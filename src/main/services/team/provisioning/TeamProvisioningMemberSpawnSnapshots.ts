@@ -1,5 +1,10 @@
 import { isBootstrapProofClearableLaunchFailureReason } from './TeamProvisioningBootstrapTranscript';
 import {
+  isExplicitlyStoppedLaunchSnapshot,
+  projectExplicitlyStoppedStatusesOffline,
+  selectExplicitlyStoppedLaunchSnapshot,
+} from './TeamProvisioningExplicitStopSnapshot';
+import {
   createInitialMemberSpawnStatusEntry,
   summarizeMemberSpawnStatusRecord,
 } from './TeamProvisioningMemberSpawnStatusPolicy';
@@ -19,7 +24,6 @@ import type {
   TeamLaunchAggregateState,
   TeamProvisioningProgress,
 } from '@shared/types';
-
 export interface MemberSpawnStatusRun {
   runId: string;
   teamName: string;
@@ -31,12 +35,12 @@ export interface MemberSpawnStatusRun {
   provisioningComplete: boolean;
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
   pendingMemberRestarts?: Map<string, PendingMemberSpawnRestart>;
+  processKilled?: boolean;
+  cancelRequested?: boolean;
 }
-
 export interface MemberSpawnStatusAuditRun extends MemberSpawnStatusRun {
   lastMemberSpawnAuditAt: number;
 }
-
 export interface MemberSpawnStatusMutationPorts<TRun extends MemberSpawnStatusRun> {
   nowIso(): string;
   syncMemberTaskActivityForRuntimeTransition(
@@ -54,7 +58,6 @@ export interface MemberSpawnStatusMutationPorts<TRun extends MemberSpawnStatusRu
   persistLaunchStateSnapshot(run: TRun, phase: PersistedTeamLaunchPhase): Promise<unknown>;
   reportBackgroundPersistenceError(run: TRun, error: unknown): void;
 }
-
 export interface MemberSpawnStatusMutationServiceHost<TRun extends MemberSpawnStatusRun> {
   syncMemberTaskActivityForRuntimeTransition: MemberSpawnStatusMutationPorts<TRun>['syncMemberTaskActivityForRuntimeTransition'];
   syncMemberLaunchGraceCheck: MemberSpawnStatusMutationPorts<TRun>['syncMemberLaunchGraceCheck'];
@@ -63,13 +66,11 @@ export interface MemberSpawnStatusMutationServiceHost<TRun extends MemberSpawnSt
   emitMemberSpawnChange: MemberSpawnStatusMutationPorts<TRun>['emitMemberSpawnChange'];
   persistLaunchStateSnapshot: MemberSpawnStatusMutationPorts<TRun>['persistLaunchStateSnapshot'];
 }
-
 export interface MemberSpawnStatusMutationServiceHostOptions<TRun extends MemberSpawnStatusRun> {
   nowIso: MemberSpawnStatusMutationPorts<TRun>['nowIso'];
   buildLaunchDiagnostics(run: TRun): TeamProvisioningProgress['launchDiagnostics'] | null;
   reportBackgroundPersistenceError: MemberSpawnStatusMutationPorts<TRun>['reportBackgroundPersistenceError'];
 }
-
 export function createMemberSpawnStatusMutationPortsFromService<TRun extends MemberSpawnStatusRun>(
   service: MemberSpawnStatusMutationServiceHost<TRun>,
   options: MemberSpawnStatusMutationServiceHostOptions<TRun>
@@ -203,7 +204,6 @@ export interface MemberSpawnStatusesSnapshotPorts<TRun extends MemberSpawnStatus
   live: MemberSpawnStatusesLiveSnapshotPorts<TRun>;
   nowIso(): string;
 }
-
 type MemberSpawnTranscriptOutcome =
   | {
       kind: 'success';
@@ -212,10 +212,10 @@ type MemberSpawnTranscriptOutcome =
   | {
       kind: string;
     };
-
 export interface MemberSpawnStatusAuditPorts<TRun extends MemberSpawnStatusAuditRun> {
   nowMs(): number;
   minAuditIntervalMs: number;
+  isCurrentTrackedRun(run: TRun): boolean;
   auditMemberSpawnStatuses(run: TRun): Promise<void>;
   findBootstrapTranscriptFailureReason(
     teamName: string,
@@ -246,8 +246,8 @@ export interface MemberSpawnStatusAuditPorts<TRun extends MemberSpawnStatusAudit
   ): void;
   isOpenCodeSecondaryLaneMemberInRun(run: TRun, memberName: string): boolean;
 }
-
 export interface MemberSpawnStatusAuditServiceHost<TRun extends MemberSpawnStatusAuditRun> {
+  isCurrentTrackedRun: MemberSpawnStatusAuditPorts<TRun>['isCurrentTrackedRun'];
   auditMemberSpawnStatuses: MemberSpawnStatusAuditPorts<TRun>['auditMemberSpawnStatuses'];
   findBootstrapTranscriptFailureReason: MemberSpawnStatusAuditPorts<TRun>['findBootstrapTranscriptFailureReason'];
   findBootstrapRuntimeProofObservedAt: MemberSpawnStatusAuditPorts<TRun>['findBootstrapRuntimeProofObservedAt'];
@@ -255,13 +255,11 @@ export interface MemberSpawnStatusAuditServiceHost<TRun extends MemberSpawnStatu
   setMemberSpawnStatus: MemberSpawnStatusAuditPorts<TRun>['setMemberSpawnStatus'];
   confirmMemberSpawnStatusFromTranscript: MemberSpawnStatusAuditPorts<TRun>['confirmMemberSpawnStatusFromTranscript'];
 }
-
 export interface MemberSpawnStatusAuditServiceHostOptions<TRun extends MemberSpawnStatusAuditRun> {
   nowMs: MemberSpawnStatusAuditPorts<TRun>['nowMs'];
   minAuditIntervalMs: MemberSpawnStatusAuditPorts<TRun>['minAuditIntervalMs'];
   isOpenCodeSecondaryLaneMemberInRun: MemberSpawnStatusAuditPorts<TRun>['isOpenCodeSecondaryLaneMemberInRun'];
 }
-
 export function createMemberSpawnStatusAuditPortsFromService<
   TRun extends MemberSpawnStatusAuditRun,
 >(
@@ -271,6 +269,7 @@ export function createMemberSpawnStatusAuditPortsFromService<
   return {
     nowMs: options.nowMs,
     minAuditIntervalMs: options.minAuditIntervalMs,
+    isCurrentTrackedRun: (run) => service.isCurrentTrackedRun(run),
     auditMemberSpawnStatuses: (run) => service.auditMemberSpawnStatuses(run),
     findBootstrapTranscriptFailureReason: (teamName, memberName, sinceMs) =>
       service.findBootstrapTranscriptFailureReason(teamName, memberName, sinceMs),
@@ -286,7 +285,6 @@ export function createMemberSpawnStatusAuditPortsFromService<
       options.isOpenCodeSecondaryLaneMemberInRun(run, memberName),
   };
 }
-
 export function cloneMemberSpawnStatusesSnapshot(
   snapshot: MemberSpawnStatusesSnapshot
 ): MemberSpawnStatusesSnapshot {
@@ -307,14 +305,12 @@ export function cloneMemberSpawnStatusesSnapshot(
     ...(snapshot.summary ? { summary: { ...snapshot.summary } } : {}),
   };
 }
-
 export function shouldCacheMemberSpawnStatusesSnapshot(run: {
   isLaunch: boolean;
   provisioningComplete: boolean;
 }): boolean {
   return run.isLaunch === true && run.provisioningComplete !== true;
 }
-
 function isMemberSpawnStatusesSnapshotReadCurrent<TRun extends MemberSpawnStatusRun>(params: {
   teamName: string;
   runIdAtStart: string | null;
@@ -326,7 +322,6 @@ function isMemberSpawnStatusesSnapshotReadCurrent<TRun extends MemberSpawnStatus
     params.ports.cache.getTrackedRunId(params.teamName) === params.runIdAtStart
   );
 }
-
 export function setMemberSpawnStatusForRun<TRun extends MemberSpawnStatusRun>(
   params: {
     run: TRun;
@@ -351,10 +346,8 @@ export function setMemberSpawnStatusForRun<TRun extends MemberSpawnStatusRun>(
     pendingRestart: run.pendingMemberRestarts?.get(memberName),
   });
   const { next } = transition;
-  if (!transition.changed) {
-    return;
-  }
-
+  if (!transition.changed) return;
+  if (!ports.isCurrentTrackedRun(run)) return;
   ports.syncMemberTaskActivityForRuntimeTransition(
     run,
     memberName,
@@ -368,17 +361,14 @@ export function setMemberSpawnStatusForRun<TRun extends MemberSpawnStatusRun>(
   }
   ports.syncMemberLaunchGraceCheck(run, memberName, next);
   ports.updateLaunchDiagnostics(run);
-
   if (transition.diagnosticText) {
     ports.appendMemberBootstrapDiagnostic(run, memberName, transition.diagnosticText);
   }
-  if (!ports.isCurrentTrackedRun(run)) return;
   ports.emitMemberSpawnChange(run, memberName);
   if (run.isLaunch) {
     persistLaunchStateSnapshotInBackground(run, ports);
   }
 }
-
 export function confirmMemberSpawnStatusFromTranscriptForRun<TRun extends MemberSpawnStatusRun>(
   params: {
     run: TRun;
@@ -398,10 +388,8 @@ export function confirmMemberSpawnStatusFromTranscriptForRun<TRun extends Member
     source,
   });
   const { next } = transition;
-  if (!transition.changed) {
-    return;
-  }
-
+  if (!transition.changed) return;
+  if (!ports.isCurrentTrackedRun(run)) return;
   ports.syncMemberTaskActivityForRuntimeTransition(
     run,
     memberName,
@@ -413,17 +401,13 @@ export function confirmMemberSpawnStatusFromTranscriptForRun<TRun extends Member
   run.pendingMemberRestarts?.delete(memberName);
   ports.syncMemberLaunchGraceCheck(run, memberName, next);
   ports.appendMemberBootstrapDiagnostic(run, memberName, transition.diagnosticText);
-  if (!ports.isCurrentTrackedRun(run)) return;
   ports.emitMemberSpawnChange(run, memberName);
   if (run.isLaunch) {
     persistLaunchStateSnapshotInBackground(run, ports);
   }
 }
-
 export function shouldSkipMemberSpawnAudit(run: MemberSpawnStatusRun): boolean {
-  if (!run.expectedMembers || run.expectedMembers.length === 0) {
-    return true;
-  }
+  if (!run.expectedMembers?.length) return true;
   return run.expectedMembers.every((memberName) => {
     const entry = run.memberSpawnStatuses.get(memberName);
     return (
@@ -434,7 +418,13 @@ export function shouldSkipMemberSpawnAudit(run: MemberSpawnStatusRun): boolean {
     );
   });
 }
-
+function isCurrentMemberSpawnAttempt<TRun extends MemberSpawnStatusRun>(
+  run: TRun,
+  memberName: string,
+  attempt: MemberSpawnStatusEntry
+): boolean {
+  return run.memberSpawnStatuses.get(memberName) === attempt;
+}
 export async function reconcileBootstrapTranscriptFailuresForRun<
   TRun extends MemberSpawnStatusAuditRun,
 >(run: TRun, ports: MemberSpawnStatusAuditPorts<TRun>): Promise<void> {
@@ -451,18 +441,20 @@ export async function reconcileBootstrapTranscriptFailuresForRun<
     }
     const acceptedAtMs =
       current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
+    const attemptAtLookup = current;
     const transcriptFailureReason = await ports.findBootstrapTranscriptFailureReason(
       run.teamName,
       memberName,
       Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
     );
-    if (!transcriptFailureReason) {
-      continue;
-    }
+    if (!ports.isCurrentTrackedRun(run)) return;
+    if (!isCurrentMemberSpawnAttempt(run, memberName, attemptAtLookup)) continue;
+    if (!transcriptFailureReason) continue;
+    if (!ports.isCurrentTrackedRun(run)) return;
+    if (!isCurrentMemberSpawnAttempt(run, memberName, attemptAtLookup)) continue;
     ports.setMemberSpawnStatus(run, memberName, 'error', transcriptFailureReason);
   }
 }
-
 export async function reconcileBootstrapTranscriptSuccessesForRun<
   TRun extends MemberSpawnStatusAuditRun,
 >(run: TRun, ports: MemberSpawnStatusAuditPorts<TRun>): Promise<void> {
@@ -487,12 +479,17 @@ export async function reconcileBootstrapTranscriptSuccessesForRun<
     }
     const acceptedAtMs =
       current.firstSpawnAcceptedAt != null ? Date.parse(current.firstSpawnAcceptedAt) : NaN;
+    const attemptAtRuntimeProofLookup = current;
     const runtimeProofObservedAt = await ports.findBootstrapRuntimeProofObservedAt(
       run.teamName,
       memberName,
       current
     );
+    if (!ports.isCurrentTrackedRun(run)) return;
+    if (!isCurrentMemberSpawnAttempt(run, memberName, attemptAtRuntimeProofLookup)) continue;
     if (runtimeProofObservedAt) {
+      if (!ports.isCurrentTrackedRun(run)) return;
+      if (!isCurrentMemberSpawnAttempt(run, memberName, attemptAtRuntimeProofLookup)) continue;
       ports.confirmMemberSpawnStatusFromTranscript(
         run,
         memberName,
@@ -501,28 +498,32 @@ export async function reconcileBootstrapTranscriptSuccessesForRun<
       );
       continue;
     }
+    const attemptAtTranscriptLookup = run.memberSpawnStatuses.get(memberName);
+    if (attemptAtTranscriptLookup !== attemptAtRuntimeProofLookup) continue;
     const transcriptOutcome = await ports.findBootstrapTranscriptOutcome(
       run.teamName,
       memberName,
       Number.isFinite(acceptedAtMs) ? acceptedAtMs : null
     );
-    if (!transcriptOutcome || !('observedAt' in transcriptOutcome)) {
-      continue;
-    }
+    if (!ports.isCurrentTrackedRun(run)) return;
+    if (!isCurrentMemberSpawnAttempt(run, memberName, attemptAtTranscriptLookup)) continue;
+    if (!transcriptOutcome || !('observedAt' in transcriptOutcome)) continue;
+    if (!ports.isCurrentTrackedRun(run)) return;
+    if (!isCurrentMemberSpawnAttempt(run, memberName, attemptAtTranscriptLookup)) continue;
     ports.confirmMemberSpawnStatusFromTranscript(run, memberName, transcriptOutcome.observedAt);
   }
 }
-
 export async function maybeAuditMemberSpawnStatusesForRun<TRun extends MemberSpawnStatusAuditRun>(
   run: TRun,
   ports: MemberSpawnStatusAuditPorts<TRun>,
   options?: { force?: boolean }
 ): Promise<void> {
-  if (!run.expectedMembers || run.expectedMembers.length === 0) {
-    return;
-  }
+  if (!ports.isCurrentTrackedRun(run)) return;
+  if (!run.expectedMembers?.length) return;
   await reconcileBootstrapTranscriptFailuresForRun(run, ports);
+  if (!ports.isCurrentTrackedRun(run)) return;
   await reconcileBootstrapTranscriptSuccessesForRun(run, ports);
+  if (!ports.isCurrentTrackedRun(run)) return;
   if (shouldSkipMemberSpawnAudit(run)) {
     return;
   }
@@ -534,11 +535,12 @@ export async function maybeAuditMemberSpawnStatusesForRun<TRun extends MemberSpa
   ) {
     return;
   }
+  if (!ports.isCurrentTrackedRun(run)) return;
   run.lastMemberSpawnAuditAt = now;
   await ports.auditMemberSpawnStatuses(run);
+  if (!ports.isCurrentTrackedRun(run)) return;
   await reconcileBootstrapTranscriptSuccessesForRun(run, ports);
 }
-
 async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawnStatusRun>(params: {
   teamName: string;
   resolvedRunId: string | null;
@@ -562,7 +564,6 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   ) {
     return cloneMemberSpawnStatusesSnapshot(cached.snapshot);
   }
-
   const repairSnapshot = await ports.persisted.readTaskActivityRepairLaunchSnapshot(teamName);
   if (!isCurrentRead()) {
     return getMemberSpawnStatusesSnapshot(teamName, ports);
@@ -571,18 +572,28 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   if (!isCurrentRead()) {
     return getMemberSpawnStatusesSnapshot(teamName, ports);
   }
-  const { snapshot, statuses } = await ports.persisted.reconcilePersistedLaunchState(teamName);
+  const launchState = await ports.live.readLaunchState(teamName);
   if (!isCurrentRead()) {
     return getMemberSpawnStatusesSnapshot(teamName, ports);
   }
-  const nextStatuses = await ports.persisted.attachLiveRuntimeMetadataToStatuses(
-    teamName,
-    statuses,
-    {
-      openCodeSecondaryBootstrapPendingMembers:
-        ports.persisted.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
-    }
-  );
+  const stoppedSnapshot = selectExplicitlyStoppedLaunchSnapshot(launchState, repairSnapshot);
+  const { snapshot, statuses } = stoppedSnapshot
+    ? {
+        snapshot: stoppedSnapshot,
+        statuses: projectExplicitlyStoppedStatusesOffline(
+          ports.live.snapshotToMemberSpawnStatuses(stoppedSnapshot)
+        ),
+      }
+    : await ports.persisted.reconcilePersistedLaunchState(teamName);
+  if (!isCurrentRead()) {
+    return getMemberSpawnStatusesSnapshot(teamName, ports);
+  }
+  const nextStatuses = isExplicitlyStoppedLaunchSnapshot(snapshot)
+    ? statuses
+    : await ports.persisted.attachLiveRuntimeMetadataToStatuses(teamName, statuses, {
+        openCodeSecondaryBootstrapPendingMembers:
+          ports.persisted.getOpenCodeSecondaryBootstrapPendingMemberNames(snapshot),
+      });
   if (!isCurrentRead()) {
     return getMemberSpawnStatusesSnapshot(teamName, ports);
   }
@@ -601,12 +612,13 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   const summary = expectedMembers
     ? summarizeMemberSpawnStatusRecord(expectedMembers, nextStatuses)
     : undefined;
+  const teamLaunchState =
+    stoppedSnapshot?.teamLaunchState ??
+    (summary ? ports.live.deriveTeamLaunchAggregateState(summary) : snapshot?.teamLaunchState);
   const persistedSnapshot: MemberSpawnStatusesSnapshot = {
     statuses: nextStatuses,
     runId: resolvedRunId,
-    teamLaunchState: summary
-      ? ports.live.deriveTeamLaunchAggregateState(summary)
-      : snapshot?.teamLaunchState,
+    teamLaunchState,
     launchPhase: snapshot?.launchPhase,
     expectedMembers,
     updatedAt: snapshot?.updatedAt,
@@ -623,7 +635,6 @@ async function readPersistedMemberSpawnStatusesSnapshot<TRun extends MemberSpawn
   }
   return persistedSnapshot;
 }
-
 export async function buildMemberSpawnStatusesSnapshotForRun<TRun extends MemberSpawnStatusRun>(
   run: TRun,
   ports: MemberSpawnStatusesSnapshotPorts<TRun>,
@@ -730,6 +741,9 @@ export async function getMemberSpawnStatusesSnapshot<TRun extends MemberSpawnSta
   }
   const run = ports.getRun(runId);
   if (!run) {
+    return readPersistedMemberSpawnStatusesSnapshot({ teamName, resolvedRunId: runId, ports });
+  }
+  if (run.processKilled === true || run.cancelRequested === true) {
     return readPersistedMemberSpawnStatusesSnapshot({ teamName, resolvedRunId: runId, ports });
   }
 

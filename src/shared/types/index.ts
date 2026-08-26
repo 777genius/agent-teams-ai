@@ -25,7 +25,12 @@ export type * from './api';
 export type * from './ipc';
 
 // Re-export Team Management types
+export type * from './launchExecutionProof';
+export type * from './openCodeStrictLaunch';
+export type * from './relaunchStop';
+export type * from './rosterAuthorizationTransaction';
 export type * from './team';
+export type * from './teamMemberRuntimeSelectionProvenance';
 
 // Re-export Schedule types
 export type * from './schedule';

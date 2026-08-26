@@ -1,6 +1,16 @@
 import { createHash } from 'crypto';
 
-import type { OpenCodeExecutionProof } from '../readiness/OpenCodeExecutionProof';
+import {
+  OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION,
+  type OpenCodeLaunchAttemptRequestBody,
+  type OpenCodeLaunchAttemptResponse,
+  type OpenCodeOpaqueIdentity,
+} from './OpenCodeLaunchAttemptContractV1';
+import { validateOpenCodeLaunchCapabilities } from './OpenCodeLaunchCapabilityContract';
+export type {
+  OpenCodeCleanupHostsCommandBody,
+  OpenCodeCleanupHostsCommandData,
+} from './OpenCodeBridgeLifecycleContract';
 import type { NativeAgentAttachmentMimeType } from '@features/agent-attachments/contracts';
 import type {
   EffortLevel,
@@ -14,6 +24,13 @@ export const OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION = 1 as const;
 export const OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION = 2 as const;
 export const OPEN_CODE_FILE_PARTS_CONTRACT_VERSION = 2 as const;
+export {
+  OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION,
+  type OpenCodeLaunchAttemptRequestBody,
+  type OpenCodeLaunchParentLinkage,
+  type OpenCodeOpaqueIdentity,
+} from './OpenCodeLaunchAttemptContractV1';
+export { OPEN_CODE_LAUNCH_REQUEST_CORRELATION_CONTRACT_VERSION } from './OpenCodeLaunchAttemptDigestV1';
 export type OpenCodeBridgeCommandName =
   | 'opencode.handshake'
   | 'opencode.commandStatus'
@@ -55,6 +72,7 @@ export interface OpenCodeTeamLaunchMemberCommandSpec {
   role: string;
   prompt: string;
   effort?: EffortLevel;
+  memberIdentity: OpenCodeOpaqueIdentity;
 }
 export interface OpenCodeLaunchTeamCommandBody {
   runId: string;
@@ -70,7 +88,8 @@ export interface OpenCodeLaunchTeamCommandBody {
   expectedCapabilitySnapshotId: string | null;
   manifestHighWatermark: number | null;
   capabilitySnapshotRecoveryAttemptId?: string;
-  executionProof?: OpenCodeExecutionProof;
+  launchContractVersion: typeof OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION;
+  launchAttempt: OpenCodeLaunchAttemptRequestBody;
 }
 
 export interface OpenCodeRuntimePermissionCommandData {
@@ -82,8 +101,8 @@ export interface OpenCodeRuntimePermissionCommandData {
   raw?: Record<string, unknown>;
 }
 export interface OpenCodeTeamMemberLaunchCommandData {
-  sessionId: string;
-  launchState: OpenCodeTeamMemberLaunchBridgeState;
+  sessionId?: string;
+  launchState: OpenCodeTeamMemberLaunchBridgeState | 'pending';
   bootstrapEvidenceSource?: OpenCodeBootstrapEvidenceSource;
   bootstrapMode?: OpenCodeBootstrapMode;
   appManagedBootstrapCandidate?: OpenCodeAppManagedBootstrapCandidate;
@@ -97,14 +116,15 @@ export interface OpenCodeTeamMemberLaunchCommandData {
 
 export interface OpenCodeLaunchTeamCommandData {
   runId: string;
-  teamLaunchState: OpenCodeTeamLaunchBridgeState;
+  teamLaunchState?: OpenCodeTeamLaunchBridgeState;
   members: Record<string, OpenCodeTeamMemberLaunchCommandData>;
-  warnings: OpenCodeTeamBridgeWarning[];
-  diagnostics: OpenCodeTeamBridgeDiagnostic[];
+  warnings?: OpenCodeTeamBridgeWarning[];
+  diagnostics?: OpenCodeTeamBridgeDiagnostic[];
   idempotencyKey?: string;
   manifestHighWatermark?: number | null;
   runtimeStoreManifestHighWatermark?: number | null;
   durableCheckpoints?: { name: string; memberName?: string | null; observedAt: string }[];
+  launchAttempt?: OpenCodeLaunchAttemptResponse;
 }
 
 export interface OpenCodeReconcileTeamCommandBody {
@@ -169,37 +189,6 @@ export interface OpenCodeListRuntimePermissionsCommandBody {
 export interface OpenCodeListRuntimePermissionsCommandData {
   permissions: OpenCodeRuntimePermissionCommandData[];
   diagnostics?: string[];
-}
-
-export interface OpenCodeCleanupHostsCommandBody {
-  reason: 'startup' | 'shutdown' | 'manual' | string;
-  mode?: 'stale' | 'force';
-  projectPath?: string;
-  staleAgeMs?: number | null;
-  leaseStaleAgeMs?: number | null;
-  preflightLeaseStaleAgeMs?: number | null;
-}
-
-export interface OpenCodeCleanupHostsCommandData {
-  cleaned: number;
-  remaining: number;
-  hosts: {
-    hostKey: string;
-    projectPath: string;
-    pid: number;
-    port: number;
-    action:
-      | 'disposed'
-      | 'removed_dead'
-      | 'kept_active'
-      | 'kept_leased'
-      | 'kept_recent'
-      | 'kept_filtered'
-      | 'failed';
-    reason: string;
-    leaseCount: number;
-  }[];
-  diagnostics: string[];
 }
 
 export interface OpenCodeSendMessageCommandBody {
@@ -486,6 +475,8 @@ export interface OpenCodeBridgePeerIdentity {
     opencodeAppManagedBootstrapContractVersion?: number;
     opencodeDeliveryAcceptanceContractVersion?: number;
     opencodeFilePartsContractVersion?: number;
+    openCodeLaunchAttemptContract?: number;
+    openCodeLaunchRequestCorrelationContract?: number;
   };
   runtime: {
     providerId: 'opencode';
@@ -685,6 +676,7 @@ export function validateOpenCodeBridgeHandshake(input: {
   expectedRunId: string | null;
   requiresDeliveryAcceptanceContract?: boolean;
   requiresVideoFilePartsContract?: boolean;
+  launchValidationScope?: 'strict-delegation-preflight';
 }): { ok: true } | { ok: false; reason: string } {
   const shape = validateOpenCodeBridgeHandshakeShape(input.handshake);
   if (!shape.ok) {
@@ -724,22 +716,13 @@ export function validateOpenCodeBridgeHandshake(input: {
   }
 
   if (input.requiredCommand === 'opencode.launchTeam') {
-    if (!input.expectedCapabilitySnapshotId) {
-      return {
-        ok: false,
-        reason:
-          'OpenCode app-managed bootstrap launch requires a fresh capability snapshot before state-changing launch',
-      };
-    }
-    if (
-      input.handshake.server.bridgeProtocol.opencodeAppManagedBootstrapContractVersion !==
-      OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION
-    ) {
-      return {
-        ok: false,
-        reason:
-          'OpenCode app-managed bootstrap is required, but the orchestrator does not advertise contract version 1. Update agent_teams_orchestrator and restart the app.',
-      };
+    const capabilityError = validateOpenCodeLaunchCapabilities({
+      protocol: input.handshake.server.bridgeProtocol,
+      requireAppManagedBootstrap:
+        input.launchValidationScope !== 'strict-delegation-preflight',
+    });
+    if (capabilityError) {
+      return { ok: false, reason: capabilityError };
     }
   }
 
@@ -1039,7 +1022,11 @@ function isPeerIdentity(value: unknown): value is OpenCodeBridgePeerIdentity {
     !isContractVersion(bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion) ||
     !isContractVersion(bridgeProtocol.opencodeAppManagedBootstrapContractVersion) ||
     !isContractVersion(bridgeProtocol.opencodeDeliveryAcceptanceContractVersion) ||
-    !isContractVersion(bridgeProtocol.opencodeFilePartsContractVersion)
+    !isContractVersion(bridgeProtocol.opencodeFilePartsContractVersion) ||
+    !isOptionalNonNegativeContractVersion(bridgeProtocol.openCodeLaunchAttemptContract) ||
+    !isOptionalNonNegativeContractVersion(
+      bridgeProtocol.openCodeLaunchRequestCorrelationContract
+    )
   ) {
     return false;
   }
@@ -1165,6 +1152,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 function isContractVersion(value: unknown): boolean {
   return value === undefined || (Number.isInteger(value) && (value as number) >= 1);
+}
+function isOptionalNonNegativeContractVersion(value: unknown): boolean {
+  return value === undefined || (Number.isInteger(value) && (value as number) >= 0);
 }
 function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === 'string';

@@ -14,6 +14,25 @@ import {
 import type { RuntimeProviderLaunchFacts } from '../TeamProvisioningRuntimeLaunchSelection';
 import type { CliProviderModelCatalog, ProviderModelLaunchIdentity } from '@shared/types';
 
+const explicitLeadProvenance = {
+  version: 1 as const,
+  providerBackendId: 'explicit' as const,
+  model: 'explicit' as const,
+  effort: 'explicit' as const,
+};
+const explicitMemberProvenance = {
+  version: 1 as const,
+  providerBackendId: 'explicit' as const,
+  model: 'explicit' as const,
+  effort: 'explicit' as const,
+};
+const inheritedMemberProvenance = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'inherited' as const,
+  effort: 'inherited' as const,
+};
+
 function buildCatalog(overrides: Partial<CliProviderModelCatalog> = {}): CliProviderModelCatalog {
   return {
     schemaVersion: 1,
@@ -224,6 +243,7 @@ describe('team provisioning launch identity request shaping', () => {
           model: 'gpt-5',
           effort: 'max',
           fastMode: 'off',
+          runtimeSelectionProvenance: explicitMemberProvenance,
         },
         requestLimitContext: false,
       })
@@ -233,19 +253,65 @@ describe('team provisioning launch identity request shaping', () => {
       model: 'gpt-5',
       effort: 'max',
       fastMode: 'off',
+      leadRuntimeSelectionProvenance: explicitLeadProvenance,
     });
 
     expect(
       buildDirectMemberLaunchIdentityRequest({
         providerId: 'anthropic',
-        memberSpec: { name: 'Worker' },
+        memberSpec: { name: 'Worker', runtimeSelectionProvenance: inheritedMemberProvenance },
         requestLimitContext: true,
       })
     ).toEqual({
       providerId: 'anthropic',
       limitContext: true,
+      leadRuntimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'default',
+        model: 'default',
+        effort: 'default',
+      },
     });
   });
+
+  it.each([
+    ['fresh launch', 'default', 'default'],
+    ['restart', 'explicit', 'explicit'],
+  ] as const)(
+    'maps inherited member axes through the current lead intent for %s',
+    (_path, leadKind, expectedKind) => {
+      expect(
+        buildDirectMemberLaunchIdentityRequest({
+          providerId: 'codex',
+          providerBackendId: 'api',
+          memberSpec: {
+            name: 'Worker',
+            providerBackendId: 'api',
+            model: 'gpt-5',
+            effort: 'high',
+            runtimeSelectionProvenance: inheritedMemberProvenance,
+          },
+          inheritedLeadRequest: {
+            providerId: 'codex',
+            providerBackendId: 'api',
+            model: 'gpt-5',
+            effort: 'high',
+            leadRuntimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: leadKind,
+              model: leadKind,
+              effort: leadKind,
+            },
+          },
+        }).leadRuntimeSelectionProvenance
+      ).toEqual({
+        version: 1,
+        providerBackendId: expectedKind,
+        model: expectedKind,
+        effort: expectedKind,
+      });
+    }
+  );
 });
 
 describe('team provisioning launch identity resolution', () => {
@@ -271,10 +337,26 @@ describe('team provisioning launch identity resolution', () => {
         claudePath: '/bin/claude',
         cwd: '/repo',
         env: { PATH: '/bin' },
-        request: { providerId: 'codex', model: 'gpt-5', effort: 'high', fastMode: 'on' },
+        request: {
+          providerId: 'codex',
+          model: 'gpt-5',
+          effort: 'high',
+          fastMode: 'on',
+          leadRuntimeSelectionProvenance: explicitLeadProvenance,
+        },
         effectiveMembers: [
-          { name: 'CodexPeer', providerId: 'codex', model: 'gpt-5-mini' },
-          { name: 'ClaudePeer', providerId: 'anthropic', model: 'sonnet' },
+          {
+            name: 'CodexPeer',
+            providerId: 'codex',
+            model: 'gpt-5-mini',
+            runtimeSelectionProvenance: explicitMemberProvenance,
+          },
+          {
+            name: 'ClaudePeer',
+            providerId: 'anthropic',
+            model: 'sonnet',
+            runtimeSelectionProvenance: explicitMemberProvenance,
+          },
         ],
         providerArgsByProvider: new Map([
           ['codex', ['--codex-arg']],
@@ -324,7 +406,13 @@ describe('team provisioning launch identity resolution', () => {
       })
     );
     expect(buildProviderModelLaunchIdentity).toHaveBeenCalledWith({
-      request: { providerId: 'codex', model: 'gpt-5', effort: 'high', fastMode: 'on' },
+      request: {
+        providerId: 'codex',
+        model: 'gpt-5',
+        effort: 'high',
+        fastMode: 'on',
+        leadRuntimeSelectionProvenance: explicitLeadProvenance,
+      },
       facts: codexFacts,
     });
   });
@@ -352,8 +440,25 @@ describe('team provisioning launch identity resolution', () => {
           claudePath: '/bin/claude',
           cwd: '/repo',
           env: { PATH: '/bin' },
-          request: { providerId: 'codex', model: 'gpt-5' },
-          effectiveMembers: [{ name: 'BadModel', providerId: 'codex', model: 'unknown-model' }],
+          request: {
+            providerId: 'codex',
+            model: 'gpt-5',
+            leadRuntimeSelectionProvenance: {
+              ...explicitLeadProvenance,
+              effort: 'default',
+            },
+          },
+          effectiveMembers: [
+            {
+              name: 'BadModel',
+              providerId: 'codex',
+              model: 'unknown-model',
+              runtimeSelectionProvenance: {
+                ...explicitMemberProvenance,
+                effort: 'inherited',
+              },
+            },
+          ],
         },
         ports
       )
@@ -389,6 +494,7 @@ describe('team provisioning launch identity resolution', () => {
             model: 'gpt-5',
             effort: 'max',
             fastMode: 'off',
+            runtimeSelectionProvenance: explicitMemberProvenance,
           },
           requestLimitContext: true,
         },
@@ -407,8 +513,10 @@ describe('team provisioning launch identity resolution', () => {
     expect(ports.validateRuntimeLaunchSelection).toHaveBeenCalledWith({
       actorLabel: 'Member Worker',
       providerId: 'codex',
+      providerBackendId: 'codex-native',
       model: 'gpt-5',
       effort: 'max',
+      leadRuntimeSelectionProvenance: explicitLeadProvenance,
       fastMode: 'off',
       limitContext: true,
       facts,
@@ -421,6 +529,7 @@ describe('team provisioning launch identity resolution', () => {
         effort: 'max',
         fastMode: 'off',
         limitContext: true,
+        leadRuntimeSelectionProvenance: explicitLeadProvenance,
       },
       facts,
     });

@@ -35,6 +35,10 @@ const COMPOSITION_SOURCE_PATH = resolve(
   process.cwd(),
   'src/main/services/team/provisioning/TeamProvisioningServiceComposition.ts'
 );
+const MEMBER_LIFECYCLE_FACADE_SOURCE_PATH = resolve(
+  process.cwd(),
+  'src/main/services/team/provisioning/TeamProvisioningServiceMemberLifecycleFacade.ts'
+);
 
 describe('TeamProvisioningServiceComposition', () => {
   it('installs every composition facade on a constructed service under its compatibility key', () => {
@@ -92,6 +96,21 @@ describe('TeamProvisioningServiceComposition', () => {
     expect(compositionSource).not.toContain('TeamProvisioningServiceCompositionHost =');
   });
 
+  it('passes explicitly typed member-lifecycle dependencies from the construction boundary', () => {
+    const compositionSource = readFileSync(COMPOSITION_SOURCE_PATH, 'utf8');
+    const facadeSource = readFileSync(MEMBER_LIFECYCLE_FACADE_SOURCE_PATH, 'utf8');
+
+    expect(compositionSource).not.toMatch(
+      /service\s+as\s+(?:unknown\s+as\s+)?TeamProvisioningMemberLifecycleCompositionPorts/
+    );
+    expect(facadeSource).toContain(
+      'const memberLifecyclePorts: TeamProvisioningMemberLifecycleCompositionPorts = {'
+    );
+    expect(facadeSource).toContain(
+      'createTeamProvisioningServiceComposition(this, memberLifecyclePorts, {'
+    );
+  });
+
   it('shares the composed watchdog scheduler with the runtime delivery host', () => {
     const service = new TeamProvisioningService();
     const scheduler = Reflect.get(service, 'openCodePromptDeliveryWatchdogScheduler');
@@ -105,8 +124,20 @@ describe('TeamProvisioningServiceComposition', () => {
   it('runs the production admission closures for public create and launch entrypoints', async () => {
     const service = new TeamProvisioningService();
     const onProgress = vi.fn();
-    const createRequest = { teamName: 'alpha' } as CreateTeamRequestInput;
-    const launchRequest = { teamName: 'alpha' } as LaunchTeamRequestInput;
+    const leadRuntimeSelectionProvenance = {
+      version: 1 as const,
+      providerBackendId: 'default' as const,
+      model: 'default' as const,
+      effort: 'default' as const,
+    };
+    const createRequest = {
+      teamName: 'alpha',
+      leadRuntimeSelectionProvenance,
+    } as CreateTeamRequestInput;
+    const launchRequest = {
+      teamName: 'alpha',
+      leadRuntimeSelectionProvenance,
+    } as LaunchTeamRequestInput;
     const existingRunId = 'existing-run';
     const provisioningRunByTeam = Reflect.get(service, 'provisioningRunByTeam') as Map<
       string,

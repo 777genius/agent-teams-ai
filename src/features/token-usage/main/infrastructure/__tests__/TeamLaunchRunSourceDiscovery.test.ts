@@ -193,6 +193,57 @@ describe('TeamLaunchRunSourceDiscovery', () => {
     }
   });
 
+  it('keeps launch identity provider/backend provenance record-atomic', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'token-usage-discovery-atomic-route-'));
+    try {
+      const teamDir = path.join(root, 'alpha');
+      await mkdir(teamDir, { recursive: true });
+      await writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({
+          name: 'alpha',
+          projectPath: '/sandbox/project',
+          leadSessionId: 'lead-session-1',
+          members: [
+            {
+              name: 'team-lead',
+              agentType: 'team-lead',
+              providerId: 'codex',
+              providerBackendId: 'api',
+              model: 'stale-codex',
+            },
+          ],
+        })
+      );
+      await writeFile(
+        path.join(teamDir, 'team.meta.json'),
+        JSON.stringify({
+          version: 2,
+          cwd: '/sandbox/project',
+          providerId: 'codex',
+          providerBackendId: 'api',
+          launchIdentity: {
+            providerId: 'gemini',
+            providerBackendId: null,
+            resolvedLaunchModel: 'gemini-current',
+          },
+        })
+      );
+
+      const runs = await new TeamLaunchRunSourceDiscovery(root).discoverAppRuns();
+
+      expect(runs).toMatchObject([
+        {
+          providerId: 'gemini',
+          providerBackendId: undefined,
+          model: 'gemini-current',
+        },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('does not use liveness evaluation time as endedAt for stopped member runs', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'token-usage-discovery-stopped-'));
     try {
@@ -267,7 +318,7 @@ describe('TeamLaunchRunSourceDiscovery', () => {
     }
   });
 
-  it('discovers teammate sessions from runtime traces when launch state is absent', async () => {
+  it('keeps historical trace route A after mutable member config changes to B', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'token-usage-discovery-runtime-'));
     try {
       const teamDir = path.join(root, 'alpha');
@@ -281,8 +332,9 @@ describe('TeamLaunchRunSourceDiscovery', () => {
             {
               name: 'auditor',
               agentId: 'auditor@alpha',
-              providerId: 'anthropic',
-              model: 'haiku',
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              model: 'gpt-config-b',
             },
           ],
         })
@@ -309,6 +361,10 @@ describe('TeamLaunchRunSourceDiscovery', () => {
             agentId: 'auditor@alpha',
             runId: 'native-session-1',
             cwd: '/sandbox/project',
+            providerId: 'opencode',
+            providerBackendId: 'opencode-cli',
+            billingMode: 'api',
+            model: 'openrouter/qwen-route-a',
           }),
           JSON.stringify({
             type: 'runtime_ready',
@@ -330,10 +386,11 @@ describe('TeamLaunchRunSourceDiscovery', () => {
           appRunId: 'team:alpha:member:auditor:native-session-1',
           agentId: 'auditor@alpha',
           agentName: 'auditor',
-          runtimeKind: 'anthropic',
-          providerId: 'anthropic',
-          billingMode: 'subscription',
-          model: 'haiku',
+          runtimeKind: 'opencode',
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          billingMode: 'api',
+          model: 'openrouter/qwen-route-a',
           startedAt: '2026-06-30T01:00:00.000Z',
           endedAt: '2026-06-30T01:01:00.000Z',
           status: 'completed',
@@ -342,7 +399,7 @@ describe('TeamLaunchRunSourceDiscovery', () => {
       expect(runs[0]?.sources[0]).toEqual(
         expect.objectContaining({
           nativeSessionId: 'native-session-1',
-          sourceType: 'cli_log',
+          sourceType: 'runtime_trace',
         })
       );
     } finally {
@@ -350,7 +407,7 @@ describe('TeamLaunchRunSourceDiscovery', () => {
     }
   });
 
-  it('does not keep a runtime session running when persisted active pid is stale', async () => {
+  it('keeps legacy trace route unknown and does not borrow current config', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'token-usage-discovery-stale-pid-'));
     try {
       const teamDir = path.join(root, 'alpha');
@@ -402,7 +459,11 @@ describe('TeamLaunchRunSourceDiscovery', () => {
       expect(runs[0]).toEqual(
         expect.objectContaining({
           appRunId: 'team:alpha:member:probe:codex-session-1',
-          runtimeKind: 'codex',
+          runtimeKind: 'unknown',
+          providerId: undefined,
+          providerBackendId: undefined,
+          billingMode: 'unknown',
+          model: undefined,
           status: 'completed',
           endedAt: '2026-06-30T01:02:00.000Z',
         })

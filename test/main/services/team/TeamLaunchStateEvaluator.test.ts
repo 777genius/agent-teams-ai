@@ -8,6 +8,73 @@ import {
 } from '../../../../src/main/services/team/TeamLaunchStateEvaluator';
 
 describe('TeamLaunchStateEvaluator', () => {
+  it('preserves ultra effort in every current v3 member identity field', () => {
+    const snapshot = normalizePersistedLaunchSnapshot('demo', {
+      version: 3,
+      teamName: 'demo',
+      updatedAt: '2026-08-25T00:00:00.000Z',
+      launchPhase: 'active',
+      expectedMembers: ['worker'],
+      members: {
+        worker: {
+          name: 'worker',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          effort: 'ultra',
+          launchIdentity: {
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            selectedModel: 'gpt-5.6',
+            selectedModelKind: 'explicit',
+            resolvedLaunchModel: 'gpt-5.6',
+            catalogId: 'gpt-5.6',
+            catalogSource: 'runtime',
+            catalogFetchedAt: null,
+            selectedEffort: 'ultra',
+            resolvedEffort: 'ultra',
+          },
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          lastEvaluatedAt: '2026-08-25T00:00:00.000Z',
+        },
+      },
+      summary: {
+        confirmedCount: 1,
+        pendingCount: 0,
+        failedCount: 0,
+        runtimeAlivePendingCount: 0,
+      },
+      teamLaunchState: 'clean_success',
+    });
+
+    expect(snapshot?.members.worker).toMatchObject({
+      effort: 'ultra',
+      launchIdentity: { selectedEffort: 'ultra', resolvedEffort: 'ultra' },
+    });
+  });
+
+  it('keeps an empty explicit-stop tombstone out of clean-success projection', () => {
+    const snapshot = normalizePersistedLaunchSnapshot('demo', {
+      version: 2,
+      teamName: 'demo',
+      updatedAt: '2026-08-23T00:00:00.000Z',
+      stoppedAt: '2026-08-23T00:00:00.000Z',
+      stoppedRunId: 'run-stopped',
+      launchPhase: 'reconciled',
+      expectedMembers: [],
+      members: {},
+    });
+
+    expect(snapshot).toMatchObject({
+      stoppedAt: '2026-08-23T00:00:00.000Z',
+      stoppedRunId: 'run-stopped',
+      teamLaunchState: 'partial_pending',
+    });
+  });
+
   it('normalizes message_send tool result JSON in persisted hard failure reasons', () => {
     const reason = normalizeLaunchFailureReasonText(
       JSON.stringify({
@@ -376,5 +443,53 @@ describe('TeamLaunchStateEvaluator', () => {
       livenessKind: 'runtime_process_candidate',
     });
     expect(snapshot?.members.alice.sources?.processAlive).toBeUndefined();
+  });
+
+  it('rehydrates only an exact continuation-eligible strict OpenCode cursor', () => {
+    const identity = (character: string) => `sha256:${character.repeat(64)}`;
+    const cursor = {
+      contractVersion: 1,
+      disposition: 'continuation_eligible',
+      attemptId: '018f47a2-4a13-7c2f-8d44-c0ffee123456',
+      payloadHash: 'a'.repeat(64),
+      generation: 1,
+      runId: 'run-1',
+      laneId: 'primary',
+      parent: {
+        sessionIdentity: identity('1'),
+        messageIdentity: identity('2'),
+      },
+      continuationToken: 'opaque-continuation-token',
+      inputDigest: 'b'.repeat(64),
+      immutableDigest: 'c'.repeat(64),
+      providerId: 'openai',
+      modelId: 'openai/gpt-5.4-mini',
+      roster: [{ name: 'alice', memberIdentity: identity('3') }],
+      partitions: {
+        committed: [],
+        failed: [],
+        pending: [identity('3')],
+        cleanupPending: [],
+      },
+    };
+    const base = {
+      version: 2,
+      teamName: 'demo',
+      updatedAt: '2026-08-23T00:00:00.000Z',
+      launchPhase: 'active',
+      expectedMembers: ['alice'],
+      members: {},
+      openCodeStrictLaunchAttempt: cursor,
+    };
+
+    expect(normalizePersistedLaunchSnapshot('demo', base)?.openCodeStrictLaunchAttempt).toEqual(
+      cursor
+    );
+    expect(
+      normalizePersistedLaunchSnapshot('demo', {
+        ...base,
+        openCodeStrictLaunchAttempt: { ...cursor, continuationToken: undefined },
+      })?.openCodeStrictLaunchAttempt
+    ).toBeUndefined();
   });
 });

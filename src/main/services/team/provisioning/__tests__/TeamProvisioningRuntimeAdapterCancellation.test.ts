@@ -276,6 +276,28 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
     expect(ports.events).toEqual([]);
   });
 
+  it('makes repeated pre-dispatch cancellation idempotent without issuing a stop', async () => {
+    const stop = vi.fn();
+    const ports = makePorts({ adapter: adapter(stop) });
+    ports.runtimeAdapterRunByTeam.delete('team-a');
+    ports.aliveRunByTeam.delete('team-a');
+
+    await cancelRuntimeAdapterProvisioning({
+      runId: 'run-1',
+      runtimeProgress: progress(),
+      ports,
+    });
+    await cancelRuntimeAdapterProvisioning({
+      runId: 'run-1',
+      runtimeProgress: progress({ state: 'cancelled' }),
+      ports,
+    });
+
+    expect(stop).not.toHaveBeenCalled();
+    expect(ports.cancelledRuntimeAdapterRunIds).toEqual(new Set(['run-1']));
+    expect(ports.events.filter((event) => event === 'clear-lane')).toHaveLength(1);
+  });
+
   it('logs stop failures and retains primary ownership and storage', async () => {
     const ports = makePorts({
       adapter: adapter(

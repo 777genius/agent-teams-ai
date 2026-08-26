@@ -25,7 +25,11 @@ function createFakePorts(
   const spawnCli = vi.fn<TeamProvisioningProviderDiagnosticsPorts['spawnCli']>();
   const spawnProbe = vi
     .fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>()
-    .mockResolvedValue({ exitCode: 0, stdout: 'PONG', stderr: '' });
+    .mockImplementation(async (_command, args) => ({
+      exitCode: 0,
+      stdout: buildProbeResponse(args),
+      stderr: '',
+    }));
 
   return {
     execCli,
@@ -53,6 +57,18 @@ function createFakePorts(
     sleep: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
+}
+
+function extractProbeNonce(args: readonly string[]): string {
+  const prompt = args.find((arg) => arg.includes('Set nonce to ')) ?? '';
+  return /Set nonce to ([a-f0-9]+)\./.exec(prompt)?.[1] ?? 'missing';
+}
+
+function buildProbeResponse(args: readonly string[]): string {
+  return JSON.stringify({
+    schema: 'agent-teams-provider-probe-response-v1',
+    nonce: extractProbeNonce(args),
+  });
 }
 
 describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
@@ -338,7 +354,11 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
     const debugEvents: string[] = [];
     const spawnProbe = vi
       .fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>()
-      .mockResolvedValue({ exitCode: 0, stdout: 'PONG', stderr: '' });
+      .mockImplementation(async (_command, args) => ({
+        exitCode: 0,
+        stdout: buildProbeResponse(args),
+        stderr: '',
+      }));
     const ports = createFakePorts({
       appendPreflightDebugLog: (event) => debugEvents.push(event),
       spawnProbe,
@@ -363,21 +383,23 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
     expect(cwd).toBe('/repo');
     expect(env).toEqual({ PATH: '/bin' });
     expect(timeoutMs).toBeGreaterThan(0);
-    expect(options?.resolveOnOutputMatch?.({ stdout: 'PONG', stderr: '' })).toBe(true);
+    const stdout = buildProbeResponse(args);
+    expect(options?.resolveOnOutputMatch?.({ stdout, stderr: '' })).toBe(true);
+    expect(options?.resolveOnOutputMatch?.({ stdout: '', stderr: stdout })).toBe(false);
     expect(debugEvents).toEqual([
       'provider_one_shot_diagnostic_start',
       'provider_one_shot_diagnostic_complete',
     ]);
   });
 
-  it('accepts PONG from stderr when stdout also contains diagnostic output', async () => {
+  it('rejects a nonce response echoed on stderr', async () => {
     const spawnProbe = vi
       .fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>()
-      .mockResolvedValue({
+      .mockImplementation(async (_command, args) => ({
         exitCode: 0,
         stdout: 'provider diagnostic banner',
-        stderr: 'PONG',
-      });
+        stderr: buildProbeResponse(args),
+      }));
     const appendPreflightDebugLog =
       vi.fn<TeamProvisioningProviderDiagnosticsPorts['appendPreflightDebugLog']>();
     const ports = createFakePorts({ spawnProbe, appendPreflightDebugLog });
@@ -390,13 +412,153 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
         providerId: 'codex',
         ports,
       })
-    ).resolves.toEqual({});
+    ).resolves.toMatchObject({
+      warning: expect.stringContaining('nonce-bound probe response on stdout'),
+    });
 
     expect(spawnProbe).toHaveBeenCalledOnce();
     expect(appendPreflightDebugLog).toHaveBeenLastCalledWith(
       'provider_one_shot_diagnostic_complete',
-      expect.objectContaining({ ok: true })
+      expect.objectContaining({ ok: false, reason: 'unexpected_output' })
     );
+  });
+
+  it('rejects prompt echoes and mismatched nonce responses', async () => {
+    const spawnProbe = vi
+      .fn<TeamProvisioningProviderDiagnosticsPorts['spawnProbe']>()
+      .mockImplementationOnce(async (_command, args) => ({
+        exitCode: 0,
+        stdout: args.find((arg) => arg.includes('Set nonce to ')) ?? '',
+        stderr: '',
+      }));
+    const ports = createFakePorts({ spawnProbe });
+
+    const result = await runProviderOneShotDiagnostic({
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      env: { PATH: '/bin' },
+      providerId: 'codex',
+      ports,
+    });
+
+    expect(result.warning).toContain('nonce-bound probe response');
+  });
+
+  it('classifies a production-shaped selected-model probe only as targeted liveness', async () => {
+    const exactCheck = {
+      providerId: 'codex' as const,
+      providerBackendId: 'codex-native' as const,
+      model: 'gpt-5.4',
+      effort: 'xhigh' as const,
+    };
+    const matchingPorts = createFakePorts({
+      spawnProbe: vi.fn(async (_command, args) => ({
+        exitCode: 0,
+        stdout: buildProbeResponse(args),
+        stderr: '',
+      })),
+    });
+    await expect(
+      runProviderOneShotDiagnostic({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        providerId: 'codex',
+        exactCheck,
+        ports: matchingPorts,
+      })
+    ).resolves.toEqual({ targetedLiveness: exactCheck });
+  });
+
+  it('classifies a production-shaped Gemini selected-model probe only as targeted liveness', async () => {
+    const target = {
+      providerId: 'gemini' as const,
+      providerBackendId: 'cli-sdk' as const,
+      model: 'gemini-2.5-pro',
+      effort: 'high' as const,
+    };
+    const ports = createFakePorts({
+      spawnProbe: vi.fn(async (_command, args) => ({
+        exitCode: 0,
+        stdout: buildProbeResponse(args),
+        stderr: '',
+      })),
+    });
+
+    await expect(
+      runProviderOneShotDiagnostic({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        providerId: 'gemini',
+        exactCheck: target,
+        ports,
+      })
+    ).resolves.toEqual({ targetedLiveness: target });
+  });
+
+  it('never labels a request-derived or assistant-authored tuple as actual execution', async () => {
+    const ports = createFakePorts({
+      spawnProbe: vi.fn(async (_command, args) => ({
+        exitCode: 0,
+        stdout: JSON.stringify({
+          schema: 'agent-teams-provider-probe-response-v1',
+          nonce: extractProbeNonce(args),
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'xhigh',
+        }),
+        stderr: '',
+      })),
+    });
+
+    const result = await runProviderOneShotDiagnostic({
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      env: { PATH: '/bin' },
+      providerId: 'codex',
+      exactCheck: {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.4',
+        effort: 'xhigh',
+      },
+      ports,
+    });
+
+    expect(result).toEqual({
+      targetedLiveness: {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.4',
+        effort: 'xhigh',
+      },
+    });
+    expect(result).not.toHaveProperty('execution');
+    expect(result).not.toHaveProperty('trustedExecutionMetadata');
+  });
+
+  it('does not authorize exact execution when the nonce-bound probe times out', async () => {
+    const ports = createFakePorts({
+      spawnProbe: vi.fn().mockRejectedValue(new Error('Timeout running: fake probe')),
+    });
+    const result = await runProviderOneShotDiagnostic({
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      env: { PATH: '/bin' },
+      providerId: 'codex',
+      exactCheck: {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.4',
+        effort: 'xhigh',
+      },
+      ports,
+    });
+
+    expect(result.targetedLiveness).toBeUndefined();
+    expect(result.warning).toContain('timed out');
   });
 
   it('reports Gemini authentication without suggesting Anthropic credentials', async () => {

@@ -1,3 +1,4 @@
+import { assertLiveTeamRuntimeSelectionProvenance } from '@shared/utils/liveTeamRuntimeSelectionProvenance';
 import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 
@@ -27,6 +28,10 @@ import {
   prepareDeterministicLaunchSetup,
 } from './TeamProvisioningLaunchDeterministicSetupFlow';
 import {
+  asRosterLaunchKnownNoStartError,
+  RosterLaunchKnownNoStartError,
+} from './TeamProvisioningRosterLaunchOutcome';
+import {
   APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
   type ProvisioningRun,
 } from './TeamProvisioningRunModel';
@@ -44,6 +49,17 @@ import type {
 } from '@shared/types';
 
 const logger = createLogger('Service:TeamProvisioning');
+
+async function runKnownNoStartPreflight<T>(
+  context: string,
+  operation: () => Promise<T> | T
+): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    throw asRosterLaunchKnownNoStartError(error, context);
+  }
+}
 
 export interface TeamProvisioningCreateLaunchOrchestrationServiceHost {
   anthropicApiKeyHelperCleanupRetryOwner: AnthropicApiKeyHelperCleanupRetryOwner;
@@ -120,8 +136,11 @@ export async function createTeamInnerWithService(
   request: TeamCreateRequest,
   onProgress: (progress: TeamProvisioningProgress) => void
 ): Promise<TeamCreateResponse> {
+  assertLiveTeamRuntimeSelectionProvenance(request);
   service.cleanedStoppedTeamOpenCodeRuntimeLanes.delete(request.teamName);
-  await service.anthropicApiKeyHelperCleanupRetryOwner.retryPendingForTeam(request.teamName);
+  await runKnownNoStartPreflight('Team cleanup preflight failed before process invocation', () =>
+    service.anthropicApiKeyHelperCleanupRetryOwner.retryPendingForTeam(request.teamName)
+  );
   const existingProvisioningRunId = service.runTracking.getResolvableProvisioningRunId(
     request.teamName
   );
@@ -134,27 +153,39 @@ export async function createTeamInnerWithService(
     };
   }
   const stopAllGenerationAtStart = service.stopAllTeamsGeneration;
-  const previousLaunchSnapshot =
-    await service.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(request.teamName);
-  if (service.stopAllTeamsGeneration !== stopAllGenerationAtStart) {
-    throw new Error('Team launch cancelled by app shutdown');
-  }
-  service.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce(
-    request.teamName,
-    previousLaunchSnapshot
+  const previousLaunchSnapshot = await runKnownNoStartPreflight(
+    'Team launch snapshot preflight failed before process invocation',
+    () => service.configTaskActivityBoundary.readTaskActivityRepairLaunchSnapshot(request.teamName)
   );
-  assertAppDeterministicBootstrapEnabled();
-  service.initializeToolApprovalSettingsForLaunch(request.teamName, request.skipPermissions);
-  if (service.shouldRouteOpenCodeToRuntimeAdapter(request)) {
+  if (service.stopAllTeamsGeneration !== stopAllGenerationAtStart) {
+    throw new RosterLaunchKnownNoStartError('Team launch cancelled by app shutdown');
+  }
+  await runKnownNoStartPreflight('Team launch preflight failed before process invocation', () => {
+    service.configTaskActivityBoundary.repairStaleTaskActivityIntervalsOnce(
+      request.teamName,
+      previousLaunchSnapshot
+    );
+    assertAppDeterministicBootstrapEnabled();
+    service.initializeToolApprovalSettingsForLaunch(request.teamName, request.skipPermissions);
+  });
+  const runId = request.rosterTransactionId ?? randomUUID();
+  if (
+    await runKnownNoStartPreflight('Team provider routing failed before process invocation', () =>
+      service.shouldRouteOpenCodeToRuntimeAdapter(request)
+    )
+  ) {
     return service.createOpenCodeTeamThroughRuntimeAdapter(request, onProgress);
   }
-  assertOpenCodeNotLaunchedThroughLegacyProvisioning(request);
+  await runKnownNoStartPreflight('Team provider validation failed before process invocation', () =>
+    assertOpenCodeNotLaunchedThroughLegacyProvisioning(request)
+  );
 
   const pendingKey = `pending-${randomUUID()}`;
   service.provisioningRunByTeam.set(request.teamName, pendingKey);
   let createSetupLease:
     | Awaited<ReturnType<typeof prepareDeterministicCreateSetupFlow>>['anthropicApiKeyHelperLease']
     | null = null;
+  let enteredSpawnRun = false;
 
   try {
     const runtimeAuthMaterialId = randomUUID();
@@ -164,11 +195,12 @@ export async function createTeamInnerWithService(
       ports: service.createDeterministicCreateSetupFlowPorts(),
     });
     createSetupLease = createSetup.anthropicApiKeyHelperLease;
+    enteredSpawnRun = true;
     return await runDeterministicCreateRunFlow({
       request,
       onProgress,
       createSetup,
-      runId: randomUUID(),
+      runId,
       startedAt: nowIso(),
       stopAllGenerationAtStart,
       disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
@@ -193,7 +225,10 @@ export async function createTeamInnerWithService(
     if (service.provisioningRunByTeam.get(request.teamName) === pendingKey) {
       service.provisioningRunByTeam.delete(request.teamName);
     }
-    throw cleanupOwnershipError ?? error;
+    const failure = cleanupOwnershipError ?? error;
+    throw enteredSpawnRun
+      ? failure
+      : asRosterLaunchKnownNoStartError(failure, 'Team setup failed before process invocation');
   }
 }
 
@@ -202,7 +237,10 @@ export async function launchTeamInnerWithService(
   request: TeamLaunchRequest,
   onProgress: (progress: TeamProvisioningProgress) => void
 ): Promise<TeamLaunchResponse> {
-  await service.anthropicApiKeyHelperCleanupRetryOwner.retryPendingForTeam(request.teamName);
+  assertLiveTeamRuntimeSelectionProvenance(request);
+  await runKnownNoStartPreflight('Team cleanup preflight failed before process invocation', () =>
+    service.anthropicApiKeyHelperCleanupRetryOwner.retryPendingForTeam(request.teamName)
+  );
   const existingProvisioningRunId = service.runTracking.getResolvableProvisioningRunId(
     request.teamName
   );
@@ -215,12 +253,20 @@ export async function launchTeamInnerWithService(
     };
   }
   const stopAllGenerationAtStart = service.stopAllTeamsGeneration;
-  assertAppDeterministicBootstrapEnabled();
-  service.initializeToolApprovalSettingsForLaunch(request.teamName, request.skipPermissions);
-  if (service.shouldRouteOpenCodeToRuntimeAdapter(request)) {
+  await runKnownNoStartPreflight('Team launch preflight failed before process invocation', () => {
+    assertAppDeterministicBootstrapEnabled();
+    service.initializeToolApprovalSettingsForLaunch(request.teamName, request.skipPermissions);
+  });
+  if (
+    await runKnownNoStartPreflight('Team provider routing failed before process invocation', () =>
+      service.shouldRouteOpenCodeToRuntimeAdapter(request)
+    )
+  ) {
     return service.launchOpenCodeTeamThroughRuntimeAdapter(request, onProgress);
   }
-  assertOpenCodeNotLaunchedThroughLegacyProvisioning(request);
+  await runKnownNoStartPreflight('Team provider validation failed before process invocation', () =>
+    assertOpenCodeNotLaunchedThroughLegacyProvisioning(request)
+  );
 
   const pendingKey = `pending-${randomUUID()}`;
   service.provisioningRunByTeam.set(request.teamName, pendingKey);
@@ -230,6 +276,7 @@ export async function launchTeamInnerWithService(
         { kind: 'prepared' }
       >['anthropicApiKeyHelperLease']
     | null = null;
+  let enteredSpawnRun = false;
 
   try {
     const setup = await prepareDeterministicLaunchSetup(
@@ -243,8 +290,16 @@ export async function launchTeamInnerWithService(
         alreadyRunning: true,
       };
     }
+    if (setup.kind === 'complete') {
+      return {
+        runId: setup.runId,
+        launchStatus: 'already_running',
+        alreadyRunning: true,
+      };
+    }
     launchSetupLease = setup.anthropicApiKeyHelperLease;
 
+    enteredSpawnRun = true;
     return runDeterministicLaunchRunFlow(
       {
         request,
@@ -268,6 +323,9 @@ export async function launchTeamInnerWithService(
     if (service.provisioningRunByTeam.get(request.teamName) === pendingKey) {
       service.provisioningRunByTeam.delete(request.teamName);
     }
-    throw cleanupOwnershipError ?? error;
+    const failure = cleanupOwnershipError ?? error;
+    throw enteredSpawnRun
+      ? failure
+      : asRosterLaunchKnownNoStartError(failure, 'Team setup failed before process invocation');
   }
 }

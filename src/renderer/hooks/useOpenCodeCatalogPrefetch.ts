@@ -167,6 +167,9 @@ export function useOpenCodeCatalogPrefetch({
     if (requestRevisionByScopeRef.current.get(normalizedProjectPath) === scopeRevision) {
       return;
     }
+    if (retryExhaustedRevisionByScopeRef.current.get(normalizedProjectPath) === scopeRevision) {
+      return;
+    }
     if (retryTimerByScopeRef.current.has(normalizedProjectPath)) {
       return;
     }
@@ -210,6 +213,7 @@ export function useOpenCodeCatalogPrefetch({
         silent: true,
         checkReason: 'launch_preflight',
         projectPath: requestScope,
+        intent: 'passive',
       }).then(
         (loaded) => {
           if (requestRevisionByScopeRef.current.get(requestScope) === requestScopeRevision) {

@@ -1,8 +1,11 @@
+import { normalizePersistedOpenCodeStrictLaunchAttempt } from '@shared/types/openCodeStrictLaunch';
+import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizePersistedProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
+import type { LegacyPartialLaunchStateFile } from './TeamLaunchStateLegacyTypes';
 import type {
   MemberLaunchState,
   MemberSpawnLivenessSource,
@@ -19,17 +22,7 @@ import type {
   TeamAgentRuntimePidSource,
   TeamLaunchAggregateState,
 } from '@shared/types';
-
-interface LegacyPartialLaunchStateFile {
-  version?: unknown;
-  state?: unknown;
-  updatedAt?: unknown;
-  leadSessionId?: unknown;
-  expectedMembers?: unknown;
-  confirmedMembers?: unknown;
-  missingMembers?: unknown;
-}
-
+import type { ProviderBackendMigrationSource } from '@shared/utils/providerBackend';
 type RuntimeMemberSpawnState = Pick<
   MemberSpawnStatusEntry,
   | 'launchState'
@@ -55,7 +48,6 @@ type RuntimeMemberSpawnState = Pick<
   | 'runtimeModel'
   | 'updatedAt'
 >;
-
 function normalizePendingPermissionRequestIds(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
@@ -66,13 +58,11 @@ function normalizePendingPermissionRequestIds(value: unknown): string[] | undefi
     .filter((item) => item.length > 0);
   return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
 }
-
 function normalizeRuntimePid(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0
     ? Math.trunc(value)
     : undefined;
 }
-
 function normalizeLivenessKind(value: unknown): TeamAgentRuntimeLivenessKind | undefined {
   return value === 'confirmed_bootstrap' ||
     value === 'runtime_process' ||
@@ -85,7 +75,6 @@ function normalizeLivenessKind(value: unknown): TeamAgentRuntimeLivenessKind | u
     ? value
     : undefined;
 }
-
 function preservesStrongRuntimeAlive(
   value:
     | {
@@ -102,7 +91,6 @@ function preservesStrongRuntimeAlive(
       value.livenessKind === 'runtime_process')
   );
 }
-
 function isOpenCodeSecondaryBootstrapPending(
   member: Pick<
     PersistedTeamLaunchMemberState,
@@ -123,7 +111,6 @@ function isOpenCodeSecondaryBootstrapPending(
     member.hardFailure !== true
   );
 }
-
 function isPersistedBootstrapStalled(
   member: Pick<
     PersistedTeamLaunchMemberState,
@@ -155,7 +142,6 @@ function isPersistedBootstrapStalled(
     hasMaterializedOpenCodeRuntimeMarker
   );
 }
-
 function normalizePidSource(value: unknown): TeamAgentRuntimePidSource | undefined {
   return value === 'lead_process' ||
     value === 'tmux_pane' ||
@@ -167,17 +153,14 @@ function normalizePidSource(value: unknown): TeamAgentRuntimePidSource | undefin
     ? value
     : undefined;
 }
-
 function normalizeDiagnosticSeverity(
   value: unknown
 ): TeamAgentRuntimeDiagnosticSeverity | undefined {
   return value === 'info' || value === 'warning' || value === 'error' ? value : undefined;
 }
-
 function normalizeOptionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
-
 function normalizeOpenCodeAppManagedBootstrapCandidate(
   value: unknown
 ): OpenCodeAppManagedBootstrapCandidate | undefined {
@@ -231,7 +214,6 @@ function normalizeOpenCodeAppManagedBootstrapCandidate(
     ...(agent ? { agent } : {}),
   };
 }
-
 function decodeJsonStringLiteral(value: string): string {
   try {
     return JSON.parse(`"${value}"`) as string;
@@ -239,7 +221,6 @@ function decodeJsonStringLiteral(value: string): string {
     return value.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
   }
 }
-
 function extractLooseJsonStringField(text: string, fieldName: string): string | undefined {
   const strictMatch = new RegExp(`"${fieldName}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`).exec(text);
   if (strictMatch?.[1]) {
@@ -249,14 +230,12 @@ function extractLooseJsonStringField(text: string, fieldName: string): string | 
   const looseMatch = new RegExp(`"${fieldName}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)$`).exec(text);
   return looseMatch?.[1] ? decodeJsonStringLiteral(looseMatch[1]).trim() || undefined : undefined;
 }
-
 function joinUniqueReasonParts(parts: readonly (string | undefined)[]): string | undefined {
   const uniqueParts = Array.from(
     new Set(parts.map((part) => part?.trim()).filter((part): part is string => !!part))
   );
   return uniqueParts.length > 0 ? uniqueParts.join(': ') : undefined;
 }
-
 function extractMessageSendRoutingReason(text: string): string | undefined {
   const trimmed = text.trim();
   if (!trimmed.includes('Message sent to') && !trimmed.includes('"routing"')) {
@@ -292,11 +271,9 @@ export function normalizeLaunchFailureReasonText(value: unknown): string | undef
   }
   return extractMessageSendRoutingReason(text) ?? text;
 }
-
 function normalizeMemberName(name: string): string {
   return name.trim();
 }
-
 function buildDiagnostics(
   member: Pick<
     PersistedTeamLaunchMemberState,
@@ -479,18 +456,16 @@ function deriveMemberLaunchState(
   }
   return 'starting';
 }
-
 function toBoolean(value: unknown): boolean {
   return value === true;
 }
-
 function normalizeFastMode(value: unknown): PersistedTeamLaunchMemberState['selectedFastMode'] {
   return value === 'inherit' || value === 'on' || value === 'off' ? value : undefined;
 }
-
 function normalizeLaunchIdentity(
   value: unknown,
-  fallbackProviderId?: PersistedTeamLaunchMemberState['providerId']
+  fallbackProviderId: PersistedTeamLaunchMemberState['providerId'] | undefined,
+  source: ProviderBackendMigrationSource
 ): ProviderModelLaunchIdentity | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
@@ -518,9 +493,10 @@ function normalizeLaunchIdentity(
   return {
     providerId,
     providerBackendId:
-      migrateProviderBackendId(
+      normalizePersistedProviderBackendId(
         providerId,
-        typeof raw.providerBackendId === 'string' ? raw.providerBackendId : undefined
+        typeof raw.providerBackendId === 'string' ? raw.providerBackendId : undefined,
+        source === 'explicit-selection' ? 'current-version' : 'legacy-unversioned'
       ) ?? null,
     billingMode: normalizeProviderBillingMode(raw.billingMode),
     selectedModel: typeof raw.selectedModel === 'string' ? raw.selectedModel.trim() || null : null,
@@ -531,26 +507,8 @@ function normalizeLaunchIdentity(
     catalogSource,
     catalogFetchedAt:
       typeof raw.catalogFetchedAt === 'string' ? raw.catalogFetchedAt.trim() || null : null,
-    selectedEffort:
-      raw.selectedEffort === 'none' ||
-      raw.selectedEffort === 'minimal' ||
-      raw.selectedEffort === 'low' ||
-      raw.selectedEffort === 'medium' ||
-      raw.selectedEffort === 'high' ||
-      raw.selectedEffort === 'xhigh' ||
-      raw.selectedEffort === 'max'
-        ? raw.selectedEffort
-        : null,
-    resolvedEffort:
-      raw.resolvedEffort === 'none' ||
-      raw.resolvedEffort === 'minimal' ||
-      raw.resolvedEffort === 'low' ||
-      raw.resolvedEffort === 'medium' ||
-      raw.resolvedEffort === 'high' ||
-      raw.resolvedEffort === 'xhigh' ||
-      raw.resolvedEffort === 'max'
-        ? raw.resolvedEffort
-        : null,
+    selectedEffort: isTeamEffortLevel(raw.selectedEffort) ? raw.selectedEffort : null,
+    resolvedEffort: isTeamEffortLevel(raw.resolvedEffort) ? raw.resolvedEffort : null,
     selectedFastMode:
       raw.selectedFastMode === 'inherit' ||
       raw.selectedFastMode === 'on' ||
@@ -562,7 +520,6 @@ function normalizeLaunchIdentity(
       typeof raw.fastResolutionReason === 'string' ? raw.fastResolutionReason.trim() || null : null,
   };
 }
-
 function normalizeSources(value: unknown): PersistedTeamLaunchMemberSources | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
@@ -579,11 +536,11 @@ function normalizeSources(value: unknown): PersistedTeamLaunchMemberSources | un
   };
   return Object.values(normalized).some(Boolean) ? normalized : undefined;
 }
-
 function normalizePersistedMemberState(
   memberName: string,
   value: unknown,
-  updatedAtFallback: string
+  updatedAtFallback: string,
+  source: ProviderBackendMigrationSource
 ): PersistedTeamLaunchMemberState | null {
   if (!value || typeof value !== 'object') {
     return null;
@@ -617,22 +574,14 @@ function normalizePersistedMemberState(
   const next: PersistedTeamLaunchMemberState = {
     name: normalizedName,
     providerId,
-    providerBackendId: migrateProviderBackendId(
+    providerBackendId: normalizePersistedProviderBackendId(
       providerId,
-      typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined
+      typeof parsed.providerBackendId === 'string' ? parsed.providerBackendId : undefined,
+      source === 'explicit-selection' ? 'current-version' : 'legacy-unversioned'
     ),
     billingMode: normalizeProviderBillingMode(parsed.billingMode),
     model: typeof parsed.model === 'string' ? parsed.model.trim() || undefined : undefined,
-    effort:
-      parsed.effort === 'none' ||
-      parsed.effort === 'minimal' ||
-      parsed.effort === 'low' ||
-      parsed.effort === 'medium' ||
-      parsed.effort === 'high' ||
-      parsed.effort === 'xhigh' ||
-      parsed.effort === 'max'
-        ? parsed.effort
-        : undefined,
+    effort: isTeamEffortLevel(parsed.effort) ? parsed.effort : undefined,
     selectedFastMode: normalizeFastMode(parsed.selectedFastMode),
     resolvedFastMode:
       typeof parsed.resolvedFastMode === 'boolean' ? parsed.resolvedFastMode : undefined,
@@ -642,7 +591,7 @@ function normalizePersistedMemberState(
         ? parsed.laneKind
         : undefined,
     laneOwnerProviderId: normalizeOptionalTeamProviderId(parsed.laneOwnerProviderId),
-    launchIdentity: normalizeLaunchIdentity(parsed.launchIdentity, providerId),
+    launchIdentity: normalizeLaunchIdentity(parsed.launchIdentity, providerId, source),
     launchState: 'starting',
     skippedForLaunch,
     skipReason: normalizeOptionalString(parsed.skipReason),
@@ -710,16 +659,19 @@ function normalizePersistedMemberState(
   next.diagnostics = next.diagnostics?.length ? next.diagnostics : buildDiagnostics(next);
   return next;
 }
-
 export function createPersistedLaunchSnapshot(params: {
   teamName: string;
   expectedMembers: readonly string[];
   bootstrapExpectedMembers?: readonly string[];
   includeLeadMembers?: boolean;
   leadSessionId?: string;
+  runtimeRunId?: string; primaryLaneIdentity?: ProviderModelLaunchIdentity;
   launchPhase?: PersistedTeamLaunchPhase;
   members?: Record<string, PersistedTeamLaunchMemberState>;
   updatedAt?: string;
+  stoppedAt?: string;
+  stoppedRunId?: string;
+  openCodeStrictLaunchAttempt?: PersistedTeamLaunchSnapshot['openCodeStrictLaunchAttempt'];
 }): PersistedTeamLaunchSnapshot {
   const updatedAt = params.updatedAt ?? new Date().toISOString();
   const shouldKeepExpectedMemberName = (name: string): boolean =>
@@ -736,7 +688,6 @@ export function createPersistedLaunchSnapshot(params: {
   );
   const members = params.members ?? {};
   const launchPhase = params.launchPhase ?? 'active';
-
   for (const name of expectedMembers) {
     if (members[name]) {
       continue;
@@ -754,11 +705,8 @@ export function createPersistedLaunchSnapshot(params: {
     };
   }
 
-  // When the launch is over (finished/reconciled), members still in 'starting' state
-  // (never spawned — agentToolAccepted is false) are unreachable and should be marked
-  // as failed. Without this, they stay as 'pending' forever, causing the UI to show
-  // "Last launch is still reconciling" indefinitely after a crash or incomplete launch.
-  if (launchPhase !== 'active') {
+  // Finalized members never spawned by the agent tool must not remain pending forever.
+  if (launchPhase !== 'active' && !params.stoppedAt) {
     for (const name of expectedMembers) {
       const member = members[name];
       const isRecoverableOpenCodeSecondaryLane =
@@ -785,10 +733,16 @@ export function createPersistedLaunchSnapshot(params: {
 
   const summary = summarizePersistedLaunchMembers(expectedMembers, members);
   return {
-    version: 2,
+    version: 3,
     teamName: params.teamName,
     updatedAt,
+    ...(params.stoppedAt ? { stoppedAt: params.stoppedAt } : {}),
+    ...(params.stoppedRunId ? { stoppedRunId: params.stoppedRunId } : {}),
     ...(params.leadSessionId ? { leadSessionId: params.leadSessionId } : {}),
+    ...(params.runtimeRunId ? { runtimeRunId: params.runtimeRunId } : {}), ...(params.primaryLaneIdentity ? { primaryLaneIdentity: params.primaryLaneIdentity } : {}),
+    ...(params.openCodeStrictLaunchAttempt
+      ? { openCodeStrictLaunchAttempt: params.openCodeStrictLaunchAttempt }
+      : {}),
     launchPhase,
     expectedMembers,
     ...(bootstrapExpectedMembers.length > 0 &&
@@ -797,14 +751,19 @@ export function createPersistedLaunchSnapshot(params: {
       : {}),
     members,
     summary,
-    teamLaunchState: deriveTeamLaunchAggregateState(summary),
+    teamLaunchState: params.stoppedAt
+      ? (summary.skippedCount ?? 0) > 0 && summary.pendingCount === 0
+        ? 'partial_skipped'
+        : 'partial_pending'
+      : deriveTeamLaunchAggregateState(summary),
   };
 }
-
 export function snapshotFromRuntimeMemberStatuses(params: {
   teamName: string;
   expectedMembers: readonly string[];
   leadSessionId?: string;
+  runtimeRunId?: string;
+  memberIdentities?: Readonly<Record<string, Partial<PersistedTeamLaunchMemberState>>>;
   launchPhase?: PersistedTeamLaunchPhase;
   statuses: Record<string, RuntimeMemberSpawnState>;
   updatedAt?: string;
@@ -816,6 +775,7 @@ export function snapshotFromRuntimeMemberStatuses(params: {
     const name = normalizeMemberName(expected);
     if (!name || name === 'user' || isLeadMember({ name })) continue;
     const runtime = params.statuses[name];
+    const identity = params.memberIdentities?.[name];
     const sources: PersistedTeamLaunchMemberSources = {};
     if (runtime?.livenessSource === 'heartbeat') {
       sources.nativeHeartbeat = true;
@@ -833,7 +793,7 @@ export function snapshotFromRuntimeMemberStatuses(params: {
         ? false
         : runtime?.hardFailure === true || launchState === 'failed_to_start';
     const entry: PersistedTeamLaunchMemberState = {
-      name,
+      name, ...identity,
       launchState,
       skippedForLaunch,
       skipReason: runtime?.skipReason,
@@ -843,6 +803,7 @@ export function snapshotFromRuntimeMemberStatuses(params: {
       bootstrapConfirmed: skippedForLaunch ? false : runtime?.bootstrapConfirmed === true,
       hardFailure,
       hardFailureReason: hardFailure ? (runtime?.hardFailureReason ?? runtime?.error) : undefined,
+      ...(params.runtimeRunId ? { runtimeRunId: params.runtimeRunId } : {}),
       pendingPermissionRequestIds: runtime?.pendingPermissionRequestIds?.length
         ? [...new Set(runtime.pendingPermissionRequestIds)]
         : undefined,
@@ -869,7 +830,7 @@ export function snapshotFromRuntimeMemberStatuses(params: {
   return createPersistedLaunchSnapshot({
     teamName: params.teamName,
     expectedMembers: params.expectedMembers,
-    leadSessionId: params.leadSessionId,
+    leadSessionId: params.leadSessionId, runtimeRunId: params.runtimeRunId,
     launchPhase: params.launchPhase,
     members,
     updatedAt,
@@ -954,7 +915,10 @@ export function normalizePersistedLaunchSnapshot(
   }
 
   const maybeLegacy = parsed as LegacyPartialLaunchStateFile;
-  if (maybeLegacy.state === 'partial_launch_failure') {
+  if (
+    maybeLegacy.state === 'partial_launch_failure' &&
+    (maybeLegacy.version === undefined || maybeLegacy.version === 1)
+  ) {
     const expectedMembers = Array.isArray(maybeLegacy.expectedMembers)
       ? maybeLegacy.expectedMembers.filter(
           (name): name is string => typeof name === 'string' && normalizeMemberName(name).length > 0
@@ -1009,9 +973,11 @@ export function normalizePersistedLaunchSnapshot(
   }
 
   const record = parsed as Record<string, unknown>;
-  if (record.version !== 2) {
+  if (record.version !== 2 && record.version !== 3) {
     return null;
   }
+  const migrationSource: ProviderBackendMigrationSource =
+    record.version === 3 ? 'explicit-selection' : 'legacy-storage';
   const expectedMembers = Array.isArray(record.expectedMembers)
     ? record.expectedMembers.filter(
         (name): name is string => typeof name === 'string' && normalizeMemberName(name).length > 0
@@ -1032,7 +998,7 @@ export function normalizePersistedLaunchSnapshot(
       ? (record.members as Record<string, unknown>)
       : {};
   for (const [memberName, value] of Object.entries(rawMembers)) {
-    const normalized = normalizePersistedMemberState(memberName, value, updatedAt);
+    const normalized = normalizePersistedMemberState(memberName, value, updatedAt, migrationSource);
     if (!normalized) continue;
     normalizedMembers[normalized.name] = normalized;
   }
@@ -1042,10 +1008,13 @@ export function normalizePersistedLaunchSnapshot(
         ? record.teamName.trim()
         : teamName,
     expectedMembers,
+    stoppedAt: normalizeOptionalString(record.stoppedAt),
+    stoppedRunId: normalizeOptionalString(record.stoppedRunId),
     leadSessionId:
       typeof record.leadSessionId === 'string' && record.leadSessionId.trim().length > 0
         ? record.leadSessionId.trim()
         : undefined,
+    runtimeRunId: normalizeOptionalString(record.runtimeRunId), primaryLaneIdentity: normalizeLaunchIdentity(record.primaryLaneIdentity, undefined, migrationSource),
     launchPhase:
       record.launchPhase === 'active' ||
       record.launchPhase === 'finished' ||
@@ -1055,5 +1024,8 @@ export function normalizePersistedLaunchSnapshot(
     bootstrapExpectedMembers,
     members: normalizedMembers,
     updatedAt,
+    openCodeStrictLaunchAttempt: normalizePersistedOpenCodeStrictLaunchAttempt(
+      record.openCodeStrictLaunchAttempt
+    ),
   });
 }

@@ -6,9 +6,10 @@ import type {
 } from '@shared/types';
 
 type RuntimeProviderStatusById = ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>;
+type RuntimeProviderLoadingById = ReadonlyMap<TeamProviderId, boolean | null | undefined>;
 type ProviderModelCheckSignatureInput =
   | string
-  | Pick<TeamProvisioningModelCheckRequest, 'model' | 'effort'>;
+  | Pick<TeamProvisioningModelCheckRequest, 'providerBackendId' | 'model' | 'effort'>;
 type SelectedModelChecksByProvider = ReadonlyMap<
   TeamProviderId,
   readonly ProviderModelCheckSignatureInput[]
@@ -35,25 +36,32 @@ function normalizeModelIds(modelIds: readonly string[] | null | undefined): stri
 
 function normalizeModelChecks(
   checks: readonly ProviderModelCheckSignatureInput[] | null | undefined
-): { model: string; effort: string | null }[] {
+): { providerBackendId: string | null; model: string; effort: string | null }[] {
   const seen = new Set<string>();
-  const normalized: { model: string; effort: string | null }[] = [];
+  const normalized: {
+    providerBackendId: string | null;
+    model: string;
+    effort: string | null;
+  }[] = [];
   for (const check of checks ?? []) {
     const model = (typeof check === 'string' ? check : check.model).trim();
     if (!model) {
       continue;
     }
     const effort = typeof check === 'string' ? null : (check.effort ?? null);
-    const key = `${model}\n${effort ?? ''}`;
+    const providerBackendId = typeof check === 'string' ? null : (check.providerBackendId ?? null);
+    const key = `${providerBackendId ?? ''}\n${model}\n${effort ?? ''}`;
     if (seen.has(key)) {
       continue;
     }
     seen.add(key);
-    normalized.push({ model, effort });
+    normalized.push({ providerBackendId, model, effort });
   }
   return normalized.sort(
     (left, right) =>
-      left.model.localeCompare(right.model) || (left.effort ?? '').localeCompare(right.effort ?? '')
+      (left.providerBackendId ?? '').localeCompare(right.providerBackendId ?? '') ||
+      left.model.localeCompare(right.model) ||
+      (left.effort ?? '').localeCompare(right.effort ?? '')
   );
 }
 
@@ -61,6 +69,7 @@ export function buildProviderPrepareMembersSignature(members: readonly MemberDra
   return JSON.stringify(
     members.map((member) => ({
       providerId: member.providerId ?? null,
+      providerBackendId: member.providerBackendId ?? null,
       model: member.model?.trim() || null,
       effort: member.effort ?? null,
       removed: Boolean(member.removedAt),
@@ -86,7 +95,9 @@ export function buildProviderPrepareModelChecksSignature(
 
 export function buildProviderPrepareRuntimeStatusSignature(
   providerIds: readonly TeamProviderId[],
-  runtimeProviderStatusById: RuntimeProviderStatusById
+  runtimeProviderStatusById: RuntimeProviderStatusById,
+  runtimeProviderLoadingById?: RuntimeProviderLoadingById,
+  runtimeProviderGenerationById?: ReadonlyMap<TeamProviderId, string | number | null | undefined>
 ): string {
   return JSON.stringify(
     Array.from(new Set(providerIds))
@@ -95,11 +106,30 @@ export function buildProviderPrepareRuntimeStatusSignature(
         const provider = runtimeProviderStatusById.get(providerId) ?? null;
         return {
           providerId,
+          generation: runtimeProviderGenerationById?.get(providerId) ?? null,
+          loading: runtimeProviderLoadingById?.get(providerId) === true,
           supported: provider?.supported ?? null,
           authenticated: provider?.authenticated ?? null,
           authMethod: provider?.authMethod ?? null,
+          statusCheckOutcome: provider?.statusCheckOutcome ?? null,
+          statusCheckErrorCode: provider?.statusCheckErrorCode ?? null,
+          teamLaunch: provider?.capabilities?.teamLaunch ?? false,
           selectedBackendId: provider?.selectedBackendId ?? null,
           resolvedBackendId: provider?.resolvedBackendId ?? null,
+          modelCatalogRefreshState: provider?.modelCatalogRefreshState ?? null,
+          modelCatalog: provider?.modelCatalog
+            ? {
+                source: provider.modelCatalog.source,
+                availabilityState:
+                  provider.modelCatalog.status === 'stale' ||
+                  provider.modelCatalog.status === 'degraded' ||
+                  provider.modelCatalog.status === 'unavailable'
+                    ? provider.modelCatalog.status
+                    : 'active',
+                configReadState: provider.modelCatalog.diagnostics?.configReadState ?? null,
+                appServerState: provider.modelCatalog.diagnostics?.appServerState ?? null,
+              }
+            : null,
           // Facts:
           // - Selected models are already represented by modelChecksSignature.
           // - OpenCode/Codex live catalogs can expand while preflight is running.
@@ -131,6 +161,7 @@ export function buildProviderPrepareRequestSignature(input: {
   runtimeStatusSignature: string;
   membersSignature?: string;
   modelChecksSignature?: string;
+  allowExperimentalLocalModels?: boolean;
 }): string {
   return JSON.stringify({
     cwd: input.cwd,
@@ -141,5 +172,6 @@ export function buildProviderPrepareRequestSignature(input: {
     runtimeStatusSignature: input.runtimeStatusSignature,
     membersSignature: input.membersSignature ?? null,
     modelChecksSignature: input.modelChecksSignature ?? null,
+    allowExperimentalLocalModels: input.allowExperimentalLocalModels === true,
   });
 }

@@ -17,7 +17,7 @@ import {
   type TeamProvisioningPrepareCoordinatorPorts,
 } from './TeamProvisioningPrepareCoordinator';
 
-import type { TeamLaunchRuntimeAdapter } from '../runtime';
+import type { OpenCodeStrictLaunchDelegationValidator, TeamLaunchRuntimeAdapter } from '../runtime';
 import type {
   ProvisioningEnvResolution,
   TeamRuntimeAuthContext,
@@ -32,9 +32,10 @@ import type {
 
 export interface TeamProvisioningPrepareFacadePorts {
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
+  getOpenCodeStrictLaunchDelegationValidator?(): OpenCodeStrictLaunchDelegationValidator | null;
   buildProvisioningEnv(
     providerId?: TeamProviderId,
-    providerBackendId?: string,
+    providerBackendId?: string | null,
     options?: { teamRuntimeAuth?: TeamRuntimeAuthContext }
   ): Promise<ProvisioningEnvResolution>;
   runProviderOneShotDiagnostic(
@@ -42,8 +43,12 @@ export interface TeamProvisioningPrepareFacadePorts {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId: TeamProviderId,
-    providerArgs: string[]
-  ): Promise<{ warning?: string }>;
+    providerArgs: string[],
+    exactCheck?: import('@shared/types').TeamProvisioningModelCheckRequest
+  ): Promise<{
+    warning?: string;
+    targetedLiveness?: import('@shared/types').TeamProvisioningModelCheckRequest;
+  }>;
   readRuntimeProviderLaunchFacts(params: {
     claudePath: string;
     cwd: string;
@@ -80,6 +85,7 @@ export interface TeamProvisioningPrepareFacadePorts {
 export interface TeamProvisioningPrepareFacadeServiceHost {
   appShellBoundary: {
     getOpenCodeRuntimeAdapter: TeamProvisioningPrepareFacadePorts['getOpenCodeRuntimeAdapter'];
+    getOpenCodeStrictLaunchDelegationValidator?: TeamProvisioningPrepareFacadePorts['getOpenCodeStrictLaunchDelegationValidator'];
   };
   buildProvisioningEnv: TeamProvisioningPrepareFacadePorts['buildProvisioningEnv'];
   providerRuntime: Pick<
@@ -112,16 +118,27 @@ export function createTeamProvisioningPrepareFacadeFromService(
 ): TeamProvisioningPrepareFacade {
   return new TeamProvisioningPrepareFacade({
     getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
+    getOpenCodeStrictLaunchDelegationValidator: () =>
+      service.appShellBoundary.getOpenCodeStrictLaunchDelegationValidator?.() ?? null,
     buildProvisioningEnv: (providerId, providerBackendId, envOptions) =>
       service.buildProvisioningEnv(providerId, providerBackendId, envOptions),
-    runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs) =>
-      service.providerRuntime.runProviderOneShotDiagnostic(
-        claudePath,
-        cwd,
-        env,
-        providerId,
-        providerArgs
-      ),
+    runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs, exactCheck) =>
+      exactCheck
+        ? service.providerRuntime.runProviderOneShotDiagnostic(
+            claudePath,
+            cwd,
+            env,
+            providerId,
+            providerArgs,
+            exactCheck
+          )
+        : service.providerRuntime.runProviderOneShotDiagnostic(
+            claudePath,
+            cwd,
+            env,
+            providerId,
+            providerArgs
+          ),
     readRuntimeProviderLaunchFacts: (params) => service.readRuntimeProviderLaunchFacts(params),
     resolveClaudeBinaryPath: options.resolveClaudeBinaryPath,
     probeClaudeRuntime: (claudePath, cwd, env, providerId, providerArgs) =>
@@ -148,10 +165,21 @@ export class TeamProvisioningPrepareFacade {
     this.coordinator = new TeamProvisioningPrepareCoordinator({
       providerProbeCache: ports.providerProbeCache ?? createInMemoryProviderProbeCachePort(),
       getOpenCodeRuntimeAdapter: () => ports.getOpenCodeRuntimeAdapter(),
+      getOpenCodeStrictLaunchDelegationValidator: () =>
+        ports.getOpenCodeStrictLaunchDelegationValidator?.() ?? null,
       buildProvisioningEnv: (providerId, providerBackendId, options) =>
         ports.buildProvisioningEnv(providerId, providerBackendId, options),
-      runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs) =>
-        ports.runProviderOneShotDiagnostic(claudePath, cwd, env, providerId, providerArgs),
+      runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs, exactCheck) =>
+        exactCheck
+          ? ports.runProviderOneShotDiagnostic(
+              claudePath,
+              cwd,
+              env,
+              providerId,
+              providerArgs,
+              exactCheck
+            )
+          : ports.runProviderOneShotDiagnostic(claudePath, cwd, env, providerId, providerArgs),
       readRuntimeProviderLaunchFacts: (params) => ports.readRuntimeProviderLaunchFacts(params),
       resolveClaudeBinaryPath: this.resolveClaudeBinaryPath,
       probeClaudeRuntime: (claudePath, cwd, env, providerId, providerArgs) =>
@@ -181,6 +209,7 @@ export class TeamProvisioningPrepareFacade {
     members: TeamCreateRequest['members'];
     defaults: {
       providerId?: TeamProviderId;
+      providerBackendId?: TeamCreateRequest['providerBackendId'];
       model?: string;
       effort?: TeamCreateRequest['effort'];
     };

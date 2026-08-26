@@ -19,10 +19,11 @@ import {
   projectRuntimeSnapshotResourceFields,
 } from '../runtime-projection';
 import { type TeamAgentRuntimeResourceHistoryRecordInput } from '../TeamAgentRuntimeResourceHistory';
+import { readBootstrapLaunchSnapshot } from '../TeamBootstrapStateReader';
 import {
-  choosePreferredLaunchSnapshot,
-  readBootstrapLaunchSnapshot,
-} from '../TeamBootstrapStateReader';
+  type PersistedLeadRuntimeRouteSource,
+  resolvePersistedLeadRuntimeRoute,
+} from '../teamProviderBackendResolution';
 import {
   addRuntimeRootOwnersFromProcessRows,
   buildProcessUsageStatsFromRows,
@@ -32,6 +33,7 @@ import {
   type RuntimeTelemetryProcessTableRow,
 } from '../TeamRuntimeTelemetry';
 
+import { chooseActiveRunLaunchSnapshot } from './TeamProvisioningActiveRunLaunchSnapshot';
 import {
   isBootstrapProofClearableLaunchFailureReason,
   isProcessBootstrapTransportDiagnostic,
@@ -63,6 +65,7 @@ import {
   hasTeamProvisioningRuntimePermissionBlock,
   readTeamProvisioningBootstrapEvidence,
 } from './TeamProvisioningRuntimeEvidenceReader';
+import { selectCurrentRuntimeIdentity } from './TeamProvisioningRuntimeIdentitySelection';
 import { resolveTeamProvisioningRuntimeLiveness } from './TeamProvisioningRuntimeLiveness';
 import {
   type LiveTeamAgentRuntimeMetadata,
@@ -82,7 +85,6 @@ import type {
   MemberSpawnStatusesSnapshot,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchSnapshot,
-  ProviderModelLaunchIdentity,
   TeamAgentRuntimeBackendType,
   TeamAgentRuntimeDiagnosticSeverity,
   TeamAgentRuntimeEntry,
@@ -91,9 +93,7 @@ import type {
   TeamAgentRuntimeSnapshot,
   TeamConfig,
   TeamCreateRequest,
-  TeamFastMode,
   TeamMember,
-  TeamProviderBackendId,
   TeamProviderId,
 } from '@shared/types';
 
@@ -142,19 +142,12 @@ export interface TeamProvisioningRuntimeSnapshotRun {
     } | null;
   }[];
 }
-
-interface TeamMetaRuntimeSnapshotSource {
-  providerId?: TeamProviderId;
-  providerBackendId?: TeamProviderBackendId | string;
-  fastMode?: TeamFastMode;
-  launchIdentity?: ProviderModelLaunchIdentity;
-}
-
+export { resolvePersistedLeadRuntimeRoute as resolvePersistedRuntimeSnapshotRoute };
 interface RuntimeSnapshotStores {
   runs: ReadonlyMap<string, TeamProvisioningRuntimeSnapshotRun>;
   runtimeAdapterRunByTeam: ReadonlyMap<string, RuntimeAdapterRunSnapshotSource>;
   teamMetaStore: {
-    getMeta(teamName: string): Promise<TeamMetaRuntimeSnapshotSource | null>;
+    getMeta(teamName: string): Promise<PersistedLeadRuntimeRouteSource | null>;
   };
   membersMetaStore: {
     getMembers(teamName: string): Promise<TeamMember[]>;
@@ -165,19 +158,15 @@ interface RuntimeSnapshotStores {
   readConfigSnapshot(teamName: string): Promise<TeamConfig | null>;
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
 }
-
 interface RuntimeSnapshotLogging {
   logDebug(message: string): void;
 }
-
 function nowIso(): string {
   return new Date().toISOString();
 }
-
 function getPersistedLaunchMemberNames(snapshot: PersistedTeamLaunchSnapshot): string[] {
   return Array.from(new Set([...snapshot.expectedMembers, ...Object.keys(snapshot.members)]));
 }
-
 function shouldUseLaunchMemberRuntimeEvidence(
   member: PersistedTeamLaunchMemberState | undefined,
   activeRuntimeRunId: string
@@ -190,7 +179,6 @@ function shouldUseLaunchMemberRuntimeEvidence(
   }
   return isLaunchMemberStatusRelevantToRuntimeRun(member, activeRuntimeRunId);
 }
-
 function resolveActiveRuntimeRunId(
   run: { runId?: string } | null | undefined,
   paramsRunId: string | null | undefined,
@@ -198,7 +186,6 @@ function resolveActiveRuntimeRunId(
 ): string {
   return run?.runId?.trim() || paramsRunId?.trim() || runtimeAdapterRun?.runId?.trim() || '';
 }
-
 function shouldUseRuntimeAdapterRunEvidence(
   runtimeAdapterRun: RuntimeAdapterRunSnapshotSource | undefined,
   activeRuntimeRunId: string
@@ -872,9 +859,10 @@ export async function buildTeamAgentRuntimeSnapshot(
     configuredMembers = [];
   }
   const metaMembers = await params.membersMetaStore.getMembers(params.teamName).catch(() => []);
-  const launchSnapshot = choosePreferredLaunchSnapshot(
+  const launchSnapshot = chooseActiveRunLaunchSnapshot(
     await readBootstrapLaunchSnapshot(params.teamName),
-    await params.launchStateStore.read(params.teamName)
+    await params.launchStateStore.read(params.teamName),
+    activeRuntimeRunId
   );
 
   const spawnStatusSnapshot = await params
@@ -974,9 +962,7 @@ export async function buildTeamAgentRuntimeSnapshot(
       }`
     );
   }
-  // Status/runtime reads can publish evidence while this snapshot is being built.
-  // Timestamp the projection after those asynchronous reads so fresh evidence is
-  // never rejected as future-dated merely because it is newer than function entry.
+  // Timestamp after async evidence reads so fresh evidence is not future-dated.
   const updatedAt = nowIso();
   const persistedRuntimeMembers = params.readPersistedRuntimeMembers(params.teamName);
   const snapshotMembers: Record<string, TeamAgentRuntimeEntry> = {};
@@ -990,7 +976,6 @@ export async function buildTeamAgentRuntimeSnapshot(
       return candidateName.length > 0 && matchesExactTeamMemberName(candidateName, memberName);
     });
   };
-
   const getSpawnStatusMember = (memberName: string): MemberSpawnStatusEntry | undefined => {
     if (!canUseSpawnStatusEvidence) {
       return undefined;
@@ -1001,7 +986,6 @@ export async function buildTeamAgentRuntimeSnapshot(
     }
     return findExactMemberRecordEntry(statuses, memberName)?.[1];
   };
-
   const activeRunMemberByName = new Map<string, TeamMember>();
   const runAllEffectiveMembers = run?.allEffectiveMembers ?? [];
   const activeRunMembers =
@@ -1011,17 +995,23 @@ export async function buildTeamAgentRuntimeSnapshot(
     if (!memberName) continue;
     activeRunMemberByName.set(memberIdentityKey(memberName), member);
   }
-
   const candidateMembers = new Map<string, TeamMember>();
+  const metadataMembersByName = new Map<string, TeamMember>();
   for (const member of configuredMembers) {
     const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
     if (!memberName || isMemberRemovedInMeta(metaMembers, memberName)) continue;
-    candidateMembers.set(memberIdentityKey(memberName), member);
+    const providerId = normalizeOptionalTeamProviderId(member.providerId);
+    candidateMembers.set(memberIdentityKey(memberName), {
+      ...member,
+      providerId,
+      providerBackendId: migrateProviderBackendId(providerId, member.providerBackendId),
+    });
   }
   for (const member of metaMembers) {
     const memberName = typeof member?.name === 'string' ? member.name.trim() : '';
     const identityKey = memberIdentityKey(memberName);
-    if (!memberName || member.removedAt || candidateMembers.has(identityKey)) continue;
+    if (!memberName || member.removedAt) continue;
+    metadataMembersByName.set(identityKey, member);
     candidateMembers.set(identityKey, member);
   }
   for (const memberName of launchSnapshot ? getPersistedLaunchMemberNames(launchSnapshot) : []) {
@@ -1164,6 +1154,9 @@ export async function buildTeamAgentRuntimeSnapshot(
         backendType: 'lead',
         pid,
         runtimeModel,
+        effort: run?.request.effort,
+        selectedFastMode: run?.request.fastMode,
+        runtimeRunId: activeRuntimeRunId || undefined,
         ...runtimeResourceFields,
         pidSource: pid ? 'lead_process' : undefined,
         updatedAt,
@@ -1190,47 +1183,26 @@ export async function buildTeamAgentRuntimeSnapshot(
       memberName
     );
     const runtimeAdapterEvidence = runtimeAdapterEvidenceResolution.evidence;
-    const activeRunMember = activeRunMemberByName.get(memberIdentityKey(memberName));
-    const activeRunModel = activeRunMember?.model?.trim();
-    const activeRunProviderId =
-      normalizeOptionalTeamProviderId(activeRunMember?.providerId) ??
-      inferTeamProviderIdFromModel(activeRunModel);
-    const liveRuntimeModel = liveRuntimeMember?.model?.trim();
-    const liveRuntimeModelProviderId = inferTeamProviderIdFromModel(liveRuntimeModel);
-    const explicitLiveRuntimeProviderId = normalizeOptionalTeamProviderId(
-      liveRuntimeMember?.providerId
-    );
-    const liveRuntimeProviderConflictsWithActive =
-      activeRunProviderId != null &&
-      ((explicitLiveRuntimeProviderId != null &&
-        explicitLiveRuntimeProviderId !== activeRunProviderId) ||
-        (liveRuntimeModelProviderId != null && liveRuntimeModelProviderId !== activeRunProviderId));
-    const canUseLiveRuntimeModel = !!liveRuntimeModel && !liveRuntimeProviderConflictsWithActive;
+    const activeRunMember = findExactActiveRunMember(run, memberName);
+    const metadataMember = metadataMembersByName.get(memberIdentityKey(memberName));
     const backendType =
       liveRuntimeMember?.backendType ??
       normalizeTeamAgentRuntimeBackendType(
         persistedRuntimeMemberRuntimeEvidence?.backendType,
         false
       );
-    const runtimeModel =
-      (canUseLiveRuntimeModel ? liveRuntimeModel : undefined) ??
-      activeRunModel ??
-      launchMember?.model?.trim() ??
-      member.model?.trim() ??
-      undefined;
-    const memberProviderId =
-      activeRunProviderId ??
-      normalizeOptionalTeamProviderId(launchMember?.providerId) ??
-      normalizeOptionalTeamProviderId(member.providerId) ??
-      inferTeamProviderIdFromModel(runtimeModel) ??
-      inferTeamProviderIdFromModel(launchMember?.model) ??
-      inferTeamProviderIdFromModel(member.model);
-    const memberProviderBackendId = migrateProviderBackendId(
-      memberProviderId,
-      activeRunMember?.providerBackendId ??
-        launchMember?.providerBackendId ??
-        member.providerBackendId
-    );
+    const runtimeIdentity = selectCurrentRuntimeIdentity({
+      activeRunMember,
+      liveRuntimeMember,
+      launchMember,
+      runtimeAdapterMember: runtimeAdapterEvidence,
+      metadataMember,
+      fallbackMember: member,
+      hasActiveRuntimeRun: activeRuntimeRunId.length > 0,
+    });
+    const runtimeModel = runtimeIdentity.model;
+    const memberProviderId = runtimeIdentity.providerId;
+    const memberProviderBackendId = runtimeIdentity.providerBackendId;
     const isOpenCodeMember = memberProviderId === 'opencode';
     const runtimeAdapterSessionId =
       typeof runtimeAdapterEvidence?.sessionId === 'string'
@@ -1457,6 +1429,10 @@ export async function buildTeamAgentRuntimeSnapshot(
       backendType,
       providerId: memberProviderId,
       providerBackendId: memberProviderBackendId,
+      effort: runtimeIdentity.effort,
+      selectedFastMode: runtimeIdentity.selectedFastMode,
+      resolvedFastMode: runtimeIdentity.resolvedFastMode,
+      runtimeRunId: activeRuntimeRunId || undefined,
       laneId: activeRunLaneIdentity.laneId ?? launchMember?.laneId,
       laneKind: activeRunLaneIdentity.laneKind ?? launchMember?.laneKind,
       pid: displayPid,
@@ -1486,18 +1462,22 @@ export async function buildTeamAgentRuntimeSnapshot(
   }
 
   const persistedLaunchIdentity = persistedTeamMeta?.launchIdentity;
-  const snapshotProviderId =
-    run?.request.providerId ?? persistedLaunchIdentity?.providerId ?? persistedTeamMeta?.providerId;
+  const persistedRoute = resolvePersistedLeadRuntimeRoute(persistedTeamMeta);
+  const snapshotProviderId = run?.request.providerId ?? persistedRoute.providerId;
   const snapshotProviderBackendId = run
     ? run.request.providerBackendId
-    : persistedLaunchIdentity
-      ? (persistedLaunchIdentity.providerBackendId ?? persistedTeamMeta?.providerBackendId)
-      : persistedTeamMeta?.providerBackendId;
+    : persistedRoute.providerBackendId;
   const snapshot = mapRuntimeProjectionSnapshot({
     teamName: params.teamName,
     updatedAt,
     runId: run?.runId ?? params.runId,
-    providerBackendId: migrateProviderBackendId(snapshotProviderId, snapshotProviderBackendId),
+    providerBackendId: snapshotProviderBackendId
+      ? migrateProviderBackendId(
+          snapshotProviderId,
+          snapshotProviderBackendId,
+          'explicit-selection'
+        )
+      : undefined,
     fastMode:
       run?.request.fastMode ??
       persistedLaunchIdentity?.selectedFastMode ??
@@ -1735,9 +1715,10 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     });
   }
 
-  const persistedLaunchSnapshot: PersistedTeamLaunchSnapshot | null = choosePreferredLaunchSnapshot(
+  const persistedLaunchSnapshot = chooseActiveRunLaunchSnapshot(
     await readBootstrapLaunchSnapshot(params.teamName).catch(() => null),
-    await params.launchStateStore.read(params.teamName).catch(() => null)
+    await params.launchStateStore.read(params.teamName).catch(() => null),
+    activeRuntimeRunId
   );
   const persistedMembers = Object.entries(persistedLaunchSnapshot?.members ?? {});
   for (const [persistedMemberKey, persistedMember] of persistedMembers) {
@@ -2013,9 +1994,7 @@ export async function buildLiveTeamAgentRuntimeMetadata(
       (bootstrapTransportLaunchState === 'runtime_pending_bootstrap' ||
         bootstrapTransportLaunchState === 'failed_to_start') &&
       isProcessBootstrapTransportDiagnostic(bootstrapTransportDiagnostic);
-    // Prefer bootstrap transport diagnostics over generic pid/liveness text
-    // while launch is unconfirmed, otherwise the UI hides the exact stage
-    // where process bootstrap got stuck.
+    // Preserve exact bootstrap-stage diagnostics while launch is unconfirmed.
     const runtimeDiagnostic = hasProcessBootstrapTransportDiagnostic
       ? bootstrapTransportDiagnostic
       : resolved.runtimeDiagnostic;

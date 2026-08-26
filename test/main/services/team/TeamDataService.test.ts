@@ -12,6 +12,7 @@ import { TeamConfigReader } from '../../../../src/main/services/team/TeamConfigR
 import { TeamDataService } from '../../../../src/main/services/team/TeamDataService';
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
 import { TeamProvisioningService } from '../../../../src/main/services/team/TeamProvisioningService';
+import { TeamRosterAuthorizationTransactionService } from '../../../../src/main/services/team/TeamRosterAuthorizationTransactionService';
 import { TeamTaskReader } from '../../../../src/main/services/team/TeamTaskReader';
 import { encodePath, setClaudeBasePathOverride } from '../../../../src/main/utils/pathDecoder';
 
@@ -31,6 +32,18 @@ import type {
 
 const TASK_COMMENT_FORWARDING_ENV = 'CLAUDE_TEAM_TASK_COMMENT_FORWARDING';
 const tempPaths: string[] = [];
+const DEFAULT_LEAD_RUNTIME_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'default' as const,
+  model: 'default' as const,
+  effort: 'default' as const,
+};
+const INHERITED_MEMBER_RUNTIME_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'inherited' as const,
+  effort: 'inherited' as const,
+};
 
 type TeamDataServicePrivate = {
   extractLeadAssistantTextsFromJsonlLines(
@@ -368,6 +381,25 @@ afterEach(async () => {
   );
 });
 
+describe('TeamDataService startup recovery', () => {
+  it('owns one explicit startup recovery attempt and preserves its failure identity', async () => {
+    const scanError = new Error('startup recovery scan failed');
+    const recoverAllTeams = vi
+      .spyOn(TeamRosterAuthorizationTransactionService.prototype, 'recoverAllTeams')
+      .mockRejectedValue(scanError);
+    const service = new TeamDataService();
+
+    expect(recoverAllTeams).not.toHaveBeenCalled();
+
+    const firstStart = service.start();
+    const secondStart = service.start();
+
+    expect(secondStart).toBe(firstStart);
+    await expect(firstStart).rejects.toBe(scanError);
+    expect(recoverAllTeams).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('TeamDataService task projection cache invalidation', () => {
   it('invalidates global task projection cache after direct task mutations', async () => {
     const task: TeamTask = {
@@ -468,8 +500,15 @@ describe('TeamDataService task projection cache invalidation', () => {
     await expect(service.permanentlyDeleteTeam('gone-team')).resolves.toBe(true);
     const firstRemovalCallCount = removeSpy.mock.calls.length;
     expect(firstRemovalCallCount).toBeGreaterThan(0);
+    const firstRemovalPaths = new Set(
+      removeSpy.mock.calls.map(([removedPath]) => path.resolve(String(removedPath)))
+    );
     await expect(service.permanentlyDeleteTeam('gone-team')).resolves.toBe(true);
-    expect(removeSpy).toHaveBeenCalledTimes(firstRemovalCallCount);
+    expect(
+      removeSpy.mock.calls
+        .slice(firstRemovalCallCount)
+        .every(([removedPath]) => !firstRemovalPaths.has(path.resolve(String(removedPath))))
+    ).toBe(true);
 
     await expect(fs.access(teamPath)).rejects.toThrow();
     await expect(fs.access(taskPath)).rejects.toThrow();
@@ -543,6 +582,25 @@ describe('TeamDataService task projection cache invalidation', () => {
 });
 
 describe('TeamDataService draft metadata', () => {
+  it('rejects a provenance-free draft before creating team artifacts', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-provenance-free-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+
+    await expect(
+      new TeamDataService().createTeamConfig({
+        teamName: 'draft-team',
+        cwd: '/sandbox/project',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5',
+        effort: 'high',
+        members: [],
+      })
+    ).rejects.toThrow('provenance is required');
+    await expect(fs.access(path.join(claudeRoot, 'teams', 'draft-team'))).rejects.toThrow();
+  });
+
   it('rejects an existing draft without overwriting its artifacts', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-draft-collision-'));
     tempPaths.push(claudeRoot);
@@ -589,8 +647,20 @@ describe('TeamDataService draft metadata', () => {
     const service = new TeamDataService();
 
     const results = await Promise.allSettled([
-      service.createTeamConfig({ teamName: 'draft-team', members: [{ name: 'alpha' }] }),
-      service.createTeamConfig({ teamName: 'draft-team', members: [{ name: 'beta' }] }),
+      service.createTeamConfig({
+        teamName: 'draft-team',
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
+        members: [
+          { name: 'alpha', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE },
+        ],
+      }),
+      service.createTeamConfig({
+        teamName: 'draft-team',
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
+        members: [
+          { name: 'beta', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE },
+        ],
+      }),
     ]);
 
     expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
@@ -623,6 +693,7 @@ describe('TeamDataService draft metadata', () => {
       skipPermissions: false,
       worktree: 'feature-x',
       extraCliArgs: '--max-turns 5',
+      leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
       members: [
         {
           name: 'builder',
@@ -631,6 +702,12 @@ describe('TeamDataService draft metadata', () => {
           providerId: 'codex',
           model: 'gpt-5.2',
           effort: 'high',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'inherited',
+            model: 'inherited',
+            effort: 'explicit',
+          },
           fastMode: 'on',
         },
       ],
@@ -646,7 +723,7 @@ describe('TeamDataService draft metadata', () => {
       cwd: '/Users/test/project',
       prompt: 'Saved prompt',
       providerId: 'codex',
-      providerBackendId: 'codex-native',
+      providerBackendId: undefined,
       model: 'gpt-5.2',
       effort: 'high',
       fastMode: 'on',
@@ -660,14 +737,96 @@ describe('TeamDataService draft metadata', () => {
           role: 'Engineer',
           workflow: 'Ship focused patches',
           providerId: 'codex',
-          providerBackendId: 'codex-native',
+          providerBackendId: undefined,
           model: 'gpt-5.2',
           effort: 'high',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'inherited',
+            model: 'inherited',
+            effort: 'explicit',
+          },
           fastMode: 'on',
         },
       ],
     });
   });
+
+  it.each(['api', 'adapter', 'auto', 'codex-native'] as const)(
+    'preserves current-schema Codex backend %s through durable create and service restart',
+    async (providerBackendId) => {
+      const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-backend-current-'));
+      tempPaths.push(claudeRoot);
+      setClaudeBasePathOverride(claudeRoot);
+
+      await new TeamDataService().createTeamConfig({
+        teamName: 'draft-team',
+        cwd: '/sandbox/project',
+        providerId: 'codex',
+        providerBackendId,
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
+        members: [
+          {
+            name: 'builder',
+            providerId: 'codex',
+            providerBackendId,
+            runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
+          },
+        ],
+      });
+
+      const teamMeta = JSON.parse(
+        await fs.readFile(path.join(claudeRoot, 'teams', 'draft-team', 'team.meta.json'), 'utf8')
+      ) as { version: number; providerBackendId: string };
+      const membersMeta = JSON.parse(
+        await fs.readFile(path.join(claudeRoot, 'teams', 'draft-team', 'members.meta.json'), 'utf8')
+      ) as { version: number; members: Array<{ providerBackendId: string }> };
+      expect(teamMeta).toMatchObject({ version: 2, providerBackendId });
+      expect(membersMeta).toMatchObject({
+        version: 2,
+        members: [{ providerBackendId }],
+      });
+
+      await expect(new TeamDataService().getSavedRequest('draft-team')).resolves.toMatchObject({
+        providerId: 'codex',
+        providerBackendId,
+        members: [{ name: 'builder', providerBackendId }],
+      });
+    }
+  );
+
+  it.each(['api', 'adapter', 'auto', 'codex-native'] as const)(
+    'migrates legacy Codex backend %s after saved metadata hydration',
+    async (providerBackendId) => {
+      const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-backend-legacy-'));
+      tempPaths.push(claudeRoot);
+      setClaudeBasePathOverride(claudeRoot);
+      const teamDir = path.join(claudeRoot, 'teams', 'draft-team');
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'team.meta.json'),
+        JSON.stringify({
+          version: 1,
+          cwd: '/sandbox/project',
+          providerId: 'codex',
+          providerBackendId,
+          createdAt: 1,
+        })
+      );
+      await fs.writeFile(
+        path.join(teamDir, 'members.meta.json'),
+        JSON.stringify({
+          version: 1,
+          members: [{ name: 'builder', providerId: 'codex', providerBackendId }],
+        })
+      );
+
+      await expect(new TeamDataService().getSavedRequest('draft-team')).resolves.toMatchObject({
+        providerBackendId: 'codex-native',
+        members: [{ providerBackendId: 'codex-native' }],
+      });
+    }
+  );
 
   it('omits removed members from saved request members', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-saved-request-removed-'));
@@ -679,18 +838,21 @@ describe('TeamDataService draft metadata', () => {
       teamName: 'draft-team',
       cwd: '/Users/test/project',
       providerId: 'anthropic',
+      leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
       members: [
         {
           name: 'active-builder',
           role: 'Engineer',
           workflow: 'Keep shipping',
           model: 'claude-sonnet-4.5',
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
         },
         {
           name: 'old-builder',
           role: 'Legacy Engineer',
           workflow: 'Should not be reused',
           model: 'claude-haiku-4.5',
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
         },
       ],
     });
@@ -886,7 +1048,9 @@ function createGetTeamDataHarness(
     getTeamMeta?: () => Promise<TeamMetaFile | null>;
     getState?: () => Promise<KanbanState>;
     readMessages?: () => Promise<InboxMessage[]>;
-    resolveMembers?: (...args: Parameters<TeamMemberResolver['resolveMembers']>) => ResolvedTeamMember[];
+    resolveMembers?: (
+      ...args: Parameters<TeamMemberResolver['resolveMembers']>
+    ) => ResolvedTeamMember[];
     listProcesses?: () => TeamProcess[];
     getMemberAdvisories?: () => Promise<Map<string, unknown>>;
   } = {}
@@ -1092,6 +1256,10 @@ describe('TeamDataService', () => {
     const membersMetaStore = {
       getMembers: vi.fn(async () => []),
       writeMembers,
+      writeMembersUnderLock: writeMembers,
+      withRosterLock: vi.fn(async (_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1126,6 +1294,10 @@ describe('TeamDataService', () => {
     const membersMetaStore = {
       getMembers: vi.fn(async () => []),
       writeMembers,
+      writeMembersUnderLock: writeMembers,
+      withRosterLock: vi.fn(async (_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1174,6 +1346,10 @@ describe('TeamDataService', () => {
         },
       ]),
       writeMembers,
+      writeMembersUnderLock: writeMembers,
+      withRosterLock: vi.fn(async (_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1199,6 +1375,7 @@ describe('TeamDataService', () => {
           providerId: 'codex',
           model: 'gpt-5.2',
           effort: 'high',
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
         },
       ],
     });
@@ -1223,6 +1400,10 @@ describe('TeamDataService', () => {
     const membersMetaStore = {
       getMembers: vi.fn(async () => []),
       writeMembers,
+      writeMembersUnderLock: writeMembers,
+      withRosterLock: vi.fn(async (_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1242,8 +1423,17 @@ describe('TeamDataService', () => {
 
     await service.replaceMembers('runtime-team', {
       members: [
-        { name: 'alice', role: 'Developer', isolation: 'worktree' },
-        { name: 'bob', role: 'Reviewer' },
+        {
+          name: 'alice',
+          role: 'Developer',
+          isolation: 'worktree',
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
+        },
+        {
+          name: 'bob',
+          role: 'Reviewer',
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
+        },
       ],
     });
 
@@ -1265,6 +1455,10 @@ describe('TeamDataService', () => {
     const membersMetaStore = {
       getMembers: vi.fn(async () => []),
       writeMembers,
+      writeMembersUnderLock: writeMembers,
+      withRosterLock: vi.fn(async (_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1294,6 +1488,7 @@ describe('TeamDataService', () => {
           model: 'gpt-5.4',
           effort: 'high',
           fastMode: 'on',
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
         },
       ],
     });
@@ -1343,6 +1538,7 @@ describe('TeamDataService', () => {
       providerId: 'codex',
       providerBackendId: 'codex-native',
       fastMode: 'on',
+      runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
     });
 
     expect(writeMembers).toHaveBeenCalledWith(
@@ -1363,6 +1559,10 @@ describe('TeamDataService', () => {
     const membersMetaStore = {
       getMembers: vi.fn(async () => []),
       writeMembers,
+      writeMembersUnderLock: writeMembers,
+      withRosterLock: vi.fn(async (_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1386,8 +1586,18 @@ describe('TeamDataService', () => {
     await expect(
       service.replaceMembers('runtime-team', {
         members: [
-          { name: 'alice', providerId: 'opencode', model: 'minimax-m2.5-free' },
-          { name: 'bob', providerId: 'opencode', model: 'nemotron-3-super-free' },
+          {
+            name: 'alice',
+            providerId: 'opencode',
+            model: 'minimax-m2.5-free',
+            runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
+          },
+          {
+            name: 'bob',
+            providerId: 'opencode',
+            model: 'nemotron-3-super-free',
+            runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
+          },
         ],
       })
     ).resolves.toBeUndefined();
@@ -1447,6 +1657,7 @@ describe('TeamDataService', () => {
         providerId: 'codex',
         model: 'gpt-5.4',
         effort: 'medium',
+        runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
       })
     ).rejects.toThrow(
       'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.'
@@ -1468,6 +1679,10 @@ describe('TeamDataService', () => {
         },
       ]),
       writeMembers,
+      writeMembersUnderLock: writeMembers,
+      withRosterLock: vi.fn(async (_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1502,7 +1717,15 @@ describe('TeamDataService', () => {
 
     await expect(
       service.replaceMembers('mixed-team', {
-        members: [{ name: 'alice', providerId: 'codex', model: 'gpt-5.4', effort: 'high' }],
+        members: [
+          {
+            name: 'alice',
+            providerId: 'codex',
+            model: 'gpt-5.4',
+            effort: 'high',
+            runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
+          },
+        ],
       })
     ).rejects.toThrow(
       'Live roster mutation on a running mixed team is not supported in V1. Stop the team, edit the roster, then relaunch.'
@@ -1578,6 +1801,10 @@ describe('TeamDataService', () => {
         },
       ]),
       writeMembers,
+      writeMembersUnderLock: writeMembers,
+      withRosterLock: vi.fn(async (_teamName: string, operation: () => Promise<unknown>) =>
+        operation()
+      ),
     } as never;
 
     const service = new TeamDataService(
@@ -1603,6 +1830,7 @@ describe('TeamDataService', () => {
           providerId: 'codex',
           model: 'gpt-5.2',
           effort: 'high',
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
         },
       ],
     });

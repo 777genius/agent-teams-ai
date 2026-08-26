@@ -31,7 +31,18 @@ export function resolveUiOwnedProviderBackendId(
   const normalizedProviderId = normalizeOptionalTeamProviderId(providerId);
   return migrateProviderBackendId(
     normalizedProviderId,
-    provider?.selectedBackendId ?? provider?.resolvedBackendId
+    provider?.resolvedBackendId ?? provider?.selectedBackendId,
+    'explicit-selection'
+  );
+}
+
+export function formatUiOwnedProviderBackendLabel(
+  providerId: TeamProviderId | CliProviderStatus['providerId'] | undefined,
+  provider: Pick<CliProviderStatus, 'selectedBackendId' | 'resolvedBackendId'> | null | undefined
+): string | undefined {
+  return formatProviderBackendLabel(
+    normalizeOptionalTeamProviderId(providerId),
+    resolveUiOwnedProviderBackendId(providerId, provider)
   );
 }
 

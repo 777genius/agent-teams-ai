@@ -97,6 +97,9 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
     adapter: TeamLaunchRuntimeAdapter;
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
+    onInvocationBoundary?: TeamRuntimeLaunchInput['onInvocationBoundary'];
+    onInvocationDispatched?: () => void;
+    assertStillCurrentAfterPersistence?: () => void;
   }): Promise<TeamRuntimeLaunchResult | null>;
   launchSingleMixedSecondaryLane(run: Run, lane: MixedSecondaryRuntimeLaneState): Promise<void>;
   publishMixedSecondaryLaneStatusChange(
@@ -117,7 +120,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
     baseCwd: string,
     members: RunOpenCodeTeamRuntimeAdapterLaunchInput['members']
   ): string;
-  clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName: string, runId: string): Promise<void>;
+  clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName: string, runId: string): Promise<boolean>;
   persistOpenCodeRuntimeAdapterLaunchResult(
     result: TeamRuntimeLaunchResult,
     input: TeamRuntimeLaunchInput
@@ -167,6 +170,10 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
     | 'cancelRuntimeAdapterProvisioning'
     | 'recordCancelledOpenCodeRuntimeAdapterLaunch'
   > & {
+    clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
+      teamName: string,
+      runId: string
+    ): Promise<boolean>;
     stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
       teamName: string,
       runId: string
@@ -262,7 +269,7 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
     getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
       service.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
     clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async (teamName, runId) => {
-      await service.cancellationBoundary.stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
+      return await service.cancellationBoundary.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
         teamName,
         runId
       );
@@ -384,6 +391,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           randomUUID,
           nowIso,
           getStopAllTeamsGeneration: () => host.getStopAllTeamsGeneration(),
+          getStopTeamGeneration: (teamName) => host.getStopTeamGeneration(teamName),
           getRuntimeAdapterRun: (teamName) => host.runtimeAdapterRunByTeam.get(teamName),
           stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
             host.stopOpenCodeRuntimeAdapterTeam(teamName, runId),

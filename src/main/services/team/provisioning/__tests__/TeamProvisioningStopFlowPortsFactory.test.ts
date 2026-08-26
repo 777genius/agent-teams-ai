@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { isExplicitlyStoppedLaunchSnapshot } from '../TeamProvisioningExplicitStopSnapshot';
 import {
   createOpenCodeRuntimeStopFlowPortsFromDeps,
   createTeamProvisioningStopFlowBoundary,
@@ -101,6 +102,7 @@ function createDeps(
   const progressUpdates: TeamProvisioningProgress[] = [];
 
   return {
+    preflightMetadataMutation: vi.fn(async () => undefined),
     getTeamsBasePath: vi.fn(() => '/teams'),
     getSecondaryRuntimeRuns: vi.fn((): SecondaryRuntimeRunEntry[] => []),
     stoppingSecondaryRuntimeTeams: new Set<string>(),
@@ -130,9 +132,10 @@ function createDeps(
     mutableRuns: runs,
     provisioningRunByTeam,
     invalidateRuntimeSnapshotCaches: vi.fn(),
+    invalidateMemberSpawnStatusesCache: vi.fn(),
     pauseActiveIntervalsForTeam: vi.fn(),
     persistentRuntimeCleanup: {
-      stopPersistentTeamMembers: vi.fn(),
+      stopPersistentTeamMembers: vi.fn(() => true),
       cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: vi.fn(),
     },
     openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
@@ -174,6 +177,28 @@ function createDeps(
 }
 
 describe('TeamProvisioningStopFlowPortsFactory', () => {
+  it('fails metadata preflight before stopping or killing any runtime owner', async () => {
+    const preflightError = new Error('Unsupported launch-state version: 999');
+    const deps = createDeps({
+      preflightMetadataMutation: vi.fn(async () => {
+        throw preflightError;
+      }),
+    });
+    const run = makeRun();
+    deps.mutableRuns.set(run.runId, run);
+    deps.provisioningRunByTeam.set(run.teamName, run.runId);
+    deps.aliveRunByTeam.set(run.teamName, run.runId);
+
+    await expect(createTeamProvisioningStopFlowBoundary(deps).stopTeam(run.teamName)).rejects.toBe(
+      preflightError
+    );
+
+    expect(deps.persistentRuntimeCleanup.stopPersistentTeamMembers).not.toHaveBeenCalled();
+    expect(deps.killTeamProcess).not.toHaveBeenCalled();
+    expect(deps.killTeamProcessAndWait).not.toHaveBeenCalled();
+    expect(deps.getOpenCodeRuntimeAdapter).not.toHaveBeenCalled();
+  });
+
   it('builds stop flow deps from service-shaped dependencies', async () => {
     const deps = createDeps();
     const service = {
@@ -184,7 +209,10 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       },
       launchStateStore: {
         read: deps.readLaunchState,
+        assertMutable: vi.fn(async () => undefined),
       },
+      teamMetaStore: { assertMutable: vi.fn(async () => undefined) },
+      membersMetaStore: { assertMutable: vi.fn(async () => undefined) },
       writeLaunchStateSnapshot: deps.writeLaunchStateSnapshot,
       readPersistedTeamProjectPath: deps.readPersistedTeamProjectPath,
       deleteSecondaryRuntimeRun: deps.deleteSecondaryRuntimeRun,
@@ -205,6 +233,9 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       runs: deps.runs,
       provisioningRunByTeam: deps.provisioningRunByTeam,
       invalidateRuntimeSnapshotCaches: deps.invalidateRuntimeSnapshotCaches,
+      runtimeSnapshotCacheBoundary: {
+        invalidateMemberSpawnStatusesCache: deps.invalidateMemberSpawnStatusesCache,
+      },
       taskActivityIntervalService: {
         pauseActiveIntervalsForTeam: deps.pauseActiveIntervalsForTeam,
       },
@@ -375,8 +406,107 @@ describe('TeamProvisioningStopFlowPortsFactory', () => {
       runId,
       detail: 'stopped',
     });
+    expect(deps.writeLaunchStateSnapshot).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({
+        stoppedAt: '2026-01-01T00:00:02.000Z',
+        stoppedRunId: runId,
+        teamLaunchState: 'partial_pending',
+      }),
+      { runId }
+    );
+    const stoppedFence = vi.mocked(deps.writeLaunchStateSnapshot).mock.calls[0]?.[1] ?? null;
+    expect(isExplicitlyStoppedLaunchSnapshot(stoppedFence)).toBe(true);
     expect(
       deps.persistentRuntimeCleanup.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam
     ).toHaveBeenCalledWith(teamName);
+  });
+
+  it('writes a durable stopped fence for a clean persisted snapshot after service restart', async () => {
+    const teamName = 'team-a';
+    const previousLaunchState = {
+      teamName,
+      expectedMembers: ['alice'],
+      members: {
+        alice: {
+          name: 'alice',
+          launchState: 'spawned',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          lastEvaluatedAt: '2026-01-01T00:00:01.000Z',
+          diagnostics: [],
+          runtimePid: 123,
+          runtimeSessionId: 'session-a',
+        },
+      },
+      teamLaunchState: 'clean_success',
+      launchPhase: 'finished',
+    } as unknown as PersistedTeamLaunchSnapshot;
+    const deps = createDeps({
+      runtimeAdapterRunByTeam: new Map(),
+      readLaunchState: vi.fn(async () => previousLaunchState),
+    });
+
+    await createTeamProvisioningStopFlowBoundary(deps).stopTeam(teamName);
+
+    expect(deps.writeLaunchStateSnapshot).toHaveBeenCalledWith(
+      teamName,
+      expect.objectContaining({
+        stoppedAt: '2026-01-01T00:00:02.000Z',
+        teamLaunchState: 'partial_pending',
+        members: {
+          alice: expect.objectContaining({
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+          }),
+        },
+      }),
+      undefined
+    );
+    const written = vi.mocked(deps.writeLaunchStateSnapshot).mock.calls[0]?.[1];
+    expect(isExplicitlyStoppedLaunchSnapshot(written ?? null)).toBe(true);
+    expect(written?.members.alice).not.toHaveProperty('runtimePid');
+    expect(written?.members.alice).not.toHaveProperty('runtimeSessionId');
+  });
+
+  it('writes a standalone durable stopped fence when restart recovery finds no launch state', async () => {
+    const deps = createDeps({
+      runtimeAdapterRunByTeam: new Map(),
+      readLaunchState: vi.fn(async () => null),
+    });
+
+    await createTeamProvisioningStopFlowBoundary(deps).stopTeam('team-a');
+
+    const written = vi.mocked(deps.writeLaunchStateSnapshot).mock.calls[0]?.[1] ?? null;
+    expect(written).toMatchObject({
+      version: 3,
+      teamName: 'team-a',
+      stoppedAt: '2026-01-01T00:00:02.000Z',
+      launchPhase: 'reconciled',
+      expectedMembers: [],
+      members: {},
+    });
+    expect(isExplicitlyStoppedLaunchSnapshot(written)).toBe(true);
+  });
+
+  it('binds a no-run stopped fence to the newest adapter recovery run', async () => {
+    const deps = createDeps({ runtimeAdapterRunByTeam: new Map() });
+    deps.runtimeAdapterProgressByRunId.set(
+      'recovery-run',
+      makeProgress('recovery-run', 'team-a', {
+        state: 'cancelled',
+        updatedAt: '2026-01-01T00:00:03.000Z',
+      })
+    );
+
+    await createTeamProvisioningStopFlowBoundary(deps).stopTeam('team-a');
+
+    expect(deps.writeLaunchStateSnapshot).toHaveBeenCalledWith(
+      'team-a',
+      expect.objectContaining({ stoppedRunId: 'recovery-run' }),
+      { runId: 'recovery-run' }
+    );
   });
 });

@@ -296,6 +296,8 @@ export async function applyPrimaryBootstrapTruthToLaunchReportingSnapshot<
     expectedMembers: snapshot.expectedMembers,
     bootstrapExpectedMembers: snapshot.bootstrapExpectedMembers,
     leadSessionId: snapshot.leadSessionId,
+    runtimeRunId: snapshot.runtimeRunId,
+    primaryLaneIdentity: snapshot.primaryLaneIdentity,
     launchPhase: snapshot.launchPhase,
     members: nextMembers,
     updatedAt,

@@ -10,6 +10,13 @@ import {
 } from '@shared/utils/openCodeWindowsAccessDenied';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 
+import {
+  cloneSupportDiagnostics,
+  escapePrepareRegExp as escapeRegExp,
+  isOpenCodeBridgeNoOutputDiagnostic,
+  mergeSupportDiagnostics,
+  uniquePrepareLines,
+} from './providerPrepareDiagnosticCollections';
 import { hasExperimentalLocalModelOverride } from './providerPrepareDiagnosticsModels';
 
 import type {
@@ -44,7 +51,7 @@ type PrepareProvisioningFn = (
   selectedModels?: string[],
   limitContext?: boolean,
   modelVerificationMode?: TeamProvisioningModelVerificationMode,
-  selectedModelChecks?: TeamProvisioningModelCheckRequest[]
+  selectedModelChecks?: TeamProvisioningModelCheckRequest[], allowExperimentalLocalModels?: boolean
 ) => Promise<TeamProvisioningPrepareResult>;
 
 interface ProviderPrepareDiagnosticsProgress {
@@ -55,52 +62,6 @@ interface ProviderPrepareDiagnosticsProgress {
 }
 
 type TeamProvisioningPrepareIssue = NonNullable<TeamProvisioningPrepareResult['issues']>[number];
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function uniquePrepareLines(lines: (string | null | undefined)[]): string[] {
-  const seen = new Set<string>();
-  const uniqueLines: string[] = [];
-  for (const line of lines) {
-    const trimmed = line?.trim() ?? '';
-    if (!trimmed || seen.has(trimmed)) {
-      continue;
-    }
-    seen.add(trimmed);
-    uniqueLines.push(trimmed);
-  }
-  return uniqueLines;
-}
-
-function isOpenCodeBridgeNoOutputDiagnostic(value: string | null | undefined): boolean {
-  const lower = value?.trim().toLowerCase() ?? '';
-  return (
-    lower.includes('opencode runtime check returned no output') ||
-    lower.includes('bridge stdout was empty') ||
-    lower.includes('opencode_bridge_contract_violation') ||
-    (lower.includes('opencode readiness bridge failed') && lower.includes('contract_violation'))
-  );
-}
-
-function cloneSupportDiagnostics(
-  diagnostics: readonly TeamProvisioningSupportDiagnostic[] | undefined
-): TeamProvisioningSupportDiagnostic[] {
-  return (diagnostics ?? []).map((diagnostic) => ({ ...diagnostic }));
-}
-
-function mergeSupportDiagnostics(
-  target: TeamProvisioningSupportDiagnostic[],
-  incoming: readonly TeamProvisioningSupportDiagnostic[] | undefined
-): void {
-  for (const diagnostic of incoming ?? []) {
-    if (!target.some((existing) => existing.id === diagnostic.id)) {
-      target.push({ ...diagnostic });
-    }
-  }
-}
-
 function withSupportDiagnostics(
   result: ProviderPrepareDiagnosticsResult,
   supportDiagnostics: readonly TeamProvisioningSupportDiagnostic[]
@@ -189,15 +150,15 @@ function normalizeSelectedModelChecks(
     if (!model) {
       continue;
     }
-    const key = `${check.providerId}\n${model}\n${check.effort ?? ''}`;
+    const providerBackendId = Object.hasOwn(check, 'providerBackendId') ? (check.providerBackendId ?? null) : undefined;
+    const key = `${check.providerId}\n${providerBackendId === undefined ? '<missing>' : (providerBackendId ?? '<null>')}\n${model}\n${check.effort ?? ''}`;
     if (seen.has(key)) {
       continue;
     }
     seen.add(key);
     normalized.push({
-      providerId: check.providerId,
-      model,
-      ...(check.effort ? { effort: check.effort } : {}),
+      providerId: check.providerId, ...(providerBackendId !== undefined ? { providerBackendId } : {}),
+      model, ...(check.effort ? { effort: check.effort } : {}),
     });
   }
   return normalized;
@@ -1059,6 +1020,9 @@ export async function runProviderPrepareDiagnostics({
     selectedModelChecks
   );
   const hasExplicitModelChecks = (selectedModelChecks?.length ?? 0) > 0;
+  const requiresAuthoritativeProof =
+    hasExplicitModelChecks &&
+    normalizedModelChecks.every((check) => Object.hasOwn(check, 'providerBackendId'));
   const orderedModelIds = Array.from(new Set(normalizedModelChecks.map((check) => check.model)));
   const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
   if (orderedModelIds.length === 0) {
@@ -1073,7 +1037,7 @@ export async function runProviderPrepareDiagnostics({
     const runtimeDetailLines = createRuntimeDetailLines(runtimeResult, providerId);
     const runtimeWarnings = createRuntimeWarningLines(runtimeResult, providerId);
 
-    if (!runtimeResult.ready) {
+    if (!runtimeResult.ready || (requiresAuthoritativeProof && !runtimeResult.executionProof)) {
       return withSupportDiagnostics(
         {
           status: 'failed',
@@ -1159,8 +1123,10 @@ export async function runProviderPrepareDiagnostics({
       cwd,
       providerId,
       [providerId],
-      undefined,
-      limitContext
+      requiresAuthoritativeProof ? orderedModelIds : undefined,
+      limitContext,
+      'deep',
+      ...(requiresAuthoritativeProof ? [normalizedModelChecks] : [])
     );
     mergeSupportDiagnostics(supportDiagnostics, runtimeResult.supportDiagnostics);
     runtimeDetailLines = createRuntimeDetailLines(runtimeResult, providerId);
@@ -1366,6 +1332,21 @@ export async function runProviderPrepareDiagnostics({
             ? [selectModelChecksForIds(normalizedModelChecks, compatibilityPassedModelIds)]
             : [])
         );
+        if (
+          requiresAuthoritativeProof &&
+          batchedModelResult.ready &&
+          !batchedModelResult.executionProof
+        ) {
+          return withSupportDiagnostics(
+            {
+              status: 'failed',
+              details: ['Authoritative exact-model execution proof was not issued'],
+              warnings: [],
+              modelResultsById: {},
+            },
+            supportDiagnostics
+          );
+        }
         mergeSupportDiagnostics(supportDiagnostics, batchedModelResult.supportDiagnostics);
         runtimeDetailLines = createRuntimeDetailLines(batchedModelResult, providerId).filter(
           (entry) => !isModelScopedEntryForAnyModel(compatibilityPassedModelIds, entry)
@@ -1564,10 +1545,29 @@ export async function runProviderPrepareDiagnostics({
               cwd,
               providerId,
               [providerId],
-              undefined,
+              requiresAuthoritativeProof ? uncachedModelIds : undefined,
               limitContext,
-              'deep'
+              'deep',
+              ...(requiresAuthoritativeProof
+                ? [selectModelChecksForIds(normalizedModelChecks, uncachedModelIds)]
+                : [])
             );
+            if (!deepResult.ready || (requiresAuthoritativeProof && !deepResult.executionProof)) {
+              hasFailure = true;
+              for (const modelId of uncachedModelIds) {
+                const failed = {
+                  status: 'failed',
+                  line: buildModelFailureLine(
+                    providerId,
+                    modelId,
+                    'check failed',
+                    deepResult.message || 'Authoritative execution proof was not issued'
+                  ),
+                } as const;
+                modelLines.set(modelId, failed.line);
+                modelResultsById.set(modelId, failed);
+              }
+            }
             runtimeDetailLines = createRuntimeDetailLines(deepResult, providerId).filter(
               (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
             );

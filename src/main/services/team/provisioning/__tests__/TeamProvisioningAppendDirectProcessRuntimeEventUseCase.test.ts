@@ -76,4 +76,48 @@ describe('createAppendDirectProcessRuntimeEventUseCase', () => {
     const appendedLine = appendFileUtf8.mock.calls[0]?.[1];
     expect(JSON.parse(String(appendedLine))).not.toHaveProperty('detail');
   });
+
+  it('persists cli_started route provenance atomically', async () => {
+    const appendFileUtf8 = vi.fn<AppendDirectProcessRuntimeEventUseCasePorts['appendFileUtf8']>(
+      async () => undefined
+    );
+    const append = createAppendDirectProcessRuntimeEventUseCase({
+      mkdirRecursive: vi.fn(async () => undefined),
+      appendFileUtf8,
+      nowIso: () => '2026-01-01T00:00:00.000Z',
+    });
+
+    await append({
+      type: 'process_spawned',
+      eventsPath: 'team-a/runtime/events.jsonl',
+      pid: 123,
+      teamName: 'team-a',
+      agentName: 'Worker',
+      agentId: 'worker@team-a',
+      runId: 'lead-session',
+      bootstrapRunId: 'bootstrap-run',
+      source: 'test',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      billingMode: 'subscription',
+      model: 'gpt-5.6',
+      effort: 'high',
+      fastMode: 'off',
+    });
+
+    const [cliStarted, processSpawned] = String(appendFileUtf8.mock.calls[0]?.[1])
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    expect(cliStarted).toMatchObject({
+      type: 'cli_started',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      billingMode: 'subscription',
+      model: 'gpt-5.6',
+      effort: 'high',
+      fastMode: 'off',
+    });
+    expect(processSpawned).toMatchObject({ type: 'process_spawned', providerId: 'codex' });
+  });
 });

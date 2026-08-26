@@ -4,6 +4,7 @@ import {
   buildConfiguredProvisioningMember,
   buildPrimaryOwnedMemberSpecForRuntime,
 } from '../TeamProvisioningConfiguredMemberSpecs';
+import { buildEffectiveTeamMemberSpec } from '../TeamProvisioningMemberSpecs';
 
 import type { EffectiveConfiguredMember } from '../TeamProvisioningMemberStatusProjection';
 
@@ -20,6 +21,12 @@ describe('TeamProvisioningConfiguredMemberSpecs', () => {
       model: 'gpt-5',
       effort: 'high',
       fastMode: 'off',
+      runtimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'explicit',
+        model: 'explicit',
+        effort: 'explicit',
+      },
       mcpPolicy: { mode: 'appOnly' },
       agentType: 'specialist',
       removedAt: 123,
@@ -36,6 +43,12 @@ describe('TeamProvisioningConfiguredMemberSpecs', () => {
       model: 'gpt-5',
       effort: 'high',
       fastMode: 'off',
+      runtimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'explicit',
+        model: 'explicit',
+        effort: 'explicit',
+      },
       mcpPolicy: { mode: 'appOnly' },
     });
   });
@@ -47,6 +60,12 @@ describe('TeamProvisioningConfiguredMemberSpecs', () => {
           name: 'Builder',
           role: 'Implementer',
           agentType: 'specialist',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'inherited',
+            model: 'inherited',
+            effort: 'inherited',
+          },
         },
         request: {
           providerId: 'codex',
@@ -65,6 +84,12 @@ describe('TeamProvisioningConfiguredMemberSpecs', () => {
       effort: 'high',
       fastMode: 'on',
       agentType: 'specialist',
+      runtimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'inherited',
+        model: 'inherited',
+        effort: 'inherited',
+      },
     });
   });
 
@@ -75,6 +100,12 @@ describe('TeamProvisioningConfiguredMemberSpecs', () => {
           name: 'Reviewer',
           providerId: 'opencode',
           model: 'opencode-model',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'inherited',
+            model: 'explicit',
+            effort: 'inherited',
+          },
         },
         request: {
           providerId: 'codex',
@@ -87,8 +118,101 @@ describe('TeamProvisioningConfiguredMemberSpecs', () => {
     ).toEqual({
       name: 'Reviewer',
       providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
       model: 'opencode-model',
       effort: undefined,
+      runtimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'inherited',
+        model: 'explicit',
+        effort: 'inherited',
+      },
+    });
+  });
+
+  it('recomputes inherited restart axes from the current lead and preserves explicit axes', () => {
+    expect(
+      buildPrimaryOwnedMemberSpecForRuntime({
+        configuredMember: {
+          name: 'Builder',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5',
+          effort: 'high',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'inherited',
+            model: 'inherited',
+            effort: 'explicit',
+          },
+        },
+        request: {
+          providerId: 'codex',
+          providerBackendId: 'adapter',
+          model: 'gpt-6',
+          effort: 'xhigh',
+          fastMode: 'off',
+        },
+      })
+    ).toMatchObject({
+      providerBackendId: 'adapter',
+      model: 'gpt-6',
+      effort: 'high',
+      runtimeSelectionProvenance: {
+        providerBackendId: 'inherited',
+        model: 'inherited',
+        effort: 'explicit',
+      },
+    });
+  });
+
+  it('fails closed for a partial legacy selection with missing provenance', () => {
+    expect(() =>
+      buildPrimaryOwnedMemberSpecForRuntime({
+        configuredMember: { name: 'Legacy', model: 'gpt-5', effort: 'high' },
+        request: {
+          providerId: 'codex',
+          providerBackendId: 'adapter',
+          model: 'gpt-6',
+          effort: 'xhigh',
+          fastMode: 'off',
+        },
+      })
+    ).toThrow(/unresolved legacy runtime selection provenance/);
+  });
+
+  it('rematerializes inherited axes for partial-launch continuation at the current roster revision', () => {
+    expect(
+      buildEffectiveTeamMemberSpec(
+        {
+          name: 'PendingWorker',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5',
+          effort: 'high',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'inherited',
+            model: 'explicit',
+            effort: 'inherited',
+          },
+        },
+        {
+          providerId: 'codex',
+          providerBackendId: 'adapter',
+          model: 'gpt-6',
+          effort: 'xhigh',
+        }
+      )
+    ).toMatchObject({
+      providerBackendId: 'adapter',
+      model: 'gpt-5',
+      effort: 'xhigh',
+      runtimeSelectionProvenance: {
+        providerBackendId: 'inherited',
+        model: 'explicit',
+        effort: 'inherited',
+      },
     });
   });
 });

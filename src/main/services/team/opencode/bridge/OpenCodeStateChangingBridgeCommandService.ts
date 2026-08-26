@@ -11,17 +11,32 @@ import {
   type OpenCodeBridgeHandshake,
   type OpenCodeBridgePeerIdentity,
   type OpenCodeBridgeResult,
+  type OpenCodeLaunchTeamCommandBody,
+  type OpenCodeLaunchTeamCommandData,
   type RuntimeStoreManifestEvidence,
   stableHash,
   validateOpenCodeBridgeHandshake,
 } from './OpenCodeBridgeCommandContract';
 import { OpenCodeBridgeCommandLeaseError } from './OpenCodeBridgeCommandLedgerStore';
+import {
+  correlateOpenCodeLaunchAttemptResponseV1,
+  decodeOpenCodeLaunchAttemptResponseV1,
+} from './OpenCodeLaunchAttemptContractV1';
+import { createOpenCodeLaunchRequestCorrelationDigestV1 } from './OpenCodeLaunchAttemptDigestV1';
+import { resolveOpenCodeStrictLaunchLedgerIdentity } from './OpenCodeStrictLaunchLedgerIdentity';
+import {
+  collectValidatedStrictLaunchMemberLinkage,
+  recoverStrictLaunchMemberLinkage,
+  toReconciliationRequiredReplay,
+} from './OpenCodeStrictLaunchMemberLinkage';
 
 import type {
   OpenCodeBridgeCommandLease,
   OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLedger,
+  OpenCodeBridgeCommandLedgerEntry,
 } from './OpenCodeBridgeCommandLedgerStore';
+import type { OpenCodeLaunchAttemptResponse } from './OpenCodeLaunchAttemptContractV1';
 
 const DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS = 10_000;
 const DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS = 100;
@@ -71,6 +86,10 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
   clock?: () => Date;
   leaseAcquireTimeoutMs?: number;
   leaseAcquireRetryDelayMs?: number;
+  failpoints?: {
+    beforeStrictLaunchCompletionPersistence?(): Promise<void> | void;
+    afterStrictLaunchCompletionPersistence?(): Promise<void> | void;
+  };
 }
 
 export class OpenCodeStateChangingBridgeCommandService {
@@ -86,6 +105,9 @@ export class OpenCodeStateChangingBridgeCommandService {
   private readonly clock: () => Date;
   private readonly leaseAcquireTimeoutMs: number | null;
   private readonly leaseAcquireRetryDelayMs: number;
+  private readonly failpoints: NonNullable<
+    OpenCodeStateChangingBridgeCommandServiceOptions['failpoints']
+  >;
 
   constructor(options: OpenCodeStateChangingBridgeCommandServiceOptions) {
     this.expectedClientIdentity = options.expectedClientIdentity;
@@ -102,6 +124,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     this.leaseAcquireTimeoutMs = options.leaseAcquireTimeoutMs ?? null;
     this.leaseAcquireRetryDelayMs =
       options.leaseAcquireRetryDelayMs ?? DEFAULT_COMMAND_LEASE_ACQUIRE_RETRY_DELAY_MS;
+    this.failpoints = options.failpoints ?? {};
   }
 
   async execute<TBody, TData>(input: {
@@ -116,6 +139,54 @@ export class OpenCodeStateChangingBridgeCommandService {
     timeoutMs: number;
   }): Promise<OpenCodeBridgeResult<TData>> {
     const normalizedLaneId = input.laneId ?? null;
+    const genericCommandIdempotencyKey = createOpenCodeBridgeIdempotencyKey({
+      command: input.command,
+      teamName: input.teamName,
+      laneId: normalizedLaneId,
+      runId: input.runId,
+      body: input.body,
+    });
+    const strictLaunchAttemptId =
+      input.command === 'opencode.launchTeam' ? requireStrictLaunchAttemptId(input.body) : null;
+    const strictLaunchRequestHash =
+      input.command === 'opencode.launchTeam'
+        ? createBridgeCommandRequestHash(input, normalizedLaneId, null)
+        : null;
+    const strictLaunchLedgerResolution =
+      input.command === 'opencode.launchTeam' && strictLaunchRequestHash
+        ? resolveOpenCodeStrictLaunchLedgerIdentity({
+            body: input.body as OpenCodeLaunchTeamCommandBody,
+            requestHash: strictLaunchRequestHash,
+            entries: await this.ledger.list(),
+          })
+        : null;
+    const ledgerIdempotencyKey =
+      strictLaunchLedgerResolution?.ledgerIdempotencyKey ?? genericCommandIdempotencyKey;
+
+    if (input.command === 'opencode.launchTeam' && strictLaunchRequestHash) {
+      const entry = strictLaunchLedgerResolution?.existingEntry ?? null;
+      if (entry) {
+        if (entry.requestHash !== strictLaunchRequestHash) {
+          throw new Error('OpenCode bridge idempotency key reused with different payload');
+        }
+        const recoverable =
+          entry.status === 'completed' ||
+          (entry.status === 'started' && entry.strictLaunchResponseJson != null);
+        if (recoverable) {
+          const replay = this.recoverStrictLaunchResult(
+            input.body as OpenCodeLaunchTeamCommandBody,
+            entry
+          );
+          if (entry.status === 'started') {
+            await this.failpoints.beforeStrictLaunchCompletionPersistence?.();
+            await this.ledger.markCompleted({ idempotencyKey: ledgerIdempotencyKey });
+            await this.failpoints.afterStrictLaunchCompletionPersistence?.();
+          }
+          return replay as OpenCodeBridgeResult<TData>;
+        }
+      }
+    }
+
     const manifest = await this.manifestReader.read(input.teamName, normalizedLaneId);
     const enforceManifestHighWatermark = commandRequiresRuntimeStoreManifestPrecondition(
       input.command
@@ -151,13 +222,9 @@ export class OpenCodeStateChangingBridgeCommandService {
       throw new Error(handshakeValidation.reason);
     }
 
-    const idempotencyKey = createOpenCodeBridgeIdempotencyKey({
-      command: input.command,
-      teamName: input.teamName,
-      laneId: normalizedLaneId,
-      runId: input.runId,
-      body: input.body,
-    });
+    const requestHash =
+      strictLaunchRequestHash ??
+      createBridgeCommandRequestHash(input, normalizedLaneId, expectedManifestHighWatermark);
     const commandRequestId = this.requestIdFactory();
     const lease = await this.acquireLease({
       teamName: input.teamName,
@@ -168,6 +235,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     });
 
     try {
+      const bridgeIdempotencyKey = strictLaunchAttemptId ?? genericCommandIdempotencyKey;
       const bodyWithPreconditions = attachBridgePreconditions(input.body, {
         handshakeIdentityHash: handshake.identityHash,
         laneId: normalizedLaneId,
@@ -176,35 +244,62 @@ export class OpenCodeStateChangingBridgeCommandService {
         expectedBehaviorFingerprint: input.behaviorFingerprint,
         expectedManifestHighWatermark,
         commandLeaseId: lease.leaseId,
-        idempotencyKey,
+        idempotencyKey: bridgeIdempotencyKey,
       });
+      let bodyForDispatch = bodyWithPreconditions;
+      let requestCorrelationDigest: string | null = null;
+      if (input.command === 'opencode.launchTeam') {
+        const strictBody = bodyWithPreconditions as unknown as OpenCodeLaunchTeamCommandBody & {
+          preconditions: OpenCodeBridgeCommandPreconditions;
+        };
+        requestCorrelationDigest = createOpenCodeLaunchRequestCorrelationDigestV1({
+          command: strictBody,
+          preconditions: strictBody.preconditions,
+          requestedBudgetMs: input.timeoutMs > 0 ? input.timeoutMs : 300_000,
+        });
+        bodyForDispatch = {
+          ...strictBody,
+          launchAttempt: {
+            ...strictBody.launchAttempt,
+            requestCorrelationDigest,
+          },
+        } as unknown as typeof bodyWithPreconditions;
+      }
 
       const begin = await this.ledger.begin({
-        idempotencyKey,
+        idempotencyKey: ledgerIdempotencyKey,
         requestId: commandRequestId,
         command: input.command,
         teamName: input.teamName,
         laneId: input.laneId,
         runId: input.runId,
-        requestHash: stableHash({
-          command: input.command,
-          teamName: input.teamName,
-          laneId: normalizedLaneId,
-          runId: input.runId,
-          capabilitySnapshotId: input.capabilitySnapshotId,
-          behaviorFingerprint: input.behaviorFingerprint,
-          manifestHighWatermark: expectedManifestHighWatermark,
-          body: input.body,
-        }),
+        requestHash,
       });
 
-      if (begin === 'duplicate_same_payload_completed') {
+      if (
+        begin === 'duplicate_same_payload_completed' ||
+        begin === 'duplicate_same_payload_recoverable'
+      ) {
+        if (input.command === 'opencode.launchTeam') {
+          const entry = await this.ledger.getByIdempotencyKey(ledgerIdempotencyKey);
+          const replay = this.recoverStrictLaunchResult(
+            input.body as OpenCodeLaunchTeamCommandBody,
+            entry
+          );
+          if (begin === 'duplicate_same_payload_recoverable') {
+            await this.failpoints.beforeStrictLaunchCompletionPersistence?.();
+            await this.ledger.markCompleted({ idempotencyKey: ledgerIdempotencyKey });
+            await this.failpoints.afterStrictLaunchCompletionPersistence?.();
+          }
+          await this.leaseStore.release(lease.leaseId);
+          return replay as OpenCodeBridgeResult<TData>;
+        }
         throw new Error('OpenCode bridge command already completed; recover through commandStatus');
       }
 
       const result = await this.bridge.execute<typeof bodyWithPreconditions, TData>(
         input.command,
-        bodyWithPreconditions,
+        bodyForDispatch,
         {
           cwd: input.cwd,
           timeoutMs: input.timeoutMs,
@@ -215,7 +310,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       if (!result.ok) {
         if (isOpenCodeBridgeUnknownOutcomeFailure(result)) {
           await this.ledger.markUnknownAfterTimeout({
-            idempotencyKey,
+            idempotencyKey: ledgerIdempotencyKey,
             error: result.error.message,
           });
           await this.appendUnknownOutcomeDiagnostic({
@@ -224,12 +319,12 @@ export class OpenCodeStateChangingBridgeCommandService {
             laneId: normalizedLaneId,
             runId: input.runId,
             command: input.command,
-            idempotencyKey,
+            idempotencyKey: bridgeIdempotencyKey,
             leaseId: lease.leaseId,
           });
         } else {
           await this.ledger.markFailed({
-            idempotencyKey,
+            idempotencyKey: ledgerIdempotencyKey,
             error: result.error.message,
             retryable: result.error.retryable,
           });
@@ -247,7 +342,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
           manifest,
-          idempotencyKey,
+          idempotencyKey: bridgeIdempotencyKey,
           enforceManifestHighWatermark,
           allowCapabilitySnapshotRecovery: isOpenCodeLaunchCapabilitySnapshotRecoveryAttempt(
             input.command,
@@ -256,19 +351,187 @@ export class OpenCodeStateChangingBridgeCommandService {
         });
       } catch (error) {
         await this.ledger.markFailed({
-          idempotencyKey,
+          idempotencyKey: ledgerIdempotencyKey,
           error: stringifyError(error),
           retryable: false,
         });
         throw error;
       }
-      await this.ledger.markCompleted({ idempotencyKey, response: result });
+      if (input.command === 'opencode.launchTeam') {
+        try {
+          const strictResponse = this.correlateStrictLaunchResult(
+            {
+              command: bodyForDispatch as unknown as OpenCodeLaunchTeamCommandBody,
+              preconditions: bodyForDispatch.preconditions,
+              requestedBudgetMs: input.timeoutMs > 0 ? input.timeoutMs : 300_000,
+            },
+            result.data
+          );
+          if (isRecord(result.data)) {
+            (result.data as Record<string, unknown>).launchAttempt = strictResponse;
+          }
+          await this.ledger.persistStrictLaunchResponse({
+            idempotencyKey: ledgerIdempotencyKey,
+            response: strictResponse,
+            memberLinkage: collectValidatedStrictLaunchMemberLinkage(
+              bodyForDispatch as unknown as OpenCodeLaunchTeamCommandBody,
+              strictResponse,
+              result.data
+            ),
+            requestCorrelationDigest: requireRequestCorrelationDigest(requestCorrelationDigest),
+          });
+        } catch (error) {
+          const message = stringifyError(error);
+          if (message.includes('launchAttempt.requestCorrelationDigest')) {
+            await this.ledger.markUnknownAfterTimeout({
+              idempotencyKey: ledgerIdempotencyKey,
+              error: `${message}; outcome must be reconciled`,
+            });
+          } else {
+            await this.ledger.markFailed({
+              idempotencyKey: ledgerIdempotencyKey,
+              error: message,
+              retryable: false,
+            });
+          }
+          throw error;
+        }
+        await this.failpoints.beforeStrictLaunchCompletionPersistence?.();
+        await this.ledger.markCompleted({ idempotencyKey: ledgerIdempotencyKey });
+        await this.failpoints.afterStrictLaunchCompletionPersistence?.();
+      } else {
+        await this.ledger.markCompleted({ idempotencyKey: ledgerIdempotencyKey, response: result });
+      }
       await this.leaseStore.release(lease.leaseId);
       return result;
     } catch (error) {
       await this.leaseStore.release(lease.leaseId).catch(() => undefined);
       throw error;
     }
+  }
+
+  private correlateStrictLaunchResult(
+    authority: {
+      command: OpenCodeLaunchTeamCommandBody;
+      preconditions: OpenCodeBridgeCommandPreconditions;
+      requestedBudgetMs: number;
+    },
+    data: unknown
+  ): OpenCodeLaunchAttemptResponse {
+    const body = authority.command;
+    if (!Array.isArray(body.members) || !isRecord(body.launchAttempt)) {
+      throw new Error('OpenCode strict launch request is malformed');
+    }
+    const response = isRecord(data) ? data.launchAttempt : undefined;
+    const correlated = correlateOpenCodeLaunchAttemptResponseV1({
+      authority,
+      response,
+    });
+    if (!correlated.ok) {
+      throw new Error(`OpenCode strict launch response failed correlation at ${correlated.field}`);
+    }
+    return correlated.value;
+  }
+
+  private recoverStrictLaunchResult(
+    body: OpenCodeLaunchTeamCommandBody,
+    entry: OpenCodeBridgeCommandLedgerEntry | null
+  ): OpenCodeBridgeResult<OpenCodeLaunchTeamCommandData> {
+    if (!entry?.strictLaunchResponseJson || !entry.responseHash) {
+      throw new Error('Completed OpenCode strict launch response is not durably recoverable');
+    }
+    let stored: unknown;
+    try {
+      stored = JSON.parse(entry.strictLaunchResponseJson);
+    } catch {
+      throw new Error('Durable OpenCode strict launch response is corrupt');
+    }
+    if (stableHash(stored) !== entry.responseHash) {
+      throw new Error('Durable OpenCode strict launch response hash mismatch');
+    }
+    const decoded = decodeOpenCodeLaunchAttemptResponseV1(stored);
+    if (!decoded.ok) {
+      throw new Error(`Durable OpenCode strict launch response is invalid at ${decoded.field}`);
+    }
+    let response = decoded.value;
+    if (
+      !entry.requestCorrelationDigest ||
+      response.launchAttempt.requestCorrelationDigest !== entry.requestCorrelationDigest
+    ) {
+      throw new Error(
+        'Durable OpenCode strict launch response lacks matching request correlation evidence; outcome must be reconciled'
+      );
+    }
+    const partition = [
+      ...response.members.committed.map((member) => member.memberIdentity),
+      ...response.members.failed.map((member) => member.memberIdentity),
+      ...response.members.pending,
+    ];
+    const expectedMembers = body.members.map((member) => member.memberIdentity);
+    if (
+      response.launchAttempt.attemptId !== body.launchAttempt.attemptId ||
+      response.launchAttempt.payloadHash !== body.launchAttempt.payloadHash ||
+      response.launchAttempt.generation !== body.launchAttempt.generation ||
+      response.launchAttempt.providerId !== body.launchAttempt.providerId ||
+      response.launchAttempt.modelId !== body.launchAttempt.modelId ||
+      partition.length !== expectedMembers.length ||
+      expectedMembers.some((identity) => !partition.includes(identity))
+    ) {
+      throw new Error('Durable OpenCode strict launch response does not match its request');
+    }
+    const memberLinkage = recoverStrictLaunchMemberLinkage(entry, body, response);
+    const missingCommittedLinkage = response.members.committed.some((committed) => {
+      const member = body.members.find(
+        (candidate) => candidate.memberIdentity === committed.memberIdentity
+      );
+      return !member || memberLinkage.members[member.name] === undefined;
+    });
+    if (missingCommittedLinkage) {
+      response = toReconciliationRequiredReplay(response);
+    }
+    return {
+      ok: true,
+      schemaVersion: 1,
+      requestId: entry.requestId,
+      command: 'opencode.launchTeam',
+      completedAt: entry.completedAt ?? this.clock().toISOString(),
+      durationMs: 0,
+      runtime: {
+        providerId: 'opencode',
+        binaryPath: null,
+        binaryFingerprint: null,
+        version: null,
+        capabilitySnapshotId: null,
+      },
+      diagnostics: [],
+      data: {
+        runId: body.runId,
+        members: Object.fromEntries(
+          Object.entries(memberLinkage.members).map(([name, linkage]) => [
+            name,
+            {
+              sessionId: linkage.sessionId,
+              launchState: 'confirmed_alive' as const,
+              model: body.selectedModel,
+              evidence: [],
+            },
+          ])
+        ),
+        warnings: [],
+        diagnostics: [
+          {
+            code: missingCommittedLinkage
+              ? 'opencode_strict_launch_replay_reconciliation_required'
+              : 'opencode_strict_launch_durable_replay',
+            severity: 'warning',
+            message: missingCommittedLinkage
+              ? 'Recovered a strict launch without complete durable member linkage; reconciliation is required and runtime ownership is retained.'
+              : 'Recovered the exact sanitized strict launch response and validated member linkage without bridge dispatch.',
+          },
+        ],
+        launchAttempt: response,
+      },
+    };
   }
 
   private async acquireLease(input: {
@@ -404,6 +667,48 @@ function commandRequiresRuntimeStoreManifestPrecondition(
   // monotonic teardown fenced by exact team/lane/run ownership, so app-owned
   // manifest evidence must not prevent the runtime from being terminated.
   return command !== 'opencode.sendMessage' && command !== 'opencode.stopTeam';
+}
+
+function createBridgeCommandRequestHash(
+  input: {
+    command: OpenCodeBridgeCommandName;
+    teamName: string;
+    runId: string | null;
+    capabilitySnapshotId: string | null;
+    behaviorFingerprint: string | null;
+    body: unknown;
+  },
+  normalizedLaneId: string | null,
+  expectedManifestHighWatermark: number | null
+): string {
+  return stableHash({
+    command: input.command,
+    teamName: input.teamName,
+    laneId: normalizedLaneId,
+    runId: input.runId,
+    capabilitySnapshotId: input.capabilitySnapshotId,
+    behaviorFingerprint: input.behaviorFingerprint,
+    manifestHighWatermark: expectedManifestHighWatermark,
+    body: input.body,
+  });
+}
+
+function requireStrictLaunchAttemptId(body: unknown): string {
+  if (!isRecord(body) || !isRecord(body.launchAttempt)) {
+    throw new Error('OpenCode strict launch request is malformed');
+  }
+  const attemptId = body.launchAttempt.attemptId;
+  if (typeof attemptId !== 'string' || attemptId.length === 0) {
+    throw new Error('OpenCode strict launch request is missing attemptId');
+  }
+  return attemptId;
+}
+
+function requireRequestCorrelationDigest(value: string | null): string {
+  if (value === null) {
+    throw new Error('OpenCode strict launch request correlation digest was not computed');
+  }
+  return value;
 }
 
 export function resolveOpenCodeBridgeLeaseAcquireTimeoutMs(input: {

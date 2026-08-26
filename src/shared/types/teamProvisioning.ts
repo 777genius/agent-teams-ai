@@ -1,5 +1,10 @@
 export interface LocalModelLaunchOptions {
   allowExperimentalLocalModels?: boolean;
+  rosterLaunchBinding?: import('./rosterAuthorizationTransaction').RosterAuthorizedLaunchBinding;
+}
+
+export interface RosterBoundLaunchResponse {
+  rosterLaunchOutcome?: import('./rosterAuthorizationTransaction').RosterAuthorizedLaunchResult;
 }
 
 export interface LocalModelIssueMetadata {

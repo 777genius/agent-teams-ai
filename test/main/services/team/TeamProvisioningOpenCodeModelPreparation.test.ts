@@ -369,6 +369,56 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
           'OpenCode is currently busy with another session. Deep model verification will retry when OpenCode is idle.',
       },
     ]);
+    expect(result.processedModelChecks).toEqual([]);
+  });
+
+  it('emits affirmative evidence for each exact successful model and effort check', async () => {
+    const prepare = vi
+      .fn<TeamLaunchRuntimeAdapter['prepare']>()
+      .mockImplementation(async (input) => ({
+        ok: true,
+        providerId: 'opencode',
+        modelId: input.model ?? null,
+        diagnostics: [],
+        warnings: [],
+      }));
+    const adapter = createAdapter({ prepare });
+    const modelChecks = [
+      { modelId: 'openrouter/qwen', effort: 'low' as const },
+      { modelId: 'openrouter/qwen', effort: 'high' as const },
+    ];
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/workspace/project',
+      modelIds: ['openrouter/qwen'],
+      modelChecks,
+      verificationMode: 'deep',
+    });
+
+    expect(prepare.mock.calls.map(([input]) => input.effort)).toEqual(['low', 'high']);
+    expect(result.processedModelChecks).toEqual(modelChecks);
+  });
+
+  it('does not attest a late success for a different exact model', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'openrouter/previous-model',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({ prepare });
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/workspace/project',
+      modelIds: ['openrouter/current-model'],
+      modelChecks: [{ modelId: 'openrouter/current-model', effort: 'medium' }],
+      verificationMode: 'deep',
+    });
+
+    expect(result.processedModelChecks).toEqual([]);
   });
 
   it('blocks the provider after the shared OpenCode readiness timeout is exhausted', async () => {
@@ -605,6 +655,63 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       projectPath: '/workspace/project',
       modelRoute: 'local-lab/team-model',
     });
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it('runs the real execution probe and succeeds only for an explicitly eligible override', async () => {
+    const prepare = vi.fn().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'local-lab/team-model',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({ prepare });
+    const inspectLocalModelRuntime = vi.fn().mockResolvedValue({
+      providerId: 'local-lab', modelId: 'team-model', presetId: 'custom', toolCapable: null,
+      parameterCount: null, trainedContextTokens: null, configuredContextTokens: null,
+      effectiveContextTokens: null, coordinationProbeStatus: 'failed', severity: 'blocking',
+      code: 'local_coordination_probe_failed', message: 'Coordination probe failed.',
+      experimentalOverrideAvailable: true,
+    } as const);
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/workspace/project',
+      modelIds: ['local-lab/team-model'],
+      verificationMode: 'deep',
+      allowExperimentalLocalModels: true,
+      modelChecks: [{ modelId: 'local-lab/team-model', effort: 'high' }],
+      inspectLocalModelRuntime,
+    });
+
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.details).toContain('Selected model local-lab/team-model verified for launch.');
+    expect(prepare).toHaveBeenCalledWith(expect.objectContaining({
+      model: 'local-lab/team-model',
+      effort: 'high',
+      allowExperimentalLocalModels: true,
+    }));
+  });
+
+  it('does not override provider, backend, tool, auth, or runtime failures', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare });
+    const inspectLocalModelRuntime = vi.fn().mockResolvedValue({
+      providerId: 'ollama', modelId: 'qwen', presetId: 'ollama', toolCapable: false,
+      parameterCount: null, trainedContextTokens: null, configuredContextTokens: null,
+      effectiveContextTokens: null, coordinationProbeStatus: null, severity: 'blocking',
+      code: 'local_tools_unsupported', message: 'Tools are unsupported.',
+    } as const);
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      cwd: '/workspace/project',
+      modelIds: ['ollama/qwen'],
+      verificationMode: 'deep',
+      allowExperimentalLocalModels: true,
+      inspectLocalModelRuntime,
+    });
+    expect(result.blockingMessages).toEqual([expect.stringContaining('Tools are unsupported')]);
     expect(prepare).not.toHaveBeenCalled();
   });
 });

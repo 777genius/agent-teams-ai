@@ -43,6 +43,7 @@ export async function materializeOpenCodeRuntimeAdapterDefaults<
 }> {
   const effectiveMembers = buildEffectiveTeamMemberSpecs(params.members, {
     providerId: params.request.providerId,
+    providerBackendId: params.request.providerBackendId,
     model: params.request.model,
     effort: params.request.effort,
   });

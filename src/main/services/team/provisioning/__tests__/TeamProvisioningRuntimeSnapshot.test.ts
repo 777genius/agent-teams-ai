@@ -4,6 +4,7 @@ import {
   buildLiveTeamAgentRuntimeMetadata,
   buildTeamAgentRuntimeSnapshot,
   type PersistedRuntimeMemberLike,
+  resolvePersistedRuntimeSnapshotRoute,
   type RuntimeAdapterRunSnapshotSource,
   type TeamProvisioningRuntimeSnapshotRun,
 } from '../TeamProvisioningRuntimeSnapshot';
@@ -120,7 +121,7 @@ function confirmedOldLaunchMember(
 
 function launchSnapshot(member: PersistedTeamLaunchMemberState): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: TEAM_NAME,
     updatedAt: UPDATED_AT,
     launchPhase: 'finished',
@@ -299,6 +300,7 @@ interface MixedRuntimeFixtureOptions {
   spawnStatusRunId?: string;
   spawnStatusSource?: MemberSpawnStatusesSnapshot['source'];
   advanceClockInSpawnStatusReadMs?: number;
+  metaMembers?: TeamConfig['members'];
 }
 
 async function buildMixedRuntimeMetadata(
@@ -316,7 +318,7 @@ async function buildMixedRuntimeMetadata(
       getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
     },
     membersMetaStore: {
-      getMembers: vi.fn(async () => []),
+      getMembers: vi.fn(async () => options.metaMembers ?? []),
     },
     launchStateStore: {
       read: vi.fn(async () => null),
@@ -361,7 +363,7 @@ async function buildMixedRuntimeSnapshot(
       getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
     },
     membersMetaStore: {
-      getMembers: vi.fn(async () => []),
+      getMembers: vi.fn(async () => options.metaMembers ?? []),
     },
     launchStateStore: {
       read: vi.fn(async () => null),
@@ -482,6 +484,102 @@ async function buildClaudeFinalSnapshot(params: {
 }
 
 describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
+  it.each([
+    ['gemini', 'codex', 'api'],
+    ['codex', 'gemini', 'api'],
+  ] as const)(
+    'does not synthesize an incomplete %s launch identity with %s root backend',
+    (identityProviderId, rootProviderId, rootBackendId) => {
+      expect(
+        resolvePersistedRuntimeSnapshotRoute({
+          providerId: rootProviderId,
+          providerBackendId: rootBackendId,
+          launchIdentity: {
+            providerId: identityProviderId,
+            providerBackendId: null,
+            selectedModel: null,
+            selectedModelKind: 'default',
+            resolvedLaunchModel: null,
+            catalogId: null,
+            catalogSource: 'unavailable',
+            catalogFetchedAt: null,
+            selectedEffort: null,
+            resolvedEffort: null,
+          },
+        })
+      ).toEqual({ providerId: identityProviderId, providerBackendId: undefined });
+    }
+  );
+
+  it.each(['api', 'adapter', 'auto', 'codex-native'] as const)(
+    'preserves active-run Codex backend %s in current team and member projections',
+    async (providerBackendId) => {
+      const currentRun = run();
+      currentRun.request.providerId = 'codex';
+      currentRun.request.providerBackendId = providerBackendId;
+      currentRun.request.members = currentRun.request.members.map((member) => ({
+        ...member,
+        providerId: 'codex',
+        providerBackendId,
+      }));
+      currentRun.effectiveMembers = (currentRun.effectiveMembers ?? []).map((member) => ({
+        ...member,
+        providerId: 'codex',
+        providerBackendId,
+      }));
+      currentRun.allEffectiveMembers = (currentRun.allEffectiveMembers ?? []).map((member) => ({
+        ...member,
+        providerId: 'codex',
+        providerBackendId,
+      }));
+
+      const snapshot = await buildMixedRuntimeSnapshot({
+        run: currentRun,
+        processRows: [],
+      });
+      expect(snapshot.providerBackendId).toBe(providerBackendId);
+      expect(snapshot.members.Worker?.providerBackendId).toBe(providerBackendId);
+    }
+  );
+
+  it('does not let newly staged metadata reclassify an older active run', async () => {
+    const currentRun = run();
+    const activeMember = {
+      ...currentRun.request.members[0]!,
+      providerId: 'codex' as const,
+      providerBackendId: 'adapter' as const,
+      model: 'gpt-5.4-active',
+    };
+    currentRun.request = {
+      ...currentRun.request,
+      providerId: 'codex',
+      providerBackendId: 'adapter',
+      model: 'gpt-5.4-active',
+      members: [activeMember],
+    };
+    currentRun.effectiveMembers = [activeMember];
+    currentRun.allEffectiveMembers = [activeMember];
+
+    const snapshot = await buildMixedRuntimeSnapshot({
+      run: currentRun,
+      processRows: [],
+      metaMembers: [
+        {
+          name: 'Worker',
+          providerId: 'gemini',
+          providerBackendId: 'api',
+          model: 'gemini-staged',
+        },
+      ],
+    });
+
+    expect(snapshot.members.Worker).toMatchObject({
+      providerId: 'codex',
+      providerBackendId: 'adapter',
+      runtimeModel: 'gpt-5.4-active',
+    });
+  });
+
   it('keeps future-dated registered-only live evidence conservative despite raw spawn confirmation', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(UPDATED_AT));

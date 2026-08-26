@@ -7,6 +7,8 @@ import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { EffortLevel, ResolvedTeamMember, TeamFastMode, TeamProviderId } from '@shared/types';
 
+export const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
+
 export function getLocalTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;

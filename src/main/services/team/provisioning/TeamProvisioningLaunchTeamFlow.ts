@@ -11,6 +11,7 @@ import {
   writeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
+import { type DeterministicLaunchContinuation } from './TeamProvisioningLaunchContinuationEvidence';
 import {
   emitProvisioningCheckpoint,
   initializeProvisioningTrace,
@@ -60,6 +61,8 @@ export interface TeamProvisioningLaunchBootstrapRun extends TeamProvisioningChec
   requiresFirstRealTurnSuccess: boolean;
   cancelRequested: boolean;
   processKilled: boolean;
+  launchRosterFingerprint?: `sha256:${string}`;
+  launchContinuation?: DeterministicLaunchContinuation;
 }
 
 export interface TeamProvisioningLaunchMcpConfigBuilder {
@@ -233,6 +236,8 @@ export function createDeterministicLaunchProvisioningRun<
   anthropicApiKeyHelper: TAnthropicApiKeyHelper | null;
   initialLaunchWarnings: string[];
   initialLaunchWarningSource: LaunchRosterSource;
+  launchRosterFingerprint: `sha256:${string}`;
+  launchContinuation?: DeterministicLaunchContinuation;
   createInitialMemberSpawnStatusEntry(): MemberSpawnStatusEntry;
 }) {
   const progress: TeamProvisioningProgress = {
@@ -348,6 +353,8 @@ export function createDeterministicLaunchProvisioningRun<
     lastMemberSpawnAuditConfigReadWarningAt: 0,
     lastMemberSpawnAuditMissingWarningAt: new Map<string, number>(),
     progress,
+    launchRosterFingerprint: input.launchRosterFingerprint,
+    ...(input.launchContinuation ? { launchContinuation: input.launchContinuation } : {}),
   };
 }
 
@@ -388,6 +395,9 @@ export async function materializeDeterministicLaunchBootstrapFiles<
   ports: MaterializeDeterministicLaunchBootstrapFilesPorts<TRun>
 ): Promise<MaterializeDeterministicLaunchBootstrapFilesResult> {
   const { request, run, effectiveMemberSpecs } = input;
+  if (!run.launchRosterFingerprint) {
+    throw new Error('Deterministic launch run omitted its continuation roster fingerprint');
+  }
 
   emitProvisioningCheckpoint(run, 'Reading existing tasks for launch prompt');
   let existingTasks: TeamTask[] = [];
@@ -442,7 +452,11 @@ export async function materializeDeterministicLaunchBootstrapFiles<
     request,
     effectiveMemberSpecs,
     nativeBootstrapBuild.specs,
-    memberMcpLaunchConfigs
+    memberMcpLaunchConfigs,
+    {
+      rosterFingerprint: run.launchRosterFingerprint,
+      ...(run.launchContinuation ? { continuation: run.launchContinuation } : {}),
+    }
   );
   emitProvisioningCheckpoint(run, 'Writing deterministic bootstrap spec file');
   const bootstrapSpecPath = await ports.writeDeterministicBootstrapSpecFile(bootstrapSpec);

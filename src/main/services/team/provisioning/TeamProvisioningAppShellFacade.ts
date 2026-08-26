@@ -1,6 +1,10 @@
 import { TeamProvisioningAppShellBoundary } from './TeamProvisioningAppShellBoundary';
 
-import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../runtime';
+import type {
+  OpenCodeStrictLaunchDelegationValidator,
+  TeamLaunchRuntimeAdapter,
+  TeamRuntimeAdapterRegistry,
+} from '../runtime';
 import type {
   MemberWorkSyncAcceptedReportChecker,
   MemberWorkSyncProofMissingRecoveryScheduler,
@@ -21,6 +25,10 @@ export abstract class TeamProvisioningAppShellFacade {
 
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null {
     return this.appShellBoundary.getOpenCodeRuntimeAdapter();
+  }
+
+  getOpenCodeStrictLaunchDelegationValidator(): OpenCodeStrictLaunchDelegationValidator | null {
+    return this.appShellBoundary.getOpenCodeStrictLaunchDelegationValidator();
   }
 
   setMemberRuntimeAdvisoryInvalidator(

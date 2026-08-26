@@ -1068,7 +1068,7 @@ describe('TeamTaskActivityIntervalService', () => {
     });
 
     const result = new TeamTaskActivityIntervalService().repairStaleIntervalsAfterCrash('alpha', {
-      version: 2,
+      version: 3,
       teamName: 'alpha',
       updatedAt: '2026-05-08T10:31:00.000Z',
       launchPhase: 'active',
@@ -1147,7 +1147,7 @@ describe('TeamTaskActivityIntervalService', () => {
     });
 
     const result = new TeamTaskActivityIntervalService().repairStaleIntervalsAfterCrash('alpha', {
-      version: 2,
+      version: 3,
       teamName: 'alpha',
       updatedAt: '2026-05-08T10:31:00.000Z',
       launchPhase: 'active',

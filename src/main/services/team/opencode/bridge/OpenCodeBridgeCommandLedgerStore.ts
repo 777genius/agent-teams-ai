@@ -25,6 +25,14 @@ export interface OpenCodeBridgeCommandLedgerEntry {
   runId: string | null;
   requestHash: string;
   responseHash: string | null;
+  /** Sanitized strict launch V1 response only; never stores general command data. */
+  strictLaunchResponseJson?: string | null;
+  /** Validated member/session linkage needed to interpret a strict launch replay. */
+  strictLaunchMemberLinkageJson?: string | null;
+  /** Integrity hash for strictLaunchMemberLinkageJson. */
+  strictLaunchMemberLinkageHash?: string | null;
+  /** Evidence required to replay a strict launch without a new handshake or lease. */
+  requestCorrelationDigest?: string | null;
   status: OpenCodeBridgeCommandLedgerStatus;
   retryable: boolean;
   startedAt: string;
@@ -44,7 +52,10 @@ export interface OpenCodeBridgeCommandLease {
   state: 'active' | 'released' | 'expired';
 }
 
-export type OpenCodeBridgeLedgerBeginResult = 'started' | 'duplicate_same_payload_completed';
+export type OpenCodeBridgeLedgerBeginResult =
+  | 'started'
+  | 'duplicate_same_payload_completed'
+  | 'duplicate_same_payload_recoverable';
 
 export class OpenCodeBridgeCommandLedgerError extends Error {
   constructor(message: string) {
@@ -93,6 +104,10 @@ export class OpenCodeBridgeCommandLedger {
         }
 
         if (existing.status === 'started') {
+          if (existing.strictLaunchResponseJson) {
+            outcome = 'duplicate_same_payload_recoverable';
+            return entries;
+          }
           throw new OpenCodeBridgeCommandLedgerError('OpenCode bridge command already started');
         }
 
@@ -118,6 +133,10 @@ export class OpenCodeBridgeCommandLedger {
           runId: input.runId,
           requestHash: input.requestHash,
           responseHash: null,
+          strictLaunchResponseJson: null,
+          strictLaunchMemberLinkageJson: null,
+          strictLaunchMemberLinkageHash: null,
+          requestCorrelationDigest: null,
           status: 'started',
           retryable: false,
           startedAt: now,
@@ -132,17 +151,51 @@ export class OpenCodeBridgeCommandLedger {
 
   async markCompleted(input: {
     idempotencyKey: string;
-    response: unknown;
+    response?: unknown;
     completedAt?: Date;
   }): Promise<void> {
-    await this.updateExisting(input.idempotencyKey, (entry) => ({
-      ...entry,
-      responseHash: stableHash(input.response),
-      status: 'completed',
-      retryable: false,
-      completedAt: (input.completedAt ?? this.clock()).toISOString(),
-      lastError: null,
-    }));
+    await this.updateExisting(input.idempotencyKey, (entry) => {
+      const responseHash =
+        input.response === undefined ? entry.responseHash : stableHash(input.response);
+      if (!responseHash) {
+        throw new OpenCodeBridgeCommandLedgerError(
+          'OpenCode bridge completion requires a response hash'
+        );
+      }
+      return {
+        ...entry,
+        responseHash,
+        status: 'completed',
+        retryable: false,
+        completedAt: (input.completedAt ?? this.clock()).toISOString(),
+        lastError: null,
+      };
+    });
+  }
+
+  async persistStrictLaunchResponse(input: {
+    idempotencyKey: string;
+    response: unknown;
+    memberLinkage: unknown;
+    requestCorrelationDigest: string;
+  }): Promise<void> {
+    const responseJson = JSON.stringify(input.response);
+    const memberLinkageJson = JSON.stringify(input.memberLinkage);
+    await this.updateExisting(input.idempotencyKey, (entry) => {
+      if (entry.command !== 'opencode.launchTeam' || entry.status !== 'started') {
+        throw new OpenCodeBridgeCommandLedgerError(
+          'Strict launch response can only be persisted for a started launch command'
+        );
+      }
+      return {
+        ...entry,
+        responseHash: stableHash(input.response),
+        strictLaunchResponseJson: responseJson,
+        strictLaunchMemberLinkageJson: memberLinkageJson,
+        strictLaunchMemberLinkageHash: stableHash(input.memberLinkage),
+        requestCorrelationDigest: input.requestCorrelationDigest,
+      };
+    });
   }
 
   async markFailed(input: {
@@ -398,6 +451,16 @@ function isLedgerEntry(value: unknown): value is OpenCodeBridgeCommandLedgerEntr
     isNullableString(value.runId) &&
     isNonEmptyString(value.requestHash) &&
     isNullableString(value.responseHash) &&
+    (value.strictLaunchResponseJson === undefined ||
+      isNullableString(value.strictLaunchResponseJson)) &&
+    (value.strictLaunchMemberLinkageJson === undefined ||
+      isNullableString(value.strictLaunchMemberLinkageJson)) &&
+    (value.strictLaunchMemberLinkageHash === undefined ||
+      value.strictLaunchMemberLinkageHash === null ||
+      isSha256(value.strictLaunchMemberLinkageHash)) &&
+    (value.requestCorrelationDigest === undefined ||
+      value.requestCorrelationDigest === null ||
+      isSha256(value.requestCorrelationDigest)) &&
     isLedgerStatus(value.status) &&
     typeof value.retryable === 'boolean' &&
     isNonEmptyString(value.startedAt) &&
@@ -443,4 +506,8 @@ function isNonEmptyString(value: unknown): value is string {
 
 function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === 'string';
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{64}$/.test(value);
 }

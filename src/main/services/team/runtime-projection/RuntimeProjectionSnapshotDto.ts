@@ -18,6 +18,10 @@ export interface RuntimeProjectionMemberEntryInput extends RuntimeProjectionSnap
   backendType?: TeamAgentRuntimeBackendType;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
+  effort?: TeamAgentRuntimeEntry['effort'];
+  selectedFastMode?: TeamFastMode;
+  resolvedFastMode?: boolean;
+  runtimeRunId?: string;
   laneId?: string;
   laneKind?: 'primary' | 'secondary';
   pid?: number;
@@ -94,6 +98,14 @@ export function mapRuntimeProjectionMemberEntry(
     ...(input.backendType ? { backendType: input.backendType } : {}),
     ...(input.providerId ? { providerId: input.providerId } : {}),
     ...(input.providerBackendId ? { providerBackendId: input.providerBackendId } : {}),
+    ...(input.effort ? { effort: input.effort } : {}),
+    ...(input.selectedFastMode ? { selectedFastMode: input.selectedFastMode } : {}),
+    ...(typeof input.resolvedFastMode === 'boolean'
+      ? { resolvedFastMode: input.resolvedFastMode }
+      : {}),
+    ...(nonEmptyString(input.runtimeRunId)
+      ? { runtimeRunId: nonEmptyString(input.runtimeRunId) }
+      : {}),
     ...(input.laneId ? { laneId: input.laneId } : {}),
     ...(input.laneKind ? { laneKind: input.laneKind } : {}),
     ...(pid ? { pid } : {}),

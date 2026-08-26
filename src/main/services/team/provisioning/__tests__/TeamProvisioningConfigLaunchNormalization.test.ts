@@ -261,6 +261,12 @@ describe('team provisioning inbox merge planning', () => {
 
 describe('team provisioning members.meta payload planning', () => {
   it('builds normalized members.meta payloads for provisioning members', () => {
+    const runtimeSelectionProvenance = {
+      version: 1 as const,
+      providerBackendId: 'inherited' as const,
+      model: 'explicit' as const,
+      effort: 'inherited' as const,
+    };
     const members: TeamCreateRequest['members'] = [
       {
         name: ' Builder ',
@@ -271,6 +277,7 @@ describe('team provisioning members.meta payload planning', () => {
         providerId: 'codex',
         model: ' gpt-5.4 ',
         effort: 'high',
+        runtimeSelectionProvenance,
         fastMode: 'on',
         mcpPolicy: { mode: 'appOnly' },
         joinedAt: 123,
@@ -286,6 +293,7 @@ describe('team provisioning members.meta payload planning', () => {
       providerId: 'codex',
       model: 'gpt-5.4',
       effort: 'high',
+      runtimeSelectionProvenance,
       fastMode: 'on',
       mcpPolicy: { mode: 'appOnly' },
       agentType: 'general-purpose',

@@ -1,5 +1,7 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
+import { assertLiveTeamRuntimeSelectionProvenance } from '@shared/utils/liveTeamRuntimeSelectionProvenance';
+
 import {
   createTeamInnerWithService,
   launchTeamInnerWithService,
@@ -85,13 +87,17 @@ export function createTeamProvisioningRequestAdmissionBoundary(
 ): TeamProvisioningRequestAdmissionBoundary {
   const admissionContext = new AsyncLocalStorage<TeamProvisioningRequestAdmissionContext>();
   return {
-    createTeam: (request, onProgress) =>
-      runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>
+    createTeam: async (request, onProgress) => {
+      assertLiveTeamRuntimeSelectionProvenance(request);
+      return await runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>
         createTeamInnerWithService(service, request, onProgress)
-      ),
-    launchTeam: (request, onProgress) =>
-      runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>
+      );
+    },
+    launchTeam: async (request, onProgress) => {
+      assertLiveTeamRuntimeSelectionProvenance(request);
+      return await runAdmittedTeamProvisioningRequest(service, admissionContext, request, () =>
         launchTeamInnerWithService(service, request, onProgress)
-      ),
+      );
+    },
   };
 }

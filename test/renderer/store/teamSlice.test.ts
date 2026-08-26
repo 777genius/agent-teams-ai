@@ -6127,6 +6127,28 @@ describe('teamSlice actions', () => {
       window.localStorage.removeItem('team:launchParams:my-team');
     });
 
+    it('migrates historical backend storage but preserves a current versioned backend', () => {
+      window.localStorage.setItem(
+        'team:launchParams:historical-team',
+        JSON.stringify({ providerId: 'codex', providerBackendId: 'api' })
+      );
+      window.localStorage.setItem(
+        'team:launchParams:current-team',
+        JSON.stringify({
+          version: 1,
+          params: { providerId: 'codex', providerBackendId: 'adapter' },
+        })
+      );
+
+      const store = createSliceStore();
+      expect(store.getState().launchParamsByTeam).toMatchObject({
+        'historical-team': { providerBackendId: 'codex-native' },
+        'current-team': { providerBackendId: 'adapter' },
+      });
+      window.localStorage.removeItem('team:launchParams:historical-team');
+      window.localStorage.removeItem('team:launchParams:current-team');
+    });
+
     it('persists providerBackendId into createTeam launch params', async () => {
       const store = createSliceStore();
 

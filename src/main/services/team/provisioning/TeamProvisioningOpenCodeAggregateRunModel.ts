@@ -188,6 +188,8 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktr
     adapter: TeamLaunchRuntimeAdapter;
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
+    onInvocationBoundary?: TeamRuntimeLaunchInput['onInvocationBoundary'];
+    onInvocationDispatched?: () => void;
     assertStillCurrentAfterPersistence?: () => void;
   }): Promise<TeamRuntimeLaunchResult | null>;
   launchSingleMixedSecondaryLane(

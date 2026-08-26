@@ -43,7 +43,10 @@ export function getConfiguredRuntimeBackend(providerId: TeamProviderId): string 
     case 'gemini':
       return runtimeConfig.gemini;
     case 'codex':
-      return migrateProviderBackendId('codex', runtimeConfig.codex) ?? 'codex-native';
+      return (
+        migrateProviderBackendId('codex', runtimeConfig.codex, 'explicit-selection') ??
+        'codex-native'
+      );
     case 'anthropic':
     default:
       return null;
@@ -73,7 +76,7 @@ export function buildRuntimeLaunchWarning(
         ? `, fast ${request.fastMode ?? 'inherit:off'}`
         : '';
   const backend =
-    migrateProviderBackendId(providerId, request.providerBackendId?.trim()) ||
+    migrateProviderBackendId(providerId, request.providerBackendId?.trim(), 'explicit-selection') ||
     getConfiguredRuntimeBackend(providerId);
   const flags: string[] = [];
   if (env.CLAUDE_CODE_USE_GEMINI === '1') flags.push('USE_GEMINI');
@@ -128,13 +131,17 @@ export function logRuntimeLaunchSnapshot(
   const providerId = resolveTeamProviderId(request.providerId);
   const snapshot = {
     providerId,
-    providerBackendId: migrateProviderBackendId(providerId, request.providerBackendId) ?? null,
+    providerBackendId:
+      migrateProviderBackendId(providerId, request.providerBackendId, 'explicit-selection') ?? null,
     model: request.model ?? null,
     effort: request.effort ?? null,
     fastMode: request.fastMode ?? null,
     configuredBackend:
-      migrateProviderBackendId(providerId, request.providerBackendId?.trim()) ||
-      getConfiguredRuntimeBackend(providerId),
+      migrateProviderBackendId(
+        providerId,
+        request.providerBackendId?.trim(),
+        'explicit-selection'
+      ) || getConfiguredRuntimeBackend(providerId),
     promptSize: options?.promptSize ?? null,
     expectedMembersCount: options?.expectedMembersCount ?? null,
     launchIdentity: options?.launchIdentity ?? null,

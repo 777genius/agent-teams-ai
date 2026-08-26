@@ -160,6 +160,8 @@ export async function launchOpenCodeAggregatePrimaryLane(
     adapter: TeamLaunchRuntimeAdapter;
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
+    onInvocationBoundary?: TeamRuntimeLaunchInput['onInvocationBoundary'];
+    onInvocationDispatched?: () => void;
     assertStillCurrentAfterPersistence?: () => void;
   },
   ports: LaunchOpenCodeAggregatePrimaryLanePorts
@@ -218,6 +220,8 @@ export async function launchOpenCodeAggregatePrimaryLane(
       : {}),
     expectedMembers,
     previousLaunchState: params.previousLaunchState,
+    onInvocationBoundary: params.onInvocationBoundary,
+    onInvocationDispatched: params.onInvocationDispatched,
   };
   const launchResult = await params.adapter.launch(launchInput);
   const { snapshot, result } = await ports.persistOpenCodeRuntimeAdapterLaunchResult(
@@ -416,15 +420,22 @@ export async function persistOpenCodeRuntimeAdapterLaunchResult(
       nowIso: () => ports.nowIso(),
     });
   }
-  const snapshot = createPersistedLaunchSnapshot({
-    teamName: input.teamName,
-    expectedMembers: input.expectedMembers.map((member) => member.name),
-    bootstrapExpectedMembers: input.expectedMembers.map((member) => member.name),
-    includeLeadMembers: true,
-    leadSessionId: result.leadSessionId,
-    launchPhase: committedResult.launchPhase,
-    members,
-  });
+  const snapshot = {
+    ...createPersistedLaunchSnapshot({
+      teamName: input.teamName,
+      expectedMembers: input.expectedMembers.map((member) => member.name),
+      bootstrapExpectedMembers: input.expectedMembers.map((member) => member.name),
+      includeLeadMembers: true,
+      leadSessionId: result.leadSessionId,
+      runtimeRunId: committedResult.runId,
+      primaryLaneIdentity: input.launchIdentity,
+      launchPhase: committedResult.launchPhase,
+      members,
+    }),
+    ...(committedResult.openCodeStrictLaunchAttempt
+      ? { openCodeStrictLaunchAttempt: committedResult.openCodeStrictLaunchAttempt }
+      : {}),
+  };
   return {
     snapshot: await ports.writeLaunchStateSnapshot(input.teamName, snapshot, {
       requireTrackedRun: true,

@@ -167,7 +167,11 @@ function normalizeEditableMemberSnapshot(member: {
     name,
     role: member.role?.trim() || undefined,
     workflow: member.workflow?.trim() || undefined,
-    providerBackendId: migrateProviderBackendId(runtime.providerId, member.providerBackendId),
+    providerBackendId: migrateProviderBackendId(
+      runtime.providerId,
+      member.providerBackendId,
+      'explicit-selection'
+    ),
     fastMode:
       member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
         ? member.fastMode

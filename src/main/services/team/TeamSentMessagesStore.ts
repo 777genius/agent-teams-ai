@@ -14,8 +14,10 @@ const MAX_SENT_MESSAGES_FILE_BYTES = 2 * 1024 * 1024;
 const logger = createLogger('TeamSentMessagesStore');
 
 export class TeamSentMessagesStore {
+  constructor(private readonly teamsBasePath: string = getTeamsBasePath()) {}
+
   private getFilePath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'sentMessages.json');
+    return path.join(this.teamsBasePath, teamName, 'sentMessages.json');
   }
 
   async readMessages(teamName: string): Promise<InboxMessage[]> {

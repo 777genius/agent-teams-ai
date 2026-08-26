@@ -1,4 +1,3 @@
-import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
 import { validateMemberName, validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -49,14 +48,6 @@ function assertValidMemberName(memberName: string): string {
     throw new HttpBadRequestError(validatedMemberName.error ?? 'Invalid memberName');
   }
   return validatedMemberName.value!;
-}
-
-function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
-  const api = services.teamApis?.provisioningStart;
-  if (!api) {
-    throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
-  }
-  return api;
 }
 
 function getTeamProvisioningStatusApi(services: HttpServices): TeamHttpProvisioningStatusApi {
@@ -287,20 +278,24 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
           return reply.status(400).send({ error: validatedTeamName.error });
         }
 
+        const startApi = getTeamProvisioningStartApi(services);
+        if (startApi.requiresAuthoritativeLaunchProof === true) {
+          // Browser HTTP does not carry the desktop main-process roster reservation
+          // and exact-model proof authority. It must never bypass the durable
+          // authorized-launch contract, for either draft-create or direct launch.
+          throw new HttpBadRequestError(
+            'Team launch over HTTP is unavailable without a desktop roster authorization transaction and current exact-model execution proof'
+          );
+        }
         const teamName = validatedTeamName.value!;
         const draftSavedRequest = await getDraftSavedRequest(services, teamName);
         const response = draftSavedRequest
-          ? await getTeamProvisioningStartApi(services).createTeam(
+          ? await startApi.createTeam(
               parseDraftLaunchCreateRequest(draftSavedRequest, request.body),
               () => undefined
             )
-          : await getTeamProvisioningStartApi(services).launchTeam(
-              parseLaunchRequest(teamName, request.body),
-              () => undefined
-            );
-        if (draftSavedRequest) {
-          services.memberWorkSyncFeature?.resumeTeam(teamName);
-        }
+          : await startApi.launchTeam(parseLaunchRequest(teamName, request.body), () => undefined);
+        if (draftSavedRequest) services.memberWorkSyncFeature?.resumeTeam(teamName);
         TeamConfigReader.invalidateListTeamsCache();
         return reply.send(response);
       } catch (error) {
@@ -677,4 +672,12 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       }
     }
   );
+}
+import { TeamConfigReader } from '@main/services/team/TeamConfigReader';
+function getTeamProvisioningStartApi(services: HttpServices): TeamHttpProvisioningStartApi {
+  const api = services.teamApis?.provisioningStart;
+  if (!api) {
+    throw new HttpFeatureUnavailableError('Team launch control is not available in this mode');
+  }
+  return api;
 }

@@ -445,7 +445,7 @@ describe('MemberDraftRow', () => {
     });
   });
 
-  it('does not inherit lead effort for an explicit teammate model override', () => {
+  it('inherits lead effort for an explicit same-provider teammate model', () => {
     const { host, root } = renderMemberDraftRow({
       member: createMemberDraft({
         id: 'member-1',
@@ -467,7 +467,7 @@ describe('MemberDraftRow', () => {
     });
 
     expect(host.textContent).toContain('effort-selector:');
-    expect(host.textContent).not.toContain('effort-selector:medium');
+    expect(host.textContent).toContain('effort-selector:medium');
 
     act(() => {
       root.unmount();

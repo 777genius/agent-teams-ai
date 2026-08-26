@@ -74,6 +74,7 @@ import {
 import {
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,
+  parseStoredTeamLaunchParams,
   saveTeamLaunchParams,
   type TeamLaunchParams,
 } from '../team/teamLaunchParams';
@@ -1806,10 +1807,8 @@ function loadAllLaunchParams(): Record<string, TeamLaunchParams> {
         }
 
         const teamName = key.slice(LAUNCH_PARAMS_PREFIX.length);
-        const parsed = JSON.parse(raw) as TeamLaunchParams;
-        if (parsed && typeof parsed === 'object') {
-          result[teamName] = parsed;
-        }
+        const parsed = parseStoredTeamLaunchParams(raw);
+        if (parsed) result[teamName] = parsed;
       } catch {
         // ignore this entry - best-effort restore
       }
@@ -4104,12 +4103,10 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       throw error;
     }
   },
-
   addMember: async (teamName: string, request: AddMemberRequest) => {
     await unwrapIpc('team:addMember', () => api.teams.addMember(teamName, request));
     await get().refreshTeamData(teamName);
   },
-
   restartMember: async (teamName: string, memberName: string) => {
     try {
       await unwrapIpc('team:restartMember', () => api.teams.restartMember(teamName, memberName));
@@ -4121,7 +4118,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
       ]);
     }
   },
-
   retryFailedOpenCodeSecondaryLanes: async (teamName: string) => {
     try {
       return await unwrapIpc('team:retryFailedOpenCodeSecondaryLanes', () =>

@@ -87,7 +87,7 @@ export interface TeamProvisioningCancellationBoundary {
     runId: string,
     runtimeProgress: TeamProvisioningProgress
   ): Promise<void>;
-  clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName: string, runId: string): Promise<void>;
+  clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName: string, runId: string): Promise<boolean>;
   stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(
     teamName: string,
     runId: string
@@ -236,8 +236,8 @@ export function createTeamProvisioningCancellationBoundary<
   const clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned = async (
     teamName: string,
     runId: string
-  ): Promise<void> => {
-    await clearOpenCodeRuntimeAdapterPrimaryLaneIfOwnedHelper({
+  ): Promise<boolean> => {
+    return await clearOpenCodeRuntimeAdapterPrimaryLaneIfOwnedHelper({
       teamName,
       runId,
       ports: createRuntimeAdapterCancellationPorts(),

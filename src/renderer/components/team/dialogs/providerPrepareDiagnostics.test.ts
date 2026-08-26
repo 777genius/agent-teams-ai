@@ -6,6 +6,33 @@ import { runProviderPrepareDiagnostics } from './providerPrepareDiagnostics';
 import type { TeamProvisioningPrepareResult } from '@shared/types';
 
 describe('runProviderPrepareDiagnostics', () => {
+  it('preserves backend-separated exact checks through ordinary diagnostics', async () => {
+    const calls: unknown[][] = [];
+    const checks = [
+      { providerId: 'codex' as const, providerBackendId: 'adapter' as const, model: 'gpt-5', effort: 'high' as const },
+      { providerId: 'codex' as const, providerBackendId: 'codex-native' as const, model: 'gpt-5', effort: 'high' as const },
+    ];
+    await runProviderPrepareDiagnostics({
+      cwd: '/workspace/test-project',
+      providerId: 'codex',
+      selectedModelIds: ['gpt-5'],
+      selectedModelChecks: checks,
+      prepareProvisioning: async (...args): Promise<TeamProvisioningPrepareResult> => {
+        calls.push(args);
+        return args[5] === 'compatibility'
+          ? { ready: true, message: 'compatible', details: ['Selected model gpt-5 is available for launch.'] }
+          : {
+              ready: true,
+              message: 'verified',
+              details: ['Selected model gpt-5 verified for launch.'],
+              executionProof: { authorityId: 'proof', generation: 1, completedAt: '2026-08-21T00:00:00.000Z', expiresAt: '2026-08-21T00:01:00.000Z', requestDigest: 'a'.repeat(64) },
+            };
+      },
+    });
+    expect(calls.every((call) => call[6] === undefined || JSON.stringify(call[6]) === JSON.stringify(checks))).toBe(true);
+    expect(calls.at(-1)?.[6]).toEqual(checks);
+  });
+
   it('requires a custom OpenCode route to pass compatibility and deep verification', async () => {
     const modelId = 'local-lab/team-model';
     type PrepareProvisioning = Parameters<

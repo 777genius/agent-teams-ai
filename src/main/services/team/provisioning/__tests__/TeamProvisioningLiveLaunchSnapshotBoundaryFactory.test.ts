@@ -135,13 +135,46 @@ describe('TeamProvisioningLiveLaunchSnapshotBoundaryFactory', () => {
       boundary.buildLiveLaunchSnapshotForRun(run({ expectedMembers: [] }), 'active')
     ).toBeNull();
 
-    const snapshot = boundary.buildLiveLaunchSnapshotForRun(run(), 'finished');
+    const snapshot = boundary.buildLiveLaunchSnapshotForRun(
+      run({
+        request: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'request-model',
+          effort: 'medium',
+          fastMode: 'off',
+        },
+        allEffectiveMembers: [
+          {
+            name: 'Builder',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'dispatched-model',
+            effort: 'high',
+            fastMode: 'on',
+          },
+        ],
+        memberSpawnStatuses: new Map([['Builder', status({ runtimeModel: 'observed-model' })]]),
+      }),
+      'finished'
+    );
 
     expect(snapshot).toMatchObject({
       teamName: 'team-a',
       leadSessionId: 'session-1',
+      runtimeRunId: 'run-1',
       launchPhase: 'finished',
       expectedMembers: ['Builder'],
+      members: {
+        Builder: {
+          runtimeRunId: 'run-1',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'observed-model',
+          effort: 'high',
+          selectedFastMode: 'on',
+        },
+      },
     });
     expect(buildRuntimeSpawnStatusRecord).toHaveBeenCalledTimes(1);
   });

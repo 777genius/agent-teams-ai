@@ -777,31 +777,34 @@ describe('ProvisioningProviderStatusList', () => {
     ).toBe('Codex native');
   });
 
-  it('normalizes persisted legacy codex fallback summaries to Codex native', () => {
-    expect(
-      getProvisioningProviderBackendSummary({
-        providerId: 'codex',
-        selectedBackendId: 'api',
-        resolvedBackendId: 'api',
-        backend: {
-          kind: 'codex-native',
-          label: 'Codex native',
-        },
-        availableBackends: [
-          {
-            id: 'codex-native',
+  it.each(['api', 'adapter', 'auto'] as const)(
+    'preserves an explicit live Codex %s backend summary',
+    (backendId) => {
+      expect(
+        getProvisioningProviderBackendSummary({
+          providerId: 'codex',
+          selectedBackendId: backendId,
+          resolvedBackendId: backendId,
+          backend: {
+            kind: 'codex-native',
             label: 'Codex native',
-            description: 'Use codex exec JSON mode.',
-            selectable: true,
-            recommended: true,
-            available: true,
-            state: 'ready',
-            audience: 'general',
           },
-        ],
-      })
-    ).toBe('Codex native');
-  });
+          availableBackends: [
+            {
+              id: 'codex-native',
+              label: 'Codex native',
+              description: 'Use codex exec JSON mode.',
+              selectable: true,
+              recommended: true,
+              available: true,
+              state: 'ready',
+              audience: 'general',
+            },
+          ],
+        })
+      ).toBe(backendId);
+    }
+  );
 
   it('promotes loading to ready once every provider check is already terminal', () => {
     expect(

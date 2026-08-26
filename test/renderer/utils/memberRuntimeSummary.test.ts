@@ -353,7 +353,7 @@ describe('resolveMemberRuntimeSummary', () => {
     ).toBe('Anthropic · Haiku 4.5 · Low');
   });
 
-  it('normalizes persisted legacy Codex lanes to the native runtime summary', () => {
+  it('keeps persisted Codex backend lanes visible in the runtime summary', () => {
     const member = createMember({ model: 'gpt-5.4-mini' });
 
     expect(
@@ -368,7 +368,7 @@ describe('resolveMemberRuntimeSummary', () => {
         },
         undefined
       )
-    ).toBe('5.4 Mini · Medium · Codex');
+    ).toBe('5.4 Mini · Medium · api');
   });
 
   it('does not leak the lead backend label into OpenCode side-lane members', () => {

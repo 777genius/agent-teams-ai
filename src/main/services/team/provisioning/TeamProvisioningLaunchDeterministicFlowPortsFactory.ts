@@ -8,6 +8,7 @@ import { TeamTaskReader } from '../TeamTaskReader';
 
 import { type RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import { type TeamLaunchCompatibilityReport } from './TeamProvisioningLaunchCompatibility';
+import { readDurableLaunchContinuationEvidence } from './TeamProvisioningLaunchContinuationState';
 import {
   type DeterministicLaunchRunFlowRun,
   type PreparedDeterministicLaunchSetup,
@@ -366,6 +367,7 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
       deleteProvisioningRunByTeam: (teamName) => {
         host.provisioningRunByTeam.delete(teamName);
       },
+      readLaunchContinuationEvidence: readDurableLaunchContinuationEvidence,
       launchExpectedMembersPorts: deps.launchExpectedMembersPorts,
       materializeLaunchCompatibilityRepair: (request, report) =>
         host.materializeLaunchCompatibilityRepair(request, report),

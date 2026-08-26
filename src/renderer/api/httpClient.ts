@@ -42,7 +42,6 @@ import {
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
-
 import type {
   CodexAccountSnapshotDto,
   CodexStartChatgptLoginOptions,
@@ -143,7 +142,6 @@ import type {
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
-
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
   if (request?.teamName) query.set('teamName', request.teamName);
@@ -161,7 +159,8 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
   const suffix = query.toString();
   return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
 }
-
+const rejectBrowserRosterTransaction = (): Promise<never> =>
+  Promise.reject(new Error('Roster transactions require the desktop app'));
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -189,7 +188,6 @@ function createBrowserCompanionStatus(
     updatedAt: new Date().toISOString(),
   };
 }
-
 export class HttpAPIClient implements ElectronAPI {
   private baseUrl: string;
   private eventSource: EventSource | null = null;
@@ -212,16 +210,13 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Team import is only available in the desktop app');
     },
   };
-
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
     this.initEventSource();
   }
-
   // ---------------------------------------------------------------------------
   // SSE event infrastructure
   // ---------------------------------------------------------------------------
-
   private initEventSource(): void {
     this.eventSource = new EventSource(`${this.baseUrl}/api/events`);
     this.eventSource.onopen = () => console.log('[HttpAPIClient] SSE connected');
@@ -230,7 +225,6 @@ export class HttpAPIClient implements ElectronAPI {
       console.warn('[HttpAPIClient] SSE connection error, will reconnect...');
     };
   }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private addEventListener(channel: string, callback: (...args: any[]) => void): () => void {
     if (!this.eventListeners.has(channel)) {
@@ -243,12 +237,10 @@ export class HttpAPIClient implements ElectronAPI {
       }) as EventListener);
     }
     this.eventListeners.get(channel)!.add(callback);
-
     return () => {
       this.eventListeners.get(channel)?.delete(callback);
     };
   }
-
   // ---------------------------------------------------------------------------
   // HTTP helpers
   // ---------------------------------------------------------------------------
@@ -1113,6 +1105,11 @@ export class HttpAPIClient implements ElectronAPI {
     stop: async (): Promise<void> => {
       throw new Error('Team stop is not available in browser mode');
     },
+    stopForRelaunch: async () => ({
+      status: 'outcome-unknown',
+      reason: 'transport-failure',
+      diagnostic: 'Relaunch stop is not available in browser mode.',
+    }),
     createConfig: async (): Promise<void> => {
       throw new Error('Team config creation is not available in browser mode');
     },
@@ -1186,6 +1183,9 @@ export class HttpAPIClient implements ElectronAPI {
     replaceMembers: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
+    beginRosterAuthorizationTransaction: rejectBrowserRosterTransaction,
+    getRosterAuthorizationTransactionOutcome: rejectBrowserRosterTransaction,
+    rollbackRosterAuthorizationTransaction: rejectBrowserRosterTransaction,
     removeMember: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
@@ -1489,7 +1489,7 @@ export class HttpAPIClient implements ElectronAPI {
       authMethod: null,
       providers: [],
     }),
-    getProviderStatus: async (): Promise<null> => null,
+    getProviderStatus: () => Promise.reject(new Error('CLI provider status requires desktop IPC')),
     verifyProviderModels: async (): Promise<null> => null,
     install: async (): Promise<void> => {
       console.warn('[HttpAPIClient] CLI installer not available in browser mode');

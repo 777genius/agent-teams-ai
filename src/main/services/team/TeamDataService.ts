@@ -9,9 +9,14 @@ import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSemantics';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import {
+  assertLiveMemberRuntimeSelectionProvenance,
+  assertLiveTeamRuntimeSelectionProvenance,
+} from '@shared/utils/liveTeamRuntimeSelectionProvenance';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { getReviewStateFromTask } from '@shared/utils/reviewState';
+import { normalizeRosterAuthorizationRequest } from '@shared/utils/rosterAuthorizationTransaction';
 import { buildStandaloneSlashCommandMeta } from '@shared/utils/slashCommands';
 import { formatTaskDisplayLabel } from '@shared/utils/taskIdentity';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
@@ -22,6 +27,7 @@ import {
   parseNumericSuffixName,
   validateTeamMemberNameFormat,
 } from '@shared/utils/teamMemberName';
+import { normalizeTeamMemberRuntimeSelectionProvenance } from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 import { extractToolPreview, formatToolSummaryFromCalls } from '@shared/utils/toolSummary';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
@@ -38,6 +44,8 @@ import {
   type LeadSessionParseCacheKey,
 } from './cache/LeadSessionParseCache';
 import { atomicWriteAsync } from './atomicWrite';
+import { buildReplacementRoster } from './buildReplacementRoster';
+import { buildRosterAuthorizationTarget } from './buildRosterAuthorizationTarget';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
 import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
@@ -45,6 +53,7 @@ import {
   permanentlyDeleteTeamData,
   type PermanentTeamDataDeletionOptions,
 } from './permanentTeamDataDeletion';
+import { buildSavedTeamCreateRequest } from './savedTeamCreateRequest';
 import { resolveSyntheticLeadRuntimeSettings } from './syntheticLeadRuntimeSettings';
 import { buildTaskChangePresenceDescriptor } from './taskChangePresenceUtils';
 import {
@@ -68,6 +77,12 @@ import { TeamMemberRuntimeAdvisoryService } from './TeamMemberRuntimeAdvisorySer
 import { TeamMembersMetaStore } from './TeamMembersMetaStore';
 import { TeamMessageFeedService } from './TeamMessageFeedService';
 import { TeamMetaStore } from './TeamMetaStore';
+import {
+  resolvePersistedLeadRuntimeRoute,
+  resolveRosterBackendPairsFromMeta,
+} from './teamProviderBackendResolution';
+import * as RosterAuthorizationLifecycle from './TeamRosterAuthorizationLifecycle';
+import { TeamRosterAuthorizationTransactionService } from './TeamRosterAuthorizationTransactionService';
 import { TeamSentMessagesStore } from './TeamSentMessagesStore';
 import { getTeamTaskWorkflowColumn, selectCurrentActiveTeamTask } from './teamTaskActiveState';
 import { TeamTaskCommentNotificationJournal } from './TeamTaskCommentNotificationJournal';
@@ -92,6 +107,7 @@ import type {
   MessagesPage,
   PersistedTeamLaunchSnapshot,
   ReplaceMembersRequest,
+  RosterAuthorizationTransactionOutcome,
   SendMessageRequest,
   SendMessageResult,
   TaskAttachmentMeta,
@@ -401,31 +417,7 @@ function hasExplicitLeadInConfig(config: TeamConfig): boolean {
   });
 }
 
-function toProvisioningMemberShape(
-  members: readonly Pick<
-    TeamMember,
-    | 'name'
-    | 'role'
-    | 'workflow'
-    | 'isolation'
-    | 'providerId'
-    | 'providerBackendId'
-    | 'model'
-    | 'effort'
-    | 'fastMode'
-    | 'removedAt'
-  >[]
-): {
-  name: string;
-  role?: string;
-  workflow?: string;
-  isolation?: 'worktree';
-  providerId?: TeamProviderId;
-  providerBackendId?: TeamMember['providerBackendId'];
-  model?: string;
-  effort?: TeamMember['effort'];
-  fastMode?: TeamMember['fastMode'];
-}[] {
+function toProvisioningMemberShape(members: readonly TeamMember[]): TeamCreateRequest['members'] {
   return members
     .filter((member) => !member.removedAt)
     .filter((member) => {
@@ -443,6 +435,9 @@ function toProvisioningMemberShape(
       providerBackendId: member.providerBackendId,
       model: member.model,
       effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+      runtimeSelectionProvenance: normalizeTeamMemberRuntimeSelectionProvenance(
+        member.runtimeSelectionProvenance
+      ),
       fastMode:
         member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
           ? member.fastMode
@@ -477,6 +472,7 @@ export class TeamDataService {
   private readonly notificationContextInFlight = new Map<string, InFlightTeamNotificationContext>();
   private readonly notificationContextGenerationByTeam = new Map<string, number>();
   private taskBoardCommandFacade = createNonDurableTaskBoardCommandFacade();
+  private startupRecovery: Promise<void> | null = null;
 
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
@@ -517,6 +513,11 @@ export class TeamDataService {
       getSentMessages: (teamName) => this.sentMessagesStore.readMessages(teamName),
     });
     this.memberActivityMetaService = new MemberActivityMetaService(this.messageFeedService);
+  }
+
+  start(): Promise<void> {
+    this.startupRecovery ??= this.rosterAuthorizationTransactions.recoverAllTeams();
+    return this.startupRecovery;
   }
 
   private readSnapshotConfig(teamName: string): Promise<TeamConfig | null> {
@@ -690,7 +691,6 @@ export class TeamDataService {
   setMemberRuntimeAdvisoryService(service: TeamMemberRuntimeAdvisoryService): void {
     this.memberRuntimeAdvisoryService = service;
   }
-
   setTaskBoardCommandFacade(facade: TaskBoardCommandFacade | null): void {
     this.taskBoardCommandFacade = facade ?? createNonDurableTaskBoardCommandFacade();
   }
@@ -703,7 +703,6 @@ export class TeamDataService {
   invalidateMemberRuntimeAdvisory(teamName: string, memberName: string): void {
     this.memberRuntimeAdvisoryService.invalidateMemberAdvisory(teamName, memberName);
   }
-
   invalidateTeamRuntimeAdvisories(teamName: string): void {
     this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName);
   }
@@ -1185,52 +1184,12 @@ export class TeamDataService {
   async listTeams(): Promise<TeamSummary[]> {
     return this.configReader.listTeams();
   }
-
   async getSavedRequest(teamName: string): Promise<TeamCreateRequest | null> {
-    const meta = await this.teamMetaStore.getMeta(teamName);
-    if (!meta) {
-      return null;
-    }
-
-    const membersMeta = await this.membersMetaStore.getMeta(teamName);
-    const members = membersMeta?.members ?? [];
-    const resolvedProviderId = meta.providerId ?? 'anthropic';
-
-    return {
-      teamName,
-      displayName: meta.displayName,
-      description: meta.description,
-      color: meta.color,
-      cwd: meta.cwd,
-      prompt: meta.prompt,
-      providerId: resolvedProviderId,
-      providerBackendId: migrateProviderBackendId(
-        resolvedProviderId,
-        meta.providerBackendId ?? membersMeta?.providerBackendId
-      ),
-      model: meta.model,
-      effort: meta.effort as TeamCreateRequest['effort'],
-      fastMode: meta.fastMode,
-      skipPermissions: meta.skipPermissions,
-      worktree: meta.worktree,
-      extraCliArgs: meta.extraCliArgs,
-      limitContext: meta.limitContext,
-      members: members
-        .filter((member) => !member.removedAt)
-        .map((member) => ({
-          name: member.name,
-          role: member.role,
-          workflow: member.workflow,
-          isolation: member.isolation,
-          cwd: member.cwd,
-          providerId: member.providerId,
-          providerBackendId: member.providerBackendId,
-          model: member.model,
-          effort: member.effort,
-          fastMode: member.fastMode,
-          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-        })),
-    };
+    const [meta, membersMeta] = await Promise.all([
+      this.teamMetaStore.getMeta(teamName),
+      this.membersMetaStore.getMeta(teamName),
+    ]);
+    return meta ? buildSavedTeamCreateRequest(teamName, meta, membersMeta) : null;
   }
 
   async listAliveProcessTeams(): Promise<string[]> {
@@ -1405,6 +1364,7 @@ export class TeamDataService {
   }
 
   async getTeamData(teamName: string, options?: TeamGetDataOptions): Promise<TeamViewSnapshot> {
+    await this.rosterAuthorizationTransactions.recoverTeam(teamName).catch(() => undefined);
     const includeMemberBranches = options?.includeMemberBranches !== false;
     const startedAt = Date.now();
     const marks: Record<string, number> = {};
@@ -1619,13 +1579,7 @@ export class TeamDataService {
     mark('changePresence');
 
     const launchIdentity = teamMeta?.launchIdentity;
-    const leadProviderBackendId = launchIdentity
-      ? (migrateProviderBackendId(
-          launchIdentity.providerId,
-          launchIdentity.providerBackendId ?? teamMeta?.providerBackendId
-        ) ?? undefined)
-      : (migrateProviderBackendId(teamMeta?.providerId, teamMeta?.providerBackendId) ?? undefined);
-
+    const leadProviderBackendId = resolvePersistedLeadRuntimeRoute(teamMeta).providerBackendId;
     const members = this.memberResolver.resolveMembers(
       config,
       metaMembers,
@@ -1633,6 +1587,7 @@ export class TeamDataService {
       tasksWithKanban,
       {
         launchSnapshot,
+        activeRuntimeRunId: launchSnapshot?.runtimeRunId ?? null,
         leadProviderId: launchIdentity?.providerId ?? teamMeta?.providerId,
         leadProviderBackendId,
         leadFastMode: teamMeta?.launchIdentity?.selectedFastMode ?? teamMeta?.fastMode ?? undefined,
@@ -1991,10 +1946,8 @@ export class TeamDataService {
     if (!member) {
       throw new Error(`Member "${memberName}" not found`);
     }
-
     return { members, member };
   }
-
   async addMember(teamName: string, request: AddMemberRequest): Promise<void> {
     const name = request.name.trim();
     if (!name) {
@@ -2013,21 +1966,21 @@ export class TeamDataService {
         `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
       );
     }
-
     const members = await this.membersMetaStore.getMembers(teamName);
     const existing = members.find((m) => m.name.toLowerCase() === name.toLowerCase());
-
     if (existing) {
       if (existing.removedAt) {
         throw new Error(`Name "${name}" was previously used by a removed member`);
       }
       throw new Error(`Member "${name}" already exists`);
     }
-
-    const memberProviderId = normalizeOptionalTeamProviderId(request.providerId);
-    const memberProviderBackendId = memberProviderId
-      ? migrateProviderBackendId(memberProviderId, request.providerBackendId)
-      : request.providerBackendId;
+    assertLiveMemberRuntimeSelectionProvenance(request);
+    const resolvedRequest = await this.resolveRosterProviderBackends(teamName, {
+      members: [request],
+    });
+    const resolvedMember = resolvedRequest.members[0];
+    const memberProviderId = normalizeOptionalTeamProviderId(resolvedMember?.providerId);
+    const memberProviderBackendId = resolvedMember?.providerBackendId;
     const newMember: TeamMember = {
       name,
       role: request.role?.trim() || undefined,
@@ -2037,6 +1990,7 @@ export class TeamDataService {
       ...(memberProviderBackendId ? { providerBackendId: memberProviderBackendId } : {}),
       model: request.model?.trim() || undefined,
       effort: isTeamEffortLevel(request.effort) ? request.effort : undefined,
+      runtimeSelectionProvenance: request.runtimeSelectionProvenance,
       ...(request.fastMode === 'inherit' || request.fastMode === 'on' || request.fastMode === 'off'
         ? { fastMode: request.fastMode }
         : {}),
@@ -2044,7 +1998,6 @@ export class TeamDataService {
       agentType: 'general-purpose',
       joinedAt: Date.now(),
     };
-
     await this.assertRosterMutationAllowed(
       teamName,
       toProvisioningMemberShape([...members, newMember])
@@ -2052,7 +2005,6 @@ export class TeamDataService {
     const nextMembers = applyDistinctRosterColors([...members, newMember]);
     await this.membersMetaStore.writeMembers(teamName, nextMembers);
   }
-
   async updateMemberRole(
     teamName: string,
     memberName: string,
@@ -2070,90 +2022,85 @@ export class TeamDataService {
     await this.membersMetaStore.writeMembers(teamName, members);
     return { oldRole, changed: true };
   }
-
   async replaceMembers(teamName: string, request: ReplaceMembersRequest): Promise<void> {
-    const existing = await this.membersMetaStore.getMembers(teamName);
-    const existingLead = existing.find(isLeadMember) ?? null;
-    const existingByName = new Map(existing.map((m) => [m.name.toLowerCase(), m]));
-    const joinedAt = Date.now();
-    const nextByName = new Set<string>();
-
-    const nextActive = applyDistinctRosterColors(
-      request.members.map((member) => {
-        const name = member.name.trim();
-        if (!name) throw new Error('Member name cannot be empty');
-        const formatError = validateTeamMemberNameFormat(name);
-        if (formatError) {
-          throw new Error(`Member name "${name}" is invalid: ${formatError}`);
-        }
-        if (name.toLowerCase() === 'user') {
-          throw new Error('Member name "user" is reserved');
-        }
-        if (name.toLowerCase() === 'team-lead') {
-          throw new Error('Member name "team-lead" is reserved');
-        }
-        if (nextByName.has(name.toLowerCase())) {
-          throw new Error(`Member "${name}" already exists`);
-        }
-        const suffixInfo = parseNumericSuffixName(name);
-        if (suffixInfo && suffixInfo.suffix >= 2) {
-          throw new Error(
-            `Member name "${name}" is not allowed (reserved for runtime-managed numeric suffixes). Use "${suffixInfo.base}" instead.`
-          );
-        }
-        nextByName.add(name.toLowerCase());
-        const prev = existingByName.get(name.toLowerCase());
-        const isSameActiveMember = Boolean(prev && prev.removedAt == null);
-        const providerId = normalizeOptionalTeamProviderId(member.providerId);
-        const providerBackendId = providerId
-          ? migrateProviderBackendId(providerId, member.providerBackendId)
-          : member.providerBackendId;
-        return {
-          name,
-          role: member.role?.trim() || undefined,
-          workflow: member.workflow?.trim() || undefined,
-          isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-          providerId,
-          providerBackendId,
-          model: member.model?.trim() || undefined,
-          effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
-          fastMode:
-            member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
-              ? member.fastMode
-              : undefined,
-          mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-          agentType: prev?.agentType ?? 'general-purpose',
-          agentId: isSameActiveMember ? prev?.agentId : undefined,
-          color: prev?.color,
-          joinedAt: prev?.joinedAt ?? joinedAt,
-          removedAt: undefined,
-        };
-      })
+    const normalizedRequest = await this.resolveRosterProviderBackends(teamName, request);
+    await this.runWithRosterLock(teamName, () =>
+      this.replaceMembersUnderRosterLock(teamName, normalizedRequest)
     );
-    await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(nextActive));
+  }
+  async resolveRosterProviderBackends(
+    teamName: string,
+    request: ReplaceMembersRequest
+  ): Promise<ReplaceMembersRequest> {
+    return resolveRosterBackendPairsFromMeta(request, () => this.teamMetaStore.getMeta(teamName));
+  }
+  async beginRosterAuthorizationTransaction(
+    teamName: string,
+    transactionId: string,
+    request: ReplaceMembersRequest,
+    admissionRequestFingerprint?: string
+  ): Promise<RosterAuthorizationTransactionOutcome> {
+    for (const member of request.members) assertLiveMemberRuntimeSelectionProvenance(member);
+    const resolvedRequest = await this.resolveRosterProviderBackends(teamName, request);
+    const normalizedRequest = normalizeRosterAuthorizationRequest(resolvedRequest);
+    const computeTargetRawUnderLock = buildRosterAuthorizationTarget({
+      teamName,
+      requested: normalizedRequest.members,
+      getMembers: (name) => this.membersMetaStore.getMembers(name),
+      buildReplacement: (existing, requested) =>
+        buildReplacementRoster(existing, requested, applyDistinctRosterColors),
+      assertAllowed: (members) =>
+        this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(members)),
+      canonicalRaw: (priorRaw, existing, requested, replacement) =>
+        this.membersMetaStore.canonicalRaw(priorRaw, existing, requested, replacement),
+    });
+    return this.rosterAuthorizationTransactions.begin(
+      teamName,
+      transactionId,
+      TeamRosterAuthorizationTransactionService.requestFingerprint(normalizedRequest),
+      computeTargetRawUnderLock,
+      admissionRequestFingerprint
+    );
+  }
+  get rosterAuthorizationTransactions(): TeamRosterAuthorizationTransactionService {
+    return RosterAuthorizationLifecycle.getRosterAuthorizationTransactionService(
+      this.membersMetaStore
+    );
+  }
+  getRosterAuthorizationTransactionOutcome(
+    teamName: string,
+    transactionId: string
+  ): Promise<RosterAuthorizationTransactionOutcome> {
+    return this.rosterAuthorizationTransactions.getOutcome(teamName, transactionId);
+  }
 
-    // Preserve/mark removed members so stale inbox files don't resurrect them in the UI.
-    const nextRemoved: TeamMember[] = [];
-    for (const prev of existing) {
-      if (isLeadMember(prev)) continue;
-      const prevName = prev.name.trim();
-      if (!prevName) continue;
-      const key = prevName.toLowerCase();
-      if (nextByName.has(key)) continue;
-      nextRemoved.push({
-        ...prev,
-        removedAt: prev.removedAt ?? joinedAt,
-      });
-    }
+  commitRosterAuthorizationTransaction(
+    teamName: string,
+    transactionId: string
+  ): Promise<RosterAuthorizationTransactionOutcome> {
+    return this.rosterAuthorizationTransactions.commit(teamName, transactionId);
+  }
 
-    const out: TeamMember[] = [...nextActive, ...nextRemoved];
-    if (existingLead) {
-      const leadKey = existingLead.name.trim().toLowerCase();
-      if (!out.some((m) => m.name.trim().toLowerCase() === leadKey)) {
-        out.unshift({ ...existingLead, removedAt: undefined });
-      }
-    }
-    await this.membersMetaStore.writeMembers(teamName, out);
+  rollbackRosterAuthorizationTransaction(
+    teamName: string,
+    transactionId: string
+  ): Promise<RosterAuthorizationTransactionOutcome> {
+    return this.rosterAuthorizationTransactions.rollback(teamName, transactionId);
+  }
+
+  private async replaceMembersUnderRosterLock(
+    teamName: string,
+    request: ReplaceMembersRequest
+  ): Promise<void> {
+    const existing = await this.membersMetaStore.getMembers(teamName);
+    const output = buildReplacementRoster(existing, request.members, applyDistinctRosterColors);
+    for (const member of request.members) assertLiveMemberRuntimeSelectionProvenance(member);
+    await this.assertRosterMutationAllowed(teamName, toProvisioningMemberShape(output));
+    await this.membersMetaStore.writeMembersUnderLock(teamName, output);
+  }
+
+  private runWithRosterLock<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
+    return this.membersMetaStore.withRosterLock(teamName, operation);
   }
 
   async removeMember(teamName: string, memberName: string): Promise<void> {
@@ -3500,7 +3447,7 @@ export class TeamDataService {
     if ((await pathExists(teamDir)) || (await pathExists(tasksDir))) {
       throw new Error(`Team already exists: ${request.teamName}`);
     }
-
+    assertLiveTeamRuntimeSelectionProvenance(request);
     try {
       await fs.promises.mkdir(teamDir);
     } catch (error) {
@@ -3530,6 +3477,7 @@ export class TeamDataService {
         providerBackendId: request.providerBackendId,
         model: request.model,
         effort: request.effort,
+        leadRuntimeSelectionProvenance: request.leadRuntimeSelectionProvenance,
         fastMode: request.fastMode,
         skipPermissions: request.skipPermissions,
         worktree: request.worktree,
@@ -3567,6 +3515,9 @@ export class TeamDataService {
           providerBackendId: member.providerBackendId,
           model: member.model?.trim() || undefined,
           effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+          runtimeSelectionProvenance: normalizeTeamMemberRuntimeSelectionProvenance(
+            member.runtimeSelectionProvenance
+          ),
           fastMode: member.fastMode,
           mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
           agentType: 'general-purpose' as const,

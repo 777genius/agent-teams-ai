@@ -1,37 +1,716 @@
 /* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unused-vars -- Synthetic adapter methods preserve the real async interface and named request parameters. */
+/* eslint-disable @typescript-eslint/no-explicit-any -- The isolated matrix intentionally reaches private seams to exercise deterministic fake-host lifecycle behavior. */
 /* eslint-disable @typescript-eslint/array-type, @typescript-eslint/consistent-type-definitions -- The matrix fixture mirrors runtime contract shapes and table types. */
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents, @typescript-eslint/no-unnecessary-type-assertion -- Assertions document fixture boundaries exercised across runtime variants. */
 /* eslint-disable @typescript-eslint/restrict-template-expressions, @typescript-eslint/prefer-nullish-coalescing -- Diagnostic fixture strings deliberately expose aggregate values and empty fallbacks. */
 /* eslint-disable sonarjs/no-alphabetical-sort -- Deterministic fixture comparisons intentionally use default and explicit lexical sorting. */
 /* eslint-disable sonarjs/no-nested-conditional, sonarjs/cognitive-complexity -- The in-file fake adapters model a bounded runtime state matrix. */
 /* eslint-disable sonarjs/file-permissions -- The executable permission applies only to an isolated test fixture. */
+/* eslint-disable simple-import-sort/imports -- The hoisted child-process mock must precede production imports in this standalone fixture. */
 
 import { EventEmitter } from 'events';
 import Fastify from 'fastify';
 import { promises as fs } from 'fs';
+import { syncBuiltinESMExports } from 'node:module';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const {
+  safeE2eLaunchGuard,
+  blockSafeE2eProcessCall,
+  guardSafeE2EProcessCall,
+  createGuardedChildProcessModule,
+  hasExactSafeE2eEnvironment,
+  captureSafeE2eEnvironmentBaseline,
+  setSafeE2eEnvironmentOverrides,
+  getSafeE2eEnvironmentMismatchNames,
+} = vi.hoisted(() => {
+  const initialHome = process.env.HOME ?? process.env.USERPROFILE;
+  const initialHomeNormalized = initialHome?.replaceAll('\\', '/').replace(/\/+$/, '');
+  const initialHomeIsTestSandbox =
+    initialHomeNormalized?.split('/').at(-1)?.startsWith('agent-teams-vitest-home-') === true &&
+    [process.env.TMPDIR, process.env.TEMP, process.env.TMP, '/tmp']
+      .filter((value): value is string => Boolean(value))
+      .map((value) => value.replaceAll('\\', '/').replace(/\/+$/, ''))
+      .some((root) => initialHomeNormalized.startsWith(`${root}/`));
+  const initialCanonicalConfigRoots = [
+    process.env.CLAUDE_CONFIG_DIR,
+    process.env.CLAUDE_ROOT,
+    process.env.CODEX_HOME,
+    process.env.OPENCODE_CONFIG,
+    process.env.OPENCODE_CONFIG_DIR,
+    process.env.XDG_CONFIG_HOME,
+    process.env.GOOGLE_APPLICATION_CREDENTIALS,
+    ...(initialHome && !initialHomeIsTestSandbox
+      ? [`${initialHome}/.claude`, `${initialHome}/.codex`, `${initialHome}/.config/opencode`]
+      : []),
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => value.replaceAll('\\', '/').replace(/\/+$/, ''));
+  const guard = {
+    allowedProcessCalls: [] as string[],
+    unexpectedProcessCalls: [] as string[],
+    actualProcessCreations: 0,
+    providerNetworkCalls: [] as string[],
+    canonicalConfigCalls: [] as string[],
+    canonicalConfigRoots: initialCanonicalConfigRoots,
+    sandboxRoot: null as string | null,
+    projectPath: null as string | null,
+    sandboxCwds: new Set<string>(),
+    fakeCliPaths: new Set<string>(),
+    environmentBaseline: null as Readonly<Record<string, string | undefined>> | null,
+    environmentOverrides: Object.freeze({}) as Readonly<Record<string, string | undefined>>,
+  };
+  const normalizeSandboxValue = (value: unknown): unknown => {
+    if (typeof value !== 'string') return value;
+    const normalized = value.replaceAll('\\', '/');
+    const sandboxRoot = guard.sandboxRoot?.replaceAll('\\', '/').replace(/\/+$/, '');
+    return sandboxRoot && (normalized === sandboxRoot || normalized.startsWith(`${sandboxRoot}/`))
+      ? `<sandbox>${normalized.slice(sandboxRoot.length)}`
+      : normalized;
+  };
+  const describeOptions = (options: unknown): unknown => {
+    if (!options || typeof options !== 'object' || Array.isArray(options)) return options;
+    return Object.fromEntries(
+      Object.entries(options).map(([key, value]) => [
+        key,
+        key === 'env'
+          ? `<env:${value && typeof value === 'object' ? Object.keys(value).sort().join(',') : typeof value}>`
+          : Array.isArray(value)
+            ? value.map(normalizeSandboxValue)
+            : normalizeSandboxValue(value),
+      ])
+    );
+  };
+  const describeProcessCall = (
+    kind: string,
+    executable: unknown,
+    args: readonly unknown[] = []
+  ): string => {
+    const commandArgs = Array.isArray(args[0]) ? args[0].map(normalizeSandboxValue) : args[0];
+    const options = describeOptions(args[1]);
+    const callback =
+      args[2] === undefined
+        ? 'absent'
+        : typeof args[2] === 'function'
+          ? `function/${args[2].length}`
+          : typeof args[2];
+    return `${kind}(${String(normalizeSandboxValue(executable))}, args=${JSON.stringify(commandArgs)}, options=${JSON.stringify(options)}, callback=${callback})`;
+  };
+  const hasExactKeys = (
+    value: unknown,
+    expected: readonly string[]
+  ): value is Record<string, unknown> =>
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.keys(value).sort().join('\0') === [...expected].sort().join('\0');
+  const environmentsAreExact = (
+    value: Record<string, unknown>,
+    expected: Record<string, unknown>
+  ): boolean => {
+    const expectedKeys = Object.keys(expected).sort();
+    return (
+      Object.keys(value).sort().join('\0') === expectedKeys.join('\0') &&
+      expectedKeys.every((key) => value[key] === expected[key])
+    );
+  };
+  const buildExpectedProvisioningEnvironment = (
+    provider: 'anthropic' | 'codex'
+  ): Record<string, unknown> | null => {
+    const sandboxRoot = guard.sandboxRoot;
+    const baseline = guard.environmentBaseline;
+    if (!sandboxRoot || !baseline || process.platform === 'win32') return null;
+    const pathApi = process.getBuiltinModule('node:path');
+    const provisioningBaseline = { ...baseline, ...guard.environmentOverrides };
+    const home = pathApi.join(sandboxRoot, 'home');
+    const username = (() => {
+      try {
+        return process.getBuiltinModule('node:os').userInfo().username;
+      } catch {
+        return 'unknown';
+      }
+    })();
+    const pathEntries = [
+      provisioningBaseline.PATH,
+      pathApi.join(sandboxRoot, '.claude', 'local', 'node_modules', '.bin'),
+      pathApi.join(home, '.bun', 'bin'),
+      pathApi.join(home, '.local', 'bin'),
+      pathApi.join(home, '.npm-global', 'bin'),
+      pathApi.join(home, '.npm', 'bin'),
+      pathApi.join(home, '.asdf', 'shims'),
+      pathApi.join(home, '.local', 'share', 'mise', 'shims'),
+      pathApi.join(home, '.volta', 'bin'),
+      pathApi.join(home, 'Library', 'pnpm'),
+      pathApi.join(home, '.local', 'share', 'pnpm'),
+      pathApi.join(home, '.cargo', 'bin'),
+      pathApi.join(home, '.nix-profile', 'bin'),
+      '/usr/local/bin',
+      '/opt/homebrew/bin',
+      '/opt/local/bin',
+      '/usr/bin',
+      '/bin',
+      '/usr/sbin',
+      '/sbin',
+    ]
+      .flatMap((entry) => entry?.split(pathApi.delimiter) ?? [])
+      .filter((entry, index, entries) => Boolean(entry) && entries.indexOf(entry) === index);
+    return {
+      ...provisioningBaseline,
+      AGENT_TEAMS_ANTHROPIC_CONNECTION_MODE: 'auto',
+      AGENT_TEAMS_IDENTITY_STORE_PATH: pathApi.join(
+        home,
+        '.agent-teams-ai',
+        'data',
+        'identity',
+        'agent-teams-client.json'
+      ),
+      CLAUDE_CODE_CODEX_BACKEND: 'codex-native',
+      CLAUDE_CODE_ENTRY_PROVIDER: provider,
+      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
+      CLAUDE_CODE_GEMINI_BACKEND: 'auto',
+      CLAUDE_CODE_PROVIDER_MANAGED_BY_HOST: '1',
+      CLAUDE_CODE_USE_BEDROCK: undefined,
+      CLAUDE_CODE_USE_FOUNDRY: undefined,
+      CLAUDE_CODE_USE_GEMINI: undefined,
+      CLAUDE_CODE_USE_OPENAI: undefined,
+      CLAUDE_CODE_USE_VERTEX: undefined,
+      CLAUDE_CONFIG_DIR: pathApi.join(sandboxRoot, '.claude'),
+      LOGNAME: provisioningBaseline.LOGNAME?.trim() || username,
+      NODE_ENV:
+        provisioningBaseline.NODE_ENV === 'test' ? 'development' : provisioningBaseline.NODE_ENV,
+      OPENCODE_DISABLE_AUTOUPDATE: '1',
+      PATH: pathEntries.join(pathApi.delimiter),
+      USER: provisioningBaseline.USER?.trim() || provisioningBaseline.USERNAME?.trim() || username,
+      XDG_STATE_HOME:
+        provisioningBaseline.XDG_STATE_HOME?.trim() || pathApi.join(home, '.local', 'state'),
+    };
+  };
+  const hasExactEnvironment = (value: unknown, provider?: 'anthropic' | 'codex'): boolean => {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+    const environment = value as Record<string, unknown>;
+    const baseline = guard.environmentBaseline;
+    const expectedBaseline = baseline ? { ...baseline, ...guard.environmentOverrides } : null;
+    if (expectedBaseline && environmentsAreExact(environment, expectedBaseline)) return true;
+    const expectedProvisioningEnvironment = provider
+      ? buildExpectedProvisioningEnvironment(provider)
+      : null;
+    return (
+      expectedProvisioningEnvironment !== null &&
+      environmentsAreExact(environment, expectedProvisioningEnvironment)
+    );
+  };
+  const matchesArgs = (value: unknown, expected: readonly unknown[]): boolean =>
+    Array.isArray(value) &&
+    value.length === expected.length &&
+    value.every((item, index) => item === expected[index]);
+  const isPositivePid = (value: unknown): boolean =>
+    typeof value === 'string' && /^[1-9]\d*$/.test(value);
+  const isSyntheticProcessTableProbe = (
+    kind: string,
+    executable: unknown,
+    args: readonly unknown[]
+  ): boolean => {
+    const commandArgs = args[0];
+    const options = args[1];
+    if (
+      args.length === 2 &&
+      kind === 'spawnSync' &&
+      executable === 'ps' &&
+      matchesArgs(commandArgs, ['-axo', 'pid=,ppid=,pgid=,lstart=']) &&
+      hasExactKeys(options, ['encoding', 'windowsHide'])
+    ) {
+      return options.encoding === 'utf8' && options.windowsHide === true;
+    }
+    if (
+      args.length === 2 &&
+      kind === 'spawnSync' &&
+      executable === 'ps' &&
+      Array.isArray(commandArgs) &&
+      commandArgs.length === 4 &&
+      commandArgs[0] === '-o' &&
+      commandArgs[1] === 'lstart=' &&
+      commandArgs[2] === '-p' &&
+      isPositivePid(commandArgs[3]) &&
+      hasExactKeys(options, ['encoding', 'env', 'timeout', 'windowsHide'])
+    ) {
+      const baseline = guard.environmentBaseline;
+      if (!baseline) return false;
+      const expectedEnv = { ...baseline, ...guard.environmentOverrides, LC_ALL: 'C' };
+      return (
+        options.encoding === 'utf8' &&
+        options.timeout === 1_000 &&
+        options.windowsHide === true &&
+        options.env !== null &&
+        typeof options.env === 'object' &&
+        !Array.isArray(options.env) &&
+        environmentsAreExact(options.env as Record<string, unknown>, expectedEnv)
+      );
+    }
+    if (
+      args.length === 2 &&
+      kind === 'execFileSync' &&
+      executable === 'ps' &&
+      matchesArgs(commandArgs, ['-ax', '-o', 'command=']) &&
+      hasExactKeys(options, ['encoding', 'maxBuffer', 'timeout'])
+    ) {
+      return (
+        options.encoding === 'utf8' &&
+        options.timeout === 2_000 &&
+        options.maxBuffer === 5 * 1024 * 1024
+      );
+    }
+    if (
+      kind === 'execFile' &&
+      executable === 'ps' &&
+      matchesArgs(commandArgs, ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command=']) &&
+      hasExactKeys(options, ['env', 'maxBuffer', 'timeout']) &&
+      hasExactEnvironment(options.env) &&
+      options.timeout === 3_000 &&
+      options.maxBuffer === 2 * 1024 * 1024 &&
+      args.length === 3
+    ) {
+      const callback = args[2];
+      return typeof callback === 'function' && callback.length === 3;
+    }
+    if (
+      args.length === 2 &&
+      kind === 'execFileSync' &&
+      executable === 'ps' &&
+      matchesArgs(commandArgs, ['-ax', '-o', 'pid=,command=']) &&
+      hasExactKeys(options, ['encoding', 'stdio'])
+    ) {
+      return (
+        options.encoding === 'utf8' &&
+        Array.isArray(options.stdio) &&
+        matchesArgs(options.stdio, ['ignore', 'pipe', 'ignore'])
+      );
+    }
+    return (
+      args.length === 2 &&
+      kind === 'execFileSync' &&
+      executable === '/bin/ps' &&
+      Array.isArray(commandArgs) &&
+      commandArgs.length === 4 &&
+      commandArgs[0] === '-p' &&
+      isPositivePid(commandArgs[1]) &&
+      commandArgs[2] === '-o' &&
+      commandArgs[3] === 'command=' &&
+      hasExactKeys(options, ['encoding', 'stdio']) &&
+      options.encoding === 'utf8' &&
+      Array.isArray(options.stdio) &&
+      matchesArgs(options.stdio, ['ignore', 'pipe', 'ignore'])
+    );
+  };
+  const isSyntheticGitRootProbe = (
+    kind: string,
+    executable: unknown,
+    args: readonly unknown[]
+  ): boolean => {
+    const commandArgs = args[0];
+    const options = args[1];
+    const callback = args[2];
+    return (
+      args.length === 3 &&
+      kind === 'execFile' &&
+      executable === 'git' &&
+      Array.isArray(commandArgs) &&
+      commandArgs.length === 4 &&
+      commandArgs[0] === '-C' &&
+      typeof commandArgs[1] === 'string' &&
+      guard.sandboxCwds.has(commandArgs[1].replaceAll('\\', '/')) &&
+      commandArgs[2] === 'rev-parse' &&
+      commandArgs[3] === '--show-toplevel' &&
+      hasExactKeys(options, ['encoding', 'maxBuffer', 'timeout', 'windowsHide']) &&
+      options.encoding === 'utf8' &&
+      options.maxBuffer === 16 * 1024 &&
+      options.timeout === 1_000 &&
+      options.windowsHide === true &&
+      typeof callback === 'function' &&
+      callback.length === 2
+    );
+  };
+  const guardProcessCall = (
+    kind: string,
+    executable: unknown,
+    args: readonly unknown[] = []
+  ): unknown => {
+    const call = describeProcessCall(kind, executable, args);
+    if (isSyntheticProcessTableProbe(kind, executable, args)) {
+      guard.allowedProcessCalls.push(call);
+      if (kind === 'spawnSync') {
+        return {
+          pid: 0,
+          output: [null, '', ''],
+          stdout: '',
+          stderr: '',
+          status: 0,
+          signal: null,
+        };
+      }
+      if (kind === 'execFile') {
+        const callback = args[2] as (...callbackArgs: unknown[]) => void;
+        queueMicrotask(() => callback?.(null, '', ''));
+        return {};
+      }
+      return '';
+    }
+    if (isSyntheticGitRootProbe(kind, executable, args)) {
+      guard.allowedProcessCalls.push(call);
+      const callback = args[2] as (...callbackArgs: unknown[]) => void;
+      queueMicrotask(() => callback?.(new Error('synthetic non-git workspace'), '', ''));
+      return {};
+    }
+    guard.unexpectedProcessCalls.push(call);
+    throw new Error(`Safe E2E process guard blocked unexpected process launch: ${call}`);
+  };
+  const blockProcessCall = (
+    kind: string,
+    executable: unknown,
+    args: readonly unknown[] = []
+  ): never => {
+    const call = describeProcessCall(kind, executable, args);
+    guard.unexpectedProcessCalls.push(call);
+    throw new Error(`Safe E2E process guard blocked unexpected process launch: ${call}`);
+  };
+  const createGuardedModule = (
+    actual: typeof import('node:child_process')
+  ): typeof import('node:child_process') & { default: typeof import('node:child_process') } => {
+    const guarded = {
+      ...actual,
+      exec: ((command: string, ...args: unknown[]) =>
+        blockProcessCall('exec', command, args)) as unknown as typeof actual.exec,
+      execFile: ((executable: string, ...args: unknown[]) =>
+        guardProcessCall('execFile', executable, args)) as unknown as typeof actual.execFile,
+      execFileSync: ((executable: string, ...args: unknown[]) =>
+        guardProcessCall('execFileSync', executable, args)) as typeof actual.execFileSync,
+      execSync: ((command: string, ...args: unknown[]) =>
+        blockProcessCall('execSync', command, args)) as typeof actual.execSync,
+      fork: ((modulePath: string, ...args: unknown[]) =>
+        blockProcessCall('fork', modulePath, args)) as typeof actual.fork,
+      spawn: ((executable: string, ...args: unknown[]) =>
+        blockProcessCall('spawn', executable, args)) as typeof actual.spawn,
+      spawnSync: ((executable: string, ...args: unknown[]) =>
+        guardProcessCall('spawnSync', executable, args)) as typeof actual.spawnSync,
+    };
+    return { ...guarded, default: guarded };
+  };
+  return {
+    safeE2eLaunchGuard: guard,
+    blockSafeE2eProcessCall: blockProcessCall,
+    guardSafeE2EProcessCall: guardProcessCall,
+    createGuardedChildProcessModule: createGuardedModule,
+    hasExactSafeE2eEnvironment: hasExactEnvironment,
+    captureSafeE2eEnvironmentBaseline: (): Readonly<Record<string, string | undefined>> => {
+      const baseline = Object.freeze({ ...process.env });
+      guard.environmentBaseline = baseline;
+      return baseline;
+    },
+    setSafeE2eEnvironmentOverrides: (names: readonly string[]): void => {
+      guard.environmentOverrides = Object.freeze({
+        ...guard.environmentOverrides,
+        ...Object.fromEntries(
+          names
+            .map((name) => [name, process.env[name]] as const)
+            .filter((entry): entry is readonly [string, string] => entry[1] !== undefined)
+        ),
+      });
+    },
+    getSafeE2eEnvironmentMismatchNames: (
+      value: Record<string, unknown>,
+      provider?: 'anthropic' | 'codex'
+    ): string => {
+      const expected = provider
+        ? buildExpectedProvisioningEnvironment(provider)
+        : guard.environmentBaseline
+          ? { ...guard.environmentBaseline, ...guard.environmentOverrides }
+          : null;
+      if (!expected) return 'baseline-unavailable';
+      return Array.from(new Set([...Object.keys(expected), ...Object.keys(value)]))
+        .filter((name) => value[name] !== expected[name])
+        .sort()
+        .join(',');
+    },
+  };
+});
+
+vi.mock('child_process', () =>
+  createGuardedChildProcessModule(process.getBuiltinModule('node:child_process'))
+);
+
+vi.mock('node:child_process', () =>
+  createGuardedChildProcessModule(process.getBuiltinModule('node:child_process'))
+);
+
+vi.mock('node-pty', () => ({
+  spawn: (executable: string) => {
+    const call = `node-pty.spawn(${executable})`;
+    safeE2eLaunchGuard.unexpectedProcessCalls.push(call);
+    throw new Error(`Safe E2E process guard blocked unexpected PTY launch: ${call}`);
+  },
+}));
+
+vi.mock('../../../../src/main/services/team/ClaudeDoctorProbe', () => ({
+  getDoctorInvokedCandidates: async (commandName: string) => {
+    const call = `ClaudeDoctorProbe(${commandName})`;
+    safeE2eLaunchGuard.unexpectedProcessCalls.push(call);
+    throw new Error(`Safe E2E process guard blocked unexpected doctor PTY probe: ${call}`);
+  },
+}));
+
+vi.mock('@features/runtime-provider-management/main', () => ({
+  inspectOpenCodeLocalModelRuntimeReadiness: async () => {
+    const call = 'inspectOpenCodeLocalModelRuntimeReadiness()';
+    safeE2eLaunchGuard.providerNetworkCalls.push(call);
+    throw new Error(`Safe E2E provider guard blocked unexpected local-provider probe: ${call}`);
+  },
+}));
+
+vi.mock('../../../../src/main/services/team/AgentTeamsMcpHttpServer', () => {
+  const guardedServer = {
+    ensureStarted: async () => {
+      const call = 'agentTeamsMcpHttpServer.ensureStarted()';
+      safeE2eLaunchGuard.unexpectedProcessCalls.push(call);
+      throw new Error(`Safe E2E process guard blocked unexpected MCP host launch: ${call}`);
+    },
+    getCurrentHandle: vi.fn<() => { transportEvidence?: unknown } | null>(() => null),
+    stop: vi.fn(async () => undefined),
+  };
+  return {
+    agentTeamsMcpHttpServer: guardedServer,
+    getCurrentAgentTeamsMcpHttpTransportEvidence: () =>
+      guardedServer.getCurrentHandle()?.transportEvidence ?? null,
+  };
+});
+
 vi.mock('@main/utils/childProcess', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@main/utils/childProcess')>();
+  const execSyntheticFakeCli = async (
+    executable: string,
+    args: readonly string[],
+    options: Record<string, unknown>
+  ) => {
+    const normalizedExecutable = executable.replaceAll('\\', '/');
+    const normalizedCwd =
+      typeof options.cwd === 'string' ? options.cwd.replaceAll('\\', '/') : null;
+    const providers = ['anthropic', 'codex'] as const;
+    const provider = providers.find((candidate) => args.at(-1) === candidate);
+    const normalizedSandboxRoot = safeE2eLaunchGuard.sandboxRoot?.replaceAll('\\', '/');
+    const executableIdentity = safeE2eLaunchGuard.fakeCliPaths.has(normalizedExecutable)
+      ? '<fake-cli>'
+      : normalizedSandboxRoot && normalizedExecutable.startsWith(`${normalizedSandboxRoot}/`)
+        ? `<sandbox>${normalizedExecutable.slice(normalizedSandboxRoot.length)}`
+        : normalizedExecutable;
+    const optionsIdentity = Object.fromEntries(
+      Object.entries(options).map(([key, value]) => [
+        key,
+        key === 'env'
+          ? `<env:${
+              value && typeof value === 'object'
+                ? Object.keys(value).sort().join(',')
+                : typeof value
+            };mismatch:${
+              value && typeof value === 'object'
+                ? getSafeE2eEnvironmentMismatchNames(value as Record<string, unknown>, provider)
+                : 'shape'
+            }>`
+          : typeof value === 'string' &&
+              normalizedSandboxRoot &&
+              value.replaceAll('\\', '/').startsWith(`${normalizedSandboxRoot}/`)
+            ? `<sandbox>${value.replaceAll('\\', '/').slice(normalizedSandboxRoot.length)}`
+            : value,
+      ])
+    );
+    const commandIdentity = `execCli(${executableIdentity}, args=${JSON.stringify(args)}, options=${JSON.stringify(optionsIdentity)})`;
+    const exactCommands = provider
+      ? [
+          { args: ['model', 'list', '--json', '--provider', provider], timeout: 30_000 },
+          { args: ['runtime', 'status', '--json', '--provider', provider], timeout: 20_000 },
+          {
+            args: ['runtime', 'status', '--json', '--summary', '--provider', provider],
+            timeout: 20_000,
+          },
+          { args: ['auth', 'status', '--json', '--provider', provider], timeout: 8_000 },
+        ]
+      : [];
+    const command = exactCommands.find(
+      (candidate) =>
+        candidate.args.length === args.length &&
+        candidate.args.every((arg, index) => arg === args[index])
+    );
+    const exactOptions =
+      Object.keys(options).sort().join('\0') === ['cwd', 'env', 'timeout'].join('\0') &&
+      normalizedCwd !== null &&
+      safeE2eLaunchGuard.sandboxCwds.has(normalizedCwd) &&
+      hasExactSafeE2eEnvironment(options.env, provider) &&
+      options.timeout === command?.timeout;
+    if (!safeE2eLaunchGuard.fakeCliPaths.has(normalizedExecutable) || !command || !exactOptions) {
+      safeE2eLaunchGuard.unexpectedProcessCalls.push(commandIdentity);
+      throw new Error(
+        `Safe E2E fake CLI guard blocked unexpected command boundary: ${commandIdentity}`
+      );
+    }
+    const providerId = provider as (typeof providers)[number];
+    safeE2eLaunchGuard.allowedProcessCalls.push(commandIdentity);
+    const catalogSource = providerId === 'anthropic' ? 'anthropic-models-api' : 'app-server';
+    const models: CliProviderModelCatalog['models'] =
+      providerId === 'anthropic'
+        ? [
+            {
+              id: 'sonnet',
+              launchModel: 'sonnet',
+              displayName: 'Sonnet',
+              hidden: false,
+              supportedReasoningEfforts: ['low', 'medium', 'high'],
+              defaultReasoningEffort: 'medium',
+              supportsFastMode: false,
+              inputModalities: ['text', 'image'],
+              supportsPersonality: false,
+              isDefault: true,
+              upgrade: false,
+              source: catalogSource,
+            },
+            {
+              id: 'haiku',
+              launchModel: 'haiku',
+              displayName: 'Haiku',
+              hidden: false,
+              supportedReasoningEfforts: ['low', 'medium'],
+              defaultReasoningEffort: 'medium',
+              supportsFastMode: false,
+              inputModalities: ['text', 'image'],
+              supportsPersonality: false,
+              isDefault: false,
+              upgrade: false,
+              source: catalogSource,
+            },
+          ]
+        : [
+            {
+              id: 'gpt-5.5',
+              launchModel: 'gpt-5.5',
+              displayName: 'GPT-5.5',
+              hidden: false,
+              supportedReasoningEfforts: ['low', 'medium', 'high'],
+              defaultReasoningEffort: 'medium',
+              supportsFastMode: true,
+              inputModalities: ['text', 'image'],
+              supportsPersonality: true,
+              isDefault: true,
+              upgrade: false,
+              source: catalogSource,
+            },
+          ];
+    const catalog = {
+      schemaVersion: 1,
+      providerId,
+      source: catalogSource,
+      status: 'ready',
+      fetchedAt: '2026-05-13T00:00:00.000Z',
+      staleAt: '2026-05-13T01:00:00.000Z',
+      defaultModelId: models[0]?.id,
+      defaultLaunchModel: models[0]?.launchModel,
+      models,
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    } satisfies CliProviderModelCatalog;
+    const payload =
+      args[0] === 'model'
+        ? {
+            schemaVersion: 1,
+            providers: {
+              [providerId]: {
+                defaultModel: catalog.defaultLaunchModel,
+                models: models.map((model) => ({
+                  id: model.launchModel,
+                  label: model.displayName,
+                })),
+              },
+            },
+          }
+        : args[0] === 'runtime'
+          ? {
+              providers: {
+                [providerId]: {
+                  providerId,
+                  displayName: providerId,
+                  supported: true,
+                  authenticated: true,
+                  authMethod: 'test',
+                  verificationState: 'verified',
+                  models: models.map((model) => model.launchModel),
+                  modelCatalog: catalog,
+                  runtimeCapabilities: {
+                    modelCatalog: { dynamic: false, source: catalogSource },
+                    reasoningEffort: {
+                      supported: true,
+                      values: ['low', 'medium', 'high'],
+                      configPassthrough: true,
+                    },
+                    fastMode: {
+                      supported: true,
+                      available: false,
+                      reason: 'test runtime',
+                      source: 'runtime',
+                    },
+                  },
+                  canLoginFromUi: false,
+                  capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+                },
+              },
+            }
+          : {
+              provider: providerId,
+              loggedIn: true,
+              authMethod: 'test',
+              providers: {
+                [providerId]: {
+                  providerId,
+                  supported: true,
+                  authenticated: true,
+                  authMethod: 'test',
+                  verificationState: 'verified',
+                  capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+                },
+              },
+            };
+    return { stdout: `${JSON.stringify(payload)}\n`, stderr: '' };
+  };
+  const terminateSyntheticChild = (
+    child: import('child_process').ChildProcess | null | undefined,
+    signal?: string
+  ): void => {
+    if (!child?.pid || child.exitCode != null || child.signalCode != null) {
+      return;
+    }
+    if (vi.isMockFunction(process.kill)) {
+      process.kill(child.pid, signal ?? 'SIGTERM');
+    }
+    const terminationSignal = (signal ?? 'SIGTERM') as NodeJS.Signals;
+    Object.assign(child, { signalCode: terminationSignal });
+    child.emit('exit', null, terminationSignal);
+    child.emit('close', null, terminationSignal);
+  };
   return {
     ...actual,
+    execCli: vi.fn(
+      (executable: string, args: readonly string[] = [], options: Record<string, unknown> = {}) =>
+        execSyntheticFakeCli(executable, args, options)
+    ),
+    spawnCli: vi.fn((executable: string, ...args: unknown[]) =>
+      blockSafeE2eProcessCall('spawn', executable, args)
+    ),
+    killTrackedCliProcesses: vi.fn(),
+    killProcessTree: vi.fn(
+      (child: import('child_process').ChildProcess | null | undefined, signal?: string) =>
+        terminateSyntheticChild(child, signal)
+    ),
     // Synthetic launch-matrix PIDs do not exist in the host process table.
     // Model the awaited boundary while retaining the real ChildProcess event
     // contract; childProcess.ts owns OS-level identity verification tests.
     killProcessTreeAndWait: vi.fn(
       (child: import('child_process').ChildProcess | null | undefined, signal?: string) => {
-        if (!child?.pid || child.exitCode != null || child.signalCode != null) {
-          return Promise.resolve();
-        }
-        if (vi.isMockFunction(process.kill)) {
-          process.kill(child.pid, signal ?? 'SIGTERM');
-        }
-        const terminationSignal = (signal ?? 'SIGTERM') as NodeJS.Signals;
-        Object.assign(child, { signalCode: terminationSignal });
-        child.emit('exit', null, terminationSignal);
-        child.emit('close', null, terminationSignal);
+        terminateSyntheticChild(child, signal);
         return Promise.resolve();
       }
     ),
@@ -40,6 +719,10 @@ vi.mock('@main/utils/childProcess', async (importOriginal) => {
 
 import { registerTeamRoutes } from '../../../../src/main/http/teams';
 import { agentTeamsMcpHttpServer } from '../../../../src/main/services/team/AgentTeamsMcpHttpServer';
+import {
+  execCli as guardedExecCli,
+  spawnCli as guardedSpawnCli,
+} from '../../../../src/main/utils/childProcess';
 import { ClaudeBinaryResolver } from '../../../../src/main/services/team/ClaudeBinaryResolver';
 import { bindTeamHttpHandlerApis } from '../../../../src/main/services/team/contracts/TeamProvisioningApis';
 import { createOpenCodeBridgeHandshakeIdentityHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
@@ -107,6 +790,7 @@ import {
   getTeamsBasePath,
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
+import { clearShellEnvCache } from '../../../../src/main/utils/shellEnv';
 
 import type {
   WorkspaceTrustCoordinator,
@@ -125,6 +809,7 @@ import type {
 } from '../../../../src/main/services/team/runtime';
 import type { TeamMemberWorktreeManager } from '../../../../src/main/services/team/TeamMemberWorktreeManager';
 import type {
+  CliProviderModelCatalog,
   InboxMessage,
   TaskRef,
   TeamProvisioningProgress,
@@ -132,7 +817,8 @@ import type {
   ToolApprovalRequest,
 } from '../../../../src/shared/types';
 
-const LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS = 60_000;
+const LAUNCH_MATRIX_SAFE_E2E_TIMEOUT_MS = 180_000;
+const SAFE_E2E_STABLE_TERM = 'xterm-256color';
 const WORKSPACE_TRUST_TEST_ENV_NAMES = [
   'AGENT_TEAMS_WORKSPACE_TRUST',
   'AGENT_TEAMS_WORKSPACE_TRUST_PREFLIGHT',
@@ -141,8 +827,43 @@ const WORKSPACE_TRUST_TEST_ENV_NAMES = [
   'AGENT_TEAMS_WORKSPACE_TRUST_CODEX_SETTINGS',
   'AGENT_TEAMS_WORKSPACE_TRUST_RETRY',
 ] as const;
+const SAFE_E2E_ISOLATED_ENV_NAMES = [
+  'HOME',
+  'USERPROFILE',
+  'HOMEDRIVE',
+  'HOMEPATH',
+  'PATH',
+  'PATHEXT',
+  'SHELL',
+  'TERM',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'NVM_HOME',
+  'ProgramFiles',
+  'CLAUDE_CLI_PATH',
+  'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH',
+  'CLAUDE_TEAM_CLI_FLAVOR',
+  'CODEX_CLI_PATH',
+  'CLAUDE_CONFIG_DIR',
+  'CLAUDE_ROOT',
+  'CODEX_HOME',
+  'OPENCODE_CONFIG',
+  'OPENCODE_CONFIG_DIR',
+  'XDG_CONFIG_HOME',
+  'XDG_DATA_HOME',
+  'XDG_CACHE_HOME',
+  'ANTHROPIC_API_KEY',
+  'CLAUDE_CODE_OAUTH_TOKEN',
+  'OPENAI_API_KEY',
+  'CODEX_API_KEY',
+  'OPENCODE_API_KEY',
+  'GEMINI_API_KEY',
+  'GOOGLE_API_KEY',
+  'GOOGLE_APPLICATION_CREDENTIALS',
+] as const;
 
 type WorkspaceTrustTestEnvName = (typeof WORKSPACE_TRUST_TEST_ENV_NAMES)[number];
+type SafeE2eIsolatedEnvName = (typeof SAFE_E2E_ISOLATED_ENV_NAMES)[number];
 type RuntimeUsageStatsForTest = { rssBytes: number; cpuPercent?: number };
 type RuntimeUsageProcessRowForTest = RuntimeUsageStatsForTest & {
   pid: number;
@@ -154,6 +875,35 @@ type PersistedLaunchSnapshotForTest = {
   members: Record<string, Record<string, unknown>>;
   summary?: Record<string, unknown>;
 };
+
+function installSafeE2eBuiltinChildProcessGuards(): () => void {
+  const childProcess = process.getBuiltinModule('node:child_process');
+  const guardedMethods = [
+    'exec',
+    'execFile',
+    'execFileSync',
+    'execSync',
+    'fork',
+    'spawn',
+    'spawnSync',
+  ] as const;
+  const originals = Object.fromEntries(
+    guardedMethods.map((method) => [method, childProcess[method]])
+  ) as Pick<typeof childProcess, (typeof guardedMethods)[number]>;
+  for (const method of guardedMethods) {
+    Object.assign(childProcess, {
+      [method]: (executable: unknown, ...args: unknown[]) =>
+        guardSafeE2EProcessCall(method, executable, args),
+    });
+  }
+  syncBuiltinESMExports();
+
+  return () => {
+    Object.assign(childProcess, originals);
+    syncBuiltinESMExports();
+  };
+}
+
 type RuntimeUsageStatsStubTarget = {
   aliveRunByTeam?: Map<string, string>;
   provisioningRunByTeam?: Map<string, string>;
@@ -226,6 +976,61 @@ function createProvisioningChildFixture(input: {
       return true;
     },
   });
+}
+
+const DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'default' as const,
+  model: 'explicit' as const,
+  effort: 'default' as const,
+};
+
+const EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'explicit' as const,
+  model: 'explicit' as const,
+  effort: 'default' as const,
+};
+
+const DEFAULT_BACKEND_EXPLICIT_MODEL_AND_EFFORT_LEAD_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'default' as const,
+  model: 'explicit' as const,
+  effort: 'explicit' as const,
+};
+
+const EXPLICIT_BACKEND_MODEL_AND_EFFORT_LEAD_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'explicit' as const,
+  model: 'explicit' as const,
+  effort: 'explicit' as const,
+};
+
+const INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'inherited' as const,
+  effort: 'inherited' as const,
+};
+
+const EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'explicit' as const,
+  effort: 'inherited' as const,
+};
+
+const EXPLICIT_BACKEND_AND_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'explicit' as const,
+  model: 'explicit' as const,
+  effort: 'inherited' as const,
+};
+
+function createTestProvisioningService(
+  ...args: ConstructorParameters<typeof TeamProvisioningService>
+): TeamProvisioningService {
+  return new TeamProvisioningService(...args);
 }
 
 function stubRuntimeUsageStatsByPid(
@@ -308,47 +1113,591 @@ describe(
     let tempDir: string;
     let tempClaudeRoot: string;
     let projectPath: string;
-    let originalClaudeCliPath: string | undefined;
+    let originalIsolatedEnv: Partial<Record<SafeE2eIsolatedEnvName, string | undefined>>;
     let originalWorkspaceTrustEnv: Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>;
+    let originalFetch: typeof globalThis.fetch | undefined;
+    let originalProcessKill: typeof process.kill;
+    let restoreCanonicalConfigGuards: () => void;
+    let restoreBuiltinChildProcessGuards: () => void;
 
     beforeEach(async () => {
       TeamConfigReader.clearCacheForTests();
       ClaudeBinaryResolver.clearCache();
-      originalClaudeCliPath = process.env.CLAUDE_CLI_PATH;
+      clearShellEnvCache();
+      safeE2eLaunchGuard.allowedProcessCalls.length = 0;
+      safeE2eLaunchGuard.unexpectedProcessCalls.length = 0;
+      safeE2eLaunchGuard.actualProcessCreations = 0;
+      safeE2eLaunchGuard.providerNetworkCalls.length = 0;
+      safeE2eLaunchGuard.canonicalConfigCalls.length = 0;
+      safeE2eLaunchGuard.canonicalConfigRoots.length = 0;
+      safeE2eLaunchGuard.fakeCliPaths.clear();
+      safeE2eLaunchGuard.sandboxCwds.clear();
+      safeE2eLaunchGuard.sandboxRoot = null;
+      safeE2eLaunchGuard.projectPath = null;
+      safeE2eLaunchGuard.environmentOverrides = Object.freeze({});
+      originalIsolatedEnv = snapshotOptionalEnv(SAFE_E2E_ISOLATED_ENV_NAMES);
       originalWorkspaceTrustEnv = snapshotWorkspaceTrustTestEnv();
+      originalFetch = globalThis.fetch;
+      originalProcessKill = process.kill;
+      restoreBuiltinChildProcessGuards = installSafeE2eBuiltinChildProcessGuards();
       tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agent-launch-matrix-e2e-'));
       tempClaudeRoot = path.join(tempDir, '.claude');
       projectPath = path.join(tempDir, 'project');
+      safeE2eLaunchGuard.sandboxRoot = tempDir.replaceAll('\\', '/');
+      safeE2eLaunchGuard.projectPath = projectPath.replaceAll('\\', '/');
+      safeE2eLaunchGuard.sandboxCwds.add(projectPath.replaceAll('\\', '/'));
       await fs.mkdir(projectPath, { recursive: true });
       await fs.mkdir(tempClaudeRoot, { recursive: true });
+      await fs.mkdir(path.join(tempDir, 'empty-bin'), { recursive: true });
+      restoreCanonicalConfigGuards = installCanonicalConfigPathGuards(originalIsolatedEnv);
+      isolateSafeE2eEnvironment(tempDir);
+      captureSafeE2eEnvironmentBaseline();
+      process.env.TERM = SAFE_E2E_STABLE_TERM;
+      setSafeE2eEnvironmentOverrides(['TERM']);
+      globalThis.fetch = vi.fn(async (input: string | URL | Request) => {
+        const target = typeof input === 'string' ? input : input.toString();
+        safeE2eLaunchGuard.providerNetworkCalls.push(target);
+        throw new Error(`Safe E2E provider guard blocked unexpected network call: ${target}`);
+      }) as typeof globalThis.fetch;
+      process.kill = ((pid: number, signal?: string | number) => {
+        if (pid === process.pid && signal === 0) {
+          safeE2eLaunchGuard.allowedProcessCalls.push(`process.kill(${pid}, 0)`);
+          return true;
+        }
+        const call = `process.kill(${pid}, ${String(signal ?? 'SIGTERM')})`;
+        safeE2eLaunchGuard.unexpectedProcessCalls.push(call);
+        throw new Error(`Safe E2E process guard blocked unexpected process signal: ${call}`);
+      }) as typeof process.kill;
       setClaudeBasePathOverride(tempClaudeRoot);
     });
 
     afterEach(async () => {
-      TeamConfigReader.clearCacheForTests();
-      restoreOptionalEnvValue('CLAUDE_CLI_PATH', originalClaudeCliPath);
-      restoreWorkspaceTrustTestEnv(originalWorkspaceTrustEnv);
-      ClaudeBinaryResolver.clearCache();
-      setClaudeBasePathOverride(null);
-      await removeTempDirWithRetries(tempDir);
+      try {
+        TeamConfigReader.clearCacheForTests();
+        ClaudeBinaryResolver.clearCache();
+        clearShellEnvCache();
+        setClaudeBasePathOverride(null);
+        await removeTempDirWithRetries(tempDir);
+        clearBenignConfigReadWarningsIfOnlyBenign();
+      } finally {
+        const unexpectedProcessCalls = [...safeE2eLaunchGuard.unexpectedProcessCalls];
+        const actualProcessCreations = safeE2eLaunchGuard.actualProcessCreations;
+        const providerNetworkCalls = [...safeE2eLaunchGuard.providerNetworkCalls];
+        const canonicalConfigCalls = [...safeE2eLaunchGuard.canonicalConfigCalls];
+        restoreOptionalEnvSnapshot(originalIsolatedEnv, SAFE_E2E_ISOLATED_ENV_NAMES);
+        restoreWorkspaceTrustTestEnv(originalWorkspaceTrustEnv);
+        globalThis.fetch = originalFetch!;
+        process.kill = originalProcessKill;
+        restoreBuiltinChildProcessGuards();
+        restoreCanonicalConfigGuards();
+        expect(unexpectedProcessCalls).toEqual([]);
+        expect(actualProcessCreations).toBe(0);
+        expect(providerNetworkCalls).toEqual([]);
+        expect(canonicalConfigCalls).toEqual([]);
+      }
+    });
+
+    it('fails closed at the direct-process fallback boundary before creating a process', () => {
+      const unexpectedRuntimePath = path.join(tempDir, 'not-allowlisted-runtime');
+      const processCreationCountBefore = safeE2eLaunchGuard.actualProcessCreations;
+      const expectedCall =
+        'spawn(<sandbox>/not-allowlisted-runtime, args=[], options={"cwd":"<sandbox>/project"}, callback=absent)';
+
+      expect(() => guardedSpawnCli(unexpectedRuntimePath, [], { cwd: projectPath })).toThrow(
+        `Safe E2E process guard blocked unexpected process launch: ${expectedCall}`
+      );
+      expect(safeE2eLaunchGuard.actualProcessCreations).toBe(processCreationCountBefore);
+      expect(safeE2eLaunchGuard.unexpectedProcessCalls).toEqual([expectedCall]);
+
+      // The deliberate violation is fully asserted here; afterEach still proves
+      // that no unaccounted process/provider boundary was crossed by this case.
+      safeE2eLaunchGuard.unexpectedProcessCalls.length = 0;
+    });
+
+    it('fails closed on synchronous canonical-config access without async module mocks', () => {
+      const canonicalHome = path.join(tempDir, 'canonical-user-home');
+      const canonicalSettingsPath = path.join(canonicalHome, '.claude', 'settings.json');
+      restoreCanonicalConfigGuards();
+      restoreCanonicalConfigGuards = installCanonicalConfigPathGuards({ HOME: canonicalHome });
+
+      expect(() =>
+        process.getBuiltinModule('node:fs').readFileSync(canonicalSettingsPath, 'utf8')
+      ).toThrow(
+        `Safe E2E config guard blocked canonical user path access: readFileSync(${canonicalSettingsPath})`
+      );
+      expect(safeE2eLaunchGuard.canonicalConfigCalls).toEqual([
+        `readFileSync(${canonicalSettingsPath})`,
+      ]);
+
+      // The deliberate violation is fully asserted here; afterEach still proves
+      // that no unaccounted canonical-config boundary was crossed by this case.
+      safeE2eLaunchGuard.canonicalConfigCalls.length = 0;
+    });
+
+    it('fails closed across destructive, copy, and link canonical-config APIs', () => {
+      const canonicalHome = path.join(tempDir, 'canonical-user-home');
+      const canonicalRoot = path.join(canonicalHome, '.claude');
+      const canonicalSettingsPath = path.join(canonicalRoot, 'settings.json');
+      const sandboxSource = path.join(projectPath, 'sandbox-source');
+      restoreCanonicalConfigGuards();
+      restoreCanonicalConfigGuards = installCanonicalConfigPathGuards({ HOME: canonicalHome });
+
+      const attempts: Array<{ method: string; invoke: () => unknown; path: string }> = [
+        {
+          method: 'unlink',
+          invoke: () => fs.unlink(canonicalSettingsPath),
+          path: canonicalSettingsPath,
+        },
+        {
+          method: 'link',
+          invoke: () => fs.link(sandboxSource, canonicalSettingsPath),
+          path: canonicalSettingsPath,
+        },
+        {
+          method: 'symlink',
+          invoke: () => fs.symlink(sandboxSource, canonicalSettingsPath),
+          path: canonicalSettingsPath,
+        },
+        {
+          method: 'readlink',
+          invoke: () => fs.readlink(canonicalSettingsPath),
+          path: canonicalSettingsPath,
+        },
+        {
+          method: 'rmdir',
+          invoke: () => fs.rmdir(canonicalRoot),
+          path: canonicalRoot,
+        },
+        {
+          method: 'cpSync',
+          invoke: () =>
+            process.getBuiltinModule('node:fs').cpSync(sandboxSource, canonicalSettingsPath),
+          path: canonicalSettingsPath,
+        },
+        {
+          method: 'linkSync',
+          invoke: () =>
+            process.getBuiltinModule('node:fs').linkSync(sandboxSource, canonicalSettingsPath),
+          path: canonicalSettingsPath,
+        },
+        {
+          method: 'symlinkSync',
+          invoke: () =>
+            process.getBuiltinModule('node:fs').symlinkSync(sandboxSource, canonicalSettingsPath),
+          path: canonicalSettingsPath,
+        },
+        {
+          method: 'realpathSync.native',
+          invoke: () =>
+            process.getBuiltinModule('node:fs').realpathSync.native(canonicalSettingsPath),
+          path: canonicalSettingsPath,
+        },
+      ];
+
+      for (const attempt of attempts) {
+        expect(attempt.invoke).toThrow(
+          `Safe E2E config guard blocked canonical user path access: ${attempt.method}(${attempt.path})`
+        );
+      }
+      expect(safeE2eLaunchGuard.canonicalConfigCalls).toEqual(
+        attempts.map(({ method, path: attemptedPath }) => `${method}(${attemptedPath})`)
+      );
+      safeE2eLaunchGuard.canonicalConfigCalls.length = 0;
+    });
+
+    it('allows only exact diagnostic ps and sandbox git-root probes', async () => {
+      const childProcess = process.getBuiltinModule('node:child_process');
+      const gitOptions = {
+        encoding: 'utf8' as const,
+        maxBuffer: 16 * 1024,
+        timeout: 1_000,
+        windowsHide: true,
+      };
+      await new Promise<void>((resolve) => {
+        childProcess.execFile(
+          'git',
+          ['-C', projectPath, 'rev-parse', '--show-toplevel'],
+          gitOptions,
+          (error, _stdout) => {
+            expect(error?.message).toBe('synthetic non-git workspace');
+            resolve();
+          }
+        );
+      });
+      expect(
+        childProcess.spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
+          encoding: 'utf8',
+          windowsHide: true,
+        }).status
+      ).toBe(0);
+      const psOptions = {
+        env: process.env,
+        maxBuffer: 2 * 1024 * 1024,
+        timeout: 3_000,
+      };
+      await new Promise<void>((resolve) => {
+        childProcess.execFile(
+          'ps',
+          ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='],
+          psOptions,
+          (error, stdout, stderr) => {
+            expect(error).toBeNull();
+            expect(stdout).toBe('');
+            expect(stderr).toBe('');
+            resolve();
+          }
+        );
+      });
+
+      const rejectedCalls: Array<() => unknown> = [
+        () =>
+          childProcess.execFile(
+            'git',
+            ['-C', tempDir, 'rev-parse', '--show-toplevel'],
+            gitOptions,
+            () => undefined
+          ),
+        () =>
+          childProcess.execFile(
+            'git',
+            ['-C', projectPath, 'rev-parse', '--show-toplevel'],
+            gitOptions,
+            (_error) => undefined
+          ),
+        () =>
+          childProcess.execFile(
+            'git',
+            ['-C', projectPath, 'rev-parse', '--show-toplevel', '--git-dir'],
+            gitOptions,
+            () => undefined
+          ),
+        () =>
+          childProcess.execFile(
+            'git',
+            ['-C', projectPath, 'rev-parse', '--show-toplevel'],
+            { ...gitOptions, shell: true },
+            () => undefined
+          ),
+        () =>
+          childProcess.spawnSync('ps.exe', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
+            encoding: 'utf8',
+            windowsHide: true,
+          }),
+        () =>
+          childProcess.spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,lstart=', '--forest'], {
+            encoding: 'utf8',
+            windowsHide: true,
+          }),
+        () =>
+          childProcess.spawnSync('ps', ['-axo', 'pid=,ppid=,pgid=,lstart='], {
+            cwd: tempDir,
+            encoding: 'utf8',
+            windowsHide: true,
+          }),
+        () =>
+          childProcess.execFile(
+            'ps.exe',
+            ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='],
+            psOptions,
+            () => undefined
+          ),
+        () =>
+          childProcess.execFile(
+            'ps',
+            ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command=', '--forest'],
+            psOptions,
+            () => undefined
+          ),
+        () =>
+          childProcess.execFile(
+            'ps',
+            ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='],
+            { ...psOptions, shell: true },
+            () => undefined
+          ),
+        () =>
+          childProcess.execFile(
+            'ps',
+            ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='],
+            { ...psOptions, env: { ...process.env, SAFE_E2E_UNEXPECTED: '1' } },
+            () => undefined
+          ),
+        () =>
+          childProcess.execFile(
+            'ps',
+            ['-ax', '-o', 'pid=,ppid=,pcpu=,rss=,command='],
+            psOptions,
+            (_error, _stdout) => undefined
+          ),
+      ];
+      for (const invoke of rejectedCalls) {
+        expect(invoke).toThrow('Safe E2E process guard blocked unexpected process launch:');
+      }
+      expect(safeE2eLaunchGuard.unexpectedProcessCalls).toHaveLength(rejectedCalls.length);
+      expect(safeE2eLaunchGuard.unexpectedProcessCalls).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('shell'),
+          expect.stringContaining('ps.exe'),
+          expect.stringContaining('--forest'),
+          expect.stringContaining('<sandbox>'),
+        ])
+      );
+      safeE2eLaunchGuard.unexpectedProcessCalls.length = 0;
+    });
+
+    it('allows only registered fake CLI paths, ordered flags, and sandbox options', async () => {
+      const fakeCli = await writeFakeClaudeCli(tempDir);
+      const env = { ...process.env };
+      const runtimeResult = await guardedExecCli(
+        fakeCli,
+        ['runtime', 'status', '--json', '--provider', 'codex'],
+        { cwd: projectPath, env, timeout: 20_000 }
+      );
+      const runtimePayload = JSON.parse(runtimeResult.stdout) as Record<string, any>;
+      const catalog = runtimePayload.providers.codex.modelCatalog as Record<string, any>;
+      expect(catalog).toMatchObject({
+        schemaVersion: 1,
+        providerId: 'codex',
+        source: 'app-server',
+        status: 'ready',
+        defaultModelId: 'gpt-5.5',
+        defaultLaunchModel: 'gpt-5.5',
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      });
+      expect(catalog.models).toEqual([
+        expect.objectContaining({
+          id: 'gpt-5.5',
+          launchModel: 'gpt-5.5',
+          hidden: false,
+          supportedReasoningEfforts: ['low', 'medium', 'high'],
+          defaultReasoningEffort: 'medium',
+          inputModalities: ['text', 'image'],
+          supportsPersonality: true,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server',
+        }),
+      ]);
+      expect(runtimePayload.providers.codex.runtimeCapabilities.modelCatalog).toEqual({
+        dynamic: false,
+        source: 'app-server',
+      });
+
+      const rejectedCalls: Array<() => ReturnType<typeof guardedExecCli>> = [
+        () =>
+          guardedExecCli(
+            `${fakeCli}/../${path.basename(fakeCli)}`,
+            ['runtime', 'status', '--json', '--provider', 'codex'],
+            { cwd: projectPath, env, timeout: 20_000 }
+          ),
+        () =>
+          guardedExecCli(
+            `${fakeCli}-suffix`,
+            ['runtime', 'status', '--json', '--provider', 'codex'],
+            { cwd: projectPath, env, timeout: 20_000 }
+          ),
+        () =>
+          guardedExecCli(fakeCli, ['runtime', '--json', 'status', '--provider', 'codex'], {
+            cwd: projectPath,
+            env,
+            timeout: 20_000,
+          }),
+        () =>
+          guardedExecCli(
+            fakeCli,
+            ['runtime', 'status', '--json', '--provider', 'codex', '--verbose'],
+            { cwd: projectPath, env, timeout: 20_000 }
+          ),
+        () =>
+          guardedExecCli(fakeCli, ['runtime', 'status', '--json', '--provider', 'codex'], {
+            cwd: tempDir,
+            env,
+            timeout: 20_000,
+          }),
+        () =>
+          guardedExecCli(fakeCli, ['runtime', 'status', '--json', '--provider', 'codex'], {
+            cwd: projectPath,
+            env,
+            shell: true,
+            timeout: 20_000,
+          } as never),
+        () =>
+          guardedExecCli(fakeCli, ['runtime', 'status', '--json', '--provider', 'codex'], {
+            cwd: projectPath,
+            env: { ...env, CLAUDE_CONFIG_DIR: path.join(tempDir, 'alternate-claude-config') },
+            timeout: 20_000,
+          }),
+        () =>
+          guardedExecCli(fakeCli, ['runtime', 'status', '--json', '--provider', 'codex'], {
+            cwd: projectPath,
+            env: { ...env, SAFE_E2E_UNEXPECTED: '1' },
+            timeout: 20_000,
+          }),
+      ];
+      for (const invoke of rejectedCalls) {
+        await expect(invoke()).rejects.toThrow(
+          'Safe E2E fake CLI guard blocked unexpected command boundary:'
+        );
+      }
+      expect(safeE2eLaunchGuard.unexpectedProcessCalls).toHaveLength(rejectedCalls.length);
+      expect(safeE2eLaunchGuard.unexpectedProcessCalls).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining('../'),
+          expect.stringContaining('-suffix'),
+          expect.stringContaining('--verbose'),
+          expect.stringContaining('<sandbox>'),
+        ])
+      );
+      safeE2eLaunchGuard.unexpectedProcessCalls.length = 0;
+    });
+
+    it('freezes fake CLI environment authority before later process.env mutations', async () => {
+      const fakeCli = await writeFakeClaudeCli(tempDir);
+      const baseline = {
+        ...safeE2eLaunchGuard.environmentBaseline,
+        ...safeE2eLaunchGuard.environmentOverrides,
+      };
+      const canonicalValue = path.join(tempDir, 'canonical-user-config-secret');
+      const alternateValue = path.join(tempDir, 'alternate-user-home-secret');
+      process.env.CLAUDE_CONFIG_DIR = canonicalValue;
+      process.env.HOME = alternateValue;
+      process.env.USERPROFILE = canonicalValue;
+      process.env.SAFE_E2E_LATE_MUTATION = 'late-secret-value';
+      try {
+        await expect(
+          guardedExecCli(fakeCli, ['runtime', 'status', '--json', '--provider', 'codex'], {
+            cwd: projectPath,
+            env: { ...process.env },
+            timeout: 20_000,
+          })
+        ).rejects.toThrow('Safe E2E fake CLI guard blocked unexpected command boundary:');
+
+        await expect(
+          guardedExecCli(fakeCli, ['runtime', 'status', '--json', '--provider', 'codex'], {
+            cwd: projectPath,
+            env: baseline,
+            timeout: 20_000,
+          })
+        ).resolves.toMatchObject({ stdout: expect.any(String) });
+
+        expect(safeE2eLaunchGuard.unexpectedProcessCalls).toHaveLength(1);
+        for (const name of ['CLAUDE_CONFIG_DIR', 'HOME', 'SAFE_E2E_LATE_MUTATION', 'USERPROFILE']) {
+          expect(safeE2eLaunchGuard.unexpectedProcessCalls[0]).toContain(name);
+        }
+        expect(safeE2eLaunchGuard.unexpectedProcessCalls[0]).not.toContain(canonicalValue);
+        expect(safeE2eLaunchGuard.unexpectedProcessCalls[0]).not.toContain(alternateValue);
+        expect(safeE2eLaunchGuard.unexpectedProcessCalls[0]).not.toContain('late-secret-value');
+        safeE2eLaunchGuard.unexpectedProcessCalls.length = 0;
+      } finally {
+        delete process.env.SAFE_E2E_LATE_MUTATION;
+      }
+    });
+
+    it('fails closed when process environment mutates immediately before the scoped ps probe', () => {
+      const childProcess = process.getBuiltinModule('node:child_process');
+      const baseline = {
+        ...safeE2eLaunchGuard.environmentBaseline,
+        ...safeE2eLaunchGuard.environmentOverrides,
+      };
+      const canonicalOptions = {
+        encoding: 'utf8' as const,
+        env: { ...baseline, LC_ALL: 'C' },
+        timeout: 1_000,
+        windowsHide: true,
+      };
+      expect(
+        childProcess.spawnSync('ps', ['-o', 'lstart=', '-p', String(process.pid)], canonicalOptions)
+          .status
+      ).toBe(0);
+
+      for (const name of ['HOME', 'CLAUDE_CONFIG_DIR', 'PATH', 'OPENAI_API_KEY'] as const) {
+        process.env[name] = `${baseline[name] ?? ''}-late-mutation`;
+      }
+      try {
+        expect(() =>
+          childProcess.spawnSync('ps', ['-o', 'lstart=', '-p', String(process.pid)], {
+            ...canonicalOptions,
+            env: { ...process.env, LC_ALL: 'C' },
+          })
+        ).toThrow('Safe E2E process guard blocked unexpected process launch:');
+        expect(safeE2eLaunchGuard.unexpectedProcessCalls).toHaveLength(1);
+      } finally {
+        for (const name of ['HOME', 'CLAUDE_CONFIG_DIR', 'PATH', 'OPENAI_API_KEY'] as const) {
+          restoreOptionalEnvValue(name, baseline[name]);
+        }
+        safeE2eLaunchGuard.unexpectedProcessCalls.length = 0;
+      }
+    });
+
+    it('accepts a registered stable TERM override but rejects an unregistered late mutation', () => {
+      const childProcess = process.getBuiltinModule('node:child_process');
+      const registeredEnvironment = {
+        ...safeE2eLaunchGuard.environmentBaseline,
+        ...safeE2eLaunchGuard.environmentOverrides,
+      };
+      const canonicalOptions = {
+        encoding: 'utf8' as const,
+        env: { ...registeredEnvironment, LC_ALL: 'C' },
+        timeout: 1_000,
+        windowsHide: true,
+      };
+
+      expect(safeE2eLaunchGuard.environmentBaseline).not.toHaveProperty('TERM');
+      expect(safeE2eLaunchGuard.environmentOverrides).toEqual({ TERM: SAFE_E2E_STABLE_TERM });
+      expect(
+        childProcess.spawnSync('ps', ['-o', 'lstart=', '-p', String(process.pid)], canonicalOptions)
+          .status
+      ).toBe(0);
+
+      process.env.TERM = 'safe-e2e-unregistered-late-term';
+      try {
+        expect(
+          getSafeE2eEnvironmentMismatchNames({
+            ...registeredEnvironment,
+            TERM: process.env.TERM,
+          })
+        ).toBe('TERM');
+        const lateEnvironment = { ...process.env, LC_ALL: 'C' };
+        expect(() =>
+          childProcess.spawnSync('ps', ['-o', 'lstart=', '-p', String(process.pid)], {
+            ...canonicalOptions,
+            env: lateEnvironment,
+          })
+        ).toThrow('Safe E2E process guard blocked unexpected process launch:');
+        expect(safeE2eLaunchGuard.unexpectedProcessCalls).toHaveLength(1);
+      } finally {
+        process.env.TERM = SAFE_E2E_STABLE_TERM;
+        safeE2eLaunchGuard.unexpectedProcessCalls.length = 0;
+      }
     });
 
     it('launches a pure OpenCode team through the runtime adapter and exposes live members', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const progressEvents: TeamProvisioningProgress[] = [];
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'pure-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
           members: [
-            { name: 'alice', role: 'Developer', providerId: 'opencode' },
-            { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
           ],
         },
         (progress) => progressEvents.push(progress)
@@ -364,6 +1713,28 @@ describe(
       expect(progressEvents.at(-1)).toMatchObject({
         state: 'ready',
         message: 'OpenCode team launch is ready',
+      });
+
+      const launchState = JSON.parse(
+        await fs.readFile(
+          path.join(getTeamsBasePath(), 'pure-opencode-safe-e2e', 'launch-state.json'),
+          'utf8'
+        )
+      ) as {
+        runtimeRunId?: string;
+        expectedMembers: string[];
+        members: Record<string, { runtimeRunId?: string }>;
+        teamLaunchState: string;
+      };
+      expect(launchState.runtimeRunId).toBe(runId);
+      expect(launchState.members['team-lead']).toMatchObject({
+        runtimeRunId: runId,
+        providerId: 'opencode',
+        model: 'opencode/big-pickle',
+      });
+      expect((svc as any).runtimeAdapterRunByTeam.get('pure-opencode-safe-e2e')).toMatchObject({
+        runId,
+        members: { 'team-lead': { providerId: 'opencode' } },
       });
 
       const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot('pure-opencode-safe-e2e');
@@ -383,14 +1754,6 @@ describe(
         runtimeModel: 'opencode/big-pickle',
       });
 
-      const launchState = JSON.parse(
-        await fs.readFile(
-          path.join(getTeamsBasePath(), 'pure-opencode-safe-e2e', 'launch-state.json'),
-          {
-            encoding: 'utf8',
-          }
-        )
-      ) as { expectedMembers: string[]; members: Record<string, unknown>; teamLaunchState: string };
       expect(launchState.teamLaunchState).toBe('clean_success');
       expect(launchState.expectedMembers).toEqual(['team-lead', 'alice', 'bob']);
       expect(Object.keys(launchState.members)).toEqual(['team-lead', 'alice', 'bob']);
@@ -413,19 +1776,31 @@ describe(
     it('rejects concurrent member restarts that both replace an untracked pure OpenCode primary', async () => {
       const teamName = 'pure-opencode-untracked-concurrent-restarts-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
-            { name: 'alice', role: 'Reviewer', providerId: 'opencode' },
-            { name: 'bob', role: 'Developer', providerId: 'opencode' },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
           ],
         },
         () => undefined
@@ -434,7 +1809,12 @@ describe(
       const launchCountBeforeRestart = adapter.launchInputs.length;
       const primaryGate = adapter.holdNextPrimaryLaunch();
       const firstRestart = svc.restartMember(teamName, 'alice');
-      await primaryGate.entered;
+      await Promise.race([
+        primaryGate.entered,
+        firstRestart.then(() => {
+          throw new Error('Primary restart completed before entering the held launch');
+        }),
+      ]);
 
       await expect(svc.restartMember(teamName, 'bob')).rejects.toThrow(
         'aggregate primary restart for teammate "alice" is already in progress'
@@ -458,17 +1838,26 @@ describe(
     it('does not resurrect an untracked pure OpenCode restart cancelled during persistence', async () => {
       const teamName = 'pure-opencode-untracked-restart-persist-stop-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -490,55 +1879,80 @@ describe(
         }
       );
 
-      const restartExpectation = expect(svc.restartMember(teamName, 'alice')).rejects.toThrow(
-        'was cancelled because team "pure-opencode-untracked-restart-persist-stop-safe-e2e" is no longer running'
-      );
-      await persistenceEntered;
+      const restart = svc.restartMember(teamName, 'alice');
+      await Promise.race([
+        persistenceEntered,
+        restart.then(() => {
+          throw new Error('Primary restart completed before entering persistence');
+        }),
+      ]);
       const stopPromise = svc.stopTeam(teamName);
       releasePersistence();
 
       await stopPromise;
-      await restartExpectation;
+      await expect(restart).rejects.toThrow(
+        'was cancelled because team "pure-opencode-untracked-restart-persist-stop-safe-e2e" is no longer running'
+      );
       expect(svc.isTeamAlive(teamName)).toBe(false);
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
       ).resolves.toMatchObject({
         lanes: {},
       });
-      await expect(
-        fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-state.json'), 'utf8')
-      ).rejects.toMatchObject({ code: 'ENOENT' });
+      const stoppedSnapshot = JSON.parse(
+        await fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-state.json'), 'utf8')
+      ) as {
+        stoppedAt?: string;
+        stoppedRunId?: string;
+        teamLaunchState?: string;
+        members?: Record<string, { diagnostics?: string[] }>;
+      };
+      expect(stoppedSnapshot).toMatchObject({
+        stoppedAt: expect.any(String),
+        stoppedRunId: expect.any(String),
+        teamLaunchState: 'partial_pending',
+        members: {
+          alice: {
+            diagnostics: expect.arrayContaining(['Runtime stopped by explicit user action']),
+          },
+        },
+      });
     });
 
     it('keeps the OpenCode lead in primary when teammates use separate model lanes', async () => {
       const teamName = 'pure-opencode-lead-distinct-model-lanes-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       stubLiveOpenCodeRuntimeProcessesForTest(svc, teamName, ['alice', 'jack']);
       const progressEvents: TeamProvisioningProgress[] = [];
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Z.AI teammate',
               providerId: 'opencode',
               model: 'zai-coding-plan/glm-5.1',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'jack',
               role: 'MiniMax teammate',
               providerId: 'opencode',
@@ -739,24 +2153,28 @@ describe(
     it('does not resurrect an OpenCode primary lane when the team stops during member restart', async () => {
       const teamName = 'pure-opencode-primary-restart-stop-race-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -769,21 +2187,21 @@ describe(
 
       const launchCountBeforeRestart = adapter.launchInputs.length;
       const primaryGate = adapter.holdNextPrimaryLaunch();
-      const restartExpectation = expect(svc.restartMember(teamName, 'tom')).rejects.toThrow(
-        'was cancelled because the owning run is no longer active'
-      );
+      const restartPromise = svc.restartMember(teamName, 'tom');
       await primaryGate.entered;
 
-      const stopPromise = svc.stopTeam(teamName);
+      let stopCompletedBeforeRelease = false;
+      const stopPromise = svc.stopTeam(teamName).then(() => {
+        stopCompletedBeforeRelease = true;
+      });
       await waitForCondition(() => !svc.isTeamAlive(teamName));
-      const stopCompletedBeforeRelease = await Promise.race([
-        stopPromise.then(() => true),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 250)),
-      ]);
+      await waitForCondition(() => stopCompletedBeforeRelease);
       primaryGate.release();
 
       expect(stopCompletedBeforeRelease).toBe(true);
-      await restartExpectation;
+      await expect(restartPromise).rejects.toThrow(
+        'was cancelled because the owning run is no longer active'
+      );
       await stopPromise;
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -811,24 +2229,28 @@ describe(
     it('waits for an in-flight primary stop before completing team stop during member restart', async () => {
       const teamName = 'pure-opencode-primary-restart-stop-await-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -870,24 +2292,28 @@ describe(
     it('cleans OpenCode primary state when a stopped member restart launch rejects', async () => {
       const teamName = 'pure-opencode-primary-restart-stop-rejection-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -900,20 +2326,20 @@ describe(
 
       const primaryGate = adapter.holdNextPrimaryLaunch();
       adapter.failNextPrimaryLaunch('primary launch rejected after stop');
-      const restartExpectation = expect(svc.restartMember(teamName, 'tom')).rejects.toThrow(
-        'was cancelled because the owning run is no longer active'
-      );
+      const restartPromise = svc.restartMember(teamName, 'tom');
       await primaryGate.entered;
 
-      const stopPromise = svc.stopTeam(teamName);
-      const stopCompletedBeforeRelease = await Promise.race([
-        stopPromise.then(() => true),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 250)),
-      ]);
+      let stopCompletedBeforeRelease = false;
+      const stopPromise = svc.stopTeam(teamName).then(() => {
+        stopCompletedBeforeRelease = true;
+      });
+      await waitForCondition(() => stopCompletedBeforeRelease);
       primaryGate.release();
 
       expect(stopCompletedBeforeRelease).toBe(true);
-      await restartExpectation;
+      await expect(restartPromise).rejects.toThrow(
+        'was cancelled because the owning run is no longer active'
+      );
       await stopPromise;
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -926,30 +2352,35 @@ describe(
     it('serializes aggregate primary restarts across different OpenCode members', async () => {
       const teamName = 'pure-opencode-concurrent-primary-restarts-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'First same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'bob',
               role: 'Second same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -994,24 +2425,28 @@ describe(
     it('serializes an aggregate primary restart behind an earlier same-team relaunch', async () => {
       const teamName = 'pure-opencode-relaunch-before-primary-restart-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1042,9 +2477,11 @@ describe(
       const launchCountBeforeRelaunch = adapter.launchInputs.length;
       const relaunchPromise = svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
         },
@@ -1085,24 +2522,28 @@ describe(
     it('waits for an earlier secondary detach before relaunching the same team', async () => {
       const teamName = 'pure-opencode-detach-before-relaunch-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1122,6 +2563,7 @@ describe(
       const relaunchPromise = svc
         .launchTeam(
           {
+            leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
             teamName,
             cwd: projectPath,
             providerId: 'opencode',
@@ -1163,24 +2605,28 @@ describe(
     it('waits for an earlier same-team relaunch before detaching a secondary lane', async () => {
       const teamName = 'pure-opencode-relaunch-before-detach-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1213,9 +2659,11 @@ describe(
       ).length;
       const relaunchPromise = svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
         },
@@ -1246,24 +2694,28 @@ describe(
     it('does not propagate a failed secondary retry into a waiting relaunch', async () => {
       const teamName = 'pure-opencode-failed-retry-before-relaunch-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1300,6 +2752,7 @@ describe(
       const relaunchPromise = svc
         .launchTeam(
           {
+            leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
             teamName,
             cwd: projectPath,
             providerId: 'opencode',
@@ -1331,24 +2784,28 @@ describe(
     it('serializes a secondary detach behind OpenCode primary restart rollback', async () => {
       const teamName = 'pure-opencode-primary-restart-detach-serialization-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1410,24 +2867,28 @@ describe(
     it('clears a late rollback snapshot when stop cancels a tracked OpenCode primary restart', async () => {
       const teamName = 'pure-opencode-primary-rollback-persist-stop-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: false,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1491,24 +2952,28 @@ describe(
     it('waits for an earlier secondary detach before snapshotting a primary restart', async () => {
       const teamName = 'pure-opencode-detach-before-primary-restart-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1561,25 +3026,29 @@ describe(
     it('restores the original OpenCode primary lane when member restart relaunch fails', async () => {
       const teamName = 'pure-opencode-primary-restart-rollback-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const progressEvents: TeamProvisioningProgress[] = [];
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1666,24 +3135,28 @@ describe(
     it('stops the exact persisted primary candidate before rollback after relaunch persistence fails', async () => {
       const teamName = 'pure-opencode-primary-restart-persist-failure-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1750,25 +3223,29 @@ describe(
     it('rolls back when primary restart returns a hard failure for the OpenCode lead', async () => {
       const teamName = 'pure-opencode-primary-restart-lead-failure-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const progressEvents: TeamProvisioningProgress[] = [];
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1821,25 +3298,29 @@ describe(
     it('stops the OpenCode aggregate cleanly when member restart and primary rollback both fail', async () => {
       const teamName = 'pure-opencode-primary-restart-double-failure-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const progressEvents: TeamProvisioningProgress[] = [];
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
           model: 'xai/grok-4.5',
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Same-model teammate',
               providerId: 'opencode',
               model: 'xai/grok-4.5',
             },
             {
+              runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'alice',
               role: 'Side-lane teammate',
               providerId: 'opencode',
@@ -1897,7 +3378,7 @@ describe(
         })),
       };
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService(
+      const svc = createTestProvisioningService(
         undefined,
         undefined,
         undefined,
@@ -1913,6 +3394,7 @@ describe(
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -1920,12 +3402,14 @@ describe(
           skipPermissions: true,
           members: [
             {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'bob',
               role: 'Developer',
               providerId: 'opencode',
               isolation: 'worktree',
             },
             {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
               name: 'tom',
               role: 'Reviewer',
               providerId: 'opencode',
@@ -2064,6 +3548,7 @@ describe(
       const launchCountBeforeRelaunch = adapter.launchInputs.length;
       await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -2087,18 +3572,26 @@ describe(
     });
 
     it('accepts pure OpenCode runtime bootstrap check-ins during adapter launch', async () => {
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const adapter = new BootstrapCheckingOpenCodeRuntimeAdapter(svc);
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'pure-opencode-bootstrap-during-launch-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -2124,18 +3617,26 @@ describe(
 
     it('keeps failed OpenCode runtime adapter launches out of alive teams', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter('partial_failure');
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const progressEvents: TeamProvisioningProgress[] = [];
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'failed-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         (progress) => progressEvents.push(progress)
       );
@@ -2161,12 +3662,13 @@ describe(
         members: ['alice', 'bob'],
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const progressEvents: TeamProvisioningProgress[] = [];
 
       const { runId } = await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'existing-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
@@ -2206,7 +3708,7 @@ describe(
         projectPath,
         members: ['alice', 'bob'],
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       vi.spyOn(svc as any, 'normalizeTeamConfigForLaunch').mockImplementation(async () => {
         throw new Error('stop after compatibility repair');
       });
@@ -2214,6 +3716,7 @@ describe(
       await expect(
         svc.launchTeam(
           {
+            leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
             teamName,
             cwd: projectPath,
             providerId: 'anthropic',
@@ -2238,12 +3741,13 @@ describe(
     it('fails unsafe old mixed OpenCode config without launch-state or members metadata mutation', async () => {
       const teamName = 'legacy-mixed-config-unsafe-safe-e2e';
       await writeMixedTeamConfigWithoutOpenCodeProviderMetadata({ teamName, projectPath });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const normalizeSpy = vi.spyOn(svc as any, 'normalizeTeamConfigForLaunch');
 
       await expect(
         svc.launchTeam(
           {
+            leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
             teamName,
             cwd: projectPath,
             providerId: 'codex',
@@ -2266,18 +3770,26 @@ describe(
 
     it('keeps permission-pending OpenCode members pending instead of reading the team as fully ready', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter('partial_pending');
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const progressEvents: TeamProvisioningProgress[] = [];
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'permission-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         (progress) => progressEvents.push(progress)
       );
@@ -2302,19 +3814,27 @@ describe(
 
     it('routes OpenCode runtime approval UI responses back through the adapter', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter('partial_pending');
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'approve-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -2370,6 +3890,11 @@ describe(
     it('blocks createTeam at workspace trust preflight before spawn and preserves existing launch state', async () => {
       forceWorkspaceTrustPreflightEnv();
       process.env.CLAUDE_CLI_PATH = await writeFakeClaudeCli(tempDir);
+      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = process.env.CLAUDE_CLI_PATH;
+      setSafeE2eEnvironmentOverrides([
+        'CLAUDE_CLI_PATH',
+        'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH',
+      ]);
       ClaudeBinaryResolver.clearCache();
 
       const teamName = 'workspace-trust-create-blocked-safe-e2e';
@@ -2403,7 +3928,7 @@ describe(
         errorMessage,
         rawTail: 'Unexpected Claude startup screen',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setWorkspaceTrustCoordinator(coordinator);
       const progressEvents: TeamProvisioningProgress[] = [];
 
@@ -2415,7 +3940,16 @@ describe(
             providerId: 'anthropic',
             model: 'sonnet',
             skipPermissions: true,
-            members: [{ name: 'alice', role: 'Reviewer', providerId: 'anthropic', model: 'haiku' }],
+            leadRuntimeSelectionProvenance: RESOLVED_ANTHROPIC_LEAD_PROVENANCE,
+            members: [
+              {
+                name: 'alice',
+                role: 'Reviewer',
+                providerId: 'anthropic',
+                model: 'haiku',
+                runtimeSelectionProvenance: RESOLVED_ANTHROPIC_MEMBER_PROVENANCE,
+              },
+            ],
           },
           (progress) => progressEvents.push(progress)
         )
@@ -2489,11 +4023,18 @@ describe(
     it('blocks launchTeam at workspace trust preflight and restores the prelaunch config backup', async () => {
       forceWorkspaceTrustPreflightEnv();
       process.env.CLAUDE_CLI_PATH = await writeFakeClaudeCli(tempDir);
+      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = process.env.CLAUDE_CLI_PATH;
+      setSafeE2eEnvironmentOverrides([
+        'CLAUDE_CLI_PATH',
+        'CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH',
+      ]);
       ClaudeBinaryResolver.clearCache();
 
       const teamName = 'workspace-trust-launch-blocked-safe-e2e';
       const originalProjectPath = path.join(tempDir, 'original-project');
       const nextProjectPath = path.join(tempDir, 'next-project');
+      safeE2eLaunchGuard.sandboxCwds.add(originalProjectPath.replaceAll('\\', '/'));
+      safeE2eLaunchGuard.sandboxCwds.add(nextProjectPath.replaceAll('\\', '/'));
       await fs.mkdir(originalProjectPath, { recursive: true });
       await fs.mkdir(nextProjectPath, { recursive: true });
       const originalConfig = await writeAnthropicTeamConfig({
@@ -2507,7 +4048,7 @@ describe(
         errorMessage,
         evidence: ['workspace trust preflight blocked launch'],
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setWorkspaceTrustCoordinator(coordinator);
       const progressEvents: TeamProvisioningProgress[] = [];
 
@@ -2519,6 +4060,7 @@ describe(
             providerId: 'anthropic',
             model: 'sonnet',
             skipPermissions: true,
+            leadRuntimeSelectionProvenance: RESOLVED_ANTHROPIC_LEAD_PROVENANCE,
           },
           (progress) => progressEvents.push(progress)
         )
@@ -2564,20 +4106,36 @@ describe(
         bob: 'permission',
         tom: 'failed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'mixed-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
           members: [
-            { name: 'alice', role: 'Developer', providerId: 'opencode' },
-            { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
-            { name: 'tom', role: 'Developer', providerId: 'opencode' },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'tom',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
           ],
         },
         () => undefined
@@ -2616,17 +4174,25 @@ describe(
 
     it('stops a pure OpenCode runtime adapter team and clears alive tracking', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'stoppable-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -2708,28 +4274,44 @@ describe(
 
     it('stops one pure OpenCode runtime adapter team without disconnecting another team', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'pure-opencode-stop-isolated-a-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'pure-opencode-stop-isolated-b-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'bob', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -2769,28 +4351,44 @@ describe(
 
     it('lists only still-running OpenCode runtime adapter teams after one team stops', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'pure-opencode-alive-list-a-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'pure-opencode-alive-list-b-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'bob', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -2816,17 +4414,25 @@ describe(
     it('reports pure OpenCode runtime state as alive before stop and offline after stop', async () => {
       const teamName = 'pure-opencode-runtime-state-stop-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -2855,17 +4461,25 @@ describe(
     it('stops the stale pure OpenCode primary runtime before same-team relaunch', async () => {
       const teamName = 'pure-opencode-relaunch-stops-stale-runtime-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const first = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -2886,6 +4500,7 @@ describe(
 
       const second = await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -2938,34 +4553,51 @@ describe(
       const relaunchTeamName = 'pure-opencode-relaunch-isolated-a-safe-e2e';
       const survivingTeamName = 'pure-opencode-relaunch-isolated-b-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const relaunchFirst = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: relaunchTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       const surviving = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: survivingTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'bob', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
 
       const relaunchSecond = await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: relaunchTeamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -3011,17 +4643,25 @@ describe(
     it('serializes same-team pure OpenCode relaunch behind an in-flight launch before replacing the current run', async () => {
       const teamName = 'pure-opencode-relaunch-queued-safe-e2e';
       const adapter = new BlockingOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const firstPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3031,6 +4671,7 @@ describe(
 
       const secondPromise = svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -3085,17 +4726,25 @@ describe(
     it('keeps relaunch waiting while the previous same-team OpenCode runtime stop is slow', async () => {
       const teamName = 'pure-opencode-relaunch-slow-stop-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const firstPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3109,6 +4758,7 @@ describe(
 
       const secondPromise = svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -3167,17 +4817,25 @@ describe(
     it('serializes manual stop and same-team OpenCode relaunch behind a slow runtime stop', async () => {
       const teamName = 'pure-opencode-stop-then-relaunch-slow-stop-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const firstPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3203,6 +4861,7 @@ describe(
 
       const secondPromise = svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -3234,17 +4893,25 @@ describe(
       const stoppingTeamName = 'pure-opencode-cross-team-slow-stop-a-safe-e2e';
       const relaunchTeamName = 'pure-opencode-cross-team-slow-stop-b-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const stoppingCreate = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: stoppingTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3254,12 +4921,20 @@ describe(
 
       const relaunchFirst = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: relaunchTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3286,6 +4961,7 @@ describe(
 
       const relaunchSecondPromise = svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: relaunchTeamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -3437,17 +5113,25 @@ describe(
     it('does not resurrect a same-team OpenCode relaunch after stopAllTeams during slow replacement stop', async () => {
       const teamName = 'pure-opencode-relaunch-stop-all-during-slow-stop-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const firstPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3460,6 +5144,7 @@ describe(
 
       const relaunchPromise = svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -3478,17 +5163,18 @@ describe(
       expect(adapter.launchInputs).toHaveLength(1);
 
       const stopAllPromise = svc.stopAllTeams();
+      expect(adapter.launchInputs).toHaveLength(1);
       adapter.releaseStops();
       const [relaunch] = await Promise.all([relaunchPromise, stopAllPromise]);
 
       expect(relaunch.runId).toBeTruthy();
       expect(relaunch.runId).not.toBe(firstRunId);
-      expect(adapter.launchInputs).toHaveLength(1);
+      expect(adapter.launchInputs).toHaveLength(2);
       await expect(svc.getProvisioningStatus(relaunch.runId)).resolves.toMatchObject({
         runId: relaunch.runId,
         teamName,
-        state: 'cancelled',
-        message: 'Provisioning cancelled by user',
+        state: 'disconnected',
+        message: 'OpenCode team stopped',
       });
       expect(svc.isTeamAlive(teamName)).toBe(false);
       await expect(
@@ -3501,17 +5187,25 @@ describe(
     it('allows a fresh OpenCode launch after stopAllTeams cancelled a queued same-team relaunch', async () => {
       const teamName = 'pure-opencode-launch-after-stop-all-cancelled-relaunch-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const firstPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3524,6 +5218,7 @@ describe(
 
       const cancelledRelaunchPromise = svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -3534,20 +5229,22 @@ describe(
       );
       await waitForCondition(() => adapter.stopInputs.length === 1);
       const stopAllPromise = svc.stopAllTeams();
+      expect(adapter.launchInputs).toHaveLength(1);
       adapter.releaseStops();
       const cancelledRelaunch = await cancelledRelaunchPromise;
       await stopAllPromise;
 
-      expect(adapter.launchInputs).toHaveLength(1);
+      expect(adapter.launchInputs).toHaveLength(2);
       await expect(svc.getProvisioningStatus(cancelledRelaunch.runId)).resolves.toMatchObject({
         runId: cancelledRelaunch.runId,
         teamName,
-        state: 'cancelled',
+        state: 'disconnected',
       });
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       const freshLaunch = await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -3560,8 +5257,8 @@ describe(
       expect(freshLaunch.runId).toBeTruthy();
       expect(freshLaunch.runId).not.toBe(firstRunId);
       expect(freshLaunch.runId).not.toBe(cancelledRelaunch.runId);
-      await waitForCondition(() => adapter.launchInputs.length === 2);
-      expect(adapter.launchInputs[1]).toMatchObject({
+      await waitForCondition(() => adapter.launchInputs.length === 3);
+      expect(adapter.launchInputs[2]).toMatchObject({
         runId: freshLaunch.runId,
         teamName,
         providerId: 'opencode',
@@ -3591,17 +5288,25 @@ describe(
       const stoppingTeamName = 'pure-opencode-stop-all-already-stopping-a-safe-e2e';
       const liveTeamName = 'pure-opencode-stop-all-already-stopping-b-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const stoppingCreate = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: stoppingTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3613,12 +5318,20 @@ describe(
 
       const live = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: liveTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'bob', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3637,6 +5350,10 @@ describe(
       expect(svc.isTeamAlive(liveTeamName)).toBe(true);
 
       const stoppingAllTeams = svc.stopAllTeams();
+      expect(adapter.stopInputs).toHaveLength(1);
+      expect(svc.isTeamAlive(liveTeamName)).toBe(true);
+      adapter.releaseStops();
+      await stoppingTeam;
       await waitForCondition(() => adapter.stopInputs.length === 2);
       expect(adapter.stopInputs).toEqual(
         expect.arrayContaining([
@@ -3659,8 +5376,7 @@ describe(
       ).toHaveLength(1);
       expect(svc.getAliveTeams()).toEqual([]);
 
-      adapter.releaseStops();
-      await Promise.all([stoppingTeam, stoppingAllTeams]);
+      await stoppingAllTeams;
       expect(svc.isTeamAlive(stoppingTeamName)).toBe(false);
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), stoppingTeamName)
@@ -3677,17 +5393,25 @@ describe(
     it('cancels an in-flight pure OpenCode runtime adapter launch without letting late success resurrect it', async () => {
       const teamName = 'pure-opencode-cancel-inflight-runtime-safe-e2e';
       const adapter = new BlockingOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const createPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3733,17 +5457,25 @@ describe(
     it('shows cancelled status immediately when manual cancel waits on a slow OpenCode stop', async () => {
       const teamName = 'pure-opencode-cancel-slow-stop-status-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const createPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3771,7 +5503,6 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
-      await expect(createPromise).resolves.toEqual({ runId });
       await waitForCondition(() => adapter.launchInputs.length === 1);
       await expect(svc.getProvisioningStatus(runId!)).resolves.toMatchObject({
         runId,
@@ -3780,6 +5511,7 @@ describe(
       });
 
       adapter.releaseStops();
+      await expect(createPromise).resolves.toEqual({ runId });
       await expect(cancelPromise).resolves.toBeUndefined();
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -3793,28 +5525,44 @@ describe(
       const cancelledTeamName = 'pure-opencode-cancel-inflight-isolated-a-safe-e2e';
       const survivingTeamName = 'pure-opencode-cancel-inflight-isolated-b-safe-e2e';
       const adapter = new BlockingOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const cancelledPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: cancelledTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       const survivingPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: survivingTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'bob', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3882,28 +5630,44 @@ describe(
       const cancelledTeamName = 'pure-opencode-cancel-slow-stop-isolated-a-safe-e2e';
       const survivingTeamName = 'pure-opencode-cancel-slow-stop-isolated-b-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const cancelledPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: cancelledTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       const survivingPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: survivingTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'bob', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -3942,7 +5706,6 @@ describe(
       expect(svc.getAliveTeams()).toEqual([]);
 
       adapter.releaseLaunches();
-      await expect(cancelledPromise).resolves.toEqual({ runId: cancelledRunId });
       await expect(survivingPromise).resolves.toEqual({ runId: survivingRunId });
       await waitForCondition(() => adapter.launchInputs.length === 2);
 
@@ -3958,6 +5721,7 @@ describe(
       });
 
       adapter.releaseStops();
+      await expect(cancelledPromise).resolves.toEqual({ runId: cancelledRunId });
       await expect(cancelPromise).resolves.toBeUndefined();
       const cancelledStatuses = await svc.getMemberSpawnStatuses(cancelledTeamName);
       expect(cancelledStatuses.teamLaunchState).not.toBe('clean_success');
@@ -3973,17 +5737,25 @@ describe(
     it('rejects cancel for a ready pure OpenCode runtime adapter team without stopping it', async () => {
       const teamName = 'pure-opencode-cancel-ready-reject-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -4008,17 +5780,25 @@ describe(
     it('does not stop a live OpenCode team when cancelling an unknown run id', async () => {
       const teamName = 'pure-opencode-cancel-unknown-run-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -4039,17 +5819,25 @@ describe(
     it('stopAllTeams cancels an in-flight pure OpenCode runtime adapter launch without late success resurrecting it', async () => {
       const teamName = 'pure-opencode-stop-all-inflight-runtime-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const createPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -4058,7 +5846,12 @@ describe(
       expect(runId).toBeTruthy();
 
       const stopAllPromise = svc.stopAllTeams();
-
+      expect(adapter.stopInputs).toHaveLength(0);
+      await expect(svc.getProvisioningStatus(runId!)).resolves.not.toMatchObject({
+        state: 'cancelled',
+      });
+      adapter.releaseLaunches();
+      await expect(createPromise).resolves.toEqual({ runId });
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs[0]).toMatchObject({
         runId,
@@ -4071,21 +5864,19 @@ describe(
       await expect(svc.getProvisioningStatus(runId!)).resolves.toMatchObject({
         runId,
         teamName,
-        state: 'cancelled',
-        message: 'Provisioning cancellation requested; stopping OpenCode runtime',
+        state: 'disconnected',
+        message: 'Stopping OpenCode team through runtime adapter',
       });
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
-      adapter.releaseLaunches();
-      await expect(createPromise).resolves.toEqual({ runId });
       await waitForCondition(() => adapter.launchInputs.length === 1);
       adapter.releaseStops();
       await stopAllPromise;
       await expect(svc.getProvisioningStatus(runId!)).resolves.toMatchObject({
         runId,
         teamName,
-        state: 'cancelled',
-        message: 'Provisioning cancelled by user',
+        state: 'disconnected',
+        message: 'OpenCode team stopped',
       });
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -4096,24 +5887,32 @@ describe(
         lanes: {},
       });
       const statuses = await svc.getMemberSpawnStatuses(teamName);
-      expect(statuses.teamLaunchState).not.toBe('clean_success');
-      expect(statuses.statuses.alice?.launchState).not.toBe('confirmed_alive');
+      expect(statuses.teamLaunchState).toBe('clean_success');
+      expect(statuses.statuses.alice?.launchState).toBe('confirmed_alive');
     });
 
     it('allows a fresh OpenCode launch after stopAllTeams cancelled an in-flight create', async () => {
       const teamName = 'pure-opencode-launch-after-stop-all-cancelled-create-safe-e2e';
       const adapter = new BlockingOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const createPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -4122,7 +5921,12 @@ describe(
       expect(cancelledRunId).toBeTruthy();
 
       const stopAllPromise = svc.stopAllTeams();
-
+      expect(adapter.stopInputs).toHaveLength(0);
+      await expect(svc.getProvisioningStatus(cancelledRunId!)).resolves.not.toMatchObject({
+        state: 'disconnected',
+      });
+      adapter.releaseLaunches();
+      await expect(createPromise).resolves.toEqual({ runId: cancelledRunId });
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs[0]).toMatchObject({
         runId: cancelledRunId,
@@ -4135,17 +5939,16 @@ describe(
       await expect(svc.getProvisioningStatus(cancelledRunId!)).resolves.toMatchObject({
         runId: cancelledRunId,
         teamName,
-        state: 'cancelled',
+        state: 'disconnected',
       });
 
-      adapter.releaseLaunches();
-      await expect(createPromise).resolves.toEqual({ runId: cancelledRunId });
       await waitForCondition(() => adapter.launchInputs.length === 1);
       await stopAllPromise;
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       const freshLaunch = await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -4176,17 +5979,25 @@ describe(
     it('shows cancelled status immediately when stopAllTeams waits on a slow OpenCode stop', async () => {
       const teamName = 'pure-opencode-stop-all-slow-stop-status-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const createPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -4195,7 +6006,12 @@ describe(
       expect(runId).toBeTruthy();
 
       const stopAllPromise = svc.stopAllTeams();
-
+      expect(adapter.stopInputs).toHaveLength(0);
+      await expect(svc.getProvisioningStatus(runId!)).resolves.not.toMatchObject({
+        state: 'disconnected',
+      });
+      adapter.releaseLaunches();
+      await expect(createPromise).resolves.toEqual({ runId });
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs[0]).toMatchObject({
         runId,
@@ -4208,18 +6024,16 @@ describe(
       await expect(svc.getProvisioningStatus(runId!)).resolves.toMatchObject({
         runId,
         teamName,
-        state: 'cancelled',
-        message: 'Provisioning cancellation requested; stopping OpenCode runtime',
+        state: 'disconnected',
+        message: 'Stopping OpenCode team through runtime adapter',
       });
       expect(svc.getAliveTeams()).not.toContain(teamName);
 
-      adapter.releaseLaunches();
-      await expect(createPromise).resolves.toEqual({ runId });
       await waitForCondition(() => adapter.launchInputs.length === 1);
       await expect(svc.getProvisioningStatus(runId!)).resolves.toMatchObject({
         runId,
         teamName,
-        state: 'cancelled',
+        state: 'disconnected',
       });
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
@@ -4237,28 +6051,44 @@ describe(
       const firstTeamName = 'pure-opencode-stop-all-slow-stop-multi-a-safe-e2e';
       const secondTeamName = 'pure-opencode-stop-all-slow-stop-multi-b-safe-e2e';
       const adapter = new BlockingStopOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const firstPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: firstTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       const secondPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: secondTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'bob', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -4273,7 +6103,16 @@ describe(
       expect(secondRunId).toBeTruthy();
 
       const stopAllPromise = svc.stopAllTeams();
-
+      expect(adapter.stopInputs).toHaveLength(0);
+      await expect(svc.getProvisioningStatus(firstRunId!)).resolves.not.toMatchObject({
+        state: 'disconnected',
+      });
+      await expect(svc.getProvisioningStatus(secondRunId!)).resolves.not.toMatchObject({
+        state: 'disconnected',
+      });
+      adapter.releaseLaunches();
+      await expect(firstPromise).resolves.toEqual({ runId: firstRunId });
+      await expect(secondPromise).resolves.toEqual({ runId: secondRunId });
       await waitForCondition(() => adapter.stopInputs.length === 2);
       expect(adapter.stopInputs.map((input) => input.teamName).sort()).toEqual([
         firstTeamName,
@@ -4302,24 +6141,21 @@ describe(
       await expect(svc.getProvisioningStatus(firstRunId!)).resolves.toMatchObject({
         runId: firstRunId,
         teamName: firstTeamName,
-        state: 'cancelled',
+        state: 'disconnected',
       });
       await expect(svc.getProvisioningStatus(secondRunId!)).resolves.toMatchObject({
         runId: secondRunId,
         teamName: secondTeamName,
-        state: 'cancelled',
+        state: 'disconnected',
       });
       expect(svc.getAliveTeams()).toEqual([]);
 
-      adapter.releaseLaunches();
-      await expect(firstPromise).resolves.toEqual({ runId: firstRunId });
-      await expect(secondPromise).resolves.toEqual({ runId: secondRunId });
       await waitForCondition(() => adapter.launchInputs.length === 2);
       await expect(svc.getProvisioningStatus(firstRunId!)).resolves.toMatchObject({
-        state: 'cancelled',
+        state: 'disconnected',
       });
       await expect(svc.getProvisioningStatus(secondRunId!)).resolves.toMatchObject({
-        state: 'cancelled',
+        state: 'disconnected',
       });
       expect(svc.getAliveTeams()).toEqual([]);
 
@@ -4342,28 +6178,44 @@ describe(
       const firstTeamName = 'pure-opencode-stop-all-inflight-multi-a-safe-e2e';
       const secondTeamName = 'pure-opencode-stop-all-inflight-multi-b-safe-e2e';
       const adapter = new BlockingOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const firstPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: firstTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       const secondPromise = svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: secondTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'bob', role: 'Reviewer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -4377,8 +6229,17 @@ describe(
       expect(firstRunId).toBeTruthy();
       expect(secondRunId).toBeTruthy();
 
-      svc.stopAllTeams();
-
+      const stopAllPromise = svc.stopAllTeams();
+      expect(adapter.stopInputs).toHaveLength(0);
+      await expect(svc.getProvisioningStatus(firstRunId!)).resolves.not.toMatchObject({
+        state: 'cancelled',
+      });
+      await expect(svc.getProvisioningStatus(secondRunId!)).resolves.not.toMatchObject({
+        state: 'cancelled',
+      });
+      adapter.releaseLaunches();
+      await expect(firstPromise).resolves.toEqual({ runId: firstRunId });
+      await expect(secondPromise).resolves.toEqual({ runId: secondRunId });
       await waitForCondition(() => adapter.stopInputs.length === 2);
       expect(adapter.stopInputs.map((input) => input.teamName).sort()).toEqual([
         firstTeamName,
@@ -4388,18 +6249,15 @@ describe(
       await expect(svc.getProvisioningStatus(firstRunId!)).resolves.toMatchObject({
         runId: firstRunId,
         teamName: firstTeamName,
-        state: 'cancelled',
+        state: 'disconnected',
       });
       await expect(svc.getProvisioningStatus(secondRunId!)).resolves.toMatchObject({
         runId: secondRunId,
         teamName: secondTeamName,
-        state: 'cancelled',
+        state: 'disconnected',
       });
-
-      adapter.releaseLaunches();
-      await expect(firstPromise).resolves.toEqual({ runId: firstRunId });
-      await expect(secondPromise).resolves.toEqual({ runId: secondRunId });
       await waitForCondition(() => adapter.launchInputs.length === 2);
+      await stopAllPromise;
 
       expect(svc.getAliveTeams()).toEqual([]);
       await expect(
@@ -4424,17 +6282,25 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: pureTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -4485,7 +6351,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
@@ -4523,16 +6389,17 @@ describe(
       const adapter = new RejectingBlockingOpenCodeRuntimeAdapter(
         'late fake shutdown bridge failure'
       );
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
       trackLiveRun(svc, run);
+      await persistTrackedLiveRunSnapshot(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopAllTeams();
+      const stopAllPromise = svc.stopAllTeams();
 
       await waitForCondition(() => adapter.stopInputs.length === 1);
       expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
@@ -4542,6 +6409,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopAllPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -4565,7 +6433,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const quiescenceState = svc as unknown as {
         aliveRunByTeam: Map<string, string>;
@@ -4679,7 +6547,7 @@ describe(
       const adapter = new RejectingBlockingOpenCodeRuntimeAdapter(
         'late fake multi shutdown failure'
       );
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const firstRun = createMixedLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createMixedLiveRun({ teamName: secondTeamName, projectPath });
@@ -4777,7 +6645,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
@@ -4803,7 +6671,6 @@ describe(
       expect(runtimeSnapshot.providerBackendId).toBe('codex-native');
       expect(runtimeSnapshot.members.alice).toMatchObject({
         providerId: 'codex',
-        providerBackendId: 'codex-native',
         laneKind: 'primary',
         runtimeModel: 'gpt-5.4-mini',
       });
@@ -4868,7 +6735,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
@@ -4935,7 +6802,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const mixedLaneHarness = svc as unknown as {
         launchMixedSecondaryLaneIfNeeded(run: unknown): Promise<unknown>;
@@ -5037,7 +6904,7 @@ describe(
         });
       }
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const recoveredStatuses = await restartedService.getMemberSpawnStatuses(teamName);
       expect(recoveredStatuses.teamLaunchState).toBe('clean_success');
       expect(recoveredStatuses.expectedMembers).toEqual(['alice', 'cody', 'bob', 'tom']);
@@ -5046,7 +6913,6 @@ describe(
         alice: { providerId: 'anthropic', laneKind: 'primary', runtimeModel: 'haiku' },
         cody: {
           providerId: 'codex',
-          providerBackendId: 'codex-native',
           laneKind: 'primary',
           runtimeModel: 'gpt-5.4-mini',
         },
@@ -5113,7 +6979,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
@@ -5190,7 +7056,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob-2']);
@@ -5247,7 +7113,7 @@ describe(
         laneId: 'secondary:opencode:tom',
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice']);
@@ -5314,7 +7180,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
@@ -5388,7 +7254,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
@@ -5458,7 +7324,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice']);
@@ -5524,7 +7390,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob-2']);
@@ -5565,7 +7431,7 @@ describe(
         },
       ]);
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice']);
@@ -5621,7 +7487,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
@@ -5684,7 +7550,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
@@ -5742,7 +7608,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -5806,7 +7672,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -5859,7 +7725,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
@@ -5905,7 +7771,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
@@ -5938,7 +7804,7 @@ describe(
         missingMembers: ['bob'],
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
@@ -6013,7 +7879,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -6073,7 +7939,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -6163,7 +8029,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'reviewer', 'bob', 'tom']);
@@ -6282,7 +8148,7 @@ describe(
         },
       });
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'reviewer', 'bob', 'tom']);
@@ -6370,7 +8236,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -6467,7 +8333,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -6569,7 +8435,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -6691,7 +8557,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -6783,7 +8649,7 @@ describe(
           }),
         },
       });
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       (restartedService as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -6848,7 +8714,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -6916,7 +8782,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -6985,7 +8851,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -7021,7 +8887,7 @@ describe(
         bob: 'confirmed',
         tom: 'permission',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       stubLiveOpenCodeRuntimeProcessesForTest(svc, teamName, ['bob']);
       const run = createMixedLiveRun({ teamName, projectPath });
@@ -7127,7 +8993,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -7179,7 +9045,7 @@ describe(
     it('marks a finished OpenCode secondary lane without runtime evidence as retryable failure', async () => {
       const teamName = 'mixed-missing-opencode-evidence-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
@@ -7220,7 +9086,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -7282,7 +9148,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -7344,7 +9210,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -7410,7 +9276,7 @@ describe(
         bob: 'confirmed',
         tom: 'launching',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       stubLiveOpenCodeRuntimeProcessesForTest(svc, teamName, ['bob']);
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
@@ -7489,7 +9355,7 @@ describe(
         bob: 'confirmed',
         tom: 'launching',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       stubLiveOpenCodeRuntimeProcessesForTest(svc, teamName, ['bob']);
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
@@ -7607,7 +9473,7 @@ describe(
         bob: 'confirmed',
         tom: 'launching',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       const reviewer = {
@@ -7712,7 +9578,7 @@ describe(
         bob: 'confirmed',
         tom: 'permission',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       const reviewer = {
@@ -7792,7 +9658,7 @@ describe(
         bob: 'failed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -7833,7 +9699,7 @@ describe(
         bob: 'failed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -7887,7 +9753,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       removeMixedOpenCodeLaneForTest(run, 'bob');
@@ -7943,7 +9809,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
@@ -8001,7 +9867,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName, { removedMembers: ['bob'] });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
@@ -8034,7 +9900,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName, { removedMembers: ['bob'] });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           [
@@ -8115,7 +9981,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           ['alice', { alive: true, model: 'haiku' }],
@@ -8181,7 +10047,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           ['alice', { alive: true, model: 'haiku' }],
@@ -8239,7 +10105,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           ['alice', { alive: true, model: 'haiku', livenessKind: 'confirmed_bootstrap' }],
@@ -8305,7 +10171,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           ['alice', { alive: true, model: 'haiku', livenessKind: 'confirmed_bootstrap' }],
@@ -8355,7 +10221,7 @@ describe(
           messageId: 'msg-bob-2-heartbeat',
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       run.memberSpawnStatuses.set('bob', {
         status: 'spawning',
@@ -8432,7 +10298,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob-2']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -8491,7 +10357,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -8560,7 +10426,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob-2']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -8620,7 +10486,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -8683,7 +10549,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob-2']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -8743,7 +10609,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -8811,7 +10677,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob-2']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -8873,7 +10739,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -8935,7 +10801,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -8996,7 +10862,7 @@ describe(
           messageId: 'msg-mixed-old-bob-2-heartbeat',
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([new FakeOpenCodeRuntimeAdapter()])
       );
@@ -9062,7 +10928,7 @@ describe(
           messageId: 'msg-mixed-old-bob-2-bootstrap-failed',
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([new FakeOpenCodeRuntimeAdapter()])
       );
@@ -9136,7 +11002,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('clean_success');
@@ -9206,7 +11072,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -9274,7 +11140,7 @@ describe(
           messageId: 'msg-mixed-new-heartbeat-after-failure',
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([new FakeOpenCodeRuntimeAdapter()])
       );
@@ -9348,7 +11214,7 @@ describe(
           messageId: 'msg-mixed-new-failure-after-heartbeat',
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([new FakeOpenCodeRuntimeAdapter()])
       );
@@ -9421,7 +11287,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('clean_success');
@@ -9490,7 +11356,7 @@ describe(
         },
       ]);
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -9557,7 +11423,7 @@ describe(
           messageId: 'msg-mixed-002-same-time-heartbeat',
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([new FakeOpenCodeRuntimeAdapter()])
       );
@@ -9630,7 +11496,7 @@ describe(
           messageId: 'msg-mixed-002-same-time-failure',
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(
         new TeamRuntimeAdapterRegistry([new FakeOpenCodeRuntimeAdapter()])
       );
@@ -9686,7 +11552,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           ['alice', { alive: true, model: 'haiku', livenessKind: 'confirmed_bootstrap' }],
@@ -9749,7 +11615,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([
           ['alice', { alive: true, model: 'haiku' }],
@@ -9821,7 +11687,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([['alice', { alive: true, model: 'haiku', livenessKind: 'runtime_process' }]]);
 
@@ -9908,7 +11774,7 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).getLiveTeamAgentRuntimeMetadata = async () =>
         new Map([['alice', { alive: true, model: 'haiku' }]]);
 
@@ -10014,7 +11880,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
@@ -10104,7 +11970,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -10201,7 +12067,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
       expect(statuses.teamLaunchState).toBe('clean_success');
@@ -10310,7 +12176,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -10404,7 +12270,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('clean_success');
@@ -10491,7 +12357,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -10589,7 +12455,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
       expect(statuses.teamLaunchState).toBe('clean_success');
@@ -10698,7 +12564,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -10778,7 +12644,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('clean_success');
@@ -10849,7 +12715,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -10932,7 +12798,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
       expect(statuses.teamLaunchState).toBe('clean_success');
@@ -11016,7 +12882,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'tom']);
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -11086,7 +12952,7 @@ describe(
           bootstrapSuccessTranscriptRecord({ timestamp: successAt, teamName, memberName: 'bob' }),
         ],
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).memberLogsFinder = {
         findMemberLogs: async () => {
           throw new Error('fake member log discovery failure');
@@ -11153,7 +13019,7 @@ describe(
           bootstrapFailureTranscriptRecord({ timestamp: failureAt, teamName, memberName: 'bob' }),
         ],
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).memberLogsFinder = {
         findMemberLogs: async () => {
           throw new Error('fake member log discovery failure');
@@ -11226,7 +13092,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('clean_success');
       expect(statuses.statuses.bob).toMatchObject({
@@ -11293,7 +13159,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_failure');
       expect(statuses.statuses.bob).toMatchObject({
@@ -11318,7 +13184,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
       expect(statuses.statuses.bob).toMatchObject({
@@ -11343,7 +13209,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
       expect(statuses.statuses.bob).toMatchObject({
@@ -11371,7 +13237,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
       expect(statuses.statuses.bob).toMatchObject({
@@ -11399,7 +13265,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
       expect(statuses.statuses.bob).toMatchObject({
@@ -11421,7 +13287,7 @@ describe(
         records: [genericTranscriptApiErrorRecord({ timestamp: errorAt })],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
       expect(statuses.statuses.bob).toMatchObject({
@@ -11448,7 +13314,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_failure');
       expect(statuses.statuses.bob).toMatchObject({
@@ -11470,7 +13336,7 @@ describe(
         records: [genericTranscriptApiErrorRecord({ timestamp: errorAt })],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
       expect(statuses.statuses.alice).toMatchObject({
@@ -11507,7 +13373,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_failure');
       expect(statuses.statuses.alice).toMatchObject({
@@ -11539,7 +13405,7 @@ describe(
         sessionId,
         records: [genericTranscriptApiErrorRecord({ timestamp: errorAt })],
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).memberLogsFinder = {
         findMemberLogs: async () => [
           {
@@ -11570,7 +13436,7 @@ describe(
         sessionId,
         records: [genericTranscriptApiErrorRecord({ timestamp: errorAt })],
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       (svc as any).memberLogsFinder = {
         findMemberLogs: async () => [
           {
@@ -11637,7 +13503,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_failure');
       expect(statuses.statuses.alice).toMatchObject({
@@ -11674,7 +13540,7 @@ describe(
         ],
       });
 
-      const statuses = await new TeamProvisioningService().getMemberSpawnStatuses(teamName);
+      const statuses = await createTestProvisioningService().getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_pending');
       expect(statuses.statuses.alice).toMatchObject({
@@ -11696,8 +13562,9 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
+      trackLiveRun(svc, run);
       run.expectedMembers = ['alice', 'bob'];
       run.memberSpawnStatuses.set('bob', {
         status: 'waiting',
@@ -11738,7 +13605,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       run.expectedMembers = ['alice', 'bob'];
       run.memberSpawnStatuses.set('bob', {
@@ -11775,8 +13642,9 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
+      trackLiveRun(svc, run);
       const progressEvents: TeamProvisioningProgress[] = [];
       run.progress = {
         ...run.progress,
@@ -11825,7 +13693,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       const progressEvents: TeamProvisioningProgress[] = [];
       run.progress = {
@@ -11865,7 +13733,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       run.expectedMembers = ['alice', 'bob'];
 
@@ -11894,8 +13762,9 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
+      trackLiveRun(svc, run);
       run.expectedMembers = ['alice', 'bob'];
       run.memberSpawnStatuses.set('bob', {
         status: 'spawning',
@@ -11945,8 +13814,9 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
+      trackLiveRun(svc, run);
       const progressEvents: TeamProvisioningProgress[] = [];
       run.progress = {
         ...run.progress,
@@ -12004,7 +13874,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
       let sentRestartMessage = '';
@@ -12039,7 +13909,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
       (svc as any).sendMessageToRun = async () => undefined;
@@ -12085,7 +13955,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
       (svc as any).sendMessageToRun = async () => {
@@ -12114,7 +13984,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
       let sendCount = 0;
@@ -12150,7 +14020,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
       (svc as any).sendMessageToRun = async () => undefined;
@@ -12196,7 +14066,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: secondTeamName, projectPath });
       await writePureAnthropicTeamMeta(secondTeamName, projectPath);
       await writePureAnthropicMembersMeta(secondTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createPureAnthropicLiveRun({ teamName: secondTeamName, projectPath });
       trackLiveRun(svc, firstRun);
@@ -12227,7 +14097,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName, { removedMembers: ['bob'] });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
@@ -12253,7 +14123,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
@@ -12279,12 +14149,12 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
       trackLiveRun(svc, run);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
       await expect(svc.restartMember(teamName, 'bob')).rejects.toThrow(
@@ -12302,7 +14172,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: secondTeamName, projectPath });
       await writePureAnthropicTeamMeta(secondTeamName, projectPath);
       await writePureAnthropicMembersMeta(secondTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createPureAnthropicLiveRun({ teamName: secondTeamName, projectPath });
       firstRun.child = { kill: () => undefined };
@@ -12310,7 +14180,7 @@ describe(
       trackLiveRun(svc, firstRun);
       trackLiveRun(svc, secondRun);
 
-      svc.stopTeam(firstTeamName);
+      await svc.stopTeam(firstTeamName);
 
       expect(svc.isTeamAlive(firstTeamName)).toBe(false);
       expect(svc.isTeamAlive(secondTeamName)).toBe(true);
@@ -12337,7 +14207,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: liveTeamName, projectPath });
       await writePureAnthropicTeamMeta(liveTeamName, projectPath);
       await writePureAnthropicMembersMeta(liveTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const stoppedRun = createPureAnthropicLiveRun({ teamName: stoppedTeamName, projectPath });
       const liveRun = createPureAnthropicLiveRun({ teamName: liveTeamName, projectPath });
       stoppedRun.child = createProvisioningChildFixture({
@@ -12396,7 +14266,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: secondTeamName, projectPath });
       await writePureAnthropicTeamMeta(secondTeamName, projectPath);
       await writePureAnthropicMembersMeta(secondTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createPureAnthropicLiveRun({ teamName: secondTeamName, projectPath });
       firstRun.child = createProvisioningChildFixture({
@@ -12412,7 +14282,7 @@ describe(
 
       expect(svc.getAliveTeams().sort()).toEqual([firstTeamName, secondTeamName].sort());
 
-      svc.stopAllTeams();
+      await svc.stopAllTeams();
 
       expect(svc.getAliveTeams()).toEqual([]);
       expect(firstRun.cancelRequested).toBe(true);
@@ -12436,7 +14306,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: secondTeamName, projectPath });
       await writePureAnthropicTeamMeta(secondTeamName, projectPath);
       await writePureAnthropicMembersMeta(secondTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createPureAnthropicLiveRun({ teamName: secondTeamName, projectPath });
       firstRun.child = { stdin: { writable: true } };
@@ -12479,7 +14349,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: secondTeamName, projectPath });
       await writePureAnthropicTeamMeta(secondTeamName, projectPath);
       await writePureAnthropicMembersMeta(secondTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createPureAnthropicLiveRun({ teamName: secondTeamName, projectPath });
       const firstWrites: string[] = [];
@@ -12538,7 +14408,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       const writes: string[] = [];
       run.child = { stdin: createWritableStdin(writes) };
@@ -12574,7 +14444,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const staleRun = createPureAnthropicLiveRun({ teamName, projectPath });
       const currentRun = createPureAnthropicLiveRun({ teamName, projectPath });
       staleRun.runId = `run-${teamName}-stale`;
@@ -12627,7 +14497,7 @@ describe(
         includeGeminiPrimary: true,
         primaryProviderId: 'anthropic',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const firstRun = createMixedLiveRun({
         teamName: firstTeamName,
         projectPath,
@@ -12684,7 +14554,7 @@ describe(
         includeGeminiPrimary: true,
         primaryProviderId: 'anthropic',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const staleRun = createMixedLiveRun({
         teamName,
         projectPath,
@@ -12736,7 +14606,7 @@ describe(
         primaryProviderId: 'anthropic',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const staleRun = createMixedLiveRun({
         teamName,
@@ -12802,7 +14672,7 @@ describe(
           raw: { patterns: ['pnpm test'] },
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
@@ -12903,7 +14773,7 @@ describe(
           raw: { patterns: ['git status'] },
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
@@ -13010,7 +14880,7 @@ describe(
         primaryProviderId: 'anthropic',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
@@ -13100,7 +14970,7 @@ describe(
         primaryProviderId: 'anthropic',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const firstRun = createMixedLiveRun({
         teamName: firstTeamName,
@@ -13172,7 +15042,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const cancelledRun = createMixedLiveRun({
         teamName: cancelledTeamName,
@@ -13296,7 +15166,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const cancelledRun = createMixedLiveRun({
         teamName: cancelledTeamName,
@@ -13384,7 +15254,7 @@ describe(
         primaryProviderId: 'anthropic',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const currentRun = createMixedLiveRun({
         teamName,
@@ -13420,22 +15290,31 @@ describe(
     it('routes direct OpenCode member messages to the current pure OpenCode run after same-team relaunch', async () => {
       const teamName = 'pure-opencode-direct-message-current-run-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const first = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       const second = await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
@@ -13471,16 +15350,24 @@ describe(
       const adapter = new VisibleReplyOpenCodeRuntimeAdapter({
         replySource: 'runtime_delivery',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -13568,19 +15455,27 @@ describe(
           raw: { patterns: ['git status'] },
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -13649,21 +15544,32 @@ describe(
           raw: { patterns: ['git status'] },
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
           members: [
-            { name: 'alice', role: 'Developer', providerId: 'opencode' },
-            { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
           ],
         },
         () => undefined
@@ -13755,19 +15661,27 @@ describe(
         return originalListRuntimePermissions(input);
       });
 
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -13817,19 +15731,27 @@ describe(
         return result;
       });
 
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -13880,19 +15802,27 @@ describe(
           raw: { patterns: ['printf inline-observe'] },
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -13973,21 +15903,32 @@ describe(
           raw: { patterns: ['npm test'] },
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
           members: [
-            { name: 'alice', role: 'Developer', providerId: 'opencode' },
-            { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
           ],
         },
         () => undefined
@@ -14047,21 +15988,32 @@ describe(
           raw: { patterns: ['npm test'] },
         },
       ]);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const approvalEvents: ToolApprovalEvent[] = [];
       svc.setToolApprovalEventEmitter((event) => approvalEvents.push(event));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
           members: [
-            { name: 'alice', role: 'Developer', providerId: 'opencode' },
-            { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
           ],
         },
         () => undefined
@@ -14111,17 +16063,25 @@ describe(
     it('refreshes stale OpenCode session evidence before direct delivery when MCP transport changed', async () => {
       const teamName = 'pure-opencode-direct-message-transport-refresh-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -14191,28 +16151,44 @@ describe(
       const firstTeamName = 'pure-opencode-direct-message-live-team-a-safe-e2e';
       const secondTeamName = 'pure-opencode-direct-message-live-team-b-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const first = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: firstTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
       const second = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: secondTeamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -14243,16 +16219,24 @@ describe(
     it('routes direct OpenCode member messages to the alive pure OpenCode run when stale provisioning state remains', async () => {
       const teamName = 'pure-opencode-direct-message-stale-provisioning-alive-run-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const current = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -14288,16 +16272,24 @@ describe(
       const adapter = new VisibleReplyOpenCodeRuntimeAdapter({
         replySource: 'runtime_delivery',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const launch = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -14354,16 +16346,24 @@ describe(
       const adapter = new VisibleReplyOpenCodeRuntimeAdapter({
         replySource: 'lead_process',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -14401,22 +16401,30 @@ describe(
     it('delivers direct OpenCode member messages to recovered pure OpenCode lanes after service restart', async () => {
       const teamName = 'pure-opencode-direct-message-recovered-lane-safe-e2e';
       const launchAdapter = new FakeOpenCodeRuntimeAdapter();
-      const firstService = new TeamProvisioningService();
+      const firstService = createTestProvisioningService();
       firstService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([launchAdapter]));
       const launch = await firstService.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
 
       const messageAdapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([messageAdapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -14450,7 +16458,7 @@ describe(
         state: 'active',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
@@ -14487,7 +16495,7 @@ describe(
         state: 'active',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -14539,7 +16547,7 @@ describe(
         state: 'degraded',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -14574,16 +16582,24 @@ describe(
     it('does not deliver direct OpenCode member messages to stopped pure OpenCode teams', async () => {
       const teamName = 'pure-opencode-direct-message-stopped-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -14609,16 +16625,24 @@ describe(
     it('does not deliver direct OpenCode member messages while a pure OpenCode stop is in flight', async () => {
       const teamName = 'pure-opencode-direct-message-stop-in-flight-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -14671,18 +16695,29 @@ describe(
     it('does not deliver direct OpenCode member messages to removed pure OpenCode teammates', async () => {
       const teamName = 'pure-opencode-direct-message-removed-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const { runId } = await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
           members: [
-            { name: 'alice', role: 'Developer', providerId: 'opencode' },
-            { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
           ],
         },
         () => undefined
@@ -14738,7 +16773,7 @@ describe(
         state: 'active',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -14770,7 +16805,7 @@ describe(
         state: 'active',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -14808,7 +16843,7 @@ describe(
         diagnostics: ['stale active primary lane while members meta removed alice'],
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -14844,16 +16879,24 @@ describe(
     it('does not deliver direct OpenCode member messages to unknown pure OpenCode teammates', async () => {
       const teamName = 'pure-opencode-direct-message-unknown-safe-e2e';
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName,
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -14882,7 +16925,7 @@ describe(
         state: 'degraded',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -14909,7 +16952,7 @@ describe(
         state: 'degraded',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
@@ -14932,7 +16975,7 @@ describe(
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
@@ -15004,7 +17047,7 @@ describe(
       const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', {
         bob: 'confirmed',
       });
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(restartedService.scanOpenCodePromptDeliveryWatchdog(teamName)).resolves.toBe(0);
@@ -15101,7 +17144,7 @@ describe(
       const adapter = new FakeOpenCodeRuntimeAdapter('partial_pending', {
         bob: 'launching',
       });
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -15201,7 +17244,7 @@ describe(
         tom: 'failed',
       });
       await writeAliveProcessRegistry(teamName);
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -15303,7 +17346,7 @@ describe(
         sessionId: 'ses_bob_confirmed_materialized',
       });
       await writeAliveProcessRegistry(teamName);
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -15435,7 +17478,7 @@ describe(
         tom: 'failed',
       });
       await writeAliveProcessRegistry(teamName);
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const scheduledWatchdogJobs: unknown[] = [];
       (restartedService as any).scheduleOpenCodePromptDeliveryWatchdog = (input: unknown): void => {
@@ -15508,7 +17551,7 @@ describe(
         'utf8'
       );
       const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', { bob: 'confirmed' });
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const scheduledWatchdogJobs: unknown[] = [];
       (restartedService as any).scheduleOpenCodePromptDeliveryWatchdog = (input: unknown): void => {
@@ -15585,7 +17628,7 @@ describe(
         'utf8'
       );
       const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', { bob: 'confirmed' });
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(restartedService.scanOpenCodePromptDeliveryWatchdog(teamName)).resolves.toBe(0);
@@ -15698,7 +17741,7 @@ describe(
         tom: 'confirmed',
       });
       await writeAliveProcessRegistry(teamName);
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const scheduledWatchdogJobs: unknown[] = [];
       (restartedService as any).scheduleOpenCodePromptDeliveryWatchdog = (input: unknown): void => {
@@ -15790,7 +17833,7 @@ describe(
       const adapter = new FakeOpenCodeRuntimeAdapter('partial_pending', {
         bob: 'launching',
       });
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -15820,7 +17863,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
@@ -15891,7 +17934,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
@@ -15931,7 +17974,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
@@ -15999,7 +18042,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
@@ -16075,7 +18118,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const firstRun = createMixedLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createMixedLiveRun({ teamName: secondTeamName, projectPath });
@@ -16161,7 +18204,7 @@ describe(
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined };
@@ -16219,7 +18262,7 @@ describe(
         laneId: 'secondary:opencode:bob',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -16256,7 +18299,7 @@ describe(
         sessionId: 'ses_bob_direct_committed_session',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter('clean_success', { bob: 'confirmed' });
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -16302,7 +18345,7 @@ describe(
         laneId: 'secondary:opencode:tom',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -16352,7 +18395,7 @@ describe(
         laneId: 'secondary:opencode:tom',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -16402,7 +18445,7 @@ describe(
         laneId: 'secondary:opencode:tom',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -16445,7 +18488,7 @@ describe(
         laneId: 'secondary:opencode:bob',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -16479,7 +18522,7 @@ describe(
         diagnostics: ['stale active lane index while bob was removed'],
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -16526,7 +18569,7 @@ describe(
         laneId: 'secondary:opencode:bob',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
@@ -16558,7 +18601,7 @@ describe(
         laneId: 'secondary:opencode:bob',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -16602,7 +18645,7 @@ describe(
         state: 'degraded',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expectOpenCodeTrackedPendingDelivery(
@@ -16646,7 +18689,7 @@ describe(
         state: 'degraded',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       restartedService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await expect(
@@ -16674,7 +18717,7 @@ describe(
         state: 'degraded',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       injectStaleTerminalProvisioningRun(svc, teamName, `run-${teamName}-stale`);
 
@@ -16706,7 +18749,7 @@ describe(
         removedMembers: ['bob'],
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
@@ -16759,7 +18802,7 @@ describe(
         primaryProviderId: 'anthropic',
       });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
@@ -16802,7 +18845,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const staleRun = createMixedLiveRun({
         teamName,
@@ -16882,7 +18925,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const staleRun = createMixedLiveRun({
         teamName,
@@ -16973,7 +19016,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const staleRun = createPureAnthropicLiveRun({ teamName, projectPath });
       const currentRun = createPureAnthropicLiveRun({ teamName, projectPath });
       staleRun.runId = `run-${teamName}-stale`;
@@ -17029,7 +19072,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const staleRun = createPureAnthropicLiveRun({ teamName, projectPath });
       const currentRun = createPureAnthropicLiveRun({ teamName, projectPath });
       staleRun.runId = `run-${teamName}-stale`;
@@ -17081,7 +19124,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const staleRun = createPureAnthropicLiveRun({ teamName, projectPath });
       const currentRun = createPureAnthropicLiveRun({ teamName, projectPath });
       staleRun.runId = `run-${teamName}-stale`;
@@ -17135,7 +19178,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const staleRun = createPureAnthropicLiveRun({ teamName, projectPath });
       staleRun.runId = `run-${teamName}-stale`;
       staleRun.child = { pid: 64101, kill: () => undefined, stdin: { writable: true } };
@@ -17152,8 +19195,8 @@ describe(
         runId: staleRun.runId,
         members: {
           'team-lead': { pid: 64101, rssBytes: 64_101_000 },
-          alice: { pid: 64102, rssBytes: 64_102_000, runtimeModel: 'haiku-stale' },
-          bob: { pid: 64103, rssBytes: 64_103_000, runtimeModel: 'sonnet-stale' },
+          alice: { pid: 64102, rssBytes: 64_102_000, runtimeModel: 'haiku' },
+          bob: { pid: 64103, rssBytes: 64_103_000, runtimeModel: 'sonnet' },
         },
       });
 
@@ -17172,8 +19215,8 @@ describe(
         runId: currentRun.runId,
         members: {
           'team-lead': { pid: 64201, rssBytes: 64_201_000 },
-          alice: { pid: 64202, rssBytes: 64_202_000, runtimeModel: 'haiku-current' },
-          bob: { pid: 64203, rssBytes: 64_203_000, runtimeModel: 'sonnet-current' },
+          alice: { pid: 64202, rssBytes: 64_202_000, runtimeModel: 'haiku' },
+          bob: { pid: 64203, rssBytes: 64_203_000, runtimeModel: 'sonnet' },
         },
       });
     });
@@ -17183,7 +19226,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName, projectPath });
       firstRun.runId = `run-${teamName}-first`;
       firstRun.child = createProvisioningChildFixture({
@@ -17203,7 +19246,7 @@ describe(
         runId: firstRun.runId,
         members: {
           'team-lead': { pid: 64501, rssBytes: 64_501_000 },
-          alice: { pid: 64502, rssBytes: 64_502_000, runtimeModel: 'haiku-before-stop' },
+          alice: { pid: 64502, rssBytes: 64_502_000, runtimeModel: 'haiku' },
         },
       });
 
@@ -17224,8 +19267,8 @@ describe(
         runId: secondRun.runId,
         members: {
           'team-lead': { pid: 64601, rssBytes: 64_601_000 },
-          alice: { pid: 64602, rssBytes: 64_602_000, runtimeModel: 'haiku-after-relaunch' },
-          bob: { pid: 64603, rssBytes: 64_603_000, runtimeModel: 'sonnet-after-relaunch' },
+          alice: { pid: 64602, rssBytes: 64_602_000, runtimeModel: 'haiku' },
+          bob: { pid: 64603, rssBytes: 64_603_000, runtimeModel: 'sonnet' },
         },
       });
     });
@@ -17235,7 +19278,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath });
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const firstRun = createMixedLiveRun({ teamName, projectPath });
       firstRun.runId = `run-${teamName}-codex`;
@@ -17254,6 +19297,7 @@ describe(
       });
 
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
       TeamConfigReader.invalidateTeam(teamName);
       const secondRun = createMixedLiveRun({
         teamName,
@@ -17295,7 +19339,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath });
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const firstRun = createMixedLiveRun({ teamName, projectPath });
       firstRun.runId = `run-${teamName}-codex`;
@@ -17309,6 +19353,7 @@ describe(
       });
 
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
       TeamConfigReader.invalidateTeam(teamName);
       const secondRun = createMixedLiveRun({
         teamName,
@@ -17354,7 +19399,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath });
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const firstRun = createMixedLiveRun({ teamName, projectPath });
       firstRun.runId = `run-${teamName}-codex`;
@@ -17362,6 +19407,7 @@ describe(
       trackLiveRun(svc, firstRun);
 
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
       TeamConfigReader.invalidateTeam(teamName);
       const secondRun = createMixedLiveRun({
         teamName,
@@ -17405,7 +19451,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
       await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
       await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       run.runId = `run-${teamName}-anthropic`;
@@ -17440,7 +19486,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
       await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
       await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       run.runId = `run-${teamName}-anthropic`;
@@ -17477,7 +19523,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
       await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
       await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       run.runId = `run-${teamName}-anthropic`;
@@ -17512,7 +19558,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
       await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
       await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       run.runId = `run-${teamName}-anthropic`;
@@ -17555,7 +19601,7 @@ describe(
         includeGeminiPrimary: true,
         primaryProviderId: 'anthropic',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
@@ -17599,7 +19645,7 @@ describe(
         includeGeminiPrimary: true,
         primaryProviderId: 'anthropic',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
@@ -17654,9 +19700,10 @@ describe(
           }),
         },
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
+      await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
       TeamConfigReader.invalidateTeam(teamName);
       const currentRun = createMixedLiveRun({
         teamName,
@@ -17686,7 +19733,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
       await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
       await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const firstRun = createMixedLiveRun({
         teamName,
@@ -17706,6 +19753,7 @@ describe(
       });
 
       await writeMixedTeamConfig({ teamName, projectPath });
+      await writeMembersMeta(teamName);
       TeamConfigReader.invalidateTeam(teamName);
       const secondRun = createMixedLiveRun({ teamName, projectPath });
       secondRun.runId = `run-${teamName}-codex`;
@@ -17730,7 +19778,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
       await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
       await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const firstRun = createMixedLiveRun({
         teamName,
@@ -17748,6 +19796,7 @@ describe(
       });
 
       await writeMixedTeamConfig({ teamName, projectPath });
+      await writeMembersMeta(teamName);
       TeamConfigReader.invalidateTeam(teamName);
       const secondRun = createMixedLiveRun({ teamName, projectPath });
       secondRun.runId = `run-${teamName}-codex`;
@@ -17789,7 +19838,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
       await writeTeamMeta(teamName, projectPath, { primaryProviderId: 'anthropic' });
       await writeMembersMeta(teamName, { primaryProviderId: 'anthropic' });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const firstRun = createMixedLiveRun({
         teamName,
@@ -17801,6 +19850,7 @@ describe(
       trackLiveRun(svc, firstRun);
 
       await writeMixedTeamConfig({ teamName, projectPath });
+      await writeMembersMeta(teamName);
       TeamConfigReader.invalidateTeam(teamName);
       const secondRun = createMixedLiveRun({ teamName, projectPath });
       secondRun.runId = `run-${teamName}-codex`;
@@ -17841,7 +19891,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath });
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
 
       const run = createMixedLiveRun({ teamName, projectPath });
       run.runId = `run-${teamName}-codex`;
@@ -17892,7 +19942,7 @@ describe(
         includeGeminiPrimary: true,
         primaryProviderId: 'anthropic',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const staleRun = createMixedLiveRun({
         teamName,
         projectPath,
@@ -17916,7 +19966,7 @@ describe(
         runId: staleRun.runId,
         members: {
           'team-lead': { pid: 64701, rssBytes: 64_701_000 },
-          alice: { pid: 64702, rssBytes: 64_702_000, runtimeModel: 'haiku-stale' },
+          alice: { pid: 64702, rssBytes: 64_702_000, runtimeModel: 'haiku' },
           reviewer: { pid: 64703, rssBytes: 64_703_000, runtimeModel: 'gemini-stale' },
           bob: { pid: 64704, rssBytes: 64_704_000, runtimeModel: 'opencode/minimax-stale' },
           tom: { pid: 64705, rssBytes: 64_705_000, runtimeModel: 'opencode/nemotron-stale' },
@@ -17945,7 +19995,7 @@ describe(
         runId: currentRun.runId,
         members: {
           'team-lead': { pid: 64801, rssBytes: 64_801_000 },
-          alice: { pid: 64802, rssBytes: 64_802_000, runtimeModel: 'haiku-current' },
+          alice: { pid: 64802, rssBytes: 64_802_000, runtimeModel: 'haiku' },
           reviewer: { pid: 64803, rssBytes: 64_803_000, runtimeModel: 'gemini-current' },
           bob: { pid: 64804, rssBytes: 64_804_000, runtimeModel: 'opencode/minimax-current' },
           tom: { pid: 64805, rssBytes: 64_805_000, runtimeModel: 'opencode/nemotron-current' },
@@ -17962,7 +20012,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: liveTeamName, projectPath });
       await writePureAnthropicTeamMeta(liveTeamName, projectPath);
       await writePureAnthropicMembersMeta(liveTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const stoppedRun = createPureAnthropicLiveRun({ teamName: stoppedTeamName, projectPath });
       const liveRun = createPureAnthropicLiveRun({ teamName: liveTeamName, projectPath });
       stoppedRun.child = { kill: () => undefined, stdin: { writable: true } };
@@ -17991,7 +20041,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       run.child = { stdin: { writable: false } };
       trackLiveRun(svc, run);
@@ -18018,7 +20068,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: secondTeamName, projectPath });
       await writePureAnthropicTeamMeta(secondTeamName, projectPath);
       await writePureAnthropicMembersMeta(secondTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const firstRun = createPureAnthropicLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createPureAnthropicLiveRun({ teamName: secondTeamName, projectPath });
       firstRun.child = { pid: 50101, kill: () => undefined, stdin: { writable: true } };
@@ -18053,14 +20103,14 @@ describe(
         pid: 50102,
         rssBytes: 50_102_000,
         providerId: 'anthropic',
-        runtimeModel: 'haiku-runtime',
+        runtimeModel: 'haiku',
       });
       expect(firstSnapshot.members.bob).toMatchObject({
         alive: true,
         pid: 50103,
         rssBytes: 50_103_000,
         providerId: 'anthropic',
-        runtimeModel: 'sonnet-runtime',
+        runtimeModel: 'sonnet',
       });
       expect(secondSnapshot.members['team-lead']).toMatchObject({
         alive: true,
@@ -18073,14 +20123,14 @@ describe(
         pid: 50202,
         rssBytes: 50_202_000,
         providerId: 'anthropic',
-        runtimeModel: 'haiku-runtime',
+        runtimeModel: 'haiku',
       });
       expect(secondSnapshot.members.bob).toMatchObject({
         alive: true,
         pid: 50203,
         rssBytes: 50_203_000,
         providerId: 'anthropic',
-        runtimeModel: 'sonnet-runtime',
+        runtimeModel: 'sonnet',
       });
     });
 
@@ -18093,7 +20143,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName: liveTeamName, projectPath });
       await writePureAnthropicTeamMeta(liveTeamName, projectPath);
       await writePureAnthropicMembersMeta(liveTeamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const stoppedRun = createPureAnthropicLiveRun({ teamName: stoppedTeamName, projectPath });
       const liveRun = createPureAnthropicLiveRun({ teamName: liveTeamName, projectPath });
       stoppedRun.child = createProvisioningChildFixture({
@@ -18153,7 +20203,7 @@ describe(
       await writePureAnthropicTeamConfig({ teamName, projectPath });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       run.child = { kill: () => undefined, stdin: { writable: true } };
       trackLiveRun(svc, run);
@@ -18163,7 +20213,7 @@ describe(
         runId: run.runId,
       });
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       expect(svc.getLeadActivityState(teamName)).toEqual({
         state: 'offline',
@@ -18180,8 +20230,9 @@ describe(
       });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
+      trackLiveRun(svc, run);
       run.expectedMembers = ['alice', 'bob'];
       run.memberSpawnStatuses.set('bob', {
         status: 'spawning',
@@ -18226,7 +20277,7 @@ describe(
       });
       await writePureAnthropicTeamMeta(teamName, projectPath);
       await writePureAnthropicMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createPureAnthropicLiveRun({ teamName, projectPath });
       run.expectedMembers = ['alice', 'bob'];
       run.memberSpawnStatuses.set('bob', {
@@ -18256,7 +20307,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -18329,7 +20380,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -18418,7 +20469,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       run.expectedMembers = ['alice', 'reviewer'];
@@ -18536,7 +20587,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       run.expectedMembers = ['alice', 'reviewer'];
@@ -18644,7 +20695,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       run.expectedMembers = ['alice', 'reviewer'];
@@ -18741,7 +20792,7 @@ describe(
     it('fails mixed OpenCode secondary lanes clearly when the runtime adapter is not registered', async () => {
       const teamName = 'mixed-missing-opencode-adapter-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
@@ -18779,7 +20830,7 @@ describe(
     it('keeps Anthropic primary online when OpenCode secondary adapter is not registered', async () => {
       const teamName = 'mixed-anthropic-missing-opencode-adapter-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath, primaryProviderId: 'anthropic' });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
@@ -18829,7 +20880,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -18881,7 +20932,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -18955,7 +21006,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const firstRun = createMixedLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createMixedLiveRun({ teamName: secondTeamName, projectPath });
@@ -19018,7 +21069,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19070,7 +21121,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const firstRun = createMixedLiveRun({ teamName: firstTeamName, projectPath });
       const secondRun = createMixedLiveRun({ teamName: secondTeamName, projectPath });
@@ -19126,7 +21177,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -19185,7 +21236,7 @@ describe(
         tom: 'confirmed',
         eve: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19245,7 +21296,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.mixedSecondaryLanes = run.mixedSecondaryLanes.filter(
@@ -19297,7 +21348,7 @@ describe(
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19326,7 +21377,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19369,7 +21420,7 @@ describe(
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19393,7 +21444,7 @@ describe(
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName, { removedMembers: ['bob'] });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19414,7 +21465,7 @@ describe(
       await writeMixedTeamConfig({ teamName, projectPath });
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName);
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
@@ -19446,7 +21497,7 @@ describe(
       await writeTeamMeta(teamName, projectPath);
       await writeMembersMeta(teamName, { extraMembers: [eve] });
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       run.allEffectiveMembers.push({
@@ -19478,7 +21529,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19534,7 +21585,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -19595,7 +21646,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19646,7 +21697,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -19702,7 +21753,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -19727,7 +21778,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -19766,7 +21817,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
@@ -19800,15 +21851,16 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
+      await persistTrackedLiveRunSnapshot(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19818,6 +21870,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19833,15 +21886,16 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
+      await persistTrackedLiveRunSnapshot(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19851,6 +21905,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19879,7 +21934,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       run.expectedMembers = ['alice', 'reviewer'];
@@ -19915,11 +21970,12 @@ describe(
         livenessSource: 'heartbeat',
       });
       trackLiveRun(svc, run);
+      await persistTrackedLiveRunSnapshot(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19929,6 +21985,7 @@ describe(
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.launchInputs.length === 1);
+      await stopPromise;
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(svc.isTeamAlive(teamName)).toBe(false);
@@ -19956,7 +22013,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const stoppedRun = createMixedLiveRun({ teamName: stoppedTeamName, projectPath });
       const survivingRun = createMixedLiveRun({ teamName: survivingTeamName, projectPath });
@@ -20013,7 +22070,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const oldRun = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, oldRun);
@@ -20021,9 +22078,10 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
+      await stopPromise;
 
       await writeMixedTeamLaunchState({
         teamName,
@@ -20097,7 +22155,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const oldRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, oldRun);
@@ -20105,9 +22163,10 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
+      await stopPromise;
 
       await writeMixedTeamLaunchState({
         teamName,
@@ -20191,7 +22250,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const oldRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       const reviewer = {
@@ -20226,9 +22285,10 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
+      await stopPromise;
 
       await writeMixedTeamLaunchState({
         teamName,
@@ -20316,7 +22376,7 @@ describe(
       const teamName = 'mixed-stop-late-error-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
       const adapter = new RejectingBlockingOpenCodeRuntimeAdapter('late fake bridge failure');
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -20324,12 +22384,13 @@ describe(
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -20337,15 +22398,22 @@ describe(
         lanes: {},
       });
       const statuses = await svc.getMemberSpawnStatuses(teamName);
-      expect(statuses.teamLaunchState).not.toBe('partial_failure');
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      expect(statuses.teamLaunchState).not.toBe('clean_success');
       expect(statuses.statuses.bob).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
-      expect(statuses.statuses.bob?.launchState).not.toBe('failed_to_start');
+      expect(statuses.statuses.bob?.status).toBe('offline');
+      expect(statuses.statuses.bob?.launchState).not.toBe('confirmed_alive');
       expect(statuses.statuses.tom).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
-      expect(statuses.statuses.tom?.launchState).not.toBe('failed_to_start');
+      expect(statuses.statuses.tom?.status).toBe('offline');
+      expect(statuses.statuses.tom?.launchState).not.toBe('confirmed_alive');
     });
 
     it('does not degrade stopped Anthropic mixed launch lanes when in-flight OpenCode launch errors late', async () => {
@@ -20354,39 +22422,67 @@ describe(
       const adapter = new RejectingBlockingOpenCodeRuntimeAdapter(
         'late fake Anthropic bridge failure'
       );
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
+      await persistTrackedLiveRunSnapshot(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
       ).resolves.toMatchObject({
         lanes: {},
       });
+      const stoppedLaunchState = JSON.parse(
+        await fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-state.json'), 'utf8')
+      ) as Record<string, any>;
+      expect(stoppedLaunchState).toMatchObject({
+        launchPhase: 'reconciled',
+        stoppedAt: expect.any(String),
+        members: {
+          alice: {
+            launchState: 'starting',
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            diagnostics: expect.arrayContaining(['Runtime stopped by explicit user action']),
+          },
+        },
+      });
       const statuses = await svc.getMemberSpawnStatuses(teamName);
-      expect(statuses.teamLaunchState).not.toBe('partial_failure');
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      expect(statuses.teamLaunchState).not.toBe('clean_success');
       expect(statuses.statuses.alice).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
+      expect(statuses.statuses.alice?.status).toBe('offline');
       expect(statuses.statuses.bob).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
-      expect(statuses.statuses.bob?.launchState).not.toBe('failed_to_start');
+      expect(statuses.statuses.bob?.status).toBe('offline');
+      expect(statuses.statuses.bob?.launchState).not.toBe('confirmed_alive');
       expect(statuses.statuses.tom).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
-      expect(statuses.statuses.tom?.launchState).not.toBe('failed_to_start');
+      expect(statuses.statuses.tom?.status).toBe('offline');
+      expect(statuses.statuses.tom?.launchState).not.toBe('confirmed_alive');
     });
 
     it('does not degrade stopped Anthropic and Gemini mixed launch lanes when in-flight OpenCode launch errors late', async () => {
@@ -20405,7 +22501,7 @@ describe(
       const adapter = new RejectingBlockingOpenCodeRuntimeAdapter(
         'late fake Anthropic and Gemini bridge failure'
       );
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       const reviewer = {
@@ -20436,16 +22532,18 @@ describe(
         livenessSource: 'heartbeat',
       });
       trackLiveRun(svc, run);
+      await persistTrackedLiveRunSnapshot(svc, run);
 
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      const stopPromise = svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+      await stopPromise;
 
       await expect(
         readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
@@ -20453,21 +22551,34 @@ describe(
         lanes: {},
       });
       const statuses = await svc.getMemberSpawnStatuses(teamName);
-      expect(statuses.teamLaunchState).not.toBe('partial_failure');
+      expect(svc.isTeamAlive(teamName)).toBe(false);
+      expect(statuses.teamLaunchState).not.toBe('clean_success');
       expect(statuses.statuses.alice).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
+      expect(statuses.statuses.alice?.status).toBe('offline');
       expect(statuses.statuses.reviewer).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
+      expect(statuses.statuses.reviewer?.status).toBe('offline');
       expect(statuses.statuses.bob).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
-      expect(statuses.statuses.bob?.launchState).not.toBe('failed_to_start');
+      expect(statuses.statuses.bob?.status).toBe('offline');
+      expect(statuses.statuses.bob?.launchState).not.toBe('confirmed_alive');
       expect(statuses.statuses.tom).toMatchObject({
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
         hardFailure: false,
       });
-      expect(statuses.statuses.tom?.launchState).not.toBe('failed_to_start');
+      expect(statuses.statuses.tom?.status).toBe('offline');
+      expect(statuses.statuses.tom?.launchState).not.toBe('confirmed_alive');
     });
 
     it('stops mixed OpenCode secondary lanes when provisioning is cancelled mid-launch', async () => {
@@ -20477,7 +22588,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -20509,7 +22620,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -20554,7 +22665,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
@@ -20603,7 +22714,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const cancelledRun = createMixedLiveRun({
         teamName,
@@ -20687,7 +22798,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const cancelledRun = createMixedLiveRun({ teamName: cancelledTeamName, projectPath });
       const survivingRun = createMixedLiveRun({ teamName: survivingTeamName, projectPath });
@@ -20767,7 +22878,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const cancelledRun = createMixedLiveRun({
         teamName: cancelledTeamName,
@@ -20844,7 +22955,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const cancelledRun = createMixedLiveRun({ teamName: cancelledTeamName, projectPath });
       const survivingRun = createMixedLiveRun({ teamName: survivingTeamName, projectPath });
@@ -20940,7 +23051,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const cancelledRun = createMixedLiveRun({
         teamName: cancelledTeamName,
@@ -21038,7 +23149,7 @@ describe(
       const adapter = new RejectingBlockingOpenCodeRuntimeAdapter(
         'late fake cancel bridge failure'
       );
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
@@ -21075,7 +23186,7 @@ describe(
       const adapter = new RejectingBlockingOpenCodeRuntimeAdapter(
         'late fake Anthropic cancel bridge failure'
       );
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
@@ -21125,7 +23236,7 @@ describe(
       const adapter = new RejectingBlockingOpenCodeRuntimeAdapter(
         'late fake Anthropic and Gemini cancel bridge failure'
       );
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       addGeminiPrimaryToMixedRun(run);
@@ -21181,7 +23292,7 @@ describe(
         state: 'active',
       });
 
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       const statuses = await svc.getMemberSpawnStatuses(teamName);
 
       expect(statuses.teamLaunchState).toBe('partial_failure');
@@ -21229,7 +23340,7 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -21277,7 +23388,7 @@ describe(
         bob: 'confirmed',
         tom: 'permission',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -21330,7 +23441,7 @@ describe(
         bob: 'confirmed',
         tom: 'launching',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -21400,7 +23511,7 @@ describe(
         bob: 'confirmed',
         tom: 'permission',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -21472,7 +23583,7 @@ describe(
         bob: 'confirmed',
         tom: 'launching',
       });
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -21519,25 +23630,36 @@ describe(
 
     it('recovers pure OpenCode launch statuses from disk after service restart', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter();
-      const firstService = new TeamProvisioningService();
+      const firstService = createTestProvisioningService();
       firstService.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await firstService.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'restart-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
           members: [
-            { name: 'alice', role: 'Developer', providerId: 'opencode' },
-            { name: 'bob', role: 'Reviewer', providerId: 'opencode' },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'bob',
+              role: 'Reviewer',
+              providerId: 'opencode',
+            },
           ],
         },
         () => undefined
       );
 
-      const restartedService = new TeamProvisioningService();
+      const restartedService = createTestProvisioningService();
       const statuses = await restartedService.getMemberSpawnStatuses('restart-opencode-safe-e2e');
 
       expect(statuses).toMatchObject({
@@ -21559,17 +23681,25 @@ describe(
 
     it('relaunches an OpenCode team after a failed runtime adapter launch and replaces stale failures', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter('partial_failure');
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'failed-then-relaunch-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: true,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -21587,6 +23717,7 @@ describe(
 
       await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'failed-then-relaunch-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
@@ -21610,17 +23741,25 @@ describe(
 
     it('relaunches an OpenCode team after permission-pending stop and clears pending permissions', async () => {
       const adapter = new FakeOpenCodeRuntimeAdapter('partial_pending');
-      const svc = new TeamProvisioningService();
+      const svc = createTestProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
       await svc.createTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'pending-then-relaunch-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
           model: 'opencode/big-pickle',
           skipPermissions: false,
-          members: [{ name: 'alice', role: 'Developer', providerId: 'opencode' }],
+          members: [
+            {
+              runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+              name: 'alice',
+              role: 'Developer',
+              providerId: 'opencode',
+            },
+          ],
         },
         () => undefined
       );
@@ -21639,6 +23778,7 @@ describe(
 
       await svc.launchTeam(
         {
+          leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
           teamName: 'pending-then-relaunch-opencode-safe-e2e',
           cwd: projectPath,
           providerId: 'opencode',
@@ -22310,6 +24450,8 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
   });
 
   override async launch(input: TeamRuntimeLaunchInput): Promise<TeamRuntimeLaunchResult> {
+    await input.onInvocationBoundary?.();
+    input.onInvocationDispatched?.();
     this.pendingLaunchInputs.push(input);
     await this.gate;
     return super.launch(input);
@@ -22529,6 +24671,21 @@ async function waitForCondition(
   expect(await assertion()).toBe(true);
 }
 
+function clearBenignConfigReadWarningsIfOnlyBenign(): void {
+  const warn = vi.mocked(console.warn);
+  if (
+    warn.mock.calls.length > 0 &&
+    warn.mock.calls.every((call) =>
+      call
+        .map((part) => String(part))
+        .join(' ')
+        .includes('[getConfig] slow read diag=')
+    )
+  ) {
+    warn.mockClear();
+  }
+}
+
 async function removeTempDirWithRetries(dir: string): Promise<void> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -22568,6 +24725,7 @@ function createMixedLiveRun(input: {
       providerBackendId: primary.providerBackendId,
       model: primary.leadModel,
       skipPermissions: false,
+      leadRuntimeSelectionProvenance: primary.leadRuntimeSelectionProvenance,
       members: [],
     },
     progress: {
@@ -22600,6 +24758,7 @@ function createMixedLiveRun(input: {
         providerId: primary.providerId,
         providerBackendId: primary.providerBackendId,
         model: primary.memberModel,
+        runtimeSelectionProvenance: primary.memberRuntimeSelectionProvenance,
       },
     ],
     allEffectiveMembers: [
@@ -22609,18 +24768,21 @@ function createMixedLiveRun(input: {
         providerId: primary.providerId,
         providerBackendId: primary.providerBackendId,
         model: primary.memberModel,
+        runtimeSelectionProvenance: primary.memberRuntimeSelectionProvenance,
       },
       {
         name: 'bob',
         role: 'Developer',
         providerId: 'opencode',
         model: 'opencode/minimax-m2.5-free',
+        runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
       },
       {
         name: 'tom',
         role: 'Developer',
         providerId: 'opencode',
         model: 'opencode/nemotron-3-super-free',
+        runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
       },
     ],
     memberSpawnStatuses: new Map([
@@ -22650,6 +24812,7 @@ function createMixedLiveRun(input: {
           role: 'Developer',
           providerId: 'opencode',
           model: 'opencode/minimax-m2.5-free',
+          runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
         },
         runId: null,
         state: 'queued',
@@ -22665,6 +24828,7 @@ function createMixedLiveRun(input: {
           role: 'Developer',
           providerId: 'opencode',
           model: 'opencode/nemotron-3-super-free',
+          runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
         },
         runId: null,
         state: 'queued',
@@ -22816,6 +24980,19 @@ function addCodexPrimaryToMixedRun(run: ReturnType<typeof createMixedLiveRun>): 
   });
 }
 
+const RESOLVED_ANTHROPIC_LEAD_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'default' as const,
+  model: 'explicit' as const,
+  effort: 'default' as const,
+};
+const RESOLVED_ANTHROPIC_MEMBER_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'explicit' as const,
+  effort: 'inherited' as const,
+};
+
 function createPureAnthropicLiveRun(input: { teamName: string; projectPath: string }): any {
   const now = '2026-04-23T10:00:00.000Z';
   const freshHeartbeatAt = new Date().toISOString();
@@ -22844,6 +25021,7 @@ function createPureAnthropicLiveRun(input: { teamName: string; projectPath: stri
       providerId: 'anthropic',
       model: 'sonnet',
       skipPermissions: false,
+      leadRuntimeSelectionProvenance: RESOLVED_ANTHROPIC_LEAD_PROVENANCE,
       members: [],
     },
     expectedMembers: ['alice', 'bob'],
@@ -22853,12 +25031,14 @@ function createPureAnthropicLiveRun(input: { teamName: string; projectPath: stri
         role: 'Reviewer',
         providerId: 'anthropic',
         model: 'haiku',
+        runtimeSelectionProvenance: RESOLVED_ANTHROPIC_MEMBER_PROVENANCE,
       },
       {
         name: 'bob',
         role: 'Developer',
         providerId: 'anthropic',
         model: 'sonnet',
+        runtimeSelectionProvenance: RESOLVED_ANTHROPIC_MEMBER_PROVENANCE,
       },
     ],
     allEffectiveMembers: [
@@ -22867,12 +25047,14 @@ function createPureAnthropicLiveRun(input: { teamName: string; projectPath: stri
         role: 'Reviewer',
         providerId: 'anthropic',
         model: 'haiku',
+        runtimeSelectionProvenance: RESOLVED_ANTHROPIC_MEMBER_PROVENANCE,
       },
       {
         name: 'bob',
         role: 'Developer',
         providerId: 'anthropic',
         model: 'sonnet',
+        runtimeSelectionProvenance: RESOLVED_ANTHROPIC_MEMBER_PROVENANCE,
       },
     ],
     memberSpawnStatuses: new Map([
@@ -22887,6 +25069,19 @@ function trackLiveRun(svc: TeamProvisioningService, run: any): void {
   (svc as any).runs.set(run.runId, run);
   (svc as any).provisioningRunByTeam.set(run.teamName, run.runId);
   (svc as any).aliveRunByTeam.set(run.teamName, run.runId);
+}
+
+async function persistTrackedLiveRunSnapshot(
+  svc: TeamProvisioningService,
+  run: ReturnType<typeof createMixedLiveRun>
+): Promise<void> {
+  const persistenceHost = svc as unknown as {
+    persistLaunchStateSnapshot(
+      targetRun: ReturnType<typeof createMixedLiveRun>,
+      phase: 'active'
+    ): Promise<unknown>;
+  };
+  await persistenceHost.persistLaunchStateSnapshot(run, 'active');
 }
 
 async function writeAliveProcessRegistry(teamName: string): Promise<void> {
@@ -23020,12 +25215,24 @@ async function writeOpenCodeTeamConfig(input: {
             agentType: 'team-lead',
             providerId: 'opencode',
             model: 'opencode/big-pickle',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: 'inherited',
+            },
           },
           ...input.members.map((name) => ({
             name,
             role: 'Developer',
             providerId: 'opencode',
             model: 'opencode/big-pickle',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: 'inherited',
+            },
             ...(removedMembers.has(name) ? { removedAt: 1_777_000_000_000 } : {}),
           })),
         ],
@@ -23047,18 +25254,31 @@ async function writeAnthropicTeamConfig(input: {
     name: input.teamName,
     projectPath: input.projectPath,
     color: 'blue',
+    leadRuntimeSelectionProvenance: RESOLVED_ANTHROPIC_LEAD_PROVENANCE,
     members: [
       {
         name: 'team-lead',
         agentType: 'team-lead',
         providerId: 'anthropic',
         model: 'sonnet',
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'inherited',
+          effort: 'inherited',
+        },
       },
       ...input.members.map((name) => ({
         name,
         role: 'Developer',
         providerId: 'anthropic',
         model: name === 'alice' ? 'haiku' : 'sonnet',
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'explicit',
+          effort: 'inherited',
+        },
       })),
     ],
   };
@@ -23077,128 +25297,14 @@ async function writeFakeClaudeCli(rootDir: string): Promise<string> {
   const binDir = path.join(rootDir, 'fake-bin');
   const cliPath = path.join(binDir, process.platform === 'win32' ? 'claude.cmd' : 'claude');
   const script = `#!/usr/bin/env node
-const args = process.argv.slice(2);
-const providerIndex = args.lastIndexOf('--provider');
-const provider = providerIndex >= 0 ? args[providerIndex + 1] : 'anthropic';
-
-function hasCommand(...parts) {
-  return parts.every((part) => args.includes(part));
-}
-
-function modelCatalog(providerId) {
-  const base = {
-    schemaVersion: 1,
-    providerId,
-    source: 'runtime',
-    status: 'ready',
-    fetchedAt: '2026-05-13T00:00:00.000Z',
-    staleAt: '2026-05-13T01:00:00.000Z',
-    diagnostics: {
-      configReadState: 'ready',
-      appServerState: 'healthy',
-    },
-  };
-  if (providerId === 'anthropic') {
-    return {
-      ...base,
-      defaultModelId: 'sonnet',
-      defaultLaunchModel: 'sonnet',
-      models: [
-        {
-          id: 'sonnet',
-          launchModel: 'sonnet',
-          displayName: 'Sonnet',
-          supportedReasoningEfforts: ['low', 'medium', 'high'],
-          defaultReasoningEffort: 'medium',
-          supportsFastMode: false,
-        },
-        {
-          id: 'haiku',
-          launchModel: 'haiku',
-          displayName: 'Haiku',
-          supportedReasoningEfforts: ['low', 'medium'],
-          defaultReasoningEffort: 'medium',
-          supportsFastMode: false,
-        },
-      ],
-    };
-  }
-  return {
-    ...base,
-    defaultModelId: 'gpt-5.5',
-    defaultLaunchModel: 'gpt-5.5',
-    models: [
-      {
-        id: 'gpt-5.5',
-        launchModel: 'gpt-5.5',
-        displayName: 'GPT-5.5',
-        supportedReasoningEfforts: ['low', 'medium', 'high'],
-        defaultReasoningEffort: 'medium',
-      },
-    ],
-  };
-}
-
-if (hasCommand('model', 'list')) {
-  const catalog = modelCatalog(provider);
-  console.log(JSON.stringify({
-    schemaVersion: 1,
-    providers: {
-      [provider]: {
-        defaultModel: catalog.defaultLaunchModel,
-        models: catalog.models.map((model) => ({ id: model.launchModel, label: model.displayName })),
-      },
-    },
-  }));
-  process.exit(0);
-}
-
-if (hasCommand('runtime', 'status')) {
-  const catalog = modelCatalog(provider);
-  console.log(JSON.stringify({
-    providers: {
-      [provider]: {
-        providerId: provider,
-        displayName: provider,
-        supported: true,
-        authenticated: true,
-        authMethod: 'test',
-        verificationState: 'verified',
-        models: catalog.models.map((model) => model.launchModel),
-        modelCatalog: catalog,
-        runtimeCapabilities: {
-          modelCatalog: { dynamic: false, source: 'runtime' },
-          reasoningEffort: {
-            supported: true,
-            values: ['low', 'medium', 'high'],
-            configPassthrough: true,
-          },
-          fastMode: {
-            supported: true,
-            available: false,
-            reason: 'test runtime',
-            source: 'runtime',
-          },
-        },
-        canLoginFromUi: false,
-        capabilities: {
-          teamLaunch: true,
-          oneShot: true,
-          extensions: {},
-        },
-      },
-    },
-  }));
-  process.exit(0);
-}
-
-console.log(JSON.stringify({ ok: true }));
+throw new Error('Safe E2E fake CLI fixture must never execute');
 `;
   await fs.mkdir(binDir, { recursive: true });
   await fs.writeFile(cliPath, script, 'utf8');
   if (process.platform !== 'win32') {
     await fs.chmod(cliPath, 0o755);
   }
+  safeE2eLaunchGuard.fakeCliPaths.add(cliPath.replaceAll('\\', '/'));
   return cliPath;
 }
 
@@ -23265,6 +25371,228 @@ function snapshotWorkspaceTrustTestEnv(): Partial<
   ) as Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>;
 }
 
+function snapshotOptionalEnv<const Name extends string>(
+  names: readonly Name[]
+): Partial<Record<Name, string | undefined>> {
+  return Object.fromEntries(names.map((name) => [name, process.env[name]])) as Partial<
+    Record<Name, string | undefined>
+  >;
+}
+
+function restoreOptionalEnvSnapshot<const Name extends string>(
+  snapshot: Partial<Record<Name, string | undefined>>,
+  names: readonly Name[]
+): void {
+  for (const name of names) {
+    restoreOptionalEnvValue(name, snapshot[name]);
+  }
+}
+
+function installCanonicalConfigPathGuards(
+  originalEnv: Partial<Record<SafeE2eIsolatedEnvName, string | undefined>>
+): () => void {
+  const originalHome = originalEnv.HOME ?? originalEnv.USERPROFILE;
+  const originalHomeIsTestSandbox = originalHome
+    ? path.dirname(path.resolve(originalHome)) === path.resolve(os.tmpdir()) &&
+      path.basename(originalHome).startsWith('agent-teams-vitest-home-')
+    : false;
+  const guardedRoots = [
+    originalEnv.CLAUDE_CONFIG_DIR,
+    originalEnv.CLAUDE_ROOT,
+    originalEnv.CODEX_HOME,
+    originalEnv.OPENCODE_CONFIG,
+    originalEnv.OPENCODE_CONFIG_DIR,
+    originalEnv.XDG_CONFIG_HOME,
+    originalEnv.GOOGLE_APPLICATION_CREDENTIALS,
+    ...(originalHome && !originalHomeIsTestSandbox
+      ? [
+          path.join(originalHome, '.claude'),
+          path.join(originalHome, '.codex'),
+          path.join(originalHome, '.config', 'opencode'),
+        ]
+      : []),
+  ]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => path.resolve(value));
+  safeE2eLaunchGuard.canonicalConfigRoots.push(
+    ...guardedRoots.map((value) => value.replaceAll('\\', '/').replace(/\/+$/, ''))
+  );
+  const restorers: Array<() => void> = [];
+  const resolveGuardedPath = (rawPath: unknown): string | null => {
+    if (typeof rawPath === 'string') {
+      return path.resolve(rawPath);
+    }
+    if (Buffer.isBuffer(rawPath)) {
+      return path.resolve(rawPath.toString());
+    }
+    if (rawPath instanceof URL && rawPath.protocol === 'file:') {
+      return path.resolve(decodeURIComponent(rawPath.pathname));
+    }
+    return null;
+  };
+  const assertNotCanonical = (method: string, args: readonly unknown[], pathCount = 1): void => {
+    const candidate = args
+      .slice(0, pathCount)
+      .map(resolveGuardedPath)
+      .find(
+        (value) =>
+          value &&
+          guardedRoots.some((root) => value === root || value.startsWith(`${root}${path.sep}`))
+      );
+    if (candidate) {
+      const call = `${method}(${candidate})`;
+      safeE2eLaunchGuard.canonicalConfigCalls.push(call);
+      throw new Error(`Safe E2E config guard blocked canonical user path access: ${call}`);
+    }
+  };
+  const guardedMethods = [
+    'access',
+    'appendFile',
+    'chmod',
+    'cp',
+    'copyFile',
+    'link',
+    'lstat',
+    'mkdir',
+    'open',
+    'readFile',
+    'readlink',
+    'readdir',
+    'realpath',
+    'rename',
+    'rm',
+    'rmdir',
+    'stat',
+    'symlink',
+    'unlink',
+    'writeFile',
+  ] as const;
+
+  for (const method of guardedMethods) {
+    const original = fs[method].bind(fs) as (...args: unknown[]) => Promise<unknown>;
+    const spy = vi.spyOn(fs, method).mockImplementation(((...args: unknown[]) => {
+      assertNotCanonical(
+        method,
+        args,
+        ['copyFile', 'cp', 'link', 'rename', 'symlink'].includes(method) ? 2 : 1
+      );
+      return original(...args);
+    }) as never);
+    restorers.push(() => spy.mockRestore());
+  }
+
+  const builtinFs = process.getBuiltinModule('node:fs');
+  const guardedSyncMethods = [
+    'accessSync',
+    'appendFileSync',
+    'chmodSync',
+    'cpSync',
+    'copyFileSync',
+    'createReadStream',
+    'createWriteStream',
+    'existsSync',
+    'linkSync',
+    'lstatSync',
+    'mkdirSync',
+    'openSync',
+    'readFileSync',
+    'readlinkSync',
+    'readdirSync',
+    'realpathSync',
+    'renameSync',
+    'rmSync',
+    'rmdirSync',
+    'statSync',
+    'symlinkSync',
+    'unlinkSync',
+    'watch',
+    'watchFile',
+    'writeFileSync',
+  ] as const;
+  const originalSyncMethods = Object.fromEntries(
+    guardedSyncMethods.map((method) => [method, builtinFs[method]])
+  ) as Pick<typeof builtinFs, (typeof guardedSyncMethods)[number]>;
+  for (const method of guardedSyncMethods) {
+    const original = originalSyncMethods[method] as (...args: unknown[]) => unknown;
+    const guarded = (...args: unknown[]): unknown => {
+      assertNotCanonical(
+        method,
+        args,
+        ['copyFileSync', 'cpSync', 'linkSync', 'renameSync', 'symlinkSync'].includes(method) ? 2 : 1
+      );
+      return original(...args);
+    };
+    if (method === 'realpathSync') {
+      Object.assign(guarded, {
+        native: (...args: unknown[]) => {
+          assertNotCanonical('realpathSync.native', args);
+          const native = originalSyncMethods.realpathSync.native as (
+            ...values: unknown[]
+          ) => unknown;
+          return native(...args);
+        },
+      });
+    }
+    Object.assign(builtinFs, {
+      [method]: guarded,
+    });
+  }
+  syncBuiltinESMExports();
+
+  return () => {
+    Object.assign(builtinFs, originalSyncMethods);
+    syncBuiltinESMExports();
+    for (const restore of restorers.reverse()) {
+      restore();
+    }
+  };
+}
+
+function isolateSafeE2eEnvironment(rootDir: string): void {
+  const isolatedHome = path.join(rootDir, 'home');
+  const emptyBin = path.join(rootDir, 'empty-bin');
+  process.env.HOME = isolatedHome;
+  process.env.USERPROFILE = isolatedHome;
+  process.env.HOMEDRIVE = path.parse(isolatedHome).root;
+  process.env.HOMEPATH = isolatedHome.slice(path.parse(isolatedHome).root.length);
+  process.env.PATH = emptyBin;
+  process.env.PATHEXT = '';
+  process.env.SHELL = path.join(emptyBin, 'blocked-shell');
+  delete process.env.TERM;
+  process.env.APPDATA = path.join(rootDir, 'appdata');
+  process.env.LOCALAPPDATA = path.join(rootDir, 'local-appdata');
+  process.env.NVM_HOME = path.join(rootDir, 'nvm');
+  process.env.ProgramFiles = path.join(rootDir, 'program-files');
+  process.env.CLAUDE_CLI_PATH = path.join(emptyBin, 'blocked-claude');
+  process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = path.join(
+    emptyBin,
+    'blocked-orchestrator'
+  );
+  process.env.CLAUDE_TEAM_CLI_FLAVOR = 'agent_teams_orchestrator';
+  process.env.CODEX_CLI_PATH = path.join(emptyBin, 'blocked-codex');
+  process.env.CLAUDE_CONFIG_DIR = path.join(rootDir, 'config', 'claude');
+  process.env.CLAUDE_ROOT = path.join(rootDir, 'config', 'claude-root');
+  process.env.CODEX_HOME = path.join(rootDir, 'config', 'codex');
+  process.env.OPENCODE_CONFIG = path.join(rootDir, 'config', 'opencode', 'config.json');
+  process.env.OPENCODE_CONFIG_DIR = path.join(rootDir, 'config', 'opencode');
+  process.env.XDG_CONFIG_HOME = path.join(rootDir, 'config');
+  process.env.XDG_DATA_HOME = path.join(rootDir, 'data');
+  process.env.XDG_CACHE_HOME = path.join(rootDir, 'cache');
+
+  for (const name of [
+    'ANTHROPIC_API_KEY',
+    'CLAUDE_CODE_OAUTH_TOKEN',
+    'OPENAI_API_KEY',
+    'CODEX_API_KEY',
+    'OPENCODE_API_KEY',
+    'GEMINI_API_KEY',
+    'GOOGLE_API_KEY',
+    'GOOGLE_APPLICATION_CREDENTIALS',
+  ] as const) {
+    process.env[name] = `safe-e2e-poisoned-${name.toLowerCase()}`;
+  }
+}
+
 function restoreOptionalEnvValue(name: string, value: string | undefined): void {
   if (value === undefined) {
     delete process.env[name];
@@ -23286,6 +25614,7 @@ function forceWorkspaceTrustPreflightEnv(): void {
   process.env.AGENT_TEAMS_WORKSPACE_TRUST_CLAUDE_PTY = '1';
   process.env.AGENT_TEAMS_WORKSPACE_TRUST_CODEX_SETTINGS = '1';
   process.env.AGENT_TEAMS_WORKSPACE_TRUST_RETRY = '0';
+  setSafeE2eEnvironmentOverrides(WORKSPACE_TRUST_TEST_ENV_NAMES);
 }
 
 async function writeOpenCodeMembersMeta(
@@ -23331,6 +25660,7 @@ async function writeOpenCodeTeamMeta(teamName: string, projectPath: string): Pro
         providerId: 'opencode',
         model: 'opencode/big-pickle',
         effort: 'medium',
+        leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_AND_EFFORT_LEAD_PROVENANCE,
         createdAt: Date.now(),
       },
       null,
@@ -23365,6 +25695,7 @@ async function writePureAnthropicTeamConfigWithMembers(input: {
         projectPath: input.projectPath,
         providerId: 'anthropic',
         model: 'sonnet',
+        leadRuntimeSelectionProvenance: RESOLVED_ANTHROPIC_LEAD_PROVENANCE,
         members: [
           {
             name: 'team-lead',
@@ -23377,6 +25708,12 @@ async function writePureAnthropicTeamConfigWithMembers(input: {
             role: index === 0 ? 'Reviewer' : 'Developer',
             providerId: 'anthropic',
             model: index === 0 ? 'haiku' : 'sonnet',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'explicit',
+              effort: 'inherited',
+            },
           })),
         ],
       },
@@ -23408,22 +25745,29 @@ async function writeMixedTeamConfig(input: {
         name: input.teamName,
         projectPath: input.projectPath,
         providerId: primary.providerId,
-        ...(primary.providerBackendId ? { providerBackendId: primary.providerBackendId } : {}),
+        ...(primary.providerId === 'codex' ? { providerBackendId: primary.providerBackendId } : {}),
         model: primary.leadModel,
+        leadRuntimeSelectionProvenance: primary.leadRuntimeSelectionProvenance,
         members: [
           {
             name: 'team-lead',
             agentType: 'team-lead',
             providerId: primary.providerId,
-            ...(primary.providerBackendId ? { providerBackendId: primary.providerBackendId } : {}),
+            ...(primary.providerId === 'codex'
+              ? { providerBackendId: primary.providerBackendId }
+              : {}),
             model: primary.leadModel,
+            runtimeSelectionProvenance: primary.memberRuntimeSelectionProvenance,
           },
           {
             name: 'alice',
             role: 'Reviewer',
             providerId: primary.providerId,
-            ...(primary.providerBackendId ? { providerBackendId: primary.providerBackendId } : {}),
+            ...(primary.providerId === 'codex'
+              ? { providerBackendId: primary.providerBackendId }
+              : {}),
             model: primary.memberModel,
+            runtimeSelectionProvenance: primary.memberRuntimeSelectionProvenance,
             ...(removedMembers.has('alice') ? { removedAt: 1_777_000_000_000 } : {}),
           },
           ...(input.includeGeminiPrimary
@@ -23433,6 +25777,7 @@ async function writeMixedTeamConfig(input: {
                   role: 'Reviewer',
                   providerId: 'gemini',
                   model: 'gemini-2.5-flash',
+                  runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
                   ...(removedMembers.has('reviewer') ? { removedAt: 1_777_000_000_000 } : {}),
                 },
               ]
@@ -23445,6 +25790,8 @@ async function writeMixedTeamConfig(input: {
                   providerId: 'codex',
                   providerBackendId: 'codex-native',
                   model: 'gpt-5.4-mini',
+                  runtimeSelectionProvenance:
+                    EXPLICIT_BACKEND_AND_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
                   ...(removedMembers.has('cody') ? { removedAt: 1_777_000_000_000 } : {}),
                 },
               ]
@@ -23454,6 +25801,7 @@ async function writeMixedTeamConfig(input: {
             role: 'Developer',
             providerId: 'opencode',
             model: 'opencode/minimax-m2.5-free',
+            runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
             ...(removedMembers.has('bob') ? { removedAt: 1_777_000_000_000 } : {}),
           },
           {
@@ -23461,6 +25809,7 @@ async function writeMixedTeamConfig(input: {
             role: 'Developer',
             providerId: 'opencode',
             model: 'opencode/nemotron-3-super-free',
+            runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
             ...(removedMembers.has('tom') ? { removedAt: 1_777_000_000_000 } : {}),
           },
           ...extraMembers.map((member) => ({
@@ -23468,6 +25817,7 @@ async function writeMixedTeamConfig(input: {
             role: 'Developer',
             providerId: member.providerId,
             model: member.model,
+            runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
             ...(removedMembers.has(member.name) ? { removedAt: 1_777_000_000_000 } : {}),
           })),
         ],
@@ -23494,6 +25844,7 @@ async function writeMixedTeamConfigWithoutOpenCodeProviderMetadata(input: {
         providerId: 'codex',
         providerBackendId: 'codex-native',
         model: 'gpt-5.4',
+        leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
         members: [
           {
             name: 'team-lead',
@@ -23501,6 +25852,8 @@ async function writeMixedTeamConfigWithoutOpenCodeProviderMetadata(input: {
             providerId: 'codex',
             providerBackendId: 'codex-native',
             model: 'gpt-5.4',
+            runtimeSelectionProvenance:
+              EXPLICIT_BACKEND_AND_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
           },
           {
             name: 'alice',
@@ -23508,11 +25861,14 @@ async function writeMixedTeamConfigWithoutOpenCodeProviderMetadata(input: {
             providerId: 'codex',
             providerBackendId: 'codex-native',
             model: 'gpt-5.4-mini',
+            runtimeSelectionProvenance:
+              EXPLICIT_BACKEND_AND_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
           },
           {
             name: 'bob',
             role: 'Developer',
             model: 'opencode/minimax-m2.5-free',
+            runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
           },
         ],
       },
@@ -23943,12 +26299,25 @@ function getMixedPrimaryFixture(providerId: MixedPrimaryProviderId = 'codex'): {
   providerBackendId?: string;
   leadModel: string;
   memberModel: string;
+  leadRuntimeSelectionProvenance:
+    | typeof DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE
+    | typeof EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE;
+  leadWithEffortRuntimeSelectionProvenance:
+    | typeof DEFAULT_BACKEND_EXPLICIT_MODEL_AND_EFFORT_LEAD_PROVENANCE
+    | typeof EXPLICIT_BACKEND_MODEL_AND_EFFORT_LEAD_PROVENANCE;
+  memberRuntimeSelectionProvenance:
+    | typeof EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE
+    | typeof EXPLICIT_BACKEND_AND_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE;
 } {
   if (providerId === 'anthropic') {
     return {
       providerId,
       leadModel: 'sonnet',
       memberModel: 'haiku',
+      leadRuntimeSelectionProvenance: DEFAULT_BACKEND_EXPLICIT_MODEL_LEAD_PROVENANCE,
+      leadWithEffortRuntimeSelectionProvenance:
+        DEFAULT_BACKEND_EXPLICIT_MODEL_AND_EFFORT_LEAD_PROVENANCE,
+      memberRuntimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
     };
   }
 
@@ -23957,6 +26326,10 @@ function getMixedPrimaryFixture(providerId: MixedPrimaryProviderId = 'codex'): {
     providerBackendId: 'codex-native',
     leadModel: 'gpt-5.4',
     memberModel: 'gpt-5.4-mini',
+    leadRuntimeSelectionProvenance: EXPLICIT_BACKEND_AND_MODEL_LEAD_PROVENANCE,
+    leadWithEffortRuntimeSelectionProvenance: EXPLICIT_BACKEND_MODEL_AND_EFFORT_LEAD_PROVENANCE,
+    memberRuntimeSelectionProvenance:
+      EXPLICIT_BACKEND_AND_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
   };
 }
 
@@ -23982,9 +26355,10 @@ async function writeTeamMeta(
         version: 1,
         cwd: projectPath,
         providerId: primary.providerId,
-        ...(primary.providerBackendId ? { providerBackendId: primary.providerBackendId } : {}),
+        ...(primary.providerId === 'codex' ? { providerBackendId: primary.providerBackendId } : {}),
         model: primary.leadModel,
         effort: 'medium',
+        leadRuntimeSelectionProvenance: primary.leadWithEffortRuntimeSelectionProvenance,
         createdAt: Date.now(),
       },
       null,
@@ -24006,6 +26380,7 @@ async function writePureAnthropicTeamMeta(teamName: string, projectPath: string)
         providerId: 'anthropic',
         model: 'sonnet',
         effort: 'medium',
+        leadRuntimeSelectionProvenance: RESOLVED_ANTHROPIC_LEAD_PROVENANCE,
         createdAt: Date.now(),
       },
       null,
@@ -24036,18 +26411,21 @@ async function writePureAnthropicMembersMeta(
             name: 'alice',
             providerId: 'anthropic',
             model: 'haiku',
+            runtimeSelectionProvenance: RESOLVED_ANTHROPIC_MEMBER_PROVENANCE,
             ...(removedMembers.has('alice') ? { removedAt: 1_777_000_000_000 } : {}),
           },
           {
             name: 'bob',
             providerId: 'anthropic',
             model: 'sonnet',
+            runtimeSelectionProvenance: RESOLVED_ANTHROPIC_MEMBER_PROVENANCE,
             ...(removedMembers.has('bob') ? { removedAt: 1_777_000_000_000 } : {}),
           },
           ...extraMembers.map((member) => ({
             name: member.name,
             providerId: member.providerId,
             model: member.model,
+            runtimeSelectionProvenance: RESOLVED_ANTHROPIC_MEMBER_PROVENANCE,
             ...(removedMembers.has(member.name) ? { removedAt: 1_777_000_000_000 } : {}),
           })),
         ],
@@ -24080,13 +26458,16 @@ async function writeMembersMeta(
     `${JSON.stringify(
       {
         version: 1,
-        ...(primary.providerBackendId ? { providerBackendId: primary.providerBackendId } : {}),
+        ...(primary.providerId === 'codex' ? { providerBackendId: primary.providerBackendId } : {}),
         members: [
           {
             name: 'alice',
             providerId: primary.providerId,
-            ...(primary.providerBackendId ? { providerBackendId: primary.providerBackendId } : {}),
+            ...(primary.providerId === 'codex'
+              ? { providerBackendId: primary.providerBackendId }
+              : {}),
             model: primary.memberModel,
+            runtimeSelectionProvenance: primary.memberRuntimeSelectionProvenance,
             ...(options.memberCwd ? { cwd: options.memberCwd } : {}),
             ...(removedMembers.has('alice') ? { removedAt: 1_777_000_000_000 } : {}),
           },
@@ -24096,6 +26477,7 @@ async function writeMembersMeta(
                   name: 'reviewer',
                   providerId: 'gemini',
                   model: 'gemini-2.5-flash',
+                  runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
                   ...(options.memberCwd ? { cwd: options.memberCwd } : {}),
                   ...(removedMembers.has('reviewer') ? { removedAt: 1_777_000_000_000 } : {}),
                 },
@@ -24108,6 +26490,8 @@ async function writeMembersMeta(
                   providerId: 'codex',
                   providerBackendId: 'codex-native',
                   model: 'gpt-5.4-mini',
+                  runtimeSelectionProvenance:
+                    EXPLICIT_BACKEND_AND_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
                   ...(options.memberCwd ? { cwd: options.memberCwd } : {}),
                   ...(removedMembers.has('cody') ? { removedAt: 1_777_000_000_000 } : {}),
                 },
@@ -24117,6 +26501,7 @@ async function writeMembersMeta(
             name: 'bob',
             providerId: 'opencode',
             model: 'opencode/minimax-m2.5-free',
+            runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
             ...(options.memberCwd ? { cwd: options.memberCwd } : {}),
             ...(removedMembers.has('bob') ? { removedAt: 1_777_000_000_000 } : {}),
           },
@@ -24124,6 +26509,7 @@ async function writeMembersMeta(
             name: 'tom',
             providerId: 'opencode',
             model: 'opencode/nemotron-3-super-free',
+            runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
             ...(options.memberCwd ? { cwd: options.memberCwd } : {}),
             ...(removedMembers.has('tom') ? { removedAt: 1_777_000_000_000 } : {}),
           },
@@ -24131,6 +26517,7 @@ async function writeMembersMeta(
             name: member.name,
             providerId: member.providerId,
             model: member.model,
+            runtimeSelectionProvenance: EXPLICIT_MODEL_MEMBER_RUNTIME_SELECTION_PROVENANCE,
             ...(options.memberCwd ? { cwd: options.memberCwd } : {}),
             ...(removedMembers.has(member.name) ? { removedAt: 1_777_000_000_000 } : {}),
           })),

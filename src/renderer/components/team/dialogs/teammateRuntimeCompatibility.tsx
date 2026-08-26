@@ -132,7 +132,11 @@ export function analyzeTeammateRuntimeCompatibility({
     ? []
     : members.filter((member) => member.removedAt == null && member.name.trim().length > 0);
   const explicitTeammateMode = getExplicitTeammateMode(extraCliArgs);
-  const leadBackendId = migrateProviderBackendId(leadProviderId, leadProviderBackendId);
+  const leadBackendId = migrateProviderBackendId(
+    leadProviderId,
+    leadProviderBackendId,
+    'explicit-selection'
+  );
   const issues: RuntimeIssue[] = [];
 
   if (explicitTeammateMode === 'tmux' && activeMembers.length > 0) {
@@ -166,7 +170,8 @@ export function analyzeTeammateRuntimeCompatibility({
 
     const memberBackendId = migrateProviderBackendId(
       memberProviderId,
-      member.providerBackendId ?? leadBackendId
+      member.providerBackendId ?? leadBackendId,
+      'explicit-selection'
     );
     if (memberProviderId === 'codex' && memberBackendId === 'codex-native') {
       issues.push({

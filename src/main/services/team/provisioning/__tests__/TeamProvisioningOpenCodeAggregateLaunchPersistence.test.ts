@@ -22,9 +22,29 @@ import type { MixedSecondaryRuntimeLaneState } from '../TeamProvisioningSecondar
 import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchSnapshot,
+  ProviderModelLaunchIdentity,
   TeamCreateRequest,
   TeamProvisioningProgress,
 } from '@shared/types';
+
+function launchIdentity(
+  providerBackendId: 'opencode-cli',
+  model: string
+): ProviderModelLaunchIdentity {
+  return {
+    providerId: 'opencode',
+    providerBackendId,
+    billingMode: 'subscription',
+    selectedModel: model,
+    selectedModelKind: 'explicit',
+    resolvedLaunchModel: model,
+    catalogId: model,
+    catalogSource: 'runtime',
+    catalogFetchedAt: null,
+    selectedEffort: 'high',
+    resolvedEffort: 'high',
+  };
+}
 
 function deferred<T = void>(): {
   promise: Promise<T>;
@@ -263,6 +283,7 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
         alice: {
           memberName: 'alice',
           providerId: 'opencode',
+          model: 'lane-model-a',
           launchState: 'confirmed_alive',
           agentToolAccepted: true,
           runtimeAlive: true,
@@ -287,7 +308,19 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
     };
     const persisted = await persistOpenCodeRuntimeAdapterLaunchResult(
       result,
-      launchInput(),
+      launchInput({
+        launchIdentity: launchIdentity('opencode-cli', 'lane-model-a'),
+        expectedMembers: [
+          {
+            name: 'alice',
+            role: 'Engineer',
+            providerId: 'opencode',
+            cwd: '/repo',
+            model: 'desired-member-b',
+            launchIdentity: launchIdentity('opencode-cli', 'desired-member-b'),
+          },
+        ],
+      }),
       persistencePorts
     );
 
@@ -302,11 +335,15 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPersistence', () => {
       teamName: 'team-a',
       expectedMembers: ['alice'],
       leadSessionId: 'lead-session',
+      runtimeRunId: 'run-1',
+      primaryLaneIdentity: { resolvedLaunchModel: 'lane-model-a' },
       launchPhase: 'finished',
       members: {
         alice: {
           name: 'alice',
           providerId: 'opencode',
+          model: 'lane-model-a',
+          launchIdentity: { resolvedLaunchModel: 'desired-member-b' },
           launchState: 'confirmed_alive',
           agentToolAccepted: true,
           runtimeAlive: true,

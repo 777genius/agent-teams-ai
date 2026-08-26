@@ -96,26 +96,38 @@ describe('team provisioning roster mutation lock', () => {
     expect(attach).toHaveBeenCalledWith('lock-team', 'worker', undefined);
   });
 
-  it('serializes stop behind a complete live roster mutation transaction', async () => {
+  it('publishes authorized stop intent before a deferred launch invocation is released', async () => {
     const service = new TeamProvisioningService();
-    const stopFlow = vi.fn(async () => undefined);
+    const activeRun = { cancelRequested: false };
+    const cancellationInternals = service as unknown as {
+      runs: Map<string, typeof activeRun>;
+      runTracking: { getTrackedRunId(teamName: string): string | null };
+    };
+    cancellationInternals.runs.set('deferred-run', activeRun);
+    vi.spyOn(cancellationInternals.runTracking, 'getTrackedRunId').mockReturnValue('deferred-run');
+    const stopFlow = vi.fn(async (_teamName: string, onAuthorized?: () => void) => {
+      onAuthorized?.();
+    });
     Object.assign(service as unknown as { stopFlowBoundaryValue: unknown }, {
       stopFlowBoundaryValue: {
-        stopTeam: stopFlow,
+        preflightMetadataMutation: vi.fn(async () => undefined),
+        authorizeStopTeam: async (_teamName: string, onAuthorized: () => void) => onAuthorized(),
+        stopTeam: vi.fn(async () => undefined),
+        stopAuthorizedTeam: stopFlow,
         stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
         stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
       },
     });
 
-    let releaseMutation!: () => void;
-    let mutationStarted!: () => void;
+    let releaseInvocation!: () => void;
+    let invocationStarted!: () => void;
     const started = new Promise<void>((resolve) => {
-      mutationStarted = resolve;
+      invocationStarted = resolve;
     });
-    const mutation = service.runLiveRosterMutation('lock-team', async () => {
-      mutationStarted();
+    const invocation = service.runLiveRosterMutation('lock-team', async () => {
+      invocationStarted();
       await new Promise<void>((resolve) => {
-        releaseMutation = resolve;
+        releaseInvocation = resolve;
       });
     });
     await started;
@@ -129,19 +141,30 @@ describe('team provisioning roster mutation lock', () => {
 
     expect(stopSettled).toBe(false);
     expect(stopFlow).not.toHaveBeenCalled();
+    expect(
+      (
+        service as unknown as { getStopTeamGeneration(teamName: string): number }
+      ).getStopTeamGeneration('lock-team')
+    ).toBe(1);
+    expect(activeRun.cancelRequested).toBe(true);
 
-    releaseMutation();
-    await Promise.all([mutation, stop]);
+    releaseInvocation();
+    await Promise.all([invocation, stop]);
 
     expect(stopFlow).toHaveBeenCalledOnce();
   });
 
-  it('publishes the per-team stop fence before queuing behind a team operation', async () => {
+  it('publishes the per-team stop fence only after locked authorization', async () => {
     const service = new TeamProvisioningService();
-    const stopFlow = vi.fn(async () => undefined);
+    const stopFlow = vi.fn(async (_teamName: string, onAuthorized?: () => void) => {
+      onAuthorized?.();
+    });
     Object.assign(service as unknown as { stopFlowBoundaryValue: unknown }, {
       stopFlowBoundaryValue: {
-        stopTeam: stopFlow,
+        preflightMetadataMutation: vi.fn(async () => undefined),
+        authorizeStopTeam: async (_teamName: string, onAuthorized: () => void) => onAuthorized(),
+        stopTeam: vi.fn(async () => undefined),
+        stopAuthorizedTeam: stopFlow,
         stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
         stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
       },
@@ -164,17 +187,21 @@ describe('team provisioning roster mutation lock', () => {
     await started;
 
     const stop = service.stopTeam('lock-team');
+    await Promise.resolve();
     expect(serviceInternals.getStopTeamGeneration('lock-team')).toBe(1);
     expect(stopFlow).not.toHaveBeenCalled();
 
     releaseOperation();
     await Promise.all([operation, stop]);
     expect(stopFlow).toHaveBeenCalledOnce();
+    expect(serviceInternals.getStopTeamGeneration('lock-team')).toBe(1);
   });
 
   it('releases roster ownership after rollback failure so stop and restart can recover', async () => {
     const service = new TeamProvisioningService();
-    const stopFlow = vi.fn(async () => undefined);
+    const stopFlow = vi.fn(async (_teamName: string, onAuthorized?: () => void) => {
+      onAuthorized?.();
+    });
     const serviceInternals = service as unknown as {
       memberLifecycleController: {
         restartMember(teamName: string, memberName: string): Promise<void>;
@@ -182,7 +209,10 @@ describe('team provisioning roster mutation lock', () => {
       stopFlowBoundaryValue: unknown;
     };
     serviceInternals.stopFlowBoundaryValue = {
-      stopTeam: stopFlow,
+      preflightMetadataMutation: vi.fn(async () => undefined),
+      authorizeStopTeam: async (_teamName: string, onAuthorized: () => void) => onAuthorized(),
+      stopTeam: vi.fn(async () => undefined),
+      stopAuthorizedTeam: stopFlow,
       stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
       stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
     };
@@ -198,8 +228,40 @@ describe('team provisioning roster mutation lock', () => {
 
     await expect(service.stopTeam('lock-team')).resolves.toBeUndefined();
     await expect(service.restartMember('lock-team', 'worker')).resolves.toBeUndefined();
+    await expect(
+      service.restartMember('lock-team', 'worker', 'restart-command-1')
+    ).resolves.toBeUndefined();
 
     expect(stopFlow).toHaveBeenCalledOnce();
-    expect(restart).toHaveBeenCalledWith('lock-team', 'worker');
+    expect(restart).toHaveBeenNthCalledWith(1, 'lock-team', 'worker');
+    expect(restart).toHaveBeenNthCalledWith(2, 'lock-team', 'worker', 'restart-command-1');
+  });
+
+  it('revalidates stop authority under the lock before publishing any cancellation fence', async () => {
+    const service = new TeamProvisioningService();
+    const rejected = new Error('Unsupported launch-state version: 999');
+    const preflight = vi.fn<() => Promise<void>>().mockRejectedValueOnce(rejected);
+    const firstEffect = vi.fn();
+    Object.assign(service as unknown as { stopFlowBoundaryValue: unknown }, {
+      stopFlowBoundaryValue: {
+        preflightMetadataMutation: preflight,
+        authorizeStopTeam: async (_teamName: string, onAuthorized: () => void) => {
+          await preflight();
+          onAuthorized();
+          firstEffect();
+        },
+        stopTeam: vi.fn(async () => undefined),
+        stopAuthorizedTeam: vi.fn(async () => undefined),
+        stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
+        stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
+      },
+    });
+    const internals = service as unknown as { getStopTeamGeneration(teamName: string): number };
+
+    await expect(service.stopTeam('future-team')).rejects.toBe(rejected);
+
+    expect(preflight).toHaveBeenCalledOnce();
+    expect(internals.getStopTeamGeneration('future-team')).toBe(0);
+    expect(firstEffect).not.toHaveBeenCalled();
   });
 });

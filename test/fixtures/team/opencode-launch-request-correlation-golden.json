@@ -1,0 +1,190 @@
+{
+  "source": {
+    "producer": "OpenCode launch request-correlation worker",
+    "contract": "agent-teams/opencode-launch-request-correlation/v1"
+  },
+  "authority": {
+    "command": {
+      "runId": "run-correlation-golden",
+      "laneId": "primary",
+      "teamId": "team-correlation",
+      "teamName": "team-correlation",
+      "projectPath": "/workspace/link/../link/project",
+      "selectedModel": "openrouter/model-s3",
+      "skipPermissions": false,
+      "members": [
+        {
+          "name": "alice",
+          "memberIdentity": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "prompt": "Implement the wire fix",
+          "effort": "high"
+        },
+        {
+          "name": "bob",
+          "memberIdentity": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        }
+      ],
+      "launchContractVersion": 1,
+      "launchAttempt": {
+        "attemptId": "018f47a2-4a13-7c2f-8d44-c0ffee123456",
+        "payloadHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generation": 1,
+        "proofNonce": "AAECAwQFBgcICQoLDA0ODw",
+        "parent": {
+          "sessionIdentity": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "messageIdentity": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "providerId": "openrouter",
+        "modelId": "openrouter/model-s3",
+        "requiredMcpTools": [
+          "agent-teams.message_send",
+          "agent-teams.task_update"
+        ],
+        "requireFreshRetainedHostProof": true
+      }
+    },
+    "preconditions": {
+      "handshakeIdentityHash": "1111111111111111111111111111111111111111111111111111111111111111",
+      "laneId": "primary",
+      "expectedRunId": "run-correlation-golden",
+      "expectedCapabilitySnapshotId": "opencode:snapshot-7",
+      "expectedBehaviorFingerprint": "2222222222222222222222222222222222222222222222222222222222222222",
+      "expectedManifestHighWatermark": 17,
+      "commandLeaseId": "lease-correlation-1",
+      "idempotencyKey": "018f47a2-4a13-7c2f-8d44-c0ffee123456"
+    },
+    "requestedBudgetMs": 45000
+  },
+  "serverEnrichment": {
+    "requestProjectPath": "/workspace/link/../link/project",
+    "projectPath": "/workspace/real/project",
+    "projectIdentity": "/workspace/real/project",
+    "effectiveProfilePlanDigest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "effectiveBudgetMs": 45000,
+    "commandInputDigest": "8dc749b3c7e760ea63bebce754ccb32dce0d4a4315b93f3d35618c5c42e653a2",
+    "commandImmutableDigest": "6491aeddab789da54607c9e5cc96e29e4cc1592173f5aa350e67c4e721e5f6ce"
+  },
+  "wire": {
+    "request": {
+      "launchContractVersion": 1,
+      "launchAttempt": {
+        "attemptId": "018f47a2-4a13-7c2f-8d44-c0ffee123456",
+        "payloadHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generation": 1,
+        "proofNonce": "AAECAwQFBgcICQoLDA0ODw",
+        "parent": {
+          "sessionIdentity": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "messageIdentity": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "providerId": "openrouter",
+        "modelId": "openrouter/model-s3",
+        "requiredMcpTools": [
+          "agent-teams.message_send",
+          "agent-teams.task_update"
+        ],
+        "requireFreshRetainedHostProof": true,
+        "requestCorrelationDigest": "d817390bbc9170b98433fc0961cbd3f2fcc0499d321d4607fff3e94c577cae69"
+      }
+    },
+    "response": {
+      "launchAttempt": {
+        "contractVersion": 1,
+        "attemptId": "018f47a2-4a13-7c2f-8d44-c0ffee123456",
+        "idempotencyKey": "attemptId",
+        "payloadHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "generation": 1,
+        "inputDigest": "118d42d6cd979b5815f052249aa74d64a60ec757f89c9e53999f9f9c1f73dffe",
+        "immutableDigest": "b0a6ca76e7d97d3e57fb572db729f257692ea4a0d6e2faed37fca5b4b50a60ab",
+        "requestCorrelationDigest": "d817390bbc9170b98433fc0961cbd3f2fcc0499d321d4607fff3e94c577cae69",
+        "outcome": "partial",
+        "phase": "cleanup",
+        "startedAt": 1776600000000,
+        "workDeadlineAt": 1776600040000,
+        "absoluteDeadlineAt": 1776600045000,
+        "cleanupReserveMs": 5000,
+        "elapsedMs": 2500,
+        "providerId": "openrouter",
+        "modelId": "openrouter/model-s3",
+        "profilePurpose": "launch_attempt",
+        "projectIdentity": "sha256:15c54b927e0d5f351b3258b0dab95c8c86c8fc88429382c5a59e99660cb96d0c",
+        "profileIdentity": "sha256:ef391b00f145f0aedc4004d88a15b631af68f7f9711b9b4620867468a8fa5b08",
+        "configIdentity": "sha256:18d0a4b0b91931caa6b615681cfc5f4b066900b31bb7740b92c52840033f5287",
+        "authIdentity": "sha256:6beedbc67fd3e30d2ea773bc2c0b1e7298ef7c14b7f7fa5700e11e420747fe7c",
+        "pluginPolicyIdentity": "sha256:dbc1c5452ea5f0676169e7cd5d2906f5392be8af27a6cfd2f181bc3d43759d19",
+        "cacheIdentity": "sha256:1ea36ae9c6874098837c2964dafa754647f743595161628d96a274a8a8c0012d",
+        "binaryIdentity": "sha256:1f032594f815bda443c6a182857d39f316b2670c07dcc40a75f03fd4f1800fdb",
+        "retainedHostIdentity": {
+          "hostKeyIdentity": "sha256:b7673501d54fce116b7bce33cdf01d15f434a346285d1f43cc5f51a977eb2bad",
+          "processId": 4242,
+          "processStartedAtMs": 1776600000001,
+          "profileScopeIdentity": "sha256:ef391b00f145f0aedc4004d88a15b631af68f7f9711b9b4620867468a8fa5b08"
+        },
+        "processStartedAtMs": 1776600000001
+      },
+      "proof": {
+        "generation": 1,
+        "attemptId": "018f47a2-4a13-7c2f-8d44-c0ffee123456",
+        "parent": {
+          "sessionIdentity": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "messageIdentity": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "providerId": "openrouter",
+        "modelId": "openrouter/model-s3",
+        "retainedHostIdentity": {
+          "hostKeyIdentity": "sha256:b7673501d54fce116b7bce33cdf01d15f434a346285d1f43cc5f51a977eb2bad",
+          "processId": 4242,
+          "processStartedAtMs": 1776600000001,
+          "profileScopeIdentity": "sha256:ef391b00f145f0aedc4004d88a15b631af68f7f9711b9b4620867468a8fa5b08"
+        },
+        "observedMcpTools": [
+          "agent-teams.message_send",
+          "agent-teams.task_update"
+        ],
+        "nonceHash": "5d2611d5a4dd2b40b277dfdb5ecf5b49819150d7d5c62f4eef960cb0c24db20c",
+        "sessionIdentity": "sha256:9ad8a952bc1501a9005d4ebbc2530f1ec96858053ba1ba0e01364199f0bf304b",
+        "promptMessageIdentity": "sha256:bdc9a14b84c5bf8789087be4a7cc77440f8821845ec0e7e820f83aeb61e680ea",
+        "assistantMessageIdentity": "sha256:4dd1944e54aa2243fe6cfc2fe23528669730fb850520508ffbc7d04e966a6897",
+        "verifiedAt": 1776600030000,
+        "authorizationSource": "fresh_live_attempt",
+        "cacheUsed": false,
+        "requestCorrelationDigest": "d817390bbc9170b98433fc0961cbd3f2fcc0499d321d4607fff3e94c577cae69"
+      },
+      "members": {
+        "committed": [
+          {
+            "memberIdentity": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "sessionIdentity": "sha256:134bf2f05261b95400cbce7cd3714184053ffc5a018d3a417f7cba528fd768df",
+            "bootstrapMessageIdentity": "sha256:8d574952c3169cf0e28cc9ce786582d4631177267a75ce2c1f6bd62efc766e27",
+            "commitIdentity": "sha256:05dc706ab908fb55b47a74c943f7990c0832d9eeff9a0d48436caa65fe3d1207"
+          }
+        ],
+        "failed": [
+          {
+            "memberIdentity": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "failure": {
+              "code": "rate_limited",
+              "origin": "provider",
+              "retryDisposition": "backoff",
+              "retryable": true,
+              "phase": "member_materialize",
+              "sideEffectsStarted": false
+            }
+          }
+        ],
+        "pending": [],
+        "cleanupPending": [
+          "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+        ],
+        "continuationToken": "opaque-continuation-token"
+      },
+      "failure": {
+        "code": "deadline_after_partial",
+        "origin": "deadline",
+        "retryDisposition": "continuation",
+        "retryable": true,
+        "phase": "member_materialize",
+        "sideEffectsStarted": true
+      }
+    }
+  }
+}

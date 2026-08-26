@@ -23,6 +23,21 @@ function providerStatusMap(
 }
 
 describe('providerPrepareRequestSignature', () => {
+  it('separates otherwise-identical members by backend route', () => {
+    const base = {
+      id: 'member',
+      name: 'builder',
+      roleSelection: 'builder',
+      customRole: '',
+      providerId: 'codex' as const,
+      model: 'gpt-5',
+    };
+    expect(
+      buildProviderPrepareMembersSignature([{ ...base, providerBackendId: 'adapter' }])
+    ).not.toBe(
+      buildProviderPrepareMembersSignature([{ ...base, providerBackendId: 'codex-native' }])
+    );
+  });
   it('stays stable for semantically identical provider runtime snapshots', () => {
     const providerIds = ['codex'] as const;
     const first = buildProviderPrepareRuntimeStatusSignature(

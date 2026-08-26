@@ -13,8 +13,8 @@ import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import * as statusBoundary from '@shared/types/cliInstaller';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
-
 import {
   API_KEYS_DELETE,
   API_KEYS_LIST,
@@ -248,6 +248,8 @@ import {
   WINDOW_MAXIMIZE,
   WINDOW_MINIMIZE,
 } from './constants/ipcChannels';
+import { createRosterAuthorizationTransactionBridge } from './rosterAuthorizationTransactionBridge';
+import { createTeamRelaunchStopBridge } from './teamRelaunchStopBridge';
 import {
   CONFIG_ADD_CUSTOM_PROJECT_PATH,
   CONFIG_ADD_IGNORE_REGEX,
@@ -276,7 +278,6 @@ import {
   CONFIG_UPDATE,
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
-
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
   ReviewDraftHistoryEntry,
@@ -304,7 +305,7 @@ import type {
   CliInstallerGetStatusOptions,
   CliInstallerProgress,
   CliProviderId,
-  CliProviderStatusRequestOptions,
+  CliProviderStatusIpcRequest,
   ConflictCheckResult,
   ContextInfo,
   CreateScheduleInput,
@@ -438,9 +439,7 @@ import type {
 } from '@shared/types/extensions';
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
-
 type SentryIpcChannel = 'start' | 'scope' | 'envelope' | 'status' | 'structured-log' | 'metric';
-
 interface SentryRendererIpcBridge {
   sendRendererStart: () => void;
   sendScope: (scopeJson: string) => void;
@@ -449,25 +448,20 @@ interface SentryRendererIpcBridge {
   sendStructuredLog: (log: unknown) => void;
   sendMetric: (metric: unknown) => void;
 }
-
 declare global {
   interface Window {
     __SENTRY_IPC__?: Record<string, SentryRendererIpcBridge>;
   }
 }
-
 const SENTRY_IPC_NAMESPACE = 'sentry-ipc';
-
 function createSentryIpcKey(channel: SentryIpcChannel): string {
   return `${SENTRY_IPC_NAMESPACE}.${channel}`;
 }
-
 function installSentryRendererIpcBridge(): void {
   window.__SENTRY_IPC__ = window.__SENTRY_IPC__ || {};
   if (window.__SENTRY_IPC__[SENTRY_IPC_NAMESPACE]) {
     return;
   }
-
   window.__SENTRY_IPC__[SENTRY_IPC_NAMESPACE] = {
     sendRendererStart: () => ipcRenderer.send(createSentryIpcKey('start')),
     sendScope: (scopeJson) => ipcRenderer.send(createSentryIpcKey('scope'), scopeJson),
@@ -476,21 +470,17 @@ function installSentryRendererIpcBridge(): void {
     sendStructuredLog: (log) => ipcRenderer.send(createSentryIpcKey('structured-log'), log),
     sendMetric: (metric) => ipcRenderer.send(createSentryIpcKey('metric'), metric),
   };
-
   contextBridge.exposeInMainWorld('__SENTRY_IPC__', window.__SENTRY_IPC__);
 }
-
 // Expose Sentry's classic IPC bridge so packaged renderers do not fall back to sentry-ipc:// fetch.
 try {
   installSentryRendererIpcBridge();
 } catch {
   // Sentry telemetry must never block the application preload bridge.
 }
-
 // =============================================================================
 // IPC Result Types and Helpers
 // =============================================================================
-
 interface IpcFileChangePayload {
   type: 'add' | 'change' | 'unlink';
   path: string;
@@ -498,7 +488,6 @@ interface IpcFileChangePayload {
   sessionId?: string;
   isSubagent: boolean;
 }
-
 /**
  * Type-safe IPC invoker for operations that return IpcResult<T>.
  * Throws an Error if the IPC call fails, otherwise returns the typed data.
@@ -984,6 +973,7 @@ const electronAPI: ElectronAPI = {
     },
   },
   teams: {
+    ...createRosterAuthorizationTransactionBridge(invokeIpcWithResult),
     ...createTeamMemberSettingsBridge(invokeIpcWithResult),
     list: async () => {
       return invokeIpcWithResult<TeamSummary[]>(TEAM_LIST);
@@ -1034,7 +1024,9 @@ const electronAPI: ElectronAPI = {
       selectedModels?: string[],
       limitContext?: boolean,
       modelVerificationMode?: TeamProvisioningModelVerificationMode,
-      selectedModelChecks?: TeamProvisioningModelCheckRequest[]
+      selectedModelChecks?: TeamProvisioningModelCheckRequest[],
+      allowExperimentalLocalModels?: boolean,
+      runtimeRosterRevision?: string
     ) => {
       return invokeIpcWithResult<TeamProvisioningPrepareResult>(
         TEAM_PREPARE_PROVISIONING,
@@ -1044,7 +1036,9 @@ const electronAPI: ElectronAPI = {
         selectedModels,
         limitContext,
         modelVerificationMode,
-        selectedModelChecks
+        selectedModelChecks,
+        allowExperimentalLocalModels,
+        runtimeRosterRevision
       );
     },
     getWorktreeGitStatus: async (projectPath: string) => {
@@ -1159,6 +1153,7 @@ const electronAPI: ElectronAPI = {
     stop: async (teamName: string) => {
       return invokeIpcWithResult<void>(TEAM_STOP, teamName);
     },
+    stopForRelaunch: createTeamRelaunchStopBridge(invokeIpcWithResult),
     createConfig: async (request: TeamCreateConfigRequest) => {
       return invokeIpcWithResult<void>(TEAM_CREATE_CONFIG, request);
     },
@@ -1843,11 +1838,16 @@ const electronAPI: ElectronAPI = {
     getStatus: async (options?: CliInstallerGetStatusOptions): Promise<CliInstallationStatus> => {
       return invokeIpcWithResult<CliInstallationStatus>(CLI_INSTALLER_GET_STATUS, options);
     },
-    getProviderStatus: async (
-      providerId: CliProviderId,
-      options?: CliProviderStatusRequestOptions
-    ) => {
-      return invokeIpcWithResult(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId, options);
+    getProviderStatus: async (providerId: CliProviderId, request: CliProviderStatusIpcRequest) => {
+      const validatedRequest = statusBoundary.parseCliProviderStatusIpcRequest(request);
+      return statusBoundary.parseExactCliProviderStatusIpcResponse(
+        await invokeIpcWithResult<unknown>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          providerId,
+          validatedRequest
+        ),
+        validatedRequest
+      );
     },
     verifyProviderModels: async (providerId: CliProviderId) => {
       return invokeIpcWithResult(CLI_INSTALLER_VERIFY_PROVIDER_MODELS, providerId);

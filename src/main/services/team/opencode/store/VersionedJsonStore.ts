@@ -1,8 +1,14 @@
-import { atomicWriteAsync } from '@main/utils/atomicWrite';
+import { atomicWriteAsync, type AtomicWriteOptions } from '@main/utils/atomicWrite';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
 import { type FileLockOptions, withFileLock } from '../../fileLock';
+
+type VersionedJsonStoreAtomicWrite = (
+  targetPath: string,
+  data: string | Buffer,
+  options?: AtomicWriteOptions
+) => Promise<void>;
 
 export interface VersionedJsonStoreEnvelope<TData> {
   schemaVersion: number;
@@ -46,6 +52,7 @@ export interface VersionedJsonStoreOptions<TData> {
   clock?: () => Date;
   quarantineDir?: string;
   lockOptions?: FileLockOptions;
+  writeFileAtomic?: VersionedJsonStoreAtomicWrite;
 }
 
 export class VersionedJsonStoreError extends Error {
@@ -67,6 +74,7 @@ export class VersionedJsonStore<TData> {
   private readonly clock: () => Date;
   private readonly quarantineDir: string | null;
   private readonly lockOptions: FileLockOptions | undefined;
+  private readonly writeFileAtomic: VersionedJsonStoreAtomicWrite;
 
   constructor(options: VersionedJsonStoreOptions<TData>) {
     this.filePath = options.filePath;
@@ -76,6 +84,7 @@ export class VersionedJsonStore<TData> {
     this.clock = options.clock ?? (() => new Date());
     this.quarantineDir = options.quarantineDir ?? null;
     this.lockOptions = options.lockOptions;
+    this.writeFileAtomic = options.writeFileAtomic ?? atomicWriteAsync;
   }
 
   async read(): Promise<VersionedJsonStoreReadResult<TData>> {
@@ -112,7 +121,10 @@ export class VersionedJsonStore<TData> {
 
         if (changed) {
           await fs.mkdir(path.dirname(this.filePath), { recursive: true });
-          await atomicWriteAsync(this.filePath, `${JSON.stringify(envelope, null, 2)}\n`);
+          await this.writeFileAtomic(this.filePath, `${JSON.stringify(envelope, null, 2)}\n`, {
+            durability: 'strict',
+            syncDirectory: true,
+          });
         }
 
         return {

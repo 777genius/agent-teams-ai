@@ -76,7 +76,7 @@ function makeSnapshot(
   members: Record<string, PersistedTeamLaunchMemberState>
 ): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'demo',
     updatedAt: acceptedAt,
     launchPhase: 'active',

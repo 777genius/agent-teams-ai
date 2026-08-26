@@ -107,23 +107,22 @@ import {
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
-import {
-  extractFlagsFromHelp,
-  extractUserFlags,
-  PROTECTED_CLI_FLAGS,
-} from '@shared/utils/cliArgsParser';
+import { extractUserFlags, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
 import { getErrorMessage } from '@shared/utils/errorHandling';
-import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import {
   buildStandaloneSlashCommandMeta,
   parseStandaloneSlashCommand,
 } from '@shared/utils/slashCommands';
 import { looksLikeCanonicalTaskId } from '@shared/utils/taskIdentity';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
-import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
-import crypto from 'crypto';
+import {
+  isResolvedLeadRuntimeSelectionProvenance,
+  isResolvedMemberRuntimeSelectionProvenance,
+  normalizeTeamLeadRuntimeSelectionProvenance,
+  normalizeTeamMemberRuntimeSelectionProvenance,
+  resolveLeadRuntimeSelectionProvenance,
+} from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 import { app, BrowserWindow, type IpcMain, type IpcMainInvokeEvent, Notification } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -151,14 +150,50 @@ import { buildOpenCodeRuntimeDeliveryUserVisibleImpact } from '../services/team/
 import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
+import {
+  captureAuthoritativeProofEpoch,
+  releaseAuthoritativeProofEpoch,
+} from '../services/team/TeamLaunchExecutionProofAuthority';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
+import { resolvePersistedLeadRuntimeRoute } from '../services/team/teamProviderBackendResolution';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
+import { attachExecutionProofToPrepareResult } from './teams/attachExecutionProofToPrepareResult';
+import { verifyProductionTeamCreateRequest } from './teams/authorizeProductionTeamCreateRequest';
+import { composeDraftTeamCreateRequest } from './teams/composeDraftTeamCreateRequest';
+import {
+  admitProductionTeamCreateRosterLaunch,
+  admitProductionTeamRosterLaunch,
+} from './teams/ensureProductionRosterLaunchTransaction';
+import { parseExecutionProofCandidate } from './teams/parseExecutionProofCandidate';
+import { validatePrepareProvisioningRequest } from './teams/prepareProvisioningRequestValidation';
+import {
+  registerRelaunchStopHandler,
+  removeRelaunchStopHandler,
+} from './teams/relaunchStopHandler';
+import {
+  parseReplaceMembersRequest,
+  registerRosterAuthorizationTransactionHandlers,
+  unregisterRosterAuthorizationTransactionHandlers,
+} from './teams/rosterAuthorizationTransactionHandlers';
+import { createRosterAuthorizedLaunchContext } from './teams/rosterAuthorizedLaunch';
+import {
+  didOpenCodeRosterMemberChange,
+  findOpenCodeOwnershipMigrationNames,
+  isOpenCodeLedRoster,
+  isOpenCodeRosterMutationMember,
+  OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE,
+  OPENCODE_OWNERSHIP_MIGRATION_BLOCK_MESSAGE,
+  type RuntimeRosterMutationMember,
+  toRollbackReplaceMembersRequest,
+} from './teams/runtimeRosterMutationPolicy';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
+import { validateCliArgsRequest } from './teams/validateCliArgsRequest';
+import { validateRosterLaunchRequestEnvelope } from './teams/validateRosterLaunchRequestEnvelope';
 import {
   validateFromField,
   validateMemberName,
@@ -220,7 +255,6 @@ import type {
   BoardTaskLogStreamResponse,
   BoardTaskLogStreamSummary,
   CreateTaskRequest,
-  EffortLevel,
   GlobalTask,
   InboxMessage,
   IpcResult,
@@ -246,17 +280,13 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
-  TeamFastMode,
   TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
   TeamLaunchResponse,
   TeamMemberActivityMeta,
   TeamMessageNotificationData,
-  TeamProviderBackendId,
   TeamProviderId,
-  TeamProvisioningModelCheckRequest,
-  TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamSummary,
@@ -852,6 +882,7 @@ export function initializeTeamHandlers(
 }
 
 export function registerTeamHandlers(ipcMain: IpcMain): void {
+  registerRosterAuthorizationTransactionHandlers(ipcMain, getTeamDataService);
   ipcMain.handle(TEAM_LIST, handleListTeams);
   ipcMain.handle(TEAM_GET_DATA, handleGetData);
   ipcMain.handle(TEAM_GET_TASK_CHANGE_PRESENCE, handleGetTaskChangePresence);
@@ -888,6 +919,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
   ipcMain.handle(TEAM_STOP, handleStopTeam);
+  registerRelaunchStopHandler(ipcMain, (teamName) => getTeamRuntimeApi().stopTeam(teamName));
   ipcMain.handle(TEAM_CREATE_CONFIG, handleCreateConfig);
   ipcMain.handle(TEAM_GET_MEMBER_LOGS, handleGetMemberLogs);
   ipcMain.handle(TEAM_GET_LOGS_FOR_TASK, handleGetLogsForTask);
@@ -941,6 +973,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
 }
 
 export function removeTeamHandlers(ipcMain: IpcMain): void {
+  unregisterRosterAuthorizationTransactionHandlers(ipcMain);
   ipcMain.removeHandler(TEAM_LIST);
   ipcMain.removeHandler(TEAM_GET_DATA);
   ipcMain.removeHandler(TEAM_GET_TASK_CHANGE_PRESENCE);
@@ -977,6 +1010,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PROCESS_ALIVE);
   ipcMain.removeHandler(TEAM_ALIVE_LIST);
   ipcMain.removeHandler(TEAM_STOP);
+  removeRelaunchStopHandler(ipcMain);
   ipcMain.removeHandler(TEAM_CREATE_CONFIG);
   ipcMain.removeHandler(TEAM_GET_MEMBER_LOGS);
   ipcMain.removeHandler(TEAM_GET_LOGS_FOR_TASK);
@@ -1345,7 +1379,6 @@ async function handleGetData(
     ) {
       return { success: false, error: 'TEAM_PROVISIONING' };
     }
-    // Draft team: team.meta.json exists but config.json doesn't (provisioning failed before TeamCreate)
     if (message === `Team not found: ${tn}`) {
       const meta = await withTimeoutValue(
         teamMetaStore.getMeta(tn).catch(() => null),
@@ -1661,138 +1694,6 @@ function isProvisioningTeamName(teamName: string): boolean {
   return parts.every((p) => /^[a-z0-9]+$/.test(p));
 }
 
-interface RuntimeRosterMutationMember {
-  name: string;
-  role?: string;
-  workflow?: string;
-  isolation?: 'worktree';
-  cwd?: string;
-  providerId?: TeamProviderId;
-  providerBackendId?: TeamProviderBackendId;
-  model?: string;
-  effort?: EffortLevel;
-  fastMode?: TeamFastMode;
-  mcpPolicy?: ReturnType<typeof normalizeTeamMemberMcpPolicy>;
-  removedAt?: number | string | null;
-}
-
-const OPENCODE_LEAD_LIVE_ROSTER_MUTATION_BLOCK_MESSAGE =
-  'Live roster mutation for a running OpenCode-led team is not supported in this phase. Stop the team, edit the roster, then relaunch.';
-const OPENCODE_OWNERSHIP_MIGRATION_BLOCK_MESSAGE =
-  'Live member migration between OpenCode and the primary runtime owner is not supported in this phase. Stop the team, edit the roster, then relaunch.';
-
-function isOpenCodeRosterMutationMember(member: RuntimeRosterMutationMember | undefined): boolean {
-  return normalizeOptionalTeamProviderId(member?.providerId) === 'opencode';
-}
-
-function isLeadRosterMutationMember(member: RuntimeRosterMutationMember | undefined): boolean {
-  if (!member) {
-    return false;
-  }
-  if (isLeadMember(member)) {
-    return true;
-  }
-  const normalizedName = member.name.trim().toLowerCase();
-  if (normalizedName === 'lead') {
-    return true;
-  }
-  return member.role?.trim().toLowerCase().replace(/\s+/g, ' ') === 'team lead';
-}
-
-function isOpenCodeLedRoster(members: RuntimeRosterMutationMember[]): boolean {
-  const leadMember = members.find(
-    (member) => !member.removedAt && isLeadRosterMutationMember(member)
-  );
-  return normalizeOptionalTeamProviderId(leadMember?.providerId) === 'opencode';
-}
-
-function didOpenCodeRosterMemberChange(
-  previous: RuntimeRosterMutationMember | undefined,
-  next: RuntimeRosterMutationMember | undefined
-): boolean {
-  if (!previous || !next) {
-    return false;
-  }
-
-  return (
-    (previous.role?.trim() || undefined) !== (next.role?.trim() || undefined) ||
-    (previous.workflow?.trim() || undefined) !== (next.workflow?.trim() || undefined) ||
-    (previous.isolation === 'worktree' ? 'worktree' : undefined) !==
-      (next.isolation === 'worktree' ? 'worktree' : undefined) ||
-    normalizeOptionalTeamProviderId(previous.providerId) !==
-      normalizeOptionalTeamProviderId(next.providerId) ||
-    migrateProviderBackendId(
-      normalizeOptionalTeamProviderId(previous.providerId),
-      previous.providerBackendId
-    ) !==
-      migrateProviderBackendId(
-        normalizeOptionalTeamProviderId(next.providerId),
-        next.providerBackendId
-      ) ||
-    (previous.model?.trim() || undefined) !== (next.model?.trim() || undefined) ||
-    previous.effort !== next.effort ||
-    previous.fastMode !== next.fastMode ||
-    JSON.stringify(normalizeTeamMemberMcpPolicy(previous.mcpPolicy)) !==
-      JSON.stringify(normalizeTeamMemberMcpPolicy(next.mcpPolicy))
-  );
-}
-
-function findOpenCodeOwnershipMigrationNames(options: {
-  previousMembers: RuntimeRosterMutationMember[];
-  nextMembers: RuntimeRosterMutationMember[];
-}): string[] {
-  const previousByName = new Map(
-    options.previousMembers
-      .filter((member) => !member.removedAt)
-      .map((member) => [member.name.trim().toLowerCase(), member])
-  );
-  const migrationNames: string[] = [];
-  for (const nextMember of options.nextMembers) {
-    const previousMember = previousByName.get(nextMember.name.trim().toLowerCase());
-    if (!previousMember) {
-      continue;
-    }
-    if (
-      isOpenCodeRosterMutationMember(previousMember) !== isOpenCodeRosterMutationMember(nextMember)
-    ) {
-      migrationNames.push(nextMember.name.trim());
-    }
-  }
-  return migrationNames;
-}
-
-function toRollbackReplaceMembersRequest(members: RuntimeRosterMutationMember[]): {
-  members: {
-    name: string;
-    role?: string;
-    workflow?: string;
-    isolation?: 'worktree';
-    providerId?: TeamProviderId;
-    providerBackendId?: TeamProviderBackendId;
-    model?: string;
-    effort?: EffortLevel;
-    fastMode?: TeamFastMode;
-    mcpPolicy?: ReturnType<typeof normalizeTeamMemberMcpPolicy>;
-  }[];
-} {
-  return {
-    members: members
-      .filter((member) => !member.removedAt && !isLeadRosterMutationMember(member))
-      .map((member) => ({
-        name: member.name.trim(),
-        role: member.role?.trim() || undefined,
-        workflow: member.workflow?.trim() || undefined,
-        isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
-        providerId: normalizeOptionalTeamProviderId(member.providerId),
-        providerBackendId: migrateProviderBackendId(member.providerId, member.providerBackendId),
-        model: member.model?.trim() || undefined,
-        effort: member.effort,
-        fastMode: member.fastMode,
-        mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
-      })),
-  };
-}
-
 async function restorePreviousMembersMetaSnapshot(options: {
   teamName: string;
   teamDataService: TeamDataService;
@@ -1904,7 +1805,6 @@ async function validateProvisioningRequest(
   if (!request || typeof request !== 'object') {
     return { valid: false, error: 'Invalid team create request' };
   }
-
   const payload = request as Partial<TeamCreateRequest>;
   if (typeof payload.teamName !== 'string' || payload.teamName.trim().length === 0) {
     return { valid: false, error: 'teamName is required' };
@@ -1913,14 +1813,12 @@ async function validateProvisioningRequest(
   if (!isProvisioningTeamName(teamName)) {
     return { valid: false, error: 'teamName must be kebab-case [a-z0-9-], max 64 chars' };
   }
-
   if (payload.displayName !== undefined && typeof payload.displayName !== 'string') {
     return { valid: false, error: 'displayName must be string' };
   }
   if (payload.description !== undefined && typeof payload.description !== 'string') {
     return { valid: false, error: 'description must be string' };
   }
-
   if (!Array.isArray(payload.members)) {
     return { valid: false, error: 'members must be an array' };
   }
@@ -1929,7 +1827,10 @@ async function validateProvisioningRequest(
     return { valid: false, error: providerValidation.error };
   }
   const providerId = providerValidation.value ?? 'anthropic';
-
+  const executionProofValidation = parseExecutionProofCandidate(payload.executionProof);
+  if (!executionProofValidation.valid) {
+    return { valid: false, error: executionProofValidation.error };
+  }
   const seenNames = new Set<string>();
   const members: TeamCreateRequest['members'] = [];
   for (const member of payload.members) {
@@ -1945,7 +1846,6 @@ async function validateProvisioningRequest(
       return { valid: false, error: 'member names must be unique' };
     }
     seenNames.add(memberName);
-
     const role = (member as { role?: unknown }).role;
     if (role !== undefined && typeof role !== 'string') {
       return { valid: false, error: 'member role must be string' };
@@ -1988,7 +1888,7 @@ async function validateProvisioningRequest(
     if (!fastModeValidation.valid) {
       return { valid: false, error: fastModeValidation.error };
     }
-    members.push({
+    const memberInput = {
       name: memberName,
       role: typeof role === 'string' ? role.trim() : undefined,
       workflow: typeof workflow === 'string' ? workflow.trim() : undefined,
@@ -1999,9 +1899,30 @@ async function validateProvisioningRequest(
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
       mcpPolicy: normalizeTeamMemberMcpPolicy((member as { mcpPolicy?: unknown }).mcpPolicy),
+    };
+    const runtimeSelectionProvenance = normalizeTeamMemberRuntimeSelectionProvenance(
+      (member as { runtimeSelectionProvenance?: unknown }).runtimeSelectionProvenance
+    );
+    if (!isResolvedMemberRuntimeSelectionProvenance(runtimeSelectionProvenance)) {
+      return {
+        valid: false,
+        error: `Member "${memberName}" runtime selection is ambiguous; choose provider, model, and effort again`,
+      };
+    }
+    members.push({
+      ...memberInput,
+      runtimeSelectionProvenance,
     });
   }
-
+  const leadRuntimeSelectionProvenance = normalizeTeamLeadRuntimeSelectionProvenance(
+    payload.leadRuntimeSelectionProvenance
+  );
+  if (!isResolvedLeadRuntimeSelectionProvenance(leadRuntimeSelectionProvenance)) {
+    return {
+      valid: false,
+      error: 'Lead runtime selection is ambiguous; choose provider, model, and effort again',
+    };
+  }
   if (typeof payload.cwd !== 'string' || payload.cwd.trim().length === 0) {
     return { valid: false, error: 'cwd is required' };
   }
@@ -2009,7 +1930,6 @@ async function validateProvisioningRequest(
   if (!path.isAbsolute(cwd)) {
     return { valid: false, error: 'cwd must be an absolute path' };
   }
-
   if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
     return { valid: false, error: 'prompt must be a string' };
   }
@@ -2038,13 +1958,6 @@ async function validateProvisioningRequest(
   if (!experimentalModelsValidation.valid) {
     return { valid: false, error: experimentalModelsValidation.error };
   }
-
-  try {
-    await fs.promises.mkdir(cwd, { recursive: true });
-  } catch {
-    return { valid: false, error: 'failed to create cwd directory' };
-  }
-
   let stat: fs.Stats;
   try {
     stat = await fs.promises.stat(cwd);
@@ -2054,7 +1967,6 @@ async function validateProvisioningRequest(
   if (!stat.isDirectory()) {
     return { valid: false, error: 'cwd must be a directory' };
   }
-
   if (payload.worktree !== undefined) {
     if (typeof payload.worktree !== 'string') {
       return { valid: false, error: 'worktree must be a string' };
@@ -2078,7 +1990,6 @@ async function validateProvisioningRequest(
       return { valid: false, error: 'extraCliArgs too long (max 1024)' };
     }
   }
-
   return {
     valid: true,
     value: {
@@ -2090,6 +2001,8 @@ async function validateProvisioningRequest(
       cwd,
       prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
       providerId,
+      leadRuntimeSelectionProvenance,
+      executionProof: executionProofValidation.value,
       providerBackendId: providerBackendValidation.value,
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
       effort: effortValidation.value,
@@ -2164,7 +2077,6 @@ function noteLaunchIntentFailed(teamName: string, source: string): void {
     updatedAt: now,
   } as TeamProvisioningProgress);
 }
-
 async function handleCreateTeam(
   event: IpcMainInvokeEvent,
   request: unknown
@@ -2173,20 +2085,36 @@ async function handleCreateTeam(
   if (!validation.valid) {
     return { success: false, error: validation.error };
   }
+  const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof === true;
+  // This must remain ahead of roster/transaction/lock admission and every team side effect.
+  if (!verifyProductionTeamCreateRequest(validation.value, proofRequired))
+    return { success: false, error: 'Fresh authoritative launch authorization is required' };
+  let admitted: Awaited<ReturnType<typeof admitProductionTeamCreateRosterLaunch>>;
+  try {
+    admitted = await admitProductionTeamCreateRosterLaunch(
+      getTeamDataService(),
+      validation.value,
+      undefined,
+      proofRequired,
+      validation.value.members
+    );
+  } catch (error) {
+    return { success: false, error: getErrorMessage(error) };
+  }
+  const { request: admittedRequest, context: rosterLaunch } = admitted;
   const progressTargetWindow = BrowserWindow.fromWebContents(event.sender);
-
   return wrapTeamHandler('create', async () => {
     addMainBreadcrumb('team', 'create', { teamName: validation.value.teamName });
     launchIoGovernor?.noteLaunchIntent(validation.value.teamName, 'create');
-    // Keep this team's team-root/task artifacts file-watched while createTeam writes
-    // its initial config, tasks, inboxes, and launch state.
     markTeamEngaged(validation.value.teamName);
     try {
       const create = (): Promise<TeamCreateResponse> =>
-        getTeamProvisioningStartApi().createTeam(validation.value, (progress) => {
-          launchIoGovernor?.noteProvisioningProgress(progress);
-          sendProvisioningProgress(progressTargetWindow, progress);
-        });
+        rosterLaunch.runCreate(admittedRequest, (authorizedRequest) =>
+          getTeamProvisioningStartApi().createTeam(authorizedRequest, (progress) => {
+            launchIoGovernor?.noteProvisioningProgress(progress);
+            sendProvisioningProgress(progressTargetWindow, progress);
+          })
+        );
       const response = teamBackupService
         ? await teamBackupService.withTeamIdentityFence(validation.value.teamName, create)
         : await create();
@@ -2194,12 +2122,12 @@ async function handleCreateTeam(
       invalidateTeamRosterSnapshotCaches(validation.value.teamName);
       return response;
     } catch (error) {
+      await rosterLaunch.rollback();
       noteLaunchIntentFailed(validation.value.teamName, 'create');
       throw error;
     }
   });
 }
-
 async function handleLaunchTeam(
   event: IpcMainInvokeEvent,
   request: unknown
@@ -2208,40 +2136,20 @@ async function handleLaunchTeam(
     return { success: false, error: 'Invalid team launch request' };
   }
   const progressTargetWindow = BrowserWindow.fromWebContents(event.sender);
-
   const payload = request as Partial<TeamLaunchRequest>;
+  const executionProofValidation = parseExecutionProofCandidate(payload.executionProof);
+  if (!executionProofValidation.valid) {
+    return { success: false, error: executionProofValidation.error };
+  }
   const validatedTeamName = validateTeamName(payload.teamName);
   if (!validatedTeamName.valid) {
     return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
   }
-
-  if (typeof payload.cwd !== 'string' || payload.cwd.trim().length === 0) {
-    return { success: false, error: 'cwd is required' };
-  }
-  const cwd = payload.cwd.trim();
-  if (!path.isAbsolute(cwd)) {
-    return { success: false, error: 'cwd must be an absolute path' };
-  }
-
-  try {
-    const stat = await fs.promises.stat(cwd);
-    if (!stat.isDirectory()) {
-      return { success: false, error: 'cwd must be a directory' };
-    }
-  } catch {
-    return { success: false, error: 'cwd does not exist' };
-  }
-
-  if (payload.prompt !== undefined && typeof payload.prompt !== 'string') {
-    return { success: false, error: 'prompt must be a string' };
-  }
-
-  if (payload.model !== undefined && typeof payload.model !== 'string') {
-    return { success: false, error: 'model must be a string' };
-  }
-  if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
-    return { success: false, error: 'limitContext must be a boolean' };
-  }
+  const tn = validatedTeamName.value!;
+  const envelope = await validateRosterLaunchRequestEnvelope(payload);
+  if (!envelope.valid) return { success: false, error: envelope.error };
+  const { cwd } = envelope;
+  let { rosterTransactionId } = envelope;
   const experimentalModelsValidation = parseOptionalBoolean(
     payload.allowExperimentalLocalModels,
     'allowExperimentalLocalModels'
@@ -2255,19 +2163,10 @@ async function handleLaunchTeam(
   }
   const explicitProviderId = providerValidation.value;
   const providerId = explicitProviderId ?? 'anthropic';
-  const providerBackendValidation = parseOptionalLaunchProviderBackendId(
-    payload.providerBackendId,
-    providerId
-  );
-  if (!providerBackendValidation.valid) {
-    return { success: false, error: providerBackendValidation.error };
+  const providerBackendShapeValidation = parseOptionalProviderBackendId(payload.providerBackendId);
+  if (!providerBackendShapeValidation.valid) {
+    return { success: false, error: providerBackendShapeValidation.error };
   }
-
-  // Detect draft team: team.meta.json exists but config.json doesn't.
-  // This happens when user created team config without launching (launchTeam=false),
-  // or when provisioning failed before TeamCreate could run.
-  // Redirect to createTeam so TeamCreate runs properly.
-  const tn = validatedTeamName.value!;
   const configPath = path.join(getTeamsBasePath(), tn, 'config.json');
   let isDraft = false;
   try {
@@ -2276,17 +2175,27 @@ async function handleLaunchTeam(
     const meta = await teamMetaStore.getMeta(tn);
     if (meta) isDraft = true;
   }
-
   if (isDraft) {
     const savedRequest = await getTeamDataService().getSavedRequest(tn);
     if (!savedRequest) {
       return { success: false, error: `Missing saved request for draft team: ${tn}` };
     }
-
     const savedProviderId = savedRequest.providerId ?? 'anthropic';
     const resolvedProviderId = explicitProviderId ?? savedRequest.providerId ?? providerId;
     const providerChangedFromSaved =
       explicitProviderId != null && explicitProviderId !== savedProviderId;
+    const rawDraftProviderBackendId = Object.hasOwn(payload, 'providerBackendId')
+      ? payload.providerBackendId
+      : providerChangedFromSaved
+        ? undefined
+        : savedRequest.providerBackendId;
+    const providerBackendValidation = parseOptionalLaunchProviderBackendId(
+      rawDraftProviderBackendId,
+      resolvedProviderId
+    );
+    if (!providerBackendValidation.valid) {
+      return { success: false, error: providerBackendValidation.error };
+    }
     const effortValidation = parseOptionalTeamEffort(
       Object.hasOwn(payload, 'effort')
         ? payload.effort
@@ -2308,99 +2217,82 @@ async function handleLaunchTeam(
     if (!fastModeValidation.valid) {
       return { success: false, error: fastModeValidation.error };
     }
-    const draftModel = Object.hasOwn(payload, 'model')
-      ? typeof payload.model === 'string'
-        ? payload.model.trim() || undefined
-        : undefined
-      : providerChangedFromSaved
-        ? undefined
-        : savedRequest.model;
-    const draftLimitContext =
-      typeof payload.limitContext === 'boolean'
-        ? payload.limitContext
-        : providerChangedFromSaved
-          ? undefined
-          : savedRequest.limitContext;
-
-    const createRequest: TeamCreateRequest = {
-      teamName: tn,
-      displayName: savedRequest.displayName,
-      description: savedRequest.description,
-      color: savedRequest.color,
-      cwd,
-      prompt:
-        typeof payload.prompt === 'string'
-          ? payload.prompt.trim() || undefined
-          : savedRequest.prompt,
-      providerId: resolvedProviderId,
-      providerBackendId: migrateProviderBackendId(
-        resolvedProviderId,
-        providerBackendValidation.value ?? savedRequest.providerBackendId
-      ),
-      model: draftModel,
-      effort: effortValidation.value,
-      fastMode: fastModeValidation.value,
-      limitContext: draftLimitContext,
-      skipPermissions:
-        typeof payload.skipPermissions === 'boolean'
-          ? payload.skipPermissions
-          : savedRequest.skipPermissions,
-      allowExperimentalLocalModels: experimentalModelsValidation.value,
-      worktree:
-        typeof payload.worktree === 'string'
-          ? payload.worktree.trim() || undefined
-          : savedRequest.worktree,
-      extraCliArgs:
-        typeof payload.extraCliArgs === 'string'
-          ? payload.extraCliArgs.trim() || undefined
-          : savedRequest.extraCliArgs,
-      members: savedRequest.members,
-    };
-
+    let createRequest = composeDraftTeamCreateRequest(
+      savedRequest,
+      payload,
+      {
+        teamName: tn,
+        cwd,
+        providerId: resolvedProviderId,
+        providerBackendId: providerBackendValidation.value,
+        effort: effortValidation.value,
+        fastMode: fastModeValidation.value,
+        allowExperimentalLocalModels: experimentalModelsValidation.value,
+      },
+      providerChangedFromSaved
+    );
+    const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof === true;
+    let rosterLaunch: Awaited<ReturnType<typeof admitProductionTeamCreateRosterLaunch>>['context'];
+    if (proofRequired) {
+      try {
+        const admitted = await admitProductionTeamCreateRosterLaunch(
+          getTeamDataService(),
+          createRequest,
+          rosterTransactionId,
+          true,
+          createRequest.members
+        );
+        createRequest = admitted.request;
+        rosterLaunch = admitted.context;
+        rosterTransactionId = rosterLaunch.transactionId;
+      } catch (error) {
+        return { success: false, error: getErrorMessage(error) };
+      }
+    } else {
+      const context = createRosterAuthorizedLaunchContext(
+        getTeamDataService(),
+        tn,
+        rosterTransactionId
+      );
+      if (!context.valid) return { success: false, error: context.error };
+      rosterLaunch = context;
+    }
     return wrapTeamHandler('create', async () => {
       launchIoGovernor?.noteLaunchIntent(tn, 'draft-launch');
-      // Draft launch runs through createTeam, so it needs the same immediate watch scope
-      // as a normal launch before startup files begin changing.
       markTeamEngaged(tn);
       try {
-        const create = (): Promise<TeamCreateResponse> =>
-          getTeamProvisioningStartApi().createTeam(createRequest, (progress) => {
-            launchIoGovernor?.noteProvisioningProgress(progress);
-            sendProvisioningProgress(progressTargetWindow, progress);
-          });
+        const launchReservedRoster = (): Promise<TeamCreateResponse> =>
+          rosterLaunch.runCreate(createRequest, (authorizedRequest) =>
+            getTeamProvisioningStartApi().createTeam(authorizedRequest, (progress) => {
+              launchIoGovernor?.noteProvisioningProgress(progress);
+              sendProvisioningProgress(progressTargetWindow, progress);
+            })
+          );
         const response = teamBackupService
-          ? await teamBackupService.withTeamIdentityFence(tn, create)
-          : await create();
+          ? await teamBackupService.withTeamIdentityFence(tn, launchReservedRoster)
+          : await launchReservedRoster();
         teamPermanentDeletionLifecycle?.resumeTeam(tn);
         invalidateTeamRosterSnapshotCaches(tn);
         return response;
       } catch (error) {
+        await rosterLaunch.rollback();
         noteLaunchIntentFailed(tn, 'draft-launch');
         throw error;
       }
     });
   }
-
+  const persistedMembers = await new TeamMembersMetaStore().getMembers(tn);
   const persistedMeta = await teamMetaStore.getMeta(tn).catch(() => null);
-  const persistedLaunchProviderId =
-    persistedMeta?.launchIdentity?.providerId ?? persistedMeta?.providerId ?? 'anthropic';
-  const launchProviderId =
-    explicitProviderId ??
-    persistedMeta?.launchIdentity?.providerId ??
-    persistedMeta?.providerId ??
-    providerId;
+  const persistedRoute = resolvePersistedLeadRuntimeRoute(persistedMeta);
+  const persistedLaunchProviderId = persistedRoute.providerId ?? 'anthropic';
+  const launchProviderId = explicitProviderId ?? persistedRoute.providerId ?? providerId;
   const providerChangedFromPersisted =
     explicitProviderId != null && explicitProviderId !== persistedLaunchProviderId;
   const rawLaunchProviderBackendId = Object.hasOwn(payload, 'providerBackendId')
     ? payload.providerBackendId
     : providerChangedFromPersisted
       ? undefined
-      : persistedMeta?.launchIdentity
-        ? migrateProviderBackendId(
-            persistedMeta.launchIdentity.providerId,
-            persistedMeta.launchIdentity.providerBackendId ?? persistedMeta.providerBackendId
-          )
-        : (persistedMeta?.providerBackendId ?? undefined);
+      : persistedRoute.providerBackendId;
   const launchProviderBackendValidation = parseOptionalLaunchProviderBackendId(
     rawLaunchProviderBackendId,
     launchProviderId
@@ -2441,75 +2333,105 @@ async function handleLaunchTeam(
         ? undefined
         : persistedMeta?.limitContext;
 
+  let launchRequest: TeamLaunchRequest = {
+    teamName: validatedTeamName.value!,
+    ...(rosterTransactionId ? { rosterTransactionId } : {}),
+    cwd,
+    prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
+    providerId: launchProviderId,
+    leadRuntimeSelectionProvenance: resolveLeadRuntimeSelectionProvenance({
+      providerId: launchProviderId,
+      providerBackendId: launchProviderBackendValidation.value,
+      model: rawLaunchModel,
+      effort: effortValidation.value,
+      leadRuntimeSelectionProvenance:
+        payload.leadRuntimeSelectionProvenance ??
+        persistedMeta?.leadRuntimeSelectionProvenance ??
+        (persistedMeta?.launchIdentity
+          ? {
+              version: 1,
+              providerBackendId:
+                persistedRoute.providerId !== 'anthropic' && persistedRoute.providerBackendId
+                  ? 'explicit'
+                  : 'default',
+              model: persistedMeta.launchIdentity.selectedModelKind,
+              effort: persistedMeta.launchIdentity.selectedEffort ? 'explicit' : 'default',
+            }
+          : undefined),
+    }),
+    executionProof: executionProofValidation.value,
+    providerBackendId: launchProviderBackendValidation.value,
+    model: rawLaunchModel,
+    effort: effortValidation.value,
+    fastMode: fastModeValidation.value,
+    limitContext: launchLimitContext,
+    clearContext: payload.clearContext === true ? true : undefined,
+    skipPermissions:
+      typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
+    allowExperimentalLocalModels: experimentalModelsValidation.value,
+    worktree:
+      typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
+    extraCliArgs:
+      typeof payload.extraCliArgs === 'string'
+        ? payload.extraCliArgs.trim() || undefined
+        : undefined,
+  };
+  const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof === true;
+  let rosterLaunch: Awaited<ReturnType<typeof admitProductionTeamRosterLaunch>>['context'];
+  if (proofRequired) {
+    try {
+      const admitted = await admitProductionTeamRosterLaunch(
+        getTeamDataService(),
+        launchRequest,
+        rosterTransactionId,
+        true,
+        persistedMembers
+      );
+      launchRequest = admitted.request;
+      rosterLaunch = admitted.context;
+      rosterTransactionId = rosterLaunch.transactionId;
+    } catch (error) {
+      return { success: false, error: getErrorMessage(error) };
+    }
+  } else {
+    const context = createRosterAuthorizedLaunchContext(
+      getTeamDataService(),
+      tn,
+      rosterTransactionId
+    );
+    if (!context.valid) return { success: false, error: context.error };
+    rosterLaunch = context;
+  }
+
   return wrapTeamHandler('launch', async () => {
-    addMainBreadcrumb('team', 'launch', { teamName: validatedTeamName.value! });
+    addMainBreadcrumb('team', 'launch', { teamName: tn });
     launchIoGovernor?.noteLaunchIntent(validatedTeamName.value!, 'launch');
-    // Keep this team's team-root/task artifacts file-watched for the whole launch (and the
-    // engaged TTL after), so the lead's immediate startup writes are not missed during the
-    // 0-30s window before the periodic watch-scope reconcile would otherwise pick it up.
     markTeamEngaged(validatedTeamName.value!);
     try {
-      const response = await getTeamProvisioningStartApi().launchTeam(
-        {
-          teamName: validatedTeamName.value!,
-          cwd,
-          prompt:
-            typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
-          providerId: launchProviderId,
-          providerBackendId: launchProviderBackendValidation.value,
-          model: rawLaunchModel,
-          effort: effortValidation.value,
-          fastMode: fastModeValidation.value,
-          limitContext: launchLimitContext,
-          clearContext: payload.clearContext === true ? true : undefined,
-          skipPermissions:
-            typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-          allowExperimentalLocalModels: experimentalModelsValidation.value,
-          worktree:
-            typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
-          extraCliArgs:
-            typeof payload.extraCliArgs === 'string'
-              ? payload.extraCliArgs.trim() || undefined
-              : undefined,
-        },
-        (progress) => {
+      const launch = (authorizedRequest: TeamLaunchRequest): Promise<TeamLaunchResponse> =>
+        getTeamProvisioningStartApi().launchTeam(authorizedRequest, (progress) => {
           launchIoGovernor?.noteProvisioningProgress(progress);
           sendProvisioningProgress(progressTargetWindow, progress);
-        }
-      );
+        });
+      const response = await rosterLaunch.run(launchRequest, launch);
       invalidateTeamRosterSnapshotCaches(validatedTeamName.value!);
       return response;
     } catch (error) {
+      await rosterLaunch.rollback();
       noteLaunchIntentFailed(validatedTeamName.value!, 'launch');
       throw error;
     }
   });
 }
-
 async function handleValidateCliArgs(
   _event: IpcMainInvokeEvent,
   rawArgs: unknown
 ): Promise<IpcResult<CliArgsValidationResult>> {
-  if (typeof rawArgs !== 'string') {
-    return { success: false, error: 'rawArgs must be a string' };
-  }
-  if (rawArgs.length > 2048) {
-    return { success: false, error: 'rawArgs too long (max 2048)' };
-  }
-  return wrapTeamHandler('validateCliArgs', async () => {
-    const helpOutput = await getTeamProvisioningPreflightApi().getCliHelpOutput();
-    const knownFlags = extractFlagsFromHelp(helpOutput);
-    const userFlags = extractUserFlags(rawArgs);
-
-    const invalidFlags = userFlags.filter((f) => !knownFlags.has(f));
-    const protectedFlags = userFlags.filter((f) => PROTECTED_CLI_FLAGS.has(f));
-    const allBad = [...new Set([...invalidFlags, ...protectedFlags])];
-
-    return {
-      valid: allBad.length === 0,
-      invalidFlags: allBad.length > 0 ? allBad : undefined,
-    };
-  });
+  return validateCliArgsRequest(
+    rawArgs,
+    () => getTeamProvisioningPreflightApi().getCliHelpOutput(),
+    (operation) => wrapTeamHandler('validateCliArgs', operation)
+  );
 }
 
 async function handlePrepareProvisioning(
@@ -2520,142 +2442,65 @@ async function handlePrepareProvisioning(
   selectedModels: unknown,
   limitContext: unknown,
   modelVerificationMode: unknown,
-  selectedModelChecks: unknown
+  selectedModelChecks: unknown,
+  allowExperimentalLocalModels: unknown,
+  runtimeRosterRevision: unknown
 ): Promise<IpcResult<TeamProvisioningPrepareResult>> {
-  let validatedCwd: string | undefined;
-  let validatedProviderId: TeamLaunchRequest['providerId'];
-  let validatedProviderIds: TeamProviderId[] | undefined;
-  let validatedSelectedModels: string[] | undefined;
-  let validatedLimitContext: boolean | undefined;
-  let validatedModelVerificationMode: TeamProvisioningModelVerificationMode | undefined;
-  let validatedSelectedModelChecks: TeamProvisioningModelCheckRequest[] | undefined;
-  if (cwd !== undefined) {
-    if (typeof cwd !== 'string' || cwd.trim().length === 0) {
-      return { success: false, error: 'cwd must be a non-empty string' };
-    }
-    validatedCwd = cwd.trim();
-    if (!path.isAbsolute(validatedCwd)) {
-      return { success: false, error: 'cwd must be an absolute path' };
-    }
-  }
-  if (providerId !== undefined) {
-    if (!isTeamProviderId(providerId)) {
-      return { success: false, error: 'providerId must be anthropic, codex, gemini, or opencode' };
-    }
-    validatedProviderId = providerId;
-  }
-  if (providerIds !== undefined) {
-    if (!Array.isArray(providerIds)) {
-      return { success: false, error: 'providerIds must be an array when provided' };
-    }
-    const normalized: TeamProviderId[] = [];
-    for (const entry of providerIds) {
-      if (!isTeamProviderId(entry)) {
-        return {
-          success: false,
-          error: 'providerIds entries must be anthropic, codex, gemini, or opencode',
-        };
-      }
-      if (!normalized.includes(entry)) {
-        normalized.push(entry);
-      }
-    }
-    validatedProviderIds = normalized;
-  }
-  if (selectedModels !== undefined) {
-    if (!Array.isArray(selectedModels)) {
-      return { success: false, error: 'selectedModels must be an array when provided' };
-    }
-    const normalized: string[] = [];
-    const seen = new Set<string>();
-    for (let index = 0; index < selectedModels.length; index += 1) {
-      if (!Object.hasOwn(selectedModels, index)) {
-        return { success: false, error: 'selectedModels entries must be non-empty strings' };
-      }
-      const entry = selectedModels[index];
-      if (typeof entry !== 'string' || entry.trim().length === 0) {
-        return { success: false, error: 'selectedModels entries must be non-empty strings' };
-      }
-      const model = entry.trim();
-      if (!seen.has(model)) {
-        seen.add(model);
-        normalized.push(model);
-      }
-    }
-    validatedSelectedModels = normalized;
-  }
-  if (limitContext !== undefined) {
-    if (typeof limitContext !== 'boolean') {
-      return { success: false, error: 'limitContext must be a boolean when provided' };
-    }
-    validatedLimitContext = limitContext;
-  }
-  if (modelVerificationMode !== undefined) {
-    if (modelVerificationMode !== 'compatibility' && modelVerificationMode !== 'deep') {
-      return {
-        success: false,
-        error: 'modelVerificationMode must be compatibility or deep when provided',
-      };
-    }
-    validatedModelVerificationMode = modelVerificationMode;
-  }
-  if (selectedModelChecks !== undefined) {
-    if (!Array.isArray(selectedModelChecks)) {
-      return { success: false, error: 'selectedModelChecks must be an array when provided' };
-    }
-    const normalized: TeamProvisioningModelCheckRequest[] = [];
-    const seen = new Set<string>();
-    for (const entry of selectedModelChecks) {
-      if (!entry || typeof entry !== 'object') {
-        return { success: false, error: 'selectedModelChecks entries must be objects' };
-      }
-      const rawEntry = entry as {
-        providerId?: unknown;
-        model?: unknown;
-        effort?: unknown;
-      };
-      if (!isTeamProviderId(rawEntry.providerId)) {
-        return {
-          success: false,
-          error: 'selectedModelChecks entries must include a valid providerId',
-        };
-      }
-      if (typeof rawEntry.model !== 'string' || rawEntry.model.trim().length === 0) {
-        return {
-          success: false,
-          error: 'selectedModelChecks entries must include a non-empty model',
-        };
-      }
-      const effortValidation = parseOptionalTeamEffort(rawEntry.effort, rawEntry.providerId);
-      if (!effortValidation.valid) {
-        return { success: false, error: `selectedModelChecks ${effortValidation.error}` };
-      }
-      const model = rawEntry.model.trim();
-      const key = `${rawEntry.providerId}\n${model}\n${effortValidation.value ?? ''}`;
-      if (seen.has(key)) {
-        continue;
-      }
-      seen.add(key);
-      normalized.push({
-        providerId: rawEntry.providerId,
-        model,
-        ...(effortValidation.value ? { effort: effortValidation.value } : {}),
+  const validation = validatePrepareProvisioningRequest({
+    cwd,
+    providerId,
+    providerIds,
+    selectedModels,
+    limitContext,
+    modelVerificationMode,
+    selectedModelChecks,
+    allowExperimentalLocalModels,
+  });
+  if (!validation.valid) return { success: false, error: validation.error };
+  const {
+    cwd: validatedCwd,
+    providerId: validatedProviderId,
+    providerIds: validatedProviderIds,
+    selectedModels: validatedSelectedModels,
+    limitContext: validatedLimitContext,
+    modelVerificationMode: validatedModelVerificationMode,
+    selectedModelChecks: validatedSelectedModelChecks,
+    allowExperimentalLocalModels: validatedAllowExperimentalLocalModels,
+  } = validation.value;
+  return wrapTeamHandler('prepareProvisioning', async () => {
+    const authorityEpoch =
+      validatedCwd &&
+      validatedModelVerificationMode === 'deep' &&
+      validatedSelectedModelChecks?.length
+        ? captureAuthoritativeProofEpoch(validatedCwd)
+        : null;
+    try {
+      const result = await getTeamProvisioningPreflightApi().prepareForProvisioning(validatedCwd, {
+        providerId: validatedProviderId,
+        providerIds: validatedProviderIds,
+        modelIds: validatedSelectedModels,
+        limitContext: validatedLimitContext,
+        modelVerificationMode: validatedModelVerificationMode,
+        modelChecks: validatedSelectedModelChecks,
+        ...(validatedAllowExperimentalLocalModels !== undefined
+          ? { allowExperimentalLocalModels: validatedAllowExperimentalLocalModels }
+          : {}),
       });
+      if (!authorityEpoch) return result;
+      return attachExecutionProofToPrepareResult({
+        authorityEpoch,
+        result,
+        cwd: validatedCwd,
+        mode: validatedModelVerificationMode,
+        checks: validatedSelectedModelChecks,
+        allowExperimentalLocalModels: validatedAllowExperimentalLocalModels,
+        runtimeRosterRevision,
+      });
+    } finally {
+      if (authorityEpoch) releaseAuthoritativeProofEpoch(authorityEpoch);
     }
-    validatedSelectedModelChecks = normalized;
-  }
-  return wrapTeamHandler('prepareProvisioning', () =>
-    getTeamProvisioningPreflightApi().prepareForProvisioning(validatedCwd, {
-      providerId: validatedProviderId,
-      providerIds: validatedProviderIds,
-      modelIds: validatedSelectedModels,
-      limitContext: validatedLimitContext,
-      modelVerificationMode: validatedModelVerificationMode,
-      modelChecks: validatedSelectedModelChecks,
-    })
-  );
+  });
 }
-
 async function handleProvisioningStatus(
   _event: IpcMainInvokeEvent,
   runId: unknown
@@ -3999,7 +3844,7 @@ async function handleCreateConfig(
     if (!fastModeValidation.valid) {
       return { success: false, error: fastModeValidation.error };
     }
-    members.push({
+    const memberInput = {
       name: memberName,
       role: typeof role === 'string' ? role.trim() : undefined,
       workflow: typeof workflow === 'string' ? workflow.trim() : undefined,
@@ -4010,7 +3855,27 @@ async function handleCreateConfig(
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
       mcpPolicy: normalizeTeamMemberMcpPolicy((member as { mcpPolicy?: unknown }).mcpPolicy),
-    });
+    };
+    const runtimeSelectionProvenance = normalizeTeamMemberRuntimeSelectionProvenance(
+      (member as { runtimeSelectionProvenance?: unknown }).runtimeSelectionProvenance
+    );
+    if (!isResolvedMemberRuntimeSelectionProvenance(runtimeSelectionProvenance)) {
+      return {
+        success: false,
+        error: `Member "${memberName}" runtime selection is ambiguous; choose provider, model, and effort again`,
+      };
+    }
+    members.push({ ...memberInput, runtimeSelectionProvenance });
+  }
+
+  const leadRuntimeSelectionProvenance = normalizeTeamLeadRuntimeSelectionProvenance(
+    payload.leadRuntimeSelectionProvenance
+  );
+  if (!isResolvedLeadRuntimeSelectionProvenance(leadRuntimeSelectionProvenance)) {
+    return {
+      success: false,
+      error: 'Lead runtime selection is ambiguous; choose provider, model, and effort again',
+    };
   }
 
   return wrapTeamHandler('createConfig', async () => {
@@ -4024,6 +3889,7 @@ async function handleCreateConfig(
         cwd: typeof payload.cwd === 'string' ? payload.cwd.trim() || undefined : undefined,
         prompt: typeof payload.prompt === 'string' ? payload.prompt.trim() || undefined : undefined,
         providerId: teamProviderValidation.value,
+        leadRuntimeSelectionProvenance,
         providerBackendId: providerBackendValidation.value,
         model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
         effort: effortValidation.value,
@@ -4499,6 +4365,7 @@ async function handleAddMember(
     model,
     fastMode,
     mcpPolicy,
+    runtimeSelectionProvenance,
   } = payload as {
     name?: unknown;
     role?: unknown;
@@ -4510,6 +4377,7 @@ async function handleAddMember(
     effort?: unknown;
     fastMode?: unknown;
     mcpPolicy?: unknown;
+    runtimeSelectionProvenance?: unknown;
   };
   const vName = validateTeammateName(name);
   if (!vName.valid) return { success: false, error: vName.error ?? 'Invalid member name' };
@@ -4547,6 +4415,15 @@ async function handleAddMember(
   if (!fastModeValidation.valid) {
     return { success: false, error: fastModeValidation.error };
   }
+  const memberRuntimeSelectionProvenance = normalizeTeamMemberRuntimeSelectionProvenance(
+    runtimeSelectionProvenance
+  );
+  if (!isResolvedMemberRuntimeSelectionProvenance(memberRuntimeSelectionProvenance)) {
+    return {
+      success: false,
+      error: 'Member runtime selection is ambiguous; choose provider, model, and effort again',
+    };
+  }
 
   return wrapTeamHandler('addMember', async () => {
     const tn = vTeam.value!;
@@ -4573,6 +4450,7 @@ async function handleAddMember(
           : {}),
         model: typeof model === 'string' ? model.trim() || undefined : undefined,
         effort: effortValidation.value,
+        runtimeSelectionProvenance: memberRuntimeSelectionProvenance,
         ...(fastModeValidation.value ? { fastMode: fastModeValidation.value } : {}),
         mcpPolicy: normalizeTeamMemberMcpPolicy(mcpPolicy),
       });
@@ -4606,96 +4484,9 @@ async function handleReplaceMembers(
 ): Promise<IpcResult<void>> {
   const vTeam = validateTeamName(teamName);
   if (!vTeam.valid) return { success: false, error: vTeam.error ?? 'Invalid teamName' };
-  if (!request || typeof request !== 'object') {
-    return { success: false, error: 'request must be an object' };
-  }
-  const payload = request as { members?: unknown };
-  if (!Array.isArray(payload.members)) {
-    return { success: false, error: 'members must be an array' };
-  }
-  const seenNames = new Set<string>();
-  const members: {
-    name: string;
-    role?: string;
-    workflow?: string;
-    isolation?: 'worktree';
-    providerId?: TeamProviderId;
-    providerBackendId?: TeamProviderBackendId;
-    model?: string;
-    effort?: EffortLevel;
-    fastMode?: TeamFastMode;
-    mcpPolicy?: ReturnType<typeof normalizeTeamMemberMcpPolicy>;
-  }[] = [];
-  for (const item of payload.members) {
-    if (!item || typeof item !== 'object') {
-      return { success: false, error: 'member must be object' };
-    }
-    const m = item as {
-      name?: unknown;
-      role?: unknown;
-      workflow?: unknown;
-      isolation?: unknown;
-      providerId?: unknown;
-      providerBackendId?: unknown;
-      model?: unknown;
-      effort?: unknown;
-      fastMode?: unknown;
-      mcpPolicy?: unknown;
-    };
-    const vName = validateTeammateName(m.name);
-    if (!vName.valid) return { success: false, error: vName.error ?? 'Invalid member name' };
-    const name = vName.value!;
-    if (seenNames.has(name)) return { success: false, error: 'member names must be unique' };
-    seenNames.add(name);
-    if (m.role !== undefined && typeof m.role !== 'string') {
-      return { success: false, error: 'member role must be string' };
-    }
-    if (m.workflow !== undefined && typeof m.workflow !== 'string') {
-      return { success: false, error: 'member workflow must be string' };
-    }
-    if (m.isolation !== undefined && m.isolation !== 'worktree') {
-      return { success: false, error: 'member isolation must be "worktree" when provided' };
-    }
-    const providerValidation = parseOptionalMemberProviderId(
-      (m as { providerId?: unknown }).providerId
-    );
-    if (!providerValidation.valid) {
-      return { success: false, error: providerValidation.error };
-    }
-    const providerBackendValidation = parseOptionalProviderBackendId(
-      (m as { providerBackendId?: unknown }).providerBackendId,
-      providerValidation.value
-    );
-    if (!providerBackendValidation.valid) {
-      return { success: false, error: providerBackendValidation.error };
-    }
-    if (m.model !== undefined && typeof m.model !== 'string') {
-      return { success: false, error: 'member model must be string' };
-    }
-    const effortValidation = parseOptionalMemberEffort(
-      (m as { effort?: unknown }).effort,
-      providerValidation.value
-    );
-    if (!effortValidation.valid) {
-      return { success: false, error: effortValidation.error };
-    }
-    const fastModeValidation = parseOptionalTeamFastMode((m as { fastMode?: unknown }).fastMode);
-    if (!fastModeValidation.valid) {
-      return { success: false, error: fastModeValidation.error };
-    }
-    members.push({
-      name,
-      role: typeof m.role === 'string' ? m.role.trim() : undefined,
-      workflow: typeof m.workflow === 'string' ? m.workflow.trim() : undefined,
-      isolation: m.isolation === 'worktree' ? ('worktree' as const) : undefined,
-      providerId: providerValidation.value,
-      providerBackendId: providerBackendValidation.value,
-      model: typeof m.model === 'string' ? m.model.trim() || undefined : undefined,
-      effort: effortValidation.value,
-      fastMode: fastModeValidation.value,
-      mcpPolicy: normalizeTeamMemberMcpPolicy(m.mcpPolicy),
-    });
-  }
+  const parsed = parseReplaceMembersRequest(request);
+  if (!parsed.valid) return { success: false, error: parsed.error };
+  const members = parsed.members;
 
   return wrapTeamHandler('replaceMembers', async () => {
     const tn = vTeam.value!;

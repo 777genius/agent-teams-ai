@@ -3,6 +3,7 @@ import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+import { normalizeTeamMemberRuntimeSelectionProvenance } from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
@@ -24,6 +25,7 @@ export interface TeamProvisioningEffectiveLaunchState {
   providerId?: TeamProviderId;
   model?: string;
   effort?: TeamCreateRequest['effort'];
+  leadRuntimeSelectionProvenance?: TeamCreateRequest['leadRuntimeSelectionProvenance'];
   members?: TeamCreateRequest['members'];
 }
 
@@ -72,6 +74,7 @@ interface ConfigMemberInput {
   provider?: string;
   model?: string;
   effort?: string;
+  runtimeSelectionProvenance?: unknown;
   mcpPolicy?: unknown;
   cwd?: string;
   removedAt?: unknown;
@@ -96,6 +99,7 @@ export function applyEffectiveLaunchStateToConfig(
   const effectiveLeadEffort = isTeamEffortLevel(launchState.effort)
     ? launchState.effort
     : undefined;
+  config.leadRuntimeSelectionProvenance = launchState.leadRuntimeSelectionProvenance;
 
   const membersByName = new Map(
     (launchState.members ?? []).map((member) => [member.name.toLowerCase(), member] as const)
@@ -113,6 +117,7 @@ export function applyEffectiveLaunchStateToConfig(
       providerId?: TeamProviderId;
       model?: string;
       effort?: TeamCreateRequest['effort'];
+      runtimeSelectionProvenance?: unknown;
     }): void => {
       const providerId = normalizeOptionalTeamProviderId(state.providerId);
       if (providerId) {
@@ -136,6 +141,15 @@ export function applyEffectiveLaunchStateToConfig(
       } else {
         delete nextMember.effort;
       }
+
+      const provenance = normalizeTeamMemberRuntimeSelectionProvenance(
+        state.runtimeSelectionProvenance
+      );
+      if (provenance) {
+        nextMember.runtimeSelectionProvenance = provenance;
+      } else {
+        delete nextMember.runtimeSelectionProvenance;
+      }
     };
 
     if (isLeadMember(nextMember) || rawName.toLowerCase() === 'team-lead') {
@@ -156,6 +170,7 @@ export function applyEffectiveLaunchStateToConfig(
       providerId: effectiveMember.providerId,
       model: effectiveMember.model,
       effort: effectiveMember.effort,
+      runtimeSelectionProvenance: effectiveMember.runtimeSelectionProvenance,
     });
     return nextMember;
   });
@@ -200,6 +215,9 @@ export function buildOpenCodeConfigMemberFromLaunchMember(
     providerId: 'opencode',
     model: member.model?.trim() || undefined,
     effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+    runtimeSelectionProvenance: normalizeTeamMemberRuntimeSelectionProvenance(
+      member.runtimeSelectionProvenance
+    ),
     mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
     cwd: member.cwd?.trim() || undefined,
     joinedAt: (clock.now ?? Date.now)(),
@@ -342,8 +360,16 @@ export function buildLaunchMembersFromMeta(
       typeof member.workflow === 'string' ? member.workflow.trim() || undefined : undefined;
     const isolation = member.isolation === 'worktree' ? 'worktree' : undefined;
     const providerId = normalizeOptionalTeamProviderId(member.providerId);
+    const providerBackendId = member.providerBackendId;
     const model = typeof member.model === 'string' ? member.model.trim() || undefined : undefined;
     const effort = isTeamEffortLevel(member.effort) ? member.effort : undefined;
+    const runtimeSelectionProvenance = normalizeTeamMemberRuntimeSelectionProvenance(
+      member.runtimeSelectionProvenance
+    );
+    const fastMode =
+      member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
+        ? member.fastMode
+        : undefined;
     const cwd = typeof member.cwd === 'string' ? member.cwd.trim() || undefined : undefined;
     const mcpPolicy = normalizeTeamMemberMcpPolicy(member.mcpPolicy);
     const prev = byName.get(name);
@@ -355,8 +381,11 @@ export function buildLaunchMembersFromMeta(
         isolation,
         cwd,
         providerId,
+        providerBackendId,
         model,
         effort,
+        runtimeSelectionProvenance,
+        fastMode,
         mcpPolicy,
       });
     } else {
@@ -367,8 +396,11 @@ export function buildLaunchMembersFromMeta(
         isolation: prev.isolation || isolation,
         cwd: prev.cwd || cwd,
         providerId: prev.providerId || providerId,
+        providerBackendId: prev.providerBackendId || providerBackendId,
         model: prev.model || model,
         effort: prev.effort || effort,
+        runtimeSelectionProvenance: prev.runtimeSelectionProvenance ?? runtimeSelectionProvenance,
+        fastMode: prev.fastMode || fastMode,
         mcpPolicy: prev.mcpPolicy || mcpPolicy,
       });
     }
@@ -407,6 +439,9 @@ export function extractTeammateSpecsFromConfig(configRaw: string): TeamCreateReq
         providerId: normalizeOptionalTeamProviderId(member.providerId ?? member.provider),
         model: typeof member.model === 'string' ? member.model.trim() || undefined : undefined,
         effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+        runtimeSelectionProvenance: normalizeTeamMemberRuntimeSelectionProvenance(
+          member.runtimeSelectionProvenance
+        ),
         mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
       });
     }

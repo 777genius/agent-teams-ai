@@ -78,7 +78,8 @@ function normalizeMember(member: TeamMember): TeamMember | null {
     providerId,
     providerBackendId: migrateProviderBackendId(
       providerId,
-      normalizeOptionalBackendId(member.providerBackendId)
+      normalizeOptionalBackendId(member.providerBackendId),
+      'explicit-selection'
     ),
     model: typeof member.model === 'string' ? member.model.trim() || undefined : undefined,
     effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,

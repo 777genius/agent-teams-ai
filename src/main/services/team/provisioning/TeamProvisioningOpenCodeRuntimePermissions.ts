@@ -765,7 +765,7 @@ export function buildOpenCodeRuntimePendingPermissionsLaunchSnapshot(input: {
     teamName: input.previous.teamName,
     expectedMembers: input.previous.expectedMembers,
     bootstrapExpectedMembers: input.previous.bootstrapExpectedMembers,
-    leadSessionId: input.previous.leadSessionId,
+    leadSessionId: input.previous.leadSessionId, runtimeRunId: input.previous.runtimeRunId, primaryLaneIdentity: input.previous.primaryLaneIdentity,
     launchPhase: input.previous.launchPhase,
     members,
     updatedAt: input.observedAt,

@@ -71,6 +71,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   readonly rollbackPersistenceStarted = this.rollbackPersistence.promise;
   readonly launchedMemberNames: string[][] = [];
   readonly clearPrimaryLaneIfOwned = vi.fn(async () => undefined);
+  readonly stopCleanup = vi.fn(async () => undefined);
 
   protected readonly inboxReader = {
     getMessagesFor: vi.fn(async () => []),
@@ -141,6 +142,30 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
     restart.cancelRequested = true;
   }
 
+  isRestartCancelled(teamName: string): boolean {
+    return (
+      this.openCodeAggregatePrimaryRestartByTeam.get(teamName.toLowerCase())?.cancelRequested ??
+      false
+    );
+  }
+
+  rejectStopAuthorization(error: Error): void {
+    Object.assign(this as unknown as { stopFlowBoundaryValue: unknown }, {
+      stopFlowBoundaryValue: {
+        preflightMetadataMutation: vi.fn(async () => {
+          throw error;
+        }),
+        authorizeStopTeam: vi.fn(async () => {
+          throw error;
+        }),
+        stopTeam: vi.fn(async () => undefined),
+        stopAuthorizedTeam: this.stopCleanup,
+        stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
+        stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
+      },
+    });
+  }
+
   releaseRollbackPersistence(): void {
     this.rollbackPersistenceRelease.resolve();
   }
@@ -202,6 +227,19 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
     facade.trackRuntimeAdapterStopForShutdown('Stopping-Team');
 
     expect(facade.getShutdownTrackedTeamNames()).toEqual(['Stopping-Team']);
+  });
+
+  it('does not cancel an aggregate restart or run cleanup when stop metadata is unsupported', async () => {
+    const facade = new TestOpenCodeAggregatePrimaryFacade();
+    const rejected = new Error('Unsupported launch-state version: 999');
+    facade.trackAggregatePrimaryRestartForShutdown('Future-Team');
+    facade.rejectStopAuthorization(rejected);
+
+    await expect(facade.stopTeam('Future-Team')).rejects.toBe(rejected);
+
+    expect(facade.isRestartCancelled('Future-Team')).toBe(false);
+    expect(facade.stopCleanup).not.toHaveBeenCalled();
+    expect(facade.clearPrimaryLaneIfOwned).not.toHaveBeenCalled();
   });
 
   it('stops a cancelled rollback candidate that has not published ownership', async () => {

@@ -8,6 +8,7 @@ import * as path from 'path';
 import { TeamTaskReader } from '../TeamTaskReader';
 
 import { ensureCwdExists as defaultEnsureCwdExists } from './TeamProvisioningAsyncUtils';
+import { beginFileSystemCreateArtifactTransaction } from './TeamProvisioningCreateArtifactTransaction';
 import { type OpenCodeRuntimeAdapterTeamFlowPorts } from './TeamProvisioningOpenCodeRuntimeAdapterTeamFlow';
 import { buildDeterministicLaunchHydrationPrompt as defaultBuildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { tryReadRegularFileUtf8 as defaultReadRegularFileUtf8 } from './TeamProvisioningRegularFileRead';
@@ -64,6 +65,7 @@ export function createOpenCodeRuntimeAdapterTeamFlowPortsFromService(
         await fs.promises.mkdir(directoryPath, { recursive: true });
       }),
     nowMs: deps.nowMs ?? (() => Date.now()),
+    beginCreateArtifactTransaction: beginFileSystemCreateArtifactTransaction,
     writeTeamMeta: (teamName, data) => service.teamMetaStore.writeMeta(teamName, data),
     writeMembersMeta: (teamName, members, options) =>
       service.membersMetaStore.writeMembers(teamName, members, options),

@@ -154,7 +154,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         this.invalidateRuntimeSnapshotCaches(candidateTeamName),
     });
   }
-
   private async restartPureOpenCodeAggregatePrimaryMemberExclusive(params: {
     teamName: string;
     memberName: string;
@@ -177,7 +176,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     if (!adapter) {
       throw new Error('OpenCode runtime adapter is not available for member restart.');
     }
-
     const restartNoLongerCurrent = (): boolean =>
       restartLease.cancelRequested ||
       run.processKilled ||
@@ -194,7 +192,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       }
       assertRestartCurrent();
     };
-
     const previousLaunchState = await this.launchStateStore.read(teamName);
     assertRestartCurrent();
     const previousEffectiveMembers = [...run.effectiveMembers];
@@ -216,7 +213,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         isRecoverableOpenCodeRuntimeEvidence(leadEvidence)
       );
     };
-
     const currentPrimaryRun = this.runtimeAdapterRunByTeam.get(teamName);
     const assertPrimaryRuntimeOwnerCurrent = (): void => {
       if (
@@ -256,13 +252,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         `[${teamName}] Local model aggregate restart preflight warnings for ${memberName}: ${localModelPreflight.warnings.join(' ')}`
       );
     }
-
     if (currentPrimaryRun?.providerId === 'opencode' && currentPrimaryRun.runId === run.runId) {
       await this.stopOpenCodeRuntimeAdapterTeam(teamName, run.runId);
       assertRestartCurrent();
       this.runTracking.setAliveRunId(teamName, run.runId);
     }
-
     run.effectiveMembers = run.effectiveMembers.filter(
       (member) => member.name.trim().toLowerCase() !== normalizedMemberName
     );
@@ -292,7 +286,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     this.invalidateRuntimeSnapshotCaches(teamName);
     this.resetRuntimeToolActivity(run, memberName);
     this.clearMemberSpawnToolTracking(run, memberName);
-
     let primaryRelaunchResult: TeamRuntimeLaunchResult | null;
     try {
       primaryRelaunchResult = await this.launchOpenCodeAggregatePrimaryLane({
@@ -351,7 +344,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       run.expectedMembers = previousExpectedMembers;
       run.mixedSecondaryLanes = previousSecondaryLanes;
       this.invalidateRuntimeSnapshotCaches(teamName);
-
       try {
         const rollbackResult = await this.launchOpenCodeAggregatePrimaryLane({
           run,
@@ -588,7 +580,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       throw error;
     }
   }
-
   override async attachLiveRosterMember(
     teamName: string,
     memberName: string,
@@ -598,13 +589,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.memberLifecycleController.attachLiveRosterMember(teamName, memberName, options)
     );
   }
-
   override async detachLiveRosterMember(teamName: string, memberName: string): Promise<void> {
     return this.runAfterInFlightTeamOperation(teamName, () =>
       this.memberLifecycleController.detachLiveRosterMember(teamName, memberName)
     );
   }
-
   override async restartMember(teamName: string, memberName: string): Promise<void> {
     return this.runAfterInFlightTeamOperation(teamName, async () => {
       const activeRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
@@ -619,7 +608,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       if (!candidate) {
         return this.memberLifecycleController.restartMember(teamName, memberName);
       }
-
       const restart = this.beginOpenCodeAggregatePrimaryRestart(
         teamName,
         memberName,
@@ -688,13 +676,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.memberLifecycleController.detachOpenCodeOwnedMemberLane(teamName, memberName)
     );
   }
-
   override async stopTeam(teamName: string): Promise<void> {
     const teamKey = teamName.trim().toLowerCase();
-    const aggregateRestart = this.openCodeAggregatePrimaryRestartByTeam.get(teamKey);
-    if (aggregateRestart) {
-      aggregateRestart.cancelRequested = true;
-    }
     const primaryStopInFlight = this.openCodeRuntimeAdapterStopInFlightByTeam.get(teamKey)?.promise;
     try {
       await super.stopTeam(teamName);
@@ -702,7 +685,15 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       await primaryStopInFlight;
     }
   }
-
+  protected override onStopTeamAuthorized(teamName: string): void {
+    super.onStopTeamAuthorized(teamName);
+    const aggregateRestart = this.openCodeAggregatePrimaryRestartByTeam.get(
+      teamName.trim().toLowerCase()
+    );
+    if (aggregateRestart) {
+      aggregateRestart.cancelRequested = true;
+    }
+  }
   protected override stopOpenCodeRuntimeAdapterTeam(
     teamName: string,
     runId: string

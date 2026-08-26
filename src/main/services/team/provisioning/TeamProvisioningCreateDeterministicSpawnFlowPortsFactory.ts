@@ -1,3 +1,5 @@
+import { beginFileSystemCreateArtifactTransaction } from './TeamProvisioningCreateArtifactTransaction';
+
 import type {
   DeterministicCreateSpawnFlowPorts,
   DeterministicCreateSpawnFlowRun,
@@ -176,6 +178,7 @@ export function createTeamProvisioningCreateDeterministicSpawnFlowBoundary<
         deps.deleteProvisioningRunByTeam(teamName);
       },
       getStopAllTeamsGeneration: () => deps.getStopAllTeamsGeneration(),
+      beginCreateArtifactTransaction: beginFileSystemCreateArtifactTransaction,
     }),
   };
 }

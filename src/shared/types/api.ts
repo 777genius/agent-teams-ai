@@ -6,7 +6,6 @@
  *
  * Shared between preload and renderer processes.
  */
-
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
@@ -17,6 +16,8 @@ import type {
   NotificationTrigger,
   TriggerTestResult,
 } from './notifications';
+import type { TeamRelaunchStopOutcome } from './relaunchStop';
+import type { RosterAuthorizationTransactionApi } from './rosterAuthorizationTransaction';
 import type {
   AgentChangeSet,
   ApplyReviewRequest,
@@ -155,11 +156,9 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
-
 // =============================================================================
 // Cost Calculation Types
 // =============================================================================
-
 /**
  * Detailed cost breakdown by token type for a session or chunk
  */
@@ -179,11 +178,9 @@ export interface CostBreakdown {
   /** Source of the cost data */
   source: 'calculated' | 'precalculated' | 'unavailable';
 }
-
 // =============================================================================
 // Agent Config
 // =============================================================================
-
 export interface AgentConfig {
   name: string;
   color?: string;
@@ -512,7 +509,7 @@ export interface HttpServerAPI {
 // Teams API
 // =============================================================================
 
-export interface TeamsAPI extends TeamMemberSettingsApi {
+export interface TeamsAPI extends RosterAuthorizationTransactionApi, TeamMemberSettingsApi {
   list: () => Promise<TeamSummary[]>;
   getData: (teamName: string, options?: TeamGetDataOptions) => Promise<TeamViewSnapshot>;
   getTaskChangePresence: (teamName: string) => Promise<Record<string, TaskChangePresenceState>>;
@@ -532,7 +529,9 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
     selectedModels?: string[],
     limitContext?: boolean,
     modelVerificationMode?: TeamProvisioningModelVerificationMode,
-    selectedModelChecks?: TeamProvisioningModelCheckRequest[]
+    selectedModelChecks?: TeamProvisioningModelCheckRequest[],
+    allowExperimentalLocalModels?: boolean,
+    runtimeRosterRevision?: string
   ) => Promise<TeamProvisioningPrepareResult>;
   getWorktreeGitStatus: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
   initializeGitRepository: (projectPath: string) => Promise<TeamWorktreeGitStatus>;
@@ -576,6 +575,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;
   stop: (teamName: string) => Promise<void>;
+  stopForRelaunch: (teamName: string) => Promise<TeamRelaunchStopOutcome>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getLogsForTask: (

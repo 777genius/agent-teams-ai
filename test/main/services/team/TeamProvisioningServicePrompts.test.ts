@@ -136,7 +136,71 @@ import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 import { toMetaMembers } from './provisioningHarness';
 
-import type { TeamCreateRequest, TeamMember, TeamProviderId } from '@shared/types';
+import type {
+  TeamCreateRequest,
+  TeamLaunchRequest,
+  TeamLeadRuntimeSelectionProvenance,
+  TeamMember,
+  TeamMemberRuntimeSelectionProvenance,
+  TeamProviderId,
+} from '@shared/types';
+
+function canonicalLeadRuntimeSelectionProvenance(
+  request: Pick<TeamLaunchRequest, 'providerBackendId' | 'model' | 'effort'>
+): TeamLeadRuntimeSelectionProvenance {
+  return {
+    version: 1,
+    providerBackendId: request.providerBackendId === undefined ? 'default' : 'explicit',
+    model: request.model === undefined ? 'default' : 'explicit',
+    effort: request.effort === undefined ? 'default' : 'explicit',
+  };
+}
+
+function canonicalMemberRuntimeSelectionProvenance(
+  member: TeamCreateRequest['members'][number]
+): TeamMemberRuntimeSelectionProvenance {
+  return {
+    version: 1,
+    providerBackendId: member.providerBackendId === undefined ? 'inherited' : 'explicit',
+    model: member.model === undefined ? 'inherited' : 'explicit',
+    effort: member.effort === undefined ? 'inherited' : 'explicit',
+  };
+}
+
+function withCanonicalRuntimeSelectionProvenance(request: TeamCreateRequest): TeamCreateRequest;
+function withCanonicalRuntimeSelectionProvenance(request: TeamLaunchRequest): TeamLaunchRequest;
+function withCanonicalRuntimeSelectionProvenance(
+  request: TeamCreateRequest | TeamLaunchRequest
+): TeamCreateRequest | TeamLaunchRequest {
+  const leadRuntimeSelectionProvenance = canonicalLeadRuntimeSelectionProvenance(request);
+  if ('members' in request) {
+    return {
+      ...request,
+      leadRuntimeSelectionProvenance,
+      members: request.members.map((member) => ({
+        ...member,
+        runtimeSelectionProvenance: canonicalMemberRuntimeSelectionProvenance(member),
+      })),
+    };
+  }
+  return { ...request, leadRuntimeSelectionProvenance };
+}
+
+function toMetaMembersWithCanonicalRuntimeSelectionProvenance(
+  members: TeamCreateRequest['members']
+): TeamMember[] {
+  const canonicalMembers = members.map((member) => ({
+    ...member,
+    runtimeSelectionProvenance: canonicalMemberRuntimeSelectionProvenance(member),
+  }));
+  const provenanceByName = new Map(
+    canonicalMembers.map((member) => [member.name, member.runtimeSelectionProvenance])
+  );
+  return toMetaMembers(canonicalMembers).map((member) => ({
+    ...member,
+    runtimeSelectionProvenance: provenanceByName.get(member.name),
+  }));
+}
 
 function createFakeChild() {
   const writeSpy = vi.fn((_data: unknown, cb?: (err?: Error | null) => void) => {
@@ -154,6 +218,13 @@ function createFakeChild() {
     kill: vi.fn(),
   });
   return { child, writeSpy };
+}
+
+function mockSpawnedChild(child: EventEmitter): void {
+  vi.mocked(spawnCli).mockImplementation(() => {
+    queueMicrotask(() => child.emit('spawn'));
+    return child as never;
+  });
 }
 
 function extractPromptFromBootstrapFile(callIndex = 0): string {
@@ -350,7 +421,7 @@ function mockLaunchConfigFacade(
   vi.spyOn(configFacade, 'assertConfigLeadOnlyForLaunch').mockResolvedValue(undefined);
   if (members) {
     vi.spyOn(configFacade.launchExpectedMembersPorts, 'getMeta').mockResolvedValue({
-      members: toMetaMembers(members),
+      members: toMetaMembersWithCanonicalRuntimeSelectionProvenance(members),
     });
     vi.spyOn(configFacade.launchExpectedMembersPorts, 'listInboxNames').mockResolvedValue([]);
   }
@@ -390,7 +461,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
   it('createTeam uses deterministic bootstrap spec and safe flags in solo mode', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc);
@@ -398,12 +469,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).pathExists = vi.fn(async () => false);
 
     const { runId } = await svc.createTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName: 'solo-team',
         cwd: process.cwd(),
         members: [],
         description: 'Solo team for prompt test',
-      },
+      }),
       () => {}
     );
 
@@ -434,7 +505,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     process.env.CLAUDE_TEAM_TEAMMATE_MODE = 'in-process';
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc, async () => ({
@@ -447,11 +518,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     try {
       ({ runId } = await svc.createTeam(
-        {
+        withCanonicalRuntimeSelectionProvenance({
           teamName: 'shell-env-create-team',
           cwd: process.cwd(),
           members: [],
-        },
+        }),
         () => {}
       ));
 
@@ -489,7 +560,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc);
@@ -499,11 +570,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).startFilesystemMonitor = vi.fn();
 
     const { runId } = await svc.launchTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName,
         cwd: process.cwd(),
         clearContext: true,
-      } as any,
+      }) as any,
       () => {}
     );
 
@@ -559,7 +630,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc, async () => ({
@@ -574,11 +645,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     try {
       ({ runId } = await svc.launchTeam(
-        {
+        withCanonicalRuntimeSelectionProvenance({
           teamName,
           cwd: process.cwd(),
           clearContext: true,
-        } as any,
+        }) as any,
         () => {}
       ));
 
@@ -602,7 +673,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
   it('createTeam bootstrap spec carries teammate descriptors for deterministic startup', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc);
@@ -610,12 +681,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).pathExists = vi.fn(async () => false);
 
     const { runId } = await svc.createTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName: 'multi-team',
         cwd: process.cwd(),
         members: [{ name: 'alice', role: 'developer' }],
         description: 'Multi team prompt test',
-      },
+      }),
       () => {}
     );
 
@@ -641,7 +712,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
   it('createTeam scales deterministic bootstrap timeout with member count', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
     const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
 
     const svc = new TeamProvisioningService();
@@ -652,7 +723,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     let runId: string | undefined;
     try {
       const created = await svc.createTeam(
-        {
+        withCanonicalRuntimeSelectionProvenance({
           teamName: 'large-team',
           cwd: process.cwd(),
           members: [
@@ -662,7 +733,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
             { name: 'jack' },
             { name: 'tom' },
           ],
-        },
+        }),
         () => {}
       );
       runId = created.runId;
@@ -684,7 +755,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
   it('createTeam bootstrap spec includes worktree isolation only for selected teammates', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc);
@@ -692,14 +763,14 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).pathExists = vi.fn(async () => false);
 
     const { runId } = await svc.createTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName: 'worktree-mixed-team',
         cwd: process.cwd(),
         members: [
           { name: 'alice', role: 'developer', isolation: 'worktree' },
           { name: 'bob', role: 'reviewer' },
         ],
-      },
+      }),
       () => {}
     );
 
@@ -716,7 +787,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
   it('forwards codex provider launch overrides into createTeam runtime args', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc, async () => ({
@@ -728,12 +799,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).pathExists = vi.fn(async () => false);
 
     const { runId } = await svc.createTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName: 'codex-team',
         cwd: process.cwd(),
         members: [],
         providerId: 'codex',
-      },
+      }),
       () => {}
     );
 
@@ -748,7 +819,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
   it('coalesces codex cross-provider launch overrides into createTeam Anthropic runtime settings', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     registerNoopOpenCodeRuntimeAdapter(svc);
@@ -774,7 +845,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).pathExists = vi.fn(async () => false);
 
     const { runId } = await svc.createTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName: 'anthropic-codex-create-team',
         cwd: process.cwd(),
         members: [
@@ -787,7 +858,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
           },
         ],
         providerId: 'anthropic',
-      },
+      }),
       () => {}
     );
 
@@ -821,13 +892,13 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     await expect(
       svc.createTeam(
-        {
+        withCanonicalRuntimeSelectionProvenance({
           teamName: 'codex-xhigh-blocked',
           cwd: process.cwd(),
           members: [],
           providerId: 'codex',
           effort: 'xhigh',
-        },
+        }),
         () => {}
       )
     ).rejects.toThrow('does not expose Codex reasoning config passthrough yet');
@@ -850,14 +921,14 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     await expect(
       svc.createTeam(
-        {
+        withCanonicalRuntimeSelectionProvenance({
           teamName: 'codex-future-model-blocked',
           cwd: process.cwd(),
           members: [],
           providerId: 'codex',
           model: 'gpt-5.5',
           effort: 'medium',
-        },
+        }),
         () => {}
       )
     ).rejects.toThrow('not present in the live Codex model catalog');
@@ -873,7 +944,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
   it('allows explicit Codex models when launch model list parsing is degraded', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc, async () => ({
@@ -900,14 +971,14 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).pathExists = vi.fn(async () => false);
 
     const { runId } = await svc.createTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName: 'codex-future-model-launchable',
         cwd: process.cwd(),
         members: [],
         providerId: 'codex',
         model: 'gpt-5.5',
         effort: 'medium',
-      },
+      }),
       () => {}
     );
 
@@ -994,7 +1065,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
   it('createTeam materializes an explicit Codex default model for teammates before bootstrap spawn', async () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc, async () => ({
@@ -1006,12 +1077,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).pathExists = vi.fn(async () => false);
 
     const { runId } = await svc.createTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName: 'codex-default-team',
         cwd: process.cwd(),
         providerId: 'codex',
         members: [{ name: 'alice', role: 'developer', providerId: 'codex' }],
-      },
+      }),
       () => {}
     );
 
@@ -1053,12 +1124,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     await expect(
       svc.createTeam(
-        {
+        withCanonicalRuntimeSelectionProvenance({
           teamName: 'codex-default-missing',
           cwd: process.cwd(),
           providerId: 'codex',
           members: [{ name: 'alice', providerId: 'codex' }],
-        },
+        }),
         () => {}
       )
     ).rejects.toThrow(
@@ -1149,7 +1220,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc);
@@ -1159,11 +1230,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).pathExists = vi.fn(async () => false);
 
     const { runId } = await svc.launchTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName,
         cwd: process.cwd(),
         clearContext: true,
-      },
+      }),
       () => {}
     );
 
@@ -1193,7 +1264,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child, writeSpy } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc);
@@ -1203,11 +1274,11 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).startFilesystemMonitor = vi.fn();
 
     const { runId } = await svc.launchTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName,
         cwd: process.cwd(),
         clearContext: true,
-      } as any,
+      }) as any,
       () => {}
     );
 
@@ -1273,7 +1344,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc, async () => ({
@@ -1287,12 +1358,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).startFilesystemMonitor = vi.fn();
 
     const { runId } = await svc.launchTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName,
         cwd: process.cwd(),
         providerId: 'codex',
         clearContext: true,
-      } as any,
+      }) as any,
       () => {}
     );
 
@@ -1326,7 +1397,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     mockProviderRuntime(svc, async () => ({
@@ -1343,12 +1414,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).startFilesystemMonitor = vi.fn();
 
     const { runId } = await svc.launchTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName,
         cwd: process.cwd(),
         providerId: 'codex',
         clearContext: true,
-      } as any,
+      }) as any,
       () => {}
     );
 
@@ -1397,7 +1468,7 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
     const { child } = createFakeChild();
-    vi.mocked(spawnCli).mockReturnValue(child as any);
+    mockSpawnedChild(child);
 
     const svc = new TeamProvisioningService();
     registerNoopOpenCodeRuntimeAdapter(svc);
@@ -1441,12 +1512,12 @@ describe('TeamProvisioningService prompt content (solo mode discipline)', () => 
     (svc as any).startFilesystemMonitor = vi.fn();
 
     const { runId } = await svc.launchTeam(
-      {
+      withCanonicalRuntimeSelectionProvenance({
         teamName,
         cwd: process.cwd(),
         providerId: 'anthropic',
         clearContext: true,
-      } as any,
+      }) as any,
       () => {}
     );
 

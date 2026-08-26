@@ -7,13 +7,39 @@ import {
   resolveExpectedLaunchMemberName,
 } from '../TeamProvisioningMemberSpawnLeadInbox';
 
-import type { InboxMessage } from '@shared/types';
+import type { InboxMessage, MemberSpawnStatusEntry } from '@shared/types';
 
-function createRun(overrides: Partial<MemberSpawnLeadInboxRun> = {}): MemberSpawnLeadInboxRun {
+type TestMemberSpawnLeadInboxRun = Omit<MemberSpawnLeadInboxRun, 'memberSpawnStatuses'> & {
+  memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
+};
+
+function createRun(
+  overrides: Partial<TestMemberSpawnLeadInboxRun> = {}
+): TestMemberSpawnLeadInboxRun {
   return {
     teamName: 'alpha',
     startedAt: '2026-01-01T00:00:00.000Z',
     expectedMembers: ['dev', 'qa'],
+    memberSpawnStatuses: new Map([
+      [
+        'dev',
+        {
+          status: 'waiting',
+          launchState: 'starting',
+          firstSpawnAcceptedAt: '2026-01-01T00:00:10.000Z',
+          updatedAt: '2026-01-01T00:00:10.000Z',
+        },
+      ],
+      [
+        'qa',
+        {
+          status: 'waiting',
+          launchState: 'starting',
+          firstSpawnAcceptedAt: '2026-01-01T00:00:20.000Z',
+          updatedAt: '2026-01-01T00:00:20.000Z',
+        },
+      ],
+    ]),
     memberSpawnLeadInboxCursorByMember: new Map(),
     ...overrides,
   };
@@ -34,9 +60,18 @@ function createMessage(overrides: Partial<InboxMessage> = {}): InboxMessage {
 function createPorts(messages: InboxMessage[]) {
   return {
     getRunLeadName: () => 'team-lead',
+    isCurrentTrackedRun: vi.fn(() => true),
     readLeadInboxMessages: vi.fn().mockResolvedValue(messages),
     setMemberSpawnStatus: vi.fn(),
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }
 
 describe('member spawn lead inbox helpers', () => {
@@ -109,6 +144,7 @@ describe('member spawn lead inbox helpers', () => {
     const run = createRun();
     const ports = {
       getRunLeadName: () => 'team-lead',
+      isCurrentTrackedRun: vi.fn(() => true),
       readLeadInboxMessages: vi.fn().mockRejectedValue(new Error('missing')),
       setMemberSpawnStatus: vi.fn(),
     };
@@ -116,5 +152,76 @@ describe('member spawn lead inbox helpers', () => {
     await refreshMemberSpawnStatusesFromLeadInbox(run, ports);
 
     expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not apply messages or advance cursors when the run is replaced during the inbox read', async () => {
+    const targetRun = createRun();
+    const inboxRead = deferred<InboxMessage[]>();
+    let current = true;
+    const ports = {
+      ...createPorts([]),
+      isCurrentTrackedRun: vi.fn(() => current),
+      readLeadInboxMessages: vi.fn(() => inboxRead.promise),
+    };
+
+    const refresh = refreshMemberSpawnStatusesFromLeadInbox(targetRun, ports);
+    current = false;
+    inboxRead.resolve([createMessage()]);
+    await refresh;
+
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+    expect(targetRun.memberSpawnLeadInboxCursorByMember.size).toBe(0);
+  });
+
+  it('preserves other members while skipping a member relaunched during the inbox read', async () => {
+    const targetRun = createRun();
+    const inboxRead = deferred<InboxMessage[]>();
+    const ports = {
+      ...createPorts([]),
+      readLeadInboxMessages: vi.fn(() => inboxRead.promise),
+    };
+
+    const refresh = refreshMemberSpawnStatusesFromLeadInbox(targetRun, ports);
+    targetRun.memberSpawnStatuses.set('dev', {
+      status: 'waiting',
+      launchState: 'starting',
+      firstSpawnAcceptedAt: '2026-01-01T00:00:30.000Z',
+      updatedAt: '2026-01-01T00:00:30.000Z',
+    });
+    inboxRead.resolve([
+      createMessage(),
+      createMessage({ from: 'qa', messageId: 'qa-1', timestamp: '2026-01-01T00:01:01.000Z' }),
+    ]);
+    await refresh;
+
+    expect(ports.setMemberSpawnStatus).toHaveBeenCalledTimes(1);
+    expect(ports.setMemberSpawnStatus).toHaveBeenCalledWith(
+      targetRun,
+      'qa',
+      'online',
+      undefined,
+      'heartbeat',
+      expect.any(String)
+    );
+    expect(targetRun.memberSpawnLeadInboxCursorByMember.has('dev')).toBe(false);
+    expect(targetRun.memberSpawnLeadInboxCursorByMember.get('qa')).toEqual({
+      timestamp: '2026-01-01T00:01:01.000Z',
+      messageId: 'qa-1',
+    });
+  });
+
+  it('does not advance the cursor when the run becomes stale during status mutation', async () => {
+    const targetRun = createRun();
+    let current = true;
+    const ports = createPorts([createMessage()]);
+    ports.isCurrentTrackedRun.mockImplementation(() => current);
+    ports.setMemberSpawnStatus.mockImplementation(() => {
+      current = false;
+    });
+
+    await refreshMemberSpawnStatusesFromLeadInbox(targetRun, ports);
+
+    expect(ports.setMemberSpawnStatus).toHaveBeenCalledOnce();
+    expect(targetRun.memberSpawnLeadInboxCursorByMember.size).toBe(0);
   });
 });

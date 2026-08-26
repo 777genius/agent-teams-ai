@@ -1,11 +1,10 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   buildEditTeamMemberRosterSnapshot,
   buildEditTeamSourceSnapshot,
   getLiveRosterIdentityChanges,
   getMembersRequiringRuntimeRestart,
 } from '@renderer/components/team/dialogs/editTeamRuntimeChanges';
+import { describe, expect, it } from 'vitest';
 
 describe('getMembersRequiringRuntimeRestart', () => {
   it('returns existing teammates whose role, workflow, provider, model, or effort changed', () => {
@@ -216,7 +215,7 @@ describe('getMembersRequiringRuntimeRestart', () => {
         name: 'alice',
         role: 'Reviewer',
         providerId: 'codex',
-        providerBackendId: 'api',
+        providerBackendId: 'codex-native',
         model: 'gpt-5.4-mini',
         effort: 'medium',
         status: 'online',
@@ -234,6 +233,22 @@ describe('getMembersRequiringRuntimeRestart', () => {
     ]);
 
     expect(built).toBe(current);
+  });
+
+  it('keeps distinct explicit Codex backend identities restart-sensitive', () => {
+    const native = buildEditTeamMemberRosterSnapshot([
+      { name: 'alice', providerId: 'codex', providerBackendId: 'codex-native' },
+    ]);
+    const api = buildEditTeamMemberRosterSnapshot([
+      { name: 'alice', providerId: 'codex', providerBackendId: 'api' },
+    ]);
+    const adapter = buildEditTeamMemberRosterSnapshot([
+      { name: 'alice', providerId: 'codex', providerBackendId: 'adapter' },
+    ]);
+
+    expect(api).not.toBe(native);
+    expect(adapter).not.toBe(native);
+    expect(adapter).not.toBe(api);
   });
 
   it('keeps provider backend and fast mode in the edit roster snapshot', () => {

@@ -10,6 +10,7 @@ import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchSnapshot,
   TeamConfig,
+  TeamMember,
 } from '@shared/types';
 
 const baseStatus = (patch: Partial<MemberSpawnStatusEntry> = {}): MemberSpawnStatusEntry => ({
@@ -19,7 +20,89 @@ const baseStatus = (patch: Partial<MemberSpawnStatusEntry> = {}): MemberSpawnSta
   ...patch,
 });
 
+async function buildRouteOnlySnapshot(params: {
+  metaMembers: TeamMember[];
+  configuredMembers: TeamMember[];
+}) {
+  return buildTeamAgentRuntimeSnapshot({
+    teamName: 'route-team',
+    runId: null,
+    generationAtStart: 1,
+    runs: new Map<string, never>(),
+    runtimeAdapterRunByTeam: new Map<string, never>(),
+    teamMetaStore: { getMeta: async () => null },
+    membersMetaStore: { getMembers: async () => params.metaMembers },
+    launchStateStore: { read: async () => null },
+    readConfigSnapshot: async (): Promise<TeamConfig> => ({
+      name: 'route-team',
+      members: params.configuredMembers,
+    }),
+    readPersistedRuntimeMembers: () => [],
+    getMemberSpawnStatuses: async () => ({ statuses: {}, runId: null }),
+    getLiveTeamAgentRuntimeMetadata: async () => new Map(),
+    readRuntimeProcessRowsForUsageSnapshot: async () => [],
+    readProcessUsageStatsByPid: async () => new Map(),
+    buildRuntimeUsageProcessTrees: () => new Map(),
+    buildRuntimeProcessLoadStats: () => undefined,
+    agentRuntimeResourceHistory: new TeamAgentRuntimeResourceHistory({
+      historyLimit: 2,
+      minSampleIntervalMs: 0,
+    }),
+    getRuntimeSnapshotCacheGeneration: () => 1,
+    getTrackedRunId: () => null,
+    getAgentRuntimeSnapshotCacheTtlMs: () => 0,
+    rememberAgentRuntimeSnapshot: () => undefined,
+    logDebug: () => undefined,
+  });
+}
+
 describe('TeamProvisioningRuntimeSnapshot', () => {
+  it('uses each current metadata row atomically instead of borrowing a stale config route', async () => {
+    const snapshot = await buildRouteOnlySnapshot({
+      metaMembers: [
+        {
+          name: 'gemini-current',
+          agentType: 'general-purpose',
+          providerId: 'gemini',
+          model: 'gemini-current-model',
+        },
+        {
+          name: 'codex-current',
+          agentType: 'general-purpose',
+          providerId: 'codex',
+          providerBackendId: 'adapter',
+          model: 'codex-current-model',
+        },
+      ],
+      configuredMembers: [
+        {
+          name: 'gemini-current',
+          agentType: 'general-purpose',
+          providerId: 'codex',
+          providerBackendId: 'api',
+          model: 'stale-codex-model',
+        },
+        {
+          name: 'codex-current',
+          agentType: 'general-purpose',
+          providerId: 'gemini',
+          model: 'stale-gemini-model',
+        },
+      ],
+    });
+
+    expect(snapshot.members['gemini-current']).toMatchObject({
+      providerId: 'gemini',
+      runtimeModel: 'gemini-current-model',
+    });
+    expect(snapshot.members['gemini-current']?.providerBackendId).toBeUndefined();
+    expect(snapshot.members['codex-current']).toMatchObject({
+      providerId: 'codex',
+      providerBackendId: 'adapter',
+      runtimeModel: 'codex-current-model',
+    });
+  });
+
   it('attaches strong live runtime metadata to spawn statuses', () => {
     const result = attachLiveRuntimeMetadataToStatuses({
       statuses: {
@@ -220,7 +303,7 @@ describe('TeamProvisioningRuntimeSnapshot', () => {
 
   it('projects persisted OpenCode host resources while the member remains not alive', async () => {
     const launchSnapshot: PersistedTeamLaunchSnapshot = {
-      version: 2,
+      version: 3,
       teamName: 'runtime-team',
       updatedAt: '2026-04-23T12:26:31.563Z',
       launchPhase: 'finished',

@@ -228,7 +228,12 @@ describe('TeamProvisioningCreateDeterministicSetupFlow', () => {
       expect.objectContaining({
         claudePath: '/usr/local/bin/claude',
         cwd: '/repo',
-        defaults: { providerId: 'codex', model: 'gpt-5.4', effort: 'high' },
+        defaults: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: 'high',
+        },
         limitContext: true,
       })
     );

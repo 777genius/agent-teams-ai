@@ -5,8 +5,13 @@ import {
 import * as path from 'path';
 
 import { buildMembersMetaWritePayload } from './TeamProvisioningConfigLaunchNormalization';
+import { type BeginCreateArtifactTransaction } from './TeamProvisioningCreateArtifactTransaction';
 import { type PreparedOpenCodeRuntimeAdapterLaunch } from './TeamProvisioningOpenCodeRuntimeAdapterPreparation';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
+import {
+  asRosterLaunchKnownNoStartError,
+  RosterLaunchKnownNoStartError,
+} from './TeamProvisioningRosterLaunchOutcome';
 import { type TeamsBaseLocation } from './TeamProvisioningRuntimeLaunchSelection';
 
 import type { TeamMetaFile } from '../TeamMetaStore';
@@ -27,6 +32,7 @@ export interface OpenCodeRuntimeAdapterTeamFlowPorts {
   pathExists(filePath: string): Promise<boolean>;
   ensureCwdExists(cwd: string): Promise<void>;
   mkdir(directoryPath: string): Promise<void>;
+  beginCreateArtifactTransaction: BeginCreateArtifactTransaction;
   nowMs(): number;
   writeTeamMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void>;
   writeMembersMeta(
@@ -94,50 +100,80 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
       request,
       members: request.members,
     });
-  await ports.mkdir(path.join(ports.getTeamsBasePath(), launchRequest.teamName));
-  await ports.mkdir(path.join(ports.getTasksBasePath(), launchRequest.teamName));
-  await ports.writeTeamMeta(launchRequest.teamName, {
-    displayName: launchRequest.displayName,
-    description: launchRequest.description,
-    color: launchRequest.color,
-    cwd: launchRequest.cwd,
-    prompt: launchRequest.prompt,
-    providerId: launchRequest.providerId,
-    providerBackendId: launchRequest.providerBackendId,
-    model: launchRequest.model,
-    effort: launchRequest.effort,
-    skipPermissions: launchRequest.skipPermissions,
-    worktree: launchRequest.worktree,
-    extraCliArgs: launchRequest.extraCliArgs,
-    limitContext: launchRequest.limitContext,
-    createdAt: ports.nowMs(),
+  const teamDir = path.join(ports.getTeamsBasePath(), launchRequest.teamName);
+  const tasksDir = path.join(ports.getTasksBasePath(), launchRequest.teamName);
+  const artifactTransaction = await ports.beginCreateArtifactTransaction({
+    attemptId: request.rosterTransactionId ?? `opencode-create-${ports.nowMs()}`,
+    teamName: launchRequest.teamName,
+    teamDir,
+    tasksDir,
   });
-  await ports.writeMembersMeta(
-    launchRequest.teamName,
-    buildMembersMetaWritePayload(effectiveMembers),
-    { providerBackendId: launchRequest.providerBackendId }
-  );
-  await ports.writeOpenCodeTeamConfig(launchRequest, effectiveMembers);
-
-  const prompt = launchRequest.prompt?.trim() ?? '';
-  if (isPureOpenCodeMemberLanePlan(lanePlan)) {
-    return ports.runOpenCodeWorktreeRootAggregateLaunch({
-      request: launchRequest,
-      members: effectiveMembers,
-      lanePlan,
-      prompt,
-      sourceWarning: undefined,
-      onProgress,
+  let enteredLaunchBoundary = false;
+  try {
+    await artifactTransaction.ensureDirectory(teamDir);
+    await artifactTransaction.ensureDirectory(tasksDir);
+    await ports.writeTeamMeta(launchRequest.teamName, {
+      displayName: launchRequest.displayName,
+      description: launchRequest.description,
+      color: launchRequest.color,
+      cwd: launchRequest.cwd,
+      prompt: launchRequest.prompt,
+      providerId: launchRequest.providerId,
+      providerBackendId: launchRequest.providerBackendId,
+      model: launchRequest.model,
+      effort: launchRequest.effort,
+      leadRuntimeSelectionProvenance: launchRequest.leadRuntimeSelectionProvenance,
+      skipPermissions: launchRequest.skipPermissions,
+      worktree: launchRequest.worktree,
+      extraCliArgs: launchRequest.extraCliArgs,
+      limitContext: launchRequest.limitContext,
+      createdAt: ports.nowMs(),
     });
-  }
+    await artifactTransaction.recordFileWrite('team-meta');
+    if (!request.rosterTransactionId) {
+      await ports.writeMembersMeta(
+        launchRequest.teamName,
+        buildMembersMetaWritePayload(effectiveMembers),
+        { providerBackendId: launchRequest.providerBackendId }
+      );
+      await artifactTransaction.recordFileWrite('members-meta');
+    }
+    await ports.writeOpenCodeTeamConfig(launchRequest, effectiveMembers);
+    await artifactTransaction.recordFileWrite('config');
 
-  return ports.runOpenCodeTeamRuntimeAdapterLaunch({
-    request: launchRequest,
-    members: runtimeLaunchMembers,
-    prompt,
-    sourceWarning: undefined,
-    onProgress,
-  });
+    const prompt = launchRequest.prompt?.trim() ?? '';
+    enteredLaunchBoundary = true;
+    const response = isPureOpenCodeMemberLanePlan(lanePlan)
+      ? await ports.runOpenCodeWorktreeRootAggregateLaunch({
+          request: launchRequest,
+          members: effectiveMembers,
+          lanePlan,
+          prompt,
+          sourceWarning: undefined,
+          onProgress,
+        })
+      : await ports.runOpenCodeTeamRuntimeAdapterLaunch({
+          request: launchRequest,
+          members: runtimeLaunchMembers,
+          prompt,
+          sourceWarning: undefined,
+          onProgress,
+        });
+    if (response.launchStatus === 'not_started') {
+      await artifactTransaction.rollbackIfOwned();
+    }
+    return response;
+  } catch (error) {
+    if (!enteredLaunchBoundary || error instanceof RosterLaunchKnownNoStartError) {
+      await artifactTransaction.rollbackIfOwned().catch(() => undefined);
+    }
+    throw enteredLaunchBoundary
+      ? error
+      : asRosterLaunchKnownNoStartError(
+          error,
+          'OpenCode create materialization failed before invocation'
+        );
+  }
 }
 
 export async function launchOpenCodeTeamThroughRuntimeAdapterFlow(

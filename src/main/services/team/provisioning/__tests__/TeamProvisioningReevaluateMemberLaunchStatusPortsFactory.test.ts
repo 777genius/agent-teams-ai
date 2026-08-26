@@ -73,6 +73,7 @@ describe('createTeamProvisioningReevaluateMemberLaunchStatusPorts', () => {
     const ports = createTeamProvisioningReevaluateMemberLaunchStatusPorts({
       nowIso: () => NOW,
       nowMs: () => NOW_MS,
+      isCurrentTrackedRun: vi.fn(() => true),
       service,
     });
 
@@ -136,6 +137,7 @@ describe('createTeamProvisioningReevaluateMemberLaunchStatusPorts', () => {
       createTeamProvisioningReevaluateMemberLaunchStatusDepsFromService(service, {
         nowIso: () => NOW,
         nowMs: () => NOW_MS,
+        isCurrentTrackedRun: vi.fn(() => true),
         isOpenCodeSecondaryLaneMemberInRun,
       })
     );
@@ -212,6 +214,7 @@ describe('createTeamProvisioningReevaluateMemberLaunchStatusBoundary', () => {
     const boundary = createTeamProvisioningReevaluateMemberLaunchStatusBoundary({
       nowIso: () => NOW,
       nowMs: () => NOW_MS,
+      isCurrentTrackedRun: vi.fn(() => true),
       service: {
         refreshMemberSpawnStatusesFromLeadInbox: (targetRun) =>
           host.refreshMemberSpawnStatusesFromLeadInbox(targetRun),

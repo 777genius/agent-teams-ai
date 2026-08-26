@@ -65,6 +65,10 @@ interface RuntimeSessionRecord {
   cwd?: string;
   startedAt: string;
   lastSeenAt: string;
+  providerId?: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
+  billingMode?: TokenUsageBillingMode;
+  model?: string;
 }
 
 export class TeamLaunchRunSourceDiscovery implements TokenUsageRunSourceDiscoveryPort {
@@ -180,6 +184,10 @@ async function readRuntimeSessionRecord(filePath: string): Promise<RuntimeSessio
       cwd: readString(record.cwd),
       startedAt: timestamp,
       lastSeenAt: timestamp,
+      providerId: normalizeProviderId(record.providerId),
+      providerBackendId: normalizeProviderBackendId(record.providerBackendId),
+      billingMode: normalizeProviderBillingMode(record.billingMode),
+      model: readString(record.model),
     };
   }
 
@@ -234,21 +242,16 @@ function buildRunsForTeam(
 
   const leadSessionId = config?.leadSessionId ?? launchState?.leadSessionId;
   if (leadSessionId) {
-    const providerId =
-      leadMember?.providerId ??
-      teamMeta?.launchIdentity?.providerId ??
-      teamMeta?.providerId ??
-      'anthropic';
-    const providerBackendId =
-      leadMember?.providerBackendId ??
-      teamMeta?.launchIdentity?.providerBackendId ??
-      teamMeta?.providerBackendId;
+    const metadataIdentity = teamMeta?.launchIdentity;
+    const authoritativeLeadRecord = metadataIdentity ?? leadMember ?? teamMeta;
+    const providerId = authoritativeLeadRecord?.providerId ?? 'anthropic';
+    const providerBackendId = authoritativeLeadRecord?.providerBackendId;
     const model = resolveRunModel(
-      leadMember?.model ??
-        teamMeta?.model ??
-        teamMeta?.launchIdentity?.resolvedLaunchModel ??
-        teamMeta?.launchIdentity?.selectedModel ??
-        teamMeta?.launchIdentity?.catalogId,
+      metadataIdentity
+        ? (metadataIdentity.resolvedLaunchModel ??
+            metadataIdentity.selectedModel ??
+            metadataIdentity.catalogId)
+        : (leadMember?.model ?? teamMeta?.model),
       providerId,
       teamMeta
     );
@@ -338,8 +341,7 @@ function buildRunsForTeam(
         fallbackIso,
         commandId,
         commandInvocationId,
-        commandHash,
-        teamMeta
+        commandHash
       )
     );
   }
@@ -368,10 +370,11 @@ function buildMemberRun(
   commandHash: string | undefined,
   teamMeta: TeamMetadata | null
 ): TokenUsageRunDto {
-  const providerId = memberState.providerId ?? configMember?.providerId;
-  const providerBackendId = memberState.providerBackendId ?? configMember?.providerBackendId;
+  const authoritativeMemberRecord = memberState ?? configMember;
+  const providerId = authoritativeMemberRecord?.providerId;
+  const providerBackendId = authoritativeMemberRecord?.providerBackendId;
   const runtimeKind = runtimeKindFromProvider(providerId);
-  const model = resolveRunModel(memberState.model ?? configMember?.model, providerId, teamMeta);
+  const model = resolveRunModel(authoritativeMemberRecord?.model, providerId, teamMeta);
   const configMemberActive = resolveConfigMemberActive(configMember);
   const nativeSessionId = memberState.runtimeSessionId;
   const launchId = memberState.runtimeRunId ?? nativeSessionId ?? 'current';
@@ -457,23 +460,13 @@ function buildRuntimeSessionRun(
   fallbackIso: string,
   commandId: string,
   commandInvocationId: string,
-  commandHash: string | undefined,
-  teamMeta: TeamMetadata | null
+  commandHash: string | undefined
 ): TokenUsageRunDto {
-  const providerId =
-    configMember?.providerId ?? teamMeta?.launchIdentity?.providerId ?? teamMeta?.providerId;
-  const providerBackendId =
-    configMember?.providerBackendId ??
-    teamMeta?.launchIdentity?.providerBackendId ??
-    teamMeta?.providerBackendId;
-  const model = resolveRunModel(
-    configMember?.model ??
-      teamMeta?.launchIdentity?.resolvedLaunchModel ??
-      teamMeta?.launchIdentity?.selectedModel ??
-      teamMeta?.model,
-    providerId,
-    teamMeta
-  );
+  // Route provenance is immutable trace data. Mutable roster/team metadata may
+  // still describe lifecycle and paths, but must never relabel a historical run.
+  const providerId = runtimeSession.providerId;
+  const providerBackendId = runtimeSession.providerBackendId;
+  const model = runtimeSession.model;
   const runtimeKind = runtimeKindFromProvider(providerId);
   const appRunId = `team:${teamName}:member:${runtimeSession.agentName}:${runtimeSession.runId}`;
   const startedAt = runtimeSession.startedAt || fallbackIso;
@@ -489,16 +482,7 @@ function buildRuntimeSessionRun(
     runtimeKind,
     providerId,
     providerBackendId,
-    billingMode: inferProviderBillingMode({
-      providerId,
-      providerBackendId,
-      explicitBillingMode:
-        configMember?.providerId == null ||
-        configMember.providerId === teamMeta?.launchIdentity?.providerId
-          ? (teamMeta?.launchIdentity?.billingMode ?? teamMeta?.billingMode)
-          : undefined,
-      model,
-    }),
+    billingMode: runtimeSession.billingMode ?? 'unknown',
     model,
     workspacePathHash: hashOptional(runtimeSession.cwd ?? configMember?.cwd ?? projectPath),
     workspaceLabel: workspaceLabelForPath(runtimeSession.cwd ?? configMember?.cwd ?? projectPath),

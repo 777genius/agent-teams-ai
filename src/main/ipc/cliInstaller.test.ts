@@ -16,6 +16,8 @@ import type {
   CliInstallationStatus,
   CliProviderId,
   CliProviderStatus,
+  CliProviderStatusIpcRequest,
+  CliProviderStatusIpcResponse,
   IpcResult,
 } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
@@ -83,6 +85,19 @@ function createProviderStatus(providerId: CliProviderId): CliProviderStatus {
       extensions: createDefaultCliExtensionCapabilities(),
     },
     backend: null,
+  };
+}
+
+let providerStatusRequestNonce = 0;
+function createProviderStatusRequest(
+  projectPath?: string,
+  purpose: CliProviderStatusIpcRequest['purpose'] = 'passive'
+): CliProviderStatusIpcRequest {
+  providerStatusRequestNonce += 1;
+  return {
+    ...(projectPath ? { projectPath } : {}),
+    purpose,
+    requestNonce: `ipc-unit-${providerStatusRequestNonce}`,
   };
 }
 
@@ -168,7 +183,11 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     const requests = (['anthropic', 'codex', 'opencode', 'gemini'] as CliProviderId[]).map(
       (providerId) =>
-        invoke<IpcResult<CliProviderStatus | null>>(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId)
+        invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          providerId,
+          createProviderStatusRequest()
+        )
     );
 
     await flushMicrotasks();
@@ -208,7 +227,11 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     const requests = (['anthropic', 'codex', 'opencode', 'gemini'] as CliProviderId[]).map(
       (providerId) =>
-        invoke<IpcResult<CliProviderStatus | null>>(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId)
+        invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          providerId,
+          createProviderStatusRequest()
+        )
     );
 
     await flushMicrotasks();
@@ -230,13 +253,15 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     const service = createInstallerService({ getProviderStatus });
     const { invoke } = setupHandlers(service);
 
-    const firstRequest = invoke<IpcResult<CliProviderStatus | null>>(
+    const firstRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'codex'
+      'codex',
+      createProviderStatusRequest()
     );
-    const secondRequest = invoke<IpcResult<CliProviderStatus | null>>(
+    const secondRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'codex'
+      'codex',
+      createProviderStatusRequest()
     );
 
     await flushMicrotasks();
@@ -245,10 +270,10 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     const providerStatus = createProviderStatus('codex');
     deferred.resolve(providerStatus);
 
-    await expect(Promise.all([firstRequest, secondRequest])).resolves.toEqual([
-      { success: true, data: providerStatus },
-      { success: true, data: providerStatus },
-    ]);
+    const results = await Promise.all([firstRequest, secondRequest]);
+    expect(results).toHaveLength(2);
+    expect(results[0]).toMatchObject({ success: true, data: { providerStatus } });
+    expect(results[1]).toMatchObject({ success: true, data: { providerStatus } });
   });
 
   test('keeps project-scoped OpenCode status requests distinct and forwards their paths', async () => {
@@ -260,15 +285,15 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
       .mockImplementationOnce(() => secondDeferred.promise);
     const service = createInstallerService({ getProviderStatus });
     const { invoke } = setupHandlers(service);
-    const firstRequest = invoke<IpcResult<CliProviderStatus | null>>(
+    const firstRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'opencode',
-      { projectPath: LOCAL_MODEL_PROJECT_A_PATH }
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH)
     );
-    const secondRequest = invoke<IpcResult<CliProviderStatus | null>>(
+    const secondRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'opencode',
-      { projectPath: LOCAL_MODEL_PROJECT_B_PATH }
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_B_PATH)
     );
 
     await flushMicrotasks();
@@ -294,10 +319,10 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     const service = createInstallerService({ getProviderStatus });
     const { invoke } = setupHandlers(service);
 
-    const result = await invoke<IpcResult<CliProviderStatus | null>>(
+    const result = await invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'opencode',
-      { projectPath: 'relative/project' }
+      createProviderStatusRequest('relative/project')
     );
 
     expect(result.success).toBe(false);
@@ -320,9 +345,10 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     });
     const { invoke } = setupHandlers(service);
 
-    const statusRequest = invoke<IpcResult<CliProviderStatus | null>>(
+    const statusRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'opencode'
+      'opencode',
+      createProviderStatusRequest()
     );
     const verifyRequest = invoke<IpcResult<CliProviderStatus | null>>(
       CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
@@ -361,7 +387,11 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     const requests = (['anthropic', 'codex', 'opencode', 'gemini'] as CliProviderId[]).map(
       (providerId) =>
-        invoke<IpcResult<CliProviderStatus | null>>(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId)
+        invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          providerId,
+          createProviderStatusRequest()
+        )
     );
 
     await flushMicrotasks();
@@ -401,7 +431,11 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     const requests = (['anthropic', 'codex', 'opencode', 'gemini'] as CliProviderId[]).map(
       (providerId) =>
-        invoke<IpcResult<CliProviderStatus | null>>(CLI_INSTALLER_GET_PROVIDER_STATUS, providerId)
+        invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          providerId,
+          createProviderStatusRequest()
+        )
     );
 
     await flushMicrotasks();
@@ -436,9 +470,10 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     const firstStatus = await invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
     expect(firstStatus.success).toBe(true);
 
-    const providerRequest = invoke<IpcResult<CliProviderStatus | null>>(
+    const providerRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'codex'
+      'codex',
+      createProviderStatusRequest()
     );
     await flushMicrotasks();
 
@@ -449,9 +484,9 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     expect(freshStatus).toEqual({ success: true, data: createCliStatus() });
 
     providerDeferred.resolve(createProviderStatus('codex'));
-    await expect(providerRequest).resolves.toEqual({
-      success: true,
-      data: createProviderStatus('codex'),
+    await expect(providerRequest).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('invalidated'),
     });
 
     const cachedStatusResult =

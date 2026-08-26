@@ -397,6 +397,127 @@ export interface CliProviderStatusRequestOptions {
   projectPath?: string | null;
 }
 
+/** Security purpose carried across the renderer/preload/main status boundary. */
+export type CliProviderStatusRequestPurpose = 'passive' | 'launch-proof';
+
+/**
+ * Renderer request identity for a provider observation. Purpose and nonce are
+ * required so legacy callers cannot accidentally obtain launch authority.
+ */
+export interface CliProviderStatusIpcRequest extends CliProviderStatusRequestOptions {
+  purpose: CliProviderStatusRequestPurpose;
+  requestNonce: string;
+}
+
+/** Main-issued metadata binding a provider observation to its exact request. */
+export interface CliProviderStatusIpcResponse {
+  providerStatus: CliProviderStatus | null;
+  purpose: CliProviderStatusRequestPurpose;
+  requestNonce: string;
+  observationGeneration: number;
+  observationNonce: string;
+}
+
+const CLI_PROVIDER_STATUS_NONCE_MAX_LENGTH = 256;
+let cliProviderStatusRequestSequence = 0;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function parseCliProviderStatusIpcRequest(value: unknown): CliProviderStatusIpcRequest {
+  if (!isRecord(value)) throw new Error('Provider status request must be an object');
+  if (value.purpose !== 'passive' && value.purpose !== 'launch-proof') {
+    throw new Error('Provider status request purpose is invalid');
+  }
+  if (
+    typeof value.requestNonce !== 'string' ||
+    value.requestNonce.length === 0 ||
+    value.requestNonce.length > CLI_PROVIDER_STATUS_NONCE_MAX_LENGTH
+  ) {
+    throw new Error('Provider status request nonce is invalid');
+  }
+  if (
+    value.projectPath !== undefined &&
+    value.projectPath !== null &&
+    typeof value.projectPath !== 'string'
+  ) {
+    throw new Error('Provider status project path is invalid');
+  }
+  return value as unknown as CliProviderStatusIpcRequest;
+}
+
+export function parseCliProviderStatusIpcResponse(value: unknown): CliProviderStatusIpcResponse {
+  if (!isRecord(value)) throw new Error('Provider status response is invalid');
+  if (value.purpose !== 'passive' && value.purpose !== 'launch-proof') {
+    throw new Error('Provider status response purpose is invalid');
+  }
+  if (
+    typeof value.requestNonce !== 'string' ||
+    value.requestNonce.length === 0 ||
+    typeof value.observationNonce !== 'string' ||
+    value.observationNonce.length === 0 ||
+    !Number.isSafeInteger(value.observationGeneration) ||
+    (value.observationGeneration as number) < 0
+  ) {
+    throw new Error('Provider status response metadata is invalid');
+  }
+  if (
+    value.providerStatus !== null &&
+    (!isRecord(value.providerStatus) || typeof value.providerStatus.providerId !== 'string')
+  ) {
+    throw new Error('Provider status response payload is invalid');
+  }
+  return value as unknown as CliProviderStatusIpcResponse;
+}
+
+export function parseExactCliProviderStatusIpcResponse(
+  value: unknown,
+  request: CliProviderStatusIpcRequest
+): CliProviderStatusIpcResponse {
+  const response = parseCliProviderStatusIpcResponse(value);
+  if (response.purpose !== request.purpose || response.requestNonce !== request.requestNonce) {
+    throw new Error('Provider status response does not match the exact request');
+  }
+  return response;
+}
+
+export function resolveCliProviderStatusIpcResponse(
+  value: unknown,
+  request: CliProviderStatusIpcRequest
+): { providerStatus: CliProviderStatus | null; metadataMatchesRequest: boolean } {
+  try {
+    const response = parseCliProviderStatusIpcResponse(value);
+    const metadataMatchesRequest =
+      response.purpose === request.purpose && response.requestNonce === request.requestNonce;
+    return {
+      providerStatus: metadataMatchesRequest ? response.providerStatus : null,
+      metadataMatchesRequest,
+    };
+  } catch {
+    const legacyPassiveStatus =
+      request.purpose === 'passive' && isRecord(value) && typeof value.providerId === 'string'
+        ? (value as unknown as CliProviderStatus)
+        : null;
+    return { providerStatus: legacyPassiveStatus, metadataMatchesRequest: false };
+  }
+}
+
+export async function requestCliProviderStatusIpcResponse(
+  getStatus: (providerId: CliProviderId, request: CliProviderStatusIpcRequest) => Promise<unknown>,
+  providerId: CliProviderId,
+  purpose: CliProviderStatusRequestPurpose,
+  projectPath: string | null
+): Promise<{ providerStatus: CliProviderStatus | null; metadataMatchesRequest: boolean }> {
+  const request = {
+    ...(projectPath ? { projectPath } : {}),
+    purpose,
+    requestNonce:
+      globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${++cliProviderStatusRequestSequence}`,
+  };
+  return resolveCliProviderStatusIpcResponse(await getStatus(providerId, request), request);
+}
+
 // =============================================================================
 // Preload API
 // =============================================================================
@@ -410,8 +531,8 @@ export interface CliInstallerAPI {
   /** Get current runtime/auth status for a single provider */
   getProviderStatus: (
     providerId: CliProviderId,
-    options?: CliProviderStatusRequestOptions
-  ) => Promise<CliProviderStatus | null>;
+    request: CliProviderStatusIpcRequest
+  ) => Promise<CliProviderStatusIpcResponse>;
   /** Start on-demand model verification for a single runtime provider */
   verifyProviderModels: (providerId: CliProviderId) => Promise<CliProviderStatus | null>;
   /** Start install/update flow. Progress sent via onProgress events. */

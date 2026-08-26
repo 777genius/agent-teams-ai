@@ -17,6 +17,23 @@ const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
 const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
 const publicationQueueByTeam = new Map<string, Promise<void>>();
 
+export class UnsupportedTeamLaunchStateVersionError extends Error {
+  constructor(readonly version: unknown) {
+    super(`Unsupported launch-state version: ${String(version)}`);
+    this.name = 'UnsupportedTeamLaunchStateVersionError';
+  }
+}
+
+export class CorruptTeamLaunchStateError extends Error {
+  constructor(cause?: unknown) {
+    super(
+      'Existing launch-state metadata is malformed',
+      cause === undefined ? undefined : { cause }
+    );
+    this.name = 'CorruptTeamLaunchStateError';
+  }
+}
+
 export function getTeamLaunchStatePath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STATE_FILE);
 }
@@ -53,7 +70,38 @@ function enqueuePublication(teamName: string, operation: () => Promise<void>): P
   });
 }
 
+function assertSupportedLaunchStateVersion(parsed: unknown): void {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new CorruptTeamLaunchStateError();
+  }
+  const version = (parsed as { version?: unknown }).version;
+  if (version !== undefined && version !== 1 && version !== 2 && version !== 3) {
+    throw new UnsupportedTeamLaunchStateVersionError(version);
+  }
+}
+
+async function assertSupportedLaunchStateVersionForMutation(targetPath: string): Promise<void> {
+  let raw: string;
+  try {
+    raw = await fs.promises.readFile(targetPath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new CorruptTeamLaunchStateError(error);
+  }
+  assertSupportedLaunchStateVersion(parsed);
+}
+
 export class TeamLaunchStateStore {
+  async assertMutable(teamName: string): Promise<void> {
+    await assertSupportedLaunchStateVersionForMutation(getTeamLaunchStatePath(teamName));
+  }
+
   async read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null> {
     const targetPath = getTeamLaunchStatePath(teamName);
     try {
@@ -63,17 +111,19 @@ export class TeamLaunchStateStore {
       }
       const raw = await fs.promises.readFile(targetPath, 'utf8');
       const parsed = JSON.parse(raw) as unknown;
+      assertSupportedLaunchStateVersion(parsed);
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         const record = parsed as Record<string, unknown>;
         if (
-          record.version === 2 &&
+          (record.version === 2 || record.version === 3) &&
           (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
         ) {
           return null;
         }
       }
       return normalizePersistedLaunchSnapshot(teamName, parsed);
-    } catch {
+    } catch (error) {
+      if (error instanceof UnsupportedTeamLaunchStateVersionError) throw error;
       return null;
     }
   }
@@ -86,6 +136,7 @@ export class TeamLaunchStateStore {
     const launchStatePath = getTeamLaunchStatePath(teamName);
     const launchSummaryPath = getTeamLaunchSummaryPath(teamName);
     try {
+      await assertSupportedLaunchStateVersionForMutation(launchStatePath);
       await atomicWriteAsync(launchStatePath, `${JSON.stringify(snapshot, null, 2)}\n`);
       await atomicWriteAsync(
         launchSummaryPath,
@@ -94,6 +145,12 @@ export class TeamLaunchStateStore {
     } catch (error) {
       if (await isMissingTeamDirectoryWriteRace(launchStatePath, error)) {
         return;
+      }
+      if (
+        error instanceof UnsupportedTeamLaunchStateVersionError ||
+        error instanceof CorruptTeamLaunchStateError
+      ) {
+        throw error;
       }
       logger.warn(
         `[${teamName}] Failed to persist launch-state: ${
@@ -106,6 +163,7 @@ export class TeamLaunchStateStore {
 
   async clear(teamName: string): Promise<void> {
     await enqueuePublication(teamName, async () => {
+      await assertSupportedLaunchStateVersionForMutation(getTeamLaunchStatePath(teamName));
       const results = await Promise.allSettled([
         fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
         fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),

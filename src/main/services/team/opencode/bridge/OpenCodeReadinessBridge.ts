@@ -104,7 +104,7 @@ const OPEN_CODE_COMPLETED_COMMAND_RECOVERY_MESSAGE =
   'OpenCode bridge command already completed; recover through commandStatus';
 
 export function resolveOpenCodeLaunchTimeoutMs(
-  input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel' | 'members'>,
+  input: { selectedModel: string; members: readonly unknown[] },
   configuredTimeoutMs?: number
 ): number {
   if (configuredTimeoutMs !== undefined) {

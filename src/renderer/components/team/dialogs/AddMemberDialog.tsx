@@ -159,6 +159,7 @@ export const AddMemberDialog = ({
         providerBackendId: m.providerBackendId,
         model: m.model,
         effort: m.effort,
+        runtimeSelectionProvenance: m.runtimeSelectionProvenance,
         fastMode: m.fastMode,
         mcpPolicy: m.mcpPolicy,
       }))

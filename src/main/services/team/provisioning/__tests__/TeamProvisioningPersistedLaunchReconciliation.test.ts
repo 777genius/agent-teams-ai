@@ -82,8 +82,8 @@ function createReconcilePorts(
     needsConfirmedBootstrapDiagnosticReconcile: vi.fn(() => false),
     cleanConfirmedBootstrapRuntimeDiagnostics: vi.fn((launchSnapshot) => launchSnapshot),
     hasBootstrapTranscriptLaunchReconcileOutcome: vi.fn(async () => false),
-    choosePreferredLaunchSnapshot: vi.fn((bootstrapSnapshot, persistedSnapshot) =>
-      bootstrapSnapshot ?? persistedSnapshot
+    choosePreferredLaunchSnapshot: vi.fn(
+      (bootstrapSnapshot, persistedSnapshot) => bootstrapSnapshot ?? persistedSnapshot
     ),
     createDefaultLaunchReconcileConfigMembers: vi.fn(() => ({
       configMembers: new Set<string>(),
@@ -121,6 +121,58 @@ function createReconcilePorts(
 }
 
 describe('persisted launch reconciliation helpers', () => {
+  it('keeps an empty explicit-stop tombstone authoritative across full restart reconciliation', async () => {
+    const stopped = {
+      ...snapshot({ members: {}, expectedMembers: [], launchPhase: 'reconciled' }),
+      stoppedAt: at,
+    };
+    const recoverStaleMixedSecondaryLaunchSnapshot = vi.fn(async () =>
+      snapshot({ members: { Stale: member('Stale', { runtimeAlive: true }) } })
+    );
+    const ports = createReconcilePorts({
+      readBootstrapLaunchSnapshot: vi.fn(async () =>
+        snapshot({ members: { Stale: member('Stale', { runtimeAlive: true }) } })
+      ),
+      readLaunchState: vi.fn(async () => stopped),
+      recoverStaleMixedSecondaryLaunchSnapshot,
+    });
+
+    await expect(reconcilePersistedLaunchStateWithPorts('demo', ports)).resolves.toEqual({
+      snapshot: stopped,
+      statuses: {},
+    });
+    expect(recoverStaleMixedSecondaryLaunchSnapshot).not.toHaveBeenCalled();
+    expect(ports.applyOpenCodeSecondaryEvidenceOverlay).not.toHaveBeenCalled();
+  });
+
+  it('keeps an empty-roster stop with recovered member rows authoritative after restart', async () => {
+    const stoppedMember = member('Stale', {
+      runtimeAlive: false,
+      diagnostics: ['Runtime stopped by explicit user action'],
+    });
+    const stopped = {
+      ...snapshot({
+        members: { Stale: stoppedMember },
+        expectedMembers: [],
+        launchPhase: 'reconciled',
+      }),
+      stoppedAt: at,
+    };
+    const recoverStaleMixedSecondaryLaunchSnapshot = vi.fn(async () =>
+      snapshot({ members: { Stale: member('Stale', { runtimeAlive: true }) } })
+    );
+    const ports = createReconcilePorts({
+      readLaunchState: vi.fn(async () => stopped),
+      recoverStaleMixedSecondaryLaunchSnapshot,
+    });
+
+    const result = await reconcilePersistedLaunchStateWithPorts('demo', ports);
+
+    expect(result.snapshot).toBe(stopped);
+    expect(result.statuses.Stale?.status).toBe('offline');
+    expect(recoverStaleMixedSecondaryLaunchSnapshot).not.toHaveBeenCalled();
+  });
+
   it('filters removed snapshot members before projecting reconcile statuses', () => {
     const launchSnapshot = snapshot({
       expectedMembers: ['Builder', 'Removed'],

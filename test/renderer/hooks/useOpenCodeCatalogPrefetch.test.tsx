@@ -83,6 +83,7 @@ describe('useOpenCodeCatalogPrefetch', () => {
       silent: true,
       checkReason: 'launch_preflight',
       projectPath: '/tmp/catalog-prefetch-project',
+      intent: 'passive',
     });
 
     await act(async () => {
@@ -308,6 +309,14 @@ describe('useOpenCodeCatalogPrefetch', () => {
 
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(4);
     expect(host.firstElementChild?.getAttribute('data-required-catalog-pending')).toBe('false');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(60_000);
+      root.render(<PrefetchHarness />);
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(4);
 
     storeState.cliProviderStatusScopeRevision += 1;
     await act(async () => {

@@ -1,5 +1,8 @@
 import * as path from 'path';
 
+import { crossRosterLaunchInvocationBoundary } from '../TeamMembersMetaStore';
+
+import { prepareOpenCodeWorktreeRootAggregateLaunchPreflight } from './TeamProvisioningOpenCodeAggregatePreflight';
 import {
   buildOpenCodeAggregateFailureProgress,
   buildOpenCodeAggregateFinalProgress,
@@ -7,7 +10,6 @@ import {
   type OpenCodeAggregateProvisioningRun,
   type OpenCodeAggregateRuntimeRunEntry,
   type OpenCodeWorktreeRootAggregateLaunchPorts,
-  type OpenCodeWorktreeRootAggregateLaunchPreflightPorts,
   type RunOpenCodeWorktreeRootAggregateLaunchInput,
 } from './TeamProvisioningOpenCodeAggregateRunModel';
 import { selectOpenCodeLaunchFailureDiagnostic } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
@@ -16,8 +18,17 @@ import {
   markOpenCodeLaneBlockedBySharedRuntimeFailure,
   selectOpenCodeSharedRuntimePreflightFailureDiagnostic,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import {
+  asRosterLaunchKnownNoStartError,
+  withKnownNoStartLaunchStatus,
+  withProductionStartedLaunchStatus,
+} from './TeamProvisioningRosterLaunchOutcome';
 
-import type { TeamLaunchRuntimeAdapter, TeamRuntimeLaunchResult } from '../runtime';
+import type {
+  TeamLaunchRuntimeAdapter,
+  TeamRuntimeLaunchInput,
+  TeamRuntimeLaunchResult,
+} from '../runtime';
 import type {
   MixedSecondaryRuntimeLaneState,
   SecondaryRuntimeRunEntry,
@@ -28,53 +39,8 @@ import type {
   TeamProvisioningProgress,
 } from '@shared/types';
 
+export { prepareOpenCodeWorktreeRootAggregateLaunchPreflight } from './TeamProvisioningOpenCodeAggregatePreflight';
 export * from './TeamProvisioningOpenCodeAggregateRunModel';
-
-export async function prepareOpenCodeWorktreeRootAggregateLaunchPreflight(
-  input: {
-    teamName: string;
-    sourceWarning?: string;
-    onProgress: (progress: TeamProvisioningProgress) => void;
-  },
-  ports: OpenCodeWorktreeRootAggregateLaunchPreflightPorts
-): Promise<TeamLaunchResponse | null> {
-  const stopAllGenerationAtStart = ports.getStopAllTeamsGeneration();
-  const stopTeamGenerationAtStart = ports.getStopTeamGeneration(input.teamName);
-  const recordCancellationIfRequested = (): TeamLaunchResponse | null =>
-    ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart ||
-    ports.getStopTeamGeneration(input.teamName) !== stopTeamGenerationAtStart
-      ? ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
-          input.teamName,
-          input.sourceWarning,
-          input.onProgress
-        )
-      : null;
-  const previousRuntimeRun = ports.getRuntimeAdapterRun(input.teamName);
-  if (previousRuntimeRun?.providerId === 'opencode') {
-    await ports.stopOpenCodeRuntimeAdapterTeam(input.teamName, previousRuntimeRun.runId);
-    const cancellation = recordCancellationIfRequested();
-    if (cancellation) return cancellation;
-  }
-  if (ports.hasSecondaryRuntimeRuns(input.teamName)) {
-    await ports.stopMixedSecondaryRuntimeLanes(input.teamName);
-    const cancellation = recordCancellationIfRequested();
-    if (cancellation) return cancellation;
-  }
-  const previousPendingRunId = ports.getProvisioningRun(input.teamName);
-  const previousRuntimeProgress = previousPendingRunId
-    ? ports.getRuntimeAdapterProgress(previousPendingRunId)
-    : undefined;
-  if (
-    previousPendingRunId &&
-    previousRuntimeProgress &&
-    ports.isCancellableRuntimeAdapterProgress(previousRuntimeProgress)
-  ) {
-    await ports.cancelRuntimeAdapterProvisioning(previousPendingRunId, previousRuntimeProgress);
-    const cancellation = recordCancellationIfRequested();
-    if (cancellation) return cancellation;
-  }
-  return recordCancellationIfRequested();
-}
 
 async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
   run: OpenCodeAggregateProvisioningRun,
@@ -115,14 +81,7 @@ async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
   }
   publishOpenCodeAggregateRollbackPendingStop(run, ports);
 
-  if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === run.runId) {
-    try {
-      await ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId);
-      primaryCleanupConfirmed = true;
-    } catch {
-      rollbackComplete = false;
-    }
-  } else if (input.untrackedPrimaryLaunchMayBeRunning) {
+  if (input.untrackedPrimaryLaunchMayBeRunning) {
     try {
       const stopResult = await input.adapter.stop({
         runId: run.runId,
@@ -140,6 +99,13 @@ async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
     } catch {
       rollbackComplete = false;
       retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
+    }
+  } else if (ownedRuntimeRun?.providerId === 'opencode' && ownedRuntimeRun.runId === run.runId) {
+    try {
+      await ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId);
+      primaryCleanupConfirmed = true;
+    } catch {
+      rollbackComplete = false;
     }
   } else {
     primaryCleanupConfirmed = true;
@@ -437,47 +403,77 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   // Resolve every lane before any stop, map update, persisted-state clear, or
   // adapter launch. In particular, worktree-shape validation must not discover
   // an invalid side lane after the previous runtime has already been mutated.
-  const primaryCwd = path.resolve(
-    ports.getOpenCodeRuntimeLaunchCwd(input.request.cwd, input.lanePlan.primaryMembers)
-  );
-  const secondaryCwds = new Map(
-    input.lanePlan.sideLanes.map((lane) => [
-      lane.laneId,
-      path.resolve(ports.getOpenCodeRuntimeLaunchCwd(input.request.cwd, [lane.member])),
-    ])
-  );
+  let primaryCwd: string;
+  let secondaryCwds: Map<string, string>;
+  try {
+    primaryCwd = path.resolve(
+      ports.getOpenCodeRuntimeLaunchCwd(input.request.cwd, input.lanePlan.primaryMembers)
+    );
+    secondaryCwds = new Map(
+      input.lanePlan.sideLanes.map((lane) => [
+        lane.laneId,
+        path.resolve(ports.getOpenCodeRuntimeLaunchCwd(input.request.cwd, [lane.member])),
+      ])
+    );
+  } catch (error) {
+    throw asRosterLaunchKnownNoStartError(
+      error,
+      'OpenCode lane materialization failed before spawn'
+    );
+  }
 
-  const preflightCancellation = await prepareOpenCodeWorktreeRootAggregateLaunchPreflight(
-    {
-      teamName,
-      sourceWarning: input.sourceWarning,
-      onProgress: input.onProgress,
-    },
-    ports
-  );
+  let preflightCancellation: TeamLaunchResponse | null;
+  try {
+    preflightCancellation = await prepareOpenCodeWorktreeRootAggregateLaunchPreflight(
+      {
+        teamName,
+        sourceWarning: input.sourceWarning,
+        onProgress: input.onProgress,
+        stopAllGenerationAtStart,
+        stopTeamGenerationAtStart,
+      },
+      ports
+    );
+  } catch (error) {
+    throw asRosterLaunchKnownNoStartError(error, 'OpenCode preflight failed before primary spawn');
+  }
   if (preflightCancellation) {
-    return preflightCancellation;
+    return withKnownNoStartLaunchStatus(input.request, preflightCancellation);
   }
   if (stopRequested()) {
-    return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
-      teamName,
-      input.sourceWarning,
-      input.onProgress
+    return withKnownNoStartLaunchStatus(
+      input.request,
+      ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
+        teamName,
+        input.sourceWarning,
+        input.onProgress
+      )
     );
   }
 
   // This is intentionally the last read-only await before this launch claims
   // team ownership and begins destructive launch-state mutation.
-  const previousLaunchState = await ports.readLaunchState(teamName);
+  let previousLaunchState: TeamRuntimeLaunchInput['previousLaunchState'];
+  try {
+    previousLaunchState = await ports.readLaunchState(teamName);
+  } catch (error) {
+    throw asRosterLaunchKnownNoStartError(error, 'OpenCode launch-state read failed before spawn');
+  }
   if (stopRequested()) {
-    return ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
-      teamName,
-      input.sourceWarning,
-      input.onProgress
+    return withKnownNoStartLaunchStatus(
+      input.request,
+      ports.recordCancelledOpenCodeRuntimeAdapterLaunch(
+        teamName,
+        input.sourceWarning,
+        input.onProgress
+      )
     );
   }
 
-  const runId = ports.randomUUID();
+  const runId =
+    'rosterTransactionId' in input.request && input.request.rosterTransactionId
+      ? input.request.rosterTransactionId
+      : ports.randomUUID();
   const startedAt = ports.nowIso();
   const initialProgress: TeamProvisioningProgress = {
     runId,
@@ -503,6 +499,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   ports.resetTeamScopedTransientStateForNewRun(teamName);
   let cancellationConsumed = false;
   let untrackedPrimaryLaunchMayBeRunning = false;
+  let primaryInvocationMayHaveStarted = false;
   const aggregateLaunchNoLongerCurrent = (): boolean => {
     cancellationConsumed ||= ports.consumeCancelledRuntimeAdapterRunId(runId);
     const runtimeOwner = ports.getRuntimeAdapterRun(teamName);
@@ -543,7 +540,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       }
     }
     ports.invalidateRuntimeSnapshotCaches(teamName);
-    return { runId };
+    return rollbackComplete ? withKnownNoStartLaunchStatus(input.request, { runId }) : { runId };
   };
 
   await ports.clearPersistedLaunchState(teamName, { expectedRunId: runId });
@@ -564,12 +561,32 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   run.progress = launching;
 
   try {
-    untrackedPrimaryLaunchMayBeRunning = true;
-    const primaryResult = await ports.launchOpenCodeAggregatePrimaryLane({
+    const primaryPromise = ports.launchOpenCodeAggregatePrimaryLane({
       run,
       adapter: input.adapter,
       prompt: input.prompt,
       previousLaunchState,
+      onInvocationBoundary: async () => {
+        const invocationLease = await crossRosterLaunchInvocationBoundary();
+        if (aggregateLaunchNoLongerCurrent()) {
+          throw new Error(
+            `OpenCode aggregate launch for team "${teamName}" was cancelled before invocation`
+          );
+        }
+        return invocationLease;
+      },
+      onInvocationDispatched: () => {
+        primaryInvocationMayHaveStarted = true;
+        untrackedPrimaryLaunchMayBeRunning = true;
+        ports.setRuntimeAdapterRun(teamName, {
+          runId,
+          providerId: 'opencode',
+          cwd: primaryCwd,
+          ...(run.request.allowExperimentalLocalModels === true
+            ? { allowExperimentalLocalModels: true }
+            : {}),
+        });
+      },
       assertStillCurrentAfterPersistence: () => {
         if (aggregateLaunchNoLongerCurrent()) {
           throw new Error(
@@ -578,6 +595,8 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
         }
       },
     });
+    const primaryResult = await primaryPromise;
+    primaryInvocationMayHaveStarted = true;
     untrackedPrimaryLaunchMayBeRunning = false;
     if (aggregateLaunchNoLongerCurrent()) {
       return await finishCancelledAggregateLaunch();
@@ -692,7 +711,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       }
       if (rollbackComplete && aggregateLaunchNoLongerCurrent()) {
         if (ports.getRun(runId) === run) ports.cleanupRun(run);
-        return { runId };
+        return withKnownNoStartLaunchStatus(input.request, { runId });
       }
       // Terminal failure: tear the run down fully. Removing it from the runs map
       // and clearing its timers/watchdogs/pending approvals (cleanupRun) is what a
@@ -712,7 +731,9 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       runId,
       detail: finalProgress.state,
     });
-    return { runId };
+    return terminalFailure && rollbackComplete
+      ? withKnownNoStartLaunchStatus(input.request, { runId })
+      : withProductionStartedLaunchStatus(input.request, { runId });
   } catch (error) {
     if (aggregateLaunchNoLongerCurrent()) {
       return await finishCancelledAggregateLaunch();
@@ -758,6 +779,11 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       ports.cleanupRun(run);
     }
     ports.invalidateRuntimeSnapshotCaches(teamName);
-    throw error;
+    throw primaryInvocationMayHaveStarted || !rollbackComplete
+      ? error
+      : asRosterLaunchKnownNoStartError(
+          error,
+          'OpenCode aggregate failed before primary process invocation'
+        );
   }
 }

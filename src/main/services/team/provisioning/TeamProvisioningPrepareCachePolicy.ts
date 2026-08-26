@@ -12,6 +12,7 @@ interface PrepareCacheKeyOptions {
   modelChecks?: readonly TeamProvisioningModelCheckRequest[];
   limitContext?: boolean;
   modelVerificationMode?: string | null;
+  allowExperimentalLocalModels?: boolean;
 }
 
 export function createPrepareForProvisioningInFlightKey(
@@ -25,6 +26,9 @@ export function createPrepareForProvisioningInFlightKey(
   const modelIds = normalizePrepareModelIds(opts?.modelIds);
   const modelChecks = normalizePrepareModelChecks(opts?.modelChecks).map((check) => ({
     providerId: check.providerId,
+    providerBackendId: Object.hasOwn(check, 'providerBackendId')
+      ? (check.providerBackendId ?? null)
+      : '<missing>',
     model: check.model,
     effort: check.effort ?? null,
   }));
@@ -37,6 +41,7 @@ export function createPrepareForProvisioningInFlightKey(
     modelChecks,
     limitContext: opts?.limitContext === true,
     modelVerificationMode: opts?.modelVerificationMode ?? null,
+    allowExperimentalLocalModels: opts?.allowExperimentalLocalModels === true,
   });
 }
 
@@ -62,6 +67,7 @@ export function normalizePrepareModelChecks(
   return normalizeProvisioningModelCheckRequests(checks).sort(
     (left, right) =>
       left.providerId.localeCompare(right.providerId) ||
+      String(left.providerBackendId ?? '').localeCompare(String(right.providerBackendId ?? '')) ||
       left.model.localeCompare(right.model) ||
       (left.effort ?? '').localeCompare(right.effort ?? '')
   );

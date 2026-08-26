@@ -203,7 +203,11 @@ function createSpawnFlowPorts(
     nowMs: vi.fn(() => 123),
     getStopAllTeamsGeneration: vi.fn(() => 7),
     seedLeadBootstrapPermissionRules: vi.fn(async () => undefined),
-    spawnCli: vi.fn(() => new EventEmitter() as ChildProcess),
+    spawnCli: vi.fn(() => {
+      const child = new EventEmitter() as ChildProcess;
+      queueMicrotask(() => child.emit('spawn'));
+      return child;
+    }),
     updateProgress: vi.fn((run: DeterministicLaunchSpawnFlowRun) => run.progress),
     attachStdoutHandler: vi.fn(),
     attachStderrHandler: vi.fn(),
@@ -382,7 +386,10 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       throw planningError;
     });
 
-    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toBe(planningError);
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(planningError.message),
+    });
 
     expect(order).toEqual([
       'plan-runtime-args',
@@ -422,7 +429,10 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       throw persistenceError;
     });
 
-    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toBe(persistenceError);
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(persistenceError.message),
+    });
 
     expect(order).toEqual([
       'write-team-meta',
@@ -495,6 +505,26 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(ports.deleteRun).toHaveBeenCalledWith(run.runId);
     expect(ports.deleteProvisioningRunByTeam).toHaveBeenCalledWith(run.teamName);
+  });
+
+  it('treats an asynchronous pre-spawn ENOENT as known no-start and clears owned setup', async () => {
+    const run = createRun();
+    const ports = createSpawnFlowPorts([]);
+    ports.spawnCli = vi.fn(() => {
+      const child = new EventEmitter() as ChildProcess;
+      queueMicrotask(() =>
+        child.emit('error', Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' }))
+      );
+      return child;
+    });
+
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining('spawn ENOENT'),
+    });
+    expect(ports.deleteRun).toHaveBeenCalledWith(run.runId);
+    expect(ports.deleteProvisioningRunByTeam).toHaveBeenCalledWith(run.teamName);
+    expect(run.child).toBeNull();
   });
 
   it('retains tracking through helper and artifact cleanup before state removal', async () => {
@@ -631,7 +661,18 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
     const cleanupRun = vi.fn();
-    const handleProcessExit = vi.fn();
+    const persist = vi.fn();
+    const cleanup = vi.fn();
+    const releaseOwnership = vi.fn();
+    const flushParser = vi.fn();
+    const recordOutcome = vi.fn();
+    const handleProcessExit = vi.fn(() => {
+      persist();
+      cleanup();
+      releaseOwnership();
+      flushParser();
+      recordOutcome();
+    });
     const updateProgress = vi.fn<
       RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>['updateProgress']
     >((nextRun, state, message) => {
@@ -656,18 +697,18 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     );
 
     child.emit('error', new Error('spawn failed'));
-    expect(updateProgress).toHaveBeenCalledWith(
-      run,
-      'failed',
-      'Failed to start Claude CLI (launch)',
-      expect.objectContaining({ error: 'spawn failed' })
-    );
     await vi.waitFor(() => {
-      expect(cleanupRun).toHaveBeenCalledWith(run);
+      expect(handleProcessExit).toHaveBeenCalledWith(run, null);
     });
+    expect(updateProgress).not.toHaveBeenCalled();
+    expect(cleanupRun).not.toHaveBeenCalled();
 
     child.emit('close', 7);
-    expect(handleProcessExit).toHaveBeenCalledWith(run, 7);
+    expect(handleProcessExit).toHaveBeenCalledTimes(1);
+    expect(handleProcessExit).not.toHaveBeenCalledWith(run, 7);
+    for (const terminalEffect of [persist, cleanup, releaseOwnership, flushParser, recordOutcome]) {
+      expect(terminalEffect).toHaveBeenCalledOnce();
+    }
 
     expect(timeoutCallback).not.toBeNull();
   });

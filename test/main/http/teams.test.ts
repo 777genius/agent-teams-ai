@@ -226,6 +226,12 @@ describe('HTTP team runtime routes', () => {
             role: 'Engineer',
             providerId: 'codex',
             providerBackendId: 'codex-native',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: 'inherited',
+            },
             mcpPolicy: {
               mode: 'strictAllowlist',
               scopes: { project: true, user: false },
@@ -238,6 +244,12 @@ describe('HTTP team runtime routes', () => {
         providerBackendId: 'codex-native',
         model: 'gpt-5.2',
         effort: 'high',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'default',
+          model: 'explicit',
+          effort: 'explicit',
+        },
         fastMode: 'on',
         limitContext: true,
       });
@@ -352,6 +364,70 @@ describe('HTTP team runtime routes', () => {
         },
         expect.any(Function)
       );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails production direct launch closed when HTTP has no durable roster proof contract', async () => {
+    const { app, services, launchTeam, createTeam } = await createApp();
+    Object.defineProperty(
+      services.teamApis!.provisioningStart,
+      'requiresAuthoritativeLaunchProof',
+      {
+        value: true,
+      }
+    );
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/demo-team/launch',
+        payload: { cwd: '/sandbox/project' },
+      });
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toContain('roster authorization transaction');
+      expect(launchTeam).not.toHaveBeenCalled();
+      expect(createTeam).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('keeps production HTTP create draft-only and fails its later create-launch closed', async () => {
+    const { app, services, getSavedRequest, createTeamConfig, createTeam } = await createApp();
+    Object.defineProperty(
+      services.teamApis!.provisioningStart,
+      'requiresAuthoritativeLaunchProof',
+      {
+        value: true,
+      }
+    );
+    getSavedRequest.mockResolvedValue({
+      teamName: 'draft-team',
+      cwd: '/sandbox/project',
+      members: [{ name: 'alice' }],
+    });
+    try {
+      const create = await app.inject({
+        method: 'POST',
+        url: '/api/teams',
+        payload: {
+          teamName: 'draft-team',
+          cwd: '/sandbox/project',
+          members: [{ name: 'alice' }],
+        },
+      });
+      expect(create.statusCode).toBe(201);
+      expect(createTeamConfig).toHaveBeenCalledOnce();
+      expect(createTeam).not.toHaveBeenCalled();
+
+      const launch = await app.inject({
+        method: 'POST',
+        url: '/api/teams/draft-team/launch',
+        payload: { cwd: '/sandbox/project' },
+      });
+      expect(launch.statusCode).toBe(400);
+      expect(createTeam).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }
@@ -484,9 +560,25 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(201);
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'default-anthropic-effort-team',
-        members: [{ name: 'builder' }],
+        members: [
+          {
+            name: 'builder',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: 'inherited',
+            },
+          },
+        ],
         cwd: '/Users/test/project',
         effort: 'max',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'default',
+          model: 'default',
+          effort: 'explicit',
+        },
       });
     } finally {
       await app.close();
@@ -512,17 +604,35 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(201);
       expect(createTeamConfig).toHaveBeenCalledWith({
         teamName: 'inherited-backend-team',
-        members: [{ name: 'builder', providerBackendId: 'codex-native', effort: 'xhigh' }],
+        members: [
+          {
+            name: 'builder',
+            providerBackendId: 'codex-native',
+            effort: 'xhigh',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'explicit',
+              model: 'inherited',
+              effort: 'explicit',
+            },
+          },
+        ],
         cwd: '/Users/test/project',
         providerId: 'codex',
         providerBackendId: 'codex-native',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'explicit',
+          model: 'default',
+          effort: 'default',
+        },
       });
     } finally {
       await app.close();
     }
   });
 
-  it('drops a stale known backend when launching with a different provider over HTTP', async () => {
+  it('rejects a known backend when it is incompatible with the HTTP launch provider', async () => {
     const { app, launchTeam } = await createApp();
     launchTeam.mockResolvedValue({ runId: 'run-2' });
 
@@ -539,17 +649,9 @@ describe('HTTP team runtime routes', () => {
         },
       });
 
-      expect(response.statusCode).toBe(200);
-      expect(launchTeam).toHaveBeenCalledWith(
-        {
-          teamName: 'demo-team',
-          cwd: '/Users/test/project',
-          providerId: 'anthropic',
-          model: 'sonnet',
-          effort: 'low',
-        },
-        expect.any(Function)
-      );
+      expect(response.statusCode).toBe(400);
+      expect(response.json().error).toContain('providerBackendId must be valid');
+      expect(launchTeam).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

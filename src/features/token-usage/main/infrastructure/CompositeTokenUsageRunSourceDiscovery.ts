@@ -28,12 +28,11 @@ function mergeRunsByNativeSession(runs: readonly TokenUsageRunDto[]): TokenUsage
     merged.set(identity, {
       ...supplemental,
       ...preferred,
-      billingMode:
-        preferred.billingMode && preferred.billingMode !== 'unknown'
-          ? preferred.billingMode
-          : supplemental.billingMode,
-      model: preferred.model ?? supplemental.model,
-      providerBackendId: preferred.providerBackendId ?? supplemental.providerBackendId,
+      // Provider identity is record-atomic. Missing preferred fields remain
+      // unknown instead of being filled from a lower-precedence stale record.
+      billingMode: preferred.billingMode,
+      model: preferred.model,
+      providerBackendId: preferred.providerBackendId,
       sources,
     });
   }

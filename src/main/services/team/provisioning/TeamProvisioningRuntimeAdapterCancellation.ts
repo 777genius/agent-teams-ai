@@ -205,6 +205,9 @@ export async function cancelRuntimeAdapterProvisioning(input: {
   ports: RuntimeAdapterCancellationPorts;
 }): Promise<void> {
   const { ports, runId, runtimeProgress } = input;
+  if (runtimeProgress.state === 'cancelled' && ports.cancelledRuntimeAdapterRunIds.has(runId)) {
+    return;
+  }
   if (!isCancellableRuntimeAdapterProgress(runtimeProgress)) {
     throw new Error('Provisioning cannot be cancelled in current state');
   }
@@ -220,6 +223,23 @@ export async function cancelRuntimeAdapterProvisioning(input: {
     updatedAt: ports.nowIso(),
   });
   ports.invalidateRuntimeSnapshotCaches(teamName);
+
+  if (!runtimeRun) {
+    await clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({ teamName, runId, ports });
+    ports.setRuntimeAdapterProgress({
+      ...runtimeProgress,
+      state: 'cancelled',
+      message: 'Provisioning cancelled before OpenCode dispatch',
+      updatedAt: ports.nowIso(),
+    });
+    ports.emitTeamChange({
+      type: 'process',
+      teamName,
+      runId,
+      detail: 'cancelled',
+    });
+    return;
+  }
 
   let stopConfirmed = false;
   try {
@@ -244,7 +264,13 @@ export async function cancelRuntimeAdapterProvisioning(input: {
       laneId: 'primary',
       emitDismiss: true,
     });
-    await clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({ teamName, runId, ports });
+    await clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({
+      teamName,
+      runId,
+      ports,
+    });
+    // A confirmed stop may still leave exact linkage for retry. The launch
+    // outcome remains unknown until its finish path confirms linkage cleanup.
     ports.setRuntimeAdapterProgress({
       ...runtimeProgress,
       state: 'cancelled',

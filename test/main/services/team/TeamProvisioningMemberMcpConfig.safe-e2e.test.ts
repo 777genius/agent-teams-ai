@@ -30,6 +30,18 @@ const hoisted = vi.hoisted(() => ({
 let tempClaudeRoot = '';
 let tempTeamsBase = '';
 let tempTasksBase = '';
+const RESOLVED_CODEX_MEMBER_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'explicit' as const,
+  effort: 'inherited' as const,
+};
+const RESOLVED_CODEX_LEAD_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'explicit' as const,
+  model: 'explicit' as const,
+  effort: 'default' as const,
+};
 
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolve: vi.fn() },
@@ -174,6 +186,15 @@ function createFakeChild() {
     }),
     kill: vi.fn(),
     unref: vi.fn(),
+  });
+  return child;
+}
+
+function mockSpawnedFakeChild(): ReturnType<typeof createFakeChild> {
+  const child = createFakeChild();
+  vi.mocked(spawnCli).mockImplementation(() => {
+    queueMicrotask(() => child.emit('spawn'));
+    return child as never;
   });
   return child;
 }
@@ -458,6 +479,7 @@ function writeCodexTeamWithAppOnlyMeta(teamName: string): void {
           role: 'developer',
           providerId: 'codex',
           model: 'gpt-5.4',
+          runtimeSelectionProvenance: RESOLVED_CODEX_MEMBER_PROVENANCE,
           mcpPolicy: { mode: 'appOnly' },
         },
       ],
@@ -496,7 +518,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     writeProjectMcpConfig(projectDir);
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
-    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+    mockSpawnedFakeChild();
 
     const svc = new TeamProvisioningService();
     configureLaunchStubs(svc);
@@ -511,12 +533,14 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           providerId: 'codex',
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
+          leadRuntimeSelectionProvenance: RESOLVED_CODEX_LEAD_PROVENANCE,
           members: [
             {
               name: 'alice',
               role: 'developer',
               providerId: 'codex',
               model: 'gpt-5.4',
+              runtimeSelectionProvenance: RESOLVED_CODEX_MEMBER_PROVENANCE,
               mcpPolicy: { mode: 'appOnly' },
             },
           ],
@@ -554,7 +578,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), 'codex fast tier project-'));
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
-    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+    mockSpawnedFakeChild();
 
     const svc = new TeamProvisioningService();
     configureLaunchStubs(svc);
@@ -573,7 +597,19 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           model: 'gpt-5.4',
           effort: 'xhigh',
           fastMode: 'on',
-          members: [{ name: 'alice', role: 'developer', providerId: 'codex', model: 'gpt-5.4' }],
+          leadRuntimeSelectionProvenance: {
+            ...RESOLVED_CODEX_LEAD_PROVENANCE,
+            effort: 'explicit',
+          },
+          members: [
+            {
+              name: 'alice',
+              role: 'developer',
+              providerId: 'codex',
+              model: 'gpt-5.4',
+              runtimeSelectionProvenance: RESOLVED_CODEX_MEMBER_PROVENANCE,
+            },
+          ],
         },
         () => {}
       );
@@ -598,7 +634,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     writeCodexTeamWithAppOnlyMeta(teamName);
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
-    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+    mockSpawnedFakeChild();
 
     const svc = new TeamProvisioningService();
     configureLaunchStubs(svc);
@@ -618,6 +654,10 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           effort: 'xhigh',
           fastMode: 'on',
           clearContext: true,
+          leadRuntimeSelectionProvenance: {
+            ...RESOLVED_CODEX_LEAD_PROVENANCE,
+            effort: 'explicit',
+          },
         },
         () => {}
       );
@@ -643,7 +683,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     writeProjectMcpConfig(projectDir);
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
-    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+    mockSpawnedFakeChild();
 
     const svc = new TeamProvisioningService();
     configureLaunchStubs(svc);
@@ -659,6 +699,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
           clearContext: true,
+          leadRuntimeSelectionProvenance: RESOLVED_CODEX_LEAD_PROVENANCE,
         },
         () => {}
       );
@@ -694,7 +735,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     writeProjectMcpConfig(projectDir);
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
-    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+    mockSpawnedFakeChild();
 
     const svc = new TeamProvisioningService();
     configureLaunchStubs(svc);
@@ -710,7 +751,16 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           providerId: 'codex',
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
-          members: [{ name: 'alice', role: 'developer', providerId: 'codex', model: 'gpt-5.4' }],
+          leadRuntimeSelectionProvenance: RESOLVED_CODEX_LEAD_PROVENANCE,
+          members: [
+            {
+              name: 'alice',
+              role: 'developer',
+              providerId: 'codex',
+              model: 'gpt-5.4',
+              runtimeSelectionProvenance: RESOLVED_CODEX_MEMBER_PROVENANCE,
+            },
+          ],
         },
         () => {}
       );
@@ -755,7 +805,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     writeProjectMcpConfig(projectDir);
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
-    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+    mockSpawnedFakeChild();
 
     const svc = new TeamProvisioningService();
     configureLaunchStubs(svc);
@@ -770,12 +820,14 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           providerId: 'codex',
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
+          leadRuntimeSelectionProvenance: RESOLVED_CODEX_LEAD_PROVENANCE,
           members: [
             {
               name: 'alice',
               role: 'developer',
               providerId: 'codex',
               model: 'gpt-5.4',
+              runtimeSelectionProvenance: RESOLVED_CODEX_MEMBER_PROVENANCE,
               mcpPolicy: { mode: 'appOnly' },
             },
           ],
@@ -797,6 +849,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
             role: 'developer',
             providerId: 'codex',
             model: 'gpt-5.4',
+            runtimeSelectionProvenance: RESOLVED_CODEX_MEMBER_PROVENANCE,
             mcpPolicy: { mode: 'appOnly' },
           },
         ],
@@ -824,8 +877,9 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
       await svc.restartMember(teamName, 'alice');
       await vi.waitFor(() => {
         const runtimeDir = path.join(tempTeamsBase, teamName, 'runtime');
-        expect(fs.existsSync(path.join(runtimeDir, 'alice.stdout.log'))).toBe(true);
-        expect(fs.existsSync(path.join(runtimeDir, 'alice.stderr.log'))).toBe(true);
+        const attemptFiles = fs.readdirSync(runtimeDir);
+        expect(attemptFiles.some((file) => /^alice-.+\.stdout\.log$/.test(file))).toBe(true);
+        expect(attemptFiles.some((file) => /^alice-.+\.stderr\.log$/.test(file))).toBe(true);
       });
 
       const restartArgs = vi.mocked(spawnCli).mock.calls[0]?.[1] as string[] | undefined;
@@ -859,7 +913,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
     writeProjectMcpConfig(projectDir);
 
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/codex');
-    vi.mocked(spawnCli).mockReturnValue(createFakeChild() as never);
+    mockSpawnedFakeChild();
     vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
       new Map([
         [
@@ -887,12 +941,14 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
           providerId: 'codex',
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
+          leadRuntimeSelectionProvenance: RESOLVED_CODEX_LEAD_PROVENANCE,
           members: [
             {
               name: 'alice',
               role: 'developer',
               providerId: 'codex',
               model: 'gpt-5.4',
+              runtimeSelectionProvenance: RESOLVED_CODEX_MEMBER_PROVENANCE,
               mcpPolicy: { mode: 'appOnly' },
             },
           ],
@@ -914,6 +970,7 @@ describe('TeamProvisioningService member MCP config safe e2e', () => {
             role: 'developer',
             providerId: 'codex',
             model: 'gpt-5.4',
+            runtimeSelectionProvenance: RESOLVED_CODEX_MEMBER_PROVENANCE,
             mcpPolicy: { mode: 'appOnly' },
           },
         ],

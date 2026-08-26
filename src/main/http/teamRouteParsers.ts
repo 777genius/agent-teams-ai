@@ -4,10 +4,16 @@ import {
 } from '@main/services/team/TeamIdentifierValidation';
 import { extractUserFlags, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
 import {
+  type DraftLeadRuntimeSelectionIntent,
+  type DraftMemberRuntimeSelectionIntent,
+  materializeDraftRuntimeSelectionProvenance,
+} from '@shared/utils/draftRuntimeSelectionProvenance';
+import {
   formatEffortLevelListForProvider,
   isTeamEffortLevelForProvider,
 } from '@shared/utils/effortLevels';
-import { isTeamProviderBackendId, migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { assertLiveTeamRuntimeSelectionProvenance } from '@shared/utils/liveTeamRuntimeSelectionProvenance';
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { isTeamProviderId } from '@shared/utils/teamProvider';
 import { isAbsolute } from 'path';
@@ -154,7 +160,11 @@ export function parseProviderBackendId(
   value: unknown
 ): TeamLaunchRequest['providerBackendId'] | undefined {
   const rawProviderBackendId = assertOptionalString(value, 'providerBackendId');
-  const providerBackendId = migrateProviderBackendId(providerId, rawProviderBackendId);
+  const providerBackendId = migrateProviderBackendId(
+    providerId,
+    rawProviderBackendId,
+    'explicit-selection'
+  );
   if (rawProviderBackendId && !providerBackendId) {
     throw new HttpBadRequestError(PROVIDER_BACKEND_ERROR);
   }
@@ -166,14 +176,15 @@ export function parseLaunchProviderBackendId(
   value: unknown
 ): TeamLaunchRequest['providerBackendId'] | undefined {
   const rawProviderBackendId = assertOptionalString(value, 'providerBackendId');
-  const providerBackendId = migrateProviderBackendId(providerId, rawProviderBackendId);
-  if (providerBackendId || !rawProviderBackendId) {
-    return providerBackendId;
+  const providerBackendId = migrateProviderBackendId(
+    providerId,
+    rawProviderBackendId,
+    'explicit-selection'
+  );
+  if (rawProviderBackendId && !providerBackendId) {
+    throw new HttpBadRequestError(PROVIDER_BACKEND_ERROR);
   }
-  if (isTeamProviderBackendId(rawProviderBackendId)) {
-    return undefined;
-  }
-  throw new HttpBadRequestError(PROVIDER_BACKEND_ERROR);
+  return providerBackendId;
 }
 
 export function parseCreateMembers(
@@ -311,9 +322,10 @@ export function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
   const worktree = assertOptionalString(payload.worktree, 'worktree');
   const extraCliArgs = assertOptionalExtraCliArgs(payload.extraCliArgs);
 
-  return {
+  const members = parseCreateMembers(payload.members, providerId ?? 'anthropic');
+  const request: TeamCreateConfigRequest = {
     teamName,
-    members: parseCreateMembers(payload.members, providerId ?? 'anthropic'),
+    members,
     ...(displayName ? { displayName } : {}),
     ...(description ? { description } : {}),
     ...(color ? { color } : {}),
@@ -329,6 +341,49 @@ export function parseCreateTeamRequest(body: unknown): TeamCreateConfigRequest {
     ...(worktree ? { worktree } : {}),
     ...(extraCliArgs ? { extraCliArgs } : {}),
   };
+  const rawMembers = Array.isArray(payload.members)
+    ? (payload.members as Record<string, unknown>[])
+    : [];
+  const leadIntent: DraftLeadRuntimeSelectionIntent = {
+    providerBackendId: assertOptionalString(payload.providerBackendId, 'providerBackendId')
+      ? 'explicit'
+      : 'default',
+    model: model ? 'explicit' : 'default',
+    effort: effort ? 'explicit' : 'default',
+  };
+  const materialized = materializeDraftRuntimeSelectionProvenance(request, {
+    lead: {
+      supplied: Object.hasOwn(payload, 'leadRuntimeSelectionProvenance'),
+      value: payload.leadRuntimeSelectionProvenance,
+      missingIntent: leadIntent,
+    },
+    members: members.map((member, index) => {
+      const rawMember = rawMembers[index]!;
+      const memberIntent: DraftMemberRuntimeSelectionIntent = {
+        providerBackendId:
+          assertOptionalString(rawMember.providerBackendId, 'member providerBackendId') !==
+          undefined
+            ? 'explicit'
+            : 'inherited',
+        model: assertOptionalString(rawMember.model, 'member model') ? 'explicit' : 'inherited',
+        effort: rawMember.effort != null ? 'explicit' : 'inherited',
+      };
+      return {
+        supplied: Object.hasOwn(rawMember, 'runtimeSelectionProvenance'),
+        value: rawMember.runtimeSelectionProvenance,
+        missingIntent: memberIntent,
+      };
+    }),
+  });
+
+  try {
+    assertLiveTeamRuntimeSelectionProvenance(materialized);
+  } catch (error) {
+    throw new HttpBadRequestError(
+      error instanceof Error ? error.message : 'Runtime selection provenance is invalid'
+    );
+  }
+  return materialized;
 }
 
 function getObjectPayload(body: unknown): Record<string, unknown> {

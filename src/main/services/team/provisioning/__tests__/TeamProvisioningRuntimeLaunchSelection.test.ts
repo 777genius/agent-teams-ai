@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import { validateRuntimeLaunchSelection } from '../TeamProvisioningRuntimeLaunchSelection';
+import {
+  buildProviderModelLaunchIdentity,
+  normalizeProvisioningModelCheckRequests,
+  validateRuntimeLaunchSelection,
+} from '../TeamProvisioningRuntimeLaunchSelection';
 
 import type { RuntimeProviderLaunchFacts } from '../TeamProvisioningRuntimeLaunchSelection';
+
+const explicitProvenance = {
+  version: 1 as const,
+  providerBackendId: 'default' as const,
+  model: 'explicit' as const,
+  effort: 'explicit' as const,
+};
 
 function createKiroFacts(): RuntimeProviderLaunchFacts {
   return {
@@ -75,6 +86,75 @@ function createKimiK3Facts(): RuntimeProviderLaunchFacts {
 }
 
 describe('validateRuntimeLaunchSelection OpenCode catalog effort', () => {
+  it('pins concrete default snapshots when catalog defaults change after proof', () => {
+    const facts = createKimiK3Facts();
+    facts.defaultModel = 'new/default';
+    facts.modelIds.add('proved/default');
+    facts.modelIds.add('new/default');
+    facts.modelCatalog = {
+      ...facts.modelCatalog!,
+      defaultModelId: 'new/default',
+      defaultLaunchModel: 'new/default',
+      models: [
+        ...facts.modelCatalog!.models.map((model) => ({ ...model, isDefault: false })),
+        {
+          ...facts.modelCatalog!.models[0],
+          id: 'proved/default',
+          launchModel: 'proved/default',
+          defaultReasoningEffort: 'low',
+          isDefault: false,
+        },
+        {
+          ...facts.modelCatalog!.models[0],
+          id: 'new/default',
+          launchModel: 'new/default',
+          defaultReasoningEffort: 'max',
+          isDefault: true,
+        },
+      ],
+    };
+
+    const identity = buildProviderModelLaunchIdentity({
+      request: {
+        providerId: 'opencode',
+        providerBackendId: 'opencode-cli',
+        model: 'proved/default',
+        effort: 'low',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'default',
+          model: 'default',
+          effort: 'default',
+        },
+      },
+      facts,
+      anthropicFastModeDefault: false,
+    });
+
+    expect(identity).toMatchObject({
+      providerBackendId: 'opencode-cli',
+      selectedModel: null,
+      selectedModelKind: 'default',
+      resolvedLaunchModel: 'proved/default',
+      selectedEffort: null,
+      resolvedEffort: 'low',
+    });
+  });
+
+  it('preserves Anthropic null and backend-separated identical checks', () => {
+    expect(
+      normalizeProvisioningModelCheckRequests([
+        { providerId: 'codex', providerBackendId: 'adapter', model: 'gpt-5', effort: 'high' },
+        { providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-5', effort: 'high' },
+        { providerId: 'anthropic', providerBackendId: null, model: 'claude-sonnet-4-5' },
+      ])
+    ).toEqual([
+      { providerId: 'codex', providerBackendId: 'adapter', model: 'gpt-5', effort: 'high' },
+      { providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-5', effort: 'high' },
+      { providerId: 'anthropic', providerBackendId: null, model: 'claude-sonnet-4-5' },
+    ]);
+  });
+
   it.each(['xhigh', 'max'] as const)('accepts exact Kiro catalog effort %s', (effort) => {
     expect(() =>
       validateRuntimeLaunchSelection({
@@ -82,6 +162,7 @@ describe('validateRuntimeLaunchSelection OpenCode catalog effort', () => {
         providerId: 'opencode',
         model: 'kiro/auto',
         effort,
+        leadRuntimeSelectionProvenance: explicitProvenance,
         facts: createKiroFacts(),
         anthropicFastModeDefault: false,
         getProviderLabel: () => 'OpenCode',
@@ -96,6 +177,7 @@ describe('validateRuntimeLaunchSelection OpenCode catalog effort', () => {
         providerId: 'opencode',
         model: 'kiro/auto',
         effort: 'ultra',
+        leadRuntimeSelectionProvenance: explicitProvenance,
         facts: createKiroFacts(),
         anthropicFastModeDefault: false,
         getProviderLabel: () => 'OpenCode',
@@ -110,6 +192,7 @@ describe('validateRuntimeLaunchSelection OpenCode catalog effort', () => {
         providerId: 'opencode',
         model: 'kimi-for-coding/k3',
         effort: 'max',
+        leadRuntimeSelectionProvenance: explicitProvenance,
         facts: createKimiK3Facts(),
         anthropicFastModeDefault: false,
         getProviderLabel: () => 'OpenCode',
@@ -121,6 +204,7 @@ describe('validateRuntimeLaunchSelection OpenCode catalog effort', () => {
         providerId: 'opencode',
         model: 'kimi-for-coding/k3',
         effort: 'medium',
+        leadRuntimeSelectionProvenance: explicitProvenance,
         facts: createKimiK3Facts(),
         anthropicFastModeDefault: false,
         getProviderLabel: () => 'OpenCode',

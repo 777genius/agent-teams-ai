@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -13,7 +14,9 @@ import {
   type OpenCodeBridgePeerIdentity,
   type OpenCodeBridgeResult,
   type OpenCodeBridgeSuccess,
+  type OpenCodeLaunchTeamCommandBody,
   type RuntimeStoreManifestEvidence,
+  stableHash,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import {
   createOpenCodeBridgeCommandLeaseStore,
@@ -22,6 +25,7 @@ import {
   type OpenCodeBridgeCommandLeaseStore,
   type OpenCodeBridgeCommandLedger,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
+import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import {
   type OpenCodeBridgeCommandExecutor,
   type OpenCodeBridgeHandshakePort,
@@ -30,6 +34,15 @@ import {
   resolveOpenCodeBridgeLeaseAcquireTimeoutMs,
   type RuntimeStoreManifestReader,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { createOpenCodeStrictLaunchLedgerKey } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStrictLaunchLedgerIdentity';
+import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
+import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
+import orchestratorVector from '../../../fixtures/team/opencode-launch-request-correlation-golden.json';
+
+import type { OpenCodeLaunchAttemptResponse } from '../../../../src/main/services/team/opencode/bridge/OpenCodeLaunchAttemptContractV1';
+import type { OpenCodeTeamLaunchReadiness } from '../../../../src/main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
+import type { TeamRuntimeLaunchInput } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
+import type { PersistedOpenCodeStrictLaunchAttempt } from '../../../../src/shared/types/openCodeStrictLaunch';
 
 describe('OpenCodeStateChangingBridgeCommandService', () => {
   let tempDir: string;
@@ -57,10 +70,12 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       clock: () => now,
     });
     clientIdentity = peerIdentity('claude_team');
-    handshakePort = new FakeHandshakePort(buildHandshake({
-      client: clientIdentity,
-      server: peerIdentity('agent_teams_orchestrator'),
-    }));
+    handshakePort = new FakeHandshakePort(
+      buildHandshake({
+        client: clientIdentity,
+        server: peerIdentity('agent_teams_orchestrator'),
+      })
+    );
     manifestReader = new FakeManifestReader();
     bridge = new FakeBridgeExecutor();
     diagnostics = new FakeDiagnosticsSink();
@@ -88,6 +103,43 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(ledger.list()).resolves.toEqual([]);
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
+
+  it.each([
+    {
+      kind: 'strict launch contract',
+      configure(server: OpenCodeBridgePeerIdentity) {
+        server.bridgeProtocol.openCodeLaunchAttemptContract = 0;
+      },
+      error: 'openCodeLaunchAttemptContract 1',
+    },
+    {
+      kind: 'request correlation contract',
+      configure(server: OpenCodeBridgePeerIdentity) {
+        server.bridgeProtocol.openCodeLaunchRequestCorrelationContract = 0;
+      },
+      error: 'openCodeLaunchRequestCorrelationContract 1',
+    },
+    {
+      kind: 'capability snapshot',
+      configure(server: OpenCodeBridgePeerIdentity) {
+        server.runtime.capabilitySnapshotId = 'cap-other';
+      },
+      error: 'capability snapshot mismatch',
+    },
+  ])(
+    'does not let upstream dispatch authorization bypass the OpenCode $kind before member mutation',
+    async ({ configure, error }) => {
+      const server = peerIdentity('agent_teams_orchestrator');
+      configure(server);
+      handshakePort.nextHandshake = buildHandshake({ client: clientIdentity, server });
+      const service = createService();
+
+      await expect(service.execute(buildLaunchInput())).rejects.toThrow(error);
+      expect(bridge.calls).toHaveLength(0);
+      await expect(ledger.list()).resolves.toEqual([]);
+      await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+    }
+  );
 
   it('requires delivery acceptance contract only for acceptance-mode sendMessage', async () => {
     clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
@@ -156,8 +208,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     );
     expect(bridge.calls).toHaveLength(0);
 
-    server.bridgeProtocol.opencodeFilePartsContractVersion =
-      OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
+    server.bridgeProtocol.opencodeFilePartsContractVersion = OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
     handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
       { client: clientIdentity, server },
       ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
@@ -211,12 +262,14 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         /^opencode:opencode\.sendMessage:team-a:secondary_opencode_bob:run-1:/
       ),
     });
-    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
-      .resolves.toMatchObject({
-        requestId: 'cmd-1',
-        status: 'completed',
-        retryable: false,
-      });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+      strictLaunchResponseJson: null,
+    });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
@@ -282,7 +335,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
-  it('adds preconditions, commits ledger, and releases lease on success', async () => {
+  it('accepts opaque realpath/plan server digests when the request echo matches', async () => {
     bridge.resultFactory = ({ body, options }) =>
       bridgeSuccess({
         requestId: options.requestId,
@@ -290,6 +343,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
           runId: 'run-1',
           idempotencyKey: body.preconditions.idempotencyKey,
           runtimeStoreManifestHighWatermark: 10,
+          members: {},
+          launchAttempt: strictLaunchResponse(body as unknown as OpenCodeLaunchTeamCommandBody),
         },
       });
     const service = createService();
@@ -297,6 +352,16 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     const result = await service.execute(buildLaunchInput());
 
     expect(result.ok).toBe(true);
+    expect(result).toMatchObject({
+      data: {
+        launchAttempt: {
+          launchAttempt: {
+            inputDigest: orchestratorVector.wire.response.launchAttempt.inputDigest,
+            immutableDigest: orchestratorVector.wire.response.launchAttempt.immutableDigest,
+          },
+        },
+      },
+    });
     expect(bridge.calls).toHaveLength(1);
     expect(bridge.calls[0].options).toMatchObject({ requestId: 'cmd-1' });
     expect(bridge.calls[0].body).toMatchObject({
@@ -308,20 +373,490 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         expectedBehaviorFingerprint: 'behavior-1',
         expectedManifestHighWatermark: 10,
         commandLeaseId: 'lease-1',
-        idempotencyKey: expect.stringMatching(
-          /^opencode:opencode\.launchTeam:team-a:no-lane:run-1:/
-        ),
+        idempotencyKey: '018f47a2-4a13-7c2f-8d44-c0ffee123456',
       },
     });
-    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
-      .resolves.toMatchObject({
-        requestId: 'cmd-1',
-        status: 'completed',
-        retryable: false,
-        completedAt: '2026-04-21T12:00:00.000Z',
-      });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+      completedAt: '2026-04-21T12:00:00.000Z',
+    });
+    expect(bridge.calls[0].body).toMatchObject({
+      launchAttempt: {
+        requestCorrelationDigest: expect.stringMatching(/^[0-9a-f]{64}$/),
+      },
+    });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
+
+  it.each(['before', 'after'] as const)(
+    'replays the exact strict response after an app restart crash %s completion persistence',
+    async (failurePoint) => {
+      bridge.resultFactory = ({ body, options }) => {
+        const launchBody = body as unknown as OpenCodeLaunchTeamCommandBody;
+        const launchAttempt = strictLaunchResponse(launchBody);
+        launchAttempt.launchAttempt.outcome = 'partial';
+        launchAttempt.launchAttempt.phase = 'cleanup';
+        launchAttempt.members.committed = launchAttempt.members.committed.slice(0, 1);
+        launchAttempt.members.failed = [
+          {
+            memberIdentity: launchBody.members[1]!.memberIdentity,
+            failure: {
+              code: 'rate_limited',
+              origin: 'provider',
+              retryDisposition: 'backoff',
+              retryable: true,
+              phase: 'member_materialize',
+              sideEffectsStarted: false,
+            },
+          },
+        ];
+        launchAttempt.members.continuationToken = 'opaque-continuation-token';
+        launchAttempt.failure = {
+          code: 'deadline_after_partial',
+          origin: 'deadline',
+          retryDisposition: 'continuation',
+          retryable: true,
+          phase: 'member_materialize',
+          sideEffectsStarted: true,
+        };
+        return bridgeSuccess({
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            idempotencyKey: body.preconditions.idempotencyKey,
+            runtimeStoreManifestHighWatermark: 10,
+            members: strictLaunchMembers(launchBody),
+            launchAttempt,
+          },
+        });
+      };
+      const crash = new Error(`crash-${failurePoint}-completion-persistence`);
+      const firstService = createService({
+        failpoints: {
+          ...(failurePoint === 'before'
+            ? { beforeStrictLaunchCompletionPersistence: () => Promise.reject(crash) }
+            : { afterStrictLaunchCompletionPersistence: () => Promise.reject(crash) }),
+        },
+      });
+
+      await expect(firstService.execute(buildLaunchInput())).rejects.toThrow(crash.message);
+      expect(bridge.calls).toHaveLength(1);
+
+      const restartedService = createService();
+      const replay = await restartedService.execute(buildLaunchInput());
+
+      expect(bridge.calls).toHaveLength(1);
+      expect(replay).toMatchObject({
+        ok: true,
+        data: {
+          members: {
+            alice: {
+              sessionId: 'session-0',
+              launchState: 'confirmed_alive',
+            },
+          },
+          launchAttempt: {
+            launchAttempt: { outcome: 'partial' },
+            members: { continuationToken: 'opaque-continuation-token' },
+          },
+        },
+      });
+      const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
+      await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
+        status: 'completed',
+        responseHash: stableHash(
+          (replay as OpenCodeBridgeSuccess<{ launchAttempt: unknown }>).data.launchAttempt
+        ),
+        strictLaunchResponseJson: expect.stringContaining('opaque-continuation-token'),
+        strictLaunchMemberLinkageJson: expect.stringContaining('session-0'),
+      });
+    }
+  );
+
+  it('replays a completed restart launch before manifest, handshake, or crash-owned lease access', async () => {
+    bridge.resultFactory = ({ body, options }) => {
+      const launchBody = body as unknown as OpenCodeLaunchTeamCommandBody;
+      return bridgeSuccess({
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+          members: strictLaunchMembers(launchBody),
+          launchAttempt: strictLaunchResponse(launchBody),
+        },
+      });
+    };
+    await createService().execute(buildLaunchInput());
+    const crashOwnedLease = await leaseStore.acquire({
+      teamName: 'team-a',
+      laneId: null,
+      runId: 'run-1',
+      command: 'opencode.launchTeam',
+      ttlMs: 60_000,
+    });
+    const manifestRead = vi
+      .spyOn(manifestReader, 'read')
+      .mockRejectedValue(new Error('manifest unavailable after restart'));
+    const handshake = vi
+      .spyOn(handshakePort, 'handshake')
+      .mockRejectedValue(new Error('bridge unavailable after restart'));
+
+    await expect(createService().execute(buildLaunchInput())).resolves.toMatchObject({
+      ok: true,
+      data: {
+        members: {
+          alice: { sessionId: 'session-0' },
+          bob: { sessionId: 'session-1' },
+        },
+        launchAttempt: { launchAttempt: { outcome: 'succeeded' } },
+      },
+    });
+
+    expect(manifestRead).not.toHaveBeenCalled();
+    expect(handshake).not.toHaveBeenCalled();
+    expect(bridge.calls).toHaveLength(1);
+    await expect(leaseStore.getActive('team-a')).resolves.toMatchObject({
+      leaseId: crashOwnedLease.leaseId,
+      state: 'active',
+    });
+  });
+
+  it.each(['legacy', 'tampered'] as const)(
+    'replays a %s strict success as reconciliation-required without redispatch',
+    async (recordKind) => {
+      bridge.resultFactory = ({ body, options }) => {
+        const launchBody = body as unknown as OpenCodeLaunchTeamCommandBody;
+        return bridgeSuccess({
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            idempotencyKey: body.preconditions.idempotencyKey,
+            runtimeStoreManifestHighWatermark: 10,
+            members: strictLaunchMembers(launchBody),
+            launchAttempt: strictLaunchResponse(launchBody),
+          },
+        });
+      };
+      await createService().execute(buildLaunchInput());
+      const ledgerPath = path.join(tempDir, 'ledger.json');
+      const envelope = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{
+          strictLaunchMemberLinkageJson?: string;
+          strictLaunchMemberLinkageHash?: string;
+        }>;
+      };
+      if (recordKind === 'legacy') {
+        delete envelope.data[0]!.strictLaunchMemberLinkageJson;
+        delete envelope.data[0]!.strictLaunchMemberLinkageHash;
+      } else {
+        envelope.data[0]!.strictLaunchMemberLinkageJson = JSON.stringify({
+          schemaVersion: 1,
+          members: { alice: { sessionId: 'attacker-session' } },
+        });
+      }
+      await fs.writeFile(ledgerPath, `${JSON.stringify(envelope)}\n`, 'utf8');
+
+      const replay = await createService().execute(buildLaunchInput());
+
+      expect(bridge.calls).toHaveLength(1);
+      expect(replay).toMatchObject({
+        ok: true,
+        data: {
+          members: {},
+          launchAttempt: { launchAttempt: { outcome: 'reconciliation_required' } },
+          diagnostics: [
+            {
+              code: 'opencode_strict_launch_replay_reconciliation_required',
+            },
+          ],
+        },
+      });
+    }
+  );
+
+  it('fails a restart replay request-hash mismatch before external recovery work', async () => {
+    bridge.resultFactory = ({ body, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+          members: {},
+          launchAttempt: strictLaunchResponse(body as unknown as OpenCodeLaunchTeamCommandBody),
+        },
+      });
+    await createService().execute(buildLaunchInput());
+    const ledgerPath = path.join(tempDir, 'ledger.json');
+    const envelope = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as {
+      data: Array<{ requestHash: string }>;
+    };
+    envelope.data[0]!.requestHash = stableHash('wrong-request');
+    await fs.writeFile(ledgerPath, `${JSON.stringify(envelope)}\n`, 'utf8');
+    const manifestRead = vi.spyOn(manifestReader, 'read');
+    const handshake = vi.spyOn(handshakePort, 'handshake');
+
+    await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
+      'OpenCode bridge idempotency key reused with different payload'
+    );
+    expect(manifestRead).not.toHaveBeenCalled();
+    expect(handshake).not.toHaveBeenCalled();
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it.each(['hash', 'correlation'] as const)(
+    'fails closed on durable strict response %s corruption without bridge redispatch',
+    async (corruption) => {
+      bridge.resultFactory = ({ body, options }) =>
+        bridgeSuccess({
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            idempotencyKey: body.preconditions.idempotencyKey,
+            runtimeStoreManifestHighWatermark: 10,
+            members: {},
+            launchAttempt: strictLaunchResponse(body as unknown as OpenCodeLaunchTeamCommandBody),
+          },
+        });
+      await createService().execute(buildLaunchInput());
+      const ledgerPath = path.join(tempDir, 'ledger.json');
+      const envelope = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{
+          responseHash: string;
+          strictLaunchResponseJson: string;
+        }>;
+      };
+      const entry = envelope.data[0]!;
+      if (corruption === 'hash') {
+        entry.responseHash = stableHash('wrong-response');
+      } else {
+        const stored = JSON.parse(entry.strictLaunchResponseJson) as {
+          launchAttempt: { attemptId: string };
+        };
+        stored.launchAttempt.attemptId = '018f47a2-4a13-7c2f-8d44-deadbeef0000';
+        entry.strictLaunchResponseJson = JSON.stringify(stored);
+        entry.responseHash = stableHash(stored);
+      }
+      await fs.writeFile(ledgerPath, `${JSON.stringify(envelope)}\n`, 'utf8');
+
+      await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
+        corruption === 'hash'
+          ? 'Durable OpenCode strict launch response hash mismatch'
+          : 'Durable OpenCode strict launch response does not match its request'
+      );
+      expect(bridge.calls).toHaveLength(1);
+    }
+  );
+
+  it.each(['missing', 'wrong'] as const)(
+    'requires %s durable request-correlation evidence for pre-handshake replay',
+    async (corruption) => {
+      bridge.resultFactory = ({ body, options }) =>
+        bridgeSuccess({
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            idempotencyKey: body.preconditions.idempotencyKey,
+            runtimeStoreManifestHighWatermark: 10,
+            members: {},
+            launchAttempt: strictLaunchResponse(body as unknown as OpenCodeLaunchTeamCommandBody),
+          },
+        });
+      await createService().execute(buildLaunchInput());
+      const ledgerPath = path.join(tempDir, 'ledger.json');
+      const envelope = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{ requestCorrelationDigest?: string }>;
+      };
+      if (corruption === 'missing') {
+        delete envelope.data[0]!.requestCorrelationDigest;
+      } else {
+        envelope.data[0]!.requestCorrelationDigest = '0'.repeat(64);
+      }
+      await fs.writeFile(ledgerPath, `${JSON.stringify(envelope)}\n`, 'utf8');
+      const manifestRead = vi.spyOn(manifestReader, 'read');
+      const handshake = vi.spyOn(handshakePort, 'handshake');
+
+      await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
+        'outcome must be reconciled'
+      );
+      expect(manifestRead).not.toHaveBeenCalled();
+      expect(handshake).not.toHaveBeenCalled();
+      expect(bridge.calls).toHaveLength(1);
+    }
+  );
+
+  it('composes the runtime adapter through the durable bridge for partial continuation and replay', async () => {
+    bridge.resultFactory = ({ command, body, options }) => {
+      if (command === 'opencode.readiness') {
+        return bridgeSuccess({
+          requestId: options.requestId,
+          command,
+          data: readyOpenCodeLaunchReadiness(),
+        });
+      }
+      const launchBody = body as unknown as OpenCodeLaunchTeamCommandBody;
+      const response = strictLaunchResponse(launchBody);
+      if (launchBody.launchAttempt.generation === 1) {
+        makeStrictLaunchPartial(response, launchBody);
+      }
+      return bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: launchBody.runId,
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+          members: strictLaunchMembers(launchBody),
+          launchAttempt: response,
+        },
+      });
+    };
+    const adapterInput = buildAdapterLaunchInput();
+    const firstAdapter = createProductionAdapter(createService(), bridge);
+    const first = await firstAdapter.launch(adapterInput);
+    const partialSnapshot = buildPartialLaunchSnapshot(first.openCodeStrictLaunchAttempt!);
+
+    // Recreate every durable component over the same files to prove restart
+    // behavior, then replay generation two from the exact persisted cursor.
+    ledger = createOpenCodeBridgeCommandLedgerStore({
+      filePath: path.join(tempDir, 'ledger.json'),
+      clock: () => now,
+    });
+    leaseStore = createOpenCodeBridgeCommandLeaseStore({
+      filePath: path.join(tempDir, 'leases.json'),
+      idFactory: () => `lease-${nextLeaseId++}`,
+      clock: () => now,
+    });
+    const restartedAdapter = createProductionAdapter(createService(), bridge);
+    const continuationInput = { ...adapterInput, previousLaunchState: partialSnapshot };
+    const second = await restartedAdapter.launch(continuationInput);
+    const replay = await restartedAdapter.launch(continuationInput);
+
+    const dispatches = bridge.calls.filter((call) => call.command === 'opencode.launchTeam');
+    expect(dispatches).toHaveLength(2);
+    const firstAttempt = (dispatches[0]!.body as unknown as OpenCodeLaunchTeamCommandBody)
+      .launchAttempt;
+    const secondAttempt = (dispatches[1]!.body as unknown as OpenCodeLaunchTeamCommandBody)
+      .launchAttempt;
+    expect(secondAttempt).toMatchObject({
+      attemptId: firstAttempt.attemptId,
+      payloadHash: firstAttempt.payloadHash,
+      generation: 2,
+      continuationToken: 'opaque-continuation-token',
+    });
+    expect(dispatches[1]!.body.preconditions.idempotencyKey).toBe(firstAttempt.attemptId);
+    expect(second.teamLaunchState).toBe('clean_success');
+    expect(replay).toMatchObject({
+      teamLaunchState: second.teamLaunchState,
+      launchPhase: second.launchPhase,
+      members: {
+        alice: { launchState: 'confirmed_alive', sessionId: second.members.alice!.sessionId },
+        bob: { launchState: 'confirmed_alive', sessionId: second.members.bob!.sessionId },
+      },
+    });
+    await expect(ledger.list()).resolves.toHaveLength(2);
+    await expect(
+      ledger.getByIdempotencyKey(createOpenCodeStrictLaunchLedgerKey(firstAttempt.attemptId, 2))
+    ).resolves.toMatchObject({ status: 'completed' });
+  });
+
+  it('rejects skipped, stale, forked, and mismatched continuation generations', async () => {
+    bridge.resultFactory = strictLaunchBridgeResult(({ response, body }) => {
+      makeStrictLaunchPartial(response, body);
+    });
+    await createService().execute(buildLaunchInput());
+    const generation2 = buildContinuationInput(buildLaunchInput(), 2);
+
+    const skipped = buildContinuationInput(buildLaunchInput(), 3);
+    await expect(createService().execute(skipped)).rejects.toThrow('cannot skip or fork');
+    const wrongToken = buildContinuationInput(buildLaunchInput(), 2, 'wrong-token');
+    await expect(createService().execute(wrongToken)).rejects.toThrow(
+      'continuation evidence does not match'
+    );
+
+    bridge.resultFactory = strictLaunchBridgeResult();
+    await expect(createService().execute(generation2)).resolves.toMatchObject({ ok: true });
+    const forked = structuredClone(generation2);
+    (forked.body as OpenCodeLaunchTeamCommandBody).leadPrompt = 'forked payload';
+    await expect(createService().execute(forked)).rejects.toThrow(
+      'idempotency key reused with different payload'
+    );
+    await expect(createService().execute(skipped)).rejects.toThrow(
+      'continuation evidence does not match'
+    );
+    expect(bridge.calls).toHaveLength(2);
+  });
+
+  it('does not retry or continue an uncertain strict launch generation', async () => {
+    bridge.resultFactory = ({ command, options }) => ({
+      ok: false,
+      schemaVersion: 1,
+      requestId: options.requestId ?? 'cmd-1',
+      command,
+      completedAt: now.toISOString(),
+      durationMs: 10_000,
+      diagnostics: [],
+      error: {
+        kind: 'timeout',
+        message: 'transport outcome unknown',
+        retryable: false,
+      },
+    });
+    const generation1 = buildLaunchInput();
+    await expect(createService().execute(generation1)).resolves.toMatchObject({ ok: false });
+    await expect(createService().execute(generation1)).rejects.toThrow(
+      'outcome must be reconciled before retry'
+    );
+    await expect(createService().execute(buildContinuationInput(generation1, 2))).rejects.toThrow(
+      'predecessor must be durably completed'
+    );
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it.each(['missing', 'wrong'] as const)(
+    'rejects a strict success whose request-correlation echo is %s',
+    async (corruption) => {
+      bridge.resultFactory = ({ body, options }) => {
+        const launchAttempt = strictLaunchResponse(
+          body as unknown as OpenCodeLaunchTeamCommandBody
+        );
+        if (corruption === 'missing') {
+          delete launchAttempt.launchAttempt.requestCorrelationDigest;
+        } else {
+          launchAttempt.launchAttempt.requestCorrelationDigest = '0'.repeat(64);
+        }
+        return bridgeSuccess({
+          requestId: options.requestId,
+          data: {
+            runId: 'run-1',
+            idempotencyKey: body.preconditions.idempotencyKey,
+            runtimeStoreManifestHighWatermark: 10,
+            members: {},
+            launchAttempt,
+          },
+        });
+      };
+
+      await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
+        'launchAttempt.requestCorrelationDigest'
+      );
+      expect(bridge.calls).toHaveLength(1);
+      const launchBody = buildLaunchInput().body as OpenCodeLaunchTeamCommandBody;
+      await expect(
+        ledger.getByIdempotencyKey(launchBody.launchAttempt.attemptId)
+      ).resolves.toMatchObject({
+        status: 'unknown_after_timeout',
+        strictLaunchResponseJson: null,
+        requestCorrelationDigest: null,
+        lastError: expect.stringContaining('outcome must be reconciled'),
+      });
+    }
+  );
 
   it('waits briefly for an active lane lease instead of failing near-concurrent sends', async () => {
     clientIdentity.bridgeProtocol.supportedCommands.push('opencode.sendMessage');
@@ -513,21 +1048,22 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   );
 
   it('records empty bridge output as unknown outcome and blocks duplicate retry', async () => {
-    bridge.resultFactory = ({ body, command, options }) => ({
-      ok: false,
-      schemaVersion: 1,
-      requestId: options.requestId,
-      command,
-      completedAt: '2026-04-21T12:00:10.000Z',
-      durationMs: 100,
-      error: {
-        kind: 'contract_violation',
-        message: 'Bridge stdout was empty',
-        retryable: false,
-      },
-      diagnostics: [],
-      data: body,
-    } as OpenCodeBridgeResult<unknown>);
+    bridge.resultFactory = ({ body, command, options }) =>
+      ({
+        ok: false,
+        schemaVersion: 1,
+        requestId: options.requestId,
+        command,
+        completedAt: '2026-04-21T12:00:10.000Z',
+        durationMs: 100,
+        error: {
+          kind: 'contract_violation',
+          message: 'Bridge stdout was empty',
+          retryable: false,
+        },
+        diagnostics: [],
+        data: body,
+      }) as OpenCodeBridgeResult<unknown>;
     const service = createService();
 
     const first = await service.execute(buildLaunchInput());
@@ -545,7 +1081,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(diagnostics.append).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'opencode_bridge_unknown_outcome',
-        message: 'OpenCode bridge command exited without output; outcome must be reconciled before retry',
+        message:
+          'OpenCode bridge command exited without output; outcome must be reconciled before retry',
       })
     );
 
@@ -619,8 +1156,12 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     const recovery = await service.execute({
       ...buildLaunchInput(),
       body: {
-        prompt: 'launch',
+        ...(buildLaunchInput().body as OpenCodeLaunchTeamCommandBody),
         capabilitySnapshotRecoveryAttemptId: 'opencode-capability-recovery-test',
+        launchAttempt: {
+          ...(buildLaunchInput().body as OpenCodeLaunchTeamCommandBody).launchAttempt,
+          attemptId: '018f47a2-4a13-7c2f-8d44-c0ffee654321',
+        },
       },
     });
     expect(recovery).toMatchObject({
@@ -660,6 +1201,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
               message: 'Accepted fresh OpenCode capability snapshot after app recovery attempt.',
             },
           ],
+          members: {},
+          launchAttempt: strictLaunchResponse(body as unknown as OpenCodeLaunchTeamCommandBody),
         },
       });
     const service = createService();
@@ -667,7 +1210,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     const result = await service.execute({
       ...buildLaunchInput(),
       body: {
-        prompt: 'launch',
+        ...(buildLaunchInput().body as OpenCodeLaunchTeamCommandBody),
         capabilitySnapshotRecoveryAttemptId: 'opencode-capability-recovery-test',
       },
     });
@@ -683,6 +1226,9 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     overrides: {
       leaseAcquireTimeoutMs?: number;
       leaseAcquireRetryDelayMs?: number;
+      failpoints?: NonNullable<
+        ConstructorParameters<typeof OpenCodeStateChangingBridgeCommandService>[0]['failpoints']
+      >;
     } = {}
   ): OpenCodeStateChangingBridgeCommandService {
     return new OpenCodeStateChangingBridgeCommandService({
@@ -702,15 +1248,310 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
 });
 
 function buildLaunchInput(): Parameters<OpenCodeStateChangingBridgeCommandService['execute']>[0] {
+  const payloadHash = stableHash('launch-payload');
+  const opaque = (value: string) => `sha256:${stableHash(value)}` as const;
   return {
     command: 'opencode.launchTeam',
     teamName: 'team-a',
     runId: 'run-1',
     capabilitySnapshotId: 'cap-1',
     behaviorFingerprint: 'behavior-1',
-    body: { prompt: 'launch' },
+    body: {
+      prompt: 'launch',
+      runId: 'run-1',
+      laneId: 'primary',
+      teamId: 'team-a',
+      teamName: 'team-a',
+      projectPath: '/tmp/project',
+      selectedModel: 'openai/gpt-5.4-mini',
+      members: [
+        {
+          name: 'alice',
+          role: 'teammate',
+          prompt: 'launch alice',
+          memberIdentity: opaque('alice'),
+        },
+        {
+          name: 'bob',
+          role: 'teammate',
+          prompt: 'launch bob',
+          memberIdentity: opaque('bob'),
+        },
+      ],
+      leadPrompt: '',
+      expectedCapabilitySnapshotId: null,
+      manifestHighWatermark: null,
+      launchContractVersion: 1,
+      launchAttempt: {
+        attemptId: '018f47a2-4a13-7c2f-8d44-c0ffee123456',
+        payloadHash,
+        generation: 1,
+        proofNonce: 'proof-nonce',
+        parent: {
+          sessionIdentity: opaque('parent-session'),
+          messageIdentity: opaque('parent-message'),
+        },
+        providerId: 'openai',
+        modelId: 'openai/gpt-5.4-mini',
+        requiredMcpTools: ['agent-teams_message_send'],
+        requireFreshRetainedHostProof: true,
+      },
+    },
     cwd: '/tmp/project',
     timeoutMs: 10_000,
+  };
+}
+
+function strictLaunchResponse(body: OpenCodeLaunchTeamCommandBody): OpenCodeLaunchAttemptResponse {
+  const opaque = (value: string) => `sha256:${stableHash(value)}` as const;
+  const sessionIdentity = (id: string) =>
+    `sha256:${createHash('sha256')
+      .update(JSON.stringify({ kind: 'opencode-session', id }))
+      .digest('hex')}` as const;
+  const host = {
+    hostKeyIdentity: opaque('host'),
+    processId: 42,
+    processStartedAtMs: 1_776_600_000_001,
+    profileScopeIdentity: opaque('profile'),
+  };
+  return {
+    launchAttempt: {
+      contractVersion: 1 as const,
+      attemptId: body.launchAttempt.attemptId,
+      idempotencyKey: 'attemptId' as const,
+      payloadHash: body.launchAttempt.payloadHash,
+      generation: body.launchAttempt.generation,
+      inputDigest: orchestratorVector.wire.response.launchAttempt.inputDigest,
+      immutableDigest: orchestratorVector.wire.response.launchAttempt.immutableDigest,
+      requestCorrelationDigest: body.launchAttempt.requestCorrelationDigest,
+      outcome: 'succeeded' as const,
+      phase: 'complete' as const,
+      startedAt: 1_776_600_000_000,
+      workDeadlineAt: 1_776_600_060_000,
+      absoluteDeadlineAt: 1_776_600_075_000,
+      cleanupReserveMs: 15_000,
+      elapsedMs: 2_500,
+      providerId: body.launchAttempt.providerId,
+      modelId: body.launchAttempt.modelId,
+      profilePurpose: 'launch_attempt',
+      projectIdentity: opaque('project'),
+      profileIdentity: host.profileScopeIdentity,
+      configIdentity: opaque('config'),
+      authIdentity: opaque('auth'),
+      pluginPolicyIdentity: opaque('plugin'),
+      cacheIdentity: opaque('cache'),
+      binaryIdentity: opaque('binary'),
+      retainedHostIdentity: host,
+      processStartedAtMs: host.processStartedAtMs,
+    },
+    proof: {
+      generation: body.launchAttempt.generation,
+      attemptId: body.launchAttempt.attemptId,
+      parent: body.launchAttempt.parent,
+      providerId: body.launchAttempt.providerId,
+      modelId: body.launchAttempt.modelId,
+      retainedHostIdentity: host,
+      observedMcpTools: [...body.launchAttempt.requiredMcpTools],
+      nonceHash: createHash('sha256').update(body.launchAttempt.proofNonce, 'utf8').digest('hex'),
+      sessionIdentity: opaque('proof-session'),
+      promptMessageIdentity: opaque('proof-prompt'),
+      assistantMessageIdentity: opaque('proof-assistant'),
+      verifiedAt: 1_776_600_030_000,
+      authorizationSource: 'fresh_live_attempt' as const,
+      cacheUsed: false as const,
+      requestCorrelationDigest: body.launchAttempt.requestCorrelationDigest,
+    },
+    members: {
+      committed: body.members.map((member, index) => ({
+        memberIdentity: member.memberIdentity,
+        sessionIdentity: sessionIdentity(`session-${index}`),
+        bootstrapMessageIdentity: opaque(`bootstrap-${index}`),
+        commitIdentity: opaque(`commit-${index}`),
+      })),
+      failed: [],
+      pending: [],
+      cleanupPending: [],
+    },
+  };
+}
+
+function strictLaunchMembers(body: OpenCodeLaunchTeamCommandBody) {
+  return Object.fromEntries(
+    body.members.map((member, index) => [
+      member.name,
+      {
+        sessionId: `session-${index}`,
+        launchState: 'confirmed_alive' as const,
+        model: body.selectedModel,
+        evidence: [],
+      },
+    ])
+  );
+}
+
+function strictLaunchBridgeResult(
+  mutate?: (input: {
+    body: OpenCodeLaunchTeamCommandBody;
+    response: OpenCodeLaunchAttemptResponse;
+  }) => void
+): FakeBridgeExecutor['resultFactory'] {
+  return ({ body, options }) => {
+    const launchBody = body as unknown as OpenCodeLaunchTeamCommandBody;
+    const response = strictLaunchResponse(launchBody);
+    mutate?.({ body: launchBody, response });
+    return bridgeSuccess({
+      requestId: options.requestId,
+      data: {
+        runId: launchBody.runId,
+        idempotencyKey: body.preconditions.idempotencyKey,
+        runtimeStoreManifestHighWatermark: 10,
+        members: strictLaunchMembers(launchBody),
+        launchAttempt: response,
+      },
+    });
+  };
+}
+
+function makeStrictLaunchPartial(
+  response: OpenCodeLaunchAttemptResponse,
+  body: OpenCodeLaunchTeamCommandBody
+): void {
+  response.launchAttempt.outcome = 'partial';
+  response.launchAttempt.phase = 'cleanup';
+  response.members.committed = response.members.committed.slice(0, 1);
+  response.members.failed = [
+    {
+      memberIdentity: body.members[1]!.memberIdentity,
+      failure: {
+        code: 'rate_limited',
+        origin: 'provider',
+        retryDisposition: 'backoff',
+        retryable: true,
+        phase: 'member_materialize',
+        sideEffectsStarted: false,
+      },
+    },
+  ];
+  response.members.continuationToken = 'opaque-continuation-token';
+  response.failure = {
+    code: 'deadline_after_partial',
+    origin: 'deadline',
+    retryDisposition: 'continuation',
+    retryable: true,
+    phase: 'member_materialize',
+    sideEffectsStarted: true,
+  };
+}
+
+function buildContinuationInput(
+  input: Parameters<OpenCodeStateChangingBridgeCommandService['execute']>[0],
+  generation: number,
+  continuationToken = 'opaque-continuation-token'
+): Parameters<OpenCodeStateChangingBridgeCommandService['execute']>[0] {
+  const continuation = structuredClone(input);
+  const body = continuation.body as OpenCodeLaunchTeamCommandBody;
+  body.launchAttempt.generation = generation;
+  body.launchAttempt.proofNonce = stableHash({
+    attemptId: body.launchAttempt.attemptId,
+    generation,
+  });
+  body.launchAttempt.continuationToken = continuationToken;
+  return continuation;
+}
+
+function createProductionAdapter(
+  stateChangingCommands: OpenCodeStateChangingBridgeCommandService,
+  rawBridge: FakeBridgeExecutor
+): OpenCodeTeamRuntimeAdapter {
+  return new OpenCodeTeamRuntimeAdapter(
+    new OpenCodeReadinessBridge(rawBridge, {
+      stateChangingCommands,
+      launchTimeoutMs: 10_000,
+    })
+  );
+}
+
+function buildAdapterLaunchInput(): TeamRuntimeLaunchInput {
+  return {
+    runId: 'run-1',
+    teamName: 'team-a',
+    cwd: '/tmp/project',
+    providerId: 'opencode',
+    model: 'openai/gpt-5.4-mini',
+    skipPermissions: true,
+    expectedMembers: ['alice', 'bob'].map((name) => ({
+      name,
+      providerId: 'opencode' as const,
+      model: 'openai/gpt-5.4-mini',
+      cwd: '/tmp/project',
+    })),
+    previousLaunchState: null,
+  };
+}
+
+function buildPartialLaunchSnapshot(
+  attempt: PersistedOpenCodeStrictLaunchAttempt
+): NonNullable<TeamRuntimeLaunchInput['previousLaunchState']> {
+  return {
+    version: 3,
+    teamName: 'team-a',
+    updatedAt: '2026-04-21T12:00:01.000Z',
+    launchPhase: 'active',
+    expectedMembers: ['alice', 'bob'],
+    teamLaunchState: 'partial_pending',
+    summary: {
+      confirmedCount: 1,
+      pendingCount: 1,
+      failedCount: 0,
+      runtimeAlivePendingCount: 1,
+    },
+    members: {
+      alice: persistedSnapshotMember('alice', 'confirmed_alive'),
+      bob: persistedSnapshotMember('bob', 'runtime_pending_bootstrap'),
+    },
+    openCodeStrictLaunchAttempt: attempt,
+  };
+}
+
+function persistedSnapshotMember(
+  name: string,
+  launchState: 'confirmed_alive' | 'runtime_pending_bootstrap'
+) {
+  return {
+    name,
+    launchState,
+    agentToolAccepted: launchState === 'confirmed_alive',
+    runtimeAlive: launchState === 'confirmed_alive',
+    bootstrapConfirmed: launchState === 'confirmed_alive',
+    hardFailure: false,
+    lastEvaluatedAt: '2026-04-21T12:00:01.000Z',
+    diagnostics: [],
+  };
+}
+
+function readyOpenCodeLaunchReadiness(): OpenCodeTeamLaunchReadiness {
+  return {
+    state: 'ready',
+    launchAllowed: true,
+    modelId: 'openai/gpt-5.4-mini',
+    availableModels: ['openai/gpt-5.4-mini'],
+    opencodeVersion: '1.0.0',
+    installMethod: 'brew',
+    binaryPath: '/usr/local/bin/opencode',
+    hostHealthy: true,
+    appMcpConnected: true,
+    requiredToolsPresent: true,
+    permissionBridgeReady: true,
+    runtimeStoresReady: true,
+    supportLevel: 'production_supported',
+    missing: [],
+    diagnostics: [],
+    evidence: {
+      capabilitiesReady: true,
+      mcpToolProofRoute: '/experimental/tool/ids',
+      observedMcpTools: [...REQUIRED_AGENT_TEAMS_APP_TOOL_IDS],
+      runtimeStoreReadinessReason: 'runtime_store_manifest_valid',
+    },
   };
 }
 
@@ -810,8 +1651,9 @@ function peerIdentity(
         'opencode.launchTeam',
         'opencode.stopTeam',
       ],
-      opencodeAppManagedBootstrapContractVersion:
-        OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      openCodeLaunchAttemptContract: 1,
+      openCodeLaunchRequestCorrelationContract: 1,
     },
     runtime: {
       providerId: 'opencode',

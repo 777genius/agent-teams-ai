@@ -640,7 +640,7 @@ function buildOpenCodeRuntimeMemberLivenessSnapshot<Run extends OpenCodeRuntimeC
   const snapshot = createPersistedLaunchSnapshot({
     teamName: input.teamName,
     expectedMembers: [...new Set([...expectedMembers, input.memberName])],
-    leadSessionId: previous?.leadSessionId,
+    leadSessionId: previous?.leadSessionId, runtimeRunId: previous?.runtimeRunId ?? input.runId, primaryLaneIdentity: previous?.primaryLaneIdentity,
     launchPhase: previous?.launchPhase ?? 'active',
     members: {
       ...(previous?.members ?? {}),

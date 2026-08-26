@@ -47,12 +47,14 @@ export interface TeamRuntimeLaunchArgsPlan {
 }
 
 export interface TeamMetaLike {
+  launchIdentity?: ProviderModelLaunchIdentity;
   providerId?: TeamProviderId;
   providerBackendId?: string;
   cwd?: string;
   prompt?: string;
   model?: string;
   effort?: EffortLevel;
+  leadRuntimeSelectionProvenance?: TeamCreateRequest['leadRuntimeSelectionProvenance'];
   fastMode?: TeamFastMode;
   limitContext?: boolean;
   skipPermissions?: boolean;
@@ -79,7 +81,8 @@ export interface TeamProvisioningMemberLifecycleSharedStatePorts {
 
 export interface TeamProvisioningMemberLifecycleStorePorts {
   mcpConfigBuilder: Pick<TeamMcpConfigBuilder, 'writeConfigFile'>;
-  membersMetaStore: Pick<TeamMembersMetaStore, 'getMembers'>;
+  membersMetaStore: Pick<TeamMembersMetaStore, 'getMembers'> &
+    Partial<Pick<TeamMembersMetaStore, 'withRosterLock'>>;
   teamMetaStore: { getMeta(teamName: string): Promise<TeamMetaLike | null> };
   readConfigForStrictDecision(teamName: string): Promise<TeamConfig | null>;
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
@@ -109,6 +112,7 @@ export interface TeamProvisioningMemberLifecycleMemberSpecPorts {
     members: TeamCreateRequest['members'];
     defaults: {
       providerId: TeamProviderId;
+      providerBackendId?: TeamCreateRequest['providerBackendId'];
       model?: string;
       effort?: EffortLevel;
     };

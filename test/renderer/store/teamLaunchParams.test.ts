@@ -5,6 +5,8 @@ import {
   areTeamLaunchParamsEqual,
   buildLaunchParamsFromRuntimeRequest,
   extractBaseModel,
+  parseStoredTeamLaunchParams,
+  saveTeamLaunchParams,
 } from '../../../src/renderer/store/team/teamLaunchParams';
 
 import type { TeamLaunchParams } from '../../../src/renderer/store/team/teamLaunchParams';
@@ -103,21 +105,24 @@ describe('teamLaunchParams', () => {
     });
   });
 
-  it('migrates legacy provider backend ids for codex requests', () => {
-    expect(
-      buildLaunchParamsFromRuntimeRequest({
+  it.each(['api', 'adapter', 'auto', 'codex-native'] as const)(
+    'preserves live/current Codex backend %s while building launch params',
+    (providerBackendId) => {
+      expect(
+        buildLaunchParamsFromRuntimeRequest({
+          providerId: 'codex',
+          providerBackendId,
+        })
+      ).toEqual({
         providerId: 'codex',
-        providerBackendId: 'api',
-      })
-    ).toEqual({
-      providerId: 'codex',
-      providerBackendId: 'codex-native',
-      model: 'default',
-      effort: undefined,
-      fastMode: undefined,
-      limitContext: false,
-    });
-  });
+        providerBackendId,
+        model: 'default',
+        effort: undefined,
+        fastMode: undefined,
+        limitContext: false,
+      });
+    }
+  );
 
   it('compares launch params by all persisted fields', () => {
     expect(areTeamLaunchParamsEqual(codexFallback, { ...codexFallback })).toBe(true);
@@ -141,6 +146,12 @@ describe('teamLaunchParams', () => {
       ...codexFallback,
       model: 'gpt-5.6-sol',
       effort: 'high',
+      leadRuntimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'default',
+        model: 'explicit',
+        effort: 'explicit',
+      },
     });
   });
 
@@ -151,5 +162,83 @@ describe('teamLaunchParams', () => {
         effort: 'medium',
       })
     ).toBeUndefined();
+  });
+
+  it('distinguishes historical unversioned storage from current versioned storage', () => {
+    expect(
+      parseStoredTeamLaunchParams(JSON.stringify({ providerId: 'codex', providerBackendId: 'api' }))
+    ).toMatchObject({ providerBackendId: 'codex-native' });
+    expect(
+      parseStoredTeamLaunchParams(
+        JSON.stringify({
+          version: 1,
+          params: { providerId: 'codex', providerBackendId: 'api' },
+        })
+      )
+    ).toMatchObject({ providerBackendId: 'api' });
+    expect(
+      parseStoredTeamLaunchParams(JSON.stringify({ version: 1, params: { providerId: 'codex' } }))
+    ).toMatchObject({ providerId: 'codex', providerBackendId: undefined });
+    expect(parseStoredTeamLaunchParams(JSON.stringify({ providerId: 'codex' }))).toMatchObject({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+    });
+  });
+
+  it.each([
+    { providerId: 'codex', model: 42 },
+    { providerId: 'unknown' },
+    { providerId: 'gemini', providerBackendId: 'codex-native' },
+    { providerId: 'codex', effort: 'impossible' },
+    { providerId: 'codex', fastMode: true },
+    { providerId: 'codex', limitContext: 'yes' },
+    { providerId: 'codex', unexpected: 'field' },
+  ])('rejects corrupt current-version params without throwing: %j', (params) => {
+    expect(parseStoredTeamLaunchParams(JSON.stringify({ version: 1, params }))).toBeNull();
+  });
+
+  it.each([
+    '{not-json',
+    JSON.stringify({ version: 1, params: {}, unexpected: true }),
+    JSON.stringify({ version: 2, params: {} }),
+    JSON.stringify({ version: { future: true }, params: {} }),
+  ])('rejects malformed or unknown envelope shape without throwing', (raw) => {
+    expect(() => parseStoredTeamLaunchParams(raw)).not.toThrow();
+    expect(parseStoredTeamLaunchParams(raw)).toBeNull();
+  });
+
+  it('conservatively ignores corrupt historical fields during unversioned migration', () => {
+    expect(
+      parseStoredTeamLaunchParams(
+        JSON.stringify({
+          providerId: 'codex',
+          providerBackendId: 42,
+          model: 42,
+          effort: 'impossible',
+          fastMode: false,
+          limitContext: 'yes',
+          historicalExtra: true,
+        })
+      )
+    ).toEqual({
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: undefined,
+      effort: undefined,
+      fastMode: undefined,
+      limitContext: undefined,
+    });
+  });
+
+  it('persists current launch params in a versioned provenance envelope', () => {
+    saveTeamLaunchParams('versioned-team', {
+      providerId: 'codex',
+      providerBackendId: 'adapter',
+    });
+    expect(JSON.parse(localStorage.getItem('team:launchParams:versioned-team') ?? '{}')).toEqual({
+      version: 1,
+      params: { providerId: 'codex', providerBackendId: 'adapter' },
+    });
+    localStorage.removeItem('team:launchParams:versioned-team');
   });
 });

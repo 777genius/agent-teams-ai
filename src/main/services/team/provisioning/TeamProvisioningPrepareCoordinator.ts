@@ -19,6 +19,7 @@ import {
   type ProvisioningEnvResolution,
   type TeamRuntimeAuthContext,
 } from './TeamProvisioningEnvBuilder';
+import { copyLaunchPreparationEvidence } from './TeamProvisioningLaunchPreparationEvidence';
 import {
   buildEffectiveTeamMemberSpec,
   normalizeTeamMemberProviderId,
@@ -28,8 +29,10 @@ import {
   selectOpenCodePrepareProviderDiagnostic,
 } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { prepareSelectedOpenCodeModelsForProvisioning } from './TeamProvisioningOpenCodeModelPreparation';
-import { isAuthFailureWarning, isQuotaRetryMessage } from './TeamProvisioningOutputErrorPolicy';
+import { isAuthFailureWarning } from './TeamProvisioningOutputErrorPolicy';
+import { runExactBackendOneShotDiagnostics } from './TeamProvisioningPrepareBackendDiagnostics';
 import { createPrepareForProvisioningInFlightKey as buildPrepareForProvisioningInFlightKey } from './TeamProvisioningPrepareCachePolicy';
+import { buildPrepareResultWithEvidence } from './TeamProvisioningPrepareResultEvidence';
 import { isBinaryProbeWarning, isTransientProbeWarning } from './TeamProvisioningProbeWarnings';
 import {
   appendPreflightDebugLog,
@@ -55,7 +58,7 @@ import {
   type RuntimeStatusCommandResponse,
 } from './TeamProvisioningRuntimeLaunchSelection';
 
-import type { TeamLaunchRuntimeAdapter } from '../runtime';
+import type { OpenCodeStrictLaunchDelegationValidator, TeamLaunchRuntimeAdapter } from '../runtime';
 import type { OpenCodeSelectedModelPreparationInput } from './TeamProvisioningOpenCodeModelPreparation';
 import type {
   CachedProbeResult,
@@ -73,7 +76,6 @@ import type {
   TeamProvisioningPrepareResult,
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
-
 export { createDefaultTeamProvisioningPrepareCoordinatorPorts } from './TeamProvisioningPrepareCoordinatorDefaults';
 export type {
   CachedProbeResult,
@@ -82,7 +84,6 @@ export type {
   ProviderProbePublication,
 } from './TeamProvisioningProviderProbeCache';
 export { createInMemoryProviderProbeCachePort } from './TeamProvisioningProviderProbeCache';
-
 export interface PrepareForProvisioningOptions {
   forceFresh?: boolean;
   providerId?: TeamProviderId;
@@ -91,14 +92,15 @@ export interface PrepareForProvisioningOptions {
   modelChecks?: TeamProvisioningModelCheckRequest[];
   limitContext?: boolean;
   modelVerificationMode?: TeamProvisioningModelVerificationMode;
+  allowExperimentalLocalModels?: boolean;
 }
-
 export interface TeamProvisioningPrepareCoordinatorPorts {
   providerProbeCache: ProviderProbeCachePort;
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
+  getOpenCodeStrictLaunchDelegationValidator(): OpenCodeStrictLaunchDelegationValidator | null;
   buildProvisioningEnv(
     providerId?: TeamProviderId,
-    providerBackendId?: string,
+    providerBackendId?: string | null,
     options?: { teamRuntimeAuth?: TeamRuntimeAuthContext }
   ): Promise<ProvisioningEnvResolution>;
   runProviderOneShotDiagnostic(
@@ -106,12 +108,14 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId: TeamProviderId,
-    providerArgs: string[]
-  ): Promise<{ warning?: string }>;
+    providerArgs: string[],
+    exactCheck?: TeamProvisioningModelCheckRequest
+  ): Promise<{ warning?: string; targetedLiveness?: TeamProvisioningModelCheckRequest }>;
   readRuntimeProviderLaunchFacts(params: {
     claudePath: string;
     cwd: string;
     providerId: TeamProviderId;
+    providerBackendId?: string | null;
     env: NodeJS.ProcessEnv;
     providerArgs?: string[];
     limitContext?: boolean;
@@ -139,6 +143,7 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     claudePath: string;
     cwd: string;
     providerId: TeamProviderId;
+    providerBackendId?: string | null;
     modelIds: string[];
     modelChecks?: { modelId: string; effort?: EffortLevel }[];
     limitContext: boolean;
@@ -160,7 +165,6 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
   info(message: string): void;
   warn(message: string): void;
 }
-
 export class TeamProvisioningPrepareCoordinator {
   private readonly prepareForProvisioningInFlight = new Map<
     string,
@@ -195,7 +199,6 @@ export class TeamProvisioningPrepareCoordinator {
     if (inFlight) {
       return this.clonePrepareForProvisioningResult(await inFlight);
     }
-
     const request = this.prepareForProvisioningOnce(cwd, opts).finally(() => {
       if (this.prepareForProvisioningInFlight.get(inFlightKey) === request) {
         this.prepareForProvisioningInFlight.delete(inFlightKey);
@@ -204,20 +207,17 @@ export class TeamProvisioningPrepareCoordinator {
     this.prepareForProvisioningInFlight.set(inFlightKey, request);
     return this.clonePrepareForProvisioningResult(await request);
   }
-
   createPrepareForProvisioningInFlightKey(
     cwd?: string,
     opts?: PrepareForProvisioningOptions
   ): string {
     return buildPrepareForProvisioningInFlightKey(cwd, opts);
   }
-
   clonePrepareForProvisioningResult(
     result: TeamProvisioningPrepareResult
   ): TeamProvisioningPrepareResult {
-    return structuredClone(result);
+    return copyLaunchPreparationEvidence(result, structuredClone(result));
   }
-
   async prepareForProvisioningOnce(
     cwd?: string,
     opts?: PrepareForProvisioningOptions
@@ -229,6 +229,7 @@ export class TeamProvisioningPrepareCoordinator {
     const providerIds = Array.from(
       new Set(
         [opts?.providerId, ...(opts?.providerIds ?? [])]
+          .filter((providerId): providerId is TeamProviderId => providerId != null)
           .map((providerId) => resolveTeamProviderId(providerId))
           .filter((providerId): providerId is TeamProviderId => Boolean(providerId))
       )
@@ -236,40 +237,41 @@ export class TeamProvisioningPrepareCoordinator {
     if (providerIds.length === 0) {
       providerIds.push('anthropic');
     }
-
     if (opts?.forceFresh) {
       for (const providerId of providerIds) {
         this.clearProbeCache(targetCwdForValidation, providerId);
       }
     }
-
     const targetCwd = cwd?.trim() || process.cwd();
     if (!path.isAbsolute(targetCwd)) {
       throw new Error('cwd must be an absolute path');
     }
-
     const warnings: string[] = [];
     const details: string[] = [];
     const blockingMessages: string[] = [];
     const issues: TeamProvisioningPrepareIssue[] = [];
     const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
+    const processedModelChecks: TeamProvisioningModelCheckRequest[] = [];
+    const nativeModelTargetedLivenessChecks: TeamProvisioningModelCheckRequest[] = [];
+    const openCodeStrictDelegationChecks: TeamProvisioningModelCheckRequest[] = [];
     const selectedModelIds = Array.from(
       new Set((opts?.modelIds ?? []).map((modelId) => modelId.trim()).filter(Boolean))
     );
     const selectedModelChecks = normalizeProvisioningModelCheckRequests(opts?.modelChecks);
     const useStructuredModelChecks = selectedModelChecks.length > 0;
-
     for (const providerId of providerIds) {
       const providerModelChecks = selectedModelChecks
         .filter((check) => check.providerId === providerId)
         .map((check) => ({
           modelId: check.model,
+          providerBackendId: Object.hasOwn(check, 'providerBackendId')
+            ? (check.providerBackendId ?? null)
+            : undefined,
           ...(check.effort ? { effort: check.effort } : {}),
         }));
       const providerSelectedModelIds = useStructuredModelChecks
         ? Array.from(new Set(providerModelChecks.map((check) => check.modelId)))
         : selectedModelIds;
-
       if (providerId === 'opencode') {
         const adapter = this.ports.getOpenCodeRuntimeAdapter();
         if (!adapter) {
@@ -278,7 +280,6 @@ export class TeamProvisioningPrepareCoordinator {
           );
           continue;
         }
-
         if (providerSelectedModelIds.length === 0) {
           const prepare = await adapter.prepare({
             runId: `prepare-${randomUUID()}`,
@@ -313,23 +314,70 @@ export class TeamProvisioningPrepareCoordinator {
           }
           continue;
         }
-
-        const openCodeModelPrepare = await prepareSelectedOpenCodeModelsForProvisioning({
-          adapter,
-          cwd: targetCwd,
-          modelIds: providerSelectedModelIds,
-          verificationMode: opts?.modelVerificationMode ?? 'deep',
-          appendPreflightDebugLog,
-          inspectLocalModelRuntime: this.ports.inspectOpenCodeLocalModelRuntime,
-        });
-        details.push(...openCodeModelPrepare.details);
-        warnings.push(...openCodeModelPrepare.warnings);
-        blockingMessages.push(...openCodeModelPrepare.blockingMessages);
-        issues.push(...openCodeModelPrepare.issues);
-        pushUniqueSupportDiagnostics(supportDiagnostics, openCodeModelPrepare.supportDiagnostics);
+        const exactChecks = selectedModelChecks.filter((check) => check.providerId === providerId);
+        const checkGroups = new Map<string, TeamProvisioningModelCheckRequest[]>();
+        for (const check of exactChecks) {
+          const backendKey = Object.hasOwn(check, 'providerBackendId')
+            ? (check.providerBackendId ?? '<null>')
+            : '<missing>';
+          checkGroups.set(backendKey, [...(checkGroups.get(backendKey) ?? []), check]);
+        }
+        const groups =
+          checkGroups.size > 0
+            ? Array.from(checkGroups.values())
+            : [providerSelectedModelIds.map((model) => ({ providerId, model, effort: undefined }))];
+        for (const group of groups) {
+          const openCodeModelPrepare = await prepareSelectedOpenCodeModelsForProvisioning({
+            adapter,
+            cwd: targetCwd,
+            modelIds: Array.from(new Set(group.map((check) => check.model))),
+            modelChecks: group.map((check) => ({
+              modelId: check.model,
+              ...(check.effort ? { effort: check.effort } : {}),
+            })),
+            verificationMode: opts?.modelVerificationMode ?? 'deep',
+            allowExperimentalLocalModels: opts?.allowExperimentalLocalModels === true,
+            appendPreflightDebugLog,
+            inspectLocalModelRuntime: this.ports.inspectOpenCodeLocalModelRuntime,
+          });
+          details.push(...openCodeModelPrepare.details);
+          warnings.push(...openCodeModelPrepare.warnings);
+          blockingMessages.push(...openCodeModelPrepare.blockingMessages);
+          issues.push(...openCodeModelPrepare.issues);
+          pushUniqueSupportDiagnostics(supportDiagnostics, openCodeModelPrepare.supportDiagnostics);
+          const preparedChecks = openCodeModelPrepare.processedModelChecks.flatMap(
+            (processedCheck) =>
+              group
+                .filter(
+                  (check) =>
+                    check.model === processedCheck.modelId &&
+                    (check.effort ?? undefined) === (processedCheck.effort ?? undefined)
+                )
+                .slice(0, 1)
+          );
+          processedModelChecks.push(...preparedChecks);
+          if (preparedChecks.length > 0) {
+            const validateDelegation = this.ports.getOpenCodeStrictLaunchDelegationValidator();
+            if (!validateDelegation) {
+              blockingMessages.push('OpenCode strict launch delegation validation is unavailable.');
+            } else {
+              for (const check of preparedChecks) {
+                const delegation = await validateDelegation({
+                  cwd: targetCwd,
+                });
+                if (!delegation.ok) {
+                  blockingMessages.push(
+                    `OpenCode strict launch delegation validation failed: ${delegation.reason}`
+                  );
+                  continue;
+                }
+                openCodeStrictDelegationChecks.push(check);
+              }
+            }
+          }
+        }
         continue;
       }
-
       const cached = this.getFreshCachedProbeResult(targetCwdForValidation, providerId);
       const probeResult = cached
         ? cachedProviderProbeResultToProbeResult(cached)
@@ -337,7 +385,6 @@ export class TeamProvisioningPrepareCoordinator {
       if (!probeResult?.claudePath) {
         throw buildMissingCliError();
       }
-
       const providerLabel = getTeamProviderLabel(providerId);
       const { authSource } = probeResult;
       if (authSource === 'anthropic_api_key' || authSource === 'anthropic_api_key_helper') {
@@ -347,100 +394,63 @@ export class TeamProvisioningPrepareCoordinator {
           `Auth: using ANTHROPIC_AUTH_TOKEN mapped to ANTHROPIC_API_KEY for ${providerLabel}`
         );
       }
-
       const appendSelectedModelVerification = async (): Promise<void> => {
         if (providerSelectedModelIds.length === 0) {
           return;
         }
-
-        const modelVerification = await (
-          this.ports.verifySelectedProviderModels ?? this.verifySelectedProviderModels.bind(this)
-        )({
+        const checksByBackend = new Map<string, typeof providerModelChecks>();
+        for (const check of providerModelChecks) {
+          const key =
+            check.providerBackendId === undefined
+              ? '<missing>'
+              : (check.providerBackendId ?? '<null>');
+          checksByBackend.set(key, [...(checksByBackend.get(key) ?? []), check]);
+        }
+        if (checksByBackend.size === 0) checksByBackend.set('<missing>', []);
+        for (const checksForBackend of checksByBackend.values()) {
+          const providerBackendId = checksForBackend[0]?.providerBackendId;
+          const modelVerification = await (
+            this.ports.verifySelectedProviderModels ?? this.verifySelectedProviderModels.bind(this)
+          )({
+            claudePath: probeResult.claudePath,
+            cwd: targetCwd,
+            providerId,
+            providerBackendId,
+            modelIds:
+              checksForBackend.length > 0
+                ? Array.from(new Set(checksForBackend.map((check) => check.modelId)))
+                : providerSelectedModelIds,
+            modelChecks: checksForBackend,
+            limitContext: opts?.limitContext === true,
+          });
+          details.push(...modelVerification.details);
+          warnings.push(...modelVerification.warnings);
+          blockingMessages.push(...modelVerification.blockingMessages);
+          issues.push(...(modelVerification.issues ?? []));
+        }
+      };
+      const appendOneShotDiagnostic = async (): Promise<void> => {
+        const diagnostic = await runExactBackendOneShotDiagnostics({
+          providerId,
+          providerLabel,
+          providerCount: providerIds.length,
+          backendIds: Array.from(
+            new Set(providerModelChecks.map((check) => check.providerBackendId))
+          ),
+          modelChecks: selectedModelChecks.filter((check) => check.providerId === providerId),
+          modelVerificationMode: opts?.modelVerificationMode,
+          authSource,
           claudePath: probeResult.claudePath,
           cwd: targetCwd,
-          providerId,
-          modelIds: providerSelectedModelIds,
-          modelChecks: providerModelChecks,
-          limitContext: opts?.limitContext === true,
+          buildProvisioningEnv: (id, backendId) => this.ports.buildProvisioningEnv(id, backendId),
+          runProviderOneShotDiagnostic: (...args) =>
+            this.ports.runProviderOneShotDiagnostic(...args),
         });
-        details.push(...modelVerification.details);
-        warnings.push(...modelVerification.warnings);
-        blockingMessages.push(...modelVerification.blockingMessages);
-        issues.push(...(modelVerification.issues ?? []));
+        warnings.push(...diagnostic.warnings);
+        blockingMessages.push(...diagnostic.blockingMessages);
+        processedModelChecks.push(...diagnostic.targetedLivenessChecks);
+        nativeModelTargetedLivenessChecks.push(...diagnostic.targetedLivenessChecks);
       };
-
-      const appendOneShotDiagnostic = async (): Promise<void> => {
-        let envResolution: ProvisioningEnvResolution | null = null;
-        const ensureEnvResolution = async (): Promise<ProvisioningEnvResolution> => {
-          if (!envResolution) {
-            envResolution = await this.ports.buildProvisioningEnv(providerId);
-          }
-          return envResolution;
-        };
-
-        let shouldRequireRuntimePingForAnthropicDirectCredential =
-          isAnthropicDirectCredentialAuthSource(authSource);
-        if (
-          resolveTeamProviderId(providerId) === 'anthropic' &&
-          !shouldRequireRuntimePingForAnthropicDirectCredential
-        ) {
-          const resolvedEnv = await ensureEnvResolution();
-          shouldRequireRuntimePingForAnthropicDirectCredential =
-            isAnthropicDirectCredentialAuthSource(resolvedEnv.authSource);
-          if (resolvedEnv.authSource === 'configured_api_key_missing' && resolvedEnv.warning) {
-            blockingMessages.push(
-              providerIds.length > 1
-                ? `${providerLabel}: ${resolvedEnv.warning}`
-                : resolvedEnv.warning
-            );
-            return;
-          }
-        }
-
-        if (
-          opts?.modelVerificationMode !== 'deep' &&
-          !shouldRequireRuntimePingForAnthropicDirectCredential
-        ) {
-          return;
-        }
-        const resolvedEnv = await ensureEnvResolution();
-        if (resolvedEnv.warning) {
-          const prefixedWarning =
-            providerIds.length > 1
-              ? `${providerLabel}: ${resolvedEnv.warning}`
-              : resolvedEnv.warning;
-          if (resolvedEnv.authSource === 'configured_api_key_missing') {
-            blockingMessages.push(prefixedWarning);
-            return;
-          }
-          warnings.push(prefixedWarning);
-          return;
-        }
-        const diagnostic = await this.ports.runProviderOneShotDiagnostic(
-          probeResult.claudePath,
-          targetCwd,
-          resolvedEnv.env,
-          providerId,
-          resolvedEnv.providerArgs ?? []
-        );
-        if (diagnostic.warning) {
-          const prefixedWarning =
-            providerIds.length > 1 ? `${providerLabel}: ${diagnostic.warning}` : diagnostic.warning;
-          if (
-            shouldRequireRuntimePingForAnthropicDirectCredential &&
-            isAuthFailureWarning(diagnostic.warning, 'probe')
-          ) {
-            blockingMessages.push(prefixedWarning);
-            return;
-          }
-          if (isQuotaRetryMessage(diagnostic.warning)) {
-            blockingMessages.push(prefixedWarning);
-            return;
-          }
-          warnings.push(prefixedWarning);
-        }
-      };
-
       if (!probeResult.warning) {
         const blockingCountBeforeModelChecks = blockingMessages.length;
         await appendSelectedModelVerification();
@@ -449,7 +459,6 @@ export class TeamProvisioningPrepareCoordinator {
         }
         continue;
       }
-
       {
         const prefixedWarning =
           providerIds.length > 1 ? `${providerLabel}: ${probeResult.warning}` : probeResult.warning;
@@ -490,28 +499,26 @@ export class TeamProvisioningPrepareCoordinator {
         }
       }
     }
-
     if (blockingMessages.length > 0) {
       const failureWarnings = Array.from(new Set([...warnings, ...blockingMessages]));
-      return {
+      return buildPrepareResultWithEvidence({
         ready: false,
-        details: details.length > 0 ? details : undefined,
+        details,
         message:
           blockingMessages.length === 1
             ? blockingMessages[0]
             : 'Some provider runtimes are not ready',
-        warnings: failureWarnings.length > 0 ? failureWarnings : undefined,
-        issues: issues.length > 0 ? issues : undefined,
-        supportDiagnostics:
-          supportDiagnostics.length > 0
-            ? supportDiagnostics.map((diagnostic) => ({ ...diagnostic }))
-            : undefined,
-      };
+        warnings: failureWarnings,
+        issues,
+        supportDiagnostics,
+        processedModelChecks,
+        nativeModelTargetedLivenessChecks,
+        openCodeStrictDelegationChecks,
+      });
     }
-
-    return {
+    return buildPrepareResultWithEvidence({
       ready: true,
-      details: details.length > 0 ? details : undefined,
+      details,
       message:
         providerIds.length > 1
           ? warnings.length > 0
@@ -520,19 +527,19 @@ export class TeamProvisioningPrepareCoordinator {
           : warnings.length > 0
             ? 'CLI is ready to launch (see notes)'
             : 'CLI is warmed up and ready to launch',
-      warnings: warnings.length > 0 ? warnings : undefined,
-      issues: issues.length > 0 ? issues : undefined,
-      supportDiagnostics:
-        supportDiagnostics.length > 0
-          ? supportDiagnostics.map((diagnostic) => ({ ...diagnostic }))
-          : undefined,
-    };
+      warnings,
+      issues,
+      supportDiagnostics,
+      processedModelChecks,
+      nativeModelTargetedLivenessChecks,
+      openCodeStrictDelegationChecks,
+    });
   }
-
   async verifySelectedProviderModels({
     claudePath,
     cwd,
     providerId,
+    providerBackendId,
     modelIds,
     modelChecks,
     limitContext,
@@ -540,6 +547,7 @@ export class TeamProvisioningPrepareCoordinator {
     claudePath: string;
     cwd: string;
     providerId: TeamProviderId;
+    providerBackendId?: string | null;
     modelIds: string[];
     modelChecks?: { modelId: string; effort?: EffortLevel }[];
     limitContext: boolean;
@@ -558,14 +566,13 @@ export class TeamProvisioningPrepareCoordinator {
       limitContext,
       ports: {
         buildProvisioningEnv: (providerIdForEnv) =>
-          this.ports.buildProvisioningEnv(providerIdForEnv),
+          this.ports.buildProvisioningEnv(providerIdForEnv, providerBackendId),
         readRuntimeProviderLaunchFacts: (params) =>
           this.ports.readRuntimeProviderLaunchFacts(params),
         appendPreflightDebugLog,
       },
     });
   }
-
   async resolveProviderDefaultModel(
     claudePath: string,
     cwd: string,
@@ -615,7 +622,6 @@ export class TeamProvisioningPrepareCoordinator {
         ? defaultModel.trim()
         : null;
     const modelIds = normalizeProviderModelListModels(parsed.providers?.[providerId]);
-
     if (providerId === 'anthropic') {
       return resolveAnthropicLaunchModel({
         limitContext,
@@ -623,11 +629,9 @@ export class TeamProvisioningPrepareCoordinator {
         defaultLaunchModel: normalizedDefaultModel,
       });
     }
-
     if (normalizedDefaultModel) {
       return normalizedDefaultModel;
     }
-
     return this.resolveProviderDefaultModelFromRuntimeStatus(
       claudePath,
       cwd,
@@ -637,7 +641,6 @@ export class TeamProvisioningPrepareCoordinator {
       limitContext
     ).catch(() => null);
   }
-
   async resolveProviderDefaultModelFromRuntimeStatus(
     claudePath: string,
     cwd: string,
@@ -666,7 +669,6 @@ export class TeamProvisioningPrepareCoordinator {
     const modelCatalog =
       providerStatus?.modelCatalog?.providerId === providerId ? providerStatus.modelCatalog : null;
     const defaultLaunchModel = modelCatalog?.defaultLaunchModel?.trim() || null;
-
     if (providerId === 'anthropic') {
       return resolveAnthropicLaunchModel({
         limitContext,
@@ -674,19 +676,13 @@ export class TeamProvisioningPrepareCoordinator {
         defaultLaunchModel,
       });
     }
-
     return defaultLaunchModel;
   }
-
   async materializeEffectiveTeamMemberSpecs(params: {
     claudePath: string;
     cwd: string;
     members: TeamCreateRequest['members'];
-    defaults: {
-      providerId?: TeamProviderId;
-      model?: string;
-      effort?: TeamCreateRequest['effort'];
-    };
+    defaults: Pick<TeamCreateRequest, 'providerId' | 'providerBackendId' | 'model' | 'effort'>;
     primaryProviderId?: TeamProviderId;
     primaryEnv?: ProvisioningEnvResolution;
     teamRuntimeAuth?: TeamRuntimeAuthContext;
@@ -700,7 +696,6 @@ export class TeamProvisioningPrepareCoordinator {
     const envByProvider = new Map<TeamProviderId, Promise<ProvisioningEnvResolution>>();
     const defaultModelByProvider = new Map<TeamProviderId, Promise<string>>();
     const normalizedPrimaryProviderId = resolveTeamProviderId(params.primaryProviderId);
-
     const getProvisioningEnv = (providerId: TeamProviderId): Promise<ProvisioningEnvResolution> => {
       if (normalizedPrimaryProviderId === providerId && params.primaryEnv != null) {
         return Promise.resolve(params.primaryEnv);

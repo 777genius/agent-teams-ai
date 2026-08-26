@@ -5,6 +5,7 @@ export type {
 } from './OpenCodeTeamRuntimeAdapter';
 export { OpenCodeTeamRuntimeAdapter } from './OpenCodeTeamRuntimeAdapter';
 export type {
+  OpenCodeStrictLaunchDelegationValidator,
   TeamLaunchRuntimeAdapter,
   TeamRuntimeApprovalProviderId,
   TeamRuntimeLaunchInput,

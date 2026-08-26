@@ -18,9 +18,72 @@ const enrichProviderStatusMock = vi.fn((provider, _options?: { hydrateModelCatal
   Promise.resolve(provider)
 );
 const enrichProviderStatusesMock = vi.fn((providers) => Promise.resolve(providers));
+const RAW_RUNTIME_STATUS_FIXTURE = Symbol('raw-runtime-status-fixture');
+
+function rawRuntimeStatusFixture<T extends object>(result: T): T {
+  return Object.assign(result, { [RAW_RUNTIME_STATUS_FIXTURE]: true });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function completeRuntimeStatusFixture(result: unknown): unknown {
+  if (
+    isRecord(result) &&
+    (result as Record<PropertyKey, unknown>)[RAW_RUNTIME_STATUS_FIXTURE] === true
+  ) {
+    return result;
+  }
+  if (!isRecord(result) || typeof result.stdout !== 'string') return result;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch {
+    return result;
+  }
+  if (!isRecord(parsed) || !isRecord(parsed.providers)) return result;
+  for (const [providerId, value] of Object.entries(parsed.providers)) {
+    if (!isRecord(value) || !('supported' in value)) continue;
+    const provider = value;
+    const hasExplicitOutcome = 'statusCheckOutcome' in provider;
+    const isLegacyInventoryTimeout = [provider.statusMessage, provider.detailMessage]
+      .filter((message) => typeof message === 'string')
+      .join(' ')
+      .toLowerCase()
+      .includes('inventory probe timed out');
+    parsed.providers[providerId] = {
+      supported: false,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      ...(!hasExplicitOutcome && !isLegacyInventoryTimeout
+        ? { statusCheckOutcome: 'authoritative' }
+        : {}),
+      canLoginFromUi: true,
+      statusMessage: null,
+      detailMessage: null,
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      availableBackends: [],
+      externalRuntimeDiagnostics: [],
+      models: [],
+      backend: null,
+      ...provider,
+      capabilities: {
+        teamLaunch: false,
+        oneShot: false,
+        ...(!hasExplicitOutcome ? { extensions: {} } : {}),
+        ...(isRecord(provider.capabilities) ? provider.capabilities : {}),
+      },
+    };
+  }
+  return { ...result, stdout: JSON.stringify(parsed) };
+}
 
 vi.mock('@main/utils/childProcess', () => ({
-  execCli: (...args: Parameters<typeof execCliMock>) => execCliMock(...args),
+  execCli: (...args: Parameters<typeof execCliMock>) =>
+    Promise.resolve(execCliMock(...args)).then(completeRuntimeStatusFixture),
 }));
 
 vi.mock('@main/utils/shellEnv', () => ({
@@ -98,7 +161,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
   });
 
-  it('keeps Gemini out of frontend aggregate fallback while explicit Gemini status still works', async () => {
+  it('keeps Gemini and legacy inventory probes out of frontend aggregate fallback', async () => {
     execCliMock.mockImplementation((_binaryPath, args, options) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       const env = options?.env ?? {};
@@ -218,23 +281,13 @@ describe('ClaudeMultimodelBridgeService', () => {
     ]);
     expect(providers[0]).toMatchObject({
       providerId: 'anthropic',
-      authenticated: true,
-      models: ['claude-sonnet-4-5'],
+      authenticated: false,
+      models: [],
     });
     expect(providers[1]).toMatchObject({
       providerId: 'codex',
       authenticated: false,
-      models: ['gpt-5-codex'],
-      statusMessage: 'Not connected',
-      capabilities: {
-        extensions: {
-          plugins: {
-            status: 'unsupported',
-            ownership: 'shared',
-            reason: 'Anthropic only',
-          },
-        },
-      },
+      models: [],
     });
     expect(providers[2]).toMatchObject({
       providerId: 'opencode',
@@ -253,26 +306,15 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(gemini).toMatchObject({
       providerId: 'gemini',
       displayName: 'Gemini',
-      supported: true,
-      authenticated: true,
-      models: ['gemini-2.5-pro'],
+      supported: false,
+      authenticated: false,
+      models: [],
       canLoginFromUi: true,
-      authMethod: 'cli_oauth_personal',
-      backend: {
-        kind: 'cli',
-        label: 'Gemini CLI',
-        endpointLabel: 'Code Assist (cloudcode-pa.googleapis.com/v1internal)',
-        projectId: 'demo-project',
-      },
+      authMethod: null,
     });
-
-    const aggregateEnvBuild = buildProviderAwareCliEnvMock.mock.calls.find(
-      ([options]) => options.providerId === undefined
-    );
-    expect(aggregateEnvBuild?.[0]).toMatchObject({
-      allowStoredApiKeyDecryption: false,
-      allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN', 'OPENAI_API_KEY'],
-    });
+    expect(execCliMock.mock.calls.some((call) => call[1][0] === 'auth')).toBe(false);
+    expect(execCliMock.mock.calls.some((call) => call[1][0] === 'model')).toBe(false);
+    vi.mocked(console.warn).mockClear();
   });
 
   it('falls back to provider-scoped full runtime status without probing Gemini', async () => {
@@ -366,9 +408,20 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(calls).not.toContain('runtime status --json');
     expect(calls).not.toContain('auth status --json --provider all');
     expect(calls).not.toContain('model list --json --provider all');
+    for (const [providerId, timeout] of [
+      ['anthropic', 5_000],
+      ['codex', 5_000],
+      ['opencode', 12_000],
+    ] as const) {
+      const providerCalls = execCliMock.mock.calls.filter((call) =>
+        call[1].includes(providerId)
+      );
+      expect(providerCalls.map((call) => call[1].includes('--summary'))).toEqual([true, false]);
+      expect(providerCalls.map((call) => call[2]?.timeout)).toEqual([timeout, timeout]);
+    }
   });
 
-  it('falls back to scoped legacy provider probes when single-provider summary status times out', async () => {
+  it('fails closed without legacy probes when single-provider summary status times out', async () => {
     execCliMock.mockImplementation((_binaryPath, args, options) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       if (normalizedArgs === 'runtime status --json --provider codex --summary') {
@@ -425,22 +478,20 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     expect(provider).toMatchObject({
       providerId: 'codex',
-      supported: true,
+      supported: false,
       authenticated: false,
-      verificationState: 'unknown',
-      statusMessage: 'Codex native runtime unavailable',
-      models: ['gpt-5.4'],
+      verificationState: 'error',
+      statusMessage: 'Provider status unavailable',
+      models: [],
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
     });
-    expect(calls).toEqual([
-      'runtime status --json --provider codex --summary',
-      'auth status --json --provider codex',
-      'model list --json --provider codex',
-    ]);
+    expect(calls).toEqual(['runtime status --json --provider codex --summary']);
     expect(execCliMock.mock.calls[0][2]?.timeout).toBe(5000);
     const warnMessages = vi.mocked(console.warn).mock.calls.map((call) => call.join(' '));
     expect(warnMessages).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('Provider-scoped summary runtime status timed out for codex'),
+        expect.stringContaining('returning degraded status without inventory fallback'),
       ])
     );
     expect(warnMessages).not.toEqual(
@@ -451,7 +502,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     vi.mocked(console.warn).mockClear();
   });
 
-  it('falls back to OpenCode model inventory when provider status times out', async () => {
+  it('does not fall back to OpenCode model inventory when provider status times out', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
@@ -488,16 +539,15 @@ describe('ClaudeMultimodelBridgeService', () => {
       providerId: 'opencode',
       supported: false,
       authenticated: false,
-      verificationState: 'unknown',
-      statusMessage: null,
-      models: ['opencode/big-pickle'],
-      statusCheckOutcome: 'model_only',
-      statusCheckErrorCode: 'partial_response',
+      verificationState: 'error',
+      statusMessage: 'OpenCode is still loading',
+      models: [],
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
     });
     expect(provider.detailMessage ?? '').not.toContain('OpenCode runtime status did not return');
     expect(execCliMock.mock.calls.map((call) => call[1].join(' '))).toEqual([
       'runtime status --json --provider opencode --summary',
-      'model list --json --provider opencode',
     ]);
     expect(execCliMock.mock.calls[0][2]?.timeout).toBe(12000);
     vi.mocked(console.warn).mockClear();
@@ -578,6 +628,54 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
   });
 
+  it('keeps raw legacy payloads without proof fields display-only and launch-conservative', async () => {
+    execCliMock.mockResolvedValue(
+      rawRuntimeStatusFixture({
+        stdout: JSON.stringify({
+          schemaVersion: 1,
+          providers: {
+            codex: {
+              supported: true,
+              authenticated: true,
+              authMethod: 'codex_chatgpt',
+              verificationState: 'verified',
+              canLoginFromUi: true,
+              statusMessage: null,
+              detailMessage: null,
+              models: ['legacy-display-model'],
+              capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+              selectedBackendId: null,
+              resolvedBackendId: null,
+              availableBackends: [],
+              externalRuntimeDiagnostics: [],
+              backend: null,
+            },
+          },
+        }),
+        stderr: '',
+        exitCode: 0,
+      })
+    );
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/agent_teams_orchestrator', 'codex');
+
+    expect(provider).toMatchObject({
+      providerId: 'codex',
+      supported: true,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'pending',
+      statusCheckErrorCode: 'partial_response',
+      models: ['legacy-display-model'],
+      capabilities: { teamLaunch: false, oneShot: true },
+    });
+  });
+
   it('allows the dev source runtime enough time to hydrate the initial provider status batch', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
@@ -626,22 +724,25 @@ describe('ClaudeMultimodelBridgeService', () => {
     ]);
   });
 
-  it('resolves project-scoped OpenCode catalogs from the selected project cwd', async () => {
-    execCliMock.mockResolvedValue({
-      stdout: JSON.stringify({
-        schemaVersion: 2,
-        providers: {
-          opencode: {
-            supported: true,
-            authenticated: true,
-            authMethod: 'opencode_configured_local',
-            verificationState: 'verified',
-            canLoginFromUi: false,
-            capabilities: { teamLaunch: true, oneShot: false },
+  it('preserves project scope and the short budget through the non-summary retry', async () => {
+    execCliMock.mockImplementation((_binaryPath, args) => {
+      if (args.includes('--summary')) return Promise.reject(new Error('unknown option --summary'));
+      return Promise.resolve({
+        stdout: JSON.stringify({
+          schemaVersion: 2,
+          providers: {
+            opencode: {
+              supported: true,
+              authenticated: true,
+              authMethod: 'opencode_configured_local',
+              verificationState: 'verified',
+              canLoginFromUi: false,
+              capabilities: { teamLaunch: true, oneShot: false },
+            },
           },
-        },
-      }),
-      stderr: '',
+        }),
+        stderr: '',
+      });
     });
 
     const { ClaudeMultimodelBridgeService } =
@@ -652,11 +753,14 @@ describe('ClaudeMultimodelBridgeService', () => {
       projectPath: '/tmp/local-model-project',
     });
 
-    expect(execCliMock).toHaveBeenCalledWith(
-      '/mock/agent_teams_orchestrator',
+    expect(execCliMock.mock.calls.map((call) => call[1])).toEqual([
       ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
-      expect.objectContaining({ cwd: '/tmp/local-model-project' })
-    );
+      ['runtime', 'status', '--json', '--provider', 'opencode'],
+    ]);
+    expect(execCliMock.mock.calls.map((call) => call[2])).toEqual([
+      expect.objectContaining({ cwd: '/tmp/local-model-project', timeout: 12_000 }),
+      expect.objectContaining({ cwd: '/tmp/local-model-project', timeout: 12_000 }),
+    ]);
   });
 
   it('keeps OpenCode timeout copy concise and preserves saved-connection confidence', async () => {
@@ -693,9 +797,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   });
 
   it('keeps generic OpenCode bridge failures non-authoritative', async () => {
-    execCliMock.mockRejectedValue(
-      new Error('spawn /mock/agent_teams_orchestrator ENOENT')
-    );
+    execCliMock.mockRejectedValue(new Error('spawn /mock/agent_teams_orchestrator ENOENT'));
 
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
@@ -823,7 +925,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
   });
 
-  it('falls back to scoped legacy probes for aggregate summary timeouts', async () => {
+  it('returns degraded scoped statuses without legacy fan-out for aggregate summary timeouts', async () => {
     execCliMock.mockImplementation((_binaryPath, args, options) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       if (
@@ -928,20 +1030,15 @@ describe('ClaudeMultimodelBridgeService', () => {
     const providers = await service.getProviderStatuses('/mock/agent_teams_orchestrator');
     const calls = execCliMock.mock.calls.map((call) => call[1].join(' '));
 
-    expect(execCliMock).toHaveBeenCalledTimes(8);
+    expect(execCliMock).toHaveBeenCalledTimes(3);
     expect(
       execCliMock.mock.calls.map((call) => call[2]?.timeout as number).sort((a, b) => a - b)
-    ).toEqual([5000, 5000, 12000, 15000, 15000, 25000, 25000, 25000]);
+    ).toEqual([5000, 5000, 12000]);
     expect(calls).toEqual(
       expect.arrayContaining([
         'runtime status --json --provider anthropic --summary',
         'runtime status --json --provider codex --summary',
         'runtime status --json --provider opencode --summary',
-        'auth status --json --provider anthropic',
-        'model list --json --provider anthropic',
-        'auth status --json --provider codex',
-        'model list --json --provider codex',
-        'model list --json --provider opencode',
       ])
     );
     expect(providers.map((provider) => provider.providerId)).toEqual([
@@ -951,31 +1048,29 @@ describe('ClaudeMultimodelBridgeService', () => {
     ]);
     expect(providers[0]).toMatchObject({
       providerId: 'anthropic',
-      supported: true,
-      authenticated: true,
-      verificationState: 'verified',
-      models: ['opus[1m]'],
+      supported: false,
+      authenticated: false,
+      verificationState: 'error',
+      models: [],
     });
     expect(providers[1]).toMatchObject({
       providerId: 'codex',
-      supported: true,
+      supported: false,
       authenticated: false,
-      verificationState: 'unknown',
-      statusMessage: 'Codex native runtime unavailable',
-      models: ['gpt-5.4'],
+      verificationState: 'error',
+      statusMessage: 'Provider status unavailable',
+      models: [],
     });
     expect(providers[2]).toMatchObject({
       providerId: 'opencode',
       supported: false,
       authenticated: false,
-      verificationState: 'unknown',
-      statusMessage: null,
-      models: ['opencode/big-pickle'],
+      verificationState: 'error',
+      statusMessage: 'OpenCode is still loading',
+      models: [],
     });
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
-      expect.stringContaining(
-        'Provider-scoped runtime status timed out for anthropic, codex, opencode'
-      ),
+      expect.stringContaining('returning degraded provider statuses without inventory fallback'),
     ]);
     vi.mocked(console.warn).mockClear();
   });
@@ -1262,7 +1357,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     }
   });
 
-  it('promotes OpenCode auth when full catalog hydration proves built-in free access', async () => {
+  it('hydrates built-in free model display without promoting summary auth', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
 
@@ -1375,12 +1470,12 @@ describe('ClaudeMultimodelBridgeService', () => {
       expect(onCatalogUpdate).toHaveBeenCalledTimes(1);
     });
     expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
-      authenticated: true,
-      authMethod: 'opencode_builtin_free',
-      statusMessage: null,
-      capabilities: { teamLaunch: true },
+      authenticated: false,
+      authMethod: null,
+      statusMessage: 'No OpenCode providers connected',
+      capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'ready',
-      backend: { authMethodDetail: 'built-in free models' },
+      backend: { authMethodDetail: null },
     });
   });
 
@@ -1740,6 +1835,13 @@ describe('ClaudeMultimodelBridgeService', () => {
         (call) => call[1].join(' ') === 'runtime status --json --provider opencode'
       )
     ).toHaveLength(2);
+    expect(
+      execCliMock.mock.calls.find(
+        (call) =>
+          call[1].join(' ') === 'runtime status --json --provider opencode' &&
+          call[2]?.cwd === '/tmp/scoped-project'
+      )?.[2]
+    ).toMatchObject({ cwd: '/tmp/scoped-project', timeout: 12_000 });
     expect(scopedStatus).toMatchObject({
       modelCatalog: { defaultModelId: 'ollama/qwen2.5-coder:0.5b' },
     });
@@ -1754,6 +1856,79 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
     expect(globalUpdate.mock.calls[0]?.[0]).toMatchObject({
       modelCatalog: { defaultModelId: 'opencode/big-pickle' },
+    });
+  });
+
+  it('does not merge a project catalog after its bounded hydration is cancelled', async () => {
+    const status = (defaultModelId?: string) => ({
+      schemaVersion: 2,
+      providers: {
+        opencode: {
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          canLoginFromUi: false,
+          models: defaultModelId ? [defaultModelId] : ['summary-model'],
+          capabilities: { teamLaunch: true, oneShot: false },
+          runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+          ...(defaultModelId
+            ? {
+                modelCatalog: {
+                  providerId: 'opencode',
+                  source: 'app-server',
+                  status: 'ready',
+                  defaultModelId,
+                  defaultLaunchModel: defaultModelId,
+                  models: [],
+                },
+              }
+            : {}),
+        },
+      },
+    });
+    let markHydrationStarted!: () => void;
+    const hydrationStarted = new Promise<void>((resolve) => {
+      markHydrationStarted = resolve;
+    });
+    let resolveHydration!: (value: { stdout: string; stderr: string; exitCode: number }) => void;
+    const hydration = new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
+      resolveHydration = resolve;
+    });
+
+    execCliMock.mockImplementation((_binaryPath, args, options) => {
+      if (args.includes('--summary')) {
+        return Promise.resolve({ stdout: JSON.stringify(status()), stderr: '', exitCode: 0 });
+      }
+      expect(options).toMatchObject({ cwd: '/tmp/cancelled-project', timeout: 12_000 });
+      markHydrationStarted();
+      return hydration;
+    });
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+    const request = service.getProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode',
+      undefined,
+      { projectPath: '/tmp/cancelled-project' }
+    );
+    await hydrationStarted;
+    service.invalidateProviderStatusHydrations();
+    resolveHydration({
+      stdout: JSON.stringify(status('cancelled-catalog-model')),
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const provider = await request;
+    expect(provider).toMatchObject({
+      authenticated: true,
+      statusCheckOutcome: 'authoritative',
+      models: ['summary-model'],
+      modelCatalog: null,
+      capabilities: { teamLaunch: true },
     });
   });
 
@@ -2305,6 +2480,7 @@ describe('ClaudeMultimodelBridgeService', () => {
             supported: true,
             authenticated: true,
             verificationState: 'verified',
+            statusCheckOutcome: 'pending',
             canLoginFromUi: true,
             capabilities: {
               teamLaunch: true,

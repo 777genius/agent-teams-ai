@@ -120,11 +120,17 @@ function findCatalogModel(
 
 function resolveBackendId(source: CodexRuntimeProfileSource): TeamProviderBackendId | null {
   const status = source.providerStatus;
+  const resolvePresentBackendId = (
+    value: TeamProviderBackendId | string | null | undefined
+  ): TeamProviderBackendId | undefined => {
+    if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+    return migrateProviderBackendId('codex', value, 'explicit-selection');
+  };
   return (
-    migrateProviderBackendId('codex', source.providerBackendId) ??
-    migrateProviderBackendId('codex', status?.resolvedBackendId) ??
-    migrateProviderBackendId('codex', status?.selectedBackendId) ??
-    migrateProviderBackendId('codex', status?.backend?.kind) ??
+    resolvePresentBackendId(source.providerBackendId) ??
+    resolvePresentBackendId(status?.resolvedBackendId) ??
+    resolvePresentBackendId(status?.selectedBackendId) ??
+    resolvePresentBackendId(status?.backend?.kind) ??
     'codex-native'
   );
 }

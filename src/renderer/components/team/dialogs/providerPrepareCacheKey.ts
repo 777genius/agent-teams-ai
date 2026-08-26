@@ -7,6 +7,7 @@ export function buildProviderPrepareModelCacheKey({
   limitContext,
   runtimeStatusSignature,
   modelChecksSignature,
+  allowExperimentalLocalModels,
 }: {
   cwd: string;
   providerId: TeamProviderId;
@@ -14,6 +15,7 @@ export function buildProviderPrepareModelCacheKey({
   limitContext: boolean;
   runtimeStatusSignature?: string | null;
   modelChecksSignature?: string | null;
+  allowExperimentalLocalModels?: boolean;
 }): string {
   return [
     cwd,
@@ -22,5 +24,6 @@ export function buildProviderPrepareModelCacheKey({
     limitContext ? 'limit-context:on' : 'limit-context:off',
     runtimeStatusSignature ?? '',
     modelChecksSignature ?? '',
+    allowExperimentalLocalModels ? 'experimental-local-models:on' : 'experimental-local-models:off',
   ].join('::');
 }

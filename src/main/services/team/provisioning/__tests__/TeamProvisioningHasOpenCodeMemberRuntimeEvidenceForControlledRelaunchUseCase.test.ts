@@ -11,7 +11,7 @@ function createSnapshot(
   members: PersistedTeamLaunchSnapshot['members']
 ): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'team-a',
     launchPhase: 'active',
     updatedAt: '2026-07-09T19:00:00.000Z',

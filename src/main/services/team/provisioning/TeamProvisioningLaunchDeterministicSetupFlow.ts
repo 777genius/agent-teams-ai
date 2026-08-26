@@ -24,6 +24,12 @@ import {
   type TeamLaunchCompatibilityReport,
 } from './TeamProvisioningLaunchCompatibility';
 import {
+  buildLaunchContinuationRosterFingerprint,
+  type DeterministicLaunchContinuation,
+  type DurableLaunchContinuationEvidenceRead,
+  resolveDeterministicLaunchContinuation,
+} from './TeamProvisioningLaunchContinuationEvidence';
+import {
   probeLaunchCompatibility,
   resolveLaunchExpectedMembersFromCompatibility,
   type TeamProvisioningLaunchExpectedMembersPorts,
@@ -79,6 +85,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
   getExistingRun(runId: string): ExistingLaunchRunLike | null | undefined;
   getRunTrackedCwd(run: ExistingLaunchRunLike | null | undefined): string | null;
   deleteProvisioningRunByTeam(teamName: string): void;
+  readLaunchContinuationEvidence(teamName: string): Promise<DurableLaunchContinuationEvidenceRead>;
   launchExpectedMembersPorts: TeamProvisioningLaunchExpectedMembersPorts;
   materializeLaunchCompatibilityRepair(
     request: TeamLaunchRequest,
@@ -102,6 +109,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
     members: TeamCreateRequest['members'];
     defaults: {
       providerId?: TeamProviderId;
+      providerBackendId?: TeamCreateRequest['providerBackendId'];
       model?: string;
       effort?: TeamCreateRequest['effort'];
     };
@@ -153,6 +161,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
 
 export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
   | { kind: 'reuse'; runId: string }
+  | { kind: 'complete'; runId: string }
   | {
       kind: 'prepared';
       teamsBasePathsToProbe: { location: TeamsBaseLocation; basePath: string }[];
@@ -167,6 +176,8 @@ export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
       providerArgsForLaunch: string[];
       crossProviderMemberArgsForLaunch: CrossProviderMemberArgsResult;
       expectedMembers: string[];
+      launchRosterFingerprint: `sha256:${string}`;
+      launchContinuation?: DeterministicLaunchContinuation;
       effectiveMemberSpecs: TeamCreateRequest['members'];
       allEffectiveMemberSpecs: TeamCreateRequest['members'];
       launchIdentity: ProviderModelLaunchIdentity;
@@ -230,6 +241,9 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     providerId: request.providerId,
     members: expectedMemberSpecs,
   });
+  const launchContinuationEvidenceRead = await ports.readLaunchContinuationEvidence(
+    request.teamName
+  );
   if (request.clearContext) {
     ports.logger.info(
       `[${request.teamName}] clearContext requested - starting fresh deterministic bootstrap session`
@@ -264,7 +278,9 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
   }
 
   const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
-  const runId = ports.randomUUID();
+  // A roster-authorized launch uses the transaction UUID as its command/run
+  // identity so restart recovery can query the existing read-only run ledger.
+  const runId = request.rosterTransactionId ?? ports.randomUUID();
   const startedAt = ports.nowIso();
   const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease(
     ports.cleanupAnthropicApiKeyHelperMaterial
@@ -321,6 +337,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       members: expectedMemberSpecs,
       defaults: {
         providerId: request.providerId,
+        providerBackendId: request.providerBackendId,
         model: request.model,
         effort: request.effort,
       },
@@ -355,19 +372,20 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       request.cwd
     );
     const primaryMemberNames = new Set(lanePlan.primaryMembers.map((member) => member.name));
-    const effectiveMemberSpecs = allEffectiveMemberSpecs.filter((member) =>
+    const fullEffectiveMemberSpecs = allEffectiveMemberSpecs.filter((member) =>
       primaryMemberNames.has(member.name)
     );
-    assertDeterministicBootstrapPrimaryMemberLimit(effectiveMemberSpecs.length);
-    const largeTeamWarning = buildLargeDeterministicBootstrapWarning(effectiveMemberSpecs.length);
+    assertDeterministicBootstrapPrimaryMemberLimit(fullEffectiveMemberSpecs.length);
+    const largeTeamWarning = buildLargeDeterministicBootstrapWarning(
+      fullEffectiveMemberSpecs.length
+    );
     const initialLaunchWarnings = [warning, largeTeamWarning].filter((value): value is string =>
       Boolean(value)
     );
-    const expectedMembers = effectiveMemberSpecs.map((member) => member.name);
     const resolvedProviderId = resolveTeamProviderId(request.providerId);
     const crossProviderMemberArgs = await ports.buildCrossProviderMemberArgs(
       resolvedProviderId,
-      effectiveMemberSpecs,
+      fullEffectiveMemberSpecs,
       { teamRuntimeAuth }
     );
     anthropicApiKeyHelperLease.coalesce(crossProviderMemberArgs.anthropicApiKeyHelper);
@@ -410,9 +428,40 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       cwd: request.cwd,
       env: shellEnv,
       request,
-      effectiveMembers: effectiveMemberSpecs,
+      effectiveMembers: fullEffectiveMemberSpecs,
       providerArgsByProvider,
     });
+    const launchRosterFingerprint = buildLaunchContinuationRosterFingerprint({
+      request,
+      materializedMemberSpecs: allEffectiveMemberSpecs,
+      launchIdentity,
+      runtimeLanePlan: lanePlan,
+    });
+    const launchContinuationDecision = resolveDeterministicLaunchContinuation({
+      teamName: request.teamName,
+      expectedMemberNames: expectedMemberSpecs.map((member) => member.name),
+      rosterFingerprint: launchRosterFingerprint,
+      evidenceRead: launchContinuationEvidenceRead,
+    });
+    if (launchContinuationDecision.kind === 'complete') {
+      await anthropicApiKeyHelperLease.cleanup();
+      await ports.restorePrelaunchConfig(request.teamName);
+      ports.deleteProvisioningRunByTeam(request.teamName);
+      return { kind: 'complete', runId: launchContinuationDecision.sourceRunId };
+    }
+    const continuationRetryNames =
+      launchContinuationDecision.kind === 'continue'
+        ? new Set(launchContinuationDecision.continuation.retryMembers.map((member) => member.name))
+        : null;
+    const effectiveMemberSpecs = continuationRetryNames
+      ? fullEffectiveMemberSpecs.filter((member) => continuationRetryNames.has(member.name))
+      : fullEffectiveMemberSpecs;
+    if (continuationRetryNames && effectiveMemberSpecs.length !== continuationRetryNames.size) {
+      throw new Error(
+        'Deterministic partial-launch continuation retry roster no longer matches the primary runtime lane'
+      );
+    }
+    const expectedMembers = effectiveMemberSpecs.map((member) => member.name);
 
     const syntheticRequest = buildLaunchSyntheticRequest({
       request,
@@ -434,6 +483,10 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       providerArgsForLaunch,
       crossProviderMemberArgsForLaunch,
       expectedMembers,
+      launchRosterFingerprint,
+      ...(launchContinuationDecision.kind === 'continue'
+        ? { launchContinuation: launchContinuationDecision.continuation }
+        : {}),
       effectiveMemberSpecs,
       allEffectiveMemberSpecs,
       launchIdentity,

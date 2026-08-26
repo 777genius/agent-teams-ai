@@ -72,6 +72,7 @@ export interface MixedSecondaryLaneSnapshotMemberInput {
 }
 
 export interface MixedSecondaryLaunchSnapshotRunLike {
+  runId: string;
   teamName: string;
   detectedSessionId?: string | null;
   request: Pick<TeamCreateRequest, 'providerId' | 'providerBackendId' | 'fastMode'>;
@@ -87,6 +88,7 @@ export interface MixedSecondaryLaunchSnapshotPorts<
   buildRuntimeSpawnStatusRecord(run: TRun): Record<string, MemberSpawnStatusEntry>;
   buildAggregateLaunchSnapshot(params: {
     teamName: string;
+    runtimeRunId?: string;
     leadSessionId?: string;
     launchPhase: PersistedTeamLaunchPhase;
     leadDefaults: MixedSecondaryLaneSnapshotLeadDefaults;
@@ -135,7 +137,11 @@ function buildMixedLeadDefaults(
   return {
     providerId,
     providerBackendId:
-      migrateProviderBackendId(run.request.providerId, run.request.providerBackendId) ?? null,
+      migrateProviderBackendId(
+        run.request.providerId,
+        run.request.providerBackendId,
+        'explicit-selection'
+      ) ?? null,
     selectedFastMode: run.request.fastMode,
     resolvedFastMode:
       typeof run.launchIdentity?.resolvedFastMode === 'boolean'
@@ -176,6 +182,7 @@ export function buildMixedSecondaryLaunchSnapshotForRun<
 
   return ports.buildAggregateLaunchSnapshot({
     teamName: run.teamName,
+    runtimeRunId: run.runId,
     leadSessionId: run.detectedSessionId ?? undefined,
     launchPhase,
     leadDefaults,

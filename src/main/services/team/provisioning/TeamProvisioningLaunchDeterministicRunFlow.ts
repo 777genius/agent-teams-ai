@@ -83,6 +83,8 @@ export async function runDeterministicLaunchRunFlow<TMixedSecondaryLane>(
     providerArgsForLaunch,
     crossProviderMemberArgsForLaunch,
     expectedMembers,
+    launchRosterFingerprint,
+    launchContinuation,
     effectiveMemberSpecs,
     allEffectiveMemberSpecs,
     launchIdentity,
@@ -109,6 +111,8 @@ export async function runDeterministicLaunchRunFlow<TMixedSecondaryLane>(
     anthropicApiKeyHelper: null,
     initialLaunchWarnings,
     initialLaunchWarningSource,
+    launchRosterFingerprint,
+    launchContinuation,
     createInitialMemberSpawnStatusEntry: ports.createInitialMemberSpawnStatusEntry,
   }) as DeterministicLaunchRunFlowRun<TMixedSecondaryLane>;
   anthropicApiKeyHelperLease.transferTo(run);

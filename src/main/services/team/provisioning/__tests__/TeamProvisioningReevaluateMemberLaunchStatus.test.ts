@@ -61,6 +61,7 @@ function makePorts(
   return {
     nowIso: vi.fn(() => NOW),
     nowMs: vi.fn(() => NOW_MS),
+    isCurrentTrackedRun: vi.fn(() => true),
     refreshMemberSpawnStatusesFromLeadInbox: vi.fn(async () => undefined),
     maybeAuditMemberSpawnStatuses: vi.fn(async () => undefined),
     getLiveTeamAgentRuntimeMetadata: vi.fn(async () => input.runtime ?? new Map()),
@@ -81,6 +82,14 @@ function makePorts(
     openCodeRetryPrompt,
     openCodeScheduleReevaluation,
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }
 
 describe('reevaluateMemberLaunchStatus', () => {
@@ -286,5 +295,102 @@ describe('reevaluateMemberLaunchStatus', () => {
       'error',
       'Teammate did not join within the launch grace window.'
     );
+  });
+
+  it('does not continue when the run is replaced during the lead inbox refresh', async () => {
+    const targetRun = run();
+    const refresh = deferred<void>();
+    let current = true;
+    const ports = makePorts();
+    vi.mocked(ports.isCurrentTrackedRun).mockImplementation(() => current);
+    vi.mocked(ports.refreshMemberSpawnStatusesFromLeadInbox).mockReturnValue(refresh.promise);
+
+    const reevaluation = reevaluateMemberLaunchStatus(targetRun, 'Worker', ports);
+    current = false;
+    refresh.resolve();
+    await reevaluation;
+
+    expect(ports.maybeAuditMemberSpawnStatuses).not.toHaveBeenCalled();
+    expect(ports.getLiveTeamAgentRuntimeMetadata).not.toHaveBeenCalled();
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not continue when the member is relaunched during the audit', async () => {
+    const targetRun = run();
+    const audit = deferred<void>();
+    const ports = makePorts();
+    vi.mocked(ports.maybeAuditMemberSpawnStatuses).mockReturnValue(audit.promise);
+
+    const reevaluation = reevaluateMemberLaunchStatus(targetRun, 'Worker', ports);
+    targetRun.memberSpawnStatuses.set(
+      'Worker',
+      status({ firstSpawnAcceptedAt: '2026-01-01T00:05:00.000Z' })
+    );
+    audit.resolve();
+    await reevaluation;
+
+    expect(ports.getLiveTeamAgentRuntimeMetadata).not.toHaveBeenCalled();
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not mutate a newer status while runtime metadata is pending', async () => {
+    const targetRun = run();
+    const metadata = deferred<ReadonlyMap<string, LiveTeamAgentRuntimeMetadata>>();
+    const ports = makePorts();
+    vi.mocked(ports.getLiveTeamAgentRuntimeMetadata).mockReturnValue(metadata.promise);
+
+    const reevaluation = reevaluateMemberLaunchStatus(targetRun, 'Worker', ports);
+    const newer = status({
+      status: 'online',
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+    });
+    targetRun.memberSpawnStatuses.set('Worker', newer);
+    metadata.resolve(new Map([['Worker', { alive: false, livenessKind: 'shell_only' }]]));
+    await reevaluation;
+
+    expect(targetRun.memberSpawnStatuses.get('Worker')).toBe(newer);
+    expect(ports.syncMemberTaskActivityForRuntimeTransition).not.toHaveBeenCalled();
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not apply a stale OpenCode diagnostic after a member relaunch', async () => {
+    const targetRun = run();
+    const diagnostic = deferred<string>();
+    const ports = makePorts({
+      isOpenCodeSecondary: true,
+      runtime: new Map([['Worker', { alive: true, livenessKind: 'runtime_process' }]]),
+    });
+    vi.mocked(
+      ports.reconcileOpenCodeBootstrapStallPorts.buildOpenCodeSecondaryBootstrapStallDiagnostic
+    ).mockReturnValue(diagnostic.promise);
+
+    const reevaluation = reevaluateMemberLaunchStatus(targetRun, 'Worker', ports);
+    const newer = status({ firstSpawnAcceptedAt: '2026-01-01T00:05:00.000Z' });
+    targetRun.memberSpawnStatuses.set('Worker', newer);
+    diagnostic.resolve('stale diagnostic');
+    await reevaluation;
+
+    expect(targetRun.memberSpawnStatuses.get('Worker')).toBe(newer);
+    expect(ports.openCodeSetPending).not.toHaveBeenCalled();
+    expect(ports.openCodeRetryPrompt).not.toHaveBeenCalled();
+    expect(ports.openCodeScheduleReevaluation).not.toHaveBeenCalled();
+  });
+
+  it('does not mutate status after task activity synchronization makes the run stale', async () => {
+    const targetRun = run();
+    let current = true;
+    const ports = makePorts();
+    vi.mocked(ports.isCurrentTrackedRun).mockImplementation(() => current);
+    vi.mocked(ports.syncMemberTaskActivityForRuntimeTransition).mockImplementation(() => {
+      current = false;
+    });
+    const original = targetRun.memberSpawnStatuses.get('Worker');
+
+    await reevaluateMemberLaunchStatus(targetRun, 'Worker', ports);
+
+    expect(ports.syncMemberTaskActivityForRuntimeTransition).toHaveBeenCalledOnce();
+    expect(targetRun.memberSpawnStatuses.get('Worker')).toBe(original);
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
   });
 });

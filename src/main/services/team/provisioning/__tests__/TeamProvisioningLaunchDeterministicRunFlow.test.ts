@@ -62,6 +62,7 @@ const request: TeamLaunchRequest = {
 };
 
 const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease();
+const launchRosterFingerprint: `sha256:${string}` = `sha256:${'0'.repeat(64)}`;
 anthropicApiKeyHelperLease.coalesce({
   teamName: 'team-a',
   directory: authHelperDirectory,
@@ -77,6 +78,7 @@ const setup: PreparedDeterministicLaunchSetup<TestLane> = {
   kind: 'prepared',
   teamsBasePathsToProbe: [{ location: 'configured', basePath: '/teams' }],
   runId: 'run-1',
+  launchRosterFingerprint,
   startedAt: '2026-01-01T00:00:00.000Z',
   claudePath: '/bin/claude',
   shellEnv: { PATH: '/bin' },

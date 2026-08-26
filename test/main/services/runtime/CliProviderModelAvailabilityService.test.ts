@@ -51,6 +51,22 @@ function createContext(models: string[]): ProviderModelAvailabilityContext {
   };
 }
 
+function buildProbeResponse(args: readonly string[], nonceOverride?: string): string {
+  const prompt = args.find((arg) => arg.includes('Set nonce to ')) ?? '';
+  const nonce = nonceOverride ?? /Set nonce to ([a-f0-9]+)\./.exec(prompt)?.[1] ?? 'missing';
+  return JSON.stringify({
+    schema: 'agent-teams-provider-probe-response-v1',
+    nonce,
+  });
+}
+
+function mockSuccessfulProbeResponse(): void {
+  execCliMock.mockImplementation(async (_binaryPath, args: string[]) => ({
+    stdout: buildProbeResponse(args),
+    stderr: '',
+  }));
+}
+
 describe('CliProviderModelAvailabilityService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -61,7 +77,7 @@ describe('CliProviderModelAvailabilityService', () => {
       env: { HOME: '/Users/tester' },
       connectionIssues: {},
     });
-    execCliMock.mockResolvedValue({ stdout: 'PONG', stderr: '' });
+    mockSuccessfulProbeResponse();
 
     const service = new CliProviderModelAvailabilityService();
     const context = createContext(['gpt-5.4', 'gpt-5.3-codex']);
@@ -143,7 +159,7 @@ describe('CliProviderModelAvailabilityService', () => {
       env: { HOME: '/Users/tester' },
       connectionIssues: {},
     });
-    execCliMock.mockResolvedValue({ stdout: 'PONG', stderr: '' });
+    mockSuccessfulProbeResponse();
 
     const service = new CliProviderModelAvailabilityService();
     service.getSnapshot(createContext(['gpt-5.4']));
@@ -165,7 +181,7 @@ describe('CliProviderModelAvailabilityService', () => {
       providerArgs: ['--settings', '{"codex":{"forced_login_method":"chatgpt"}}'],
       connectionIssues: {},
     });
-    execCliMock.mockResolvedValue({ stdout: 'PONG', stderr: '' });
+    mockSuccessfulProbeResponse();
 
     const service = new CliProviderModelAvailabilityService();
     service.getSnapshot(createContext(['gpt-5.4']));
@@ -177,7 +193,7 @@ describe('CliProviderModelAvailabilityService', () => {
           '--settings',
           '{"codex":{"forced_login_method":"chatgpt"}}',
           '-p',
-          'Output only the single word PONG.',
+          expect.stringContaining('agent-teams-provider-probe-response-v1'),
           '--output-format',
           'text',
           '--model',
@@ -199,10 +215,7 @@ describe('CliProviderModelAvailabilityService', () => {
       providerArgs: ['-c', 'forced_login_method="chatgpt"'],
       connectionIssues: {},
     });
-    execCliMock.mockResolvedValue({
-      stdout: '{"type":"agent_message","message":"PONG"}',
-      stderr: '',
-    });
+    mockSuccessfulProbeResponse();
 
     const service = new CliProviderModelAvailabilityService();
     service.getSnapshot({
@@ -223,7 +236,7 @@ describe('CliProviderModelAvailabilityService', () => {
           '--ephemeral',
           '--model',
           'gpt-5.4',
-          'Output only the single word PONG.',
+          expect.stringContaining('agent-teams-provider-probe-response-v1'),
         ],
         expect.objectContaining({
           env: { HOME: '/Users/tester' },
@@ -237,7 +250,7 @@ describe('CliProviderModelAvailabilityService', () => {
       env: { HOME: '/Users/tester' },
       connectionIssues: {},
     });
-    execCliMock.mockResolvedValue({ stdout: 'PONG', stderr: '' });
+    mockSuccessfulProbeResponse();
 
     const service = new CliProviderModelAvailabilityService();
     service.getSnapshot(createContext(['gpt-5.4']));
@@ -251,5 +264,35 @@ describe('CliProviderModelAvailabilityService', () => {
         })
       );
     });
+  });
+
+  it('binds direct model availability validation to a fresh caller nonce', async () => {
+    buildProviderAwareCliEnvMock.mockResolvedValue({
+      env: { HOME: '/Users/tester' },
+      connectionIssues: {},
+    });
+    execCliMock.mockImplementation(async (_binaryPath, args: string[]) => ({
+      stdout: buildProbeResponse(args, 'forged-response-nonce'),
+      stderr: '',
+    }));
+
+    const onUpdate = vi.fn();
+    const service = new CliProviderModelAvailabilityService(onUpdate);
+    service.getSnapshot(createContext(['gpt-5.4']));
+
+    await vi.waitFor(() => {
+      expect(onUpdate).toHaveBeenCalledWith(
+        'codex',
+        expect.any(String),
+        expect.objectContaining({
+          modelAvailability: [
+            expect.objectContaining({ modelId: 'gpt-5.4', status: 'unknown' }),
+          ],
+        })
+      );
+    });
+    const prompt = execCliMock.mock.calls[0][1].find((arg: string) => arg.includes('Set nonce to '));
+    expect(prompt).toMatch(/Set nonce to [a-f0-9]{64}\./);
+    expect(prompt).not.toContain('forged-response-nonce');
   });
 });

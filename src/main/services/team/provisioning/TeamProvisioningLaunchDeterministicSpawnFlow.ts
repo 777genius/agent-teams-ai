@@ -6,6 +6,7 @@ import {
   applyDesktopTeammateModeDecisionToEnv,
   resolveDesktopTeammateModeDecision,
 } from '../runtimeTeammateMode';
+import { crossRosterLaunchInvocationBoundary } from '../TeamMembersMetaStore';
 import { type TeamMetaFile } from '../TeamMetaStore';
 
 import {
@@ -20,6 +21,7 @@ import {
   writeDeterministicBootstrapSpecFile,
   writeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
+import { createChildProcessTerminalReconciler } from './TeamProvisioningChildSettlement';
 import {
   buildMembersMetaWritePayload,
   mergeMembersMetaForLaunch,
@@ -37,6 +39,11 @@ import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import {
+  asRosterLaunchKnownNoStartError,
+  RosterLaunchKnownNoStartError,
+  withProductionStartedLaunchStatus,
+} from './TeamProvisioningRosterLaunchOutcome';
+import {
   buildRuntimeLaunchWarning,
   getPromptSizeSummary,
   logRuntimeLaunchSnapshot,
@@ -46,6 +53,7 @@ import {
   type TeamRuntimeLaunchArgsPlan,
   type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
 } from './TeamProvisioningRuntimeLaunchSelection';
+import { waitForSpawnBoundary } from './TeamProvisioningSpawnBoundary';
 
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
@@ -199,6 +207,8 @@ export function buildLaunchTeamMetaPayload(input: {
     providerBackendId: syntheticRequest.providerBackendId,
     model: syntheticRequest.model,
     effort: syntheticRequest.effort,
+    leadRuntimeSelectionProvenance:
+      request.leadRuntimeSelectionProvenance ?? syntheticRequest.leadRuntimeSelectionProvenance,
     fastMode: syntheticRequest.fastMode,
     skipPermissions: syntheticRequest.skipPermissions,
     worktree: syntheticRequest.worktree,
@@ -233,17 +243,19 @@ export async function persistDeterministicLaunchMetadata<
       nowMs: ports.nowMs(),
     })
   );
-  const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
-  await ports.membersMetaStore.writeMembers(
-    request.teamName,
-    mergeMembersMetaForLaunch(
-      buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
-      existingMembers
-    ),
-    {
-      providerBackendId: syntheticRequest.providerBackendId,
-    }
-  );
+  if (!request.rosterTransactionId) {
+    const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
+    await ports.membersMetaStore.writeMembers(
+      request.teamName,
+      mergeMembersMetaForLaunch(
+        buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
+        existingMembers
+      ),
+      {
+        providerBackendId: syntheticRequest.providerBackendId,
+      }
+    );
+  }
 }
 
 export function isDeterministicLaunchSpawnCancelled(input: {
@@ -440,21 +452,22 @@ export function registerDeterministicLaunchChildHandlers<
     }
   }, getProvisioningRunTimeoutMs(run));
 
+  const reconcileChild = createChildProcessTerminalReconciler({
+    reconcile: (code) => ports.handleProcessExit(run, code),
+    onReconciliationFailure: (_reconciliationError, childError) => {
+      const progress = ports.updateProgress(run, 'failed', 'Claude CLI process error (launch)', {
+        error: childError?.message ?? 'Claude CLI process reconciliation failed',
+        cliLogsTail: extractCliLogsFromRun(run),
+      });
+      run.onProgress(progress);
+    },
+  });
   child.once('error', (error: Error) => {
-    const progress = ports.updateProgress(run, 'failed', 'Failed to start Claude CLI (launch)', {
-      error: error.message,
-      cliLogsTail: extractCliLogsFromRun(run),
-    });
-    run.onProgress(progress);
-    void cleanupAnthropicHelperIfPresent(run, ports).then((helperReleased) => {
-      if (helperReleased) {
-        ports.cleanupRun(run);
-      }
-    });
+    void reconcileChild(null, error);
   });
 
   child.once('close', (code: number | null) => {
-    void ports.handleProcessExit(run, code);
+    void reconcileChild(code);
   });
 }
 
@@ -489,7 +502,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       { request, run, runId, provisioningEnv },
       ports
     );
-    throw error;
+    throw asRosterLaunchKnownNoStartError(error, 'Team launch planning failed before spawn');
   }
   applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
 
@@ -537,7 +550,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       { request, run, runId, provisioningEnv },
       ports
     );
-    throw error;
+    throw asRosterLaunchKnownNoStartError(error, 'Team launch materialization failed before spawn');
   }
 
   let runtimeArgsPlan: TeamRuntimeLaunchArgsPlan;
@@ -558,7 +571,10 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       { request, run, runId, provisioningEnv },
       ports
     );
-    throw error;
+    throw asRosterLaunchKnownNoStartError(
+      error,
+      'Team launch argument planning failed before spawn'
+    );
   }
   emitProvisioningCheckpoint(run, 'Resolving cross-provider member launch args');
   const finalLaunchArgs = buildDeterministicLaunchProcessArgs({
@@ -606,7 +622,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       { request, run, runId, provisioningEnv },
       ports
     );
-    throw error;
+    throw asRosterLaunchKnownNoStartError(error, 'Team metadata persistence failed before spawn');
   }
 
   let child: ChildProcess;
@@ -618,7 +634,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
         currentStopAllGeneration: ports.getStopAllTeamsGeneration(),
       })
     ) {
-      throw new Error('Team launch cancelled by app shutdown');
+      throw new RosterLaunchKnownNoStartError('Team launch cancelled by app shutdown');
     }
     if (request.skipPermissions === false) {
       emitProvisioningCheckpoint(run, 'Seeding lead bootstrap permission rules');
@@ -631,21 +647,25 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
         currentStopAllGeneration: ports.getStopAllTeamsGeneration(),
       })
     ) {
-      throw new Error('Team launch cancelled by app shutdown');
+      throw new RosterLaunchKnownNoStartError('Team launch cancelled by app shutdown');
     }
     emitProvisioningCheckpoint(
       run,
       'Spawning Claude CLI process for team launch',
       `args=${finalLaunchArgs.length} cwd=${request.cwd}`
     );
-    child = ports.spawnCli(claudePath, finalLaunchArgs, {
-      cwd: request.cwd,
-      env: { ...shellEnv },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const invocationLease = await crossRosterLaunchInvocationBoundary();
+    child = invocationLease.invoke(() =>
+      ports.spawnCli(claudePath, finalLaunchArgs, {
+        cwd: request.cwd,
+        env: { ...shellEnv },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    );
+    await waitForSpawnBoundary(child);
   } catch (error) {
     await cleanupDeterministicLaunchSpawnFailure({ request, run, runId, provisioningEnv }, ports);
-    throw error;
+    throw asRosterLaunchKnownNoStartError(error, 'Team launch failed before a process existed');
   }
 
   ports.updateProgress(run, 'spawning', 'Starting Claude CLI process for team launch', {
@@ -675,5 +695,5 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
 
   registerDeterministicLaunchChildHandlers({ run, child }, ports);
 
-  return { runId };
+  return withProductionStartedLaunchStatus(request, { runId });
 }

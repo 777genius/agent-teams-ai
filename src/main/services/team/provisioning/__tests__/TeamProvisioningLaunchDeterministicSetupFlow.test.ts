@@ -62,7 +62,13 @@ const anthropicApiKeyHelper = {
 
 function createMembers(): TeamCreateRequest['members'] {
   return [
-    { name: 'Lead', role: 'Lead', providerId: 'codex' },
+    {
+      name: 'Lead',
+      role: 'Lead',
+      providerId: 'codex',
+      providerBackendId: 'adapter',
+      fastMode: 'on',
+    },
     { name: 'Reviewer', role: 'Review', providerId: 'anthropic' },
   ];
 }
@@ -98,6 +104,7 @@ function createPorts(
     getExistingRun: vi.fn(() => null),
     getRunTrackedCwd: vi.fn(() => null),
     deleteProvisioningRunByTeam: vi.fn(),
+    readLaunchContinuationEvidence: vi.fn(async () => ({ kind: 'absent' as const })),
     launchExpectedMembersPorts: {
       readLaunchState: vi.fn(async () => null),
       readBootstrapLaunchSnapshot: vi.fn(async () => null),

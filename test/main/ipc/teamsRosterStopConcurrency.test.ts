@@ -35,6 +35,43 @@ function deferred(): { promise: Promise<void>; resolve(): void } {
   return { promise, resolve };
 }
 
+async function expectAttachToStartBeforeAddCompletes(
+  attachStarted: Promise<void>,
+  add: Promise<unknown>
+): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutMs = 2_000;
+
+  try {
+    await Promise.race([
+      attachStarted,
+      add.then(
+        (result) => {
+          throw new Error(
+            `Add-member completed before attachLiveRosterMember started: ${JSON.stringify(result)}`
+          );
+        },
+        (error: unknown) => {
+          throw new Error(
+            `Add-member rejected before attachLiveRosterMember started: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      ),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => {
+          reject(
+            new Error(
+              `Timed out after ${timeoutMs}ms waiting for add-member to enter attachLiveRosterMember`
+            )
+          );
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 describe('team IPC roster mutation and stop concurrency', () => {
   const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
   const ipcMain = {
@@ -56,7 +93,9 @@ describe('team IPC roster mutation and stop concurrency', () => {
     const lifecycleService = new TeamProvisioningService();
     const attachStarted = deferred();
     const releaseAttach = deferred();
-    const stopFlow = vi.fn(async () => undefined);
+    const stopFlow = vi.fn(async (_teamName: string, onAuthorized?: () => void) => {
+      onAuthorized?.();
+    });
     const lifecycleInternals = lifecycleService as unknown as {
       memberLifecycleController: {
         attachLiveRosterMember(teamName: string, memberName: string): Promise<void>;
@@ -71,7 +110,10 @@ describe('team IPC roster mutation and stop concurrency', () => {
       await releaseAttach.promise;
     });
     lifecycleInternals.stopFlowBoundaryValue = {
-      stopTeam: stopFlow,
+      preflightMetadataMutation: vi.fn(async () => undefined),
+      authorizeStopTeam: async (_teamName: string, onAuthorized: () => void) => onAuthorized(),
+      stopTeam: vi.fn(async () => undefined),
+      stopAuthorizedTeam: stopFlow,
       stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
       stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => undefined),
     };
@@ -100,8 +142,14 @@ describe('team IPC roster mutation and stop concurrency', () => {
     const add = handlers.get(TEAM_ADD_MEMBER)!({} as never, 'ipc-lock-team', {
       name: 'alice',
       role: 'developer',
+      runtimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'inherited',
+        model: 'inherited',
+        effort: 'inherited',
+      },
     });
-    await attachStarted.promise;
+    await expectAttachToStartBeforeAddCompletes(attachStarted.promise, add);
 
     const stop = handlers.get(TEAM_STOP)!({} as never, 'ipc-lock-team');
     await Promise.resolve();

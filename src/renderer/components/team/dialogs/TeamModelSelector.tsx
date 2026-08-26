@@ -40,7 +40,6 @@ import {
 import {
   canUseCustomAnthropicCompatibleModel,
   getAvailableTeamProviderModelOptions,
-  getOpenCodeOpenAiRouteAuthUnavailableReason,
   getTeamModelUiDisabledReason,
   isAnthropicCompatibleRuntime,
   isTeamProviderModelCatalogFresh,
@@ -99,11 +98,16 @@ import {
   getOpenCodeReadinessBadgeLabel,
   getOpenCodeReadinessMessage,
   getOpenCodeReadinessSummary,
+  getOpenCodeRouteUnavailableReasons,
   getOpenCodeRuntimeStatusUiState,
   hasFreeOpenCodeModelRoute,
   shouldShowOpenCodeRuntimeLoading,
 } from './openCodeRuntimeStatusUi';
-import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
+import {
+  compareModelFreshness,
+  getScopedOpenCodeDefaultModel,
+  isRecentlyReleasedModel,
+} from './teamModelFreshness';
 import {
   getActiveOpenCodeStickyHeadingIndex,
   getOpenCodeModelGridColumnCount,
@@ -123,34 +127,27 @@ export {
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
-
-// --- Provider definitions ---
-
 interface ProviderDef {
   id: TeamProviderId;
   label: string;
   comingSoon: boolean;
 }
-
 interface OpenCodeProviderTabDef {
   id: string;
   label: string;
   sourceId: string;
   connected: boolean;
 }
-
 interface OpenCodeProviderLoadingRowDef {
   label: string;
   sourceId: string;
   status: 'connected' | 'checking';
 }
-
 interface OpenCodeSourceOption {
   id: string;
   label: string;
   count: number;
 }
-
 interface OpenCodeRouteTagOption {
   id: OpenCodeRouteFilterTag;
   label: string;
@@ -314,8 +311,8 @@ function isAppManagedOpenCodeLocalModel(
     route?.providerId?.trim().toLowerCase() ||
     parseOpenCodeQualifiedModelRef(modelId)?.sourceId ||
     null;
-  // OpenCode currently reports Cursor ACP and Kiro as configured_authless.
-  // They are companion runtimes, not local OpenAI-compatible servers managed by this app.
+  // Cursor ACP and Kiro are companion runtimes,
+  // not local OpenAI-compatible servers managed by this app.
   if (sourceId && OPENCODE_COMPANION_SOURCE_IDS.has(sourceId)) {
     return false;
   }
@@ -1339,6 +1336,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     void fetchCodexRuntimeStatus();
   }, [codexRuntimeStatus, codexRuntimeStatusLoading, effectiveProviderId, fetchCodexRuntimeStatus]);
+  const openCodeResolvedDefaultModel = getScopedOpenCodeDefaultModel(
+    runtimeProviderStatus,
+    openCodeLocalModelOverlay.modelIds,
+    openCodeLocalProviderLookupAuthoritative
+  );
   const defaultModelTooltip = useMemo(() => {
     if (effectiveProviderId === 'anthropic') {
       if (isAnthropicCompatibleRuntime(runtimeProviderStatus)) {
@@ -1372,22 +1374,17 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       });
     }
     if (effectiveProviderId === 'opencode') {
-      const defaultOpenCodeModel =
-        runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
-        runtimeProviderStatus?.modelCatalog?.defaultModelId ??
-        null;
-      return defaultOpenCodeModel
-        ? t('modelSelector.defaultTooltip.openCodeWithResolved', { model: defaultOpenCodeModel })
+      return openCodeResolvedDefaultModel
+        ? t('modelSelector.defaultTooltip.openCodeWithResolved', {
+            model: openCodeResolvedDefaultModel,
+          })
         : t('modelSelector.defaultTooltip.openCode');
     }
     return t('modelSelector.defaultTooltip.runtime');
-  }, [effectiveProviderId, runtimeProviderStatus, t]);
+  }, [effectiveProviderId, openCodeResolvedDefaultModel, runtimeProviderStatus, t]);
   const openCodeDefaultOptionLabel = useMemo(() => {
     if (effectiveProviderId !== 'opencode') return t('modelSelector.defaultModel');
-    const resolvedModel =
-      runtimeProviderStatus?.modelCatalog?.defaultLaunchModel ??
-      runtimeProviderStatus?.modelCatalog?.defaultModelId ??
-      null;
+    const resolvedModel = openCodeResolvedDefaultModel;
     if (!resolvedModel) return t('modelSelector.defaultModel');
     const resolvedLabel =
       resolvedModel === 'openrouter/openrouter/free'
@@ -1398,7 +1395,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             runtimeProviderStatus
           ) ?? resolvedModel);
     return t('modelSelector.defaultWithResolved', { model: resolvedLabel });
-  }, [effectiveProviderId, runtimeProviderStatus, t]);
+  }, [effectiveProviderId, openCodeResolvedDefaultModel, runtimeProviderStatus, t]);
   const getProviderOverrideDisabledReason = (candidateProviderId: string): string | null => {
     if (!isTeamProviderId(candidateProviderId)) {
       return null;
@@ -2738,16 +2735,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       opt.value === '' ? null : (modelIssueReasonByValue?.[opt.value] ?? null);
     const explicitModelUnavailableReason =
       opt.value === '' ? null : (modelUnavailableReasonByValue?.[opt.value] ?? null);
-    const modelUnavailableReason =
-      opt.value === ''
-        ? null
-        : (explicitModelUnavailableReason ??
-          getOpenCodeOpenAiRouteAuthUnavailableReason(
-            effectiveProviderId,
-            opt.value,
-            runtimeProviderStatus
-          ) ??
-          runtimeUnavailableReason);
+    const {
+      unavailableReason: modelUnavailableReason,
+      unauthenticatedReason: unauthenticatedOpenCodeRouteUnavailableReason,
+    } = getOpenCodeRouteUnavailableReasons({
+      providerStatus: runtimeProviderStatus,
+      providerId: effectiveProviderId,
+      model: opt.value,
+      explicitReason: explicitModelUnavailableReason,
+      runtimeReason: runtimeUnavailableReason,
+    });
     const openCodeMetadata =
       effectiveProviderId === 'opencode' ? openCodeModelMetadataByValue.get(opt.value) : null;
     let modelRecommendation: ReturnType<typeof getTeamModelRecommendation> = null;
@@ -2768,7 +2765,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const localModelBlockingReason =
       modelIssueReason ??
       explicitModelUnavailableReason ??
-      (localModelDescriptor?.baseStatus === 'not_configured' ? null : modelUnavailableReason);
+      (localModelDescriptor?.baseStatus === 'not_configured' ||
+      modelUnavailableReason === unauthenticatedOpenCodeRouteUnavailableReason
+        ? null
+        : modelUnavailableReason);
     const resolvedLocalModelPresentation = localModelDescriptor
       ? resolveOpenCodeLocalModelPresentation({
           descriptor: localModelDescriptor,

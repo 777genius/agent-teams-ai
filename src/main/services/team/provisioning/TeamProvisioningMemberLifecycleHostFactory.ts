@@ -361,6 +361,8 @@ export function createTeamProvisioningMemberLifecycleHostPortGroups<
       },
       membersMetaStore: {
         getMembers: (teamName) => service.membersMetaStore.getMembers(teamName),
+        withRosterLock: (teamName, operation) =>
+          service.membersMetaStore.withRosterLock!(teamName, operation),
       },
       teamMetaStore: {
         getMeta: (teamName) => service.teamMetaStore.getMeta(teamName),
@@ -457,6 +459,14 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
   } = portGroups;
   const enqueueDirectRestartPromptSeam = messaging.enqueueDirectRestartPrompt;
 
+  const membersMetaStore: TeamProvisioningMemberLifecycleHost['membersMetaStore'] = {
+    getMembers: (teamName) => stores.membersMetaStore.getMembers(teamName),
+  };
+  if (stores.membersMetaStore.withRosterLock) {
+    membersMetaStore.withRosterLock = (teamName, operation) =>
+      stores.membersMetaStore.withRosterLock!(teamName, operation);
+  }
+
   return {
     runs: sharedState.runs,
     runtimeAdapterRunByTeam: sharedState.runtimeAdapterRunByTeam,
@@ -466,9 +476,7 @@ export function createTeamProvisioningMemberLifecycleHostFromPortGroups<
       writeConfigFile: (projectPath, options) =>
         stores.mcpConfigBuilder.writeConfigFile(projectPath, options as never),
     },
-    membersMetaStore: {
-      getMembers: (teamName) => stores.membersMetaStore.getMembers(teamName),
-    },
+    membersMetaStore,
     teamMetaStore: {
       getMeta: (teamName) => stores.teamMetaStore.getMeta(teamName),
     },

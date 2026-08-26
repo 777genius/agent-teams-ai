@@ -116,6 +116,8 @@ export function createTeamProvisioningServiceMemberLifecycleHostPortGroups(
       },
       membersMetaStore: {
         getMembers: (teamName) => service.membersMetaStore.getMembers(teamName),
+        withRosterLock: (teamName, operation) =>
+          service.membersMetaStore.withRosterLock!(teamName, operation),
       },
       teamMetaStore: {
         getMeta: (teamName) =>

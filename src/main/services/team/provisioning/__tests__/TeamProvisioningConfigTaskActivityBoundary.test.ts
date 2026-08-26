@@ -12,7 +12,7 @@ import type { PersistedTeamLaunchSnapshot, TeamConfig } from '@shared/types';
 
 function snapshot(): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'alpha',
     updatedAt: '2026-01-01T00:00:00.000Z',
     launchPhase: 'active',

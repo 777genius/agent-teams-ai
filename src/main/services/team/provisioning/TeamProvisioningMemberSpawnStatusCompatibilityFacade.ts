@@ -30,6 +30,8 @@ export abstract class TeamProvisioningMemberSpawnStatusCompatibilityFacade<
   protected async refreshMemberSpawnStatusesFromLeadInbox(run: TRun): Promise<void> {
     await refreshMemberSpawnStatusesFromLeadInboxHelper(run, {
       getRunLeadName: (targetRun) => this.getRunLeadName(targetRun),
+      isCurrentTrackedRun: (targetRun) =>
+        this.memberSpawnStatusAuditPorts.isCurrentTrackedRun(targetRun),
       readLeadInboxMessages: (teamName, leadName) =>
         this.inboxReader.getMessagesFor(teamName, leadName),
       setMemberSpawnStatus: (targetRun, memberName, status, error, source, heartbeatTimestamp) =>

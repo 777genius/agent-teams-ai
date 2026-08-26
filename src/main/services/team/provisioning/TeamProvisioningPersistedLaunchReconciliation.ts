@@ -4,6 +4,10 @@ import {
 } from '../TeamLaunchStateEvaluator';
 
 import {
+  isExplicitlyStoppedLaunchSnapshot,
+  projectExplicitlyStoppedStatusesOffline,
+} from './TeamProvisioningExplicitStopSnapshot';
+import {
   type LaunchReconcileConfigMembers,
   reconcilePersistedLaunchMember,
   type ReconcilePersistedLaunchMemberPorts,
@@ -128,6 +132,9 @@ export async function reconcilePersistedLaunchStateWithPorts(
 ): Promise<PersistedLaunchReconciliationResult> {
   const bootstrapSnapshot = await ports.readBootstrapLaunchSnapshot(teamName);
   const persisted = await ports.readLaunchState(teamName);
+  if (isExplicitlyStoppedLaunchSnapshot(persisted)) {
+    return projectPersistedLaunchReconciliationResult(persisted);
+  }
   const metaMembers = await ports.readMembersMeta(teamName).catch(() => []);
   const recoveredMixedSnapshot = await ports.recoverStaleMixedSecondaryLaunchSnapshot(
     teamName,
@@ -154,15 +161,15 @@ export async function reconcilePersistedLaunchStateWithPorts(
     snapshotBeforeBootstrapStallOverlay: overlaidRecoveredMixedSnapshot,
   });
   const stableRecoveredMixedSnapshotWithCommittedEvidence =
-    recoveredMixedSnapshotWithBootstrapStall &&
-    recoveredCommittedEvidenceWriteDecision.shouldWrite
+    recoveredMixedSnapshotWithBootstrapStall && recoveredCommittedEvidenceWriteDecision.shouldWrite
       ? await ports.writeLaunchStateSnapshot(teamName, recoveredMixedSnapshotWithBootstrapStall)
       : recoveredMixedSnapshotWithBootstrapStall;
   const promotedRecoveredMixedSnapshot = promoteOpenCodePersistedFailureReasonsFromDiagnostics(
     stableRecoveredMixedSnapshotWithCommittedEvidence
   );
-  const cleanedRecoveredMixedSnapshot =
-    ports.cleanConfirmedBootstrapRuntimeDiagnostics(promotedRecoveredMixedSnapshot);
+  const cleanedRecoveredMixedSnapshot = ports.cleanConfirmedBootstrapRuntimeDiagnostics(
+    promotedRecoveredMixedSnapshot
+  );
   const recoveredPromotionCleanupWriteDecision = getPromotionCleanupWriteDecision({
     baseSnapshot: stableRecoveredMixedSnapshotWithCommittedEvidence,
     promotedSnapshot: promotedRecoveredMixedSnapshot,
@@ -323,6 +330,8 @@ export async function reconcilePersistedLaunchStateWithPorts(
     teamName,
     expectedMembers: persistedMemberNames,
     leadSessionId: persistedWithCommittedEvidence.leadSessionId,
+    runtimeRunId: persistedWithCommittedEvidence.runtimeRunId,
+    primaryLaneIdentity: persistedWithCommittedEvidence.primaryLaneIdentity,
     launchPhase: persistedWithCommittedEvidence.launchPhase,
     members: nextMembers,
     updatedAt: now,
@@ -355,9 +364,12 @@ export function filterOptionalRemovedMembersFromLaunchSnapshot(
 export function projectPersistedLaunchReconciliationResult(
   snapshot: PersistedTeamLaunchSnapshot | null
 ): PersistedLaunchReconciliationResult {
+  const statuses = snapshotToMemberSpawnStatuses(snapshot);
   return {
     snapshot,
-    statuses: snapshotToMemberSpawnStatuses(snapshot),
+    statuses: isExplicitlyStoppedLaunchSnapshot(snapshot)
+      ? projectExplicitlyStoppedStatusesOffline(statuses)
+      : statuses,
   };
 }
 
