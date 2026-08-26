@@ -62,6 +62,51 @@ function createPorts(
 }
 
 describe('TeamProvisioningEnvBuilder', () => {
+  it('binds helper key A and B to distinct opaque identities without retaining either raw secret', async () => {
+    const materializeAnthropicTeamApiKeyHelper = vi.fn(async () => ({
+      teamName: 'demo',
+      directory: '/private/helper',
+      helperPath: '/private/helper/helper.sh',
+      keyPath: '/private/helper/key',
+      settingsPath: '/private/helper/settings.json',
+      settingsObject: { apiKeyHelper: "'/private/helper/helper.sh'" },
+      settingsArgs: ['--settings', '/private/helper/settings.json'],
+      envPatch: { CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper' },
+    }));
+    const buildForKey = async (apiKey: string) =>
+      buildProvisioningEnv({
+        providerId: 'anthropic',
+        options: {
+          teamRuntimeAuth: {
+            teamName: 'demo',
+            authMaterialId: 'run-1',
+            allowAnthropicApiKeyHelper: true,
+            credentialIdentityKey: 'private-continuation-key',
+          },
+        },
+        ports: createPorts({
+          providerConnectionService: {
+            augmentConfiguredConnectionEnv: vi.fn(async (env) => env),
+            getConfiguredAnthropicApiKeyForTeamRuntime: vi.fn(async () => apiKey),
+          },
+          materializeAnthropicTeamApiKeyHelper,
+          verifyAnthropicTeamApiKeyHelperMaterial: vi.fn(async () => undefined),
+        }),
+      });
+
+    const keyA = 'anthropic-adversarial-key-A';
+    const keyB = 'anthropic-adversarial-key-B';
+    const resultA = await buildForKey(keyA);
+    const resultB = await buildForKey(keyB);
+
+    expect(resultA.anthropicCredentialIdentity).toMatch(/^hmac-sha256:[a-f0-9]{64}$/);
+    expect(resultB.anthropicCredentialIdentity).not.toBe(resultA.anthropicCredentialIdentity);
+    expect(resultA.env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(resultB.env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(JSON.stringify([resultA, resultB])).not.toContain(keyA);
+    expect(JSON.stringify([resultA, resultB])).not.toContain(keyB);
+  });
+
   it('returns codex runtime auth source for Codex provider env', async () => {
     const ports = createPorts({
       buildRuntimeTurnSettledEnvironment: vi.fn(async () => ({

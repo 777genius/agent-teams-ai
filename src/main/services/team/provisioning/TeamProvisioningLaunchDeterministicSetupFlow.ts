@@ -222,7 +222,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
     launchArgs: string[];
     credentialDigestKey: string;
   }): Promise<LaunchContinuationSourceSnapshot>;
-  getCredentialDigestKey(): Promise<string>;
+  getCredentialDigestKey(allowCreate: boolean): Promise<string>;
   prepareLeadMcpConfig(input: {
     cwd: string;
     controlApiBaseUrl?: string | null;
@@ -267,6 +267,7 @@ export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
       initialLaunchWarnings: string[];
       initialLaunchWarningSource: LaunchRosterSource;
       anthropicApiKeyHelperLease: AnthropicApiKeyHelperSetupLease;
+      credentialDigestKey: string;
     };
 
 export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
@@ -298,6 +299,12 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     return { kind: 'reuse', runId: existingRunReuse.runId };
   }
 
+  const launchContinuationEvidenceRead = await ports.readLaunchContinuationEvidence(
+    request.teamName
+  );
+  const credentialDigestKey = await ports.getCredentialDigestKey(
+    launchContinuationEvidenceRead.kind === 'absent'
+  );
   const launchCompatibility = await probeLaunchCompatibility(
     {
       teamName: request.teamName,
@@ -322,9 +329,6 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     providerId: request.providerId,
     members: expectedMemberSpecs,
   });
-  const launchContinuationEvidenceRead = await ports.readLaunchContinuationEvidence(
-    request.teamName
-  );
   if (request.clearContext) {
     ports.logger.info(
       `[${request.teamName}] clearContext requested - starting fresh deterministic bootstrap session`
@@ -371,6 +375,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     authMaterialId: runId,
     allowAnthropicApiKeyHelper: true,
     anthropicApiKeyHelperLease,
+    credentialIdentityKey: credentialDigestKey,
   };
 
   try {
@@ -533,7 +538,6 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       shellEnv
     );
     applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
-    const credentialDigestKey = await ports.getCredentialDigestKey();
     const leadMcpConfig = await ports.prepareLeadMcpConfig({
       cwd: request.cwd,
       controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
@@ -596,6 +600,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     const normalizedProviderAuthority = replacePreparedMaterialPaths(
       {
         authSource: provisioningEnv.authSource,
+        anthropicCredentialIdentity: provisioningEnv.anthropicCredentialIdentity,
         providerArgsForLaunch,
         crossProviderMemberArgsForLaunch: {
           ...crossProviderMemberArgsForLaunch,
@@ -717,6 +722,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
         leadMcpConfig,
         memberMcpLaunchConfigs,
       },
+      credentialDigestKey,
       syntheticRequest,
       mixedSecondaryLanes: ports.createMixedSecondaryLaneStates(lanePlan),
       initialLaunchWarnings,

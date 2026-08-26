@@ -48,6 +48,7 @@ import { waitForSpawnBoundary } from './TeamProvisioningSpawnBoundary';
 
 import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
 import type { PreparedRuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
+import type { LaunchContinuationSourceSnapshot } from './TeamProvisioningLaunchContinuationEvidence';
 import type { PreparedDeterministicLaunchMaterial } from './TeamProvisioningLaunchDeterministicSetupFlow';
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
@@ -146,6 +147,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   restorePrelaunchConfig(teamName: string): Promise<void>;
   deleteRun(runId: string): void;
   deleteProvisioningRunByTeam(teamName: string): void;
+  verifyLaunchMaterialSources(snapshot: LaunchContinuationSourceSnapshot): Promise<void>;
   teamMetaStore: {
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
@@ -577,20 +579,6 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     }
   );
 
-  emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
-  try {
-    await persistDeterministicLaunchMetadata(
-      { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs },
-      ports
-    );
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw asRosterLaunchKnownNoStartError(error, 'Team metadata persistence failed before spawn');
-  }
-
   let child: ChildProcess;
   try {
     if (
@@ -615,11 +603,29 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     ) {
       throw new RosterLaunchKnownNoStartError('Team launch cancelled by app shutdown');
     }
+    try {
+      await ports.verifyLaunchMaterialSources(preparedLaunchMaterial.sourceSnapshot);
+    } catch (error) {
+      throw asRosterLaunchKnownNoStartError(
+        error,
+        'Team launch material changed after continuation snapshot'
+      );
+    }
+    emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
+    try {
+      await persistDeterministicLaunchMetadata(
+        { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs },
+        ports
+      );
+    } catch (error) {
+      throw asRosterLaunchKnownNoStartError(error, 'Team metadata persistence failed before spawn');
+    }
     emitProvisioningCheckpoint(
       run,
       'Spawning Claude CLI process for team launch',
       `args=${finalLaunchArgs.length} cwd=${request.cwd}`
     );
+    await ports.verifyLaunchMaterialSources(preparedLaunchMaterial.sourceSnapshot);
     const invocationLease = await crossRosterLaunchInvocationBoundary();
     child = invocationLease.invoke(() =>
       ports.spawnCli(claudePath, finalLaunchArgs, {

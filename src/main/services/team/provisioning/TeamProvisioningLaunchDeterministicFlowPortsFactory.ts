@@ -1,4 +1,3 @@
-import { ensureAgentTeamsClientIdentity } from '@main/services/identity/AgentTeamsIdentityStore';
 import { getClaudeBasePath, getHomeDir, getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as path from 'path';
 
@@ -13,7 +12,9 @@ import { type TeamLaunchCompatibilityReport } from './TeamProvisioningLaunchComp
 import {
   collectLaunchContinuationSourcePaths,
   snapshotLaunchContinuationSources,
+  verifyLaunchContinuationSources,
 } from './TeamProvisioningLaunchContinuationEvidence';
+import { ensureLaunchContinuationSecret } from './TeamProvisioningLaunchContinuationSecret';
 import { readDurableLaunchContinuationEvidence } from './TeamProvisioningLaunchContinuationState';
 import {
   type DeterministicLaunchRunFlowRun,
@@ -430,10 +431,7 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
           }),
           credentialDigestKey
         ),
-      getCredentialDigestKey: async () => {
-        const identity = await ensureAgentTeamsClientIdentity();
-        return `launch-continuation-v1:${identity.clientId}`;
-      },
+      getCredentialDigestKey: (allowCreate) => ensureLaunchContinuationSecret({ allowCreate }),
       prepareLeadMcpConfig: ({ cwd, controlApiBaseUrl }) =>
         host.mcpConfigBuilder.prepareConfig(cwd, { controlApiBaseUrl }),
       prepareRuntimeBootstrapMemberMcpLaunchConfigs: (input) =>
@@ -495,6 +493,8 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
         deleteProvisioningRunByTeam: (teamName) => {
           host.provisioningRunByTeam.delete(teamName);
         },
+        verifyLaunchMaterialSources: (snapshot) =>
+          verifyLaunchContinuationSources(snapshot, setup.credentialDigestKey),
         teamMetaStore: host.teamMetaStore,
         membersMetaStore: host.membersMetaStore,
         nowMs: () => Date.now(),

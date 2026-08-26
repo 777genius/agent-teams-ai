@@ -76,6 +76,7 @@ anthropicApiKeyHelperLease.coalesce({
 
 const setup: PreparedDeterministicLaunchSetup<TestLane> = {
   kind: 'prepared',
+  credentialDigestKey: 'launch-continuation-hmac-v1:test',
   teamsBasePathsToProbe: [{ location: 'configured', basePath: '/teams' }],
   runId: 'run-1',
   launchRosterFingerprint,

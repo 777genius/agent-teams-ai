@@ -218,6 +218,7 @@ function createSpawnFlowPorts(
     deleteProvisioningRunByTeam: vi.fn(() => {
       order.push('delete-team-run');
     }),
+    verifyLaunchMaterialSources: vi.fn(async () => undefined),
     teamMetaStore: {
       writeMeta: vi.fn(async () => undefined),
     },
@@ -402,13 +403,30 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     );
   });
 
-  it('reuses the frozen MCP material without rereading mutable source snapshots', async () => {
+  it('uses frozen MCP material then fails closed before metadata or spawn when sources changed', async () => {
+    const planningError = new Error('snapshotted settings changed');
     const order: string[] = [];
     const run = createRun();
     const ports = createSpawnFlowPorts(order);
+    ports.verifyLaunchMaterialSources = vi.fn(async () => {
+      order.push('verify-launch-sources');
+      throw planningError;
+    });
 
-    await expect(runPreSpawnFailureFlow(run, ports)).resolves.toEqual({ runId: 'run-1' });
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(planningError.message),
+    });
 
+    expect(order).toEqual([
+      'verify-launch-sources',
+      'remove-mcp',
+      'remove-member-mcp',
+      'cleanup-auth',
+      'delete-run',
+      'delete-team-run',
+      'restore-config',
+    ]);
     expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledWith(
       expect.objectContaining({
         preparedLeadMcpConfig: preparedLaunchMaterial.leadMcpConfig,
@@ -416,8 +434,27 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       }),
       expect.any(Object)
     );
-    expect(ports.spawnCli).toHaveBeenCalledOnce();
-    expect(order).toEqual([]);
+    expect(ports.teamMetaStore.writeMeta).not.toHaveBeenCalled();
+    expect(ports.membersMetaStore.writeMembers).not.toHaveBeenCalled();
+    expect(ports.spawnCli).not.toHaveBeenCalled();
+  });
+
+  it('reverifies inherited sources at the final invocation boundary', async () => {
+    const mutationError = new Error('settings mutated immediately before invocation');
+    const run = createRun();
+    const ports = createSpawnFlowPorts([]);
+    ports.verifyLaunchMaterialSources = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(mutationError);
+
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(mutationError.message),
+    });
+
+    expect(ports.verifyLaunchMaterialSources).toHaveBeenCalledTimes(2);
+    expect(ports.spawnCli).not.toHaveBeenCalled();
   });
 
   it('rolls back materialized launch artifacts when deterministic metadata persistence rejects', async () => {
@@ -446,12 +483,12 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       'write-team-meta',
       'read-members-meta',
       'write-members-meta',
-      'cleanup-auth',
       'remove-mcp',
       'remove-member-mcp',
-      'restore-config',
+      'cleanup-auth',
       'delete-run',
       'delete-team-run',
+      'restore-config',
     ]);
     expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledOnce();
     expect(flowMocks.removeDeterministicBootstrapSpecFile).toHaveBeenCalledWith(bootstrapSpecPath);

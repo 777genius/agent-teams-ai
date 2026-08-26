@@ -300,12 +300,14 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
   });
 
   it('preserves member1 across restart only when credentials and finalized material are unchanged', async () => {
+    const helperIdentityA = `hmac-sha256:${'a'.repeat(64)}` as const;
+    const helperIdentityB = `hmac-sha256:${'b'.repeat(64)}` as const;
     const initial = await prepareDeterministicLaunchSetup(
       request,
       createPorts({
-        prepareLeadMcpConfig: vi.fn(async () => ({
-          version: 1 as const,
-          json: '{"env":{"API_KEY":"first-key"}}',
+        buildCrossProviderMemberArgs: vi.fn(async () => ({
+          ...createCrossProviderArgs(),
+          anthropicCredentialIdentity: helperIdentityA,
         })),
       })
     );
@@ -339,9 +341,9 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
         kind: 'evidence' as const,
         evidence: continuationEvidence,
       })),
-      prepareLeadMcpConfig: vi.fn(async () => ({
-        version: 1 as const,
-        json: '{"env":{"API_KEY":"first-key"}}',
+      buildCrossProviderMemberArgs: vi.fn(async () => ({
+        ...createCrossProviderArgs(),
+        anthropicCredentialIdentity: helperIdentityA,
       })),
     });
     const continued = await prepareDeterministicLaunchSetup(request, unchangedPorts);
@@ -363,9 +365,9 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
         kind: 'evidence' as const,
         evidence: continuationEvidence,
       })),
-      prepareLeadMcpConfig: vi.fn(async () => ({
-        version: 1 as const,
-        json: '{"env":{"API_KEY":"second-key"}}',
+      buildCrossProviderMemberArgs: vi.fn(async () => ({
+        ...createCrossProviderArgs(),
+        anthropicCredentialIdentity: helperIdentityB,
       })),
     });
     await expect(prepareDeterministicLaunchSetup(request, changedCredentialPorts)).rejects.toThrow(
@@ -386,6 +388,26 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     await expect(prepareDeterministicLaunchSetup(request, changedPorts)).rejects.toThrow(
       /does not match the current launch configuration/
     );
+  });
+
+  it('rejects missing continuation identity before config mutation or member preparation', async () => {
+    const identityError = new Error('Stable launch continuation secret is unavailable');
+    const ports = createPorts({
+      readLaunchContinuationEvidence: vi.fn(async () => ({
+        kind: 'invalid' as const,
+        reason: 'persisted evidence cannot be trusted',
+      })),
+      getCredentialDigestKey: vi.fn(async () => {
+        throw identityError;
+      }),
+    });
+
+    await expect(prepareDeterministicLaunchSetup(request, ports)).rejects.toBe(identityError);
+    expect(ports.getCredentialDigestKey).toHaveBeenCalledWith(false);
+    expect(ports.materializeLaunchCompatibilityRepair).not.toHaveBeenCalled();
+    expect(ports.normalizeTeamConfigForLaunch).not.toHaveBeenCalled();
+    expect(ports.materializeEffectiveTeamMemberSpecs).not.toHaveBeenCalled();
+    expect(ports.buildNativeAppManagedBootstrapSpecsWithDiagnostics).not.toHaveBeenCalled();
   });
 
   it('cleans a Gemini-primary dynamic Anthropic helper and restores config on later setup failure', async () => {
