@@ -1,129 +1,162 @@
-# Gastown и Paperclip comparison для лендинга и README
+# Agent Teams, Gas Town, Paperclip, Cursor и Claude Code CLI: проверка для публичной таблицы
 
-> Дата проверки: 2026-06-25, обновлено 2026-07-09
-> Цель: публичная таблица `Agent Teams | Gastown | Paperclip | Cursor | Claude Code CLI` без угадываний по конкурентам.
-> Метод: `gh repo view`, `gh release list`, `gh api` по первичным GitHub-файлам, официальные docs Cursor и Claude Code, страница Claude pricing.
+> Последняя полная проверка: 2026-08-27. Файл сохраняет исходное имя 2026-06-25, чтобы не ломать публичные ссылки.
+> Цель: поддерживать таблицу `Agent Teams | Gas Town | Paperclip | Cursor | Claude Code CLI` без угадываний по конкурентам.
+> Метод: локальный source audit Agent Teams; `gh api`, GitHub releases и source files для GitHub-проектов; официальные docs, changelog и pricing pages Cursor и Anthropic.
 
-## Локальная корректировка Agent Teams на 2026-07-09
+## Ограничение методики
 
-- `Org chart / governance` для Agent Teams обновлено с `⚠️ Roles + approvals, no org chart` на `✅ Organization map + approvals`.
-- Причина: в текущем коде есть полноценная `features/organizations` slice: configurable organization tree, organizations/units/relations DTO, Organization Map tab, edit mode, team placement and manual relations.
-- `Budget controls` для Agent Teams обновлено с `⚠️ Cost/token visibility, no hard caps` на `✅ Usage budgets + scheduled hard caps`.
-- Причина: token usage budgets поддерживают monthly token/API-equivalent cost limits на global/team/project scopes, а scheduled runs прокидывают `--max-budget-usd` как жёсткий лимит запуска.
-- Важно: это не утверждает Paperclip-style per-agent monthly hard stop для всех runtime. Поэтому формулировка намеренно `Usage budgets + scheduled hard caps`, а не `Per-agent budgets + hard stops`.
+Оценки live collaboration - качественная редакционная оценка документированных возможностей общения, владения задачами, зависимостей, завершения работы и ревью. Это не benchmark и не результат воспроизводимого performance-теста.
+
+Для Gas Town и Paperclip отдельно различаются последний стабильный release и более свежий default branch. Claims из default branch нельзя автоматически считать доступными в последнем release.
+
+## Локальная проверка Agent Teams
+
+Проверено на `origin/main` commit `f6afac73c` от 2026-08-25.
+
+- **Live collaboration:** inbox delivery, owned tasks, dependencies/unblocking, completion, peer review и cross-team delivery подтверждены в `agent-teams-controller/src/internal`. Поэтому `9/10` остаётся редакционной оценкой сильного live-team flow, но не измеренным benchmark.
+- **Organizations:** editable nested organizations, live team/agent state, task counts, relations и runtime cross-team communication overlay подтверждены `src/features/organizations`.
+- **Terminal workspace:** подтверждён встроенный visual terminal, scoped per team/project, local shell, tabs, persistent history, autocomplete и settings. Source не подтверждает отдельное переключение между live agent runtime и local shell, поэтому такой claim удалён.
+- **Budgets:** monthly token/API-equivalent estimated-cost budgets на global/team/project scopes дают alerts на 80% и 100%, но не являются универсальным monthly hard stop.
+- **Scheduled hard cap:** optional schedule budget передаётся поддерживаемому runtime CLI через `--max-budget-usd`. Это нельзя расширять до одинакового enforcement всеми provider paths.
 
 ## Snapshot
 
-| Проект | Позиционирование | Статус на 2026-07-09 | Лицензия |
-|---|---|---:|---|
-| **Gastown** | multi-agent workspace manager для coding agents | `16,900★`, latest `v1.2.1` от `2026-06-06`, push `2026-07-08` | MIT |
-| **Paperclip** | app/control plane для управления work agents | `73,117★`, latest `v2026.707.0` от `2026-07-07`, push `2026-07-09` | MIT |
+| Проект | Проверенный срез | Последний stable release | GitHub snapshot | Лицензия |
+|---|---|---|---:|---|
+| **Gas Town** | `main` `649b832` от 2026-07-23 | `v1.2.1` от 2026-06-06 | `17,794★` на 2026-08-27 | MIT |
+| **Paperclip** | `master` `4277ecb` от 2026-08-26 | `v2026.824.1` от 2026-08-25 | `79,432★` на 2026-08-27 | MIT |
+| **Claude Code CLI** | official docs на 2026-08-27 | `v2.1.246` от 2026-08-25 | release metadata | proprietary |
 
-## Что изменилось после проверки 2026-05-16
+Stars - волатильный snapshot, не продуктовая метрика и не часть сравнительного score.
 
-- **Gastown**: свежий GitHub snapshot изменился с `v1.1.0` на `v1.2.1`. Основные изменения релизов `v1.2.0`/`v1.2.1` вокруг dependency/runtime hardening, scheduler/polecat operations, daemon recovery, dashboard fixes и startup diagnostics. Публичные claims README/provider/scheduler/dashboard для таблицы остаются валидными.
-- **Paperclip**: свежий GitHub snapshot изменился с `v2026.513.0`/`v2026.517.0` на `v2026.707.0`. Важные новые акценты после майской проверки: Skills Store, self-hostable sandbox execution, per-company isolation, workspace file viewer/artifact links, richer attachments и gateway routing for local adapters. Это усиливает Paperclip как control plane, но не делает его встроенным code editor или hunk-review UI.
-- **Cursor**: старые ссылки `docs.cursor.com/en/...` теперь редиректят на новый docs hub. Background Agents официально переименованы в **Cloud Agents**. Cursor также документирует **Agents Window worktrees**, поэтому строку `Git worktree isolation` честнее повысить до `✅ Agents Window worktrees`.
-- **Claude Code CLI**: official docs теперь описывают agent teams with post-`v2.1.178` behavior and mention later UI behavior through `v2.1.199`. Teams всё ещё experimental и disabled by default через `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`, но setup упростился: teammate spawning больше не требует отдельного team setup step, cleanup автоматический. Публичные формулировки таблицы остаются валидными.
-- **Claude Code costs/pricing**: `/usage` остаётся основной командой для session token/cost tracking; docs также упоминают plan usage bars, workspace spend limits, `/usage-credits` для Pro/Max usage credits и Console billing для API users. Строка `Claude plan or API usage` остаётся корректной.
+## Что изменилось после 2026-07-11
 
-## Проверенные публичные формулировки
+### Gas Town
 
-### Gastown
-
-- README по-прежнему позиционирует Gas Town как workspace manager для Claude Code, GitHub Copilot, Codex, Gemini и других coding agents.
-- Provider guide по-прежнему описывает tmux/provider contract для Claude, Gemini, Codex, Cursor, AMP, OpenCode, Copilot и других.
-- Scheduler docs подтверждают `scheduler.max_polecats`, direct/deferred dispatch, daemon dispatch cycle, pause/resume, capacity governor и batching.
-- Dashboard остаётся monitoring view for agents, convoys, hooks, queues, issues and escalations, а не Kanban product.
-- Refinery/merge queue есть, но не нашёл hunk-level diff review UI.
-
-Публичная оценка не меняется:
-
-- `Task dependencies` - `✅ Dependency waves`
-- `Kanban board` - `❌ Dashboard, not Kanban`
-- `Per-task code review` - `⚠️ Merge queue, no diff UI`
-- `Budget controls` - `⚠️ Cost tiers + digest, no hard caps`
+- Stable release остался `v1.2.1`, но `main` продолжил развиваться. Встроенные provider presets расширились, включая Kiro; это unreleased source capability относительно `v1.2.1`.
+- Current README по-прежнему подтверждает identities, mailboxes, handoffs, git-worktree persistence, terminal feed, web dashboard, escalation и Bors-style Refinery merge queue.
+- Scheduler остаётся capacity governor/backpressure для polecat dispatch, а не calendar/cron scheduler.
+- `gt costs`, daily digest и cost tiers не дают numeric spend cap или hard stop. Формулировка `Cost tiers + digest, no hard caps` остаётся корректной.
 
 ### Paperclip
 
-- README по-прежнему описывает org charts, budgets, governance, goal alignment and agent coordination.
-- Adapter overview подтверждает Claude Local, Codex Local, Gemini experimental, OpenCode Local, Cursor, Pi, Hermes, OpenClaw Gateway, Process and HTTP adapters.
-- Heartbeat protocol подтверждает wake/assignment/comment-driven bounded runs, durable progress через comments/documents/work products и run liveness.
-- Budget docs подтверждают per-agent monthly budgets, warning threshold at 80%, hard stop at 100%, auto-pause and no more heartbeats.
-- Runtime services docs подтверждают manual UI-managed services/jobs and execution workspaces with isolated checkout/branch/runtime state.
-- Kanban source по-прежнему содержит `backlog`, `todo`, `in_progress`, `in_review`, `blocked`, `done`, `cancelled` and `@dnd-kit`.
-- Work product validators подтверждают `preview_url`, `runtime_service`, `pull_request`, `branch`, `commit`, `artifact`, `document` and review statuses.
-
-Публичная оценка почти не меняется:
-
-- `Task attachments` - `✅ Docs, attachments, work products`
-- `Kanban board` - `✅ 7 columns, drag-and-drop`
-- `Per-task code review` - `⚠️ PR/work products, no inline diff`
-- `Hunk-level review` - `❌ Bring your own review`
-- `Budget controls` - `✅ Per-agent budgets + hard stops`
+- Stable вырос с `v2026.707.0` до `v2026.824.1`.
+- `v2026.817.0` усилил governed agent-to-agent issue-thread interactions, audit, routines, model catalogs, cost attribution и workspace concurrency.
+- `v2026.824.0` сделал chat-style task UI default, добавил task conversation с blockers/sub-task tree/documents/artifacts, HTTPS runtime previews, verified sandbox capability contract, in-product Claude/Codex sign-in и transactional review-policy verdicts.
+- `v2026.824.1` исправил background-service onboarding и завершает interactive onboarding открытием dashboard.
+- Несмотря на более сильный task chat и governance, default execution остаётся schedule/event-driven heartbeat model. README прямо позиционирует Paperclip как orchestrator, а не code-review tool. Поэтому live score `7/10` и `Review gates, not inline code review` остаются честными.
 
 ### Cursor
 
-- Cloud Agents run in isolated cloud VMs, clone repos, work on separate branches, can run/build/test/control browser/desktop, support MCP, and can be launched from web, desktop, Slack, GitHub/Bitbucket, Linear or API.
-- Cursor docs explicitly say Cloud Agents were formerly called Background Agents.
-- Worktrees docs say the Agents Window can create isolated Git checkouts per agent/task; this supports upgrading the public cell from `⚠️ Background branches/VMs` to `✅ Agents Window worktrees`.
-- Agent Review is now the live official docs page for dedicated local review. Bugbot remains PR-review oriented and can run automatically or manually on PR updates.
-- Pricing docs still support `Free + paid usage`; team docs add paid seats, included usage, on-demand usage, team-wide spending limits and Enterprise per-member spend limits.
-
-Публичная оценка после свежей проверки:
-
-- `Full autonomy` - `⚠️ Cloud agents, not teams`
-- `Review workflow` - `⚠️ PR/BugBot only`
-- `Git worktree isolation` - `✅ Agents Window worktrees`
-- `Flexible autonomy` - `⚠️ Cloud agents run commands`
-- `Budget controls` - `⚠️ Usage + cloud spend limits`
-- `Price` - `Free + paid usage`
+- Agents Window теперь официально описывает unified workspace для local/cloud/remote parallel agents.
+- Subagents имеют отдельный context, foreground/background execution, parallel launch, optional isolated worktrees/VMs, cloud handoff и ограниченную nested delegation. Результат возвращается parent agent; peer-to-peer mailbox или shared peer task graph не документированы.
+- Поэтому live cell уточнён до `Parallel agents + subagents, no peer team`, а score остаётся `6/10`.
+- Code-review cell теперь различает configurable local Agent Review и PR-oriented Bugbot. Отдельный Cursor Review продукт остаётся closed beta и не засчитывается как GA capability.
+- Cloud Agents работают в isolated VMs/branches, доступны на paid plans, тарифицируются по model API pricing и требуют spend limit при первом использовании.
+- Individual plans: Hobby free, Pro `$20/mo`, Pro+ `$60/mo`, Ultra `$200/mo`. Teams: Standard `$40/user/mo`, Premium `$120/user/mo`; team-wide spend limits доступны Teams, per-member limits - Enterprise.
 
 ### Claude Code CLI
 
-- Agent teams still experimental and disabled by default through `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`.
-- Official docs confirm shared task list, mailbox, direct teammate messaging, task dependencies, plan approval requests, quality-gate hooks and local team/task storage.
-- Agent teams docs describe post-`v2.1.178` behavior and mention later UI behavior through `v2.1.199`: teammate spawning no longer needs a separate setup step, cleanup happens automatically, `teammateMode` defaults to in-process unless configured otherwise.
-- Worktrees remain an official workflow for isolated sessions, but this is not a desktop/product-level worktree strategy UI.
-- Cost docs use `/usage` for detailed token usage statistics and mention workspace spend limits, Console usage reporting, and `/usage-credits` for Pro/Max usage credits.
+- Agent teams всё ещё experimental и disabled by default через `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`; в `-p`/Agent SDK teammates не spawnятся.
+- Teams подтверждают direct peer messaging, shared task list, task dependencies, atomic claims, plan approval и hooks, но сохраняют resume/task-sync/shutdown ограничения. Score `7/10` остаётся обоснованным.
+- После 2026-07-11 появился cross-session messaging (`ListAgents`, `SendMessage`, `@session`) между независимыми sessions, в том числе на других машинах. Поэтому `Cross-team communication: ❌` заменено на partial: `Cross-session messaging, no shared cross-team task graph`.
+- Worktrees теперь официально встроены для CLI sessions и isolated subagents.
+- Costs docs подтверждают `/usage`, plan/org/workspace limits и reporting. `--max-budget-usd` является hard cap только для print mode, включая subagents/background agents, поэтому cell уточнён до `Usage/org limits + print-mode hard cap`.
+- Актуальные plan цены: Pro `$20/mo` или `$17/mo` annual; Max `$100/$200`; Team Standard `$20/$25` за seat и Premium `$100/$125`; Enterprise self-serve `$20/seat/mo + API-rate usage` при annual billing.
 
-Публичная оценка не меняется:
+## Публичные оценки после проверки
 
-- `Agent-to-agent messaging` - `✅ Team mailbox, no UI`
-- `Linked tasks` - `✅ Shared task list`
-- `Task dependencies` - `✅ Team task deps, no UI`
-- `Budget controls` - `⚠️ /usage + workspace limits`
-- `Mixed AI teammates` - `⚠️ Claude-only experimental teams`
+### Gas Town
 
-## Источники
+- `Live team collaboration` - `8/10`: persistent identities, async mailboxes/handoffs, shared state и recovery; terminal/tmux-first, без shared live app chat.
+- `Task dependencies` - `✅ Dependency waves`: convoys/molecules и dependency-aware work staging; decomposition должна существовать до convoy launch.
+- `Kanban board` - `❌ Dashboard, not Kanban`.
+- `Code review` - `⚠️ Merge queue, no diff UI`.
+- `Budget controls` - `⚠️ Cost tiers + digest, no hard caps`.
 
-- Agent Teams organizations feature: `src/features/organizations/README.md`
-- Agent Teams organizations DTOs: `src/features/organizations/contracts/dto.ts`
-- Agent Teams token usage budget DTOs: `src/features/token-usage/contracts/dto.ts`
-- Agent Teams scheduled budget cap: `src/main/services/schedule/ScheduledTaskExecutor.ts`
-- Gastown repo: <https://github.com/gastownhall/gastown>
-- Gastown v1.2.1: <https://github.com/gastownhall/gastown/releases/tag/v1.2.1>
-- Gastown provider guide: <https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md>
-- Gastown scheduler docs: <https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md>
-- Gastown dashboard source: <https://github.com/gastownhall/gastown/blob/main/internal/web/templates/convoy.html>
-- Paperclip repo: <https://github.com/paperclipai/paperclip>
-- Paperclip v2026.707.0: <https://github.com/paperclipai/paperclip/releases/tag/v2026.707.0>
-- Paperclip adapters: <https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md>
-- Paperclip heartbeat protocol: <https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/heartbeat-protocol.md>
-- Paperclip org chart: <https://paperclip.inc/docs/guides/board-operator/org-structure/>
-- Paperclip OrgChart source: <https://github.com/paperclipai/paperclip/blob/master/ui/src/pages/OrgChart.tsx>
-- Paperclip costs and budgets docs: <https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md>
-- Paperclip runtime services docs: <https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md>
-- Paperclip Kanban source: <https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx>
-- Paperclip work products source: <https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts>
-- Cursor Cloud Agents: <https://cursor.com/docs/cloud-agent>
-- Cursor Agent Review: <https://cursor.com/docs/agent/agent-review>
-- Cursor Bugbot: <https://cursor.com/docs/bugbot>
-- Cursor worktrees: <https://cursor.com/docs/configuration/worktrees>
-- Cursor Models & Pricing: <https://cursor.com/docs/models-and-pricing>
-- Cursor Team Pricing: <https://cursor.com/docs/account/teams/pricing>
-- Claude Code agent teams: <https://code.claude.com/docs/en/agent-teams>
-- Claude Code subagents: <https://code.claude.com/docs/en/sub-agents>
-- Claude Code common workflows: <https://code.claude.com/docs/en/common-workflows>
-- Claude Code costs: <https://code.claude.com/docs/en/costs>
+### Paperclip
+
+- `Live team collaboration` - `7/10`: durable heartbeat agents, issue comments, mentions and governed interactions; меньше continuously addressable peer teamwork.
+- `Team workspace` - `⚠️ Board + task chats, less live teammate view`.
+- `Kanban board` - `✅ 7 columns, drag-and-drop`.
+- `Code review` - `⚠️ Review gates, not inline code review`.
+- `Budget controls` - `✅ Per-agent budgets + hard stops`; current policies также поддерживают company/project scopes.
+- `Task attachments` - `✅ Docs, attachments, work products`.
+
+### Cursor
+
+- `Live team collaboration` - `6/10`: parallel agents/subagents, no documented peer team.
+- `Team workspace` - `⚠️ Agents Window, no peer team workspace`.
+- `Code review` - `✅ Local Agent Review + PR Bugbot`.
+- `Git worktree isolation` - `✅ Agents Window worktrees`; subagents need explicit isolation when concurrent edits could collide.
+- `Budget controls` - `⚠️ Usage + cloud spend limits`.
+- `Price` - `Free + paid usage`.
+
+### Claude Code CLI
+
+- `Live team collaboration` - `7/10`: experimental peer teams + cross-session messaging, with recovery/task-sync limits.
+- `Cross-team communication` - `⚠️ Cross-session messaging, no shared cross-team task graph`.
+- `Linked tasks` - `✅ Shared task list` with dependencies inside agent teams.
+- `Git worktree isolation` - `✅ Built-in for sessions and subagents`.
+- `Budget controls` - `⚠️ Usage/org limits + print-mode hard cap`.
+- `Mixed AI teammates` - `⚠️ Claude-only experimental teams`.
+
+## Первичные источники
+
+### Agent Teams
+
+- Collaboration controller: <https://github.com/777genius/agent-teams-ai/tree/main/agent-teams-controller/src/internal>
+- Organizations: <https://github.com/777genius/agent-teams-ai/tree/main/src/features/organizations>
+- Terminal workspace: <https://github.com/777genius/agent-teams-ai/blob/main/src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx>
+- Token usage budgets: <https://github.com/777genius/agent-teams-ai/blob/main/src/features/token-usage/contracts/dto.ts>
+- Scheduled budget cap: <https://github.com/777genius/agent-teams-ai/blob/main/src/main/services/schedule/ScheduledTaskExecutor.ts>
+
+### Gas Town
+
+- Repository/current README: <https://github.com/gastownhall/gastown>
+- Checked `main` commit: <https://github.com/gastownhall/gastown/commit/649b832b7672bc7a2dbef26f5983aba6198b819b>
+- `v1.2.1`: <https://github.com/gastownhall/gastown/releases/tag/v1.2.1>
+- Provider guide: <https://github.com/gastownhall/gastown/blob/main/docs/agent-provider-integration.md>
+- Mail protocol: <https://github.com/gastownhall/gastown/blob/main/docs/design/mail-protocol.md>
+- Scheduler: <https://github.com/gastownhall/gastown/blob/main/docs/design/scheduler.md>
+- Dashboard source: <https://github.com/gastownhall/gastown/blob/main/internal/web/templates/convoy.html>
+
+### Paperclip
+
+- Repository/current README: <https://github.com/paperclipai/paperclip>
+- Checked `master` commit: <https://github.com/paperclipai/paperclip/commit/4277ecbb2e7b80cda02c86641a14ae31d0d1a5ba>
+- `v2026.824.1`: <https://github.com/paperclipai/paperclip/releases/tag/v2026.824.1>
+- Adapters: <https://github.com/paperclipai/paperclip/blob/master/docs/adapters/overview.md>
+- Heartbeat runtime: <https://github.com/paperclipai/paperclip/blob/master/docs/agents-runtime.md>
+- Heartbeat protocol: <https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/heartbeat-protocol.md>
+- Comments and communication: <https://github.com/paperclipai/paperclip/blob/master/docs/guides/agent-developer/comments-and-communication.md>
+- Costs and budgets: <https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/costs-and-budgets.md>
+- Runtime services: <https://github.com/paperclipai/paperclip/blob/master/docs/guides/board-operator/execution-workspaces-and-runtime-services.md>
+- Kanban source: <https://github.com/paperclipai/paperclip/blob/master/ui/src/components/KanbanBoard.tsx>
+- Org chart source: <https://github.com/paperclipai/paperclip/blob/master/ui/src/pages/OrgChart.tsx>
+- Work products: <https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts>
+
+### Cursor
+
+- Terminal: <https://cursor.com/docs/agent/tools/terminal>
+- Cloud Agents: <https://cursor.com/docs/cloud-agent>
+- Agents Window: <https://cursor.com/docs/agent/agents-window>
+- Subagents: <https://cursor.com/docs/subagents>
+- Agent Review: <https://cursor.com/docs/agent/agent-review>
+- Bugbot: <https://cursor.com/docs/bugbot>
+- Worktrees: <https://cursor.com/docs/configuration/worktrees>
+- Models and pricing: <https://cursor.com/docs/models-and-pricing>
+- Team pricing: <https://cursor.com/docs/account/teams/pricing>
+
+### Claude Code CLI
+
+- CLI reference: <https://code.claude.com/docs/en/cli-reference>
+- Agent teams: <https://code.claude.com/docs/en/agent-teams>
+- Cross-session messaging: <https://code.claude.com/docs/en/cross-session-messaging>
+- Worktrees: <https://code.claude.com/docs/en/worktrees>
+- Subagents: <https://code.claude.com/docs/en/sub-agents>
+- Dynamic workflows: <https://code.claude.com/docs/en/workflows>
+- Costs: <https://code.claude.com/docs/en/costs>
 - Claude pricing: <https://claude.com/pricing>
+- `v2.1.246`: <https://github.com/anthropics/claude-code/releases/tag/v2.1.246>
