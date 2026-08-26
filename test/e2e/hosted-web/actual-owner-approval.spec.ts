@@ -366,6 +366,45 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
   playwright,
 }) => {
   const scenario = readScenario();
+  const eventStreamRequests: Array<{ readonly url: string; readonly lastEventId: string | null }> =
+    [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname !== '/api/hosted/v1/events') return;
+    eventStreamRequests.push({
+      url: request.url(),
+      lastEventId: request.headers()['last-event-id'] ?? null,
+    });
+  });
+  await page.addInitScript(() => {
+    const host = window as unknown as {
+      __p3cObservedEventSources: Array<{
+        source: EventSource;
+        url: string;
+        eventIds: string[];
+        eventTypes: string[];
+      }>;
+    };
+    host.__p3cObservedEventSources = [];
+    const NativeEventSource = globalThis.EventSource;
+    globalThis.EventSource = class ObservedEventSource extends NativeEventSource {
+      constructor(url: string | URL, init?: EventSourceInit) {
+        super(url, init);
+        const observation = {
+          source: this as EventSource,
+          url: String(url),
+          eventIds: [] as string[],
+          eventTypes: [] as string[],
+        };
+        for (const eventType of ['coordination_event', 'resync_required']) {
+          this.addEventListener(eventType, (event) => {
+            observation.eventTypes.push(event.type);
+            observation.eventIds.push((event as MessageEvent).lastEventId);
+          });
+        }
+        host.__p3cObservedEventSources.push(observation);
+      }
+    };
+  });
   await page.route('**/*', async (route) => {
     if (new URL(route.request().url()).origin !== PRODUCT_ORIGIN) {
       await route.abort('blockedbyclient');
@@ -396,6 +435,82 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
     expect(item).toBeDefined();
     return exactApprovalItem(item!, scenario.targetTeamAId, scenario.teamARunId, target);
   });
+  await expect(page.locator(`[data-approval-id="${scenario.allow.approvalId}"]`)).toHaveCount(1, {
+    timeout: 15_000,
+  });
+  await expect(page.locator(`[data-approval-id="${scenario.deny.approvalId}"]`)).toHaveCount(1, {
+    timeout: 15_000,
+  });
+  await page.waitForFunction(
+    () =>
+      (
+        window as unknown as {
+          __p3cObservedEventSources: Array<{ eventIds: string[] }>;
+        }
+      ).__p3cObservedEventSources.some(({ eventIds }) => eventIds.some(Boolean)),
+    undefined,
+    { timeout: 30_000 }
+  );
+  const firstCursor = await page.evaluate(() => {
+    const observations = (
+      window as unknown as {
+        __p3cObservedEventSources: Array<{
+          source: EventSource;
+          eventIds: string[];
+        }>;
+      }
+    ).__p3cObservedEventSources;
+    const active = observations.find(({ eventIds }) => eventIds.some(Boolean));
+    if (!active) throw new Error('p3c_browser_eventsource_event_missing');
+    const cursor = active.eventIds.find(Boolean)!;
+    active.source.dispatchEvent(new Event('error'));
+    return cursor;
+  });
+  await page.waitForFunction(
+    () =>
+      (
+        window as unknown as {
+          __p3cObservedEventSources: unknown[];
+        }
+      ).__p3cObservedEventSources.length >= 2,
+    undefined,
+    { timeout: 30_000 }
+  );
+  await expect
+    .poll(
+      () => eventStreamRequests.findLast(({ lastEventId }) => lastEventId !== null)?.lastEventId,
+      {
+        timeout: 30_000,
+      }
+    )
+    .toBe(firstCursor);
+  expect(
+    eventStreamRequests.some(
+      ({ url, lastEventId }) =>
+        url.includes(`after=${encodeURIComponent(firstCursor)}`) && lastEventId === firstCursor
+    )
+  ).toBe(true);
+  await page.waitForFunction(
+    () => {
+      const observations = (
+        window as unknown as {
+          __p3cObservedEventSources: Array<{
+            eventIds: string[];
+            eventTypes: string[];
+          }>;
+        }
+      ).__p3cObservedEventSources;
+      const ids = observations.flatMap(({ eventIds }) => eventIds).filter(Boolean);
+      return (
+        observations.some(({ eventTypes }) => eventTypes.includes('resync_required')) &&
+        new Set(ids).size < ids.length
+      );
+    },
+    undefined,
+    { timeout: 30_000 }
+  );
+  await expect(page.locator(`[data-approval-id="${scenario.allow.approvalId}"]`)).toHaveCount(1);
+  await expect(page.locator(`[data-approval-id="${scenario.deny.approvalId}"]`)).toHaveCount(1);
   const preview = await page.evaluate(
     async ({ teamId, runId, target, csrfValue }) => {
       const response = await fetch('/api/hosted/v1/team-approvals/preview', {

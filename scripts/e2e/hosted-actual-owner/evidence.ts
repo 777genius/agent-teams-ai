@@ -1,4 +1,4 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, rename } from 'node:fs/promises';
 
 import { assertRootCurrent, procFdPath, type RootAnchor } from './anchors';
 import {
@@ -79,8 +79,11 @@ export const EVIDENCE_REQUIREMENTS: Readonly<Record<MatrixRow, readonly Requirem
     '06_ambiguity_reconciliation': [
       ['owner-wal', 'operator_required_fsynced', 2],
       ['owner-wal', 'automatic_retry_absent', 2],
+      ['owner-wal', 'reconciliation_lease_fenced', 2],
       ['opencode', 'reconcile_delivered_no_effect', 2],
-      ['opencode', 'reconcile_not_delivered_one_retry', 3],
+      ['opencode', 'reconcile_not_delivered_retry_effect', 3],
+      ['owner-wal', 'reconcile_retry_terminal_fsynced', 3],
+      ['opencode', 'effect_total_three', 3],
       ['owner-wal', 'reconcile_unknown_held', 3],
       ['product-http', 'reconcile_while_lease_open_rejected', 3],
       ['product-http', 'reconcile_identity_mismatch_rejected', 3],
@@ -221,6 +224,14 @@ export interface ExactlyOnceEvidence {
   }[];
   readonly globallyUniqueProviderEffectIds: true;
   readonly observedNormalRetryCount: 0;
+  readonly reconciledProviderEffect: {
+    readonly chainId: string;
+    readonly providerEffectId: string;
+    readonly providerEffectRecordId: string;
+    readonly attempt: 2;
+    readonly retryObserved: true;
+  };
+  readonly globalProviderEffectCount: 3;
 }
 
 function parseRecord(
@@ -402,7 +413,12 @@ function validateRedactedStructure(value: unknown, label: string): RetainedObser
 }
 
 function ownerGenerationForEvent(event: string): number {
-  if (/boundary_three|after_effect|truth_reconstructed|stale_sockets/u.test(event)) return 4;
+  if (
+    /boundary_three|after_effect|truth_reconstructed|stale_sockets|reconcile|reconciliation|operator_required|automatic_retry/u.test(
+      event
+    )
+  )
+    return 4;
   if (/boundary_two|after_decision|stale_generations/u.test(event)) return 3;
   if (/restart|restored|boundary_one/u.test(event)) return 2;
   return 1;
@@ -411,6 +427,8 @@ function ownerGenerationForEvent(event: string): number {
 export function semanticScopeForEvent(row: MatrixRow, event: string): string {
   if (/^allow_|allow_terminal/u.test(event)) return 'decision:allow';
   if (/^deny_|deny_terminal/u.test(event)) return 'decision:deny';
+  if (row === '04_auth_replay_rejections') return 'decision:allow';
+  if (row === '06_ambiguity_reconciliation') return 'ambiguity:reconciliation';
   if (row === '08_cross_team_isolation') return 'cross-team:team-b-request';
   return `${row}:${event}`;
 }
@@ -421,15 +439,12 @@ export function semanticDecisionForEvent(
 ): SemanticIdentity['decision'] {
   if (/^allow_|allow_terminal/u.test(event)) return 'allow';
   if (/^deny_|deny_terminal/u.test(event)) return 'deny';
-  if (row === '08_cross_team_isolation' && event === 'cross_team_decide_rejected')
-    return 'deny';
+  if (row === '04_auth_replay_rejections') return 'allow';
+  if (row === '08_cross_team_isolation' && event === 'cross_team_decide_rejected') return 'deny';
   return 'none';
 }
 
-export function canonicalRowIdentity(
-  row: MatrixRow,
-  identity: SemanticIdentity
-): unknown {
+export function canonicalRowIdentity(row: MatrixRow, identity: SemanticIdentity): unknown {
   if (row !== '08_cross_team_isolation') return identity;
   return Object.freeze({
     lane: identity.lane,
@@ -460,14 +475,32 @@ function causalPhaseForEvent(event: string): number {
     allow_terminal_fsynced: 60,
     deny_terminal_fsynced: 60,
   });
-  return normalDecisionPhases[event] ?? 1;
+  const reconciliationPhases: Readonly<Record<string, number>> = Object.freeze({
+    operator_required_fsynced: 10,
+    automatic_retry_absent: 20,
+    reconciliation_lease_fenced: 30,
+    reconcile_delivered_no_effect: 35,
+    reconcile_not_delivered_retry_effect: 40,
+    reconcile_retry_terminal_fsynced: 60,
+    effect_total_three: 70,
+    reconcile_unknown_held: 80,
+    reconcile_while_lease_open_rejected: 90,
+    reconcile_identity_mismatch_rejected: 90,
+  });
+  if (
+    /^(?:missing_session_rejected|invalid_session_rejected|origin_rejected|csrf_rejected|stale_revision_rejected|wrong_team_rejected|wrong_run_rejected|wrong_provider_rejected|non_owner_browser_rejected|duplicate_post_rejected|nonce_replay_rejected|owner_response_replay_rejected|duplicate_suppressed|gap_reconnected|negative_effect_delta_zero)$/u.test(
+      event
+    )
+  )
+    return 80;
+  return normalDecisionPhases[event] ?? reconciliationPhases[event] ?? 1;
 }
 
 function causalAttempt(
   event: string,
   origin: RawOrigin
 ): { attempt: number; retryObserved: boolean } {
-  if (event === 'reconcile_not_delivered_one_retry') {
+  if (event === 'reconcile_not_delivered_retry_effect') {
     return { attempt: 2, retryObserved: true };
   }
   if (
@@ -541,14 +574,39 @@ function expectedHttpRequestHeaders(event: string): Record<string, string> {
 const APPROVAL_PAGE_PATH = '/api/hosted/v1/team-approvals/page' as const;
 const APPROVAL_PREVIEW_PATH = '/api/hosted/v1/team-approvals/preview' as const;
 const APPROVAL_DECISIONS_PATH = '/api/hosted/v1/team-approvals/decisions' as const;
+const APPROVAL_RECONCILIATION_PATH = '/api/hosted/v1/team-approvals/reconcile' as const;
+
+function reconciliationRef(identity: SemanticIdentity): string {
+  return `reconciliation_${sha256(
+    `agent-teams.p3c.reconciliation-ref/v1\0${canonicalJson(identity)}`
+  ).slice(0, 32)}`;
+}
+
+function reconciliationLeaseId(identity: SemanticIdentity): string {
+  return `lease_${sha256(
+    `agent-teams.p3c.reconciliation-lease/v1\0${canonicalJson(identity)}`
+  ).slice(0, 32)}`;
+}
+
+function writerFence(identity: SemanticIdentity, ownerGeneration: number): Record<string, unknown> {
+  return Object.freeze({
+    ownerGeneration,
+    fenceDigest: sha256(
+      `agent-teams.p3c.owner-writer-fence/v1\0${ownerGeneration}\0${canonicalJson(identity)}`
+    ),
+  });
+}
 
 function httpEndpointForEvent(event: string): {
-  readonly family: 'page' | 'preview' | 'decisions';
+  readonly family: 'page' | 'preview' | 'decisions' | 'reconcile';
   readonly path:
     | typeof APPROVAL_PAGE_PATH
     | typeof APPROVAL_PREVIEW_PATH
-    | typeof APPROVAL_DECISIONS_PATH;
+    | typeof APPROVAL_DECISIONS_PATH
+    | typeof APPROVAL_RECONCILIATION_PATH;
 } {
+  if (/^reconcile_/u.test(event))
+    return Object.freeze({ family: 'reconcile', path: APPROVAL_RECONCILIATION_PATH });
   if (
     event === 'approval_preview_observed' ||
     event === 'team_b_preview_request_observed' ||
@@ -593,6 +651,17 @@ function expectedHttpRequestBody(
       approvalId: identity.approvalId,
       expectedGeneration: identity.generationId,
       previewRef: identity.previewRef,
+    });
+  }
+  if (endpoint.family === 'reconcile') {
+    return Object.freeze({
+      schemaVersion: 1,
+      teamId: identity.targetTeamId,
+      expectedRunId: identity.targetTeamRunId,
+      approvalId: identity.approvalId,
+      expectedGeneration: identity.generationId,
+      idempotencyKey: identity.idempotencyKey,
+      reconciliationRef: reconciliationRef(identity),
     });
   }
   return Object.freeze({
@@ -946,13 +1015,7 @@ function validateTransport(
       throw new Error('p3c_semantic_http_body_binding');
     const rejected = /rejected|routes_absent/u.test(event);
     if (endpoint.family === 'page' && !rejected) {
-      validateApprovalPageExchanges(
-        item.pageExchanges,
-        requestBody,
-        responseBody,
-        event,
-        identity
-      );
+      validateApprovalPageExchanges(item.pageExchanges, requestBody, responseBody, event, identity);
     } else {
       if (item.pageExchanges !== null) throw new Error('p3c_semantic_http_page_unexpected');
       validateHttpResponseBody(event, responseBody.value, identity);
@@ -976,19 +1039,52 @@ function validateTransport(
     return ownerGenerationForEvent(event);
   }
   if (origin === 'product-sse') {
+    const reconnect = event === 'duplicate_suppressed' || event === 'gap_reconnected';
+    const disposition =
+      event === 'duplicate_suppressed'
+        ? 'duplicate-suppressed'
+        : event === 'gap_reconnected'
+          ? 'gap-replay-applied'
+          : 'live-applied';
     const item = exactRecord(
       transport,
-      ['kind', 'eventId', 'eventType', 'reconnectAttempt', 'data'],
+      [
+        'kind',
+        'consumer',
+        'eventId',
+        'eventType',
+        'reconnectAttempt',
+        'lastEventIdHeader',
+        'deliveryDisposition',
+        'domObservation',
+        'data',
+      ],
       'semantic_sse'
+    );
+    const dom = exactRecord(
+      item.domObservation,
+      ['renderedBefore', 'renderedAfter', 'duplicateCount', 'gapDetected'],
+      'semantic_sse_dom'
     );
     if (
       item.kind !== 'sse' ||
+      item.consumer !== 'rendered-ui-eventsource' ||
       typeof item.eventId !== 'string' ||
       !/^[1-9]\d*$/u.test(item.eventId) ||
+      item.eventId !== (event === 'gap_reconnected' ? '3' : '1') ||
       typeof item.eventType !== 'string' ||
       !/^[a-z][a-z0-9_-]{0,127}$/u.test(item.eventType) ||
       !Number.isSafeInteger(item.reconnectAttempt) ||
-      (item.reconnectAttempt as number) < 0
+      item.reconnectAttempt !== (reconnect ? 1 : 0) ||
+      item.lastEventIdHeader !== (reconnect ? '1' : null) ||
+      item.deliveryDisposition !== disposition ||
+      !Number.isSafeInteger(dom.renderedBefore) ||
+      !Number.isSafeInteger(dom.renderedAfter) ||
+      !Number.isSafeInteger(dom.duplicateCount) ||
+      dom.renderedBefore !== 1 ||
+      dom.renderedAfter !== (event === 'duplicate_suppressed' ? 1 : 2) ||
+      dom.duplicateCount !== (event === 'duplicate_suppressed' ? 1 : 0) ||
+      dom.gapDetected !== (event === 'gap_reconnected')
     )
       throw new Error('p3c_semantic_sse');
     const data = validateRedactedStructure(item.data, 'sse_data').value;
@@ -1024,6 +1120,9 @@ function validateTransport(
         'providerEffectId',
         'attempt',
         'retryObserved',
+        'reconciliationRef',
+        'leaseId',
+        'writerFence',
         'record',
       ],
       'semantic_wal'
@@ -1040,6 +1139,9 @@ function validateTransport(
         'decision',
         'ownerGeneration',
         'providerEffectId',
+        'reconciliationRef',
+        'leaseId',
+        'writerFence',
         'identity',
       ],
       'wal_record_body'
@@ -1064,9 +1166,17 @@ function validateTransport(
       record.decision !== identity.decision ||
       record.ownerGeneration !== expectedGeneration ||
       record.providerEffectId !== providerEffectId ||
+      record.reconciliationRef !== reconciliationRef(identity) ||
+      record.leaseId !== reconciliationLeaseId(identity) ||
+      canonicalJson(record.writerFence) !==
+        canonicalJson(writerFence(identity, expectedGeneration)) ||
       canonicalJson(record.identity) !== canonicalJson(identity) ||
       item.ownerGeneration !== expectedGeneration ||
       item.providerEffectId !== providerEffectId ||
+      item.reconciliationRef !== reconciliationRef(identity) ||
+      item.leaseId !== reconciliationLeaseId(identity) ||
+      canonicalJson(item.writerFence) !==
+        canonicalJson(writerFence(identity, expectedGeneration)) ||
       item.attempt !== causalAttempt(event, origin).attempt ||
       item.retryObserved !== causalAttempt(event, origin).retryObserved
     )
@@ -1095,8 +1205,11 @@ function validateTransport(
     );
     const expectedGeneration = ownerGenerationForEvent(event);
     const expectedAttempt = causalAttempt(event, origin);
-    const isProviderEffect = /_effect$/u.test(event);
-    const isEffectTotal = event === 'effect_total_two';
+    const isProviderEffect =
+      /^(?:(?:allow|deny)_effect|reconcile_not_delivered_retry_effect)$/u.test(event);
+    const effectTotalCount =
+      event === 'effect_total_two' ? 2 : event === 'effect_total_three' ? 3 : null;
+    const isEffectTotal = effectTotalCount !== null;
     if (
       item.kind !== 'opencode' ||
       !['request', 'response', 'effect', 'observation'].includes(item.direction as string) ||
@@ -1119,7 +1232,7 @@ function validateTransport(
           ? typeof item.effectSetDigest !== 'string' ||
             !/^[0-9a-f]{64}$/u.test(item.effectSetDigest) ||
             !Array.isArray(item.effectSetSha256s) ||
-            item.effectSetSha256s.length !== 2 ||
+            item.effectSetSha256s.length !== effectTotalCount ||
             item.effectSetSha256s.some(
               (digest) => typeof digest !== 'string' || !/^[0-9a-f]{64}$/u.test(digest)
             )
@@ -1289,7 +1402,8 @@ export function validateStructuralPayload(
       attempt: causal.attempt as number,
       retryObserved: causal.retryObserved as boolean,
       providerEffectSha256:
-        origin === 'opencode' && /_effect$/u.test(event)
+        origin === 'opencode' &&
+        /^(?:(?:allow|deny)_effect|reconcile_not_delivered_retry_effect)$/u.test(event)
           ? validateRedactedStructure(
               (semantic.transport as Record<string, unknown>).response,
               'opencode_response'
@@ -1597,10 +1711,39 @@ export function deriveEvidence(
       retryObserved: false as const,
     });
   });
+  const canonicalAllowIdentity = all.find(
+    ({ row, event }) => row === '02_browser_allow_deny' && event === 'allow_submitted'
+  )?.semanticIdentity;
+  const negativeRecords = all.filter(({ row }) => row === '04_auth_replay_rejections');
+  if (
+    canonicalAllowIdentity === undefined ||
+    negativeRecords.length !== EVIDENCE_REQUIREMENTS['04_auth_replay_rejections'].length ||
+    negativeRecords.some(
+      ({ semanticIdentity, effectCount, causal }) =>
+        canonicalJson(semanticIdentity) !== canonicalJson(canonicalAllowIdentity) ||
+        effectCount !== 2 ||
+        causal.providerEffectSha256 !== null
+    ) ||
+    all.filter(
+      ({ semanticIdentity, event }) =>
+        canonicalJson(semanticIdentity) === canonicalJson(canonicalAllowIdentity) &&
+        event === 'allow_effect'
+    ).length !== 1
+  )
+    throw new Error('p3c_negative_canonical_request_exactly_one_mutation');
   const providerEffectRecords = all.filter(
     (record) => record.origin === 'opencode' && record.causal.phase === 40
   );
+  const normalProviderEffectRecords = providerEffectRecords.filter(
+    ({ event }) => event === 'allow_effect' || event === 'deny_effect'
+  );
+  const reconciledProviderEffectRecords = providerEffectRecords.filter(
+    ({ event }) => event === 'reconcile_not_delivered_retry_effect'
+  );
   if (
+    providerEffectRecords.length !== 3 ||
+    normalProviderEffectRecords.length !== 2 ||
+    reconciledProviderEffectRecords.length !== 1 ||
     new Set(normalEffects.map(({ providerEffectId }) => providerEffectId)).size !==
       normalEffects.length ||
     new Set(providerEffectRecords.map(({ causal }) => causal.providerEffectId)).size !==
@@ -1610,7 +1753,7 @@ export function deriveEvidence(
   const effectTotalRecords = all.filter(
     (record) => record.origin === 'opencode' && record.event === 'effect_total_two'
   );
-  const normalEffectSha256s = providerEffectRecords
+  const normalEffectSha256s = normalProviderEffectRecords
     .map(({ causal }) => causal.providerEffectSha256)
     .filter((digest): digest is string => digest !== null)
     .sort();
@@ -1619,7 +1762,7 @@ export function deriveEvidence(
   );
   if (
     effectTotalRecords.length === 1 &&
-    providerEffectRecords.some(
+    normalProviderEffectRecords.some(
       (record) => BigInt(record.monotonicNs) >= BigInt(effectTotalRecords[0].monotonicNs)
     )
   )
@@ -1633,10 +1776,47 @@ export function deriveEvidence(
     effectTotalRecords[0].causal.effectSetDigest !== expectedEffectSetDigest
   )
     throw new Error('p3c_provider_effect_total_join');
+  const reconciledProviderEffect = reconciledProviderEffectRecords[0];
+  if (
+    reconciledProviderEffect.causal.providerEffectId === null ||
+    reconciledProviderEffect.causal.attempt !== 2 ||
+    reconciledProviderEffect.causal.retryObserved !== true
+  )
+    throw new Error('p3c_reconciled_provider_effect_attempt');
+  const globalEffectSha256s = providerEffectRecords
+    .map(({ causal }) => causal.providerEffectSha256)
+    .filter((digest): digest is string => digest !== null)
+    .sort();
+  const globalEffectTotal = all.filter(
+    (record) => record.origin === 'opencode' && record.event === 'effect_total_three'
+  );
+  const expectedGlobalEffectSetDigest = sha256(
+    `agent-teams.p3c.provider-effect-set/v1\0${canonicalJson(globalEffectSha256s)}`
+  );
+  if (
+    globalEffectTotal.length !== 1 ||
+    globalEffectSha256s.length !== 3 ||
+    new Set(globalEffectSha256s).size !== 3 ||
+    providerEffectRecords.some(
+      (record) => BigInt(record.monotonicNs) >= BigInt(globalEffectTotal[0].monotonicNs)
+    ) ||
+    canonicalJson([...(globalEffectTotal[0].causal.effectSetSha256s ?? [])].sort()) !==
+      canonicalJson(globalEffectSha256s) ||
+    globalEffectTotal[0].causal.effectSetDigest !== expectedGlobalEffectSetDigest
+  )
+    throw new Error('p3c_global_provider_effect_total_join');
   const exactlyOnce = Object.freeze({
     normalProviderEffects: Object.freeze(normalEffects),
     globallyUniqueProviderEffectIds: true as const,
     observedNormalRetryCount: 0 as const,
+    reconciledProviderEffect: Object.freeze({
+      chainId: reconciledProviderEffect.causal.chainId,
+      providerEffectId: reconciledProviderEffect.causal.providerEffectId,
+      providerEffectRecordId: reconciledProviderEffect.recordId,
+      attempt: 2 as const,
+      retryObserved: true as const,
+    }),
+    globalProviderEffectCount: 3 as const,
   });
   return Object.freeze({
     origins: Object.freeze(origins),
@@ -1689,37 +1869,63 @@ export async function retainEvidence(
   if ((await readdir(procFdPath(evidenceRoot.handle))).length !== 0)
     throw new Error('p3c_evidence_root_not_empty');
   const digests: Record<string, string> = {};
+  const staged: { readonly stage: string; readonly final: string; readonly sha256: string }[] = [];
+  const stage = async (final: string, bytes: Buffer, expectedSha256?: string): Promise<void> => {
+    const stageName = `.stage-${final}`;
+    const pin = await writeExclusive(evidenceRoot, stageName, bytes, 0o400);
+    if (expectedSha256 !== undefined && pin.sha256 !== expectedSha256)
+      throw new Error('p3c_evidence_publish_digest');
+    staged.push(Object.freeze({ stage: stageName, final, sha256: pin.sha256 }));
+  };
   for (const origin of RAW_ORIGINS) {
     assertNoSecretLikeBytes(raw[origin]);
-    const pin = await writeExclusive(evidenceRoot, `raw-${origin}.ndjson`, raw[origin], 0o400);
-    if (pin.sha256 !== document.raw[origin].sha256) throw new Error('p3c_evidence_publish_digest');
-    digests[pin.relativePath] = pin.sha256;
+    await stage(`raw-${origin}.ndjson`, raw[origin], document.raw[origin].sha256);
   }
   assertNoSecretLikeBytes(supervisorTranscript);
   if (sha256(supervisorTranscript) !== document.supervisorTranscriptSha256)
     throw new Error('p3c_evidence_supervisor_transcript_digest');
-  const transcript = await writeExclusive(
-    evidenceRoot,
-    'supervisor-transcript.ndjson',
-    supervisorTranscript,
-    0o400
-  );
-  digests[transcript.relativePath] = transcript.sha256;
+  await stage('supervisor-transcript.ndjson', supervisorTranscript);
   const bytes = Buffer.from(canonicalJson(document));
-  const pin = await writeExclusive(evidenceRoot, 'evidence.json', bytes, 0o400);
-  digests[pin.relativePath] = pin.sha256;
+  await stage('evidence.json', bytes);
+  for (const item of staged) {
+    await rename(
+      `${procFdPath(evidenceRoot.handle)}/${item.stage}`,
+      `${procFdPath(evidenceRoot.handle)}/${item.final}`
+    );
+    digests[item.final] = item.sha256;
+  }
   await evidenceRoot.handle.sync();
   await assertRootCurrent(evidenceRoot);
+  const readyBytes = Buffer.from(
+    canonicalJson({
+      schemaVersion: 1,
+      purpose: 'agent-teams.p3c.evidence-ready/v1',
+      evidenceDigest: document.evidenceDigest,
+      files: Object.fromEntries(
+        Object.entries(digests).sort(([left], [right]) =>
+          Buffer.from(left).compare(Buffer.from(right))
+        )
+      ),
+    })
+  );
+  const ready = await writeExclusive(evidenceRoot, 'READY.json', readyBytes, 0o400);
+  digests[ready.relativePath] = ready.sha256;
+  await evidenceRoot.handle.sync();
   const expectedNames = [
     ...RAW_ORIGINS.map((origin) => `raw-${origin}.ndjson`),
     'supervisor-transcript.ndjson',
     'evidence.json',
+    'READY.json',
   ].sort((left, right) => Buffer.from(left).compare(Buffer.from(right)));
   const names = (await readdir(procFdPath(evidenceRoot.handle))).sort((left, right) =>
     Buffer.from(left).compare(Buffer.from(right))
   );
   if (canonicalJson(names) !== canonicalJson(expectedNames))
     throw new Error('p3c_evidence_root_changed');
+  await evidenceRoot.handle.chmod(0o500);
+  await evidenceRoot.handle.sync();
+  const final = await evidenceRoot.handle.stat({ bigint: true });
+  if (Number(final.mode & 0o777n) !== 0o500) throw new Error('p3c_evidence_root_not_sealed');
   return Object.freeze(digests);
 }
 
@@ -1850,9 +2056,25 @@ export function makeSemanticPayload(input: {
     case 'product-sse':
       transport = {
         kind: 'sse',
-        eventId: '1',
+        consumer: 'rendered-ui-eventsource',
+        eventId: input.event === 'gap_reconnected' ? '3' : '1',
         eventType: input.event,
-        reconnectAttempt: input.event.includes('reconnect') ? 1 : 0,
+        reconnectAttempt:
+          input.event === 'duplicate_suppressed' || input.event === 'gap_reconnected' ? 1 : 0,
+        lastEventIdHeader:
+          input.event === 'duplicate_suppressed' || input.event === 'gap_reconnected' ? '1' : null,
+        deliveryDisposition:
+          input.event === 'duplicate_suppressed'
+            ? 'duplicate-suppressed'
+            : input.event === 'gap_reconnected'
+              ? 'gap-replay-applied'
+              : 'live-applied',
+        domObservation: {
+          renderedBefore: 1,
+          renderedAfter: input.event === 'duplicate_suppressed' ? 1 : 2,
+          duplicateCount: input.event === 'duplicate_suppressed' ? 1 : 0,
+          gapDetected: input.event === 'gap_reconnected',
+        },
         data: redactedStructure(
           Buffer.from(
             canonicalJson({
@@ -1877,6 +2099,9 @@ export function makeSemanticPayload(input: {
           decision: input.identity.decision,
           ownerGeneration: generation,
           providerEffectId: input.providerEffectId ?? null,
+          reconciliationRef: reconciliationRef(input.identity),
+          leaseId: reconciliationLeaseId(input.identity),
+          writerFence: writerFence(input.identity, generation),
           identity: input.identity,
         })
       );
@@ -1889,6 +2114,9 @@ export function makeSemanticPayload(input: {
         state: input.event,
         ownerGeneration: generation,
         providerEffectId: input.providerEffectId ?? null,
+        reconciliationRef: reconciliationRef(input.identity),
+        leaseId: reconciliationLeaseId(input.identity),
+        writerFence: writerFence(input.identity, generation),
         ...causalAttempt(input.event, input.origin),
         record: redactedStructure(record),
       };
@@ -1910,18 +2138,16 @@ export function makeSemanticPayload(input: {
         ownerGeneration: generation,
         providerEffectId: input.providerEffectId ?? null,
         ...causalAttempt(input.event, input.origin),
-        effectSetSha256s:
-          input.event === 'effect_total_two'
-            ? Object.freeze([...(input.effectSetSha256s ?? [])])
-            : null,
-        effectSetDigest:
-          input.event === 'effect_total_two'
-            ? sha256(
-                `agent-teams.p3c.provider-effect-set/v1\0${canonicalJson(
-                  [...(input.effectSetSha256s ?? [])].sort()
-                )}`
-              )
-            : null,
+        effectSetSha256s: /^effect_total_(?:two|three)$/u.test(input.event)
+          ? Object.freeze([...(input.effectSetSha256s ?? [])])
+          : null,
+        effectSetDigest: /^effect_total_(?:two|three)$/u.test(input.event)
+          ? sha256(
+              `agent-teams.p3c.provider-effect-set/v1\0${canonicalJson(
+                [...(input.effectSetSha256s ?? [])].sort()
+              )}`
+            )
+          : null,
         request: redactedStructure(
           requiredObservedBody(input.observedRequestBody, 'opencode_request')
         ),

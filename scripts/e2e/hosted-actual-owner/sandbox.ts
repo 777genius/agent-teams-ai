@@ -2,7 +2,13 @@ import { constants } from 'node:fs';
 import { mkdir, open, readdir, rename, rmdir, unlink, type FileHandle } from 'node:fs/promises';
 
 import { assertRootCurrent, descriptorMountId, procFdPath, type RootAnchor } from './anchors';
-import { CONTRACT_PURPOSE, canonicalJson, exactRecord, sha256 } from './contracts';
+import {
+  CONTRACT_PURPOSE,
+  GLOBAL_FINAL_RUN_RECORD,
+  canonicalJson,
+  exactRecord,
+  sha256,
+} from './contracts';
 
 const MARKER = '.p3c-sandbox.json';
 const DIRECTORIES = Object.freeze([
@@ -125,7 +131,11 @@ export async function createSandbox(
   if (parent.name !== 'sandboxParent' || !/^[0-9a-f]{64}$/u.test(controllerNonce))
     throw new Error('p3c_sandbox_authority');
   await assertRootCurrent(parent);
-  if ((await readdir(procFdPath(parent.handle))).length !== 0)
+  const parentNames = await readdir(procFdPath(parent.handle));
+  if (
+    parentNames.length > 1 ||
+    (parentNames.length === 1 && parentNames[0] !== GLOBAL_FINAL_RUN_RECORD)
+  )
     throw new Error('p3c_sandbox_parent_not_empty');
   const runId = sha256(`agent-teams.p3c.run/v1\0${controllerNonce}`);
   const name = `actual-owner-${runId}`;
@@ -423,7 +433,11 @@ export async function cleanupSandbox(
     await rmdir(`${procFdPath(sandbox.parent.handle)}/${cleanupName}`);
     await sandbox.parent.handle.sync();
     await assertRootCurrent(sandbox.parent);
-    if ((await readdir(procFdPath(sandbox.parent.handle))).length !== 0)
+    const remainingParentNames = await readdir(procFdPath(sandbox.parent.handle));
+    if (
+      remainingParentNames.length > 1 ||
+      (remainingParentNames.length === 1 && remainingParentNames[0] !== GLOBAL_FINAL_RUN_RECORD)
+    )
       throw new Error('p3c_cleanup_parent_not_empty');
     return Object.freeze({
       disposition: 'removed',

@@ -49,6 +49,8 @@ async function readRawFile(
         expectedUid === undefined ||
         before.uid !== BigInt(expectedUid) ||
         String(before.dev) !== sandbox.device ||
+        String(before.dev) !== expected.captureDevice ||
+        String(before.ino) !== expected.captureInode ||
         (await descriptorMountId(file)) !== sandbox.mountId ||
         Number(before.size) !== expected.size
       )

@@ -9,28 +9,31 @@ export const HARNESS_REVIEW_PURPOSE = 'agent-teams.p3c.harness-review/v1' as con
 export const ONE_RUN_AUTHORIZATION_PURPOSE =
   'agent-teams.p3c.controller-one-run-authorization/v1' as const;
 export const CONSUMED_ATTEMPT_PURPOSE = 'agent-teams.p3c.consumed-attempt/v1' as const;
+export const GLOBAL_FINAL_RUN_RECORD = 'actual-owner-final-run-000001.json' as const;
 export const P3C_LANE = 'P3.C2.FINAL_NO_FAKE_RUN' as const;
+export const MAXIMUM_FINAL_RUNS = 1 as const;
 
-export const PRODUCT_AUTHORITY_COMMIT = '666a4d89ce68f52984e08a857f6abfeda2931cb4' as const;
+export const PRODUCT_AUTHORITY_COMMIT = '85c0850e2fc312b995ba3116f8d4aa46dcb0b1dd' as const;
 export const PACKET_BASE_COMMIT = '720fc62768341e1c2960cfaf4ad2496dd008291e' as const;
 export const AUDITED_PRODUCT_COMMIT = 'd71671599c062244767494d392575cfacba5e1ff' as const;
 export const AUDITED_PRODUCT_TREE = 'af7fa38ec50893550ce14026c39b428f8dbfd1f2' as const;
-export const P3B_SOURCE_COMMIT = '06e5dd89aee920c6e3ecd8ff0efbfcf5135021b7' as const;
+export const P3B_SOURCE_COMMIT = '459eae38e60a1463ca2b7b077047bc18e4ab3bcc' as const;
 
 export const OPENCODE_IDENTITIES = Object.freeze({
-  pullRequestHead: 'fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f',
-  workflowMergeCommit: '2cbaa3f8d7f130ba41f07aab114a76f08cc311f1',
-  releaseSourceCommit: '3186244c3103eb02d95a255b593847b14488b070',
-  releaseSourceTree: '8fba45aecd63ec61f334a856694cbd3da037df90',
-  releaseBaseCommit: '47b6b6f5f4f9b42d2bce7af1c4e5bf6efaf22ba7',
-  workflowRunId: '32784750815',
+  pullRequestHead: '9fb0d367a9ff28c63b4b90774c9650c3dec19f80',
+  workflowMergeCommit: '6cb3c41e74e70915099ef25904df80684e055e82',
+  releaseSourceCommit: '9d715ab06095a130c37202ea54437be180323f52',
+  releaseSourceTree: '48ed783507f284923ae537beb2956fb852278a5b',
+  releaseBaseCommit: 'ef2880f379129aa048be9e9353e30aa168d42c17',
+  workflowRunId: '32981811498',
   workflowRunAttempt: 1,
   workflowRef: 'refs/pull/4/merge',
-  artifactId: '9541196940',
-  actionsArtifactZipSha256: '601e3bf7713ff4180d449cc788e6000a2b706fb01f7cd11647379ab45c004b0c',
-  releaseManifestSha256: '076dd096b36e34c47ad789c7b492d6b510f9b89cca9e6604f6fd0431c02d99fd',
-  linuxX64ArchiveSha256: 'fb1a48abaa25c412134c684f2c5b7ffa4fafd16d68c717fe0ede3ee655123308',
-  linuxX64BinarySha256: '4947f69d85d491b5f73ef1c9306a5ef69c2991800fbd40f05f2b15a53f57299e',
+  artifactId: '9612023097',
+  actionsArtifactZipSha256: '0dbe83717768df7ffb3840764d082927552f1c354246ca953e16b9a1117ef932',
+  buildProvenanceBundleSha256: 'a9bfa64fe9ea53505b9fa78e04a49459bbed9fec784c4c098e2039608c4fa562',
+  releaseManifestSha256: 'ac749763956ddf2c34e31e345ce228fc744eb3d217a8cdfe0bdf162570f7cb5d',
+  linuxX64ArchiveSha256: '16de032488890e60c66d90291e2148da556a021590c635e22d3a4ade15b59a61',
+  linuxX64BinarySha256: 'cffecbe3ff685de84d7fa028e552c42d15a7c720a8f8d5d1cddd265110e5eb88',
 } as const);
 
 export const PRODUCT_ORIGIN = 'http://127.0.0.1:45131' as const;
@@ -45,7 +48,6 @@ export const ROOT_NAMES = Object.freeze([
   'p3b2',
   'openCode',
   'controllerAuthority',
-  'attemptLedger',
   'sandboxParent',
   'evidenceRoot',
 ] as const);
@@ -138,6 +140,7 @@ export interface IntegrationDescriptor {
   };
   readonly control: {
     readonly lane: typeof P3C_LANE;
+    readonly maximumFinalRuns: typeof MAXIMUM_FINAL_RUNS;
     readonly freezeId: string;
     readonly reviewId: string;
     readonly authorizationId: string;
@@ -180,11 +183,12 @@ export interface IntegrationDescriptor {
   readonly openCode: {
     readonly identities: typeof OPENCODE_IDENTITIES;
     readonly acquisitionReceipt: FilePin;
+    readonly buildProvenanceBundle: FilePin;
     readonly releaseManifest: FilePin;
     readonly actionsArtifactZip: FilePin;
     readonly linuxX64Archive: FilePin;
     readonly linuxX64Binary: FilePin;
-    readonly signedBuildProvenance: false;
+    readonly signedBuildProvenance: true;
     readonly productionEligible: false;
     readonly releaseEligible: false;
   };
@@ -418,6 +422,7 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     top.control,
     [
       'lane',
+      'maximumFinalRuns',
       'freezeId',
       'reviewId',
       'authorizationId',
@@ -429,7 +434,8 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     ],
     'control'
   );
-  if (control.lane !== P3C_LANE) throw new TypeError('p3c_wrong_lane');
+  if (control.lane !== P3C_LANE || control.maximumFinalRuns !== MAXIMUM_FINAL_RUNS)
+    throw new TypeError('p3c_wrong_lane_or_run_limit');
   const freezeId = text(control.freezeId, HEX_64, 'freeze_id');
   const reviewId = text(control.reviewId, HEX_64, 'review_id');
   const authorizationId = text(control.authorizationId, HEX_64, 'authorization_id');
@@ -544,6 +550,7 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     [
       'identities',
       'acquisitionReceipt',
+      'buildProvenanceBundle',
       'releaseManifest',
       'actionsArtifactZip',
       'linuxX64Archive',
@@ -555,7 +562,7 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     'opencode'
   );
   if (
-    openCode.signedBuildProvenance !== false ||
+    openCode.signedBuildProvenance !== true ||
     openCode.productionEligible !== false ||
     openCode.releaseEligible !== false
   )
@@ -584,6 +591,7 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     authority: expectedAuthority,
     control: Object.freeze({
       lane: P3C_LANE,
+      maximumFinalRuns: MAXIMUM_FINAL_RUNS,
       freezeId,
       reviewId,
       authorizationId,
@@ -629,11 +637,15 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     openCode: Object.freeze({
       identities: exactOpenCodeIdentities(openCode.identities),
       acquisitionReceipt: filePin(openCode.acquisitionReceipt, 'opencode_receipt'),
+      buildProvenanceBundle: filePin(
+        openCode.buildProvenanceBundle,
+        'opencode_build_provenance_bundle'
+      ),
       releaseManifest: filePin(openCode.releaseManifest, 'opencode_manifest'),
       actionsArtifactZip: filePin(openCode.actionsArtifactZip, 'opencode_zip'),
       linuxX64Archive: filePin(openCode.linuxX64Archive, 'opencode_archive'),
       linuxX64Binary: filePin(openCode.linuxX64Binary, 'opencode_binary'),
-      signedBuildProvenance: false,
+      signedBuildProvenance: true,
       productionEligible: false,
       releaseEligible: false,
     }),

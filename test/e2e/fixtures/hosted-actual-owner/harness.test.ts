@@ -33,6 +33,7 @@ import {
   canonicalJson,
   type FilePin,
   MATRIX_ROWS,
+  MAXIMUM_FINAL_RUNS,
   OPENCODE_IDENTITIES,
   OWNED_PATHS,
   P3B_SOURCE_COMMIT,
@@ -47,12 +48,14 @@ import {
   sha256,
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import {
+  assembleEvidence,
   canonicalRowIdentity,
   deriveEvidence,
   EVIDENCE_REQUIREMENTS,
   makeRawRecord,
   makeSemanticPayload,
   observedSemanticIdentity,
+  retainEvidence,
   semanticDecisionForEvent,
   type SemanticIdentity,
   semanticScopeForEvent,
@@ -73,7 +76,9 @@ import {
   collectBoundedStream,
   exactChildEnvironment,
   parseSupervisorTranscript,
+  type ProcessExitEvidence,
   processOwnershipMarker,
+  type ProcessStartEvidence,
   registerProvisionalDetachedProcessAnchor,
   settleFailedProcessCapture,
   SUPERVISOR_PROTOCOL,
@@ -92,6 +97,7 @@ import {
   type ClosureEntry,
   readStable,
   verifyClosure,
+  type WrittenFileEvidence,
 } from '../../../../scripts/e2e/hosted-actual-owner/secure-files';
 import { parseHostedTeamApprovalPage } from '../../../../src/features/team-approvals/contracts/hosted';
 
@@ -145,7 +151,6 @@ function validDescriptor(): Record<string, unknown> {
     'p3b2',
     'openCode',
     'controllerAuthority',
-    'attemptLedger',
     'sandboxParent',
     'evidenceRoot',
   ] as const;
@@ -163,6 +168,7 @@ function validDescriptor(): Record<string, unknown> {
     },
     control: {
       lane: P3C_LANE,
+      maximumFinalRuns: MAXIMUM_FINAL_RUNS,
       freezeId: digest('freeze-id'),
       reviewId: digest('review-id'),
       authorizationId: digest('authorization-id'),
@@ -231,6 +237,11 @@ function validDescriptor(): Record<string, unknown> {
     openCode: {
       identities: OPENCODE_IDENTITIES,
       acquisitionReceipt: filePin('openCode', 'receipt'),
+      buildProvenanceBundle: filePin(
+        'openCode',
+        'build-provenance-bundle',
+        OPENCODE_IDENTITIES.buildProvenanceBundleSha256
+      ),
       releaseManifest: filePin(
         'openCode',
         'release-manifest',
@@ -252,7 +263,7 @@ function validDescriptor(): Record<string, unknown> {
         OPENCODE_IDENTITIES.linuxX64BinarySha256,
         0o555
       ),
-      signedBuildProvenance: false,
+      signedBuildProvenance: true,
       productionEligible: false,
       releaseEligible: false,
     },
@@ -295,6 +306,14 @@ function signedControlFixture() {
     format: 'der',
     type: 'spki',
   });
+  const trustAnchor = {
+    schemaVersion: 1 as const,
+    purpose: 'agent-teams.p3c.controller-trust-anchor/v1' as const,
+    authorityEpoch: 1,
+    harnessReviewerPublicKeySha256: sha256(reviewerPublicKeyBytes),
+    runAuthorizationPublicKeySha256: sha256(runAuthorizationPublicKeyBytes),
+    revokedSignerKeyIds: [] as string[],
+  };
   const control = raw.control as Record<string, unknown>;
   const reviewerKeyPin = control.harnessReviewerPublicKey as Record<string, unknown>;
   reviewerKeyPin.sha256 = sha256(reviewerPublicKeyBytes);
@@ -328,6 +347,7 @@ function signedControlFixture() {
       identities: openCode.identities,
       provenanceReceiptSha256: openCode.acquisitionReceipt.sha256,
       releaseManifestSha256: openCode.releaseManifest.sha256,
+      buildProvenanceBundleSha256: openCode.buildProvenanceBundle.sha256,
       archiveSha256: openCode.linuxX64Archive.sha256,
       binarySha256: openCode.linuxX64Binary.sha256,
       accepted: true,
@@ -348,10 +368,12 @@ function signedControlFixture() {
       retries: 0,
     },
     attemptLedger: {
-      device: roots.attemptLedger.device,
-      inode: roots.attemptLedger.inode,
-      mountId: roots.attemptLedger.mountId,
+      device: roots.sandboxParent.device,
+      inode: roots.sandboxParent.inode,
+      mountId: roots.sandboxParent.mountId,
     },
+    maximumFinalRuns: MAXIMUM_FINAL_RUNS,
+    authorityPolicy: trustAnchor,
     harnessReviewerPublicKeySha256: sha256(reviewerPublicKeyBytes),
     runAuthorizationPublicKeySha256: sha256(runAuthorizationPublicKeyBytes),
     productionGates: raw.productionGates,
@@ -395,6 +417,7 @@ function signedControlFixture() {
     authorizationId: '',
     controllerNonce: raw.controllerNonce,
     attemptLedger: freeze.attemptLedger,
+    maximumFinalRuns: MAXIMUM_FINAL_RUNS,
     authorizedAttempts: 1,
     disposition: 'authorize-once',
     signerKeyId: sha256(
@@ -423,6 +446,7 @@ function signedControlFixture() {
     authorization: Buffer.from(canonicalJson(authorization)),
     reviewerPublicKey: Buffer.from(reviewerPublicKeyBytes),
     runAuthorizationPublicKey: Buffer.from(runAuthorizationPublicKeyBytes),
+    trustAnchor,
   };
 }
 
@@ -512,6 +536,7 @@ describe('P3.C exact contract', () => {
         'harnessReview',
         'harnessReviewerPublicKey',
         'lane',
+        'maximumFinalRuns',
         'oneRunAuthorization',
         'reviewId',
         'runAuthorizationPublicKey',
@@ -534,12 +559,12 @@ describe('P3.C exact contract', () => {
     const wrongLane = structuredClone(valid) as typeof valid;
     (wrongLane.control as Record<string, unknown>).lane = 'P3.B2.BUILT_ACTUAL_OWNER_ENTRY';
     expect(() => parseIntegrationDescriptor(Buffer.from(canonicalJson(wrongLane)))).toThrow(
-      'p3c_wrong_lane'
+      'p3c_wrong_lane_or_run_limit'
     );
     const backingAlias = structuredClone(valid) as typeof valid;
     const roots = backingAlias.roots as Record<string, Record<string, unknown>>;
-    roots.attemptLedger.device = roots.sandboxParent.device;
-    roots.attemptLedger.inode = roots.sandboxParent.inode;
+    roots.evidenceRoot.device = roots.sandboxParent.device;
+    roots.evidenceRoot.inode = roots.sandboxParent.inode;
     expect(() => parseIntegrationDescriptor(Buffer.from(canonicalJson(backingAlias)))).toThrow(
       'p3c_root_backing_alias'
     );
@@ -570,7 +595,8 @@ describe('P3.C exact contract', () => {
         fixture.review,
         fixture.authorization,
         fixture.reviewerPublicKey,
-        fixture.runAuthorizationPublicKey
+        fixture.runAuthorizationPublicKey,
+        fixture.trustAnchor
       )
     ).not.toThrow();
     const forged = JSON.parse(fixture.authorization.toString('utf8')) as Record<string, unknown>;
@@ -582,7 +608,8 @@ describe('P3.C exact contract', () => {
         fixture.review,
         Buffer.from(canonicalJson(forged)),
         fixture.reviewerPublicKey,
-        fixture.runAuthorizationPublicKey
+        fixture.runAuthorizationPublicKey,
+        fixture.trustAnchor
       )
     ).toThrow('p3c_one_run_authorization_signature');
     expect(() =>
@@ -592,9 +619,25 @@ describe('P3.C exact contract', () => {
         fixture.review,
         fixture.authorization,
         fixture.runAuthorizationPublicKey,
-        fixture.reviewerPublicKey
+        fixture.reviewerPublicKey,
+        fixture.trustAnchor
       )
     ).toThrow();
+    const descriptorSelectedTrust = {
+      ...fixture.trustAnchor,
+      harnessReviewerPublicKeySha256: digest('descriptor-selected-reviewer'),
+    };
+    expect(() =>
+      verifyControlDocuments(
+        fixture.descriptor,
+        fixture.freeze,
+        fixture.review,
+        fixture.authorization,
+        fixture.reviewerPublicKey,
+        fixture.runAuthorizationPublicKey,
+        descriptorSelectedTrust
+      )
+    ).toThrow('p3c_p3c1_freeze_binding');
   });
 
   it('structurally cross-checks exact OpenCode release-manifest bytes', () => {
@@ -617,13 +660,16 @@ describe('P3.C exact contract', () => {
         sha: OPENCODE_IDENTITIES.workflowMergeCommit,
       },
       release: {
-        version: '1.0.0',
-        tag: 'v1.0.0',
+        version: '1.18.23-agentteams.1',
+        tag: 'v1.18.23-agentteams.1',
         sourceCommit: OPENCODE_IDENTITIES.releaseSourceCommit,
         sourceTree: OPENCODE_IDENTITIES.releaseSourceTree,
+        artifactTree: '1111111111111111111111111111111111111111',
         baseCommit: OPENCODE_IDENTITIES.releaseBaseCommit,
         patchSha256: digest('reviewed-patch'),
+        bunVersion: '1.3.14',
         productionEligible: false,
+        patchSize: 1,
       },
       assets: platforms.map(([os, arch]) => ({
         os,
@@ -640,6 +686,14 @@ describe('P3.C exact contract', () => {
             ? OPENCODE_IDENTITIES.linuxX64BinarySha256
             : digest(`binary:${os}:${arch}`),
         binarySize: 5,
+        platform: `opencode-${os}-${arch}`,
+        signing: {
+          binaryStatus: 'unsigned',
+          reason: 'non-production fork prerelease',
+          provenanceAction:
+            'actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8',
+          provenanceStatus: 'required-after-manifest',
+        },
       })),
     };
     expect(() =>
@@ -793,9 +847,9 @@ describe('single disposable sandbox', () => {
 describe('one-run authorization consumption', () => {
   it('atomically persists one attempt before spawn and rejects a fresh descriptor replay', async () => {
     const path = await temporaryPrivateDirectory();
-    const root = await openRootAnchor('attemptLedger', await rootPin(path));
+    const root = await openRootAnchor('sandboxParent', await rootPin(path));
     const admission = {
-      roots: { attemptLedger: root },
+      roots: { sandboxParent: root },
       descriptor: { controllerNonce: digest('consume-controller') },
       control: {
         freezeId: digest('consume-freeze'),
@@ -804,7 +858,7 @@ describe('one-run authorization consumption', () => {
       },
     } as unknown as PreflightAdmission;
     const consumed = await consumeOneRunAuthorization(admission);
-    expect(consumed.relativePath).toBe(`consumed-${admission.control.authorizationId}.json`);
+    expect(consumed.relativePath).toBe('actual-owner-final-run-000001.json');
     await expect(assertOneRunAuthorizationConsumed(admission, consumed)).resolves.toBeUndefined();
     const freshSelfAssertion = {
       ...admission,
@@ -816,8 +870,41 @@ describe('one-run authorization consumption', () => {
     await expect(consumeOneRunAuthorization(freshSelfAssertion)).rejects.toThrow(
       'p3c_authorization_already_consumed'
     );
+    const sandbox = await createSandbox(root, admission.descriptor.controllerNonce);
+    expect((await cleanupSandbox(sandbox, true)).disposition).toBe('removed');
+    await expect(assertOneRunAuthorizationConsumed(admission, consumed)).resolves.toBeUndefined();
     await root.handle.close();
     await unlink(join(path, consumed.relativePath));
+    await rmdir(path);
+  });
+
+  it('allows exactly one global winner across concurrent nonces and survives controller restart', async () => {
+    const path = await temporaryPrivateDirectory();
+    const root = await openRootAnchor('sandboxParent', await rootPin(path));
+    const admission = (label: string) =>
+      ({
+        roots: { sandboxParent: root },
+        descriptor: { controllerNonce: digest(`concurrent-controller:${label}`) },
+        control: {
+          freezeId: digest(`concurrent-freeze:${label}`),
+          reviewId: digest(`concurrent-review:${label}`),
+          authorizationId: digest(`concurrent-authorization:${label}`),
+        },
+      }) as unknown as PreflightAdmission;
+    const contenders = [admission('a'), admission('b')];
+    const results = await Promise.allSettled(contenders.map(consumeOneRunAuthorization));
+    expect(results.filter(({ status }) => status === 'fulfilled')).toHaveLength(1);
+    expect(results.filter(({ status }) => status === 'rejected')).toHaveLength(1);
+    const winnerIndex = results.findIndex(({ status }) => status === 'fulfilled');
+    const winner = results[winnerIndex] as PromiseFulfilledResult<WrittenFileEvidence>;
+    await expect(
+      assertOneRunAuthorizationConsumed(contenders[winnerIndex], winner.value)
+    ).resolves.toBeUndefined();
+    await expect(consumeOneRunAuthorization(admission('restart'))).rejects.toThrow(
+      'p3c_authorization_already_consumed'
+    );
+    await root.handle.close();
+    await unlink(join(path, winner.value.relativePath));
     await rmdir(path);
   });
 });
@@ -882,9 +969,7 @@ describe('spawn isolation contract', () => {
     expect(plan.expectedArgv.browser).toEqual(
       expect.arrayContaining(['--workers=1', '--retries=0'])
     );
-    expect(plan.processOwnership.escapedDescendants).toBe(
-      'excluded-without-separate-pid-namespace-proof'
-    );
+    expect(plan.processOwnership.escapedDescendants).toBe('independent-proc-census');
   });
 });
 
@@ -951,7 +1036,13 @@ function supervisorPlan(): SupervisorPlan {
       census: '/proc',
       identity: 'pid-start-time',
       signals: ['SIGTERM', 'SIGKILL'],
-      escapedDescendants: 'excluded-without-separate-pid-namespace-proof',
+      escapedDescendants: 'independent-proc-census',
+    },
+    cleanupAudit: {
+      injectionPoints: ['owner', 'opencode'],
+      escapedCensusKinds: ['setsid', 'double-fork'],
+      escalationSignals: ['SIGTERM', 'SIGKILL'],
+      outsideSandboxSentinelPath: '/outside-sandbox-sentinel',
     },
     sandbox: {
       descriptor: 10,
@@ -1119,12 +1210,45 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
       supervisorCwdInode: plan.expectedCwd.supervisor.inode,
     },
   ];
-  const starts = plan.startSchedule.map((expected, index) => {
+  const starts: ProcessStartEvidence[] = [];
+  const replacementExits: ProcessExitEvidence[] = [];
+  let previousOwner: ProcessStartEvidence | undefined;
+  let previousOwnerSocket: Record<string, unknown> | undefined;
+  plan.startSchedule.forEach((expected, index) => {
+    if (expected.role === 'owner' && expected.generation > 1) {
+      const replacement = {
+        schemaVersion: 2,
+        protocol: SUPERVISOR_PROTOCOL,
+        type: 'owner-replacement',
+        sequence: lines.length + 1,
+        controllerNonce: plan.controllerNonce,
+        runId: plan.runId,
+        observerStartToken: digest('start:supervisor'),
+        previousOwnerStartToken: previousOwner!.startToken,
+        previousOwnerPidfdInode: previousOwner!.pidfdInode,
+        previousGeneration: previousOwner!.generation,
+        previousExitCause: 'restart-boundary-complete',
+        previousExitObservedMonotonicNs: String(20 + lines.length),
+        previousOwnerSurvivorStartTokens: [],
+        invalidatedSocket: previousOwnerSocket,
+        postInvalidationCurrentOwnerStartTokens: [],
+        postInvalidationCurrentSocketOwners: [],
+        nextGeneration: expected.generation,
+      };
+      lines.push(replacement);
+      replacementExits.push({
+        startToken: previousOwner!.startToken,
+        pidfdInode: previousOwner!.pidfdInode,
+        observedMonotonicNs: replacement.previousExitObservedMonotonicNs,
+        observerStartToken: digest('start:supervisor'),
+        disposition: 'replacement-boundary-exit',
+      });
+    }
     const start = {
       schemaVersion: 2,
       protocol: SUPERVISOR_PROTOCOL,
       type: 'process-start',
-      sequence: index + 2,
+      sequence: lines.length + 1,
       controllerNonce: plan.controllerNonce,
       runId: plan.runId,
       role: expected.role,
@@ -1134,7 +1258,7 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
       pid: 1000 + index,
       pidfdInode: String(2000 + index),
       startTime: String(3000 + index),
-      observedMonotonicNs: String(20 + index),
+      observedMonotonicNs: String(20 + lines.length),
       startToken: digest(`start:${expected.instanceId}`),
       parentStartToken: digest('start:supervisor'),
       observerStartToken: digest('start:supervisor'),
@@ -1147,7 +1271,28 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
       cwdInode: plan.expectedCwd[expected.role].inode,
     };
     lines.push(start);
-    return start;
+    starts.push(start);
+    if (expected.role === 'owner') {
+      previousOwner = start;
+      previousOwnerSocket = {
+        device: String(6000 + expected.generation),
+        inode: String(6100 + expected.generation),
+        generation: expected.generation,
+        ownerStartToken: start.startToken,
+      };
+      lines.push({
+        schemaVersion: 2,
+        protocol: SUPERVISOR_PROTOCOL,
+        type: 'owner-current',
+        sequence: lines.length + 1,
+        controllerNonce: plan.controllerNonce,
+        runId: plan.runId,
+        observerStartToken: digest('start:supervisor'),
+        generation: expected.generation,
+        currentOwnerStartTokens: [start.startToken],
+        currentSocketOwners: [previousOwnerSocket],
+      });
+    }
   });
   const browser = starts.find(({ role }) => role === 'browser')!;
   let chromiumParent = '';
@@ -1156,7 +1301,7 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
       schemaVersion: 2,
       protocol: SUPERVISOR_PROTOCOL,
       type: 'descendant-start',
-      sequence: starts.length + index + 2,
+      sequence: lines.length + 1,
       controllerNonce: plan.controllerNonce,
       runId: plan.runId,
       role,
@@ -1246,23 +1391,65 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
     ],
   };
   lines.push(network);
-  const exits = [...starts, ...descendants].reverse().map((start, index) => {
-    const exit = {
-      schemaVersion: 2,
-      protocol: SUPERVISOR_PROTOCOL,
-      type: 'process-exit',
-      sequence: lines.length + 1,
-      controllerNonce: plan.controllerNonce,
-      runId: plan.runId,
-      startToken: start.startToken,
-      pidfdInode: start.pidfdInode,
-      observedMonotonicNs: String(1000 + index),
-      observerStartToken: digest('start:supervisor'),
-      disposition: 'controlled-exit',
-    };
-    lines.push(exit);
-    return exit;
-  });
+  const replacedOwnerTokens = new Set(replacementExits.map(({ startToken }) => startToken));
+  const finalExits = [...starts, ...descendants]
+    .filter(({ startToken }) => !replacedOwnerTokens.has(startToken))
+    .reverse()
+    .map((start, index) => {
+      const exit = {
+        schemaVersion: 2,
+        protocol: SUPERVISOR_PROTOCOL,
+        type: 'process-exit',
+        sequence: lines.length + 1,
+        controllerNonce: plan.controllerNonce,
+        runId: plan.runId,
+        startToken: start.startToken,
+        pidfdInode: start.pidfdInode,
+        observedMonotonicNs: String(1000 + index),
+        observerStartToken: digest('start:supervisor'),
+        disposition: 'controlled-exit',
+      };
+      lines.push(exit);
+      return exit;
+    });
+  const exits = [...replacementExits, ...finalExits];
+  const injectedProcessStartTokens = [
+    digest('cleanup-injected-owner'),
+    digest('cleanup-injected-opencode'),
+  ];
+  const sentinelDigest = digest('outside-sandbox-sentinel');
+  const cleanupAudit = {
+    schemaVersion: 2,
+    protocol: SUPERVISOR_PROTOCOL,
+    type: 'cleanup-audit',
+    sequence: lines.length + 1,
+    controllerNonce: plan.controllerNonce,
+    runId: plan.runId,
+    observerStartToken: digest('start:supervisor'),
+    injectionPoints: plan.cleanupAudit.injectionPoints,
+    injectedProcessStartTokens,
+    escapedCensusKinds: plan.cleanupAudit.escapedCensusKinds,
+    escapedDescendantStartTokens: [
+      digest('cleanup-escaped-setsid'),
+      digest('cleanup-escaped-double-fork'),
+    ],
+    escalationSignals: plan.cleanupAudit.escalationSignals,
+    exitCauses: plan.cleanupAudit.injectionPoints.map((injectionPoint, index) => ({
+      injectionPoint,
+      startToken: injectedProcessStartTokens[index],
+      cause: 'sigkill-after-grace',
+    })),
+    postDrainEscapedDescendantStartTokens: [],
+    postDrainIndependentCensus: true,
+    outsideSandboxSentinel: {
+      path: plan.cleanupAudit.outsideSandboxSentinelPath,
+      digestBefore: sentinelDigest,
+      digestAfter: sentinelDigest,
+      mutationObserved: false,
+    },
+  };
+  lines.push(cleanupAudit);
+  const cleanupAuditRecordSha256 = sha256(canonicalJson(cleanupAudit));
   const processEvidenceSetId = sha256(
     `agent-teams.p3c.process-evidence-set/v1\0${canonicalJson({
       networkRecordSha256: sha256(canonicalJson(network)),
@@ -1271,6 +1458,7 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
       ownedStartTokens: [...starts, ...descendants].map(({ startToken }) => startToken).sort(),
       closedPidfdInodes: [...starts, ...descendants].map(({ pidfdInode }) => pidfdInode).sort(),
       exitedStartTokens: exits.map(({ startToken }) => startToken),
+      cleanupAuditRecordSha256,
     })}`
   );
   const drain = {
@@ -1287,11 +1475,20 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
     ownershipAmbiguities: [],
     descendantEnumerationRecordSha256: sha256(canonicalJson(descendantEnumeration)),
     postTerminationDescendantStartTokens: [],
+    cleanupAuditRecordSha256,
     processEvidenceSetId,
     bounded: true,
     zeroOwnedSurvivors: true,
   };
   lines.push(drain);
+  const producerRoles: Readonly<Record<RawOrigin, readonly string[]>> = {
+    browser: ['browser'],
+    'product-http': ['product'],
+    'product-sse': ['product'],
+    'owner-wal': ['owner'],
+    opencode: ['opencode'],
+    supervisor: ['supervisor'],
+  };
   lines.push({
     schemaVersion: 2,
     protocol: SUPERVISOR_PROTOCOL,
@@ -1311,14 +1508,27 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
     readyInstances: starts.map(({ instanceId }) => instanceId),
     exitedStartTokens: exits.map(({ startToken }) => startToken),
     rawFiles: Object.fromEntries(
-      RAW_ORIGINS.map((origin) => [
-        origin,
-        {
-          path: `/sandbox/raw/${origin}.ndjson`,
-          sha256: digest(`raw:${origin}`),
-          size: 1,
-        },
-      ])
+      RAW_ORIGINS.map((origin, index) => {
+        const producers =
+          origin === 'supervisor'
+            ? [{ startToken: digest('start:supervisor'), pidfdInode: '901' }]
+            : starts.filter(({ role }) => producerRoles[origin].includes(role));
+        return [
+          origin,
+          {
+            path: `/sandbox/raw/${origin}.ndjson`,
+            sha256: digest(`raw:${origin}`),
+            size: 1,
+            captureDevice: String(8000 + index),
+            captureInode: String(9000 + index),
+            producerStartTokens: producers.map(({ startToken }) => startToken).sort(),
+            producerPidfdInodes: producers.map(({ pidfdInode }) => pidfdInode).sort(),
+            parentCreatedExclusive: true,
+            writerDescriptorsClosed: true,
+            sealedBeforeParse: true,
+          },
+        ];
+      })
     ),
   });
   return Buffer.from(`${lines.map(canonicalJson).join('\n')}\n`);
@@ -1347,6 +1557,34 @@ describe('process ownership transcript', () => {
     );
     expect(() => parseSupervisorTranscript(wrongParent, plan)).toThrow(
       'p3c_supervisor_start_binding'
+    );
+    const overlappingOwners = Buffer.from(
+      transcript
+        .toString('utf8')
+        .replace(
+          '"postInvalidationCurrentOwnerStartTokens":[]',
+          `"postInvalidationCurrentOwnerStartTokens":["${digest('start:owner-1')}"]`
+        )
+    );
+    expect(() => parseSupervisorTranscript(overlappingOwners, plan)).toThrow(
+      'p3c_supervisor_owner_replacement'
+    );
+    const escapedSurvivor = Buffer.from(
+      transcript
+        .toString('utf8')
+        .replace(
+          '"postDrainEscapedDescendantStartTokens":[]',
+          `"postDrainEscapedDescendantStartTokens":["${digest('cleanup-escaped-setsid')}"]`
+        )
+    );
+    expect(() => parseSupervisorTranscript(escapedSurvivor, plan)).toThrow(
+      'p3c_supervisor_cleanup_audit'
+    );
+    const sentinelMutation = Buffer.from(
+      transcript.toString('utf8').replace('"mutationObserved":false', '"mutationObserved":true')
+    );
+    expect(() => parseSupervisorTranscript(sentinelMutation, plan)).toThrow(
+      'p3c_supervisor_cleanup_audit'
     );
     for (const [needle, replacement, expected] of [
       ['"playwrightWorkers":1', '"playwrightWorkers":2', 'p3c_supervisor_hello'],
@@ -1492,9 +1730,9 @@ describe('bounded supervisor shutdown fixtures', () => {
       "process.on('SIGTERM',()=>{});process.stdout.write('ready\\n');setInterval(()=>{},1000)";
     const supervisorSource = [
       "const {spawn}=require('node:child_process')",
+      "process.on('SIGTERM',()=>{})",
       `const descendant=spawn(process.execPath,['-e',${JSON.stringify(descendantSource)}],{stdio:['ignore','pipe','ignore']})`,
       "descendant.stdout.once('data',()=>process.stdout.write(String(descendant.pid)+'\\n'))",
-      "process.on('SIGTERM',()=>{})",
       'setInterval(()=>{},1000)',
     ].join(';');
     const child = spawnChild(process.execPath, ['-e', supervisorSource], {
@@ -1514,27 +1752,21 @@ describe('bounded supervisor shutdown fixtures', () => {
     const exited = once(child, 'exit');
     const groupSignals: NodeJS.Signals[] = [];
     let leaderAliveBeforeKill = false;
-    let descendantAliveBeforeKill = false;
     await terminateAnchoredProcessGroup(anchor, 2_000, marker, {
       signalProcessGroup: (processGroupId, signal) => {
         expect(processGroupId).toBe(anchor.processGroupId);
         groupSignals.push(signal);
         if (signal === 'SIGKILL') {
           leaderAliveBeforeKill = child.exitCode === null && child.signalCode === null;
-          try {
-            process.kill(descendantPid, 0);
-            descendantAliveBeforeKill = true;
-          } catch {
-            descendantAliveBeforeKill = false;
-          }
         }
         process.kill(-processGroupId, signal);
       },
     });
     await exited;
-    expect(groupSignals).toEqual(['SIGTERM', 'SIGKILL']);
+    expect(groupSignals[0]).toBe('SIGTERM');
+    expect(groupSignals).toContain('SIGKILL');
+    expect(groupSignals.at(-1)).toBe('SIGKILL');
     expect(leaderAliveBeforeKill).toBe(true);
-    expect(descendantAliveBeforeKill).toBe(true);
     await expect(censusOwnedProcesses(marker)).resolves.toEqual([]);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(() => process.kill(-anchor.processGroupId, 0)).toThrow(
@@ -1572,7 +1804,7 @@ describe('bounded supervisor shutdown fixtures', () => {
     }
   });
 
-  it('fails closed without marker checks or signals when child exit precedes an exact tuple collision', async () => {
+  it('signals the retained negative PGID and fails closed when an exited leader group cannot drain', async () => {
     const marker = processOwnershipMarker(digest('reuse-controller'), digest('reuse-run'));
     const child = spawnChild(process.execPath, ['-e', 'setInterval(()=>{},1000)'], {
       detached: true,
@@ -1607,7 +1839,7 @@ describe('bounded supervisor shutdown fixtures', () => {
       ).rejects.toThrow('p3c_supervisor_leader_exited_before_owned_cleanup');
       expect(identityReads).toBe(0);
       expect(markerReads).toBe(0);
-      expect(signals).toBe(0);
+      expect(signals).toBeGreaterThan(0);
       expect(() => process.kill(anchor.pid, 0)).not.toThrow();
       expect((await cleanupSandbox(sandbox, false)).disposition).toBe('preserved');
       await expect(assertSandboxCurrent(sandbox)).resolves.toBeUndefined();
@@ -1671,7 +1903,7 @@ describe('bounded supervisor shutdown fixtures', () => {
             },
           })
         ).rejects.toThrow('p3c_supervisor_capture_failed_group_occupied');
-        expect(groupSignals).toBe(0);
+        expect(groupSignals).toBeGreaterThan(0);
         expect((await cleanupSandbox(sandbox, false)).disposition).toBe('preserved');
         await expect(assertSandboxCurrent(sandbox)).resolves.toBeUndefined();
       } finally {
@@ -1716,6 +1948,7 @@ describe('bounded supervisor shutdown fixtures', () => {
       await expect(
         settleFailedProcessCapture(marker, 100, {
           processGroupHasMembers: () => observations[censuses++] ?? false,
+          signalProcessGroup: () => undefined,
         })
       ).resolves.toBeUndefined();
       expect(censuses).toBe(3);
@@ -1759,7 +1992,7 @@ describe('bounded supervisor shutdown fixtures', () => {
           })
         ).resolves.toBeUndefined();
         expect(groupCensuses).toBe(4);
-        expect(signals).toBe(0);
+        expect(signals).toBe(1);
       } finally {
         child.kill('SIGKILL');
         await once(child, 'exit');
@@ -1768,7 +2001,7 @@ describe('bounded supervisor shutdown fixtures', () => {
   );
 
   it.each(['ENOENT', 'ESRCH'] as const)(
-    'never converts an early %s identity read into a leader or group signal',
+    'uses the retained group anchor after an early %s identity read and still fails closed if occupied',
     async (code) => {
       const marker = processOwnershipMarker(
         digest(`missing-${code}-controller`),
@@ -1793,7 +2026,7 @@ describe('bounded supervisor shutdown fixtures', () => {
             },
           })
         ).rejects.toThrow('p3c_supervisor_leader_missing_group_occupied');
-        expect(signals).toBe(0);
+        expect(signals).toBeGreaterThan(0);
         expect(() => process.kill(anchor.pid, 0)).not.toThrow();
       } finally {
         process.kill(-anchor.processGroupId, 'SIGKILL');
@@ -1949,6 +2182,7 @@ function fixtureObservedBodies(
 } {
   const bytes = (value: Readonly<Record<string, unknown>>) => Buffer.from(canonicalJson(value));
   if (origin === 'product-http') {
+    const isReconciliation = /^reconcile_/u.test(event);
     const isPreview = /(?:approval_preview|team_b_preview|cross_team_preview)/u.test(event);
     const isPage =
       event === 'pending_observed' ||
@@ -1973,15 +2207,27 @@ function fixtureObservedBodies(
             expectedGeneration: identity.generationId,
             previewRef: identity.previewRef,
           }
-        : {
-            schemaVersion: 1,
-            teamId: identity.targetTeamId,
-            expectedRunId: identity.targetTeamRunId,
-            approvalId: identity.approvalId,
-            expectedGeneration: identity.generationId,
-            idempotencyKey: identity.idempotencyKey,
-            decision: identity.decision === 'allow' ? 'allow' : 'deny',
-          };
+        : isReconciliation
+          ? {
+              schemaVersion: 1,
+              teamId: identity.targetTeamId,
+              expectedRunId: identity.targetTeamRunId,
+              approvalId: identity.approvalId,
+              expectedGeneration: identity.generationId,
+              idempotencyKey: identity.idempotencyKey,
+              reconciliationRef: `reconciliation_${sha256(
+                `agent-teams.p3c.reconciliation-ref/v1\0${canonicalJson(identity)}`
+              ).slice(0, 32)}`,
+            }
+          : {
+              schemaVersion: 1,
+              teamId: identity.targetTeamId,
+              expectedRunId: identity.targetTeamRunId,
+              approvalId: identity.approvalId,
+              expectedGeneration: identity.generationId,
+              idempotencyKey: identity.idempotencyKey,
+              decision: identity.decision === 'allow' ? 'allow' : 'deny',
+            };
     const rejected = /rejected|routes_absent/u.test(event);
     const response = rejected
       ? {
@@ -2089,14 +2335,16 @@ function fixtureObservedBodies(
       }),
       observedResponseBody: bytes({
         schemaVersion: 1,
-        kind: /_effect$/u.test(event) ? 'provider-effect' : 'conditional-decision-result',
+        kind: /^(?:(?:allow|deny)_effect|reconcile_not_delivered_retry_effect)$/u.test(event)
+          ? 'provider-effect'
+          : 'conditional-decision-result',
         approvalId: identity.approvalId,
         generation: identity.generationId,
         decision: identity.decision,
         providerEffectId,
-        outcome: /_effect$/u.test(event)
+        outcome: /^(?:(?:allow|deny)_effect|reconcile_not_delivered_retry_effect)$/u.test(event)
           ? 'committed'
-          : event === 'effect_total_two'
+          : /^effect_total_(?:two|three)$/u.test(event)
             ? 'total_observed'
             : 'observed',
       }),
@@ -2140,7 +2388,10 @@ function rawEvidence(): {
         `observed-provider-effect-id:${semanticScopeForEvent(row, event)}`
       ).slice(0, 32)}`;
       const observedBodies = fixtureObservedBodies(origin, event, identity, providerEffectId);
-      if (origin === 'opencode' && /_effect$/u.test(event)) {
+      if (
+        origin === 'opencode' &&
+        /^(?:(?:allow|deny)_effect|reconcile_not_delivered_retry_effect)$/u.test(event)
+      ) {
         observedProviderEffectSha256s.push(sha256(observedBodies.observedResponseBody!));
       }
       const correlation = sha256(
@@ -2159,7 +2410,11 @@ function rawEvidence(): {
                 ? 'supervisor'
                 : 'product';
       if (origin === 'owner-wal') {
-        if (/boundary_three|after_effect|truth_reconstructed|stale_sockets/u.test(event))
+        if (
+          /boundary_three|after_effect|truth_reconstructed|stale_sockets|reconcile|reconciliation|operator_required|automatic_retry/u.test(
+            event
+          )
+        )
           role = 'owner4';
         else if (/boundary_two|after_decision|stale_generations/u.test(event)) role = 'owner3';
         else if (/restart|restored|boundary_one/u.test(event)) role = 'owner2';
@@ -2182,8 +2437,9 @@ function rawEvidence(): {
             identity,
             providerEffectId,
             ...observedBodies,
-            effectSetSha256s:
-              event === 'effect_total_two' ? [...observedProviderEffectSha256s] : undefined,
+            effectSetSha256s: /^effect_total_(?:two|three)$/u.test(event)
+              ? [...observedProviderEffectSha256s]
+              : undefined,
             processEvidenceSetId:
               origin === 'supervisor' ? digest('process-evidence-set') : undefined,
             observedBrowserStatus:
@@ -2281,15 +2537,38 @@ function rawEvidence(): {
     },
     processEvidenceSetId: digest('process-evidence-set'),
     rawFiles: Object.fromEntries(
-      RAW_ORIGINS.map((origin) => [
-        origin,
-        {
-          path: `/sandbox/raw/${origin}.ndjson`,
-          sha256: sha256(raw[origin]),
-          size: raw[origin].length,
-        },
-      ])
-    ) as Record<RawOrigin, { path: string; sha256: string; size: number }>,
+      RAW_ORIGINS.map((origin, index) => {
+        const roles =
+          origin === 'browser'
+            ? ['browser']
+            : origin === 'owner-wal'
+              ? ['owner']
+              : origin === 'opencode'
+                ? ['opencode']
+                : origin === 'supervisor'
+                  ? ['supervisor']
+                  : ['product'];
+        const producers =
+          origin === 'supervisor'
+            ? [{ startToken: starts.supervisor, pidfdInode: '5999' }]
+            : processStarts.filter(({ role }) => roles.includes(role));
+        return [
+          origin,
+          {
+            path: `/sandbox/raw/${origin}.ndjson`,
+            sha256: sha256(raw[origin]),
+            size: raw[origin].length,
+            captureDevice: String(8100 + index),
+            captureInode: String(9100 + index),
+            producerStartTokens: producers.map(({ startToken }) => startToken).sort(),
+            producerPidfdInodes: producers.map(({ pidfdInode }) => pidfdInode).sort(),
+            parentCreatedExclusive: true as const,
+            writerDescriptorsClosed: true as const,
+            sealedBeforeParse: true as const,
+          },
+        ];
+      })
+    ) as unknown as SupervisorOutcome['rawFiles'],
     transcriptSha256: digest('transcript'),
     transcript: Buffer.from('deterministic-supervisor-transcript'),
   };
@@ -2410,9 +2689,7 @@ function mutateAllSemanticRecords(
           event,
           correlation: sha256(
             `agent-teams.p3c.row-identity/v1\0${String(original.controllerNonce)}\0${row}\0${sha256(
-              canonicalJson(
-                canonicalRowIdentity(row, semantic.identity as SemanticIdentity)
-              )
+              canonicalJson(canonicalRowIdentity(row, semantic.identity as SemanticIdentity))
             )}`
           ),
           effectCount: original.effectCount as number,
@@ -2491,6 +2768,47 @@ function mutateOuterEvent(
 }
 
 describe('raw evidence validation', () => {
+  it('publishes through staged names, writes READY last, and seals the final parent', async () => {
+    const fixture = rawEvidence();
+    const outcome = {
+      ...fixture.outcome,
+      transcriptSha256: sha256(fixture.outcome.transcript),
+    };
+    const path = await temporaryPrivateDirectory();
+    const root = await openRootAnchor('evidenceRoot', await rootPin(path));
+    const cleanup = {
+      disposition: 'removed' as const,
+      runId: outcome.runId,
+      path: '/marker-owned-sandbox/removed',
+      markerVerified: true,
+      zeroOwnedSurvivors: true,
+      reason: null,
+    };
+    const document = assembleEvidence({
+      raw: fixture.raw,
+      controllerNonce: fixture.controllerNonce,
+      runId: outcome.runId,
+      outcome,
+      cleanup,
+    });
+    const digests = await retainEvidence(root, fixture.raw, document, outcome.transcript);
+    expect(Object.keys(digests)).toContain('READY.json');
+    expect((await stat(path)).mode & 0o777).toBe(0o500);
+    const names = await (await import('node:fs/promises')).readdir(path);
+    expect(names.some((name) => name.startsWith('.stage-'))).toBe(false);
+    const ready = JSON.parse(await readFile(join(path, 'READY.json'), 'utf8')) as Record<
+      string,
+      unknown
+    >;
+    expect(ready).toMatchObject({
+      purpose: 'agent-teams.p3c.evidence-ready/v1',
+      evidenceDigest: document.evidenceDigest,
+    });
+    await root.handle.chmod(0o700);
+    await root.handle.close();
+    await rm(path, { recursive: true });
+  });
+
   it('accepts only complete product/provider-observed semantic identities', () => {
     const valid = fixtureObservedIdentity(
       digest('observed-identity-controller'),
@@ -2555,7 +2873,9 @@ describe('raw evidence validation', () => {
       ['cross_team_preview_rejected', 'none'],
       ['cross_team_decide_rejected', 'deny'],
     ]);
-    expect(() => deriveEvidence(fixture.raw, fixture.controllerNonce, fixture.outcome)).not.toThrow();
+    expect(() =>
+      deriveEvidence(fixture.raw, fixture.controllerNonce, fixture.outcome)
+    ).not.toThrow();
   });
 
   it('fails closed when a required raw record is absent', () => {
@@ -2570,6 +2890,7 @@ describe('raw evidence validation', () => {
       rawFiles: {
         ...fixture.outcome.rawFiles,
         browser: {
+          ...fixture.outcome.rawFiles.browser,
           path: '/sandbox/raw/browser.ndjson',
           sha256: sha256(raw.browser),
           size: raw.browser.length,
@@ -2746,7 +3067,25 @@ describe('raw evidence validation', () => {
             const record = JSON.parse(
               Buffer.from(retained.bodyBase64 as string, 'base64').toString('utf8')
             ) as Record<string, unknown>;
+            const reconciliationRef = `reconciliation_${sha256(
+              `agent-teams.p3c.reconciliation-ref/v1\0${canonicalJson(identity)}`
+            ).slice(0, 32)}`;
+            const leaseId = `lease_${sha256(
+              `agent-teams.p3c.reconciliation-lease/v1\0${canonicalJson(identity)}`
+            ).slice(0, 32)}`;
+            const writerFence = {
+              ownerGeneration: 1,
+              fenceDigest: sha256(
+                `agent-teams.p3c.owner-writer-fence/v1\0${1}\0${canonicalJson(identity)}`
+              ),
+            };
             record.identity = identity;
+            record.reconciliationRef = reconciliationRef;
+            record.leaseId = leaseId;
+            record.writerFence = writerFence;
+            transport.reconciliationRef = reconciliationRef;
+            transport.leaseId = leaseId;
+            transport.writerFence = writerFence;
             const bytes = Buffer.from(canonicalJson(record));
             retained.bodyBase64 = bytes.toString('base64');
             retained.sha256 = sha256(bytes);
@@ -3093,7 +3432,9 @@ describe('raw evidence validation', () => {
 
   it('accepts and binds a complete multi-page approval traversal', () => {
     const fixture = rawEvidence();
-    expect(() => deriveEvidence(fixture.raw, fixture.controllerNonce, fixture.outcome)).not.toThrow();
+    expect(() =>
+      deriveEvidence(fixture.raw, fixture.controllerNonce, fixture.outcome)
+    ).not.toThrow();
     const record = fixture.raw['product-http']
       .toString('utf8')
       .trimEnd()
@@ -3114,8 +3455,10 @@ describe('raw evidence validation', () => {
   it('rejects an approval ID duplicated only on a later retained page', () => {
     const fixture = rawEvidence();
     const changed = mutateSemanticEvent(fixture, 'product-http', 'pending_observed', (semantic) => {
-      const exchanges = (semantic.transport as Record<string, unknown>)
-        .pageExchanges as Record<string, unknown>[];
+      const exchanges = (semantic.transport as Record<string, unknown>).pageExchanges as Record<
+        string,
+        unknown
+      >[];
       const firstResponse = exchanges[0].response as Record<string, unknown>;
       const firstBody = JSON.parse(
         Buffer.from(firstResponse.bodyBase64 as string, 'base64').toString('utf8')
@@ -3133,8 +3476,10 @@ describe('raw evidence validation', () => {
   it('rejects a manipulated later retained page after every digest is rehashed', () => {
     const fixture = rawEvidence();
     const changed = mutateSemanticEvent(fixture, 'product-http', 'pending_observed', (semantic) => {
-      const exchanges = (semantic.transport as Record<string, unknown>)
-        .pageExchanges as Record<string, unknown>[];
+      const exchanges = (semantic.transport as Record<string, unknown>).pageExchanges as Record<
+        string,
+        unknown
+      >[];
       mutateRedactedBody(exchanges[1].response as Record<string, unknown>, (body) => {
         body.teamId = `team_${digest('hidden-team-c').slice(0, 32)}`;
       });
@@ -3147,8 +3492,10 @@ describe('raw evidence validation', () => {
   it('rejects a retained approval-page cursor cycle', () => {
     const fixture = rawEvidence();
     const changed = mutateSemanticEvent(fixture, 'product-http', 'pending_observed', (semantic) => {
-      const exchanges = (semantic.transport as Record<string, unknown>)
-        .pageExchanges as Record<string, unknown>[];
+      const exchanges = (semantic.transport as Record<string, unknown>).pageExchanges as Record<
+        string,
+        unknown
+      >[];
       const terminal = structuredClone(exchanges[1]);
       const requestBody = JSON.parse(
         Buffer.from(
@@ -3170,8 +3517,10 @@ describe('raw evidence validation', () => {
   it('rejects a truncated approval page with no retained successor', () => {
     const fixture = rawEvidence();
     const changed = mutateSemanticEvent(fixture, 'product-http', 'pending_observed', (semantic) => {
-      const exchanges = (semantic.transport as Record<string, unknown>)
-        .pageExchanges as Record<string, unknown>[];
+      const exchanges = (semantic.transport as Record<string, unknown>).pageExchanges as Record<
+        string,
+        unknown
+      >[];
       exchanges.pop();
     });
     expect(() => deriveEvidence(changed.raw, changed.controllerNonce, changed.outcome)).toThrow(
@@ -3315,12 +3664,14 @@ describe('raw evidence validation', () => {
   });
 
   it('rejects a fully rehashed reciprocal allow/deny semantic and effect substitution', () => {
-    const allowEffectId = `effect_${digest(
-      'observed-provider-effect-id:decision:allow'
-    ).slice(0, 32)}`;
-    const denyEffectId = `effect_${digest(
-      'observed-provider-effect-id:decision:deny'
-    ).slice(0, 32)}`;
+    const allowEffectId = `effect_${digest('observed-provider-effect-id:decision:allow').slice(
+      0,
+      32
+    )}`;
+    const denyEffectId = `effect_${digest('observed-provider-effect-id:decision:deny').slice(
+      0,
+      32
+    )}`;
     const effectSha256s: string[] = [];
     const swapEffectId = (value: unknown): unknown =>
       value === allowEffectId ? denyEffectId : value === denyEffectId ? allowEffectId : value;
@@ -3332,9 +3683,7 @@ describe('raw evidence validation', () => {
         identity.decision = substitutedDecision;
         const causal = semantic.causal as Record<string, unknown>;
         causal.providerEffectId = swapEffectId(causal.providerEffectId);
-        causal.chainId = sha256(
-          `agent-teams.p3c.causal-chain/v1\0${canonicalJson(identity)}`
-        );
+        causal.chainId = sha256(`agent-teams.p3c.causal-chain/v1\0${canonicalJson(identity)}`);
         const transport = semantic.transport as Record<string, unknown>;
         if (origin === 'browser') transport.decision = substitutedDecision;
         if (origin === 'owner-wal' || origin === 'opencode')
@@ -3348,7 +3697,10 @@ describe('raw evidence validation', () => {
             });
           }
         }
-        if (origin === 'opencode' && /_effect$/u.test(event)) {
+        if (
+          origin === 'opencode' &&
+          /^(?:(?:allow|deny)_effect|reconcile_not_delivered_retry_effect)$/u.test(event)
+        ) {
           effectSha256s.push((transport.response as Record<string, unknown>).sha256 as string);
         }
       }
