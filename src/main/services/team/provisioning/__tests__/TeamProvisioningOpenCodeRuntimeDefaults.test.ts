@@ -8,6 +8,16 @@ import {
 import type { TeamCreateRequest } from '@shared/types';
 
 const testProjectPath = '/safe-test/project';
+const inheritedRuntimeSelectionProvenance = {
+  version: 1,
+  providerBackendId: 'inherited',
+  model: 'inherited',
+  effort: 'inherited',
+} as const;
+const explicitModelRuntimeSelectionProvenance = {
+  ...inheritedRuntimeSelectionProvenance,
+  model: 'explicit',
+} as const;
 
 function createRequest(overrides: Partial<TeamCreateRequest> = {}): TeamCreateRequest {
   return {
@@ -40,9 +50,24 @@ describe('OpenCode runtime defaults', () => {
       {
         request: createRequest({ model: ' opencode/gpt-5 ' }),
         members: [
-          { name: 'lead', role: 'lead', providerId: 'opencode' },
-          { name: 'dev', role: 'developer', providerId: 'opencode' },
-          { name: 'claude', role: 'reviewer', providerId: 'anthropic' },
+          {
+            name: 'lead',
+            role: 'lead',
+            providerId: 'opencode',
+            runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+          },
+          {
+            name: 'dev',
+            role: 'developer',
+            providerId: 'opencode',
+            runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+          },
+          {
+            name: 'claude',
+            role: 'reviewer',
+            providerId: 'anthropic',
+            runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+          },
         ],
       },
       ports
@@ -63,7 +88,15 @@ describe('OpenCode runtime defaults', () => {
     const result = await materializeOpenCodeRuntimeAdapterDefaults(
       {
         request: createRequest(),
-        members: [{ name: 'dev', role: 'developer', providerId: 'opencode', model: 'gpt-5' }],
+        members: [
+          {
+            name: 'dev',
+            role: 'developer',
+            providerId: 'opencode',
+            model: 'gpt-5',
+            runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+          },
+        ],
       },
       ports
     );
@@ -81,9 +114,27 @@ describe('OpenCode runtime defaults', () => {
       {
         request: createRequest(),
         members: [
-          { name: 'dev', role: 'developer', providerId: 'opencode', model: 'gpt-5' },
-          { name: 'reviewer', role: 'reviewer', providerId: 'anthropic', model: 'sonnet' },
-          { name: 'qa', role: 'tester', providerId: 'codex', model: 'gpt-5-codex' },
+          {
+            name: 'dev',
+            role: 'developer',
+            providerId: 'opencode',
+            model: 'gpt-5',
+            runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+          },
+          {
+            name: 'reviewer',
+            role: 'reviewer',
+            providerId: 'anthropic',
+            model: 'sonnet',
+            runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+          },
+          {
+            name: 'qa',
+            role: 'tester',
+            providerId: 'codex',
+            model: 'gpt-5-codex',
+            runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+          },
         ],
       },
       ports
@@ -106,8 +157,19 @@ describe('OpenCode runtime defaults', () => {
       {
         request: createRequest(),
         members: [
-          { name: 'dev', role: 'developer', providerId: 'opencode' },
-          { name: 'reviewer', role: 'reviewer', providerId: 'anthropic', model: 'sonnet' },
+          {
+            name: 'dev',
+            role: 'developer',
+            providerId: 'opencode',
+            runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+          },
+          {
+            name: 'reviewer',
+            role: 'reviewer',
+            providerId: 'anthropic',
+            model: 'sonnet',
+            runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+          },
         ],
       },
       ports
@@ -127,8 +189,20 @@ describe('OpenCode runtime defaults', () => {
       {
         request: createRequest(),
         members: [
-          { name: 'dev', role: 'developer', providerId: 'opencode', model: 'gpt-5' },
-          { name: 'qa', role: 'tester', providerId: 'opencode', model: 'gpt-4.1' },
+          {
+            name: 'dev',
+            role: 'developer',
+            providerId: 'opencode',
+            model: 'gpt-5',
+            runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+          },
+          {
+            name: 'qa',
+            role: 'tester',
+            providerId: 'opencode',
+            model: 'gpt-4.1',
+            runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+          },
         ],
       },
       ports
@@ -148,7 +222,14 @@ describe('OpenCode runtime defaults', () => {
     const result = await materializeOpenCodeRuntimeAdapterDefaults(
       {
         request: createRequest({ limitContext: true }),
-        members: [{ name: 'dev', role: 'developer', providerId: 'opencode' }],
+        members: [
+          {
+            name: 'dev',
+            role: 'developer',
+            providerId: 'opencode',
+            runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+          },
+        ],
       },
       ports
     );
@@ -171,7 +252,14 @@ describe('OpenCode runtime defaults', () => {
       materializeOpenCodeRuntimeAdapterDefaults(
         {
           request: createRequest(),
-          members: [{ name: 'dev', role: 'developer', providerId: 'opencode' }],
+          members: [
+            {
+              name: 'dev',
+              role: 'developer',
+              providerId: 'opencode',
+              runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+            },
+          ],
         },
         createPorts({ resolveProviderDefaultModel: vi.fn().mockResolvedValue('   ') })
       )
