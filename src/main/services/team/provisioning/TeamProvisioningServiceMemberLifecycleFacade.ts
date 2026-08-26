@@ -346,6 +346,7 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
         {
           nowIso,
           nowMs: () => Date.now(),
+          isCurrentTrackedRun: (run: ProvisioningRun) => this.isCurrentTrackedRun(run),
           isOpenCodeSecondaryLaneMemberInRun,
         }
       )

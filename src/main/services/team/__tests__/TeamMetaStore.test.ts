@@ -7,10 +7,6 @@ const atomicWriteAsync = vi.hoisted(() =>
 
 vi.mock('../atomicWrite', () => ({ atomicWriteAsync }));
 
-import {
-  compareExchangeLeadRuntimeMetadata,
-  type LeadRuntimeMetadataState,
-} from '../provisioning/TeamProvisioningLeadRuntimeRestart';
 import { TeamMetaStore } from '../TeamMetaStore';
 
 import type { TeamMetaFile } from '../TeamMetaStore';
@@ -22,17 +18,6 @@ const initialMeta: TeamMetaFile = {
   model: 'old-model',
   effort: 'low',
   createdAt: 1,
-};
-
-const priorCodexState: LeadRuntimeMetadataState = {
-  settings: { providerId: 'codex', model: 'old-model', effort: 'low' },
-  launchIdentity: null,
-  provenance: { kind: 'absent' },
-};
-const targetCodexState: LeadRuntimeMetadataState = {
-  settings: { providerId: 'codex', model: 'new-model', effort: 'high' },
-  launchIdentity: null,
-  provenance: { kind: 'absent' },
 };
 
 function launchIdentity(providerBackendId: TeamProviderBackendId): ProviderModelLaunchIdentity {
@@ -101,78 +86,6 @@ describe('TeamMetaStore', () => {
       effort: 'medium',
     });
   });
-
-  it.each(['auto', 'adapter', 'api'] as const)(
-    'preserves concurrent raw Codex backend %s so target CAS fails closed',
-    async (providerBackendId) => {
-      vi.spyOn(fs.promises, 'stat').mockResolvedValue({
-        isFile: () => true,
-        size: 128,
-      } as fs.Stats);
-      vi.spyOn(fs.promises, 'readFile').mockResolvedValue(
-        JSON.stringify({
-          ...initialMeta,
-          version: 2,
-          providerId: 'codex',
-          providerBackendId,
-        })
-      );
-      const conflict = new Error('concurrent backend drift');
-
-      await expect(
-        new TeamMetaStore().updateMeta('alpha', (meta) => {
-          if (!meta) throw new Error('missing metadata');
-          const exchange = compareExchangeLeadRuntimeMetadata(
-            meta,
-            priorCodexState,
-            targetCodexState
-          );
-          expect(meta.providerBackendId).toBe(providerBackendId);
-          expect(exchange.outcome).toBe('conflict');
-          throw conflict;
-        })
-      ).rejects.toBe(conflict);
-
-      expect(atomicWriteAsync).not.toHaveBeenCalled();
-    }
-  );
-
-  it.each(['auto', 'adapter', 'api'] as const)(
-    'preserves concurrent raw Codex backend %s so rollback CAS fails closed',
-    async (providerBackendId) => {
-      vi.spyOn(fs.promises, 'stat').mockResolvedValue({
-        isFile: () => true,
-        size: 128,
-      } as fs.Stats);
-      vi.spyOn(fs.promises, 'readFile').mockResolvedValue(
-        JSON.stringify({
-          ...initialMeta,
-          version: 2,
-          providerId: 'codex',
-          providerBackendId,
-          model: 'new-model',
-          effort: 'high',
-        })
-      );
-      const conflict = new Error('concurrent backend drift');
-
-      await expect(
-        new TeamMetaStore().updateMeta('alpha', (meta) => {
-          if (!meta) throw new Error('missing metadata');
-          const exchange = compareExchangeLeadRuntimeMetadata(
-            meta,
-            targetCodexState,
-            priorCodexState
-          );
-          expect(meta.providerBackendId).toBe(providerBackendId);
-          expect(exchange.outcome).toBe('conflict');
-          throw conflict;
-        })
-      ).rejects.toBe(conflict);
-
-      expect(atomicWriteAsync).not.toHaveBeenCalled();
-    }
-  );
 
   it.each(['auto', 'adapter', 'api', 'codex-native'] as const)(
     'round-trips current-schema root and launch identity backend %s across restart',

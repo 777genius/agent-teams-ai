@@ -3,10 +3,7 @@ import {
   sendKeysToTmuxPaneForCurrentPlatform,
 } from '@features/tmux-installer/main';
 import { spawnCli } from '@main/utils/childProcess';
-import {
-  captureAttemptProcessIdentity,
-  createAttemptOwnedProcessHandle,
-} from '@main/utils/processKill';
+import { killProcessByPid } from '@main/utils/processKill';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -17,9 +14,7 @@ import { TeamProvisioningMemberLifecycleController } from '../TeamProvisioningMe
 
 import type { TeamProvisioningMemberLifecycleHost } from '../TeamProvisioningMemberLifecycleHostPorts';
 import type { TeamProvisioningMemberLifecycleOperationUseCases } from '../TeamProvisioningMemberLifecycleOperationUseCases';
-import type { MemberRestartAuthorityContext } from '../TeamProvisioningMemberRestartAuthority';
 import type * as PathDecoderModule from '@main/utils/pathDecoder';
-import type { AttemptProcessIdentity } from '@main/utils/processKill';
 
 type DirectProcessRestartInput = Parameters<
   TeamProvisioningMemberLifecycleController['launchDirectProcessMemberRestartInternal']
@@ -64,23 +59,7 @@ vi.mock('@main/utils/childProcess', () => ({
 }));
 
 vi.mock('@main/utils/processKill', () => ({
-  captureAttemptProcessIdentity: vi.fn(
-    async (pid: number, launchToken: string): Promise<AttemptProcessIdentity> => ({
-      pid,
-      platform: 'linux',
-      birthIdentity: `birth-${pid}`,
-      executablePath: '/mock/runtime',
-      launchToken,
-    })
-  ),
-  createAttemptOwnedProcessHandle: vi.fn((_child, identity: AttemptProcessIdentity) => ({
-    identity,
-    isLive: true,
-    terminateAndWait: vi.fn(async () => ({
-      root: 'terminated',
-      descendants: 'unresolved',
-    })),
-  })),
+  killProcessByPid: vi.fn(),
 }));
 
 vi.mock('@main/services/team/bootstrap/NativeAppManagedBootstrapContextBuilder', () => ({
@@ -121,8 +100,7 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
     vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockReset();
     vi.mocked(sendKeysToTmuxPaneForCurrentPlatform).mockResolvedValue(undefined);
     vi.mocked(spawnCli).mockReset();
-    vi.mocked(captureAttemptProcessIdentity).mockClear();
-    vi.mocked(createAttemptOwnedProcessHandle).mockClear();
+    vi.mocked(killProcessByPid).mockReset();
   });
 
   afterEach(() => {
@@ -221,20 +199,14 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
   }
 
   function createController(
-    host: ReturnType<typeof createHost>,
-    context: MemberRestartAuthorityContext = {}
+    host: ReturnType<typeof createHost>
   ): TeamProvisioningMemberLifecycleController {
-    return new TeamProvisioningMemberLifecycleController(
-      host,
-      immediateOperationUseCases,
-      {
-        restart: {
-          appendDirectProcessRuntimeEvent: host.appendDirectProcessRuntimeEvent,
-          updateDirectTmuxRestartMemberConfig: host.updateDirectTmuxRestartMemberConfig,
-        },
+    return new TeamProvisioningMemberLifecycleController(host, immediateOperationUseCases, {
+      restart: {
+        appendDirectProcessRuntimeEvent: host.appendDirectProcessRuntimeEvent,
+        updateDirectTmuxRestartMemberConfig: host.updateDirectTmuxRestartMemberConfig,
       },
-      context
-    );
+    });
   }
 
   it('removes pending helper material when direct process preparation fails', async () => {
@@ -311,76 +283,13 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
       unref: vi.fn(),
     });
     vi.mocked(spawnCli).mockReturnValue(child as never);
-    const markUnknown = vi.fn(async () => undefined);
-    const markCompleted = vi.fn(async () => undefined);
-    const markAttemptResourceEnded = vi.fn(async () => undefined);
-    input.authority = {
-      attemptId: 'restart-attempt-success-cleanup',
-      assertCurrent: vi.fn(async () => undefined),
-      markDispatched: vi.fn(async () => undefined),
-      recordOwnedProcess: vi.fn(async () => undefined),
-      markCompleted,
-      publishCommittedEvidence: vi.fn(async () => undefined),
-      markUnknown,
-      markAttemptResourceEnded,
-    };
     const controller = createController(host);
 
     await expect(controller.launchDirectProcessMemberRestartInternal(input)).rejects.toThrow(
       'runtime event persistence failed'
     );
 
-    expect(captureAttemptProcessIdentity).toHaveBeenCalledWith(4567, expect.any(String));
-    const processHandle = vi.mocked(createAttemptOwnedProcessHandle).mock.results[0]?.value;
-    expect(processHandle.terminateAndWait).toHaveBeenCalledWith(
-      expect.objectContaining({ pid: 4567, birthIdentity: 'birth-4567' })
-    );
-    expect(markUnknown).toHaveBeenCalledTimes(2);
-    expect(markUnknown).toHaveBeenLastCalledWith(
-      expect.stringContaining('root=terminated, descendants=unresolved'),
-      { ownedPid: 4567 }
-    );
-    expect(markAttemptResourceEnded).not.toHaveBeenCalled();
-    expect(markCompleted).not.toHaveBeenCalled();
-    expect(fs.existsSync(helperDirectory)).toBe(false);
-  });
-
-  it('fails closed with an unknown recovery fence when spawned identity cannot be captured', async () => {
-    const helperDirectory = createHelperDirectory();
-    const input = createInput();
-    const host = createHost(helperDirectory, input.run);
-    const child = Object.assign(new EventEmitter(), {
-      pid: 4890,
-      stdin: Object.assign(new EventEmitter(), { unref: vi.fn() }),
-      stdout: { pipe: vi.fn(), unref: vi.fn() },
-      stderr: { pipe: vi.fn(), unref: vi.fn() },
-      unref: vi.fn(),
-    });
-    vi.mocked(spawnCli).mockReturnValue(child as never);
-    vi.mocked(captureAttemptProcessIdentity).mockRejectedValueOnce(
-      new Error('birth identity unavailable')
-    );
-    const markUnknown = vi.fn(async () => undefined);
-    input.authority = {
-      attemptId: 'restart-attempt-unobservable',
-      assertCurrent: vi.fn(async () => undefined),
-      markDispatched: vi.fn(async () => undefined),
-      recordOwnedProcess: vi.fn(async () => undefined),
-      markCompleted: vi.fn(async () => undefined),
-      publishCommittedEvidence: vi.fn(async () => undefined),
-      markUnknown,
-      markAttemptResourceEnded: vi.fn(async () => undefined),
-    };
-    const controller = createController(host);
-
-    await expect(controller.launchDirectProcessMemberRestartInternal(input)).rejects.toThrow(
-      'birth identity unavailable'
-    );
-
-    expect(markUnknown).toHaveBeenCalledWith(expect.stringContaining('refusing PID-only cleanup'), {
-      ownedPid: 4890,
-    });
-    expect(createAttemptOwnedProcessHandle).not.toHaveBeenCalled();
+    expect(killProcessByPid).toHaveBeenCalledWith(4567);
     expect(fs.existsSync(helperDirectory)).toBe(false);
   });
 
@@ -399,32 +308,20 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
       unref: vi.fn(),
     });
     vi.mocked(spawnCli).mockReturnValue(child as never);
-    const publishCommittedEvidence = vi.fn(async () => undefined);
-    const markCompleted = vi.fn(async () => undefined);
-    input.authority = {
-      attemptId: 'restart-attempt-committed',
-      assertCurrent: vi.fn(async () => undefined),
-      markDispatched: vi.fn(async () => undefined),
-      recordOwnedProcess: vi.fn(async () => undefined),
-      publishCommittedEvidence,
-      markCompleted,
-      markUnknown: vi.fn(async () => undefined),
-      markAttemptResourceEnded: vi.fn(async () => undefined),
-    };
     const controller = createController(host);
 
     await controller.launchDirectProcessMemberRestartInternal(input);
 
     await vi.waitFor(() => {
       expect(
-        fs
-          .readdirSync(path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime'))
-          .some((name) => name.endsWith('.stdout.log'))
+        fs.existsSync(
+          path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stdout.log')
+        )
       ).toBe(true);
       expect(
-        fs
-          .readdirSync(path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime'))
-          .some((name) => name.endsWith('.stderr.log'))
+        fs.existsSync(
+          path.join(hoisted.teamsBase, 'anthropic-restart-team', 'runtime', 'alice.stderr.log')
+        )
       ).toBe(true);
     });
     expect(host.enqueueDirectRestartPrompt).toHaveBeenCalledWith(
@@ -435,16 +332,6 @@ describe('TeamProvisioningMemberLifecycle Anthropic helper cleanup', () => {
           '</agent_teams_native_app_managed_bootstrap_check>',
         ].join('\n'),
       })
-    );
-    expect(publishCommittedEvidence).toHaveBeenCalledWith(expect.stringMatching(/^sha256:/));
-    expect(host.updateDirectTmuxRestartMemberConfig.mock.invocationCallOrder[0]).toBeLessThan(
-      publishCommittedEvidence.mock.invocationCallOrder[0]!
-    );
-    expect(vi.mocked(host.enqueueDirectRestartPrompt!).mock.invocationCallOrder[0]).toBeLessThan(
-      publishCommittedEvidence.mock.invocationCallOrder[0]!
-    );
-    expect(publishCommittedEvidence.mock.invocationCallOrder[0]).toBeLessThan(
-      markCompleted.mock.invocationCallOrder[0]!
     );
     child.emit('close', 0, null);
     await new Promise<void>((resolve) => setImmediate(resolve));

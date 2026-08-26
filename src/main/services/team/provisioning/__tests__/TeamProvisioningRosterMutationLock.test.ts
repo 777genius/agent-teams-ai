@@ -228,13 +228,9 @@ describe('team provisioning roster mutation lock', () => {
 
     await expect(service.stopTeam('lock-team')).resolves.toBeUndefined();
     await expect(service.restartMember('lock-team', 'worker')).resolves.toBeUndefined();
-    await expect(
-      service.restartMember('lock-team', 'worker', 'restart-command-1')
-    ).resolves.toBeUndefined();
 
     expect(stopFlow).toHaveBeenCalledOnce();
-    expect(restart).toHaveBeenNthCalledWith(1, 'lock-team', 'worker');
-    expect(restart).toHaveBeenNthCalledWith(2, 'lock-team', 'worker', 'restart-command-1');
+    expect(restart).toHaveBeenCalledWith('lock-team', 'worker');
   });
 
   it('revalidates stop authority under the lock before publishing any cancellation fence', async () => {

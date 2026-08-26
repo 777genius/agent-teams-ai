@@ -17,7 +17,6 @@ import {
 } from './ProjectRootIdentityLease';
 
 import type { ProjectRootIdentity, ProjectRootIdentityLease } from './ProjectRootIdentityLease';
-import type { LeadRuntimeRestartProof } from '@features/team-provisioning/contracts';
 import type {
   AuthoritativeModelExecutionProof,
   TeamCreateRequest,
@@ -28,7 +27,9 @@ import type {
 } from '@shared/types';
 import type { ProviderModelLaunchIdentity } from '@shared/types';
 
-export type OpaqueLeadRuntimeRestartProof = LeadRuntimeRestartProof;
+export interface OpaqueLeadRuntimeRestartProof {
+  readonly opaque: string;
+}
 
 export interface LeadRuntimeRestartProofBinding {
   teamName: string;

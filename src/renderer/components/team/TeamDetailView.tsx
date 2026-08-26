@@ -2254,16 +2254,17 @@ export const TeamDetailView = memo(function TeamDetailView({
         members: nextMembers,
         stopTeam: async (nextTeamName) => {
           try {
-            await api.teams.stop(nextTeamName);
+            const outcome = await api.teams.stopForRelaunch(nextTeamName);
             recordTeamStop({
               source: 'relaunch',
-              success: true,
+              success: outcome.status === 'stopped',
               memberCount: data?.members.length ?? null,
               providerIds: data?.members.map((member) => member.providerId ?? null),
               runtimeActive: data?.isAlive ?? null,
               hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
-              errorClass: 'none',
+              errorClass: outcome.status === 'stopped' ? 'none' : 'unknown',
             });
+            return outcome;
           } catch (error) {
             recordTeamStop({
               source: 'relaunch',
