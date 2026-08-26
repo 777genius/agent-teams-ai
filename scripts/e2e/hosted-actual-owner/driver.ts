@@ -1,151 +1,124 @@
-import { appendFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { constants } from 'node:fs';
+import { open } from 'node:fs/promises';
 
-import { type ActualOwnerIntegration } from './contracts';
-import { deriveProofRows, writeEvidenceIndex } from './evidence';
-import { actualOwnerPreflight } from './preflight';
-import { spawnOwnedProcess, stopOwnedProcess, type OwnedProcess } from './processes';
-import { claimExactlyOneRun, createRunSandbox } from './sandbox';
-import { atomicPrivateFile, canonicalJson } from './secure-files';
+import { assertFileCurrent, assertRootCurrent, descriptorMountId, procFdPath } from './anchors';
+import { RAW_ORIGINS, sha256, type RawOrigin } from './contracts';
+import { executeSupervisor, type RawFileEvidence, type SupervisorOutcome } from './processes';
+import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
+import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
+import { verifyClosure, type WrittenFileEvidence } from './secure-files';
 
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
-
-async function waitForProduct(origin: string, product: OwnedProcess): Promise<void> {
-  const deadline = Date.now() + 60_000;
-  while (Date.now() < deadline) {
-    if (product.child.exitCode !== null)
-      throw new Error('actual_owner_product_exited_before_ready');
-    const response = await fetch(new URL('/api/hosted/v1/readiness', origin), {
-      redirect: 'manual',
-      signal: AbortSignal.timeout(1_000),
-    }).catch(() => null);
-    if (response?.status === 200) return;
-    await new Promise((resolveWait) => setTimeout(resolveWait, 100));
-  }
-  throw new Error('actual_owner_product_readiness_timeout');
+export interface DriverResult {
+  readonly outcome: SupervisorOutcome;
+  readonly raw: Readonly<Record<RawOrigin, Buffer>>;
 }
 
-export async function runActualOwnerE2E(integration: ActualOwnerIntegration): Promise<string> {
-  if (!integration.finalRunAuthorized) throw new Error('actual_owner_final_run_not_authorized');
-  await actualOwnerPreflight(repositoryRoot, integration);
-  const sandbox = await createRunSandbox(integration.controllerNonce);
-  await claimExactlyOneRun(sandbox);
-  const browserManifestPath = join(sandbox.root, 'browser-manifest.json');
-  const browserResultsPath = join(sandbox.evidenceRoot, 'browser-results.json');
-  await atomicPrivateFile(
-    browserManifestPath,
-    canonicalJson({
-      schemaVersion: 1,
-      purpose: 'agent-teams.hosted-actual-owner-e2e.browser/v1',
-      nonce: integration.controllerNonce,
-      productOrigin: integration.productOrigin,
-      chromiumExecutable: integration.browser.chromiumExecutable,
-      ownerStorageState: integration.ownerStorageState,
-      nonOwnerStorageState: integration.nonOwnerStorageState,
-      teamA: integration.browser.teamA,
-      runA: integration.browser.runA,
-      teamB: integration.browser.teamB,
-      runB: integration.browser.runB,
-      csrfHeader: integration.browser.csrfHeader,
-      csrfToken: integration.browser.csrfToken,
-      evidenceRoot: sandbox.evidenceRoot,
-      resultsPath: browserResultsPath,
-    }),
-    sandbox.root
+async function readRawFile(
+  sandbox: DisposableSandbox,
+  origin: RawOrigin,
+  expected: RawFileEvidence
+): Promise<Buffer> {
+  if (expected.path !== `/sandbox/raw/${origin}.ndjson`) throw new Error('p3c_driver_raw_path');
+  await assertSandboxCurrent(sandbox);
+  const rawDirectory = await open(
+    `${procFdPath(sandbox.handle)}/raw`,
+    constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW
   );
-
-  const environment = Object.freeze({
-    NODE_ENV: 'test',
-    HOSTED_ACTUAL_OWNER_E2E: '1',
-    HOSTED_ACTUAL_OWNER_E2E_NONCE: integration.controllerNonce,
-    HOSTED_ACTUAL_OWNER_E2E_SANDBOX: sandbox.root,
-    HOSTED_ACTUAL_OWNER_E2E_EVIDENCE_ROOT: sandbox.evidenceRoot,
-    HOSTED_ACTUAL_OWNER_E2E_BROWSER_MANIFEST: browserManifestPath,
-    HOSTED_ACTUAL_OWNER_E2E_OPENCODE_EXECUTABLE: integration.openCode.executable,
-    HOSTED_ACTUAL_OWNER_E2E_OPENCODE_SHA256: integration.openCode.executableSha256,
-    HOSTED_ACTUAL_OWNER_E2E_PROVIDER_URL: integration.provider.baseUrl,
-  });
-  const processes: OwnedProcess[] = [];
-  let primaryError: unknown = null;
-  let completed = false;
-  const cleanupErrors: unknown[] = [];
   try {
-    const product = await spawnOwnedProcess({
-      role: 'product',
-      executable: integration.product.executable,
-      argv: integration.product.argv,
-      cwd: repositoryRoot,
-      runRoot: sandbox.root,
-      environment,
-    });
-    processes.push(product);
-    await waitForProduct(integration.productOrigin, product);
-    const owner = await spawnOwnedProcess({
-      role: 'orchestrator',
-      executable: integration.orchestrator.entry,
-      argv: [...integration.orchestrator.argv, '--runtime-manifest', browserManifestPath],
-      cwd: dirname(integration.orchestrator.entry),
-      runRoot: sandbox.root,
-      environment,
-    });
-    processes.push(owner);
-    const playwright = await spawnOwnedProcess({
-      role: 'browser',
-      executable: process.execPath,
-      argv: [
-        join(repositoryRoot, 'node_modules/@playwright/test/cli.js'),
-        'test',
-        join(repositoryRoot, 'test/e2e/hosted-web/actual-owner-approval.spec.ts'),
-        '--workers=1',
-      ],
-      cwd: repositoryRoot,
-      runRoot: sandbox.root,
-      environment,
-    });
-    processes.push(playwright);
-    const exitCode = await new Promise<number | null>((resolveExit) =>
-      playwright.child.once('exit', resolveExit)
+    const directoryStat = await rawDirectory.stat({ bigint: true });
+    const expectedUid = process.getuid?.();
+    if (
+      !directoryStat.isDirectory() ||
+      Number(directoryStat.mode & 0o777n) !== 0o700 ||
+      expectedUid === undefined ||
+      directoryStat.uid !== BigInt(expectedUid) ||
+      String(directoryStat.dev) !== sandbox.device ||
+      (await descriptorMountId(rawDirectory)) !== sandbox.mountId
+    )
+      throw new Error('p3c_driver_raw_directory');
+    const file = await open(
+      `${procFdPath(rawDirectory)}/${origin}.ndjson`,
+      constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW
     );
-    if (exitCode !== 0) throw new Error(`actual_owner_browser_failed:${exitCode ?? 'signal'}`);
-    completed = true;
-  } catch (error) {
-    primaryError = error;
-  } finally {
-    for (const process of [...processes].reverse()) {
-      try {
-        await stopOwnedProcess(process, primaryError !== null);
-      } catch (error) {
-        cleanupErrors.push(error);
+    try {
+      const before = await file.stat({ bigint: true });
+      if (
+        !before.isFile() ||
+        before.nlink !== 1n ||
+        ![0o400, 0o600].includes(Number(before.mode & 0o777n)) ||
+        expectedUid === undefined ||
+        before.uid !== BigInt(expectedUid) ||
+        String(before.dev) !== sandbox.device ||
+        (await descriptorMountId(file)) !== sandbox.mountId ||
+        Number(before.size) !== expected.size
+      )
+        throw new Error('p3c_driver_raw_metadata');
+      const bytes = Buffer.alloc(expected.size);
+      let offset = 0;
+      while (offset < bytes.length) {
+        const { bytesRead } = await file.read(bytes, offset, bytes.length - offset, offset);
+        if (!bytesRead) throw new Error('p3c_driver_raw_short_read');
+        offset += bytesRead;
       }
+      const after = await file.stat({ bigint: true });
+      if (
+        before.dev !== after.dev ||
+        before.ino !== after.ino ||
+        before.size !== after.size ||
+        before.mode !== after.mode ||
+        before.nlink !== after.nlink ||
+        before.mtimeNs !== after.mtimeNs ||
+        before.ctimeNs !== after.ctimeNs ||
+        sha256(bytes) !== expected.sha256
+      )
+        throw new Error('p3c_driver_raw_changed');
+      return bytes;
+    } finally {
+      await file.close();
     }
-    if (completed && cleanupErrors.length === 0) {
-      await appendFile(
-        join(sandbox.evidenceRoot, 'supervisor.ndjson'),
-        `${JSON.stringify({
-          schemaVersion: 1,
-          scenario: 'cleanup-normal',
-          recordId: `cleanup:${integration.controllerNonce}`,
-          passed: true,
-          effectCount: 0,
-          raw: { survivors: 0, processCount: processes.length },
-        })}\n`,
-        { encoding: 'utf8', mode: 0o600 }
-      );
-    }
+  } finally {
+    await rawDirectory.close();
   }
-  if (primaryError !== null) {
-    throw primaryError instanceof Error
-      ? primaryError
-      : new Error('actual_owner_run_failed', { cause: primaryError });
-  }
-  if (cleanupErrors.length > 0)
-    throw new AggregateError(cleanupErrors, 'actual_owner_cleanup_failed');
-  const evidenceIndex = join(sandbox.evidenceRoot, 'evidence-index.json');
-  await writeEvidenceIndex(
-    evidenceIndex,
-    sandbox.evidenceRoot,
-    await deriveProofRows(sandbox.evidenceRoot)
-  );
-  return evidenceIndex;
+}
+
+async function revalidateBeforeExecution(
+  admission: PreflightAdmission,
+  sandbox: DisposableSandbox,
+  consumedAttempt: WrittenFileEvidence
+): Promise<void> {
+  await assertSandboxCurrent(sandbox);
+  await Promise.all([
+    ...Object.values(admission.roots).map(assertRootCurrent),
+    ...Object.values(admission.execution).map(assertFileCurrent),
+  ]);
+  await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
+  const [harness, toolchain, product, browser, owner] = await Promise.all([
+    verifyClosure(admission.roots.harness, admission.descriptor.product.harnessClosure),
+    verifyClosure(admission.roots.toolchain, admission.descriptor.toolchain.closure),
+    verifyClosure(admission.roots.productRuntime, admission.descriptor.product.runtimeClosure),
+    verifyClosure(admission.roots.browserBundle, admission.descriptor.product.browserBundle),
+    verifyClosure(admission.roots.p3b2, admission.descriptor.p3b2.closure),
+  ]);
+  if (
+    harness.merkleRoot !== admission.closures.harness.merkleRoot ||
+    toolchain.merkleRoot !== admission.closures.toolchain.merkleRoot ||
+    product.merkleRoot !== admission.closures.productRuntime.merkleRoot ||
+    browser.merkleRoot !== admission.closures.browserBundle.merkleRoot ||
+    owner.merkleRoot !== admission.closures.p3b2.merkleRoot
+  )
+    throw new Error('p3c_driver_closure_changed_before_execution');
+}
+
+export async function runDriver(
+  admission: PreflightAdmission,
+  sandbox: DisposableSandbox,
+  consumedAttempt: WrittenFileEvidence
+): Promise<DriverResult> {
+  await revalidateBeforeExecution(admission, sandbox, consumedAttempt);
+  const outcome = await executeSupervisor(admission, sandbox, consumedAttempt);
+  if (!outcome.zeroOwnedSurvivors) throw new Error('p3c_driver_owned_survivors');
+  const raw = {} as Record<RawOrigin, Buffer>;
+  for (const origin of RAW_ORIGINS)
+    raw[origin] = await readRawFile(sandbox, origin, outcome.rawFiles[origin]);
+  return Object.freeze({ outcome, raw: Object.freeze(raw) });
 }

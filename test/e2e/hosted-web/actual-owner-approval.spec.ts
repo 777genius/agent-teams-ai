@@ -1,168 +1,606 @@
-import { appendFile, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFileSync, writeSync } from 'node:fs';
 
-import { type APIResponse, chromium, expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
-type BrowserManifest = Readonly<{
-  schemaVersion: 1;
-  purpose: 'agent-teams.hosted-actual-owner-e2e.browser/v1';
-  nonce: string;
-  productOrigin: string;
-  chromiumExecutable: string;
-  ownerStorageState: string;
-  nonOwnerStorageState: string;
-  teamA: string;
-  runA: string;
-  teamB: string;
-  runB: string;
-  csrfHeader: string;
-  csrfToken: string;
-  evidenceRoot: string;
-  resultsPath: string;
-}>;
+import {
+  canonicalJson,
+  exactRecord,
+  type MatrixRow,
+  PRODUCT_ORIGIN,
+  sha256,
+} from '../../../scripts/e2e/hosted-actual-owner/contracts';
+import {
+  canonicalRowIdentity,
+  makeRawRecord,
+  makeSemanticPayload,
+  observedSemanticIdentity,
+} from '../../../scripts/e2e/hosted-actual-owner/evidence';
+import { parseHostedTeamApprovalPage } from '../../../src/features/team-approvals/contracts/hosted';
 
-const manifestPath = process.env.HOSTED_ACTUAL_OWNER_E2E_BROWSER_MANIFEST;
-if (!manifestPath) throw new Error('actual_owner_browser_manifest_missing');
-const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as BrowserManifest;
-const rawPath = join(manifest.evidenceRoot, 'browser-http.ndjson');
+const DESCRIPTOR_FD = 3;
+const OBSERVATION_FD = 4;
+const PROCESS_IDENTITY_FD = 5;
 
-async function rawResponse(response: APIResponse): Promise<Record<string, unknown>> {
-  return {
-    url: response.url(),
-    status: response.status(),
-    headers: response.headers(),
-    body: await response.text(),
-  };
+interface ApprovalTarget {
+  readonly approvalId: string;
+  readonly generation: string;
+  readonly idempotencyKey: string;
+  readonly previewRef: string;
 }
 
-async function record(
-  scenario: 'allow' | 'deny' | 'stale' | 'replay' | 'cross-team',
-  recordId: string,
-  response: APIResponse,
-  passed: boolean
-): Promise<void> {
-  await appendFile(
-    rawPath,
-    `${JSON.stringify({
-      schemaVersion: 1,
-      scenario,
-      recordId,
-      passed,
-      effectCount: 0,
-      raw: await rawResponse(response),
-    })}\n`,
-    { mode: 0o600 }
+interface ObservedApprovalItem {
+  readonly teamId: string;
+  readonly runId: string;
+  readonly approvalId: string;
+  readonly generation: string;
+  readonly category: 'file_change' | 'command' | 'network' | 'other';
+  readonly summary: string;
+  readonly requestedAtMs: number;
+  readonly expiresAtMs: number | null;
+  readonly previewRef: string;
+}
+
+interface BrowserScenario {
+  readonly controllerNonce: string;
+  readonly origin: typeof PRODUCT_ORIGIN;
+  readonly authenticatedActorTeamId: string;
+  readonly targetTeamAId: string;
+  readonly targetTeamBId: string;
+  readonly teamARunId: string;
+  readonly teamBRunId: string;
+  readonly allow: ApprovalTarget;
+  readonly deny: ApprovalTarget;
+  readonly teamBRequest: ApprovalTarget;
+  readonly processStartToken: string;
+}
+
+function canonicalFdJson(fd: number, label: string): Record<string, unknown> {
+  const bytes = readFileSync(`/proc/self/fd/${fd}`);
+  const source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  const value = JSON.parse(source) as unknown;
+  if (canonicalJson(value) !== source) throw new Error(`p3c_browser_${label}_noncanonical`);
+  return value as Record<string, unknown>;
+}
+
+function readScenario(): BrowserScenario {
+  const descriptor = exactRecord(
+    canonicalFdJson(DESCRIPTOR_FD, 'descriptor'),
+    [
+      'schemaVersion',
+      'purpose',
+      'controllerNonce',
+      'origin',
+      'matrixRows',
+      'observationFd',
+      'scenario',
+      'playwright',
+    ],
+    'browser_descriptor'
+  );
+  const identity = exactRecord(
+    canonicalFdJson(PROCESS_IDENTITY_FD, 'identity'),
+    ['schemaVersion', 'purpose', 'controllerNonce', 'role', 'processStartToken'],
+    'browser_identity'
+  );
+  const scenario = exactRecord(
+    descriptor.scenario,
+    [
+      'authenticatedActorTeamId',
+      'targetTeamAId',
+      'targetTeamBId',
+      'teamARunId',
+      'teamBRunId',
+      'allow',
+      'deny',
+      'teamBRequest',
+    ],
+    'browser_scenario'
+  );
+  const target = (value: unknown, label: string): ApprovalTarget => {
+    const item = exactRecord(
+      value,
+      ['approvalId', 'generation', 'idempotencyKey', 'previewRef'],
+      label
+    );
+    if (
+      typeof item.approvalId !== 'string' ||
+      !/^approval_[0-9a-f]{32}$/u.test(item.approvalId) ||
+      typeof item.generation !== 'string' ||
+      !/^generation_[A-Za-z0-9][A-Za-z0-9._-]{0,245}$/u.test(item.generation) ||
+      typeof item.idempotencyKey !== 'string' ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(item.idempotencyKey) ||
+      typeof item.previewRef !== 'string' ||
+      !/^approval_preview_[A-Za-z0-9][A-Za-z0-9._-]{0,239}$/u.test(item.previewRef)
+    )
+      throw new Error(`p3c_browser_${label}_identity`);
+    return Object.freeze({
+      approvalId: item.approvalId,
+      generation: item.generation,
+      idempotencyKey: item.idempotencyKey,
+      previewRef: item.previewRef,
+    });
+  };
+  const allow = target(scenario.allow, 'allow');
+  const deny = target(scenario.deny, 'deny');
+  const teamBRequest = target(scenario.teamBRequest, 'team_b_request');
+  if (
+    descriptor.schemaVersion !== 1 ||
+    descriptor.purpose !== 'agent-teams.p3c.browser-descriptor/v1' ||
+    descriptor.origin !== PRODUCT_ORIGIN ||
+    descriptor.observationFd !== OBSERVATION_FD ||
+    identity.schemaVersion !== 1 ||
+    identity.purpose !== 'agent-teams.p3c.process-identity/v1' ||
+    identity.controllerNonce !== descriptor.controllerNonce ||
+    identity.role !== 'browser' ||
+    typeof descriptor.controllerNonce !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(descriptor.controllerNonce) ||
+    typeof identity.processStartToken !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(identity.processStartToken) ||
+    typeof scenario.authenticatedActorTeamId !== 'string' ||
+    !/^team_[0-9a-f]{32}$/u.test(scenario.authenticatedActorTeamId) ||
+    scenario.authenticatedActorTeamId !== scenario.targetTeamAId ||
+    typeof scenario.targetTeamBId !== 'string' ||
+    !/^team_[0-9a-f]{32}$/u.test(scenario.targetTeamBId) ||
+    scenario.targetTeamAId === scenario.targetTeamBId ||
+    typeof scenario.teamARunId !== 'string' ||
+    !/^run_[0-9a-f]{32}$/u.test(scenario.teamARunId) ||
+    typeof scenario.teamBRunId !== 'string' ||
+    !/^run_[0-9a-f]{32}$/u.test(scenario.teamBRunId) ||
+    scenario.teamARunId === scenario.teamBRunId ||
+    allow.approvalId === deny.approvalId ||
+    allow.idempotencyKey === deny.idempotencyKey ||
+    [allow.approvalId, deny.approvalId].includes(teamBRequest.approvalId)
+  )
+    throw new Error('p3c_browser_descriptor_binding');
+  return Object.freeze({
+    controllerNonce: descriptor.controllerNonce,
+    origin: PRODUCT_ORIGIN,
+    authenticatedActorTeamId: String(scenario.authenticatedActorTeamId),
+    targetTeamAId: String(scenario.targetTeamAId),
+    targetTeamBId: String(scenario.targetTeamBId),
+    teamARunId: String(scenario.teamARunId),
+    teamBRunId: String(scenario.teamBRunId),
+    allow,
+    deny,
+    teamBRequest,
+    processStartToken: identity.processStartToken,
+  });
+}
+
+let sequence = 0;
+
+function observe(
+  scenario: BrowserScenario,
+  row: MatrixRow,
+  event: string,
+  target: ApprovalTarget,
+  decision: 'allow' | 'deny' | 'none',
+  submittedMonotonicNs: bigint,
+  observedBrowserStatus?: number
+): void {
+  sequence += 1;
+  const runId = sha256(`agent-teams.p3c.run/v1\0${scenario.controllerNonce}`);
+  const identity = observedSemanticIdentity({
+    lane: 'P3.C2.FINAL_NO_FAKE_RUN',
+    controllerNonce: scenario.controllerNonce,
+    harnessRunId: runId,
+    authenticatedActorTeamId: scenario.authenticatedActorTeamId,
+    targetTeamRunId: row === '08_cross_team_isolation' ? scenario.teamBRunId : scenario.teamARunId,
+    targetTeamId:
+      row === '08_cross_team_isolation' ? scenario.targetTeamBId : scenario.targetTeamAId,
+    approvalId: target.approvalId,
+    generationId: target.generation,
+    idempotencyKey: target.idempotencyKey,
+    previewRef: target.previewRef,
+    decision,
+  });
+  const record = makeRawRecord({
+    controllerNonce: scenario.controllerNonce,
+    origin: 'browser',
+    row,
+    sequence,
+    monotonicNs: submittedMonotonicNs.toString(),
+    processStartToken: scenario.processStartToken,
+    event,
+    correlation: sha256(
+      `agent-teams.p3c.row-identity/v1\0${scenario.controllerNonce}\0${row}\0${sha256(
+        canonicalJson(canonicalRowIdentity(row, identity))
+      )}`
+    ),
+    effectCount: 0,
+    payload: makeSemanticPayload({
+      origin: 'browser',
+      row,
+      event,
+      identity,
+      observedBrowserStatus,
+    }),
+  });
+  writeSync(OBSERVATION_FD, `${canonicalJson(record)}\n`);
+}
+
+async function submit(
+  page: Page,
+  scenario: BrowserScenario,
+  csrf: string,
+  target: ApprovalTarget,
+  decision: 'allow' | 'deny'
+) {
+  return page.evaluate(
+    async ({ csrfValue, targetValue, decisionValue, teamId, runId }) => {
+      const response = await fetch('/api/hosted/v1/team-approvals/decisions', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        redirect: 'error',
+        headers: {
+          'content-type': 'application/json',
+          'x-agent-teams-csrf': csrfValue,
+        },
+        body: JSON.stringify({
+          schemaVersion: 1,
+          teamId,
+          expectedRunId: runId,
+          approvalId: targetValue.approvalId,
+          expectedGeneration: targetValue.generation,
+          idempotencyKey: targetValue.idempotencyKey,
+          decision: decisionValue,
+        }),
+      });
+      return {
+        status: response.status,
+        body: (await response.json()) as Record<string, unknown>,
+      };
+    },
+    {
+      csrfValue: csrf,
+      targetValue: target,
+      decisionValue: decision,
+      teamId: scenario.targetTeamAId,
+      runId: scenario.teamARunId,
+    }
   );
 }
 
-test('real browser drives actual-owner approval decisions and rejections', async () => {
-  test.setTimeout(180_000);
-  expect(manifest.schemaVersion).toBe(1);
-  expect(manifest.purpose).toBe('agent-teams.hosted-actual-owner-e2e.browser/v1');
-  const browser = await chromium.launch({
-    executablePath: manifest.chromiumExecutable,
-    headless: true,
-  });
-  try {
-    const owner = await browser.newContext({
-      storageState: manifest.ownerStorageState,
-      baseURL: manifest.productOrigin,
-    });
-    const nonOwner = await browser.newContext({
-      storageState: manifest.nonOwnerStorageState,
-      baseURL: manifest.productOrigin,
-    });
-    const headers = { Origin: manifest.productOrigin, [manifest.csrfHeader]: manifest.csrfToken };
-    const pageBody = {
-      schemaVersion: 1,
-      teamId: manifest.teamA,
-      expectedRunId: manifest.runA,
-      cursor: null,
-      limit: 50,
-    };
-    let items: Record<string, unknown>[] = [];
-    const deadline = Date.now() + 60_000;
-    while (Date.now() < deadline && items.length < 2) {
-      const response = await owner.request.post('/api/hosted/v1/team-approvals/page', {
-        data: pageBody,
-        headers,
-      });
-      if (response.status() === 200) {
-        const body = (await response.json()) as { items?: Record<string, unknown>[] };
-        items = body.items ?? [];
+async function readAllApprovalPages(
+  page: Page,
+  scenario: BrowserScenario,
+  csrf: string
+): Promise<readonly Record<string, unknown>[]> {
+  const items: Record<string, unknown>[] = [];
+  const approvalIds = new Set<string>();
+  const cursors = new Set<string>();
+  let cursor: string | null = null;
+  for (;;) {
+    const cursorKey = cursor === null ? '<initial>' : cursor;
+    if (cursors.has(cursorKey)) throw new Error('p3c_browser_approval_cursor_cycle');
+    cursors.add(cursorKey);
+    const result = await page.evaluate(
+      async ({ teamId, runId, csrfValue, pageCursor }) => {
+        const request = {
+          schemaVersion: 1,
+          teamId,
+          expectedRunId: runId,
+          cursor: pageCursor,
+          limit: 32,
+        };
+        const response = await fetch('/api/hosted/v1/team-approvals/page', {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+          redirect: 'error',
+          headers: {
+            'content-type': 'application/json',
+            'x-agent-teams-csrf': csrfValue,
+          },
+          body: JSON.stringify(request),
+        });
+        return { request, status: response.status, body: (await response.json()) as unknown };
+      },
+      {
+        teamId: scenario.targetTeamAId,
+        runId: scenario.teamARunId,
+        csrfValue: csrf,
+        pageCursor: cursor,
       }
-      if (items.length < 2) await new Promise((resolveWait) => setTimeout(resolveWait, 100));
+    );
+    if (result.request.cursor !== cursor) throw new Error('p3c_browser_approval_cursor_binding');
+    if (result.status !== 200) throw new Error('p3c_browser_approval_page_status');
+    const parsed = parseHostedTeamApprovalPage(result.body);
+    if (!parsed.ok) throw new Error('p3c_browser_approval_page_malformed');
+    if (
+      parsed.value.teamId !== scenario.targetTeamAId ||
+      parsed.value.items.some((item) => item.runId !== scenario.teamARunId)
+    )
+      throw new Error('p3c_browser_approval_page_authority_binding');
+    for (const item of parsed.value.items) {
+      if (approvalIds.has(item.approvalId))
+        throw new Error('p3c_browser_approval_duplicate_across_pages');
+      approvalIds.add(item.approvalId);
+      items.push(item as unknown as Record<string, unknown>);
     }
-    expect(items.length).toBeGreaterThanOrEqual(2);
-    const [allowItem, denyItem] = items;
-    const decide = (item: Record<string, unknown>, decision: 'allow' | 'deny', nonce: string) => ({
+    if (!parsed.value.truncated) return Object.freeze(items);
+    if (parsed.value.nextCursor === null) throw new Error('p3c_browser_approval_missing_tail');
+    cursor = parsed.value.nextCursor;
+  }
+}
+
+function exactApprovalItem(
+  value: Record<string, unknown>,
+  teamId: string,
+  runId: string,
+  target: ApprovalTarget
+): ObservedApprovalItem {
+  expect(Reflect.ownKeys(value).sort()).toEqual(
+    [
+      'approvalId',
+      'category',
+      'expiresAtMs',
+      'generation',
+      'previewRef',
+      'requestedAtMs',
+      'runId',
+      'summary',
+      'teamId',
+    ].sort()
+  );
+  expect(value).toMatchObject({
+    teamId,
+    runId,
+    approvalId: target.approvalId,
+    generation: target.generation,
+    category: expect.stringMatching(/^(?:file_change|command|network|other)$/u),
+    summary: expect.any(String),
+    requestedAtMs: expect.any(Number),
+    previewRef: target.previewRef,
+  });
+  expect(value.expiresAtMs === null || Number.isSafeInteger(value.expiresAtMs)).toBe(true);
+  return value as unknown as ObservedApprovalItem;
+}
+
+test.use({ storageState: '/sandbox/run/browser-state.json' });
+test.describe.configure({ mode: 'serial', retries: 0 });
+
+test('authenticated loopback browser submits actual-owner allow and deny decisions', async ({
+  page,
+  playwright,
+}) => {
+  const scenario = readScenario();
+  await page.route('**/*', async (route) => {
+    if (new URL(route.request().url()).origin !== PRODUCT_ORIGIN) {
+      await route.abort('blockedbyclient');
+      return;
+    }
+    await route.continue();
+  });
+  await page.goto(scenario.origin, { waitUntil: 'domcontentloaded' });
+  expect(new URL(page.url()).origin).toBe(PRODUCT_ORIGIN);
+  const auth = await page.evaluate(async () => {
+    const response = await fetch('/api/auth/status', {
+      credentials: 'include',
+      cache: 'no-store',
+      redirect: 'error',
+    });
+    return {
+      status: response.status,
+      body: (await response.json()) as Record<string, unknown>,
+    };
+  });
+  expect(auth.status).toBe(200);
+  expect(auth.body.authenticated).toBe(true);
+  expect(auth.body.csrfToken).toEqual(expect.stringMatching(/^[A-Za-z0-9_-]{32,512}$/u));
+  const csrf = String(auth.body.csrfToken);
+  const pending = await readAllApprovalPages(page, scenario, csrf);
+  const observedItems = [scenario.allow, scenario.deny].map((target) => {
+    const item = pending.find(({ approvalId }) => approvalId === target.approvalId);
+    expect(item).toBeDefined();
+    return exactApprovalItem(item!, scenario.targetTeamAId, scenario.teamARunId, target);
+  });
+  const preview = await page.evaluate(
+    async ({ teamId, runId, target, csrfValue }) => {
+      const response = await fetch('/api/hosted/v1/team-approvals/preview', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        redirect: 'error',
+        headers: {
+          'content-type': 'application/json',
+          'x-agent-teams-csrf': csrfValue,
+        },
+        body: JSON.stringify({
+          schemaVersion: 1,
+          teamId,
+          expectedRunId: runId,
+          approvalId: target.approvalId,
+          expectedGeneration: target.generation,
+          previewRef: target.previewRef,
+        }),
+      });
+      return {
+        status: response.status,
+        body: (await response.json()) as Record<string, unknown>,
+      };
+    },
+    {
+      teamId: scenario.targetTeamAId,
+      runId: scenario.teamARunId,
+      target: observedItems[0],
+      csrfValue: csrf,
+    }
+  );
+  expect(preview.status).toBe(200);
+  expect(preview.body).toEqual({
+    schemaVersion: 1,
+    kind: 'approval_preview',
+    teamId: scenario.targetTeamAId,
+    runId: scenario.teamARunId,
+    approvalId: scenario.allow.approvalId,
+    generation: scenario.allow.generation,
+    content: expect.any(String),
+    byteLength: expect.any(Number),
+    truncated: expect.any(Boolean),
+    isBinary: expect.any(Boolean),
+  });
+  for (const decision of ['allow', 'deny'] as const) {
+    const submittedMonotonicNs = process.hrtime.bigint();
+    const result = await submit(page, scenario, csrf, scenario[decision], decision);
+    expect(result.status).toBe(200);
+    expect(result.body).toEqual({
       schemaVersion: 1,
-      teamId: manifest.teamA,
-      expectedRunId: manifest.runA,
-      approvalId: item.approvalId,
-      expectedGeneration: item.generation,
-      idempotencyKey: `actual-owner:${manifest.nonce}:${nonce}`,
+      outcome: 'committed',
+      teamId: scenario.targetTeamAId,
+      runId: scenario.teamARunId,
+      approvalId: scenario[decision].approvalId,
+      generation: scenario[decision].generation,
       decision,
     });
-    const allowCommand = decide(allowItem, 'allow', 'allow');
-    const allow = await owner.request.post('/api/hosted/v1/team-approvals/decisions', {
-      data: allowCommand,
-      headers,
-    });
-    await record('allow', `allow:${manifest.nonce}`, allow, allow.status() === 200);
-    expect(allow.status()).toBe(200);
-    const replay = await owner.request.post('/api/hosted/v1/team-approvals/decisions', {
-      data: allowCommand,
-      headers,
-    });
-    const replayBody = await replay.text();
-    await appendFile(
-      rawPath,
-      `${JSON.stringify({
-        schemaVersion: 1,
-        scenario: 'replay',
-        recordId: `replay:${manifest.nonce}`,
-        passed: replay.status() === 200 && replayBody.includes('idempotent_replay'),
-        effectCount: 0,
-        raw: {
-          url: replay.url(),
-          status: replay.status(),
-          headers: replay.headers(),
-          body: replayBody,
-        },
-      })}\n`,
-      { mode: 0o600 }
+    observe(
+      scenario,
+      '02_browser_allow_deny',
+      `${decision}_submitted`,
+      scenario[decision],
+      decision,
+      submittedMonotonicNs
     );
-    expect(replayBody).toContain('idempotent_replay');
-    const staleCommand = {
-      ...decide(denyItem, 'deny', 'stale'),
-      expectedGeneration: 'generation_stale',
-    };
-    const stale = await owner.request.post('/api/hosted/v1/team-approvals/decisions', {
-      data: staleCommand,
-      headers,
-    });
-    await record('stale', `stale:${manifest.nonce}`, stale, stale.status() === 409);
-    expect(stale.status()).toBe(409);
-    const denied = await owner.request.post('/api/hosted/v1/team-approvals/decisions', {
-      data: decide(denyItem, 'deny', 'deny'),
-      headers,
-    });
-    await record('deny', `deny:${manifest.nonce}`, denied, denied.status() === 200);
-    expect(denied.status()).toBe(200);
-    const crossTeam = await nonOwner.request.post('/api/hosted/v1/team-approvals/page', {
-      data: { ...pageBody, teamId: manifest.teamB, expectedRunId: manifest.runB },
-      headers,
-    });
-    await record(
-      'cross-team',
-      `cross-team:${manifest.nonce}`,
-      crossTeam,
-      [401, 403, 404].includes(crossTeam.status())
-    );
-    expect([401, 403, 404]).toContain(crossTeam.status());
-    await Promise.all([owner.close(), nonOwner.close()]);
-  } finally {
-    await browser.close();
   }
+  const outsider = await playwright.request.newContext({
+    baseURL: PRODUCT_ORIGIN,
+  });
+  try {
+    const unauthenticated = await outsider.post('/api/hosted/v1/team-approvals/decisions', {
+      maxRedirects: 0,
+      headers: { origin: PRODUCT_ORIGIN, 'content-type': 'application/json' },
+      data: {
+        schemaVersion: 1,
+        teamId: scenario.targetTeamAId,
+        expectedRunId: scenario.teamARunId,
+        approvalId: scenario.allow.approvalId,
+        expectedGeneration: scenario.allow.generation,
+        idempotencyKey: scenario.allow.idempotencyKey,
+        decision: 'allow',
+      },
+    });
+    expect([401, 403]).toContain(unauthenticated.status());
+    const unauthenticatedPreview = await outsider.post('/api/hosted/v1/team-approvals/preview', {
+      maxRedirects: 0,
+      headers: { origin: PRODUCT_ORIGIN, 'content-type': 'application/json' },
+      data: {
+        schemaVersion: 1,
+        teamId: scenario.targetTeamAId,
+        expectedRunId: scenario.teamARunId,
+        approvalId: scenario.allow.approvalId,
+        expectedGeneration: scenario.allow.generation,
+        previewRef: scenario.allow.previewRef,
+      },
+    });
+    expect([401, 403]).toContain(unauthenticatedPreview.status());
+  } finally {
+    await outsider.dispose();
+  }
+  const missingCsrf = await page.evaluate(
+    async ({ teamId, runId, target }) => {
+      const response = await fetch('/api/hosted/v1/team-approvals/decisions', {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+        redirect: 'error',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          schemaVersion: 1,
+          teamId,
+          expectedRunId: runId,
+          approvalId: target.approvalId,
+          expectedGeneration: target.generation,
+          idempotencyKey: target.idempotencyKey,
+          decision: 'allow',
+        }),
+      });
+      return response.status;
+    },
+    {
+      teamId: scenario.targetTeamAId,
+      runId: scenario.teamARunId,
+      target: scenario.allow,
+    }
+  );
+  expect(missingCsrf).toBe(403);
+  const crossTeamStatuses = await page.evaluate(
+    async ({ teamId, runId, target, csrfValue }) => {
+      const common = {
+        method: 'POST',
+        credentials: 'include' as const,
+        cache: 'no-store' as const,
+        redirect: 'error' as const,
+        headers: {
+          'content-type': 'application/json',
+          'x-agent-teams-csrf': csrfValue,
+        },
+      };
+      const requests = [
+        [
+          '/api/hosted/v1/team-approvals/page',
+          {
+            schemaVersion: 1,
+            teamId,
+            expectedRunId: runId,
+            cursor: null,
+            limit: 32,
+          },
+        ],
+        [
+          '/api/hosted/v1/team-approvals/preview',
+          {
+            schemaVersion: 1,
+            teamId,
+            expectedRunId: runId,
+            approvalId: target.approvalId,
+            expectedGeneration: target.generation,
+            previewRef: target.previewRef,
+          },
+        ],
+        [
+          '/api/hosted/v1/team-approvals/decisions',
+          {
+            schemaVersion: 1,
+            teamId,
+            expectedRunId: runId,
+            approvalId: target.approvalId,
+            expectedGeneration: target.generation,
+            idempotencyKey: target.idempotencyKey,
+            decision: 'deny',
+          },
+        ],
+      ] as const;
+      return Promise.all(
+        requests.map(
+          async ([path, body]) =>
+            (await fetch(path, { ...common, body: JSON.stringify(body) })).status
+        )
+      );
+    },
+    {
+      teamId: scenario.targetTeamBId,
+      runId: scenario.teamBRunId,
+      target: scenario.teamBRequest,
+      csrfValue: csrf,
+    }
+  );
+  expect(crossTeamStatuses).toHaveLength(3);
+  for (const status of crossTeamStatuses) expect([403, 404]).toContain(status);
+  const crossTeamEvents = [
+    ['cross_team_list_rejected', 'none'],
+    ['cross_team_preview_rejected', 'none'],
+    ['cross_team_decide_rejected', 'deny'],
+  ] as const;
+  crossTeamEvents.forEach(([event, decision], index) => {
+    observe(
+      scenario,
+      '08_cross_team_isolation',
+      event,
+      scenario.teamBRequest,
+      decision,
+      process.hrtime.bigint(),
+      crossTeamStatuses[index]
+    );
+  });
 });
