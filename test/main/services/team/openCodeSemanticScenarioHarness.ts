@@ -227,6 +227,12 @@ export function buildOpenCodeScenarioTeamRequest(input: {
     cwd: input.projectPath,
     providerId: 'opencode',
     model: input.model,
+    leadRuntimeSelectionProvenance: {
+      version: 1,
+      providerBackendId: 'default',
+      model: 'explicit',
+      effort: 'default',
+    },
     skipPermissions: true,
     prompt: input.scenario.teamPromptLines.join('\n'),
     members: input.scenario.members
@@ -237,6 +243,12 @@ export function buildOpenCodeScenarioTeamRequest(input: {
         workflow: member.workflowLines.join('\n'),
         providerId: 'opencode' as const,
         model: input.model,
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'explicit',
+          effort: 'inherited',
+        },
       })),
   };
 }

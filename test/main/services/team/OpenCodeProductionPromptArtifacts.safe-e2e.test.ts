@@ -68,7 +68,13 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
 
     const bridgeCapture = createCapturingOpenCodeBridge(selectedModel);
     const realAdapter = createOpenCodeRuntimeAdapterFromCapture(bridgeCapture);
-    await expect(realAdapter.launch(launchInput!)).resolves.toMatchObject({
+    const artifactReplayInput = {
+      ...launchInput!,
+      onInvocationBoundary: async () => ({
+        invoke: <T>(invocation: () => T): T => invocation(),
+      }),
+    };
+    await expect(realAdapter.launch(artifactReplayInput)).resolves.toMatchObject({
       teamLaunchState: 'clean_success',
     });
 
