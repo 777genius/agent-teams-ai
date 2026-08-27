@@ -4,236 +4,274 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { withFileLock, withFileLockSync } from '@main/services/team/fileLock';
+import {
+  FILE_LOCK_RETIREMENT_MARKER,
+  withFileLock,
+  withFileLockSync,
+} from '@main/services/team/fileLock';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('node:fs', { spy: true });
 
 const workerPath = path.resolve('test/fixtures/fileLockProcessWorker.ts');
-const tsxPath = path.resolve('node_modules/tsx/dist/cli.mjs');
+const tsxPath = path.resolve('node_modules/tsx/dist/loader.mjs');
 
 interface Worker {
-  ready: Promise<void>;
-  result: Promise<{ code: number | null; signal: NodeJS.Signals | null; output: string }>;
+  acquired: Promise<void>;
+  release(): void;
+  result: Promise<{ code: number | null; output: string }>;
 }
 
-function launchWorker(args: string[]): Worker {
-  const child = spawn(process.execPath, [tsxPath, workerPath, ...args], {
+function launchWorker(mode: 'async-holder' | 'sync-contender', target: string, trace: string): Worker {
+  const child = spawn(process.execPath, ['--import', tsxPath, workerPath, mode, target, trace], {
     cwd: process.cwd(),
     env: { ...process.env, NODE_ENV: 'test' },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   let output = '';
-  let stderr = '';
-  let markReady!: () => void;
-  const ready = new Promise<void>((resolve) => {
-    markReady = resolve;
+  let markAcquired!: () => void;
+  let rejectAcquired!: (error: Error) => void;
+  let isAcquired = false;
+  const acquired = new Promise<void>((resolve, reject) => {
+    markAcquired = resolve;
+    rejectAcquired = reject;
   });
   child.stdout!.on('data', (chunk) => {
     output += String(chunk);
-    if (output.includes('ready\n') || output.includes('acquired\n')) markReady();
+    if (output.includes('acquired\n') || output.includes('attempting\n')) {
+      isAcquired = true;
+      markAcquired();
+    }
   });
   child.stderr!.on('data', (chunk) => {
-    stderr += String(chunk);
+    output += String(chunk);
   });
-  const result = once(child, 'close').then(([code, signal]) => ({
-    code: code as number | null,
-    signal: signal as NodeJS.Signals | null,
-    output: `${output}${stderr}`,
-  }));
-  return { ready, result };
+  const result = once(child, 'close').then(([code]) => ({ code: code as number | null, output }));
+  child.once('close', (code) => {
+    if (!isAcquired) rejectAcquired(new Error(`Worker exited before barrier (${code}): ${output}`));
+  });
+  return {
+    acquired,
+    release: () => child.send('release'),
+    result,
+  };
 }
 
-describe('withFileLock SQLite transaction ownership', () => {
+function exactLegacyLockAge(lockPath: string, now: number): number | null {
+  try {
+    const content = fs.readFileSync(lockPath, 'utf8');
+    const timestamp = Number.parseInt(content.split('\n')[1] || '', 10);
+    return Number.isFinite(timestamp) ? now - timestamp : null;
+  } catch {
+    return null;
+  }
+}
+
+function exactLegacyTryDeleteStale(lockPath: string, now: number, staleTimeoutMs: number): void {
+  const age = exactLegacyLockAge(lockPath, now);
+  if (age !== null && age > staleTimeoutMs) fs.unlinkSync(lockPath);
+}
+
+describe('withFileLock legacy compatibility ownership', () => {
   let temporaryRoot: string;
   let testFile: string;
-  let displacedRoot: string | null = null;
 
   beforeEach(() => {
     temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'filelock-test-'));
     testFile = path.join(temporaryRoot, 'test.json');
-    displacedRoot = null;
     fs.writeFileSync(testFile, '[]', 'utf8');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
-    if (displacedRoot) fs.rmSync(displacedRoot, { recursive: true, force: true });
   });
 
-  it('acquires around async and synchronous operations and retains the lock database', async () => {
-    const asyncResult = await withFileLock(testFile, async () => 42);
-    const syncResult = withFileLockSync(testFile, () => 43);
+  it('uses the exact legacy namespace for async and synchronous operations', async () => {
+    let asyncLockContent = '';
+    const asyncResult = await withFileLock(testFile, async () => {
+      asyncLockContent = fs.readFileSync(`${testFile}.lock`, 'utf8');
+      return 42;
+    });
+    const syncResult = withFileLockSync(testFile, () => {
+      expect(fs.statSync(`${testFile}.lock`).isFile()).toBe(true);
+      return 43;
+    });
 
     expect(asyncResult).toBe(42);
     expect(syncResult).toBe(43);
-    expect(fs.statSync(`${testFile}.lock.sqlite3`).isFile()).toBe(true);
+    expect(asyncLockContent.split('\n').slice(0, 3)).toEqual([
+      String(process.pid),
+      '9007199254740991',
+      'agent-teams-legacy-authoritative-v1',
+    ]);
+    expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+    expect(fs.existsSync(`${testFile}.lock.sqlite3`)).toBe(false);
   });
 
-  it('rolls back ownership after callback failure', async () => {
+  it('excludes an old creator in the former check-to-BEGIN window', async () => {
+    const lockPath = `${testFile}.lock`;
+    const originalOpen = fs.openSync;
+    let injected = false;
+    vi.spyOn(fs, 'openSync').mockImplementation(((target, flags, mode) => {
+      if (!injected && String(target) === lockPath && flags === 'wx') {
+        injected = true;
+        const oldDescriptor = originalOpen(lockPath, 'wx', 0o600);
+        fs.writeSync(oldDescriptor, `1234\n${Date.now()}\n`);
+        fs.closeSync(oldDescriptor);
+      }
+      return originalOpen(target, flags, mode);
+    }) as typeof fs.openSync);
+    const callback = vi.fn(async () => undefined);
+
+    await expect(withFileLock(testFile, callback, { acquireTimeoutMs: 0 })).rejects.toThrow(
+      `File lock timeout: ${testFile}`
+    );
+    expect(callback).not.toHaveBeenCalled();
+    expect(fs.readFileSync(lockPath, 'utf8')).toMatch(/^1234\n/);
+  });
+
+  it('cannot expose an active lock to the exact legacy stale parser', async () => {
+    await withFileLock(testFile, async () => {
+      const lockPath = `${testFile}.lock`;
+      fs.utimesSync(lockPath, new Date(0), new Date(0));
+      exactLegacyTryDeleteStale(lockPath, Date.now() + 60_000, 1);
+      expect(fs.existsSync(lockPath)).toBe(true);
+      expect(exactLegacyLockAge(lockPath, Date.now())).toBeLessThan(0);
+    });
+  });
+
+  it('defines a durable marker that the exact legacy parser cannot age out', () => {
+    const lockPath = `${testFile}.lock`;
+    fs.writeFileSync(lockPath, FILE_LOCK_RETIREMENT_MARKER, { encoding: 'utf8', mode: 0o600 });
+    fs.utimesSync(lockPath, new Date(0), new Date(0));
+
+    expect(FILE_LOCK_RETIREMENT_MARKER.split('\n').slice(0, 3)).toEqual([
+      '0',
+      '9007199254740991',
+      'agent-teams-sqlite-cutover-v1',
+    ]);
+    exactLegacyTryDeleteStale(lockPath, Date.now() + 60_000, 1);
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe(FILE_LOCK_RETIREMENT_MARKER);
+  });
+
+  it.each([
+    ['foreign file', (lockPath: string) => fs.writeFileSync(lockPath, 'foreign\nbytes\n')],
+    ['directory', (lockPath: string) => fs.mkdirSync(lockPath)],
+    ['symlink', (lockPath: string) => fs.symlinkSync(testFile, lockPath)],
+  ])('fails closed without deleting an unknown %s', async (_label, createUnknown) => {
+    const lockPath = `${testFile}.lock`;
+    createUnknown(lockPath);
+    const before = fs.lstatSync(lockPath);
+    const callback = vi.fn(async () => undefined);
+
+    await expect(withFileLock(testFile, callback, { acquireTimeoutMs: 0 })).rejects.toThrow(
+      `File lock timeout: ${testFile}`
+    );
+    expect(callback).not.toHaveBeenCalled();
+    const after = fs.lstatSync(lockPath);
+    expect([after.dev, after.ino, after.mode]).toEqual([before.dev, before.ino, before.mode]);
+  });
+
+  it('detects ownership replacement and preserves the foreign path', async () => {
+    const lockPath = `${testFile}.lock`;
+    const displacedPath = `${lockPath}.displaced`;
+
     await expect(
       withFileLock(testFile, async () => {
-        throw new Error('boom');
+        fs.renameSync(lockPath, displacedPath);
+        fs.writeFileSync(lockPath, 'foreign replacement', 'utf8');
       })
-    ).rejects.toThrow('boom');
-
-    await expect(withFileLock(testFile, async () => 'recovered')).resolves.toBe('recovered');
+    ).rejects.toThrow(`File lock ownership was lost: ${testFile}`);
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe('foreign replacement');
+    expect(fs.existsSync(displacedPath)).toBe(true);
   });
 
-  it('serializes same-process access without wall-clock stale stealing', async () => {
-    const order: string[] = [];
-    let release!: () => void;
-    const first = withFileLock(
-      testFile,
-      async () => {
-        order.push('first:start');
-        await new Promise<void>((resolve) => {
-          release = resolve;
-        });
-        order.push('first:end');
-      },
-      { staleTimeoutMs: 1 }
-    );
-    await vi.waitFor(() => expect(order).toEqual(['first:start']));
-    const second = withFileLock(testFile, async () => {
-      order.push('second');
+  it('validates ownership again before protected effects', async () => {
+    const lockPath = `${testFile}.lock`;
+    const originalLstat = fs.lstatSync;
+    let lockStatsReads = 0;
+    vi.spyOn(fs, 'lstatSync').mockImplementation(((target, options) => {
+      if (String(target) === lockPath && ++lockStatsReads === 2) {
+        fs.renameSync(lockPath, `${lockPath}.displaced`);
+        fs.writeFileSync(lockPath, 'foreign replacement', 'utf8');
+      }
+      return originalLstat(target, options as never);
+    }) as typeof fs.lstatSync);
+    const callback = vi.fn(async () => undefined);
+
+    const attempt = withFileLock(testFile, callback);
+    await expect(attempt).rejects.toThrow('File lock operation and cleanup both failed');
+    await expect(attempt).rejects.toMatchObject({
+      errors: [
+        { message: `File lock ownership was lost: ${testFile}` },
+        { message: `File lock ownership was lost: ${testFile}` },
+      ],
     });
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(order).toEqual(['first:start']);
-    release();
-    await Promise.all([first, second]);
-    expect(order).toEqual(['first:start', 'first:end', 'second']);
+    expect(callback).not.toHaveBeenCalled();
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe('foreign replacement');
   });
 
-  it('fences same-PID legacy uncertainty and ignores inert stale tombstones', async () => {
-    const legacyPath = `${testFile}.lock`;
-    fs.mkdirSync(legacyPath);
-    fs.writeFileSync(
-      path.join(legacyPath, 'owner.json'),
-      JSON.stringify({ pid: process.pid, token: 'reused-token', processStartIdentity: 'unknown' })
-    );
-    fs.mkdirSync(`${legacyPath}.abandoned.reused-token`);
-    const legacyCallback = vi.fn(async () => undefined);
-    await expect(withFileLock(testFile, legacyCallback)).rejects.toThrow(
-      `Legacy file lock ownership is uncertain: ${testFile}`
-    );
-    expect(legacyCallback).not.toHaveBeenCalled();
-    fs.rmSync(legacyPath, { recursive: true });
+  it('preserves callback and cleanup failures deterministically', async () => {
+    const callbackError = new Error('callback failed');
+    const lockPath = `${testFile}.lock`;
+    let caught: unknown;
+    try {
+      await withFileLock(testFile, async () => {
+        fs.renameSync(lockPath, `${lockPath}.displaced`);
+        fs.writeFileSync(lockPath, 'foreign replacement', 'utf8');
+        throw callbackError;
+      });
+    } catch (error) {
+      caught = error;
+    }
 
-    let release!: () => void;
-    let markStarted!: () => void;
-    const started = new Promise<void>((resolve) => {
-      markStarted = resolve;
+    expect(caught).toBeInstanceOf(AggregateError);
+    const aggregate = caught as AggregateError;
+    expect(aggregate.errors[0]).toBe(callbackError);
+    expect(aggregate.errors[1]).toMatchObject({
+      message: `File lock ownership was lost: ${testFile}`,
+    });
+    expect(aggregate.cause).toBe(callbackError);
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe('foreign replacement');
+  });
+
+  it('fails a sync caller behind an async same-process owner without spinning', async () => {
+    let releaseOwner!: () => void;
+    let markAcquired!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      markAcquired = resolve;
     });
     const owner = withFileLock(testFile, async () => {
-      markStarted();
+      markAcquired();
       await new Promise<void>((resolve) => {
-        release = resolve;
+        releaseOwner = resolve;
       });
     });
-    await started;
+    await acquired;
 
-    await expect(
-      withFileLock(testFile, async () => 'stolen', { acquireTimeoutMs: 20, retryIntervalMs: 1 })
-    ).rejects.toThrow(`File lock timeout: ${testFile}`);
-    release();
+    expect(() => withFileLockSync(testFile, () => undefined)).toThrow(
+      `File lock is already held by this process: ${testFile}`
+    );
+    releaseOwner();
     await owner;
-    expect(fs.existsSync(`${legacyPath}.abandoned.reused-token`)).toBe(true);
   });
 
-  it('recovers after the owning process crashes without a reclaim rename/delete phase', async () => {
-    const crashed = launchWorker(['crash', testFile]);
-    await crashed.ready;
-    const result = await crashed.result;
-    expect(result.signal === 'SIGKILL' || result.code === 137, result.output).toBe(true);
-
-    await expect(withFileLock(testFile, async () => 'recovered')).resolves.toBe('recovered');
-  });
-
-  it('serializes two post-crash reclaimers and a successor writer behind one barrier', async () => {
+  it('serializes sync and async callers across processes using explicit barriers', async () => {
     const tracePath = path.join(temporaryRoot, 'trace');
-    const activePath = path.join(temporaryRoot, 'active');
-    const startPath = path.join(temporaryRoot, 'start');
-    const crashed = launchWorker(['crash', testFile]);
-    await crashed.ready;
-    await crashed.result;
+    const holder = launchWorker('async-holder', testFile, tracePath);
+    await holder.acquired;
+    const contender = launchWorker('sync-contender', testFile, tracePath);
+    await contender.acquired;
 
-    const workers = ['reclaimer-a', 'reclaimer-b', 'successor'].map((label) =>
-      launchWorker(['barrier', testFile, label, startPath, tracePath, activePath])
-    );
-    await Promise.all(workers.map((worker) => worker.ready));
-    fs.writeFileSync(startPath, 'go\n', 'utf8');
-    const results = await Promise.all(workers.map((worker) => worker.result));
-
-    for (const result of results) expect(result.code, result.output).toBe(0);
-    const events = fs.readFileSync(tracePath, 'utf8').trim().split('\n');
-    expect(events).toHaveLength(6);
-    for (let index = 0; index < events.length; index += 2) {
-      const label = events[index]!.slice('start:'.length);
-      expect(events[index + 1]).toBe(`end:${label}`);
-    }
-    expect(events).toContain('start:successor');
-    expect(fs.existsSync(activePath)).toBe(false);
-  });
-
-  it('fences malformed databases and symlink lock paths before the callback', async () => {
-    const callback = vi.fn(async () => undefined);
-    fs.writeFileSync(`${testFile}.lock.sqlite3`, 'not a sqlite database', 'utf8');
-    await expect(withFileLock(testFile, callback)).rejects.toThrow(/database/i);
-    expect(callback).not.toHaveBeenCalled();
-
-    fs.rmSync(`${testFile}.lock.sqlite3`, { force: true });
-    fs.symlinkSync(testFile, `${testFile}.lock.sqlite3`);
-    await expect(withFileLock(testFile, callback)).rejects.toThrow('Unsafe lock database');
-    expect(callback).not.toHaveBeenCalled();
-  });
-
-  it('detects a database replacement before protected effects', async () => {
-    await withFileLock(testFile, async () => undefined);
-    const databasePath = `${testFile}.lock.sqlite3`;
-    const lstatSync = fs.lstatSync;
-    let databaseStatsReads = 0;
-    vi.spyOn(fs, 'lstatSync').mockImplementation(((target, options) => {
-      if (String(target) === databasePath && ++databaseStatsReads === 2) {
-        fs.renameSync(databasePath, `${databasePath}.malicious`);
-        fs.writeFileSync(databasePath, 'replacement', 'utf8');
-      }
-      return lstatSync(target, options as never);
-    }) as typeof fs.lstatSync);
-    const callback = vi.fn(async () => undefined);
-
-    await expect(withFileLock(testFile, callback)).rejects.toThrow(/identity changed|database/i);
-    expect(callback).not.toHaveBeenCalled();
-  });
-
-  it('detects a lock-root swap before protected effects', async () => {
-    const databasePath = `${testFile}.lock.sqlite3`;
-    await withFileLock(testFile, async () => undefined);
-    const lstatSync = fs.lstatSync;
-    let databaseStatsReads = 0;
-    vi.spyOn(fs, 'lstatSync').mockImplementation(((target, options) => {
-      if (String(target) === databasePath && ++databaseStatsReads === 2) {
-        displacedRoot = `${temporaryRoot}.displaced`;
-        fs.renameSync(temporaryRoot, displacedRoot);
-        fs.mkdirSync(temporaryRoot);
-        fs.writeFileSync(testFile, 'replacement', 'utf8');
-        fs.writeFileSync(databasePath, '', 'utf8');
-      }
-      return lstatSync(target, options as never);
-    }) as typeof fs.lstatSync);
-    const callback = vi.fn(async () => undefined);
-
-    await expect(withFileLock(testFile, callback)).rejects.toThrow(
-      /identity changed|ownership was lost/
-    );
-    expect(callback).not.toHaveBeenCalled();
-  });
-
-  it('creates missing parents and keeps Windows directory-sync limitations compatible', async () => {
-    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
-    const nested = path.join(temporaryRoot, 'nested', 'deep', 'data.json');
-    await expect(withFileLock(nested, async () => 'ok')).resolves.toBe('ok');
-    expect(fs.existsSync(`${nested}.lock.sqlite3`)).toBe(true);
+    holder.release();
+    const [holderResult, contenderResult] = await Promise.all([holder.result, contender.result]);
+    expect(holderResult.code, holderResult.output).toBe(0);
+    expect(contenderResult.code, contenderResult.output).toBe(0);
+    expect(fs.readFileSync(tracePath, 'utf8').trim().split('\n')).toEqual([
+      'holder:start',
+      'holder:end',
+      'contender:acquired',
+    ]);
   });
 });

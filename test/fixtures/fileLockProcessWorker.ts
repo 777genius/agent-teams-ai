@@ -1,32 +1,24 @@
-import { appendFileSync, closeSync, existsSync, openSync, unlinkSync } from 'node:fs';
+import { appendFileSync } from 'node:fs';
 
-import { withFileLock } from '../../src/main/services/team/fileLock';
+import { withFileLock, withFileLockSync } from '../../src/main/services/team/fileLock';
 
-const [mode, target, label, startPath, tracePath, activePath] = process.argv.slice(2);
-if ((mode !== 'crash' && mode !== 'barrier') || !target) {
+const [mode, target, tracePath] = process.argv.slice(2);
+if (!target || !tracePath || (mode !== 'async-holder' && mode !== 'sync-contender')) {
   throw new Error('Invalid file-lock process worker arguments');
 }
 
-if (mode === 'crash') {
+if (mode === 'async-holder') {
   await withFileLock(target, async () => {
+    appendFileSync(tracePath, 'holder:start\n', 'utf8');
     process.stdout.write('acquired\n');
-    process.kill(process.pid, 'SIGKILL');
-    await new Promise(() => undefined);
+    await new Promise<void>((resolve) => {
+      process.once('message', resolve);
+    });
+    appendFileSync(tracePath, 'holder:end\n', 'utf8');
   });
 } else {
-  if (!label || !startPath || !tracePath || !activePath) {
-    throw new Error('Barrier worker requires label, start, trace, and active paths');
-  }
-  process.stdout.write('ready\n');
-  while (!existsSync(startPath)) {
-    await new Promise((resolve) => setTimeout(resolve, 2));
-  }
-  await withFileLock(target, async () => {
-    const active = openSync(activePath, 'wx');
-    closeSync(active);
-    appendFileSync(tracePath, `start:${label}\n`, 'utf8');
-    await new Promise((resolve) => setTimeout(resolve, 15));
-    appendFileSync(tracePath, `end:${label}\n`, 'utf8');
-    unlinkSync(activePath);
+  process.stdout.write('attempting\n');
+  withFileLockSync(target, () => {
+    appendFileSync(tracePath, 'contender:acquired\n', 'utf8');
   });
 }
