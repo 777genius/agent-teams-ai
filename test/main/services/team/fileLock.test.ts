@@ -22,7 +22,11 @@ interface Worker {
   result: Promise<{ code: number | null; output: string }>;
 }
 
-function launchWorker(mode: 'async-holder' | 'sync-contender', target: string, trace: string): Worker {
+function launchWorker(
+  mode: 'async-holder' | 'sync-contender',
+  target: string,
+  trace: string
+): Worker {
   const child = spawn(process.execPath, ['--import', tsxPath, workerPath, mode, target, trace], {
     cwd: process.cwd(),
     env: { ...process.env, NODE_ENV: 'test' },
@@ -109,7 +113,7 @@ describe('withFileLock legacy compatibility ownership', () => {
     expect(fs.existsSync(`${testFile}.lock.sqlite3`)).toBe(false);
   });
 
-  it('excludes an old creator in the former check-to-BEGIN window', async () => {
+  it('atomically excludes an old creator in the former check-to-BEGIN window', async () => {
     const lockPath = `${testFile}.lock`;
     const originalOpen = fs.openSync;
     let injected = false;
@@ -124,8 +128,8 @@ describe('withFileLock legacy compatibility ownership', () => {
     }) as typeof fs.openSync);
     const callback = vi.fn(async () => undefined);
 
-    await expect(withFileLock(testFile, callback, { acquireTimeoutMs: 0 })).rejects.toThrow(
-      `File lock timeout: ${testFile}`
+    await expect(withFileLock(testFile, callback, { acquireTimeoutMs: 60_000 })).rejects.toThrow(
+      `Legacy file lock ownership is uncertain: ${testFile}`
     );
     expect(callback).not.toHaveBeenCalled();
     expect(fs.readFileSync(lockPath, 'utf8')).toMatch(/^1234\n/);
@@ -155,18 +159,33 @@ describe('withFileLock legacy compatibility ownership', () => {
     expect(fs.readFileSync(lockPath, 'utf8')).toBe(FILE_LOCK_RETIREMENT_MARKER);
   });
 
+  it('fails immediately on an ownerless two-line lock without deleting it', async () => {
+    const lockPath = `${testFile}.lock`;
+    const legacyContent = `424242\n${Date.now()}\n`;
+    fs.writeFileSync(lockPath, legacyContent, 'utf8');
+    const callback = vi.fn(async () => undefined);
+    const timer = vi.spyOn(globalThis, 'setTimeout');
+
+    await expect(withFileLock(testFile, callback, { acquireTimeoutMs: 120_000 })).rejects.toThrow(
+      `Legacy file lock ownership is uncertain: ${testFile}`
+    );
+    expect(timer).not.toHaveBeenCalled();
+    expect(callback).not.toHaveBeenCalled();
+    expect(fs.readFileSync(lockPath, 'utf8')).toBe(legacyContent);
+  });
+
   it.each([
-    ['foreign file', (lockPath: string) => fs.writeFileSync(lockPath, 'foreign\nbytes\n')],
+    ['malformed file', (lockPath: string) => fs.writeFileSync(lockPath, 'foreign\nbytes\n')],
     ['directory', (lockPath: string) => fs.mkdirSync(lockPath)],
     ['symlink', (lockPath: string) => fs.symlinkSync(testFile, lockPath)],
-  ])('fails closed without deleting an unknown %s', async (_label, createUnknown) => {
+  ])('fails immediately without deleting an unknown %s', async (_label, createUnknown) => {
     const lockPath = `${testFile}.lock`;
     createUnknown(lockPath);
     const before = fs.lstatSync(lockPath);
     const callback = vi.fn(async () => undefined);
 
-    await expect(withFileLock(testFile, callback, { acquireTimeoutMs: 0 })).rejects.toThrow(
-      `File lock timeout: ${testFile}`
+    await expect(withFileLock(testFile, callback, { acquireTimeoutMs: 120_000 })).rejects.toThrow(
+      `Legacy file lock ownership is uncertain: ${testFile}`
     );
     expect(callback).not.toHaveBeenCalled();
     const after = fs.lstatSync(lockPath);
@@ -257,7 +276,94 @@ describe('withFileLock legacy compatibility ownership', () => {
     await owner;
   });
 
-  it('serializes sync and async callers across processes using explicit barriers', async () => {
+  it('keys same-process ownership by the canonical lock path across aliases', async () => {
+    const aliasDirectory = path.join(temporaryRoot, 'alias');
+    fs.symlinkSync(temporaryRoot, aliasDirectory, 'dir');
+    const aliasedFile = path.join(aliasDirectory, path.basename(testFile));
+    let releaseOwner!: () => void;
+    let markAcquired!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      markAcquired = resolve;
+    });
+    const owner = withFileLock(testFile, async () => {
+      markAcquired();
+      await new Promise<void>((resolve) => {
+        releaseOwner = resolve;
+      });
+    });
+    await acquired;
+
+    expect(() =>
+      withFileLockSync(aliasedFile, () => undefined, { acquireTimeoutMs: 120_000 })
+    ).toThrow(`File lock is already held by this process: ${aliasedFile}`);
+    releaseOwner();
+    await owner;
+  });
+
+  it('rejects an async caller through an alias while the canonical path is held', async () => {
+    const aliasDirectory = path.join(temporaryRoot, 'async-alias');
+    fs.symlinkSync(temporaryRoot, aliasDirectory, 'dir');
+    const aliasedFile = path.join(aliasDirectory, path.basename(testFile));
+    let releaseOwner!: () => void;
+    let markAcquired!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      markAcquired = resolve;
+    });
+    const owner = withFileLock(testFile, async () => {
+      markAcquired();
+      await new Promise<void>((resolve) => {
+        releaseOwner = resolve;
+      });
+    });
+    await acquired;
+
+    const callback = vi.fn(async () => undefined);
+    await expect(
+      withFileLock(aliasedFile, callback, { acquireTimeoutMs: 120_000 })
+    ).rejects.toThrow(`File lock is already held by this process: ${aliasedFile}`);
+    expect(callback).not.toHaveBeenCalled();
+    releaseOwner();
+    await owner;
+  });
+
+  it('fails closed when a requested symlink parent is retargeted before callback entry', async () => {
+    const originalDirectory = path.join(temporaryRoot, 'original');
+    const retargetedDirectory = path.join(temporaryRoot, 'retargeted');
+    const aliasDirectory = path.join(temporaryRoot, 'mutable-alias');
+    fs.mkdirSync(originalDirectory);
+    fs.mkdirSync(retargetedDirectory);
+    fs.symlinkSync(originalDirectory, aliasDirectory, 'dir');
+    const aliasedFile = path.join(aliasDirectory, 'protected.json');
+    const originalLockPath = path.join(originalDirectory, 'protected.json.lock');
+    const retargetedLockPath = path.join(retargetedDirectory, 'protected.json.lock');
+    const originalReadFile = fs.readFileSync;
+    let retargeted = false;
+    vi.spyOn(fs, 'readFileSync').mockImplementation(((target, options) => {
+      const result = originalReadFile(target, options as never);
+      if (!retargeted && String(target) === originalLockPath) {
+        retargeted = true;
+        fs.unlinkSync(aliasDirectory);
+        fs.symlinkSync(retargetedDirectory, aliasDirectory, 'dir');
+      }
+      return result;
+    }) as typeof fs.readFileSync);
+    const callback = vi.fn(async () => undefined);
+
+    const attempt = withFileLock(aliasedFile, callback);
+    await expect(attempt).rejects.toThrow('File lock operation and cleanup both failed');
+    await expect(attempt).rejects.toMatchObject({
+      errors: [
+        { message: `File lock ownership was lost: ${aliasedFile}` },
+        { message: `File lock ownership was lost: ${aliasedFile}` },
+      ],
+    });
+    expect(retargeted).toBe(true);
+    expect(callback).not.toHaveBeenCalled();
+    expect(fs.existsSync(originalLockPath)).toBe(true);
+    expect(fs.existsSync(retargetedLockPath)).toBe(false);
+  });
+
+  it('queues behind a valid new-format contender and succeeds after release', async () => {
     const tracePath = path.join(temporaryRoot, 'trace');
     const holder = launchWorker('async-holder', testFile, tracePath);
     await holder.acquired;
