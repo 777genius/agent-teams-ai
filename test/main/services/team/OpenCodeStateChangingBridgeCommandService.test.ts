@@ -818,7 +818,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   });
 
   it.each(['hash', 'correlation'] as const)(
-    'retains exact production-adapter ownership when cancellation interrupts corrupt %s replay',
+    'retains exact production-adapter ownership when generation-two cancellation interrupts corrupt predecessor %s replay',
     async (corruption) => {
       bridge.resultFactory = ({ command, body, options }) => {
         if (command === 'opencode.readiness') {
@@ -848,6 +848,10 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
           });
         }
         const launchBody = body as unknown as OpenCodeLaunchTeamCommandBody;
+        const response = strictLaunchResponse(launchBody);
+        if (launchBody.launchAttempt.generation === 1) {
+          makeStrictLaunchPartial(response, launchBody);
+        }
         return bridgeSuccess({
           requestId: options.requestId,
           command,
@@ -856,16 +860,19 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
             idempotencyKey: body.preconditions.idempotencyKey,
             runtimeStoreManifestHighWatermark: 10,
             members: strictLaunchMembers(launchBody),
-            launchAttempt: strictLaunchResponse(launchBody),
+            launchAttempt: response,
           },
         });
       };
-      const seedHarness = createProvisioningLaunchHarness(
-        createProductionAdapter(createService(), bridge)
+      const seedAdapter = createProductionAdapter(createService(), bridge);
+      const generationOne = await seedAdapter.launch(buildAdapterLaunchInput());
+      expect(generationOne).toMatchObject({
+        teamLaunchState: 'partial_pending',
+        members: { alice: { launchState: 'confirmed_alive' } },
+      });
+      const partialSnapshot = buildPartialLaunchSnapshot(
+        generationOne.openCodeStrictLaunchAttempt!
       );
-      await expect(
-        runOpenCodeTeamRuntimeAdapterLaunch(seedHarness.input, seedHarness.ports)
-      ).resolves.toEqual({ runId: 'run-1' });
 
       const ledgerPath = path.join(tempDir, 'ledger.json');
       const envelope = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as {
@@ -898,7 +905,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         }),
         bridge
       );
-      const replayHarness = createProvisioningLaunchHarness(restartedAdapter);
+      const replayHarness = createProvisioningLaunchHarness(restartedAdapter, partialSnapshot);
       const replay = runOpenCodeTeamRuntimeAdapterLaunch(replayHarness.input, replayHarness.ports);
 
       await replayDispositionPublished.promise;
@@ -1743,7 +1750,10 @@ function buildContinuationInput(
   return continuation;
 }
 
-function createProvisioningLaunchHarness(adapter: OpenCodeTeamRuntimeAdapter): {
+function createProvisioningLaunchHarness(
+  adapter: OpenCodeTeamRuntimeAdapter,
+  previousLaunchState: TeamRuntimeLaunchInput['previousLaunchState'] = null
+): {
   input: Parameters<typeof runOpenCodeTeamRuntimeAdapterLaunch>[0];
   ports: OpenCodeRuntimeAdapterLaunchPorts;
   cancel(): void;
@@ -1791,7 +1801,7 @@ function createProvisioningLaunchHarness(adapter: OpenCodeTeamRuntimeAdapter): {
     },
     setRuntimeAdapterProgress: (progress) => progress,
     resetTeamScopedTransientStateForNewRun: () => undefined,
-    readLaunchState: async () => null,
+    readLaunchState: async () => previousLaunchState,
     clearPersistedLaunchState: async () => undefined,
     getTeamsBasePath: () => '/tmp/test-teams',
     migrateLegacyOpenCodeRuntimeState: async () => undefined,

@@ -23,7 +23,11 @@ import {
   decodeOpenCodeLaunchAttemptResponseV1,
 } from './OpenCodeLaunchAttemptContractV1';
 import { createOpenCodeLaunchRequestCorrelationDigestV1 } from './OpenCodeLaunchAttemptDigestV1';
-import { resolveOpenCodeStrictLaunchLedgerIdentity } from './OpenCodeStrictLaunchLedgerIdentity';
+import {
+  discoverOpenCodeStrictLaunchLedgerIdentity,
+  hasRecoverableOpenCodeStrictLaunchSideEffects,
+  resolveOpenCodeStrictLaunchLedgerIdentity,
+} from './OpenCodeStrictLaunchLedgerIdentity';
 import {
   collectValidatedStrictLaunchMemberLinkage,
   recoverStrictLaunchMemberLinkage,
@@ -143,6 +147,13 @@ export class OpenCodeStateChangingBridgeCommandService {
     } & OpenCodeBridgeInvocationOptions
   ): Promise<OpenCodeBridgeResult<TData>> {
     const normalizedLaneId = input.laneId ?? null;
+    let previousSideEffectsPublished = false;
+    const publishPreviousSideEffects = async (): Promise<void> => {
+      if (previousSideEffectsPublished) return;
+      previousSideEffectsPublished = true;
+      input.onInvocationDisposition?.('previous_side_effects_recovered');
+      await this.failpoints.afterStrictLaunchReplayDisposition?.();
+    };
     const genericCommandIdempotencyKey = createOpenCodeBridgeIdempotencyKey({
       command: input.command,
       teamName: input.teamName,
@@ -156,14 +167,23 @@ export class OpenCodeStateChangingBridgeCommandService {
       input.command === 'opencode.launchTeam'
         ? createBridgeCommandRequestHash(input, normalizedLaneId, null)
         : null;
-    const strictLaunchLedgerResolution =
-      input.command === 'opencode.launchTeam' && strictLaunchRequestHash
-        ? resolveOpenCodeStrictLaunchLedgerIdentity({
-            body: input.body as OpenCodeLaunchTeamCommandBody,
-            requestHash: strictLaunchRequestHash,
-            entries: await this.ledger.list(),
-          })
-        : null;
+    let strictLaunchLedgerResolution: ReturnType<
+      typeof resolveOpenCodeStrictLaunchLedgerIdentity
+    > | null = null;
+    if (input.command === 'opencode.launchTeam' && strictLaunchRequestHash) {
+      const entries = await this.ledger.list();
+      const body = input.body as OpenCodeLaunchTeamCommandBody;
+      const discovery = discoverOpenCodeStrictLaunchLedgerIdentity({ body, entries });
+      if (hasRecoverableOpenCodeStrictLaunchSideEffects(discovery.predecessorEntry)) {
+        await publishPreviousSideEffects();
+      }
+      strictLaunchLedgerResolution = resolveOpenCodeStrictLaunchLedgerIdentity({
+        body,
+        requestHash: strictLaunchRequestHash,
+        entries,
+        discovery,
+      });
+    }
     const ledgerIdempotencyKey =
       strictLaunchLedgerResolution?.ledgerIdempotencyKey ?? genericCommandIdempotencyKey;
 
@@ -177,8 +197,7 @@ export class OpenCodeStateChangingBridgeCommandService {
           entry.status === 'completed' ||
           (entry.status === 'started' && entry.strictLaunchResponseJson != null);
         if (recoverable) {
-          input.onInvocationDisposition?.('previous_side_effects_recovered');
-          await this.failpoints.afterStrictLaunchReplayDisposition?.();
+          await publishPreviousSideEffects();
           const replay = this.recoverStrictLaunchResult(
             input.body as OpenCodeLaunchTeamCommandBody,
             entry
@@ -288,8 +307,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       ) {
         if (input.command === 'opencode.launchTeam') {
           const entry = await this.ledger.getByIdempotencyKey(ledgerIdempotencyKey);
-          input.onInvocationDisposition?.('previous_side_effects_recovered');
-          await this.failpoints.afterStrictLaunchReplayDisposition?.();
+          await publishPreviousSideEffects();
           const replay = this.recoverStrictLaunchResult(
             input.body as OpenCodeLaunchTeamCommandBody,
             entry

@@ -13,6 +13,46 @@ export interface OpenCodeStrictLaunchLedgerResolution {
   existingEntry: OpenCodeBridgeCommandLedgerEntry | null;
 }
 
+export interface OpenCodeStrictLaunchLedgerDiscovery {
+  generationKey: string;
+  generationEntry: OpenCodeBridgeCommandLedgerEntry | undefined;
+  legacyEntry: OpenCodeBridgeCommandLedgerEntry | undefined;
+  predecessorEntry: OpenCodeBridgeCommandLedgerEntry | undefined;
+}
+
+/**
+ * Finds exact generation identities without decoding any persisted response.
+ * Callers can therefore publish durable side-effect ownership before corrupt
+ * replay evidence reaches the fallible validation path.
+ */
+export function discoverOpenCodeStrictLaunchLedgerIdentity(input: {
+  body: OpenCodeLaunchTeamCommandBody;
+  entries: readonly OpenCodeBridgeCommandLedgerEntry[];
+}): OpenCodeStrictLaunchLedgerDiscovery {
+  const attempt = input.body.launchAttempt;
+  const generationKey = createOpenCodeStrictLaunchLedgerKey(attempt.attemptId, attempt.generation);
+  const generationEntry = input.entries.find((entry) => entry.idempotencyKey === generationKey);
+  const legacyEntry = input.entries.find((entry) => entry.idempotencyKey === attempt.attemptId);
+  const predecessorEntry =
+    attempt.generation > 1
+      ? (input.entries.find(
+          (entry) =>
+            entry.idempotencyKey ===
+            createOpenCodeStrictLaunchLedgerKey(attempt.attemptId, attempt.generation - 1)
+        ) ?? (attempt.generation === 2 ? legacyEntry : undefined))
+      : undefined;
+  return { generationKey, generationEntry, legacyEntry, predecessorEntry };
+}
+
+export function hasRecoverableOpenCodeStrictLaunchSideEffects(
+  entry: OpenCodeBridgeCommandLedgerEntry | undefined
+): boolean {
+  return (
+    entry?.status === 'completed' ||
+    (entry?.status === 'started' && entry.strictLaunchResponseJson != null)
+  );
+}
+
 /**
  * Resolves Desktop's durable command identity without changing the Orchestrator
  * wire idempotency contract. Generation one retains the legacy attemptId key;
@@ -22,12 +62,14 @@ export function resolveOpenCodeStrictLaunchLedgerIdentity(input: {
   body: OpenCodeLaunchTeamCommandBody;
   requestHash: string;
   entries: readonly OpenCodeBridgeCommandLedgerEntry[];
+  discovery?: OpenCodeStrictLaunchLedgerDiscovery;
 }): OpenCodeStrictLaunchLedgerResolution {
   const attempt = input.body.launchAttempt;
+  const discovery =
+    input.discovery ??
+    discoverOpenCodeStrictLaunchLedgerIdentity({ body: input.body, entries: input.entries });
   assertRequestGenerationShape(attempt.generation, attempt.continuationToken);
-
-  const generationKey = createOpenCodeStrictLaunchLedgerKey(attempt.attemptId, attempt.generation);
-  const generationEntry = input.entries.find((entry) => entry.idempotencyKey === generationKey);
+  const { generationKey, generationEntry, legacyEntry } = discovery;
   if (generationEntry) {
     return { ledgerIdempotencyKey: generationKey, existingEntry: generationEntry };
   }
@@ -35,7 +77,6 @@ export function resolveOpenCodeStrictLaunchLedgerIdentity(input: {
   // Before generation-qualified keys existed, every strict launch used the
   // attemptId. Preserve exact durable replays, but never reinterpret a
   // different legacy payload as the current generation.
-  const legacyEntry = input.entries.find((entry) => entry.idempotencyKey === attempt.attemptId);
   if (legacyEntry?.requestHash === input.requestHash) {
     return { ledgerIdempotencyKey: attempt.attemptId, existingEntry: legacyEntry };
   }
@@ -50,7 +91,7 @@ export function resolveOpenCodeStrictLaunchLedgerIdentity(input: {
   assertMonotonicContinuation({
     body: input.body,
     entries: input.entries,
-    legacyEntry,
+    predecessor: discovery.predecessorEntry,
   });
   return { ledgerIdempotencyKey: generationKey, existingEntry: null };
 }
@@ -77,7 +118,7 @@ function assertRequestGenerationShape(
 function assertMonotonicContinuation(input: {
   body: OpenCodeLaunchTeamCommandBody;
   entries: readonly OpenCodeBridgeCommandLedgerEntry[];
-  legacyEntry: OpenCodeBridgeCommandLedgerEntry | undefined;
+  predecessor: OpenCodeBridgeCommandLedgerEntry | undefined;
 }): void {
   const attempt = input.body.launchAttempt;
   const knownGenerations = findKnownGenerations(input.entries, attempt.attemptId);
@@ -86,14 +127,7 @@ function assertMonotonicContinuation(input: {
     throw new Error('OpenCode strict launch continuation cannot skip or fork generations');
   }
 
-  const predecessorKey = createOpenCodeStrictLaunchLedgerKey(
-    attempt.attemptId,
-    attempt.generation - 1
-  );
-  const predecessor =
-    input.entries.find((entry) => entry.idempotencyKey === predecessorKey) ??
-    (attempt.generation === 2 ? input.legacyEntry : undefined);
-  const evidence = decodeCompletedContinuationEvidence(predecessor);
+  const evidence = decodeCompletedContinuationEvidence(input.predecessor);
   if (
     evidence.launchAttempt.attemptId !== attempt.attemptId ||
     evidence.launchAttempt.payloadHash !== attempt.payloadHash ||
