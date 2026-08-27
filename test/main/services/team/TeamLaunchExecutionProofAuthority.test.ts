@@ -10,6 +10,7 @@ import {
   consumeLeadRuntimeRestartProof,
   consumeLeadRuntimeRestartProofForCurrentOwner,
   invalidateAuthoritativeModelExecutionProofs,
+  invalidateAuthoritativeModelExecutionProofsForProvider,
   issueAuthoritativeModelExecutionProof,
   issueLeadRuntimeRestartProof,
   verifyAuthoritativeModelExecutionProof,
@@ -480,6 +481,35 @@ describe('TeamLaunchExecutionProofAuthority', () => {
         checks: [],
       })
     ).toThrow('epoch changed during preparation');
+  });
+
+  it('keeps an unrelated provider attempt and proof valid after provider invalidation', () => {
+    const codexProof = issue([
+      { providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-5' },
+    ]);
+    const geminiProof = issue([
+      { providerId: 'gemini', providerBackendId: 'api', model: 'gemini-2.5-pro' },
+    ]);
+    const codexAttempt = captureAuthoritativeProofEpoch(PROJECT_PATH);
+    const geminiAttempt = captureAuthoritativeProofEpoch(PROJECT_PATH);
+
+    invalidateAuthoritativeModelExecutionProofsForProvider('codex');
+
+    expect(verifyAuthoritativeModelExecutionProof(codexProof)).toBe(false);
+    expect(verifyAuthoritativeModelExecutionProof(geminiProof)).toBe(true);
+    expect(() =>
+      issueAuthoritativeModelExecutionProof({
+        authorityEpoch: codexAttempt,
+        cwd: PROJECT_PATH,
+        checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-6' }],
+      })
+    ).toThrow('provider authority changed during preparation');
+    const laterGeminiProof = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: geminiAttempt,
+      cwd: PROJECT_PATH,
+      checks: [{ providerId: 'gemini', providerBackendId: 'api', model: 'gemini-3-pro' }],
+    });
+    expect(verifyAuthoritativeModelExecutionProof(laterGeminiProof)).toBe(true);
   });
 
   it.skipIf(process.platform === 'win32')(

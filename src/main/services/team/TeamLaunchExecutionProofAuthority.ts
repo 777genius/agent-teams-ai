@@ -15,6 +15,7 @@ import {
   canonicalProjectPathComparisonKey,
   captureProjectRootIdentityLease,
 } from './ProjectRootIdentityLease';
+import * as providerAuthority from './TeamLaunchProviderAuthorityGeneration';
 
 import type { ProjectRootIdentity, ProjectRootIdentityLease } from './ProjectRootIdentityLease';
 import type {
@@ -115,11 +116,6 @@ const leadRestartProofs = new Map<string, LeadRestartExecutionRecord>();
 const claimedLeadRestartLeases = new Set<ClaimedLeadRestartRecord>();
 let generation = 0;
 let currentAuthorityEpoch: object = {};
-let providerAuthorityGeneration = 0;
-const providerAuthorityGenerationById = new Map<
-  ProviderModelLaunchIdentity['providerId'],
-  number
->();
 let expiryTimer: ReturnType<typeof setTimeout> | null = null;
 let rootAuthorityOpen = true;
 
@@ -139,7 +135,7 @@ export function captureAuthoritativeProofEpoch(
     authorityEpoch: currentAuthorityEpoch,
     expiresAtMs: nowMs + PROOF_TTL_MS,
     projectLease: captureProjectRootIdentityLease(cwd),
-    providerAuthorityGenerations: new Map(providerAuthorityGenerationById),
+    providerAuthorityGenerations: providerAuthority.captureGenerations(),
   };
   attempts.set(attempt, record);
   scheduleExpiryCleanup();
@@ -321,16 +317,11 @@ function claimAttemptLease(
     scheduleExpiryCleanup();
     throw new Error(`${purpose} project root changed during preparation`);
   }
-  for (const providerId of providerIds) {
-    if (
-      (record.providerAuthorityGenerations.get(providerId) ?? 0) !==
-      (providerAuthorityGenerationById.get(providerId) ?? 0)
-    ) {
-      attempts.delete(attempt);
-      record.projectLease.close();
-      scheduleExpiryCleanup();
-      throw new Error(`${purpose} provider authority changed during preparation`);
-    }
+  if (!providerAuthority.generationsAreCurrent(record.providerAuthorityGenerations, providerIds)) {
+    attempts.delete(attempt);
+    record.projectLease.close();
+    scheduleExpiryCleanup();
+    throw new Error(`${purpose} provider authority changed during preparation`);
   }
   attempts.delete(attempt);
   scheduleExpiryCleanup();
@@ -419,7 +410,7 @@ export function issueAuthoritativeModelExecutionProof(input: {
 export function invalidateAuthoritativeModelExecutionProofs(): void {
   generation += 1;
   currentAuthorityEpoch = {};
-  providerAuthorityGeneration += 1;
+  providerAuthority.invalidateAll();
   if (expiryTimer) clearTimeout(expiryTimer);
   expiryTimer = null;
   for (const record of attempts.values()) record.projectLease.close();
@@ -437,11 +428,7 @@ export function invalidateAuthoritativeModelExecutionProofs(): void {
 export function invalidateAuthoritativeModelExecutionProofsForProvider(
   providerId: ProviderModelLaunchIdentity['providerId']
 ): void {
-  providerAuthorityGeneration += 1;
-  providerAuthorityGenerationById.set(
-    providerId,
-    (providerAuthorityGenerationById.get(providerId) ?? 0) + 1
-  );
+  providerAuthority.invalidateProvider(providerId);
   for (const [authorityId, record] of proofs) {
     if (record.checks.some((check) => check.providerId === providerId)) {
       deleteExecutionProof(authorityId, record, false);
@@ -470,9 +457,7 @@ export function activateAuthoritativeModelExecutionProofs(): void {
 }
 
 /** Read-only seam used by member restart authorization until proof epochs share one owner. */
-export function getProviderAuthorityGeneration(): number {
-  return providerAuthorityGeneration;
-}
+export { getProviderAuthorityGeneration } from './TeamLaunchProviderAuthorityGeneration';
 
 function normalizeLeadRestartBinding(input: LeadRuntimeRestartProofBinding) {
   return {
