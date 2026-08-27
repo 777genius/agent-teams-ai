@@ -90,6 +90,12 @@ export interface OpenCodeSemanticScenario {
 export interface CapturedOpenCodeBridge {
   readonly launchCommands: OpenCodeLaunchTeamCommandBody[];
   readonly messageCommands: OpenCodeSendMessageCommandBody[];
+  readonly onInvocationBoundary: NonNullable<TeamRuntimeLaunchInput['onInvocationBoundary']>;
+  readonly launchAuthorityIssuanceCount: number;
+  readonly launchAuthorityConsumptionCount: number;
+  getIssuedLaunchInvocationAuthority(): Awaited<
+    ReturnType<NonNullable<TeamRuntimeLaunchInput['onInvocationBoundary']>>
+  >;
   readonly bridge: OpenCodeTeamRuntimeBridgePort;
 }
 
@@ -311,9 +317,43 @@ export function taskRefForScenario(
 export function createCapturingOpenCodeBridge(modelId: string): CapturedOpenCodeBridge {
   const launchCommands: OpenCodeLaunchTeamCommandBody[] = [];
   const messageCommands: OpenCodeSendMessageCommandBody[] = [];
+  let launchAuthorityIssuanceCount = 0;
+  let launchAuthorityConsumptionCount = 0;
+  let issuedLaunchInvocationAuthority:
+    | Awaited<ReturnType<NonNullable<TeamRuntimeLaunchInput['onInvocationBoundary']>>>
+    | undefined;
+  const onInvocationBoundary: NonNullable<TeamRuntimeLaunchInput['onInvocationBoundary']> =
+    async () => {
+      if (issuedLaunchInvocationAuthority) {
+        throw new Error('Launch invocation authority was already issued');
+      }
+      launchAuthorityIssuanceCount += 1;
+      let consumed = false;
+      issuedLaunchInvocationAuthority = {
+        invoke<T>(invocation: () => T): T {
+          if (consumed) throw new Error('Launch invocation authority was already used');
+          consumed = true;
+          return invocation();
+        },
+      };
+      return issuedLaunchInvocationAuthority;
+    };
   return {
     launchCommands,
     messageCommands,
+    onInvocationBoundary,
+    get launchAuthorityIssuanceCount() {
+      return launchAuthorityIssuanceCount;
+    },
+    get launchAuthorityConsumptionCount() {
+      return launchAuthorityConsumptionCount;
+    },
+    getIssuedLaunchInvocationAuthority() {
+      if (!issuedLaunchInvocationAuthority) {
+        throw new Error('Launch invocation authority was not issued');
+      }
+      return issuedLaunchInvocationAuthority;
+    },
     bridge: {
       checkOpenCodeTeamLaunchReadiness: async () => readyOpenCodeReadiness(modelId),
       getLastOpenCodeRuntimeSnapshot: () => ({
@@ -323,9 +363,18 @@ export function createCapturingOpenCodeBridge(modelId: string): CapturedOpenCode
         version: '1.14.19',
         capabilitySnapshotId: 'capability-semantic-contract',
       }),
-      launchOpenCodeTeam: async (command) => {
-        launchCommands.push(command);
-        return buildReadyLaunchData(command, modelId);
+      launchOpenCodeTeam: async (command, options) => {
+        if (
+          !issuedLaunchInvocationAuthority ||
+          options?.invocationAuthority !== issuedLaunchInvocationAuthority
+        ) {
+          throw new Error('Capture bridge requires the exact issued launch invocation authority');
+        }
+        return options.invocationAuthority.invoke(() => {
+          launchAuthorityConsumptionCount += 1;
+          launchCommands.push(command);
+          return buildReadyLaunchData(command, modelId);
+        });
       },
       sendOpenCodeTeamMessage: async (command) => {
         messageCommands.push(command);
