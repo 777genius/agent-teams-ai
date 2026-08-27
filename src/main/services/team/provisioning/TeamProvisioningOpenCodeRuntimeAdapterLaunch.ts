@@ -479,7 +479,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       request: input.request,
       dispatchState: dispatch.state,
       cleanupInvokedRuntime:
-        dispatch.state === 'dispatched' && launchedInput
+        dispatch.state !== 'not_dispatched' && launchedInput
           ? () =>
               cancelledLaunch.cleanupCancelledOpenCodeRuntimeAdapterLaunch({
                 adapter: input.adapter,
@@ -551,6 +551,10 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
     };
     launchInput.onInvocationDispatched = () => {
       dispatch.state = 'dispatched';
+      cancelledLaunch.publishInvokingOpenCodeRuntimeOwnership(ports, launchInput);
+    };
+    launchInput.onInvocationDisposition = (disposition) => {
+      dispatch.state = disposition;
       cancelledLaunch.publishInvokingOpenCodeRuntimeOwnership(ports, launchInput);
     };
     const launching = ports.setRuntimeAdapterProgress(
@@ -731,7 +735,7 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
       return finishAuthorityLoss();
     }
     let runtimeStopped = dispatch.state === 'not_dispatched';
-    if (dispatch.state === 'dispatched' && launchedInput) {
+    if (dispatch.state !== 'not_dispatched' && launchedInput) {
       try {
         const stopped = await input.adapter.stop({
           runId,

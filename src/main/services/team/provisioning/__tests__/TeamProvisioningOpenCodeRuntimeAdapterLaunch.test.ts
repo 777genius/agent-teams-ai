@@ -754,6 +754,70 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     });
   });
 
+  it('stops or retains durable ownership when restart replay is cancelled while deferred', async () => {
+    const calls: string[] = [];
+    const replayRecovered = deferred<void>();
+    const releaseReplay = deferred<void>();
+    let cancelled = false;
+    let runtimeOwner: Parameters<OpenCodeRuntimeAdapterLaunchPorts['setRuntimeAdapterRun']>[1];
+    const { ports } = ownedPorts(calls, {
+      isCancelledRuntimeAdapterRunId: () => cancelled,
+      consumeCancelledRuntimeAdapterRunId: () => {
+        const wasCancelled = cancelled;
+        cancelled = false;
+        return wasCancelled;
+      },
+      setRuntimeAdapterRun: (_teamName, owner) => {
+        runtimeOwner = owner;
+      },
+    });
+    const params = launchParams(async (input) => {
+      await input.onInvocationBoundary?.();
+      input.onInvocationDisposition?.('previous_side_effects_recovered');
+      replayRecovered.resolve(undefined);
+      await releaseReplay.promise;
+      return runtimeResult({
+        teamLaunchState: 'partial_pending',
+        members: {
+          alice: {
+            memberName: 'alice',
+            providerId: 'opencode',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            diagnostics: [],
+          },
+        },
+      });
+    });
+    params.adapter.stop = vi.fn(async (input) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: false,
+      members: {},
+      warnings: [],
+      diagnostics: ['stop confirmation unavailable'],
+    }));
+
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(params, ports);
+    await replayRecovered.promise;
+    expect(runtimeOwner!).toMatchObject({ runId: 'run-1', providerId: 'opencode' });
+
+    cancelled = true;
+    releaseReplay.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(params.adapter.stop).toHaveBeenCalledOnce();
+    expect(runtimeOwner!).toMatchObject({
+      runId: 'run-1',
+      providerId: 'opencode',
+      members: { alice: { model: 'openai/gpt-5' } },
+    });
+    expect(calls).not.toContain('clearPrimaryLaneIfOwned');
+  });
+
   it('reports transaction-bound known-no-start after exact dispatched cleanup', async () => {
     const calls: string[] = [];
     const dispatched = deferred<void>();

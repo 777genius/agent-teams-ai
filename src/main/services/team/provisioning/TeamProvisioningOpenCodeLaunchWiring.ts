@@ -98,6 +98,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     onInvocationBoundary?: TeamRuntimeLaunchInput['onInvocationBoundary'];
+    onInvocationDisposition?: TeamRuntimeLaunchInput['onInvocationDisposition'];
     onInvocationDispatched?: () => void;
     assertStillCurrentAfterPersistence?: () => void;
   }): Promise<TeamRuntimeLaunchResult | null>;

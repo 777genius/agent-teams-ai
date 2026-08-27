@@ -10,6 +10,8 @@ export interface OpenCodeBridgeInvocationAuthority {
 
 export interface OpenCodeBridgeInvocationOptions {
   invocationAuthority?: OpenCodeBridgeInvocationAuthority;
+  /** Reports durable evidence that this exact invocation produced side effects before restart. */
+  onInvocationDisposition?: (disposition: 'previous_side_effects_recovered') => void;
   onInvocationDispatched?: () => void;
 }
 

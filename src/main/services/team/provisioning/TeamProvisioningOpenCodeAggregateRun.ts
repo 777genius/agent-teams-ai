@@ -500,6 +500,18 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   let cancellationConsumed = false;
   let untrackedPrimaryLaunchMayBeRunning = false;
   let primaryInvocationMayHaveStarted = false;
+  const publishPrimaryInvocationOwnership = (): void => {
+    primaryInvocationMayHaveStarted = true;
+    untrackedPrimaryLaunchMayBeRunning = true;
+    ports.setRuntimeAdapterRun(teamName, {
+      runId,
+      providerId: 'opencode',
+      cwd: primaryCwd,
+      ...(run.request.allowExperimentalLocalModels === true
+        ? { allowExperimentalLocalModels: true }
+        : {}),
+    });
+  };
   const aggregateLaunchNoLongerCurrent = (): boolean => {
     cancellationConsumed ||= ports.consumeCancelledRuntimeAdapterRunId(runId);
     const runtimeOwner = ports.getRuntimeAdapterRun(teamName);
@@ -575,18 +587,8 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
         }
         return invocationLease;
       },
-      onInvocationDispatched: () => {
-        primaryInvocationMayHaveStarted = true;
-        untrackedPrimaryLaunchMayBeRunning = true;
-        ports.setRuntimeAdapterRun(teamName, {
-          runId,
-          providerId: 'opencode',
-          cwd: primaryCwd,
-          ...(run.request.allowExperimentalLocalModels === true
-            ? { allowExperimentalLocalModels: true }
-            : {}),
-        });
-      },
+      onInvocationDisposition: publishPrimaryInvocationOwnership,
+      onInvocationDispatched: publishPrimaryInvocationOwnership,
       assertStillCurrentAfterPersistence: () => {
         if (aggregateLaunchNoLongerCurrent()) {
           throw new Error(

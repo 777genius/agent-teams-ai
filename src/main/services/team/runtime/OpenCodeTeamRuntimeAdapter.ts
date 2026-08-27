@@ -349,8 +349,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     let launchWarnings: string[] = [];
     const localRuntimeInspectionState = createLocalRuntimeInspectionState();
 
-    // Reject incompatible local runtimes before OpenCode starts its execution probe.
-    // Mixed-model lanes cannot bypass this guard through a custom source id.
+    // Reject incompatible local runtimes before the probe; mixed-model lanes cannot bypass it.
     const localModelTargets = [
       { projectPath: input.cwd, modelRoute: selectedModel },
       ...input.expectedMembers.map((member) => ({
@@ -524,6 +523,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     const invocationLease = await input.onInvocationBoundary?.();
     const data = await this.bridge.launchOpenCodeTeam(dispatchedCommand, {
       invocationAuthority: invocationLease,
+      onInvocationDisposition: input.onInvocationDisposition,
       onInvocationDispatched: input.onInvocationDispatched,
     });
     const correlated = correlateOpenCodeLaunchAttemptResponseV1({

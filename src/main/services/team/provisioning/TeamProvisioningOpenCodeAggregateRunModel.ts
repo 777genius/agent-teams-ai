@@ -189,6 +189,7 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktr
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     onInvocationBoundary?: TeamRuntimeLaunchInput['onInvocationBoundary'];
+    onInvocationDisposition?: TeamRuntimeLaunchInput['onInvocationDisposition'];
     onInvocationDispatched?: () => void;
     assertStillCurrentAfterPersistence?: () => void;
   }): Promise<TeamRuntimeLaunchResult | null>;

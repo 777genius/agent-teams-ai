@@ -161,6 +161,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
     prompt: string;
     previousLaunchState: PersistedTeamLaunchSnapshot | null;
     onInvocationBoundary?: TeamRuntimeLaunchInput['onInvocationBoundary'];
+    onInvocationDisposition?: TeamRuntimeLaunchInput['onInvocationDisposition'];
     onInvocationDispatched?: () => void;
     assertStillCurrentAfterPersistence?: () => void;
   },
@@ -221,6 +222,7 @@ export async function launchOpenCodeAggregatePrimaryLane(
     expectedMembers,
     previousLaunchState: params.previousLaunchState,
     onInvocationBoundary: params.onInvocationBoundary,
+    onInvocationDisposition: params.onInvocationDisposition,
     onInvocationDispatched: params.onInvocationDispatched,
   };
   const launchResult = await params.adapter.launch(launchInput);

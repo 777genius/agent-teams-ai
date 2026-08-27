@@ -105,6 +105,8 @@ export interface TeamRuntimeLaunchInput {
   previousLaunchState: PersistedTeamLaunchSnapshot | null;
   /** Called immediately before the first irreversible provider launch command. */
   onInvocationBoundary?: () => Promise<RosterLaunchInvocationLease>;
+  /** Reports durable evidence that this exact invocation produced side effects before restart. */
+  onInvocationDisposition?: (disposition: 'previous_side_effects_recovered') => void;
   /** Called synchronously after the irreversible provider launch command is dispatched. */
   onInvocationDispatched?: () => void;
 }

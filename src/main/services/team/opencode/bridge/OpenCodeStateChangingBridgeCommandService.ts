@@ -180,6 +180,7 @@ export class OpenCodeStateChangingBridgeCommandService {
             input.body as OpenCodeLaunchTeamCommandBody,
             entry
           );
+          input.onInvocationDisposition?.('previous_side_effects_recovered');
           if (entry.status === 'started') {
             await this.failpoints.beforeStrictLaunchCompletionPersistence?.();
             await this.ledger.markCompleted({ idempotencyKey: ledgerIdempotencyKey });
@@ -289,6 +290,7 @@ export class OpenCodeStateChangingBridgeCommandService {
             input.body as OpenCodeLaunchTeamCommandBody,
             entry
           );
+          input.onInvocationDisposition?.('previous_side_effects_recovered');
           if (begin === 'duplicate_same_payload_recoverable') {
             await this.failpoints.beforeStrictLaunchCompletionPersistence?.();
             await this.ledger.markCompleted({ idempotencyKey: ledgerIdempotencyKey });

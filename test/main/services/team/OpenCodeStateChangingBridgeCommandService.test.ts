@@ -480,9 +480,18 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       expect(bridge.calls).toHaveLength(1);
 
       const restartedService = createService();
-      const replay = await restartedService.execute(buildLaunchInput());
+      const onInvocationDisposition = vi.fn();
+      const onInvocationDispatched = vi.fn();
+      const replay = await restartedService.execute({
+        ...buildLaunchInput(),
+        onInvocationDisposition,
+        onInvocationDispatched,
+      });
 
       expect(bridge.calls).toHaveLength(1);
+      expect(onInvocationDisposition).toHaveBeenCalledOnce();
+      expect(onInvocationDisposition).toHaveBeenCalledWith('previous_side_effects_recovered');
+      expect(onInvocationDispatched).not.toHaveBeenCalled();
       expect(replay).toMatchObject({
         ok: true,
         data: {
@@ -509,6 +518,48 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       });
     }
   );
+
+  it('publishes previous side effects before a restarted partial replay completion is released', async () => {
+    bridge.resultFactory = strictLaunchBridgeResult(({ response, body }) => {
+      makeStrictLaunchPartial(response, body);
+    });
+    const crash = new Error('crash-before-replay-completion');
+    await expect(
+      createService({
+        failpoints: {
+          beforeStrictLaunchCompletionPersistence: () => Promise.reject(crash),
+        },
+      }).execute(buildLaunchInput())
+    ).rejects.toThrow(crash.message);
+
+    const replayPaused = deferred<void>();
+    const releaseReplay = deferred<void>();
+    const onInvocationDisposition = vi.fn();
+    const onInvocationDispatched = vi.fn();
+    const replay = createService({
+      failpoints: {
+        beforeStrictLaunchCompletionPersistence: () => {
+          replayPaused.resolve(undefined);
+          return releaseReplay.promise;
+        },
+      },
+    }).execute({
+      ...buildLaunchInput(),
+      onInvocationDisposition,
+      onInvocationDispatched,
+    });
+
+    await replayPaused.promise;
+    expect(onInvocationDisposition).toHaveBeenCalledWith('previous_side_effects_recovered');
+    expect(onInvocationDispatched).not.toHaveBeenCalled();
+    expect(bridge.calls).toHaveLength(1);
+
+    releaseReplay.resolve(undefined);
+    await expect(replay).resolves.toMatchObject({
+      ok: true,
+      data: { launchAttempt: { launchAttempt: { outcome: 'partial' } } },
+    });
+  });
 
   it('replays a completed restart launch before manifest, handshake, or crash-owned lease access', async () => {
     bridge.resultFactory = ({ body, options }) => {
@@ -768,7 +819,13 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     const restartedAdapter = createProductionAdapter(createService(), bridge);
     const continuationInput = { ...adapterInput, previousLaunchState: partialSnapshot };
     const second = await restartedAdapter.launch(continuationInput);
-    const replay = await restartedAdapter.launch(continuationInput);
+    const onInvocationDisposition = vi.fn();
+    const onInvocationDispatched = vi.fn();
+    const replay = await restartedAdapter.launch({
+      ...continuationInput,
+      onInvocationDisposition,
+      onInvocationDispatched,
+    });
 
     const dispatches = bridge.calls.filter((call) => call.command === 'opencode.launchTeam');
     expect(dispatches).toHaveLength(2);
@@ -784,6 +841,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     });
     expect(dispatches[1]!.body.preconditions.idempotencyKey).toBe(firstAttempt.attemptId);
     expect(second.teamLaunchState).toBe('clean_success');
+    expect(onInvocationDisposition).toHaveBeenCalledWith('previous_side_effects_recovered');
+    expect(onInvocationDispatched).not.toHaveBeenCalled();
     expect(replay).toMatchObject({
       teamLaunchState: second.teamLaunchState,
       launchPhase: second.launchPhase,
@@ -1293,9 +1352,9 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       onInvocationDispatched: () => events.push('dispatched'),
     };
 
-    await expect(createProductionAdapter(createService(), bridge).launch(input)).resolves.toMatchObject(
-      { teamLaunchState: 'clean_success' }
-    );
+    await expect(
+      createProductionAdapter(createService(), bridge).launch(input)
+    ).resolves.toMatchObject({ teamLaunchState: 'clean_success' });
     expect(events).toEqual(['boundary', 'authority', 'runner', 'dispatched']);
   });
 

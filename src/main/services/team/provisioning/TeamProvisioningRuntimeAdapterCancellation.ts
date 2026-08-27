@@ -225,6 +225,21 @@ export async function cancelRuntimeAdapterProvisioning(input: {
   ports.invalidateRuntimeSnapshotCaches(teamName);
 
   if (!runtimeRun) {
+    if (ports.provisioningRunByTeam.get(teamName) === runId) {
+      ports.setRuntimeAdapterProgress({
+        ...runtimeProgress,
+        state: 'cancelled',
+        message: 'Provisioning cancellation requested; awaiting OpenCode launch disposition',
+        updatedAt: ports.nowIso(),
+      });
+      ports.emitTeamChange({
+        type: 'process',
+        teamName,
+        runId,
+        detail: 'cancelled',
+      });
+      return;
+    }
     await clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned({ teamName, runId, ports });
     ports.setRuntimeAdapterProgress({
       ...runtimeProgress,

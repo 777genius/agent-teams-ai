@@ -26,7 +26,10 @@ export interface CancelledOpenCodeLaunchFinishPorts extends CancelledOpenCodeLau
   clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName: string, runId: string): Promise<boolean>;
 }
 
-export type CancelledOpenCodeLaunchDispatchState = 'not_dispatched' | 'dispatched';
+export type CancelledOpenCodeLaunchDispatchState =
+  | 'not_dispatched'
+  | 'previous_side_effects_recovered'
+  | 'dispatched';
 
 export async function finishCancelledOpenCodeRuntimeAdapterLaunch(input: {
   ports: CancelledOpenCodeLaunchFinishPorts;
@@ -36,17 +39,13 @@ export async function finishCancelledOpenCodeRuntimeAdapterLaunch(input: {
   dispatchState: CancelledOpenCodeLaunchDispatchState;
   cleanupInvokedRuntime?: () => Promise<boolean>;
 }): Promise<TeamLaunchResponse> {
-  const cancellationWasRecorded = input.ports.consumeCancelledRuntimeAdapterRunId(input.runId);
+  input.ports.consumeCancelledRuntimeAdapterRunId(input.runId);
   if (input.dispatchState === 'not_dispatched') {
     // The provider command is proven absent. Clear only exact attempt linkage;
     // a newer run remains fenced by the injected ownership boundary.
     await input.ports
       .clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(input.teamName, input.runId)
       .catch(() => false);
-    return withKnownNoStartLaunchStatus(input.request, { runId: input.runId });
-  }
-
-  if (cancellationWasRecorded && input.ports.getRuntimeAdapterRun(input.teamName) === undefined) {
     return withKnownNoStartLaunchStatus(input.request, { runId: input.runId });
   }
 
