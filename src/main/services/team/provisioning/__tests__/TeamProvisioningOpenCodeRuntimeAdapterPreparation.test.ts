@@ -8,6 +8,18 @@ import {
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import type { TeamCreateRequest, TeamLaunchRequest, TeamProviderId } from '@shared/types';
 
+const inheritedRuntimeSelectionProvenance = {
+  version: 1,
+  providerBackendId: 'inherited',
+  model: 'inherited',
+  effort: 'inherited',
+} as const;
+
+const explicitModelRuntimeSelectionProvenance = {
+  ...inheritedRuntimeSelectionProvenance,
+  model: 'explicit',
+} as const;
+
 function createRequest(overrides: Partial<TeamCreateRequest> = {}): TeamCreateRequest {
   return {
     teamName: 'alpha',
@@ -82,7 +94,12 @@ function createPorts(
 describe('OpenCode runtime adapter preparation', () => {
   it('materializes defaults, resolves workspaces, plans lanes, and builds runtime members', async () => {
     const members: TeamCreateRequest['members'] = [
-      { name: 'dev', role: 'Developer', providerId: 'opencode' },
+      {
+        name: 'dev',
+        role: 'Developer',
+        providerId: 'opencode',
+        runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+      },
     ];
     const ports = createPorts();
 
@@ -98,11 +115,30 @@ describe('OpenCode runtime adapter preparation', () => {
       teamName: 'alpha',
       baseCwd: '/repo',
       leadProviderId: 'opencode',
-      members: [expect.objectContaining({ name: 'dev', model: 'gpt-5' })],
+      members: [
+        expect.objectContaining({
+          name: 'dev',
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'gpt-5',
+          effort: 'high',
+          runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+        }),
+      ],
     });
     expect(ports.planRuntimeLanesOrThrow).toHaveBeenCalledWith(
       'opencode',
-      [expect.objectContaining({ name: 'dev', cwd: '/repo/dev', model: 'gpt-5' })],
+      [
+        expect.objectContaining({
+          name: 'dev',
+          cwd: '/repo/dev',
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'gpt-5',
+          effort: 'high',
+          runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+        }),
+      ],
       '/repo'
     );
     expect(ports.buildOpenCodeRuntimeAdapterLaunchMembers).toHaveBeenCalledWith(
@@ -111,12 +147,30 @@ describe('OpenCode runtime adapter preparation', () => {
         model: 'gpt-5',
         effort: 'high',
       }),
-      [expect.objectContaining({ name: 'dev', cwd: '/repo/dev', model: 'gpt-5' })],
+      [
+        expect.objectContaining({
+          name: 'dev',
+          cwd: '/repo/dev',
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'gpt-5',
+          effort: 'high',
+          runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+        }),
+      ],
       result.lanePlan
     );
     expect(result.launchRequest).toEqual(expect.objectContaining({ model: 'gpt-5' }));
     expect(result.effectiveMembers).toEqual([
-      expect.objectContaining({ name: 'dev', cwd: '/repo/dev', model: 'gpt-5' }),
+      expect.objectContaining({
+        name: 'dev',
+        cwd: '/repo/dev',
+        providerId: 'opencode',
+        providerBackendId: 'adapter',
+        model: 'gpt-5',
+        effort: 'high',
+        runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+      }),
     ]);
     expect(result.runtimeLaunchMembers).toEqual([
       expect.objectContaining({
@@ -125,13 +179,26 @@ describe('OpenCode runtime adapter preparation', () => {
         model: 'gpt-5',
         effort: 'high',
       }),
-      expect.objectContaining({ name: 'dev' }),
+      expect.objectContaining({
+        name: 'dev',
+        providerId: 'opencode',
+        providerBackendId: 'adapter',
+        model: 'gpt-5',
+        effort: 'high',
+        runtimeSelectionProvenance: inheritedRuntimeSelectionProvenance,
+      }),
     ]);
   });
 
   it('uses launch request fields when preparing an existing team launch', async () => {
     const members: TeamCreateRequest['members'] = [
-      { name: 'reviewer', role: 'Reviewer', providerId: 'opencode', model: 'gpt-5' },
+      {
+        name: 'reviewer',
+        role: 'Reviewer',
+        providerId: 'opencode',
+        model: 'gpt-5',
+        runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+      },
     ];
     const ports = createPorts();
 
@@ -152,10 +219,46 @@ describe('OpenCode runtime adapter preparation', () => {
     );
     expect(ports.planRuntimeLanesOrThrow).toHaveBeenCalledWith(
       'opencode',
-      [expect.objectContaining({ name: 'reviewer', cwd: '/new-repo/reviewer' })],
+      [
+        expect.objectContaining({
+          name: 'reviewer',
+          cwd: '/new-repo/reviewer',
+          providerId: 'opencode',
+          providerBackendId: 'adapter',
+          model: 'gpt-5',
+          effort: 'high',
+          runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+        }),
+      ],
       '/new-repo'
     );
-    expect(result.launchRequest.cwd).toBe('/new-repo');
-    expect(result.launchRequest.limitContext).toBe(true);
+    expect(result.launchRequest).toEqual(
+      expect.objectContaining({
+        cwd: '/new-repo',
+        providerId: 'opencode',
+        providerBackendId: 'adapter',
+        model: 'gpt-5',
+        effort: 'high',
+        limitContext: true,
+      })
+    );
+    expect(result.runtimeLaunchMembers).toEqual([
+      expect.objectContaining({
+        name: 'team-lead',
+        providerId: 'opencode',
+        providerBackendId: 'adapter',
+        model: 'gpt-5',
+        effort: 'high',
+      }),
+      expect.objectContaining({
+        name: 'reviewer',
+        cwd: '/new-repo/reviewer',
+        providerId: 'opencode',
+        providerBackendId: 'adapter',
+        model: 'gpt-5',
+        effort: 'high',
+        runtimeSelectionProvenance: explicitModelRuntimeSelectionProvenance,
+      }),
+    ]);
   });
 });
