@@ -762,7 +762,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     }
   );
 
-  it('does not roll back or repeat after an unknown launch transport outcome', async () => {
+  it('accepts a durable commit after the launch response is lost without retrying', async () => {
     const authorization = {
       prepareState: 'ready',
       providerStatusesAuthoritative: true,
@@ -774,7 +774,10 @@ describe('LaunchTeamDialog provisioning authorization', () => {
       executionProof: freshExecutionProof,
     };
     const persist = vi.fn(async () => ({ transactionId: 'tx', status: 'applied' as const }));
-    const getOutcome = vi.fn(async () => ({ transactionId: 'tx', status: 'applied' as const }));
+    const getOutcome = vi
+      .fn()
+      .mockResolvedValueOnce({ transactionId: 'tx', status: 'applied' as const })
+      .mockResolvedValueOnce({ transactionId: 'tx', status: 'committed' as const });
     const launch = vi.fn(async () => {
       throw new Error('launch response lost');
     });
@@ -788,11 +791,53 @@ describe('LaunchTeamDialog provisioning authorization', () => {
         launch,
         rollback
       )
-    ).rejects.toThrow('launch response lost');
+    ).resolves.toBe(true);
     expect(persist).toHaveBeenCalledTimes(1);
+    expect(getOutcome).toHaveBeenCalledTimes(2);
     expect(launch).toHaveBeenCalledTimes(1);
     expect(rollback).not.toHaveBeenCalled();
   });
+
+  it.each(['prepared', 'launch-unknown'] as const)(
+    'preserves the launch rejection when reconciliation finds %s',
+    async (status) => {
+      const authorization = {
+        prepareState: 'ready',
+        providerStatusesAuthoritative: true,
+        preparedRequestSignature: 'project-a',
+        currentRequestSignature: 'project-a',
+        preparedGeneration: 1,
+        currentGeneration: 1,
+        providerProofExpiresAtMs: freshProofExpiry,
+        executionProof: freshExecutionProof,
+      };
+      const persist = vi.fn(async () => ({ transactionId: 'tx', status: 'applied' as const }));
+      const getOutcome = vi
+        .fn()
+        .mockResolvedValueOnce({ transactionId: 'tx', status: 'applied' as const })
+        .mockResolvedValueOnce({ transactionId: 'tx', status });
+      const failure = new Error('launch response lost');
+      const launch = vi.fn(async () => Promise.reject(failure));
+      const rollback = vi.fn(async () => ({
+        transactionId: 'tx',
+        status: 'rolled-back' as const,
+      }));
+
+      await expect(
+        executeLaunchTeamDialogSubmissionWithRecheck(
+          () => authorization,
+          persist,
+          getOutcome,
+          launch,
+          rollback
+        )
+      ).rejects.toBe(failure);
+      expect(persist).toHaveBeenCalledTimes(1);
+      expect(getOutcome).toHaveBeenCalledTimes(2);
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(rollback).not.toHaveBeenCalled();
+    }
+  );
 
   it.each(['stop-rejected', 'aborted-before-stop'] as const)(
     'rolls back exactly once for a known %s relaunch failure',

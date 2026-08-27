@@ -151,6 +151,13 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
     if (isTeamRelaunchKnownPreDispatchFailure(error)) {
       return rollbackKnownPreDispatchFailure(error, rollback);
     }
+    let reconciled: RosterAuthorizationTransactionOutcome;
+    try {
+      reconciled = await getOutcome();
+    } catch {
+      throw error;
+    }
+    if (reconciled.status === 'committed') return true;
     throw error;
   }
 
