@@ -1,8 +1,19 @@
 // @vitest-environment node
 
 import { registerTeamRoutes } from '@main/http/teams';
+import { attachExecutionProofToPrepareResult } from '@main/ipc/teams/attachExecutionProofToPrepareResult';
+import { admitProductionTeamRosterLaunch } from '@main/ipc/teams/ensureProductionRosterLaunchTransaction';
+import {
+  markNativeModelTargetedLiveness,
+} from '@main/services/team/provisioning/TeamProvisioningLaunchPreparationEvidence';
 import { TeamDataService } from '@main/services/team/TeamDataService';
+import {
+  captureAuthoritativeProofEpoch,
+  invalidateAuthoritativeModelExecutionProofs,
+} from '@main/services/team/TeamLaunchExecutionProofAuthority';
+import { crossRosterLaunchInvocationBoundary } from '@main/services/team/TeamMembersMetaStore';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
+import { buildEffectiveRuntimeRosterRevision } from '@shared/utils/effectiveMemberRuntimeIdentity';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { mkdir, mkdtemp, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
@@ -24,6 +35,9 @@ import type {
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamLaunchResponse,
+  TeamMember,
+  TeamProvisioningModelCheckRequest,
+  TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamRuntimeState,
 } from '@shared/types/team';
@@ -31,23 +45,6 @@ import type {
 interface RegisteredTool {
   name: string;
   execute: (args: Record<string, unknown>) => unknown;
-}
-
-interface DesktopLaunchAuthorizationFixture {
-  authorizedAt: string;
-  cwd: string;
-  executionProof: {
-    expiresAt: string;
-    model: string;
-    providerBackendId: string;
-    verifiedAt: string;
-  };
-  expiresAt: string;
-  model: string;
-  providerBackendId: string;
-  rosterMemberNames: string[];
-  teamName: string;
-  transactionId: string;
 }
 
 type InjectHttpMethod = 'DELETE' | 'GET' | 'HEAD' | 'PATCH' | 'POST' | 'PUT' | 'OPTIONS';
@@ -178,33 +175,137 @@ function installControlApiFetchMock(app: FastifyInstance, baseUrl: string): () =
   };
 }
 
-function createDesktopLaunchAuthorizationFixture(
-  target: Pick<
-    DesktopLaunchAuthorizationFixture,
-    'cwd' | 'model' | 'providerBackendId' | 'rosterMemberNames' | 'teamName'
-  >
-): DesktopLaunchAuthorizationFixture {
-  const authorizedAt = new Date().toISOString();
-  const expiresAt = new Date(Date.now() + 5 * 60_000).toISOString();
-  return {
-    ...target,
-    transactionId: `test-only-roster-authorization-${target.teamName}`,
-    authorizedAt,
-    expiresAt,
-    executionProof: {
-      providerBackendId: target.providerBackendId,
-      model: target.model,
-      verifiedAt: authorizedAt,
-      expiresAt,
+const TEST_LEAD_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'explicit' as const,
+  model: 'explicit' as const,
+  effort: 'explicit' as const,
+};
+
+const TEST_MEMBER_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'inherited' as const,
+  effort: 'inherited' as const,
+};
+
+function canonicalDesktopRoster(memberName = 'builder'): TeamMember[] {
+  return [
+    {
+      name: memberName,
+      role: 'Engineer',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5.2',
+      effort: 'high',
+      runtimeSelectionProvenance: TEST_MEMBER_PROVENANCE,
     },
+  ];
+}
+
+function canonicalDesktopLaunchRequest(
+  cwd: string,
+  teamName: string,
+  overrides: Partial<TeamLaunchRequest> = {}
+): TeamLaunchRequest {
+  return {
+    teamName,
+    cwd,
+    prompt: 'Coordinate the test task',
+    providerId: 'codex',
+    providerBackendId: 'codex-native',
+    model: 'gpt-5.2',
+    effort: 'high',
+    leadRuntimeSelectionProvenance: TEST_LEAD_PROVENANCE,
+    ...overrides,
   };
 }
 
-function createServices(
-  claudeRoot: string,
-  desktopAuthorization?: DesktopLaunchAuthorizationFixture,
-  launchResponse?: TeamLaunchResponse
-): {
+function prepareDesktopExecutionProof(request: TeamLaunchRequest, roster: TeamMember[]) {
+  const checks: TeamProvisioningModelCheckRequest[] = [
+    {
+      providerId: request.providerId!,
+      providerBackendId: request.providerBackendId!,
+      model: request.model!,
+      effort: request.effort,
+    },
+  ];
+  const runtimeRosterRevision = buildEffectiveRuntimeRosterRevision({
+    lead: {
+      providerId: request.providerId!,
+      providerBackendId: request.providerBackendId,
+      model: request.model,
+      effort: request.effort,
+    },
+    leadRuntimeSelectionProvenance: request.leadRuntimeSelectionProvenance,
+    members: roster,
+    missingProvenance: 'reject',
+  });
+  if (!runtimeRosterRevision) throw new Error('Canonical test roster did not resolve');
+
+  const prepared = attachExecutionProofToPrepareResult({
+    authorityEpoch: captureAuthoritativeProofEpoch(request.cwd),
+    result: markNativeModelTargetedLiveness(
+      {
+        ready: true,
+        message: 'Fake exact-model probe completed',
+        processedModelChecks: checks,
+      } satisfies TeamProvisioningPrepareResult,
+      checks
+    ),
+    cwd: request.cwd,
+    mode: 'deep',
+    checks,
+    runtimeRosterRevision,
+  });
+  if (!prepared.ready || !prepared.executionProof) {
+    throw new Error(prepared.message || 'Desktop proof preparation failed');
+  }
+  return prepared.executionProof;
+}
+
+async function runDesktopAuthorizedFakeLaunch(input: {
+  service: TeamDataService;
+  request: TeamLaunchRequest;
+  roster: TeamMember[];
+  response?: TeamLaunchResponse;
+  onFakeSpawn?: (request: TeamLaunchRequest) => void;
+}): Promise<TeamLaunchResponse> {
+  const admitted = await admitProductionTeamRosterLaunch(
+    input.service,
+    input.request,
+    undefined,
+    true,
+    input.roster
+  );
+  return admitted.context.run(admitted.request, async (boundRequest) => {
+    const binding = boundRequest.rosterLaunchBinding;
+    expect(binding).toMatchObject({
+      transactionId: admitted.request.rosterTransactionId,
+      teamName: input.request.teamName,
+      rosterFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+      rosterRevision: expect.stringMatching(/^[a-f0-9]{64}$/),
+      launchCommandId: admitted.request.rosterTransactionId,
+      launchRequestFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+      executionProof: {
+        authorityId: expect.any(String),
+        generation: expect.any(Number),
+        requestDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      },
+    });
+    if (input.response?.launchStatus === 'already_launching') return input.response;
+
+    const invocation = await crossRosterLaunchInvocationBoundary();
+    invocation.invoke(() => input.onFakeSpawn?.(boundRequest));
+    return {
+      runId: binding!.launchCommandId,
+      launchStatus: 'not_started',
+      ...input.response,
+    };
+  });
+}
+
+function createServices(claudeRoot: string): {
   configureDraftTeamForTest: (teamName: string) => Promise<void>;
   launchTeamCalls: TeamLaunchRequest[];
   services: HttpServices;
@@ -255,39 +356,13 @@ function createServices(
     if (!savedRequest) {
       throw new Error(`Missing test-only draft request for ${teamName}`);
     }
-    if (desktopAuthorization?.teamName === teamName) {
-      expect(savedRequest.members.map((member) => member.name)).toEqual(
-        desktopAuthorization.rosterMemberNames
-      );
-    }
     await persistLaunchedConfig(savedRequest);
-  }
-
-  function assertCurrentDesktopAuthorization(
-    request: Pick<TeamCreateRequest, 'cwd' | 'model' | 'providerBackendId' | 'teamName'>
-  ): void {
-    if (!desktopAuthorization) {
-      throw new Error('Missing test-only desktop roster authorization transaction');
-    }
-    expect(Date.parse(desktopAuthorization.expiresAt)).toBeGreaterThan(Date.now());
-    expect(Date.parse(desktopAuthorization.executionProof.expiresAt)).toBeGreaterThan(Date.now());
-    expect(desktopAuthorization.executionProof).toMatchObject({
-      providerBackendId: request.providerBackendId,
-      model: request.model,
-    });
-    expect(desktopAuthorization).toMatchObject({
-      teamName: request.teamName,
-      cwd: request.cwd,
-      providerBackendId: request.providerBackendId,
-      model: request.model,
-    });
   }
 
   async function createTeam(
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
   ): Promise<TeamLaunchResponse> {
-    assertCurrentDesktopAuthorization(request);
     await persistLaunchedConfig(request);
 
     const runId = `run-${request.teamName}`;
@@ -319,19 +394,13 @@ function createServices(
   }
 
   const teamProvisioningStartApi = {
-    // This test-only adapter stands in for the desktop boundary after it has
-    // admitted the exact current roster transaction and execution proof above.
-    requiresAuthoritativeLaunchProof: desktopAuthorization ? false : true,
+    requiresAuthoritativeLaunchProof: true,
     createTeam,
     launchTeam: async (
       request: TeamLaunchRequest,
       onProgress: (progress: TeamProvisioningProgress) => void
     ): Promise<TeamLaunchResponse> => {
-      assertCurrentDesktopAuthorization(request);
       launchTeamCalls.push(request);
-      if (launchResponse) {
-        return launchResponse;
-      }
       const runId = `run-${request.teamName}`;
       const progress: TeamProvisioningProgress = {
         runId,
@@ -421,23 +490,13 @@ describe('MCP team tools over the local REST control API', () => {
     return tool!;
   }
 
-  it('creates, gets, launches, and lists a team through MCP and REST end to end', async () => {
+  it('creates, gets, and lists a draft through MCP while production HTTP launch fails closed', async () => {
     const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-e2e-'));
     const projectDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-project-e2e-'));
     setClaudeBasePathOverride(claudeRoot);
 
     const app = Fastify();
-    const desktopAuthorization = createDesktopLaunchAuthorizationFixture({
-      teamName: 'mcp-e2e-team',
-      cwd: projectDir,
-      providerBackendId: 'codex-native',
-      model: 'gpt-5.2',
-      rosterMemberNames: ['builder'],
-    });
-    const { configureDraftTeamForTest, launchTeamCalls, services } = createServices(
-      claudeRoot,
-      desktopAuthorization
-    );
+    const { configureDraftTeamForTest, launchTeamCalls, services } = createServices(claudeRoot);
     registerTeamRoutes(app, services);
 
     const controlUrl = 'http://agent-teams-control.test';
@@ -540,8 +599,8 @@ describe('MCP team tools over the local REST control API', () => {
       // without starting a provider, terminal, or teammate process.
       await configureDraftTeamForTest('mcp-e2e-team');
 
-      const launched = parseJsonToolResult(
-        await getTool('team_launch').execute({
+      await expect(
+        getTool('team_launch').execute({
           claudeDir: claudeRoot,
           controlUrl,
           teamName: 'mcp-e2e-team',
@@ -557,71 +616,43 @@ describe('MCP team tools over the local REST control API', () => {
           worktree: 'feature-e2e',
           extraCliArgs: '--max-turns 5',
         })
-      ) as { isAlive: boolean; progress: TeamProvisioningProgress; runId: string };
-      expect(launched).toMatchObject({
-        isAlive: true,
-        runId: 'run-mcp-e2e-team',
-        progress: {
-          state: 'ready',
-          teamName: 'mcp-e2e-team',
-        },
-      });
-      expect(desktopAuthorization.transactionId).toBe(
-        'test-only-roster-authorization-mcp-e2e-team'
-      );
-      expect(launchTeamCalls).toHaveLength(1);
-      expect(launchTeamCalls[0]).toMatchObject({
-        teamName: 'mcp-e2e-team',
-        cwd: projectDir,
-        prompt: 'Coordinate the test task',
-        providerId: 'codex',
-        providerBackendId: 'codex-native',
-        model: 'gpt-5.2',
-        effort: 'high',
-        fastMode: 'on',
-        limitContext: true,
-        skipPermissions: false,
-        worktree: 'feature-e2e',
-        extraCliArgs: '--max-turns 5',
-      });
+      ).rejects.toThrow('desktop roster authorization transaction');
+      expect(launchTeamCalls).toHaveLength(0);
 
       const restRuntime = await fetchJson(controlUrl, '/api/teams/mcp-e2e-team/runtime');
       expect(restRuntime.status).toBe(200);
       expect(restRuntime.body).toMatchObject({
         teamName: 'mcp-e2e-team',
-        isAlive: true,
-        runId: 'run-mcp-e2e-team',
+        isAlive: false,
+        runId: null,
       });
 
       const restListAfterLaunch = await fetchJson(controlUrl, '/api/teams');
       expect(restListAfterLaunch.status).toBe(200);
-      const launchedListItem = (restListAfterLaunch.body as Record<string, unknown>[]).find(
+      const configuredListItem = (restListAfterLaunch.body as Record<string, unknown>[]).find(
         (team) => team.teamName === 'mcp-e2e-team'
       );
-      expect(launchedListItem).toMatchObject({
+      expect(configuredListItem).toMatchObject({
         teamName: 'mcp-e2e-team',
         displayName: 'MCP E2E Team',
+        pendingCreate: true,
       });
-      expect(launchedListItem).not.toHaveProperty('pendingCreate');
 
-      const mcpLaunchedTeam = parseJsonToolResult(
+      const mcpConfiguredTeam = parseJsonToolResult(
         await getTool('team_get').execute({
           claudeDir: claudeRoot,
           controlUrl,
           teamName: 'mcp-e2e-team',
         })
       );
-      expect(mcpLaunchedTeam).toMatchObject({
+      expect(mcpConfiguredTeam).toMatchObject({
         teamName: 'mcp-e2e-team',
         config: {
           name: 'MCP E2E Team',
           projectPath: projectDir,
         },
         members: expect.arrayContaining([
-          expect.objectContaining({
-            name: 'builder',
-            role: 'Engineer',
-          }),
+          expect.objectContaining({ name: 'builder', role: 'Engineer' }),
         ]),
       });
     } finally {
@@ -633,86 +664,157 @@ describe('MCP team tools over the local REST control API', () => {
     }
   });
 
-  it('returns active launch status without waiting when MCP team_launch re-enters provisioning', async () => {
+  it('returns active provisioning re-entry without waiting after real desktop admission', async () => {
     const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-active-'));
     const projectDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-project-active-'));
     const teamName = 'mcp-active-launch';
     setClaudeBasePathOverride(claudeRoot);
-
-    const app = Fastify();
-    const desktopAuthorization = createDesktopLaunchAuthorizationFixture({
-      teamName,
-      cwd: projectDir,
-      providerBackendId: 'codex-native',
-      model: 'gpt-5.2',
-      rosterMemberNames: [],
-    });
-    const { configureDraftTeamForTest, launchTeamCalls, services } = createServices(
-      claudeRoot,
-      desktopAuthorization,
-      {
-        runId: 'active-run-1',
-        launchStatus: 'already_launching',
-        alreadyLaunching: true,
-      }
-    );
-    services.teamApis!.provisioningStatus!.getProvisioningStatus = () =>
-      Promise.reject(
-        new Error('team_launch should not wait for provisioning status after already_launching')
-      );
-    registerTeamRoutes(app, services);
-
-    const controlUrl = 'http://agent-teams-control-active.test';
-    const restoreFetch = installControlApiFetchMock(app, controlUrl);
     try {
-      await getTool('team_create').execute({
-        claudeDir: claudeRoot,
-        controlUrl,
-        teamName,
-        cwd: projectDir,
-        providerId: 'codex',
-        providerBackendId: 'codex-native',
-        model: 'gpt-5.2',
-        members: [],
+      await mkdir(path.join(claudeRoot, 'teams', teamName), { recursive: true });
+      const roster = canonicalDesktopRoster();
+      const request = canonicalDesktopLaunchRequest(projectDir, teamName);
+      request.executionProof = prepareDesktopExecutionProof(request, roster);
+      const service = new TeamDataService();
+      const launched = await runDesktopAuthorizedFakeLaunch({
+        service,
+        request,
+        roster,
+        response: {
+          runId: 'active-run-1',
+          launchStatus: 'already_launching',
+          alreadyLaunching: true,
+        },
       });
-      await configureDraftTeamForTest(teamName);
-
-      const launched = parseJsonToolResult(
-        await getTool('team_launch').execute({
-          claudeDir: claudeRoot,
-          controlUrl,
-          teamName,
-          cwd: projectDir,
-          providerId: 'codex',
-          providerBackendId: 'codex-native',
-          model: 'gpt-5.2',
-          effort: 'minimal',
-        })
-      );
-
       expect(launched).toMatchObject({
-        teamName,
         runId: 'active-run-1',
-        waitForReady: false,
         launchStatus: 'already_launching',
         alreadyLaunching: true,
-      });
-      expect(launchTeamCalls).toHaveLength(1);
-      expect(launchTeamCalls[0]).toMatchObject({
-        teamName,
-        cwd: projectDir,
-        providerBackendId: 'codex-native',
-        model: 'gpt-5.2',
-        effort: 'minimal',
       });
     } finally {
-      restoreFetch();
-      await app.close().catch(() => undefined);
+      invalidateAuthoritativeModelExecutionProofs();
       await rm(claudeRoot, { recursive: true, force: true });
       await rm(projectDir, { recursive: true, force: true });
       setClaudeBasePathOverride(null);
     }
   });
+
+  it('uses an exact prepared binding once and rejects reuse before a second fake spawn', async () => {
+    const claudeRoot = await mkdtemp(path.join(tmpdir(), 'desktop-authority-current-'));
+    const projectDir = await mkdtemp(path.join(tmpdir(), 'desktop-authority-project-'));
+    const teamName = 'desktop-authority-current';
+    setClaudeBasePathOverride(claudeRoot);
+    try {
+      await mkdir(path.join(claudeRoot, 'teams', teamName), { recursive: true });
+      const roster = canonicalDesktopRoster();
+      const request = canonicalDesktopLaunchRequest(projectDir, teamName);
+      request.executionProof = prepareDesktopExecutionProof(request, roster);
+      const preparedProof = request.executionProof;
+      const service = new TeamDataService();
+      let fakeSpawnCount = 0;
+
+      const admitted = await admitProductionTeamRosterLaunch(
+        service,
+        request,
+        undefined,
+        true,
+        roster
+      );
+      const admittedProof = admitted.request.executionProof!;
+      expect(admittedProof.authorityId).not.toBe(preparedProof.authorityId);
+      expect(admittedProof.requestDigest).not.toBe(preparedProof.requestDigest);
+      expect(admittedProof.generation).toBeGreaterThan(preparedProof.generation);
+      const launch = (boundRequest: TeamLaunchRequest) =>
+        admitted.context.run(boundRequest, async (exactRequest) => {
+          expect(exactRequest.rosterLaunchBinding?.executionProof).toEqual(
+            exactRequest.executionProof
+          );
+          expect(exactRequest.executionProof).toMatchObject({
+            authorityId: expect.any(String),
+            generation: expect.any(Number),
+            requestDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+          });
+          expect(exactRequest.executionProof).toEqual(admittedProof);
+          expect(exactRequest.rosterLaunchBinding?.launchRequestFingerprint).toMatch(
+            /^[a-f0-9]{64}$/
+          );
+          const invocation = await crossRosterLaunchInvocationBoundary();
+          invocation.invoke(() => {
+            fakeSpawnCount += 1;
+          });
+          return {
+            runId: exactRequest.rosterLaunchBinding!.launchCommandId,
+            launchStatus: 'not_started' as const,
+          };
+        });
+
+      await expect(launch(admitted.request)).resolves.toMatchObject({
+        launchStatus: 'not_started',
+      });
+      await expect(launch(admitted.request)).rejects.toThrow(/stale|already used|transaction/i);
+      expect(fakeSpawnCount).toBe(1);
+    } finally {
+      invalidateAuthoritativeModelExecutionProofs();
+      await rm(claudeRoot, { recursive: true, force: true });
+      await rm(projectDir, { recursive: true, force: true });
+      setClaudeBasePathOverride(null);
+    }
+  });
+
+  it.each(['stale', 'roster-revision', 'provider', 'project', 'model'] as const)(
+    'rejects %s desktop authority before launch admission or fake spawn',
+    async (mismatch) => {
+      const claudeRoot = await mkdtemp(path.join(tmpdir(), `desktop-authority-${mismatch}-`));
+      const projectDir = await mkdtemp(path.join(tmpdir(), 'desktop-authority-project-'));
+      const otherProjectDir = await mkdtemp(path.join(tmpdir(), 'desktop-authority-other-project-'));
+      const teamName = `desktop-authority-${mismatch}`;
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        await mkdir(path.join(claudeRoot, 'teams', teamName), { recursive: true });
+        const canonicalRoster = canonicalDesktopRoster();
+        const authorizedRequest = canonicalDesktopLaunchRequest(projectDir, teamName);
+        const executionProof = prepareDesktopExecutionProof(authorizedRequest, canonicalRoster);
+        const submittedRoster =
+          mismatch === 'roster-revision'
+            ? canonicalDesktopRoster('different-builder')
+            : canonicalRoster;
+        const submittedRequest = canonicalDesktopLaunchRequest(projectDir, teamName, {
+          executionProof,
+          ...(mismatch === 'provider'
+            ? { providerId: 'opencode', providerBackendId: 'opencode-cli' }
+            : {}),
+          ...(mismatch === 'project' ? { cwd: otherProjectDir } : {}),
+          ...(mismatch === 'model' ? { model: 'gpt-5.3' } : {}),
+        });
+        if (mismatch === 'stale') invalidateAuthoritativeModelExecutionProofs();
+
+        const service = new TeamDataService();
+        const beginTransaction = vi.spyOn(service, 'beginRosterAuthorizationTransaction');
+        let fakeSpawnCount = 0;
+        await expect(
+          admitProductionTeamRosterLaunch(
+            service,
+            submittedRequest,
+            undefined,
+            true,
+            submittedRoster
+          ).then((admitted) =>
+            admitted.context.run(admitted.request, async () => {
+              fakeSpawnCount += 1;
+              return { runId: 'must-not-launch' };
+            })
+          )
+        ).rejects.toThrow('Fresh authoritative launch authorization is required');
+        expect(beginTransaction).not.toHaveBeenCalled();
+        expect(fakeSpawnCount).toBe(0);
+      } finally {
+        invalidateAuthoritativeModelExecutionProofs();
+        await rm(claudeRoot, { recursive: true, force: true });
+        await rm(projectDir, { recursive: true, force: true });
+        await rm(otherProjectDir, { recursive: true, force: true });
+        setClaudeBasePathOverride(null);
+      }
+    }
+  );
 
   it('fails HTTP launch closed without a desktop roster authorization transaction', async () => {
     const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-unauthorized-'));
