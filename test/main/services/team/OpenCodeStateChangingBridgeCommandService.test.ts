@@ -36,6 +36,10 @@ import {
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { createOpenCodeStrictLaunchLedgerKey } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStrictLaunchLedgerIdentity';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
+import {
+  type OpenCodeRuntimeAdapterLaunchPorts,
+  runOpenCodeTeamRuntimeAdapterLaunch,
+} from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeRuntimeAdapterLaunch';
 import { RosterLaunchKnownNoStartError } from '../../../../src/main/services/team/provisioning/TeamProvisioningRosterLaunchOutcome';
 import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import orchestratorVector from '../../../fixtures/team/opencode-launch-request-correlation-golden.json';
@@ -44,6 +48,7 @@ import type { OpenCodeLaunchAttemptResponse } from '../../../../src/main/service
 import type { OpenCodeTeamLaunchReadiness } from '../../../../src/main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type { TeamRuntimeLaunchInput } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import type { PersistedOpenCodeStrictLaunchAttempt } from '../../../../src/shared/types/openCodeStrictLaunch';
+import type { TeamCreateRequest } from '../../../../src/shared/types/team';
 
 describe('OpenCodeStateChangingBridgeCommandService', () => {
   let tempDir: string;
@@ -728,12 +733,22 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       }
       await fs.writeFile(ledgerPath, `${JSON.stringify(envelope)}\n`, 'utf8');
 
-      await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
+      const onInvocationDisposition = vi.fn();
+      const onInvocationDispatched = vi.fn();
+      await expect(
+        createService().execute({
+          ...buildLaunchInput(),
+          onInvocationDisposition,
+          onInvocationDispatched,
+        })
+      ).rejects.toThrow(
         corruption === 'hash'
           ? 'Durable OpenCode strict launch response hash mismatch'
           : 'Durable OpenCode strict launch response does not match its request'
       );
       expect(bridge.calls).toHaveLength(1);
+      expect(onInvocationDisposition).toHaveBeenCalledWith('previous_side_effects_recovered');
+      expect(onInvocationDispatched).not.toHaveBeenCalled();
     }
   );
 
@@ -765,12 +780,145 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       const manifestRead = vi.spyOn(manifestReader, 'read');
       const handshake = vi.spyOn(handshakePort, 'handshake');
 
-      await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
-        'outcome must be reconciled'
-      );
+      const onInvocationDisposition = vi.fn();
+      await expect(
+        createService().execute({ ...buildLaunchInput(), onInvocationDisposition })
+      ).rejects.toThrow('outcome must be reconciled');
       expect(manifestRead).not.toHaveBeenCalled();
       expect(handshake).not.toHaveBeenCalled();
       expect(bridge.calls).toHaveLength(1);
+      expect(onInvocationDisposition).toHaveBeenCalledWith('previous_side_effects_recovered');
+    }
+  );
+
+  it('publishes previous side effects before corrupt duplicate-begin replay reconstruction', async () => {
+    bridge.resultFactory = strictLaunchBridgeResult();
+    await createService().execute(buildLaunchInput());
+    const ledgerPath = path.join(tempDir, 'ledger.json');
+    const envelope = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as {
+      data: Array<{ responseHash: string }>;
+    };
+    envelope.data[0]!.responseHash = stableHash('wrong-response');
+    await fs.writeFile(ledgerPath, `${JSON.stringify(envelope)}\n`, 'utf8');
+    vi.spyOn(ledger, 'list').mockResolvedValueOnce([]);
+    const onInvocationDisposition = vi.fn();
+    const onInvocationDispatched = vi.fn();
+
+    await expect(
+      createService().execute({
+        ...buildLaunchInput(),
+        onInvocationDisposition,
+        onInvocationDispatched,
+      })
+    ).rejects.toThrow('Durable OpenCode strict launch response hash mismatch');
+
+    expect(onInvocationDisposition).toHaveBeenCalledWith('previous_side_effects_recovered');
+    expect(onInvocationDispatched).not.toHaveBeenCalled();
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it.each(['hash', 'correlation'] as const)(
+    'retains exact production-adapter ownership when cancellation interrupts corrupt %s replay',
+    async (corruption) => {
+      bridge.resultFactory = ({ command, body, options }) => {
+        if (command === 'opencode.readiness') {
+          return bridgeSuccess({
+            requestId: options.requestId,
+            command,
+            data: readyOpenCodeLaunchReadiness(),
+          });
+        }
+        if (command === 'opencode.stopTeam') {
+          return bridgeSuccess({
+            requestId: options.requestId,
+            command,
+            data: {
+              runId: 'run-1',
+              stopped: false,
+              members: {},
+              warnings: [],
+              diagnostics: [
+                {
+                  code: 'stop_confirmation_unavailable',
+                  severity: 'warning',
+                  message: 'Deterministic fake retained exact runtime ownership.',
+                },
+              ],
+            },
+          });
+        }
+        const launchBody = body as unknown as OpenCodeLaunchTeamCommandBody;
+        return bridgeSuccess({
+          requestId: options.requestId,
+          command,
+          data: {
+            runId: launchBody.runId,
+            idempotencyKey: body.preconditions.idempotencyKey,
+            runtimeStoreManifestHighWatermark: 10,
+            members: strictLaunchMembers(launchBody),
+            launchAttempt: strictLaunchResponse(launchBody),
+          },
+        });
+      };
+      const seedHarness = createProvisioningLaunchHarness(
+        createProductionAdapter(createService(), bridge)
+      );
+      await expect(
+        runOpenCodeTeamRuntimeAdapterLaunch(seedHarness.input, seedHarness.ports)
+      ).resolves.toEqual({ runId: 'run-1' });
+
+      const ledgerPath = path.join(tempDir, 'ledger.json');
+      const envelope = JSON.parse(await fs.readFile(ledgerPath, 'utf8')) as {
+        data: Array<{ responseHash: string; requestCorrelationDigest?: string }>;
+      };
+      const entry = envelope.data[0]!;
+      if (corruption === 'hash') {
+        entry.responseHash = stableHash('wrong-response');
+      } else {
+        entry.requestCorrelationDigest = '0'.repeat(64);
+      }
+      await fs.writeFile(ledgerPath, `${JSON.stringify(envelope)}\n`, 'utf8');
+
+      ledger = createOpenCodeBridgeCommandLedgerStore({ filePath: ledgerPath, clock: () => now });
+      leaseStore = createOpenCodeBridgeCommandLeaseStore({
+        filePath: path.join(tempDir, 'leases.json'),
+        idFactory: () => `lease-${nextLeaseId++}`,
+        clock: () => now,
+      });
+      const replayDispositionPublished = deferred<void>();
+      const releaseReplay = deferred<void>();
+      const restartedAdapter = createProductionAdapter(
+        createService({
+          failpoints: {
+            afterStrictLaunchReplayDisposition: () => {
+              replayDispositionPublished.resolve(undefined);
+              return releaseReplay.promise;
+            },
+          },
+        }),
+        bridge
+      );
+      const replayHarness = createProvisioningLaunchHarness(restartedAdapter);
+      const replay = runOpenCodeTeamRuntimeAdapterLaunch(replayHarness.input, replayHarness.ports);
+
+      await replayDispositionPublished.promise;
+      expect(replayHarness.runtimeOwner()).toMatchObject({
+        runId: 'run-1',
+        providerId: 'opencode',
+        cwd: '/tmp/project',
+      });
+      replayHarness.cancel();
+      releaseReplay.resolve(undefined);
+
+      await expect(replay).resolves.toEqual({ runId: 'run-1' });
+      expect(bridge.calls.filter((call) => call.command === 'opencode.launchTeam')).toHaveLength(1);
+      expect(bridge.calls.filter((call) => call.command === 'opencode.stopTeam')).toHaveLength(1);
+      expect(replayHarness.clearPrimaryLane).not.toHaveBeenCalled();
+      expect(replayHarness.runtimeOwner()).toMatchObject({
+        runId: 'run-1',
+        providerId: 'opencode',
+        cwd: '/tmp/project',
+      });
     }
   );
 
@@ -1593,6 +1741,96 @@ function buildContinuationInput(
   });
   body.launchAttempt.continuationToken = continuationToken;
   return continuation;
+}
+
+function createProvisioningLaunchHarness(adapter: OpenCodeTeamRuntimeAdapter): {
+  input: Parameters<typeof runOpenCodeTeamRuntimeAdapterLaunch>[0];
+  ports: OpenCodeRuntimeAdapterLaunchPorts;
+  cancel(): void;
+  runtimeOwner(): { runId: string; providerId: string; cwd?: string } | undefined;
+  clearPrimaryLane: ReturnType<typeof vi.fn>;
+} {
+  let provisioningRun: string | undefined;
+  let cancelled = false;
+  let runtimeOwner:
+    | Parameters<OpenCodeRuntimeAdapterLaunchPorts['setRuntimeAdapterRun']>[1]
+    | undefined;
+  const clearPrimaryLane = vi.fn(async () => true);
+  const members: TeamCreateRequest['members'] = [
+    { name: 'alice', role: 'teammate', providerId: 'opencode' },
+    { name: 'bob', role: 'teammate', providerId: 'opencode' },
+  ];
+  const input: Parameters<typeof runOpenCodeTeamRuntimeAdapterLaunch>[0] = {
+    adapter,
+    request: {
+      teamName: 'team-a',
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
+      model: 'openai/gpt-5.4-mini',
+      members,
+    },
+    members,
+    prompt: '',
+    onProgress: vi.fn(),
+  };
+  const ports: OpenCodeRuntimeAdapterLaunchPorts = {
+    randomUUID: () => 'run-1',
+    nowIso: () => '2026-04-21T12:00:00.000Z',
+    getStopAllTeamsGeneration: () => 0,
+    getStopTeamGeneration: () => 0,
+    getRuntimeAdapterRun: () => runtimeOwner,
+    stopOpenCodeRuntimeAdapterTeam: async () => undefined,
+    getProvisioningRun: () => provisioningRun,
+    getRuntimeAdapterProgress: () => undefined,
+    isCancellableRuntimeAdapterProgress: () => false,
+    cancelRuntimeAdapterProvisioning: async () => undefined,
+    recordCancelledOpenCodeRuntimeAdapterLaunch: () => ({ runId: 'cancelled-run' }),
+    setProvisioningRun: (_teamName, runId) => {
+      provisioningRun = runId;
+    },
+    setRuntimeAdapterProgress: (progress) => progress,
+    resetTeamScopedTransientStateForNewRun: () => undefined,
+    readLaunchState: async () => null,
+    clearPersistedLaunchState: async () => undefined,
+    getTeamsBasePath: () => '/tmp/test-teams',
+    migrateLegacyOpenCodeRuntimeState: async () => undefined,
+    upsertOpenCodeRuntimeLaneIndexEntry: async () => undefined,
+    getOpenCodeRuntimeLaunchCwd: (cwd) => cwd,
+    setOpenCodeRuntimeActiveRunManifest: async () => undefined,
+    isCancelledRuntimeAdapterRunId: () => cancelled,
+    consumeCancelledRuntimeAdapterRunId: () => {
+      const wasCancelled = cancelled;
+      cancelled = false;
+      return wasCancelled;
+    },
+    clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: clearPrimaryLane,
+    persistOpenCodeRuntimeAdapterLaunchResult: async (result) => ({ result }),
+    launchFailureArtifacts: { write: async () => undefined },
+    syncOpenCodeRuntimeToolApprovals: () => undefined,
+    clearOpenCodeRuntimeLaneStorage: async () => undefined,
+    deleteRuntimeOwnershipIfCurrent: (_teamName, runId) => {
+      if (runtimeOwner?.runId === runId) runtimeOwner = undefined;
+    },
+    setRuntimeAdapterRun: (_teamName, owner) => {
+      runtimeOwner = owner;
+    },
+    setAliveRunId: () => undefined,
+    invalidateRuntimeSnapshotCaches: () => undefined,
+    deleteProvisioningRunIfCurrent: (_teamName, runId) => {
+      if (provisioningRun === runId) provisioningRun = undefined;
+    },
+    emitTeamProcessChange: () => undefined,
+  };
+  return {
+    input,
+    ports,
+    cancel: () => {
+      cancelled = true;
+    },
+    runtimeOwner: () => runtimeOwner,
+    clearPrimaryLane,
+  };
 }
 
 function createProductionAdapter(

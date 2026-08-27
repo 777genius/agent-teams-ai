@@ -88,6 +88,7 @@ export interface OpenCodeStateChangingBridgeCommandServiceOptions {
   leaseAcquireTimeoutMs?: number;
   leaseAcquireRetryDelayMs?: number;
   failpoints?: {
+    afterStrictLaunchReplayDisposition?(): Promise<void> | void;
     beforeStrictLaunchCompletionPersistence?(): Promise<void> | void;
     afterStrictLaunchCompletionPersistence?(): Promise<void> | void;
   };
@@ -176,11 +177,12 @@ export class OpenCodeStateChangingBridgeCommandService {
           entry.status === 'completed' ||
           (entry.status === 'started' && entry.strictLaunchResponseJson != null);
         if (recoverable) {
+          input.onInvocationDisposition?.('previous_side_effects_recovered');
+          await this.failpoints.afterStrictLaunchReplayDisposition?.();
           const replay = this.recoverStrictLaunchResult(
             input.body as OpenCodeLaunchTeamCommandBody,
             entry
           );
-          input.onInvocationDisposition?.('previous_side_effects_recovered');
           if (entry.status === 'started') {
             await this.failpoints.beforeStrictLaunchCompletionPersistence?.();
             await this.ledger.markCompleted({ idempotencyKey: ledgerIdempotencyKey });
@@ -286,11 +288,12 @@ export class OpenCodeStateChangingBridgeCommandService {
       ) {
         if (input.command === 'opencode.launchTeam') {
           const entry = await this.ledger.getByIdempotencyKey(ledgerIdempotencyKey);
+          input.onInvocationDisposition?.('previous_side_effects_recovered');
+          await this.failpoints.afterStrictLaunchReplayDisposition?.();
           const replay = this.recoverStrictLaunchResult(
             input.body as OpenCodeLaunchTeamCommandBody,
             entry
           );
-          input.onInvocationDisposition?.('previous_side_effects_recovered');
           if (begin === 'duplicate_same_payload_recoverable') {
             await this.failpoints.beforeStrictLaunchCompletionPersistence?.();
             await this.ledger.markCompleted({ idempotencyKey: ledgerIdempotencyKey });
