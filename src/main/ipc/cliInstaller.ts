@@ -27,7 +27,10 @@ import { createLogger } from '@shared/utils/logger';
 
 import { CodexBinaryResolver } from '../services/infrastructure/codexAppServer';
 import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
-import { invalidateAuthoritativeModelExecutionProofs } from '../services/team/TeamLaunchExecutionProofAuthority';
+import {
+  invalidateAuthoritativeModelExecutionProofs,
+  invalidateAuthoritativeModelExecutionProofsForProvider,
+} from '../services/team/TeamLaunchExecutionProofAuthority';
 
 import type { CliInstallerService } from '../services';
 import type {
@@ -393,7 +396,7 @@ function observeProviderAuthority(providerStatus: CliProviderStatus): void {
     previousAuthorityFingerprint !== undefined &&
     previousAuthorityFingerprint !== authorityFingerprint
   ) {
-    invalidateAuthoritativeModelExecutionProofs();
+    invalidateAuthoritativeModelExecutionProofsForProvider(providerStatus.providerId);
   }
   observedProviderAuthorityFingerprintById.set(providerStatus.providerId, authorityFingerprint);
 }

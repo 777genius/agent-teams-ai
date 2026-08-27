@@ -9,6 +9,12 @@ import {
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
+import {
+  captureAuthoritativeProofEpoch,
+  issueAuthoritativeModelExecutionProof,
+  verifyAuthoritativeModelExecutionProof,
+} from '../services/team/TeamLaunchExecutionProofAuthority';
+
 import { initializeCliInstallerHandlers, registerCliInstallerHandlers } from './cliInstaller';
 
 import type { CliInstallerService } from '@main/services';
@@ -492,5 +498,63 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     const cachedStatusResult =
       await invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
     expect(cachedStatusResult).toEqual({ success: true, data: createCliStatus() });
+  });
+
+  test('invalidates only execution proofs that depend on a changed provider fingerprint', async () => {
+    const statusByProvider = new Map<CliProviderId, CliProviderStatus>([
+      ['anthropic', createProviderStatus('anthropic')],
+      ['codex', createProviderStatus('codex')],
+    ]);
+    const service = createInstallerService({
+      getProviderStatus: vi.fn((providerId: CliProviderId) =>
+        Promise.resolve(statusByProvider.get(providerId) ?? null)
+      ),
+    });
+    const { invoke } = setupHandlers(service);
+
+    for (const providerId of ['anthropic', 'codex'] as const) {
+      await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+        CLI_INSTALLER_GET_PROVIDER_STATUS,
+        providerId,
+        createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+      );
+    }
+
+    const anthropicAttempt = captureAuthoritativeProofEpoch(process.cwd());
+    const codexAttempt = captureAuthoritativeProofEpoch(process.cwd());
+    const staleAnthropicAttempt = captureAuthoritativeProofEpoch(process.cwd());
+    const anthropicProof = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: anthropicAttempt,
+      cwd: process.cwd(),
+      checks: [{ providerId: 'anthropic', model: 'claude-test' }],
+    });
+    const codexProof = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: codexAttempt,
+      cwd: process.cwd(),
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-test' }],
+    });
+
+    statusByProvider.set('anthropic', {
+      ...createProviderStatus('anthropic'),
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+    });
+    const changedStatus = await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'anthropic',
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+    );
+
+    expect(changedStatus.success).toBe(true);
+    expect(verifyAuthoritativeModelExecutionProof(anthropicProof)).toBe(false);
+    expect(verifyAuthoritativeModelExecutionProof(codexProof)).toBe(true);
+    expect(() =>
+      issueAuthoritativeModelExecutionProof({
+        authorityEpoch: staleAnthropicAttempt,
+        cwd: process.cwd(),
+        checks: [{ providerId: 'anthropic', model: 'claude-test' }],
+      })
+    ).toThrow('provider authority changed during preparation');
   });
 });

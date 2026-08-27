@@ -59,6 +59,7 @@ interface AuthoritativeAttemptRecord {
   authorityEpoch: object;
   expiresAtMs: number;
   projectLease: ProjectRootIdentityLease;
+  providerAuthorityGenerations: ReadonlyMap<ProviderModelLaunchIdentity['providerId'], number>;
 }
 
 interface AuthoritativeExecutionRecord {
@@ -77,6 +78,7 @@ interface ClaimedExecutionRecord {
   stale: boolean;
   invocationActive: boolean;
   closed: boolean;
+  providerIds: ReadonlySet<ProviderModelLaunchIdentity['providerId']>;
 }
 
 export interface AuthoritativeModelExecutionInvocationLease {
@@ -114,6 +116,10 @@ const claimedLeadRestartLeases = new Set<ClaimedLeadRestartRecord>();
 let generation = 0;
 let currentAuthorityEpoch: object = {};
 let providerAuthorityGeneration = 0;
+const providerAuthorityGenerationById = new Map<
+  ProviderModelLaunchIdentity['providerId'],
+  number
+>();
 let expiryTimer: ReturnType<typeof setTimeout> | null = null;
 let rootAuthorityOpen = true;
 
@@ -133,6 +139,7 @@ export function captureAuthoritativeProofEpoch(
     authorityEpoch: currentAuthorityEpoch,
     expiresAtMs: nowMs + PROOF_TTL_MS,
     projectLease: captureProjectRootIdentityLease(cwd),
+    providerAuthorityGenerations: new Map(providerAuthorityGenerationById),
   };
   attempts.set(attempt, record);
   scheduleExpiryCleanup();
@@ -301,7 +308,8 @@ function claimAttemptLease(
   attempt: AuthoritativeProofEpoch,
   cwd: string,
   nowMs: number,
-  purpose: 'Launch authorization' | 'Lead restart authorization'
+  purpose: 'Launch authorization' | 'Lead restart authorization',
+  providerIds: ReadonlySet<ProviderModelLaunchIdentity['providerId']>
 ): { authorityEpoch: object; projectLease: ProjectRootIdentityLease } {
   const record = attempts.get(attempt);
   if (!record || record.authorityEpoch !== currentAuthorityEpoch) {
@@ -312,6 +320,17 @@ function claimAttemptLease(
     record.projectLease.close();
     scheduleExpiryCleanup();
     throw new Error(`${purpose} project root changed during preparation`);
+  }
+  for (const providerId of providerIds) {
+    if (
+      (record.providerAuthorityGenerations.get(providerId) ?? 0) !==
+      (providerAuthorityGenerationById.get(providerId) ?? 0)
+    ) {
+      attempts.delete(attempt);
+      record.projectLease.close();
+      scheduleExpiryCleanup();
+      throw new Error(`${purpose} provider authority changed during preparation`);
+    }
   }
   attempts.delete(attempt);
   scheduleExpiryCleanup();
@@ -360,11 +379,13 @@ export function issueAuthoritativeModelExecutionProof(input: {
     throw new Error('Launch authorization is unavailable during Claude root handoff');
   }
   const completedAtMs = input.completedAtMs ?? Date.now();
+  const checks = normalizeChecks(input.checks);
   const claimed = claimAttemptLease(
     input.authorityEpoch,
     input.cwd,
     Date.now(),
-    'Launch authorization'
+    'Launch authorization',
+    new Set(checks.map((check) => check.providerId))
   );
   try {
     const proof: AuthoritativeModelExecutionProof = {
@@ -383,7 +404,7 @@ export function issueAuthoritativeModelExecutionProof(input: {
       proof,
       expiresAtMs: completedAtMs + PROOF_TTL_MS,
       projectLease: claimed.projectLease,
-      checks: normalizeChecks(input.checks),
+      checks,
       runtimeRosterRevision: input.runtimeRosterRevision ?? null,
       authorityEpoch: claimed.authorityEpoch,
     });
@@ -410,6 +431,32 @@ export function invalidateAuthoritativeModelExecutionProofs(): void {
   proofs.clear();
   claimedExecutionLeases.clear();
   leadRestartProofs.clear();
+}
+
+/** Invalidates only execution authority that depends on one provider. */
+export function invalidateAuthoritativeModelExecutionProofsForProvider(
+  providerId: ProviderModelLaunchIdentity['providerId']
+): void {
+  providerAuthorityGeneration += 1;
+  providerAuthorityGenerationById.set(
+    providerId,
+    (providerAuthorityGenerationById.get(providerId) ?? 0) + 1
+  );
+  for (const [authorityId, record] of proofs) {
+    if (record.checks.some((check) => check.providerId === providerId)) {
+      deleteExecutionProof(authorityId, record, false);
+    }
+  }
+  for (const record of claimedExecutionLeases) {
+    if (record.providerIds.has(providerId)) invalidateClaimedExecutionRecord(record);
+  }
+  for (const [opaque, record] of leadRestartProofs) {
+    if (record.binding.providerId === providerId) deleteLeadRestartProof(opaque, record, false);
+  }
+  for (const record of claimedLeadRestartLeases) {
+    if (record.binding.providerId === providerId) record.stale = true;
+  }
+  scheduleExpiryCleanup();
 }
 
 /** Closes proof capture and issuance until the root coordinator commits a generation. */
@@ -458,7 +505,8 @@ export function issueLeadRuntimeRestartProof(
     authorityEpoch,
     input.cwd,
     Date.now(),
-    'Lead restart authorization'
+    'Lead restart authorization',
+    new Set([input.providerId])
   );
   const opaque = randomUUID();
   const teamRunKey = `${input.teamName.trim()}\u0000${input.runId}`;
@@ -710,6 +758,7 @@ export function claimAuthoritativeModelExecutionProofInvocation(
     stale: false,
     invocationActive: false,
     closed: false,
+    providerIds: new Set(record.checks.map((check) => check.providerId)),
   };
   claimedExecutionLeases.add(claimed);
   scheduleExpiryCleanup();
