@@ -42,6 +42,7 @@ import {
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
+
 import type {
   CodexAccountSnapshotDto,
   CodexStartChatgptLoginOptions,
@@ -142,6 +143,7 @@ import type {
 import type { AgentConfig, MemberWorkSyncElectronApi } from '@shared/types/api';
 import type { EditorAPI, ProjectAPI } from '@shared/types/editor';
 import type { TerminalAPI } from '@shared/types/terminal';
+
 function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): string {
   const query = new URLSearchParams();
   if (request?.teamName) query.set('teamName', request.teamName);
@@ -156,11 +158,23 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
   if (request?.nativeSessionId) query.set('nativeSessionId', request.nativeSessionId);
   if (request?.from) query.set('from', request.from);
   if (request?.to) query.set('to', request.to);
-  const suffix = query.toString();
-  return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
+  return query.size
+    ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${query.toString()}`
+    : TOKEN_USAGE_SNAPSHOT_ROUTE;
 }
 const rejectBrowserRosterTransaction = (): Promise<never> =>
   Promise.reject(new Error('Roster transactions require the desktop app'));
+function createUnsupportedRuntimeProviderResponse(runtimeId: 'opencode') {
+  return {
+    schemaVersion: 1 as const,
+    runtimeId,
+    error: {
+      code: 'unsupported-action' as const,
+      message: 'Runtime provider management is not available in browser mode.',
+      recoverable: true,
+    },
+  };
+}
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -1609,42 +1623,10 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
-    connectProvider: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    connectWithApiKey: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    forgetCredential: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    loadModels: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
+    connectProvider: async (input) => createUnsupportedRuntimeProviderResponse(input.runtimeId),
+    connectWithApiKey: async (input) => createUnsupportedRuntimeProviderResponse(input.runtimeId),
+    forgetCredential: async (input) => createUnsupportedRuntimeProviderResponse(input.runtimeId),
+    loadModels: async (input) => createUnsupportedRuntimeProviderResponse(input.runtimeId),
     testModel: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,
@@ -1664,7 +1646,15 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
-    clearProjectDefaultModel: async (input) => ({ schemaVersion: 1, runtimeId: input.runtimeId, error: { code: 'unsupported-action', message: 'Runtime provider management is not available in browser mode.', recoverable: true } }),
+    clearProjectDefaultModel: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'unsupported-action',
+        message: 'Runtime provider management is not available in browser mode.',
+        recoverable: true,
+      },
+    }),
     configureModelLimits: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,

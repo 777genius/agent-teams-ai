@@ -135,7 +135,11 @@ export function resolveEffectiveConfiguredMember(
       metaMember?.providerBackendId,
       'explicit-selection'
     ) ??
-    migrateProviderBackendId(configuredMember?.providerId, configuredMember?.providerBackendId);
+    migrateProviderBackendId(
+      configuredMember?.providerId,
+      configuredMember?.providerBackendId,
+      'explicit-selection'
+    );
   const model = metaMember?.model?.trim() || configuredMember?.model?.trim() || undefined;
   const effort = isTeamEffortLevel(metaMember?.effort)
     ? metaMember.effort

@@ -9,6 +9,7 @@ import {
   assertAggregatePrimaryStopConfirmed,
   beginAggregatePrimaryRestart,
   clearPersistedAggregateLaunchStateIfOwned,
+  createAggregatePrimaryRestartLeaseGuard,
   getCancelledAggregateLaunchError,
   getCancelledAggregateRestartError,
   resolveAggregatePrimaryRestartCandidate,
@@ -159,14 +160,17 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     memberName: string;
     run: ProvisioningRun;
     restartLease: OpenCodeAggregatePrimaryRestartLease;
+    assertRestartLeaseCurrent: () => void;
   }): Promise<void> {
-    const { teamName, memberName, run, restartLease } = params;
+    const { teamName, memberName, run, restartLease, assertRestartLeaseCurrent } = params;
     const normalizedMemberName = memberName.trim().toLowerCase();
     const primaryMember = run.effectiveMembers.find(
       (member) => member.name.trim().toLowerCase() === normalizedMemberName
     );
     if (!primaryMember) {
-      await this.memberLifecycleController.restartMember(teamName, memberName);
+      await this.memberLifecycleController.restartMember(teamName, memberName, {
+        assertCurrent: assertRestartLeaseCurrent,
+      });
       return;
     }
     if (run.pendingMemberRestarts.has(memberName)) {
@@ -182,6 +186,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       run.cancelRequested ||
       this.runs.get(run.runId) !== run;
     const assertRestartCurrent = (): void => {
+      assertRestartLeaseCurrent();
       if (restartNoLongerCurrent()) {
         throw getCancelledAggregateRestartError(teamName, memberName);
       }
@@ -613,6 +618,10 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
         memberName,
         candidate.runId
       );
+      const assertRestartLeaseCurrent = createAggregatePrimaryRestartLeaseGuard(
+        restart.lease,
+        this.openCodeAggregatePrimaryRestartByTeam
+      );
       try {
         await Promise.all(restart.lease.precedingLifecycleOperations);
         if (candidate.run) {
@@ -626,10 +635,13 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
                 memberName,
                 run: candidate.run!,
                 restartLease: restart.lease,
+                assertRestartLeaseCurrent,
               })
           );
         } else {
-          await this.memberLifecycleController.restartMember(teamName, memberName);
+          await this.memberLifecycleController.restartMember(teamName, memberName, {
+            assertCurrent: assertRestartLeaseCurrent,
+          });
         }
         if (restart.lease.cancelRequested) {
           await this.clearCancelledOpenCodeAggregateRestartState(teamName, restart.lease.runId);
@@ -649,7 +661,6 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       }
     });
   }
-
   override async retryFailedOpenCodeSecondaryLanes(
     teamName: string
   ): Promise<RetryFailedOpenCodeSecondaryLanesResult> {

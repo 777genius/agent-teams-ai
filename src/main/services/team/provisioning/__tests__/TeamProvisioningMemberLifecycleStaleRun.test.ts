@@ -12,7 +12,12 @@ import { createUpdateDirectTmuxRestartMemberConfigUseCase } from '../TeamProvisi
 import type { TeamProvisioningMemberLifecycleHost } from '../TeamProvisioningMemberLifecycleHostPorts';
 import type { TeamProvisioningMemberLifecycleOperationUseCases } from '../TeamProvisioningMemberLifecycleOperationUseCases';
 import type { ProvisioningRun } from '../TeamProvisioningMemberLifecycleTypes';
-import type { TeamConfig, TeamCreateRequest } from '@shared/types';
+import type {
+  PersistedTeamLaunchSnapshot,
+  ProviderModelLaunchIdentity,
+  TeamConfig,
+  TeamCreateRequest,
+} from '@shared/types';
 
 vi.mock('@features/tmux-installer/main', () => ({
   listTmuxPaneRuntimeInfoForCurrentPlatform: vi.fn(async () => new Map()),
@@ -103,6 +108,70 @@ function createPureOpenCodeConfig(worker: TeamCreateRequest['members'][number]):
       projectPath: '/safe-test-project',
       members: [lead, worker],
     } as TeamConfig,
+  };
+}
+
+function createPureOpenCodeLaunchSnapshot(
+  runtimeRunId = 'adapter-run-1',
+  memberName = 'Worker',
+  options: { stoppedAt?: string; memberBackendId?: 'adapter' | 'opencode-cli' } = {}
+): PersistedTeamLaunchSnapshot {
+  const laneIdentity: ProviderModelLaunchIdentity = {
+    providerId: 'opencode',
+    providerBackendId: 'opencode-cli',
+    billingMode: 'api',
+    selectedModel: 'current/lane-model',
+    selectedModelKind: 'explicit',
+    resolvedLaunchModel: 'current/lane-model',
+    catalogId: 'current/lane-model',
+    catalogSource: 'runtime',
+    catalogFetchedAt: '2026-08-26T00:00:00.000Z',
+    selectedEffort: 'high',
+    resolvedEffort: 'high',
+    selectedFastMode: 'on',
+    resolvedFastMode: true,
+    fastResolutionReason: 'test',
+  };
+  const memberIdentity = {
+    ...laneIdentity,
+    providerBackendId: options.memberBackendId ?? laneIdentity.providerBackendId,
+    selectedModel: 'current/member-model',
+    resolvedLaunchModel: 'current/member-model',
+  } satisfies ProviderModelLaunchIdentity;
+  return {
+    version: 3,
+    teamName: 'team-a',
+    updatedAt: '2026-08-26T00:00:00.000Z',
+    leadSessionId: runtimeRunId,
+    runtimeRunId,
+    primaryLaneIdentity: laneIdentity,
+    launchPhase: 'active',
+    expectedMembers: [memberName],
+    members: {
+      [memberName]: {
+        name: memberName,
+        providerId: 'opencode',
+        providerBackendId: memberIdentity.providerBackendId ?? undefined,
+        model: memberIdentity.resolvedLaunchModel ?? undefined,
+        effort: memberIdentity.resolvedEffort ?? undefined,
+        launchIdentity: memberIdentity,
+        launchState: 'confirmed_alive',
+        agentToolAccepted: true,
+        runtimeAlive: true,
+        bootstrapConfirmed: true,
+        hardFailure: false,
+        runtimeRunId,
+        lastEvaluatedAt: '2026-08-26T00:00:00.000Z',
+      },
+    },
+    summary: {
+      confirmedCount: 1,
+      pendingCount: 0,
+      failedCount: 0,
+      runtimeAlivePendingCount: 0,
+    },
+    teamLaunchState: 'clean_success',
+    ...(options.stoppedAt ? { stoppedAt: options.stoppedAt } : {}),
   };
 }
 
@@ -1294,6 +1363,11 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
           return { providerId: 'opencode', cwd: '/safe-test-project', prompt: 'Continue' };
         },
       },
+      launchStateStore: {
+        async read() {
+          return createPureOpenCodeLaunchSnapshot();
+        },
+      },
       async resolveOpenCodeMemberWorkspacesForRuntime(input) {
         runtimeAdapterRunByTeam.set('team-a', {
           providerId: 'opencode',
@@ -1320,12 +1394,120 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     );
 
     await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
-      'Team "team-a" is not currently running'
+      'was cancelled because team "team-a" is no longer running'
     );
+    await expect(
+      controller.restartMember('team-a', 'Worker', { assertCurrent: vi.fn() })
+    ).rejects.toThrow('Team "team-a" is not currently running');
 
     expect(sentMessages).toEqual([]);
     expect(adapterLaunches).toEqual([]);
     expect(launchSnapshots).toEqual([]);
+  });
+
+  it('fails before persistence and launch when a persisted member changes runtime run', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'opencode',
+    };
+    const run = createRun(member);
+    const { config } = createPureOpenCodeConfig(member);
+    const currentSnapshot = createPureOpenCodeLaunchSnapshot();
+    const replacedMemberSnapshot = createPureOpenCodeLaunchSnapshot();
+    replacedMemberSnapshot.members.Worker.runtimeRunId = 'adapter-run-replaced';
+    const readLaunchState = vi
+      .fn()
+      .mockResolvedValueOnce(currentSnapshot)
+      .mockResolvedValue(replacedMemberSnapshot);
+    const resolveWorkspaces = vi.fn(async (input) => input.members);
+    const preflightLocalModels = vi.fn();
+    const launch = vi.fn();
+    const persistSentMessage = vi.fn();
+    const host = createHost(run, {
+      runtimeAdapterRunByTeam: new Map([
+        ['team-a', { providerId: 'opencode', runId: 'adapter-run-1', cwd: '/safe-test-project' }],
+      ]),
+      getAliveRunId: () => null,
+      getTrackedRunId: () => 'adapter-run-1',
+      getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode', preflightLocalModels }),
+      async readConfigForStrictDecision() {
+        return config;
+      },
+      launchStateStore: { read: readLaunchState },
+      resolveOpenCodeMemberWorkspacesForRuntime: resolveWorkspaces,
+      runOpenCodeTeamRuntimeAdapterLaunch: launch,
+      persistSentMessage,
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases
+    );
+
+    await expect(
+      controller.restartMember('team-a', 'Worker', { assertCurrent: vi.fn() })
+    ).rejects.toThrow('launch-state identity changed during member restart');
+
+    expect(resolveWorkspaces).not.toHaveBeenCalled();
+    expect(preflightLocalModels).not.toHaveBeenCalled();
+    expect(persistSentMessage).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
+  });
+
+  it('checks restart authority after the final identity read before persistence and launch', async () => {
+    const member: TeamCreateRequest['members'][number] = {
+      name: 'Worker',
+      role: 'Developer',
+      providerId: 'opencode',
+    };
+    const run = createRun(member);
+    const { config } = createPureOpenCodeConfig(member);
+    const launchSnapshot = createPureOpenCodeLaunchSnapshot();
+    let resolveFinalRead!: (snapshot: PersistedTeamLaunchSnapshot) => void;
+    const finalRead = new Promise<PersistedTeamLaunchSnapshot>((resolve) => {
+      resolveFinalRead = resolve;
+    });
+    const readLaunchState = vi
+      .fn()
+      .mockResolvedValueOnce(launchSnapshot)
+      .mockResolvedValueOnce(launchSnapshot)
+      .mockResolvedValueOnce(launchSnapshot)
+      .mockResolvedValueOnce(launchSnapshot)
+      .mockReturnValueOnce(finalRead);
+    let leaseCurrent = true;
+    const persistSentMessage = vi.fn();
+    const launch = vi.fn();
+    const host = createHost(run, {
+      runtimeAdapterRunByTeam: new Map([
+        ['team-a', { providerId: 'opencode', runId: 'adapter-run-1', cwd: '/safe-test-project' }],
+      ]),
+      getAliveRunId: () => null,
+      getTrackedRunId: () => 'adapter-run-1',
+      getOpenCodeRuntimeAdapter: () => ({ providerId: 'opencode' }),
+      async readConfigForStrictDecision() {
+        return config;
+      },
+      launchStateStore: { read: readLaunchState },
+      persistSentMessage,
+      runOpenCodeTeamRuntimeAdapterLaunch: launch,
+    });
+    const controller = new TeamProvisioningMemberLifecycleController(
+      host,
+      immediateOperationUseCases
+    );
+    const restart = controller.restartMember('team-a', 'Worker', {
+      assertCurrent() {
+        if (!leaseCurrent) throw new Error('restart lease is no longer current');
+      },
+    });
+
+    await vi.waitFor(() => expect(readLaunchState).toHaveBeenCalledTimes(5));
+    leaseCurrent = false;
+    resolveFinalRead(launchSnapshot);
+
+    await expect(restart).rejects.toThrow('restart lease is no longer current');
+    expect(persistSentMessage).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
   });
 
   it('persists pure OpenCode restart message and relaunches when the adapter generation remains current', async () => {
@@ -1354,7 +1536,20 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
       },
       teamMetaStore: {
         async getMeta() {
-          return { providerId: 'opencode', cwd: '/safe-test-project', prompt: 'Continue' };
+          return {
+            providerId: 'opencode',
+            providerBackendId: 'adapter',
+            cwd: '/safe-test-project',
+            prompt: 'Continue',
+            model: 'stale/root-model',
+            effort: 'low',
+            fastMode: 'off',
+          };
+        },
+      },
+      launchStateStore: {
+        async read() {
+          return createPureOpenCodeLaunchSnapshot();
         },
       },
       persistSentMessage(_teamName, message) {
@@ -1370,7 +1565,7 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
       immediateOperationUseCases
     );
 
-    await controller.restartMember('team-a', 'Worker');
+    await controller.restartMember('team-a', 'Worker', { assertCurrent: vi.fn() });
 
     expect(sentMessages).toHaveLength(1);
     expect(sentMessages[0]).toMatchObject({
@@ -1384,8 +1579,20 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
       request: expect.objectContaining({
         teamName: 'team-a',
         providerId: 'opencode',
+        providerBackendId: 'opencode-cli',
+        model: 'current/lane-model',
+        effort: 'high',
+        fastMode: 'on',
       }),
-      members: [expect.objectContaining({ name: 'Worker', providerId: 'opencode' })],
+      members: [
+        expect.objectContaining({
+          name: 'Worker',
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'current/member-model',
+          effort: 'high',
+        }),
+      ],
     });
   });
 

@@ -72,6 +72,8 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   readonly launchedMemberNames: string[][] = [];
   readonly clearPrimaryLaneIfOwned = vi.fn(async () => undefined);
   readonly stopCleanup = vi.fn(async () => undefined);
+  readonly pureRestartMessagePersistence = vi.fn();
+  readonly pureRestartLaunch = vi.fn();
 
   protected readonly inboxReader = {
     getMessagesFor: vi.fn(async () => []),
@@ -85,6 +87,7 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   } as never;
   protected readonly launchStateStore = {
     read: vi.fn(async () => null),
+    clear: vi.fn(async () => undefined),
   } as never;
   protected readonly launchStateCompatibilityBoundary = {
     enqueueLaunchStateStoreOperation: async <T>(
@@ -105,6 +108,53 @@ class TestOpenCodeAggregatePrimaryFacade extends TeamProvisioningOpenCodeAggrega
   publishNewOwner(teamName: string, owner: RuntimeAdapterRunByTeamEntry): void {
     this.runTracking.setAliveRunId(teamName, owner.runId);
     this.runtimeAdapterRunByTeam.set(teamName, owner);
+  }
+
+  trackUnownedPureRuntime(teamName: string, runId = 'restart-run'): void {
+    this.runtimeAdapterRunByTeam.set(teamName, {
+      runId,
+      providerId: 'opencode',
+      cwd: '/safe-test-workspace/alpha',
+    });
+  }
+
+  installDeferredPureRestartController(): {
+    finalIdentityReadStarted: Promise<void>;
+    releaseFinalIdentityRead: () => void;
+  } {
+    const finalIdentityRead = createDeferred();
+    const finalIdentityReadStarted = createDeferred();
+    Object.assign(this, {
+      memberLifecycleController: {
+        restartMember: async (
+          _teamName: string,
+          _memberName: string,
+          authority?: { assertCurrent(): void }
+        ) => {
+          finalIdentityReadStarted.resolve();
+          await finalIdentityRead.promise;
+          authority?.assertCurrent();
+          this.pureRestartMessagePersistence();
+          authority?.assertCurrent();
+          this.pureRestartLaunch();
+        },
+      },
+    });
+    return {
+      finalIdentityReadStarted: finalIdentityReadStarted.promise,
+      releaseFinalIdentityRead: finalIdentityRead.resolve,
+    };
+  }
+
+  replaceRestartLease(teamName: string): void {
+    this.openCodeAggregatePrimaryRestartByTeam.set(teamName.toLowerCase(), {
+      teamName,
+      runId: 'replacement-run',
+      memberName: 'Replacement',
+      completion: Promise.resolve(),
+      precedingLifecycleOperations: [],
+      cancelRequested: false,
+    });
   }
 
   getPrimaryOwner(teamName: string): RuntimeAdapterRunByTeamEntry | undefined {
@@ -241,6 +291,30 @@ describe('TeamProvisioningOpenCodeAggregatePrimaryFacade', () => {
     expect(facade.stopCleanup).not.toHaveBeenCalled();
     expect(facade.clearPrimaryLaneIfOwned).not.toHaveBeenCalled();
   });
+
+  it.each(['cancellation', 'lease replacement'] as const)(
+    'fences pure restart persistence and launch after deferred identity read on %s',
+    async (authorityLoss) => {
+      const facade = new TestOpenCodeAggregatePrimaryFacade();
+      facade.trackUnownedPureRuntime('alpha');
+      const deferred = facade.installDeferredPureRestartController();
+
+      const restart = facade.restartMember('alpha', 'Worker');
+      await deferred.finalIdentityReadStarted;
+      if (authorityLoss === 'cancellation') {
+        facade.cancelRestart('alpha');
+      } else {
+        facade.replaceRestartLease('alpha');
+      }
+      deferred.releaseFinalIdentityRead();
+
+      await expect(restart).rejects.toThrow(
+        'was cancelled because team "alpha" is no longer running'
+      );
+      expect(facade.pureRestartMessagePersistence).not.toHaveBeenCalled();
+      expect(facade.pureRestartLaunch).not.toHaveBeenCalled();
+    }
+  );
 
   it('stops a cancelled rollback candidate that has not published ownership', async () => {
     const stop = vi.fn(async (input: TeamRuntimeStopInput) => ({

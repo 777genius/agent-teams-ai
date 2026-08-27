@@ -4,9 +4,10 @@
  */
 /* eslint
   "@typescript-eslint/array-type": "warn",
-  "@typescript-eslint/no-base-to-string": "warn",
+  "@typescript-eslint/no-base-to-string": "off",
   "@typescript-eslint/no-empty-function": "off",
-  "@typescript-eslint/no-redundant-type-constituents": "warn",
+  "@typescript-eslint/no-explicit-any": "off",
+  "@typescript-eslint/no-redundant-type-constituents": "off",
   "@typescript-eslint/no-unused-vars": "warn",
   "@typescript-eslint/require-await": "off",
   "sonarjs/no-dead-store": "warn",
@@ -43,6 +44,7 @@ const hoisted = vi.hoisted(() => ({
     root: 'terminated' as const,
     descendants: 'ended' as const,
   })),
+  killProcessByPid: vi.fn(),
 }));
 
 let tempClaudeRoot = '';
@@ -172,6 +174,11 @@ vi.mock('@main/utils/childProcess', () => ({
 vi.mock('@main/utils/windowsProcessTable', () => ({
   listWindowsProcessTable: vi.fn(async () => []),
   listWindowsProcessTableSync: vi.fn(() => []),
+}));
+
+vi.mock('@main/utils/processKill', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/utils/processKill')>()),
+  killProcessByPid: hoisted.killProcessByPid,
 }));
 
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => {
@@ -712,6 +719,33 @@ function writeLaunchConfig(
   );
 }
 
+function createFakeMcpConfigBuilder(
+  overrides: {
+    writeConfigFile?: ReturnType<typeof vi.fn>;
+    removeConfigFile?: ReturnType<typeof vi.fn>;
+  } = {}
+) {
+  const writeConfigFile = overrides.writeConfigFile ?? vi.fn(async () => '/mock/mcp-config.json');
+  const removeConfigFile = overrides.removeConfigFile ?? vi.fn(async () => {});
+  const prepareConfig = vi.fn(async (projectPath: string, policy?: unknown) => ({
+    version: 1 as const,
+    json: '{}',
+    fakeProjectPath: projectPath,
+    fakePolicy: policy,
+  }));
+  const writePreparedConfigFile = vi.fn(
+    async (prepared: { fakeProjectPath: string; fakePolicy?: unknown }) =>
+      writeConfigFile(prepared.fakeProjectPath, prepared.fakePolicy)
+  );
+
+  return {
+    writeConfigFile,
+    prepareConfig,
+    writePreparedConfigFile,
+    removeConfigFile,
+  };
+}
+
 async function startDeterministicLaunchCloseHarness(options?: {
   teamName?: string;
   leadSessionId?: string;
@@ -726,10 +760,15 @@ async function startDeterministicLaunchCloseHarness(options?: {
   const child = createRunningChild();
   vi.mocked(spawnCli).mockReturnValue(child as any);
 
-  const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-    writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-    removeConfigFile: vi.fn(async () => {}),
-  } as any);
+  const svc = new TeamProvisioningService(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    createFakeMcpConfigBuilder({
+      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+    }) as any
+  );
   vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
     env: { CODEX_API_KEY: 'test' },
     authSource: 'codex_runtime',
@@ -6404,6 +6443,7 @@ describe('TeamProvisioningService', () => {
               name: 'bob',
               role: 'Developer',
               providerId: 'codex',
+              providerBackendId: 'adapter',
               model: 'gpt-5.4',
               effort: 'high',
             },
@@ -6444,19 +6484,20 @@ describe('TeamProvisioningService', () => {
 
       const sendMessageToRun = vi.fn(async () => {});
       (svc as any).sendMessageToRun = sendMessageToRun;
-      vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(
-        async () => ({
+      const buildProvisioningEnv = vi
+        .spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv')
+        .mockImplementation(async () => ({
           env: { OPENAI_API_KEY: 'test-openai-key' },
           authSource: 'openai_api_key',
           providerArgs: [],
-        })
-      );
+        }));
       (svc as any).membersMetaStore = {
         getMembers: vi.fn(async () => [
           {
             name: 'bob',
             role: 'Developer',
             providerId: 'codex',
+            providerBackendId: 'adapter',
             model: 'gpt-5.4',
             effort: 'high',
             agentType: 'general-purpose',
@@ -6478,6 +6519,11 @@ describe('TeamProvisioningService', () => {
 
       await restartMemberWithResolvedRuntimeSelection(svc, teamName, 'bob');
 
+      expect(buildProvisioningEnv).toHaveBeenCalledWith(
+        'codex',
+        'adapter',
+        expect.objectContaining({ teamRuntimeAuth: expect.any(Object) })
+      );
       expect(killTmuxPaneForCurrentPlatformSync).not.toHaveBeenCalled();
       expect(sendMessageToRun).not.toHaveBeenCalled();
       expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
@@ -17133,18 +17179,14 @@ describe('TeamProvisioningService', () => {
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
         lanes: {},
       });
-      await expect(
-        fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName,
-              laneId: 'primary',
-              fileName: 'opencode-launch-transaction.json',
-            })
-          )
-        )
-      ).rejects.toThrow();
+      const transactionPath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'primary',
+        fileName: 'opencode-launch-transaction.json',
+      });
+      await expect(fsPromises.stat(transactionPath)).rejects.toThrow();
+      await expect(fsPromises.stat(path.dirname(transactionPath))).resolves.toBeDefined();
       expect((svc as any).provisioningRunByTeam.has(teamName)).toBe(false);
     });
 
@@ -17285,18 +17327,14 @@ describe('TeamProvisioningService', () => {
       await expect(readOpenCodeRuntimeLaneIndex(tempTeamsBase, teamName)).resolves.toMatchObject({
         lanes: {},
       });
-      await expect(
-        fsPromises.stat(
-          path.dirname(
-            getOpenCodeLaneScopedRuntimeFilePath({
-              teamsBasePath: tempTeamsBase,
-              teamName,
-              laneId: 'primary',
-              fileName: 'opencode-diagnostics.json',
-            })
-          )
-        )
-      ).rejects.toThrow();
+      const diagnosticsPath = getOpenCodeLaneScopedRuntimeFilePath({
+        teamsBasePath: tempTeamsBase,
+        teamName,
+        laneId: 'primary',
+        fileName: 'opencode-diagnostics.json',
+      });
+      await expect(fsPromises.stat(diagnosticsPath)).rejects.toThrow();
+      await expect(fsPromises.stat(path.dirname(diagnosticsPath))).resolves.toBeDefined();
     });
 
     it('retains replay ownership and never stops when durable member linkage requires reconciliation', async () => {
@@ -17762,16 +17800,17 @@ describe('TeamProvisioningService', () => {
         svc,
         'process-team',
         'forge'
-      ).catch((error) => error);
+      );
+      void restartPromise.catch(() => undefined);
       await vi.waitFor(() => {
-        expect(hoisted.terminateOwnedProcess).toHaveBeenCalledWith(process.pid);
+        expect(hoisted.killProcessByPid).toHaveBeenCalledWith(process.pid);
       });
       await vi.advanceTimersByTimeAsync(1_500);
-      await expect(restartPromise).resolves.toThrow(
+      await expect(restartPromise).rejects.toThrow(
         `Restart for teammate "forge" is still waiting for the previous process to exit (${process.pid}).`
       );
 
-      expect(hoisted.terminateOwnedProcess).toHaveBeenCalledWith(process.pid);
+      expect(hoisted.killProcessByPid).toHaveBeenCalledWith(process.pid);
       expect(sendMessageToRun).not.toHaveBeenCalled();
     });
 
@@ -17849,16 +17888,17 @@ describe('TeamProvisioningService', () => {
         svc,
         'process-team',
         'forge'
-      ).catch((error) => error);
+      );
+      void restartPromise.catch(() => undefined);
       await vi.waitFor(() => {
-        expect(hoisted.terminateOwnedProcess).toHaveBeenCalledWith(process.pid);
+        expect(hoisted.killProcessByPid).toHaveBeenCalledWith(process.pid);
       });
       await vi.advanceTimersByTimeAsync(1_500);
-      await expect(restartPromise).resolves.toThrow(
+      await expect(restartPromise).rejects.toThrow(
         `Restart for teammate "forge" is still waiting for the previous process to exit (${process.pid}).`
       );
 
-      expect(hoisted.terminateOwnedProcess).toHaveBeenCalledWith(process.pid);
+      expect(hoisted.killProcessByPid).toHaveBeenCalledWith(process.pid);
       expect(sendMessageToRun).not.toHaveBeenCalled();
     });
 
@@ -17913,16 +17953,17 @@ describe('TeamProvisioningService', () => {
         svc,
         'process-team',
         'forge'
-      ).catch((error) => error);
+      );
+      void restartPromise.catch(() => undefined);
       await vi.waitFor(() => {
-        expect(hoisted.terminateOwnedProcess).toHaveBeenCalledWith(process.pid);
+        expect(hoisted.killProcessByPid).toHaveBeenCalledWith(process.pid);
       });
       await vi.advanceTimersByTimeAsync(1_500);
-      await expect(restartPromise).resolves.toThrow(
+      await expect(restartPromise).rejects.toThrow(
         `Restart for teammate "forge" is still waiting for the previous process to exit (${process.pid}).`
       );
 
-      expect(hoisted.terminateOwnedProcess).toHaveBeenCalledWith(process.pid);
+      expect(hoisted.killProcessByPid).toHaveBeenCalledWith(process.pid);
       expect(sendMessageToRun).not.toHaveBeenCalled();
     });
 
@@ -18245,9 +18286,15 @@ describe('TeamProvisioningService', () => {
         });
         vi.mocked(spawnCli).mockReturnValue(child as any);
 
-        const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-          writeConfigFile: vi.fn(async () => '/mock/mcp-config.json'),
-        } as any);
+        const svc = new TeamProvisioningService(
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          createFakeMcpConfigBuilder({
+            writeConfigFile: vi.fn(async () => '/mock/mcp-config.json'),
+          }) as any
+        );
         const run = createMemberSpawnRun({
           teamName,
           expectedMembers: ['atlas'],
@@ -18395,9 +18442,15 @@ describe('TeamProvisioningService', () => {
       });
       vi.mocked(spawnCli).mockReturnValue(child as any);
 
-      const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-        writeConfigFile: vi.fn(async () => '/mock/mcp-config.json'),
-      } as any);
+      const svc = new TeamProvisioningService(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        createFakeMcpConfigBuilder({
+          writeConfigFile: vi.fn(async () => '/mock/mcp-config.json'),
+        }) as any
+      );
       const run = createMemberSpawnRun({
         teamName,
         expectedMembers: ['forge'],
@@ -18470,9 +18523,7 @@ describe('TeamProvisioningService', () => {
         })
       ).rejects.toThrow('event write failed');
 
-      expect(hoisted.terminateRegisteredHandle).toHaveBeenCalledWith(
-        expect.objectContaining({ pid: 5678 })
-      );
+      expect(hoisted.killProcessByPid).toHaveBeenCalledWith(5678);
       expect(updateDirectTmuxRestartMemberConfig).not.toHaveBeenCalled();
       expect(run.allEffectiveMembers ?? []).toEqual([]);
       await new Promise((resolve) => setTimeout(resolve, 25));
@@ -18493,9 +18544,9 @@ describe('TeamProvisioningService', () => {
       });
       vi.mocked(spawnCli).mockReturnValue(child as any);
 
-      const mcpConfigBuilder = {
+      const mcpConfigBuilder = createFakeMcpConfigBuilder({
         writeConfigFile: vi.fn(async () => '/mock/strict-mcp-config.json'),
-      };
+      });
       const svc = new TeamProvisioningService(
         undefined,
         undefined,
@@ -18550,14 +18601,13 @@ describe('TeamProvisioningService', () => {
         appManagedSettingsPath: null,
       }));
       (svc as any).materializeDirectProcessNativeBootstrapContext = vi.fn(async () => ({}));
-      const hostSeams = memberLifecycleHostHarness(svc) as any;
       stubMemberLifecycleHostOptionalSeam(
         svc,
         'updateDirectTmuxRestartMemberConfig',
         vi.fn(async () => {})
       );
       stubMemberLifecycleHostOptionalSeam(svc, 'enqueueDirectRestartPrompt', vi.fn());
-      hostSeams.appendDirectProcessRuntimeEvent = vi.fn(async () => {});
+      memberLifecycleUseCasesHarness(svc).appendDirectProcessRuntimeEvent = vi.fn(async () => {});
       const runState = svc as unknown as {
         aliveRunByTeam: Map<string, string>;
         runs: Map<string, typeof run>;
@@ -18918,10 +18968,10 @@ describe('TeamProvisioningService', () => {
       throw new Error('spawn EINVAL');
     });
 
-    const mcpConfigBuilder = {
+    const mcpConfigBuilder = createFakeMcpConfigBuilder({
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
       removeConfigFile: vi.fn(async () => {}),
-    };
+    });
     const membersMetaStore = {
       writeMembers: vi.fn(writeFakeMembersMetaArtifact),
     };
@@ -18982,10 +19032,10 @@ describe('TeamProvisioningService', () => {
       throw new Error('spawn EINVAL');
     });
 
-    const mcpConfigBuilder = {
+    const mcpConfigBuilder = createFakeMcpConfigBuilder({
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
       removeConfigFile: vi.fn(async () => {}),
-    };
+    });
     const membersMetaStore = {
       writeMembers: vi.fn(writeFakeMembersMetaArtifact),
     };
@@ -19124,12 +19174,12 @@ describe('TeamProvisioningService', () => {
     function createSafeLaunchService(options?: {
       memberWorktreeManager?: { ensureMemberWorktree: ReturnType<typeof vi.fn> };
     }) {
-      const mcpConfigBuilder = {
+      const mcpConfigBuilder = createFakeMcpConfigBuilder({
         writeConfigFile: vi.fn(async (_projectPath?: string, _policy?: unknown) =>
           path.join(tempClaudeRoot, 'mcp-config.json')
         ),
         removeConfigFile: vi.fn(async () => {}),
-      };
+      });
       const membersMetaStore = {
         writeMembers: vi.fn(async (teamName: string, data: unknown) => {
           fs.mkdirSync(path.join(tempTeamsBase, teamName), { recursive: true });
@@ -21926,10 +21976,10 @@ describe('TeamProvisioningService', () => {
       throw new Error('launch spawn EINVAL');
     });
 
-    const mcpConfigBuilder = {
+    const mcpConfigBuilder = createFakeMcpConfigBuilder({
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
       removeConfigFile: vi.fn(async () => {}),
-    };
+    });
     const restorePrelaunchConfig = vi.fn(async () => {});
 
     const svc = new TeamProvisioningService(
@@ -21998,13 +22048,13 @@ describe('TeamProvisioningService', () => {
       .mockImplementationOnce(() => firstChild as any)
       .mockImplementationOnce(() => secondChild as any);
 
-    const mcpConfigBuilder = {
+    const mcpConfigBuilder = createFakeMcpConfigBuilder({
       writeConfigFile: vi
         .fn()
         .mockResolvedValueOnce('/missing/original-mcp-config.json')
         .mockResolvedValueOnce('/regenerated/mcp-config.json'),
       removeConfigFile: vi.fn(async () => {}),
-    };
+    });
     const membersMetaStore = {
       writeMembers: vi.fn(writeFakeMembersMetaArtifact),
     };
@@ -22090,10 +22140,10 @@ describe('TeamProvisioningService', () => {
       throw new Error('spawn EINVAL');
     });
 
-    const mcpConfigBuilder = {
+    const mcpConfigBuilder = createFakeMcpConfigBuilder({
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
       removeConfigFile: vi.fn(async () => {}),
-    };
+    });
     const membersMetaStore = {
       writeMembers: vi.fn(writeFakeMembersMetaArtifact),
     };
@@ -22617,10 +22667,16 @@ describe('TeamProvisioningService', () => {
       throw new Error('launch spawn EINVAL');
     });
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -22698,10 +22754,16 @@ describe('TeamProvisioningService', () => {
       throw new Error('launch spawn EINVAL');
     });
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -22771,10 +22833,16 @@ describe('TeamProvisioningService', () => {
       throw new Error('launch spawn EINVAL');
     });
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -22830,10 +22898,16 @@ describe('TeamProvisioningService', () => {
       throw new Error('launch spawn EINVAL');
     });
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -22892,10 +22966,16 @@ describe('TeamProvisioningService', () => {
       throw new Error('launch spawn EINVAL');
     });
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { CODEX_API_KEY: 'test' },
       authSource: 'codex_runtime',
@@ -22965,10 +23045,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -23016,10 +23102,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -23073,10 +23165,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -23146,10 +23244,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -23214,10 +23318,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -23285,10 +23395,10 @@ describe('TeamProvisioningService', () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const mcpConfigBuilder = {
+    const mcpConfigBuilder = createFakeMcpConfigBuilder({
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
       removeConfigFile: vi.fn(async () => {}),
-    };
+    });
     const membersMetaStore = {
       writeMembers: vi.fn(writeFakeMembersMetaArtifact),
       getMembers: vi.fn(async () => []),
@@ -23383,10 +23493,10 @@ describe('TeamProvisioningService', () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const mcpConfigBuilder = {
+    const mcpConfigBuilder = createFakeMcpConfigBuilder({
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
       removeConfigFile: vi.fn(async () => {}),
-    };
+    });
     const membersMetaStore = {
       writeMembers: vi.fn(writeFakeMembersMetaArtifact),
       getMembers: vi.fn(async () => []),
@@ -23482,10 +23592,10 @@ describe('TeamProvisioningService', () => {
     vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/claude');
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const mcpConfigBuilder = {
+    const mcpConfigBuilder = createFakeMcpConfigBuilder({
       writeConfigFile: vi.fn(async () => '/mock/mcp-config-create.json'),
       removeConfigFile: vi.fn(async () => {}),
-    };
+    });
     const membersMetaStore = {
       writeMembers: vi.fn(writeFakeMembersMetaArtifact),
       getMembers: vi.fn(async () => []),
@@ -23576,10 +23686,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -23644,10 +23760,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -23721,10 +23843,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -23811,10 +23939,16 @@ describe('TeamProvisioningService', () => {
     const child = createRunningChild();
     vi.mocked(spawnCli).mockReturnValue(child as any);
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
@@ -24097,10 +24231,16 @@ describe('TeamProvisioningService', () => {
       throw new Error('launch spawn EINVAL');
     });
 
-    const svc = new TeamProvisioningService(undefined, undefined, undefined, undefined, {
-      writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
-      removeConfigFile: vi.fn(async () => {}),
-    } as any);
+    const svc = new TeamProvisioningService(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      createFakeMcpConfigBuilder({
+        writeConfigFile: vi.fn(async () => '/mock/mcp-config-launch.json'),
+        removeConfigFile: vi.fn(async () => {}),
+      }) as any
+    );
     vi.spyOn(providerRuntimeHarness(svc), 'buildProvisioningEnv').mockImplementation(async () => ({
       env: { ANTHROPIC_API_KEY: 'test' },
       authSource: 'anthropic_api_key',
