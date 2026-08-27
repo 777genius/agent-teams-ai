@@ -125,42 +125,46 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('still runs readiness when a legacy caller asks to skip OpenCode preflight', async () => {
+    const invocation = launchInvocationFixture();
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >(
-      async (command) =>
-        ({
-          ...successfulOpenCodeLaunchData(command),
-          runId: 'run-1',
-          teamLaunchState: 'ready',
-          members: {
-            alice: {
-              sessionId: 'oc-session-1',
-              launchState: 'confirmed_alive',
-              runtimePid: 123,
-              model: 'openai/gpt-5.4-mini',
-              evidence: [
-                { kind: 'required_tools_proven', observedAt: '2026-04-21T00:00:00.000Z' },
-                { kind: 'delivery_ready', observedAt: '2026-04-21T00:00:00.000Z' },
-                { kind: 'member_ready', observedAt: '2026-04-21T00:00:00.000Z' },
-                { kind: 'run_ready', observedAt: '2026-04-21T00:00:00.000Z' },
-              ],
+    >(async (command, options) =>
+      invocation.dispatch(
+        options,
+        () =>
+          ({
+            ...successfulOpenCodeLaunchData(command),
+            runId: 'run-1',
+            teamLaunchState: 'ready',
+            members: {
+              alice: {
+                sessionId: 'oc-session-1',
+                launchState: 'confirmed_alive',
+                runtimePid: 123,
+                model: 'openai/gpt-5.4-mini',
+                evidence: [
+                  { kind: 'required_tools_proven', observedAt: '2026-04-21T00:00:00.000Z' },
+                  { kind: 'delivery_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+                  { kind: 'member_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+                  { kind: 'run_ready', observedAt: '2026-04-21T00:00:00.000Z' },
+                ],
+              },
             },
-          },
-          warnings: [],
-          diagnostics: [
-            {
-              code: 'opencode_launch_total_timing',
-              severity: 'info',
-              message: 'total=12ms provisioningProbe=3ms members=1',
-            },
-            {
-              code: 'member_reconcile',
-              severity: 'warning',
-              message: 'alice: sample reconcile diagnostic',
-            },
-          ],
-        }) satisfies OpenCodeLaunchTeamCommandData
+            warnings: [],
+            diagnostics: [
+              {
+                code: 'opencode_launch_total_timing',
+                severity: 'info',
+                message: 'total=12ms provisioningProbe=3ms members=1',
+              },
+              {
+                code: 'member_reconcile',
+                severity: 'warning',
+                message: 'alice: sample reconcile diagnostic',
+              },
+            ],
+          }) satisfies OpenCodeLaunchTeamCommandData
+      )
     );
     const bridge = bridgePort(
       readiness({
@@ -175,7 +179,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     );
     const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
 
-    const result = await adapter.launch(launchInput({ skipReadinessPreflight: true }));
+    const result = await adapter.launch(
+      launchInput({
+        skipReadinessPreflight: true,
+        onInvocationBoundary: invocation.onBoundary,
+      })
+    );
 
     expect(result.teamLaunchState).toBe('clean_success');
     expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
@@ -183,9 +192,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       expect.objectContaining({
         selectedModel: 'openai/gpt-5.4-mini',
         skipPermissions: true,
-          expectedCapabilitySnapshotId: null,
-      })
+        expectedCapabilitySnapshotId: null,
+        launchAttempt: expect.objectContaining({ requireFreshRetainedHostProof: true }),
+      }),
+      expect.objectContaining({ invocationAuthority: invocation.authority })
     );
+    invocation.expectConsumed();
     expect(result.diagnostics).toEqual(
       expect.arrayContaining([
         'info:opencode_launch_total_timing: total=12ms provisioningProbe=3ms members=1',
@@ -650,9 +662,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
   it('launches isolated worktrees with the member worktree as the OpenCode project path', async () => {
     const worktreePath = '/tmp/generated-worktrees/alice';
+    const invocation = launchInvocationFixture();
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >(async (command) => successfulOpenCodeLaunchData(command));
+    >(async (command, options) =>
+      invocation.dispatch(options, () => successfulOpenCodeLaunchData(command))
+    );
     const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
       getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-worktree')),
       launchOpenCodeTeam,
@@ -671,22 +686,28 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
             isolation: 'worktree',
           },
         ],
+        onInvocationBoundary: invocation.onBoundary,
       })
     );
 
     expect(result.teamLaunchState).toBe('clean_success');
-    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith(expect.objectContaining({
-      projectPath: worktreePath,
-      selectedModel: 'openai/gpt-5.4-mini',
-      requireExecutionProbe: true,
-    }));
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectPath: worktreePath,
+        selectedModel: 'openai/gpt-5.4-mini',
+        requireExecutionProbe: true,
+      })
+    );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         projectPath: worktreePath,
         expectedCapabilitySnapshotId: null,
         members: [expect.objectContaining({ name: 'alice' })],
-      })
+        launchAttempt: expect.objectContaining({ requireFreshRetainedHostProof: true }),
+      }),
+      expect.objectContaining({ invocationAuthority: invocation.authority })
     );
+    invocation.expectConsumed();
   });
 
   it('builds a lead-specific OpenCode bootstrap prompt for team-lead sessions', async () => {
@@ -984,6 +1005,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('launch retries transient readiness before a capability-unbound strict command', async () => {
+    const invocation = launchInvocationFixture();
     const checkReadiness = vi
       .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
       .mockResolvedValueOnce(
@@ -997,7 +1019,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const getLastOpenCodeRuntimeSnapshot = vi.fn(() => runtimeSnapshot('cap-fresh'));
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >((command) => Promise.resolve(successfulOpenCodeLaunchData(command)));
+    >((command, options) =>
+      Promise.resolve(invocation.dispatch(options, () => successfulOpenCodeLaunchData(command)))
+    );
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
       getLastOpenCodeRuntimeSnapshot,
@@ -1006,7 +1030,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
     vi.useFakeTimers();
     try {
-      const resultPromise = adapter.launch(launchInput());
+      const resultPromise = adapter.launch(
+        launchInput({ onInvocationBoundary: invocation.onBoundary })
+      );
       await Promise.resolve();
       await vi.advanceTimersByTimeAsync(750);
 
@@ -1022,18 +1048,24 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         expectedCapabilitySnapshotId: null,
-      })
+        launchAttempt: expect.objectContaining({ requireFreshRetainedHostProof: true }),
+      }),
+      expect.objectContaining({ invocationAuthority: invocation.authority })
     );
+    invocation.expectConsumed();
   });
 
   it('refreshes readiness availability without forwarding execution proof authorization', async () => {
     const executionProof = reusableExecutionProof();
+    const invocation = launchInvocationFixture();
     const checkReadiness = vi.fn(async () =>
       readiness({ state: 'ready', launchAllowed: true, executionProof })
     );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >((command) => Promise.resolve(successfulOpenCodeLaunchData(command)));
+    >((command, options) =>
+      Promise.resolve(invocation.dispatch(options, () => successfulOpenCodeLaunchData(command)))
+    );
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
       getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
@@ -1041,12 +1073,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
 
     await adapter.prepare(launchInput());
-    await adapter.launch(launchInput());
+    await adapter.launch(launchInput({ onInvocationBoundary: invocation.onBoundary }));
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
-      expect.not.objectContaining({ executionProof: expect.anything() })
+      expect.not.objectContaining({ executionProof: expect.anything() }),
+      expect.objectContaining({ invocationAuthority: invocation.authority })
     );
+    expect(launchOpenCodeTeam.mock.calls[0]?.[1]).not.toHaveProperty('executionProof');
+    invocation.expectConsumed();
   });
 
   it('does not reuse OAuth execution proof across prepare and launch', async () => {
@@ -1055,12 +1090,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       credentialMode: 'oauth' as const,
       reusable: false,
     };
+    const invocation = launchInvocationFixture();
     const checkReadiness = vi.fn(async () =>
       readiness({ state: 'ready', launchAllowed: true, executionProof: oauthProof })
     );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >((command) => Promise.resolve(successfulOpenCodeLaunchData(command)));
+    >((command, options) =>
+      Promise.resolve(invocation.dispatch(options, () => successfulOpenCodeLaunchData(command)))
+    );
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
       getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
@@ -1068,12 +1106,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
 
     await adapter.prepare(launchInput());
-    await adapter.launch(launchInput());
+    await adapter.launch(launchInput({ onInvocationBoundary: invocation.onBoundary }));
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
-      expect.not.objectContaining({ executionProof: expect.anything() })
+      expect.not.objectContaining({ executionProof: expect.anything() }),
+      expect.objectContaining({ invocationAuthority: invocation.authority })
     );
+    expect(launchOpenCodeTeam.mock.calls[0]?.[1]).not.toHaveProperty('executionProof');
+    invocation.expectConsumed();
   });
 
   it('singleflights concurrent readiness availability checks', async () => {
@@ -1106,9 +1147,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('passes manual tool approval intent with a fresh capability precondition', async () => {
+    const invocation = launchInvocationFixture();
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >((command) => Promise.resolve(successfulOpenCodeLaunchData(command)));
+    >((command, options) =>
+      Promise.resolve(invocation.dispatch(options, () => successfulOpenCodeLaunchData(command)))
+    );
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
         readiness({ state: 'ready', launchAllowed: true })
@@ -1117,23 +1161,36 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       launchOpenCodeTeam,
     });
 
-    await expect(adapter.launch(launchInput({ skipPermissions: false }))).resolves.toMatchObject({
-      teamLaunchState: 'clean_success',
-    });
+    await expect(
+      adapter.launch(
+        launchInput({
+          skipPermissions: false,
+          onInvocationBoundary: invocation.onBoundary,
+        })
+      )
+    ).resolves.toMatchObject({ teamLaunchState: 'clean_success' });
 
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         skipPermissions: false,
         expectedCapabilitySnapshotId: null,
-      })
+        launchAttempt: expect.objectContaining({ requireFreshRetainedHostProof: true }),
+      }),
+      expect.objectContaining({ invocationAuthority: invocation.authority })
     );
+    invocation.expectConsumed();
   });
 
   it('preserves Kimi K3 effort as the OpenCode launch variant', async () => {
+    const invocation = launchInvocationFixture();
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >((command) =>
-      Promise.resolve(successfulOpenCodeLaunchData(command, { model: 'kimi-for-coding/k3' }))
+    >((command, options) =>
+      Promise.resolve(
+        invocation.dispatch(options, () =>
+          successfulOpenCodeLaunchData(command, { model: 'kimi-for-coding/k3' })
+        )
+      )
     );
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
@@ -1161,6 +1218,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
             cwd: '/repo',
           },
         ],
+        onInvocationBoundary: invocation.onBoundary,
       })
     );
 
@@ -1174,15 +1232,21 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
             effort: 'max',
           }),
         ],
-      })
+        launchAttempt: expect.objectContaining({ requireFreshRetainedHostProof: true }),
+      }),
+      expect.objectContaining({ invocationAuthority: invocation.authority })
     );
+    invocation.expectConsumed();
   });
 
   it('launches model-less Default selections with the readiness-resolved model', async () => {
+    const invocation = launchInvocationFixture();
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >(async (command) =>
-      successfulOpenCodeLaunchData(command, { model: 'opencode/big-pickle' })
+    >(async (command, options) =>
+      invocation.dispatch(options, () =>
+        successfulOpenCodeLaunchData(command, { model: 'opencode/big-pickle' })
+      )
     );
     const adapter = new OpenCodeTeamRuntimeAdapter(
       bridgePort(
@@ -1206,6 +1270,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
             cwd: '/repo',
           },
         ],
+        onInvocationBoundary: invocation.onBoundary,
       })
     );
 
@@ -1213,8 +1278,11 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         selectedModel: 'opencode/big-pickle',
-      })
+        launchAttempt: expect.objectContaining({ requireFreshRetainedHostProof: true }),
+      }),
+      expect.objectContaining({ invocationAuthority: invocation.authority })
     );
+    invocation.expectConsumed();
     expect(result.members.alice?.model).toBe('opencode/big-pickle');
   });
 
@@ -2340,6 +2408,50 @@ function bridgePort(
   return {
     checkOpenCodeTeamLaunchReadiness: vi.fn(async () => readinessResult),
     ...overrides,
+  };
+}
+
+function launchInvocationFixture() {
+  type InvocationAuthority = NonNullable<
+    NonNullable<
+      Parameters<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>[1]
+    >['invocationAuthority']
+  >;
+
+  let consumed = false;
+  let authority: InvocationAuthority | undefined;
+  const onBoundary = vi.fn(async () => {
+    authority = {
+      invoke<T>(invocation: () => T): T {
+        if (consumed) throw new Error('Launch invocation authority was already used');
+        consumed = true;
+        return invocation();
+      },
+    };
+    return authority;
+  });
+  return {
+    get authority(): InvocationAuthority {
+      if (!authority) throw new Error('Launch invocation authority was not issued');
+      return authority;
+    },
+    onBoundary,
+    dispatch<T>(
+      options: Parameters<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>[1],
+      invocation: () => T
+    ): T {
+      expect(options?.invocationAuthority).toBe(authority);
+      if (!authority) throw new Error('Launch invocation authority was not issued');
+      return authority.invoke(invocation);
+    },
+    expectConsumed(): void {
+      expect(onBoundary).toHaveBeenCalledTimes(1);
+      expect(Object.keys(authority ?? {})).toEqual(['invoke']);
+      if (!authority) throw new Error('Launch invocation authority was not issued');
+      expect(() => authority.invoke(() => undefined)).toThrow(
+        'Launch invocation authority was already used'
+      );
+    },
   };
 }
 
