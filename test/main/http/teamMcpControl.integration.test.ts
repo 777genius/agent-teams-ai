@@ -264,47 +264,6 @@ function prepareDesktopExecutionProof(request: TeamLaunchRequest, roster: TeamMe
   return prepared.executionProof;
 }
 
-async function runDesktopAuthorizedFakeLaunch(input: {
-  service: TeamDataService;
-  request: TeamLaunchRequest;
-  roster: TeamMember[];
-  response?: TeamLaunchResponse;
-  onFakeSpawn?: (request: TeamLaunchRequest) => void;
-}): Promise<TeamLaunchResponse> {
-  const admitted = await admitProductionTeamRosterLaunch(
-    input.service,
-    input.request,
-    undefined,
-    true,
-    input.roster
-  );
-  return admitted.context.run(admitted.request, async (boundRequest) => {
-    const binding = boundRequest.rosterLaunchBinding;
-    expect(binding).toMatchObject({
-      transactionId: admitted.request.rosterTransactionId,
-      teamName: input.request.teamName,
-      rosterFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
-      rosterRevision: expect.stringMatching(/^[a-f0-9]{64}$/),
-      launchCommandId: admitted.request.rosterTransactionId,
-      launchRequestFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
-      executionProof: {
-        authorityId: expect.any(String),
-        generation: expect.any(Number),
-        requestDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
-      },
-    });
-    if (input.response?.launchStatus === 'already_launching') return input.response;
-
-    const invocation = await crossRosterLaunchInvocationBoundary();
-    invocation.invoke(() => input.onFakeSpawn?.(boundRequest));
-    return {
-      runId: binding!.launchCommandId,
-      launchStatus: 'not_started',
-      ...input.response,
-    };
-  });
-}
-
 function createServices(claudeRoot: string): {
   configureDraftTeamForTest: (teamName: string) => Promise<void>;
   launchTeamCalls: TeamLaunchRequest[];
@@ -664,34 +623,70 @@ describe('MCP team tools over the local REST control API', () => {
     }
   });
 
-  it('returns active provisioning re-entry without waiting after real desktop admission', async () => {
+  it('returns an already-launching MCP response without polling provisioning status', async () => {
     const claudeRoot = await mkdtemp(path.join(tmpdir(), 'agent-teams-control-active-'));
     const projectDir = await mkdtemp(path.join(tmpdir(), 'agent-teams-project-active-'));
     const teamName = 'mcp-active-launch';
     setClaudeBasePathOverride(claudeRoot);
+
+    const app = Fastify();
+    const controlUrl = 'http://agent-teams-active-control.test';
+    let provisioningStatusCalls = 0;
+    let releaseProvisioningStatus!: () => void;
+    const provisioningStatusRelease = new Promise<void>((resolve) => {
+      releaseProvisioningStatus = resolve;
+    });
+    app.post<{ Params: { teamName: string } }>('/api/teams/:teamName/launch', (request) => ({
+      teamName: request.params.teamName,
+      runId: 'active-run-1',
+      launchStatus: 'already_launching',
+      alreadyLaunching: true,
+    }));
+    app.get('/api/teams/provisioning/:runId', async () => {
+      provisioningStatusCalls += 1;
+      await provisioningStatusRelease;
+      throw new Error('MCP controller unexpectedly polled provisioning status');
+    });
+    const restoreFetch = installControlApiFetchMock(app, controlUrl);
     try {
       await mkdir(path.join(claudeRoot, 'teams', teamName), { recursive: true });
-      const roster = canonicalDesktopRoster();
-      const request = canonicalDesktopLaunchRequest(projectDir, teamName);
-      request.executionProof = prepareDesktopExecutionProof(request, roster);
-      const service = new TeamDataService();
-      const launched = await runDesktopAuthorizedFakeLaunch({
-        service,
-        request,
-        roster,
-        response: {
-          runId: 'active-run-1',
-          launchStatus: 'already_launching',
-          alreadyLaunching: true,
-        },
-      });
-      expect(launched).toMatchObject({
+      await writeFile(
+        path.join(claudeRoot, 'teams', teamName, 'config.json'),
+        JSON.stringify({ name: teamName, projectPath: projectDir, members: [] }),
+        'utf8'
+      );
+
+      const outcome = await Promise.race([
+        Promise.resolve(
+          getTool('team_launch').execute({
+            claudeDir: claudeRoot,
+            controlUrl,
+            teamName,
+            cwd: projectDir,
+            waitForReady: true,
+          })
+        ).then((result) => ({ kind: 'returned' as const, result })),
+        new Promise<{ kind: 'timed_out' }>((resolve) => {
+          setTimeout(() => resolve({ kind: 'timed_out' }), 250);
+        }),
+      ]);
+
+      expect(outcome.kind).toBe('returned');
+      if (outcome.kind !== 'returned') {
+        throw new Error('MCP team_launch waited for provisioning status');
+      }
+      expect(parseJsonToolResult(outcome.result)).toMatchObject({
+        teamName,
         runId: 'active-run-1',
+        waitForReady: false,
         launchStatus: 'already_launching',
         alreadyLaunching: true,
       });
+      expect(provisioningStatusCalls).toBe(0);
     } finally {
-      invalidateAuthoritativeModelExecutionProofs();
+      releaseProvisioningStatus();
+      restoreFetch();
+      await app.close();
       await rm(claudeRoot, { recursive: true, force: true });
       await rm(projectDir, { recursive: true, force: true });
       setClaudeBasePathOverride(null);
