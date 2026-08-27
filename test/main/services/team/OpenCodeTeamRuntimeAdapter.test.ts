@@ -2448,7 +2448,8 @@ function launchInvocationFixture() {
       expect(onBoundary).toHaveBeenCalledTimes(1);
       expect(Object.keys(authority ?? {})).toEqual(['invoke']);
       if (!authority) throw new Error('Launch invocation authority was not issued');
-      expect(() => authority.invoke(() => undefined)).toThrow(
+      const issuedAuthority = authority;
+      expect(() => issuedAuthority.invoke(() => undefined)).toThrow(
         'Launch invocation authority was already used'
       );
     },
