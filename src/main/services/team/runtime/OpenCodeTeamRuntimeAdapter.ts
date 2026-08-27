@@ -48,6 +48,7 @@ import type {
   OpenCodeStopTeamCommandData,
   OpenCodeTeamMemberLaunchBridgeState,
 } from '../opencode/bridge/OpenCodeBridgeCommandContract';
+import type { OpenCodeLaunchTeamBridge } from '../opencode/bridge/OpenCodeBridgeInvocationAuthority';
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 import type {
@@ -87,7 +88,7 @@ export interface OpenCodeTeamRuntimeBridgePort {
     selectedModel?: string | null,
     requireExecutionProbe?: boolean
   ): OpenCodeBridgeRuntimeSnapshot | null;
-  launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
+  launchOpenCodeTeam?: OpenCodeLaunchTeamBridge;
   reconcileOpenCodeTeam?(
     input: OpenCodeReconcileTeamCommandBody
   ): Promise<OpenCodeLaunchTeamCommandData>;
@@ -521,11 +522,10 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       ]);
     }
     const invocationLease = await input.onInvocationBoundary?.();
-    const dispatch = invocationLease
-      ? invocationLease.invoke(() => this.bridge.launchOpenCodeTeam!(dispatchedCommand))
-      : this.bridge.launchOpenCodeTeam(dispatchedCommand);
-    input.onInvocationDispatched?.();
-    const data = await dispatch;
+    const data = await this.bridge.launchOpenCodeTeam(dispatchedCommand, {
+      invocationAuthority: invocationLease,
+      onInvocationDispatched: input.onInvocationDispatched,
+    });
     const correlated = correlateOpenCodeLaunchAttemptResponseV1({
       previouslyVerifiedRequest: {
         ...dispatchedCommand.launchAttempt,

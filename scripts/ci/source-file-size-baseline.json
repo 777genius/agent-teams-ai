@@ -53,7 +53,7 @@
     "src/main/services/team/AgentTeamsMcpHttpServer.ts": 1410,
     "src/main/services/team/ChangeExtractorService.ts": 1739,
     "src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract.ts": 1172,
-    "src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.ts": 898,
+    "src/main/services/team/opencode/bridge/OpenCodeReadinessBridge.ts": 894,
     "src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService.ts": 1578,
     "src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger.ts": 1286,
     "src/main/services/team/opencode/delivery/RuntimeDeliveryJournal.ts": 1442,

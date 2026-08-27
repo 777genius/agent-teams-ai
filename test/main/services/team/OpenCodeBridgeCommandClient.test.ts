@@ -89,6 +89,77 @@ describe('OpenCodeBridgeCommandClient', () => {
     await expect(fs.access(outputPath)).rejects.toThrow();
   });
 
+  it('reasserts invocation authority after deferred environment resolution and does not dispatch when it is lost', async () => {
+    const environmentStarted = deferred<void>();
+    const releaseEnvironment = deferred<NodeJS.ProcessEnv>();
+    let authorityCurrent = true;
+    const onInvocationDispatched = vi.fn();
+    const client = createClient({
+      envProvider: async () => {
+        environmentStarted.resolve();
+        return releaseEnvironment.promise;
+      },
+    });
+
+    const executing = client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+        invocationAuthority: {
+          invoke(invocation) {
+            if (!authorityCurrent) throw new Error('invocation authority lost');
+            authorityCurrent = false;
+            return invocation();
+          },
+        },
+        onInvocationDispatched,
+      }
+    );
+    await environmentStarted.promise;
+    authorityCurrent = false;
+    releaseEnvironment.resolve({ PATH: '/usr/bin' });
+
+    await expect(executing).rejects.toThrow('invocation authority lost');
+    expect(runner.calls).toHaveLength(0);
+    expect(onInvocationDispatched).not.toHaveBeenCalled();
+  });
+
+  it('consumes authority immediately around runner dispatch and reports dispatch after the call begins', async () => {
+    const events: string[] = [];
+    const processRunner: OpenCodeBridgeProcessRunner = {
+      run: vi.fn(() => {
+        events.push('runner');
+        return Promise.resolve({
+          stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
+          stderr: '',
+          exitCode: 0,
+          timedOut: false,
+        });
+      }),
+    };
+    const client = createClient({ processRunner });
+
+    await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      {
+        cwd: '/tmp/project',
+        timeoutMs: 10_000,
+        invocationAuthority: {
+          invoke(invocation) {
+            events.push('authority');
+            return invocation();
+          },
+        },
+        onInvocationDispatched: () => events.push('dispatched'),
+      }
+    );
+
+    expect(events).toEqual(['authority', 'runner', 'dispatched']);
+  });
+
   it('reads bridge JSON from the output file when stdout is empty', async () => {
     runner.nextResult = {
       stdout: '',
@@ -858,4 +929,12 @@ class FakeDiagnosticsSink implements OpenCodeBridgeDiagnosticsSink {
   readonly append = vi.fn(async (event: OpenCodeBridgeDiagnosticEvent) => {
     this.events.push(event);
   });
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
 }

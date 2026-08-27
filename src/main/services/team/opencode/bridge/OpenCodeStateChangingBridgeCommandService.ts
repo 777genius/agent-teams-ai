@@ -36,6 +36,7 @@ import type {
   OpenCodeBridgeCommandLedger,
   OpenCodeBridgeCommandLedgerEntry,
 } from './OpenCodeBridgeCommandLedgerStore';
+import type { OpenCodeBridgeInvocationOptions } from './OpenCodeBridgeInvocationAuthority';
 import type { OpenCodeLaunchAttemptResponse } from './OpenCodeLaunchAttemptContractV1';
 
 const DEFAULT_COMMAND_LEASE_ACQUIRE_TIMEOUT_MS = 10_000;
@@ -51,7 +52,7 @@ export interface OpenCodeBridgeCommandExecutor {
       requestId?: string;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
-    }
+    } & OpenCodeBridgeInvocationOptions
   ): Promise<OpenCodeBridgeResult<TData>>;
 }
 
@@ -127,17 +128,19 @@ export class OpenCodeStateChangingBridgeCommandService {
     this.failpoints = options.failpoints ?? {};
   }
 
-  async execute<TBody, TData>(input: {
-    command: OpenCodeBridgeCommandName;
-    teamName: string;
-    laneId?: string | null;
-    runId: string | null;
-    capabilitySnapshotId: string | null;
-    behaviorFingerprint: string | null;
-    body: TBody;
-    cwd: string;
-    timeoutMs: number;
-  }): Promise<OpenCodeBridgeResult<TData>> {
+  async execute<TBody, TData>(
+    input: {
+      command: OpenCodeBridgeCommandName;
+      teamName: string;
+      laneId?: string | null;
+      runId: string | null;
+      capabilitySnapshotId: string | null;
+      behaviorFingerprint: string | null;
+      body: TBody;
+      cwd: string;
+      timeoutMs: number;
+    } & OpenCodeBridgeInvocationOptions
+  ): Promise<OpenCodeBridgeResult<TData>> {
     const normalizedLaneId = input.laneId ?? null;
     const genericCommandIdempotencyKey = createOpenCodeBridgeIdempotencyKey({
       command: input.command,
@@ -304,6 +307,8 @@ export class OpenCodeStateChangingBridgeCommandService {
           cwd: input.cwd,
           timeoutMs: input.timeoutMs,
           requestId: commandRequestId,
+          invocationAuthority: input.invocationAuthority,
+          onInvocationDispatched: input.onInvocationDispatched,
         }
       );
 

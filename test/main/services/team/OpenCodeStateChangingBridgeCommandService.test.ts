@@ -36,6 +36,7 @@ import {
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { createOpenCodeStrictLaunchLedgerKey } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStrictLaunchLedgerIdentity';
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
+import { RosterLaunchKnownNoStartError } from '../../../../src/main/services/team/provisioning/TeamProvisioningRosterLaunchOutcome';
 import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import orchestratorVector from '../../../fixtures/team/opencode-launch-request-correlation-golden.json';
 
@@ -102,6 +103,38 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(bridge.calls).toHaveLength(0);
     await expect(ledger.list()).resolves.toEqual([]);
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
+  it('forwards opaque invocation authority across deferred manifest work and fails known-no-start when invalidated', async () => {
+    const manifestStarted = deferred<void>();
+    const releaseManifest = deferred<RuntimeStoreManifestEvidence>();
+    manifestReader.read = vi.fn(async () => {
+      manifestStarted.resolve();
+      return releaseManifest.promise;
+    });
+    let authorityCurrent = true;
+    const onInvocationDispatched = vi.fn();
+    const service = createService();
+    const executing = service.execute({
+      ...buildLaunchInput(),
+      invocationAuthority: {
+        invoke(invocation) {
+          if (!authorityCurrent) {
+            throw new RosterLaunchKnownNoStartError('launch authority invalidated');
+          }
+          authorityCurrent = false;
+          return invocation();
+        },
+      },
+      onInvocationDispatched,
+    });
+    await manifestStarted.promise;
+    authorityCurrent = false;
+    releaseManifest.resolve(manifestReader.manifest);
+
+    await expect(executing).rejects.toBeInstanceOf(RosterLaunchKnownNoStartError);
+    expect(bridge.calls).toHaveLength(0);
+    expect(onInvocationDispatched).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -1222,6 +1255,50 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     });
   });
 
+  it('threads adapter invocation authority to the final bridge dispatch without firing early', async () => {
+    const events: string[] = [];
+    bridge.resultFactory = ({ command, body, options }) => {
+      if (command === 'opencode.readiness') {
+        return bridgeSuccess({
+          requestId: options.requestId,
+          command,
+          data: readyOpenCodeLaunchReadiness(),
+        });
+      }
+      events.push('runner');
+      const launchBody = body as unknown as OpenCodeLaunchTeamCommandBody;
+      return bridgeSuccess({
+        requestId: options.requestId,
+        command,
+        data: {
+          runId: launchBody.runId,
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+          members: strictLaunchMembers(launchBody),
+          launchAttempt: strictLaunchResponse(launchBody),
+        },
+      });
+    };
+    const input: TeamRuntimeLaunchInput = {
+      ...buildAdapterLaunchInput(),
+      onInvocationBoundary: async () => {
+        events.push('boundary');
+        return {
+          invoke(invocation) {
+            events.push('authority');
+            return invocation();
+          },
+        };
+      },
+      onInvocationDispatched: () => events.push('dispatched'),
+    };
+
+    await expect(createProductionAdapter(createService(), bridge).launch(input)).resolves.toMatchObject(
+      { teamLaunchState: 'clean_success' }
+    );
+    expect(events).toEqual(['boundary', 'authority', 'runner', 'dispatched']);
+  });
+
   function createService(
     overrides: {
       leaseAcquireTimeoutMs?: number;
@@ -1719,12 +1796,12 @@ class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
   calls: Array<{
     command: OpenCodeBridgeCommandName;
     body: { prompt: string; preconditions: { idempotencyKey: string; commandLeaseId?: string } };
-    options: { cwd: string; timeoutMs: number; requestId?: string };
+    options: Parameters<OpenCodeBridgeCommandExecutor['execute']>[2];
   }> = [];
   resultFactory: (input: {
     command: OpenCodeBridgeCommandName;
     body: { prompt: string; preconditions: { idempotencyKey: string; commandLeaseId?: string } };
-    options: { cwd: string; timeoutMs: number; requestId?: string };
+    options: Parameters<OpenCodeBridgeCommandExecutor['execute']>[2];
   }) => OpenCodeBridgeResult<unknown> = ({ body, options }) =>
     bridgeSuccess({
       requestId: options.requestId,
@@ -1738,7 +1815,7 @@ class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
   async execute<TBody, TData>(
     command: OpenCodeBridgeCommandName,
     body: TBody,
-    options: { cwd: string; timeoutMs: number; requestId?: string }
+    options: Parameters<OpenCodeBridgeCommandExecutor['execute']>[2]
   ): Promise<OpenCodeBridgeResult<TData>> {
     const call = {
       command,
@@ -1748,8 +1825,13 @@ class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
       },
       options,
     };
-    this.calls.push(call);
-    return this.resultFactory(call) as OpenCodeBridgeResult<TData>;
+    const dispatch = () => {
+      this.calls.push(call);
+      const result = this.resultFactory(call) as OpenCodeBridgeResult<TData>;
+      options.onInvocationDispatched?.();
+      return result;
+    };
+    return options.invocationAuthority ? options.invocationAuthority.invoke(dispatch) : dispatch();
   }
 }
 
@@ -1779,4 +1861,12 @@ class FakeDiagnosticsSink implements OpenCodeStateChangingBridgeDiagnosticsSink 
 
 function sleep(delayMs: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+function deferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
 }
