@@ -16,6 +16,7 @@ import { providerConnectionService } from './ProviderConnectionService';
 import {
   applyProviderStatusCheck,
   createDefaultProviderStatus,
+  createDegradedProviderStatus,
   createPendingProviderStatus,
   createRuntimeStatusErrorProviderStatus,
   getLegacyProviderStatusCheck,
@@ -625,42 +626,21 @@ function mergeRuntimeCapabilitiesForCatalogHydration(
   };
 }
 
-function shouldPromoteHydratedAuthState(
-  liveProvider: CliProviderStatus,
-  hydratedProvider: CliProviderStatus
-): boolean {
-  return (
-    liveProvider.providerId === 'opencode' &&
-    liveProvider.authenticated !== true &&
-    hydratedProvider.authenticated === true
-  );
-}
-
 function mergeProviderCatalogFields(
   liveProvider: CliProviderStatus,
   hydratedProvider: CliProviderStatus
 ): CliProviderStatus {
+  if (hydratedProvider.statusCheckOutcome !== 'authoritative') {
+    return createDegradedProviderStatus(
+      liveProvider,
+      hydratedProvider.detailMessage ??
+        hydratedProvider.statusMessage ??
+        'Provider catalog hydration was not authoritative'
+    );
+  }
   const modelCatalog = hydratedProvider.modelCatalog ?? liveProvider.modelCatalog ?? null;
-  const promoteHydratedAuthState = shouldPromoteHydratedAuthState(liveProvider, hydratedProvider);
   return {
     ...liveProvider,
-    authenticated: promoteHydratedAuthState
-      ? hydratedProvider.authenticated
-      : liveProvider.authenticated,
-    authMethod: promoteHydratedAuthState ? hydratedProvider.authMethod : liveProvider.authMethod,
-    verificationState: promoteHydratedAuthState
-      ? hydratedProvider.verificationState
-      : liveProvider.verificationState,
-    capabilities: promoteHydratedAuthState
-      ? hydratedProvider.capabilities
-      : liveProvider.capabilities,
-    statusMessage: promoteHydratedAuthState
-      ? hydratedProvider.statusMessage
-      : liveProvider.statusMessage,
-    detailMessage: promoteHydratedAuthState
-      ? hydratedProvider.detailMessage
-      : liveProvider.detailMessage,
-    backend: promoteHydratedAuthState ? hydratedProvider.backend : liveProvider.backend,
     models: hydratedProvider.models.length > 0 ? hydratedProvider.models : liveProvider.models,
     modelCatalog,
     modelCatalogRefreshState: modelCatalog
@@ -839,7 +819,7 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private shouldUseLegacyProviderTimeoutFallback(providerId: CliProviderId): boolean {
-    return providerId === 'anthropic' || providerId === 'codex' || providerId === 'opencode';
+    return providerId === 'anthropic' || providerId === 'codex';
   }
 
   private getProviderStatusRuntimeTimeout(
@@ -1033,19 +1013,25 @@ export class ClaudeMultimodelBridgeService {
       return provider;
     }
     const modelCatalog = mapRuntimeProviderModelCatalog(providerId, runtimeStatus.modelCatalog);
+    const statusCheck = resolveRuntimeProviderStatusCheck(runtimeStatus);
+    const isAuthoritative = statusCheck.statusCheckOutcome === 'authoritative';
 
     return {
       ...provider,
       supported: runtimeStatus.supported === true,
-      authenticated: runtimeStatus.authenticated === true,
-      authMethod: runtimeStatus.authMethod ?? null,
-      verificationState: runtimeStatus.verificationState ?? 'unknown',
-      ...resolveRuntimeProviderStatusCheck(runtimeStatus),
+      authenticated: isAuthoritative && runtimeStatus.authenticated === true,
+      authMethod: isAuthoritative ? (runtimeStatus.authMethod ?? null) : null,
+      verificationState: isAuthoritative
+        ? (runtimeStatus.verificationState ?? 'unknown')
+        : statusCheck.statusCheckOutcome === 'transient_error'
+          ? 'error'
+          : 'unknown',
+      ...statusCheck,
       statusMessage: runtimeStatus.statusMessage ?? null,
       detailMessage: runtimeStatus.detailMessage ?? null,
       canLoginFromUi: runtimeStatus.canLoginFromUi !== false,
       capabilities: {
-        teamLaunch: runtimeStatus.capabilities?.teamLaunch === true,
+        teamLaunch: isAuthoritative && runtimeStatus.capabilities?.teamLaunch === true,
         oneShot: runtimeStatus.capabilities?.oneShot === true,
         extensions: mapRuntimeExtensionCapabilities(
           providerId,
@@ -1139,6 +1125,7 @@ export class ClaudeMultimodelBridgeService {
       verificationState: 'error',
       statusMessage: issue,
       detailMessage: null,
+      capabilities: { ...provider.capabilities, teamLaunch: false },
       backend: null,
     };
   }
@@ -1178,13 +1165,21 @@ export class ClaudeMultimodelBridgeService {
       cwd: getProviderStatusCommandCwd(options.projectPath),
     });
     const parsed = extractJsonObject<UnifiedRuntimeStatusResponse>(stdout);
-    return providerConnectionService.enrichProviderStatus(
-      this.applyConnectionIssue(
-        this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
-        connectionIssues
-      ),
-      { hydrateModelCatalog: options.summary !== true }
+    const mappedProvider = this.applyConnectionIssue(
+      this.mapRuntimeProviderStatus(providerId, parsed.providers?.[providerId]),
+      connectionIssues
     );
+    if (mappedProvider.statusCheckOutcome !== 'authoritative') {
+      return {
+        ...mappedProvider,
+        authenticated: false,
+        authMethod: null,
+        capabilities: { ...mappedProvider.capabilities, teamLaunch: false },
+      };
+    }
+    return providerConnectionService.enrichProviderStatus(mappedProvider, {
+      hydrateModelCatalog: options.summary !== true,
+    });
   }
 
   private async getProviderStatusFromScopedRuntimeStatus(
@@ -1254,7 +1249,11 @@ export class ClaudeMultimodelBridgeService {
         return this.buildProviderStatusesSnapshot(providers, providerIds);
       }
 
-      return null;
+      for (const { providerId, error } of failures) {
+        providers.set(providerId, createRuntimeStatusErrorProviderStatus(providerId, error));
+      }
+      onUpdate?.(this.buildProviderStatusesSnapshot(providers, providerIds));
+      return this.buildProviderStatusesSnapshot(providers, providerIds);
     }
 
     logger.warn(
@@ -1306,7 +1305,10 @@ export class ClaudeMultimodelBridgeService {
     }
 
     for (const liveProvider of liveProviders) {
-      if (liveProvider.runtimeCapabilities?.modelCatalog?.dynamic !== true) {
+      if (
+        liveProvider.statusCheckOutcome !== 'authoritative' ||
+        liveProvider.runtimeCapabilities?.modelCatalog?.dynamic !== true
+      ) {
         this.clearProviderStatusHydrationGeneration(
           binaryPath,
           liveProvider.providerId,
@@ -1345,10 +1347,10 @@ export class ClaudeMultimodelBridgeService {
           if (!currentProvider) {
             return;
           }
-          providers.set(liveProvider.providerId, {
-            ...currentProvider,
-            modelCatalogRefreshState: 'error',
-          });
+          providers.set(
+            liveProvider.providerId,
+            createDegradedProviderStatus(currentProvider, error)
+          );
           logger.warn(
             `Provider catalog hydration failed for ${liveProvider.providerId}: ${
               error instanceof Error ? error.message : String(error)
@@ -1461,25 +1463,33 @@ export class ClaudeMultimodelBridgeService {
     onCatalogUpdate?: (provider: CliProviderStatus) => void,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus> {
+    const requestedProjectPath = options.projectPath?.trim() ?? '';
+    const projectPath = requestedProjectPath
+      ? getProviderStatusCommandCwd(requestedProjectPath)
+      : undefined;
+    if (requestedProjectPath && !projectPath) {
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Project-scoped provider status requires an absolute, non-root project path')
+      );
+    }
+
     await resolveInteractiveShellEnvBestEffort({
       timeoutMs: 1_500,
       fallbackEnv: process.env,
       background: false,
     });
 
-    const generation = this.beginProviderStatusHydration(
-      binaryPath,
-      [providerId],
-      options.projectPath
-    );
+    const generation = this.beginProviderStatusHydration(binaryPath, [providerId], projectPath);
     let backgroundHydrationOwnsGenerationCleanup = false;
     try {
       const provider = await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
         summary: true,
-        projectPath: options.projectPath,
+        projectPath,
       });
       if (
-        options.projectPath?.trim() &&
+        projectPath &&
+        provider.statusCheckOutcome === 'authoritative' &&
         provider.runtimeCapabilities?.modelCatalog?.dynamic === true
       ) {
         try {
@@ -1487,7 +1497,7 @@ export class ClaudeMultimodelBridgeService {
             binaryPath,
             provider.providerId,
             generation,
-            options
+            { projectPath }
           );
           if (
             hydratedProvider &&
@@ -1495,7 +1505,7 @@ export class ClaudeMultimodelBridgeService {
               binaryPath,
               provider.providerId,
               generation,
-              options.projectPath
+              projectPath
             )
           ) {
             return mergeProviderCatalogFields(provider, hydratedProvider);
@@ -1506,16 +1516,18 @@ export class ClaudeMultimodelBridgeService {
               error instanceof Error ? error.message : String(error)
             }`
           );
-          return {
-            ...provider,
-            modelCatalogRefreshState: 'error',
-            detailMessage: error instanceof Error ? error.message : String(error),
-          };
+          return createDegradedProviderStatus(provider, error);
         }
       }
-      if (provider.runtimeCapabilities?.modelCatalog?.dynamic === true && onCatalogUpdate) {
+      if (
+        provider.statusCheckOutcome === 'authoritative' &&
+        provider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
+        onCatalogUpdate
+      ) {
         backgroundHydrationOwnsGenerationCleanup = true;
-        void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation, options)
+        void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation, {
+          projectPath,
+        })
           .then((hydratedProvider) => {
             if (!hydratedProvider) {
               return;
@@ -1525,7 +1537,7 @@ export class ClaudeMultimodelBridgeService {
                 binaryPath,
                 provider.providerId,
                 generation,
-                options.projectPath
+                projectPath
               )
             ) {
               return;
@@ -1538,7 +1550,7 @@ export class ClaudeMultimodelBridgeService {
                 binaryPath,
                 provider.providerId,
                 generation,
-                options.projectPath
+                projectPath
               )
             ) {
               return;
@@ -1548,22 +1560,27 @@ export class ClaudeMultimodelBridgeService {
                 error instanceof Error ? error.message : String(error)
               }`
             );
-            onCatalogUpdate({
-              ...provider,
-              modelCatalogRefreshState: 'error',
-            });
+            onCatalogUpdate(createDegradedProviderStatus(provider, error));
           })
           .finally(() => {
             this.clearProviderStatusHydrationGeneration(
               binaryPath,
               providerId,
               generation,
-              options.projectPath
+              projectPath
             );
           });
       }
       return provider;
     } catch (error) {
+      if (providerId === 'opencode') {
+        logger.warn(
+          `OpenCode summary runtime status unavailable; returning degraded status without inventory fallback: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+        return createRuntimeStatusErrorProviderStatus(providerId, error);
+      }
       if (providerId === 'gemini' && this.isRuntimeStatusCompatibilityError(error)) {
         return this.buildGeminiStatus(binaryPath);
       }
@@ -1576,7 +1593,7 @@ export class ClaudeMultimodelBridgeService {
         );
         try {
           return await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
-            projectPath: options.projectPath,
+            projectPath,
           });
         } catch (fullError) {
           if (
@@ -1592,7 +1609,7 @@ export class ClaudeMultimodelBridgeService {
               binaryPath,
               providerId,
               fullError,
-              options
+              { projectPath }
             );
           }
           logger.warn(
@@ -1617,12 +1634,9 @@ export class ClaudeMultimodelBridgeService {
             summaryStatusError
           }`
         );
-        return this.getProviderStatusFromLegacyProbesOrError(
-          binaryPath,
-          providerId,
-          error,
-          options
-        );
+        return this.getProviderStatusFromLegacyProbesOrError(binaryPath, providerId, error, {
+          projectPath,
+        });
       }
       logger.warn(
         `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`
@@ -1634,7 +1648,7 @@ export class ClaudeMultimodelBridgeService {
           binaryPath,
           providerId,
           generation,
-          options.projectPath
+          projectPath
         );
       }
     }

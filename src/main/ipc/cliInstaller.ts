@@ -22,6 +22,11 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
 import { CodexBinaryResolver } from '../services/infrastructure/codexAppServer';
+import {
+  createRuntimeStatusErrorProviderStatus,
+  mergeProviderStatusDisplayEvidence,
+  sanitizeProviderStatusAuthority,
+} from '../services/runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
 
 import type { CliInstallerService } from '../services';
@@ -52,6 +57,7 @@ let statusCacheGeneration = 0;
 const STATUS_CACHE_TTL_MS = 5_000;
 const MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS = 3;
 const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
+const CLI_PROVIDER_IDS = new Set<unknown>(['anthropic', 'codex', 'gemini', 'opencode']);
 const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'codex', 'opencode']);
 const INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS = new Set<CliProviderId>(['opencode']);
 const MAX_PROVIDER_STATUS_PROJECT_PATH_LENGTH = 4_096;
@@ -88,6 +94,13 @@ function normalizeProviderStatusOptions(options: unknown): CliProviderStatusRequ
     throw new Error('Provider status project path cannot be a filesystem root');
   }
   return { projectPath: resolvedProjectPath };
+}
+
+function normalizeProviderId(providerId: unknown): CliProviderId {
+  if (!CLI_PROVIDER_IDS.has(providerId)) {
+    throw new Error('Provider id is invalid');
+  }
+  return providerId as CliProviderId;
 }
 
 function getProviderStatusRequestKey(
@@ -343,7 +356,9 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
     );
     const nextProviders = hasProvider
       ? cached.value.providers.map((provider) =>
-          provider.providerId === providerStatus.providerId ? providerStatus : provider
+          provider.providerId === providerStatus.providerId
+            ? mergeProviderStatusDisplayEvidence(providerStatus, provider)
+            : provider
         )
       : [...cached.value.providers, providerStatus];
     const authenticatedProvider =
@@ -368,10 +383,11 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
 
 async function handleGetProviderStatus(
   _event: IpcMainInvokeEvent,
-  providerId: CliProviderId,
+  rawProviderId: unknown,
   rawOptions?: unknown
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
+    const providerId = normalizeProviderId(rawProviderId);
     const options = normalizeProviderStatusOptions(rawOptions);
     const requestKey = getProviderStatusRequestKey(providerId, options);
     const inFlight = providerStatusInFlight.get(requestKey);
@@ -386,10 +402,19 @@ async function handleGetProviderStatus(
       currentService.getProviderStatus(providerId, options)
     )
       .then((status) => {
+        const matchedStatus =
+          status && status.providerId !== providerId
+            ? createRuntimeStatusErrorProviderStatus(
+                providerId,
+                new Error('Provider status response did not match the requested provider')
+              )
+            : status
+              ? sanitizeProviderStatusAuthority(status)
+              : null;
         if (generation === statusCacheGeneration && !options.projectPath) {
-          patchCachedProviderStatus(status);
+          patchCachedProviderStatus(matchedStatus);
         }
-        return status;
+        return matchedStatus;
       })
       .finally(() => {
         if (providerStatusInFlight.get(requestKey) === request) {
@@ -402,7 +427,7 @@ async function handleGetProviderStatus(
     return { success: true, data: status };
   } catch (error) {
     const msg = getErrorMessage(error);
-    logger.error(`Error in cliInstaller:getProviderStatus(${providerId}):`, msg);
+    logger.error(`Error in cliInstaller:getProviderStatus(${String(rawProviderId)}):`, msg);
     return { success: false, error: msg };
   }
 }
@@ -420,9 +445,10 @@ async function handleInstall(_event: IpcMainInvokeEvent): Promise<IpcResult<void
 
 async function handleVerifyProviderModels(
   _event: IpcMainInvokeEvent,
-  providerId: CliProviderId
+  rawProviderId: unknown
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
+    const providerId = normalizeProviderId(rawProviderId);
     const generation = statusCacheGeneration;
     const currentService = service;
     const status = await runProviderRuntimeRequest(providerId, () =>
@@ -434,7 +460,7 @@ async function handleVerifyProviderModels(
     return { success: true, data: status };
   } catch (error) {
     const msg = getErrorMessage(error);
-    logger.error(`Error in cliInstaller:verifyProviderModels(${providerId}):`, msg);
+    logger.error(`Error in cliInstaller:verifyProviderModels(${String(rawProviderId)}):`, msg);
     return { success: false, error: msg };
   }
 }

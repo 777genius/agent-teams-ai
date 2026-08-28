@@ -11,7 +11,6 @@ import {
   getCliProviderStatusScopeKey,
   reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
-import { isTeamProviderModelCatalogSettled } from '@renderer/utils/teamModelAvailability';
 
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
@@ -21,6 +20,36 @@ export interface EffectiveCliProviderStatusSnapshot {
   providerStatus: CliProviderStatus | null;
   loading: boolean;
   codexSnapshotPending: boolean;
+}
+
+/** Resolves one exact project scope without borrowing global catalog or launch authority. */
+export function resolveProjectScopedProviderStatus(
+  providerId: CliProviderId,
+  scopedProviderStatus: CliProviderStatus | null,
+  globalProviderStatus: CliProviderStatus | null
+): CliProviderStatus | null {
+  if (scopedProviderStatus?.providerId === providerId) {
+    return reconcileCliStatus(undefined, scopedProviderStatus);
+  }
+  if (!globalProviderStatus || globalProviderStatus.providerId !== providerId) {
+    return null;
+  }
+  return reconcileCliStatus(undefined, {
+    ...globalProviderStatus,
+    authenticated: false,
+    authMethod: null,
+    verificationState: 'unknown',
+    statusCheckOutcome: 'pending',
+    statusCheckErrorCode: 'partial_response',
+    models: [],
+    modelAvailability: [],
+    modelCatalog: null,
+    modelCatalogRefreshState: 'loading',
+    capabilities: {
+      ...globalProviderStatus.capabilities,
+      teamLaunch: false,
+    },
+  });
 }
 
 export function useEffectiveCliProviderStatus(
@@ -68,66 +97,11 @@ export function useEffectiveCliProviderStatus(
     const globalProvider = withCodexSnapshot.providers.find(
       (provider) => provider.providerId === providerId
     );
-    const scopedProviderFailed =
-      scopedProviderStatus?.verificationState === 'error' ||
-      scopedProviderStatus?.modelCatalogRefreshState === 'error';
-    const scopedProviderNeedsReadinessFallback =
-      scopedProviderStatus?.statusCheckOutcome === 'pending' ||
-      scopedProviderStatus?.statusCheckOutcome === 'transient_error' ||
-      scopedProviderStatus?.statusCheckOutcome === 'model_only';
-    const scopedProviderSettled = Boolean(
-      scopedProviderStatus && isTeamProviderModelCatalogSettled(providerId, scopedProviderStatus)
+    const projectProvider = resolveProjectScopedProviderStatus(
+      providerId,
+      scopedProviderStatus,
+      globalProvider ?? null
     );
-    const projectProviderBase = scopedProviderStatus ?? globalProvider ?? null;
-    const catalogFallbackProvider =
-      scopedProviderStatus?.modelCatalog != null ? scopedProviderStatus : (globalProvider ?? null);
-    const canReuseOpenCodeCatalog = Boolean(
-      providerId === 'opencode' && (catalogFallbackProvider?.modelCatalog?.models.length ?? 0) > 0
-    );
-    const projectProviderWithCatalogFallback =
-      projectProviderBase && catalogFallbackProvider && canReuseOpenCodeCatalog
-        ? {
-            ...projectProviderBase,
-            models:
-              projectProviderBase.models.length > 0
-                ? projectProviderBase.models
-                : catalogFallbackProvider.models,
-            modelAvailability:
-              (projectProviderBase.modelAvailability?.length ?? 0) > 0
-                ? projectProviderBase.modelAvailability
-                : catalogFallbackProvider.modelAvailability,
-            modelCatalog: projectProviderBase.modelCatalog ?? catalogFallbackProvider.modelCatalog,
-          }
-        : projectProviderBase;
-    let projectProvider: CliProviderStatus | null = null;
-    if (scopedProviderNeedsReadinessFallback && projectProviderBase) {
-      projectProvider = reconcileCliStatus(
-        undefined,
-        projectProviderWithCatalogFallback ?? projectProviderBase,
-        globalProvider ?? undefined
-      );
-    } else if (scopedProviderSettled) {
-      projectProvider = scopedProviderStatus;
-    } else if (scopedProviderFailed) {
-      projectProvider =
-        canReuseOpenCodeCatalog && projectProviderWithCatalogFallback
-          ? projectProviderWithCatalogFallback
-          : scopedProviderStatus;
-    } else if (projectProviderBase) {
-      projectProvider =
-        canReuseOpenCodeCatalog && projectProviderWithCatalogFallback
-          ? {
-              ...projectProviderWithCatalogFallback,
-              modelCatalogRefreshState: 'loading',
-            }
-          : {
-              ...projectProviderBase,
-              models: [],
-              modelAvailability: [],
-              modelCatalog: null,
-              modelCatalogRefreshState: 'loading',
-            };
-    }
     if (!projectProvider) {
       return withCodexSnapshot;
     }

@@ -86,6 +86,10 @@ function getLegacyRuntimeProviderStatusCheck(
   return null;
 }
 
+function hasStaleCatalogEvidence(provider: CliProviderStatus): boolean {
+  return Boolean(provider.modelCatalog && provider.modelCatalog.status !== 'ready');
+}
+
 function isCompleteRuntimeProviderStatus(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return false;
@@ -172,6 +176,9 @@ export function getProviderStatusCheckErrorCode(error: unknown): CliProviderStat
   if (lower.includes('timed out') || lower.includes('timeout')) {
     return 'timeout';
   }
+  if (lower.includes('runtime missing') || lower.includes('runtime was not found')) {
+    return 'runtime_missing';
+  }
   return 'unavailable';
 }
 
@@ -194,6 +201,118 @@ export function createRuntimeStatusErrorProviderStatus(
       ? 'OpenCode is taking longer than expected to load provider status. Your saved connections were not changed. Retry in a moment.'
       : message,
   };
+}
+
+/** Retains same-scope display evidence while revoking authentication and launch authority. */
+export function createDegradedProviderStatus(
+  previous: CliProviderStatus,
+  error: unknown
+): CliProviderStatus {
+  const degraded = createRuntimeStatusErrorProviderStatus(previous.providerId, error);
+  return {
+    ...previous,
+    authenticated: false,
+    authMethod: null,
+    verificationState: degraded.verificationState,
+    statusCheckOutcome: degraded.statusCheckOutcome,
+    statusCheckErrorCode: degraded.statusCheckErrorCode,
+    statusMessage: degraded.statusMessage,
+    detailMessage: degraded.detailMessage,
+    capabilities: {
+      ...previous.capabilities,
+      teamLaunch: false,
+    },
+    modelCatalog: previous.modelCatalog ? { ...previous.modelCatalog, status: 'stale' } : null,
+    modelCatalogRefreshState: previous.modelCatalog ? 'error' : degraded.modelCatalogRefreshState,
+  };
+}
+
+function hasRetainedModelEvidence(
+  incoming: CliProviderStatus,
+  current: CliProviderStatus
+): boolean {
+  return (
+    incoming.models.length === 0 &&
+    (incoming.modelAvailability?.length ?? 0) === 0 &&
+    !(incoming.modelCatalog?.status === 'ready' && incoming.modelCatalog.models.length > 0) &&
+    (current.models.length > 0 || (current.modelAvailability?.length ?? 0) > 0)
+  );
+}
+
+/**
+ * Merges only same-provider display evidence. Retained, stale, or incomplete
+ * evidence can remain visible, but can never preserve authentication or launch.
+ */
+export function mergeProviderStatusDisplayEvidence(
+  incoming: CliProviderStatus,
+  current: CliProviderStatus
+): CliProviderStatus {
+  if (incoming.providerId !== current.providerId) {
+    return createRuntimeStatusErrorProviderStatus(
+      current.providerId,
+      new Error('Provider status response did not match the requested provider')
+    );
+  }
+
+  const catalogRetained = incoming.modelCatalog == null && current.modelCatalog != null;
+  const modelsRetained = hasRetainedModelEvidence(incoming, current);
+  const launchUnproved =
+    incoming.statusCheckOutcome !== 'authoritative' ||
+    incoming.statusCheckErrorCode != null ||
+    hasStaleCatalogEvidence(incoming) ||
+    catalogRetained ||
+    modelsRetained;
+  const retainedCatalog = incoming.modelCatalog ?? current.modelCatalog ?? null;
+  const modelCatalog =
+    retainedCatalog && launchUnproved
+      ? { ...retainedCatalog, status: 'stale' as const }
+      : retainedCatalog;
+
+  return {
+    ...incoming,
+    supported: incoming.supported,
+    authenticated: launchUnproved ? false : incoming.authenticated,
+    authMethod: launchUnproved ? null : incoming.authMethod,
+    canLoginFromUi: launchUnproved ? current.canLoginFromUi : incoming.canLoginFromUi,
+    capabilities: launchUnproved
+      ? { ...incoming.capabilities, teamLaunch: false }
+      : incoming.capabilities,
+    selectedBackendId: launchUnproved ? current.selectedBackendId : incoming.selectedBackendId,
+    resolvedBackendId: launchUnproved ? current.resolvedBackendId : incoming.resolvedBackendId,
+    models: incoming.models.length > 0 ? incoming.models : current.models,
+    modelAvailability:
+      (incoming.modelAvailability?.length ?? 0) > 0
+        ? incoming.modelAvailability
+        : current.modelAvailability,
+    availableBackends:
+      (incoming.availableBackends?.length ?? 0) > 0
+        ? incoming.availableBackends
+        : current.availableBackends,
+    externalRuntimeDiagnostics:
+      (incoming.externalRuntimeDiagnostics?.length ?? 0) > 0
+        ? incoming.externalRuntimeDiagnostics
+        : current.externalRuntimeDiagnostics,
+    backend: incoming.backend ?? current.backend,
+    connection: incoming.connection ?? current.connection,
+    modelCatalog,
+    modelCatalogRefreshState:
+      modelCatalog && launchUnproved
+        ? incoming.modelCatalogRefreshState === 'loading'
+          ? 'loading'
+          : 'error'
+        : (incoming.modelCatalogRefreshState ?? current.modelCatalogRefreshState ?? 'idle'),
+    runtimeCapabilities: incoming.runtimeCapabilities ?? current.runtimeCapabilities ?? null,
+    subscriptionRateLimits:
+      incoming.subscriptionRateLimits ?? current.subscriptionRateLimits ?? null,
+  };
+}
+
+/** Applies authority rules when no same-provider snapshot has been cached yet. */
+export function sanitizeProviderStatusAuthority(provider: CliProviderStatus): CliProviderStatus {
+  return mergeProviderStatusDisplayEvidence(
+    provider,
+    createDefaultProviderStatus(provider.providerId)
+  );
 }
 
 export function applyProviderStatusCheck(
@@ -226,9 +345,9 @@ export function getLegacyProviderStatusCheck(
 }
 
 /**
- * Untyped or structurally incomplete responses never become authoritative by
- * inference. This keeps an older runtime's partial JSON from clearing saved
- * provider state in the desktop app.
+ * Untyped, legacy, or structurally incomplete responses never become
+ * authoritative by inference. Only an explicit, complete authoritative
+ * response may grant launch readiness.
  */
 export function resolveRuntimeProviderStatusCheck(runtimeStatus: unknown): ProviderStatusCheck {
   const record =
@@ -238,11 +357,21 @@ export function resolveRuntimeProviderStatusCheck(runtimeStatus: unknown): Provi
   const outcome = record?.statusCheckOutcome;
   const errorCode = record?.statusCheckErrorCode;
 
-  if (outcome === 'authoritative' && !isCompleteRuntimeProviderStatus(runtimeStatus)) {
-    return {
-      statusCheckOutcome: 'pending',
-      statusCheckErrorCode: 'partial_response',
-    };
+  if (outcome === 'authoritative') {
+    if (!isCompleteRuntimeProviderStatus(runtimeStatus)) {
+      return {
+        statusCheckOutcome: 'pending',
+        statusCheckErrorCode: 'partial_response',
+      };
+    }
+    if (errorCode !== undefined && errorCode !== null) {
+      const resolvedErrorCode = isStatusCheckErrorCode(errorCode) ? errorCode : 'partial_response';
+      return {
+        statusCheckOutcome:
+          resolvedErrorCode === 'partial_response' ? 'pending' : 'transient_error',
+        statusCheckErrorCode: resolvedErrorCode,
+      };
+    }
   }
 
   if (isStatusCheckOutcome(outcome)) {
@@ -263,12 +392,10 @@ export function resolveRuntimeProviderStatusCheck(runtimeStatus: unknown): Provi
     return legacyStatusCheck;
   }
 
-  return isCompleteRuntimeProviderStatus(runtimeStatus)
-    ? { statusCheckOutcome: 'authoritative' }
-    : {
-        statusCheckOutcome: 'pending',
-        statusCheckErrorCode: 'partial_response',
-      };
+  return {
+    statusCheckOutcome: 'pending',
+    statusCheckErrorCode: 'partial_response',
+  };
 }
 
 export function mapRuntimeExtensionCapabilities(

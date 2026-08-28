@@ -45,6 +45,12 @@ import {
   type ProviderModelAvailabilityContext,
   type ProviderModelAvailabilitySnapshot,
 } from '../runtime/CliProviderModelAvailabilityService';
+import {
+  createDegradedProviderStatus,
+  createRuntimeStatusErrorProviderStatus,
+  mergeProviderStatusDisplayEvidence,
+  sanitizeProviderStatusAuthority,
+} from '../runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor';
 
@@ -224,27 +230,6 @@ function cloneCliInstallationStatus(status: CliInstallationStatus): CliInstallat
       backend: provider.backend ? { ...provider.backend } : null,
       models: [...provider.models],
     })),
-  };
-}
-
-function mergeProviderStatusCatalogCache(
-  incomingProvider: CliProviderStatus,
-  currentProvider: CliProviderStatus
-): CliProviderStatus {
-  const modelCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
-  const incomingRefreshState = incomingProvider.modelCatalogRefreshState ?? null;
-  const shouldPreserveCurrentModels = incomingProvider.models.length === 0;
-
-  return {
-    ...incomingProvider,
-    models: shouldPreserveCurrentModels ? currentProvider.models : incomingProvider.models,
-    modelCatalog,
-    modelCatalogRefreshState:
-      modelCatalog && incomingRefreshState !== 'error'
-        ? 'ready'
-        : (incomingRefreshState ?? currentProvider.modelCatalogRefreshState ?? 'idle'),
-    runtimeCapabilities:
-      incomingProvider.runtimeCapabilities ?? currentProvider.runtimeCapabilities ?? null,
   };
 }
 
@@ -807,10 +792,10 @@ export class CliInstallerService {
     const nextProviders = hasProvider
       ? this.latestStatusSnapshot.providers.map((provider) =>
           provider.providerId === providerStatus.providerId
-            ? mergeProviderStatusCatalogCache(providerStatus, provider)
+            ? mergeProviderStatusDisplayEvidence(providerStatus, provider)
             : provider
         )
-      : [...this.latestStatusSnapshot.providers, providerStatus];
+      : [...this.latestStatusSnapshot.providers, sanitizeProviderStatusAuthority(providerStatus)];
     const authenticatedProvider = getFrontendAuthenticatedProvider(nextProviders);
 
     this.latestStatusSnapshot = {
@@ -921,13 +906,18 @@ export class CliInstallerService {
 
     const binaryPath = await ClaudeBinaryResolver.resolve();
     if (!binaryPath) {
-      return null;
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Provider runtime missing')
+      );
     }
 
     const flavor = getConfiguredCliFlavor();
     if (flavor !== 'agent_teams_orchestrator') {
-      const fullStatus = await this.getStatus();
-      return fullStatus.providers.find((provider) => provider.providerId === providerId) ?? null;
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Provider-scoped runtime status is unavailable for this CLI flavor')
+      );
     }
 
     const generation = this.statusGatherGeneration;
@@ -1092,10 +1082,16 @@ export class CliInstallerService {
         const recoveredHealthyStatus = this.getRecoverableHealthyStatus(binaryPath);
         if (recoveredHealthyStatus) {
           logger.warn(
-            `CLI version probe failed for ${binaryPath}, reusing last healthy status snapshot: ${versionProbe.error}`
+            `CLI version probe failed for ${binaryPath}, retaining stale display evidence without launch authority: ${versionProbe.error}`
           );
           Object.assign(r, recoveredHealthyStatus, {
             launchError: null,
+            authLoggedIn: false,
+            authMethod: null,
+            authStatusChecking: false,
+            providers: recoveredHealthyStatus.providers.map((provider) =>
+              createDegradedProviderStatus(provider, versionProbe.error)
+            ),
           });
           this.publishStatusSnapshotIfCurrent(r, generation);
           return;

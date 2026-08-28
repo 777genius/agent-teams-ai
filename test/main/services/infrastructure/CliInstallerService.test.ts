@@ -905,7 +905,7 @@ describe('CliInstallerService', () => {
       expect(verifiedProvider?.modelAvailability).toEqual([]);
     });
 
-    it('keeps non-empty OpenCode refresh models authoritative while preserving catalog metadata', async () => {
+    it('retains OpenCode catalog display metadata without preserving refresh authority', async () => {
       allowConsoleLogs();
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
       vi.mocked(getCliFlavorUiOptions).mockReturnValue({
@@ -1033,7 +1033,12 @@ describe('CliInstallerService', () => {
         'opencode/big-pickle',
         'openai/gpt-5.4',
       ]);
-      expect(opencode?.modelCatalogRefreshState).toBe('ready');
+      expect(opencode).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        capabilities: { teamLaunch: false },
+        modelCatalogRefreshState: 'loading',
+      });
     });
   });
 

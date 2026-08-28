@@ -170,7 +170,7 @@ describe('cliInstaller IPC handlers', () => {
     vi.clearAllMocks();
   });
 
-  it('does not let explicit hidden Gemini refresh poison cached frontend auth status', async () => {
+  it('revokes passive hidden Gemini authority without poisoning cached frontend status', async () => {
     service.getStatus.mockResolvedValue(
       status([
         provider({ providerId: 'anthropic' }),
@@ -202,7 +202,11 @@ describe('cliInstaller IPC handlers', () => {
       'gemini'
     )) as IpcResult<CliProviderStatus | null>;
     expect(gemini.success).toBe(true);
-    expect(gemini.data?.authenticated).toBe(true);
+    expect(gemini.data).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      capabilities: { teamLaunch: false },
+    });
 
     const cached = (await ipcMain.invoke(
       CLI_INSTALLER_GET_STATUS
