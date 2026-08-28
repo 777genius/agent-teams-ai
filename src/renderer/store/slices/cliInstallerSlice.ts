@@ -1408,7 +1408,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         }
         set((state) => {
           const currentCliStatus = state.cliStatus;
-          const nextLoading = silent
+          const nextLoading = silent && !projectPath
             ? state.cliProviderStatusLoading
             : {
                 ...state.cliProviderStatusLoading,
@@ -1522,7 +1522,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         logger.error(`Failed to fetch ${providerId} CLI status:`, error);
         set((state) => {
           const currentCliStatus = state.cliStatus;
-          const nextLoading = silent
+          const nextLoading = silent && !projectPath
             ? state.cliProviderStatusLoading
             : {
                 ...state.cliProviderStatusLoading,

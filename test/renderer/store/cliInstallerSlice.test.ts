@@ -202,12 +202,15 @@ function createReadyOpenCodeCatalogProvider(
 function createDeferredValue<T>(): {
   promise: Promise<T>;
   resolve: (value: T) => void;
+  reject: (reason: unknown) => void;
 } {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((resolvePromise) => {
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
+    reject = rejectPromise;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 describe('cliInstallerSlice', () => {
@@ -2723,33 +2726,79 @@ describe('cliInstallerSlice', () => {
       ).toBe('ollama/cached-model');
     });
 
-    it('keeps silent scoped provider failures out of the global CLI error channel', async () => {
+    it('clears provider loading after a silent scoped provider status succeeds', async () => {
+      const projectPath = '/tmp/project-silent-success';
+      const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+      const globalProvider = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
+      const scopedProvider = createReadyOpenCodeCatalogProvider('ollama/cached-model');
+      const refreshedProvider = createReadyOpenCodeCatalogProvider('ollama/refreshed-model');
+      const request = createDeferredValue<CliInstallationStatus['providers'][number]>();
       useStore.setState({
-        cliStatus: createMultimodelStatus([
-          createReadyOpenCodeCatalogProvider('opencode/big-pickle'),
-        ]),
+        cliStatus: createMultimodelStatus([globalProvider]),
+        cliProviderStatusByScope: { [scopeKey]: scopedProvider },
         cliStatusError: null,
       });
-      vi.mocked(api.cliInstaller.getProviderStatus).mockRejectedValue(
-        new Error('Scoped OpenCode catalog failed')
-      );
+      vi.mocked(api.cliInstaller.getProviderStatus).mockReturnValue(request.promise);
 
-      const loaded = await useStore.getState().fetchCliProviderStatus('opencode', {
-        projectPath: '/tmp/project-error',
+      const refresh = useStore.getState().fetchCliProviderStatus('opencode', {
+        projectPath,
         silent: true,
       });
 
-      expect(loaded).toBe(false);
-      expect(useStore.getState().cliStatusError).toBeNull();
+      expect(useStore.getState().cliProviderStatusLoading.opencode).toBe(true);
+
+      request.resolve(refreshedProvider);
+      await expect(refresh).resolves.toBe(true);
+
+      const state = useStore.getState();
+      expect(state.cliProviderStatusLoading.opencode).toBe(false);
+      expect(state.cliStatusError).toBeNull();
+      expect(state.cliProviderStatusByScope[scopeKey]?.models).toEqual([
+        'ollama/refreshed-model',
+      ]);
       expect(
-        useStore.getState().cliProviderStatusByScope[
-          getCliProviderStatusScopeKey('opencode', '/tmp/project-error')
-        ]
-      ).toMatchObject({
+        state.cliStatus?.providers.find((provider) => provider.providerId === 'opencode')?.models
+      ).toEqual(['opencode/big-pickle']);
+    });
+
+    it('clears provider loading after a silent scoped provider status fails', async () => {
+      const projectPath = '/tmp/project-silent-error';
+      const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+      const globalProvider = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
+      const scopedProvider = createReadyOpenCodeCatalogProvider('ollama/cached-model');
+      const request = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      useStore.setState({
+        cliStatus: createMultimodelStatus([globalProvider]),
+        cliProviderStatusByScope: { [scopeKey]: scopedProvider },
+        cliStatusError: null,
+      });
+      vi.mocked(api.cliInstaller.getProviderStatus).mockReturnValue(request.promise);
+
+      const refresh = useStore.getState().fetchCliProviderStatus('opencode', {
+        projectPath,
+        silent: true,
+      });
+
+      expect(useStore.getState().cliProviderStatusLoading.opencode).toBe(true);
+
+      request.reject(new Error('Scoped OpenCode catalog failed'));
+      await expect(refresh).resolves.toBe(false);
+
+      const state = useStore.getState();
+      expect(state.cliProviderStatusLoading.opencode).toBe(false);
+      expect(state.cliStatusError).toBeNull();
+      expect(state.cliProviderStatusByScope[scopeKey]).toMatchObject({
         verificationState: 'error',
         modelCatalogRefreshState: 'error',
         statusMessage: 'Scoped OpenCode catalog failed',
+        models: ['ollama/cached-model'],
       });
+      expect(state.cliProviderStatusByScope[scopeKey]?.modelCatalog?.defaultModelId).toBe(
+        'ollama/cached-model'
+      );
+      expect(
+        state.cliStatus?.providers.find((provider) => provider.providerId === 'opencode')?.models
+      ).toEqual(['opencode/big-pickle']);
     });
 
     it('keeps the newer scoped catalog when its request finishes first', async () => {
