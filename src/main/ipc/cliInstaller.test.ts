@@ -566,6 +566,269 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     expect(cachedStatusResult).toEqual({ success: true, data: createCliStatus() });
   });
 
+  test('rejects a late project authentication after a newer aggregate logout completes', async () => {
+    const projectDeferred = createDeferred<CliProviderStatus | null>();
+    const aggregateDeferred = createDeferred<CliInstallationStatus>();
+    const service = createInstallerService({
+      getStatus: vi.fn(() => aggregateDeferred.promise),
+      getProviderStatus: vi.fn(() => projectDeferred.promise),
+    });
+    const { invoke } = setupHandlers(service);
+    await invoke<IpcResult<void>>(CLI_INSTALLER_INVALIDATE_STATUS);
+
+    const projectRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+    );
+    await flushMicrotasks();
+    const aggregateRequest = invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
+
+    aggregateDeferred.resolve(
+      createCliStatus([
+        {
+          ...createProviderStatus('codex'),
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'authoritative',
+        },
+      ])
+    );
+    await expect(aggregateRequest).resolves.toMatchObject({
+      success: true,
+      data: { authLoggedIn: false },
+    });
+
+    projectDeferred.resolve({
+      ...createProviderStatus('codex'),
+      statusCheckOutcome: 'authoritative',
+    });
+    await expect(projectRequest).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('superseded'),
+    });
+  });
+
+  test('rejects a late aggregate authentication after a newer project logout completes', async () => {
+    const aggregateDeferred = createDeferred<CliInstallationStatus>();
+    const service = createInstallerService({
+      getStatus: vi.fn(() => aggregateDeferred.promise),
+      getProviderStatus: vi.fn(() =>
+        Promise.resolve({
+          ...createProviderStatus('codex'),
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'authoritative' as const,
+        })
+      ),
+    });
+    const { invoke } = setupHandlers(service);
+    await invoke<IpcResult<void>>(CLI_INSTALLER_INVALIDATE_STATUS);
+
+    const aggregateRequest = invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
+    await flushMicrotasks();
+    const projectResult = await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+    );
+    expect(projectResult.success).toBe(true);
+
+    aggregateDeferred.resolve(
+      createCliStatus([
+        {
+          ...createProviderStatus('codex'),
+          statusCheckOutcome: 'authoritative',
+        },
+      ])
+    );
+    await expect(aggregateRequest).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('superseded'),
+    });
+  });
+
+  test('accepts a completed project authentication followed by a later aggregate logout', async () => {
+    const service = createInstallerService({
+      getStatus: vi.fn(() =>
+        Promise.resolve(
+          createCliStatus([
+            {
+              ...createProviderStatus('codex'),
+              authenticated: false,
+              authMethod: null,
+              verificationState: 'unknown',
+              statusCheckOutcome: 'authoritative',
+            },
+          ])
+        )
+      ),
+      getProviderStatus: vi.fn(() =>
+        Promise.resolve({
+          ...createProviderStatus('codex'),
+          statusCheckOutcome: 'authoritative' as const,
+        })
+      ),
+    });
+    const { invoke } = setupHandlers(service);
+    await invoke<IpcResult<void>>(CLI_INSTALLER_INVALIDATE_STATUS);
+
+    const projectResult = await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+    );
+    const aggregateResult =
+      await invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
+
+    expect(projectResult.success).toBe(true);
+    expect(aggregateResult).toMatchObject({ success: true, data: { authLoggedIn: false } });
+  });
+
+  test('keeps unrelated provider observations current when one provider is superseded', async () => {
+    const statusDeferredByProvider = new Map<CliProviderId, Deferred<CliProviderStatus | null>>();
+    const service = createInstallerService({
+      getStatus: vi.fn(() =>
+        Promise.resolve(
+          createCliStatus([
+            {
+              ...createProviderStatus('codex'),
+              authenticated: false,
+              authMethod: null,
+              verificationState: 'unknown',
+              statusCheckOutcome: 'authoritative',
+            },
+          ])
+        )
+      ),
+      getProviderStatus: vi.fn((providerId: CliProviderId) => {
+        const deferred = createDeferred<CliProviderStatus | null>();
+        statusDeferredByProvider.set(providerId, deferred);
+        return deferred.promise;
+      }),
+    });
+    const { invoke } = setupHandlers(service);
+    await invoke<IpcResult<void>>(CLI_INSTALLER_INVALIDATE_STATUS);
+
+    const codexRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+    );
+    const openCodeRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+    );
+    await flushMicrotasks();
+
+    const aggregateResult =
+      await invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
+    expect(aggregateResult.success).toBe(true);
+
+    statusDeferredByProvider.get('codex')?.resolve({
+      ...createProviderStatus('codex'),
+      statusCheckOutcome: 'authoritative',
+    });
+    statusDeferredByProvider.get('opencode')?.resolve({
+      ...createProviderStatus('opencode'),
+      statusCheckOutcome: 'authoritative',
+    });
+
+    await expect(codexRequest).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('superseded'),
+    });
+    await expect(openCodeRequest).resolves.toMatchObject({ success: true });
+  });
+
+  test('rejects a late model verification after a newer aggregate logout', async () => {
+    const verifyDeferred = createDeferred<CliProviderStatus | null>();
+    const aggregateDeferred = createDeferred<CliInstallationStatus>();
+    const service = createInstallerService({
+      getStatus: vi.fn(() => aggregateDeferred.promise),
+      verifyProviderModels: vi.fn(() => verifyDeferred.promise),
+    });
+    const { invoke } = setupHandlers(service);
+    await invoke<IpcResult<void>>(CLI_INSTALLER_INVALIDATE_STATUS);
+
+    const verifyRequest = invoke<IpcResult<CliProviderStatus | null>>(
+      CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
+      'codex'
+    );
+    await flushMicrotasks();
+    const aggregateRequest = invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
+    aggregateDeferred.resolve(
+      createCliStatus([
+        {
+          ...createProviderStatus('codex'),
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'authoritative',
+        },
+      ])
+    );
+    await expect(aggregateRequest).resolves.toMatchObject({ success: true });
+
+    verifyDeferred.resolve({
+      ...createProviderStatus('codex'),
+      statusCheckOutcome: 'model_only',
+      models: ['late-model'],
+    });
+    await expect(verifyRequest).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('superseded'),
+    });
+
+    await expect(
+      invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS)
+    ).resolves.toMatchObject({ success: true, data: { authLoggedIn: false } });
+  });
+
+  test('resets request ordering on explicit invalidation without accepting old completions', async () => {
+    const oldDeferred = createDeferred<CliProviderStatus | null>();
+    const freshDeferred = createDeferred<CliProviderStatus | null>();
+    const getProviderStatus = vi
+      .fn()
+      .mockImplementationOnce(() => oldDeferred.promise)
+      .mockImplementationOnce(() => freshDeferred.promise);
+    const service = createInstallerService({ getProviderStatus });
+    const { invoke } = setupHandlers(service);
+
+    const oldRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+    );
+    await flushMicrotasks();
+    await invoke<IpcResult<void>>(CLI_INSTALLER_INVALIDATE_STATUS);
+    const freshRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+    );
+
+    oldDeferred.resolve({
+      ...createProviderStatus('codex'),
+      statusCheckOutcome: 'authoritative',
+    });
+    await expect(oldRequest).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining('invalidated'),
+    });
+    await flushMicrotasks();
+    expect(getProviderStatus).toHaveBeenCalledTimes(2);
+
+    freshDeferred.resolve({
+      ...createProviderStatus('codex'),
+      statusCheckOutcome: 'authoritative',
+    });
+    await expect(freshRequest).resolves.toMatchObject({ success: true });
+  });
+
   test('invalidates only execution proofs that depend on a changed provider fingerprint', async () => {
     const statusByProvider = new Map<CliProviderId, CliProviderStatus>([
       ['anthropic', createProviderStatus('anthropic')],

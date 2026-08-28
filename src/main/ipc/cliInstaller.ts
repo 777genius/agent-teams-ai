@@ -56,6 +56,11 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 const logger = createLogger('IPC:cliInstaller');
 
 let service: CliInstallerService;
+interface ProviderObservationRequestFence {
+  epoch: number;
+  order: number;
+}
+
 const statusInFlight = new Map<CliInstallerProviderStatusMode, Promise<CliInstallationStatus>>();
 interface ProviderStatusObservation {
   providerStatus: CliProviderStatus | null;
@@ -76,7 +81,10 @@ interface ObservedProjectProviderAuthority {
 const observedProviderGlobalAccessFingerprintById = new Map<CliProviderId, string>();
 const observedProjectProviderAuthorityByScope = new Map<string, ObservedProjectProviderAuthority>();
 const observedProjectlessProviderProfileFingerprintById = new Map<CliProviderId, string>();
+const latestCompletedProviderObservationOrderById = new Map<CliProviderId, number>();
 let activeProviderRuntimeRequestCount = 0;
+let providerObservationFenceEpoch = 0;
+let nextProviderObservationRequestOrder = 0;
 const cachedStatus = new Map<
   CliInstallerProviderStatusMode,
   { value: CliInstallationStatus; at: number }
@@ -85,10 +93,69 @@ let statusCacheGeneration = 0;
 const STATUS_CACHE_TTL_MS = 5_000;
 const MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS = 3;
 const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
+const CLI_PROVIDER_IDS = new Set<unknown>(['anthropic', 'codex', 'gemini', 'opencode']);
 const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'codex', 'opencode']);
 const INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS = new Set<CliProviderId>(['opencode']);
 const MAX_PROVIDER_STATUS_PROJECT_PATH_LENGTH = 4_096;
 const MAX_OBSERVED_PROJECT_PROVIDER_AUTHORITIES = 128;
+
+function resetProviderObservationRequestFence(): void {
+  providerObservationFenceEpoch += 1;
+  nextProviderObservationRequestOrder = 0;
+  latestCompletedProviderObservationOrderById.clear();
+}
+
+function beginProviderObservationRequest(): ProviderObservationRequestFence {
+  nextProviderObservationRequestOrder += 1;
+  return {
+    epoch: providerObservationFenceEpoch,
+    order: nextProviderObservationRequestOrder,
+  };
+}
+
+function canCompleteProviderObservation(
+  providerId: CliProviderId,
+  requestFence: ProviderObservationRequestFence
+): boolean {
+  return (
+    requestFence.epoch === providerObservationFenceEpoch &&
+    requestFence.order >= (latestCompletedProviderObservationOrderById.get(providerId) ?? 0)
+  );
+}
+
+function advancesProviderObservationOrder(providerStatus: CliProviderStatus): boolean {
+  // Pending/transient checks preserve the last known authority and therefore
+  // must not supersede an older authoritative request that is still running.
+  // Model-only responses still mutate cached provider observations.
+  return (
+    isSemanticProviderAuthorityObservation(providerStatus) ||
+    providerStatus.statusCheckOutcome === 'model_only'
+  );
+}
+
+function claimProviderObservationCompletion(
+  providerStatus: CliProviderStatus,
+  requestFence: ProviderObservationRequestFence
+): boolean {
+  // The fixed provider-id domain bounds this cross-mode fence to four entries.
+  // Comparing start order against the latest completed semantic observation
+  // rejects late results without serializing unrelated providers.
+  if (!canCompleteProviderObservation(providerStatus.providerId, requestFence)) {
+    return false;
+  }
+  if (advancesProviderObservationOrder(providerStatus)) {
+    latestCompletedProviderObservationOrderById.set(providerStatus.providerId, requestFence.order);
+  }
+  return true;
+}
+
+function assertProviderObservationRequestCurrent(
+  requestFence: ProviderObservationRequestFence
+): void {
+  if (requestFence.epoch !== providerObservationFenceEpoch) {
+    throw new Error('Provider status observation was invalidated before completion');
+  }
+}
 
 function clearObservedProviderAuthorities(): void {
   observedProviderGlobalAccessFingerprintById.clear();
@@ -122,6 +189,13 @@ function normalizeProviderStatusRequest(request: unknown): CliProviderStatusIpcR
     purpose: candidate.purpose,
     requestNonce: candidate.requestNonce,
   };
+}
+
+function normalizeProviderId(providerId: unknown): CliProviderId {
+  if (!CLI_PROVIDER_IDS.has(providerId)) {
+    throw new Error('Provider id is invalid');
+  }
+  return providerId as CliProviderId;
 }
 
 function getProviderStatusRequestKey(
@@ -317,7 +391,13 @@ async function handleGetStatus(
     const cached = cachedStatus.get(cacheKey);
     if (cached && Date.now() - cached.at < STATUS_CACHE_TTL_MS) {
       if (latestSnapshot && canUseStatusForCacheKey(cacheKey, latestSnapshot)) {
+        const requestFence = beginProviderObservationRequest();
         for (const providerStatus of latestSnapshot.providers) {
+          if (!claimProviderObservationCompletion(providerStatus, requestFence)) {
+            throw new Error(
+              `Provider status observation for ${providerStatus.providerId} was superseded before completion`
+            );
+          }
           observeProviderAuthority(providerStatus, null);
         }
         cachedStatus.set(cacheKey, { value: latestSnapshot, at: Date.now() });
@@ -329,10 +409,28 @@ async function handleGetStatus(
     if (!statusInFlight.has(cacheKey)) {
       const startedAt = Date.now();
       const generation = statusCacheGeneration;
+      const requestFence = beginProviderObservationRequest();
       const request = service
         .getStatus(normalizedOptions)
         .then((status) => {
-          if (generation === statusCacheGeneration && canUseStatusForCacheKey(cacheKey, status)) {
+          if (generation !== statusCacheGeneration) {
+            throw new Error('Provider status observation was invalidated before completion');
+          }
+          assertProviderObservationRequestCurrent(requestFence);
+          const supersededProviderIds: CliProviderId[] = [];
+          for (const providerStatus of status.providers) {
+            if (!claimProviderObservationCompletion(providerStatus, requestFence)) {
+              supersededProviderIds.push(providerStatus.providerId);
+              continue;
+            }
+            observeProviderAuthority(providerStatus, null);
+          }
+          if (supersededProviderIds.length > 0) {
+            throw new Error(
+              `Provider status observation for ${supersededProviderIds.join(', ')} was superseded before completion`
+            );
+          }
+          if (canUseStatusForCacheKey(cacheKey, status)) {
             cachedStatus.set(cacheKey, { value: status, at: Date.now() });
           }
           return status;
@@ -356,7 +454,6 @@ async function handleGetStatus(
     }
 
     const status = await statusInFlight.get(cacheKey)!;
-    for (const providerStatus of status.providers) observeProviderAuthority(providerStatus, null);
     return { success: true, data: status };
   } catch (error) {
     const msg = getErrorMessage(error);
@@ -507,10 +604,11 @@ function observeProviderAuthority(
 
 async function handleGetProviderStatus(
   _event: IpcMainInvokeEvent,
-  providerId: CliProviderId,
+  rawProviderId: unknown,
   rawRequest?: unknown
 ): Promise<IpcResult<CliProviderStatusIpcResponse>> {
   try {
+    const providerId = normalizeProviderId(rawProviderId);
     const providerRequest = normalizeProviderStatusRequest(rawRequest);
     const requestKey = getProviderStatusRequestKey(providerId, providerRequest);
     const inFlight = providerStatusInFlight.get(requestKey);
@@ -530,6 +628,7 @@ async function handleGetProviderStatus(
     }
 
     const generation = statusCacheGeneration;
+    const requestFence = beginProviderObservationRequest();
     const currentService = service;
     const serviceOptions: CliProviderStatusRequestOptions = providerRequest.projectPath
       ? { projectPath: providerRequest.projectPath }
@@ -539,7 +638,16 @@ async function handleGetProviderStatus(
       currentService.getProviderStatus(providerId, serviceOptions)
     )
       .then((status) => {
-        if (generation === statusCacheGeneration && status) {
+        if (generation !== statusCacheGeneration) {
+          throw new Error('Provider status observation was invalidated before completion');
+        }
+        assertProviderObservationRequestCurrent(requestFence);
+        if (status && !claimProviderObservationCompletion(status, requestFence)) {
+          throw new Error(
+            `Provider status observation for ${providerId} was superseded before completion`
+          );
+        }
+        if (status) {
           observeProviderAuthority(status, serviceOptions.projectPath ?? null);
           if (!serviceOptions.projectPath) patchCachedProviderStatus(status);
         }
@@ -576,7 +684,7 @@ async function handleGetProviderStatus(
     };
   } catch (error) {
     const msg = getErrorMessage(error);
-    logger.error(`Error in cliInstaller:getProviderStatus(${providerId}):`, msg);
+    logger.error(`Error in cliInstaller:getProviderStatus(${String(rawProviderId)}):`, msg);
     return { success: false, error: msg };
   }
 }
@@ -594,22 +702,33 @@ async function handleInstall(_event: IpcMainInvokeEvent): Promise<IpcResult<void
 
 async function handleVerifyProviderModels(
   _event: IpcMainInvokeEvent,
-  providerId: CliProviderId
+  rawProviderId: unknown
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
+    const providerId = normalizeProviderId(rawProviderId);
     const generation = statusCacheGeneration;
+    const requestFence = beginProviderObservationRequest();
     const currentService = service;
     const status = await runProviderRuntimeRequest(providerId, () =>
       currentService.verifyProviderModels(providerId)
     );
-    if (generation === statusCacheGeneration) {
-      if (status) observeProviderAuthority(status, null);
+    if (generation !== statusCacheGeneration) {
+      throw new Error('Provider model observation was invalidated before completion');
+    }
+    assertProviderObservationRequestCurrent(requestFence);
+    if (status && !claimProviderObservationCompletion(status, requestFence)) {
+      throw new Error(
+        `Provider model observation for ${providerId} was superseded before completion`
+      );
+    }
+    if (status) {
+      observeProviderAuthority(status, null);
       patchCachedProviderStatus(status);
     }
     return { success: true, data: status };
   } catch (error) {
     const msg = getErrorMessage(error);
-    logger.error(`Error in cliInstaller:verifyProviderModels(${providerId}):`, msg);
+    logger.error(`Error in cliInstaller:verifyProviderModels(${String(rawProviderId)}):`, msg);
     return { success: false, error: msg };
   }
 }
@@ -617,6 +736,7 @@ async function handleVerifyProviderModels(
 function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
   invalidateAuthoritativeModelExecutionProofs();
   statusCacheGeneration += 1;
+  resetProviderObservationRequestFence();
   cachedStatus.clear();
   statusInFlight.clear();
   providerStatusInFlight.clear();
