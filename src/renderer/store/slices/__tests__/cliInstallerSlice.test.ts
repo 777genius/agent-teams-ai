@@ -335,6 +335,32 @@ describe('provider launch proof authority reconciliation', () => {
     expect(reconciled[scopeB]).toBe(proofs[scopeB]);
   });
 
+  it('accepts a reset catalog generation on the first response from a newer profile epoch', () => {
+    const previousA = {
+      ...proofs[scopeA],
+      providerStatus: { ...ready, models: ['old-profile-model'] },
+      authorityScope: authorityScope(projectA, { profile: 1, catalog: 128 }),
+    };
+    const nextProfileStatus = { ...ready, models: ['new-profile-model'] };
+
+    const reconciled = reconcileProject(
+      { ...proofs, [scopeA]: previousA },
+      projectA,
+      nextProfileStatus,
+      { profile: 2, catalog: 1 }
+    );
+
+    expect(reconciled[scopeA]).toMatchObject({
+      providerStatus: nextProfileStatus,
+      requestId: 3,
+      authorityScope: {
+        profileGeneration: 2,
+        catalogGeneration: 1,
+      },
+    });
+    expect(reconciled[scopeB]).toBeUndefined();
+  });
+
   it('does not authorize a projectless authority scope or disturb exact proofs', () => {
     const reconciled = reconcileScopedProviderLaunchProofs({
       current: proofs,

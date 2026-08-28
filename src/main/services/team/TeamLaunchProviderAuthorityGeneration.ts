@@ -106,8 +106,9 @@ export function invalidateProviderProfile(providerId: ProviderId): void {
 export function invalidateProviderCatalog(providerId: ProviderId, projectPath: string): void {
   let generations = catalogGenerations(providerId);
   if (
-    !generations?.has(projectPath) &&
-    generations?.size >= MAX_CATALOG_AUTHORITY_SCOPES_PER_PROVIDER
+    generations !== undefined &&
+    !generations.has(projectPath) &&
+    generations.size >= MAX_CATALOG_AUTHORITY_SCOPES_PER_PROVIDER
   ) {
     bumpProviderProfileGeneration(providerId);
     generations = undefined;

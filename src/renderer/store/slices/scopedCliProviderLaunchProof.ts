@@ -165,6 +165,7 @@ export function reconcileScopedProviderLaunchProofs(input: {
   const staleCatalogGeneration =
     scopeMatchesRequest &&
     previous?.authorityScope !== undefined &&
+    incomingProfileGeneration === previous.authorityScope.profileGeneration &&
     incomingCatalogGeneration !== null &&
     incomingCatalogGeneration < previous.authorityScope.catalogGeneration;
   const globalLogout =
