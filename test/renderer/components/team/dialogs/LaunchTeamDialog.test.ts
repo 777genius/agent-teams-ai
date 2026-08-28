@@ -10,9 +10,15 @@ const fetchCliStatus = vi.fn();
 const fetchCliProviderStatus = vi.fn<
   (
     providerId: string,
-    options?: { projectPath?: string | null; silent?: boolean; checkReason?: string }
+    options?: {
+      projectPath?: string | null;
+      silent?: boolean;
+      checkReason?: string;
+      intent?: 'passive' | 'launch-proof';
+    }
   ) => Promise<boolean>
 >(async () => true);
+let launchProofRequestId = 0;
 const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
@@ -672,7 +678,14 @@ function createAuthoritativeLaunchProofProvider(providerId: string, provider: an
             },
           })),
         }
-      : (provider?.modelCatalog ?? null);
+      : provider?.modelCatalog
+        ? {
+            ...provider.modelCatalog,
+            status: 'ready',
+            fetchedAt: '2026-08-20T00:00:00.000Z',
+            staleAt: '2099-08-20T00:10:00.000Z',
+          }
+        : null;
   return {
     ...provider,
     providerId,
@@ -742,7 +755,7 @@ describe('LaunchTeamDialog', () => {
     });
     fetchCliProviderStatus.mockReset();
     fetchCliProviderStatus.mockImplementation(async (providerId, options) => {
-      if (!options?.projectPath) {
+      if (!options?.projectPath || options.intent !== 'launch-proof') {
         return true;
       }
 
@@ -771,7 +784,20 @@ describe('LaunchTeamDialog', () => {
       };
       storeState.cliProviderLaunchProofByScope = {
         ...storeState.cliProviderLaunchProofByScope,
-        [scopeKey]: { providerStatus: provider, requestId: 1, epoch: 0, fetchedAtMs: Date.now() },
+        [scopeKey]: {
+          providerStatus: provider,
+          requestId: ++launchProofRequestId,
+          epoch: 0,
+          fetchedAtMs: Date.now(),
+          authorityScope: {
+            schemaVersion: 1,
+            providerId,
+            projectPath: options.projectPath,
+            globalGeneration: 1,
+            profileGeneration: 1,
+            catalogGeneration: 1,
+          },
+        },
       };
       return true;
     });
@@ -786,6 +812,7 @@ describe('LaunchTeamDialog', () => {
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusLoadingByScope = {};
     storeState.cliProviderLaunchProofByScope = {};
+    launchProofRequestId = 0;
     storeState.launchParamsByTeam = {};
     createTeamDraftMock.state.members[0].model = 'opencode/big-pickle';
     createTeamDraftMock.state.cwdMode = 'project';
