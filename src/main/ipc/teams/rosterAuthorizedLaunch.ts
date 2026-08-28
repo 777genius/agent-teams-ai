@@ -470,7 +470,12 @@ async function authorizeRosterRequest(
     const roster = outcome.authorizedRoster ?? ('members' in request ? request.members : []);
     if (consumedAdmission) {
       const admissionBinding = admissionBindings.get(consumedAdmission);
-      const submittedFingerprint = fingerprintProductionLaunchRequest(request, roster);
+      // Create admission is issued against the submitted roster before the
+      // transaction canonicalizes durable metadata such as joinedAt. Keep the
+      // admission check bound to that exact submitted request; prepare binds
+      // the canonical roster fingerprint and revision independently below.
+      const submittedRoster = 'members' in request ? request.members : roster;
+      const submittedFingerprint = fingerprintProductionLaunchRequest(request, submittedRoster);
       if (
         !admissionBinding ||
         admissionBinding.teamName !== teamName ||
