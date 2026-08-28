@@ -221,17 +221,6 @@ function canUseStatusForCacheKey(
   );
 }
 
-function getCachedProviderStatus(providerId: CliProviderId): CliProviderStatus | null {
-  let newestMatch: { value: CliProviderStatus; at: number } | null = null;
-  for (const cached of cachedStatus.values()) {
-    const match = cached.value.providers.find((provider) => provider.providerId === providerId);
-    if (match && (!newestMatch || cached.at > newestMatch.at)) {
-      newestMatch = { value: match, at: cached.at };
-    }
-  }
-  return newestMatch?.value ?? null;
-}
-
 function withDerivedAggregateAuthentication(
   status: CliInstallationStatus,
   providers: CliProviderStatus[]
@@ -251,18 +240,21 @@ function withDerivedAggregateAuthentication(
   };
 }
 
-function buildCacheableStatus(
+function reconcileAggregateStatus(
   status: CliInstallationStatus,
-  claims: ReadonlyMap<CliProviderId, ProviderObservationCompletionClaim>
+  requestFence: ReturnType<ProviderObservationPolicy['beginRequest']>
 ): CliInstallationStatus {
-  const providers = status.providers.flatMap((providerStatus) => {
-    const claim = claims.get(providerStatus.providerId);
-    const cachedProviderStatus = getCachedProviderStatus(providerStatus.providerId);
-    const mergedProviderStatus = claim
-      ? mergeProviderObservationForCache(cachedProviderStatus, providerStatus, claim)
-      : cachedProviderStatus;
-    return mergedProviderStatus ? [mergedProviderStatus] : [];
-  });
+  for (const providerStatus of status.providers) {
+    const claim = providerObservationPolicy.claimCompletion(providerStatus, requestFence);
+    if (claim.applyAuthority) observeProviderAuthority(providerStatus, null);
+  }
+  const providers = providerObservationPolicy.reconcileAggregateProviders(
+    status.providers,
+    requestFence,
+    (providerStatus) =>
+      status.flavor !== 'agent_teams_orchestrator' ||
+      isFrontendMultimodelProviderId(providerStatus.providerId)
+  );
   return withDerivedAggregateAuthentication(status, providers);
 }
 
@@ -392,24 +384,12 @@ async function handleGetStatus(
     if (cached && Date.now() - cached.at < STATUS_CACHE_TTL_MS) {
       if (latestSnapshot && canUseStatusForCacheKey(cacheKey, latestSnapshot)) {
         const requestFence = providerObservationPolicy.beginRequest();
-        const claims = new Map<CliProviderId, ProviderObservationCompletionClaim>();
-        for (const providerStatus of latestSnapshot.providers) {
-          const claim = providerObservationPolicy.claimCompletion(providerStatus, requestFence);
-          claims.set(providerStatus.providerId, claim);
-          if (!claim.applyAuthority && !claim.applyCache) {
-            throw new Error(
-              `Provider status observation for ${providerStatus.providerId} was superseded before completion`
-            );
-          }
-          if (claim.applyAuthority) {
-            observeProviderAuthority(providerStatus, null);
-          }
-        }
+        const reconciledStatus = reconcileAggregateStatus(latestSnapshot, requestFence);
         cachedStatus.set(cacheKey, {
-          value: buildCacheableStatus(latestSnapshot, claims),
+          value: reconciledStatus,
           at: Date.now(),
         });
-        return { success: true, data: latestSnapshot };
+        return { success: true, data: reconciledStatus };
       }
       return { success: true, data: cached.value };
     }
@@ -426,31 +406,14 @@ async function handleGetStatus(
             // observations or caches, but the caller still owns the service result.
             return status;
           }
-          const supersededProviderIds: CliProviderId[] = [];
-          const claims = new Map<CliProviderId, ProviderObservationCompletionClaim>();
-          for (const providerStatus of status.providers) {
-            const claim = providerObservationPolicy.claimCompletion(providerStatus, requestFence);
-            claims.set(providerStatus.providerId, claim);
-            if (!claim.applyAuthority && !claim.applyCache) {
-              supersededProviderIds.push(providerStatus.providerId);
-              continue;
-            }
-            if (claim.applyAuthority) {
-              observeProviderAuthority(providerStatus, null);
-            }
-          }
-          if (supersededProviderIds.length > 0) {
-            throw new Error(
-              `Provider status observation for ${supersededProviderIds.join(', ')} was superseded before completion`
-            );
-          }
-          if (canUseStatusForCacheKey(cacheKey, status)) {
+          const reconciledStatus = reconcileAggregateStatus(status, requestFence);
+          if (canUseStatusForCacheKey(cacheKey, reconciledStatus)) {
             cachedStatus.set(cacheKey, {
-              value: buildCacheableStatus(status, claims),
+              value: reconciledStatus,
               at: Date.now(),
             });
           }
-          return status;
+          return reconciledStatus;
         })
         .catch((err) => {
           if (generation === statusCacheGeneration) {

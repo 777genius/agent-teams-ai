@@ -109,6 +109,46 @@ describe('ProviderObservationPolicy', () => {
     });
   });
 
+  test('retains a cold-cache catalog and reconciles a later older authority', () => {
+    const policy = new ProviderObservationPolicy();
+    const olderAggregateFence = policy.beginRequest();
+    const newerCatalogFence = policy.beginRequest();
+    const newerCatalog = createProviderStatus({
+      statusCheckOutcome: 'model_only',
+      models: ['new-model'],
+    });
+    const olderAuthority = createProviderStatus({
+      authenticated: false,
+      authMethod: null,
+      models: ['old-model'],
+    });
+
+    policy.claimCompletion(newerCatalog, newerCatalogFence);
+    policy.claimCompletion(olderAuthority, olderAggregateFence);
+
+    expect(policy.reconcileAggregateProviders([olderAuthority], olderAggregateFence)).toEqual([
+      expect.objectContaining({ authenticated: false, authMethod: null, models: ['new-model'] }),
+    ]);
+  });
+
+  test('restores a newer retained provider missing from an older aggregate', () => {
+    const policy = new ProviderObservationPolicy();
+    const olderAggregateFence = policy.beginRequest();
+    const newerProviderFence = policy.beginRequest();
+    const newerProvider = createProviderStatus({ models: ['new-model'] });
+    const unrelatedProvider = createProviderStatus({
+      providerId: 'anthropic',
+      models: ['claude-model'],
+    });
+
+    policy.claimCompletion(newerProvider, newerProviderFence);
+
+    expect(policy.reconcileAggregateProviders([unrelatedProvider], olderAggregateFence)).toEqual([
+      unrelatedProvider,
+      newerProvider,
+    ]);
+  });
+
   test('revokes every completion claim captured before reset', () => {
     const policy = new ProviderObservationPolicy();
     const staleFence = policy.beginRequest();
@@ -119,5 +159,6 @@ describe('ProviderObservationPolicy', () => {
       applyAuthority: false,
       applyCache: false,
     });
+    expect(policy.reconcileAggregateProviders([], staleFence)).toEqual([]);
   });
 });

@@ -15,12 +15,14 @@ export class ProviderObservationPolicy {
   private nextRequestOrder = 0;
   private readonly latestAuthorityOrderByProvider = new Map<CliProviderId, number>();
   private readonly latestCacheOrderByProvider = new Map<CliProviderId, number>();
+  private readonly latestObservationByProvider = new Map<CliProviderId, CliProviderStatus>();
 
   reset(): void {
     this.epoch += 1;
     this.nextRequestOrder = 0;
     this.latestAuthorityOrderByProvider.clear();
     this.latestCacheOrderByProvider.clear();
+    this.latestObservationByProvider.clear();
   }
 
   beginRequest(): ProviderObservationRequestFence {
@@ -51,7 +53,9 @@ export class ProviderObservationPolicy {
       if (applyCache) {
         this.latestCacheOrderByProvider.set(providerId, requestFence.order);
       }
-      return { applyAuthority: true, applyCache };
+      const claim = { applyAuthority: true, applyCache };
+      this.rememberObservation(providerStatus, claim);
+      return claim;
     }
 
     // Non-authoritative observations only own cache/catalog data. A newer
@@ -60,7 +64,47 @@ export class ProviderObservationPolicy {
       return { applyAuthority: false, applyCache: false };
     }
     this.latestCacheOrderByProvider.set(providerId, requestFence.order);
-    return { applyAuthority: false, applyCache: true };
+    const claim = { applyAuthority: false, applyCache: true };
+    this.rememberObservation(providerStatus, claim);
+    return claim;
+  }
+
+  reconcileAggregateProviders(
+    aggregateProviders: readonly CliProviderStatus[],
+    requestFence: ProviderObservationRequestFence,
+    includeMissingProvider: (providerStatus: CliProviderStatus) => boolean = () => true
+  ): CliProviderStatus[] {
+    if (requestFence.epoch !== this.epoch) return [...aggregateProviders];
+
+    const aggregateProviderIds = new Set(aggregateProviders.map((provider) => provider.providerId));
+    const providers = aggregateProviders.map(
+      (provider) => this.latestObservationByProvider.get(provider.providerId) ?? provider
+    );
+    for (const [providerId, providerStatus] of this.latestObservationByProvider) {
+      const cacheOrder = this.latestCacheOrderByProvider.get(providerId) ?? 0;
+      if (
+        !aggregateProviderIds.has(providerId) &&
+        cacheOrder > requestFence.order &&
+        includeMissingProvider(providerStatus)
+      ) {
+        providers.push(providerStatus);
+      }
+    }
+    return providers;
+  }
+
+  private rememberObservation(
+    providerStatus: CliProviderStatus,
+    claim: ProviderObservationCompletionClaim
+  ): void {
+    const previousObservation =
+      this.latestObservationByProvider.get(providerStatus.providerId) ?? null;
+    const observation = mergeProviderObservationForCache(
+      previousObservation,
+      providerStatus,
+      claim
+    );
+    if (observation) this.latestObservationByProvider.set(providerStatus.providerId, observation);
   }
 }
 
