@@ -1,4 +1,7 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
 import { resolve as resolvePath } from 'node:path';
+import * as path from 'node:path';
 
 import {
   CLI_INSTALLER_GET_PROVIDER_STATUS,
@@ -1659,6 +1662,204 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
       })
     ).toThrow('provider authority changed during preparation');
   });
+
+  test.skipIf(process.platform === 'win32')(
+    'invalidates an alias B proof when alias A observes a catalog change',
+    async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-authority-catalog-alias-'));
+      const project = path.join(root, 'physical');
+      const aliasA = path.join(root, 'alias-a');
+      const aliasB = path.join(root, 'alias-b');
+      fs.mkdirSync(project);
+      fs.symlinkSync(project, aliasA, 'dir');
+      fs.symlinkSync(project, aliasB, 'dir');
+      let models = ['catalog-v1'];
+      const service = createInstallerService({
+        getProviderStatus: vi.fn(() =>
+          Promise.resolve({
+            ...createProviderStatus('codex'),
+            models,
+          })
+        ),
+      });
+      const harness = setupHandlers(service);
+      try {
+        await harness.invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          'codex',
+          createProviderStatusRequest(aliasB, 'launch-proof')
+        );
+        const proof = issueAuthoritativeModelExecutionProof({
+          authorityEpoch: captureAuthoritativeProofEpoch(aliasB),
+          cwd: aliasB,
+          checks: [
+            {
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              model: 'catalog-v1',
+            },
+          ],
+        });
+
+        models = ['catalog-v2'];
+        await harness.invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          'codex',
+          createProviderStatusRequest(aliasA, 'launch-proof')
+        );
+
+        expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(false);
+      } finally {
+        removeCliInstallerHandlers(harness.ipcMain);
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  test.skipIf(process.platform === 'win32')(
+    'invalidates an alias B proof when alias A observes a project profile change',
+    async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-authority-profile-alias-'));
+      const project = path.join(root, 'physical');
+      const aliasA = path.join(root, 'alias-a');
+      const aliasB = path.join(root, 'alias-b');
+      fs.mkdirSync(project);
+      fs.symlinkSync(project, aliasA, 'dir');
+      fs.symlinkSync(project, aliasB, 'dir');
+      let backend = 'adapter';
+      const service = createInstallerService({
+        getProviderStatus: vi.fn(() =>
+          Promise.resolve({
+            ...createProviderStatus('opencode'),
+            selectedBackendId: backend,
+            resolvedBackendId: backend,
+          })
+        ),
+      });
+      const harness = setupHandlers(service);
+      try {
+        await harness.invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          'opencode',
+          createProviderStatusRequest(aliasB, 'launch-proof')
+        );
+        const proof = issueAuthoritativeModelExecutionProof({
+          authorityEpoch: captureAuthoritativeProofEpoch(aliasB),
+          cwd: aliasB,
+          checks: [{ providerId: 'opencode', providerBackendId: 'adapter', model: 'model' }],
+        });
+
+        backend = 'api';
+        await harness.invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          'opencode',
+          createProviderStatusRequest(aliasA, 'launch-proof')
+        );
+
+        expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(false);
+      } finally {
+        removeCliInstallerHandlers(harness.ipcMain);
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  test.skipIf(process.platform === 'win32')(
+    'keeps different physical roots isolated and does not inherit authority after replacement',
+    async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-authority-root-identity-'));
+      const projectA = path.join(root, 'project-a');
+      const displacedA = path.join(root, 'project-a-displaced');
+      const projectB = path.join(root, 'project-b');
+      fs.mkdirSync(projectA);
+      fs.mkdirSync(projectB);
+      let projectAModels = ['a-v1'];
+      const service = createInstallerService({
+        getProviderStatus: vi.fn((_providerId: CliProviderId, options) =>
+          Promise.resolve({
+            ...createProviderStatus('codex'),
+            models: options?.projectPath === projectA ? projectAModels : ['b-v1'],
+          })
+        ),
+      });
+      const harness = setupHandlers(service);
+      try {
+        for (const projectPath of [projectA, projectB]) {
+          await harness.invoke<IpcResult<CliProviderStatusIpcResponse>>(
+            CLI_INSTALLER_GET_PROVIDER_STATUS,
+            'codex',
+            createProviderStatusRequest(projectPath, 'launch-proof')
+          );
+        }
+        const proofB = issueAuthoritativeModelExecutionProof({
+          authorityEpoch: captureAuthoritativeProofEpoch(projectB),
+          cwd: projectB,
+          checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'b-v1' }],
+        });
+
+        projectAModels = ['a-v2'];
+        const changedA = await harness.invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          'codex',
+          createProviderStatusRequest(projectA, 'launch-proof')
+        );
+        expect(changedA).toMatchObject({
+          success: true,
+          data: { authorityScope: { catalogGeneration: 1 } },
+        });
+        expect(verifyAuthoritativeModelExecutionProof(proofB)).toBe(true);
+
+        fs.renameSync(projectA, displacedA);
+        fs.mkdirSync(projectA);
+        const replacementA = await harness.invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          'codex',
+          createProviderStatusRequest(projectA, 'launch-proof')
+        );
+        expect(replacementA).toMatchObject({
+          success: true,
+          data: { authorityScope: { catalogGeneration: 0 } },
+        });
+        expect(verifyAuthoritativeModelExecutionProof(proofB)).toBe(true);
+      } finally {
+        removeCliInstallerHandlers(harness.ipcMain);
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  test.skipIf(process.platform === 'win32')(
+    'withholds authority when a provider observation straddles root replacement',
+    async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-authority-midflight-replace-'));
+      const project = path.join(root, 'project');
+      const displaced = path.join(root, 'displaced');
+      fs.mkdirSync(project);
+      const deferred = createDeferred<CliProviderStatus | null>();
+      const harness = setupHandlers(
+        createInstallerService({ getProviderStatus: vi.fn(() => deferred.promise) })
+      );
+      try {
+        const request = harness.invoke<IpcResult<CliProviderStatusIpcResponse>>(
+          CLI_INSTALLER_GET_PROVIDER_STATUS,
+          'codex',
+          createProviderStatusRequest(project, 'launch-proof')
+        );
+        await flushMicrotasks();
+        fs.renameSync(project, displaced);
+        fs.mkdirSync(project);
+        deferred.resolve(createProviderStatus('codex'));
+
+        await expect(request).resolves.toMatchObject({
+          success: true,
+          data: { authorityScope: null },
+        });
+      } finally {
+        removeCliInstallerHandlers(harness.ipcMain);
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
 
   test('a projectless catalog change does not invalidate project-scoped proofs', async () => {
     const projectA = resolvePath(process.cwd(), 'src');

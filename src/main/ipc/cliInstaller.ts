@@ -32,6 +32,7 @@ import { createLogger } from '@shared/utils/logger';
 
 import { CodexBinaryResolver } from '../services/infrastructure/codexAppServer';
 import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
+import { resolveConservativeProjectRootAuthorityKey } from '../services/team/ProjectRootIdentityLease';
 import {
   invalidateAuthoritativeModelExecutionProofs,
   invalidateAuthoritativeModelExecutionProofsForProviderCatalog,
@@ -46,6 +47,7 @@ import {
 } from './providerObservationPolicy';
 
 import type { CliInstallerService } from '../services';
+import type { ProjectRootAuthorityKey } from '../services/team/ProjectRootIdentityLease';
 import type { ProviderObservationCompletionClaim } from './providerObservationPolicy';
 import type {
   CliInstallationStatus,
@@ -80,6 +82,10 @@ interface ObservedProjectProviderAuthority {
   providerId: CliProviderId;
   profileFingerprint: string;
   catalogFingerprint: string;
+}
+
+interface ProjectProviderAuthorityScope {
+  authorityKey: ProjectRootAuthorityKey;
 }
 
 const observedProviderGlobalAccessFingerprintById = new Map<CliProviderId, string>();
@@ -498,6 +504,18 @@ function getProviderGlobalAccessFingerprint(providerStatus: CliProviderStatus): 
   });
 }
 
+function resolveProjectProviderAuthorityScope(
+  requestedPath: string | undefined
+): ProjectProviderAuthorityScope | null {
+  return requestedPath
+    ? {
+        authorityKey: resolveConservativeProjectRootAuthorityKey(requestedPath, {
+          fallbackLexicalPath: requestedPath,
+        }),
+      }
+    : null;
+}
+
 function rememberProjectProviderAuthority(
   scopeKey: string,
   observation: ObservedProjectProviderAuthority
@@ -522,7 +540,7 @@ function rememberProjectProviderAuthority(
 
 function observeProviderAuthority(
   providerStatus: CliProviderStatus,
-  projectPath: string | null
+  projectScope: ProjectProviderAuthorityScope | null
 ): void {
   if (!isSemanticProviderAuthorityObservation(providerStatus)) return;
   const globalAccessFingerprint = getProviderGlobalAccessFingerprint(providerStatus);
@@ -541,7 +559,7 @@ function observeProviderAuthority(
   );
 
   const profileFingerprint = getCliProviderProfileAuthorityFingerprint(providerStatus);
-  if (!projectPath) {
+  if (!projectScope) {
     const previousProfileFingerprint = observedProjectlessProviderProfileFingerprintById.get(
       providerStatus.providerId
     );
@@ -558,7 +576,7 @@ function observeProviderAuthority(
     return;
   }
 
-  const scopeKey = `${providerStatus.providerId}\0${projectPath}`;
+  const scopeKey = `${providerStatus.providerId}\0${projectScope.authorityKey}`;
   const catalogFingerprint = getCliProviderCatalogAuthorityFingerprint(providerStatus);
   const previousAuthority = observedProjectProviderAuthorityByScope.get(scopeKey);
   if (
@@ -568,7 +586,7 @@ function observeProviderAuthority(
   ) {
     invalidateAuthoritativeModelExecutionProofsForProviderCatalog(
       providerStatus.providerId,
-      projectPath
+      projectScope.authorityKey
     );
   }
   rememberProjectProviderAuthority(scopeKey, {
@@ -606,6 +624,7 @@ async function handleGetProviderStatus(
     const serviceOptions: CliProviderStatusRequestOptions = providerRequest.projectPath
       ? { projectPath: providerRequest.projectPath }
       : {};
+    const projectScope = resolveProjectProviderAuthorityScope(serviceOptions.projectPath);
     const observationNonce = randomUUID();
     const observationPromise = runProviderRuntimeRequest(providerId, () =>
       currentService.getProviderStatus(providerId, serviceOptions)
@@ -629,9 +648,20 @@ async function handleGetProviderStatus(
             `Provider status observation for ${providerId} was superseded before completion`
           );
         }
+        const completedProjectScope = resolveProjectProviderAuthorityScope(
+          serviceOptions.projectPath
+        );
+        const projectIdentityStayedCurrent =
+          projectScope?.authorityKey === completedProjectScope?.authorityKey;
         if (status) {
           if (claim.applyAuthority) {
-            observeProviderAuthority(status, serviceOptions.projectPath ?? null);
+            if (projectIdentityStayedCurrent) {
+              observeProviderAuthority(status, projectScope);
+            } else {
+              // The runtime observation straddled a physical root replacement.
+              // Fail closed instead of assigning either root the other's result.
+              invalidateAuthoritativeModelExecutionProofsForProviderProfile(providerId);
+            }
           }
           if (!serviceOptions.projectPath) patchCachedProviderStatus(status, claim);
         }
@@ -642,8 +672,13 @@ async function handleGetProviderStatus(
           authorityScope:
             providerRequest.purpose === 'launch-proof' &&
             serviceOptions.projectPath &&
+            projectIdentityStayedCurrent &&
             status?.statusCheckOutcome === 'authoritative'
-              ? getAuthorityScope(providerId, serviceOptions.projectPath)
+              ? getAuthorityScope(
+                  providerId,
+                  serviceOptions.projectPath,
+                  projectScope!.authorityKey
+                )
               : null,
         };
       })

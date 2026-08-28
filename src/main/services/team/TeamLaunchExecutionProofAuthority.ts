@@ -18,7 +18,7 @@ import {
 import { executionProofRequestDigestForIdentity } from './TeamLaunchExecutionProofDigests';
 import * as providerAuthority from './TeamLaunchProviderAuthorityGeneration';
 
-import type { ProjectRootIdentityLease } from './ProjectRootIdentityLease';
+import type { ProjectRootAuthorityKey, ProjectRootIdentityLease } from './ProjectRootIdentityLease';
 import type {
   AuthoritativeModelExecutionProof,
   TeamCreateRequest,
@@ -132,11 +132,12 @@ export function captureAuthoritativeProofEpoch(
     throw new Error('Launch authorization is unavailable during Claude root handoff');
   }
   const attempt = createAuthorityAttempt();
-  const record = {
+  const projectLease = captureProjectRootIdentityLease(cwd);
+  const record: AuthoritativeAttemptRecord = {
     authorityEpoch: currentAuthorityEpoch,
     expiresAtMs: nowMs + PROOF_TTL_MS,
-    projectLease: captureProjectRootIdentityLease(cwd),
-    providerAuthorityGenerations: providerAuthority.captureGenerations(normalizeProjectPath(cwd)),
+    projectLease,
+    providerAuthorityGenerations: providerAuthority.captureGenerations(projectLease.authorityKey),
   };
   attempts.set(attempt, record);
   scheduleExpiryCleanup();
@@ -399,10 +400,10 @@ export function invalidateAuthoritativeModelExecutionProofs(): void {
 
 function invalidateProviderProofRecords(
   providerId: ProviderModelLaunchIdentity['providerId'],
-  projectPath: string | null
+  projectAuthorityKey: ProjectRootAuthorityKey | null
 ): void {
   const leaseMatches = (lease: ProjectRootIdentityLease): boolean =>
-    projectPath === null || lease.isCurrent(projectPath);
+    projectAuthorityKey === null || lease.matchesCurrentAuthority(projectAuthorityKey);
   for (const [authorityId, record] of proofs) {
     if (
       record.checks.some((check) => check.providerId === providerId) &&
@@ -437,11 +438,10 @@ export function invalidateAuthoritativeModelExecutionProofsForProviderProfile(
 /** Invalidates only the exact project+provider catalog authority. */
 export function invalidateAuthoritativeModelExecutionProofsForProviderCatalog(
   providerId: ProviderModelLaunchIdentity['providerId'],
-  projectPath: string
+  projectAuthorityKey: ProjectRootAuthorityKey
 ): void {
-  const normalizedProjectPath = normalizeProjectPath(projectPath);
-  providerAuthority.invalidateProviderCatalog(providerId, normalizedProjectPath);
-  invalidateProviderProofRecords(providerId, normalizedProjectPath);
+  providerAuthority.invalidateProviderCatalog(providerId, projectAuthorityKey);
+  invalidateProviderProofRecords(providerId, projectAuthorityKey);
 }
 
 /** Closes proof capture and issuance until the root coordinator commits a generation. */

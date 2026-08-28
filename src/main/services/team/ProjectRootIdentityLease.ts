@@ -1,5 +1,14 @@
+import { createHash } from 'node:crypto';
+
 import * as fs from 'fs';
 import * as path from 'path';
+
+declare const projectRootAuthorityKeyBrand: unique symbol;
+
+/** Opaque, process-internal physical project identity used for provider authority maps. */
+export type ProjectRootAuthorityKey = string & {
+  readonly [projectRootAuthorityKeyBrand]: true;
+};
 
 export interface ProjectRootIdentity {
   requestedPath: string;
@@ -9,7 +18,9 @@ export interface ProjectRootIdentity {
 
 export interface ProjectRootIdentityLease {
   readonly identity: ProjectRootIdentity;
+  readonly authorityKey: ProjectRootAuthorityKey;
   isCurrent(cwd?: string): boolean;
+  matchesCurrentAuthority(authorityKey: ProjectRootAuthorityKey): boolean;
   close(): void;
 }
 
@@ -31,6 +42,7 @@ export interface ProjectRootIdentityLeaseFileSystem {
 export interface ProjectRootIdentityLeaseOptions {
   platform?: NodeJS.Platform;
   fileSystem?: ProjectRootIdentityLeaseFileSystem;
+  fallbackLexicalPath?: string;
 }
 
 const nodeFileSystem: ProjectRootIdentityLeaseFileSystem = {
@@ -60,6 +72,18 @@ function stableFileId(stats: ProjectRootFileStats): string {
     throw new Error('Launch authorization cannot establish a stable project filesystem identity');
   }
   return `device:${device}:inode:${inode}`;
+}
+
+function opaqueAuthorityKey(kind: 'physical' | 'lexical', ...parts: string[]) {
+  return createHash('sha256')
+    .update(JSON.stringify([kind, ...parts]))
+    .digest('hex') as ProjectRootAuthorityKey;
+}
+
+export function projectRootAuthorityKey(
+  identity: Pick<ProjectRootIdentity, 'canonicalPath' | 'stableFileId'>
+): ProjectRootAuthorityKey {
+  return opaqueAuthorityKey('physical', identity.canonicalPath, identity.stableFileId);
 }
 
 function resolveRequestedPath(cwd: string, platform: NodeJS.Platform): string {
@@ -93,6 +117,36 @@ function captureIdentity(
   };
 }
 
+/** Resolves an existing directory to a physical authority key without retaining a descriptor. */
+export function resolveProjectRootAuthorityKey(
+  cwd: string,
+  options: ProjectRootIdentityLeaseOptions = {}
+): ProjectRootAuthorityKey {
+  const platform = options.platform ?? process.platform;
+  const fileSystem = options.fileSystem ?? nodeFileSystem;
+  return projectRootAuthorityKey(captureIdentity(cwd, platform, fileSystem).identity);
+}
+
+/**
+ * Missing, remote, or identity-poor roots remain isolated by their normalized
+ * lexical request path instead of being merged into an unverifiable scope.
+ */
+export function resolveConservativeProjectRootAuthorityKey(
+  cwd: string,
+  options: ProjectRootIdentityLeaseOptions = {}
+): ProjectRootAuthorityKey {
+  try {
+    return resolveProjectRootAuthorityKey(cwd, options);
+  } catch {
+    const platform = options.platform ?? process.platform;
+    const lexicalPath =
+      options.fallbackLexicalPath !== undefined
+        ? canonicalProjectPathComparisonKey(options.fallbackLexicalPath, platform)
+        : canonicalProjectPathComparisonKey(resolveRequestedPath(cwd, platform), platform);
+    return opaqueAuthorityKey('lexical', lexicalPath);
+  }
+}
+
 function sameIdentity(left: ProjectRootIdentity, right: ProjectRootIdentity): boolean {
   return (
     left.requestedPath === right.requestedPath &&
@@ -109,6 +163,7 @@ export function captureProjectRootIdentityLease(
   const fileSystem = options.fileSystem ?? nodeFileSystem;
   const captured = captureIdentity(cwd, platform, fileSystem);
   const identity = captured.identity;
+  const authorityKey = projectRootAuthorityKey(identity);
   let handle: number | null = null;
   let closed = false;
   try {
@@ -127,6 +182,7 @@ export function captureProjectRootIdentityLease(
 
   return {
     identity,
+    authorityKey,
     isCurrent(candidateCwd?: string): boolean {
       if (closed || handle === null) return false;
       try {
@@ -141,6 +197,15 @@ export function captureProjectRootIdentityLease(
           stableFileId(heldStats) === identity.stableFileId &&
           sameIdentity(candidate, identity)
         );
+      } catch {
+        return false;
+      }
+    },
+    matchesCurrentAuthority(candidateAuthorityKey: ProjectRootAuthorityKey): boolean {
+      if (closed || handle === null || candidateAuthorityKey !== authorityKey) return false;
+      try {
+        const heldStats = fileSystem.fstat(handle);
+        return heldStats.isDirectory() && stableFileId(heldStats) === identity.stableFileId;
       } catch {
         return false;
       }

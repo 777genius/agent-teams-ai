@@ -1,17 +1,18 @@
+import type { ProjectRootAuthorityKey } from './ProjectRootIdentityLease';
 import type { CliProviderStatusAuthorityScope, ProviderModelLaunchIdentity } from '@shared/types';
 
 type ProviderId = ProviderModelLaunchIdentity['providerId'];
 
 export interface CapturedProviderAuthorityGenerations {
   globalGeneration: number;
-  projectPath: string;
+  projectAuthorityKey: ProjectRootAuthorityKey;
   profileGenerationByProviderId: ReadonlyMap<ProviderId, number>;
   catalogGenerationByProviderId: ReadonlyMap<ProviderId, number>;
 }
 
 let globalGeneration = 0;
 const profileGenerationByProviderId = new Map<ProviderId, number>();
-const catalogGenerationsByProviderId = new Map<ProviderId, Map<string, number>>();
+const catalogGenerationsByProviderId = new Map<ProviderId, Map<ProjectRootAuthorityKey, number>>();
 let aggregateGeneration = 0;
 
 /**
@@ -21,12 +22,14 @@ let aggregateGeneration = 0;
  */
 export const MAX_CATALOG_AUTHORITY_SCOPES_PER_PROVIDER = 128;
 
-function catalogGenerations(providerId: ProviderId): Map<string, number> | undefined {
+function catalogGenerations(
+  providerId: ProviderId
+): Map<ProjectRootAuthorityKey, number> | undefined {
   return catalogGenerationsByProviderId.get(providerId);
 }
 
-function catalogGeneration(providerId: ProviderId, projectPath: string): number {
-  return catalogGenerations(providerId)?.get(projectPath) ?? 0;
+function catalogGeneration(providerId: ProviderId, projectAuthorityKey: ProjectRootAuthorityKey) {
+  return catalogGenerations(providerId)?.get(projectAuthorityKey) ?? 0;
 }
 
 function retireProviderCatalogGenerations(providerId: ProviderId): void {
@@ -42,21 +45,26 @@ function bumpProviderProfileGeneration(providerId: ProviderId): void {
   aggregateGeneration += 1;
 }
 
-export function captureGenerations(projectPath: string): CapturedProviderAuthorityGenerations {
+export function captureGenerations(
+  projectAuthorityKey: ProjectRootAuthorityKey
+): CapturedProviderAuthorityGenerations {
   const catalogGenerationByProviderId = new Map<ProviderId, number>();
   for (const providerId of profileGenerationByProviderId.keys()) {
-    catalogGenerationByProviderId.set(providerId, catalogGeneration(providerId, projectPath));
+    catalogGenerationByProviderId.set(
+      providerId,
+      catalogGeneration(providerId, projectAuthorityKey)
+    );
   }
   // Catalog-only providers have no profile-map entry yet. Iterating provider
   // buckets keeps capture work independent of the number of retained scopes.
   for (const [providerId, generations] of catalogGenerationsByProviderId.entries()) {
     if (!profileGenerationByProviderId.has(providerId)) {
-      catalogGenerationByProviderId.set(providerId, generations.get(projectPath) ?? 0);
+      catalogGenerationByProviderId.set(providerId, generations.get(projectAuthorityKey) ?? 0);
     }
   }
   return {
     globalGeneration,
-    projectPath,
+    projectAuthorityKey,
     profileGenerationByProviderId: new Map(profileGenerationByProviderId),
     catalogGenerationByProviderId,
   };
@@ -72,7 +80,7 @@ export function generationsAreCurrent(
       (captured.profileGenerationByProviderId.get(providerId) ?? 0) !==
         (profileGenerationByProviderId.get(providerId) ?? 0) ||
       (captured.catalogGenerationByProviderId.get(providerId) ?? 0) !==
-        catalogGeneration(providerId, captured.projectPath)
+        catalogGeneration(providerId, captured.projectAuthorityKey)
     ) {
       return false;
     }
@@ -82,15 +90,19 @@ export function generationsAreCurrent(
 
 export function getAuthorityScope(
   providerId: ProviderId,
-  projectPath: string | null
+  requestedProjectPath: string | null,
+  projectAuthorityKey?: ProjectRootAuthorityKey
 ): CliProviderStatusAuthorityScope {
   return {
     schemaVersion: 1,
     providerId,
-    projectPath,
+    projectPath: requestedProjectPath,
     globalGeneration,
     profileGeneration: profileGenerationByProviderId.get(providerId) ?? 0,
-    catalogGeneration: projectPath ? catalogGeneration(providerId, projectPath) : 0,
+    catalogGeneration:
+      requestedProjectPath && projectAuthorityKey
+        ? catalogGeneration(providerId, projectAuthorityKey)
+        : 0,
   };
 }
 
@@ -103,21 +115,24 @@ export function invalidateProviderProfile(providerId: ProviderId): void {
   bumpProviderProfileGeneration(providerId);
 }
 
-export function invalidateProviderCatalog(providerId: ProviderId, projectPath: string): void {
+export function invalidateProviderCatalog(
+  providerId: ProviderId,
+  projectAuthorityKey: ProjectRootAuthorityKey
+): void {
   let generations = catalogGenerations(providerId);
   if (
     generations !== undefined &&
-    !generations.has(projectPath) &&
+    !generations.has(projectAuthorityKey) &&
     generations.size >= MAX_CATALOG_AUTHORITY_SCOPES_PER_PROVIDER
   ) {
     bumpProviderProfileGeneration(providerId);
     generations = undefined;
   }
   if (!generations) {
-    generations = new Map<string, number>();
+    generations = new Map<ProjectRootAuthorityKey, number>();
     catalogGenerationsByProviderId.set(providerId, generations);
   }
-  generations.set(projectPath, (generations.get(projectPath) ?? 0) + 1);
+  generations.set(projectAuthorityKey, (generations.get(projectAuthorityKey) ?? 0) + 1);
   aggregateGeneration += 1;
 }
 

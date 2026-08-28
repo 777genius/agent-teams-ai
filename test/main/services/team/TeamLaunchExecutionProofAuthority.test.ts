@@ -574,6 +574,45 @@ describe('TeamLaunchExecutionProofAuthority', () => {
     }
   );
 
+  it.skipIf(process.platform === 'win32')(
+    'keeps lexical request binding exact across aliases of one physical root',
+    () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'proof-alias-envelope-'));
+      try {
+        const project = path.join(root, 'physical');
+        const aliasA = path.join(root, 'alias-a');
+        const aliasB = path.join(root, 'alias-b');
+        fs.mkdirSync(project);
+        fs.symlinkSync(project, aliasA, 'dir');
+        fs.symlinkSync(project, aliasB, 'dir');
+        const launchB = request({ cwd: aliasB });
+        const proof = issueAuthoritativeModelExecutionProof({
+          authorityEpoch: captureAuthoritativeProofEpoch(aliasB),
+          cwd: aliasB,
+          checks: [
+            {
+              providerId: 'codex',
+              providerBackendId: 'codex-native',
+              model: 'gpt-5',
+            },
+          ],
+          runtimeRosterRevision: runtimeRosterRevision(launchB),
+        });
+
+        expect(verifyAuthoritativeModelExecutionProofForRequest(proof, launchB, [])).toBe(true);
+        expect(
+          verifyAuthoritativeModelExecutionProofForRequest(
+            proof,
+            request({ cwd: aliasA, executionProof: proof }),
+            []
+          )
+        ).toBe(false);
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
   it('rejects a proof after the project directory is replaced at the same path', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'proof-replacement-'));
     const project = path.join(root, 'project');
