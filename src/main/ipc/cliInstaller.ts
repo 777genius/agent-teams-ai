@@ -414,7 +414,9 @@ async function handleGetStatus(
         .getStatus(normalizedOptions)
         .then((status) => {
           if (generation !== statusCacheGeneration) {
-            throw new Error('Provider status observation was invalidated before completion');
+            // Invalidation revokes this completion's authority to mutate shared
+            // observations or caches, but the caller still owns the service result.
+            return status;
           }
           assertProviderObservationRequestCurrent(requestFence);
           const supersededProviderIds: CliProviderId[] = [];
@@ -713,7 +715,9 @@ async function handleVerifyProviderModels(
       currentService.verifyProviderModels(providerId)
     );
     if (generation !== statusCacheGeneration) {
-      throw new Error('Provider model observation was invalidated before completion');
+      // Preserve the response contract for work that already started while
+      // suppressing every stale cache and authority side effect below.
+      return { success: true, data: status };
     }
     assertProviderObservationRequestCurrent(requestFence);
     if (status && !claimProviderObservationCompletion(status, requestFence)) {
