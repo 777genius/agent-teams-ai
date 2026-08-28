@@ -19,11 +19,7 @@ const RANDOM_UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-
 const NO_FOLLOW = process.platform === 'win32' ? 0 : (fs.constants.O_NOFOLLOW ?? 0);
 const WINDOWS_DIRECTORY_SYNC_UNSUPPORTED = new Set(['EACCES', 'EPERM', 'EISDIR', 'EBADF']);
 
-/**
- * Reserved cutover marker bytes. Publication is intentionally not performed by
- * this module: the desktop runtime has no authoritative proof that every
- * process capable of the old protocol is quiescent.
- */
+/** Reserved cutover marker; publication requires proof that every old-protocol process is gone. */
 export const FILE_LOCK_RETIREMENT_MARKER = '0\n9007199254740991\nagent-teams-sqlite-cutover-v1\n';
 
 export interface FileLockOptions {
@@ -36,6 +32,11 @@ export interface FileLockOptions {
 interface FileIdentity {
   dev: bigint;
   ino: bigint;
+}
+
+interface ObservedFile {
+  content: string;
+  identity: FileIdentity;
 }
 
 interface OwnedLock {
@@ -156,7 +157,7 @@ function assertNotOwnedByAsyncLineage(filePath: string, ownerKey: string): void 
   }
 }
 
-function readBoundedLock(lockPath: string): string | 'retry' {
+function inspectBoundedFile(lockPath: string): ObservedFile | 'retry' {
   let descriptor: number | undefined;
   try {
     const pathStatsBefore = fs.lstatSync(lockPath, { bigint: true });
@@ -193,13 +194,21 @@ function readBoundedLock(lockPath: string): string | 'retry' {
     ) {
       throw new Error('Lock changed while it was being read');
     }
-    return buffer.subarray(0, bytesRead).toString('utf8');
+    return {
+      content: buffer.subarray(0, bytesRead).toString('utf8'),
+      identity: identity(descriptorStatsBefore),
+    };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'retry';
     throw error;
   } finally {
     if (descriptor !== undefined) fs.closeSync(descriptor);
   }
+}
+
+function readBoundedLock(lockPath: string): string | 'retry' {
+  const observed = inspectBoundedFile(lockPath);
+  return observed === 'retry' ? observed : observed.content;
 }
 
 function isActiveProcess(pid: number): boolean {
@@ -255,7 +264,7 @@ function preflightExistingLock(
   return classifyExistingLock(filePath, lockPath);
 }
 
-function unlinkExactContent(lockPath: string, expectedContent: string): void {
+function unlinkExactObserved(lockPath: string, expected: ObservedFile): void {
   let descriptor: number | undefined;
   try {
     const pathStats = fs.lstatSync(lockPath, { bigint: true });
@@ -265,7 +274,8 @@ function unlinkExactContent(lockPath: string, expectedContent: string): void {
     if (
       !descriptorStats.isFile() ||
       !sameIdentity(identity(pathStats), identity(descriptorStats)) ||
-      fs.readFileSync(descriptor, 'utf8') !== expectedContent
+      !sameIdentity(expected.identity, identity(descriptorStats)) ||
+      fs.readFileSync(descriptor, 'utf8') !== expected.content
     ) {
       throw new Error('Lock changed before cleanup');
     }
@@ -276,25 +286,160 @@ function unlinkExactContent(lockPath: string, expectedContent: string): void {
   }
 }
 
+function unlinkExactContent(lockPath: string, expectedContent: string): void {
+  const observed = inspectBoundedFile(lockPath);
+  if (observed === 'retry' || observed.content !== expectedContent) {
+    throw new Error('Lock changed before cleanup');
+  }
+  unlinkExactObserved(lockPath, observed);
+}
+
+function isRecoverablePublicationPrefix(content: string): boolean {
+  let offset = 0;
+  const acceptVariablePrefix = (pattern: RegExp): boolean | 'complete' => {
+    const newline = content.indexOf('\n', offset);
+    const value = newline === -1 ? content.slice(offset) : content.slice(offset, newline);
+    if (newline === -1) return value === '' || pattern.test(value);
+    if (!pattern.test(value)) return false;
+    offset = newline + 1;
+    return 'complete';
+  };
+  const acceptFixedPrefix = (expected: string): boolean | 'complete' => {
+    const remaining = content.slice(offset);
+    if (remaining.length <= expected.length) return expected.startsWith(remaining);
+    if (!remaining.startsWith(`${expected}\n`)) return false;
+    offset += expected.length + 1;
+    return 'complete';
+  };
+
+  const pid = acceptVariablePrefix(/^[1-9]\d*$/);
+  if (pid !== 'complete') return pid;
+  const timestamp = acceptFixedPrefix(String(LEGACY_SAFE_TIMESTAMP));
+  if (timestamp !== 'complete') return timestamp;
+  const magic = acceptFixedPrefix(AUTHORITATIVE_MAGIC);
+  if (magic !== 'complete') return magic;
+
+  const remaining = content.slice(offset);
+  const uuidPrefix = remaining.endsWith('\n') ? remaining.slice(0, -1) : remaining;
+  if (remaining.includes('\n') && !remaining.endsWith('\n')) return false;
+  if (uuidPrefix.length > 36) return false;
+  const uuidTemplate = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
+  for (let index = 0; index < uuidPrefix.length; index += 1) {
+    const character = uuidPrefix[index];
+    const template = uuidTemplate[index];
+    if (template === '-' || template === '4') {
+      if (character !== template) return false;
+    } else if (template === 'y') {
+      if (!/[89ab]/.test(character)) return false;
+    } else if (!/[0-9a-f]/.test(character)) {
+      return false;
+    }
+  }
+  return !remaining.endsWith('\n') || uuidPrefix.length === 36;
+}
+
 function cleanupPublicationTombstone(publicationPath: string): void {
   try {
-    const content = readBoundedLock(publicationPath);
-    if (content === 'retry') return;
-    const lines = content.split('\n');
-    if (
-      lines.length !== 5 ||
-      lines[4] !== '' ||
-      !/^[1-9]\d*$/.test(lines[0]) ||
-      lines[1] !== String(LEGACY_SAFE_TIMESTAMP) ||
-      lines[2] !== AUTHORITATIVE_MAGIC ||
-      !RANDOM_UUID_V4.test(lines[3])
-    ) {
+    const observed = inspectBoundedFile(publicationPath);
+    if (observed === 'retry') return;
+    if (!isRecoverablePublicationPrefix(observed.content)) {
       throw new Error(`Unsafe file lock publication tombstone: ${publicationPath}`);
     }
-    unlinkExactContent(publicationPath, content);
+    unlinkExactObserved(publicationPath, observed);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
   }
+}
+
+function unlinkExactIdentity(lockPath: string, expectedIdentity: FileIdentity): void {
+  let descriptor: number | undefined;
+  try {
+    const pathStats = fs.lstatSync(lockPath, { bigint: true });
+    if (
+      pathStats.isSymbolicLink() ||
+      !pathStats.isFile() ||
+      !sameIdentity(expectedIdentity, identity(pathStats))
+    ) {
+      throw new Error('Lock changed before cleanup');
+    }
+    descriptor = fs.openSync(lockPath, fs.constants.O_RDONLY | NO_FOLLOW);
+    const descriptorStats = fs.fstatSync(descriptor, { bigint: true });
+    if (
+      !descriptorStats.isFile() ||
+      !sameIdentity(expectedIdentity, identity(descriptorStats)) ||
+      !sameIdentity(identity(pathStats), identity(descriptorStats))
+    ) {
+      throw new Error('Lock changed before cleanup');
+    }
+    fs.unlinkSync(lockPath);
+    syncDirectory(path.dirname(lockPath));
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+}
+
+function cleanupExactIdentity(lockPath: string, expectedIdentity: FileIdentity): void {
+  try {
+    unlinkExactIdentity(lockPath, expectedIdentity);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+}
+
+function unlinkOwnedPublication(
+  publicationPath: string,
+  descriptor: number,
+  expectedIdentity: FileIdentity
+): void {
+  const descriptorStats = fs.fstatSync(descriptor, { bigint: true });
+  const pathStats = fs.lstatSync(publicationPath, { bigint: true });
+  if (
+    !descriptorStats.isFile() ||
+    pathStats.isSymbolicLink() ||
+    !pathStats.isFile() ||
+    !sameIdentity(expectedIdentity, identity(descriptorStats)) ||
+    !sameIdentity(expectedIdentity, identity(pathStats))
+  ) {
+    throw new Error('Lock changed before cleanup');
+  }
+  fs.unlinkSync(publicationPath);
+  syncDirectory(path.dirname(publicationPath));
+}
+
+function cleanupOwnedPublication(
+  publicationPath: string,
+  descriptor: number | undefined,
+  expectedIdentity: FileIdentity
+): void {
+  try {
+    if (descriptor === undefined) cleanupExactIdentity(publicationPath, expectedIdentity);
+    else unlinkOwnedPublication(publicationPath, descriptor, expectedIdentity);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+}
+
+interface ContextualFailure {
+  context: string;
+  failure: Failure;
+}
+
+function captureCleanup(context: string, action: () => void): ContextualFailure | undefined {
+  try {
+    action();
+    return undefined;
+  } catch (error) {
+    return { context, failure: { error, status: 'failure' } };
+  }
+}
+
+function throwContextualFailures(failures: ContextualFailure[], message: string): never | void {
+  if (failures.length === 0) return;
+  if (failures.length === 1) throw failures[0].failure.error;
+  const errors = failures.map(({ context, failure }) =>
+    contextualizeUndefinedFailure(failure, context)
+  );
+  throw new AggregateError(errors, message, { cause: errors[0] });
 }
 
 function tryAcquire(
@@ -318,45 +463,91 @@ function tryAcquire(
   const token = Symbol(lockPath);
   const content = `${process.pid}\n${LEGACY_SAFE_TIMESTAMP}\n${AUTHORITATIVE_MAGIC}\n${randomUUID()}\n`;
   const publicationPath = `${lockPath}.publishing`;
-  let descriptor: number;
+  let descriptor: number | undefined;
+  let publicationIdentity: FileIdentity | undefined;
+  let authoritySettled = false;
   try {
     cleanupPublicationTombstone(publicationPath);
     descriptor = fs.openSync(publicationPath, 'wx', 0o600);
+    const openedStats = fs.fstatSync(descriptor, { bigint: true });
+    if (!openedStats.isFile()) throw new Error(`Unsafe file lock: ${publicationPath}`);
+    publicationIdentity = identity(openedStats);
   } catch (error) {
-    authority.release();
+    const failures: ContextualFailure[] = [
+      { context: 'File lock acquisition', failure: { error, status: 'failure' } },
+    ];
+    const closeFailure = captureCleanup('File lock descriptor close', () => {
+      if (descriptor !== undefined) {
+        fs.closeSync(descriptor);
+        descriptor = undefined;
+      }
+    });
+    if (closeFailure) failures.push(closeFailure);
+    const publicationFailure = captureCleanup('File lock publication cleanup', () => {
+      if (publicationIdentity !== undefined) {
+        cleanupOwnedPublication(publicationPath, descriptor, publicationIdentity);
+      }
+    });
+    if (publicationFailure) failures.push(publicationFailure);
+    const authorityFailure = captureCleanup('File lock authority release', () =>
+      authority.release()
+    );
+    if (authorityFailure) failures.push(authorityFailure);
+    throwContextualFailures(failures, 'File lock acquisition and cleanup failed');
     throw error;
   }
+  const ownedDescriptor = descriptor as number;
+  const ownedPublicationIdentity = publicationIdentity as FileIdentity;
 
   try {
-    fs.writeFileSync(descriptor, content, 'utf8');
-    fs.fsyncSync(descriptor);
-    const stats = fs.fstatSync(descriptor, { bigint: true });
-    if (!stats.isFile()) throw new Error(`Unsafe file lock: ${publicationPath}`);
+    fs.writeFileSync(ownedDescriptor, content, 'utf8');
+    fs.fsyncSync(ownedDescriptor);
+    const stats = fs.fstatSync(ownedDescriptor, { bigint: true });
+    if (!stats.isFile() || !sameIdentity(ownedPublicationIdentity, identity(stats))) {
+      throw new Error(`Unsafe file lock: ${publicationPath}`);
+    }
     try {
       fs.linkSync(publicationPath, lockPath);
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
       if (code !== 'EEXIST' && code !== 'EISDIR') throw error;
-      fs.closeSync(descriptor);
-      descriptor = -1;
-      unlinkExactContent(publicationPath, content);
-      const classification = classifyExistingLock(filePath, lockPath);
-      if (classification === 'recoverable') {
-        const staleContent = readBoundedLock(lockPath);
-        if (staleContent !== 'retry') unlinkExactContent(lockPath, staleContent);
-        authority.release();
-        return 'retry';
-      }
-      authority.release();
+      const failures: ContextualFailure[] = [];
+      const closeFailure = captureCleanup('File lock descriptor close', () => {
+        fs.closeSync(ownedDescriptor);
+        descriptor = undefined;
+      });
+      if (closeFailure) failures.push(closeFailure);
+      const publicationFailure = captureCleanup('File lock publication cleanup', () =>
+        cleanupOwnedPublication(publicationPath, descriptor, ownedPublicationIdentity)
+      );
+      if (publicationFailure) failures.push(publicationFailure);
+
+      let classification: 'contended' | 'retry' = 'retry';
+      const classificationFailure = captureCleanup('File lock contention recovery', () => {
+        const observedClassification = classifyExistingLock(filePath, lockPath);
+        if (observedClassification === 'recoverable') {
+          const staleContent = readBoundedLock(lockPath);
+          if (staleContent !== 'retry') unlinkExactContent(lockPath, staleContent);
+          classification = 'retry';
+        } else {
+          classification = observedClassification;
+        }
+      });
+      if (classificationFailure) failures.push(classificationFailure);
+      const authorityFailure = captureCleanup('File lock authority release', () =>
+        authority.release()
+      );
+      if (authorityFailure) failures.push(authorityFailure);
+      authoritySettled = true;
+      throwContextualFailures(failures, 'File lock contention cleanup failed');
       return classification;
     }
-    fs.unlinkSync(publicationPath);
-    syncDirectory(path.dirname(lockPath));
+    unlinkOwnedPublication(publicationPath, ownedDescriptor, ownedPublicationIdentity);
     const lock: OwnedLock = {
       authority,
       canonicalParent,
       content,
-      descriptor,
+      descriptor: ownedDescriptor,
       identity: identity(stats),
       lockPath,
       ownerKey,
@@ -368,12 +559,28 @@ function tryAcquire(
     sameProcessOwners.set(ownerKey, token);
     return lock;
   } catch (error) {
-    if (descriptor >= 0) fs.closeSync(descriptor);
-    try {
-      cleanupPublicationTombstone(publicationPath);
-    } finally {
-      authority.release();
-    }
+    if (authoritySettled) throw error;
+    const failures: ContextualFailure[] = [
+      { context: 'File lock acquisition', failure: { error, status: 'failure' } },
+    ];
+    const closeFailure = captureCleanup('File lock descriptor close', () => {
+      if (descriptor !== undefined) {
+        fs.closeSync(descriptor);
+        descriptor = undefined;
+      }
+    });
+    if (closeFailure) failures.push(closeFailure);
+    const publicationFailure = captureCleanup('File lock publication cleanup', () => {
+      if (publicationIdentity !== undefined) {
+        cleanupOwnedPublication(publicationPath, descriptor, publicationIdentity);
+      }
+    });
+    if (publicationFailure) failures.push(publicationFailure);
+    const authorityFailure = captureCleanup('File lock authority release', () =>
+      authority.release()
+    );
+    if (authorityFailure) failures.push(authorityFailure);
+    throwContextualFailures(failures, 'File lock acquisition and cleanup failed');
     throw error;
   }
 }

@@ -40,13 +40,6 @@ function isSemanticAuthorityObservation(status: CliProviderStatus): boolean {
   return !['pending', 'transient_error', 'model_only'].includes(status.statusCheckOutcome ?? '');
 }
 
-function fingerprint(status: CliProviderStatus): string {
-  return JSON.stringify({
-    profile: getCliProviderProfileAuthorityFingerprint(status),
-    catalog: getCliProviderCatalogAuthorityFingerprint(status),
-  });
-}
-
 function deleteScope(
   current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
   scopeKey: string
@@ -79,7 +72,8 @@ export function reconcileGlobalProviderLaunchProofs(
     if (
       (current &&
         isSemanticAuthorityObservation(current) &&
-        fingerprint(current) !== fingerprint(incoming)) ||
+        getCliProviderProfileAuthorityFingerprint(current) !==
+          getCliProviderProfileAuthorityFingerprint(incoming)) ||
       (incoming.statusCheckOutcome === 'authoritative' && !incoming.authenticated)
     )
       nextProofs = deleteProvider(nextProofs, incoming.providerId);
@@ -102,12 +96,28 @@ export function reconcileScopedProviderLaunchProofs(input: {
   fetchedAtMs: number;
 }): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
   const previous = input.current[input.scopeKey];
-  const semanticChange =
+  const profileChange =
     input.responseMatchesProvider &&
     isSemanticAuthorityObservation(input.providerStatus) &&
     previous !== undefined &&
-    fingerprint(previous.providerStatus) !== fingerprint(input.providerStatus);
-  const retained = semanticChange ? deleteScope(input.current, input.scopeKey) : input.current;
+    getCliProviderProfileAuthorityFingerprint(previous.providerStatus) !==
+      getCliProviderProfileAuthorityFingerprint(input.providerStatus);
+  const catalogChange =
+    input.responseMatchesProvider &&
+    isSemanticAuthorityObservation(input.providerStatus) &&
+    previous !== undefined &&
+    getCliProviderCatalogAuthorityFingerprint(previous.providerStatus) !==
+      getCliProviderCatalogAuthorityFingerprint(input.providerStatus);
+  const globalLogout =
+    input.responseMatchesProvider &&
+    input.providerStatus.statusCheckOutcome === 'authoritative' &&
+    !input.providerStatus.authenticated;
+  const retained =
+    profileChange || globalLogout
+      ? deleteProvider(input.current, input.providerId)
+      : catalogChange
+        ? deleteScope(input.current, input.scopeKey)
+        : input.current;
   const scope = input.authorityScope;
   const canAuthorize =
     input.requestIntent === 'launch-proof' &&

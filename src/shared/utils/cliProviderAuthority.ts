@@ -4,35 +4,60 @@ import type {
   CliProviderStatusAuthorityScope,
 } from '@shared/types/cliInstaller';
 
-/**
- * Cross-process lexical key for an absolute project path. Main resolves the
- * path first; renderer applies the same representation to request/cache keys.
- */
+/** Cross-process, host-independent lexical key for an absolute project path. */
 export function normalizeCliProviderAuthorityProjectPath(projectPath: string): string {
-  const value = projectPath.trim().replace(/\\/g, '/');
-  const windowsDrive = /^[a-zA-Z]:\//.test(value);
-  const windowsUnc = value.startsWith('//');
-  const prefix = windowsDrive
-    ? value.slice(0, 2)
-    : windowsUnc
-      ? '//'
-      : value.startsWith('/')
-        ? '/'
-        : '';
-  const remainder = windowsDrive ? value.slice(2) : value.slice(prefix.length);
+  const raw = projectPath.trim();
+  const windowsUnc = raw.startsWith('\\\\');
+  const value = raw.replace(/\\/g, '/');
+  const windowsDrive = /^[a-zA-Z]:\//u.test(value);
+  const posix = value.startsWith('/') && !windowsUnc;
+  if (!windowsDrive && !windowsUnc && !posix) {
+    throw new Error('Provider authority project path must be absolute');
+  }
+
+  let prefix: string;
+  let remainder: string;
+  if (windowsUnc) {
+    const rootComponents = value.slice(2).split('/').filter(Boolean).slice(0, 2);
+    if (
+      rootComponents.length !== 2 ||
+      rootComponents.some((component) => component === '.' || component === '..')
+    ) {
+      throw new Error('Provider authority UNC path must include a server and share');
+    }
+    prefix = `\\\\${rootComponents.join('\\')}`;
+    remainder = value.slice(2).split('/').filter(Boolean).slice(2).join('/');
+  } else if (windowsDrive) {
+    prefix = `${value.slice(0, 2)}/`;
+    remainder = value.slice(3);
+  } else {
+    prefix = '/';
+    remainder = value.replace(/^\/+/u, '');
+  }
+
   const components: string[] = [];
   for (const component of remainder.split('/')) {
     if (!component || component === '.') continue;
     if (component === '..') {
-      if (components.length > 0 && components.at(-1) !== '..') components.pop();
-      else if (!prefix) components.push(component);
+      if (components.length > 0) components.pop();
       continue;
     }
     components.push(component);
   }
-  const separator = prefix && components.length > 0 && !prefix.endsWith('/') ? '/' : '';
-  const normalized = `${prefix}${separator}${components.join('/')}` || '.';
-  return windowsDrive || windowsUnc ? normalized.toLowerCase() : normalized;
+  if (windowsUnc) {
+    const separator = components.length > 0 ? '\\' : '';
+    return `${prefix}${separator}${components.join('\\')}`.toLowerCase();
+  }
+  const separator = components.length > 0 && !prefix.endsWith('/') ? '/' : '';
+  const normalized = `${prefix}${separator}${components.join('/')}`;
+  return windowsDrive ? normalized.toLowerCase() : normalized;
+}
+
+export function isCliProviderAuthorityProjectRoot(projectPath: string): boolean {
+  const normalized = normalizeCliProviderAuthorityProjectPath(projectPath);
+  return (
+    normalized === '/' || /^[a-z]:\/$/u.test(normalized) || /^\\\\[^\\]+\\[^\\]+$/u.test(normalized)
+  );
 }
 
 function sortByJson<T>(values: readonly T[]): T[] {

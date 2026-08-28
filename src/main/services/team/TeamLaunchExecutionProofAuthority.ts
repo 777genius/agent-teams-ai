@@ -10,7 +10,6 @@ import {
   resolveLeadRuntimeSelectionProvenance,
 } from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 import { createHash, randomUUID } from 'crypto';
-import * as path from 'path';
 
 import {
   canonicalProjectPathComparisonKey,
@@ -169,7 +168,7 @@ function normalizeChecks(checks: readonly TeamProvisioningModelCheckRequest[]) {
 }
 
 function normalizeProjectPath(cwd: string): string {
-  return normalizeCliProviderAuthorityProjectPath(path.resolve(cwd.trim()));
+  return normalizeCliProviderAuthorityProjectPath(cwd);
 }
 
 export { canonicalProjectPathComparisonKey };
@@ -398,14 +397,10 @@ export function invalidateAuthoritativeModelExecutionProofs(): void {
   leadRestartProofs.clear();
 }
 
-/** Invalidates only execution authority that depends on one provider. */
-export function invalidateAuthoritativeModelExecutionProofsForProvider(
+function invalidateProviderProofRecords(
   providerId: ProviderModelLaunchIdentity['providerId'],
-  projectPath: string | null = null
+  projectPath: string | null
 ): void {
-  if (projectPath)
-    providerAuthority.invalidateProviderCatalog(providerId, normalizeProjectPath(projectPath));
-  else providerAuthority.invalidateProviderProfile(providerId);
   const leaseMatches = (lease: ProjectRootIdentityLease): boolean =>
     projectPath === null || lease.isCurrent(projectPath);
   for (const [authorityId, record] of proofs) {
@@ -429,6 +424,24 @@ export function invalidateAuthoritativeModelExecutionProofsForProvider(
       record.stale = true;
   }
   scheduleExpiryCleanup();
+}
+
+/** Invalidates global profile/auth authority for this provider in every project. */
+export function invalidateAuthoritativeModelExecutionProofsForProviderProfile(
+  providerId: ProviderModelLaunchIdentity['providerId']
+): void {
+  providerAuthority.invalidateProviderProfile(providerId);
+  invalidateProviderProofRecords(providerId, null);
+}
+
+/** Invalidates only the exact project+provider catalog authority. */
+export function invalidateAuthoritativeModelExecutionProofsForProviderCatalog(
+  providerId: ProviderModelLaunchIdentity['providerId'],
+  projectPath: string
+): void {
+  const normalizedProjectPath = normalizeProjectPath(projectPath);
+  providerAuthority.invalidateProviderCatalog(providerId, normalizedProjectPath);
+  invalidateProviderProofRecords(providerId, normalizedProjectPath);
 }
 
 /** Closes proof capture and issuance until the root coordinator commits a generation. */

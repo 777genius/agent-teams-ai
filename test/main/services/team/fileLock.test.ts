@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import * as sqliteTransactionLock from '@main/services/infrastructure/SqliteTransactionLock';
 import {
   FILE_LOCK_RETIREMENT_MARKER,
   withFileLock,
@@ -128,6 +129,8 @@ function expectUndefinedOperationAggregate(error: unknown, cleanupError: Error):
   expect(aggregate.errors[1]).toBe(cleanupError);
   expect(aggregate.cause).toBe(aggregate.errors[0]);
 }
+
+const COMPLETE_PUBLICATION = `${process.pid}\n9007199254740991\nagent-teams-legacy-authoritative-v2\n12345678-1234-4123-8123-123456789abc\n`;
 
 describe('withFileLock legacy compatibility ownership', () => {
   let temporaryRoot: string;
@@ -797,5 +800,202 @@ describe('withFileLock legacy compatibility ownership', () => {
       'crash:start',
       'contender:acquired',
     ]);
+  });
+
+  it.each(Array.from({ length: COMPLETE_PUBLICATION.length }, (_, length) => length))(
+    'recovers a publication interrupted after exactly %i bytes on restart',
+    (length) => {
+      const publicationPath = `${testFile}.lock.publishing`;
+      fs.writeFileSync(publicationPath, COMPLETE_PUBLICATION.slice(0, length), {
+        encoding: 'utf8',
+        mode: 0o600,
+      });
+
+      expect(withFileLockSync(testFile, () => 'restarted')).toBe('restarted');
+      expect(fs.existsSync(publicationPath)).toBe(false);
+      expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+    }
+  );
+
+  it('recovers a complete branded publication left by a crashed predecessor', () => {
+    const publicationPath = `${testFile}.lock.publishing`;
+    fs.writeFileSync(publicationPath, COMPLETE_PUBLICATION, { encoding: 'utf8', mode: 0o600 });
+
+    expect(withFileLockSync(testFile, () => 'restarted')).toBe('restarted');
+    expect(fs.existsSync(publicationPath)).toBe(false);
+  });
+
+  it('rejects malformed publication bytes without deleting them', () => {
+    const publicationPath = `${testFile}.lock.publishing`;
+    const malformed = Buffer.from([0xff, 0x00, 0x61, 0x0a]);
+    fs.writeFileSync(publicationPath, malformed, { mode: 0o600 });
+
+    expect(() => withFileLockSync(testFile, () => undefined)).toThrow(
+      `Unsafe file lock publication tombstone: ${publicationPath}`
+    );
+    expect(fs.readFileSync(publicationPath)).toEqual(malformed);
+    expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+  });
+
+  it('does not unlink a foreign inode that replaces the inspected publication', () => {
+    const publicationPath = `${testFile}.lock.publishing`;
+    const inspectedPath = `${publicationPath}.inspected`;
+    fs.writeFileSync(publicationPath, COMPLETE_PUBLICATION.slice(0, 17), {
+      encoding: 'utf8',
+      mode: 0o600,
+    });
+    const originalLstat = fs.lstatSync;
+    let publicationStatsReads = 0;
+    vi.spyOn(fs, 'lstatSync').mockImplementation(((target, options) => {
+      if (String(target) === publicationPath && ++publicationStatsReads === 3) {
+        fs.renameSync(publicationPath, inspectedPath);
+        fs.writeFileSync(publicationPath, 'foreign replacement', { mode: 0o600 });
+      }
+      return originalLstat(target, options as never);
+    }) as typeof fs.lstatSync);
+
+    expect(() => withFileLockSync(testFile, () => undefined)).toThrow(
+      'Lock changed before cleanup'
+    );
+    expect(fs.readFileSync(publicationPath, 'utf8')).toBe('foreign replacement');
+    expect(fs.existsSync(inspectedPath)).toBe(true);
+    expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+  });
+
+  it('reports stale-publication cleanup failure, releases authority, and permits restart', () => {
+    const publicationPath = `${testFile}.lock.publishing`;
+    fs.writeFileSync(publicationPath, '', { mode: 0o600 });
+    const cleanupError = new Error('stale publication unlink failed');
+    const originalUnlink = fs.unlinkSync;
+    const unlinkSpy = vi.spyOn(fs, 'unlinkSync').mockImplementation((target) => {
+      if (String(target) === publicationPath) throw cleanupError;
+      originalUnlink(target);
+    });
+
+    const failure = captureFailure(() => withFileLockSync(testFile, () => undefined));
+    expect(failure).toEqual({ error: cleanupError, failed: true });
+    expect(fs.existsSync(publicationPath)).toBe(true);
+
+    unlinkSpy.mockRestore();
+    expect(withFileLockSync(testFile, () => 'restarted')).toBe('restarted');
+    expect(fs.existsSync(publicationPath)).toBe(false);
+  });
+
+  it.each(['write', 'fsync', 'link'] as const)(
+    'preserves the %s publication failure and removes its poison',
+    (stage) => {
+      const publicationPath = `${testFile}.lock.publishing`;
+      const primaryError = new Error(`${stage} publication failed`);
+      const originalWrite = fs.writeFileSync;
+      const originalFsync = fs.fsyncSync;
+      const originalLink = fs.linkSync;
+      let injected = false;
+      const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(((
+        target,
+        data,
+        options
+      ) => {
+        if (stage === 'write' && !injected && typeof target === 'number') {
+          injected = true;
+          throw primaryError;
+        }
+        return originalWrite(target, data, options as never);
+      }) as typeof fs.writeFileSync);
+      const fsyncSpy = vi.spyOn(fs, 'fsyncSync').mockImplementation((descriptor) => {
+        if (stage === 'fsync' && !injected && fs.fstatSync(descriptor).isFile()) {
+          injected = true;
+          throw primaryError;
+        }
+        originalFsync(descriptor);
+      });
+      const linkSpy = vi.spyOn(fs, 'linkSync').mockImplementation((existingPath, newPath) => {
+        if (stage === 'link' && !injected && String(newPath) === `${testFile}.lock`) {
+          injected = true;
+          throw primaryError;
+        }
+        originalLink(existingPath, newPath);
+      });
+
+      const callback = vi.fn(() => undefined);
+      const failure = captureFailure(() => withFileLockSync(testFile, callback));
+      expect(failure).toEqual({ error: primaryError, failed: true });
+      expect(callback).not.toHaveBeenCalled();
+      expect(fs.existsSync(publicationPath)).toBe(false);
+      expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+      writeSpy.mockRestore();
+      fsyncSpy.mockRestore();
+      linkSpy.mockRestore();
+      expect(withFileLockSync(testFile, () => 'next')).toBe('next');
+    }
+  );
+
+  it('aggregates acquisition and every cleanup failure in causal order, including undefined', () => {
+    const publicationPath = `${testFile}.lock.publishing`;
+    const closeError = new Error('publication close failed');
+    const unlinkError = new Error('publication unlink failed');
+    const trace: string[] = [];
+    const originalWrite = fs.writeFileSync;
+    const originalClose = fs.closeSync;
+    const originalUnlink = fs.unlinkSync;
+    const originalLstat = fs.lstatSync;
+    let leakedDescriptor: number | undefined;
+    const databasePath = sqliteTransactionLock.getSqliteTransactionLockDatabasePath(testFile);
+    const expectedReleaseError = `File lock ownership was lost: ${testFile}`;
+    let publicationUnlinkAttempted = false;
+    let releaseFailed = false;
+    const lstatSpy = vi.spyOn(fs, 'lstatSync').mockImplementation(((target, options) => {
+      if (publicationUnlinkAttempted && !releaseFailed && String(target) === databasePath) {
+        releaseFailed = true;
+        trace.push('release');
+        throw new Error('injected authority identity read failure');
+      }
+      return originalLstat(target, options as never);
+    }) as typeof fs.lstatSync);
+    const writeSpy = vi.spyOn(fs, 'writeFileSync').mockImplementation(((target, data, options) => {
+      if (typeof target === 'number') {
+        trace.push('write');
+        throw undefined;
+      }
+      return originalWrite(target, data, options as never);
+    }) as typeof fs.writeFileSync);
+    const closeSpy = vi.spyOn(fs, 'closeSync').mockImplementation((descriptor) => {
+      if (leakedDescriptor === undefined && fs.fstatSync(descriptor).isFile()) {
+        leakedDescriptor = descriptor;
+        trace.push('close');
+        throw closeError;
+      }
+      originalClose(descriptor);
+    });
+    const unlinkSpy = vi.spyOn(fs, 'unlinkSync').mockImplementation((target) => {
+      if (String(target) === publicationPath) {
+        trace.push('unlink');
+        publicationUnlinkAttempted = true;
+        throw unlinkError;
+      }
+      originalUnlink(target);
+    });
+
+    const failure = captureFailure(() => withFileLockSync(testFile, () => undefined));
+    expect(failure.failed).toBe(true);
+    expect(failure.error).toBeInstanceOf(AggregateError);
+    const aggregate = failure.error as AggregateError;
+    expect(aggregate.message).toBe('File lock acquisition and cleanup failed');
+    expect(aggregate.errors).toHaveLength(4);
+    expect(aggregate.errors[0]).toMatchObject({
+      message: 'File lock acquisition failed by throwing undefined',
+    });
+    expect(aggregate.errors.slice(1, 3)).toEqual([closeError, unlinkError]);
+    expect(aggregate.errors[3]).toMatchObject({ message: expectedReleaseError });
+    expect(aggregate.cause).toBe(aggregate.errors[0]);
+    expect(trace).toEqual(['write', 'close', 'unlink', 'release']);
+    expect(fs.existsSync(publicationPath)).toBe(true);
+
+    writeSpy.mockRestore();
+    closeSpy.mockRestore();
+    unlinkSpy.mockRestore();
+    lstatSpy.mockRestore();
+    if (leakedDescriptor !== undefined) originalClose(leakedDescriptor);
+    expect(withFileLockSync(testFile, () => 'next')).toBe('next');
+    expect(fs.existsSync(publicationPath)).toBe(false);
   });
 });

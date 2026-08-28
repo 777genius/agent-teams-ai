@@ -8,7 +8,6 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import path from 'node:path';
 
 import {
   CLI_INSTALLER_GET_PROVIDER_STATUS,
@@ -25,6 +24,7 @@ import {
 import {
   getCliProviderCatalogAuthorityFingerprint,
   getCliProviderProfileAuthorityFingerprint,
+  isCliProviderAuthorityProjectRoot,
   normalizeCliProviderAuthorityProjectPath,
 } from '@shared/utils/cliProviderAuthority';
 import { getErrorMessage } from '@shared/utils/errorHandling';
@@ -34,7 +34,8 @@ import { CodexBinaryResolver } from '../services/infrastructure/codexAppServer';
 import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
 import {
   invalidateAuthoritativeModelExecutionProofs,
-  invalidateAuthoritativeModelExecutionProofsForProvider,
+  invalidateAuthoritativeModelExecutionProofsForProviderCatalog,
+  invalidateAuthoritativeModelExecutionProofsForProviderProfile,
 } from '../services/team/TeamLaunchExecutionProofAuthority';
 import { getAuthorityScope } from '../services/team/TeamLaunchProviderAuthorityGeneration';
 
@@ -98,16 +99,12 @@ function normalizeProviderStatusRequest(request: unknown): CliProviderStatusIpcR
   if (!trimmedProjectPath) {
     return { purpose: candidate.purpose, requestNonce: candidate.requestNonce };
   }
-  if (!path.isAbsolute(trimmedProjectPath)) {
-    throw new Error('Provider status project path must be absolute');
-  }
-
-  const resolvedProjectPath = path.resolve(trimmedProjectPath);
-  if (resolvedProjectPath === path.parse(resolvedProjectPath).root) {
+  const normalizedProjectPath = normalizeCliProviderAuthorityProjectPath(trimmedProjectPath);
+  if (isCliProviderAuthorityProjectRoot(normalizedProjectPath)) {
     throw new Error('Provider status project path cannot be a filesystem root');
   }
   return {
-    projectPath: normalizeCliProviderAuthorityProjectPath(resolvedProjectPath),
+    projectPath: normalizedProjectPath,
     purpose: candidate.purpose,
     requestNonce: candidate.requestNonce,
   };
@@ -408,41 +405,37 @@ function observeProviderAuthority(
   projectPath: string | null
 ): void {
   if (!isSemanticProviderAuthorityObservation(providerStatus)) return;
+  const profileFingerprint = getCliProviderProfileAuthorityFingerprint(providerStatus);
+  const previousProfileFingerprint = observedProviderProfileAuthorityFingerprintById.get(
+    providerStatus.providerId
+  );
+  if (
+    previousProfileFingerprint !== undefined &&
+    previousProfileFingerprint !== profileFingerprint
+  ) {
+    invalidateAuthoritativeModelExecutionProofsForProviderProfile(providerStatus.providerId);
+  }
+  observedProviderProfileAuthorityFingerprintById.set(
+    providerStatus.providerId,
+    profileFingerprint
+  );
+
   if (projectPath) {
     const scopeKey = `${providerStatus.providerId}\0${projectPath}`;
-    const authorityFingerprint = JSON.stringify({
-      profile: getCliProviderProfileAuthorityFingerprint(providerStatus),
-      catalog: getCliProviderCatalogAuthorityFingerprint(providerStatus),
-    });
+    const authorityFingerprint = getCliProviderCatalogAuthorityFingerprint(providerStatus);
     const previousAuthorityFingerprint =
       observedProviderCatalogAuthorityFingerprintByScope.get(scopeKey);
     if (
       previousAuthorityFingerprint !== undefined &&
       previousAuthorityFingerprint !== authorityFingerprint
     ) {
-      invalidateAuthoritativeModelExecutionProofsForProvider(
+      invalidateAuthoritativeModelExecutionProofsForProviderCatalog(
         providerStatus.providerId,
         projectPath
       );
     }
     observedProviderCatalogAuthorityFingerprintByScope.set(scopeKey, authorityFingerprint);
-    return;
   }
-
-  const authorityFingerprint = getCliProviderProfileAuthorityFingerprint(providerStatus);
-  const previousAuthorityFingerprint = observedProviderProfileAuthorityFingerprintById.get(
-    providerStatus.providerId
-  );
-  if (
-    previousAuthorityFingerprint !== undefined &&
-    previousAuthorityFingerprint !== authorityFingerprint
-  ) {
-    invalidateAuthoritativeModelExecutionProofsForProvider(providerStatus.providerId);
-  }
-  observedProviderProfileAuthorityFingerprintById.set(
-    providerStatus.providerId,
-    authorityFingerprint
-  );
 }
 
 async function handleGetProviderStatus(

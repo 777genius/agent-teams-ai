@@ -4,6 +4,10 @@ import {
   getCliProviderStatusScopeKey,
   reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
+import {
+  reconcileGlobalProviderLaunchProofs,
+  reconcileScopedProviderLaunchProofs,
+} from '@renderer/store/slices/scopedCliProviderLaunchProof';
 import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
@@ -70,6 +74,102 @@ function withProviderStatusEnvelope(
     };
   };
 }
+
+describe('provider launch proof authority reconciliation', () => {
+  const projectA = '/project/a';
+  const projectB = '/project/b';
+  const scopeA = getCliProviderStatusScopeKey('codex', projectA);
+  const scopeB = getCliProviderStatusScopeKey('codex', projectB);
+  const base = createLoadingMultimodelCliStatus();
+  const codex = base.providers.find((provider) => provider.providerId === 'codex')!;
+  const ready: CliProviderStatus = {
+    ...codex,
+    supported: true,
+    authenticated: true,
+    authMethod: 'codex_chatgpt',
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    capabilities: { ...codex.capabilities, teamLaunch: true },
+    models: ['gpt-v1'],
+  };
+  const proofs = {
+    [scopeA]: { providerStatus: ready, requestId: 1, epoch: 1, fetchedAtMs: 1 },
+    [scopeB]: { providerStatus: ready, requestId: 2, epoch: 1, fetchedAtMs: 1 },
+  };
+
+  it.each([
+    ['//tmp/project', '/tmp/project'],
+    ['/tmp/./parent/../project', '/tmp/project'],
+    ['C:\\Work\\Project', 'c:/work/project'],
+    ['\\\\Server\\Share\\folder\\..\\Project', '\\\\server\\share\\project'],
+    ['\\\\Server\\Share\\..\\..\\Project', '\\\\server\\share\\project'],
+  ])('derives the canonical renderer scope for %s', (input, expected) => {
+    expect(getCliProviderStatusScopeKey('codex', input)).toBe(`codex\0${expected}`);
+  });
+
+  it('revokes projects A and B when a scoped authoritative observation discovers logout', () => {
+    const loggedOut = {
+      ...ready,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown' as const,
+    };
+    const reconciled = reconcileScopedProviderLaunchProofs({
+      current: proofs,
+      scopeKey: scopeA,
+      providerId: 'codex',
+      projectPath: projectA,
+      providerStatus: loggedOut,
+      responseMatchesProvider: true,
+      metadataMatchesRequest: true,
+      authorityScope: null,
+      requestIntent: 'launch-proof',
+      requestId: 3,
+      epoch: 1,
+      fetchedAtMs: 2,
+    });
+
+    expect(reconciled[scopeA]).toBeUndefined();
+    expect(reconciled[scopeB]).toBeUndefined();
+  });
+
+  it('replaces only project A authority when only its catalog changes', () => {
+    const reconciled = reconcileScopedProviderLaunchProofs({
+      current: proofs,
+      scopeKey: scopeA,
+      providerId: 'codex',
+      projectPath: projectA,
+      providerStatus: { ...ready, models: ['gpt-v2'] },
+      responseMatchesProvider: true,
+      metadataMatchesRequest: true,
+      authorityScope: {
+        schemaVersion: 1,
+        providerId: 'codex',
+        projectPath: projectA,
+        globalGeneration: 1,
+        profileGeneration: 1,
+        catalogGeneration: 2,
+      },
+      requestIntent: 'launch-proof',
+      requestId: 3,
+      epoch: 1,
+      fetchedAtMs: 2,
+    });
+
+    expect(reconciled[scopeA]?.providerStatus.models).toEqual(['gpt-v2']);
+    expect(reconciled[scopeB]).toBe(proofs[scopeB]);
+  });
+
+  it('does not revoke scoped proofs for a projectless catalog-only observation', () => {
+    const currentStatus = { ...base, providers: [ready] };
+    const incomingStatus = {
+      ...currentStatus,
+      providers: [{ ...ready, models: ['gpt-v2'] }],
+    };
+
+    expect(reconcileGlobalProviderLaunchProofs(proofs, currentStatus, incomingStatus)).toBe(proofs);
+  });
+});
 
 describe('reconcileCliStatus', () => {
   it('retains a previous exact-scope catalog as stale while revoking launch authority', () => {

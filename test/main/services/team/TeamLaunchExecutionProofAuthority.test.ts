@@ -10,7 +10,7 @@ import {
   consumeLeadRuntimeRestartProof,
   consumeLeadRuntimeRestartProofForCurrentOwner,
   invalidateAuthoritativeModelExecutionProofs,
-  invalidateAuthoritativeModelExecutionProofsForProvider,
+  invalidateAuthoritativeModelExecutionProofsForProviderProfile,
   issueAuthoritativeModelExecutionProof,
   issueLeadRuntimeRestartProof,
   verifyAuthoritativeModelExecutionProof,
@@ -493,7 +493,7 @@ describe('TeamLaunchExecutionProofAuthority', () => {
     const codexAttempt = captureAuthoritativeProofEpoch(PROJECT_PATH);
     const geminiAttempt = captureAuthoritativeProofEpoch(PROJECT_PATH);
 
-    invalidateAuthoritativeModelExecutionProofsForProvider('codex');
+    invalidateAuthoritativeModelExecutionProofsForProviderProfile('codex');
 
     expect(verifyAuthoritativeModelExecutionProof(codexProof)).toBe(false);
     expect(verifyAuthoritativeModelExecutionProof(geminiProof)).toBe(true);

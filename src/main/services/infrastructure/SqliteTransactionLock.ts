@@ -5,6 +5,8 @@ import { DatabaseSync } from 'node:sqlite';
 const WINDOWS_DIRECTORY_SYNC_UNSUPPORTED = new Set(['EACCES', 'EPERM', 'EISDIR', 'EBADF']);
 const SQLITE_TRANSACTION_LOCK_DATABASE_SUFFIX = '.lock.sqlite3';
 const SQLITE_TRANSACTION_LOCK_SIDECAR_SUFFIXES = ['-journal', '-shm', '-wal'] as const;
+const NO_FOLLOW = process.platform === 'win32' ? 0 : (fs.constants.O_NOFOLLOW ?? 0);
+const MAX_IDENTITY_PREPARATION_ATTEMPTS = 8;
 
 export interface SqliteTransactionLockOptions {
   acquireTimeoutMs: number;
@@ -18,10 +20,40 @@ interface FileIdentity {
   ino: bigint;
 }
 
+interface DatabaseIdentityGuard {
+  created: boolean;
+  descriptor: number;
+  identity: FileIdentity;
+}
+
+interface Failure {
+  error: unknown;
+  context: string;
+}
+
+export interface SqliteTransactionLockTestHooks {
+  afterAbsentFilePrecreated?(databasePath: string): void;
+  beforeDatabaseOpen?(databasePath: string): void;
+  afterDatabaseOpen?(databasePath: string): void;
+}
+
+let testHooks: SqliteTransactionLockTestHooks | undefined;
+
+/** Test-only race injection seam. Production callers must not configure it. */
+export function setSqliteTransactionLockTestHooksForTests(
+  hooks: SqliteTransactionLockTestHooks | undefined
+): void {
+  if (process.env.NODE_ENV !== 'test') {
+    throw new Error('SQLite transaction lock test hooks are only available in tests');
+  }
+  testHooks = hooks;
+}
+
 interface OpenLock {
   database: DatabaseSync;
   databasePath: string;
   databaseIdentity: FileIdentity;
+  identityDescriptor: number;
   parentIdentity: FileIdentity;
 }
 
@@ -60,6 +92,26 @@ function identity(stats: fs.BigIntStats): FileIdentity {
 
 function sameIdentity(left: FileIdentity, right: FileIdentity): boolean {
   return left.dev === right.dev && left.ino === right.ino;
+}
+
+function captureFailure(context: string, operation: () => void): Failure | null {
+  try {
+    operation();
+    return null;
+  } catch (error) {
+    return { context, error };
+  }
+}
+
+function contextualizeFailure(failure: Failure): unknown {
+  if (failure.error !== undefined) return failure.error;
+  return new Error(`${failure.context} failed by throwing undefined`, { cause: failure.error });
+}
+
+function throwWithCleanupFailures(primary: Failure, cleanupFailures: Failure[]): never {
+  if (cleanupFailures.length === 0) throw primary.error;
+  const errors = [primary, ...cleanupFailures].map(contextualizeFailure);
+  throw new AggregateError(errors, `${primary.context} and cleanup failed`, { cause: errors[0] });
 }
 
 function syncDirectory(directoryPath: string): void {
@@ -126,17 +178,94 @@ function assertRegularDatabase(databasePath: string): FileIdentity | null {
   }
 }
 
+function openDatabaseIdentityGuard(databasePath: string): DatabaseIdentityGuard {
+  for (let attempt = 0; attempt < MAX_IDENTITY_PREPARATION_ATTEMPTS; attempt += 1) {
+    const existingIdentity = assertRegularDatabase(databasePath);
+    let descriptor: number;
+    let created = false;
+    try {
+      if (existingIdentity) {
+        descriptor = fs.openSync(databasePath, fs.constants.O_RDONLY | NO_FOLLOW);
+      } else {
+        descriptor = fs.openSync(
+          databasePath,
+          fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_RDWR | NO_FOLLOW,
+          0o600
+        );
+        created = true;
+      }
+    } catch (error) {
+      if (
+        isMissing(error) ||
+        (!existingIdentity && (error as NodeJS.ErrnoException).code === 'EEXIST')
+      ) {
+        continue;
+      }
+      throw error;
+    }
+
+    try {
+      const descriptorStats = fs.fstatSync(descriptor, { bigint: true });
+      const pathStats = fs.lstatSync(databasePath, { bigint: true });
+      const descriptorIdentity = identity(descriptorStats);
+      if (
+        !descriptorStats.isFile() ||
+        pathStats.isSymbolicLink() ||
+        !pathStats.isFile() ||
+        !sameIdentity(descriptorIdentity, identity(pathStats)) ||
+        (existingIdentity && !sameIdentity(existingIdentity, descriptorIdentity))
+      ) {
+        throw new Error(`Lock database identity changed before opening: ${databasePath}`);
+      }
+      if (created) syncDirectory(path.dirname(databasePath));
+      return { created, descriptor, identity: descriptorIdentity };
+    } catch (error) {
+      const primary = { context: 'SQLite lock identity preparation', error };
+      const closeFailure = captureFailure('SQLite lock identity descriptor close', () =>
+        fs.closeSync(descriptor)
+      );
+      throwWithCleanupFailures(primary, closeFailure ? [closeFailure] : []);
+    }
+  }
+  throw new Error(`Lock database identity kept changing before opening: ${databasePath}`);
+}
+
+function validateDatabaseIdentity(
+  databasePath: string,
+  guard: DatabaseIdentityGuard,
+  parentIdentity: FileIdentity
+): void {
+  const descriptorStats = fs.fstatSync(guard.descriptor, { bigint: true });
+  const databaseStats = fs.lstatSync(databasePath, { bigint: true });
+  const parentStats = fs.lstatSync(path.dirname(databasePath), { bigint: true });
+  if (
+    !descriptorStats.isFile() ||
+    databaseStats.isSymbolicLink() ||
+    !databaseStats.isFile() ||
+    parentStats.isSymbolicLink() ||
+    !parentStats.isDirectory() ||
+    !sameIdentity(guard.identity, identity(descriptorStats)) ||
+    !sameIdentity(guard.identity, identity(databaseStats)) ||
+    !sameIdentity(parentIdentity, identity(parentStats))
+  ) {
+    throw new Error(`Lock database identity changed while opening: ${databasePath}`);
+  }
+}
+
 function assertPathOwnership(lock: OpenLock, ownershipLostMessage: string): void {
   try {
     const parentStats = fs.lstatSync(path.dirname(lock.databasePath), { bigint: true });
     const databaseStats = fs.lstatSync(lock.databasePath, { bigint: true });
+    const descriptorStats = fs.fstatSync(lock.identityDescriptor, { bigint: true });
     if (
       !parentStats.isSymbolicLink() &&
       parentStats.isDirectory() &&
       !databaseStats.isSymbolicLink() &&
       databaseStats.isFile() &&
+      descriptorStats.isFile() &&
       sameIdentity(lock.parentIdentity, identity(parentStats)) &&
-      sameIdentity(lock.databaseIdentity, identity(databaseStats))
+      sameIdentity(lock.databaseIdentity, identity(databaseStats)) &&
+      sameIdentity(lock.databaseIdentity, identity(descriptorStats))
     ) {
       return;
     }
@@ -150,27 +279,42 @@ function openLock(databasePath: string): OpenLock {
   ensureDirectoryHierarchy(path.dirname(databasePath));
   const canonicalParent = fs.realpathSync.native(path.dirname(databasePath));
   const canonicalPath = path.join(canonicalParent, path.basename(databasePath));
-  const existingIdentity = assertRegularDatabase(canonicalPath);
   const parentIdentity = identity(fs.lstatSync(canonicalParent, { bigint: true }));
-  const database = new DatabaseSync(canonicalPath);
+  const guard = openDatabaseIdentityGuard(canonicalPath);
+  let database: DatabaseSync | undefined;
   try {
+    if (guard.created) testHooks?.afterAbsentFilePrecreated?.(canonicalPath);
+    testHooks?.beforeDatabaseOpen?.(canonicalPath);
+    database = new DatabaseSync(canonicalPath);
+    testHooks?.afterDatabaseOpen?.(canonicalPath);
     database.exec('PRAGMA busy_timeout = 0');
-    const databaseIdentity = assertRegularDatabase(canonicalPath);
-    if (
-      !databaseIdentity ||
-      (existingIdentity && !sameIdentity(existingIdentity, databaseIdentity))
-    ) {
-      throw new Error(`Lock database identity changed while opening: ${canonicalPath}`);
-    }
+    validateDatabaseIdentity(canonicalPath, guard, parentIdentity);
     try {
       fs.chmodSync(canonicalPath, 0o600);
     } catch (error) {
       if (process.platform !== 'win32') throw error;
     }
-    return { database, databasePath: canonicalPath, databaseIdentity, parentIdentity };
+    return {
+      database,
+      databasePath: canonicalPath,
+      databaseIdentity: guard.identity,
+      identityDescriptor: guard.descriptor,
+      parentIdentity,
+    };
   } catch (error) {
-    database.close();
-    throw error;
+    const cleanupFailures: Failure[] = [];
+    if (database) {
+      const openedDatabase = database;
+      const closeFailure = captureFailure('SQLite lock database close', () =>
+        openedDatabase.close()
+      );
+      if (closeFailure) cleanupFailures.push(closeFailure);
+    }
+    const descriptorCloseFailure = captureFailure('SQLite lock identity descriptor close', () =>
+      fs.closeSync(guard.descriptor)
+    );
+    if (descriptorCloseFailure) cleanupFailures.push(descriptorCloseFailure);
+    throwWithCleanupFailures({ context: 'SQLite lock open', error }, cleanupFailures);
   }
 }
 
@@ -186,7 +330,32 @@ function rollbackAndClose(lock: OpenLock): void {
   } catch {
     // BEGIN may not have succeeded, or SQLite may already have rolled back.
   }
-  lock.database.close();
+  closeLockResources(lock);
+}
+
+function closeLockResources(lock: OpenLock): void {
+  const databaseCloseFailure = captureFailure('SQLite lock database close', () =>
+    lock.database.close()
+  );
+  const descriptorCloseFailure = captureFailure('SQLite lock identity descriptor close', () =>
+    fs.closeSync(lock.identityDescriptor)
+  );
+  if (databaseCloseFailure && descriptorCloseFailure) {
+    throwWithCleanupFailures(databaseCloseFailure, [descriptorCloseFailure]);
+  }
+  if (databaseCloseFailure) throw databaseCloseFailure.error;
+  if (descriptorCloseFailure) throw descriptorCloseFailure.error;
+}
+
+function rollbackAndCloseAfterFailure(lock: OpenLock, context: string, error: unknown): never {
+  const primary = { context, error };
+  try {
+    lock.database.exec('ROLLBACK');
+  } catch {
+    // BEGIN may not have succeeded, or SQLite may already have rolled back.
+  }
+  const closeFailure = captureFailure('SQLite lock resource close', () => closeLockResources(lock));
+  throwWithCleanupFailures(primary, closeFailure ? [closeFailure] : []);
 }
 
 function tryAcquire(databasePath: string, ownershipLostMessage: string): OpenLock | null {
@@ -205,8 +374,15 @@ function tryAcquire(databasePath: string, ownershipLostMessage: string): OpenLoc
     assertPathOwnership(lock, ownershipLostMessage);
     return lock;
   } catch (error) {
-    rollbackAndClose(lock);
-    if (isBusy(error)) return null;
+    const busy = isBusy(error);
+    try {
+      rollbackAndClose(lock);
+    } catch (cleanupError) {
+      throwWithCleanupFailures({ context: 'SQLite lock acquisition', error }, [
+        { context: 'SQLite lock database close', error: cleanupError },
+      ]);
+    }
+    if (busy) return null;
     throw error;
   }
 }
@@ -240,10 +416,9 @@ export function tryRetainSqliteTransactionLock(
       try {
         commitLock(lock, ownershipLostMessage);
       } catch (error) {
-        rollbackAndClose(lock);
-        throw error;
+        rollbackAndCloseAfterFailure(lock, 'SQLite retained lock release', error);
       }
-      lock.database.close();
+      closeLockResources(lock);
     },
   };
 }
@@ -276,10 +451,9 @@ export function withSqliteTransactionLockSync<T>(
     result = operation();
     commitLock(lock, options.ownershipLostMessage);
   } catch (error) {
-    rollbackAndClose(lock);
-    throw error;
+    rollbackAndCloseAfterFailure(lock, 'SQLite lock operation', error);
   }
-  lock.database.close();
+  closeLockResources(lock);
   return result;
 }
 
@@ -300,9 +474,8 @@ export async function withSqliteTransactionLock<T>(
     result = await operation();
     commitLock(lock, options.ownershipLostMessage);
   } catch (error) {
-    rollbackAndClose(lock);
-    throw error;
+    rollbackAndCloseAfterFailure(lock, 'SQLite lock operation', error);
   }
-  lock.database.close();
+  closeLockResources(lock);
   return result;
 }

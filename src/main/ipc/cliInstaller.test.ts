@@ -6,6 +6,10 @@ import {
   CLI_INSTALLER_INVALIDATE_STATUS,
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
 } from '@preload/constants/ipcChannels';
+import {
+  isCliProviderAuthorityProjectRoot,
+  normalizeCliProviderAuthorityProjectPath,
+} from '@shared/utils/cliProviderAuthority';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
@@ -173,6 +177,35 @@ function setupHandlers(service: CliInstallerService): ReturnType<typeof createIp
   return harness;
 }
 
+describe('provider authority project scope normalization', () => {
+  test.each([
+    ['/tmp/project', '/tmp/project'],
+    ['//tmp/project', '/tmp/project'],
+    ['/tmp/./parent/../project/', '/tmp/project'],
+    ['/../../tmp/project', '/tmp/project'],
+    ['C:\\Work\\Project', 'c:/work/project'],
+    ['c:/work/./parent/../project/', 'c:/work/project'],
+    ['C:\\..\\Project', 'c:/project'],
+    ['\\\\Server\\Share\\Project', '\\\\server\\share\\project'],
+    ['\\\\SERVER\\Share\\folder\\..\\Project', '\\\\server\\share\\project'],
+    ['\\\\Server\\Share\\..\\..\\Project', '\\\\server\\share\\project'],
+  ])('normalizes %s deterministically to %s', (input, expected) => {
+    expect(normalizeCliProviderAuthorityProjectPath(input)).toBe(expected);
+    expect(normalizeCliProviderAuthorityProjectPath(expected)).toBe(expected);
+  });
+
+  test.each(['project', './project', '../project', 'C:project', '', '\\\\server'])(
+    'rejects non-absolute or incomplete input %s',
+    (input) => {
+      expect(() => normalizeCliProviderAuthorityProjectPath(input)).toThrow();
+    }
+  );
+
+  test.each(['/', 'C:\\', '\\\\Server\\Share'])('recognizes authority roots %s', (input) => {
+    expect(isCliProviderAuthorityProjectRoot(input)).toBe(true);
+  });
+});
+
 describe('cliInstaller IPC provider runtime scheduling', () => {
   test('runs shared provider status requests sequentially while OpenCode stays independent', async () => {
     const started: CliProviderId[] = [];
@@ -333,6 +366,26 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     expect(result.success).toBe(false);
     expect(getProviderStatus).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['//tmp/project', '/tmp/project'],
+    ['/tmp/./parent/../project', '/tmp/project'],
+    ['C:\\Work\\Project', 'c:/work/project'],
+    ['\\\\Server\\Share\\folder\\..\\Project', '\\\\server\\share\\project'],
+    ['\\\\Server\\Share\\..\\..\\Project', '\\\\server\\share\\project'],
+  ])('forwards canonical project scope %s as %s', async (input, expected) => {
+    const getProviderStatus = vi.fn(() => Promise.resolve(createProviderStatus('opencode')));
+    const { invoke } = setupHandlers(createInstallerService({ getProviderStatus }));
+
+    const result = await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      createProviderStatusRequest(input)
+    );
+
+    expect(result.success).toBe(true);
+    expect(getProviderStatus).toHaveBeenCalledWith('opencode', { projectPath: expected });
   });
 
   test('keeps status and model verification sequential for the same provider', async () => {
@@ -556,5 +609,95 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
         checks: [{ providerId: 'anthropic', model: 'claude-test' }],
       })
     ).toThrow('provider authority changed during preparation');
+  });
+
+  test('a scoped global logout invalidates provider proofs for projects A and B', async () => {
+    let providerStatus: CliProviderStatus = {
+      ...createProviderStatus('codex'),
+      statusCheckOutcome: 'authoritative',
+    };
+    const service = createInstallerService({
+      getProviderStatus: vi.fn(() => Promise.resolve(providerStatus)),
+    });
+    const { invoke } = setupHandlers(service);
+    const projectA = resolvePath(process.cwd(), 'src');
+    const projectB = resolvePath(process.cwd(), 'test');
+
+    for (const projectPath of [projectA, projectB]) {
+      await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+        CLI_INSTALLER_GET_PROVIDER_STATUS,
+        'codex',
+        createProviderStatusRequest(projectPath, 'launch-proof')
+      );
+    }
+    const proofA = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectA),
+      cwd: projectA,
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-test' }],
+    });
+    const proofB = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectB),
+      cwd: projectB,
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-test' }],
+    });
+
+    providerStatus = {
+      ...providerStatus,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+    };
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(projectA, 'launch-proof')
+    );
+
+    expect(verifyAuthoritativeModelExecutionProof(proofA)).toBe(false);
+    expect(verifyAuthoritativeModelExecutionProof(proofB)).toBe(false);
+  });
+
+  test('a project A catalog change leaves the project B provider proof authoritative', async () => {
+    const projectA = resolvePath(process.cwd(), 'src');
+    const projectB = resolvePath(process.cwd(), 'test');
+    let projectAModels = ['gpt-a-v1'];
+    const service = createInstallerService({
+      getProviderStatus: vi.fn((_providerId: CliProviderId, options) =>
+        Promise.resolve({
+          ...createProviderStatus('codex'),
+          statusCheckOutcome: 'authoritative' as const,
+          models: options?.projectPath === projectA ? projectAModels : ['gpt-b-v1'],
+        })
+      ),
+    });
+    const { invoke } = setupHandlers(service);
+
+    for (const projectPath of [projectA, projectB]) {
+      await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+        CLI_INSTALLER_GET_PROVIDER_STATUS,
+        'codex',
+        createProviderStatusRequest(projectPath, 'launch-proof')
+      );
+    }
+    const proofA = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectA),
+      cwd: projectA,
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-a-v1' }],
+    });
+    const proofB = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectB),
+      cwd: projectB,
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-b-v1' }],
+    });
+
+    projectAModels = ['gpt-a-v2'];
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(projectA, 'launch-proof')
+    );
+
+    expect(verifyAuthoritativeModelExecutionProof(proofA)).toBe(false);
+    expect(verifyAuthoritativeModelExecutionProof(proofB)).toBe(true);
   });
 });
