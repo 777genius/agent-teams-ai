@@ -143,6 +143,50 @@ describe('provider launch proof authority reconciliation', () => {
       fetchedAtMs: 2,
     });
 
+  const reconcileProviderProject = (
+    current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
+    providerId: 'anthropic' | 'codex' | 'gemini' | 'opencode',
+    projectPath: string,
+    providerStatus: CliProviderStatus,
+    generations: { global?: number; profile?: number; catalog?: number } = {}
+  ) =>
+    reconcileScopedProviderLaunchProofs({
+      current,
+      scopeKey: getCliProviderStatusScopeKey(providerId, projectPath),
+      providerId,
+      projectPath,
+      providerStatus,
+      responseMatchesProvider: true,
+      metadataMatchesRequest: true,
+      authorityScope: {
+        ...authorityScope(projectPath, generations),
+        providerId,
+      },
+      requestIntent: 'launch-proof',
+      requestId: 3,
+      epoch: 1,
+      fetchedAtMs: 2,
+    });
+
+  const readyFor = (
+    providerId: 'anthropic' | 'codex' | 'gemini' | 'opencode'
+  ): CliProviderStatus => ({
+    ...ready,
+    providerId,
+    authMethod:
+      providerId === 'anthropic'
+        ? 'claude.ai'
+        : providerId === 'opencode'
+          ? 'opencode_configured_local'
+          : 'codex_chatgpt',
+  });
+
+  const watermarkProviders = (current: Readonly<Record<string, ScopedCliProviderLaunchProof>>) =>
+    Object.values(current)
+      .filter((proof) => proof.requestId === -1)
+      .map((proof) => proof.authorityScope?.providerId)
+      .sort();
+
   it.each([
     ['//Server/Share/Project', '\\\\server\\share\\project'],
     ['\\\\Server\\Share\\Project', '\\\\server\\share\\project'],
@@ -362,37 +406,46 @@ describe('provider launch proof authority reconciliation', () => {
     expect(reconciled[scopeB]).toBeUndefined();
   });
 
-  it('keeps catalog resurrection fail-closed through bounded eviction and repeated churn', () => {
+  it('protects A catalog watermark from enough B/C project churn to evict A exact proof', () => {
     const target = '/project/evicted';
     const targetScope = getCliProviderStatusScopeKey('codex', target);
     let current = reconcileProject({}, target, ready, { profile: 5, catalog: 5 });
 
-    for (let index = 0; index < 10_001; index += 1) {
-      current = reconcileProject(current, `/project/churn-${index}`, ready, {
-        profile: 5,
-        catalog: 5,
-      });
+    for (let index = 0; index < CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT * 2; index += 1) {
+      const providerId = index % 2 === 0 ? 'anthropic' : 'gemini';
+      current = reconcileProviderProject(
+        current,
+        providerId,
+        `/project/${providerId}-churn-${index}`,
+        readyFor(providerId),
+        {
+          profile: 5,
+          catalog: 5,
+        }
+      );
       expect(Object.keys(current).length).toBeLessThanOrEqual(
         CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT
       );
     }
+    expect(Object.keys(current)).toHaveLength(CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT);
     expect(current[targetScope]).toBeUndefined();
-    expect(Object.values(current)).toContainEqual(
-      expect.objectContaining({
-        requestId: -1,
-        epoch: -1,
-        authorityScope: expect.objectContaining({ projectPath: null }),
-      })
-    );
+    expect(watermarkProviders(current)).toEqual(['anthropic', 'codex', 'gemini']);
+    const codexWatermarkKey = Object.entries(current).find(
+      ([, proof]) => proof.requestId === -1 && proof.authorityScope?.providerId === 'codex'
+    )?.[0];
+    expect(codexWatermarkKey).toBeDefined();
+    expect(codexWatermarkKey).not.toBe(targetScope);
+    expect(current[codexWatermarkKey!]).toMatchObject({
+      requestId: -1,
+      epoch: -1,
+      authorityScope: { projectPath: null, catalogGeneration: 5 },
+    });
 
     const stale = reconcileProject(
       current,
       target,
       { ...ready, models: ['stale'] },
-      {
-        profile: 5,
-        catalog: 4,
-      }
+      { profile: 5, catalog: 4 }
     );
     expect(stale[targetScope]).toBeUndefined();
 
@@ -417,9 +470,141 @@ describe('provider launch proof authority reconciliation', () => {
       }
     );
     expect(newer[targetScope]?.providerStatus.models).toEqual(['newer']);
+  });
 
+  it('does not expose a reserved watermark through any project proof scope key', () => {
+    const current = reconcileProject({}, projectA, ready, { profile: 5, catalog: 5 });
+    const reservedKey = Object.entries(current).find(([, proof]) => proof.requestId === -1)?.[0];
+
+    expect(reservedKey).toBeDefined();
+    for (const projectPath of [
+      '/',
+      '/renderer-catalog-watermark',
+      '/\0renderer-catalog-watermark',
+    ]) {
+      const projectScopeKey = getCliProviderStatusScopeKey('codex', projectPath);
+      expect(projectScopeKey).not.toBe(reservedKey);
+      expect(current[projectScopeKey]).toBeUndefined();
+    }
+    expect(current[reservedKey!].authorityScope?.projectPath).toBeNull();
+  });
+
+  it('stays exactly bounded under 10,001 mixed-provider project proofs', () => {
+    let current: Readonly<Record<string, ScopedCliProviderLaunchProof>> = {};
+    const providerIds = ['codex', 'anthropic', 'gemini'] as const;
+
+    for (let index = 0; index < 10_001; index += 1) {
+      const providerId = providerIds[index % providerIds.length]!;
+      current = reconcileProviderProject(
+        current,
+        providerId,
+        `/project/mixed-churn-${index}`,
+        readyFor(providerId),
+        {
+          profile: 5,
+          catalog: index + 1,
+        }
+      );
+      expect(Object.keys(current).length).toBeLessThanOrEqual(
+        CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT
+      );
+    }
+
+    expect(Object.keys(current)).toHaveLength(CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT);
+    expect(watermarkProviders(current)).toEqual(['anthropic', 'codex', 'gemini']);
+  });
+
+  it('removes only the reset or logged-out provider watermark and isolates other providers', () => {
+    const anthropicProject = '/project/reset-anthropic';
+    const anthropicReady = readyFor('anthropic');
+    let current = reconcileProject({}, projectA, ready, { profile: 5, catalog: 500 });
+    current = reconcileProviderProject(current, 'anthropic', anthropicProject, anthropicReady, {
+      profile: 5,
+      catalog: 50,
+    });
+
+    const profileReset = reconcileProject(
+      current,
+      projectB,
+      { ...ready, models: ['profile-reset'] },
+      { profile: 6, catalog: 1 }
+    );
+    expect(watermarkProviders(profileReset)).toEqual(['anthropic', 'codex']);
+    expect(
+      Object.values(profileReset).find(
+        (proof) => proof.requestId === -1 && proof.authorityScope?.providerId === 'codex'
+      )?.authorityScope
+    ).toMatchObject({ profileGeneration: 6, catalogGeneration: 1 });
+
+    const loggedOut = reconcileProviderProject(
+      profileReset,
+      'codex',
+      projectA,
+      {
+        ...ready,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+      },
+      { profile: 7, catalog: 1 }
+    );
+    expect(watermarkProviders(loggedOut)).toEqual(['anthropic']);
+    expect(loggedOut[getCliProviderStatusScopeKey('anthropic', anthropicProject)]).toBeDefined();
+
+    const globalReset = reconcileProject(loggedOut, projectA, ready, {
+      global: 2,
+      profile: 7,
+      catalog: 1,
+    });
+    expect(watermarkProviders(globalReset)).toEqual(['codex']);
+    expect(
+      globalReset[getCliProviderStatusScopeKey('anthropic', anthropicProject)]
+    ).toBeUndefined();
+  });
+
+  it.each(['profile reset', 'logout'] as const)(
+    'removes a provider watermark during projectless %s without disturbing another provider',
+    (resetKind) => {
+      const anthropicProject = '/project/provider-isolation';
+      const anthropicReady = readyFor('anthropic');
+      let current = reconcileProject({}, projectA, ready, { profile: 5, catalog: 500 });
+      current = reconcileProviderProject(current, 'anthropic', anthropicProject, anthropicReady, {
+        profile: 5,
+        catalog: 50,
+      });
+      const currentStatus = { ...base, providers: [ready, anthropicReady] };
+      const incomingCodex =
+        resetKind === 'profile reset'
+          ? { ...ready, selectedBackendId: 'codex-native' }
+          : {
+              ...ready,
+              authenticated: false,
+              authMethod: null,
+              verificationState: 'unknown' as const,
+            };
+      const reconciled = reconcileGlobalProviderLaunchProofs(current, currentStatus, {
+        ...currentStatus,
+        providers: [incomingCodex, anthropicReady],
+      });
+
+      expect(watermarkProviders(reconciled)).toEqual(['anthropic']);
+      expect(reconciled[getCliProviderStatusScopeKey('anthropic', anthropicProject)]).toBeDefined();
+    }
+  );
+
+  it('keeps catalog resurrection fail-closed across profile generations', () => {
+    const target = '/project/profile-reset';
+    const targetScope = getCliProviderStatusScopeKey('codex', target);
+    let current = reconcileProject({}, target, ready, { profile: 5, catalog: 5 });
+    for (let index = 0; index < CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT; index += 1) {
+      current = reconcileProject(current, `/project/churn-${index}`, ready, {
+        profile: 5,
+        catalog: 5,
+      });
+    }
+    expect(current[targetScope]).toBeUndefined();
     const olderProfile = reconcileProject(
-      newer,
+      current,
       target,
       { ...ready, models: ['old-profile'] },
       {
@@ -427,7 +612,7 @@ describe('provider launch proof authority reconciliation', () => {
         catalog: 1_000,
       }
     );
-    expect(olderProfile[targetScope]?.providerStatus.models).toEqual(['newer']);
+    expect(olderProfile[targetScope]).toBeUndefined();
 
     const resetProfile = reconcileProject(
       olderProfile,
@@ -442,40 +627,6 @@ describe('provider launch proof authority reconciliation', () => {
     expect(Object.keys(resetProfile).length).toBeLessThanOrEqual(
       CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT
     );
-  });
-
-  it('isolates bounded catalog watermarks by provider', () => {
-    const anthropicProject = '/project/anthropic';
-    const anthropicScope = getCliProviderStatusScopeKey('anthropic', anthropicProject);
-    const anthropicReady: CliProviderStatus = {
-      ...ready,
-      providerId: 'anthropic',
-      authMethod: 'claude.ai',
-    };
-    const withCodexWatermark = reconcileProject({}, projectA, ready, {
-      profile: 5,
-      catalog: 500,
-    });
-    const reconciled = reconcileScopedProviderLaunchProofs({
-      current: withCodexWatermark,
-      scopeKey: anthropicScope,
-      providerId: 'anthropic',
-      projectPath: anthropicProject,
-      providerStatus: anthropicReady,
-      responseMatchesProvider: true,
-      metadataMatchesRequest: true,
-      authorityScope: {
-        ...authorityScope(anthropicProject, { profile: 5, catalog: 1 }),
-        providerId: 'anthropic',
-      },
-      requestIntent: 'launch-proof',
-      requestId: 4,
-      epoch: 1,
-      fetchedAtMs: 2,
-    });
-
-    expect(reconciled[anthropicScope]?.providerStatus).toBe(anthropicReady);
-    expect(reconciled[scopeA]?.providerStatus).toBe(ready);
   });
 
   it('does not authorize a projectless authority scope or disturb exact proofs', () => {

@@ -14,6 +14,19 @@ import type {
 export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
 
 const CATALOG_WATERMARK_SCOPE_SUFFIX = '\0renderer-catalog-watermark';
+const CLI_PROVIDER_IDS = Object.keys({
+  anthropic: true,
+  codex: true,
+  gemini: true,
+  opencode: true,
+} satisfies Record<CliProviderId, true>) as CliProviderId[];
+const CATALOG_WATERMARK_SCOPE_KEYS = new Set<string>(
+  CLI_PROVIDER_IDS.map((providerId) => `${providerId}\0${CATALOG_WATERMARK_SCOPE_SUFFIX}`)
+);
+
+function isCatalogWatermarkScopeKey(scopeKey: string): boolean {
+  return CATALOG_WATERMARK_SCOPE_KEYS.has(scopeKey);
+}
 
 export interface ScopedCliProviderLaunchProof {
   providerStatus: CliProviderStatus;
@@ -44,8 +57,14 @@ export function setBoundedScopedProviderLaunchProof(
 ): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
   const entries = Object.entries(current).filter(([key]) => key !== scopeKey);
   entries.push([scopeKey, proof]);
-  if (entries.length > CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT) {
-    entries.splice(0, entries.length - CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT);
+  while (entries.length > CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT) {
+    const oldestProjectProofIndex = entries.findIndex(([key]) => !isCatalogWatermarkScopeKey(key));
+    if (oldestProjectProofIndex < 0) {
+      // There are only four valid provider watermark keys. If reserved entries
+      // somehow consume the entire cache, refuse to publish another proof.
+      return current;
+    }
+    entries.splice(oldestProjectProofIndex, 1);
   }
   return Object.fromEntries(entries);
 }
