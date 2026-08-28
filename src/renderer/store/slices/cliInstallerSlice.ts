@@ -18,7 +18,7 @@ import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExt
 import {
   CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT,
   reconcileGlobalProviderLaunchProofs,
-  reconcileScopedProviderLaunchProofs,
+  reconcileScopedProviderAuthorityResponse,
   type ScopedCliProviderLaunchProof,
 } from './scopedCliProviderLaunchProof';
 
@@ -822,6 +822,9 @@ export interface CliInstallerSlice {
   cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
   cliProviderStatusLoadingByScope: Readonly<Record<string, boolean>>;
   cliProviderLaunchProofByScope: Readonly<Record<string, ScopedCliProviderLaunchProof>>;
+  /** Monotonic tombstones prevent late cross-project responses from reviving cleared proofs. */
+  cliProviderAuthorityGlobalGeneration: number | null;
+  cliProviderAuthorityProfileGenerationById: Readonly<Partial<Record<CliProviderId, number>>>;
   cliProviderStatusByScope: Readonly<Record<string, CliProviderStatus>>;
   cliProviderStatusScopeRevision: number;
   cliStatusError: string | null;
@@ -992,6 +995,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   cliProviderStatusLoading: {},
   cliProviderStatusLoadingByScope: {},
   cliProviderLaunchProofByScope: {},
+  cliProviderAuthorityGlobalGeneration: null,
+  cliProviderAuthorityProfileGenerationById: {},
   cliProviderStatusByScope: {},
   cliProviderStatusScopeRevision: 0,
   cliStatusError: null,
@@ -1364,11 +1369,11 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           if (projectPath) {
             const previousScopedProvider = state.cliProviderStatusByScope[scopeKey];
             // prettier-ignore
-            const nextLaunchProofs = reconcileScopedProviderLaunchProofs({ current: state.cliProviderLaunchProofByScope, scopeKey, providerId, projectPath, providerStatus, responseMatchesProvider, metadataMatchesRequest: responseMetadataMatchesRequest, authorityScope: responseAuthorityScope, requestIntent, requestId, epoch: requestEpoch, fetchedAtMs: Date.now() });
+            const nextProviderAuthority = reconcileScopedProviderAuthorityResponse({ current: state.cliProviderLaunchProofByScope, currentGlobalGeneration: state.cliProviderAuthorityGlobalGeneration, currentProfileGenerationById: state.cliProviderAuthorityProfileGenerationById, scopeKey, providerId, projectPath, providerStatus, responseMatchesProvider, metadataMatchesRequest: responseMetadataMatchesRequest, authorityScope: responseAuthorityScope, requestIntent, requestId, epoch: requestEpoch, fetchedAtMs: Date.now() });
             return {
               cliProviderStatusLoading: nextLoading,
               cliProviderStatusLoadingByScope: nextScopedLoading,
-              cliProviderLaunchProofByScope: nextLaunchProofs,
+              ...nextProviderAuthority,
               cliProviderStatusByScope: setBoundedScopedProviderStatus(
                 state.cliProviderStatusByScope,
                 scopeKey,
@@ -1429,12 +1434,11 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         const settledProviderStatus = projectPath
           ? get().cliProviderStatusByScope[scopeKey]
           : providerStatus;
-        return Boolean(
-          requestIsCurrent &&
-          (projectPath
-            ? responseMatchesProvider && hasFreshAuthoritativeScopedProviderStatus(providerStatus)
-            : Boolean(settledProviderStatus))
-        );
+        const settledLaunchProof = projectPath
+          ? get().cliProviderLaunchProofByScope[scopeKey]
+          : null;
+        // prettier-ignore
+        return Boolean(requestIsCurrent && (projectPath ? requestIntent === 'launch-proof' ? settledLaunchProof?.requestId === requestId && settledLaunchProof.epoch === requestEpoch : responseMatchesProvider && hasFreshAuthoritativeScopedProviderStatus(providerStatus) : Boolean(settledProviderStatus)));
       } catch (error) {
         const message =
           error instanceof Error ? error.message : `Failed to refresh ${providerId} status`;
@@ -1574,6 +1578,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       cliProviderStatusByScope: {},
       cliProviderStatusLoadingByScope: {},
       cliProviderLaunchProofByScope: {},
+      cliProviderAuthorityGlobalGeneration: null,
+      cliProviderAuthorityProfileGenerationById: {},
       cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
       cliStatusLoading: false,
       cliProviderStatusLoading: {},

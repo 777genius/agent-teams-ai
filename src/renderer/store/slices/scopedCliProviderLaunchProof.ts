@@ -1,5 +1,4 @@
 import {
-  getCliProviderCatalogAuthorityFingerprint,
   getCliProviderProfileAuthorityFingerprint,
   normalizeCliProviderAuthorityProjectPath,
 } from '@shared/utils/cliProviderAuthority';
@@ -40,22 +39,26 @@ function isSemanticAuthorityObservation(status: CliProviderStatus): boolean {
   return !['pending', 'transient_error', 'model_only'].includes(status.statusCheckOutcome ?? '');
 }
 
-function deleteScope(
-  current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
-  scopeKey: string
-): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
-  if (!(scopeKey in current)) return current;
-  const next = { ...current };
-  delete next[scopeKey];
-  return next;
-}
-
 function deleteProvider(
   current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
   providerId: CliProviderId
 ): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
   const entries = Object.entries(current).filter(([key]) => !key.startsWith(`${providerId}\0`));
   return entries.length === Object.keys(current).length ? current : Object.fromEntries(entries);
+}
+
+function getObservedGeneration(
+  current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
+  select: (proof: ScopedCliProviderLaunchProof) => number | null
+): number | null {
+  let observed: number | null = null;
+  for (const proof of Object.values(current)) {
+    const generation = select(proof);
+    if (generation !== null && (observed === null || generation > observed)) {
+      observed = generation;
+    }
+  }
+  return observed;
 }
 
 export function reconcileGlobalProviderLaunchProofs(
@@ -94,46 +97,137 @@ export function reconcileScopedProviderLaunchProofs(input: {
   requestId: number;
   epoch: number;
   fetchedAtMs: number;
+  observedGlobalGeneration?: number | null;
+  observedProfileGeneration?: number | null;
 }): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
   const previous = input.current[input.scopeKey];
-  const profileChange =
-    input.responseMatchesProvider &&
-    isSemanticAuthorityObservation(input.providerStatus) &&
-    previous !== undefined &&
-    getCliProviderProfileAuthorityFingerprint(previous.providerStatus) !==
-      getCliProviderProfileAuthorityFingerprint(input.providerStatus);
-  const catalogChange =
-    input.responseMatchesProvider &&
-    isSemanticAuthorityObservation(input.providerStatus) &&
-    previous !== undefined &&
-    getCliProviderCatalogAuthorityFingerprint(previous.providerStatus) !==
-      getCliProviderCatalogAuthorityFingerprint(input.providerStatus);
+  const scope = input.authorityScope;
+  const scopeMatchesRequest =
+    input.metadataMatchesRequest &&
+    scope?.schemaVersion === 1 &&
+    scope.providerId === input.providerId &&
+    scope.projectPath === normalizeCliProviderAuthorityProjectPath(input.projectPath);
+  const proofGlobalGeneration = getObservedGeneration(
+    input.current,
+    (proof) => proof.authorityScope?.globalGeneration ?? null
+  );
+  const proofProfileGeneration = getObservedGeneration(input.current, (proof) =>
+    proof.authorityScope?.providerId === input.providerId
+      ? proof.authorityScope.profileGeneration
+      : null
+  );
+  // Proofs are bounded and may be removed on logout or refresh. The store
+  // watermarks retain the highest main-process generations across removals.
+  const observedGlobalGeneration = Math.max(
+    input.observedGlobalGeneration ?? -1,
+    proofGlobalGeneration ?? -1
+  );
+  const observedProfileGeneration = Math.max(
+    input.observedProfileGeneration ?? -1,
+    proofProfileGeneration ?? -1
+  );
+  const incomingGlobalGeneration = scope?.globalGeneration ?? null;
+  const incomingProfileGeneration = scope?.profileGeneration ?? null;
+  const incomingCatalogGeneration = scope?.catalogGeneration ?? null;
+  const staleGlobalGeneration =
+    scopeMatchesRequest &&
+    observedGlobalGeneration >= 0 &&
+    incomingGlobalGeneration !== null &&
+    incomingGlobalGeneration < observedGlobalGeneration;
+  const staleProfileGeneration =
+    scopeMatchesRequest &&
+    observedProfileGeneration >= 0 &&
+    incomingProfileGeneration !== null &&
+    incomingProfileGeneration < observedProfileGeneration;
+  const newerGlobalGeneration =
+    scopeMatchesRequest &&
+    observedGlobalGeneration >= 0 &&
+    incomingGlobalGeneration !== null &&
+    incomingGlobalGeneration > observedGlobalGeneration;
+  const newerProfileGeneration =
+    scopeMatchesRequest &&
+    observedProfileGeneration >= 0 &&
+    incomingProfileGeneration !== null &&
+    incomingProfileGeneration > observedProfileGeneration;
+  const staleCatalogGeneration =
+    scopeMatchesRequest &&
+    previous?.authorityScope !== undefined &&
+    incomingCatalogGeneration !== null &&
+    incomingCatalogGeneration < previous.authorityScope.catalogGeneration;
   const globalLogout =
     input.responseMatchesProvider &&
     input.providerStatus.statusCheckOutcome === 'authoritative' &&
     !input.providerStatus.authenticated;
-  const retained =
-    profileChange || globalLogout
+  const retained = newerGlobalGeneration
+    ? {}
+    : globalLogout || newerProfileGeneration
       ? deleteProvider(input.current, input.providerId)
-      : catalogChange
-        ? deleteScope(input.current, input.scopeKey)
-        : input.current;
-  const scope = input.authorityScope;
+      : input.current;
   const canAuthorize =
     input.requestIntent === 'launch-proof' &&
-    input.metadataMatchesRequest &&
     input.responseMatchesProvider &&
     hasFreshAuthoritativeScopedProviderStatus(input.providerStatus) &&
-    scope?.schemaVersion === 1 &&
-    scope.providerId === input.providerId &&
-    scope.projectPath === normalizeCliProviderAuthorityProjectPath(input.projectPath);
+    scopeMatchesRequest &&
+    !globalLogout &&
+    !staleGlobalGeneration &&
+    !staleProfileGeneration &&
+    !staleCatalogGeneration;
   return canAuthorize
     ? setBoundedScopedProviderLaunchProof(retained, input.scopeKey, {
         providerStatus: input.providerStatus,
         requestId: input.requestId,
         epoch: input.epoch,
         fetchedAtMs: input.fetchedAtMs,
-        authorityScope: scope,
+        authorityScope: scope ?? undefined,
       })
     : retained;
+}
+
+export function reconcileScopedProviderAuthorityResponse(input: {
+  current: Readonly<Record<string, ScopedCliProviderLaunchProof>>;
+  currentGlobalGeneration: number | null;
+  currentProfileGenerationById: Readonly<Partial<Record<CliProviderId, number>>>;
+  scopeKey: string;
+  providerId: CliProviderId;
+  projectPath: string;
+  providerStatus: CliProviderStatus;
+  responseMatchesProvider: boolean;
+  metadataMatchesRequest: boolean;
+  authorityScope: CliProviderStatusAuthorityScope | null;
+  requestIntent: 'passive' | 'launch-proof';
+  requestId: number;
+  epoch: number;
+  fetchedAtMs: number;
+}): {
+  cliProviderLaunchProofByScope: Readonly<Record<string, ScopedCliProviderLaunchProof>>;
+  cliProviderAuthorityGlobalGeneration: number | null;
+  cliProviderAuthorityProfileGenerationById: Readonly<Partial<Record<CliProviderId, number>>>;
+} {
+  const cliProviderLaunchProofByScope = reconcileScopedProviderLaunchProofs({
+    ...input,
+    observedGlobalGeneration: input.currentGlobalGeneration,
+    observedProfileGeneration: input.currentProfileGenerationById[input.providerId] ?? null,
+  });
+  const observedScope =
+    input.responseMatchesProvider &&
+    input.metadataMatchesRequest &&
+    input.authorityScope?.providerId === input.providerId &&
+    input.authorityScope.projectPath === normalizeCliProviderAuthorityProjectPath(input.projectPath)
+      ? input.authorityScope
+      : null;
+  return {
+    cliProviderLaunchProofByScope,
+    cliProviderAuthorityGlobalGeneration: observedScope
+      ? Math.max(input.currentGlobalGeneration ?? -1, observedScope.globalGeneration)
+      : input.currentGlobalGeneration,
+    cliProviderAuthorityProfileGenerationById: observedScope
+      ? {
+          ...input.currentProfileGenerationById,
+          [input.providerId]: Math.max(
+            input.currentProfileGenerationById[input.providerId] ?? -1,
+            observedScope.profileGeneration
+          ),
+        }
+      : input.currentProfileGenerationById,
+  };
 }

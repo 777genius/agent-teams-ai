@@ -7,8 +7,8 @@ import type {
 /** Cross-process, host-independent lexical key for an absolute project path. */
 export function normalizeCliProviderAuthorityProjectPath(projectPath: string): string {
   const raw = projectPath.trim();
-  const windowsUnc = raw.startsWith('\\\\');
   const value = raw.replace(/\\/g, '/');
+  const windowsUnc = value.startsWith('//') && value[2] !== '/';
   const windowsDrive = /^[a-zA-Z]:\//u.test(value);
   const posix = value.startsWith('/') && !windowsUnc;
   if (!windowsDrive && !windowsUnc && !posix) {

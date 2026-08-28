@@ -180,18 +180,30 @@ function setupHandlers(service: CliInstallerService): ReturnType<typeof createIp
 describe('provider authority project scope normalization', () => {
   test.each([
     ['/tmp/project', '/tmp/project'],
-    ['//tmp/project', '/tmp/project'],
+    ['/Server//Share///Project', '/Server/Share/Project'],
+    ['///Server//Share///Project', '/Server/Share/Project'],
     ['/tmp/./parent/../project/', '/tmp/project'],
     ['/../../tmp/project', '/tmp/project'],
     ['C:\\Work\\Project', 'c:/work/project'],
     ['c:/work/./parent/../project/', 'c:/work/project'],
     ['C:\\..\\Project', 'c:/project'],
+    ['//Server/Share/Project', '\\\\server\\share\\project'],
+    ['//SERVER//Share///folder/../Project/', '\\\\server\\share\\project'],
     ['\\\\Server\\Share\\Project', '\\\\server\\share\\project'],
     ['\\\\SERVER\\Share\\folder\\..\\Project', '\\\\server\\share\\project'],
     ['\\\\Server\\Share\\..\\..\\Project', '\\\\server\\share\\project'],
   ])('normalizes %s deterministically to %s', (input, expected) => {
     expect(normalizeCliProviderAuthorityProjectPath(input)).toBe(expected);
     expect(normalizeCliProviderAuthorityProjectPath(expected)).toBe(expected);
+  });
+
+  test('keeps forward-slash UNC and single-root POSIX identities distinct', () => {
+    expect(normalizeCliProviderAuthorityProjectPath('//server/share/project')).toBe(
+      '\\\\server\\share\\project'
+    );
+    expect(normalizeCliProviderAuthorityProjectPath('/server/share/project')).toBe(
+      '/server/share/project'
+    );
   });
 
   test.each(['project', './project', '../project', 'C:project', '', '\\\\server'])(
@@ -369,7 +381,8 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
   });
 
   test.each([
-    ['//tmp/project', '/tmp/project'],
+    ['//Server/Share/Project', '\\\\server\\share\\project'],
+    ['/Server//Share///Project', '/Server/Share/Project'],
     ['/tmp/./parent/../project', '/tmp/project'],
     ['C:\\Work\\Project', 'c:/work/project'],
     ['\\\\Server\\Share\\folder\\..\\Project', '\\\\server\\share\\project'],
@@ -699,5 +712,230 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     expect(verifyAuthoritativeModelExecutionProof(proofA)).toBe(false);
     expect(verifyAuthoritativeModelExecutionProof(proofB)).toBe(true);
+  });
+
+  test('alternating project-local profiles do not invalidate another project proof', async () => {
+    const projectA = resolvePath(process.cwd(), 'src');
+    const projectB = resolvePath(process.cwd(), 'test');
+    const service = createInstallerService({
+      getProviderStatus: vi.fn((_providerId: CliProviderId, options) =>
+        Promise.resolve({
+          ...createProviderStatus('opencode'),
+          statusCheckOutcome: 'authoritative' as const,
+          selectedBackendId: options?.projectPath === projectA ? 'adapter' : 'opencode-cli',
+          resolvedBackendId: options?.projectPath === projectA ? 'adapter' : 'opencode-cli',
+          backend: {
+            kind: 'opencode',
+            label: 'OpenCode',
+            projectId: options?.projectPath === projectA ? 'project-a' : 'project-b',
+          },
+        })
+      ),
+    });
+    const { invoke } = setupHandlers(service);
+
+    for (const projectPath of [projectA, projectB]) {
+      await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+        CLI_INSTALLER_GET_PROVIDER_STATUS,
+        'opencode',
+        createProviderStatusRequest(projectPath, 'launch-proof')
+      );
+    }
+    const proofA = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectA),
+      cwd: projectA,
+      checks: [{ providerId: 'opencode', providerBackendId: 'adapter', model: 'model-a' }],
+    });
+    const proofB = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectB),
+      cwd: projectB,
+      checks: [{ providerId: 'opencode', providerBackendId: 'opencode-cli', model: 'model-b' }],
+    });
+
+    for (const projectPath of [projectA, projectB, projectA, projectB]) {
+      await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+        CLI_INSTALLER_GET_PROVIDER_STATUS,
+        'opencode',
+        createProviderStatusRequest(projectPath, 'launch-proof')
+      );
+    }
+
+    expect(verifyAuthoritativeModelExecutionProof(proofA)).toBe(true);
+    expect(verifyAuthoritativeModelExecutionProof(proofB)).toBe(true);
+  });
+
+  test('a matching project profile change invalidates only that scope and rejects a stale epoch', async () => {
+    const projectA = resolvePath(process.cwd(), 'src');
+    const projectB = resolvePath(process.cwd(), 'test');
+    let projectABackend = 'adapter';
+    const service = createInstallerService({
+      getProviderStatus: vi.fn((_providerId: CliProviderId, options) => {
+        const resolvedBackendId =
+          options?.projectPath === projectA ? projectABackend : 'opencode-cli';
+        return Promise.resolve({
+          ...createProviderStatus('opencode'),
+          statusCheckOutcome: 'authoritative' as const,
+          selectedBackendId: resolvedBackendId,
+          resolvedBackendId,
+        });
+      }),
+    });
+    const { invoke } = setupHandlers(service);
+
+    for (const projectPath of [projectA, projectB]) {
+      await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+        CLI_INSTALLER_GET_PROVIDER_STATUS,
+        'opencode',
+        createProviderStatusRequest(projectPath, 'launch-proof')
+      );
+    }
+    const staleProjectAEpoch = captureAuthoritativeProofEpoch(projectA);
+    const proofA = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectA),
+      cwd: projectA,
+      checks: [{ providerId: 'opencode', providerBackendId: 'adapter', model: 'model-a' }],
+    });
+    const proofB = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectB),
+      cwd: projectB,
+      checks: [{ providerId: 'opencode', providerBackendId: 'opencode-cli', model: 'model-b' }],
+    });
+
+    projectABackend = 'api';
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      createProviderStatusRequest(projectA, 'launch-proof')
+    );
+
+    expect(verifyAuthoritativeModelExecutionProof(proofA)).toBe(false);
+    expect(verifyAuthoritativeModelExecutionProof(proofB)).toBe(true);
+    expect(() =>
+      issueAuthoritativeModelExecutionProof({
+        authorityEpoch: staleProjectAEpoch,
+        cwd: projectA,
+        checks: [{ providerId: 'opencode', providerBackendId: 'api', model: 'model-a' }],
+      })
+    ).toThrow('provider authority changed during preparation');
+  });
+
+  test('a projectless catalog change does not invalidate project-scoped proofs', async () => {
+    const projectA = resolvePath(process.cwd(), 'src');
+    let projectlessModels = ['global-model-v1'];
+    const service = createInstallerService({
+      getProviderStatus: vi.fn((_providerId: CliProviderId, options) =>
+        Promise.resolve({
+          ...createProviderStatus('codex'),
+          statusCheckOutcome: 'authoritative' as const,
+          models: options?.projectPath ? ['project-model'] : projectlessModels,
+        })
+      ),
+    });
+    const { invoke } = setupHandlers(service);
+
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(undefined, 'passive')
+    );
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(projectA, 'launch-proof')
+    );
+    const proofA = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectA),
+      cwd: projectA,
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'project-model' }],
+    });
+
+    projectlessModels = ['global-model-v2'];
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(undefined, 'passive')
+    );
+
+    expect(verifyAuthoritativeModelExecutionProof(proofA)).toBe(true);
+  });
+
+  test('a projectless profile change invalidates every project scope', async () => {
+    const projectA = resolvePath(process.cwd(), 'src');
+    const projectB = resolvePath(process.cwd(), 'test');
+    let selectedBackendId = 'codex-native';
+    const service = createInstallerService({
+      getProviderStatus: vi.fn(() =>
+        Promise.resolve({
+          ...createProviderStatus('codex'),
+          statusCheckOutcome: 'authoritative' as const,
+          selectedBackendId,
+          resolvedBackendId: selectedBackendId,
+        })
+      ),
+    });
+    const { invoke } = setupHandlers(service);
+
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(undefined, 'passive')
+    );
+    const proofA = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectA),
+      cwd: projectA,
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'model-a' }],
+    });
+    const proofB = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(projectB),
+      cwd: projectB,
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'model-b' }],
+    });
+
+    selectedBackendId = 'api';
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(undefined, 'passive')
+    );
+
+    expect(verifyAuthoritativeModelExecutionProof(proofA)).toBe(false);
+    expect(verifyAuthoritativeModelExecutionProof(proofB)).toBe(false);
+  });
+
+  test('bounded scope removal fails closed for the removed project proof', async () => {
+    const removedProject = process.cwd();
+    const service = createInstallerService({
+      getProviderStatus: vi.fn(() =>
+        Promise.resolve({
+          ...createProviderStatus('codex'),
+          statusCheckOutcome: 'authoritative' as const,
+        })
+      ),
+    });
+    const { invoke } = setupHandlers(service);
+
+    await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest(removedProject, 'launch-proof')
+    );
+    const removedProof = issueAuthoritativeModelExecutionProof({
+      authorityEpoch: captureAuthoritativeProofEpoch(removedProject),
+      cwd: removedProject,
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'model' }],
+    });
+
+    for (let index = 1; index <= 128; index += 1) {
+      await invoke<IpcResult<CliProviderStatusIpcResponse>>(
+        CLI_INSTALLER_GET_PROVIDER_STATUS,
+        'codex',
+        createProviderStatusRequest(
+          resolvePath(process.cwd(), `bounded-project-${index}`),
+          'launch-proof'
+        )
+      );
+    }
+
+    expect(verifyAuthoritativeModelExecutionProof(removedProof)).toBe(false);
   });
 });

@@ -67,8 +67,15 @@ interface ProviderStatusObservation {
 const providerStatusInFlight = new Map<string, Promise<ProviderStatusObservation>>();
 const providerRuntimeRequestTails = new Map<CliProviderId, Promise<void>>();
 const providerRuntimeRequestQueue: Array<() => void> = [];
-const observedProviderProfileAuthorityFingerprintById = new Map<CliProviderId, string>();
-const observedProviderCatalogAuthorityFingerprintByScope = new Map<string, string>();
+interface ObservedProjectProviderAuthority {
+  providerId: CliProviderId;
+  profileFingerprint: string;
+  catalogFingerprint: string;
+}
+
+const observedProviderGlobalAccessFingerprintById = new Map<CliProviderId, string>();
+const observedProjectProviderAuthorityByScope = new Map<string, ObservedProjectProviderAuthority>();
+const observedProjectlessProviderProfileFingerprintById = new Map<CliProviderId, string>();
 let activeProviderRuntimeRequestCount = 0;
 const cachedStatus = new Map<
   CliInstallerProviderStatusMode,
@@ -81,6 +88,13 @@ const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
 const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'codex', 'opencode']);
 const INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS = new Set<CliProviderId>(['opencode']);
 const MAX_PROVIDER_STATUS_PROJECT_PATH_LENGTH = 4_096;
+const MAX_OBSERVED_PROJECT_PROVIDER_AUTHORITIES = 128;
+
+function clearObservedProviderAuthorities(): void {
+  observedProviderGlobalAccessFingerprintById.clear();
+  observedProjectProviderAuthorityByScope.clear();
+  observedProjectlessProviderProfileFingerprintById.clear();
+}
 
 function normalizeProviderStatusRequest(request: unknown): CliProviderStatusIpcRequest {
   const candidate = parseCliProviderStatusIpcRequest(request);
@@ -258,6 +272,7 @@ function runProviderRuntimeRequest<T>(
 export function initializeCliInstallerHandlers(installerService: CliInstallerService): void {
   service = installerService;
   invalidateAuthoritativeModelExecutionProofs();
+  clearObservedProviderAuthorities();
   resetProviderRuntimeRequestLimiter();
 }
 
@@ -400,42 +415,94 @@ function isSemanticProviderAuthorityObservation(providerStatus: CliProviderStatu
   );
 }
 
+function getProviderGlobalAccessFingerprint(providerStatus: CliProviderStatus): string {
+  return JSON.stringify({
+    providerId: providerStatus.providerId,
+    supported: providerStatus.supported,
+    authenticated: providerStatus.authenticated,
+    authMethod: providerStatus.authMethod,
+    teamLaunch: providerStatus.capabilities.teamLaunch,
+  });
+}
+
+function rememberProjectProviderAuthority(
+  scopeKey: string,
+  observation: ObservedProjectProviderAuthority
+): void {
+  if (
+    !observedProjectProviderAuthorityByScope.has(scopeKey) &&
+    observedProjectProviderAuthorityByScope.size >= MAX_OBSERVED_PROJECT_PROVIDER_AUTHORITIES
+  ) {
+    const oldest = observedProjectProviderAuthorityByScope.entries().next().value as
+      | [string, ObservedProjectProviderAuthority]
+      | undefined;
+    if (oldest) {
+      observedProjectProviderAuthorityByScope.delete(oldest[0]);
+      // Forgetting a comparison baseline must fail closed for proofs that could
+      // otherwise outlive it. A provider-wide bump avoids creating unbounded
+      // per-project generation tombstones.
+      invalidateAuthoritativeModelExecutionProofsForProviderProfile(oldest[1].providerId);
+    }
+  }
+  observedProjectProviderAuthorityByScope.set(scopeKey, observation);
+}
+
 function observeProviderAuthority(
   providerStatus: CliProviderStatus,
   projectPath: string | null
 ): void {
   if (!isSemanticProviderAuthorityObservation(providerStatus)) return;
-  const profileFingerprint = getCliProviderProfileAuthorityFingerprint(providerStatus);
-  const previousProfileFingerprint = observedProviderProfileAuthorityFingerprintById.get(
+  const globalAccessFingerprint = getProviderGlobalAccessFingerprint(providerStatus);
+  const previousGlobalAccessFingerprint = observedProviderGlobalAccessFingerprintById.get(
     providerStatus.providerId
   );
   if (
-    previousProfileFingerprint !== undefined &&
-    previousProfileFingerprint !== profileFingerprint
+    previousGlobalAccessFingerprint !== undefined &&
+    previousGlobalAccessFingerprint !== globalAccessFingerprint
   ) {
     invalidateAuthoritativeModelExecutionProofsForProviderProfile(providerStatus.providerId);
   }
-  observedProviderProfileAuthorityFingerprintById.set(
+  observedProviderGlobalAccessFingerprintById.set(
     providerStatus.providerId,
-    profileFingerprint
+    globalAccessFingerprint
   );
 
-  if (projectPath) {
-    const scopeKey = `${providerStatus.providerId}\0${projectPath}`;
-    const authorityFingerprint = getCliProviderCatalogAuthorityFingerprint(providerStatus);
-    const previousAuthorityFingerprint =
-      observedProviderCatalogAuthorityFingerprintByScope.get(scopeKey);
+  const profileFingerprint = getCliProviderProfileAuthorityFingerprint(providerStatus);
+  if (!projectPath) {
+    const previousProfileFingerprint = observedProjectlessProviderProfileFingerprintById.get(
+      providerStatus.providerId
+    );
     if (
-      previousAuthorityFingerprint !== undefined &&
-      previousAuthorityFingerprint !== authorityFingerprint
+      previousProfileFingerprint !== undefined &&
+      previousProfileFingerprint !== profileFingerprint
     ) {
-      invalidateAuthoritativeModelExecutionProofsForProviderCatalog(
-        providerStatus.providerId,
-        projectPath
-      );
+      invalidateAuthoritativeModelExecutionProofsForProviderProfile(providerStatus.providerId);
     }
-    observedProviderCatalogAuthorityFingerprintByScope.set(scopeKey, authorityFingerprint);
+    observedProjectlessProviderProfileFingerprintById.set(
+      providerStatus.providerId,
+      profileFingerprint
+    );
+    return;
   }
+
+  const scopeKey = `${providerStatus.providerId}\0${projectPath}`;
+  const catalogFingerprint = getCliProviderCatalogAuthorityFingerprint(providerStatus);
+  const previousAuthority = observedProjectProviderAuthorityByScope.get(scopeKey);
+  if (
+    previousAuthority !== undefined &&
+    (previousAuthority.profileFingerprint !== profileFingerprint ||
+      previousAuthority.catalogFingerprint !== catalogFingerprint)
+  ) {
+    invalidateAuthoritativeModelExecutionProofsForProviderCatalog(
+      providerStatus.providerId,
+      projectPath
+    );
+  }
+  rememberProjectProviderAuthority(scopeKey, {
+    providerId: providerStatus.providerId,
+    profileFingerprint,
+    catalogFingerprint,
+  });
 }
 
 async function handleGetProviderStatus(
@@ -553,8 +620,7 @@ function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
   cachedStatus.clear();
   statusInFlight.clear();
   providerStatusInFlight.clear();
-  observedProviderProfileAuthorityFingerprintById.clear();
-  observedProviderCatalogAuthorityFingerprintByScope.clear();
+  clearObservedProviderAuthorities();
   ClaudeBinaryResolver.clearCache();
   CodexBinaryResolver.clearCache();
   service.invalidateStatusCache();

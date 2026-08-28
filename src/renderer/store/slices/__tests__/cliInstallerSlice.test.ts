@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createStore } from 'zustand/vanilla';
 
 import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
+import type { ScopedCliProviderLaunchProof } from '@renderer/store/slices/scopedCliProviderLaunchProof';
 import type { ElectronAPI } from '@shared/types/api';
 import type {
   CliProviderReasoningEffort,
@@ -92,19 +93,72 @@ describe('provider launch proof authority reconciliation', () => {
     capabilities: { ...codex.capabilities, teamLaunch: true },
     models: ['gpt-v1'],
   };
+  const authorityScope = (
+    projectPath: string,
+    generations: { global?: number; profile?: number; catalog?: number } = {}
+  ) => ({
+    schemaVersion: 1 as const,
+    providerId: 'codex' as const,
+    projectPath,
+    globalGeneration: generations.global ?? 1,
+    profileGeneration: generations.profile ?? 1,
+    catalogGeneration: generations.catalog ?? 1,
+  });
   const proofs = {
-    [scopeA]: { providerStatus: ready, requestId: 1, epoch: 1, fetchedAtMs: 1 },
-    [scopeB]: { providerStatus: ready, requestId: 2, epoch: 1, fetchedAtMs: 1 },
+    [scopeA]: {
+      providerStatus: ready,
+      requestId: 1,
+      epoch: 1,
+      fetchedAtMs: 1,
+      authorityScope: authorityScope(projectA),
+    },
+    [scopeB]: {
+      providerStatus: ready,
+      requestId: 2,
+      epoch: 1,
+      fetchedAtMs: 1,
+      authorityScope: authorityScope(projectB),
+    },
   };
 
+  const reconcileProject = (
+    current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
+    projectPath: string,
+    providerStatus: CliProviderStatus,
+    generations: { global?: number; profile?: number; catalog?: number } = {}
+  ) =>
+    reconcileScopedProviderLaunchProofs({
+      current,
+      scopeKey: getCliProviderStatusScopeKey('codex', projectPath),
+      providerId: 'codex',
+      projectPath,
+      providerStatus,
+      responseMatchesProvider: true,
+      metadataMatchesRequest: true,
+      authorityScope: authorityScope(projectPath, generations),
+      requestIntent: 'launch-proof',
+      requestId: 3,
+      epoch: 1,
+      fetchedAtMs: 2,
+    });
+
   it.each([
-    ['//tmp/project', '/tmp/project'],
+    ['//Server/Share/Project', '\\\\server\\share\\project'],
+    ['\\\\Server\\Share\\Project', '\\\\server\\share\\project'],
+    ['/Server//Share///Project', '/Server/Share/Project'],
+    ['///Server//Share///Project', '/Server/Share/Project'],
     ['/tmp/./parent/../project', '/tmp/project'],
     ['C:\\Work\\Project', 'c:/work/project'],
     ['\\\\Server\\Share\\folder\\..\\Project', '\\\\server\\share\\project'],
     ['\\\\Server\\Share\\..\\..\\Project', '\\\\server\\share\\project'],
   ])('derives the canonical renderer scope for %s', (input, expected) => {
     expect(getCliProviderStatusScopeKey('codex', input)).toBe(`codex\0${expected}`);
+  });
+
+  it('does not collapse a forward-slash UNC scope into a single-root POSIX scope', () => {
+    expect(getCliProviderStatusScopeKey('codex', '//server/share/project')).not.toBe(
+      getCliProviderStatusScopeKey('codex', '/server/share/project')
+    );
   });
 
   it('revokes projects A and B when a scoped authoritative observation discovers logout', () => {
@@ -122,7 +176,7 @@ describe('provider launch proof authority reconciliation', () => {
       providerStatus: loggedOut,
       responseMatchesProvider: true,
       metadataMatchesRequest: true,
-      authorityScope: null,
+      authorityScope: authorityScope(projectA, { profile: 2 }),
       requestIntent: 'launch-proof',
       requestId: 3,
       epoch: 1,
@@ -158,6 +212,159 @@ describe('provider launch proof authority reconciliation', () => {
 
     expect(reconciled[scopeA]?.providerStatus.models).toEqual(['gpt-v2']);
     expect(reconciled[scopeB]).toBe(proofs[scopeB]);
+  });
+
+  it('revokes B when the first exact observation in A has a newer provider profile generation', () => {
+    const onlyB = { [scopeB]: proofs[scopeB] };
+
+    const reconciled = reconcileProject(
+      onlyB,
+      projectA,
+      { ...ready, selectedBackendId: 'codex-native' },
+      { profile: 2 }
+    );
+
+    expect(reconciled[scopeB]).toBeUndefined();
+    expect(reconciled[scopeA]?.authorityScope?.profileGeneration).toBe(2);
+  });
+
+  it('revokes every provider proof when A observes a newer global generation', () => {
+    const anthropicScope = getCliProviderStatusScopeKey('anthropic', projectB);
+    const anthropic = {
+      ...ready,
+      providerId: 'anthropic' as const,
+      authMethod: 'claude.ai' as const,
+    };
+    const current = {
+      [scopeB]: proofs[scopeB],
+      [anthropicScope]: {
+        providerStatus: anthropic,
+        requestId: 4,
+        epoch: 1,
+        fetchedAtMs: 1,
+        authorityScope: {
+          ...authorityScope(projectB),
+          providerId: 'anthropic' as const,
+        },
+      },
+    };
+
+    const reconciled = reconcileProject(current, projectA, ready, { global: 2 });
+
+    expect(reconciled[scopeB]).toBeUndefined();
+    expect(reconciled[anthropicScope]).toBeUndefined();
+    expect(reconciled[scopeA]?.authorityScope?.globalGeneration).toBe(2);
+  });
+
+  it('preserves B for project-local A differences at the same profile generation', () => {
+    const projectLocalDifference = {
+      ...ready,
+      backend: {
+        kind: 'api' as const,
+        label: 'Project A',
+        projectId: 'project-a',
+      },
+      models: ['gpt-project-a'],
+    };
+
+    const reconciled = reconcileProject(proofs, projectA, projectLocalDifference, { catalog: 2 });
+
+    expect(reconciled[scopeB]).toBe(proofs[scopeB]);
+    expect(reconciled[scopeA]?.providerStatus).toBe(projectLocalDifference);
+  });
+
+  it('does not let an older profile generation claim A or revoke a newer B proof', () => {
+    const newerB = {
+      ...proofs[scopeB],
+      authorityScope: authorityScope(projectB, { profile: 3 }),
+    };
+
+    const reconciled = reconcileProject({ [scopeB]: newerB }, projectA, ready, { profile: 2 });
+
+    expect(reconciled[scopeB]).toBe(newerB);
+    expect(reconciled[scopeA]).toBeUndefined();
+  });
+
+  it('does not let an older global generation claim A or revoke newer proofs', () => {
+    const newerB = {
+      ...proofs[scopeB],
+      authorityScope: authorityScope(projectB, { global: 3 }),
+    };
+
+    const reconciled = reconcileProject({ [scopeB]: newerB }, projectA, ready, { global: 2 });
+
+    expect(reconciled[scopeB]).toBe(newerB);
+    expect(reconciled[scopeA]).toBeUndefined();
+  });
+
+  it('does not resurrect authority behind a retained logout/profile watermark', () => {
+    const reconciled = reconcileScopedProviderLaunchProofs({
+      current: {},
+      scopeKey: scopeA,
+      providerId: 'codex',
+      projectPath: projectA,
+      providerStatus: ready,
+      responseMatchesProvider: true,
+      metadataMatchesRequest: true,
+      authorityScope: authorityScope(projectA, { profile: 2 }),
+      requestIntent: 'launch-proof',
+      requestId: 5,
+      epoch: 1,
+      fetchedAtMs: 3,
+      observedGlobalGeneration: 1,
+      observedProfileGeneration: 3,
+    });
+
+    expect(reconciled).toEqual({});
+  });
+
+  it('does not replace an exact proof with an older catalog generation', () => {
+    const newerA = {
+      ...proofs[scopeA],
+      authorityScope: authorityScope(projectA, { catalog: 3 }),
+    };
+
+    const reconciled = reconcileProject(
+      { ...proofs, [scopeA]: newerA },
+      projectA,
+      { ...ready, models: ['stale-model'] },
+      { catalog: 2 }
+    );
+
+    expect(reconciled[scopeA]).toBe(newerA);
+    expect(reconciled[scopeB]).toBe(proofs[scopeB]);
+  });
+
+  it('does not authorize a projectless authority scope or disturb exact proofs', () => {
+    const reconciled = reconcileScopedProviderLaunchProofs({
+      current: proofs,
+      scopeKey: scopeA,
+      providerId: 'codex',
+      projectPath: projectA,
+      providerStatus: ready,
+      responseMatchesProvider: true,
+      metadataMatchesRequest: true,
+      authorityScope: { ...authorityScope(projectA), projectPath: null },
+      requestIntent: 'launch-proof',
+      requestId: 3,
+      epoch: 1,
+      fetchedAtMs: 2,
+    });
+
+    expect(reconciled).toBe(proofs);
+  });
+
+  it('revokes project proofs for a projectless selected-profile change', () => {
+    const currentStatus = { ...base, providers: [ready] };
+    const incomingStatus = {
+      ...currentStatus,
+      providers: [{ ...ready, selectedBackendId: 'codex-native' }],
+    };
+
+    const reconciled = reconcileGlobalProviderLaunchProofs(proofs, currentStatus, incomingStatus);
+
+    expect(reconciled[scopeA]).toBeUndefined();
+    expect(reconciled[scopeB]).toBeUndefined();
   });
 
   it('does not revoke scoped proofs for a projectless catalog-only observation', () => {
