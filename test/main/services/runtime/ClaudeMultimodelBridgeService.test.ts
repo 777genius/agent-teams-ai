@@ -30,7 +30,7 @@ async function execCliWithAuthoritativeRuntimeFixtures(...args: Parameters<typeo
     schemaVersion?: number;
     providers?: Record<string, Record<string, unknown>>;
   };
-  for (const provider of Object.values(parsed.providers ?? {})) {
+  for (const [providerId, provider] of Object.entries(parsed.providers ?? {})) {
     if (
       provider.statusCheckOutcome !== undefined ||
       `${String(provider.statusMessage ?? '')} ${String(provider.detailMessage ?? '')}`.includes(
@@ -41,6 +41,7 @@ async function execCliWithAuthoritativeRuntimeFixtures(...args: Parameters<typeo
     }
     const capabilities = provider.capabilities as Record<string, unknown>;
     Object.assign(provider, {
+      providerId: provider.providerId ?? providerId,
       authMethod: provider.authMethod ?? null,
       statusMessage: provider.statusMessage ?? null,
       detailMessage: provider.detailMessage ?? null,
