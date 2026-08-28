@@ -1,11 +1,10 @@
 import { mkdir, readdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
 
-import { isSqliteTransactionLockArtifactName } from '@main/services/infrastructure/SqliteTransactionLock';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
 
-import { withFileLock } from '../../fileLock';
+import { fileLockTarget, withFileLock } from '../../fileLock';
 
 import {
   normalizeOpenCodeBootstrapSessionRecord,
@@ -67,14 +66,14 @@ export interface OpenCodeRuntimeLaneIndexEntry {
   updatedAt: string;
   diagnostics?: string[];
 }
-
 export interface OpenCodeRuntimeLaneIndex {
   version: 1;
   updatedAt: string;
   lanes: Record<string, OpenCodeRuntimeLaneIndexEntry>;
 }
-
-function createEmptyOpenCodeRuntimeLaneIndex(updatedAt = new Date().toISOString()): OpenCodeRuntimeLaneIndex {
+function createEmptyOpenCodeRuntimeLaneIndex(
+  updatedAt = new Date().toISOString()
+): OpenCodeRuntimeLaneIndex {
   return {
     version: 1,
     updatedAt,
@@ -401,9 +400,9 @@ export async function inspectOpenCodeRuntimeLaneStorage(params: {
     };
   }
 
-  const fileNames = (await readdir(laneDir).catch(() => [] as string[]))
-    .filter((fileName) => !isSqliteTransactionLockArtifactName(fileName))
-    .sort((left, right) => left.localeCompare(right));
+  const fileNames = (await readdir(laneDir).catch(() => [] as string[])).sort((left, right) =>
+    left.localeCompare(right)
+  );
   const manifestPath = getOpenCodeRuntimeManifestPath(
     params.teamsBasePath,
     params.teamName,
@@ -608,6 +607,7 @@ export async function readCommittedOpenCodeBootstrapSessionEvidence(params: {
     params.laneId
   );
   const manifestStore = createRuntimeStoreManifestStore({
+    authorityRoot: params.teamsBasePath,
     filePath: manifestPath,
     teamName: params.teamName,
   });
@@ -678,7 +678,7 @@ export async function writeOpenCodeRuntimeLaneIndex(
 ): Promise<void> {
   const filePath = getOpenCodeRuntimeLaneIndexPath(teamsBasePath, teamName);
   await withFileLock(
-    filePath,
+    fileLockTarget(teamsBasePath, filePath),
     async () => {
       await writeOpenCodeRuntimeLaneIndexUnlocked(teamsBasePath, teamName, index);
     },
@@ -695,7 +695,7 @@ export async function upsertOpenCodeRuntimeLaneIndexEntry(params: {
 }): Promise<void> {
   const filePath = getOpenCodeRuntimeLaneIndexPath(params.teamsBasePath, params.teamName);
   await withFileLock(
-    filePath,
+    fileLockTarget(params.teamsBasePath, filePath),
     async () => {
       const index = await readOpenCodeRuntimeLaneIndexUnlocked(
         params.teamsBasePath,
@@ -744,6 +744,7 @@ async function setOpenCodeRuntimeActiveRunManifestUnlocked(params: {
     params.clock ?? (() => new Date())
   );
   const manifestStore = createRuntimeStoreManifestStore({
+    authorityRoot: params.teamsBasePath,
     filePath: manifestPath,
     teamName: params.teamName,
     clock: params.clock,
@@ -802,7 +803,7 @@ export async function removeOpenCodeRuntimeLaneIndexEntry(params: {
 }): Promise<void> {
   const filePath = getOpenCodeRuntimeLaneIndexPath(params.teamsBasePath, params.teamName);
   await withFileLock(
-    filePath,
+    fileLockTarget(params.teamsBasePath, filePath),
     async () => {
       const index = await readOpenCodeRuntimeLaneIndexUnlocked(
         params.teamsBasePath,
@@ -865,16 +866,12 @@ async function clearOpenCodeRuntimeLaneStorageUnlocked(params: {
   if (laneDirectoryExists) {
     // The journal owns logical idempotency/recovery across runs, while tombstones enforce
     // anti-rejoin. Serialize against both durable stores and reset only per-run evidence.
-    await withFileLock(deliveryJournalPath, () =>
-      withFileLock(runTombstonesPath, async () => {
+    await withFileLock(fileLockTarget(params.teamsBasePath, deliveryJournalPath), () =>
+      withFileLock(fileLockTarget(params.teamsBasePath, runTombstonesPath), async () => {
         const entries = await readdir(laneDirectory);
         await Promise.all(
           entries
-            .filter(
-              (entry) =>
-                !OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry) &&
-                !isSqliteTransactionLockArtifactName(entry)
-            )
+            .filter((entry) => !OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry))
             .map((entry) => rm(path.join(laneDirectory, entry), { recursive: true, force: true }))
         );
       })
@@ -900,7 +897,11 @@ function withOpenCodeRuntimeLaneLifecycleLock<T>(
     OPENCODE_TEAM_RUNTIME_LANES_DIR,
     `.${encodeURIComponent(laneId)}.lifecycle`
   );
-  return withFileLock(lockTargetPath, operation, OPENCODE_LANE_INDEX_LOCK_OPTIONS);
+  return withFileLock(
+    fileLockTarget(params.teamsBasePath, lockTargetPath),
+    operation,
+    OPENCODE_LANE_INDEX_LOCK_OPTIONS
+  );
 }
 
 export async function recoverStaleOpenCodeRuntimeLaneIndexEntry(params: {

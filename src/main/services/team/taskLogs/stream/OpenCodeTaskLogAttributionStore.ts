@@ -280,6 +280,8 @@ export function getOpenCodeTaskLogAttributionPath(teamName: string): string {
 }
 
 export class OpenCodeTaskLogAttributionStore implements OpenCodeTaskLogAttributionReader {
+  constructor(private readonly teamsBasePath: string = getTeamsBasePath()) {}
+
   private async readFileForWrite(filePath: string): Promise<OpenCodeTaskLogAttributionFile> {
     try {
       const stat = await fs.promises.stat(filePath);
@@ -336,7 +338,7 @@ export class OpenCodeTaskLogAttributionStore implements OpenCodeTaskLogAttributi
     teamName: string,
     taskId: string
   ): Promise<OpenCodeTaskLogAttributionRecord[]> {
-    const filePath = getOpenCodeTaskLogAttributionPath(teamName);
+    const filePath = path.join(this.teamsBasePath, teamName, OPENCODE_TASK_LOG_ATTRIBUTION_FILE);
     try {
       const stat = await fs.promises.stat(filePath);
       if (!stat.isFile() || stat.size > MAX_ATTRIBUTION_FILE_BYTES) {
@@ -381,8 +383,8 @@ export class OpenCodeTaskLogAttributionStore implements OpenCodeTaskLogAttributi
       throw new Error('Invalid OpenCode task-log attribution record');
     }
 
-    const filePath = getOpenCodeTaskLogAttributionPath(teamName);
-    return withFileLock(filePath, async () => {
+    const filePath = path.join(this.teamsBasePath, teamName, OPENCODE_TASK_LOG_ATTRIBUTION_FILE);
+    return withFileLock({ authorityRoot: this.teamsBasePath, targetPath: filePath }, async () => {
       const previous = await this.readFileForWrite(filePath);
       const now = (options?.now ?? new Date()).toISOString();
       const taskRecords = previous.tasks[normalized.taskId] ?? [];
@@ -449,8 +451,8 @@ export class OpenCodeTaskLogAttributionStore implements OpenCodeTaskLogAttributi
     }
     const validRecords = normalizedRecords as OpenCodeTaskLogAttributionRecord[];
 
-    const filePath = getOpenCodeTaskLogAttributionPath(teamName);
-    return withFileLock(filePath, async () => {
+    const filePath = path.join(this.teamsBasePath, teamName, OPENCODE_TASK_LOG_ATTRIBUTION_FILE);
+    return withFileLock({ authorityRoot: this.teamsBasePath, targetPath: filePath }, async () => {
       const previous = await this.readFileForWrite(filePath);
       const next = canonicalizeFile([
         ...Object.entries(previous.tasks).flatMap(([candidateTaskId, taskRecords]) =>
@@ -472,8 +474,8 @@ export class OpenCodeTaskLogAttributionStore implements OpenCodeTaskLogAttributi
       throw new Error('Invalid OpenCode task-log attribution task id');
     }
 
-    const filePath = getOpenCodeTaskLogAttributionPath(teamName);
-    return withFileLock(filePath, async () => {
+    const filePath = path.join(this.teamsBasePath, teamName, OPENCODE_TASK_LOG_ATTRIBUTION_FILE);
+    return withFileLock({ authorityRoot: this.teamsBasePath, targetPath: filePath }, async () => {
       const previous = await this.readFileForWrite(filePath);
       if (!previous.tasks[normalizedTaskId]) {
         return 'unchanged';

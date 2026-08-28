@@ -689,14 +689,15 @@ export class RuntimePermissionReconciler {
     }
   }
 }
-
 export function createRuntimePermissionRequestStore(options: {
+  authorityRoot?: string;
   filePath: string;
   clock?: () => Date;
 }): RuntimePermissionRequestStore {
   const clock = options.clock ?? (() => new Date());
   return new RuntimePermissionRequestStore(
     new VersionedJsonStore<RuntimePermissionRequestRecord[]>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: RUNTIME_PERMISSION_REQUEST_SCHEMA_VERSION,
       defaultData: () => [],
@@ -705,7 +706,6 @@ export function createRuntimePermissionRequestStore(options: {
     })
   );
 }
-
 export function normalizeOpenCodePermissionRequest(
   raw: OpenCodeRawPermissionRequest
 ): OpenCodeNormalizedPermissionRequest | null {

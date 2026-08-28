@@ -72,7 +72,8 @@ export async function markTeamInboxMessagesRead(
     return;
   }
 
-  await withFileLock(inboxPath, async () => {
+  const teamsBasePath = input.teamsBasePath ?? getTeamsBasePath();
+  await withFileLock({ authorityRoot: teamsBasePath, targetPath: inboxPath }, async () => {
     await withInboxLock(inboxPath, async () => {
       if (await shouldSkipNonRegularInboxFile(inboxPath)) {
         return;

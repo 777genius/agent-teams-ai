@@ -1,5 +1,4 @@
 import { listPreSqliteArchiveGenerations } from '@features/internal-storage/main';
-import { withFileLock } from '@main/services/team/fileLock';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createHash } from 'crypto';
 import { access, mkdir, readdir, readFile } from 'fs/promises';
@@ -726,8 +725,8 @@ export class JsonMemberWorkSyncStore
     const memberKey = this.paths.getMemberKey(status.memberName);
     await this.paths.ensureMemberWorkSyncDir(status.teamName, status.memberName);
     await this.enqueue(status.teamName, async () => {
-      await withFileLock(this.paths.getMetricsIndexPath(status.teamName), async () => {
-        await withFileLock(
+      await this.paths.lock(this.paths.getMetricsIndexPath(status.teamName), async () => {
+        await this.paths.lock(
           this.paths.getMemberStatusPath(status.teamName, status.memberName),
           async () => {
             const metrics = await this.readMetricsIndexFile(status.teamName);
@@ -767,8 +766,8 @@ export class JsonMemberWorkSyncStore
     const memberKey = this.paths.getMemberKey(request.memberName);
     await this.paths.ensureMemberWorkSyncDir(request.teamName, request.memberName);
     await this.enqueue(request.teamName, async () => {
-      await withFileLock(this.paths.getPendingReportsIndexPath(request.teamName), async () => {
-        await withFileLock(
+      await this.paths.lock(this.paths.getPendingReportsIndexPath(request.teamName), async () => {
+        await this.paths.lock(
           this.paths.getMemberReportsPath(request.teamName, request.memberName),
           async () => {
             const reports = await this.readMemberReportsFile(request.teamName, request.memberName);
@@ -806,7 +805,7 @@ export class JsonMemberWorkSyncStore
     let index = await this.readPendingReportsIndexFile(teamName);
     if (Object.keys(index.items).length === 0) {
       await this.enqueue(teamName, async () => {
-        await withFileLock(this.paths.getPendingReportsIndexPath(teamName), async () => {
+        await this.paths.lock(this.paths.getPendingReportsIndexPath(teamName), async () => {
           index = await this.readPendingReportsIndexFile(teamName);
           if (Object.keys(index.items).length === 0) {
             index = await this.repairPendingReportsIndex(teamName);
@@ -833,7 +832,7 @@ export class JsonMemberWorkSyncStore
       : await this.hasUnindexedOrStaleIndexedPendingReport(teamName, index);
     if (staleIndex || unindexedOrStaleIndexedPending) {
       await this.enqueue(teamName, async () => {
-        await withFileLock(this.paths.getPendingReportsIndexPath(teamName), async () => {
+        await this.paths.lock(this.paths.getPendingReportsIndexPath(teamName), async () => {
           index = await this.repairPendingReportsIndex(teamName);
         });
       });
@@ -862,7 +861,7 @@ export class JsonMemberWorkSyncStore
     }
   ): Promise<void> {
     await this.enqueue(teamName, async () => {
-      await withFileLock(this.paths.getPendingReportsIndexPath(teamName), async () => {
+      await this.paths.lock(this.paths.getPendingReportsIndexPath(teamName), async () => {
         let index = await this.readPendingReportsIndexFile(teamName);
         if (!index.items[id]) {
           index = await this.repairPendingReportsIndex(teamName);
@@ -875,7 +874,7 @@ export class JsonMemberWorkSyncStore
           targetRoute: PendingReportsIndexFile['items'][string]
         ): Promise<boolean> => {
           let staleRoute = false;
-          await withFileLock(
+          await this.paths.lock(
             this.paths.getMemberReportsPath(teamName, targetRoute.memberName),
             async () => {
               const reports = await this.readMemberReportsFile(teamName, targetRoute.memberName);
@@ -934,8 +933,8 @@ export class JsonMemberWorkSyncStore
     const memberKey = this.paths.getMemberKey(input.memberName);
     await this.paths.ensureMemberWorkSyncDir(input.teamName, input.memberName);
     await this.enqueue(input.teamName, async () => {
-      await withFileLock(this.paths.getOutboxIndexPath(input.teamName), async () => {
-        await withFileLock(
+      await this.paths.lock(this.paths.getOutboxIndexPath(input.teamName), async () => {
+        await this.paths.lock(
           this.paths.getMemberOutboxPath(input.teamName, input.memberName),
           async () => {
             const outbox = await this.readMemberOutboxFile(input.teamName, input.memberName);
@@ -1028,7 +1027,7 @@ export class JsonMemberWorkSyncStore
   async claimDue(input: MemberWorkSyncOutboxClaimInput): Promise<MemberWorkSyncOutboxItem[]> {
     const claimed: MemberWorkSyncOutboxItem[] = [];
     await this.enqueue(input.teamName, async () => {
-      await withFileLock(this.paths.getOutboxIndexPath(input.teamName), async () => {
+      await this.paths.lock(this.paths.getOutboxIndexPath(input.teamName), async () => {
         let index = await this.readOutboxIndexFile(input.teamName);
         if (Object.keys(index.items).length === 0) {
           index = await this.repairOutboxIndex(input.teamName);
@@ -1048,7 +1047,7 @@ export class JsonMemberWorkSyncStore
             if (claimed.length >= Math.max(0, input.limit)) {
               break;
             }
-            await withFileLock(
+            await this.paths.lock(
               this.paths.getMemberOutboxPath(input.teamName, route.memberName),
               async () => {
                 const outbox = await this.readMemberOutboxFile(input.teamName, route.memberName);
@@ -1179,7 +1178,7 @@ export class JsonMemberWorkSyncStore
     let index = await this.readOutboxIndexFile(input.teamName);
     if (Object.keys(index.items).length === 0) {
       await this.enqueue(input.teamName, async () => {
-        await withFileLock(this.paths.getOutboxIndexPath(input.teamName), async () => {
+        await this.paths.lock(this.paths.getOutboxIndexPath(input.teamName), async () => {
           index = await this.readOutboxIndexFile(input.teamName);
           if (Object.keys(index.items).length === 0) {
             index = await this.repairOutboxIndex(input.teamName);
@@ -1199,7 +1198,7 @@ export class JsonMemberWorkSyncStore
     ).length;
     if (memberFileCount > indexedCount) {
       await this.enqueue(input.teamName, async () => {
-        await withFileLock(this.paths.getOutboxIndexPath(input.teamName), async () => {
+        await this.paths.lock(this.paths.getOutboxIndexPath(input.teamName), async () => {
           await this.repairOutboxIndex(input.teamName);
         });
       });
@@ -1832,7 +1831,7 @@ export class JsonMemberWorkSyncStore
     updater: (current: MemberWorkSyncOutboxItem | undefined) => MemberWorkSyncOutboxItem | undefined
   ): Promise<void> {
     await this.enqueue(teamName, async () => {
-      await withFileLock(this.paths.getOutboxIndexPath(teamName), async () => {
+      await this.paths.lock(this.paths.getOutboxIndexPath(teamName), async () => {
         let index = await this.readOutboxIndexFile(teamName);
         if (!index.items[id]) {
           index = await this.repairOutboxIndex(teamName);
@@ -1843,7 +1842,7 @@ export class JsonMemberWorkSyncStore
         }
         const updateRoute = async (targetRoute: OutboxIndexRoute): Promise<boolean> => {
           let staleRoute = false;
-          await withFileLock(
+          await this.paths.lock(
             this.paths.getMemberOutboxPath(teamName, targetRoute.memberName),
             async () => {
               const outbox = await this.readMemberOutboxFile(teamName, targetRoute.memberName);
@@ -1890,7 +1889,7 @@ export class JsonMemberWorkSyncStore
   private async repairMetricsIndex(teamName: string): Promise<MetricsIndexFile | null> {
     let repaired: MetricsIndexFile | null = null;
     await this.enqueue(teamName, async () => {
-      await withFileLock(this.paths.getMetricsIndexPath(teamName), async () => {
+      await this.paths.lock(this.paths.getMetricsIndexPath(teamName), async () => {
         const current = await this.readMetricsIndexFile(teamName);
         if (Object.keys(current.members).length > 0 || current.recentEvents.length > 0) {
           repaired = current;
@@ -1965,7 +1964,7 @@ export class JsonMemberWorkSyncStore
       }
       const memberKey = this.paths.getMemberKey(intent.memberName);
       if (!index.items[intent.id]) {
-        await withFileLock(
+        await this.paths.lock(
           this.paths.getMemberReportsPath(teamName, intent.memberName),
           async () => {
             const reports = await this.readMemberReportsFile(teamName, intent.memberName);
@@ -2020,7 +2019,8 @@ export class JsonMemberWorkSyncStore
       }
       const memberKey = this.paths.getMemberKey(item.memberName);
       if (!index.items[item.id]) {
-        await withFileLock(this.paths.getMemberOutboxPath(teamName, item.memberName), async () => {
+        const memberOutboxPath = this.paths.getMemberOutboxPath(teamName, item.memberName);
+        await this.paths.lock(memberOutboxPath, async () => {
           const outbox = await this.readMemberOutboxFile(teamName, item.memberName);
           outbox.items[item.id] = item;
           await this.writeMemberOutboxFile(teamName, item.memberName, outbox);

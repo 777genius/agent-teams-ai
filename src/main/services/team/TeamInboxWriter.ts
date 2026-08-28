@@ -24,14 +24,13 @@ function realpathIfExists(inputPath: string): string | null {
   }
 }
 
-function resolveInboxPath(teamName: string, inboxName: string): string {
+function resolveInboxPath(teamsBasePath: string, teamName: string, inboxName: string): string {
   const safeTeamName = teamName.trim();
   const safeInboxName = inboxName.trim();
   if (!validateFileName(safeTeamName).valid || !validateFileName(safeInboxName).valid) {
     throw new Error('Invalid inbox path');
   }
 
-  const teamsBasePath = getTeamsBasePath();
   const teamDir = path.join(teamsBasePath, safeTeamName);
   const inboxDir = path.join(teamsBasePath, safeTeamName, 'inboxes');
   const inboxPath = path.join(inboxDir, `${safeInboxName}.json`);
@@ -115,8 +114,10 @@ export interface CorrelateRuntimeDeliveryReplyResult {
 }
 
 export class TeamInboxWriter {
+  constructor(private readonly teamsBasePath: string = getTeamsBasePath()) {}
+
   async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
-    const inboxPath = resolveInboxPath(teamName, request.member);
+    const inboxPath = resolveInboxPath(this.teamsBasePath, teamName, request.member);
     const explicitMessageId = request.messageId?.trim();
     const messageId = explicitMessageId || randomUUID();
 
@@ -164,7 +165,7 @@ export class TeamInboxWriter {
     let resultMessageId = messageId;
     let resultDeduplicated = false;
 
-    await withFileLock(inboxPath, async () => {
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: inboxPath }, async () => {
       await withInboxLock(inboxPath, async () => {
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
@@ -291,10 +292,10 @@ export class TeamInboxWriter {
       return { found: false, updated: false };
     }
 
-    const inboxPath = resolveInboxPath(teamName, request.member);
+    const inboxPath = resolveInboxPath(this.teamsBasePath, teamName, request.member);
     let result: UpdateInboxMessageTextResult = { found: false, updated: false };
 
-    await withFileLock(inboxPath, async () => {
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: inboxPath }, async () => {
       await withInboxLock(inboxPath, async () => {
         let raw: string;
         try {
@@ -366,14 +367,14 @@ export class TeamInboxWriter {
       return { found: false, updated: false };
     }
 
-    const inboxPath = resolveInboxPath(teamName, inboxName);
+    const inboxPath = resolveInboxPath(this.teamsBasePath, teamName, inboxName);
     const expectedFrom = this.normalizeComparableParticipant(request.from);
     if (!expectedFrom) {
       return { found: false, updated: false };
     }
 
     let result: MergeRuntimeDeliveryTaskRefsResult = { found: false, updated: false };
-    await withFileLock(inboxPath, async () => {
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: inboxPath }, async () => {
       await withInboxLock(inboxPath, async () => {
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
@@ -452,10 +453,10 @@ export class TeamInboxWriter {
       return { found: false, updated: false };
     }
 
-    const inboxPath = resolveInboxPath(teamName, inboxName);
+    const inboxPath = resolveInboxPath(this.teamsBasePath, teamName, inboxName);
     const taskRefs = this.normalizeTaskRefs(request.taskRefs);
     let result: CorrelateRuntimeDeliveryReplyResult = { found: false, updated: false };
-    await withFileLock(inboxPath, async () => {
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: inboxPath }, async () => {
       await withInboxLock(inboxPath, async () => {
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);

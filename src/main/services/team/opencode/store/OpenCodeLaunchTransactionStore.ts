@@ -299,12 +299,14 @@ export function redactOpenCodeLaunchEvidence(evidence: unknown): unknown {
 }
 
 export function createOpenCodeLaunchTransactionStore(options: {
+  authorityRoot?: string;
   filePath: string;
   clock?: () => Date;
 }): OpenCodeLaunchTransactionStore {
   const clock = options.clock ?? (() => new Date());
   return new OpenCodeLaunchTransactionStore(
     new VersionedJsonStore<OpenCodeLaunchTransaction[]>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: OPENCODE_LAUNCH_TRANSACTION_SCHEMA_VERSION,
       defaultData: () => [],

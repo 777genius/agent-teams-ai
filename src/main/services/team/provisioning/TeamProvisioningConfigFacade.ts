@@ -78,6 +78,7 @@ export interface TeamProvisioningConfigFacadeOptions {
 export class TeamProvisioningConfigFacade {
   readonly launchExpectedMembersPorts: TeamProvisioningLaunchExpectedMembersPorts;
   private readonly configMaintenance: TeamProvisioningConfigMaintenance;
+  private readonly teamsBasePath = getTeamsBasePath();
 
   constructor(private readonly options: TeamProvisioningConfigFacadeOptions) {
     this.launchExpectedMembersPorts = createTeamProvisioningLaunchExpectedMembersPorts({
@@ -89,7 +90,7 @@ export class TeamProvisioningConfigFacade {
     });
     this.configMaintenance = new TeamProvisioningConfigMaintenance({
       ports: {
-        getTeamsBasePath,
+        getTeamsBasePath: () => this.teamsBasePath,
         getProjectsBasePath,
         readRegularFileUtf8: options.readRegularFileUtf8,
         writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
@@ -97,7 +98,9 @@ export class TeamProvisioningConfigFacade {
         readDir: (dirPath) => fs.promises.readdir(dirPath),
         stat: (filePath) => fs.promises.stat(filePath),
         withCanonicalInboxLock: (filePath, fn) =>
-          withFileLock(filePath, () => withInboxLock(filePath, fn)),
+          withFileLock({ authorityRoot: this.teamsBasePath, targetPath: filePath }, () =>
+            withInboxLock(filePath, fn)
+          ),
         scanForNewestProjectSession,
         membersMetaStore: options.membersMetaStore,
         invalidateTeam: (teamName) => TeamConfigReader.invalidateTeam(teamName),

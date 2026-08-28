@@ -366,9 +366,9 @@ export class TeamTaskActivityIntervalService {
   private readonly memberActivityNoopCache = new Map<string, string>();
   private readonly taskFileCache = new Map<string, CachedActivityTaskFile>();
   private taskFileCacheBytes = 0;
-
+  constructor(private readonly teamsBasePath: string = getTeamsBasePath()) {}
   private getBoardStateLockPath(teamName: string): string {
-    return `${path.join(getTeamsBasePath(), teamName, 'board-state')}.lock`;
+    return `${path.join(this.teamsBasePath, teamName, 'board-state')}.lock`;
   }
 
   private getMemberActivityNoopCacheKey(
@@ -502,9 +502,9 @@ export class TeamTaskActivityIntervalService {
     teamName: string,
     run: () => ActivityIntervalResult
   ): ActivityIntervalResult {
-    const lockScope = path.join(getTeamsBasePath(), teamName, 'board-state');
+    const lockScope = path.join(this.teamsBasePath, teamName, 'board-state');
     try {
-      return withFileLockSync(lockScope, run);
+      return withFileLockSync({ authorityRoot: this.teamsBasePath, targetPath: lockScope }, run);
     } catch (error) {
       logger.warn(
         `[${teamName}] Failed to update task activity intervals: ${

@@ -1,15 +1,6 @@
 // @vitest-environment node
 /* eslint-disable security/detect-non-literal-fs-filename, sonarjs/publicly-writable-directories */
-import {
-  chmod,
-  copyFile,
-  link,
-  mkdir,
-  mkdtemp,
-  rm,
-  symlink,
-  writeFile,
-} from 'node:fs/promises';
+import { chmod, copyFile, link, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import http from 'node:http';
 import Module from 'node:module';
 import net from 'node:net';
@@ -22,6 +13,14 @@ import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge
 import { clearResolvedNodePathForTests } from '@main/services/team/TeamMcpConfigBuilder';
 import { setAppDataBasePath } from '@main/utils/pathDecoder';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('@main/services/team/fileLock', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/services/team/fileLock')>();
+  return {
+    ...actual,
+    withFileLock: async <T>(_target: unknown, fn: () => Promise<T>): Promise<T> => await fn(),
+  };
+});
 
 const FAKE_MCP_HTTP_SERVER_SOURCE = String.raw`
 const fs = require('node:fs');
@@ -299,11 +298,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
   });
 
   it('carries a packaged Electron MCP launch through runtime env into a healthy child', async () => {
-    type ModuleLoad = (
-      request: string,
-      parent: NodeModule | undefined,
-      isMain: boolean
-    ) => unknown;
+    type ModuleLoad = (request: string, parent: NodeModule | undefined, isMain: boolean) => unknown;
     const moduleInternal = Module as unknown as { _load: ModuleLoad };
     const originalModuleLoad = moduleInternal._load;
     const originalExecPathDescriptor = Object.getOwnPropertyDescriptor(process, 'execPath');
@@ -329,11 +324,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
     );
 
     await mkdir(packagedServerDir, { recursive: true });
-    await writeFile(
-      path.join(packagedServerDir, 'index.js'),
-      FAKE_MCP_HTTP_SERVER_SOURCE,
-      'utf8'
-    );
+    await writeFile(path.join(packagedServerDir, 'index.js'), FAKE_MCP_HTTP_SERVER_SOURCE, 'utf8');
     await writeFile(
       path.join(packagedServerDir, 'package.json'),
       JSON.stringify({ name: 'agent-teams-mcp-e2e', private: true }),
@@ -381,12 +372,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
       await ensureAgentTeamsMcpLocalLaunchEnv(entryOnlyEnv, () =>
         Promise.reject(new Error('simulated full launch spec failure'))
       );
-      const expectedEntry = path.join(
-        appDataDir,
-        'mcp-server',
-        '2.11.0-e2e',
-        'index.js'
-      );
+      const expectedEntry = path.join(appDataDir, 'mcp-server', '2.11.0-e2e', 'index.js');
       expect(entryOnlyEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe(expectedEntry);
       expect(entryOnlyEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBeUndefined();
       expect(entryOnlyEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBeUndefined();
@@ -394,6 +380,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
 
       server = new AgentTeamsMcpHttpServer({
         statePath: path.join(tempDir!, 'packaged-entry-fallback-mcp-http-state.json'),
+        stateAuthorityRoot: tempDir!,
         disableOrphanCleanup: true,
         resolveLaunchSpec: () =>
           Promise.resolve({
@@ -429,6 +416,7 @@ describe('packaged Agent Teams MCP launch integration', () => {
 
       server = new AgentTeamsMcpHttpServer({
         statePath: path.join(tempDir!, 'packaged-env-mcp-http-state.json'),
+        stateAuthorityRoot: tempDir!,
         disableOrphanCleanup: true,
         resolveLaunchSpec: () =>
           Promise.resolve({
@@ -496,6 +484,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
   }): AgentTeamsMcpHttpServer {
     const server = new AgentTeamsMcpHttpServer({
       statePath: input.statePath ?? path.join(tempDir!, `mcp-http-state-${servers.length}.json`),
+      stateAuthorityRoot: tempDir!,
       disableOrphanCleanup: true,
       resolveLaunchSpec: () =>
         Promise.resolve({
@@ -513,6 +502,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
   it('starts the actual Agent Teams MCP HTTP server and proves its health endpoint', async () => {
     const server = new AgentTeamsMcpHttpServer({
       statePath: path.join(tempDir!, 'actual-mcp-http-state.json'),
+      stateAuthorityRoot: tempDir!,
       disableOrphanCleanup: true,
     });
     servers.push(server);
@@ -717,11 +707,7 @@ describePosix('AgentTeamsMcpHttpServer integration', () => {
     }
     const firstHandle = server.getCurrentHandle();
     expect(firstHandle?.pid).toEqual(expect.any(Number));
-    await writeFile(
-      controlFile,
-      `unhealthy-pid:${firstHandle?.pid}`,
-      'utf8'
-    );
+    await writeFile(controlFile, `unhealthy-pid:${firstHandle?.pid}`, 'utf8');
 
     const secondResult = await client.execute<{ runId: string }, { observedMcpUrl: string }>(
       'opencode.launchTeam',

@@ -312,11 +312,13 @@ export async function commitOpenCodeRuntimeBootstrapSessionEvidence(
   };
   const sessions = mergeOpenCodeRuntimeSessionRecords(existingSessions, session);
   const manifestStore = createRuntimeStoreManifestStore({
+    authorityRoot: ports.teamsBasePath,
     filePath: paths.manifestPath,
     teamName: input.teamName,
     lockOptions: OPENCODE_BOOTSTRAP_EVIDENCE_LOCK_OPTIONS,
   });
   const receiptStore = createRuntimeStoreReceiptStore({
+    authorityRoot: ports.teamsBasePath,
     filePath: paths.receiptStorePath,
     lockOptions: OPENCODE_BOOTSTRAP_EVIDENCE_LOCK_OPTIONS,
   });
@@ -427,11 +429,13 @@ export async function stampOpenCodeAppMcpTransportEvidenceIfMissing(
     }
 
     const manifestStore = createRuntimeStoreManifestStore({
+      authorityRoot: ports.teamsBasePath,
       filePath: paths.manifestPath,
       teamName: session.teamName,
       lockOptions: OPENCODE_BOOTSTRAP_EVIDENCE_LOCK_OPTIONS,
     });
     const receiptStore = createRuntimeStoreReceiptStore({
+      authorityRoot: ports.teamsBasePath,
       filePath: paths.receiptStorePath,
       lockOptions: OPENCODE_BOOTSTRAP_EVIDENCE_LOCK_OPTIONS,
     });

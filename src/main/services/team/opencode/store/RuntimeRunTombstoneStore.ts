@@ -201,6 +201,7 @@ export function assertRuntimeEvidenceRunMatches(input: RuntimeEvidenceAcceptance
 }
 
 export function createRuntimeRunTombstoneStore(options: {
+  authorityRoot?: string;
   filePath: string;
   idFactory?: () => string;
   clock?: () => Date;
@@ -208,6 +209,7 @@ export function createRuntimeRunTombstoneStore(options: {
   const clock = options.clock ?? (() => new Date());
   return new RuntimeRunTombstoneStore(
     new VersionedJsonStore<RuntimeRunTombstone[]>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: OPENCODE_RUNTIME_RUN_TOMBSTONE_SCHEMA_VERSION,
       defaultData: () => [],

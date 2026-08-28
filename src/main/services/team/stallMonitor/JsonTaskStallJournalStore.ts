@@ -21,12 +21,14 @@ export function getStallMonitorJournalPath(teamName: string): string {
  * read-mutate-write cycle, matching the original TeamTaskStallJournal behavior.
  */
 export class JsonTaskStallJournalStore implements TaskStallJournalStore {
+  constructor(private readonly teamsBasePath: string = getTeamsBasePath()) {}
+
   async update<T>(
     teamName: string,
     mutate: (entries: TaskStallJournalEntry[]) => TaskStallJournalMutation<T>
   ): Promise<T> {
-    const filePath = getStallMonitorJournalPath(teamName);
-    return withFileLock(filePath, async () => {
+    const filePath = path.join(this.teamsBasePath, teamName, STALL_MONITOR_JOURNAL_FILENAME);
+    return withFileLock({ authorityRoot: this.teamsBasePath, targetPath: filePath }, async () => {
       const entries = await this.readUnlocked(filePath);
       const { entries: nextEntries, result, changed = true } = mutate(entries);
       if (changed) {

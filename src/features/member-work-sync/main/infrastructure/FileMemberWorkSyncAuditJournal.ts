@@ -157,10 +157,13 @@ export class FileMemberWorkSyncAuditJournal implements MemberWorkSyncAuditJourna
     try {
       await this.paths.ensureMemberWorkSyncDir(event.teamName, event.memberName);
       await mkdir(dirname(filePath), { recursive: true });
-      await withFileLock(filePath, async () => {
-        await rotateIfNeeded(filePath, this.maxBytes, this.rotatedFileCount);
-        await appendFile(filePath, `${JSON.stringify(sanitizeEvent(event))}\n`, 'utf8');
-      });
+      await withFileLock(
+        { authorityRoot: this.paths.getTeamsBasePath(), targetPath: filePath },
+        async () => {
+          await rotateIfNeeded(filePath, this.maxBytes, this.rotatedFileCount);
+          await appendFile(filePath, `${JSON.stringify(sanitizeEvent(event))}\n`, 'utf8');
+        }
+      );
     } catch (error) {
       this.logger?.warn('member work sync audit journal append failed', {
         teamName: event.teamName,

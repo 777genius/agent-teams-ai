@@ -184,21 +184,24 @@ export class JsonTeamRuntimeRecoveryRepository implements RuntimeRecoveryReposit
     }
   ): Promise<T> {
     const statePath = this.paths.getStatePath(teamName);
-    return withFileLock(statePath, async () => {
-      const current = await this.readUnlocked(teamName, true);
-      const updated = updater(structuredClone(current));
-      const nextState: RuntimeRecoveryTeamState = {
-        ...updated.state,
-        schemaVersion: 1,
-        teamName,
-      };
-      if (!isRuntimeRecoveryTeamState(nextState)) {
-        throw new Error(`Invalid runtime recovery state for team "${teamName}"`);
+    return withFileLock(
+      { authorityRoot: this.paths.getTeamsBasePath(), targetPath: statePath },
+      async () => {
+        const current = await this.readUnlocked(teamName, true);
+        const updated = updater(structuredClone(current));
+        const nextState: RuntimeRecoveryTeamState = {
+          ...updated.state,
+          schemaVersion: 1,
+          teamName,
+        };
+        if (!isRuntimeRecoveryTeamState(nextState)) {
+          throw new Error(`Invalid runtime recovery state for team "${teamName}"`);
+        }
+        await mkdir(dirname(statePath), { recursive: true });
+        await atomicWriteAsync(statePath, `${JSON.stringify(nextState, null, 2)}\n`);
+        return updated.result;
       }
-      await mkdir(dirname(statePath), { recursive: true });
-      await atomicWriteAsync(statePath, `${JSON.stringify(nextState, null, 2)}\n`);
-      return updated.result;
-    });
+    );
   }
 
   async listTeamNames(): Promise<string[]> {

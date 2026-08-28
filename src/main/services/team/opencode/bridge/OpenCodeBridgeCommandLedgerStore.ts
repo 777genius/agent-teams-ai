@@ -363,12 +363,14 @@ export class OpenCodeBridgeCommandLeaseStore {
 }
 
 export function createOpenCodeBridgeCommandLedgerStore(options: {
+  authorityRoot?: string;
   filePath: string;
   clock?: () => Date;
 }): OpenCodeBridgeCommandLedger {
   const clock = options.clock ?? (() => new Date());
   return new OpenCodeBridgeCommandLedger(
     new VersionedJsonStore<OpenCodeBridgeCommandLedgerEntry[]>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: OPEN_CODE_BRIDGE_COMMAND_LEDGER_SCHEMA_VERSION,
       defaultData: () => [],
@@ -380,6 +382,7 @@ export function createOpenCodeBridgeCommandLedgerStore(options: {
 }
 
 export function createOpenCodeBridgeCommandLeaseStore(options: {
+  authorityRoot?: string;
   filePath: string;
   idFactory?: () => string;
   clock?: () => Date;
@@ -387,6 +390,7 @@ export function createOpenCodeBridgeCommandLeaseStore(options: {
   const clock = options.clock ?? (() => new Date());
   return new OpenCodeBridgeCommandLeaseStore(
     new VersionedJsonStore<OpenCodeBridgeCommandLease[]>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: OPEN_CODE_BRIDGE_COMMAND_LEASE_SCHEMA_VERSION,
       defaultData: () => [],

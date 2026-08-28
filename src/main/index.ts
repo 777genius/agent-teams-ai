@@ -627,7 +627,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
       copyOpenCodeLocalMcpLaunchEnv(explicitLocalMcpLaunchEnv, bridgeEnv);
       return;
     }
-
     await applyMcpLaunchSpecEnv(targetEnv, options);
     if (hasOpenCodeLocalMcpLaunchEnv(targetEnv)) {
       copyOpenCodeLocalMcpLaunchEnv(targetEnv, bridgeEnv);
@@ -688,7 +687,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
   ) {
     await ensureOpenCodeLocalMcpLaunchEnv(bridgeEnv, { emitProgress: true });
   }
-
   reportProgress('runtime-bridge', 'Preparing OpenCode bridge...');
   const resolveBridgeCommandEnv = async (): Promise<NodeJS.ProcessEnv> => {
     const nextEnv = { ...bridgeEnv };
@@ -744,9 +742,11 @@ async function createOpenCodeRuntimeAdapterRegistry(
     expectedClientIdentity: clientIdentity,
     handshakePort,
     leaseStore: createOpenCodeBridgeCommandLeaseStore({
+      authorityRoot: bridgeControlDir,
       filePath: join(bridgeControlDir, 'command-leases.json'),
     }),
     ledger: createOpenCodeBridgeCommandLedgerStore({
+      authorityRoot: bridgeControlDir,
       filePath: join(bridgeControlDir, 'command-ledger.json'),
     }),
     bridge: bridgeClient,
@@ -1949,7 +1949,8 @@ function reconfigureLocalContextForClaudeRoot(): void {
       projectsDir,
       todosDir,
     });
-    if (notificationManager) replacementLocal.fileWatcher.setNotificationManager(notificationManager);
+    if (notificationManager)
+      replacementLocal.fileWatcher.setNotificationManager(notificationManager);
     replacementLocal.start();
     if (!wasLocalActive) replacementLocal.stopFileWatcher();
     contextRegistry.replaceContext('local', replacementLocal);

@@ -302,7 +302,10 @@ export class TaskLogOpenCodeSessionEvidenceSource implements OpenCodeTaskLogSess
   }
 
   private async readLedgerRecords(filePath: string): Promise<OpenCodePromptDeliveryLedgerRecord[]> {
-    const store = createOpenCodePromptDeliveryLedgerStore({ filePath });
+    const store = createOpenCodePromptDeliveryLedgerStore({
+      authorityRoot: this.teamsBasePath,
+      filePath,
+    });
     return await store
       .list()
       .then((records) => records.slice(-this.maxRecordsPerLedger))

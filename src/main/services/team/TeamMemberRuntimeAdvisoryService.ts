@@ -512,9 +512,8 @@ export class TeamMemberRuntimeAdvisoryService {
       return new Map();
     }
 
-    const laneIndex = await readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName).catch(
-      () => null
-    );
+    const teamsBasePath = getTeamsBasePath();
+    const laneIndex = await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName).catch(() => null);
     if (!laneIndex) {
       return new Map();
     }
@@ -526,8 +525,9 @@ export class TeamMemberRuntimeAdvisoryService {
         continue;
       }
       const ledger = createOpenCodePromptDeliveryLedgerStore({
+        authorityRoot: teamsBasePath,
         filePath: getOpenCodeLaneScopedRuntimeFilePath({
-          teamsBasePath: getTeamsBasePath(),
+          teamsBasePath,
           teamName,
           laneId: lane.laneId,
           fileName: 'opencode-prompt-delivery-ledger.json',

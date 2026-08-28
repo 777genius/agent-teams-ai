@@ -562,7 +562,14 @@ export function createNodeLegacyMemberSettingsRepositoryDependencies(
       return atomicWriteAsync(path.join(getTeamsBasePath(), teamName, 'config.json'), contents);
     },
     withConfigLock(teamName, operation) {
-      return withFileLock(path.join(getTeamsBasePath(), teamName, 'config.json'), operation);
+      const teamsBasePath = getTeamsBasePath();
+      return withFileLock(
+        {
+          authorityRoot: teamsBasePath,
+          targetPath: path.join(teamsBasePath, teamName, 'config.json'),
+        },
+        operation
+      );
     },
     async readLeadProviderId(teamName) {
       const meta = await teamMetaStore.getMeta(teamName);

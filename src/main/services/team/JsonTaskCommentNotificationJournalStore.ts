@@ -25,9 +25,14 @@ export function getCommentNotificationJournalPath(teamName: string): string {
  * journal would re-notify the lead about every historical comment.
  */
 export class JsonTaskCommentNotificationJournalStore implements TaskCommentNotificationJournalStore {
+  constructor(private readonly teamsBasePath: string = getTeamsBasePath()) {}
+
   async exists(teamName: string): Promise<boolean> {
     try {
-      await fs.promises.access(getCommentNotificationJournalPath(teamName), fs.constants.F_OK);
+      await fs.promises.access(
+        path.join(this.teamsBasePath, teamName, COMMENT_NOTIFICATION_JOURNAL_FILENAME),
+        fs.constants.F_OK
+      );
       return true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -38,15 +43,17 @@ export class JsonTaskCommentNotificationJournalStore implements TaskCommentNotif
   }
 
   async ensureInitialized(teamName: string): Promise<void> {
-    const filePath = getCommentNotificationJournalPath(teamName);
-    await withFileLock(filePath, async () => {
+    const filePath = path.join(this.teamsBasePath, teamName, COMMENT_NOTIFICATION_JOURNAL_FILENAME);
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: filePath }, async () => {
       const existing = await this.readUnlocked(filePath);
       await atomicWriteAsync(filePath, JSON.stringify(existing, null, 2));
     });
   }
 
   async read(teamName: string): Promise<TaskCommentNotificationJournalEntry[]> {
-    return this.readUnlocked(getCommentNotificationJournalPath(teamName));
+    return this.readUnlocked(
+      path.join(this.teamsBasePath, teamName, COMMENT_NOTIFICATION_JOURNAL_FILENAME)
+    );
   }
 
   async withEntries<T>(
@@ -57,10 +64,10 @@ export class JsonTaskCommentNotificationJournalStore implements TaskCommentNotif
       | Promise<TaskCommentNotificationJournalMutation<T>>
       | TaskCommentNotificationJournalMutation<T>
   ): Promise<T> {
-    const filePath = getCommentNotificationJournalPath(teamName);
+    const filePath = path.join(this.teamsBasePath, teamName, COMMENT_NOTIFICATION_JOURNAL_FILENAME);
     let result!: T;
 
-    await withFileLock(filePath, async () => {
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: filePath }, async () => {
       const entries = await this.readUnlocked(filePath);
       const outcome = await fn(entries);
       result = outcome.result;

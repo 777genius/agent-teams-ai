@@ -886,14 +886,13 @@ function buildRuntimeDeliveryRecordFromReceipt(
     lastError: null,
   };
 }
-
 function throwRuntimeDeliveryJournalRecordNotFound(input: RuntimeDeliveryJournalKeyInput): never {
   throw new Error(
     `Runtime delivery journal record not found: ${input.teamName}/${input.runId}/${input.idempotencyKey}`
   );
 }
-
 export function createRuntimeDeliveryJournalStore(options: {
+  authorityRoot?: string;
   filePath: string;
   clock?: () => Date;
   maxTerminalRecords?: number;
@@ -906,6 +905,7 @@ export function createRuntimeDeliveryJournalStore(options: {
   }
   return new RuntimeDeliveryJournalStore(
     new VersionedJsonStore<RuntimeDeliveryJournalEntry[]>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: RUNTIME_DELIVERY_JOURNAL_SCHEMA_VERSION,
       defaultData: () => [],

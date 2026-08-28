@@ -45,6 +45,8 @@ export interface VersionedJsonStoreUpdateResult<TData> {
 }
 
 export interface VersionedJsonStoreOptions<TData> {
+  /** Required outside tests; omitted test fixtures are scoped to the target's direct parent. */
+  authorityRoot?: string;
   filePath: string;
   schemaVersion: number;
   defaultData: () => TData;
@@ -68,6 +70,7 @@ export class VersionedJsonStoreError extends Error {
 
 export class VersionedJsonStore<TData> {
   private readonly filePath: string;
+  private readonly authorityRoot: string;
   private readonly schemaVersion: number;
   private readonly defaultData: () => TData;
   private readonly validate: (value: unknown) => TData;
@@ -78,6 +81,13 @@ export class VersionedJsonStore<TData> {
 
   constructor(options: VersionedJsonStoreOptions<TData>) {
     this.filePath = options.filePath;
+    if (options.authorityRoot) {
+      this.authorityRoot = options.authorityRoot;
+    } else if (process.env.NODE_ENV === 'test') {
+      this.authorityRoot = path.dirname(this.filePath);
+    } else {
+      throw new Error('VersionedJsonStore requires an explicit authorityRoot');
+    }
     this.schemaVersion = options.schemaVersion;
     this.defaultData = options.defaultData;
     this.validate = options.validate;
@@ -95,7 +105,7 @@ export class VersionedJsonStore<TData> {
     updater: (current: TData) => TData | Promise<TData>
   ): Promise<VersionedJsonStoreUpdateResult<TData>> {
     return withFileLock(
-      this.filePath,
+      { authorityRoot: this.authorityRoot, targetPath: this.filePath },
       async () => {
         const current = await this.readUnlocked();
         if (!current.ok) {

@@ -253,6 +253,8 @@ function buildActiveNameGuard(membersByName: Map<string, TeamMember>): (name: st
 }
 
 export class TeamMembersMetaStore {
+  constructor(private readonly teamsBasePath: string = getTeamsBasePath()) {}
+
   normalizeRootBackend(
     value: unknown,
     source: 'legacy-storage' | 'explicit-selection'
@@ -269,7 +271,7 @@ export class TeamMembersMetaStore {
     return canonicalRosterRawFromStore(priorRaw, existing, requested, replacement, this);
   }
   private getMetaPath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'members.meta.json');
+    return path.join(this.teamsBasePath, teamName, 'members.meta.json');
   }
 
   async assertMutable(teamName: string): Promise<void> {
@@ -369,7 +371,10 @@ export class TeamMembersMetaStore {
     try {
       // The promise queue protects one Electron main instance. The file lock is
       // the serialization authority shared by every app process/worktree.
-      return await withFileLock(`${lockKey}.roster-cas`, operation);
+      return await withFileLock(
+        { authorityRoot: this.teamsBasePath, targetPath: `${lockKey}.roster-cas` },
+        operation
+      );
     } finally {
       release();
       if (rosterLocks.get(lockKey) === queued) rosterLocks.delete(lockKey);

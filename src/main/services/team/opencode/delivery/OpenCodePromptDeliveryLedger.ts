@@ -778,14 +778,15 @@ export class OpenCodePromptDeliveryLedgerStore {
     return result.data;
   }
 }
-
 export function createOpenCodePromptDeliveryLedgerStore(options: {
+  authorityRoot?: string;
   filePath: string;
   clock?: () => Date;
 }): OpenCodePromptDeliveryLedgerStore {
   const clock = options.clock ?? (() => new Date());
   return new OpenCodePromptDeliveryLedgerStore(
     new VersionedJsonStore<OpenCodePromptDeliveryLedgerRecord[]>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: OPENCODE_PROMPT_DELIVERY_LEDGER_SCHEMA_VERSION,
       defaultData: () => [],
@@ -794,7 +795,6 @@ export function createOpenCodePromptDeliveryLedgerStore(options: {
     })
   );
 }
-
 export function buildOpenCodePromptDeliveryRecordId(input: {
   teamName: string;
   memberName: string;

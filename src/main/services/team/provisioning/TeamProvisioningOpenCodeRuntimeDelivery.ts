@@ -452,6 +452,7 @@ export function createOpenCodeRuntimeDeliveryService(
     ? (candidateTeamName: string) => ports.readLaunchState!(candidateTeamName)
     : undefined;
   const journal = createRuntimeDeliveryJournalStore({
+    authorityRoot: ports.teamsBasePath,
     filePath: getOpenCodeLaneScopedRuntimeFilePath({
       teamsBasePath: ports.teamsBasePath,
       teamName,
@@ -955,6 +956,7 @@ export async function recoverOpenCodeRuntimeDeliveryJournal(
   });
   for (const laneId of recoveryLaneIds) {
     const journal = createRuntimeDeliveryJournalStore({
+      authorityRoot: ports.teamsBasePath,
       filePath: getOpenCodeLaneScopedRuntimeFilePath({
         teamsBasePath: ports.teamsBasePath,
         teamName,

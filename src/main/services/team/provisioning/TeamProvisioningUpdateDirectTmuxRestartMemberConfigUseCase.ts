@@ -220,8 +220,9 @@ export function createNodeUpdateDirectTmuxRestartMemberConfigUseCasePorts(): Upd
       await atomicWriteAsync(configPath, contents);
     },
     withTeamConfigLock(teamName, operation) {
-      const configPath = path.join(getTeamsBasePath(), teamName, 'config.json');
-      return withFileLock(configPath, operation);
+      const teamsBasePath = getTeamsBasePath();
+      const configPath = path.join(teamsBasePath, teamName, 'config.json');
+      return withFileLock({ authorityRoot: teamsBasePath, targetPath: configPath }, operation);
     },
     invalidateTeamConfig(teamName) {
       TeamConfigReader.invalidateTeam(teamName);

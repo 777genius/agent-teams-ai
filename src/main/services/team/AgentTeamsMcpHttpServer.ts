@@ -14,7 +14,7 @@ import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { createLogger } from '@shared/utils/logger';
 
-import { type FileLockOptions, withFileLock } from './fileLock';
+import { type FileLockOptions, type FileLockTarget, withFileLock } from './fileLock';
 import { type McpLaunchSpec, resolveAgentTeamsMcpLaunchSpec } from './TeamMcpConfigBuilder';
 
 const logger = createLogger('Service:AgentTeamsMcpHttpServer');
@@ -92,8 +92,9 @@ export interface AgentTeamsMcpHttpServerDeps {
   probeHealth?: (host: string, port: number) => Promise<AgentTeamsMcpHttpHealthProbe>;
   canListenOnPort?: (host: string, port: number) => Promise<boolean>;
   statePath?: string | null;
+  stateAuthorityRoot?: string;
   withStateLock?: <T>(
-    filePath: string,
+    target: FileLockTarget,
     fn: () => Promise<T>,
     options?: FileLockOptions
   ) => Promise<T>;
@@ -690,9 +691,7 @@ export class AgentTeamsMcpHttpServer {
   private readonly ownerInstanceId = randomUUID();
   private readonly startedAtMs = Date.now();
   private preventFutureStarts = false;
-
   constructor(private readonly deps: AgentTeamsMcpHttpServerDeps = {}) {}
-
   async ensureStarted(): Promise<AgentTeamsMcpHttpServerHandle> {
     this.throwIfStartsPrevented();
     if (this.startPromise) {
@@ -706,7 +705,6 @@ export class AgentTeamsMcpHttpServer {
     });
     return this.startPromise;
   }
-
   async stop(input: { preventRestart?: boolean } = {}): Promise<void> {
     if (input.preventRestart) {
       this.preventFutureStarts = true;
@@ -731,7 +729,6 @@ export class AgentTeamsMcpHttpServer {
       );
     }
   }
-
   getCurrentHandle(): AgentTeamsMcpHttpServerHandle | null {
     return this.handle;
   }
@@ -742,13 +739,17 @@ export class AgentTeamsMcpHttpServer {
     }
     return this.deps.statePath ?? buildStatePath();
   }
-
+  private resolveStateLockTarget(targetPath: string): FileLockTarget {
+    if (this.deps.statePath !== undefined && !this.deps.stateAuthorityRoot) {
+      throw new Error('Injected Agent Teams MCP statePath requires an explicit stateAuthorityRoot');
+    }
+    return { authorityRoot: this.deps.stateAuthorityRoot ?? getAppDataPath(), targetPath };
+  }
   private throwIfStartsPrevented(): void {
     if (this.preventFutureStarts) {
       throw new Error('Agent Teams MCP HTTP server startup is disabled during shutdown');
     }
   }
-
   private async reuseOrRestartExistingHandle(
     handle: AgentTeamsMcpHttpServerHandle
   ): Promise<AgentTeamsMcpHttpServerHandle> {
@@ -778,7 +779,6 @@ export class AgentTeamsMcpHttpServer {
 
     return this.startOnce();
   }
-
   private async readStateSafe(
     statePath: string,
     diagnostics: string[]
@@ -797,7 +797,6 @@ export class AgentTeamsMcpHttpServer {
       return null;
     }
   }
-
   private async writeStateSafe(
     statePath: string | null,
     state: AgentTeamsMcpHttpState,
@@ -819,9 +818,10 @@ export class AgentTeamsMcpHttpServer {
       return;
     }
     const lock = this.deps.withStateLock ?? withFileLock;
+    const target = this.resolveStateLockTarget(statePath);
     try {
       await lock(
-        statePath,
+        target,
         async () => {
           const diagnostics: string[] = [];
           const state = await this.readStateSafe(statePath, diagnostics);
@@ -1035,14 +1035,14 @@ export class AgentTeamsMcpHttpServer {
     const statePath = this.resolveStatePath();
     const startUnlocked = async (effectiveStatePath: string | null, diagnostics: string[]) =>
       this.startOnceUnlocked(input, launchSpec, expectedIdentity, effectiveStatePath, diagnostics);
-
     if (!statePath) {
       return startUnlocked(null, []);
     }
 
     const lock = this.deps.withStateLock ?? withFileLock;
+    const target = this.resolveStateLockTarget(statePath);
     try {
-      return await lock(statePath, () => startUnlocked(statePath, []), MCP_HTTP_STATE_LOCK_OPTIONS);
+      return await lock(target, () => startUnlocked(statePath, []), MCP_HTTP_STATE_LOCK_OPTIONS);
     } catch (error) {
       if (!isFileLockTimeoutError(error)) {
         throw error;

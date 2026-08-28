@@ -1,113 +1,103 @@
-import { appendFileSync, readSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
-import {
-  getSqliteTransactionLockDatabasePath,
-  setSqliteTransactionLockTestHooksForTests,
-  tryRetainSqliteTransactionLock,
-} from '../../src/main/services/infrastructure/SqliteTransactionLock';
-import { withFileLock, withFileLockSync } from '../../src/main/services/team/fileLock';
+import { createFileLockApi } from '../../src/main/services/team/fileLock';
 
-const [mode, target, tracePath] = process.argv.slice(2);
-if (
-  !target ||
-  !tracePath ||
-  ![
-    'async-holder',
-    'authority-holder',
-    'crash-holder',
-    'sqlite-before-provenance-holder',
-    'sqlite-crash-holder',
-    'sqlite-durable-release-holder',
-    'sqlite-partial-release-holder',
-    'sqlite-partial-provenance-holder',
-    'sync-contender',
-  ].includes(mode ?? '')
-) {
+import type { FileLockNativePort } from '../../src/main/services/infrastructure/file-lock';
+
+const [mode, authorityRoot, targetPath, tracePath] = process.argv.slice(2);
+if (!authorityRoot || !targetPath || !tracePath || (mode !== 'hold' && mode !== 'acquire')) {
   throw new Error('Invalid file-lock process worker arguments');
 }
 
-if (mode === 'async-holder') {
-  await withFileLock(target, async () => {
-    appendFileSync(tracePath, 'holder:start\n', 'utf8');
-    process.stdout.write('acquired\n');
-    await new Promise<void>((resolve) => {
-      process.once('message', resolve);
-    });
-    appendFileSync(tracePath, 'holder:end\n', 'utf8');
-  });
-} else if (mode === 'authority-holder') {
-  const authority = tryRetainSqliteTransactionLock(
-    getSqliteTransactionLockDatabasePath(target),
-    'pre-publication authority lost'
-  );
-  if (!authority) throw new Error('Could not acquire pre-publication authority');
-  appendFileSync(tracePath, 'publication:start\n', 'utf8');
-  process.stdout.write('acquired\n');
-  await new Promise<void>((resolve) => process.once('message', resolve));
-  appendFileSync(tracePath, 'publication:end\n', 'utf8');
-  authority.release();
-} else if (mode === 'crash-holder') {
-  await withFileLock(target, async () => {
-    appendFileSync(tracePath, 'crash:start\n', 'utf8');
-    process.stdout.write('acquired\n');
-    await new Promise<void>((resolve) => process.once('message', resolve));
-    process.exit(17);
-  });
-} else if (
-  mode === 'sqlite-before-provenance-holder' ||
-  mode === 'sqlite-partial-provenance-holder'
-) {
-  const pausePublication = () => {
-    process.stdout.write('acquired\n');
-    readSync(0, Buffer.alloc(1), 0, 1, null);
-  };
-  setSqliteTransactionLockTestHooksForTests(
-    mode === 'sqlite-before-provenance-holder'
-      ? { beforeProvenancePublication: pausePublication }
-      : { afterPartialProvenanceWrite: pausePublication }
-  );
-  const authority = tryRetainSqliteTransactionLock(target, 'paused publication holder lost');
-  if (!authority) throw new Error('Could not retain paused publication authority');
-  process.stdout.write('published\n');
-  await new Promise<void>((resolve) => process.once('message', resolve));
-  authority.release();
-  process.stdout.write('released\n');
-} else if (mode === 'sqlite-crash-holder') {
-  setSqliteTransactionLockTestHooksForTests({
-    afterDatabaseOpen: (_databasePath, database) => {
-      database.prepare("UPDATE recovery_state SET value = 'uncommitted'").run();
-    },
-  });
-  const authority = tryRetainSqliteTransactionLock(target, 'crash holder lost ownership');
-  if (!authority) throw new Error('Could not acquire SQLite crash authority');
-  process.stdout.write('acquired\n');
-  await new Promise<void>(() => undefined);
-} else if (mode === 'sqlite-durable-release-holder' || mode === 'sqlite-partial-release-holder') {
-  setSqliteTransactionLockTestHooksForTests({
-    afterDatabaseOpen: (_databasePath, database) => {
-      database.prepare("UPDATE recovery_state SET value = 'uncommitted'").run();
-    },
-    ...(mode === 'sqlite-durable-release-holder'
-      ? {
-          afterDurableReleasePublication: () => {
-            process.stdout.write('release-state\n');
-            readSync(0, Buffer.alloc(1), 0, 1, null);
-          },
-        }
-      : {
-          afterPartialReleaseWrite: () => {
-            process.stdout.write('partial-release\n');
-            readSync(0, Buffer.alloc(1), 0, 1, null);
-          },
-        }),
-  });
-  const authority = tryRetainSqliteTransactionLock(target, 'release holder lost ownership');
-  if (!authority) throw new Error('Could not acquire SQLite release authority');
-  process.stdout.write('acquired\n');
-  authority.release();
-} else {
-  process.stdout.write('attempting\n');
-  withFileLockSync(target, () => {
-    appendFileSync(tracePath, 'contender:acquired\n', 'utf8');
-  });
+interface Lease {
+  authorityPath: string;
+  marker: string;
 }
+
+function processIsAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
+  }
+}
+
+class ProcessFixtureNativePort implements FileLockNativePort {
+  private nextLease = 1n;
+  private readonly leases = new Map<bigint, Lease>();
+
+  captureScope(): bigint {
+    return 1n;
+  }
+
+  tryAcquire(_scopeId: bigint, relativeTarget: string, marker: string) {
+    const authorityDirectory = path.join(authorityRoot, '.fixture-native-authority');
+    fs.mkdirSync(authorityDirectory, { recursive: true });
+    const ownerKey = createHash('sha256').update(relativeTarget).digest('hex');
+    const authorityPath = path.join(authorityDirectory, ownerKey);
+    for (;;) {
+      try {
+        fs.writeFileSync(authorityPath, `${process.pid}\n`, { flag: 'wx' });
+        const leaseId = this.nextLease++;
+        this.leases.set(leaseId, { authorityPath, marker });
+        return { status: 'acquired' as const, leaseId, ownerKey };
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+        const priorPid = Number(fs.readFileSync(authorityPath, 'utf8').trim());
+        if (Number.isSafeInteger(priorPid) && processIsAlive(priorPid)) {
+          return { status: 'contended' as const };
+        }
+        fs.rmSync(authorityPath, { force: true });
+      }
+    }
+  }
+
+  assertOwned(leaseId: bigint): void {
+    const lease = this.required(leaseId);
+    if (fs.readFileSync(lease.authorityPath, 'utf8') !== `${process.pid}\n`) {
+      throw new Error('fixture lease lost');
+    }
+  }
+
+  publishRelease(leaseId: bigint, record: string): void {
+    const lease = this.required(leaseId);
+    if (record !== lease.marker) throw new Error('fixture release record mismatch');
+    fs.writeFileSync(`${targetPath}.lock`, record, 'utf8');
+  }
+
+  release(leaseId: bigint): void {
+    const lease = this.required(leaseId);
+    fs.rmSync(lease.authorityPath, { force: true });
+    this.leases.delete(leaseId);
+  }
+
+  abandon(leaseId: bigint): void {
+    this.required(leaseId);
+  }
+
+  closeScope(): void {}
+
+  private required(leaseId: bigint): Lease {
+    const lease = this.leases.get(leaseId);
+    if (!lease) throw new Error('fixture lease missing');
+    return lease;
+  }
+}
+
+const api = createFileLockApi(new ProcessFixtureNativePort());
+fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+await api.withFileLock(
+  { authorityRoot, targetPath },
+  async () => {
+    fs.appendFileSync(tracePath, `${mode}:acquired:${process.env.HOME ?? ''}\n`, 'utf8');
+    process.stdout.write('acquired\n');
+    if (mode === 'hold') {
+      await new Promise<void>((resolve) => process.once('message', () => resolve()));
+    }
+  },
+  { acquireTimeoutMs: 2_000, retryIntervalMs: 5 }
+);
+process.disconnect?.();

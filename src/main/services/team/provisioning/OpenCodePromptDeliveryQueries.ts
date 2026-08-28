@@ -36,6 +36,7 @@ export function createOpenCodePromptDeliveryLedger(
   ports: OpenCodePromptDeliveryLedgerPorts
 ): OpenCodePromptDeliveryLedgerStore {
   return createOpenCodePromptDeliveryLedgerStore({
+    authorityRoot: ports.teamsBasePath,
     filePath: getOpenCodeLaneScopedRuntimeFilePath({
       teamsBasePath: ports.teamsBasePath,
       teamName,

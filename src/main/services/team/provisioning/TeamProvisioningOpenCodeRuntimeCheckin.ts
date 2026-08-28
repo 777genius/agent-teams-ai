@@ -420,6 +420,7 @@ export async function assertOpenCodeRuntimeEvidenceAccepted<Run extends OpenCode
   >
 ): Promise<void> {
   const store = createRuntimeRunTombstoneStore({
+    authorityRoot: ports.teamsBasePath,
     filePath: getOpenCodeRuntimeRunTombstonesPath(
       ports.teamsBasePath,
       input.teamName,
@@ -640,7 +641,9 @@ function buildOpenCodeRuntimeMemberLivenessSnapshot<Run extends OpenCodeRuntimeC
   const snapshot = createPersistedLaunchSnapshot({
     teamName: input.teamName,
     expectedMembers: [...new Set([...expectedMembers, input.memberName])],
-    leadSessionId: previous?.leadSessionId, runtimeRunId: previous?.runtimeRunId ?? input.runId, primaryLaneIdentity: previous?.primaryLaneIdentity,
+    leadSessionId: previous?.leadSessionId,
+    runtimeRunId: previous?.runtimeRunId ?? input.runId,
+    primaryLaneIdentity: previous?.primaryLaneIdentity,
     launchPhase: previous?.launchPhase ?? 'active',
     members: {
       ...(previous?.members ?? {}),

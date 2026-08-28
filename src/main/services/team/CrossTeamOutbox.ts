@@ -420,8 +420,10 @@ function findRecentMatch(
 }
 
 export class CrossTeamOutbox {
+  constructor(private readonly teamsBasePath: string = getTeamsBasePath()) {}
+
   private getOutboxPath(teamName: string): string {
-    return path.join(getTeamsBasePath(), teamName, 'sent-cross-team.json');
+    return path.join(this.teamsBasePath, teamName, 'sent-cross-team.json');
   }
 
   private async readUnlocked(outboxPath: string): Promise<unknown[]> {
@@ -437,7 +439,7 @@ export class CrossTeamOutbox {
 
   async append(teamName: string, message: CrossTeamMessage): Promise<void> {
     const outboxPath = this.getOutboxPath(teamName);
-    await withFileLock(outboxPath, async () => {
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: outboxPath }, async () => {
       const list = await this.readUnlocked(outboxPath);
       list.push(message);
       await atomicWriteAsync(outboxPath, JSON.stringify(list, null, 2));
@@ -454,7 +456,7 @@ export class CrossTeamOutbox {
     const outboxPath = this.getOutboxPath(teamName);
     let duplicate: CrossTeamOutboxMessage | null = null;
 
-    await withFileLock(outboxPath, async () => {
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: outboxPath }, async () => {
       const list = await this.readUnlocked(outboxPath);
       const match = findRecentMatch(list, message, windowMs, options);
       if (match?.state === 'conflict') {
@@ -495,7 +497,7 @@ export class CrossTeamOutbox {
     const acceptedAt = new Date(acceptedAtMs).toISOString();
     let marked = false;
 
-    await withFileLock(outboxPath, async () => {
+    await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: outboxPath }, async () => {
       const list = await this.readUnlocked(outboxPath);
       const matchingIndexes = list.flatMap((entry, index) => {
         const message = normalizePersistedMessage(entry);

@@ -179,7 +179,7 @@ export class TeamSentMessagesStore {
   async appendMessage(teamName: string, message: InboxMessage): Promise<void> {
     const filePath = this.getFilePath(teamName);
     try {
-      await withFileLock(filePath, async () => {
+      await withFileLock({ authorityRoot: this.teamsBasePath, targetPath: filePath }, async () => {
         const existing = await this.readMessagesForAppend(teamName, filePath);
         existing.push(message);
 

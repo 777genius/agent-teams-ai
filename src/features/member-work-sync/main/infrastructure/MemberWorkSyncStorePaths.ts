@@ -1,3 +1,4 @@
+import { withFileLock } from '@main/services/team/fileLock';
 import { TeamMemberStoragePaths } from '@main/services/team/TeamMemberStoragePaths';
 import { dirname, join } from 'path';
 
@@ -10,6 +11,14 @@ export class MemberWorkSyncStorePaths {
 
   getTeamRootDir(teamName: string): string {
     return join(this.teamsBasePath, teamName);
+  }
+
+  getTeamsBasePath(): string {
+    return this.teamsBasePath;
+  }
+
+  lock<T>(targetPath: string, operation: () => Promise<T>): Promise<T> {
+    return withFileLock({ authorityRoot: this.teamsBasePath, targetPath }, operation);
   }
 
   getTeamDir(teamName: string): string {

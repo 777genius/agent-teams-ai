@@ -26,6 +26,14 @@ vi.mock('@main/utils/childProcess', async (importOriginal) => {
   };
 });
 
+vi.mock('@main/services/team/fileLock', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@main/services/team/fileLock')>();
+  return {
+    ...actual,
+    withFileLock: async <T>(_target: unknown, fn: () => Promise<T>): Promise<T> => await fn(),
+  };
+});
+
 import {
   AgentTeamsMcpHttpServer,
   type AgentTeamsMcpHttpServerDeps,
@@ -57,9 +65,7 @@ function buildLaunchSpecHash(launchSpec: TestLaunchSpec): string {
         Object.entries(launchSpec.env).sort(([left], [right]) => left.localeCompare(right))
       )
     : {};
-  return sha256Hex(
-    JSON.stringify({ command: launchSpec.command, args: launchSpec.args, env })
-  );
+  return sha256Hex(JSON.stringify({ command: launchSpec.command, args: launchSpec.args, env }));
 }
 
 async function createTempStatePath(): Promise<{ root: string; statePath: string }> {
@@ -372,6 +378,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     });
     const firstServer = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       disableOrphanCleanup: true,
       resolveLaunchSpec: async () => launchSpec,
       allocatePort: async () => 41024,
@@ -382,6 +389,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     });
     const secondServer = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       disableOrphanCleanup: true,
       resolveLaunchSpec: async () => launchSpec,
       allocatePort: async () => 41025,
@@ -432,6 +440,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     }));
     const server = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       disableOrphanCleanup: true,
       resolveLaunchSpec: async () => launchSpec,
       spawnProcess: spawnProcess as AgentTeamsMcpHttpServerDeps['spawnProcess'],
@@ -463,6 +472,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const spawnProcess = vi.fn(() => child as unknown as ChildProcess);
     const server = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       disableOrphanCleanup: true,
       resolveLaunchSpec: async () => launchSpec,
       allocatePort: async () => 41022,
@@ -502,6 +512,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const spawnProcess = vi.fn(() => child as unknown as ChildProcess);
     const server = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       disableOrphanCleanup: true,
       resolveLaunchSpec: async () => currentLaunchSpec,
       allocatePort: async () => 41030,
@@ -531,6 +542,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const spawnProcess = vi.fn();
     const server = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       disableOrphanCleanup: true,
       resolveLaunchSpec: async () => launchSpec,
       spawnProcess: spawnProcess as AgentTeamsMcpHttpServerDeps['spawnProcess'],
@@ -712,6 +724,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const details = `${command} AGENT_TEAMS_MCP_CLAUDE_DIR=${getClaudeBasePath()} AGENT_TEAMS_MCP_TRANSPORT=httpStream AGENT_TEAMS_MCP_HTTP_HOST=127.0.0.1 AGENT_TEAMS_MCP_HTTP_PORT=${orphanPort} AGENT_TEAMS_MCP_HTTP_ENDPOINT=/mcp`;
     const server = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       resolveLaunchSpec: async () => ({
         command: 'node',
         args: ['mcp-server/dist/index.js'],
@@ -735,9 +748,7 @@ describe('AgentTeamsMcpHttpServer', () => {
 
       expect(killProcess).toHaveBeenNthCalledWith(1, 9005);
       expect(killProcess).toHaveBeenNthCalledWith(2, 9001);
-      expect(handle.diagnostics).toContain(
-        `opencode_app_mcp_legacy_orphan_cleaned:${orphanPort}`
-      );
+      expect(handle.diagnostics).toContain(`opencode_app_mcp_legacy_orphan_cleaned:${orphanPort}`);
     } finally {
       await rm(root, { recursive: true, force: true });
       vi.mocked(console.warn).mockClear();
@@ -759,6 +770,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const killProcess = vi.fn();
     const server = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       resolveLaunchSpec: async () => ({
         command: 'node',
         args: ['mcp-server/dist/index.js'],
@@ -768,9 +780,7 @@ describe('AgentTeamsMcpHttpServer', () => {
       waitForPort: vi.fn(async () => undefined),
       listProcessRows: async () => rows,
       readProcessDetails: async (pid) =>
-        pid === 9002
-          ? orphanDetails
-          : `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`,
+        pid === 9002 ? orphanDetails : `CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL=${url}`,
       readProcessStartTimeMs: async () => 0,
       killProcess,
       isProcessAlive: () => false,
@@ -800,6 +810,7 @@ describe('AgentTeamsMcpHttpServer', () => {
     const killProcess = vi.fn();
     const server = new AgentTeamsMcpHttpServer({
       statePath,
+      stateAuthorityRoot: root,
       resolveLaunchSpec: async () => ({
         command: 'node',
         args: ['mcp-server/dist/index.js'],

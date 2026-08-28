@@ -914,8 +914,8 @@ export function validateOpenCodeRuntimeStoreInvariants(
 
   return failures;
 }
-
 export function createRuntimeStoreManifestStore(options: {
+  authorityRoot?: string;
   filePath: string;
   teamName: string;
   clock?: () => Date;
@@ -924,6 +924,7 @@ export function createRuntimeStoreManifestStore(options: {
   const clock = options.clock ?? (() => new Date());
   return new RuntimeStoreManifestStore(
     new VersionedJsonStore<RuntimeStoreManifest>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: OPENCODE_RUNTIME_STORE_MANIFEST_SCHEMA_VERSION,
       defaultData: () => createDefaultRuntimeStoreManifest(options.teamName, clock().toISOString()),
@@ -934,8 +935,8 @@ export function createRuntimeStoreManifestStore(options: {
     clock
   );
 }
-
 export function createRuntimeStoreReceiptStore(options: {
+  authorityRoot?: string;
   filePath: string;
   clock?: () => Date;
   lockOptions?: FileLockOptions;
@@ -943,6 +944,7 @@ export function createRuntimeStoreReceiptStore(options: {
   const clock = options.clock ?? (() => new Date());
   return new RuntimeStoreReceiptStore(
     new VersionedJsonStore<RuntimeStoreWriteBatch[]>({
+      authorityRoot: options.authorityRoot,
       filePath: options.filePath,
       schemaVersion: OPENCODE_RUNTIME_STORE_RECEIPT_SCHEMA_VERSION,
       defaultData: () => [],
@@ -953,7 +955,6 @@ export function createRuntimeStoreReceiptStore(options: {
     clock
   );
 }
-
 export function createDefaultRuntimeStoreManifest(
   teamName: string,
   updatedAt: string
@@ -972,7 +973,6 @@ export function createDefaultRuntimeStoreManifest(
     updatedAt,
   };
 }
-
 export function computeRuntimeStoreContentHash(raw: string): string {
   return `sha256:${createHash('sha256').update(raw).digest('hex')}`;
 }
