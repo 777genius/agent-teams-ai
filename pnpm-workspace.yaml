@@ -3,6 +3,7 @@ packages:
   - mcp-server
   - landing
   - packages/agent-graph
+  - packages/desktop-file-lock-native
 minimumReleaseAge: 4320
 minimumReleaseAgeExclude:
   - '@esbuild/*'

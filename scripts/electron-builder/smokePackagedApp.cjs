@@ -173,6 +173,79 @@ function findExecutable(bundlePath, platform) {
   fail(`Unsupported platform: ${platform}`);
 }
 
+function resolveResourcesDir(bundlePath, platform) {
+  return platform === 'darwin'
+    ? path.join(bundlePath, 'Contents', 'Resources')
+    : path.join(bundlePath, 'resources');
+}
+
+async function smokePackagedFileLockNative(executable, bundlePath, platform) {
+  const packageDir = path.join(
+    resolveResourcesDir(bundlePath, platform),
+    'app.asar',
+    'node_modules',
+    '@agent-teams',
+    'desktop-file-lock-native'
+  );
+  const smokeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-native-lock-smoke-'));
+  const smokeScript = String.raw`
+const fs = require('node:fs');
+const path = require('node:path');
+const addon = require(process.argv[1]);
+const root = process.argv[2];
+const parent = path.join(root, 'target-parent');
+fs.mkdirSync(parent);
+fs.writeFileSync(path.join(parent, 'fresh-target'), 'packaged-smoke');
+const scope = addon.captureScope(root);
+let lease;
+try {
+  const acquired = addon.tryAcquire(scope, 'target-parent/fresh-target', 'packaged-addon-smoke');
+  if (!acquired || acquired.status !== 'acquired') {
+    throw new Error('packaged native addon did not acquire fresh target: ' + JSON.stringify(acquired));
+  }
+  lease = acquired.leaseId;
+  addon.assertOwned(lease);
+  addon.release(lease);
+  lease = undefined;
+} finally {
+  if (lease !== undefined) addon.abandon(lease);
+  addon.closeScope(scope);
+}
+`;
+
+  try {
+    await new Promise((resolve, reject) => {
+      let output = '';
+      const child = spawn(executable, ['-e', smokeScript, packageDir, smokeRoot], {
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      child.stdout.on('data', (chunk) => {
+        output += chunk.toString();
+      });
+      child.stderr.on('data', (chunk) => {
+        output += chunk.toString();
+      });
+      child.once('error', reject);
+      child.once('close', (code, signal) => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        reject(
+          new Error(
+            `packaged native addon smoke failed with ${signal ?? `exit code ${code}`}${
+              output.trim() ? `\n${output.trim()}` : ''
+            }`
+          )
+        );
+      });
+    });
+  } finally {
+    fs.rmSync(smokeRoot, { recursive: true, force: true });
+  }
+}
+
 function waitForProcessClose(child, exitPromise, timeoutMs) {
   if (child.exitCode !== null || child.signalCode !== null) {
     return Promise.resolve(true);
@@ -241,6 +314,7 @@ async function main() {
 
   const bundlePath = resolveBundlePath(path.resolve(bundlePathArg), platform);
   const executable = findExecutable(bundlePath, platform);
+  await smokePackagedFileLockNative(executable, bundlePath, platform);
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-teams-smoke-'));
   const args = [`--user-data-dir=${userDataDir}`];
   if (platform === 'linux') {
@@ -315,6 +389,7 @@ if (require.main === module) {
 module.exports = {
   _internal: {
     getInternalStorageVerificationError,
+    smokePackagedFileLockNative,
     terminateChild,
     waitForProcessClose,
   },

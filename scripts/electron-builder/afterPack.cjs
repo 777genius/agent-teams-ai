@@ -515,6 +515,46 @@ async function validateNativeBinaries(appOutDir, targetPlatform, targetArch) {
   return mismatches;
 }
 
+function normalizeRelativePath(appOutDir, filePath) {
+  return path.relative(appOutDir, filePath).split(path.sep).join('/');
+}
+
+async function validateDesktopFileLockNative(appOutDir, targetPlatform, targetArch) {
+  const packagePath = 'node_modules/@agent-teams/desktop-file-lock-native/';
+  const nativeBinaries = (await walkFiles(appOutDir)).filter((filePath) => {
+    const relativePath = normalizeRelativePath(appOutDir, filePath);
+    return relativePath.includes(packagePath) && relativePath.endsWith('.node');
+  });
+
+  if (nativeBinaries.length !== 1) {
+    const found = nativeBinaries.map((filePath) => normalizeRelativePath(appOutDir, filePath));
+    throw new Error(
+      `Expected exactly one desktop file-lock native binary for ${targetPlatform}-${targetArch}; ` +
+        `found ${nativeBinaries.length}${found.length > 0 ? `: ${found.join(', ')}` : ''}`
+    );
+  }
+
+  const binaryPath = nativeBinaries[0];
+  const relativePath = normalizeRelativePath(appOutDir, binaryPath);
+  const unpackedPackageSuffix = `resources/app.asar.unpacked/${packagePath}`;
+  if (!relativePath.toLowerCase().includes(unpackedPackageSuffix.toLowerCase())) {
+    throw new Error(`Desktop file-lock native binary is not under asarUnpack: ${relativePath}`);
+  }
+
+  const metadata = await detectBinaryMetadata(binaryPath);
+  if (!metadata) {
+    throw new Error(`Unable to identify desktop file-lock native binary: ${relativePath}`);
+  }
+  if (!isBinaryCompatible(metadata.format, metadata.archs, targetPlatform, targetArch)) {
+    throw new Error(
+      `Desktop file-lock native binary has wrong architecture for ${targetPlatform}-${targetArch}: ` +
+        `${relativePath} [${metadata.format}] -> ${[...metadata.archs].sort().join(', ')}`
+    );
+  }
+
+  return relativePath;
+}
+
 async function afterPack(context) {
   const targetPlatform = context.electronPlatformName;
   const targetArch = getArchLabel(context.arch);
@@ -523,6 +563,11 @@ async function afterPack(context) {
     ...(await pruneNodePtyArtifacts(context.appOutDir, targetPlatform, targetArch)),
     ...(await pruneKnownIncompatibleNativeArtifacts(context.appOutDir, targetPlatform, targetArch)),
   ];
+  const fileLockNativePath = await validateDesktopFileLockNative(
+    context.appOutDir,
+    targetPlatform,
+    targetArch
+  );
   const mismatches = await validateNativeBinaries(context.appOutDir, targetPlatform, targetArch);
 
   if (mismatches.length > 0) {
@@ -540,6 +585,7 @@ async function afterPack(context) {
       `[afterPack] pruned ${removedPaths.length} incompatible native artifact(s) for ${targetPlatform}-${targetArch}`
     );
   }
+  console.log(`[afterPack] verified desktop file-lock native binary: ${fileLockNativePath}`);
 }
 
 module.exports = afterPack;
@@ -553,6 +599,7 @@ module.exports._internal = {
   parsePortableExecutable,
   pruneKnownIncompatibleNativeArtifacts,
   pruneNodePtyArtifacts,
+  validateDesktopFileLockNative,
   validateNativeBinaries,
   walkFiles,
 };

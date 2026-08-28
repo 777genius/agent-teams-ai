@@ -23,7 +23,9 @@
   "scripts": {
     "preinstall": "node ./scripts/ci/enforce-pnpm-install.mjs",
     "screenshots:previews": "node ./scripts/generate-screenshot-previews.mjs",
+    "predev": "pnpm native:file-lock:build",
     "dev": "node ./scripts/dev-with-runtime.mjs",
+    "predev:mcp": "pnpm native:file-lock:build",
     "dev:mcp": "node ./scripts/dev-with-runtime.mjs --remoteDebuggingPort 9222",
     "dev:kill": "node bin/kill-dev.js",
     "opencode:prove-mixed-recovery": "node ./scripts/prove-opencode-mixed-recovery.mjs",
@@ -36,9 +38,9 @@
     "team:prove-launch-matrix": "pnpm exec vitest run --maxWorkers=1 test/main/services/team/TeamAgentLaunchMatrix.safe-e2e.test.ts",
     "team:smoke-changes-real-data": "tsx scripts/team-changes-real-data-smoke.ts",
     "smoke:codex-runtime-install": "tsx scripts/smoke/codex-runtime-install.ts",
-    "prebuild": "node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
+    "prebuild": "pnpm native:file-lock:build && node ./scripts/ci/verify-radix-presence-patch.mjs && tsx scripts/fetch-pricing-data.ts && pnpm --filter agent-teams-controller build && pnpm --filter agent-teams-mcp build",
     "build": "node --max-old-space-size=8192 ./node_modules/electron-vite/bin/electron-vite.js build",
-    "postbuild": "node ./scripts/ci/verify-radix-renderer-bundle.mjs",
+    "postbuild": "node ./scripts/ci/verify-desktop-file-lock-main-bundle.mjs && node ./scripts/ci/verify-radix-renderer-bundle.mjs",
     "stage-runtime": "node ./scripts/stage-runtime.mjs",
     "stage-terminal-platform-runtime": "node ./scripts/stage-terminal-platform-runtime.mjs",
     "ensure-terminal-platform-runtime": "node ./scripts/ensure-terminal-platform-runtime.mjs",
@@ -61,6 +63,12 @@
     "dist:win:x64": "pnpm build && node ./scripts/stage-runtime.mjs --platform win32-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform win32-x64 && node ./scripts/electron-builder/dist.mjs --win --x64",
     "dist:linux": "pnpm build && node ./scripts/stage-runtime.mjs --platform linux-x64 && node ./scripts/stage-terminal-platform-runtime.mjs --platform linux-x64 && node ./scripts/electron-builder/dist.mjs --linux",
     "smoke:packaged": "node ./scripts/electron-builder/smokePackagedApp.cjs",
+    "native:file-lock:build": "pnpm --filter @agent-teams/desktop-file-lock-native build",
+    "native:file-lock:rebuild:electron": "electron-rebuild -f -o @agent-teams/desktop-file-lock-native",
+    "native:file-lock:test:ci": "node ./scripts/ci/test-desktop-file-lock-native.mjs",
+    "native:file-lock:test:packaging": "node --test ./scripts/electron-builder/desktopFileLockNativeValidation.test.cjs",
+    "native:file-lock:network-gate": "node ./scripts/ci/verify-desktop-file-lock-network-conformance.mjs",
+    "guard:file-lock-main-bundle": "node ./scripts/ci/verify-desktop-file-lock-main-bundle.mjs",
     "preview": "electron-vite preview",
     "typecheck": "node ./node_modules/@typescript/native/bin/tsc --noEmit",
     "typecheck:legacy": "node ./node_modules/typescript/bin/tsc --noEmit",
@@ -118,6 +126,7 @@
     ]
   },
   "dependencies": {
+    "@agent-teams/desktop-file-lock-native": "workspace:*",
     "@claude-teams/agent-graph": "workspace:*",
     "@codemirror/autocomplete": "^6.20.0",
     "@codemirror/commands": "^6.10.2",
@@ -316,6 +325,19 @@
         ]
       },
       {
+        "from": "packages/desktop-file-lock-native",
+        "to": "node_modules/@agent-teams/desktop-file-lock-native",
+        "filter": [
+          "package.json",
+          "*.js",
+          "*.cjs",
+          "*.d.ts",
+          "lib/**/*.js",
+          "lib/**/*.cjs",
+          "build/Release/*.node"
+        ]
+      },
+      {
         "from": ".",
         "to": ".",
         "filter": [
@@ -326,6 +348,7 @@
     "asar": true,
     "asarUnpack": [
       "out/renderer/**",
+      "**/node_modules/@agent-teams/desktop-file-lock-native/**/*.node",
       "**/node_modules/node-pty/**"
     ],
     "extraResources": [

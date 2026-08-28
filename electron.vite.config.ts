@@ -35,6 +35,7 @@ const posthogHost =
 
 // Fastify and its plugins rely on runtime module resolution that breaks when bundled.
 const runtimeExternalDeps = new Set([
+  '@agent-teams/desktop-file-lock-native',
   'node-pty',
   'better-sqlite3',
   'agent-teams-controller',
@@ -101,9 +102,11 @@ function resolveReleaseChannel(): string {
   )
 }
 
-// Rollup plugin: stub out native .node addon imports with empty modules.
+// Rollup plugin: stub out optional transitive .node addon imports with empty modules.
 // ssh2 and cpu-features use optional native bindings that can't be bundled,
 // but they have pure JS fallbacks when the native module isn't available.
+// Required native packages, including desktop-file-lock-native, stay external above and
+// therefore never reach this fallback plugin.
 function nativeModuleStub(): Plugin {
   const STUB_ID = '\0native-stub'
   const NODE_MODULE_RE = /\.node(?:\?.*)?$/

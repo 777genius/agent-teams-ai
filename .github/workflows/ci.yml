@@ -73,6 +73,58 @@ on:
       - '*.tsx'
 
 jobs:
+  desktop-file-lock-native:
+    name: desktop file-lock native (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-x64
+            runner: ubuntu-24.04
+          - platform: darwin-x64
+            runner: macos-15-intel
+          - platform: darwin-arm64
+            runner: macos-14
+          - platform: win32-x64
+            runner: windows-2022
+          - platform: win32-arm64
+            runner: windows-11-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Setup Python for node-gyp
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build raw Node-API addon
+        run: pnpm native:file-lock:build
+
+      - name: Run contract, child-process, name-alias, and root-substitution tests
+        run: pnpm native:file-lock:test:ci
+
+      - name: Test missing, duplicate, unpack, and architecture bundle rejection
+        run: pnpm native:file-lock:test:packaging
+
+      - name: Verify network conformance gate definition
+        run: pnpm native:file-lock:network-gate --check-gate-definition
+
   validate:
     runs-on: ubuntu-latest
 

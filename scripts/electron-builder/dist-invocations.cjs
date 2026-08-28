@@ -32,10 +32,7 @@ const LINUX_PACKAGE_NAME_OVERRIDES = [
 
 const WINDOWS_ARM64_ARTIFACT_NAME_OVERRIDE =
   '--config.nsis.artifactName=Agent.Teams.AI.Setup.${version}-arm64.${ext}';
-const WINDOWS_ARTIFACT_NAME_FLAGS = [
-  '--config.nsis.artifactName',
-  '-c.nsis.artifactName',
-];
+const WINDOWS_ARTIFACT_NAME_FLAGS = ['--config.nsis.artifactName', '-c.nsis.artifactName'];
 
 const ARCH_FLAGS = new Map([
   ['--x64', 'x64'],
@@ -46,6 +43,12 @@ const ARCH_FLAGS = new Map([
 ]);
 const ARCH_NAMES = new Set(ARCH_FLAGS.values());
 const CROSS_ARCH_NATIVE_MODULES = ['better-sqlite3', 'cpu-features'];
+const FILE_LOCK_NATIVE_MODULE = '@agent-teams/desktop-file-lock-native';
+const ELECTRON_PLATFORM_NAMES = {
+  linux: 'linux',
+  mac: 'darwin',
+  win: 'win32',
+};
 
 function resolvePlatformTargets(arg) {
   const separatorIndex = arg.indexOf('=');
@@ -123,10 +126,7 @@ function resolveTargetArch(args, hostArch) {
       let enabled = !isNegated;
       if (!isNegated && separatorIndex > 0) {
         enabled = arg.slice(separatorIndex + 1) === 'true';
-      } else if (
-        !isNegated &&
-        (args[index + 1] === 'true' || args[index + 1] === 'false')
-      ) {
+      } else if (!isNegated && (args[index + 1] === 'true' || args[index + 1] === 'false')) {
         enabled = args[index + 1] === 'true';
         index += 1;
       }
@@ -258,6 +258,22 @@ function buildNativeRebuildPlan(args, hostPlatform, hostArch) {
   };
 }
 
+function buildFileLockNativeRebuildPlan(args, hostPlatform, hostArch) {
+  const explicitPlatforms = [...new Set(args.flatMap(resolvePlatformTargets))];
+  if (explicitPlatforms.length > 1) {
+    throw new Error(
+      '[electron-builder] file-lock native rebuild requires one platform per invocation'
+    );
+  }
+
+  const platformName = explicitPlatforms[0];
+  return {
+    platform: platformName ? ELECTRON_PLATFORM_NAMES[platformName] : hostPlatform,
+    arch: resolveTargetArch(args, hostArch),
+    modules: [FILE_LOCK_NATIVE_MODULE],
+  };
+}
+
 function buildNativeRestorePlan(targetPlan, hostPlatform, hostArch) {
   if (!targetPlan || (targetPlan.platform === hostPlatform && targetPlan.arch === hostArch)) {
     return null;
@@ -302,6 +318,7 @@ async function runWithNativeDependencyRestore({ targetPlan, restorePlan, rebuild
 
 module.exports = {
   buildElectronBuilderInvocations,
+  buildFileLockNativeRebuildPlan,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
   runWithNativeDependencyRestore,

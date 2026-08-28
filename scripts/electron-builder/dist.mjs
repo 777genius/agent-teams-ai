@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const require = createRequire(import.meta.url);
 const {
   buildElectronBuilderInvocations,
+  buildFileLockNativeRebuildPlan,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
   runWithNativeDependencyRestore,
@@ -13,6 +14,7 @@ const {
 
 export {
   buildElectronBuilderInvocations,
+  buildFileLockNativeRebuildPlan,
   buildNativeRebuildPlan,
   buildNativeRestorePlan,
   runWithNativeDependencyRestore,
@@ -36,11 +38,18 @@ async function rebuildNativeDependencies(plan, action = 'rebuilding') {
 }
 
 async function runElectronBuilderInvocation(invocation) {
-  const targetPlan = buildNativeRebuildPlan(invocation.args, process.platform, process.arch);
-  if (!targetPlan) {
-    await runElectronBuilder(invocation.args);
-    return;
-  }
+  const crossArchPlan = buildNativeRebuildPlan(invocation.args, process.platform, process.arch);
+  const fileLockPlan = buildFileLockNativeRebuildPlan(
+    invocation.args,
+    process.platform,
+    process.arch
+  );
+  const targetPlan = crossArchPlan
+    ? {
+        ...crossArchPlan,
+        modules: [...new Set([...crossArchPlan.modules, ...fileLockPlan.modules])],
+      }
+    : fileLockPlan;
 
   const restorePlan = buildNativeRestorePlan(targetPlan, process.platform, process.arch);
   await runWithNativeDependencyRestore({

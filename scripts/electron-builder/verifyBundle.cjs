@@ -5,7 +5,7 @@ const fs = require('node:fs');
 
 const afterPackModule = require('./afterPack.cjs');
 
-const { validateNativeBinaries } = afterPackModule._internal;
+const { validateDesktopFileLockNative, validateNativeBinaries } = afterPackModule._internal;
 
 function isMacBundle(candidatePath) {
   return (
@@ -123,6 +123,7 @@ async function main() {
 
   const bundlePath = resolveBundlePath(path.resolve(bundlePathArg), platform);
   verifyBundledTerminalPlatformRuntime(bundlePath, platform);
+  const fileLockNativePath = await validateDesktopFileLockNative(bundlePath, platform, arch);
   const mismatches = await validateNativeBinaries(bundlePath, platform, arch);
   const blockingMismatches = mismatches.filter(
     (mismatch) => !isAllowedPostPackMismatch(mismatch, platform, arch)
@@ -132,7 +133,9 @@ async function main() {
     const allowedCount = mismatches.length - blockingMismatches.length;
     const suffix =
       allowedCount > 0 ? ` (${allowedCount} allowed post-pack helper mismatch ignored)` : '';
-    console.log(`[verifyBundle] OK ${platform}-${arch}: ${bundlePath}${suffix}`);
+    console.log(
+      `[verifyBundle] OK ${platform}-${arch}: ${bundlePath}${suffix}; file-lock=${fileLockNativePath}`
+    );
     return;
   }
 

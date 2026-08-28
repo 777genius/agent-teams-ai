@@ -93,6 +93,9 @@ importers:
 
   .:
     dependencies:
+      '@agent-teams/desktop-file-lock-native':
+        specifier: workspace:*
+        version: link:packages/desktop-file-lock-native
       '@claude-teams/agent-graph':
         specifier: workspace:*
         version: link:packages/agent-graph
@@ -747,6 +750,8 @@ importers:
       '@types/d3-force':
         specifier: ^3.0.10
         version: 3.0.10
+
+  packages/desktop-file-lock-native: {}
 
 packages:
 
