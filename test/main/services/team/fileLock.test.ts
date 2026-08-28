@@ -76,6 +76,59 @@ function exactLegacyTryDeleteStale(lockPath: string, now: number, staleTimeoutMs
   if (age !== null && age > staleTimeoutMs) fs.unlinkSync(lockPath);
 }
 
+interface CapturedFailure {
+  error?: unknown;
+  failed: boolean;
+}
+
+function captureFailure(fn: () => unknown): CapturedFailure {
+  try {
+    fn();
+    return { failed: false };
+  } catch (error) {
+    return { error, failed: true };
+  }
+}
+
+async function captureAsyncFailure(fn: () => Promise<unknown>): Promise<CapturedFailure> {
+  try {
+    await fn();
+    return { failed: false };
+  } catch (error) {
+    return { error, failed: true };
+  }
+}
+
+function failOwnedDescriptorClose(closeError: unknown): () => void {
+  const originalClose = fs.closeSync;
+  let failedDescriptor: number | undefined;
+  const closeSpy = vi.spyOn(fs, 'closeSync').mockImplementation((descriptor) => {
+    if (failedDescriptor === undefined && fs.fstatSync(descriptor).isFile()) {
+      failedDescriptor = descriptor;
+      throw closeError;
+    }
+    originalClose(descriptor);
+  });
+
+  return () => {
+    closeSpy.mockRestore();
+    if (failedDescriptor !== undefined) originalClose(failedDescriptor);
+  };
+}
+
+function expectUndefinedOperationAggregate(error: unknown, cleanupError: Error): void {
+  expect(error).toBeInstanceOf(AggregateError);
+  const aggregate = error as AggregateError;
+  expect(aggregate.message).toBe('File lock operation and cleanup both failed');
+  expect(aggregate.errors[0]).toMatchObject({
+    message: 'File lock operation failed by throwing undefined',
+  });
+  expect(Object.prototype.hasOwnProperty.call(aggregate.errors[0], 'cause')).toBe(true);
+  expect((aggregate.errors[0] as Error).cause).toBeUndefined();
+  expect(aggregate.errors[1]).toBe(cleanupError);
+  expect(aggregate.cause).toBe(aggregate.errors[0]);
+}
+
 describe('withFileLock legacy compatibility ownership', () => {
   let temporaryRoot: string;
   let testFile: string;
@@ -87,6 +140,7 @@ describe('withFileLock legacy compatibility ownership', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
   });
@@ -255,6 +309,144 @@ describe('withFileLock legacy compatibility ownership', () => {
     expect(fs.readFileSync(lockPath, 'utf8')).toBe('foreign replacement');
   });
 
+  it('preserves a synchronous callback throwing undefined', () => {
+    const failure = captureFailure(() =>
+      withFileLockSync(testFile, () => {
+        throw undefined;
+      })
+    );
+
+    expect(failure.failed).toBe(true);
+    expect(failure.error).toBeUndefined();
+    expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+  });
+
+  it('preserves an asynchronous callback rejecting with undefined', async () => {
+    const failure = await captureAsyncFailure(() =>
+      withFileLock(testFile, async () => await Promise.reject())
+    );
+
+    expect(failure.failed).toBe(true);
+    expect(failure.error).toBeUndefined();
+    expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+  });
+
+  it('aggregates synchronous undefined callback and descriptor close failures', () => {
+    const cleanupError = new Error('sync close failed');
+    const closeLeakedDescriptor = failOwnedDescriptorClose(cleanupError);
+    try {
+      const failure = captureFailure(() =>
+        withFileLockSync(testFile, () => {
+          throw undefined;
+        })
+      );
+
+      expect(failure.failed).toBe(true);
+      expectUndefinedOperationAggregate(failure.error, cleanupError);
+    } finally {
+      closeLeakedDescriptor();
+    }
+  });
+
+  it('aggregates asynchronous undefined callback and descriptor close failures', async () => {
+    const cleanupError = new Error('async close failed');
+    const closeLeakedDescriptor = failOwnedDescriptorClose(cleanupError);
+    try {
+      const failure = await captureAsyncFailure(() =>
+        withFileLock(testFile, async () => await Promise.reject())
+      );
+
+      expect(failure.failed).toBe(true);
+      expectUndefinedOperationAggregate(failure.error, cleanupError);
+    } finally {
+      closeLeakedDescriptor();
+    }
+  });
+
+  it('surfaces a synchronous descriptor close failure after callback success', () => {
+    const cleanupError = new Error('sync close failed after success');
+    const closeLeakedDescriptor = failOwnedDescriptorClose(cleanupError);
+    try {
+      const failure = captureFailure(() => withFileLockSync(testFile, () => 42));
+
+      expect(failure).toEqual({ error: cleanupError, failed: true });
+    } finally {
+      closeLeakedDescriptor();
+    }
+  });
+
+  it('does not let a synchronous descriptor close failure mask an earlier cleanup failure', () => {
+    const cleanupError = new Error('sync unlink failed');
+    const closeError = new Error('sync close failed after unlink');
+    vi.spyOn(fs, 'unlinkSync').mockImplementation((target) => {
+      if (String(target) === `${testFile}.lock`) throw cleanupError;
+    });
+    const closeLeakedDescriptor = failOwnedDescriptorClose(closeError);
+    try {
+      const failure = captureFailure(() => withFileLockSync(testFile, () => 42));
+
+      expect(failure.error).toMatchObject({
+        cause: cleanupError,
+        errors: [cleanupError, closeError],
+        message: 'File lock cleanup and descriptor close both failed',
+      });
+    } finally {
+      closeLeakedDescriptor();
+    }
+  });
+
+  it('surfaces an asynchronous descriptor close failure after callback success', async () => {
+    const cleanupError = new Error('async close failed after success');
+    const closeLeakedDescriptor = failOwnedDescriptorClose(cleanupError);
+    try {
+      const failure = await captureAsyncFailure(() => withFileLock(testFile, async () => 42));
+
+      expect(failure).toEqual({ error: cleanupError, failed: true });
+    } finally {
+      closeLeakedDescriptor();
+    }
+  });
+
+  it('orders synchronous callback and descriptor close errors causally', () => {
+    const callbackError = new Error('sync callback failed');
+    const cleanupError = new Error('sync close failed after callback');
+    const closeLeakedDescriptor = failOwnedDescriptorClose(cleanupError);
+    try {
+      const failure = captureFailure(() =>
+        withFileLockSync(testFile, () => {
+          throw callbackError;
+        })
+      );
+
+      expect(failure.error).toMatchObject({
+        cause: callbackError,
+        errors: [callbackError, cleanupError],
+        message: 'File lock operation and cleanup both failed',
+      });
+    } finally {
+      closeLeakedDescriptor();
+    }
+  });
+
+  it('orders asynchronous callback and descriptor close errors causally', async () => {
+    const callbackError = new Error('async callback failed');
+    const cleanupError = new Error('async close failed after callback');
+    const closeLeakedDescriptor = failOwnedDescriptorClose(cleanupError);
+    try {
+      const failure = await captureAsyncFailure(() =>
+        withFileLock(testFile, async () => await Promise.reject(callbackError))
+      );
+
+      expect(failure.error).toMatchObject({
+        cause: callbackError,
+        errors: [callbackError, cleanupError],
+        message: 'File lock operation and cleanup both failed',
+      });
+    } finally {
+      closeLeakedDescriptor();
+    }
+  });
+
   it('fails a sync caller behind an async same-process owner without spinning', async () => {
     let releaseOwner!: () => void;
     let markAcquired!: () => void;
@@ -300,10 +492,132 @@ describe('withFileLock legacy compatibility ownership', () => {
     await owner;
   });
 
-  it('rejects an async caller through an alias while the canonical path is held', async () => {
+  it('rejects nested async reentry on the same canonical path before callback', async () => {
+    const nestedCallback = vi.fn(async () => undefined);
+    const timer = vi.spyOn(globalThis, 'setTimeout');
+
+    await withFileLock(testFile, async () => {
+      await expect(
+        withFileLock(testFile, nestedCallback, {
+          acquireTimeoutMs: 120_000,
+          retryIntervalMs: 10_000,
+        })
+      ).rejects.toThrow(`File lock is already held by this process: ${testFile}`);
+    });
+
+    expect(timer).not.toHaveBeenCalled();
+    expect(nestedCallback).not.toHaveBeenCalled();
+  });
+
+  it('rejects nested async reentry through a canonical alias before callback', async () => {
     const aliasDirectory = path.join(temporaryRoot, 'async-alias');
     fs.symlinkSync(temporaryRoot, aliasDirectory, 'dir');
     const aliasedFile = path.join(aliasDirectory, path.basename(testFile));
+    const nestedCallback = vi.fn(async () => undefined);
+
+    await withFileLock(testFile, async () => {
+      await Promise.resolve();
+      await expect(
+        withFileLock(aliasedFile, nestedCallback, { acquireTimeoutMs: 120_000 })
+      ).rejects.toThrow(`File lock is already held by this process: ${aliasedFile}`);
+    });
+
+    expect(nestedCallback).not.toHaveBeenCalled();
+  });
+
+  it('queues a separate same-path async contender until exact release', async () => {
+    let releaseOwner!: () => void;
+    let markAcquired!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      markAcquired = resolve;
+    });
+    let ownerLockContent = '';
+    const owner = withFileLock(testFile, async () => {
+      ownerLockContent = fs.readFileSync(`${testFile}.lock`, 'utf8');
+      markAcquired();
+      await new Promise<void>((resolve) => {
+        releaseOwner = resolve;
+      });
+    });
+    await acquired;
+
+    const callback = vi.fn(async () => fs.readFileSync(`${testFile}.lock`, 'utf8'));
+    const contender = withFileLock(testFile, callback, {
+      acquireTimeoutMs: 1_000,
+      retryIntervalMs: 5,
+    });
+    expect(callback).not.toHaveBeenCalled();
+    releaseOwner();
+    await owner;
+    const contenderLockContent = await contender;
+    expect(contenderLockContent).not.toBe(ownerLockContent);
+    expect(callback).toHaveBeenCalledOnce();
+  });
+
+  it('queues a separate async alias contender until canonical owner release', async () => {
+    const aliasDirectory = path.join(temporaryRoot, 'queued-async-alias');
+    fs.symlinkSync(temporaryRoot, aliasDirectory, 'dir');
+    const aliasedFile = path.join(aliasDirectory, path.basename(testFile));
+    let releaseOwner!: () => void;
+    let markAcquired!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      markAcquired = resolve;
+    });
+    let ownerLockContent = '';
+    const owner = withFileLock(testFile, async () => {
+      ownerLockContent = fs.readFileSync(`${testFile}.lock`, 'utf8');
+      markAcquired();
+      await new Promise<void>((resolve) => {
+        releaseOwner = resolve;
+      });
+    });
+    await acquired;
+
+    const callback = vi.fn(async () => fs.readFileSync(`${testFile}.lock`, 'utf8'));
+    const contender = withFileLock(aliasedFile, callback, {
+      acquireTimeoutMs: 1_000,
+      retryIntervalMs: 5,
+    });
+    expect(callback).not.toHaveBeenCalled();
+    releaseOwner();
+    await owner;
+    const contenderLockContent = await contender;
+    expect(contenderLockContent).not.toBe(ownerLockContent);
+    expect(callback).toHaveBeenCalledOnce();
+  });
+
+  it('does not split ownership when the active same-process lock pathname disappears', async () => {
+    const lockPath = `${testFile}.lock`;
+    let settleOwner!: () => void;
+    let markAcquired!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      markAcquired = resolve;
+    });
+    const owner = withFileLock(testFile, async () => {
+      markAcquired();
+      await new Promise<void>((resolve) => {
+        settleOwner = resolve;
+      });
+    });
+    await acquired;
+    fs.unlinkSync(lockPath);
+
+    const callback = vi.fn(async () => undefined);
+    const contender = withFileLock(testFile, callback, {
+      acquireTimeoutMs: 1_000,
+      retryIntervalMs: 5,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(callback).not.toHaveBeenCalled();
+    expect(fs.existsSync(lockPath)).toBe(false);
+
+    settleOwner();
+    await expect(owner).rejects.toThrow(`File lock ownership was lost: ${testFile}`);
+    await contender;
+    expect(callback).toHaveBeenCalledOnce();
+  });
+
+  it('bounds timeout for a separate same-process async contender without callback entry', async () => {
     let releaseOwner!: () => void;
     let markAcquired!: () => void;
     const acquired = new Promise<void>((resolve) => {
@@ -317,10 +631,16 @@ describe('withFileLock legacy compatibility ownership', () => {
     });
     await acquired;
 
+    vi.useFakeTimers();
     const callback = vi.fn(async () => undefined);
-    await expect(
-      withFileLock(aliasedFile, callback, { acquireTimeoutMs: 120_000 })
-    ).rejects.toThrow(`File lock is already held by this process: ${aliasedFile}`);
+    const contender = withFileLock(testFile, callback, {
+      acquireTimeoutMs: 60,
+      retryIntervalMs: 5,
+    });
+    const rejection = expect(contender).rejects.toThrow(`File lock timeout: ${testFile}`);
+    await vi.advanceTimersByTimeAsync(60);
+
+    await rejection;
     expect(callback).not.toHaveBeenCalled();
     releaseOwner();
     await owner;

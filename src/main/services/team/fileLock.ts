@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -51,7 +52,11 @@ interface LockTarget {
 
 type AcquisitionResult = OwnedLock | 'contended' | 'retry';
 
+type Failure = { error: unknown; status: 'failure' };
+type Outcome<T> = { status: 'success'; value: T } | Failure;
+
 const sameProcessOwners = new Map<string, symbol>();
+const asyncOwnership = new AsyncLocalStorage<ReadonlySet<string>>();
 
 function identity(stats: fs.BigIntStats): FileIdentity {
   return { dev: stats.dev, ino: stats.ino };
@@ -129,6 +134,12 @@ function uncertain(filePath: string): Error {
 
 function assertNotOwnedByThisProcess(filePath: string, ownerKey: string): void {
   if (sameProcessOwners.has(ownerKey)) {
+    throw new Error(`File lock is already held by this process: ${filePath}`);
+  }
+}
+
+function assertNotOwnedByAsyncLineage(filePath: string, ownerKey: string): void {
+  if (asyncOwnership.getStore()?.has(ownerKey)) {
     throw new Error(`File lock is already held by this process: ${filePath}`);
   }
 }
@@ -215,9 +226,16 @@ function classifyExistingLock(filePath: string, lockPath: string): 'contended' |
   }
 }
 
-function tryAcquire(filePath: string, target: LockTarget): AcquisitionResult {
+function tryAcquire(
+  filePath: string,
+  target: LockTarget,
+  sameProcessContention: 'reject' | 'wait'
+): AcquisitionResult {
   const { lockPath, canonicalParent, ownerKey, requestedParent } = target;
-  assertNotOwnedByThisProcess(filePath, ownerKey);
+  if (sameProcessOwners.has(ownerKey)) {
+    if (sameProcessContention === 'wait') return 'contended';
+    assertNotOwnedByThisProcess(filePath, ownerKey);
+  }
   const token = Symbol(lockPath);
   const content = `${process.pid}\n${LEGACY_SAFE_TIMESTAMP}\n${AUTHORITATIVE_MAGIC}\n${randomUUID()}\n`;
   let descriptor: number;
@@ -258,26 +276,56 @@ function tryAcquire(filePath: string, target: LockTarget): AcquisitionResult {
 }
 
 function release(lock: OwnedLock, ownershipLostMessage: string): void {
+  let cleanupOutcome: Outcome<void>;
   try {
     assertOwned(lock, ownershipLostMessage);
     fs.unlinkSync(lock.lockPath);
     syncDirectory(path.dirname(lock.lockPath));
-  } finally {
+    cleanupOutcome = { status: 'success', value: undefined };
+  } catch (error) {
+    cleanupOutcome = { error, status: 'failure' };
+  }
+
+  let closeOutcome: Outcome<void>;
+  try {
     fs.closeSync(lock.descriptor);
+    closeOutcome = { status: 'success', value: undefined };
+  } catch (error) {
+    closeOutcome = { error, status: 'failure' };
+  } finally {
     if (sameProcessOwners.get(lock.ownerKey) === lock.token) {
       sameProcessOwners.delete(lock.ownerKey);
     }
   }
+
+  if (cleanupOutcome.status === 'failure' && closeOutcome.status === 'failure') {
+    combineFailures(
+      cleanupOutcome,
+      closeOutcome,
+      'File lock cleanup and descriptor close both failed',
+      'File lock cleanup',
+      'File lock descriptor close'
+    );
+  }
+  if (cleanupOutcome.status === 'failure') throw cleanupOutcome.error;
+  if (closeOutcome.status === 'failure') throw closeOutcome.error;
 }
 
-function combineErrors(operationError: unknown, releaseError: unknown): never {
-  if (operationError === undefined) throw releaseError;
-  if (releaseError === undefined) throw operationError;
-  throw new AggregateError(
-    [operationError, releaseError],
-    'File lock operation and cleanup both failed',
-    { cause: operationError }
-  );
+function contextualizeUndefinedFailure(failure: Failure, context: string): unknown {
+  if (failure.error !== undefined) return failure.error;
+  return new Error(`${context} failed by throwing undefined`, { cause: failure.error });
+}
+
+function combineFailures(
+  firstFailure: Failure,
+  secondFailure: Failure,
+  message: string,
+  firstContext: string,
+  secondContext: string
+): never {
+  const firstError = contextualizeUndefinedFailure(firstFailure, firstContext);
+  const secondError = contextualizeUndefinedFailure(secondFailure, secondContext);
+  throw new AggregateError([firstError, secondError], message, { cause: firstError });
 }
 
 function sleepSync(ms: number): void {
@@ -303,37 +351,45 @@ export function withFileLockSync<T>(
   const target = resolveLockTarget(filePath);
   assertNotOwnedByThisProcess(filePath, target.ownerKey);
   const deadline = Date.now() + (options.acquireTimeoutMs ?? ACQUIRE_TIMEOUT_MS);
-  let acquisition = tryAcquire(filePath, target);
+  let acquisition = tryAcquire(filePath, target, 'reject');
   while (acquisition === 'contended' || acquisition === 'retry') {
     if (acquisition === 'retry') {
-      acquisition = tryAcquire(filePath, target);
+      acquisition = tryAcquire(filePath, target, 'reject');
       if (acquisition === 'retry' && Date.now() >= deadline) throw timeout(filePath);
       continue;
     }
     if (Date.now() >= deadline) throw timeout(filePath);
     sleepSync(Math.min(options.retryIntervalMs ?? RETRY_INTERVAL_MS, deadline - Date.now()));
-    acquisition = tryAcquire(filePath, target);
+    acquisition = tryAcquire(filePath, target, 'reject');
   }
   const lock = acquisition;
 
-  let result: T | undefined;
-  let operationError: unknown;
+  let operationOutcome: Outcome<T>;
   try {
     assertOwned(lock, `File lock ownership was lost: ${filePath}`);
-    result = fn();
+    operationOutcome = { status: 'success', value: fn() };
   } catch (error) {
-    operationError = error;
+    operationOutcome = { error, status: 'failure' };
   }
-  let releaseError: unknown;
+  let releaseOutcome: Outcome<void>;
   try {
     release(lock, `File lock ownership was lost: ${filePath}`);
+    releaseOutcome = { status: 'success', value: undefined };
   } catch (error) {
-    releaseError = error;
+    releaseOutcome = { error, status: 'failure' };
   }
-  if (operationError !== undefined || releaseError !== undefined) {
-    combineErrors(operationError, releaseError);
+  if (operationOutcome.status === 'failure' && releaseOutcome.status === 'failure') {
+    combineFailures(
+      operationOutcome,
+      releaseOutcome,
+      'File lock operation and cleanup both failed',
+      'File lock operation',
+      'File lock cleanup'
+    );
   }
-  return result as T;
+  if (operationOutcome.status === 'failure') throw operationOutcome.error;
+  if (releaseOutcome.status === 'failure') throw releaseOutcome.error;
+  return operationOutcome.value;
 }
 
 export async function withFileLock<T>(
@@ -342,37 +398,52 @@ export async function withFileLock<T>(
   options: FileLockOptions = {}
 ): Promise<T> {
   const target = resolveLockTarget(filePath);
-  assertNotOwnedByThisProcess(filePath, target.ownerKey);
+  assertNotOwnedByAsyncLineage(filePath, target.ownerKey);
   const deadline = Date.now() + (options.acquireTimeoutMs ?? ACQUIRE_TIMEOUT_MS);
-  let acquisition = tryAcquire(filePath, target);
+  let acquisition = tryAcquire(filePath, target, 'wait');
   while (acquisition === 'contended' || acquisition === 'retry') {
     if (acquisition === 'retry') {
-      acquisition = tryAcquire(filePath, target);
+      acquisition = tryAcquire(filePath, target, 'wait');
       if (acquisition === 'retry' && Date.now() >= deadline) throw timeout(filePath);
       continue;
     }
     if (Date.now() >= deadline) throw timeout(filePath);
     await delay(Math.min(options.retryIntervalMs ?? RETRY_INTERVAL_MS, deadline - Date.now()));
-    acquisition = tryAcquire(filePath, target);
+    acquisition = tryAcquire(filePath, target, 'wait');
   }
   const lock = acquisition;
 
-  let result: T | undefined;
-  let operationError: unknown;
+  let operationOutcome: Outcome<T>;
   try {
-    assertOwned(lock, `File lock ownership was lost: ${filePath}`);
-    result = await fn();
+    const ownership = new Set(asyncOwnership.getStore());
+    ownership.add(target.ownerKey);
+    operationOutcome = {
+      status: 'success',
+      value: await asyncOwnership.run(ownership, async () => {
+        assertOwned(lock, `File lock ownership was lost: ${filePath}`);
+        return await fn();
+      }),
+    };
   } catch (error) {
-    operationError = error;
+    operationOutcome = { error, status: 'failure' };
   }
-  let releaseError: unknown;
+  let releaseOutcome: Outcome<void>;
   try {
     release(lock, `File lock ownership was lost: ${filePath}`);
+    releaseOutcome = { status: 'success', value: undefined };
   } catch (error) {
-    releaseError = error;
+    releaseOutcome = { error, status: 'failure' };
   }
-  if (operationError !== undefined || releaseError !== undefined) {
-    combineErrors(operationError, releaseError);
+  if (operationOutcome.status === 'failure' && releaseOutcome.status === 'failure') {
+    combineFailures(
+      operationOutcome,
+      releaseOutcome,
+      'File lock operation and cleanup both failed',
+      'File lock operation',
+      'File lock cleanup'
+    );
   }
-  return result as T;
+  if (operationOutcome.status === 'failure') throw operationOutcome.error;
+  if (releaseOutcome.status === 'failure') throw releaseOutcome.error;
+  return operationOutcome.value;
 }
