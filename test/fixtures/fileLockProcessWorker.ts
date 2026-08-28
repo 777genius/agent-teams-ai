@@ -17,6 +17,8 @@ if (
     'crash-holder',
     'sqlite-before-provenance-holder',
     'sqlite-crash-holder',
+    'sqlite-durable-release-holder',
+    'sqlite-partial-release-holder',
     'sqlite-partial-provenance-holder',
     'sync-contender',
   ].includes(mode ?? '')
@@ -80,6 +82,29 @@ if (mode === 'async-holder') {
   if (!authority) throw new Error('Could not acquire SQLite crash authority');
   process.stdout.write('acquired\n');
   await new Promise<void>(() => undefined);
+} else if (mode === 'sqlite-durable-release-holder' || mode === 'sqlite-partial-release-holder') {
+  setSqliteTransactionLockTestHooksForTests({
+    afterDatabaseOpen: (_databasePath, database) => {
+      database.prepare("UPDATE recovery_state SET value = 'uncommitted'").run();
+    },
+    ...(mode === 'sqlite-durable-release-holder'
+      ? {
+          afterDurableReleasePublication: () => {
+            process.stdout.write('release-state\n');
+            readSync(0, Buffer.alloc(1), 0, 1, null);
+          },
+        }
+      : {
+          afterPartialReleaseWrite: () => {
+            process.stdout.write('partial-release\n');
+            readSync(0, Buffer.alloc(1), 0, 1, null);
+          },
+        }),
+  });
+  const authority = tryRetainSqliteTransactionLock(target, 'release holder lost ownership');
+  if (!authority) throw new Error('Could not acquire SQLite release authority');
+  process.stdout.write('acquired\n');
+  authority.release();
 } else {
   process.stdout.write('attempting\n');
   withFileLockSync(target, () => {

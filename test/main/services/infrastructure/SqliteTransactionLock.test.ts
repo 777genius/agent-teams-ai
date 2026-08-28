@@ -37,7 +37,7 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     setSqliteTransactionLockTestHooksForTests(undefined);
     vi.restoreAllMocks();
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
-  });
+  }, 30_000);
 
   it('keeps its own and a concurrent live owner database out of bounded cleanup', async () => {
     const liveTarget = path.join(temporaryRoot, 'live-owner.json');
@@ -114,6 +114,11 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     expect(
       isSqliteTransactionLockArtifactName(
         'state.json.lock.sqlite3.custody-0123456789abcdef0123456789abcdef.provenance'
+      )
+    ).toBe(true);
+    expect(
+      isSqliteTransactionLockArtifactName(
+        'state.json.lock.sqlite3.custody-0123456789abcdef0123456789abcdef.release'
       )
     ).toBe(true);
     expect(isSqliteTransactionLockArtifactName('state.json.lock.sqlite3.custody-short')).toBe(
@@ -213,13 +218,18 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     const databasePath = path.join(temporaryRoot, 'after-open.sqlite3');
     const displacedPath = `${databasePath}.displaced`;
     let successor: ReturnType<typeof tryRetainSqliteTransactionLock> | undefined;
+    let successorError: unknown;
     let firstReturned = false;
     setSqliteTransactionLockTestHooksForTests({
       afterDatabaseOpen: (openedPath) => {
         setSqliteTransactionLockTestHooksForTests(undefined);
         fs.renameSync(openedPath, displacedPath);
         fs.writeFileSync(openedPath, '');
-        successor = tryRetainSqliteTransactionLock(openedPath, 'successor lost');
+        try {
+          successor = tryRetainSqliteTransactionLock(openedPath, 'successor lost');
+        } catch (error) {
+          successorError = error;
+        }
         expect(firstReturned).toBe(false);
       },
     });
@@ -229,10 +239,12 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
       firstReturned = owner !== null;
     }).toThrow('Lock database identity changed while opening');
     expect(firstReturned).toBe(false);
-    expect(successor).toBeDefined();
-    expect(successor).not.toBeNull();
-    expect(() => successor!.assertOwned()).not.toThrow();
-    successor!.release();
+    expect(successor).toBeUndefined();
+    expect(successorError).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('database substitution detected'),
+      })
+    );
     expect(fs.existsSync(databasePath)).toBe(true);
     expect(fs.existsSync(displacedPath)).toBe(true);
   });
@@ -323,6 +335,117 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     );
     expect(transientArtifacts(failingPath)).toEqual([]);
     expect(() => fs.renameSync(failingPath, `${failingPath}.closed`)).not.toThrow();
+  });
+
+  it('publishes durable release state before COMMIT and removes it last after cleanup', () => {
+    const databasePath = path.join(temporaryRoot, 'release-transition.sqlite3');
+    const transitions: string[] = [];
+    let releasePath = '';
+    setSqliteTransactionLockTestHooksForTests({
+      afterDurableReleasePublication: (publishedPath) => {
+        releasePath = publishedPath;
+        transitions.push('durable');
+        expect(fs.existsSync(releasePath)).toBe(true);
+        expect(fs.existsSync(releasePath.replace(/\.release$/, '.provenance'))).toBe(true);
+        expect(JSON.parse(fs.readFileSync(releasePath, 'utf8'))).toMatchObject({ version: 1 });
+      },
+      afterCommitBeforeCleanup: () => transitions.push('committed'),
+      afterDatabaseCloseBeforeCleanup: () => {
+        transitions.push('closed');
+        expect(fs.existsSync(releasePath)).toBe(true);
+      },
+    });
+
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'owner lost');
+    owner!.release();
+
+    expect(transitions).toEqual(['durable', 'committed', 'closed']);
+    expect(fs.existsSync(releasePath)).toBe(false);
+    expect(transientArtifacts(databasePath)).toEqual([]);
+  });
+
+  it('allows a contender to complete the exact durable cleanup after the OS lock releases', () => {
+    const databasePath = path.join(temporaryRoot, 'release-contender.sqlite3');
+    let contender: ReturnType<typeof tryRetainSqliteTransactionLock> | undefined;
+    setSqliteTransactionLockTestHooksForTests({
+      afterDatabaseCloseBeforeCleanup: () => {
+        setSqliteTransactionLockTestHooksForTests(undefined);
+        contender = tryRetainSqliteTransactionLock(databasePath, 'contender lost');
+      },
+    });
+
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'owner lost');
+    expect(() => owner!.release()).not.toThrow();
+    expect(contender).not.toBeNull();
+    expect(contender).toBeDefined();
+    contender!.release();
+    expect(transientArtifacts(databasePath)).toEqual([]);
+  });
+
+  it('recovers an exact crash after durable release publication without accepting uncommitted data', async () => {
+    const databasePath = path.join(temporaryRoot, 'durable-release-crash.sqlite3');
+    await crashReleaseOwner(databasePath, 'sqlite-durable-release-holder');
+
+    const successor = tryRetainSqliteTransactionLock(databasePath, 'successor lost');
+    expect(successor).not.toBeNull();
+    successor!.release();
+    const verification = new DatabaseSync(databasePath, { readOnly: true });
+    expect(verification.prepare('SELECT value FROM recovery_state').get()).toMatchObject({
+      value: 'stable',
+    });
+    verification.close();
+    expect(transientArtifacts(databasePath)).toEqual([]);
+  });
+
+  it('fails closed after a crash before release state is durable', async () => {
+    const databasePath = path.join(temporaryRoot, 'partial-release-crash.sqlite3');
+    const releasePath = await crashReleaseOwner(databasePath, 'sqlite-partial-release-holder');
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'Corrupted SQLite durable release state'
+    );
+    expect(fs.existsSync(releasePath)).toBe(true);
+  });
+
+  it.each([
+    [
+      'substituted',
+      (releasePath: string) => {
+        const contents = fs.readFileSync(releasePath);
+        const substitutePath = `${releasePath}.substitute`;
+        fs.writeFileSync(substitutePath, contents);
+        fs.renameSync(substitutePath, releasePath);
+      },
+    ],
+    ['torn', (releasePath: string) => fs.writeFileSync(releasePath, '{"version":1')],
+    [
+      'wrong inode',
+      (releasePath: string) => {
+        const state = JSON.parse(fs.readFileSync(releasePath, 'utf8'));
+        state.database.ino = (BigInt(state.database.ino) + 1n).toString();
+        fs.writeFileSync(releasePath, `${JSON.stringify(state)}\n`);
+      },
+    ],
+  ])('rejects a %s durable release marker without deleting it', async (_label, tamper) => {
+    const databasePath = path.join(temporaryRoot, `${_label.replace(' ', '-')}-release.sqlite3`);
+    const releasePath = await crashReleaseOwner(databasePath, 'sqlite-durable-release-holder');
+    tamper(releasePath);
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow();
+    expect(fs.existsSync(releasePath)).toBe(true);
+  });
+
+  it('rejects a symlinked durable release marker without following or deleting it', async () => {
+    if (process.platform === 'win32') return;
+    const databasePath = path.join(temporaryRoot, 'symlinked-release.sqlite3');
+    const releasePath = await crashReleaseOwner(databasePath, 'sqlite-durable-release-holder');
+    fs.unlinkSync(releasePath);
+    fs.symlinkSync(databasePath, releasePath);
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'Unsafe SQLite durable release state'
+    );
+    expect(fs.lstatSync(releasePath).isSymbolicLink()).toBe(true);
   });
 
   it('recovers a SIGKILLed hot journal before reaping every predecessor artifact', async () => {
@@ -446,6 +569,63 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     successor!.release();
     expect(inode(custodyPath)).toEqual(inode(unrelatedPath));
     expect(fs.existsSync(custodyPath)).toBe(true);
+  });
+
+  it('blocks a replacement database while a live owner holds the displaced inode', async () => {
+    if (process.platform === 'win32') return;
+    const databasePath = path.join(temporaryRoot, 'live-displaced.sqlite3');
+    const displacedPath = `${databasePath}.displaced`;
+    const setup = new DatabaseSync(databasePath);
+    setup.exec(
+      "CREATE TABLE recovery_state(value TEXT NOT NULL); INSERT INTO recovery_state VALUES ('stable')"
+    );
+    setup.close();
+    const child = spawn(
+      process.execPath,
+      ['--import', tsxPath, workerPath, 'sqlite-crash-holder', databasePath, databasePath],
+      {
+        cwd: process.cwd(),
+        env: { ...process.env, NODE_ENV: 'test' },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    );
+    let output = '';
+    child.stdout!.on('data', (chunk) => (output += String(chunk)));
+    child.stderr!.on('data', (chunk) => (output += String(chunk)));
+    await waitForOutput(() => output, 'acquired\n');
+    const artifacts = transientArtifacts(databasePath).filter(
+      (entry) => !entry.endsWith('-journal')
+    );
+    fs.renameSync(databasePath, displacedPath);
+    const replacement = new DatabaseSync(databasePath);
+    replacement.close();
+    const beforeOrphanDatabaseOpen = vi.fn();
+    const beforeOrphanArtifactUnlink = vi.fn();
+    setSqliteTransactionLockTestHooksForTests({
+      beforeOrphanDatabaseOpen,
+      beforeOrphanArtifactUnlink,
+    });
+
+    try {
+      expect(() => tryRetainSqliteTransactionLock(databasePath, 'contender lost')).toThrow(
+        'SQLite lock database substitution detected'
+      );
+      expect(
+        transientArtifacts(databasePath).filter((entry) => !entry.endsWith('-journal'))
+      ).toEqual(artifacts);
+      expect(beforeOrphanDatabaseOpen).not.toHaveBeenCalled();
+      expect(beforeOrphanArtifactUnlink).not.toHaveBeenCalled();
+      expect(inode(databasePath)).not.toEqual(inode(displacedPath));
+    } finally {
+      child.kill('SIGKILL');
+      await once(child, 'close');
+      fs.rmSync(databasePath, { force: true });
+      fs.renameSync(displacedPath, databasePath);
+    }
+
+    const successor = tryRetainSqliteTransactionLock(databasePath, 'successor lost');
+    expect(successor).not.toBeNull();
+    successor!.release();
   });
 
   it('rejects a foreign ordinary orphan journal without opening or deleting it', () => {
@@ -776,6 +956,41 @@ async function crashSqliteOwner(
   expect(child.kill('SIGKILL')).toBe(true);
   await once(child, 'close');
   return path.join(path.dirname(databasePath), custodyName!);
+}
+
+async function crashReleaseOwner(
+  databasePath: string,
+  mode: 'sqlite-durable-release-holder' | 'sqlite-partial-release-holder'
+): Promise<string> {
+  const setup = new DatabaseSync(databasePath);
+  setup.exec(
+    "CREATE TABLE recovery_state(value TEXT NOT NULL); INSERT INTO recovery_state VALUES ('stable')"
+  );
+  setup.close();
+  const child = spawn(
+    process.execPath,
+    ['--import', tsxPath, workerPath, mode, databasePath, databasePath],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, NODE_ENV: 'test' },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }
+  );
+  let output = '';
+  child.stdout!.on('data', (chunk) => (output += String(chunk)));
+  child.stderr!.on('data', (chunk) => (output += String(chunk)));
+  await waitForOutput(() => output, 'acquired\n');
+  await waitForOutput(
+    () => output,
+    mode === 'sqlite-durable-release-holder' ? 'release-state\n' : 'partial-release\n'
+  );
+  const [releaseName] = transientArtifacts(databasePath).filter((entry) =>
+    entry.endsWith('.release')
+  );
+  expect(releaseName, output).toBeDefined();
+  expect(child.kill('SIGKILL')).toBe(true);
+  await once(child, 'close');
+  return path.join(path.dirname(databasePath), releaseName!);
 }
 
 function spawnPausedPublicationOwner(
