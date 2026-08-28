@@ -81,7 +81,8 @@ interface ObservedProjectProviderAuthority {
 const observedProviderGlobalAccessFingerprintById = new Map<CliProviderId, string>();
 const observedProjectProviderAuthorityByScope = new Map<string, ObservedProjectProviderAuthority>();
 const observedProjectlessProviderProfileFingerprintById = new Map<CliProviderId, string>();
-const latestCompletedProviderObservationOrderById = new Map<CliProviderId, number>();
+const latestCompletedProviderAuthorityOrderById = new Map<CliProviderId, number>();
+const latestCompletedProviderCacheOrderById = new Map<CliProviderId, number>();
 let activeProviderRuntimeRequestCount = 0;
 let providerObservationFenceEpoch = 0;
 let nextProviderObservationRequestOrder = 0;
@@ -102,7 +103,8 @@ const MAX_OBSERVED_PROJECT_PROVIDER_AUTHORITIES = 128;
 function resetProviderObservationRequestFence(): void {
   providerObservationFenceEpoch += 1;
   nextProviderObservationRequestOrder = 0;
-  latestCompletedProviderObservationOrderById.clear();
+  latestCompletedProviderAuthorityOrderById.clear();
+  latestCompletedProviderCacheOrderById.clear();
 }
 
 function beginProviderObservationRequest(): ProviderObservationRequestFence {
@@ -113,39 +115,34 @@ function beginProviderObservationRequest(): ProviderObservationRequestFence {
   };
 }
 
-function canCompleteProviderObservation(
-  providerId: CliProviderId,
-  requestFence: ProviderObservationRequestFence
-): boolean {
-  return (
-    requestFence.epoch === providerObservationFenceEpoch &&
-    requestFence.order >= (latestCompletedProviderObservationOrderById.get(providerId) ?? 0)
-  );
-}
-
-function advancesProviderObservationOrder(providerStatus: CliProviderStatus): boolean {
-  // Pending/transient checks preserve the last known authority and therefore
-  // must not supersede an older authoritative request that is still running.
-  // Model-only responses still mutate cached provider observations.
-  return (
-    isSemanticProviderAuthorityObservation(providerStatus) ||
-    providerStatus.statusCheckOutcome === 'model_only'
-  );
-}
-
 function claimProviderObservationCompletion(
   providerStatus: CliProviderStatus,
   requestFence: ProviderObservationRequestFence
 ): boolean {
-  // The fixed provider-id domain bounds this cross-mode fence to four entries.
-  // Comparing start order against the latest completed semantic observation
-  // rejects late results without serializing unrelated providers.
-  if (!canCompleteProviderObservation(providerStatus.providerId, requestFence)) {
+  if (requestFence.epoch !== providerObservationFenceEpoch) {
     return false;
   }
-  if (advancesProviderObservationOrder(providerStatus)) {
-    latestCompletedProviderObservationOrderById.set(providerStatus.providerId, requestFence.order);
+
+  const providerId = providerStatus.providerId;
+  const latestAuthorityOrder = latestCompletedProviderAuthorityOrderById.get(providerId) ?? 0;
+  if (isSemanticProviderAuthorityObservation(providerStatus)) {
+    // Catalog/cache-only results cannot suppress an authority observation. Only
+    // a newer completed authority observation participates in this dimension.
+    if (requestFence.order < latestAuthorityOrder) {
+      return false;
+    }
+    latestCompletedProviderAuthorityOrderById.set(providerId, requestFence.order);
+    return true;
   }
+
+  // Every non-authoritative result can mutate cached provider data. Keep those
+  // mutations ordered with each other, while a newer authority result also
+  // fences older cache data from patching the authority/cache state it established.
+  const latestCacheOrder = latestCompletedProviderCacheOrderById.get(providerId) ?? 0;
+  if (requestFence.order < latestAuthorityOrder || requestFence.order < latestCacheOrder) {
+    return false;
+  }
+  latestCompletedProviderCacheOrderById.set(providerId, requestFence.order);
   return true;
 }
 
@@ -161,6 +158,15 @@ function clearObservedProviderAuthorities(): void {
   observedProviderGlobalAccessFingerprintById.clear();
   observedProjectProviderAuthorityByScope.clear();
   observedProjectlessProviderProfileFingerprintById.clear();
+}
+
+function resetCliInstallerHandlerState(): void {
+  statusCacheGeneration += 1;
+  resetProviderObservationRequestFence();
+  cachedStatus.clear();
+  statusInFlight.clear();
+  providerStatusInFlight.clear();
+  clearObservedProviderAuthorities();
 }
 
 function normalizeProviderStatusRequest(request: unknown): CliProviderStatusIpcRequest {
@@ -344,9 +350,9 @@ function runProviderRuntimeRequest<T>(
  * Initializes CLI installer handlers with the service instance.
  */
 export function initializeCliInstallerHandlers(installerService: CliInstallerService): void {
+  resetCliInstallerHandlerState();
   service = installerService;
   invalidateAuthoritativeModelExecutionProofs();
-  clearObservedProviderAuthorities();
   resetProviderRuntimeRequestLimiter();
 }
 
@@ -372,6 +378,9 @@ export function removeCliInstallerHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(CLI_INSTALLER_VERIFY_PROVIDER_MODELS);
   ipcMain.removeHandler(CLI_INSTALLER_INSTALL);
   ipcMain.removeHandler(CLI_INSTALLER_INVALIDATE_STATUS);
+
+  invalidateAuthoritativeModelExecutionProofs();
+  resetCliInstallerHandlerState();
 
   logger.info('CLI installer handlers removed');
 }
@@ -507,11 +516,9 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
 }
 
 function isSemanticProviderAuthorityObservation(providerStatus: CliProviderStatus): boolean {
-  return (
-    providerStatus.statusCheckOutcome !== 'pending' &&
-    providerStatus.statusCheckOutcome !== 'transient_error' &&
-    providerStatus.statusCheckOutcome !== 'model_only'
-  );
+  // Missing legacy outcomes are ambiguous (including deferred/partial service
+  // paths), so fail closed instead of inferring semantic authority from fields.
+  return providerStatus.statusCheckOutcome === 'authoritative';
 }
 
 function getProviderGlobalAccessFingerprint(providerStatus: CliProviderStatus): string {
@@ -739,12 +746,7 @@ async function handleVerifyProviderModels(
 
 function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
   invalidateAuthoritativeModelExecutionProofs();
-  statusCacheGeneration += 1;
-  resetProviderObservationRequestFence();
-  cachedStatus.clear();
-  statusInFlight.clear();
-  providerStatusInFlight.clear();
-  clearObservedProviderAuthorities();
+  resetCliInstallerHandlerState();
   ClaudeBinaryResolver.clearCache();
   CodexBinaryResolver.clearCache();
   service.invalidateStatusCache();

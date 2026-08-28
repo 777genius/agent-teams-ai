@@ -206,10 +206,20 @@ describe('cliInstaller IPC handlers', () => {
   it('invalidates main launch proof when an exact-project provider catalog changes', async () => {
     service.getProviderStatus
       .mockResolvedValueOnce(
-        provider({ providerId: 'opencode', models: ['openai/gpt-5'], authenticated: true })
+        provider({
+          providerId: 'opencode',
+          models: ['openai/gpt-5'],
+          authenticated: true,
+          statusCheckOutcome: 'authoritative',
+        })
       )
       .mockResolvedValueOnce(
-        provider({ providerId: 'opencode', models: ['openai/gpt-5.1'], authenticated: true })
+        provider({
+          providerId: 'opencode',
+          models: ['openai/gpt-5.1'],
+          authenticated: true,
+          statusCheckOutcome: 'authoritative',
+        })
       );
     const anthropicProof = prepareAuthoritativeExecutionProof({
       cwd: process.cwd(),
