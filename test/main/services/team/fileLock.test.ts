@@ -4,6 +4,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { resolveDesktopSqliteLockAuthority } from '@main/services/infrastructure/DesktopSqliteLockAuthority';
 import * as sqliteTransactionLock from '@main/services/infrastructure/SqliteTransactionLock';
 import {
   FILE_LOCK_RETIREMENT_MARKER,
@@ -91,6 +92,18 @@ function captureFailure(fn: () => unknown): CapturedFailure {
   }
 }
 
+function directorySnapshot(root: string): string[] {
+  return fs
+    .readdirSync(root, { recursive: true, withFileTypes: true })
+    .map((entry) => {
+      const relativePath = path.relative(root, path.join(entry.parentPath, entry.name));
+      return entry.isFile()
+        ? `${relativePath}:file:${fs.readFileSync(path.join(root, relativePath), 'hex')}`
+        : `${relativePath}:${entry.isDirectory() ? 'directory' : 'other'}`;
+    })
+    .sort();
+}
+
 async function captureAsyncFailure(fn: () => Promise<unknown>): Promise<CapturedFailure> {
   try {
     await fn();
@@ -138,14 +151,19 @@ describe('withFileLock legacy compatibility ownership', () => {
 
   beforeEach(() => {
     temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'filelock-test-'));
+    process.env.AGENT_TEAMS_SQLITE_LOCK_ROOT_FOR_TESTS = `${temporaryRoot}-authority`;
     testFile = path.join(temporaryRoot, 'test.json');
     fs.writeFileSync(testFile, '[]', 'utf8');
   });
 
   afterEach(() => {
+    sqliteTransactionLock.setSqliteTransactionLockTestHooksForTests(undefined);
     vi.useRealTimers();
     vi.restoreAllMocks();
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
+    fs.rmSync(`${temporaryRoot}-displaced`, { recursive: true, force: true });
+    fs.rmSync(`${temporaryRoot}-authority`, { recursive: true, force: true });
+    delete process.env.AGENT_TEAMS_SQLITE_LOCK_ROOT_FOR_TESTS;
   });
 
   it('uses the exact legacy namespace for async and synchronous operations', async () => {
@@ -167,8 +185,57 @@ describe('withFileLock legacy compatibility ownership', () => {
       'agent-teams-legacy-authoritative-v2',
     ]);
     expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
-    expect(fs.statSync(`${testFile}.lock.sqlite3`).isFile()).toBe(true);
+    expect(fs.statSync(resolveDesktopSqliteLockAuthority(testFile).databasePath).isFile()).toBe(
+      true
+    );
+    expect(fs.existsSync(`${testFile}.lock.sqlite3`)).toBe(false);
     expect(fs.existsSync(`${testFile}.lock.lock.sqlite3`)).toBe(false);
+  });
+
+  it('does not touch a replacement project root substituted before SQLite opens', async () => {
+    const displacedRoot = `${temporaryRoot}-displaced`;
+    const callback = vi.fn(async () => undefined);
+    let replacementBefore: string[] = [];
+    sqliteTransactionLock.setSqliteTransactionLockTestHooksForTests({
+      beforeDatabaseOpen: () => {
+        fs.renameSync(temporaryRoot, displacedRoot);
+        fs.mkdirSync(temporaryRoot);
+        fs.mkdirSync(path.join(temporaryRoot, 'nested'));
+        fs.writeFileSync(path.join(temporaryRoot, 'foreign.txt'), 'foreign');
+        fs.writeFileSync(path.join(temporaryRoot, 'nested', 'custody'), 'shared');
+        replacementBefore = directorySnapshot(temporaryRoot);
+      },
+    });
+
+    await expect(withFileLock(testFile, callback)).rejects.toThrow(
+      'Desktop SQLite lock target root changed'
+    );
+    expect(callback).not.toHaveBeenCalled();
+    expect(directorySnapshot(temporaryRoot)).toEqual(replacementBefore);
+
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+    fs.renameSync(displacedRoot, temporaryRoot);
+  });
+
+  it('does not touch a replacement project root during SQLite cleanup', async () => {
+    const displacedRoot = `${temporaryRoot}-displaced`;
+    let replacementBefore: string[] = [];
+    sqliteTransactionLock.setSqliteTransactionLockTestHooksForTests({
+      afterDatabaseCloseBeforeCleanup: () => {
+        fs.renameSync(temporaryRoot, displacedRoot);
+        fs.mkdirSync(temporaryRoot);
+        fs.mkdirSync(path.join(temporaryRoot, 'nested'));
+        fs.writeFileSync(path.join(temporaryRoot, 'foreign.txt'), 'foreign');
+        fs.writeFileSync(path.join(temporaryRoot, 'nested', 'custody'), 'shared');
+        replacementBefore = directorySnapshot(temporaryRoot);
+      },
+    });
+
+    await expect(withFileLock(testFile, async () => 'locked')).resolves.toBe('locked');
+    expect(directorySnapshot(temporaryRoot)).toEqual(replacementBefore);
+
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+    fs.renameSync(displacedRoot, temporaryRoot);
   });
 
   it('atomically excludes an old creator in the former check-to-BEGIN window', async () => {
@@ -939,7 +1006,7 @@ describe('withFileLock legacy compatibility ownership', () => {
     const originalUnlink = fs.unlinkSync;
     const originalLstat = fs.lstatSync;
     let leakedDescriptor: number | undefined;
-    const databasePath = sqliteTransactionLock.getSqliteTransactionLockDatabasePath(testFile);
+    const databasePath = resolveDesktopSqliteLockAuthority(testFile).databasePath;
     const expectedReleaseError = `File lock ownership was lost: ${testFile}`;
     let publicationUnlinkAttempted = false;
     let releaseFailed = false;
