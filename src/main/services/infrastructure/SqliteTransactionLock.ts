@@ -22,52 +22,29 @@ export interface SqliteTransactionLockOptions {
   ownershipLostMessage: string;
 }
 
-interface FileIdentity {
-  dev: bigint;
-  ino: bigint;
-}
+// prettier-ignore
+type FileIdentity = { dev: bigint; ino: bigint };
+// prettier-ignore
+type DatabaseIdentityGuard = { created: boolean; descriptor: number; identity: FileIdentity };
+// prettier-ignore
+type DatabaseCustodyLink = { path: string };
+// prettier-ignore
+type ProvenanceIdentity = { dev: string; ino: string };
+// prettier-ignore
+type CustodyProvenance = { version: number; token: string; database: ProvenanceIdentity; journal: ProvenanceIdentity };
+// prettier-ignore
+type PublishedProvenance = { descriptor: number; identity: FileIdentity; journalIdentity: FileIdentity; journalPath: string; path: string; witnessPath: string };
 
-interface DatabaseIdentityGuard {
-  created: boolean;
-  descriptor: number;
-  identity: FileIdentity;
-}
-
-interface DatabaseCustodyLink {
-  path: string;
-}
-
-interface ProvenanceIdentity {
-  dev: string;
-  ino: string;
-}
-
-interface CustodyProvenance {
-  version: number;
-  token: string;
-  database: ProvenanceIdentity;
-  journal: ProvenanceIdentity;
-}
-
-interface PublishedProvenance {
-  descriptor: number;
-  identity: FileIdentity;
-  journalIdentity: FileIdentity;
-  journalPath: string;
-  path: string;
-  witnessPath: string;
-}
-
-interface Failure {
-  error: unknown;
-  context: string;
-}
+// prettier-ignore
+type Failure = { error: unknown; context: string };
 
 export interface SqliteTransactionLockTestHooks {
   afterAbsentFilePrecreated?(databasePath: string): void;
   beforeDatabaseOpen?(databasePath: string): void;
   afterDatabaseOpen?(databasePath: string, database: DatabaseSync): void;
   beforeProvenancePublication?(custodyPath: string): void;
+  afterPartialProvenanceWrite?(custodyPath: string, provenancePath: string): void;
+  beforeIncompleteCustodyProbeOpen?(probePath: string): void;
   beforeOrphanDatabaseOpen?(custodyPath: string): void;
   beforeOrphanArtifactUnlink?(artifactPath: string): void;
 }
@@ -123,9 +100,6 @@ export function isSqliteTransactionLockArtifactName(fileName: string): boolean {
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
 }
-
-// prettier-ignore
-function pathEntryExists(pathname: string): boolean { try { fs.lstatSync(pathname); return true; } catch (error) { if (isMissing(error)) return false; throw error; } }
 
 function identity(stats: fs.BigIntStats): FileIdentity {
   return { dev: stats.dev, ino: stats.ino };
@@ -326,7 +300,10 @@ function publishCustodyProvenance(custodyPath: string, databaseIdentity: FileIde
   let descriptor: number | undefined, provenanceIdentity: FileIdentity | undefined;
   try {
     descriptor = fs.openSync(provenancePath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_RDWR | NO_FOLLOW, 0o600);
-    provenanceIdentity = identity(fs.fstatSync(descriptor, { bigint: true })); fs.writeSync(descriptor, `${JSON.stringify(manifest)}\n`, undefined, 'utf8'); fs.fdatasyncSync(descriptor); syncDirectory(path.dirname(custodyPath));
+    provenanceIdentity = identity(fs.fstatSync(descriptor, { bigint: true }));
+    const serialized = `${JSON.stringify(manifest)}\n`, splitAt = Math.max(1, Math.floor(serialized.length / 2));
+    fs.writeSync(descriptor, serialized.slice(0, splitAt), undefined, 'utf8'); testHooks?.afterPartialProvenanceWrite?.(custodyPath, provenancePath);
+    fs.writeSync(descriptor, serialized.slice(splitAt), undefined, 'utf8'); fs.fdatasyncSync(descriptor); syncDirectory(path.dirname(custodyPath));
     return { descriptor, identity: provenanceIdentity, journalIdentity, journalPath, path: provenancePath, witnessPath };
   } catch (error) {
     const failures = [descriptor === undefined ? null : captureFailure('SQLite lock provenance descriptor close', () => fs.closeSync(descriptor!)), captureFailure('SQLite lock journal witness cleanup', () => unlinkExact(witnessPath, journalIdentity, true)), provenanceIdentity ? captureFailure('SQLite lock provenance file cleanup', () => unlinkExact(provenancePath, provenanceIdentity!, true)) : null].filter((failure): failure is Failure => failure !== null);
@@ -336,6 +313,30 @@ function publishCustodyProvenance(custodyPath: string, databaseIdentity: FileIde
 
 // prettier-ignore
 type OrphanCustodyArtifacts = { custodyPath: string; journalIdentity: FileIdentity; journalPath: string; provenanceDescriptor: number; provenanceIdentity: FileIdentity; provenancePath: string; witnessPath: string };
+
+// Probe through a fresh, unpredictable hard link so SQLite observes the exact guarded inode
+// without seeing or recovering an unproven journal belonging to the incomplete custody name.
+// prettier-ignore
+function hasActiveWriterForIncompleteCustody(databasePath: string, expectedIdentity: FileIdentity, parentIdentity: FileIdentity): boolean {
+  const probe = createDatabaseCustodyLink(databasePath); let database: DatabaseSync | undefined, began = false, active = false;
+  try {
+    const probeStats = fs.lstatSync(probe.path, { bigint: true }), databaseStats = fs.lstatSync(databasePath, { bigint: true }), parentStats = fs.lstatSync(path.dirname(databasePath), { bigint: true });
+    if (probeStats.isSymbolicLink() || !probeStats.isFile() || databaseStats.isSymbolicLink() || !databaseStats.isFile() || parentStats.isSymbolicLink() || !parentStats.isDirectory() || !sameIdentity(expectedIdentity, identity(probeStats)) || !sameIdentity(expectedIdentity, identity(databaseStats)) || !sameIdentity(parentIdentity, identity(parentStats))) throw new Error(`Lock database identity changed before custody publication probe: ${databasePath}`);
+    testHooks?.beforeIncompleteCustodyProbeOpen?.(probe.path); database = new DatabaseSync(probe.path); database.exec('PRAGMA busy_timeout = 0');
+    try { database.exec('BEGIN IMMEDIATE'); began = true; } catch (error) { if (!isBusy(error)) throw error; active = true; }
+    const afterProbe = fs.lstatSync(probe.path, { bigint: true }), afterDatabase = fs.lstatSync(databasePath, { bigint: true }), afterParent = fs.lstatSync(path.dirname(databasePath), { bigint: true });
+    if (afterProbe.isSymbolicLink() || !afterProbe.isFile() || afterDatabase.isSymbolicLink() || !afterDatabase.isFile() || afterParent.isSymbolicLink() || !afterParent.isDirectory() || !sameIdentity(expectedIdentity, identity(afterProbe)) || !sameIdentity(expectedIdentity, identity(afterDatabase)) || !sameIdentity(parentIdentity, identity(afterParent))) throw new Error(`Lock database identity changed during custody publication probe: ${databasePath}`);
+    return active;
+  } finally {
+    if (began) database?.exec('ROLLBACK'); database?.close(); removeDatabaseCustodyLink(probe.path, expectedIdentity);
+  }
+}
+
+// prettier-ignore
+function throwIncompleteCustody(primary: unknown, databasePath: string, expectedIdentity: FileIdentity, parentIdentity: FileIdentity): never {
+  if (hasActiveWriterForIncompleteCustody(databasePath, expectedIdentity, parentIdentity)) throw new Error('database is locked during custody publication', { cause: primary });
+  throw primary;
+}
 
 // prettier-ignore
 function scanOrphanCustodyArtifacts(databasePath: string, expectedIdentity: FileIdentity, parentIdentity: FileIdentity): OrphanCustodyArtifacts[] {
@@ -362,7 +363,7 @@ function scanOrphanCustodyArtifacts(databasePath: string, expectedIdentity: File
       if (custodyStats.isSymbolicLink() || !custodyStats.isFile()) throw new Error(`Unsafe orphan SQLite lock custody link: ${custodyPath}`);
       if (!sameIdentity(expectedIdentity, identity(custodyStats))) continue;
       if (names.has('-wal') || names.has('-shm')) throw new Error(`Unrecoverable SQLite lock WAL/SHM custody: ${custodyPath}`);
-      if (!names.has('custody') || !names.has('-journal.witness') || !names.has('.provenance')) { const remnants = [...names].filter((name) => name !== 'custody').some((name) => pathEntryExists(`${custodyPath}${name}`)); if (!remnants) throw new Error('database is locked during custody publication'); throw new Error(`Missing SQLite lock custody provenance: ${custodyPath}`); }
+      if (!names.has('custody') || !names.has('-journal.witness') || !names.has('.provenance')) throwIncompleteCustody(new Error(`Missing SQLite lock custody provenance: ${custodyPath}`), databasePath, expectedIdentity, parentIdentity);
       const journalPath = `${custodyPath}-journal`, witnessPath = `${journalPath}.witness`, provenancePath = `${custodyPath}.provenance`;
       const witnessStats = fs.lstatSync(witnessPath, { bigint: true });
       if (witnessStats.isSymbolicLink() || !witnessStats.isFile() || (witnessStats.nlink !== 1n && witnessStats.nlink !== 2n)) throw new Error(`Unsafe orphan SQLite lock sidecar: ${journalPath}`);
@@ -371,9 +372,11 @@ function scanOrphanCustodyArtifacts(databasePath: string, expectedIdentity: File
       try {
         const descriptorStats = fs.fstatSync(provenanceDescriptor, { bigint: true }), pathStats = fs.lstatSync(provenancePath, { bigint: true });
         if (!descriptorStats.isFile() || pathStats.isSymbolicLink() || !pathStats.isFile() || descriptorStats.nlink !== 1n || descriptorStats.size > 1_024n || !sameIdentity(identity(descriptorStats), identity(pathStats))) throw new Error(`Unsafe SQLite lock custody provenance: ${provenancePath}`);
-        const candidate = JSON.parse(fs.readFileSync(provenanceDescriptor, 'utf8')) as Partial<CustodyProvenance>;
+        let candidate: Partial<CustodyProvenance>;
+        try { candidate = JSON.parse(fs.readFileSync(provenanceDescriptor, 'utf8')) as Partial<CustodyProvenance>; }
+        catch (error) { throwIncompleteCustody(new Error(`Corrupted SQLite lock custody provenance: ${provenancePath}`, { cause: error }), databasePath, expectedIdentity, parentIdentity); }
         const manifestDatabase = parseIdentity(candidate?.database), manifestJournal = parseIdentity(candidate?.journal);
-        if (candidate?.version !== PROVENANCE_VERSION || candidate.token !== token || !manifestDatabase || !manifestJournal || !sameIdentity(manifestDatabase, expectedIdentity) || !sameIdentity(manifestJournal, identity(witnessStats))) throw new Error(`Corrupted SQLite lock custody provenance: ${provenancePath}`);
+        if (candidate?.version !== PROVENANCE_VERSION || candidate.token !== token || !manifestDatabase || !manifestJournal || !sameIdentity(manifestDatabase, expectedIdentity) || !sameIdentity(manifestJournal, identity(witnessStats))) throwIncompleteCustody(new Error(`Corrupted SQLite lock custody provenance: ${provenancePath}`), databasePath, expectedIdentity, parentIdentity);
         complete.push({ custodyPath, journalIdentity: manifestJournal, journalPath, provenanceDescriptor, provenanceIdentity: identity(descriptorStats), provenancePath, witnessPath });
       } catch (error) { fs.closeSync(provenanceDescriptor); throw error; }
     }

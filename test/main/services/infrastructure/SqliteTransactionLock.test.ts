@@ -384,6 +384,54 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     expect(transientArtifacts(databasePath)).toEqual([]);
   });
 
+  it.each([
+    ['before the provenance file', 'sqlite-before-provenance-holder'],
+    ['with a partial provenance file', 'sqlite-partial-provenance-holder'],
+  ] as const)('treats an exact live writer as contention %s', async (_label, mode) => {
+    const databasePath = path.join(temporaryRoot, `${mode}.sqlite3`);
+    const child = spawnPausedPublicationOwner(databasePath, mode);
+    let output = '';
+    child.stdout!.on('data', (chunk) => (output += String(chunk)));
+    child.stderr!.on('data', (chunk) => (output += String(chunk)));
+    await waitForOutput(() => output, 'acquired\n');
+
+    try {
+      const [custodyName] = custodyArtifacts(databasePath);
+      expect(custodyName, output).toBeDefined();
+      const custodyPath = path.join(temporaryRoot, custodyName!);
+      expect(fs.existsSync(`${custodyPath}-journal.witness`)).toBe(true);
+      if (mode === 'sqlite-partial-provenance-holder') {
+        const partial = fs.readFileSync(`${custodyPath}.provenance`, 'utf8');
+        expect(partial.length).toBeGreaterThan(0);
+        expect(() => JSON.parse(partial)).toThrow();
+      } else {
+        expect(fs.existsSync(`${custodyPath}.provenance`)).toBe(false);
+      }
+
+      expect(tryRetainSqliteTransactionLock(databasePath, 'contender lost')).toBeNull();
+      await expect(
+        withSqliteTransactionLock(databasePath, async () => undefined, {
+          ...LOCK_OPTIONS,
+          acquireTimeoutMs: 40,
+        })
+      ).rejects.toThrow('lock timeout');
+
+      child.stdin!.write('c');
+      await waitForOutput(() => output, 'published\n');
+      expect(tryRetainSqliteTransactionLock(databasePath, 'contender lost')).toBeNull();
+      child.send!('release');
+      await waitForOutput(() => output, 'released\n');
+      await once(child, 'close');
+
+      const successor = tryRetainSqliteTransactionLock(databasePath, 'successor lost');
+      expect(successor).not.toBeNull();
+      successor!.release();
+      expect(transientArtifacts(databasePath)).toEqual([]);
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+    }
+  });
+
   it('ignores unrelated custody inodes and leaves them untouched', () => {
     const databasePath = path.join(temporaryRoot, 'unrelated-custody.sqlite3');
     const owner = tryRetainSqliteTransactionLock(databasePath, 'initial owner lost');
@@ -493,11 +541,16 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     expect(fs.existsSync(sidecarPath)).toBe(true);
   });
 
-  it('fails closed after a crash before durable provenance publication', async () => {
-    const databasePath = path.join(temporaryRoot, 'pre-provenance-crash.sqlite3');
-    await crashSqliteOwner(databasePath, 'sqlite-before-provenance-holder');
+  it.each([
+    ['before the provenance file', 'sqlite-before-provenance-holder'],
+    ['with a partial provenance file', 'sqlite-partial-provenance-holder'],
+  ] as const)('fails closed after an owner crash %s', async (_label, mode) => {
+    const databasePath = path.join(temporaryRoot, `${mode}-crash.sqlite3`);
+    await crashSqliteOwner(databasePath, mode);
     expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
-      'Missing SQLite lock custody provenance'
+      mode === 'sqlite-before-provenance-holder'
+        ? 'Missing SQLite lock custody provenance'
+        : 'Corrupted SQLite lock custody provenance'
     );
     expect(custodyArtifacts(databasePath)).toHaveLength(1);
   });
@@ -515,6 +568,63 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
       expect(fs.existsSync(custodyPath)).toBe(true);
     }
   );
+
+  it('rejects database inode substitution during a live-publication probe', async () => {
+    if (process.platform === 'win32') return;
+    const databasePath = path.join(temporaryRoot, 'probe-inode-substitution.sqlite3');
+    const displacedPath = `${databasePath}.displaced`;
+    const child = spawnPausedPublicationOwner(databasePath, 'sqlite-before-provenance-holder');
+    let output = '';
+    child.stdout!.on('data', (chunk) => (output += String(chunk)));
+    child.stderr!.on('data', (chunk) => (output += String(chunk)));
+    await waitForOutput(() => output, 'acquired\n', 30_000);
+    setSqliteTransactionLockTestHooksForTests({
+      beforeIncompleteCustodyProbeOpen: () => {
+        fs.renameSync(databasePath, displacedPath);
+        const replacement = new DatabaseSync(databasePath);
+        replacement.close();
+      },
+    });
+
+    try {
+      expect(() => tryRetainSqliteTransactionLock(databasePath, 'contender lost')).toThrow(
+        'identity changed during custody publication probe'
+      );
+      expect(inode(databasePath)).not.toEqual(inode(displacedPath));
+    } finally {
+      child.kill('SIGKILL');
+      await once(child, 'close');
+      fs.rmSync(databasePath, { force: true });
+      fs.renameSync(displacedPath, databasePath);
+    }
+  });
+
+  it('fails closed when the lock root is substituted during a live-publication probe', async () => {
+    if (process.platform === 'win32') return;
+    const databasePath = path.join(temporaryRoot, 'probe-root-substitution.sqlite3');
+    const displacedRoot = `${temporaryRoot}.displaced`;
+    const child = spawnPausedPublicationOwner(databasePath, 'sqlite-before-provenance-holder');
+    let output = '';
+    child.stdout!.on('data', (chunk) => (output += String(chunk)));
+    child.stderr!.on('data', (chunk) => (output += String(chunk)));
+    await waitForOutput(() => output, 'acquired\n', 30_000);
+    setSqliteTransactionLockTestHooksForTests({
+      beforeIncompleteCustodyProbeOpen: () => {
+        fs.renameSync(temporaryRoot, displacedRoot);
+        fs.mkdirSync(temporaryRoot);
+      },
+    });
+
+    try {
+      expect(() => tryRetainSqliteTransactionLock(databasePath, 'contender lost')).toThrow();
+      expect(fs.existsSync(displacedRoot)).toBe(true);
+    } finally {
+      child.kill('SIGKILL');
+      await once(child, 'close');
+      fs.rmSync(temporaryRoot, { recursive: true, force: true });
+      fs.renameSync(displacedRoot, temporaryRoot);
+    }
+  });
 
   it.each(['-wal', '-shm'] as const)(
     'fails closed without deleting an unproven %s sidecar',
@@ -638,7 +748,10 @@ function transientArtifacts(databasePath: string): string[] {
 
 async function crashSqliteOwner(
   databasePath: string,
-  mode: 'sqlite-crash-holder' | 'sqlite-before-provenance-holder' = 'sqlite-crash-holder'
+  mode:
+    | 'sqlite-crash-holder'
+    | 'sqlite-before-provenance-holder'
+    | 'sqlite-partial-provenance-holder' = 'sqlite-crash-holder'
 ): Promise<string> {
   const setup = new DatabaseSync(databasePath);
   setup.exec(
@@ -651,7 +764,7 @@ async function crashSqliteOwner(
     {
       cwd: process.cwd(),
       env: { ...process.env, NODE_ENV: 'test' },
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: [mode === 'sqlite-crash-holder' ? 'ignore' : 'pipe', 'pipe', 'pipe'],
     }
   );
   let output = '';
@@ -663,6 +776,21 @@ async function crashSqliteOwner(
   expect(child.kill('SIGKILL')).toBe(true);
   await once(child, 'close');
   return path.join(path.dirname(databasePath), custodyName!);
+}
+
+function spawnPausedPublicationOwner(
+  databasePath: string,
+  mode: 'sqlite-before-provenance-holder' | 'sqlite-partial-provenance-holder'
+) {
+  return spawn(
+    process.execPath,
+    ['--import', tsxPath, workerPath, mode, databasePath, databasePath],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, NODE_ENV: 'test' },
+      stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+    }
+  );
 }
 
 async function waitForOutput(

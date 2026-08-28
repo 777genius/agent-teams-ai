@@ -1,4 +1,4 @@
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readSync } from 'node:fs';
 
 import {
   getSqliteTransactionLockDatabasePath,
@@ -17,6 +17,7 @@ if (
     'crash-holder',
     'sqlite-before-provenance-holder',
     'sqlite-crash-holder',
+    'sqlite-partial-provenance-holder',
     'sync-contender',
   ].includes(mode ?? '')
 ) {
@@ -50,14 +51,25 @@ if (mode === 'async-holder') {
     await new Promise<void>((resolve) => process.once('message', resolve));
     process.exit(17);
   });
-} else if (mode === 'sqlite-before-provenance-holder') {
-  setSqliteTransactionLockTestHooksForTests({
-    beforeProvenancePublication: () => {
-      process.stdout.write('acquired\n');
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
-    },
-  });
-  tryRetainSqliteTransactionLock(target, 'pre-provenance holder lost ownership');
+} else if (
+  mode === 'sqlite-before-provenance-holder' ||
+  mode === 'sqlite-partial-provenance-holder'
+) {
+  const pausePublication = () => {
+    process.stdout.write('acquired\n');
+    readSync(0, Buffer.alloc(1), 0, 1, null);
+  };
+  setSqliteTransactionLockTestHooksForTests(
+    mode === 'sqlite-before-provenance-holder'
+      ? { beforeProvenancePublication: pausePublication }
+      : { afterPartialProvenanceWrite: pausePublication }
+  );
+  const authority = tryRetainSqliteTransactionLock(target, 'paused publication holder lost');
+  if (!authority) throw new Error('Could not retain paused publication authority');
+  process.stdout.write('published\n');
+  await new Promise<void>((resolve) => process.once('message', resolve));
+  authority.release();
+  process.stdout.write('released\n');
 } else if (mode === 'sqlite-crash-holder') {
   setSqliteTransactionLockTestHooksForTests({
     afterDatabaseOpen: (_databasePath, database) => {
