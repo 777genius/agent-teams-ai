@@ -23,6 +23,10 @@ import type {
 } from '@shared/types';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const admissionBindings = new WeakMap<
+  ProductionLaunchAdmissionLease,
+  { teamName: string; transactionId: string; launchRequestFingerprint: string }
+>();
 
 export function isRosterTransactionId(value: unknown): value is string {
   return typeof value === 'string' && UUID_PATTERN.test(value);
@@ -93,7 +97,12 @@ export function runRosterAuthorizedCreate<T extends TeamLaunchResponse>(
   admission?: ProductionLaunchAdmissionLease
 ): Promise<T> {
   if (!transactionId) return create(request);
-  return authorizeRosterRequest(service, teamName, transactionId, request, admission).then(
+  return runAdmissionAuthorizedRosterLaunch(
+    service,
+    teamName,
+    transactionId,
+    request,
+    admission,
     ({ proof, launchRequestFingerprint }) =>
       runRosterLaunch(
         service,
@@ -144,6 +153,20 @@ export function createRosterAuthorizedLaunchContext(
     return { valid: false, error: 'Invalid rosterTransactionId' };
   }
   const transactionId = value;
+  if (admission && transactionId) {
+    const existingBinding = admissionBindings.get(admission);
+    if (
+      existingBinding &&
+      (existingBinding.teamName !== teamName || existingBinding.transactionId !== transactionId)
+    ) {
+      return { valid: false, error: 'Production launch admission is bound to another transaction' };
+    }
+    admissionBindings.set(admission, {
+      teamName,
+      transactionId,
+      launchRequestFingerprint: admission.launchRequestFingerprint,
+    });
+  }
   // Rollback is an invocation capability, not something possession of a
   // durable transaction ID confers. Replays and restarted callers may resume
   // an admitted transaction but cannot undo it on unrelated rejection paths.
@@ -158,7 +181,12 @@ export function createRosterAuthorizedLaunchContext(
     rollback: () => rollbackRosterLaunchIfSafe(service, teamName, ownedTransactionId),
     run: (request, launch) => {
       if (!transactionId) return launch(request);
-      return authorizeRosterRequest(service, teamName, transactionId, request, admission).then(
+      return runAdmissionAuthorizedRosterLaunch(
+        service,
+        teamName,
+        transactionId,
+        request,
+        admission,
         ({ proof, launchRequestFingerprint }) =>
           runRosterLaunch(
             service,
@@ -178,6 +206,133 @@ export function createRosterAuthorizedLaunchContext(
     runCreate: (request, create) =>
       runRosterAuthorizedCreate(service, teamName, transactionId, request, create, admission),
   };
+}
+
+type AuthorizedRosterRequest = Awaited<ReturnType<typeof authorizeRosterRequest>>;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isExactKnownNoStart(
+  transactionId: string,
+  outcome: Awaited<ReturnType<TeamDataService['getRosterAuthorizationTransactionOutcome']>>
+): boolean {
+  return (
+    outcome.transactionId === transactionId &&
+    (outcome.status === 'rolled-back' || outcome.status === 'not-started')
+  );
+}
+
+function recoveryStatus(
+  transactionId: string,
+  outcome: Awaited<ReturnType<TeamDataService['getRosterAuthorizationTransactionOutcome']>>
+): string {
+  return outcome.transactionId === transactionId ? outcome.status : 'foreign';
+}
+
+function unconfirmedRecoveryError(
+  failure: unknown,
+  status: string,
+  recoveryError?: unknown
+): Error {
+  const message = `${errorMessage(failure)}; roster transaction recovery is ${status}`;
+  return new Error(message, {
+    cause:
+      recoveryError === undefined
+        ? failure
+        : new AggregateError([failure, recoveryError], errorMessage(failure)),
+  });
+}
+
+async function rollbackConsumedAdmission(
+  service: TeamDataService,
+  teamName: string,
+  transactionId: string,
+  failure: unknown
+): Promise<never> {
+  let rollback:
+    | Awaited<ReturnType<TeamDataService['rollbackRosterAuthorizationTransaction']>>
+    | undefined;
+  let rollbackError: unknown;
+  try {
+    rollback = await service.rollbackRosterAuthorizationTransaction(teamName, transactionId);
+  } catch (error) {
+    rollbackError = error;
+  }
+  if (rollback) {
+    if (isExactKnownNoStart(transactionId, rollback)) {
+      throw new RosterLaunchKnownNoStartError(errorMessage(failure));
+    }
+    throw unconfirmedRecoveryError(failure, recoveryStatus(transactionId, rollback));
+  }
+  let durable: Awaited<ReturnType<TeamDataService['getRosterAuthorizationTransactionOutcome']>>;
+  try {
+    durable = await service.getRosterAuthorizationTransactionOutcome(teamName, transactionId);
+  } catch (confirmationError) {
+    throw unconfirmedRecoveryError(
+      failure,
+      'unknown',
+      new AggregateError([rollbackError, confirmationError], errorMessage(failure))
+    );
+  }
+  if (isExactKnownNoStart(transactionId, durable)) {
+    throw new RosterLaunchKnownNoStartError(errorMessage(failure));
+  }
+  throw unconfirmedRecoveryError(failure, recoveryStatus(transactionId, durable), rollbackError);
+}
+
+async function recoverConsumedAdmissionBeforeDispatch(
+  service: TeamDataService,
+  teamName: string,
+  transactionId: string,
+  failure: unknown
+): Promise<never> {
+  let outcome: Awaited<ReturnType<TeamDataService['getRosterAuthorizationTransactionOutcome']>>;
+  try {
+    outcome = await service.getRosterAuthorizationTransactionOutcome(teamName, transactionId);
+  } catch (recoveryError) {
+    throw unconfirmedRecoveryError(failure, 'unknown', recoveryError);
+  }
+  if (outcome.transactionId !== transactionId) {
+    throw unconfirmedRecoveryError(failure, 'foreign');
+  }
+  if (isExactKnownNoStart(transactionId, outcome)) {
+    throw new RosterLaunchKnownNoStartError(errorMessage(failure));
+  }
+  if (
+    outcome.status === 'pending' ||
+    outcome.status === 'applied' ||
+    outcome.status === 'prepared'
+  ) {
+    return rollbackConsumedAdmission(service, teamName, transactionId, failure);
+  }
+  throw unconfirmedRecoveryError(failure, outcome.status);
+}
+
+async function runAdmissionAuthorizedRosterLaunch<T extends TeamLaunchResponse>(
+  service: TeamDataService,
+  teamName: string,
+  transactionId: string,
+  request: TeamCreateRequest | TeamLaunchRequest,
+  admission: ProductionLaunchAdmissionLease | undefined,
+  launch: (authorization: AuthorizedRosterRequest) => Promise<T>
+): Promise<T> {
+  if (!admission) {
+    return launch(await authorizeRosterRequest(service, teamName, transactionId, request));
+  }
+  const authorization = await authorizeRosterRequest(
+    service,
+    teamName,
+    transactionId,
+    request,
+    admission
+  );
+  try {
+    return await launch(authorization);
+  } catch (error) {
+    return recoverConsumedAdmissionBeforeDispatch(service, teamName, transactionId, error);
+  }
 }
 
 export async function runRosterLaunch<T extends TeamLaunchResponse>(
@@ -309,39 +464,66 @@ async function authorizeRosterRequest(
   launchRequestFingerprint: string;
 }> {
   const consumedAdmission = admission ? consumeProductionLaunchAdmission(admission) : undefined;
-  if (
-    consumedAdmission &&
-    !(await service.rosterAuthorizationTransactions.validateLaunchAdmission(
-      teamName,
-      transactionId,
-      consumedAdmission.launchRequestFingerprint
-    ))
-  ) {
-    throw new Error('Roster authorization transaction does not admit this exact launch request');
-  }
-  const outcome = await service.getRosterAuthorizationTransactionOutcome(teamName, transactionId);
-  const roster = outcome.authorizedRoster ?? ('members' in request ? request.members : []);
-  const rosterRevision = outcome.rosterRevision;
-  if (!rosterRevision) {
-    throw new Error('Roster authorization omitted its immutable revision');
-  }
-  if (consumedAdmission) {
+  let cleanupAuthorized = false;
+  try {
+    const outcome = await service.getRosterAuthorizationTransactionOutcome(teamName, transactionId);
+    const roster = outcome.authorizedRoster ?? ('members' in request ? request.members : []);
+    if (consumedAdmission) {
+      const admissionBinding = admissionBindings.get(consumedAdmission);
+      const submittedFingerprint = fingerprintProductionLaunchRequest(request, roster);
+      if (
+        !admissionBinding ||
+        admissionBinding.teamName !== teamName ||
+        admissionBinding.transactionId !== transactionId ||
+        admissionBinding.launchRequestFingerprint !== consumedAdmission.launchRequestFingerprint ||
+        outcome.transactionId !== transactionId ||
+        request.teamName !== teamName ||
+        submittedFingerprint !== consumedAdmission.launchRequestFingerprint
+      ) {
+        throw new Error('Production launch admission is not bound to this exact request');
+      }
+      cleanupAuthorized = true;
+    }
+    if (
+      consumedAdmission &&
+      !(await service.rosterAuthorizationTransactions.validateLaunchAdmission(
+        teamName,
+        transactionId,
+        consumedAdmission.launchRequestFingerprint
+      ))
+    ) {
+      throw new Error('Roster authorization transaction does not admit this exact launch request');
+    }
+    const rosterRevision = outcome.rosterRevision;
+    if (!rosterRevision) {
+      throw new Error('Roster authorization omitted its immutable revision');
+    }
+    if (consumedAdmission) {
+      return {
+        proof: consumedAdmission.executionProof,
+        roster,
+        rosterRevision,
+        launchRequestFingerprint: consumedAdmission.launchRequestFingerprint,
+      };
+    }
+    const proof = request.executionProof;
+    if (!proof || !verifyAuthoritativeModelExecutionProofForRequest(proof, request, roster)) {
+      throw new Error('Fresh authoritative launch authorization is required');
+    }
+    const launchRequestFingerprint = fingerprintProductionLaunchRequest(request, roster);
     return {
-      proof: consumedAdmission.executionProof,
+      proof: bindAuthoritativeModelExecutionProof(proof, launchRequestFingerprint, rosterRevision),
       roster,
       rosterRevision,
-      launchRequestFingerprint: consumedAdmission.launchRequestFingerprint,
+      launchRequestFingerprint,
     };
+  } catch (error) {
+    if (consumedAdmission && cleanupAuthorized) {
+      return rollbackConsumedAdmission(service, teamName, transactionId, error);
+    }
+    if (consumedAdmission) {
+      throw unconfirmedRecoveryError(error, 'unknown');
+    }
+    throw error;
   }
-  const proof = request.executionProof;
-  if (!proof || !verifyAuthoritativeModelExecutionProofForRequest(proof, request, roster)) {
-    throw new Error('Fresh authoritative launch authorization is required');
-  }
-  const launchRequestFingerprint = fingerprintProductionLaunchRequest(request, roster);
-  return {
-    proof: bindAuthoritativeModelExecutionProof(proof, launchRequestFingerprint, rosterRevision),
-    roster,
-    rosterRevision,
-    launchRequestFingerprint,
-  };
 }

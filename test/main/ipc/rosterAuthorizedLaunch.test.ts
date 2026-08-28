@@ -1,5 +1,13 @@
+import {
+  authorizeProductionTeamLaunchRequest,
+  claimProductionLaunchAdmission,
+} from '@main/ipc/teams/authorizeProductionTeamCreateRequest';
 import { registerRosterAuthorizationTransactionHandlers } from '@main/ipc/teams/rosterAuthorizationTransactionHandlers';
-import { runRosterLaunch } from '@main/ipc/teams/rosterAuthorizedLaunch';
+import {
+  createRosterAuthorizedLaunchContext,
+  runRosterLaunch,
+} from '@main/ipc/teams/rosterAuthorizedLaunch';
+import { RosterLaunchKnownNoStartError } from '@main/services/team/provisioning/TeamProvisioningRosterLaunchOutcome';
 import { TeamRuntimeAdapterRegistry } from '@main/services/team/runtime';
 import { TeamDataService } from '@main/services/team/TeamDataService';
 import { invalidateAuthoritativeModelExecutionProofs } from '@main/services/team/TeamLaunchExecutionProofAuthority';
@@ -12,6 +20,7 @@ import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { createRosterAuthorizationTransactionBridge } from '@preload/rosterAuthorizationTransactionBridge';
 import { executeLaunchTeamDialogSubmissionWithRecheck } from '@renderer/components/team/dialogs/launchRosterAuthorizationTransaction';
 import { executeTeamRelaunch } from '@renderer/components/team/dialogs/teamRelaunchFlow';
+import { buildEffectiveRuntimeRosterRevision } from '@shared/utils/effectiveMemberRuntimeIdentity';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
@@ -20,6 +29,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { prepareAuthoritativeExecutionProof } from './helpers/authoritativePreparationTestHarness';
 
 import type { TeamLaunchRuntimeAdapter } from '@main/services/team/runtime';
+import type { RosterAuthorizationTransactionOutcome, TeamLaunchRequest } from '@shared/types';
 
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
@@ -659,5 +669,314 @@ describe('roster-authorized fake launch contract', () => {
     await expect(
       service.getRosterAuthorizationTransactionOutcome(teamName, transactionId)
     ).resolves.toMatchObject({ status: 'rolled-back' });
+  });
+});
+
+describe('consumed production admission rollback', () => {
+  const teamName = 'admission-rollback-team';
+  const transactionId = '77777777-7777-4777-8777-777777777777';
+  const members: [] = [];
+
+  function admittedRequest() {
+    const request: TeamLaunchRequest = {
+      teamName,
+      cwd: process.cwd(),
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: 'gpt-5',
+      leadRuntimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'explicit',
+        model: 'explicit',
+        effort: 'default',
+      },
+    };
+    request.executionProof = prepareAuthoritativeExecutionProof({
+      cwd: process.cwd(),
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-5' }],
+      runtimeRosterRevision: buildEffectiveRuntimeRosterRevision({
+        lead: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5',
+        },
+        leadRuntimeSelectionProvenance: request.leadRuntimeSelectionProvenance,
+        members,
+        missingProvenance: 'reject',
+      })!,
+    });
+    const admitted = authorizeProductionTeamLaunchRequest(request, members, true);
+    return {
+      request: admitted,
+      admission: claimProductionLaunchAdmission(admitted, members, true),
+    };
+  }
+
+  function outcome(
+    status: RosterAuthorizationTransactionOutcome['status'],
+    id = transactionId
+  ): RosterAuthorizationTransactionOutcome {
+    return { transactionId: id, status };
+  }
+
+  function serviceFor(input: {
+    validate?: () => Promise<boolean>;
+    rollback: () => Promise<RosterAuthorizationTransactionOutcome>;
+    getOutcome?: () => Promise<RosterAuthorizationTransactionOutcome>;
+    prepare?: () => Promise<never>;
+  }): TeamDataService {
+    return {
+      rosterAuthorizationTransactions: {
+        validateLaunchAdmission: input.validate ?? vi.fn(async () => false),
+        prepare: input.prepare,
+      },
+      rollbackRosterAuthorizationTransaction: input.rollback,
+      getRosterAuthorizationTransactionOutcome:
+        input.getOutcome ?? vi.fn(async () => outcome('applied')),
+    } as unknown as TeamDataService;
+  }
+
+  it.each([
+    ['mismatched', vi.fn(async () => false), 'rolled-back'],
+    ['corrupt', vi.fn(async () => false), 'not-started'],
+    [
+      'unreadable',
+      vi.fn(async () => {
+        throw new Error('admission index unreadable');
+      }),
+      'rolled-back',
+    ],
+  ] as const)(
+    'rolls back an exact consumed lease after %s admission rejection without dispatch',
+    async (_failure, validate, rollbackStatus) => {
+      const rollback = vi.fn(async () => outcome(rollbackStatus));
+      const service = serviceFor({ rollback, validate });
+      const { request, admission } = admittedRequest();
+      const context = createRosterAuthorizedLaunchContext(
+        service,
+        teamName,
+        transactionId,
+        admission,
+        false
+      );
+      if (!context.valid) throw new Error(context.error);
+      const launch = vi.fn();
+
+      await expect(context.run(request, launch)).rejects.toBeInstanceOf(
+        RosterLaunchKnownNoStartError
+      );
+      expect(rollback).toHaveBeenCalledWith(teamName, transactionId);
+      expect(launch).not.toHaveBeenCalled();
+
+      await expect(context.run(request, launch)).rejects.toThrow(
+        'Production launch admission is stale or already used'
+      );
+      expect(rollback).toHaveBeenCalledOnce();
+      expect(launch).not.toHaveBeenCalled();
+    }
+  );
+
+  it('confirms an exact durable rollback after the rollback response is lost', async () => {
+    const rollback = vi.fn(async () => {
+      throw new Error('rollback response lost');
+    });
+    const getOutcome = vi.fn(async () => outcome('rolled-back'));
+    const service = serviceFor({ rollback, getOutcome });
+    const { request, admission } = admittedRequest();
+    const context = createRosterAuthorizedLaunchContext(
+      service,
+      teamName,
+      transactionId,
+      admission
+    );
+    if (!context.valid) throw new Error(context.error);
+    const launch = vi.fn();
+
+    await expect(context.run(request, launch)).rejects.toBeInstanceOf(
+      RosterLaunchKnownNoStartError
+    );
+    expect(getOutcome).toHaveBeenCalledWith(teamName, transactionId);
+    expect(launch).not.toHaveBeenCalled();
+  });
+
+  it('does not use a consumed lease to roll back a differently bound request', async () => {
+    const rollback = vi.fn(async () => outcome('rolled-back'));
+    const service = serviceFor({ rollback });
+    const { request, admission } = admittedRequest();
+    const context = createRosterAuthorizedLaunchContext(
+      service,
+      teamName,
+      transactionId,
+      admission
+    );
+    if (!context.valid) throw new Error(context.error);
+    const launch = vi.fn();
+
+    await expect(context.run({ ...request, prompt: 'different request' }, launch)).rejects.toThrow(
+      'roster transaction recovery is unknown'
+    );
+    expect(rollback).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['pending', outcome('pending')],
+    ['unknown', outcome('unknown')],
+    ['conflict', outcome('conflict')],
+    ['foreign', outcome('rolled-back', '88888888-8888-4888-8888-888888888888')],
+  ] as const)(
+    'keeps the roster reserved when rollback recovery is %s',
+    async (status, rollbackOutcome) => {
+      const rollback = vi.fn(async () => rollbackOutcome);
+      const service = serviceFor({ rollback });
+      const { request, admission } = admittedRequest();
+      const context = createRosterAuthorizedLaunchContext(
+        service,
+        teamName,
+        transactionId,
+        admission
+      );
+      if (!context.valid) throw new Error(context.error);
+      const launch = vi.fn();
+
+      await expect(context.run(request, launch)).rejects.toMatchObject({
+        name: 'Error',
+        message: expect.stringContaining(`roster transaction recovery is ${status}`),
+      });
+      expect(launch).not.toHaveBeenCalled();
+    }
+  );
+
+  it('keeps an unconfirmed rollback failure generic and reserved', async () => {
+    const getOutcome = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...outcome('applied'),
+        rosterRevision: 'exact-roster-revision',
+        authorizedRoster: members,
+      })
+      .mockRejectedValueOnce(new Error('outcome unreadable'));
+    const service = serviceFor({
+      rollback: vi.fn(async () => {
+        throw new Error('rollback failed');
+      }),
+      getOutcome,
+    });
+    const { request, admission } = admittedRequest();
+    const context = createRosterAuthorizedLaunchContext(
+      service,
+      teamName,
+      transactionId,
+      admission
+    );
+    if (!context.valid) throw new Error(context.error);
+    const launch = vi.fn();
+
+    await expect(context.run(request, launch)).rejects.toMatchObject({
+      name: 'Error',
+      message: expect.stringContaining('roster transaction recovery is unknown'),
+    });
+    expect(launch).not.toHaveBeenCalled();
+  });
+
+  it('rolls back a later pre-dispatch prepare failure after consuming the exact lease', async () => {
+    const rollback = vi.fn(async () => outcome('rolled-back'));
+    const getOutcome = vi.fn(async () => ({
+      ...outcome('applied'),
+      rosterRevision: 'exact-roster-revision',
+      authorizedRoster: members,
+    }));
+    const service = serviceFor({
+      validate: vi.fn(async () => true),
+      rollback,
+      getOutcome,
+      prepare: vi.fn(async () => {
+        throw new Error('prepare response failed');
+      }),
+    });
+    const { request, admission } = admittedRequest();
+    const context = createRosterAuthorizedLaunchContext(
+      service,
+      teamName,
+      transactionId,
+      admission
+    );
+    if (!context.valid) throw new Error(context.error);
+    const launch = vi.fn();
+
+    await expect(context.run(request, launch)).rejects.toBeInstanceOf(
+      RosterLaunchKnownNoStartError
+    );
+    expect(rollback).toHaveBeenCalledWith(teamName, transactionId);
+    expect(launch).not.toHaveBeenCalled();
+  });
+});
+
+describe('renderer recovery for main-owned admission rollback', () => {
+  const authorization = {
+    prepareState: 'ready' as const,
+    providerStatusesAuthoritative: true,
+    preparedRequestSignature: 'same',
+    currentRequestSignature: 'same',
+    preparedGeneration: 1,
+    currentGeneration: 1,
+    providerProofExpiresAtMs: Date.now() + 60_000,
+    executionProof: prepareAuthoritativeExecutionProof({
+      cwd: process.cwd(),
+      checks: [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-5' }],
+    }),
+  };
+  const transactionId = '99999999-9999-4999-8999-999999999999';
+
+  it('clears authorization only after the exact transaction confirms rollback', async () => {
+    const getOutcome = vi
+      .fn()
+      .mockResolvedValueOnce({ transactionId, status: 'applied' })
+      .mockResolvedValueOnce({ transactionId, status: 'rolled-back' });
+    const onKnownNoDispatch = vi.fn();
+
+    await expect(
+      executeLaunchTeamDialogSubmissionWithRecheck(
+        () => authorization,
+        async () => ({ transactionId, status: 'applied' }),
+        getOutcome,
+        async () => {
+          throw Object.assign(new Error('admission rejected'), {
+            code: 'team-launch-known-no-dispatch',
+          });
+        },
+        vi.fn(),
+        () => true,
+        onKnownNoDispatch
+      )
+    ).resolves.toBe(false);
+    expect(onKnownNoDispatch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps authorization reserved when the exact transaction outcome is unknown', async () => {
+    const getOutcome = vi
+      .fn()
+      .mockResolvedValueOnce({ transactionId, status: 'applied' })
+      .mockResolvedValueOnce({ transactionId, status: 'unknown' });
+    const onKnownNoDispatch = vi.fn();
+    const rollback = vi.fn();
+
+    await expect(
+      executeLaunchTeamDialogSubmissionWithRecheck(
+        () => authorization,
+        async () => ({ transactionId, status: 'applied' }),
+        getOutcome,
+        async () => {
+          throw Object.assign(new Error('admission recovery unconfirmed'), {
+            code: 'team-launch-known-no-dispatch',
+          });
+        },
+        rollback,
+        () => true,
+        onKnownNoDispatch
+      )
+    ).rejects.toThrow('admission recovery unconfirmed');
+    expect(onKnownNoDispatch).not.toHaveBeenCalled();
+    expect(rollback).not.toHaveBeenCalled();
   });
 });
