@@ -49,6 +49,7 @@ const MULTIMODEL_PROVIDER_ID_SET = new Set<CliProviderId>(MULTIMODEL_PROVIDER_ID
 export interface CliProviderStatusFetchOptions {
   silent?: boolean;
   epoch?: number;
+  requestEpoch?: number; // Caller-owned replacement-attempt identity.
   verifyModels?: boolean;
   checkReason?: AnalyticsProviderCheckReason;
   projectPath?: string | null;
@@ -1239,8 +1240,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const projectPath = options?.projectPath?.trim() || null;
     const requestIntent = options?.intent ?? 'passive';
     const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}:${requestIntent}`;
+    const requestDedupeKey = `${requestKey}:${options?.requestEpoch ?? 'default'}`;
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
-    const inFlight = cliProviderStatusInFlight.get(requestKey);
+    const inFlight = cliProviderStatusInFlight.get(requestDedupeKey);
     if (inFlight) return inFlight;
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
     const requestId = ++cliProviderStatusRequestId;
@@ -1395,7 +1397,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
               },
             };
           }
-
           const hasProvider = settledCliStatus.providers.some(
             (provider) => provider.providerId === providerId
           );
@@ -1422,7 +1423,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
                 authLoggedIn: nextProviders.some((provider) => provider.authenticated),
                 authMethod: getAuthenticatedProvider(nextProviders)?.authMethod ?? null,
               };
-
           return {
             cliStatus: nextCliStatus,
             cliProviderStatusLoading: nextLoading,
@@ -1552,15 +1552,15 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         clearCodexCatalogLoadingRefresh(providerId);
         return false;
       } finally {
-        if (cliProviderStatusInFlight.get(requestKey) === request) {
-          cliProviderStatusInFlight.delete(requestKey);
+        if (cliProviderStatusInFlight.get(requestDedupeKey) === request) {
+          cliProviderStatusInFlight.delete(requestDedupeKey);
         }
         if (cliProviderStatusActiveRequestIds.get(requestKey) === requestId) {
           cliProviderStatusActiveRequestIds.delete(requestKey);
         }
       }
     })();
-    cliProviderStatusInFlight.set(requestKey, request);
+    cliProviderStatusInFlight.set(requestDedupeKey, request);
     return request;
   },
   invalidateCliStatus: async () => {

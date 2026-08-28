@@ -300,6 +300,146 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('isolates a multi-provider recovery from the timed-out attempt epoch', async () => {
+    const base = createLoadingMultimodelCliStatus();
+    const codex: CliProviderStatus = {
+      ...base.providers.find((provider) => provider.providerId === 'codex')!,
+      supported: true,
+      authenticated: true,
+      authMethod: 'codex_chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: {
+        ...base.providers.find((provider) => provider.providerId === 'codex')!.capabilities,
+        teamLaunch: true,
+      },
+      models: ['gpt-project'],
+    };
+    const requests: Array<{
+      providerId: 'opencode' | 'codex';
+      requestEpoch: number;
+      resolve: (value: boolean) => void;
+    }> = [];
+    storeState.fetchCliProviderStatus.mockImplementation((providerId, options) => {
+      return new Promise<boolean>((resolve) => {
+        requests.push({ providerId, requestEpoch: options?.requestEpoch, resolve });
+      });
+    });
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const snapshots: ProofSnapshot[] = [];
+    const onSnapshot = (snapshot: ProofSnapshot): void => {
+      snapshots.push(snapshot);
+    };
+
+    await act(async () => {
+      root.render(
+        React.createElement(HookProbe, {
+          projectPath: '/project/a',
+          providerIds: ['opencode', 'codex'],
+          onSnapshot,
+        })
+      );
+      await flushPromises();
+    });
+    expect(requests).toHaveLength(2);
+    const firstEpoch = requests[0]!.requestEpoch;
+    expect(requests.map((request) => request.requestEpoch)).toEqual([firstEpoch, firstEpoch]);
+
+    await act(async () => {
+      root.render(
+        React.createElement(HookProbe, {
+          projectPath: '/project/a',
+          providerIds: ['codex', 'opencode'],
+          onSnapshot,
+          renderRevision: 1,
+        })
+      );
+      await flushPromises();
+    });
+    expect(requests).toHaveLength(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EXACT_PROJECT_PROVIDER_PROOF_REFRESH_TIMEOUT_MS);
+      await flushPromises();
+    });
+    expect(requests).toHaveLength(2);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(EXACT_PROJECT_PROVIDER_PROOF_RECOVERY_DELAYS_MS[0]);
+      await flushPromises();
+    });
+    expect(requests).toHaveLength(4);
+    const recoveryEpoch = requests[2]!.requestEpoch;
+    expect(recoveryEpoch).not.toBe(firstEpoch);
+    expect(requests.slice(2).map((request) => request.requestEpoch)).toEqual([
+      recoveryEpoch,
+      recoveryEpoch,
+    ]);
+    for (const index of [0, 1]) {
+      const [firstProvider, firstOptions] = storeState.fetchCliProviderStatus.mock.calls[index]!;
+      const [recoveryProvider, recoveryOptions] =
+        storeState.fetchCliProviderStatus.mock.calls[index + 2]!;
+      expect(recoveryProvider).toBe(firstProvider);
+      expect({ ...recoveryOptions, requestEpoch: firstOptions.requestEpoch }).toEqual(firstOptions);
+    }
+
+    await act(async () => {
+      storeState.cliProviderLaunchProofByScope['opencode\0/project/a'] = {
+        providerStatus: authoritativeProvider(),
+        epoch: 20,
+        requestId: 1,
+        fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a'),
+      };
+      storeState.cliProviderLaunchProofByScope['codex\0/project/a'] = {
+        providerStatus: codex,
+        epoch: 20,
+        requestId: 2,
+        fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a', 'codex'),
+      };
+      requests[0]!.resolve(true);
+      requests[1]!.resolve(true);
+      await flushPromises();
+    });
+    expect(snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
+    expect(snapshots.at(-1)?.providerStatusById.get('codex')).toBeNull();
+
+    await act(async () => {
+      storeState.cliProviderLaunchProofByScope['opencode\0/project/a'] = {
+        providerStatus: authoritativeProvider(),
+        epoch: 20,
+        requestId: 3,
+        fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a'),
+      };
+      requests[3]!.resolve(true);
+      await flushPromises();
+    });
+    expect(snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
+    expect(snapshots.at(-1)?.providerStatusById.get('codex')).toBeNull();
+
+    await act(async () => {
+      storeState.cliProviderLaunchProofByScope['codex\0/project/a'] = {
+        providerStatus: codex,
+        epoch: 20,
+        requestId: 4,
+        fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a', 'codex'),
+      };
+      requests[2]!.resolve(true);
+      await flushPromises();
+    });
+    expect(snapshots.at(-1)?.providerStatusById.get('opencode')).not.toBeNull();
+    expect(snapshots.at(-1)?.providerStatusById.get('codex')).toBe(codex);
+    expect(snapshots.at(-1)?.providerGenerationById.get('opencode')).toBe('20:3');
+    expect(snapshots.at(-1)?.providerGenerationById.get('codex')).toBe('20:4');
+
+    act(() => root.unmount());
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('cancels an in-flight generation and all timers on unmount', async () => {
     const provider = authoritativeProvider();
     let complete: ((value: boolean) => void) | undefined;
@@ -710,6 +850,7 @@ describe('resolveProjectScopedProviderStatus', () => {
       });
       expect(fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
         silent: true,
+        requestEpoch: expect.any(Number),
         checkReason: 'launch_preflight',
         projectPath: '/project/models-only',
         intent: 'launch-proof',

@@ -146,6 +146,7 @@ export function useExactProjectProviderLaunchProof(
         providerIds.map(async (providerId) => {
           const authoritative = await fetchCliProviderStatus(providerId, {
             silent: true,
+            requestEpoch: generation,
             checkReason: 'launch_preflight',
             projectPath: normalizedProjectPath,
             intent: 'launch-proof',

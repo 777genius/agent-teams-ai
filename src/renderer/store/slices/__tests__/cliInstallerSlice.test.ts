@@ -1320,6 +1320,90 @@ describe('project-scoped provider loading', () => {
     }
   });
 
+  it('deduplicates within one request epoch but isolates a replacement epoch', async () => {
+    const previousApi = window.electronAPI;
+    const base = createLoadingMultimodelCliStatus();
+    const openCode = base.providers.find((provider) => provider.providerId === 'opencode')!;
+    const ready: CliProviderStatus = {
+      ...openCode,
+      supported: true,
+      authenticated: true,
+      authMethod: 'opencode_configured_local',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { ...openCode.capabilities, teamLaunch: true },
+      models: ['openai/recovery-model'],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-21T00:00:00.000Z',
+        staleAt: '2099-08-21T00:00:00.000Z',
+        defaultModelId: 'openai/recovery-model',
+        defaultLaunchModel: 'openai/recovery-model',
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+    const completions: Array<(status: CliProviderStatus) => void> = [];
+    const getProviderStatus = vi.fn(
+      () =>
+        new Promise<CliProviderStatus>((resolve) => {
+          completions.push(resolve);
+        })
+    );
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: { getProviderStatus: withProviderStatusEnvelope(getProviderStatus) },
+      } as unknown as ElectronAPI,
+    });
+    const store = createCliInstallerStore();
+    const projectPath = '/project/recovery-epoch';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+    const request = {
+      silent: true,
+      projectPath,
+      intent: 'launch-proof' as const,
+      requestEpoch: 41,
+    };
+    store.setState({ cliStatus: { ...base, installed: true } });
+
+    try {
+      const original = store.getState().fetchCliProviderStatus('opencode', request);
+      const sameAttemptRerender = store.getState().fetchCliProviderStatus('opencode', {
+        ...request,
+      });
+      expect(getProviderStatus).toHaveBeenCalledTimes(1);
+
+      const recovery = store.getState().fetchCliProviderStatus('opencode', {
+        ...request,
+        requestEpoch: 42,
+      });
+      expect(getProviderStatus).toHaveBeenCalledTimes(2);
+
+      completions[0]!(ready);
+      await expect(Promise.all([original, sameAttemptRerender])).resolves.toEqual([false, false]);
+      expect(store.getState().cliProviderLaunchProofByScope[scopeKey]).toBeUndefined();
+
+      completions[1]!(ready);
+      await expect(recovery).resolves.toBe(true);
+      expect(store.getState().cliProviderLaunchProofByScope[scopeKey]).toMatchObject({
+        providerStatus: ready,
+        requestId: expect.any(Number),
+      });
+    } finally {
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+    }
+  });
+
   it('defaults old scoped callers to passive display state without publishing proof', async () => {
     const previousApi = window.electronAPI;
     const base = createLoadingMultimodelCliStatus();
