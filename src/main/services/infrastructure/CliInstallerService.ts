@@ -883,6 +883,7 @@ export class CliInstallerService {
     providerId: CliProviderId,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
+    const generation = this.statusGatherGeneration;
     await resolveInteractiveShellEnvBestEffort({
       timeoutMs: 1_500,
       fallbackEnv: process.env,
@@ -907,7 +908,6 @@ export class CliInstallerService {
       );
     }
 
-    const generation = this.statusGatherGeneration;
     const handleCatalogUpdate = (hydratedProviderStatus: CliProviderStatus): void => {
       if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
         return;

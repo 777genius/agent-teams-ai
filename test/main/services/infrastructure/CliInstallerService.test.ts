@@ -153,6 +153,31 @@ function createTestProviderStatus(
   };
 }
 
+function createDeferred<T>(): {
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+} {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+function createProviderStatuses(codexStatusMessage: string): CliProviderStatus[] {
+  return [
+    {
+      ...createTestProviderStatus('anthropic', false, null),
+      statusMessage: 'fresh anthropic state',
+    },
+    {
+      ...createTestProviderStatus('codex', true, 'chatgpt'),
+      statusMessage: codexStatusMessage,
+    },
+    createTestProviderStatus('opencode', false, null),
+  ];
+}
+
 describe('CliInstallerService', () => {
   let service: CliInstallerService;
 
@@ -1319,70 +1344,175 @@ describe('CliInstallerService', () => {
       vi.useRealTimers();
     });
 
-    it('does not let stale explicit provider refresh mutate a newer status snapshot', async () => {
-      allowConsoleLogs();
+    describe('explicit provider refresh invalidation fencing', () => {
+      function configureMultimodelStatus() {
+        vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+        vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+          displayName: 'agent_teams_orchestrator',
+          supportsSelfUpdate: false,
+          showVersionDetails: false,
+          showBinaryPath: false,
+        });
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/agent_teams_orchestrator');
+        vi.mocked(execCli).mockResolvedValue({ stdout: '0.0.45', stderr: '' });
+        vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses').mockResolvedValue(
+          createProviderStatuses('fresh codex state')
+        );
+        const mockWindow = {
+          isDestroyed: () => false,
+          webContents: { send: vi.fn(), isDestroyed: () => false },
+        };
+        service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
+        return mockWindow;
+      }
 
-      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
-      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
-        displayName: 'agent_teams_orchestrator',
-        supportsSelfUpdate: false,
-        showVersionDetails: false,
-        showBinaryPath: false,
+      function createStaleProvider(): CliProviderStatus {
+        return {
+          ...createTestProviderStatus('codex', false, null),
+          verificationState: 'error',
+          statusMessage: 'stale codex state',
+        };
+      }
+
+      function expectNoStatusProgress(mockWindow: {
+        webContents: { send: ReturnType<typeof vi.fn> };
+      }): void {
+        expect(
+          mockWindow.webContents.send.mock.calls.filter(
+            (call: unknown[]) =>
+              call[0] === 'cliInstaller:progress' &&
+              (call[1] as { type?: string }).type === 'status'
+          )
+        ).toHaveLength(0);
+      }
+
+      it('fences a refresh invalidated while shell environment resolution is pending', async () => {
+        allowConsoleLogs();
+        const mockWindow = configureMultimodelStatus();
+        const shellGate = createDeferred<NodeJS.ProcessEnv>();
+        resolveInteractiveShellEnvBestEffortMock
+          .mockImplementationOnce(() => shellGate.promise)
+          .mockImplementation(
+            async (options?: { fallbackEnv?: NodeJS.ProcessEnv }) =>
+              options?.fallbackEnv ?? process.env
+          );
+        const staleProvider = createStaleProvider();
+        vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus').mockImplementation(
+          async (_binaryPath, _providerId, onCatalogUpdate) => {
+            onCatalogUpdate?.(staleProvider);
+            return staleProvider;
+          }
+        );
+
+        const staleRefresh = service.getProviderStatus('codex');
+        await vi.waitFor(() =>
+          expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledTimes(1)
+        );
+        service.invalidateStatusCache();
+        await service.getStatus();
+        const currentSnapshot = service.getLatestStatusSnapshot();
+        mockWindow.webContents.send.mockClear();
+
+        shellGate.resolve(process.env);
+        await expect(staleRefresh).resolves.toBe(staleProvider);
+
+        expect(service.getLatestStatusSnapshot()).toEqual(currentSnapshot);
+        expect(
+          currentSnapshot?.providers.find((provider) => provider.providerId === 'anthropic')
+            ?.statusMessage
+        ).toBe('fresh anthropic state');
+        expectNoStatusProgress(mockWindow);
       });
-      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/agent_teams_orchestrator');
-      vi.mocked(execCli).mockResolvedValue({ stdout: '0.0.45', stderr: '' });
 
-      const providerStatusesSpy = vi
-        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses')
-        .mockResolvedValueOnce([
-          createTestProviderStatus('anthropic', false, null),
-          {
-            ...createTestProviderStatus('codex', false, null),
-            statusMessage: 'initial codex state',
-          },
-          createTestProviderStatus('opencode', false, null),
-        ])
-        .mockResolvedValueOnce([
-          createTestProviderStatus('anthropic', false, null),
-          {
-            ...createTestProviderStatus('codex', true, 'chatgpt'),
-            statusMessage: 'fresh codex state',
-          },
-          createTestProviderStatus('opencode', false, null),
-        ]);
+      it('fences a refresh invalidated while binary resolution is pending', async () => {
+        allowConsoleLogs();
+        const mockWindow = configureMultimodelStatus();
+        const binaryGate = createDeferred<string | null>();
+        vi.mocked(ClaudeBinaryResolver.resolve)
+          .mockReturnValueOnce(binaryGate.promise)
+          .mockResolvedValue('/mock/agent_teams_orchestrator');
+        const staleProvider = createStaleProvider();
+        vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus').mockImplementation(
+          async (_binaryPath, _providerId, onCatalogUpdate) => {
+            onCatalogUpdate?.(staleProvider);
+            return staleProvider;
+          }
+        );
 
-      let resolveStaleProvider!: (provider: CliProviderStatus) => void;
-      const staleProvider = new Promise<CliProviderStatus>((resolve) => {
-        resolveStaleProvider = resolve;
-      });
-      const providerStatusSpy = vi
-        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
-        .mockReturnValue(staleProvider);
+        const staleRefresh = service.getProviderStatus('codex');
+        await vi.waitFor(() => expect(ClaudeBinaryResolver.resolve).toHaveBeenCalledTimes(1));
+        service.invalidateStatusCache();
+        await service.getStatus();
+        const currentSnapshot = service.getLatestStatusSnapshot();
+        mockWindow.webContents.send.mockClear();
 
-      await service.getStatus();
-      const staleRefresh = service.getProviderStatus('codex');
-      await vi.waitFor(() => {
-        expect(providerStatusSpy).toHaveBeenCalledTimes(1);
+        binaryGate.resolve('/mock/agent_teams_orchestrator');
+        await expect(staleRefresh).resolves.toBe(staleProvider);
+
+        expect(service.getLatestStatusSnapshot()).toEqual(currentSnapshot);
+        expectNoStatusProgress(mockWindow);
       });
 
-      service.invalidateStatusCache();
-      await service.getStatus();
+      it('fences a refresh invalidated while bridge provider status is pending', async () => {
+        allowConsoleLogs();
+        const mockWindow = configureMultimodelStatus();
+        const bridgeGate = createDeferred<void>();
+        const staleProvider = createStaleProvider();
+        const providerStatusSpy = vi
+          .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+          .mockImplementation(async (_binaryPath, _providerId, onCatalogUpdate) => {
+            await bridgeGate.promise;
+            onCatalogUpdate?.(staleProvider);
+            return staleProvider;
+          });
 
-      resolveStaleProvider({
-        ...createTestProviderStatus('codex', false, null),
-        verificationState: 'error',
-        statusMessage: 'stale codex state',
+        const staleRefresh = service.getProviderStatus('codex');
+        await vi.waitFor(() => expect(providerStatusSpy).toHaveBeenCalledTimes(1));
+        service.invalidateStatusCache();
+        await service.getStatus();
+        const currentSnapshot = service.getLatestStatusSnapshot();
+        mockWindow.webContents.send.mockClear();
+
+        bridgeGate.resolve(undefined);
+        await expect(staleRefresh).resolves.toBe(staleProvider);
+
+        expect(service.getLatestStatusSnapshot()).toEqual(currentSnapshot);
+        expectNoStatusProgress(mockWindow);
       });
-      await staleRefresh;
 
-      const latestCodex = service
-        .getLatestStatusSnapshot()
-        ?.providers.find((provider) => provider.providerId === 'codex');
-      expect(latestCodex?.statusMessage).toBe('fresh codex state');
-      expect(latestCodex?.authenticated).toBe(true);
+      it('allows a current-generation refresh to update cache and publish progress', async () => {
+        allowConsoleLogs();
+        const mockWindow = configureMultimodelStatus();
+        await service.getStatus();
+        const currentProvider = {
+          ...createTestProviderStatus('codex', true, 'chatgpt'),
+          statusMessage: 'current codex state',
+        };
+        vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus').mockImplementation(
+          async (_binaryPath, _providerId, onCatalogUpdate) => {
+            onCatalogUpdate?.(currentProvider);
+            return currentProvider;
+          }
+        );
+        mockWindow.webContents.send.mockClear();
 
-      providerStatusesSpy.mockRestore();
-      providerStatusSpy.mockRestore();
+        await expect(service.getProviderStatus('codex')).resolves.toBe(currentProvider);
+
+        const latest = service.getLatestStatusSnapshot();
+        expect(
+          latest?.providers.find((provider) => provider.providerId === 'codex')?.statusMessage
+        ).toBe('current codex state');
+        expect(
+          latest?.providers.find((provider) => provider.providerId === 'anthropic')?.statusMessage
+        ).toBe('fresh anthropic state');
+        expect(
+          mockWindow.webContents.send.mock.calls.filter(
+            (call: unknown[]) =>
+              call[0] === 'cliInstaller:progress' &&
+              (call[1] as { type?: string }).type === 'status'
+          )
+        ).toHaveLength(1);
+      });
     });
   });
 
