@@ -1219,13 +1219,13 @@ async function wrapTeamHandler<T>(
     return { success: true, data };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error(`[teams:${operation}] ${message}`);
     if (error instanceof RosterLaunchKnownNoStartError)
       return {
         success: false,
         error: message,
         errorCode: TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE,
       };
+    logger.error(`[teams:${operation}] ${message}`);
     return { success: false, error: message };
   }
 }
