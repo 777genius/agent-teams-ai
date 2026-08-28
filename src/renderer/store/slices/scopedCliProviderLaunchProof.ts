@@ -22,6 +22,19 @@ export interface ScopedCliProviderLaunchProof {
   authorityScope?: CliProviderStatusAuthorityScope;
 }
 
+export interface ScopedCliProviderAuthorityState {
+  /** Monotonic tombstones prevent late cross-project responses from reviving cleared proofs. */
+  cliProviderAuthorityGlobalGeneration: number | null;
+  cliProviderAuthorityProfileGenerationById: Readonly<Partial<Record<CliProviderId, number>>>;
+}
+
+export function createEmptyScopedCliProviderAuthorityState(): ScopedCliProviderAuthorityState {
+  return {
+    cliProviderAuthorityGlobalGeneration: null,
+    cliProviderAuthorityProfileGenerationById: {},
+  };
+}
+
 export function setBoundedScopedProviderLaunchProof(
   current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
   scopeKey: string,
