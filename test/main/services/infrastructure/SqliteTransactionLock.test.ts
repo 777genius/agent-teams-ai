@@ -106,6 +106,16 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
         'state.json.lock.sqlite3.custody-0123456789abcdef0123456789abcdef-journal'
       )
     ).toBe(true);
+    expect(
+      isSqliteTransactionLockArtifactName(
+        'state.json.lock.sqlite3.custody-0123456789abcdef0123456789abcdef-journal.witness'
+      )
+    ).toBe(true);
+    expect(
+      isSqliteTransactionLockArtifactName(
+        'state.json.lock.sqlite3.custody-0123456789abcdef0123456789abcdef.provenance'
+      )
+    ).toBe(true);
     expect(isSqliteTransactionLockArtifactName('state.json.lock.sqlite3.custody-short')).toBe(
       false
     );
@@ -341,7 +351,9 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     });
     await waitForOutput(() => output, 'acquired\n');
     expect(custodyArtifacts(databasePath)).toHaveLength(1);
-    expect(transientArtifacts(databasePath).some((entry) => entry.endsWith('-journal'))).toBe(true);
+    expect(
+      transientArtifacts(databasePath).some((entry) => entry.endsWith('-journal.witness'))
+    ).toBe(true);
 
     expect(child.kill('SIGKILL')).toBe(true);
     const [code, signal] = (await once(child, 'close')) as [number | null, NodeJS.Signals | null];
@@ -365,7 +377,7 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     const owner = tryRetainSqliteTransactionLock(databasePath, 'owner lost');
     expect(owner).not.toBeNull();
     const liveArtifacts = transientArtifacts(databasePath);
-    expect(liveArtifacts).toHaveLength(2);
+    expect(liveArtifacts).toHaveLength(4);
     expect(tryRetainSqliteTransactionLock(databasePath, 'contender lost')).toBeNull();
     expect(transientArtifacts(databasePath)).toEqual(liveArtifacts);
     owner!.release();
@@ -388,14 +400,67 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     expect(fs.existsSync(custodyPath)).toBe(true);
   });
 
-  it('rejects a symlinked orphan journal without opening or deleting it', () => {
-    if (process.platform === 'win32') return;
-    const databasePath = path.join(temporaryRoot, 'tampered-sidecar.sqlite3');
+  it('rejects a foreign ordinary orphan journal without opening or deleting it', () => {
+    const databasePath = path.join(temporaryRoot, 'foreign-ordinary-sidecar.sqlite3');
     const owner = tryRetainSqliteTransactionLock(databasePath, 'initial owner lost');
     owner!.release();
-    const custodyPath = `${databasePath}.custody-22222222222222222222222222222222`;
+    const custodyPath = `${databasePath}.custody-21212121212121212121212121212121`;
     const sidecarPath = `${custodyPath}-journal`;
     fs.linkSync(databasePath, custodyPath);
+    fs.writeFileSync(sidecarPath, 'foreign ordinary file');
+    const foreignIdentity = inode(sidecarPath);
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'Missing SQLite lock custody provenance'
+    );
+    expect(inode(sidecarPath)).toEqual(foreignIdentity);
+    expect(fs.readFileSync(sidecarPath, 'utf8')).toBe('foreign ordinary file');
+  });
+
+  it('revalidates a foreign replacement between orphan scan and SQLite open', async () => {
+    const databasePath = path.join(temporaryRoot, 'scan-open-replacement.sqlite3');
+    const custodyPath = await crashSqliteOwner(databasePath);
+    const journalPath = `${custodyPath}-journal`;
+    setSqliteTransactionLockTestHooksForTests({
+      beforeOrphanDatabaseOpen: () => {
+        fs.rmSync(journalPath, { force: true });
+        fs.writeFileSync(journalPath, 'foreign replacement');
+      },
+    });
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'changed before recovery open'
+    );
+    expect(fs.readFileSync(journalPath, 'utf8')).toBe('foreign replacement');
+  });
+
+  it('revalidates a foreign replacement between recovery and artifact unlink', async () => {
+    const databasePath = path.join(temporaryRoot, 'scan-unlink-replacement.sqlite3');
+    const custodyPath = await crashSqliteOwner(databasePath);
+    const journalPath = `${custodyPath}-journal`;
+    let replaced = false;
+    setSqliteTransactionLockTestHooksForTests({
+      beforeOrphanArtifactUnlink: (artifactPath) => {
+        if (artifactPath === journalPath && !replaced) {
+          replaced = true;
+          fs.rmSync(journalPath, { force: true });
+          fs.writeFileSync(journalPath, 'foreign replacement');
+        }
+      },
+    });
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'artifact changed before cleanup'
+    );
+    expect(fs.readFileSync(journalPath, 'utf8')).toBe('foreign replacement');
+  });
+
+  it('rejects a symlinked proven journal witness without opening or deleting it', async () => {
+    if (process.platform === 'win32') return;
+    const databasePath = path.join(temporaryRoot, 'tampered-sidecar.sqlite3');
+    const custodyPath = await crashSqliteOwner(databasePath);
+    const sidecarPath = `${custodyPath}-journal.witness`;
+    fs.unlinkSync(sidecarPath);
     fs.symlinkSync(databasePath, sidecarPath);
 
     expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
@@ -414,13 +479,11 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
         fs.linkSync(sidecarPath, `${sidecarPath}.foreign-link`);
       },
     ],
-  ])('rejects a %s orphan sidecar without deleting custody', (_label, createSidecar) => {
+  ])('rejects a %s proven sidecar without deleting custody', async (_label, createSidecar) => {
     const databasePath = path.join(temporaryRoot, `${_label}-sidecar.sqlite3`);
-    const owner = tryRetainSqliteTransactionLock(databasePath, 'initial owner lost');
-    owner!.release();
-    const custodyPath = `${databasePath}.custody-33333333333333333333333333333333`;
-    const sidecarPath = `${custodyPath}-journal`;
-    fs.linkSync(databasePath, custodyPath);
+    const custodyPath = await crashSqliteOwner(databasePath);
+    const sidecarPath = `${custodyPath}-journal.witness`;
+    fs.unlinkSync(sidecarPath);
     createSidecar(sidecarPath);
 
     expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
@@ -429,6 +492,44 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     expect(fs.existsSync(custodyPath)).toBe(true);
     expect(fs.existsSync(sidecarPath)).toBe(true);
   });
+
+  it('fails closed after a crash before durable provenance publication', async () => {
+    const databasePath = path.join(temporaryRoot, 'pre-provenance-crash.sqlite3');
+    await crashSqliteOwner(databasePath, 'sqlite-before-provenance-holder');
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'Missing SQLite lock custody provenance'
+    );
+    expect(custodyArtifacts(databasePath)).toHaveLength(1);
+  });
+
+  it.each(['missing', 'corrupted'] as const)(
+    'fails closed for %s custody provenance',
+    async (mode) => {
+      const databasePath = path.join(temporaryRoot, `${mode}-provenance.sqlite3`);
+      const custodyPath = await crashSqliteOwner(databasePath);
+      const provenancePath = `${custodyPath}.provenance`;
+      if (mode === 'missing') fs.unlinkSync(provenancePath);
+      else fs.writeFileSync(provenancePath, '{not-json');
+
+      expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow();
+      expect(fs.existsSync(custodyPath)).toBe(true);
+    }
+  );
+
+  it.each(['-wal', '-shm'] as const)(
+    'fails closed without deleting an unproven %s sidecar',
+    async (suffix) => {
+      const databasePath = path.join(temporaryRoot, `${suffix.slice(1)}-sidecar.sqlite3`);
+      const custodyPath = await crashSqliteOwner(databasePath);
+      const sidecarPath = `${custodyPath}${suffix}`;
+      fs.writeFileSync(sidecarPath, 'foreign WAL-family data');
+
+      expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+        'Unrecoverable SQLite lock WAL/SHM custody'
+      );
+      expect(fs.readFileSync(sidecarPath, 'utf8')).toBe('foreign WAL-family data');
+    }
+  );
 
   it('rejects unexpected external hard links to the guarded database', () => {
     const databasePath = path.join(temporaryRoot, 'extra-hard-link.sqlite3');
@@ -533,6 +634,35 @@ function transientArtifacts(databasePath: string): string[] {
         entry === `${databaseName}-shm` ||
         entry === `${databaseName}-wal`
     );
+}
+
+async function crashSqliteOwner(
+  databasePath: string,
+  mode: 'sqlite-crash-holder' | 'sqlite-before-provenance-holder' = 'sqlite-crash-holder'
+): Promise<string> {
+  const setup = new DatabaseSync(databasePath);
+  setup.exec(
+    "CREATE TABLE IF NOT EXISTS recovery_state(value TEXT NOT NULL); DELETE FROM recovery_state; INSERT INTO recovery_state VALUES ('stable')"
+  );
+  setup.close();
+  const child = spawn(
+    process.execPath,
+    ['--import', tsxPath, workerPath, mode, databasePath, databasePath],
+    {
+      cwd: process.cwd(),
+      env: { ...process.env, NODE_ENV: 'test' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    }
+  );
+  let output = '';
+  child.stdout!.on('data', (chunk) => (output += String(chunk)));
+  child.stderr!.on('data', (chunk) => (output += String(chunk)));
+  await waitForOutput(() => output, 'acquired\n');
+  const [custodyName] = custodyArtifacts(databasePath);
+  expect(custodyName, output).toBeDefined();
+  expect(child.kill('SIGKILL')).toBe(true);
+  await once(child, 'close');
+  return path.join(path.dirname(databasePath), custodyName!);
 }
 
 async function waitForOutput(

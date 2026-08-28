@@ -15,6 +15,7 @@ if (
     'async-holder',
     'authority-holder',
     'crash-holder',
+    'sqlite-before-provenance-holder',
     'sqlite-crash-holder',
     'sync-contender',
   ].includes(mode ?? '')
@@ -49,6 +50,14 @@ if (mode === 'async-holder') {
     await new Promise<void>((resolve) => process.once('message', resolve));
     process.exit(17);
   });
+} else if (mode === 'sqlite-before-provenance-holder') {
+  setSqliteTransactionLockTestHooksForTests({
+    beforeProvenancePublication: () => {
+      process.stdout.write('acquired\n');
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
+    },
+  });
+  tryRetainSqliteTransactionLock(target, 'pre-provenance holder lost ownership');
 } else if (mode === 'sqlite-crash-holder') {
   setSqliteTransactionLockTestHooksForTests({
     afterDatabaseOpen: (_databasePath, database) => {

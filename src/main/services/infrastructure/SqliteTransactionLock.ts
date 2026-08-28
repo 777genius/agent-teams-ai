@@ -11,7 +11,9 @@ const MAX_IDENTITY_PREPARATION_ATTEMPTS = 8;
 const CUSTODY_TOKEN_BYTES = 16;
 const MAX_CUSTODY_DIRECTORY_ENTRIES = 4_096;
 const MAX_ORPHAN_CUSTODY_LINKS = 64;
-const SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX = /^\.custody-([0-9a-f]{32})(-journal|-shm|-wal)?$/;
+const SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX =
+  /^\.custody-([0-9a-f]{32})(-journal|-shm|-wal|\.provenance|-journal\.witness)?$/;
+const PROVENANCE_VERSION = 1;
 
 export interface SqliteTransactionLockOptions {
   acquireTimeoutMs: number;
@@ -35,6 +37,27 @@ interface DatabaseCustodyLink {
   path: string;
 }
 
+interface ProvenanceIdentity {
+  dev: string;
+  ino: string;
+}
+
+interface CustodyProvenance {
+  version: number;
+  token: string;
+  database: ProvenanceIdentity;
+  journal: ProvenanceIdentity;
+}
+
+interface PublishedProvenance {
+  descriptor: number;
+  identity: FileIdentity;
+  journalIdentity: FileIdentity;
+  journalPath: string;
+  path: string;
+  witnessPath: string;
+}
+
 interface Failure {
   error: unknown;
   context: string;
@@ -44,6 +67,9 @@ export interface SqliteTransactionLockTestHooks {
   afterAbsentFilePrecreated?(databasePath: string): void;
   beforeDatabaseOpen?(databasePath: string): void;
   afterDatabaseOpen?(databasePath: string, database: DatabaseSync): void;
+  beforeProvenancePublication?(custodyPath: string): void;
+  beforeOrphanDatabaseOpen?(custodyPath: string): void;
+  beforeOrphanArtifactUnlink?(artifactPath: string): void;
 }
 
 let testHooks: SqliteTransactionLockTestHooks | undefined;
@@ -65,6 +91,7 @@ interface OpenLock {
   databaseIdentity: FileIdentity;
   identityDescriptor: number;
   parentIdentity: FileIdentity;
+  provenance: PublishedProvenance;
 }
 
 export interface RetainedSqliteTransactionLock {
@@ -96,6 +123,9 @@ export function isSqliteTransactionLockArtifactName(fileName: string): boolean {
 function isMissing(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
 }
+
+// prettier-ignore
+function pathEntryExists(pathname: string): boolean { try { fs.lstatSync(pathname); return true; } catch (error) { if (isMissing(error)) return false; throw error; } }
 
 function identity(stats: fs.BigIntStats): FileIdentity {
   return { dev: stats.dev, ino: stats.ino };
@@ -276,164 +306,118 @@ function validateDatabaseCustodyLink(
   syncDirectory(path.dirname(databasePath));
 }
 
-interface OrphanCustodyArtifacts {
-  custodyPath: string;
-  sidecarPaths: string[];
+// These compact, ignored declarations keep this security boundary below the production-size cap.
+// prettier-ignore
+function serializedIdentity(value: FileIdentity): ProvenanceIdentity { return { dev: value.dev.toString(), ino: value.ino.toString() }; }
+// prettier-ignore
+function parseIdentity(value: unknown): FileIdentity | null { if (!value || typeof value !== 'object') return null; const item = value as Partial<ProvenanceIdentity>; if (!/^\d+$/.test(item.dev ?? '') || !/^\d+$/.test(item.ino ?? '')) return null; return { dev: BigInt(item.dev!), ino: BigInt(item.ino!) }; }
+
+// prettier-ignore
+function publishCustodyProvenance(custodyPath: string, databaseIdentity: FileIdentity): PublishedProvenance {
+  const journalPath = `${custodyPath}-journal`, witnessPath = `${journalPath}.witness`, provenancePath = `${custodyPath}.provenance`;
+  const journalStats = fs.lstatSync(journalPath, { bigint: true });
+  if (journalStats.isSymbolicLink() || !journalStats.isFile() || journalStats.nlink !== 1n) throw new Error(`Unsafe SQLite lock journal before provenance: ${journalPath}`);
+  const journalIdentity = identity(journalStats); fs.linkSync(journalPath, witnessPath);
+  const witnessStats = fs.lstatSync(witnessPath, { bigint: true }), linkedStats = fs.lstatSync(journalPath, { bigint: true });
+  if (linkedStats.nlink !== 2n || witnessStats.nlink !== 2n || !sameIdentity(journalIdentity, identity(linkedStats)) || !sameIdentity(journalIdentity, identity(witnessStats))) throw new Error(`SQLite lock journal witness identity changed: ${journalPath}`);
+  testHooks?.beforeProvenancePublication?.(custodyPath);
+  const token = custodyPath.slice(custodyPath.lastIndexOf('.custody-') + '.custody-'.length);
+  const manifest: CustodyProvenance = { version: PROVENANCE_VERSION, token, database: serializedIdentity(databaseIdentity), journal: serializedIdentity(journalIdentity) };
+  let descriptor: number | undefined, provenanceIdentity: FileIdentity | undefined;
+  try {
+    descriptor = fs.openSync(provenancePath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_RDWR | NO_FOLLOW, 0o600);
+    provenanceIdentity = identity(fs.fstatSync(descriptor, { bigint: true })); fs.writeSync(descriptor, `${JSON.stringify(manifest)}\n`, undefined, 'utf8'); fs.fdatasyncSync(descriptor); syncDirectory(path.dirname(custodyPath));
+    return { descriptor, identity: provenanceIdentity, journalIdentity, journalPath, path: provenancePath, witnessPath };
+  } catch (error) {
+    const failures = [descriptor === undefined ? null : captureFailure('SQLite lock provenance descriptor close', () => fs.closeSync(descriptor!)), captureFailure('SQLite lock journal witness cleanup', () => unlinkExact(witnessPath, journalIdentity, true)), provenanceIdentity ? captureFailure('SQLite lock provenance file cleanup', () => unlinkExact(provenancePath, provenanceIdentity!, true)) : null].filter((failure): failure is Failure => failure !== null);
+    throwWithCleanupFailures({ context: 'SQLite lock provenance publication', error }, failures);
+  }
 }
 
-function scanOrphanCustodyArtifacts(
-  databasePath: string,
-  expectedIdentity: FileIdentity,
-  parentIdentity: FileIdentity
-): OrphanCustodyArtifacts[] {
-  const directoryPath = path.dirname(databasePath);
-  const databaseName = path.basename(databasePath);
-  const prefix = `${databaseName}.custody-`;
-  const groups = new Map<string, OrphanCustodyArtifacts>();
-  const directory = fs.opendirSync(directoryPath);
-  let entryCount = 0;
+// prettier-ignore
+type OrphanCustodyArtifacts = { custodyPath: string; journalIdentity: FileIdentity; journalPath: string; provenanceDescriptor: number; provenanceIdentity: FileIdentity; provenancePath: string; witnessPath: string };
+
+// prettier-ignore
+function scanOrphanCustodyArtifacts(databasePath: string, expectedIdentity: FileIdentity, parentIdentity: FileIdentity): OrphanCustodyArtifacts[] {
+  const directoryPath = path.dirname(databasePath), databaseName = path.basename(databasePath), prefix = `${databaseName}.custody-`;
+  const groups = new Map<string, Set<string>>(), directory = fs.opendirSync(directoryPath); let entryCount = 0;
   try {
     for (;;) {
-      const entry = directory.readSync();
-      if (!entry) break;
-      entryCount += 1;
-      if (entryCount > MAX_CUSTODY_DIRECTORY_ENTRIES) {
-        throw new Error(`SQLite lock custody directory scan exceeded its bound: ${directoryPath}`);
-      }
+      const entry = directory.readSync(); if (!entry) break;
+      if (++entryCount > MAX_CUSTODY_DIRECTORY_ENTRIES) throw new Error(`SQLite lock custody directory scan exceeded its bound: ${directoryPath}`);
       if (!entry.name.startsWith(prefix)) continue;
-      const suffix = entry.name.slice(databaseName.length);
-      const match = SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX.exec(suffix);
-      if (!match) continue;
-      const token = match[1];
-      let group = groups.get(token);
-      if (!group) {
-        if (groups.size >= MAX_ORPHAN_CUSTODY_LINKS) {
-          throw new Error(`SQLite lock orphan custody scan exceeded its bound: ${databasePath}`);
-        }
-        group = { custodyPath: path.join(directoryPath, `${prefix}${token}`), sidecarPaths: [] };
-        groups.set(token, group);
-      }
-      if (match[2]) group.sidecarPaths.push(path.join(directoryPath, entry.name));
+      const match = SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX.exec(entry.name.slice(databaseName.length)); if (!match) continue;
+      const token = match[1]; let names = groups.get(token);
+      if (!names) { if (groups.size >= MAX_ORPHAN_CUSTODY_LINKS) throw new Error(`SQLite lock orphan custody scan exceeded its bound: ${databasePath}`); names = new Set(); groups.set(token, names); }
+      names.add(match[2] ?? 'custody');
     }
-  } finally {
-    directory.closeSync();
-  }
-
+  } finally { directory.closeSync(); }
   const parentStats = fs.lstatSync(directoryPath, { bigint: true });
-  if (
-    parentStats.isSymbolicLink() ||
-    !parentStats.isDirectory() ||
-    !sameIdentity(parentIdentity, identity(parentStats))
-  ) {
-    throw new Error(`Lock database parent changed during custody recovery: ${databasePath}`);
-  }
-
-  const completeGroups: OrphanCustodyArtifacts[] = [];
-  for (const group of groups.values()) {
-    let custodyStats: fs.BigIntStats;
-    try {
-      custodyStats = fs.lstatSync(group.custodyPath, { bigint: true });
-    } catch (error) {
-      if (isMissing(error)) {
-        throw new Error(`SQLite lock custody sidecar has no database link: ${group.custodyPath}`);
-      }
-      throw error;
+  if (parentStats.isSymbolicLink() || !parentStats.isDirectory() || !sameIdentity(parentIdentity, identity(parentStats))) throw new Error(`Lock database parent changed during custody recovery: ${databasePath}`);
+  const complete: OrphanCustodyArtifacts[] = [];
+  try {
+    for (const [token, names] of groups) {
+      const custodyPath = path.join(directoryPath, `${prefix}${token}`); let custodyStats: fs.BigIntStats;
+      try { custodyStats = fs.lstatSync(custodyPath, { bigint: true }); } catch (error) { if (isMissing(error)) throw new Error('database is locked during custody cleanup'); throw error; }
+      if (custodyStats.isSymbolicLink() || !custodyStats.isFile()) throw new Error(`Unsafe orphan SQLite lock custody link: ${custodyPath}`);
+      if (!sameIdentity(expectedIdentity, identity(custodyStats))) continue;
+      if (names.has('-wal') || names.has('-shm')) throw new Error(`Unrecoverable SQLite lock WAL/SHM custody: ${custodyPath}`);
+      if (!names.has('custody') || !names.has('-journal.witness') || !names.has('.provenance')) { const remnants = [...names].filter((name) => name !== 'custody').some((name) => pathEntryExists(`${custodyPath}${name}`)); if (!remnants) throw new Error('database is locked during custody publication'); throw new Error(`Missing SQLite lock custody provenance: ${custodyPath}`); }
+      const journalPath = `${custodyPath}-journal`, witnessPath = `${journalPath}.witness`, provenancePath = `${custodyPath}.provenance`;
+      const witnessStats = fs.lstatSync(witnessPath, { bigint: true });
+      if (witnessStats.isSymbolicLink() || !witnessStats.isFile() || (witnessStats.nlink !== 1n && witnessStats.nlink !== 2n)) throw new Error(`Unsafe orphan SQLite lock sidecar: ${journalPath}`);
+      if (names.has('-journal')) { const stats = fs.lstatSync(journalPath, { bigint: true }); if (stats.isSymbolicLink() || !stats.isFile() || !sameIdentity(identity(stats), identity(witnessStats))) throw new Error(`Unsafe orphan SQLite lock sidecar: ${journalPath}`); }
+      const provenanceDescriptor = fs.openSync(provenancePath, fs.constants.O_RDONLY | NO_FOLLOW);
+      try {
+        const descriptorStats = fs.fstatSync(provenanceDescriptor, { bigint: true }), pathStats = fs.lstatSync(provenancePath, { bigint: true });
+        if (!descriptorStats.isFile() || pathStats.isSymbolicLink() || !pathStats.isFile() || descriptorStats.nlink !== 1n || descriptorStats.size > 1_024n || !sameIdentity(identity(descriptorStats), identity(pathStats))) throw new Error(`Unsafe SQLite lock custody provenance: ${provenancePath}`);
+        const candidate = JSON.parse(fs.readFileSync(provenanceDescriptor, 'utf8')) as Partial<CustodyProvenance>;
+        const manifestDatabase = parseIdentity(candidate?.database), manifestJournal = parseIdentity(candidate?.journal);
+        if (candidate?.version !== PROVENANCE_VERSION || candidate.token !== token || !manifestDatabase || !manifestJournal || !sameIdentity(manifestDatabase, expectedIdentity) || !sameIdentity(manifestJournal, identity(witnessStats))) throw new Error(`Corrupted SQLite lock custody provenance: ${provenancePath}`);
+        complete.push({ custodyPath, journalIdentity: manifestJournal, journalPath, provenanceDescriptor, provenanceIdentity: identity(descriptorStats), provenancePath, witnessPath });
+      } catch (error) { fs.closeSync(provenanceDescriptor); throw error; }
     }
-    if (custodyStats.isSymbolicLink() || !custodyStats.isFile()) {
-      throw new Error(`Unsafe orphan SQLite lock custody link: ${group.custodyPath}`);
-    }
-    // An A-to-B pathname replacement can temporarily leave A's valid custody name beside
-    // canonical B. It is not this database's artifact and must neither be opened nor reaped.
-    if (!sameIdentity(expectedIdentity, identity(custodyStats))) continue;
-    for (const sidecarPath of group.sidecarPaths) {
-      const sidecarStats = fs.lstatSync(sidecarPath, { bigint: true });
-      if (
-        sidecarStats.isSymbolicLink() ||
-        !sidecarStats.isFile() ||
-        sidecarStats.nlink !== 1n ||
-        sidecarStats.dev !== parentStats.dev
-      ) {
-        throw new Error(`Unsafe orphan SQLite lock sidecar: ${sidecarPath}`);
-      }
-    }
-    completeGroups.push(group);
-  }
-
-  const databaseStats = fs.lstatSync(databasePath, { bigint: true });
-  if (
-    databaseStats.isSymbolicLink() ||
-    !databaseStats.isFile() ||
-    !sameIdentity(expectedIdentity, identity(databaseStats)) ||
-    databaseStats.nlink !== BigInt(completeGroups.length + 1)
-  ) {
-    throw new Error(`Unexpected SQLite lock database hard-link count: ${databasePath}`);
-  }
-  return completeGroups;
+    const databaseStats = fs.lstatSync(databasePath, { bigint: true });
+    if (databaseStats.isSymbolicLink() || !databaseStats.isFile() || !sameIdentity(expectedIdentity, identity(databaseStats)) || databaseStats.nlink !== BigInt(complete.length + 1)) throw new Error(`Unexpected SQLite lock database hard-link count: ${databasePath}`);
+    return complete;
+  } catch (error) { for (const item of complete) fs.closeSync(item.provenanceDescriptor); if (isMissing(error)) throw new Error('database is locked during custody cleanup'); throw error; }
 }
 
-function removeRecoveredCustodyArtifacts(
-  artifacts: OrphanCustodyArtifacts,
-  expectedIdentity: FileIdentity
-): void {
-  for (const sidecarPath of artifacts.sidecarPaths) {
-    let stats: fs.BigIntStats;
-    try {
-      stats = fs.lstatSync(sidecarPath, { bigint: true });
-    } catch (error) {
-      if (isMissing(error)) continue;
-      throw error;
-    }
-    if (stats.isSymbolicLink() || !stats.isFile() || stats.nlink !== 1n) {
-      throw new Error(`SQLite lock sidecar changed before cleanup: ${sidecarPath}`);
-    }
-    fs.unlinkSync(sidecarPath);
-  }
-  removeDatabaseCustodyLink(artifacts.custodyPath, expectedIdentity);
+// prettier-ignore
+function unlinkExact(pathname: string, expected: FileIdentity, allowMissing = false, orphanRecovery = false): void {
+  if (orphanRecovery) testHooks?.beforeOrphanArtifactUnlink?.(pathname);
+  try { const stats = fs.lstatSync(pathname, { bigint: true }); if (stats.isSymbolicLink() || !stats.isFile() || !sameIdentity(expected, identity(stats))) throw new Error(`SQLite lock artifact changed before cleanup: ${pathname}`); fs.unlinkSync(pathname); }
+  catch (error) { if (allowMissing && isMissing(error)) return; throw error; }
 }
 
-function recoverOrphanDatabaseCustodyLinks(
-  databasePath: string,
-  guard: DatabaseIdentityGuard,
-  parentIdentity: FileIdentity
-): void {
+// prettier-ignore
+function validateOrphanForOpen(orphan: OrphanCustodyArtifacts, databaseIdentity: FileIdentity, parentIdentity: FileIdentity): void {
+  const paths: Array<[string, FileIdentity]> = [[orphan.custodyPath, databaseIdentity], [orphan.journalPath, orphan.journalIdentity], [orphan.witnessPath, orphan.journalIdentity], [orphan.provenancePath, orphan.provenanceIdentity]];
+  for (const [pathname, expected] of paths) { const stats = fs.lstatSync(pathname, { bigint: true }); if (stats.isSymbolicLink() || !stats.isFile() || !sameIdentity(expected, identity(stats))) throw new Error(`SQLite lock custody changed before recovery open: ${pathname}`); }
+  const provenanceStats = fs.fstatSync(orphan.provenanceDescriptor, { bigint: true }), parentStats = fs.lstatSync(path.dirname(orphan.custodyPath), { bigint: true });
+  if (!sameIdentity(orphan.provenanceIdentity, identity(provenanceStats)) || parentStats.isSymbolicLink() || !parentStats.isDirectory() || !sameIdentity(parentIdentity, identity(parentStats))) throw new Error(`SQLite lock provenance changed before recovery: ${orphan.provenancePath}`);
+}
+
+// prettier-ignore
+function restoreProvenJournal(orphan: OrphanCustodyArtifacts): void { try { fs.linkSync(orphan.witnessPath, orphan.journalPath); } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error; } }
+
+// prettier-ignore
+function recoverOrphanDatabaseCustodyLinks(databasePath: string, guard: DatabaseIdentityGuard, parentIdentity: FileIdentity): void {
   const orphans = scanOrphanCustodyArtifacts(databasePath, guard.identity, parentIdentity);
   for (const orphan of orphans) {
     let database: DatabaseSync | undefined;
     try {
-      database = new DatabaseSync(orphan.custodyPath);
-      database.exec('PRAGMA busy_timeout = 0');
-      // Opening followed by an EXCLUSIVE transaction makes SQLite finish hot-journal/WAL
-      // recovery on this predecessor's exact custody name. Only after that succeeds may
-      // its journal namespace be removed.
-      database.exec('BEGIN EXCLUSIVE');
-      database.exec('ROLLBACK');
-      database.close();
-      database = undefined;
-
-      const descriptorStats = fs.fstatSync(guard.descriptor, { bigint: true });
-      const custodyStats = fs.lstatSync(orphan.custodyPath, { bigint: true });
-      const parentStats = fs.lstatSync(path.dirname(databasePath), { bigint: true });
-      if (
-        !descriptorStats.isFile() ||
-        custodyStats.isSymbolicLink() ||
-        !custodyStats.isFile() ||
-        parentStats.isSymbolicLink() ||
-        !parentStats.isDirectory() ||
-        !sameIdentity(guard.identity, identity(descriptorStats)) ||
-        !sameIdentity(guard.identity, identity(custodyStats)) ||
-        !sameIdentity(parentIdentity, identity(parentStats))
-      ) {
-        throw new Error(`SQLite lock custody changed during recovery: ${orphan.custodyPath}`);
-      }
-      removeRecoveredCustodyArtifacts(orphan, guard.identity);
+      testHooks?.beforeOrphanDatabaseOpen?.(orphan.custodyPath); restoreProvenJournal(orphan); validateOrphanForOpen(orphan, guard.identity, parentIdentity);
+      database = new DatabaseSync(orphan.custodyPath); database.exec('PRAGMA busy_timeout = 0'); database.exec('BEGIN EXCLUSIVE'); database.exec('ROLLBACK'); database.close(); database = undefined;
+      const descriptorStats = fs.fstatSync(guard.descriptor, { bigint: true }), custodyStats = fs.lstatSync(orphan.custodyPath, { bigint: true }), parentStats = fs.lstatSync(path.dirname(databasePath), { bigint: true });
+      if (!descriptorStats.isFile() || custodyStats.isSymbolicLink() || !custodyStats.isFile() || parentStats.isSymbolicLink() || !parentStats.isDirectory() || !sameIdentity(guard.identity, identity(descriptorStats)) || !sameIdentity(guard.identity, identity(custodyStats)) || !sameIdentity(parentIdentity, identity(parentStats))) throw new Error(`SQLite lock custody changed during recovery: ${orphan.custodyPath}`);
+      unlinkExact(orphan.journalPath, orphan.journalIdentity, true, true); unlinkExact(orphan.witnessPath, orphan.journalIdentity, true, true); unlinkExact(orphan.provenancePath, orphan.provenanceIdentity, true, true);
+      removeDatabaseCustodyLink(orphan.custodyPath, guard.identity); fs.closeSync(orphan.provenanceDescriptor);
     } catch (error) {
-      const closeFailure = database
-        ? captureFailure('SQLite orphan recovery database close', () => database!.close())
-        : null;
-      throwWithCleanupFailures(
-        { context: 'SQLite orphan custody recovery', error },
-        closeFailure ? [closeFailure] : []
-      );
+      const primaryError = isMissing(error) ? new Error('database is locked during custody cleanup') : error;
+      const closeFailure = database ? captureFailure('SQLite orphan recovery database close', () => database!.close()) : null;
+      const descriptorFailure = captureFailure('SQLite orphan provenance close', () => fs.closeSync(orphan.provenanceDescriptor));
+      throwWithCleanupFailures({ context: 'SQLite orphan custody recovery', error: primaryError }, [closeFailure, descriptorFailure].filter((failure): failure is Failure => failure !== null));
     }
   }
   syncDirectory(path.dirname(databasePath));
@@ -485,12 +469,64 @@ function validateDatabaseIdentity(
   }
 }
 
+function validatePublishedProvenance(provenance: PublishedProvenance): void {
+  const descriptorStats = fs.fstatSync(provenance.descriptor, { bigint: true });
+  const pathStats = fs.lstatSync(provenance.path, { bigint: true });
+  const journalStats = fs.lstatSync(provenance.witnessPath, { bigint: true });
+  if (
+    !descriptorStats.isFile() ||
+    pathStats.isSymbolicLink() ||
+    !pathStats.isFile() ||
+    journalStats.isSymbolicLink() ||
+    !journalStats.isFile() ||
+    !sameIdentity(provenance.identity, identity(descriptorStats)) ||
+    !sameIdentity(provenance.identity, identity(pathStats)) ||
+    !sameIdentity(provenance.journalIdentity, identity(journalStats))
+  ) {
+    throw new Error(`SQLite lock provenance identity changed: ${provenance.path}`);
+  }
+  try {
+    const journalPathStats = fs.lstatSync(provenance.journalPath, { bigint: true });
+    if (
+      journalPathStats.isSymbolicLink() ||
+      !journalPathStats.isFile() ||
+      !sameIdentity(provenance.journalIdentity, identity(journalPathStats))
+    ) {
+      throw new Error(`SQLite lock journal identity changed: ${provenance.journalPath}`);
+    }
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+  }
+}
+
+function removePublishedProvenance(provenance: PublishedProvenance): void {
+  const failures: Failure[] = [];
+  const operations: Array<[string, () => void]> = [
+    ['SQLite lock provenance descriptor close', () => fs.closeSync(provenance.descriptor)],
+    [
+      'SQLite lock journal witness cleanup',
+      () => unlinkExact(provenance.witnessPath, provenance.journalIdentity, true),
+    ],
+    [
+      'SQLite lock provenance file cleanup',
+      () => unlinkExact(provenance.path, provenance.identity, true),
+    ],
+  ];
+  for (const [context, operation] of operations) {
+    const failure = captureFailure(context, operation);
+    if (failure) failures.push(failure);
+  }
+  syncDirectory(path.dirname(provenance.path));
+  if (failures.length > 0) throwWithCleanupFailures(failures[0], failures.slice(1));
+}
+
 function assertPathOwnership(lock: OpenLock, ownershipLostMessage: string): void {
   try {
     const parentStats = fs.lstatSync(path.dirname(lock.databasePath), { bigint: true });
     const databaseStats = fs.lstatSync(lock.databasePath, { bigint: true });
     const custodyStats = fs.lstatSync(lock.custodyPath, { bigint: true });
     const descriptorStats = fs.fstatSync(lock.identityDescriptor, { bigint: true });
+    validatePublishedProvenance(lock.provenance);
     if (
       !parentStats.isSymbolicLink() &&
       parentStats.isDirectory() &&
@@ -523,6 +559,7 @@ function openLock(databasePath: string): OpenLock {
   const guard = openDatabaseIdentityGuard(canonicalPath);
   let custody: DatabaseCustodyLink | undefined;
   let database: DatabaseSync | undefined;
+  let provenance: PublishedProvenance | undefined;
   try {
     if (guard.created) testHooks?.afterAbsentFilePrecreated?.(canonicalPath);
     recoverOrphanDatabaseCustodyLinks(canonicalPath, guard, parentIdentity);
@@ -536,8 +573,15 @@ function openLock(databasePath: string): OpenLock {
     // cross-platform identity binding to the guarded inode: an A-to-B-to-A
     // pathname swap therefore still opens and locks A, never B.
     database.exec('BEGIN IMMEDIATE');
+    database.exec('CREATE TABLE IF NOT EXISTS transaction_lock_provenance(epoch TEXT NOT NULL)');
+    database.exec('DELETE FROM transaction_lock_provenance');
+    database
+      .prepare('INSERT INTO transaction_lock_provenance(epoch) VALUES (?)')
+      .run(randomBytes(CUSTODY_TOKEN_BYTES).toString('hex'));
+    provenance = publishCustodyProvenance(custody.path, guard.identity);
     testHooks?.afterDatabaseOpen?.(canonicalPath, database);
     validateDatabaseIdentity(canonicalPath, custody.path, guard, parentIdentity);
+    validatePublishedProvenance(provenance);
     try {
       fs.chmodSync(canonicalPath, 0o600);
     } catch (error) {
@@ -550,6 +594,7 @@ function openLock(databasePath: string): OpenLock {
       databaseIdentity: guard.identity,
       identityDescriptor: guard.descriptor,
       parentIdentity,
+      provenance,
     };
   } catch (error) {
     const cleanupFailures: Failure[] = [];
@@ -559,6 +604,13 @@ function openLock(databasePath: string): OpenLock {
         openedDatabase.close()
       );
       if (closeFailure) cleanupFailures.push(closeFailure);
+    }
+    if (provenance) {
+      const published = provenance;
+      const provenanceCleanupFailure = captureFailure('SQLite lock provenance cleanup', () =>
+        removePublishedProvenance(published)
+      );
+      if (provenanceCleanupFailure) cleanupFailures.push(provenanceCleanupFailure);
     }
     const descriptorCloseFailure = captureFailure('SQLite lock identity descriptor close', () =>
       fs.closeSync(guard.descriptor)
@@ -594,6 +646,7 @@ function closeLockResources(lock: OpenLock): void {
   const failures: Failure[] = [];
   const operations: Array<[string, () => void]> = [
     ['SQLite lock database close', () => lock.database.close()],
+    ['SQLite lock provenance cleanup', () => removePublishedProvenance(lock.provenance)],
     ['SQLite lock identity descriptor close', () => fs.closeSync(lock.identityDescriptor)],
     [
       'SQLite lock custody cleanup',
