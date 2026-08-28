@@ -11,25 +11,48 @@ export interface CapturedProviderAuthorityGenerations {
 
 let globalGeneration = 0;
 const profileGenerationByProviderId = new Map<ProviderId, number>();
-const catalogGenerationByScope = new Map<string, number>();
+const catalogGenerationsByProviderId = new Map<ProviderId, Map<string, number>>();
+let aggregateGeneration = 0;
 
-function catalogScopeKey(providerId: ProviderId, projectPath: string): string {
-  return `${providerId}\0${projectPath}`;
+/**
+ * Catalog generations are subordinate to a provider profile epoch. Crossing
+ * this bound advances that epoch and retires all of its catalog generations,
+ * so forgotten scopes remain stale without permanent tombstones.
+ */
+export const MAX_CATALOG_AUTHORITY_SCOPES_PER_PROVIDER = 128;
+
+function catalogGenerations(providerId: ProviderId): Map<string, number> | undefined {
+  return catalogGenerationsByProviderId.get(providerId);
+}
+
+function catalogGeneration(providerId: ProviderId, projectPath: string): number {
+  return catalogGenerations(providerId)?.get(projectPath) ?? 0;
+}
+
+function retireProviderCatalogGenerations(providerId: ProviderId): void {
+  catalogGenerationsByProviderId.delete(providerId);
+}
+
+function bumpProviderProfileGeneration(providerId: ProviderId): void {
+  profileGenerationByProviderId.set(
+    providerId,
+    (profileGenerationByProviderId.get(providerId) ?? 0) + 1
+  );
+  retireProviderCatalogGenerations(providerId);
+  aggregateGeneration += 1;
 }
 
 export function captureGenerations(projectPath: string): CapturedProviderAuthorityGenerations {
   const catalogGenerationByProviderId = new Map<ProviderId, number>();
   for (const providerId of profileGenerationByProviderId.keys()) {
-    catalogGenerationByProviderId.set(
-      providerId,
-      catalogGenerationByScope.get(catalogScopeKey(providerId, projectPath)) ?? 0
-    );
+    catalogGenerationByProviderId.set(providerId, catalogGeneration(providerId, projectPath));
   }
-  for (const key of catalogGenerationByScope.keys()) {
-    const separator = key.indexOf('\0');
-    if (separator < 0 || key.slice(separator + 1) !== projectPath) continue;
-    const providerId = key.slice(0, separator) as ProviderId;
-    catalogGenerationByProviderId.set(providerId, catalogGenerationByScope.get(key) ?? 0);
+  // Catalog-only providers have no profile-map entry yet. Iterating provider
+  // buckets keeps capture work independent of the number of retained scopes.
+  for (const [providerId, generations] of catalogGenerationsByProviderId.entries()) {
+    if (!profileGenerationByProviderId.has(providerId)) {
+      catalogGenerationByProviderId.set(providerId, generations.get(projectPath) ?? 0);
+    }
   }
   return {
     globalGeneration,
@@ -49,7 +72,7 @@ export function generationsAreCurrent(
       (captured.profileGenerationByProviderId.get(providerId) ?? 0) !==
         (profileGenerationByProviderId.get(providerId) ?? 0) ||
       (captured.catalogGenerationByProviderId.get(providerId) ?? 0) !==
-        (catalogGenerationByScope.get(catalogScopeKey(providerId, captured.projectPath)) ?? 0)
+        catalogGeneration(providerId, captured.projectPath)
     ) {
       return false;
     }
@@ -67,32 +90,57 @@ export function getAuthorityScope(
     projectPath,
     globalGeneration,
     profileGeneration: profileGenerationByProviderId.get(providerId) ?? 0,
-    catalogGeneration: projectPath
-      ? (catalogGenerationByScope.get(catalogScopeKey(providerId, projectPath)) ?? 0)
-      : 0,
+    catalogGeneration: projectPath ? catalogGeneration(providerId, projectPath) : 0,
   };
 }
 
 export function invalidateAll(): void {
   globalGeneration += 1;
+  aggregateGeneration += 1;
 }
 
 export function invalidateProviderProfile(providerId: ProviderId): void {
-  profileGenerationByProviderId.set(
-    providerId,
-    (profileGenerationByProviderId.get(providerId) ?? 0) + 1
-  );
+  bumpProviderProfileGeneration(providerId);
 }
 
 export function invalidateProviderCatalog(providerId: ProviderId, projectPath: string): void {
-  const key = catalogScopeKey(providerId, projectPath);
-  catalogGenerationByScope.set(key, (catalogGenerationByScope.get(key) ?? 0) + 1);
+  let generations = catalogGenerations(providerId);
+  if (
+    !generations?.has(projectPath) &&
+    generations?.size >= MAX_CATALOG_AUTHORITY_SCOPES_PER_PROVIDER
+  ) {
+    bumpProviderProfileGeneration(providerId);
+    generations = undefined;
+  }
+  if (!generations) {
+    generations = new Map<string, number>();
+    catalogGenerationsByProviderId.set(providerId, generations);
+  }
+  generations.set(projectPath, (generations.get(projectPath) ?? 0) + 1);
+  aggregateGeneration += 1;
 }
 
 /** Backward-compatible aggregate generation used only as a read-only diagnostic seam. */
 export function getProviderAuthorityGeneration(): number {
-  let generation = globalGeneration;
-  for (const value of profileGenerationByProviderId.values()) generation += value;
-  for (const value of catalogGenerationByScope.values()) generation += value;
-  return generation;
+  return aggregateGeneration;
+}
+
+/** Read-only bounded-state diagnostics for regression tests and support probes. */
+export function getProviderAuthorityGenerationDiagnostics(): {
+  retainedCatalogScopeCount: number;
+  catalogProviderCount: number;
+  captureProviderLookupCount: number;
+} {
+  let retainedCatalogScopeCount = 0;
+  for (const generations of catalogGenerationsByProviderId.values()) {
+    retainedCatalogScopeCount += generations.size;
+  }
+  return {
+    retainedCatalogScopeCount,
+    catalogProviderCount: catalogGenerationsByProviderId.size,
+    captureProviderLookupCount: new Set([
+      ...profileGenerationByProviderId.keys(),
+      ...catalogGenerationsByProviderId.keys(),
+    ]).size,
+  };
 }
