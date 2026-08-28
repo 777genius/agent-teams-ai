@@ -1369,7 +1369,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           if (projectPath) {
             const previousScopedProvider = state.cliProviderStatusByScope[scopeKey];
             // prettier-ignore
-            const nextProviderAuthority = reconcileScopedProviderAuthorityResponse({ current: state.cliProviderLaunchProofByScope, currentGlobalGeneration: state.cliProviderAuthorityGlobalGeneration, currentProfileGenerationById: state.cliProviderAuthorityProfileGenerationById, scopeKey, providerId, projectPath, providerStatus, responseMatchesProvider, metadataMatchesRequest: responseMetadataMatchesRequest, authorityScope: responseAuthorityScope, requestIntent, requestId, epoch: requestEpoch, fetchedAtMs: Date.now() });
+            const nextProviderAuthority = reconcileScopedProviderAuthorityResponse({ current: state.cliProviderLaunchProofByScope, currentGlobalGeneration: state.cliProviderAuthorityGlobalGeneration, currentProfileGenerationById: state.cliProviderAuthorityProfileGenerationById, currentCatalogWatermarkById: state.cliProviderCatalogWatermarkById, scopeKey, providerId, projectPath, providerStatus, responseMatchesProvider, metadataMatchesRequest: responseMetadataMatchesRequest, authorityScope: responseAuthorityScope, requestIntent, requestId, epoch: requestEpoch, fetchedAtMs: Date.now() });
             return {
               cliProviderStatusLoading: nextLoading,
               cliProviderStatusLoadingByScope: nextScopedLoading,

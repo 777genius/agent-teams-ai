@@ -12,21 +12,8 @@ import type {
 } from '@shared/types';
 
 export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
-
-const CATALOG_WATERMARK_SCOPE_SUFFIX = '\0renderer-catalog-watermark';
-const CLI_PROVIDER_IDS = Object.keys({
-  anthropic: true,
-  codex: true,
-  gemini: true,
-  opencode: true,
-} satisfies Record<CliProviderId, true>) as CliProviderId[];
-const CATALOG_WATERMARK_SCOPE_KEYS = new Set<string>(
-  CLI_PROVIDER_IDS.map((providerId) => `${providerId}\0${CATALOG_WATERMARK_SCOPE_SUFFIX}`)
-);
-
-function isCatalogWatermarkScopeKey(scopeKey: string): boolean {
-  return CATALOG_WATERMARK_SCOPE_KEYS.has(scopeKey);
-}
+/** Mirrors main's per-provider catalog authority scope bound. */
+export const CLI_PROVIDER_CATALOG_WATERMARK_SCOPE_LIMIT = 128;
 
 export interface ScopedCliProviderLaunchProof {
   providerStatus: CliProviderStatus;
@@ -41,12 +28,23 @@ export interface ScopedCliProviderAuthorityState {
   /** Monotonic tombstones prevent late cross-project responses from reviving cleared proofs. */
   cliProviderAuthorityGlobalGeneration: number | null;
   cliProviderAuthorityProfileGenerationById: Readonly<Partial<Record<CliProviderId, number>>>;
+  cliProviderCatalogWatermarkById: Readonly<
+    Partial<Record<CliProviderId, ScopedCliProviderCatalogWatermark>>
+  >;
+}
+
+export interface ScopedCliProviderCatalogWatermark {
+  profileGeneration: number;
+  catalogGenerationByProjectPath: Readonly<Record<string, number>>;
+  /** Fail closed if main ever violates its matching bounded-scope contract. */
+  saturated: boolean;
 }
 
 export function createEmptyScopedCliProviderAuthorityState(): ScopedCliProviderAuthorityState {
   return {
     cliProviderAuthorityGlobalGeneration: null,
     cliProviderAuthorityProfileGenerationById: {},
+    cliProviderCatalogWatermarkById: {},
   };
 }
 
@@ -58,13 +56,7 @@ export function setBoundedScopedProviderLaunchProof(
   const entries = Object.entries(current).filter(([key]) => key !== scopeKey);
   entries.push([scopeKey, proof]);
   while (entries.length > CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT) {
-    const oldestProjectProofIndex = entries.findIndex(([key]) => !isCatalogWatermarkScopeKey(key));
-    if (oldestProjectProofIndex < 0) {
-      // There are only four valid provider watermark keys. If reserved entries
-      // somehow consume the entire cache, refuse to publish another proof.
-      return current;
-    }
-    entries.splice(oldestProjectProofIndex, 1);
+    entries.shift();
   }
   return Object.fromEntries(entries);
 }
@@ -95,41 +87,68 @@ function getObservedGeneration(
   return observed;
 }
 
-function getProviderCatalogWatermark(
-  current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
+function getProjectCatalogWatermark(
+  current: ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'],
   providerId: CliProviderId,
-  profileGeneration: number | null
+  profileGeneration: number | null,
+  projectPath: string
 ): number | null {
   if (profileGeneration === null) return null;
-  return getObservedGeneration(current, (proof) =>
-    proof.authorityScope?.providerId === providerId &&
-    proof.authorityScope.profileGeneration === profileGeneration
-      ? proof.authorityScope.catalogGeneration
-      : null
-  );
+  const providerWatermark = current[providerId];
+  if (!providerWatermark || providerWatermark.profileGeneration !== profileGeneration) return null;
+  return providerWatermark.catalogGenerationByProjectPath[projectPath] ?? null;
 }
 
-function retainProviderCatalogWatermark(
-  current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
+function deleteProviderCatalogWatermark(
+  current: ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'],
+  providerId: CliProviderId
+): ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'] {
+  if (!current[providerId]) return current;
+  const next = { ...current };
+  delete next[providerId];
+  return next;
+}
+
+function retainProjectCatalogWatermark(
+  current: ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'],
   providerId: CliProviderId,
-  proof: ScopedCliProviderLaunchProof
-): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
-  // The reserved entry is deliberately not a real project scope. Keeping the
-  // high-water proof inside the same bounded map prevents FIFO eviction from
-  // resurrecting an older catalog without introducing an unbounded tombstone map.
-  return setBoundedScopedProviderLaunchProof(
-    current,
-    `${providerId}\0${CATALOG_WATERMARK_SCOPE_SUFFIX}`,
-    {
-      ...proof,
-      requestId: -1,
-      epoch: -1,
-      fetchedAtMs: 0,
-      authorityScope: proof.authorityScope
-        ? { ...proof.authorityScope, projectPath: null }
-        : undefined,
-    }
-  );
+  profileGeneration: number,
+  projectPath: string,
+  catalogGeneration: number
+): ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'] {
+  const currentProvider = current[providerId];
+  const provider =
+    currentProvider?.profileGeneration === profileGeneration
+      ? currentProvider
+      : {
+          profileGeneration,
+          catalogGenerationByProjectPath: {},
+          saturated: false,
+        };
+  if (provider.saturated) return current;
+  const previousGeneration = provider.catalogGenerationByProjectPath[projectPath];
+  // Zero is main's implicit value for an untracked scope. It needs no tombstone
+  // and retaining it would let ordinary project reads consume the scope bound.
+  if (previousGeneration === undefined && catalogGeneration === 0) return current;
+  if (previousGeneration !== undefined && previousGeneration >= catalogGeneration) return current;
+  const isNewScope = previousGeneration === undefined;
+  if (
+    isNewScope &&
+    Object.keys(provider.catalogGenerationByProjectPath).length >=
+      CLI_PROVIDER_CATALOG_WATERMARK_SCOPE_LIMIT
+  ) {
+    return { ...current, [providerId]: { ...provider, saturated: true } };
+  }
+  return {
+    ...current,
+    [providerId]: {
+      ...provider,
+      catalogGenerationByProjectPath: {
+        ...provider.catalogGenerationByProjectPath,
+        [projectPath]: catalogGeneration,
+      },
+    },
+  };
 }
 
 export function reconcileGlobalProviderLaunchProofs(
@@ -171,12 +190,52 @@ export function reconcileScopedProviderLaunchProofs(input: {
   observedGlobalGeneration?: number | null;
   observedProfileGeneration?: number | null;
 }): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
+  const catalogWatermarks = Object.values(input.current).reduce<
+    ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById']
+  >((watermarks, proof) => {
+    const scope = proof.authorityScope;
+    if (!scope?.projectPath) return watermarks;
+    return retainProjectCatalogWatermark(
+      watermarks,
+      scope.providerId,
+      scope.profileGeneration,
+      scope.projectPath,
+      scope.catalogGeneration
+    );
+  }, {});
+  return reconcileScopedProviderAuthority({
+    ...input,
+    currentCatalogWatermarkById: catalogWatermarks,
+  }).cliProviderLaunchProofByScope;
+}
+
+function reconcileScopedProviderAuthority(input: {
+  current: Readonly<Record<string, ScopedCliProviderLaunchProof>>;
+  currentCatalogWatermarkById: ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'];
+  scopeKey: string;
+  providerId: CliProviderId;
+  projectPath: string;
+  providerStatus: CliProviderStatus;
+  responseMatchesProvider: boolean;
+  metadataMatchesRequest: boolean;
+  authorityScope: CliProviderStatusAuthorityScope | null;
+  requestIntent: 'passive' | 'launch-proof';
+  requestId: number;
+  epoch: number;
+  fetchedAtMs: number;
+  observedGlobalGeneration?: number | null;
+  observedProfileGeneration?: number | null;
+}): {
+  cliProviderLaunchProofByScope: Readonly<Record<string, ScopedCliProviderLaunchProof>>;
+  cliProviderCatalogWatermarkById: ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'];
+} {
   const scope = input.authorityScope;
+  const normalizedProjectPath = normalizeCliProviderAuthorityProjectPath(input.projectPath);
   const scopeMatchesRequest =
     input.metadataMatchesRequest &&
     scope?.schemaVersion === 1 &&
     scope.providerId === input.providerId &&
-    scope.projectPath === normalizeCliProviderAuthorityProjectPath(input.projectPath);
+    scope.projectPath === normalizedProjectPath;
   const proofGlobalGeneration = getObservedGeneration(
     input.current,
     (proof) => proof.authorityScope?.globalGeneration ?? null
@@ -199,10 +258,12 @@ export function reconcileScopedProviderLaunchProofs(input: {
   const incomingGlobalGeneration = scope?.globalGeneration ?? null;
   const incomingProfileGeneration = scope?.profileGeneration ?? null;
   const incomingCatalogGeneration = scope?.catalogGeneration ?? null;
-  const providerCatalogWatermark = getProviderCatalogWatermark(
-    input.current,
+  const providerWatermark = input.currentCatalogWatermarkById[input.providerId];
+  const providerCatalogWatermark = getProjectCatalogWatermark(
+    input.currentCatalogWatermarkById,
     input.providerId,
-    incomingProfileGeneration
+    incomingProfileGeneration,
+    normalizedProjectPath
   );
   const staleGlobalGeneration =
     scopeMatchesRequest &&
@@ -229,6 +290,12 @@ export function reconcileScopedProviderLaunchProofs(input: {
     providerCatalogWatermark !== null &&
     incomingCatalogGeneration !== null &&
     incomingCatalogGeneration < providerCatalogWatermark;
+  const saturatedCatalogWatermark =
+    scopeMatchesRequest &&
+    !newerGlobalGeneration &&
+    !newerProfileGeneration &&
+    providerWatermark?.profileGeneration === incomingProfileGeneration &&
+    providerWatermark.saturated;
   const globalLogout =
     input.responseMatchesProvider &&
     input.providerStatus.statusCheckOutcome === 'authoritative' &&
@@ -238,6 +305,31 @@ export function reconcileScopedProviderLaunchProofs(input: {
     : globalLogout || newerProfileGeneration
       ? deleteProvider(input.current, input.providerId)
       : input.current;
+  let retainedCatalogWatermarks = newerGlobalGeneration
+    ? {}
+    : globalLogout || newerProfileGeneration
+      ? deleteProviderCatalogWatermark(input.currentCatalogWatermarkById, input.providerId)
+      : input.currentCatalogWatermarkById;
+  const canObserveCatalogGeneration =
+    input.responseMatchesProvider &&
+    scopeMatchesRequest &&
+    !globalLogout &&
+    !staleGlobalGeneration &&
+    !staleProfileGeneration &&
+    !staleCatalogGeneration &&
+    !saturatedCatalogWatermark;
+  if (canObserveCatalogGeneration) {
+    retainedCatalogWatermarks = retainProjectCatalogWatermark(
+      retainedCatalogWatermarks,
+      input.providerId,
+      incomingProfileGeneration!,
+      normalizedProjectPath,
+      incomingCatalogGeneration!
+    );
+  }
+  const catalogWatermarkSaturated =
+    retainedCatalogWatermarks[input.providerId]?.profileGeneration === incomingProfileGeneration &&
+    retainedCatalogWatermarks[input.providerId]?.saturated;
   const canAuthorize =
     input.requestIntent === 'launch-proof' &&
     input.responseMatchesProvider &&
@@ -246,8 +338,14 @@ export function reconcileScopedProviderLaunchProofs(input: {
     !globalLogout &&
     !staleGlobalGeneration &&
     !staleProfileGeneration &&
-    !staleCatalogGeneration;
-  if (!canAuthorize) return retained;
+    !staleCatalogGeneration &&
+    !catalogWatermarkSaturated;
+  if (!canAuthorize) {
+    return {
+      cliProviderLaunchProofByScope: retained,
+      cliProviderCatalogWatermarkById: retainedCatalogWatermarks,
+    };
+  }
   const proof = {
     providerStatus: input.providerStatus,
     requestId: input.requestId,
@@ -255,17 +353,21 @@ export function reconcileScopedProviderLaunchProofs(input: {
     fetchedAtMs: input.fetchedAtMs,
     authorityScope: scope ?? undefined,
   };
-  return retainProviderCatalogWatermark(
-    setBoundedScopedProviderLaunchProof(retained, input.scopeKey, proof),
-    input.providerId,
-    proof
-  );
+  return {
+    cliProviderLaunchProofByScope: setBoundedScopedProviderLaunchProof(
+      retained,
+      input.scopeKey,
+      proof
+    ),
+    cliProviderCatalogWatermarkById: retainedCatalogWatermarks,
+  };
 }
 
 export function reconcileScopedProviderAuthorityResponse(input: {
   current: Readonly<Record<string, ScopedCliProviderLaunchProof>>;
   currentGlobalGeneration: number | null;
   currentProfileGenerationById: Readonly<Partial<Record<CliProviderId, number>>>;
+  currentCatalogWatermarkById: ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'];
   scopeKey: string;
   providerId: CliProviderId;
   projectPath: string;
@@ -281,9 +383,11 @@ export function reconcileScopedProviderAuthorityResponse(input: {
   cliProviderLaunchProofByScope: Readonly<Record<string, ScopedCliProviderLaunchProof>>;
   cliProviderAuthorityGlobalGeneration: number | null;
   cliProviderAuthorityProfileGenerationById: Readonly<Partial<Record<CliProviderId, number>>>;
+  cliProviderCatalogWatermarkById: ScopedCliProviderAuthorityState['cliProviderCatalogWatermarkById'];
 } {
-  const cliProviderLaunchProofByScope = reconcileScopedProviderLaunchProofs({
+  const reconciled = reconcileScopedProviderAuthority({
     ...input,
+    currentCatalogWatermarkById: input.currentCatalogWatermarkById,
     observedGlobalGeneration: input.currentGlobalGeneration,
     observedProfileGeneration: input.currentProfileGenerationById[input.providerId] ?? null,
   });
@@ -295,7 +399,7 @@ export function reconcileScopedProviderAuthorityResponse(input: {
       ? input.authorityScope
       : null;
   return {
-    cliProviderLaunchProofByScope,
+    ...reconciled,
     cliProviderAuthorityGlobalGeneration: observedScope
       ? Math.max(input.currentGlobalGeneration ?? -1, observedScope.globalGeneration)
       : input.currentGlobalGeneration,
