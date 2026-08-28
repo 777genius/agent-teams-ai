@@ -2,6 +2,7 @@ import { appendFileSync } from 'node:fs';
 
 import {
   getSqliteTransactionLockDatabasePath,
+  setSqliteTransactionLockTestHooksForTests,
   tryRetainSqliteTransactionLock,
 } from '../../src/main/services/infrastructure/SqliteTransactionLock';
 import { withFileLock, withFileLockSync } from '../../src/main/services/team/fileLock';
@@ -10,7 +11,13 @@ const [mode, target, tracePath] = process.argv.slice(2);
 if (
   !target ||
   !tracePath ||
-  !['async-holder', 'authority-holder', 'crash-holder', 'sync-contender'].includes(mode ?? '')
+  ![
+    'async-holder',
+    'authority-holder',
+    'crash-holder',
+    'sqlite-crash-holder',
+    'sync-contender',
+  ].includes(mode ?? '')
 ) {
   throw new Error('Invalid file-lock process worker arguments');
 }
@@ -42,6 +49,16 @@ if (mode === 'async-holder') {
     await new Promise<void>((resolve) => process.once('message', resolve));
     process.exit(17);
   });
+} else if (mode === 'sqlite-crash-holder') {
+  setSqliteTransactionLockTestHooksForTests({
+    afterDatabaseOpen: (_databasePath, database) => {
+      database.prepare("UPDATE recovery_state SET value = 'uncommitted'").run();
+    },
+  });
+  const authority = tryRetainSqliteTransactionLock(target, 'crash holder lost ownership');
+  if (!authority) throw new Error('Could not acquire SQLite crash authority');
+  process.stdout.write('acquired\n');
+  await new Promise<void>(() => undefined);
 } else {
   process.stdout.write('attempting\n');
   withFileLockSync(target, () => {

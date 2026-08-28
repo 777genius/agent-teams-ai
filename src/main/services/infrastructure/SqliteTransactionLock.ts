@@ -9,7 +9,9 @@ const SQLITE_TRANSACTION_LOCK_SIDECAR_SUFFIXES = ['-journal', '-shm', '-wal'] as
 const NO_FOLLOW = process.platform === 'win32' ? 0 : (fs.constants.O_NOFOLLOW ?? 0);
 const MAX_IDENTITY_PREPARATION_ATTEMPTS = 8;
 const CUSTODY_TOKEN_BYTES = 16;
-const SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX = /^\.custody-[0-9a-f]{32}(?:-journal|-shm|-wal)?$/;
+const MAX_CUSTODY_DIRECTORY_ENTRIES = 4_096;
+const MAX_ORPHAN_CUSTODY_LINKS = 64;
+const SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX = /^\.custody-([0-9a-f]{32})(-journal|-shm|-wal)?$/;
 
 export interface SqliteTransactionLockOptions {
   acquireTimeoutMs: number;
@@ -41,7 +43,7 @@ interface Failure {
 export interface SqliteTransactionLockTestHooks {
   afterAbsentFilePrecreated?(databasePath: string): void;
   beforeDatabaseOpen?(databasePath: string): void;
-  afterDatabaseOpen?(databasePath: string): void;
+  afterDatabaseOpen?(databasePath: string, database: DatabaseSync): void;
 }
 
 let testHooks: SqliteTransactionLockTestHooks | undefined;
@@ -264,10 +266,175 @@ function validateDatabaseCustodyLink(
     custodyStats.isSymbolicLink() ||
     !custodyStats.isFile() ||
     !descriptorStats.isFile() ||
+    custodyStats.nlink !== 2n ||
+    descriptorStats.nlink !== 2n ||
     !sameIdentity(guard.identity, identity(custodyStats)) ||
     !sameIdentity(guard.identity, identity(descriptorStats))
   ) {
     throw new Error(`Lock database custody changed before opening: ${databasePath}`);
+  }
+  syncDirectory(path.dirname(databasePath));
+}
+
+interface OrphanCustodyArtifacts {
+  custodyPath: string;
+  sidecarPaths: string[];
+}
+
+function scanOrphanCustodyArtifacts(
+  databasePath: string,
+  expectedIdentity: FileIdentity,
+  parentIdentity: FileIdentity
+): OrphanCustodyArtifacts[] {
+  const directoryPath = path.dirname(databasePath);
+  const databaseName = path.basename(databasePath);
+  const prefix = `${databaseName}.custody-`;
+  const groups = new Map<string, OrphanCustodyArtifacts>();
+  const directory = fs.opendirSync(directoryPath);
+  let entryCount = 0;
+  try {
+    for (;;) {
+      const entry = directory.readSync();
+      if (!entry) break;
+      entryCount += 1;
+      if (entryCount > MAX_CUSTODY_DIRECTORY_ENTRIES) {
+        throw new Error(`SQLite lock custody directory scan exceeded its bound: ${directoryPath}`);
+      }
+      if (!entry.name.startsWith(prefix)) continue;
+      const suffix = entry.name.slice(databaseName.length);
+      const match = SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX.exec(suffix);
+      if (!match) continue;
+      const token = match[1];
+      let group = groups.get(token);
+      if (!group) {
+        if (groups.size >= MAX_ORPHAN_CUSTODY_LINKS) {
+          throw new Error(`SQLite lock orphan custody scan exceeded its bound: ${databasePath}`);
+        }
+        group = { custodyPath: path.join(directoryPath, `${prefix}${token}`), sidecarPaths: [] };
+        groups.set(token, group);
+      }
+      if (match[2]) group.sidecarPaths.push(path.join(directoryPath, entry.name));
+    }
+  } finally {
+    directory.closeSync();
+  }
+
+  const parentStats = fs.lstatSync(directoryPath, { bigint: true });
+  if (
+    parentStats.isSymbolicLink() ||
+    !parentStats.isDirectory() ||
+    !sameIdentity(parentIdentity, identity(parentStats))
+  ) {
+    throw new Error(`Lock database parent changed during custody recovery: ${databasePath}`);
+  }
+
+  const completeGroups: OrphanCustodyArtifacts[] = [];
+  for (const group of groups.values()) {
+    let custodyStats: fs.BigIntStats;
+    try {
+      custodyStats = fs.lstatSync(group.custodyPath, { bigint: true });
+    } catch (error) {
+      if (isMissing(error)) {
+        throw new Error(`SQLite lock custody sidecar has no database link: ${group.custodyPath}`);
+      }
+      throw error;
+    }
+    if (custodyStats.isSymbolicLink() || !custodyStats.isFile()) {
+      throw new Error(`Unsafe orphan SQLite lock custody link: ${group.custodyPath}`);
+    }
+    // An A-to-B pathname replacement can temporarily leave A's valid custody name beside
+    // canonical B. It is not this database's artifact and must neither be opened nor reaped.
+    if (!sameIdentity(expectedIdentity, identity(custodyStats))) continue;
+    for (const sidecarPath of group.sidecarPaths) {
+      const sidecarStats = fs.lstatSync(sidecarPath, { bigint: true });
+      if (
+        sidecarStats.isSymbolicLink() ||
+        !sidecarStats.isFile() ||
+        sidecarStats.nlink !== 1n ||
+        sidecarStats.dev !== parentStats.dev
+      ) {
+        throw new Error(`Unsafe orphan SQLite lock sidecar: ${sidecarPath}`);
+      }
+    }
+    completeGroups.push(group);
+  }
+
+  const databaseStats = fs.lstatSync(databasePath, { bigint: true });
+  if (
+    databaseStats.isSymbolicLink() ||
+    !databaseStats.isFile() ||
+    !sameIdentity(expectedIdentity, identity(databaseStats)) ||
+    databaseStats.nlink !== BigInt(completeGroups.length + 1)
+  ) {
+    throw new Error(`Unexpected SQLite lock database hard-link count: ${databasePath}`);
+  }
+  return completeGroups;
+}
+
+function removeRecoveredCustodyArtifacts(
+  artifacts: OrphanCustodyArtifacts,
+  expectedIdentity: FileIdentity
+): void {
+  for (const sidecarPath of artifacts.sidecarPaths) {
+    let stats: fs.BigIntStats;
+    try {
+      stats = fs.lstatSync(sidecarPath, { bigint: true });
+    } catch (error) {
+      if (isMissing(error)) continue;
+      throw error;
+    }
+    if (stats.isSymbolicLink() || !stats.isFile() || stats.nlink !== 1n) {
+      throw new Error(`SQLite lock sidecar changed before cleanup: ${sidecarPath}`);
+    }
+    fs.unlinkSync(sidecarPath);
+  }
+  removeDatabaseCustodyLink(artifacts.custodyPath, expectedIdentity);
+}
+
+function recoverOrphanDatabaseCustodyLinks(
+  databasePath: string,
+  guard: DatabaseIdentityGuard,
+  parentIdentity: FileIdentity
+): void {
+  const orphans = scanOrphanCustodyArtifacts(databasePath, guard.identity, parentIdentity);
+  for (const orphan of orphans) {
+    let database: DatabaseSync | undefined;
+    try {
+      database = new DatabaseSync(orphan.custodyPath);
+      database.exec('PRAGMA busy_timeout = 0');
+      // Opening followed by an EXCLUSIVE transaction makes SQLite finish hot-journal/WAL
+      // recovery on this predecessor's exact custody name. Only after that succeeds may
+      // its journal namespace be removed.
+      database.exec('BEGIN EXCLUSIVE');
+      database.exec('ROLLBACK');
+      database.close();
+      database = undefined;
+
+      const descriptorStats = fs.fstatSync(guard.descriptor, { bigint: true });
+      const custodyStats = fs.lstatSync(orphan.custodyPath, { bigint: true });
+      const parentStats = fs.lstatSync(path.dirname(databasePath), { bigint: true });
+      if (
+        !descriptorStats.isFile() ||
+        custodyStats.isSymbolicLink() ||
+        !custodyStats.isFile() ||
+        parentStats.isSymbolicLink() ||
+        !parentStats.isDirectory() ||
+        !sameIdentity(guard.identity, identity(descriptorStats)) ||
+        !sameIdentity(guard.identity, identity(custodyStats)) ||
+        !sameIdentity(parentIdentity, identity(parentStats))
+      ) {
+        throw new Error(`SQLite lock custody changed during recovery: ${orphan.custodyPath}`);
+      }
+      removeRecoveredCustodyArtifacts(orphan, guard.identity);
+    } catch (error) {
+      const closeFailure = database
+        ? captureFailure('SQLite orphan recovery database close', () => database!.close())
+        : null;
+      throwWithCleanupFailures(
+        { context: 'SQLite orphan custody recovery', error },
+        closeFailure ? [closeFailure] : []
+      );
+    }
   }
   syncDirectory(path.dirname(databasePath));
 }
@@ -332,6 +499,9 @@ function assertPathOwnership(lock: OpenLock, ownershipLostMessage: string): void
       !custodyStats.isSymbolicLink() &&
       custodyStats.isFile() &&
       descriptorStats.isFile() &&
+      databaseStats.nlink === 2n &&
+      custodyStats.nlink === 2n &&
+      descriptorStats.nlink === 2n &&
       sameIdentity(lock.parentIdentity, identity(parentStats)) &&
       sameIdentity(lock.databaseIdentity, identity(databaseStats)) &&
       sameIdentity(lock.databaseIdentity, identity(custodyStats)) &&
@@ -355,6 +525,7 @@ function openLock(databasePath: string): OpenLock {
   let database: DatabaseSync | undefined;
   try {
     if (guard.created) testHooks?.afterAbsentFilePrecreated?.(canonicalPath);
+    recoverOrphanDatabaseCustodyLinks(canonicalPath, guard, parentIdentity);
     custody = createDatabaseCustodyLink(canonicalPath);
     validateDatabaseCustodyLink(canonicalPath, custody.path, guard);
     testHooks?.beforeDatabaseOpen?.(canonicalPath);
@@ -365,7 +536,7 @@ function openLock(databasePath: string): OpenLock {
     // cross-platform identity binding to the guarded inode: an A-to-B-to-A
     // pathname swap therefore still opens and locks A, never B.
     database.exec('BEGIN IMMEDIATE');
-    testHooks?.afterDatabaseOpen?.(canonicalPath);
+    testHooks?.afterDatabaseOpen?.(canonicalPath, database);
     validateDatabaseIdentity(canonicalPath, custody.path, guard, parentIdentity);
     try {
       fs.chmodSync(canonicalPath, 0o600);

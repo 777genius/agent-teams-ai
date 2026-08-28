@@ -1,6 +1,9 @@
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 
 import {
   getSqliteTransactionLockDatabasePath,
@@ -19,6 +22,9 @@ const LOCK_OPTIONS = {
   timeoutMessage: 'lock timeout',
   ownershipLostMessage: 'lock ownership lost',
 };
+
+const workerPath = path.resolve('test/fixtures/fileLockProcessWorker.ts');
+const tsxPath = path.resolve('node_modules/tsx/dist/loader.mjs');
 
 describe('SqliteTransactionLock artifact lifecycle', () => {
   let temporaryRoot: string;
@@ -309,6 +315,148 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     expect(() => fs.renameSync(failingPath, `${failingPath}.closed`)).not.toThrow();
   });
 
+  it('recovers a SIGKILLed hot journal before reaping every predecessor artifact', async () => {
+    const databasePath = path.join(temporaryRoot, 'sigkill-recovery.sqlite3');
+    const setup = new DatabaseSync(databasePath);
+    setup.exec(
+      "CREATE TABLE recovery_state(value TEXT NOT NULL); INSERT INTO recovery_state VALUES ('stable')"
+    );
+    setup.close();
+
+    const child = spawn(
+      process.execPath,
+      ['--import', tsxPath, workerPath, 'sqlite-crash-holder', databasePath, databasePath],
+      {
+        cwd: process.cwd(),
+        env: { ...process.env, NODE_ENV: 'test' },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    );
+    let output = '';
+    child.stdout!.on('data', (chunk) => {
+      output += String(chunk);
+    });
+    child.stderr!.on('data', (chunk) => {
+      output += String(chunk);
+    });
+    await waitForOutput(() => output, 'acquired\n');
+    expect(custodyArtifacts(databasePath)).toHaveLength(1);
+    expect(transientArtifacts(databasePath).some((entry) => entry.endsWith('-journal'))).toBe(true);
+
+    expect(child.kill('SIGKILL')).toBe(true);
+    const [code, signal] = (await once(child, 'close')) as [number | null, NodeJS.Signals | null];
+    expect(signal === 'SIGKILL' || (code !== null && code !== 0), output).toBe(true);
+
+    const successor = tryRetainSqliteTransactionLock(databasePath, 'successor lost ownership');
+    expect(successor).not.toBeNull();
+    successor!.release();
+
+    const verification = new DatabaseSync(databasePath, { readOnly: true });
+    const row = verification.prepare('SELECT value FROM recovery_state').get() as {
+      value: string;
+    };
+    verification.close();
+    expect(row.value).toBe('stable');
+    expect(transientArtifacts(databasePath)).toEqual([]);
+  });
+
+  it('does not reap a custody link owned by a live transaction', () => {
+    const databasePath = path.join(temporaryRoot, 'live-custody.sqlite3');
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'owner lost');
+    expect(owner).not.toBeNull();
+    const liveArtifacts = transientArtifacts(databasePath);
+    expect(liveArtifacts).toHaveLength(2);
+    expect(tryRetainSqliteTransactionLock(databasePath, 'contender lost')).toBeNull();
+    expect(transientArtifacts(databasePath)).toEqual(liveArtifacts);
+    owner!.release();
+    expect(transientArtifacts(databasePath)).toEqual([]);
+  });
+
+  it('ignores unrelated custody inodes and leaves them untouched', () => {
+    const databasePath = path.join(temporaryRoot, 'unrelated-custody.sqlite3');
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'initial owner lost');
+    owner!.release();
+    const unrelatedPath = path.join(temporaryRoot, 'unrelated.sqlite3');
+    fs.writeFileSync(unrelatedPath, 'unrelated');
+    const custodyPath = `${databasePath}.custody-11111111111111111111111111111111`;
+    fs.linkSync(unrelatedPath, custodyPath);
+
+    const successor = tryRetainSqliteTransactionLock(databasePath, 'successor lost');
+    expect(successor).not.toBeNull();
+    successor!.release();
+    expect(inode(custodyPath)).toEqual(inode(unrelatedPath));
+    expect(fs.existsSync(custodyPath)).toBe(true);
+  });
+
+  it('rejects a symlinked orphan journal without opening or deleting it', () => {
+    if (process.platform === 'win32') return;
+    const databasePath = path.join(temporaryRoot, 'tampered-sidecar.sqlite3');
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'initial owner lost');
+    owner!.release();
+    const custodyPath = `${databasePath}.custody-22222222222222222222222222222222`;
+    const sidecarPath = `${custodyPath}-journal`;
+    fs.linkSync(databasePath, custodyPath);
+    fs.symlinkSync(databasePath, sidecarPath);
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'Unsafe orphan SQLite lock sidecar'
+    );
+    expect(fs.lstatSync(sidecarPath).isSymbolicLink()).toBe(true);
+    expect(fs.existsSync(custodyPath)).toBe(true);
+  });
+
+  it.each([
+    ['non-regular', (sidecarPath: string) => fs.mkdirSync(sidecarPath)],
+    [
+      'multiply-linked',
+      (sidecarPath: string) => {
+        fs.writeFileSync(sidecarPath, 'tampered journal');
+        fs.linkSync(sidecarPath, `${sidecarPath}.foreign-link`);
+      },
+    ],
+  ])('rejects a %s orphan sidecar without deleting custody', (_label, createSidecar) => {
+    const databasePath = path.join(temporaryRoot, `${_label}-sidecar.sqlite3`);
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'initial owner lost');
+    owner!.release();
+    const custodyPath = `${databasePath}.custody-33333333333333333333333333333333`;
+    const sidecarPath = `${custodyPath}-journal`;
+    fs.linkSync(databasePath, custodyPath);
+    createSidecar(sidecarPath);
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'Unsafe orphan SQLite lock sidecar'
+    );
+    expect(fs.existsSync(custodyPath)).toBe(true);
+    expect(fs.existsSync(sidecarPath)).toBe(true);
+  });
+
+  it('rejects unexpected external hard links to the guarded database', () => {
+    const databasePath = path.join(temporaryRoot, 'extra-hard-link.sqlite3');
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'initial owner lost');
+    owner!.release();
+    const externalPath = path.join(temporaryRoot, 'external-hard-link.sqlite3');
+    fs.linkSync(databasePath, externalPath);
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'Unexpected SQLite lock database hard-link count'
+    );
+    expect(inode(externalPath)).toEqual(inode(databasePath));
+  });
+
+  it('fails closed when orphan custody retention exceeds the bounded scan', () => {
+    const databasePath = path.join(temporaryRoot, 'bounded-orphans.sqlite3');
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'initial owner lost');
+    owner!.release();
+    for (let index = 0; index < 65; index += 1) {
+      fs.linkSync(databasePath, `${databasePath}.custody-${index.toString(16).padStart(32, '0')}`);
+    }
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'successor lost')).toThrow(
+      'SQLite lock orphan custody scan exceeded its bound'
+    );
+    expect(custodyArtifacts(databasePath)).toHaveLength(65);
+  });
+
   it('fails closed and closes its identity guard when a custody hard link cannot be created', () => {
     const databasePath = path.join(temporaryRoot, 'unsupported-hard-link.sqlite3');
     const hardLinkError = Object.assign(new Error('hard links unavailable'), {
@@ -385,4 +533,20 @@ function transientArtifacts(databasePath: string): string[] {
         entry === `${databaseName}-shm` ||
         entry === `${databaseName}-wal`
     );
+}
+
+async function waitForOutput(
+  readOutput: () => string,
+  expected: string,
+  timeoutMs = 10_000
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!readOutput().includes(expected)) {
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `Timed out waiting for child output ${JSON.stringify(expected)}: ${readOutput()}`
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 }
