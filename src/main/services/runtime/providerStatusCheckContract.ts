@@ -90,7 +90,10 @@ function hasStaleCatalogEvidence(provider: CliProviderStatus): boolean {
   return Boolean(provider.modelCatalog && provider.modelCatalog.status !== 'ready');
 }
 
-function isCompleteRuntimeProviderStatus(value: unknown): boolean {
+function isCompleteRuntimeProviderStatus(
+  value: unknown,
+  expectedProviderId?: CliProviderId
+): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return false;
   }
@@ -105,6 +108,8 @@ function isCompleteRuntimeProviderStatus(value: unknown): boolean {
   const backend = status.backend;
   const verificationState = status.verificationState;
   return (
+    typeof status.providerId === 'string' &&
+    (expectedProviderId === undefined || status.providerId === expectedProviderId) &&
     typeof status.supported === 'boolean' &&
     typeof status.authenticated === 'boolean' &&
     (typeof status.authMethod === 'string' || status.authMethod === null) &&
@@ -273,6 +278,11 @@ export function mergeProviderStatusDisplayEvidence(
     supported: incoming.supported,
     authenticated: launchUnproved ? false : incoming.authenticated,
     authMethod: launchUnproved ? null : incoming.authMethod,
+    verificationState: launchUnproved
+      ? incoming.statusCheckOutcome === 'transient_error'
+        ? 'error'
+        : 'unknown'
+      : incoming.verificationState,
     canLoginFromUi: launchUnproved ? current.canLoginFromUi : incoming.canLoginFromUi,
     capabilities: launchUnproved
       ? { ...incoming.capabilities, teamLaunch: false }
@@ -349,7 +359,10 @@ export function getLegacyProviderStatusCheck(
  * authoritative by inference. Only an explicit, complete authoritative
  * response may grant launch readiness.
  */
-export function resolveRuntimeProviderStatusCheck(runtimeStatus: unknown): ProviderStatusCheck {
+export function resolveRuntimeProviderStatusCheck(
+  runtimeStatus: unknown,
+  expectedProviderId?: CliProviderId
+): ProviderStatusCheck {
   const record =
     runtimeStatus && typeof runtimeStatus === 'object' && !Array.isArray(runtimeStatus)
       ? (runtimeStatus as Record<string, unknown>)
@@ -358,7 +371,7 @@ export function resolveRuntimeProviderStatusCheck(runtimeStatus: unknown): Provi
   const errorCode = record?.statusCheckErrorCode;
 
   if (outcome === 'authoritative') {
-    if (!isCompleteRuntimeProviderStatus(runtimeStatus)) {
+    if (!isCompleteRuntimeProviderStatus(runtimeStatus, expectedProviderId)) {
       return {
         statusCheckOutcome: 'pending',
         statusCheckErrorCode: 'partial_response',

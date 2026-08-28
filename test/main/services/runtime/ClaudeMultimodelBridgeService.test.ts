@@ -452,9 +452,12 @@ describe('ClaudeMultimodelBridgeService', () => {
       providerId: 'codex',
       supported: true,
       authenticated: false,
-      verificationState: 'unknown',
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
       statusMessage: 'Codex native runtime unavailable',
       models: ['gpt-5.4'],
+      capabilities: { teamLaunch: false },
     });
     expect(calls).toEqual([
       'runtime status --json --provider codex --summary',
@@ -975,17 +978,23 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(providers[0]).toMatchObject({
       providerId: 'anthropic',
       supported: true,
-      authenticated: true,
-      verificationState: 'verified',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
       models: ['opus[1m]'],
+      capabilities: { teamLaunch: false },
     });
     expect(providers[1]).toMatchObject({
       providerId: 'codex',
       supported: true,
       authenticated: false,
-      verificationState: 'unknown',
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
       statusMessage: 'Codex native runtime unavailable',
       models: ['gpt-5.4'],
+      capabilities: { teamLaunch: false },
     });
     expect(providers[2]).toMatchObject({
       providerId: 'opencode',

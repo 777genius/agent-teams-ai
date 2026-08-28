@@ -27,6 +27,7 @@ vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
 
 function statusPayload(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
+    providerId: 'opencode',
     supported: true,
     authenticated: true,
     authMethod: 'builtin_free',
@@ -164,6 +165,8 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
         statusPayload(
           isSummary
             ? {
+                statusCheckOutcome: 'model_only',
+                statusCheckErrorCode: 'partial_response',
                 authenticated: false,
                 authMethod: null,
                 capabilities: { teamLaunch: false, oneShot: false, extensions: {} },
@@ -196,11 +199,55 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     expect(result).toMatchObject({
       authenticated: false,
       authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
       models: ['project/model'],
       modelCatalog: { defaultModelId: 'project/model' },
       capabilities: { teamLaunch: false },
     });
   });
+
+  it.each([
+    ['anthropic', 'transient_error', 'error', []],
+    [undefined, 'pending', 'unknown', ['opencode/big-pickle']],
+  ] as const)(
+    'fails closed for an authoritative record with %s provider identity',
+    async (wireProviderId, statusCheckOutcome, verificationState, models) => {
+      execCliMock.mockResolvedValue({
+        stdout: JSON.stringify({
+          schemaVersion: 2,
+          providers: {
+            codex: {
+              ...statusPayload(),
+              providerId: wireProviderId,
+              authenticated: true,
+              authMethod: 'unsafe',
+              capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+            },
+          },
+        }),
+        stderr: '',
+        exitCode: 0,
+      });
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+
+      const result = await new ClaudeMultimodelBridgeService().getProviderStatus(
+        '/mock/runtime',
+        'codex'
+      );
+
+      expect(result).toMatchObject({
+        providerId: 'codex',
+        authenticated: false,
+        authMethod: null,
+        verificationState,
+        statusCheckOutcome,
+        capabilities: { teamLaunch: false },
+        models,
+      });
+    }
+  );
 
   it.each(['.', '/'])(
     'rejects invalid project scope %s before running the provider route',

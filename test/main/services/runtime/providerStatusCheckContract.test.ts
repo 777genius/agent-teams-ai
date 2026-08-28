@@ -81,6 +81,7 @@ function providerStatus(overrides: Partial<CliProviderStatus> = {}): CliProvider
 
 function completeRuntimeStatus(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
+    providerId: 'opencode',
     supported: true,
     authenticated: true,
     authMethod: 'builtin_free',
@@ -121,9 +122,21 @@ describe('provider status check contract', () => {
   });
 
   it('accepts an explicit complete authoritative response', () => {
-    expect(resolveRuntimeProviderStatusCheck(completeRuntimeStatus())).toEqual({
+    expect(resolveRuntimeProviderStatusCheck(completeRuntimeStatus(), 'opencode')).toEqual({
       statusCheckOutcome: 'authoritative',
       statusCheckErrorCode: undefined,
+    });
+  });
+
+  it.each([
+    [{ providerId: 'anthropic' }, 'mismatched'],
+    [{ providerId: undefined }, 'missing'],
+  ])('rejects authoritative status with %s provider identity', (identity, _label) => {
+    expect(
+      resolveRuntimeProviderStatusCheck(completeRuntimeStatus(identity), 'opencode')
+    ).toEqual({
+      statusCheckOutcome: 'pending',
+      statusCheckErrorCode: 'partial_response',
     });
   });
 
@@ -209,6 +222,7 @@ describe('provider status check contract', () => {
       expect(merged).toMatchObject({
         authenticated: false,
         authMethod: null,
+        verificationState: statusCheckOutcome === 'transient_error' ? 'error' : 'unknown',
         models: ['opencode/big-pickle'],
         modelCatalog: { status: 'stale' },
         capabilities: { teamLaunch: false },

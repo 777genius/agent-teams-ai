@@ -23,6 +23,7 @@ import {
   mapRuntimeExtensionCapabilities,
   resolveRuntimeProviderStatusCheck,
   type RuntimeExtensionCapabilitiesResponse,
+  sanitizeProviderStatusAuthority,
 } from './providerStatusCheckContract';
 
 import type {
@@ -171,6 +172,7 @@ interface UnifiedRuntimeStatusResponse {
   providers?: Record<
     string,
     {
+      providerId?: string;
       supported?: boolean;
       authenticated?: boolean;
       authMethod?: string | null;
@@ -657,6 +659,14 @@ function mergeProviderCatalogFields(
   };
 }
 
+function canHydrateProviderCatalog(provider: CliProviderStatus): boolean {
+  return (
+    provider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
+    (provider.statusCheckOutcome === 'authoritative' ||
+      (provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only'))
+  );
+}
+
 export class ClaudeMultimodelBridgeService {
   private providerStatusHydrationGeneration = 0;
 
@@ -989,10 +999,12 @@ export class ClaudeMultimodelBridgeService {
         options
       );
       const statusCheck = getLegacyProviderStatusCheck(providerId, originalError);
-      return applyProviderStatusCheck(
-        provider,
-        statusCheck.statusCheckOutcome,
-        statusCheck.statusCheckErrorCode
+      return sanitizeProviderStatusAuthority(
+        applyProviderStatusCheck(
+          provider,
+          statusCheck.statusCheckOutcome,
+          statusCheck.statusCheckErrorCode
+        )
       );
     } catch (fallbackError) {
       logger.warn(
@@ -1012,8 +1024,14 @@ export class ClaudeMultimodelBridgeService {
     if (!runtimeStatus) {
       return provider;
     }
+    if (runtimeStatus.providerId !== undefined && runtimeStatus.providerId !== providerId) {
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Provider status response did not match the requested provider')
+      );
+    }
     const modelCatalog = mapRuntimeProviderModelCatalog(providerId, runtimeStatus.modelCatalog);
-    const statusCheck = resolveRuntimeProviderStatusCheck(runtimeStatus);
+    const statusCheck = resolveRuntimeProviderStatusCheck(runtimeStatus, providerId);
     const isAuthoritative = statusCheck.statusCheckOutcome === 'authoritative';
 
     return {
@@ -1306,8 +1324,7 @@ export class ClaudeMultimodelBridgeService {
 
     for (const liveProvider of liveProviders) {
       if (
-        liveProvider.statusCheckOutcome !== 'authoritative' ||
-        liveProvider.runtimeCapabilities?.modelCatalog?.dynamic !== true
+        !canHydrateProviderCatalog(liveProvider)
       ) {
         this.clearProviderStatusHydrationGeneration(
           binaryPath,
@@ -1489,8 +1506,7 @@ export class ClaudeMultimodelBridgeService {
       });
       if (
         projectPath &&
-        provider.statusCheckOutcome === 'authoritative' &&
-        provider.runtimeCapabilities?.modelCatalog?.dynamic === true
+        canHydrateProviderCatalog(provider)
       ) {
         try {
           const hydratedProvider = await this.getProviderCatalogHydration(
@@ -1520,8 +1536,7 @@ export class ClaudeMultimodelBridgeService {
         }
       }
       if (
-        provider.statusCheckOutcome === 'authoritative' &&
-        provider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
+        canHydrateProviderCatalog(provider) &&
         onCatalogUpdate
       ) {
         backgroundHydrationOwnsGenerationCleanup = true;
