@@ -1,7 +1,7 @@
 import { appendFileSync, readSync } from 'node:fs';
 
-import { resolveDesktopSqliteLockAuthority } from '../../src/main/services/infrastructure/DesktopSqliteLockAuthority';
 import {
+  getSqliteTransactionLockDatabasePath,
   setSqliteTransactionLockTestHooksForTests,
   tryRetainSqliteTransactionLock,
 } from '../../src/main/services/infrastructure/SqliteTransactionLock';
@@ -37,7 +37,7 @@ if (mode === 'async-holder') {
   });
 } else if (mode === 'authority-holder') {
   const authority = tryRetainSqliteTransactionLock(
-    resolveDesktopSqliteLockAuthority(target).databasePath,
+    getSqliteTransactionLockDatabasePath(target),
     'pre-publication authority lost'
   );
   if (!authority) throw new Error('Could not acquire pre-publication authority');

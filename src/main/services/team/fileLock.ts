@@ -4,11 +4,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import {
-  type DesktopSqliteLockAuthority,
-  resolveDesktopSqliteLockAuthority,
-  syncLockDirectory,
-} from '@main/services/infrastructure/DesktopSqliteLockAuthority';
-import {
+  getSqliteTransactionLockDatabasePath,
   type RetainedSqliteTransactionLock,
   tryRetainSqliteTransactionLock,
 } from '@main/services/infrastructure/SqliteTransactionLock';
@@ -21,6 +17,7 @@ const AUTHORITATIVE_MAGIC = 'agent-teams-legacy-authoritative-v2';
 const MAX_LOCK_BYTES = 256;
 const RANDOM_UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const NO_FOLLOW = process.platform === 'win32' ? 0 : (fs.constants.O_NOFOLLOW ?? 0);
+const WINDOWS_DIRECTORY_SYNC_UNSUPPORTED = new Set(['EACCES', 'EPERM', 'EISDIR', 'EBADF']);
 
 /** Reserved cutover marker; publication requires proof that every old-protocol process is gone. */
 export const FILE_LOCK_RETIREMENT_MARKER = '0\n9007199254740991\nagent-teams-sqlite-cutover-v1\n';
@@ -56,8 +53,8 @@ interface OwnedLock {
 }
 
 interface LockTarget {
-  authority: DesktopSqliteLockAuthority;
   canonicalParent: string;
+  logicalTarget: string;
   lockPath: string;
   ownerKey: string;
   requestedParent: string;
@@ -79,6 +76,25 @@ function sameIdentity(left: FileIdentity, right: FileIdentity): boolean {
   return left.dev === right.dev && left.ino === right.ino;
 }
 
+function syncDirectory(directoryPath: string): void {
+  let descriptor: number | undefined;
+  try {
+    descriptor = fs.openSync(directoryPath, 'r');
+    fs.fsyncSync(descriptor);
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (
+      process.platform !== 'win32' ||
+      code === undefined ||
+      !WINDOWS_DIRECTORY_SYNC_UNSUPPORTED.has(code)
+    ) {
+      throw error;
+    }
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+}
+
 function resolveLockTarget(filePath: string): LockTarget {
   const requestedLockPath = path.resolve(`${filePath}.lock`);
   const requestedParent = path.dirname(requestedLockPath);
@@ -90,8 +106,8 @@ function resolveLockTarget(filePath: string): LockTarget {
   }
   const lockPath = path.join(canonicalParent, path.basename(requestedLockPath));
   return {
-    authority: resolveDesktopSqliteLockAuthority(lockPath.slice(0, -'.lock'.length)),
     canonicalParent,
+    logicalTarget: lockPath.slice(0, -'.lock'.length),
     lockPath,
     ownerKey: lockPath,
     requestedParent,
@@ -264,7 +280,7 @@ function unlinkExactObserved(lockPath: string, expected: ObservedFile): void {
       throw new Error('Lock changed before cleanup');
     }
     fs.unlinkSync(lockPath);
-    syncLockDirectory(path.dirname(lockPath));
+    syncDirectory(path.dirname(lockPath));
   } finally {
     if (descriptor !== undefined) fs.closeSync(descriptor);
   }
@@ -356,7 +372,7 @@ function unlinkExactIdentity(lockPath: string, expectedIdentity: FileIdentity): 
       throw new Error('Lock changed before cleanup');
     }
     fs.unlinkSync(lockPath);
-    syncLockDirectory(path.dirname(lockPath));
+    syncDirectory(path.dirname(lockPath));
   } finally {
     if (descriptor !== undefined) fs.closeSync(descriptor);
   }
@@ -387,7 +403,7 @@ function unlinkOwnedPublication(
     throw new Error('Lock changed before cleanup');
   }
   fs.unlinkSync(publicationPath);
-  syncLockDirectory(path.dirname(publicationPath));
+  syncDirectory(path.dirname(publicationPath));
 }
 
 function cleanupOwnedPublication(
@@ -431,13 +447,7 @@ function tryAcquire(
   target: LockTarget,
   sameProcessContention: 'reject' | 'wait'
 ): AcquisitionResult {
-  const {
-    authority: sqliteAuthority,
-    lockPath,
-    canonicalParent,
-    ownerKey,
-    requestedParent,
-  } = target;
+  const { lockPath, canonicalParent, logicalTarget, ownerKey, requestedParent } = target;
   if (sameProcessOwners.has(ownerKey)) {
     if (sameProcessContention === 'wait') return 'contended';
     assertNotOwnedByThisProcess(filePath, ownerKey);
@@ -446,7 +456,7 @@ function tryAcquire(
   if (preflight === 'contended' || preflight === 'retry') return preflight;
   const ownershipLostMessage = `File lock ownership was lost: ${filePath}`;
   const authority = tryRetainSqliteTransactionLock(
-    sqliteAuthority.databasePath,
+    getSqliteTransactionLockDatabasePath(logicalTarget),
     ownershipLostMessage
   );
   if (!authority) return 'contended';
@@ -457,7 +467,6 @@ function tryAcquire(
   let publicationIdentity: FileIdentity | undefined;
   let authoritySettled = false;
   try {
-    sqliteAuthority.assertTargetRoot();
     cleanupPublicationTombstone(publicationPath);
     descriptor = fs.openSync(publicationPath, 'wx', 0o600);
     const openedStats = fs.fstatSync(descriptor, { bigint: true });
@@ -581,7 +590,7 @@ function release(lock: OwnedLock, ownershipLostMessage: string): void {
   try {
     assertOwned(lock, ownershipLostMessage);
     fs.unlinkSync(lock.lockPath);
-    syncLockDirectory(path.dirname(lock.lockPath));
+    syncDirectory(path.dirname(lock.lockPath));
     cleanupOutcome = { status: 'success', value: undefined };
   } catch (error) {
     cleanupOutcome = { error, status: 'failure' };
