@@ -1,0 +1,23 @@
+{
+  "name": "@agent-teams/desktop-file-lock-native",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Capability-relative Desktop file-lock V3 Node-API addon",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "build/Release/desktop_file_lock_native.node",
+    "index.js",
+    "index.d.ts",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.js",
+    "clean": "node scripts/build.js --clean",
+    "test": "node scripts/build.js && node --test test/contract.test.js",
+    "test:windows-source": "node scripts/check-windows-source.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
