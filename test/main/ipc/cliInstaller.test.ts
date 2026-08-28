@@ -926,6 +926,7 @@ describe('cliInstaller IPC handlers', () => {
             authMethod: 'chatgpt',
             verificationState: 'verified',
             statusMessage: 'ChatGPT account ready',
+            statusCheckOutcome: 'authoritative',
           }),
         ])
       );
@@ -937,10 +938,11 @@ describe('cliInstaller IPC handlers', () => {
     expect(initial.success).toBe(true);
     expect(initial.data?.authLoggedIn).toBe(false);
 
+    const request = providerStatusRequest();
     const staleProviderInvoke = ipcMain.invoke(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'codex',
-      providerStatusRequest()
+      request
     ) as Promise<IpcResult<CliProviderStatusIpcResponse>>;
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
 
@@ -950,18 +952,29 @@ describe('cliInstaller IPC handlers', () => {
     )) as IpcResult<CliInstallationStatus>;
     expect(fresh.success).toBe(true);
     expect(fresh.data?.authLoggedIn).toBe(true);
+    const freshProof = prepareAuthoritativeExecutionProof({
+      cwd: process.cwd(),
+      checks: [{ providerId: 'codex', providerBackendId: null, model: 'fresh-model' }],
+    });
 
     staleProviderRequest.resolve(
       provider({
         providerId: 'codex',
         verificationState: 'error',
         statusMessage: 'Codex CLI not found',
+        statusCheckOutcome: 'authoritative',
       })
     );
     await expect(staleProviderInvoke).resolves.toMatchObject({
-      success: false,
-      error: expect.stringContaining('invalidated'),
+      success: true,
+      data: {
+        providerStatus: { providerId: 'codex', statusMessage: 'Codex CLI not found' },
+        purpose: request.purpose,
+        requestNonce: request.requestNonce,
+        authorityScope: null,
+      },
     });
+    expect(verifyAuthoritativeModelExecutionProof(freshProof)).toBe(true);
 
     const cached = (await ipcMain.invoke(
       CLI_INSTALLER_GET_STATUS

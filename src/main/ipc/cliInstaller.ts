@@ -61,6 +61,11 @@ interface ProviderObservationRequestFence {
   order: number;
 }
 
+interface ProviderObservationCompletionClaim {
+  applyAuthority: boolean;
+  applyCache: boolean;
+}
+
 const statusInFlight = new Map<CliInstallerProviderStatusMode, Promise<CliInstallationStatus>>();
 interface ProviderStatusObservation {
   providerStatus: CliProviderStatus | null;
@@ -118,40 +123,39 @@ function beginProviderObservationRequest(): ProviderObservationRequestFence {
 function claimProviderObservationCompletion(
   providerStatus: CliProviderStatus,
   requestFence: ProviderObservationRequestFence
-): boolean {
+): ProviderObservationCompletionClaim {
   if (requestFence.epoch !== providerObservationFenceEpoch) {
-    return false;
+    return { applyAuthority: false, applyCache: false };
   }
 
   const providerId = providerStatus.providerId;
   const latestAuthorityOrder = latestCompletedProviderAuthorityOrderById.get(providerId) ?? 0;
+  const latestCacheOrder = latestCompletedProviderCacheOrderById.get(providerId) ?? 0;
   if (isSemanticProviderAuthorityObservation(providerStatus)) {
     // Catalog/cache-only results cannot suppress an authority observation. Only
     // a newer completed authority observation participates in this dimension.
     if (requestFence.order < latestAuthorityOrder) {
-      return false;
+      return { applyAuthority: false, applyCache: false };
     }
     latestCompletedProviderAuthorityOrderById.set(providerId, requestFence.order);
-    return true;
+
+    // An older authority result still owns its genuine auth/capability change,
+    // but it must not replace catalog/cache data completed by a newer request.
+    const applyCache = requestFence.order >= latestCacheOrder;
+    if (applyCache) {
+      latestCompletedProviderCacheOrderById.set(providerId, requestFence.order);
+    }
+    return { applyAuthority: true, applyCache };
   }
 
   // Every non-authoritative result can mutate cached provider data. Keep those
   // mutations ordered with each other, while a newer authority result also
   // fences older cache data from patching the authority/cache state it established.
-  const latestCacheOrder = latestCompletedProviderCacheOrderById.get(providerId) ?? 0;
   if (requestFence.order < latestAuthorityOrder || requestFence.order < latestCacheOrder) {
-    return false;
+    return { applyAuthority: false, applyCache: false };
   }
   latestCompletedProviderCacheOrderById.set(providerId, requestFence.order);
-  return true;
-}
-
-function assertProviderObservationRequestCurrent(
-  requestFence: ProviderObservationRequestFence
-): void {
-  if (requestFence.epoch !== providerObservationFenceEpoch) {
-    throw new Error('Provider status observation was invalidated before completion');
-  }
+  return { applyAuthority: false, applyCache: true };
 }
 
 function clearObservedProviderAuthorities(): void {
@@ -273,6 +277,87 @@ function canUseStatusForCacheKey(
     !hasDeferredProviderStatus(status) &&
     !isDeferredProviderStatusSnapshot(status)
   );
+}
+
+function mergeAuthoritativeProviderFields(
+  cachedProviderStatus: CliProviderStatus,
+  authoritativeProviderStatus: CliProviderStatus
+): CliProviderStatus {
+  return {
+    ...cachedProviderStatus,
+    supported: authoritativeProviderStatus.supported,
+    authenticated: authoritativeProviderStatus.authenticated,
+    authMethod: authoritativeProviderStatus.authMethod,
+    verificationState: authoritativeProviderStatus.verificationState,
+    statusCheckOutcome: authoritativeProviderStatus.statusCheckOutcome,
+    statusCheckErrorCode: authoritativeProviderStatus.statusCheckErrorCode,
+    canLoginFromUi: authoritativeProviderStatus.canLoginFromUi,
+    capabilities: authoritativeProviderStatus.capabilities,
+    selectedBackendId: authoritativeProviderStatus.selectedBackendId,
+    resolvedBackendId: authoritativeProviderStatus.resolvedBackendId,
+    availableBackends: authoritativeProviderStatus.availableBackends,
+    backend: authoritativeProviderStatus.backend,
+    connection: authoritativeProviderStatus.connection,
+  };
+}
+
+function isModelOnlyProviderObservation(providerStatus: CliProviderStatus): boolean {
+  return providerStatus.statusCheckOutcome === 'model_only';
+}
+
+function getCachedProviderStatus(providerId: CliProviderId): CliProviderStatus | null {
+  let newestMatch: { value: CliProviderStatus; at: number } | null = null;
+  for (const cached of cachedStatus.values()) {
+    const match = cached.value.providers.find((provider) => provider.providerId === providerId);
+    if (match && (!newestMatch || cached.at > newestMatch.at)) {
+      newestMatch = { value: match, at: cached.at };
+    }
+  }
+  return newestMatch?.value ?? null;
+}
+
+function withDerivedAggregateAuthentication(
+  status: CliInstallationStatus,
+  providers: CliProviderStatus[]
+): CliInstallationStatus {
+  const authenticatedProvider =
+    status.flavor === 'agent_teams_orchestrator'
+      ? getCachedStatusAuthenticatedProvider(providers)
+      : (providers.find((provider) => provider.authenticated) ?? null);
+  return {
+    ...status,
+    providers,
+    authLoggedIn:
+      status.flavor === 'agent_teams_orchestrator'
+        ? authenticatedProvider !== null
+        : providers.some((provider) => provider.authenticated),
+    authMethod: authenticatedProvider?.authMethod ?? null,
+  };
+}
+
+function buildCacheableStatus(
+  status: CliInstallationStatus,
+  claims: ReadonlyMap<CliProviderId, ProviderObservationCompletionClaim>
+): CliInstallationStatus {
+  const providers = status.providers.flatMap((providerStatus) => {
+    const claim = claims.get(providerStatus.providerId);
+    const cachedProviderStatus = getCachedProviderStatus(providerStatus.providerId);
+    if (claim?.applyCache) {
+      return [
+        claim.applyAuthority || !cachedProviderStatus
+          ? providerStatus
+          : isModelOnlyProviderObservation(providerStatus)
+            ? mergeAuthoritativeProviderFields(providerStatus, cachedProviderStatus)
+            : providerStatus,
+      ];
+    }
+
+    if (claim?.applyAuthority && cachedProviderStatus) {
+      return [mergeAuthoritativeProviderFields(cachedProviderStatus, providerStatus)];
+    }
+    return cachedProviderStatus ? [cachedProviderStatus] : [];
+  });
+  return withDerivedAggregateAuthentication(status, providers);
 }
 
 function resetProviderRuntimeRequestLimiter(): void {
@@ -401,15 +486,23 @@ async function handleGetStatus(
     if (cached && Date.now() - cached.at < STATUS_CACHE_TTL_MS) {
       if (latestSnapshot && canUseStatusForCacheKey(cacheKey, latestSnapshot)) {
         const requestFence = beginProviderObservationRequest();
+        const claims = new Map<CliProviderId, ProviderObservationCompletionClaim>();
         for (const providerStatus of latestSnapshot.providers) {
-          if (!claimProviderObservationCompletion(providerStatus, requestFence)) {
+          const claim = claimProviderObservationCompletion(providerStatus, requestFence);
+          claims.set(providerStatus.providerId, claim);
+          if (!claim.applyAuthority && !claim.applyCache) {
             throw new Error(
               `Provider status observation for ${providerStatus.providerId} was superseded before completion`
             );
           }
-          observeProviderAuthority(providerStatus, null);
+          if (claim.applyAuthority) {
+            observeProviderAuthority(providerStatus, null);
+          }
         }
-        cachedStatus.set(cacheKey, { value: latestSnapshot, at: Date.now() });
+        cachedStatus.set(cacheKey, {
+          value: buildCacheableStatus(latestSnapshot, claims),
+          at: Date.now(),
+        });
         return { success: true, data: latestSnapshot };
       }
       return { success: true, data: cached.value };
@@ -427,14 +520,18 @@ async function handleGetStatus(
             // observations or caches, but the caller still owns the service result.
             return status;
           }
-          assertProviderObservationRequestCurrent(requestFence);
           const supersededProviderIds: CliProviderId[] = [];
+          const claims = new Map<CliProviderId, ProviderObservationCompletionClaim>();
           for (const providerStatus of status.providers) {
-            if (!claimProviderObservationCompletion(providerStatus, requestFence)) {
+            const claim = claimProviderObservationCompletion(providerStatus, requestFence);
+            claims.set(providerStatus.providerId, claim);
+            if (!claim.applyAuthority && !claim.applyCache) {
               supersededProviderIds.push(providerStatus.providerId);
               continue;
             }
-            observeProviderAuthority(providerStatus, null);
+            if (claim.applyAuthority) {
+              observeProviderAuthority(providerStatus, null);
+            }
           }
           if (supersededProviderIds.length > 0) {
             throw new Error(
@@ -442,7 +539,10 @@ async function handleGetStatus(
             );
           }
           if (canUseStatusForCacheKey(cacheKey, status)) {
-            cachedStatus.set(cacheKey, { value: status, at: Date.now() });
+            cachedStatus.set(cacheKey, {
+              value: buildCacheableStatus(status, claims),
+              at: Date.now(),
+            });
           }
           return status;
         })
@@ -473,11 +573,13 @@ async function handleGetStatus(
   }
 }
 
-function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): void {
+function patchCachedProviderStatus(
+  providerStatus: CliProviderStatus | null,
+  claim: ProviderObservationCompletionClaim
+): void {
   if (!providerStatus) {
     return;
   }
-  observeProviderAuthority(providerStatus, null);
 
   for (const [cacheKey, cached] of cachedStatus) {
     if (
@@ -490,26 +592,28 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
     const hasProvider = cached.value.providers.some(
       (provider) => provider.providerId === providerStatus.providerId
     );
+    if (!claim.applyCache && (!claim.applyAuthority || !hasProvider)) {
+      continue;
+    }
+
+    const cachedProviderStatus = cached.value.providers.find(
+      (provider) => provider.providerId === providerStatus.providerId
+    );
+    const nextProviderStatus = claim.applyAuthority
+      ? claim.applyCache || !cachedProviderStatus
+        ? providerStatus
+        : mergeAuthoritativeProviderFields(cachedProviderStatus, providerStatus)
+      : cachedProviderStatus && isModelOnlyProviderObservation(providerStatus)
+        ? mergeAuthoritativeProviderFields(providerStatus, cachedProviderStatus)
+        : providerStatus;
     const nextProviders = hasProvider
       ? cached.value.providers.map((provider) =>
-          provider.providerId === providerStatus.providerId ? providerStatus : provider
+          provider.providerId === providerStatus.providerId ? nextProviderStatus : provider
         )
-      : [...cached.value.providers, providerStatus];
-    const authenticatedProvider =
-      cached.value.flavor === 'agent_teams_orchestrator'
-        ? getCachedStatusAuthenticatedProvider(nextProviders)
-        : (nextProviders.find((provider) => provider.authenticated) ?? null);
+      : [...cached.value.providers, nextProviderStatus];
 
     cachedStatus.set(cacheKey, {
-      value: {
-        ...cached.value,
-        providers: nextProviders,
-        authLoggedIn:
-          cached.value.flavor === 'agent_teams_orchestrator'
-            ? authenticatedProvider !== null
-            : nextProviders.some((provider) => provider.authenticated),
-        authMethod: authenticatedProvider?.authMethod ?? null,
-      },
+      value: withDerivedAggregateAuthentication(cached.value, nextProviders),
       at: Date.now(),
     });
   }
@@ -623,9 +727,6 @@ async function handleGetProviderStatus(
     const inFlight = providerStatusInFlight.get(requestKey);
     if (inFlight) {
       const observation = await inFlight;
-      if (observation.observationGeneration !== statusCacheGeneration) {
-        throw new Error('Provider status observation was invalidated before completion');
-      }
       return {
         success: true,
         data: {
@@ -648,17 +749,28 @@ async function handleGetProviderStatus(
     )
       .then((status) => {
         if (generation !== statusCacheGeneration) {
-          throw new Error('Provider status observation was invalidated before completion');
+          // The caller owns work that already started. Invalidation only revokes
+          // this completion's permission to mutate cache/proof/authority state.
+          return {
+            providerStatus: status,
+            observationGeneration: generation,
+            observationNonce,
+            authorityScope: null,
+          };
         }
-        assertProviderObservationRequestCurrent(requestFence);
-        if (status && !claimProviderObservationCompletion(status, requestFence)) {
+        const claim = status
+          ? claimProviderObservationCompletion(status, requestFence)
+          : { applyAuthority: false, applyCache: true };
+        if (status && !claim.applyAuthority && !claim.applyCache) {
           throw new Error(
             `Provider status observation for ${providerId} was superseded before completion`
           );
         }
         if (status) {
-          observeProviderAuthority(status, serviceOptions.projectPath ?? null);
-          if (!serviceOptions.projectPath) patchCachedProviderStatus(status);
+          if (claim.applyAuthority) {
+            observeProviderAuthority(status, serviceOptions.projectPath ?? null);
+          }
+          if (!serviceOptions.projectPath) patchCachedProviderStatus(status, claim);
         }
         return {
           providerStatus: status,
@@ -680,9 +792,6 @@ async function handleGetProviderStatus(
 
     providerStatusInFlight.set(requestKey, observationPromise);
     const observation = await observationPromise;
-    if (observation.observationGeneration !== statusCacheGeneration) {
-      throw new Error('Provider status observation was invalidated before completion');
-    }
     return {
       success: true,
       data: {
@@ -726,15 +835,19 @@ async function handleVerifyProviderModels(
       // suppressing every stale cache and authority side effect below.
       return { success: true, data: status };
     }
-    assertProviderObservationRequestCurrent(requestFence);
-    if (status && !claimProviderObservationCompletion(status, requestFence)) {
+    const claim = status
+      ? claimProviderObservationCompletion(status, requestFence)
+      : { applyAuthority: false, applyCache: true };
+    if (status && !claim.applyAuthority && !claim.applyCache) {
       throw new Error(
         `Provider model observation for ${providerId} was superseded before completion`
       );
     }
     if (status) {
-      observeProviderAuthority(status, null);
-      patchCachedProviderStatus(status);
+      if (claim.applyAuthority) {
+        observeProviderAuthority(status, null);
+      }
+      patchCachedProviderStatus(status, claim);
     }
     return { success: true, data: status };
   } catch (error) {

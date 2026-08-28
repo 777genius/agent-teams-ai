@@ -491,12 +491,7 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     deferredByProvider.get('gemini')?.resolve(createProviderStatus('gemini'));
     const results = await Promise.all(requests);
-    expect(results.every((result) => !result.success)).toBe(true);
-    expect(results).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ error: expect.stringContaining('invalidated') }),
-      ])
-    );
+    expect(results.every((result) => result.success)).toBe(true);
 
     const replacementResult = await invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
@@ -561,10 +556,11 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     const firstStatus = await invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
     expect(firstStatus.success).toBe(true);
 
+    const request = createProviderStatusRequest();
     const providerRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'codex',
-      createProviderStatusRequest()
+      request
     );
     await flushMicrotasks();
 
@@ -576,8 +572,13 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     providerDeferred.resolve(createProviderStatus('codex'));
     await expect(providerRequest).resolves.toMatchObject({
-      success: false,
-      error: expect.stringContaining('invalidated'),
+      success: true,
+      data: {
+        providerStatus: { providerId: 'codex' },
+        purpose: request.purpose,
+        requestNonce: request.requestNonce,
+        authorityScope: null,
+      },
     });
 
     const cachedStatusResult =
@@ -807,21 +808,34 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     ).resolves.toMatchObject({ success: true, data: { authLoggedIn: false } });
   });
 
-  test('lets an older authoritative logout complete after a newer model-only result', async () => {
+  test('merges an older aggregate logout without overwriting newer scoped model cache data', async () => {
     const projectPath = resolvePath(process.cwd(), 'src');
     const aggregateDeferred = createDeferred<CliInstallationStatus>();
-    const verifyDeferred = createDeferred<CliProviderStatus | null>();
+    const providerDeferred = createDeferred<CliProviderStatus | null>();
+    const seedStatus = createCliStatus([
+      {
+        ...createProviderStatus('codex'),
+        models: ['seed-model'],
+      },
+    ]);
     const service = createInstallerService({
-      getStatus: vi.fn(() => aggregateDeferred.promise),
-      getProviderStatus: vi.fn(() =>
-        Promise.resolve({
+      getStatus: vi
+        .fn()
+        .mockResolvedValueOnce(seedStatus)
+        .mockImplementationOnce(() => aggregateDeferred.promise),
+      getProviderStatus: vi
+        .fn()
+        .mockResolvedValueOnce({
           ...createProviderStatus('codex'),
           models: ['authenticated-model'],
         })
-      ),
-      verifyProviderModels: vi.fn(() => verifyDeferred.promise),
+        .mockImplementationOnce(() => providerDeferred.promise),
     });
     const { invoke } = setupHandlers(service);
+
+    await invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS, {
+      providerStatusMode: 'defer',
+    });
 
     await invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
@@ -838,16 +852,17 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
 
     const aggregateRequest = invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
     await flushMicrotasks();
-    const verifyRequest = invoke<IpcResult<CliProviderStatus | null>>(
-      CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
-      'codex'
+    const providerRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest()
     );
-    verifyDeferred.resolve({
+    providerDeferred.resolve({
       ...createProviderStatus('codex'),
       statusCheckOutcome: 'model_only',
       models: ['newer-catalog-model'],
     });
-    await expect(verifyRequest).resolves.toMatchObject({ success: true });
+    await expect(providerRequest).resolves.toMatchObject({ success: true });
     expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(true);
 
     aggregateDeferred.resolve(
@@ -866,10 +881,26 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
       data: { authLoggedIn: false },
     });
     expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(false);
+
+    await expect(
+      invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS)
+    ).resolves.toMatchObject({
+      success: true,
+      data: {
+        authLoggedIn: false,
+        providers: [
+          expect.objectContaining({
+            authenticated: false,
+            authMethod: null,
+            models: ['newer-catalog-model'],
+          }),
+        ],
+      },
+    });
   });
 
-  test('rejects an older model-only completion after a newer model-only completion', async () => {
-    const verifyDeferred = createDeferred<CliProviderStatus | null>();
+  test('merges an older scoped logout without overwriting newer aggregate model cache data', async () => {
+    const providerDeferred = createDeferred<CliProviderStatus | null>();
     const service = createInstallerService({
       getStatus: vi.fn(() =>
         Promise.resolve(
@@ -877,14 +908,86 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
             {
               ...createProviderStatus('codex'),
               statusCheckOutcome: 'model_only',
-              models: ['newer-model'],
+              models: ['newer-aggregate-model'],
             },
           ])
         )
       ),
+      getProviderStatus: vi.fn(() => providerDeferred.promise),
+    });
+    const { invoke } = setupHandlers(service);
+
+    const providerRequest = invoke<IpcResult<CliProviderStatusIpcResponse>>(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      createProviderStatusRequest()
+    );
+    await flushMicrotasks();
+    await expect(
+      invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS)
+    ).resolves.toMatchObject({ success: true });
+
+    providerDeferred.resolve({
+      ...createProviderStatus('codex'),
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'authoritative',
+      models: ['older-scoped-model'],
+    });
+    await expect(providerRequest).resolves.toMatchObject({
+      success: true,
+      data: { providerStatus: { authenticated: false } },
+    });
+
+    await expect(
+      invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS)
+    ).resolves.toMatchObject({
+      success: true,
+      data: {
+        authLoggedIn: false,
+        providers: [
+          expect.objectContaining({
+            authenticated: false,
+            models: ['newer-aggregate-model'],
+          }),
+        ],
+      },
+    });
+  });
+
+  test('rejects an older model-only completion after a newer model-only completion', async () => {
+    const verifyDeferred = createDeferred<CliProviderStatus | null>();
+    const service = createInstallerService({
+      getStatus: vi
+        .fn()
+        .mockResolvedValueOnce(
+          createCliStatus([
+            {
+              ...createProviderStatus('codex'),
+              models: ['authoritative-seed'],
+            },
+          ])
+        )
+        .mockResolvedValueOnce(
+          createCliStatus([
+            {
+              ...createProviderStatus('codex'),
+              authenticated: false,
+              authMethod: null,
+              verificationState: 'unknown',
+              statusCheckOutcome: 'model_only',
+              models: ['newer-model'],
+            },
+          ])
+        ),
       verifyProviderModels: vi.fn(() => verifyDeferred.promise),
     });
     const { invoke } = setupHandlers(service);
+
+    await invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS, {
+      providerStatusMode: 'defer',
+    });
 
     const olderRequest = invoke<IpcResult<CliProviderStatus | null>>(
       CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
@@ -908,7 +1011,10 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
       invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS)
     ).resolves.toMatchObject({
       success: true,
-      data: { providers: [expect.objectContaining({ models: ['newer-model'] })] },
+      data: {
+        authLoggedIn: true,
+        providers: [expect.objectContaining({ authenticated: true, models: ['newer-model'] })],
+      },
     });
   });
 
@@ -1033,7 +1139,7 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     ).resolves.toMatchObject({ success: true, data: { authLoggedIn: true } });
   });
 
-  test('resets request ordering on explicit invalidation without accepting old completions', async () => {
+  test('resets request ordering on invalidation while returning old completions without effects', async () => {
     const oldDeferred = createDeferred<CliProviderStatus | null>();
     const freshDeferred = createDeferred<CliProviderStatus | null>();
     const getProviderStatus = vi
@@ -1061,8 +1167,8 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
       statusCheckOutcome: 'authoritative',
     });
     await expect(oldRequest).resolves.toMatchObject({
-      success: false,
-      error: expect.stringContaining('invalidated'),
+      success: true,
+      data: { providerStatus: { providerId: 'codex' }, authorityScope: null },
     });
     await flushMicrotasks();
     expect(getProviderStatus).toHaveBeenCalledTimes(2);
