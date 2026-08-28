@@ -1320,7 +1320,7 @@ describe('project-scoped provider loading', () => {
     }
   });
 
-  it('deduplicates within one request epoch but isolates a replacement epoch', async () => {
+  it('deduplicates within one request identity and fences overlapping identities out of order', async () => {
     const previousApi = window.electronAPI;
     const base = createLoadingMultimodelCliStatus();
     const openCode = base.providers.find((provider) => provider.providerId === 'opencode')!;
@@ -1347,7 +1347,7 @@ describe('project-scoped provider loading', () => {
         diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
       },
     };
-    const completions: Array<(status: CliProviderStatus) => void> = [];
+    const completions: ((status: CliProviderStatus) => void)[] = [];
     const getProviderStatus = vi.fn(
       () =>
         new Promise<CliProviderStatus>((resolve) => {
@@ -1368,7 +1368,7 @@ describe('project-scoped provider loading', () => {
       silent: true,
       projectPath,
       intent: 'launch-proof' as const,
-      requestEpoch: 41,
+      requestIdentity: 41,
     };
     store.setState({ cliStatus: { ...base, installed: true } });
 
@@ -1381,20 +1381,36 @@ describe('project-scoped provider loading', () => {
 
       const recovery = store.getState().fetchCliProviderStatus('opencode', {
         ...request,
-        requestEpoch: 42,
+        requestIdentity: 42,
       });
       expect(getProviderStatus).toHaveBeenCalledTimes(2);
 
-      completions[0]!(ready);
-      await expect(Promise.all([original, sameAttemptRerender])).resolves.toEqual([false, false]);
-      expect(store.getState().cliProviderLaunchProofByScope[scopeKey]).toBeUndefined();
-
-      completions[1]!(ready);
+      completions[1](ready);
       await expect(recovery).resolves.toBe(true);
       expect(store.getState().cliProviderLaunchProofByScope[scopeKey]).toMatchObject({
         providerStatus: ready,
         requestId: expect.any(Number),
       });
+      const recoveryRequestId = store.getState().cliProviderLaunchProofByScope[scopeKey]?.requestId;
+
+      const replacementAfterCleanup = store.getState().fetchCliProviderStatus('opencode', {
+        ...request,
+        requestIdentity: 42,
+      });
+      expect(getProviderStatus).toHaveBeenCalledTimes(3);
+
+      completions[0](ready);
+      await expect(Promise.all([original, sameAttemptRerender])).resolves.toEqual([false, false]);
+      expect(store.getState().cliProviderLaunchProofByScope[scopeKey]).toBeUndefined();
+
+      completions[2](ready);
+      await expect(replacementAfterCleanup).resolves.toBe(true);
+      expect(store.getState().cliProviderLaunchProofByScope[scopeKey]).toMatchObject({
+        providerStatus: ready,
+      });
+      expect(store.getState().cliProviderLaunchProofByScope[scopeKey]?.requestId).not.toBe(
+        recoveryRequestId
+      );
     } finally {
       Object.defineProperty(window, 'electronAPI', {
         configurable: true,

@@ -28,6 +28,7 @@ import {
   useExactProjectProviderLaunchProof,
 } from './useEffectiveCliProviderStatus';
 
+import type { CliProviderStatusFetchOptions } from '@renderer/store/slices/cliInstallerSlice';
 import type { CliInstallationStatus, CliProviderStatus } from '@shared/types';
 
 const authoritativeProvider = (): CliProviderStatus => ({
@@ -300,7 +301,101 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
-  it('isolates a multi-provider recovery from the timed-out attempt epoch', async () => {
+  it('uses a new global attempt identity after an unmount and cannot accept the old completion', async () => {
+    const requests: {
+      requestIdentity: number;
+      resolve: (value: boolean) => void;
+    }[] = [];
+    storeState.fetchCliProviderStatus.mockImplementation((_providerId, options) => {
+      return new Promise<boolean>((resolve) => {
+        const requestOptions = options as CliProviderStatusFetchOptions | undefined;
+        requests.push({ requestIdentity: requestOptions?.requestIdentity ?? -1, resolve });
+      });
+    });
+
+    const first = await mountProbe('/project/remount');
+    expect(requests).toHaveLength(1);
+    act(() => first.root.unmount());
+
+    const second = await mountProbe('/project/remount');
+    expect(requests).toHaveLength(2);
+    expect(requests[1].requestIdentity).toBeGreaterThan(requests[0].requestIdentity);
+
+    await act(async () => {
+      storeState.cliProviderLaunchProofByScope['opencode\0/project/remount'] = {
+        providerStatus: authoritativeProvider(),
+        epoch: 10,
+        requestId: 1,
+        fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/remount'),
+      };
+      requests[0].resolve(true);
+      await flushPromises();
+    });
+    expect(second.snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
+
+    await act(async () => {
+      storeState.cliProviderLaunchProofByScope['opencode\0/project/remount'] = {
+        providerStatus: authoritativeProvider(),
+        epoch: 10,
+        requestId: 2,
+        fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/remount'),
+      };
+      requests[1].resolve(true);
+      await flushPromises();
+    });
+    expect(second.snapshots.at(-1)?.providerStatusById.get('opencode')).toEqual(
+      authoritativeProvider()
+    );
+    act(() => second.root.unmount());
+  });
+
+  it('gives simultaneous hook instances distinct identities and keeps their authority isolated', async () => {
+    const requests: {
+      requestIdentity: number;
+      resolve: (value: boolean) => void;
+    }[] = [];
+    storeState.fetchCliProviderStatus.mockImplementation((_providerId, options) => {
+      return new Promise<boolean>((resolve) => {
+        const requestOptions = options as CliProviderStatusFetchOptions | undefined;
+        requests.push({ requestIdentity: requestOptions?.requestIdentity ?? -1, resolve });
+      });
+    });
+
+    const first = await mountProbe('/project/concurrent');
+    const second = await mountProbe('/project/concurrent');
+    expect(requests).toHaveLength(2);
+    expect(requests[1].requestIdentity).toBeGreaterThan(requests[0].requestIdentity);
+
+    await act(async () => {
+      requests[0].resolve(false);
+      await flushPromises();
+    });
+    expect(first.snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
+    expect(second.snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
+
+    await act(async () => {
+      storeState.cliProviderLaunchProofByScope['opencode\0/project/concurrent'] = {
+        providerStatus: authoritativeProvider(),
+        epoch: 11,
+        requestId: 2,
+        fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/concurrent'),
+      };
+      requests[1].resolve(true);
+      await flushPromises();
+    });
+    expect(first.snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
+    expect(second.snapshots.at(-1)?.providerStatusById.get('opencode')).toEqual(
+      authoritativeProvider()
+    );
+
+    act(() => first.root.unmount());
+    act(() => second.root.unmount());
+  });
+
+  it('isolates a multi-provider recovery from the timed-out attempt identity', async () => {
     const base = createLoadingMultimodelCliStatus();
     const codex: CliProviderStatus = {
       ...base.providers.find((provider) => provider.providerId === 'codex')!,
@@ -315,14 +410,19 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
       },
       models: ['gpt-project'],
     };
-    const requests: Array<{
+    const requests: {
       providerId: 'opencode' | 'codex';
-      requestEpoch: number;
+      requestIdentity: number;
       resolve: (value: boolean) => void;
-    }> = [];
+    }[] = [];
     storeState.fetchCliProviderStatus.mockImplementation((providerId, options) => {
       return new Promise<boolean>((resolve) => {
-        requests.push({ providerId, requestEpoch: options?.requestEpoch, resolve });
+        const requestOptions = options as CliProviderStatusFetchOptions | undefined;
+        requests.push({
+          providerId,
+          requestIdentity: requestOptions?.requestIdentity ?? -1,
+          resolve,
+        });
       });
     });
     const host = document.createElement('div');
@@ -344,8 +444,11 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
       await flushPromises();
     });
     expect(requests).toHaveLength(2);
-    const firstEpoch = requests[0]!.requestEpoch;
-    expect(requests.map((request) => request.requestEpoch)).toEqual([firstEpoch, firstEpoch]);
+    const firstIdentity = requests[0].requestIdentity;
+    expect(requests.map((request) => request.requestIdentity)).toEqual([
+      firstIdentity,
+      firstIdentity,
+    ]);
 
     await act(async () => {
       root.render(
@@ -370,18 +473,20 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
       await flushPromises();
     });
     expect(requests).toHaveLength(4);
-    const recoveryEpoch = requests[2]!.requestEpoch;
-    expect(recoveryEpoch).not.toBe(firstEpoch);
-    expect(requests.slice(2).map((request) => request.requestEpoch)).toEqual([
-      recoveryEpoch,
-      recoveryEpoch,
+    const recoveryIdentity = requests[2].requestIdentity;
+    expect(recoveryIdentity).toBeGreaterThan(firstIdentity);
+    expect(requests.slice(2).map((request) => request.requestIdentity)).toEqual([
+      recoveryIdentity,
+      recoveryIdentity,
     ]);
     for (const index of [0, 1]) {
-      const [firstProvider, firstOptions] = storeState.fetchCliProviderStatus.mock.calls[index]!;
+      const [firstProvider, firstOptions] = storeState.fetchCliProviderStatus.mock.calls[index];
       const [recoveryProvider, recoveryOptions] =
-        storeState.fetchCliProviderStatus.mock.calls[index + 2]!;
+        storeState.fetchCliProviderStatus.mock.calls[index + 2];
       expect(recoveryProvider).toBe(firstProvider);
-      expect({ ...recoveryOptions, requestEpoch: firstOptions.requestEpoch }).toEqual(firstOptions);
+      expect({ ...recoveryOptions, requestIdentity: firstOptions.requestIdentity }).toEqual(
+        firstOptions
+      );
     }
 
     await act(async () => {
@@ -399,8 +504,8 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         fetchedAtMs: Date.now(),
         authorityScope: authorityScope('/project/a', 'codex'),
       };
-      requests[0]!.resolve(true);
-      requests[1]!.resolve(true);
+      requests[0].resolve(true);
+      requests[1].resolve(true);
       await flushPromises();
     });
     expect(snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
@@ -414,7 +519,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         fetchedAtMs: Date.now(),
         authorityScope: authorityScope('/project/a'),
       };
-      requests[3]!.resolve(true);
+      requests[3].resolve(true);
       await flushPromises();
     });
     expect(snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
@@ -428,7 +533,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         fetchedAtMs: Date.now(),
         authorityScope: authorityScope('/project/a', 'codex'),
       };
-      requests[2]!.resolve(true);
+      requests[2].resolve(true);
       await flushPromises();
     });
     expect(snapshots.at(-1)?.providerStatusById.get('opencode')).not.toBeNull();
@@ -850,7 +955,7 @@ describe('resolveProjectScopedProviderStatus', () => {
       });
       expect(fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
         silent: true,
-        requestEpoch: expect.any(Number),
+        requestIdentity: expect.any(Number),
         checkReason: 'launch_preflight',
         projectPath: '/project/models-only',
         intent: 'launch-proof',

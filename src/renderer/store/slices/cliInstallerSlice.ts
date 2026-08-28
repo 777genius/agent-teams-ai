@@ -49,7 +49,7 @@ const MULTIMODEL_PROVIDER_ID_SET = new Set<CliProviderId>(MULTIMODEL_PROVIDER_ID
 export interface CliProviderStatusFetchOptions {
   silent?: boolean;
   epoch?: number;
-  requestEpoch?: number; // Caller-owned replacement-attempt identity.
+  requestIdentity?: number; // Opaque identity shared only within one logical attempt.
   verifyModels?: boolean;
   checkReason?: AnalyticsProviderCheckReason;
   projectPath?: string | null;
@@ -150,8 +150,8 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function clearCliProviderStatusInFlight(providerId: CliProviderId): void {
-  for (const key of cliProviderStatusInFlight.keys()) {
-    if (key.startsWith(`${providerId}:status:`) || key.startsWith(`${providerId}:verify:`)) {
+  for (const [key, [entryProviderId]] of cliProviderStatusInFlight) {
+    if (entryProviderId === providerId) {
       cliProviderStatusInFlight.delete(key);
     }
   }
@@ -870,7 +870,7 @@ export interface CliInstallerSlice extends ScopedCliProviderAuthorityState {
   invalidateCodexRuntimeStatus: () => Promise<void>;
 }
 let cliStatusInFlight: Promise<void> | null = null;
-const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
+const cliProviderStatusInFlight = new Map<string, readonly [CliProviderId, Promise<boolean>]>();
 let cliStatusEpoch = 0;
 let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
@@ -1239,11 +1239,11 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const verifyModels = options?.verifyModels === true && providerId !== 'opencode';
     const projectPath = options?.projectPath?.trim() || null;
     const requestIntent = options?.intent ?? 'passive';
-    const requestKey = `${providerId}:${verifyModels ? 'verify' : 'status'}:${projectPath ?? ''}:${requestIntent}`;
-    const requestDedupeKey = `${requestKey}:${options?.requestEpoch ?? 'default'}`;
+    const requestKey = JSON.stringify([providerId, verifyModels, projectPath, requestIntent]);
+    const requestDedupeKey = JSON.stringify([requestKey, options?.requestIdentity ?? null]);
     const scopeKey = getCliProviderStatusScopeKey(providerId, projectPath);
     const inFlight = cliProviderStatusInFlight.get(requestDedupeKey);
-    if (inFlight) return inFlight;
+    if (inFlight) return inFlight[1];
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
     const requestId = ++cliProviderStatusRequestId;
     const silent = options?.silent === true;
@@ -1552,7 +1552,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         clearCodexCatalogLoadingRefresh(providerId);
         return false;
       } finally {
-        if (cliProviderStatusInFlight.get(requestDedupeKey) === request) {
+        if (cliProviderStatusInFlight.get(requestDedupeKey)?.[1] === request) {
           cliProviderStatusInFlight.delete(requestDedupeKey);
         }
         if (cliProviderStatusActiveRequestIds.get(requestKey) === requestId) {
@@ -1560,7 +1560,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         }
       }
     })();
-    cliProviderStatusInFlight.set(requestDedupeKey, request);
+    cliProviderStatusInFlight.set(requestDedupeKey, [providerId, request]);
     return request;
   },
   invalidateCliStatus: async () => {

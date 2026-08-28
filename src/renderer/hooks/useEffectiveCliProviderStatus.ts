@@ -15,6 +15,12 @@ import { hasFreshAuthoritativeScopedProviderStatus } from '@shared/utils/cliProv
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 const CLI_PROVIDER_LAUNCH_PROOF_TTL_MS = 60_000;
+let exactProjectProviderProofAttemptIdentity = 0;
+
+function createExactProjectProviderProofAttemptIdentity(): number {
+  exactProjectProviderProofAttemptIdentity += 1;
+  return exactProjectProviderProofAttemptIdentity;
+}
 
 export interface EffectiveCliProviderStatusSnapshot {
   cliStatus: CliInstallationStatus | null;
@@ -112,6 +118,7 @@ export function useExactProjectProviderLaunchProof(
       return;
     }
     const generation = ++proofRequestGenerationRef.current;
+    const requestIdentity = createExactProjectProviderProofAttemptIdentity();
     let cancelled = false;
     const refreshTimeoutHandles = new Set<number>();
     const previouslyAcceptedProviderGenerations = new Map(acceptedProviderGenerationsRef.current);
@@ -146,7 +153,7 @@ export function useExactProjectProviderLaunchProof(
         providerIds.map(async (providerId) => {
           const authoritative = await fetchCliProviderStatus(providerId, {
             silent: true,
-            requestEpoch: generation,
+            requestIdentity,
             checkReason: 'launch_preflight',
             projectPath: normalizedProjectPath,
             intent: 'launch-proof',
