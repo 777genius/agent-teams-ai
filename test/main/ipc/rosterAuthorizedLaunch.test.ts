@@ -481,6 +481,7 @@ describe('roster-authorized fake launch contract', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        transactionId,
         () =>
           bridge.beginRosterAuthorizationTransaction(teamName, {
             transactionId,
@@ -533,6 +534,7 @@ describe('roster-authorized fake launch contract', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        transactionId,
         async () => {
           calls.push('snapshot');
           return service.beginRosterAuthorizationTransaction(teamName, transactionId, {
@@ -614,6 +616,7 @@ describe('roster-authorized fake launch contract', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        transactionId,
         () =>
           service.beginRosterAuthorizationTransaction(teamName, transactionId, {
             members: [
@@ -938,6 +941,7 @@ describe('renderer recovery for main-owned admission rollback', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        transactionId,
         async () => ({ transactionId, status: 'applied' }),
         getOutcome,
         async () => {
@@ -964,6 +968,7 @@ describe('renderer recovery for main-owned admission rollback', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        transactionId,
         async () => ({ transactionId, status: 'applied' }),
         getOutcome,
         async () => {

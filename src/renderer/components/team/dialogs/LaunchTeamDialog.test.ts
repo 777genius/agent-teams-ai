@@ -1,6 +1,7 @@
 import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -26,7 +27,6 @@ import {
   TeamRelaunchStopOutcomeUnknownError,
 } from './teamRelaunchFlow';
 import { useCommittedLaunchAuthorizationRef } from './useCommittedLaunchAuthorizationRef';
-import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 
 import type { ProvisioningLaunchAuthorizationInput } from './provisioningLaunchAuthorization';
 import type { ProvisioningProviderCheck } from './provisioningProviderChecks';
@@ -512,6 +512,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
 
     const submission = executeLaunchTeamDialogSubmissionWithRecheck(
       getAuthorization,
+      'tx',
       begin,
       getOutcome,
       launch,
@@ -556,6 +557,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         getAuthorization,
+        'tx',
         begin,
         getOutcome,
         launch,
@@ -604,6 +606,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
 
     const submission = executeLaunchTeamDialogSubmissionWithRecheck(
       () => authorization,
+      'tx',
       persist,
       getOutcome,
       launch,
@@ -652,6 +655,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         getAuthorization,
+        'tx',
         persist,
         getOutcome,
         launch,
@@ -686,6 +690,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        'tx',
         persist,
         getOutcome,
         launch,
@@ -717,6 +722,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        'tx',
         begin,
         getOutcome,
         launch,
@@ -750,6 +756,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
       await expect(
         executeLaunchTeamDialogSubmissionWithRecheck(
           () => authorization,
+          'tx',
           persist,
           getOutcome,
           launch,
@@ -788,6 +795,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        'tx',
         persist,
         getOutcome,
         launch,
@@ -803,43 +811,85 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
-  it('refreshes the consumed proof after typed no-dispatch reconciliation rolls back', async () => {
-    const authorization = {
-      prepareState: 'ready' as const,
-      providerStatusesAuthoritative: true,
-      preparedRequestSignature: 'project-a',
-      currentRequestSignature: 'project-a',
-      preparedGeneration: 1,
-      currentGeneration: 1,
-      providerProofExpiresAtMs: freshProofExpiry,
-      executionProof: freshExecutionProof,
-    };
-    const getOutcome = vi
-      .fn()
-      .mockResolvedValueOnce({ transactionId: 'tx', status: 'applied' as const })
-      .mockResolvedValueOnce({ transactionId: 'tx', status: 'rolled-back' as const });
-    const rollback = vi.fn(async () => ({ transactionId: 'tx', status: 'rolled-back' as const }));
-    const refresh = vi.fn();
-    const transportError = Object.assign(new Error('authoritative no-dispatch'), {
-      code: TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE,
-    });
-    const storeError = Object.assign(new Error('launch failed'), { causeError: transportError });
+  it.each(['rolled-back', 'not-started'] as const)(
+    'refreshes the consumed proof after exact durable %s reconciliation',
+    async (status) => {
+      const authorization = {
+        prepareState: 'ready' as const,
+        providerStatusesAuthoritative: true,
+        preparedRequestSignature: 'project-a',
+        currentRequestSignature: 'project-a',
+        preparedGeneration: 1,
+        currentGeneration: 1,
+        providerProofExpiresAtMs: freshProofExpiry,
+        executionProof: freshExecutionProof,
+      };
+      const getOutcome = vi
+        .fn()
+        .mockResolvedValueOnce({ transactionId: 'tx', status: 'applied' as const })
+        .mockResolvedValueOnce({ transactionId: 'tx', status });
+      const rollback = vi.fn(async () => ({ transactionId: 'tx', status: 'rolled-back' as const }));
+      const refresh = vi.fn();
+      const transportError = Object.assign(new Error('authoritative no-dispatch'), {
+        code: TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE,
+      });
+      const storeError = Object.assign(new Error('launch failed'), { causeError: transportError });
 
-    await expect(
-      executeLaunchTeamDialogSubmissionWithRecheck(
-        () => authorization,
-        async () => ({ transactionId: 'tx', status: 'applied' as const }),
-        getOutcome,
-        async () => Promise.reject(storeError),
-        rollback,
-        undefined,
-        refresh
-      )
-    ).resolves.toBe(false);
-    expect(getOutcome).toHaveBeenCalledTimes(2);
-    expect(rollback).not.toHaveBeenCalled();
-    expect(refresh).toHaveBeenCalledOnce();
-  });
+      await expect(
+        executeLaunchTeamDialogSubmissionWithRecheck(
+          () => authorization,
+          'tx',
+          async () => ({ transactionId: 'tx', status: 'applied' as const }),
+          getOutcome,
+          async () => Promise.reject(storeError),
+          rollback,
+          undefined,
+          refresh
+        )
+      ).resolves.toBe(false);
+      expect(getOutcome).toHaveBeenCalledTimes(2);
+      expect(rollback).not.toHaveBeenCalled();
+      expect(refresh).toHaveBeenCalledOnce();
+    }
+  );
+
+  it.each(['rolled-back', 'not-started'] as const)(
+    'rejects a foreign %s reconciliation without refreshing authorization',
+    async (status) => {
+      const authorization = {
+        prepareState: 'ready' as const,
+        providerStatusesAuthoritative: true,
+        preparedRequestSignature: 'project-a',
+        currentRequestSignature: 'project-a',
+        preparedGeneration: 1,
+        currentGeneration: 1,
+        providerProofExpiresAtMs: freshProofExpiry,
+        executionProof: freshExecutionProof,
+      };
+      const failure = new Error('launch response lost');
+      const getOutcome = vi
+        .fn()
+        .mockResolvedValueOnce({ transactionId: 'tx', status: 'applied' as const })
+        .mockResolvedValueOnce({ transactionId: 'foreign-tx', status });
+      const refresh = vi.fn();
+      const launch = vi.fn(async () => Promise.reject(failure));
+
+      await expect(
+        executeLaunchTeamDialogSubmissionWithRecheck(
+          () => authorization,
+          'tx',
+          async () => ({ transactionId: 'tx', status: 'applied' as const }),
+          getOutcome,
+          launch,
+          vi.fn(),
+          undefined,
+          refresh
+        )
+      ).rejects.toBe(failure);
+      expect(launch).toHaveBeenCalledOnce();
+      expect(refresh).not.toHaveBeenCalled();
+    }
+  );
 
   it.each(['prepared', 'launch-unknown', 'unknown'] as const)(
     'preserves the launch rejection when reconciliation finds %s',
@@ -870,6 +920,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
       await expect(
         executeLaunchTeamDialogSubmissionWithRecheck(
           () => authorization,
+          'tx',
           persist,
           getOutcome,
           launch,
@@ -912,6 +963,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
       await expect(
         executeLaunchTeamDialogSubmissionWithRecheck(
           () => authorization,
+          'tx',
           async () => ({ transactionId: 'tx', status: 'applied' as const }),
           getOutcome,
           async () => {
@@ -949,6 +1001,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
 
     const staleSubmission = executeLaunchTeamDialogSubmissionWithRecheck(
       () => authorization,
+      'tx-a',
       async () => ({ transactionId: 'tx-a', status: 'applied' as const }),
       async () => ({ transactionId: 'tx-a', status: 'applied' as const }),
       () =>
@@ -996,6 +1049,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        'tx',
         async () => ({ transactionId: 'tx', status: 'applied' as const }),
         async () => ({ transactionId: 'tx', status: 'applied' as const }),
         async () => {
@@ -1040,6 +1094,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        'tx',
         async () => ({ transactionId: 'tx', status: 'applied' as const }),
         async () => ({ transactionId: 'tx', status: 'applied' as const }),
         async () => {
@@ -1083,6 +1138,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        'tx',
         persist,
         getOutcome,
         launch,

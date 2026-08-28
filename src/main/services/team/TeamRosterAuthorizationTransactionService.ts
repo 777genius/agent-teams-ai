@@ -13,6 +13,7 @@ import {
   reserveRosterAdmissionIndexUnderLock,
 } from './reconcileRosterAuthorizationAdmissions';
 import { recoverAllRosterAuthorizationTeams } from './recoverRosterAuthorizationTeams';
+import { resolveMissingRosterRecord } from './resolveMissingRosterAuthorizationRecord';
 import { buildTerminalRosterAuthorizationRecord } from './rosterAuthorizationOutcome';
 import { toRosterAuthorizationOutcome as toOutcome } from './rosterAuthorizationOutcome';
 import {
@@ -57,7 +58,6 @@ export class TeamRosterAuthorizationTransactionService {
   private readonly ledger: TeamRosterAuthorizationLedger;
   private readonly recoveryScheduler: RosterAuthorizationRecoveryScheduler;
   private readonly boundedRecovery = new BoundedRosterTeamRecovery();
-
   constructor(
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
     private readonly options: RosterAuthorizationTransactionServiceOptions = {}
@@ -161,7 +161,7 @@ export class TeamRosterAuthorizationTransactionService {
         const record = await this.ledger.readRecord(teamName, transactionId);
         return record
           ? this.resolveRecordOutcomeUnderLock(teamName, record)
-          : toOutcome(transactionId, 'not-started');
+          : resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       });
     } catch {
       return toOutcome(transactionId, 'unknown', undefined, 'Transaction outcome is unreadable');
@@ -224,7 +224,7 @@ export class TeamRosterAuthorizationTransactionService {
     this.assertTransactionId(launchCommandId);
     return this.membersMetaStore.withRosterLock(teamName, async () => {
       const record = await this.ledger.readRecord(teamName, transactionId);
-      if (!record) return toOutcome(transactionId, 'not-started');
+      if (!record) return resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       const requestedBinding = { launchCommandId, executionProof, launchRequestFingerprint };
       if (record.launchCommandId && !hasExactPreparedLaunchBinding(record, requestedBinding)) {
         return toPreparedLaunchBindingConflict(record);
@@ -255,7 +255,7 @@ export class TeamRosterAuthorizationTransactionService {
     this.assertTransactionId(transactionId);
     return this.membersMetaStore.withRosterLock(teamName, async () => {
       const record = await this.ledger.readRecord(teamName, transactionId);
-      if (!record) return toOutcome(transactionId, 'not-started');
+      if (!record) return resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       const bindingError = validateRosterAuthorizedLaunchResult(record, result);
       if (bindingError) {
         if (TERMINAL.has(record.status)) {
@@ -331,7 +331,7 @@ export class TeamRosterAuthorizationTransactionService {
     this.assertTransactionId(transactionId);
     return this.membersMetaStore.withRosterLock(teamName, async () => {
       const record = await this.ledger.readRecord(teamName, transactionId);
-      if (!record) return toOutcome(transactionId, 'not-started');
+      if (!record) return resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       if (record.status === 'launch-unknown') {
         const resolved = await this.resolveRecordUnderLock(teamName, record);
         return toOutcome(transactionId, resolved.status, resolved);
@@ -370,7 +370,7 @@ export class TeamRosterAuthorizationTransactionService {
     this.assertTransactionId(transactionId);
     return this.membersMetaStore.withRosterLock(teamName, async () => {
       const record = await this.ledger.readRecord(teamName, transactionId);
-      if (!record) return toOutcome(transactionId, 'not-started');
+      if (!record) return resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       if (record.status !== 'prepared' && record.status !== 'launch-unknown') {
         return toOutcome(transactionId, record.status, record);
       }
@@ -414,7 +414,7 @@ export class TeamRosterAuthorizationTransactionService {
     this.assertTransactionId(transactionId);
     return this.membersMetaStore.withRosterLock(teamName, async () => {
       const record = await this.ledger.readRecord(teamName, transactionId);
-      if (!record) return toOutcome(transactionId, 'not-started');
+      if (!record) return resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       const resolved = await this.resolveRecordUnderLock(teamName, record);
       if (resolved.status !== 'prepared')
         return toOutcome(transactionId, resolved.status, resolved);
@@ -445,7 +445,7 @@ export class TeamRosterAuthorizationTransactionService {
     this.assertTransactionId(transactionId);
     return this.membersMetaStore.withRosterLock(teamName, async () => {
       const record = await this.ledger.readRecord(teamName, transactionId);
-      if (!record) return toOutcome(transactionId, 'not-started');
+      if (!record) return resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       if (record.status !== 'prepared' && record.status !== 'launch-unknown') {
         return toOutcome(transactionId, record.status, record);
       }
@@ -471,7 +471,7 @@ export class TeamRosterAuthorizationTransactionService {
     this.assertTransactionId(transactionId);
     return this.membersMetaStore.withRosterLock(teamName, async () => {
       const record = await this.ledger.readRecord(teamName, transactionId);
-      if (!record) return toOutcome(transactionId, 'not-started');
+      if (!record) return resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       if (record.status === 'committed') return toOutcome(transactionId, 'committed', record);
       if (record.status === 'applied' || record.status === 'prepared') {
         return toOutcome(
@@ -492,7 +492,7 @@ export class TeamRosterAuthorizationTransactionService {
     this.assertTransactionId(transactionId);
     return this.membersMetaStore.withRosterLock(teamName, async () => {
       const record = await this.ledger.readRecord(teamName, transactionId);
-      if (!record) return toOutcome(transactionId, 'not-started');
+      if (!record) return resolveMissingRosterRecord(this.ledger, teamName, transactionId);
       if (record.status === 'rolled-back') return toOutcome(transactionId, 'rolled-back', record);
       if (record.status !== 'applied' && record.status !== 'prepared') {
         return toOutcome(transactionId, record.status, record);

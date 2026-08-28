@@ -4,7 +4,6 @@ import {
   type ProvisioningLaunchAuthorizationInput,
 } from './provisioningLaunchAuthorization';
 import { isTeamRelaunchKnownPreDispatchFailure } from './teamRelaunchFlow';
-import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 
 import type {
   AuthoritativeModelExecutionProof,
@@ -13,28 +12,26 @@ import type {
 
 type TransactionOperation = () => Promise<RosterAuthorizationTransactionOutcome>;
 
-function requireRollback(outcome: RosterAuthorizationTransactionOutcome): void {
-  if (outcome.status !== 'rolled-back') {
+function hasExpectedTransaction(
+  expectedTransactionId: string,
+  outcome: RosterAuthorizationTransactionOutcome
+): boolean {
+  return outcome.transactionId === expectedTransactionId;
+}
+
+function requireRollback(
+  expectedTransactionId: string,
+  outcome: RosterAuthorizationTransactionOutcome
+): void {
+  if (!hasExpectedTransaction(expectedTransactionId, outcome) || outcome.status !== 'rolled-back') {
     throw new Error(
-      `The roster authorization transaction could not be safely rolled back (${outcome.status}). ${outcome.message ?? 'Newer roster state was preserved.'}`
+      `The roster authorization transaction could not be safely rolled back (${hasExpectedTransaction(expectedTransactionId, outcome) ? outcome.status : 'foreign'}). ${outcome.message ?? 'Newer roster state was preserved.'}`
     );
   }
 }
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function isKnownNoDispatchError(error: unknown, seen = new Set<unknown>()): boolean {
-  if (error == null || (typeof error !== 'object' && typeof error !== 'function')) return false;
-  if (seen.has(error)) return false;
-  seen.add(error);
-  const candidate = error as { code?: unknown; cause?: unknown; causeError?: unknown };
-  return (
-    candidate.code === TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE ||
-    isKnownNoDispatchError(candidate.cause, seen) ||
-    isKnownNoDispatchError(candidate.causeError, seen)
-  );
 }
 
 function hasSameExecutionProof(
@@ -67,11 +64,12 @@ function hasSameImmutableLaunchAuthorization(
 }
 
 async function rollbackKnownPreDispatchFailure(
+  expectedTransactionId: string,
   failure: Error,
   rollback: TransactionOperation
 ): Promise<never> {
   try {
-    requireRollback(await rollback());
+    requireRollback(expectedTransactionId, await rollback());
   } catch (rollbackError) {
     throw new Error(
       `${failure.message}; immediate roster rollback failed: ${describeError(rollbackError)}`,
@@ -83,6 +81,7 @@ async function rollbackKnownPreDispatchFailure(
 
 export async function executeLaunchTeamDialogSubmissionWithRecheck(
   getAuthorization: () => ProvisioningLaunchAuthorizationInput,
+  expectedTransactionId: string,
   begin: TransactionOperation,
   getOutcome: TransactionOperation,
   submit: (proof: AuthoritativeModelExecutionProof) => void | Promise<void>,
@@ -103,14 +102,17 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
     began = await begin();
   } catch (beginError) {
     const resolved = await getOutcome();
-    if (resolved.status === 'applied') {
-      requireRollback(await rollback());
+    if (hasExpectedTransaction(expectedTransactionId, resolved) && resolved.status === 'applied') {
+      requireRollback(expectedTransactionId, await rollback());
       throw new Error(
         'The roster update response was lost. The exact prior roster was restored; review authorization and retry.',
         { cause: beginError }
       );
     }
-    if (resolved.status === 'pending' || resolved.status === 'unknown') {
+    if (
+      hasExpectedTransaction(expectedTransactionId, resolved) &&
+      (resolved.status === 'pending' || resolved.status === 'unknown')
+    ) {
       throw new Error(
         `The roster update outcome is ${resolved.status}. Launch was not attempted; retry after the transaction can be resolved.`,
         { cause: beginError }
@@ -119,23 +121,23 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
     throw beginError;
   }
 
-  if (began.status !== 'applied') {
+  if (!hasExpectedTransaction(expectedTransactionId, began) || began.status !== 'applied') {
     throw new Error(
-      `The roster authorization transaction is ${began.status}; launch was not attempted.`
+      `The roster authorization transaction is ${hasExpectedTransaction(expectedTransactionId, began) ? began.status : 'foreign'}; launch was not attempted.`
     );
   }
   if (!isCurrent()) {
-    requireRollback(await rollback());
+    requireRollback(expectedTransactionId, await rollback());
     return false;
   }
   const confirmed = await getOutcome();
-  if (confirmed.status !== 'applied') {
+  if (!hasExpectedTransaction(expectedTransactionId, confirmed) || confirmed.status !== 'applied') {
     throw new Error(
-      `The applied roster could not be confirmed (${confirmed.status}); launch was not attempted.`
+      `The applied roster could not be confirmed (${hasExpectedTransaction(expectedTransactionId, confirmed) ? confirmed.status : 'foreign'}); launch was not attempted.`
     );
   }
   if (!isCurrent()) {
-    requireRollback(await rollback());
+    requireRollback(expectedTransactionId, await rollback());
     return false;
   }
   let currentAuthorization: ProvisioningLaunchAuthorizationInput;
@@ -143,6 +145,7 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
     currentAuthorization = getAuthorization();
   } catch (error) {
     return rollbackKnownPreDispatchFailure(
+      expectedTransactionId,
       new Error('Launch authorization could not be refreshed immediately before submit.', {
         cause: error,
       }),
@@ -153,17 +156,17 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
     !hasSameImmutableLaunchAuthorization(submittedAuthorization, currentAuthorization) ||
     !isProvisioningLaunchAuthorized(currentAuthorization)
   ) {
-    requireRollback(await rollback());
+    requireRollback(expectedTransactionId, await rollback());
     return false;
   }
   try {
     if (!(await executeAuthorizedProvisioningLaunch(currentAuthorization, submit))) {
-      requireRollback(await rollback());
+      requireRollback(expectedTransactionId, await rollback());
       return false;
     }
   } catch (error) {
     if (isTeamRelaunchKnownPreDispatchFailure(error)) {
-      return rollbackKnownPreDispatchFailure(error, rollback);
+      return rollbackKnownPreDispatchFailure(expectedTransactionId, error, rollback);
     }
     let reconciled: RosterAuthorizationTransactionOutcome;
     try {
@@ -171,8 +174,9 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
     } catch {
       throw error;
     }
+    if (!hasExpectedTransaction(expectedTransactionId, reconciled)) throw error;
     if (reconciled.status === 'committed') return true;
-    if (isKnownNoDispatchError(error) && reconciled.status === 'rolled-back') {
+    if (reconciled.status === 'rolled-back' || reconciled.status === 'not-started') {
       onKnownNoDispatch();
       return false;
     }
@@ -182,7 +186,12 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
   // The desktop launch IPC owns prepare + launch-result finalization. Reading the
   // durable result also recovers a renderer response loss without retrying launch.
   const finalized = await getOutcome();
-  if (finalized.status === 'rolled-back') {
+  if (!hasExpectedTransaction(expectedTransactionId, finalized)) {
+    throw new Error(
+      'The launch result belongs to a different roster transaction. The roster remains reserved for main-process recovery.'
+    );
+  }
+  if (finalized.status === 'rolled-back' || finalized.status === 'not-started') {
     onKnownNoDispatch();
     return false;
   }

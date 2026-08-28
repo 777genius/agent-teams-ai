@@ -753,6 +753,7 @@ describe('draft roster-authorized launch fake E2E', () => {
       await expect(
         executeLaunchTeamDialogSubmissionWithRecheck(
           () => authorization,
+          transactionId,
           async () => {
             const began = await bridge.beginRosterAuthorizationTransaction('draft-team', {
               transactionId,

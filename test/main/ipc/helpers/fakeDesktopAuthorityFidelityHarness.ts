@@ -581,6 +581,7 @@ export async function createFakeDesktopAuthorityFidelityHarness(
     launch(authorization = currentAuthorization(), launchTransactionId = transactionId) {
       return executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        launchTransactionId,
         () =>
           bridge.beginRosterAuthorizationTransaction(teamName, {
             transactionId: launchTransactionId,

@@ -730,6 +730,115 @@ describe('TeamDataService roster authorization transactions', () => {
     }
   });
 
+  it('treats a missing transaction record after durable dispatch as unknown', async () => {
+    const service = new TeamDataService();
+    await service.beginRosterAuthorizationTransaction(teamName, firstId, {
+      members: [
+        {
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+          name: 'alice',
+        },
+      ],
+    });
+    await service.rosterAuthorizationTransactions.prepare(
+      teamName,
+      firstId,
+      firstId,
+      exactProof,
+      launchFingerprint
+    );
+    await service.rosterAuthorizationTransactions.prepareLaunchInvocationIntent(teamName, firstId);
+    await service.rosterAuthorizationTransactions.recordLaunchDispatched(teamName, firstId);
+    await fs.rm(
+      path.join(sandbox, 'teams', teamName, '.roster-authorization-transactions', `${firstId}.json`)
+    );
+
+    await expect(
+      new TeamDataService().getRosterAuthorizationTransactionOutcome(teamName, firstId)
+    ).resolves.toMatchObject({ transactionId: firstId, status: 'unknown' });
+  });
+
+  it('treats bare transaction absence as unknown', async () => {
+    await expect(
+      new TeamDataService().getRosterAuthorizationTransactionOutcome(teamName, firstId)
+    ).resolves.toMatchObject({ transactionId: firstId, status: 'unknown' });
+  });
+
+  it('accepts not-started from an exact durable command marker when the transaction is absent', async () => {
+    const service = new TeamDataService();
+    await service.beginRosterAuthorizationTransaction(teamName, firstId, {
+      members: [
+        {
+          runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_SELECTION_PROVENANCE,
+          name: 'alice',
+        },
+      ],
+    });
+    const prepared = await service.rosterAuthorizationTransactions.prepare(
+      teamName,
+      firstId,
+      firstId,
+      exactProof,
+      launchFingerprint
+    );
+    await service.rosterAuthorizationTransactions.prepareLaunchInvocationIntent(teamName, firstId);
+    await service.rosterAuthorizationTransactions.recordKnownLaunchFailure(
+      teamName,
+      firstId,
+      'invocation lease expired before dispatch'
+    );
+    await fs.rm(
+      path.join(sandbox, 'teams', teamName, '.roster-authorization-transactions', `${firstId}.json`)
+    );
+
+    await expect(
+      new TeamDataService().getRosterAuthorizationTransactionOutcome(teamName, firstId)
+    ).resolves.toMatchObject({
+      transactionId: firstId,
+      status: 'not-started',
+      launchCommandId: firstId,
+      targetFingerprint: prepared.targetFingerprint,
+      rosterRevision: prepared.rosterRevision,
+    });
+  });
+
+  it.each([
+    {
+      label: 'foreign',
+      marker: {
+        version: 1,
+        transactionId: secondId,
+        teamName,
+        rosterFingerprint: 'exact-roster',
+        rosterRevision: 'exact-revision',
+        launchRequestFingerprint: launchFingerprint,
+        launchCommandId: firstId,
+        state: 'not-started',
+        updatedAt: '2026-08-21T00:00:00.000Z',
+      },
+    },
+    { label: 'corrupt', marker: '{' },
+  ])(
+    'rejects a $label no-dispatch command marker for an absent transaction',
+    async ({ marker }) => {
+      const commandDirectory = path.join(
+        sandbox,
+        'teams',
+        teamName,
+        '.roster-launch-command-ledger'
+      );
+      await fs.mkdir(commandDirectory, { recursive: true });
+      await fs.writeFile(
+        path.join(commandDirectory, `${firstId}.json`),
+        typeof marker === 'string' ? marker : JSON.stringify(marker)
+      );
+
+      await expect(
+        new TeamDataService().getRosterAuthorizationTransactionOutcome(teamName, firstId)
+      ).resolves.toMatchObject({ transactionId: firstId, status: 'unknown' });
+    }
+  );
+
   it('keeps an unknown launch reserved without retry, commit, or automatic rollback', async () => {
     const service = new TeamDataService();
     await service.beginRosterAuthorizationTransaction(teamName, firstId, {

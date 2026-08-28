@@ -3720,6 +3720,7 @@ describe('LaunchTeamDialog submission generation fence', () => {
     const rollbackA = vi.fn(async () => ({ transactionId: 'A', status: 'rolled-back' as const }));
     const operationA = executeLaunchTeamDialogSubmissionWithRecheck(
       () => authorization,
+      'A',
       () => beginA,
       async () => ({ transactionId: 'A', status: 'applied' as const }),
       submitA,
@@ -3733,6 +3734,7 @@ describe('LaunchTeamDialog submission generation fence', () => {
     const submitB = vi.fn();
     const operationB = executeLaunchTeamDialogSubmissionWithRecheck(
       () => authorization,
+      'B',
       async () => ({ transactionId: 'B', status: 'applied' as const }),
       async () => ({
         transactionId: 'B',
@@ -3769,6 +3771,7 @@ describe('LaunchTeamDialog submission generation fence', () => {
       }));
       const operation = executeLaunchTeamDialogSubmissionWithRecheck(
         () => authorization,
+        'A',
         () => begin,
         async () => ({
           transactionId: 'A',

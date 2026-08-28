@@ -2298,6 +2298,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           const transactionId = crypto.randomUUID();
           const submitted = await executeLaunchTeamDialogSubmissionWithRecheck(
             () => launchAuthorizationRef.current,
+            transactionId,
             () =>
               api.teams.beginRosterAuthorizationTransaction(effectiveTeamName, {
                 transactionId,
@@ -2330,7 +2331,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           openTeamTab(effectiveTeamName, effectiveCwd || defaultProjectPath);
           closeDialog();
         } else {
-          // Schedule mode: create or update
           const parsedBudget = maxBudgetUsd ? parseFloat(maxBudgetUsd) : undefined;
           const scheduleProviderBackendId =
             resolveUiOwnedProviderBackendId(

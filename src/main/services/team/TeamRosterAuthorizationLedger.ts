@@ -283,7 +283,13 @@ export class TeamRosterAuthorizationLedger {
         value.launchCommandId !== launchCommandId ||
         typeof value.transactionId !== 'string' ||
         typeof value.rosterFingerprint !== 'string' ||
+        value.rosterFingerprint.length === 0 ||
         typeof value.rosterRevision !== 'string' ||
+        value.rosterRevision.length === 0 ||
+        (value.launchRequestFingerprint !== undefined &&
+          (typeof value.launchRequestFingerprint !== 'string' ||
+            value.launchRequestFingerprint.length === 0)) ||
+        typeof value.updatedAt !== 'string' ||
         !['prepared', 'dispatched', 'succeeded', 'not-started', 'unknown'].includes(value.state)
       ) {
         throw new Error('Invalid roster launch command ledger record');
