@@ -39,7 +39,14 @@ import {
 } from '../services/team/TeamLaunchExecutionProofAuthority';
 import { getAuthorityScope } from '../services/team/TeamLaunchProviderAuthorityGeneration';
 
+import {
+  isSemanticProviderAuthorityObservation,
+  mergeProviderObservationForCache,
+  ProviderObservationPolicy,
+} from './providerObservationPolicy';
+
 import type { CliInstallerService } from '../services';
+import type { ProviderObservationCompletionClaim } from './providerObservationPolicy';
 import type {
   CliInstallationStatus,
   CliInstallerGetStatusOptions,
@@ -56,15 +63,7 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 const logger = createLogger('IPC:cliInstaller');
 
 let service: CliInstallerService;
-interface ProviderObservationRequestFence {
-  epoch: number;
-  order: number;
-}
-
-interface ProviderObservationCompletionClaim {
-  applyAuthority: boolean;
-  applyCache: boolean;
-}
+const providerObservationPolicy = new ProviderObservationPolicy();
 
 const statusInFlight = new Map<CliInstallerProviderStatusMode, Promise<CliInstallationStatus>>();
 interface ProviderStatusObservation {
@@ -86,11 +85,7 @@ interface ObservedProjectProviderAuthority {
 const observedProviderGlobalAccessFingerprintById = new Map<CliProviderId, string>();
 const observedProjectProviderAuthorityByScope = new Map<string, ObservedProjectProviderAuthority>();
 const observedProjectlessProviderProfileFingerprintById = new Map<CliProviderId, string>();
-const latestCompletedProviderAuthorityOrderById = new Map<CliProviderId, number>();
-const latestCompletedProviderCacheOrderById = new Map<CliProviderId, number>();
 let activeProviderRuntimeRequestCount = 0;
-let providerObservationFenceEpoch = 0;
-let nextProviderObservationRequestOrder = 0;
 const cachedStatus = new Map<
   CliInstallerProviderStatusMode,
   { value: CliInstallationStatus; at: number }
@@ -105,59 +100,6 @@ const INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS = new Set<CliProviderId>(['openco
 const MAX_PROVIDER_STATUS_PROJECT_PATH_LENGTH = 4_096;
 const MAX_OBSERVED_PROJECT_PROVIDER_AUTHORITIES = 128;
 
-function resetProviderObservationRequestFence(): void {
-  providerObservationFenceEpoch += 1;
-  nextProviderObservationRequestOrder = 0;
-  latestCompletedProviderAuthorityOrderById.clear();
-  latestCompletedProviderCacheOrderById.clear();
-}
-
-function beginProviderObservationRequest(): ProviderObservationRequestFence {
-  nextProviderObservationRequestOrder += 1;
-  return {
-    epoch: providerObservationFenceEpoch,
-    order: nextProviderObservationRequestOrder,
-  };
-}
-
-function claimProviderObservationCompletion(
-  providerStatus: CliProviderStatus,
-  requestFence: ProviderObservationRequestFence
-): ProviderObservationCompletionClaim {
-  if (requestFence.epoch !== providerObservationFenceEpoch) {
-    return { applyAuthority: false, applyCache: false };
-  }
-
-  const providerId = providerStatus.providerId;
-  const latestAuthorityOrder = latestCompletedProviderAuthorityOrderById.get(providerId) ?? 0;
-  const latestCacheOrder = latestCompletedProviderCacheOrderById.get(providerId) ?? 0;
-  if (isSemanticProviderAuthorityObservation(providerStatus)) {
-    // Catalog/cache-only results cannot suppress an authority observation. Only
-    // a newer completed authority observation participates in this dimension.
-    if (requestFence.order < latestAuthorityOrder) {
-      return { applyAuthority: false, applyCache: false };
-    }
-    latestCompletedProviderAuthorityOrderById.set(providerId, requestFence.order);
-
-    // An older authority result still owns its genuine auth/capability change,
-    // but it must not replace catalog/cache data completed by a newer request.
-    const applyCache = requestFence.order >= latestCacheOrder;
-    if (applyCache) {
-      latestCompletedProviderCacheOrderById.set(providerId, requestFence.order);
-    }
-    return { applyAuthority: true, applyCache };
-  }
-
-  // Every non-authoritative result can mutate cached provider data. Keep those
-  // mutations ordered with each other, while a newer authority result also
-  // fences older cache data from patching the authority/cache state it established.
-  if (requestFence.order < latestAuthorityOrder || requestFence.order < latestCacheOrder) {
-    return { applyAuthority: false, applyCache: false };
-  }
-  latestCompletedProviderCacheOrderById.set(providerId, requestFence.order);
-  return { applyAuthority: false, applyCache: true };
-}
-
 function clearObservedProviderAuthorities(): void {
   observedProviderGlobalAccessFingerprintById.clear();
   observedProjectProviderAuthorityByScope.clear();
@@ -166,7 +108,7 @@ function clearObservedProviderAuthorities(): void {
 
 function resetCliInstallerHandlerState(): void {
   statusCacheGeneration += 1;
-  resetProviderObservationRequestFence();
+  providerObservationPolicy.reset();
   cachedStatus.clear();
   statusInFlight.clear();
   providerStatusInFlight.clear();
@@ -279,32 +221,6 @@ function canUseStatusForCacheKey(
   );
 }
 
-function mergeAuthoritativeProviderFields(
-  cachedProviderStatus: CliProviderStatus,
-  authoritativeProviderStatus: CliProviderStatus
-): CliProviderStatus {
-  return {
-    ...cachedProviderStatus,
-    supported: authoritativeProviderStatus.supported,
-    authenticated: authoritativeProviderStatus.authenticated,
-    authMethod: authoritativeProviderStatus.authMethod,
-    verificationState: authoritativeProviderStatus.verificationState,
-    statusCheckOutcome: authoritativeProviderStatus.statusCheckOutcome,
-    statusCheckErrorCode: authoritativeProviderStatus.statusCheckErrorCode,
-    canLoginFromUi: authoritativeProviderStatus.canLoginFromUi,
-    capabilities: authoritativeProviderStatus.capabilities,
-    selectedBackendId: authoritativeProviderStatus.selectedBackendId,
-    resolvedBackendId: authoritativeProviderStatus.resolvedBackendId,
-    availableBackends: authoritativeProviderStatus.availableBackends,
-    backend: authoritativeProviderStatus.backend,
-    connection: authoritativeProviderStatus.connection,
-  };
-}
-
-function isModelOnlyProviderObservation(providerStatus: CliProviderStatus): boolean {
-  return providerStatus.statusCheckOutcome === 'model_only';
-}
-
 function getCachedProviderStatus(providerId: CliProviderId): CliProviderStatus | null {
   let newestMatch: { value: CliProviderStatus; at: number } | null = null;
   for (const cached of cachedStatus.values()) {
@@ -342,20 +258,10 @@ function buildCacheableStatus(
   const providers = status.providers.flatMap((providerStatus) => {
     const claim = claims.get(providerStatus.providerId);
     const cachedProviderStatus = getCachedProviderStatus(providerStatus.providerId);
-    if (claim?.applyCache) {
-      return [
-        claim.applyAuthority || !cachedProviderStatus
-          ? providerStatus
-          : isModelOnlyProviderObservation(providerStatus)
-            ? mergeAuthoritativeProviderFields(providerStatus, cachedProviderStatus)
-            : providerStatus,
-      ];
-    }
-
-    if (claim?.applyAuthority && cachedProviderStatus) {
-      return [mergeAuthoritativeProviderFields(cachedProviderStatus, providerStatus)];
-    }
-    return cachedProviderStatus ? [cachedProviderStatus] : [];
+    const mergedProviderStatus = claim
+      ? mergeProviderObservationForCache(cachedProviderStatus, providerStatus, claim)
+      : cachedProviderStatus;
+    return mergedProviderStatus ? [mergedProviderStatus] : [];
   });
   return withDerivedAggregateAuthentication(status, providers);
 }
@@ -485,10 +391,10 @@ async function handleGetStatus(
     const cached = cachedStatus.get(cacheKey);
     if (cached && Date.now() - cached.at < STATUS_CACHE_TTL_MS) {
       if (latestSnapshot && canUseStatusForCacheKey(cacheKey, latestSnapshot)) {
-        const requestFence = beginProviderObservationRequest();
+        const requestFence = providerObservationPolicy.beginRequest();
         const claims = new Map<CliProviderId, ProviderObservationCompletionClaim>();
         for (const providerStatus of latestSnapshot.providers) {
-          const claim = claimProviderObservationCompletion(providerStatus, requestFence);
+          const claim = providerObservationPolicy.claimCompletion(providerStatus, requestFence);
           claims.set(providerStatus.providerId, claim);
           if (!claim.applyAuthority && !claim.applyCache) {
             throw new Error(
@@ -511,7 +417,7 @@ async function handleGetStatus(
     if (!statusInFlight.has(cacheKey)) {
       const startedAt = Date.now();
       const generation = statusCacheGeneration;
-      const requestFence = beginProviderObservationRequest();
+      const requestFence = providerObservationPolicy.beginRequest();
       const request = service
         .getStatus(normalizedOptions)
         .then((status) => {
@@ -523,7 +429,7 @@ async function handleGetStatus(
           const supersededProviderIds: CliProviderId[] = [];
           const claims = new Map<CliProviderId, ProviderObservationCompletionClaim>();
           for (const providerStatus of status.providers) {
-            const claim = claimProviderObservationCompletion(providerStatus, requestFence);
+            const claim = providerObservationPolicy.claimCompletion(providerStatus, requestFence);
             claims.set(providerStatus.providerId, claim);
             if (!claim.applyAuthority && !claim.applyCache) {
               supersededProviderIds.push(providerStatus.providerId);
@@ -596,16 +502,16 @@ function patchCachedProviderStatus(
       continue;
     }
 
-    const cachedProviderStatus = cached.value.providers.find(
-      (provider) => provider.providerId === providerStatus.providerId
+    const cachedProviderStatus =
+      cached.value.providers.find(
+        (provider) => provider.providerId === providerStatus.providerId
+      ) ?? null;
+    const nextProviderStatus = mergeProviderObservationForCache(
+      cachedProviderStatus,
+      providerStatus,
+      claim
     );
-    const nextProviderStatus = claim.applyAuthority
-      ? claim.applyCache || !cachedProviderStatus
-        ? providerStatus
-        : mergeAuthoritativeProviderFields(cachedProviderStatus, providerStatus)
-      : cachedProviderStatus && isModelOnlyProviderObservation(providerStatus)
-        ? mergeAuthoritativeProviderFields(providerStatus, cachedProviderStatus)
-        : providerStatus;
+    if (!nextProviderStatus) continue;
     const nextProviders = hasProvider
       ? cached.value.providers.map((provider) =>
           provider.providerId === providerStatus.providerId ? nextProviderStatus : provider
@@ -617,12 +523,6 @@ function patchCachedProviderStatus(
       at: Date.now(),
     });
   }
-}
-
-function isSemanticProviderAuthorityObservation(providerStatus: CliProviderStatus): boolean {
-  // Missing legacy outcomes are ambiguous (including deferred/partial service
-  // paths), so fail closed instead of inferring semantic authority from fields.
-  return providerStatus.statusCheckOutcome === 'authoritative';
 }
 
 function getProviderGlobalAccessFingerprint(providerStatus: CliProviderStatus): string {
@@ -738,7 +638,7 @@ async function handleGetProviderStatus(
     }
 
     const generation = statusCacheGeneration;
-    const requestFence = beginProviderObservationRequest();
+    const requestFence = providerObservationPolicy.beginRequest();
     const currentService = service;
     const serviceOptions: CliProviderStatusRequestOptions = providerRequest.projectPath
       ? { projectPath: providerRequest.projectPath }
@@ -759,7 +659,7 @@ async function handleGetProviderStatus(
           };
         }
         const claim = status
-          ? claimProviderObservationCompletion(status, requestFence)
+          ? providerObservationPolicy.claimCompletion(status, requestFence)
           : { applyAuthority: false, applyCache: true };
         if (status && !claim.applyAuthority && !claim.applyCache) {
           throw new Error(
@@ -825,7 +725,7 @@ async function handleVerifyProviderModels(
   try {
     const providerId = normalizeProviderId(rawProviderId);
     const generation = statusCacheGeneration;
-    const requestFence = beginProviderObservationRequest();
+    const requestFence = providerObservationPolicy.beginRequest();
     const currentService = service;
     const status = await runProviderRuntimeRequest(providerId, () =>
       currentService.verifyProviderModels(providerId)
@@ -836,7 +736,7 @@ async function handleVerifyProviderModels(
       return { success: true, data: status };
     }
     const claim = status
-      ? claimProviderObservationCompletion(status, requestFence)
+      ? providerObservationPolicy.claimCompletion(status, requestFence)
       : { applyAuthority: false, applyCache: true };
     if (status && !claim.applyAuthority && !claim.applyCache) {
       throw new Error(
