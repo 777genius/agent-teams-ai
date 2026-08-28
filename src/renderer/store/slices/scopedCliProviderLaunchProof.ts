@@ -13,6 +13,8 @@ import type {
 
 export const CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT = 12;
 
+const CATALOG_WATERMARK_SCOPE_SUFFIX = '\0renderer-catalog-watermark';
+
 export interface ScopedCliProviderLaunchProof {
   providerStatus: CliProviderStatus;
   requestId: number;
@@ -74,6 +76,43 @@ function getObservedGeneration(
   return observed;
 }
 
+function getProviderCatalogWatermark(
+  current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
+  providerId: CliProviderId,
+  profileGeneration: number | null
+): number | null {
+  if (profileGeneration === null) return null;
+  return getObservedGeneration(current, (proof) =>
+    proof.authorityScope?.providerId === providerId &&
+    proof.authorityScope.profileGeneration === profileGeneration
+      ? proof.authorityScope.catalogGeneration
+      : null
+  );
+}
+
+function retainProviderCatalogWatermark(
+  current: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
+  providerId: CliProviderId,
+  proof: ScopedCliProviderLaunchProof
+): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
+  // The reserved entry is deliberately not a real project scope. Keeping the
+  // high-water proof inside the same bounded map prevents FIFO eviction from
+  // resurrecting an older catalog without introducing an unbounded tombstone map.
+  return setBoundedScopedProviderLaunchProof(
+    current,
+    `${providerId}\0${CATALOG_WATERMARK_SCOPE_SUFFIX}`,
+    {
+      ...proof,
+      requestId: -1,
+      epoch: -1,
+      fetchedAtMs: 0,
+      authorityScope: proof.authorityScope
+        ? { ...proof.authorityScope, projectPath: null }
+        : undefined,
+    }
+  );
+}
+
 export function reconcileGlobalProviderLaunchProofs(
   currentProofs: Readonly<Record<string, ScopedCliProviderLaunchProof>>,
   currentStatus: CliInstallationStatus | null,
@@ -113,7 +152,6 @@ export function reconcileScopedProviderLaunchProofs(input: {
   observedGlobalGeneration?: number | null;
   observedProfileGeneration?: number | null;
 }): Readonly<Record<string, ScopedCliProviderLaunchProof>> {
-  const previous = input.current[input.scopeKey];
   const scope = input.authorityScope;
   const scopeMatchesRequest =
     input.metadataMatchesRequest &&
@@ -142,6 +180,11 @@ export function reconcileScopedProviderLaunchProofs(input: {
   const incomingGlobalGeneration = scope?.globalGeneration ?? null;
   const incomingProfileGeneration = scope?.profileGeneration ?? null;
   const incomingCatalogGeneration = scope?.catalogGeneration ?? null;
+  const providerCatalogWatermark = getProviderCatalogWatermark(
+    input.current,
+    input.providerId,
+    incomingProfileGeneration
+  );
   const staleGlobalGeneration =
     scopeMatchesRequest &&
     observedGlobalGeneration >= 0 &&
@@ -164,10 +207,9 @@ export function reconcileScopedProviderLaunchProofs(input: {
     incomingProfileGeneration > observedProfileGeneration;
   const staleCatalogGeneration =
     scopeMatchesRequest &&
-    previous?.authorityScope !== undefined &&
-    incomingProfileGeneration === previous.authorityScope.profileGeneration &&
+    providerCatalogWatermark !== null &&
     incomingCatalogGeneration !== null &&
-    incomingCatalogGeneration < previous.authorityScope.catalogGeneration;
+    incomingCatalogGeneration < providerCatalogWatermark;
   const globalLogout =
     input.responseMatchesProvider &&
     input.providerStatus.statusCheckOutcome === 'authoritative' &&
@@ -186,15 +228,19 @@ export function reconcileScopedProviderLaunchProofs(input: {
     !staleGlobalGeneration &&
     !staleProfileGeneration &&
     !staleCatalogGeneration;
-  return canAuthorize
-    ? setBoundedScopedProviderLaunchProof(retained, input.scopeKey, {
-        providerStatus: input.providerStatus,
-        requestId: input.requestId,
-        epoch: input.epoch,
-        fetchedAtMs: input.fetchedAtMs,
-        authorityScope: scope ?? undefined,
-      })
-    : retained;
+  if (!canAuthorize) return retained;
+  const proof = {
+    providerStatus: input.providerStatus,
+    requestId: input.requestId,
+    epoch: input.epoch,
+    fetchedAtMs: input.fetchedAtMs,
+    authorityScope: scope ?? undefined,
+  };
+  return retainProviderCatalogWatermark(
+    setBoundedScopedProviderLaunchProof(retained, input.scopeKey, proof),
+    input.providerId,
+    proof
+  );
 }
 
 export function reconcileScopedProviderAuthorityResponse(input: {

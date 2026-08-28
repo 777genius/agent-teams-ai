@@ -5,6 +5,7 @@ import {
   reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
 import {
+  CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT,
   reconcileGlobalProviderLaunchProofs,
   reconcileScopedProviderLaunchProofs,
 } from '@renderer/store/slices/scopedCliProviderLaunchProof';
@@ -359,6 +360,122 @@ describe('provider launch proof authority reconciliation', () => {
       },
     });
     expect(reconciled[scopeB]).toBeUndefined();
+  });
+
+  it('keeps catalog resurrection fail-closed through bounded eviction and repeated churn', () => {
+    const target = '/project/evicted';
+    const targetScope = getCliProviderStatusScopeKey('codex', target);
+    let current = reconcileProject({}, target, ready, { profile: 5, catalog: 5 });
+
+    for (let index = 0; index < 10_001; index += 1) {
+      current = reconcileProject(current, `/project/churn-${index}`, ready, {
+        profile: 5,
+        catalog: 5,
+      });
+      expect(Object.keys(current).length).toBeLessThanOrEqual(
+        CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT
+      );
+    }
+    expect(current[targetScope]).toBeUndefined();
+    expect(Object.values(current)).toContainEqual(
+      expect.objectContaining({
+        requestId: -1,
+        epoch: -1,
+        authorityScope: expect.objectContaining({ projectPath: null }),
+      })
+    );
+
+    const stale = reconcileProject(
+      current,
+      target,
+      { ...ready, models: ['stale'] },
+      {
+        profile: 5,
+        catalog: 4,
+      }
+    );
+    expect(stale[targetScope]).toBeUndefined();
+
+    const equal = reconcileProject(
+      stale,
+      target,
+      { ...ready, models: ['equal'] },
+      {
+        profile: 5,
+        catalog: 5,
+      }
+    );
+    expect(equal[targetScope]?.providerStatus.models).toEqual(['equal']);
+
+    const newer = reconcileProject(
+      equal,
+      target,
+      { ...ready, models: ['newer'] },
+      {
+        profile: 5,
+        catalog: 6,
+      }
+    );
+    expect(newer[targetScope]?.providerStatus.models).toEqual(['newer']);
+
+    const olderProfile = reconcileProject(
+      newer,
+      target,
+      { ...ready, models: ['old-profile'] },
+      {
+        profile: 4,
+        catalog: 1_000,
+      }
+    );
+    expect(olderProfile[targetScope]?.providerStatus.models).toEqual(['newer']);
+
+    const resetProfile = reconcileProject(
+      olderProfile,
+      target,
+      { ...ready, models: ['reset-profile'] },
+      { profile: 6, catalog: 1 }
+    );
+    expect(resetProfile[targetScope]).toMatchObject({
+      providerStatus: { models: ['reset-profile'] },
+      authorityScope: { profileGeneration: 6, catalogGeneration: 1 },
+    });
+    expect(Object.keys(resetProfile).length).toBeLessThanOrEqual(
+      CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT
+    );
+  });
+
+  it('isolates bounded catalog watermarks by provider', () => {
+    const anthropicProject = '/project/anthropic';
+    const anthropicScope = getCliProviderStatusScopeKey('anthropic', anthropicProject);
+    const anthropicReady: CliProviderStatus = {
+      ...ready,
+      providerId: 'anthropic',
+      authMethod: 'claude.ai',
+    };
+    const withCodexWatermark = reconcileProject({}, projectA, ready, {
+      profile: 5,
+      catalog: 500,
+    });
+    const reconciled = reconcileScopedProviderLaunchProofs({
+      current: withCodexWatermark,
+      scopeKey: anthropicScope,
+      providerId: 'anthropic',
+      projectPath: anthropicProject,
+      providerStatus: anthropicReady,
+      responseMatchesProvider: true,
+      metadataMatchesRequest: true,
+      authorityScope: {
+        ...authorityScope(anthropicProject, { profile: 5, catalog: 1 }),
+        providerId: 'anthropic',
+      },
+      requestIntent: 'launch-proof',
+      requestId: 4,
+      epoch: 1,
+      fetchedAtMs: 2,
+    });
+
+    expect(reconciled[anthropicScope]?.providerStatus).toBe(anthropicReady);
+    expect(reconciled[scopeA]?.providerStatus).toBe(ready);
   });
 
   it('does not authorize a projectless authority scope or disturb exact proofs', () => {
