@@ -90,6 +90,19 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     expect(isSqliteTransactionLockArtifactName('state.json.lock.sqlite3-journal')).toBe(true);
     expect(isSqliteTransactionLockArtifactName('state.json.lock.sqlite3-shm')).toBe(true);
     expect(isSqliteTransactionLockArtifactName('state.json.lock.sqlite3-wal')).toBe(true);
+    expect(
+      isSqliteTransactionLockArtifactName(
+        'state.json.lock.sqlite3.custody-0123456789abcdef0123456789abcdef'
+      )
+    ).toBe(true);
+    expect(
+      isSqliteTransactionLockArtifactName(
+        'state.json.lock.sqlite3.custody-0123456789abcdef0123456789abcdef-journal'
+      )
+    ).toBe(true);
+    expect(isSqliteTransactionLockArtifactName('state.json.lock.sqlite3.custody-short')).toBe(
+      false
+    );
     expect(isSqliteTransactionLockArtifactName('state.json.lock.sqlite3-backup')).toBe(false);
     expect(isSqliteTransactionLockArtifactName('state.sqlite3')).toBe(false);
     expect(isSqliteTransactionLockArtifactName('../state.json.lock.sqlite3')).toBe(false);
@@ -233,6 +246,88 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
     successor!.release();
   });
 
+  it('opens and locks the guarded inode while the canonical path is replaced and restored', () => {
+    const databasePath = path.join(temporaryRoot, 'guarded-a.sqlite3');
+    const replacementPath = path.join(temporaryRoot, 'replacement-b.sqlite3');
+    const displacedPath = `${databasePath}.displaced`;
+    const initialOwner = tryRetainSqliteTransactionLock(databasePath, 'initial A lost');
+    const replacementOwner = tryRetainSqliteTransactionLock(replacementPath, 'initial B lost');
+    initialOwner!.release();
+    replacementOwner!.release();
+    const guardedIdentity = inode(databasePath);
+    const replacementIdentity = inode(replacementPath);
+    let contender: ReturnType<typeof tryRetainSqliteTransactionLock> | undefined;
+
+    setSqliteTransactionLockTestHooksForTests({
+      beforeDatabaseOpen: (openedPath) => {
+        fs.renameSync(openedPath, displacedPath);
+        fs.renameSync(replacementPath, openedPath);
+        expect(inode(openedPath)).toEqual(replacementIdentity);
+      },
+      afterDatabaseOpen: (openedPath) => {
+        fs.renameSync(openedPath, replacementPath);
+        fs.renameSync(displacedPath, openedPath);
+        expect(inode(openedPath)).toEqual(guardedIdentity);
+        setSqliteTransactionLockTestHooksForTests(undefined);
+        contender = tryRetainSqliteTransactionLock(openedPath, 'contender lost');
+      },
+    });
+
+    const owner = tryRetainSqliteTransactionLock(databasePath, 'outer ownership lost');
+    expect(owner).not.toBeNull();
+    expect(contender).toBeNull();
+    expect(inode(databasePath)).toEqual(guardedIdentity);
+    expect(inode(replacementPath)).toEqual(replacementIdentity);
+    expect(custodyArtifacts(databasePath)).toHaveLength(1);
+    expect(() => owner!.assertOwned()).not.toThrow();
+
+    owner!.release();
+    expect(transientArtifacts(databasePath)).toEqual([]);
+  });
+
+  it('removes custody links and SQLite sidecars after success and open failure', () => {
+    const successfulPath = path.join(temporaryRoot, 'successful-cleanup.sqlite3');
+    const owner = tryRetainSqliteTransactionLock(successfulPath, 'success owner lost');
+    expect(owner).not.toBeNull();
+    expect(custodyArtifacts(successfulPath)).toHaveLength(1);
+    owner!.release();
+    expect(transientArtifacts(successfulPath)).toEqual([]);
+    expect(() => fs.renameSync(successfulPath, `${successfulPath}.closed`)).not.toThrow();
+
+    const failingPath = path.join(temporaryRoot, 'failed-cleanup.sqlite3');
+    const failpoint = new Error('fail after database open');
+    setSqliteTransactionLockTestHooksForTests({
+      afterDatabaseOpen: () => {
+        throw failpoint;
+      },
+    });
+
+    expect(() => tryRetainSqliteTransactionLock(failingPath, 'failed owner lost')).toThrow(
+      failpoint
+    );
+    expect(transientArtifacts(failingPath)).toEqual([]);
+    expect(() => fs.renameSync(failingPath, `${failingPath}.closed`)).not.toThrow();
+  });
+
+  it('fails closed and closes its identity guard when a custody hard link cannot be created', () => {
+    const databasePath = path.join(temporaryRoot, 'unsupported-hard-link.sqlite3');
+    const hardLinkError = Object.assign(new Error('hard links unavailable'), {
+      code: 'EOPNOTSUPP',
+    });
+    const beforeDatabaseOpen = vi.fn();
+    vi.spyOn(fs, 'linkSync').mockImplementationOnce(() => {
+      throw hardLinkError;
+    });
+    setSqliteTransactionLockTestHooksForTests({ beforeDatabaseOpen });
+
+    expect(() => tryRetainSqliteTransactionLock(databasePath, 'ownership lost')).toThrow(
+      hardLinkError
+    );
+    expect(beforeDatabaseOpen).not.toHaveBeenCalled();
+    expect(transientArtifacts(databasePath)).toEqual([]);
+    expect(() => fs.renameSync(databasePath, `${databasePath}.closed`)).not.toThrow();
+  });
+
   it('preserves undefined pre-open failure causally when descriptor cleanup also fails', () => {
     const databasePath = path.join(temporaryRoot, 'cleanup.sqlite3');
     const cleanupError = new Error('identity descriptor close failed');
@@ -272,4 +367,22 @@ describe('SqliteTransactionLock artifact lifecycle', () => {
 function inode(filePath: string): [bigint, bigint] {
   const stats = fs.lstatSync(filePath, { bigint: true });
   return [stats.dev, stats.ino];
+}
+
+function custodyArtifacts(databasePath: string): string[] {
+  const custodyPattern = new RegExp(`^${path.basename(databasePath)}\\.custody-[0-9a-f]{32}$`);
+  return fs.readdirSync(path.dirname(databasePath)).filter((entry) => custodyPattern.test(entry));
+}
+
+function transientArtifacts(databasePath: string): string[] {
+  const databaseName = path.basename(databasePath);
+  return fs
+    .readdirSync(path.dirname(databasePath))
+    .filter(
+      (entry) =>
+        entry.startsWith(`${databaseName}.custody-`) ||
+        entry === `${databaseName}-journal` ||
+        entry === `${databaseName}-shm` ||
+        entry === `${databaseName}-wal`
+    );
 }

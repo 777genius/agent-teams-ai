@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -7,6 +8,8 @@ const SQLITE_TRANSACTION_LOCK_DATABASE_SUFFIX = '.lock.sqlite3';
 const SQLITE_TRANSACTION_LOCK_SIDECAR_SUFFIXES = ['-journal', '-shm', '-wal'] as const;
 const NO_FOLLOW = process.platform === 'win32' ? 0 : (fs.constants.O_NOFOLLOW ?? 0);
 const MAX_IDENTITY_PREPARATION_ATTEMPTS = 8;
+const CUSTODY_TOKEN_BYTES = 16;
+const SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX = /^\.custody-[0-9a-f]{32}(?:-journal|-shm|-wal)?$/;
 
 export interface SqliteTransactionLockOptions {
   acquireTimeoutMs: number;
@@ -24,6 +27,10 @@ interface DatabaseIdentityGuard {
   created: boolean;
   descriptor: number;
   identity: FileIdentity;
+}
+
+interface DatabaseCustodyLink {
+  path: string;
 }
 
 interface Failure {
@@ -50,6 +57,7 @@ export function setSqliteTransactionLockTestHooksForTests(
 }
 
 interface OpenLock {
+  custodyPath: string;
   database: DatabaseSync;
   databasePath: string;
   databaseIdentity: FileIdentity;
@@ -78,7 +86,8 @@ export function isSqliteTransactionLockArtifactName(fileName: string): boolean {
   );
   return (
     artifactSuffix === '' ||
-    SQLITE_TRANSACTION_LOCK_SIDECAR_SUFFIXES.some((suffix) => suffix === artifactSuffix)
+    SQLITE_TRANSACTION_LOCK_SIDECAR_SUFFIXES.some((suffix) => suffix === artifactSuffix) ||
+    SQLITE_TRANSACTION_LOCK_CUSTODY_SUFFIX.test(artifactSuffix)
   );
 }
 
@@ -230,22 +239,79 @@ function openDatabaseIdentityGuard(databasePath: string): DatabaseIdentityGuard 
   throw new Error(`Lock database identity kept changing before opening: ${databasePath}`);
 }
 
+function createDatabaseCustodyLink(databasePath: string): DatabaseCustodyLink {
+  for (let attempt = 0; attempt < MAX_IDENTITY_PREPARATION_ATTEMPTS; attempt += 1) {
+    const custodyPath = `${databasePath}.custody-${randomBytes(CUSTODY_TOKEN_BYTES).toString('hex')}`;
+    try {
+      fs.linkSync(databasePath, custodyPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') continue;
+      throw error;
+    }
+    return { path: custodyPath };
+  }
+  throw new Error(`Could not reserve lock database custody path: ${databasePath}`);
+}
+
+function validateDatabaseCustodyLink(
+  databasePath: string,
+  custodyPath: string,
+  guard: DatabaseIdentityGuard
+): void {
+  const custodyStats = fs.lstatSync(custodyPath, { bigint: true });
+  const descriptorStats = fs.fstatSync(guard.descriptor, { bigint: true });
+  if (
+    custodyStats.isSymbolicLink() ||
+    !custodyStats.isFile() ||
+    !descriptorStats.isFile() ||
+    !sameIdentity(guard.identity, identity(custodyStats)) ||
+    !sameIdentity(guard.identity, identity(descriptorStats))
+  ) {
+    throw new Error(`Lock database custody changed before opening: ${databasePath}`);
+  }
+  syncDirectory(path.dirname(databasePath));
+}
+
+function removeDatabaseCustodyLink(custodyPath: string, expectedIdentity: FileIdentity): void {
+  let custodyStats: fs.BigIntStats;
+  try {
+    custodyStats = fs.lstatSync(custodyPath, { bigint: true });
+  } catch (error) {
+    if (isMissing(error)) return;
+    throw error;
+  }
+  if (
+    custodyStats.isSymbolicLink() ||
+    !custodyStats.isFile() ||
+    !sameIdentity(expectedIdentity, identity(custodyStats))
+  ) {
+    throw new Error(`Lock database custody changed before cleanup: ${custodyPath}`);
+  }
+  fs.unlinkSync(custodyPath);
+  syncDirectory(path.dirname(custodyPath));
+}
+
 function validateDatabaseIdentity(
   databasePath: string,
+  custodyPath: string,
   guard: DatabaseIdentityGuard,
   parentIdentity: FileIdentity
 ): void {
   const descriptorStats = fs.fstatSync(guard.descriptor, { bigint: true });
   const databaseStats = fs.lstatSync(databasePath, { bigint: true });
+  const custodyStats = fs.lstatSync(custodyPath, { bigint: true });
   const parentStats = fs.lstatSync(path.dirname(databasePath), { bigint: true });
   if (
     !descriptorStats.isFile() ||
     databaseStats.isSymbolicLink() ||
     !databaseStats.isFile() ||
+    custodyStats.isSymbolicLink() ||
+    !custodyStats.isFile() ||
     parentStats.isSymbolicLink() ||
     !parentStats.isDirectory() ||
     !sameIdentity(guard.identity, identity(descriptorStats)) ||
     !sameIdentity(guard.identity, identity(databaseStats)) ||
+    !sameIdentity(guard.identity, identity(custodyStats)) ||
     !sameIdentity(parentIdentity, identity(parentStats))
   ) {
     throw new Error(`Lock database identity changed while opening: ${databasePath}`);
@@ -256,15 +322,19 @@ function assertPathOwnership(lock: OpenLock, ownershipLostMessage: string): void
   try {
     const parentStats = fs.lstatSync(path.dirname(lock.databasePath), { bigint: true });
     const databaseStats = fs.lstatSync(lock.databasePath, { bigint: true });
+    const custodyStats = fs.lstatSync(lock.custodyPath, { bigint: true });
     const descriptorStats = fs.fstatSync(lock.identityDescriptor, { bigint: true });
     if (
       !parentStats.isSymbolicLink() &&
       parentStats.isDirectory() &&
       !databaseStats.isSymbolicLink() &&
       databaseStats.isFile() &&
+      !custodyStats.isSymbolicLink() &&
+      custodyStats.isFile() &&
       descriptorStats.isFile() &&
       sameIdentity(lock.parentIdentity, identity(parentStats)) &&
       sameIdentity(lock.databaseIdentity, identity(databaseStats)) &&
+      sameIdentity(lock.databaseIdentity, identity(custodyStats)) &&
       sameIdentity(lock.databaseIdentity, identity(descriptorStats))
     ) {
       return;
@@ -281,20 +351,29 @@ function openLock(databasePath: string): OpenLock {
   const canonicalPath = path.join(canonicalParent, path.basename(databasePath));
   const parentIdentity = identity(fs.lstatSync(canonicalParent, { bigint: true }));
   const guard = openDatabaseIdentityGuard(canonicalPath);
+  let custody: DatabaseCustodyLink | undefined;
   let database: DatabaseSync | undefined;
   try {
     if (guard.created) testHooks?.afterAbsentFilePrecreated?.(canonicalPath);
+    custody = createDatabaseCustodyLink(canonicalPath);
+    validateDatabaseCustodyLink(canonicalPath, custody.path, guard);
     testHooks?.beforeDatabaseOpen?.(canonicalPath);
-    database = new DatabaseSync(canonicalPath);
-    testHooks?.afterDatabaseOpen?.(canonicalPath);
+    database = new DatabaseSync(custody.path);
     database.exec('PRAGMA busy_timeout = 0');
-    validateDatabaseIdentity(canonicalPath, guard, parentIdentity);
+    // Acquire through the cryptographically unguessable hard-link name before
+    // pathname validation or test/user code can run. The link is an atomic,
+    // cross-platform identity binding to the guarded inode: an A-to-B-to-A
+    // pathname swap therefore still opens and locks A, never B.
+    database.exec('BEGIN IMMEDIATE');
+    testHooks?.afterDatabaseOpen?.(canonicalPath);
+    validateDatabaseIdentity(canonicalPath, custody.path, guard, parentIdentity);
     try {
       fs.chmodSync(canonicalPath, 0o600);
     } catch (error) {
       if (process.platform !== 'win32') throw error;
     }
     return {
+      custodyPath: custody.path,
       database,
       databasePath: canonicalPath,
       databaseIdentity: guard.identity,
@@ -314,6 +393,13 @@ function openLock(databasePath: string): OpenLock {
       fs.closeSync(guard.descriptor)
     );
     if (descriptorCloseFailure) cleanupFailures.push(descriptorCloseFailure);
+    if (custody) {
+      const custodyPath = custody.path;
+      const custodyCleanupFailure = captureFailure('SQLite lock custody cleanup', () =>
+        removeDatabaseCustodyLink(custodyPath, guard.identity)
+      );
+      if (custodyCleanupFailure) cleanupFailures.push(custodyCleanupFailure);
+    }
     throwWithCleanupFailures({ context: 'SQLite lock open', error }, cleanupFailures);
   }
 }
@@ -334,17 +420,20 @@ function rollbackAndClose(lock: OpenLock): void {
 }
 
 function closeLockResources(lock: OpenLock): void {
-  const databaseCloseFailure = captureFailure('SQLite lock database close', () =>
-    lock.database.close()
-  );
-  const descriptorCloseFailure = captureFailure('SQLite lock identity descriptor close', () =>
-    fs.closeSync(lock.identityDescriptor)
-  );
-  if (databaseCloseFailure && descriptorCloseFailure) {
-    throwWithCleanupFailures(databaseCloseFailure, [descriptorCloseFailure]);
+  const failures: Failure[] = [];
+  const operations: Array<[string, () => void]> = [
+    ['SQLite lock database close', () => lock.database.close()],
+    ['SQLite lock identity descriptor close', () => fs.closeSync(lock.identityDescriptor)],
+    [
+      'SQLite lock custody cleanup',
+      () => removeDatabaseCustodyLink(lock.custodyPath, lock.databaseIdentity),
+    ],
+  ];
+  for (const [context, operation] of operations) {
+    const failure = captureFailure(context, operation);
+    if (failure) failures.push(failure);
   }
-  if (databaseCloseFailure) throw databaseCloseFailure.error;
-  if (descriptorCloseFailure) throw descriptorCloseFailure.error;
+  if (failures.length > 0) throwWithCleanupFailures(failures[0], failures.slice(1));
 }
 
 function rollbackAndCloseAfterFailure(lock: OpenLock, context: string, error: unknown): never {
@@ -370,7 +459,6 @@ function tryAcquire(databasePath: string, ownershipLostMessage: string): OpenLoc
     // SQLite's OS-backed RESERVED lock is the generation/CAS operation. There
     // is no reclaim rename or unlink: a crashed connection releases the exact
     // kernel lock, while a delayed contender can only begin a later transaction.
-    lock.database.exec('BEGIN IMMEDIATE');
     assertPathOwnership(lock, ownershipLostMessage);
     return lock;
   } catch (error) {
