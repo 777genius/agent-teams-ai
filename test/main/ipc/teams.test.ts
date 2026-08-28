@@ -5,6 +5,7 @@ import {
 import { invalidateAuthoritativeModelExecutionProofs } from '@main/services/team/TeamLaunchExecutionProofAuthority';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
+import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 import {
   TEAM_BEGIN_ROSTER_AUTHORIZATION_TRANSACTION,
   TEAM_GET_ROSTER_AUTHORIZATION_TRANSACTION_OUTCOME,
@@ -7396,6 +7397,37 @@ describe('ipc teams handlers', () => {
           effort: 'max',
         })
       );
+    });
+
+    it('returns a typed no-dispatch result for an authoritatively not-started launch', async () => {
+      const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-known-no-dispatch-'));
+      setClaudeBasePathOverride(claudeRoot);
+      try {
+        const teamDir = path.join(claudeRoot, 'teams', 'known-no-dispatch-team');
+        fs.mkdirSync(teamDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(teamDir, 'config.json'),
+          JSON.stringify({ teamName: 'known-no-dispatch-team' })
+        );
+        teamHandlerMocks.launchTeam.mockResolvedValueOnce({
+          runId: 'run-not-started',
+          launchStatus: 'not_started',
+        });
+
+        const result = (await handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+          teamName: 'known-no-dispatch-team',
+          cwd: os.tmpdir(),
+        })) as { success: boolean; error?: string; errorCode?: string };
+
+        expect(result).toEqual({
+          success: false,
+          error: 'Authoritative no-dispatch',
+          errorCode: TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE,
+        });
+        expect(teamHandlerMocks.launchTeam).toHaveBeenCalledOnce();
+      } finally {
+        fs.rmSync(claudeRoot, { recursive: true, force: true });
+      }
     });
 
     it('launches draft team through saved request without dropping Electron draft metadata', async () => {

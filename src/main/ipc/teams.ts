@@ -107,6 +107,7 @@ import {
 import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { KANBAN_COLUMN_IDS } from '@shared/constants/kanban';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
+import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 import { extractUserFlags, PROTECTED_CLI_FLAGS } from '@shared/utils/cliArgsParser';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
@@ -158,6 +159,7 @@ import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLau
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { resolvePersistedLeadRuntimeRoute } from '../services/team/teamProviderBackendResolution';
+import { RosterLaunchKnownNoStartError } from '../services/team/provisioning/TeamProvisioningRosterLaunchOutcome';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
 import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService';
 
@@ -303,8 +305,6 @@ import type {
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
 const logger = createLogger('IPC:teams');
-// Runtime relay continues in the background after this race; keep sendMessage IPC off the
-// 25s OpenCode turn-settled guard while still giving prompt acceptance/reconcile time.
 const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_MS = 6_000;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_AFTER_UI_TIMEOUT_MS = 1_000;
 const OPENCODE_RUNTIME_DELIVERY_UI_TIMEOUT_PENDING_REASON =
@@ -1220,6 +1220,12 @@ async function wrapTeamHandler<T>(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     logger.error(`[teams:${operation}] ${message}`);
+    if (error instanceof RosterLaunchKnownNoStartError)
+      return {
+        success: false,
+        error: message,
+        errorCode: TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE,
+      };
     return { success: false, error: message };
   }
 }
@@ -1338,7 +1344,6 @@ async function handleGetData(
       : getTeamDataService().getTeamData(tn, getDataOptions);
   setCurrentMainOp('team:getData');
   try {
-    // Prefer worker thread to keep main event loop responsive
     const worker = getTeamDataWorkerClient();
     workerAvailable = worker.isAvailable();
     const missingState = await classifyMissingTeamData(tn);
@@ -1670,7 +1675,6 @@ async function handleUpdateConfig(
       throw new Error('Team config not found');
     }
 
-    // Notify running lead about the rename so it stays aware of current team name
     if (requestedName && requestedName !== (previousDisplayName?.trim() || tn)) {
       const messaging = getTeamMessagingApi();
       if (getTeamRuntimeApi().isTeamAlive(tn)) {
@@ -2086,7 +2090,6 @@ async function handleCreateTeam(
     return { success: false, error: validation.error };
   }
   const proofRequired = getTeamProvisioningStartApi().requiresAuthoritativeLaunchProof !== false;
-  // This must remain ahead of roster/transaction/lock admission and every team side effect.
   if (!verifyProductionTeamCreateRequest(validation.value, proofRequired))
     return { success: false, error: 'Fresh authoritative launch authorization is required' };
   let admitted: Awaited<ReturnType<typeof admitProductionTeamCreateRosterLaunch>>;
@@ -2402,7 +2405,6 @@ async function handleLaunchTeam(
     if (!context.valid) return { success: false, error: context.error };
     rosterLaunch = context;
   }
-
   return wrapTeamHandler('launch', async () => {
     addMainBreadcrumb('team', 'launch', { teamName: tn });
     launchIoGovernor?.noteLaunchIntent(validatedTeamName.value!, 'launch');
@@ -2414,6 +2416,8 @@ async function handleLaunchTeam(
           sendProvisioningProgress(progressTargetWindow, progress);
         });
       const response = await rosterLaunch.run(launchRequest, launch);
+      if (response.launchStatus === 'not_started')
+        throw new RosterLaunchKnownNoStartError('Authoritative no-dispatch');
       invalidateTeamRosterSnapshotCaches(validatedTeamName.value!);
       return response;
     } catch (error) {

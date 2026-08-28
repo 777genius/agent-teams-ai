@@ -481,7 +481,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     effectiveCwd,
     open && isLaunchMode
   );
-  useExecutionProofRefresh({
+  const executionProofRefresh = useExecutionProofRefresh({
     generation: authorizedPreparation?.generation ?? null,
     providerIds: selectedMemberProviders,
     clearAuthorization: clearAuthorizedPreparation,
@@ -783,7 +783,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSelectedModelRaw(
         scheduleSourceProviderId !== 'gemini' &&
           scheduleSourceProviderId !== 'opencode' &&
-          scheduleProviderId === normalizeOneShotProviderForMode(schedule.launchConfig.providerId, true)
+          scheduleProviderId ===
+            normalizeOneShotProviderForMode(schedule.launchConfig.providerId, true)
           ? (schedule.launchConfig.model ?? '')
           : getStoredTeamModel('anthropic')
       );
@@ -2318,7 +2319,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   }),
             () =>
               api.teams.rollbackRosterAuthorizationTransaction(effectiveTeamName, transactionId),
-            isActiveSubmission
+            isActiveSubmission,
+            executionProofRefresh.refreshNow
           );
           if (!isActiveSubmission()) return;
           if (!submitted) {

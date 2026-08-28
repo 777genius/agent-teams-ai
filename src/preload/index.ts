@@ -13,6 +13,7 @@ import { createTmuxInstallerBridge } from '@features/tmux-installer/preload';
 import { createTokenUsageBridge } from '@features/token-usage/preload';
 import { createWorkspaceTrustBridge } from '@features/workspace-trust/preload';
 import { WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL } from '@shared/constants';
+import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 import * as statusBoundary from '@shared/types/cliInstaller';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
@@ -497,7 +498,11 @@ interface IpcFileChangePayload {
 async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Promise<T> {
   const result = (await ipcRenderer.invoke(channel, ...args)) as IpcResult<T>;
   if (!result.success) {
-    throw new Error(result.error ?? 'Unknown error');
+    const error = new Error(result.error ?? 'Unknown error');
+    if (result.errorCode === TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE) {
+      Object.assign(error, { code: result.errorCode });
+    }
+    throw error;
   }
   return result.data as T;
 }
@@ -2001,7 +2006,9 @@ const electronAPI: ElectronAPI = {
         scheduleId,
         runId
       ),
-    onScheduleChange: (callback: (event: unknown, data: ScheduleChangeEvent) => void): (() => void) => {
+    onScheduleChange: (
+      callback: (event: unknown, data: ScheduleChangeEvent) => void
+    ): (() => void) => {
       const listener = (_event: Electron.IpcRendererEvent, data: ScheduleChangeEvent): void =>
         callback(null, data);
       ipcRenderer.on(SCHEDULE_CHANGE, listener);

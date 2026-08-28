@@ -626,6 +626,7 @@ import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDi
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { isTeamModelAvailableForUi } from '@renderer/utils/teamModelAvailability';
+import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 
 async function flush(): Promise<void> {
   await Promise.resolve();
@@ -2172,6 +2173,139 @@ describe('LaunchTeamDialog', () => {
       providerId: 'opencode',
       model: 'openai/gpt-5.4',
     });
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('refreshes a consumed proof after known no-dispatch and launches only on deliberate retry', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(isTeamModelAvailableForUi).mockImplementation(
+      (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
+    );
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          models: ['openai/gpt-5.4'],
+          capabilities: { teamLaunch: true, oneShot: false },
+        },
+      ],
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
+      model: 'openai/gpt-5.4',
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'opencode',
+          model: 'openai/gpt-5.4',
+        },
+      ],
+    } as any);
+    let proofNumber = 0;
+    vi.mocked(api.teams.prepareProvisioning).mockImplementation(async () => {
+      proofNumber += 1;
+      return {
+        ready: true,
+        message: 'ready',
+        executionProof: {
+          authorityId: `renderer-retry-proof-${proofNumber}`,
+          generation: proofNumber,
+          completedAt: '2026-08-28T00:00:00.000Z',
+          expiresAt: '2099-01-01T00:00:00.000Z',
+          requestDigest: String(proofNumber).repeat(64),
+        },
+      };
+    });
+    const transactionStatus = new Map<string, 'applied' | 'rolled-back' | 'committed'>();
+    vi.mocked(api.teams.beginRosterAuthorizationTransaction).mockImplementation(
+      async (_teamName, request) => {
+        transactionStatus.set(request.transactionId, 'applied');
+        return { transactionId: request.transactionId, status: 'applied' as const };
+      }
+    );
+    vi.mocked(api.teams.getRosterAuthorizationTransactionOutcome).mockImplementation(
+      async (_teamName, transactionId) => ({
+        transactionId,
+        status: transactionStatus.get(transactionId) ?? 'unknown',
+      })
+    );
+    let dispatches = 0;
+    const submittedProofIds: string[] = [];
+    const onLaunch = vi.fn(async (request: any) => {
+      submittedProofIds.push(request.executionProof.authorityId);
+      const transactionId = request.rosterTransactionId as string;
+      if (submittedProofIds.length === 1) {
+        transactionStatus.set(transactionId, 'rolled-back');
+        throw Object.assign(new Error('Authoritative no-dispatch'), {
+          code: TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE,
+        });
+      }
+      dispatches += 1;
+      transactionStatus.set(transactionId, 'committed');
+    });
+    const onClose = vi.fn();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose,
+          onLaunch,
+        })
+      );
+      await flush();
+    });
+    await vi.waitFor(() =>
+      expect(
+        Array.from(host.querySelectorAll('button')).find(
+          (button) => button.textContent === 'Launch team'
+        )?.disabled
+      ).toBe(false)
+    );
+    const launchButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+
+    await act(async () => {
+      launchButton?.click();
+      await flush();
+    });
+    await vi.waitFor(() => expect(api.teams.prepareProvisioning).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(launchButton?.disabled).toBe(false));
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => {
+      launchButton?.click();
+      await flush();
+    });
+
+    expect(submittedProofIds).toEqual(['renderer-retry-proof-1', 'renderer-retry-proof-2']);
+    expect(dispatches).toBe(1);
+    expect(api.teams.rollbackRosterAuthorizationTransaction).not.toHaveBeenCalled();
+    expect([...transactionStatus.values()]).toEqual(['rolled-back', 'committed']);
+    expect(onClose).toHaveBeenCalledOnce();
 
     await act(async () => {
       root.unmount();

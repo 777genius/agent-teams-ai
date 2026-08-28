@@ -26,6 +26,7 @@ import {
   TeamRelaunchStopOutcomeUnknownError,
 } from './teamRelaunchFlow';
 import { useCommittedLaunchAuthorizationRef } from './useCommittedLaunchAuthorizationRef';
+import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 
 import type { ProvisioningLaunchAuthorizationInput } from './provisioningLaunchAuthorization';
 import type { ProvisioningProviderCheck } from './provisioningProviderChecks';
@@ -782,6 +783,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
       throw new Error('launch response lost');
     });
     const rollback = vi.fn(async () => ({ transactionId: 'tx', status: 'rolled-back' as const }));
+    const refresh = vi.fn();
 
     await expect(
       executeLaunchTeamDialogSubmissionWithRecheck(
@@ -789,16 +791,57 @@ describe('LaunchTeamDialog provisioning authorization', () => {
         persist,
         getOutcome,
         launch,
-        rollback
+        rollback,
+        undefined,
+        refresh
       )
     ).resolves.toBe(true);
     expect(persist).toHaveBeenCalledTimes(1);
     expect(getOutcome).toHaveBeenCalledTimes(2);
     expect(launch).toHaveBeenCalledTimes(1);
     expect(rollback).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
   });
 
-  it.each(['prepared', 'launch-unknown'] as const)(
+  it('refreshes the consumed proof after typed no-dispatch reconciliation rolls back', async () => {
+    const authorization = {
+      prepareState: 'ready' as const,
+      providerStatusesAuthoritative: true,
+      preparedRequestSignature: 'project-a',
+      currentRequestSignature: 'project-a',
+      preparedGeneration: 1,
+      currentGeneration: 1,
+      providerProofExpiresAtMs: freshProofExpiry,
+      executionProof: freshExecutionProof,
+    };
+    const getOutcome = vi
+      .fn()
+      .mockResolvedValueOnce({ transactionId: 'tx', status: 'applied' as const })
+      .mockResolvedValueOnce({ transactionId: 'tx', status: 'rolled-back' as const });
+    const rollback = vi.fn(async () => ({ transactionId: 'tx', status: 'rolled-back' as const }));
+    const refresh = vi.fn();
+    const transportError = Object.assign(new Error('authoritative no-dispatch'), {
+      code: TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE,
+    });
+    const storeError = Object.assign(new Error('launch failed'), { causeError: transportError });
+
+    await expect(
+      executeLaunchTeamDialogSubmissionWithRecheck(
+        () => authorization,
+        async () => ({ transactionId: 'tx', status: 'applied' as const }),
+        getOutcome,
+        async () => Promise.reject(storeError),
+        rollback,
+        undefined,
+        refresh
+      )
+    ).resolves.toBe(false);
+    expect(getOutcome).toHaveBeenCalledTimes(2);
+    expect(rollback).not.toHaveBeenCalled();
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
+  it.each(['prepared', 'launch-unknown', 'unknown'] as const)(
     'preserves the launch rejection when reconciliation finds %s',
     async (status) => {
       const authorization = {
@@ -822,6 +865,7 @@ describe('LaunchTeamDialog provisioning authorization', () => {
         transactionId: 'tx',
         status: 'rolled-back' as const,
       }));
+      const refresh = vi.fn();
 
       await expect(
         executeLaunchTeamDialogSubmissionWithRecheck(
@@ -829,13 +873,16 @@ describe('LaunchTeamDialog provisioning authorization', () => {
           persist,
           getOutcome,
           launch,
-          rollback
+          rollback,
+          undefined,
+          refresh
         )
       ).rejects.toBe(failure);
       expect(persist).toHaveBeenCalledTimes(1);
       expect(getOutcome).toHaveBeenCalledTimes(2);
       expect(launch).toHaveBeenCalledTimes(1);
       expect(rollback).not.toHaveBeenCalled();
+      expect(refresh).not.toHaveBeenCalled();
     }
   );
 

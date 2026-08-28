@@ -4,6 +4,7 @@ import {
   type ProvisioningLaunchAuthorizationInput,
 } from './provisioningLaunchAuthorization';
 import { isTeamRelaunchKnownPreDispatchFailure } from './teamRelaunchFlow';
+import { TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE } from '@shared/types/ipc';
 
 import type {
   AuthoritativeModelExecutionProof,
@@ -22,6 +23,18 @@ function requireRollback(outcome: RosterAuthorizationTransactionOutcome): void {
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isKnownNoDispatchError(error: unknown, seen = new Set<unknown>()): boolean {
+  if (error == null || (typeof error !== 'object' && typeof error !== 'function')) return false;
+  if (seen.has(error)) return false;
+  seen.add(error);
+  const candidate = error as { code?: unknown; cause?: unknown; causeError?: unknown };
+  return (
+    candidate.code === TEAM_LAUNCH_KNOWN_NO_DISPATCH_ERROR_CODE ||
+    isKnownNoDispatchError(candidate.cause, seen) ||
+    isKnownNoDispatchError(candidate.causeError, seen)
+  );
 }
 
 function hasSameExecutionProof(
@@ -74,7 +87,8 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
   getOutcome: TransactionOperation,
   submit: (proof: AuthoritativeModelExecutionProof) => void | Promise<void>,
   rollback: TransactionOperation,
-  isCurrent: () => boolean = () => true
+  isCurrent: () => boolean = () => true,
+  onKnownNoDispatch: () => void = () => undefined
 ): Promise<boolean> {
   // Bind the transaction to request/roster A. A later render must not let proof
   // B authorize A, and a stale proof A must not survive a revoked live status.
@@ -158,13 +172,20 @@ export async function executeLaunchTeamDialogSubmissionWithRecheck(
       throw error;
     }
     if (reconciled.status === 'committed') return true;
+    if (isKnownNoDispatchError(error) && reconciled.status === 'rolled-back') {
+      onKnownNoDispatch();
+      return false;
+    }
     throw error;
   }
 
   // The desktop launch IPC owns prepare + launch-result finalization. Reading the
   // durable result also recovers a renderer response loss without retrying launch.
   const finalized = await getOutcome();
-  if (finalized.status === 'rolled-back') return false;
+  if (finalized.status === 'rolled-back') {
+    onKnownNoDispatch();
+    return false;
+  }
   if (finalized.status === 'prepared' || finalized.status === 'launch-unknown') {
     throw new Error(
       `The launch outcome is ${finalized.status}; the roster remains reserved and launch will not be retried automatically.`
