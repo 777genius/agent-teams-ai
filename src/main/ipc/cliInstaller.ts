@@ -22,6 +22,11 @@ import {
   CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
   parseCliProviderStatusIpcRequest,
 } from '@shared/types/cliInstaller';
+import {
+  getCliProviderCatalogAuthorityFingerprint,
+  getCliProviderProfileAuthorityFingerprint,
+  normalizeCliProviderAuthorityProjectPath,
+} from '@shared/utils/cliProviderAuthority';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
@@ -31,6 +36,7 @@ import {
   invalidateAuthoritativeModelExecutionProofs,
   invalidateAuthoritativeModelExecutionProofsForProvider,
 } from '../services/team/TeamLaunchExecutionProofAuthority';
+import { getAuthorityScope } from '../services/team/TeamLaunchProviderAuthorityGeneration';
 
 import type { CliInstallerService } from '../services';
 import type {
@@ -54,12 +60,14 @@ interface ProviderStatusObservation {
   providerStatus: CliProviderStatus | null;
   observationGeneration: number;
   observationNonce: string;
+  authorityScope: CliProviderStatusIpcResponse['authorityScope'];
 }
 
 const providerStatusInFlight = new Map<string, Promise<ProviderStatusObservation>>();
 const providerRuntimeRequestTails = new Map<CliProviderId, Promise<void>>();
 const providerRuntimeRequestQueue: Array<() => void> = [];
-const observedProviderAuthorityFingerprintById = new Map<CliProviderId, string>();
+const observedProviderProfileAuthorityFingerprintById = new Map<CliProviderId, string>();
+const observedProviderCatalogAuthorityFingerprintByScope = new Map<string, string>();
 let activeProviderRuntimeRequestCount = 0;
 const cachedStatus = new Map<
   CliInstallerProviderStatusMode,
@@ -99,7 +107,7 @@ function normalizeProviderStatusRequest(request: unknown): CliProviderStatusIpcR
     throw new Error('Provider status project path cannot be a filesystem root');
   }
   return {
-    projectPath: resolvedProjectPath,
+    projectPath: normalizeCliProviderAuthorityProjectPath(resolvedProjectPath),
     purpose: candidate.purpose,
     requestNonce: candidate.requestNonce,
   };
@@ -298,7 +306,7 @@ async function handleGetStatus(
     if (cached && Date.now() - cached.at < STATUS_CACHE_TTL_MS) {
       if (latestSnapshot && canUseStatusForCacheKey(cacheKey, latestSnapshot)) {
         for (const providerStatus of latestSnapshot.providers) {
-          observeProviderAuthority(providerStatus);
+          observeProviderAuthority(providerStatus, null);
         }
         cachedStatus.set(cacheKey, { value: latestSnapshot, at: Date.now() });
         return { success: true, data: latestSnapshot };
@@ -336,7 +344,7 @@ async function handleGetStatus(
     }
 
     const status = await statusInFlight.get(cacheKey)!;
-    for (const providerStatus of status.providers) observeProviderAuthority(providerStatus);
+    for (const providerStatus of status.providers) observeProviderAuthority(providerStatus, null);
     return { success: true, data: status };
   } catch (error) {
     const msg = getErrorMessage(error);
@@ -349,7 +357,7 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
   if (!providerStatus) {
     return;
   }
-  observeProviderAuthority(providerStatus);
+  observeProviderAuthority(providerStatus, null);
 
   for (const [cacheKey, cached] of cachedStatus) {
     if (
@@ -387,9 +395,42 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
   }
 }
 
-function observeProviderAuthority(providerStatus: CliProviderStatus): void {
-  const authorityFingerprint = JSON.stringify(providerStatus);
-  const previousAuthorityFingerprint = observedProviderAuthorityFingerprintById.get(
+function isSemanticProviderAuthorityObservation(providerStatus: CliProviderStatus): boolean {
+  return (
+    providerStatus.statusCheckOutcome !== 'pending' &&
+    providerStatus.statusCheckOutcome !== 'transient_error' &&
+    providerStatus.statusCheckOutcome !== 'model_only'
+  );
+}
+
+function observeProviderAuthority(
+  providerStatus: CliProviderStatus,
+  projectPath: string | null
+): void {
+  if (!isSemanticProviderAuthorityObservation(providerStatus)) return;
+  if (projectPath) {
+    const scopeKey = `${providerStatus.providerId}\0${projectPath}`;
+    const authorityFingerprint = JSON.stringify({
+      profile: getCliProviderProfileAuthorityFingerprint(providerStatus),
+      catalog: getCliProviderCatalogAuthorityFingerprint(providerStatus),
+    });
+    const previousAuthorityFingerprint =
+      observedProviderCatalogAuthorityFingerprintByScope.get(scopeKey);
+    if (
+      previousAuthorityFingerprint !== undefined &&
+      previousAuthorityFingerprint !== authorityFingerprint
+    ) {
+      invalidateAuthoritativeModelExecutionProofsForProvider(
+        providerStatus.providerId,
+        projectPath
+      );
+    }
+    observedProviderCatalogAuthorityFingerprintByScope.set(scopeKey, authorityFingerprint);
+    return;
+  }
+
+  const authorityFingerprint = getCliProviderProfileAuthorityFingerprint(providerStatus);
+  const previousAuthorityFingerprint = observedProviderProfileAuthorityFingerprintById.get(
     providerStatus.providerId
   );
   if (
@@ -398,7 +439,10 @@ function observeProviderAuthority(providerStatus: CliProviderStatus): void {
   ) {
     invalidateAuthoritativeModelExecutionProofsForProvider(providerStatus.providerId);
   }
-  observedProviderAuthorityFingerprintById.set(providerStatus.providerId, authorityFingerprint);
+  observedProviderProfileAuthorityFingerprintById.set(
+    providerStatus.providerId,
+    authorityFingerprint
+  );
 }
 
 async function handleGetProviderStatus(
@@ -436,13 +480,19 @@ async function handleGetProviderStatus(
     )
       .then((status) => {
         if (generation === statusCacheGeneration && status) {
-          observeProviderAuthority(status);
+          observeProviderAuthority(status, serviceOptions.projectPath ?? null);
           if (!serviceOptions.projectPath) patchCachedProviderStatus(status);
         }
         return {
           providerStatus: status,
           observationGeneration: generation,
           observationNonce,
+          authorityScope:
+            providerRequest.purpose === 'launch-proof' &&
+            serviceOptions.projectPath &&
+            status?.statusCheckOutcome === 'authoritative'
+              ? getAuthorityScope(providerId, serviceOptions.projectPath)
+              : null,
         };
       })
       .finally(() => {
@@ -493,7 +543,7 @@ async function handleVerifyProviderModels(
       currentService.verifyProviderModels(providerId)
     );
     if (generation === statusCacheGeneration) {
-      if (status) observeProviderAuthority(status);
+      if (status) observeProviderAuthority(status, null);
       patchCachedProviderStatus(status);
     }
     return { success: true, data: status };
@@ -510,7 +560,8 @@ function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
   cachedStatus.clear();
   statusInFlight.clear();
   providerStatusInFlight.clear();
-  observedProviderAuthorityFingerprintById.clear();
+  observedProviderProfileAuthorityFingerprintById.clear();
+  observedProviderCatalogAuthorityFingerprintByScope.clear();
   ClaudeBinaryResolver.clearCache();
   CodexBinaryResolver.clearCache();
   service.invalidateStatusCache();

@@ -10,14 +10,16 @@ import {
 import { api } from '@renderer/api';
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import * as cliInstallerContract from '@shared/types/cliInstaller';
+import { normalizeCliProviderAuthorityProjectPath } from '@shared/utils/cliProviderAuthority';
 import { hasFreshAuthoritativeScopedProviderStatus } from '@shared/utils/cliProviderStatus';
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import {
   CLI_PROVIDER_STATUS_SCOPE_CACHE_LIMIT,
+  reconcileGlobalProviderLaunchProofs,
+  reconcileScopedProviderLaunchProofs,
   type ScopedCliProviderLaunchProof,
-  setBoundedScopedProviderLaunchProof,
 } from './scopedCliProviderLaunchProof';
 
 import type { AppState } from '../types';
@@ -864,7 +866,6 @@ export interface CliInstallerSlice {
   installCodexRuntime: () => Promise<void>;
   invalidateCodexRuntimeStatus: () => Promise<void>;
 }
-
 let cliStatusInFlight: Promise<void> | null = null;
 const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
 let cliStatusEpoch = 0;
@@ -878,7 +879,7 @@ export function getCliProviderStatusScopeKey(
   providerId: CliProviderId,
   projectPath: string | null | undefined
 ): string {
-  return `${providerId}\0${projectPath?.trim() ?? ''}`;
+  return `${providerId}\0${projectPath ? normalizeCliProviderAuthorityProjectPath(projectPath) : ''}`;
 }
 function setBoundedScopedProviderStatus(
   current: Readonly<Record<string, CliProviderStatus>>,
@@ -1047,7 +1048,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
             cliProviderStatusLoadingByScope: {},
             cliStatusError: null,
           }),
-      cliProviderLaunchProofByScope: {},
       cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
     }));
 
@@ -1106,6 +1106,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
                 ...nextAuthState,
               }
             : nextCliStatus,
+          // prettier-ignore
+          cliProviderLaunchProofByScope: reconcileGlobalProviderLaunchProofs(state.cliProviderLaunchProofByScope, state.cliStatus, metadata),
           cliStatusLoading: false,
           cliProviderStatusLoading: nextProviderLoading,
         };
@@ -1170,7 +1172,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       set((state) => ({
         cliStatusLoading: true,
         cliProviderStatusLoadingByScope: {},
-        cliProviderLaunchProofByScope: {},
         cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
         cliStatusError: null,
       }));
@@ -1192,6 +1193,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
                 }
               : nextCliStatus,
             cliProviderStatusLoading: {},
+            // prettier-ignore
+            cliProviderLaunchProofByScope: reconcileGlobalProviderLaunchProofs(state.cliProviderLaunchProofByScope, state.cliStatus, status),
           };
         });
         scheduleCodexCatalogLoadingRefreshes(get);
@@ -1300,7 +1303,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       }
       try {
         const resolvedResponse = verifyModels
-          ? { providerStatus: null, metadataMatchesRequest: false }
+          ? { providerStatus: null, metadataMatchesRequest: false, authorityScope: null }
           : await cliInstallerContract.requestCliProviderStatusIpcResponse(
               api.cliInstaller.getProviderStatus,
               providerId,
@@ -1308,6 +1311,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
               projectPath
             );
         const responseMetadataMatchesRequest = resolvedResponse.metadataMatchesRequest;
+        const responseAuthorityScope = resolvedResponse.authorityScope;
         const responseProviderStatus = verifyModels
           ? await api.cliInstaller.verifyProviderModels(providerId)
           : resolvedResponse.providerStatus;
@@ -1359,23 +1363,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           }
           if (projectPath) {
             const previousScopedProvider = state.cliProviderStatusByScope[scopeKey];
+            // prettier-ignore
+            const nextLaunchProofs = reconcileScopedProviderLaunchProofs({ current: state.cliProviderLaunchProofByScope, scopeKey, providerId, projectPath, providerStatus, responseMatchesProvider, metadataMatchesRequest: responseMetadataMatchesRequest, authorityScope: responseAuthorityScope, requestIntent, requestId, epoch: requestEpoch, fetchedAtMs: Date.now() });
             return {
               cliProviderStatusLoading: nextLoading,
               cliProviderStatusLoadingByScope: nextScopedLoading,
-              cliProviderLaunchProofByScope:
-                requestIntent === 'launch-proof' && responseMetadataMatchesRequest
-                  ? setBoundedScopedProviderLaunchProof(
-                      state.cliProviderLaunchProofByScope,
-                      scopeKey,
-                      {
-                        providerStatus,
-                        requestId,
-                        epoch: requestEpoch,
-                        // Freshness begins when the authoritative observation completes.
-                        fetchedAtMs: Date.now(),
-                      }
-                    )
-                  : state.cliProviderLaunchProofByScope,
+              cliProviderLaunchProofByScope: nextLaunchProofs,
               cliProviderStatusByScope: setBoundedScopedProviderStatus(
                 state.cliProviderStatusByScope,
                 scopeKey,

@@ -35,11 +35,18 @@ import {
   CLI_INSTALLER_INVALIDATE_STATUS,
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
 } from '@preload/constants/ipcChannels';
+import {
+  createCliInstallerSlice,
+  createLoadingMultimodelCliStatus,
+  getCliProviderStatusScopeKey,
+} from '@renderer/store/slices/cliInstallerSlice';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+import { createStore } from 'zustand/vanilla';
 
 import { prepareAuthoritativeExecutionProof } from './helpers/authoritativePreparationTestHarness';
 
 import type { CliInstallerService } from '@main/services';
+import type { CliInstallerSlice } from '@renderer/store/slices/cliInstallerSlice';
 import type {
   CliInstallationStatus,
   CliProviderId,
@@ -48,7 +55,9 @@ import type {
   CliProviderStatusIpcResponse,
   IpcResult,
 } from '@shared/types';
+import type { ElectronAPI } from '@shared/types/api';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
+import type { StateCreator } from 'zustand';
 
 type IpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 
@@ -160,6 +169,12 @@ function providerStatusRequest(
   };
 }
 
+function createCliInstallerStore() {
+  return createStore<CliInstallerSlice>()(
+    createCliInstallerSlice as unknown as StateCreator<CliInstallerSlice>
+  );
+}
+
 describe('cliInstaller IPC handlers', () => {
   let ipcMain: ReturnType<typeof createMockIpcMain>;
   let service: {
@@ -196,9 +211,15 @@ describe('cliInstaller IPC handlers', () => {
       .mockResolvedValueOnce(
         provider({ providerId: 'opencode', models: ['openai/gpt-5.1'], authenticated: true })
       );
-    const proof = prepareAuthoritativeExecutionProof({
+    const anthropicProof = prepareAuthoritativeExecutionProof({
       cwd: process.cwd(),
       checks: [{ providerId: 'anthropic', providerBackendId: null, model: 'claude' }],
+    });
+    const openCodeProof = prepareAuthoritativeExecutionProof({
+      cwd: process.cwd(),
+      checks: [
+        { providerId: 'opencode', providerBackendId: 'opencode-cli', model: 'openai/gpt-5' },
+      ],
     });
 
     await ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'opencode', {
@@ -206,13 +227,222 @@ describe('cliInstaller IPC handlers', () => {
       purpose: 'launch-proof',
       requestNonce: 'catalog-change-1',
     });
-    expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(true);
+    expect(verifyAuthoritativeModelExecutionProof(anthropicProof)).toBe(true);
+    expect(verifyAuthoritativeModelExecutionProof(openCodeProof)).toBe(true);
     await ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'opencode', {
       projectPath: process.cwd(),
       purpose: 'launch-proof',
       requestNonce: 'catalog-change-2',
     });
 
+    expect(verifyAuthoritativeModelExecutionProof(anthropicProof)).toBe(true);
+    expect(verifyAuthoritativeModelExecutionProof(openCodeProof)).toBe(false);
+  });
+
+  it('ignores passive transient DTO changes for exact-project proof authority', async () => {
+    const authoritative = provider({
+      providerId: 'opencode',
+      authenticated: true,
+      statusCheckOutcome: 'authoritative',
+      models: ['openai/project-model'],
+    });
+    service.getProviderStatus.mockResolvedValueOnce(authoritative).mockResolvedValueOnce({
+      ...authoritative,
+      authenticated: false,
+      authMethod: null,
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      statusMessage: 'Temporary timeout',
+    });
+
+    const first = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('launch-proof', process.cwd())
+    )) as IpcResult<CliProviderStatusIpcResponse>;
+    const proof = prepareAuthoritativeExecutionProof({
+      cwd: process.cwd(),
+      checks: [
+        {
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'openai/project-model',
+        },
+      ],
+    });
+    const transient = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('passive', process.cwd())
+    )) as IpcResult<CliProviderStatusIpcResponse>;
+
+    expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(true);
+    expect(first.success && first.data?.authorityScope).toBeTruthy();
+    expect(transient.success && transient.data?.authorityScope).toBeNull();
+  });
+
+  it('isolates distinct OpenCode project catalogs and their generations', async () => {
+    const projectA = process.cwd();
+    const projectB = '/tmp';
+    const statusA = provider({
+      providerId: 'opencode',
+      authenticated: true,
+      statusCheckOutcome: 'authoritative',
+      models: ['openai/project-a'],
+    });
+    const statusB = { ...statusA, models: ['openai/project-b'] };
+    service.getProviderStatus
+      .mockResolvedValueOnce(statusA)
+      .mockResolvedValueOnce(statusB)
+      .mockResolvedValueOnce({ ...statusB, models: ['openai/project-b-v2'] });
+
+    const firstA = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('launch-proof', projectA)
+    )) as IpcResult<CliProviderStatusIpcResponse>;
+    const proofA = prepareAuthoritativeExecutionProof({
+      cwd: projectA,
+      checks: [
+        { providerId: 'opencode', providerBackendId: 'opencode-cli', model: 'openai/project-a' },
+      ],
+    });
+    const firstB = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('launch-proof', projectB)
+    )) as IpcResult<CliProviderStatusIpcResponse>;
+    const changedB = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('launch-proof', projectB)
+    )) as IpcResult<CliProviderStatusIpcResponse>;
+
+    expect(verifyAuthoritativeModelExecutionProof(proofA)).toBe(true);
+    const projectAGeneration = firstA.success
+      ? firstA.data?.authorityScope?.catalogGeneration
+      : null;
+    const firstProjectBGeneration = firstB.success
+      ? firstB.data?.authorityScope?.catalogGeneration
+      : null;
+    expect(projectAGeneration).toEqual(expect.any(Number));
+    expect(firstProjectBGeneration).toEqual(expect.any(Number));
+    expect(changedB.success && changedB.data?.authorityScope?.catalogGeneration).toBe(
+      (firstProjectBGeneration ?? -1) + 1
+    );
+  });
+
+  it('propagates the exact main authority generation into the renderer proof', async () => {
+    const projectPath = `${process.cwd()}/synthetic-segment/..`;
+    const ready = provider({
+      providerId: 'opencode',
+      authenticated: true,
+      authMethod: 'opencode_configured_local',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      modelCatalogRefreshState: 'ready',
+      models: ['openai/project-model'],
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-28T00:00:00.000Z',
+        staleAt: '2099-08-28T00:00:00.000Z',
+        defaultModelId: 'openai/project-model',
+        defaultLaunchModel: 'openai/project-model',
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    });
+    service.getProviderStatus.mockResolvedValue(ready);
+    let mainAuthorityScope: CliProviderStatusIpcResponse['authorityScope'];
+    const previousApi = window.electronAPI;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      value: {
+        cliInstaller: {
+          getProviderStatus: async (
+            providerId: CliProviderId,
+            request: CliProviderStatusIpcRequest
+          ) => {
+            const result = (await ipcMain.invoke(
+              CLI_INSTALLER_GET_PROVIDER_STATUS,
+              providerId,
+              request
+            )) as IpcResult<CliProviderStatusIpcResponse>;
+            if (!result.success || !result.data)
+              throw new Error(result.error ?? 'missing response');
+            mainAuthorityScope = result.data.authorityScope;
+            return result.data;
+          },
+        },
+      } as unknown as ElectronAPI,
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+
+    try {
+      await expect(
+        store.getState().fetchCliProviderStatus('opencode', {
+          projectPath,
+          intent: 'launch-proof',
+          silent: true,
+        })
+      ).resolves.toBe(true);
+      const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+      expect(store.getState().cliProviderLaunchProofByScope[scopeKey]?.authorityScope).toEqual(
+        mainAuthorityScope
+      );
+      expect(mainAuthorityScope?.projectPath).toBe(process.cwd());
+    } finally {
+      Object.defineProperty(window, 'electronAPI', { configurable: true, value: previousApi });
+    }
+  });
+
+  it('invalidates every scoped proof for a provider after authoritative global logout', async () => {
+    const loggedIn = provider({
+      providerId: 'opencode',
+      authenticated: true,
+      authMethod: 'opencode_configured_local',
+      statusCheckOutcome: 'authoritative',
+      models: ['openai/project-model'],
+    });
+    service.getProviderStatus
+      .mockResolvedValueOnce(loggedIn)
+      .mockResolvedValueOnce(loggedIn)
+      .mockResolvedValueOnce({
+        ...loggedIn,
+        authenticated: false,
+        authMethod: null,
+      });
+
+    await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('passive')
+    );
+    await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('launch-proof', process.cwd())
+    );
+    const proof = prepareAuthoritativeExecutionProof({
+      cwd: process.cwd(),
+      checks: [
+        {
+          providerId: 'opencode',
+          providerBackendId: 'opencode-cli',
+          model: 'openai/project-model',
+        },
+      ],
+    });
+
+    await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('passive')
+    );
     expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(false);
   });
 

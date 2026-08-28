@@ -1,4 +1,5 @@
 import { stableJsonStringify } from '@features/application-command-ledger';
+import { normalizeCliProviderAuthorityProjectPath } from '@shared/utils/cliProviderAuthority';
 import { normalizeEffectiveLaunchIdentity } from '@shared/utils/effectiveLaunchIdentity';
 import {
   buildEffectiveRuntimeRosterRevision,
@@ -15,9 +16,10 @@ import {
   canonicalProjectPathComparisonKey,
   captureProjectRootIdentityLease,
 } from './ProjectRootIdentityLease';
+import { executionProofRequestDigestForIdentity } from './TeamLaunchExecutionProofDigests';
 import * as providerAuthority from './TeamLaunchProviderAuthorityGeneration';
 
-import type { ProjectRootIdentity, ProjectRootIdentityLease } from './ProjectRootIdentityLease';
+import type { ProjectRootIdentityLease } from './ProjectRootIdentityLease';
 import type {
   AuthoritativeModelExecutionProof,
   TeamCreateRequest,
@@ -60,7 +62,7 @@ interface AuthoritativeAttemptRecord {
   authorityEpoch: object;
   expiresAtMs: number;
   projectLease: ProjectRootIdentityLease;
-  providerAuthorityGenerations: ReadonlyMap<ProviderModelLaunchIdentity['providerId'], number>;
+  providerAuthorityGenerations: providerAuthority.CapturedProviderAuthorityGenerations;
 }
 
 interface AuthoritativeExecutionRecord {
@@ -135,7 +137,7 @@ export function captureAuthoritativeProofEpoch(
     authorityEpoch: currentAuthorityEpoch,
     expiresAtMs: nowMs + PROOF_TTL_MS,
     projectLease: captureProjectRootIdentityLease(cwd),
-    providerAuthorityGenerations: providerAuthority.captureGenerations(),
+    providerAuthorityGenerations: providerAuthority.captureGenerations(normalizeProjectPath(cwd)),
   };
   attempts.set(attempt, record);
   scheduleExpiryCleanup();
@@ -167,7 +169,7 @@ function normalizeChecks(checks: readonly TeamProvisioningModelCheckRequest[]) {
 }
 
 function normalizeProjectPath(cwd: string): string {
-  return canonicalProjectPathComparisonKey(path.resolve(cwd.trim()));
+  return normalizeCliProviderAuthorityProjectPath(path.resolve(cwd.trim()));
 }
 
 export { canonicalProjectPathComparisonKey };
@@ -328,35 +330,7 @@ function claimAttemptLease(
   return { authorityEpoch: record.authorityEpoch, projectLease: record.projectLease };
 }
 
-export function executionProofRequestDigest(input: {
-  cwd: string;
-  checks: readonly TeamProvisioningModelCheckRequest[];
-  allowExperimentalLocalModels?: boolean;
-  runtimeRosterRevision?: string | null;
-}): string {
-  const projectLease = captureProjectRootIdentityLease(input.cwd);
-  try {
-    return executionProofRequestDigestForIdentity(input, projectLease.identity);
-  } finally {
-    projectLease.close();
-  }
-}
-
-function executionProofRequestDigestForIdentity(
-  input: {
-    checks: readonly TeamProvisioningModelCheckRequest[];
-    allowExperimentalLocalModels?: boolean;
-    runtimeRosterRevision?: string | null;
-  },
-  projectIdentity: ProjectRootIdentity
-): string {
-  return digest({
-    projectIdentity,
-    checks: normalizeChecks(input.checks),
-    allowExperimentalLocalModels: input.allowExperimentalLocalModels === true,
-    runtimeRosterRevision: input.runtimeRosterRevision ?? null,
-  });
-}
+export { executionProofRequestDigest } from './TeamLaunchExecutionProofDigests';
 
 export function issueAuthoritativeModelExecutionProof(input: {
   authorityEpoch: AuthoritativeProofEpoch;
@@ -426,22 +400,33 @@ export function invalidateAuthoritativeModelExecutionProofs(): void {
 
 /** Invalidates only execution authority that depends on one provider. */
 export function invalidateAuthoritativeModelExecutionProofsForProvider(
-  providerId: ProviderModelLaunchIdentity['providerId']
+  providerId: ProviderModelLaunchIdentity['providerId'],
+  projectPath: string | null = null
 ): void {
-  providerAuthority.invalidateProvider(providerId);
+  if (projectPath)
+    providerAuthority.invalidateProviderCatalog(providerId, normalizeProjectPath(projectPath));
+  else providerAuthority.invalidateProviderProfile(providerId);
+  const leaseMatches = (lease: ProjectRootIdentityLease): boolean =>
+    projectPath === null || lease.isCurrent(projectPath);
   for (const [authorityId, record] of proofs) {
-    if (record.checks.some((check) => check.providerId === providerId)) {
+    if (
+      record.checks.some((check) => check.providerId === providerId) &&
+      leaseMatches(record.projectLease)
+    ) {
       deleteExecutionProof(authorityId, record, false);
     }
   }
   for (const record of claimedExecutionLeases) {
-    if (record.providerIds.has(providerId)) invalidateClaimedExecutionRecord(record);
+    if (record.providerIds.has(providerId) && leaseMatches(record.projectLease))
+      invalidateClaimedExecutionRecord(record);
   }
   for (const [opaque, record] of leadRestartProofs) {
-    if (record.binding.providerId === providerId) deleteLeadRestartProof(opaque, record, false);
+    if (record.binding.providerId === providerId && leaseMatches(record.projectLease))
+      deleteLeadRestartProof(opaque, record, false);
   }
   for (const record of claimedLeadRestartLeases) {
-    if (record.binding.providerId === providerId) record.stale = true;
+    if (record.binding.providerId === providerId && leaseMatches(record.projectLease))
+      record.stale = true;
   }
   scheduleExpiryCleanup();
 }

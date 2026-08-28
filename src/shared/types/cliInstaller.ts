@@ -409,6 +409,16 @@ export interface CliProviderStatusIpcRequest extends CliProviderStatusRequestOpt
   requestNonce: string;
 }
 
+/** Main-owned launch authority generation for one exact provider/project scope. */
+export interface CliProviderStatusAuthorityScope {
+  schemaVersion: 1;
+  providerId: CliProviderId;
+  projectPath: string | null;
+  globalGeneration: number;
+  profileGeneration: number;
+  catalogGeneration: number;
+}
+
 /** Main-issued metadata binding a provider observation to its exact request. */
 export interface CliProviderStatusIpcResponse {
   providerStatus: CliProviderStatus | null;
@@ -416,6 +426,8 @@ export interface CliProviderStatusIpcResponse {
   requestNonce: string;
   observationGeneration: number;
   observationNonce: string;
+  /** Missing on legacy payloads, which are display-only and never launch-ready. */
+  authorityScope?: CliProviderStatusAuthorityScope | null;
 }
 
 const CLI_PROVIDER_STATUS_NONCE_MAX_LENGTH = 256;
@@ -462,6 +474,25 @@ export function parseCliProviderStatusIpcResponse(value: unknown): CliProviderSt
   ) {
     throw new Error('Provider status response metadata is invalid');
   }
+  if (value.authorityScope !== undefined && value.authorityScope !== null) {
+    if (!isRecord(value.authorityScope)) {
+      throw new Error('Provider status authority scope is invalid');
+    }
+    const scope = value.authorityScope;
+    if (
+      scope.schemaVersion !== 1 ||
+      typeof scope.providerId !== 'string' ||
+      (scope.projectPath !== null && typeof scope.projectPath !== 'string') ||
+      !Number.isSafeInteger(scope.globalGeneration) ||
+      (scope.globalGeneration as number) < 0 ||
+      !Number.isSafeInteger(scope.profileGeneration) ||
+      (scope.profileGeneration as number) < 0 ||
+      !Number.isSafeInteger(scope.catalogGeneration) ||
+      (scope.catalogGeneration as number) < 0
+    ) {
+      throw new Error('Provider status authority scope is invalid');
+    }
+  }
   if (
     value.providerStatus !== null &&
     (!isRecord(value.providerStatus) || typeof value.providerStatus.providerId !== 'string')
@@ -485,7 +516,11 @@ export function parseExactCliProviderStatusIpcResponse(
 export function resolveCliProviderStatusIpcResponse(
   value: unknown,
   request: CliProviderStatusIpcRequest
-): { providerStatus: CliProviderStatus | null; metadataMatchesRequest: boolean } {
+): {
+  providerStatus: CliProviderStatus | null;
+  metadataMatchesRequest: boolean;
+  authorityScope: CliProviderStatusAuthorityScope | null;
+} {
   try {
     const response = parseCliProviderStatusIpcResponse(value);
     const metadataMatchesRequest =
@@ -493,13 +528,18 @@ export function resolveCliProviderStatusIpcResponse(
     return {
       providerStatus: metadataMatchesRequest ? response.providerStatus : null,
       metadataMatchesRequest,
+      authorityScope: metadataMatchesRequest ? (response.authorityScope ?? null) : null,
     };
   } catch {
     const legacyPassiveStatus =
       request.purpose === 'passive' && isRecord(value) && typeof value.providerId === 'string'
         ? (value as unknown as CliProviderStatus)
         : null;
-    return { providerStatus: legacyPassiveStatus, metadataMatchesRequest: false };
+    return {
+      providerStatus: legacyPassiveStatus,
+      metadataMatchesRequest: false,
+      authorityScope: null,
+    };
   }
 }
 
@@ -508,7 +548,11 @@ export async function requestCliProviderStatusIpcResponse(
   providerId: CliProviderId,
   purpose: CliProviderStatusRequestPurpose,
   projectPath: string | null
-): Promise<{ providerStatus: CliProviderStatus | null; metadataMatchesRequest: boolean }> {
+): Promise<{
+  providerStatus: CliProviderStatus | null;
+  metadataMatchesRequest: boolean;
+  authorityScope: CliProviderStatusAuthorityScope | null;
+}> {
   const request = {
     ...(projectPath ? { projectPath } : {}),
     purpose,

@@ -23,7 +23,7 @@ interface Worker {
 }
 
 function launchWorker(
-  mode: 'async-holder' | 'sync-contender',
+  mode: 'async-holder' | 'authority-holder' | 'crash-holder' | 'sync-contender',
   target: string,
   trace: string
 ): Worker {
@@ -161,25 +161,24 @@ describe('withFileLock legacy compatibility ownership', () => {
     expect(asyncLockContent.split('\n').slice(0, 3)).toEqual([
       String(process.pid),
       '9007199254740991',
-      'agent-teams-legacy-authoritative-v1',
+      'agent-teams-legacy-authoritative-v2',
     ]);
     expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
-    expect(fs.existsSync(`${testFile}.lock.sqlite3`)).toBe(false);
+    expect(fs.statSync(`${testFile}.lock.sqlite3`).isFile()).toBe(true);
+    expect(fs.existsSync(`${testFile}.lock.lock.sqlite3`)).toBe(false);
   });
 
   it('atomically excludes an old creator in the former check-to-BEGIN window', async () => {
     const lockPath = `${testFile}.lock`;
-    const originalOpen = fs.openSync;
+    const originalLink = fs.linkSync;
     let injected = false;
-    vi.spyOn(fs, 'openSync').mockImplementation(((target, flags, mode) => {
-      if (!injected && String(target) === lockPath && flags === 'wx') {
+    vi.spyOn(fs, 'linkSync').mockImplementation((existingPath, newPath) => {
+      if (!injected && String(newPath) === lockPath) {
         injected = true;
-        const oldDescriptor = originalOpen(lockPath, 'wx', 0o600);
-        fs.writeSync(oldDescriptor, `1234\n${Date.now()}\n`);
-        fs.closeSync(oldDescriptor);
+        fs.writeFileSync(lockPath, `1234\n${Date.now()}\n`, { flag: 'wx', mode: 0o600 });
       }
-      return originalOpen(target, flags, mode);
-    }) as typeof fs.openSync);
+      return originalLink(existingPath, newPath);
+    });
     const callback = vi.fn(async () => undefined);
 
     await expect(withFileLock(testFile, callback, { acquireTimeoutMs: 60_000 })).rejects.toThrow(
@@ -226,6 +225,8 @@ describe('withFileLock legacy compatibility ownership', () => {
     expect(timer).not.toHaveBeenCalled();
     expect(callback).not.toHaveBeenCalled();
     expect(fs.readFileSync(lockPath, 'utf8')).toBe(legacyContent);
+    expect(fs.existsSync(`${testFile}.lock.sqlite3`)).toBe(false);
+    expect(fs.existsSync(`${testFile}.lock.publishing`)).toBe(false);
   });
 
   it.each([
@@ -265,7 +266,7 @@ describe('withFileLock legacy compatibility ownership', () => {
     const originalLstat = fs.lstatSync;
     let lockStatsReads = 0;
     vi.spyOn(fs, 'lstatSync').mockImplementation(((target, options) => {
-      if (String(target) === lockPath && ++lockStatsReads === 2) {
+      if (String(target) === lockPath && ++lockStatsReads === 3) {
         fs.renameSync(lockPath, `${lockPath}.displaced`);
         fs.writeFileSync(lockPath, 'foreign replacement', 'utf8');
       }
@@ -525,6 +526,33 @@ describe('withFileLock legacy compatibility ownership', () => {
     expect(nestedCallback).not.toHaveBeenCalled();
   });
 
+  it('expires inherited async ownership only after the exact owner releases', async () => {
+    let activeAttempt!: Promise<string>;
+    let deferredAttempt!: Promise<string>;
+
+    await withFileLock(testFile, async () => {
+      activeAttempt = new Promise((resolve) => {
+        setTimeout(() => {
+          void withFileLock(testFile, async () => 'unexpected').then(
+            () => resolve('entered'),
+            (error) => resolve((error as Error).message)
+          );
+        }, 0);
+      });
+      deferredAttempt = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          void withFileLock(testFile, async () => 'entered-after-release').then(resolve, reject);
+        }, 50);
+      });
+
+      await expect(activeAttempt).resolves.toBe(
+        `File lock is already held by this process: ${testFile}`
+      );
+    });
+
+    await expect(deferredAttempt).resolves.toBe('entered-after-release');
+  });
+
   it('queues a separate same-path async contender until exact release', async () => {
     let releaseOwner!: () => void;
     let markAcquired!: () => void;
@@ -697,6 +725,76 @@ describe('withFileLock legacy compatibility ownership', () => {
     expect(fs.readFileSync(tracePath, 'utf8').trim().split('\n')).toEqual([
       'holder:start',
       'holder:end',
+      'contender:acquired',
+    ]);
+  });
+
+  it('keeps child processes excluded after the holder pathname is unlinked', async () => {
+    const tracePath = path.join(temporaryRoot, 'unlink-trace');
+    const holder = launchWorker('async-holder', testFile, tracePath);
+    await holder.acquired;
+    fs.unlinkSync(`${testFile}.lock`);
+
+    const contender = launchWorker('sync-contender', testFile, tracePath);
+    await contender.acquired;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(fs.readFileSync(tracePath, 'utf8').trim().split('\n')).toEqual(['holder:start']);
+
+    holder.release();
+    const [holderResult, contenderResult] = await Promise.all([holder.result, contender.result]);
+    expect(holderResult.code, holderResult.output).not.toBe(0);
+    expect(contenderResult.code, contenderResult.output).toBe(0);
+    expect(fs.readFileSync(tracePath, 'utf8').trim().split('\n')).toEqual([
+      'holder:start',
+      'holder:end',
+      'contender:acquired',
+    ]);
+  });
+
+  it('treats controlled pre-publication authority as ordinary child-process contention', async () => {
+    const tracePath = path.join(temporaryRoot, 'publication-trace');
+    const publisher = launchWorker('authority-holder', testFile, tracePath);
+    await publisher.acquired;
+    expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+
+    const contender = launchWorker('sync-contender', testFile, tracePath);
+    await contender.acquired;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(fs.readFileSync(tracePath, 'utf8').trim().split('\n')).toEqual(['publication:start']);
+
+    publisher.release();
+    const [publisherResult, contenderResult] = await Promise.all([
+      publisher.result,
+      contender.result,
+    ]);
+    expect(publisherResult.code, publisherResult.output).toBe(0);
+    expect(contenderResult.code, contenderResult.output).toBe(0);
+    expect(fs.readFileSync(tracePath, 'utf8').trim().split('\n')).toEqual([
+      'publication:start',
+      'publication:end',
+      'contender:acquired',
+    ]);
+  });
+
+  it('recovers a branded legacy tombstone after a child crashes', async () => {
+    const tracePath = path.join(temporaryRoot, 'crash-trace');
+    const crashed = launchWorker('crash-holder', testFile, tracePath);
+    await crashed.acquired;
+    const crashedContent = fs.readFileSync(`${testFile}.lock`, 'utf8');
+    expect(crashedContent).toContain('agent-teams-legacy-authoritative-v2');
+
+    crashed.release();
+    const crashedResult = await crashed.result;
+    expect(crashedResult.code, crashedResult.output).toBe(17);
+    expect(fs.existsSync(`${testFile}.lock`)).toBe(true);
+
+    const contender = launchWorker('sync-contender', testFile, tracePath);
+    await contender.acquired;
+    const contenderResult = await contender.result;
+    expect(contenderResult.code, contenderResult.output).toBe(0);
+    expect(fs.existsSync(`${testFile}.lock`)).toBe(false);
+    expect(fs.readFileSync(tracePath, 'utf8').trim().split('\n')).toEqual([
+      'crash:start',
       'contender:acquired',
     ]);
   });

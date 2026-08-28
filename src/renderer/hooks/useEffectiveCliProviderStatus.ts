@@ -44,6 +44,17 @@ interface ExactProjectProviderProofAttemptState {
   providerGenerationById: ReadonlyMap<CliProviderId, string>;
 }
 
+function getScopedLaunchProofGeneration(
+  proof:
+    | import('@renderer/store/slices/scopedCliProviderLaunchProof').ScopedCliProviderLaunchProof
+    | null
+    | undefined
+): string | null {
+  const authority = proof?.authorityScope;
+  if (!proof || !authority) return null;
+  return `${proof.epoch}:${proof.requestId}`;
+}
+
 export function didExactProjectProviderLaunchProofComplete(results: readonly boolean[]): boolean {
   return results.length > 0 && results.every((result) => result === true);
 }
@@ -175,7 +186,7 @@ export function useExactProjectProviderLaunchProof(
           for (const [providerId, authoritative] of results) {
             const proof =
               currentProofs[getCliProviderStatusScopeKey(providerId, normalizedProjectPath)];
-            const proofGeneration = proof ? `${proof.epoch}:${proof.requestId}` : null;
+            const proofGeneration = getScopedLaunchProofGeneration(proof);
             if (
               authoritative &&
               proof !== undefined &&
@@ -197,7 +208,7 @@ export function useExactProjectProviderLaunchProof(
             }
             const proof =
               currentProofs[getCliProviderStatusScopeKey(providerId, normalizedProjectPath)];
-            const proofGeneration = proof ? `${proof.epoch}:${proof.requestId}` : null;
+            const proofGeneration = getScopedLaunchProofGeneration(proof);
             if (proofGeneration === completedProviderGenerations.get(providerId)) {
               providerGenerationById.set(providerId, proofGeneration);
             } else {
@@ -298,7 +309,7 @@ export function useExactProjectProviderLaunchProof(
     for (const providerId of normalizedProviderIds) {
       const scopeKey = getCliProviderStatusScopeKey(providerId, normalizedProjectPath);
       const proof = normalizedProjectPath ? (scopedLaunchProofs?.[scopeKey] ?? null) : null;
-      const proofGeneration = proof ? `${proof.epoch}:${proof.requestId}` : null;
+      const proofGeneration = getScopedLaunchProofGeneration(proof);
       const expectedGeneration = attemptState?.providerGenerationById.get(providerId) ?? null;
       const proofIsCurrent =
         attemptState?.requestKey === proofRequestKey &&
@@ -355,7 +366,7 @@ export function useExactProjectProviderLaunchProof(
     const changedProofs = normalizedProviderIds.flatMap((providerId) => {
       const proof =
         scopedLaunchProofs?.[getCliProviderStatusScopeKey(providerId, normalizedProjectPath)];
-      const currentGeneration = proof ? `${proof.epoch}:${proof.requestId}` : null;
+      const currentGeneration = getScopedLaunchProofGeneration(proof);
       return currentGeneration !== attemptState.providerGenerationById.get(providerId)
         ? [proof]
         : [];

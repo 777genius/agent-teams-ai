@@ -516,7 +516,7 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
       await invoke<IpcResult<CliProviderStatusIpcResponse>>(
         CLI_INSTALLER_GET_PROVIDER_STATUS,
         providerId,
-        createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+        createProviderStatusRequest(process.cwd(), 'launch-proof')
       );
     }
 
@@ -543,7 +543,7 @@ describe('cliInstaller IPC provider runtime scheduling', () => {
     const changedStatus = await invoke<IpcResult<CliProviderStatusIpcResponse>>(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
       'anthropic',
-      createProviderStatusRequest(LOCAL_MODEL_PROJECT_A_PATH, 'launch-proof')
+      createProviderStatusRequest(process.cwd(), 'launch-proof')
     );
 
     expect(changedStatus.success).toBe(true);

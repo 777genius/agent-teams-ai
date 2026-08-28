@@ -46,13 +46,29 @@ function withProviderStatusEnvelope(
     request: CliProviderStatusIpcRequest
   ) => CliProviderStatus | null | Promise<CliProviderStatus | null>
 ): ElectronAPI['cliInstaller']['getProviderStatus'] {
-  return async (providerId, request): Promise<CliProviderStatusIpcResponse> => ({
-    providerStatus: await implementation(providerId, request),
-    purpose: request.purpose,
-    requestNonce: request.requestNonce,
-    observationGeneration: 1,
-    observationNonce: `main-observation-${request.requestNonce}`,
-  });
+  return async (providerId, request): Promise<CliProviderStatusIpcResponse> => {
+    const providerStatus = await implementation(providerId, request);
+    return {
+      providerStatus,
+      purpose: request.purpose,
+      requestNonce: request.requestNonce,
+      observationGeneration: 1,
+      observationNonce: `main-observation-${request.requestNonce}`,
+      authorityScope:
+        request.purpose === 'launch-proof' &&
+        request.projectPath &&
+        providerStatus?.statusCheckOutcome === 'authoritative'
+          ? {
+              schemaVersion: 1,
+              providerId: providerStatus.providerId,
+              projectPath: request.projectPath,
+              globalGeneration: 1,
+              profileGeneration: 1,
+              catalogGeneration: 1,
+            }
+          : null,
+    };
+  };
 }
 
 describe('reconcileCliStatus', () => {
@@ -431,7 +447,7 @@ describe('reconcileCliStatus', () => {
 
 describe('project-scoped provider loading', () => {
   it.each(['bootstrapCliStatus', 'fetchCliStatus'] as const)(
-    'revokes scoped launch proof when %s starts a new status generation',
+    'retains scoped launch proof while passive %s status refresh is pending',
     async (actionName) => {
       const previousApi = window.electronAPI;
       const base = createLoadingMultimodelCliStatus();
@@ -462,7 +478,7 @@ describe('project-scoped provider loading', () => {
       try {
         const refresh = store.getState()[actionName]();
 
-        expect(store.getState().cliProviderLaunchProofByScope).toEqual({});
+        expect(store.getState().cliProviderLaunchProofByScope[scopeKey]).toBeDefined();
         expect(store.getState().cliProviderStatusScopeRevision).toBe(4);
 
         resolveStatus({ ...base, installed: false });
@@ -512,9 +528,8 @@ describe('project-scoped provider loading', () => {
           intent: 'launch-proof',
         })
       ).resolves.toBe(false);
-      expect(
-        store.getState().cliProviderLaunchProofByScope[scopeKey]?.providerStatus
-      ).toMatchObject({
+      expect(store.getState().cliProviderLaunchProofByScope[scopeKey]).toBeUndefined();
+      expect(store.getState().cliProviderStatusByScope[scopeKey]).toMatchObject({
         providerId: 'codex',
         authenticated: false,
         statusCheckOutcome: 'transient_error',
@@ -548,6 +563,19 @@ describe('project-scoped provider loading', () => {
         statusCheckOutcome: 'authoritative',
         capabilities: { ...openCode.capabilities, teamLaunch: true },
         models: ['openai/exact-model'],
+        modelCatalogRefreshState: 'ready',
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'opencode',
+          source: 'app-server',
+          status: 'ready',
+          fetchedAt: '2026-08-19T00:00:00.000Z',
+          staleAt: '2099-08-19T00:05:00.000Z',
+          defaultModelId: 'openai/exact-model',
+          defaultLaunchModel: 'openai/exact-model',
+          models: [],
+          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+        },
       };
       const completions: Array<(status: CliProviderStatus) => void> = [];
       const getProviderStatus = vi.fn(
@@ -673,6 +701,14 @@ describe('project-scoped provider loading', () => {
         providerStatus: ready,
         requestId: expect.any(Number),
         epoch: expect.any(Number),
+        authorityScope: {
+          schemaVersion: 1,
+          providerId: 'opencode',
+          projectPath,
+          globalGeneration: 1,
+          profileGeneration: 1,
+          catalogGeneration: 1,
+        },
       });
     } finally {
       Object.defineProperty(window, 'electronAPI', {
@@ -1283,15 +1319,7 @@ describe('project-scoped provider loading', () => {
       await requestA;
       expect(store.getState().cliProviderStatusLoadingByScope[scopeA]).toBeUndefined();
       expect(store.getState().cliProviderStatusLoadingByScope[scopeB]).toBe(true);
-      expect(store.getState().cliProviderLaunchProofByScope[scopeA]).toMatchObject({
-        providerStatus: {
-          statusCheckOutcome: 'transient_error',
-          authenticated: false,
-        },
-        requestId: expect.any(Number),
-        epoch: expect.any(Number),
-        fetchedAtMs: expect.any(Number),
-      });
+      expect(store.getState().cliProviderLaunchProofByScope[scopeA]).toBeUndefined();
 
       resolveProjectB(ready);
       await expect(requestB).resolves.toBe(true);

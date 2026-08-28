@@ -68,6 +68,15 @@ const authoritativeProvider = (): CliProviderStatus => ({
 
 type ProofSnapshot = ReturnType<typeof useExactProjectProviderLaunchProof>;
 
+const authorityScope = (projectPath: string, providerId: 'opencode' | 'codex' = 'opencode') => ({
+  schemaVersion: 1 as const,
+  providerId,
+  projectPath,
+  globalGeneration: 1,
+  profileGeneration: 1,
+  catalogGeneration: 1,
+});
+
 const HookProbe = ({
   projectPath,
   onSnapshot,
@@ -150,6 +159,25 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
     }
   );
 
+  it('treats a legacy proof without main authority generations as display-only', async () => {
+    const provider = authoritativeProvider();
+    storeState.fetchCliProviderStatus.mockImplementationOnce(async () => {
+      storeState.cliProviderLaunchProofByScope['opencode\0/project/a'] = {
+        providerStatus: provider,
+        epoch: 1,
+        requestId: 1,
+        fetchedAtMs: Date.now(),
+      };
+      return true;
+    });
+    const { root, snapshots } = await mountProbe('/project/a');
+
+    expect(snapshots.at(-1)?.providerStatusById.get('opencode')).toBeNull();
+    expect(snapshots.at(-1)?.providerGenerationById.get('opencode')).toBeNull();
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    act(() => root.unmount());
+  });
+
   it('backs off after a rejected status batch instead of polling or staying degraded forever', async () => {
     storeState.fetchCliProviderStatus.mockRejectedValue(new Error('transport disconnected'));
     const { root, snapshots } = await mountProbe('/project/a');
@@ -210,6 +238,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
           epoch: 9,
           requestId,
           fetchedAtMs: Date.now(),
+          authorityScope: authorityScope('/project/a'),
         };
         return true;
       })
@@ -221,6 +250,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
           epoch: 9,
           requestId,
           fetchedAtMs: Date.now(),
+          authorityScope: authorityScope('/project/a'),
         };
         return true;
       });
@@ -289,6 +319,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 11,
         requestId: 1,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a'),
       };
       complete?.(true);
       await flushPromises();
@@ -308,6 +339,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
           epoch: 4,
           requestId: 12,
           fetchedAtMs: Date.now(),
+          authorityScope: authorityScope('/project/a'),
         };
         return true;
       });
@@ -336,6 +368,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 5,
         requestId: 20,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/b'),
       };
       return true;
     });
@@ -382,6 +415,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 5,
         requestId: 21,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/b'),
       };
       return true;
     });
@@ -397,6 +431,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 5,
         requestId: 22,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a'),
       };
       resolveProjectA?.(true);
       await flushPromises();
@@ -434,6 +469,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 10,
         requestId: 2,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a', 'codex'),
       };
       return true;
     });
@@ -470,6 +506,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
           epoch: 6,
           requestId: 30,
           fetchedAtMs: Date.now(),
+          authorityScope: authorityScope('/project/a'),
         };
         return true;
       })
@@ -484,6 +521,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 6,
         requestId: 31,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a'),
       },
     };
     await act(async () => {
@@ -507,6 +545,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 8,
         requestId: 40,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a'),
       };
       return true;
     });
@@ -525,6 +564,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 8,
         requestId: 41,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a'),
       },
     };
     await act(async () => {
@@ -552,6 +592,7 @@ describe('useExactProjectProviderLaunchProof retry state machine', () => {
         epoch: 12,
         requestId: 70,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/a'),
       };
       return true;
     });
@@ -630,6 +671,7 @@ describe('resolveProjectScopedProviderStatus', () => {
         requestId,
         epoch: 4,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/models-only', 'codex'),
       };
       return true;
     });
@@ -640,6 +682,7 @@ describe('resolveProjectScopedProviderStatus', () => {
           requestId: 12,
           epoch: 4,
           fetchedAtMs: nowMs,
+          authorityScope: authorityScope('/project/models-only', 'codex'),
         },
       },
       cliProviderStatusLoadingByScope: {},
@@ -711,12 +754,19 @@ describe('resolveProjectScopedProviderStatus', () => {
         requestId: 2,
         epoch: 1,
         fetchedAtMs: Date.now(),
+        authorityScope: authorityScope('/project/expired-arrival', 'codex'),
       };
       return true;
     });
     const storeState = {
       cliProviderLaunchProofByScope: {
-        [scopeKey]: { providerStatus, requestId: 1, epoch: 1, fetchedAtMs: 39_999 },
+        [scopeKey]: {
+          providerStatus,
+          requestId: 1,
+          epoch: 1,
+          fetchedAtMs: 39_999,
+          authorityScope: authorityScope('/project/expired-arrival', 'codex'),
+        },
       },
       cliProviderStatusLoadingByScope: {},
       fetchCliProviderStatus,
