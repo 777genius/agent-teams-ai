@@ -243,6 +243,63 @@ describe('provider status check contract', () => {
     expect(merged.modelCatalog?.status).toBe('stale');
   });
 
+  it('publishes authoritative empty catalog arrays over obsolete display evidence', () => {
+    const current = providerStatus({
+      modelAvailability: [{ modelId: 'opencode/big-pickle', status: 'available' }],
+    });
+    const merged = mergeProviderStatusDisplayEvidence(
+      providerStatus({
+        models: [],
+        modelAvailability: [],
+        modelCatalog: current.modelCatalog
+          ? {
+              ...current.modelCatalog,
+              defaultModelId: null,
+              defaultLaunchModel: null,
+              models: [],
+            }
+          : null,
+      }),
+      current
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: true,
+      verificationState: 'verified',
+      models: [],
+      modelAvailability: [],
+      modelCatalog: { status: 'ready', models: [] },
+      capabilities: { teamLaunch: true },
+    });
+  });
+
+  it('retains stale arrays and revokes launch for a non-authoritative empty catalog', () => {
+    const current = providerStatus({
+      modelAvailability: [{ modelId: 'opencode/big-pickle', status: 'available' }],
+    });
+    const merged = mergeProviderStatusDisplayEvidence(
+      providerStatus({
+        statusCheckOutcome: 'pending',
+        statusCheckErrorCode: 'partial_response',
+        models: [],
+        modelAvailability: [],
+        modelCatalog: current.modelCatalog
+          ? { ...current.modelCatalog, defaultModelId: null, defaultLaunchModel: null, models: [] }
+          : null,
+      }),
+      current
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      verificationState: 'unknown',
+      models: current.models,
+      modelAvailability: current.modelAvailability,
+      modelCatalog: { status: 'stale', models: [] },
+      capabilities: { teamLaunch: false },
+    });
+  });
+
   it.each(['stale', 'degraded', 'unavailable'] as const)(
     'revokes authoritative status backed by a %s catalog',
     (status) => {

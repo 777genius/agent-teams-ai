@@ -3,7 +3,10 @@ import {
   createDefaultCliExtensionCapabilities,
   createLegacyRuntimeFallbackCliExtensionCapabilities,
 } from '@shared/utils/providerExtensionCapabilities';
-import { hasAuthoritativeProviderLaunchEvidence } from '@shared/utils/providerStatusAuthority';
+import {
+  hasAuthoritativeProviderLaunchEvidence,
+  isProviderModelCatalogExactReady,
+} from '@shared/utils/providerStatusAuthority';
 
 import type {
   CliProviderId,
@@ -231,9 +234,11 @@ export function createDegradedProviderStatus(
 
 function hasRetainedModelEvidence(
   incoming: CliProviderStatus,
-  current: CliProviderStatus
+  current: CliProviderStatus,
+  authoritativeCatalogReplacement: boolean
 ): boolean {
   return (
+    !authoritativeCatalogReplacement &&
     incoming.models.length === 0 &&
     (incoming.modelAvailability?.length ?? 0) === 0 &&
     !(incoming.modelCatalog?.status === 'ready' && incoming.modelCatalog.models.length > 0) &&
@@ -256,10 +261,16 @@ export function mergeProviderStatusDisplayEvidence(
     );
   }
 
+  const hasAuthoritativeLaunchEvidence = hasAuthoritativeProviderLaunchEvidence(incoming);
+  const authoritativeCatalogReplacement =
+    hasAuthoritativeLaunchEvidence && isProviderModelCatalogExactReady(incoming);
   const catalogRetained = incoming.modelCatalog == null && current.modelCatalog != null;
-  const modelsRetained = hasRetainedModelEvidence(incoming, current);
-  const launchUnproved =
-    !hasAuthoritativeProviderLaunchEvidence(incoming) || catalogRetained || modelsRetained;
+  const modelsRetained = hasRetainedModelEvidence(
+    incoming,
+    current,
+    authoritativeCatalogReplacement
+  );
+  const launchUnproved = !hasAuthoritativeLaunchEvidence || catalogRetained || modelsRetained;
   const retainedCatalog = incoming.modelCatalog ?? current.modelCatalog ?? null;
   const modelCatalog =
     retainedCatalog && launchUnproved
@@ -284,9 +295,12 @@ export function mergeProviderStatusDisplayEvidence(
       : incoming.capabilities,
     selectedBackendId: launchUnproved ? current.selectedBackendId : incoming.selectedBackendId,
     resolvedBackendId: launchUnproved ? current.resolvedBackendId : incoming.resolvedBackendId,
-    models: incoming.models.length > 0 ? incoming.models : current.models,
+    models:
+      authoritativeCatalogReplacement || incoming.models.length > 0
+        ? incoming.models
+        : current.models,
     modelAvailability:
-      (incoming.modelAvailability?.length ?? 0) > 0
+      authoritativeCatalogReplacement || (incoming.modelAvailability?.length ?? 0) > 0
         ? incoming.modelAvailability
         : current.modelAvailability,
     availableBackends:
