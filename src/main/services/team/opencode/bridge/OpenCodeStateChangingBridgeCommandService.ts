@@ -263,6 +263,31 @@ export class OpenCodeStateChangingBridgeCommandService {
           result.data
         );
       } catch (error) {
+        if (
+          isLaunchFingerprintEchoMismatch(
+            input.command,
+            input.behaviorFingerprint,
+            result.data,
+            error
+          )
+        ) {
+          const ambiguousResult = launchFingerprintMismatchResult<TData>(result);
+          await this.ledger.markUnknownAfterTimeout({
+            idempotencyKey,
+            error: ambiguousResult.error.message,
+          });
+          await this.appendUnknownOutcomeDiagnostic({
+            result: ambiguousResult,
+            teamName: input.teamName,
+            laneId: normalizedLaneId,
+            runId: input.runId,
+            command: input.command,
+            idempotencyKey,
+            leaseId: lease.leaseId,
+          });
+          await this.leaseStore.release(lease.leaseId);
+          return ambiguousResult;
+        }
         await this.ledger.markFailed({
           idempotencyKey,
           error: stringifyError(error),
@@ -345,7 +370,7 @@ export class OpenCodeStateChangingBridgeCommandService {
       severity: 'warning',
       message: isOpenCodeBridgeEmptyOutputFailure(input.result)
         ? 'OpenCode bridge command exited without output; outcome must be reconciled before retry'
-        : 'OpenCode bridge command timed out; outcome must be reconciled before retry',
+        : 'OpenCode bridge command outcome must be reconciled before retry',
       createdAt: completedAt,
     });
   }
@@ -455,6 +480,38 @@ export function resolveOpenCodeBridgeLeaseAcquireTimeoutMs(input: {
 
 function stringifyError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isLaunchFingerprintEchoMismatch(
+  command: OpenCodeBridgeCommandName,
+  expectedBehaviorFingerprint: string | null,
+  data: unknown,
+  error: unknown
+): boolean {
+  return (
+    command === 'opencode.launchTeam' &&
+    stringifyError(error) === 'OpenCode launch result behavior fingerprint mismatch' &&
+    (!isRecord(data) || data.expectedBehaviorFingerprint !== expectedBehaviorFingerprint)
+  );
+}
+
+function launchFingerprintMismatchResult<TData>(
+  result: Extract<OpenCodeBridgeResult<TData>, { ok: true }>
+): Extract<OpenCodeBridgeResult<TData>, { ok: false }> {
+  return {
+    ok: false,
+    schemaVersion: result.schemaVersion,
+    requestId: result.requestId,
+    command: result.command,
+    completedAt: result.completedAt,
+    durationMs: result.durationMs,
+    error: {
+      kind: 'contract_violation',
+      message: 'OpenCode launch result behavior fingerprint mismatch',
+      retryable: false,
+    },
+    diagnostics: result.diagnostics,
+  };
 }
 
 function isActiveOpenCodeBridgeCommandLeaseError(error: OpenCodeBridgeCommandLeaseError): boolean {

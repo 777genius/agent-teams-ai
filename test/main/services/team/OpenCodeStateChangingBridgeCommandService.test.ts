@@ -125,7 +125,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(entries[1]?.requestHash).not.toBe(entries[0]?.requestHash);
   });
 
-  it('fails closed when committed launch evidence returns another digest', async () => {
+  it('keeps a committed launch with a mismatched fingerprint echo reconcilable', async () => {
     bridge.resultFactory = ({ body, options }) =>
       bridgeSuccess({
         requestId: options.requestId,
@@ -137,10 +137,31 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         },
       });
 
-    await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
-      'launch result behavior fingerprint mismatch'
-    );
+    const result = await createService().execute(buildLaunchInput());
+
+    expect(result).toMatchObject({
+      ok: false,
+      requestId: 'cmd-1',
+      error: {
+        kind: 'contract_violation',
+        message: 'OpenCode launch result behavior fingerprint mismatch',
+        retryable: false,
+      },
+    });
     expect(bridge.calls).toHaveLength(1);
+    const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
+    await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
+      status: 'unknown_after_timeout',
+      retryable: false,
+      lastError: 'OpenCode launch result behavior fingerprint mismatch',
+    });
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'opencode_bridge_unknown_outcome',
+        message: 'OpenCode bridge command outcome must be reconciled before retry',
+      })
+    );
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
   it('rejects state-changing command when bridge handshake has stale manifest high watermark', async () => {

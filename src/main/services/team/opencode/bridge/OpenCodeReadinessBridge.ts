@@ -245,7 +245,11 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       cwd: input.projectPath,
       timeoutMs: resolveOpenCodeLaunchTimeoutMs(input, this.options.launchTimeoutMs),
     });
-    return result.ok ? result.data : blockedLaunchData(input.runId, result);
+    return result.ok
+      ? result.data
+      : isAmbiguousOpenCodeLaunchFailure(result)
+        ? reconciliationRequiredLaunchData(input, result)
+        : blockedLaunchData(input.runId, result);
   }
 
   async reconcileOpenCodeTeam(
@@ -693,7 +697,10 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           laneId: input.laneId,
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
-          behaviorFingerprint: command === 'opencode.launchTeam' ? (body as OpenCodeLaunchTeamCommandBody).expectedBehaviorFingerprint : null,
+          behaviorFingerprint:
+            command === 'opencode.launchTeam'
+              ? (body as OpenCodeLaunchTeamCommandBody).expectedBehaviorFingerprint
+              : null,
           body,
           cwd: input.cwd,
           timeoutMs: input.timeoutMs,
@@ -718,6 +725,44 @@ type OpenCodeStateChangingTeamCommandName = Extract<
   | 'opencode.sendMessage'
   | 'opencode.answerPermission'
 >;
+
+function isAmbiguousOpenCodeLaunchFailure(result: OpenCodeBridgeResult<unknown>): boolean {
+  return (
+    !result.ok &&
+    (result.error.kind === 'timeout' ||
+      result.error.kind === 'transport_watchdog_timeout' ||
+      isOpenCodeBridgeEmptyOutputFailure(result) ||
+      result.error.message === 'OpenCode launch result behavior fingerprint mismatch')
+  );
+}
+
+function reconciliationRequiredLaunchData(
+  input: OpenCodeLaunchTeamCommandBody,
+  result: OpenCodeBridgeResult<unknown>
+): OpenCodeLaunchTeamCommandData {
+  if (result.ok) {
+    throw new Error('reconciliationRequiredLaunchData expects a failed bridge result');
+  }
+  return {
+    runId: input.runId,
+    teamLaunchState: 'launching',
+    members: {},
+    warnings: [],
+    diagnostics: [
+      {
+        code: 'opencode_launch_reconciliation_required',
+        severity: 'warning',
+        message: `OpenCode launch outcome is ambiguous: ${result.error.message}`,
+      },
+      ...result.diagnostics.map((event) => ({
+        code: event.type,
+        severity: event.severity,
+        message: event.message,
+      })),
+    ],
+    expectedBehaviorFingerprint: input.expectedBehaviorFingerprint,
+  };
+}
 
 function blockedLaunchData(
   runId: string,

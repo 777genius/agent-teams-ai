@@ -209,7 +209,6 @@ describe('issue #443 Desktop real child-process wire contract', () => {
   it.each([
     ['stale readiness proof', 'stale-proof', 0],
     ['handshake fingerprint v1', 'handshake-v1', 0],
-    ['mismatched result fingerprint echo', 'mismatch-echo', 1],
   ] as const)('fails closed for %s', async (_label, scenario, expectedLaunches) => {
     const harness = await realContractHarness(scenario);
     const result = await harness.adapter.launch(launchInput(`run-${scenario}`, harness.fake.project));
@@ -223,11 +222,38 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
+  it('retains a launch with a mismatched fingerprint echo for reconciliation', async () => {
+    const harness = await realContractHarness('mismatch-echo');
+    const result = await harness.adapter.launch(
+      launchInput('run-mismatch-echo', harness.fake.project)
+    );
+
+    expect(result.teamLaunchState).toBe('partial_pending');
+    expect(result.members.alice).toMatchObject({
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+    });
+    const traces = await harness.fake.traces();
+    expect(traces.filter((trace) => trace.envelope?.command === 'opencode.launchTeam')).toHaveLength(
+      1
+    );
+    expect(harness.ledger.markUnknownAfterTimeout).toHaveBeenCalledTimes(1);
+    expect(harness.ledger.markFailed).not.toHaveBeenCalled();
+    assertProcessesExited(traces);
+  });
+
   it('treats an unknown launch outcome as non-retryable without duplicating the side effect', async () => {
     const harness = await realContractHarness('unknown-outcome');
     const result = await harness.adapter.launch(launchInput('run-unknown', harness.fake.project));
 
-    expect(result.teamLaunchState).not.toBe('clean_success');
+    expect(result.teamLaunchState).toBe('partial_pending');
+    expect(result.members.alice).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+    });
     const traces = await harness.fake.traces();
     const launchTraces = traces.filter(
       (trace) => trace.envelope?.command === 'opencode.launchTeam'
@@ -238,7 +264,13 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       sideEffectCommitted: true,
       proofValidation: { ok: true, membersObservedBeforeProof: false },
     });
+    expect(traces.map((trace) => trace.envelope?.command)).toEqual([
+      'opencode.readiness',
+      'opencode.handshake',
+      'opencode.launchTeam',
+    ]);
     expect(harness.ledger.markUnknownAfterTimeout).toHaveBeenCalledTimes(1);
+    expect(harness.ledger.markFailed).not.toHaveBeenCalled();
     expect(harness.ledger.begin).toHaveBeenCalledTimes(1);
     assertProcessesExited(traces);
     expect(await harness.fake.remainingBridgeFiles()).toEqual([]);
