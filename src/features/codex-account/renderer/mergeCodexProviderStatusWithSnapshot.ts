@@ -1,4 +1,4 @@
-import { hasExactReadyDynamicProviderCatalog } from '@shared/utils/providerStatusAuthority';
+import { hasAuthoritativeProviderLaunchEvidence } from '@shared/utils/providerStatusAuthority';
 
 import type { CodexAccountSnapshotDto } from '../contracts';
 import type { CliProviderStatus } from '@shared/types';
@@ -245,7 +245,7 @@ export function mergeCodexProviderStatusWithSnapshot(
     },
   };
 
-  if (hasExactReadyDynamicProviderCatalog(mergedProvider)) {
+  if (hasAuthoritativeProviderLaunchEvidence(provider)) {
     return mergedProvider;
   }
 

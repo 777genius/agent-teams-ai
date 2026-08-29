@@ -68,7 +68,7 @@ export function mergeProviderCatalogFields(
   }
   return {
     ...liveProvider,
-    models: hydratedProvider.models.length > 0 ? hydratedProvider.models : liveProvider.models,
+    models: hydratedProvider.models,
     modelCatalog: hydratedCatalog,
     modelCatalogRefreshState: 'ready',
     runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(

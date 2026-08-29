@@ -149,6 +149,14 @@ function createDynamicCatalogProvider(): CliProviderStatus {
   };
 }
 
+function createAuthoritativeBaseCodexProvider(): CliProviderStatus {
+  return {
+    ...createBaseCodexProvider(),
+    statusCheckOutcome: 'authoritative',
+    verificationState: 'verified',
+  };
+}
+
 describe('mergeCodexProviderStatusWithSnapshot', () => {
   it.each([
     ['missing', { modelCatalog: null, modelCatalogRefreshState: 'loading' as const }],
@@ -202,9 +210,38 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     }
   );
 
-  it('upgrades stale codex provider auth/runtime state from the live snapshot', () => {
+  it('does not restore launch authority from a ready snapshot when exact-ready provider status is non-authoritative', () => {
     const merged = mergeCodexProviderStatusWithSnapshot(
-      createBaseCodexProvider(),
+      {
+        ...createDynamicCatalogProvider(),
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'timeout',
+        capabilities: {
+          ...createDynamicCatalogProvider().capabilities,
+          teamLaunch: false,
+        },
+      },
+      createReadyChatgptSnapshot()
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      capabilities: { teamLaunch: false },
+      modelCatalog: { status: 'stale' },
+      connection: { codex: { launchAllowed: true, effectiveAuthMode: 'chatgpt' } },
+    });
+  });
+
+  it('upgrades authoritative codex provider auth/runtime state from the live snapshot', () => {
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      createAuthoritativeBaseCodexProvider(),
       createReadyChatgptSnapshot()
     );
 
@@ -224,7 +261,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     });
   });
 
-  it('clears a stale runtime-missing provider once the live snapshot is ready', () => {
+  it('keeps a runtime-missing provider fail-closed when the live snapshot is ready', () => {
     const baseProvider = createBaseCodexProvider();
     const baseConnection = baseProvider.connection!;
     const merged = mergeCodexProviderStatusWithSnapshot(
@@ -269,10 +306,11 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     );
 
     expect(merged.supported).toBe(true);
-    expect(merged.authenticated).toBe(true);
-    expect(merged.verificationState).toBe('verified');
+    expect(merged.authenticated).toBe(false);
+    expect(merged.authMethod).toBe(null);
+    expect(merged.verificationState).toBe('error');
     expect(merged.statusMessage).toBe('ChatGPT account ready');
-    expect(merged.capabilities.teamLaunch).toBe(true);
+    expect(merged.capabilities.teamLaunch).toBe(false);
     expect(merged.capabilities.oneShot).toBe(true);
     expect(merged.connection?.codex?.appServerState).toBe('healthy');
     expect(merged.connection?.codex?.launchReadinessState).toBe('ready_chatgpt');
@@ -287,7 +325,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
   it('hydrates codex connection truth even when the stale provider payload had no connection block', () => {
     const merged = mergeCodexProviderStatusWithSnapshot(
       {
-        ...createBaseCodexProvider(),
+        ...createAuthoritativeBaseCodexProvider(),
         connection: null,
       },
       createReadyChatgptSnapshot()
@@ -364,7 +402,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
   });
 
   it('preserves an active Codex custom provider endpoint label through snapshot merge', () => {
-    const provider = createBaseCodexProvider();
+    const provider = createAuthoritativeBaseCodexProvider();
     const customProvider = {
       enabled: true,
       active: true,

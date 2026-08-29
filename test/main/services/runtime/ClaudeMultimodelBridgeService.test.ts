@@ -1,13 +1,16 @@
 // @vitest-environment node
+import { mergeProviderCatalogFields } from '@main/services/runtime/providerCatalogAuthority';
 import {
   getProviderConnectionModeSummary,
   getProviderCurrentRuntimeSummary,
   isConnectionManagedRuntimeProvider,
 } from '@renderer/components/runtime/providerConnectionUi';
+import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { readFile as readFileFixture, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { CliProviderStatus } from '@shared/types';
 import type { PathLike } from 'fs';
 
 const execCliMock = vi.fn();
@@ -111,6 +114,55 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
         ? ['OPENAI_API_KEY']
         : undefined,
 }));
+
+describe('mergeProviderCatalogFields', () => {
+  it('replaces obsolete flat models with an intentionally empty authoritative hydrated list', () => {
+    const hydratedCatalog = {
+      schemaVersion: 1 as const,
+      providerId: 'codex' as const,
+      source: 'app-server' as const,
+      status: 'ready' as const,
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2026-08-29T00:10:00.000Z',
+      defaultModelId: null,
+      defaultLaunchModel: null,
+      models: [],
+      diagnostics: { configReadState: 'ready' as const, appServerState: 'healthy' as const },
+    };
+    const hydratedProvider: CliProviderStatus = {
+      providerId: 'codex',
+      displayName: 'Codex',
+      supported: true,
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusMessage: null,
+      models: [],
+      modelCatalog: hydratedCatalog,
+      modelCatalogRefreshState: 'ready',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: true,
+        oneShot: true,
+        extensions: createDefaultCliExtensionCapabilities(),
+      },
+    };
+    const liveProvider: CliProviderStatus = {
+      ...hydratedProvider,
+      models: ['obsolete-model'],
+      modelCatalog: null,
+      modelCatalogRefreshState: 'loading',
+    };
+
+    const merged = mergeProviderCatalogFields(liveProvider, hydratedProvider);
+
+    expect(merged.models).toEqual([]);
+    expect(merged.modelCatalog).toBe(hydratedCatalog);
+    expect(merged.modelCatalogRefreshState).toBe('ready');
+  });
+});
 
 describe('ClaudeMultimodelBridgeService', () => {
   beforeEach(() => {
