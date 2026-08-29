@@ -66,6 +66,13 @@ describe('createHostedOperatorSurfacesComposition', () => {
       getPreview: vi.fn(),
       decide: vi.fn(),
     });
+    const approvalRoute = route('team-approvals.page.v1', '/approvals');
+    const approvalRoutes = Object.freeze([approvalRoute]);
+    const approvalContribution = Object.freeze({
+      id: 'team-approvals.hosted.v1',
+      facade: approvalFacade,
+      routes: approvalRoutes,
+    });
     const diagnosticsFacade = Object.freeze({ getDiagnostics: vi.fn() });
 
     const composition = createHostedOperatorSurfacesComposition({
@@ -87,11 +94,7 @@ describe('createHostedOperatorSurfacesComposition', () => {
         createContext: memberContext,
       },
       approvals: {
-        contribution: Object.freeze({
-          id: 'team-approvals.hosted.v1',
-          facade: approvalFacade,
-          routes: Object.freeze([route('team-approvals.page.v1', '/approvals')]),
-        }),
+        contribution: approvalContribution,
         createContext: approvalContext,
       },
       diagnostics: {
@@ -115,10 +118,15 @@ describe('createHostedOperatorSurfacesComposition', () => {
     );
     expect(registrations.approvals).toHaveBeenCalledWith(
       app,
-      expect.objectContaining({ facade: approvalFacade }),
+      approvalContribution,
       routeAdmission,
+      undefined,
       approvalContext
     );
+    const registeredApprovalContribution = registrations.approvals.mock.calls[0]?.[1];
+    expect(registeredApprovalContribution).toBe(approvalContribution);
+    expect(registeredApprovalContribution.routes).toBe(approvalRoutes);
+    expect(registeredApprovalContribution.routes[0]).toBe(approvalRoute);
     expect(registrations.diagnostics).toHaveBeenCalledWith(
       app,
       expect.objectContaining({ facade: diagnosticsFacade }),
