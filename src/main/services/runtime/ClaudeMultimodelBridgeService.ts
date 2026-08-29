@@ -498,14 +498,29 @@ function mapRuntimeProviderModelCatalog(
     return null;
   }
 
+  if (!Array.isArray(modelCatalog.models)) {
+    return null;
+  }
+  if (
+    !modelCatalog.models.every(
+      (model) =>
+        model &&
+        typeof model === 'object' &&
+        !Array.isArray(model) &&
+        typeof model.id === 'string' &&
+        typeof model.launchModel === 'string' &&
+        typeof model.displayName === 'string' &&
+        Boolean(model.id.trim() && model.launchModel.trim() && model.displayName.trim())
+    )
+  ) {
+    return null;
+  }
+
   const models: NonNullable<CliProviderStatus['modelCatalog']>['models'] =
-    modelCatalog.models?.flatMap((model) => {
-      const id = model.id?.trim();
-      const launchModel = model.launchModel?.trim();
-      const displayName = model.displayName?.trim();
-      if (!id || !launchModel || !displayName) {
-        return [];
-      }
+    modelCatalog.models.flatMap((model) => {
+      const id = model.id!.trim();
+      const launchModel = model.launchModel!.trim();
+      const displayName = model.displayName!.trim();
 
       const supportedReasoningEfforts = collectRuntimeReasoningEfforts(
         model.supportedReasoningEfforts
@@ -540,7 +555,7 @@ function mapRuntimeProviderModelCatalog(
           metadata: mapRuntimeProviderModelMetadata(model.metadata),
         },
       ];
-    }) ?? [];
+    });
 
   return {
     schemaVersion: 1,
@@ -1590,73 +1605,9 @@ export class ClaudeMultimodelBridgeService {
       }
       return provider;
     } catch (error) {
-      if (providerId === 'opencode') {
-        logger.warn(
-          `OpenCode summary runtime status unavailable; returning degraded status without inventory fallback: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-        return createRuntimeStatusErrorProviderStatus(providerId, error);
-      }
-      if (providerId === 'gemini' && this.isRuntimeStatusCompatibilityError(error)) {
-        return this.buildGeminiStatus(binaryPath);
-      }
-
-      if (this.isRuntimeStatusCompatibilityError(error)) {
-        logger.warn(
-          `Provider-scoped summary runtime status unavailable for ${providerId}, falling back to full probe: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-        try {
-          return await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
-            projectPath,
-          });
-        } catch (fullError) {
-          if (
-            this.isRuntimeStatusTimeoutError(fullError) &&
-            this.shouldUseLegacyProviderTimeoutFallback(providerId)
-          ) {
-            logger.warn(
-              `Provider-scoped full runtime status timed out for ${providerId}, falling back to scoped legacy probes: ${
-                fullError instanceof Error ? fullError.message : String(fullError)
-              }`
-            );
-            return this.getProviderStatusFromLegacyProbesOrError(
-              binaryPath,
-              providerId,
-              fullError,
-              { projectPath }
-            );
-          }
-          logger.warn(
-            `Provider-scoped full runtime status unavailable for ${providerId}, returning scoped error: ${
-              fullError instanceof Error ? fullError.message : String(fullError)
-            }`
-          );
-          return createRuntimeStatusErrorProviderStatus(providerId, fullError);
-        }
-      }
-
       const summaryStatusError = error instanceof Error ? error.message : String(error);
-      if (
-        this.isRuntimeStatusTimeoutError(error) &&
-        this.shouldUseLegacyProviderTimeoutFallback(providerId)
-      ) {
-        logger.debug(
-          `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`
-        );
-        logger.warn(
-          `Provider-scoped summary runtime status timed out for ${providerId}, falling back to scoped legacy probes: ${
-            summaryStatusError
-          }`
-        );
-        return this.getProviderStatusFromLegacyProbesOrError(binaryPath, providerId, error, {
-          projectPath,
-        });
-      }
       logger.warn(
-        `Provider-scoped summary runtime status unavailable for ${providerId}: ${summaryStatusError}`
+        `Provider-scoped summary runtime status unavailable for ${providerId}; returning scoped degraded status without fallback: ${summaryStatusError}`
       );
       return createRuntimeStatusErrorProviderStatus(providerId, error);
     } finally {

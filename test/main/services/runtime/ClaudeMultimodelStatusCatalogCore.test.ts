@@ -83,9 +83,12 @@ function catalog(modelId: string): Record<string, unknown> {
   };
 }
 
-function commandResult(provider: Record<string, unknown>): Promise<unknown> {
+function commandResult(
+  provider: Record<string, unknown>,
+  providerId: 'codex' | 'opencode' = 'opencode'
+): Promise<unknown> {
   return Promise.resolve({
-    stdout: JSON.stringify({ schemaVersion: 2, providers: { opencode: provider } }),
+    stdout: JSON.stringify({ schemaVersion: 2, providers: { [providerId]: provider } }),
     stderr: '',
     exitCode: 0,
   });
@@ -125,9 +128,7 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       '--summary',
     ]);
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
-      expect.stringContaining(
-        'OpenCode summary runtime status unavailable; returning degraded status without inventory fallback'
-      ),
+      expect.stringContaining('returning scoped degraded status without fallback'),
     ]);
     vi.mocked(console.warn).mockClear();
   });
@@ -185,11 +186,58 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
   );
 
   it.each([
-    ['mismatched', { ...catalog('opencode/big-pickle'), providerId: 'codex' }],
-    ['non-ready', { ...catalog('opencode/big-pickle'), status: 'stale' }],
-    ['invalid', { providerId: 'opencode', status: 'ready' }],
-  ])('publishes supplied-but-%s catalog evidence without launch authority', async (_label, modelCatalog) => {
-    execCliMock.mockImplementation(() => commandResult(statusPayload({ modelCatalog })));
+    [
+      'missing-array',
+      'getProviderStatus',
+      { ...catalog('opencode/big-pickle'), models: undefined },
+    ],
+    ['non-array', 'getProviderStatus', { ...catalog('opencode/big-pickle'), models: {} }],
+    [
+      'one-malformed-entry',
+      'verifyProviderStatus',
+      { ...catalog('opencode/big-pickle'), models: [{ id: 'broken', launchModel: 'broken' }] },
+    ],
+    [
+      'mixed-valid-malformed',
+      'verifyProviderStatus',
+      {
+        ...catalog('opencode/big-pickle'),
+        models: [
+          ...(catalog('opencode/big-pickle').models as unknown[]),
+          { id: 'broken', displayName: 'Broken' },
+        ],
+      },
+    ],
+  ] as const)(
+    'rejects the entire %s catalog at the public %s boundary',
+    async (_label, method, suppliedCatalog) => {
+      const providerId = method === 'verifyProviderStatus' ? 'codex' : 'opencode';
+      const modelCatalog = { ...suppliedCatalog, providerId };
+      execCliMock.mockImplementation(() =>
+        commandResult({ ...statusPayload({ modelCatalog }), providerId }, providerId)
+      );
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+      const service = new ClaudeMultimodelBridgeService();
+
+      const result = await service[method]('/mock/runtime', providerId);
+
+      expect(result.authenticated).toBe(true);
+      expect(result.authMethod).toBe('builtin_free');
+      expect(result.capabilities.teamLaunch).toBe(false);
+      expect(result.statusCheckOutcome).toBe('authoritative');
+      expect(result.modelCatalog).toBeNull();
+      expect(result.modelCatalogRefreshState).toBe('loading');
+      expect(execCliMock.mock.calls.map((call) => call[1])).toEqual([
+        ['runtime', 'status', '--json', '--provider', providerId, '--summary'],
+      ]);
+    }
+  );
+
+  it('accepts an explicitly present empty catalog without granting phantom models', async () => {
+    execCliMock.mockImplementation(() =>
+      commandResult(statusPayload({ modelCatalog: { ...catalog('unused'), models: [] } }))
+    );
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
 
@@ -198,10 +246,9 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       'opencode'
     );
 
-    expect(result.authenticated).toBe(true);
-    expect(result.authMethod).toBe('builtin_free');
-    expect(result.capabilities.teamLaunch).toBe(false);
-    expect(result.statusCheckOutcome).toBe('authoritative');
+    expect(result.modelCatalog).toMatchObject({ status: 'ready', models: [] });
+    expect(result.models).toEqual([]);
+    expect(result.capabilities.teamLaunch).toBe(true);
   });
 
   it('normalizes an exact project cwd and merges only catalog fields', async () => {

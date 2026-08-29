@@ -204,7 +204,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
   });
 
-  it('keeps Gemini out of frontend aggregate status while explicit Gemini status still works', async () => {
+  it('keeps Gemini out of frontend aggregate status and scopes explicit summary failure', async () => {
     execCliMock.mockImplementation((_binaryPath, args, options) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       const env = options?.env ?? {};
@@ -348,22 +348,19 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(gemini).toMatchObject({
       providerId: 'gemini',
       displayName: 'Gemini',
-      supported: true,
-      authenticated: true,
-      models: ['gemini-2.5-pro'],
+      supported: false,
+      authenticated: false,
+      models: [],
       canLoginFromUi: true,
-      authMethod: 'cli_oauth_personal',
-      backend: {
-        kind: 'cli',
-        label: 'Gemini CLI',
-        endpointLabel: 'Code Assist (cloudcode-pa.googleapis.com/v1internal)',
-        projectId: 'demo-project',
-      },
+      authMethod: null,
+      statusCheckOutcome: 'transient_error',
+      capabilities: { teamLaunch: false },
     });
 
     expect(buildProviderAwareCliEnvMock.mock.calls.every(([options]) => options.providerId)).toBe(
       true
     );
+    vi.mocked(console.warn).mockClear();
   });
 
   it('does not fall back to full runtime status after summary compatibility errors', async () => {
@@ -454,7 +451,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(calls).not.toContain('model list --json --provider all');
   });
 
-  it('falls back to scoped legacy provider probes when single-provider summary status times out', async () => {
+  it('never changes query strategy when single-provider summary status times out', async () => {
     execCliMock.mockImplementation((_binaryPath, args, options) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       if (normalizedArgs === 'runtime status --json --provider codex --summary') {
@@ -464,42 +461,7 @@ describe('ClaudeMultimodelBridgeService', () => {
           )
         );
       }
-      if (normalizedArgs === 'auth status --json --provider codex') {
-        return Promise.resolve({
-          stdout: JSON.stringify({
-            schemaVersion: 1,
-            provider: 'codex',
-            status: {
-              supported: true,
-              authenticated: false,
-              authMethod: null,
-              verificationState: 'unknown',
-              canLoginFromUi: false,
-              statusMessage: 'Codex native runtime unavailable',
-              capabilities: {
-                teamLaunch: true,
-                oneShot: true,
-              },
-            },
-          }),
-          stderr: '',
-        });
-      }
-      if (normalizedArgs === 'model list --json --provider codex') {
-        return Promise.resolve({
-          stdout: JSON.stringify({
-            schemaVersion: 1,
-            providers: {
-              codex: {
-                models: [{ id: 'gpt-5.4', label: 'GPT-5.4' }],
-              },
-            },
-          }),
-          stderr: '',
-        });
-      }
-
-      return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
+      throw new Error(`Forbidden fallback command: ${normalizedArgs}`);
     });
 
     const { ClaudeMultimodelBridgeService } =
@@ -511,32 +473,20 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     expect(provider).toMatchObject({
       providerId: 'codex',
-      supported: true,
+      supported: false,
       authenticated: false,
       authMethod: null,
       verificationState: 'error',
       statusCheckOutcome: 'transient_error',
-      statusMessage: 'Codex native runtime unavailable',
-      models: ['gpt-5.4'],
+      statusCheckErrorCode: 'timeout',
+      models: [],
       capabilities: { teamLaunch: false },
     });
-    expect(calls).toEqual([
-      'runtime status --json --provider codex --summary',
-      'auth status --json --provider codex',
-      'model list --json --provider codex',
-    ]);
+    expect(calls).toEqual(['runtime status --json --provider codex --summary']);
     expect(execCliMock.mock.calls[0][2]?.timeout).toBe(5000);
-    const warnMessages = vi.mocked(console.warn).mock.calls.map((call) => call.join(' '));
-    expect(warnMessages).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('Provider-scoped summary runtime status timed out for codex'),
-      ])
-    );
-    expect(warnMessages).not.toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('Provider-scoped summary runtime status unavailable for codex:'),
-      ])
-    );
+    expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
+      expect.stringContaining('returning scoped degraded status without fallback'),
+    ]);
     vi.mocked(console.warn).mockClear();
   });
 
@@ -588,7 +538,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     ]);
     expect(execCliMock.mock.calls[0][2]?.timeout).toBe(30000);
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
-      expect.stringContaining('without inventory fallback'),
+      expect.stringContaining('returning scoped degraded status without fallback'),
     ]);
     vi.mocked(console.warn).mockClear();
   });
