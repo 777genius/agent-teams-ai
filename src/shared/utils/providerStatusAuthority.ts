@@ -58,6 +58,7 @@ export function isProviderModelCatalogExactReady(
     fetchedAt <= now &&
     now < staleAt &&
     Array.isArray(catalog.models) &&
+    catalog.models.length > 0 &&
     catalog.models.every(
       (model) =>
         typeof model?.id === 'string' &&

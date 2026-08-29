@@ -35,7 +35,21 @@ function createReadyProvider(): CliProviderStatus {
     staleAt: '2026-08-29T00:10:00.000Z',
     defaultModelId: null,
     defaultLaunchModel: null,
-    models: [],
+    models: [
+      {
+        id: 'gpt-5.6-sol',
+        launchModel: 'gpt-5.6-sol',
+        displayName: 'GPT-5.6 Sol',
+        hidden: false,
+        supportedReasoningEfforts: ['low', 'medium', 'high'],
+        defaultReasoningEffort: 'medium',
+        inputModalities: ['text'],
+        supportsPersonality: false,
+        isDefault: true,
+        upgrade: false,
+        source: 'app-server',
+      },
+    ],
     diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
   };
   return provider;
@@ -72,7 +86,15 @@ describe('hasAuthoritativeProviderLaunchEvidence', () => {
     expect(hasAuthoritativeProviderLaunchEvidence(createProvider())).toBe(false);
   });
 
-  it('accepts an explicitly exact-ready empty catalog as authoritative evidence', () => {
+  it('rejects an otherwise authoritative payload when its ready catalog is empty', () => {
+    const provider = createReadyProvider();
+    provider.modelCatalog!.models = [];
+    provider.modelCatalog!.staleAt = '2100-01-01T00:00:00.000Z';
+
+    expect(hasAuthoritativeProviderLaunchEvidence(provider)).toBe(false);
+  });
+
+  it('accepts an explicitly exact-ready non-empty catalog as authoritative evidence', () => {
     const provider = createReadyProvider();
     provider.modelCatalog!.staleAt = '2100-01-01T00:00:00.000Z';
 
