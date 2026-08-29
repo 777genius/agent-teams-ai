@@ -143,7 +143,13 @@ function createDynamicCatalogProvider(): CliProviderStatus {
       staleAt: '2100-01-01T00:00:00.000Z',
       defaultModelId: 'gpt-5.4',
       defaultLaunchModel: 'gpt-5.4',
-      models: [],
+      models: [
+        {
+          id: 'gpt-5.4',
+          launchModel: 'gpt-5.4',
+          displayName: 'GPT-5.4',
+        },
+      ],
       diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
     },
   };
