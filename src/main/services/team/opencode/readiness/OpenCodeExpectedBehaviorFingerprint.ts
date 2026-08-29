@@ -50,22 +50,36 @@ export function reusableOpenCodeExecutionProof(
   input: OpenCodeReadinessIdentity
 ): OpenCodeExecutionProof | null {
   const proof = readiness?.executionProof;
+  const fullModelId = input.selectedModel;
   if (
     !proof ||
+    !fullModelId ||
     !proof.reusable ||
     (proof.credentialMode !== 'api' && proof.credentialMode !== 'none')
   ) {
     return null;
   }
+  const expiresAt = Date.parse(proof.expiresAt);
   if (
     proof.modelId !== readiness?.modelId ||
     normalizeOpenCodeProjectIdentity(proof.projectPath) !==
       normalizeOpenCodeProjectIdentity(input.projectPath) ||
-    Date.parse(proof.expiresAt) <= Date.now() + 1_000
+    !Number.isFinite(expiresAt) ||
+    expiresAt <= Date.now() + 1_000
   ) {
     return null;
   }
-  return proof;
+  try {
+    validateOpenCodeExpectedBehaviorEvidence({
+      evidence: proof.expectedBehaviorEvidence,
+      executionProof: proof,
+      projectPath: input.projectPath,
+      fullModelId,
+    });
+    return proof;
+  } catch {
+    return null;
+  }
 }
 
 export function freshOpenCodeExecutionProof(

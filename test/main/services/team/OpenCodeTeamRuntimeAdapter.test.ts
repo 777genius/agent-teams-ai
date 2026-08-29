@@ -1039,6 +1039,45 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(checkReadiness).toHaveBeenCalledTimes(1);
   });
 
+  it('reuses valid cached launch readiness with strict proof evidence', async () => {
+    const bridge = bridgePort(
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        executionProof: reusableExecutionProof(),
+      })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    await adapter.prepare(launchInput());
+    await adapter.prepare(launchInput());
+
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes readiness instead of returning cached launch-ready state after proof rejection', async () => {
+    const cached = readiness({
+      state: 'ready',
+      launchAllowed: true,
+      executionProof: reusableExecutionProof(),
+    });
+    const refreshed = readiness({ state: 'ready', launchAllowed: true });
+    const checkReadiness = vi
+      .fn<OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']>()
+      .mockResolvedValueOnce(cached)
+      .mockResolvedValueOnce(refreshed);
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
+    });
+
+    await adapter.prepare(launchInput());
+    cached.executionProof = executionProofWith({ expectedBehaviorEvidence: undefined });
+
+    await expect(adapter.prepare(launchInput())).resolves.toMatchObject({ ok: true });
+    expect(checkReadiness).toHaveBeenCalledTimes(2);
+    expect(adapter.getLastOpenCodeTeamLaunchReadiness('/repo')).toBe(refreshed);
+  });
+
   it('passes manual tool approval intent with a fresh capability precondition', async () => {
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>

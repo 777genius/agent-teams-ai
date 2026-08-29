@@ -7,8 +7,12 @@ import {
   createOpenCodeExecutionProofHash,
   createOpenCodeExpectedBehaviorFingerprint,
   parseOpenCodeExpectedBehaviorEvidence,
+  reusableOpenCodeExecutionProof,
   validateOpenCodeExpectedBehaviorEvidence,
 } from '../../../../src/main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
+
+import type { OpenCodeExecutionProof } from '../../../../src/main/services/team/opencode/readiness/OpenCodeExecutionProof';
+import type { OpenCodeTeamLaunchReadiness } from '../../../../src/main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
 
 interface GoldenCase {
   name: string;
@@ -107,6 +111,42 @@ describe('OpenCodeExpectedBehaviorFingerprint', () => {
     ).toHaveLength(64);
   });
 
+  it('reuses only a valid cached proof bound to the requested identity', () => {
+    const proof = validProof();
+    expect(reusableOpenCodeExecutionProof(cachedReadiness(proof), validReuseInput())).toBe(proof);
+  });
+
+  it.each([
+    ['missing evidence', () => changedProof({ expectedBehaviorEvidence: undefined }), {}],
+    ['uppercase evidence', () => changedProof({
+      expectedBehaviorEvidence: { ...validEvidence(), effectiveConfigFingerprint: 'A'.repeat(64) },
+    }), {}],
+    ['malformed evidence', () => changedProof({ expectedBehaviorEvidence: null }), {}],
+    ['extra-field evidence', () => changedProof({
+      expectedBehaviorEvidence: { ...validEvidence(), unexpected: true },
+    }), {}],
+    ['digest mismatch', () => changedProof({
+      expectedBehaviorEvidence: { ...validEvidence(), expectedBehaviorFingerprint: 'f'.repeat(64) },
+    }), {}],
+    ['requested project mismatch', () => validProof(), { projectPath: '/different/project' }],
+    ['requested full-model mismatch', () => validProof(), { selectedModel: 'deepinfra/other' }],
+    ['requested provider mismatch', () => {
+      const evidence = { ...validEvidence(), modelProviderId: 'custom' };
+      evidence.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(evidence);
+      return changedProof({ expectedBehaviorEvidence: evidence });
+    }, {}],
+    ['proofHash mismatch', () => ({ ...validProof(), proofHash: '9'.repeat(64) }), {}],
+    ['expired proof', () => changedProof({ expiresAt: '2020-01-01T00:00:00.000Z' }), {}],
+  ])('rejects cached %s', (_name, buildProof, inputChanges) => {
+    const proof = buildProof();
+    expect(
+      reusableOpenCodeExecutionProof(cachedReadiness(proof), {
+        ...validReuseInput(),
+        ...inputChanges,
+      })
+    ).toBeNull();
+  });
+
   it('rejects stale config or auth evidence after either fingerprint changes', () => {
     for (const field of ['effectiveConfigFingerprint', 'effectiveSelectedAuthFingerprint'] as const) {
       expect(() =>
@@ -153,4 +193,24 @@ function validProof(expectedBehaviorEvidence = validEvidence()) {
     expectedBehaviorEvidence,
   };
   return { ...unsigned, proofHash: createOpenCodeExecutionProofHash(unsigned) };
+}
+
+function changedProof(
+  changes: Partial<Omit<OpenCodeExecutionProof, 'proofHash'>>
+): OpenCodeExecutionProof {
+  const { proofHash: _proofHash, ...unsigned } = validProof();
+  const changed = { ...unsigned, ...changes };
+  return { ...changed, proofHash: createOpenCodeExecutionProofHash(changed) };
+}
+
+function cachedReadiness(proof: OpenCodeExecutionProof): OpenCodeTeamLaunchReadiness {
+  return { executionProof: proof, modelId: proof.modelId } as OpenCodeTeamLaunchReadiness;
+}
+
+function validReuseInput() {
+  return {
+    projectPath: '/disposable/project',
+    selectedModel: 'deepinfra/deepseek-ai/DeepSeek-V3.2',
+    requireExecutionProbe: true,
+  };
 }

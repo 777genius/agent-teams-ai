@@ -740,7 +740,7 @@ export function validateOpenCodeBridgeHandshake(input: {
           'OpenCode app-managed bootstrap is required, but the orchestrator does not advertise contract version 1. Update agent_teams_orchestrator and restart the app.',
       };
     }
-    if (input.handshake.server.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion !== OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION) return { ok: false, reason: 'OpenCode expected behavior fingerprint schema version 1 is required. Update agent_teams_orchestrator and restart the app.' };
+    if ([input.handshake.client.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion, input.handshake.server.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion].some((version) => version !== OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION)) return { ok: false, reason: 'OpenCode expected behavior fingerprint schema version 1 is required. Update agent_teams_orchestrator and restart the app.' };
   }
 
   if (
