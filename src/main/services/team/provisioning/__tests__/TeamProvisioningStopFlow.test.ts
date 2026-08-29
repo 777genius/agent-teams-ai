@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { TeamProvisioningRuntimeStateProjection } from '../TeamProvisioningRuntimeStateProjection';
 import {
   stopAllTeamsFlow,
   stopTeamFlow,
@@ -75,9 +76,10 @@ function makePorts(
   runtimeAdapterRunByTeam: Map<string, { runId: string; providerId: string }>;
 } {
   const ports = {
+    preflightMetadataMutation: vi.fn(async () => undefined),
     invalidateRuntimeSnapshotCaches: vi.fn(),
     pauseActiveIntervalsForTeam: vi.fn(),
-    stopPersistentTeamMembers: vi.fn(),
+    stopPersistentTeamMembers: vi.fn(() => true),
     openCodeRuntimeDeliveryAdvisory: { cancelTeam: vi.fn() },
     getTrackedRunId: vi.fn(
       (candidateTeamName: string) =>
@@ -95,7 +97,7 @@ function makePorts(
     cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: vi.fn(),
     runtimeAdapterRunByTeam: new Map(),
     withTeamLock,
-    stopOpenCodeRuntimeAdapterTeam: vi.fn(),
+    stopOpenCodeRuntimeAdapterTeam: vi.fn(async () => true),
     hasSecondaryRuntimeRuns: vi.fn(() => false),
     stopMixedSecondaryRuntimeLanes: vi.fn(),
     provisioningRunByTeam,
@@ -116,6 +118,7 @@ function makePorts(
       const next = { ...progress(run.runId, run.teamName), state, message };
       return next;
     }),
+    persistStoppedLaunchState: vi.fn(async () => undefined),
     cleanupRun: vi.fn((run: StopFlowRun) => {
       runs.delete(run.runId);
       if (provisioningRunByTeam.get(run.teamName) === run.runId) {
@@ -131,7 +134,70 @@ function makePorts(
   return ports;
 }
 
+function projectRunAlive(run: StopFlowRun): boolean {
+  return new TeamProvisioningRuntimeStateProjection({
+    state: {
+      provisioningRunByTeam: new Map([[run.teamName, run.runId]]),
+      runs: new Map([[run.runId, { ...run, progress: progress(run.runId, run.teamName) }]]),
+      runtimeAdapterRunByTeam: new Map(),
+      runtimeAdapterProgressByRunId: new Map(),
+      getRetainedProvisioningProgressMap: () => new Map(),
+    },
+    ports: {
+      getAliveRunId: () => run.runId,
+      getTrackedRunId: () => run.runId,
+      getAliveTeamNames: () => [run.teamName],
+      hasSecondaryRuntimeRuns: () => false,
+      readBootstrapRuntimeState: async () => null,
+    },
+  }).isTeamAlive(run.teamName);
+}
+
 describe('team provisioning stop flow', () => {
+  it('authorizes the complete shutdown target union before any observable mutation', async () => {
+    const events: string[] = [];
+    const rejected = new Error('Unsupported members metadata version: 999');
+    const preflightMetadataMutation = vi.fn(async (teamName: string) => {
+      events.push(`preflight:${teamName}`);
+      if (teamName === 'orphan-team') throw rejected;
+    });
+
+    await expect(
+      stopAllTeamsFlow({
+        preflightMetadataMutation,
+        withTeamLocks: async (_teamNames, operation) => operation(),
+        incrementStopAllTeamsGeneration: () => events.push('generation'),
+        getShutdownTrackedTeamNames: () => ['tracked-team'],
+        pauseActiveIntervalsForTeam: (teamName) => events.push(`pause:${teamName}`),
+        killTrackedCliProcesses: () => events.push('kill-cli'),
+        killTransientProbeProcessesForShutdown: () => events.push('kill-probes'),
+        stopTrackedTeamsForShutdown: async () => {
+          events.push('stop-tracked');
+          return [];
+        },
+        cancelPendingRuntimeAdapterLaunchesForShutdown: async () => {
+          events.push('cancel-adapter');
+        },
+        waitForInFlightTeamOperationsForShutdown: async () => {
+          events.push('wait-locks');
+        },
+        listPersistedTeamNames: () => ['tracked-team', 'orphan-team'],
+        stopPersistentTeamMembers: () => {
+          events.push('stop-persisted');
+          return true;
+        },
+        cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: async () => {
+          events.push('cleanup-helper');
+        },
+        logger: { info: vi.fn() },
+      })
+    ).rejects.toBe(rejected);
+
+    expect(new Set(events)).toEqual(
+      new Set(['preflight:tracked-team', 'preflight:orphan-team'])
+    );
+  });
+
   it('cancels pending adapter launches before waiting for a slow roster-aware team stop', async () => {
     let releaseInitialStop!: () => void;
     const initialStopGate = new Promise<void>((resolve) => {
@@ -139,9 +205,24 @@ describe('team provisioning stop flow', () => {
     });
     const events: string[] = [];
     let stopPass = 0;
+    let effectsStarted!: () => void;
+    const effectsStartedSignal = new Promise<void>((resolve) => {
+      effectsStarted = resolve;
+    });
+    let initialStopStarted!: () => void;
+    const initialStopStartedSignal = new Promise<void>((resolve) => {
+      initialStopStarted = resolve;
+    });
 
     const stopping = stopAllTeamsFlow({
-      incrementStopAllTeamsGeneration: () => events.push('generation'),
+      preflightMetadataMutation: async () => {
+        events.push('preflight');
+      },
+      withTeamLocks: async (_teamNames, operation) => operation(),
+      incrementStopAllTeamsGeneration: () => {
+        events.push('generation');
+        effectsStarted();
+      },
       getShutdownTrackedTeamNames: () => ['team-a'],
       pauseActiveIntervalsForTeam: () => events.push('pause'),
       killTrackedCliProcesses: () => events.push('kill-cli'),
@@ -150,6 +231,7 @@ describe('team provisioning stop flow', () => {
         stopPass += 1;
         events.push(`stop-${stopPass}:start`);
         if (stopPass === 1) {
+          initialStopStarted();
           await initialStopGate;
         }
         events.push(`stop-${stopPass}:end`);
@@ -162,13 +244,19 @@ describe('team provisioning stop flow', () => {
         events.push('wait-locks');
       },
       listPersistedTeamNames: () => [],
-      stopPersistentTeamMembers: () => events.push('stop-persisted'),
+      stopPersistentTeamMembers: () => {
+        events.push('stop-persisted');
+        return true;
+      },
       cleanupAnthropicApiKeyHelperMaterialForStoppedTeam: async () => undefined,
       logger: { info: vi.fn() },
     });
-    await Promise.resolve();
+    await effectsStartedSignal;
+    await initialStopStartedSignal;
 
     expect(events).toEqual([
+      'preflight',
+      'preflight',
       'generation',
       'pause',
       'kill-cli',
@@ -180,6 +268,8 @@ describe('team provisioning stop flow', () => {
     releaseInitialStop();
     await stopping;
     expect(events).toEqual([
+      'preflight',
+      'preflight',
       'generation',
       'pause',
       'kill-cli',
@@ -203,6 +293,29 @@ describe('team provisioning stop flow', () => {
     expect(ports.openCodeRuntimeDeliveryAdvisory.cancelTeam).toHaveBeenCalledWith(teamName);
     expect(ports.cleanupRun).not.toHaveBeenCalled();
     expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).toHaveBeenCalledWith(teamName);
+    expect(ports.persistStoppedLaunchState).toHaveBeenCalledWith(teamName, undefined);
+  });
+
+  it('keeps tracked runtime truth conservative when persistent cleanup is unconfirmed', async () => {
+    const teamName = 'team-cleanup-unconfirmed';
+    const currentRun = makeRun('run-cleanup-unconfirmed', teamName);
+    const runs = new Map([[currentRun.runId, currentRun]]);
+    const aliveRunByTeam = new Map([[teamName, currentRun.runId]]);
+    const ports = makePorts(teamName, runs, new Map(), aliveRunByTeam);
+    vi.mocked(ports.stopPersistentTeamMembers).mockReturnValue(false);
+
+    await expect(stopTeamFlow(teamName, ports)).rejects.toThrow(
+      'Persistent teammate cleanup is unconfirmed'
+    );
+
+    expect(ports.killTeamProcessAndWait).toHaveBeenCalledWith(currentRun.child);
+    expect(ports.persistStoppedLaunchState).not.toHaveBeenCalled();
+    expect(ports.updateProgress).not.toHaveBeenCalled();
+    expect(currentRun.onProgress).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(runs.get(currentRun.runId)).toBe(currentRun);
+    expect(currentRun).toMatchObject({ processKilled: false, cancelRequested: false });
+    expect(projectRunAlive(currentRun)).toBe(true);
   });
 
   it('propagates the stopped-team helper sweep failure to its production caller', async () => {
@@ -248,6 +361,8 @@ describe('team provisioning stop flow', () => {
     expect(ports.cleanupAnthropicApiKeyHelperMaterialForStoppedTeam).not.toHaveBeenCalled();
     expect(runs.get(currentRun.runId)).toBe(currentRun);
     expect(currentRun.anthropicApiKeyHelper).not.toBeNull();
+    expect(currentRun).toMatchObject({ processKilled: false, cancelRequested: false });
+    expect(projectRunAlive(currentRun)).toBe(true);
   });
 
   it('does not report a stopped run when its exact OpenCode lane stop fails', async () => {

@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -22,6 +22,7 @@ class FakeMcpConfigBuilder {
   readonly writes: WriteCall[] = [];
   readonly removed: string[] = [];
   private sequence = 0;
+  sourceRevision = 'initial-source';
 
   constructor(private readonly rootPath: string) {}
 
@@ -33,6 +34,23 @@ class FakeMcpConfigBuilder {
     this.sequence += 1;
     const configPath = path.join(this.rootPath, `member-mcp-${this.sequence}.json`);
     await writeFile(configPath, JSON.stringify({ cwd }), 'utf8');
+    return configPath;
+  }
+
+  async prepareConfig(
+    cwd?: string,
+    options?: { mcpPolicy?: TeamMemberMcpPolicy; controlApiBaseUrl?: string | null }
+  ) {
+    return {
+      version: 1 as const,
+      json: JSON.stringify({ cwd, options, sourceRevision: this.sourceRevision }),
+    };
+  }
+
+  async writePreparedConfigFile(prepared: { version: 1; json: string }): Promise<string> {
+    this.sequence += 1;
+    const configPath = path.join(this.rootPath, `member-mcp-${this.sequence}.json`);
+    await writeFile(configPath, prepared.json, 'utf8');
     return configPath;
   }
 
@@ -158,6 +176,34 @@ describe('TeamProvisioningMemberMcpLaunchConfigProvisioner', () => {
       'http://control.test',
       'http://control.test',
     ]);
+  });
+
+  it('materializes the exact prepared config after the mutable MCP source changes', async () => {
+    const members: TeamCreateRequest['members'] = [
+      { name: 'Scoped', mcpPolicy: { mode: 'strictAllowlist', serverNames: ['external'] } },
+    ];
+    const prepared = await provisioner.prepareRuntimeBootstrapMemberMcpLaunchConfigs({
+      cwd: '/repo/root',
+      members,
+      controlApiBaseUrl: 'http://control.test',
+    });
+    builder.sourceRevision = 'mutated-after-prepare';
+    const run = createRun();
+
+    const configs = await provisioner.buildRuntimeBootstrapMemberMcpLaunchConfigs({
+      cwd: '/repo/root',
+      members,
+      run,
+      controlApiBaseUrl: 'http://changed-control.test',
+      preparedConfigs: prepared,
+    });
+
+    const configPath = configs.get('Scoped')?.mcpConfigPath;
+    expect(configPath).toBeTruthy();
+    expect(await readFile(configPath!, 'utf8')).toContain('initial-source');
+    expect(await readFile(configPath!, 'utf8')).not.toContain('mutated-after-prepare');
+    expect(builder.writes).toEqual([]);
+    expect(run.memberMcpConfigPaths).toEqual([configPath]);
   });
 
   it('returns null and avoids writes for missing tracked MCP policy', async () => {

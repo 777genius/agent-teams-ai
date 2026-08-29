@@ -68,10 +68,16 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
 
     const bridgeCapture = createCapturingOpenCodeBridge(selectedModel);
     const realAdapter = createOpenCodeRuntimeAdapterFromCapture(bridgeCapture);
-    await expect(realAdapter.launch(launchInput!)).resolves.toMatchObject({
+    const artifactReplayInput = {
+      ...launchInput!,
+      onInvocationBoundary: bridgeCapture.onInvocationBoundary,
+    };
+    await expect(realAdapter.launch(artifactReplayInput)).resolves.toMatchObject({
       teamLaunchState: 'clean_success',
     });
 
+    expect(bridgeCapture.launchAuthorityIssuanceCount).toBe(1);
+    expect(bridgeCapture.launchAuthorityConsumptionCount).toBe(1);
     expect(bridgeCapture.launchCommands).toHaveLength(1);
     const launchCommand = bridgeCapture.launchCommands[0];
     expect(launchCommand?.leadPrompt).toContain('Known risk areas include stale runtime sessions');
@@ -79,6 +85,16 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     expect(launchCommand?.leadPrompt.length ?? 0).toBeGreaterThan(1_500);
     expect(launchCommand?.leadPrompt.length ?? 0).toBeLessThan(80_000);
     expect(launchCommand?.members.map((member) => member.name)).toEqual(['team-lead', 'bob', 'jack']);
+
+    const issuedLaunchInvocationAuthority = bridgeCapture.getIssuedLaunchInvocationAuthority();
+    await expect(
+      bridgeCapture.bridge.launchOpenCodeTeam?.(launchCommand!, {
+        invocationAuthority: issuedLaunchInvocationAuthority,
+      })
+    ).rejects.toThrow('Launch invocation authority was already used');
+    expect(bridgeCapture.launchAuthorityIssuanceCount).toBe(1);
+    expect(bridgeCapture.launchAuthorityConsumptionCount).toBe(1);
+    expect(bridgeCapture.launchCommands).toHaveLength(1);
 
     for (const member of launchCommand?.members ?? []) {
       expect(member.prompt).toContain(`You are ${member.name}`);

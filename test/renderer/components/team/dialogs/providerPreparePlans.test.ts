@@ -28,6 +28,28 @@ function modelChecksMap(
 }
 
 describe('providerPreparePlans', () => {
+  it('separates cache and request identity by backend checks and override decision', () => {
+    const base = {
+      cwd: '/tmp/project',
+      providerIds: ['codex' as const],
+      backendSummaryByProvider: new Map([['codex' as const, 'Codex']]),
+      limitContext: false,
+      runtimeProviderStatusById: providerStatusMap([]),
+      cachedModelResultsByCacheKey: new Map(),
+    };
+    const plan = (providerBackendId: 'adapter' | 'codex-native', allow = false) =>
+      buildProviderPreparePlans({
+        ...base,
+        selectedModelChecksByProvider: modelChecksMap([
+          ['codex', [{ providerId: 'codex', providerBackendId, model: 'gpt-5', effort: 'high' }]],
+        ]),
+        allowExperimentalLocalModels: allow,
+      })[0];
+    expect(plan('adapter').cacheKey).not.toBe(plan('codex-native').cacheKey);
+    expect(plan('adapter').requestSignature).not.toBe(plan('adapter', true).requestSignature);
+    expect(plan('adapter').cacheKey).not.toBe(plan('adapter', true).cacheKey);
+  });
+
   it('keeps unchanged provider signatures and cache keys stable when another provider changes', () => {
     const providerIds: TeamProviderId[] = ['codex', 'opencode'];
     const selectedModelChecksByProvider = modelChecksMap([
@@ -115,5 +137,41 @@ describe('providerPreparePlans', () => {
     expect(firstByProvider.get('opencode')?.cacheKey).toBe(
       secondByProvider.get('opencode')?.cacheKey
     );
+  });
+
+  it('does not reuse a terminal model result across provider proof generations', () => {
+    const input = {
+      cwd: '/tmp/project',
+      providerIds: ['opencode' as const],
+      selectedModelChecksByProvider: modelChecksMap([
+        [
+          'opencode',
+          [
+            {
+              providerId: 'opencode',
+              providerBackendId: 'opencode-cli',
+              model: 'openrouter/qwen',
+            },
+          ],
+        ],
+      ]),
+      backendSummaryByProvider: new Map([['opencode' as const, 'OpenCode CLI']]),
+      limitContext: false,
+      runtimeProviderStatusById: providerStatusMap([
+        ['opencode', { providerId: 'opencode', supported: true, authenticated: true }],
+      ]),
+      cachedModelResultsByCacheKey: new Map(),
+    };
+    const first = buildProviderPreparePlans({
+      ...input,
+      runtimeProviderGenerationById: new Map([['opencode', 'epoch-1:request-1']]),
+    })[0]!;
+    const second = buildProviderPreparePlans({
+      ...input,
+      runtimeProviderGenerationById: new Map([['opencode', 'epoch-1:request-2']]),
+    })[0]!;
+
+    expect(second.cacheKey).not.toBe(first.cacheKey);
+    expect(second.requestSignature).toBe(first.requestSignature);
   });
 });

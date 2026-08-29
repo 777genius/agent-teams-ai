@@ -195,6 +195,7 @@ function createHost(
     },
     clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async () => {
       calls.push('clearPrimaryIfOwned');
+      return true;
     },
     persistOpenCodeRuntimeAdapterLaunchResult: async (result) => {
       calls.push('persistRuntimeResult');
@@ -238,6 +239,9 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
         cancelRuntimeAdapterProvisioning: baseHost.cancelRuntimeAdapterProvisioning,
         recordCancelledOpenCodeRuntimeAdapterLaunch:
           baseHost.recordCancelledOpenCodeRuntimeAdapterLaunch,
+        clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async (teamName, runId) => {
+          return await baseHost.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId);
+        },
         stopAndClearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async (teamName, runId) => {
           await baseHost.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId);
           return true;
@@ -403,8 +407,21 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
         runtimeResult({
           teamLaunchState: 'partial_failure',
           diagnostics: ['readiness failed'],
+          members: {
+            alice: {
+              memberName: 'alice',
+              providerId: 'opencode',
+              launchState: 'failed_to_start',
+              agentToolAccepted: false,
+              runtimeAlive: false,
+              bootstrapConfirmed: false,
+              hardFailure: true,
+              diagnostics: ['readiness failed'],
+            },
+          },
         })
       ),
+      stop: vi.fn(async () => ({ stopped: true })),
     } as unknown as TeamLaunchRuntimeAdapter;
     const host = createHost(calls, adapter);
     host.runtimeAdapterRunByTeam.set('team-a', {

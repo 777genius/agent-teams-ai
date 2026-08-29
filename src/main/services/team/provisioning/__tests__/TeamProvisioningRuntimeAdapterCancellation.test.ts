@@ -244,6 +244,27 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
     ]);
   });
 
+  it('retains an in-flight provisioning lane until deferred replay reports its disposition', async () => {
+    const ports = makePorts();
+    ports.runtimeAdapterRunByTeam.delete('team-a');
+    ports.aliveRunByTeam.delete('team-a');
+
+    await cancelRuntimeAdapterProvisioning({
+      runId: 'run-1',
+      runtimeProgress: progress(),
+      ports,
+    });
+
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.runtimeAdapterRunByTeam.has('team-a')).toBe(false);
+    expect(ports.events).not.toContain('clear-lane');
+    expect(ports.events).not.toContain('get-adapter');
+    expect(ports.progressUpdates.at(-1)).toMatchObject({
+      state: 'cancelled',
+      message: 'Provisioning cancellation requested; awaiting OpenCode launch disposition',
+    });
+  });
+
   it('falls back to the persisted project path when the runtime run has no cwd', async () => {
     const ports = makePorts();
     ports.runtimeAdapterRunByTeam.set('team-a', {
@@ -274,6 +295,29 @@ describe('TeamProvisioningRuntimeAdapterCancellation', () => {
 
     expect(ports.cancelledRuntimeAdapterRunIds.size).toBe(0);
     expect(ports.events).toEqual([]);
+  });
+
+  it('makes repeated in-flight pre-disposition cancellation idempotent without clearing ownership', async () => {
+    const stop = vi.fn();
+    const ports = makePorts({ adapter: adapter(stop) });
+    ports.runtimeAdapterRunByTeam.delete('team-a');
+    ports.aliveRunByTeam.delete('team-a');
+
+    await cancelRuntimeAdapterProvisioning({
+      runId: 'run-1',
+      runtimeProgress: progress(),
+      ports,
+    });
+    await cancelRuntimeAdapterProvisioning({
+      runId: 'run-1',
+      runtimeProgress: progress({ state: 'cancelled' }),
+      ports,
+    });
+
+    expect(stop).not.toHaveBeenCalled();
+    expect(ports.cancelledRuntimeAdapterRunIds).toEqual(new Set(['run-1']));
+    expect(ports.provisioningRunByTeam.get('team-a')).toBe('run-1');
+    expect(ports.events).not.toContain('clear-lane');
   });
 
   it('logs stop failures and retains primary ownership and storage', async () => {

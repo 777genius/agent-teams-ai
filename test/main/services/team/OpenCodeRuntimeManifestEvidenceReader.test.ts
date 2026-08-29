@@ -1,17 +1,16 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  OpenCodeRuntimeManifestEvidenceReader,
-  getOpenCodeRuntimeManifestPath,
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeLaneIndexPath,
+  getOpenCodeRuntimeManifestPath,
   getOpenCodeTeamRuntimeDirectory,
   inspectOpenCodeRuntimeLaneStorage,
   migrateLegacyOpenCodeRuntimeState,
+  OpenCodeRuntimeManifestEvidenceReader,
   prepareOpenCodeRuntimeLaneForLaunchGeneration,
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
@@ -20,11 +19,11 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
+  createDefaultRuntimeStoreManifest,
   createRuntimeStoreManifestStore,
   createRuntimeStoreReceiptStore,
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
-  createDefaultRuntimeStoreManifest,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
 
 describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
@@ -118,6 +117,63 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
         },
       ],
     });
+  });
+
+  it('retains only app-managed candidates linked to their enclosing committed session', async () => {
+    const teamName = 'team-app-managed-session';
+    const laneId = 'secondary:opencode:tom';
+    const candidate = {
+      schemaVersion: 1,
+      source: 'app_managed_bootstrap',
+      teamName,
+      memberName: 'tom',
+      runId: 'runtime-run-1',
+      laneId,
+      runtimeSessionId: 'ses-tom',
+      messageID: 'msg-tom',
+      contextHash: 'context-tom',
+      briefingHash: 'briefing-tom',
+      injectionVerifiedAt: '2026-04-22T10:00:00.000Z',
+      candidateAt: '2026-04-22T10:00:01.000Z',
+    };
+    await writeCommittedSessionStore({
+      teamName,
+      laneId,
+      sessions: [
+        {
+          id: 'ses-tom',
+          teamName,
+          memberName: 'tom',
+          runId: 'runtime-run-1',
+          laneId,
+          source: 'app_managed_bootstrap',
+          appManagedBootstrapCandidate: candidate,
+        },
+        {
+          id: 'ses-jerry',
+          teamName,
+          memberName: 'jerry',
+          runId: 'runtime-run-1',
+          laneId,
+          source: 'app_managed_bootstrap',
+          appManagedBootstrapCandidate: {
+            ...candidate,
+            memberName: 'jerry',
+            runtimeSessionId: 'ses-other',
+          },
+        },
+      ],
+    });
+
+    const evidence = await readCommittedOpenCodeBootstrapSessionEvidence({
+      teamsBasePath: tempDir,
+      teamName,
+      laneId,
+    });
+
+    expect(evidence.sessions).toHaveLength(2);
+    expect(evidence.sessions[0]?.appManagedBootstrapCandidate).toEqual(candidate);
+    expect(evidence.sessions[1]).not.toHaveProperty('appManagedBootstrapCandidate');
   });
 
   it('does not treat an uncommitted session file as OpenCode bootstrap evidence', async () => {

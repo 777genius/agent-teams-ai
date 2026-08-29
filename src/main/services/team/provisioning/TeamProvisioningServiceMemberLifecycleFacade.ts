@@ -61,6 +61,7 @@ import {
 } from './TeamProvisioningSecondaryRuntimeRuns';
 import {
   createTeamProvisioningServiceComposition,
+  type TeamProvisioningMemberLifecycleCompositionPorts,
   type TeamProvisioningServiceComposition,
 } from './TeamProvisioningServiceComposition';
 import {
@@ -296,16 +297,8 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
       ) => this.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
     }
   );
-  protected readonly memberLifecycleController = new TeamProvisioningMemberLifecycleController(
-    this.memberLifecycleHost,
-    this.memberLifecycleOperationUseCases,
-    {
-      restart: this.memberLifecycleUseCases,
-      openCodeRetry: this.memberLifecycleUseCases,
-    }
-  );
-  protected readonly memberLifecycleFacade: TeamProvisioningMemberLifecyclePublicFacade =
-    this.memberLifecycleController;
+  protected readonly memberLifecycleController!: TeamProvisioningMemberLifecycleController;
+  protected readonly memberLifecycleFacade!: TeamProvisioningMemberLifecyclePublicFacade;
   protected teamChangeEmitter: ((event: TeamChangeEvent) => void) | null = null;
   protected readonly runtimeFailureObservationBoundary =
     new TeamProvisioningRuntimeFailureObservationBoundary();
@@ -346,6 +339,7 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
         {
           nowIso,
           nowMs: () => Date.now(),
+          isCurrentTrackedRun: (run: ProvisioningRun) => this.isCurrentTrackedRun(run),
           isOpenCodeSecondaryLaneMemberInRun,
         }
       )
@@ -382,7 +376,12 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     const service = this as unknown as { membersMetaStore: TeamMembersMetaStore };
     const membersMetaStore = preserveProvisioningRemovalTombstones(service.membersMetaStore);
     service.membersMetaStore = membersMetaStore;
-    createTeamProvisioningServiceComposition(this);
+    const memberLifecyclePorts: TeamProvisioningMemberLifecycleCompositionPorts = {
+      memberLifecycleHost: this.memberLifecycleHost,
+      memberLifecycleOperationUseCases: this.memberLifecycleOperationUseCases,
+      memberLifecycleUseCases: this.memberLifecycleUseCases,
+    };
+    createTeamProvisioningServiceComposition(this, memberLifecyclePorts, {});
     this.preserveAtomicOpenCodeRuntimePreparation();
     this.staleAnthropicApiKeyHelperCleanupRetryOwner.start();
   }

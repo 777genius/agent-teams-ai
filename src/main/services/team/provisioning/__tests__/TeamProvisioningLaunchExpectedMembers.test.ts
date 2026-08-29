@@ -36,7 +36,14 @@ describe('team provisioning launch expected members', () => {
       getMeta: vi.fn<(teamName: string) => Promise<{ members: TeamMember[] } | null>>(async () => ({
         members: [
           { name: 'team-lead', agentType: 'team-lead' },
-          { name: 'Alice', role: 'Engineer', model: 'claude-sonnet-4-20250514' },
+          {
+            name: 'Alice',
+            role: 'Engineer',
+            providerId: 'codex',
+            providerBackendId: 'adapter',
+            model: 'gpt-5.4',
+            fastMode: 'on',
+          },
         ],
       })),
       listInboxNames: vi.fn<(teamName: string) => Promise<string[]>>(async () => ['Bob']),
@@ -54,7 +61,16 @@ describe('team provisioning launch expected members', () => {
     expect(readBootstrapLaunchSnapshot).toHaveBeenCalledWith('team-a');
     expect(result).toEqual({
       source: 'members-meta',
-      members: [{ name: 'Alice', role: 'Engineer', model: 'claude-sonnet-4-20250514' }],
+      members: [
+        {
+          name: 'Alice',
+          role: 'Engineer',
+          providerId: 'codex',
+          providerBackendId: 'adapter',
+          model: 'gpt-5.4',
+          fastMode: 'on',
+        },
+      ],
     });
   });
 

@@ -11,6 +11,9 @@ const TEAM_PROVIDER_BACKEND_IDS = new Set<TeamProviderBackendId>([
 const GEMINI_PROVIDER_BACKEND_IDS = new Set<TeamProviderBackendId>(['auto', 'api', 'cli-sdk']);
 const OPENCODE_PROVIDER_BACKEND_IDS = new Set<TeamProviderBackendId>(['adapter', 'opencode-cli']);
 
+export type ProviderBackendMigrationSource = 'legacy-storage' | 'explicit-selection';
+export type PersistedProviderBackendSource = 'legacy-unversioned' | 'current-version';
+
 function normalizeOptionalBackendId(value: unknown): string | undefined {
   if (typeof value !== 'string') {
     return undefined;
@@ -22,7 +25,9 @@ function normalizeOptionalBackendId(value: unknown): string | undefined {
 export function getDefaultProviderBackendId(
   providerId: TeamProviderId | undefined
 ): TeamProviderBackendId | undefined {
-  return providerId === 'codex' ? 'codex-native' : undefined;
+  if (providerId === 'codex') return 'codex-native';
+  if (providerId === 'opencode') return 'opencode-cli';
+  return undefined;
 }
 
 export function isLegacyCodexProviderBackendId(
@@ -46,7 +51,8 @@ export function isTeamProviderBackendId(
 
 export function migrateProviderBackendId(
   providerId: TeamProviderId | undefined,
-  providerBackendId: string | null | undefined
+  providerBackendId: string | null | undefined,
+  source: ProviderBackendMigrationSource = 'legacy-storage'
 ): TeamProviderBackendId | undefined {
   const normalizedBackendId = normalizeOptionalBackendId(providerBackendId);
   if (providerId === undefined || providerId === 'anthropic') {
@@ -54,10 +60,20 @@ export function migrateProviderBackendId(
   }
 
   if (providerId === 'codex') {
-    if (!normalizedBackendId || isLegacyCodexProviderBackendId(normalizedBackendId)) {
+    if (!normalizedBackendId) {
       return 'codex-native';
     }
-
+    if (
+      source === 'explicit-selection' &&
+      (normalizedBackendId === 'auto' ||
+        normalizedBackendId === 'adapter' ||
+        normalizedBackendId === 'api')
+    ) {
+      return normalizedBackendId;
+    }
+    if (isLegacyCodexProviderBackendId(normalizedBackendId)) {
+      return 'codex-native';
+    }
     return normalizedBackendId === 'codex-native' ? normalizedBackendId : undefined;
   }
 
@@ -76,11 +92,34 @@ export function migrateProviderBackendId(
   return undefined;
 }
 
+/**
+ * Normalizes a backend read from persistence without applying new-selection
+ * defaults to current schemas. Only explicitly legacy/unversioned records may
+ * synthesize a migration default when the backend field is absent.
+ */
+export function normalizePersistedProviderBackendId(
+  providerId: TeamProviderId | undefined,
+  providerBackendId: string | null | undefined,
+  source: PersistedProviderBackendSource
+): TeamProviderBackendId | undefined {
+  const normalizedBackendId = normalizeOptionalBackendId(providerBackendId);
+  if (!normalizedBackendId && source === 'current-version') return undefined;
+  return migrateProviderBackendId(
+    providerId,
+    normalizedBackendId,
+    source === 'current-version' ? 'explicit-selection' : 'legacy-storage'
+  );
+}
+
 export function formatProviderBackendLabel(
   providerId: TeamProviderId | undefined,
   providerBackendId: string | undefined
 ): string | undefined {
-  const normalizedBackendId = migrateProviderBackendId(providerId, providerBackendId);
+  const normalizedBackendId = migrateProviderBackendId(
+    providerId,
+    providerBackendId,
+    'explicit-selection'
+  );
   if (!normalizedBackendId) {
     return undefined;
   }

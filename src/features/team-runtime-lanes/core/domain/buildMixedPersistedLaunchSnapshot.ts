@@ -245,6 +245,7 @@ function createPrimaryLaneMemberState(params: {
   status?: MemberSpawnStatusEntry;
   updatedAt: string;
   leadDefaults: MixedLaneLeadRuntimeDefaults;
+  runtimeRunId?: string;
 }): PersistedTeamLaunchMemberState {
   const providerId =
     normalizeOptionalTeamProviderId(params.member.providerId) ?? params.leadDefaults.providerId;
@@ -271,11 +272,11 @@ function createPrimaryLaneMemberState(params: {
     name: params.member.name.trim(),
     providerId,
     providerBackendId:
-      migrateProviderBackendId(providerId, params.member.providerBackendId) ??
+      migrateProviderBackendId(providerId, params.member.providerBackendId, 'explicit-selection') ??
       (providerId === params.leadDefaults.providerId
         ? (params.leadDefaults.providerBackendId ?? undefined)
         : undefined),
-    model: params.member.model?.trim() || undefined,
+    model: runtime?.runtimeModel?.trim() || params.member.model?.trim() || undefined,
     effort: params.member.effort,
     cwd: params.member.cwd?.trim() || undefined,
     selectedFastMode:
@@ -294,6 +295,7 @@ function createPrimaryLaneMemberState(params: {
       providerId === params.leadDefaults.providerId
         ? (params.leadDefaults.launchIdentity ?? undefined)
         : undefined,
+    runtimeRunId: params.runtimeRunId,
     launchState,
     agentToolAccepted: runtime?.agentToolAccepted === true,
     runtimeAlive,
@@ -350,7 +352,7 @@ function createSecondaryLaneMemberState(
     name: params.member.name.trim(),
     providerId,
     providerBackendId:
-      migrateProviderBackendId(providerId, params.member.providerBackendId) ??
+      migrateProviderBackendId(providerId, params.member.providerBackendId, 'explicit-selection') ??
       (providerId === params.leadDefaults.providerId
         ? (params.leadDefaults.providerBackendId ?? undefined)
         : undefined),
@@ -504,6 +506,7 @@ function deriveTeamLaunchState(
 
 export function buildMixedPersistedLaunchSnapshot(params: {
   teamName: string;
+  runtimeRunId?: string;
   leadSessionId?: string;
   launchPhase: PersistedTeamLaunchPhase;
   leadDefaults: MixedLaneLeadRuntimeDefaults;
@@ -526,6 +529,7 @@ export function buildMixedPersistedLaunchSnapshot(params: {
       status: params.primaryStatuses[trimmedName],
       updatedAt,
       leadDefaults: params.leadDefaults,
+      runtimeRunId: params.runtimeRunId,
     });
   }
 
@@ -542,10 +546,14 @@ export function buildMixedPersistedLaunchSnapshot(params: {
   const summary = summarizeMembers(expectedMembers, members);
 
   return {
-    version: 2,
+    version: 3,
     teamName: params.teamName,
     updatedAt,
     ...(params.leadSessionId ? { leadSessionId: params.leadSessionId } : {}),
+    ...(params.runtimeRunId ? { runtimeRunId: params.runtimeRunId } : {}),
+    ...(params.leadDefaults.launchIdentity
+      ? { primaryLaneIdentity: params.leadDefaults.launchIdentity }
+      : {}),
     launchPhase: params.launchPhase,
     expectedMembers,
     ...(primaryExpectedMembers.join('\u0000') !== expectedMembers.join('\u0000')

@@ -12,6 +12,7 @@ import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
+  TeamRuntimeStopInput,
 } from '../../runtime';
 import type {
   PersistedTeamLaunchSnapshot,
@@ -188,6 +189,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
       },
       {
         getStopAllTeamsGeneration: () => stopAllGeneration,
+        getStopTeamGeneration: () => 0,
         getRuntimeAdapterRun: () => ({ runId: 'old-run', providerId: 'opencode' }),
         stopOpenCodeRuntimeAdapterTeam: async () => {
           calls.push('stopPreviousRuntimeRun');
@@ -329,14 +331,26 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     expect(aliveRuns.get('team-a')).toBe('run-1');
   });
 
-  it('does not publish runtime ownership after persistence loses launch authority', async () => {
+  it('stops an invoked runtime after persistence loses launch authority', async () => {
     const calls: string[] = [];
     let provisioningOwner: string | undefined;
+    const stop = vi.fn(async (input: TeamRuntimeStopInput) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: true,
+      members: {},
+      warnings: [],
+      diagnostics: [],
+    }));
 
     const result = await runOpenCodeTeamRuntimeAdapterLaunch(
       {
         adapter: {
-          launch: vi.fn(async () => runtimeResult()),
+          launch: vi.fn(async (input: TeamRuntimeLaunchInput) => {
+            input.onInvocationDispatched?.();
+            return runtimeResult();
+          }),
+          stop,
         } as unknown as TeamLaunchRuntimeAdapter,
         request: {
           teamName: 'team-a',
@@ -364,9 +378,12 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     );
 
     expect(result).toEqual({ runId: 'run-1' });
+    expect(stop).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: 'run-1', teamName: 'team-a', force: true })
+    );
     expect(calls).toContain('clearPrimaryLaneIfOwned');
     expect(calls).not.toContain('syncApprovals');
-    expect(calls).not.toContain('setRuntimeRun');
+    expect(calls).toContain('setRuntimeRun');
     expect(calls).not.toContain('setAliveRun');
   });
 
@@ -426,6 +443,48 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     expect(calls).toContain('deleteRuntimeOwnershipIfCurrent');
   });
 
+  it('retains a confirmed first member when a later member fails', async () => {
+    const calls: string[] = [];
+    const { ports } = ownedPorts(calls);
+    const retainedPartial = runtimeResult({
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          memberName: 'alice',
+          providerId: 'opencode',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          diagnostics: [],
+        },
+        bob: {
+          memberName: 'bob',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          diagnostics: ['failed second member'],
+        },
+      },
+    });
+
+    const params = launchParams(async () => retainedPartial);
+    params.request.rosterLaunchBinding = fakeRosterLaunchBinding();
+    await expect(runOpenCodeTeamRuntimeAdapterLaunch(params, ports)).resolves.toMatchObject({
+      runId: 'run-1',
+      launchStatus: 'started',
+    });
+    expect(calls).toContain('setRuntimeRun');
+    expect(calls).toContain('setAliveRun');
+    expect(calls).not.toContain('clearLaneStorage');
+    expect(calls).not.toContain('deleteRuntimeOwnershipIfCurrent');
+    expect(calls).not.toContain('writeLaunchFailureArtifact');
+  });
+
   it('awaits a thrown setup failure artifact and preserves the original error object', async () => {
     const calls: string[] = [];
     const artifact = deferred<void>();
@@ -461,7 +520,10 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     expect(artifactInputs[0]).not.toHaveProperty('memberSpawnStatuses');
 
     artifact.resolve(undefined);
-    await expect(launch).rejects.toBe(setupError);
+    await expect(launch).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(setupError.message),
+    });
     expect(calls).toContain('clearLaneStorage');
   });
 
@@ -492,6 +554,66 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     expect(calls).toContain('deleteRuntimeOwnershipIfCurrent');
   });
 
+  it('does not certify no-start when all-failed lane storage cleanup is incomplete', async () => {
+    const calls: string[] = [];
+    const { ports } = ownedPorts(calls, {
+      clearOpenCodeRuntimeLaneStorage: async () => {
+        calls.push('clearLaneStorage:failed');
+        throw new Error('storage cleanup failed');
+      },
+    });
+    const params = launchParams(async () => failedRuntimeResult());
+    params.request.rosterLaunchBinding = fakeRosterLaunchBinding();
+
+    await expect(runOpenCodeTeamRuntimeAdapterLaunch(params, ports)).resolves.toEqual({
+      runId: 'run-1',
+    });
+    expect(calls).toContain('clearLaneStorage:failed');
+    expect(calls).not.toContain('deleteRuntimeOwnershipIfCurrent');
+    expect(calls).not.toContain('deleteProvisioningRunIfCurrent');
+  });
+
+  it('keeps all-failed launch uncertain when the attempt-owned stop is unconfirmed', async () => {
+    const calls: string[] = [];
+    const { ports } = ownedPorts(calls);
+    const params = launchParams(async () => failedRuntimeResult());
+    params.adapter.stop = vi.fn(async (input) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: false,
+      members: {},
+      warnings: [],
+      diagnostics: ['transport outcome unknown'],
+    }));
+
+    await expect(runOpenCodeTeamRuntimeAdapterLaunch(params, ports)).resolves.toEqual({
+      runId: 'run-1',
+    });
+    expect(calls).not.toContain('clearLaneStorage');
+    expect(calls).not.toContain('deleteRuntimeOwnershipIfCurrent');
+    expect(calls).not.toContain('deleteProvisioningRunIfCurrent');
+  });
+
+  it('proves a synchronous pre-invocation error as no-start when cleanup is incomplete', async () => {
+    const calls: string[] = [];
+    const syncError = new Error('synchronous adapter failure');
+    const { ports } = ownedPorts(calls, {
+      clearOpenCodeRuntimeLaneStorage: async () => {
+        throw new Error('storage cleanup failed');
+      },
+    });
+    const params = launchParams(async () => runtimeResult());
+    params.adapter.launch = () => {
+      throw syncError;
+    };
+
+    await expect(runOpenCodeTeamRuntimeAdapterLaunch(params, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(syncError.message),
+      cleanupDiagnostics: ['partial OpenCode lane cleanup remains durably targetable'],
+    });
+  });
+
   it('preserves a thrown adapter error identity when the artifact port rejects', async () => {
     const calls: string[] = [];
     const adapterError = new Error('adapter exploded');
@@ -506,7 +628,9 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
 
     await expect(
       runOpenCodeTeamRuntimeAdapterLaunch(
-        launchParams(async () => {
+        launchParams(async (input) => {
+          await input.onInvocationBoundary?.();
+          input.onInvocationDispatched?.();
           throw adapterError;
         }),
         ports
@@ -516,7 +640,229 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     expect(calls).toContain('deleteRuntimeOwnershipIfCurrent');
   });
 
-  it('preserves a thrown adapter error identity when run-owned cleanup also fails', async () => {
+  it('observes a per-team stop published while the adapter invocation is deferred', async () => {
+    const calls: string[] = [];
+    const invocation = deferred<void>();
+    let stopGeneration = 0;
+    const persist = vi.fn(async (result: TeamRuntimeLaunchResult) => ({ result }));
+    const { ports } = ownedPorts(calls, {
+      getStopTeamGeneration: () => stopGeneration,
+      persistOpenCodeRuntimeAdapterLaunchResult: persist,
+    });
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+      launchParams(async (input) => {
+        await input.onInvocationBoundary?.();
+        input.onInvocationDispatched?.();
+        calls.push('adapter:invocation-started');
+        await invocation.promise;
+        return runtimeResult();
+      }),
+      ports
+    );
+    await waitForCall(calls, 'adapter:invocation-started');
+
+    stopGeneration += 1;
+    expect(calls).not.toContain('persistLaunchResult');
+    invocation.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(persist).not.toHaveBeenCalled();
+    expect(calls).toContain('clearPrimaryLaneIfOwned');
+  });
+
+  it('does not stop when cancellation wins after authorization but before dispatch', async () => {
+    const calls: string[] = [];
+    const boundaryReached = deferred<void>();
+    const releaseBoundary = deferred<void>();
+    let stopGeneration = 0;
+    const stop = vi.fn();
+    const { ports } = ownedPorts(calls, {
+      getStopTeamGeneration: () => stopGeneration,
+    });
+    const params = launchParams(async (input) => {
+      await input.onInvocationBoundary?.();
+      boundaryReached.resolve(undefined);
+      await releaseBoundary.promise;
+      throw new Error('cancelled before provider dispatch');
+    });
+    params.adapter.stop = stop;
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(params, ports);
+
+    await boundaryReached.promise;
+    stopGeneration += 1;
+    releaseBoundary.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it('retains exact run ownership when dispatched cancellation cleanup is unconfirmed', async () => {
+    const calls: string[] = [];
+    const dispatched = deferred<void>();
+    const releaseResult = deferred<void>();
+    let stopGeneration = 0;
+    let runtimeOwner: Parameters<OpenCodeRuntimeAdapterLaunchPorts['setRuntimeAdapterRun']>[1];
+    const clearPrimaryLane = vi.fn(async () => false);
+    const { ports } = ownedPorts(calls, {
+      getStopTeamGeneration: () => stopGeneration,
+      setRuntimeAdapterRun: (_teamName, owner) => {
+        runtimeOwner = owner;
+      },
+      clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: clearPrimaryLane,
+    });
+    const params = launchParams(async (input) => {
+      await input.onInvocationBoundary?.();
+      input.onInvocationDispatched?.();
+      dispatched.resolve(undefined);
+      await releaseResult.promise;
+      return runtimeResult({
+        members: {
+          alice: {
+            memberName: 'alice',
+            providerId: 'opencode',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            diagnostics: [],
+          },
+        },
+      });
+    });
+    params.adapter.stop = vi.fn(async (input) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: false,
+      members: {},
+      warnings: [],
+      diagnostics: ['stop confirmation unavailable'],
+    }));
+
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(params, ports);
+    await dispatched.promise;
+    stopGeneration += 1;
+    releaseResult.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(clearPrimaryLane).not.toHaveBeenCalled();
+    expect(runtimeOwner!).toMatchObject({
+      runId: 'run-1',
+      providerId: 'opencode',
+      cwd: '/repo/runtime',
+      members: { alice: { model: 'openai/gpt-5' } },
+    });
+  });
+
+  it('stops or retains durable ownership when restart replay is cancelled while deferred', async () => {
+    const calls: string[] = [];
+    const replayRecovered = deferred<void>();
+    const releaseReplay = deferred<void>();
+    let cancelled = false;
+    let runtimeOwner: Parameters<OpenCodeRuntimeAdapterLaunchPorts['setRuntimeAdapterRun']>[1];
+    const { ports } = ownedPorts(calls, {
+      isCancelledRuntimeAdapterRunId: () => cancelled,
+      consumeCancelledRuntimeAdapterRunId: () => {
+        const wasCancelled = cancelled;
+        cancelled = false;
+        return wasCancelled;
+      },
+      setRuntimeAdapterRun: (_teamName, owner) => {
+        runtimeOwner = owner;
+      },
+    });
+    const params = launchParams(async (input) => {
+      await input.onInvocationBoundary?.();
+      input.onInvocationDisposition?.('previous_side_effects_recovered');
+      replayRecovered.resolve(undefined);
+      await releaseReplay.promise;
+      return runtimeResult({
+        teamLaunchState: 'partial_pending',
+        members: {
+          alice: {
+            memberName: 'alice',
+            providerId: 'opencode',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            diagnostics: [],
+          },
+        },
+      });
+    });
+    params.adapter.stop = vi.fn(async (input) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: false,
+      members: {},
+      warnings: [],
+      diagnostics: ['stop confirmation unavailable'],
+    }));
+
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(params, ports);
+    await replayRecovered.promise;
+    expect(runtimeOwner!).toMatchObject({ runId: 'run-1', providerId: 'opencode' });
+
+    cancelled = true;
+    releaseReplay.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({ runId: 'run-1' });
+    expect(params.adapter.stop).toHaveBeenCalledOnce();
+    expect(runtimeOwner!).toMatchObject({
+      runId: 'run-1',
+      providerId: 'opencode',
+      members: { alice: { model: 'openai/gpt-5' } },
+    });
+    expect(calls).not.toContain('clearPrimaryLaneIfOwned');
+  });
+
+  it('reports transaction-bound known-no-start after exact dispatched cleanup', async () => {
+    const calls: string[] = [];
+    const dispatched = deferred<void>();
+    const releaseResult = deferred<void>();
+    let stopGeneration = 0;
+    const { ports } = ownedPorts(calls, {
+      getStopTeamGeneration: () => stopGeneration,
+    });
+    const params = launchParams(async (input) => {
+      await input.onInvocationBoundary?.();
+      input.onInvocationDispatched?.();
+      dispatched.resolve(undefined);
+      await releaseResult.promise;
+      return runtimeResult();
+    });
+    params.request.rosterLaunchBinding = {
+      transactionId: 'transaction-1',
+      teamName: 'team-a',
+      rosterFingerprint: 'roster-1',
+      rosterRevision: 'revision-1',
+      launchCommandId: 'command-1',
+    };
+    params.adapter.stop = vi.fn(async (input) => ({
+      runId: input.runId,
+      teamName: input.teamName,
+      stopped: true,
+      members: {},
+      warnings: [],
+      diagnostics: [],
+    }));
+
+    const launch = runOpenCodeTeamRuntimeAdapterLaunch(params, ports);
+    await dispatched.promise;
+    stopGeneration += 1;
+    releaseResult.resolve(undefined);
+
+    await expect(launch).resolves.toEqual({
+      runId: 'run-1',
+      launchStatus: 'not_started',
+    });
+    expect(params.adapter.stop).toHaveBeenCalledTimes(1);
+    expect(calls).toContain('clearPrimaryLaneIfOwned');
+  });
+
+  it('retains the primary pre-invocation classification when run-owned cleanup also fails', async () => {
     const calls: string[] = [];
     const adapterError = new Error('adapter exploded');
     const { ports } = ownedPorts(calls, {
@@ -541,7 +887,11 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
         }),
         ports
       )
-    ).rejects.toBe(adapterError);
+    ).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(adapterError.message),
+      cleanupDiagnostics: ['partial OpenCode lane cleanup remains durably targetable'],
+    });
   });
 
   it.each(['clean_success', 'partial_pending'] as const)(
@@ -717,13 +1067,21 @@ async function waitForCall(calls: string[], expected: string): Promise<void> {
 }
 
 function launchParams(
-  launch: () => Promise<TeamRuntimeLaunchResult>
+  launch: (input: TeamRuntimeLaunchInput) => Promise<TeamRuntimeLaunchResult>
 ): Parameters<typeof runOpenCodeTeamRuntimeAdapterLaunch>[0] {
   return {
     adapter: {
-      launch: async () => {
-        return launch();
+      launch: async (input: TeamRuntimeLaunchInput) => {
+        return launch(input);
       },
+      stop: async (input: TeamRuntimeStopInput) => ({
+        runId: input.runId,
+        teamName: input.teamName,
+        stopped: true,
+        members: {},
+        warnings: [],
+        diagnostics: [],
+      }),
     } as unknown as TeamLaunchRuntimeAdapter,
     request: {
       teamName: 'team-a',
@@ -736,6 +1094,24 @@ function launchParams(
     members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
     prompt: 'launch',
     onProgress: vi.fn(),
+  };
+}
+
+function fakeRosterLaunchBinding(): NonNullable<TeamCreateRequest['rosterLaunchBinding']> {
+  return {
+    transactionId: '11111111-1111-4111-8111-111111111111',
+    teamName: 'team-a',
+    rosterFingerprint: 'roster-fingerprint',
+    rosterRevision: 'roster-revision',
+    launchCommandId: '11111111-1111-4111-8111-111111111111',
+    executionProof: {
+      authorityId: 'authority',
+      generation: 1,
+      completedAt: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2026-01-01T00:01:00.000Z',
+      requestDigest: 'request-digest',
+    },
+    launchRequestFingerprint: 'launch-request',
   };
 }
 
@@ -761,7 +1137,7 @@ function failedRuntimeResult(): TeamRuntimeLaunchResult {
 
 function failedSnapshot(): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'team-a',
     expectedMembers: ['alice'],
     bootstrapExpectedMembers: ['alice'],
@@ -821,6 +1197,7 @@ function basePorts(calls: string[]): OpenCodeRuntimeAdapterLaunchPorts {
     randomUUID: () => 'run-1',
     nowIso: () => '2026-01-01T00:00:00.000Z',
     getStopAllTeamsGeneration: () => 0,
+    getStopTeamGeneration: () => 0,
     getRuntimeAdapterRun: () => undefined,
     stopOpenCodeRuntimeAdapterTeam: async () => {
       calls.push('stopPreviousRuntimeRun');
@@ -873,6 +1250,7 @@ function basePorts(calls: string[]): OpenCodeRuntimeAdapterLaunchPorts {
     consumeCancelledRuntimeAdapterRunId: () => false,
     clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned: async () => {
       calls.push('clearPrimaryLaneIfOwned');
+      return true;
     },
     persistOpenCodeRuntimeAdapterLaunchResult: async (result) => {
       calls.push('persistLaunchResult');

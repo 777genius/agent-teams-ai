@@ -6,6 +6,7 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { createCliAutoSuffixNameGuard } from '@shared/utils/teamMemberName';
+import { normalizeTeamMemberRuntimeSelectionProvenance } from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
 import { getEffectiveInboxMessageId } from '../inboxMessageIdentity';
@@ -409,9 +410,16 @@ export function buildMembersMetaWritePayload(members: TeamCreateRequest['members
         isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
         cwd: member.cwd?.trim() || undefined,
         providerId: normalizeOptionalTeamProviderId(member.providerId),
-        providerBackendId: migrateProviderBackendId(member.providerId, member.providerBackendId),
+        providerBackendId: migrateProviderBackendId(
+          member.providerId,
+          member.providerBackendId,
+          'explicit-selection'
+        ),
         model: member.model?.trim() || undefined,
         effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+        runtimeSelectionProvenance: normalizeTeamMemberRuntimeSelectionProvenance(
+          member.runtimeSelectionProvenance
+        ),
         fastMode:
           member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
             ? member.fastMode

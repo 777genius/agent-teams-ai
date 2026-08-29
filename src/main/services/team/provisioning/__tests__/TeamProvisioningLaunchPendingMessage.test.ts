@@ -47,7 +47,7 @@ function snapshot(params: {
   members: Record<string, PersistedTeamLaunchMemberState>;
 }): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'launch-team',
     updatedAt: ISO,
     launchPhase: 'active',

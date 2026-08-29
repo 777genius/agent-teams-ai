@@ -1,3 +1,6 @@
+import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+
 import {
   snapshotFromRuntimeMemberStatuses,
   snapshotToMemberSpawnStatuses,
@@ -7,6 +10,7 @@ import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpa
 
 import type {
   MemberSpawnStatusEntry,
+  PersistedTeamLaunchMemberState,
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
 } from '@shared/types';
@@ -18,6 +22,22 @@ export interface TeamProvisioningLiveLaunchSnapshotRun {
   detectedSessionId?: string | null;
   isLaunch: boolean;
   provisioningComplete: boolean;
+  request?: {
+    providerId?: string;
+    providerBackendId?: string;
+    model?: string;
+    effort?: PersistedTeamLaunchMemberState['effort'];
+    fastMode?: PersistedTeamLaunchMemberState['selectedFastMode'];
+  };
+  allEffectiveMembers?: readonly {
+    name: string;
+    providerId?: string;
+    providerBackendId?: string;
+    model?: string;
+    effort?: PersistedTeamLaunchMemberState['effort'];
+    fastMode?: PersistedTeamLaunchMemberState['selectedFastMode'];
+  }[];
+  effectiveMembers?: TeamProvisioningLiveLaunchSnapshotRun['allEffectiveMembers'];
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
   pendingMemberRestarts?: { has(memberName: string): boolean };
 }
@@ -159,6 +179,46 @@ export function createTeamProvisioningLiveLaunchSnapshotBoundary<
         teamName: run.teamName,
         expectedMembers: run.expectedMembers,
         leadSessionId: run.detectedSessionId ?? undefined,
+        runtimeRunId: run.runId,
+        memberIdentities: Object.fromEntries(
+          run.expectedMembers.map((memberName) => {
+            const member = (run.allEffectiveMembers ?? run.effectiveMembers ?? []).find(
+              (candidate) => candidate.name.trim().toLowerCase() === memberName.trim().toLowerCase()
+            );
+            const providerId =
+              normalizeOptionalTeamProviderId(member?.providerId) ??
+              normalizeOptionalTeamProviderId(run.request?.providerId);
+            const providerBackendId = migrateProviderBackendId(
+              providerId,
+              member?.providerBackendId ?? run.request?.providerBackendId,
+              'explicit-selection'
+            );
+            const status = run.memberSpawnStatuses.get(memberName);
+            return [
+              memberName,
+              {
+                ...(providerId ? { providerId } : {}),
+                ...(providerBackendId ? { providerBackendId } : {}),
+                ...(status?.runtimeModel?.trim() ||
+                member?.model?.trim() ||
+                run.request?.model?.trim()
+                  ? {
+                      model:
+                        status?.runtimeModel?.trim() ||
+                        member?.model?.trim() ||
+                        run.request?.model?.trim(),
+                    }
+                  : {}),
+                ...((member?.effort ?? run.request?.effort)
+                  ? { effort: member?.effort ?? run.request?.effort }
+                  : {}),
+                ...((member?.fastMode ?? run.request?.fastMode)
+                  ? { selectedFastMode: member?.fastMode ?? run.request?.fastMode }
+                  : {}),
+              },
+            ];
+          })
+        ),
         launchPhase,
         statuses: deps.buildRuntimeSpawnStatusRecord(run),
       });

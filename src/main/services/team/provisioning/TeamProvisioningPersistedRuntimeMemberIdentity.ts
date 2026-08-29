@@ -70,7 +70,8 @@ export function resolvePersistedRuntimeMemberIdentity(params: {
     providerId,
     providerBackendId: migrateProviderBackendId(
       providerId,
-      primaryMember.providerBackendId ?? params.trackedRun?.request.providerBackendId
+      primaryMember.providerBackendId ?? params.trackedRun?.request.providerBackendId,
+      'explicit-selection'
     ),
     model: primaryMember.model,
     effort: primaryMember.effort,

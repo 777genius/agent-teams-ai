@@ -1,11 +1,7 @@
-import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { type ChildProcess, type SpawnOptions } from 'child_process';
 
 import { type GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
-import {
-  applyDesktopTeammateModeDecisionToEnv,
-  resolveDesktopTeammateModeDecision,
-} from '../runtimeTeammateMode';
+import { crossRosterLaunchInvocationBoundary } from '../TeamMembersMetaStore';
 import { type TeamMetaFile } from '../TeamMetaStore';
 
 import {
@@ -20,6 +16,7 @@ import {
   writeDeterministicBootstrapSpecFile,
   writeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
+import { createChildProcessTerminalReconciler } from './TeamProvisioningChildSettlement';
 import {
   buildMembersMetaWritePayload,
   mergeMembersMetaForLaunch,
@@ -37,16 +34,22 @@ import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { buildDeterministicLaunchHydrationPrompt } from './TeamProvisioningPromptBuilders';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import {
+  asRosterLaunchKnownNoStartError,
+  RosterLaunchKnownNoStartError,
+  withProductionStartedLaunchStatus,
+} from './TeamProvisioningRosterLaunchOutcome';
+import {
   buildRuntimeLaunchWarning,
   getPromptSizeSummary,
   logRuntimeLaunchSnapshot,
 } from './TeamProvisioningRuntimeDiagnostics';
-import {
-  type BuildTeamRuntimeLaunchArgsPlanInput,
-  type TeamRuntimeLaunchArgsPlan,
-  type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
-} from './TeamProvisioningRuntimeLaunchSelection';
+import { type TeamRuntimeLaunchArgsPlanEnvResolutionLike } from './TeamProvisioningRuntimeLaunchSelection';
+import { waitForSpawnBoundary } from './TeamProvisioningSpawnBoundary';
 
+import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
+import type { PreparedRuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
+import type { LaunchContinuationSourceSnapshot } from './TeamProvisioningLaunchContinuationEvidence';
+import type { PreparedDeterministicLaunchMaterial } from './TeamProvisioningLaunchDeterministicSetupFlow';
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
   ProviderModelLaunchIdentity,
@@ -87,6 +90,11 @@ export interface DeterministicLaunchSpawnFlowRun
 export interface DeterministicLaunchMcpConfigBuilder {
   writeConfigFile(cwd: string, options: { controlApiBaseUrl?: string | null }): Promise<string>;
   removeConfigFile(filePath: string): Promise<void> | void;
+  prepareConfig(
+    cwd: string,
+    options: { controlApiBaseUrl?: string | null }
+  ): Promise<PreparedMcpConfig>;
+  writePreparedConfigFile(prepared: PreparedMcpConfig): Promise<string>;
 }
 
 export interface DeterministicLaunchSpawnEnvResolution extends TeamRuntimeLaunchArgsPlanEnvResolutionLike {
@@ -109,6 +117,7 @@ export interface RunDeterministicLaunchSpawnFlowInput<
   providerArgsForLaunch: string[];
   crossProviderMemberArgsForLaunch: { args: string[] };
   launchIdentity: ProviderModelLaunchIdentity | null;
+  preparedLaunchMaterial: PreparedDeterministicLaunchMaterial;
   effectiveMemberSpecs: TeamCreateRequest['members'];
   allEffectiveMemberSpecs: TeamCreateRequest['members'];
   teammateRuntimeDisallowedTools: string;
@@ -127,6 +136,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
     cwd: string;
     members: TeamCreateRequest['members'];
     run: TRun;
+    preparedConfigs?: ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>;
   }): Promise<ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig>>;
   validateAgentTeamsMcpRuntime(
     mcpConfigPath: string,
@@ -137,9 +147,7 @@ export interface RunDeterministicLaunchSpawnFlowPorts<
   restorePrelaunchConfig(teamName: string): Promise<void>;
   deleteRun(runId: string): void;
   deleteProvisioningRunByTeam(teamName: string): void;
-  buildTeamRuntimeLaunchArgsPlan(
-    input: BuildTeamRuntimeLaunchArgsPlanInput
-  ): Promise<TeamRuntimeLaunchArgsPlan>;
+  verifyLaunchMaterialSources(snapshot: LaunchContinuationSourceSnapshot): Promise<void>;
   teamMetaStore: {
     writeMeta(teamName: string, payload: LaunchTeamMetaPayload): Promise<void>;
   };
@@ -199,6 +207,8 @@ export function buildLaunchTeamMetaPayload(input: {
     providerBackendId: syntheticRequest.providerBackendId,
     model: syntheticRequest.model,
     effort: syntheticRequest.effort,
+    leadRuntimeSelectionProvenance:
+      request.leadRuntimeSelectionProvenance ?? syntheticRequest.leadRuntimeSelectionProvenance,
     fastMode: syntheticRequest.fastMode,
     skipPermissions: syntheticRequest.skipPermissions,
     worktree: syntheticRequest.worktree,
@@ -233,17 +243,19 @@ export async function persistDeterministicLaunchMetadata<
       nowMs: ports.nowMs(),
     })
   );
-  const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
-  await ports.membersMetaStore.writeMembers(
-    request.teamName,
-    mergeMembersMetaForLaunch(
-      buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
-      existingMembers
-    ),
-    {
-      providerBackendId: syntheticRequest.providerBackendId,
-    }
-  );
+  if (!request.rosterTransactionId) {
+    const existingMembers = await ports.membersMetaStore.getMembers(request.teamName);
+    await ports.membersMetaStore.writeMembers(
+      request.teamName,
+      mergeMembersMetaForLaunch(
+        buildMembersMetaWritePayload(selectMembersMetaTeammates(allEffectiveMemberSpecs)),
+        existingMembers
+      ),
+      {
+        providerBackendId: syntheticRequest.providerBackendId,
+      }
+    );
+  }
 }
 
 export function isDeterministicLaunchSpawnCancelled(input: {
@@ -440,21 +452,22 @@ export function registerDeterministicLaunchChildHandlers<
     }
   }, getProvisioningRunTimeoutMs(run));
 
+  const reconcileChild = createChildProcessTerminalReconciler({
+    reconcile: (code) => ports.handleProcessExit(run, code),
+    onReconciliationFailure: (_reconciliationError, childError) => {
+      const progress = ports.updateProgress(run, 'failed', 'Claude CLI process error (launch)', {
+        error: childError?.message ?? 'Claude CLI process reconciliation failed',
+        cliLogsTail: extractCliLogsFromRun(run),
+      });
+      run.onProgress(progress);
+    },
+  });
   child.once('error', (error: Error) => {
-    const progress = ports.updateProgress(run, 'failed', 'Failed to start Claude CLI (launch)', {
-      error: error.message,
-      cliLogsTail: extractCliLogsFromRun(run),
-    });
-    run.onProgress(progress);
-    void cleanupAnthropicHelperIfPresent(run, ports).then((helperReleased) => {
-      if (helperReleased) {
-        ports.cleanupRun(run);
-      }
-    });
+    void reconcileChild(null, error);
   });
 
   child.once('close', (code: number | null) => {
-    void ports.handleProcessExit(run, code);
+    void reconcileChild(code);
   });
 }
 
@@ -472,27 +485,13 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     provisioningEnv,
     stopAllGenerationAtStart,
     resolvedProviderId,
-    providerArgsForLaunch,
-    crossProviderMemberArgsForLaunch,
     launchIdentity,
+    preparedLaunchMaterial,
     effectiveMemberSpecs,
     allEffectiveMemberSpecs,
-    teammateRuntimeDisallowedTools,
   } = input;
 
   shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';
-  let teammateModeDecision: Awaited<ReturnType<typeof resolveDesktopTeammateModeDecision>>;
-  try {
-    teammateModeDecision = await resolveDesktopTeammateModeDecision(request.extraCliArgs, shellEnv);
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw error;
-  }
-  applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
-
   let prompt!: string;
   let promptSize!: ReturnType<typeof getPromptSizeSummary>;
   let mcpConfigPath: string;
@@ -511,6 +510,10 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
             stopAllGenerationAtStart,
             currentStopAllGeneration: ports.getStopAllTeamsGeneration(),
           }),
+        preparedExistingTasks: preparedLaunchMaterial.existingTasks,
+        preparedNativeBootstrapBuild: preparedLaunchMaterial.nativeBootstrapBuild,
+        preparedLeadMcpConfig: preparedLaunchMaterial.leadMcpConfig,
+        preparedMemberMcpLaunchConfigs: preparedLaunchMaterial.memberMcpLaunchConfigs,
       },
       {
         readTasks: ports.readTasks,
@@ -537,29 +540,10 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
       { request, run, runId, provisioningEnv },
       ports
     );
-    throw error;
+    throw asRosterLaunchKnownNoStartError(error, 'Team launch materialization failed before spawn');
   }
 
-  let runtimeArgsPlan: TeamRuntimeLaunchArgsPlan;
-  try {
-    const extraCliArgs = parseCliArgs(request.extraCliArgs);
-    runtimeArgsPlan = await ports.buildTeamRuntimeLaunchArgsPlan({
-      teamName: request.teamName,
-      providerId: resolvedProviderId,
-      launchIdentity,
-      envResolution: { ...provisioningEnv, providerArgs: providerArgsForLaunch },
-      extraArgs: extraCliArgs,
-      inheritedProviderArgs: crossProviderMemberArgsForLaunch.args,
-      includeAnthropicHelper: resolvedProviderId === 'anthropic',
-      contextLabel: 'Team launch',
-    });
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw error;
-  }
+  const { runtimeArgsPlan, teammateModeDecision } = preparedLaunchMaterial;
   emitProvisioningCheckpoint(run, 'Resolving cross-provider member launch args');
   const finalLaunchArgs = buildDeterministicLaunchProcessArgs({
     mcpConfigPath,
@@ -572,7 +556,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     launchIdentity,
     runtimeArgsPlan,
     teammateModeDecision,
-    disallowedTools: teammateRuntimeDisallowedTools,
+    disallowedTools: preparedLaunchMaterial.disallowedTools,
   });
   applyAppManagedRuntimeSettingsPathEnv(shellEnv, runtimeArgsPlan.appManagedSettingsPath);
   const runtimeWarning = buildRuntimeLaunchWarning(request, shellEnv, {
@@ -595,20 +579,6 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
     }
   );
 
-  emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
-  try {
-    await persistDeterministicLaunchMetadata(
-      { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs },
-      ports
-    );
-  } catch (error) {
-    await cleanupDeterministicLaunchMaterializationFailure(
-      { request, run, runId, provisioningEnv },
-      ports
-    );
-    throw error;
-  }
-
   let child: ChildProcess;
   try {
     if (
@@ -618,7 +588,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
         currentStopAllGeneration: ports.getStopAllTeamsGeneration(),
       })
     ) {
-      throw new Error('Team launch cancelled by app shutdown');
+      throw new RosterLaunchKnownNoStartError('Team launch cancelled by app shutdown');
     }
     if (request.skipPermissions === false) {
       emitProvisioningCheckpoint(run, 'Seeding lead bootstrap permission rules');
@@ -631,21 +601,43 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
         currentStopAllGeneration: ports.getStopAllTeamsGeneration(),
       })
     ) {
-      throw new Error('Team launch cancelled by app shutdown');
+      throw new RosterLaunchKnownNoStartError('Team launch cancelled by app shutdown');
+    }
+    try {
+      await ports.verifyLaunchMaterialSources(preparedLaunchMaterial.sourceSnapshot);
+    } catch (error) {
+      throw asRosterLaunchKnownNoStartError(
+        error,
+        'Team launch material changed after continuation snapshot'
+      );
+    }
+    emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
+    try {
+      await persistDeterministicLaunchMetadata(
+        { request, syntheticRequest, launchIdentity, allEffectiveMemberSpecs },
+        ports
+      );
+    } catch (error) {
+      throw asRosterLaunchKnownNoStartError(error, 'Team metadata persistence failed before spawn');
     }
     emitProvisioningCheckpoint(
       run,
       'Spawning Claude CLI process for team launch',
       `args=${finalLaunchArgs.length} cwd=${request.cwd}`
     );
-    child = ports.spawnCli(claudePath, finalLaunchArgs, {
-      cwd: request.cwd,
-      env: { ...shellEnv },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    await ports.verifyLaunchMaterialSources(preparedLaunchMaterial.sourceSnapshot);
+    const invocationLease = await crossRosterLaunchInvocationBoundary();
+    child = invocationLease.invoke(() =>
+      ports.spawnCli(claudePath, finalLaunchArgs, {
+        cwd: request.cwd,
+        env: { ...shellEnv },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    );
+    await waitForSpawnBoundary(child);
   } catch (error) {
     await cleanupDeterministicLaunchSpawnFailure({ request, run, runId, provisioningEnv }, ports);
-    throw error;
+    throw asRosterLaunchKnownNoStartError(error, 'Team launch failed before a process existed');
   }
 
   ports.updateProgress(run, 'spawning', 'Starting Claude CLI process for team launch', {
@@ -675,5 +667,5 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
 
   registerDeterministicLaunchChildHandlers({ run, child }, ports);
 
-  return { runId };
+  return withProductionStartedLaunchStatus(request, { runId });
 }

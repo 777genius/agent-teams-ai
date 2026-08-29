@@ -1,5 +1,6 @@
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { isProcessAlive } from '@main/utils/processHealth';
+import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { type ChildProcess, type spawn } from 'child_process';
 import * as fs from 'fs';
@@ -13,10 +14,11 @@ import {
 } from '../../runtime/providerCliCommandArgs';
 import { ProviderConnectionService } from '../../runtime/ProviderConnectionService';
 import {
-  buildProviderPreflightPingArgs,
+  bindProviderModelProbeNonce,
+  createProviderModelProbeNonce,
   getProviderModelProbeTimeoutMs,
-  isProviderModelProbeSuccessOutput,
   normalizeProviderModelProbeFailureReason,
+  parseProviderModelProbeResponse,
 } from '../../runtime/providerModelProbe';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { atomicWriteAsync } from '../atomicWrite';
@@ -32,6 +34,7 @@ import {
   PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
   truncatePreflightDebugText,
 } from './TeamProvisioningProviderPreflight';
+import { getProviderPreflightPingArgs } from './TeamProvisioningProviderProbeArgs';
 import { getTeamProviderLabel } from './TeamProvisioningRuntimeDiagnostics';
 import {
   type AuthStatusCommandResponse,
@@ -40,7 +43,7 @@ import {
   type RuntimeStatusCommandResponse,
 } from './TeamProvisioningRuntimeLaunchSelection';
 
-import type { TeamProviderId } from '@shared/types';
+import type { TeamProviderId, TeamProvisioningModelCheckRequest } from '@shared/types';
 
 const { AGENT_TEAMS_TEAMMATE_OPERATIONAL_TOOL_NAMES } = agentTeamsControllerModule;
 
@@ -214,7 +217,6 @@ export async function probeClaudeRuntime({
       warning: `${cliCommandLabel} binary failed to start. Details: ${message}`,
     };
   }
-
   if (resolvedProviderId === 'gemini') {
     const authState = await resolveGeminiRuntimeAuth(env);
     if (authState.authenticated) {
@@ -226,7 +228,6 @@ export async function probeClaudeRuntime({
         'Gemini provider is not configured for runtime use. Set GEMINI_API_KEY or Google ADC credentials (plus GOOGLE_CLOUD_PROJECT when needed) and retry.',
     };
   }
-
   if (resolvedProviderId === 'anthropic' || resolvedProviderId === 'codex') {
     return await probeProviderRuntimeControlPlane({
       claudePath,
@@ -237,10 +238,8 @@ export async function probeClaudeRuntime({
       ports,
     });
   }
-
   return {};
 }
-
 export async function probeProviderRuntimeControlPlane({
   claudePath,
   cwd,
@@ -258,7 +257,6 @@ export async function probeProviderRuntimeControlPlane({
 }): Promise<{ warning?: string }> {
   const cliCommandLabel = getConfiguredCliCommandLabel();
   const providerLabel = getTeamProviderLabel(providerId);
-
   try {
     const runtimeStatus = await ports.execCli(
       claudePath,
@@ -355,7 +353,6 @@ export async function probeProviderRuntimeControlPlane({
           `Proceeding with catalog checks. Details: ${runtimeStatusMessage}; auth status failed: ${authStatusMessage}`,
       };
     }
-
     return {
       warning:
         `${cliCommandLabel} runtime status was unavailable and auth status did not report ${providerLabel} authentication. ` +
@@ -363,7 +360,6 @@ export async function probeProviderRuntimeControlPlane({
     };
   }
 }
-
 function buildProviderAuthenticationHint(
   providerId: TeamProviderId,
   cliCommandLabel: string,
@@ -396,13 +392,13 @@ function buildProviderAuthenticationHint(
       );
   }
 }
-
 export async function runProviderOneShotDiagnostic({
   claudePath,
   cwd,
   env,
   providerId = 'anthropic',
   providerArgs = [],
+  exactCheck,
   ports,
 }: {
   claudePath: string;
@@ -410,11 +406,11 @@ export async function runProviderOneShotDiagnostic({
   env: NodeJS.ProcessEnv;
   providerId?: TeamProviderId;
   providerArgs?: string[];
+  exactCheck?: TeamProvisioningModelCheckRequest;
   ports: TeamProvisioningProviderDiagnosticsPorts;
-}): Promise<{ warning?: string }> {
+}): Promise<{ warning?: string; targetedLiveness?: TeamProvisioningModelCheckRequest }> {
   const cliCommandLabel = getConfiguredCliCommandLabel();
   const resolvedProviderId = resolveTeamProviderId(providerId);
-
   if (!(await ports.pathExistsAsDirectory(cwd))) {
     ports.appendPreflightDebugLog('provider_one_shot_diagnostic_skipped', {
       providerId: resolvedProviderId,
@@ -423,24 +419,37 @@ export async function runProviderOneShotDiagnostic({
     });
     return {};
   }
-
-  const args = buildProviderCliCommandArgs(providerArgs, getPreflightPingArgs(providerId, ports));
+  if (
+    exactCheck &&
+    (exactCheck.providerId !== resolvedProviderId ||
+      !Object.hasOwn(exactCheck, 'providerBackendId') ||
+      !exactCheck.model.trim() ||
+      isDefaultProviderModelSelection(exactCheck.model))
+  ) {
+    return {
+      warning:
+        'Model-targeted liveness requires an explicit matching provider, backend, and model.',
+    };
+  }
+  const baseArgs = buildProviderCliCommandArgs(
+    providerArgs,
+    getProviderPreflightPingArgs(providerId, ports, exactCheck)
+  );
   const timeoutMs = getPreflightTimeoutMs(providerId);
   ports.appendPreflightDebugLog('provider_one_shot_diagnostic_start', {
     providerId: resolvedProviderId,
     cwd,
     timeoutMs,
-    args,
   });
 
   for (let attempt = 1; attempt <= PREFLIGHT_AUTH_MAX_RETRIES; attempt++) {
+    const nonce = createProviderModelProbeNonce();
+    const args = bindProviderModelProbeNonce(baseArgs, nonce);
     let pingProbe: SpawnProbeResult | null = null;
     try {
       pingProbe = await ports.spawnProbe(claudePath, args, cwd, env, timeoutMs, {
-        resolveOnOutputMatch: ({ stdout, stderr }) => {
-          const combined = `${stdout}\n${stderr}`.trim();
-          return /\bPONG\b/i.test(combined);
-        },
+        resolveOnOutputMatch: ({ stdout }) =>
+          parseProviderModelProbeResponse(stdout, nonce) !== null,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -520,8 +529,8 @@ export async function runProviderOneShotDiagnostic({
       };
     }
 
-    const isPong = isProviderModelProbeSuccessOutput(combinedOutput);
-    if (!isPong) {
+    const response = parseProviderModelProbeResponse(pingProbe.stdout, nonce);
+    if (!response) {
       ports.appendPreflightDebugLog('provider_one_shot_diagnostic_complete', {
         providerId: resolvedProviderId,
         cwd,
@@ -533,7 +542,7 @@ export async function runProviderOneShotDiagnostic({
       });
       return {
         warning:
-          'One-shot diagnostic completed but did not return the expected PONG. ' +
+          'One-shot diagnostic completed but did not return a nonce-bound probe response on stdout. ' +
           'This does not mark selected models unavailable. ' +
           `Output: ${combinedOutput || '(empty)'}`,
       };
@@ -551,7 +560,9 @@ export async function runProviderOneShotDiagnostic({
       ok: true,
       exitCode: pingProbe.exitCode,
     });
-    return {};
+    // The native CLI transport confirms only that this nonce-bound probe completed while
+    // invoked with the selected target. It does not report trusted actual-execution metadata.
+    return exactCheck ? { targetedLiveness: exactCheck } : {};
   }
 
   return {};
@@ -1165,17 +1176,6 @@ export async function spawnProbe({
       });
     });
   });
-}
-
-function getPreflightPingArgs(
-  providerId: TeamProviderId | undefined,
-  ports: Pick<TeamProvisioningProviderDiagnosticsPorts, 'getConfiguredCodexCustomProviderModel'>
-): string[] {
-  const codexCustomModel =
-    resolveTeamProviderId(providerId) === 'codex'
-      ? ports.getConfiguredCodexCustomProviderModel()
-      : null;
-  return buildProviderPreflightPingArgs(providerId, { modelOverride: codexCustomModel });
 }
 
 function getPreflightTimeoutMs(providerId: TeamProviderId | undefined): number {

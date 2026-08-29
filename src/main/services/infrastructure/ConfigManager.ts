@@ -202,7 +202,6 @@ export type TriggerMatchField =
   | MatchFieldForSkill
   | MatchFieldForThinking
   | MatchFieldForText;
-
 /**
  * Trigger mode determines how the trigger evaluates conditions.
  * - 'error_status': Triggers when is_error is true (simple boolean check)
@@ -281,16 +280,14 @@ export interface GeneralConfig {
   /** Send anonymous crash & performance telemetry (requires SENTRY_DSN at build time) */
   telemetryEnabled: boolean;
 }
-
 export interface RuntimeConfig {
+  providerBackendsVersion: 2;
   providerBackends: {
     gemini: 'auto' | 'api' | 'cli-sdk';
-    codex: 'codex-native';
+    codex: 'auto' | 'adapter' | 'api' | 'codex-native';
   };
 }
-
 export type ProviderConnectionAuthMode = 'auto' | 'oauth' | 'api_key';
-
 export interface AnthropicCompatibleEndpointConfig {
   enabled: boolean;
   baseUrl: string;
@@ -432,10 +429,8 @@ const DEFAULT_CONFIG: AppConfig = {
     },
   },
   runtime: {
-    providerBackends: {
-      gemini: 'auto',
-      codex: 'codex-native',
-    },
+    providerBackendsVersion: 2,
+    providerBackends: { gemini: 'auto', codex: 'codex-native' },
   },
   display: {
     showTimestamps: true,
@@ -543,17 +538,14 @@ function normalizeCodexCustomProviderConfig(
 function shouldPersistNormalizedConfig(loaded: Partial<AppConfig>, normalized: AppConfig): boolean {
   return JSON.stringify(loaded) !== JSON.stringify(normalized);
 }
-
-// ===========================================================================
-// ConfigManager Class
-// ===========================================================================
-
 export class ConfigManager {
   private config: AppConfig;
   private readonly configPath: string;
   private static instance: ConfigManager | null = null;
   private triggerManager: TriggerManager;
   private readonly configChangeListeners = new Set<(section: ConfigSection | 'reload') => void>();
+  private configWriteQueue: Promise<void> = Promise.resolve();
+  private configRevision = 0;
 
   constructor(configPath?: string) {
     this.configPath = configPath ?? getDefaultConfigPath();
@@ -563,7 +555,6 @@ export class ConfigManager {
       this.saveConfig()
     );
   }
-
   // ===========================================================================
   // Singleton Pattern
   // ===========================================================================
@@ -583,22 +574,18 @@ export class ConfigManager {
     ConfigManager.instance = null;
   }
 
-  // ===========================================================================
-  // Config Loading & Saving
-  // ===========================================================================
-
   /**
    * Loads configuration from disk.
    * Returns default config if file doesn't exist or is invalid.
    * Uses a single readFileSync (no TOCTOU from existsSync + readFileSync).
    */
-  private loadConfig(): AppConfig {
+  private loadConfig(persistNormalized = true): AppConfig {
     try {
       const content = fs.readFileSync(this.configPath, 'utf8');
       const parsed = JSON.parse(content) as Partial<AppConfig>;
       const merged = this.mergeWithDefaults(parsed);
 
-      if (shouldPersistNormalizedConfig(parsed, merged)) {
+      if (persistNormalized && shouldPersistNormalizedConfig(parsed, merged)) {
         this.persistConfig(merged);
       }
 
@@ -614,11 +601,10 @@ export class ConfigManager {
     }
   }
 
-  /**
-   * Saves the current configuration to disk.
-   */
+  /** Saves the current configuration to disk. */
   private saveConfig(): void {
     try {
+      this.configRevision += 1;
       this.persistConfig(this.config);
       logger.info('Config saved');
     } catch (error) {
@@ -633,7 +619,11 @@ export class ConfigManager {
    */
   private persistConfig(config: AppConfig): void {
     const content = JSON.stringify(config, null, 2);
-    void atomicWriteAsync(this.configPath, content).catch((error) => {
+    const write = this.configWriteQueue
+      .catch(() => undefined)
+      .then(() => atomicWriteAsync(this.configPath, content));
+    this.configWriteQueue = write;
+    void write.catch((error) => {
       logger.error('Error persisting config:', error);
     });
   }
@@ -754,13 +744,18 @@ export class ConfigManager {
         },
       },
       runtime: {
+        providerBackendsVersion: 2,
         providerBackends: {
           ...DEFAULT_CONFIG.runtime.providerBackends,
           ...(loaded.runtime?.providerBackends ?? {}),
-          codex: migrateProviderBackendId(
+          codex: (migrateProviderBackendId(
             'codex',
-            loaded.runtime?.providerBackends?.codex
-          ) as RuntimeConfig['providerBackends']['codex'],
+            loaded.runtime?.providerBackendsVersion === 2 ||
+              loaded.runtime?.providerBackendsVersion === undefined
+              ? loaded.runtime?.providerBackends?.codex
+              : undefined,
+            loaded.runtime?.providerBackendsVersion === 2 ? 'explicit-selection' : 'legacy-storage'
+          ) ?? 'codex-native') as RuntimeConfig['providerBackends']['codex'],
         },
       },
       display: {
@@ -854,22 +849,22 @@ export class ConfigManager {
     if (section !== 'general' && section !== 'runtime' && section !== 'providerConnections') {
       return data;
     }
-
     if (section === 'runtime') {
       const runtimeUpdate = data as Partial<RuntimeConfig>;
       return {
         ...runtimeUpdate,
+        providerBackendsVersion: 2,
         providerBackends: {
           ...this.config.runtime.providerBackends,
           ...runtimeUpdate.providerBackends,
-          codex: migrateProviderBackendId(
+          codex: (migrateProviderBackendId(
             'codex',
-            runtimeUpdate.providerBackends?.codex ?? this.config.runtime.providerBackends.codex
-          ) as RuntimeConfig['providerBackends']['codex'],
+            runtimeUpdate.providerBackends?.codex ?? this.config.runtime.providerBackends.codex,
+            'explicit-selection'
+          ) ?? 'codex-native') as RuntimeConfig['providerBackends']['codex'],
         },
       } as unknown as Partial<AppConfig[K]>;
     }
-
     if (section === 'providerConnections') {
       const connectionUpdate = data as Partial<ProviderConnectionsConfig>;
       return {
@@ -1378,18 +1373,22 @@ export class ConfigManager {
     return this.getConfig();
   }
 
-  /**
-   * Reloads configuration from disk.
-   * Useful if config was modified externally.
-   * @returns Updated config
-   */
-  reload(): AppConfig {
-    this.config = this.loadConfig();
-    applyConfiguredClaudeRootPath(this.config.general.claudeRootPath);
-    this.triggerManager.setTriggers(this.config.notifications.triggers);
-    this.notifyConfigChanged('reload');
-    logger.info('Config reloaded from disk');
-    return this.getConfig();
+  async reload(): Promise<AppConfig> {
+    const requestedRevision = this.configRevision;
+    const reload = this.configWriteQueue
+      .catch(() => undefined)
+      .then(() => {
+        if (this.configRevision === requestedRevision) {
+          this.config = this.loadConfig(false);
+          applyConfiguredClaudeRootPath(this.config.general.claudeRootPath);
+          this.triggerManager.setTriggers(this.config.notifications.triggers);
+          this.notifyConfigChanged('reload');
+          logger.info('Config reloaded from disk');
+        } else logger.info('Skipped stale config reload after a newer in-memory update');
+        return this.getConfig();
+      });
+    this.configWriteQueue = reload.then(() => undefined);
+    return reload;
   }
 }
 

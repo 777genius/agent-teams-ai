@@ -4,9 +4,15 @@ import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvaila
 import { extractProviderScopedBaseModel } from '@renderer/utils/teamModelContext';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizeTeamLeadRuntimeSelectionProvenance } from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
-import type { ResolvedTeamMember, TeamCreateRequest, TeamProviderId } from '@shared/types';
+import type {
+  ResolvedTeamMember,
+  TeamCreateRequest,
+  TeamProviderBackendId,
+  TeamProviderId,
+} from '@shared/types';
 
 interface PreviousLaunchParamsLike {
   providerId?: TeamProviderId;
@@ -15,6 +21,7 @@ interface PreviousLaunchParamsLike {
   effort?: string;
   fastMode?: 'inherit' | 'on' | 'off';
   limitContext?: boolean;
+  leadRuntimeSelectionProvenance?: TeamCreateRequest['leadRuntimeSelectionProvenance'];
 }
 
 interface LaunchDialogPrefillInput {
@@ -32,6 +39,7 @@ interface LaunchDialogPrefillInput {
 interface LaunchDialogPrefillResult {
   providerId: TeamProviderId;
   providerBackendId?: string;
+  providerBackendIsDefault: boolean;
   model: string;
   effort: string;
   fastMode: 'inherit' | 'on' | 'off';
@@ -59,6 +67,70 @@ function canReuseModelForSelectedProvider(
   return selectedProviderId === normalizeCreateLaunchProviderForUi(sourceProviderId, true);
 }
 
+export function resolveRelaunchProviderBackend(input: {
+  selectedProviderId: TeamProviderId;
+  hasAuthoritativeLaunchRecord: boolean;
+  authoritativeProviderId?: TeamProviderId | null;
+  authoritativeBackendId?: string | null;
+  fallbackBackendId?: TeamProviderBackendId;
+}): TeamProviderBackendId | undefined {
+  if (
+    input.hasAuthoritativeLaunchRecord &&
+    input.authoritativeProviderId === input.selectedProviderId
+  ) {
+    return input.authoritativeBackendId
+      ? migrateProviderBackendId(
+          input.selectedProviderId,
+          input.authoritativeBackendId,
+          'explicit-selection'
+        )
+      : undefined;
+  }
+  return input.fallbackBackendId;
+}
+
+export function resolveLaunchDialogBackendState(input: {
+  selectedProviderId: TeamProviderId;
+  hasAuthoritativeLaunchRecord: boolean;
+  authoritativeProviderId: TeamProviderId | null;
+  authoritativeBackendId: string | null;
+  authoritativeBackendIsDefault: boolean;
+  previousProviderId?: TeamProviderId;
+  previousBackendId?: string;
+  runtimeFallbackBackendId?: TeamProviderBackendId;
+}): {
+  providerBackendId: TeamProviderBackendId | undefined;
+  authoritativeUnavailable: boolean;
+} {
+  const preserveAuthoritativeBackend =
+    input.hasAuthoritativeLaunchRecord && !input.authoritativeBackendIsDefault;
+  const persistedBackendId = preserveAuthoritativeBackend
+    ? input.authoritativeProviderId === input.selectedProviderId
+      ? input.authoritativeBackendId
+      : undefined
+    : !input.hasAuthoritativeLaunchRecord && input.previousProviderId === input.selectedProviderId
+      ? input.previousBackendId
+      : undefined;
+  const persistedSelection = persistedBackendId
+    ? migrateProviderBackendId(input.selectedProviderId, persistedBackendId, 'explicit-selection')
+    : undefined;
+  const providerBackendId = resolveRelaunchProviderBackend({
+    selectedProviderId: input.selectedProviderId,
+    hasAuthoritativeLaunchRecord: preserveAuthoritativeBackend,
+    authoritativeProviderId: input.authoritativeProviderId,
+    authoritativeBackendId: input.authoritativeBackendId,
+    fallbackBackendId: persistedSelection ?? input.runtimeFallbackBackendId,
+  });
+  return {
+    providerBackendId,
+    authoritativeUnavailable:
+      input.hasAuthoritativeLaunchRecord &&
+      input.authoritativeProviderId === input.selectedProviderId &&
+      input.selectedProviderId !== 'anthropic' &&
+      providerBackendId === undefined,
+  };
+}
+
 export function resolveLaunchDialogPrefill({
   members,
   savedRequest,
@@ -81,19 +153,49 @@ export function resolveLaunchDialogPrefill({
     currentLeadProviderId ?? savedRequestProviderId ?? previousLaunchProviderId ?? storedProviderId,
     multimodelEnabled
   );
+  const selectedProvenance =
+    (currentLeadProviderId === providerId
+      ? savedRequestProviderId === providerId
+        ? normalizeTeamLeadRuntimeSelectionProvenance(savedRequest?.leadRuntimeSelectionProvenance)
+        : previousLaunchProviderId === providerId
+          ? normalizeTeamLeadRuntimeSelectionProvenance(
+              previousLaunchParams?.leadRuntimeSelectionProvenance
+            )
+          : undefined
+      : undefined) ??
+    (savedRequestProviderId === providerId
+      ? normalizeTeamLeadRuntimeSelectionProvenance(savedRequest?.leadRuntimeSelectionProvenance)
+      : undefined) ??
+    (previousLaunchProviderId === providerId
+      ? normalizeTeamLeadRuntimeSelectionProvenance(
+          previousLaunchParams?.leadRuntimeSelectionProvenance
+        )
+      : undefined);
 
   const modelCandidates = [
     {
       providerId: currentLeadProviderId,
-      model: normalizeModelCandidate(currentLead?.model, currentLeadProviderId),
+      model:
+        selectedProvenance?.model === 'default'
+          ? ''
+          : normalizeModelCandidate(currentLead?.model, currentLeadProviderId),
     },
     {
       providerId: savedRequestProviderId,
-      model: normalizeModelCandidate(savedRequest?.model, savedRequestProviderId),
+      model:
+        normalizeTeamLeadRuntimeSelectionProvenance(savedRequest?.leadRuntimeSelectionProvenance)
+          ?.model === 'default'
+          ? ''
+          : normalizeModelCandidate(savedRequest?.model, savedRequestProviderId),
     },
     {
       providerId: previousLaunchProviderId,
-      model: normalizeModelCandidate(previousLaunchParams?.model, previousLaunchProviderId),
+      model:
+        normalizeTeamLeadRuntimeSelectionProvenance(
+          previousLaunchParams?.leadRuntimeSelectionProvenance
+        )?.model === 'default'
+          ? ''
+          : normalizeModelCandidate(previousLaunchParams?.model, previousLaunchProviderId),
     },
   ];
 
@@ -103,25 +205,50 @@ export function resolveLaunchDialogPrefill({
   )?.model;
 
   const effort =
-    currentLead?.effort ?? savedRequest?.effort ?? previousLaunchParams?.effort ?? storedEffort;
+    selectedProvenance?.effort === 'default'
+      ? ''
+      : (currentLead?.effort ??
+        savedRequest?.effort ??
+        previousLaunchParams?.effort ??
+        storedEffort);
   const fastMode =
-    savedRequest?.fastMode ?? previousLaunchParams?.fastMode ?? storedFastMode ?? 'inherit';
+    currentLead?.selectedFastMode ??
+    savedRequest?.fastMode ??
+    previousLaunchParams?.fastMode ??
+    storedFastMode ??
+    'inherit';
   const limitContext =
-    previousLaunchParams?.limitContext ?? savedRequest?.limitContext ?? storedLimitContext;
-  const providerBackendId =
-    migrateProviderBackendId(
-      providerId,
-      previousLaunchParams?.providerBackendId?.trim() || savedRequest?.providerBackendId?.trim()
-    ) ??
-    getDefaultProviderBackendId(providerId) ??
-    undefined;
+    savedRequest?.limitContext ?? previousLaunchParams?.limitContext ?? storedLimitContext;
+  const authoritativeRecord = currentLead ?? savedRequest;
+  const authoritativeProviderId = normalizeOptionalTeamProviderId(authoritativeRecord?.providerId);
+  const previousBackend =
+    previousLaunchProviderId === providerId ? previousLaunchParams?.providerBackendId : undefined;
+  const backendCandidate = authoritativeRecord
+    ? authoritativeProviderId === providerId
+      ? authoritativeRecord.providerBackendId
+      : undefined
+    : previousBackend;
+  const providerBackendIsDefault =
+    selectedProvenance?.providerBackendId === 'default' ||
+    (!selectedProvenance && !backendCandidate);
+  const providerBackendId = providerBackendIsDefault
+    ? undefined
+    : backendCandidate
+      ? migrateProviderBackendId(providerId, backendCandidate, 'explicit-selection')
+      : authoritativeRecord
+        ? undefined
+        : getDefaultProviderBackendId(providerId);
 
   return {
     providerId,
     providerBackendId,
-    model: matchingModel
-      ? normalizeExplicitTeamModelForUi(providerId, matchingModel)
-      : getStoredModel(providerId),
+    providerBackendIsDefault,
+    model:
+      selectedProvenance?.model === 'default'
+        ? ''
+        : matchingModel
+          ? normalizeExplicitTeamModelForUi(providerId, matchingModel)
+          : getStoredModel(providerId),
     effort,
     fastMode,
     limitContext,

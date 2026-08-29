@@ -293,7 +293,7 @@ export async function stopOpenCodeRuntimeAdapterTeam(
   teamName: string,
   runId: string,
   ports: OpenCodeRuntimeStopFlowPorts
-): Promise<void> {
+): Promise<boolean> {
   const adapter = ports.getOpenCodeRuntimeAdapter();
   const currentRuntimeRun = ports.runtimeAdapterRunByTeam.get(teamName);
   const runtimeRun = currentRuntimeRun?.runId === runId ? currentRuntimeRun : undefined;
@@ -329,7 +329,7 @@ export async function stopOpenCodeRuntimeAdapterTeam(
     assertOpenCodeRuntimeStopSucceeded(result, 'OpenCode team did not confirm stop');
 
     if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
-      return;
+      return false;
     }
     ports.clearOpenCodeRuntimeToolApprovals(teamName, {
       runId,
@@ -339,12 +339,12 @@ export async function stopOpenCodeRuntimeAdapterTeam(
     const cleared = await clearPrimaryRuntimeLaneStorage(teamName, runId, ports);
     if (!cleared) {
       if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
-        return;
+        return false;
       }
       throw new Error('OpenCode primary lane ownership changed before stopped storage cleanup');
     }
     if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
-      return;
+      return false;
     }
     if (ports.runtimeAdapterRunByTeam.get(teamName)?.runId === runId) {
       ports.runtimeAdapterRunByTeam.delete(teamName);
@@ -372,6 +372,7 @@ export async function stopOpenCodeRuntimeAdapterTeam(
       runId,
       detail: 'stopped',
     });
+    return true;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     ports.setRuntimeAdapterProgress({

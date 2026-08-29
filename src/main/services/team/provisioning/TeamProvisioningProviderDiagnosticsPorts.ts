@@ -13,7 +13,7 @@ import {
 
 import type { ProviderConnectionService } from '../../runtime/ProviderConnectionService';
 import type { AuthWarningSource } from './TeamProvisioningOutputErrorPolicy';
-import type { TeamProviderId } from '@shared/types';
+import type { TeamProviderId, TeamProvisioningModelCheckRequest } from '@shared/types';
 
 interface TeamProvisioningProviderDiagnosticsLogger {
   info(message: string): void;
@@ -53,8 +53,9 @@ export interface TeamProvisioningProviderDiagnosticsRuntime {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId?: TeamProviderId,
-    providerArgs?: string[]
-  ): Promise<{ warning?: string }>;
+    providerArgs?: string[],
+    exactCheck?: TeamProvisioningModelCheckRequest
+  ): Promise<{ warning?: string; targetedLiveness?: TeamProvisioningModelCheckRequest }>;
   validateAgentTeamsMcpRuntime(
     claudePath: string,
     cwd: string,
@@ -143,7 +144,8 @@ export function createTeamProvisioningProviderDiagnosticsRuntime(
       cwd,
       env,
       providerId = 'anthropic',
-      providerArgs = []
+      providerArgs = [],
+      exactCheck
     ) =>
       runProviderOneShotDiagnosticHelper({
         claudePath,
@@ -151,6 +153,7 @@ export function createTeamProvisioningProviderDiagnosticsRuntime(
         env,
         providerId,
         providerArgs,
+        exactCheck,
         ports: getPorts(),
       }),
     validateAgentTeamsMcpRuntime: (

@@ -1,10 +1,15 @@
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
+import { FileSystemCreateArtifactTransaction } from '../TeamProvisioningCreateArtifactTransaction';
 import {
   createOpenCodeTeamThroughRuntimeAdapterFlow,
   launchOpenCodeTeamThroughRuntimeAdapterFlow,
   type OpenCodeRuntimeAdapterTeamFlowPorts,
 } from '../TeamProvisioningOpenCodeRuntimeAdapterTeamFlow';
+import { RosterLaunchKnownNoStartError } from '../TeamProvisioningRosterLaunchOutcome';
 
 import type { PreparedOpenCodeRuntimeAdapterLaunch } from '../TeamProvisioningOpenCodeRuntimeAdapterPreparation';
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
@@ -23,6 +28,12 @@ function createRequest(overrides: Partial<TeamCreateRequest> = {}): TeamCreateRe
     providerBackendId: 'adapter',
     model: 'gpt-5',
     effort: 'high',
+    leadRuntimeSelectionProvenance: {
+      version: 1,
+      providerBackendId: 'explicit',
+      model: 'explicit',
+      effort: 'explicit',
+    },
     skipPermissions: false,
     worktree: 'feature-a',
     extraCliArgs: '--flag',
@@ -120,6 +131,13 @@ function createPorts(
       calls.push(`mkdir:${directoryPath}`);
     },
     nowMs: () => 123,
+    beginCreateArtifactTransaction: async () => ({
+      ensureDirectory: async (directoryPath) => {
+        calls.push(`mkdir:${directoryPath}`);
+      },
+      recordFileWrite: async () => undefined,
+      rollbackIfOwned: async () => ({ status: 'rolled-back', retained: [], errors: [] }),
+    }),
     writeTeamMeta: async (_teamName, data) => {
       calls.push(`writeTeamMeta:${data.createdAt}:${data.cwd}`);
     },
@@ -203,28 +221,157 @@ describe('OpenCode runtime adapter team flow', () => {
 
   it('creates team directories and metadata before launching the runtime adapter branch', async () => {
     const calls: string[] = [];
+    const writeTeamMeta = vi.fn(async () => undefined);
 
     const result = await createOpenCodeTeamThroughRuntimeAdapterFlow(
       createRequest(),
       vi.fn(),
-      createPorts(calls)
+      createPorts(calls, { writeTeamMeta })
     );
 
     expect(result).toEqual({ runId: 'adapter-run' });
+    expect(writeTeamMeta).toHaveBeenCalledWith(
+      'alpha',
+      expect.objectContaining({
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'explicit',
+          model: 'explicit',
+          effort: 'explicit',
+        },
+      })
+    );
     expect(calls).toEqual([
       'pathExists:/configured/teams/alpha/config.json',
       'pathExists:/default/teams/alpha/config.json',
       'ensureCwdExists:/repo',
       'prepareOpenCodeRuntimeAdapterLaunch',
       'getTeamsBasePath',
-      'mkdir:/configured/teams/alpha',
       'getTasksBasePath',
+      'mkdir:/configured/teams/alpha',
       'mkdir:/configured/tasks/alpha',
-      'writeTeamMeta:123:/repo',
       'writeMembersMeta:alice:adapter',
       'writeOpenCodeTeamConfig:alice',
       'runRuntimeAdapter:team-lead,alice:build it:none',
     ]);
+  });
+
+  it('preserves a transaction-owned canonical roster before adapter spawn', async () => {
+    const calls: string[] = [];
+    const result = await createOpenCodeTeamThroughRuntimeAdapterFlow(
+      createRequest({ rosterTransactionId: '11111111-1111-4111-8111-111111111111' }),
+      vi.fn(),
+      createPorts(calls)
+    );
+
+    expect(result).toEqual({ runId: 'adapter-run' });
+    expect(calls.some((call) => call.startsWith('writeMembersMeta:'))).toBe(false);
+    expect(calls).toContain('writeOpenCodeTeamConfig:alice');
+    expect(calls).toContain('runRuntimeAdapter:team-lead,alice:build it:none');
+  });
+
+  it('rolls back OpenCode config and metadata on authoritative no-start', async () => {
+    const calls: string[] = [];
+    const rollbackIfOwned = vi.fn(async () => ({
+      status: 'rolled-back' as const,
+      retained: [],
+      errors: [],
+    }));
+    const ports = createPorts(calls, {
+      beginCreateArtifactTransaction: async () => ({
+        ensureDirectory: async (directoryPath) => {
+          calls.push(`mkdir:${directoryPath}`);
+        },
+        recordFileWrite: async () => undefined,
+        rollbackIfOwned,
+      }),
+      runOpenCodeTeamRuntimeAdapterLaunch: async () => {
+        throw new RosterLaunchKnownNoStartError('proof expired before invocation');
+      },
+    });
+
+    await expect(
+      createOpenCodeTeamThroughRuntimeAdapterFlow(
+        createRequest({ rosterTransactionId: '11111111-1111-4111-8111-111111111111' }),
+        vi.fn(),
+        ports
+      )
+    ).rejects.toThrow('proof expired before invocation');
+
+    expect(rollbackIfOwned).toHaveBeenCalledOnce();
+  });
+
+  it('restores exact saved draft files and tasks after OpenCode not-started', async () => {
+    const root = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'opencode-draft-rollback-'));
+    const teamDir = path.join(root, 'teams', 'alpha');
+    const tasksDir = path.join(root, 'tasks', 'alpha');
+    const metaPath = path.join(teamDir, 'team.meta.json');
+    const configPath = path.join(teamDir, 'config.json');
+    const taskPath = path.join(tasksDir, 'task.json');
+    const savedMeta = '{"version":1,"cwd":"/saved","createdAt":1}\n';
+    try {
+      await fs.promises.mkdir(teamDir, { recursive: true });
+      await fs.promises.mkdir(tasksDir, { recursive: true });
+      await fs.promises.writeFile(metaPath, savedMeta);
+      await fs.promises.writeFile(taskPath, '{"subject":"saved-task"}\n');
+      const ports = createPorts([], {
+        getTeamsBasePathsToProbe: () => [
+          { location: 'configured', basePath: path.join(root, 'teams') },
+        ],
+        getTeamsBasePath: () => path.join(root, 'teams'),
+        getTasksBasePath: () => path.join(root, 'tasks'),
+        pathExists: async () => false,
+        beginCreateArtifactTransaction: (input) => FileSystemCreateArtifactTransaction.begin(input),
+        writeTeamMeta: async () => {
+          await fs.promises.writeFile(metaPath, 'attempt-meta');
+        },
+        writeOpenCodeTeamConfig: async () => {
+          await fs.promises.writeFile(configPath, 'attempt-config');
+        },
+        runOpenCodeTeamRuntimeAdapterLaunch: async () => ({
+          runId: 'not-started',
+          launchStatus: 'not_started',
+        }),
+      });
+
+      await expect(
+        createOpenCodeTeamThroughRuntimeAdapterFlow(
+          createRequest({ rosterTransactionId: '11111111-1111-4111-8111-111111111111' }),
+          vi.fn(),
+          ports
+        )
+      ).resolves.toMatchObject({ launchStatus: 'not_started' });
+
+      await expect(fs.promises.readFile(metaPath, 'utf8')).resolves.toBe(savedMeta);
+      await expect(fs.promises.access(configPath)).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(fs.promises.readFile(taskPath, 'utf8')).resolves.toBe(
+        '{"subject":"saved-task"}\n'
+      );
+    } finally {
+      await fs.promises.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('retains OpenCode artifacts when the launch outcome is transport-unknown', async () => {
+    const calls: string[] = [];
+    const rollbackIfOwned = vi.fn();
+    const ports = createPorts(calls, {
+      beginCreateArtifactTransaction: async () => ({
+        ensureDirectory: async (directoryPath) => {
+          calls.push(`mkdir:${directoryPath}`);
+        },
+        recordFileWrite: async () => undefined,
+        rollbackIfOwned,
+      }),
+      runOpenCodeTeamRuntimeAdapterLaunch: async () => {
+        throw new Error('runtime transport closed after uncertain dispatch');
+      },
+    });
+
+    await expect(
+      createOpenCodeTeamThroughRuntimeAdapterFlow(createRequest(), vi.fn(), ports)
+    ).rejects.toThrow('runtime transport closed after uncertain dispatch');
+    expect(rollbackIfOwned).not.toHaveBeenCalled();
   });
 
   it('routes create with a model-distinct member through the aggregate member-lane branch', async () => {

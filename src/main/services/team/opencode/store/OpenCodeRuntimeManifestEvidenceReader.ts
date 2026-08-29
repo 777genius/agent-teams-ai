@@ -1,5 +1,6 @@
 import { mkdir, readdir, readFile, rm, rmdir, stat } from 'node:fs/promises';
 
+import { isSqliteTransactionLockArtifactName } from '@main/services/infrastructure/SqliteTransactionLock';
 import { atomicWriteAsync, renamePathWithRetry } from '@main/utils/atomicWrite';
 import { createLogger } from '@shared/utils/logger';
 import * as path from 'path';
@@ -23,19 +24,15 @@ import {
 import type { RuntimeStoreManifestEvidence } from '../bridge/OpenCodeBridgeCommandContract';
 import type { RuntimeStoreManifestReader } from '../bridge/OpenCodeStateChangingBridgeCommandService';
 import type { RuntimeStoreManifest } from './RuntimeStoreManifest';
-
 export type {
   OpenCodeCommittedBootstrapSessionEvidence,
   OpenCodeCommittedBootstrapSessionRecord,
 } from './OpenCodeBootstrapSessionNormalization';
-
 const logger = createLogger('OpenCodeRuntimeManifestEvidenceReader');
-
 export interface OpenCodeRuntimeManifestEvidenceReaderOptions {
   teamsBasePath: string;
   clock?: () => Date;
 }
-
 const OPENCODE_TEAM_RUNTIME_DIR = '.opencode-runtime';
 const OPENCODE_TEAM_RUNTIME_LANES_DIR = 'lanes';
 const OPENCODE_TEAM_RUNTIME_LANES_INDEX_FILE = 'lanes.json';
@@ -77,9 +74,7 @@ export interface OpenCodeRuntimeLaneIndex {
   lanes: Record<string, OpenCodeRuntimeLaneIndexEntry>;
 }
 
-function createEmptyOpenCodeRuntimeLaneIndex(
-  updatedAt = new Date().toISOString()
-): OpenCodeRuntimeLaneIndex {
+function createEmptyOpenCodeRuntimeLaneIndex(updatedAt = new Date().toISOString()): OpenCodeRuntimeLaneIndex {
   return {
     version: 1,
     updatedAt,
@@ -406,9 +401,9 @@ export async function inspectOpenCodeRuntimeLaneStorage(params: {
     };
   }
 
-  const fileNames = (await readdir(laneDir).catch(() => [] as string[])).sort((left, right) =>
-    left.localeCompare(right)
-  );
+  const fileNames = (await readdir(laneDir).catch(() => [] as string[]))
+    .filter((fileName) => !isSqliteTransactionLockArtifactName(fileName))
+    .sort((left, right) => left.localeCompare(right));
   const manifestPath = getOpenCodeRuntimeManifestPath(
     params.teamsBasePath,
     params.teamName,
@@ -875,7 +870,11 @@ async function clearOpenCodeRuntimeLaneStorageUnlocked(params: {
         const entries = await readdir(laneDirectory);
         await Promise.all(
           entries
-            .filter((entry) => !OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry))
+            .filter(
+              (entry) =>
+                !OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS.has(entry) &&
+                !isSqliteTransactionLockArtifactName(entry)
+            )
             .map((entry) => rm(path.join(laneDirectory, entry), { recursive: true, force: true }))
         );
       })

@@ -126,6 +126,33 @@ export function getCancelledAggregateRestartError(teamName: string, memberName: 
   );
 }
 
+export function assertAggregatePrimaryRestartLeaseCurrent(input: {
+  teamName: string;
+  memberName: string;
+  lease: OpenCodeAggregatePrimaryRestartLease;
+  restarts: Map<string, OpenCodeAggregatePrimaryRestartLease>;
+}): void {
+  if (
+    input.restarts.get(input.teamName.trim().toLowerCase()) !== input.lease ||
+    input.lease.cancelRequested
+  ) {
+    throw getCancelledAggregateRestartError(input.teamName, input.memberName);
+  }
+}
+
+export function createAggregatePrimaryRestartLeaseGuard(
+  lease: OpenCodeAggregatePrimaryRestartLease,
+  restarts: Map<string, OpenCodeAggregatePrimaryRestartLease>
+): () => void {
+  return () =>
+    assertAggregatePrimaryRestartLeaseCurrent({
+      teamName: lease.teamName,
+      memberName: lease.memberName,
+      lease,
+      restarts,
+    });
+}
+
 export function getCancelledAggregateLaunchError(teamName: string): Error {
   return new Error(
     `OpenCode aggregate primary launch for team "${teamName}" was cancelled because the owning run is no longer active`

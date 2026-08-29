@@ -11,7 +11,9 @@ import type {
   MemberSpawnStatusEntry,
   PersistedTeamLaunchMemberState,
   PersistedTeamLaunchSnapshot,
+  ProviderModelLaunchIdentity,
   TeamMember,
+  TeamProviderId,
 } from '@shared/types';
 
 type AggregateParams = Parameters<
@@ -19,6 +21,21 @@ type AggregateParams = Parameters<
 >[0];
 
 const NOW = '2026-07-03T00:00:00.000Z';
+
+function launchIdentity(providerId: TeamProviderId): ProviderModelLaunchIdentity {
+  return {
+    providerId,
+    providerBackendId: null,
+    selectedModel: null,
+    selectedModelKind: 'default',
+    resolvedLaunchModel: null,
+    catalogId: null,
+    catalogSource: 'unavailable',
+    catalogFetchedAt: null,
+    selectedEffort: null,
+    resolvedEffort: null,
+  };
+}
 
 function createSpawnStatus(input: Partial<MemberSpawnStatusEntry> = {}): MemberSpawnStatusEntry {
   return {
@@ -34,7 +51,7 @@ function createSnapshot(
 ): PersistedTeamLaunchSnapshot {
   const members = input.members ?? {};
   return {
-    version: 2,
+    version: 3,
     teamName: input.teamName ?? 'team-a',
     updatedAt: input.updatedAt ?? NOW,
     leadSessionId: input.leadSessionId,
@@ -177,6 +194,29 @@ function createPorts(input: Partial<StaleMixedSecondaryRecoveryPorts> = {}): {
 }
 
 describe('recoverStaleMixedSecondaryLaunchSnapshotWithPorts', () => {
+  it.each([
+    ['gemini', 'codex', 'api'],
+    ['codex', 'gemini', 'api'],
+  ] as const)(
+    'does not recover a synthetic %s/%s route from an incomplete identity and %s root backend',
+    async (identityProviderId, rootProviderId, rootBackendId) => {
+      const { ports, getAggregateParams } = createPorts({
+        readTeamMeta: async () => ({
+          providerId: rootProviderId,
+          providerBackendId: rootBackendId,
+          launchIdentity: launchIdentity(identityProviderId),
+        }),
+      });
+
+      await recoverStaleMixedSecondaryLaunchSnapshotWithPorts('team-a', null, null, ports);
+
+      expect(getAggregateParams()?.leadDefaults).toMatchObject({
+        providerId: identityProviderId,
+        providerBackendId: null,
+      });
+    }
+  );
+
   it('projects active OpenCode lane runtime evidence into a recovered aggregate snapshot', async () => {
     const persistedSnapshot = createSnapshot({
       leadSessionId: 'lead-session',

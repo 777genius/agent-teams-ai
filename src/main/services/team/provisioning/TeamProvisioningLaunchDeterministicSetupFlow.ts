@@ -4,9 +4,14 @@ import {
   type WorkspaceTrustFeatureFlags,
   type WorkspaceTrustFullPlanResult,
 } from '@features/workspace-trust/main';
+import { parseCliArgs } from '@shared/utils/cliArgsParser';
 
 import { ANTHROPIC_HELPER_MODE_COMPETING_AUTH_ENV_KEYS } from '../../runtime/anthropicTeamApiKeyHelper';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
+import {
+  applyDesktopTeammateModeDecisionToEnv,
+  resolveDesktopTeammateModeDecision,
+} from '../runtimeTeammateMode';
 
 import {
   type AnthropicApiKeyHelperCleanupRetryOwner,
@@ -24,11 +29,20 @@ import {
   type TeamLaunchCompatibilityReport,
 } from './TeamProvisioningLaunchCompatibility';
 import {
+  buildLaunchContinuationRosterFingerprint,
+  buildRedactedLaunchMaterialDigest,
+  type DeterministicLaunchContinuation,
+  type DurableLaunchContinuationEvidenceRead,
+  type LaunchContinuationSourceSnapshot,
+  resolveDeterministicLaunchContinuation,
+} from './TeamProvisioningLaunchContinuationEvidence';
+import {
   probeLaunchCompatibility,
   resolveLaunchExpectedMembersFromCompatibility,
   type TeamProvisioningLaunchExpectedMembersPorts,
 } from './TeamProvisioningLaunchExpectedMembers';
 import {
+  buildDeterministicLaunchProcessArgs,
   buildLaunchSyntheticRequest,
   type ExistingLaunchRunLike,
   type LaunchRosterSource,
@@ -36,9 +50,12 @@ import {
   resolveExistingLaunchRunReuse,
 } from './TeamProvisioningLaunchTeamFlow';
 import { teamRequestIncludesCodexMember } from './TeamProvisioningMemberSpecs';
+import { APP_TEAM_RUNTIME_DISALLOWED_TOOLS } from './TeamProvisioningRunModel';
 import { buildMissingCliError } from './TeamProvisioningRuntimeFailureLabels';
 import {
+  filterOutSettingsPathArgs,
   getTeamsBasePathsToProbe,
+  type TeamRuntimeLaunchArgsPlan,
   type TeamsBaseLocation,
 } from './TeamProvisioningRuntimeLaunchSelection';
 import {
@@ -55,6 +72,9 @@ import {
 } from './TeamProvisioningWorkspaceTrust';
 import { buildWorkspaceTrustLaunchArgs } from './TeamProvisioningWorkspaceTrustLaunchArgs';
 
+import type { NativeAppManagedBootstrapBuildResult } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
+import type { PreparedRuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type {
   CrossProviderMemberArgsResult,
   ProvisioningEnvResolution,
@@ -66,7 +86,39 @@ import type {
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamProviderId,
+  TeamTask,
 } from '@shared/types';
+
+export interface PreparedDeterministicLaunchMaterial {
+  existingTasks: TeamTask[];
+  nativeBootstrapBuild: NativeAppManagedBootstrapBuildResult;
+  runtimeArgsPlan: TeamRuntimeLaunchArgsPlan;
+  teammateModeDecision: { injectedTeammateMode: 'tmux' | null };
+  sourceSnapshot: LaunchContinuationSourceSnapshot;
+  finalArgvTemplate: string[];
+  disallowedTools: string;
+  leadMcpConfig: PreparedMcpConfig;
+  memberMcpLaunchConfigs: ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>;
+}
+
+function replacePreparedMaterialPaths(value: unknown, pathsToReplace: readonly string[]): unknown {
+  if (typeof value === 'string') {
+    return pathsToReplace.reduce(
+      (result, materialPath) => result.split(materialPath).join('<app-managed-launch-material>'),
+      value
+    );
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => replacePreparedMaterialPaths(entry, pathsToReplace));
+  }
+  if (!value || typeof value !== 'object') return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+      key,
+      replacePreparedMaterialPaths(entry, pathsToReplace),
+    ])
+  );
+}
 
 export interface DeterministicLaunchSetupLogger {
   info(message: string): void;
@@ -79,6 +131,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
   getExistingRun(runId: string): ExistingLaunchRunLike | null | undefined;
   getRunTrackedCwd(run: ExistingLaunchRunLike | null | undefined): string | null;
   deleteProvisioningRunByTeam(teamName: string): void;
+  readLaunchContinuationEvidence(teamName: string): Promise<DurableLaunchContinuationEvidenceRead>;
   launchExpectedMembersPorts: TeamProvisioningLaunchExpectedMembersPorts;
   materializeLaunchCompatibilityRepair(
     request: TeamLaunchRequest,
@@ -102,6 +155,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
     members: TeamCreateRequest['members'];
     defaults: {
       providerId?: TeamProviderId;
+      providerBackendId?: TeamCreateRequest['providerBackendId'];
       model?: string;
       effort?: TeamCreateRequest['effort'];
     };
@@ -144,6 +198,40 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
     effectiveMembers: TeamCreateRequest['members'];
     providerArgsByProvider?: Map<TeamProviderId, string[]>;
   }): Promise<ProviderModelLaunchIdentity>;
+  readTasks(teamName: string): Promise<TeamTask[]>;
+  buildNativeAppManagedBootstrapSpecsWithDiagnostics(input: {
+    teamName: string;
+    cwd: string;
+    members: TeamCreateRequest['members'];
+  }): Promise<NativeAppManagedBootstrapBuildResult>;
+  buildTeamRuntimeLaunchArgsPlan(input: {
+    teamName: string;
+    providerId: TeamProviderId;
+    launchIdentity: ProviderModelLaunchIdentity;
+    envResolution: ProvisioningEnvResolution;
+    extraArgs: string[];
+    inheritedProviderArgs: string[];
+    includeAnthropicHelper: boolean;
+    contextLabel: string;
+  }): Promise<TeamRuntimeLaunchArgsPlan>;
+  resolveDesktopTeammateModeDecision: typeof resolveDesktopTeammateModeDecision;
+  snapshotLaunchMaterialSources(input: {
+    cwd: string;
+    members: TeamCreateRequest['members'];
+    shellEnv: NodeJS.ProcessEnv;
+    launchArgs: string[];
+    credentialDigestKey: string;
+  }): Promise<LaunchContinuationSourceSnapshot>;
+  getCredentialDigestKey(allowCreate: boolean): Promise<string>;
+  prepareLeadMcpConfig(input: {
+    cwd: string;
+    controlApiBaseUrl?: string | null;
+  }): Promise<PreparedMcpConfig>;
+  prepareRuntimeBootstrapMemberMcpLaunchConfigs(input: {
+    cwd: string;
+    members: TeamCreateRequest['members'];
+    controlApiBaseUrl?: string | null;
+  }): Promise<ReadonlyMap<string, PreparedRuntimeBootstrapMemberMcpLaunchConfig>>;
   randomUUID(): string;
   nowIso(): string;
   logger: DeterministicLaunchSetupLogger;
@@ -153,6 +241,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
 
 export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
   | { kind: 'reuse'; runId: string }
+  | { kind: 'complete'; runId: string }
   | {
       kind: 'prepared';
       teamsBasePathsToProbe: { location: TeamsBaseLocation; basePath: string }[];
@@ -167,14 +256,18 @@ export type DeterministicLaunchSetupResult<TMixedSecondaryLane> =
       providerArgsForLaunch: string[];
       crossProviderMemberArgsForLaunch: CrossProviderMemberArgsResult;
       expectedMembers: string[];
+      launchRosterFingerprint: `sha256:${string}`;
+      launchContinuation?: DeterministicLaunchContinuation;
       effectiveMemberSpecs: TeamCreateRequest['members'];
       allEffectiveMemberSpecs: TeamCreateRequest['members'];
       launchIdentity: ProviderModelLaunchIdentity;
+      preparedLaunchMaterial: PreparedDeterministicLaunchMaterial;
       syntheticRequest: TeamCreateRequest;
       mixedSecondaryLanes: TMixedSecondaryLane[];
       initialLaunchWarnings: string[];
       initialLaunchWarningSource: LaunchRosterSource;
       anthropicApiKeyHelperLease: AnthropicApiKeyHelperSetupLease;
+      credentialDigestKey: string;
     };
 
 export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
@@ -206,6 +299,12 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     return { kind: 'reuse', runId: existingRunReuse.runId };
   }
 
+  const launchContinuationEvidenceRead = await ports.readLaunchContinuationEvidence(
+    request.teamName
+  );
+  const credentialDigestKey = await ports.getCredentialDigestKey(
+    launchContinuationEvidenceRead.kind === 'absent'
+  );
   const launchCompatibility = await probeLaunchCompatibility(
     {
       teamName: request.teamName,
@@ -264,7 +363,9 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
   }
 
   const teamsBasePathsToProbe = getTeamsBasePathsToProbe();
-  const runId = ports.randomUUID();
+  // A roster-authorized launch uses the transaction UUID as its command/run
+  // identity so restart recovery can query the existing read-only run ledger.
+  const runId = request.rosterTransactionId ?? ports.randomUUID();
   const startedAt = ports.nowIso();
   const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease(
     ports.cleanupAnthropicApiKeyHelperMaterial
@@ -274,6 +375,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
     authMaterialId: runId,
     allowAnthropicApiKeyHelper: true,
     anthropicApiKeyHelperLease,
+    credentialIdentityKey: credentialDigestKey,
   };
 
   try {
@@ -321,6 +423,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       members: expectedMemberSpecs,
       defaults: {
         providerId: request.providerId,
+        providerBackendId: request.providerBackendId,
         model: request.model,
         effort: request.effort,
       },
@@ -355,19 +458,20 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       request.cwd
     );
     const primaryMemberNames = new Set(lanePlan.primaryMembers.map((member) => member.name));
-    const effectiveMemberSpecs = allEffectiveMemberSpecs.filter((member) =>
+    const fullEffectiveMemberSpecs = allEffectiveMemberSpecs.filter((member) =>
       primaryMemberNames.has(member.name)
     );
-    assertDeterministicBootstrapPrimaryMemberLimit(effectiveMemberSpecs.length);
-    const largeTeamWarning = buildLargeDeterministicBootstrapWarning(effectiveMemberSpecs.length);
+    assertDeterministicBootstrapPrimaryMemberLimit(fullEffectiveMemberSpecs.length);
+    const largeTeamWarning = buildLargeDeterministicBootstrapWarning(
+      fullEffectiveMemberSpecs.length
+    );
     const initialLaunchWarnings = [warning, largeTeamWarning].filter((value): value is string =>
       Boolean(value)
     );
-    const expectedMembers = effectiveMemberSpecs.map((member) => member.name);
     const resolvedProviderId = resolveTeamProviderId(request.providerId);
     const crossProviderMemberArgs = await ports.buildCrossProviderMemberArgs(
       resolvedProviderId,
-      effectiveMemberSpecs,
+      fullEffectiveMemberSpecs,
       { teamRuntimeAuth }
     );
     anthropicApiKeyHelperLease.coalesce(crossProviderMemberArgs.anthropicApiKeyHelper);
@@ -410,9 +514,175 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       cwd: request.cwd,
       env: shellEnv,
       request,
-      effectiveMembers: effectiveMemberSpecs,
+      effectiveMembers: fullEffectiveMemberSpecs,
       providerArgsByProvider,
     });
+    const existingTasks = await ports.readTasks(request.teamName);
+    const nativeBootstrapBuild = await ports.buildNativeAppManagedBootstrapSpecsWithDiagnostics({
+      teamName: request.teamName,
+      cwd: request.cwd,
+      members: fullEffectiveMemberSpecs,
+    });
+    const runtimeArgsPlan = await ports.buildTeamRuntimeLaunchArgsPlan({
+      teamName: request.teamName,
+      providerId: resolvedProviderId,
+      launchIdentity,
+      envResolution: { ...provisioningEnv, providerArgs: providerArgsForLaunch },
+      extraArgs: parseCliArgs(request.extraCliArgs),
+      inheritedProviderArgs: crossProviderMemberArgsForLaunch.args,
+      includeAnthropicHelper: resolvedProviderId === 'anthropic',
+      contextLabel: 'Team launch',
+    });
+    const teammateModeDecision = await ports.resolveDesktopTeammateModeDecision(
+      request.extraCliArgs,
+      shellEnv
+    );
+    applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
+    const leadMcpConfig = await ports.prepareLeadMcpConfig({
+      cwd: request.cwd,
+      controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+    });
+    const memberMcpLaunchConfigs = await ports.prepareRuntimeBootstrapMemberMcpLaunchConfigs({
+      cwd: request.cwd,
+      members: allEffectiveMemberSpecs,
+      controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
+    });
+    const finalArgvTemplate = buildDeterministicLaunchProcessArgs({
+      mcpConfigPath: '<prepared-mcp-config>',
+      bootstrapSpecPath: '<prepared-bootstrap-spec>',
+      bootstrapUserPromptPath: '<prepared-bootstrap-prompt>',
+      skipPermissions: request.skipPermissions,
+      worktree: request.worktree,
+      providerId: resolvedProviderId,
+      model: request.model,
+      launchIdentity,
+      runtimeArgsPlan,
+      teammateModeDecision,
+      disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+    });
+    const appManagedMaterialPaths = [
+      provisioningEnv.anthropicApiKeyHelper?.directory,
+      provisioningEnv.anthropicApiKeyHelper?.helperPath,
+      provisioningEnv.anthropicApiKeyHelper?.keyPath,
+      provisioningEnv.anthropicApiKeyHelper?.settingsPath,
+      crossProviderMemberArgsForLaunch.anthropicApiKeyHelper?.directory,
+      crossProviderMemberArgsForLaunch.anthropicApiKeyHelper?.helperPath,
+      crossProviderMemberArgsForLaunch.anthropicApiKeyHelper?.keyPath,
+      crossProviderMemberArgsForLaunch.anthropicApiKeyHelper?.settingsPath,
+      runtimeArgsPlan.appManagedSettingsPath,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .sort((left, right) => right.length - left.length);
+    let externalLaunchArgs = [
+      ...providerArgsForLaunch,
+      ...crossProviderMemberArgsForLaunch.args,
+      ...parseCliArgs(request.extraCliArgs),
+    ];
+    for (const materialPath of appManagedMaterialPaths) {
+      externalLaunchArgs = filterOutSettingsPathArgs(externalLaunchArgs, materialPath);
+    }
+    const sourceSnapshot = await ports.snapshotLaunchMaterialSources({
+      cwd: request.cwd,
+      members: allEffectiveMemberSpecs,
+      shellEnv,
+      launchArgs: externalLaunchArgs,
+      credentialDigestKey,
+    });
+    const nativeBootstrapIdentity = [...nativeBootstrapBuild.specs.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, spec]) => ({
+        name,
+        schemaVersion: spec.schemaVersion,
+        mode: spec.mode,
+        contextHash: spec.contextHash,
+        briefingHash: spec.briefingHash,
+      }));
+    const normalizedProviderAuthority = replacePreparedMaterialPaths(
+      {
+        authSource: provisioningEnv.authSource,
+        anthropicCredentialIdentity: provisioningEnv.anthropicCredentialIdentity,
+        providerArgsForLaunch,
+        crossProviderMemberArgsForLaunch: {
+          ...crossProviderMemberArgsForLaunch,
+          providerArgsByProvider: [
+            ...crossProviderMemberArgsForLaunch.providerArgsByProvider.entries(),
+          ].sort(([left], [right]) => left.localeCompare(right)),
+        },
+        launchIdentity,
+        allEffectiveMemberSpecs,
+      },
+      appManagedMaterialPaths
+    );
+    const finalizedLaunchMaterial = {
+      providerPluginProfileAuthorityDigest: buildRedactedLaunchMaterialDigest(
+        normalizedProviderAuthority,
+        credentialDigestKey
+      ),
+      settingsAndMcpSourceDigest: sourceSnapshot.digest,
+      mcpBootstrapInputDigest: buildRedactedLaunchMaterialDigest(
+        {
+          leadMcpConfig,
+          memberMcpLaunchConfigs: [...memberMcpLaunchConfigs.entries()].sort(([left], [right]) =>
+            left.localeCompare(right)
+          ),
+        },
+        credentialDigestKey
+      ),
+      nativeBootstrapDigest: buildRedactedLaunchMaterialDigest(
+        nativeBootstrapIdentity,
+        credentialDigestKey
+      ),
+      workspaceTrustPatchDigest: buildRedactedLaunchMaterialDigest(
+        workspaceTrustFullPlan?.launchArgPatches ?? [],
+        credentialDigestKey
+      ),
+      runtimeArgsPlanDigest: buildRedactedLaunchMaterialDigest(
+        replacePreparedMaterialPaths(runtimeArgsPlan, appManagedMaterialPaths),
+        credentialDigestKey
+      ),
+      runtimeEnvironmentDigest: buildRedactedLaunchMaterialDigest(
+        replacePreparedMaterialPaths(shellEnv, appManagedMaterialPaths),
+        credentialDigestKey
+      ),
+      finalArgvDigest: buildRedactedLaunchMaterialDigest(
+        replacePreparedMaterialPaths(finalArgvTemplate, appManagedMaterialPaths),
+        credentialDigestKey
+      ),
+      taskBootstrapDigest: buildRedactedLaunchMaterialDigest(existingTasks, credentialDigestKey),
+    };
+    const launchRosterFingerprint = buildLaunchContinuationRosterFingerprint({
+      request,
+      materializedMemberSpecs: allEffectiveMemberSpecs,
+      launchIdentity,
+      runtimeLanePlan: lanePlan,
+      finalizedLaunchMaterial,
+      credentialDigestKey,
+    });
+    const launchContinuationDecision = resolveDeterministicLaunchContinuation({
+      teamName: request.teamName,
+      expectedMemberNames: expectedMemberSpecs.map((member) => member.name),
+      rosterFingerprint: launchRosterFingerprint,
+      evidenceRead: launchContinuationEvidenceRead,
+    });
+    if (launchContinuationDecision.kind === 'complete') {
+      await anthropicApiKeyHelperLease.cleanup();
+      await ports.restorePrelaunchConfig(request.teamName);
+      ports.deleteProvisioningRunByTeam(request.teamName);
+      return { kind: 'complete', runId: launchContinuationDecision.sourceRunId };
+    }
+    const continuationRetryNames =
+      launchContinuationDecision.kind === 'continue'
+        ? new Set(launchContinuationDecision.continuation.retryMembers.map((member) => member.name))
+        : null;
+    const effectiveMemberSpecs = continuationRetryNames
+      ? fullEffectiveMemberSpecs.filter((member) => continuationRetryNames.has(member.name))
+      : fullEffectiveMemberSpecs;
+    if (continuationRetryNames && effectiveMemberSpecs.length !== continuationRetryNames.size) {
+      throw new Error(
+        'Deterministic partial-launch continuation retry roster no longer matches the primary runtime lane'
+      );
+    }
+    const expectedMembers = effectiveMemberSpecs.map((member) => member.name);
 
     const syntheticRequest = buildLaunchSyntheticRequest({
       request,
@@ -434,9 +704,25 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
       providerArgsForLaunch,
       crossProviderMemberArgsForLaunch,
       expectedMembers,
+      launchRosterFingerprint,
+      ...(launchContinuationDecision.kind === 'continue'
+        ? { launchContinuation: launchContinuationDecision.continuation }
+        : {}),
       effectiveMemberSpecs,
       allEffectiveMemberSpecs,
       launchIdentity,
+      preparedLaunchMaterial: {
+        existingTasks,
+        nativeBootstrapBuild,
+        runtimeArgsPlan,
+        teammateModeDecision,
+        sourceSnapshot,
+        finalArgvTemplate,
+        disallowedTools: APP_TEAM_RUNTIME_DISALLOWED_TOOLS,
+        leadMcpConfig,
+        memberMcpLaunchConfigs,
+      },
+      credentialDigestKey,
       syntheticRequest,
       mixedSecondaryLanes: ports.createMixedSecondaryLaneStates(lanePlan),
       initialLaunchWarnings,

@@ -86,6 +86,20 @@ vi.mock('@main/services/team/TeamMcpConfigBuilder', () => ({
 }));
 
 describe('buildProviderAwareCliEnv', () => {
+  it('fails before environment construction when current provenance omits its backend', async () => {
+    const { buildProviderAwareCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+
+    await expect(
+      buildProviderAwareCliEnv({
+        providerId: 'codex',
+        requireExplicitProviderBackend: true,
+      })
+    ).rejects.toThrow('providerBackendId is required');
+    expect(buildEnrichedEnvMock).not.toHaveBeenCalled();
+    expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();

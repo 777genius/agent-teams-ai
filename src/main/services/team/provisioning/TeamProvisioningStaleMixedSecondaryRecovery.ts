@@ -1,5 +1,6 @@
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
+
+import { resolvePersistedLeadRuntimeRoute } from '../teamProviderBackendResolution';
 
 import {
   isRecoverableOpenCodeRuntimeEvidence,
@@ -37,6 +38,7 @@ export interface StaleMixedSecondaryTeamMeta {
 }
 
 export interface StaleMixedSecondaryMembersMeta {
+  version?: 1 | 2;
   providerBackendId?: TeamProviderBackendId | string;
   members: TeamMember[];
 }
@@ -173,9 +175,8 @@ export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
 
   const teamMeta = await ports.readTeamMeta(teamName).catch(() => null);
   const leadLaunchIdentity = teamMeta?.launchIdentity;
-  const leadProviderId =
-    normalizeOptionalTeamProviderId(leadLaunchIdentity?.providerId) ??
-    normalizeOptionalTeamProviderId(teamMeta?.providerId);
+  const leadRoute = resolvePersistedLeadRuntimeRoute(teamMeta);
+  const leadProviderId = leadRoute.providerId;
   if (!leadProviderId) {
     return null;
   }
@@ -195,15 +196,7 @@ export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
   const bootstrapStatuses = ports.snapshotToMemberSpawnStatuses(bootstrapSnapshot);
   const leadDefaults = {
     providerId: leadProviderId,
-    providerBackendId:
-      migrateProviderBackendId(
-        leadProviderId,
-        leadLaunchIdentity
-          ? (leadLaunchIdentity.providerBackendId ??
-              teamMeta?.providerBackendId ??
-              membersMeta?.providerBackendId)
-          : (teamMeta?.providerBackendId ?? membersMeta?.providerBackendId)
-      ) ?? null,
+    providerBackendId: leadRoute.providerBackendId ?? null,
     selectedFastMode: leadLaunchIdentity?.selectedFastMode ?? teamMeta?.fastMode,
     resolvedFastMode:
       typeof teamMeta?.launchIdentity?.resolvedFastMode === 'boolean'
@@ -250,10 +243,7 @@ export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
             },
           });
 
-    if (
-      laneIdentity.laneKind !== 'secondary' ||
-      laneIdentity.laneOwnerProviderId !== 'opencode'
-    ) {
+    if (laneIdentity.laneKind !== 'secondary' || laneIdentity.laneOwnerProviderId !== 'opencode') {
       primaryMembers.push(member);
       continue;
     }

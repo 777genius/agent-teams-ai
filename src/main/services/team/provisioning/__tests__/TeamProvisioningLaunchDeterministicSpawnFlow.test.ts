@@ -95,6 +95,38 @@ const bootstrapSpecPath = `${testArtifactsRoot}/agent-teams-test-spec/spec.json`
 const bootstrapUserPromptPath = `${testArtifactsRoot}/agent-teams-test-prompt/prompt.txt`;
 const mcpConfigPath = `${testArtifactsRoot}/mcp.json`;
 
+const preparedLaunchMaterial = {
+  existingTasks: [],
+  nativeBootstrapBuild: {
+    specs: new Map(),
+    diagnostics: {
+      nativeMemberCount: 0,
+      totalContextChars: 0,
+      totalContextLimitChars: 0,
+      warning: null,
+    },
+  },
+  runtimeArgsPlan: {
+    settingsArgs: [],
+    fastModeArgs: [],
+    runtimeTurnSettledHookArgs: [],
+    providerArgs: [],
+    extraArgs: ['--flag'],
+    inheritedProviderArgs: [],
+    appManagedSettingsPath: null,
+  },
+  teammateModeDecision: { injectedTeammateMode: null },
+  sourceSnapshot: {
+    version: 1 as const,
+    digest: 'sha256:stable-sources' as const,
+    entries: [],
+  },
+  finalArgvTemplate: ['--flag'],
+  disallowedTools: 'TeamDelete',
+  leadMcpConfig: { version: 1 as const, json: '{"lead":true}' },
+  memberMcpLaunchConfigs: new Map(),
+};
+
 const anthropicApiKeyHelper = {
   teamName: 'demo',
   directory: authHelperDirectory,
@@ -160,6 +192,8 @@ function createSpawnFlowPorts(
     logger: { info: vi.fn() },
     mcpConfigBuilder: {
       writeConfigFile: vi.fn(async () => mcpConfigPath),
+      prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+      writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
       removeConfigFile: vi.fn(async () => {
         order.push('remove-mcp');
       }),
@@ -184,15 +218,7 @@ function createSpawnFlowPorts(
     deleteProvisioningRunByTeam: vi.fn(() => {
       order.push('delete-team-run');
     }),
-    buildTeamRuntimeLaunchArgsPlan: vi.fn(async () => ({
-      settingsArgs: [],
-      fastModeArgs: [],
-      runtimeTurnSettledHookArgs: [],
-      providerArgs: [],
-      extraArgs: [],
-      inheritedProviderArgs: [],
-      appManagedSettingsPath: null,
-    })),
+    verifyLaunchMaterialSources: vi.fn(async () => undefined),
     teamMetaStore: {
       writeMeta: vi.fn(async () => undefined),
     },
@@ -203,7 +229,11 @@ function createSpawnFlowPorts(
     nowMs: vi.fn(() => 123),
     getStopAllTeamsGeneration: vi.fn(() => 7),
     seedLeadBootstrapPermissionRules: vi.fn(async () => undefined),
-    spawnCli: vi.fn(() => new EventEmitter() as ChildProcess),
+    spawnCli: vi.fn(() => {
+      const child = new EventEmitter() as ChildProcess;
+      queueMicrotask(() => child.emit('spawn'));
+      return child;
+    }),
     updateProgress: vi.fn((run: DeterministicLaunchSpawnFlowRun) => run.progress),
     attachStdoutHandler: vi.fn(),
     attachStderrHandler: vi.fn(),
@@ -234,6 +264,7 @@ function runPreSpawnFailureFlow(
       providerArgsForLaunch: [],
       crossProviderMemberArgsForLaunch: { args: [] },
       launchIdentity,
+      preparedLaunchMaterial,
       effectiveMemberSpecs: syntheticRequest.members,
       allEffectiveMemberSpecs: syntheticRequest.members,
       teammateRuntimeDisallowedTools: 'TeamDelete',
@@ -372,37 +403,58 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     );
   });
 
-  it('rolls back materialized launch artifacts when runtime argument planning rejects', async () => {
-    const planningError = new Error('runtime argument planning failed');
+  it('uses frozen MCP material then fails closed before metadata or spawn when sources changed', async () => {
+    const planningError = new Error('snapshotted settings changed');
     const order: string[] = [];
     const run = createRun();
     const ports = createSpawnFlowPorts(order);
-    ports.buildTeamRuntimeLaunchArgsPlan = vi.fn(async () => {
-      order.push('plan-runtime-args');
+    ports.verifyLaunchMaterialSources = vi.fn(async () => {
+      order.push('verify-launch-sources');
       throw planningError;
     });
 
-    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toBe(planningError);
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(planningError.message),
+    });
 
     expect(order).toEqual([
-      'plan-runtime-args',
-      'cleanup-auth',
+      'verify-launch-sources',
       'remove-mcp',
       'remove-member-mcp',
-      'restore-config',
+      'cleanup-auth',
       'delete-run',
       'delete-team-run',
+      'restore-config',
     ]);
-    expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledOnce();
-    expect(flowMocks.removeDeterministicBootstrapSpecFile).toHaveBeenCalledWith(bootstrapSpecPath);
-    expect(flowMocks.removeDeterministicBootstrapUserPromptFile).toHaveBeenCalledWith(
-      bootstrapUserPromptPath
+    expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preparedLeadMcpConfig: preparedLaunchMaterial.leadMcpConfig,
+        preparedMemberMcpLaunchConfigs: preparedLaunchMaterial.memberMcpLaunchConfigs,
+      }),
+      expect.any(Object)
     );
     expect(ports.teamMetaStore.writeMeta).not.toHaveBeenCalled();
+    expect(ports.membersMetaStore.writeMembers).not.toHaveBeenCalled();
     expect(ports.spawnCli).not.toHaveBeenCalled();
-    expect(run.bootstrapSpecPath).toBeNull();
-    expect(run.bootstrapUserPromptPath).toBeNull();
-    expect(run.mcpConfigPath).toBeNull();
+  });
+
+  it('reverifies inherited sources at the final invocation boundary', async () => {
+    const mutationError = new Error('settings mutated immediately before invocation');
+    const run = createRun();
+    const ports = createSpawnFlowPorts([]);
+    ports.verifyLaunchMaterialSources = vi
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(mutationError);
+
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(mutationError.message),
+    });
+
+    expect(ports.verifyLaunchMaterialSources).toHaveBeenCalledTimes(2);
+    expect(ports.spawnCli).not.toHaveBeenCalled();
   });
 
   it('rolls back materialized launch artifacts when deterministic metadata persistence rejects', async () => {
@@ -422,20 +474,22 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       throw persistenceError;
     });
 
-    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toBe(persistenceError);
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(persistenceError.message),
+    });
 
     expect(order).toEqual([
       'write-team-meta',
       'read-members-meta',
       'write-members-meta',
-      'cleanup-auth',
       'remove-mcp',
       'remove-member-mcp',
-      'restore-config',
+      'cleanup-auth',
       'delete-run',
       'delete-team-run',
+      'restore-config',
     ]);
-    expect(ports.buildTeamRuntimeLaunchArgsPlan).toHaveBeenCalledOnce();
     expect(flowMocks.materializeDeterministicLaunchBootstrapFiles).toHaveBeenCalledOnce();
     expect(flowMocks.removeDeterministicBootstrapSpecFile).toHaveBeenCalledWith(bootstrapSpecPath);
     expect(flowMocks.removeDeterministicBootstrapUserPromptFile).toHaveBeenCalledWith(
@@ -497,6 +551,26 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(ports.deleteProvisioningRunByTeam).toHaveBeenCalledWith(run.teamName);
   });
 
+  it('treats an asynchronous pre-spawn ENOENT as known no-start and clears owned setup', async () => {
+    const run = createRun();
+    const ports = createSpawnFlowPorts([]);
+    ports.spawnCli = vi.fn(() => {
+      const child = new EventEmitter() as ChildProcess;
+      queueMicrotask(() =>
+        child.emit('error', Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' }))
+      );
+      return child;
+    });
+
+    await expect(runPreSpawnFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining('spawn ENOENT'),
+    });
+    expect(ports.deleteRun).toHaveBeenCalledWith(run.runId);
+    expect(ports.deleteProvisioningRunByTeam).toHaveBeenCalledWith(run.teamName);
+    expect(run.child).toBeNull();
+  });
+
   it('retains tracking through helper and artifact cleanup before state removal', async () => {
     const order: string[] = [];
     const run = createRun();
@@ -516,6 +590,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         }),
         mcpConfigBuilder: {
           writeConfigFile: vi.fn(async () => mcpConfigPath),
+          prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+          writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
           removeConfigFile: vi.fn(async () => {
             order.push('remove-mcp');
           }),
@@ -556,6 +632,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       cleanupAnthropicApiKeyHelperMaterial,
       mcpConfigBuilder: {
         writeConfigFile: vi.fn(async () => mcpConfigPath),
+        prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+        writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
         removeConfigFile: vi.fn(async () => undefined),
       },
       removeRunMemberMcpConfigFiles: vi.fn(async () => undefined),
@@ -600,6 +678,8 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
         }),
         mcpConfigBuilder: {
           writeConfigFile: vi.fn(async () => mcpConfigPath),
+          prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+          writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
           removeConfigFile: vi.fn(async () => {
             order.push('remove-mcp');
           }),
@@ -631,7 +711,18 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
     const cleanupRun = vi.fn();
-    const handleProcessExit = vi.fn();
+    const persist = vi.fn();
+    const cleanup = vi.fn();
+    const releaseOwnership = vi.fn();
+    const flushParser = vi.fn();
+    const recordOutcome = vi.fn();
+    const handleProcessExit = vi.fn(() => {
+      persist();
+      cleanup();
+      releaseOwnership();
+      flushParser();
+      recordOutcome();
+    });
     const updateProgress = vi.fn<
       RunDeterministicLaunchSpawnFlowPorts<DeterministicLaunchSpawnFlowRun>['updateProgress']
     >((nextRun, state, message) => {
@@ -656,18 +747,18 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     );
 
     child.emit('error', new Error('spawn failed'));
-    expect(updateProgress).toHaveBeenCalledWith(
-      run,
-      'failed',
-      'Failed to start Claude CLI (launch)',
-      expect.objectContaining({ error: 'spawn failed' })
-    );
     await vi.waitFor(() => {
-      expect(cleanupRun).toHaveBeenCalledWith(run);
+      expect(handleProcessExit).toHaveBeenCalledWith(run, null);
     });
+    expect(updateProgress).not.toHaveBeenCalled();
+    expect(cleanupRun).not.toHaveBeenCalled();
 
     child.emit('close', 7);
-    expect(handleProcessExit).toHaveBeenCalledWith(run, 7);
+    expect(handleProcessExit).toHaveBeenCalledTimes(1);
+    expect(handleProcessExit).not.toHaveBeenCalledWith(run, 7);
+    for (const terminalEffect of [persist, cleanup, releaseOwnership, flushParser, recordOutcome]) {
+      expect(terminalEffect).toHaveBeenCalledOnce();
+    }
 
     expect(timeoutCallback).not.toBeNull();
   });

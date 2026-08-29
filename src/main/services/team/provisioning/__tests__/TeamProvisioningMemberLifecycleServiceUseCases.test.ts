@@ -20,7 +20,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
       readLaunchStateSnapshot: async (teamName) => {
         launchStateReads.push(teamName);
         return {
-          version: 2,
+          version: 3,
           teamName,
           launchPhase: 'active',
           updatedAt: '2026-07-06T17:00:00.000Z',

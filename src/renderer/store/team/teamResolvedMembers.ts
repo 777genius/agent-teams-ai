@@ -155,6 +155,7 @@ function buildConfigFallbackMemberSnapshots(snapshot: TeamViewSnapshot): TeamMem
       providerBackendId: member.providerBackendId,
       model: member.model,
       effort: member.effort,
+      runtimeSelectionProvenance: member.runtimeSelectionProvenance,
       mcpPolicy: member.mcpPolicy,
       selectedFastMode: member.fastMode,
       configuredRuntimeSettings: {

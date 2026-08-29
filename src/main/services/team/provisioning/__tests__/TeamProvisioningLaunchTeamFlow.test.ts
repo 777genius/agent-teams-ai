@@ -22,6 +22,8 @@ import type {
   TeamTask,
 } from '@shared/types';
 
+const launchRosterFingerprint: `sha256:${string}` = `sha256:${'0'.repeat(64)}`;
+
 const launchIdentity: ProviderModelLaunchIdentity = {
   providerId: 'codex',
   providerBackendId: null,
@@ -97,6 +99,7 @@ function createLaunchBootstrapRun(): { run: TeamProvisioningLaunchBootstrapRun }
     requiresFirstRealTurnSuccess: false,
     cancelRequested: false,
     processKilled: false,
+    launchRosterFingerprint: `sha256:${'a'.repeat(64)}`,
     provisioningTraceLines: [],
     provisioningOutputParts: [],
     provisioningOutputIndexByMessageId: new Map<string, number>(),
@@ -212,7 +215,15 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
   });
 
   it('preserves relaunch metadata through the production synthetic request builder', () => {
-    const members: TeamCreateRequest['members'] = [{ name: 'Builder', role: 'Build' }];
+    const members: TeamCreateRequest['members'] = [
+      {
+        name: 'Builder',
+        role: 'Build',
+        providerId: 'codex',
+        providerBackendId: 'adapter',
+        fastMode: 'on',
+      },
+    ];
     const synthetic = buildLaunchSyntheticRequest({
       request: {
         teamName: 'demo',
@@ -272,6 +283,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
     const effectiveMemberSpecs = [syntheticRequest.members[0]];
     const run = createDeterministicLaunchProvisioningRun({
       runId: 'run-1',
+      launchRosterFingerprint,
       teamName: 'demo',
       startedAt: '2026-01-01T00:00:00.000Z',
       onProgress: vi.fn(),
@@ -404,6 +416,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
   ] as const)('creates launch progress for %s roster source', (source, message) => {
     const run = createDeterministicLaunchProvisioningRun({
       runId: 'run-1',
+      launchRosterFingerprint,
       teamName: 'demo',
       startedAt: '2026-01-01T00:00:00.000Z',
       onProgress: vi.fn(),
@@ -565,6 +578,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         }),
         writeDeterministicBootstrapSpecFile: vi.fn(async (spec) => {
           order.push(`write-spec:${spec.mode}:${spec.runId}`);
+          expect(spec.launch?.rosterFingerprint).toBe(run.launchRosterFingerprint);
           expect(
             spec.members.find((member: { name: string }) => member.name === 'Builder')
           ).toMatchObject({
@@ -582,6 +596,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
             order.push(`write-mcp:${cwd}:${options.controlApiBaseUrl}`);
             return mcpConfigPath;
           }),
+          writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
         },
         validateAgentTeamsMcpRuntime: vi.fn(async (nextMcpConfigPath, options) => {
           order.push(`validate:${nextMcpConfigPath}`);
@@ -660,6 +675,7 @@ describe('TeamProvisioningLaunchTeamFlow', () => {
         writeDeterministicBootstrapUserPromptFile: vi.fn(async () => bootstrapUserPromptPath),
         mcpConfigBuilder: {
           writeConfigFile: vi.fn(async () => mcpConfigPath),
+          writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
         },
         validateAgentTeamsMcpRuntime: vi.fn(async () => undefined),
       }

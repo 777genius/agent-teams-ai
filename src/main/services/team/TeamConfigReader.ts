@@ -738,7 +738,7 @@ export class TeamConfigReader {
       }
       const metaRaw = await readFileUtf8WithTimeout(metaPath, PER_TEAM_READ_TIMEOUT_MS);
       const meta = JSON.parse(metaRaw) as Record<string, unknown>;
-      if (meta?.version !== 1 || typeof meta?.cwd !== 'string') {
+      if ((meta?.version !== undefined && meta?.version !== 1 && meta?.version !== 2) || typeof meta?.cwd !== 'string') {
         return null;
       }
 

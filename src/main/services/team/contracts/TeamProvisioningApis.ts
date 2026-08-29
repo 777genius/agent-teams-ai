@@ -31,6 +31,11 @@ import type {
 } from '@shared/types/team';
 
 export interface TeamProvisioningStartApi {
+  /**
+   * Declares whether launch requests require current main-process authorization proof.
+   * Omission is an unknown capability and must be handled conservatively by consumers.
+   */
+  readonly requiresAuthoritativeLaunchProof?: boolean;
   createTeam(
     request: TeamCreateRequest,
     onProgress: (progress: TeamProvisioningProgress) => void
@@ -290,6 +295,7 @@ export function bindTeamProvisioningStartApi(
   source: TeamProvisioningStartApi
 ): TeamProvisioningStartApi {
   return {
+    requiresAuthoritativeLaunchProof: source.requiresAuthoritativeLaunchProof,
     createTeam: source.createTeam.bind(source),
     launchTeam: source.launchTeam.bind(source),
   };

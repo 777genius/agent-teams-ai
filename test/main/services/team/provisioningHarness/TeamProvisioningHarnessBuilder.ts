@@ -286,7 +286,11 @@ export class TeamProvisioningHarnessBuilder {
           configs.get(teamName)?.members?.[0]?.providerId ??
           teammates[0]?.providerId;
         return writeMembers(teamName, teammates, {
-          providerBackendId: migrateProviderBackendId(providerId, options?.providerBackendId),
+          providerBackendId: migrateProviderBackendId(
+            providerId,
+            options?.providerBackendId,
+            'explicit-selection'
+          ),
         });
       };
       const harnessLogger = new HarnessLogger();
@@ -395,7 +399,11 @@ export class TeamProvisioningHarnessBuilder {
         });
       const meta: TeamMetaFile = {
         ...rawMeta,
-        providerBackendId: migrateProviderBackendId(rawMeta.providerId, rawMeta.providerBackendId),
+        providerBackendId: migrateProviderBackendId(
+          rawMeta.providerId,
+          rawMeta.providerBackendId,
+          'explicit-selection'
+        ),
       };
       assertNoSecretLikeFixtureValues({ teamName, meta });
       metaByTeam.set(teamName, cloneFixture(meta));
@@ -425,7 +433,11 @@ export class TeamProvisioningHarnessBuilder {
         teammates[0]?.providerId;
       const meta: TeamMembersMetaFile = {
         version: 1,
-        providerBackendId: migrateProviderBackendId(providerId, rawMeta.providerBackendId),
+        providerBackendId: migrateProviderBackendId(
+          providerId,
+          rawMeta.providerBackendId,
+          'explicit-selection'
+        ),
         members: teammates,
       };
       assertNoSecretLikeFixtureValues({ teamName, meta });

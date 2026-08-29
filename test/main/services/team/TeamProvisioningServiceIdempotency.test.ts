@@ -34,6 +34,19 @@ import {
   registerProvisioningRun,
 } from './provisioningHarness/servicePrivateHarness';
 
+import type { TeamLaunchRequest } from '@shared/types';
+
+const buildResolvedLaunchRequest = (teamName: string, cwd: string): TeamLaunchRequest => ({
+  teamName,
+  cwd,
+  leadRuntimeSelectionProvenance: {
+    version: 1,
+    providerBackendId: 'default',
+    model: 'default',
+    effort: 'default',
+  },
+});
+
 describe('TeamProvisioningService idempotent launch guards', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -80,7 +93,10 @@ describe('TeamProvisioningService idempotent launch guards', () => {
 
     registerAliveRun(svc, aliveRun);
 
-    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
+    const response = await svc.launchTeam(
+      buildResolvedLaunchRequest(teamName, process.cwd()),
+      () => undefined
+    );
 
     expect(response.runId).toBe(aliveRun.runId);
   });
@@ -100,7 +116,10 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       progress: { state: 'spawning' },
     });
 
-    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
+    const response = await svc.launchTeam(
+      buildResolvedLaunchRequest(teamName, process.cwd()),
+      () => undefined
+    );
 
     expect(response).toMatchObject({
       runId,
@@ -118,7 +137,10 @@ describe('TeamProvisioningService idempotent launch guards', () => {
       runtimeAdapterProgressState: 'finalizing',
     });
 
-    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
+    const response = await svc.launchTeam(
+      buildResolvedLaunchRequest(teamName, process.cwd()),
+      () => undefined
+    );
 
     expect(response).toMatchObject({
       runId,
@@ -181,7 +203,10 @@ describe('TeamProvisioningService idempotent launch guards', () => {
     registerProvisioningRun(svc, teamName, 'pending-stale-run');
     registerAliveRun(svc, aliveRun);
 
-    const response = await svc.launchTeam({ teamName, cwd: process.cwd() }, () => undefined);
+    const response = await svc.launchTeam(
+      buildResolvedLaunchRequest(teamName, process.cwd()),
+      () => undefined
+    );
 
     expect(response.runId).toBe(aliveRun.runId);
     expect(getRegisteredProvisioningRunId(svc, teamName)).toBeUndefined();
@@ -219,9 +244,9 @@ describe('TeamProvisioningService idempotent launch guards', () => {
 
     registerAliveRun(svc, aliveRun);
 
-    await expect(svc.launchTeam({ teamName, cwd: nextCwd }, () => undefined)).rejects.toThrow(
-      `Team "${teamName}" is already running in "${path.resolve(currentCwd)}".`
-    );
+    await expect(
+      svc.launchTeam(buildResolvedLaunchRequest(teamName, nextCwd), () => undefined)
+    ).rejects.toThrow(`Team "${teamName}" is already running in "${path.resolve(currentCwd)}".`);
   });
 
   it('fails closed when an alive run cwd cannot be determined', async () => {
@@ -255,8 +280,8 @@ describe('TeamProvisioningService idempotent launch guards', () => {
 
     registerAliveRun(svc, aliveRun);
 
-    await expect(svc.launchTeam({ teamName, cwd: nextCwd }, () => undefined)).rejects.toThrow(
-      `Team "${teamName}" is already running, but its cwd could not be determined.`
-    );
+    await expect(
+      svc.launchTeam(buildResolvedLaunchRequest(teamName, nextCwd), () => undefined)
+    ).rejects.toThrow(`Team "${teamName}" is already running, but its cwd could not be determined.`);
   });
 });

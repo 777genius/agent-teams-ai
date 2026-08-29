@@ -1,4 +1,3 @@
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
@@ -33,6 +32,9 @@ export function buildConfiguredProvisioningMember(
       : {}),
     ...(configuredMember.model ? { model: configuredMember.model } : {}),
     ...(configuredMember.effort ? { effort: configuredMember.effort } : {}),
+    ...(configuredMember.runtimeSelectionProvenance
+      ? { runtimeSelectionProvenance: configuredMember.runtimeSelectionProvenance }
+      : {}),
     ...(configuredMember.fastMode ? { fastMode: configuredMember.fastMode } : {}),
     ...(configuredMember.mcpPolicy
       ? { mcpPolicy: normalizeTeamMemberMcpPolicy(configuredMember.mcpPolicy) }
@@ -47,25 +49,18 @@ export function buildPrimaryOwnedMemberSpecForRuntime(input: {
   const configuredSpec = buildConfiguredProvisioningMember(input.configuredMember);
   const defaultProviderId = resolveTeamProviderId(input.request.providerId);
   const memberProviderId = normalizeTeamMemberProviderId(configuredSpec.providerId);
-  const inheritsDefaultRuntime =
-    memberProviderId == null || memberProviderId === defaultProviderId;
+  const inheritsDefaultRuntime = memberProviderId == null || memberProviderId === defaultProviderId;
   const effectiveSpec = buildEffectiveTeamMemberSpec(configuredSpec, {
     providerId: defaultProviderId,
+    providerBackendId: input.request.providerBackendId,
     model: input.request.model,
     effort: input.request.effort,
   });
-  const effectiveProviderId = resolveTeamProviderId(effectiveSpec.providerId);
-  const providerBackendId =
-    migrateProviderBackendId(effectiveProviderId, configuredSpec.providerBackendId) ??
-    (inheritsDefaultRuntime
-      ? migrateProviderBackendId(effectiveProviderId, input.request.providerBackendId)
-      : undefined);
   const fastMode =
     configuredSpec.fastMode ?? (inheritsDefaultRuntime ? input.request.fastMode : undefined);
 
   return {
     ...effectiveSpec,
-    ...(providerBackendId ? { providerBackendId } : {}),
     ...(fastMode ? { fastMode } : {}),
     ...(input.configuredMember.agentType ? { agentType: input.configuredMember.agentType } : {}),
   };

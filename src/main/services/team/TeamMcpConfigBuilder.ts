@@ -47,6 +47,11 @@ interface WriteMcpConfigOptions {
   controlApiBaseUrl?: string | null;
 }
 
+export interface PreparedMcpConfig {
+  version: 1;
+  json: string;
+}
+
 const MCP_SERVER_NAME = 'agent-teams';
 const MCP_CLAUDE_DIR_ENV = 'AGENT_TEAMS_MCP_CLAUDE_DIR';
 const MCP_CONTROL_URL_ENV = 'CLAUDE_TEAM_CONTROL_URL';
@@ -589,12 +594,14 @@ export class TeamMcpConfigBuilder {
     projectPath?: string,
     optionsOrPolicy?: WriteMcpConfigOptions | TeamMemberMcpPolicy
   ): Promise<string> {
+    return this.writePreparedConfigFile(await this.prepareConfig(projectPath, optionsOrPolicy));
+  }
+
+  async prepareConfig(
+    projectPath?: string,
+    optionsOrPolicy?: WriteMcpConfigOptions | TeamMemberMcpPolicy
+  ): Promise<PreparedMcpConfig> {
     const launchSpec = await resolveAgentTeamsMcpLaunchSpec();
-    const configDir = getMcpConfigsBasePath();
-    const configPath = path.join(
-      configDir,
-      `${MCP_CONFIG_PREFIX}${process.pid}-${Date.now()}-${randomUUID()}.json`
-    );
     const options = isWriteMcpConfigOptions(optionsOrPolicy)
       ? optionsOrPolicy
       : ({
@@ -626,18 +633,29 @@ export class TeamMcpConfigBuilder {
       }
     }
 
-    await fs.promises.mkdir(configDir, { recursive: true });
-    await atomicWriteAsync(
-      configPath,
-      JSON.stringify(
+    return {
+      version: 1,
+      json: JSON.stringify(
         {
           mcpServers: generatedServers,
         },
         null,
         2
-      )
-    );
+      ),
+    };
+  }
 
+  async writePreparedConfigFile(prepared: PreparedMcpConfig): Promise<string> {
+    if (prepared.version !== 1 || typeof prepared.json !== 'string') {
+      throw new Error('Invalid prepared MCP config');
+    }
+    const configDir = getMcpConfigsBasePath();
+    const configPath = path.join(
+      configDir,
+      `${MCP_CONFIG_PREFIX}${process.pid}-${Date.now()}-${randomUUID()}.json`
+    );
+    await fs.promises.mkdir(configDir, { recursive: true });
+    await atomicWriteAsync(configPath, prepared.json);
     return configPath;
   }
 

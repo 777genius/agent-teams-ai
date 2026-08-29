@@ -90,6 +90,8 @@ class BoundCallbackHost {
 
   readonly mcpConfigBuilder = {
     writeConfigFile: vi.fn(async () => mcpConfigPath),
+    prepareConfig: vi.fn(async () => ({ version: 1 as const, json: '{}' })),
+    writePreparedConfigFile: vi.fn(async () => mcpConfigPath),
     removeConfigFile: vi.fn(async () => undefined),
   };
   readonly teamMetaStore = {
@@ -165,6 +167,12 @@ class BoundCallbackHost {
     run: TestRun;
   }): Promise<Map<string, never>> {
     this.calls.push(`${this.marker}:member-mcp:${input.run.runId}`);
+    return new Map<string, never>();
+  }
+
+  async prepareRuntimeBootstrapMemberMcpLaunchConfigs(
+    _input: unknown
+  ): Promise<Map<string, never>> {
     return new Map<string, never>();
   }
 
@@ -330,6 +338,8 @@ describe('createTeamProvisioningLaunchDeterministicFlowBoundary', () => {
         boundHost.publishMixedSecondaryLaneStatusChange(...args),
       buildRuntimeBootstrapMemberMcpLaunchConfigs: (...args) =>
         boundHost.buildRuntimeBootstrapMemberMcpLaunchConfigs(...args),
+      prepareRuntimeBootstrapMemberMcpLaunchConfigs: (...args) =>
+        boundHost.prepareRuntimeBootstrapMemberMcpLaunchConfigs(...args),
       buildTeamRuntimeLaunchArgsPlan: () => boundHost.buildTeamRuntimeLaunchArgsPlan(),
       seedLeadBootstrapPermissionRules: () => boundHost.seedLeadBootstrapPermissionRules(),
       tryCompleteAfterTimeout: (...args) => boundHost.tryCompleteAfterTimeout(...args),

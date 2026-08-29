@@ -2854,7 +2854,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     await act(async () => root.unmount());
   });
 
-  it('keeps scoped cached OpenCode models selectable after a transient preflight error', async () => {
+  it('keeps scoped cached OpenCode models visible but disabled after a transient preflight error', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const projectPath = '/tmp/opencode-scoped-timeout';
     const globalModel = {
@@ -2956,19 +2956,18 @@ describe('TeamModelSelector disabled Codex models', () => {
     const cachedModelButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('scoped-cached-model')
     );
-    expect(cachedModelButton?.hasAttribute('disabled')).toBe(false);
-    expect(cachedModelButton?.getAttribute('aria-disabled')).not.toBe('true');
+    expect(cachedModelButton?.getAttribute('aria-disabled')).toBe('true');
 
     await act(async () => {
       cachedModelButton?.click();
       await Promise.resolve();
     });
 
-    expect(onValueChange).toHaveBeenCalledWith('ollama/scoped-cached-model');
+    expect(onValueChange).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 
-  it('keeps cold cached OpenCode models selectable without authoritative readiness', async () => {
+  it('keeps cold cached OpenCode models visible but disabled without authoritative readiness', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const cachedModel = {
       id: 'opencode/cold-cached-model',
@@ -3036,8 +3035,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     const cachedModelButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('cold-cached-model')
     );
-    expect(cachedModelButton?.hasAttribute('disabled')).toBe(false);
-    expect(cachedModelButton?.getAttribute('aria-disabled')).not.toBe('true');
+    expect(cachedModelButton?.getAttribute('aria-disabled')).toBe('true');
 
     onValueChange.mockClear();
     await act(async () => {
@@ -3045,7 +3043,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
-    expect(onValueChange).toHaveBeenCalledWith('opencode/cold-cached-model');
+    expect(onValueChange).not.toHaveBeenCalled();
     await act(async () => root.unmount());
   });
 
@@ -3271,10 +3269,53 @@ describe('TeamModelSelector disabled Codex models', () => {
           providerId: 'opencode',
           supported: true,
           authenticated: false,
+          authMethod: null,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           statusMessage: 'Provider not connected',
           detailMessage: null,
-          capabilities: { teamLaunch: false },
+          capabilities: { teamLaunch: true },
           models: ['opencode/big-pickle'],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-21T00:00:00.000Z',
+            staleAt: '2099-08-21T00:05:00.000Z',
+            defaultModelId: 'opencode/big-pickle',
+            defaultLaunchModel: 'opencode/big-pickle',
+            models: [
+              {
+                id: 'opencode/big-pickle',
+                launchModel: 'opencode/big-pickle',
+                displayName: 'Big Pickle',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: true,
+                upgrade: false,
+                source: 'app-server',
+                metadata: {
+                  free: true,
+                  opencode: {
+                    providerId: 'opencode',
+                    modelId: 'big-pickle',
+                    sourceLabel: 'OpenCode',
+                    accessKind: 'builtin_free',
+                    routeKind: 'builtin_free',
+                    proofState: 'not_required',
+                    requiresExecutionProof: false,
+                    reason: null,
+                  },
+                },
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
           modelVerificationState: 'idle',
           modelAvailability: [],
         },
@@ -3331,6 +3372,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).not.toContain('OpenCode is not ready for team launch');
     expect(host.textContent).not.toContain('team launch available');
     expect(host.textContent).toContain('big-pickle');
+    expect(
+      Array.from(
+        host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+      ).find((button) => button.textContent?.includes('Big Pickle'))?.getAttribute('aria-disabled')
+    ).toBe('false');
 
     await act(async () => {
       root.unmount();
@@ -3338,7 +3384,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('keeps unauthenticated OpenCode selectable but does not promise free models when none are listed', async () => {
+  it('disables a free-looking OpenCode model without authoritative catalog evidence', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       providers: [
@@ -3349,7 +3395,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           statusMessage: 'Provider not connected',
           detailMessage: null,
           capabilities: { teamLaunch: false },
-          models: ['openai/gpt-5.4-mini'],
+          models: ['openrouter/spoof:free'],
           modelVerificationState: 'idle',
           modelAvailability: [],
         },
@@ -3380,6 +3426,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('provider-backed models need setup');
     expect(host.textContent).not.toContain('team launch available');
     expect(host.textContent).not.toContain('OpenCode free models are available');
+    expect(
+      Array.from(
+        host.querySelectorAll<HTMLButtonElement>('[data-testid="team-model-selector-model-option"]')
+      ).find((button) => button.textContent?.includes('spoof:free'))?.getAttribute('aria-disabled')
+    ).toBe('true');
     expect(
       host
         .querySelector('[data-testid="team-model-selector-provider-status"]')
@@ -5763,7 +5814,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     await renderForProject('/tmp/local-model-project-a');
     await renderForProject('/tmp/local-model-project-b');
-    expect(host.textContent).not.toContain('qwen-test:0.5b');
+    await vi.waitFor(() => expect(host.textContent).not.toContain('qwen-test:0.5b'));
     expect(onValueChange).not.toHaveBeenCalledWith('');
 
     await act(async () => {

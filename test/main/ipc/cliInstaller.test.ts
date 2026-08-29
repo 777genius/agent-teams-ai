@@ -28,6 +28,7 @@ import {
   initializeCliInstallerHandlers,
   registerCliInstallerHandlers,
 } from '@main/ipc/cliInstaller';
+import { verifyAuthoritativeModelExecutionProof } from '@main/services/team/TeamLaunchExecutionProofAuthority';
 import {
   CLI_INSTALLER_GET_PROVIDER_STATUS,
   CLI_INSTALLER_GET_STATUS,
@@ -36,11 +37,15 @@ import {
 } from '@preload/constants/ipcChannels';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
+import { prepareAuthoritativeExecutionProof } from './helpers/authoritativePreparationTestHarness';
+
 import type { CliInstallerService } from '@main/services';
 import type {
   CliInstallationStatus,
   CliProviderId,
   CliProviderStatus,
+  CliProviderStatusIpcRequest,
+  CliProviderStatusIpcResponse,
   IpcResult,
 } from '@shared/types';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
@@ -142,6 +147,19 @@ function status(providers: CliProviderStatus[]): CliInstallationStatus {
   };
 }
 
+let requestNonce = 0;
+function providerStatusRequest(
+  purpose: CliProviderStatusIpcRequest['purpose'] = 'passive',
+  projectPath?: string
+): CliProviderStatusIpcRequest {
+  requestNonce += 1;
+  return {
+    ...(projectPath ? { projectPath } : {}),
+    purpose,
+    requestNonce: `ipc-e2e-${requestNonce}`,
+  };
+}
+
 describe('cliInstaller IPC handlers', () => {
   let ipcMain: ReturnType<typeof createMockIpcMain>;
   let service: {
@@ -168,6 +186,94 @@ describe('cliInstaller IPC handlers', () => {
     registerCliInstallerHandlers(ipcMain);
     await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS);
     vi.clearAllMocks();
+  });
+
+  it('invalidates main launch proof when an exact-project provider catalog changes', async () => {
+    service.getProviderStatus
+      .mockResolvedValueOnce(
+        provider({ providerId: 'opencode', models: ['openai/gpt-5'], authenticated: true })
+      )
+      .mockResolvedValueOnce(
+        provider({ providerId: 'opencode', models: ['openai/gpt-5.1'], authenticated: true })
+      );
+    const proof = prepareAuthoritativeExecutionProof({
+      cwd: process.cwd(),
+      checks: [{ providerId: 'anthropic', providerBackendId: null, model: 'claude' }],
+    });
+
+    await ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'opencode', {
+      projectPath: process.cwd(),
+      purpose: 'launch-proof',
+      requestNonce: 'catalog-change-1',
+    });
+    expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(true);
+    await ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'opencode', {
+      projectPath: process.cwd(),
+      purpose: 'launch-proof',
+      requestNonce: 'catalog-change-2',
+    });
+
+    expect(verifyAuthoritativeModelExecutionProof(proof)).toBe(false);
+  });
+
+  it('keeps concurrent passive and launch-proof observations distinct across IPC', async () => {
+    const passive = deferred<CliProviderStatus>();
+    const launchProof = deferred<CliProviderStatus>();
+    service.getProviderStatus
+      .mockReturnValueOnce(passive.promise)
+      .mockReturnValueOnce(launchProof.promise);
+
+    const passiveInvoke = ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('passive', '/tmp/purpose-isolation')
+    ) as Promise<IpcResult<CliProviderStatusIpcResponse>>;
+    const launchInvoke = ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest('launch-proof', '/tmp/purpose-isolation')
+    ) as Promise<IpcResult<CliProviderStatusIpcResponse>>;
+
+    await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
+    passive.resolve(provider({ providerId: 'opencode', models: ['older-passive'] }));
+    const passiveResult = await passiveInvoke;
+    await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(2));
+    launchProof.resolve(
+      provider({ providerId: 'opencode', authenticated: true, models: ['fresh-launch'] })
+    );
+    const launchResult = await launchInvoke;
+
+    expect(launchResult).toMatchObject({
+      success: true,
+      data: {
+        purpose: 'launch-proof',
+        requestNonce: expect.any(String),
+        observationGeneration: expect.any(Number),
+        observationNonce: expect.any(String),
+        providerStatus: { models: ['fresh-launch'] },
+      },
+    });
+    expect(passiveResult).toMatchObject({
+      success: true,
+      data: { purpose: 'passive', providerStatus: { models: ['older-passive'] } },
+    });
+    expect(launchResult.data?.observationNonce).not.toBe(passiveResult.data?.observationNonce);
+  });
+
+  it.each([
+    ['legacy omitted request', undefined],
+    ['missing purpose', { requestNonce: 'legacy' }],
+    ['unknown purpose', { purpose: 'catalog', requestNonce: 'bad-purpose' }],
+    ['missing nonce', { purpose: 'launch-proof' }],
+  ])('fails closed for %s payloads', async (_label, request) => {
+    const result = (await ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      request
+    )) as IpcResult<CliProviderStatusIpcResponse>;
+
+    expect(result.success).toBe(false);
+    expect(service.getProviderStatus).not.toHaveBeenCalled();
   });
 
   it('does not let explicit hidden Gemini refresh poison cached frontend auth status', async () => {
@@ -199,10 +305,11 @@ describe('cliInstaller IPC handlers', () => {
 
     const gemini = (await ipcMain.invoke(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'gemini'
-    )) as IpcResult<CliProviderStatus | null>;
+      'gemini',
+      providerStatusRequest()
+    )) as IpcResult<CliProviderStatusIpcResponse>;
     expect(gemini.success).toBe(true);
-    expect(gemini.data?.authenticated).toBe(true);
+    expect(gemini.data?.providerStatus?.authenticated).toBe(true);
 
     const cached = (await ipcMain.invoke(
       CLI_INSTALLER_GET_STATUS
@@ -241,12 +348,14 @@ describe('cliInstaller IPC handlers', () => {
     await ipcMain.invoke(CLI_INSTALLER_GET_STATUS);
     const scoped = (await ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'opencode', {
       projectPath: '/tmp/project-a',
-    })) as IpcResult<CliProviderStatus | null>;
+      purpose: 'passive',
+      requestNonce: 'scoped-cache',
+    })) as IpcResult<CliProviderStatusIpcResponse>;
     const cached = (await ipcMain.invoke(
       CLI_INSTALLER_GET_STATUS
     )) as IpcResult<CliInstallationStatus>;
 
-    expect(scoped.data?.models).toEqual(['ollama/qwen2.5:0.5b']);
+    expect(scoped.data?.providerStatus?.models).toEqual(['ollama/qwen2.5:0.5b']);
     expect(service.getProviderStatus).toHaveBeenCalledWith('opencode', {
       projectPath: '/tmp/project-a',
     });
@@ -274,13 +383,16 @@ describe('cliInstaller IPC handlers', () => {
 
     const anthropicInvoke = ipcMain.invoke(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'anthropic'
-    ) as Promise<IpcResult<CliProviderStatus | null>>;
+      'anthropic',
+      providerStatusRequest()
+    ) as Promise<IpcResult<CliProviderStatusIpcResponse>>;
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
 
-    const codexInvoke = ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'codex') as Promise<
-      IpcResult<CliProviderStatus | null>
-    >;
+    const codexInvoke = ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      providerStatusRequest()
+    ) as Promise<IpcResult<CliProviderStatusIpcResponse>>;
     await Promise.resolve();
     await Promise.resolve();
 
@@ -290,7 +402,7 @@ describe('cliInstaller IPC handlers', () => {
     anthropicRequest.resolve(provider({ providerId: 'anthropic', authenticated: true }));
     await expect(anthropicInvoke).resolves.toMatchObject({
       success: true,
-      data: { providerId: 'anthropic' },
+      data: { providerStatus: { providerId: 'anthropic' } },
     });
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(2));
 
@@ -298,7 +410,7 @@ describe('cliInstaller IPC handlers', () => {
     codexRequest.resolve(provider({ providerId: 'codex', authenticated: true }));
     await expect(codexInvoke).resolves.toMatchObject({
       success: true,
-      data: { providerId: 'codex' },
+      data: { providerStatus: { providerId: 'codex' } },
     });
   });
 
@@ -311,27 +423,31 @@ describe('cliInstaller IPC handlers', () => {
       return providerId === 'codex' ? codexRequest.promise : opencodeRequest.promise;
     });
 
-    const codexInvoke = ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'codex') as Promise<
-      IpcResult<CliProviderStatus | null>
-    >;
+    const codexInvoke = ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'codex',
+      providerStatusRequest()
+    ) as Promise<IpcResult<CliProviderStatusIpcResponse>>;
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
 
-    const opencodeInvoke = ipcMain.invoke(CLI_INSTALLER_GET_PROVIDER_STATUS, 'opencode') as Promise<
-      IpcResult<CliProviderStatus | null>
-    >;
+    const opencodeInvoke = ipcMain.invoke(
+      CLI_INSTALLER_GET_PROVIDER_STATUS,
+      'opencode',
+      providerStatusRequest()
+    ) as Promise<IpcResult<CliProviderStatusIpcResponse>>;
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(2));
 
     expect(startedProviders).toEqual(['codex', 'opencode']);
     opencodeRequest.resolve(provider({ providerId: 'opencode', authenticated: true }));
     await expect(opencodeInvoke).resolves.toMatchObject({
       success: true,
-      data: { providerId: 'opencode' },
+      data: { providerStatus: { providerId: 'opencode' } },
     });
 
     codexRequest.resolve(provider({ providerId: 'codex', authenticated: true }));
     await expect(codexInvoke).resolves.toMatchObject({
       success: true,
-      data: { providerId: 'codex' },
+      data: { providerStatus: { providerId: 'codex' } },
     });
   });
 
@@ -583,8 +699,9 @@ describe('cliInstaller IPC handlers', () => {
 
     const staleProviderInvoke = ipcMain.invoke(
       CLI_INSTALLER_GET_PROVIDER_STATUS,
-      'codex'
-    ) as Promise<IpcResult<CliProviderStatus | null>>;
+      'codex',
+      providerStatusRequest()
+    ) as Promise<IpcResult<CliProviderStatusIpcResponse>>;
     await vi.waitFor(() => expect(service.getProviderStatus).toHaveBeenCalledTimes(1));
 
     await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS);
@@ -602,8 +719,8 @@ describe('cliInstaller IPC handlers', () => {
       })
     );
     await expect(staleProviderInvoke).resolves.toMatchObject({
-      success: true,
-      data: { statusMessage: 'Codex CLI not found' },
+      success: false,
+      error: expect.stringContaining('invalidated'),
     });
 
     const cached = (await ipcMain.invoke(

@@ -5,7 +5,11 @@ import {
 } from './TeamProvisioningRuntimeRecipientResolution';
 
 import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
-import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../runtime';
+import type {
+  OpenCodeStrictLaunchDelegationValidator,
+  TeamLaunchRuntimeAdapter,
+  TeamRuntimeAdapterRegistry,
+} from '../runtime';
 import type {
   MemberWorkSyncAcceptedReportChecker,
   MemberWorkSyncProofMissingRecoveryScheduler,
@@ -54,6 +58,10 @@ export class TeamProvisioningAppShellBoundary {
 
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null {
     return getOpenCodeRuntimeAdapterFromRegistry(this.runtimeAdapterRegistry);
+  }
+
+  getOpenCodeStrictLaunchDelegationValidator(): OpenCodeStrictLaunchDelegationValidator | null {
+    return this.runtimeAdapterRegistry?.getOpenCodeStrictLaunchDelegationValidator() ?? null;
   }
 
   getOpenCodeRuntimeMessageAdapter(): OpenCodeRuntimeMessageAdapter | null {

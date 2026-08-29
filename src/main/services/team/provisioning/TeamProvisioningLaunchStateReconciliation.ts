@@ -333,6 +333,8 @@ export async function applyOpenCodeSecondaryEvidenceOverlay(
     expectedMembers: params.snapshot.expectedMembers,
     bootstrapExpectedMembers: params.snapshot.bootstrapExpectedMembers,
     leadSessionId: params.snapshot.leadSessionId,
+    runtimeRunId: params.snapshot.runtimeRunId,
+    primaryLaneIdentity: params.snapshot.primaryLaneIdentity,
     launchPhase: params.snapshot.launchPhase,
     members: nextMembers,
     updatedAt: ports.nowIso(),

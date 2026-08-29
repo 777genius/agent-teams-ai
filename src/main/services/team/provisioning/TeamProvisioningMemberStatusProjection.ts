@@ -2,6 +2,7 @@ import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
+import { normalizeTeamMemberRuntimeSelectionProvenance } from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
 
@@ -35,6 +36,7 @@ export interface EffectiveConfiguredMember {
   providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  runtimeSelectionProvenance?: TeamMember['runtimeSelectionProvenance'];
   fastMode?: TeamFastMode;
   mcpPolicy?: ReturnType<typeof normalizeTeamMemberMcpPolicy>;
   cwd?: string;
@@ -128,14 +130,25 @@ export function resolveEffectiveConfiguredMember(
     normalizeTeamMemberProviderId(metaMember?.providerId) ??
     normalizeTeamMemberProviderId(configuredMember?.providerId);
   const providerBackendId =
-    migrateProviderBackendId(metaMember?.providerId, metaMember?.providerBackendId) ??
-    migrateProviderBackendId(configuredMember?.providerId, configuredMember?.providerBackendId);
+    migrateProviderBackendId(
+      metaMember?.providerId,
+      metaMember?.providerBackendId,
+      'explicit-selection'
+    ) ??
+    migrateProviderBackendId(
+      configuredMember?.providerId,
+      configuredMember?.providerBackendId,
+      'explicit-selection'
+    );
   const model = metaMember?.model?.trim() || configuredMember?.model?.trim() || undefined;
   const effort = isTeamEffortLevel(metaMember?.effort)
     ? metaMember.effort
     : isTeamEffortLevel(configuredMember?.effort)
       ? configuredMember.effort
       : undefined;
+  const runtimeSelectionProvenance =
+    normalizeTeamMemberRuntimeSelectionProvenance(metaMember?.runtimeSelectionProvenance) ??
+    normalizeTeamMemberRuntimeSelectionProvenance(configuredMember?.runtimeSelectionProvenance);
   const fastMode =
     metaMember?.fastMode === 'inherit' ||
     metaMember?.fastMode === 'on' ||
@@ -163,6 +176,7 @@ export function resolveEffectiveConfiguredMember(
     ...(providerBackendId ? { providerBackendId } : {}),
     ...(model ? { model } : {}),
     ...(effort ? { effort } : {}),
+    ...(runtimeSelectionProvenance ? { runtimeSelectionProvenance } : {}),
     ...(fastMode ? { fastMode } : {}),
     ...(mcpPolicy ? { mcpPolicy } : {}),
     ...(cwd ? { cwd } : {}),
@@ -241,6 +255,8 @@ export function filterRemovedMembersFromLaunchSnapshot(
     expectedMembers,
     bootstrapExpectedMembers: snapshot.bootstrapExpectedMembers?.filter((name) => !isRemoved(name)),
     leadSessionId: snapshot.leadSessionId,
+    runtimeRunId: snapshot.runtimeRunId,
+    primaryLaneIdentity: snapshot.primaryLaneIdentity,
     launchPhase: snapshot.launchPhase,
     members,
     updatedAt: snapshot.updatedAt,

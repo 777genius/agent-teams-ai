@@ -6,7 +6,6 @@ import { spawnCli } from '@main/utils/childProcess';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { killProcessByPid } from '@main/utils/processKill';
 import { getMemberColorByName } from '@shared/constants/memberColors';
-import { isTeamEffortLevel } from '@shared/utils/effortLevels';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
@@ -31,6 +30,7 @@ import { getConfiguredCliFlavor } from '../cliFlavor';
 import { sanitizeProcessRuntimeEventFilePrefix } from '../ProcessBootstrapTransportEvidence';
 import { createPersistedLaunchSnapshot } from '../TeamLaunchStateEvaluator';
 
+import { getCancelledAggregateRestartError } from './OpenCodeAggregatePrimaryRestartPolicy';
 import {
   createAppendDirectProcessRuntimeEventUseCase,
   type DirectProcessRuntimeEventInput,
@@ -60,6 +60,13 @@ import {
   createPersistOpenCodeMemberRestartSystemMessageUseCase,
   type OpenCodeMemberRestartSystemMessageInput,
 } from './TeamProvisioningOpenCodeMemberRestartSystemMessageUseCase';
+import {
+  createPureOpenCodeRestartAuthorityGuard,
+  createPureOpenCodeRestartIdentityCurrentGuard,
+  type PureOpenCodeRestartAuthority,
+  resolvePureOpenCodeRestartIdentity,
+  resolvePureOpenCodeRestartPlan,
+} from './TeamProvisioningOpenCodeRestartIdentity';
 import { MEMBER_BOOTSTRAP_STALL_MS } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   createNodePreparePrimaryOwnedMemberRestartRuntimeUseCase,
@@ -635,7 +642,8 @@ export class TeamProvisioningMemberLifecycleController {
     const providerId = resolveTeamProviderId(preliminaryMemberSpec.providerId);
     const providerBackendId = migrateProviderBackendId(
       providerId,
-      preliminaryMemberSpec.providerBackendId
+      preliminaryMemberSpec.providerBackendId,
+      'explicit-selection'
     );
     const provisioningEnv = await this.buildProvisioningEnv(providerId, providerBackendId, {
       teamRuntimeAuth: {
@@ -841,7 +849,8 @@ export class TeamProvisioningMemberLifecycleController {
     const providerId = resolveTeamProviderId(preliminaryMemberSpec.providerId);
     const providerBackendId = migrateProviderBackendId(
       providerId,
-      preliminaryMemberSpec.providerBackendId
+      preliminaryMemberSpec.providerBackendId,
+      'explicit-selection'
     );
     const provisioningEnv = await this.buildProvisioningEnv(providerId, providerBackendId, {
       teamRuntimeAuth: {
@@ -1642,25 +1651,45 @@ export class TeamProvisioningMemberLifecycleController {
       await this.persistLaunchStateSnapshot(run, run.provisioningComplete ? 'finished' : 'active');
     }
   }
-
-  async restartMember(teamName: string, memberName: string): Promise<void> {
+  async restartMember(
+    teamName: string,
+    memberName: string,
+    pureOpenCodeAuthority?: PureOpenCodeRestartAuthority
+  ): Promise<void> {
     const seam = this.actionUseCases.restartMember;
     return this.runMemberLifecycleOperation(teamName, memberName, 'manual_restart', () =>
-      seam ? seam(teamName, memberName) : this.restartMemberUnlocked(teamName, memberName)
+      seam
+        ? seam(teamName, memberName)
+        : this.restartMemberUnlocked(teamName, memberName, pureOpenCodeAuthority)
     );
   }
-
-  private async restartMemberUnlocked(teamName: string, memberName: string): Promise<void> {
+  private async restartMemberUnlocked(
+    teamName: string,
+    memberName: string,
+    pureOpenCodeAuthority?: PureOpenCodeRestartAuthority
+  ): Promise<void> {
     const runId = this.getAliveRunId(teamName);
     if (!runId) {
-      if (await this.restartPureOpenCodePrimaryMemberWithoutTrackedRun(teamName, memberName)) {
+      if (
+        await this.restartPureOpenCodePrimaryMemberWithoutTrackedRun(
+          teamName,
+          memberName,
+          pureOpenCodeAuthority
+        )
+      ) {
         return;
       }
       throw new Error(`Team "${teamName}" is not currently running`);
     }
     const run = this.runs.get(runId);
     if (!run || run.processKilled || run.cancelRequested) {
-      if (await this.restartPureOpenCodePrimaryMemberWithoutTrackedRun(teamName, memberName)) {
+      if (
+        await this.restartPureOpenCodePrimaryMemberWithoutTrackedRun(
+          teamName,
+          memberName,
+          pureOpenCodeAuthority
+        )
+      ) {
         return;
       }
       throw new Error(`Team "${teamName}" is not currently running`);
@@ -1937,12 +1966,17 @@ export class TeamProvisioningMemberLifecycleController {
 
   private async restartPureOpenCodePrimaryMemberWithoutTrackedRun(
     teamName: string,
-    memberName: string
+    memberName: string,
+    authority?: PureOpenCodeRestartAuthority
   ): Promise<boolean> {
     const runtimeRun = this.runtimeAdapterRunByTeam.get(teamName);
     if (runtimeRun?.providerId !== 'opencode') {
       return false;
     }
+    if (!authority) {
+      throw getCancelledAggregateRestartError(teamName, memberName);
+    }
+    authority.assertCurrent();
     const assertRuntimeAdapterRunStillCurrent = this.createRuntimeAdapterRunStillCurrentGuard(
       teamName,
       runtimeRun
@@ -1956,91 +1990,48 @@ export class TeamProvisioningMemberLifecycleController {
     if (!config) {
       return false;
     }
-    const [teamMeta, metaMembers] = await Promise.all([
+    const [teamMeta, metaMembers, launchSnapshot] = await Promise.all([
       this.teamMetaStore.getMeta(teamName).catch(() => null),
       this.membersMetaStore.getMembers(teamName).catch(() => []),
+      this.launchStateStore.read(teamName),
     ]);
-    const configuredMember = this.resolveEffectiveConfiguredMember(
-      config.members ?? [],
-      metaMembers,
-      memberName
-    );
-    if (!configuredMember) {
-      throw new Error(`Member "${memberName}" is not configured in team "${teamName}"`);
-    }
-    if (configuredMember.removedAt) {
-      throw new Error(`Member "${memberName}" has been removed`);
-    }
-    if (isLeadMember({ name: configuredMember.name, agentType: configuredMember.agentType })) {
-      throw new Error('Lead restart is not supported from member controls');
-    }
-
-    const leadMember = config.members?.find((member) => isLeadMember(member));
-    const leadProviderId =
-      normalizeOptionalTeamProviderId(teamMeta?.providerId) ??
-      normalizeOptionalTeamProviderId(leadMember?.providerId);
-    if (leadProviderId !== 'opencode') {
-      return false;
-    }
-
-    const configuredNames = new Set<string>();
-    for (const member of config.members ?? []) {
-      const name = member.name?.trim();
-      if (name) {
-        configuredNames.add(name);
-      }
-    }
-    for (const member of metaMembers) {
-      const name = member.name?.trim();
-      if (name) {
-        configuredNames.add(name);
-      }
-    }
-
-    const activeMembers = [...configuredNames]
-      .map((name) => this.resolveEffectiveConfiguredMember(config.members ?? [], metaMembers, name))
-      .filter((member): member is NonNullable<EffectiveConfiguredMember | null> => {
-        if (!member || member.removedAt) {
-          return false;
-        }
-        return !isLeadMember({ name: member.name, agentType: member.agentType });
-      })
-      .sort((left, right) => left.name.localeCompare(right.name));
-
-    const targetMember = activeMembers.find((member) =>
-      matchesExactTeamMemberName(member.name, configuredMember.name)
-    );
-    if (!targetMember) {
-      throw new Error(`Member "${memberName}" is not configured in team "${teamName}"`);
-    }
-
-    const nonOpenCodeMember = activeMembers.find((member) => {
-      const providerId = normalizeOptionalTeamProviderId(member.providerId) ?? leadProviderId;
-      return providerId !== 'opencode';
+    assertRuntimeAdapterRunStillCurrent();
+    const restartIdentity = resolvePureOpenCodeRestartIdentity({
+      runtimeRunId: runtimeRun.runId,
+      memberName,
+      launchSnapshot,
     });
-    if (nonOpenCodeMember) {
-      return false;
-    }
+    const assertRestartIdentityStillCurrent = createPureOpenCodeRestartIdentityCurrentGuard({
+      runtimeRunId: runtimeRun.runId,
+      memberName,
+      expectedIdentity: restartIdentity,
+      readLaunchSnapshot: () => this.launchStateStore.read(teamName),
+      assertRuntimeRunStillCurrent: assertRuntimeAdapterRunStillCurrent,
+    });
+    const restartPlan = resolvePureOpenCodeRestartPlan({
+      teamName,
+      memberName,
+      config,
+      metaMembers,
+      teamMetaCwd: teamMeta?.cwd,
+      runtimeCwd: runtimeRun.cwd,
+      persistedProjectPath: this.readPersistedTeamProjectPath(teamName) ?? undefined,
+      restartIdentity,
+      resolveEffectiveConfiguredMember: (configuredMembers, members, name) =>
+        this.resolveEffectiveConfiguredMember(configuredMembers, members, name),
+      buildConfiguredProvisioningMember: (member) => this.buildConfiguredProvisioningMember(member),
+    });
 
-    const projectPath =
-      targetMember.cwd?.trim() ||
-      config.projectPath?.trim() ||
-      teamMeta?.cwd?.trim() ||
-      runtimeRun.cwd?.trim() ||
-      this.readPersistedTeamProjectPath(teamName);
-    if (!projectPath) {
-      throw new Error(`Team "${teamName}" project path is not available for OpenCode restart`);
-    }
-
+    await assertRestartIdentityStillCurrent();
     const effectiveMembers = await this.resolveOpenCodeMemberWorkspacesForRuntime({
       teamName,
-      baseCwd: projectPath,
-      leadProviderId: 'opencode',
-      members: activeMembers.map((member) => this.buildConfiguredProvisioningMember(member)),
+      baseCwd: restartPlan.projectPath,
+      leadProviderId: restartIdentity.laneIdentity.providerId,
+      members: restartPlan.members,
     });
-    assertRuntimeAdapterRunStillCurrent();
+    await assertRestartIdentityStillCurrent();
     const targetRuntimeMember = effectiveMembers.find((member) =>
-      matchesExactTeamMemberName(member.name, targetMember.name)
+      matchesExactTeamMemberName(member.name, restartPlan.targetMember.name)
     );
     if (!targetRuntimeMember) {
       throw new Error(`Member "${memberName}" could not be resolved for OpenCode restart`);
@@ -2049,11 +2040,11 @@ export class TeamProvisioningMemberLifecycleController {
     const localModelPreflight = await adapter.preflightLocalModels?.({
       allowExperimentalLocalModels: runtimeRun.allowExperimentalLocalModels,
       targets: effectiveMembers.map((member) => ({
-        projectPath: member.cwd?.trim() || projectPath,
+        projectPath: member.cwd?.trim() || restartPlan.projectPath,
         modelRoute: member.model?.trim() ?? '',
       })),
     });
-    assertRuntimeAdapterRunStillCurrent();
+    await assertRestartIdentityStillCurrent();
     if (localModelPreflight && !localModelPreflight.ok) {
       throw new Error(
         localModelPreflight.diagnostics[0] ??
@@ -2066,32 +2057,34 @@ export class TeamProvisioningMemberLifecycleController {
       );
     }
 
-    assertRuntimeAdapterRunStillCurrent();
+    const assertRestartAuthorityStillCurrent = createPureOpenCodeRestartAuthorityGuard(
+      authority,
+      assertRuntimeAdapterRunStillCurrent
+    );
     this.invalidateRuntimeSnapshotCaches(teamName);
+    await assertRestartIdentityStillCurrent();
     this.persistOpenCodeMemberRestartSystemMessage({
       teamName,
-      leadName: leadMember?.name?.trim() || 'team-lead',
+      leadName: restartPlan.leadMember?.name?.trim() || 'team-lead',
       leadSessionId: runtimeRun.runId,
       displayName: config.description?.trim() || config.name,
       member: targetRuntimeMember,
       reason: 'manual_restart',
-      assertStillCurrent: assertRuntimeAdapterRunStillCurrent,
+      assertStillCurrent: assertRestartAuthorityStillCurrent,
     });
 
-    assertRuntimeAdapterRunStillCurrent();
+    assertRestartAuthorityStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
         allowExperimentalLocalModels: runtimeRun.allowExperimentalLocalModels,
         teamName,
-        cwd: projectPath,
+        cwd: restartPlan.projectPath,
         prompt: teamMeta?.prompt?.trim() || '',
         providerId: 'opencode',
-        providerBackendId: migrateProviderBackendId('opencode', teamMeta?.providerBackendId),
-        model: targetRuntimeMember.model?.trim() || teamMeta?.model,
-        effort:
-          targetRuntimeMember.effort ??
-          (isTeamEffortLevel(teamMeta?.effort) ? teamMeta.effort : undefined),
-        fastMode: teamMeta?.fastMode,
+        providerBackendId: restartIdentity.providerBackendId,
+        model: restartIdentity.model,
+        effort: restartIdentity.effort,
+        fastMode: restartIdentity.fastMode,
         limitContext: teamMeta?.limitContext,
         skipPermissions: teamMeta?.skipPermissions,
         worktree: teamMeta?.worktree,

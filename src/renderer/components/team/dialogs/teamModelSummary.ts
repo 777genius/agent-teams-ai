@@ -5,8 +5,8 @@ import {
   getTeamModelSourceBadgeLabel,
   getTeamProviderLabel as getCatalogTeamProviderLabel,
 } from '@renderer/utils/teamModelCatalog';
-import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
-import { getAnthropicDefaultTeamModel } from '@shared/utils/anthropicModelDefaults';
+
+import { resolveConcreteLaunchModel } from './authoritativeLaunchIdentity';
 
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -60,15 +60,8 @@ export function computeEffectiveTeamModel(
   providerId: TeamProviderId = 'anthropic',
   providerStatus?: Pick<CliProviderStatus, 'providerId' | 'modelCatalog'> | null
 ): string | undefined {
-  if (providerId !== 'anthropic') return selectedModel.trim() || undefined;
-  const catalog =
-    providerStatus?.providerId === 'anthropic' ? (providerStatus.modelCatalog ?? null) : null;
   return (
-    resolveAnthropicLaunchModel({
-      selectedModel,
-      limitContext,
-      availableLaunchModels: catalog?.models.map((model) => model.launchModel),
-      defaultLaunchModel: catalog?.defaultLaunchModel ?? null,
-    }) ?? getAnthropicDefaultTeamModel(limitContext)
+    resolveConcreteLaunchModel({ providerId, selectedModel, limitContext, providerStatus }) ??
+    undefined
   );
 }

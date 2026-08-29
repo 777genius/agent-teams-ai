@@ -25,6 +25,57 @@ export interface OpenCodeCommittedBootstrapSessionEvidence {
   diagnostics: string[];
 }
 
+export function normalizeOpenCodeRuntimeBootstrapCandidate(
+  value: OpenCodeAppManagedBootstrapCandidate | undefined,
+  expected: {
+    teamName: string;
+    memberName: string;
+    runId: string;
+    laneId: string;
+    runtimeSessionId?: string;
+  }
+): OpenCodeAppManagedBootstrapCandidate | undefined {
+  if (value?.schemaVersion !== 1 || value.source !== 'app_managed_bootstrap') {
+    return undefined;
+  }
+  if (
+    value.teamName !== expected.teamName ||
+    value.memberName !== expected.memberName ||
+    value.runId !== expected.runId ||
+    value.laneId !== expected.laneId ||
+    (expected.runtimeSessionId && value.runtimeSessionId !== expected.runtimeSessionId)
+  ) {
+    return undefined;
+  }
+  if (
+    !isNonEmptyString(value.runtimeSessionId) ||
+    !isNonEmptyString(value.messageID) ||
+    !value.messageID.startsWith('msg') ||
+    !isNonEmptyString(value.contextHash) ||
+    !isNonEmptyString(value.briefingHash) ||
+    !isNonEmptyString(value.injectionVerifiedAt) ||
+    !isNonEmptyString(value.candidateAt)
+  ) {
+    return undefined;
+  }
+  return {
+    schemaVersion: 1,
+    source: 'app_managed_bootstrap',
+    teamName: value.teamName,
+    memberName: value.memberName,
+    runId: value.runId,
+    laneId: value.laneId,
+    runtimeSessionId: value.runtimeSessionId,
+    messageID: value.messageID,
+    contextHash: value.contextHash,
+    briefingHash: value.briefingHash,
+    injectionVerifiedAt: value.injectionVerifiedAt,
+    candidateAt: value.candidateAt,
+    ...(isNonEmptyString(value.model) ? { model: value.model } : {}),
+    ...(isNonEmptyString(value.agent) ? { agent: value.agent } : {}),
+  };
+}
+
 export function normalizeOpenCodeBootstrapSessionRecord(
   value: unknown
 ): OpenCodeCommittedBootstrapSessionRecord | null {
@@ -49,7 +100,13 @@ export function normalizeOpenCodeBootstrapSessionRecord(
   const observedAt = normalizeOptionalStoreIso(record.observedAt);
   const appManagedBootstrapCandidate =
     source === 'app_managed_bootstrap'
-      ? normalizeAppManagedBootstrapCandidate(record.appManagedBootstrapCandidate)
+      ? normalizeAppManagedBootstrapCandidate(record.appManagedBootstrapCandidate, {
+          id,
+          teamName,
+          memberName,
+          laneId,
+          runId: normalizeNonEmptyStoreString(record.runId),
+        })
       : undefined;
   const appMcpTransportHash = normalizeNonEmptyStoreString(record.appMcpTransportHash);
   const appMcpTransportEvidence =
@@ -73,7 +130,14 @@ export function normalizeOpenCodeBootstrapSessionRecord(
 }
 
 function normalizeAppManagedBootstrapCandidate(
-  value: unknown
+  value: unknown,
+  session: {
+    id: string;
+    teamName: string;
+    memberName: string;
+    laneId: string;
+    runId: string | null;
+  }
 ): OpenCodeAppManagedBootstrapCandidate | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return undefined;
@@ -106,6 +170,15 @@ function normalizeAppManagedBootstrapCandidate(
   ) {
     return undefined;
   }
+  if (
+    runtimeSessionId !== session.id ||
+    teamName !== session.teamName ||
+    memberName !== session.memberName ||
+    runId !== session.runId ||
+    laneId !== session.laneId
+  ) {
+    return undefined;
+  }
   const model = normalizeNonEmptyStoreString(record.model);
   const agent = normalizeNonEmptyStoreString(record.agent);
   return {
@@ -128,6 +201,10 @@ function normalizeAppManagedBootstrapCandidate(
 
 function normalizeNonEmptyStoreString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
 }
 
 function normalizeOptionalStoreIso(value: unknown): string | null {

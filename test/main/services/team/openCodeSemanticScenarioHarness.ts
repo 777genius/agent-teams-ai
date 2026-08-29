@@ -1,8 +1,13 @@
+import { createHash } from 'node:crypto';
+
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
+import { stableHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamTaskWriter } from '../../../../src/main/services/team/TeamTaskWriter';
+
 import type {
   OpenCodeLaunchTeamCommandBody,
   OpenCodeLaunchTeamCommandData,
@@ -10,7 +15,6 @@ import type {
   OpenCodeSendMessageCommandData,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import type { OpenCodeTeamLaunchReadiness } from '../../../../src/main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
-import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import type {
   OpenCodeTeamRuntimeBridgePort,
   OpenCodeTeamRuntimeMessageInput,
@@ -26,7 +30,12 @@ import type {
   TeamRuntimeStopInput,
   TeamRuntimeStopResult,
 } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
-import type { AgentActionMode, TaskRef, TeamCreateRequest, TeamTask } from '../../../../src/shared/types';
+import type {
+  AgentActionMode,
+  TaskRef,
+  TeamCreateRequest,
+  TeamTask,
+} from '../../../../src/shared/types';
 
 const FIXTURE_PATH = path.join(
   process.cwd(),
@@ -81,6 +90,12 @@ export interface OpenCodeSemanticScenario {
 export interface CapturedOpenCodeBridge {
   readonly launchCommands: OpenCodeLaunchTeamCommandBody[];
   readonly messageCommands: OpenCodeSendMessageCommandBody[];
+  readonly onInvocationBoundary: NonNullable<TeamRuntimeLaunchInput['onInvocationBoundary']>;
+  readonly launchAuthorityIssuanceCount: number;
+  readonly launchAuthorityConsumptionCount: number;
+  getIssuedLaunchInvocationAuthority(): Awaited<
+    ReturnType<NonNullable<TeamRuntimeLaunchInput['onInvocationBoundary']>>
+  >;
   readonly bridge: OpenCodeTeamRuntimeBridgePort;
 }
 
@@ -208,7 +223,9 @@ export function buildOpenCodeScenarioTeamRequest(input: {
   model: string;
   memberNames?: string[];
 }): TeamCreateRequest {
-  const memberNames = new Set(input.memberNames ?? input.scenario.members.map((member) => member.name));
+  const memberNames = new Set(
+    input.memberNames ?? input.scenario.members.map((member) => member.name)
+  );
   return {
     teamName: input.teamName,
     displayName: input.scenario.displayName,
@@ -216,6 +233,12 @@ export function buildOpenCodeScenarioTeamRequest(input: {
     cwd: input.projectPath,
     providerId: 'opencode',
     model: input.model,
+    leadRuntimeSelectionProvenance: {
+      version: 1,
+      providerBackendId: 'default',
+      model: 'explicit',
+      effort: 'default',
+    },
     skipPermissions: true,
     prompt: input.scenario.teamPromptLines.join('\n'),
     members: input.scenario.members
@@ -226,6 +249,12 @@ export function buildOpenCodeScenarioTeamRequest(input: {
         workflow: member.workflowLines.join('\n'),
         providerId: 'opencode' as const,
         model: input.model,
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'explicit',
+          effort: 'inherited',
+        },
       })),
   };
 }
@@ -288,9 +317,43 @@ export function taskRefForScenario(
 export function createCapturingOpenCodeBridge(modelId: string): CapturedOpenCodeBridge {
   const launchCommands: OpenCodeLaunchTeamCommandBody[] = [];
   const messageCommands: OpenCodeSendMessageCommandBody[] = [];
+  let launchAuthorityIssuanceCount = 0;
+  let launchAuthorityConsumptionCount = 0;
+  let issuedLaunchInvocationAuthority:
+    | Awaited<ReturnType<NonNullable<TeamRuntimeLaunchInput['onInvocationBoundary']>>>
+    | undefined;
+  const onInvocationBoundary: NonNullable<TeamRuntimeLaunchInput['onInvocationBoundary']> =
+    async () => {
+      if (issuedLaunchInvocationAuthority) {
+        throw new Error('Launch invocation authority was already issued');
+      }
+      launchAuthorityIssuanceCount += 1;
+      let consumed = false;
+      issuedLaunchInvocationAuthority = {
+        invoke<T>(invocation: () => T): T {
+          if (consumed) throw new Error('Launch invocation authority was already used');
+          consumed = true;
+          return invocation();
+        },
+      };
+      return issuedLaunchInvocationAuthority;
+    };
   return {
     launchCommands,
     messageCommands,
+    onInvocationBoundary,
+    get launchAuthorityIssuanceCount() {
+      return launchAuthorityIssuanceCount;
+    },
+    get launchAuthorityConsumptionCount() {
+      return launchAuthorityConsumptionCount;
+    },
+    getIssuedLaunchInvocationAuthority() {
+      if (!issuedLaunchInvocationAuthority) {
+        throw new Error('Launch invocation authority was not issued');
+      }
+      return issuedLaunchInvocationAuthority;
+    },
     bridge: {
       checkOpenCodeTeamLaunchReadiness: async () => readyOpenCodeReadiness(modelId),
       getLastOpenCodeRuntimeSnapshot: () => ({
@@ -300,9 +363,18 @@ export function createCapturingOpenCodeBridge(modelId: string): CapturedOpenCode
         version: '1.14.19',
         capabilitySnapshotId: 'capability-semantic-contract',
       }),
-      launchOpenCodeTeam: async (command) => {
-        launchCommands.push(command);
-        return buildReadyLaunchData(command, modelId);
+      launchOpenCodeTeam: async (command, options) => {
+        if (
+          !issuedLaunchInvocationAuthority ||
+          options?.invocationAuthority !== issuedLaunchInvocationAuthority
+        ) {
+          throw new Error('Capture bridge requires the exact issued launch invocation authority');
+        }
+        return options.invocationAuthority.invoke(() => {
+          launchAuthorityConsumptionCount += 1;
+          launchCommands.push(command);
+          return buildReadyLaunchData(command, modelId);
+        });
       },
       sendOpenCodeTeamMessage: async (command) => {
         messageCommands.push(command);
@@ -334,7 +406,10 @@ export async function dumpOpenCodePromptArtifacts(input: {
       taskRefs: command.taskRefs ?? [],
     })),
   };
-  await fs.writeFile(path.join(input.outputDir, 'summary.json'), `${JSON.stringify(summary, null, 2)}\n`);
+  await fs.writeFile(
+    path.join(input.outputDir, 'summary.json'),
+    `${JSON.stringify(summary, null, 2)}\n`
+  );
   await fs.writeFile(
     path.join(input.outputDir, 'launch-command.json'),
     `${JSON.stringify(input.launchCommand, null, 2)}\n`
@@ -393,6 +468,21 @@ function buildReadyLaunchData(
   command: OpenCodeLaunchTeamCommandBody,
   modelId: string
 ): OpenCodeLaunchTeamCommandData {
+  const opaque = (value: unknown) => `sha256:${stableHash(value)}` as const;
+  const sessionIdentity = (sessionId: string) =>
+    `sha256:${createHash('sha256')
+      .update(JSON.stringify({ kind: 'opencode-session', id: sessionId }))
+      .digest('hex')}` as const;
+  const requestCorrelationDigest = stableHash({
+    kind: 'semantic-open-code-launch-response',
+    attemptId: command.launchAttempt.attemptId,
+  });
+  const retainedHostIdentity = {
+    hostKeyIdentity: opaque('semantic-host'),
+    processId: 31_000,
+    processStartedAtMs: 1_776_600_000_001,
+    profileScopeIdentity: opaque('semantic-profile-scope'),
+  };
   return {
     runId: command.runId,
     teamLaunchState: 'ready',
@@ -421,6 +511,67 @@ function buildReadyLaunchData(
     ),
     warnings: [],
     diagnostics: [],
+    launchAttempt: {
+      launchAttempt: {
+        contractVersion: 1,
+        attemptId: command.launchAttempt.attemptId,
+        idempotencyKey: 'attemptId',
+        payloadHash: command.launchAttempt.payloadHash,
+        generation: command.launchAttempt.generation,
+        inputDigest: stableHash({ kind: 'semantic-input', command }),
+        immutableDigest: stableHash({ kind: 'semantic-immutable', command }),
+        requestCorrelationDigest,
+        outcome: 'succeeded',
+        phase: 'complete',
+        startedAt: 1_776_600_000_000,
+        workDeadlineAt: 1_776_600_060_000,
+        absoluteDeadlineAt: 1_776_600_075_000,
+        cleanupReserveMs: 15_000,
+        elapsedMs: 2_500,
+        providerId: command.launchAttempt.providerId,
+        modelId: command.launchAttempt.modelId,
+        profilePurpose: 'launch_attempt',
+        projectIdentity: opaque('semantic-project'),
+        profileIdentity: retainedHostIdentity.profileScopeIdentity,
+        configIdentity: opaque('semantic-config'),
+        authIdentity: opaque('semantic-auth'),
+        pluginPolicyIdentity: opaque('semantic-plugin'),
+        cacheIdentity: opaque('semantic-cache'),
+        binaryIdentity: opaque('semantic-binary'),
+        retainedHostIdentity,
+        processStartedAtMs: retainedHostIdentity.processStartedAtMs,
+      },
+      proof: {
+        generation: command.launchAttempt.generation,
+        attemptId: command.launchAttempt.attemptId,
+        parent: command.launchAttempt.parent,
+        providerId: command.launchAttempt.providerId,
+        modelId: command.launchAttempt.modelId,
+        retainedHostIdentity,
+        observedMcpTools: [...command.launchAttempt.requiredMcpTools],
+        nonceHash: createHash('sha256')
+          .update(command.launchAttempt.proofNonce, 'utf8')
+          .digest('hex'),
+        sessionIdentity: opaque('semantic-proof-session'),
+        promptMessageIdentity: opaque('semantic-proof-prompt'),
+        assistantMessageIdentity: opaque('semantic-proof-assistant'),
+        verifiedAt: 1_776_600_030_000,
+        authorizationSource: 'fresh_live_attempt',
+        cacheUsed: false,
+        requestCorrelationDigest,
+      },
+      members: {
+        committed: command.members.map((member, index) => ({
+          memberIdentity: member.memberIdentity,
+          sessionIdentity: sessionIdentity(`semantic-session-${member.name}`),
+          bootstrapMessageIdentity: opaque(`semantic-bootstrap-${index}`),
+          commitIdentity: opaque(`semantic-commit-${index}`),
+        })),
+        failed: [],
+        pending: [],
+        cleanupPending: [],
+      },
+    },
   };
 }
 

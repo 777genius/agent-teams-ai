@@ -13,7 +13,7 @@ import {
   extractHeartbeatTimestamp,
 } from './TeamProvisioningPromptBuilders';
 
-import type { InboxMessage } from '@shared/types';
+import type { InboxMessage, MemberSpawnStatusEntry } from '@shared/types';
 
 export type LeadInboxMemberSpawnMessage = InboxMessage & { messageId: string };
 
@@ -21,11 +21,13 @@ export interface MemberSpawnLeadInboxRun {
   teamName: string;
   startedAt: string;
   expectedMembers: string[];
+  memberSpawnStatuses: Pick<Map<string, MemberSpawnStatusEntry>, 'get'>;
   memberSpawnLeadInboxCursorByMember: Map<string, MemberSpawnInboxCursor>;
 }
 
 export interface MemberSpawnLeadInboxPorts<TRun extends MemberSpawnLeadInboxRun> {
   getRunLeadName(run: TRun): string;
+  isCurrentTrackedRun(run: TRun): boolean;
   readLeadInboxMessages(teamName: string, leadName: string): Promise<InboxMessage[]>;
   setMemberSpawnStatus(
     run: TRun,
@@ -37,19 +39,28 @@ export interface MemberSpawnLeadInboxPorts<TRun extends MemberSpawnLeadInboxRun>
   ): void;
 }
 
-export async function refreshMemberSpawnStatusesFromLeadInbox<
-  TRun extends MemberSpawnLeadInboxRun,
->(run: TRun, ports: MemberSpawnLeadInboxPorts<TRun>): Promise<void> {
+export async function refreshMemberSpawnStatusesFromLeadInbox<TRun extends MemberSpawnLeadInboxRun>(
+  run: TRun,
+  ports: MemberSpawnLeadInboxPorts<TRun>
+): Promise<void> {
+  if (!ports.isCurrentTrackedRun(run)) return;
   const leadName = ports.getRunLeadName(run);
+  const expectedMembers = Array.isArray(run.expectedMembers) ? run.expectedMembers : [];
+  const launchIdentityByMember = new Map(
+    expectedMembers.map((memberName) => [
+      memberName,
+      run.memberSpawnStatuses.get(memberName)?.firstSpawnAcceptedAt,
+    ])
+  );
   let leadInboxMessages: InboxMessage[] = [];
   try {
     leadInboxMessages = await ports.readLeadInboxMessages(run.teamName, leadName);
+    if (!ports.isCurrentTrackedRun(run)) return;
   } catch {
     return;
   }
 
   const runStartedAtMs = Date.parse(run.startedAt);
-  const expectedMembers = Array.isArray(run.expectedMembers) ? run.expectedMembers : [];
   const teammateMessages = leadInboxMessages
     .filter((message): message is LeadInboxMemberSpawnMessage => {
       const from = typeof message.from === 'string' ? message.from.trim() : '';
@@ -87,6 +98,7 @@ export async function refreshMemberSpawnStatusesFromLeadInbox<
   }
 
   for (const [memberName, messages] of messagesByMember.entries()) {
+    if (!isCurrentMemberLaunch(run, memberName, launchIdentityByMember, ports)) continue;
     const currentCursor = run.memberSpawnLeadInboxCursorByMember.get(memberName);
     let nextCursor = currentCursor;
 
@@ -99,7 +111,18 @@ export async function refreshMemberSpawnStatusesFromLeadInbox<
         }
       }
 
+      if (!isCurrentMemberLaunch(run, memberName, launchIdentityByMember, ports)) break;
       applyLeadInboxSpawnSignal(run, memberName, message, ports);
+      if (
+        launchIdentityByMember.get(memberName) == null &&
+        ports.isCurrentTrackedRun(run) &&
+        run.memberSpawnStatuses.get(memberName)?.firstSpawnAcceptedAt != null
+      ) {
+        launchIdentityByMember.set(
+          memberName,
+          run.memberSpawnStatuses.get(memberName)?.firstSpawnAcceptedAt
+        );
+      }
       if (messageCursor) {
         nextCursor = maxMemberSpawnInboxCursor(nextCursor, messageCursor);
       }
@@ -107,11 +130,25 @@ export async function refreshMemberSpawnStatusesFromLeadInbox<
 
     if (
       nextCursor &&
+      isCurrentMemberLaunch(run, memberName, launchIdentityByMember, ports) &&
       (currentCursor == null || compareMemberSpawnInboxCursor(nextCursor, currentCursor) > 0)
     ) {
       run.memberSpawnLeadInboxCursorByMember.set(memberName, nextCursor);
     }
   }
+}
+
+function isCurrentMemberLaunch<TRun extends MemberSpawnLeadInboxRun>(
+  run: TRun,
+  memberName: string,
+  launchIdentityByMember: ReadonlyMap<string, string | undefined>,
+  ports: Pick<MemberSpawnLeadInboxPorts<TRun>, 'isCurrentTrackedRun'>
+): boolean {
+  return (
+    ports.isCurrentTrackedRun(run) &&
+    run.memberSpawnStatuses.get(memberName)?.firstSpawnAcceptedAt ===
+      launchIdentityByMember.get(memberName)
+  );
 }
 
 export function applyLeadInboxSpawnSignal<TRun extends MemberSpawnLeadInboxRun>(

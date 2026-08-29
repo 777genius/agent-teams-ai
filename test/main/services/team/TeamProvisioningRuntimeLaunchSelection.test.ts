@@ -1,5 +1,6 @@
 import {
   addModelCatalogLaunchModels,
+  buildProviderModelLaunchIdentity,
   extractJsonObjectFromCli,
   filterOutSettingsPathArgs,
   hasAuthoritativeAnthropicLaunchCatalog,
@@ -11,9 +12,16 @@ import {
   normalizeProvisioningModelCheckRequests,
   validateRuntimeLaunchSelection,
 } from '@main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { RuntimeProviderLaunchFacts } from '@main/services/team/provisioning/TeamProvisioningRuntimeLaunchSelection';
+
+const explicitProvenance = {
+  version: 1 as const,
+  providerBackendId: 'default' as const,
+  model: 'explicit' as const,
+  effort: 'default' as const,
+};
 
 function createAnthropicCatalogFacts(
   source: 'anthropic-models-api' | 'static-fallback'
@@ -59,6 +67,310 @@ function createAnthropicCatalogFacts(
 }
 
 describe('TeamProvisioningRuntimeLaunchSelection', () => {
+  it('keeps Default UI semantics while pinning its proved concrete model', () => {
+    const facts = (defaultModel: string): RuntimeProviderLaunchFacts => ({
+      defaultModel,
+      modelIds: new Set(['gpt-5', 'gpt-6']),
+      modelListParsed: true,
+      modelCatalog: null,
+      runtimeCapabilities: null,
+      providerStatus: null,
+    });
+    const provenance = (model: 'default' | 'explicit') => ({
+      version: 1 as const,
+      providerBackendId: 'default' as const,
+      model,
+      effort: 'default' as const,
+    });
+
+    const defaultIdentity = buildProviderModelLaunchIdentity({
+      request: {
+        providerId: 'codex',
+        model: 'gpt-5',
+        leadRuntimeSelectionProvenance: provenance('default'),
+      },
+      facts: facts('gpt-5'),
+      anthropicFastModeDefault: false,
+    });
+    const explicitIdentity = buildProviderModelLaunchIdentity({
+      request: {
+        providerId: 'codex',
+        model: 'gpt-5',
+        leadRuntimeSelectionProvenance: provenance('explicit'),
+      },
+      facts: facts('gpt-5'),
+      anthropicFastModeDefault: false,
+    });
+    const changedDefaultIdentity = buildProviderModelLaunchIdentity({
+      request: {
+        providerId: 'codex',
+        model: 'gpt-5',
+        leadRuntimeSelectionProvenance: provenance('default'),
+      },
+      facts: facts('gpt-6'),
+      anthropicFastModeDefault: false,
+    });
+
+    expect(defaultIdentity).toMatchObject({
+      selectedModel: null,
+      selectedModelKind: 'default',
+      resolvedLaunchModel: 'gpt-5',
+    });
+    expect(explicitIdentity).toMatchObject({
+      selectedModel: 'gpt-5',
+      selectedModelKind: 'explicit',
+      resolvedLaunchModel: 'gpt-5',
+    });
+    expect(changedDefaultIdentity.resolvedLaunchModel).toBe('gpt-5');
+  });
+
+  it('blocks invocation when an authoritative catalog drops the proved default snapshot', () => {
+    const invoke = vi.fn();
+    const facts = createAnthropicCatalogFacts('anthropic-models-api');
+    facts.defaultModel = 'sonnet-next';
+    facts.modelIds = new Set(['sonnet-next']);
+    facts.modelCatalog = {
+      ...facts.modelCatalog!,
+      defaultModelId: 'sonnet-next',
+      defaultLaunchModel: 'sonnet-next',
+      models: facts.modelCatalog!.models.map((model) => ({
+        ...model,
+        id: 'sonnet-next',
+        launchModel: 'sonnet-next',
+      })),
+    };
+
+    expect(() => {
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Team lead',
+        providerId: 'anthropic',
+        model: 'sonnet',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'default',
+          model: 'default',
+          effort: 'default',
+        },
+        facts,
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Anthropic',
+      });
+      invoke();
+    }).toThrow('does not list it as launchable');
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it('pins an absent default effort as the exact no-override identity', () => {
+    const facts = createAnthropicCatalogFacts('anthropic-models-api');
+    facts.modelCatalog!.models[0]!.defaultReasoningEffort = 'high';
+    const identity = buildProviderModelLaunchIdentity({
+      request: {
+        providerId: 'anthropic',
+        model: 'sonnet',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'default',
+          model: 'default',
+          effort: 'default',
+        },
+      },
+      facts,
+      anthropicFastModeDefault: false,
+    });
+    expect(identity).toMatchObject({ selectedEffort: null, resolvedEffort: null });
+  });
+
+  it.each(['api', 'adapter', 'auto'] as const)(
+    'preserves explicit Codex backend %s in the runtime launch identity',
+    (providerBackendId) => {
+      const identity = buildProviderModelLaunchIdentity({
+        request: {
+          providerId: 'codex',
+          providerBackendId,
+          model: 'gpt-5',
+          leadRuntimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'explicit',
+            model: 'explicit',
+            effort: 'default',
+          },
+        },
+        facts: {
+          defaultModel: 'gpt-5',
+          modelIds: new Set(['gpt-5']),
+          modelListParsed: true,
+          modelCatalog: null,
+          runtimeCapabilities: null,
+          providerStatus: null,
+        },
+        anthropicFastModeDefault: false,
+      });
+
+      expect(identity.providerBackendId).toBe(providerBackendId);
+    }
+  );
+
+  it.each([
+    {
+      name: 'Codex backend',
+      request: { providerId: 'codex' as const, providerBackendId: 'api' as const },
+      stale: 'api',
+      expected: 'api',
+      facts: {
+        providerId: 'codex' as const,
+        resolvedBackendId: 'codex-native' as const,
+        authenticated: true,
+      },
+    },
+    {
+      name: 'Anthropic effort',
+      request: { providerId: 'anthropic' as const, effort: 'high' as const },
+      stale: 'high',
+      expected: 'high',
+      facts: null,
+    },
+  ])(
+    'pins the proved default $name instead of granting wildcard authority',
+    ({ request, expected, facts }) => {
+      const providerId = request.providerId;
+      const modelId = providerId === 'anthropic' ? 'claude-current' : 'gpt-current';
+      const identity = buildProviderModelLaunchIdentity({
+        request: {
+          ...request,
+          model: modelId,
+          leadRuntimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'default',
+            model: 'default',
+            effort: 'default',
+          },
+        },
+        facts: {
+          defaultModel: modelId,
+          modelIds: new Set([modelId]),
+          modelListParsed: true,
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId,
+            source: providerId === 'anthropic' ? 'anthropic-models-api' : 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-25T00:00:00.000Z',
+            staleAt: '2026-08-25T00:10:00.000Z',
+            defaultModelId: modelId,
+            defaultLaunchModel: modelId,
+            models: [
+              {
+                id: modelId,
+                launchModel: modelId,
+                displayName: modelId,
+                hidden: false,
+                supportedReasoningEfforts: ['low', 'high'],
+                defaultReasoningEffort: 'low',
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: true,
+                upgrade: false,
+                source: providerId === 'anthropic' ? 'anthropic-models-api' : 'app-server',
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+          runtimeCapabilities: null,
+          providerStatus: facts,
+        },
+        anthropicFastModeDefault: false,
+      });
+      expect(providerId === 'codex' ? identity.providerBackendId : identity.resolvedEffort).toBe(
+        expected
+      );
+    }
+  );
+
+  it('keeps explicit and default same-tuple selections semantically distinct', () => {
+    const facts: RuntimeProviderLaunchFacts = {
+      defaultModel: 'gpt-5',
+      modelIds: new Set(['gpt-5']),
+      modelListParsed: true,
+      modelCatalog: null,
+      runtimeCapabilities: null,
+      providerStatus: { providerId: 'codex', resolvedBackendId: 'api' },
+    };
+    const build = (kind: 'default' | 'explicit') =>
+      buildProviderModelLaunchIdentity({
+        request: {
+          providerId: 'codex',
+          providerBackendId: 'api',
+          model: 'gpt-5',
+          effort: 'high',
+          leadRuntimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: kind,
+            model: kind,
+            effort: kind,
+          },
+        },
+        facts,
+        anthropicFastModeDefault: false,
+      });
+    expect(build('default')).toMatchObject({ selectedModelKind: 'default', selectedEffort: null });
+    expect(build('explicit')).toMatchObject({
+      selectedModelKind: 'explicit',
+      selectedEffort: 'high',
+    });
+  });
+
+  it.each(['gemini', 'opencode'] as const)(
+    'exact-validates explicit %s models against current runtime facts',
+    (providerId) => {
+      expect(() =>
+        validateRuntimeLaunchSelection({
+          actorLabel: 'Team lead',
+          providerId,
+          model: 'stale-model',
+          leadRuntimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'default',
+            model: 'explicit',
+            effort: 'default',
+          },
+          facts: {
+            defaultModel: 'current-model',
+            modelIds: new Set(['current-model']),
+            modelListParsed: true,
+            modelCatalog: null,
+            runtimeCapabilities: null,
+            providerStatus: null,
+          },
+          anthropicFastModeDefault: false,
+          getProviderLabel: (id) => id,
+        })
+      ).toThrow('current runtime model catalog');
+    }
+  );
+
+  it.each([undefined, { version: 9 }])('rejects unresolved provenance %j', (provenance) => {
+    expect(() =>
+      buildProviderModelLaunchIdentity({
+        request: {
+          providerId: 'codex',
+          providerBackendId: 'api',
+          model: 'gpt-5',
+          effort: 'high',
+          leadRuntimeSelectionProvenance: provenance as never,
+        },
+        facts: {
+          defaultModel: 'gpt-5',
+          modelIds: new Set(['gpt-5']),
+          modelListParsed: true,
+          modelCatalog: null,
+          runtimeCapabilities: null,
+          providerStatus: null,
+        },
+        anthropicFastModeDefault: false,
+      })
+    ).toThrow('Runtime selection provenance');
+  });
+
   it('extracts the last provider JSON object from noisy CLI output', () => {
     const parsed = extractJsonObjectFromCli<{
       providers?: Record<string, { defaultModel?: string }>;
@@ -213,6 +525,7 @@ describe('TeamProvisioningRuntimeLaunchSelection', () => {
         actorLabel: 'Member jack',
         providerId: 'anthropic',
         model: 'claude-sonnet-5',
+        leadRuntimeSelectionProvenance: explicitProvenance,
         facts,
         anthropicFastModeDefault: false,
         getProviderLabel: () => 'Anthropic',
@@ -229,6 +542,7 @@ describe('TeamProvisioningRuntimeLaunchSelection', () => {
         actorLabel: 'Member jack',
         providerId: 'anthropic',
         model: 'claude-sonnet-5',
+        leadRuntimeSelectionProvenance: explicitProvenance,
         facts,
         anthropicFastModeDefault: false,
         getProviderLabel: () => 'Anthropic',
@@ -244,6 +558,7 @@ describe('TeamProvisioningRuntimeLaunchSelection', () => {
         actorLabel: 'Member bob',
         providerId: 'codex',
         model: 'gpt-5.4-mini',
+        leadRuntimeSelectionProvenance: explicitProvenance,
         effort: 'low',
         facts: {
           defaultModel: 'gpt-5.6-sol',

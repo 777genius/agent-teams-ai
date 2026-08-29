@@ -33,9 +33,27 @@ const createRequest: TeamCreateRequest = {
   providerId: 'opencode',
   model: 'gpt-5',
   effort: 'high',
+  leadRuntimeSelectionProvenance: {
+    version: 1,
+    providerBackendId: 'default',
+    model: 'explicit',
+    effort: 'explicit',
+  },
   fastMode: 'off',
   skipPermissions: false,
-  members: [{ name: 'Lead', role: 'Lead', providerId: 'opencode' }],
+  members: [
+    {
+      name: 'Lead',
+      role: 'Lead',
+      providerId: 'opencode',
+      runtimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'inherited',
+        model: 'inherited',
+        effort: 'inherited',
+      },
+    },
+  ],
   prompt: 'start',
 };
 
@@ -45,6 +63,12 @@ const launchRequest: TeamLaunchRequest = {
   providerId: 'opencode',
   model: 'gpt-5',
   effort: 'high',
+  leadRuntimeSelectionProvenance: {
+    version: 1,
+    providerBackendId: 'default',
+    model: 'explicit',
+    effort: 'explicit',
+  },
   fastMode: 'off',
   skipPermissions: false,
 };
@@ -284,7 +308,19 @@ describe('TeamProvisioningCreateLaunchOrchestration', () => {
         {
           ...createRequest,
           providerId: 'codex',
-          members: [{ name: 'Lead', role: 'Lead', providerId: 'codex' }],
+          members: [
+            {
+              name: 'Lead',
+              role: 'Lead',
+              providerId: 'codex',
+              runtimeSelectionProvenance: {
+                version: 1,
+                providerBackendId: 'inherited',
+                model: 'inherited',
+                effort: 'inherited',
+              },
+            },
+          ],
         },
         vi.fn()
       )

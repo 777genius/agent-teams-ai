@@ -12,6 +12,7 @@ import {
   ANTHROPIC_DIRECT_ROUTE_ENV_KEYS,
   ANTHROPIC_EXTERNAL_ROUTE_ENV_KEYS,
 } from '@shared/constants/anthropicConnectionMode';
+import { createHmac } from 'crypto';
 import * as os from 'os';
 
 import {
@@ -59,6 +60,8 @@ export interface TeamRuntimeAuthContext {
   allowAnthropicApiKeyHelper?: boolean;
   /** Setup-scoped ownership for any helper materialized through this context. */
   anthropicApiKeyHelperLease?: AnthropicApiKeyHelperSetupLease;
+  /** In-memory key used only to bind finalized helper credentials to continuation evidence. */
+  credentialIdentityKey?: string;
 }
 
 export interface ProvisioningEnvResolution {
@@ -67,6 +70,7 @@ export interface ProvisioningEnvResolution {
   geminiRuntimeAuth: GeminiRuntimeAuthState | null;
   providerArgs?: string[];
   anthropicApiKeyHelper?: AnthropicTeamApiKeyHelperMaterial | null;
+  anthropicCredentialIdentity?: `hmac-sha256:${string}`;
   warning?: string;
 }
 
@@ -76,6 +80,7 @@ export interface CrossProviderMemberArgsResult {
   envPatch: NodeJS.ProcessEnv;
   usesAnthropicApiKeyHelper: boolean;
   anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null;
+  anthropicCredentialIdentity?: `hmac-sha256:${string}`;
 }
 
 interface TeamProvisioningProviderConnectionPort {
@@ -413,6 +418,12 @@ export async function buildProvisioningEnv({
     const apiKey =
       await ports.providerConnectionService.getConfiguredAnthropicApiKeyForTeamRuntime(providerEnv);
     if (apiKey) {
+      const credentialIdentityKey = teamRuntimeAuth.credentialIdentityKey?.trim();
+      const anthropicCredentialIdentity = credentialIdentityKey
+        ? (`hmac-sha256:${createHmac('sha256', credentialIdentityKey)
+            .update(apiKey.trim())
+            .digest('hex')}` as const)
+        : undefined;
       const helper = await (
         ports.materializeAnthropicTeamApiKeyHelper ?? materializeAnthropicTeamApiKeyHelper
       )({
@@ -450,6 +461,7 @@ export async function buildProvisioningEnv({
         geminiRuntimeAuth: null,
         providerArgs: [...(providerEnvResult.providerArgs ?? []), ...helper.settingsArgs],
         anthropicApiKeyHelper: helper,
+        anthropicCredentialIdentity,
       };
     }
   }
@@ -526,6 +538,7 @@ export async function buildCrossProviderMemberArgs({
   const envPatch: NodeJS.ProcessEnv = {};
   let usesAnthropicApiKeyHelper = false;
   let anthropicApiKeyHelper: AnthropicTeamApiKeyHelperMaterial | null = null;
+  let anthropicCredentialIdentity: `hmac-sha256:${string}` | undefined;
   const providersToPrepare = new Set(crossProviderIds);
   const prepareAnthropicForDynamicSpawn =
     primaryProviderId !== 'anthropic' && !crossProviderIds.has('anthropic');
@@ -579,6 +592,7 @@ export async function buildCrossProviderMemberArgs({
         options?.teamRuntimeAuth?.anthropicApiKeyHelperLease?.coalesce(env.anthropicApiKeyHelper);
         usesAnthropicApiKeyHelper = true;
         anthropicApiKeyHelper = env.anthropicApiKeyHelper;
+        anthropicCredentialIdentity = env.anthropicCredentialIdentity;
         Object.assign(envPatch, env.anthropicApiKeyHelper.envPatch);
       } else if (
         providerId === 'anthropic' &&
@@ -605,6 +619,7 @@ export async function buildCrossProviderMemberArgs({
       envPatch,
       usesAnthropicApiKeyHelper,
       anthropicApiKeyHelper,
+      anthropicCredentialIdentity,
     };
   } catch (error) {
     if (anthropicApiKeyHelper && !options?.teamRuntimeAuth?.anthropicApiKeyHelperLease) {

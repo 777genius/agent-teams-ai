@@ -5,7 +5,10 @@ import {
   isReservedLeadRole,
   normalizeTeamMemberRole,
 } from '@shared/utils/leadDetection';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import {
+  migrateProviderBackendId,
+  normalizePersistedProviderBackendId,
+} from '@shared/utils/providerBackend';
 import { buildTeamMemberColorMap } from '@shared/utils/teamMemberColors';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import {
@@ -108,11 +111,14 @@ export class TeamMemberResolver {
     tasks: TeamTaskWithKanban[],
     options?: {
       launchSnapshot?: PersistedTeamLaunchSnapshot | null;
+      activeRuntimeRunId?: string | null;
       leadProviderId?: TeamProviderId;
       leadProviderBackendId?: TeamProviderBackendId | null;
       leadFastMode?: TeamMember['fastMode'];
       leadResolvedFastMode?: boolean | null;
-      leadRuntimeSettings?: Pick<TeamMemberSnapshot, 'model' | 'effort' | 'resolvedFastMode'>;
+      leadRuntimeSettings?: Pick<TeamMemberSnapshot, 'model' | 'effort' | 'resolvedFastMode'> & {
+        configuredRuntimeSettings?: TeamMemberSnapshot['configuredRuntimeSettings'];
+      };
     }
   ): TeamMemberSnapshot[] {
     const names = new Set<string>();
@@ -187,6 +193,7 @@ export class TeamMemberResolver {
         configuredProviderBackendId?: TeamProviderBackendId;
         model?: string;
         effort?: TeamMember['effort'];
+        runtimeSelectionProvenance?: TeamMember['runtimeSelectionProvenance'];
         fastMode?: TeamMember['fastMode'];
         mcpPolicy?: TeamMember['mcpPolicy'];
         color?: string;
@@ -213,6 +220,7 @@ export class TeamMemberResolver {
             configuredProviderBackendId: configMember.providerBackendId,
             model: configMember.model,
             effort: configMember.effort,
+            runtimeSelectionProvenance: configMember.runtimeSelectionProvenance,
             fastMode:
               configMember.fastMode === 'inherit' ||
               configMember.fastMode === 'on' ||
@@ -242,6 +250,7 @@ export class TeamMemberResolver {
         configuredProviderBackendId?: TeamProviderBackendId;
         model?: string;
         effort?: TeamMember['effort'];
+        runtimeSelectionProvenance?: TeamMember['runtimeSelectionProvenance'];
         fastMode?: TeamMember['fastMode'];
         mcpPolicy?: TeamMember['mcpPolicy'];
         color?: string;
@@ -260,13 +269,15 @@ export class TeamMemberResolver {
             workflow: member.workflow,
             isolation: member.isolation === 'worktree' ? ('worktree' as const) : undefined,
             providerId: member.providerId,
-            providerBackendId: migrateProviderBackendId(
+            providerBackendId: normalizePersistedProviderBackendId(
               member.providerId,
-              member.providerBackendId
+              member.providerBackendId,
+              'current-version'
             ),
             configuredProviderBackendId: member.providerBackendId,
             model: member.model,
             effort: member.effort,
+            runtimeSelectionProvenance: member.runtimeSelectionProvenance,
             fastMode:
               member.fastMode === 'inherit' || member.fastMode === 'on' || member.fastMode === 'off'
                 ? member.fastMode
@@ -327,16 +338,25 @@ export class TeamMemberResolver {
       const configMember = configMemberMap.get(name.toLowerCase());
       const metaMember = metaMemberMap.get(name.toLowerCase());
       const launchMember = launchMemberMap.get(name);
+      const activeRuntimeRunId = options?.activeRuntimeRunId?.trim() ?? '';
+      const runBoundLaunchMember =
+        activeRuntimeRunId &&
+        launchMember?.runtimeRunId?.trim() === activeRuntimeRunId &&
+        !launchSnapshot?.stoppedAt
+          ? launchMember
+          : undefined;
+      // Launch-state is run-bound evidence. When present, consume its runtime
+      // identity as one record; staged metadata remains desired configuration.
+      const authoritativeSettingsRecord = runBoundLaunchMember ?? metaMember ?? configMember;
+      const configuredSettingsRecord = metaMember ?? configMember;
       const memberIsLead = isCanonicalLeadMember({
         name,
-        agentType: configMember?.agentType ?? metaMember?.agentType,
-        role: configMember?.role ?? metaMember?.role,
+        agentType: configuredSettingsRecord?.agentType,
+        role: configuredSettingsRecord?.role,
       });
       const effectiveProviderId =
-        launchMember?.providerId ??
-        configMember?.providerId ??
-        metaMember?.providerId ??
-        options?.leadProviderId;
+        authoritativeSettingsRecord?.providerId ??
+        (authoritativeSettingsRecord ? undefined : options?.leadProviderId);
       const plannedLane = buildPlannedMemberLaneIdentity({
         leadProviderId: options?.leadProviderId,
         member: {
@@ -344,68 +364,77 @@ export class TeamMemberResolver {
           providerId: effectiveProviderId,
         },
       });
-      const providerBackendId = migrateProviderBackendId(
+      const providerBackendId = normalizePersistedProviderBackendId(
         effectiveProviderId,
-        launchMember?.providerBackendId ??
-          configMember?.providerBackendId ??
-          metaMember?.providerBackendId ??
-          (effectiveProviderId === options?.leadProviderId
+        authoritativeSettingsRecord?.providerBackendId ??
+          (!authoritativeSettingsRecord && effectiveProviderId === options?.leadProviderId
             ? (options?.leadProviderBackendId ?? undefined)
-            : undefined)
+            : undefined),
+        authoritativeSettingsRecord === configMember && configMember
+          ? 'legacy-unversioned'
+          : 'current-version'
       );
-      const agentId = configMember?.agentId ?? metaMember?.agentId;
+      const agentId = configuredSettingsRecord?.agentId;
       members.push({
         name,
         agentId,
-        joinedAt: configMember?.joinedAt ?? metaMember?.joinedAt,
+        joinedAt: configuredSettingsRecord?.joinedAt,
         currentTaskId: currentTask?.id ?? null,
         taskCount: ownedTasks.length,
-        color: configMember?.color ?? metaMember?.color ?? getMemberColorByName(name),
-        agentType: configMember?.agentType ?? metaMember?.agentType,
-        role: configMember?.role ?? metaMember?.role,
-        workflow: configMember?.workflow ?? metaMember?.workflow,
-        isolation: configMember?.isolation ?? metaMember?.isolation,
+        color: configuredSettingsRecord?.color ?? getMemberColorByName(name),
+        agentType: configuredSettingsRecord?.agentType,
+        role: configuredSettingsRecord?.role,
+        workflow: configuredSettingsRecord?.workflow,
+        isolation: configuredSettingsRecord?.isolation,
         providerId: effectiveProviderId,
         providerBackendId,
         model:
-          launchMember?.model ??
-          configMember?.model ??
-          metaMember?.model ??
-          (memberIsLead ? options?.leadRuntimeSettings?.model : undefined),
+          memberIsLead && options?.leadRuntimeSettings?.model !== undefined
+            ? options.leadRuntimeSettings.model
+            : authoritativeSettingsRecord?.model,
         effort:
-          launchMember?.effort ??
-          configMember?.effort ??
-          metaMember?.effort ??
-          (memberIsLead ? options?.leadRuntimeSettings?.effort : undefined),
-        mcpPolicy: configMember?.mcpPolicy ?? metaMember?.mcpPolicy,
+          memberIsLead && options?.leadRuntimeSettings?.effort !== undefined
+            ? options.leadRuntimeSettings.effort
+            : authoritativeSettingsRecord?.effort,
+        runtimeSelectionProvenance: configuredSettingsRecord?.runtimeSelectionProvenance,
+        mcpPolicy: configuredSettingsRecord?.mcpPolicy,
         selectedFastMode:
-          launchMember?.selectedFastMode ??
-          configMember?.fastMode ??
-          metaMember?.fastMode ??
-          (effectiveProviderId === options?.leadProviderId
+          (runBoundLaunchMember
+            ? runBoundLaunchMember.selectedFastMode
+            : (metaMember?.fastMode ?? configMember?.fastMode)) ??
+          (!authoritativeSettingsRecord && effectiveProviderId === options?.leadProviderId
             ? (options?.leadFastMode ?? undefined)
             : undefined),
-        configuredRuntimeSettings: {
-          providerId: configMember?.providerId ?? metaMember?.providerId,
-          providerBackendId:
-            configMember?.configuredProviderBackendId ?? metaMember?.configuredProviderBackendId,
-          model: configMember?.model ?? metaMember?.model,
-          effort: configMember?.effort ?? metaMember?.effort,
-          fastMode: configMember?.fastMode ?? metaMember?.fastMode,
-        },
+        configuredRuntimeSettings:
+          memberIsLead && options?.leadRuntimeSettings?.configuredRuntimeSettings
+            ? options.leadRuntimeSettings.configuredRuntimeSettings
+            : {
+                providerId: configuredSettingsRecord?.providerId,
+                providerBackendId: configuredSettingsRecord?.configuredProviderBackendId,
+                model:
+                  memberIsLead && options?.leadRuntimeSettings?.model !== undefined
+                    ? options.leadRuntimeSettings.model
+                    : configuredSettingsRecord?.model,
+                effort:
+                  memberIsLead && options?.leadRuntimeSettings?.effort !== undefined
+                    ? options.leadRuntimeSettings.effort
+                    : configuredSettingsRecord?.effort,
+                fastMode: configuredSettingsRecord?.fastMode,
+              },
         resolvedFastMode:
-          typeof launchMember?.resolvedFastMode === 'boolean'
-            ? launchMember.resolvedFastMode
+          typeof runBoundLaunchMember?.resolvedFastMode === 'boolean'
+            ? runBoundLaunchMember.resolvedFastMode
             : effectiveProviderId === options?.leadProviderId
               ? (options?.leadRuntimeSettings?.resolvedFastMode ??
                 options?.leadResolvedFastMode ??
                 undefined)
               : undefined,
-        laneId: launchMember?.laneId ?? plannedLane.laneId,
-        laneKind: launchMember?.laneKind ?? plannedLane.laneKind,
-        laneOwnerProviderId: launchMember?.laneOwnerProviderId ?? plannedLane.laneOwnerProviderId,
-        cwd: configMember?.cwd ?? metaMember?.cwd,
-        removedAt: configMember?.removedAt ?? metaMember?.removedAt,
+        laneId: runBoundLaunchMember?.laneId ?? plannedLane.laneId,
+        laneKind: runBoundLaunchMember?.laneKind ?? plannedLane.laneKind,
+        laneOwnerProviderId:
+          runBoundLaunchMember?.laneOwnerProviderId ?? plannedLane.laneOwnerProviderId,
+        cwd: configuredSettingsRecord?.cwd,
+        removedAt: metaMember?.removedAt ?? configMember?.removedAt,
       });
     }
 

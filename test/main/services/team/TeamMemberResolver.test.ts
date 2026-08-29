@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { TeamMemberResolver } from '../../../../src/main/services/team/TeamMemberResolver';
 
-import type { TeamConfig, TeamTask, TeamTaskWithKanban } from '../../../../src/shared/types/team';
+import type {
+  PersistedTeamLaunchSnapshot,
+  TeamConfig,
+  TeamTask,
+  TeamTaskWithKanban,
+} from '../../../../src/shared/types/team';
 
 describe('TeamMemberResolver', () => {
   it('builds roster from config + meta + inbox only', () => {
@@ -165,7 +170,7 @@ describe('TeamMemberResolver', () => {
     ]);
   });
 
-  it('keeps resolved defaults visible for a materialized lead without making them configured', () => {
+  it('prefers dedicated lead metadata over a legacy materialized lead row', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {
       name: 'Team',
@@ -192,17 +197,17 @@ describe('TeamMemberResolver', () => {
 
     expect(members.find((member) => member.name === 'team-lead')).toMatchObject({
       model: 'gpt-default',
-      effort: 'medium',
+      effort: 'high',
       configuredRuntimeSettings: {
-        model: undefined,
-        effort: 'medium',
+        model: 'gpt-default',
+        effort: 'high',
       },
     });
     expect(members.find((member) => member.name === 'alice')?.model).toBeUndefined();
     expect(members.find((member) => member.name === 'alice')?.effort).toBeUndefined();
   });
 
-  it('uses lead runtime fallbacks for a role-only legacy lead but preserves explicit values', () => {
+  it('prefers dedicated lead metadata over explicit values in a role-only legacy row', () => {
     const resolver = new TeamMemberResolver();
     const config: TeamConfig = {
       name: 'Team',
@@ -227,11 +232,11 @@ describe('TeamMemberResolver', () => {
 
     expect(members[0]).toMatchObject({
       name: 'captain',
-      model: 'gpt-explicit',
+      model: 'gpt-default',
       effort: 'high',
       configuredRuntimeSettings: {
-        model: 'gpt-explicit',
-        effort: undefined,
+        model: 'gpt-default',
+        effort: 'high',
       },
     });
   });
@@ -545,5 +550,192 @@ describe('TeamMemberResolver', () => {
     const members = resolver.resolveMembers(config, [], [], tasks);
     const bob = members.find((m) => m.name === 'bob');
     expect(bob?.currentTaskId).toBeNull();
+  });
+
+  it('prefers current members metadata over unversioned config backend provenance', () => {
+    const resolver = new TeamMemberResolver();
+    const members = resolver.resolveMembers(
+      {
+        name: 'Team',
+        members: [
+          {
+            name: 'builder',
+            providerId: 'codex',
+            providerBackendId: 'api',
+          },
+        ],
+      },
+      [{ name: 'builder', providerId: 'codex', providerBackendId: 'adapter' }],
+      [],
+      []
+    );
+
+    expect(members).toMatchObject([
+      {
+        name: 'builder',
+        providerId: 'codex',
+        providerBackendId: 'adapter',
+        configuredRuntimeSettings: {
+          providerId: 'codex',
+          providerBackendId: 'adapter',
+        },
+      },
+    ]);
+  });
+
+  it.each([
+    {
+      label: 'Gemini metadata over stale Codex/API records',
+      meta: { name: 'builder', providerId: 'gemini' as const },
+      config: {
+        name: 'builder',
+        providerId: 'codex' as const,
+        providerBackendId: 'api' as const,
+        model: 'stale-codex',
+      },
+      launch: {
+        name: 'builder',
+        providerId: 'codex' as const,
+        providerBackendId: 'api' as const,
+        model: 'stale-launch-codex',
+      },
+      expectedProviderId: 'gemini',
+    },
+    {
+      label: 'Codex metadata over stale Gemini/API records',
+      meta: { name: 'builder', providerId: 'codex' as const },
+      config: {
+        name: 'builder',
+        providerId: 'gemini' as const,
+        providerBackendId: 'api' as const,
+        model: 'stale-gemini',
+      },
+      launch: {
+        name: 'builder',
+        providerId: 'gemini' as const,
+        providerBackendId: 'api' as const,
+        model: 'stale-launch-gemini',
+      },
+      expectedProviderId: 'codex',
+    },
+  ])(
+    'keeps $label record-atomic when the backend is absent',
+    ({ meta, config, launch, expectedProviderId }) => {
+      const members = new TeamMemberResolver().resolveMembers(
+        { name: 'Team', members: [config] },
+        [meta],
+        [],
+        [],
+        {
+          launchSnapshot: {
+            version: 3,
+            teamName: 'Team',
+            expectedMembers: ['builder'],
+            launchPhase: 'active',
+            members: { builder: launch },
+            updatedAt: '2026-08-25T00:00:00.000Z',
+          } as unknown as PersistedTeamLaunchSnapshot,
+        }
+      );
+
+      expect(members).toMatchObject([
+        {
+          name: 'builder',
+          providerId: expectedProviderId,
+          providerBackendId: undefined,
+          model: undefined,
+          configuredRuntimeSettings: {
+            providerId: expectedProviderId,
+            providerBackendId: undefined,
+            model: undefined,
+          },
+        },
+      ]);
+    }
+  );
+
+  it('keeps current run A through desired roster edit B and app-restart recovery', () => {
+    const launchSnapshot = {
+      version: 3,
+      teamName: 'Team',
+      runtimeRunId: 'run-a',
+      expectedMembers: ['builder'],
+      launchPhase: 'active',
+      members: {
+        builder: {
+          name: 'builder',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'runtime-model-a',
+          effort: 'high',
+          selectedFastMode: 'off',
+          runtimeRunId: 'run-a',
+        },
+      },
+      updatedAt: '2026-08-25T00:00:00.000Z',
+    } as unknown as PersistedTeamLaunchSnapshot;
+    const config: TeamConfig = {
+      name: 'Team',
+      members: [
+        {
+          name: 'builder',
+          providerId: 'gemini',
+          providerBackendId: 'api',
+          model: 'desired-model-b',
+          effort: 'low',
+          fastMode: 'on',
+        },
+      ],
+    };
+    const options = { launchSnapshot, activeRuntimeRunId: 'run-a' };
+
+    const beforeRestart = new TeamMemberResolver().resolveMembers(config, [], [], [], options)[0];
+    const afterAppRestart = new TeamMemberResolver().resolveMembers(config, [], [], [], options)[0];
+
+    for (const member of [beforeRestart, afterAppRestart]) {
+      expect(member).toMatchObject({
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'runtime-model-a',
+        effort: 'high',
+        selectedFastMode: 'off',
+        configuredRuntimeSettings: {
+          providerId: 'gemini',
+          providerBackendId: 'api',
+          model: 'desired-model-b',
+          effort: 'low',
+          fastMode: 'on',
+        },
+      });
+    }
+  });
+
+  it('rejects launch identity from a run other than the active run', () => {
+    const members = new TeamMemberResolver().resolveMembers(
+      { name: 'Team', members: [{ name: 'builder', providerId: 'gemini', model: 'desired-b' }] },
+      [],
+      [],
+      [],
+      {
+        activeRuntimeRunId: 'run-b',
+        launchSnapshot: {
+          version: 3,
+          teamName: 'Team',
+          expectedMembers: ['builder'],
+          launchPhase: 'active',
+          members: {
+            builder: {
+              name: 'builder',
+              providerId: 'codex',
+              model: 'stale-a',
+              runtimeRunId: 'run-a',
+            },
+          },
+          updatedAt: '2026-08-25T00:00:00.000Z',
+        } as unknown as PersistedTeamLaunchSnapshot,
+      }
+    );
+
+    expect(members[0]).toMatchObject({ providerId: 'gemini', model: 'desired-b' });
   });
 });

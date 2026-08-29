@@ -1,12 +1,62 @@
-import { isTeamProviderModelVerificationPending } from '@renderer/utils/teamModelAvailability';
-import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
+import {
+  getOpenCodeOpenAiRouteAuthUnavailableReason,
+  isTeamProviderModelVerificationPending,
+} from '@renderer/utils/teamModelAvailability';
+
+import {
+  isAuthoritativeFreeOpenCodeLaunchRoute,
+  isAuthoritativeProviderLaunchStatus,
+} from './provisioningLaunchAuthorization';
 
 import type { TranslationNamespace } from '@features/localization';
-import type { CliProviderStatus, OpenCodeRuntimeStatus } from '@shared/types';
+import type { CliProviderStatus, OpenCodeRuntimeStatus, TeamProviderId } from '@shared/types';
 import type { TFunction } from 'i18next';
 
 export type OpenCodeRuntimeStatusUiState = 'checking' | 'missing' | 'retry' | 'ready';
 type TeamTranslator = TFunction<TranslationNamespace, undefined>;
+
+export const OPENCODE_AUTHORITATIVE_FREE_ROUTE_REQUIRED_REASON =
+  'A current authoritative free OpenCode route is required without provider authentication.';
+
+export function getUnauthenticatedOpenCodeRouteUnavailableReason(
+  providerStatus: CliProviderStatus | null | undefined,
+  model: string
+): string | null {
+  if (providerStatus?.providerId !== 'opencode' || providerStatus.authenticated !== false) {
+    return null;
+  }
+  return isAuthoritativeProviderLaunchStatus(providerStatus, false, Date.now(), [
+    { model, providerBackendId: 'opencode-cli' },
+  ])
+    ? null
+    : OPENCODE_AUTHORITATIVE_FREE_ROUTE_REQUIRED_REASON;
+}
+
+export function getOpenCodeRouteUnavailableReasons(input: {
+  providerStatus: CliProviderStatus | null | undefined;
+  providerId: TeamProviderId;
+  model: string;
+  explicitReason: string | null;
+  runtimeReason: string | null;
+}): { unavailableReason: string | null; unauthenticatedReason: string | null } {
+  if (!input.model) return { unavailableReason: null, unauthenticatedReason: null };
+  const unauthenticatedReason = getUnauthenticatedOpenCodeRouteUnavailableReason(
+    input.providerStatus,
+    input.model
+  );
+  return {
+    unavailableReason:
+      input.explicitReason ??
+      unauthenticatedReason ??
+      getOpenCodeOpenAiRouteAuthUnavailableReason(
+        input.providerId,
+        input.model,
+        input.providerStatus
+      ) ??
+      input.runtimeReason,
+    unauthenticatedReason,
+  };
+}
 
 export function getOpenCodeRuntimeStatusUiState({
   providerStatus,
@@ -67,22 +117,14 @@ export function hasFreeOpenCodeModelRoute(
   providerStatus: CliProviderStatus | null | undefined
 ): boolean {
   if (providerStatus?.providerId !== 'opencode') return false;
-  if (providerStatus.models.some((modelId) => isOpenCodeModelExplicitlyFree({ modelId }))) {
-    return true;
-  }
   return (
-    providerStatus.modelCatalog?.models.some((model) => {
-      const route = model.metadata?.opencode;
-      return isOpenCodeModelExplicitlyFree({
-        modelId: model.launchModel,
-        catalogId: model.id,
-        providerId: route?.providerId,
-        routeKind: route?.routeKind,
-        accessKind: route?.accessKind,
-        free: model.metadata?.free,
-        badgeLabel: model.badgeLabel,
-      });
-    }) ?? false
+    providerStatus.modelCatalog?.models.some(
+      (model) =>
+        isAuthoritativeFreeOpenCodeLaunchRoute(providerStatus, model.launchModel) &&
+        isAuthoritativeProviderLaunchStatus(providerStatus, false, Date.now(), [
+          { model: model.launchModel, providerBackendId: 'opencode-cli' },
+        ])
+    ) ?? false
   );
 }
 

@@ -123,6 +123,24 @@ function request(members: TeamCreateRequest['members']): TeamCreateRequest {
   } as TeamCreateRequest;
 }
 
+function fakeRosterLaunchBinding(): NonNullable<TeamCreateRequest['rosterLaunchBinding']> {
+  return {
+    transactionId: '11111111-1111-4111-8111-111111111111',
+    teamName: 'open-code-team',
+    rosterFingerprint: 'roster-fingerprint',
+    rosterRevision: 'roster-revision',
+    launchCommandId: '11111111-1111-4111-8111-111111111111',
+    executionProof: {
+      authorityId: 'authority',
+      generation: 1,
+      completedAt: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2026-01-01T00:01:00.000Z',
+      requestDigest: 'request-digest',
+    },
+    launchRequestFingerprint: 'launch-request',
+  };
+}
+
 function lanePlan(input: {
   primaryMembers: OpenCodeMember[];
   sideMembers?: OpenCodeMember[];
@@ -678,11 +696,13 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     const cleanupRun = vi.fn(() => {
       calls.push('cleanupRun');
     });
+    const boundRequest = request([alice, bob]);
+    boundRequest.rosterLaunchBinding = fakeRosterLaunchBinding();
 
     const result = await runOpenCodeWorktreeRootAggregateLaunch(
       {
         adapter: {} as TeamLaunchRuntimeAdapter,
-        request: request([alice, bob]),
+        request: boundRequest,
         members: [alice, bob],
         lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
         prompt: 'launch',
@@ -714,7 +734,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       }
     );
 
-    expect(result).toEqual({ runId: 'run-open-code' });
+    expect(result).toEqual({ runId: 'run-open-code', launchStatus: 'started' });
     expect(stopOwnedPrimary).toHaveBeenCalledTimes(1);
     expect(stopOwnedPrimary).toHaveBeenCalledWith('open-code-team', 'run-open-code');
     expect(stopOwnedSecondaries).not.toHaveBeenCalled();
@@ -805,7 +825,9 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
           runs.set(runId, run);
         },
         getRun: (runId) => runs.get(runId),
-        launchOpenCodeAggregatePrimaryLane: async () => {
+        launchOpenCodeAggregatePrimaryLane: async (input) => {
+          await input.onInvocationBoundary?.();
+          input.onInvocationDispatched?.();
           throw new Error('primary launch failed after process spawn');
         },
       }
@@ -1126,8 +1148,10 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
         },
         {
           ...baseAggregatePorts(calls),
-          launchOpenCodeAggregatePrimaryLane: async () => {
+          launchOpenCodeAggregatePrimaryLane: async (input) => {
             calls.push('launchPrimary');
+            await input.onInvocationBoundary?.();
+            input.onInvocationDispatched?.();
             throw new Error('primary launch failed');
           },
         }
@@ -1146,6 +1170,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'invalidateRuntimeSnapshotCaches',
       'setProgress:spawning',
       'launchPrimary',
+      'setRuntimeRun',
       'setRuntimeRun',
       'setProgress:disconnected',
       'invalidateRuntimeSnapshotCaches',
@@ -1334,6 +1359,8 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
         getProvisioningRun: () => (superseded ? undefined : 'run-open-code'),
         launchOpenCodeAggregatePrimaryLane: async (input) => {
           calls.push('launchPrimary');
+          await input.onInvocationBoundary?.();
+          input.onInvocationDispatched?.();
           superseded = true;
           expect(input.assertStillCurrentAfterPersistence).toBeTypeOf('function');
           input.assertStillCurrentAfterPersistence?.();
@@ -1411,6 +1438,8 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
         getRuntimeAdapterRun: () => runtimeOwnership.current,
         launchOpenCodeAggregatePrimaryLane: async (input) => {
           calls.push('launchPrimary');
+          await input.onInvocationBoundary?.();
+          input.onInvocationDispatched?.();
           persistenceStarted.resolve();
           await persistenceGate.promise;
           input.assertStillCurrentAfterPersistence?.();

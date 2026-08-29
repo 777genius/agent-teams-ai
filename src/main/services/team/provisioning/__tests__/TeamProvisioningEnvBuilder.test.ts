@@ -62,6 +62,68 @@ function createPorts(
 }
 
 describe('TeamProvisioningEnvBuilder', () => {
+  it('binds helper credentials to stable keyed identities without retaining raw material', async () => {
+    const materializeAnthropicTeamApiKeyHelper = vi.fn(async () => ({
+      teamName: 'demo',
+      directory: '/private/helper',
+      helperPath: '/private/helper/helper.sh',
+      keyPath: '/private/helper/key',
+      settingsPath: '/private/helper/settings.json',
+      settingsObject: { apiKeyHelper: "'/private/helper/helper.sh'" },
+      settingsArgs: ['--settings', '/private/helper/settings.json'],
+      envPatch: { CLAUDE_TEAM_ANTHROPIC_AUTH_MODE: 'api_key_helper' },
+    }));
+    const buildForCredential = async (apiKey: string, credentialIdentityKey: string) =>
+      buildProvisioningEnv({
+        providerId: 'anthropic',
+        options: {
+          teamRuntimeAuth: {
+            teamName: 'demo',
+            authMaterialId: 'run-1',
+            allowAnthropicApiKeyHelper: true,
+            credentialIdentityKey,
+          },
+        },
+        ports: createPorts({
+          providerConnectionService: {
+            augmentConfiguredConnectionEnv: vi.fn(async (env) => env),
+            getConfiguredAnthropicApiKeyForTeamRuntime: vi.fn(async () => apiKey),
+          },
+          materializeAnthropicTeamApiKeyHelper,
+          verifyAnthropicTeamApiKeyHelperMaterial: vi.fn(async () => undefined),
+        }),
+      });
+
+    const apiKeyA = 'anthropic-adversarial-key-A';
+    const apiKeyB = 'anthropic-adversarial-key-B';
+    const continuationSecretA = 'private-continuation-key-A';
+    const continuationSecretB = 'private-continuation-key-B';
+    const resultA = await buildForCredential(apiKeyA, continuationSecretA);
+    const repeatedA = await buildForCredential(apiKeyA, continuationSecretA);
+    const differentApiKey = await buildForCredential(apiKeyB, continuationSecretA);
+    const differentSecret = await buildForCredential(apiKeyA, continuationSecretB);
+    const serializedResults = JSON.stringify([
+      resultA,
+      repeatedA,
+      differentApiKey,
+      differentSecret,
+    ]);
+
+    expect(resultA.anthropicCredentialIdentity).toMatch(/^hmac-sha256:[a-f0-9]{64}$/);
+    expect(repeatedA.anthropicCredentialIdentity).toBe(resultA.anthropicCredentialIdentity);
+    expect(differentApiKey.anthropicCredentialIdentity).not.toBe(
+      resultA.anthropicCredentialIdentity
+    );
+    expect(differentSecret.anthropicCredentialIdentity).not.toBe(
+      resultA.anthropicCredentialIdentity
+    );
+    expect(resultA.env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(serializedResults).not.toContain(apiKeyA);
+    expect(serializedResults).not.toContain(apiKeyB);
+    expect(serializedResults).not.toContain(continuationSecretA);
+    expect(serializedResults).not.toContain(continuationSecretB);
+  });
+
   it('returns codex runtime auth source for Codex provider env', async () => {
     const ports = createPorts({
       buildRuntimeTurnSettledEnvironment: vi.fn(async () => ({

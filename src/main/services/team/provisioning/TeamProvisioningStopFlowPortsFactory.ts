@@ -5,10 +5,14 @@ import {
 } from './TeamProvisioningOpenCodeRuntimeStopFlow';
 import { killTeamProcessAndWait as killTeamProcessAndWaitDefault } from './TeamProvisioningRunProgress';
 import {
+  stopAuthorizedTeamFlow,
   stopTeamFlow,
   type TeamProvisioningStopRun,
   type TeamProvisioningStopTeamPorts,
 } from './TeamProvisioningStopFlow';
+
+import type { LaunchStateWriteOptions } from './TeamProvisioningLaunchStateStoreBoundary';
+import type { PersistedTeamLaunchMemberState, PersistedTeamLaunchSnapshot } from '@shared/types';
 
 type RuntimeAdapterRunMap<TRun extends TeamProvisioningStopRun> =
   OpenCodeRuntimeStopFlowPorts['runtimeAdapterRunByTeam'] &
@@ -24,12 +28,17 @@ type PersistentRuntimeCleanupPort<TRun extends TeamProvisioningStopRun> = Pick<
 >;
 
 export interface TeamProvisioningStopFlowFactoryDeps<TRun extends TeamProvisioningStopRun> {
+  preflightMetadataMutation(teamName: string): Promise<void>;
   getTeamsBasePath(): string;
   getSecondaryRuntimeRuns: OpenCodeRuntimeStopFlowPorts['getSecondaryRuntimeRuns'];
   stoppingSecondaryRuntimeTeams: OpenCodeRuntimeStopFlowPorts['stoppingSecondaryRuntimeTeams'];
   getOpenCodeRuntimeAdapter: OpenCodeRuntimeStopFlowPorts['getOpenCodeRuntimeAdapter'];
   readLaunchState: OpenCodeRuntimeStopFlowPorts['readLaunchState'];
-  writeLaunchStateSnapshot: OpenCodeRuntimeStopFlowPorts['writeLaunchStateSnapshot'];
+  writeLaunchStateSnapshot(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: LaunchStateWriteOptions
+  ): Promise<PersistedTeamLaunchSnapshot>;
   readPersistedTeamProjectPath: OpenCodeRuntimeStopFlowPorts['readPersistedTeamProjectPath'];
   clearOpenCodeRuntimeLaneStorage: OpenCodeRuntimeStopFlowPorts['clearOpenCodeRuntimeLaneStorage'];
   deleteSecondaryRuntimeRun: OpenCodeRuntimeStopFlowPorts['deleteSecondaryRuntimeRun'];
@@ -44,6 +53,7 @@ export interface TeamProvisioningStopFlowFactoryDeps<TRun extends TeamProvisioni
   runs: TeamProvisioningStopTeamPorts<TRun>['runs'];
   provisioningRunByTeam: TeamProvisioningStopTeamPorts<TRun>['provisioningRunByTeam'];
   invalidateRuntimeSnapshotCaches: OpenCodeRuntimeStopFlowPorts['invalidateRuntimeSnapshotCaches'];
+  invalidateMemberSpawnStatusesCache(teamName: string): void;
   pauseActiveIntervalsForTeam: TeamProvisioningStopTeamPorts<TRun>['pauseActiveIntervalsForTeam'];
   persistentRuntimeCleanup: PersistentRuntimeCleanupPort<TRun>;
   openCodeRuntimeDeliveryAdvisory: TeamProvisioningStopTeamPorts<TRun>['openCodeRuntimeDeliveryAdvisory'];
@@ -61,9 +71,12 @@ export interface TeamProvisioningStopFlowFactoryDeps<TRun extends TeamProvisioni
 }
 
 export interface TeamProvisioningStopFlowBoundary {
-  stopTeam(teamName: string): Promise<void>;
+  preflightMetadataMutation(teamName: string): Promise<void>;
+  authorizeStopTeam(teamName: string, onAuthorized: () => void): Promise<void>;
+  stopTeam(teamName: string, onAuthorized?: () => void): Promise<void>;
+  stopAuthorizedTeam(teamName: string): Promise<void>;
   stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
-  stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<void>;
+  stopOpenCodeRuntimeAdapterTeam(teamName: string, runId: string): Promise<boolean>;
 }
 
 export interface TeamProvisioningStopFlowServiceHost<TRun extends TeamProvisioningStopRun> {
@@ -74,7 +87,10 @@ export interface TeamProvisioningStopFlowServiceHost<TRun extends TeamProvisioni
   };
   launchStateStore: {
     read: TeamProvisioningStopFlowFactoryDeps<TRun>['readLaunchState'];
+    assertMutable(teamName: string): Promise<void>;
   };
+  teamMetaStore: { assertMutable(teamName: string): Promise<void> };
+  membersMetaStore: { assertMutable(teamName: string): Promise<void> };
   writeLaunchStateSnapshot: TeamProvisioningStopFlowFactoryDeps<TRun>['writeLaunchStateSnapshot'];
   readPersistedTeamProjectPath: TeamProvisioningStopFlowFactoryDeps<TRun>['readPersistedTeamProjectPath'];
   deleteSecondaryRuntimeRun: TeamProvisioningStopFlowFactoryDeps<TRun>['deleteSecondaryRuntimeRun'];
@@ -94,6 +110,9 @@ export interface TeamProvisioningStopFlowServiceHost<TRun extends TeamProvisioni
   runs: TeamProvisioningStopFlowFactoryDeps<TRun>['runs'];
   provisioningRunByTeam: TeamProvisioningStopFlowFactoryDeps<TRun>['provisioningRunByTeam'];
   invalidateRuntimeSnapshotCaches: TeamProvisioningStopFlowFactoryDeps<TRun>['invalidateRuntimeSnapshotCaches'];
+  runtimeSnapshotCacheBoundary: {
+    invalidateMemberSpawnStatusesCache: TeamProvisioningStopFlowFactoryDeps<TRun>['invalidateMemberSpawnStatusesCache'];
+  };
   taskActivityIntervalService: {
     pauseActiveIntervalsForTeam: TeamProvisioningStopFlowFactoryDeps<TRun>['pauseActiveIntervalsForTeam'];
   };
@@ -124,13 +143,20 @@ export function createTeamProvisioningStopFlowDepsFromService<TRun extends TeamP
   options: TeamProvisioningStopFlowServiceHostOptions<TRun>
 ): TeamProvisioningStopFlowFactoryDeps<TRun> {
   return {
+    preflightMetadataMutation: async (teamName) => {
+      await Promise.all([
+        service.launchStateStore.assertMutable(teamName),
+        service.teamMetaStore.assertMutable(teamName),
+        service.membersMetaStore.assertMutable(teamName),
+      ]);
+    },
     getTeamsBasePath: options.getTeamsBasePath,
     getSecondaryRuntimeRuns: (teamName) => service.getSecondaryRuntimeRuns(teamName),
     stoppingSecondaryRuntimeTeams: service.stoppingSecondaryRuntimeTeams,
     getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => service.launchStateStore.read(teamName),
-    writeLaunchStateSnapshot: (teamName, snapshot) =>
-      service.writeLaunchStateSnapshot(teamName, snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot, writeOptions) =>
+      service.writeLaunchStateSnapshot(teamName, snapshot, writeOptions),
     readPersistedTeamProjectPath: (teamName) => service.readPersistedTeamProjectPath(teamName),
     clearOpenCodeRuntimeLaneStorage: options.clearOpenCodeRuntimeLaneStorage,
     deleteSecondaryRuntimeRun: (teamName, laneId) =>
@@ -149,6 +175,8 @@ export function createTeamProvisioningStopFlowDepsFromService<TRun extends TeamP
     provisioningRunByTeam: service.provisioningRunByTeam,
     invalidateRuntimeSnapshotCaches: (teamName) =>
       service.invalidateRuntimeSnapshotCaches(teamName),
+    invalidateMemberSpawnStatusesCache: (teamName) =>
+      service.runtimeSnapshotCacheBoundary.invalidateMemberSpawnStatusesCache(teamName),
     pauseActiveIntervalsForTeam: (teamName) =>
       service.taskActivityIntervalService.pauseActiveIntervalsForTeam(teamName),
     persistentRuntimeCleanup: service.persistentRuntimeCleanup,
@@ -206,6 +234,7 @@ export function createTeamProvisioningStopTeamPortsFromDeps<TRun extends TeamPro
   deps: TeamProvisioningStopFlowFactoryDeps<TRun>
 ): TeamProvisioningStopTeamPorts<TRun> {
   return {
+    preflightMetadataMutation: (teamName) => deps.preflightMetadataMutation(teamName),
     invalidateRuntimeSnapshotCaches: (teamName) => deps.invalidateRuntimeSnapshotCaches(teamName),
     pauseActiveIntervalsForTeam: (teamName) => deps.pauseActiveIntervalsForTeam(teamName),
     stopPersistentTeamMembers: (teamName) =>
@@ -237,6 +266,100 @@ export function createTeamProvisioningStopTeamPortsFromDeps<TRun extends TeamPro
     killTeamProcess: (child) => deps.killTeamProcess(child),
     killTeamProcessAndWait: (child) => deps.killTeamProcessAndWait(child),
     updateProgress: (run, state, message) => deps.updateProgress(run, state, message),
+    persistStoppedLaunchState: async (teamName, stoppedRunId) => {
+      const snapshot = await deps.readLaunchState(teamName);
+      const stoppedAt = deps.nowIso();
+      const durableSnapshot: PersistedTeamLaunchSnapshot = snapshot ?? {
+        version: 3,
+        teamName,
+        updatedAt: stoppedAt,
+        launchPhase: 'reconciled',
+        expectedMembers: [],
+        members: {},
+        summary: {
+          confirmedCount: 0,
+          pendingCount: 0,
+          failedCount: 0,
+          skippedCount: 0,
+          runtimeAlivePendingCount: 0,
+          shellOnlyPendingCount: 0,
+          runtimeProcessPendingCount: 0,
+          runtimeCandidatePendingCount: 0,
+          noRuntimePendingCount: 0,
+          permissionPendingCount: 0,
+        },
+        teamLaunchState: 'partial_pending',
+      };
+      const members = Object.fromEntries(
+        Array.from(
+          new Set([...durableSnapshot.expectedMembers, ...Object.keys(durableSnapshot.members)])
+        ).map((memberName) => {
+          const member = durableSnapshot.members[memberName];
+          const {
+            appManagedBootstrapCandidate: _appManagedBootstrapCandidate,
+            bootstrapEvidenceSource: _bootstrapEvidenceSource,
+            bootstrapMode: _bootstrapMode,
+            bootstrapStalled: _bootstrapStalled,
+            pendingPermissionRequestIds: _pendingPermissionRequestIds,
+            runtimeDiagnostic: _runtimeDiagnostic,
+            runtimeDiagnosticSeverity: _runtimeDiagnosticSeverity,
+            runtimeLastSeenAt: _runtimeLastSeenAt,
+            runtimePid: _runtimePid,
+            runtimeRunId: _runtimeRunId,
+            runtimeSessionId: _runtimeSessionId,
+            ...identity
+          } = member ?? ({} as PersistedTeamLaunchMemberState);
+          const stopped: PersistedTeamLaunchMemberState = {
+            ...identity,
+            name: member?.name ?? memberName,
+            launchState:
+              member?.launchState === 'skipped_for_launch' ? 'skipped_for_launch' : 'starting',
+            agentToolAccepted: false,
+            runtimeAlive: false,
+            bootstrapConfirmed: false,
+            hardFailure: false,
+            lastEvaluatedAt: stoppedAt,
+            diagnostics: [
+              ...(member?.diagnostics ?? []),
+              'Runtime stopped by explicit user action',
+            ],
+          };
+          return [memberName, stopped];
+        })
+      );
+      const skippedCount = Object.values(members).filter(
+        (member) => member.launchState === 'skipped_for_launch'
+      ).length;
+      const pendingCount = Math.max(0, durableSnapshot.expectedMembers.length - skippedCount);
+      await deps.writeLaunchStateSnapshot(
+        teamName,
+        {
+          ...durableSnapshot,
+          updatedAt: stoppedAt,
+          stoppedAt,
+          ...(stoppedRunId ? { stoppedRunId } : {}),
+          launchPhase: 'reconciled',
+          members,
+          summary: {
+            confirmedCount: 0,
+            pendingCount,
+            failedCount: 0,
+            skippedCount,
+            runtimeAlivePendingCount: 0,
+            shellOnlyPendingCount: 0,
+            runtimeProcessPendingCount: 0,
+            runtimeCandidatePendingCount: 0,
+            noRuntimePendingCount: pendingCount,
+            permissionPendingCount: 0,
+          },
+          teamLaunchState:
+            skippedCount > 0 && pendingCount === 0 ? 'partial_skipped' : 'partial_pending',
+        },
+        stoppedRunId ? { runId: stoppedRunId } : undefined
+      );
+      deps.invalidateRuntimeSnapshotCaches(teamName);
+      deps.invalidateMemberSpawnStatusesCache(teamName);
+    },
     cleanupRun: (run) => deps.cleanupRun(run),
     logger: deps.logger,
   };
@@ -246,8 +369,15 @@ export function createTeamProvisioningStopFlowBoundary<TRun extends TeamProvisio
   deps: TeamProvisioningStopFlowFactoryDeps<TRun>
 ): TeamProvisioningStopFlowBoundary {
   return {
-    stopTeam: (teamName) =>
-      stopTeamFlow(teamName, createTeamProvisioningStopTeamPortsFromDeps(deps)),
+    preflightMetadataMutation: (teamName) => deps.preflightMetadataMutation(teamName),
+    authorizeStopTeam: async (teamName, onAuthorized) => {
+      await deps.preflightMetadataMutation(teamName);
+      onAuthorized();
+    },
+    stopTeam: (teamName, onAuthorized) =>
+      stopTeamFlow(teamName, createTeamProvisioningStopTeamPortsFromDeps(deps), onAuthorized),
+    stopAuthorizedTeam: (teamName) =>
+      stopAuthorizedTeamFlow(teamName, createTeamProvisioningStopTeamPortsFromDeps(deps)),
     stopMixedSecondaryRuntimeLanes: (teamName) =>
       stopMixedSecondaryRuntimeLanes(teamName, createOpenCodeRuntimeStopFlowPortsFromDeps(deps)),
     stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>

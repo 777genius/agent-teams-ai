@@ -94,6 +94,7 @@ import {
   type TeamProvisioningLeadInboxRelayCompatibilityFacade,
   type TeamProvisioningLeadInboxRelayCompatibilityServiceHost,
 } from './TeamProvisioningLeadInboxRelayCompatibilityFacade';
+import { TeamProvisioningMemberLifecycleController } from './TeamProvisioningMemberLifecycle';
 import {
   createTeamProvisioningMemberMcpLaunchConfigProvisionerFromService,
   TeamProvisioningMemberMcpLaunchConfigProvisioner,
@@ -189,6 +190,10 @@ import {
 } from './TeamProvisioningVerificationProbePortsFactory';
 
 import type { TeamRuntimeMemberLaunchEvidence } from '../runtime';
+import type { TeamProvisioningMemberLifecyclePublicFacade } from './TeamProvisioningMemberLifecycleCompatibilityFacade';
+import type { TeamProvisioningMemberLifecycleHost } from './TeamProvisioningMemberLifecycleHostPorts';
+import type { TeamProvisioningMemberLifecycleOperationUseCases } from './TeamProvisioningMemberLifecycleOperationUseCases';
+import type { TeamProvisioningMemberLifecycleServiceUseCases } from './TeamProvisioningMemberLifecycleServiceUseCases';
 import type { TeamProvisioningServiceCompositionDeps } from './TeamProvisioningServiceCompositionDeps';
 import type { TeamProviderId } from '@shared/types';
 
@@ -227,6 +232,12 @@ interface ServiceCompositionPorts {
   logOpenCodePromptDeliveryEvent: OpenCodePromptDeliveryWatchdogCoordinatorPorts['logPromptDeliveryEvent'];
 }
 
+export interface TeamProvisioningMemberLifecycleCompositionPorts {
+  memberLifecycleHost: TeamProvisioningMemberLifecycleHost;
+  memberLifecycleOperationUseCases: TeamProvisioningMemberLifecycleOperationUseCases;
+  memberLifecycleUseCases: TeamProvisioningMemberLifecycleServiceUseCases;
+}
+
 export interface TeamProvisioningServiceComposition {
   configFacade: TeamProvisioningConfigFacade;
   liveRuntimeMetadataPorts: TeamProvisioningRuntimeProjection['liveRuntimeMetadataPorts'];
@@ -259,70 +270,15 @@ export interface TeamProvisioningServiceComposition {
   transientRunState: TeamProvisioningTransientRunState;
   requestAdmissionBoundary: TeamProvisioningRequestAdmissionBoundary;
   openCodeRuntimeControlApi: OpenCodeRuntimeControlApi;
+  memberLifecycleController: TeamProvisioningMemberLifecycleController;
+  memberLifecycleFacade: TeamProvisioningMemberLifecyclePublicFacade;
 }
 
-export const TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS = [
-  'configFacade',
-  'liveRuntimeMetadataPorts',
-  'runtimeSnapshotFacade',
-  'openCodeRuntimeDeliveryBoundaryHost',
-  'launchStateStoreBoundary',
-  'persistenceReconcileFacade',
-  'launchStateCompatibilityBoundary',
-  'configTaskActivityBoundary',
-  'toolApprovalFacade',
-  'idlePromptInjectionBoundary',
-  'providerRuntime',
-  'providerRuntimeCompatibility',
-  'openCodeRuntimeRecoveryFacade',
-  'openCodePromptDeliveryWatchdogScheduler',
-  'compatibilityDelegation',
-  'outputRecoveryFacade',
-  'deterministicLaunchFlowBoundary',
-  'deterministicCreateSpawnFlowBoundary',
-  'verificationProbePorts',
-  'processExitPorts',
-  'prepareFacade',
-  'memberMcpLaunchConfigProvisioner',
-  'openCodeVisibleReplyProofService',
-  'openCodePromptDeliveryWatchdogCoordinator',
-  'bootstrapTranscriptFacade',
-  'bootstrapEvidenceFacade',
-  'leadInboxRelayFacade',
-  'cleanupRunPorts',
-  'transientRunState',
-  'requestAdmissionBoundary',
-  'openCodeRuntimeControlApi',
-] as const satisfies readonly (keyof TeamProvisioningServiceComposition)[];
-
-type MissingTeamProvisioningServiceCompositionKey = Exclude<
-  keyof TeamProvisioningServiceComposition,
-  (typeof TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS)[number]
->;
-
-type DuplicateTeamProvisioningServiceCompositionKey<
-  Keys extends readonly PropertyKey[],
-  Seen extends PropertyKey = never,
-> = Keys extends readonly [
-  infer Key extends PropertyKey,
-  ...infer RemainingKeys extends readonly PropertyKey[],
-]
-  ? Key extends Seen
-    ? Key
-    : DuplicateTeamProvisioningServiceCompositionKey<RemainingKeys, Seen | Key>
-  : never;
-
-export const TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_EXHAUSTIVE: [
-  MissingTeamProvisioningServiceCompositionKey,
-] extends [never]
-  ? true
-  : false = true;
-
-export const TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_UNIQUE: [
-  DuplicateTeamProvisioningServiceCompositionKey<typeof TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS>,
-] extends [never]
-  ? true
-  : false = true;
+export {
+  TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS,
+  TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_EXHAUSTIVE,
+  TEAM_PROVISIONING_SERVICE_COMPOSITION_KEYS_ARE_UNIQUE,
+} from './TeamProvisioningServiceCompositionKeys';
 
 type TeamProvisioningServiceCompositionInstallTarget = {
   -readonly [K in keyof TeamProvisioningServiceComposition]?: TeamProvisioningServiceComposition[K];
@@ -363,10 +319,12 @@ interface TeamProvisioningServiceCompositionHostAdapters {
   transientRunState: TeamProvisioningTransientRunStateServiceHost;
   requestAdmission: TeamProvisioningRequestAdmissionServiceHost;
   runtimeControl: TeamRuntimeControlCompatibilityServiceHost;
+  memberLifecycle: TeamProvisioningMemberLifecycleCompositionPorts;
 }
 
 function createTeamProvisioningServiceCompositionHostAdapters(
-  service: object
+  service: object,
+  memberLifecycle: TeamProvisioningMemberLifecycleCompositionPorts
 ): TeamProvisioningServiceCompositionHostAdapters {
   return {
     installTarget: service as TeamProvisioningServiceCompositionInstallTarget,
@@ -409,6 +367,7 @@ function createTeamProvisioningServiceCompositionHostAdapters(
     transientRunState: service as TeamProvisioningTransientRunStateServiceHost,
     requestAdmission: service as TeamProvisioningRequestAdmissionServiceHost,
     runtimeControl: service as TeamRuntimeControlCompatibilityServiceHost,
+    memberLifecycle,
   };
 }
 
@@ -425,9 +384,11 @@ function assignCompositionPart<K extends keyof TeamProvisioningServiceCompositio
 }
 
 export function createTeamProvisioningServiceComposition(
-  service: object
+  service: object,
+  memberLifecycle: TeamProvisioningMemberLifecycleCompositionPorts,
+  _options: Record<never, never> = {}
 ): TeamProvisioningServiceComposition {
-  const host = createTeamProvisioningServiceCompositionHostAdapters(service);
+  const host = createTeamProvisioningServiceCompositionHostAdapters(service, memberLifecycle);
   const servicePorts = host.ports;
   const deps = host.deps;
   const configFacade = new TeamProvisioningConfigFacade({
@@ -802,6 +763,16 @@ export function createTeamProvisioningServiceComposition(
     host.requestAdmission
   );
   assignCompositionPart(host.installTarget, 'requestAdmissionBoundary', requestAdmissionBoundary);
+  const memberLifecycleController = new TeamProvisioningMemberLifecycleController(
+    host.memberLifecycle.memberLifecycleHost,
+    host.memberLifecycle.memberLifecycleOperationUseCases,
+    {
+      restart: host.memberLifecycle.memberLifecycleUseCases,
+      openCodeRetry: host.memberLifecycle.memberLifecycleUseCases,
+    }
+  );
+  assignCompositionPart(host.installTarget, 'memberLifecycleController', memberLifecycleController);
+  assignCompositionPart(host.installTarget, 'memberLifecycleFacade', memberLifecycleController);
   const openCodeRuntimeControlApi = createTeamRuntimeControlCompatibilityApiFromService(
     host.runtimeControl
   );
@@ -839,5 +810,7 @@ export function createTeamProvisioningServiceComposition(
     transientRunState,
     requestAdmissionBoundary,
     openCodeRuntimeControlApi,
+    memberLifecycleController,
+    memberLifecycleFacade: memberLifecycleController,
   };
 }

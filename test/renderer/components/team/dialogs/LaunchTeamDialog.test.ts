@@ -29,6 +29,12 @@ const createTeamDraftMock = vi.hoisted(() => ({
         workflow: '',
         providerId: 'opencode',
         model: 'opencode/big-pickle',
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'explicit',
+          effort: 'inherited',
+        },
       },
       {
         id: 'member-codex',
@@ -38,6 +44,12 @@ const createTeamDraftMock = vi.hoisted(() => ({
         workflow: '',
         providerId: 'codex',
         model: 'gpt-5.5',
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'explicit',
+          effort: 'inherited',
+        },
       },
     ],
     setMembers: vi.fn(),
@@ -68,6 +80,9 @@ const storeState = {
   cliStatusLoading: false,
   cliProviderStatusLoading: {},
   cliProviderStatusByScope: {} as Record<string, any>,
+  cliProviderStatusLoadingByScope: {} as Record<string, boolean>,
+  cliProviderLaunchProofByScope: {} as Record<string, any>,
+  cliProviderStatusScopeRevision: 0,
   fetchCliStatus,
   fetchCliProviderStatus,
   createSchedule,
@@ -109,6 +124,17 @@ vi.mock('@renderer/api', () => ({
     teams: {
       getSavedRequest: vi.fn(async () => null),
       replaceMembers: vi.fn(async () => {}),
+      beginRosterAuthorizationTransaction: vi.fn(
+        async (_teamName: string, request: { transactionId: string }) => ({
+          transactionId: request.transactionId,
+          status: 'applied' as const,
+        })
+      ),
+      getRosterAuthorizationTransactionOutcome: vi.fn(),
+      rollbackRosterAuthorizationTransaction: vi.fn(async (_teamName: string, id: string) => ({
+        transactionId: id,
+        status: 'rolled-back' as const,
+      })),
       prepareProvisioning: vi.fn(async () => ({})),
       getWorktreeGitStatus: vi.fn(async (projectPath: string) => ({
         projectPath,
@@ -172,7 +198,10 @@ vi.mock('@renderer/api', () => ({
 }));
 
 vi.mock('@renderer/store', () => ({
-  useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
+  useStore: Object.assign(
+    (selector: (state: typeof storeState) => unknown) => selector(storeState),
+    { getState: () => storeState }
+  ),
 }));
 
 vi.mock('@renderer/store/slices/teamSlice', () => ({
@@ -193,6 +222,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       providerBackendId?: string;
       model?: string;
       effort?: string;
+      runtimeSelectionProvenance?: unknown;
       fastMode?: string;
     }>
   ) =>
@@ -204,6 +234,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       providerBackendId: draft.providerBackendId as 'codex-native' | undefined,
       model: draft.model,
       effort: draft.effort as 'low' | 'medium' | 'high' | undefined,
+      runtimeSelectionProvenance: draft.runtimeSelectionProvenance,
       fastMode: draft.fastMode as 'inherit' | 'on' | 'off' | undefined,
     })),
   createMemberDraft: (member: any = {}) => ({
@@ -218,6 +249,12 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     providerBackendId: member.providerBackendId,
     model: member.model ?? '',
     effort: member.effort,
+    runtimeSelectionProvenance: member.runtimeSelectionProvenance ?? {
+      version: 1,
+      providerBackendId: member.providerBackendId ? 'explicit' : 'inherited',
+      model: member.model ? 'explicit' : 'inherited',
+      effort: member.effort ? 'explicit' : 'inherited',
+    },
     fastMode: member.fastMode,
   }),
   clearMemberModelOverrides: (member: unknown) => member,
@@ -230,6 +267,7 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       providerBackendId?: string;
       model?: string;
       effort?: string;
+      runtimeSelectionProvenance?: unknown;
       fastMode?: string;
       isolation?: 'worktree';
     }>
@@ -246,6 +284,12 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
       providerBackendId: member.providerBackendId,
       model: member.model ?? '',
       effort: member.effort,
+      runtimeSelectionProvenance: member.runtimeSelectionProvenance ?? {
+        version: 1,
+        providerBackendId: member.providerBackendId ? 'explicit' : 'inherited',
+        model: member.model ? 'explicit' : 'inherited',
+        effort: member.effort ? 'explicit' : 'inherited',
+      },
       fastMode: member.fastMode,
     })),
   filterEditableMemberInputs: (members: unknown) => members,
@@ -571,6 +615,7 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
 
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
+import { executeLaunchTeamDialogSubmissionWithRecheck } from '@renderer/components/team/dialogs/launchRosterAuthorizationTransaction';
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
@@ -582,8 +627,100 @@ async function flush(): Promise<void> {
   await Promise.resolve();
 }
 
+function createAuthoritativeLaunchProofProvider(providerId: string, provider: any): any {
+  const models =
+    provider?.models?.length > 0
+      ? provider.models
+      : [
+          providerId === 'anthropic'
+            ? 'claude-sonnet-4-5'
+            : providerId === 'codex'
+              ? 'gpt-5.4'
+              : 'opencode/big-pickle',
+        ];
+  const modelCatalog =
+    providerId === 'opencode'
+      ? {
+          ...(provider?.modelCatalog ?? {}),
+          schemaVersion: 1,
+          providerId: 'opencode',
+          source: 'app-server',
+          status: 'ready',
+          fetchedAt: '2026-07-20T00:00:00.000Z',
+          staleAt: '2099-07-20T00:10:00.000Z',
+          defaultModelId: provider?.modelCatalog?.defaultModelId ?? models[0],
+          defaultLaunchModel: provider?.modelCatalog?.defaultLaunchModel ?? models[0],
+          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          models: models.map((model: string) => ({
+            id: model,
+            launchModel: model,
+            displayName: model,
+            hidden: false,
+            source: 'app-server',
+            metadata: {
+              free: false,
+              opencode: {
+                providerId: model.split('/')[0] || 'opencode',
+                modelId: model.split('/').slice(1).join('/') || model,
+                sourceLabel: 'Test provider',
+                accessKind: model.startsWith('ollama/') ? 'local' : 'credentialed',
+                routeKind: model.startsWith('ollama/') ? 'configured_local' : 'connected_provider',
+                proofState: 'not_required',
+                requiresExecutionProof: false,
+                reason: null,
+              },
+            },
+          })),
+        }
+      : (provider?.modelCatalog ?? null);
+  return {
+    ...provider,
+    providerId,
+    selectedBackendId:
+      provider?.selectedBackendId ??
+      (providerId === 'codex'
+        ? 'codex-native'
+        : providerId === 'opencode'
+          ? 'opencode-cli'
+          : providerId === 'gemini'
+            ? 'cli'
+            : 'cli-sdk'),
+    resolvedBackendId:
+      provider?.resolvedBackendId ??
+      (providerId === 'codex'
+        ? 'codex-native'
+        : providerId === 'opencode'
+          ? 'opencode-cli'
+          : providerId === 'gemini'
+            ? 'cli'
+            : 'cli-sdk'),
+    supported: true,
+    authenticated: true,
+    authMethod: provider?.authMethod ?? 'test_auth',
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    models,
+    modelCatalog,
+    modelCatalogRefreshState: modelCatalog
+      ? 'ready'
+      : (provider?.modelCatalogRefreshState ?? 'idle'),
+    capabilities: { ...(provider?.capabilities ?? {}), teamLaunch: true, oneShot: true },
+  };
+}
+
 describe('LaunchTeamDialog', () => {
   beforeEach(() => {
+    const outcomeReads = new Map<string, number>();
+    vi.mocked(api.teams.getRosterAuthorizationTransactionOutcome).mockImplementation(
+      async (_teamName, transactionId) => {
+        const reads = outcomeReads.get(transactionId) ?? 0;
+        outcomeReads.set(transactionId, reads + 1);
+        return {
+          transactionId,
+          status: reads === 0 ? ('applied' as const) : ('committed' as const),
+        };
+      }
+    );
     vi.mocked(runProviderPrepareDiagnostics).mockReset();
     vi.mocked(runProviderPrepareDiagnostics).mockResolvedValue({
       status: 'ready',
@@ -591,50 +728,50 @@ describe('LaunchTeamDialog', () => {
       details: [],
       modelResultsById: {},
     });
+    vi.mocked(api.teams.prepareProvisioning).mockReset();
+    vi.mocked(api.teams.prepareProvisioning).mockResolvedValue({
+      ready: true,
+      message: 'ready',
+      executionProof: {
+        authorityId: 'renderer-integration-proof',
+        generation: 1,
+        completedAt: '2026-08-21T00:00:00.000Z',
+        expiresAt: '2099-01-01T00:00:00.000Z',
+        requestDigest: 'a'.repeat(64),
+      },
+    });
     fetchCliProviderStatus.mockReset();
     fetchCliProviderStatus.mockImplementation(async (providerId, options) => {
-      if (providerId !== 'opencode' || !options?.projectPath) {
+      if (!options?.projectPath) {
         return true;
       }
 
       const globalProvider = (storeState.cliStatus as any)?.providers?.find(
-        (provider: { providerId?: string }) => provider.providerId === 'opencode'
+        (provider: { providerId?: string }) => provider.providerId === providerId
       );
-      const models =
-        globalProvider?.models?.length > 0
-          ? globalProvider.models
-          : createTeamDraftMock.state.members
-              .filter((member) => member.providerId === 'opencode')
-              .map((member) => member.model)
-              .filter(Boolean);
+      const scopeKey = getCliProviderStatusScopeKey(providerId as any, options.projectPath);
+      const scopedProvider = storeState.cliProviderStatusByScope[scopeKey];
+      const draftModels = createTeamDraftMock.state.members
+        .filter((member) => member.providerId === providerId)
+        .map((member) => member.model)
+        .filter(Boolean);
+      const provider = createAuthoritativeLaunchProofProvider(providerId, {
+        ...(globalProvider ?? {}),
+        ...(scopedProvider ?? {}),
+        models:
+          scopedProvider?.models?.length > 0
+            ? scopedProvider.models
+            : globalProvider?.models?.length > 0
+              ? globalProvider.models
+              : draftModels,
+      });
       storeState.cliProviderStatusByScope = {
         ...storeState.cliProviderStatusByScope,
-        [getCliProviderStatusScopeKey('opencode', options.projectPath)]: {
-          ...(globalProvider ?? {
-            providerId: 'opencode',
-            supported: true,
-            authenticated: true,
-            verificationState: 'verified',
-            capabilities: { teamLaunch: true, oneShot: false },
-          }),
-          models,
-          modelCatalogRefreshState: 'ready',
-          modelCatalog: {
-            schemaVersion: 1,
-            providerId: 'opencode',
-            source: 'app-server',
-            status: 'ready',
-            fetchedAt: '2026-07-20T00:00:00.000Z',
-            staleAt: '2099-07-20T00:10:00.000Z',
-            defaultModelId: models[0] ?? null,
-            defaultLaunchModel: models[0] ?? null,
-            models: [],
-            diagnostics: {
-              configReadState: 'ready',
-              appServerState: 'healthy',
-            },
-          },
-        },
+        [scopeKey]: provider,
+      };
+      storeState.cliProviderLaunchProofByScope = {
+        ...storeState.cliProviderLaunchProofByScope,
+        [scopeKey]: { providerStatus: provider, requestId: 1, epoch: 0, fetchedAtMs: Date.now() },
       };
       return true;
     });
@@ -647,6 +784,8 @@ describe('LaunchTeamDialog', () => {
     vi.clearAllMocks();
     storeState.cliStatus = { providers: [] };
     storeState.cliProviderStatusByScope = {};
+    storeState.cliProviderStatusLoadingByScope = {};
+    storeState.cliProviderLaunchProofByScope = {};
     storeState.launchParamsByTeam = {};
     createTeamDraftMock.state.members[0].model = 'opencode/big-pickle';
     createTeamDraftMock.state.cwdMode = 'project';
@@ -1200,7 +1339,9 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
-    expect(vi.mocked(api.teams.replaceMembers).mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      vi.mocked(api.teams.beginRosterAuthorizationTransaction).mock.calls[0]?.[1]
+    ).toMatchObject({
       members: [
         {
           name: 'alice',
@@ -1214,6 +1355,314 @@ describe('LaunchTeamDialog', () => {
       ],
     });
     expect(onLaunch).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('preserves an explicit live Codex backend in status, roster, and launch request', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'codex',
+          supported: true,
+          authenticated: true,
+          authMethod: 'codex_api_key',
+          verificationState: 'verified',
+          selectedBackendId: 'api',
+          resolvedBackendId: 'api',
+          models: ['gpt-5.4'],
+          capabilities: { teamLaunch: true, oneShot: true },
+          backend: { kind: 'codex-native', label: 'Codex native' },
+        },
+      ],
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      providerBackendId: 'api',
+      model: 'gpt-5.4',
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'codex',
+          model: 'gpt-5.4',
+        },
+      ],
+    } as any);
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+      await flush();
+    });
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
+
+    const submitButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(submitButton?.hasAttribute('disabled')).toBe(false);
+
+    await act(async () => {
+      submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+      await flush();
+    });
+
+    expect(
+      vi.mocked(api.teams.beginRosterAuthorizationTransaction).mock.calls[0]?.[1]
+    ).toMatchObject({ members: [{ providerBackendId: 'api' }] });
+    expect(onLaunch).toHaveBeenCalledWith(expect.objectContaining({ providerBackendId: 'api' }));
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it.each([
+    {
+      name: 'blocks stale same-provider params when authoritative backend is absent',
+      savedBackend: undefined,
+      expectedBackend: undefined,
+      shouldSubmit: false,
+    },
+    {
+      name: 'uses committed metadata after a crash leaves stale renderer params',
+      savedBackend: 'adapter',
+      expectedBackend: 'adapter',
+      shouldSubmit: true,
+    },
+    {
+      name: 'materializes a committed Codex auto route to its prepared backend',
+      savedBackend: 'auto',
+      expectedBackend: 'codex-native',
+      shouldSubmit: true,
+    },
+  ] as const)(
+    '$name while provider status is unavailable',
+    async ({ savedBackend, expectedBackend, shouldSubmit }) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      storeState.launchParamsByTeam = {
+        'team-alpha': {
+          providerId: 'codex',
+          providerBackendId: 'api',
+          model: 'gpt-5.4',
+          effort: 'medium',
+          fastMode: 'off',
+        },
+      };
+      storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [] } as any;
+      if (savedBackend === undefined) {
+        fetchCliProviderStatus.mockResolvedValue(false);
+      }
+      vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        providerBackendId: savedBackend,
+        model: 'gpt-5.4',
+        members: [{ name: 'alice', providerId: 'codex', model: 'gpt-5.4' }],
+      } as any);
+      const onLaunch = vi.fn(async () => {});
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      await act(async () => {
+        root.render(
+          React.createElement(LaunchTeamDialog, {
+            mode: 'launch',
+            open: true,
+            teamName: 'team-alpha',
+            members: [],
+            defaultProjectPath: '/tmp/project',
+            provisioningError: null,
+            clearProvisioningError: vi.fn(),
+            activeTeams: [],
+            onClose: vi.fn(),
+            onLaunch,
+          })
+        );
+        await flush();
+        await flush();
+      });
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          await flush();
+        });
+      }
+
+      const submitButton = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Launch team'
+      );
+      expect(submitButton?.hasAttribute('disabled')).toBe(!shouldSubmit);
+      if (!shouldSubmit) {
+        expect(onLaunch).not.toHaveBeenCalled();
+        expect(api.teams.beginRosterAuthorizationTransaction).not.toHaveBeenCalled();
+        await act(async () => {
+          root.unmount();
+          await flush();
+        });
+        return;
+      }
+      await act(async () => {
+        submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        await flush();
+        await flush();
+      });
+      expect(onLaunch).toHaveBeenCalledWith(
+        expect.objectContaining({ providerBackendId: expectedBackend })
+      );
+      expect(
+        vi.mocked(api.teams.beginRosterAuthorizationTransaction).mock.calls[0]?.[1]
+      ).toMatchObject({ members: [{ providerBackendId: expectedBackend }] });
+
+      await act(async () => {
+        root.unmount();
+        await flush();
+      });
+    }
+  );
+
+  it('revokes an experimental local-model decision when eligibility changes before submit', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let eligibilityAvailable = true;
+    vi.mocked(runProviderPrepareDiagnostics).mockImplementation(async () =>
+      eligibilityAvailable
+        ? {
+            status: 'failed',
+            warnings: [],
+            details: ['Local model verification failed'],
+            modelResultsById: {},
+            experimentalOverrideAvailable: true,
+          }
+        : {
+            status: 'ready',
+            warnings: [],
+            details: ['Local model verified'],
+            modelResultsById: {},
+          }
+    );
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'opencode',
+          supported: true,
+          authenticated: true,
+          authMethod: 'opencode_managed',
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          models: ['ollama/qwen-test'],
+          capabilities: { teamLaunch: true, oneShot: false },
+          backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
+        },
+      ],
+    } as any;
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
+      model: 'ollama/qwen-test',
+      members: [
+        {
+          name: 'alice',
+          role: 'Reviewer',
+          providerId: 'opencode',
+          model: 'ollama/qwen-test',
+        },
+      ],
+    } as any);
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+      await flush();
+    });
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
+
+    const override = host.querySelector('#launch-experimental-local-model');
+    expect(override).toBeTruthy();
+    eligibilityAvailable = false;
+    await act(async () => {
+      override?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+    });
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
+
+    const submitButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(submitButton?.hasAttribute('disabled')).toBe(false);
+    await act(async () => {
+      submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+      await flush();
+    });
+
+    const proofRequest = vi.mocked(api.teams.prepareProvisioning).mock.calls.at(-1);
+    expect(proofRequest?.[7]).toBe(false);
+    expect(onLaunch).toHaveBeenCalledWith(
+      expect.objectContaining({ allowExperimentalLocalModels: undefined })
+    );
 
     await act(async () => {
       root.unmount();
@@ -1251,6 +1700,7 @@ describe('LaunchTeamDialog', () => {
       teamName: 'team-alpha',
       cwd: '/tmp/project',
       providerId: 'codex',
+      providerBackendId: 'codex-native',
       model: 'gpt-5.4',
       limitContext: true,
       members: [
@@ -1301,6 +1751,12 @@ describe('LaunchTeamDialog', () => {
           providerId: 'codex',
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'explicit',
+            model: 'explicit',
+            effort: 'inherited',
+          },
         },
       ]);
       await flush();
@@ -1561,8 +2017,16 @@ describe('LaunchTeamDialog', () => {
         role: 'Reviewer',
         workflow: '',
         providerId: 'codex',
+        providerBackendId: 'codex-native',
         model: 'gpt-5.4',
         effort: 'medium',
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'explicit',
+          effort: 'explicit',
+        },
+        fastMode: undefined,
       },
     ]);
 
@@ -1588,7 +2052,7 @@ describe('LaunchTeamDialog', () => {
           verificationState: 'verified',
           statusMessage: null,
           detailMessage: null,
-          models: ['opencode/minimax-m2.5-free'],
+          models: ['openai/gpt-5.4'],
           capabilities: {
             teamLaunch: true,
             oneShot: false,
@@ -1599,13 +2063,14 @@ describe('LaunchTeamDialog', () => {
     vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
       teamName: 'team-alpha',
       providerId: 'opencode',
-      model: 'opencode/minimax-m2.5-free',
+      providerBackendId: 'opencode-cli',
+      model: 'openai/gpt-5.4',
       members: [
         {
           name: 'alice',
           role: 'Reviewer',
           providerId: 'opencode',
-          model: 'opencode/minimax-m2.5-free',
+          model: 'openai/gpt-5.4',
         },
       ],
     } as any);
@@ -1659,14 +2124,16 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
-    expect(vi.mocked(api.teams.replaceMembers)).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(api.teams.replaceMembers).mock.calls[0]?.[1]).toMatchObject({
+    expect(vi.mocked(api.teams.beginRosterAuthorizationTransaction)).toHaveBeenCalledTimes(1);
+    expect(
+      vi.mocked(api.teams.beginRosterAuthorizationTransaction).mock.calls[0]?.[1]
+    ).toMatchObject({
       members: [
         {
           name: 'alice',
           role: 'Reviewer',
           providerId: 'opencode',
-          model: 'opencode/minimax-m2.5-free',
+          model: 'openai/gpt-5.4',
         },
       ],
     });
@@ -1676,7 +2143,7 @@ describe('LaunchTeamDialog', () => {
     )[0]?.[0] as { providerId?: string; model?: string } | undefined;
     expect(launchRequest).toMatchObject({
       providerId: 'opencode',
-      model: 'opencode/minimax-m2.5-free',
+      model: 'openai/gpt-5.4',
     });
 
     await act(async () => {
@@ -1698,7 +2165,7 @@ describe('LaunchTeamDialog', () => {
           verificationState: 'verified',
           statusMessage: null,
           detailMessage: null,
-          models: ['opencode/minimax-m2.5-free'],
+          models: ['openai/gpt-5.4'],
           capabilities: {
             teamLaunch: true,
             oneShot: false,
@@ -1709,6 +2176,7 @@ describe('LaunchTeamDialog', () => {
     vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
       teamName: 'team-alpha',
       providerId: 'opencode',
+      providerBackendId: 'opencode-cli',
       model: '',
       members: [{ name: 'alice', role: 'Reviewer', providerId: 'opencode' }],
     } as any);
@@ -1768,7 +2236,7 @@ describe('LaunchTeamDialog', () => {
           verificationState: 'verified',
           statusMessage: null,
           detailMessage: null,
-          models: ['opencode/minimax-m2.5-free'],
+          models: ['openai/gpt-5.4'],
           capabilities: {
             teamLaunch: true,
             oneShot: false,
@@ -1779,7 +2247,8 @@ describe('LaunchTeamDialog', () => {
     vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
       teamName: 'team-alpha',
       providerId: 'opencode',
-      model: 'opencode/minimax-m2.5-free',
+      providerBackendId: 'opencode-cli',
+      model: 'openai/gpt-5.4',
       members: [],
     } as any);
     const onLaunch = vi.fn(async () => {});
@@ -1848,7 +2317,7 @@ describe('LaunchTeamDialog', () => {
           verificationState: 'verified',
           statusMessage: null,
           detailMessage: null,
-          models: ['opencode/minimax-m2.5-free'],
+          models: ['openai/gpt-5.4'],
           capabilities: {
             teamLaunch: true,
             oneShot: false,
@@ -1875,7 +2344,7 @@ describe('LaunchTeamDialog', () => {
     vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
       teamName: 'team-alpha',
       providerId: 'opencode',
-      model: 'opencode/minimax-m2.5-free',
+      model: 'openai/gpt-5.4',
       members: [{ name: 'alice', role: 'Reviewer', providerId: 'codex', model: 'gpt-5.4' }],
     } as any);
     const onLaunch = vi.fn(async () => {});
@@ -2453,11 +2922,11 @@ describe('LaunchTeamDialog', () => {
           modelVerificationState: 'verified',
           statusMessage: 'warming up',
           detailMessage: 'catalog still loading',
-          models: ['opencode/minimax-m2.5-free'],
+          models: ['openai/gpt-5.4'],
           modelCatalog: {
             source: 'live',
             status: 'checking',
-            models: [{ id: 'opencode/minimax-m2.5-free' }],
+            models: [{ id: 'openai/gpt-5.4' }],
           },
           capabilities: {
             teamLaunch: true,
@@ -2498,7 +2967,7 @@ describe('LaunchTeamDialog', () => {
               name: 'alice',
               role: 'Reviewer',
               providerId: 'opencode',
-              model: 'opencode/minimax-m2.5-free',
+              model: 'openai/gpt-5.4',
             },
           ] as any,
           defaultProjectPath: '/tmp/project',
@@ -2519,7 +2988,7 @@ describe('LaunchTeamDialog', () => {
     const launchButtonWhileChecking = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );
-    expect(launchButtonWhileChecking?.hasAttribute('disabled')).toBe(false);
+    expect(launchButtonWhileChecking?.hasAttribute('disabled')).toBe(true);
 
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -2534,7 +3003,7 @@ describe('LaunchTeamDialog', () => {
           statusMessage: 'healthy',
           detailMessage: 'catalog ready',
           models: [
-            'opencode/minimax-m2.5-free',
+            'openai/gpt-5.4',
             'opencode/qwen3.6-plus-free',
             'openrouter/google/gemma-4-26b-a4b-it',
           ],
@@ -2542,7 +3011,7 @@ describe('LaunchTeamDialog', () => {
             source: 'live',
             status: 'ready',
             models: [
-              { id: 'opencode/minimax-m2.5-free' },
+              { id: 'openai/gpt-5.4' },
               { id: 'opencode/qwen3.6-plus-free' },
               { id: 'openrouter/google/gemma-4-26b-a4b-it' },
             ],
@@ -2896,6 +3365,7 @@ describe('LaunchTeamDialog', () => {
 
   it('does not report the submitted team name as a duplicate while creation is in flight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    createTeamDraftMock.state.members[0].model = 'openai/gpt-5.4';
 
     let resolveCreate!: () => void;
     const createPromise = new Promise<void>((resolve) => {
@@ -2933,6 +3403,12 @@ describe('LaunchTeamDialog', () => {
     await act(async () => {
       await renderDialog([], []);
     });
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
 
     const submitButton = Array.from(host.querySelectorAll('button')).find(
       (button) =>
@@ -2967,4 +3443,191 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
   });
+
+  it.each(['resolve', 'reject'] as const)(
+    'ignores stale create submission A callbacks after unmount/reopen when A later %s',
+    async (settlement) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      createTeamDraftMock.state.members[0].model = 'openai/gpt-5.4';
+      let resolveA!: () => void;
+      let rejectA!: (error: Error) => void;
+      const submissionA = new Promise<void>((resolve, reject) => {
+        resolveA = resolve;
+        rejectA = reject;
+      });
+      let submissionCount = 0;
+      const onCreate = vi.fn(() => {
+        submissionCount += 1;
+        return submissionCount === 1 ? submissionA : Promise.resolve();
+      });
+      const onClose = vi.fn();
+      const onOpenTeam = vi.fn();
+      const renderAndSubmit = async (): Promise<ReturnType<typeof createRoot>> => {
+        const host = document.createElement('div');
+        document.body.appendChild(host);
+        const root = createRoot(host);
+        await act(async () => {
+          root.render(
+            React.createElement(CreateTeamDialog, {
+              open: true,
+              canCreate: true,
+              provisioningErrorsByTeam: {},
+              clearProvisioningError: vi.fn(),
+              existingTeamNames: [],
+              provisioningTeamNames: [],
+              activeTeams: [],
+              defaultProjectPath: '/tmp/project',
+              onClose,
+              onCreate,
+              onOpenTeam,
+            })
+          );
+          await flush();
+        });
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await flush();
+          });
+        }
+        const submitButton = Array.from(host.querySelectorAll('button')).find(
+          (button) =>
+            button.textContent === 'Create' || button.textContent === 'Skip preflight and create'
+        );
+        expect(submitButton?.disabled).toBe(false);
+        await act(async () => {
+          submitButton?.click();
+          await flush();
+        });
+        return root;
+      };
+
+      const rootA = await renderAndSubmit();
+      expect(onCreate).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        rootA.unmount();
+        await flush();
+      });
+
+      const rootB = await renderAndSubmit();
+      expect(onCreate).toHaveBeenCalledTimes(2);
+      expect(onOpenTeam).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        if (settlement === 'resolve') resolveA();
+        else rejectA(new Error('stale submission A failed'));
+        await submissionA.catch(() => undefined);
+        await flush();
+      });
+      expect(onOpenTeam).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        rootB.unmount();
+        await flush();
+      });
+    }
+  );
+});
+
+describe('LaunchTeamDialog submission generation fence', () => {
+  const authorization = {
+    prepareState: 'ready' as const,
+    providerStatusesAuthoritative: true,
+    preparedRequestSignature: 'same',
+    currentRequestSignature: 'same',
+    preparedGeneration: 1,
+    currentGeneration: 1,
+    providerProofExpiresAtMs: Date.parse('2099-01-01T00:00:00.000Z'),
+    executionProof: {
+      authorityId: 'dialog-generation-proof',
+      generation: 1,
+      completedAt: '2026-08-23T00:00:00.000Z',
+      expiresAt: '2099-01-01T00:00:00.000Z',
+      requestDigest: 'b'.repeat(64),
+    },
+  };
+
+  it('rolls back stale A after close/reopen while B alone submits', async () => {
+    let resolveA!: (value: { transactionId: string; status: 'applied' }) => void;
+    const beginA = new Promise<{ transactionId: string; status: 'applied' }>((resolve) => {
+      resolveA = resolve;
+    });
+    let generation = 1;
+    const submitA = vi.fn();
+    const rollbackA = vi.fn(async () => ({ transactionId: 'A', status: 'rolled-back' as const }));
+    const operationA = executeLaunchTeamDialogSubmissionWithRecheck(
+      () => authorization,
+      () => beginA,
+      async () => ({ transactionId: 'A', status: 'applied' as const }),
+      submitA,
+      rollbackA,
+      () => generation === 1
+    );
+    await flush();
+
+    generation = 2;
+    let readsB = 0;
+    const submitB = vi.fn();
+    const operationB = executeLaunchTeamDialogSubmissionWithRecheck(
+      () => authorization,
+      async () => ({ transactionId: 'B', status: 'applied' as const }),
+      async () => ({
+        transactionId: 'B',
+        status: readsB++ === 0 ? ('applied' as const) : ('committed' as const),
+      }),
+      submitB,
+      async () => ({ transactionId: 'B', status: 'rolled-back' as const }),
+      () => generation === 2
+    );
+    await expect(operationB).resolves.toBe(true);
+    resolveA({ transactionId: 'A', status: 'applied' });
+    await expect(operationA).resolves.toBe(false);
+
+    expect(submitA).not.toHaveBeenCalled();
+    expect(rollbackA).toHaveBeenCalledOnce();
+    expect(submitB).toHaveBeenCalledOnce();
+  });
+
+  it.each(['resolve', 'reject'] as const)(
+    'ignores stale %s completion after unmount invalidates the generation',
+    async (settlement) => {
+      let current = true;
+      let settle!: (value?: unknown) => void;
+      const begin = new Promise<{ transactionId: string; status: 'applied' }>((resolve, reject) => {
+        settle =
+          settlement === 'resolve'
+            ? () => resolve({ transactionId: 'A', status: 'applied' })
+            : reject;
+      });
+      const submit = vi.fn();
+      const rollback = vi.fn(async () => ({
+        transactionId: 'A',
+        status: 'rolled-back' as const,
+      }));
+      const operation = executeLaunchTeamDialogSubmissionWithRecheck(
+        () => authorization,
+        () => begin,
+        async () => ({
+          transactionId: 'A',
+          status: settlement === 'reject' ? ('rolled-back' as const) : ('applied' as const),
+        }),
+        submit,
+        rollback,
+        () => current
+      );
+      await flush();
+      current = false;
+      settle(settlement === 'reject' ? new Error('stale A rejected') : undefined);
+
+      if (settlement === 'resolve') {
+        await expect(operation).resolves.toBe(false);
+        expect(rollback).toHaveBeenCalledOnce();
+      } else {
+        await expect(operation).rejects.toThrow('stale A rejected');
+      }
+      expect(submit).not.toHaveBeenCalled();
+    }
+  );
 });

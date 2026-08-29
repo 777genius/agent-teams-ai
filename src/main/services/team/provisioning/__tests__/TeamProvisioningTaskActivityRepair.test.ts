@@ -20,7 +20,7 @@ import type {
 
 function snapshot(teamName: string, updatedAt: string): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName,
     updatedAt,
     launchPhase: 'active',

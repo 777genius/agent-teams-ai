@@ -187,7 +187,7 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
     expect(pendingEvidence).not.toHaveProperty('bootstrapEvidenceSource');
   });
 
-  it('normalizes lead topology, teammate agent types, and provider/backend pairs', () => {
+  it('normalizes lead topology and teammate agent types without rewriting valid backends', () => {
     const lead = memberFixture.lead({
       name: 'ignored-lead-override',
       agentType: 'general-purpose',
@@ -214,18 +214,18 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
     expect(lead).toMatchObject({
       name: 'Lead',
       agentType: 'team-lead',
-      providerBackendId: 'codex-native',
+      providerBackendId: 'adapter',
     });
     expect(builder).toMatchObject({
       agentType: 'general-purpose',
-      providerBackendId: 'codex-native',
+      providerBackendId: 'adapter',
     });
     expect(config.members).toEqual([
       expect.objectContaining({ name: 'Lead', agentType: 'team-lead' }),
       expect.objectContaining({
         name: 'Builder',
         agentType: 'general-purpose',
-        providerBackendId: 'codex-native',
+        providerBackendId: 'adapter',
       }),
       expect.objectContaining({
         name: 'Reviewer',
@@ -246,7 +246,7 @@ describe('TeamProvisioningHarnessBuilder fixture isolation', () => {
     expect(request).toMatchObject({
       providerId: 'anthropic',
       providerBackendId: undefined,
-      members: [expect.objectContaining({ name: 'Builder', providerBackendId: 'codex-native' })],
+      members: [expect.objectContaining({ name: 'Builder', providerBackendId: 'adapter' })],
     });
     expect(toMetaMembers(request.members)).toEqual([
       expect.objectContaining({ name: 'Builder', agentType: 'general-purpose' }),

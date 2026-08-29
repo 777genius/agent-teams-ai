@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
+import { UnsupportedTeamLaunchStateVersionError } from '../../TeamLaunchStateStore';
 import { applyOpenCodeSecondaryEvidenceOverlay } from '../TeamProvisioningLaunchStateReconciliation';
 import {
   createTeamProvisioningLaunchStateStoreBoundaryFromService,
@@ -112,6 +113,26 @@ function createBoundary(overrides: Partial<TeamProvisioningLaunchStateStoreBound
 }
 
 describe('TeamProvisioningLaunchStateStoreBoundary', () => {
+  it('fails closed before overlays or writes when a future schema is encountered', async () => {
+    const futureVersion = new UnsupportedTeamLaunchStateVersionError(999);
+    const { boundary, ports } = createBoundary({
+      launchStateStore: {
+        read: vi.fn(async () => {
+          throw futureVersion;
+        }),
+        write: vi.fn(async () => undefined),
+        clear: vi.fn(async () => undefined),
+      },
+    });
+
+    await expect(boundary.writeLaunchStateSnapshotNow('demo', snapshot())).rejects.toBe(
+      futureVersion
+    );
+    expect(ports.applyOpenCodeSecondaryEvidenceOverlay).not.toHaveBeenCalled();
+    expect(ports.launchStateStore.write).not.toHaveBeenCalled();
+    expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
+  });
+
   it('builds service-shaped boundary ports and mirrors launch-state writes', async () => {
     const nextSnapshot = snapshot();
     const launchStateStore = {
@@ -267,6 +288,29 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     expect(ports.logDebug).toHaveBeenCalledWith(
       '[demo] Skipping stale launch-state clear for run run-stale'
     );
+  });
+
+  it('preserves a stopped run fence from that run cleanup but lets a fresh run replace it', async () => {
+    const stopped = snapshot({
+      stoppedAt: at,
+      stoppedRunId: 'run-1',
+      members: {
+        Builder: member({ diagnostics: ['Runtime stopped by explicit user action'] }),
+      },
+    });
+    const { boundary, ports, setCurrentSnapshot, setTrackedRunId } = createBoundary();
+    setCurrentSnapshot(stopped);
+
+    await boundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'run-1' });
+
+    expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
+    expect(ports.logDebug).toHaveBeenCalledWith(
+      '[demo] Preserving explicit-stop launch-state fence for run run-1'
+    );
+
+    setTrackedRunId('run-2');
+    await boundary.clearPersistedLaunchStateNow('demo', { expectedRunId: 'run-2' });
+    expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo');
   });
 
   it('clears run-scoped persisted state, last-written state, and runtime caches', async () => {
@@ -597,6 +641,28 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     );
   });
 
+  it('rejects late writes from the run fenced by an explicit stop', async () => {
+    const stopped = snapshot({
+      stoppedAt: at,
+      stoppedRunId: 'run-1',
+      members: {
+        Builder: member({ diagnostics: ['Runtime stopped by explicit user action'] }),
+      },
+    });
+    const { boundary, ports, setCurrentSnapshot } = createBoundary();
+    setCurrentSnapshot(stopped);
+
+    const result = await boundary.writeLaunchStateSnapshotNow('demo', snapshot(), {
+      runId: 'run-1',
+    });
+
+    expect(result).toEqual({ snapshot: stopped, wrote: false });
+    expect(ports.launchStateStore.write).not.toHaveBeenCalled();
+    expect(ports.logDebug).toHaveBeenCalledWith(
+      '[demo] Skipping launch-state write fenced by explicit stop for run run-1'
+    );
+  });
+
   it('does not persist a run snapshot after tracking has been cleared', async () => {
     const previousSnapshot = snapshot({ updatedAt: '2026-01-01T00:00:01.000Z' });
     const nextSnapshot = snapshot();
@@ -647,6 +713,42 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     expect(ports.launchStateStore.clear).toHaveBeenCalledWith('demo');
     expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
     expect(boundary.getWrittenRunIdByTeam().has('demo')).toBe(false);
+  });
+
+  it('restores an explicit-stop fence when a stale pending write loses run authority', async () => {
+    const stoppedSnapshot = snapshot({
+      stoppedAt: '2026-01-01T00:00:01.000Z',
+      members: {
+        Builder: member({ diagnostics: ['Runtime stopped by explicit user action'] }),
+      },
+    });
+    const writeStarted = deferred();
+    const writeGate = deferred();
+    let persistedSnapshot: PersistedTeamLaunchSnapshot | null = stoppedSnapshot;
+    const launchStateStore = {
+      read: vi.fn(async () => persistedSnapshot),
+      write: vi.fn(async (_teamName: string, nextSnapshot: PersistedTeamLaunchSnapshot) => {
+        if (nextSnapshot !== stoppedSnapshot) {
+          writeStarted.resolve();
+          await writeGate.promise;
+        }
+        persistedSnapshot = nextSnapshot;
+      }),
+      clear: vi.fn(async () => {
+        persistedSnapshot = null;
+      }),
+    };
+    const { boundary, ports, setTrackedRunId } = createBoundary({ launchStateStore });
+
+    const writing = boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
+    await writeStarted.promise;
+    setTrackedRunId(undefined);
+    writeGate.resolve();
+
+    await expect(writing).resolves.toMatchObject({ wrote: false });
+    expect(persistedSnapshot).toBe(stoppedSnapshot);
+    expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
+    expect(ports.launchStateStore.write).toHaveBeenLastCalledWith('demo', stoppedSnapshot);
   });
 
   it('serializes queued operations and only removes the current queue entry', async () => {

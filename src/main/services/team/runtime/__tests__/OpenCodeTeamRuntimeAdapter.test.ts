@@ -178,7 +178,7 @@ function readiness({
   };
 }
 
-function launchInput(): TeamRuntimeLaunchInput {
+function launchInput(overrides: Partial<TeamRuntimeLaunchInput> = {}): TeamRuntimeLaunchInput {
   return {
     runId: 'run-launch',
     teamName: 'team-launch',
@@ -197,5 +197,6 @@ function launchInput(): TeamRuntimeLaunchInput {
       },
     ],
     previousLaunchState: null,
+    ...overrides,
   };
 }

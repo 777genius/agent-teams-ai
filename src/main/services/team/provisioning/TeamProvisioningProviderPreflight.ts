@@ -182,7 +182,10 @@ interface ProviderPreflightEnvResolution {
 }
 
 export interface VerifySelectedProviderModelsPorts {
-  buildProvisioningEnv(providerId: TeamProviderId): Promise<ProviderPreflightEnvResolution>;
+  buildProvisioningEnv(
+    providerId: TeamProviderId,
+    providerBackendId?: string | null
+  ): Promise<ProviderPreflightEnvResolution>;
   readRuntimeProviderLaunchFacts(params: {
     claudePath: string;
     cwd: string;

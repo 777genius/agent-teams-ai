@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  readNativeModelTargetedLiveness,
+  readOpenCodeStrictLaunchDelegation,
+} from '../TeamProvisioningLaunchPreparationEvidence';
+import {
   createDefaultTeamProvisioningPrepareCoordinatorPorts,
   createInMemoryProviderProbeCachePort,
   TeamProvisioningPrepareCoordinator,
@@ -16,6 +20,13 @@ import type {
   TeamProvisioningPrepareCoordinatorPorts,
 } from '../TeamProvisioningPrepareCoordinator';
 import type { TeamCreateRequest, TeamProvisioningPrepareResult } from '@shared/types';
+
+const inherited = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'inherited' as const,
+  effort: 'inherited' as const,
+};
 
 function createCoordinator(
   overrides: Partial<TeamProvisioningPrepareCoordinatorPorts> = {}
@@ -109,6 +120,136 @@ function deferredPublication(): {
 }
 
 describe('TeamProvisioningPrepareCoordinator', () => {
+  it('records OpenCode model availability without treating readiness as launch authorization', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'openrouter/verified',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = {
+      providerId: 'opencode',
+      prepare,
+      launch: vi.fn(),
+      reconcile: vi.fn(),
+      stop: vi.fn(),
+    } as unknown as TeamLaunchRuntimeAdapter;
+    const coordinator = createCoordinator({
+      getOpenCodeRuntimeAdapter: vi.fn(() => adapter),
+      getOpenCodeStrictLaunchDelegationValidator: vi.fn(() =>
+        vi.fn().mockResolvedValue({ ok: true, contractVersion: 1 })
+      ),
+    });
+    const checks = [
+      {
+        providerId: 'opencode' as const,
+        providerBackendId: 'opencode-cli' as const,
+        model: 'openrouter/verified',
+        effort: 'high' as const,
+      },
+    ];
+
+    const result = await coordinator.prepareForProvisioning('/workspace/opencode-evidence', {
+      providerIds: ['opencode'],
+      modelChecks: checks,
+      modelVerificationMode: 'deep',
+    });
+
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(result.ready).toBe(true);
+    expect(result.processedModelChecks).toEqual(checks);
+    expect(readOpenCodeStrictLaunchDelegation(result)).toEqual({
+      contractVersion: 1,
+      checks,
+    });
+  });
+
+  it('processes same provider/model/effort checks separately for every exact backend', async () => {
+    const verificationInputs: Array<{ providerBackendId?: string | null }> = [];
+    const envBackends: Array<string | null | undefined> = [];
+    const coordinator = createCoordinator({
+      buildProvisioningEnv: vi.fn(async (_providerId, providerBackendId) => {
+        envBackends.push(providerBackendId);
+        return {
+          env: { VERIFIED_BACKEND: providerBackendId ?? '<null>' },
+          authSource: 'none' as const,
+          geminiRuntimeAuth: null,
+          providerArgs: [],
+        };
+      }),
+      verifySelectedProviderModels: vi.fn(async (input) => {
+        verificationInputs.push({ providerBackendId: input.providerBackendId });
+        return {
+          details: [`verified:${input.providerBackendId}`],
+          warnings: [],
+          blockingMessages: [],
+        };
+      }),
+      runProviderOneShotDiagnostic: vi.fn(
+        async (_claudePath, _cwd, _env, _providerId, _providerArgs, exactCheck) => ({
+          targetedLiveness: exactCheck,
+        })
+      ),
+    });
+    const checks = [
+      {
+        providerId: 'codex' as const,
+        providerBackendId: 'adapter' as const,
+        model: 'gpt-5',
+        effort: 'high' as const,
+      },
+      {
+        providerId: 'codex' as const,
+        providerBackendId: 'codex-native' as const,
+        model: 'gpt-5',
+        effort: 'high' as const,
+      },
+    ];
+
+    const result = await coordinator.prepareForProvisioning('/workspace/backend-groups', {
+      providerIds: ['codex'],
+      modelChecks: checks,
+      modelVerificationMode: 'deep',
+    });
+
+    expect(result.ready).toBe(true);
+    expect(verificationInputs).toEqual([
+      { providerBackendId: 'adapter' },
+      { providerBackendId: 'codex-native' },
+    ]);
+    expect(envBackends).toEqual(expect.arrayContaining(['adapter', 'codex-native']));
+    expect(result.processedModelChecks).toEqual(checks);
+    expect(readOpenCodeStrictLaunchDelegation(result)?.checks).toEqual([]);
+    expect(readNativeModelTargetedLiveness(result)).toEqual(checks);
+  });
+
+  it('does not record a selected model rejected by targeted liveness', async () => {
+    const execute = vi.fn().mockResolvedValue({
+      warning: 'Selected model unavailable-model is unavailable.',
+    });
+    const check = {
+      providerId: 'codex' as const,
+      providerBackendId: 'codex-native' as const,
+      model: 'unavailable-model',
+      effort: 'high' as const,
+    };
+    const coordinator = createCoordinator({
+      runProviderOneShotDiagnostic: execute,
+    });
+
+    const result = await coordinator.prepareForProvisioning('/workspace/unavailable-model', {
+      providerIds: ['codex'],
+      modelChecks: [check],
+      modelVerificationMode: 'deep',
+    });
+
+    expect(result.ready).toBe(false);
+    expect(execute).toHaveBeenCalledOnce();
+    expect(result.processedModelChecks).toEqual([]);
+    expect(readOpenCodeStrictLaunchDelegation(result)?.checks).toEqual([]);
+  });
+
   it('coalesces matching prepare requests and returns cloned results', async () => {
     let releaseProbe: ((value: { warning?: string }) => void) | null = null;
     const probeClaudeRuntime = vi.fn(
@@ -435,9 +576,14 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     });
 
     const members: TeamCreateRequest['members'] = [
-      { name: 'one', role: 'One', providerId: 'codex' },
-      { name: 'two', role: 'Two', providerId: 'codex' },
-      { name: 'three', role: 'Three', providerId: 'anthropic' },
+      { name: 'one', role: 'One', providerId: 'codex', runtimeSelectionProvenance: inherited },
+      { name: 'two', role: 'Two', providerId: 'codex', runtimeSelectionProvenance: inherited },
+      {
+        name: 'three',
+        role: 'Three',
+        providerId: 'anthropic',
+        runtimeSelectionProvenance: inherited,
+      },
     ];
 
     const result = await coordinator.materializeEffectiveTeamMemberSpecs({

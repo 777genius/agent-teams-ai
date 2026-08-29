@@ -68,6 +68,7 @@ describe('TeamProvisioning API binders', () => {
 
     const source: StartSource = {
       runId: 'run-start',
+      requiresAuthoritativeLaunchProof: true,
       createTeam(this: StartSource): Promise<TeamCreateResponse> {
         return Promise.resolve({ runId: this.runId });
       },
@@ -80,13 +81,27 @@ describe('TeamProvisioning API binders', () => {
     const createTeam = api.createTeam.bind(undefined);
     const launchTeam = api.launchTeam.bind(undefined);
 
-    expect(Object.keys(api).sort()).toEqual(['createTeam', 'launchTeam']);
+    expect(Object.keys(api).sort()).toEqual([
+      'createTeam',
+      'launchTeam',
+      'requiresAuthoritativeLaunchProof',
+    ]);
+    expect(api.requiresAuthoritativeLaunchProof).toBe(true);
     await expect(
       createTeam({ teamName: 'team-start', cwd: TEST_TEAM_CWD, members: [] }, () => undefined)
     ).resolves.toEqual({ runId: 'run-start' });
     await expect(
       launchTeam({ teamName: 'team-start', cwd: TEST_TEAM_CWD }, () => undefined)
     ).resolves.toEqual({ runId: 'run-start' });
+  });
+
+  it('preserves an omitted provisioning proof capability as unknown', () => {
+    const api = bindTeamProvisioningStartApi({
+      createTeam: () => Promise.resolve({ runId: 'legacy-create' }),
+      launchTeam: () => Promise.resolve({ runId: 'legacy-launch' }),
+    });
+
+    expect(api.requiresAuthoritativeLaunchProof).toBeUndefined();
   });
 
   it('binds provisioning status methods to the source object', async () => {

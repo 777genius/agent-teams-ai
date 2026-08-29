@@ -37,6 +37,7 @@ import {
   isAnthropicSonnetOneMillionContextTeamModel,
 } from '@renderer/utils/teamModelCatalog';
 import { getMemberColorByName } from '@shared/constants/memberColors';
+import { normalizeEffectiveLaunchIdentity } from '@shared/utils/effectiveLaunchIdentity';
 import {
   normalizeTeamMemberMcpPolicy,
   resolveTeamMemberMcpScopes,
@@ -353,13 +354,10 @@ export const MemberDraftRow = ({
   const effectiveModel = forceInheritedModelSettings
     ? inheritedModel
     : (member.model ?? inheritedModel);
-  const memberProviderId = member.providerId;
-  const explicitMemberModel = member.model?.trim() ?? '';
-  const inheritsDefaultRuntime = !memberProviderId || memberProviderId === inheritedProviderId;
-  const effectiveEffort = forceInheritedModelSettings
-    ? inheritedEffort
-    : (member.effort ??
-      (inheritsDefaultRuntime && !explicitMemberModel ? inheritedEffort : undefined));
+  const effectiveEffort = normalizeEffectiveLaunchIdentity({
+    lead: { providerId: inheritedProviderId, model: inheritedModel, effort: inheritedEffort },
+    member: forceInheritedModelSettings ? undefined : member,
+  }).effort;
   const modelButtonLabelBase = effectiveModel?.trim()
     ? getProviderScopedTeamModelLabel(effectiveProviderId, effectiveModel.trim())
     : t('memberDraft.model.default');
@@ -462,7 +460,7 @@ export const MemberDraftRow = ({
   const runtimeSummary = formatTeamModelSummary(
     effectiveProviderId,
     effectiveModel?.trim() ?? '',
-    effectiveEffort
+    effectiveEffort ?? undefined
   );
   const toggleWorkflowExpanded = useCallback(() => {
     setWorkflowExpanded((prev) => {

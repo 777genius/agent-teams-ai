@@ -512,7 +512,7 @@ describe('configValidation', () => {
     }
   });
 
-  it('normalizes legacy Codex runtime backend updates to codex-native', () => {
+  it('preserves explicit Codex runtime backend routes', () => {
     const apiResult = validateConfigUpdatePayload('runtime', {
       providerBackends: {
         codex: 'api',
@@ -523,7 +523,7 @@ describe('configValidation', () => {
     if (apiResult.valid) {
       expect(apiResult.data).toEqual({
         providerBackends: {
-          codex: 'codex-native',
+          codex: 'api',
         },
       });
     }

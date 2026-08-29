@@ -52,6 +52,8 @@ import type {
 
 /** Stable app-shell facade. Construction and orchestration live in focused delegate layers. */
 export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePrimaryFacade {
+  readonly requiresAuthoritativeLaunchProof = true;
+
   constructor(
     private readonly configReader: TeamConfigReader = new TeamConfigReader(),
     protected readonly inboxReader: TeamInboxReader = new TeamInboxReader(),

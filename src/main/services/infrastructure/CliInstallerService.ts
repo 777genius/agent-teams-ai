@@ -1,20 +1,6 @@
 /**
  * CliInstallerService — detects, downloads, verifies, and installs Claude Code CLI.
- *
- * Architecture mirrors UpdaterService: instance with setMainWindow(), progress events
- * via webContents.send(). Downloads the native binary from GCS, verifies SHA256,
- * then delegates `claude install` for shell integration (symlink, PATH setup).
- *
- * Edge cases handled:
- * - HTTP redirects (GCS 302) — manual redirect following
- * - Missing Content-Length — indeterminate progress
- * - tmpfile cleanup on failure/abort (finally block)
- * - SHA256 mismatch — clear error, file deleted
- * - spawn timeouts (10s for --version, 120s for install)
- * - manifest.json / latest response validation
- * - Concurrent install mutex
- * - `latest` version string trimming / 'v' prefix stripping
- * - Human-readable error messages per phase
+ * Mirrors UpdaterService and delegates shell integration to `claude install`.
  */
 
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
@@ -45,6 +31,11 @@ import {
   type ProviderModelAvailabilityContext,
   type ProviderModelAvailabilitySnapshot,
 } from '../runtime/CliProviderModelAvailabilityService';
+import {
+  createDegradedProviderStatus,
+  createRuntimeStatusErrorProviderStatus,
+  mergeProviderStatusDisplayEvidence,
+} from '../runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor';
 
@@ -224,27 +215,6 @@ function cloneCliInstallationStatus(status: CliInstallationStatus): CliInstallat
       backend: provider.backend ? { ...provider.backend } : null,
       models: [...provider.models],
     })),
-  };
-}
-
-function mergeProviderStatusCatalogCache(
-  incomingProvider: CliProviderStatus,
-  currentProvider: CliProviderStatus
-): CliProviderStatus {
-  const modelCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
-  const incomingRefreshState = incomingProvider.modelCatalogRefreshState ?? null;
-  const shouldPreserveCurrentModels = incomingProvider.models.length === 0;
-
-  return {
-    ...incomingProvider,
-    models: shouldPreserveCurrentModels ? currentProvider.models : incomingProvider.models,
-    modelCatalog,
-    modelCatalogRefreshState:
-      modelCatalog && incomingRefreshState !== 'error'
-        ? 'ready'
-        : (incomingRefreshState ?? currentProvider.modelCatalogRefreshState ?? 'idle'),
-    runtimeCapabilities:
-      incomingProvider.runtimeCapabilities ?? currentProvider.runtimeCapabilities ?? null,
   };
 }
 
@@ -807,7 +777,7 @@ export class CliInstallerService {
     const nextProviders = hasProvider
       ? this.latestStatusSnapshot.providers.map((provider) =>
           provider.providerId === providerStatus.providerId
-            ? mergeProviderStatusCatalogCache(providerStatus, provider)
+            ? mergeProviderStatusDisplayEvidence(providerStatus, provider)
             : provider
         )
       : [...this.latestStatusSnapshot.providers, providerStatus];
@@ -924,10 +894,17 @@ export class CliInstallerService {
       return null;
     }
 
+    const projectPath = options.projectPath?.trim() || null;
     const flavor = getConfiguredCliFlavor();
     if (flavor !== 'agent_teams_orchestrator') {
-      const fullStatus = await this.getStatus();
-      return fullStatus.providers.find((provider) => provider.providerId === providerId) ?? null;
+      return createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error(
+          projectPath
+            ? 'Project-scoped provider status is unsupported by this CLI flavor'
+            : 'Provider-scoped status is unsupported by this CLI flavor'
+        )
+      );
     }
 
     const generation = this.statusGatherGeneration;
@@ -939,19 +916,16 @@ export class CliInstallerService {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
     };
-    const providerStatus = options.projectPath
-      ? await this.multimodelBridgeService.getProviderStatus(
-          binaryPath,
-          providerId,
-          undefined,
-          options
-        )
+    const providerStatus = projectPath
+      ? await this.multimodelBridgeService.getProviderStatus(binaryPath, providerId, undefined, {
+          projectPath,
+        })
       : await this.multimodelBridgeService.getProviderStatus(
           binaryPath,
           providerId,
           handleCatalogUpdate
         );
-    if (!options.projectPath) {
+    if (!projectPath) {
       this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
     }
     return providerStatus;
@@ -1092,10 +1066,17 @@ export class CliInstallerService {
         const recoveredHealthyStatus = this.getRecoverableHealthyStatus(binaryPath);
         if (recoveredHealthyStatus) {
           logger.warn(
-            `CLI version probe failed for ${binaryPath}, reusing last healthy status snapshot: ${versionProbe.error}`
+            `CLI version probe failed for ${binaryPath}, retaining stale display evidence ` +
+              `without launch authority: ${versionProbe.error}`
           );
           Object.assign(r, recoveredHealthyStatus, {
             launchError: null,
+            authLoggedIn: false,
+            authMethod: null,
+            authStatusChecking: false,
+            providers: recoveredHealthyStatus.providers.map((provider) =>
+              createDegradedProviderStatus(provider, versionProbe.error)
+            ),
           });
           this.publishStatusSnapshotIfCurrent(r, generation);
           return;

@@ -1170,6 +1170,21 @@ describe('OpenCodeReadinessBridge', () => {
         leadPrompt: '',
         expectedCapabilitySnapshotId: 'cap-1',
         manifestHighWatermark: 0,
+        launchContractVersion: 1,
+        launchAttempt: {
+          attemptId: '018f47a2-4a13-7c2f-8d44-c0ffee123456',
+          payloadHash: 'a'.repeat(64),
+          generation: 1,
+          proofNonce: 'AAECAwQFBgcICQoLDA0ODw',
+          parent: {
+            sessionIdentity: `sha256:${'b'.repeat(64)}`,
+            messageIdentity: `sha256:${'c'.repeat(64)}`,
+          },
+          providerId: 'openai',
+          modelId: 'openai/gpt-5.4-mini',
+          requiredMcpTools: ['agent-teams_message_send'],
+          requireFreshRetainedHostProof: true,
+        },
       })
     ).resolves.toMatchObject({
       runId: 'run-1',

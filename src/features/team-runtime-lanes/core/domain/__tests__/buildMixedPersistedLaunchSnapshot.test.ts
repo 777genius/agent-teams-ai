@@ -3,9 +3,34 @@ import { describe, expect, it } from 'vitest';
 import { buildMixedPersistedLaunchSnapshot } from '../buildMixedPersistedLaunchSnapshot';
 
 describe('buildMixedPersistedLaunchSnapshot', () => {
+  it.each(['api', 'adapter', 'auto', 'codex-native'] as const)(
+    'preserves current Codex backend %s in primary and secondary persisted roster state',
+    (providerBackendId) => {
+      const snapshot = buildMixedPersistedLaunchSnapshot({
+        teamName: 'codex-routes',
+        launchPhase: 'active',
+        updatedAt: '2026-08-25T00:00:00.000Z',
+        leadDefaults: { providerId: 'codex', providerBackendId },
+        primaryMembers: [{ name: 'primary', providerId: 'codex', providerBackendId }],
+        primaryStatuses: {},
+        secondaryMembers: [
+          {
+            laneId: 'secondary:codex:secondary',
+            member: { name: 'secondary', providerId: 'codex', providerBackendId },
+            leadDefaults: { providerId: 'codex', providerBackendId },
+          },
+        ],
+      });
+
+      expect(snapshot.members.primary.providerBackendId).toBe(providerBackendId);
+      expect(snapshot.members.secondary.providerBackendId).toBe(providerBackendId);
+    }
+  );
+
   it('records bootstrapExpectedMembers when a secondary lane extends the expected roster', () => {
     const snapshot = buildMixedPersistedLaunchSnapshot({
       teamName: 'mixed-team',
+      runtimeRunId: 'run-primary',
       launchPhase: 'active',
       updatedAt: '2026-04-22T10:00:00.000Z',
       leadDefaults: {
@@ -18,6 +43,7 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       primaryMembers: [{ name: 'alice', providerId: 'codex', model: 'gpt-5.4', effort: 'high' }],
       primaryStatuses: {
         alice: {
+          runtimeModel: 'gpt-5.5-runtime',
           launchState: 'confirmed_alive',
           status: 'online',
           agentToolAccepted: true,
@@ -59,6 +85,8 @@ describe('buildMixedPersistedLaunchSnapshot', () => {
       laneKind: 'primary',
       laneOwnerProviderId: 'codex',
       launchState: 'confirmed_alive',
+      model: 'gpt-5.5-runtime',
+      runtimeRunId: 'run-primary',
     });
     expect(snapshot.members.bob).toMatchObject({
       providerId: 'opencode',

@@ -72,6 +72,56 @@ describe('team provisioning config materialization', () => {
     ]);
   });
 
+  it('preserves member runtime selection provenance with effective launch fields', () => {
+    const config: Record<string, unknown> = {
+      members: [
+        {
+          name: 'Builder',
+          providerId: 'codex',
+          model: 'gpt-5',
+          effort: 'high',
+        },
+      ],
+    };
+    const runtimeSelectionProvenance = {
+      version: 1 as const,
+      providerBackendId: 'inherited' as const,
+      model: 'inherited' as const,
+      effort: 'inherited' as const,
+    };
+
+    applyEffectiveLaunchStateToConfig('runtime-team', config, {
+      members: [
+        {
+          name: 'Builder',
+          providerId: 'codex',
+          providerBackendId: 'adapter',
+          model: 'gpt-6',
+          effort: 'xhigh',
+          runtimeSelectionProvenance,
+        },
+      ],
+    });
+
+    expect(config.members).toEqual([
+      expect.objectContaining({
+        name: 'Builder',
+        providerId: 'codex',
+        model: 'gpt-6',
+        effort: 'xhigh',
+        runtimeSelectionProvenance,
+      }),
+    ]);
+    expect(extractTeammateSpecsFromConfig(JSON.stringify(config))).toEqual([
+      expect.objectContaining({
+        name: 'Builder',
+        model: 'gpt-6',
+        effort: 'xhigh',
+        runtimeSelectionProvenance,
+      }),
+    ]);
+  });
+
   it('appends missing OpenCode launch members to config members', () => {
     const config: Record<string, unknown> = {
       members: [{ name: 'team-lead', agentType: 'team-lead' }],
@@ -179,6 +229,12 @@ describe('team provisioning config materialization', () => {
   });
 
   it('builds launch members from metadata without lead, user, removed, or auto-suffixed entries', () => {
+    const runtimeSelectionProvenance = {
+      version: 1 as const,
+      providerBackendId: 'inherited' as const,
+      model: 'explicit' as const,
+      effort: 'inherited' as const,
+    };
     expect(
       buildLaunchMembersFromMeta([
         { name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' },
@@ -187,8 +243,11 @@ describe('team provisioning config materialization', () => {
         {
           name: 'Builder',
           providerId: 'codex',
+          providerBackendId: 'adapter',
           model: ' gpt-5.4 ',
           effort: 'medium',
+          runtimeSelectionProvenance,
+          fastMode: 'on',
           cwd: ' /repo/builder ',
           mcpPolicy: { mode: 'appOnly' },
         },
@@ -202,8 +261,11 @@ describe('team provisioning config materialization', () => {
         isolation: undefined,
         cwd: '/repo/builder',
         providerId: 'codex',
+        providerBackendId: 'adapter',
         model: 'gpt-5.4',
         effort: 'medium',
+        runtimeSelectionProvenance,
+        fastMode: 'on',
         mcpPolicy: { mode: 'appOnly' },
       },
     ]);

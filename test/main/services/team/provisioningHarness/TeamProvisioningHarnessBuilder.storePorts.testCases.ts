@@ -56,7 +56,7 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
       expect.objectContaining({
         name: 'Builder',
         agentType: 'general-purpose',
-        providerBackendId: 'codex-native',
+        providerBackendId: 'adapter',
       }),
     ]);
   });
@@ -109,12 +109,12 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
       expect.objectContaining({
         name: 'Captain',
         agentType: 'team-lead',
-        providerBackendId: 'codex-native',
+        providerBackendId: 'adapter',
       }),
       expect.objectContaining({
         name: 'Builder',
         agentType: 'general-purpose',
-        providerBackendId: 'codex-native',
+        providerBackendId: 'adapter',
       }),
       expect.objectContaining({
         name: 'Runtime',
@@ -196,7 +196,7 @@ describe('TeamProvisioningHarnessBuilder fake stores and facade ports', () => {
       expect.objectContaining({ name: 'beta', role: 'Builder' }),
     ]);
     await expect(harness.stores.membersMetaStore.getMeta('port-team')).resolves.toMatchObject({
-      providerBackendId: 'codex-native',
+      providerBackendId: 'adapter',
     });
   });
 

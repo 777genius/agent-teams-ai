@@ -4,6 +4,7 @@ import {
   buildRuntimeSpawnStatusRecord,
   getFailedSpawnMembersFromStatuses,
   projectPendingRestartStatusForSnapshot,
+  resolveEffectiveConfiguredMember,
   shouldPreferCurrentLaunchMemberStatus,
 } from '../TeamProvisioningMemberStatusProjection';
 
@@ -21,6 +22,35 @@ const baseStatus = (overrides: Partial<MemberSpawnStatusEntry> = {}): MemberSpaw
 });
 
 describe('member status projection helpers', () => {
+  it('projects runtime selection provenance with the configured identity', () => {
+    expect(
+      resolveEffectiveConfiguredMember(
+        [
+          {
+            name: 'worker',
+            providerId: 'codex',
+            providerBackendId: 'codex-native',
+            model: 'gpt-5',
+            effort: 'high',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: 'explicit',
+            },
+          },
+        ],
+        [],
+        'worker'
+      )
+    ).toMatchObject({
+      runtimeSelectionProvenance: {
+        providerBackendId: 'inherited',
+        model: 'inherited',
+        effort: 'explicit',
+      },
+    });
+  });
   it('returns failed spawn members sorted by name', () => {
     const statuses = new Map<string, MemberSpawnStatusEntry>([
       ['zeta', baseStatus({ launchState: 'failed_to_start', error: 'terminal error' })],

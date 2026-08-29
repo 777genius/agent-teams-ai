@@ -115,6 +115,24 @@ function makeProviderStatus(overrides?: Partial<CliProviderStatus>): Partial<Cli
 }
 
 describe('resolveCodexRuntimeProfile', () => {
+  it.each(['api', 'adapter', 'auto', 'codex-native'] as const)(
+    'preserves authoritative current backend %s',
+    (providerBackendId) => {
+      const selection = resolveCodexRuntimeSelection({
+        source: {
+          providerStatus: makeProviderStatus({
+            selectedBackendId: providerBackendId,
+            resolvedBackendId: providerBackendId,
+            backend: { kind: providerBackendId, label: providerBackendId },
+          }),
+        },
+        selectedModel: 'gpt-5.4',
+      });
+
+      expect(selection.providerBackendId).toBe(providerBackendId);
+    }
+  );
+
   it('allows explicit Fast for GPT-5.4 with ChatGPT auth on codex-native', () => {
     const selection = resolveCodexRuntimeSelection({
       source: { providerStatus: makeProviderStatus() },

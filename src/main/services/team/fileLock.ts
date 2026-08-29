@@ -1,156 +1,41 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
 
-const STALE_TIMEOUT_MS = 30_000;
+import {
+  getSqliteTransactionLockDatabasePath,
+  withSqliteTransactionLock,
+  withSqliteTransactionLockSync,
+} from '@main/services/infrastructure/SqliteTransactionLock';
+
 const ACQUIRE_TIMEOUT_MS = 5_000;
 const RETRY_INTERVAL_MS = 20;
 
 export interface FileLockOptions {
   acquireTimeoutMs?: number;
+  /** Retained for caller compatibility; OS ownership has no wall-clock expiry. */
   staleTimeoutMs?: number;
   retryIntervalMs?: number;
 }
 
-interface LockInfo {
-  pid: number | null;
-  ageMs: number | null;
-}
-
-function readLockInfo(lockPath: string): LockInfo {
-  let pid: number | null = null;
-  let ageMs: number | null = null;
-  try {
-    const content = fs.readFileSync(lockPath, 'utf8');
-    const lines = content.split('\n');
-    const parsedPid = parseInt(lines[0] ?? '', 10);
-    if (Number.isFinite(parsedPid) && parsedPid > 0) {
-      pid = parsedPid;
-    }
-    const ts = parseInt(lines[1] ?? '', 10);
-    if (Number.isFinite(ts)) {
-      ageMs = Date.now() - ts;
-    }
-  } catch {
-    /* lock may have been released concurrently */
-  }
-  if (ageMs === null) {
-    try {
-      ageMs = Date.now() - fs.statSync(lockPath).mtimeMs;
-    } catch {
-      /* lock may have been released concurrently */
-    }
-  }
-  return { pid, ageMs };
-}
-
-function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
-    return code !== 'ESRCH';
-  }
-}
-
-function shouldBreakExistingLock(lockPath: string, staleTimeoutMs: number): boolean {
-  const info = readLockInfo(lockPath);
-  if (info.pid !== null && !isProcessAlive(info.pid)) {
-    return true;
-  }
-  return info.ageMs !== null && info.ageMs > staleTimeoutMs;
-}
-
-function removeLockPath(lockPath: string): void {
-  try {
-    fs.rmSync(lockPath, { recursive: true, force: true });
-  } catch {
-    /* another process may have cleaned it */
-  }
-}
-
-function writeLockFile(lockPath: string): void {
-  const fd = fs.openSync(lockPath, 'wx');
-  let closeError: unknown = null;
-  try {
-    fs.writeSync(fd, `${process.pid}\n${Date.now()}\n`);
-  } finally {
-    try {
-      fs.closeSync(fd);
-    } catch (err) {
-      closeError = err;
-    }
-  }
-  if (closeError) {
-    throw closeError instanceof Error ? closeError : new Error('Failed to close file lock');
-  }
-}
-
-function isExistingLockError(code: string | undefined): boolean {
-  return code === 'EEXIST' || code === 'EISDIR';
-}
-
-function tryAcquire(lockPath: string, options: Required<FileLockOptions>): boolean {
-  try {
-    // Fast path: assume the lock directory already exists (the common case once a
-    // team dir is created). This drops an existsSync(dir) stat from EVERY acquire,
-    // which adds up across the many lock cycles during a team launch.
-    writeLockFile(lockPath);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === 'ENOENT') {
-      // Lock directory missing - create it lazily and acquire in the same call, so
-      // first-acquire latency in a fresh dir is unchanged.
-      try {
-        fs.mkdirSync(path.dirname(lockPath), { recursive: true });
-        writeLockFile(lockPath);
-        return true;
-      } catch (retryError) {
-        const retryCode = (retryError as NodeJS.ErrnoException).code;
-        if (retryCode === 'ENOENT') {
-          return false;
-        }
-        if (isExistingLockError(retryCode)) {
-          if (shouldBreakExistingLock(lockPath, options.staleTimeoutMs)) {
-            removeLockPath(lockPath);
-          }
-          return false;
-        }
-        throw retryError;
-      }
-    }
-    if (isExistingLockError(code)) {
-      if (shouldBreakExistingLock(lockPath, options.staleTimeoutMs)) {
-        removeLockPath(lockPath);
-      }
-      return false;
-    }
-    throw err;
-  }
-}
-
-function releaseLock(lockPath: string): void {
-  try {
-    fs.unlinkSync(lockPath);
-  } catch {
-    /* already released or cleaned up */
-  }
-}
-
-function sleepSync(ms: number): void {
-  const deadline = Date.now() + ms;
-  while (Date.now() < deadline) {
-    // Synchronous callers need the same cross-process lock as controller writes.
-  }
-}
-
-function resolveLockOptions(options: FileLockOptions): Required<FileLockOptions> {
+function resolveLockOptions(filePath: string, options: FileLockOptions) {
   return {
     acquireTimeoutMs: options.acquireTimeoutMs ?? ACQUIRE_TIMEOUT_MS,
-    staleTimeoutMs: options.staleTimeoutMs ?? STALE_TIMEOUT_MS,
     retryIntervalMs: options.retryIntervalMs ?? RETRY_INTERVAL_MS,
+    timeoutMessage: `File lock timeout: ${filePath}`,
+    ownershipLostMessage: `File lock ownership was lost: ${filePath}`,
   };
+}
+
+function assertNoLegacyLock(filePath: string): void {
+  try {
+    // A simultaneously running pre-migration Desktop process does not know the
+    // SQLite namespace. Fence its exact legacy path instead of guessing stale
+    // ownership and recreating the original ABA removal hazard.
+    fs.lstatSync(`${filePath}.lock`);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  throw new Error(`Legacy file lock ownership is uncertain: ${filePath}`);
 }
 
 export function withFileLockSync<T>(
@@ -158,22 +43,12 @@ export function withFileLockSync<T>(
   fn: () => T,
   options: FileLockOptions = {}
 ): T {
-  const resolvedOptions = resolveLockOptions(options);
-  const lockPath = `${filePath}.lock`;
-  const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
-
-  while (!tryAcquire(lockPath, resolvedOptions)) {
-    if (Date.now() >= deadline) {
-      throw new Error(`File lock timeout: ${filePath}`);
-    }
-    sleepSync(Math.min(resolvedOptions.retryIntervalMs, Math.max(0, deadline - Date.now())));
-  }
-
-  try {
-    return fn();
-  } finally {
-    releaseLock(lockPath);
-  }
+  assertNoLegacyLock(filePath);
+  return withSqliteTransactionLockSync(
+    getSqliteTransactionLockDatabasePath(filePath),
+    fn,
+    resolveLockOptions(filePath, options)
+  );
 }
 
 export async function withFileLock<T>(
@@ -181,20 +56,10 @@ export async function withFileLock<T>(
   fn: () => Promise<T>,
   options: FileLockOptions = {}
 ): Promise<T> {
-  const resolvedOptions = resolveLockOptions(options);
-  const lockPath = `${filePath}.lock`;
-  const deadline = Date.now() + resolvedOptions.acquireTimeoutMs;
-
-  while (!tryAcquire(lockPath, resolvedOptions)) {
-    if (Date.now() >= deadline) {
-      throw new Error(`File lock timeout: ${filePath}`);
-    }
-    await new Promise((resolve) => setTimeout(resolve, resolvedOptions.retryIntervalMs));
-  }
-
-  try {
-    return await fn();
-  } finally {
-    releaseLock(lockPath);
-  }
+  assertNoLegacyLock(filePath);
+  return withSqliteTransactionLock(
+    getSqliteTransactionLockDatabasePath(filePath),
+    fn,
+    resolveLockOptions(filePath, options)
+  );
 }

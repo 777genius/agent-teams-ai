@@ -1,4 +1,6 @@
+import { runWithRosterReservation } from '@main/services/team/TeamMembersMetaStore';
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
+import { EventEmitter } from 'events';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -55,6 +57,7 @@ import {
   runDeterministicCreateSpawnFlow,
   shouldCancelDeterministicCreateSpawn,
 } from '../TeamProvisioningCreateDeterministicSpawnFlow';
+import { RosterLaunchKnownNoStartError } from '../TeamProvisioningRosterLaunchOutcome';
 
 import type { TeamCreateRequest } from '@shared/types';
 
@@ -178,6 +181,14 @@ function createPlanningPorts(
       order.push('unregister-run');
     }),
     getStopAllTeamsGeneration: vi.fn(() => 4),
+    beginCreateArtifactTransaction: vi.fn(async () => ({
+      ensureDirectory: vi.fn(async () => undefined),
+      recordFileWrite: vi.fn(async () => undefined),
+      rollbackIfOwned: vi.fn(async () => {
+        order.push('rollback-artifacts');
+        return { status: 'rolled-back' as const, retained: [], errors: [] };
+      }),
+    })),
   };
 }
 
@@ -216,11 +227,13 @@ function configureSpawnedChild(
   ports: PlanningPorts,
   pid: number
 ): ReturnType<PlanningPorts['spawnCli']> {
-  const child = {
-    pid,
-    once: vi.fn(),
-  } as unknown as ReturnType<PlanningPorts['spawnCli']>;
-  ports.spawnCli = vi.fn(() => child) as unknown as typeof ports.spawnCli;
+  const child = Object.assign(new EventEmitter(), { pid }) as unknown as ReturnType<
+    PlanningPorts['spawnCli']
+  >;
+  ports.spawnCli = vi.fn(() => {
+    queueMicrotask(() => child.emit('spawn'));
+    return child;
+  }) as unknown as typeof ports.spawnCli;
   return child;
 }
 
@@ -343,7 +356,10 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       throw parseError;
     });
 
-    await expect(runPlanningFailureFlow(run, ports)).rejects.toBe(parseError);
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(parseError.message),
+    });
 
     expect(flowMocks.materializeDeterministicCreateTeamBootstrapFiles).not.toHaveBeenCalled();
     expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledOnce();
@@ -368,6 +384,37 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledOnce();
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(ports.unregisterRun).toHaveBeenCalledWith(run.runId, planningRequest.teamName);
+  });
+
+  it('rolls back the attempt when exact proof expires at the invocation boundary', async () => {
+    const order: string[] = [];
+    const run = createPlanningRun();
+    const ports = createPlanningPorts(order);
+
+    await expect(
+      runWithRosterReservation('proof-expiry-transaction', () => runPlanningFailureFlow(run, ports), async () => {
+        throw new RosterLaunchKnownNoStartError('Exact-model execution proof expired');
+      })
+    ).rejects.toThrow('Exact-model execution proof expired');
+
+    expect(ports.spawnCli).not.toHaveBeenCalled();
+    expect(order).toContain('rollback-artifacts');
+  });
+
+  it('rolls back an incomplete materialization without invoking a process', async () => {
+    const order: string[] = [];
+    const run = createPlanningRun();
+    const ports = createPlanningPorts(order);
+    flowMocks.materializeDeterministicCreateTeamBootstrapFiles.mockRejectedValueOnce(
+      new Error('metadata materialization failed')
+    );
+
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toThrow(
+      'metadata materialization failed'
+    );
+
+    expect(ports.spawnCli).not.toHaveBeenCalled();
+    expect(order).toContain('rollback-artifacts');
   });
 
   it('rechecks cancellation after permission seeding and does not spawn an orphan', async () => {
@@ -423,11 +470,33 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       throw spawnError;
     });
 
-    await expect(runPlanningFailureFlow(run, ports)).rejects.toBe(spawnError);
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(spawnError.message),
+    });
 
     expect(flowMocks.cleanupAnthropicTeamApiKeyHelperMaterial).toHaveBeenCalledOnce();
     expect(run.anthropicApiKeyHelper).toBeNull();
     expect(ports.unregisterRun).toHaveBeenCalledWith(run.runId, planningRequest.teamName);
+  });
+
+  it('treats an asynchronous pre-spawn ENOENT as durable no-start and retryable cleanup', async () => {
+    const run = createPlanningRun();
+    const ports = createPlanningPorts([]);
+    ports.spawnCli = vi.fn(() => {
+      const child = new EventEmitter() as ReturnType<PlanningPorts['spawnCli']>;
+      queueMicrotask(() =>
+        child.emit('error', Object.assign(new Error('spawn ENOENT'), { code: 'ENOENT' }))
+      );
+      return child;
+    }) as unknown as typeof ports.spawnCli;
+
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining('spawn ENOENT'),
+    });
+    expect(ports.unregisterRun).toHaveBeenCalledWith(run.runId, planningRequest.teamName);
+    expect(run.child).toBeNull();
   });
 
   it('rolls back materialized create artifacts when the launch CLI argument parse fails', async () => {
@@ -454,12 +523,15 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       order.push('remove-anthropic-helper');
     });
 
-    await expect(runPlanningFailureFlow(run, ports)).rejects.toBe(parseError);
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(parseError.message),
+    });
 
     expect(order).toEqual([
       'materialize',
       'remove-anthropic-helper',
-      'delete-meta',
+      'rollback-artifacts',
       'remove-mcp-config',
       'remove-member-mcp-configs',
       'unregister-run',
@@ -493,8 +565,15 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       order.push('remove-anthropic-helper');
       throw cleanupError;
     });
+    ports.beginCreateArtifactTransaction = vi.fn(async () => ({
+      ensureDirectory: vi.fn(async () => undefined),
+      recordFileWrite: vi.fn(async () => undefined),
+      rollbackIfOwned: vi.fn(async () => {
+        order.push('rollback-artifacts');
+        throw cleanupError;
+      }),
+    }));
     ports.teamMetaStore.deleteMeta = vi.fn(async () => {
-      order.push('delete-meta');
       throw cleanupError;
     });
     ports.mcpConfigBuilder.removeConfigFile = vi.fn(async () => {
@@ -506,19 +585,22 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       throw cleanupError;
     });
 
-    await expect(runPlanningFailureFlow(run, ports)).rejects.toBe(planningError);
+    await expect(runPlanningFailureFlow(run, ports)).rejects.toMatchObject({
+      name: 'RosterLaunchKnownNoStartError',
+      message: expect.stringContaining(planningError.message),
+    });
 
     expect(order).toEqual([
       'materialize',
       'plan-launch',
       'remove-anthropic-helper',
-      'delete-meta',
+      'rollback-artifacts',
       'remove-mcp-config',
       'remove-member-mcp-configs',
     ]);
     expect(ports.unregisterRun).not.toHaveBeenCalled();
     expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
-    expect(flowMocks.removePath).toHaveBeenCalledTimes(4);
+    expect(flowMocks.removePath).toHaveBeenCalledTimes(2);
     expect(run.bootstrapSpecPath).toBeNull();
     expect(run.bootstrapUserPromptPath).toBeNull();
     expect(run.mcpConfigPath).toBeNull();
@@ -555,6 +637,35 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       expect.anything()
     );
     expect(cleanupRun).toHaveBeenCalledOnce();
+  });
+
+  it('reconciles an error-then-close child exactly once', async () => {
+    const run = createPlanningRun();
+    const ports = createPlanningPorts([]);
+    const child = configureSpawnedChild(ports, 123);
+    const persist = vi.fn();
+    const cleanup = vi.fn();
+    const releaseOwnership = vi.fn();
+    const flushParser = vi.fn();
+    const recordOutcome = vi.fn();
+    const handleProcessExit = vi.fn(async () => {
+      persist();
+      cleanup();
+      releaseOwnership();
+      flushParser();
+      recordOutcome();
+    });
+    ports.handleProcessExit = handleProcessExit;
+
+    await runPlanningFailureFlow(run, ports);
+    child.emit('error', new Error('post-spawn failure'));
+    child.emit('close', 9);
+
+    await vi.waitFor(() => expect(handleProcessExit).toHaveBeenCalledTimes(1));
+    expect(handleProcessExit).toHaveBeenCalledWith(run, null);
+    for (const terminalEffect of [persist, cleanup, releaseOwnership, flushParser, recordOutcome]) {
+      expect(terminalEffect).toHaveBeenCalledOnce();
+    }
   });
 
   it('kills and cleans up the spawned child when it is genuinely not ready at timeout', async () => {

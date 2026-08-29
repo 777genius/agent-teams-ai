@@ -168,6 +168,11 @@ export function mergeCodexProviderStatusWithSnapshot(
   }
 
   const availableBackends = mergeCodexNativeBackendOption(provider, snapshot);
+  // Snapshot data enriches Codex account/auth readiness only. Backend identity is
+  // live provider status and must retain its exact route for launch correlation.
+  const selectedBackendId = provider.selectedBackendId ?? CODEX_NATIVE_BACKEND_ID;
+  const resolvedBackendId = provider.resolvedBackendId ?? selectedBackendId;
+  const backendKind = provider.backend?.kind ?? resolvedBackendId;
   const customProvider = provider.connection?.codex?.customProvider ?? null;
   const endpointLabel =
     customProvider?.active === true && customProvider.baseUrl.trim()
@@ -202,15 +207,15 @@ export function mergeCodexProviderStatusWithSnapshot(
         ? 'error'
         : 'unknown',
     statusMessage: getProviderStatusMessage(snapshot, provider.statusMessage),
-    selectedBackendId: CODEX_NATIVE_BACKEND_ID,
-    resolvedBackendId: CODEX_NATIVE_BACKEND_ID,
+    selectedBackendId,
+    resolvedBackendId,
     availableBackends,
     backend: {
-      kind: CODEX_NATIVE_BACKEND_ID,
-      label: CODEX_NATIVE_LABEL,
-      endpointLabel,
+      kind: backendKind,
+      label: provider.backend?.label || CODEX_NATIVE_LABEL,
+      endpointLabel: provider.backend?.endpointLabel || endpointLabel,
       projectId: provider.backend?.projectId ?? null,
-      authMethodDetail: snapshot.effectiveAuthMode ?? null,
+      authMethodDetail: provider.backend?.authMethodDetail ?? snapshot.effectiveAuthMode ?? null,
     },
     connection: {
       ...baseConnection,

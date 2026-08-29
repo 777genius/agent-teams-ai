@@ -6,12 +6,43 @@ import {
   HttpBadRequestError,
   parseCreateTeamRequest,
   parseDraftLaunchCreateRequest,
+  parseLaunchProviderBackendId,
   parseLaunchRequest,
+  parseProviderBackendId,
   withRuntimeTeamName,
 } from '@main/http/teamRouteParsers';
 import { describe, expect, it } from 'vitest';
 
-import type { TeamCreateRequest } from '@shared/types/team';
+import type { TeamCreateRequest, TeamProviderBackendId, TeamProviderId } from '@shared/types/team';
+
+const backendIds: TeamProviderBackendId[] = [
+  'auto',
+  'adapter',
+  'api',
+  'cli-sdk',
+  'codex-native',
+  'opencode-cli',
+];
+const validPairs: Array<[TeamProviderId, TeamProviderBackendId]> = [
+  ['codex', 'auto'],
+  ['codex', 'adapter'],
+  ['codex', 'api'],
+  ['codex', 'codex-native'],
+  ['gemini', 'auto'],
+  ['gemini', 'api'],
+  ['gemini', 'cli-sdk'],
+  ['opencode', 'adapter'],
+  ['opencode', 'opencode-cli'],
+];
+const validPairKeys = new Set(
+  validPairs.map(([providerId, backendId]) => `${providerId}:${backendId}`)
+);
+const invalidPairs = (['anthropic', 'codex', 'gemini', 'opencode'] as TeamProviderId[]).flatMap(
+  (providerId) =>
+    backendIds
+      .filter((backendId) => !validPairKeys.has(`${providerId}:${backendId}`))
+      .map((backendId) => [providerId, backendId] as const)
+);
 
 function expectBadRequest(fn: () => unknown, message: string): void {
   expect(fn).toThrow(HttpBadRequestError);
@@ -83,17 +114,15 @@ describe('HTTP team route parsers', () => {
       worktree: 'feature-branch',
     });
 
-    expect(
-      parseLaunchRequest('demo-team', {
-        cwd: '/Users/test/project',
-        providerId: 'anthropic',
-        providerBackendId: 'codex-native',
-      })
-    ).toEqual({
-      teamName: 'demo-team',
-      cwd: '/Users/test/project',
-      providerId: 'anthropic',
-    });
+    expectBadRequest(
+      () =>
+        parseLaunchRequest('demo-team', {
+          cwd: '/Users/test/project',
+          providerId: 'anthropic',
+          providerBackendId: 'codex-native',
+        }),
+      'providerBackendId must be valid for the selected provider'
+    );
 
     expectBadRequest(
       () =>
@@ -113,6 +142,24 @@ describe('HTTP team route parsers', () => {
       'allowExperimentalLocalModels must be a boolean'
     );
   });
+
+  it.each(validPairs)(
+    'accepts valid %s/%s pair over both HTTP parser paths',
+    (providerId, backendId) => {
+      expect(parseProviderBackendId(providerId, backendId)).toBe(backendId);
+      expect(parseLaunchProviderBackendId(providerId, backendId)).toBe(backendId);
+    }
+  );
+
+  it.each(invalidPairs)(
+    'rejects incompatible %s/%s pair over both HTTP parser paths',
+    (providerId, backendId) => {
+      expect(() => parseProviderBackendId(providerId, backendId)).toThrow(HttpBadRequestError);
+      expect(() => parseLaunchProviderBackendId(providerId, backendId)).toThrow(
+        HttpBadRequestError
+      );
+    }
+  );
 
   it('parses create-team requests including inherited member provider settings', () => {
     expect(
@@ -152,6 +199,12 @@ describe('HTTP team route parsers', () => {
           workflow: 'Implementer',
           providerBackendId: 'codex-native',
           effort: 'xhigh',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'explicit',
+            model: 'inherited',
+            effort: 'explicit',
+          },
           mcpPolicy: {
             mode: 'strictAllowlist',
             scopes: { project: true, user: false },
@@ -163,6 +216,12 @@ describe('HTTP team route parsers', () => {
       providerId: 'codex',
       providerBackendId: 'codex-native',
       model: 'gpt-5.2',
+      leadRuntimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'explicit',
+        model: 'explicit',
+        effort: 'default',
+      },
       fastMode: 'on',
       limitContext: false,
     });
@@ -180,6 +239,12 @@ describe('HTTP team route parsers', () => {
     expect(parseCreateTeamRequest({ teamName: 'new-team' })).toEqual({
       teamName: 'new-team',
       members: [],
+      leadRuntimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'default',
+        model: 'default',
+        effort: 'default',
+      },
     });
 
     expectBadRequest(

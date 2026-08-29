@@ -1,6 +1,9 @@
+import {
+  resolveLaunchDialogBackendState,
+  resolveLaunchDialogPrefill,
+  resolveRelaunchProviderBackend,
+} from '@renderer/components/team/dialogs/launchDialogPrefill';
 import { describe, expect, it } from 'vitest';
-
-import { resolveLaunchDialogPrefill } from '@renderer/components/team/dialogs/launchDialogPrefill';
 
 import type { ResolvedTeamMember, TeamCreateRequest, TeamProviderId } from '@shared/types';
 
@@ -9,6 +12,186 @@ function createStoredModelGetter(models: Partial<Record<TeamProviderId, string>>
 }
 
 describe('resolveLaunchDialogPrefill', () => {
+  it('keeps identical default and explicit backend tuples semantically distinct', () => {
+    const resolve = (authoritativeBackendIsDefault: boolean) =>
+      resolveLaunchDialogBackendState({
+        selectedProviderId: 'codex',
+        hasAuthoritativeLaunchRecord: true,
+        authoritativeProviderId: 'codex',
+        authoritativeBackendId: 'api',
+        authoritativeBackendIsDefault,
+        runtimeFallbackBackendId: 'codex-native',
+      });
+
+    expect(resolve(true)).toEqual({
+      providerBackendId: 'codex-native',
+      authoritativeUnavailable: false,
+    });
+    expect(resolve(false)).toEqual({
+      providerBackendId: 'api',
+      authoritativeUnavailable: false,
+    });
+  });
+
+  it('does not synthesize a missing current backend from live runtime status', () => {
+    expect(
+      resolveRelaunchProviderBackend({
+        selectedProviderId: 'codex',
+        hasAuthoritativeLaunchRecord: true,
+        authoritativeProviderId: 'codex',
+        authoritativeBackendId: null,
+        fallbackBackendId: 'codex-native',
+      })
+    ).toBeUndefined();
+  });
+
+  it.each(['anthropic', 'codex', 'opencode'] as const)(
+    'drops stale default runtime values for %s prefill',
+    (providerId) => {
+      const result = resolveLaunchDialogPrefill({
+        members: [],
+        savedRequest: {
+          teamName: 'default-prefill',
+          cwd: '/safe-test-project',
+          providerId,
+          providerBackendId:
+            providerId === 'codex' ? 'api' : providerId === 'opencode' ? 'adapter' : undefined,
+          model: 'stale-model',
+          effort: 'high',
+          leadRuntimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'default',
+            model: 'default',
+            effort: 'default',
+          },
+          members: [],
+        },
+        previousLaunchParams: {
+          providerId,
+          model: 'older-stale-model',
+          effort: 'low',
+        },
+        multimodelEnabled: true,
+        storedProviderId: providerId,
+        storedEffort: 'medium',
+        storedFastMode: 'inherit',
+        storedLimitContext: false,
+        getStoredModel: () => 'stored-stale-model',
+      });
+
+      expect(result).toMatchObject({
+        providerId,
+        providerBackendId: undefined,
+        providerBackendIsDefault: true,
+        model: '',
+        effort: '',
+      });
+    }
+  );
+
+  it('retains exact explicit runtime values and intent in prefill', () => {
+    const result = resolveLaunchDialogPrefill({
+      members: [],
+      savedRequest: {
+        teamName: 'explicit-prefill',
+        cwd: '/safe-test-project',
+        providerId: 'opencode',
+        providerBackendId: 'adapter',
+        model: 'openrouter/exact-model',
+        effort: 'high',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'explicit',
+          model: 'explicit',
+          effort: 'explicit',
+        },
+        members: [],
+      },
+      multimodelEnabled: true,
+      storedProviderId: 'anthropic',
+      storedEffort: 'medium',
+      storedFastMode: 'inherit',
+      storedLimitContext: false,
+      getStoredModel: () => 'stale-model',
+    });
+
+    expect(result).toMatchObject({
+      providerId: 'opencode',
+      providerBackendId: 'adapter',
+      providerBackendIsDefault: false,
+      model: 'openrouter/exact-model',
+      effort: 'high',
+    });
+  });
+
+  it('treats complete provenance-free legacy values as exact instead of silently defaulting', () => {
+    const result = resolveLaunchDialogPrefill({
+      members: [],
+      savedRequest: {
+        teamName: 'legacy-prefill',
+        cwd: '/safe-test-project',
+        providerId: 'codex',
+        providerBackendId: 'api',
+        model: 'gpt-legacy',
+        effort: 'high',
+        members: [],
+      },
+      multimodelEnabled: true,
+      storedProviderId: 'anthropic',
+      storedEffort: 'medium',
+      storedFastMode: 'inherit',
+      storedLimitContext: false,
+      getStoredModel: () => 'gpt-current',
+    });
+
+    expect(result).toMatchObject({
+      providerBackendId: 'api',
+      providerBackendIsDefault: false,
+      model: 'gpt-legacy',
+      effort: 'high',
+    });
+  });
+
+  it('prefers the current lead fast-mode selection over a stale saved request', () => {
+    const result = resolveLaunchDialogPrefill({
+      members: [
+        {
+          name: 'team-lead',
+          agentType: 'team-lead',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.6',
+          effort: 'high',
+          selectedFastMode: 'on',
+          color: 'blue',
+          currentTaskId: null,
+          taskCount: 0,
+          status: 'active',
+          lastActiveAt: null,
+          messageCount: 0,
+        },
+      ],
+      savedRequest: {
+        teamName: 'team',
+        displayName: 'Team',
+        cwd: '/tmp/project',
+        members: [],
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5.4',
+        fastMode: 'off',
+      },
+      multimodelEnabled: true,
+      storedProviderId: 'anthropic',
+      storedEffort: 'medium',
+      storedFastMode: 'inherit',
+      storedLimitContext: false,
+      getStoredModel: createStoredModelGetter({ codex: 'gpt-5.4' }),
+    });
+
+    expect(result.fastMode).toBe('on');
+  });
+
   it('prefills from the current lead runtime before localStorage defaults', () => {
     const members = [
       {
@@ -46,9 +229,9 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'codex',
-      providerBackendId: 'codex-native',
+      providerBackendId: undefined,
       model: 'gpt-5.4',
       effort: 'medium',
       fastMode: 'inherit',
@@ -91,9 +274,9 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'codex',
-      providerBackendId: 'codex-native',
+      providerBackendId: undefined,
       model: 'gpt-5.4',
       effort: 'medium',
       fastMode: 'inherit',
@@ -122,7 +305,7 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'codex',
       providerBackendId: 'codex-native',
       model: 'gpt-5.3-codex',
@@ -156,7 +339,7 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'codex',
       providerBackendId: 'codex-native',
       model: 'gpt-5.4',
@@ -166,7 +349,7 @@ describe('resolveLaunchDialogPrefill', () => {
     });
   });
 
-  it('defaults new Codex launch flows to codex-native when no backend was persisted', () => {
+  it('preserves authoritative current Codex backend absence', () => {
     const result = resolveLaunchDialogPrefill({
       members: [
         {
@@ -189,14 +372,113 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'codex',
-      providerBackendId: 'codex-native',
+      providerBackendId: undefined,
       model: 'gpt-5.4',
       effort: 'medium',
       fastMode: 'inherit',
       limitContext: false,
     });
+  });
+
+  it.each(['api', 'adapter', 'auto', 'codex-native'] as const)(
+    'preserves a current saved Codex %s backend for relaunch',
+    (providerBackendId) => {
+      const result = resolveLaunchDialogPrefill({
+        members: [],
+        savedRequest: {
+          teamName: 'legacy-codex-team',
+          cwd: '/Users/test/project',
+          providerId: 'codex',
+          providerBackendId,
+          model: 'gpt-5.4',
+          members: [],
+        } as TeamCreateRequest,
+        previousLaunchParams: undefined,
+        multimodelEnabled: true,
+        storedProviderId: 'anthropic',
+        storedEffort: 'medium',
+        storedFastMode: 'inherit',
+        storedLimitContext: false,
+        getStoredModel: createStoredModelGetter({ codex: 'gpt-5.4' }),
+      });
+
+      expect(result.providerBackendId).toBe(providerBackendId);
+    }
+  );
+
+  it('prefers committed saved metadata over stale same-provider renderer params after a crash', () => {
+    const result = resolveLaunchDialogPrefill({
+      members: [],
+      savedRequest: {
+        teamName: 'crash-recovery-team',
+        cwd: '/safe-test-project',
+        providerId: 'codex',
+        providerBackendId: 'adapter',
+        model: 'gpt-5.6-sol',
+        effort: 'high',
+        fastMode: 'off',
+        limitContext: false,
+        members: [],
+      },
+      previousLaunchParams: {
+        providerId: 'codex',
+        providerBackendId: 'api',
+        model: 'gpt-5.4',
+        effort: 'low',
+        fastMode: 'on',
+        limitContext: true,
+      },
+      multimodelEnabled: true,
+      storedProviderId: 'anthropic',
+      storedEffort: 'medium',
+      storedFastMode: 'inherit',
+      storedLimitContext: true,
+      getStoredModel: createStoredModelGetter({ codex: 'gpt-5.4' }),
+    });
+
+    expect(result).toMatchObject({
+      providerId: 'codex',
+      providerBackendId: 'adapter',
+      model: 'gpt-5.6-sol',
+      effort: 'high',
+      fastMode: 'off',
+      limitContext: false,
+    });
+  });
+
+  it('prefers the current lead backend over both saved metadata and renderer params', () => {
+    const result = resolveLaunchDialogPrefill({
+      members: [
+        {
+          name: 'team-lead',
+          agentType: 'team-lead',
+          providerId: 'codex',
+          providerBackendId: 'adapter',
+          model: 'gpt-5.6-sol',
+        },
+      ] as ResolvedTeamMember[],
+      savedRequest: {
+        teamName: 'current-route-team',
+        cwd: '/safe-test-project',
+        providerId: 'codex',
+        providerBackendId: 'api',
+        members: [],
+      },
+      previousLaunchParams: {
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+      },
+      multimodelEnabled: true,
+      storedProviderId: 'anthropic',
+      storedEffort: 'medium',
+      storedFastMode: 'inherit',
+      storedLimitContext: false,
+      getStoredModel: createStoredModelGetter({ codex: 'gpt-5.4' }),
+    });
+
+    expect(result.providerBackendId).toBe('adapter');
   });
 
   it('does not carry a frozen Gemini model into an Anthropic fallback', () => {
@@ -225,7 +507,7 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'anthropic',
       providerBackendId: undefined,
       model: 'haiku',
@@ -255,7 +537,7 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'opencode',
       providerBackendId: undefined,
       model: 'openrouter/moonshotai/kimi-k2',
@@ -285,7 +567,7 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'anthropic',
       providerBackendId: undefined,
       model: 'opus',
@@ -335,7 +617,7 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'anthropic',
       providerBackendId: undefined,
       model: 'haiku',
@@ -365,9 +647,9 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'codex',
-      providerBackendId: 'codex-native',
+      providerBackendId: undefined,
       model: 'custom-model[1m]',
       effort: 'medium',
       fastMode: 'inherit',
@@ -395,9 +677,9 @@ describe('resolveLaunchDialogPrefill', () => {
       }),
     });
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       providerId: 'codex',
-      providerBackendId: 'codex-native',
+      providerBackendId: undefined,
       model: 'custom-model[1m]',
       effort: 'medium',
       fastMode: 'inherit',

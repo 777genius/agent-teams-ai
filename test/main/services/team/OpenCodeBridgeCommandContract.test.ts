@@ -9,6 +9,8 @@ import {
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
+  OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION,
+  OPEN_CODE_LAUNCH_REQUEST_CORRELATION_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
   type OpenCodeBridgeCommandEnvelope,
   type OpenCodeBridgeHandshake,
@@ -20,8 +22,19 @@ import {
   validateBridgeResultEnvelope,
   validateOpenCodeBridgeHandshake,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import { createOpenCodeBridgeClientIdentity } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 
 describe('OpenCodeBridgeCommandContract', () => {
+  it('advertises strict OpenCode launch-attempt contract version 1', () => {
+    expect(
+      createOpenCodeBridgeClientIdentity({ appVersion: '1.0.0' }).bridgeProtocol
+        .openCodeLaunchAttemptContract
+    ).toBe(OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION);
+    expect(
+      createOpenCodeBridgeClientIdentity({ appVersion: '1.0.0' }).bridgeProtocol
+        .openCodeLaunchRequestCorrelationContract
+    ).toBe(OPEN_CODE_LAUNCH_REQUEST_CORRELATION_CONTRACT_VERSION);
+  });
   it('rejects bridge stdout with logs plus json', () => {
     const result = parseSingleBridgeJsonResult('debug log\n{"ok":true}\n');
 
@@ -346,6 +359,74 @@ describe('OpenCodeBridgeCommandContract', () => {
     });
   });
 
+  it.each([undefined, 0])(
+    'blocks launch when openCodeLaunchAttemptContract is %s',
+    (version) => {
+      const client = peerIdentity('claude_team');
+      const server = peerIdentity('agent_teams_orchestrator');
+      server.bridgeProtocol.openCodeLaunchAttemptContract = version;
+      const handshake = buildHandshake({ client, server });
+
+      expect(
+        validateOpenCodeBridgeHandshake({
+          handshake,
+          expectedClient: client,
+          requiredCommand: 'opencode.launchTeam',
+          expectedCapabilitySnapshotId: 'cap-1',
+          expectedManifestHighWatermark: 10,
+          expectedRunId: 'run-1',
+        })
+      ).toEqual({
+        ok: false,
+        reason:
+          `Strict OpenCode launch contract version ${OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION} is required, but the orchestrator does not advertise openCodeLaunchAttemptContract 1. Update agent_teams_orchestrator and restart the app.`,
+      });
+    }
+  );
+
+  it.each([undefined, 0])(
+    'blocks launch when openCodeLaunchRequestCorrelationContract is %s',
+    (version) => {
+      const client = peerIdentity('claude_team');
+      const server = peerIdentity('agent_teams_orchestrator');
+      server.bridgeProtocol.openCodeLaunchRequestCorrelationContract = version;
+      const handshake = buildHandshake({ client, server });
+
+      expect(
+        validateOpenCodeBridgeHandshake({
+          handshake,
+          expectedClient: client,
+          requiredCommand: 'opencode.launchTeam',
+          expectedCapabilitySnapshotId: 'cap-1',
+          expectedManifestHighWatermark: 10,
+          expectedRunId: 'run-1',
+        })
+      ).toEqual({
+        ok: false,
+        reason:
+          'Strict OpenCode launch request correlation contract version 1 is required, but the orchestrator does not advertise openCodeLaunchRequestCorrelationContract 1. Update agent_teams_orchestrator and restart the app.',
+      });
+    }
+  );
+
+  it('accepts strict V1 launch when no capability snapshot exists', () => {
+    const client = peerIdentity('claude_team');
+    const server = peerIdentity('agent_teams_orchestrator');
+    server.runtime.capabilitySnapshotId = null;
+    const handshake = buildHandshake({ client, server });
+
+    expect(
+      validateOpenCodeBridgeHandshake({
+        handshake,
+        expectedClient: client,
+        requiredCommand: 'opencode.launchTeam',
+        expectedCapabilitySnapshotId: null,
+        expectedManifestHighWatermark: 10,
+        expectedRunId: 'run-1',
+      })
+    ).toEqual({ ok: true });
+  });
+
   it('requires the delivery acceptance contract only for acceptance-mode sendMessage', () => {
     const client = peerIdentity('claude_team');
     const server = peerIdentity('agent_teams_orchestrator');
@@ -537,6 +618,8 @@ function peerIdentity(
       ],
       opencodeAppManagedBootstrapContractVersion:
         OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      openCodeLaunchAttemptContract: 1,
+      openCodeLaunchRequestCorrelationContract: 1,
     },
     runtime: {
       providerId: 'opencode',

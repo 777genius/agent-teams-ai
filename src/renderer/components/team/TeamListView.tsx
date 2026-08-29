@@ -1037,13 +1037,14 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           members,
           stopTeam: async (nextTeamName) => {
             try {
-              await api.teams.stop(nextTeamName);
+              const outcome = await api.teams.stopForRelaunch(nextTeamName);
               recordTeamStop({
                 source: 'relaunch',
-                success: true,
+                success: outcome.status === 'stopped',
                 runtimeActive: true,
-                errorClass: 'none',
+                errorClass: outcome.status === 'stopped' ? 'none' : 'unknown',
               });
+              return outcome;
             } catch (error) {
               recordTeamStop({
                 source: 'relaunch',
@@ -1067,7 +1068,6 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     },
     [launchTeam]
   );
-
   useEffect(() => {
     if (!electronMode) {
       return;

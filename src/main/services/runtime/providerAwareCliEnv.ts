@@ -38,6 +38,8 @@ export interface ProviderAwareCliEnvOptions {
   allowStoredApiKeyDecryption?: boolean;
   allowedStoredApiKeyEnvVarNames?: readonly string[];
   allowClaudeUserSettingsAuthEnv?: boolean;
+  /** Reject incomplete current provenance instead of applying runtime defaults. */
+  requireExplicitProviderBackend?: boolean;
 }
 
 export interface ProviderAwareCliEnvResult {
@@ -67,6 +69,14 @@ function removeGlobalElectronRunAsNodeEnv(env: NodeJS.ProcessEnv): void {
 export async function buildProviderAwareCliEnv(
   options: ProviderAwareCliEnvOptions = {}
 ): Promise<ProviderAwareCliEnvResult> {
+  if (
+    options.requireExplicitProviderBackend === true &&
+    options.providerId !== undefined &&
+    options.providerId !== 'anthropic' &&
+    !options.providerBackendId?.trim()
+  ) {
+    throw new Error('providerBackendId is required for the selected provider');
+  }
   const connectionMode = options.connectionMode ?? 'strict';
   const storedApiKeyAccessArgs =
     options.allowStoredApiKeyDecryption === undefined &&

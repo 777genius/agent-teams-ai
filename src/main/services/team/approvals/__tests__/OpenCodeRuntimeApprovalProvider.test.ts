@@ -116,7 +116,7 @@ describe('OpenCode runtime approval provider', () => {
       },
     });
     const previousLaunchState: PersistedTeamLaunchSnapshot = {
-      version: 2,
+      version: 3,
       teamName: 'alpha',
       updatedAt: '2026-01-01T00:00:00.000Z',
       launchPhase: 'finished',

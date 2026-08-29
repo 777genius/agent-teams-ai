@@ -1,10 +1,10 @@
+import type { AuthoritativeModelExecutionProof } from './launchExecutionProof';
 import type { NotificationTarget, TeamEventType } from './notifications';
+import type { TeamLeadRuntimeSelectionProvenanceCarrier, TeamMemberRuntimeSelectionProvenanceCarrier } from './teamMemberRuntimeSelectionProvenance';
 import type * as TeamProvisioningTypes from './teamProvisioning';
 import type { EnhancedChunk } from '@main/types';
-
 export type * from './teamProvisioning';
-
-export interface TeamMember {
+export interface TeamMember extends TeamMemberRuntimeSelectionProvenanceCarrier {
   name: string;
   agentId?: string;
   agentType?: string;
@@ -24,7 +24,6 @@ export interface TeamMember {
   cwd?: string;
   removedAt?: number;
 }
-
 export type TeamMemberMcpScope = 'user' | 'project' | 'local';
 
 export type TeamMemberMcpMode = 'inheritLead' | 'inheritScopes' | 'strictAllowlist' | 'appOnly';
@@ -35,7 +34,7 @@ export interface TeamMemberMcpPolicy {
   serverNames?: string[];
 }
 
-export interface TeamConfig {
+export interface TeamConfig extends TeamLeadRuntimeSelectionProvenanceCarrier {
   name: string;
   description?: string;
   color?: string;
@@ -882,7 +881,7 @@ export type UpdateKanbanPatch =
   | { op: 'set_column'; column: Extract<KanbanColumnId, 'review' | 'approved'> }
   | { op: 'remove' }
   | { op: 'request_changes'; comment?: string; taskRefs?: TaskRef[] };
-export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt'> {
+export interface ResolvedTeamMember extends Pick<TeamMember, 'joinedAt' | 'runtimeSelectionProvenance'> {
   name: string;
   agentId?: string;
   status: MemberStatus;
@@ -951,7 +950,7 @@ export interface TeamProcess {
   registeredAt: string;
   stoppedAt?: string;
 }
-export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt'> {
+export interface TeamMemberSnapshot extends Pick<TeamMember, 'joinedAt' | 'runtimeSelectionProvenance'> {
   name: string;
   agentId?: string;
   currentTaskId: string | null;
@@ -1059,8 +1058,10 @@ export interface ProviderModelLaunchIdentity {
   fastResolutionReason?: string | null;
 }
 
-export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunchOptions, TeamLeadRuntimeSelectionProvenanceCarrier {
   teamName: string;
+  rosterTransactionId?: string;
+  executionProof?: AuthoritativeModelExecutionProof;
   cwd: string;
   prompt?: string;
   providerId?: TeamProviderId;
@@ -1070,7 +1071,6 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   fastMode?: TeamFastMode;
   /** When true, context window is limited to 200K tokens instead of the default. */
   limitContext?: boolean;
-  /** Legacy flag retained for compatibility. Deterministic bootstrap launches fresh today. */
   clearContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
@@ -1080,9 +1080,9 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   extraCliArgs?: string;
 }
 
-export interface TeamLaunchResponse {
+export interface TeamLaunchResponse extends TeamProvisioningTypes.RosterBoundLaunchResponse {
   runId: string;
-  launchStatus?: 'started' | 'already_launching' | 'already_running';
+  launchStatus?: 'started' | 'not_started' | 'already_launching' | 'already_running';
   alreadyLaunching?: boolean;
   alreadyRunning?: boolean;
 }
@@ -1228,11 +1228,14 @@ export interface PersistedTeamLaunchSummary {
   noRuntimePendingCount?: number;
   permissionPendingCount?: number;
 }
-
 export interface PersistedTeamLaunchSnapshot {
-  version: 2;
+  version: 3;
   teamName: string;
   updatedAt: string;
+  runtimeRunId?: string;
+  primaryLaneIdentity?: ProviderModelLaunchIdentity;
+  stoppedAt?: string;
+  stoppedRunId?: string;
   leadSessionId?: string;
   launchPhase: PersistedTeamLaunchPhase;
   expectedMembers: string[];
@@ -1240,6 +1243,7 @@ export interface PersistedTeamLaunchSnapshot {
   members: Record<string, PersistedTeamLaunchMemberState>;
   summary: PersistedTeamLaunchSummary;
   teamLaunchState: TeamLaunchAggregateState;
+  openCodeStrictLaunchAttempt?: import('./openCodeStrictLaunch').PersistedOpenCodeStrictLaunchAttempt;
 }
 
 export interface MemberSpawnStatusesSnapshot {
@@ -1252,7 +1256,6 @@ export interface MemberSpawnStatusesSnapshot {
   summary?: PersistedTeamLaunchSummary;
   source?: 'live' | 'persisted' | 'merged';
 }
-
 export interface RetryFailedOpenCodeSecondaryLanesResult {
   attempted: string[];
   confirmed: string[];
@@ -1260,11 +1263,8 @@ export interface RetryFailedOpenCodeSecondaryLanesResult {
   failed: { memberName: string; error: string }[];
   skipped: { memberName: string; reason: string }[];
 }
-
 export type MemberSpawnLivenessSource = 'heartbeat' | 'process';
-
 export type TeamAgentRuntimeBackendType = 'lead' | 'tmux' | 'iterm2' | 'in-process' | 'process';
-
 export type TeamAgentRuntimeLivenessKind =
   | 'confirmed_bootstrap'
   | 'runtime_process'
@@ -1274,7 +1274,6 @@ export type TeamAgentRuntimeLivenessKind =
   | 'registered_only'
   | 'stale_metadata'
   | 'not_found';
-
 export type TeamAgentRuntimePidSource =
   | 'lead_process'
   | 'tmux_pane'
@@ -1301,7 +1300,6 @@ export interface TeamAgentRuntimeResourceSample {
   pid?: number;
   runtimePid?: number;
 }
-
 export type TeamAgentRuntimeLoadScope = 'single-process' | 'process-tree' | 'shared-host';
 
 export interface TeamAgentRuntimeEntry {
@@ -1311,6 +1309,10 @@ export interface TeamAgentRuntimeEntry {
   backendType?: TeamAgentRuntimeBackendType;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
+  effort?: EffortLevel;
+  selectedFastMode?: TeamFastMode;
+  resolvedFastMode?: boolean;
+  runtimeRunId?: string;
   laneId?: string;
   laneKind?: 'primary' | 'secondary';
   pid?: number;
@@ -1344,7 +1346,6 @@ export interface TeamAgentRuntimeEntry {
   diagnostics?: string[];
   updatedAt: string;
 }
-
 export interface TeamAgentRuntimeSnapshot {
   teamName: string;
   updatedAt: string;
@@ -1467,7 +1468,7 @@ export type TeamProvisioningState =
   | 'failed'
   | 'cancelled';
 
-export interface TeamProvisioningMemberInput {
+export interface TeamProvisioningMemberInput extends TeamMemberRuntimeSelectionProvenanceCarrier {
   name: string;
   role?: string;
   /** Per-agent workflow/instructions injected into spawn prompt. */
@@ -1501,8 +1502,9 @@ export interface TeamWorktreeGitStatus {
   reason?: TeamWorktreeGitBlockReason;
   message?: string;
 }
-
-export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions {
+export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunchOptions, TeamLeadRuntimeSelectionProvenanceCarrier {
+  rosterTransactionId?: string;
+  executionProof?: AuthoritativeModelExecutionProof;
   teamName: string;
   displayName?: string;
   description?: string;
@@ -1525,7 +1527,7 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
   extraCliArgs?: string;
 }
 
-export interface TeamCreateConfigRequest {
+export interface TeamCreateConfigRequest extends TeamLeadRuntimeSelectionProvenanceCarrier {
   teamName: string;
   displayName?: string;
   description?: string;
@@ -1548,15 +1550,10 @@ export interface TeamCreateConfigRequest {
   extraCliArgs?: string;
 }
 
-export interface TeamCreateResponse {
-  runId: string;
-  launchStatus?: 'started' | 'already_launching' | 'already_running';
-  alreadyLaunching?: boolean;
-  alreadyRunning?: boolean;
-}
-
+export type TeamCreateResponse = TeamLaunchResponse;
 export interface TeamProvisioningModelCheckRequest {
   providerId: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId | null;
   model: string;
   effort?: EffortLevel;
 }
@@ -1589,6 +1586,9 @@ export interface TeamProvisioningPrepareResult {
   warnings?: string[];
   issues?: TeamProvisioningPrepareIssue[];
   supportDiagnostics?: TeamProvisioningSupportDiagnostic[];
+  processedModelChecks?: TeamProvisioningModelCheckRequest[];
+  /** Opaque metadata only; main re-resolves authority rather than trusting this copy. */
+  executionProof?: AuthoritativeModelExecutionProof;
 }
 
 export interface TeamProvisioningProgress {
@@ -1752,7 +1752,7 @@ export interface MemberFullStats {
   computedAt: string;
 }
 
-export interface AddMemberRequest {
+export interface AddMemberRequest extends TeamMemberRuntimeSelectionProvenanceCarrier {
   name: string;
   role?: string;
   workflow?: string;

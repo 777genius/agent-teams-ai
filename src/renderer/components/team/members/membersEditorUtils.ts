@@ -9,6 +9,10 @@ import { migrateProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeTeamMemberMcpPolicy } from '@shared/utils/teamMemberMcpPolicy';
 import { validateTeamMemberNameFormat } from '@shared/utils/teamMemberName';
 import {
+  normalizeTeamMemberRuntimeSelectionProvenance,
+  resolveMemberRuntimeSelectionProvenance,
+} from '@shared/utils/teamMemberRuntimeSelectionProvenance';
+import {
   inferTeamProviderIdFromModel,
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
@@ -18,10 +22,22 @@ import type { MentionSuggestion } from '@renderer/types/mention';
 import type {
   EffortLevel,
   TeamFastMode,
+  TeamMemberRuntimeSelectionProvenance,
   TeamProviderBackendId,
   TeamProviderId,
   TeamProvisioningMemberInput,
 } from '@shared/types';
+
+export function createDraftRuntimeSelectionProvenance(
+  draft: Pick<MemberDraft, 'providerBackendId' | 'model' | 'effort'>
+): TeamMemberRuntimeSelectionProvenance {
+  return {
+    version: 1,
+    providerBackendId: draft.providerBackendId ? 'explicit' : 'inherited',
+    model: draft.model?.trim() ? 'explicit' : 'inherited',
+    effort: draft.effort ? 'explicit' : 'inherited',
+  };
+}
 
 export function validateMemberNameInline(name: string): string | null {
   const trimmed = name.trim();
@@ -48,6 +64,9 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
     providerBackendId: initial?.providerBackendId,
     model: normalizeExplicitTeamModelForUi(providerId, initial?.model ?? ''),
     effort: initial?.effort,
+    runtimeSelectionProvenance:
+      normalizeTeamMemberRuntimeSelectionProvenance(initial?.runtimeSelectionProvenance) ??
+      createDraftRuntimeSelectionProvenance(initial ?? {}),
     fastMode: initial?.fastMode,
     mcpPolicy: normalizeTeamMemberMcpPolicy(initial?.mcpPolicy),
     removedAt: initial?.removedAt,
@@ -64,6 +83,7 @@ export function createMemberDraftsFromInputs(
     providerBackendId?: TeamProviderBackendId;
     model?: string;
     effort?: EffortLevel;
+    runtimeSelectionProvenance?: unknown;
     fastMode?: TeamFastMode;
     mcpPolicy?: unknown;
     isolation?: 'worktree';
@@ -73,6 +93,7 @@ export function createMemberDraftsFromInputs(
   return members
     .filter((member) => !member.removedAt)
     .map((member) => {
+      const provenance = resolveMemberRuntimeSelectionProvenance(member);
       const role = typeof member.role === 'string' ? member.role.trim() : '';
       const presetRoles: readonly string[] = PRESET_ROLES;
       const isPreset = presetRoles.includes(role);
@@ -84,9 +105,12 @@ export function createMemberDraftsFromInputs(
         workflow: member.workflow,
         isolation: member.isolation === 'worktree' ? 'worktree' : undefined,
         providerId: normalizeOptionalTeamProviderId(member.providerId),
-        providerBackendId: member.providerBackendId,
-        model: member.model ?? '',
-        effort: normalizeDraftEffort(member.effort),
+        providerBackendId:
+          provenance?.providerBackendId === 'inherited' ? undefined : member.providerBackendId,
+        model: provenance?.model === 'inherited' ? '' : (member.model ?? ''),
+        effort:
+          provenance?.effort === 'inherited' ? undefined : normalizeDraftEffort(member.effort),
+        runtimeSelectionProvenance: provenance,
         fastMode: member.fastMode,
         mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
         removedAt: member.removedAt,
@@ -107,6 +131,12 @@ export function clearMemberModelOverrides(member: MemberDraft): MemberDraft {
     providerBackendId: undefined,
     model: '',
     effort: undefined,
+    runtimeSelectionProvenance: {
+      version: 1,
+      providerBackendId: 'inherited',
+      model: 'inherited',
+      effort: 'inherited',
+    },
     fastMode: undefined,
   };
 }
@@ -148,6 +178,15 @@ export function normalizeMemberDraftForProviderMode(
       providerId: normalizedProviderId,
       providerBackendId: undefined,
       model: '',
+      runtimeSelectionProvenance:
+        member.runtimeSelectionProvenance?.unknownReason === undefined
+          ? {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: member.effort ? 'explicit' : 'inherited',
+            }
+          : member.runtimeSelectionProvenance,
       fastMode: undefined,
     };
   }
@@ -193,7 +232,7 @@ function normalizeDraftProviderBackendForProvider(
   if (!value) {
     return undefined;
   }
-  return providerId ? migrateProviderBackendId(providerId, value) : value;
+  return providerId ? migrateProviderBackendId(providerId, value, 'explicit-selection') : value;
 }
 
 interface ExistingMemberColorInput {
@@ -298,6 +337,7 @@ export function buildMembersFromDrafts(
       if (effort) {
         result.effort = effort;
       }
+      result.runtimeSelectionProvenance = resolveMemberRuntimeSelectionProvenance(member);
       if (member.fastMode) {
         result.fastMode = member.fastMode;
       }

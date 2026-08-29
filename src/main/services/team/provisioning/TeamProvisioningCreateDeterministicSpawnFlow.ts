@@ -1,7 +1,6 @@
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
 import { parseCliArgs } from '@shared/utils/cliArgsParser';
 import { type spawn } from 'child_process';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
@@ -9,6 +8,7 @@ import {
   applyDesktopTeammateModeDecisionToEnv,
   resolveDesktopTeammateModeDecision,
 } from '../runtimeTeammateMode';
+import { crossRosterLaunchInvocationBoundary } from '../TeamMembersMetaStore';
 
 import {
   type AnthropicApiKeyHelperRunOwner,
@@ -20,6 +20,11 @@ import {
   removeDeterministicBootstrapUserPromptFile,
   type RuntimeBootstrapMemberMcpLaunchConfig,
 } from './TeamProvisioningBootstrapSpec';
+import { createChildProcessTerminalReconciler } from './TeamProvisioningChildSettlement';
+import {
+  type BeginCreateArtifactTransaction,
+  type TeamProvisioningCreateArtifactTransaction,
+} from './TeamProvisioningCreateArtifactTransaction';
 import {
   buildDeterministicCreateSpawnArgs,
   materializeDeterministicCreateTeamBootstrapFiles,
@@ -33,6 +38,11 @@ import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
 import {
+  asRosterLaunchKnownNoStartError,
+  RosterLaunchKnownNoStartError,
+  withProductionStartedLaunchStatus,
+} from './TeamProvisioningRosterLaunchOutcome';
+import {
   buildRuntimeLaunchWarning,
   getPromptSizeSummary,
   logRuntimeLaunchSnapshot,
@@ -42,6 +52,7 @@ import {
   getLaunchModelArg,
   type TeamRuntimeLaunchArgsPlan,
 } from './TeamProvisioningRuntimeLaunchSelection';
+import { waitForSpawnBoundary } from './TeamProvisioningSpawnBoundary';
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
@@ -152,6 +163,7 @@ export interface DeterministicCreateSpawnFlowPorts<TRun extends DeterministicCre
   removeRunMemberMcpConfigFiles(run: TRun): Promise<void>;
   unregisterRun(runId: string, teamName: string): void;
   getStopAllTeamsGeneration(): number;
+  beginCreateArtifactTransaction: BeginCreateArtifactTransaction;
 }
 
 export interface RunDeterministicCreateSpawnFlowInput<
@@ -212,10 +224,11 @@ async function cleanupDeterministicCreateMaterializationFailure<
 >(
   run: TRun,
   request: TeamCreateRequest,
-  ports: DeterministicCreateSpawnFlowPorts<TRun>
+  ports: DeterministicCreateSpawnFlowPorts<TRun>,
+  artifactTransaction: TeamProvisioningCreateArtifactTransaction
 ): Promise<void> {
   await cleanupRunOwnedAnthropicApiKeyHelper(run).catch(() => undefined);
-  await cleanupDeterministicCreateMaterializedFiles(run, request, ports);
+  await cleanupDeterministicCreateMaterializedFiles(run, request, ports, artifactTransaction);
   if (!run.anthropicApiKeyHelper) {
     ports.unregisterRun(run.runId, request.teamName);
   }
@@ -224,9 +237,10 @@ async function cleanupDeterministicCreateMaterializationFailure<
 async function cleanupDeterministicCreateSpawnFailure<TRun extends DeterministicCreateSpawnFlowRun>(
   run: TRun,
   request: TeamCreateRequest,
-  ports: DeterministicCreateSpawnFlowPorts<TRun>
+  ports: DeterministicCreateSpawnFlowPorts<TRun>,
+  artifactTransaction: TeamProvisioningCreateArtifactTransaction
 ): Promise<void> {
-  await cleanupDeterministicCreateMaterializedFiles(run, request, ports);
+  await cleanupDeterministicCreateMaterializedFiles(run, request, ports, artifactTransaction);
   await cleanupRunOwnedAnthropicApiKeyHelper(run).catch(() => undefined);
   if (!run.anthropicApiKeyHelper) {
     ports.unregisterRun(run.runId, request.teamName);
@@ -238,17 +252,16 @@ async function cleanupDeterministicCreateMaterializedFiles<
 >(
   run: TRun,
   request: TeamCreateRequest,
-  ports: DeterministicCreateSpawnFlowPorts<TRun>
+  ports: DeterministicCreateSpawnFlowPorts<TRun>,
+  artifactTransaction: TeamProvisioningCreateArtifactTransaction
 ): Promise<void> {
-  await ports.teamMetaStore.deleteMeta(request.teamName).catch(() => {});
   const targets = buildDeterministicCreateCleanupTargets({
     teamName: request.teamName,
     bootstrapSpecPath: run.bootstrapSpecPath,
     bootstrapUserPromptPath: run.bootstrapUserPromptPath,
     mcpConfigPath: run.mcpConfigPath,
   });
-  await fs.promises.rm(targets.teamDir, { recursive: true, force: true }).catch(() => {});
-  await fs.promises.rm(targets.tasksDir, { recursive: true, force: true }).catch(() => {});
+  await artifactTransaction.rollbackIfOwned().catch(() => undefined);
   await removeDeterministicBootstrapSpecFile(targets.bootstrapSpecPath).catch(() => {});
   run.bootstrapSpecPath = null;
   await removeDeterministicBootstrapUserPromptFile(targets.bootstrapUserPromptPath).catch(() => {});
@@ -365,14 +378,21 @@ export async function runDeterministicCreateSpawnFlow<
     if (!run.anthropicApiKeyHelper) {
       ports.unregisterRun(run.runId, request.teamName);
     }
-    throw error;
+    throw asRosterLaunchKnownNoStartError(error, 'Team launch failed before a process existed');
   }
   applyDesktopTeammateModeDecisionToEnv(shellEnv, teammateModeDecision);
   let mcpConfigPath: string;
   let bootstrapSpecPath: string;
   let bootstrapUserPromptPath: string | null = null;
   let runtimeArgsPlan: TeamRuntimeLaunchArgsPlan;
+  let artifactTransaction: TeamProvisioningCreateArtifactTransaction | null = null;
   try {
+    artifactTransaction = await ports.beginCreateArtifactTransaction({
+      attemptId: run.runId,
+      teamName: request.teamName,
+      teamDir: path.join(getTeamsBasePath(), request.teamName),
+      tasksDir: path.join(getTasksBasePath(), request.teamName),
+    });
     // Pre-save our meta files before native app-managed briefing generation.
     // member_briefing intentionally reads canonical team metadata/inboxes, so
     // createTeam must materialize those files before building the bootstrap spec.
@@ -402,6 +422,7 @@ export async function runDeterministicCreateSpawnFlow<
             run.processKilled ||
             ports.getStopAllTeamsGeneration() !== stopAllGenerationAtStart,
         }),
+      artifactTransaction,
     });
     mcpConfigPath = materializedBootstrapFiles.mcpConfigPath;
     bootstrapSpecPath = materializedBootstrapFiles.bootstrapSpecPath;
@@ -418,8 +439,21 @@ export async function runDeterministicCreateSpawnFlow<
       contextLabel: 'Team create launch',
     });
   } catch (error) {
-    await cleanupDeterministicCreateMaterializationFailure(run, request, ports);
-    throw error;
+    if (artifactTransaction) {
+      await cleanupDeterministicCreateMaterializationFailure(
+        run,
+        request,
+        ports,
+        artifactTransaction
+      );
+    } else {
+      await cleanupRunOwnedAnthropicApiKeyHelper(run).catch(() => undefined);
+      if (!run.anthropicApiKeyHelper) ports.unregisterRun(run.runId, request.teamName);
+    }
+    throw asRosterLaunchKnownNoStartError(error, 'Team launch materialization failed before spawn');
+  }
+  if (!artifactTransaction) {
+    throw new RosterLaunchKnownNoStartError('Create artifact transaction was not initialized');
   }
   const launchModelArg = getLaunchModelArg(
     resolveTeamProviderId(request.providerId),
@@ -464,7 +498,7 @@ export async function runDeterministicCreateSpawnFlow<
         currentStopAllTeamsGeneration: ports.getStopAllTeamsGeneration(),
       })
     ) {
-      throw new Error('Team launch cancelled by app shutdown');
+      throw new RosterLaunchKnownNoStartError('Team launch cancelled by app shutdown');
     }
     if (request.skipPermissions === false) {
       emitProvisioningCheckpoint(run, 'Seeding lead bootstrap permission rules');
@@ -478,7 +512,7 @@ export async function runDeterministicCreateSpawnFlow<
         currentStopAllTeamsGeneration: ports.getStopAllTeamsGeneration(),
       })
     ) {
-      throw new Error('Team launch cancelled by app shutdown');
+      throw new RosterLaunchKnownNoStartError('Team launch cancelled by app shutdown');
     }
 
     emitProvisioningCheckpoint(
@@ -486,15 +520,19 @@ export async function runDeterministicCreateSpawnFlow<
       'Spawning Claude CLI process',
       `args=${spawnArgs.length} cwd=${request.cwd}`
     );
-    child = ports.spawnCli(claudePath, spawnArgs, {
-      cwd: request.cwd,
-      env: { ...shellEnv },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const invocationLease = await crossRosterLaunchInvocationBoundary();
+    child = invocationLease.invoke(() =>
+      ports.spawnCli(claudePath, spawnArgs, {
+        cwd: request.cwd,
+        env: { ...shellEnv },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+    );
+    await waitForSpawnBoundary(child);
   } catch (error) {
     // Clean up pre-saved meta files if spawn failed (instant failure, not transient)
-    await cleanupDeterministicCreateSpawnFailure(run, request, ports);
-    throw error;
+    await cleanupDeterministicCreateSpawnFailure(run, request, ports, artifactTransaction);
+    throw asRosterLaunchKnownNoStartError(error, 'Team launch failed before a process existed');
   }
 
   ports.updateProgress(run, 'spawning', 'Starting Claude CLI process', {
@@ -537,21 +575,26 @@ export async function runDeterministicCreateSpawnFlow<
     }
   }, getProvisioningRunTimeoutMs(run));
 
+  const reconcileChild = createChildProcessTerminalReconciler({
+    reconcile: (code) => ports.handleProcessExit(run, code),
+    onReconciliationFailure: (_reconciliationError, childError) => {
+      const progress = ports.updateProgress(run, 'failed', 'Claude CLI process error', {
+        error: childError?.message ?? 'Claude CLI process reconciliation failed',
+        cliLogsTail: extractCliLogsFromRun(run),
+      });
+      run.onProgress(progress);
+    },
+  });
   child.once('error', (error) => {
-    const progress = ports.updateProgress(run, 'failed', 'Failed to start Claude CLI', {
-      error: error.message,
-      cliLogsTail: extractCliLogsFromRun(run),
-    });
-    run.onProgress(progress);
-    void cleanupRunOwnedAnthropicApiKeyHelper(run).then(
-      () => ports.cleanupRun(run),
-      () => undefined
-    );
+    // A post-spawn error is an outcome event, not a pre-spawn rejection. Route
+    // it through the durable process-exit reconciliation before releasing run
+    // ownership or helper evidence.
+    void reconcileChild(null, error);
   });
 
   child.once('close', (code) => {
-    void ports.handleProcessExit(run, code);
+    void reconcileChild(code);
   });
 
-  return { runId };
+  return withProductionStartedLaunchStatus(request, { runId });
 }

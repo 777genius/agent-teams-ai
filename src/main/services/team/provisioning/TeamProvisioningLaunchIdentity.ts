@@ -11,6 +11,12 @@ import {
 } from '@shared/types';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isUsableCodexModelCatalog } from '@shared/utils/codexModelCatalog';
+import {
+  isResolvedLeadRuntimeSelectionProvenance,
+  isResolvedMemberRuntimeSelectionProvenance,
+  resolveLeadRuntimeSelectionProvenance,
+  resolveMemberRuntimeSelectionProvenance,
+} from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
@@ -30,7 +36,13 @@ import {
 
 export type LaunchIdentityRequest = Pick<
   TeamCreateRequest,
-  'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode' | 'limitContext'
+  | 'providerId'
+  | 'providerBackendId'
+  | 'model'
+  | 'effort'
+  | 'fastMode'
+  | 'limitContext'
+  | 'leadRuntimeSelectionProvenance'
 >;
 
 export interface ReadRuntimeProviderLaunchFactsInput {
@@ -84,6 +96,7 @@ export interface ResolveDirectMemberLaunchIdentityInput {
   };
   memberSpec: TeamCreateRequest['members'][number];
   requestLimitContext?: boolean;
+  inheritedLeadRequest?: LaunchIdentityRequest;
 }
 
 export interface LaunchIdentityResolutionPorts {
@@ -97,8 +110,10 @@ export interface LaunchIdentityResolutionPorts {
   validateRuntimeLaunchSelection(params: {
     actorLabel: string;
     providerId: TeamProviderId;
+    providerBackendId?: TeamProviderBackendId;
     model?: string;
     effort?: EffortLevel;
+    leadRuntimeSelectionProvenance?: TeamCreateRequest['leadRuntimeSelectionProvenance'];
     fastMode?: TeamFastMode;
     limitContext?: boolean;
     facts: RuntimeProviderLaunchFacts;
@@ -297,7 +312,37 @@ export function buildDirectMemberLaunchIdentityRequest(input: {
   providerBackendId?: TeamProviderBackendId;
   memberSpec: TeamCreateRequest['members'][number];
   requestLimitContext?: boolean;
+  inheritedLeadRequest?: LaunchIdentityRequest;
 }): LaunchIdentityRequest {
+  const memberProvenance = resolveMemberRuntimeSelectionProvenance({
+    ...input.memberSpec,
+    providerId: input.providerId,
+    runtimeSelectionProvenance: input.memberSpec.runtimeSelectionProvenance,
+  });
+  if (!isResolvedMemberRuntimeSelectionProvenance(memberProvenance)) {
+    throw new Error('Member runtime selection provenance is unresolved');
+  }
+  const leadProviderId = resolveTeamProviderId(input.inheritedLeadRequest?.providerId);
+  const inheritedLeadProvenance = resolveLeadRuntimeSelectionProvenance(
+    input.inheritedLeadRequest ?? {}
+  );
+  const sameProvider = Boolean(input.inheritedLeadRequest) && input.providerId === leadProviderId;
+  const axis = (
+    memberKind: 'explicit' | 'inherited',
+    leadKind: 'default' | 'explicit' | 'unknown'
+  ) => (memberKind === 'explicit' ? 'explicit' : sameProvider ? leadKind : 'default');
+  const leadRuntimeSelectionProvenance = {
+    version: 1 as const,
+    providerBackendId: axis(
+      memberProvenance.providerBackendId,
+      inheritedLeadProvenance.providerBackendId
+    ),
+    model: axis(memberProvenance.model, inheritedLeadProvenance.model),
+    effort: axis(memberProvenance.effort, inheritedLeadProvenance.effort),
+  };
+  if (!isResolvedLeadRuntimeSelectionProvenance(leadRuntimeSelectionProvenance)) {
+    throw new Error('Inherited lead runtime selection provenance is unresolved');
+  }
   return {
     providerId: input.providerId,
     ...(input.providerBackendId ? { providerBackendId: input.providerBackendId } : {}),
@@ -305,6 +350,7 @@ export function buildDirectMemberLaunchIdentityRequest(input: {
     ...(input.memberSpec.effort ? { effort: input.memberSpec.effort } : {}),
     ...(input.memberSpec.fastMode ? { fastMode: input.memberSpec.fastMode } : {}),
     ...(input.requestLimitContext ? { limitContext: input.requestLimitContext } : {}),
+    leadRuntimeSelectionProvenance,
   };
 }
 
@@ -335,8 +381,10 @@ export async function resolveAndValidateLaunchIdentity(
   ports.validateRuntimeLaunchSelection({
     actorLabel: 'Team lead',
     providerId: leadProviderId,
+    providerBackendId: input.request.providerBackendId,
     model: input.request.model,
     effort: input.request.effort,
+    leadRuntimeSelectionProvenance: input.request.leadRuntimeSelectionProvenance,
     fastMode: input.request.fastMode,
     limitContext: input.request.limitContext,
     facts: leadFacts,
@@ -345,11 +393,35 @@ export async function resolveAndValidateLaunchIdentity(
   for (const member of input.effectiveMembers) {
     const memberProviderId = resolveTeamProviderId(member.providerId);
     const memberFacts = await getFacts(memberProviderId);
+    const memberProvenance = resolveMemberRuntimeSelectionProvenance({
+      ...member,
+      providerId: memberProviderId,
+      runtimeSelectionProvenance: member.runtimeSelectionProvenance,
+    });
+    if (!isResolvedMemberRuntimeSelectionProvenance(memberProvenance)) {
+      throw new Error(`Member ${member.name} runtime selection provenance is unresolved`);
+    }
+    const leadProvenance = resolveLeadRuntimeSelectionProvenance(input.request);
+    const sameProvider = memberProviderId === leadProviderId;
+    const selectionKind = (
+      memberKind: 'explicit' | 'inherited',
+      leadKind: 'default' | 'explicit' | 'unknown'
+    ) => (memberKind === 'explicit' ? 'explicit' : sameProvider ? leadKind : 'default');
     ports.validateRuntimeLaunchSelection({
       actorLabel: `Member ${member.name}`,
       providerId: memberProviderId,
+      providerBackendId: member.providerBackendId,
       model: member.model,
       effort: member.effort,
+      leadRuntimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: selectionKind(
+          memberProvenance.providerBackendId,
+          leadProvenance.providerBackendId
+        ),
+        model: selectionKind(memberProvenance.model, leadProvenance.model),
+        effort: selectionKind(memberProvenance.effort, leadProvenance.effort),
+      },
       limitContext: input.request.limitContext,
       facts: memberFacts,
     });
@@ -370,6 +442,7 @@ export async function resolveDirectMemberLaunchIdentity(
     providerBackendId: input.providerBackendId,
     memberSpec: input.memberSpec,
     requestLimitContext: input.requestLimitContext,
+    inheritedLeadRequest: input.inheritedLeadRequest,
   });
   const facts = await ports.readRuntimeProviderLaunchFacts({
     claudePath: input.claudePath,
@@ -382,8 +455,10 @@ export async function resolveDirectMemberLaunchIdentity(
   ports.validateRuntimeLaunchSelection({
     actorLabel: `Member ${input.memberSpec.name}`,
     providerId: input.providerId,
+    providerBackendId: request.providerBackendId,
     model: input.memberSpec.model,
     effort: input.memberSpec.effort,
+    leadRuntimeSelectionProvenance: request.leadRuntimeSelectionProvenance,
     fastMode: input.memberSpec.fastMode,
     limitContext: input.requestLimitContext,
     facts,

@@ -11,6 +11,7 @@ import {
 } from '../TeamProvisioningLaunchDeterministicSetupFlow';
 
 import type { CrossProviderMemberArgsResult } from '../TeamProvisioningEnvBuilder';
+import type { DurableLaunchContinuationEvidence } from '../TeamProvisioningLaunchContinuationEvidence';
 import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import type {
   ProviderModelLaunchIdentity,
@@ -62,7 +63,13 @@ const anthropicApiKeyHelper = {
 
 function createMembers(): TeamCreateRequest['members'] {
   return [
-    { name: 'Lead', role: 'Lead', providerId: 'codex' },
+    {
+      name: 'Lead',
+      role: 'Lead',
+      providerId: 'codex',
+      providerBackendId: 'adapter',
+      fastMode: 'on',
+    },
     { name: 'Reviewer', role: 'Review', providerId: 'anthropic' },
   ];
 }
@@ -98,6 +105,7 @@ function createPorts(
     getExistingRun: vi.fn(() => null),
     getRunTrackedCwd: vi.fn(() => null),
     deleteProvisioningRunByTeam: vi.fn(),
+    readLaunchContinuationEvidence: vi.fn(async () => ({ kind: 'absent' as const })),
     launchExpectedMembersPorts: {
       readLaunchState: vi.fn(async () => null),
       readBootstrapLaunchSnapshot: vi.fn(async () => null),
@@ -135,6 +143,38 @@ function createPorts(
     createMixedSecondaryLaneStates: vi.fn(() => [{ laneId: 'primary' }]),
     buildCrossProviderMemberArgs: vi.fn(async () => createCrossProviderArgs()),
     resolveAndValidateLaunchIdentity: vi.fn(async () => launchIdentity),
+    readTasks: vi.fn(async () => []),
+    buildNativeAppManagedBootstrapSpecsWithDiagnostics: vi.fn(async () => ({
+      specs: new Map(),
+      diagnostics: {
+        nativeMemberCount: 0,
+        totalContextChars: 0,
+        totalContextLimitChars: 0,
+        warning: null,
+      },
+    })),
+    buildTeamRuntimeLaunchArgsPlan: vi.fn(async (input) => ({
+      settingsArgs: [],
+      fastModeArgs: [],
+      runtimeTurnSettledHookArgs: [],
+      providerArgs: input.envResolution.providerArgs ?? [],
+      extraArgs: input.extraArgs,
+      inheritedProviderArgs: input.inheritedProviderArgs,
+      appManagedSettingsPath: null,
+    })),
+    resolveDesktopTeammateModeDecision: vi.fn(async () => ({
+      injectedTeammateMode: null,
+      forceProcessTeammates: false,
+      source: 'default' as const,
+    })),
+    snapshotLaunchMaterialSources: vi.fn(async () => ({
+      version: 1 as const,
+      digest: 'sha256:stable-sources' as const,
+      entries: [],
+    })),
+    getCredentialDigestKey: vi.fn(async () => 'device-identity-for-tests'),
+    prepareLeadMcpConfig: vi.fn(async () => ({ version: 1 as const, json: '{"lead":true}' })),
+    prepareRuntimeBootstrapMemberMcpLaunchConfigs: vi.fn(async () => new Map()),
     randomUUID: vi.fn(() => 'run-1'),
     nowIso: vi.fn(() => '2026-01-01T00:00:00.000Z'),
     logger: {
@@ -257,6 +297,117 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
         effectiveMembers: [createMembers()[0]],
       })
     );
+  });
+
+  it('preserves member1 across restart only when credentials and finalized material are unchanged', async () => {
+    const helperIdentityA = `hmac-sha256:${'a'.repeat(64)}` as const;
+    const helperIdentityB = `hmac-sha256:${'b'.repeat(64)}` as const;
+    const initial = await prepareDeterministicLaunchSetup(
+      request,
+      createPorts({
+        buildCrossProviderMemberArgs: vi.fn(async () => ({
+          ...createCrossProviderArgs(),
+          anthropicCredentialIdentity: helperIdentityA,
+        })),
+      })
+    );
+    if (initial.kind !== 'prepared') throw new Error('Expected prepared launch');
+    const observedAt = '2026-01-01T00:00:00.000Z';
+    const continuationEvidence: DurableLaunchContinuationEvidence = {
+      version: 1,
+      sourceRunId: 'run-previous',
+      teamName: 'demo',
+      evidenceId: 'evidence-1',
+      updatedAt: observedAt,
+      rosterFingerprint: initial.launchRosterFingerprint,
+      terminalStatus: 'partial_success',
+      members: [
+        {
+          name: 'Reviewer',
+          outcome: 'bootstrap_confirmed',
+          runtimeRunId: 'run-previous',
+          observedAt,
+        },
+        {
+          name: 'Lead',
+          outcome: 'failed',
+          observedAt,
+          cleanup: { status: 'confirmed', runId: 'run-previous', observedAt },
+        },
+      ],
+    };
+    const unchangedPorts = createPorts({
+      readLaunchContinuationEvidence: vi.fn(async () => ({
+        kind: 'evidence' as const,
+        evidence: continuationEvidence,
+      })),
+      buildCrossProviderMemberArgs: vi.fn(async () => ({
+        ...createCrossProviderArgs(),
+        anthropicCredentialIdentity: helperIdentityA,
+      })),
+    });
+    const continued = await prepareDeterministicLaunchSetup(request, unchangedPorts);
+
+    expect(continued).toMatchObject({
+      kind: 'prepared',
+      expectedMembers: ['Lead'],
+      launchContinuation: {
+        preservedMembers: [{ name: 'Reviewer', runtimeRunId: 'run-previous' }],
+        retryMembers: [{ name: 'Lead', cleanupRunId: 'run-previous' }],
+      },
+    });
+    expect(unchangedPorts.buildNativeAppManagedBootstrapSpecsWithDiagnostics).toHaveBeenCalledWith(
+      expect.objectContaining({ members: createMembers().slice(0, 1) })
+    );
+
+    const changedCredentialPorts = createPorts({
+      readLaunchContinuationEvidence: vi.fn(async () => ({
+        kind: 'evidence' as const,
+        evidence: continuationEvidence,
+      })),
+      buildCrossProviderMemberArgs: vi.fn(async () => ({
+        ...createCrossProviderArgs(),
+        anthropicCredentialIdentity: helperIdentityB,
+      })),
+    });
+    await expect(prepareDeterministicLaunchSetup(request, changedCredentialPorts)).rejects.toThrow(
+      /does not match the current launch configuration/
+    );
+
+    const changedPorts = createPorts({
+      readLaunchContinuationEvidence: vi.fn(async () => ({
+        kind: 'evidence' as const,
+        evidence: continuationEvidence,
+      })),
+      snapshotLaunchMaterialSources: vi.fn(async () => ({
+        version: 1 as const,
+        digest: 'sha256:mutated-project-settings' as const,
+        entries: [],
+      })),
+    });
+    await expect(prepareDeterministicLaunchSetup(request, changedPorts)).rejects.toThrow(
+      /does not match the current launch configuration/
+    );
+  });
+
+  it('rejects missing continuation identity before config mutation or member preparation', async () => {
+    const identityError = new Error('Stable launch continuation secret is unavailable');
+    const ports = createPorts({
+      readLaunchContinuationEvidence: vi.fn(async () => ({
+        kind: 'invalid' as const,
+        reason: 'persisted evidence cannot be trusted',
+      })),
+      getCredentialDigestKey: vi.fn(async () => {
+        throw identityError;
+      }),
+    });
+
+    await expect(prepareDeterministicLaunchSetup(request, ports)).rejects.toBe(identityError);
+    expect(ports.getCredentialDigestKey).toHaveBeenCalledWith(false);
+    expect(ports.materializeLaunchCompatibilityRepair).not.toHaveBeenCalled();
+    expect(ports.normalizeTeamConfigForLaunch).not.toHaveBeenCalled();
+    expect(ports.materializeEffectiveTeamMemberSpecs).not.toHaveBeenCalled();
+    expect(ports.buildNativeAppManagedBootstrapSpecsWithDiagnostics).not.toHaveBeenCalled();
   });
 
   it('cleans a Gemini-primary dynamic Anthropic helper and restores config on later setup failure', async () => {

@@ -1,13 +1,19 @@
 import { FileReadTimeoutError, readFileUtf8WithTimeout } from '@main/utils/fsRead';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-import { migrateProviderBackendId } from '@shared/utils/providerBackend';
+import { normalizePersistedProviderBackendId } from '@shared/utils/providerBackend';
 import { normalizeProviderBillingMode } from '@shared/utils/providerBillingMode';
+import { normalizeTeamLeadRuntimeSelectionProvenance } from '@shared/utils/teamMemberRuntimeSelectionProvenance';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { atomicWriteAsync } from './atomicWrite';
 
-import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '@shared/types';
+import type {
+  ProviderModelLaunchIdentity,
+  TeamFastMode,
+  TeamLeadRuntimeSelectionProvenance,
+  TeamProviderId,
+} from '@shared/types';
 
 /**
  * Persisted team-level metadata saved by the UI before CLI provisioning.
@@ -16,7 +22,7 @@ import type { ProviderModelLaunchIdentity, TeamFastMode, TeamProviderId } from '
  * configuration for retry.
  */
 export interface TeamMetaFile {
-  version: 1;
+  version: 1 | 2;
   displayName?: string;
   description?: string;
   color?: string;
@@ -26,6 +32,7 @@ export interface TeamMetaFile {
   providerBackendId?: string;
   model?: string;
   effort?: string;
+  leadRuntimeSelectionProvenance?: TeamLeadRuntimeSelectionProvenance;
   fastMode?: TeamFastMode;
   skipPermissions?: boolean;
   worktree?: string;
@@ -37,6 +44,13 @@ export interface TeamMetaFile {
 
 const MAX_META_FILE_BYTES = 256 * 1024;
 const metaMutationLocks = new Map<string, Promise<void>>();
+
+export class UnsupportedTeamMetaVersionError extends Error {
+  constructor(readonly version: unknown) {
+    super(`Unsupported team metadata version: ${String(version)}`);
+    this.name = 'UnsupportedTeamMetaVersionError';
+  }
+}
 
 async function withMetaMutationLock<T>(pathKey: string, operation: () => Promise<T>): Promise<T> {
   const previous = metaMutationLocks.get(pathKey);
@@ -76,7 +90,10 @@ function normalizeFastMode(value: unknown): TeamFastMode | null {
   return value === 'inherit' || value === 'on' || value === 'off' ? value : null;
 }
 
-function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | undefined {
+function normalizeLaunchIdentity(
+  value: unknown,
+  source: 'legacy-storage' | 'explicit-selection'
+): ProviderModelLaunchIdentity | undefined {
   if (!value || typeof value !== 'object') {
     return undefined;
   }
@@ -122,11 +139,19 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
     raw.resolvedEffort === 'ultra'
       ? raw.resolvedEffort
       : null;
+  const rawProviderBackendId = normalizeOptionalString(raw.providerBackendId);
+  const providerBackendId = normalizePersistedProviderBackendId(
+    providerId,
+    rawProviderBackendId,
+    source === 'explicit-selection' ? 'current-version' : 'legacy-unversioned'
+  );
 
   return {
     providerId,
-    providerBackendId:
-      migrateProviderBackendId(providerId, normalizeOptionalString(raw.providerBackendId)) ?? null,
+    // The provider/backend pair belongs to this identity record. Preserve an
+    // absent or incompatible backend as unknown instead of allowing consumers
+    // to borrow a backend from root or roster metadata.
+    providerBackendId: providerBackendId ?? null,
     billingMode: normalizeProviderBillingMode(raw.billingMode),
     selectedModel: normalizeOptionalString(raw.selectedModel),
     selectedModelKind,
@@ -140,6 +165,33 @@ function normalizeLaunchIdentity(value: unknown): ProviderModelLaunchIdentity | 
     resolvedFastMode: typeof raw.resolvedFastMode === 'boolean' ? raw.resolvedFastMode : null,
     fastResolutionReason: normalizeOptionalString(raw.fastResolutionReason),
   };
+}
+
+async function assertSupportedMetaVersionForMutation(metaPath: string): Promise<void> {
+  let raw: string;
+  try {
+    raw = await fs.promises.readFile(metaPath, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new Error('Existing team metadata is malformed', { cause: error });
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Existing team metadata is malformed');
+  }
+  const version = (parsed as { version?: unknown }).version;
+  if (version !== undefined && version !== 1 && version !== 2) {
+    throw new UnsupportedTeamMetaVersionError(version);
+  }
+  if (version === 2 && typeof (parsed as { cwd?: unknown }).cwd !== 'string') {
+    throw new Error('Existing team metadata is malformed');
+  }
 }
 
 export class TeamMetaStore {
@@ -182,14 +234,19 @@ export class TeamMetaStore {
     }
 
     const file = parsed as Partial<TeamMetaFile>;
-    if (file.version !== 1 || typeof file.cwd !== 'string') {
+    if (
+      (file.version !== undefined && file.version !== 1 && file.version !== 2) ||
+      typeof file.cwd !== 'string'
+    ) {
       return null;
     }
 
+    const version = file.version === 2 ? 2 : 1;
+    const migrationSource = version === 2 ? 'explicit-selection' : 'legacy-storage';
     const providerId = normalizeProviderId(file.providerId);
 
     return {
-      version: 1,
+      version,
       displayName:
         typeof file.displayName === 'string' ? file.displayName.trim() || undefined : undefined,
       description:
@@ -198,26 +255,37 @@ export class TeamMetaStore {
       cwd: file.cwd.trim(),
       prompt: typeof file.prompt === 'string' ? file.prompt.trim() || undefined : undefined,
       providerId,
-      providerBackendId: migrateProviderBackendId(
+      providerBackendId: normalizePersistedProviderBackendId(
         providerId,
-        normalizeOptionalBackendId(file.providerBackendId)
+        normalizeOptionalBackendId(file.providerBackendId),
+        migrationSource === 'explicit-selection' ? 'current-version' : 'legacy-unversioned'
       ),
       model: typeof file.model === 'string' ? file.model.trim() || undefined : undefined,
       effort: typeof file.effort === 'string' ? file.effort.trim() || undefined : undefined,
+      leadRuntimeSelectionProvenance: normalizeTeamLeadRuntimeSelectionProvenance(
+        file.leadRuntimeSelectionProvenance
+      ),
       fastMode: normalizeFastMode(file.fastMode) ?? undefined,
       skipPermissions: typeof file.skipPermissions === 'boolean' ? file.skipPermissions : undefined,
       worktree: typeof file.worktree === 'string' ? file.worktree.trim() || undefined : undefined,
       extraCliArgs:
         typeof file.extraCliArgs === 'string' ? file.extraCliArgs.trim() || undefined : undefined,
       limitContext: typeof file.limitContext === 'boolean' ? file.limitContext : undefined,
-      launchIdentity: normalizeLaunchIdentity(file.launchIdentity),
+      launchIdentity: normalizeLaunchIdentity(file.launchIdentity, migrationSource),
       createdAt: typeof file.createdAt === 'number' ? file.createdAt : Date.now(),
     };
   }
 
+  async assertMutable(teamName: string): Promise<void> {
+    await assertSupportedMetaVersionForMutation(this.getMetaPath(teamName));
+  }
+
   async writeMeta(teamName: string, data: Omit<TeamMetaFile, 'version'>): Promise<void> {
     const metaPath = this.getMetaPath(teamName);
-    await withMetaMutationLock(metaPath, () => this.writeMetaUnlocked(metaPath, data));
+    await withMetaMutationLock(metaPath, async () => {
+      await assertSupportedMetaVersionForMutation(metaPath);
+      await this.writeMetaUnlocked(metaPath, data);
+    });
   }
 
   async updateMeta(
@@ -228,6 +296,7 @@ export class TeamMetaStore {
   ): Promise<void> {
     const metaPath = this.getMetaPath(teamName);
     await withMetaMutationLock(metaPath, async () => {
+      await assertSupportedMetaVersionForMutation(metaPath);
       const data = await update(await this.getMeta(teamName));
       await this.writeMetaUnlocked(metaPath, data);
     });
@@ -238,25 +307,29 @@ export class TeamMetaStore {
     data: Omit<TeamMetaFile, 'version'>
   ): Promise<void> {
     const payload: TeamMetaFile = {
-      version: 1,
+      version: 2,
       displayName: data.displayName?.trim() || undefined,
       description: data.description?.trim() || undefined,
       color: data.color?.trim() || undefined,
       cwd: data.cwd.trim(),
       prompt: data.prompt?.trim() || undefined,
       providerId: data.providerId,
-      providerBackendId: migrateProviderBackendId(
+      providerBackendId: normalizePersistedProviderBackendId(
         data.providerId,
-        normalizeOptionalBackendId(data.providerBackendId)
+        normalizeOptionalBackendId(data.providerBackendId),
+        'current-version'
       ),
       model: data.model?.trim() || undefined,
       effort: data.effort?.trim() || undefined,
+      leadRuntimeSelectionProvenance: normalizeTeamLeadRuntimeSelectionProvenance(
+        data.leadRuntimeSelectionProvenance
+      ),
       fastMode: normalizeFastMode(data.fastMode) ?? undefined,
       skipPermissions: data.skipPermissions,
       worktree: data.worktree?.trim() || undefined,
       extraCliArgs: data.extraCliArgs?.trim() || undefined,
       limitContext: data.limitContext,
-      launchIdentity: normalizeLaunchIdentity(data.launchIdentity),
+      launchIdentity: normalizeLaunchIdentity(data.launchIdentity, 'explicit-selection'),
       createdAt: data.createdAt,
     };
     await atomicWriteAsync(metaPath, JSON.stringify(payload, null, 2));
@@ -265,6 +338,7 @@ export class TeamMetaStore {
   async deleteMeta(teamName: string): Promise<void> {
     const metaPath = this.getMetaPath(teamName);
     await withMetaMutationLock(metaPath, async () => {
+      await assertSupportedMetaVersionForMutation(metaPath);
       try {
         await fs.promises.unlink(metaPath);
       } catch (error) {

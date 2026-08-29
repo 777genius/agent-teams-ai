@@ -641,7 +641,18 @@ describe('CliInstallerService', () => {
           throw new Error("The 'gpt-5.4-mini' model is not supported in this Codex runtime.");
         }
         if (normalizedArgs.includes('--model gpt-5.4')) {
-          return { stdout: 'PONG', stderr: '' };
+          const prompt = Array.isArray(args)
+            ? args.find((arg) => arg.includes('agent-teams-provider-probe-response-v1'))
+            : undefined;
+          const nonce = prompt?.match(/Set nonce to ([a-f0-9]+)\./)?.[1];
+          if (!nonce) throw new Error('Expected a nonce-bound model probe prompt');
+          return {
+            stdout: JSON.stringify({
+              schema: 'agent-teams-provider-probe-response-v1',
+              nonce,
+            }),
+            stderr: '',
+          };
         }
         throw new Error(`Unexpected execCli call: ${normalizedArgs}`);
       });
@@ -935,6 +946,7 @@ describe('CliInstallerService', () => {
           statusMessage: null,
           detailMessage: null,
           models: ['opencode/big-pickle', 'openai/gpt-5.4', 'openrouter/openai/gpt-oss-20b:free'],
+          statusCheckOutcome: 'authoritative',
           modelCatalog: {
             schemaVersion: 1,
             providerId: 'opencode',
@@ -1003,6 +1015,7 @@ describe('CliInstallerService', () => {
         statusMessage: null,
         detailMessage: null,
         models: ['opencode/big-pickle'],
+        statusCheckOutcome: 'authoritative',
         modelCatalog: null,
         modelCatalogRefreshState: 'loading',
         modelAvailability: [],

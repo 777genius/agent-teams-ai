@@ -201,7 +201,18 @@ describe('TeamProvisioningPrepareFacade', () => {
       providerBackendId: 'adapter',
     } as TeamCreateRequest;
     const members: TeamCreateRequest['members'] = [
-      { name: 'dev', role: 'Developer', providerId: 'opencode', isolation: 'worktree' },
+      {
+        name: 'dev',
+        role: 'Developer',
+        providerId: 'opencode',
+        isolation: 'worktree',
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'inherited',
+          effort: 'inherited',
+        },
+      },
     ];
 
     const result = await facade.prepareOpenCodeRuntimeAdapterLaunch({ request, members });

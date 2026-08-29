@@ -92,6 +92,7 @@ export interface TeamProvisioningTurnCompletePorts<
       providerId: TeamCreateRequest['providerId'];
       model: TeamCreateRequest['model'];
       effort: TeamCreateRequest['effort'];
+      leadRuntimeSelectionProvenance?: TeamCreateRequest['leadRuntimeSelectionProvenance'];
       members: TeamCreateRequest['members'];
     }
   ): Promise<unknown>;
@@ -429,6 +430,7 @@ export async function handleTeamProvisioningTurnComplete<
         providerId: run.request.providerId,
         model: run.request.model,
         effort: run.request.effort,
+        leadRuntimeSelectionProvenance: run.request.leadRuntimeSelectionProvenance,
         members: run.allEffectiveMembers,
       }
     );
@@ -538,6 +540,7 @@ export async function handleTeamProvisioningTurnComplete<
       providerId: run.request.providerId,
       model: run.request.model,
       effort: run.request.effort,
+      leadRuntimeSelectionProvenance: run.request.leadRuntimeSelectionProvenance,
       members: run.allEffectiveMembers,
     }
   );

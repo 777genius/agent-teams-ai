@@ -52,7 +52,7 @@ function createRun(input: Partial<TestRun> = {}): TestRun {
 
 function createSnapshot(launchPhase: PersistedTeamLaunchPhase): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'team-a',
     updatedAt: '2026-07-03T00:00:00.000Z',
     launchPhase,

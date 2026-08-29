@@ -158,10 +158,23 @@ function buildTokenUsageSnapshotRoute(request?: TokenUsageSnapshotRequest): stri
   if (request?.nativeSessionId) query.set('nativeSessionId', request.nativeSessionId);
   if (request?.from) query.set('from', request.from);
   if (request?.to) query.set('to', request.to);
-  const suffix = query.toString();
-  return suffix ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${suffix}` : TOKEN_USAGE_SNAPSHOT_ROUTE;
+  return query.size
+    ? `${TOKEN_USAGE_SNAPSHOT_ROUTE}?${query.toString()}`
+    : TOKEN_USAGE_SNAPSHOT_ROUTE;
 }
-
+const rejectBrowserRosterTransaction = (): Promise<never> =>
+  Promise.reject(new Error('Roster transactions require the desktop app'));
+function createUnsupportedRuntimeProviderResponse(runtimeId: 'opencode') {
+  return {
+    schemaVersion: 1 as const,
+    runtimeId,
+    error: {
+      code: 'unsupported-action' as const,
+      message: 'Runtime provider management is not available in browser mode.',
+      recoverable: true,
+    },
+  };
+}
 function createBrowserCompanionStatus(
   input: RuntimeProviderCompanionInput,
   operation: 'status' | 'install' | 'connect' | 'action'
@@ -189,7 +202,6 @@ function createBrowserCompanionStatus(
     updatedAt: new Date().toISOString(),
   };
 }
-
 export class HttpAPIClient implements ElectronAPI {
   private baseUrl: string;
   private eventSource: EventSource | null = null;
@@ -212,16 +224,13 @@ export class HttpAPIClient implements ElectronAPI {
       throw new Error('Team import is only available in the desktop app');
     },
   };
-
   constructor(baseUrl: string) {
     this.baseUrl = baseUrl;
     this.initEventSource();
   }
-
   // ---------------------------------------------------------------------------
   // SSE event infrastructure
   // ---------------------------------------------------------------------------
-
   private initEventSource(): void {
     this.eventSource = new EventSource(`${this.baseUrl}/api/events`);
     this.eventSource.onopen = () => console.log('[HttpAPIClient] SSE connected');
@@ -230,7 +239,6 @@ export class HttpAPIClient implements ElectronAPI {
       console.warn('[HttpAPIClient] SSE connection error, will reconnect...');
     };
   }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures
   private addEventListener(channel: string, callback: (...args: any[]) => void): () => void {
     if (!this.eventListeners.has(channel)) {
@@ -243,12 +251,10 @@ export class HttpAPIClient implements ElectronAPI {
       }) as EventListener);
     }
     this.eventListeners.get(channel)!.add(callback);
-
     return () => {
       this.eventListeners.get(channel)?.delete(callback);
     };
   }
-
   // ---------------------------------------------------------------------------
   // HTTP helpers
   // ---------------------------------------------------------------------------
@@ -1113,6 +1119,11 @@ export class HttpAPIClient implements ElectronAPI {
     stop: async (): Promise<void> => {
       throw new Error('Team stop is not available in browser mode');
     },
+    stopForRelaunch: async () => ({
+      status: 'outcome-unknown',
+      reason: 'transport-failure',
+      diagnostic: 'Relaunch stop is not available in browser mode.',
+    }),
     createConfig: async (): Promise<void> => {
       throw new Error('Team config creation is not available in browser mode');
     },
@@ -1186,6 +1197,9 @@ export class HttpAPIClient implements ElectronAPI {
     replaceMembers: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
+    beginRosterAuthorizationTransaction: rejectBrowserRosterTransaction,
+    getRosterAuthorizationTransactionOutcome: rejectBrowserRosterTransaction,
+    rollbackRosterAuthorizationTransaction: rejectBrowserRosterTransaction,
     removeMember: async (): Promise<void> => {
       throw new Error('Team member management is not available in browser mode');
     },
@@ -1489,7 +1503,7 @@ export class HttpAPIClient implements ElectronAPI {
       authMethod: null,
       providers: [],
     }),
-    getProviderStatus: async (): Promise<null> => null,
+    getProviderStatus: () => Promise.reject(new Error('CLI provider status requires desktop IPC')),
     verifyProviderModels: async (): Promise<null> => null,
     install: async (): Promise<void> => {
       console.warn('[HttpAPIClient] CLI installer not available in browser mode');
@@ -1609,42 +1623,10 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
-    connectProvider: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    connectWithApiKey: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    forgetCredential: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    loadModels: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
+    connectProvider: async (input) => createUnsupportedRuntimeProviderResponse(input.runtimeId),
+    connectWithApiKey: async (input) => createUnsupportedRuntimeProviderResponse(input.runtimeId),
+    forgetCredential: async (input) => createUnsupportedRuntimeProviderResponse(input.runtimeId),
+    loadModels: async (input) => createUnsupportedRuntimeProviderResponse(input.runtimeId),
     testModel: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,
@@ -1664,7 +1646,15 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
-    clearProjectDefaultModel: async (input) => ({ schemaVersion: 1, runtimeId: input.runtimeId, error: { code: 'unsupported-action', message: 'Runtime provider management is not available in browser mode.', recoverable: true } }),
+    clearProjectDefaultModel: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'unsupported-action',
+        message: 'Runtime provider management is not available in browser mode.',
+        recoverable: true,
+      },
+    }),
     configureModelLimits: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,

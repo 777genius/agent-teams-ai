@@ -12,6 +12,7 @@ import {
   buildCodexExecModelProbeArgs,
   buildProviderModelProbeArgs,
   classifyProviderModelProbeFailure,
+  createProviderModelProbeNonce,
   getProviderModelProbeTimeoutMs,
   isProviderModelProbeSuccessOutput,
   normalizeProviderModelProbeFailureReason,
@@ -167,13 +168,14 @@ function classifyFailedProbe(
 function buildModelProbeCommandArgs(
   context: ProviderModelAvailabilityContext,
   providerArgs: string[],
-  modelId: string
+  modelId: string,
+  nonce: string
 ): string[] {
   if (context.provider.providerId === 'codex' && isCodexExecBinary(context.binaryPath)) {
-    return [...providerArgs, ...buildCodexExecModelProbeArgs(modelId)];
+    return [...providerArgs, ...buildCodexExecModelProbeArgs(modelId, nonce)];
   }
 
-  return [...providerArgs, ...buildProviderModelProbeArgs(modelId)];
+  return [...providerArgs, ...buildProviderModelProbeArgs(modelId, nonce)];
 }
 
 export class CliProviderModelAvailabilityService {
@@ -293,16 +295,17 @@ export class CliProviderModelAvailabilityService {
   ): Promise<Pick<CliProviderModelAvailability, 'status' | 'reason'>> {
     try {
       const { env, providerArgs } = await entry.cliEnvPromise;
+      const nonce = createProviderModelProbeNonce();
       const { stdout } = await execCli(
         context.binaryPath,
-        buildModelProbeCommandArgs(context, providerArgs, modelId),
+        buildModelProbeCommandArgs(context, providerArgs, modelId, nonce),
         {
           timeout: getProviderModelProbeTimeoutMs(context.provider.providerId),
           env,
         }
       );
       const output = stdout.trim();
-      if (isProviderModelProbeSuccessOutput(output)) {
+      if (isProviderModelProbeSuccessOutput(output, nonce)) {
         return {
           status: 'available',
           reason: null,

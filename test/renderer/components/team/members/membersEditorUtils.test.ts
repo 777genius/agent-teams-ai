@@ -361,6 +361,57 @@ describe('members editor editable input filtering', () => {
     ]);
   });
 
+  it('restores inherited concrete runtime fields to omissions for relaunch editing', () => {
+    const drafts = createMemberDraftsFromInputs([
+      {
+        name: 'alice',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        model: 'gpt-5',
+        effort: 'high',
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'inherited',
+          effort: 'inherited',
+        },
+      },
+    ]);
+
+    expect(drafts[0]).toMatchObject({
+      providerBackendId: undefined,
+      model: '',
+      effort: undefined,
+    });
+    expect(buildMembersFromDrafts(drafts, { inheritedProviderId: 'codex' })).toEqual([
+      expect.not.objectContaining({
+        providerBackendId: expect.anything(),
+        model: expect.anything(),
+        effort: expect.anything(),
+      }),
+    ]);
+  });
+
+  it('keeps legacy concrete runtime fields explicit when provenance is absent or invalid', () => {
+    for (const runtimeSelectionProvenance of [undefined, { version: 99 }]) {
+      const [draft] = createMemberDraftsFromInputs([
+        {
+          name: 'alice',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5',
+          effort: 'high',
+          runtimeSelectionProvenance,
+        },
+      ]);
+      expect(draft).toMatchObject({
+        providerBackendId: 'codex-native',
+        model: 'gpt-5',
+        effort: 'high',
+      });
+    }
+  });
+
   it('preserves worktree isolation when importing and exporting member drafts', () => {
     const drafts = createMemberDraftsFromInputs(
       filterEditableMemberInputs([

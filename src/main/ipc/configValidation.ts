@@ -619,8 +619,7 @@ function validateRuntimeSection(data: unknown): ValidationSuccess<'runtime'> | V
           };
         }
         providerBackends.codex = migrateProviderBackendId(
-          'codex',
-          backendId
+          'codex', backendId, 'explicit-selection'
         ) as RuntimeConfig['providerBackends']['codex'];
         continue;
       }

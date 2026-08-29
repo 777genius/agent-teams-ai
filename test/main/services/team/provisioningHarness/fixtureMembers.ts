@@ -38,7 +38,8 @@ function member(
     ...overridden,
     providerBackendId: migrateProviderBackendId(
       overridden.providerId,
-      overridden.providerBackendId
+      overridden.providerBackendId,
+      'explicit-selection'
     ),
   };
   assertNoSecretLikeFixtureValues(fixture);
@@ -68,7 +69,8 @@ function normalizeMemberForConfig(memberValue: TeamMember, isLead: boolean): Tea
     ...cloneFixture(memberValue),
     providerBackendId: migrateProviderBackendId(
       memberValue.providerId,
-      memberValue.providerBackendId
+      memberValue.providerBackendId,
+      'explicit-selection'
     ),
     agentType: isLead ? HARNESS_LEAD_AGENT_TYPE : HARNESS_TEAMMATE_AGENT_TYPE,
   };
@@ -142,7 +144,8 @@ export const teamMetaFixture = {
       ...overridden,
       providerBackendId: migrateProviderBackendId(
         overridden.providerId,
-        overridden.providerBackendId
+        overridden.providerBackendId,
+        'explicit-selection'
       ),
     };
     assertNoSecretLikeFixtureValues(fixture);
@@ -165,7 +168,8 @@ export function toMetaMembers(members: TeamCreateRequest['members']): TeamMember
             providerId: memberValue.providerId,
             providerBackendId: migrateProviderBackendId(
               memberValue.providerId,
-              memberValue.providerBackendId
+              memberValue.providerBackendId,
+              'explicit-selection'
             ),
             model: memberValue.model,
             effort: memberValue.effort,
@@ -192,7 +196,8 @@ function toProvisioningMemberInputs(
         providerId: memberValue.providerId,
         providerBackendId: migrateProviderBackendId(
           memberValue.providerId ?? fallbackProviderId,
-          memberValue.providerBackendId
+          memberValue.providerBackendId,
+          'explicit-selection'
         ),
         model: memberValue.model,
         effort: memberValue.effort,
@@ -206,7 +211,11 @@ export function normalizeTeamCreateRequestFixture(request: TeamCreateRequest): T
   const providerId = request.providerId;
   const fixture: TeamCreateRequest = {
     ...cloneFixture(request),
-    providerBackendId: migrateProviderBackendId(providerId, request.providerBackendId),
+    providerBackendId: migrateProviderBackendId(
+      providerId,
+      request.providerBackendId,
+      'explicit-selection'
+    ),
     members: toProvisioningMemberInputs(request.members as readonly TeamMember[], providerId),
   };
   assertNoSecretLikeFixtureValues(fixture);

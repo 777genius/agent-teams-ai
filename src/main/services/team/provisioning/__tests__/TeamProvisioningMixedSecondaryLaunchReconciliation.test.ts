@@ -35,7 +35,7 @@ function createSpawnStatus(input: Partial<MemberSpawnStatusEntry> = {}): MemberS
 
 function createSnapshot(params: SnapshotParams): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: params.teamName,
     updatedAt: '2026-07-02T00:00:00.000Z',
     leadSessionId: params.leadSessionId,
@@ -79,7 +79,7 @@ function createPersistedSnapshot(input: {
   members?: Record<string, PersistedTeamLaunchMemberState>;
 }): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'team-a',
     updatedAt: input.updatedAt ?? '2026-07-02T00:00:00.000Z',
     launchPhase: 'active',
@@ -138,6 +138,7 @@ function createRun(input: {
 }): MixedSecondaryLaunchSnapshotRunLike {
   return {
     teamName: 'team-a',
+    runId: 'run-primary',
     detectedSessionId: 'lead-session',
     request: {
       providerId: 'codex',

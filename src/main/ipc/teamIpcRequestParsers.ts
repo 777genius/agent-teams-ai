@@ -47,7 +47,7 @@ export function parseOptionalProviderBackendId(
     return { valid: false, error: 'providerBackendId too long (max 64)' };
   }
   const migratedBackendId = providerId
-    ? migrateProviderBackendId(providerId, trimmed)
+    ? migrateProviderBackendId(providerId, trimmed, 'explicit-selection')
     : isTeamProviderBackendId(trimmed)
       ? trimmed
       : null;
@@ -75,14 +75,14 @@ export function parseOptionalLaunchProviderBackendId(
   if (trimmed.length > 64) {
     return { valid: false, error: 'providerBackendId too long (max 64)' };
   }
-  const migratedBackendId = migrateProviderBackendId(providerId, trimmed);
-  if (migratedBackendId) return { valid: true, value: migratedBackendId };
-  if (isTeamProviderBackendId(trimmed)) return { valid: true, value: undefined };
-  return {
-    valid: false,
-    error:
-      'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)',
-  };
+  const migratedBackendId = migrateProviderBackendId(providerId, trimmed, 'explicit-selection');
+  return migratedBackendId
+    ? { valid: true, value: migratedBackendId }
+    : {
+        valid: false,
+        error:
+          'providerBackendId must be valid for the selected provider (auto, adapter, api, cli-sdk, codex-native, or opencode-cli)',
+      };
 }
 
 export function parseOptionalMemberEffort(

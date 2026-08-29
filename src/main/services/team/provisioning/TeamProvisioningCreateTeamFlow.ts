@@ -1,5 +1,4 @@
 import { getTasksBasePath, getTeamsBasePath } from '@main/utils/pathDecoder';
-import * as fs from 'fs';
 import * as path from 'path';
 
 import { mergeJsonSettingsArgs } from '../../runtime/cliSettingsArgs';
@@ -23,6 +22,7 @@ import {
 } from './TeamProvisioningProgressBuffers';
 import { getPromptSizeSummary, type PromptSizeSummary } from './TeamProvisioningRuntimeDiagnostics';
 
+import type { TeamProvisioningCreateArtifactTransaction } from './TeamProvisioningCreateArtifactTransaction';
 import type {
   TeamRuntimeLaunchArgsPlan,
   TeamsBaseLocation,
@@ -83,6 +83,7 @@ export interface MaterializeDeterministicCreateTeamBootstrapFilesInput {
     ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig>
   >;
   validateAgentTeamsMcpRuntime(mcpConfigPath: string): Promise<void>;
+  artifactTransaction: TeamProvisioningCreateArtifactTransaction;
 }
 
 export interface MaterializeDeterministicCreateTeamBootstrapFilesResult {
@@ -121,6 +122,7 @@ export function buildCreateTeamMetaPayload(
   providerBackendId: TeamCreateRequest['providerBackendId'];
   model: TeamCreateRequest['model'];
   effort: TeamCreateRequest['effort'];
+  leadRuntimeSelectionProvenance: TeamCreateRequest['leadRuntimeSelectionProvenance'];
   fastMode: TeamCreateRequest['fastMode'];
   skipPermissions: TeamCreateRequest['skipPermissions'];
   worktree: TeamCreateRequest['worktree'];
@@ -139,6 +141,7 @@ export function buildCreateTeamMetaPayload(
     providerBackendId: request.providerBackendId,
     model: request.model,
     effort: request.effort,
+    leadRuntimeSelectionProvenance: request.leadRuntimeSelectionProvenance,
     fastMode: request.fastMode,
     skipPermissions: request.skipPermissions,
     worktree: request.worktree,
@@ -302,25 +305,33 @@ export async function materializeDeterministicCreateTeamBootstrapFiles({
   mcpConfigBuilder,
   buildMemberMcpLaunchConfigs,
   validateAgentTeamsMcpRuntime,
+  artifactTransaction,
 }: MaterializeDeterministicCreateTeamBootstrapFilesInput): Promise<MaterializeDeterministicCreateTeamBootstrapFilesResult> {
   assertDeterministicBootstrapPrimaryMemberLimit(effectiveMemberSpecs.length);
 
   emitProvisioningCheckpoint(run, 'Persisting team metadata before spawn');
   const teamDir = path.join(getTeamsBasePath(), request.teamName);
   const tasksDir = path.join(getTasksBasePath(), request.teamName);
-  await fs.promises.mkdir(teamDir, { recursive: true });
-  await fs.promises.mkdir(tasksDir, { recursive: true });
+  await artifactTransaction.ensureDirectory(teamDir);
+  await artifactTransaction.ensureDirectory(tasksDir);
   await teamMetaStore.writeMeta(
     request.teamName,
     buildCreateTeamMetaPayload(request, launchIdentity)
   );
-  await membersMetaStore.writeMembers(
-    request.teamName,
-    buildMembersMetaWritePayload(allEffectiveMemberSpecs),
-    {
-      providerBackendId: request.providerBackendId,
-    }
-  );
+  await artifactTransaction.recordFileWrite('team-meta');
+  // Draft launch reservations have already durably published the canonical roster.
+  // Re-serializing effective specs here would replace stable joinedAt/custom metadata
+  // immediately before spawn and invalidate the authorization fingerprint.
+  if (!request.rosterTransactionId) {
+    await membersMetaStore.writeMembers(
+      request.teamName,
+      buildMembersMetaWritePayload(allEffectiveMemberSpecs),
+      {
+        providerBackendId: request.providerBackendId,
+      }
+    );
+    await artifactTransaction.recordFileWrite('members-meta');
+  }
 
   emitProvisioningCheckpoint(
     run,

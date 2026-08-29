@@ -35,6 +35,24 @@ vi.mock('@main/services/infrastructure/NotificationManager', () => ({
   },
 }));
 
+const runtimeSelectionProvenance = (
+  providerBackendId: 'explicit' | 'inherited',
+  model: 'explicit' | 'inherited',
+  effort: 'explicit' | 'inherited'
+) => ({ version: 1 as const, providerBackendId, model, effort });
+
+const withResolvedRuntimeSelectionProvenance = (members: TeamCreateRequest['members']) =>
+  members.map((member) => ({
+    ...member,
+    runtimeSelectionProvenance:
+      member.runtimeSelectionProvenance ??
+      runtimeSelectionProvenance(
+        member.providerBackendId ? 'explicit' : 'inherited',
+        member.model ? 'explicit' : 'inherited',
+        member.effort ? 'explicit' : 'inherited'
+      ),
+  }));
+
 const defaultExecCliMockImplementation = async (_binaryPath: string | null, args: string[]) => {
   if (args[0] === '-e' && args[1]?.includes('process.execPath')) {
     return {
@@ -571,6 +589,12 @@ function validateRuntimeLaunchSelectionForTest(
 ): void {
   validateRuntimeLaunchSelection({
     ...params,
+    leadRuntimeSelectionProvenance: params.leadRuntimeSelectionProvenance ?? {
+      version: 1,
+      providerBackendId: params.providerBackendId ? 'explicit' : 'default',
+      model: params.model?.trim() ? 'explicit' : 'default',
+      effort: params.effort ? 'explicit' : 'default',
+    },
     anthropicFastModeDefault: false,
     getProviderLabel: getTeamProviderLabel,
   });
@@ -581,6 +605,15 @@ function buildProviderModelLaunchIdentityForTest(
 ): ReturnType<typeof buildProviderModelLaunchIdentity> {
   return buildProviderModelLaunchIdentity({
     ...params,
+    request: {
+      ...params.request,
+      leadRuntimeSelectionProvenance: params.request.leadRuntimeSelectionProvenance ?? {
+        version: 1,
+        providerBackendId: params.request.providerBackendId ? 'explicit' : 'default',
+        model: params.request.model?.trim() ? 'explicit' : 'default',
+        effort: params.request.effort ? 'explicit' : 'default',
+      },
+    },
     anthropicFastModeDefault: false,
   });
 }
@@ -979,13 +1012,16 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.args).toContain('--anthropic-compatible-passthrough');
   });
 
-  it('does not inherit lead effort for an Anthropic teammate with an explicit model', async () => {
+  it('inherits lead effort for an Anthropic teammate with an explicit model', async () => {
     const svc = new TeamProvisioningService();
 
     const result = await (svc as any).materializeEffectiveTeamMemberSpecs({
       claudePath: '/fake/claude',
       cwd: tempRoot,
-      members: [{ name: 'jack', providerId: 'anthropic', model: 'haiku' }, { name: 'alice' }],
+      members: withResolvedRuntimeSelectionProvenance([
+        { name: 'jack', providerId: 'anthropic', model: 'haiku' },
+        { name: 'alice' },
+      ]),
       defaults: {
         providerId: 'anthropic',
         model: 'sonnet',
@@ -994,8 +1030,28 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
 
     expect(result).toEqual([
-      { name: 'jack', providerId: 'anthropic', model: 'haiku', effort: undefined },
-      { name: 'alice', providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+      {
+        name: 'jack',
+        providerId: 'anthropic',
+        model: 'haiku',
+        effort: 'low',
+        runtimeSelectionProvenance: runtimeSelectionProvenance(
+          'inherited',
+          'explicit',
+          'inherited'
+        ),
+      },
+      {
+        name: 'alice',
+        providerId: 'anthropic',
+        model: 'sonnet',
+        effort: 'low',
+        runtimeSelectionProvenance: runtimeSelectionProvenance(
+          'inherited',
+          'inherited',
+          'inherited'
+        ),
+      },
     ]);
   });
 
@@ -1004,43 +1060,129 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       label: 'inherits lead model and effort when teammate leaves runtime unset',
       defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
       members: [{ name: 'alice' }],
-      expected: [{ name: 'alice', providerId: 'anthropic', model: 'sonnet', effort: 'low' }],
+      expected: [
+        {
+          name: 'alice',
+          providerId: 'anthropic',
+          model: 'sonnet',
+          effort: 'low',
+          runtimeSelectionProvenance: runtimeSelectionProvenance(
+            'inherited',
+            'inherited',
+            'inherited'
+          ),
+        },
+      ],
     },
     {
-      label: 'keeps effort unset when teammate selects a different Anthropic model',
+      label: 'inherits lead effort when teammate selects a different same-provider model',
       defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
       members: [{ name: 'jack', providerId: 'anthropic', model: 'haiku' }],
-      expected: [{ name: 'jack', providerId: 'anthropic', model: 'haiku', effort: undefined }],
+      expected: [
+        {
+          name: 'jack',
+          providerId: 'anthropic',
+          model: 'haiku',
+          effort: 'low',
+          runtimeSelectionProvenance: runtimeSelectionProvenance(
+            'inherited',
+            'explicit',
+            'inherited'
+          ),
+        },
+      ],
     },
     {
-      label: 'keeps effort unset even when teammate explicitly selects the same Anthropic model',
+      label: 'inherits lead effort when teammate explicitly selects the same model',
       defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
       members: [{ name: 'bob', providerId: 'anthropic', model: 'sonnet' }],
-      expected: [{ name: 'bob', providerId: 'anthropic', model: 'sonnet', effort: undefined }],
+      expected: [
+        {
+          name: 'bob',
+          providerId: 'anthropic',
+          model: 'sonnet',
+          effort: 'low',
+          runtimeSelectionProvenance: runtimeSelectionProvenance(
+            'inherited',
+            'explicit',
+            'inherited'
+          ),
+        },
+      ],
     },
     {
       label: 'preserves teammate explicit effort with an explicit Anthropic model',
       defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
       members: [{ name: 'eve', providerId: 'anthropic', model: 'haiku', effort: 'medium' }],
-      expected: [{ name: 'eve', providerId: 'anthropic', model: 'haiku', effort: 'medium' }],
+      expected: [
+        {
+          name: 'eve',
+          providerId: 'anthropic',
+          model: 'haiku',
+          effort: 'medium',
+          runtimeSelectionProvenance: runtimeSelectionProvenance(
+            'inherited',
+            'explicit',
+            'explicit'
+          ),
+        },
+      ],
     },
     {
       label: 'does not inherit lead effort across providers',
       defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
       members: [{ name: 'tom', providerId: 'codex', model: 'gpt-5.4' }],
-      expected: [{ name: 'tom', providerId: 'codex', model: 'gpt-5.4', effort: undefined }],
+      expected: [
+        {
+          name: 'tom',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4',
+          effort: undefined,
+          runtimeSelectionProvenance: runtimeSelectionProvenance(
+            'inherited',
+            'explicit',
+            'inherited'
+          ),
+        },
+      ],
     },
     {
       label: 'resolves secondary non-Anthropic default model without inheriting lead effort',
       defaults: { providerId: 'anthropic', model: 'sonnet', effort: 'low' },
       members: [{ name: 'sam', providerId: 'codex' }],
-      expected: [{ name: 'sam', providerId: 'codex', model: 'gpt-5.4-mini', effort: undefined }],
+      expected: [
+        {
+          name: 'sam',
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.4-mini',
+          effort: undefined,
+          runtimeSelectionProvenance: runtimeSelectionProvenance(
+            'inherited',
+            'inherited',
+            'inherited'
+          ),
+        },
+      ],
     },
     {
       label: 'does not inherit Codex lead effort into an Anthropic teammate model',
       defaults: { providerId: 'codex', model: 'gpt-5.5', effort: 'low' },
       members: [{ name: 'zoe', providerId: 'anthropic', model: 'haiku' }],
-      expected: [{ name: 'zoe', providerId: 'anthropic', model: 'haiku', effort: undefined }],
+      expected: [
+        {
+          name: 'zoe',
+          providerId: 'anthropic',
+          model: 'haiku',
+          effort: undefined,
+          runtimeSelectionProvenance: runtimeSelectionProvenance(
+            'inherited',
+            'explicit',
+            'inherited'
+          ),
+        },
+      ],
     },
   ])('$label', async ({ defaults, members, expected }) => {
     const svc = new TeamProvisioningService();
@@ -1048,14 +1190,14 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     const result = await (svc as any).materializeEffectiveTeamMemberSpecs({
       claudePath: '/fake/claude',
       cwd: tempRoot,
-      members,
+      members: withResolvedRuntimeSelectionProvenance(members as TeamCreateRequest['members']),
       defaults,
     });
 
     expect(result).toEqual(expected);
   });
 
-  it('validates the Sonnet low lead plus explicit Haiku teammate launch matrix', async () => {
+  it('rejects an inherited lead effort unsupported by an explicit teammate model', async () => {
     const svc = new TeamProvisioningService();
     const facts = {
       defaultModel: 'sonnet',
@@ -1123,7 +1265,10 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     const materializedMembers = await (svc as any).materializeEffectiveTeamMemberSpecs({
       claudePath: '/fake/claude',
       cwd: tempRoot,
-      members: [{ name: 'jack', providerId: 'anthropic', model: 'haiku' }, { name: 'alice' }],
+      members: withResolvedRuntimeSelectionProvenance([
+        { name: 'jack', providerId: 'anthropic', model: 'haiku' },
+        { name: 'alice' },
+      ]),
       defaults: {
         providerId: 'anthropic',
         model: 'sonnet',
@@ -1132,8 +1277,28 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
 
     expect(materializedMembers).toEqual([
-      { name: 'jack', providerId: 'anthropic', model: 'haiku', effort: undefined },
-      { name: 'alice', providerId: 'anthropic', model: 'sonnet', effort: 'low' },
+      {
+        name: 'jack',
+        providerId: 'anthropic',
+        model: 'haiku',
+        effort: 'low',
+        runtimeSelectionProvenance: runtimeSelectionProvenance(
+          'inherited',
+          'explicit',
+          'inherited'
+        ),
+      },
+      {
+        name: 'alice',
+        providerId: 'anthropic',
+        model: 'sonnet',
+        effort: 'low',
+        runtimeSelectionProvenance: runtimeSelectionProvenance(
+          'inherited',
+          'inherited',
+          'inherited'
+        ),
+      },
     ]);
 
     expect(() =>
@@ -1147,18 +1312,16 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       })
     ).not.toThrow();
 
-    for (const member of materializedMembers) {
-      expect(() =>
-        validateRuntimeLaunchSelectionForTest({
-          actorLabel: `Member ${member.name}`,
-          providerId: member.providerId,
-          model: member.model,
-          effort: member.effort,
-          limitContext: false,
-          facts,
-        })
-      ).not.toThrow();
-    }
+    expect(() =>
+      validateRuntimeLaunchSelectionForTest({
+        actorLabel: 'Member alice',
+        providerId: materializedMembers[1].providerId,
+        model: materializedMembers[1].model,
+        effort: materializedMembers[1].effort,
+        limitContext: false,
+        facts,
+      })
+    ).not.toThrow();
 
     expect(() =>
       validateRuntimeLaunchSelectionForTest({
@@ -1315,6 +1478,12 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
           teamName: 'opencode-team',
           cwd: tempRoot,
           providerId: 'opencode',
+          leadRuntimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'default',
+            model: 'default',
+            effort: 'default',
+          },
           members: [],
         },
         () => {}
@@ -1504,31 +1673,34 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
             });
         })
     );
-    const registry = new TeamRuntimeAdapterRegistry([
-      {
-        providerId: 'opencode',
-        prepare,
-        getLastOpenCodeTeamLaunchReadiness: vi.fn(() => ({
-          state: 'ready',
-          launchAllowed: true,
-          modelId: 'opencode/big-pickle',
-          availableModels: ['opencode/big-pickle'],
-          opencodeVersion: '1.0.0',
-          installMethod: 'unknown',
-          binaryPath: 'opencode',
-          hostHealthy: true,
-          appMcpConnected: true,
-          requiredToolsPresent: true,
-          permissionBridgeReady: true,
-          issues: [],
-          warnings: [],
-          diagnostics: [],
-        })),
-        launch: vi.fn(),
-        reconcile: vi.fn(),
-        stop: vi.fn(),
-      } as any,
-    ]);
+    const registry = new TeamRuntimeAdapterRegistry(
+      [
+        {
+          providerId: 'opencode',
+          prepare,
+          getLastOpenCodeTeamLaunchReadiness: vi.fn(() => ({
+            state: 'ready',
+            launchAllowed: true,
+            modelId: 'opencode/big-pickle',
+            availableModels: ['opencode/big-pickle'],
+            opencodeVersion: '1.0.0',
+            installMethod: 'unknown',
+            binaryPath: 'opencode',
+            hostHealthy: true,
+            appMcpConnected: true,
+            requiredToolsPresent: true,
+            permissionBridgeReady: true,
+            issues: [],
+            warnings: [],
+            diagnostics: [],
+          })),
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+        } as any,
+      ],
+      vi.fn(async () => ({ ok: true as const, contractVersion: 1 as const }))
+    );
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
     const opts = {
@@ -1580,15 +1752,18 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         warnings: [],
       };
     });
-    const registry = new TeamRuntimeAdapterRegistry([
-      {
-        providerId: 'opencode',
-        prepare,
-        launch: vi.fn(),
-        reconcile: vi.fn(),
-        stop: vi.fn(),
-      } as any,
-    ]);
+    const registry = new TeamRuntimeAdapterRegistry(
+      [
+        {
+          providerId: 'opencode',
+          prepare,
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+        } as any,
+      ],
+      vi.fn(async () => ({ ok: true as const, contractVersion: 1 as const }))
+    );
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -1659,15 +1834,18 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         });
       });
     });
-    const registry = new TeamRuntimeAdapterRegistry([
-      {
-        providerId: 'opencode',
-        prepare,
-        launch: vi.fn(),
-        reconcile: vi.fn(),
-        stop: vi.fn(),
-      } as any,
-    ]);
+    const registry = new TeamRuntimeAdapterRegistry(
+      [
+        {
+          providerId: 'opencode',
+          prepare,
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+        } as any,
+      ],
+      vi.fn(async () => ({ ok: true as const, contractVersion: 1 as const }))
+    );
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -1747,15 +1925,18 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         warnings: [],
       };
     });
-    const registry = new TeamRuntimeAdapterRegistry([
-      {
-        providerId: 'opencode',
-        prepare,
-        launch: vi.fn(),
-        reconcile: vi.fn(),
-        stop: vi.fn(),
-      } as any,
-    ]);
+    const registry = new TeamRuntimeAdapterRegistry(
+      [
+        {
+          providerId: 'opencode',
+          prepare,
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+        } as any,
+      ],
+      vi.fn(async () => ({ ok: true as const, contractVersion: 1 as const }))
+    );
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -2260,15 +2441,18 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         warnings: [],
       };
     });
-    const registry = new TeamRuntimeAdapterRegistry([
-      {
-        providerId: 'opencode',
-        prepare,
-        launch: vi.fn(),
-        reconcile: vi.fn(),
-        stop: vi.fn(),
-      } as any,
-    ]);
+    const registry = new TeamRuntimeAdapterRegistry(
+      [
+        {
+          providerId: 'opencode',
+          prepare,
+          launch: vi.fn(),
+          reconcile: vi.fn(),
+          stop: vi.fn(),
+        } as any,
+      ],
+      vi.fn(async () => ({ ok: true as const, contractVersion: 1 as const }))
+    );
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -2953,7 +3137,19 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
   it('passes provider launch args before codex advisory one-shot probe flags', async () => {
     const svc = new TeamProvisioningService();
-    mockSpawnProbeOutput('PONG', '');
+    vi.mocked(spawnCli).mockImplementation((_command, args) => {
+      const prompt = args.find((arg) => arg.includes('agent-teams-provider-probe-response-v1'));
+      const nonce = prompt?.match(/Set nonce to ([a-f0-9]+)\./)?.[1];
+      if (!nonce) throw new Error('Expected a nonce-bound model probe prompt');
+      const { child, stdout, stderr } = createMockChildProcess();
+      queueMicrotask(() => {
+        stdout.write(JSON.stringify({ schema: 'agent-teams-provider-probe-response-v1', nonce }));
+        stdout.end();
+        stderr.end();
+        child.emit('close', 0, null);
+      });
+      return child as never;
+    });
 
     const result = await providerRuntimeHarness(svc).runProviderOneShotDiagnostic(
       '/fake/claude',
@@ -2976,7 +3172,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         '-c',
         'service_tier="fast"',
         '-p',
-        'Output only the single word PONG.',
+        expect.stringContaining('agent-teams-provider-probe-response-v1'),
         '--output-format',
         'text',
         '--model',
@@ -3825,12 +4021,12 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         providerId: 'opencode',
         skipPermissions: true,
       },
-      members: [
+      members: withResolvedRuntimeSelectionProvenance([
         {
           name: 'atlas',
           providerId: 'opencode',
         },
-      ],
+      ]),
     });
 
     expect(result.request.model).toBe('opencode/big-pickle');
@@ -3838,8 +4034,14 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       {
         name: 'atlas',
         providerId: 'opencode',
+        providerBackendId: 'opencode-cli',
         model: 'opencode/big-pickle',
         effort: undefined,
+        runtimeSelectionProvenance: runtimeSelectionProvenance(
+          'inherited',
+          'inherited',
+          'inherited'
+        ),
       },
     ]);
     expect(execCliMock).toHaveBeenCalledWith(
@@ -3861,13 +4063,13 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         providerId: 'opencode',
         skipPermissions: true,
       },
-      members: [
+      members: withResolvedRuntimeSelectionProvenance([
         {
           name: 'atlas',
           providerId: 'opencode',
           model: 'opencode/big-pickle',
         },
-      ],
+      ]),
     });
 
     expect(result.request.model).toBe('opencode/big-pickle');

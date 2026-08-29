@@ -3,6 +3,7 @@ import type {
   EffortLevel,
   TeamFastMode,
   TeamMemberMcpPolicy,
+  TeamMemberRuntimeSelectionProvenance,
   TeamProviderBackendId,
   TeamProviderId,
 } from '@shared/types';
@@ -20,6 +21,7 @@ export interface MemberDraft {
   providerBackendId?: TeamProviderBackendId;
   model?: string;
   effort?: EffortLevel;
+  runtimeSelectionProvenance?: TeamMemberRuntimeSelectionProvenance;
   fastMode?: TeamFastMode;
   mcpPolicy?: TeamMemberMcpPolicy;
   removedAt?: number | string | null;

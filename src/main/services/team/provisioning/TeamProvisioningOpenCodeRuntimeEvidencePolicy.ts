@@ -6,6 +6,7 @@ import {
   normalizeOpenCodePersistedFailureReason,
   OPENCODE_UNCOMMITTED_BOOTSTRAP_DIAGNOSTIC,
 } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
+import { projectOpenCodePersistedLaunchIdentity } from './TeamProvisioningOpenCodeLaunchIdentityProjection';
 
 import type {
   TeamRuntimeLaunchInput,
@@ -184,9 +185,7 @@ export function toOpenCodePersistedLaunchMember(
   return {
     name: member.name,
     providerId: 'opencode',
-    providerBackendId: undefined,
-    model: member.model?.trim() || evidence?.model?.trim() || undefined,
-    effort: member.effort,
+    ...projectOpenCodePersistedLaunchIdentity(member, evidence?.model),
     cwd: member.cwd?.trim() || undefined,
     laneId: 'primary',
     laneKind: 'primary',
@@ -836,7 +835,7 @@ export function applyOpenCodeSecondaryBootstrapStallOverlay(
     teamName: snapshot.teamName,
     expectedMembers: snapshot.expectedMembers,
     bootstrapExpectedMembers: snapshot.bootstrapExpectedMembers,
-    leadSessionId: snapshot.leadSessionId,
+    leadSessionId: snapshot.leadSessionId, runtimeRunId: snapshot.runtimeRunId, primaryLaneIdentity: snapshot.primaryLaneIdentity,
     launchPhase: snapshot.launchPhase,
     members,
     updatedAt: options.updatedAt,

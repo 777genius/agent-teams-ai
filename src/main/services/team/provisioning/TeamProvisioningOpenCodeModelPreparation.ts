@@ -8,6 +8,7 @@ import {
   getOpenCodeCatalogProviderIds,
   resolveOpenCodeCompatibilityModel,
 } from './OpenCodeModelCompatibility';
+import { appendExperimentalLocalModelOverrideOutcome, isEligibleExperimentalLocalModelOverride, normalizeOpenCodeExactModelChecks } from './TeamProvisioningExperimentalLocalModelOverride';
 import {
   buildOpenCodeProviderVerificationDeferredLine,
   isOpenCodeModelPrepareBusyDeferred,
@@ -26,6 +27,7 @@ export {
 
 import type { TeamLaunchRuntimeAdapter, TeamRuntimePrepareResult } from '../runtime';
 import type {
+  EffortLevel,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareIssue,
   TeamProvisioningSupportDiagnostic,
@@ -36,7 +38,7 @@ export interface OpenCodeSelectedModelPreparationResult {
   warnings: string[];
   blockingMessages: string[];
   issues: TeamProvisioningPrepareIssue[];
-  supportDiagnostics: TeamProvisioningSupportDiagnostic[];
+  supportDiagnostics: TeamProvisioningSupportDiagnostic[]; processedModelChecks: { modelId: string; effort?: EffortLevel }[];
 }
 
 export interface OpenCodeLocalModelRuntimeReadiness {
@@ -69,8 +71,8 @@ export interface OpenCodeLocalModelRuntimeReadiness {
 export interface OpenCodeSelectedModelPreparationInput {
   adapter: TeamLaunchRuntimeAdapter;
   cwd: string;
-  modelIds: readonly string[];
-  verificationMode: TeamProvisioningModelVerificationMode;
+  modelIds: readonly string[]; modelChecks?: readonly { modelId: string; effort?: EffortLevel }[];
+  verificationMode: TeamProvisioningModelVerificationMode; allowExperimentalLocalModels?: boolean;
   appendPreflightDebugLog?: (event: string, data: Record<string, unknown>) => void;
   inspectLocalModelRuntime?: (input: {
     projectPath: string;
@@ -153,8 +155,8 @@ function buildLocalRuntimeInspectionFailure(
 export async function prepareSelectedOpenCodeModelsForProvisioning({
   adapter,
   cwd,
-  modelIds,
-  verificationMode,
+  modelIds, modelChecks,
+  verificationMode, allowExperimentalLocalModels = false,
   appendPreflightDebugLog = () => undefined,
   inspectLocalModelRuntime,
 }: OpenCodeSelectedModelPreparationInput): Promise<OpenCodeSelectedModelPreparationResult> {
@@ -162,11 +164,11 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
   const warnings: string[] = [];
   const blockingMessages: string[] = [];
   const issues: TeamProvisioningPrepareIssue[] = [];
-  const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
-  const startedAt = Date.now();
+  const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = []; const processedModelChecks: { modelId: string; effort?: EffortLevel }[] = [];
+  const startedAt = Date.now(); const exactModelChecks = normalizeOpenCodeExactModelChecks(modelIds, modelChecks);
 
   if (modelIds.length === 0) {
-    return { details, warnings, blockingMessages, issues, supportDiagnostics };
+    return { details, warnings, blockingMessages, issues, supportDiagnostics, processedModelChecks };
   }
 
   if (verificationMode === 'compatibility') {
@@ -184,12 +186,12 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
 
   const results = new Array<
     | {
-        modelId: string;
+        modelId: string; effort?: EffortLevel;
         prepare: TeamRuntimePrepareResult;
         localRuntimeReadiness?: OpenCodeLocalModelRuntimeReadiness | null;
       }
     | undefined
-  >(modelIds.length);
+  >(exactModelChecks.length);
   let providerBusyDeferred: {
     modelId: string;
     reason: string;
@@ -197,7 +199,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
   } | null = null;
   const nonLocalProviderSources = new Set<string>();
 
-  const prepareModel = async (modelId: string): Promise<TeamRuntimePrepareResult> => {
+  const prepareModel = async (modelId: string, effort?: EffortLevel): Promise<TeamRuntimePrepareResult> => {
     const modelStartedAt = Date.now();
     try {
       const prepare = await adapter.prepare({
@@ -205,15 +207,15 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
         teamName: '__prepare_opencode__',
         cwd,
         providerId: 'opencode',
-        model: modelId,
+        model: modelId, effort,
         runtimeOnly: verificationMode === 'compatibility',
         skipPermissions: true,
         expectedMembers: [],
-        previousLaunchState: null,
+        previousLaunchState: null, allowExperimentalLocalModels,
       });
       appendPreflightDebugLog('opencode_model_prepare_result', {
         cwd,
-        modelId,
+        modelId, ...(effort ? { effort } : {}),
         verificationMode,
         durationMs: Date.now() - modelStartedAt,
         ok: prepare.ok,
@@ -254,8 +256,8 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
   // - Deep OpenCode preflight maps to a real foreground execution probe.
   // - The host reports "session status busy" while another probe/member turn is active.
   // - Once busy is observed, probing more selected models only repeats the same host state.
-  for (let index = 0; index < modelIds.length; index += 1) {
-    const modelId = modelIds[index];
+  for (let index = 0; index < exactModelChecks.length; index += 1) {
+    const { modelId, effort } = exactModelChecks[index];
     let localRuntimeReadiness: OpenCodeLocalModelRuntimeReadiness | null | undefined;
     const parsedModel = parseOpenCodeQualifiedModelRef(modelId);
     if (
@@ -298,7 +300,8 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
     // A local runtime can often prove a hard incompatibility from server metadata alone.
     // Avoid starting the much slower OpenCode execution probe when launch is already
     // impossible (for example, missing tool support or an effective 4K context window).
-    if (localRuntimeReadiness?.severity === 'blocking') {
+    const usesEligibleExperimentalOverride = isEligibleExperimentalLocalModelOverride(allowExperimentalLocalModels, localRuntimeReadiness);
+    if (localRuntimeReadiness?.severity === 'blocking' && !usesEligibleExperimentalOverride) {
       appendPreflightDebugLog('opencode_local_model_prepare_skipped', {
         cwd,
         modelId,
@@ -319,8 +322,8 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       continue;
     }
 
-    const prepare = await prepareModel(modelId);
-    results[index] = { modelId, prepare, localRuntimeReadiness };
+    const prepare = await prepareModel(modelId, effort);
+    results[index] = { modelId, ...(effort ? { effort } : {}), prepare, localRuntimeReadiness };
 
     if (verificationMode === 'compatibility' || prepare.ok) {
       continue;
@@ -358,7 +361,8 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       continue;
     }
 
-    const { modelId, prepare, localRuntimeReadiness } = result;
+    const { modelId, effort, prepare, localRuntimeReadiness } = result;
+    const usesEligibleExperimentalOverride = isEligibleExperimentalLocalModelOverride(allowExperimentalLocalModels, localRuntimeReadiness);
     pushUniqueSupportDiagnostics(supportDiagnostics, prepare.supportDiagnostics);
     const prepareReason = prepare.ok ? undefined : prepare.reason;
     warnings.push(
@@ -367,7 +371,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
       )
     );
     if (prepare.ok) {
-      if (verificationMode === 'deep' && localRuntimeReadiness?.severity === 'blocking') {
+      if (verificationMode === 'deep' && localRuntimeReadiness?.severity === 'blocking' && !usesEligibleExperimentalOverride) {
         const unavailableLine = `Selected model ${modelId} is unavailable. ${localRuntimeReadiness.message}`;
         pushUniqueLine(details, unavailableLine);
         pushUniqueLine(blockingMessages, unavailableLine);
@@ -381,6 +385,11 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
           experimentalOverrideAvailable:
             localRuntimeReadiness.experimentalOverrideAvailable === true,
         });
+        continue;
+      }
+      if (verificationMode === 'deep' && prepare.providerId === 'opencode' && prepare.modelId === modelId) processedModelChecks.push({ modelId, ...(effort ? { effort } : {}) });
+      if (verificationMode === 'deep' && usesEligibleExperimentalOverride) {
+        appendExperimentalLocalModelOverrideOutcome({ modelId, readiness: localRuntimeReadiness!, details, warnings, issues });
         continue;
       }
       details.push(
@@ -496,7 +505,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
     blockingMessages,
   });
 
-  return { details, warnings, blockingMessages, issues, supportDiagnostics };
+  return { details, warnings, blockingMessages, issues, supportDiagnostics, processedModelChecks };
 }
 
 export function isProviderScopedOpenCodePrepareFailure(
@@ -529,7 +538,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
   const warnings: string[] = [];
   const blockingMessages: string[] = [];
   const issues: TeamProvisioningPrepareIssue[] = [];
-  const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
+  const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = []; const processedModelChecks: { modelId: string; effort?: EffortLevel }[] = [];
   const startedAt = Date.now();
 
   appendPreflightDebugLog('opencode_compatibility_batch_start', {
@@ -568,7 +577,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
       cwd,
       modelIds,
     });
-    return { details, warnings, blockingMessages, issues, supportDiagnostics };
+    return { details, warnings, blockingMessages, issues, supportDiagnostics, processedModelChecks };
   }
 
   let sharedPrepare = await prepareOpenCodeCompatibilityModel(adapter, cwd, catalogModelIds[0]);
@@ -591,7 +600,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
           cwd,
           modelIds: deferredModelIds,
         });
-        return { details, warnings, blockingMessages, issues, supportDiagnostics };
+        return { details, warnings, blockingMessages, issues, supportDiagnostics, processedModelChecks };
       }
       sharedPrepare = await prepareOpenCodeCompatibilityModel(adapter, cwd, catalogModelId);
     }
@@ -641,7 +650,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
         modelIds,
         reason: primaryReason,
       });
-      return { details, warnings, blockingMessages, issues, supportDiagnostics };
+      return { details, warnings, blockingMessages, issues, supportDiagnostics, processedModelChecks };
     }
     if (primaryReason.trim().length > 0) {
       details.push(primaryReason);
@@ -656,7 +665,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
       code: sharedPrepare.reason,
       message: primaryReason.trim() || `OpenCode: ${sharedPrepare.reason}`,
     });
-    return { details, warnings, blockingMessages, issues, supportDiagnostics };
+    return { details, warnings, blockingMessages, issues, supportDiagnostics, processedModelChecks };
   }
 
   const latestReadiness = getLastOpenCodeTeamLaunchReadiness(adapter, cwd);
@@ -717,7 +726,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     details,
   });
 
-  return { details, warnings, blockingMessages, issues, supportDiagnostics };
+  return { details, warnings, blockingMessages, issues, supportDiagnostics, processedModelChecks };
 }
 
 async function prepareOpenCodeCompatibilityModel(

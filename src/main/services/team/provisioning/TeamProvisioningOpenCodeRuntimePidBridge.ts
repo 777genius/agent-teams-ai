@@ -157,6 +157,8 @@ export async function rememberOpenCodeRuntimePidFromBridge(
         expectedMembers: previous.expectedMembers,
         bootstrapExpectedMembers: previous.bootstrapExpectedMembers,
         leadSessionId: previous.leadSessionId,
+        runtimeRunId: previous.runtimeRunId,
+        primaryLaneIdentity: previous.primaryLaneIdentity,
         launchPhase: previous.launchPhase,
         members: {
           ...previous.members,

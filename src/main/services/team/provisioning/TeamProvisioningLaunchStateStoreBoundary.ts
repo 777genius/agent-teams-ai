@@ -1,6 +1,22 @@
+import { UnsupportedTeamLaunchStateVersionError } from '../TeamLaunchStateStore';
+
+import { isExplicitlyStoppedLaunchSnapshot } from './TeamProvisioningExplicitStopSnapshot';
+
 import type { PersistedTeamLaunchSnapshot, TeamMember } from '@shared/types';
 
 const DEFAULT_LAUNCH_STATE_NOOP_REFRESH_MS = 15_000;
+
+async function readLaunchStateConservatively(
+  store: TeamProvisioningLaunchStateStoreBoundaryPorts['launchStateStore'],
+  teamName: string
+): Promise<PersistedTeamLaunchSnapshot | null> {
+  try {
+    return await store.read(teamName);
+  } catch (error) {
+    if (error instanceof UnsupportedTeamLaunchStateVersionError) throw error;
+    return null;
+  }
+}
 
 export interface LaunchStateWriteResult {
   snapshot: PersistedTeamLaunchSnapshot;
@@ -114,6 +130,20 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       );
       return;
     }
+    const currentSnapshot = await readLaunchStateConservatively(
+      this.ports.launchStateStore,
+      teamName
+    );
+    if (
+      options?.expectedRunId &&
+      isExplicitlyStoppedLaunchSnapshot(currentSnapshot) &&
+      currentSnapshot.stoppedRunId === options.expectedRunId
+    ) {
+      this.ports.logDebug(
+        `[${teamName}] Preserving explicit-stop launch-state fence for run ${options.expectedRunId}`
+      );
+      return;
+    }
     const writtenRunIdBeforeClear = this.writtenRunIdByTeam.get(teamName);
     await this.ports.launchStateStore.clear(teamName);
     if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeClear) {
@@ -147,7 +177,10 @@ export class TeamProvisioningLaunchStateStoreBoundary {
     snapshot: PersistedTeamLaunchSnapshot,
     options?: LaunchStateWriteOptions
   ): Promise<LaunchStateWriteResult> {
-    const previousSnapshot = await this.ports.launchStateStore.read(teamName).catch(() => null);
+    const previousSnapshot = await readLaunchStateConservatively(
+      this.ports.launchStateStore,
+      teamName
+    );
     const trackedRunIdBeforeWrite =
       typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
     if (typeof options?.runId === 'string' && trackedRunIdBeforeWrite === options.runId) {
@@ -164,6 +197,18 @@ export class TeamProvisioningLaunchStateStoreBoundary {
         `[${teamName}] Skipping stale launch-state write for run ${options.runId}`
       );
       return { snapshot: previousSnapshot ?? snapshot, wrote: false };
+    }
+    if (
+      isExplicitlyStoppedLaunchSnapshot(previousSnapshot) &&
+      !isExplicitlyStoppedLaunchSnapshot(snapshot) &&
+      (!options?.runId || previousSnapshot.stoppedRunId === options.runId)
+    ) {
+      this.ports.logDebug(
+        `[${teamName}] Skipping launch-state write fenced by explicit stop${
+          options?.runId ? ` for run ${options.runId}` : ''
+        }`
+      );
+      return { snapshot: previousSnapshot, wrote: false };
     }
     const metaMembers = await this.ports.membersMetaStore.getMembers(teamName).catch(() => []);
     const overlaidSnapshot = await this.ports.applyOpenCodeSecondaryEvidenceOverlay({
@@ -198,7 +243,11 @@ export class TeamProvisioningLaunchStateStoreBoundary {
           (options.requireTrackedRun === true ||
             this.observedTrackedRunIdByTeam.get(teamName) === options.runId)))
     ) {
-      await this.ports.launchStateStore.clear(teamName);
+      if (isExplicitlyStoppedLaunchSnapshot(previousSnapshot)) {
+        await this.ports.launchStateStore.write(teamName, previousSnapshot);
+      } else {
+        await this.ports.launchStateStore.clear(teamName);
+      }
       if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeWrite) {
         this.writtenRunIdByTeam.delete(teamName);
       }

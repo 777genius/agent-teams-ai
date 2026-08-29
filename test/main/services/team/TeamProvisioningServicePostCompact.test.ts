@@ -50,7 +50,71 @@ import { setAppDataBasePath } from '@main/utils/pathDecoder';
 
 import { toMetaMembers } from './provisioningHarness';
 
-import type { TeamCreateRequest, TeamMember, TeamProviderId } from '@shared/types';
+import type {
+  TeamCreateRequest,
+  TeamLaunchRequest,
+  TeamLeadRuntimeSelectionProvenance,
+  TeamMember,
+  TeamMemberRuntimeSelectionProvenance,
+  TeamProviderId,
+} from '@shared/types';
+
+function canonicalLeadRuntimeSelectionProvenance(
+  request: Pick<TeamLaunchRequest, 'providerBackendId' | 'model' | 'effort'>
+): TeamLeadRuntimeSelectionProvenance {
+  return {
+    version: 1,
+    providerBackendId: request.providerBackendId === undefined ? 'default' : 'explicit',
+    model: request.model === undefined ? 'default' : 'explicit',
+    effort: request.effort === undefined ? 'default' : 'explicit',
+  };
+}
+
+function canonicalMemberRuntimeSelectionProvenance(
+  member: TeamCreateRequest['members'][number]
+): TeamMemberRuntimeSelectionProvenance {
+  return {
+    version: 1,
+    providerBackendId: member.providerBackendId === undefined ? 'inherited' : 'explicit',
+    model: member.model === undefined ? 'inherited' : 'explicit',
+    effort: member.effort === undefined ? 'inherited' : 'explicit',
+  };
+}
+
+function withCanonicalRuntimeSelectionProvenance(request: TeamCreateRequest): TeamCreateRequest;
+function withCanonicalRuntimeSelectionProvenance(request: TeamLaunchRequest): TeamLaunchRequest;
+function withCanonicalRuntimeSelectionProvenance(
+  request: TeamCreateRequest | TeamLaunchRequest
+): TeamCreateRequest | TeamLaunchRequest {
+  const leadRuntimeSelectionProvenance = canonicalLeadRuntimeSelectionProvenance(request);
+  if ('members' in request) {
+    return {
+      ...request,
+      leadRuntimeSelectionProvenance,
+      members: request.members.map((member) => ({
+        ...member,
+        runtimeSelectionProvenance: canonicalMemberRuntimeSelectionProvenance(member),
+      })),
+    };
+  }
+  return { ...request, leadRuntimeSelectionProvenance };
+}
+
+function toMetaMembersWithCanonicalRuntimeSelectionProvenance(
+  members: TeamCreateRequest['members']
+): TeamMember[] {
+  const canonicalMembers = members.map((member) => ({
+    ...member,
+    runtimeSelectionProvenance: canonicalMemberRuntimeSelectionProvenance(member),
+  }));
+  const provenanceByName = new Map(
+    canonicalMembers.map((member) => [member.name, member.runtimeSelectionProvenance])
+  );
+  return toMetaMembers(canonicalMembers).map((member) => ({
+    ...member,
+    runtimeSelectionProvenance: provenanceByName.get(member.name),
+  }));
+}
 
 function createFakeChild() {
   const writeSpy = vi.fn((_data: unknown, cb?: (err?: Error | null) => void) => {
@@ -162,7 +226,7 @@ function mockLaunchConfigFacade(
   vi.spyOn(configFacade, 'restorePrelaunchConfig').mockResolvedValue(undefined);
   vi.spyOn(configFacade, 'assertConfigLeadOnlyForLaunch').mockResolvedValue(undefined);
   vi.spyOn(configFacade.launchExpectedMembersPorts, 'getMeta').mockResolvedValue({
-    members: toMetaMembers(members),
+    members: toMetaMembersWithCanonicalRuntimeSelectionProvenance(members),
   });
   vi.spyOn(configFacade.launchExpectedMembersPorts, 'listInboxNames').mockResolvedValue([]);
 }
@@ -186,7 +250,10 @@ async function setupRunningTeam(teamName: string) {
 
   vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/fake/claude');
   const { child, writeSpy } = createFakeChild();
-  vi.mocked(spawnCli).mockReturnValue(child as any);
+  vi.mocked(spawnCli).mockImplementation(() => {
+    queueMicrotask(() => child.emit('spawn'));
+    return child as any;
+  });
   vi.mocked(execCli).mockImplementation(async (_binaryPath, args) => {
     if (args[0] === '-e' && args[1]?.includes('process.execPath')) {
       return {
@@ -253,7 +320,11 @@ async function setupRunningTeam(teamName: string) {
   (svc as any).startFilesystemMonitor = vi.fn();
 
   const { runId } = await svc.launchTeam(
-    { teamName, cwd: process.cwd(), clearContext: true } as any,
+    withCanonicalRuntimeSelectionProvenance({
+      teamName,
+      cwd: process.cwd(),
+      clearContext: true,
+    }) as any,
     () => {}
   );
 

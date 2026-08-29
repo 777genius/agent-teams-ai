@@ -12,7 +12,7 @@ describe('TeamProvisioningTurnComplete failure artifacts', () => {
     [false, 'provisioning_completed_with_teammate_errors'],
   ] as const)('writes a partial-failure artifact pack when isLaunch=%s', (isLaunch, reason) => {
     const run = { isLaunch } as TeamProvisioningTurnCompleteRun;
-    const launchSnapshot = { version: 2 } as PersistedTeamLaunchSnapshot;
+    const launchSnapshot = { version: 3 } as PersistedTeamLaunchSnapshot;
     const writeLaunchFailureArtifactPackBestEffort = vi.fn();
 
     writeTeammateLaunchFailureArtifactPackIfNeeded(run, true, launchSnapshot, {

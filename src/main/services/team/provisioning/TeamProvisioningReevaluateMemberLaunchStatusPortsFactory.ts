@@ -48,6 +48,7 @@ export interface TeamProvisioningReevaluateMemberLaunchStatusPortsFactoryDeps<
 > {
   nowIso(): string;
   nowMs(): number;
+  isCurrentTrackedRun(run: TRun): boolean;
   service: TeamProvisioningReevaluateMemberLaunchStatusServiceAdapter<TRun>;
 }
 
@@ -87,6 +88,7 @@ export interface TeamProvisioningReevaluateMemberLaunchStatusServiceHostOptions<
 > {
   nowIso(): string;
   nowMs(): number;
+  isCurrentTrackedRun(run: TRun): boolean;
   isOpenCodeSecondaryLaneMemberInRun(
     run: TRun,
     memberName: string
@@ -107,9 +109,12 @@ export function createTeamProvisioningReevaluateMemberLaunchStatusPorts<
 >(
   deps: TeamProvisioningReevaluateMemberLaunchStatusPortsFactoryDeps<TRun>
 ): ReevaluateMemberLaunchStatusPorts<TRun> {
+  const reconcileOpenCodeBootstrapStallPorts =
+    deps.service.getOpenCodeBootstrapStallReconciliationPorts();
   return {
     nowIso: deps.nowIso,
     nowMs: deps.nowMs,
+    isCurrentTrackedRun: deps.isCurrentTrackedRun,
     refreshMemberSpawnStatusesFromLeadInbox: (run) =>
       deps.service.refreshMemberSpawnStatusesFromLeadInbox(run),
     maybeAuditMemberSpawnStatuses: (run, options) =>
@@ -118,8 +123,7 @@ export function createTeamProvisioningReevaluateMemberLaunchStatusPorts<
       deps.service.getLiveTeamAgentRuntimeMetadata(teamName),
     isOpenCodeSecondaryLaneMemberInRun: (run, memberName) =>
       deps.service.isOpenCodeSecondaryLaneMemberInRun(run, memberName),
-    reconcileOpenCodeBootstrapStallPorts:
-      deps.service.getOpenCodeBootstrapStallReconciliationPorts(),
+    reconcileOpenCodeBootstrapStallPorts,
     setMemberSpawnStatus: (run, memberName, status, error, livenessSource) =>
       deps.service.setMemberSpawnStatus(run, memberName, status, error, livenessSource),
     emitMemberSpawnChange: (run, memberName) => deps.service.emitMemberSpawnChange(run, memberName),
@@ -149,6 +153,7 @@ export function createTeamProvisioningReevaluateMemberLaunchStatusDepsFromServic
   return {
     nowIso: options.nowIso,
     nowMs: options.nowMs,
+    isCurrentTrackedRun: options.isCurrentTrackedRun,
     service: {
       refreshMemberSpawnStatusesFromLeadInbox: (run) =>
         service.refreshMemberSpawnStatusesFromLeadInbox(run),

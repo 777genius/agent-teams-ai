@@ -255,39 +255,43 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     expect(merged.statusMessage).toBe('Connect a ChatGPT account to use your Codex subscription.');
   });
 
-  it('normalizes stale legacy backend truth back to codex-native even when the live snapshot is reconnect-needed', () => {
-    const merged = mergeCodexProviderStatusWithSnapshot(
-      {
-        ...createBaseCodexProvider(),
-        selectedBackendId: 'auto',
-        resolvedBackendId: 'api',
-        backend: {
-          kind: 'adapter',
-          label: 'Default adapter',
-          endpointLabel: 'legacy adapter',
-          projectId: null,
-          authMethodDetail: null,
+  it.each(['api', 'adapter', 'auto'] as const)(
+    'preserves live explicit Codex backend identity %s while enriching snapshot account truth',
+    (providerBackendId) => {
+      const merged = mergeCodexProviderStatusWithSnapshot(
+        {
+          ...createBaseCodexProvider(),
+          selectedBackendId: providerBackendId,
+          resolvedBackendId: providerBackendId,
+          backend: {
+            kind: providerBackendId,
+            label: `Explicit ${providerBackendId}`,
+            endpointLabel: `live ${providerBackendId}`,
+            projectId: null,
+            authMethodDetail: null,
+          },
         },
-      },
-      {
-        ...createReadyChatgptSnapshot(),
-        effectiveAuthMode: null,
-        launchAllowed: false,
-        launchIssueMessage: 'Reconnect ChatGPT to refresh the current Codex subscription session.',
-        launchReadinessState: 'missing_auth',
-        managedAccount: null,
-        requiresOpenaiAuth: true,
-      }
-    );
+        {
+          ...createReadyChatgptSnapshot(),
+          effectiveAuthMode: null,
+          launchAllowed: false,
+          launchIssueMessage:
+            'Reconnect ChatGPT to refresh the current Codex subscription session.',
+          launchReadinessState: 'missing_auth',
+          managedAccount: null,
+          requiresOpenaiAuth: true,
+        }
+      );
 
-    expect(merged.selectedBackendId).toBe('codex-native');
-    expect(merged.resolvedBackendId).toBe('codex-native');
-    expect(merged.backend).toMatchObject({
-      kind: 'codex-native',
-      label: 'Codex native',
-      endpointLabel: 'codex exec --json',
-    });
-  });
+      expect(merged.selectedBackendId).toBe(providerBackendId);
+      expect(merged.resolvedBackendId).toBe(providerBackendId);
+      expect(merged.backend).toMatchObject({
+        kind: providerBackendId,
+        label: `Explicit ${providerBackendId}`,
+        endpointLabel: `live ${providerBackendId}`,
+      });
+    }
+  );
 
   it('preserves an active Codex custom provider endpoint label through snapshot merge', () => {
     const provider = createBaseCodexProvider();

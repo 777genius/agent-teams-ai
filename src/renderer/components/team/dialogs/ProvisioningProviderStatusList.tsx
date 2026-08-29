@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
-import { formatProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
+import { formatUiOwnedProviderBackendLabel } from '@renderer/utils/providerBackendIdentity';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
 import {
   isOpenCodeWindowsAccessDeniedDiagnostic,
@@ -81,8 +81,7 @@ export function getProvisioningProviderBackendSummary(
           options.some((option) => option.id === 'codex-native')
         ? 'codex'
         : undefined;
-  const normalizedLabel =
-    formatProviderBackendLabel(inferredProviderId, effectiveBackendId ?? undefined) ?? null;
+  const normalizedLabel = formatUiOwnedProviderBackendLabel(inferredProviderId, provider) ?? null;
 
   const baseSummary = effectiveBackendId
     ? (normalizedLabel ??

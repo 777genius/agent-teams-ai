@@ -50,7 +50,7 @@ function persistedSnapshot(params: {
   summary?: Partial<PersistedTeamLaunchSnapshot['summary']>;
 }): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'launch-team',
     updatedAt: ISO,
     launchPhase: 'finished',

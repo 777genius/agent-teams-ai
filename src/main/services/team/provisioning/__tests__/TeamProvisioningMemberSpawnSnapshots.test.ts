@@ -120,6 +120,7 @@ describe('member spawn snapshot mutations', () => {
     const run = { ...createRun(), lastMemberSpawnAuditAt: 0 } as MemberSpawnStatusAuditRun;
     const current = baseStatus();
     const service = {
+      isCurrentTrackedRun: vi.fn(() => true),
       auditMemberSpawnStatuses: vi.fn(async () => undefined),
       findBootstrapTranscriptFailureReason: vi.fn(async () => 'failed'),
       findBootstrapRuntimeProofObservedAt: vi.fn(async () => '2026-01-01T00:02:00.000Z'),
@@ -140,6 +141,7 @@ describe('member spawn snapshot mutations', () => {
 
     expect(ports.nowMs()).toBe(123);
     expect(ports.minAuditIntervalMs).toBe(456);
+    expect(ports.isCurrentTrackedRun(run)).toBe(true);
     await ports.auditMemberSpawnStatuses(run);
     await expect(ports.findBootstrapTranscriptFailureReason('team-a', 'api', 1)).resolves.toBe(
       'failed'
@@ -155,6 +157,7 @@ describe('member spawn snapshot mutations', () => {
     expect(ports.isOpenCodeSecondaryLaneMemberInRun(run, 'api')).toBe(true);
 
     expect(service.auditMemberSpawnStatuses).toHaveBeenCalledWith(run);
+    expect(service.isCurrentTrackedRun).toHaveBeenCalledWith(run);
     expect(service.findBootstrapRuntimeProofObservedAt).toHaveBeenCalledWith(
       'team-a',
       'api',
@@ -210,5 +213,29 @@ describe('member spawn snapshot mutations', () => {
     await vi.waitFor(() =>
       expect(ports.reportBackgroundPersistenceError).toHaveBeenCalledWith(run, persistenceError)
     );
+  });
+
+  it('does not mutate or emit a status transition for a replaced run', () => {
+    const run = createRun();
+    const original = run.memberSpawnStatuses.get('api');
+    const ports = createPorts();
+    vi.mocked(ports.isCurrentTrackedRun).mockReturnValue(false);
+
+    setMemberSpawnStatusForRun(
+      {
+        run,
+        memberName: 'api',
+        status: 'online',
+      },
+      ports
+    );
+
+    expect(run.memberSpawnStatuses.get('api')).toBe(original);
+    expect(ports.syncMemberTaskActivityForRuntimeTransition).not.toHaveBeenCalled();
+    expect(ports.syncMemberLaunchGraceCheck).not.toHaveBeenCalled();
+    expect(ports.updateLaunchDiagnostics).not.toHaveBeenCalled();
+    expect(ports.appendMemberBootstrapDiagnostic).not.toHaveBeenCalled();
+    expect(ports.emitMemberSpawnChange).not.toHaveBeenCalled();
+    expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
   });
 });

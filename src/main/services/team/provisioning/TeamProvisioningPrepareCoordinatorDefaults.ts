@@ -13,6 +13,7 @@ export function createDefaultTeamProvisioningPrepareCoordinatorPorts(
   return {
     providerProbeCache: createInMemoryProviderProbeCachePort(),
     getOpenCodeRuntimeAdapter: () => null,
+    getOpenCodeStrictLaunchDelegationValidator: () => null,
     buildProvisioningEnv: async () => ({
       env: process.env,
       authSource: 'none',

@@ -1,5 +1,15 @@
+import {
+  markNativeModelTargetedLiveness,
+  markOpenCodeStrictLaunchDelegation,
+} from '@main/services/team/provisioning/TeamProvisioningLaunchPreparationEvidence';
+import { invalidateAuthoritativeModelExecutionProofs } from '@main/services/team/TeamLaunchExecutionProofAuthority';
 import { setClaudeBasePathOverride } from '@main/utils/pathDecoder';
 import { MAX_TEXT_LENGTH } from '@shared/constants/teamLimits';
+import {
+  TEAM_BEGIN_ROSTER_AUTHORIZATION_TRANSACTION,
+  TEAM_GET_ROSTER_AUTHORIZATION_TRANSACTION_OUTCOME,
+  TEAM_ROLLBACK_ROSTER_AUTHORIZATION_TRANSACTION,
+} from '@shared/types/rosterAuthorizationTransaction';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -18,6 +28,8 @@ import type {
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamProviderId,
+  TeamProvisioningModelCheckRequest,
+  TeamProvisioningPrepareResult,
   TeamProvisioningProgress,
   TeamViewSnapshot,
 } from '@shared/types/team';
@@ -101,6 +113,18 @@ const DRAFT_TEAM_CWD = path.join(os.tmpdir(), 'draft-team');
 const TASK_LOG_JSONL_PATH = path.join(os.tmpdir(), 'task.jsonl');
 const TASK_LOG_BUNDLE_ID = `tool:${TASK_LOG_JSONL_PATH}:tool-1`;
 const TRANSCRIPT_JSONL_PATH = path.join(os.tmpdir(), 'transcript.jsonl');
+const INHERITED_MEMBER_RUNTIME_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'inherited' as const,
+  model: 'inherited' as const,
+  effort: 'inherited' as const,
+};
+const DEFAULT_LEAD_RUNTIME_PROVENANCE = {
+  version: 1 as const,
+  providerBackendId: 'default' as const,
+  model: 'default' as const,
+  effort: 'default' as const,
+};
 
 vi.mock('@main/services/infrastructure/NotificationManager', () => ({
   NotificationManager: {
@@ -228,6 +252,7 @@ import {
   TEAM_START_TASK,
   TEAM_START_TASK_BY_USER,
   TEAM_STOP,
+  TEAM_STOP_FOR_RELAUNCH,
   TEAM_TOOL_APPROVAL_READ_FILE,
   TEAM_TOOL_APPROVAL_RESPOND,
   TEAM_TOOL_APPROVAL_SETTINGS,
@@ -266,6 +291,7 @@ const TEAM_HANDLER_KEYS = [
   TEAM_ADD_TASK_COMMENT,
   TEAM_ADD_TASK_RELATIONSHIP,
   TEAM_ALIVE_LIST,
+  TEAM_BEGIN_ROSTER_AUTHORIZATION_TRANSACTION,
   TEAM_CANCEL_PROVISIONING,
   TEAM_CREATE,
   TEAM_CREATE_CONFIG,
@@ -287,6 +313,7 @@ const TEAM_HANDLER_KEYS = [
   TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_ROSTER_AUTHORIZATION_TRANSACTION_OUTCOME,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
@@ -314,6 +341,7 @@ const TEAM_HANDLER_KEYS = [
   TEAM_REMOVE_MEMBER,
   TEAM_REMOVE_TASK_RELATIONSHIP,
   TEAM_REPLACE_MEMBERS,
+  TEAM_ROLLBACK_ROSTER_AUTHORIZATION_TRANSACTION,
   TEAM_REQUEST_REVIEW,
   TEAM_RESTART_MEMBER,
   TEAM_RESTORE,
@@ -333,6 +361,7 @@ const TEAM_HANDLER_KEYS = [
   TEAM_START_TASK,
   TEAM_START_TASK_BY_USER,
   TEAM_STOP,
+  TEAM_STOP_FOR_RELAUNCH,
   TEAM_TOOL_APPROVAL_READ_FILE,
   TEAM_TOOL_APPROVAL_RESPOND,
   TEAM_TOOL_APPROVAL_SETTINGS,
@@ -548,6 +577,7 @@ describe('ipc teams handlers', () => {
       })
     ),
     updateMemberRole: vi.fn(() => resolved({ oldRole: undefined, changed: true })),
+    killProcess: vi.fn(() => resolvedUndefined()),
     softDeleteTask: vi.fn(() => resolvedUndefined()),
     getDeletedTasks: vi.fn(() => resolved([])),
     setTaskNeedsClarification: vi.fn(() => resolvedUndefined()),
@@ -672,6 +702,7 @@ describe('ipc teams handlers', () => {
   };
   const teamHandlerApis = {
     provisioningStart: {
+      requiresAuthoritativeLaunchProof: false,
       createTeam: teamHandlerMocks.createTeam,
       launchTeam: teamHandlerMocks.launchTeam,
     },
@@ -897,6 +928,16 @@ describe('ipc teams handlers', () => {
     expect(new Set(handlers.keys())).toEqual(new Set(TEAM_HANDLER_KEYS));
   });
 
+  it('returns an explicit failure and sends no success notification when process authority is unknown', async () => {
+    service.killProcess.mockRejectedValueOnce(new Error('Process 41001 stop is fenced'));
+
+    const result = await handlers.get(TEAM_KILL_PROCESS)!({} as never, 'my-team', 41_001);
+
+    expect(result).toEqual({ success: false, error: 'Process 41001 stop is fenced' });
+    expect(teamHandlerMocks.sendMessageToTeam).not.toHaveBeenCalled();
+    vi.mocked(console.error).mockClear();
+  });
+
   it('preserves narrow facade receivers when a team handler invokes its runtime dependency', async () => {
     const runtimeCalls: string[] = [];
     const runtimeFacade = {
@@ -919,6 +960,45 @@ describe('ipc teams handlers', () => {
     expect(runtimeCalls).toEqual(['stop:my-team']);
   });
 
+  it('types relaunch stop validation rejection as authoritatively not dispatched', async () => {
+    const result = await handlers.get(TEAM_STOP_FOR_RELAUNCH)!({} as never, '../invalid');
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        status: 'not-dispatched',
+        reason: 'validation-rejected',
+        diagnostic: 'teamName contains invalid characters',
+      },
+    });
+    expect(teamHandlerMocks.stopTeam).not.toHaveBeenCalled();
+  });
+
+  it('types a relaunch stop operation failure after service dispatch as unknown', async () => {
+    teamHandlerMocks.stopTeam.mockRejectedValueOnce(new Error('runtime crashed after signal'));
+
+    const result = await handlers.get(TEAM_STOP_FOR_RELAUNCH)!({} as never, 'my-team');
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        status: 'outcome-unknown',
+        reason: 'stop-operation-failed',
+        diagnostic: 'runtime crashed after signal',
+      },
+    });
+    expect(teamHandlerMocks.stopTeam).toHaveBeenCalledOnce();
+    expect(teamHandlerMocks.stopTeam).toHaveBeenCalledWith('my-team');
+    vi.mocked(console.error).mockClear();
+  });
+
+  it('types a completed relaunch stop as stopped', async () => {
+    const result = await handlers.get(TEAM_STOP_FOR_RELAUNCH)!({} as never, 'my-team');
+
+    expect(result).toEqual({ success: true, data: { status: 'stopped' } });
+    expect(teamHandlerMocks.stopTeam).toHaveBeenCalledOnce();
+  });
+
   it('forwards selected model checks with effort to prepareProvisioning', async () => {
     const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
     const result = (await handler(
@@ -932,6 +1012,7 @@ describe('ipc teams handlers', () => {
       [
         {
           providerId: 'anthropic',
+          providerBackendId: null,
           model: 'claude-opus-4-6[1m]',
           effort: 'medium',
         },
@@ -948,12 +1029,44 @@ describe('ipc teams handlers', () => {
       modelChecks: [
         {
           providerId: 'anthropic',
+          providerBackendId: null,
           model: 'claude-opus-4-6[1m]',
           effort: 'medium',
         },
       ],
     });
   });
+
+  it.each(['api', 'adapter', 'auto'] as const)(
+    'preserves explicit Codex backend %s through main preparation parsing',
+    async (providerBackendId) => {
+      const check = {
+        providerId: 'codex' as const,
+        providerBackendId,
+        model: 'gpt-5',
+      };
+      const result = (await handlers.get(TEAM_PREPARE_PROVISIONING)!(
+        { sender: { send: vi.fn() } } as never,
+        os.tmpdir(),
+        'codex',
+        ['codex'],
+        [check.model],
+        false,
+        'compatibility',
+        [check]
+      )) as { success: boolean };
+
+      expect(result.success).toBe(true);
+      expect(teamHandlerMocks.prepareForProvisioning).toHaveBeenLastCalledWith(os.tmpdir(), {
+        providerId: 'codex',
+        providerIds: ['codex'],
+        modelIds: ['gpt-5'],
+        limitContext: false,
+        modelVerificationMode: 'compatibility',
+        modelChecks: [check],
+      });
+    }
+  );
 
   it('rejects invalid selected model check effort for the provider', async () => {
     const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
@@ -968,6 +1081,7 @@ describe('ipc teams handlers', () => {
       [
         {
           providerId: 'anthropic',
+          providerBackendId: null,
           model: 'claude-opus-4-6[1m]',
           effort: 'xhigh',
         },
@@ -976,6 +1090,334 @@ describe('ipc teams handlers', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('selectedModelChecks effort must be one of');
+  });
+
+  it('rejects a deep provider/check mismatch before verification and mints no proof', async () => {
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'anthropic',
+      ['anthropic'],
+      ['gpt-5'],
+      false,
+      'deep',
+      [{ providerId: 'codex', providerBackendId: 'codex-native', model: 'gpt-5' }]
+    )) as { success: boolean; error?: string; data?: { executionProof?: unknown } };
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('provider set must exactly match');
+    expect(result.data?.executionProof).toBeUndefined();
+    expect(teamHandlerMocks.prepareForProvisioning).not.toHaveBeenCalled();
+  });
+
+  it('issues native proof only after every targeted liveness check is processed', async () => {
+    const checks = [
+      { providerId: 'anthropic' as const, providerBackendId: null, model: 'claude-sonnet-4-5' },
+      {
+        providerId: 'gemini' as const,
+        providerBackendId: 'cli-sdk' as const,
+        model: 'gemini-2.5-pro',
+      },
+      { providerId: 'codex' as const, providerBackendId: 'codex-native' as const, model: 'gpt-5' },
+    ];
+    teamHandlerMocks.prepareForProvisioning.mockResolvedValueOnce(
+      markNativeModelTargetedLiveness(
+        { ready: true, message: 'all processed', processedModelChecks: checks },
+        checks
+      )
+    );
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'anthropic',
+      ['anthropic', 'codex', 'gemini'],
+      ['claude-sonnet-4-5', 'gemini-2.5-pro', 'gpt-5'],
+      false,
+      'deep',
+      checks,
+      false
+    )) as { success: boolean; data?: { executionProof?: unknown } };
+
+    expect(result.success).toBe(true);
+    expect(result.data?.executionProof).toBeDefined();
+    expect(teamHandlerMocks.prepareForProvisioning).toHaveBeenCalledWith(
+      os.tmpdir(),
+      expect.objectContaining({ modelChecks: checks, allowExperimentalLocalModels: false })
+    );
+  });
+
+  it('fails closed when authority is invalidated while production preparation is delayed', async () => {
+    const check = {
+      providerId: 'codex' as const,
+      providerBackendId: 'codex-native' as const,
+      model: 'gpt-5',
+    };
+    const delayed = createDeferred<TeamProvisioningPrepareResult>();
+    teamHandlerMocks.prepareForProvisioning.mockReturnValueOnce(delayed.promise);
+    const pending = handlers.get(TEAM_PREPARE_PROVISIONING)!(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'codex',
+      ['codex'],
+      [check.model],
+      false,
+      'deep',
+      [check],
+      false
+    ) as Promise<{ success: boolean; data?: TeamProvisioningPrepareResult }>;
+    await vi.waitFor(() => expect(teamHandlerMocks.prepareForProvisioning).toHaveBeenCalledOnce());
+
+    invalidateAuthoritativeModelExecutionProofs();
+    delayed.resolve(
+      markNativeModelTargetedLiveness(
+        { ready: true, message: 'late completion', processedModelChecks: [check] },
+        [check]
+      )
+    );
+
+    await expect(pending).resolves.toMatchObject({
+      success: true,
+      data: {
+        ready: false,
+        executionProof: undefined,
+        message: 'Launch authorization epoch changed during preparation',
+      },
+    });
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'fails closed when the project root is replaced while production preparation is delayed',
+    async () => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-proof-attempt-root-'));
+      const project = path.join(root, 'project');
+      const displaced = path.join(root, 'project-displaced');
+      fs.mkdirSync(project);
+      try {
+        const check = {
+          providerId: 'codex' as const,
+          providerBackendId: 'codex-native' as const,
+          model: 'gpt-5',
+        };
+        const delayed = createDeferred<TeamProvisioningPrepareResult>();
+        teamHandlerMocks.prepareForProvisioning.mockReturnValueOnce(delayed.promise);
+        const pending = handlers.get(TEAM_PREPARE_PROVISIONING)!(
+          { sender: { send: vi.fn() } } as never,
+          project,
+          'codex',
+          ['codex'],
+          [check.model],
+          false,
+          'deep',
+          [check],
+          false
+        ) as Promise<{ success: boolean; data?: TeamProvisioningPrepareResult }>;
+        await vi.waitFor(() =>
+          expect(teamHandlerMocks.prepareForProvisioning).toHaveBeenCalledOnce()
+        );
+        fs.renameSync(project, displaced);
+        fs.mkdirSync(project);
+        delayed.resolve(
+          markNativeModelTargetedLiveness(
+            { ready: true, message: 'completed against old root', processedModelChecks: [check] },
+            [check]
+          )
+        );
+
+        await expect(pending).resolves.toMatchObject({
+          success: true,
+          data: {
+            ready: false,
+            executionProof: undefined,
+            message: 'Launch authorization project root changed during preparation',
+          },
+        });
+      } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it.each([
+    {
+      kind: 'missing',
+      processed: [] as TeamProvisioningModelCheckRequest[],
+    },
+    {
+      kind: 'partial',
+      processed: [
+        {
+          providerId: 'opencode' as const,
+          providerBackendId: 'opencode-cli' as const,
+          model: 'openrouter/verified',
+          effort: 'high' as const,
+        },
+      ],
+    },
+    {
+      kind: 'duplicate',
+      processed: [
+        {
+          providerId: 'opencode' as const,
+          providerBackendId: 'opencode-cli' as const,
+          model: 'openrouter/verified',
+          effort: 'high' as const,
+        },
+        {
+          providerId: 'opencode' as const,
+          providerBackendId: 'opencode-cli' as const,
+          model: 'openrouter/verified',
+          effort: 'high' as const,
+        },
+      ],
+    },
+  ])('fails $kind processed OpenCode evidence closed without proof', async ({ processed }) => {
+    const checks = [
+      {
+        providerId: 'opencode' as const,
+        providerBackendId: 'opencode-cli' as const,
+        model: 'openrouter/verified',
+        effort: 'high' as const,
+      },
+      {
+        providerId: 'opencode' as const,
+        providerBackendId: 'opencode-cli' as const,
+        model: 'openrouter/second',
+        effort: 'low' as const,
+      },
+    ];
+    teamHandlerMocks.prepareForProvisioning.mockResolvedValueOnce(
+      markOpenCodeStrictLaunchDelegation(
+        { ready: true, message: 'incorrectly ready', processedModelChecks: processed },
+        { contractVersion: 1, checks: processed }
+      )
+    );
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'opencode',
+      ['opencode'],
+      checks.map((check) => check.model),
+      false,
+      'deep',
+      checks,
+      false
+    )) as { success: boolean; data?: TeamProvisioningPrepareResult };
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({
+      ready: false,
+      message:
+        'Authoritative preparation did not establish strict OpenCode launch delegation for every provider/backend/model/effort check',
+    });
+    expect(result.data?.executionProof).toBeUndefined();
+  });
+
+  it('rejects duplicate exact checks before preparation and proof issuance', async () => {
+    const check = {
+      providerId: 'opencode' as const,
+      providerBackendId: 'opencode-cli' as const,
+      model: 'openrouter/verified',
+      effort: 'high' as const,
+    };
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'opencode',
+      ['opencode'],
+      [check.model],
+      false,
+      'deep',
+      [check, { ...check }],
+      false
+    )) as { success: boolean; error?: string };
+
+    expect(result).toMatchObject({
+      success: false,
+      error: 'selectedModelChecks must not contain duplicate checks',
+    });
+    expect(teamHandlerMocks.prepareForProvisioning).not.toHaveBeenCalled();
+  });
+
+  it('fails old exact-check payloads closed when providerBackendId is omitted', async () => {
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const result = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'anthropic',
+      ['anthropic'],
+      ['claude-sonnet-4-5'],
+      false,
+      'deep',
+      [{ providerId: 'anthropic', model: 'claude-sonnet-4-5' }]
+    )) as { success: boolean; error?: string };
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('explicit providerBackendId');
+  });
+
+  it('issues override proof only with authoritative eligible model-scoped evidence', async () => {
+    const check = {
+      providerId: 'opencode' as const,
+      providerBackendId: 'opencode-cli' as const,
+      model: 'ollama/qwen',
+    };
+    teamHandlerMocks.prepareForProvisioning.mockResolvedValueOnce(
+      markOpenCodeStrictLaunchDelegation(
+        {
+          ready: true,
+          message: 'verified under override',
+          processedModelChecks: [check],
+          issues: [
+            {
+              providerId: 'opencode',
+              modelId: 'ollama/qwen',
+              scope: 'model',
+              severity: 'warning',
+              code: 'local_coordination_probe_failed',
+              message: 'Eligible.',
+              experimentalOverrideAvailable: true,
+            },
+          ],
+        },
+        { contractVersion: 1, checks: [check] }
+      )
+    );
+    const handler = handlers.get(TEAM_PREPARE_PROVISIONING)!;
+    const eligible = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'opencode',
+      ['opencode'],
+      ['ollama/qwen'],
+      false,
+      'deep',
+      [check],
+      true
+    )) as { success: boolean; data?: TeamProvisioningPrepareResult };
+    expect(eligible.data?.executionProof).toBeDefined();
+
+    teamHandlerMocks.prepareForProvisioning.mockResolvedValueOnce({
+      ready: true,
+      message: 'incorrectly ready',
+      processedModelChecks: [check],
+    } as TeamProvisioningPrepareResult);
+    const ineligible = (await handler(
+      { sender: { send: vi.fn() } } as never,
+      os.tmpdir(),
+      'opencode',
+      ['opencode'],
+      ['ollama/qwen'],
+      false,
+      'deep',
+      [check],
+      true
+    )) as { success: boolean; data?: TeamProvisioningPrepareResult };
+    expect(ineligible.data).toMatchObject({ ready: false, executionProof: undefined });
   });
 
   it.each([
@@ -2438,8 +2880,9 @@ describe('ipc teams handlers', () => {
 
     const createResult = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
       teamName: 'my-team',
-      members: [{ name: 'alice' }],
+      members: [{ name: 'alice', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE }],
       cwd: os.tmpdir(),
+      leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
     })) as { success: boolean };
     expect(createResult.success).toBe(true);
     expect(teamHandlerMocks.createTeam).toHaveBeenCalledTimes(1);
@@ -2486,8 +2929,9 @@ describe('ipc teams handlers', () => {
 
     const result = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
       teamName: createTeam,
-      members: [{ name: 'alice' }],
+      members: [{ name: 'alice', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE }],
       cwd: os.tmpdir(),
+      leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
     })) as { success: boolean };
 
     expect(result.success).toBe(true);
@@ -2611,8 +3055,9 @@ describe('ipc teams handlers', () => {
 
     const createResult = (await handlers.get(TEAM_CREATE)!({ sender: { send: vi.fn() } } as never, {
       teamName: 'my-team',
-      members: [{ name: 'alice' }],
+      members: [{ name: 'alice', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE }],
       cwd: os.tmpdir(),
+      leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
     })) as { success: boolean };
     expect(createResult.success).toBe(false);
     vi.mocked(console.error).mockClear();
@@ -4115,12 +4560,28 @@ describe('ipc teams handlers', () => {
   });
 
   describe('addMember', () => {
+    it('rejects unknown legacy provenance before persistence or runtime attach', async () => {
+      const handler = handlers.get(TEAM_ADD_MEMBER)!;
+
+      const result = (await handler({} as never, 'my-team', {
+        name: 'legacy-member',
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('runtime selection is ambiguous');
+      expect(service.addMember).not.toHaveBeenCalled();
+      expect(teamHandlerMocks.attachLiveRosterMember).not.toHaveBeenCalled();
+    });
+
     it('runs the complete roster persistence and runtime attach transaction under the team lifecycle lock', async () => {
       const handler = handlers.get(TEAM_ADD_MEMBER)!;
 
       const result = (await handler({} as never, 'my-team', {
         name: 'alice',
         role: 'developer',
+        runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -4136,6 +4597,7 @@ describe('ipc teams handlers', () => {
       const result = (await handler({} as never, 'my-team', {
         name: 'alice',
         role: 'developer',
+        runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
       })) as { success: boolean };
       expect(result.success).toBe(true);
       expect(service.addMember).toHaveBeenCalledWith(
@@ -4153,6 +4615,7 @@ describe('ipc teams handlers', () => {
         name: 'alice',
         role: 'developer',
         workflow: 'Focus on frontend polish',
+        runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -4170,6 +4633,10 @@ describe('ipc teams handlers', () => {
         providerId: 'codex',
         providerBackendId: 'codex-native',
         fastMode: 'on',
+        runtimeSelectionProvenance: {
+          ...INHERITED_MEMBER_RUNTIME_PROVENANCE,
+          providerBackendId: 'explicit',
+        },
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -4211,6 +4678,7 @@ describe('ipc teams handlers', () => {
         role: 'developer',
         providerId: 'codex',
         mcpPolicy: { mode: 'appOnly' },
+        runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -4234,6 +4702,7 @@ describe('ipc teams handlers', () => {
         role: 'developer',
         providerId: 'codex',
         mcpPolicy: { mode: 'appOnly' },
+        runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
       })) as { success: boolean; error?: string };
 
       expect(result.success).toBe(false);
@@ -4295,6 +4764,7 @@ describe('ipc teams handlers', () => {
         name: 'alice',
         role: 'developer',
         providerId: 'opencode',
+        runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
       })) as { success: boolean; error?: string };
 
       expect(result.success).toBe(false);
@@ -4357,6 +4827,10 @@ describe('ipc teams handlers', () => {
         role: 'developer',
         providerId: 'opencode',
         model: 'minimax-m2.5-free',
+        runtimeSelectionProvenance: {
+          ...INHERITED_MEMBER_RUNTIME_PROVENANCE,
+          model: 'explicit',
+        },
       })) as { success: boolean; error?: string };
 
       expect(result.success).toBe(false);
@@ -4370,6 +4844,10 @@ describe('ipc teams handlers', () => {
         model: 'minimax-m2.5-free',
         effort: undefined,
         mcpPolicy: undefined,
+        runtimeSelectionProvenance: {
+          ...INHERITED_MEMBER_RUNTIME_PROVENANCE,
+          model: 'explicit',
+        },
       });
       expect(service.replaceMembers).not.toHaveBeenCalled();
       expect(mockWriteMembersMeta).toHaveBeenCalledWith(
@@ -5042,6 +5520,7 @@ describe('ipc teams handlers', () => {
       let result = (await addHandler({} as never, 'my-team', {
         name: 'alice',
         role: 'developer',
+        runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
       })) as { success: boolean };
       expect(result.success).toBe(true);
       expect(service.addMember).toHaveBeenCalledWith(
@@ -6293,9 +6772,12 @@ describe('ipc teams handlers', () => {
       const handler = handlers.get(TEAM_CREATE)!;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
-        members: [{ name: 'alice' }],
+        members: [
+          { name: 'alice', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE },
+        ],
         cwd: os.tmpdir(),
         prompt: 'Build a web app',
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
       })) as { success: boolean };
       expect(result.success).toBe(true);
       const callArg = teamHandlerMocks.createTeam.mock.calls[0][0];
@@ -6306,9 +6788,12 @@ describe('ipc teams handlers', () => {
       const handler = handlers.get(TEAM_CREATE)!;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
-        members: [{ name: 'alice' }],
+        members: [
+          { name: 'alice', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE },
+        ],
         cwd: os.tmpdir(),
         prompt: 123,
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
       })) as { success: boolean; error: string };
       expect(result.success).toBe(false);
       expect(result.error).toContain('prompt must be a string');
@@ -6318,9 +6803,12 @@ describe('ipc teams handlers', () => {
       const handler = handlers.get(TEAM_CREATE)!;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'test-team',
-        members: [{ name: 'alice' }],
+        members: [
+          { name: 'alice', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE },
+        ],
         cwd: os.tmpdir(),
         allowExperimentalLocalModels: 'yes',
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
       })) as { success: boolean; error: string };
 
       expect(result.success).toBe(false);
@@ -6479,12 +6967,34 @@ describe('ipc teams handlers', () => {
   });
 
   describe('solo team (zero members)', () => {
+    it('rejects an ambiguous draft member before creating persistent resources', async () => {
+      const handler = handlers.get(TEAM_CREATE_CONFIG)!;
+
+      const result = (await handler({} as never, {
+        teamName: 'ambiguous-draft',
+        members: [{ name: 'legacy-member', providerBackendId: 'codex-native' }],
+        cwd: os.tmpdir(),
+        providerId: 'codex',
+        providerBackendId: 'codex-native',
+        leadRuntimeSelectionProvenance: {
+          ...DEFAULT_LEAD_RUNTIME_PROVENANCE,
+          providerBackendId: 'explicit',
+        },
+      })) as { success: boolean; error?: string };
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('runtime selection is ambiguous');
+      expect(service.createTeamConfig).not.toHaveBeenCalled();
+      expect(mockTeamDataWorkerClient.invalidateTeamConfig).not.toHaveBeenCalled();
+    });
+
     it('createTeam accepts members: [] (provisioning validation)', async () => {
       const handler = handlers.get(TEAM_CREATE)!;
       const result = (await handler({ sender: { send: vi.fn() } } as never, {
         teamName: 'solo-team',
         members: [],
         cwd: os.tmpdir(),
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
       })) as { success: boolean };
       expect(result.success).toBe(true);
       expect(teamHandlerMocks.createTeam).toHaveBeenCalledTimes(1);
@@ -6504,6 +7014,12 @@ describe('ipc teams handlers', () => {
             providerBackendId: 'codex-native',
             model: 'gpt-5.4',
             effort: 'high',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'explicit',
+              effort: 'inherited',
+            },
             fastMode: 'on',
             mcpPolicy: { mode: 'appOnly' },
           },
@@ -6511,6 +7027,10 @@ describe('ipc teams handlers', () => {
         cwd: os.tmpdir(),
         providerId: 'codex',
         providerBackendId: 'codex-native',
+        leadRuntimeSelectionProvenance: {
+          ...DEFAULT_LEAD_RUNTIME_PROVENANCE,
+          providerBackendId: 'explicit',
+        },
         limitContext: true,
         allowExperimentalLocalModels: true,
       })) as { success: boolean };
@@ -6529,6 +7049,12 @@ describe('ipc teams handlers', () => {
           providerBackendId: 'codex-native',
           model: 'gpt-5.4',
           effort: 'high',
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'inherited',
+            model: 'explicit',
+            effort: 'inherited',
+          },
           fastMode: 'on',
           mcpPolicy: { mode: 'appOnly' },
         },
@@ -6544,11 +7070,21 @@ describe('ipc teams handlers', () => {
             name: 'builder',
             providerBackendId: 'codex-native',
             effort: 'xhigh',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: 'explicit',
+            },
           },
         ],
         cwd: os.tmpdir(),
         providerId: 'codex',
         providerBackendId: 'codex-native',
+        leadRuntimeSelectionProvenance: {
+          ...DEFAULT_LEAD_RUNTIME_PROVENANCE,
+          providerBackendId: 'explicit',
+        },
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -6563,6 +7099,13 @@ describe('ipc teams handlers', () => {
           model: undefined,
           effort: 'xhigh',
           fastMode: undefined,
+          mcpPolicy: undefined,
+          runtimeSelectionProvenance: {
+            version: 1,
+            providerBackendId: 'inherited',
+            model: 'inherited',
+            effort: 'explicit',
+          },
         },
       ]);
     });
@@ -6575,11 +7118,16 @@ describe('ipc teams handlers', () => {
           {
             name: 'builder',
             providerBackendId: 'opencode-cli',
+            runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE,
           },
         ],
         cwd: os.tmpdir(),
         providerId: 'opencode',
         providerBackendId: 'opencode-cli',
+        leadRuntimeSelectionProvenance: {
+          ...DEFAULT_LEAD_RUNTIME_PROVENANCE,
+          providerBackendId: 'explicit',
+        },
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -6606,6 +7154,7 @@ describe('ipc teams handlers', () => {
         teamName: 'solo-team',
         members: [],
         cwd: os.tmpdir(),
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
       })) as { success: boolean };
       expect(result.success).toBe(true);
       expect(mockTeamDataWorkerClient.invalidateTeamConfig).toHaveBeenCalledWith('solo-team');
@@ -6627,11 +7176,18 @@ describe('ipc teams handlers', () => {
             providerBackendId: 'codex-native',
             model: ' gpt-5.2 ',
             effort: 'high',
+            isolation: undefined,
             fastMode: 'on',
             mcpPolicy: {
               mode: 'strictAllowlist',
               scopes: { project: true, user: false },
               serverNames: ['agent-teams'],
+            },
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'explicit',
+              model: 'explicit',
+              effort: 'explicit',
             },
           },
         ],
@@ -6641,6 +7197,12 @@ describe('ipc teams handlers', () => {
         providerBackendId: 'codex-native',
         model: ' gpt-5.2 ',
         effort: 'high',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'explicit',
+          model: 'explicit',
+          effort: 'explicit',
+        },
         fastMode: 'on',
         limitContext: true,
         skipPermissions: false,
@@ -6663,11 +7225,18 @@ describe('ipc teams handlers', () => {
             providerBackendId: 'codex-native',
             model: 'gpt-5.2',
             effort: 'high',
+            isolation: undefined,
             fastMode: 'on',
             mcpPolicy: {
               mode: 'strictAllowlist',
               scopes: { project: true, user: false },
               serverNames: ['agent-teams'],
+            },
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'explicit',
+              model: 'explicit',
+              effort: 'explicit',
             },
           },
         ],
@@ -6675,6 +7244,12 @@ describe('ipc teams handlers', () => {
         prompt: 'Saved prompt',
         providerId: 'codex',
         providerBackendId: 'codex-native',
+        leadRuntimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'explicit',
+          model: 'explicit',
+          effort: 'explicit',
+        },
         model: 'gpt-5.2',
         effort: 'high',
         fastMode: 'on',
@@ -6694,11 +7269,21 @@ describe('ipc teams handlers', () => {
             name: 'builder',
             providerBackendId: 'codex-native',
             effort: 'xhigh',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: 'explicit',
+            },
           },
         ],
         cwd: os.tmpdir(),
         providerId: 'codex',
         providerBackendId: 'codex-native',
+        leadRuntimeSelectionProvenance: {
+          ...DEFAULT_LEAD_RUNTIME_PROVENANCE,
+          providerBackendId: 'explicit',
+        },
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -6738,23 +7323,20 @@ describe('ipc teams handlers', () => {
       expect(service.createTeamConfig).not.toHaveBeenCalled();
     });
 
-    it('handleCreateConfig drops known stale top-level backend when provider is omitted', async () => {
+    it('handleCreateConfig rejects a known backend when its provider is omitted', async () => {
       const handler = handlers.get(TEAM_CREATE_CONFIG)!;
       const result = (await handler({} as never, {
         teamName: 'draft-stale-top-level-runtime',
-        members: [{ name: 'builder' }],
+        members: [
+          { name: 'builder', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE },
+        ],
         cwd: os.tmpdir(),
         providerBackendId: 'codex-native',
-      })) as { success: boolean };
+      })) as { success: boolean; error?: string };
 
-      expect(result.success).toBe(true);
-      expect(service.createTeamConfig).toHaveBeenCalledWith(
-        expect.objectContaining({
-          teamName: 'draft-stale-top-level-runtime',
-          providerId: undefined,
-          providerBackendId: undefined,
-        })
-      );
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('providerBackendId must be valid');
+      expect(service.createTeamConfig).not.toHaveBeenCalled();
     });
 
     it('handleCreateConfig validates teammate effort against default Anthropic provider metadata', async () => {
@@ -6765,9 +7347,16 @@ describe('ipc teams handlers', () => {
           {
             name: 'builder',
             effort: 'max',
+            runtimeSelectionProvenance: {
+              version: 1,
+              providerBackendId: 'inherited',
+              model: 'inherited',
+              effort: 'explicit',
+            },
           },
         ],
         cwd: os.tmpdir(),
+        leadRuntimeSelectionProvenance: DEFAULT_LEAD_RUNTIME_PROVENANCE,
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -6788,9 +7377,15 @@ describe('ipc teams handlers', () => {
       const handler = handlers.get(TEAM_CREATE_CONFIG)!;
       const result = (await handler({} as never, {
         teamName: 'draft-default-anthropic-effort',
-        members: [{ name: 'builder' }],
+        members: [
+          { name: 'builder', runtimeSelectionProvenance: INHERITED_MEMBER_RUNTIME_PROVENANCE },
+        ],
         cwd: os.tmpdir(),
         effort: 'max',
+        leadRuntimeSelectionProvenance: {
+          ...DEFAULT_LEAD_RUNTIME_PROVENANCE,
+          effort: 'explicit',
+        },
       })) as { success: boolean };
 
       expect(result.success).toBe(true);
@@ -7195,6 +7790,45 @@ describe('ipc teams handlers', () => {
       }
     });
 
+    it.each(['api', 'adapter', 'auto', 'codex-native'] as const)(
+      'resolves omitted Codex provider before validating explicit backend %s on relaunch',
+      async (providerBackendId) => {
+        const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-relaunch-codex-backend-'));
+        setClaudeBasePathOverride(claudeRoot);
+        try {
+          const teamName = `codex-backend-${providerBackendId}`;
+          const teamDir = path.join(claudeRoot, 'teams', teamName);
+          fs.mkdirSync(teamDir, { recursive: true });
+          fs.writeFileSync(path.join(teamDir, 'config.json'), JSON.stringify({ teamName }));
+          fs.writeFileSync(
+            path.join(teamDir, 'team.meta.json'),
+            JSON.stringify({
+              version: 2,
+              cwd: '/sandbox/project',
+              providerId: 'codex',
+              providerBackendId,
+              model: 'gpt-5',
+              createdAt: Date.now(),
+            })
+          );
+
+          const result = (await handlers.get(TEAM_LAUNCH)!({ sender: { send: vi.fn() } } as never, {
+            teamName,
+            cwd: os.tmpdir(),
+            providerBackendId,
+          })) as { success: boolean };
+
+          expect(result).toMatchObject({ success: true });
+          expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
+            expect.objectContaining({ teamName, providerId: 'codex', providerBackendId }),
+            expect.any(Function)
+          );
+        } finally {
+          fs.rmSync(claudeRoot, { recursive: true, force: true });
+        }
+      }
+    );
+
     it('clears a persisted model when an explicit relaunch repeats the provider with default model', async () => {
       const claudeRoot = fs.mkdtempSync(
         path.join(os.tmpdir(), 'ipc-relaunch-same-provider-default-model-')
@@ -7262,7 +7896,7 @@ describe('ipc teams handlers', () => {
       }
     });
 
-    it('drops a known stale providerBackendId from explicit Anthropic relaunch payloads', async () => {
+    it('rejects a known incompatible providerBackendId from explicit Anthropic relaunch payloads', async () => {
       const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-relaunch-stale-backend-'));
       setClaudeBasePathOverride(claudeRoot);
       try {
@@ -7295,20 +7929,11 @@ describe('ipc teams handlers', () => {
           model: 'sonnet',
           effort: 'low',
           fastMode: 'inherit',
-        })) as { success: boolean };
+        })) as { success: boolean; error?: string };
 
-        expect(result).toMatchObject({ success: true });
-        expect(teamHandlerMocks.launchTeam).toHaveBeenCalledWith(
-          expect.objectContaining({
-            teamName: 'runtime-backend-change-team',
-            providerId: 'anthropic',
-            providerBackendId: undefined,
-            model: 'sonnet',
-            effort: 'low',
-            fastMode: 'inherit',
-          }),
-          expect.any(Function)
-        );
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('providerBackendId must be valid');
+        expect(teamHandlerMocks.launchTeam).not.toHaveBeenCalled();
       } finally {
         fs.rmSync(claudeRoot, { recursive: true, force: true });
       }

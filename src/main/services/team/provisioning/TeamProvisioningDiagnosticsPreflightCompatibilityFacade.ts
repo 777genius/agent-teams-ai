@@ -241,6 +241,7 @@ export abstract class TeamProvisioningDiagnosticsPreflightCompatibilityFacade<
     return this.launchIdentityBoundary.resolveDirectMemberLaunchIdentity({
       ...input,
       requestLimitContext: input.run.request.limitContext,
+      inheritedLeadRequest: input.run.request,
     });
   }
 

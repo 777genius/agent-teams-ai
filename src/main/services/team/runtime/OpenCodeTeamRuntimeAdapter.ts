@@ -1,15 +1,35 @@
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
+import {
+  OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION,
+  type OpenCodeLaunchAttemptRequestBody,
+  type OpenCodeOpaqueIdentity,
+  stableHash,
+} from '../opencode/bridge/OpenCodeBridgeCommandContract';
+import {
+  correlateOpenCodeLaunchAttemptResponseV1,
+  createOpenCodeLaunchAttemptIdV1,
+  type OpenCodeLaunchAttemptResponse,
+} from '../opencode/bridge/OpenCodeLaunchAttemptContractV1';
+import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../opencode/mcp/OpenCodeMcpToolAvailability';
 import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
+import { normalizeOpenCodeRuntimeBootstrapCandidate } from '../opencode/store/OpenCodeBootstrapSessionNormalization';
 
 import {
   createLocalRuntimeInspectionState,
   preflightOpenCodeLocalModels,
 } from './OpenCodeLocalModelPreflight';
 import { isTransientOpenCodeReadinessTransportFailure } from './OpenCodeReadinessRetryPolicy';
+import {
+  authorizeOpenCodeCommittedMemberSession,
+  buildOpenCodeReconciliationBlockResult,
+  buildPersistedOpenCodeStrictLaunchAttempt,
+} from './OpenCodeStrictLaunchResult';
 
 export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
+
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 
 import type {
   OpenCodeAnswerPermissionCommandBody,
@@ -28,7 +48,7 @@ import type {
   OpenCodeStopTeamCommandData,
   OpenCodeTeamMemberLaunchBridgeState,
 } from '../opencode/bridge/OpenCodeBridgeCommandContract';
-import type { OpenCodeExecutionProof } from '../opencode/readiness/OpenCodeExecutionProof';
+import type { OpenCodeLaunchTeamBridge } from '../opencode/bridge/OpenCodeBridgeInvocationAuthority';
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 import type {
@@ -68,7 +88,7 @@ export interface OpenCodeTeamRuntimeBridgePort {
     selectedModel?: string | null,
     requireExecutionProbe?: boolean
   ): OpenCodeBridgeRuntimeSnapshot | null;
-  launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
+  launchOpenCodeTeam?: OpenCodeLaunchTeamBridge;
   reconcileOpenCodeTeam?(
     input: OpenCodeReconcileTeamCommandBody
   ): Promise<OpenCodeLaunchTeamCommandData>;
@@ -122,31 +142,39 @@ export interface OpenCodeTeamRuntimeMessageResult {
   responseObservation?: OpenCodeSendMessageCommandData['responseObservation'];
   diagnostics: string[];
 }
-
-const REQUIRED_READY_CHECKPOINTS = new Set([
-  'required_tools_proven',
-  'delivery_ready',
-  'member_ready',
-  'run_ready',
-]);
 const GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON = 'OpenCode bridge reported member launch failure';
 const SECRET_FLAG_PATTERN =
   /(--(?:api-key|token|password|secret|authorization|auth-token)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
 const BEARER_TOKEN_PATTERN = /\bBearer\s+\S+/gi;
 const SECRET_KEY_PATTERN = /\bsk-[A-Za-z0-9_-]{16,}\b/g;
-const OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_WARNING =
-  'OpenCode capability snapshot changed between readiness and launch; refreshed readiness and retried launch.';
-const OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS = [
-  'Bridge server capability snapshot mismatch',
-  'OpenCode bridge capability snapshot precondition mismatch',
-];
-const OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_LIMIT = 3;
 const OPEN_CODE_READINESS_RETRY_DELAYS_MS = [750, 2_000] as const;
-
+function openCodeOpaqueIdentity(value: unknown): OpenCodeOpaqueIdentity {
+  return `sha256:${stableHash(value)}`;
+}
+function buildOpenCodeLaunchParent(
+  input: TeamRuntimeLaunchInput
+): OpenCodeLaunchAttemptRequestBody['parent'] {
+  const laneId = input.laneId?.trim() || 'primary';
+  return {
+    sessionIdentity: openCodeOpaqueIdentity({
+      kind: 'opencode-launch-parent-session',
+      runId: input.runId,
+      teamName: input.teamName,
+      laneId,
+      projectPath: normalizeOpenCodeProjectIdentity(input.cwd),
+    }),
+    messageIdentity: openCodeOpaqueIdentity({
+      kind: 'opencode-launch-parent-message',
+      runId: input.runId,
+      teamName: input.teamName,
+      laneId,
+      leadPrompt: input.prompt?.trim() ?? '',
+    }),
+  };
+}
 type OpenCodeTeamLaunchReadinessInput = Parameters<
   OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
 >[0];
-
 function openCodeReadinessArtifactKey(input: OpenCodeTeamLaunchReadinessInput): string {
   return JSON.stringify([
     normalizeOpenCodeProjectIdentity(input.projectPath),
@@ -154,41 +182,14 @@ function openCodeReadinessArtifactKey(input: OpenCodeTeamLaunchReadinessInput): 
     input.requireExecutionProbe,
   ]);
 }
-
-function reusableOpenCodeExecutionProof(
-  readiness: OpenCodeTeamLaunchReadiness | undefined,
-  input: OpenCodeTeamLaunchReadinessInput
-): OpenCodeExecutionProof | null {
-  const proof = readiness?.executionProof;
-  if (
-    !proof ||
-    !proof.reusable ||
-    (proof.credentialMode !== 'api' && proof.credentialMode !== 'none')
-  ) {
-    return null;
-  }
-  const normalizedExpected = normalizeOpenCodeProjectIdentity(input.projectPath);
-  const normalizedProofProject = normalizeOpenCodeProjectIdentity(proof.projectPath);
-  if (
-    proof.modelId !== readiness?.modelId ||
-    normalizedProofProject !== normalizedExpected ||
-    Date.parse(proof.expiresAt) <= Date.now() + 1_000
-  ) {
-    return null;
-  }
-  return proof;
-}
-
 function sleepOpenCodeReadinessRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
-
 function resolveOpenCodeRuntimeSettlementMode(
   input: Pick<OpenCodeTeamRuntimeMessageInput, 'messageKind'>
 ): OpenCodeSendMessageCommandBody['settlementMode'] {
   return input.messageKind === 'member_work_sync_nudge' ? 'observed' : 'acceptance';
 }
-
 export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   readonly providerId = 'opencode' as const;
   private readonly lastProjectPathByTeamName = new Map<string, string>();
@@ -198,16 +199,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     string,
     Promise<OpenCodeTeamLaunchReadiness>
   >();
-
   constructor(
     private readonly bridge: OpenCodeTeamRuntimeBridgePort,
     private readonly options: OpenCodeTeamRuntimeAdapterOptions = {}
   ) {}
-
   async prepare(input: TeamRuntimeLaunchInput): Promise<TeamRuntimePrepareResult> {
     return this.prepareOpenCodeLaunch(input, false);
   }
-
   private async prepareOpenCodeLaunch(
     input: TeamRuntimeLaunchInput,
     forceReadinessRefresh: boolean
@@ -252,7 +250,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(projectPath)) ?? null
     );
   }
-
   async preflightLocalModels(input: {
     targets: readonly TeamRuntimeLocalModelPreflightTarget[];
     allowExperimentalLocalModels?: boolean;
@@ -264,7 +261,6 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       input.allowExperimentalLocalModels === true
     );
   }
-
   private async checkOpenCodeReadinessWithTransientRetry(
     input: OpenCodeTeamLaunchReadinessInput
   ): Promise<OpenCodeTeamLaunchReadiness> {
@@ -285,7 +281,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   ): Promise<OpenCodeTeamLaunchReadiness> {
     const artifactKey = openCodeReadinessArtifactKey(input);
     const cached = this.lastReadinessByArtifactKey.get(artifactKey);
-    if (!forceRefresh && cached?.launchAllowed && reusableOpenCodeExecutionProof(cached, input)) {
+    if (!forceRefresh && cached?.launchAllowed) {
       return cached;
     }
 
@@ -296,12 +292,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
 
     const request = this.checkOpenCodeReadinessWithTransientRetry(input)
       .then((readiness) => {
+        const { executionProof: _ignoredAuthorization, ...availability } = readiness;
+        const readinessAvailability = readiness.executionProof ? availability : readiness;
         this.lastReadinessByProjectPath.set(
           normalizeOpenCodeProjectIdentity(input.projectPath),
-          readiness
+          readinessAvailability
         );
-        this.lastReadinessByArtifactKey.set(artifactKey, readiness);
-        return readiness;
+        this.lastReadinessByArtifactKey.set(artifactKey, readinessAvailability);
+        return readinessAvailability;
       })
       .finally(() => {
         if (this.readinessInFlightByArtifactKey.get(artifactKey) === request) {
@@ -325,15 +323,33 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       );
     }
 
-    // App-managed OpenCode launch requires a fresh capability snapshot from
-    // readiness before any state-changing bridge command can run.
+    const persistedAttempt = input.previousLaunchState?.openCodeStrictLaunchAttempt;
+    if (persistedAttempt?.disposition === 'reconciliation_required') {
+      return {
+        ...blockedLaunchResult(input, 'opencode_launch_reconciliation_required', [
+          'OpenCode launch has an unknown post-side-effect outcome. Reconcile the exact durable attempt before any retry.',
+        ]),
+        openCodeStrictLaunchAttempt: persistedAttempt,
+      };
+    }
+    if (
+      input.previousLaunchState?.teamLaunchState === 'partial_pending' &&
+      persistedAttempt?.disposition !== 'continuation_eligible'
+    ) {
+      return blockedLaunchResult(input, 'opencode_continuation_identity_missing', [
+        'OpenCode has a partial launch without a strictly correlated durable continuation cursor. Reconcile the command ledger before retrying.',
+      ]);
+    }
+    const continuation =
+      persistedAttempt?.disposition === 'continuation_eligible' ? persistedAttempt : undefined;
+
+    // App-managed launch requires fresh readiness proof before state-changing commands.
     const skipReadinessPreflight = false;
     let selectedModel = input.model?.trim() ?? '';
     let launchWarnings: string[] = [];
     const localRuntimeInspectionState = createLocalRuntimeInspectionState();
 
-    // Reject incompatible local runtimes before OpenCode starts its execution probe.
-    // Mixed-model lanes cannot bypass this guard through a custom source id.
+    // Reject incompatible local runtimes before the probe; mixed-model lanes cannot bypass it.
     const localModelTargets = [
       { projectPath: input.cwd, modelRoute: selectedModel },
       ...input.expectedMembers.map((member) => ({
@@ -365,18 +381,22 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       selectedModel = prepared.modelId ?? selectedModel;
       launchWarnings = mergeDiagnostics(launchWarnings, prepared.warnings);
     }
-
     if (!this.bridge.launchOpenCodeTeam) {
       return blockedLaunchResult(input, 'opencode_launch_bridge_missing', [
         'OpenCode state-changing launch bridge is not registered.',
       ]);
     }
-
     if (!selectedModel) {
       return blockedLaunchResult(input, 'opencode_model_unavailable', [
         'OpenCode launch requires a selected raw model id.',
       ]);
     }
+    const canonicalModel = parseOpenCodeQualifiedModelRef(selectedModel);
+    if (!canonicalModel)
+      return blockedLaunchResult(input, 'opencode_model_unavailable', [
+        'OpenCode strict launch requires a canonical provider/model selection.',
+      ]);
+    selectedModel = canonicalModel.raw;
 
     const selectedLocalModelPreflight = await preflightOpenCodeLocalModels(
       this.options,
@@ -393,139 +413,142 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     }
     launchWarnings = mergeDiagnostics(launchWarnings, selectedLocalModelPreflight.warnings);
 
-    const readinessInput: OpenCodeTeamLaunchReadinessInput = {
-      projectPath: input.cwd,
-      selectedModel: input.model ?? null,
-      requireExecutionProbe: true,
-    };
-    let runtimeSnapshot = skipReadinessPreflight
-      ? null
-      : (this.bridge.getLastOpenCodeRuntimeSnapshot?.(
-          input.cwd,
-          readinessInput.selectedModel,
-          readinessInput.requireExecutionProbe
-        ) ?? null);
-    let executionProof = reusableOpenCodeExecutionProof(
-      this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
-        this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
-      readinessInput
-    );
-    if (executionProof?.capabilitySnapshotId !== runtimeSnapshot?.capabilitySnapshotId) {
-      executionProof = null;
-    }
-    if (
-      !skipReadinessPreflight &&
-      this.bridge.getLastOpenCodeRuntimeSnapshot &&
-      !runtimeSnapshot?.capabilitySnapshotId
-    ) {
-      return blockedLaunchResult(input, 'opencode_capability_snapshot_missing', [
-        'OpenCode app-managed launch requires a fresh capability snapshot before state-changing launch.',
-      ]);
-    }
     this.lastProjectPathByTeamName.set(input.teamName, input.cwd);
-    const buildLaunchCommand = (
-      snapshot: OpenCodeBridgeRuntimeSnapshot | null,
-      model: string,
-      recoveryAttemptId?: string
-    ): OpenCodeLaunchTeamCommandBody => ({
-      runId: input.runId,
-      laneId: input.laneId?.trim() || 'primary',
-      teamId: input.teamName,
-      teamName: input.teamName,
-      projectPath: input.cwd,
-      selectedModel: model,
-      ...(input.effort ? { effort: input.effort } : {}),
-      skipPermissions: input.skipPermissions,
-      members: input.expectedMembers.map((member) => {
+    const buildLaunchCommand = (model: string): OpenCodeLaunchTeamCommandBody => {
+      const parsedModel = parseOpenCodeQualifiedModelRef(model);
+      if (!parsedModel)
+        throw new Error('OpenCode strict launch requires a canonical provider/model selection.');
+      const laneId = continuation?.laneId ?? (input.laneId?.trim() || 'primary');
+      const attemptRunId = continuation?.runId ?? input.runId;
+      const parent = continuation?.parent ?? buildOpenCodeLaunchParent(input);
+      const members = input.expectedMembers.map((member) => {
         const effort = member.effort ?? input.effort;
+        const role = member.role?.trim() || member.workflow?.trim() || 'teammate';
+        const prompt = buildMemberBootstrapPrompt(input, member);
         return {
           name: member.name,
-          role: member.role?.trim() || member.workflow?.trim() || 'teammate',
-          prompt: buildMemberBootstrapPrompt(input, member),
+          role,
+          prompt,
           ...(effort ? { effort } : {}),
+          memberIdentity: openCodeOpaqueIdentity({
+            kind: 'opencode-launch-member',
+            runId: attemptRunId,
+            teamName: input.teamName,
+            laneId,
+            projectPath: normalizeOpenCodeProjectIdentity(member.cwd || input.cwd),
+            name: member.name,
+            role,
+            prompt,
+            model: member.model?.trim() || parsedModel.raw,
+            effort: effort ?? null,
+          }),
         };
-      }),
-      leadPrompt: input.prompt?.trim() ?? '',
-      expectedCapabilitySnapshotId: snapshot?.capabilitySnapshotId ?? null,
-      manifestHighWatermark: null,
-      ...(executionProof ? { executionProof } : {}),
-      ...(recoveryAttemptId ? { capabilitySnapshotRecoveryAttemptId: recoveryAttemptId } : {}),
-    });
-
-    let data = await this.bridge.launchOpenCodeTeam(
-      buildLaunchCommand(runtimeSnapshot, selectedModel)
-    );
-    let capabilitySnapshotRefreshAttempts = 0;
-    while (
-      !skipReadinessPreflight &&
-      isOpenCodePreLaunchCapabilitySnapshotMismatchData(data) &&
-      capabilitySnapshotRefreshAttempts < OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_LIMIT
-    ) {
-      capabilitySnapshotRefreshAttempts += 1;
-      const refreshed = await this.prepareOpenCodeLaunch(input, true);
-      if (!refreshed.ok) {
-        return blockedLaunchResult(
-          input,
-          refreshed.reason,
-          mergeDiagnostics(data.diagnostics.map(formatOpenCodeBridgeDiagnostic), [
-            OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_WARNING,
-            ...refreshed.diagnostics,
-          ]),
-          mergeDiagnostics(launchWarnings, refreshed.warnings)
-        );
+      });
+      if (
+        continuation &&
+        (continuation.providerId !== parsedModel.sourceId ||
+          continuation.modelId !== parsedModel.raw ||
+          continuation.roster.length !== members.length ||
+          continuation.roster.some(
+            (persisted, index) =>
+              persisted.name !== members[index]?.name ||
+              persisted.memberIdentity !== members[index]?.memberIdentity
+          ))
+      ) {
+        throw new Error('OpenCode continuation roster or model differs from the durable attempt.');
       }
-      selectedModel = refreshed.modelId ?? selectedModel;
-      const refreshedLocalModelPreflight = await preflightOpenCodeLocalModels(
-        this.options,
-        [{ projectPath: input.cwd, modelRoute: selectedModel }],
-        localRuntimeInspectionState,
-        input.allowExperimentalLocalModels === true
-      );
-      if (!refreshedLocalModelPreflight.ok) {
-        return blockedLaunchResult(
-          input,
-          'model_unavailable',
-          refreshedLocalModelPreflight.diagnostics
+      const payloadHash = stableHash({
+        launchContractVersion: OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION,
+        runId: attemptRunId,
+        laneId,
+        teamId: input.teamName,
+        teamName: input.teamName,
+        projectPath: normalizeOpenCodeProjectIdentity(input.cwd),
+        providerId: parsedModel.sourceId,
+        modelId: parsedModel.raw,
+        effort: input.effort ?? null,
+        skipPermissions: input.skipPermissions,
+        members,
+        leadPrompt: input.prompt?.trim() ?? '',
+        requiredMcpTools: REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
+      });
+      if (continuation && continuation.payloadHash !== payloadHash)
+        throw new Error(
+          'OpenCode continuation payload no longer matches the durable launch attempt.'
         );
-      }
-      launchWarnings = mergeDiagnostics(launchWarnings, refreshedLocalModelPreflight.warnings);
-      const refreshedSnapshot =
-        this.bridge.getLastOpenCodeRuntimeSnapshot?.(
-          input.cwd,
-          readinessInput.selectedModel,
-          readinessInput.requireExecutionProbe
-        ) ?? null;
-      if (refreshedSnapshot?.capabilitySnapshotId) {
-        runtimeSnapshot = refreshedSnapshot;
-        executionProof = reusableOpenCodeExecutionProof(
-          this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
-            this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
-          readinessInput
-        );
-        if (executionProof?.capabilitySnapshotId !== runtimeSnapshot.capabilitySnapshotId) {
-          executionProof = null;
-        }
-        launchWarnings = mergeDiagnostics(launchWarnings, [
-          ...refreshed.warnings,
-          OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_WARNING,
-        ]);
-        // TODO(opencode-bridge): replace marker-based capability recovery with
-        // structured bridge failure details: expectedCapabilitySnapshotId,
-        // actualCapabilitySnapshotId, preconditionStage, and safeToRetryWithFreshCommand.
-        // Keep this app-side attempt id until packaged runtimes all expose that protocol.
-        data = await this.bridge.launchOpenCodeTeam(
-          buildLaunchCommand(
-            runtimeSnapshot,
-            selectedModel,
-            `opencode-capability-recovery-${randomUUID()}`
-          )
-        );
-      } else {
-        break;
-      }
+      const generation = continuation ? continuation.generation + 1 : 1;
+      const attemptId =
+        continuation?.attemptId ?? createOpenCodeLaunchAttemptIdV1(payloadHash, generation);
+      const launchAttempt: OpenCodeLaunchAttemptRequestBody = {
+        attemptId,
+        payloadHash,
+        generation,
+        proofNonce: stableHash({
+          kind: 'opencode-launch-wire-nonce-placeholder',
+          attemptId,
+          generation,
+        }),
+        parent,
+        providerId: parsedModel.sourceId,
+        modelId: parsedModel.raw,
+        requiredMcpTools: [...REQUIRED_AGENT_TEAMS_APP_TOOL_IDS],
+        ...(continuation ? { continuationToken: continuation.continuationToken } : {}),
+        requireFreshRetainedHostProof: true,
+      };
+      return {
+        runId: attemptRunId,
+        laneId,
+        teamId: input.teamName,
+        teamName: input.teamName,
+        projectPath: input.cwd,
+        selectedModel: parsedModel.raw,
+        ...(input.effort ? { effort: input.effort } : {}),
+        skipPermissions: input.skipPermissions,
+        members,
+        leadPrompt: input.prompt?.trim() ?? '',
+        expectedCapabilitySnapshotId: null,
+        manifestHighWatermark: null,
+        launchContractVersion: OPEN_CODE_LAUNCH_ATTEMPT_CONTRACT_VERSION,
+        launchAttempt,
+      };
+    };
+    let dispatchedCommand: OpenCodeLaunchTeamCommandBody;
+    try {
+      dispatchedCommand = buildLaunchCommand(selectedModel);
+    } catch (error) {
+      return blockedLaunchResult(input, 'opencode_continuation_contract_mismatch', [
+        error instanceof Error ? error.message : String(error),
+      ]);
     }
-
-    return mapOpenCodeLaunchDataToRuntimeResult(input, data, launchWarnings);
+    const invocationLease = await input.onInvocationBoundary?.();
+    const data = await this.bridge.launchOpenCodeTeam(dispatchedCommand, {
+      invocationAuthority: invocationLease,
+      onInvocationDisposition: input.onInvocationDisposition,
+      onInvocationDispatched: input.onInvocationDispatched,
+    });
+    const correlated = correlateOpenCodeLaunchAttemptResponseV1({
+      previouslyVerifiedRequest: {
+        ...dispatchedCommand.launchAttempt,
+        requestCorrelationDigest: data.launchAttempt?.launchAttempt.requestCorrelationDigest,
+      },
+      response: data.launchAttempt,
+      expectedMemberIdentities: dispatchedCommand.members.map((member) => member.memberIdentity),
+    });
+    if (!correlated.ok) {
+      return buildOpenCodeReconciliationBlockResult(
+        input,
+        dispatchedCommand,
+        continuation,
+        `OpenCode strict launch response failed correlation at ${correlated.field}. The attempt must be reconciled before retrying.`
+      );
+    }
+    return mapOpenCodeLaunchDataToRuntimeResult(
+      input,
+      data,
+      launchWarnings,
+      dispatchedCommand,
+      correlated.value
+    );
   }
 
   async reconcile(input: TeamRuntimeReconcileInput): Promise<TeamRuntimeReconcileResult> {
@@ -859,183 +882,144 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
 function mapOpenCodeLaunchDataToRuntimeResult(
   input: TeamRuntimeLaunchInput,
   data: OpenCodeLaunchTeamCommandData,
-  prepareWarnings: string[]
+  prepareWarnings: string[],
+  command?: OpenCodeLaunchTeamCommandBody,
+  response?: OpenCodeLaunchAttemptResponse
 ): TeamRuntimeLaunchResult {
-  const bridgeDiagnostics = data.diagnostics.map(formatOpenCodeBridgeDiagnostic);
-  const memberBridgeDiagnostics = bridgeDiagnostics.filter(
-    (diagnostic) => !isOpenCodeLaunchTimingDiagnostic(diagnostic)
+  if (!command || !response) {
+    const members = Object.fromEntries(
+      input.expectedMembers.map((member) => {
+        const bridgeMember = data.members[member.name];
+        return [
+          member.name,
+          mapBridgeMemberToRuntimeEvidence(
+            member.name,
+            bridgeMember?.launchState ?? 'pending',
+            bridgeMember?.sessionId,
+            bridgeMember?.model,
+            bridgeMember?.runtimePid,
+            bridgeMember?.pendingPermissionRequestIds,
+            bridgeMember?.pendingPermissions,
+            bridgeMember != null,
+            bridgeMember?.diagnostics ?? [],
+            input.runId,
+            input.laneId?.trim() || 'primary',
+            input.teamName,
+            bridgeMember?.bootstrapEvidenceSource,
+            bridgeMember?.bootstrapMode,
+            bridgeMember?.appManagedBootstrapCandidate,
+            GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON
+          ),
+        ];
+      })
+    );
+    const allConfirmed = Object.values(members).every(
+      (member) => member.launchState === 'confirmed_alive'
+    );
+    const anyFailed = Object.values(members).some((member) => member.hardFailure);
+    return {
+      runId: input.runId,
+      teamName: input.teamName,
+      launchPhase: allConfirmed || anyFailed ? 'finished' : 'active',
+      teamLaunchState: allConfirmed
+        ? 'clean_success'
+        : anyFailed || data.teamLaunchState === 'failed'
+          ? 'partial_failure'
+          : 'partial_pending',
+      members,
+      warnings: [...prepareWarnings, ...(data.warnings ?? []).map((warning) => warning.message)],
+      diagnostics: (data.diagnostics ?? []).map(formatOpenCodeBridgeDiagnostic),
+    };
+  }
+  const outcome = response.launchAttempt.outcome;
+  const continuationEligible = outcome === 'partial' && !!response.members.continuationToken;
+  const reconciliationRequired = outcome === 'reconciliation_required';
+  const failed = new Map(
+    response.members.failed.map((member) => [member.memberIdentity, member.failure] as const)
   );
-  const checkpointNames = extractCheckpointNames(data);
-  const readyCheckpointsPresent = [...REQUIRED_READY_CHECKPOINTS].every((name) =>
-    checkpointNames.has(name)
-  );
-  const bridgeReady = data.teamLaunchState === 'ready';
-  const isExpectedMemberConfirmed = (memberName: string): boolean => {
-    const bridgeMember = data.members[memberName];
-    return bridgeMember?.launchState === 'confirmed_alive';
-  };
-  const missingExpectedMembers = input.expectedMembers
-    .map((member) => member.name)
-    .filter((memberName) => data.members[memberName] == null);
-  const unconfirmedExpectedMembers = input.expectedMembers
-    .map((member) => member.name)
-    .filter((memberName) => !isExpectedMemberConfirmed(memberName));
-  const anyExpectedMemberFailed = input.expectedMembers.some(
-    (member) => data.members[member.name]?.launchState === 'failed'
-  );
-  const allExpectedMembersConfirmed =
-    input.expectedMembers.length > 0 && unconfirmedExpectedMembers.length === 0;
-  const success =
-    (bridgeReady && readyCheckpointsPresent && allExpectedMembersConfirmed) ||
-    (data.teamLaunchState === 'launching' && allExpectedMembersConfirmed);
-  const checkpointDiagnostic = success
-    ? []
-    : bridgeReady && !readyCheckpointsPresent
-      ? [
-          `OpenCode bridge reported ready without all required durable checkpoints: missing ${[
-            ...REQUIRED_READY_CHECKPOINTS,
-          ]
-            .filter((name) => !checkpointNames.has(name))
-            .join(', ')}`,
-        ]
-      : [];
-  const incompleteReadyDiagnostic =
-    bridgeReady && readyCheckpointsPresent && !allExpectedMembersConfirmed
-      ? [
-          `OpenCode bridge reported ready before all expected members were confirmed: pending ${unconfirmedExpectedMembers.join(', ')}`,
-        ]
-      : [];
-
+  const pending = new Set(response.members.pending);
+  const cleanupPending = new Set(response.members.cleanupPending);
+  const bridgeDiagnostics = (data.diagnostics ?? []).map(formatOpenCodeBridgeDiagnostic);
+  if (response.failure) {
+    bridgeDiagnostics.push(`OpenCode launch failure: ${response.failure.code}`);
+  }
   const members = Object.fromEntries(
-    input.expectedMembers.map((member) => {
+    input.expectedMembers.map((member, index) => {
       const bridgeMember = data.members[member.name];
-      const fallbackLaunchState = bridgeMember
-        ? bridgeMember.launchState
-        : data.teamLaunchState === 'failed'
-          ? 'failed'
-          : 'created';
-      const checkpointDiagnosticsForMember = [
-        ...checkpointDiagnostic,
-        ...(missingExpectedMembers.includes(member.name) ? incompleteReadyDiagnostic : []),
-      ];
+      const identity = command.members[index]?.memberIdentity;
+      const memberFailure = identity ? failed.get(identity) : undefined;
+      const committedAuthorization = authorizeOpenCodeCommittedMemberSession({
+        response,
+        memberIdentity: identity,
+        sessionId: bridgeMember?.sessionId,
+      });
+      const isCommitted = committedAuthorization.committed;
+      const isPending = identity ? pending.has(identity) : false;
+      const shouldRemainPending = continuationEligible || reconciliationRequired || isPending;
+      const launchState = isCommitted
+        ? 'confirmed_alive'
+        : shouldRemainPending
+          ? 'pending'
+          : 'failed';
       const memberDiagnostics = [
-        ...(bridgeMember
-          ? []
-          : [
-              `OpenCode bridge response did not include ${member.name}; keeping the member pending until lane state materializes.`,
-            ]),
         ...(bridgeMember?.diagnostics ?? []),
         ...(bridgeMember?.evidence ?? []).map(
           (evidence) => `${evidence.kind} at ${evidence.observedAt}`
         ),
-        ...memberBridgeDiagnostics,
-        ...checkpointDiagnosticsForMember,
+        ...(memberFailure ? [`OpenCode member launch failure: ${memberFailure.code}`] : []),
+        ...committedAuthorization.diagnostics,
+        ...(identity && cleanupPending.has(identity)
+          ? ['OpenCode cleanup remains pending for this member.']
+          : []),
+        ...bridgeDiagnostics.filter((diagnostic) => !isOpenCodeLaunchTimingDiagnostic(diagnostic)),
       ];
       return [
         member.name,
         mapBridgeMemberToRuntimeEvidence(
           member.name,
-          fallbackLaunchState,
-          bridgeMember?.sessionId,
+          launchState,
+          isCommitted ? bridgeMember?.sessionId : undefined,
           bridgeMember?.model,
-          bridgeMember?.runtimePid,
-          bridgeMember?.pendingPermissionRequestIds,
-          bridgeMember?.pendingPermissions,
-          bridgeMember != null,
+          isCommitted ? bridgeMember?.runtimePid : undefined,
+          isCommitted ? bridgeMember?.pendingPermissionRequestIds : undefined,
+          isCommitted ? bridgeMember?.pendingPermissions : undefined,
+          isCommitted,
           memberDiagnostics,
           input.runId,
-          input.laneId?.trim() || 'primary',
+          command.laneId,
           input.teamName,
-          bridgeMember?.bootstrapEvidenceSource,
-          bridgeMember?.bootstrapMode,
-          bridgeMember?.appManagedBootstrapCandidate,
-          selectOpenCodeMemberFailureReason({
-            memberDiagnostics: bridgeMember?.diagnostics ?? [],
-            bridgeDiagnostics: data.diagnostics,
-            checkpointDiagnostics: checkpointDiagnosticsForMember,
-            fallback: GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON,
-          })
+          isCommitted ? bridgeMember?.bootstrapEvidenceSource : undefined,
+          isCommitted ? bridgeMember?.bootstrapMode : undefined,
+          isCommitted ? bridgeMember?.appManagedBootstrapCandidate : undefined,
+          memberFailure?.code ?? GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON
         ),
       ];
     })
   );
-
+  const strictAttempt = buildPersistedOpenCodeStrictLaunchAttempt(command, response);
   return {
     runId: input.runId,
     teamName: input.teamName,
-    launchPhase: success
-      ? 'finished'
-      : data.teamLaunchState === 'launching' || (bridgeReady && !anyExpectedMemberFailed)
-        ? 'active'
-        : 'finished',
-    teamLaunchState: success
-      ? 'clean_success'
-      : anyExpectedMemberFailed || data.teamLaunchState === 'failed'
-        ? 'partial_failure'
-        : data.teamLaunchState === 'launching' ||
-            data.teamLaunchState === 'permission_blocked' ||
-            bridgeReady
+    launchPhase:
+      outcome === 'succeeded' || outcome === 'failed' || outcome === 'cancelled'
+        ? 'finished'
+        : 'active',
+    teamLaunchState:
+      outcome === 'succeeded' &&
+      Object.values(members).every((member) => member.launchState === 'confirmed_alive')
+        ? 'clean_success'
+        : continuationEligible || reconciliationRequired
           ? 'partial_pending'
           : 'partial_failure',
     members,
-    warnings: [...prepareWarnings, ...data.warnings.map((warning) => warning.message)],
-    diagnostics: [...bridgeDiagnostics, ...checkpointDiagnostic, ...incompleteReadyDiagnostic],
+    warnings: [...prepareWarnings, ...(data.warnings ?? []).map((warning) => warning.message)],
+    diagnostics: bridgeDiagnostics,
+    ...(strictAttempt ? { openCodeStrictLaunchAttempt: strictAttempt } : {}),
   };
 }
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
-}
-
-function normalizeAppManagedBootstrapCandidate(
-  value: OpenCodeAppManagedBootstrapCandidate | undefined,
-  expected: {
-    teamName: string;
-    memberName: string;
-    runId: string;
-    laneId: string;
-    runtimeSessionId?: string;
-  }
-): OpenCodeAppManagedBootstrapCandidate | undefined {
-  if (value?.schemaVersion !== 1 || value.source !== 'app_managed_bootstrap') {
-    return undefined;
-  }
-  if (
-    value.teamName !== expected.teamName ||
-    value.memberName !== expected.memberName ||
-    value.runId !== expected.runId ||
-    value.laneId !== expected.laneId ||
-    (expected.runtimeSessionId && value.runtimeSessionId !== expected.runtimeSessionId)
-  ) {
-    return undefined;
-  }
-  if (
-    !isNonEmptyString(value.runtimeSessionId) ||
-    !isNonEmptyString(value.messageID) ||
-    !value.messageID.startsWith('msg') ||
-    !isNonEmptyString(value.contextHash) ||
-    !isNonEmptyString(value.briefingHash) ||
-    !isNonEmptyString(value.injectionVerifiedAt) ||
-    !isNonEmptyString(value.candidateAt)
-  ) {
-    return undefined;
-  }
-  return {
-    schemaVersion: 1,
-    source: 'app_managed_bootstrap',
-    teamName: value.teamName,
-    memberName: value.memberName,
-    runId: value.runId,
-    laneId: value.laneId,
-    runtimeSessionId: value.runtimeSessionId,
-    messageID: value.messageID,
-    contextHash: value.contextHash,
-    briefingHash: value.briefingHash,
-    injectionVerifiedAt: value.injectionVerifiedAt,
-    candidateAt: value.candidateAt,
-    ...(isNonEmptyString(value.model) ? { model: value.model } : {}),
-    ...(isNonEmptyString(value.agent) ? { agent: value.agent } : {}),
-  };
 }
 
 function normalizeOpenCodeRuntimePendingPermissions(
@@ -1067,7 +1051,7 @@ function normalizeOpenCodeRuntimePendingPermissions(
 
 function mapBridgeMemberToRuntimeEvidence(
   memberName: string,
-  launchState: OpenCodeTeamMemberLaunchBridgeState,
+  launchState: OpenCodeTeamMemberLaunchBridgeState | 'pending',
   sessionId: string | undefined,
   model: string | undefined,
   runtimePid: number | undefined,
@@ -1083,7 +1067,7 @@ function mapBridgeMemberToRuntimeEvidence(
   appManagedBootstrapCandidate: OpenCodeAppManagedBootstrapCandidate | undefined,
   selectedHardFailureReason: string
 ): TeamRuntimeMemberLaunchEvidence {
-  const normalizedAppManagedCandidate = normalizeAppManagedBootstrapCandidate(
+  const normalizedAppManagedCandidate = normalizeOpenCodeRuntimeBootstrapCandidate(
     appManagedBootstrapCandidate,
     {
       teamName,
@@ -1152,13 +1136,16 @@ function mapBridgeMemberToRuntimeEvidence(
     bootstrapConfirmed: confirmed,
     hardFailure: failed,
     hardFailureReason: failed ? selectedHardFailureReason : undefined,
-    pendingPermissionRequestIds:
-      pendingPermissionRequestIds && pendingPermissionRequestIds.length > 0
-        ? [...new Set(pendingPermissionRequestIds)]
-        : undefined,
-    pendingApprovals: normalizedPendingApprovals,
-    pendingPermissions: normalizedPendingApprovals,
-    sessionId,
+    ...(pendingPermissionRequestIds && pendingPermissionRequestIds.length > 0
+      ? { pendingPermissionRequestIds: [...new Set(pendingPermissionRequestIds)] }
+      : {}),
+    ...(normalizedPendingApprovals
+      ? {
+          pendingApprovals: normalizedPendingApprovals,
+          pendingPermissions: normalizedPendingApprovals,
+        }
+      : {}),
+    ...(hasSessionId ? { sessionId: sessionId.trim() } : {}),
     ...(appManagedCandidatePresent
       ? { bootstrapEvidenceSource: 'app_managed_bootstrap' as const }
       : {}),
@@ -1173,37 +1160,6 @@ function mapBridgeMemberToRuntimeEvidence(
     ...(runtimeDiagnosticSeverity ? { runtimeDiagnosticSeverity } : {}),
     diagnostics,
   };
-}
-
-function selectOpenCodeMemberFailureReason(input: {
-  memberDiagnostics: readonly string[];
-  bridgeDiagnostics: readonly {
-    code: string;
-    severity: 'info' | 'warning' | 'error';
-    message: string;
-  }[];
-  checkpointDiagnostics: readonly string[];
-  fallback: string;
-}): string {
-  return (
-    firstDisplayableOpenCodeFailureMessage(input.memberDiagnostics, { includeGeneric: false }) ??
-    firstDisplayableOpenCodeFailureMessage(
-      input.bridgeDiagnostics
-        .filter((diagnostic) => diagnostic.severity === 'error')
-        .map((diagnostic) => diagnostic.message),
-      { includeGeneric: false }
-    ) ??
-    firstDisplayableOpenCodeFailureMessage(input.memberDiagnostics, { includeGeneric: true }) ??
-    firstDisplayableOpenCodeFailureMessage(input.checkpointDiagnostics, { includeGeneric: true }) ??
-    firstDisplayableOpenCodeFailureMessage(
-      input.bridgeDiagnostics
-        .filter((diagnostic) => diagnostic.severity !== 'info')
-        .map((diagnostic) => diagnostic.message),
-      { includeGeneric: true }
-    ) ??
-    normalizeOpenCodeFailureMessage(input.fallback) ??
-    GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON
-  );
 }
 
 function firstDisplayableOpenCodeFailureMessage(
@@ -1255,19 +1211,6 @@ function isGenericOpenCodeFailureMessage(message: string): boolean {
     (message.startsWith('opencode_app_mcp_tool_proof_') && message.includes('cache_hit')) ||
     isOpenCodeLaunchTimingDiagnostic(message)
   );
-}
-
-function extractCheckpointNames(data: OpenCodeLaunchTeamCommandData): Set<string> {
-  const names = new Set<string>();
-  for (const checkpoint of data.durableCheckpoints ?? []) {
-    if (checkpoint.name.trim()) names.add(checkpoint.name);
-  }
-  for (const member of Object.values(data.members)) {
-    for (const evidence of member.evidence) {
-      if (evidence.kind.trim()) names.add(evidence.kind);
-    }
-  }
-  return names;
 }
 
 function buildMemberBootstrapPrompt(
@@ -1496,33 +1439,6 @@ function formatOpenCodeBridgeDiagnostic(diagnostic: {
   message: string;
 }): string {
   return `${diagnostic.severity}:${diagnostic.code}: ${diagnostic.message}`;
-}
-
-function isOpenCodePreLaunchCapabilitySnapshotMismatchData(
-  data: OpenCodeLaunchTeamCommandData
-): boolean {
-  if (data.teamLaunchState !== 'failed') {
-    return false;
-  }
-  if (
-    data.diagnostics.some(
-      (diagnostic) =>
-        isOpenCodePreLaunchCapabilitySnapshotMismatchText(diagnostic.message) ||
-        isOpenCodePreLaunchCapabilitySnapshotMismatchText(diagnostic.code)
-    )
-  ) {
-    return true;
-  }
-  return Object.values(data.members).some((member) =>
-    (member.diagnostics ?? []).some(isOpenCodePreLaunchCapabilitySnapshotMismatchText)
-  );
-}
-
-function isOpenCodePreLaunchCapabilitySnapshotMismatchText(value: string): boolean {
-  const normalized = value.toLowerCase();
-  return OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS.some((marker) =>
-    normalized.includes(marker.toLowerCase())
-  );
 }
 
 function isOpenCodeLaunchTimingDiagnostic(diagnostic: string): boolean {

@@ -7,6 +7,7 @@
  * - cliInstaller:progress: Progress events (main → renderer, not a handler)
  */
 
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
 import {
@@ -17,12 +18,16 @@ import {
   CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
   // eslint-disable-next-line boundaries/element-types -- IPC channel constants shared between main and preload
 } from '@preload/constants/ipcChannels';
-import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
+import {
+  CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
+  parseCliProviderStatusIpcRequest,
+} from '@shared/types/cliInstaller';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
 import { CodexBinaryResolver } from '../services/infrastructure/codexAppServer';
 import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
+import { invalidateAuthoritativeModelExecutionProofs } from '../services/team/TeamLaunchExecutionProofAuthority';
 
 import type { CliInstallerService } from '../services';
 import type {
@@ -31,6 +36,8 @@ import type {
   CliInstallerProviderStatusMode,
   CliProviderId,
   CliProviderStatus,
+  CliProviderStatusIpcRequest,
+  CliProviderStatusIpcResponse,
   CliProviderStatusRequestOptions,
   IpcResult,
 } from '@shared/types';
@@ -40,9 +47,16 @@ const logger = createLogger('IPC:cliInstaller');
 
 let service: CliInstallerService;
 const statusInFlight = new Map<CliInstallerProviderStatusMode, Promise<CliInstallationStatus>>();
-const providerStatusInFlight = new Map<string, Promise<CliProviderStatus | null>>();
+interface ProviderStatusObservation {
+  providerStatus: CliProviderStatus | null;
+  observationGeneration: number;
+  observationNonce: string;
+}
+
+const providerStatusInFlight = new Map<string, Promise<ProviderStatusObservation>>();
 const providerRuntimeRequestTails = new Map<CliProviderId, Promise<void>>();
 const providerRuntimeRequestQueue: Array<() => void> = [];
+const observedProviderAuthorityFingerprintById = new Map<CliProviderId, string>();
 let activeProviderRuntimeRequestCount = 0;
 const cachedStatus = new Map<
   CliInstallerProviderStatusMode,
@@ -56,17 +70,11 @@ const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'c
 const INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS = new Set<CliProviderId>(['opencode']);
 const MAX_PROVIDER_STATUS_PROJECT_PATH_LENGTH = 4_096;
 
-function normalizeProviderStatusOptions(options: unknown): CliProviderStatusRequestOptions {
-  if (options === undefined || options === null) {
-    return {};
-  }
-  if (typeof options !== 'object' || Array.isArray(options)) {
-    throw new Error('Provider status options must be an object');
-  }
-
-  const projectPath = (options as { projectPath?: unknown }).projectPath;
+function normalizeProviderStatusRequest(request: unknown): CliProviderStatusIpcRequest {
+  const candidate = parseCliProviderStatusIpcRequest(request);
+  const projectPath = candidate.projectPath;
   if (projectPath === undefined || projectPath === null || projectPath === '') {
-    return {};
+    return { purpose: candidate.purpose, requestNonce: candidate.requestNonce };
   }
   if (
     typeof projectPath !== 'string' ||
@@ -77,7 +85,7 @@ function normalizeProviderStatusOptions(options: unknown): CliProviderStatusRequ
 
   const trimmedProjectPath = projectPath.trim();
   if (!trimmedProjectPath) {
-    return {};
+    return { purpose: candidate.purpose, requestNonce: candidate.requestNonce };
   }
   if (!path.isAbsolute(trimmedProjectPath)) {
     throw new Error('Provider status project path must be absolute');
@@ -87,14 +95,18 @@ function normalizeProviderStatusOptions(options: unknown): CliProviderStatusRequ
   if (resolvedProjectPath === path.parse(resolvedProjectPath).root) {
     throw new Error('Provider status project path cannot be a filesystem root');
   }
-  return { projectPath: resolvedProjectPath };
+  return {
+    projectPath: resolvedProjectPath,
+    purpose: candidate.purpose,
+    requestNonce: candidate.requestNonce,
+  };
 }
 
 function getProviderStatusRequestKey(
   providerId: CliProviderId,
-  options: CliProviderStatusRequestOptions
+  request: CliProviderStatusIpcRequest
 ): string {
-  return `${providerId}\0${options.projectPath ?? ''}`;
+  return `${providerId}\0${request.projectPath ?? ''}\0${request.purpose}`;
 }
 
 function isFrontendMultimodelProviderId(providerId: CliProviderId): boolean {
@@ -237,6 +249,7 @@ function runProviderRuntimeRequest<T>(
  */
 export function initializeCliInstallerHandlers(installerService: CliInstallerService): void {
   service = installerService;
+  invalidateAuthoritativeModelExecutionProofs();
   resetProviderRuntimeRequestLimiter();
 }
 
@@ -281,6 +294,9 @@ async function handleGetStatus(
     const cached = cachedStatus.get(cacheKey);
     if (cached && Date.now() - cached.at < STATUS_CACHE_TTL_MS) {
       if (latestSnapshot && canUseStatusForCacheKey(cacheKey, latestSnapshot)) {
+        for (const providerStatus of latestSnapshot.providers) {
+          observeProviderAuthority(providerStatus);
+        }
         cachedStatus.set(cacheKey, { value: latestSnapshot, at: Date.now() });
         return { success: true, data: latestSnapshot };
       }
@@ -317,6 +333,7 @@ async function handleGetStatus(
     }
 
     const status = await statusInFlight.get(cacheKey)!;
+    for (const providerStatus of status.providers) observeProviderAuthority(providerStatus);
     return { success: true, data: status };
   } catch (error) {
     const msg = getErrorMessage(error);
@@ -329,6 +346,7 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
   if (!providerStatus) {
     return;
   }
+  observeProviderAuthority(providerStatus);
 
   for (const [cacheKey, cached] of cachedStatus) {
     if (
@@ -366,40 +384,83 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
   }
 }
 
+function observeProviderAuthority(providerStatus: CliProviderStatus): void {
+  const authorityFingerprint = JSON.stringify(providerStatus);
+  const previousAuthorityFingerprint = observedProviderAuthorityFingerprintById.get(
+    providerStatus.providerId
+  );
+  if (
+    previousAuthorityFingerprint !== undefined &&
+    previousAuthorityFingerprint !== authorityFingerprint
+  ) {
+    invalidateAuthoritativeModelExecutionProofs();
+  }
+  observedProviderAuthorityFingerprintById.set(providerStatus.providerId, authorityFingerprint);
+}
+
 async function handleGetProviderStatus(
   _event: IpcMainInvokeEvent,
   providerId: CliProviderId,
-  rawOptions?: unknown
-): Promise<IpcResult<CliProviderStatus | null>> {
+  rawRequest?: unknown
+): Promise<IpcResult<CliProviderStatusIpcResponse>> {
   try {
-    const options = normalizeProviderStatusOptions(rawOptions);
-    const requestKey = getProviderStatusRequestKey(providerId, options);
+    const providerRequest = normalizeProviderStatusRequest(rawRequest);
+    const requestKey = getProviderStatusRequestKey(providerId, providerRequest);
     const inFlight = providerStatusInFlight.get(requestKey);
     if (inFlight) {
-      const status = await inFlight;
-      return { success: true, data: status };
+      const observation = await inFlight;
+      if (observation.observationGeneration !== statusCacheGeneration) {
+        throw new Error('Provider status observation was invalidated before completion');
+      }
+      return {
+        success: true,
+        data: {
+          ...observation,
+          purpose: providerRequest.purpose,
+          requestNonce: providerRequest.requestNonce,
+        },
+      };
     }
 
     const generation = statusCacheGeneration;
     const currentService = service;
-    const request = runProviderRuntimeRequest(providerId, () =>
-      currentService.getProviderStatus(providerId, options)
+    const serviceOptions: CliProviderStatusRequestOptions = providerRequest.projectPath
+      ? { projectPath: providerRequest.projectPath }
+      : {};
+    const observationNonce = randomUUID();
+    const observationPromise = runProviderRuntimeRequest(providerId, () =>
+      currentService.getProviderStatus(providerId, serviceOptions)
     )
       .then((status) => {
-        if (generation === statusCacheGeneration && !options.projectPath) {
-          patchCachedProviderStatus(status);
+        if (generation === statusCacheGeneration && status) {
+          observeProviderAuthority(status);
+          if (!serviceOptions.projectPath) patchCachedProviderStatus(status);
         }
-        return status;
+        return {
+          providerStatus: status,
+          observationGeneration: generation,
+          observationNonce,
+        };
       })
       .finally(() => {
-        if (providerStatusInFlight.get(requestKey) === request) {
+        if (providerStatusInFlight.get(requestKey) === observationPromise) {
           providerStatusInFlight.delete(requestKey);
         }
       });
 
-    providerStatusInFlight.set(requestKey, request);
-    const status = await request;
-    return { success: true, data: status };
+    providerStatusInFlight.set(requestKey, observationPromise);
+    const observation = await observationPromise;
+    if (observation.observationGeneration !== statusCacheGeneration) {
+      throw new Error('Provider status observation was invalidated before completion');
+    }
+    return {
+      success: true,
+      data: {
+        ...observation,
+        purpose: providerRequest.purpose,
+        requestNonce: providerRequest.requestNonce,
+      },
+    };
   } catch (error) {
     const msg = getErrorMessage(error);
     logger.error(`Error in cliInstaller:getProviderStatus(${providerId}):`, msg);
@@ -429,6 +490,7 @@ async function handleVerifyProviderModels(
       currentService.verifyProviderModels(providerId)
     );
     if (generation === statusCacheGeneration) {
+      if (status) observeProviderAuthority(status);
       patchCachedProviderStatus(status);
     }
     return { success: true, data: status };
@@ -440,10 +502,12 @@ async function handleVerifyProviderModels(
 }
 
 function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
+  invalidateAuthoritativeModelExecutionProofs();
   statusCacheGeneration += 1;
   cachedStatus.clear();
   statusInFlight.clear();
   providerStatusInFlight.clear();
+  observedProviderAuthorityFingerprintById.clear();
   ClaudeBinaryResolver.clearCache();
   CodexBinaryResolver.clearCache();
   service.invalidateStatusCache();

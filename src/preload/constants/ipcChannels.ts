@@ -7,7 +7,6 @@
 // =============================================================================
 // Diagnostics / Logging Channels
 // =============================================================================
-
 /** Renderer -> main log forwarding (filtered in preload) */
 export const RENDERER_LOG = 'renderer:log';
 
@@ -334,6 +333,7 @@ export const TEAM_RESTORE_TASK = 'team:restoreTask';
 /** Get list of teams with live CLI processes */
 export const TEAM_ALIVE_LIST = 'team:aliveList';
 export const TEAM_STOP = 'team:stop';
+export const TEAM_STOP_FOR_RELAUNCH = 'team:stopForRelaunch';
 
 /** Create team config without provisioning CLI */
 export const TEAM_CREATE_CONFIG = 'team:createConfig';

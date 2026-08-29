@@ -19,6 +19,8 @@ import {
   validateBridgeResultEnvelope,
 } from './OpenCodeBridgeCommandContract';
 
+import type { OpenCodeBridgeInvocationOptions } from './OpenCodeBridgeInvocationAuthority';
+
 export interface OpenCodeBridgeProcessRunInput {
   binaryPath: string;
   args: string[];
@@ -204,7 +206,7 @@ export class OpenCodeBridgeCommandClient {
       requestId?: string;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
-    }
+    } & OpenCodeBridgeInvocationOptions
   ): Promise<OpenCodeBridgeResult<TData>> {
     const envelope: OpenCodeBridgeCommandEnvelope<TBody> = {
       schemaVersion: OPEN_CODE_BRIDGE_SCHEMA_VERSION,
@@ -232,7 +234,7 @@ export class OpenCodeBridgeCommandClient {
         if (!useStdoutOnlyFallback) {
           bridgeArgs.push('--output', outputPath);
         }
-        const processResult = await this.processRunner.run({
+        const processInput: OpenCodeBridgeProcessRunInput = {
           binaryPath: this.binaryPath,
           args: bridgeArgs,
           cwd: resolveOpenCodeBridgeProcessCwd(this.binaryPath, options.cwd),
@@ -240,7 +242,17 @@ export class OpenCodeBridgeCommandClient {
           stdoutLimitBytes: options.stdoutLimitBytes ?? DEFAULT_STDOUT_LIMIT_BYTES,
           stderrLimitBytes: options.stderrLimitBytes ?? DEFAULT_STDERR_LIMIT_BYTES,
           env: await this.resolveEnv(),
-        });
+        };
+        const dispatch = () => {
+          try {
+            return this.processRunner.run(processInput);
+          } finally {
+            options.onInvocationDispatched?.();
+          }
+        };
+        const processResult = await (options.invocationAuthority
+          ? options.invocationAuthority.invoke(dispatch)
+          : dispatch());
         const bridgeOutput = await this.readBridgeOutput(processResult.stdout, outputPath);
         const processDetails = {
           exitCode: processResult.exitCode,

@@ -38,6 +38,7 @@ import type {
   OpenCodeStopTeamCommandBody,
   OpenCodeStopTeamCommandData,
 } from './OpenCodeBridgeCommandContract';
+import type { OpenCodeBridgeInvocationOptions } from './OpenCodeBridgeInvocationAuthority';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 export interface OpenCodeLedgerBackfillPort {
@@ -56,7 +57,7 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
       requestId?: string;
       stdoutLimitBytes?: number;
       stderrLimitBytes?: number;
-    }
+    } & OpenCodeBridgeInvocationOptions
   ): Promise<OpenCodeBridgeResult<TData>>;
 }
 
@@ -104,7 +105,7 @@ const OPEN_CODE_COMPLETED_COMMAND_RECOVERY_MESSAGE =
   'OpenCode bridge command already completed; recover through commandStatus';
 
 export function resolveOpenCodeLaunchTimeoutMs(
-  input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel' | 'members'>,
+  input: { selectedModel: string; members: readonly unknown[] },
   configuredTimeoutMs?: number
 ): number {
   if (configuredTimeoutMs !== undefined) {
@@ -232,7 +233,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   }
 
   async launchOpenCodeTeam(
-    input: OpenCodeLaunchTeamCommandBody
+    input: OpenCodeLaunchTeamCommandBody,
+    invocation: OpenCodeBridgeInvocationOptions = {}
   ): Promise<OpenCodeLaunchTeamCommandData> {
     const result = await this.executeStateChangingCommand<
       OpenCodeLaunchTeamCommandBody,
@@ -244,6 +246,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       capabilitySnapshotId: input.expectedCapabilitySnapshotId,
       cwd: input.projectPath,
       timeoutMs: resolveOpenCodeLaunchTimeoutMs(input, this.options.launchTimeoutMs),
+      ...invocation,
     });
     return result.ok ? result.data : blockedLaunchData(input.runId, result);
   }
@@ -683,30 +686,23 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       capabilitySnapshotId: string | null;
       cwd: string;
       timeoutMs: number;
-    }
+    } & OpenCodeBridgeInvocationOptions
   ): Promise<OpenCodeBridgeResult<TData>> {
     if (this.options.stateChangingCommands) {
       try {
         return await this.options.stateChangingCommands.execute<TBody, TData>({
+          ...input,
           command,
-          teamName: input.teamName,
-          laneId: input.laneId,
-          runId: input.runId,
-          capabilitySnapshotId: input.capabilitySnapshotId,
           behaviorFingerprint: null,
           body,
-          cwd: input.cwd,
-          timeoutMs: input.timeoutMs,
         });
       } catch (error) {
+        if (input.invocationAuthority) throw error;
         return thrownBridgeFailure(command, input.runId, error);
       }
     }
 
-    return this.bridge.execute<TBody, TData>(command, body, {
-      cwd: input.cwd,
-      timeoutMs: input.timeoutMs,
-    });
+    return this.bridge.execute<TBody, TData>(command, body, input);
   }
 }
 

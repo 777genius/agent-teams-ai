@@ -68,6 +68,7 @@ export interface DeterministicCreateSetupFlowPorts<TMixedSecondaryLane> {
     members: TeamCreateRequest['members'];
     defaults: {
       providerId?: TeamProviderId;
+      providerBackendId?: TeamCreateRequest['providerBackendId'];
       model?: string;
       effort?: TeamCreateRequest['effort'];
     };
@@ -248,6 +249,7 @@ async function prepareDeterministicCreateSetupFlowWithLease<TMixedSecondaryLane>
     members: request.members,
     defaults: {
       providerId: request.providerId,
+      providerBackendId: request.providerBackendId,
       model: request.model,
       effort: request.effort,
     },

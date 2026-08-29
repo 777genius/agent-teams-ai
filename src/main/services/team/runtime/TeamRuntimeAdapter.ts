@@ -1,3 +1,4 @@
+import type { RosterLaunchInvocationLease } from '../TeamMembersMetaStore';
 import type {
   EffortLevel,
   MemberLaunchState,
@@ -6,6 +7,7 @@ import type {
   OpenCodeBootstrapMode,
   PersistedTeamLaunchPhase,
   PersistedTeamLaunchSnapshot,
+  ProviderModelLaunchIdentity,
   TeamAgentRuntimeBackendType,
   TeamAgentRuntimeDiagnosticSeverity,
   TeamAgentRuntimeLivenessKind,
@@ -13,6 +15,7 @@ import type {
   TeamLaunchAggregateState,
   TeamProvisioningSupportDiagnostic,
 } from '@shared/types';
+import type { PersistedOpenCodeStrictLaunchAttempt } from '@shared/types/openCodeStrictLaunch';
 
 export const TEAM_RUNTIME_PROVIDER_IDS = ['anthropic', 'codex', 'gemini', 'opencode'] as const;
 
@@ -24,6 +27,7 @@ export interface TeamRuntimeMemberSpec {
   workflow?: string;
   isolation?: 'worktree';
   providerId: TeamRuntimeProviderId;
+  launchIdentity?: ProviderModelLaunchIdentity;
   model?: string;
   effort?: EffortLevel;
   cwd: string;
@@ -74,6 +78,8 @@ export interface TeamRuntimeLaunchInput {
   runId: string;
   teamName: string;
   laneId?: string;
+  /** Immutable resolved identity for the shared lane command, distinct from member desires. */
+  launchIdentity?: ProviderModelLaunchIdentity;
   cwd: string;
   prompt?: string;
   providerId: TeamRuntimeProviderId;
@@ -97,6 +103,12 @@ export interface TeamRuntimeLaunchInput {
   allowExperimentalLocalModels?: boolean;
   expectedMembers: TeamRuntimeMemberSpec[];
   previousLaunchState: PersistedTeamLaunchSnapshot | null;
+  /** Called immediately before the first irreversible provider launch command. */
+  onInvocationBoundary?: () => Promise<RosterLaunchInvocationLease>;
+  /** Reports durable evidence that this exact invocation produced side effects before restart. */
+  onInvocationDisposition?: (disposition: 'previous_side_effects_recovered') => void;
+  /** Called synchronously after the irreversible provider launch command is dispatched. */
+  onInvocationDispatched?: () => void;
 }
 
 export interface TeamRuntimePrepareSuccess {
@@ -155,6 +167,7 @@ export interface TeamRuntimeLaunchResult {
   members: Record<string, TeamRuntimeMemberLaunchEvidence>;
   warnings: string[];
   diagnostics: string[];
+  openCodeStrictLaunchAttempt?: PersistedOpenCodeStrictLaunchAttempt;
 }
 
 export type TeamRuntimeReconcileReason =
@@ -249,10 +262,17 @@ export function isTeamRuntimeProviderId(value: unknown): value is TeamRuntimePro
   return value === 'anthropic' || value === 'codex' || value === 'gemini' || value === 'opencode';
 }
 
+export type OpenCodeStrictLaunchDelegationValidator = (input: {
+  cwd: string;
+}) => Promise<{ ok: true; contractVersion: 1 } | { ok: false; reason: string }>;
+
 export class TeamRuntimeAdapterRegistry {
   private readonly adapters = new Map<TeamRuntimeProviderId, TeamLaunchRuntimeAdapter>();
 
-  constructor(adapters: readonly TeamLaunchRuntimeAdapter[] = []) {
+  constructor(
+    adapters: readonly TeamLaunchRuntimeAdapter[] = [],
+    private readonly openCodeStrictLaunchDelegationValidator: OpenCodeStrictLaunchDelegationValidator | null = null
+  ) {
     for (const adapter of adapters) {
       this.register(adapter);
     }
@@ -282,5 +302,9 @@ export class TeamRuntimeAdapterRegistry {
 
   providers(): TeamRuntimeProviderId[] {
     return Array.from(this.adapters.keys());
+  }
+
+  getOpenCodeStrictLaunchDelegationValidator(): OpenCodeStrictLaunchDelegationValidator | null {
+    return this.openCodeStrictLaunchDelegationValidator;
   }
 }

@@ -62,6 +62,7 @@ const request: TeamLaunchRequest = {
 };
 
 const anthropicApiKeyHelperLease = createAnthropicApiKeyHelperSetupLease();
+const launchRosterFingerprint: `sha256:${string}` = `sha256:${'0'.repeat(64)}`;
 anthropicApiKeyHelperLease.coalesce({
   teamName: 'team-a',
   directory: authHelperDirectory,
@@ -75,8 +76,10 @@ anthropicApiKeyHelperLease.coalesce({
 
 const setup: PreparedDeterministicLaunchSetup<TestLane> = {
   kind: 'prepared',
+  credentialDigestKey: 'launch-continuation-hmac-v1:test',
   teamsBasePathsToProbe: [{ location: 'configured', basePath: '/teams' }],
   runId: 'run-1',
+  launchRosterFingerprint,
   startedAt: '2026-01-01T00:00:00.000Z',
   claudePath: '/bin/claude',
   shellEnv: { PATH: '/bin' },
@@ -137,6 +140,37 @@ const setup: PreparedDeterministicLaunchSetup<TestLane> = {
     catalogFetchedAt: null,
     selectedEffort: 'high',
     resolvedEffort: 'high',
+  },
+  preparedLaunchMaterial: {
+    existingTasks: [],
+    nativeBootstrapBuild: {
+      specs: new Map(),
+      diagnostics: {
+        nativeMemberCount: 0,
+        totalContextChars: 0,
+        totalContextLimitChars: 0,
+        warning: null,
+      },
+    },
+    runtimeArgsPlan: {
+      settingsArgs: [],
+      fastModeArgs: [],
+      runtimeTurnSettledHookArgs: [],
+      providerArgs: [],
+      extraArgs: [],
+      inheritedProviderArgs: [],
+      appManagedSettingsPath: null,
+    },
+    teammateModeDecision: { injectedTeammateMode: null },
+    sourceSnapshot: {
+      version: 1,
+      digest: 'sha256:stable-sources',
+      entries: [],
+    },
+    finalArgvTemplate: [],
+    disallowedTools: 'Bash(rm:*)',
+    leadMcpConfig: { version: 1, json: '{"lead":true}' },
+    memberMcpLaunchConfigs: new Map(),
   },
   syntheticRequest: {
     ...request,

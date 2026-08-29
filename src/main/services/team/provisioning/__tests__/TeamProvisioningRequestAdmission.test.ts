@@ -17,7 +17,25 @@ const createRequest: TeamCreateRequest = {
   effort: 'high',
   fastMode: 'off',
   skipPermissions: false,
-  members: [{ name: 'Lead', role: 'Lead', providerId: 'opencode' }],
+  leadRuntimeSelectionProvenance: {
+    version: 1,
+    providerBackendId: 'default',
+    model: 'explicit',
+    effort: 'explicit',
+  },
+  members: [
+    {
+      name: 'Lead',
+      role: 'Lead',
+      providerId: 'opencode',
+      runtimeSelectionProvenance: {
+        version: 1,
+        providerBackendId: 'inherited',
+        model: 'inherited',
+        effort: 'inherited',
+      },
+    },
+  ],
   prompt: 'start',
 };
 
@@ -29,6 +47,12 @@ const launchRequest: TeamLaunchRequest = {
   effort: 'high',
   fastMode: 'off',
   skipPermissions: false,
+  leadRuntimeSelectionProvenance: {
+    version: 1,
+    providerBackendId: 'default',
+    model: 'explicit',
+    effort: 'explicit',
+  },
 };
 
 function unexpected(): never {
@@ -83,6 +107,15 @@ describe('TeamProvisioningRequestAdmission', () => {
 
   it('preserves the request team name as the lock key', () => {
     expect(getTeamProvisioningRequestLockKey({ teamName: ' alpha ' })).toBe(' alpha ');
+  });
+
+  it('fails closed before the lock when a live request lacks provenance', async () => {
+    const host = createHost();
+    const boundary = createTeamProvisioningRequestAdmissionBoundary(host);
+    await expect(
+      boundary.launchTeam({ ...launchRequest, leadRuntimeSelectionProvenance: undefined }, vi.fn())
+    ).rejects.toThrow('provenance is required');
+    expect(host.lockCalls).toEqual([]);
   });
 
   it('does not enter the create lock or provisioning flow for an invalid request', async () => {

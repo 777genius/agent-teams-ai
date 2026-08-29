@@ -198,7 +198,6 @@ import { createHash } from 'crypto';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
-
 import { cleanupEditorState, setEditorMainWindow } from './ipc/editor';
 import { initializeIpcHandlers, removeIpcHandlers } from './ipc/handlers';
 import { registerRendererLogHandlers } from './ipc/rendererLogs';
@@ -239,6 +238,7 @@ import {
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeStrictLaunchDelegationPreflight } from './services/team/opencode/bridge/OpenCodeStrictLaunchDelegationPreflight';
 import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   buildTeamControlApiBaseUrl,
@@ -322,7 +322,6 @@ import {
   UpdaterService,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from './services';
-
 import type { FileChangeEvent } from '@main/types';
 import type {
   AppStartupMemorySnapshot,
@@ -330,18 +329,15 @@ import type {
   AppStartupStep,
   TeamChangeEvent,
 } from '@shared/types';
-
 const logger = createLogger('App');
 let persistentAppLog: ReturnType<typeof installPersistentAppLog> | null = null;
 const appStartedAtMs = Date.now();
 const openCodeManagedHostInstanceId = `${process.pid}-${appStartedAtMs}`;
 let openCodeLifecycleBridge: OpenCodeReadinessBridge | null = null;
-
 if (process.env.AGENT_TEAMS_DISABLE_GPU?.trim() === '1') {
   app.disableHardwareAcceleration();
   logger.info('Hardware acceleration disabled by AGENT_TEAMS_DISABLE_GPU=1');
 }
-
 if (
   earlyElectronDevPathOverrideResult.userDataDir ||
   earlyElectronDevPathOverrideResult.claudeRoot
@@ -354,13 +350,11 @@ if (
 for (const warning of earlyElectronDevPathOverrideResult.warnings) {
   logger.warn(warning);
 }
-
 function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
   return diagnostics.some(
     (diagnostic) => !isInformationalOpenCodeRuntimeDeliveryDiagnostic(diagnostic)
   );
 }
-
 /**
  * A busy inbox re-reports the same relay diagnostics (e.g. a terminal ledger
  * reason) on every file change, flooding the dev console with identical lines.
@@ -370,7 +364,6 @@ function hasWarningRelayDiagnostics(diagnostics: readonly string[]): boolean {
 const RELAY_DIAGNOSTICS_LOG_DEDUP_MS = 60_000;
 const RELAY_DIAGNOSTICS_LOG_DEDUP_MAX_ENTRIES = 512;
 const relayDiagnosticsLogDedup = new Map<string, { message: string; loggedAt: number }>();
-
 function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: number): boolean {
   const previous = relayDiagnosticsLogDedup.get(dedupKey);
   if (
@@ -389,19 +382,16 @@ function shouldLogRelayDiagnostics(dedupKey: string, message: string, nowMs: num
   relayDiagnosticsLogDedup.set(dedupKey, { message, loggedAt: nowMs });
   return true;
 }
-
 function readOptionalEnv(name: string): string | undefined {
   const value = process.env[name]?.trim();
   return value ? value : undefined;
 }
-
 function readOptionalEnvNumber(name: string): number | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
-
 function readOptionalEnvArgs(name: string): string[] | undefined {
   const value = readOptionalEnv(name);
   if (!value) return undefined;
@@ -421,7 +411,6 @@ function readOptionalEnvArgs(name: string): string[] | undefined {
   const args = value.split(/\s+/).filter(Boolean);
   return args.length > 0 ? args : undefined;
 }
-
 function formatTokenUsageBudgetMetricLabel(metric: 'tokens' | 'apiEquivalentCostUsd'): string {
   return metric === 'apiEquivalentCostUsd' ? 'API-equivalent' : 'token';
 }
@@ -747,12 +736,13 @@ async function createOpenCodeRuntimeAdapterRegistry(
     gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
     buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
   });
+  const handshakePort = new OpenCodeBridgeCommandHandshakePort({
+    bridge: bridgeClient,
+    clientIdentity,
+  });
   const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
     expectedClientIdentity: clientIdentity,
-    handshakePort: new OpenCodeBridgeCommandHandshakePort({
-      bridge: bridgeClient,
-      clientIdentity,
-    }),
+    handshakePort,
     leaseStore: createOpenCodeBridgeCommandLeaseStore({
       filePath: join(bridgeControlDir, 'command-leases.json'),
     }),
@@ -768,12 +758,19 @@ async function createOpenCodeRuntimeAdapterRegistry(
     stateChangingCommands,
     appVersion: clientIdentity.appVersion,
   });
+  const strictLaunchDelegationPreflight = new OpenCodeStrictLaunchDelegationPreflight(
+    handshakePort,
+    clientIdentity
+  );
   openCodeLifecycleBridge = readinessBridge;
-  return new TeamRuntimeAdapterRegistry([
-    new OpenCodeTeamRuntimeAdapter(readinessBridge, {
-      inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
-    }),
-  ]);
+  return new TeamRuntimeAdapterRegistry(
+    [
+      new OpenCodeTeamRuntimeAdapter(readinessBridge, {
+        inspectLocalModelRuntime: inspectOpenCodeLocalModelRuntimeReadiness,
+      }),
+    ],
+    async ({ cwd }) => strictLaunchDelegationPreflight.validate({ cwd })
+  );
 }
 
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
@@ -1943,9 +1940,7 @@ function reconfigureLocalContextForClaudeRoot(): void {
 
     logger.info(`Reconfiguring local context: projectsDir=${projectsDir}, todosDir=${todosDir}`);
 
-    if (wasLocalActive) {
-      currentLocal.stopFileWatcher();
-    }
+    if (wasLocalActive) currentLocal.stopFileWatcher();
 
     const replacementLocal = new ServiceContext({
       id: 'local',
@@ -1954,21 +1949,11 @@ function reconfigureLocalContextForClaudeRoot(): void {
       projectsDir,
       todosDir,
     });
-
-    if (notificationManager) {
-      replacementLocal.fileWatcher.setNotificationManager(notificationManager);
-    }
+    if (notificationManager) replacementLocal.fileWatcher.setNotificationManager(notificationManager);
     replacementLocal.start();
-
-    if (!wasLocalActive) {
-      replacementLocal.stopFileWatcher();
-    }
-
+    if (!wasLocalActive) replacementLocal.stopFileWatcher();
     contextRegistry.replaceContext('local', replacementLocal);
-
-    if (wasLocalActive) {
-      wireFileWatcherEvents(replacementLocal);
-    }
+    if (wasLocalActive) wireFileWatcherEvents(replacementLocal);
   } catch (error) {
     logger.error('Failed to reconfigure local context for Claude root change:', error);
   }
@@ -2083,6 +2068,15 @@ async function initializeServices(): Promise<void> {
     void internalStorageFeature.probeBackend();
   }
   teamDataService = new TeamDataService();
+  void teamDataService
+    .start()
+    .catch((error: unknown) =>
+      logger.warn(
+        `[startup] roster authorization recovery scan failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
+    );
   const applicationCommandLedgerBackend = internalStorageFeature.applicationCommandLedgerBackend;
   let applicationCommandRunner = null;
   if (applicationCommandLedgerBackend) {
@@ -2907,8 +2901,6 @@ async function initializeServices(): Promise<void> {
       await requestGuardedAppQuit('relaunch');
     },
   });
-
-  // Initialize IPC handlers with registry
   initializeIpcHandlers(
     contextRegistry,
     updaterService,
@@ -2931,9 +2923,7 @@ async function initializeServices(): Promise<void> {
       onClaudeRootPathUpdated: (_claudeRootPath: string | null) => {
         reconfigureLocalContextForClaudeRoot();
         void schedulerService?.reloadForClaudeRootChange();
-        if (httpServer?.isRunning()) {
-          void syncTeamControlApiState().catch(() => undefined);
-        }
+        if (httpServer?.isRunning()) void syncTeamControlApiState().catch(() => undefined);
       },
       onAgentLanguageUpdated: (newLangCode: string) => {
         void teamProvisioningService.notifyLanguageChange(newLangCode);

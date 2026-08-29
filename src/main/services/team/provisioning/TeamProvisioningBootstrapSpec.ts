@@ -8,6 +8,8 @@ import * as path from 'path';
 import { getConfiguredAgentLanguageName } from './TeamProvisioningAgentLanguage';
 
 import type { NativeAppManagedBootstrapSpec } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
+import type { PreparedMcpConfig } from '../TeamMcpConfigBuilder';
+import type { DeterministicLaunchContinuation } from './TeamProvisioningLaunchContinuationEvidence';
 import type {
   EffortLevel,
   TeamCreateRequest,
@@ -29,6 +31,7 @@ interface RuntimeBootstrapMemberSpec {
   cwd?: string;
   model?: string;
   provider?: TeamProviderId;
+  providerBackendId?: TeamCreateRequest['providerBackendId'];
   effort?: EffortLevel;
   isolation?: 'worktree';
   agentType?: string;
@@ -43,6 +46,12 @@ interface RuntimeBootstrapMemberSpec {
 
 export interface RuntimeBootstrapMemberMcpLaunchConfig {
   mcpConfigPath: string;
+  mcpSettingSources: string;
+  strictMcpConfig: boolean;
+}
+
+export interface PreparedRuntimeBootstrapMemberMcpLaunchConfig {
+  preparedConfig: PreparedMcpConfig;
   mcpSettingSources: string;
   strictMcpConfig: boolean;
 }
@@ -70,6 +79,8 @@ export interface RuntimeBootstrapSpec {
   launch?: {
     bootstrapTimeoutMs?: number;
     continueOnPartialFailure?: boolean;
+    rosterFingerprint?: `sha256:${string}`;
+    continuation?: DeterministicLaunchContinuation;
   };
   ui?: {
     emitStructuredEvents?: boolean;
@@ -147,6 +158,7 @@ export function buildDeterministicCreateBootstrapSpec(
         ...(request.cwd ? { cwd: request.cwd } : {}),
         ...(member.model?.trim() ? { model: member.model.trim() } : {}),
         ...(member.providerId ? { provider: member.providerId } : {}),
+        ...(member.providerBackendId ? { providerBackendId: member.providerBackendId } : {}),
         ...(member.effort ? { effort: member.effort } : {}),
         ...(member.isolation === 'worktree' ? { isolation: 'worktree' as const } : {}),
         ...(member.role?.trim() ? { description: member.role.trim() } : {}),
@@ -171,7 +183,11 @@ export function buildDeterministicLaunchBootstrapSpec(
   request: TeamLaunchRequest,
   effectiveMembers: TeamCreateRequest['members'],
   nativeAppManagedBootstrapByMember: ReadonlyMap<string, NativeAppManagedBootstrapSpec> = new Map(),
-  mcpLaunchConfigByMember: ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig> = new Map()
+  mcpLaunchConfigByMember: ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig> = new Map(),
+  continuationContract?: {
+    rosterFingerprint: `sha256:${string}`;
+    continuation?: DeterministicLaunchContinuation;
+  }
 ): RuntimeBootstrapSpec {
   return {
     version: 1,
@@ -205,6 +221,7 @@ export function buildDeterministicLaunchBootstrapSpec(
         ...(request.cwd ? { cwd: request.cwd } : {}),
         ...(member.model?.trim() ? { model: member.model.trim() } : {}),
         ...(member.providerId ? { provider: member.providerId } : {}),
+        ...(member.providerBackendId ? { providerBackendId: member.providerBackendId } : {}),
         ...(member.effort ? { effort: member.effort } : {}),
         ...(member.isolation === 'worktree' ? { isolation: 'worktree' as const } : {}),
         ...(member.role?.trim() ? { role: member.role.trim() } : {}),
@@ -219,6 +236,14 @@ export function buildDeterministicLaunchBootstrapSpec(
     launch: {
       bootstrapTimeoutMs: getDeterministicBootstrapTimeoutMs(effectiveMembers.length),
       continueOnPartialFailure: true,
+      ...(continuationContract
+        ? {
+            rosterFingerprint: continuationContract.rosterFingerprint,
+            ...(continuationContract.continuation
+              ? { continuation: continuationContract.continuation }
+              : {}),
+          }
+        : {}),
     },
     ui: {
       emitStructuredEvents: true,

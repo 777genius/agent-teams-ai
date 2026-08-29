@@ -1,8 +1,7 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   VersionedJsonStore,
@@ -118,6 +117,31 @@ describe('VersionedJsonStore', () => {
       data: ['future'],
     });
   });
+
+  it.each(['file sync', 'directory sync'] as const)(
+    'requires strict file durability and propagates an injected %s failure',
+    async (failureStage) => {
+      const filePath = path.join(tempDir, 'strict-store.json');
+      const failure = new Error(`injected ${failureStage} failure`);
+      const writeFileAtomic = vi.fn((...args: unknown[]) => {
+        expect(args[0]).toBe(filePath);
+        expect(args[2]).toEqual({ durability: 'strict', syncDirectory: true });
+        return Promise.reject(failure);
+      });
+      const store = new VersionedJsonStore<string[]>({
+        filePath,
+        schemaVersion: 1,
+        defaultData: () => [],
+        validate: validateStringArray,
+        clock: () => now,
+        writeFileAtomic,
+      });
+
+      await expect(store.updateLocked(() => ['completion'])).rejects.toBe(failure);
+      expect(writeFileAtomic).toHaveBeenCalledTimes(1);
+      await expect(fs.readFile(filePath, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  );
 });
 
 function validateStringArray(value: unknown): string[] {

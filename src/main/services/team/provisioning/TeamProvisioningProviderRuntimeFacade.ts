@@ -85,15 +85,23 @@ export class TeamProvisioningProviderRuntimeFacade {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId: TeamProviderId | undefined = 'anthropic',
-    providerArgs: string[] = []
-  ): Promise<{ warning?: string }> {
-    return this.getProviderDiagnosticsRuntime().runProviderOneShotDiagnostic(
-      claudePath,
-      cwd,
-      env,
-      providerId,
-      providerArgs
-    );
+    providerArgs: string[] = [],
+    exactCheck?: import('@shared/types').TeamProvisioningModelCheckRequest
+  ): Promise<{
+    warning?: string;
+    targetedLiveness?: import('@shared/types').TeamProvisioningModelCheckRequest;
+  }> {
+    const runtime = this.getProviderDiagnosticsRuntime();
+    return exactCheck
+      ? runtime.runProviderOneShotDiagnostic(
+          claudePath,
+          cwd,
+          env,
+          providerId,
+          providerArgs,
+          exactCheck
+        )
+      : runtime.runProviderOneShotDiagnostic(claudePath, cwd, env, providerId, providerArgs);
   }
 
   async validateAgentTeamsMcpRuntime(

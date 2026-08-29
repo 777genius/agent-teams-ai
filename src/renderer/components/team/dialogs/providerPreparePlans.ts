@@ -39,7 +39,9 @@ export function buildProviderPreparePlans({
   backendSummaryByProvider,
   limitContext,
   runtimeProviderStatusById,
+  runtimeProviderGenerationById,
   cachedModelResultsByCacheKey,
+  allowExperimentalLocalModels,
 }: {
   cwd: string;
   providerIds: readonly TeamProviderId[];
@@ -50,10 +52,15 @@ export function buildProviderPreparePlans({
   backendSummaryByProvider: ReadonlyMap<TeamProviderId, string | null>;
   limitContext: boolean;
   runtimeProviderStatusById: RuntimeProviderStatusById;
+  runtimeProviderGenerationById?: ReadonlyMap<
+    TeamProviderId,
+    string | number | null | undefined
+  >;
   cachedModelResultsByCacheKey: ReadonlyMap<
     string,
     Record<string, ProviderPrepareDiagnosticsModelResult>
   >;
+  allowExperimentalLocalModels?: boolean;
 }): ProviderPreparePlan[] {
   return providerIds.map((providerId) => {
     const selectedModelChecks = [...(selectedModelChecksByProvider.get(providerId) ?? [])];
@@ -62,6 +69,12 @@ export function buildProviderPreparePlans({
     const runtimeStatusSignature = buildProviderPrepareRuntimeStatusSignature(
       [providerId],
       runtimeProviderStatusById
+    );
+    const proofBoundRuntimeStatusSignature = buildProviderPrepareRuntimeStatusSignature(
+      [providerId],
+      runtimeProviderStatusById,
+      undefined,
+      runtimeProviderGenerationById
     );
     const modelChecksSignature = buildProviderPrepareModelChecksSignature(
       new Map([[providerId, selectedModelChecks]])
@@ -74,22 +87,29 @@ export function buildProviderPreparePlans({
       limitContext,
       runtimeStatusSignature,
       modelChecksSignature,
+      allowExperimentalLocalModels,
     });
     const cacheKey = buildProviderPrepareModelCacheKey({
       cwd,
       providerId,
       backendSummary,
       limitContext,
-      runtimeStatusSignature,
+      runtimeStatusSignature: proofBoundRuntimeStatusSignature,
       modelChecksSignature,
+      allowExperimentalLocalModels,
     });
-    const cachedModelResultsById = {
+    const reusableModelResultsById = {
       ...getShortLivedProviderPrepareModelResults({
         providerId,
         cacheKey,
       }),
       ...(cachedModelResultsByCacheKey.get(cacheKey) ?? {}),
     };
+    // Ready display snapshots are not execution authority. Exact-model deep
+    // verification must execute again whenever a plan is refreshed.
+    const cachedModelResultsById = Object.fromEntries(
+      Object.entries(reusableModelResultsById).filter(([, result]) => result.status !== 'ready')
+    );
 
     return {
       providerId,

@@ -75,6 +75,7 @@ function makeAuditPorts(
   const ports: MemberSpawnStatusAuditPorts<MemberSpawnStatusAuditRun> = {
     nowMs: () => 1_000,
     minAuditIntervalMs: 500,
+    isCurrentTrackedRun: vi.fn(() => true),
     auditMemberSpawnStatuses: vi.fn(() => Promise.resolve(undefined)),
     findBootstrapTranscriptFailureReason: vi.fn(() => Promise.resolve(null)),
     findBootstrapRuntimeProofObservedAt: vi.fn(() => Promise.resolve(null)),
@@ -110,7 +111,7 @@ function makeAuditPorts(
 
 function makeLaunchSnapshot(): PersistedTeamLaunchSnapshot {
   return {
-    version: 2,
+    version: 3,
     teamName: 'team-a',
     updatedAt: '2026-01-01T00:00:10.000Z',
     leadSessionId: 'session-1',
@@ -285,6 +286,30 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
     );
   });
 
+  it('drops every transcript-confirmation side effect when the run was replaced', () => {
+    const run = makeRun();
+    const original = run.memberSpawnStatuses.get('alice');
+    const ports = makeMutationPorts();
+    ports.isCurrentTrackedRun = vi.fn(() => false);
+
+    confirmMemberSpawnStatusFromTranscriptForRun(
+      {
+        run,
+        memberName: 'alice',
+        observedAt: '2026-01-01T00:00:05.000Z',
+      },
+      ports
+    );
+
+    expect(run.memberSpawnStatuses.get('alice')).toBe(original);
+    expect(ports.syncMemberTaskActivityForRuntimeTransition).not.toHaveBeenCalled();
+    expect(ports.syncMemberLaunchGraceCheck).not.toHaveBeenCalled();
+    expect(ports.updateLaunchDiagnostics).not.toHaveBeenCalled();
+    expect(ports.appendMemberBootstrapDiagnostic).not.toHaveBeenCalled();
+    expect(ports.emitMemberSpawnChange).not.toHaveBeenCalled();
+    expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
+  });
+
   it('keeps member spawn status snapshot cache decisions focused on active launches', () => {
     expect(shouldCacheMemberSpawnStatusesSnapshot(makeRun())).toBe(true);
     expect(shouldCacheMemberSpawnStatusesSnapshot(makeRun({ provisioningComplete: true }))).toBe(
@@ -374,6 +399,46 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
     expect(cachedCurrentSnapshot).toMatchObject({ generation: 2, runId: run.runId });
   });
 
+  it('drops late inbox evidence from run A after run B becomes tracked', async () => {
+    const runA = makeRun();
+    const runB = makeRun({ runId: 'run-2', detectedSessionId: 'session-2' });
+    const lateInboxEvidence = createDeferred();
+    const lateInboxReadStarted = createDeferred();
+    let trackedRunId = runA.runId;
+    const mutationPorts = makeMutationPorts();
+    mutationPorts.isCurrentTrackedRun = vi.fn((run) => run.runId === trackedRunId);
+    const { ports } = makeSnapshotPorts({ run: runA });
+    ports.getRun = (runId) => {
+      if (runId === runA.runId) return runA;
+      if (runId === runB.runId) return runB;
+      return undefined;
+    };
+    ports.cache.getTrackedRunId = () => trackedRunId;
+    ports.live.refreshMemberSpawnStatusesFromLeadInbox = vi
+      .fn()
+      .mockImplementationOnce(async (run) => {
+        lateInboxReadStarted.resolve();
+        await lateInboxEvidence.promise;
+        setMemberSpawnStatusForRun({ run, memberName: 'alice', status: 'online' }, mutationPorts);
+      })
+      .mockResolvedValue(undefined);
+
+    const staleRead = getMemberSpawnStatusesSnapshot('team-a', ports);
+    await lateInboxReadStarted.promise;
+    trackedRunId = runB.runId;
+    lateInboxEvidence.resolve();
+    const result = await staleRead;
+
+    expect(result.runId).toBe(runB.runId);
+    expect(runA.memberSpawnStatuses.get('alice')).toEqual(baseStatus());
+    expect(mutationPorts.syncMemberTaskActivityForRuntimeTransition).not.toHaveBeenCalled();
+    expect(mutationPorts.syncMemberLaunchGraceCheck).not.toHaveBeenCalled();
+    expect(mutationPorts.updateLaunchDiagnostics).not.toHaveBeenCalled();
+    expect(mutationPorts.appendMemberBootstrapDiagnostic).not.toHaveBeenCalled();
+    expect(mutationPorts.emitMemberSpawnChange).not.toHaveBeenCalled();
+    expect(mutationPorts.persistLaunchStateSnapshot).not.toHaveBeenCalled();
+  });
+
   it('does not let a read stalled in audit overwrite newer launch persistence', async () => {
     const oldRun = makeRun();
     const newRun = makeRun({ runId: 'run-2', detectedSessionId: 'session-2' });
@@ -447,6 +512,76 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
     expect(ports.auditMemberSpawnStatuses).not.toHaveBeenCalled();
   });
 
+  it('drops a late transcript failure from run A after run B becomes tracked', async () => {
+    const runA = makeAuditRun();
+    const runB = makeAuditRun({ runId: 'run-2' });
+    const lateFailure = createDeferred<string | null>();
+    let trackedRun = runA;
+    const ports = makeAuditPorts({
+      isCurrentTrackedRun: vi.fn((run) => run === trackedRun),
+      findBootstrapTranscriptFailureReason: vi.fn(() => lateFailure.promise),
+    });
+
+    const staleAudit = maybeAuditMemberSpawnStatusesForRun(runA, ports);
+    expect(ports.findBootstrapTranscriptFailureReason).toHaveBeenCalledOnce();
+    trackedRun = runB;
+    lateFailure.resolve('bootstrap failed');
+    await staleAudit;
+
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+    expect(ports.confirmMemberSpawnStatusFromTranscript).not.toHaveBeenCalled();
+    expect(ports.auditMemberSpawnStatuses).not.toHaveBeenCalled();
+    expect(runA.memberSpawnStatuses.get('alice')).toEqual(baseStatus());
+  });
+
+  it('drops a late transcript failure after a same-run member relaunch and preserves siblings', async () => {
+    const originalAliceAttempt = baseStatus({
+      firstSpawnAcceptedAt: '2026-01-01T00:00:05.000Z',
+    });
+    const bobAttempt = baseStatus({ firstSpawnAcceptedAt: '2026-01-01T00:00:05.000Z' });
+    const relaunchedAliceAttempt = baseStatus({
+      firstSpawnAcceptedAt: '2026-01-01T00:00:06.000Z',
+    });
+    const run = makeAuditRun({
+      expectedMembers: ['alice', 'bob'],
+      memberSpawnStatuses: new Map([
+        ['alice', originalAliceAttempt],
+        ['bob', bobAttempt],
+      ]),
+    });
+    const lateFailure = createDeferred<string | null>();
+    const transcriptReadStarted = createDeferred();
+    const ports = makeAuditPorts({
+      findBootstrapTranscriptFailureReason: vi.fn((_teamName, memberName) => {
+        if (memberName === 'alice') {
+          transcriptReadStarted.resolve();
+          return lateFailure.promise;
+        }
+        return Promise.resolve('bob bootstrap failed');
+      }),
+    });
+
+    const audit = maybeAuditMemberSpawnStatusesForRun(run, ports);
+    await transcriptReadStarted.promise;
+    run.memberSpawnStatuses.set('alice', relaunchedAliceAttempt);
+    lateFailure.resolve('stale alice bootstrap failed');
+    await audit;
+
+    expect(run.memberSpawnStatuses.get('alice')).toBe(relaunchedAliceAttempt);
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalledWith(
+      run,
+      'alice',
+      'error',
+      'stale alice bootstrap failed'
+    );
+    expect(ports.setMemberSpawnStatus).toHaveBeenCalledWith(
+      run,
+      'bob',
+      'error',
+      'bob bootstrap failed'
+    );
+  });
+
   it('clears retryable bootstrap failures when runtime proof is found', async () => {
     const run = makeAuditRun({
       memberSpawnStatuses: new Map([
@@ -475,5 +610,150 @@ describe('TeamProvisioningMemberSpawnSnapshots', () => {
       'runtime-proof'
     );
     expect(ports.auditMemberSpawnStatuses).not.toHaveBeenCalled();
+  });
+
+  it('drops late runtime proof from run A after run B becomes tracked', async () => {
+    const runA = makeAuditRun();
+    const runB = makeAuditRun({ runId: 'run-2' });
+    const lateRuntimeProof = createDeferred<string | null>();
+    const runtimeProofReadStarted = createDeferred();
+    let trackedRun = runA;
+    const ports = makeAuditPorts({
+      isCurrentTrackedRun: vi.fn((run) => run === trackedRun),
+      findBootstrapRuntimeProofObservedAt: vi.fn(() => {
+        runtimeProofReadStarted.resolve();
+        return lateRuntimeProof.promise;
+      }),
+    });
+
+    const staleAudit = maybeAuditMemberSpawnStatusesForRun(runA, ports);
+    await runtimeProofReadStarted.promise;
+    expect(ports.findBootstrapRuntimeProofObservedAt).toHaveBeenCalledOnce();
+    trackedRun = runB;
+    lateRuntimeProof.resolve('2026-01-01T00:00:09.000Z');
+    await staleAudit;
+
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+    expect(ports.confirmMemberSpawnStatusFromTranscript).not.toHaveBeenCalled();
+    expect(ports.auditMemberSpawnStatuses).not.toHaveBeenCalled();
+    expect(runA.memberSpawnStatuses.get('alice')).toEqual(baseStatus());
+  });
+
+  it('drops a late transcript success from run A after run B becomes tracked', async () => {
+    const runA = makeAuditRun();
+    const runB = makeAuditRun({ runId: 'run-2' });
+    const lateTranscript = createDeferred<{ kind: 'success'; observedAt: string } | null>();
+    const transcriptReadStarted = createDeferred();
+    let trackedRun = runA;
+    const ports = makeAuditPorts({
+      isCurrentTrackedRun: vi.fn((run) => run === trackedRun),
+      findBootstrapTranscriptOutcome: vi.fn(() => {
+        transcriptReadStarted.resolve();
+        return lateTranscript.promise;
+      }),
+    });
+
+    const staleAudit = maybeAuditMemberSpawnStatusesForRun(runA, ports);
+    await transcriptReadStarted.promise;
+    expect(ports.findBootstrapTranscriptOutcome).toHaveBeenCalledOnce();
+    trackedRun = runB;
+    lateTranscript.resolve({
+      kind: 'success',
+      observedAt: '2026-01-01T00:00:09.000Z',
+    });
+    await staleAudit;
+
+    expect(ports.setMemberSpawnStatus).not.toHaveBeenCalled();
+    expect(ports.confirmMemberSpawnStatusFromTranscript).not.toHaveBeenCalled();
+    expect(ports.auditMemberSpawnStatuses).not.toHaveBeenCalled();
+    expect(runA.memberSpawnStatuses.get('alice')).toEqual(baseStatus());
+  });
+
+  it('drops a late transcript success after a same-run member relaunch and preserves siblings', async () => {
+    const originalAliceAttempt = baseStatus({
+      firstSpawnAcceptedAt: '2026-01-01T00:00:05.000Z',
+    });
+    const bobAttempt = baseStatus({ firstSpawnAcceptedAt: '2026-01-01T00:00:05.000Z' });
+    const relaunchedAliceAttempt = baseStatus({
+      firstSpawnAcceptedAt: '2026-01-01T00:00:06.000Z',
+    });
+    const run = makeAuditRun({
+      expectedMembers: ['alice', 'bob'],
+      memberSpawnStatuses: new Map([
+        ['alice', originalAliceAttempt],
+        ['bob', bobAttempt],
+      ]),
+    });
+    const lateTranscript = createDeferred<{ kind: 'success'; observedAt: string } | null>();
+    const transcriptReadStarted = createDeferred();
+    let aliceTranscriptReads = 0;
+    const ports = makeAuditPorts({
+      findBootstrapTranscriptOutcome: vi.fn((_teamName, memberName) => {
+        if (memberName === 'alice' && aliceTranscriptReads++ === 0) {
+          transcriptReadStarted.resolve();
+          return lateTranscript.promise;
+        }
+        if (memberName === 'bob') {
+          return Promise.resolve({
+            kind: 'success',
+            observedAt: '2026-01-01T00:00:09.000Z',
+          });
+        }
+        return Promise.resolve(null);
+      }),
+    });
+
+    const audit = maybeAuditMemberSpawnStatusesForRun(run, ports);
+    await transcriptReadStarted.promise;
+    run.memberSpawnStatuses.set('alice', relaunchedAliceAttempt);
+    lateTranscript.resolve({
+      kind: 'success',
+      observedAt: '2026-01-01T00:00:08.000Z',
+    });
+    await audit;
+
+    expect(run.memberSpawnStatuses.get('alice')).toBe(relaunchedAliceAttempt);
+    expect(ports.confirmMemberSpawnStatusFromTranscript).not.toHaveBeenCalledWith(
+      run,
+      'alice',
+      '2026-01-01T00:00:08.000Z'
+    );
+    expect(ports.confirmMemberSpawnStatusFromTranscript).toHaveBeenCalledWith(
+      run,
+      'bob',
+      '2026-01-01T00:00:09.000Z'
+    );
+  });
+
+  it('drops late registered-member evidence from run A after run B becomes tracked', async () => {
+    const runA = makeAuditRun();
+    const runB = makeAuditRun({ runId: 'run-2' });
+    const lateRegisteredMembers = createDeferred();
+    const registeredReadStarted = createDeferred();
+    let trackedRun = runA;
+    const mutationPorts = makeMutationPorts();
+    mutationPorts.isCurrentTrackedRun = vi.fn((run) => run === trackedRun);
+    const ports = makeAuditPorts({
+      isCurrentTrackedRun: vi.fn((run) => run === trackedRun),
+      auditMemberSpawnStatuses: vi.fn(async (run) => {
+        registeredReadStarted.resolve();
+        await lateRegisteredMembers.promise;
+        setMemberSpawnStatusForRun({ run, memberName: 'alice', status: 'online' }, mutationPorts);
+      }),
+    });
+
+    const staleAudit = maybeAuditMemberSpawnStatusesForRun(runA, ports, { force: true });
+    await registeredReadStarted.promise;
+    trackedRun = runB;
+    lateRegisteredMembers.resolve();
+    await staleAudit;
+
+    expect(runA.memberSpawnStatuses.get('alice')).toEqual(baseStatus());
+    expect(mutationPorts.syncMemberTaskActivityForRuntimeTransition).not.toHaveBeenCalled();
+    expect(mutationPorts.syncMemberLaunchGraceCheck).not.toHaveBeenCalled();
+    expect(mutationPorts.updateLaunchDiagnostics).not.toHaveBeenCalled();
+    expect(mutationPorts.appendMemberBootstrapDiagnostic).not.toHaveBeenCalled();
+    expect(mutationPorts.emitMemberSpawnChange).not.toHaveBeenCalled();
+    expect(mutationPorts.persistLaunchStateSnapshot).not.toHaveBeenCalled();
   });
 });

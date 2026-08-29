@@ -1,13 +1,21 @@
-import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { getClaudeBasePath, getHomeDir, getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as path from 'path';
 
 import { cleanupAnthropicTeamApiKeyHelperMaterial } from '../../runtime/anthropicTeamApiKeyHelper';
 import { buildNativeAppManagedBootstrapSpecsWithDiagnostics } from '../bootstrap/NativeAppManagedBootstrapContextBuilder';
 import { ClaudeBinaryResolver } from '../ClaudeBinaryResolver';
+import { resolveDesktopTeammateModeDecision } from '../runtimeTeammateMode';
 import { TeamTaskReader } from '../TeamTaskReader';
 
 import { type RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import { type TeamLaunchCompatibilityReport } from './TeamProvisioningLaunchCompatibility';
+import {
+  collectLaunchContinuationSourcePaths,
+  snapshotLaunchContinuationSources,
+  verifyLaunchContinuationSources,
+} from './TeamProvisioningLaunchContinuationEvidence';
+import { ensureLaunchContinuationSecret } from './TeamProvisioningLaunchContinuationSecret';
+import { readDurableLaunchContinuationEvidence } from './TeamProvisioningLaunchContinuationState';
 import {
   type DeterministicLaunchRunFlowRun,
   type PreparedDeterministicLaunchSetup,
@@ -89,8 +97,13 @@ export interface TeamProvisioningLaunchDeterministicFlowHost<
     cwd: string;
     members: TeamCreateRequest['members'];
     run: TRun;
+    preparedConfigs?: ReadonlyMap<
+      string,
+      import('./TeamProvisioningBootstrapSpec').PreparedRuntimeBootstrapMemberMcpLaunchConfig
+    >;
   }): Promise<ReadonlyMap<string, RuntimeBootstrapMemberMcpLaunchConfig>>;
-  buildTeamRuntimeLaunchArgsPlan: RunDeterministicLaunchRunFlowPorts<TMixedSecondaryLane>['buildTeamRuntimeLaunchArgsPlan'];
+  prepareRuntimeBootstrapMemberMcpLaunchConfigs: DeterministicLaunchSetupPorts<TMixedSecondaryLane>['prepareRuntimeBootstrapMemberMcpLaunchConfigs'];
+  buildTeamRuntimeLaunchArgsPlan: DeterministicLaunchSetupPorts<TMixedSecondaryLane>['buildTeamRuntimeLaunchArgsPlan'];
   seedLeadBootstrapPermissionRules(teamName: string, cwd: string): Promise<void>;
   attachStdoutHandler(run: TRun): void;
   attachStderrHandler(run: TRun): void;
@@ -236,6 +249,10 @@ export interface TeamProvisioningLaunchDeterministicFlowServiceHost<
     TRun,
     TMixedSecondaryLane
   >['buildRuntimeBootstrapMemberMcpLaunchConfigs'];
+  prepareRuntimeBootstrapMemberMcpLaunchConfigs: TeamProvisioningLaunchDeterministicFlowHost<
+    TRun,
+    TMixedSecondaryLane
+  >['prepareRuntimeBootstrapMemberMcpLaunchConfigs'];
   buildTeamRuntimeLaunchArgsPlan: TeamProvisioningLaunchDeterministicFlowHost<
     TRun,
     TMixedSecondaryLane
@@ -328,6 +345,8 @@ export function createTeamProvisioningLaunchDeterministicFlowHostFromService<
       service.publishMixedSecondaryLaneStatusChange(run, lane),
     buildRuntimeBootstrapMemberMcpLaunchConfigs: (input) =>
       service.buildRuntimeBootstrapMemberMcpLaunchConfigs(input),
+    prepareRuntimeBootstrapMemberMcpLaunchConfigs: (input) =>
+      service.prepareRuntimeBootstrapMemberMcpLaunchConfigs(input),
     buildTeamRuntimeLaunchArgsPlan: (input) => service.buildTeamRuntimeLaunchArgsPlan(input),
     seedLeadBootstrapPermissionRules: (teamName, cwd) =>
       service.seedLeadBootstrapPermissionRules(teamName, cwd),
@@ -366,6 +385,7 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
       deleteProvisioningRunByTeam: (teamName) => {
         host.provisioningRunByTeam.delete(teamName);
       },
+      readLaunchContinuationEvidence: readDurableLaunchContinuationEvidence,
       launchExpectedMembersPorts: deps.launchExpectedMembersPorts,
       materializeLaunchCompatibilityRepair: (request, report) =>
         host.materializeLaunchCompatibilityRepair(request, report),
@@ -390,6 +410,32 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
       buildCrossProviderMemberArgs: (primaryProviderId, memberSpecs, options) =>
         host.providerRuntime.buildCrossProviderMemberArgs(primaryProviderId, memberSpecs, options),
       resolveAndValidateLaunchIdentity: (params) => host.resolveAndValidateLaunchIdentity(params),
+      readTasks: (teamName) => new TeamTaskReader().getTasks(teamName),
+      buildNativeAppManagedBootstrapSpecsWithDiagnostics,
+      buildTeamRuntimeLaunchArgsPlan: (input) => host.buildTeamRuntimeLaunchArgsPlan(input),
+      resolveDesktopTeammateModeDecision,
+      snapshotLaunchMaterialSources: ({
+        cwd,
+        members,
+        shellEnv,
+        launchArgs,
+        credentialDigestKey,
+      }) =>
+        snapshotLaunchContinuationSources(
+          collectLaunchContinuationSourcePaths({
+            cwd,
+            memberCwds: members.map((member) => member.cwd),
+            claudeConfigDir: shellEnv.CLAUDE_CONFIG_DIR?.trim() || getClaudeBasePath(),
+            homeDir: getHomeDir(),
+            launchArgs,
+          }),
+          credentialDigestKey
+        ),
+      getCredentialDigestKey: (allowCreate) => ensureLaunchContinuationSecret({ allowCreate }),
+      prepareLeadMcpConfig: ({ cwd, controlApiBaseUrl }) =>
+        host.mcpConfigBuilder.prepareConfig(cwd, { controlApiBaseUrl }),
+      prepareRuntimeBootstrapMemberMcpLaunchConfigs: (input) =>
+        host.prepareRuntimeBootstrapMemberMcpLaunchConfigs(input),
       randomUUID: deps.randomUUID,
       nowIso: deps.nowIso,
       logger: deps.logger,
@@ -447,7 +493,8 @@ export function createTeamProvisioningLaunchDeterministicFlowBoundary<
         deleteProvisioningRunByTeam: (teamName) => {
           host.provisioningRunByTeam.delete(teamName);
         },
-        buildTeamRuntimeLaunchArgsPlan: (input) => host.buildTeamRuntimeLaunchArgsPlan(input),
+        verifyLaunchMaterialSources: (snapshot) =>
+          verifyLaunchContinuationSources(snapshot, setup.credentialDigestKey),
         teamMetaStore: host.teamMetaStore,
         membersMetaStore: host.membersMetaStore,
         nowMs: () => Date.now(),

@@ -25,6 +25,7 @@ import {
   type TeamProvisioningStopFlowBoundary,
   type TeamProvisioningStopFlowServiceHost,
 } from './TeamProvisioningStopFlowPortsFactory';
+import { TeamProvisioningStopIntentAuthority } from './TeamProvisioningStopIntentAuthority';
 
 import type { TeamConfig, TeamMember } from '@shared/types';
 
@@ -47,6 +48,7 @@ export interface TeamProvisioningStopCleanupCompatibilityServiceHost<
   };
   membersMetaStore: {
     getMembers(teamName: string): Promise<readonly TeamMember[]>;
+    assertMutable(teamName: string): Promise<void>;
   };
   cleanupRunPorts: TeamProvisioningCleanupPorts<TRun>;
   outputRecoveryFacade: {
@@ -71,7 +73,7 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   TRun extends ProvisioningRun = ProvisioningRun,
 > extends TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade<TRun> {
   protected stopAllTeamsGeneration = 0;
-  private readonly stopTeamGenerationByTeam = new Map<string, number>();
+  private readonly stopIntentAuthority = new TeamProvisioningStopIntentAuthority();
   protected readonly cleanedStoppedTeamOpenCodeRuntimeLanes = new Set<string>();
   protected readonly cleanupRunPorts!: TeamProvisioningCleanupPorts<TRun>;
 
@@ -173,7 +175,16 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   }
 
   protected getStopTeamGeneration(teamName: string): number {
-    return this.stopTeamGenerationByTeam.get(teamName.trim().toLowerCase()) ?? 0;
+    return this.stopIntentAuthority.getGeneration(teamName);
+  }
+
+  protected onStopTeamAuthorized(teamName: string): void {
+    const service = this.stopCleanupServiceHost;
+    const runId = service.runTracking.getTrackedRunId(teamName);
+    const run = runId ? service.runs.get(runId) : undefined;
+    if (run) {
+      run.cancelRequested = true;
+    }
   }
 
   /**
@@ -181,10 +192,16 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
    * Always uses SIGKILL via killTeamProcess() to prevent CLI cleanup.
    */
   async stopTeam(teamName: string): Promise<void> {
-    const teamKey = teamName.trim().toLowerCase();
-    this.stopTeamGenerationByTeam.set(teamKey, this.getStopTeamGeneration(teamName) + 1);
+    await this.stopIntentAuthority.authorizeAndPublish(
+      teamName,
+      () =>
+        this.stopFlowBoundary.authorizeStopTeam(teamName, () =>
+          this.onStopTeamAuthorized(teamName)
+        ),
+      () => undefined
+    );
     await this.stopCleanupServiceHost.withTeamLock(teamName, () =>
-      this.stopFlowBoundary.stopTeam(teamName)
+      this.stopFlowBoundary.stopAuthorizedTeam(teamName)
     );
   }
 
@@ -204,6 +221,18 @@ export abstract class TeamProvisioningStopCleanupCompatibilityFacade<
   async stopAllTeams(): Promise<void> {
     const service = this.stopCleanupServiceHost;
     await stopAllTeamsFlow({
+      preflightMetadataMutation: (teamName) =>
+        this.stopFlowBoundary.preflightMetadataMutation(teamName),
+      withTeamLocks: (teamNames, operation) => {
+        const acquire = async (index: number): Promise<unknown> => {
+          const teamName = teamNames[index];
+          if (!teamName) {
+            return operation();
+          }
+          return service.withTeamLock(teamName, () => acquire(index + 1));
+        };
+        return acquire(0) as ReturnType<typeof operation>;
+      },
       incrementStopAllTeamsGeneration: () => {
         this.stopAllTeamsGeneration += 1;
       },

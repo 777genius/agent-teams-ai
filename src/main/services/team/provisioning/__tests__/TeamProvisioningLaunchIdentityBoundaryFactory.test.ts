@@ -49,6 +49,12 @@ describe('TeamProvisioningLaunchIdentityBoundaryFactory', () => {
         name: 'Worker',
         model: 'gemini-default',
         effort: 'low',
+        runtimeSelectionProvenance: {
+          version: 1,
+          providerBackendId: 'inherited',
+          model: 'explicit',
+          effort: 'explicit',
+        },
       },
       requestLimitContext: true,
     });
