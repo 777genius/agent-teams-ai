@@ -37,6 +37,7 @@ export function mergeProviderCatalogFields(
   const canRestoreLaunch =
     authoritativeCatalogReplacement &&
     liveProvider.authenticated === true &&
+    liveProvider.capabilities.teamLaunch === true &&
     hydratedProvider.capabilities.teamLaunch === true;
   if (!authoritativeCatalogReplacement) {
     const catalogMatchesProvider =
@@ -48,26 +49,10 @@ export function mergeProviderCatalogFields(
     const displayPair = selectProviderModelDisplayPair(hydratedProvider, liveProvider, false);
     return {
       ...liveProvider,
-      detailMessage:
-        hydratedProvider.detailMessage ??
-        hydratedProvider.statusMessage ??
-        'Provider catalog hydration did not return an authoritative ready catalog',
       capabilities: { ...liveProvider.capabilities, teamLaunch: false },
       ...displayPair,
       modelCatalog: retainedCatalog ? { ...retainedCatalog, status: 'stale' } : null,
-      modelCatalogRefreshState: retainedCatalog
-        ? 'error'
-        : hydratedProvider.modelCatalogRefreshState,
-      runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(
-        liveProvider.runtimeCapabilities,
-        hydratedProvider.runtimeCapabilities
-      ),
-      subscriptionRateLimits:
-        hydratedProvider.subscriptionRateLimits ?? liveProvider.subscriptionRateLimits ?? null,
-      externalRuntimeDiagnostics:
-        (hydratedProvider.externalRuntimeDiagnostics?.length ?? 0) > 0
-          ? hydratedProvider.externalRuntimeDiagnostics
-          : liveProvider.externalRuntimeDiagnostics,
+      modelCatalogRefreshState: 'error',
     };
   }
   const displayPair = selectProviderModelDisplayPair(hydratedProvider, liveProvider, true);
@@ -83,6 +68,19 @@ export function mergeProviderCatalogFields(
     ),
     subscriptionRateLimits:
       hydratedProvider.subscriptionRateLimits ?? liveProvider.subscriptionRateLimits ?? null,
+  };
+}
+
+export function markProviderCatalogRefreshFailed(
+  liveProvider: CliProviderStatus
+): CliProviderStatus {
+  return {
+    ...liveProvider,
+    capabilities: { ...liveProvider.capabilities, teamLaunch: false },
+    modelCatalog: liveProvider.modelCatalog
+      ? { ...liveProvider.modelCatalog, status: 'stale' }
+      : null,
+    modelCatalogRefreshState: 'error',
   };
 }
 

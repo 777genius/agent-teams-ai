@@ -215,31 +215,53 @@ describe('mergeProviderCatalogFields', () => {
   });
 
   it('preserves live status authority and its display pair across model-only hydration', () => {
-    const live = provider();
-    const merged = mergeProviderCatalogFields(
-      live,
-      provider({
-        authenticated: false,
-        authMethod: null,
-        verificationState: 'unknown',
-        statusCheckOutcome: 'model_only',
-        statusMessage: 'Catalog timeout',
-        models: ['fresh-model'],
-        modelAvailability: undefined,
-      })
-    );
+    const live = provider({
+      detailMessage: 'Live detail',
+      subscriptionRateLimits: {
+        primary: { usedPercent: 12, windowDurationMins: 300, resetsAt: 1_800 },
+        secondary: null,
+      },
+      externalRuntimeDiagnostics: [
+        { id: 'live', label: 'Live diagnostic', detected: true, statusMessage: 'Healthy' },
+      ],
+    });
+    const hydrated = provider({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      statusMessage: 'Catalog timeout',
+      detailMessage: 'Catalog-only detail',
+      backend: { kind: 'codex-native', label: 'Catalog backend' },
+      subscriptionRateLimits: {
+        primary: { usedPercent: 99, windowDurationMins: 5, resetsAt: 60 },
+        secondary: null,
+      },
+      externalRuntimeDiagnostics: [{ id: 'catalog', label: 'Catalog diagnostic', detected: false }],
+      models: ['fresh-model'],
+      modelAvailability: undefined,
+    });
+    const liveBefore = structuredClone(live);
+    const hydratedBefore = structuredClone(hydrated);
+
+    const merged = mergeProviderCatalogFields(live, hydrated);
     expect(merged).toMatchObject({
       authenticated: true,
       authMethod: 'chatgpt',
       verificationState: 'verified',
       statusCheckOutcome: 'authoritative',
       statusMessage: 'Live status',
+      detailMessage: 'Live detail',
       backend: live.backend,
       capabilities: { teamLaunch: false },
       models: ['old-model'],
       modelAvailability: live.modelAvailability,
       modelCatalog: { status: 'stale' },
+      subscriptionRateLimits: live.subscriptionRateLimits,
+      externalRuntimeDiagnostics: live.externalRuntimeDiagnostics,
     });
+    expect(live).toEqual(liveBefore);
+    expect(hydrated).toEqual(hydratedBefore);
   });
 
   it.each([
@@ -283,20 +305,25 @@ describe('mergeProviderCatalogFields', () => {
     expect(merged.capabilities.teamLaunch).toBe(false);
   });
 
-  it('canonically replaces a contradictory pair only for an authoritative exact catalog', () => {
-    const merged = mergeProviderCatalogFields(
-      provider({ capabilities: { ...provider().capabilities, teamLaunch: false } }),
-      provider({
-        models: ['contradictory-flat-model'],
-        modelAvailability: [
-          { modelId: 'fresh-model', status: 'available' },
-          { modelId: 'contradictory-flat-model', status: 'available' },
-        ],
-      })
-    );
+  it('does not borrow launch authority from an authoritative exact catalog', () => {
+    const live = provider({ capabilities: { ...provider().capabilities, teamLaunch: false } });
+    const hydrated = provider({
+      models: ['contradictory-flat-model'],
+      modelAvailability: [
+        { modelId: 'fresh-model', status: 'available' },
+        { modelId: 'contradictory-flat-model', status: 'available' },
+      ],
+    });
+    const liveBefore = structuredClone(live);
+    const hydratedBefore = structuredClone(hydrated);
+
+    const merged = mergeProviderCatalogFields(live, hydrated);
+
     expect(merged.models).toEqual(['fresh-model']);
     expect(merged.modelAvailability).toEqual([{ modelId: 'fresh-model', status: 'available' }]);
-    expect(merged.capabilities.teamLaunch).toBe(true);
+    expect(merged.capabilities.teamLaunch).toBe(false);
+    expect(live).toEqual(liveBefore);
+    expect(hydrated).toEqual(hydratedBefore);
   });
 });
 
@@ -1939,7 +1966,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
   });
 
-  it('hydrates Anthropic subscription rate limits after the live summary status', async () => {
+  it('does not borrow Anthropic rate-limit evidence from a non-authoritative catalog result', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
 
@@ -2046,10 +2073,7 @@ describe('ClaudeMultimodelBridgeService', () => {
       authMethod: 'oauth_token',
       statusMessage: null,
       capabilities: { teamLaunch: false },
-      subscriptionRateLimits: {
-        primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: 1_800 },
-        secondary: null,
-      },
+      subscriptionRateLimits: null,
       modelCatalogRefreshState: 'error',
       modelCatalog: { status: 'stale' },
     });

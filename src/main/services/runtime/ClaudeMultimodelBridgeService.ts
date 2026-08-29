@@ -11,12 +11,15 @@ import {
   buildProviderAwareCliEnv,
   getProviderStatusStoredCredentialAllowlist,
 } from './providerAwareCliEnv';
-import { canHydrateProviderCatalog, mergeProviderCatalogFields } from './providerCatalogAuthority';
+import {
+  canHydrateProviderCatalog,
+  markProviderCatalogRefreshFailed,
+  mergeProviderCatalogFields,
+} from './providerCatalogAuthority';
 import { providerConnectionService } from './ProviderConnectionService';
 import {
   applyProviderStatusCheck,
   createDefaultProviderStatus,
-  createDegradedProviderStatus,
   createPendingProviderStatus,
   createRuntimeStatusErrorProviderStatus,
   getLegacyProviderStatusCheck,
@@ -1366,10 +1369,7 @@ export class ClaudeMultimodelBridgeService {
           if (!currentProvider) {
             return;
           }
-          providers.set(
-            liveProvider.providerId,
-            createDegradedProviderStatus(currentProvider, error)
-          );
+          providers.set(liveProvider.providerId, markProviderCatalogRefreshFailed(currentProvider));
           logger.warn(
             `Provider catalog hydration failed for ${liveProvider.providerId}: ${
               error instanceof Error ? error.message : String(error)
@@ -1534,19 +1534,14 @@ export class ClaudeMultimodelBridgeService {
               mergeProviderCatalogFields(provider, hydratedProvider)
             );
           }
-          return sanitizeProviderStatusAuthority(
-            createDegradedProviderStatus(
-              provider,
-              'Project-scoped catalog hydration returned no current catalog'
-            )
-          );
+          return sanitizeProviderStatusAuthority(markProviderCatalogRefreshFailed(provider));
         } catch (error) {
           logger.warn(
             `Project-scoped provider catalog hydration failed for ${provider.providerId}: ${
               error instanceof Error ? error.message : String(error)
             }`
           );
-          return sanitizeProviderStatusAuthority(createDegradedProviderStatus(provider, error));
+          return sanitizeProviderStatusAuthority(markProviderCatalogRefreshFailed(provider));
         }
       }
       if (canHydrateProviderCatalog(provider) && onCatalogUpdate) {
@@ -1589,10 +1584,7 @@ export class ClaudeMultimodelBridgeService {
                 error instanceof Error ? error.message : String(error)
               }`
             );
-            this.notifyProviderStatus(
-              onCatalogUpdate,
-              createDegradedProviderStatus(provider, error)
-            );
+            this.notifyProviderStatus(onCatalogUpdate, markProviderCatalogRefreshFailed(provider));
           })
           .finally(() => {
             this.clearProviderStatusHydrationGeneration(

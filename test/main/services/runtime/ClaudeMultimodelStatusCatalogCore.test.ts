@@ -300,6 +300,50 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     });
   });
 
+  it('preserves authoritative live evidence when project catalog hydration times out', async () => {
+    execCliMock.mockImplementation((_binary, args) => {
+      if (!(args as string[]).includes('--summary')) {
+        return Promise.reject(new Error('Catalog request timed out'));
+      }
+      return commandResult(
+        statusPayload({
+          statusMessage: 'Live status',
+          detailMessage: 'Live detail',
+          backend: { kind: 'opencode', label: 'Live backend' },
+          modelCatalog: catalog('opencode/big-pickle'),
+          modelCatalogRefreshState: 'ready',
+        })
+      );
+    });
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+
+    const result = await new ClaudeMultimodelBridgeService().getProviderStatus(
+      '/mock/runtime',
+      'opencode',
+      undefined,
+      { projectPath: '/projects/catalog-timeout' }
+    );
+
+    expect(result).toMatchObject({
+      authenticated: true,
+      authMethod: 'builtin_free',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusMessage: 'Live status',
+      detailMessage: 'Live detail',
+      backend: { kind: 'opencode', label: 'Live backend' },
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'error',
+      modelCatalog: { status: 'stale' },
+    });
+    expect(vi.mocked(console.warn)).toHaveBeenCalledWith(
+      '[ClaudeMultimodelBridgeService]',
+      expect.stringContaining('Project-scoped provider catalog hydration failed for opencode')
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
   it.each(['unknown', 'error'] as const)(
     'preserves verified summary authority when catalog hydration verification is %s',
     async (verificationState) => {
@@ -344,7 +388,7 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
         verificationState: 'verified',
         statusCheckOutcome: 'authoritative',
         statusMessage: null,
-        detailMessage: `Hydration verification is ${verificationState}`,
+        detailMessage: null,
         capabilities: { teamLaunch: false },
         modelCatalogRefreshState: 'error',
         modelCatalog: {
