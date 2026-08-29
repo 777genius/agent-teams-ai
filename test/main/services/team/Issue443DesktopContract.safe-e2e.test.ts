@@ -1,49 +1,55 @@
 // @vitest-environment node
+import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import {
   createDegradedProviderStatus,
   mergeProviderStatusDisplayEvidence,
 } from '@main/services/runtime/providerStatusCheckContract';
+import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
-  createOpenCodeBridgeHandshakeIdentityHash,
-  OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
 } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import {
+  createOpenCodeBridgeClientIdentity,
+  OpenCodeBridgeCommandHandshakePort,
+} from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from '@main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeStateChangingBridgeCommandService } from '@main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import {
-  createOpenCodeCanonicalProjectPathFingerprint,
-  createOpenCodeExecutionProofHash,
   createOpenCodeExpectedBehaviorFingerprint,
 } from '@main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import goldenFixture from '../../../fixtures/team/opencode/expected-behavior-fingerprint-v2.json';
-
-import type {
-  OpenCodeBridgeCommandName,
-  OpenCodeBridgePeerIdentity,
-  OpenCodeBridgeResult,
-} from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import type {
   OpenCodeBridgeCommandLeaseStore,
   OpenCodeBridgeCommandLedger,
 } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
-import type { OpenCodeBridgeCommandExecutor } from '@main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import type { OpenCodeExecutionProof } from '@main/services/team/opencode/readiness/OpenCodeExecutionProof';
 import type { OpenCodeExpectedBehaviorTuple } from '@main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
-import type { OpenCodeTeamLaunchReadiness } from '@main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type { TeamRuntimeLaunchInput } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import type { CliProviderStatus } from '@shared/types';
 
-const execCli = vi.fn();
-vi.mock('@main/utils/childProcess', () => ({ execCli: (...args: unknown[]) => execCli(...args) }));
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: () => Promise.resolve({}),
 }));
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
-  buildPassiveProviderStatusCliEnv: () => ({ env: {}, connectionIssues: {}, providerArgs: [] }),
-  buildProviderAwareCliEnv: () => Promise.resolve({ env: {}, connectionIssues: {} }),
+  buildPassiveProviderStatusCliEnv: () => ({
+    env: {
+      ISSUE443_FAKE_SCENARIO: process.env.ISSUE443_FAKE_SCENARIO,
+      ISSUE443_FAKE_TRACE_FILE: process.env.ISSUE443_FAKE_TRACE_FILE,
+    },
+    connectionIssues: {},
+    providerArgs: [],
+  }),
+  buildProviderAwareCliEnv: () => Promise.resolve({
+    env: {
+      ISSUE443_FAKE_SCENARIO: process.env.ISSUE443_FAKE_SCENARIO,
+      ISSUE443_FAKE_TRACE_FILE: process.env.ISSUE443_FAKE_TRACE_FILE,
+    },
+    connectionIssues: {},
+  }),
   getAggregateProviderStatusStoredCredentialAllowlist: () => [],
   getProviderStatusStoredCredentialAllowlist: () => [],
 }));
@@ -54,52 +60,189 @@ vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
   },
 }));
 
-const PROJECT = '/disposable/project';
 const MODEL = 'deepinfra/deepseek-ai/DeepSeek-V3.2';
 const NOW = '2026-08-29T00:00:00.000Z';
-const golden = goldenFixture.cases[0];
-const { name: _goldenName, ...goldenEvidence } = golden;
+const FIXTURE_SOURCE = path.join(
+  process.cwd(),
+  'test/main/services/team/Issue443DesktopContractFakeExecutable.mjs'
+);
+const sandboxes: string[] = [];
 
-interface CapturedLaunchBody extends Record<string, unknown> {
-  runId: string;
-  expectedBehaviorFingerprint: string;
-  preconditions: {
-    expectedBehaviorFingerprint: string | null;
-    idempotencyKey: string;
-  };
+interface FakeTrace {
+  kind: 'provider-status' | 'bridge';
+  pid: number;
+  argv: string[];
+  cwd: string;
+  inputPath?: string;
+  outputPath?: string | null;
+  inputRaw?: string;
+  envelope?: Record<string, unknown> & { body: Record<string, unknown>; command: string };
+  outputRaw: string;
+  proofValidation?: {
+    ok: boolean;
+    independentlyExpected?: string;
+    membersObservedBeforeProof?: boolean;
+  } | null;
+  sideEffectCommitted?: boolean;
 }
-describe('issue #443 Desktop-owned fake E2E contract', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
 
-  it('scopes passive status/catalog to the selected provider with zero real effects', async () => {
-    const unrelatedHungProvider = deferred<never>();
-    execCli.mockImplementation((_binary, args) => {
-      const provider = providerArg(args as string[]);
-      if (provider === 'cursor') return unrelatedHungProvider.promise;
-      expect(provider).toBe('opencode');
-      return Promise.resolve(commandResult(providerPayload('opencode/big-pickle')));
-    });
+afterEach(async () => {
+  await Promise.all(sandboxes.splice(0).map((sandbox) => rm(sandbox, { recursive: true })));
+});
+
+describe('issue #443 Desktop real child-process wire contract', () => {
+  it('uses provider-scoped authoritative status through the disposable executable', async () => {
+    const fake = await createFake('valid');
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
 
     const selected = await new ClaudeMultimodelBridgeService().getProviderStatus(
-      '/fake/bridge',
+      fake.executable,
       'opencode',
       undefined,
-      { projectPath: PROJECT }
+      { projectPath: fake.project }
     );
 
     expect(selected).toMatchObject({
       providerId: 'opencode',
       statusCheckOutcome: 'authoritative',
-      modelCatalog: { defaultLaunchModel: 'opencode/big-pickle' },
+      modelCatalog: { defaultLaunchModel: MODEL },
+      capabilities: { teamLaunch: true },
     });
-    expect(execCli).toHaveBeenCalledTimes(2);
-    expect(execCli.mock.calls.every((call) => providerArg(call[1]) === 'opencode')).toBe(true);
+    const traces = await fake.traces();
+    expect(traces).toHaveLength(2);
+    expect(traces.every((trace) => trace.kind === 'provider-status')).toBe(true);
+    expect(traces.every((trace) => trace.cwd === fake.project)).toBe(true);
+    expect(traces.map((trace) => trace.argv)).toEqual([
+      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+      ['runtime', 'status', '--json', '--provider', 'opencode'],
+    ]);
+    assertProcessesExited(traces);
   });
-  it('retains a timed-out catalog for display but revokes launch authority', () => {
+
+  it('crosses the real Desktop child boundary with exact v2 proof bindings and framing', async () => {
+    const harness = await realContractHarness('valid');
+    const result = await harness.adapter.launch(launchInput('run-valid', harness.fake.project));
+
+    expect(result.teamLaunchState).toBe('clean_success');
+    expect(result.members.alice).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      runtimeAlive: true,
+    });
+    const traces = await harness.fake.traces();
+    expect(traces.map((trace) => trace.envelope?.command)).toEqual([
+      'opencode.readiness',
+      'opencode.handshake',
+      'opencode.launchTeam',
+    ]);
+    for (const trace of traces) {
+      expect(trace.kind).toBe('bridge');
+      expect(trace.cwd).toBe(harness.fake.project);
+      expect(trace.argv).toEqual([
+        'runtime',
+        'opencode-command',
+        '--json',
+        '--input',
+        trace.inputPath,
+        '--output',
+        trace.outputPath,
+      ]);
+      expect(trace.inputRaw).toBe(`${JSON.stringify(trace.envelope, null, 2)}\n`);
+      expect(trace.outputRaw).toMatch(/^\{[^\n]+\}\n$/);
+    }
+    const readiness = traces[0].envelope?.body;
+    expect(readiness).toEqual({
+      projectPath: harness.fake.project,
+      selectedModel: MODEL,
+      requireExecutionProbe: true,
+    });
+    const handshakeEnvelope = traces[1].envelope as unknown as {
+      body: {
+        requiredCommand: string;
+        expectedRunId: string;
+        expectedCapabilitySnapshotId: string;
+        expectedManifestHighWatermark: number;
+        client: { bridgeProtocol: { expectedBehaviorFingerprintSchemaVersion: number } };
+      };
+    };
+    expect(handshakeEnvelope.body).toMatchObject({
+      requiredCommand: 'opencode.launchTeam',
+      expectedRunId: 'run-valid',
+      expectedCapabilitySnapshotId: 'issue443-capability-v2',
+      expectedManifestHighWatermark: 0,
+      client: { bridgeProtocol: { expectedBehaviorFingerprintSchemaVersion: 2 } },
+    });
+    expect(JSON.parse(traces[1].outputRaw).data).toMatchObject({
+      acceptedCommands: ['opencode.launchTeam'],
+      server: {
+        peer: 'agent_teams_orchestrator',
+        bridgeProtocol: { expectedBehaviorFingerprintSchemaVersion: 2 },
+      },
+    });
+    const launch = traces[2];
+    const launchBody = launch.envelope?.body as {
+      expectedBehaviorFingerprint: string;
+      executionProof: { expectedBehaviorEvidence: OpenCodeExpectedBehaviorTuple };
+      preconditions: { expectedBehaviorFingerprint: string };
+    };
+    const independentlyExpected = launch.proofValidation?.independentlyExpected;
+    expect(independentlyExpected).toMatch(/^[0-9a-f]{64}$/);
+    expect(createOpenCodeExpectedBehaviorFingerprint(launchBody.executionProof.expectedBehaviorEvidence)).toBe(
+      independentlyExpected
+    );
+    expect(launchBody.expectedBehaviorFingerprint).toBe(independentlyExpected);
+    expect(launchBody.preconditions.expectedBehaviorFingerprint).toBe(independentlyExpected);
+    expect(JSON.parse(launch.outputRaw).data.expectedBehaviorFingerprint).toBe(independentlyExpected);
+    expect(launch.proofValidation).toEqual({
+      ok: true,
+      independentlyExpected,
+      membersObservedBeforeProof: false,
+    });
+    expect(launch.sideEffectCommitted).toBe(true);
+    assertProcessesExited(traces);
+    expect(await harness.fake.remainingBridgeFiles()).toEqual([]);
+  });
+
+  it.each([
+    ['stale readiness proof', 'stale-proof', 0],
+    ['handshake fingerprint v1', 'handshake-v1', 0],
+    ['mismatched result fingerprint echo', 'mismatch-echo', 1],
+  ] as const)('fails closed for %s', async (_label, scenario, expectedLaunches) => {
+    const harness = await realContractHarness(scenario);
+    const result = await harness.adapter.launch(launchInput(`run-${scenario}`, harness.fake.project));
+
+    expect(result.teamLaunchState).not.toBe('clean_success');
+    expect(result.members.alice).not.toMatchObject({ runtimeAlive: true, bootstrapConfirmed: true });
+    const traces = await harness.fake.traces();
+    expect(traces.filter((trace) => trace.envelope?.command === 'opencode.launchTeam')).toHaveLength(
+      expectedLaunches
+    );
+    assertProcessesExited(traces);
+  });
+
+  it('treats an unknown launch outcome as non-retryable without duplicating the side effect', async () => {
+    const harness = await realContractHarness('unknown-outcome');
+    const result = await harness.adapter.launch(launchInput('run-unknown', harness.fake.project));
+
+    expect(result.teamLaunchState).not.toBe('clean_success');
+    const traces = await harness.fake.traces();
+    const launchTraces = traces.filter(
+      (trace) => trace.envelope?.command === 'opencode.launchTeam'
+    );
+    expect(launchTraces).toHaveLength(1);
+    expect(launchTraces[0]).toMatchObject({
+      outputRaw: '',
+      sideEffectCommitted: true,
+      proofValidation: { ok: true, membersObservedBeforeProof: false },
+    });
+    expect(harness.ledger.markUnknownAfterTimeout).toHaveBeenCalledTimes(1);
+    expect(harness.ledger.begin).toHaveBeenCalledTimes(1);
+    assertProcessesExited(traces);
+    expect(await harness.fake.remainingBridgeFiles()).toEqual([]);
+  });
+
+  it('retains stale catalog display data while revoking launch authority', () => {
     const prior = providerStatus();
     const merged = mergeProviderStatusDisplayEvidence(
       createDegradedProviderStatus(prior, new Error('catalog timeout')),
@@ -117,427 +260,121 @@ describe('issue #443 Desktop-owned fake E2E contract', () => {
         .capabilities.teamLaunch
     ).toBe(false);
   });
-  it('does not let an older catalog generation overwrite the newer result', async () => {
-    const firstCatalog = deferred<ReturnType<typeof commandResult>>();
-    let summaryCalls = 0;
-    let catalogCalls = 0;
-    execCli.mockImplementation((_binary, args) => {
-      const isSummary = (args as string[]).includes('--summary');
-      if (isSummary) {
-        summaryCalls += 1;
-        return Promise.resolve(
-          commandResult(providerPayload(summaryCalls === 1 ? 'old/model' : 'new/model', false))
-        );
-      }
-      catalogCalls += 1;
-      return catalogCalls === 1
-        ? firstCatalog.promise
-        : Promise.resolve(commandResult(providerPayload('new/model')));
-    });
-    const { ClaudeMultimodelBridgeService } =
-      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
-    const service = new ClaudeMultimodelBridgeService();
-    const first = service.getProviderStatus('/fake/bridge', 'opencode', undefined, {
-      projectPath: PROJECT,
-    });
-    await vi.waitFor(() => expect(catalogCalls).toBe(1));
-    const second = service.getProviderStatus('/fake/bridge', 'opencode', undefined, {
-      projectPath: PROJECT,
-    });
-    firstCatalog.resolve(commandResult(providerPayload('old/model')));
-
-    const [oldGeneration, newGeneration] = await Promise.all([first, second]);
-    expect(oldGeneration.modelCatalog?.defaultLaunchModel).not.toBe('old/model');
-    expect(newGeneration.modelCatalog?.defaultLaunchModel).toBe('new/model');
-  });
-  it.each([
-    [
-      'missing evidence',
-      (proof: OpenCodeExecutionProof) => ({ ...proof, expectedBehaviorEvidence: undefined }),
-    ],
-    ['missing provider evidence', proofWith({ modelProviderId: undefined })],
-    ['wrong provider evidence', proofWith({ modelProviderId: 'custom' })],
-    ['missing model evidence', proofWith({ fullModelId: undefined })],
-    ['wrong model evidence', proofWith({ fullModelId: 'deepinfra/other' })],
-    ['missing project evidence', proofWith({ canonicalProjectPathFingerprint: undefined })],
-    ['wrong project evidence', proofWith({ canonicalProjectPathFingerprint: '0'.repeat(64) })],
-    ['missing digest', proofWith({ expectedBehaviorFingerprint: undefined }, false)],
-    ['wrong digest', proofWith({ expectedBehaviorFingerprint: 'f'.repeat(64) }, false)],
-    [
-      'wrong proofHash',
-      (proof: OpenCodeExecutionProof) => ({ ...proof, proofHash: '9'.repeat(64) }),
-    ],
-    [
-      'missing proofHash',
-      (proof: OpenCodeExecutionProof) => {
-        Reflect.set(proof, 'proofHash', undefined);
-        return proof;
-      },
-    ],
-  ])('blocks dispatch for %s', async (_label, changeProof) => {
-    const harness = contractHarness({ proof: changeProof(validProof()) });
-    const result = await harness.adapter.launch(launchInput('run-invalid'));
-
-    expect(result.teamLaunchState).not.toBe('clean_success');
-    expect(harness.launchCalls).toHaveLength(0);
-  });
-  it.each([
-    ['missing capability', { readinessCapability: null }],
-    ['wrong capability', { handshakeCapability: 'cap-wrong' }],
-    ['missing v2 behavior evidence', { fingerprintSchemaVersion: undefined }],
-    ['old v2 behavior evidence', { fingerprintSchemaVersion: 1 }],
-  ])('blocks state-changing dispatch for %s', async (_label, changes) => {
-    const harness = contractHarness(changes);
-    const result = await harness.adapter.launch(launchInput('run-invalid-handshake'));
-
-    expect(result.teamLaunchState).not.toBe('clean_success');
-    expect(harness.launchCalls).toHaveLength(0);
-  });
-  it('computes the shared golden and sends the valid canonical digest in both launch bindings', async () => {
-    const harness = contractHarness();
-    const result = await harness.adapter.launch(launchInput('run-valid'));
-
-    expect(result.teamLaunchState).toBe('clean_success');
-    expect(createOpenCodeExpectedBehaviorFingerprint(golden)).toBe(
-      golden.expectedBehaviorFingerprint
-    );
-    expect(golden.expectedBehaviorFingerprint).toMatch(/^[0-9a-f]{64}$/);
-    const expectedFingerprint = validProof().expectedBehaviorEvidence as {
-      expectedBehaviorFingerprint: string;
-    };
-    expect(harness.launchCalls[0]?.body.expectedBehaviorFingerprint).toBe(
-      expectedFingerprint.expectedBehaviorFingerprint
-    );
-    expect(harness.launchCalls[0]?.body.preconditions.expectedBehaviorFingerprint).toBe(
-      expectedFingerprint.expectedBehaviorFingerprint
-    );
-
-    const goldenHarness = contractHarness();
-    await expect(
-      goldenHarness.stateChanging.execute({
-        command: 'opencode.launchTeam',
-        teamName: 'golden-team',
-        runId: 'golden-run',
-        capabilitySnapshotId: 'cap-1',
-        behaviorFingerprint: golden.expectedBehaviorFingerprint,
-        body: {
-          runId: 'golden-run',
-          expectedBehaviorFingerprint: golden.expectedBehaviorFingerprint,
-        },
-        cwd: PROJECT,
-        timeoutMs: 1_000,
-      })
-    ).resolves.toMatchObject({ ok: true });
-    expect(goldenHarness.launchCalls[0]?.body.expectedBehaviorFingerprint).toBe(
-      golden.expectedBehaviorFingerprint
-    );
-    expect(goldenHarness.launchCalls[0]?.body.preconditions.expectedBehaviorFingerprint).toBe(
-      golden.expectedBehaviorFingerprint
-    );
-  });
-  it.each([
-    ['prior requestId', { secondResponseRequestId: 'request-1' }],
-    ['wrong requestId', { secondResponseRequestId: 'request-wrong' }],
-    ['different fingerprint', { secondResponseFingerprint: 'f'.repeat(64) }],
-  ])('uses fresh requestIds and rejects a second launch with %s', async (_label, changes) => {
-    const harness = contractHarness(changes);
-    expect((await harness.adapter.launch(launchInput('run-1', 'team-1'))).teamLaunchState).toBe(
-      'clean_success'
-    );
-    const second = await harness.adapter.launch(launchInput('run-2', 'team-2'));
-
-    expect(harness.launchCalls.map((call) => call.requestId)).toEqual(['request-1', 'request-2']);
-    expect(second.teamLaunchState).not.toBe('clean_success');
-  });
 });
-function contractHarness(
-  changes: {
-    proof?: OpenCodeExecutionProof;
-    readinessCapability?: string | null;
-    handshakeCapability?: string | null;
-    fingerprintSchemaVersion?: number;
-    secondResponseRequestId?: string;
-    secondResponseFingerprint?: string;
-  } = {}
-) {
-  const launchCalls: Array<{ requestId: string; body: CapturedLaunchBody }> = [];
-  const client = peer(
-    'claude_team',
-    'cap-1',
+
+async function realContractHarness(scenario: string) {
+  const fake = await createFake(scenario);
+  const bridge = new OpenCodeBridgeCommandClient({
+    binaryPath: fake.executable,
+    tempDirectory: fake.bridgeTemp,
+    requestIdFactory: sequentialIds('wire'),
+    diagnosticIdFactory: sequentialIds('diagnostic'),
+    clock: () => new Date(NOW),
+    env: {
+      PATH: '/usr/bin:/bin',
+      ISSUE443_FAKE_SCENARIO: scenario,
+      ISSUE443_FAKE_TRACE_FILE: fake.traceFile,
+    },
+  });
+  const clientIdentity = createOpenCodeBridgeClientIdentity({
+    appVersion: 'issue443-desktop-test',
+    gitSha: '825b6881db4165eee2bbb98841c3469617ee5ddd',
+    buildId: 'issue443-r141',
+  });
+  expect(clientIdentity.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion).toBe(
     OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION
   );
-  let requestNumber = 0;
-  const bridge: OpenCodeBridgeCommandExecutor = {
-    async execute<TBody, TData>(
-      command: OpenCodeBridgeCommandName,
-      body: TBody,
-      options: { requestId?: string }
-    ) {
-      if (command === 'opencode.readiness') {
-        return success(command, 'readiness-1', readiness(changes.proof ?? validProof()), {
-          capabilitySnapshotId:
-            changes.readinessCapability === undefined ? 'cap-1' : changes.readinessCapability,
-        }) as OpenCodeBridgeResult<TData>;
-      }
-      if (command !== 'opencode.launchTeam') throw new Error(`Unexpected fake command ${command}`);
-      const requestId = options.requestId ?? '';
-      const request = body as CapturedLaunchBody;
-      launchCalls.push({ requestId, body: request });
-      const callNumber = launchCalls.length;
-      return success(
-        command,
-        callNumber === 2 && changes.secondResponseRequestId
-          ? changes.secondResponseRequestId
-          : requestId,
-        launchData(
-          request,
-          callNumber === 2 && changes.secondResponseFingerprint
-            ? changes.secondResponseFingerprint
-            : request.expectedBehaviorFingerprint
-        )
-      ) as OpenCodeBridgeResult<TData>;
-    },
-  };
-  const handshakePort = {
-    async handshake(input: { expectedRunId: string | null }) {
-      const server = peer(
-        'agent_teams_orchestrator',
-        changes.handshakeCapability === undefined ? 'cap-1' : changes.handshakeCapability,
-        changes.fingerprintSchemaVersion === undefined && 'fingerprintSchemaVersion' in changes
-          ? undefined
-          : (changes.fingerprintSchemaVersion ??
-              OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION),
-        input.expectedRunId
-      );
-      const unsigned = {
-        schemaVersion: 1 as const,
-        requestId: 'handshake-1',
-        client,
-        server,
-        agreedProtocolVersion: 1,
-        acceptedCommands: ['opencode.launchTeam'] as OpenCodeBridgeCommandName[],
-        serverTime: NOW,
-      };
-      return { ...unsigned, identityHash: createOpenCodeBridgeHandshakeIdentityHash(unsigned) };
-    },
-  };
   const ledger = {
-    begin: async () => 'started' as const,
-    markCompleted: async () => undefined,
-    markFailed: async () => undefined,
-    markUnknownAfterTimeout: async () => undefined,
-  } as unknown as OpenCodeBridgeCommandLedger;
+    begin: vi.fn().mockResolvedValue('started'),
+    markCompleted: vi.fn().mockResolvedValue(undefined),
+    markFailed: vi.fn().mockResolvedValue(undefined),
+    markUnknownAfterTimeout: vi.fn().mockResolvedValue(undefined),
+  } as unknown as OpenCodeBridgeCommandLedger & Record<string, ReturnType<typeof vi.fn>>;
+  let leaseNumber = 0;
   const leaseStore = {
-    acquire: async (input: Record<string, unknown>) => ({
+    acquire: vi.fn(async (input: Record<string, unknown>) => ({
       ...input,
-      leaseId: `lease-${requestNumber + 1}`,
+      leaseId: `issue443-lease-${++leaseNumber}`,
       laneId: input.laneId ?? null,
       holderPeer: 'claude_team' as const,
       acquiredAt: NOW,
-      expiresAt: '2099-08-29T00:00:00.000Z',
+      expiresAt: '2099-01-01T00:00:00.000Z',
       state: 'active' as const,
-    }),
-    release: async () => undefined,
+    })),
+    release: vi.fn().mockResolvedValue(undefined),
   } as unknown as OpenCodeBridgeCommandLeaseStore;
   const stateChanging = new OpenCodeStateChangingBridgeCommandService({
-    expectedClientIdentity: client,
-    handshakePort,
+    expectedClientIdentity: clientIdentity,
+    handshakePort: new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 1_000 }),
     leaseStore,
     ledger,
     bridge,
-    manifestReader: {
-      async read() {
-        return { highWatermark: 0, activeRunId: null, capabilitySnapshotId: 'cap-1' };
-      },
-    },
-    requestIdFactory: () => `request-${++requestNumber}`,
+    manifestReader: { read: async () => ({ highWatermark: 0, activeRunId: null, capabilitySnapshotId: 'issue443-capability-v2' }) },
+    requestIdFactory: sequentialIds('state-change'),
+    diagnosticIdFactory: sequentialIds('state-diagnostic'),
     clock: () => new Date(NOW),
   });
-  const readinessBridge = new OpenCodeReadinessBridge(bridge, {
+  const readiness = new OpenCodeReadinessBridge(bridge, {
+    timeoutMs: 1_000,
+    launchTimeoutMs: 1_000,
     stateChangingCommands: stateChanging,
   });
+  return { fake, ledger, adapter: new OpenCodeTeamRuntimeAdapter(readiness) };
+}
+
+async function createFake(scenario: string) {
+  const sandbox = await mkdtemp(path.join(tmpdir(), 'issue443-desktop-wire-'));
+  sandboxes.push(sandbox);
+  const project = path.join(sandbox, 'project');
+  const bridgeTemp = path.join(sandbox, 'bridge-inputs');
+  const executable = path.join(sandbox, 'issue443-fake-orchestrator');
+  const traceFile = path.join(sandbox, `trace-${scenario}.ndjson`);
+  await Promise.all([mkdir(project), mkdir(bridgeTemp)]);
+  await copyFile(FIXTURE_SOURCE, executable);
+  await chmod(executable, 0o700);
+  process.env.ISSUE443_FAKE_SCENARIO = scenario;
+  process.env.ISSUE443_FAKE_TRACE_FILE = traceFile;
   return {
-    adapter: new OpenCodeTeamRuntimeAdapter(readinessBridge),
-    stateChanging,
-    launchCalls,
-  };
-}
-function validProof(): OpenCodeExecutionProof {
-  const expectedBehaviorEvidence = {
-    ...goldenEvidence,
-    canonicalProjectPathFingerprint: createOpenCodeCanonicalProjectPathFingerprint(PROJECT),
-  };
-  expectedBehaviorEvidence.expectedBehaviorFingerprint =
-    createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorEvidence);
-  const unsigned = {
-    schemaVersion: 1 as const,
-    providerId: 'opencode' as const,
-    modelId: MODEL,
-    projectPath: PROJECT,
-    profileRootKey: 'fake-profile',
-    projectBehaviorFingerprint: golden.projectBehaviorFingerprint,
-    managedConfigFingerprint: golden.effectiveConfigFingerprint,
-    managedAuthFingerprint: golden.effectiveSelectedAuthFingerprint,
-    binaryPath: '/fake/opencode',
-    binaryFingerprint: 'fake-binary',
-    opencodeVersion: '1.0.0',
-    capabilitySnapshotId: 'cap-1',
-    credentialMode: 'api' as const,
-    reusable: false,
-    verifiedAt: NOW,
-    expiresAt: '2099-08-29T00:00:00.000Z',
-    expectedBehaviorEvidence,
-  };
-  return { ...unsigned, proofHash: createOpenCodeExecutionProofHash(unsigned) };
-}
-function mutateEvidence(
-  proof: OpenCodeExecutionProof,
-  changes: Record<string, unknown>,
-  rehash = true
-): OpenCodeExecutionProof {
-  const evidence = { ...(proof.expectedBehaviorEvidence as Record<string, unknown>), ...changes };
-  if (
-    rehash &&
-    typeof evidence.modelProviderId === 'string' &&
-    typeof evidence.fullModelId === 'string'
-  ) {
-    evidence.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(
-      evidence as unknown as OpenCodeExpectedBehaviorTuple
-    );
-  }
-  const { proofHash: _old, ...unsigned } = { ...proof, expectedBehaviorEvidence: evidence };
-  return { ...unsigned, proofHash: createOpenCodeExecutionProofHash(unsigned) };
-}
-function proofWith(changes: Record<string, unknown>, rehash = true) {
-  return (proof: OpenCodeExecutionProof) => mutateEvidence(proof, changes, rehash);
-}
-function readiness(proof: OpenCodeExecutionProof): OpenCodeTeamLaunchReadiness {
-  return {
-    state: 'ready',
-    launchAllowed: true,
-    modelId: MODEL,
-    availableModels: [MODEL],
-    opencodeVersion: '1.0.0',
-    installMethod: 'unknown',
-    binaryPath: '/fake/opencode',
-    hostHealthy: true,
-    appMcpConnected: true,
-    requiredToolsPresent: true,
-    permissionBridgeReady: true,
-    runtimeStoresReady: true,
-    supportLevel: 'production_supported',
-    missing: [],
-    diagnostics: [],
-    executionProof: proof,
-    evidence: {
-      capabilitiesReady: true,
-      mcpToolProofRoute: '/experimental/tool/ids',
-      observedMcpTools: ['agent'],
-      runtimeStoreReadinessReason: null,
+    sandbox,
+    project,
+    bridgeTemp,
+    executable,
+    traceFile,
+    async traces(): Promise<FakeTrace[]> {
+      const raw = await readFile(traceFile, 'utf8');
+      return raw.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line) as FakeTrace);
     },
+    remainingBridgeFiles: () => readdir(bridgeTemp),
   };
 }
-function launchInput(runId: string, teamName = 'team-fake'): TeamRuntimeLaunchInput {
+
+function launchInput(runId: string, project: string): TeamRuntimeLaunchInput {
   return {
     runId,
-    teamName,
-    cwd: PROJECT,
+    teamName: 'issue443-fake-team',
+    cwd: project,
     providerId: 'opencode',
     model: MODEL,
     skipPermissions: true,
     previousLaunchState: null,
     expectedMembers: [
-      { name: 'alice', role: 'Developer', providerId: 'opencode', model: MODEL, cwd: PROJECT },
+      { name: 'alice', role: 'Developer', providerId: 'opencode', model: MODEL, cwd: project },
     ],
   };
 }
-function launchData(body: CapturedLaunchBody, fingerprint: string) {
-  return {
-    runId: body.runId,
-    teamLaunchState: 'ready',
-    members: {
-      alice: {
-        sessionId: 'fake-session',
-        launchState: 'confirmed_alive',
-        model: MODEL,
-        evidence: [],
-      },
-    },
-    warnings: [],
-    diagnostics: [],
-    expectedBehaviorFingerprint: fingerprint,
-    idempotencyKey: body.preconditions.idempotencyKey,
-    runtimeStoreManifestHighWatermark: 0,
-    durableCheckpoints: [
-      'required_tools_proven',
-      'delivery_ready',
-      'member_ready',
-      'run_ready',
-    ].map((name) => ({ name, observedAt: NOW })),
-  };
+
+function sequentialIds(prefix: string): () => string {
+  let number = 0;
+  return () => `${prefix}-${++number}`;
 }
-function success(
-  command: OpenCodeBridgeCommandName,
-  requestId: string,
-  data: unknown,
-  runtime: { capabilitySnapshotId?: string | null } = {}
-) {
-  return {
-    ok: true as const,
-    schemaVersion: 1 as const,
-    requestId,
-    command,
-    completedAt: NOW,
-    durationMs: 0,
-    runtime: {
-      providerId: 'opencode' as const,
-      binaryPath: '/fake/opencode',
-      binaryFingerprint: 'fake-binary',
-      version: '1.0.0',
-      capabilitySnapshotId:
-        'capabilitySnapshotId' in runtime ? (runtime.capabilitySnapshotId ?? null) : 'cap-1',
-    },
-    diagnostics: [],
-    data,
-  };
+
+function assertProcessesExited(traces: FakeTrace[]): void {
+  for (const pid of new Set(traces.map((trace) => trace.pid))) {
+    expect(() => process.kill(pid, 0)).toThrow();
+  }
 }
-function peer(
-  peerName: OpenCodeBridgePeerIdentity['peer'],
-  capabilitySnapshotId: string | null,
-  schemaVersion?: number,
-  activeRunId: string | null = null
-): OpenCodeBridgePeerIdentity {
-  return {
-    schemaVersion: 1,
-    peer: peerName,
-    appVersion: 'fake',
-    gitSha: null,
-    buildId: 'fake',
-    bridgeProtocol: {
-      minVersion: 1,
-      currentVersion: 1,
-      supportedCommands: ['opencode.launchTeam'],
-      opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
-      ...(schemaVersion === undefined
-        ? {}
-        : { expectedBehaviorFingerprintSchemaVersion: schemaVersion }),
-    },
-    runtime: {
-      providerId: 'opencode',
-      binaryPath: '/fake/opencode',
-      binaryFingerprint: 'fake-binary',
-      version: '1.0.0',
-      capabilitySnapshotId,
-      runtimeStoreManifestHighWatermark: 0,
-      activeRunId,
-    },
-    featureFlags: { opencodeTeamLaunch: true, opencodeStateChangingCommands: true },
-  };
-}
+
 function providerStatus(): CliProviderStatus {
-  return providerPayload('opencode/big-pickle') as unknown as CliProviderStatus;
-}
-function providerPayload(model: string, withCatalog = true) {
   return {
     providerId: 'opencode',
     supported: true,
@@ -548,59 +385,19 @@ function providerPayload(model: string, withCatalog = true) {
     canLoginFromUi: false,
     statusMessage: null,
     detailMessage: null,
-    selectedBackendId: 'opencode',
-    resolvedBackendId: 'opencode',
-    availableBackends: [],
-    externalRuntimeDiagnostics: [],
-    models: [model],
+    models: [MODEL],
     capabilities: { teamLaunch: true, oneShot: false, extensions: {} },
-    backend: { kind: 'opencode', label: 'OpenCode' },
-    runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'runtime' } },
-    modelCatalog: withCatalog
-      ? {
-          schemaVersion: 1,
-          providerId: 'opencode',
-          source: 'static-fallback',
-          status: 'ready',
-          fetchedAt: NOW,
-          staleAt: '2099-01-01T00:00:00.000Z',
-          defaultModelId: model,
-          defaultLaunchModel: model,
-          models: [
-            {
-              id: model,
-              launchModel: model,
-              displayName: model,
-              hidden: false,
-              supportedReasoningEfforts: [],
-              defaultReasoningEffort: null,
-              inputModalities: ['text'],
-              supportsPersonality: false,
-              isDefault: true,
-              upgrade: false,
-              source: 'static-fallback',
-            },
-          ],
-          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
-        }
-      : undefined,
-  };
-}
-function commandResult(provider: Record<string, unknown>) {
-  return {
-    stdout: JSON.stringify({ schemaVersion: 2, providers: { opencode: provider } }),
-    stderr: '',
-    exitCode: 0,
-  };
-}
-function providerArg(args: unknown): string | undefined {
-  const values = args as string[];
-  return values[values.indexOf('--provider') + 1];
-}
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'static-fallback',
+      status: 'ready',
+      fetchedAt: NOW,
+      staleAt: '2099-01-01T00:00:00.000Z',
+      defaultModelId: MODEL,
+      defaultLaunchModel: MODEL,
+      models: [],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+  } as unknown as CliProviderStatus;
 }
