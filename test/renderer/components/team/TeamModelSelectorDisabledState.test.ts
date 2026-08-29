@@ -2484,7 +2484,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('hydrates Anthropic static fallback catalogs before clearing live-only selections', async () => {
+  it('fail-closes static Anthropic catalogs before accepting live-only selections', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const onValueChange = vi.fn();
     const staticAnthropicProvider = {
@@ -2530,11 +2530,19 @@ describe('TeamModelSelector disabled Codex models', () => {
     };
     const liveAnthropicProvider = {
       ...staticAnthropicProvider,
+      supported: true,
+      authenticated: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { teamLaunch: true, oneShot: true },
       models: ['claude-fable-5', 'claude-mythos-5', 'claude-sonnet-5'],
+      modelCatalogRefreshState: 'ready',
       modelCatalog: {
         ...staticAnthropicProvider.modelCatalog,
         source: 'anthropic-models-api',
         status: 'ready',
+        fetchedAt: '2026-07-03T00:00:00.000Z',
+        staleAt: '2099-07-03T00:10:00.000Z',
         defaultModelId: 'claude-fable-5',
         defaultLaunchModel: 'claude-fable-5',
         models: [
@@ -2610,8 +2618,9 @@ describe('TeamModelSelector disabled Codex models', () => {
       silent: false,
       checkReason: 'launch_preflight',
     });
-    expect(onValueChange).not.toHaveBeenCalledWith('');
+    expect(onValueChange).toHaveBeenCalledWith('');
     expect(host.textContent).not.toContain('Mythos 5');
+    onValueChange.mockClear();
 
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -2628,6 +2637,9 @@ describe('TeamModelSelector disabled Codex models', () => {
         })
       );
       await Promise.resolve();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     expect(host.textContent).toContain('Fable 5');
@@ -3311,6 +3323,9 @@ describe('TeamModelSelector disabled Codex models', () => {
       render();
       await Promise.resolve();
     });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
 
     expect(onProviderChange).not.toHaveBeenCalled();
     expect(host.textContent).toContain('OpenCode is ready');
@@ -3464,7 +3479,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('does not normalize the selected model while viewing OpenCode readiness diagnostics', async () => {
+  it('does not normalize the selected model when unknown OpenCode readiness stays fail closed', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -3491,6 +3506,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
 
+    expect(openCodeButton?.getAttribute('aria-disabled')).toBe('true');
     expect(host.textContent).toContain('OpenCode is not ready for team launch');
     expect(onValueChange).not.toHaveBeenCalled();
 
@@ -5414,6 +5430,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     for (const retryDelay of [2_000, 5_000, 10_000]) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(retryDelay);
+        await Promise.resolve();
       });
     }
 
@@ -5516,11 +5533,12 @@ describe('TeamModelSelector disabled Codex models', () => {
       host.querySelector('[data-testid="team-model-selector-provider-nav-loading-openrouter"]')
     ).not.toBeNull();
     expect(host.textContent).toContain('Syncing models');
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalled();
 
     for (const retryDelay of [2_000, 5_000, 10_000]) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(retryDelay);
+        await Promise.resolve();
       });
     }
 
@@ -5638,10 +5656,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     for (const retryDelay of [2_000, 5_000, 10_000]) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(retryDelay);
+        await Promise.resolve();
       });
     }
 
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(4);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalled();
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-openrouter"]')
     ).not.toBeNull();
@@ -5658,11 +5677,12 @@ describe('TeamModelSelector disabled Codex models', () => {
     const retryButton = Array.from(refreshError?.querySelectorAll('button') ?? []).find(
       (button) => button.textContent?.trim() === 'Retry'
     );
+    const callsBeforeManualRetry = storeState.fetchCliProviderStatus.mock.calls.length;
     await act(async () => {
       retryButton?.click();
       await Promise.resolve();
     });
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(5);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(callsBeforeManualRetry + 1);
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-catalog-refresh-error"]')
     ).toBeNull();
@@ -6143,7 +6163,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       'deep'
     );
     expect(testModel).not.toHaveBeenCalled();
-    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledOnce();
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();

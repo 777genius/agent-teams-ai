@@ -582,6 +582,45 @@ async function flush(): Promise<void> {
   await Promise.resolve();
 }
 
+function createAuthoritativeProviderStatus(providerId: string, models: string[]) {
+  return {
+    providerId,
+    supported: true,
+    authenticated: true,
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    models,
+    modelAvailability: [],
+    modelCatalogRefreshState: 'ready',
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId,
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2026-07-20T00:00:00.000Z',
+      staleAt: '2099-07-20T00:10:00.000Z',
+      defaultModelId: models[0] ?? null,
+      defaultLaunchModel: models[0] ?? null,
+      models: models.map((model) => ({
+        id: model,
+        launchModel: model,
+        displayName: model,
+        hidden: false,
+        supportedReasoningEfforts: [],
+        defaultReasoningEffort: null,
+        inputModalities: ['text'],
+        supportsPersonality: false,
+        isDefault: false,
+        upgrade: false,
+        source: 'app-server',
+      })),
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+    canLoginFromUi: false,
+    capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+  };
+}
+
 describe('LaunchTeamDialog', () => {
   beforeEach(() => {
     vi.mocked(runProviderPrepareDiagnostics).mockReset();
@@ -591,6 +630,14 @@ describe('LaunchTeamDialog', () => {
       details: [],
       modelResultsById: {},
     });
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        createAuthoritativeProviderStatus('anthropic', ['opus', 'sonnet']),
+        createAuthoritativeProviderStatus('codex', ['gpt-5.4']),
+        createAuthoritativeProviderStatus('opencode', ['opencode/big-pickle']),
+      ],
+    };
     fetchCliProviderStatus.mockReset();
     fetchCliProviderStatus.mockImplementation(async (providerId, options) => {
       if (providerId !== 'opencode' || !options?.projectPath) {
@@ -617,6 +664,11 @@ describe('LaunchTeamDialog', () => {
             verificationState: 'verified',
             capabilities: { teamLaunch: true, oneShot: false },
           }),
+          authenticated: true,
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          statusCheckErrorCode: undefined,
+          capabilities: { teamLaunch: true, oneShot: true },
           models,
           modelCatalogRefreshState: 'ready',
           modelCatalog: {
@@ -731,6 +783,10 @@ describe('LaunchTeamDialog', () => {
       );
       await flush();
     });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+      await flush();
+    });
     const launchButton = Array.from(launchHost.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );
@@ -766,6 +822,10 @@ describe('LaunchTeamDialog', () => {
           onOpenTeam: vi.fn(),
         })
       );
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
       await flush();
     });
     const createButton = Array.from(createHost.querySelectorAll('button')).find((button) =>
@@ -1356,6 +1416,7 @@ describe('LaunchTeamDialog', () => {
       flavor: 'agent_teams_orchestrator',
       providers: [
         {
+          ...createAuthoritativeProviderStatus('codex', ['gpt-5.4']),
           providerId: 'codex',
           supported: true,
           authenticated: true,
@@ -1366,6 +1427,7 @@ describe('LaunchTeamDialog', () => {
           capabilities: { teamLaunch: true, oneShot: true },
         },
         {
+          ...createAuthoritativeProviderStatus('anthropic', ['sonnet']),
           providerId: 'anthropic',
           supported: true,
           authenticated: true,
@@ -2567,7 +2629,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('keeps the in-flight OpenCode preflight result when live catalog expands during rerender', async () => {
+  it('refreshes OpenCode preflight when a checking catalog becomes authoritative', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -2578,22 +2640,35 @@ describe('LaunchTeamDialog', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'verified',
           statusMessage: 'warming up',
           detailMessage: 'catalog still loading',
           models: ['opencode/minimax-m2.5-free'],
+          modelCatalogRefreshState: 'loading',
           modelCatalog: {
-            source: 'live',
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
             status: 'checking',
-            models: [{ id: 'opencode/minimax-m2.5-free' }],
+            fetchedAt: '2026-07-20T00:00:00.000Z',
+            staleAt: '2099-07-20T00:10:00.000Z',
+            defaultModelId: 'opencode/minimax-m2.5-free',
+            defaultLaunchModel: 'opencode/minimax-m2.5-free',
+            models: [],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
           },
           capabilities: {
             teamLaunch: true,
             oneShot: false,
           },
         },
+        createAuthoritativeProviderStatus('anthropic', ['opus']),
       ],
     } as any;
+    const projectScopeKey = getCliProviderStatusScopeKey('opencode', '/tmp/project');
+    storeState.cliProviderStatusByScope[projectScopeKey] = (storeState.cliStatus as any).providers[0];
+    fetchCliProviderStatus.mockResolvedValue(true);
 
     let resolvePrepare!: (value: {
       status: 'ready';
@@ -2647,7 +2722,7 @@ describe('LaunchTeamDialog', () => {
     const launchButtonWhileChecking = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );
-    expect(launchButtonWhileChecking?.hasAttribute('disabled')).toBe(false);
+    expect(launchButtonWhileChecking?.hasAttribute('disabled')).toBe(true);
 
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -2658,6 +2733,7 @@ describe('LaunchTeamDialog', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'verified',
           statusMessage: 'healthy',
           detailMessage: 'catalog ready',
@@ -2666,25 +2742,51 @@ describe('LaunchTeamDialog', () => {
             'opencode/qwen3.6-plus-free',
             'openrouter/google/gemma-4-26b-a4b-it',
           ],
+          modelCatalogRefreshState: 'ready',
           modelCatalog: {
-            source: 'live',
+            schemaVersion: 1,
+            providerId: 'opencode',
+            source: 'app-server',
             status: 'ready',
+            fetchedAt: '2026-07-20T00:00:00.000Z',
+            staleAt: '2099-07-20T00:10:00.000Z',
+            defaultModelId: 'opencode/minimax-m2.5-free',
+            defaultLaunchModel: 'opencode/minimax-m2.5-free',
             models: [
-              { id: 'opencode/minimax-m2.5-free' },
-              { id: 'opencode/qwen3.6-plus-free' },
-              { id: 'openrouter/google/gemma-4-26b-a4b-it' },
+              {
+                id: 'opencode/minimax-m2.5-free',
+                launchModel: 'opencode/minimax-m2.5-free',
+                displayName: 'minimax-m2.5-free',
+              },
+              {
+                id: 'opencode/qwen3.6-plus-free',
+                launchModel: 'opencode/qwen3.6-plus-free',
+                displayName: 'qwen3.6-plus-free',
+              },
+              {
+                id: 'openrouter/google/gemma-4-26b-a4b-it',
+                launchModel: 'openrouter/google/gemma-4-26b-a4b-it',
+                displayName: 'gemma-4-26b-a4b-it',
+              },
             ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
           },
           capabilities: {
             teamLaunch: true,
             oneShot: false,
           },
         },
+        createAuthoritativeProviderStatus('anthropic', ['opus']),
       ],
     } as any;
+    storeState.cliProviderStatusByScope[projectScopeKey] = (storeState.cliStatus as any).providers[0];
 
     await act(async () => {
       await renderDialog();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flush();
     });
 
     await act(async () => {
@@ -2701,7 +2803,7 @@ describe('LaunchTeamDialog', () => {
     const inFlightOpencodePrepareCalls = vi
       .mocked(runProviderPrepareDiagnostics)
       .mock.calls.filter((call) => call[0]?.providerId === 'opencode');
-    expect(inFlightOpencodePrepareCalls).toHaveLength(1);
+    expect(inFlightOpencodePrepareCalls).toHaveLength(2);
     expect(host.textContent).toContain('All selected providers are ready.');
 
     await act(async () => {
@@ -2721,22 +2823,47 @@ describe('LaunchTeamDialog', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'verified',
           statusMessage: null,
           detailMessage: null,
           models: ['ollama/llama3.2:latest', 'ollama/qwen2.5:latest'],
+          modelCatalogRefreshState: 'ready',
           modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'opencode',
             source: 'app-server',
             status: 'ready',
-            models: [{ id: 'ollama/llama3.2:latest' }, { id: 'ollama/qwen2.5:latest' }],
+            fetchedAt: '2026-07-20T00:00:00.000Z',
+            staleAt: '2099-07-20T00:10:00.000Z',
+            defaultModelId: 'ollama/llama3.2:latest',
+            defaultLaunchModel: 'ollama/llama3.2:latest',
+            models: [
+              {
+                id: 'ollama/llama3.2:latest',
+                launchModel: 'ollama/llama3.2:latest',
+                displayName: 'llama3.2:latest',
+              },
+              {
+                id: 'ollama/qwen2.5:latest',
+                launchModel: 'ollama/qwen2.5:latest',
+                displayName: 'qwen2.5:latest',
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
           },
           capabilities: {
             teamLaunch: true,
             oneShot: false,
           },
         },
+        createAuthoritativeProviderStatus('anthropic', ['sonnet']),
       ],
     } as any;
+    storeState.cliProviderStatusByScope[
+      getCliProviderStatusScopeKey('opencode', '/tmp/project')
+    ] = (storeState.cliStatus as any).providers[0];
+    fetchCliProviderStatus.mockResolvedValue(true);
     vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
       teamName: 'team-alpha',
       providerId: 'anthropic',
