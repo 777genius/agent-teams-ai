@@ -314,7 +314,7 @@ describe('reconcileCliStatus', () => {
       ...incoming.providers[1],
       authenticated: false,
       authMethod: null,
-      verificationState: 'unverified',
+      verificationState: 'error',
       statusCheckOutcome: 'transient_error',
       models: [],
       modelAvailability: [],
