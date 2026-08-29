@@ -69,6 +69,42 @@ function status(overrides: Partial<CliProviderStatus> = {}): CliProviderStatus {
 }
 
 describe('resolveProjectScopedProviderStatus', () => {
+  it('revokes launch exactly at staleAt while preserving authoritative authentication', () => {
+    const scoped = status({
+      modelCatalog: {
+        ...status().modelCatalog!,
+        staleAt: '2026-08-29T00:00:00.100Z',
+      },
+    });
+
+    expect(
+      resolveProjectScopedProviderStatus('opencode', scoped, null, Date.parse('2026-08-29T00:00:00.099Z'))
+        ?.capabilities.teamLaunch
+    ).toBe(true);
+    const expired = resolveProjectScopedProviderStatus(
+      'opencode',
+      scoped,
+      null,
+      Date.parse('2026-08-29T00:00:00.100Z')
+    );
+    expect(expired).toMatchObject({
+      authenticated: true,
+      authMethod: 'builtin_free',
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+    });
+  });
+
+  it.each([undefined, 'not-a-date'])('fails closed for a %s staleAt', (staleAt) => {
+    const scoped = status({
+      modelCatalog: { ...status().modelCatalog!, staleAt: staleAt as string },
+    });
+
+    expect(resolveProjectScopedProviderStatus('opencode', scoped, null)?.capabilities.teamLaunch).toBe(
+      false
+    );
+  });
+
   it('does not reuse a global catalog before the exact project responds', () => {
     const resolved = resolveProjectScopedProviderStatus('opencode', null, status());
 
@@ -102,7 +138,9 @@ describe('resolveProjectScopedProviderStatus', () => {
       },
     });
 
-    expect(resolveProjectScopedProviderStatus('opencode', scoped, status())).toBe(scoped);
+    const resolved = resolveProjectScopedProviderStatus('opencode', scoped, status());
+    expect(resolved).toEqual(scoped);
+    expect(resolved).not.toBe(scoped);
   });
 
   it.each(['pending', 'model_only', 'transient_error'] as const)(

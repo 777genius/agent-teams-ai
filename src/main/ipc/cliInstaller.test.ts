@@ -176,6 +176,54 @@ function setupHandlers(service: CliInstallerService): ReturnType<typeof createIp
 }
 
 describe('cliInstaller IPC provider runtime scheduling', () => {
+  test('sanitizes cached status at one injected boundary time', async () => {
+    const staleAt = Date.parse('2026-08-29T00:00:00.100Z');
+    const providers = (['anthropic', 'codex'] as CliProviderId[]).map((providerId) => ({
+      ...createProviderStatus(providerId),
+      modelCatalog: {
+        ...createProviderStatus(providerId).modelCatalog!,
+        staleAt: new Date(staleAt).toISOString(),
+      },
+    }));
+    const service = createInstallerService({
+      getStatus: vi.fn(() => Promise.resolve(createCliStatus(providers))),
+    });
+    const now = vi.fn(() => staleAt - 1);
+    const harness = setupHandlers(service);
+    initializeCliInstallerHandlers(service, now);
+    const fresh = await harness.invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
+    expect(fresh.data!.providers.every((entry) => entry.capabilities.teamLaunch)).toBe(true);
+    expect(now).toHaveBeenCalledTimes(1);
+    now.mockReturnValue(staleAt);
+    const expired =
+      await harness.invoke<IpcResult<CliInstallationStatus>>(CLI_INSTALLER_GET_STATUS);
+    expect(expired.data!.providers.every((entry) => !entry.capabilities.teamLaunch)).toBe(true);
+    expect(expired.data!.authLoggedIn).toBe(true);
+    expect(expired.data!.providers.every((entry) => entry.authenticated)).toBe(true);
+  });
+
+  test('fails closed when verification returns another provider identity', async () => {
+    const service = createInstallerService({
+      verifyProviderModels: vi.fn(() => Promise.resolve(createProviderStatus('anthropic'))),
+    });
+    const { invoke } = setupHandlers(service);
+
+    const result = await invoke<IpcResult<CliProviderStatus | null>>(
+      CLI_INSTALLER_VERIFY_PROVIDER_MODELS,
+      'codex'
+    );
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        providerId: 'codex',
+        authenticated: false,
+        statusCheckOutcome: 'transient_error',
+        capabilities: { teamLaunch: false },
+      },
+    });
+  });
+
   test('runs shared provider status requests sequentially while OpenCode stays independent', async () => {
     const started: CliProviderId[] = [];
     const deferredByProvider = new Map<CliProviderId, Deferred<CliProviderStatus | null>>();

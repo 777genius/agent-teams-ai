@@ -156,7 +156,7 @@ function createTestProviderStatus(
       source: 'static-fallback',
       status: 'ready',
       fetchedAt: '2026-08-29T00:00:00.000Z',
-      staleAt: '2026-08-29T00:10:00.000Z',
+      staleAt: '2100-08-29T00:10:00.000Z',
       defaultModelId: null,
       defaultLaunchModel: null,
       models: [],
@@ -183,6 +183,44 @@ describe('CliInstallerService', () => {
       showBinaryPath: true,
     });
     service = new CliInstallerService();
+  });
+
+  it('projects cached snapshots without mutating authoritative source evidence', () => {
+    const staleAt = Date.parse('2026-08-29T00:10:00.000Z');
+    const provider = createTestProviderStatus('codex', true, 'chatgpt');
+    provider.modelCatalog = { ...provider.modelCatalog!, staleAt: new Date(staleAt).toISOString() };
+    const source = {
+      flavor: 'agent_teams_orchestrator' as const,
+      displayName: 'Runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      installed: true,
+      installedVersion: '1.0.0',
+      binaryPath: '/fake/runtime',
+      launchError: null,
+      latestVersion: null,
+      updateAvailable: false,
+      authLoggedIn: true,
+      authStatusChecking: false,
+      authMethod: 'chatgpt',
+      providers: [provider],
+    };
+    let now = staleAt - 1;
+    service = new CliInstallerService(() => now);
+    (service as unknown as { latestStatusSnapshot: typeof source }).latestStatusSnapshot = source;
+
+    expect(service.getLatestStatusSnapshot()?.providers[0].capabilities.teamLaunch).toBe(true);
+    now = staleAt;
+    const expired = service.getLatestStatusSnapshot()!;
+    expect(expired.providers[0]).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+    });
+    expect(provider.capabilities.teamLaunch).toBe(true);
+    expect(provider.modelCatalog?.status).toBe('ready');
   });
 
   describe('getStatus', () => {
@@ -499,7 +537,8 @@ describe('CliInstallerService', () => {
 
       const status = await service.getProviderStatus('codex');
 
-      expect(status).toBe(providerStatus);
+      expect(status).toEqual(providerStatus);
+      expect(status).not.toBe(providerStatus);
       expect(execCli).not.toHaveBeenCalled();
       expect(getProviderStatusSpy).toHaveBeenCalledWith(
         '/mock/agent_teams_orchestrator',

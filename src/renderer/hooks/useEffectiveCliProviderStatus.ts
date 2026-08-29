@@ -11,6 +11,10 @@ import {
   getCliProviderStatusScopeKey,
   reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
+import {
+  hasAuthoritativeProviderStatusEvidence,
+  isProviderModelCatalogExactReady,
+} from '@shared/utils/providerStatusAuthority';
 
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
@@ -22,14 +26,42 @@ export interface EffectiveCliProviderStatusSnapshot {
   codexSnapshotPending: boolean;
 }
 
+function gateProviderLaunch(provider: CliProviderStatus, now: number): CliProviderStatus {
+  return {
+    ...provider,
+    capabilities: {
+      ...provider.capabilities,
+      teamLaunch:
+        hasAuthoritativeProviderStatusEvidence(provider) &&
+        provider.authenticated === true &&
+        provider.capabilities.teamLaunch === true &&
+        isProviderModelCatalogExactReady(provider, now),
+    },
+  };
+}
+
+function gateStatusLaunch(status: CliInstallationStatus | null, now: number) {
+  return status
+    ? {
+        ...status,
+        providers: status.providers.map((provider) => gateProviderLaunch(provider, now)),
+      }
+    : null;
+}
+
 /** Resolves one exact project scope without borrowing global catalog or launch authority. */
 export function resolveProjectScopedProviderStatus(
   providerId: CliProviderId,
   scopedProviderStatus: CliProviderStatus | null,
-  globalProviderStatus: CliProviderStatus | null
+  globalProviderStatus: CliProviderStatus | null,
+  now: number = Date.now()
 ): CliProviderStatus | null {
   if (scopedProviderStatus?.providerId === providerId) {
-    return reconcileCliStatus(undefined, scopedProviderStatus);
+    const resolved = reconcileCliStatus(undefined, scopedProviderStatus);
+    return {
+      ...resolved,
+      capabilities: gateProviderLaunch(scopedProviderStatus, now).capabilities,
+    };
   }
   if (!globalProviderStatus || globalProviderStatus.providerId !== providerId) {
     return null;
@@ -56,6 +88,7 @@ export function useEffectiveCliProviderStatus(
   providerId: CliProviderId | undefined,
   options: { projectPath?: string | null } = {}
 ): EffectiveCliProviderStatusSnapshot {
+  const authorityNow = Date.now();
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const cliStatus = useStore((s) => s.cliStatus);
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
@@ -91,7 +124,7 @@ export function useEffectiveCliProviderStatus(
       codexAccount.snapshot
     );
     if (!providerId || !options.projectPath?.trim() || !withCodexSnapshot) {
-      return withCodexSnapshot;
+      return gateStatusLaunch(withCodexSnapshot, authorityNow);
     }
 
     const globalProvider = withCodexSnapshot.providers.find(
@@ -100,21 +133,28 @@ export function useEffectiveCliProviderStatus(
     const projectProvider = resolveProjectScopedProviderStatus(
       providerId,
       scopedProviderStatus,
-      globalProvider ?? null
+      globalProvider ?? null,
+      authorityNow
     );
     if (!projectProvider) {
-      return withCodexSnapshot;
+      return gateStatusLaunch(withCodexSnapshot, authorityNow);
     }
-    return {
-      ...withCodexSnapshot,
-      providers: withCodexSnapshot.providers.some((provider) => provider.providerId === providerId)
-        ? withCodexSnapshot.providers.map((provider) =>
-            provider.providerId === providerId ? projectProvider : provider
-          )
-        : [...withCodexSnapshot.providers, projectProvider],
-    };
+    return gateStatusLaunch(
+      {
+        ...withCodexSnapshot,
+        providers: withCodexSnapshot.providers.some(
+          (provider) => provider.providerId === providerId
+        )
+          ? withCodexSnapshot.providers.map((provider) =>
+              provider.providerId === providerId ? projectProvider : provider
+            )
+          : [...withCodexSnapshot.providers, projectProvider],
+      },
+      authorityNow
+    );
   }, [
     codexAccount.snapshot,
+    authorityNow,
     loadingCliStatus,
     options.projectPath,
     providerId,

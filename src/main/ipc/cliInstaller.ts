@@ -20,6 +20,10 @@ import {
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
+import {
+  hasAuthoritativeProviderStatusEvidence,
+  isProviderModelCatalogExactReady,
+} from '@shared/utils/providerStatusAuthority';
 
 import { CodexBinaryResolver } from '../services/infrastructure/codexAppServer';
 import {
@@ -44,6 +48,7 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 const logger = createLogger('IPC:cliInstaller');
 
 let service: CliInstallerService;
+let readNow: () => number = Date.now;
 const statusInFlight = new Map<CliInstallerProviderStatusMode, Promise<CliInstallationStatus>>();
 const providerStatusInFlight = new Map<string, Promise<CliProviderStatus | null>>();
 const providerRuntimeRequestTails = new Map<CliProviderId, Promise<void>>();
@@ -122,6 +127,48 @@ function getCachedStatusAuthenticatedProvider(
       (provider) => isFrontendMultimodelProviderId(provider.providerId) && provider.authenticated
     ) ?? null
   );
+}
+
+function projectProviderAuthority(provider: CliProviderStatus, now: number): CliProviderStatus {
+  const projected = sanitizeProviderStatusAuthority(structuredClone(provider));
+  const catalogFresh = isProviderModelCatalogExactReady(provider, now);
+  return {
+    ...projected,
+    modelCatalog:
+      provider.modelCatalog && !catalogFresh
+        ? { ...structuredClone(provider.modelCatalog), status: 'stale' }
+        : provider.modelCatalog && structuredClone(provider.modelCatalog),
+    modelCatalogRefreshState:
+      provider.modelCatalog && !catalogFresh ? 'error' : provider.modelCatalogRefreshState,
+    capabilities: {
+      ...projected.capabilities,
+      teamLaunch:
+        hasAuthoritativeProviderStatusEvidence(provider) &&
+        provider.authenticated === true &&
+        provider.capabilities.teamLaunch === true &&
+        catalogFresh,
+    },
+  };
+}
+
+function projectStatusAuthority(status: CliInstallationStatus, now: number): CliInstallationStatus {
+  const providers = status.providers.map((provider) => projectProviderAuthority(provider, now));
+  const authenticatedProvider =
+    status.flavor === 'agent_teams_orchestrator'
+      ? getCachedStatusAuthenticatedProvider(providers)
+      : (providers.find((provider) => provider.authenticated) ?? null);
+  return {
+    ...status,
+    providers,
+    authLoggedIn:
+      status.flavor === 'agent_teams_orchestrator'
+        ? authenticatedProvider !== null
+        : status.authLoggedIn,
+    authMethod:
+      status.flavor === 'agent_teams_orchestrator'
+        ? (authenticatedProvider?.authMethod ?? null)
+        : status.authMethod,
+  };
 }
 
 function normalizeGetStatusOptions(options: unknown): Required<CliInstallerGetStatusOptions> {
@@ -248,8 +295,12 @@ function runProviderRuntimeRequest<T>(
 /**
  * Initializes CLI installer handlers with the service instance.
  */
-export function initializeCliInstallerHandlers(installerService: CliInstallerService): void {
+export function initializeCliInstallerHandlers(
+  installerService: CliInstallerService,
+  now: () => number = Date.now
+): void {
   service = installerService;
+  readNow = now;
   resetProviderRuntimeRequestLimiter();
 }
 
@@ -295,9 +346,9 @@ async function handleGetStatus(
     if (cached && Date.now() - cached.at < STATUS_CACHE_TTL_MS) {
       if (latestSnapshot && canUseStatusForCacheKey(cacheKey, latestSnapshot)) {
         cachedStatus.set(cacheKey, { value: latestSnapshot, at: Date.now() });
-        return { success: true, data: latestSnapshot };
+        return { success: true, data: projectStatusAuthority(latestSnapshot, readNow()) };
       }
-      return { success: true, data: cached.value };
+      return { success: true, data: projectStatusAuthority(cached.value, readNow()) };
     }
 
     if (!statusInFlight.has(cacheKey)) {
@@ -330,7 +381,7 @@ async function handleGetStatus(
     }
 
     const status = await statusInFlight.get(cacheKey)!;
-    return { success: true, data: status };
+    return { success: true, data: projectStatusAuthority(status, readNow()) };
   } catch (error) {
     const msg = getErrorMessage(error);
     logger.error('Error in cliInstaller:getStatus:', msg);
@@ -357,7 +408,9 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
     const nextProviders = hasProvider
       ? cached.value.providers.map((provider) =>
           provider.providerId === providerStatus.providerId
-            ? mergeProviderStatusDisplayEvidence(providerStatus, provider)
+            ? hasAuthoritativeProviderStatusEvidence(providerStatus)
+              ? providerStatus
+              : mergeProviderStatusDisplayEvidence(providerStatus, provider)
             : provider
         )
       : [...cached.value.providers, providerStatus];
@@ -393,7 +446,7 @@ async function handleGetProviderStatus(
     const inFlight = providerStatusInFlight.get(requestKey);
     if (inFlight) {
       const status = await inFlight;
-      return { success: true, data: status };
+      return { success: true, data: status ? projectProviderAuthority(status, readNow()) : null };
     }
 
     const generation = statusCacheGeneration;
@@ -408,9 +461,7 @@ async function handleGetProviderStatus(
                 providerId,
                 new Error('Provider status response did not match the requested provider')
               )
-            : status
-              ? sanitizeProviderStatusAuthority(status)
-              : null;
+            : status;
         if (generation === statusCacheGeneration && !options.projectPath) {
           patchCachedProviderStatus(matchedStatus);
         }
@@ -424,7 +475,10 @@ async function handleGetProviderStatus(
 
     providerStatusInFlight.set(requestKey, request);
     const status = await request;
-    return { success: true, data: status };
+    return {
+      success: true,
+      data: status ? projectProviderAuthority(status, readNow()) : null,
+    };
   } catch (error) {
     const msg = getErrorMessage(error);
     logger.error(`Error in cliInstaller:getProviderStatus(${String(rawProviderId)}):`, msg);
@@ -454,10 +508,19 @@ async function handleVerifyProviderModels(
     const status = await runProviderRuntimeRequest(providerId, () =>
       currentService.verifyProviderModels(providerId)
     );
+    const matchedStatus =
+      status?.providerId === providerId
+        ? projectProviderAuthority(status, readNow())
+        : status
+          ? createRuntimeStatusErrorProviderStatus(
+              providerId,
+              new Error('Provider verification response did not match the requested provider')
+            )
+          : null;
     if (generation === statusCacheGeneration) {
-      patchCachedProviderStatus(status);
+      patchCachedProviderStatus(matchedStatus);
     }
-    return { success: true, data: status };
+    return { success: true, data: matchedStatus };
   } catch (error) {
     const msg = getErrorMessage(error);
     logger.error(`Error in cliInstaller:verifyProviderModels(${String(rawProviderId)}):`, msg);
