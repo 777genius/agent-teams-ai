@@ -948,13 +948,9 @@ export class CliInstallerService {
     providerId: CliProviderId,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
-    await resolveInteractiveShellEnvBestEffort({
-      timeoutMs: 1_500,
-      fallbackEnv: process.env,
-      background: false,
-    });
-
-    const binaryPath = await ClaudeBinaryResolver.resolve();
+    // A passive provider refresh may use only the runtime already discovered by
+    // the startup status pass. Cold discovery can invoke an interactive shell.
+    const binaryPath = this.latestStatusSnapshot?.binaryPath ?? null;
     if (!binaryPath) {
       return createRuntimeStatusErrorProviderStatus(
         providerId,
@@ -962,7 +958,7 @@ export class CliInstallerService {
       );
     }
 
-    const flavor = getConfiguredCliFlavor();
+    const flavor = this.latestStatusSnapshot?.flavor ?? getConfiguredCliFlavor();
     if (flavor !== 'agent_teams_orchestrator') {
       return createRuntimeStatusErrorProviderStatus(
         providerId,

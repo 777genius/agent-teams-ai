@@ -3,16 +3,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const execCliMock = vi.fn();
 const buildProviderAwareCliEnvMock = vi.fn();
+const buildPassiveProviderStatusCliEnvMock = vi.fn();
+const resolveInteractiveShellEnvBestEffortMock = vi.fn(() => Promise.resolve({}));
+const enrichProviderStatusMock = vi.fn((provider: unknown, _options?: unknown) =>
+  Promise.resolve(provider)
+);
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: (...args: unknown[]) => execCliMock(...args),
 }));
 
 vi.mock('@main/utils/shellEnv', () => ({
-  resolveInteractiveShellEnvBestEffort: () => Promise.resolve({}),
+  resolveInteractiveShellEnvBestEffort: () => resolveInteractiveShellEnvBestEffortMock(),
 }));
 
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
+  buildPassiveProviderStatusCliEnv: (...args: unknown[]) =>
+    buildPassiveProviderStatusCliEnvMock(...args),
   buildProviderAwareCliEnv: (...args: unknown[]) => buildProviderAwareCliEnvMock(...args),
   getAggregateProviderStatusStoredCredentialAllowlist: () => [],
   getProviderStatusStoredCredentialAllowlist: () => [],
@@ -20,7 +27,8 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
 
 vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
   providerConnectionService: {
-    enrichProviderStatus: (provider: unknown) => Promise.resolve(provider),
+    enrichProviderStatus: (...args: Parameters<typeof enrichProviderStatusMock>) =>
+      enrichProviderStatusMock(...args),
     enrichProviderStatuses: (providers: unknown) => Promise.resolve(providers),
   },
 }));
@@ -99,6 +107,55 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     vi.resetModules();
     vi.clearAllMocks();
     buildProviderAwareCliEnvMock.mockResolvedValue({ env: {}, connectionIssues: {} });
+    buildPassiveProviderStatusCliEnvMock.mockReturnValue({
+      env: {},
+      connectionIssues: {},
+      providerArgs: [],
+    });
+  });
+
+  it('keeps passive single-provider status and catalog outside launch-oriented dependencies', async () => {
+    execCliMock.mockImplementation(() =>
+      commandResult(statusPayload({ modelCatalog: catalog('model') }))
+    );
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+
+    await new ClaudeMultimodelBridgeService().getProviderStatus(
+      '/mock/runtime',
+      'opencode',
+      undefined,
+      { projectPath: '/projects/passive' }
+    );
+
+    expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+    expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
+    expect(enrichProviderStatusMock).not.toHaveBeenCalled();
+    expect(buildPassiveProviderStatusCliEnvMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ['whitespace fetchedAt', 'fetchedAt', ' 2026-08-28T00:00:00.000Z '],
+    ['whitespace staleAt', 'staleAt', ' 2100-01-01T00:00:00.000Z '],
+    ['impossible round trip', 'staleAt', '2026-02-29T00:00:00.000Z'],
+  ])('fails closed for %s catalog timestamps', async (_label, field, value) => {
+    execCliMock.mockImplementation(() =>
+      commandResult(statusPayload({ modelCatalog: { ...catalog('model'), [field]: value } }))
+    );
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+
+    const result = await new ClaudeMultimodelBridgeService().getProviderStatus(
+      '/mock/runtime',
+      'opencode'
+    );
+
+    expect(result.modelCatalog?.[field as 'fetchedAt' | 'staleAt']).toBe(value);
+    expect(result).toMatchObject({
+      authenticated: true,
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'error',
+    });
   });
 
   it('never falls back from OpenCode summary timeout to full or model inventory', async () => {

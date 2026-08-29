@@ -76,6 +76,11 @@ vi.mock('@main/services/team/cliFlavor', () => ({
 }));
 
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
+  buildPassiveProviderStatusCliEnv: vi.fn(() => ({
+    env: { HOME: '/Users/tester' },
+    connectionIssues: {},
+    providerArgs: [],
+  })),
   buildProviderAwareCliEnv: vi.fn(async () => ({
     env: { HOME: '/Users/tester' },
     connectionIssues: {},
@@ -535,16 +540,41 @@ describe('CliInstallerService', () => {
         .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
         .mockResolvedValue(providerStatus);
 
+      await service.getStatus({ providerStatusMode: 'defer' });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockClear();
+      resolveInteractiveShellEnvBestEffortMock.mockClear();
+
       const status = await service.getProviderStatus('codex');
 
       expect(status).toEqual(providerStatus);
       expect(status).not.toBe(providerStatus);
       expect(execCli).not.toHaveBeenCalled();
+      expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+      expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
       expect(getProviderStatusSpy).toHaveBeenCalledWith(
         '/mock/agent_teams_orchestrator',
         'codex',
         expect.any(Function)
       );
+    });
+
+    it('fails closed without cold runtime or shell discovery on a passive provider refresh', async () => {
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      const getProviderStatusSpy = vi.spyOn(
+        ClaudeMultimodelBridgeService.prototype,
+        'getProviderStatus'
+      );
+
+      const status = await service.getProviderStatus('codex');
+
+      expect(status).toMatchObject({
+        providerId: 'codex',
+        authenticated: false,
+        capabilities: { teamLaunch: false },
+      });
+      expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+      expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+      expect(getProviderStatusSpy).not.toHaveBeenCalled();
     });
 
     it('retries the version probe once before marking the runtime unhealthy', async () => {

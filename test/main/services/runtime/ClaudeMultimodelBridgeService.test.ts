@@ -15,6 +15,7 @@ import type { PathLike } from 'fs';
 
 const execCliMock = vi.fn();
 const buildProviderAwareCliEnvMock = vi.fn();
+const buildPassiveProviderStatusCliEnvMock = vi.fn();
 const resolveInteractiveShellEnvMock = vi.fn<() => Promise<NodeJS.ProcessEnv>>();
 const readFileMock = vi.fn<(path: PathLike, encoding: BufferEncoding) => Promise<string>>();
 const enrichProviderStatusMock = vi.fn((provider, _options?: { hydrateModelCatalog?: boolean }) =>
@@ -101,6 +102,9 @@ vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
 }));
 
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
+  buildPassiveProviderStatusCliEnv: (
+    ...args: Parameters<typeof buildPassiveProviderStatusCliEnvMock>
+  ) => buildPassiveProviderStatusCliEnvMock(...args),
   buildProviderAwareCliEnv: (...args: Parameters<typeof buildProviderAwareCliEnvMock>) =>
     buildProviderAwareCliEnvMock(...args),
   getAggregateProviderStatusStoredCredentialAllowlist: () => [
@@ -342,6 +346,16 @@ describe('ClaudeMultimodelBridgeService', () => {
           connectionIssues: {},
         })
     );
+    buildPassiveProviderStatusCliEnvMock.mockImplementation(
+      ({ providerId }: { providerId?: string } = {}) => ({
+        env: {
+          HOME: '/Users/tester',
+          ...(providerId ? { CLAUDE_CODE_ENTRY_PROVIDER: providerId } : {}),
+        },
+        connectionIssues: {},
+        providerArgs: [],
+      })
+    );
     readFileMock.mockImplementation((filePath) => {
       if (String(filePath) === path.join('/Users/tester', '.claude.json')) {
         return Promise.resolve(
@@ -509,9 +523,10 @@ describe('ClaudeMultimodelBridgeService', () => {
       capabilities: { teamLaunch: false },
     });
 
-    expect(buildProviderAwareCliEnvMock.mock.calls.every(([options]) => options.providerId)).toBe(
-      true
-    );
+    expect(
+      buildPassiveProviderStatusCliEnvMock.mock.calls.every(([options]) => options.providerId)
+    ).toBe(true);
+    expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
     vi.mocked(console.warn).mockClear();
   });
 
@@ -1273,10 +1288,7 @@ describe('ClaudeMultimodelBridgeService', () => {
         .filter((call) => call[1].join(' ').startsWith('runtime status --json --provider '))
         .map((call) => call[2]?.maxBuffer)
     ).toEqual([8 * 1024 * 1024, 8 * 1024 * 1024, 8 * 1024 * 1024]);
-    expect(enrichProviderStatusMock).toHaveBeenCalledTimes(3);
-    expect(
-      enrichProviderStatusMock.mock.calls.every((call) => call[1]?.hydrateModelCatalog === false)
-    ).toBe(true);
+    expect(enrichProviderStatusMock).not.toHaveBeenCalled();
     expect(providers.map((provider) => provider.providerId)).toEqual([
       'anthropic',
       'codex',
@@ -1450,17 +1462,16 @@ describe('ClaudeMultimodelBridgeService', () => {
       expect(hydrationState.providerStatusHydrationInFlight.size).toBe(0);
     });
 
-    const codexEnvBuilds = buildProviderAwareCliEnvMock.mock.calls.filter(
+    const codexEnvBuilds = buildPassiveProviderStatusCliEnvMock.mock.calls.filter(
       ([options]) => options.providerId === 'codex'
     );
     expect(codexEnvBuilds.length).toBeGreaterThanOrEqual(2);
     for (const [options] of codexEnvBuilds) {
       expect(options).toMatchObject({
         providerId: 'codex',
-        allowStoredApiKeyDecryption: false,
-        allowedStoredApiKeyEnvVarNames: ['OPENAI_API_KEY'],
       });
     }
+    expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
   });
 
   it('does not promote OpenCode auth from catalog hydration', async () => {
@@ -2424,7 +2435,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(hasOldCatalogUpdate).toBe(false);
   });
 
-  it('overrides provider auth status when provider-aware env reports a missing API key', async () => {
+  it('does not consult launch-environment connection issues for passive status', async () => {
     buildProviderAwareCliEnvMock.mockResolvedValue({
       env: { HOME: '/Users/tester' },
       connectionIssues: {
@@ -2457,21 +2468,17 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     expect(provider).toMatchObject({
       providerId: 'anthropic',
-      authenticated: false,
-      authMethod: null,
-      verificationState: 'error',
+      authenticated: true,
+      authMethod: 'oauth_token',
+      verificationState: 'verified',
     });
-    expect(provider.statusMessage).toContain('ANTHROPIC_API_KEY');
-    expect(buildProviderAwareCliEnvMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        providerId: 'anthropic',
-        allowStoredApiKeyDecryption: false,
-        allowedStoredApiKeyEnvVarNames: ['ANTHROPIC_AUTH_TOKEN'],
-      })
+    expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
+    expect(buildPassiveProviderStatusCliEnvMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 'anthropic' })
     );
   });
 
-  it('allows the stored Codex API key for Codex status checks', async () => {
+  it('uses only runtime-provided Codex auth evidence for passive status', async () => {
     execCliMock.mockResolvedValue({
       stdout: JSON.stringify({
         schemaVersion: 2,
@@ -2501,12 +2508,9 @@ describe('ClaudeMultimodelBridgeService', () => {
       authenticated: true,
       authMethod: 'api_key',
     });
-    expect(buildProviderAwareCliEnvMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        providerId: 'codex',
-        allowStoredApiKeyDecryption: false,
-        allowedStoredApiKeyEnvVarNames: ['OPENAI_API_KEY'],
-      })
+    expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
+    expect(buildPassiveProviderStatusCliEnvMock).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 'codex' })
     );
   });
 

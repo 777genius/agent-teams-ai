@@ -1038,7 +1038,7 @@ describe('ProviderConnectionService', () => {
     expect(verifyAnthropicApiKey).toHaveBeenCalledWith('stored-key');
   });
 
-  it('reports Anthropic API key mode as connected after direct API verification succeeds', async () => {
+  it('does not promote Anthropic launch authority after direct API verification succeeds', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
     const verifyAnthropicApiKey = vi.fn().mockResolvedValue({ state: 'valid', status: 200 });
@@ -1061,14 +1061,14 @@ describe('ProviderConnectionService', () => {
       providerId: 'anthropic',
       displayName: 'Anthropic',
       supported: true,
-      authenticated: true,
-      authMethod: 'claude.ai',
-      verificationState: 'verified',
-      statusMessage: 'Connected via Anthropic subscription',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusMessage: 'Runtime did not verify authentication',
       models: ['claude-sonnet-4-6'],
       canLoginFromUi: true,
       capabilities: {
-        teamLaunch: true,
+        teamLaunch: false,
         oneShot: true,
         extensions: { mcp: 'unsupported', skills: 'unsupported', plugins: 'unsupported' },
       },
@@ -1081,10 +1081,12 @@ describe('ProviderConnectionService', () => {
     } as never);
 
     expect(status).toMatchObject({
-      authenticated: true,
-      authMethod: 'api_key',
-      verificationState: 'verified',
-      statusMessage: 'Connected via API key',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      capabilities: { teamLaunch: false },
+      statusMessage:
+        'Anthropic API key is configured, but has not been verified by the runtime yet.',
       connection: {
         configuredAuthMode: 'api_key',
         apiKeyConfigured: true,

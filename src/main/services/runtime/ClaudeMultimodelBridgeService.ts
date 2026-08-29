@@ -8,6 +8,7 @@ import path from 'path';
 
 import { resolveGeminiRuntimeAuth } from './geminiRuntimeAuth';
 import {
+  buildPassiveProviderStatusCliEnv,
   buildProviderAwareCliEnv,
   getProviderStatusStoredCredentialAllowlist,
 } from './providerAwareCliEnv';
@@ -484,8 +485,10 @@ function mapRuntimeProviderModelCatalog(
     return null;
   }
 
-  const fetchedAt = modelCatalog.fetchedAt?.trim();
-  const staleAt = modelCatalog.staleAt?.trim();
+  // Preserve the wire value exactly. Authority parsing requires an exact UTC
+  // ISO round trip, so whitespace or normalization must not repair bad input.
+  const fetchedAt = modelCatalog.fetchedAt;
+  const staleAt = modelCatalog.staleAt;
   const source = modelCatalog.source;
   const status = modelCatalog.status;
   if (
@@ -1185,11 +1188,7 @@ export class ClaudeMultimodelBridgeService {
         capabilities: { ...mappedProvider.capabilities, teamLaunch: false },
       };
     }
-    return sanitizeProviderStatusAuthority(
-      await providerConnectionService.enrichProviderStatus(mappedProvider, {
-        hydrateModelCatalog: options.summary !== true,
-      })
-    );
+    return sanitizeProviderStatusAuthority(mappedProvider);
   }
 
   private async getProviderStatusFromScopedRuntimeStatus(
@@ -1197,7 +1196,10 @@ export class ClaudeMultimodelBridgeService {
     providerId: CliProviderId,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
-    const { env, connectionIssues } = await this.buildProviderCliEnv(binaryPath, providerId);
+    const { env, connectionIssues } = buildPassiveProviderStatusCliEnv({
+      binaryPath,
+      providerId,
+    });
     return this.getProviderStatusFromRuntimeStatusCommand(
       binaryPath,
       providerId,
@@ -1499,12 +1501,6 @@ export class ClaudeMultimodelBridgeService {
         new Error('Project-scoped provider status requires an absolute, non-root project path')
       );
     }
-
-    await resolveInteractiveShellEnvBestEffort({
-      timeoutMs: 1_500,
-      fallbackEnv: process.env,
-      background: false,
-    });
 
     const generation = this.beginProviderStatusHydration(binaryPath, [providerId], projectPath);
     let backgroundHydrationOwnsGenerationCleanup = false;

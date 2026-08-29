@@ -1392,11 +1392,9 @@ export class ProviderConnectionService {
       if (apiVerification?.state === 'valid') {
         return {
           ...provider,
-          authenticated: true,
-          authMethod: 'api_key',
           subscriptionRateLimits: null,
-          verificationState: 'verified',
-          statusMessage: 'Connected via API key',
+          statusMessage:
+            'Anthropic API key is configured, but has not been verified by the runtime yet.',
         };
       }
 
