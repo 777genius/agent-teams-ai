@@ -1746,7 +1746,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(openAiButton?.getAttribute('aria-disabled')).toBe('true');
     expect(openAiButton?.textContent).toContain('Unavailable');
     expect(bigPickleButton).not.toBeNull();
-    expect(bigPickleButton?.getAttribute('aria-disabled')).toBe('false');
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(bigPickleButton?.getAttribute('aria-disabled')).toBe('false')
+      );
+    });
 
     await act(async () => {
       openAiButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -2626,7 +2630,9 @@ describe('TeamModelSelector disabled Codex models', () => {
       silent: false,
       checkReason: 'launch_preflight',
     });
-    expect(onValueChange).toHaveBeenCalledWith('');
+    await act(async () => {
+      await vi.waitFor(() => expect(onValueChange).toHaveBeenCalledWith(''));
+    });
     expect(host.textContent).not.toContain('Mythos 5');
     onValueChange.mockClear();
 
@@ -2647,12 +2653,12 @@ describe('TeamModelSelector disabled Codex models', () => {
       await Promise.resolve();
     });
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await vi.waitFor(() => {
+        expect(host.textContent).toContain('Fable 5');
+        expect(host.textContent).toContain('Mythos 5');
+        expect(host.textContent).toContain('Sonnet 5');
+      });
     });
-
-    expect(host.textContent).toContain('Fable 5');
-    expect(host.textContent).toContain('Mythos 5');
-    expect(host.textContent).toContain('Sonnet 5');
     expect(onValueChange).not.toHaveBeenCalledWith('');
 
     await act(async () => {
@@ -2699,10 +2705,14 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(onProviderChange).not.toHaveBeenCalled();
-    const activeOpenCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('OpenCode')
-    );
-    expect(activeOpenCodeButton?.getAttribute('data-state')).toBe('active');
+    await act(async () => {
+      await vi.waitFor(() => {
+        const activeOpenCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
+          button.textContent?.includes('OpenCode')
+        );
+        expect(activeOpenCodeButton?.getAttribute('data-state')).toBe('active');
+      });
+    });
     expect(host.textContent).toContain('OpenCode is not ready for team launch');
     expect(host.textContent).toContain('OpenCode status: checking runtime');
     expect(host.textContent).toContain(
@@ -4502,13 +4512,22 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     expect(openRouterButton).toBeTruthy();
     expect(openRouterButton?.textContent).not.toContain('OpenRouter');
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(openRouterButton?.getAttribute('aria-disabled')).toBe('false')
+      );
+    });
 
     await act(async () => {
       openRouterButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
-    expect(onValueChange).toHaveBeenCalledWith('openrouter/moonshotai/kimi-k2');
+    await act(async () => {
+      await vi.waitFor(() =>
+        expect(onValueChange).toHaveBeenCalledWith('openrouter/moonshotai/kimi-k2')
+      );
+    });
 
     await act(async () => {
       root.unmount();
