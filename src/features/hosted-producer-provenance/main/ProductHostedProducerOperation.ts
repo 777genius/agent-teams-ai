@@ -1,8 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
-import type { QueryContext } from '@shared/contracts/hosted';
-
 import type { HostedProducerProvenance } from './HostedProducerProvenance';
+import type { QueryContext } from '@shared/contracts/hosted';
 
 const NONCE = /^[0-9a-f]{64}$/u;
 const PRODUCT_RUN_ID = /^run_([0-9a-f]{32})$/u;

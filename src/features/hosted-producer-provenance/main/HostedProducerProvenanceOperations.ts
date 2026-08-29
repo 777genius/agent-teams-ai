@@ -108,7 +108,7 @@ export function defaultHostedProducerProvenanceOperations(): HostedProducerProve
       const flagsSource = readFileSync(`/proc/self/fdinfo/${fd}`, 'utf8');
       const flagsMatch = /^flags:\s+([0-7]+)$/mu.exec(flagsSource);
       if (flagsMatch === null) throw new TypeError('producer-provenance-descriptor-flags');
-      const flags = Number.parseInt(flagsMatch[1]!, 8);
+      const flags = Number.parseInt(flagsMatch[1], 8);
       return Object.freeze({
         device: identity.dev.toString(),
         inode: identity.ino.toString(),

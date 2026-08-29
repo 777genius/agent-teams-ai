@@ -12,6 +12,7 @@ import {
   type HostedProducerProvenanceStream,
 } from '../contracts';
 import producerProvenanceContractArtifact from '../contracts/hosted-producer-provenance-v2.schema.json?raw';
+
 import {
   defaultHostedProducerProvenanceOperations,
   type HostedProducerDerivedIdentity,
@@ -526,7 +527,7 @@ export function parseHostedProducerProvenanceContract(
     ])
   ) as Partial<Record<HostedProducerProvenanceStream, HostedProducerProvenanceDescriptorContract>>;
   const descriptorIdentities = Object.values(parsedStreams).map(
-    (descriptor) => `${descriptor!.device}:${descriptor!.inode}`
+    (descriptor) => `${descriptor.device}:${descriptor.inode}`
   );
   if (new Set(descriptorIdentities).size !== descriptorIdentities.length) {
     throw new TypeError('producer-provenance-descriptor-alias');

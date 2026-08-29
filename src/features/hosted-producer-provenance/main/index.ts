@@ -1,9 +1,9 @@
 export {
   createBrowserHostedProducerProvenanceFromEnvironment,
   createHostedProducerProvenanceFromEnvironment,
-  parseHostedProducerProvenanceContract,
   type CreateHostedProducerProvenanceOptions,
   type HostedProducerProvenance,
+  parseHostedProducerProvenanceContract,
 } from './HostedProducerProvenance';
 export type {
   HostedProducerDerivedIdentity,
@@ -17,15 +17,15 @@ export {
   isHostedProducerProvenanceFatalError,
 } from './HostedProducerProvenanceRegistry';
 export {
-  emitProductSseWrite,
-  type ProductSseFrameIdentity,
-} from './ProductHostedProducerProvenanceEmission';
-export {
   bindProductHostedProducerInstance,
   bindProductHostedProducerOperation,
+  type ProductHostedProducerInstance,
+  type ProductHostedProducerOperation,
   productRunIdToProvenanceTeamRunId,
   requireProductHostedProducerInstance,
   requireProductHostedProducerOperation,
-  type ProductHostedProducerInstance,
-  type ProductHostedProducerOperation,
 } from './ProductHostedProducerOperation';
+export {
+  emitProductSseWrite,
+  type ProductSseFrameIdentity,
+} from './ProductHostedProducerProvenanceEmission';
