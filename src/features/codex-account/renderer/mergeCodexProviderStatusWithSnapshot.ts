@@ -221,14 +221,16 @@ export function mergeCodexProviderStatusWithSnapshot(
   };
 
   const hasStatusAuthority = hasAuthoritativeProviderStatusEvidence(provider);
-  if (hasAuthoritativeProviderLaunchEvidence(provider)) {
+  const snapshotRevokesAuthority = snapshot.launchAllowed === false;
+  const preserveProviderAuthentication = !snapshotRevokesAuthority && hasStatusAuthority;
+  if (!snapshotRevokesAuthority && hasAuthoritativeProviderLaunchEvidence(provider)) {
     return mergedProvider;
   }
 
   return {
     ...mergedProvider,
-    authenticated: hasStatusAuthority ? provider.authenticated : false,
-    authMethod: hasStatusAuthority ? provider.authMethod : null,
+    authenticated: preserveProviderAuthentication ? provider.authenticated : false,
+    authMethod: preserveProviderAuthentication ? provider.authMethod : null,
     verificationState: hasStatusAuthority
       ? provider.verificationState
       : provider.verificationState === 'error' || provider.verificationState === 'offline'
