@@ -11,7 +11,10 @@ import {
   isDynamicCodexModelCatalog,
   isUsableCodexModelCatalog,
 } from '@shared/utils/codexModelCatalog';
-import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
+import {
+  hasAuthoritativeProviderStatusEvidence,
+  selectProviderModelDisplayPair,
+} from '@shared/utils/providerStatusAuthority';
 
 import { ApiKeyService } from '../extensions/apikeys/ApiKeyService';
 import { ConfigManager } from '../infrastructure/ConfigManager';
@@ -1190,7 +1193,16 @@ export class ProviderConnectionService {
     const customProvider = this.getConfiguredCodexCustomProvider();
     if (customProvider) {
       const catalog = createCodexCustomProviderCatalog(customProvider);
-      const model = catalog.defaultLaunchModel ?? customProvider.model;
+      const catalogProvider = {
+        ...withConnection,
+        modelCatalog: catalog,
+        modelCatalogRefreshState: 'ready' as const,
+      };
+      const displayPair = selectProviderModelDisplayPair(
+        catalogProvider,
+        withConnection,
+        hasAuthoritativeProviderStatusEvidence(withConnection)
+      );
       const statusMessage =
         withConnection.statusMessage ??
         (withConnection.connection?.apiKeyConfigured
@@ -1198,8 +1210,9 @@ export class ProviderConnectionService {
           : 'Codex custom provider configured. API key is not set.');
       return {
         ...withConnection,
-        models: [model],
+        ...displayPair,
         modelCatalog: catalog,
+        modelCatalogRefreshState: 'ready',
         subscriptionRateLimits: null,
         backend: withConnection.backend
           ? {
@@ -1243,12 +1256,17 @@ export class ProviderConnectionService {
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
-      const models = isProviderModelCatalogExactReady({ ...withConnection, modelCatalog: catalog })
-        ? catalog.models
-            .filter((model) => !model.hidden)
-            .map((model) => model.launchModel.trim())
-            .filter(Boolean)
-        : withConnection.models;
+      const catalogProvider = {
+        ...withConnection,
+        modelCatalog: catalog,
+        modelCatalogRefreshState:
+          catalog.status === 'ready' ? ('ready' as const) : withConnection.modelCatalogRefreshState,
+      };
+      const displayPair = selectProviderModelDisplayPair(
+        catalogProvider,
+        withConnection,
+        hasAuthoritativeProviderStatusEvidence(withConnection)
+      );
       const reasoningEfforts = Array.from(
         new Set(
           catalog.models.flatMap<CliProviderReasoningEffort>(
@@ -1267,8 +1285,9 @@ export class ProviderConnectionService {
             };
       return {
         ...withConnection,
-        models: models.length > 0 ? models : withConnection.models,
+        ...displayPair,
         modelCatalog: catalog,
+        modelCatalogRefreshState: catalogProvider.modelCatalogRefreshState,
         runtimeCapabilities: {
           ...withConnection.runtimeCapabilities,
           modelCatalog: modelCatalogCapability,

@@ -1,5 +1,5 @@
 import {
-  hasAuthoritativeProviderLaunchEvidence,
+  hasAuthoritativeProviderStatusEvidence,
   isProviderModelCatalogExactReady,
   selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
@@ -30,20 +30,24 @@ export function mergeProviderCatalogFields(
 ): CliProviderStatus {
   const hydratedCatalog = hydratedProvider.modelCatalog;
   const authoritativeCatalogReplacement =
-    hasAuthoritativeProviderLaunchEvidence(hydratedProvider) &&
+    hydratedProvider.providerId === liveProvider.providerId &&
+    hasAuthoritativeProviderStatusEvidence(liveProvider) &&
+    hasAuthoritativeProviderStatusEvidence(hydratedProvider) &&
     isProviderModelCatalogExactReady(hydratedProvider);
-  if (hydratedProvider.providerId !== liveProvider.providerId || !authoritativeCatalogReplacement) {
-    const catalogMatchesProvider = hydratedCatalog?.providerId === liveProvider.providerId;
+  const canRestoreLaunch =
+    authoritativeCatalogReplacement &&
+    liveProvider.authenticated === true &&
+    hydratedProvider.capabilities.teamLaunch === true;
+  if (!authoritativeCatalogReplacement) {
+    const catalogMatchesProvider =
+      hydratedProvider.providerId === liveProvider.providerId &&
+      hydratedCatalog?.providerId === liveProvider.providerId;
     const retainedCatalog = catalogMatchesProvider
       ? hydratedCatalog
       : (liveProvider.modelCatalog ?? null);
     const displayPair = selectProviderModelDisplayPair(hydratedProvider, liveProvider, false);
     return {
       ...liveProvider,
-      verificationState: hydratedProvider.verificationState,
-      statusCheckOutcome: hydratedProvider.statusCheckOutcome,
-      statusCheckErrorCode: hydratedProvider.statusCheckErrorCode,
-      statusMessage: hydratedProvider.statusMessage ?? liveProvider.statusMessage,
       detailMessage:
         hydratedProvider.detailMessage ??
         hydratedProvider.statusMessage ??
@@ -70,6 +74,7 @@ export function mergeProviderCatalogFields(
   return {
     ...liveProvider,
     ...displayPair,
+    capabilities: { ...liveProvider.capabilities, teamLaunch: canRestoreLaunch },
     modelCatalog: hydratedCatalog,
     modelCatalogRefreshState: 'ready',
     runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(

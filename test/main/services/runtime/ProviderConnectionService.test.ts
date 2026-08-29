@@ -2779,7 +2779,9 @@ describe('ProviderConnectionService', () => {
       authenticated: true,
       authMethod: 'api_key',
       verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
       models: ['gpt-5.4'],
+      modelAvailability: [{ modelId: 'gpt-5.4', status: 'available' }],
       subscriptionRateLimits: {
         primary: null,
         secondary: null,
@@ -2802,6 +2804,7 @@ describe('ProviderConnectionService', () => {
 
     expect(directCatalog).not.toHaveBeenCalled();
     expect(enriched.models).toEqual(['gateway-codex-model']);
+    expect(enriched.modelAvailability).toEqual([]);
     expect(enriched.modelCatalog?.defaultLaunchModel).toBe('gateway-codex-model');
     expect(enriched.modelCatalog?.models).toHaveLength(1);
     expect(enriched.modelCatalog?.models[0]).toMatchObject({
@@ -2815,6 +2818,19 @@ describe('ProviderConnectionService', () => {
     expect(enriched.runtimeCapabilities?.modelCatalog).toEqual({
       dynamic: false,
       source: 'static-fallback',
+    });
+
+    const transient = await service.enrichProviderStatus({
+      ...enriched,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      models: ['retained-model'],
+      modelAvailability: [{ modelId: 'retained-model', status: 'unknown' }],
+    });
+    expect({ models: transient.models, modelAvailability: transient.modelAvailability }).toEqual({
+      models: ['retained-model'],
+      modelAvailability: [{ modelId: 'retained-model', status: 'unknown' }],
     });
   });
 

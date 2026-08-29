@@ -301,7 +301,7 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
   });
 
   it.each(['unknown', 'error'] as const)(
-    'revokes verified summary authority when catalog hydration verification is %s',
+    'preserves verified summary authority when catalog hydration verification is %s',
     async (verificationState) => {
       execCliMock.mockImplementation((_binary, args) => {
         const isSummary = (args as string[]).includes('--summary');
@@ -339,11 +339,11 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       );
 
       expect(result).toMatchObject({
-        authenticated: false,
-        authMethod: null,
-        verificationState,
+        authenticated: true,
+        authMethod: 'builtin_free',
+        verificationState: 'verified',
         statusCheckOutcome: 'authoritative',
-        statusMessage: 'Hydration verification incomplete',
+        statusMessage: null,
         detailMessage: `Hydration verification is ${verificationState}`,
         capabilities: { teamLaunch: false },
         modelCatalogRefreshState: 'error',

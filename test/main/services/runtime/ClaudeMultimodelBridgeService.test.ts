@@ -116,6 +116,46 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
 }));
 
 describe('mergeProviderCatalogFields', () => {
+  const exactCatalog = (providerId: 'codex' | 'opencode' = 'codex') =>
+    ({
+      schemaVersion: 1 as const,
+      providerId,
+      source: 'app-server' as const,
+      status: 'ready' as const,
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
+      defaultModelId: 'fresh-model',
+      defaultLaunchModel: 'fresh-model',
+      models: [
+        { id: 'fresh-model', launchModel: 'fresh-model', displayName: 'Fresh model' } as never,
+      ],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    }) as NonNullable<CliProviderStatus['modelCatalog']>;
+
+  const provider = (overrides: Partial<CliProviderStatus> = {}): CliProviderStatus => ({
+    providerId: 'codex',
+    displayName: 'Codex',
+    supported: true,
+    authenticated: true,
+    authMethod: 'chatgpt',
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    statusMessage: 'Live status',
+    models: ['old-model'],
+    modelAvailability: [{ modelId: 'old-model', status: 'available' }],
+    modelCatalog: exactCatalog(),
+    modelCatalogRefreshState: 'ready',
+    backend: { kind: 'codex-native', label: 'Live backend' },
+    runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+    canLoginFromUi: false,
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: createDefaultCliExtensionCapabilities(),
+    },
+    ...overrides,
+  });
+
   it('replaces obsolete model evidence with intentionally empty authoritative hydrated arrays', () => {
     const hydratedCatalog = {
       schemaVersion: 1 as const,
@@ -171,6 +211,91 @@ describe('mergeProviderCatalogFields', () => {
     expect(merged.modelCatalog).toBe(hydratedCatalog);
     expect(merged.modelCatalogRefreshState).toBe('ready');
     expect(merged.authenticated).toBe(true);
+    expect(merged.capabilities.teamLaunch).toBe(true);
+  });
+
+  it('preserves live status authority and its display pair across model-only hydration', () => {
+    const live = provider();
+    const merged = mergeProviderCatalogFields(
+      live,
+      provider({
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'model_only',
+        statusMessage: 'Catalog timeout',
+        models: ['fresh-model'],
+        modelAvailability: undefined,
+      })
+    );
+    expect(merged).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusMessage: 'Live status',
+      backend: live.backend,
+      capabilities: { teamLaunch: false },
+      models: ['old-model'],
+      modelAvailability: live.modelAvailability,
+      modelCatalog: { status: 'stale' },
+    });
+  });
+
+  it.each([
+    ['new models without availability', { models: ['fresh-model'], modelAvailability: undefined }],
+    ['new availability without models', { models: undefined, modelAvailability: [] }],
+  ])('retains both old display fields for %s', (_label, displayFields) => {
+    const live = provider();
+    const merged = mergeProviderCatalogFields(
+      live,
+      provider({
+        ...displayFields,
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+      } as Partial<CliProviderStatus>)
+    );
+    expect({ models: merged.models, modelAvailability: merged.modelAvailability }).toEqual({
+      models: live.models,
+      modelAvailability: live.modelAvailability,
+    });
+  });
+
+  it('never authenticates from catalog evidence and fails closed on provider mismatch', () => {
+    const live = provider({
+      authenticated: false,
+      authMethod: null,
+      capabilities: { ...provider().capabilities, teamLaunch: false },
+    });
+    const sameProvider = mergeProviderCatalogFields(live, provider());
+    expect(sameProvider.authenticated).toBe(false);
+    expect(sameProvider.models).toEqual(['fresh-model']);
+    expect(sameProvider.capabilities.teamLaunch).toBe(false);
+
+    const merged = mergeProviderCatalogFields(
+      live,
+      provider({ providerId: 'opencode', modelCatalog: exactCatalog('opencode') })
+    );
+    expect(merged.authenticated).toBe(false);
+    expect(merged.authMethod).toBeNull();
+    expect(merged.models).toEqual(['old-model']);
+    expect(merged.modelCatalog).toMatchObject({ providerId: 'codex', status: 'stale' });
+    expect(merged.capabilities.teamLaunch).toBe(false);
+  });
+
+  it('canonically replaces a contradictory pair only for an authoritative exact catalog', () => {
+    const merged = mergeProviderCatalogFields(
+      provider({ capabilities: { ...provider().capabilities, teamLaunch: false } }),
+      provider({
+        models: ['contradictory-flat-model'],
+        modelAvailability: [
+          { modelId: 'fresh-model', status: 'available' },
+          { modelId: 'contradictory-flat-model', status: 'available' },
+        ],
+      })
+    );
+    expect(merged.models).toEqual(['fresh-model']);
+    expect(merged.modelAvailability).toEqual([{ modelId: 'fresh-model', status: 'available' }]);
     expect(merged.capabilities.teamLaunch).toBe(true);
   });
 });
@@ -1287,7 +1412,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(hydratedCodex).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
-      statusMessage: 'stale full status should not win',
+      statusMessage: null,
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'error',
       modelCatalog: { status: 'stale' },
@@ -1529,7 +1654,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
-      statusMessage: 'full status should not overwrite live summary',
+      statusMessage: null,
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'error',
       modelCatalog: {
@@ -1694,7 +1819,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(secondUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
-      statusMessage: 'fresh full status should not overwrite live summary',
+      statusMessage: null,
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'error',
       modelCatalog: {
@@ -1919,7 +2044,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: true,
       authMethod: 'oauth_token',
-      statusMessage: 'full status should not overwrite live summary',
+      statusMessage: null,
       capabilities: { teamLaunch: false },
       subscriptionRateLimits: {
         primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: 1_800 },
@@ -2058,7 +2183,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(onCodexCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
-      statusMessage: 'full status should not overwrite live summary',
+      statusMessage: null,
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'error',
       modelCatalog: { status: 'stale' },
