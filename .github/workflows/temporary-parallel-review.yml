@@ -1,0 +1,90 @@
+name: Temporary Parallel PR Review
+
+run-name: ${{ format('Parallel review of PR #{0}', inputs.pr_number || vars.REVIEW_CAMPAIGN_PR_NUMBER || '252') }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to review
+        required: true
+        default: '252'
+        type: string
+  schedule:
+    - cron: '23 * * * *'
+
+concurrency:
+  group: temporary-parallel-review-${{ github.repository }}-${{ inputs.pr_number || vars.REVIEW_CAMPAIGN_PR_NUMBER || '252' }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  resolve:
+    name: Resolve exact PR revision
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      can_run: ${{ steps.pr.outputs.can_run }}
+      head_sha: ${{ steps.pr.outputs.head_sha }}
+      pr_number: ${{ steps.pr.outputs.pr_number }}
+    steps:
+      - name: Resolve open pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_PR: ${{ inputs.pr_number || vars.REVIEW_CAMPAIGN_PR_NUMBER || '252' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${TARGET_PR}" --jq '.state')"
+          head_sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${TARGET_PR}" --jq '.head.sha')"
+          printf 'pr_number=%s\n' "$TARGET_PR" >> "$GITHUB_OUTPUT"
+          printf 'head_sha=%s\n' "$head_sha" >> "$GITHUB_OUTPUT"
+          if [ "$state" = 'open' ]; then
+            printf 'can_run=true\n' >> "$GITHUB_OUTPUT"
+          else
+            printf 'can_run=false\n' >> "$GITHUB_OUTPUT"
+            echo "PR #${TARGET_PR} is ${state}; skipping this campaign."
+          fi
+
+  review-shard:
+    name: Review shard ${{ matrix.label }}/12
+    needs: resolve
+    if: ${{ needs.resolve.outputs.can_run == 'true' }}
+    strategy:
+      fail-fast: false
+      max-parallel: 12
+      matrix:
+        include:
+          - { shard: 0, label: 1 }
+          - { shard: 1, label: 2 }
+          - { shard: 2, label: 3 }
+          - { shard: 3, label: 4 }
+          - { shard: 4, label: 5 }
+          - { shard: 5, label: 6 }
+          - { shard: 6, label: 7 }
+          - { shard: 7, label: 8 }
+          - { shard: 8, label: 9 }
+          - { shard: 9, label: 10 }
+          - { shard: 10, label: 11 }
+          - { shard: 11, label: 12 }
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+      id-token: write
+    uses: 777genius/review-router/.github/workflows/reviewrouter-reusable.yml@913596908d9d45c32cfe85fb76eadc92b1295e11
+    with:
+      runtime_ref: 913596908d9d45c32cfe85fb76eadc92b1295e11
+      runtime_config_mode: static
+      review_action_v2_mode: disabled
+      pr_number: ${{ needs.resolve.outputs.pr_number }}
+      review_drafts: true
+      legacy_review_timeout_minutes: 180
+      max_changed_lines: '0'
+      static_runtime_env_json: ${{ format('{{"REVIEWROUTER_PATH_SHARD_INDEX":"{0}","REVIEWROUTER_PATH_SHARD_COUNT":"12","REVIEWROUTER_HEAD_SHA":"{1}","REVIEW_PROVIDERS":"codex/gpt-5.6-sol","CODEX_MODEL":"gpt-5.6-sol","CODEX_REASONING_EFFORT":"xhigh","CODEX_AGENTIC_CONTEXT":"true","REVIEWROUTER_FORK_AGENTIC_SANDBOX":"true","PROVIDER_LIMIT":"1","PROVIDER_RETRIES":"1","PROVIDER_MAX_PARALLEL":"3","INLINE_MAX_COMMENTS":"500","INLINE_MIN_SEVERITY":"minor","INCREMENTAL_ENABLED":"false","REVIEW_THREAD_LIFECYCLE":"off","REVIEW_ROUTER_PROGRESS_COMMENTS":"never","UPDATE_PR_DESCRIPTION":"false","SKIP_TRIVIAL_CHANGES":"false","SKIP_DEPENDENCY_UPDATES":"false","SKIP_DOCUMENTATION_ONLY":"false","SKIP_FORMATTING_ONLY":"false","SKIP_TEST_FIXTURES":"false","SKIP_CONFIG_FILES":"false","SKIP_BUILD_ARTIFACTS":"false","FAIL_ON_SEVERITY":"off","DIFF_MAX_BYTES":"2000000","TARGET_TOKENS_PER_BATCH":"35000","RUN_TIMEOUT_SECONDS":"900"}}', matrix.shard, needs.resolve.outputs.head_sha) }}
+    secrets:
+      CODEX_AUTH_JSON: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E18_e64e449dd792733ddd3409e8bca0c1d3 }}
