@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useReducer } from 'react';
 
 import {
   isCodexAccountSnapshotPending,
@@ -17,6 +17,8 @@ import {
 } from '@shared/utils/providerStatusAuthority';
 
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
+
+const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
 
 export interface EffectiveCliProviderStatusSnapshot {
   cliStatus: CliInstallationStatus | null;
@@ -88,6 +90,7 @@ export function useEffectiveCliProviderStatus(
   providerId: CliProviderId | undefined,
   options: { projectPath?: string | null } = {}
 ): EffectiveCliProviderStatusSnapshot {
+  const [, recheckLaunchAuthority] = useReducer((tick: number) => tick + 1, 0);
   const authorityNow = Date.now();
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const cliStatus = useStore((s) => s.cliStatus);
@@ -176,6 +179,37 @@ export function useEffectiveCliProviderStatus(
         : null,
     [effectiveCliStatus?.providers, providerId]
   );
+
+  const nextCatalogStaleAt = effectiveCliStatus?.providers.reduce<number | null>(
+    (nearest, provider) => {
+      if (!provider.capabilities.teamLaunch || provider.modelCatalog?.status !== 'ready') {
+        return nearest;
+      }
+      const staleAt = Date.parse(provider.modelCatalog.staleAt);
+      return Number.isFinite(staleAt) &&
+        staleAt > authorityNow &&
+        (nearest === null || staleAt < nearest)
+        ? staleAt
+        : nearest;
+    },
+    null
+  );
+
+  useEffect(() => {
+    if (nextCatalogStaleAt === null || nextCatalogStaleAt === undefined) {
+      return;
+    }
+    const remainingMs = nextCatalogStaleAt - Date.now();
+    if (remainingMs <= 0) {
+      recheckLaunchAuthority();
+      return;
+    }
+    const timeoutId = window.setTimeout(
+      recheckLaunchAuthority,
+      Math.min(remainingMs, MAX_BROWSER_TIMEOUT_MS)
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [nextCatalogStaleAt, options.projectPath, providerId]);
 
   return {
     cliStatus: effectiveCliStatus,

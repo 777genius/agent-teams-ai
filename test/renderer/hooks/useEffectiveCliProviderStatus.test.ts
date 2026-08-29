@@ -1,7 +1,30 @@
-import { resolveProjectScopedProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
-import { describe, expect, it } from 'vitest';
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
+
+import {
+  resolveProjectScopedProviderStatus,
+  useEffectiveCliProviderStatus,
+} from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { CliProviderStatus } from '@shared/types';
+
+const storeState = {
+  appConfig: { general: { multimodelEnabled: true } },
+  cliStatus: null as unknown,
+  cliStatusLoading: false,
+  cliProviderStatusByScope: {} as Record<string, CliProviderStatus>,
+};
+
+vi.mock('@renderer/store', () => ({
+  useStore: (selector: (state: typeof storeState) => unknown) => selector(storeState),
+}));
+vi.mock('@features/codex-account/renderer', () => ({
+  useCodexAccountSnapshot: () => ({ loading: false, snapshot: null, error: null }),
+  mergeCodexCliStatusWithSnapshot: (cliStatus: unknown) => cliStatus,
+  isCodexAccountSnapshotPending: () => false,
+}));
 
 function status(overrides: Partial<CliProviderStatus> = {}): CliProviderStatus {
   return {
@@ -210,5 +233,81 @@ describe('resolveProjectScopedProviderStatus', () => {
         status({ providerId: 'anthropic' })
       )
     ).toBeNull();
+  });
+});
+
+describe('useEffectiveCliProviderStatus catalog expiry', () => {
+  const baseTime = Date.parse('2026-08-29T00:00:00.000Z');
+  let renderedLaunchReady: boolean | undefined;
+
+  function Harness({ projectPath }: { projectPath: string }) {
+    renderedLaunchReady = useEffectiveCliProviderStatus('opencode', { projectPath }).providerStatus
+      ?.capabilities.teamLaunch;
+    return null;
+  }
+
+  function setProjectCatalog(projectPath: string, staleAt: number) {
+    const provider = status({
+      modelCatalog: { ...status().modelCatalog!, staleAt: new Date(staleAt).toISOString() },
+    });
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers: [provider] };
+    storeState.cliProviderStatusByScope = {
+      [getCliProviderStatusScopeKey('opencode', projectPath)]: provider,
+    };
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    storeState.cliStatus = null;
+    storeState.cliProviderStatusByScope = {};
+    renderedLaunchReady = undefined;
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('revokes launch authority exactly when staleAt is reached', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    vi.setSystemTime(baseTime);
+    setProjectCatalog('/project', baseTime + 100);
+    const root = createRoot(document.createElement('div'));
+
+    await act(async () => root.render(createElement(Harness, { projectPath: '/project' })));
+    expect(renderedLaunchReady).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(99));
+    expect(renderedLaunchReady).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    expect(renderedLaunchReady).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it('reschedules when the project catalog changes', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    vi.setSystemTime(baseTime);
+    setProjectCatalog('/first', baseTime + 100);
+    const root = createRoot(document.createElement('div'));
+    await act(async () => root.render(createElement(Harness, { projectPath: '/first' })));
+
+    setProjectCatalog('/second', baseTime + 200);
+    await act(async () => root.render(createElement(Harness, { projectPath: '/second' })));
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    expect(renderedLaunchReady).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(100));
+    expect(renderedLaunchReady).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it('cleans up the expiry timer on unmount', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    vi.setSystemTime(baseTime);
+    setProjectCatalog('/project', baseTime + 100);
+    const root = createRoot(document.createElement('div'));
+    await act(async () => root.render(createElement(Harness, { projectPath: '/project' })));
+    expect(vi.getTimerCount()).toBe(1);
+
+    await act(async () => root.unmount());
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
