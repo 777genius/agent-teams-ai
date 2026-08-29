@@ -5,6 +5,14 @@ export interface ProviderModelDisplayPair {
   modelAvailability: CliProviderStatus['modelAvailability'];
 }
 
+function parseCanonicalUtcInstant(value: unknown): number {
+  if (typeof value !== 'string') return NaN;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value
+    ? timestamp
+    : NaN;
+}
+
 export function selectProviderModelDisplayPair(
   incoming: CliProviderStatus,
   current: CliProviderStatus | undefined,
@@ -37,8 +45,8 @@ export function isProviderModelCatalogExactReady(
   now: number = Date.now()
 ): boolean {
   const catalog = provider.modelCatalog;
-  const fetchedAt = typeof catalog?.fetchedAt === 'string' ? Date.parse(catalog.fetchedAt) : NaN;
-  const staleAt = typeof catalog?.staleAt === 'string' ? Date.parse(catalog.staleAt) : NaN;
+  const fetchedAt = parseCanonicalUtcInstant(catalog?.fetchedAt);
+  const staleAt = parseCanonicalUtcInstant(catalog?.staleAt);
   return (
     Number.isFinite(now) &&
     catalog?.schemaVersion === 1 &&
