@@ -31,6 +31,7 @@ import {
 } from '../../../../scripts/e2e/hosted-actual-owner/anchors';
 import {
   canonicalJson,
+  exactRecord,
   type FilePin,
   MATRIX_ROWS,
   MAXIMUM_FINAL_RUNS,
@@ -100,11 +101,19 @@ import {
   type WrittenFileEvidence,
 } from '../../../../scripts/e2e/hosted-actual-owner/secure-files';
 import { parseHostedTeamApprovalPage } from '../../../../src/features/team-approvals/contracts/hosted';
+import {
+  type HostedLifecycleRecentCommandStatus,
+  parseHostedLifecycleCommandPublicResult,
+  parseHostedLifecycleProvisioningStatus,
+} from '../../../../src/features/team-lifecycle/contracts/hosted-lifecycle-commands';
 
 import type { DriverResult } from '../../../../scripts/e2e/hosted-actual-owner/driver';
 import type { RunResult } from '../../../../scripts/e2e/hosted-actual-owner/run';
 
 const repositoryRoot = process.cwd();
+const RECENT_COMMANDS_CONTRACT = 'hosted-lifecycle-recent-commands-v1' as const;
+const RECENT_COMMANDS_GOLDEN_SHA256 =
+  '4a94e072a308173fb921f8644ebdc7ea94e3cd9e8d3e40cb1084da5b256b11b5' as const;
 type CompileHarnessSurfaces = DriverResult | RunResult;
 const compileHarnessSurfaces: CompileHarnessSurfaces | null = null;
 void compileHarnessSurfaces;
@@ -140,6 +149,46 @@ function closure(root: RootName, label: string) {
     fileCount: 1,
     totalBytes: 1,
   };
+}
+
+function captureRecentCommandsContract(
+  value: unknown
+): readonly HostedLifecycleRecentCommandStatus[] {
+  const capture = exactRecord(
+    value,
+    ['schemaVersion', 'contract', 'recentCommands'],
+    'hosted_lifecycle_recent_commands_capture'
+  );
+  if (
+    capture.schemaVersion !== 1 ||
+    capture.contract !== RECENT_COMMANDS_CONTRACT ||
+    !Array.isArray(capture.recentCommands) ||
+    sha256(`${JSON.stringify(capture)}\n`) !== RECENT_COMMANDS_GOLDEN_SHA256
+  ) {
+    throw new Error('hosted_lifecycle_recent_commands_contract');
+  }
+  const recentCommands = capture.recentCommands.map((entry, index) => {
+    const command = exactRecord(
+      entry,
+      ['action', 'commandId', 'result'],
+      `hosted_lifecycle_recent_command_${index}`
+    );
+    const result = parseHostedLifecycleCommandPublicResult(command.result);
+    if (
+      !result.ok ||
+      result.value.kind === 'unavailable' ||
+      result.value.action !== command.action ||
+      result.value.commandId !== command.commandId
+    ) {
+      throw new Error(`hosted_lifecycle_recent_command_result_${index}`);
+    }
+    return Object.freeze({
+      action: result.value.action,
+      commandId: result.value.commandId,
+      result: result.value,
+    });
+  });
+  return Object.freeze(recentCommands);
 }
 
 function validDescriptor(): Record<string, unknown> {
@@ -508,6 +557,78 @@ describe('P3.C exact contract', () => {
     expect(OWNED_PATHS).toHaveLength(14);
     expect(new Set(OWNED_PATHS).size).toBe(14);
     await Promise.all(OWNED_PATHS.map((path) => access(join(repositoryRoot, path))));
+  });
+
+  it('captures exactly the mirrored hosted-lifecycle-recent-commands-v1 contract', async () => {
+    const fixturePath = join(
+      repositoryRoot,
+      'test/e2e/fixtures/hosted-actual-owner/hosted-lifecycle-recent-commands-v1.json'
+    );
+    const bytes = await readFile(fixturePath);
+    const source = bytes.toString('utf8');
+    const capture = JSON.parse(source) as unknown;
+
+    expect(sha256(bytes)).toBe(RECENT_COMMANDS_GOLDEN_SHA256);
+    expect(`${JSON.stringify(capture)}\n`).toBe(source);
+
+    const recentCommands = captureRecentCommandsContract(capture);
+    expect(recentCommands).toEqual([
+      {
+        action: 'launch',
+        commandId: 'lifecycle-command_command01',
+        result: {
+          schemaVersion: 1,
+          kind: 'accepted',
+          action: 'launch',
+          commandId: 'lifecycle-command_command01',
+          workspaceId: 'workspace_11111111111111111111111111111111',
+          teamId: 'team_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+          runId: 'run_22222222222222222222222222222222',
+          resourceRevision: 'revision_admitted',
+        },
+      },
+      {
+        action: 'recover',
+        commandId: 'lifecycle-command_command02',
+        result: {
+          schemaVersion: 1,
+          kind: 'operator_required',
+          action: 'recover',
+          commandId: 'lifecycle-command_command02',
+          workspaceId: 'workspace_11111111111111111111111111111111',
+          teamId: 'team_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        },
+      },
+    ]);
+
+    const provisioningStatus = parseHostedLifecycleProvisioningStatus({
+      schemaVersion: 1,
+      kind: 'provisioning_status',
+      workspaceId: 'workspace_11111111111111111111111111111111',
+      teamId: 'team_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      deploymentId: 'deployment_contract01',
+      bootId: 'boot_contract01',
+      runId: 'run_22222222222222222222222222222222',
+      resourceRevision: 'revision_admitted',
+      availableActions: ['recover'],
+      recentCommands,
+    });
+    expect(provisioningStatus.ok).toBe(true);
+    if (!provisioningStatus.ok) throw new Error('hosted_lifecycle_recent_commands_projection');
+    expect(provisioningStatus.value.recentCommands).toEqual(recentCommands);
+
+    const schemaDrift = structuredClone(capture) as Record<string, unknown>;
+    schemaDrift.schemaVersion = 2;
+    expect(() => captureRecentCommandsContract(schemaDrift)).toThrow(
+      'hosted_lifecycle_recent_commands_contract'
+    );
+    const resultDrift = structuredClone(capture) as {
+      recentCommands: Array<{ result: Record<string, unknown> }>;
+    };
+    resultDrift.recentCommands[1].result.kind = 'started';
+    expect(() => captureRecentCommandsContract(resultDrift)).toThrow(
+      'hosted_lifecycle_recent_commands_contract'
+    );
   });
 
   it('accepts only canonical, integrated, exact-identity descriptors', async () => {
