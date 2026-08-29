@@ -9,7 +9,7 @@
       "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
       "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
       "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
-      "expectedBehaviorFingerprint": "24c90d07dabd7df2da360970e41f28657b043649c4028e50f78ec986bafaf501"
+      "expectedBehaviorFingerprint": "92489c9f3cb15f8ba41d92a0483485e5719b676801725d991822f9761b59832a"
     },
     {
       "name": "project-path-changed",
@@ -19,7 +19,7 @@
       "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
       "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
       "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
-      "expectedBehaviorFingerprint": "c3c47452569078691de8949c70bdf1a22ff43dd370c8ea697a604018624fe5c1"
+      "expectedBehaviorFingerprint": "a6982078eb671f58af0f1d8c76e2b86e8c4b27b2ce36c42f91b3a3c569d27ec6"
     },
     {
       "name": "provider-changed",
@@ -29,7 +29,7 @@
       "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
       "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
       "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
-      "expectedBehaviorFingerprint": "2a0746d10e6653823ef23f39ae054a2f08325834afae66d4426dfe1298180289"
+      "expectedBehaviorFingerprint": "a50fd395e4a9c79e04a544393fa254eaf66088033f8affc477c25f79c6a26e6f"
     },
     {
       "name": "model-changed",
@@ -39,7 +39,7 @@
       "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
       "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
       "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
-      "expectedBehaviorFingerprint": "3116a6972f07827ef1c7703f43c312408e5542f0918ed6d3f628e5edd6d31a13"
+      "expectedBehaviorFingerprint": "921c64c6e9b08f484941282fd1f3e04aae1b2b5080a6811319bfb8a9793b7c65"
     },
     {
       "name": "project-behavior-changed",
@@ -49,7 +49,7 @@
       "projectBehaviorFingerprint": "aa11809ae92bbf6a15a85ef733d61482a9e05b532670c73d1f4896ec0865d148",
       "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
       "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
-      "expectedBehaviorFingerprint": "26185690c5032744489e5f33c1216b695208295a0f843c97452354c01ad99392"
+      "expectedBehaviorFingerprint": "706ba0d808b87b948a867fd0693f2be9b0750db656e0c0f8b1b20ba0619a8541"
     },
     {
       "name": "config-changed",
@@ -59,7 +59,7 @@
       "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
       "effectiveConfigFingerprint": "ddec39a69bb07d759dbeb16b82de862ec614cdbfa95abc4d83db3c461b2dfab7",
       "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
-      "expectedBehaviorFingerprint": "1fd4ea0e5a42c17a1362635fbd4618e8bb2a6241a2702518d9efdcc5eaf12058"
+      "expectedBehaviorFingerprint": "4cab6804adcd2069fbbd656ec92c951b744408be3a63c38487843a3b8ffeee24"
     },
     {
       "name": "auth-changed",
@@ -69,7 +69,7 @@
       "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
       "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
       "effectiveSelectedAuthFingerprint": "6043cc00b51a9f79723af5c236608173271425613547dab08302310000268833",
-      "expectedBehaviorFingerprint": "b80e699c0212bc7a05bf60ecb76ec4418cac5122ca6e8ea5264bb917198c58d1"
+      "expectedBehaviorFingerprint": "e8a47b077ef01a58ba5f02cbf21682b1f97d47964d99ca6ad545284bd0269846"
     },
     {
       "name": "auth-known-absent",
@@ -79,7 +79,7 @@
       "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
       "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
       "effectiveSelectedAuthFingerprint": "9a5fd1a6c36a41f1220b95f95694fa491c40e00c5ae9895c31d4eeeb6958592b",
-      "expectedBehaviorFingerprint": "7e4f89dd8e5db191a8684221bba168bea550bd51c1188a3fd488c316dd15957e"
+      "expectedBehaviorFingerprint": "9bf60d381b22d022796bf4366037482f081ca20ea5b6516bd926e9f0f278fd37"
     }
   ]
 }

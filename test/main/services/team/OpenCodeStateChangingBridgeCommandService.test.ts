@@ -78,7 +78,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     handshakePort.nextHandshake = buildHandshake({ client: clientIdentity, server });
 
     await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
-      'expected behavior fingerprint schema version 1 is required'
+      'expected behavior fingerprint schema version 2 is required'
     );
     expect(bridge.calls).toHaveLength(0);
     await expect(ledger.list()).resolves.toEqual([]);

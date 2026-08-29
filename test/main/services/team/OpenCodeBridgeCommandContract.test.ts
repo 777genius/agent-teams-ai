@@ -312,7 +312,7 @@ describe('OpenCodeBridgeCommandContract', () => {
     });
   });
 
-  it('advertises and requires fingerprint schema v1 on both production handshake peers', () => {
+  it('advertises and requires fingerprint schema v2 on both production handshake peers', () => {
     const client = createOpenCodeBridgeClientIdentity({ appVersion: '1.0.0' });
     const server = peerIdentity('agent_teams_orchestrator');
     expect(client.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion).toBe(
@@ -335,13 +335,13 @@ describe('OpenCodeBridgeCommandContract', () => {
       expect(validate()).toEqual({
         ok: false,
         reason:
-          'OpenCode expected behavior fingerprint schema version 1 is required. Update agent_teams_orchestrator and restart the app.',
+          'OpenCode expected behavior fingerprint schema version 2 is required. Update agent_teams_orchestrator and restart the app.',
       });
-      identity.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion = 2;
+      identity.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion = 1;
       expect(validate()).toEqual({
         ok: false,
         reason:
-          'OpenCode expected behavior fingerprint schema version 1 is required. Update agent_teams_orchestrator and restart the app.',
+          'OpenCode expected behavior fingerprint schema version 2 is required. Update agent_teams_orchestrator and restart the app.',
       });
       identity.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion =
         OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION;

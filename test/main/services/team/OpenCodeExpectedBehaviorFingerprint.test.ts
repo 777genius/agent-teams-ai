@@ -29,7 +29,7 @@ describe('OpenCodeExpectedBehaviorFingerprint', () => {
   it('produces every committed issue 443 golden digest exactly', () => {
     const fixture = JSON.parse(
       readFileSync(
-        resolve('test/fixtures/team/opencode/expected-behavior-fingerprint-v1.json'),
+        resolve('test/fixtures/team/opencode/expected-behavior-fingerprint-v2.json'),
         'utf8'
       )
     ) as { cases: GoldenCase[] };
@@ -71,6 +71,16 @@ describe('OpenCodeExpectedBehaviorFingerprint', () => {
         fullModelId: 'deepinfra/deepseek-ai/DeepSeek-V3.2',
       })
     ).toThrow('proof hash mismatch');
+  });
+
+  it('rejects a schema v1 digest without compatibility fallback', () => {
+    expect(() =>
+      parseOpenCodeExpectedBehaviorEvidence({
+        ...validEvidence(),
+        expectedBehaviorFingerprint:
+          'fc23fcd9418b882aefe66d1b1a11e5fbe9ab702174c6b9be92a7832bdd2fc60d',
+      })
+    ).toThrow('digest mismatch');
   });
 
   it.each([

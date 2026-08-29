@@ -7,12 +7,12 @@ import { normalizeOpenCodeProjectIdentity } from './OpenCodeProjectIdentity';
 import type { OpenCodeExecutionProof } from './OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from './OpenCodeTeamLaunchReadiness';
 
-const EXPECTED_BEHAVIOR_DOMAIN = 'agent-teams.opencode.expected-behavior/v1';
+const EXPECTED_BEHAVIOR_DOMAIN = 'agent-teams.opencode.expected-behavior/v2';
 const LOWERCASE_SHA256_PATTERN = /^[0-9a-f]{64}$/;
 
-export const OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION = 1 as const;
+export const OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION = 2 as const;
 
-export interface OpenCodeExpectedBehaviorEvidenceV1 {
+export interface OpenCodeExpectedBehaviorEvidenceV2 {
   canonicalProjectPathFingerprint: string;
   modelProviderId: string;
   fullModelId: string;
@@ -141,9 +141,9 @@ export function createOpenCodeExecutionProofHash(
 
 export function parseOpenCodeExpectedBehaviorEvidence(
   value: unknown
-): OpenCodeExpectedBehaviorEvidenceV1 {
+): OpenCodeExpectedBehaviorEvidenceV2 {
   if (!isRecord(value)) {
-    throw new Error('OpenCode expected behavior evidence v1 object is required');
+    throw new Error('OpenCode expected behavior evidence v2 object is required');
   }
 
   const expectedKeys = [
@@ -157,7 +157,7 @@ export function parseOpenCodeExpectedBehaviorEvidence(
   ];
   const keys = Object.keys(value);
   if (keys.length !== expectedKeys.length || !expectedKeys.every((key) => keys.includes(key))) {
-    throw new Error('OpenCode expected behavior evidence v1 fields are invalid');
+    throw new Error('OpenCode expected behavior evidence v2 fields are invalid');
   }
 
   const fingerprintFields = [
@@ -185,7 +185,7 @@ export function parseOpenCodeExpectedBehaviorEvidence(
     throw new Error('OpenCode expected behavior evidence fullModelId is required');
   }
 
-  const evidence = value as unknown as OpenCodeExpectedBehaviorEvidenceV1;
+  const evidence = value as unknown as OpenCodeExpectedBehaviorEvidenceV2;
   if (createOpenCodeExpectedBehaviorFingerprint(evidence) !== evidence.expectedBehaviorFingerprint) {
     throw new Error('OpenCode expected behavior fingerprint digest mismatch');
   }
@@ -197,7 +197,7 @@ export function validateOpenCodeExpectedBehaviorEvidence(input: {
   executionProof: OpenCodeExecutionProof;
   projectPath: string;
   fullModelId: string;
-}): OpenCodeExpectedBehaviorEvidenceV1 {
+}): OpenCodeExpectedBehaviorEvidenceV2 {
   const evidence = parseOpenCodeExpectedBehaviorEvidence(input.evidence);
   const { proofHash, ...unsignedProof } = input.executionProof;
   if (!isLowercaseSha256(proofHash) || createOpenCodeExecutionProofHash(unsignedProof) !== proofHash) {
