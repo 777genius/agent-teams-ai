@@ -334,9 +334,16 @@ class RestartBridgeExecutor implements OpenCodeBridgeCommandExecutor {
   async execute<TBody, TData>(
     command: OpenCodeBridgeCommandName,
     body: TBody,
-    options: { requestId?: string }
+    options: {
+      cwd: string;
+      timeoutMs: number;
+      requestId?: string;
+      stdoutLimitBytes?: number;
+      stderrLimitBytes?: number;
+    }
   ): Promise<OpenCodeBridgeResult<TData>> {
     const outcome = this.dispatch();
+    const requestId = options.requestId ?? 'restart-request-fallback';
     const idempotencyKey = (
       body as { preconditions: { idempotencyKey: string; expectedBehaviorFingerprint: string } }
     ).preconditions.idempotencyKey;
@@ -345,7 +352,7 @@ class RestartBridgeExecutor implements OpenCodeBridgeCommandExecutor {
       return {
         ok: false,
         schemaVersion: 1,
-        requestId: options.requestId,
+        requestId,
         command,
         completedAt: '2026-04-21T12:00:01.000Z',
         durationMs: 1_000,
@@ -361,7 +368,7 @@ class RestartBridgeExecutor implements OpenCodeBridgeCommandExecutor {
     return {
       ok: true,
       schemaVersion: 1,
-      requestId: options.requestId,
+      requestId,
       command,
       completedAt: '2026-04-21T12:00:01.000Z',
       durationMs: 1_000,
