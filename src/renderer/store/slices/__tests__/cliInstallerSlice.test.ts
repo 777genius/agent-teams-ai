@@ -196,7 +196,7 @@ describe('reconcileCliStatus', () => {
     ['stale', 'anthropic'],
     ['ready', 'codex'],
   ] as const)(
-    'fails closed during cold aggregate hydration for a %s catalog owned by %s',
+    'preserves status authentication but fails launch closed for a %s catalog owned by %s',
     (catalogStatus, catalogProviderId) => {
       const incoming = createLoadingMultimodelCliStatus();
       incoming.authLoggedIn = true;
@@ -226,11 +226,11 @@ describe('reconcileCliStatus', () => {
 
       const merged = reconcileCliStatus(null, incoming);
 
-      expect(merged.authLoggedIn).toBe(false);
-      expect(merged.authMethod).toBeNull();
+      expect(merged.authLoggedIn).toBe(true);
+      expect(merged.authMethod).toBe('oauth');
       expect(merged.providers[0]).toMatchObject({
-        authenticated: false,
-        authMethod: null,
+        authenticated: true,
+        authMethod: 'oauth',
         capabilities: { teamLaunch: false },
         modelCatalog: { providerId: catalogProviderId, status: 'stale' },
       });
@@ -270,7 +270,7 @@ describe('reconcileCliStatus', () => {
         source: 'app-server',
         status: 'ready',
         fetchedAt: '2026-08-29T00:00:00.000Z',
-        staleAt: '2026-08-29T00:10:00.000Z',
+        staleAt: '2100-01-01T00:00:00.000Z',
         defaultModelId: null,
         defaultLaunchModel: null,
         models: [],

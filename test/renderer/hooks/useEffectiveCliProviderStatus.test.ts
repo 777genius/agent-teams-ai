@@ -42,7 +42,7 @@ function status(overrides: Partial<CliProviderStatus> = {}): CliProviderStatus {
       source: 'static-fallback',
       status: 'ready',
       fetchedAt: '2026-08-28T00:00:00.000Z',
-      staleAt: '2026-08-28T01:00:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
       defaultModelId: 'opencode/big-pickle',
       defaultLaunchModel: 'opencode/big-pickle',
       models: [
@@ -140,7 +140,7 @@ describe('resolveProjectScopedProviderStatus', () => {
 
       const resolved = resolveProjectScopedProviderStatus('opencode', scoped, base);
 
-      expect(resolved?.authenticated).toBe(false);
+      expect(resolved?.authenticated).toBe(true);
       expect(resolved?.capabilities.teamLaunch).toBe(false);
       expect(resolved?.modelCatalog?.status).toBe('stale');
     }

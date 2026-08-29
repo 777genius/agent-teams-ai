@@ -34,7 +34,7 @@ describe('hasAuthoritativeProviderLaunchEvidence', () => {
       source: 'app-server',
       status: 'ready',
       fetchedAt: '2026-08-29T00:00:00.000Z',
-      staleAt: '2026-08-29T00:10:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
       defaultModelId: null,
       defaultLaunchModel: null,
       models: [],

@@ -123,7 +123,7 @@ describe('mergeProviderCatalogFields', () => {
       source: 'app-server' as const,
       status: 'ready' as const,
       fetchedAt: '2026-08-29T00:00:00.000Z',
-      staleAt: '2026-08-29T00:10:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
       defaultModelId: null,
       defaultLaunchModel: null,
       models: [],
@@ -284,15 +284,12 @@ describe('ClaudeMultimodelBridgeService', () => {
         });
       }
 
-      if (normalizedArgs === 'model list --json --provider all') {
+      if (normalizedArgs === 'model list --json --provider gemini') {
         return Promise.resolve({
           stdout: JSON.stringify({
             providers: {
-              anthropic: {
-                models: [{ id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' }],
-              },
-              codex: {
-                models: [{ id: 'gpt-5-codex', label: 'GPT-5 Codex' }],
+              gemini: {
+                models: [{ id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' }],
               },
             },
           }),
@@ -1077,7 +1074,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     vi.mocked(console.warn).mockClear();
   });
 
-  it('loads frontend providers with parallel provider-scoped runtime status probes', async () => {
+  it('keeps parallel provider-scoped query strategy when the observer throws', async () => {
     const providerPayloads = {
       anthropic: {
         supported: true,
@@ -1151,7 +1148,10 @@ describe('ClaudeMultimodelBridgeService', () => {
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
     const service = new ClaudeMultimodelBridgeService();
-    const onUpdate = vi.fn();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const onUpdate = vi.fn((_providers: CliProviderStatus[]) => {
+      throw new Error('observer failed');
+    });
 
     const providers = await service.getProviderStatuses('/mock/agent_teams_orchestrator', onUpdate);
 
@@ -1254,7 +1254,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                   source: 'app-server',
                   status: 'ready',
                   fetchedAt: '2026-05-17T00:00:00.000Z',
-                  staleAt: '2026-05-17T00:10:00.000Z',
+                  staleAt: '2100-01-01T00:00:00.000Z',
                   defaultModelId: 'gpt-5.4',
                   defaultLaunchModel: 'gpt-5.4',
                   models: [
@@ -1418,7 +1418,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                   source: 'app-server',
                   status: 'ready',
                   fetchedAt: '2026-05-25T00:00:00.000Z',
-                  staleAt: '2026-05-25T00:10:00.000Z',
+                  staleAt: '2100-01-01T00:00:00.000Z',
                   defaultModelId: 'opencode/big-pickle',
                   defaultLaunchModel: 'opencode/big-pickle',
                   models: [
@@ -1534,7 +1534,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                   source: 'app-server',
                   status: 'ready',
                   fetchedAt: '2026-05-17T00:00:00.000Z',
-                  staleAt: '2026-05-17T00:10:00.000Z',
+                  staleAt: '2100-01-01T00:00:00.000Z',
                   defaultModelId: 'gpt-5.4',
                   defaultLaunchModel: 'gpt-5.4',
                   models: [],
@@ -1659,7 +1659,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                   source: 'app-server',
                   status: 'ready',
                   fetchedAt: '2026-05-17T00:01:00.000Z',
-                  staleAt: '2026-05-17T00:11:00.000Z',
+                  staleAt: '2100-01-01T00:00:00.000Z',
                   defaultModelId: 'fresh-model',
                   defaultLaunchModel: 'fresh-model',
                   models: [],
@@ -1715,7 +1715,7 @@ describe('ClaudeMultimodelBridgeService', () => {
               source: 'app-server',
               status: 'ready',
               fetchedAt: '2026-05-17T00:00:00.000Z',
-              staleAt: '2026-05-17T00:10:00.000Z',
+              staleAt: '2100-01-01T00:00:00.000Z',
               defaultModelId: 'gpt-5.4',
               defaultLaunchModel: 'gpt-5.4',
               models: [],
@@ -1782,7 +1782,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                   source: 'app-server',
                   status: 'ready',
                   fetchedAt: '2026-07-19T00:00:00.000Z',
-                  staleAt: '2026-07-19T00:10:00.000Z',
+                  staleAt: '2100-01-01T00:00:00.000Z',
                   defaultModelId,
                   defaultLaunchModel: defaultModelId,
                   models: [],
@@ -1918,7 +1918,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                   source: 'anthropic-models-api',
                   status: 'ready',
                   fetchedAt: '2026-05-17T00:00:00.000Z',
-                  staleAt: '2026-05-17T00:10:00.000Z',
+                  staleAt: '2100-01-01T00:00:00.000Z',
                   defaultModelId: 'sonnet',
                   defaultLaunchModel: 'sonnet',
                   models: [],
@@ -2076,7 +2076,7 @@ describe('ClaudeMultimodelBridgeService', () => {
               source: 'app-server',
               status: 'ready',
               fetchedAt: '2026-05-17T00:00:00.000Z',
-              staleAt: '2026-05-17T00:10:00.000Z',
+              staleAt: '2100-01-01T00:00:00.000Z',
               defaultModelId: 'gpt-5.4',
               defaultLaunchModel: 'gpt-5.4',
               models: [],
@@ -2224,7 +2224,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                   source: 'app-server',
                   status: 'ready',
                   fetchedAt: '2026-05-17T00:01:00.000Z',
-                  staleAt: '2026-05-17T00:11:00.000Z',
+                  staleAt: '2100-01-01T00:00:00.000Z',
                   defaultModelId: 'fresh-model',
                   defaultLaunchModel: 'fresh-model',
                   models: [],
@@ -2288,7 +2288,7 @@ describe('ClaudeMultimodelBridgeService', () => {
               source: 'app-server',
               status: 'ready',
               fetchedAt: '2026-05-17T00:00:00.000Z',
-              staleAt: '2026-05-17T00:10:00.000Z',
+              staleAt: '2100-01-01T00:00:00.000Z',
               defaultModelId: 'old-model',
               defaultLaunchModel: 'old-model',
               models: [],
@@ -2458,7 +2458,7 @@ describe('ClaudeMultimodelBridgeService', () => {
               source: 'anthropic-models-api',
               status: 'ready',
               fetchedAt: '2026-04-21T00:00:00.000Z',
-              staleAt: '2026-04-21T00:10:00.000Z',
+              staleAt: '2100-01-01T00:00:00.000Z',
               defaultModelId: 'opus[1m]',
               defaultLaunchModel: 'opus[1m]',
               models: [
@@ -2544,7 +2544,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(provider).toMatchObject({
       providerId: 'anthropic',
       authenticated: true,
-      models: ['opus', 'claude-opus-4-6', 'sonnet', 'haiku'],
+      models: ['opus', 'opus[1m]'],
       modelCatalog: {
         providerId: 'anthropic',
         source: 'anthropic-models-api',
@@ -2940,9 +2940,11 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     expect(provider).toMatchObject({
       providerId: 'opencode',
+      authenticated: true,
       verificationState: 'verified',
       detailMessage: expect.stringContaining('live resolved-fin'),
       capabilities: {
+        teamLaunch: false,
         extensions: {
           plugins: {
             status: 'unsupported',

@@ -1,16 +1,54 @@
 import type { CliProviderStatus } from '@shared/types/cliInstaller';
 
-export function isProviderModelCatalogExactReady(provider: CliProviderStatus): boolean {
+export interface ProviderModelDisplayPair {
+  models: CliProviderStatus['models'];
+  modelAvailability: CliProviderStatus['modelAvailability'];
+}
+
+export function selectProviderModelDisplayPair(
+  incoming: CliProviderStatus,
+  current: CliProviderStatus | undefined,
+  replacePair: boolean
+): ProviderModelDisplayPair {
+  if (replacePair && isProviderModelCatalogExactReady(incoming)) {
+    const models = incoming.modelCatalog!.models.map((model) => model.launchModel);
+    const modelIds = new Set(
+      incoming.modelCatalog!.models.flatMap((model) => [model.id, model.launchModel])
+    );
+    return {
+      models,
+      modelAvailability: (incoming.modelAvailability ?? []).filter((availability) =>
+        modelIds.has(availability.modelId)
+      ),
+    };
+  }
+  const currentHasDisplayEvidence =
+    current !== undefined &&
+    (current.models.length > 0 || (current.modelAvailability?.length ?? 0) > 0);
+  const source = replacePair || !currentHasDisplayEvidence ? incoming : current;
+  return {
+    models: source.models,
+    modelAvailability: source.modelAvailability,
+  };
+}
+
+export function isProviderModelCatalogExactReady(
+  provider: CliProviderStatus,
+  now: number = Date.now()
+): boolean {
   const catalog = provider.modelCatalog;
+  const fetchedAt = typeof catalog?.fetchedAt === 'string' ? Date.parse(catalog.fetchedAt) : NaN;
+  const staleAt = typeof catalog?.staleAt === 'string' ? Date.parse(catalog.staleAt) : NaN;
   return (
+    Number.isFinite(now) &&
     catalog?.schemaVersion === 1 &&
     catalog.providerId === provider.providerId &&
     catalog.status === 'ready' &&
     provider.modelCatalogRefreshState === 'ready' &&
-    typeof catalog.fetchedAt === 'string' &&
-    catalog.fetchedAt.trim().length > 0 &&
-    typeof catalog.staleAt === 'string' &&
-    catalog.staleAt.trim().length > 0 &&
+    Number.isFinite(fetchedAt) &&
+    Number.isFinite(staleAt) &&
+    fetchedAt <= now &&
+    now < staleAt &&
     Array.isArray(catalog.models) &&
     catalog.models.every(
       (model) =>
@@ -24,6 +62,14 @@ export function isProviderModelCatalogExactReady(provider: CliProviderStatus): b
   );
 }
 
+export function hasAuthoritativeProviderStatusEvidence(provider: CliProviderStatus): boolean {
+  return (
+    provider.statusCheckOutcome === 'authoritative' &&
+    provider.statusCheckErrorCode == null &&
+    provider.verificationState === 'verified'
+  );
+}
+
 export function hasExactReadyDynamicProviderCatalog(provider: CliProviderStatus): boolean {
   return (
     provider.runtimeCapabilities?.modelCatalog?.dynamic !== true ||
@@ -33,9 +79,7 @@ export function hasExactReadyDynamicProviderCatalog(provider: CliProviderStatus)
 
 export function hasAuthoritativeProviderLaunchEvidence(provider: CliProviderStatus): boolean {
   return (
-    provider.statusCheckOutcome === 'authoritative' &&
-    provider.statusCheckErrorCode == null &&
-    provider.verificationState === 'verified' &&
+    hasAuthoritativeProviderStatusEvidence(provider) &&
     isProviderModelCatalogExactReady(provider) &&
     hasExactReadyDynamicProviderCatalog(provider)
   );

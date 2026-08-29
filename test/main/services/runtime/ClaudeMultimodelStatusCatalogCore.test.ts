@@ -61,7 +61,7 @@ function catalog(modelId: string): Record<string, unknown> {
     source: 'static-fallback',
     status: 'ready',
     fetchedAt: '2026-08-28T00:00:00.000Z',
-    staleAt: '2026-08-28T01:00:00.000Z',
+    staleAt: '2100-01-01T00:00:00.000Z',
     defaultModelId: modelId,
     defaultLaunchModel: modelId,
     models: [
@@ -198,8 +198,8 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       'opencode'
     );
 
-    expect(result.authenticated).toBe(false);
-    expect(result.authMethod).toBeNull();
+    expect(result.authenticated).toBe(true);
+    expect(result.authMethod).toBe('builtin_free');
     expect(result.capabilities.teamLaunch).toBe(false);
     expect(result.statusCheckOutcome).toBe('authoritative');
   });

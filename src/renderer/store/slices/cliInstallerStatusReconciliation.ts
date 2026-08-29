@@ -1,6 +1,8 @@
 import {
   hasAuthoritativeProviderLaunchEvidence,
+  hasAuthoritativeProviderStatusEvidence,
   isProviderModelCatalogExactReady,
+  selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
 
 import type { CliProviderId, CliProviderStatus } from '@shared/types';
@@ -28,19 +30,17 @@ function mergeProviderCatalogCache(
   const authoritativeCatalogReplacement =
     hasAuthoritativeProviderLaunchEvidence(incomingProvider) &&
     isProviderModelCatalogExactReady(incomingProvider);
-  const modelsRetained =
-    !authoritativeCatalogReplacement &&
-    incomingProvider.models.length === 0 &&
-    currentProvider.models.length > 0;
-  const modelAvailabilityRetained =
-    !authoritativeCatalogReplacement &&
-    (incomingProvider.modelAvailability?.length ?? 0) === 0 &&
-    (currentProvider.modelAvailability?.length ?? 0) > 0;
+  const displayPair = selectProviderModelDisplayPair(
+    incomingProvider,
+    currentProvider,
+    authoritativeCatalogReplacement
+  );
+  const displayPairRetained = displayPair.models === currentProvider.models;
+  const hasAuthoritativeStatusEvidence = hasAuthoritativeProviderStatusEvidence(incomingProvider);
   const launchUnproved =
     !hasAuthoritativeProviderLaunchEvidence(incomingProvider) ||
     catalogRetained ||
-    modelsRetained ||
-    modelAvailabilityRetained;
+    displayPairRetained;
   const modelCatalog =
     retainedCatalog && launchUnproved
       ? { ...retainedCatalog, status: 'stale' as const }
@@ -48,28 +48,21 @@ function mergeProviderCatalogCache(
   return {
     ...incomingProvider,
     supported: incomingProvider.supported,
-    authenticated: launchUnproved ? false : incomingProvider.authenticated,
-    authMethod: launchUnproved ? null : incomingProvider.authMethod,
-    canLoginFromUi: launchUnproved
+    authenticated: hasAuthoritativeStatusEvidence ? incomingProvider.authenticated : false,
+    authMethod: hasAuthoritativeStatusEvidence ? incomingProvider.authMethod : null,
+    canLoginFromUi: !hasAuthoritativeStatusEvidence
       ? currentProvider.canLoginFromUi
       : incomingProvider.canLoginFromUi,
     capabilities: launchUnproved
       ? { ...incomingProvider.capabilities, teamLaunch: false }
       : incomingProvider.capabilities,
-    selectedBackendId: launchUnproved
+    selectedBackendId: !hasAuthoritativeStatusEvidence
       ? currentProvider.selectedBackendId
       : incomingProvider.selectedBackendId,
-    resolvedBackendId: launchUnproved
+    resolvedBackendId: !hasAuthoritativeStatusEvidence
       ? currentProvider.resolvedBackendId
       : incomingProvider.resolvedBackendId,
-    models:
-      authoritativeCatalogReplacement || incomingProvider.models.length > 0
-        ? incomingProvider.models
-        : currentProvider.models,
-    modelAvailability:
-      authoritativeCatalogReplacement || (incomingProvider.modelAvailability?.length ?? 0) > 0
-        ? incomingProvider.modelAvailability
-        : currentProvider.modelAvailability,
+    ...displayPair,
     availableBackends:
       (incomingProvider.availableBackends?.length ?? 0) > 0
         ? incomingProvider.availableBackends
@@ -95,10 +88,11 @@ function mergeProviderCatalogCache(
 }
 
 export function revokeProviderLaunchAuthority(provider: CliProviderStatus): CliProviderStatus {
+  const hasAuthoritativeStatusEvidence = hasAuthoritativeProviderStatusEvidence(provider);
   return {
     ...provider,
-    authenticated: false,
-    authMethod: null,
+    authenticated: hasAuthoritativeStatusEvidence ? provider.authenticated : false,
+    authMethod: hasAuthoritativeStatusEvidence ? provider.authMethod : null,
     capabilities: { ...provider.capabilities, teamLaunch: false },
     modelCatalog: provider.modelCatalog ? { ...provider.modelCatalog, status: 'stale' } : null,
     modelCatalogRefreshState: provider.modelCatalog

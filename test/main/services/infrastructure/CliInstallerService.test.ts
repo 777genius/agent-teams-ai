@@ -393,10 +393,10 @@ describe('CliInstallerService', () => {
 
       const status = await service.getStatus();
 
-      expect(status).toMatchObject({ authLoggedIn: false, authMethod: null });
+      expect(status).toMatchObject({ authLoggedIn: true, authMethod: 'opencode_managed' });
       expect(status.providers[0]).toMatchObject({
-        authenticated: false,
-        authMethod: null,
+        authenticated: true,
+        authMethod: 'opencode_managed',
         modelCatalog: { status: 'stale' },
         capabilities: { teamLaunch: false },
       });
@@ -1109,7 +1109,11 @@ describe('CliInstallerService', () => {
       const opencode = latestSnapshot?.providers.find(
         (provider) => provider.providerId === 'opencode'
       );
-      expect(opencode?.models).toEqual(['opencode/big-pickle']);
+      expect(opencode?.models).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+        'openrouter/openai/gpt-oss-20b:free',
+      ]);
       expect(opencode?.modelCatalog?.models.map((model) => model.id)).toEqual([
         'opencode/big-pickle',
         'openai/gpt-5.4',

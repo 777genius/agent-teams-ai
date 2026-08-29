@@ -1,6 +1,7 @@
 import {
   hasAuthoritativeProviderLaunchEvidence,
   isProviderModelCatalogExactReady,
+  selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
 
 import type { CliProviderStatus } from '@shared/types';
@@ -36,10 +37,9 @@ export function mergeProviderCatalogFields(
     const retainedCatalog = catalogMatchesProvider
       ? hydratedCatalog
       : (liveProvider.modelCatalog ?? null);
+    const displayPair = selectProviderModelDisplayPair(hydratedProvider, liveProvider, false);
     return {
       ...liveProvider,
-      authenticated: false,
-      authMethod: null,
       verificationState: hydratedProvider.verificationState,
       statusCheckOutcome: hydratedProvider.statusCheckOutcome,
       statusCheckErrorCode: hydratedProvider.statusCheckErrorCode,
@@ -49,14 +49,7 @@ export function mergeProviderCatalogFields(
         hydratedProvider.statusMessage ??
         'Provider catalog hydration did not return an authoritative ready catalog',
       capabilities: { ...liveProvider.capabilities, teamLaunch: false },
-      models:
-        catalogMatchesProvider && hydratedProvider.models.length > 0
-          ? hydratedProvider.models
-          : liveProvider.models,
-      modelAvailability:
-        catalogMatchesProvider && (hydratedProvider.modelAvailability?.length ?? 0) > 0
-          ? hydratedProvider.modelAvailability
-          : liveProvider.modelAvailability,
+      ...displayPair,
       modelCatalog: retainedCatalog ? { ...retainedCatalog, status: 'stale' } : null,
       modelCatalogRefreshState: retainedCatalog
         ? 'error'
@@ -73,10 +66,10 @@ export function mergeProviderCatalogFields(
           : liveProvider.externalRuntimeDiagnostics,
     };
   }
+  const displayPair = selectProviderModelDisplayPair(hydratedProvider, liveProvider, true);
   return {
     ...liveProvider,
-    models: hydratedProvider.models,
-    modelAvailability: hydratedProvider.modelAvailability,
+    ...displayPair,
     modelCatalog: hydratedCatalog,
     modelCatalogRefreshState: 'ready',
     runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(

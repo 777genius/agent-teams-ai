@@ -190,12 +190,28 @@ function createReadyOpenCodeCatalogProvider(
       staleAt: staleAt.toISOString(),
       defaultModelId: model,
       defaultLaunchModel: model,
-      models: [],
+      models: [
+        {
+          id: model,
+          launchModel: model,
+          displayName: model,
+          hidden: false,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: ['text'],
+          supportsPersonality: true,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server',
+        },
+      ],
       diagnostics: {
         configReadState: 'ready',
         appServerState: 'healthy',
       },
     },
+    runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+    backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
   });
 }
 
@@ -873,16 +889,7 @@ describe('cliInstallerSlice', () => {
         },
         backend: null,
       });
-      const refreshed = createMultimodelProvider({
-        providerId: 'opencode',
-        displayName: 'OpenCode',
-        supported: true,
-        authenticated: true,
-        authMethod: 'opencode_managed',
-        models: ['opencode/big-pickle'],
-        canLoginFromUi: false,
-        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
-      });
+      const refreshed = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
 
       useStore.setState({
         cliStatus: createMultimodelStatus([placeholder]),
@@ -985,16 +992,7 @@ describe('cliInstallerSlice', () => {
         },
         backend: null,
       });
-      const refreshed = createMultimodelProvider({
-        providerId: 'opencode',
-        displayName: 'OpenCode',
-        supported: true,
-        authenticated: true,
-        authMethod: 'opencode_managed',
-        models: ['opencode/big-pickle'],
-        canLoginFromUi: false,
-        backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
-      });
+      const refreshed = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
 
       useStore.setState({
         cliStatus: createMultimodelStatus([stale]),
@@ -1535,8 +1533,9 @@ describe('cliInstallerSlice', () => {
           .cliStatus?.providers.find((provider) => provider.providerId === 'opencode')
       ).toMatchObject({
         supported: true,
-        authenticated: false,
-        authMethod: null,
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        capabilities: { teamLaunch: false },
         backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
       });
     });
@@ -1595,7 +1594,7 @@ describe('cliInstallerSlice', () => {
                 source: 'app-server',
                 status: 'ready',
                 fetchedAt: '2026-05-20T00:00:00.000Z',
-                staleAt: '2026-05-20T00:10:00.000Z',
+                staleAt: '2100-01-01T00:00:00.000Z',
                 defaultModelId: 'opencode/big-pickle',
                 defaultLaunchModel: 'opencode/big-pickle',
                 models: [
@@ -1870,6 +1869,34 @@ describe('cliInstallerSlice', () => {
         authMethod: 'claude-login',
         verificationState: 'verified',
         statusMessage: 'Subscription ready',
+        models: ['claude-sonnet-4-5'],
+        modelCatalogRefreshState: 'ready',
+        modelCatalog: {
+          schemaVersion: 1,
+          providerId: 'anthropic',
+          source: 'anthropic-models-api',
+          status: 'ready',
+          fetchedAt: '2020-01-01T00:00:00.000Z',
+          staleAt: '2100-01-01T00:00:00.000Z',
+          defaultModelId: 'claude-sonnet-4-5',
+          defaultLaunchModel: 'claude-sonnet-4-5',
+          models: [
+            {
+              id: 'claude-sonnet-4-5',
+              launchModel: 'claude-sonnet-4-5',
+              displayName: 'Claude Sonnet 4.5',
+              hidden: false,
+              supportedReasoningEfforts: [],
+              defaultReasoningEffort: null,
+              inputModalities: ['text'],
+              supportsPersonality: false,
+              isDefault: true,
+              upgrade: false,
+              source: 'anthropic-models-api',
+            },
+          ],
+          diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+        },
       });
       useStore.setState({
         cliStatus: createMultimodelStatus([loadingProvider]),
@@ -2096,7 +2123,7 @@ describe('cliInstallerSlice', () => {
         authMethod: null,
         backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
         statusCheckOutcome: 'model_only',
-        models: ['ollama/project-model'],
+        models: ['opencode/global-model'],
         modelCatalog: { defaultModelId: 'ollama/project-model' },
       });
     });
@@ -2325,7 +2352,7 @@ describe('cliInstallerSlice', () => {
           source: 'app-server',
           status: 'ready',
           fetchedAt: '2026-05-17T00:00:00.000Z',
-          staleAt: '2026-05-17T00:10:00.000Z',
+          staleAt: '2100-01-01T00:00:00.000Z',
           defaultModelId: 'gpt-5.4',
           defaultLaunchModel: 'gpt-5.4',
           models: [
@@ -2422,7 +2449,7 @@ describe('cliInstallerSlice', () => {
           source: 'app-server',
           status: 'ready',
           fetchedAt: '2026-05-17T00:00:00.000Z',
-          staleAt: '2026-05-17T00:10:00.000Z',
+          staleAt: '2100-01-01T00:00:00.000Z',
           defaultModelId: 'gpt-5.4',
           defaultLaunchModel: 'gpt-5.4',
           models: [
@@ -2571,7 +2598,11 @@ describe('cliInstallerSlice', () => {
       const provider = useStore
         .getState()
         .cliStatus?.providers.find((candidate) => candidate.providerId === 'opencode');
-      expect(provider?.models).toEqual(['opencode/big-pickle']);
+      expect(provider?.models).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+        'openrouter/openai/gpt-oss-20b:free',
+      ]);
       expect(provider?.modelCatalog?.models.map((model) => model.id)).toEqual([
         'opencode/big-pickle',
         'openai/gpt-5.4',
@@ -2767,9 +2798,7 @@ describe('cliInstallerSlice', () => {
       const state = useStore.getState();
       expect(state.cliProviderStatusLoading.opencode).toBe(false);
       expect(state.cliStatusError).toBeNull();
-      expect(state.cliProviderStatusByScope[scopeKey]?.models).toEqual([
-        'ollama/refreshed-model',
-      ]);
+      expect(state.cliProviderStatusByScope[scopeKey]?.models).toEqual(['ollama/refreshed-model']);
       expect(
         state.cliStatus?.providers.find((provider) => provider.providerId === 'opencode')?.models
       ).toEqual(['opencode/big-pickle']);

@@ -2915,7 +2915,7 @@ describe('ProviderConnectionService', () => {
     });
 
     expect(directCatalog).not.toHaveBeenCalled();
-    expect(enriched.models).toEqual(['gpt-5.4', 'gpt-5.5']);
+    expect(enriched.models).toEqual(['gpt-5.4']);
     expect(enriched.modelCatalog?.defaultLaunchModel).toBe('gpt-5.4');
     expect(enriched.runtimeCapabilities?.modelCatalog).toEqual({
       dynamic: true,

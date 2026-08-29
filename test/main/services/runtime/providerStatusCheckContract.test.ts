@@ -6,6 +6,7 @@ import {
   resolveRuntimeProviderStatusCheck,
   sanitizeProviderStatusAuthority,
 } from '@main/services/runtime/providerStatusCheckContract';
+import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 import { describe, expect, it } from 'vitest';
 
 import type { CliProviderStatus } from '@shared/types';
@@ -47,8 +48,8 @@ function providerStatus(overrides: Partial<CliProviderStatus> = {}): CliProvider
       providerId: 'opencode',
       source: 'static-fallback',
       status: 'ready',
-      fetchedAt: '2026-08-28T00:00:00.000Z',
-      staleAt: '2026-08-28T01:00:00.000Z',
+      fetchedAt: '2020-01-01T00:00:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
       defaultModelId: 'opencode/big-pickle',
       defaultLaunchModel: 'opencode/big-pickle',
       models: [
@@ -132,9 +133,7 @@ describe('provider status check contract', () => {
     [{ providerId: 'anthropic' }, 'mismatched'],
     [{ providerId: undefined }, 'missing'],
   ])('rejects authoritative status with %s provider identity', (identity, _label) => {
-    expect(
-      resolveRuntimeProviderStatusCheck(completeRuntimeStatus(identity), 'opencode')
-    ).toEqual({
+    expect(resolveRuntimeProviderStatusCheck(completeRuntimeStatus(identity), 'opencode')).toEqual({
       statusCheckOutcome: 'pending',
       statusCheckErrorCode: 'partial_response',
     });
@@ -186,12 +185,12 @@ describe('provider status check contract', () => {
     });
   });
 
-  it('retains display evidence but revokes a transient snapshot', () => {
+  it('retains prior authentication display evidence but revokes transient launch authority', () => {
     const degraded = createDegradedProviderStatus(providerStatus(), new Error('Command timed out'));
 
     expect(degraded).toMatchObject({
-      authenticated: false,
-      authMethod: null,
+      authenticated: true,
+      authMethod: 'builtin_free',
       statusCheckOutcome: 'transient_error',
       statusCheckErrorCode: 'timeout',
       models: ['opencode/big-pickle'],
@@ -237,7 +236,7 @@ describe('provider status check contract', () => {
       current
     );
 
-    expect(merged.authenticated).toBe(false);
+    expect(merged.authenticated).toBe(true);
     expect(merged.capabilities.teamLaunch).toBe(false);
     expect(merged.models).toEqual(current.models);
     expect(merged.modelCatalog?.status).toBe('stale');
@@ -300,6 +299,47 @@ describe('provider status check contract', () => {
     });
   });
 
+  it.each([
+    {
+      models: ['incoming-model'],
+      modelAvailability: [],
+    },
+    {
+      models: [],
+      modelAvailability: [{ modelId: 'incoming-model', status: 'unknown' as const }],
+    },
+  ])('never mixes one incoming model evidence array with the retained pair', (partialPair) => {
+    const current = providerStatus({
+      modelAvailability: [{ modelId: 'opencode/big-pickle', status: 'available' }],
+    });
+    const merged = mergeProviderStatusDisplayEvidence(
+      providerStatus({
+        ...partialPair,
+        statusCheckOutcome: 'pending',
+        statusCheckErrorCode: 'partial_response',
+        modelCatalog: null,
+      }),
+      current
+    );
+
+    expect(merged.models).toEqual(current.models);
+    expect(merged.modelAvailability).toEqual(current.modelAvailability);
+    expect(merged.capabilities.teamLaunch).toBe(false);
+  });
+
+  it('canonically derives both flat arrays from an authoritative exact catalog', () => {
+    const sanitized = sanitizeProviderStatusAuthority(
+      providerStatus({
+        models: ['contradictory-model'],
+        modelAvailability: [{ modelId: 'contradictory-model', status: 'available' }],
+      })
+    );
+
+    expect(sanitized.models).toEqual(['opencode/big-pickle']);
+    expect(sanitized.modelAvailability).toEqual([]);
+    expect(sanitized.capabilities.teamLaunch).toBe(true);
+  });
+
   it.each(['stale', 'degraded', 'unavailable'] as const)(
     'revokes authoritative status backed by a %s catalog',
     (status) => {
@@ -311,7 +351,7 @@ describe('provider status check contract', () => {
         current
       );
 
-      expect(merged.authenticated).toBe(false);
+      expect(merged.authenticated).toBe(true);
       expect(merged.capabilities.teamLaunch).toBe(false);
       expect(merged.modelCatalog?.status).toBe('stale');
     }
@@ -378,14 +418,45 @@ describe('provider status check contract', () => {
     );
 
     expect(withoutCatalog).toMatchObject({
-      authenticated: false,
+      authenticated: true,
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'loading',
     });
     expect(mismatchedCatalog).toMatchObject({
-      authenticated: false,
+      authenticated: true,
       capabilities: { teamLaunch: false },
       modelCatalog: { providerId: 'codex', status: 'stale' },
     });
+  });
+
+  it.each([
+    ['malformed', 'not-a-date', '2100-01-01T00:00:00.000Z'],
+    ['expired', '2020-01-01T00:00:00.000Z', '2026-08-29T12:00:00.000Z'],
+    ['inverted', '2026-08-29T14:00:00.000Z', '2026-08-29T13:00:00.000Z'],
+    ['future', '2026-08-29T14:00:00.000Z', '2100-01-01T00:00:00.000Z'],
+  ])('rejects %s exact-ready catalog timestamps', (_label, fetchedAt, staleAt) => {
+    expect(
+      isProviderModelCatalogExactReady(
+        providerStatus({
+          modelCatalog: { ...providerStatus().modelCatalog!, fetchedAt, staleAt },
+        }),
+        Date.parse('2026-08-29T13:00:00.000Z')
+      )
+    ).toBe(false);
+  });
+
+  it('accepts a fresh, ordered exact-ready catalog at an injected time', () => {
+    expect(
+      isProviderModelCatalogExactReady(
+        providerStatus({
+          modelCatalog: {
+            ...providerStatus().modelCatalog!,
+            fetchedAt: '2026-08-29T12:00:00.000Z',
+            staleAt: '2026-08-29T14:00:00.000Z',
+          },
+        }),
+        Date.parse('2026-08-29T13:00:00.000Z')
+      )
+    ).toBe(true);
   });
 });

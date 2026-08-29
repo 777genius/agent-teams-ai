@@ -5,7 +5,9 @@ import {
 } from '@shared/utils/providerExtensionCapabilities';
 import {
   hasAuthoritativeProviderLaunchEvidence,
+  hasAuthoritativeProviderStatusEvidence,
   isProviderModelCatalogExactReady,
+  selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
 
 import type {
@@ -208,7 +210,7 @@ export function createRuntimeStatusErrorProviderStatus(
   };
 }
 
-/** Retains same-scope display evidence while revoking authentication and launch authority. */
+/** Retains same-scope display evidence while revoking fresh launch authority. */
 export function createDegradedProviderStatus(
   previous: CliProviderStatus,
   error: unknown
@@ -216,8 +218,6 @@ export function createDegradedProviderStatus(
   const degraded = createRuntimeStatusErrorProviderStatus(previous.providerId, error);
   return {
     ...previous,
-    authenticated: false,
-    authMethod: null,
     verificationState: degraded.verificationState,
     statusCheckOutcome: degraded.statusCheckOutcome,
     statusCheckErrorCode: degraded.statusCheckErrorCode,
@@ -232,23 +232,9 @@ export function createDegradedProviderStatus(
   };
 }
 
-function hasRetainedModelEvidence(
-  incoming: CliProviderStatus,
-  current: CliProviderStatus,
-  authoritativeCatalogReplacement: boolean
-): boolean {
-  return (
-    !authoritativeCatalogReplacement &&
-    incoming.models.length === 0 &&
-    (incoming.modelAvailability?.length ?? 0) === 0 &&
-    !(incoming.modelCatalog?.status === 'ready' && incoming.modelCatalog.models.length > 0) &&
-    (current.models.length > 0 || (current.modelAvailability?.length ?? 0) > 0)
-  );
-}
-
 /**
  * Merges only same-provider display evidence. Retained, stale, or incomplete
- * evidence can remain visible, but can never preserve authentication or launch.
+ * evidence can remain visible, but can never preserve fresh launch authority.
  */
 export function mergeProviderStatusDisplayEvidence(
   incoming: CliProviderStatus,
@@ -262,15 +248,17 @@ export function mergeProviderStatusDisplayEvidence(
   }
 
   const hasAuthoritativeLaunchEvidence = hasAuthoritativeProviderLaunchEvidence(incoming);
+  const hasAuthoritativeStatusEvidence = hasAuthoritativeProviderStatusEvidence(incoming);
   const authoritativeCatalogReplacement =
     hasAuthoritativeLaunchEvidence && isProviderModelCatalogExactReady(incoming);
   const catalogRetained = incoming.modelCatalog == null && current.modelCatalog != null;
-  const modelsRetained = hasRetainedModelEvidence(
+  const displayPair = selectProviderModelDisplayPair(
     incoming,
     current,
     authoritativeCatalogReplacement
   );
-  const launchUnproved = !hasAuthoritativeLaunchEvidence || catalogRetained || modelsRetained;
+  const displayPairRetained = displayPair.models === current.models;
+  const launchUnproved = !hasAuthoritativeLaunchEvidence || catalogRetained || displayPairRetained;
   const retainedCatalog = incoming.modelCatalog ?? current.modelCatalog ?? null;
   const modelCatalog =
     retainedCatalog && launchUnproved
@@ -280,29 +268,28 @@ export function mergeProviderStatusDisplayEvidence(
   return {
     ...incoming,
     supported: incoming.supported,
-    authenticated: launchUnproved ? false : incoming.authenticated,
-    authMethod: launchUnproved ? null : incoming.authMethod,
-    verificationState: launchUnproved
+    authenticated: hasAuthoritativeStatusEvidence ? incoming.authenticated : false,
+    authMethod: hasAuthoritativeStatusEvidence ? incoming.authMethod : null,
+    verificationState: !hasAuthoritativeStatusEvidence
       ? incoming.verificationState === 'error' || incoming.verificationState === 'offline'
         ? incoming.verificationState
         : incoming.statusCheckOutcome === 'transient_error'
           ? 'error'
           : 'unknown'
       : incoming.verificationState,
-    canLoginFromUi: launchUnproved ? current.canLoginFromUi : incoming.canLoginFromUi,
+    canLoginFromUi: hasAuthoritativeStatusEvidence
+      ? incoming.canLoginFromUi
+      : current.canLoginFromUi,
     capabilities: launchUnproved
       ? { ...incoming.capabilities, teamLaunch: false }
       : incoming.capabilities,
-    selectedBackendId: launchUnproved ? current.selectedBackendId : incoming.selectedBackendId,
-    resolvedBackendId: launchUnproved ? current.resolvedBackendId : incoming.resolvedBackendId,
-    models:
-      authoritativeCatalogReplacement || incoming.models.length > 0
-        ? incoming.models
-        : current.models,
-    modelAvailability:
-      authoritativeCatalogReplacement || (incoming.modelAvailability?.length ?? 0) > 0
-        ? incoming.modelAvailability
-        : current.modelAvailability,
+    selectedBackendId: hasAuthoritativeStatusEvidence
+      ? incoming.selectedBackendId
+      : current.selectedBackendId,
+    resolvedBackendId: hasAuthoritativeStatusEvidence
+      ? incoming.resolvedBackendId
+      : current.resolvedBackendId,
+    ...displayPair,
     availableBackends:
       (incoming.availableBackends?.length ?? 0) > 0
         ? incoming.availableBackends
@@ -328,10 +315,19 @@ export function mergeProviderStatusDisplayEvidence(
 
 /** Applies authority rules when no same-provider snapshot has been cached yet. */
 export function sanitizeProviderStatusAuthority(provider: CliProviderStatus): CliProviderStatus {
-  return mergeProviderStatusDisplayEvidence(
+  const sanitized = mergeProviderStatusDisplayEvidence(
     provider,
     createDefaultProviderStatus(provider.providerId)
   );
+  const displayPair = selectProviderModelDisplayPair(
+    provider,
+    undefined,
+    hasAuthoritativeProviderLaunchEvidence(provider)
+  );
+  return {
+    ...sanitized,
+    ...displayPair,
+  };
 }
 
 export function applyProviderStatusCheck(
