@@ -53,6 +53,11 @@ export const DESCRIPTOR_FIFO_POLICY = Object.freeze({
   maximumOpenReadMs: DESCRIPTOR_FIFO_TIMEOUT_MS,
 });
 
+function exactText(value: unknown, pattern: RegExp, label: string): string {
+  if (typeof value !== 'string' || !pattern.test(value)) throw new Error(`p3c_${label}`);
+  return value;
+}
+
 export function descriptorFifoPolicyAccepts(mode: number, nlink: number, flags: number): boolean {
   return (
     mode === DESCRIPTOR_FIFO_POLICY.mode &&
@@ -443,6 +448,7 @@ export function verifyControlDocuments(
       'supervisorSha256',
       'recipeSha256',
       'closureMerkleRoot',
+      'candidateOpenCodeSha256',
       'accepted',
     ],
     'p3c1_p3b2'
@@ -502,6 +508,7 @@ export function verifyControlDocuments(
     p3b2.supervisorSha256 !== descriptor.p3b2.supervisor.sha256 ||
     p3b2.recipeSha256 !== descriptor.p3b2.recipeSha256 ||
     p3b2.closureMerkleRoot !== descriptor.p3b2.closure.merkleRoot ||
+    p3b2.candidateOpenCodeSha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
     p3b2.accepted !== true ||
     canonicalJson(openCode.identities) !== canonicalJson(OPENCODE_IDENTITIES) ||
     openCode.provenanceReceiptSha256 !== descriptor.openCode.acquisitionReceipt.sha256 ||
@@ -720,7 +727,12 @@ export function verifyReleaseManifest(bytes: Buffer): void {
       `release_manifest_asset_${index}`
     )
   );
-  const platforms = assets.map((asset) => `${String(asset.os)}:${String(asset.arch)}`);
+  const platforms = assets.map((asset) => {
+    if (typeof asset.os !== 'string' || typeof asset.arch !== 'string') {
+      throw new Error('p3c_release_manifest_asset_platform_type');
+    }
+    return `${asset.os}:${asset.arch}`;
+  });
   const invalidAsset = assets.some((asset) => {
     const signing = exactRecord(
       asset.signing,
@@ -732,7 +744,7 @@ export function verifyReleaseManifest(bytes: Buffer): void {
       !['linux', 'darwin', 'windows'].includes(asset.os) ||
       typeof asset.arch !== 'string' ||
       !['x64', 'arm64'].includes(asset.arch) ||
-      asset.platform !== `opencode-${String(asset.os)}-${String(asset.arch)}` ||
+      asset.platform !== `opencode-${asset.os}-${asset.arch}` ||
       typeof asset.archive !== 'string' ||
       !/^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/u.test(asset.archive) ||
       typeof asset.binaryPath !== 'string' ||
@@ -761,7 +773,7 @@ export function verifyReleaseManifest(bytes: Buffer): void {
     typeof workflow.workflow !== 'string' ||
     workflow.workflow.length < 1 ||
     workflow.runId !== OPENCODE_IDENTITIES.workflowRunId ||
-    String(workflow.runAttempt) !== String(OPENCODE_IDENTITIES.workflowRunAttempt) ||
+    workflow.runAttempt !== OPENCODE_IDENTITIES.workflowRunAttempt ||
     typeof workflow.actor !== 'string' ||
     workflow.actor.length < 1 ||
     workflow.ref !== OPENCODE_IDENTITIES.workflowRef ||
@@ -889,10 +901,17 @@ export function verifyBuildProvenanceBundle(bundleBytes: Buffer, manifestBytes: 
         ],
         `build_provenance_manifest_asset_${index}`
       );
-      return { name: item.archive, digest: { sha256: item.archiveSha256 } };
+      return {
+        name: exactText(item.archive, /^[A-Za-z0-9][A-Za-z0-9._-]{0,255}$/u, 'subject_archive'),
+        digest: {
+          sha256: exactText(item.archiveSha256, /^[0-9a-f]{64}$/u, 'subject_archive_sha'),
+        },
+      };
     }),
     { name: 'release-manifest.json', digest: { sha256: sha256(manifestBytes) } },
-  ].sort((left, right) => String(left.name).localeCompare(String(right.name)));
+  ].sort((left, right) =>
+    Buffer.from(left.name, 'utf8').compare(Buffer.from(right.name, 'utf8'))
+  );
   const actualSubjects = statement.subject
     .map((subject, index) => {
       const item = exactRecord(subject, ['name', 'digest'], `build_provenance_subject_${index}`);
@@ -901,9 +920,14 @@ export function verifyBuildProvenanceBundle(bundleBytes: Buffer, manifestBytes: 
         ['sha256'],
         `build_provenance_subject_digest_${index}`
       );
-      return { name: item.name, digest: { sha256: digest.sha256 } };
+      return {
+        name: exactText(item.name, /^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$/u, 'subject_name'),
+        digest: { sha256: exactText(digest.sha256, /^[0-9a-f]{64}$/u, 'subject_sha') },
+      };
     })
-    .sort((left, right) => String(left.name).localeCompare(String(right.name)));
+    .sort((left, right) =>
+      Buffer.from(left.name, 'utf8').compare(Buffer.from(right.name, 'utf8'))
+    );
   const predicate = exactRecord(
     statement.predicate,
     ['buildDefinition', 'runDetails'],
@@ -929,7 +953,7 @@ export function verifyBuildProvenanceBundle(bundleBytes: Buffer, manifestBytes: 
     throw new Error('p3c_build_provenance_binding');
 }
 
-function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): void {
+export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): void {
   const recipe = exactRecord(
     parseCanonicalObject(bytes, 'p3b2_recipe'),
     [
@@ -940,6 +964,7 @@ function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): voi
       'entry',
       'supervisor',
       'closureMerkleRoot',
+      'candidateOpenCodeSha256',
       'argv',
       'sourceTreeRequired',
       'accepted',
@@ -962,7 +987,9 @@ function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): voi
     supervisor.relativePath !== descriptor.p3b2.supervisor.relativePath ||
     supervisor.sha256 !== descriptor.p3b2.supervisor.sha256 ||
     recipe.closureMerkleRoot !== descriptor.p3b2.closure.merkleRoot ||
-    canonicalJson(recipe.argv) !== canonicalJson(['--p3c-supervisor']) ||
+    recipe.candidateOpenCodeSha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
+    canonicalJson(recipe.argv) !==
+      canonicalJson(['--runtime-manifest', '/sandbox/runtime-manifest.json']) ||
     recipe.sourceTreeRequired !== false ||
     recipe.accepted !== true
   )
@@ -997,8 +1024,7 @@ function verifyProductCompositionDescriptor(
     composition.entryRelativePath !== descriptor.product.compositionEntry.relativePath ||
     composition.entrySha256 !== descriptor.product.compositionEntry.sha256 ||
     composition.runtimeClosureMerkleRoot !== descriptor.product.runtimeClosure.merkleRoot ||
-    canonicalJson(composition.argv) !==
-      canonicalJson(['--p3c-composition-descriptor-fd=3', '--host=127.0.0.1', '--port=45131'])
+    canonicalJson(composition.argv) !== canonicalJson([])
   )
     throw new Error('p3c_product_composition_binding');
 }

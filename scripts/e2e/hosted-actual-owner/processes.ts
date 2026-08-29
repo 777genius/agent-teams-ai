@@ -1,12 +1,21 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { once } from 'node:events';
-import { createReadStream, readFileSync } from 'node:fs';
+import { createReadStream, fstatSync, readFileSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 
 import { assertFileCurrent, assertRootCurrent, procFdPath } from './anchors';
 import {
   RAW_ORIGINS,
+  OWNER_CHILD_FDS,
+  OWNER_SEALED_PROTOCOL_ARGUMENT,
+  OWNER_WRAPPER_ARGUMENT,
+  OPENCODE_IDENTITIES,
+  OWNER_CHILD_PROTOCOL,
+  PRODUCER_PROVENANCE_CONTRACT,
+  PRODUCER_PROVENANCE_CONTRACT_SHA256,
+  RUNTIME_CAPTURE_NAMES,
+  RUNTIME_CAPTURE_STREAMS,
   canonicalJson,
   exactRecord,
   sha256,
@@ -14,6 +23,7 @@ import {
   validateRecordId,
   type ClosurePin,
   type RawOrigin,
+  type RuntimeCaptureName,
 } from './contracts';
 import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
 import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
@@ -92,6 +102,49 @@ export interface SupervisorPlan {
   readonly runId: string;
   readonly maximumRuntimeMs: 900000;
   readonly shutdownGraceMs: 5000;
+  readonly runtimeManifest: Readonly<{
+    schemaVersion: 1;
+    purpose: 'agent-teams.hosted-actual-owner-e2e/v1';
+    runId: string;
+    sandboxRoot: '/sandbox';
+    markerPath: '/sandbox/.p3c-sandbox.json';
+    evidenceRoot: '/sandbox/evidence';
+    driverBaseUrl: 'http://127.0.0.1:45130/';
+    productBaseUrl: 'http://127.0.0.1:45131/';
+    approvalPath: '/api/hosted/v1/team-approvals/decisions';
+    browser: Readonly<{ workers: 1; retries: 0 }>;
+    capture: Readonly<Record<RuntimeCaptureName, string>>;
+    captureEmissionContract: Readonly<{
+      contract: typeof PRODUCER_PROVENANCE_CONTRACT.contract;
+      version: typeof PRODUCER_PROVENANCE_CONTRACT.version;
+      contractSha256: string;
+      environment: typeof PRODUCER_PROVENANCE_CONTRACT.environment;
+      framing: typeof PRODUCER_PROVENANCE_CONTRACT.framing;
+      descriptorSlots: typeof PRODUCER_PROVENANCE_CONTRACT.descriptorSlots;
+      verifierMayProduceBytes: false;
+      producerNativeIdentitiesComposed: false;
+    }>;
+    refs: Readonly<{
+      openCode: string;
+      openCodeExecutableSha256: typeof OPENCODE_IDENTITIES.linuxX64BinarySha256;
+      orchestrator: string;
+      product: string;
+    }>;
+  }>;
+  readonly ownerChildProtocol: Readonly<{
+    wrapperArgv: readonly [typeof OWNER_WRAPPER_ARGUMENT, '/sandbox/runtime-manifest.json'];
+    sealedArgv: readonly [
+      typeof OWNER_SEALED_PROTOCOL_ARGUMENT,
+      typeof OWNER_WRAPPER_ARGUMENT,
+      '/sandbox/runtime-manifest.json',
+    ];
+    childLocalDescriptors: typeof OWNER_CHILD_FDS;
+    descriptorContract: typeof OWNER_CHILD_PROTOCOL;
+    parentSourceDescriptors: 'arbitrary-distinct-owned';
+    closeParentCopiesAfterSpawn: true;
+    compatibilityProbing: false;
+    socketPathReconnect: false;
+  }>;
   readonly network: {
     readonly namespace: 'new';
     readonly mountNamespace: 'new';
@@ -180,6 +233,8 @@ export interface SupervisorPlan {
   readonly expectedExecutableSha256: Readonly<Record<ProcessEvidenceRole, string>>;
   readonly expectedExecutableDevice: Readonly<Record<ProcessEvidenceRole, string>>;
   readonly expectedExecutableInode: Readonly<Record<ProcessEvidenceRole, string>>;
+  readonly expectedProducerArtifactSha256: Readonly<Record<RootProcessRole, string>>;
+  readonly expectedProducerModuleSha256: Readonly<Record<RootProcessRole, string>>;
   readonly expectedArgv: Readonly<Record<'supervisor' | RootProcessRole, readonly string[]>>;
   readonly startSchedule: typeof ROOT_PROCESS_SCHEDULE;
   readonly chromiumDescendants: typeof CHROMIUM_DESCENDANT_ROLES;
@@ -297,6 +352,105 @@ export interface RawFileEvidence {
   readonly sealedBeforeParse: true;
 }
 
+export interface ProducerCaptureShardEvidence {
+  readonly authority: 'kernel-observed';
+  readonly path: string;
+  readonly sha256: string;
+  readonly size: number;
+  readonly contractSha256: string;
+  readonly stream: (typeof RUNTIME_CAPTURE_STREAMS)[RuntimeCaptureName];
+  readonly captureDevice: string;
+  readonly captureInode: string;
+  readonly producerPid: number;
+  readonly producerStartToken: string;
+  readonly producerPidfdInode: string;
+  readonly producerRole: RootProcessRole;
+  readonly producerFd: 9 | 10;
+  readonly producerArtifactSha256: string;
+  readonly producerModuleSha256: string;
+  readonly allocation: Readonly<{
+    observationMethod: 'openat-exclusive-no-follow';
+    flags: 'O_CREAT|O_EXCL|O_NOFOLLOW|O_WRONLY|O_APPEND|O_CLOEXEC';
+    mode: 384;
+    nlink: 1;
+    initialSize: 0;
+    captureDevice: string;
+    captureInode: string;
+  }>;
+  readonly parentClose: Readonly<{
+    supervisorPid: number;
+    supervisorStartToken: string;
+    writerFd: number;
+    descriptorPath: string;
+    captureDevice: string;
+    captureInode: string;
+    observedOpenMonotonicNs: string;
+    spawnBoundaryMonotonicNs: string;
+    observedClosedMonotonicNs: string;
+    closeObservationMethod: 'fstat-ebadf';
+    closedErrno: 'EBADF';
+  }>;
+  readonly producerOpen: Readonly<{
+    descriptorPath: string;
+    captureDevice: string;
+    captureInode: string;
+    observationMethod: 'proc-fd-identity';
+    observedMonotonicNs: string;
+  }>;
+  readonly producerClose: Readonly<{
+    observationMethod: 'proc-fd-absent' | 'pidfd-exact-exit';
+    observedMonotonicNs: string;
+    descriptorPath: string;
+    producerStartToken: string;
+    producerPidfdInode: string;
+  }>;
+  readonly descendantCensus: Readonly<{
+    observationMethod: 'proc-fd-inode-census';
+    observedMonotonicNs: string;
+    processEvidenceSetId: string;
+    inspectedStartTokens: readonly string[];
+    retainedWriterCount: 0;
+  }>;
+  readonly seal: Readonly<{
+    observationMethod: 'read-only-stable-hash';
+    observedMonotonicNs: string;
+    captureDevice: string;
+    captureInode: string;
+    mode: 256;
+    nlink: 1;
+    size: number;
+    sha256: string;
+    manifestSha256: string;
+  }>;
+}
+
+export interface ProducerCaptureFileEvidence {
+  readonly stream: (typeof RUNTIME_CAPTURE_STREAMS)[RuntimeCaptureName];
+  readonly contractSha256: string;
+  readonly shards: readonly ProducerCaptureShardEvidence[];
+}
+
+export function producerCaptureSealManifestSha256(input: {
+  readonly path: string;
+  readonly stream: (typeof RUNTIME_CAPTURE_STREAMS)[RuntimeCaptureName];
+  readonly contractSha256: string;
+  readonly captureDevice: string;
+  readonly captureInode: string;
+  readonly size: number;
+  readonly sha256: string;
+  readonly producerPid: number;
+  readonly producerStartToken: string;
+  readonly producerPidfdInode: string;
+  readonly producerRole: RootProcessRole;
+  readonly producerFd: 9 | 10;
+  readonly producerArtifactSha256: string;
+  readonly producerModuleSha256: string;
+}): string {
+  return sha256(
+    `agent-teams.p3c.producer-capture-seal/v1\0${canonicalJson(input)}`
+  );
+}
+
 export interface SupervisorOutcome {
   readonly controllerNonce: string;
   readonly runId: string;
@@ -308,9 +462,266 @@ export interface SupervisorOutcome {
   readonly network: NetworkEvidence;
   readonly filesystem: FilesystemEvidence;
   readonly processEvidenceSetId: string;
+  readonly ownerChildDescriptorCleanup: Readonly<{
+    contract: 'agent-teams.hosted-owner-child-parent-fd-cleanup/v2';
+    ownerStartTokens: readonly string[];
+    records: readonly ParentDescriptorLifecycleRecord[];
+  }>;
   readonly rawFiles: Readonly<Record<RawOrigin, RawFileEvidence>>;
+  readonly captureFiles: Readonly<Record<RuntimeCaptureName, ProducerCaptureFileEvidence>>;
   readonly transcriptSha256: string;
   readonly transcript: Buffer;
+}
+
+export const PARENT_DESCRIPTOR_ROLES = Object.freeze([
+  'sealed-launcher-lease',
+  'bootstrap',
+  'activation-v2',
+] as const);
+
+export interface ParentDescriptorBeforeSpawnObservation {
+  readonly method: 'proc-fd-identity';
+  readonly observedMonotonicNs: string;
+  readonly path: string;
+  readonly device: string;
+  readonly inode: string;
+  readonly mode: number;
+}
+
+export interface ParentDescriptorAfterSpawnObservation {
+  readonly method: 'fstat-ebadf';
+  readonly observedMonotonicNs: string;
+  readonly errno: 'EBADF';
+}
+
+export interface ParentDescriptorLifecycleRecord {
+  readonly wrapperPid: number;
+  readonly wrapperStartToken: string;
+  readonly spawnNonce: string;
+  readonly spawnBoundaryMonotonicNs: string;
+  readonly childPublication: ChildDescriptorPublication;
+  readonly descriptors: readonly Readonly<{
+    role: (typeof PARENT_DESCRIPTOR_ROLES)[number];
+    parentFd: number;
+    beforeSpawn: ParentDescriptorBeforeSpawnObservation;
+    afterSpawn: ParentDescriptorAfterSpawnObservation;
+  }>[];
+}
+
+export interface ChildDescriptorPublication {
+  readonly schemaVersion: 1;
+  readonly contract: 'agent-teams.hosted-owner-child-fd-map/v1';
+  readonly wrapperPid: number;
+  readonly wrapperStartToken: string;
+  readonly spawnNonce: string;
+  readonly descriptors: readonly Readonly<{
+    readonly role: (typeof PARENT_DESCRIPTOR_ROLES)[number];
+    readonly childFd: 3 | 4 | 5;
+    readonly device: string;
+    readonly inode: string;
+    readonly mode: number;
+  }>[];
+}
+
+type ParentDescriptorCleanupObservation = Omit<ParentDescriptorLifecycleRecord, 'childPublication'>;
+
+/** @internal Kernel observation seams used only by deterministic fail-closed regressions. */
+export interface ParentDescriptorObservationDependencies {
+  readonly fstatDescriptor?: typeof fstatSync;
+  readonly statProcDescriptor?: typeof statSync;
+}
+
+export interface WrapperProcessStartIdentity {
+  readonly pid: number;
+  readonly startTime: string;
+  readonly startToken: string;
+}
+
+/** Derives the wrapper identity from the kernel's current `/proc` process-start record. */
+export function readCurrentWrapperProcessStartIdentity(): WrapperProcessStartIdentity {
+  const pid = process.pid;
+  const anchor = parseProcStat(readFileSync(`/proc/${pid}/stat`, 'utf8'), pid);
+  return Object.freeze({
+    pid,
+    startTime: anchor.startTime,
+    startToken: sha256(
+      canonicalJson({
+        contract: 'agent-teams.hosted-owner-wrapper-process-start/v1',
+        pid,
+        startTime: anchor.startTime,
+      })
+    ),
+  });
+}
+
+/** Captures the current supervising wrapper and its descriptors without caller-supplied identity. */
+export function observeCurrentWrapperDescriptorsBeforeSpawn(
+  parentFds: readonly number[]
+): ReturnType<typeof observeParentDescriptorsBeforeSpawn> {
+  const wrapper = readCurrentWrapperProcessStartIdentity();
+  return observeParentDescriptorsBeforeSpawn(wrapper.pid, wrapper.startToken, parentFds);
+}
+
+/**
+ * Accepts the child's diagnostic publication only when FD3/FD4/FD5 are the exact identities the
+ * parent observed before spawn. This publication proves canonical mapping; cleanup authority still
+ * comes exclusively from the supervising parent's EBADF observations.
+ */
+export function acceptCanonicalChildDescriptorPublication(
+  value: unknown,
+  before: ReturnType<typeof observeParentDescriptorsBeforeSpawn>
+): ChildDescriptorPublication {
+  const publication = exactRecord(
+    value,
+    ['schemaVersion', 'contract', 'wrapperPid', 'wrapperStartToken', 'spawnNonce', 'descriptors'],
+    'child_descriptor_publication'
+  );
+  if (
+    publication.schemaVersion !== 1 ||
+    publication.contract !== 'agent-teams.hosted-owner-child-fd-map/v1' ||
+    publication.wrapperPid !== before.wrapperPid ||
+    publication.wrapperStartToken !== before.wrapperStartToken ||
+    publication.spawnNonce !== before.spawnNonce ||
+    typeof publication.spawnNonce !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(publication.spawnNonce) ||
+    !Array.isArray(publication.descriptors) ||
+    publication.descriptors.length !== PARENT_DESCRIPTOR_ROLES.length
+  ) {
+    throw new Error('p3c_child_descriptor_publication');
+  }
+  const descriptors = publication.descriptors.map((candidate, index) => {
+    const descriptor = exactRecord(
+      candidate,
+      ['role', 'childFd', 'device', 'inode', 'mode'],
+      `child_descriptor_publication_${index}`
+    );
+    const expected = before.descriptors[index];
+    if (
+      expected === undefined ||
+      descriptor.role !== expected.role ||
+      descriptor.childFd !== index + 3 ||
+      descriptor.device !== expected.beforeSpawn.device ||
+      descriptor.inode !== expected.beforeSpawn.inode ||
+      descriptor.mode !== expected.beforeSpawn.mode
+    ) {
+      throw new Error('p3c_child_descriptor_publication');
+    }
+    return Object.freeze({
+      role: expected.role,
+      childFd: (index + 3) as 3 | 4 | 5,
+      device: expected.beforeSpawn.device,
+      inode: expected.beforeSpawn.inode,
+      mode: expected.beforeSpawn.mode,
+    });
+  });
+  return Object.freeze({
+    schemaVersion: 1,
+    contract: 'agent-teams.hosted-owner-child-fd-map/v1',
+    wrapperPid: before.wrapperPid,
+    wrapperStartToken: before.wrapperStartToken,
+    spawnNonce: before.spawnNonce,
+    descriptors: Object.freeze(descriptors),
+  });
+}
+
+/** Captures kernel descriptor identities immediately before the wrapper spawn boundary. */
+export function observeParentDescriptorsBeforeSpawn(
+  wrapperPid: number,
+  wrapperStartToken: string,
+  parentFds: readonly number[],
+  dependencies?: ParentDescriptorObservationDependencies
+): Omit<
+  ParentDescriptorLifecycleRecord,
+  'descriptors' | 'spawnBoundaryMonotonicNs' | 'childPublication'
+> & {
+  readonly descriptors: readonly Omit<
+    ParentDescriptorLifecycleRecord['descriptors'][number],
+    'afterSpawn'
+  >[];
+} {
+  if (
+    !Number.isSafeInteger(wrapperPid) ||
+    wrapperPid < 2 ||
+    wrapperPid !== process.pid ||
+    !/^[0-9a-f]{64}$/u.test(wrapperStartToken) ||
+    parentFds.length !== PARENT_DESCRIPTOR_ROLES.length ||
+    new Set(parentFds).size !== parentFds.length
+  ) {
+    throw new Error('p3c_parent_fd_lifecycle_input');
+  }
+  return Object.freeze({
+    wrapperPid,
+    wrapperStartToken,
+    spawnNonce: randomBytes(32).toString('hex'),
+    descriptors: Object.freeze(
+      PARENT_DESCRIPTOR_ROLES.map((role, index) => {
+        const parentFd = parentFds[index];
+        if (!Number.isSafeInteger(parentFd) || parentFd === undefined || parentFd < 0) {
+          throw new Error('p3c_parent_fd_lifecycle_input');
+        }
+        const stat = (dependencies?.fstatDescriptor ?? fstatSync)(parentFd, { bigint: true });
+        const path = `/proc/${wrapperPid}/fd/${parentFd}`;
+        const procStat = (dependencies?.statProcDescriptor ?? statSync)(path, { bigint: true });
+        if (procStat.dev !== stat.dev || procStat.ino !== stat.ino || procStat.mode !== stat.mode) {
+          throw new Error('p3c_parent_fd_identity_mismatch');
+        }
+        return Object.freeze({
+          role,
+          parentFd,
+          beforeSpawn: Object.freeze({
+            method: 'proc-fd-identity' as const,
+            observedMonotonicNs: process.hrtime.bigint().toString(),
+            path,
+            device: String(procStat.dev),
+            inode: String(procStat.ino),
+            mode: Number(procStat.mode & 0o7777n),
+          }),
+        });
+      })
+    ),
+  });
+}
+
+/** Fails closed unless every exact parent descriptor is now rejected by the kernel with EBADF. */
+export function observeParentDescriptorsClosed(
+  before: ReturnType<typeof observeParentDescriptorsBeforeSpawn>,
+  spawnBoundaryMonotonicNs = process.hrtime.bigint().toString()
+): ParentDescriptorCleanupObservation {
+  if (
+    !/^\d+$/u.test(spawnBoundaryMonotonicNs) ||
+    before.descriptors.some(
+      ({ beforeSpawn }) =>
+        BigInt(beforeSpawn.observedMonotonicNs) >= BigInt(spawnBoundaryMonotonicNs)
+    )
+  ) {
+    throw new Error('p3c_parent_fd_spawn_boundary_invalid');
+  }
+  return Object.freeze({
+    wrapperPid: before.wrapperPid,
+    wrapperStartToken: before.wrapperStartToken,
+    spawnNonce: before.spawnNonce,
+    spawnBoundaryMonotonicNs,
+    descriptors: Object.freeze(
+      before.descriptors.map((descriptor) => {
+        try {
+          fstatSync(descriptor.parentFd);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'EBADF') {
+            return Object.freeze({
+              ...descriptor,
+              afterSpawn: Object.freeze({
+                method: 'fstat-ebadf' as const,
+                observedMonotonicNs: process.hrtime.bigint().toString(),
+                errno: 'EBADF' as const,
+              }),
+            });
+          }
+          throw error;
+        }
+        throw new Error('p3c_parent_fd_copy_still_open');
+      })
+    ),
+  });
 }
 
 function browserArgv(admission: PreflightAdmission): readonly string[] {
@@ -335,6 +746,11 @@ export function buildSupervisorPlan(
       inode: sandbox.directoryIdentities[name].inode,
     });
   const chromium = admission.descriptor.product.chromiumExecutable;
+  const capture = Object.freeze(
+    Object.fromEntries(
+      RUNTIME_CAPTURE_NAMES.map((name) => [name, `/sandbox/capture/${name}.ndjson`])
+    ) as Record<RuntimeCaptureName, string>
+  );
   const executableSha256 = {
     owner: admission.execution.ownerEntry.pin.sha256,
     opencode: admission.execution.openCode.pin.sha256,
@@ -359,6 +775,18 @@ export function buildSupervisorPlan(
     browser: admission.descriptor.toolchain.node.inode,
     ...Object.fromEntries(CHROMIUM_DESCENDANT_ROLES.map((role) => [role, chromium.inode])),
   } as Record<ProcessEvidenceRole, string>;
+  const expectedProducerArtifactSha256 = Object.freeze({
+    owner: admission.descriptor.p3b2.closure.manifestSha256,
+    opencode: admission.descriptor.openCode.identities.releaseManifestSha256,
+    product: admission.descriptor.product.runtimeClosure.manifestSha256,
+    browser: admission.descriptor.product.browserBundle.manifestSha256,
+  });
+  const expectedProducerModuleSha256 = Object.freeze({
+    owner: admission.execution.ownerEntry.pin.sha256,
+    opencode: admission.descriptor.openCode.identities.linuxX64BinarySha256,
+    product: admission.descriptor.product.compositionEntry.sha256,
+    browser: admission.descriptor.product.playwrightSpec.sha256,
+  });
   return Object.freeze({
     schemaVersion: 2,
     protocol: SUPERVISOR_PROTOCOL,
@@ -366,6 +794,52 @@ export function buildSupervisorPlan(
     runId: sandbox.runId,
     maximumRuntimeMs: 900_000,
     shutdownGraceMs: 5_000,
+    runtimeManifest: Object.freeze({
+      schemaVersion: 1,
+      purpose: 'agent-teams.hosted-actual-owner-e2e/v1',
+      runId: sandbox.runId,
+      sandboxRoot: '/sandbox',
+      markerPath: '/sandbox/.p3c-sandbox.json',
+      evidenceRoot: '/sandbox/evidence',
+      driverBaseUrl: 'http://127.0.0.1:45130/',
+      productBaseUrl: 'http://127.0.0.1:45131/',
+      approvalPath: '/api/hosted/v1/team-approvals/decisions',
+      browser: Object.freeze({ workers: 1, retries: 0 }),
+      capture,
+      captureEmissionContract: Object.freeze({
+        contract: PRODUCER_PROVENANCE_CONTRACT.contract,
+        version: PRODUCER_PROVENANCE_CONTRACT.version,
+        contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+        environment: PRODUCER_PROVENANCE_CONTRACT.environment,
+        framing: PRODUCER_PROVENANCE_CONTRACT.framing,
+        descriptorSlots: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots,
+        verifierMayProduceBytes: false as const,
+        producerNativeIdentitiesComposed: false as const,
+      }),
+      refs: Object.freeze({
+        openCode: admission.descriptor.openCode.identities.pullRequestHead,
+        openCodeExecutableSha256: OPENCODE_IDENTITIES.linuxX64BinarySha256,
+        orchestrator: admission.descriptor.p3b2.resultCommit,
+        product: admission.descriptor.product.finalHarnessCommit,
+      }),
+    }),
+    ownerChildProtocol: Object.freeze({
+      wrapperArgv: Object.freeze([
+        OWNER_WRAPPER_ARGUMENT,
+        '/sandbox/runtime-manifest.json',
+      ] as const),
+      sealedArgv: Object.freeze([
+        OWNER_SEALED_PROTOCOL_ARGUMENT,
+        OWNER_WRAPPER_ARGUMENT,
+        '/sandbox/runtime-manifest.json',
+      ] as const),
+      childLocalDescriptors: OWNER_CHILD_FDS,
+      descriptorContract: OWNER_CHILD_PROTOCOL,
+      parentSourceDescriptors: 'arbitrary-distinct-owned',
+      closeParentCopiesAfterSpawn: true,
+      compatibilityProbing: false,
+      socketPathReconnect: false,
+    }),
     network: Object.freeze({
       namespace: 'new',
       mountNamespace: 'new',
@@ -502,15 +976,13 @@ export function buildSupervisorPlan(
     expectedExecutableSha256: Object.freeze(executableSha256),
     expectedExecutableDevice: Object.freeze(executableDevice),
     expectedExecutableInode: Object.freeze(executableInode),
+    expectedProducerArtifactSha256,
+    expectedProducerModuleSha256,
     expectedArgv: Object.freeze({
-      supervisor: Object.freeze(['--p3c-supervisor']),
+      supervisor: Object.freeze([]),
       opencode: Object.freeze(['serve', '--hostname', '127.0.0.1', '--port', '4096']),
-      owner: Object.freeze(['--p3c-acceptance-manifest-fd=3']),
-      product: Object.freeze([
-        '--p3c-composition-descriptor-fd=3',
-        '--host=127.0.0.1',
-        '--port=45131',
-      ]),
+      owner: Object.freeze([OWNER_WRAPPER_ARGUMENT, '/sandbox/runtime-manifest.json']),
+      product: Object.freeze([]),
       browser: browserArgv(admission),
     }),
     startSchedule: ROOT_PROCESS_SCHEDULE,
@@ -1047,6 +1519,444 @@ function parseRawFiles(
   return Object.freeze(result);
 }
 
+function parseCaptureFiles(
+  value: unknown,
+  plan: SupervisorPlan,
+  starts: readonly ProcessStartEvidence[],
+  descendants: readonly ProcessStartEvidence[],
+  exits: readonly ProcessExitEvidence[],
+  supervisorStart: ProcessStartEvidence,
+  processEvidenceSetId: string
+): Readonly<Record<RuntimeCaptureName, ProducerCaptureFileEvidence>> {
+  const producerRoles = {
+    conditionalPostLedgerPath: 'product',
+    negativeResultsPath: 'browser',
+    openCodeTimelinePath: 'opencode',
+    ownerWalTimelinePath: 'owner',
+    productTimelinePath: 'product',
+    protectedEffectLedgerPath: 'opencode',
+  } as const satisfies Readonly<Record<RuntimeCaptureName, RootProcessRole>>;
+  const expectedSlots = {
+    conditionalPostLedgerPath: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots.conditionalPostLedger,
+    negativeResultsPath: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots.negativeResults,
+    openCodeTimelinePath: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots.openCodeTimeline,
+    ownerWalTimelinePath: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots.ownerWalTimeline,
+    productTimelinePath: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots.productTimeline,
+    protectedEffectLedgerPath: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots.protectedEffectLedger,
+  };
+  const item = exactRecord(value, RUNTIME_CAPTURE_NAMES, 'supervisor_capture_files');
+  const result = {} as Record<RuntimeCaptureName, ProducerCaptureFileEvidence>;
+  const inspectedStartTokens = [...starts, ...descendants].map(({ startToken }) => startToken).sort();
+  for (const name of RUNTIME_CAPTURE_NAMES) {
+    const file = exactRecord(item[name], ['stream', 'contractSha256', 'shards'], `capture_${name}`);
+    const expectedProducers = starts.filter(({ role }) => role === producerRoles[name]);
+    if (
+      file.stream !== RUNTIME_CAPTURE_STREAMS[name] ||
+      file.contractSha256 !== PRODUCER_PROVENANCE_CONTRACT_SHA256 ||
+      !Array.isArray(file.shards) ||
+      file.shards.length !== expectedProducers.length ||
+      file.shards.length === 0
+    ) {
+      throw new Error(`p3c_supervisor_capture_${name}`);
+    }
+    const shards = file.shards.map((candidate, index) => {
+      const producer = expectedProducers[index];
+      if (producer === undefined) throw new Error(`p3c_supervisor_capture_${name}_producer`);
+      const shard = exactRecord(
+        candidate,
+        [
+          'authority',
+          'path',
+          'sha256',
+          'size',
+          'contractSha256',
+          'stream',
+          'captureDevice',
+          'captureInode',
+          'producerPid',
+          'producerStartToken',
+          'producerPidfdInode',
+          'producerRole',
+          'producerFd',
+          'producerArtifactSha256',
+          'producerModuleSha256',
+          'allocation',
+          'parentClose',
+          'producerOpen',
+          'producerClose',
+          'descendantCensus',
+          'seal',
+        ],
+        `capture_${name}_shard`
+      );
+      const parentClose = exactRecord(
+        shard.parentClose,
+        [
+          'supervisorPid',
+          'supervisorStartToken',
+          'writerFd',
+          'descriptorPath',
+          'captureDevice',
+          'captureInode',
+          'observedOpenMonotonicNs',
+          'spawnBoundaryMonotonicNs',
+          'observedClosedMonotonicNs',
+          'closeObservationMethod',
+          'closedErrno',
+        ],
+        `capture_${name}_parent_close`
+      );
+      const allocation = exactRecord(
+        shard.allocation,
+        [
+          'observationMethod',
+          'flags',
+          'mode',
+          'nlink',
+          'initialSize',
+          'captureDevice',
+          'captureInode',
+        ],
+        `capture_${name}_allocation`
+      );
+      const producerOpen = exactRecord(
+        shard.producerOpen,
+        ['descriptorPath', 'captureDevice', 'captureInode', 'observationMethod', 'observedMonotonicNs'],
+        `capture_${name}_producer_open`
+      );
+      const producerClose = exactRecord(
+        shard.producerClose,
+        [
+          'observationMethod',
+          'observedMonotonicNs',
+          'descriptorPath',
+          'producerStartToken',
+          'producerPidfdInode',
+        ],
+        `capture_${name}_producer_close`
+      );
+      const census = exactRecord(
+        shard.descendantCensus,
+        [
+          'observationMethod',
+          'observedMonotonicNs',
+          'processEvidenceSetId',
+          'inspectedStartTokens',
+          'retainedWriterCount',
+        ],
+        `capture_${name}_descendant_census`
+      );
+      const seal = exactRecord(
+        shard.seal,
+        [
+          'observationMethod',
+          'observedMonotonicNs',
+          'captureDevice',
+          'captureInode',
+          'mode',
+          'nlink',
+          'size',
+          'sha256',
+          'manifestSha256',
+        ],
+        `capture_${name}_seal`
+      );
+      const captureDevice = validateDecimal(shard.captureDevice, `capture_${name}_device`);
+      const captureInode = validateDecimal(shard.captureInode, `capture_${name}_inode`);
+      const parentOpenNs = validateDecimal(parentClose.observedOpenMonotonicNs, 'capture_parent_open');
+      const spawnNs = validateDecimal(parentClose.spawnBoundaryMonotonicNs, 'capture_spawn');
+      const parentClosedNs = validateDecimal(
+        parentClose.observedClosedMonotonicNs,
+        'capture_parent_closed'
+      );
+      const producerOpenNs = validateDecimal(
+        producerOpen.observedMonotonicNs,
+        'capture_producer_open'
+      );
+      const producerClosedNs = validateDecimal(
+        producerClose.observedMonotonicNs,
+        'capture_producer_closed'
+      );
+      const censusNs = validateDecimal(census.observedMonotonicNs, 'capture_census');
+      const sealNs = validateDecimal(seal.observedMonotonicNs, 'capture_seal');
+      const expectedPath =
+        name === 'ownerWalTimelinePath'
+          ? plan.runtimeManifest.capture[name].replace(/\.ndjson$/u, `.${producer.instanceId}.ndjson`)
+          : plan.runtimeManifest.capture[name];
+      const matchingExit = exits.find(
+        ({ startToken, pidfdInode }) =>
+          startToken === producer.startToken && pidfdInode === producer.pidfdInode
+      );
+      const expectedSealManifestSha256 = producerCaptureSealManifestSha256({
+        path: shard.path as string,
+        stream: RUNTIME_CAPTURE_STREAMS[name],
+        contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+        captureDevice,
+        captureInode,
+        size: shard.size as number,
+        sha256: shard.sha256 as string,
+        producerPid: producer.pid,
+        producerStartToken: producer.startToken,
+        producerPidfdInode: producer.pidfdInode,
+        producerRole: producer.role as RootProcessRole,
+        producerFd: expectedSlots[name],
+        producerArtifactSha256: shard.producerArtifactSha256 as string,
+        producerModuleSha256: shard.producerModuleSha256 as string,
+      });
+      if (
+        shard.authority !== 'kernel-observed' ||
+        shard.path !== expectedPath ||
+        shard.stream !== RUNTIME_CAPTURE_STREAMS[name] ||
+        shard.contractSha256 !== PRODUCER_PROVENANCE_CONTRACT_SHA256 ||
+        !Number.isSafeInteger(shard.size) ||
+        (shard.size as number) < 2 ||
+        (shard.size as number) > 64 * 1024 * 1024 ||
+        shard.producerPid !== producer.pid ||
+        shard.producerStartToken !== producer.startToken ||
+        shard.producerPidfdInode !== producer.pidfdInode ||
+        shard.producerRole !== producer.role ||
+        shard.producerFd !== expectedSlots[name] ||
+        shard.producerArtifactSha256 !== plan.expectedProducerArtifactSha256[producerRoles[name]] ||
+        shard.producerModuleSha256 !== plan.expectedProducerModuleSha256[producerRoles[name]] ||
+        allocation.observationMethod !== 'openat-exclusive-no-follow' ||
+        allocation.flags !== 'O_CREAT|O_EXCL|O_NOFOLLOW|O_WRONLY|O_APPEND|O_CLOEXEC' ||
+        allocation.mode !== 0o600 ||
+        allocation.nlink !== 1 ||
+        allocation.initialSize !== 0 ||
+        allocation.captureDevice !== captureDevice ||
+        allocation.captureInode !== captureInode ||
+        parentClose.supervisorPid !== supervisorStart.pid ||
+        parentClose.supervisorStartToken !== supervisorStart.startToken ||
+        !Number.isSafeInteger(parentClose.writerFd) ||
+        (parentClose.writerFd as number) < 3 ||
+        parentClose.descriptorPath !== `/proc/${supervisorStart.pid}/fd/${String(parentClose.writerFd)}` ||
+        parentClose.captureDevice !== captureDevice ||
+        parentClose.captureInode !== captureInode ||
+        parentClose.closeObservationMethod !== 'fstat-ebadf' ||
+        parentClose.closedErrno !== 'EBADF' ||
+        !(BigInt(parentOpenNs) < BigInt(spawnNs) && BigInt(spawnNs) < BigInt(parentClosedNs)) ||
+        producerOpen.descriptorPath !== `/proc/${producer.pid}/fd/${expectedSlots[name]}` ||
+        producerOpen.captureDevice !== captureDevice ||
+        producerOpen.captureInode !== captureInode ||
+        producerOpen.observationMethod !== 'proc-fd-identity' ||
+        BigInt(producerOpenNs) < BigInt(spawnNs) ||
+        producerClose.descriptorPath !== `/proc/${producer.pid}/fd/${expectedSlots[name]}` ||
+        producerClose.producerStartToken !== producer.startToken ||
+        producerClose.producerPidfdInode !== producer.pidfdInode ||
+        typeof producerClose.observationMethod !== 'string' ||
+        !['proc-fd-absent', 'pidfd-exact-exit'].includes(producerClose.observationMethod) ||
+        matchingExit === undefined ||
+        BigInt(producerClosedNs) <= BigInt(producerOpenNs) ||
+        (producerClose.observationMethod === 'pidfd-exact-exit'
+          ? producerClosedNs !== matchingExit.observedMonotonicNs
+          : BigInt(producerClosedNs) >= BigInt(matchingExit.observedMonotonicNs)) ||
+        census.observationMethod !== 'proc-fd-inode-census' ||
+        census.processEvidenceSetId !== processEvidenceSetId ||
+        canonicalJson(census.inspectedStartTokens) !== canonicalJson(inspectedStartTokens) ||
+        census.retainedWriterCount !== 0 ||
+        BigInt(censusNs) < BigInt(matchingExit.observedMonotonicNs) ||
+        seal.observationMethod !== 'read-only-stable-hash' ||
+        seal.captureDevice !== captureDevice ||
+        seal.captureInode !== captureInode ||
+        seal.mode !== 0o400 ||
+        seal.nlink !== 1 ||
+        seal.size !== shard.size ||
+        seal.sha256 !== shard.sha256 ||
+        seal.manifestSha256 !== expectedSealManifestSha256 ||
+        BigInt(sealNs) < BigInt(censusNs)
+      ) {
+        throw new Error(`p3c_supervisor_capture_${name}_kernel_proof`);
+      }
+      return Object.freeze({
+        authority: 'kernel-observed' as const,
+        path: shard.path as string,
+        sha256: validateRecordId(shard.sha256, `capture_${name}_sha`),
+        size: shard.size as number,
+        contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+        stream: RUNTIME_CAPTURE_STREAMS[name],
+        captureDevice,
+        captureInode,
+        producerPid: producer.pid,
+        producerStartToken: producer.startToken,
+        producerPidfdInode: producer.pidfdInode,
+        producerRole: producer.role as RootProcessRole,
+        producerFd: expectedSlots[name],
+        producerArtifactSha256: shard.producerArtifactSha256 as string,
+        producerModuleSha256: shard.producerModuleSha256 as string,
+        allocation: Object.freeze(allocation) as ProducerCaptureShardEvidence['allocation'],
+        parentClose: Object.freeze(parentClose) as ProducerCaptureShardEvidence['parentClose'],
+        producerOpen: Object.freeze(producerOpen) as ProducerCaptureShardEvidence['producerOpen'],
+        producerClose: Object.freeze(producerClose) as ProducerCaptureShardEvidence['producerClose'],
+        descendantCensus: Object.freeze(census) as ProducerCaptureShardEvidence['descendantCensus'],
+        seal: Object.freeze({
+          ...seal,
+          sha256: validateRecordId(seal.sha256, `capture_${name}_seal_sha`),
+          manifestSha256: validateRecordId(
+            seal.manifestSha256,
+            `capture_${name}_seal_manifest_sha`
+          ),
+        }) as ProducerCaptureShardEvidence['seal'],
+      });
+    });
+    result[name] = Object.freeze({
+      stream: RUNTIME_CAPTURE_STREAMS[name],
+      contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+      shards: Object.freeze(shards),
+    });
+  }
+  return Object.freeze(result);
+}
+
+export function parseOwnerChildDescriptorCleanup(
+  value: unknown,
+  starts: readonly Pick<ProcessStartEvidence, 'role' | 'pid' | 'startToken'>[]
+): SupervisorOutcome['ownerChildDescriptorCleanup'] {
+  const cleanup = exactRecord(
+    value,
+    ['schemaVersion', 'contract', 'records'],
+    'supervisor_owner_child_descriptor_cleanup'
+  );
+  const expectedOwnerTokens = starts
+    .filter(({ role }) => role === 'owner')
+    .map(({ startToken }) => startToken);
+  if (!Array.isArray(cleanup.records) || cleanup.records.length !== expectedOwnerTokens.length) {
+    throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
+  }
+  const observedTokens = cleanup.records.map((candidate, index) => {
+    const expectedOwner = starts.filter(({ role }) => role === 'owner')[index];
+    if (expectedOwner === undefined) {
+      throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
+    }
+    const record = exactRecord(
+      candidate,
+      [
+        'wrapperPid',
+        'wrapperStartToken',
+        'spawnNonce',
+        'spawnBoundaryMonotonicNs',
+        'childPublication',
+        'descriptors',
+      ],
+      `supervisor_owner_child_descriptor_cleanup_${index}`
+    );
+    if (
+      record.wrapperPid !== expectedOwner.pid ||
+      record.wrapperStartToken !== expectedOwnerTokens[index] ||
+      typeof record.spawnNonce !== 'string' ||
+      !/^[0-9a-f]{64}$/u.test(record.spawnNonce) ||
+      typeof record.spawnBoundaryMonotonicNs !== 'string' ||
+      !/^\d+$/u.test(record.spawnBoundaryMonotonicNs) ||
+      !Array.isArray(record.descriptors) ||
+      record.descriptors.length !== PARENT_DESCRIPTOR_ROLES.length
+    ) {
+      throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
+    }
+    const parentFds = new Set<number>();
+    const descriptors = record.descriptors.map((candidateDescriptor, descriptorIndex) => {
+      const descriptor = exactRecord(
+        candidateDescriptor,
+        ['role', 'parentFd', 'beforeSpawn', 'afterSpawn'],
+        `supervisor_owner_child_descriptor_${index}_${descriptorIndex}`
+      );
+      const beforeSpawn = exactRecord(
+        descriptor.beforeSpawn,
+        ['method', 'observedMonotonicNs', 'path', 'device', 'inode', 'mode'],
+        `supervisor_owner_child_descriptor_before_${index}_${descriptorIndex}`
+      );
+      const afterSpawn = exactRecord(
+        descriptor.afterSpawn,
+        ['method', 'observedMonotonicNs', 'errno'],
+        `supervisor_owner_child_descriptor_after_${index}_${descriptorIndex}`
+      );
+      const spawnBoundaryMonotonicNs = record.spawnBoundaryMonotonicNs;
+      const beforeSpawnMonotonicNs = beforeSpawn.observedMonotonicNs;
+      const afterSpawnMonotonicNs = afterSpawn.observedMonotonicNs;
+      if (
+        descriptor.role !== PARENT_DESCRIPTOR_ROLES[descriptorIndex] ||
+        !Number.isSafeInteger(descriptor.parentFd) ||
+        (descriptor.parentFd as number) < 0 ||
+        parentFds.has(descriptor.parentFd as number) ||
+        beforeSpawn.method !== 'proc-fd-identity' ||
+        typeof beforeSpawn.observedMonotonicNs !== 'string' ||
+        !/^\d+$/u.test(beforeSpawn.observedMonotonicNs) ||
+        typeof spawnBoundaryMonotonicNs !== 'string' ||
+        typeof beforeSpawnMonotonicNs !== 'string' ||
+        BigInt(beforeSpawnMonotonicNs) >= BigInt(spawnBoundaryMonotonicNs) ||
+        beforeSpawn.path !== `/proc/${expectedOwner.pid}/fd/${descriptor.parentFd}` ||
+        typeof beforeSpawn.device !== 'string' ||
+        !/^\d+$/u.test(beforeSpawn.device) ||
+        typeof beforeSpawn.inode !== 'string' ||
+        !/^[1-9]\d*$/u.test(beforeSpawn.inode) ||
+        !Number.isSafeInteger(beforeSpawn.mode) ||
+        (beforeSpawn.mode as number) < 0 ||
+        (beforeSpawn.mode as number) > 0o7777 ||
+        afterSpawn.method !== 'fstat-ebadf' ||
+        typeof afterSpawn.observedMonotonicNs !== 'string' ||
+        !/^\d+$/u.test(afterSpawn.observedMonotonicNs) ||
+        typeof afterSpawnMonotonicNs !== 'string' ||
+        BigInt(afterSpawnMonotonicNs) < BigInt(spawnBoundaryMonotonicNs) ||
+        afterSpawn.errno !== 'EBADF'
+      ) {
+        throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
+      }
+      parentFds.add(descriptor.parentFd as number);
+      return Object.freeze({
+        role: descriptor.role as (typeof PARENT_DESCRIPTOR_ROLES)[number],
+        parentFd: descriptor.parentFd as number,
+        beforeSpawn: Object.freeze({
+          method: 'proc-fd-identity' as const,
+          observedMonotonicNs: beforeSpawn.observedMonotonicNs,
+          path: beforeSpawn.path as string,
+          device: beforeSpawn.device as string,
+          inode: beforeSpawn.inode as string,
+          mode: beforeSpawn.mode as number,
+        }),
+        afterSpawn: Object.freeze({
+          method: 'fstat-ebadf' as const,
+          observedMonotonicNs: afterSpawn.observedMonotonicNs,
+          errno: 'EBADF' as const,
+        }),
+      });
+    });
+    const beforeObservation = Object.freeze({
+      wrapperPid: record.wrapperPid as number,
+      wrapperStartToken: record.wrapperStartToken as string,
+      spawnNonce: record.spawnNonce as string,
+      descriptors: Object.freeze(
+        descriptors.map(({ role, parentFd, beforeSpawn }) =>
+          Object.freeze({ role, parentFd, beforeSpawn })
+        )
+      ),
+    });
+    const childPublication = acceptCanonicalChildDescriptorPublication(
+      record.childPublication,
+      beforeObservation
+    );
+    return Object.freeze({
+      token: record.wrapperStartToken as string,
+      record: Object.freeze({
+        wrapperPid: record.wrapperPid as number,
+        wrapperStartToken: record.wrapperStartToken as string,
+        spawnNonce: record.spawnNonce as string,
+        spawnBoundaryMonotonicNs: record.spawnBoundaryMonotonicNs,
+        childPublication,
+        descriptors: Object.freeze(descriptors),
+      }),
+    });
+  });
+  if (
+    cleanup.schemaVersion !== 2 ||
+    cleanup.contract !== 'agent-teams.hosted-owner-child-parent-fd-cleanup/v2'
+  ) {
+    throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
+  }
+  return Object.freeze({
+    contract: cleanup.contract,
+    ownerStartTokens: Object.freeze(observedTokens.map(({ token }) => token)),
+    records: Object.freeze(observedTokens.map(({ record }) => record)),
+  });
+}
+
 function recordType(value: unknown): string | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   return (value as Record<string, unknown>).type as string | undefined;
@@ -1433,7 +2343,9 @@ export function parseSupervisorTranscript(
       'playwrightRetries',
       'readyInstances',
       'exitedStartTokens',
+      'ownerChildDescriptorCleanup',
       'rawFiles',
+      'captureFiles',
     ],
     'supervisor_result'
   );
@@ -1460,6 +2372,10 @@ export function parseSupervisorTranscript(
       canonicalJson(exits.map(({ startToken }) => startToken))
   )
     throw new Error('p3c_supervisor_result');
+  const ownerChildDescriptorCleanup = parseOwnerChildDescriptorCleanup(
+    result.ownerChildDescriptorCleanup,
+    starts
+  );
   return Object.freeze({
     controllerNonce: plan.controllerNonce,
     runId: plan.runId,
@@ -1471,7 +2387,17 @@ export function parseSupervisorTranscript(
     network,
     filesystem,
     processEvidenceSetId,
+    ownerChildDescriptorCleanup,
     rawFiles: parseRawFiles(result.rawFiles, starts, supervisorStart),
+    captureFiles: parseCaptureFiles(
+      result.captureFiles,
+      plan,
+      starts,
+      descendants,
+      exits,
+      supervisorStart,
+      processEvidenceSetId
+    ),
     transcriptSha256: createHash('sha256').update(bytes).digest('hex'),
     transcript: Buffer.from(bytes),
   });
@@ -2109,6 +3035,14 @@ export async function executeSupervisor(
   sandbox: DisposableSandbox,
   consumedAttempt: WrittenFileEvidence
 ): Promise<SupervisorOutcome> {
+  // The staged r4 executable predates the r307 producer contract. Keep planning/parsing testable,
+  // but never launch a candidate which cannot author the required OpenCode streams itself.
+  if (
+    admission.descriptor.openCode.identities.linuxX64BinarySha256 ===
+    OPENCODE_IDENTITIES.linuxX64BinarySha256
+  ) {
+    throw new Error('p3c_old_opencode_artifact_not_producer_native');
+  }
   await assertSandboxCurrent(sandbox);
   await Promise.all([
     ...Object.values(admission.roots).map(assertRootCurrent),
@@ -2117,7 +3051,7 @@ export async function executeSupervisor(
   const plan = buildSupervisorPlan(admission, sandbox);
   const ownershipMarker = plan.processOwnership.marker;
   await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
-  const supervisor = spawn('/proc/self/fd/9', ['--p3c-supervisor'], {
+  const supervisor = spawn('/proc/self/fd/9', [], {
     cwd: `${procFdPath(sandbox.handle)}/run`,
     detached: true,
     shell: false,

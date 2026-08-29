@@ -21,6 +21,8 @@ const DIRECTORIES = Object.freeze([
   'tmp',
   'run',
   'raw',
+  'capture',
+  'evidence',
   'stage',
 ] as const);
 const MAX_CLEANUP_ENTRIES = 200_000;

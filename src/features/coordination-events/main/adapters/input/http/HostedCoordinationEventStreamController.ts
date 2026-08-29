@@ -1,4 +1,9 @@
 import {
+  emitProductSseWrite,
+  type ProductSseFrameIdentity,
+} from '@features/hosted-producer-provenance/main';
+
+import {
   type CoordinationEventEnvelope,
   type CoordinationReplayBatch,
   HOSTED_COORDINATION_EVENT_SSE_EVENT,
@@ -11,21 +16,18 @@ import {
   type HostedCoordinationResyncRequired,
   type ReplayCursor,
 } from '../../../../contracts';
-
+import type { ReplayCoordinationEventsInput } from '../../../../core/application';
+import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
 import {
   hostedCoordinationEventStreamAuthorizationIsCurrent as authorizationIsCurrent,
   type HostedCoordinationEventStreamCurrentAuthorization,
 } from './hostedCoordinationEventStreamAuthorization';
-
-import type { ReplayCoordinationEventsInput } from '../../../../core/application';
-import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
 
 interface HostedCoordinationHttpSocket {
   readonly destroyed: boolean;
   once(event: 'close', listener: () => void): unknown;
   removeListener(event: 'close', listener: () => void): unknown;
 }
-
 interface HostedCoordinationHttpRawRequest {
   readonly aborted: boolean;
   readonly destroyed: boolean;
@@ -33,13 +35,11 @@ interface HostedCoordinationHttpRawRequest {
   once(event: 'aborted', listener: () => void): unknown;
   removeListener(event: 'aborted', listener: () => void): unknown;
 }
-
 interface HostedCoordinationHttpRequest {
   readonly headers: Readonly<Record<string, string | readonly string[] | undefined>>;
   readonly query: unknown;
   readonly raw: HostedCoordinationHttpRawRequest;
 }
-
 interface HostedCoordinationHttpRawReply {
   readonly destroyed: boolean;
   readonly writableEnded: boolean;
@@ -50,14 +50,12 @@ interface HostedCoordinationHttpRawReply {
   write(frame: string): boolean;
   writeHead(statusCode: number, headers: Readonly<Record<string, string>>): unknown;
 }
-
 interface HostedCoordinationHttpReply {
   readonly raw: HostedCoordinationHttpRawReply;
   code(statusCode: number): HostedCoordinationHttpReply;
   hijack(): void;
   send(payload: unknown): unknown;
 }
-
 interface HostedCoordinationHttpApplication {
   get(
     route: string,
@@ -67,7 +65,6 @@ interface HostedCoordinationHttpApplication {
     ) => Promise<void>
   ): void;
 }
-
 const DEFAULT_REPLAY_BATCH_SIZE = 100;
 const MAX_REPLAY_BATCH_SIZE = 500;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
@@ -77,37 +74,30 @@ const MAX_CURSOR_LENGTH = 2_048;
 const MAX_IDENTIFIER_LENGTH = 256;
 const ABORTED_OPERATION = Symbol('aborted_operation');
 const UTF8_ENCODER = new TextEncoder();
-
 function utf8ByteLength(value: string): number {
   return UTF8_ENCODER.encode(value).byteLength;
 }
-
 interface HostedCoordinationEventReplay {
   replay(input: ReplayCoordinationEventsInput): Promise<CoordinationReplayBatch>;
 }
-
 /** Live admission whose projector remains bound to the authorized grant context. */
 interface HostedCoordinationEventStreamAuthorization extends HostedCoordinationEventStreamCurrentAuthorization {
   projectEvent(
     event: CoordinationEventEnvelope
   ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
 }
-
 interface HostedCoordinationEventStreamAuthorizer {
   readonly allowedOrigin: string;
   authorize(
     request: HostedCoordinationHttpRequest
   ): Promise<HostedCoordinationEventStreamAuthorization | null>;
 }
-
 interface HostedCoordinationEventWakeupSource {
   subscribe(listener: CoordinationEventWakeupListener): () => void;
 }
-
 export interface HostedCoordinationEventStreamScheduler {
   schedule(delayMs: number, callback: () => void): () => void;
 }
-
 interface HostedCoordinationEventStreamControllerOptions {
   readonly replay: HostedCoordinationEventReplay;
   readonly authorizer: HostedCoordinationEventStreamAuthorizer;
@@ -138,7 +128,6 @@ class WakeSignal {
   get version(): number {
     return this.versionValue;
   }
-
   notify = (): void => {
     this.versionValue += 1;
     for (const listener of [...this.listeners]) listener();
@@ -466,7 +455,6 @@ export class HostedCoordinationEventStreamController {
       await reply.code(403).send({ error: 'origin_invalid' });
       return;
     }
-
     const wakeSignal = new WakeSignal();
     const streamController = new AbortController();
     let unsubscribeWakeup = (): void => undefined;
@@ -621,7 +609,13 @@ export class HostedCoordinationEventStreamController {
     reply.hijack();
     reply.raw.writeHead(200, this.sseHeaders());
     reply.raw.flushHeaders();
-    await this.writeAuthorized(reply, resyncFrame(reason), authorization, signal);
+    await this.writeAuthorized(
+      reply,
+      resyncFrame(reason),
+      { frameKind: 'resync_required', eventId: null, eventType: 'resync_required' },
+      authorization,
+      signal
+    );
     if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
   }
 
@@ -686,6 +680,7 @@ export class HostedCoordinationEventStreamController {
               await this.writeAuthorized(
                 reply,
                 resyncFrame('projection_invalid'),
+                { frameKind: 'resync_required', eventId: null, eventType: 'resync_required' },
                 prepared.authorization,
                 prepared.signal
               );
@@ -694,6 +689,11 @@ export class HostedCoordinationEventStreamController {
             const wrote = await this.writeAuthorized(
               reply,
               eventFrame(event.eventCursor, materialized.data),
+              {
+                frameKind: 'coordination_event',
+                eventId: event.eventCursor,
+                eventType: HOSTED_COORDINATION_EVENT_SSE_EVENT,
+              },
               prepared.authorization,
               prepared.signal
             );
@@ -717,6 +717,7 @@ export class HostedCoordinationEventStreamController {
           const wrote = await this.writeAuthorized(
             reply,
             ': heartbeat\n\n',
+            { frameKind: 'heartbeat', eventId: null, eventType: null },
             prepared.authorization,
             prepared.signal
           );
@@ -730,6 +731,7 @@ export class HostedCoordinationEventStreamController {
         await this.writeAuthorized(
           reply,
           resyncFrame(reason),
+          { frameKind: 'resync_required', eventId: null, eventType: 'resync_required' },
           prepared.authorization,
           prepared.signal
         );
@@ -742,11 +744,12 @@ export class HostedCoordinationEventStreamController {
   private async writeAuthorized(
     reply: HostedCoordinationHttpReply,
     frame: string,
+    identity: ProductSseFrameIdentity,
     authorization: HostedCoordinationEventStreamAuthorization,
     signal: AbortSignal
   ): Promise<boolean> {
     if (!(await authorizationIsCurrent(authorization, signal))) return false;
-    return this.writeBounded(reply, frame, signal);
+    return emitProductSseWrite(frame, identity, await this.writeBounded(reply, frame, signal));
   }
 
   private writeBounded(

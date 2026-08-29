@@ -528,8 +528,7 @@ function rejectContractEvidence(fixture: InvalidFixture): string | null {
   const contractPin = evidence.contractPin as JsonObject | undefined;
   if (
     contractPin?.acceptedSha256 === SCHEMA_SHA256 &&
-    contractPin.presentedSha256 === OLD_DIGEST &&
-    contractPin.presentedSha256 !== contractPin.acceptedSha256
+    contractPin.presentedSha256 === OLD_DIGEST
   ) {
     return 'old_digest';
   }

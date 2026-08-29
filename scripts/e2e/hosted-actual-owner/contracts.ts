@@ -1,5 +1,13 @@
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
+
+const producerProvenanceContractArtifact = readFileSync(
+  resolve(
+    process.cwd(),
+    'src/features/hosted-producer-provenance/contracts/hosted-producer-provenance-v2.schema.json'
+  )
+);
 
 export const CONTRACT_PURPOSE = 'agent-teams.p3c.actual-owner-harness/v2' as const;
 export const INTEGRATION_PURPOSE = 'agent-teams.p3c.integration-descriptor/v2' as const;
@@ -9,6 +17,7 @@ export const HARNESS_REVIEW_PURPOSE = 'agent-teams.p3c.harness-review/v1' as con
 export const ONE_RUN_AUTHORIZATION_PURPOSE =
   'agent-teams.p3c.controller-one-run-authorization/v1' as const;
 export const CONSUMED_ATTEMPT_PURPOSE = 'agent-teams.p3c.consumed-attempt/v1' as const;
+export const PRODUCER_CANDIDATE_PURPOSE = 'agent-teams.p3c.producer-candidate/v1' as const;
 export const GLOBAL_FINAL_RUN_RECORD = 'actual-owner-final-run-000001.json' as const;
 export const P3C_LANE = 'P3.C2.FINAL_NO_FAKE_RUN' as const;
 export const MAXIMUM_FINAL_RUNS = 1 as const;
@@ -39,6 +48,46 @@ export const OPENCODE_IDENTITIES = Object.freeze({
 export const PRODUCT_ORIGIN = 'http://127.0.0.1:45131' as const;
 export const INTEGRATION_DESCRIPTOR_FD = 3;
 export const BROWSER_OBSERVATION_FD = 4;
+export const OWNER_CHILD_FDS = Object.freeze({
+  sealedLauncherLease: 3,
+  bootstrap: 4,
+  activationV2: 5,
+} as const);
+export const OWNER_WRAPPER_ARGUMENT = '--runtime-manifest' as const;
+export const OWNER_SEALED_PROTOCOL_ARGUMENT = '--hosted-actual-owner-sealed-protocol=v1' as const;
+export const OWNER_CHILD_PROTOCOL = Object.freeze({
+  sealedLauncherLease: Object.freeze({
+    fd: 3,
+    kind: 'sealed-memfd',
+    format: 'agent-teams.hosted-control.launcher-lease/v1',
+    maximumBytes: 64 * 1024,
+    requiredSeals: Object.freeze(['seal', 'shrink', 'grow', 'write'] as const),
+    childOwnership: 'retained-until-owner-close',
+  }),
+  bootstrap: Object.freeze({
+    fd: 4,
+    kind: 'one-use-stream',
+    format: 'agent-teams.hosted-control.bootstrap/v1',
+    framing: 'u32be-header-length+canonical-json-header+32-byte-key+32-byte-hmac',
+    maximumHeaderBytes: 64 * 1024,
+    maximumFrameBytes: 4 + 64 * 1024 + 32 + 32,
+    childOwnership: 'close-after-one-frame-eof',
+  }),
+  activationV2: Object.freeze({
+    fd: 5,
+    kind: 'connected-stream-socket',
+    protocol: 'agent-teams.hosted-approval-activation-v2',
+    alreadyAuthenticated: true,
+    maximumPrepareBytes: 64 * 1024,
+    maximumResponseBytes: 64 * 1024,
+    maximumAdmissionBytes: 256 * 1024,
+    childOwnership: 'retained-by-activation-lease',
+  }),
+  parentOwnership: Object.freeze({
+    sourceDescriptors: 'arbitrary-distinct-owned',
+    closeCopiesAfterSpawn: true,
+  }),
+} as const);
 
 export const ROOT_NAMES = Object.freeze([
   'harness',
@@ -96,8 +145,86 @@ export const OWNED_PATHS = Object.freeze([
 
 const HEX_40 = /^[0-9a-f]{40}$/u;
 const HEX_64 = /^[0-9a-f]{64}$/u;
+const HARNESS_RUN_ID = /^[0-9a-f]{64}$/u;
+const PRODUCT_RUN_ID = /^run_[0-9a-f]{32}$/u;
 const DECIMAL = /^(?:0|[1-9]\d*)$/u;
 const SAFE_ID = /^[a-z][a-z0-9._:-]{0,127}$/u;
+
+export const RUNTIME_CAPTURE_NAMES = Object.freeze([
+  'conditionalPostLedgerPath',
+  'negativeResultsPath',
+  'openCodeTimelinePath',
+  'ownerWalTimelinePath',
+  'productTimelinePath',
+  'protectedEffectLedgerPath',
+] as const);
+export type RuntimeCaptureName = (typeof RUNTIME_CAPTURE_NAMES)[number];
+
+export const PRODUCER_PROVENANCE_CONTRACT = Object.freeze({
+  contract: 'claude-team/hosted-producer-provenance' as const,
+  version: 2 as const,
+  environment: 'CLAUDE_TEAM_PRODUCER_PROVENANCE_V2' as const,
+  framing: 'canonical-ndjson' as const,
+  maximumLineBytes: 64 * 1024,
+  firstRecordType: 'producer-open' as const,
+  firstSequence: 0 as const,
+  descriptorSlots: Object.freeze({
+    ownerWalTimeline: 9,
+    conditionalPostLedger: 9,
+    productTimeline: 10,
+    negativeResults: 9,
+    openCodeTimeline: 9,
+    protectedEffectLedger: 10,
+  }),
+});
+
+/** Digest of the exact shared, LF-terminated, repo-neutral contract artifact bytes. */
+export const PRODUCER_PROVENANCE_CONTRACT_SHA256 = sha256(
+  producerProvenanceContractArtifact
+);
+if (
+  Buffer.byteLength(producerProvenanceContractArtifact) !== 54_393 ||
+  PRODUCER_PROVENANCE_CONTRACT_SHA256 !==
+    'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498'
+) {
+  throw new Error('p3c_producer_provenance_contract_artifact_identity');
+}
+
+export const RUNTIME_CAPTURE_STREAMS = Object.freeze({
+  conditionalPostLedgerPath: 'conditionalPostLedger',
+  negativeResultsPath: 'negativeResults',
+  openCodeTimelinePath: 'openCodeTimeline',
+  ownerWalTimelinePath: 'ownerWalTimeline',
+  productTimelinePath: 'productTimeline',
+  protectedEffectLedgerPath: 'protectedEffectLedger',
+} as const satisfies Readonly<Record<RuntimeCaptureName, string>>);
+export type ProducerProvenanceStream = (typeof RUNTIME_CAPTURE_STREAMS)[RuntimeCaptureName];
+
+export interface ActualOwnerRuntimeManifest {
+  readonly schemaVersion: 1;
+  readonly purpose: 'agent-teams.hosted-actual-owner-e2e/v1';
+  readonly harnessRunId: string;
+  readonly sandboxRoot: string;
+  readonly markerPath: string;
+  readonly evidenceRoot: string;
+  readonly capture: Readonly<Record<RuntimeCaptureName, string>>;
+  readonly captureEmissionContract: Readonly<{
+    contract: typeof PRODUCER_PROVENANCE_CONTRACT.contract;
+    version: typeof PRODUCER_PROVENANCE_CONTRACT.version;
+    contractSha256: string;
+    environment: typeof PRODUCER_PROVENANCE_CONTRACT.environment;
+    framing: typeof PRODUCER_PROVENANCE_CONTRACT.framing;
+    descriptorSlots: typeof PRODUCER_PROVENANCE_CONTRACT.descriptorSlots;
+    verifierMayProduceBytes: false;
+    producerNativeIdentitiesComposed: false;
+  }>;
+  readonly refs: Readonly<{
+    openCode: string;
+    openCodeExecutableSha256: typeof OPENCODE_IDENTITIES.linuxX64BinarySha256;
+    orchestrator: string;
+    product: string;
+  }>;
+}
 
 export interface RootPin {
   readonly path: string;
@@ -223,6 +350,43 @@ export interface RawRecord {
   readonly payloadSha256: string;
 }
 
+export const ORDERED_PRODUCER_IDENTITIES = Object.freeze([
+  Object.freeze({ role: 'browser', implementationId: 'agent-teams.product.browser-observer.v1' }),
+  Object.freeze({ role: 'opencode', implementationId: 'agent-teams.opencode.hosted-approval.v1' }),
+  Object.freeze({ role: 'owner', implementationId: 'agent-teams.orchestrator.hosted-approval-owner.v1' }),
+  Object.freeze({
+    role: 'product-producer',
+    implementationId: 'agent-teams.product.hosted-approval.v1',
+  }),
+] as const);
+
+export interface SignedProducerCandidatePayload {
+  readonly contract: typeof PRODUCER_PROVENANCE_CONTRACT.contract;
+  readonly contractSha256: typeof PRODUCER_PROVENANCE_CONTRACT_SHA256;
+  readonly producers: readonly Readonly<{
+    artifactManifestSha256: string;
+    executableSha256: string;
+    implementationId: string;
+    moduleSha256: string;
+    role: (typeof ORDERED_PRODUCER_IDENTITIES)[number]['role'];
+    sourceCommit: string;
+    sourceRepository: string;
+    sourceTree: string;
+  }>[];
+  readonly productionEligible: false;
+  readonly purpose: typeof PRODUCER_CANDIDATE_PURPOSE;
+  readonly releaseEligible: false;
+  readonly schemaVersion: 1;
+  readonly signedBuildProvenanceRequired: true;
+}
+
+export interface ProducerCandidateSignatureSidecar {
+  readonly algorithm: 'ed25519';
+  readonly keyId: string;
+  readonly payloadSha256: string;
+  readonly signature: string;
+}
+
 export function sha256(value: string | Uint8Array): string {
   return createHash('sha256').update(value).digest('hex');
 }
@@ -281,6 +445,167 @@ export function canonicalAbsolutePath(value: unknown, label = 'absolute_path'): 
   if (!isAbsolute(path) || resolve(path) !== path || path === '/')
     throw new TypeError(`p3c_${label}`);
   return path;
+}
+
+export function parseProductRunId(value: unknown, label = 'product_run_id'): string {
+  return text(value, PRODUCT_RUN_ID, label);
+}
+
+export function parseHarnessRunId(value: unknown, label = 'harness_run_id'): string {
+  return text(value, HARNESS_RUN_ID, label);
+}
+
+export function assertRuntimeIdentifierSeparation(
+  input: Readonly<{
+    productRunId: unknown;
+    harnessRunId: unknown;
+    controllerNonce: unknown;
+  }>
+): void {
+  const productRunId = parseProductRunId(input.productRunId);
+  const harnessRunId = parseHarnessRunId(input.harnessRunId);
+  const controllerNonce = text(input.controllerNonce, HEX_64, 'controller_nonce');
+  if (
+    productRunId.slice('run_'.length) === harnessRunId ||
+    productRunId.slice('run_'.length) === controllerNonce ||
+    harnessRunId === controllerNonce
+  ) {
+    throw new TypeError('p3c_runtime_identifier_spliced');
+  }
+}
+
+export function assertCandidateOpenCodeDigestChain(
+  input: Readonly<{
+    compiledBuildPin: unknown;
+    runtimeRef: unknown;
+    rehashedExecutable: unknown;
+    signedRouteDigests: readonly unknown[];
+  }>
+): typeof OPENCODE_IDENTITIES.linuxX64BinarySha256 {
+  const expected = OPENCODE_IDENTITIES.linuxX64BinarySha256;
+  if (
+    input.compiledBuildPin !== expected ||
+    input.runtimeRef !== expected ||
+    input.rehashedExecutable !== expected ||
+    input.signedRouteDigests.length === 0 ||
+    input.signedRouteDigests.some((digest) => digest !== `sha256:${expected}`)
+  ) {
+    throw new TypeError('p3c_candidate_opencode_digest_chain_mismatch');
+  }
+  return expected;
+}
+
+export function parseActualOwnerRuntimeManifest(value: unknown): ActualOwnerRuntimeManifest {
+  const item = exactRecord(
+    value,
+    [
+      'schemaVersion',
+      'purpose',
+      'runId',
+      'sandboxRoot',
+      'markerPath',
+      'evidenceRoot',
+      'driverBaseUrl',
+      'productBaseUrl',
+      'approvalPath',
+      'browser',
+      'capture',
+      'captureEmissionContract',
+      'refs',
+    ],
+    'runtime_manifest'
+  );
+  if (item.schemaVersion !== 1 || item.purpose !== 'agent-teams.hosted-actual-owner-e2e/v1') {
+    throw new TypeError('p3c_runtime_manifest_version');
+  }
+  const sandboxRoot = canonicalAbsolutePath(item.sandboxRoot, 'runtime_sandbox_root');
+  const markerPath = canonicalAbsolutePath(item.markerPath, 'runtime_marker');
+  const evidenceRoot = canonicalAbsolutePath(item.evidenceRoot, 'runtime_evidence_root');
+  const capture = exactRecord(item.capture, RUNTIME_CAPTURE_NAMES, 'runtime_capture');
+  const capturePaths = Object.fromEntries(
+    RUNTIME_CAPTURE_NAMES.map((name) => [
+      name,
+      canonicalAbsolutePath(capture[name], `runtime_capture_${name}`),
+    ])
+  ) as Record<RuntimeCaptureName, string>;
+  const confinedPaths = [markerPath, evidenceRoot, ...Object.values(capturePaths)];
+  const captureEmissionContract = exactRecord(
+    item.captureEmissionContract,
+    [
+      'contract',
+      'version',
+      'contractSha256',
+      'environment',
+      'framing',
+      'descriptorSlots',
+      'verifierMayProduceBytes',
+      'producerNativeIdentitiesComposed',
+    ],
+    'runtime_capture_emission_contract'
+  );
+  if (
+    confinedPaths.some((path) => {
+      const relation = relative(sandboxRoot, path);
+      return relation === '' || relation === '..' || relation.startsWith(`..${sep}`);
+    }) ||
+    new Set(confinedPaths).size !== confinedPaths.length
+  ) {
+    throw new TypeError('p3c_runtime_capture_not_isolated');
+  }
+  if (
+    captureEmissionContract.contract !== PRODUCER_PROVENANCE_CONTRACT.contract ||
+    captureEmissionContract.version !== PRODUCER_PROVENANCE_CONTRACT.version ||
+    captureEmissionContract.contractSha256 !== PRODUCER_PROVENANCE_CONTRACT_SHA256 ||
+    captureEmissionContract.environment !== PRODUCER_PROVENANCE_CONTRACT.environment ||
+    captureEmissionContract.framing !== PRODUCER_PROVENANCE_CONTRACT.framing ||
+    canonicalJson(captureEmissionContract.descriptorSlots) !==
+      canonicalJson(PRODUCER_PROVENANCE_CONTRACT.descriptorSlots) ||
+    captureEmissionContract.verifierMayProduceBytes !== false ||
+    captureEmissionContract.producerNativeIdentitiesComposed !== false
+  ) {
+    throw new TypeError('p3c_runtime_capture_emission_contract');
+  }
+  const refs = exactRecord(
+    item.refs,
+    ['openCode', 'openCodeExecutableSha256', 'orchestrator', 'product'],
+    'runtime_refs'
+  );
+  if (
+    refs.openCodeExecutableSha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
+    typeof refs.openCode !== 'string' ||
+    !HEX_40.test(refs.openCode) ||
+    typeof refs.orchestrator !== 'string' ||
+    !HEX_40.test(refs.orchestrator) ||
+    typeof refs.product !== 'string' ||
+    !HEX_40.test(refs.product)
+  ) {
+    throw new TypeError('p3c_runtime_refs_invalid');
+  }
+  return Object.freeze({
+    schemaVersion: 1,
+    purpose: 'agent-teams.hosted-actual-owner-e2e/v1',
+    harnessRunId: parseHarnessRunId(item.runId),
+    sandboxRoot,
+    markerPath,
+    evidenceRoot,
+    capture: Object.freeze(capturePaths),
+    captureEmissionContract: Object.freeze({
+      contract: PRODUCER_PROVENANCE_CONTRACT.contract,
+      version: PRODUCER_PROVENANCE_CONTRACT.version,
+      contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+      environment: PRODUCER_PROVENANCE_CONTRACT.environment,
+      framing: PRODUCER_PROVENANCE_CONTRACT.framing,
+      descriptorSlots: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots,
+      verifierMayProduceBytes: false,
+      producerNativeIdentitiesComposed: false,
+    }),
+    refs: Object.freeze({
+      openCode: refs.openCode,
+      openCodeExecutableSha256: OPENCODE_IDENTITIES.linuxX64BinarySha256,
+      orchestrator: refs.orchestrator,
+      product: refs.product,
+    }),
+  });
 }
 
 function rootPin(value: unknown, label: string): RootPin {
@@ -666,6 +991,96 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
 
 export function parseRunArguments(arguments_: readonly string[]): void {
   if (arguments_.length !== 0) throw new TypeError('p3c_run_accepts_no_cli_inputs');
+}
+
+function parseCanonicalCandidateDocument(bytes: Buffer, label: string): Record<string, unknown> {
+  if (bytes.length < 2 || bytes.length > 1024 * 1024 || bytes.includes(0x0d)) {
+    throw new TypeError(`p3c_${label}_frame`);
+  }
+  const source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  let value: unknown;
+  try {
+    value = JSON.parse(source);
+  } catch {
+    throw new TypeError(`p3c_${label}_json`);
+  }
+  if (canonicalJson(value) !== source) throw new TypeError(`p3c_${label}_noncanonical`);
+  return exactRecord(value, Reflect.ownKeys(value as object) as string[], label);
+}
+
+export function parseSignedProducerCandidatePayload(bytes: Buffer): SignedProducerCandidatePayload {
+  const item = exactRecord(
+    parseCanonicalCandidateDocument(bytes, 'producer_candidate'),
+    [
+      'contract', 'contractSha256', 'producers', 'productionEligible', 'purpose',
+      'releaseEligible', 'schemaVersion', 'signedBuildProvenanceRequired',
+    ],
+    'producer_candidate'
+  );
+  if (
+    item.contract !== PRODUCER_PROVENANCE_CONTRACT.contract ||
+    item.contractSha256 !== PRODUCER_PROVENANCE_CONTRACT_SHA256 ||
+    item.productionEligible !== false ||
+    item.purpose !== PRODUCER_CANDIDATE_PURPOSE ||
+    item.releaseEligible !== false ||
+    item.schemaVersion !== 1 ||
+    item.signedBuildProvenanceRequired !== true ||
+    !Array.isArray(item.producers) ||
+    item.producers.length !== ORDERED_PRODUCER_IDENTITIES.length
+  ) {
+    throw new TypeError('p3c_producer_candidate_contract');
+  }
+  const producers = item.producers.map((value, index) => {
+    const producer = exactRecord(
+      value,
+      [
+        'artifactManifestSha256', 'executableSha256', 'implementationId', 'moduleSha256',
+        'role', 'sourceCommit', 'sourceRepository', 'sourceTree',
+      ],
+      `producer_candidate_producer_${index}`
+    );
+    const identity = ORDERED_PRODUCER_IDENTITIES[index]!;
+    if (
+      producer.role !== identity.role ||
+      producer.implementationId !== identity.implementationId ||
+      typeof producer.sourceRepository !== 'string' ||
+      !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/u.test(producer.sourceRepository) ||
+      typeof producer.sourceCommit !== 'string' ||
+      !HEX_40.test(producer.sourceCommit) ||
+      typeof producer.sourceTree !== 'string' ||
+      !HEX_40.test(producer.sourceTree) ||
+      [producer.artifactManifestSha256, producer.executableSha256, producer.moduleSha256].some(
+        (digest) => typeof digest !== 'string' || !HEX_64.test(digest)
+      )
+    ) {
+      throw new TypeError(`p3c_producer_candidate_producer_${index}`);
+    }
+    return Object.freeze(producer) as SignedProducerCandidatePayload['producers'][number];
+  });
+  return Object.freeze({ ...item, producers: Object.freeze(producers) }) as unknown as SignedProducerCandidatePayload;
+}
+
+export function parseProducerCandidateSignatureSidecar(
+  bytes: Buffer,
+  payloadBytes: Buffer
+): ProducerCandidateSignatureSidecar {
+  const item = exactRecord(
+    parseCanonicalCandidateDocument(bytes, 'producer_candidate_signature'),
+    ['algorithm', 'keyId', 'payloadSha256', 'signature'],
+    'producer_candidate_signature'
+  );
+  if (
+    item.algorithm !== 'ed25519' ||
+    typeof item.keyId !== 'string' ||
+    !SAFE_ID.test(item.keyId) ||
+    item.payloadSha256 !== sha256(payloadBytes) ||
+    typeof item.signature !== 'string' ||
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(item.signature) ||
+    Buffer.from(item.signature, 'base64').length !== 64
+  ) {
+    throw new TypeError('p3c_producer_candidate_signature');
+  }
+  return Object.freeze(item) as unknown as ProducerCandidateSignatureSidecar;
 }
 
 export function validateRecordId(value: unknown, label: string): string {

@@ -1,9 +1,16 @@
+import { createHash } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 
 import {
   HostedCoordinationEventStreamController,
   type HostedCoordinationEventStreamScheduler,
 } from '@features/coordination-events/main/adapters/input/http/HostedCoordinationEventStreamController';
+import {
+  bindProductHostedProducerInstance,
+  clearProductHostedProducerProvenance,
+  type HostedProducerProvenance,
+  installProductHostedProducerProvenance,
+} from '@features/hosted-producer-provenance/main';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -560,6 +567,24 @@ describe('HostedCoordinationEventStreamController', () => {
   });
 
   it('lets Last-Event-ID win, listens before replay, catches up durably, and projects bounded envelopes', async () => {
+    const provenanceEmit = vi.fn();
+    const provenance: HostedProducerProvenance = {
+      role: 'product-producer',
+      controllerNonce: 'c'.repeat(64),
+      runId: 'd'.repeat(64),
+      emit: provenanceEmit,
+      bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => { throw new Error(reason); }),
+      close: vi.fn(),
+    };
+    bindProductHostedProducerInstance(provenance, {
+      deploymentId: 'deployment_sse',
+      bootId: 'boot_sse',
+      ownerAuthority: 'owner-authority_sse',
+      ownerGeneration: 7,
+      ownerSessionId: 'owner-session_sse',
+    });
+    installProductHostedProducerProvenance(provenance);
     const order: string[] = [];
     const wakeups = createWakeups();
     wakeups.source.subscribe.mockImplementation((listener: () => void) => {
@@ -619,10 +644,29 @@ describe('HostedCoordinationEventStreamController', () => {
     };
 
     await registerHandler(controller)(request, reply.reply);
+    clearProductHostedProducerProvenance(provenance);
 
     expect(order).toEqual(['subscribe', 'replay:cursor-0', 'replay:cursor-1']);
     const eventFrames = reply.raw.frames.filter((frame) => frame.startsWith('id: '));
     expect(eventFrames).toHaveLength(2);
+    expect(provenanceEmit).toHaveBeenCalledTimes(2);
+    expect(provenanceEmit.mock.calls).toEqual(
+      eventFrames.map((frame) => [
+        'productTimeline',
+        {
+          recordType: 'coordination-sse-write-succeeded',
+          operationNonce: expect.stringMatching(/^[0-9a-f]{64}$/u),
+          native: expect.objectContaining({
+            eventId: expect.stringMatching(/^cursor-/u),
+            eventType: 'coordination_event',
+            frameBytes: Buffer.byteLength(frame),
+            frameKind: 'coordination_event',
+            frameSha256: createHash('sha256').update(frame).digest('hex'),
+          }),
+        },
+      ])
+    );
+    expect(JSON.stringify(provenanceEmit.mock.calls)).not.toContain('private-owner');
     expect(eventFrames[0]).toContain('id: cursor-1\nevent: coordination_event\n');
     expect(eventFrames[1]).toContain('id: cursor-3\nevent: coordination_event\n');
     const envelopes = eventFrames.map((frame) =>

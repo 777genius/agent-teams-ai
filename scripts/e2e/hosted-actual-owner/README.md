@@ -73,16 +73,52 @@ injects setsid and double-fork descendants at owner and OpenCode boundaries, bin
 escalation and exit cause, requires an empty post-drain census, and proves an outside-sandbox
 sentinel was unchanged.
 
+The owner wrapper accepts only `--runtime-manifest /sandbox/runtime-manifest.json`; its sealed child
+receives the fixed FD3 launcher lease, one-use FD4 bootstrap stream, and retained authenticated FD5
+ActivationV2 connection. Arbitrary distinct parent descriptors may be remapped to those child-local
+numbers, but the supervisor result is accepted only when the production wrapper records, for every
+observed wrapper PID/start token, the exact pre-spawn `/proc/<pid>/fd/<fd>` identity and post-spawn
+`fstat` `EBADF` result for each launcher-lease, bootstrap, and ActivationV2 parent copy, ordered on
+the same monotonic clock around the recorded spawn boundary. The child publication repeats the
+wrapper PID/start token and a fresh 256-bit pre-spawn nonce, and final acceptance joins all three to
+that exact lifecycle record. A plan flag or cleanup boolean is not
+evidence. Missing, partial, reordered, identity-detached, temporally invalid, or non-`EBADF` records
+fail final acceptance before evidence is retained.
+
 ## Raw evidence
 
-Six independently produced canonical NDJSON streams (`browser`, `product-http`, `product-sse`,
-`owner-wal`, `opencode`, and `supervisor`) are authoritative. Their parent-created exclusive
-descriptors are sealed before parsing; retained metadata binds the producer start tokens and pidfd
-inodes plus the parent's descriptor capture device/inode and final hash. Each record binds the controller nonce,
+Six independently collected raw canonical NDJSON streams (`browser`, `product-http`, `product-sse`,
+`owner-wal`, `opencode`, and `supervisor`) remain one side of the comparison. Each record binds the controller nonce,
 matrix row, monotonic sequence, verified replacement-aware process-start token, raw semantic payload
 digest, and the joined authenticated-actor/target-team/run/approval/generation/preview/idempotency/
 decision identity that the pinned product contract exposes, plus separately observed provider-effect
 identity captured from retained provider bytes. The harness never synthesizes product API fields.
+The verify-only overlay parses the independent r307
+`claude-team/hosted-producer-provenance/v1` envelope, its exact contract digest, producer nonce,
+per-shard sequence/hash chain, and stream-specific semantic joins. It accepts multiple physical
+owner shards as one logical `ownerWalTimeline`. Acceptance additionally requires supervisor-observed
+FD 9/10 device/inode identity, producer PID/start ticks/executable and module identity, parent-copy
+`EBADF`, producer descriptor disappearance or exact pidfd exit, a zero-retained-writer descendant
+census, and a stable read-only seal manifest. `runDriver()` only reopens those sealed shard inodes
+read-only. No verifier function constructs expected native bytes.
+
+Producer-open and semantic records use exact capture-specific native schemas bound to that shared
+contract digest. Each native semantic record and digest must equal the independently parsed raw
+record. Cross-joins are exact and ordered within the kernel-bound producer shard, rejecting
+resequencing, rehashing, owner substitution, duplicate or missing joins, and cross-owner mixing.
+Emission nonces are unique across every FD stream, owner generation, and shard in the run. A live
+capture mode must exactly equal its authoritative sealed mode (`0400`); stable `0600` captures are
+rejected.
+
+This repository does not yet contain composed successor P3.B2/OpenCode/Product/browser producer
+identities. The frozen OpenCode artifact predates the native writer contract and is rejected before
+launch. Therefore `productionEligible=false`, fixture proofs cannot satisfy acceptance, and the
+README does not claim producer-native readiness. Fixed hand-authored parser goldens are explicitly
+`nonAuthoritative`; they exercise framing and tamper rejection only.
+
+The current hand-written contract digest is
+`f83678990876983c839f32d3c5f0413a2df4a681cfb278a646d3e192b69d13d3`; the parser rejects any
+other value.
 Cross-team evidence binds the authenticated Team A actor from the successful browser decisions to
 the browser's retained rejected Team B page, preview, and decision calls, and then to a distinct
 Team B item, preview, and result first observed under Team B authority. HTTP, SSE,

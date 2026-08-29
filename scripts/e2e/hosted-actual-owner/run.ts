@@ -40,6 +40,7 @@ export async function run(arguments_: readonly string[]): Promise<RunResult> {
     sandboxRemoved = cleanup.disposition === 'removed';
     const document = assembleEvidence({
       raw: driver.raw,
+      captures: driver.captures,
       controllerNonce: descriptor.controllerNonce,
       runId: sandbox.runId,
       outcome: driver.outcome,
@@ -48,6 +49,7 @@ export async function run(arguments_: readonly string[]): Promise<RunResult> {
     await retainEvidence(
       admission.roots.evidenceRoot,
       driver.raw,
+      driver.captures,
       document,
       driver.outcome.transcript
     );

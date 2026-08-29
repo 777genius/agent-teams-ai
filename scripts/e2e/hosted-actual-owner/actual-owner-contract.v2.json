@@ -58,8 +58,58 @@
     "playwrightWorkers": 1,
     "playwrightRetries": 0
   },
+  "ownerChildProtocol": {
+    "wrapperArgv": ["--runtime-manifest", "/sandbox/runtime-manifest.json"],
+    "sealedArgv": [
+      "--hosted-actual-owner-sealed-protocol=v1",
+      "--runtime-manifest",
+      "/sandbox/runtime-manifest.json"
+    ],
+    "childLocalFd3": "sealed-launcher-lease",
+    "childLocalFd4": "bootstrap",
+    "childLocalFd5": "retained-authenticated-activation-v2",
+    "descriptorContracts": {
+      "fd3": {
+        "kind": "sealed-memfd",
+        "format": "agent-teams.hosted-control.launcher-lease/v1",
+        "maximumBytes": 65536,
+        "childOwnership": "retained-until-owner-close"
+      },
+      "fd4": {
+        "kind": "one-use-stream",
+        "format": "agent-teams.hosted-control.bootstrap/v1",
+        "framing": "u32be-header-length+canonical-json-header+32-byte-key+32-byte-hmac",
+        "maximumHeaderBytes": 65536,
+        "maximumFrameBytes": 65604,
+        "childOwnership": "close-after-one-frame-eof"
+      },
+      "fd5": {
+        "kind": "connected-stream-socket",
+        "protocol": "agent-teams.hosted-approval-activation-v2",
+        "alreadyAuthenticated": true,
+        "maximumPrepareBytes": 65536,
+        "maximumResponseBytes": 65536,
+        "maximumAdmissionBytes": 262144,
+        "childOwnership": "retained-by-activation-lease"
+      }
+    },
+    "parentDescriptorsMayBeArbitrary": true,
+    "parentCopiesClosedAfterSpawn": true,
+    "parentCleanupEvidence": {
+      "contract": "agent-teams.hosted-owner-child-parent-fd-cleanup/v2",
+      "requiredForEveryOwnerStart": true,
+      "descriptorOrder": ["sealed-launcher-lease", "bootstrap", "activation-v2"],
+      "beforeSpawnObservation": "exact-/proc-wrapper-pid-fd-identity",
+      "afterSpawnObservation": "fstat-EBADF",
+      "monotonicSpawnBoundaryOrderingRequired": true,
+      "wrapperPidAndStartTokenRequired": true,
+      "nonReplayableSpawnNonceRequired": true
+    },
+    "compatibilityProbingPermitted": false,
+    "socketPathReconnectPermitted": false
+  },
   "evidence": {
-    "authority": "raw-records-only",
+    "authority": "independent-raw-observations-plus-kernel-bound-native-captures",
     "summaryIsAuthority": false,
     "controllerExternalTrustAnchorRequired": true,
     "authorityRolesAndRevocationsFreezeBound": true,
@@ -75,6 +125,51 @@
     "ambiguityWalLeaseFenceReconciliationRequired": true,
     "secretLikeContentPermitted": false,
     "semanticSchemasRequired": true,
+    "captureSpecificNativeRecordSchemasRequired": true,
+    "captureNativeSchemaContractDigestBindingRequired": true,
+    "captureSemanticRecordDigestEqualityRequired": true,
+    "captureOrderedExactCrossJoinRequired": true,
+    "captureRawProcessToKernelProducerBindingRequired": true,
+    "captureRunGlobalProducerNonceUniquenessRequired": true,
+    "captureLiveModeMustEqualSealedMode": "0400",
+    "captureEntryActivationAdmissionRuntimeRawIdentityRequired": true,
+    "captureAuthority": "unavailable-until-real-producer-identities-are-composed",
+    "producerProvenanceContract": "claude-team/hosted-producer-provenance/v2",
+    "producerProvenanceContractSha256": "acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498",
+    "producerProvenanceEnvironment": "CLAUDE_TEAM_PRODUCER_PROVENANCE_V2",
+    "producerNativeIdentitiesComposed": false,
+    "captureSemanticMappings": "unavailable-until-cross-repo-v2-native-schemas-pinned",
+    "captureNativeRecordTypes": {
+      "conditionalPostLedger": ["decision-compare-and-claim-verified"],
+      "negativeResults": ["browser-negative-response-observed"],
+      "openCodeTimeline": [
+        "hosted-capability",
+        "hosted-observe",
+        "hosted-reply",
+        "hosted-reply-raw"
+      ],
+      "ownerWalTimeline": ["owner-wal-published"],
+      "productTimeline": [
+        "approval-http-response-finalized",
+        "approval-http-unadmitted-response-finalized",
+        "coordination-sse-write-succeeded"
+      ],
+      "protectedEffectLedger": ["conditional-reply-effect"]
+    },
+    "fixedParserGoldensAuthoritative": false,
+    "captureVerifierMayProduceBytes": false,
+    "captureWriterDescriptorLifecycleProofRequired": true,
+    "captureExactProducerBytesIndependentlyRehashed": true,
+    "ownerWalTimelinePhysicalShardsRequired": true,
+    "ownerWalTimelineLogicalGroupingRequired": true,
+    "captureFdSlots": {
+      "ownerWalTimeline": 9,
+      "conditionalPostLedger": 9,
+      "productTimeline": 10,
+      "negativeResults": 9,
+      "openCodeTimeline": 9,
+      "protectedEffectLedger": 10
+    },
     "identityJoinRequired": [
       "authenticatedActorTeam",
       "targetTeam",
@@ -104,7 +199,15 @@
     "sseInnerOuterLabelBindingRequired": true,
     "walInnerOuterStateBindingRequired": true,
     "walRetainedRecordDigestBindingRequired": true,
-    "approvalEndpointFamilies": ["page", "preview", "decisions"]
+    "approvalEndpointFamilies": ["page", "preview", "decisions"],
+    "isolatedCapturePaths": [
+      "conditionalPostLedgerPath",
+      "negativeResultsPath",
+      "openCodeTimelinePath",
+      "ownerWalTimelinePath",
+      "productTimelinePath",
+      "protectedEffectLedgerPath"
+    ]
   },
   "productionEligible": false,
   "finalE2EAuthorizedByHarnessImplementation": false

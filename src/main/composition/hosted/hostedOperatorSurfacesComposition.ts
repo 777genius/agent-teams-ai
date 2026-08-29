@@ -25,6 +25,7 @@ import {
 } from '@features/team-approvals/main/hosted';
 
 import type { HostedRouteAdmission, HostedRouteContribution } from './application';
+import type { HostedProducerProvenance } from '@features/hosted-producer-provenance/main';
 import type { FastifyInstance } from 'fastify';
 
 interface OperatorRoute<TFacade, TContextFactory> {
@@ -40,7 +41,8 @@ export interface CreateHostedOperatorSurfacesCompositionDependencies {
   readonly approvals?: OperatorRoute<
     HostedTeamApprovalsHttpFacade,
     HostedTeamApprovalsContextFactory
-  >;
+  > &
+    Readonly<{ producerProvenance: HostedProducerProvenance }>;
   readonly diagnostics?: OperatorRoute<
     HostedDiagnosticsHttpFacade,
     HostedDiagnosticsContextFactory
@@ -87,6 +89,7 @@ export function createHostedOperatorSurfacesComposition(
           app,
           dependencies.approvals.contribution,
           dependencies.routeAdmission,
+          dependencies.approvals.producerProvenance,
           dependencies.approvals.createContext
         );
       }

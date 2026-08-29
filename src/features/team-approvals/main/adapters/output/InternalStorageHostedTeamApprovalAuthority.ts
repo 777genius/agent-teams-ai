@@ -1,5 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+import {
+  type HostedProducerProvenance,
+  isHostedProducerProvenanceFatalError,
+  type ProductHostedProducerOperation,
+  productRunIdToProvenanceTeamRunId,
+  requireProductHostedProducerOperation,
+} from '@features/hosted-producer-provenance/main';
 import { parseCursor, parseRunId, parseTeamId, type QueryContext } from '@shared/contracts/hosted';
 
 import {
@@ -54,6 +61,7 @@ export interface InternalStorageHostedTeamApprovalAuthorityDependencies {
   readonly clock?: HostedTeamApprovalClockPort;
   readonly ids?: HostedTeamApprovalAuthorityIdFactory;
   readonly onDecisionCommitted?: () => void;
+  readonly producerProvenance: HostedProducerProvenance;
 }
 
 function defaultIds(): HostedTeamApprovalAuthorityIdFactory {
@@ -332,6 +340,17 @@ export class InternalStorageHostedTeamApprovalAuthority
     context: QueryContext
   ): Promise<HostedTeamApprovalDecisionAdmissionResult> {
     if (!contextOpen(context, this.clock, context.deadlineAtMs)) return unavailable();
+    let producerOperation: ProductHostedProducerOperation;
+    try {
+      producerOperation = requireProductHostedProducerOperation(
+        context,
+        this.dependencies.producerProvenance
+      );
+    } catch {
+      return this.dependencies.producerProvenance.poison(
+        'producer-provenance-operation-binding-missing'
+      );
+    }
     try {
       const scope = await this.resolveScope(command.teamId, context, context.deadlineAtMs);
       if (scope === null) return Object.freeze({ kind: 'not_found' });
@@ -354,14 +373,49 @@ export class InternalStorageHostedTeamApprovalAuthority
         },
         deadlineAtMs: context.deadlineAtMs,
       });
-      if (!contextOpen(context, this.clock, context.deadlineAtMs)) return unavailable();
       if (result.kind === 'committed' || result.kind === 'idempotent_replay') {
+        const expectedApprovalId = `approval_${createHash('sha256')
+          .update(
+            JSON.stringify({
+              schemaVersion: 1,
+              teamId: scope.teamId,
+              runId: command.expectedRunId,
+              requestId: producerOperation.requestId,
+            }),
+            'utf8'
+          )
+          .digest('hex')
+          .slice(0, 32)}`;
         if (
+          command.approvalId !== expectedApprovalId ||
           result.receipt.approvalGeneration !== command.expectedGeneration ||
           result.receipt.decision !== command.decision
         ) {
-          return unavailable();
+          return this.dependencies.producerProvenance.poison(
+            'producer-provenance-post-commit-receipt-mismatch'
+          );
         }
+        this.dependencies.producerProvenance.emit('conditionalPostLedger', {
+          recordType: 'decision-compare-and-claim-verified',
+          native: Object.freeze({
+            actorId: producerOperation.actorId,
+            bootId: producerOperation.bootId,
+            deploymentId: producerOperation.deploymentId,
+            ownerAuthority: producerOperation.ownerAuthority,
+            ownerGeneration: producerOperation.ownerGeneration,
+            ownerSessionId: producerOperation.ownerSessionId,
+            requestId: producerOperation.requestId,
+            sessionId: producerOperation.sessionId,
+            approvalId: command.approvalId,
+            decision: command.decision,
+            generationId: command.expectedGeneration,
+            idempotencyKeySha256: createHash('sha256').update(command.idempotencyKey).digest('hex'),
+            outcome: result.kind,
+            targetTeamId: scope.teamId,
+            targetTeamRunId: productRunIdToProvenanceTeamRunId(command.expectedRunId),
+          }),
+          operationNonce: producerOperation.operationNonce,
+        });
         if (result.kind === 'committed') this.dependencies.onDecisionCommitted?.();
         return Object.freeze({ kind: result.kind, receipt: receipt(result.kind, command) });
       }
@@ -379,7 +433,8 @@ export class InternalStorageHostedTeamApprovalAuthority
         });
       }
       return result;
-    } catch {
+    } catch (error) {
+      if (isHostedProducerProvenanceFatalError(error)) throw error;
       return unavailable();
     }
   }

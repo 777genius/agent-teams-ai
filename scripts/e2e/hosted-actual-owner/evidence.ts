@@ -3,9 +3,14 @@ import { readdir, rename } from 'node:fs/promises';
 import { assertRootCurrent, procFdPath, type RootAnchor } from './anchors';
 import {
   MATRIX_ROWS,
+  OPENCODE_IDENTITIES,
   P3C_LANE,
   RAW_ORIGINS,
   RAW_RECORD_PURPOSE,
+  RUNTIME_CAPTURE_NAMES,
+  RUNTIME_CAPTURE_STREAMS,
+  PRODUCER_PROVENANCE_CONTRACT,
+  PRODUCER_PROVENANCE_CONTRACT_SHA256,
   canonicalJson,
   exactRecord,
   sha256,
@@ -15,8 +20,13 @@ import {
   type MatrixRow,
   type RawOrigin,
   type RawRecord,
+  type RuntimeCaptureName,
 } from './contracts';
-import type { ProcessStartEvidence, SupervisorOutcome } from './processes';
+import type {
+  ProcessStartEvidence,
+  ProducerCaptureFileEvidence,
+  SupervisorOutcome,
+} from './processes';
 import type { CleanupResult } from './sandbox';
 import { assertNoSecretLikeBytes, writeExclusive } from './secure-files';
 
@@ -188,6 +198,7 @@ interface CausalEvidence {
 
 interface ParsedRawRecord extends RawRecord {
   readonly semanticIdentity: SemanticIdentity;
+  readonly nativeRecord: Readonly<Record<string, unknown>>;
   readonly ownerGeneration: number;
   readonly processEvidenceSetId: string | null;
   readonly causal: CausalEvidence;
@@ -206,11 +217,788 @@ export interface EvidenceDocument {
   readonly runId: string;
   readonly result: 'verified';
   readonly raw: Readonly<Record<RawOrigin, OriginEvidence>>;
+  readonly captures: Readonly<
+    Record<
+      RuntimeCaptureName,
+      {
+        sha256: string;
+        size: number;
+        shardCount: number;
+        shardSha256s: readonly string[];
+        producerRole: string;
+        semanticRecordCount: number;
+      }
+    >
+  >;
   readonly rows: readonly RowEvidence[];
   readonly exactlyOnce: ExactlyOnceEvidence;
   readonly supervisorTranscriptSha256: string;
   readonly cleanup: CleanupResult;
   readonly evidenceDigest: string;
+}
+
+const CAPTURE_PRODUCER_ROLES = Object.freeze({
+  conditionalPostLedgerPath: 'product-producer',
+  negativeResultsPath: 'browser',
+  openCodeTimelinePath: 'opencode',
+  ownerWalTimelinePath: 'owner',
+  productTimelinePath: 'product-producer',
+  protectedEffectLedgerPath: 'opencode',
+} as const satisfies Readonly<Record<RuntimeCaptureName, string>>);
+
+const CAPTURE_IMPLEMENTATION_IDS = Object.freeze({
+  conditionalPostLedgerPath: 'agent-teams.product.hosted-approval.v1',
+  negativeResultsPath: 'agent-teams.product.browser-observer.v1',
+  openCodeTimelinePath: 'agent-teams.opencode.hosted-approval.v1',
+  ownerWalTimelinePath: 'agent-teams.orchestrator.hosted-approval-owner.v1',
+  productTimelinePath: 'agent-teams.product.hosted-approval.v1',
+  protectedEffectLedgerPath: 'agent-teams.opencode.hosted-approval.v1',
+} as const satisfies Readonly<Record<RuntimeCaptureName, string>>);
+
+const CAPTURE_NATIVE_RECORD_TYPES = Object.freeze({
+  conditionalPostLedgerPath: Object.freeze(['decision-compare-and-claim-verified'] as const),
+  negativeResultsPath: Object.freeze(['browser-negative-response-observed'] as const),
+  openCodeTimelinePath: Object.freeze(
+    ['hosted-capability', 'hosted-observe', 'hosted-reply', 'hosted-reply-raw'] as const
+  ),
+  ownerWalTimelinePath: Object.freeze(['owner-wal-published'] as const),
+  productTimelinePath: Object.freeze(
+    [
+      'approval-http-response-finalized',
+      'approval-http-unadmitted-response-finalized',
+      'coordination-sse-write-succeeded',
+    ] as const
+  ),
+  protectedEffectLedgerPath: Object.freeze(['conditional-reply-effect'] as const),
+} as const satisfies Readonly<Record<RuntimeCaptureName, readonly string[]>>);
+
+export interface NativeCaptureRecord {
+  readonly stream: (typeof RUNTIME_CAPTURE_STREAMS)[RuntimeCaptureName];
+  readonly recordType: string;
+  readonly sequence: number;
+  readonly previousRecordSha256: string | null;
+  readonly emissionNonce: string;
+  readonly operationNonce: string | null;
+  readonly producer: Readonly<{
+    role: string;
+    pid: number;
+    startTicks: string;
+    exeDev: string;
+    exeIno: string;
+    exeSha256: string;
+    artifactManifestSha256: string;
+    implementationId: string;
+    moduleSha256: string;
+  }>;
+  readonly activation: Readonly<{
+    controllerNonce: string;
+    runId: string;
+    stackManifestSha256: string;
+  }>;
+  readonly native: Readonly<Record<string, unknown>>;
+  readonly lineSha256: string;
+}
+
+export interface ParsedNativeCapture {
+  readonly producerRole: string;
+  readonly semanticRecordCount: number;
+  readonly records: readonly NativeCaptureRecord[];
+  readonly finalLineSha256: string;
+}
+
+const NATIVE_RECORD_KEYS = Object.freeze({
+  'decision-compare-and-claim-verified': Object.freeze([
+    'actorId', 'approvalId', 'bootId', 'decision', 'deploymentId', 'generationId',
+    'idempotencyKeySha256', 'ownerAuthority', 'ownerGeneration',
+    'ownerSessionId', 'outcome', 'requestId', 'sessionId',
+    'targetTeamId', 'targetTeamRunId',
+  ]),
+  'browser-negative-response-observed': Object.freeze([
+    'actorTeamId', 'harnessRunId', 'httpStatus', 'observedOutcome',
+    'processStartToken',
+    'requestBodySha256', 'requestFamily', 'responseBodySha256', 'targetTeamId', 'targetTeamRunId',
+  ]),
+  'approval-http-response-finalized': Object.freeze([
+    'actorId', 'bootId', 'deploymentId', 'method', 'outcome', 'ownerAuthority',
+    'ownerGeneration', 'ownerSessionId', 'requestBodyBytes', 'requestBodySha256', 'requestId',
+    'responseBodyBytes', 'responseBodySha256', 'routeId', 'sessionId', 'status',
+  ]),
+  'approval-http-unadmitted-response-finalized': Object.freeze([
+    'bootId', 'deploymentId', 'method', 'outcome', 'ownerAuthority', 'ownerGeneration',
+    'ownerSessionId', 'requestBodyBytes', 'requestBodySha256', 'responseBodyBytes',
+    'responseBodySha256', 'routeId', 'status',
+  ]),
+  'coordination-sse-write-succeeded': Object.freeze([
+    'bootId', 'deploymentId', 'eventId', 'eventType', 'frameBytes', 'frameKind', 'frameSha256',
+    'ownerAuthority', 'ownerGeneration', 'ownerSessionId',
+  ]),
+  'owner-wal-published': Object.freeze(['fence', 'mutation', 'revision', 'stateDelta', 'wal']),
+  'hosted-capability': Object.freeze([
+    'configGeneration', 'outcome', 'responseSha256', 'runtimeInstanceId', 'status',
+  ]),
+  'hosted-observe': Object.freeze([
+    'configGeneration', 'outcome', 'permissionCount', 'responseSha256', 'runtimeInstanceId',
+    'sessionId', 'status',
+  ]),
+  'hosted-reply': Object.freeze([
+    'configGeneration', 'decision', 'outcome', 'permissionDigest', 'requestId',
+    'requestIncarnation', 'responseSha256', 'runtimeInstanceId', 'sessionId',
+    'sessionIncarnation', 'status',
+  ]),
+  'hosted-reply-raw': Object.freeze([
+    'configGeneration', 'outcome', 'requestBodySha256', 'requestId', 'requestIncarnation',
+    'responseSha256', 'runtimeInstanceId', 'sessionId', 'sessionIncarnation', 'status',
+  ]),
+  'conditional-reply-effect': Object.freeze([
+    'configGeneration', 'decision', 'outcome', 'permissionDigest', 'requestId',
+    'requestIncarnation', 'runtimeInstanceId', 'sessionId', 'sessionIncarnation',
+  ]),
+} as const);
+
+function nativeKeysForRecord(
+  recordType: keyof typeof NATIVE_RECORD_KEYS,
+  value: unknown
+): readonly string[] {
+  if (recordType !== 'hosted-reply') return NATIVE_RECORD_KEYS[recordType];
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return [];
+  const outcome = (value as Record<string, unknown>).outcome;
+  return outcome === 'applied'
+    ? NATIVE_RECORD_KEYS['hosted-reply']
+    : NATIVE_RECORD_KEYS['hosted-reply'].filter((key) => key !== 'responseSha256');
+}
+
+const PRODUCT_HTTP_OUTCOMES: Readonly<Record<string, Readonly<Record<string, number>>>> =
+  Object.freeze({
+    'team-approvals.page.v1': Object.freeze({
+      success: 200, invalid_request: 400, not_found: 404, cancelled: 503, unavailable: 503,
+    }),
+    'team-approvals.preview.v1': Object.freeze({
+      success: 200, invalid_request: 400, stale_generation: 409, not_found: 404,
+      cancelled: 503, unavailable: 503,
+    }),
+    'team-approvals.decision.v1': Object.freeze({
+      committed: 200, idempotent_replay: 200, already_resolved: 409, invalid_request: 400,
+      stale_generation: 409, conflict: 409, expired: 410, not_found: 404, unavailable: 503,
+    }),
+  });
+
+function validProductHttpOutcome(
+  recordType: string,
+  route: unknown,
+  outcome: unknown,
+  status: unknown
+): boolean {
+  if (recordType === 'approval-http-unadmitted-response-finalized') {
+    return outcome === 'unadmitted' && status === 503;
+  }
+  return (
+    typeof route === 'string' &&
+    typeof outcome === 'string' &&
+    PRODUCT_HTTP_OUTCOMES[route]?.[outcome] === status
+  );
+}
+
+function validSseFrameIdentity(kind: unknown, eventId: unknown, eventType: unknown): boolean {
+  if (kind === 'heartbeat') return eventId === null && eventType === null;
+  if (kind === 'resync_required') return eventId === null && eventType === 'resync_required';
+  return kind === 'coordination_event' && typeof eventId === 'string' && eventId.length > 0 &&
+    typeof eventType === 'string' && eventType.length > 0;
+}
+
+function validOwnerMutation(value: unknown): boolean {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const mutation = value as Record<string, unknown>;
+  const simple: Readonly<Record<string, string>> = Object.freeze({
+    'admission-reconciled': 'published',
+    'ingress-admitted': 'admitted',
+    'ingress-acknowledged': 'acknowledged',
+    'delivery-started': 'started',
+  });
+  if (typeof mutation.kind !== 'string' || typeof mutation.outcome !== 'string') return false;
+  if (simple[mutation.kind] === mutation.outcome) {
+    return Reflect.ownKeys(mutation).length === 2;
+  }
+  if (mutation.kind === 'delivery-settled') {
+    return Reflect.ownKeys(mutation).length === 3 &&
+      ((mutation.phase === 'completed' && mutation.outcome === 'delivered') ||
+        (mutation.phase === 'rejected' &&
+          ['stale_generation', 'expired', 'wrong_lane', 'self_approval', 'unavailable']
+            .includes(mutation.outcome)));
+  }
+  if (mutation.kind !== 'ingress-lease-claimed' || mutation.outcome !== 'claimed' ||
+    Reflect.ownKeys(mutation).length !== 3 || !Array.isArray(mutation.claims) ||
+    mutation.claims.length === 0) return false;
+  return mutation.claims.every((claim) => {
+    if (claim === null || typeof claim !== 'object' || Array.isArray(claim)) return false;
+    const item = claim as Record<string, unknown>;
+    const iso = (candidate: unknown): boolean =>
+      typeof candidate === 'string' &&
+      /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/u.test(candidate);
+    const id = (candidate: unknown): boolean =>
+      typeof candidate === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.test(candidate);
+    return Reflect.ownKeys(item).length === 6 && iso(item.claimedAtIso) &&
+      Number.isSafeInteger(item.generation) && (item.generation as number) >= 1 &&
+      iso(item.leaseExpiresAtIso) && id(item.leaseToken) && id(item.outboxId) && id(item.ownerId);
+  });
+}
+
+function assertNativeRecordSemantics(
+  name: RuntimeCaptureName,
+  recordType: keyof typeof NATIVE_RECORD_KEYS,
+  native: Record<string, unknown>
+): void {
+  const fail = (): never => {
+    throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
+  };
+  const sha = (value: unknown): value is string =>
+    typeof value === 'string' && /^[0-9a-f]{64}$/u.test(value);
+  const identity = (value: unknown): value is string =>
+    typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.test(value);
+  const count = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
+  const productInstance = (): boolean =>
+    identity(native.bootId) &&
+    identity(native.deploymentId) &&
+    identity(native.ownerAuthority) &&
+    Number.isSafeInteger(native.ownerGeneration) &&
+    (native.ownerGeneration as number) >= 1 &&
+    identity(native.ownerSessionId);
+  switch (recordType) {
+    case 'decision-compare-and-claim-verified':
+      {
+      const joinedApprovalId =
+        typeof native.targetTeamId === 'string' && typeof native.targetTeamRunId === 'string' &&
+        typeof native.requestId === 'string'
+          ? `approval_${sha256(JSON.stringify({
+              schemaVersion: 1,
+              teamId: native.targetTeamId,
+              runId: native.targetTeamRunId.replace(/^team-run_/u, 'run_'),
+              requestId: native.requestId,
+            })).slice(0, 32)}`
+          : null;
+      if (
+        !productInstance() || !identity(native.actorId) ||
+        !identity(native.requestId) || !identity(native.sessionId) ||
+        typeof native.approvalId !== 'string' || !/^approval_[0-9a-f]{32}$/u.test(native.approvalId) ||
+        typeof native.generationId !== 'string' ||
+        !/^generation_runtime-permission-[0-9a-f]{64}$/u.test(native.generationId) ||
+        !identity(native.targetTeamId) ||
+        typeof native.targetTeamRunId !== 'string' ||
+        !/^team-run_[0-9a-f]{32}$/u.test(native.targetTeamRunId) ||
+        !sha(native.idempotencyKeySha256) ||
+        !['allow', 'deny'].includes(native.decision as string) ||
+        !['committed', 'idempotent_replay'].includes(native.outcome as string) ||
+        native.approvalId !== joinedApprovalId
+      ) fail();
+      return;
+      }
+    case 'browser-negative-response-observed':
+      if (
+        typeof native.actorTeamId !== 'string' || !/^team_[0-9a-f]{32}$/u.test(native.actorTeamId) ||
+        !sha(native.harnessRunId) ||
+        !sha(native.processStartToken) ||
+        !sha(native.requestBodySha256) || !sha(native.responseBodySha256) ||
+        typeof native.targetTeamId !== 'string' || !/^team_[0-9a-f]{32}$/u.test(native.targetTeamId) ||
+        typeof native.targetTeamRunId !== 'string' ||
+        !/^team-run_[0-9a-f]{32}$/u.test(native.targetTeamRunId) ||
+        ![403, 404].includes(native.httpStatus as number) ||
+        !(
+          (native.observedOutcome === 'cross_team_list_rejected' && native.requestFamily === 'approval-page') ||
+          (native.observedOutcome === 'cross_team_preview_rejected' && native.requestFamily === 'approval-preview') ||
+          (native.observedOutcome === 'cross_team_decide_rejected' && native.requestFamily === 'approval-decision')
+        )
+      ) fail();
+      return;
+    case 'approval-http-response-finalized':
+      if (
+        !productInstance() || !identity(native.actorId) ||
+        !identity(native.requestId) || !identity(native.sessionId)
+      ) fail();
+      // Fall through to the shared exact-wire fields.
+    case 'approval-http-unadmitted-response-finalized':
+      if (
+        !productInstance() ||
+        native.method !== 'POST' || !count(native.requestBodyBytes) ||
+        !sha(native.requestBodySha256) || !count(native.responseBodyBytes) ||
+        !sha(native.responseBodySha256) ||
+        !['team-approvals.page.v1', 'team-approvals.preview.v1', 'team-approvals.decision.v1']
+          .includes(native.routeId as string) ||
+        !validProductHttpOutcome(recordType, native.routeId, native.outcome, native.status)
+      ) fail();
+      return;
+    case 'coordination-sse-write-succeeded':
+      if (
+        !productInstance() ||
+        !count(native.frameBytes) || !sha(native.frameSha256) ||
+        !validSseFrameIdentity(native.frameKind, native.eventId, native.eventType)
+      ) fail();
+      return;
+    case 'hosted-capability':
+      if (!identity(native.runtimeInstanceId) || !identity(native.configGeneration) ||
+        native.outcome !== 'ok' || !sha(native.responseSha256) || native.status !== 200) fail();
+      return;
+    case 'hosted-observe':
+      if (!identity(native.runtimeInstanceId) || !identity(native.configGeneration) ||
+        !identity(native.sessionId) || !count(native.permissionCount) || !sha(native.responseSha256) ||
+        !['ok', 'overflow'].includes(native.outcome as string) || ![200, 500].includes(native.status as number)) fail();
+      return;
+    case 'hosted-reply':
+      if (!identity(native.sessionId) || !identity(native.requestId) ||
+        !['allow_once', 'reject'].includes(native.decision as string) || !sha(native.permissionDigest)) fail();
+      if (native.outcome === 'applied') {
+        if (native.status !== 200 || !sha(native.responseSha256) ||
+          !identity(native.runtimeInstanceId) || !identity(native.configGeneration) ||
+          !identity(native.sessionIncarnation) || !identity(native.requestIncarnation)) fail();
+      } else if (
+        !(
+          (native.outcome === 'bad-request' && native.status === 400) ||
+          (native.outcome === 'precondition-failed' && native.status === 412) ||
+          (native.outcome === 'conflict' && native.status === 409)
+        ) ||
+        native.runtimeInstanceId !== null || native.configGeneration !== null ||
+        native.sessionIncarnation !== null || native.requestIncarnation !== null ||
+        'responseSha256' in native
+      ) fail();
+      return;
+    case 'hosted-reply-raw': {
+      if (!identity(native.sessionId) || !identity(native.requestId) || !sha(native.responseSha256)) fail();
+      const outcomeStatus: Readonly<Record<string, number>> = Object.freeze({
+        unavailable: 404, 'body-read-failed': 400, 'invalid-json': 400, 'invalid-schema': 400,
+        'bad-request': 400, conflict: 409, 'precondition-failed': 412, applied: 200,
+      });
+      if (typeof native.outcome !== 'string' || outcomeStatus[native.outcome] !== native.status) fail();
+      if (native.outcome === 'unavailable' || native.outcome === 'body-read-failed') {
+        if (native.requestBodySha256 !== null) fail();
+      } else if (!sha(native.requestBodySha256)) fail();
+      if (native.outcome === 'applied') {
+        if (!identity(native.runtimeInstanceId) || !identity(native.configGeneration) ||
+          !identity(native.sessionIncarnation) || !identity(native.requestIncarnation)) fail();
+      } else if (native.runtimeInstanceId !== null || native.configGeneration !== null ||
+        native.sessionIncarnation !== null || native.requestIncarnation !== null) fail();
+      return;
+    }
+    case 'conditional-reply-effect':
+      if (!identity(native.sessionId) || !identity(native.requestId) ||
+        !['once', 'reject'].includes(native.decision as string)) fail();
+      if (native.outcome === 'applied') {
+        if (!sha(native.permissionDigest) || !identity(native.runtimeInstanceId) ||
+          !identity(native.configGeneration) || !identity(native.sessionIncarnation) ||
+          !identity(native.requestIncarnation)) fail();
+      } else if (native.outcome !== 'mismatch' || native.permissionDigest !== null ||
+        ![native.runtimeInstanceId, native.configGeneration, native.sessionIncarnation,
+          native.requestIncarnation].every((value) => value === null)) fail();
+      return;
+    case 'owner-wal-published':
+      return;
+  }
+}
+
+function parseNativePayload(
+  name: RuntimeCaptureName,
+  recordType: string,
+  value: unknown
+): Readonly<Record<string, unknown>> {
+  if (recordType === PRODUCER_PROVENANCE_CONTRACT.firstRecordType) {
+    const open = exactRecord(value, ['descriptor'], `native_capture_${name}_producer_open`);
+    const descriptor = exactRecord(
+      open.descriptor,
+      ['device', 'fd', 'inode'],
+      `native_capture_${name}_producer_open_descriptor`
+    );
+    if (descriptor.fd !== PRODUCER_PROVENANCE_CONTRACT.descriptorSlots[RUNTIME_CAPTURE_STREAMS[name]]) {
+      throw new Error(`p3c_runtime_capture_native_schema:${name}:producer-open`);
+    }
+    validateDecimal(descriptor.device, 'native_open_device');
+    validateDecimal(descriptor.inode, 'native_open_inode');
+    return Object.freeze({ descriptor: Object.freeze(descriptor) });
+  }
+  if (recordType === 'producer-close') {
+    return Object.freeze(exactRecord(value, [], `native_capture_${name}_producer_close`));
+  }
+  if (!CAPTURE_NATIVE_RECORD_TYPES[name].includes(recordType as never)) {
+    throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
+  }
+  const keys = NATIVE_RECORD_KEYS[recordType as keyof typeof NATIVE_RECORD_KEYS];
+  if (keys === undefined) {
+    throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
+  }
+  const native = exactRecord(
+    value,
+    nativeKeysForRecord(recordType as keyof typeof NATIVE_RECORD_KEYS, value),
+    `native_capture_${name}_${recordType}`
+  );
+  if (recordType === 'owner-wal-published') {
+    const fence = exactRecord(native.fence, ['generation', 'dev', 'ino'], 'native_owner_fence');
+    const wal = exactRecord(native.wal, ['byteSize', 'sha256'], 'native_owner_wal');
+    const delta = exactRecord(
+      native.stateDelta,
+      [
+        'previousRevision', 'previousStateSha256', 'nextRevision', 'nextStateSha256',
+        'changedFields', 'collectionSizes',
+      ],
+      'native_owner_state_delta'
+    );
+    if (
+      !Number.isSafeInteger(native.revision) || (native.revision as number) < 1 ||
+      !Number.isSafeInteger(wal.byteSize) || (wal.byteSize as number) < 1 ||
+      typeof wal.sha256 !== 'string' || !/^[0-9a-f]{64}$/u.test(wal.sha256) ||
+      typeof fence.generation !== 'string' || fence.generation.length === 0 ||
+      typeof fence.dev !== 'string' || !/^(?:0|[1-9]\d*)$/u.test(fence.dev) ||
+      typeof fence.ino !== 'string' || !/^(?:0|[1-9]\d*)$/u.test(fence.ino) ||
+      delta.nextRevision !== native.revision ||
+      typeof delta.nextStateSha256 !== 'string' || !/^[0-9a-f]{64}$/u.test(delta.nextStateSha256) ||
+      !Array.isArray(delta.changedFields) || delta.changedFields.length === 0 ||
+      !validOwnerMutation(native.mutation)
+    ) {
+      throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
+    }
+  }
+  assertNativeRecordSemantics(name, recordType as keyof typeof NATIVE_RECORD_KEYS, native);
+  return Object.freeze(native);
+}
+
+/**
+ * Parses producer-authored r307 bytes without accepting raw observations or an expected serializer.
+ * Fixed parser goldens may call this function, but parsing alone is never acceptance evidence.
+ */
+export function parseNativeRuntimeCapture(
+  name: RuntimeCaptureName,
+  bytes: Buffer,
+  controllerNonce: string,
+  runId: string,
+  runNonces: Set<string> = new Set<string>()
+): ParsedNativeCapture {
+  if (bytes.length < 2 || bytes.length > 8 * 1024 * 1024 || bytes.at(-1) !== 0x0a) {
+    throw new Error('p3c_runtime_capture_frame');
+  }
+  const source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  if (source.includes('\r')) {
+    throw new Error('p3c_runtime_capture_frame');
+  }
+  const lines = source.slice(0, -1).split('\n');
+  if (lines.length < 2) throw new Error(`p3c_runtime_capture_empty_semantic_stream:${name}`);
+  const records: NativeCaptureRecord[] = [];
+  let previousLineSha256: string | null = null;
+  for (const [index, line] of lines.entries()) {
+    if (Buffer.byteLength(line) + 1 > PRODUCER_PROVENANCE_CONTRACT.maximumLineBytes) {
+      throw new Error('p3c_runtime_capture_line_too_large');
+    }
+    const parsed = JSON.parse(line) as unknown;
+    if (canonicalJson(parsed) !== line) throw new Error('p3c_runtime_capture_noncanonical');
+    const item = exactRecord(
+      parsed,
+      [
+        'contract',
+        'version',
+        'contractSha256',
+        'stream',
+        'recordType',
+        'sequence',
+        'previousRecordSha256',
+        'emissionNonce',
+        'producer',
+        'activation',
+        'native',
+        'operationNonce',
+      ],
+      `runtime_capture_${name}_record`
+    );
+    const producer = exactRecord(
+      item.producer,
+      [
+        'role',
+        'pid',
+        'startTicks',
+        'exeDev',
+        'exeIno',
+        'exeSha256',
+        'artifactManifestSha256',
+        'implementationId',
+        'moduleSha256',
+      ],
+      `runtime_capture_${name}_producer`
+    );
+    const activation = exactRecord(
+      item.activation,
+      ['controllerNonce', 'runId', 'stackManifestSha256'],
+      `runtime_capture_${name}_activation`
+    );
+    if (typeof item.recordType !== 'string') {
+      throw new Error(`p3c_runtime_capture_binding:${name}:${index}`);
+    }
+    const native = parseNativePayload(name, item.recordType, item.native);
+    const emissionNonce = validateRecordId(item.emissionNonce, 'native_emission_nonce');
+    if (
+      item.contract !== PRODUCER_PROVENANCE_CONTRACT.contract ||
+      item.version !== PRODUCER_PROVENANCE_CONTRACT.version ||
+      item.contractSha256 !== PRODUCER_PROVENANCE_CONTRACT_SHA256 ||
+      item.stream !== RUNTIME_CAPTURE_STREAMS[name] ||
+      item.sequence !== index ||
+      item.previousRecordSha256 !== previousLineSha256 ||
+      (index === 0 && item.recordType !== PRODUCER_PROVENANCE_CONTRACT.firstRecordType) ||
+      (index > 0 && item.recordType === PRODUCER_PROVENANCE_CONTRACT.firstRecordType) ||
+      (index === lines.length - 1 && item.recordType !== 'producer-close') ||
+      (index > 0 && index < lines.length - 1 &&
+        !CAPTURE_NATIVE_RECORD_TYPES[name].includes(item.recordType as never)) ||
+      ((index === 0 || item.recordType === 'producer-close')
+        ? item.operationNonce !== null
+        : typeof item.operationNonce !== 'string' || !/^[0-9a-f]{64}$/u.test(item.operationNonce)) ||
+      producer.role !== CAPTURE_PRODUCER_ROLES[name] ||
+      producer.implementationId !== CAPTURE_IMPLEMENTATION_IDS[name] ||
+      !Number.isSafeInteger(producer.pid) ||
+      (producer.pid as number) < 2 ||
+      activation.controllerNonce !== controllerNonce ||
+      activation.runId !== runId ||
+      typeof activation.stackManifestSha256 !== 'string' ||
+      !/^[0-9a-f]{64}$/u.test(activation.stackManifestSha256) ||
+      !/^[a-z][a-z0-9-]{0,127}$/u.test(item.recordType) ||
+      typeof producer.startTicks !== 'string' ||
+      !/^(?:0|[1-9]\d*)$/u.test(producer.startTicks) ||
+      typeof producer.exeDev !== 'string' ||
+      !/^(?:0|[1-9]\d*)$/u.test(producer.exeDev) ||
+      typeof producer.exeIno !== 'string' ||
+      !/^(?:0|[1-9]\d*)$/u.test(producer.exeIno) ||
+      [producer.exeSha256, producer.artifactManifestSha256, producer.moduleSha256].some(
+        (digest) => typeof digest !== 'string' || !/^[0-9a-f]{64}$/u.test(digest)
+      ) ||
+      runNonces.has(emissionNonce)
+    ) {
+      throw new Error(`p3c_runtime_capture_binding:${name}:${index}`);
+    }
+    runNonces.add(emissionNonce);
+    previousLineSha256 = sha256(`${line}\n`);
+    records.push(
+      Object.freeze({
+        stream: item.stream as NativeCaptureRecord['stream'],
+        recordType: item.recordType,
+        sequence: index,
+        previousRecordSha256: item.previousRecordSha256 as string | null,
+        emissionNonce,
+        operationNonce: item.operationNonce as string | null,
+        producer: Object.freeze({
+          role: producer.role as string,
+          pid: producer.pid as number,
+          startTicks: producer.startTicks as string,
+          exeDev: producer.exeDev as string,
+          exeIno: producer.exeIno as string,
+          exeSha256: producer.exeSha256 as string,
+          artifactManifestSha256: producer.artifactManifestSha256 as string,
+          implementationId: producer.implementationId as string,
+          moduleSha256: producer.moduleSha256 as string,
+        }),
+        activation: Object.freeze({
+          controllerNonce,
+          runId,
+          stackManifestSha256: activation.stackManifestSha256 as string,
+        }),
+        native: Object.freeze(native),
+        lineSha256: previousLineSha256,
+      })
+    );
+  }
+  return Object.freeze({
+    producerRole: CAPTURE_PRODUCER_ROLES[name],
+    semanticRecordCount: records.length - 2,
+    records: Object.freeze(records),
+    finalLineSha256: previousLineSha256!,
+  });
+}
+
+export function assertNativeSemanticCrossJoin(
+  name: RuntimeCaptureName,
+  parsedShards: readonly ParsedNativeCapture[],
+  raw: Readonly<Record<RawOrigin, Buffer>>,
+  controllerNonce: string,
+  expected: ProducerCaptureFileEvidence
+): void {
+  if (
+    name === 'openCodeTimelinePath' ||
+    name === 'protectedEffectLedgerPath' ||
+    name === 'ownerWalTimelinePath'
+  ) {
+    throw new Error(`p3c_runtime_capture_semantic_mapping_unavailable:${name}`);
+  }
+  const origins: readonly RawOrigin[] =
+    name === 'negativeResultsPath'
+      ? ['browser', 'product-http']
+      : name === 'conditionalPostLedgerPath'
+        ? ['product-http']
+        : ['product-http', 'product-sse'];
+  const rawRecords = origins.flatMap((origin) => parseOrigin(raw[origin], origin, controllerNonce));
+  const consumed = new Set<string>();
+  const semanticRecords = parsedShards.flatMap((shard, shardIndex) =>
+    shard.records.slice(1, -1).map((record) => Object.freeze({ record, shardIndex }))
+  );
+  const shardTokens = new Set(expected.shards.map(({ producerStartToken }) => producerStartToken));
+  const candidates = rawRecords.filter((record) =>
+    shardTokens.has(record.processStartToken) ||
+    (name === 'negativeResultsPath' && record.origin === 'product-http' &&
+      /^cross_team_(?:list|preview|decide)_rejected$/u.test(record.event))
+  );
+  const fail = (label: string): never => {
+    throw new Error(`p3c_runtime_capture_semantic_${label}:${name}`);
+  };
+  const retain = (value: unknown, label: string): { readonly bytes: number; readonly sha256: string } => {
+    const structure = exactRecord(value, ['schemaVersion', 'bodyBase64', 'sha256', 'redacted'], label);
+    if (structure.schemaVersion !== 1 || structure.redacted !== true ||
+      typeof structure.bodyBase64 !== 'string' || typeof structure.sha256 !== 'string') fail('wire');
+    const bytes = Buffer.from(structure.bodyBase64 as string, 'base64');
+    if (bytes.toString('base64') !== structure.bodyBase64 || sha256(bytes) !== structure.sha256) {
+      fail('wire');
+    }
+    return Object.freeze({ bytes: bytes.length, sha256: structure.sha256 as string });
+  };
+  const matches = (nativeRecord: NativeCaptureRecord, rawRecord: LocatedRawRecord): boolean => {
+    const native = nativeRecord.native;
+    const semantic = rawRecord.nativeRecord;
+    const transport = semantic.transport as Record<string, unknown>;
+    const identity = rawRecord.semanticIdentity;
+    if (name === 'negativeResultsPath') {
+      return rawRecord.origin === 'browser' && native.harnessRunId === identity.harnessRunId &&
+        native.processStartToken === rawRecord.processStartToken &&
+        native.actorTeamId === identity.authenticatedActorTeamId &&
+        native.targetTeamId === identity.targetTeamId &&
+        native.targetTeamRunId === identity.targetTeamRunId.replace(/^run_/u, 'team-run_') &&
+        native.httpStatus === transport.status && native.observedOutcome === rawRecord.event;
+    }
+    if (name === 'conditionalPostLedgerPath') {
+      const response = validateRedactedStructure(transport.response, 'decision_response').value;
+      return rawRecord.origin === 'product-http' &&
+        ['allow_accepted', 'deny_accepted'].includes(rawRecord.event) &&
+        native.approvalId === identity.approvalId && native.generationId === identity.generationId &&
+        native.targetTeamId === identity.targetTeamId &&
+        native.targetTeamRunId === identity.targetTeamRunId.replace(/^run_/u, 'team-run_') &&
+        native.decision === identity.decision &&
+        native.idempotencyKeySha256 === sha256(identity.idempotencyKey) &&
+        native.outcome === response.outcome;
+    }
+    if (nativeRecord.recordType === 'coordination-sse-write-succeeded') {
+      if (rawRecord.origin !== 'product-sse') return false;
+      const data = retain(transport.data, 'sse_data');
+      if (typeof transport.eventId !== 'string' || typeof transport.eventType !== 'string') {
+        fail('wire');
+      }
+      const dataBytes = Buffer.from(
+        (transport.data as Record<string, unknown>).bodyBase64 as string,
+        'base64'
+      );
+      const frame = `id: ${transport.eventId}\nevent: ${transport.eventType}\ndata: ${dataBytes.toString('utf8')}\n\n`;
+      return native.frameKind === 'coordination_event' && native.eventId === transport.eventId &&
+        native.eventType === transport.eventType && native.frameBytes === Buffer.byteLength(frame) &&
+        native.frameSha256 === sha256(frame) && data.bytes > 0;
+    }
+    if (rawRecord.origin !== 'product-http') return false;
+    const request = retain(transport.request, 'http_request');
+    const response = retain(transport.response, 'http_response');
+    const routeIds: Readonly<Record<string, string>> = Object.freeze({
+      page: 'team-approvals.page.v1',
+      preview: 'team-approvals.preview.v1',
+      decisions: 'team-approvals.decision.v1',
+    });
+    return native.routeId === routeIds[transport.endpointFamily as string] &&
+      native.status === transport.status && native.method === transport.method &&
+      native.requestBodyBytes === request.bytes && native.requestBodySha256 === request.sha256 &&
+      native.responseBodyBytes === response.bytes && native.responseBodySha256 === response.sha256;
+  };
+  let previousMonotonicNs = -1n;
+  const captureOccurrences = new Map<string, number>();
+  for (const { record: nativeRecord, shardIndex } of semanticRecords) {
+    const shardToken = expected.shards[shardIndex]?.producerStartToken;
+    if (shardToken === undefined) fail('shard_identity');
+    const occurrenceIdentity = `${shardToken}\0${nativeRecord.recordType}\0${JSON.stringify(
+      nativeRecord.native
+    )}`;
+    const occurrence = captureOccurrences.get(occurrenceIdentity) ?? 0;
+    const found = candidates
+      .filter(
+        (candidate) =>
+          candidate.processStartToken === shardToken && matches(nativeRecord, candidate)
+      )
+      .sort((left, right) => {
+        const leftNs = BigInt(left.monotonicNs);
+        const rightNs = BigInt(right.monotonicNs);
+        if (leftNs !== rightNs) return leftNs < rightNs ? -1 : 1;
+        if (left.origin !== right.origin) return left.origin < right.origin ? -1 : 1;
+        return left.byteStart - right.byteStart;
+      });
+    const selected = found[occurrence];
+    if (selected === undefined || consumed.has(selected.recordId)) fail('unmatched_native');
+    captureOccurrences.set(occurrenceIdentity, occurrence + 1);
+    const monotonicNs = BigInt(selected.monotonicNs);
+    if (monotonicNs <= previousMonotonicNs) fail('order');
+    previousMonotonicNs = monotonicNs;
+    consumed.add(selected.recordId);
+    if (name === 'negativeResultsPath') {
+      const browserRecord = selected;
+      const wire = rawRecords.filter((candidate) =>
+        candidate.origin === 'product-http' && candidate.event === browserRecord.event &&
+        canonicalJson(candidate.semanticIdentity) === canonicalJson(browserRecord.semanticIdentity)
+      );
+      if (wire.length !== 1) fail(wire.length === 0 ? 'unmatched_wire' : 'ambiguous_wire');
+      const transport = wire[0]!.nativeRecord.transport as Record<string, unknown>;
+      const request = retain(transport.request, 'browser_http_request');
+      const response = retain(transport.response, 'browser_http_response');
+      if (nativeRecord.native.requestBodySha256 !== request.sha256 ||
+        nativeRecord.native.responseBodySha256 !== response.sha256 ||
+        nativeRecord.native.httpStatus !== transport.status) fail('wire');
+      consumed.add(wire[0]!.recordId);
+    }
+  }
+  if (consumed.size !== candidates.length) fail('unconsumed_raw');
+}
+
+function assertProducerCaptureFileEvidence(
+  name: RuntimeCaptureName,
+  expected: ProducerCaptureFileEvidence
+): void {
+  if (
+    expected.stream !== RUNTIME_CAPTURE_STREAMS[name] ||
+    expected.contractSha256 !== PRODUCER_PROVENANCE_CONTRACT_SHA256 ||
+    expected.shards.length === 0 ||
+    (name !== 'ownerWalTimelinePath' && expected.shards.length !== 1) ||
+    new Set(expected.shards.map(({ path }) => path)).size !== expected.shards.length ||
+    new Set(expected.shards.map(({ captureDevice, captureInode }) => `${captureDevice}:${captureInode}`))
+      .size !== expected.shards.length
+  ) {
+    throw new Error(`p3c_runtime_capture_producer_proof:${name}`);
+  }
+  if (
+    (name === 'openCodeTimelinePath' || name === 'protectedEffectLedgerPath') &&
+    expected.shards.some(
+      ({ producerModuleSha256 }) =>
+        producerModuleSha256 === OPENCODE_IDENTITIES.linuxX64BinarySha256
+    )
+  ) {
+    throw new Error(`p3c_runtime_capture_old_opencode_artifact:${name}`);
+  }
+}
+
+function assertNativeCaptureKernelBinding(
+  name: RuntimeCaptureName,
+  parsed: ParsedNativeCapture,
+  shard: ProducerCaptureFileEvidence['shards'][number],
+  outcome: SupervisorOutcome
+): void {
+  const observedProcess = outcome.starts.find(
+    ({ pid, startToken }) => pid === shard.producerPid && startToken === shard.producerStartToken
+  );
+  if (observedProcess === undefined) {
+    throw new Error(`p3c_runtime_capture_process_binding:${name}`);
+  }
+  for (const record of parsed.records) {
+    if (
+      record.producer.role !== CAPTURE_PRODUCER_ROLES[name] ||
+      observedProcess.role !== shard.producerRole ||
+      record.producer.pid !== observedProcess.pid ||
+      record.producer.startTicks !== observedProcess.startTime ||
+      record.producer.exeDev !== observedProcess.executableDevice ||
+      record.producer.exeIno !== observedProcess.executableInode ||
+      record.producer.exeSha256 !== observedProcess.executableSha256 ||
+      record.producer.artifactManifestSha256 !== shard.producerArtifactSha256 ||
+      record.producer.moduleSha256 !== shard.producerModuleSha256
+    ) {
+      throw new Error(`p3c_runtime_capture_process_binding:${name}:${record.sequence}`);
+    }
+  }
 }
 
 export interface ExactlyOnceEvidence {
@@ -266,6 +1054,7 @@ function parseRecord(
     item.controllerNonce !== controllerNonce ||
     item.origin !== origin ||
     item.sequence !== sequence ||
+    typeof item.event !== 'string' ||
     !MATRIX_ROWS.includes(item.row as MatrixRow) ||
     !Number.isSafeInteger(item.effectCount) ||
     (item.effectCount as number) < 0 ||
@@ -285,7 +1074,7 @@ function parseRecord(
   const semantic = validateStructuralPayload(
     origin,
     item.row as MatrixRow,
-    String(item.event),
+    item.event,
     controllerNonce,
     payload
   );
@@ -312,6 +1101,7 @@ function parseRecord(
     payloadBase64: item.payloadBase64,
     payloadSha256,
     semanticIdentity: semantic.identity,
+    nativeRecord: semantic.nativeRecord,
     ownerGeneration: semantic.ownerGeneration,
     processEvidenceSetId: semantic.processEvidenceSetId,
     causal: semantic.causal,
@@ -1299,6 +2089,7 @@ export function validateStructuralPayload(
   payload: Buffer
 ): {
   readonly identity: SemanticIdentity;
+  readonly nativeRecord: Readonly<Record<string, unknown>>;
   readonly ownerGeneration: number;
   readonly processEvidenceSetId: string | null;
   readonly causal: CausalEvidence;
@@ -1383,6 +2174,7 @@ export function validateStructuralPayload(
     throw new Error('p3c_semantic_causal_binding');
   return Object.freeze({
     identity,
+    nativeRecord: Object.freeze({ ...semantic }),
     ownerGeneration: validateTransport(
       origin,
       row,
@@ -1450,7 +2242,7 @@ function parseOrigin(
       ...record,
       byteStart,
       byteEnd: byteStart + lineBytes.length,
-      lineSha256: sha256(lineBytes),
+      lineSha256: sha256(Buffer.concat([lineBytes, Buffer.from('\n')])),
     });
     byteStart += lineBytes.length + 1;
     return located;
@@ -1827,6 +2619,7 @@ export function deriveEvidence(
 
 export function assembleEvidence(input: {
   readonly raw: Readonly<Record<RawOrigin, Buffer>>;
+  readonly captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>;
   readonly controllerNonce: string;
   readonly runId: string;
   readonly outcome: SupervisorOutcome;
@@ -1840,6 +2633,71 @@ export function assembleEvidence(input: {
   )
     throw new Error('p3c_evidence_cleanup_unproven');
   const derived = deriveEvidence(input.raw, input.controllerNonce, input.outcome);
+  const runNonces = new Set<string>();
+  const captures = Object.fromEntries(
+    RUNTIME_CAPTURE_NAMES.map((name) => {
+      const expected = input.outcome.captureFiles[name];
+      assertProducerCaptureFileEvidence(name, expected);
+      const shardBytes = input.captures[name];
+      if (shardBytes.length !== expected.shards.length || shardBytes.length === 0) {
+        throw new Error('p3c_evidence_supervisor_capture_shard_disagreement');
+      }
+      const parsedShards = shardBytes.map((bytes, index) => {
+        const shard = expected.shards[index]!;
+        if (bytes.length !== shard.size || sha256(bytes) !== shard.sha256) {
+          throw new Error('p3c_evidence_supervisor_capture_disagreement');
+        }
+        const parsed = parseNativeRuntimeCapture(
+          name,
+          bytes,
+          input.controllerNonce,
+          input.runId,
+          runNonces
+        );
+        assertNativeCaptureKernelBinding(name, parsed, shard, input.outcome);
+        return parsed;
+      });
+      const semanticRecordCount = parsedShards.reduce(
+        (count, parsed) => count + parsed.semanticRecordCount,
+        0
+      );
+      if (semanticRecordCount === 0) {
+        throw new Error(`p3c_runtime_capture_empty_semantic_stream:${name}`);
+      }
+      assertNativeSemanticCrossJoin(
+        name,
+        parsedShards,
+        input.raw,
+        input.controllerNonce,
+        expected
+      );
+      const shardSha256s = expected.shards.map(({ sha256 }) => sha256);
+      const logicalSha256 = sha256(
+        `agent-teams.p3c.logical-native-capture/v1\0${name}\0${canonicalJson(shardSha256s)}`
+      );
+      return [
+        name,
+        Object.freeze({
+          sha256: logicalSha256,
+          size: expected.shards.reduce((size, shard) => size + shard.size, 0),
+          shardCount: expected.shards.length,
+          shardSha256s: Object.freeze(shardSha256s),
+          producerRole: parsedShards[0]!.producerRole,
+          semanticRecordCount,
+        }),
+      ];
+    })
+  ) as Record<
+    RuntimeCaptureName,
+    {
+      sha256: string;
+      size: number;
+      shardCount: number;
+      shardSha256s: readonly string[];
+      producerRole: string;
+      semanticRecordCount: number;
+    }
+  >;
   const unsigned = {
     schemaVersion: 1,
     purpose: 'agent-teams.p3c.evidence/v1',
@@ -1847,6 +2705,7 @@ export function assembleEvidence(input: {
     runId: input.runId,
     result: 'verified',
     raw: derived.origins,
+    captures: Object.freeze(captures),
     rows: derived.rows,
     exactlyOnce: derived.exactlyOnce,
     supervisorTranscriptSha256: input.outcome.transcriptSha256,
@@ -1861,6 +2720,7 @@ export function assembleEvidence(input: {
 export async function retainEvidence(
   evidenceRoot: RootAnchor,
   raw: Readonly<Record<RawOrigin, Buffer>>,
+  captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>,
   document: EvidenceDocument,
   supervisorTranscript: Buffer
 ): Promise<Readonly<Record<string, string>>> {
@@ -1880,6 +2740,19 @@ export async function retainEvidence(
   for (const origin of RAW_ORIGINS) {
     assertNoSecretLikeBytes(raw[origin]);
     await stage(`raw-${origin}.ndjson`, raw[origin], document.raw[origin].sha256);
+  }
+  for (const name of RUNTIME_CAPTURE_NAMES) {
+    if (captures[name].length !== document.captures[name].shardCount) {
+      throw new Error('p3c_evidence_publish_shard_count');
+    }
+    for (const [index, bytes] of captures[name].entries()) {
+      assertNoSecretLikeBytes(bytes);
+      await stage(
+        `capture-${name}-shard-${String(index + 1).padStart(2, '0')}.ndjson`,
+        bytes,
+        document.captures[name].shardSha256s[index]
+      );
+    }
   }
   assertNoSecretLikeBytes(supervisorTranscript);
   if (sha256(supervisorTranscript) !== document.supervisorTranscriptSha256)
@@ -1913,6 +2786,11 @@ export async function retainEvidence(
   await evidenceRoot.handle.sync();
   const expectedNames = [
     ...RAW_ORIGINS.map((origin) => `raw-${origin}.ndjson`),
+    ...RUNTIME_CAPTURE_NAMES.flatMap((name) =>
+      captures[name].map(
+        (_bytes, index) => `capture-${name}-shard-${String(index + 1).padStart(2, '0')}.ndjson`
+      )
+    ),
     'supervisor-transcript.ndjson',
     'evidence.json',
     'READY.json',

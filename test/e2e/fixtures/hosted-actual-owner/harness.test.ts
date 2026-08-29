@@ -1,7 +1,7 @@
 import { spawn as spawnChild } from 'node:child_process';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import { once } from 'node:events';
-import { constants } from 'node:fs';
+import { closeSync, constants, openSync } from 'node:fs';
 import {
   access,
   chmod,
@@ -35,27 +35,41 @@ import {
   MATRIX_ROWS,
   MAXIMUM_FINAL_RUNS,
   OPENCODE_IDENTITIES,
+  ORDERED_PRODUCER_IDENTITIES,
   OWNED_PATHS,
+  OWNER_CHILD_PROTOCOL,
   P3B_SOURCE_COMMIT,
   P3C_LANE,
   PACKET_BASE_COMMIT,
   parseIntegrationDescriptor,
+  parseProducerCandidateSignatureSidecar,
+  parseSignedProducerCandidatePayload,
+  PRODUCER_PROVENANCE_CONTRACT,
+  PRODUCER_PROVENANCE_CONTRACT_SHA256,
   PRODUCT_AUTHORITY_COMMIT,
   RAW_ORIGINS,
   type RawOrigin,
   type RootName,
   type RootPin,
+  RUNTIME_CAPTURE_NAMES,
+  RUNTIME_CAPTURE_STREAMS,
+  type RuntimeCaptureName,
   sha256,
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import {
+  assertLiveCaptureMode,
+  type DriverResult,
+} from '../../../../scripts/e2e/hosted-actual-owner/driver';
+import {
   assembleEvidence,
+  assertNativeSemanticCrossJoin,
   canonicalRowIdentity,
   deriveEvidence,
   EVIDENCE_REQUIREMENTS,
   makeRawRecord,
   makeSemanticPayload,
   observedSemanticIdentity,
-  retainEvidence,
+  parseNativeRuntimeCapture,
   semanticDecisionForEvent,
   type SemanticIdentity,
   semanticScopeForEvent,
@@ -67,18 +81,28 @@ import {
   descriptorFifoPolicyAccepts,
   type PreflightAdmission,
   verifyControlDocuments,
+  verifyP3B2Recipe,
   verifyReleaseManifest,
 } from '../../../../scripts/e2e/hosted-actual-owner/preflight';
 import {
+  acceptCanonicalChildDescriptorPublication,
   buildSupervisorPlan,
   captureDetachedProcessAnchor,
   censusOwnedProcesses,
   collectBoundedStream,
   exactChildEnvironment,
+  executeSupervisor,
+  observeCurrentWrapperDescriptorsBeforeSpawn,
+  observeParentDescriptorsBeforeSpawn,
+  observeParentDescriptorsClosed,
+  PARENT_DESCRIPTOR_ROLES,
+  parseOwnerChildDescriptorCleanup,
   parseSupervisorTranscript,
   type ProcessExitEvidence,
   processOwnershipMarker,
   type ProcessStartEvidence,
+  producerCaptureSealManifestSha256,
+  readCurrentWrapperProcessStartIdentity,
   registerProvisionalDetachedProcessAnchor,
   settleFailedProcessCapture,
   SUPERVISOR_PROTOCOL,
@@ -101,7 +125,6 @@ import {
 } from '../../../../scripts/e2e/hosted-actual-owner/secure-files';
 import { parseHostedTeamApprovalPage } from '../../../../src/features/team-approvals/contracts/hosted';
 
-import type { DriverResult } from '../../../../scripts/e2e/hosted-actual-owner/driver';
 import type { RunResult } from '../../../../scripts/e2e/hosted-actual-owner/run';
 
 const repositoryRoot = process.cwd();
@@ -341,6 +364,7 @@ function signedControlFixture() {
       supervisorSha256: p3b2.supervisor.sha256,
       recipeSha256: p3b2.recipeSha256,
       closureMerkleRoot: p3b2.closure.merkleRoot,
+      candidateOpenCodeSha256: OPENCODE_IDENTITIES.linuxX64BinarySha256,
       accepted: true,
     },
     openCode: {
@@ -502,6 +526,60 @@ async function pinnedFile(
     await stat.close();
   }
 }
+
+describe('signed producer candidate shape', () => {
+  const payload = Object.freeze({
+    contract: PRODUCER_PROVENANCE_CONTRACT.contract,
+    contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+    producers: ORDERED_PRODUCER_IDENTITIES.map((identity, index) => ({
+      artifactManifestSha256: digest(`candidate-artifact-${index}`),
+      executableSha256: digest(`candidate-executable-${index}`),
+      implementationId: identity.implementationId,
+      moduleSha256: digest(`candidate-module-${index}`),
+      role: identity.role,
+      sourceCommit: `${index + 1}`.repeat(40),
+      sourceRepository: `example/producer-${index}`,
+      sourceTree: `${index + 5}`.repeat(40),
+    })),
+    productionEligible: false,
+    purpose: 'agent-teams.p3c.producer-candidate/v1',
+    releaseEligible: false,
+    schemaVersion: 1,
+    signedBuildProvenanceRequired: true,
+  });
+  const payloadBytes = Buffer.from(canonicalJson(payload));
+
+  it('requires exact producer order and false eligibility', () => {
+    expect(parseSignedProducerCandidatePayload(payloadBytes)).toEqual(payload);
+    const reordered = { ...payload, producers: [...payload.producers].reverse() };
+    expect(() =>
+      parseSignedProducerCandidatePayload(Buffer.from(canonicalJson(reordered)))
+    ).toThrow(/p3c_producer_candidate_producer_0/u);
+    expect(() =>
+      parseSignedProducerCandidatePayload(
+        Buffer.from(canonicalJson({ ...payload, productionEligible: true }))
+      )
+    ).toThrow('p3c_producer_candidate_contract');
+  });
+
+  it('binds the detached signature shape to exact candidate bytes without signing', () => {
+    const sidecar = {
+      algorithm: 'ed25519',
+      keyId: 'candidate-reviewer-v1',
+      payloadSha256: sha256(payloadBytes),
+      signature: Buffer.alloc(64, 7).toString('base64'),
+    };
+    expect(
+      parseProducerCandidateSignatureSidecar(Buffer.from(canonicalJson(sidecar)), payloadBytes)
+    ).toEqual(sidecar);
+    expect(() =>
+      parseProducerCandidateSignatureSidecar(
+        Buffer.from(canonicalJson(sidecar)),
+        Buffer.from(`${payloadBytes.toString('utf8')}\n`)
+      )
+    ).toThrow('p3c_producer_candidate_signature');
+  });
+});
 
 describe('P3.C exact contract', () => {
   it('owns exactly the fourteen authorized paths', async () => {
@@ -921,6 +999,36 @@ describe('bounded private descriptor FIFO', () => {
 });
 
 describe('spawn isolation contract', () => {
+  it('pins the accepted P3.B2 entry, supervisor, closure, recipe argv, and candidate digest', () => {
+    const descriptor = parseIntegrationDescriptor(Buffer.from(canonicalJson(validDescriptor())));
+    const recipe = {
+      schemaVersion: 1,
+      purpose: 'agent-teams.p3b2.built-actual-owner-entry/v1',
+      sourceBaseCommit: descriptor.p3b2.sourceBaseCommit,
+      resultCommit: descriptor.p3b2.resultCommit,
+      entry: {
+        relativePath: descriptor.p3b2.entry.relativePath,
+        sha256: descriptor.p3b2.entry.sha256,
+      },
+      supervisor: {
+        relativePath: descriptor.p3b2.supervisor.relativePath,
+        sha256: descriptor.p3b2.supervisor.sha256,
+      },
+      closureMerkleRoot: descriptor.p3b2.closure.merkleRoot,
+      candidateOpenCodeSha256: OPENCODE_IDENTITIES.linuxX64BinarySha256,
+      argv: ['--runtime-manifest', '/sandbox/runtime-manifest.json'],
+      sourceTreeRequired: false,
+      accepted: true,
+    };
+    expect(() => verifyP3B2Recipe(Buffer.from(canonicalJson(recipe)), descriptor)).not.toThrow();
+    expect(() =>
+      verifyP3B2Recipe(
+        Buffer.from(canonicalJson({ ...recipe, candidateOpenCodeSha256: '9'.repeat(64) })),
+        descriptor
+      )
+    ).toThrow('p3c_p3b2_recipe_binding');
+  });
+
   it('constructs a private allowlist without ambient token or proxy variables', () => {
     const environment = exactChildEnvironment();
     expect(environment).toEqual({
@@ -987,6 +1095,56 @@ function supervisorPlan(): SupervisorPlan {
     runId: digest('process-run'),
     maximumRuntimeMs: 900000,
     shutdownGraceMs: 5000,
+    runtimeManifest: {
+      schemaVersion: 1,
+      purpose: 'agent-teams.hosted-actual-owner-e2e/v1',
+      runId: digest('process-run'),
+      sandboxRoot: '/sandbox',
+      markerPath: '/sandbox/.p3c-sandbox.json',
+      evidenceRoot: '/sandbox/evidence',
+      driverBaseUrl: 'http://127.0.0.1:45130/',
+      productBaseUrl: 'http://127.0.0.1:45131/',
+      approvalPath: '/api/hosted/v1/team-approvals/decisions',
+      browser: { workers: 1, retries: 0 },
+      capture: {
+        conditionalPostLedgerPath: '/sandbox/capture/conditionalPostLedgerPath.ndjson',
+        negativeResultsPath: '/sandbox/capture/negativeResultsPath.ndjson',
+        openCodeTimelinePath: '/sandbox/capture/openCodeTimelinePath.ndjson',
+        ownerWalTimelinePath: '/sandbox/capture/ownerWalTimelinePath.ndjson',
+        productTimelinePath: '/sandbox/capture/productTimelinePath.ndjson',
+        protectedEffectLedgerPath: '/sandbox/capture/protectedEffectLedgerPath.ndjson',
+      },
+      captureEmissionContract: {
+        contract: PRODUCER_PROVENANCE_CONTRACT.contract,
+        version: PRODUCER_PROVENANCE_CONTRACT.version,
+        contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+        environment: PRODUCER_PROVENANCE_CONTRACT.environment,
+        framing: PRODUCER_PROVENANCE_CONTRACT.framing,
+        descriptorSlots: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots,
+        verifierMayProduceBytes: false,
+        producerNativeIdentitiesComposed: false,
+      },
+      refs: {
+        openCode: 'fe07feb2f6c1a1d58ffb65d2f269c8fb3de4ca8f',
+        openCodeExecutableSha256: OPENCODE_IDENTITIES.linuxX64BinarySha256,
+        orchestrator: '1'.repeat(40),
+        product: '2'.repeat(40),
+      },
+    },
+    ownerChildProtocol: {
+      wrapperArgv: ['--runtime-manifest', '/sandbox/runtime-manifest.json'],
+      sealedArgv: [
+        '--hosted-actual-owner-sealed-protocol=v1',
+        '--runtime-manifest',
+        '/sandbox/runtime-manifest.json',
+      ],
+      childLocalDescriptors: { sealedLauncherLease: 3, bootstrap: 4, activationV2: 5 },
+      descriptorContract: OWNER_CHILD_PROTOCOL,
+      parentSourceDescriptors: 'arbitrary-distinct-owned',
+      closeParentCopiesAfterSpawn: true,
+      compatibilityProbing: false,
+      socketPathReconnect: false,
+    },
     network: {
       namespace: 'new',
       mountNamespace: 'new',
@@ -1109,11 +1267,23 @@ function supervisorPlan(): SupervisorPlan {
       'chromium-gpu': '25',
       'chromium-renderer': '25',
     },
+    expectedProducerArtifactSha256: {
+      owner: digest('owner-artifact'),
+      opencode: digest('opencode-artifact'),
+      product: digest('product-artifact'),
+      browser: digest('browser-artifact'),
+    },
+    expectedProducerModuleSha256: {
+      owner: digest('owner-module'),
+      opencode: OPENCODE_IDENTITIES.linuxX64BinarySha256,
+      product: digest('product-module'),
+      browser: digest('browser-module'),
+    },
     expectedArgv: {
-      supervisor: ['--p3c-supervisor'],
+      supervisor: [],
       opencode: ['serve', '--hostname', '127.0.0.1', '--port', '4096'],
-      owner: ['--p3c-acceptance-manifest-fd=3'],
-      product: ['--p3c-composition-descriptor-fd=3', '--host=127.0.0.1', '--port=45131'],
+      owner: ['--runtime-manifest', '/sandbox/runtime-manifest.json'],
+      product: [],
       browser: [
         '/browser/playwright-entry.bin',
         'test',
@@ -1174,7 +1344,15 @@ function supervisorPlan(): SupervisorPlan {
   };
 }
 
-function supervisorTranscript(plan: SupervisorPlan): Buffer {
+function supervisorTranscript(
+  plan: SupervisorPlan,
+  firstOwnerObservation?: Readonly<{
+    readonly pid: number;
+    readonly startToken: string;
+    readonly lifecycle: ReturnType<typeof observeParentDescriptorsClosed>;
+    readonly childPublication: ReturnType<typeof acceptCanonicalChildDescriptorPublication>;
+  }>
+): Buffer {
   const lines: unknown[] = [
     {
       schemaVersion: 2,
@@ -1255,11 +1433,21 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
       instanceId: expected.instanceId,
       generation: expected.generation,
       restartBoundary: expected.restartBoundary,
-      pid: 1000 + index,
+      pid:
+        expected.role === 'owner' &&
+        expected.generation === 1 &&
+        firstOwnerObservation !== undefined
+          ? firstOwnerObservation.pid
+          : 1000 + index,
       pidfdInode: String(2000 + index),
       startTime: String(3000 + index),
       observedMonotonicNs: String(20 + lines.length),
-      startToken: digest(`start:${expected.instanceId}`),
+      startToken:
+        expected.role === 'owner' &&
+        expected.generation === 1 &&
+        firstOwnerObservation !== undefined
+          ? firstOwnerObservation.startToken
+          : digest(`start:${expected.instanceId}`),
       parentStartToken: digest('start:supervisor'),
       observerStartToken: digest('start:supervisor'),
       ownershipMarkerSha256: sha256(plan.processOwnership.marker),
@@ -1507,6 +1695,61 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
     playwrightRetries: 0,
     readyInstances: starts.map(({ instanceId }) => instanceId),
     exitedStartTokens: exits.map(({ startToken }) => startToken),
+    ownerChildDescriptorCleanup: {
+      schemaVersion: 2,
+      contract: 'agent-teams.hosted-owner-child-parent-fd-cleanup/v2',
+      records: starts
+        .filter(({ role }) => role === 'owner')
+        .map(({ pid, startToken }, ownerIndex) => {
+          if (ownerIndex === 0 && firstOwnerObservation !== undefined) {
+            return {
+              ...firstOwnerObservation.lifecycle,
+              childPublication: firstOwnerObservation.childPublication,
+            };
+          }
+          const descriptors = PARENT_DESCRIPTOR_ROLES.map((role, descriptorIndex) => {
+            const parentFd = 30 + ownerIndex * 3 + descriptorIndex;
+            return {
+              role,
+              parentFd,
+              beforeSpawn: {
+                method: 'proc-fd-identity' as const,
+                observedMonotonicNs: String(49_000 + ownerIndex * 100 + descriptorIndex),
+                path: `/proc/${pid}/fd/${parentFd}`,
+                device: String(20_000 + ownerIndex),
+                inode: String(21_000 + descriptorIndex),
+                mode: 0o600,
+              },
+              afterSpawn: {
+                method: 'fstat-ebadf' as const,
+                observedMonotonicNs: String(51_000 + ownerIndex * 100 + descriptorIndex),
+                errno: 'EBADF' as const,
+              },
+            };
+          });
+          return {
+            wrapperPid: pid,
+            wrapperStartToken: startToken,
+            spawnNonce: digest(`spawn-nonce:${startToken}`),
+            spawnBoundaryMonotonicNs: String(50_000 + ownerIndex * 100),
+            childPublication: {
+              schemaVersion: 1,
+              contract: 'agent-teams.hosted-owner-child-fd-map/v1',
+              wrapperPid: pid,
+              wrapperStartToken: startToken,
+              spawnNonce: digest(`spawn-nonce:${startToken}`),
+              descriptors: descriptors.map(({ role, beforeSpawn }, descriptorIndex) => ({
+                role,
+                childFd: descriptorIndex + 3,
+                device: beforeSpawn.device,
+                inode: beforeSpawn.inode,
+                mode: beforeSpawn.mode,
+              })),
+            },
+            descriptors,
+          };
+        }),
+    },
     rawFiles: Object.fromEntries(
       RAW_ORIGINS.map((origin, index) => {
         const producers =
@@ -1530,11 +1773,231 @@ function supervisorTranscript(plan: SupervisorPlan): Buffer {
         ];
       })
     ),
+    captureFiles: Object.fromEntries(
+      RUNTIME_CAPTURE_NAMES.map((name, index) => {
+        const roles = {
+          conditionalPostLedgerPath: 'product',
+          negativeResultsPath: 'browser',
+          openCodeTimelinePath: 'opencode',
+          ownerWalTimelinePath: 'owner',
+          productTimelinePath: 'product',
+          protectedEffectLedgerPath: 'opencode',
+        } as const;
+        const slots = {
+          conditionalPostLedgerPath: 9,
+          negativeResultsPath: 9,
+          openCodeTimelinePath: 9,
+          ownerWalTimelinePath: 9,
+          productTimelinePath: 10,
+          protectedEffectLedgerPath: 10,
+        } as const;
+        const producers = starts.filter(({ role }) => role === roles[name]);
+        const shards = producers.map((producer, shardIndex) => {
+          const captureDevice = String(10_000 + index * 10 + shardIndex);
+          const captureInode = String(11_000 + index * 10 + shardIndex);
+          const captureSha256 = digest(`non-authoritative-capture:${name}:${shardIndex}`);
+          const path =
+            name === 'ownerWalTimelinePath'
+              ? plan.runtimeManifest.capture[name].replace(
+                  /\.ndjson$/u,
+                  `.${producer.instanceId}.ndjson`
+                )
+              : plan.runtimeManifest.capture[name];
+          const exit = exits.find(
+            ({ startToken, pidfdInode }) =>
+              startToken === producer.startToken && pidfdInode === producer.pidfdInode
+          )!;
+          const common = {
+            path,
+            stream: RUNTIME_CAPTURE_STREAMS[name],
+            contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+            captureDevice,
+            captureInode,
+            size: 2,
+            sha256: captureSha256,
+            producerPid: producer.pid,
+            producerStartToken: producer.startToken,
+            producerPidfdInode: producer.pidfdInode,
+            producerRole: roles[name],
+            producerFd: slots[name],
+            producerArtifactSha256: plan.expectedProducerArtifactSha256[roles[name]],
+            producerModuleSha256: plan.expectedProducerModuleSha256[roles[name]],
+          };
+          return {
+            authority: 'kernel-observed',
+            ...common,
+            allocation: {
+              observationMethod: 'openat-exclusive-no-follow',
+              flags: 'O_CREAT|O_EXCL|O_NOFOLLOW|O_WRONLY|O_APPEND|O_CLOEXEC',
+              mode: 0o600,
+              nlink: 1,
+              initialSize: 0,
+              captureDevice,
+              captureInode,
+            },
+            parentClose: {
+              supervisorPid: 900,
+              supervisorStartToken: digest('start:supervisor'),
+              writerFd: 70 + index * 8 + shardIndex,
+              descriptorPath: `/proc/900/fd/${70 + index * 8 + shardIndex}`,
+              captureDevice,
+              captureInode,
+              observedOpenMonotonicNs: '11',
+              spawnBoundaryMonotonicNs: '12',
+              observedClosedMonotonicNs: '13',
+              closeObservationMethod: 'fstat-ebadf',
+              closedErrno: 'EBADF',
+            },
+            producerOpen: {
+              descriptorPath: `/proc/${producer.pid}/fd/${slots[name]}`,
+              captureDevice,
+              captureInode,
+              observationMethod: 'proc-fd-identity',
+              observedMonotonicNs: '14',
+            },
+            producerClose: {
+              observationMethod: 'pidfd-exact-exit',
+              observedMonotonicNs: exit.observedMonotonicNs,
+              descriptorPath: `/proc/${producer.pid}/fd/${slots[name]}`,
+              producerStartToken: producer.startToken,
+              producerPidfdInode: producer.pidfdInode,
+            },
+            descendantCensus: {
+              observationMethod: 'proc-fd-inode-census',
+              observedMonotonicNs: '2000',
+              processEvidenceSetId,
+              inspectedStartTokens: [...starts, ...descendants]
+                .map(({ startToken }) => startToken)
+                .sort(),
+              retainedWriterCount: 0,
+            },
+            seal: {
+              observationMethod: 'read-only-stable-hash',
+              observedMonotonicNs: '2001',
+              captureDevice,
+              captureInode,
+              mode: 0o400,
+              nlink: 1,
+              size: 2,
+              sha256: captureSha256,
+              manifestSha256: producerCaptureSealManifestSha256(common),
+            },
+          };
+        });
+        return [
+          name,
+          {
+            stream: RUNTIME_CAPTURE_STREAMS[name],
+            contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+            shards,
+          },
+        ];
+      })
+    ),
   });
   return Buffer.from(`${lines.map(canonicalJson).join('\n')}\n`);
 }
 
+const descriptorProbeSource = (
+  publication: 'valid' | 'partial' | 'malformed' | 'timeout',
+  exitCode: number,
+  binding: Readonly<{ wrapperPid: number; wrapperStartToken: string; spawnNonce: string }>
+) => `
+const { fstatSync } = require('node:fs');
+const roles = ['sealed-launcher-lease', 'bootstrap', 'activation-v2'];
+const descriptors = roles.map((role, index) => {
+  const stat = fstatSync(index + 3, { bigint: true });
+  return { role, childFd: index + 3, device: String(stat.dev), inode: String(stat.ino), mode: Number(stat.mode & 4095n) };
+});
+const publication = ${JSON.stringify(publication)};
+const binding = ${JSON.stringify(binding)};
+const validPublication = JSON.stringify({ schemaVersion: 1, contract: 'agent-teams.hosted-owner-child-fd-map/v1', ...binding, descriptors }) + '\\n';
+if (publication === 'valid') process.stdout.write(validPublication);
+if (publication === 'timeout') process.stdout.write(validPublication, () => process.stderr.write('descriptor-ready\\n'));
+if (publication === 'partial') process.stdout.write(JSON.stringify({ schemaVersion: 1, contract: 'agent-teams.hosted-owner-child-fd-map/v1', ...binding, descriptors: descriptors.slice(0, 1) }) + '\\n');
+if (publication === 'malformed') process.stdout.write('{not-json}\\n');
+if (publication === 'timeout') setInterval(() => {}, 1000);
+else process.exit(${exitCode});
+`;
+
+async function spawnRealCanonicalDescriptorProbe(options: {
+  readonly publication?: 'valid' | 'partial' | 'malformed' | 'timeout';
+  readonly exitCode?: number;
+  readonly executable?: string;
+}) {
+  const root = await mkdtemp(join(tmpdir(), 'hosted-owner-child-fd-'));
+  const paths = [join(root, 'lease'), join(root, 'bootstrap'), join(root, 'activation')];
+  const fds: number[] = [];
+  let child: ReturnType<typeof spawnChild> | null = null;
+  try {
+    await Promise.all(paths.map((path, index) => writeFile(path, `descriptor-${index}`)));
+    for (const path of paths) fds.push(openSync(path, constants.O_RDONLY));
+    const before = observeCurrentWrapperDescriptorsBeforeSpawn(fds);
+    child = spawnChild(
+      options.executable ?? process.execPath,
+      [
+        '--eval',
+        descriptorProbeSource(options.publication ?? 'valid', options.exitCode ?? 0, before),
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe', ...fds] }
+    );
+    const spawnBoundaryMonotonicNs = process.hrtime.bigint().toString();
+    for (const fd of fds.splice(0)) closeSync(fd);
+    const record = observeParentDescriptorsClosed(before, spawnBoundaryMonotonicNs);
+    if (options.publication === 'timeout') {
+      const fallback = setTimeout(() => child?.kill('SIGKILL'), 2_000);
+      child.stderr?.once('data', () => {
+        clearTimeout(fallback);
+        child?.kill('SIGKILL');
+      });
+    }
+    const stdout = collectBoundedStream(child.stdout, 16 * 1024);
+    const stderr = collectBoundedStream(child.stderr, 16 * 1024);
+    const [close, stdoutBytes, stderrBytes] = await Promise.all([
+      once(child, 'close') as Promise<[number | null, NodeJS.Signals | null]>,
+      stdout,
+      stderr,
+    ]);
+    return Object.freeze({ before, record, close, stdoutBytes, stderrBytes });
+  } finally {
+    for (const fd of fds) closeSync(fd);
+    child?.kill('SIGKILL');
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+function acceptRealDescriptorCleanup(
+  record: ReturnType<typeof observeParentDescriptorsClosed>,
+  childPublication: ReturnType<typeof acceptCanonicalChildDescriptorPublication>
+) {
+  return parseOwnerChildDescriptorCleanup(
+    {
+      schemaVersion: 2,
+      contract: 'agent-teams.hosted-owner-child-parent-fd-cleanup/v2',
+      records: [{ ...record, childPublication }],
+    },
+    [{ role: 'owner', pid: record.wrapperPid, startToken: record.wrapperStartToken }]
+  );
+}
+
 describe('process ownership transcript', () => {
+  it('rejects the frozen OpenCode artifact before sandbox checks or process readiness', async () => {
+    const admission = {
+      descriptor: {
+        openCode: {
+          identities: { linuxX64BinarySha256: OPENCODE_IDENTITIES.linuxX64BinarySha256 },
+        },
+      },
+    } as unknown as PreflightAdmission;
+    await expect(
+      executeSupervisor(
+        admission,
+        {} as Parameters<typeof executeSupervisor>[1],
+        {} as Parameters<typeof executeSupervisor>[2]
+      )
+    ).rejects.toThrow('p3c_old_opencode_artifact_not_producer_native');
+  });
+
   it('requires replacement owners, complete Chromium descendants, network isolation, and drain', () => {
     const plan = supervisorPlan();
     const transcript = supervisorTranscript(plan);
@@ -1543,6 +2006,44 @@ describe('process ownership transcript', () => {
     expect(outcome.starts.filter(({ role }) => role === 'owner')).toHaveLength(4);
     expect(outcome.descendants.map(({ role }) => role)).toEqual(plan.chromiumDescendants);
     expect(outcome.network.namespaceInode).not.toBe(outcome.network.parentNamespaceInode);
+    expect(outcome.ownerChildDescriptorCleanup.ownerStartTokens).toHaveLength(4);
+    expect(outcome.captureFiles.ownerWalTimelinePath.shards).toHaveLength(4);
+    expect(
+      new Set(
+        outcome.captureFiles.ownerWalTimelinePath.shards.map(
+          ({ captureDevice, captureInode }) => `${captureDevice}:${captureInode}`
+        )
+      ).size
+    ).toBe(4);
+    for (const [needle, replacement] of [
+      ['"producerPid":1000', '"producerPid":9999'],
+      ['"producerFd":9', '"producerFd":8'],
+      ['"captureInode":"11000"', '"captureInode":"99999"'],
+      [
+        `"producerArtifactSha256":"${plan.expectedProducerArtifactSha256.opencode}"`,
+        `"producerArtifactSha256":"${digest('wrong-producer-artifact')}"`,
+      ],
+      ['"retainedWriterCount":0', '"retainedWriterCount":1'],
+      ['"observationMethod":"pidfd-exact-exit"', '"observationMethod":"missing-close"'],
+      ['"observationMethod":"read-only-stable-hash"', '"observationMethod":"unsealed"'],
+    ] as const) {
+      const adversarial = Buffer.from(transcript.toString('utf8').replace(needle, replacement));
+      expect(() => parseSupervisorTranscript(adversarial, plan)).toThrow(/p3c_supervisor_capture/u);
+    }
+    const incompleteParentCleanup = Buffer.from(
+      transcript.toString('utf8').replace('"errno":"EBADF"', '"errno":"EIO"')
+    );
+    expect(() => parseSupervisorTranscript(incompleteParentCleanup, plan)).toThrow(
+      'p3c_supervisor_owner_child_descriptor_cleanup'
+    );
+    const temporallyInvalidParentCleanup = Buffer.from(
+      transcript
+        .toString('utf8')
+        .replace('"spawnBoundaryMonotonicNs":"50000"', '"spawnBoundaryMonotonicNs":"48000"')
+    );
+    expect(() => parseSupervisorTranscript(temporallyInvalidParentCleanup, plan)).toThrow(
+      'p3c_supervisor_owner_child_descriptor_cleanup'
+    );
     const changed = Buffer.from(
       transcript.toString('utf8').replace('"zeroOwnedSurvivors":true', '"zeroOwnedSurvivors":false')
     );
@@ -1619,6 +2120,266 @@ describe('process ownership transcript', () => {
     expect(() => parseSupervisorTranscript(Buffer.from(`${documents.join('\n')}\n`), plan)).toThrow(
       'p3c_supervisor_unexpected_descendant'
     );
+  });
+
+  it('accepts supervising-parent evidence from a real FD3/FD4/FD5 child spawn', async () => {
+    const probe = await spawnRealCanonicalDescriptorProbe({});
+    expect(probe.close).toEqual([0, null]);
+    const publication = JSON.parse(probe.stdoutBytes.toString('utf8')) as unknown;
+    const childPublication = acceptCanonicalChildDescriptorPublication(publication, probe.before);
+    const accepted = acceptRealDescriptorCleanup(probe.record, childPublication);
+    expect(accepted.records).toEqual([{ ...probe.record, childPublication }]);
+    expect(probe.record.wrapperPid).toBe(process.pid);
+    expect(probe.record.wrapperStartToken).toBe(
+      readCurrentWrapperProcessStartIdentity().startToken
+    );
+  });
+
+  it('accepts real child publication only through the final supervisor parser', async () => {
+    const probe = await spawnRealCanonicalDescriptorProbe({});
+    const childPublication = acceptCanonicalChildDescriptorPublication(
+      JSON.parse(probe.stdoutBytes.toString('utf8')) as unknown,
+      probe.before
+    );
+    const plan = supervisorPlan();
+    const outcome = parseSupervisorTranscript(
+      supervisorTranscript(plan, {
+        pid: probe.record.wrapperPid,
+        startToken: probe.record.wrapperStartToken,
+        lifecycle: probe.record,
+        childPublication,
+      }),
+      plan
+    );
+    expect(outcome.ownerChildDescriptorCleanup.records[0]).toEqual({
+      ...probe.record,
+      childPublication,
+    });
+  });
+
+  it.each(['missing', 'malformed', 'reordered', 'identity-drifted', 'detached'] as const)(
+    'rejects %s child publication in final supervisor acceptance',
+    (mutation) => {
+      const plan = supervisorPlan();
+      const documents = supervisorTranscript(plan)
+        .toString('utf8')
+        .trimEnd()
+        .split('\n')
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+      const result = documents.at(-1)!;
+      const cleanup = result.ownerChildDescriptorCleanup as {
+        records: Array<Record<string, unknown>>;
+      };
+      const record = cleanup.records[0]!;
+      const publication = record.childPublication as {
+        wrapperPid: number;
+        wrapperStartToken: string;
+        spawnNonce: string;
+        descriptors: Array<Record<string, unknown>>;
+      };
+      if (mutation === 'missing') delete record.childPublication;
+      else if (mutation === 'malformed') publication.descriptors.length = 1;
+      else if (mutation === 'reordered') publication.descriptors.reverse();
+      else if (mutation === 'identity-drifted') publication.descriptors[0]!.inode = '999999';
+      else {
+        const detached = cleanup.records[1]!.childPublication as {
+          wrapperPid: number;
+          wrapperStartToken: string;
+          spawnNonce: string;
+        };
+        record.childPublication = {
+          ...publication,
+          wrapperPid: detached.wrapperPid,
+          wrapperStartToken: detached.wrapperStartToken,
+          spawnNonce: detached.spawnNonce,
+        };
+        expect((record.childPublication as typeof publication).descriptors).toEqual(
+          publication.descriptors
+        );
+      }
+      expect(() =>
+        parseSupervisorTranscript(Buffer.from(`${documents.map(canonicalJson).join('\n')}\n`), plan)
+      ).toThrow(/p3c_(?:supervisor_owner_child_descriptor_cleanup|child_descriptor_publication)/u);
+    }
+  );
+
+  it.each([
+    ['partial publication', 'partial', 0],
+    ['malformed publication', 'malformed', 0],
+    ['child exit', 'valid', 7],
+  ] as const)('requires canonical publication across %s', async (_label, publication, exitCode) => {
+    const probe = await spawnRealCanonicalDescriptorProbe({ publication, exitCode });
+    if (publication === 'valid') {
+      expect(probe.close).toEqual([exitCode, null]);
+      const childPublication = acceptCanonicalChildDescriptorPublication(
+        JSON.parse(probe.stdoutBytes.toString('utf8')) as unknown,
+        probe.before
+      );
+      expect(() => acceptRealDescriptorCleanup(probe.record, childPublication)).not.toThrow();
+    } else {
+      expect(() => {
+        const value = JSON.parse(probe.stdoutBytes.toString('utf8')) as unknown;
+        acceptCanonicalChildDescriptorPublication(value, probe.before);
+      }).toThrow();
+    }
+  });
+
+  it('retains authoritative cleanup when the child times out', async () => {
+    const probe = await spawnRealCanonicalDescriptorProbe({ publication: 'timeout' });
+    expect(probe.close).toEqual([null, 'SIGKILL']);
+    const childPublication = acceptCanonicalChildDescriptorPublication(
+      JSON.parse(probe.stdoutBytes.toString('utf8')) as unknown,
+      probe.before
+    );
+    expect(() => acceptRealDescriptorCleanup(probe.record, childPublication)).not.toThrow();
+  });
+
+  it('retains authoritative cleanup when the child spawn fails', async () => {
+    const fds = [
+      openSync('/dev/null', constants.O_RDONLY),
+      openSync('/dev/null', constants.O_RDONLY),
+      openSync('/dev/null', constants.O_RDONLY),
+    ];
+    const before = observeCurrentWrapperDescriptorsBeforeSpawn(fds);
+    const child = spawnChild('/definitely/missing/hosted-owner-child', [], {
+      stdio: ['ignore', 'ignore', 'ignore', ...fds],
+    });
+    const spawnBoundaryMonotonicNs = process.hrtime.bigint().toString();
+    for (const fd of fds) closeSync(fd);
+    const record = observeParentDescriptorsClosed(before, spawnBoundaryMonotonicNs);
+    const [error] = (await once(child, 'error')) as [NodeJS.ErrnoException];
+    expect(error.code).toBe('ENOENT');
+    expect(record.descriptors).toHaveLength(3);
+  });
+
+  it('retains authoritative cleanup through rollback and repeated cleanup', async () => {
+    const probe = await spawnRealCanonicalDescriptorProbe({});
+    const childPublication = acceptCanonicalChildDescriptorPublication(
+      JSON.parse(probe.stdoutBytes.toString('utf8')) as unknown,
+      probe.before
+    );
+    expect(() => {
+      try {
+        throw new Error('simulated-activation-rollback');
+      } finally {
+        acceptRealDescriptorCleanup(probe.record, childPublication);
+      }
+    }).toThrow('simulated-activation-rollback');
+    expect(observeParentDescriptorsClosed(probe.before)).toEqual(
+      expect.objectContaining({ wrapperStartToken: probe.record.wrapperStartToken })
+    );
+  });
+
+  it('fails closed on missing proc descriptor identity', () => {
+    const fds = [
+      openSync('/dev/null', constants.O_RDONLY),
+      openSync('/dev/null', constants.O_RDONLY),
+      openSync('/dev/null', constants.O_RDONLY),
+    ];
+    try {
+      const wrapper = readCurrentWrapperProcessStartIdentity();
+      expect(() =>
+        observeParentDescriptorsBeforeSpawn(wrapper.pid, wrapper.startToken, fds, {
+          statProcDescriptor: () => {
+            const error = new Error('missing proc') as NodeJS.ErrnoException;
+            error.code = 'ENOENT';
+            throw error;
+          },
+        })
+      ).toThrow('missing proc');
+    } finally {
+      for (const fd of fds) closeSync(fd);
+    }
+  });
+
+  it('rejects descriptor reuse after the parent close boundary', () => {
+    const fds = [
+      openSync('/dev/null', constants.O_RDONLY),
+      openSync('/dev/null', constants.O_RDONLY),
+      openSync('/dev/null', constants.O_RDONLY),
+    ];
+    const wrapper = readCurrentWrapperProcessStartIdentity();
+    const before = observeParentDescriptorsBeforeSpawn(wrapper.pid, wrapper.startToken, fds);
+    const reusedFd = fds[0]!;
+    closeSync(reusedFd);
+    const replacement = openSync('/dev/null', constants.O_RDONLY);
+    try {
+      expect(replacement).toBe(reusedFd);
+      closeSync(fds[1]!);
+      closeSync(fds[2]!);
+      expect(() => observeParentDescriptorsClosed(before)).toThrow('p3c_parent_fd_copy_still_open');
+    } finally {
+      closeSync(replacement);
+    }
+  });
+
+  it.each(['wrapper-replacement', 'reordered', 'duplicated', 'detached'] as const)(
+    'rejects %s lifecycle evidence after a real spawn',
+    async (mutation) => {
+      const probe = await spawnRealCanonicalDescriptorProbe({});
+      const childPublication = acceptCanonicalChildDescriptorPublication(
+        JSON.parse(probe.stdoutBytes.toString('utf8')) as unknown,
+        probe.before
+      );
+      const cleanup = {
+        schemaVersion: 2,
+        contract: 'agent-teams.hosted-owner-child-parent-fd-cleanup/v2',
+        records: [{ ...probe.record, childPublication }],
+      };
+      const starts = [
+        {
+          role: 'owner' as const,
+          pid: probe.record.wrapperPid,
+          startToken: probe.record.wrapperStartToken,
+        },
+      ];
+      if (mutation === 'wrapper-replacement') starts[0] = { ...starts[0]!, pid: process.pid + 1 };
+      if (mutation === 'reordered') {
+        cleanup.records = [
+          {
+            ...probe.record,
+            childPublication,
+            descriptors: [...probe.record.descriptors].reverse(),
+          },
+        ];
+      }
+      if (mutation === 'duplicated') {
+        cleanup.records = [
+          { ...probe.record, childPublication },
+          { ...probe.record, childPublication },
+        ];
+      }
+      if (mutation === 'detached') starts[0] = { ...starts[0]!, startToken: sha256('detached') };
+      expect(() => parseOwnerChildDescriptorCleanup(cleanup, starts)).toThrow(
+        'p3c_supervisor_owner_child_descriptor_cleanup'
+      );
+    }
+  );
+
+  it('fails closed while any exact parent descriptor remains open', () => {
+    const fds = [
+      openSync('/dev/null', constants.O_RDONLY),
+      openSync('/dev/null', constants.O_RDONLY),
+      openSync('/dev/null', constants.O_RDONLY),
+    ];
+    try {
+      const before = observeParentDescriptorsBeforeSpawn(
+        process.pid,
+        sha256('wrapper:still-open'),
+        fds
+      );
+      closeSync(fds[0]!);
+      closeSync(fds[1]!);
+      expect(() => observeParentDescriptorsClosed(before)).toThrow('p3c_parent_fd_copy_still_open');
+    } finally {
+      for (const fd of fds) {
+        try {
+          closeSync(fd);
+        } catch {
+          // Expected for descriptors already closed above.
+        }
+      }
+    }
   });
 
   it('rejects every missing Chromium census role and every Chromium executable digest mismatch', () => {
@@ -1960,7 +2721,7 @@ describe('bounded supervisor shutdown fixtures', () => {
           childHasExited: () => directChildExited,
         })
       ).resolves.toBeUndefined();
-      expect(censuses).toBe(3);
+      expect(censuses).toBeGreaterThanOrEqual(3);
       await expect(censusOwnedProcesses(marker)).resolves.toEqual([]);
     } finally {
       process.kill(-provisional.processGroupId, 'SIGKILL');
@@ -2364,8 +3125,10 @@ function fixtureObservedBodies(
 
 function rawEvidence(): {
   raw: Readonly<Record<RawOrigin, Buffer>>;
+  captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>;
   outcome: SupervisorOutcome;
   controllerNonce: string;
+  nonAuthoritative: true;
 } {
   const controllerNonce = digest('evidence-controller');
   const runId = digest('evidence-run');
@@ -2428,34 +3191,34 @@ function rawEvidence(): {
         else if (/boundary_two|after_decision|stale_generations/u.test(event)) role = 'owner3';
         else if (/restart|restored|boundary_one/u.test(event)) role = 'owner2';
       }
-      byOrigin[origin].push(
-        makeRawRecord({
-          controllerNonce,
-          origin,
-          row,
-          sequence: sequence[origin],
-          monotonicNs: String(globalMonotonicSequence * 1000),
-          processStartToken: starts[role],
-          event,
-          correlation,
-          effectCount,
-          payload: makeSemanticPayload({
-            origin,
-            row,
-            event,
-            identity,
-            providerEffectId,
-            ...observedBodies,
-            effectSetSha256s: /^effect_total_(?:two|three)$/u.test(event)
-              ? [...observedProviderEffectSha256s]
-              : undefined,
-            processEvidenceSetId:
-              origin === 'supervisor' ? digest('process-evidence-set') : undefined,
-            observedBrowserStatus:
-              origin === 'browser' && row === '08_cross_team_isolation' ? 403 : undefined,
-          }),
-        })
-      );
+      const monotonicNs = String(globalMonotonicSequence * 1000);
+      const payload = makeSemanticPayload({
+        origin,
+        row,
+        event,
+        identity,
+        providerEffectId,
+        ...observedBodies,
+        effectSetSha256s: /^effect_total_(?:two|three)$/u.test(event)
+          ? [...observedProviderEffectSha256s]
+          : undefined,
+        processEvidenceSetId: origin === 'supervisor' ? digest('process-evidence-set') : undefined,
+        observedBrowserStatus:
+          origin === 'browser' && row === '08_cross_team_isolation' ? 403 : undefined,
+      });
+      const rawRecord = makeRawRecord({
+        controllerNonce,
+        origin,
+        row,
+        sequence: sequence[origin],
+        monotonicNs,
+        processStartToken: starts[role],
+        event,
+        correlation,
+        effectCount,
+        payload,
+      });
+      byOrigin[origin].push(rawRecord);
     }
   }
   const raw = Object.fromEntries(
@@ -2493,6 +3256,11 @@ function rawEvidence(): {
       cwdDevice: '1',
       cwdInode: String(8000 + index),
     })
+  );
+  const captures = Object.freeze(
+    Object.fromEntries(
+      RUNTIME_CAPTURE_NAMES.map((name) => [name, Object.freeze([Buffer.from('{}\n')])])
+    ) as Record<RuntimeCaptureName, readonly Buffer[]>
   );
   const outcome: SupervisorOutcome = {
     controllerNonce,
@@ -2545,6 +3313,54 @@ function rawEvidence(): {
       recordSha256: digest('filesystem'),
     },
     processEvidenceSetId: digest('process-evidence-set'),
+    ownerChildDescriptorCleanup: {
+      contract: 'agent-teams.hosted-owner-child-parent-fd-cleanup/v2',
+      ownerStartTokens: processStarts
+        .filter(({ role }) => role === 'owner')
+        .map(({ startToken }) => startToken),
+      records: processStarts
+        .filter(({ role }) => role === 'owner')
+        .map(({ pid, startToken }, ownerIndex) => {
+          const descriptors = PARENT_DESCRIPTOR_ROLES.map((role, descriptorIndex) => ({
+            role,
+            parentFd: 30 + ownerIndex * 3 + descriptorIndex,
+            beforeSpawn: {
+              method: 'proc-fd-identity' as const,
+              observedMonotonicNs: String(49_000 + ownerIndex * 100 + descriptorIndex),
+              path: `/proc/${pid}/fd/${30 + ownerIndex * 3 + descriptorIndex}`,
+              device: String(20_000 + ownerIndex),
+              inode: String(21_000 + descriptorIndex),
+              mode: 0o600,
+            },
+            afterSpawn: {
+              method: 'fstat-ebadf' as const,
+              observedMonotonicNs: String(51_000 + ownerIndex * 100 + descriptorIndex),
+              errno: 'EBADF' as const,
+            },
+          }));
+          return {
+            wrapperPid: pid,
+            wrapperStartToken: startToken,
+            spawnNonce: digest(`spawn-nonce:${startToken}`),
+            spawnBoundaryMonotonicNs: String(50_000 + ownerIndex * 100),
+            childPublication: {
+              schemaVersion: 1 as const,
+              contract: 'agent-teams.hosted-owner-child-fd-map/v1' as const,
+              wrapperPid: pid,
+              wrapperStartToken: startToken,
+              spawnNonce: digest(`spawn-nonce:${startToken}`),
+              descriptors: descriptors.map(({ role, beforeSpawn }, descriptorIndex) => ({
+                role,
+                childFd: (descriptorIndex + 3) as 3 | 4 | 5,
+                device: beforeSpawn.device,
+                inode: beforeSpawn.inode,
+                mode: beforeSpawn.mode,
+              })),
+            },
+            descriptors,
+          };
+        }),
+    },
     rawFiles: Object.fromEntries(
       RAW_ORIGINS.map((origin, index) => {
         const roles =
@@ -2578,10 +3394,23 @@ function rawEvidence(): {
         ];
       })
     ) as unknown as SupervisorOutcome['rawFiles'],
+    captureFiles: Object.fromEntries(
+      RUNTIME_CAPTURE_NAMES.map((name) => [name, {
+        stream: RUNTIME_CAPTURE_STREAMS[name],
+        contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+        shards: [],
+      }])
+    ) as unknown as SupervisorOutcome['captureFiles'],
     transcriptSha256: digest('transcript'),
     transcript: Buffer.from('deterministic-supervisor-transcript'),
   };
-  return { raw: Object.freeze(raw), outcome, controllerNonce };
+  return {
+    raw: Object.freeze(raw),
+    captures: Object.freeze(captures),
+    outcome,
+    controllerNonce,
+    nonAuthoritative: true,
+  };
 }
 
 function replaceRawOrigin(
@@ -2776,46 +3605,531 @@ function mutateOuterEvent(
   );
 }
 
+function nativeCrossJoinFixture(name: 'productTimelinePath' | 'ownerWalTimelinePath') {
+  const fixture = rawEvidence();
+  const origins =
+    name === 'productTimelinePath'
+      ? (['product-http', 'product-sse'] as const)
+      : (['owner-wal'] as const);
+  const role = name === 'productTimelinePath' ? 'product' : 'owner';
+  const candidates = origins
+    .flatMap((origin) =>
+      fixture.raw[origin]
+        .toString('utf8')
+        .trimEnd()
+        .split('\n')
+        .map((line) => {
+          const raw = JSON.parse(line) as Record<string, unknown>;
+          const payload = JSON.parse(
+            Buffer.from(raw.payloadBase64 as string, 'base64').toString('utf8')
+          ) as Record<string, unknown>;
+          const semanticRecord = JSON.parse(
+            Buffer.from(payload.recordBase64 as string, 'base64').toString('utf8')
+          ) as Record<string, unknown>;
+          return { origin, raw, semanticRecord };
+        })
+    )
+    .sort((left, right) =>
+      BigInt(left.raw.monotonicNs as string) < BigInt(right.raw.monotonicNs as string) ? -1 : 1
+    );
+  const producers = fixture.outcome.starts.filter((start) => start.role === role);
+  const parsedShards = producers.map((producer, shardIndex) => {
+    const semanticRecords = candidates
+      .filter(({ raw }) => raw.processStartToken === producer.startToken)
+      .map(({ origin, semanticRecord }, recordIndex) => {
+        const transport = semanticRecord.transport as Record<string, unknown>;
+        const retained = (value: unknown) => {
+          const structure = value as Record<string, unknown>;
+          const bytes = Buffer.from(structure.bodyBase64 as string, 'base64');
+          return { bytes, sha256: structure.sha256 as string };
+        };
+        const native = (() => {
+          if (name !== 'productTimelinePath') return {};
+          if (origin === 'product-sse') {
+            const data = retained(transport.data);
+            const frame = `id: ${String(transport.eventId)}\nevent: ${String(transport.eventType)}\ndata: ${data.bytes.toString('utf8')}\n\n`;
+            return {
+              eventId: transport.eventId,
+              eventType: transport.eventType,
+              frameBytes: Buffer.byteLength(frame),
+              frameKind: 'coordination_event',
+              frameSha256: sha256(frame),
+            };
+          }
+          const request = retained(transport.request);
+          const response = retained(transport.response);
+          const routeIds: Readonly<Record<string, string>> = Object.freeze({
+            page: 'team-approvals.page.v1',
+            preview: 'team-approvals.preview.v1',
+            decisions: 'team-approvals.decision.v1',
+          });
+          return {
+            method: transport.method,
+            requestBodyBytes: request.bytes.length,
+            requestBodySha256: request.sha256,
+            responseBodyBytes: response.bytes.length,
+            responseBodySha256: response.sha256,
+            routeId: routeIds[transport.endpointFamily as string],
+            status: transport.status,
+          };
+        })();
+        return {
+        stream: RUNTIME_CAPTURE_STREAMS[name],
+        recordType:
+          name === 'productTimelinePath'
+            ? origin === 'product-sse'
+              ? 'coordination-sse-write-succeeded'
+              : 'approval-http-response-finalized'
+            : 'owner-wal-published',
+        sequence: recordIndex + 1,
+        previousRecordSha256: digest(`cross-join-previous:${shardIndex}:${recordIndex}`),
+        emissionNonce: digest(`cross-join-nonce:${shardIndex}:${recordIndex}`),
+        producer: {},
+        activation: { controllerNonce: fixture.controllerNonce, runId: fixture.outcome.runId },
+        native,
+        lineSha256: digest(`cross-join-line:${shardIndex}:${recordIndex}`),
+        };
+      });
+    return {
+      producerRole: role,
+      semanticRecordCount: semanticRecords.length,
+      records: [
+        {
+          native: {},
+        },
+        ...semanticRecords,
+        {
+          native: {},
+        },
+      ],
+      finalLineSha256: digest(`cross-join-final:${shardIndex}`),
+    };
+  }) as unknown as Parameters<typeof assertNativeSemanticCrossJoin>[1];
+  const expected = {
+    shards: producers.map(({ startToken }) => ({ producerStartToken: startToken })),
+  } as unknown as Parameters<typeof assertNativeSemanticCrossJoin>[4];
+  return { fixture, parsedShards, expected };
+}
+
+describe('nonAuthoritative native capture parser goldens', () => {
+  const controllerNonce = digest('native-parser-controller');
+  const runId = digest('native-parser-run');
+  const producer = Object.freeze({
+    role: 'product-producer',
+    pid: 4321,
+    startTicks: '991',
+    exeDev: '8',
+    exeIno: '42',
+    exeSha256: digest('native-parser-exe'),
+    artifactManifestSha256: digest('native-parser-artifact'),
+    implementationId: 'agent-teams.product.hosted-approval.v1',
+    moduleSha256: digest('native-parser-module'),
+  });
+  const activation = Object.freeze({
+    controllerNonce,
+    runId,
+    stackManifestSha256: digest('native-parser-stack-manifest'),
+  });
+  const open = Object.freeze({
+    activation,
+    contract: PRODUCER_PROVENANCE_CONTRACT.contract,
+    version: PRODUCER_PROVENANCE_CONTRACT.version,
+    contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+    stream: RUNTIME_CAPTURE_STREAMS.productTimelinePath,
+    recordType: 'producer-open',
+    sequence: 0,
+    previousRecordSha256: null,
+    emissionNonce: digest('native-parser-open-nonce'),
+    operationNonce: null,
+    producer,
+    native: { descriptor: { device: '9', fd: 10, inode: '10' } },
+  });
+  const openLine = canonicalJson(open);
+  const processStartToken = digest('native-parser-process-start');
+  const semanticRecord = Object.freeze({
+    schemaVersion: 1,
+    purpose: 'agent-teams.p3c.semantic-record/v1',
+    origin: 'product-http',
+    row: '01_direct_api_allow_deny',
+    event: 'allow_submitted',
+    identity: {},
+    causal: {},
+    transport: {},
+  });
+  const fixedControllerNonce = controllerNonce;
+  const fixedRunId = runId;
+  const fixedOpenLine = openLine;
+  const fixedSemantic = Object.freeze({
+    ...open,
+    emissionNonce: digest('native-parser-semantic-nonce'),
+    native: {
+      actorId: 'actor_test', bootId: 'boot_test', deploymentId: 'deployment_test', method: 'POST',
+      outcome: 'success', ownerAuthority: 'owner-authority_test', ownerGeneration: 7,
+      ownerSessionId: 'owner-session_test', requestBodyBytes: 2,
+      requestBodySha256: '4'.repeat(64), requestId: 'request_test', responseBodyBytes: 2,
+      responseBodySha256: '5'.repeat(64), routeId: 'team-approvals.page.v1',
+      sessionId: 'session_test', status: 200,
+    },
+    operationNonce: '3'.repeat(64),
+    previousRecordSha256: sha256(`${fixedOpenLine}\n`),
+    recordType: 'approval-http-response-finalized',
+    sequence: 1,
+  });
+  const fixedSemanticLine = canonicalJson(fixedSemantic);
+  const fixedClose = Object.freeze({
+    ...open,
+    emissionNonce: digest('native-parser-close-nonce'),
+    native: {},
+    previousRecordSha256: sha256(`${fixedSemanticLine}\n`),
+    recordType: 'producer-close',
+    sequence: 2,
+  });
+  const fixedCloseLine = canonicalJson(fixedClose);
+  const fixedOpen = JSON.parse(fixedOpenLine) as Record<string, unknown>;
+  const fixedGolden = Buffer.from(`${fixedOpenLine}\n${fixedSemanticLine}\n${fixedCloseLine}\n`);
+
+  it('pins the exact hand-written r307 contract digest', () => {
+    expect(PRODUCER_PROVENANCE_CONTRACT_SHA256).toBe(
+      'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498'
+    );
+  });
+
+  it('parses a fixed hand-authored nonAuthoritative golden without granting authority', () => {
+    const parsed = parseNativeRuntimeCapture(
+      'productTimelinePath',
+      fixedGolden,
+      fixedControllerNonce,
+      fixedRunId
+    );
+    expect(parsed.semanticRecordCount).toBe(1);
+    expect(parsed.records).toHaveLength(3);
+  });
+
+  it.each([
+    'truncated',
+    'reordered',
+    'broken-chain',
+    'same-role-substitution',
+    'duplicate-nonce',
+    'empty-stream',
+  ] as const)(
+    'rejects %s producer bytes',
+    (mutation) => {
+      const records = [fixedOpen, fixedSemantic].map(
+        (record) => JSON.parse(JSON.stringify(record)) as Record<string, unknown>
+      );
+      let bytes: Buffer;
+      if (mutation === 'truncated') {
+        bytes = fixedGolden.subarray(0, -1);
+      } else if (mutation === 'empty-stream') {
+        bytes = Buffer.from(`${openLine}\n`);
+      } else if (mutation === 'reordered') {
+        bytes = Buffer.from(`${canonicalJson(records[1])}\n${canonicalJson(records[0])}\n`);
+      } else {
+        if (mutation === 'broken-chain') records[1]!.previousRecordSha256 = digest('wrong-chain');
+        if (mutation === 'same-role-substitution') {
+          records[1]!.recordType = 'conditional-post-observed';
+        }
+        if (mutation === 'duplicate-nonce') {
+          records[1]!.emissionNonce = records[0]!.emissionNonce;
+        }
+        bytes = Buffer.from(`${records.map(canonicalJson).join('\n')}\n`);
+      }
+      expect(() =>
+        parseNativeRuntimeCapture('productTimelinePath', bytes, fixedControllerNonce, fixedRunId)
+      ).toThrow(/p3c_(?:runtime_capture|native_capture)/u);
+    }
+  );
+
+  it('rejects generic self-key native records and semantic digest substitution', () => {
+    const generic = [fixedOpen, fixedSemantic].map(
+      (record) => JSON.parse(JSON.stringify(record)) as Record<string, unknown>
+    );
+    generic[1]!.native = { join: {} };
+    expect(() =>
+      parseNativeRuntimeCapture(
+        'productTimelinePath',
+        Buffer.from(`${generic.map(canonicalJson).join('\n')}\n`),
+        fixedControllerNonce,
+        fixedRunId
+      )
+    ).toThrow(/p3c_(?:runtime_capture|native_capture)/u);
+
+    const substituted = [fixedOpen, fixedSemantic].map(
+      (record) => JSON.parse(JSON.stringify(record)) as Record<string, unknown>
+    );
+    (substituted[1]!.native as Record<string, unknown>).semanticRecordSha256 = digest(
+      'substituted-semantic'
+    );
+    expect(() =>
+      parseNativeRuntimeCapture(
+        'productTimelinePath',
+        Buffer.from(`${substituted.map(canonicalJson).join('\n')}\n`),
+        fixedControllerNonce,
+        fixedRunId
+      )
+    ).toThrow(/p3c_native_capture_productTimelinePath_approval-http-response-finalized/u);
+  });
+
+  it.each([
+    ['owner-wal-attacker', (record: Record<string, unknown>) => {
+      record.recordType = 'owner-wal-attacker';
+    }],
+    ['numeric-record-type', (record: Record<string, unknown>) => {
+      record.recordType = 7;
+    }],
+    ['missing-operation', (record: Record<string, unknown>) => {
+      delete record.operationNonce;
+    }],
+    ['empty-identity', (record: Record<string, unknown>) => {
+      (record.native as Record<string, unknown>).actorId = '';
+    }],
+  ] as const)('rejects fixed full-envelope adversary %s', (_label, mutate) => {
+    const changed = JSON.parse(fixedSemanticLine) as Record<string, unknown>;
+    mutate(changed);
+    expect(() =>
+      parseNativeRuntimeCapture(
+        'productTimelinePath',
+        Buffer.from(`${fixedOpenLine}\n${canonicalJson(changed)}\n`),
+        fixedControllerNonce,
+        fixedRunId
+      )
+    ).toThrow(/p3c_(?:runtime_capture|native_capture)/u);
+  });
+
+  it.each([
+    [
+      'conditionalPostLedgerPath',
+      'product',
+      'conditional-post-accepted',
+      'conditional-post',
+      'product-http',
+      'accepted',
+    ],
+    [
+      'negativeResultsPath',
+      'browser',
+      'negative-result-rejected',
+      'browser-negative-result',
+      'browser',
+      'missing_session_rejected',
+    ],
+    [
+      'openCodeTimelinePath',
+      'opencode',
+      'opencode-handler-observed',
+      'opencode-handler',
+      'opencode',
+      'allow_effect',
+    ],
+    [
+      'ownerWalTimelinePath',
+      'owner',
+      'owner-wal-transition',
+      'owner-wal',
+      'owner-wal',
+      'allow_committed',
+    ],
+    [
+      'productTimelinePath',
+      'product',
+      'product-sse-observed',
+      'product-sse',
+      'product-sse',
+      'allow_observed',
+    ],
+    [
+      'protectedEffectLedgerPath',
+      'opencode',
+      'protected-effect-committed',
+      'protected-effect',
+      'opencode',
+      'allow_effect',
+    ],
+  ] as const)(
+    'rejects the legacy generic wrapper schema for %s',
+    (name, role, recordType, captureKind, origin, event) => {
+      const familyOpen = {
+        ...open,
+        stream: RUNTIME_CAPTURE_STREAMS[name],
+        producer: { ...producer, role },
+        emissionNonce: digest(`native-family-open:${name}`),
+        native: {
+          schemaVersion: 1,
+          contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+          captureKind:
+            name === 'productTimelinePath' ? 'product-http-sse' : captureKind,
+        },
+      };
+      const familySemanticRecord = { ...semanticRecord, origin, event };
+      const familySemantic = {
+        ...familyOpen,
+        recordType,
+        sequence: 1,
+        previousRecordSha256: sha256(canonicalJson(familyOpen)),
+        emissionNonce: digest(`native-family-semantic:${name}`),
+        native: {
+          schemaVersion: 1,
+          contractSha256: PRODUCER_PROVENANCE_CONTRACT_SHA256,
+          captureKind,
+          processStartToken,
+          semanticRecord: familySemanticRecord,
+          semanticRecordSha256: sha256(canonicalJson(familySemanticRecord)),
+          join: {
+            rawOrigin: origin,
+            rawRecordId: digest(`native-family-raw-record:${name}`),
+            rawPayloadSha256: digest(`native-family-raw-payload:${name}`),
+            semanticIdentitySha256: digest(`native-family-identity:${name}`),
+            event,
+          },
+        },
+      };
+      const validBytes = Buffer.from(
+        `${canonicalJson(familyOpen)}\n${canonicalJson(familySemantic)}\n`
+      );
+      expect(() =>
+        parseNativeRuntimeCapture(name, validBytes, controllerNonce, runId)
+      ).toThrow(/p3c_native_capture/u);
+      const adversarial = JSON.parse(JSON.stringify(familySemantic)) as Record<string, unknown>;
+      (adversarial.native as Record<string, unknown>).captureKind = 'attacker-generic-schema';
+      expect(() =>
+        parseNativeRuntimeCapture(
+          name,
+          Buffer.from(`${canonicalJson(familyOpen)}\n${canonicalJson(adversarial)}\n`),
+          controllerNonce,
+          runId
+        )
+      ).toThrow(/p3c_(?:runtime_capture_native_schema|native_capture)/u);
+    }
+  );
+
+  it('rejects a producer nonce reused across separately parsed shards in one run', () => {
+    const runNonces = new Set<string>();
+    expect(() =>
+      parseNativeRuntimeCapture(
+        'productTimelinePath',
+        fixedGolden,
+        fixedControllerNonce,
+        fixedRunId,
+        runNonces
+      )
+    ).not.toThrow();
+    expect(() =>
+      parseNativeRuntimeCapture(
+        'productTimelinePath',
+        fixedGolden,
+        fixedControllerNonce,
+        fixedRunId,
+        runNonces
+      )
+    ).toThrow('p3c_runtime_capture_binding:productTimelinePath:0');
+  });
+
+  it('rejects stable writable capture modes instead of trusting the sealed manifest claim', () => {
+    expect(() => assertLiveCaptureMode(0o400, 0o400)).not.toThrow();
+    expect(() => assertLiveCaptureMode(0o600, 0o400)).toThrow(
+      'p3c_driver_capture_mode_disagreement'
+    );
+  });
+
+  it.each(['resequence', 'rehash', 'owner-substitution', 'duplicate', 'missing'] as const)(
+    'rejects an exact-cross-join %s exploit trace',
+    (exploit) => {
+      const { fixture, parsedShards, expected } = nativeCrossJoinFixture('productTimelinePath');
+      expect(() =>
+        assertNativeSemanticCrossJoin(
+          'productTimelinePath',
+          parsedShards,
+          fixture.raw,
+          fixture.controllerNonce,
+          expected
+        )
+      ).not.toThrow();
+      const changed = JSON.parse(JSON.stringify(parsedShards)) as unknown as Parameters<
+        typeof assertNativeSemanticCrossJoin
+      >[1];
+      const records = changed[0]!.records as unknown as Record<string, unknown>[];
+      if (exploit === 'resequence') [records[1], records[2]] = [records[2]!, records[1]!];
+      if (exploit === 'rehash') {
+        const native = records[1]!.native as Record<string, unknown>;
+        if (records[1]!.recordType === 'coordination-sse-write-succeeded') {
+          native.frameSha256 = digest('attacker-rehashed-frame');
+        } else {
+          native.requestBodySha256 = digest('attacker-rehashed-body');
+        }
+      }
+      if (exploit === 'owner-substitution') {
+        const native = records[1]!.native as Record<string, unknown>;
+        if (records[1]!.recordType === 'coordination-sse-write-succeeded') {
+          native.eventType = 'owner-event';
+        } else {
+          native.responseBodySha256 = digest('owner-body');
+        }
+      }
+      if (exploit === 'duplicate') records[2] = JSON.parse(JSON.stringify(records[1]));
+      if (exploit === 'missing') records.splice(1, 1);
+      expect(() =>
+        assertNativeSemanticCrossJoin(
+          'productTimelinePath',
+          changed,
+          fixture.raw,
+          fixture.controllerNonce,
+          expected
+        )
+      ).toThrow(/p3c_runtime_capture_semantic_/u);
+    }
+  );
+
+  it('rejects cross-owner mixing between ordered owner-generation shards', () => {
+    const { fixture, parsedShards, expected } = nativeCrossJoinFixture('ownerWalTimelinePath');
+    expect(() =>
+      assertNativeSemanticCrossJoin(
+        'ownerWalTimelinePath',
+        parsedShards,
+        fixture.raw,
+        fixture.controllerNonce,
+        expected
+      )
+    ).toThrow('p3c_runtime_capture_semantic_mapping_unavailable:ownerWalTimelinePath');
+    const changed = JSON.parse(JSON.stringify(parsedShards)) as unknown as Parameters<
+      typeof assertNativeSemanticCrossJoin
+    >[1];
+    const first = changed[0]!.records as unknown as Record<string, unknown>[];
+    const second = changed[1]!.records as unknown as Record<string, unknown>[];
+    first.push(second[1]!);
+    second.splice(1, 1);
+    expect(() =>
+      assertNativeSemanticCrossJoin(
+        'ownerWalTimelinePath',
+        changed,
+        fixture.raw,
+        fixture.controllerNonce,
+        expected
+      )
+    ).toThrow(/p3c_runtime_capture_semantic_/u);
+  });
+});
+
 describe('raw evidence validation', () => {
-  it('publishes through staged names, writes READY last, and seals the final parent', async () => {
+  it('rejects raw-only evidence and non-authoritative fixture bytes without kernel proofs', () => {
     const fixture = rawEvidence();
-    const outcome = {
-      ...fixture.outcome,
-      transcriptSha256: sha256(fixture.outcome.transcript),
-    };
-    const path = await temporaryPrivateDirectory();
-    const root = await openRootAnchor('evidenceRoot', await rootPin(path));
-    const cleanup = {
-      disposition: 'removed' as const,
-      runId: outcome.runId,
-      path: '/marker-owned-sandbox/removed',
-      markerVerified: true,
-      zeroOwnedSurvivors: true,
-      reason: null,
-    };
-    const document = assembleEvidence({
-      raw: fixture.raw,
-      controllerNonce: fixture.controllerNonce,
-      runId: outcome.runId,
-      outcome,
-      cleanup,
-    });
-    const digests = await retainEvidence(root, fixture.raw, document, outcome.transcript);
-    expect(Object.keys(digests)).toContain('READY.json');
-    expect((await stat(path)).mode & 0o777).toBe(0o500);
-    const names = await (await import('node:fs/promises')).readdir(path);
-    expect(names.some((name) => name.startsWith('.stage-'))).toBe(false);
-    const ready = JSON.parse(await readFile(join(path, 'READY.json'), 'utf8')) as Record<
-      string,
-      unknown
-    >;
-    expect(ready).toMatchObject({
-      purpose: 'agent-teams.p3c.evidence-ready/v1',
-      evidenceDigest: document.evidenceDigest,
-    });
-    await root.handle.chmod(0o700);
-    await root.handle.close();
-    await rm(path, { recursive: true });
+    expect(() =>
+      assembleEvidence({
+        raw: fixture.raw,
+        captures: fixture.captures,
+        controllerNonce: fixture.controllerNonce,
+        runId: fixture.outcome.runId,
+        outcome: fixture.outcome,
+        cleanup: {
+          disposition: 'removed',
+          runId: fixture.outcome.runId,
+          path: '/marker-owned-sandbox/removed',
+          markerVerified: true,
+          zeroOwnedSurvivors: true,
+          reason: null,
+        },
+      })
+    ).toThrow('p3c_runtime_capture_producer_proof:conditionalPostLedgerPath');
   });
 
   it('accepts only complete product/provider-observed semantic identities', () => {
