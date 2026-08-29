@@ -11,16 +11,13 @@ import {
   isDynamicCodexModelCatalog,
   isUsableCodexModelCatalog,
 } from '@shared/utils/codexModelCatalog';
-import {
-  hasAuthoritativeProviderStatusEvidence,
-  selectProviderModelDisplayPair,
-} from '@shared/utils/providerStatusAuthority';
 
 import { ApiKeyService } from '../extensions/apikeys/ApiKeyService';
 import { ConfigManager } from '../infrastructure/ConfigManager';
 
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
 import { isCodexExecBinary } from './codexCliBinary';
+import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
 
 import type {
   AnthropicCompatibleEndpointConfig,
@@ -1193,15 +1190,10 @@ export class ProviderConnectionService {
     const customProvider = this.getConfiguredCodexCustomProvider();
     if (customProvider) {
       const catalog = createCodexCustomProviderCatalog(customProvider);
-      const catalogProvider = {
-        ...withConnection,
-        modelCatalog: catalog,
-        modelCatalogRefreshState: 'ready' as const,
-      };
-      const displayPair = selectProviderModelDisplayPair(
-        catalogProvider,
+      const catalogDisplay = mergeProviderCatalogDisplayAuthority(
         withConnection,
-        hasAuthoritativeProviderStatusEvidence(withConnection)
+        catalog,
+        'ready'
       );
       const statusMessage =
         withConnection.statusMessage ??
@@ -1210,9 +1202,7 @@ export class ProviderConnectionService {
           : 'Codex custom provider configured. API key is not set.');
       return {
         ...withConnection,
-        ...displayPair,
-        modelCatalog: catalog,
-        modelCatalogRefreshState: 'ready',
+        ...catalogDisplay,
         subscriptionRateLimits: null,
         backend: withConnection.backend
           ? {
@@ -1256,16 +1246,10 @@ export class ProviderConnectionService {
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
-      const catalogProvider = {
-        ...withConnection,
-        modelCatalog: catalog,
-        modelCatalogRefreshState:
-          catalog.status === 'ready' ? ('ready' as const) : withConnection.modelCatalogRefreshState,
-      };
-      const displayPair = selectProviderModelDisplayPair(
-        catalogProvider,
+      const catalogDisplay = mergeProviderCatalogDisplayAuthority(
         withConnection,
-        hasAuthoritativeProviderStatusEvidence(withConnection)
+        catalog,
+        catalog.status === 'ready' ? 'ready' : withConnection.modelCatalogRefreshState
       );
       const reasoningEfforts = Array.from(
         new Set(
@@ -1285,9 +1269,7 @@ export class ProviderConnectionService {
             };
       return {
         ...withConnection,
-        ...displayPair,
-        modelCatalog: catalog,
-        modelCatalogRefreshState: catalogProvider.modelCatalogRefreshState,
+        ...catalogDisplay,
         runtimeCapabilities: {
           ...withConnection.runtimeCapabilities,
           modelCatalog: modelCatalogCapability,

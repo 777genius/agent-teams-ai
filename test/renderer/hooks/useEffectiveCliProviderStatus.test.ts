@@ -102,8 +102,12 @@ describe('resolveProjectScopedProviderStatus', () => {
     });
 
     expect(
-      resolveProjectScopedProviderStatus('opencode', scoped, null, Date.parse('2026-08-29T00:00:00.099Z'))
-        ?.capabilities.teamLaunch
+      resolveProjectScopedProviderStatus(
+        'opencode',
+        scoped,
+        null,
+        Date.parse('2026-08-29T00:00:00.099Z')
+      )?.capabilities.teamLaunch
     ).toBe(true);
     const expired = resolveProjectScopedProviderStatus(
       'opencode',
@@ -124,9 +128,9 @@ describe('resolveProjectScopedProviderStatus', () => {
       modelCatalog: { ...status().modelCatalog!, staleAt: staleAt as string },
     });
 
-    expect(resolveProjectScopedProviderStatus('opencode', scoped, null)?.capabilities.teamLaunch).toBe(
-      false
-    );
+    expect(
+      resolveProjectScopedProviderStatus('opencode', scoped, null)?.capabilities.teamLaunch
+    ).toBe(false);
   });
 
   it('does not reuse a global catalog before the exact project responds', () => {
@@ -257,6 +261,11 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     };
   }
 
+  async function hydrateAuthorityClock() {
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+    await act(async () => vi.advanceTimersByTimeAsync(0));
+  }
+
   afterEach(() => {
     document.body.innerHTML = '';
     storeState.cliStatus = null;
@@ -274,6 +283,8 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     const root = createRoot(document.createElement('div'));
 
     await act(async () => root.render(createElement(Harness, { projectPath: '/project' })));
+    expect(renderedLaunchReady).toBe(false);
+    await hydrateAuthorityClock();
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(99));
     expect(renderedLaunchReady).toBe(true);
@@ -290,6 +301,8 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     const root = createRoot(document.createElement('div'));
 
     await act(async () => root.render(createElement(Harness, { projectPath: '/project' })));
+    expect(renderedLaunchReady).toBe(false);
+    await hydrateAuthorityClock();
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(MAX_BROWSER_TIMEOUT_MS));
     expect(renderedLaunchReady).toBe(true);
@@ -308,9 +321,14 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     setProjectCatalog('/first', baseTime + 100);
     const root = createRoot(document.createElement('div'));
     await act(async () => root.render(createElement(Harness, { projectPath: '/first' })));
+    await hydrateAuthorityClock();
+    expect(renderedLaunchReady).toBe(true);
 
     setProjectCatalog('/second', baseTime + 200);
     await act(async () => root.render(createElement(Harness, { projectPath: '/second' })));
+    expect(renderedLaunchReady).toBe(false);
+    await hydrateAuthorityClock();
+    expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(100));
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(100));
@@ -325,6 +343,7 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     setProjectCatalog('/project', baseTime + 100);
     const root = createRoot(document.createElement('div'));
     await act(async () => root.render(createElement(Harness, { projectPath: '/project' })));
+    await hydrateAuthorityClock();
     expect(vi.getTimerCount()).toBe(1);
 
     await act(async () => root.unmount());

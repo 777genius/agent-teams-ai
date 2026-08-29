@@ -7,7 +7,6 @@ import {
 } from '@features/anthropic-runtime-profile/renderer';
 import {
   isCodexAccountSnapshotPending,
-  mergeCodexCliStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import {
@@ -59,11 +58,7 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import {
-  hasEffectiveProviderLaunchAuthority,
-  useEffectiveCliProviderStatus,
-  useLaunchAuthorityGatedCliStatus,
-} from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useOpenCodeCatalogPrefetch } from '@renderer/hooks/useOpenCodeCatalogPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
@@ -129,6 +124,7 @@ import {
 } from './projectPathOptions';
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
+import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
@@ -475,11 +471,7 @@ export const CreateTeamDialog = ({
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
-  const mergedCliStatus = useMemo(
-    () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
-    [loadingCliStatus, codexAccount.snapshot]
-  );
-  const effectiveCliStatus = useLaunchAuthorityGatedCliStatus(mergedCliStatus);
+  const effectiveCliStatus = useAuthorityGatedCliStatus(loadingCliStatus, codexAccount.snapshot);
   const codexSnapshotPending =
     isCodexAccountSnapshotPending(
       codexAccount.loading,
@@ -825,12 +817,7 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
-  const providerAuthorityBlocksCreate =
-    launchTeam &&
-    selectedMemberProviders.some(
-      (providerId) =>
-        !hasEffectiveProviderLaunchAuthority(runtimeProviderStatusById.get(providerId))
-    );
+  const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -2115,7 +2102,7 @@ export const CreateTeamDialog = ({
     isNameProvisioning ||
     !requestValidation.valid ||
     !!modelValidationError ||
-    providerAuthorityBlocksCreate ||
+    launchGuard.blocked(launchTeam) ||
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission;
 
@@ -2311,19 +2298,7 @@ export const CreateTeamDialog = ({
       setLocalError(modelValidationError);
       return;
     }
-    if (
-      launchTeam &&
-      selectedMemberProviders.some(
-        (providerId) =>
-          !hasEffectiveProviderLaunchAuthority(
-            runtimeProviderStatusById.get(providerId),
-            Date.now()
-          )
-      )
-    ) {
-      setLocalError(t('launch.prepare.failed'));
-      return;
-    }
+    if (launchGuard.reject(launchTeam, () => setLocalError(t('launch.prepare.failed')))) return;
     if (prepareBlocksCreate) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;

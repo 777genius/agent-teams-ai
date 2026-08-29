@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useMemo, useReducer } from 'react';
 
 import {
   isCodexAccountSnapshotPending,
@@ -26,6 +26,27 @@ export interface EffectiveCliProviderStatusSnapshot {
   providerStatus: CliProviderStatus | null;
   loading: boolean;
   codexSnapshotPending: boolean;
+}
+
+interface ConservativeClockSnapshot {
+  source: unknown;
+  now: number;
+}
+
+/** Starts fail-closed, then publishes clock reads only from timer callbacks. */
+function useConservativeNow(source: unknown): readonly [number, (now: number) => void] {
+  const [snapshot, publishSnapshot] = useReducer(
+    (_current: ConservativeClockSnapshot, next: ConservativeClockSnapshot) => next,
+    { source: null, now: Number.POSITIVE_INFINITY }
+  );
+  const publishNow = useCallback((now: number) => publishSnapshot({ source, now }), [source]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => publishNow(Date.now()), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [publishNow]);
+
+  return [Object.is(snapshot.source, source) ? snapshot.now : Number.POSITIVE_INFINITY, publishNow];
 }
 
 export function hasEffectiveProviderLaunchAuthority(
@@ -64,8 +85,7 @@ function gateStatusLaunch(status: CliInstallationStatus | null, now: number) {
 export function useLaunchAuthorityGatedCliStatus(
   status: CliInstallationStatus | null
 ): CliInstallationStatus | null {
-  const [, recheckLaunchAuthority] = useReducer((tick: number) => tick + 1, 0);
-  const authorityNow = Date.now();
+  const [authorityNow, publishAuthorityNow] = useConservativeNow(status);
   const gatedStatus = useMemo(() => gateStatusLaunch(status, authorityNow), [authorityNow, status]);
   const nextCatalogStaleAt = gatedStatus?.providers.reduce<number | null>((nearest, provider) => {
     if (!provider.capabilities.teamLaunch || provider.modelCatalog?.status !== 'ready') {
@@ -88,9 +108,10 @@ export function useLaunchAuthorityGatedCliStatus(
     let cancelled = false;
     const scheduleNextChunk = (): void => {
       if (cancelled) return;
-      const remainingMs = nextCatalogStaleAt - Date.now();
+      const currentNow = Date.now();
+      const remainingMs = nextCatalogStaleAt - currentNow;
       if (remainingMs <= 0) {
-        recheckLaunchAuthority();
+        publishAuthorityNow(currentNow);
         return;
       }
       timeoutId = window.setTimeout(
@@ -104,7 +125,7 @@ export function useLaunchAuthorityGatedCliStatus(
       cancelled = true;
       if (timeoutId !== null) window.clearTimeout(timeoutId);
     };
-  }, [nextCatalogStaleAt]);
+  }, [nextCatalogStaleAt, publishAuthorityNow]);
 
   return gatedStatus;
 }
@@ -148,7 +169,6 @@ export function useEffectiveCliProviderStatus(
   providerId: CliProviderId | undefined,
   options: { projectPath?: string | null } = {}
 ): EffectiveCliProviderStatusSnapshot {
-  const authorityNow = Date.now();
   const multimodelEnabled = useStore((s) => s.appConfig?.general?.multimodelEnabled ?? true);
   const cliStatus = useStore((s) => s.cliStatus);
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
@@ -177,6 +197,18 @@ export function useEffectiveCliProviderStatus(
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
+
+  const authorityClockSource = useMemo(
+    () => ({
+      loadingCliStatus,
+      codexSnapshot: codexAccount.snapshot,
+      projectPath: options.projectPath,
+      providerId,
+      scopedProviderStatus,
+    }),
+    [codexAccount.snapshot, loadingCliStatus, options.projectPath, providerId, scopedProviderStatus]
+  );
+  const [authorityNow] = useConservativeNow(authorityClockSource);
 
   const resolvedCliStatus = useMemo(() => {
     const withCodexSnapshot = mergeCodexCliStatusWithSnapshot(
