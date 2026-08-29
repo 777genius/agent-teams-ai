@@ -4437,6 +4437,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('renders OpenCode source groups and keeps raw model ids on selection', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     storeState.cliStatus = {
       providers: [
         {
@@ -4494,6 +4495,12 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
 
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent).toContain('OpenAI');
@@ -4512,11 +4519,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     expect(openRouterButton).toBeTruthy();
     expect(openRouterButton?.textContent).not.toContain('OpenRouter');
-    await act(async () => {
-      await vi.waitFor(() =>
-        expect(openRouterButton?.getAttribute('aria-disabled')).toBe('false')
-      );
-    });
+    expect(openRouterButton?.getAttribute('aria-disabled')).toBe('false');
 
     await act(async () => {
       openRouterButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -5576,6 +5579,9 @@ describe('TeamModelSelector disabled Codex models', () => {
         await vi.advanceTimersByTimeAsync(retryDelay);
         await Promise.resolve();
       });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
     }
 
     expect(
@@ -5697,6 +5703,9 @@ describe('TeamModelSelector disabled Codex models', () => {
         await vi.advanceTimersByTimeAsync(retryDelay);
         await Promise.resolve();
       });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
     }
 
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalled();
@@ -5720,6 +5729,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     await act(async () => {
       retryButton?.click();
       await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
     });
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(callsBeforeManualRetry + 1);
     expect(
