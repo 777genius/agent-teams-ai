@@ -1,4 +1,7 @@
-import { hasAuthoritativeProviderLaunchEvidence } from '@shared/utils/providerStatusAuthority';
+import {
+  hasAuthoritativeProviderLaunchEvidence,
+  isProviderModelCatalogExactReady,
+} from '@shared/utils/providerStatusAuthority';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -25,10 +28,10 @@ export function mergeProviderCatalogFields(
   hydratedProvider: CliProviderStatus
 ): CliProviderStatus {
   const hydratedCatalog = hydratedProvider.modelCatalog;
-  if (
-    hydratedProvider.providerId !== liveProvider.providerId ||
-    !hasAuthoritativeProviderLaunchEvidence(hydratedProvider)
-  ) {
+  const authoritativeCatalogReplacement =
+    hasAuthoritativeProviderLaunchEvidence(hydratedProvider) &&
+    isProviderModelCatalogExactReady(hydratedProvider);
+  if (hydratedProvider.providerId !== liveProvider.providerId || !authoritativeCatalogReplacement) {
     const catalogMatchesProvider = hydratedCatalog?.providerId === liveProvider.providerId;
     const retainedCatalog = catalogMatchesProvider
       ? hydratedCatalog
@@ -50,6 +53,10 @@ export function mergeProviderCatalogFields(
         catalogMatchesProvider && hydratedProvider.models.length > 0
           ? hydratedProvider.models
           : liveProvider.models,
+      modelAvailability:
+        catalogMatchesProvider && (hydratedProvider.modelAvailability?.length ?? 0) > 0
+          ? hydratedProvider.modelAvailability
+          : liveProvider.modelAvailability,
       modelCatalog: retainedCatalog ? { ...retainedCatalog, status: 'stale' } : null,
       modelCatalogRefreshState: retainedCatalog
         ? 'error'
@@ -69,6 +76,7 @@ export function mergeProviderCatalogFields(
   return {
     ...liveProvider,
     models: hydratedProvider.models,
+    modelAvailability: hydratedProvider.modelAvailability,
     modelCatalog: hydratedCatalog,
     modelCatalogRefreshState: 'ready',
     runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(

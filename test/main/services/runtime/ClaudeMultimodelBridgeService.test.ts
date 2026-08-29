@@ -116,7 +116,7 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
 }));
 
 describe('mergeProviderCatalogFields', () => {
-  it('replaces obsolete flat models with an intentionally empty authoritative hydrated list', () => {
+  it('replaces obsolete model evidence with intentionally empty authoritative hydrated arrays', () => {
     const hydratedCatalog = {
       schemaVersion: 1 as const,
       providerId: 'codex' as const,
@@ -139,6 +139,7 @@ describe('mergeProviderCatalogFields', () => {
       statusCheckOutcome: 'authoritative',
       statusMessage: null,
       models: [],
+      modelAvailability: [],
       modelCatalog: hydratedCatalog,
       modelCatalogRefreshState: 'ready',
       runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
@@ -152,6 +153,13 @@ describe('mergeProviderCatalogFields', () => {
     const liveProvider: CliProviderStatus = {
       ...hydratedProvider,
       models: ['obsolete-model'],
+      modelAvailability: [
+        {
+          modelId: 'obsolete-model',
+          status: 'available',
+          checkedAt: '2026-08-28T00:00:00.000Z',
+        },
+      ],
       modelCatalog: null,
       modelCatalogRefreshState: 'loading',
     };
@@ -159,8 +167,11 @@ describe('mergeProviderCatalogFields', () => {
     const merged = mergeProviderCatalogFields(liveProvider, hydratedProvider);
 
     expect(merged.models).toEqual([]);
+    expect(merged.modelAvailability).toEqual([]);
     expect(merged.modelCatalog).toBe(hydratedCatalog);
     expect(merged.modelCatalogRefreshState).toBe('ready');
+    expect(merged.authenticated).toBe(true);
+    expect(merged.capabilities.teamLaunch).toBe(true);
   });
 });
 

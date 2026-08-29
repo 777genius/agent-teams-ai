@@ -25,16 +25,22 @@ function mergeProviderCatalogCache(
   const retainedCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
   const catalogRetained =
     incomingProvider.modelCatalog == null && currentProvider.modelCatalog != null;
-  const modelEvidenceRetained =
+  const authoritativeCatalogReplacement =
+    hasAuthoritativeProviderLaunchEvidence(incomingProvider) &&
+    isProviderModelCatalogExactReady(incomingProvider);
+  const modelsRetained =
+    !authoritativeCatalogReplacement &&
     incomingProvider.models.length === 0 &&
+    currentProvider.models.length > 0;
+  const modelAvailabilityRetained =
+    !authoritativeCatalogReplacement &&
     (incomingProvider.modelAvailability?.length ?? 0) === 0 &&
-    !isProviderModelCatalogExactReady(incomingProvider) &&
-    (currentProvider.models.length > 0 || (currentProvider.modelAvailability?.length ?? 0) > 0);
-  const incomingCatalogIsReady = isProviderModelCatalogExactReady(incomingProvider);
+    (currentProvider.modelAvailability?.length ?? 0) > 0;
   const launchUnproved =
     !hasAuthoritativeProviderLaunchEvidence(incomingProvider) ||
     catalogRetained ||
-    modelEvidenceRetained;
+    modelsRetained ||
+    modelAvailabilityRetained;
   const modelCatalog =
     retainedCatalog && launchUnproved
       ? { ...retainedCatalog, status: 'stale' as const }
@@ -57,13 +63,11 @@ function mergeProviderCatalogCache(
       ? currentProvider.resolvedBackendId
       : incomingProvider.resolvedBackendId,
     models:
-      incomingProvider.models.length > 0
+      authoritativeCatalogReplacement || incomingProvider.models.length > 0
         ? incomingProvider.models
-        : incomingCatalogIsReady
-          ? (incomingProvider.modelCatalog?.models.map((model) => model.launchModel) ?? [])
-          : currentProvider.models,
+        : currentProvider.models,
     modelAvailability:
-      (incomingProvider.modelAvailability?.length ?? 0) > 0
+      authoritativeCatalogReplacement || (incomingProvider.modelAvailability?.length ?? 0) > 0
         ? incomingProvider.modelAvailability
         : currentProvider.modelAvailability,
     availableBackends:

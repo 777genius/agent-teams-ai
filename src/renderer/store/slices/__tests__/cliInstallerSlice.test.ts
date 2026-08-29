@@ -237,7 +237,7 @@ describe('reconcileCliStatus', () => {
     }
   );
 
-  it('uses a fresh exact catalog as model evidence when redundant flat models are empty', () => {
+  it('replaces both model evidence arrays with authoritative exact-ready empty arrays', () => {
     const current = createLoadingMultimodelCliStatus();
     current.providers[1] = {
       ...current.providers[1],
@@ -248,12 +248,20 @@ describe('reconcileCliStatus', () => {
       verificationState: 'verified',
       statusCheckOutcome: 'authoritative',
       models: ['old-flat-model'],
+      modelAvailability: [
+        {
+          modelId: 'old-flat-model',
+          status: 'available',
+          checkedAt: '2026-08-28T00:00:00.000Z',
+        },
+      ],
       capabilities: { ...current.providers[1].capabilities, teamLaunch: true },
     };
     const incoming = structuredClone(current);
     incoming.providers[1] = {
       ...incoming.providers[1],
       models: [],
+      modelAvailability: [],
       modelCatalogRefreshState: 'ready',
       runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
       modelCatalog: {
@@ -263,23 +271,9 @@ describe('reconcileCliStatus', () => {
         status: 'ready',
         fetchedAt: '2026-08-29T00:00:00.000Z',
         staleAt: '2026-08-29T00:10:00.000Z',
-        defaultModelId: 'fresh-model',
-        defaultLaunchModel: 'fresh-launch-model',
-        models: [
-          {
-            id: 'fresh-model',
-            launchModel: 'fresh-launch-model',
-            displayName: 'Fresh model',
-            hidden: false,
-            supportedReasoningEfforts: [],
-            defaultReasoningEffort: null,
-            inputModalities: ['text'],
-            supportsPersonality: false,
-            isDefault: true,
-            upgrade: false,
-            source: 'app-server',
-          },
-        ],
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
         diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
       },
     };
@@ -290,8 +284,66 @@ describe('reconcileCliStatus', () => {
       authenticated: true,
       authMethod: 'chatgpt',
       capabilities: { teamLaunch: true },
-      models: ['fresh-launch-model'],
-      modelCatalog: { status: 'ready', defaultModelId: 'fresh-model' },
+      models: [],
+      modelAvailability: [],
+      modelCatalog: { status: 'ready', defaultModelId: null },
+    });
+  });
+
+  it('retains both model evidence arrays and revokes launch for non-authoritative exact-empty input', () => {
+    const current = createLoadingMultimodelCliStatus();
+    current.providers[1] = {
+      ...current.providers[1],
+      supported: true,
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      models: ['old-flat-model'],
+      modelAvailability: [
+        {
+          modelId: 'old-flat-model',
+          status: 'available',
+          checkedAt: '2026-08-28T00:00:00.000Z',
+        },
+      ],
+      capabilities: { ...current.providers[1].capabilities, teamLaunch: true },
+    };
+    const incoming = structuredClone(current);
+    incoming.providers[1] = {
+      ...incoming.providers[1],
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unverified',
+      statusCheckOutcome: 'transient_error',
+      models: [],
+      modelAvailability: [],
+      modelCatalogRefreshState: 'ready',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'codex',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2026-08-29T00:10:00.000Z',
+        defaultModelId: null,
+        defaultLaunchModel: null,
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged.providers[1]).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      capabilities: { teamLaunch: false },
+      models: ['old-flat-model'],
+      modelAvailability: [{ modelId: 'old-flat-model', status: 'available' }],
+      modelCatalog: { status: 'stale' },
+      modelCatalogRefreshState: 'error',
     });
   });
 });
