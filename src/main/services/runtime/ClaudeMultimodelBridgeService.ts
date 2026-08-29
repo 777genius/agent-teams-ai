@@ -12,6 +12,7 @@ import {
   getAggregateProviderStatusStoredCredentialAllowlist,
   getProviderStatusStoredCredentialAllowlist,
 } from './providerAwareCliEnv';
+import { canHydrateProviderCatalog, mergeProviderCatalogFields } from './providerCatalogAuthority';
 import { providerConnectionService } from './ProviderConnectionService';
 import {
   applyProviderStatusCheck,
@@ -608,63 +609,6 @@ function mapRuntimeSubscriptionRateLimits(
   const primary = mapRuntimeSubscriptionRateLimitWindow(rateLimits.primary);
   const secondary = mapRuntimeSubscriptionRateLimitWindow(rateLimits.secondary);
   return primary || secondary ? { primary, secondary } : null;
-}
-
-function mergeRuntimeCapabilitiesForCatalogHydration(
-  live: CliProviderStatus['runtimeCapabilities'],
-  hydrated: CliProviderStatus['runtimeCapabilities']
-): CliProviderStatus['runtimeCapabilities'] {
-  if (!hydrated) {
-    return live ?? null;
-  }
-  if (!live) {
-    return hydrated;
-  }
-  return {
-    ...live,
-    modelCatalog: hydrated.modelCatalog ?? live.modelCatalog,
-    reasoningEffort: hydrated.reasoningEffort ?? live.reasoningEffort,
-    fastMode: hydrated.fastMode ?? live.fastMode,
-  };
-}
-
-function mergeProviderCatalogFields(
-  liveProvider: CliProviderStatus,
-  hydratedProvider: CliProviderStatus
-): CliProviderStatus {
-  if (hydratedProvider.statusCheckOutcome !== 'authoritative') {
-    return createDegradedProviderStatus(
-      liveProvider,
-      hydratedProvider.detailMessage ??
-        hydratedProvider.statusMessage ??
-        'Provider catalog hydration was not authoritative'
-    );
-  }
-  const modelCatalog = hydratedProvider.modelCatalog ?? liveProvider.modelCatalog ?? null;
-  return {
-    ...liveProvider,
-    models: hydratedProvider.models.length > 0 ? hydratedProvider.models : liveProvider.models,
-    modelCatalog,
-    modelCatalogRefreshState: modelCatalog
-      ? 'ready'
-      : hydratedProvider.modelCatalogRefreshState === 'error'
-        ? 'error'
-        : liveProvider.modelCatalogRefreshState,
-    runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(
-      liveProvider.runtimeCapabilities,
-      hydratedProvider.runtimeCapabilities
-    ),
-    subscriptionRateLimits:
-      hydratedProvider.subscriptionRateLimits ?? liveProvider.subscriptionRateLimits ?? null,
-  };
-}
-
-function canHydrateProviderCatalog(provider: CliProviderStatus): boolean {
-  return (
-    provider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
-    (provider.statusCheckOutcome === 'authoritative' ||
-      (provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only'))
-  );
 }
 
 export class ClaudeMultimodelBridgeService {
@@ -1323,9 +1267,7 @@ export class ClaudeMultimodelBridgeService {
     }
 
     for (const liveProvider of liveProviders) {
-      if (
-        !canHydrateProviderCatalog(liveProvider)
-      ) {
+      if (!canHydrateProviderCatalog(liveProvider)) {
         this.clearProviderStatusHydrationGeneration(
           binaryPath,
           liveProvider.providerId,
@@ -1504,10 +1446,7 @@ export class ClaudeMultimodelBridgeService {
         summary: true,
         projectPath,
       });
-      if (
-        projectPath &&
-        canHydrateProviderCatalog(provider)
-      ) {
+      if (projectPath && canHydrateProviderCatalog(provider)) {
         try {
           const hydratedProvider = await this.getProviderCatalogHydration(
             binaryPath,
@@ -1535,10 +1474,7 @@ export class ClaudeMultimodelBridgeService {
           return createDegradedProviderStatus(provider, error);
         }
       }
-      if (
-        canHydrateProviderCatalog(provider) &&
-        onCatalogUpdate
-      ) {
+      if (canHydrateProviderCatalog(provider) && onCatalogUpdate) {
         backgroundHydrationOwnsGenerationCleanup = true;
         void this.getProviderCatalogHydration(binaryPath, provider.providerId, generation, {
           projectPath,
