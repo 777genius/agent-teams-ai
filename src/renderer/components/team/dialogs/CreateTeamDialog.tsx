@@ -59,7 +59,11 @@ import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors'
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
+import {
+  hasEffectiveProviderLaunchAuthority,
+  useEffectiveCliProviderStatus,
+  useLaunchAuthorityGatedCliStatus,
+} from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useOpenCodeCatalogPrefetch } from '@renderer/hooks/useOpenCodeCatalogPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
@@ -471,10 +475,11 @@ export const CreateTeamDialog = ({
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
-  const effectiveCliStatus = useMemo(
+  const mergedCliStatus = useMemo(
     () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
     [loadingCliStatus, codexAccount.snapshot]
   );
+  const effectiveCliStatus = useLaunchAuthorityGatedCliStatus(mergedCliStatus);
   const codexSnapshotPending =
     isCodexAccountSnapshotPending(
       codexAccount.loading,
@@ -820,6 +825,12 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
+  const providerAuthorityBlocksCreate =
+    launchTeam &&
+    selectedMemberProviders.some(
+      (providerId) =>
+        !hasEffectiveProviderLaunchAuthority(runtimeProviderStatusById.get(providerId))
+    );
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -2104,6 +2115,7 @@ export const CreateTeamDialog = ({
     isNameProvisioning ||
     !requestValidation.valid ||
     !!modelValidationError ||
+    providerAuthorityBlocksCreate ||
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission;
 
@@ -2297,6 +2309,19 @@ export const CreateTeamDialog = ({
     }
     if (modelValidationError) {
       setLocalError(modelValidationError);
+      return;
+    }
+    if (
+      launchTeam &&
+      selectedMemberProviders.some(
+        (providerId) =>
+          !hasEffectiveProviderLaunchAuthority(
+            runtimeProviderStatusById.get(providerId),
+            Date.now()
+          )
+      )
+    ) {
+      setLocalError(t('launch.prepare.failed'));
       return;
     }
     if (prepareBlocksCreate) {

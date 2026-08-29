@@ -2,6 +2,7 @@ import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import {
+  MAX_BROWSER_TIMEOUT_MS,
   resolveProjectScopedProviderStatus,
   useEffectiveCliProviderStatus,
 } from '@renderer/hooks/useEffectiveCliProviderStatus';
@@ -274,6 +275,25 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
 
     await act(async () => root.render(createElement(Harness, { projectPath: '/project' })));
     expect(renderedLaunchReady).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(99));
+    expect(renderedLaunchReady).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(1));
+    expect(renderedLaunchReady).toBe(false);
+    await act(async () => root.unmount());
+  });
+
+  it('chunks delays above the browser timer maximum and still revokes at the exact boundary', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    vi.setSystemTime(baseTime);
+    setProjectCatalog('/project', baseTime + MAX_BROWSER_TIMEOUT_MS + 100);
+    const root = createRoot(document.createElement('div'));
+
+    await act(async () => root.render(createElement(Harness, { projectPath: '/project' })));
+    expect(renderedLaunchReady).toBe(true);
+    await act(async () => vi.advanceTimersByTimeAsync(MAX_BROWSER_TIMEOUT_MS));
+    expect(renderedLaunchReady).toBe(true);
+    expect(vi.getTimerCount()).toBe(1);
     await act(async () => vi.advanceTimersByTimeAsync(99));
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(1));

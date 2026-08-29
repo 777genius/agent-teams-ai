@@ -652,8 +652,136 @@ describe('LaunchTeamDialog', () => {
     createTeamDraftMock.state.cwdMode = 'project';
     createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
     createTeamDraftMock.state.customCwd = '';
+    createTeamDraftMock.state.soloTeam = false;
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(() => true);
     teamRosterEditorSectionMock.lastProps = null;
+  });
+
+  it('fail-closes both real launch submit paths when Anthropic authority expires', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    const baseTime = Date.parse('2026-08-29T00:00:00.000Z');
+    vi.setSystemTime(baseTime);
+    localStorage.setItem('team:lastSelectedProvider', 'anthropic');
+    localStorage.setItem('team:lastSelectedModel:anthropic', 'opus');
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          providerId: 'anthropic',
+          displayName: 'Anthropic',
+          supported: true,
+          authenticated: true,
+          authMethod: 'api_key',
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
+          models: ['opus'],
+          modelAvailability: [{ modelId: 'opus', status: 'available' }],
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'anthropic',
+            source: 'anthropic-models-api',
+            status: 'ready',
+            fetchedAt: new Date(baseTime).toISOString(),
+            staleAt: new Date(baseTime + 100).toISOString(),
+            defaultModelId: 'opus',
+            defaultLaunchModel: 'opus',
+            models: [
+              {
+                id: 'opus',
+                launchModel: 'opus',
+                displayName: 'Opus',
+                hidden: false,
+                supportedReasoningEfforts: [],
+                defaultReasoningEffort: null,
+                inputModalities: ['text'],
+                supportsPersonality: false,
+                isDefault: true,
+                upgrade: false,
+                source: 'anthropic-models-api',
+              },
+            ],
+            diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+          },
+          canLoginFromUi: false,
+          capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+        },
+      ],
+    } as any;
+
+    const launchHost = document.createElement('div');
+    document.body.appendChild(launchHost);
+    const launchRoot = createRoot(launchHost);
+    const onLaunch = vi.fn(async () => {});
+    await act(async () => {
+      launchRoot.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+    });
+    const launchButton = Array.from(launchHost.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    expect(launchButton?.disabled).toBe(false);
+
+    vi.setSystemTime(baseTime + 100);
+    await act(async () => {
+      launchButton?.click();
+      await flush();
+    });
+    expect(onLaunch).not.toHaveBeenCalled();
+    await act(async () => vi.runOnlyPendingTimersAsync());
+    expect(launchButton?.disabled).toBe(true);
+    await act(async () => launchRoot.unmount());
+
+    vi.setSystemTime(baseTime);
+    createTeamDraftMock.state.soloTeam = true;
+    const createHost = document.createElement('div');
+    document.body.appendChild(createHost);
+    const createRoot = createRoot(createHost);
+    const onCreate = vi.fn(async () => {});
+    await act(async () => {
+      createRoot.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          existingTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate,
+          onOpenTeam: vi.fn(),
+        })
+      );
+      await flush();
+    });
+    const createButton = Array.from(createHost.querySelectorAll('button')).find((button) =>
+      button.textContent?.toLowerCase().includes('create')
+    );
+    expect(createButton?.disabled).toBe(false);
+
+    vi.setSystemTime(baseTime + 100);
+    await act(async () => {
+      createButton?.click();
+      await flush();
+    });
+    expect(onCreate).not.toHaveBeenCalled();
+    await act(async () => vi.runOnlyPendingTimersAsync());
+    expect(createButton?.disabled).toBe(true);
+    await act(async () => createRoot.unmount());
   });
 
   it('renders relaunch-specific title, warning and submit label', async () => {

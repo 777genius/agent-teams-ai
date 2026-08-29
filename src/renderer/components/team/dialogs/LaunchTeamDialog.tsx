@@ -51,7 +51,11 @@ import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
+import {
+  hasEffectiveProviderLaunchAuthority,
+  useEffectiveCliProviderStatus,
+  useLaunchAuthorityGatedCliStatus,
+} from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useOpenCodeCatalogPrefetch } from '@renderer/hooks/useOpenCodeCatalogPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
@@ -292,10 +296,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
-  const effectiveCliStatus = useMemo(
+  const mergedCliStatus = useMemo(
     () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
     [loadingCliStatus, codexAccount.snapshot]
   );
+  const effectiveCliStatus = useLaunchAuthorityGatedCliStatus(mergedCliStatus);
   const codexSnapshotPending =
     isCodexAccountSnapshotPending(
       codexAccount.loading,
@@ -522,6 +527,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
+  const providerAuthorityBlocksLaunch =
+    isLaunchMode &&
+    selectedMemberProviders.some(
+      (providerId) =>
+        !hasEffectiveProviderLaunchAuthority(runtimeProviderStatusById.get(providerId))
+    );
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -2280,6 +2291,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setLocalError(modelValidationError);
       return;
     }
+    if (
+      isLaunchMode &&
+      selectedMemberProviders.some(
+        (providerId) =>
+          !hasEffectiveProviderLaunchAuthority(
+            runtimeProviderStatusById.get(providerId),
+            Date.now()
+          )
+      )
+    ) {
+      setLocalError(t('launch.prepare.failed'));
+      return;
+    }
     if (prepareBlocksLaunch) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
@@ -2460,6 +2484,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       launchInFlight ||
       validationErrors.length > 0 ||
       !!modelValidationError ||
+      providerAuthorityBlocksLaunch ||
       hasInvalidLaunchMemberNames ||
       hasDuplicateLaunchMemberNames ||
       prepareBlocksLaunch ||
