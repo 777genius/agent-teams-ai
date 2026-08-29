@@ -253,6 +253,65 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     });
   });
 
+  it.each(['unknown', 'error'] as const)(
+    'revokes verified summary authority when catalog hydration verification is %s',
+    async (verificationState) => {
+      execCliMock.mockImplementation((_binary, args) => {
+        const isSummary = (args as string[]).includes('--summary');
+        const hydratedCatalog = catalog('project/model');
+        return commandResult(
+          statusPayload(
+            isSummary
+              ? { modelCatalog: undefined }
+              : {
+                  verificationState,
+                  statusMessage: 'Hydration verification incomplete',
+                  detailMessage: `Hydration verification is ${verificationState}`,
+                  models: [],
+                  modelCatalog: {
+                    ...hydratedCatalog,
+                    diagnostics: {
+                      configReadState: 'failed',
+                      appServerState: 'degraded',
+                      message: 'Catalog diagnostics retained',
+                      code: 'catalog-verification-incomplete',
+                    },
+                  },
+                }
+          )
+        );
+      });
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+
+      const result = await new ClaudeMultimodelBridgeService().getProviderStatus(
+        '/mock/runtime',
+        'opencode',
+        undefined,
+        { projectPath: '/projects/authority-boundary' }
+      );
+
+      expect(result).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState,
+        statusCheckOutcome: 'authoritative',
+        statusMessage: 'Hydration verification incomplete',
+        detailMessage: `Hydration verification is ${verificationState}`,
+        capabilities: { teamLaunch: false },
+        modelCatalogRefreshState: 'error',
+        modelCatalog: {
+          status: 'stale',
+          diagnostics: {
+            message: 'Catalog diagnostics retained',
+            code: 'catalog-verification-incomplete',
+          },
+        },
+      });
+      expect(execCliMock).toHaveBeenCalledTimes(2);
+    }
+  );
+
   it.each([
     ['anthropic', 'transient_error', 'error', []],
     [undefined, 'pending', 'unknown', ['opencode/big-pickle']],

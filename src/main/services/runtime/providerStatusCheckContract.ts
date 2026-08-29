@@ -3,6 +3,7 @@ import {
   createDefaultCliExtensionCapabilities,
   createLegacyRuntimeFallbackCliExtensionCapabilities,
 } from '@shared/utils/providerExtensionCapabilities';
+import { hasAuthoritativeProviderLaunchEvidence } from '@shared/utils/providerStatusAuthority';
 
 import type {
   CliProviderId,
@@ -84,20 +85,6 @@ function getLegacyRuntimeProviderStatusCheck(
   }
 
   return null;
-}
-
-function hasAuthoritativeLaunchEvidence(provider: CliProviderStatus): boolean {
-  const catalog = provider.modelCatalog;
-  const requiresCatalog = provider.runtimeCapabilities?.modelCatalog?.dynamic === true;
-  const catalogIsReady =
-    catalog?.providerId === provider.providerId && catalog.status === 'ready';
-  return (
-    provider.statusCheckOutcome === 'authoritative' &&
-    provider.statusCheckErrorCode == null &&
-    provider.verificationState === 'verified' &&
-    (!catalog || catalogIsReady) &&
-    (!requiresCatalog || catalogIsReady)
-  );
 }
 
 function isCompleteRuntimeProviderStatus(
@@ -272,7 +259,7 @@ export function mergeProviderStatusDisplayEvidence(
   const catalogRetained = incoming.modelCatalog == null && current.modelCatalog != null;
   const modelsRetained = hasRetainedModelEvidence(incoming, current);
   const launchUnproved =
-    !hasAuthoritativeLaunchEvidence(incoming) || catalogRetained || modelsRetained;
+    !hasAuthoritativeProviderLaunchEvidence(incoming) || catalogRetained || modelsRetained;
   const retainedCatalog = incoming.modelCatalog ?? current.modelCatalog ?? null;
   const modelCatalog =
     retainedCatalog && launchUnproved
@@ -288,8 +275,8 @@ export function mergeProviderStatusDisplayEvidence(
       ? incoming.verificationState === 'error' || incoming.verificationState === 'offline'
         ? incoming.verificationState
         : incoming.statusCheckOutcome === 'transient_error'
-        ? 'error'
-        : 'unknown'
+          ? 'error'
+          : 'unknown'
       : incoming.verificationState,
     canLoginFromUi: launchUnproved ? current.canLoginFromUi : incoming.canLoginFromUi,
     capabilities: launchUnproved

@@ -236,6 +236,64 @@ describe('reconcileCliStatus', () => {
       });
     }
   );
+
+  it('uses a fresh exact catalog as model evidence when redundant flat models are empty', () => {
+    const current = createLoadingMultimodelCliStatus();
+    current.providers[1] = {
+      ...current.providers[1],
+      providerId: 'codex',
+      supported: true,
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      models: ['old-flat-model'],
+      capabilities: { ...current.providers[1].capabilities, teamLaunch: true },
+    };
+    const incoming = structuredClone(current);
+    incoming.providers[1] = {
+      ...incoming.providers[1],
+      models: [],
+      modelCatalogRefreshState: 'ready',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'codex',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2026-08-29T00:10:00.000Z',
+        defaultModelId: 'fresh-model',
+        defaultLaunchModel: 'fresh-launch-model',
+        models: [
+          {
+            id: 'fresh-model',
+            launchModel: 'fresh-launch-model',
+            displayName: 'Fresh model',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+
+    const merged = reconcileCliStatus(current, incoming);
+
+    expect(merged.providers[1]).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      capabilities: { teamLaunch: true },
+      models: ['fresh-launch-model'],
+      modelCatalog: { status: 'ready', defaultModelId: 'fresh-model' },
+    });
+  });
 });
 
 describe('OpenCode runtime rejection state', () => {

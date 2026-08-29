@@ -1,3 +1,8 @@
+import {
+  hasAuthoritativeProviderLaunchEvidence,
+  isProviderModelCatalogExactReady,
+} from '@shared/utils/providerStatusAuthority';
+
 import type { CliProviderId, CliProviderStatus } from '@shared/types';
 
 export function settleCliProviderStatusLoading(
@@ -23,21 +28,11 @@ function mergeProviderCatalogCache(
   const modelEvidenceRetained =
     incomingProvider.models.length === 0 &&
     (incomingProvider.modelAvailability?.length ?? 0) === 0 &&
-    !(
-      incomingProvider.modelCatalog?.status === 'ready' &&
-      incomingProvider.modelCatalog.models.length > 0
-    ) &&
+    !isProviderModelCatalogExactReady(incomingProvider) &&
     (currentProvider.models.length > 0 || (currentProvider.modelAvailability?.length ?? 0) > 0);
-  const incomingCatalogIsReady =
-    incomingProvider.modelCatalog?.providerId === incomingProvider.providerId &&
-    incomingProvider.modelCatalog.status === 'ready';
+  const incomingCatalogIsReady = isProviderModelCatalogExactReady(incomingProvider);
   const launchUnproved =
-    incomingProvider.statusCheckOutcome !== 'authoritative' ||
-    incomingProvider.statusCheckErrorCode != null ||
-    incomingProvider.verificationState !== 'verified' ||
-    (incomingProvider.modelCatalog != null && !incomingCatalogIsReady) ||
-    (incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
-      !incomingCatalogIsReady) ||
+    !hasAuthoritativeProviderLaunchEvidence(incomingProvider) ||
     catalogRetained ||
     modelEvidenceRetained;
   const modelCatalog =
@@ -61,7 +56,12 @@ function mergeProviderCatalogCache(
     resolvedBackendId: launchUnproved
       ? currentProvider.resolvedBackendId
       : incomingProvider.resolvedBackendId,
-    models: incomingProvider.models.length > 0 ? incomingProvider.models : currentProvider.models,
+    models:
+      incomingProvider.models.length > 0
+        ? incomingProvider.models
+        : incomingCatalogIsReady
+          ? (incomingProvider.modelCatalog?.models.map((model) => model.launchModel) ?? [])
+          : currentProvider.models,
     modelAvailability:
       (incomingProvider.modelAvailability?.length ?? 0) > 0
         ? incomingProvider.modelAvailability
@@ -117,17 +117,9 @@ export function reconcileCliProviderSnapshot(
     ? mergeProviderCatalogCache(incomingProvider, currentProvider)
     : incomingProvider;
   if (
-    incomingProvider.statusCheckOutcome === 'authoritative' &&
-    incomingProvider.statusCheckErrorCode == null &&
-    incomingProvider.verificationState === 'verified' &&
-    (incomingProvider.modelCatalog == null ||
-      (incomingProvider.modelCatalog.providerId === incomingProvider.providerId &&
-        incomingProvider.modelCatalog.status === 'ready')) &&
-    (incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic !== true ||
-      (incomingProvider.modelCatalog?.providerId === incomingProvider.providerId &&
-        incomingProvider.modelCatalog.status === 'ready')) &&
+    hasAuthoritativeProviderLaunchEvidence(incomingProvider) &&
     (!currentProvider ||
-      (incomingProvider.modelCatalog != null && incomingProvider.models.length > 0) ||
+      isProviderModelCatalogExactReady(incomingProvider) ||
       (currentProvider.modelCatalog == null && currentProvider.models.length === 0) ||
       (currentProvider.authenticated &&
         currentProvider.statusCheckOutcome === 'authoritative' &&

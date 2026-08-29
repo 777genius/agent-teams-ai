@@ -1,4 +1,4 @@
-import { createDegradedProviderStatus } from './providerStatusCheckContract';
+import { hasAuthoritativeProviderLaunchEvidence } from '@shared/utils/providerStatusAuthority';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -27,17 +27,44 @@ export function mergeProviderCatalogFields(
   const hydratedCatalog = hydratedProvider.modelCatalog;
   if (
     hydratedProvider.providerId !== liveProvider.providerId ||
-    hydratedProvider.statusCheckOutcome !== 'authoritative' ||
-    hydratedProvider.statusCheckErrorCode != null ||
-    hydratedCatalog?.providerId !== liveProvider.providerId ||
-    hydratedCatalog.status !== 'ready'
+    !hasAuthoritativeProviderLaunchEvidence(hydratedProvider)
   ) {
-    return createDegradedProviderStatus(
-      liveProvider,
-      hydratedProvider.detailMessage ??
+    const catalogMatchesProvider = hydratedCatalog?.providerId === liveProvider.providerId;
+    const retainedCatalog = catalogMatchesProvider
+      ? hydratedCatalog
+      : (liveProvider.modelCatalog ?? null);
+    return {
+      ...liveProvider,
+      authenticated: false,
+      authMethod: null,
+      verificationState: hydratedProvider.verificationState,
+      statusCheckOutcome: hydratedProvider.statusCheckOutcome,
+      statusCheckErrorCode: hydratedProvider.statusCheckErrorCode,
+      statusMessage: hydratedProvider.statusMessage ?? liveProvider.statusMessage,
+      detailMessage:
+        hydratedProvider.detailMessage ??
         hydratedProvider.statusMessage ??
-        'Provider catalog hydration did not return an authoritative ready catalog'
-    );
+        'Provider catalog hydration did not return an authoritative ready catalog',
+      capabilities: { ...liveProvider.capabilities, teamLaunch: false },
+      models:
+        catalogMatchesProvider && hydratedProvider.models.length > 0
+          ? hydratedProvider.models
+          : liveProvider.models,
+      modelCatalog: retainedCatalog ? { ...retainedCatalog, status: 'stale' } : null,
+      modelCatalogRefreshState: retainedCatalog
+        ? 'error'
+        : hydratedProvider.modelCatalogRefreshState,
+      runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(
+        liveProvider.runtimeCapabilities,
+        hydratedProvider.runtimeCapabilities
+      ),
+      subscriptionRateLimits:
+        hydratedProvider.subscriptionRateLimits ?? liveProvider.subscriptionRateLimits ?? null,
+      externalRuntimeDiagnostics:
+        (hydratedProvider.externalRuntimeDiagnostics?.length ?? 0) > 0
+          ? hydratedProvider.externalRuntimeDiagnostics
+          : liveProvider.externalRuntimeDiagnostics,
+    };
   }
   return {
     ...liveProvider,

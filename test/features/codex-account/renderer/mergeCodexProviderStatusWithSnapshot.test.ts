@@ -127,7 +127,81 @@ function createReadyChatgptSnapshot(): CodexAccountSnapshotDto {
   };
 }
 
+function createDynamicCatalogProvider(): CliProviderStatus {
+  return {
+    ...createBaseCodexProvider(),
+    statusCheckOutcome: 'authoritative',
+    verificationState: 'verified',
+    modelCatalogRefreshState: 'ready',
+    runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'codex',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2026-08-29T00:10:00.000Z',
+      defaultModelId: 'gpt-5.4',
+      defaultLaunchModel: 'gpt-5.4',
+      models: [],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+  };
+}
+
 describe('mergeCodexProviderStatusWithSnapshot', () => {
+  it.each([
+    ['missing', { modelCatalog: null, modelCatalogRefreshState: 'loading' as const }],
+    [
+      'stale',
+      {
+        modelCatalog: { ...createDynamicCatalogProvider().modelCatalog!, status: 'stale' as const },
+        modelCatalogRefreshState: 'error' as const,
+      },
+    ],
+    [
+      'mismatched',
+      {
+        modelCatalog: {
+          ...createDynamicCatalogProvider().modelCatalog!,
+          providerId: 'opencode' as const,
+        },
+      },
+    ],
+    ['loading', { modelCatalogRefreshState: 'loading' as const }],
+    [
+      'invalid',
+      {
+        modelCatalog: {
+          ...createDynamicCatalogProvider().modelCatalog!,
+          fetchedAt: '',
+        },
+      },
+    ],
+  ])(
+    'does not restore launch authority from a ready account snapshot when the dynamic catalog is %s',
+    (_label, overrides) => {
+      const merged = mergeCodexProviderStatusWithSnapshot(
+        { ...createDynamicCatalogProvider(), ...overrides },
+        createReadyChatgptSnapshot()
+      );
+
+      expect(merged).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        capabilities: { teamLaunch: false },
+        connection: { codex: { launchAllowed: true, effectiveAuthMode: 'chatgpt' } },
+      });
+      expect(
+        merged.availableBackends?.find((option) => option.id === 'codex-native')
+      ).toMatchObject({
+        available: true,
+        state: 'ready',
+      });
+    }
+  );
+
   it('upgrades stale codex provider auth/runtime state from the live snapshot', () => {
     const merged = mergeCodexProviderStatusWithSnapshot(
       createBaseCodexProvider(),

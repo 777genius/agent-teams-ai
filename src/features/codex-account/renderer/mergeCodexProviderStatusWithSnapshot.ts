@@ -1,3 +1,5 @@
+import { hasExactReadyDynamicProviderCatalog } from '@shared/utils/providerStatusAuthority';
+
 import type { CodexAccountSnapshotDto } from '../contracts';
 import type { CliProviderStatus } from '@shared/types';
 
@@ -184,7 +186,7 @@ export function mergeCodexProviderStatusWithSnapshot(
     codex: null,
   };
 
-  return {
+  const mergedProvider: CliProviderStatus = {
     ...provider,
     supported:
       provider.supported || isCodexBootstrapPlaceholder(provider) || snapshot.launchAllowed,
@@ -241,5 +243,23 @@ export function mergeCodexProviderStatusWithSnapshot(
         },
       },
     },
+  };
+
+  if (hasExactReadyDynamicProviderCatalog(mergedProvider)) {
+    return mergedProvider;
+  }
+
+  return {
+    ...mergedProvider,
+    authenticated: false,
+    authMethod: null,
+    verificationState:
+      provider.verificationState === 'error' || provider.verificationState === 'offline'
+        ? provider.verificationState
+        : 'unknown',
+    capabilities: { ...mergedProvider.capabilities, teamLaunch: false },
+    modelCatalog: mergedProvider.modelCatalog
+      ? { ...mergedProvider.modelCatalog, status: 'stale' }
+      : null,
   };
 }
