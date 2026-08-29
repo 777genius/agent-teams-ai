@@ -88,7 +88,9 @@ export function freshOpenCodeExecutionProof(
 ): { proof: OpenCodeExecutionProof; expectedBehaviorFingerprint: string } {
   const proof = readiness?.executionProof;
   if (!proof || proof.modelId !== input.fullModelId) {
-    throw new Error('OpenCode launch requires fresh expected behavior evidence for the selected model');
+    throw new Error(
+      'OpenCode launch requires fresh expected behavior evidence for the selected model'
+    );
   }
   if (
     normalizeOpenCodeProjectIdentity(proof.projectPath) !==
@@ -96,7 +98,9 @@ export function freshOpenCodeExecutionProof(
     !Number.isFinite(Date.parse(proof.expiresAt)) ||
     Date.parse(proof.expiresAt) <= Date.now()
   ) {
-    throw new Error('OpenCode launch expected behavior evidence is stale or belongs to another project');
+    throw new Error(
+      'OpenCode launch expected behavior evidence is stale or belongs to another project'
+    );
   }
   const evidence = validateOpenCodeExpectedBehaviorEvidence({
     evidence: proof.expectedBehaviorEvidence,
@@ -179,14 +183,18 @@ export function parseOpenCodeExpectedBehaviorEvidence(
     value.modelProviderId !== value.modelProviderId.toLowerCase() ||
     !/^[a-z0-9._-]+$/.test(value.modelProviderId)
   ) {
-    throw new Error('OpenCode expected behavior evidence modelProviderId must be canonical lowercase');
+    throw new Error(
+      'OpenCode expected behavior evidence modelProviderId must be canonical lowercase'
+    );
   }
   if (typeof value.fullModelId !== 'string' || !value.fullModelId) {
     throw new Error('OpenCode expected behavior evidence fullModelId is required');
   }
 
   const evidence = value as unknown as OpenCodeExpectedBehaviorEvidenceV2;
-  if (createOpenCodeExpectedBehaviorFingerprint(evidence) !== evidence.expectedBehaviorFingerprint) {
+  if (
+    createOpenCodeExpectedBehaviorFingerprint(evidence) !== evidence.expectedBehaviorFingerprint
+  ) {
     throw new Error('OpenCode expected behavior fingerprint digest mismatch');
   }
   return evidence;
@@ -200,7 +208,10 @@ export function validateOpenCodeExpectedBehaviorEvidence(input: {
 }): OpenCodeExpectedBehaviorEvidenceV2 {
   const evidence = parseOpenCodeExpectedBehaviorEvidence(input.evidence);
   const { proofHash, ...unsignedProof } = input.executionProof;
-  if (!isLowercaseSha256(proofHash) || createOpenCodeExecutionProofHash(unsignedProof) !== proofHash) {
+  if (
+    !isLowercaseSha256(proofHash) ||
+    createOpenCodeExecutionProofHash(unsignedProof) !== proofHash
+  ) {
     throw new Error('OpenCode expected behavior evidence proof hash mismatch');
   }
   if (
@@ -209,6 +220,9 @@ export function validateOpenCodeExpectedBehaviorEvidence(input: {
     input.executionProof.modelId !== input.fullModelId
   ) {
     throw new Error('OpenCode expected behavior evidence execution proof model mismatch');
+  }
+  if (evidence.projectBehaviorFingerprint !== input.executionProof.projectBehaviorFingerprint) {
+    throw new Error('OpenCode expected behavior evidence project behavior fingerprint mismatch');
   }
   if (
     normalizeOpenCodeProjectIdentity(input.executionProof.projectPath) !==

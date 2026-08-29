@@ -110,6 +110,19 @@ describe('OpenCodeExpectedBehaviorFingerprint', () => {
     ).toThrow('model provider mismatch');
   });
 
+  it('rejects independently valid evidence and proof hashes with unequal project behavior fingerprints', () => {
+    const changed = { ...validEvidence(), projectBehaviorFingerprint: '8'.repeat(64) };
+    changed.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(changed);
+    expect(() =>
+      validateOpenCodeExpectedBehaviorEvidence({
+        evidence: changed,
+        executionProof: validProof(changed),
+        projectPath: '/disposable/project',
+        fullModelId: 'deepinfra/deepseek-ai/DeepSeek-V3.2',
+      })
+    ).toThrow('project behavior fingerprint mismatch');
+  });
+
   it('accepts an exact proof-bound project, provider, model and digest', () => {
     expect(
       validateOpenCodeExpectedBehaviorEvidence({
