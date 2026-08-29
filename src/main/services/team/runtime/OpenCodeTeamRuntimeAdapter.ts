@@ -300,7 +300,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     // App-managed OpenCode launch requires a fresh capability snapshot from
     // readiness before any state-changing bridge command can run.
     const skipReadinessPreflight = false;
-    let selectedModel = input.model?.trim() ?? '';
+    const requestedModel = input.model?.trim() ?? '';
+    let selectedModel = requestedModel;
     let launchWarnings: string[] = [];
     const localRuntimeInspectionState = createLocalRuntimeInspectionState();
 
@@ -334,7 +335,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             : prepared.diagnostics;
         return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings);
       }
-      selectedModel = prepared.modelId ?? selectedModel;
+      const readinessModel = prepared.modelId?.trim() ?? '';
+      if (requestedModel && readinessModel !== requestedModel) {
+        return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+          `OpenCode readiness returned model ${readinessModel || '(missing)'} for requested model ${requestedModel}`,
+        ]);
+      }
+      selectedModel = readinessModel || selectedModel;
       launchWarnings = mergeDiagnostics(launchWarnings, prepared.warnings);
     }
 
@@ -399,6 +406,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         'OpenCode app-managed launch requires a fresh capability snapshot before state-changing launch.',
       ]);
     }
+    if (
+      runtimeSnapshot?.capabilitySnapshotId &&
+      executionProof.capabilitySnapshotId !== runtimeSnapshot.capabilitySnapshotId
+    ) {
+      return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+        'OpenCode launch execution proof belongs to another capability snapshot',
+      ]);
+    }
     this.lastProjectPathByTeamName.set(input.teamName, input.cwd);
     const buildLaunchCommand = (
       snapshot: OpenCodeBridgeRuntimeSnapshot | null,
@@ -452,7 +467,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           mergeDiagnostics(launchWarnings, refreshed.warnings)
         );
       }
-      selectedModel = refreshed.modelId ?? selectedModel;
+      const refreshedModel = refreshed.modelId?.trim() ?? '';
+      if (requestedModel && refreshedModel !== requestedModel) {
+        return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+          `OpenCode readiness returned model ${refreshedModel || '(missing)'} for requested model ${requestedModel}`,
+        ]);
+      }
+      selectedModel = refreshedModel || selectedModel;
       const refreshedLocalModelPreflight = await preflightOpenCodeLocalModels(
         this.options,
         [{ projectPath: input.cwd, modelRoute: selectedModel }],
@@ -482,6 +503,11 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             { projectPath: input.cwd, fullModelId: selectedModel }
           );
           executionProof = proofBinding.proof;
+          if (executionProof.capabilitySnapshotId !== runtimeSnapshot.capabilitySnapshotId) {
+            return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+              'OpenCode launch execution proof belongs to another capability snapshot',
+            ]);
+          }
         } catch (error) {
           return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
             error instanceof Error ? error.message : String(error),
