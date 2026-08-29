@@ -712,10 +712,10 @@ describe('LaunchTeamDialog', () => {
 
     const launchHost = document.createElement('div');
     document.body.appendChild(launchHost);
-    const launchRoot = createRoot(launchHost);
+    const launchDialogRoot = createRoot(launchHost);
     const onLaunch = vi.fn(async () => {});
     await act(async () => {
-      launchRoot.render(
+      launchDialogRoot.render(
         React.createElement(LaunchTeamDialog, {
           mode: 'launch',
           open: true,
@@ -744,16 +744,16 @@ describe('LaunchTeamDialog', () => {
     expect(onLaunch).not.toHaveBeenCalled();
     await act(async () => vi.runOnlyPendingTimersAsync());
     expect(launchButton?.disabled).toBe(true);
-    await act(async () => launchRoot.unmount());
+    await act(async () => launchDialogRoot.unmount());
 
     vi.setSystemTime(baseTime);
     createTeamDraftMock.state.soloTeam = true;
     const createHost = document.createElement('div');
     document.body.appendChild(createHost);
-    const createRoot = createRoot(createHost);
+    const createDialogRoot = createRoot(createHost);
     const onCreate = vi.fn(async () => {});
     await act(async () => {
-      createRoot.render(
+      createDialogRoot.render(
         React.createElement(CreateTeamDialog, {
           open: true,
           canCreate: true,
@@ -781,7 +781,7 @@ describe('LaunchTeamDialog', () => {
     expect(onCreate).not.toHaveBeenCalled();
     await act(async () => vi.runOnlyPendingTimersAsync());
     expect(createButton?.disabled).toBe(true);
-    await act(async () => createRoot.unmount());
+    await act(async () => createDialogRoot.unmount());
   });
 
   it('renders relaunch-specific title, warning and submit label', async () => {
