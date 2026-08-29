@@ -2897,6 +2897,7 @@ describe('ProviderConnectionService', () => {
           appServerState: 'healthy',
         },
       },
+      modelCatalogRefreshState: 'ready',
       runtimeCapabilities: {
         modelCatalog: { dynamic: true, source: 'app-server' },
       },
@@ -2920,6 +2921,66 @@ describe('ProviderConnectionService', () => {
       dynamic: true,
       source: 'app-server',
     });
+  });
+
+  it('does not synthesize flat models from a stale orchestrator catalog', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    const staleCatalog = {
+      schemaVersion: 1 as const,
+      providerId: 'codex' as const,
+      source: 'app-server' as const,
+      status: 'stale' as const,
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2026-08-29T00:10:00.000Z',
+      defaultModelId: 'gpt-stale',
+      defaultLaunchModel: 'gpt-stale',
+      models: [
+        {
+          id: 'gpt-stale',
+          launchModel: 'gpt-stale',
+          displayName: 'GPT stale',
+          hidden: false,
+          supportedReasoningEfforts: ['low' as const],
+          defaultReasoningEffort: 'low' as const,
+          inputModalities: ['text' as const],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server' as const,
+        },
+      ],
+      diagnostics: { configReadState: 'ready' as const, appServerState: 'healthy' as const },
+    };
+
+    const enriched = await service.enrichProviderStatus({
+      providerId: 'codex',
+      displayName: 'Codex',
+      supported: true,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      models: ['gpt-previous'],
+      modelCatalog: staleCatalog,
+      modelCatalogRefreshState: 'error',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: false,
+        oneShot: false,
+        extensions: undefined as never,
+      },
+    });
+
+    expect(enriched.modelCatalog).toBe(staleCatalog);
+    expect(enriched.models).toEqual(['gpt-previous']);
+    expect(enriched.models).not.toContain('gpt-stale');
   });
 
   it('skips Codex catalog hydration when summary enrichment disables catalog loading', async () => {

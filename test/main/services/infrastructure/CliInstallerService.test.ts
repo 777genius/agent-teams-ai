@@ -131,7 +131,7 @@ function createTestProviderStatus(
     verificationState: authenticated ? 'verified' : 'unknown',
     statusCheckOutcome: 'authoritative',
     modelVerificationState: 'idle',
-    modelCatalogRefreshState: 'idle',
+    modelCatalogRefreshState: 'ready',
     statusMessage: null,
     detailMessage: null,
     models: [],
@@ -150,7 +150,18 @@ function createTestProviderStatus(
     externalRuntimeDiagnostics: [],
     backend: null,
     connection: null,
-    modelCatalog: null,
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId,
+      source: 'static-fallback',
+      status: 'ready',
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2026-08-29T00:10:00.000Z',
+      defaultModelId: null,
+      defaultLaunchModel: null,
+      models: [],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
   };
 }
 
@@ -646,8 +657,32 @@ describe('CliInstallerService', () => {
               verificationState: 'verified',
               statusCheckOutcome: 'authoritative',
               modelVerificationState: 'idle',
+              modelCatalogRefreshState: 'ready',
               statusMessage: null,
               models: ['gpt-5.4', 'gpt-5.4-mini'],
+              modelCatalog: {
+                schemaVersion: 1,
+                providerId: 'codex',
+                source: 'app-server',
+                status: 'ready',
+                fetchedAt: '2026-08-29T00:00:00.000Z',
+                staleAt: '2026-08-29T00:10:00.000Z',
+                defaultModelId: 'gpt-5.4',
+                defaultLaunchModel: 'gpt-5.4',
+                models: [
+                  {
+                    id: 'gpt-5.4',
+                    launchModel: 'gpt-5.4',
+                    displayName: 'GPT-5.4',
+                  },
+                  {
+                    id: 'gpt-5.4-mini',
+                    launchModel: 'gpt-5.4-mini',
+                    displayName: 'GPT-5.4 mini',
+                  },
+                ],
+                diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+              },
               modelAvailability: [],
               canLoginFromUi: true,
               capabilities: { teamLaunch: true, oneShot: true },
@@ -1253,7 +1288,7 @@ describe('CliInstallerService', () => {
       expect(status.authMethod).toBe('api_key');
     });
 
-    it('returns multimodel metadata before provider status hydration finishes', async () => {
+    it('does not publish provider authority after the initial hydration wait times out', async () => {
       allowConsoleLogs();
       vi.useFakeTimers();
 
@@ -1281,7 +1316,7 @@ describe('CliInstallerService', () => {
       const status = await statusPromise;
       expect(status.installed).toBe(true);
       expect(status.installedVersion).toBe('0.0.45');
-      expect(status.authStatusChecking).toBe(true);
+      expect(status.authStatusChecking).toBe(false);
       expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(
         true
       );
@@ -1296,9 +1331,9 @@ describe('CliInstallerService', () => {
 
       const latest = service.getLatestStatusSnapshot();
       expect(latest?.authStatusChecking).toBe(false);
-      expect(latest?.authLoggedIn).toBe(true);
-      expect(latest?.authMethod).toBe('oauth_token');
-      expect(status.authStatusChecking).toBe(true);
+      expect(latest?.authLoggedIn).toBe(false);
+      expect(latest?.authMethod).toBeNull();
+      expect(status.authStatusChecking).toBe(false);
       expect(status.authLoggedIn).toBe(false);
       expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(
         true

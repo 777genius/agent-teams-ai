@@ -1247,24 +1247,23 @@ export class CliInstallerService {
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
       result.authStatusChecking = true;
-      let statusTarget = result;
+      let acceptsHydrationUpdates = true;
       const applyProviders = (providersSnapshot: CliProviderStatus[], final: boolean): void => {
-        if (generation !== this.statusGatherGeneration) {
+        if (!acceptsHydrationUpdates || generation !== this.statusGatherGeneration) {
           return;
         }
 
-        const target = statusTarget;
         const frontendProviders = filterFrontendMultimodelProviders(providersSnapshot).map(
           sanitizeProviderStatusAuthority
         );
-        target.providers = frontendProviders;
-        target.authLoggedIn = hasFrontendAuthenticatedProvider(frontendProviders);
-        target.authMethod = getFrontendAuthenticatedProvider(frontendProviders)?.authMethod ?? null;
+        result.providers = frontendProviders;
+        result.authLoggedIn = hasFrontendAuthenticatedProvider(frontendProviders);
+        result.authMethod = getFrontendAuthenticatedProvider(frontendProviders)?.authMethod ?? null;
         if (final) {
-          target.authStatusChecking = false;
-          this.rememberHealthyStatus(target);
+          result.authStatusChecking = false;
+          this.rememberHealthyStatus(result);
         }
-        this.publishStatusSnapshot(target);
+        this.publishStatusSnapshot(result);
       };
 
       const completion = this.multimodelBridgeService
@@ -1275,7 +1274,7 @@ export class CliInstallerService {
           applyProviders(providers, true);
         })
         .catch((error) => {
-          if (generation !== this.statusGatherGeneration) {
+          if (!acceptsHydrationUpdates || generation !== this.statusGatherGeneration) {
             return;
           }
 
@@ -1289,7 +1288,8 @@ export class CliInstallerService {
       let timer: ReturnType<typeof setTimeout> | null = null;
       const timeout = new Promise<'timeout'>((resolve) => {
         timer = setTimeout(() => {
-          statusTarget = cloneCliInstallationStatus(result);
+          acceptsHydrationUpdates = false;
+          result.authStatusChecking = false;
           resolve('timeout');
         }, MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS);
         timer.unref?.();

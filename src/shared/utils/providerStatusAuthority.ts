@@ -36,7 +36,7 @@ export function hasAuthoritativeProviderLaunchEvidence(provider: CliProviderStat
     provider.statusCheckOutcome === 'authoritative' &&
     provider.statusCheckErrorCode == null &&
     provider.verificationState === 'verified' &&
-    (provider.modelCatalog == null || isProviderModelCatalogExactReady(provider)) &&
+    isProviderModelCatalogExactReady(provider) &&
     hasExactReadyDynamicProviderCatalog(provider)
   );
 }

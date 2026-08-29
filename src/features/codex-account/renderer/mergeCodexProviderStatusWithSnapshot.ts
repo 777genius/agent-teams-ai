@@ -146,21 +146,6 @@ function mergeCodexNativeBackendOption(
   });
 }
 
-function mergeCodexCapabilitiesWithSnapshot(
-  provider: CliProviderStatus,
-  snapshot: CodexAccountSnapshotDto
-): CliProviderStatus['capabilities'] {
-  if (!snapshot.launchAllowed) {
-    return provider.capabilities;
-  }
-
-  return {
-    ...provider.capabilities,
-    teamLaunch: true,
-    oneShot: true,
-  };
-}
-
 export function mergeCodexProviderStatusWithSnapshot(
   provider: CliProviderStatus,
   snapshot: CodexAccountSnapshotDto | null
@@ -190,19 +175,6 @@ export function mergeCodexProviderStatusWithSnapshot(
     ...provider,
     supported:
       provider.supported || isCodexBootstrapPlaceholder(provider) || snapshot.launchAllowed,
-    authenticated: snapshot.launchAllowed,
-    capabilities: mergeCodexCapabilitiesWithSnapshot(provider, snapshot),
-    authMethod:
-      snapshot.effectiveAuthMode === 'chatgpt'
-        ? 'chatgpt'
-        : snapshot.effectiveAuthMode === 'api_key'
-          ? 'api_key'
-          : null,
-    verificationState: snapshot.launchAllowed
-      ? 'verified'
-      : snapshot.appServerState === 'runtime-missing' || snapshot.appServerState === 'incompatible'
-        ? 'error'
-        : 'unknown',
     statusMessage: getProviderStatusMessage(snapshot, provider.statusMessage),
     selectedBackendId: CODEX_NATIVE_BACKEND_ID,
     resolvedBackendId: CODEX_NATIVE_BACKEND_ID,

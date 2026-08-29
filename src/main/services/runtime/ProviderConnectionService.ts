@@ -11,6 +11,7 @@ import {
   isDynamicCodexModelCatalog,
   isUsableCodexModelCatalog,
 } from '@shared/utils/codexModelCatalog';
+import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 
 import { ApiKeyService } from '../extensions/apikeys/ApiKeyService';
 import { ConfigManager } from '../infrastructure/ConfigManager';
@@ -1195,7 +1196,6 @@ export class ProviderConnectionService {
         (withConnection.connection?.apiKeyConfigured
           ? 'Codex custom provider configured'
           : 'Codex custom provider configured. API key is not set.');
-
       return {
         ...withConnection,
         models: [model],
@@ -1234,7 +1234,6 @@ export class ProviderConnectionService {
       ) {
         return withConnection;
       }
-
       const orchestratorCatalog = isUsableCodexModelCatalog(withConnection.modelCatalog)
         ? withConnection.modelCatalog
         : null;
@@ -1244,11 +1243,12 @@ export class ProviderConnectionService {
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
-
-      const models = catalog.models
-        .filter((model) => !model.hidden)
-        .map((model) => model.launchModel.trim())
-        .filter(Boolean);
+      const models = isProviderModelCatalogExactReady({ ...withConnection, modelCatalog: catalog })
+        ? catalog.models
+            .filter((model) => !model.hidden)
+            .map((model) => model.launchModel.trim())
+            .filter(Boolean)
+        : withConnection.models;
       const reasoningEfforts = Array.from(
         new Set(
           catalog.models.flatMap<CliProviderReasoningEffort>(

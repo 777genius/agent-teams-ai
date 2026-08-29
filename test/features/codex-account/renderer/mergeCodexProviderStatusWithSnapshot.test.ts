@@ -151,7 +151,9 @@ function createDynamicCatalogProvider(): CliProviderStatus {
 
 function createAuthoritativeBaseCodexProvider(): CliProviderStatus {
   return {
-    ...createBaseCodexProvider(),
+    ...createDynamicCatalogProvider(),
+    authenticated: true,
+    authMethod: 'chatgpt',
     statusCheckOutcome: 'authoritative',
     verificationState: 'verified',
   };
@@ -239,7 +241,30 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     });
   });
 
-  it('upgrades authoritative codex provider auth/runtime state from the live snapshot', () => {
+  it('does not create authentication or team-launch authority from an account snapshot', () => {
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      {
+        ...createDynamicCatalogProvider(),
+        authenticated: false,
+        authMethod: null,
+        capabilities: {
+          ...createDynamicCatalogProvider().capabilities,
+          teamLaunch: false,
+        },
+      },
+      createReadyChatgptSnapshot()
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+      connection: { codex: { launchAllowed: true, effectiveAuthMode: 'chatgpt' } },
+    });
+  });
+
+  it('preserves authoritative provider auth while merging snapshot display evidence', () => {
     const merged = mergeCodexProviderStatusWithSnapshot(
       createAuthoritativeBaseCodexProvider(),
       createReadyChatgptSnapshot()
@@ -311,7 +336,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     expect(merged.verificationState).toBe('error');
     expect(merged.statusMessage).toBe('ChatGPT account ready');
     expect(merged.capabilities.teamLaunch).toBe(false);
-    expect(merged.capabilities.oneShot).toBe(true);
+    expect(merged.capabilities.oneShot).toBe(false);
     expect(merged.connection?.codex?.appServerState).toBe('healthy');
     expect(merged.connection?.codex?.launchReadinessState).toBe('ready_chatgpt');
     expect(merged.availableBackends?.find((option) => option.id === 'codex-native')).toMatchObject({
