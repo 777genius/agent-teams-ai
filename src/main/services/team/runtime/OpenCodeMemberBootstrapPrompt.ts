@@ -1,3 +1,5 @@
+import { wrapAgentBlock } from '@shared/constants/agentBlocks';
+
 import type { TeamRuntimeLaunchInput } from './TeamRuntimeAdapter';
 
 export function buildMemberBootstrapPrompt(
@@ -16,7 +18,7 @@ export function buildMemberBootstrapPrompt(
     ? 'the human user or a teammate'
     : 'the human user, team lead, or another teammate';
   const senderRole = isTeamLead ? 'team lead' : 'OpenCode teammate';
-  return [
+  const briefing = [
     '<agent_teams_app_managed_bootstrap_briefing>',
     'AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1',
     identityLine,
@@ -39,4 +41,5 @@ export function buildMemberBootstrapPrompt(
   ]
     .filter((line): line is string => line !== null)
     .join('\n');
+  return wrapAgentBlock(briefing);
 }

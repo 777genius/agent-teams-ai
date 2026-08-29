@@ -534,15 +534,16 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       }
     }
 
+    const launchResult = mapOpenCodeLaunchDataToRuntimeResult(input, data, launchWarnings);
     if (
-      data.teamLaunchState === 'ready' &&
+      launchResult.teamLaunchState === 'clean_success' &&
       data.expectedBehaviorFingerprint !== proofBinding.expectedBehaviorFingerprint
     ) {
       return blockedLaunchResult(input, 'opencode_launch_behavior_fingerprint_mismatch', [
         'OpenCode launch result behavior fingerprint mismatch',
       ]);
     }
-    return mapOpenCodeLaunchDataToRuntimeResult(input, data, launchWarnings);
+    return launchResult;
   }
 
   async reconcile(input: TeamRuntimeReconcileInput): Promise<TeamRuntimeReconcileResult> {
