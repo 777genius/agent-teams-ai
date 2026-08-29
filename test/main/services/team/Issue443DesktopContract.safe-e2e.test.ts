@@ -36,18 +36,12 @@ vi.mock('@main/utils/shellEnv', () => ({
 }));
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
   buildPassiveProviderStatusCliEnv: () => ({
-    env: {
-      ISSUE443_FAKE_SCENARIO: process.env.ISSUE443_FAKE_SCENARIO,
-      ISSUE443_FAKE_TRACE_FILE: process.env.ISSUE443_FAKE_TRACE_FILE,
-    },
+    env: fakeExecutableEnv(),
     connectionIssues: {},
     providerArgs: [],
   }),
   buildProviderAwareCliEnv: () => Promise.resolve({
-    env: {
-      ISSUE443_FAKE_SCENARIO: process.env.ISSUE443_FAKE_SCENARIO,
-      ISSUE443_FAKE_TRACE_FILE: process.env.ISSUE443_FAKE_TRACE_FILE,
-    },
+    env: fakeExecutableEnv(),
     connectionIssues: {},
   }),
   getAggregateProviderStatusStoredCredentialAllowlist: () => [],
@@ -67,6 +61,14 @@ const FIXTURE_SOURCE = path.join(
   'test/main/services/team/Issue443DesktopContractFakeExecutable.mjs'
 );
 const sandboxes: string[] = [];
+
+function fakeExecutableEnv(): NodeJS.ProcessEnv {
+  return {
+    PATH: [path.dirname(process.execPath), process.env.PATH].filter(Boolean).join(path.delimiter),
+    ISSUE443_FAKE_SCENARIO: process.env.ISSUE443_FAKE_SCENARIO,
+    ISSUE443_FAKE_TRACE_FILE: process.env.ISSUE443_FAKE_TRACE_FILE,
+  };
+}
 
 interface FakeTrace {
   kind: 'provider-status' | 'bridge';
@@ -270,11 +272,7 @@ async function realContractHarness(scenario: string) {
     requestIdFactory: sequentialIds('wire'),
     diagnosticIdFactory: sequentialIds('diagnostic'),
     clock: () => new Date(NOW),
-    env: {
-      PATH: '/usr/bin:/bin',
-      ISSUE443_FAKE_SCENARIO: scenario,
-      ISSUE443_FAKE_TRACE_FILE: fake.traceFile,
-    },
+    env: fakeExecutableEnv(),
   });
   const clientIdentity = createOpenCodeBridgeClientIdentity({
     appVersion: 'issue443-desktop-test',

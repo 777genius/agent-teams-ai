@@ -1,4 +1,4 @@
-#!/root/.bun/bin/bun
+#!/usr/bin/env node
 /* global process */
 
 import { createHash } from 'node:crypto';
