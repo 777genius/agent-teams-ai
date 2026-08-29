@@ -7,7 +7,6 @@ import {
 } from '@features/anthropic-runtime-profile/renderer';
 import {
   isCodexAccountSnapshotPending,
-  mergeCodexCliStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import {
@@ -51,11 +50,7 @@ import { MentionableTextarea } from '@renderer/components/ui/MentionableTextarea
 import { getTeamColorSet } from '@renderer/constants/teamColors';
 import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
-import {
-  hasEffectiveProviderLaunchAuthority,
-  useEffectiveCliProviderStatus,
-  useLaunchAuthorityGatedCliStatus,
-} from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
 import { useOpenCodeCatalogPrefetch } from '@renderer/hooks/useOpenCodeCatalogPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
@@ -127,6 +122,7 @@ import {
 } from './projectPathOptions';
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
+import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
@@ -296,11 +292,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
-  const mergedCliStatus = useMemo(
-    () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
-    [loadingCliStatus, codexAccount.snapshot]
-  );
-  const effectiveCliStatus = useLaunchAuthorityGatedCliStatus(mergedCliStatus);
+  const effectiveCliStatus = useAuthorityGatedCliStatus(loadingCliStatus, codexAccount.snapshot);
   const codexSnapshotPending =
     isCodexAccountSnapshotPending(
       codexAccount.loading,
@@ -527,12 +519,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
-  const providerAuthorityBlocksLaunch =
-    isLaunchMode &&
-    selectedMemberProviders.some(
-      (providerId) =>
-        !hasEffectiveProviderLaunchAuthority(runtimeProviderStatusById.get(providerId))
-    );
+  const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -2291,19 +2278,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setLocalError(modelValidationError);
       return;
     }
-    if (
-      isLaunchMode &&
-      selectedMemberProviders.some(
-        (providerId) =>
-          !hasEffectiveProviderLaunchAuthority(
-            runtimeProviderStatusById.get(providerId),
-            Date.now()
-          )
-      )
-    ) {
-      setLocalError(t('launch.prepare.failed'));
-      return;
-    }
+    if (launchGuard.reject(isLaunchMode, () => setLocalError(t('launch.prepare.failed')))) return;
     if (prepareBlocksLaunch) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
@@ -2484,7 +2459,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       launchInFlight ||
       validationErrors.length > 0 ||
       !!modelValidationError ||
-      providerAuthorityBlocksLaunch ||
+      launchGuard.blocked(isLaunchMode) ||
       hasInvalidLaunchMemberNames ||
       hasDuplicateLaunchMemberNames ||
       prepareBlocksLaunch ||
