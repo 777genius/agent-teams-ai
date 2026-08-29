@@ -1747,7 +1747,21 @@ describe('cliInstallerSlice', () => {
           staleAt: staleAt.toISOString(),
           defaultModelId: 'opencode/big-pickle',
           defaultLaunchModel: 'opencode/big-pickle',
-          models: [],
+          models: [
+            {
+              id: 'opencode/big-pickle',
+              launchModel: 'opencode/big-pickle',
+              displayName: 'Big Pickle',
+              hidden: false,
+              supportedReasoningEfforts: [],
+              defaultReasoningEffort: null,
+              inputModalities: ['text'],
+              supportsPersonality: true,
+              isDefault: true,
+              upgrade: false,
+              source: 'app-server',
+            },
+          ],
           diagnostics: {
             configReadState: 'ready',
             appServerState: 'healthy',

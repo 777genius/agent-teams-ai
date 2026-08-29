@@ -237,7 +237,7 @@ describe('reconcileCliStatus', () => {
     }
   );
 
-  it('replaces both model evidence arrays with authoritative exact-ready empty arrays', () => {
+  it('retains both model evidence arrays but revokes launch for authoritative exact-empty input', () => {
     const current = createLoadingMultimodelCliStatus();
     current.providers[1] = {
       ...current.providers[1],
@@ -283,10 +283,11 @@ describe('reconcileCliStatus', () => {
     expect(merged.providers[1]).toMatchObject({
       authenticated: true,
       authMethod: 'chatgpt',
-      capabilities: { teamLaunch: true },
-      models: [],
-      modelAvailability: [],
-      modelCatalog: { status: 'ready', defaultModelId: null },
+      capabilities: { teamLaunch: false },
+      models: ['old-flat-model'],
+      modelAvailability: [{ modelId: 'old-flat-model', status: 'available' }],
+      modelCatalog: { status: 'stale', defaultModelId: null },
+      modelCatalogRefreshState: 'error',
     });
   });
 

@@ -242,7 +242,7 @@ describe('provider status check contract', () => {
     expect(merged.modelCatalog?.status).toBe('stale');
   });
 
-  it('publishes authoritative empty catalog arrays over obsolete display evidence', () => {
+  it('retains obsolete display evidence but revokes launch for an authoritative empty catalog', () => {
     const current = providerStatus({
       modelAvailability: [{ modelId: 'opencode/big-pickle', status: 'available' }],
     });
@@ -265,10 +265,11 @@ describe('provider status check contract', () => {
     expect(merged).toMatchObject({
       authenticated: true,
       verificationState: 'verified',
-      models: [],
-      modelAvailability: [],
-      modelCatalog: { status: 'ready', models: [] },
-      capabilities: { teamLaunch: true },
+      models: current.models,
+      modelAvailability: current.modelAvailability,
+      modelCatalog: { status: 'stale', models: [] },
+      modelCatalogRefreshState: 'error',
+      capabilities: { teamLaunch: false },
     });
   });
 
