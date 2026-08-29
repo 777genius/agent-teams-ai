@@ -42,6 +42,7 @@ vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: () => Promise.resolve({}),
 }));
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
+  buildPassiveProviderStatusCliEnv: () => ({ env: {}, connectionIssues: {}, providerArgs: [] }),
   buildProviderAwareCliEnv: () => Promise.resolve({ env: {}, connectionIssues: {} }),
   getAggregateProviderStatusStoredCredentialAllowlist: () => [],
   getProviderStatusStoredCredentialAllowlist: () => [],
