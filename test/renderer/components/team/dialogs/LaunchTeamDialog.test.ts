@@ -694,7 +694,11 @@ describe('LaunchTeamDialog', () => {
             staleAt: '2099-07-20T00:10:00.000Z',
             defaultModelId: models[0] ?? null,
             defaultLaunchModel: models[0] ?? null,
-            models: [],
+            models: models.map((model: string) => ({
+              id: model,
+              launchModel: model,
+              displayName: model,
+            })),
             diagnostics: {
               configReadState: 'ready',
               appServerState: 'healthy',

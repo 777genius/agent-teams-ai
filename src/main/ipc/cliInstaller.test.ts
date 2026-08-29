@@ -68,6 +68,14 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 function createProviderStatus(providerId: CliProviderId): CliProviderStatus {
+  const defaultModel =
+    {
+      anthropic: 'opus',
+      codex: 'gpt-5.4',
+      gemini: 'gemini-2.5-pro',
+      opencode: 'opencode/big-pickle',
+    }[providerId] ?? `${providerId}/default`;
+
   return {
     providerId,
     displayName: providerId,
@@ -78,7 +86,7 @@ function createProviderStatus(providerId: CliProviderId): CliProviderStatus {
     statusCheckOutcome: 'authoritative',
     statusCheckErrorCode: undefined,
     modelCatalogRefreshState: 'ready',
-    models: [],
+    models: [defaultModel],
     modelAvailability: [],
     modelCatalog: {
       schemaVersion: 1,
@@ -87,9 +95,15 @@ function createProviderStatus(providerId: CliProviderId): CliProviderStatus {
       status: 'ready',
       fetchedAt: '2020-01-01T00:00:00.000Z',
       staleAt: '2100-01-01T00:00:00.000Z',
-      defaultModelId: null,
-      defaultLaunchModel: null,
-      models: [],
+      defaultModelId: defaultModel,
+      defaultLaunchModel: defaultModel,
+      models: [
+        {
+          id: defaultModel,
+          launchModel: defaultModel,
+          displayName: defaultModel,
+        },
+      ],
       diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
     },
     canLoginFromUi: false,

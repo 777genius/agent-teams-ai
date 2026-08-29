@@ -1324,7 +1324,13 @@ describe('TeamModelSelector disabled Codex models', () => {
         staleAt: new Date(Date.now() + 1_000).toISOString(),
         defaultModelId: 'ollama/qwen2.5:0.5b',
         defaultLaunchModel: 'ollama/qwen2.5:0.5b',
-        models: [],
+        models: [
+          {
+            id: 'ollama/qwen2.5:0.5b',
+            launchModel: 'ollama/qwen2.5:0.5b',
+            displayName: 'qwen2.5:0.5b',
+          },
+        ],
         diagnostics: {
           configReadState: 'ready',
           appServerState: 'healthy',

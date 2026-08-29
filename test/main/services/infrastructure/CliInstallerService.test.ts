@@ -127,6 +127,14 @@ function createTestProviderStatus(
   authenticated: boolean,
   authMethod: string | null
 ): CliProviderStatus {
+  const defaultModel =
+    {
+      anthropic: 'opus',
+      codex: 'gpt-5.4',
+      gemini: 'gemini-2.5-pro',
+      opencode: 'opencode/big-pickle',
+    }[providerId] ?? `${providerId}/default`;
+
   return {
     providerId,
     displayName: providerId,
@@ -139,7 +147,7 @@ function createTestProviderStatus(
     modelCatalogRefreshState: 'ready',
     statusMessage: null,
     detailMessage: null,
-    models: [],
+    models: [defaultModel],
     modelAvailability: [],
     runtimeCapabilities: null,
     subscriptionRateLimits: null,
@@ -162,9 +170,15 @@ function createTestProviderStatus(
       status: 'ready',
       fetchedAt: '2026-08-29T00:00:00.000Z',
       staleAt: '2100-08-29T00:10:00.000Z',
-      defaultModelId: null,
-      defaultLaunchModel: null,
-      models: [],
+      defaultModelId: defaultModel,
+      defaultLaunchModel: defaultModel,
+      models: [
+        {
+          id: defaultModel,
+          launchModel: defaultModel,
+          displayName: defaultModel,
+        },
+      ],
       diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
     },
   };
