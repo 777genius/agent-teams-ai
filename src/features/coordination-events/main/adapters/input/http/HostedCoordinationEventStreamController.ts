@@ -16,12 +16,20 @@ import {
   type HostedCoordinationResyncRequired,
   type ReplayCursor,
 } from '../../../../contracts';
-import type { ReplayCoordinationEventsInput } from '../../../../core/application';
-import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
+
 import {
   hostedCoordinationEventStreamAuthorizationIsCurrent as authorizationIsCurrent,
   type HostedCoordinationEventStreamCurrentAuthorization,
 } from './hostedCoordinationEventStreamAuthorization';
+import {
+  type HostedCoordinationEventStreamScheduler,
+  WakeSignal,
+} from './HostedCoordinationEventWakeSignal';
+
+import type { ReplayCoordinationEventsInput } from '../../../../core/application';
+import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
+
+export type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
 
 interface HostedCoordinationHttpSocket {
   readonly destroyed: boolean;
@@ -95,9 +103,6 @@ interface HostedCoordinationEventStreamAuthorizer {
 interface HostedCoordinationEventWakeupSource {
   subscribe(listener: CoordinationEventWakeupListener): () => void;
 }
-export interface HostedCoordinationEventStreamScheduler {
-  schedule(delayMs: number, callback: () => void): () => void;
-}
 interface HostedCoordinationEventStreamControllerOptions {
   readonly replay: HostedCoordinationEventReplay;
   readonly authorizer: HostedCoordinationEventStreamAuthorizer;
@@ -109,8 +114,6 @@ interface HostedCoordinationEventStreamControllerOptions {
   readonly maxFrameBytes?: number;
 }
 
-type WakeResult = 'wakeup' | 'heartbeat' | 'closed';
-
 interface PreparedStream {
   readonly authorization: HostedCoordinationEventStreamAuthorization;
   readonly requestedCursor: ReplayCursor;
@@ -119,47 +122,6 @@ interface PreparedStream {
   readonly wakeSignal: WakeSignal;
   readonly signal: AbortSignal;
   readonly closeStream: () => void;
-}
-
-class WakeSignal {
-  private versionValue = 0;
-  private readonly listeners = new Set<() => void>();
-
-  get version(): number {
-    return this.versionValue;
-  }
-  notify = (): void => {
-    this.versionValue += 1;
-    for (const listener of [...this.listeners]) listener();
-  };
-
-  wait(input: {
-    readonly afterVersion: number;
-    readonly delayMs: number;
-    readonly signal: AbortSignal;
-    readonly scheduler: HostedCoordinationEventStreamScheduler;
-  }): Promise<WakeResult> {
-    if (input.signal.aborted) return Promise.resolve('closed');
-    if (this.versionValue !== input.afterVersion) return Promise.resolve('wakeup');
-    return new Promise<WakeResult>((resolve) => {
-      let settled = false;
-      let cancelSchedule = (): void => undefined;
-      const finish = (result: WakeResult): void => {
-        if (settled) return;
-        settled = true;
-        cancelSchedule();
-        this.listeners.delete(onWakeup);
-        input.signal.removeEventListener('abort', onAbort);
-        resolve(result);
-      };
-      const onWakeup = (): void => finish('wakeup');
-      const onAbort = (): void => finish('closed');
-      cancelSchedule = input.scheduler.schedule(input.delayMs, () => finish('heartbeat'));
-      this.listeners.add(onWakeup);
-      input.signal.addEventListener('abort', onAbort, { once: true });
-      if (this.versionValue !== input.afterVersion) finish('wakeup');
-    });
-  }
 }
 
 function positiveBounded(value: number, field: string, maximum: number): number {
