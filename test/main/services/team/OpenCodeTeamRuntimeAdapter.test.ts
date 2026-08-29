@@ -987,13 +987,13 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(result.diagnostics).toContain('OpenCode launch result behavior fingerprint mismatch');
   });
 
-  it('retains a fresh OAuth execution proof for its immediate launch', async () => {
-    const oauthProof = executionProofWith({
-      credentialMode: 'oauth' as const,
+  it('retains a fresh API execution proof for its immediate launch', async () => {
+    const apiProof = executionProofWith({
+      credentialMode: 'api' as const,
       reusable: false,
     });
     const checkReadiness = vi.fn(async () =>
-      readiness({ state: 'ready', launchAllowed: true, executionProof: oauthProof })
+      readiness({ state: 'ready', launchAllowed: true, executionProof: apiProof })
     );
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
@@ -1009,7 +1009,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
-      expect.objectContaining({ executionProof: oauthProof })
+      expect.objectContaining({ executionProof: apiProof })
     );
   });
 

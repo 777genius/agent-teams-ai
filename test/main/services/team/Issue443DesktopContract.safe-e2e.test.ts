@@ -167,7 +167,13 @@ describe('issue #443 Desktop-owned fake E2E contract', () => {
       'wrong proofHash',
       (proof: OpenCodeExecutionProof) => ({ ...proof, proofHash: '9'.repeat(64) }),
     ],
-    ['missing proofHash', (proof: OpenCodeExecutionProof) => ({ ...proof, proofHash: undefined })],
+    [
+      'missing proofHash',
+      (proof: OpenCodeExecutionProof) => {
+        Reflect.set(proof, 'proofHash', undefined);
+        return proof;
+      },
+    ],
   ])('blocks dispatch for %s', async (_label, changeProof) => {
     const harness = contractHarness({ proof: changeProof(validProof()) });
     const result = await harness.adapter.launch(launchInput('run-invalid'));
@@ -419,13 +425,13 @@ function readiness(proof: OpenCodeExecutionProof): OpenCodeTeamLaunchReadiness {
     requiredToolsPresent: true,
     permissionBridgeReady: true,
     runtimeStoresReady: true,
-    supportLevel: 'supported',
+    supportLevel: 'production_supported',
     missing: [],
     diagnostics: [],
     executionProof: proof,
     evidence: {
       capabilitiesReady: true,
-      mcpToolProofRoute: 'execution',
+      mcpToolProofRoute: '/experimental/tool/ids',
       observedMcpTools: ['agent'],
       runtimeStoreReadinessReason: null,
     },
