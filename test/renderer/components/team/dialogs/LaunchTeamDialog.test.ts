@@ -16,6 +16,8 @@ const fetchCliProviderStatus = vi.fn<
 const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
+type TestCliStatus = Pick<CliInstallationStatus, 'providers'> &
+  Partial<Pick<CliInstallationStatus, 'flavor'>>;
 const createTeamDraftMock = vi.hoisted(() => ({
   state: {
     teamName: 'team-alpha',
@@ -64,7 +66,7 @@ const createTeamDraftMock = vi.hoisted(() => ({
 
 const storeState = {
   appConfig: { general: { multimodelEnabled: true } },
-  cliStatus: { providers: [] },
+  cliStatus: { providers: [] } as TestCliStatus,
   cliStatusLoading: false,
   cliProviderStatusLoading: {},
   cliProviderStatusByScope: {} as Record<string, any>,
@@ -575,6 +577,9 @@ import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDi
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { isTeamModelAvailableForUi } from '@renderer/utils/teamModelAvailability';
+import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
+
+import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 async function flush(): Promise<void> {
   await Promise.resolve();
@@ -582,11 +587,16 @@ async function flush(): Promise<void> {
   await Promise.resolve();
 }
 
-function createAuthoritativeProviderStatus(providerId: string, models: string[]) {
+function createAuthoritativeProviderStatus(
+  providerId: CliProviderId,
+  models: string[]
+): CliProviderStatus {
   return {
     providerId,
+    displayName: providerId,
     supported: true,
     authenticated: true,
+    authMethod: 'test',
     verificationState: 'verified',
     statusCheckOutcome: 'authoritative',
     models,
@@ -617,7 +627,11 @@ function createAuthoritativeProviderStatus(providerId: string, models: string[])
       diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
     },
     canLoginFromUi: false,
-    capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+    capabilities: {
+      teamLaunch: true,
+      oneShot: true,
+      extensions: createDefaultCliExtensionCapabilities(),
+    },
   };
 }
 
