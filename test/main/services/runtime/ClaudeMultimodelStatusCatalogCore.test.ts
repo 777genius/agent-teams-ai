@@ -291,7 +291,7 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     }
   );
 
-  it('accepts an explicitly present empty catalog without granting phantom models', async () => {
+  it('keeps an explicitly empty catalog as stale display-only evidence', async () => {
     execCliMock.mockImplementation(() =>
       commandResult(statusPayload({ modelCatalog: { ...catalog('unused'), models: [] } }))
     );
@@ -303,9 +303,10 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       'opencode'
     );
 
-    expect(result.modelCatalog).toMatchObject({ status: 'ready', models: [] });
-    expect(result.models).toEqual([]);
-    expect(result.capabilities.teamLaunch).toBe(true);
+    expect(result.modelCatalog).toMatchObject({ status: 'stale', models: [] });
+    expect(result.models).toEqual(['opencode/big-pickle']);
+    expect(result.modelCatalogRefreshState).toBe('error');
+    expect(result.capabilities.teamLaunch).toBe(false);
   });
 
   it('normalizes an exact project cwd and merges only catalog fields', async () => {

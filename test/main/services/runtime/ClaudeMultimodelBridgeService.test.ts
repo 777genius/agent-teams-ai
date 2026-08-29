@@ -160,7 +160,7 @@ describe('mergeProviderCatalogFields', () => {
     ...overrides,
   });
 
-  it('replaces obsolete model evidence with intentionally empty authoritative hydrated arrays', () => {
+  it('retains display evidence but revokes launch for an intentionally empty hydrated catalog', () => {
     const hydratedCatalog = {
       schemaVersion: 1 as const,
       providerId: 'codex' as const,
@@ -210,12 +210,18 @@ describe('mergeProviderCatalogFields', () => {
 
     const merged = mergeProviderCatalogFields(liveProvider, hydratedProvider);
 
-    expect(merged.models).toEqual([]);
-    expect(merged.modelAvailability).toEqual([]);
-    expect(merged.modelCatalog).toBe(hydratedCatalog);
-    expect(merged.modelCatalogRefreshState).toBe('ready');
+    expect(merged.models).toEqual(['obsolete-model']);
+    expect(merged.modelAvailability).toEqual([
+      {
+        modelId: 'obsolete-model',
+        status: 'available',
+        checkedAt: '2026-08-28T00:00:00.000Z',
+      },
+    ]);
+    expect(merged.modelCatalog).toMatchObject({ status: 'stale', models: [] });
+    expect(merged.modelCatalogRefreshState).toBe('error');
     expect(merged.authenticated).toBe(true);
-    expect(merged.capabilities.teamLaunch).toBe(true);
+    expect(merged.capabilities.teamLaunch).toBe(false);
   });
 
   it('preserves live status authority and its display pair across model-only hydration', () => {
