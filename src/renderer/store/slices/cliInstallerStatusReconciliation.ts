@@ -28,10 +28,16 @@ function mergeProviderCatalogCache(
       incomingProvider.modelCatalog.models.length > 0
     ) &&
     (currentProvider.models.length > 0 || (currentProvider.modelAvailability?.length ?? 0) > 0);
+  const incomingCatalogIsReady =
+    incomingProvider.modelCatalog?.providerId === incomingProvider.providerId &&
+    incomingProvider.modelCatalog.status === 'ready';
   const launchUnproved =
     incomingProvider.statusCheckOutcome !== 'authoritative' ||
     incomingProvider.statusCheckErrorCode != null ||
-    (incomingProvider.modelCatalog != null && incomingProvider.modelCatalog.status !== 'ready') ||
+    incomingProvider.verificationState !== 'verified' ||
+    (incomingProvider.modelCatalog != null && !incomingCatalogIsReady) ||
+    (incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
+      !incomingCatalogIsReady) ||
     catalogRetained ||
     modelEvidenceRetained;
   const modelCatalog =
@@ -113,10 +119,19 @@ export function reconcileCliProviderSnapshot(
   if (
     incomingProvider.statusCheckOutcome === 'authoritative' &&
     incomingProvider.statusCheckErrorCode == null &&
-    (incomingProvider.modelCatalog == null || incomingProvider.modelCatalog.status === 'ready') &&
+    incomingProvider.verificationState === 'verified' &&
+    (incomingProvider.modelCatalog == null ||
+      (incomingProvider.modelCatalog.providerId === incomingProvider.providerId &&
+        incomingProvider.modelCatalog.status === 'ready')) &&
+    (incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic !== true ||
+      (incomingProvider.modelCatalog?.providerId === incomingProvider.providerId &&
+        incomingProvider.modelCatalog.status === 'ready')) &&
     (!currentProvider ||
       (incomingProvider.modelCatalog != null && incomingProvider.models.length > 0) ||
-      (currentProvider.modelCatalog == null && currentProvider.models.length === 0))
+      (currentProvider.modelCatalog == null && currentProvider.models.length === 0) ||
+      (currentProvider.authenticated &&
+        currentProvider.statusCheckOutcome === 'authoritative' &&
+        currentProvider.verificationState === 'verified'))
   ) {
     return mergedProvider;
   }

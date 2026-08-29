@@ -567,7 +567,7 @@ function getRuntimeModelCatalogRefreshState(
   modelCatalog: CliProviderStatus['modelCatalog']
 ): NonNullable<CliProviderStatus['modelCatalogRefreshState']> {
   if (modelCatalog) {
-    return 'ready';
+    return modelCatalog.status === 'ready' ? 'ready' : 'error';
   }
 
   return runtimeStatus?.runtimeCapabilities?.modelCatalog?.dynamic === true ? 'loading' : 'idle';
@@ -976,16 +976,21 @@ export class ClaudeMultimodelBridgeService {
     }
     const modelCatalog = mapRuntimeProviderModelCatalog(providerId, runtimeStatus.modelCatalog);
     const statusCheck = resolveRuntimeProviderStatusCheck(runtimeStatus, providerId);
-    const isAuthoritative = statusCheck.statusCheckOutcome === 'authoritative';
+    const isAuthoritative =
+      statusCheck.statusCheckOutcome === 'authoritative' &&
+      runtimeStatus.verificationState === 'verified' &&
+      (runtimeStatus.modelCatalog == null ||
+        (modelCatalog?.providerId === providerId && modelCatalog.status === 'ready'));
 
     return {
       ...provider,
       supported: runtimeStatus.supported === true,
       authenticated: isAuthoritative && runtimeStatus.authenticated === true,
       authMethod: isAuthoritative ? (runtimeStatus.authMethod ?? null) : null,
-      verificationState: isAuthoritative
-        ? (runtimeStatus.verificationState ?? 'unknown')
-        : statusCheck.statusCheckOutcome === 'transient_error'
+      verificationState:
+        statusCheck.statusCheckOutcome === 'authoritative'
+          ? (runtimeStatus.verificationState ?? 'unknown')
+          : statusCheck.statusCheckOutcome === 'transient_error'
           ? 'error'
           : 'unknown',
       ...statusCheck,
@@ -1349,7 +1354,11 @@ export class ClaudeMultimodelBridgeService {
     snapshot: OpenCodeRuntimeVerifyResponse['snapshot']
   ): CliProviderStatus {
     if (!snapshot) {
-      return provider;
+      return sanitizeProviderStatusAuthority({
+        ...provider,
+        verificationState: 'unknown',
+        statusMessage: 'OpenCode live verification returned no evidence',
+      });
     }
 
     const diagnostics = snapshot.diagnostics ?? [];
@@ -1394,7 +1403,7 @@ export class ClaudeMultimodelBridgeService {
       },
     ];
 
-    return {
+    return sanitizeProviderStatusAuthority({
       ...provider,
       verificationState: liveIssuesPresent ? 'error' : 'verified',
       statusMessage: liveIssuesPresent
@@ -1413,7 +1422,7 @@ export class ClaudeMultimodelBridgeService {
                 : (provider.backend.authMethodDetail ?? null),
           }
         : provider.backend,
-    };
+    });
   }
 
   async getProviderStatus(
@@ -1465,6 +1474,10 @@ export class ClaudeMultimodelBridgeService {
           ) {
             return mergeProviderCatalogFields(provider, hydratedProvider);
           }
+          return createDegradedProviderStatus(
+            provider,
+            'Project-scoped catalog hydration returned no current catalog'
+          );
         } catch (error) {
           logger.warn(
             `Project-scoped provider catalog hydration failed for ${provider.providerId}: ${
@@ -1623,12 +1636,12 @@ export class ClaudeMultimodelBridgeService {
           error instanceof Error ? error.message : String(error)
         }`
       );
-      return {
+      return sanitizeProviderStatusAuthority({
         ...provider,
         verificationState: 'error',
         statusMessage: 'OpenCode live verification failed',
         detailMessage: error instanceof Error ? error.message : String(error),
-      };
+      });
     }
   }
 

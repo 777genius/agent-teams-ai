@@ -1254,7 +1254,9 @@ export class CliInstallerService {
         }
 
         const target = statusTarget;
-        const frontendProviders = filterFrontendMultimodelProviders(providersSnapshot);
+        const frontendProviders = filterFrontendMultimodelProviders(providersSnapshot).map(
+          sanitizeProviderStatusAuthority
+        );
         target.providers = frontendProviders;
         target.authLoggedIn = hasFrontendAuthenticatedProvider(frontendProviders);
         target.authMethod = getFrontendAuthenticatedProvider(frontendProviders)?.authMethod ?? null;

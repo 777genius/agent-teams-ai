@@ -158,6 +158,52 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     });
   });
 
+  it.each(['unknown', 'error'] as const)(
+    'rejects launch authority when successful status has %s verification',
+    async (verificationState) => {
+      execCliMock.mockImplementation(() =>
+        commandResult(
+          statusPayload({ verificationState, modelCatalog: catalog('opencode/big-pickle') })
+        )
+      );
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+
+      const result = await new ClaudeMultimodelBridgeService().getProviderStatus(
+        '/mock/runtime',
+        'opencode'
+      );
+
+      expect(result).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState,
+        statusCheckOutcome: 'authoritative',
+        capabilities: { teamLaunch: false },
+      });
+    }
+  );
+
+  it.each([
+    ['mismatched', { ...catalog('opencode/big-pickle'), providerId: 'codex' }],
+    ['non-ready', { ...catalog('opencode/big-pickle'), status: 'stale' }],
+    ['invalid', { providerId: 'opencode', status: 'ready' }],
+  ])('publishes supplied-but-%s catalog evidence without launch authority', async (_label, modelCatalog) => {
+    execCliMock.mockImplementation(() => commandResult(statusPayload({ modelCatalog })));
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+
+    const result = await new ClaudeMultimodelBridgeService().getProviderStatus(
+      '/mock/runtime',
+      'opencode'
+    );
+
+    expect(result.authenticated).toBe(false);
+    expect(result.authMethod).toBeNull();
+    expect(result.capabilities.teamLaunch).toBe(false);
+    expect(result.statusCheckOutcome).toBe('authoritative');
+  });
+
   it('normalizes an exact project cwd and merges only catalog fields', async () => {
     execCliMock.mockImplementation((_binary, args, options) => {
       const isSummary = (args as string[]).includes('--summary');

@@ -427,18 +427,16 @@ function reconcileCliInstallationStatus(
   current: CliInstallationStatus | null,
   incoming: CliInstallationStatus
 ): CliInstallationStatus {
-  if (
-    current?.flavor !== 'agent_teams_orchestrator' ||
-    incoming.flavor !== 'agent_teams_orchestrator'
-  ) {
+  if (incoming.flavor !== 'agent_teams_orchestrator') {
     if (current && isCliInstallationStatusContentEqual(current, incoming)) {
       return current;
     }
     return incoming;
   }
-  if (!incoming.installed) return incoming;
   const currentProvidersById = new Map(
-    current.providers.map((provider) => [provider.providerId, provider])
+    current?.flavor === 'agent_teams_orchestrator'
+      ? current.providers.map((provider) => [provider.providerId, provider])
+      : []
   );
   const incomingProviderIds = new Set(incoming.providers.map((provider) => provider.providerId));
   const providers = incoming.providers.map((incomingProvider) => {
@@ -452,7 +450,9 @@ function reconcileCliInstallationStatus(
     return reconciledProvider;
   });
 
-  for (const currentProvider of current.providers) {
+  for (const currentProvider of current?.flavor === 'agent_teams_orchestrator'
+    ? current.providers
+    : []) {
     if (
       !incomingProviderIds.has(currentProvider.providerId) &&
       isActiveMultimodelProviderId(currentProvider.providerId) &&
@@ -464,7 +464,9 @@ function reconcileCliInstallationStatus(
 
   const authenticatedProvider = getAuthenticatedProvider(providers);
 
-  const mergedProviders = areArraysEqual(providers, current.providers, Object.is)
+  const mergedProviders =
+    current?.flavor === 'agent_teams_orchestrator' &&
+    areArraysEqual(providers, current.providers, Object.is)
     ? current.providers
     : providers;
 
@@ -477,7 +479,7 @@ function reconcileCliInstallationStatus(
     authMethod: authenticatedProvider?.authMethod ?? null,
   };
 
-  if (isCliInstallationStatusContentEqual(current, merged)) {
+  if (current && isCliInstallationStatusContentEqual(current, merged)) {
     return current;
   }
 

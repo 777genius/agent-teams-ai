@@ -86,8 +86,18 @@ function getLegacyRuntimeProviderStatusCheck(
   return null;
 }
 
-function hasStaleCatalogEvidence(provider: CliProviderStatus): boolean {
-  return Boolean(provider.modelCatalog && provider.modelCatalog.status !== 'ready');
+function hasAuthoritativeLaunchEvidence(provider: CliProviderStatus): boolean {
+  const catalog = provider.modelCatalog;
+  const requiresCatalog = provider.runtimeCapabilities?.modelCatalog?.dynamic === true;
+  const catalogIsReady =
+    catalog?.providerId === provider.providerId && catalog.status === 'ready';
+  return (
+    provider.statusCheckOutcome === 'authoritative' &&
+    provider.statusCheckErrorCode == null &&
+    provider.verificationState === 'verified' &&
+    (!catalog || catalogIsReady) &&
+    (!requiresCatalog || catalogIsReady)
+  );
 }
 
 function isCompleteRuntimeProviderStatus(
@@ -262,11 +272,7 @@ export function mergeProviderStatusDisplayEvidence(
   const catalogRetained = incoming.modelCatalog == null && current.modelCatalog != null;
   const modelsRetained = hasRetainedModelEvidence(incoming, current);
   const launchUnproved =
-    incoming.statusCheckOutcome !== 'authoritative' ||
-    incoming.statusCheckErrorCode != null ||
-    hasStaleCatalogEvidence(incoming) ||
-    catalogRetained ||
-    modelsRetained;
+    !hasAuthoritativeLaunchEvidence(incoming) || catalogRetained || modelsRetained;
   const retainedCatalog = incoming.modelCatalog ?? current.modelCatalog ?? null;
   const modelCatalog =
     retainedCatalog && launchUnproved
@@ -279,7 +285,9 @@ export function mergeProviderStatusDisplayEvidence(
     authenticated: launchUnproved ? false : incoming.authenticated,
     authMethod: launchUnproved ? null : incoming.authMethod,
     verificationState: launchUnproved
-      ? incoming.statusCheckOutcome === 'transient_error'
+      ? incoming.verificationState === 'error' || incoming.verificationState === 'offline'
+        ? incoming.verificationState
+        : incoming.statusCheckOutcome === 'transient_error'
         ? 'error'
         : 'unknown'
       : incoming.verificationState,

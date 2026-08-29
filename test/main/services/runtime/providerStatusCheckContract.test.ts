@@ -289,4 +289,46 @@ describe('provider status check contract', () => {
       capabilities: { teamLaunch: false },
     });
   });
+
+  it.each(['unknown', 'error'] as const)(
+    'revokes authoritative launch claims when verification is %s',
+    (verificationState) => {
+      const sanitized = sanitizeProviderStatusAuthority(
+        providerStatus({ verificationState, authenticated: true, authMethod: 'retained' })
+      );
+
+      expect(sanitized).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState,
+        capabilities: { teamLaunch: false },
+        models: ['opencode/big-pickle'],
+        modelCatalog: { status: 'stale' },
+      });
+    }
+  );
+
+  it('requires an exact ready catalog for a dynamic provider', () => {
+    const withoutCatalog = sanitizeProviderStatusAuthority(
+      providerStatus({ modelCatalog: null, modelCatalogRefreshState: 'loading' })
+    );
+    const mismatchedCatalog = sanitizeProviderStatusAuthority(
+      providerStatus({
+        modelCatalog: providerStatus().modelCatalog
+          ? { ...providerStatus().modelCatalog!, providerId: 'codex' }
+          : null,
+      })
+    );
+
+    expect(withoutCatalog).toMatchObject({
+      authenticated: false,
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'loading',
+    });
+    expect(mismatchedCatalog).toMatchObject({
+      authenticated: false,
+      capabilities: { teamLaunch: false },
+      modelCatalog: { providerId: 'codex', status: 'stale' },
+    });
+  });
 });

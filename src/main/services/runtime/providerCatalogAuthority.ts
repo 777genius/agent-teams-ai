@@ -24,24 +24,26 @@ export function mergeProviderCatalogFields(
   liveProvider: CliProviderStatus,
   hydratedProvider: CliProviderStatus
 ): CliProviderStatus {
-  if (hydratedProvider.statusCheckOutcome !== 'authoritative') {
+  const hydratedCatalog = hydratedProvider.modelCatalog;
+  if (
+    hydratedProvider.providerId !== liveProvider.providerId ||
+    hydratedProvider.statusCheckOutcome !== 'authoritative' ||
+    hydratedProvider.statusCheckErrorCode != null ||
+    hydratedCatalog?.providerId !== liveProvider.providerId ||
+    hydratedCatalog.status !== 'ready'
+  ) {
     return createDegradedProviderStatus(
       liveProvider,
       hydratedProvider.detailMessage ??
         hydratedProvider.statusMessage ??
-        'Provider catalog hydration was not authoritative'
+        'Provider catalog hydration did not return an authoritative ready catalog'
     );
   }
-  const modelCatalog = hydratedProvider.modelCatalog ?? liveProvider.modelCatalog ?? null;
   return {
     ...liveProvider,
     models: hydratedProvider.models.length > 0 ? hydratedProvider.models : liveProvider.models,
-    modelCatalog,
-    modelCatalogRefreshState: modelCatalog
-      ? 'ready'
-      : hydratedProvider.modelCatalogRefreshState === 'error'
-        ? 'error'
-        : liveProvider.modelCatalogRefreshState,
+    modelCatalog: hydratedCatalog,
+    modelCatalogRefreshState: 'ready',
     runtimeCapabilities: mergeRuntimeCapabilitiesForCatalogHydration(
       liveProvider.runtimeCapabilities,
       hydratedProvider.runtimeCapabilities

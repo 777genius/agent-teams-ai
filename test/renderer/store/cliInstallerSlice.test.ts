@@ -1158,7 +1158,21 @@ describe('cliInstallerSlice', () => {
 
       await useStore.getState().bootstrapCliStatus({ multimodelEnabled: true });
 
-      expect(useStore.getState().cliStatus).toEqual(mockStatus);
+      expect(useStore.getState().cliStatus).toMatchObject({
+        installed: false,
+        launchError: 'spawn EACCES',
+        authLoggedIn: false,
+        authMethod: null,
+        providers: [
+          {
+            providerId: 'anthropic',
+            authenticated: false,
+            authMethod: null,
+            verificationState: 'error',
+            capabilities: { teamLaunch: false },
+          },
+        ],
+      });
       expect(useStore.getState().cliStatusLoading).toBe(false);
       expect(useStore.getState().cliProviderStatusLoading).toEqual({});
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();

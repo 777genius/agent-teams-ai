@@ -129,6 +129,7 @@ function createTestProviderStatus(
     authenticated,
     authMethod,
     verificationState: authenticated ? 'verified' : 'unknown',
+    statusCheckOutcome: 'authoritative',
     modelVerificationState: 'idle',
     modelCatalogRefreshState: 'idle',
     statusMessage: null,
@@ -345,6 +346,49 @@ describe('CliInstallerService', () => {
           ?.providers.some((provider) => provider.providerId === 'gemini')
       ).toBe(false);
       expect(service.getLatestStatusSnapshot()?.authLoggedIn).toBe(false);
+    });
+
+    it('sanitizes stale catalog authority before publishing aggregate authentication', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/agent_teams_orchestrator');
+      vi.mocked(execCli).mockResolvedValueOnce({ stdout: '2.3.4', stderr: '' });
+      const provider = createTestProviderStatus('opencode', true, 'opencode_managed');
+      provider.runtimeCapabilities = { modelCatalog: { dynamic: true, source: 'runtime' } };
+      provider.modelCatalog = {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'stale',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2026-08-29T00:10:00.000Z',
+        defaultModelId: 'openai/model',
+        defaultLaunchModel: 'openai/model',
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      };
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses').mockImplementation(
+        async (_binaryPath, onUpdate) => {
+          onUpdate?.([provider]);
+          return [provider];
+        }
+      );
+
+      const status = await service.getStatus();
+
+      expect(status).toMatchObject({ authLoggedIn: false, authMethod: null });
+      expect(status.providers[0]).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        modelCatalog: { status: 'stale' },
+        capabilities: { teamLaunch: false },
+      });
     });
 
     it('defers multimodel provider status probes during lightweight startup status checks', async () => {
@@ -584,6 +628,7 @@ describe('CliInstallerService', () => {
               authenticated: true,
               authMethod: 'oauth_token',
               verificationState: 'verified',
+              statusCheckOutcome: 'authoritative',
               modelVerificationState: 'idle',
               statusMessage: null,
               models: [],
@@ -599,6 +644,7 @@ describe('CliInstallerService', () => {
               authenticated: true,
               authMethod: 'oauth_token',
               verificationState: 'verified',
+              statusCheckOutcome: 'authoritative',
               modelVerificationState: 'idle',
               statusMessage: null,
               models: ['gpt-5.4', 'gpt-5.4-mini'],
