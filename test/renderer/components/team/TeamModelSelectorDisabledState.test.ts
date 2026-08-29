@@ -1631,7 +1631,9 @@ describe('TeamModelSelector disabled Codex models', () => {
       button.textContent?.includes('big-pickle')
     );
     expect(issueButton).not.toBeNull();
-    expect(issueButton?.getAttribute('aria-disabled')).toBe('false');
+    await act(async () => {
+      await vi.waitFor(() => expect(issueButton?.getAttribute('aria-disabled')).toBe('false'));
+    });
     expect(issueButton?.textContent).toContain('Ping not confirmed');
     expect(issueButton?.className).toContain('bg-amber-300/5');
     expect(issueButton?.className).toContain('border-0');
@@ -3848,7 +3850,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     const openCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('OpenCode')
     );
-    expect(openCodeButton?.hasAttribute('disabled')).toBe(false);
+    await act(async () => {
+      await vi.waitFor(() => expect(openCodeButton?.hasAttribute('disabled')).toBe(false));
+    });
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -4119,6 +4123,10 @@ describe('TeamModelSelector disabled Codex models', () => {
       )
     ).toBe(true);
     expect(host.textContent).not.toContain('SuperGrok');
+
+    await act(async () => {
+      await vi.waitFor(() => expect(copilotTab?.hasAttribute('disabled')).toBe(false));
+    });
 
     await act(async () => {
       copilotTab?.click();
@@ -5534,6 +5542,9 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
 
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-loading-openrouter"]')
@@ -5652,6 +5663,9 @@ describe('TeamModelSelector disabled Codex models', () => {
         })
       );
       await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(
