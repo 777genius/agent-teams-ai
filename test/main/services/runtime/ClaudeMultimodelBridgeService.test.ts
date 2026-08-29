@@ -1189,7 +1189,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(onUpdate.mock.calls.at(-1)?.[0]).toEqual(providers);
   });
 
-  it('hydrates model catalogs without overwriting live summary auth state', async () => {
+  it('rejects contradictory catalog hydration without overwriting live summary auth state', async () => {
     const summaryPayloads = {
       anthropic: {
         supported: true,
@@ -1337,8 +1337,10 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(hydratedCodex).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
-      statusMessage: null,
-      modelCatalogRefreshState: 'ready',
+      statusMessage: 'stale full status should not win',
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'error',
+      modelCatalog: { status: 'stale' },
     });
     expect(hydratedCodex?.modelCatalog?.models.map((model) => model.id)).toEqual(['gpt-5.4']);
     await vi.waitFor(() => {
@@ -1476,12 +1478,13 @@ describe('ClaudeMultimodelBridgeService', () => {
       authMethod: null,
       statusMessage: 'No OpenCode providers connected',
       capabilities: { teamLaunch: false },
-      modelCatalogRefreshState: 'ready',
+      modelCatalogRefreshState: 'error',
+      modelCatalog: { status: 'stale' },
       backend: { authMethodDetail: null },
     });
   });
 
-  it('hydrates a single provider catalog after summary refresh', async () => {
+  it('rejects a contradictory single-provider catalog after summary refresh', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
 
@@ -1576,10 +1579,12 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
-      statusMessage: null,
-      modelCatalogRefreshState: 'ready',
+      statusMessage: 'full status should not overwrite live summary',
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'error',
       modelCatalog: {
         defaultModelId: 'gpt-5.4',
+        status: 'stale',
       },
     });
     expect(
@@ -1739,9 +1744,12 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(secondUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
-      statusMessage: null,
+      statusMessage: 'fresh full status should not overwrite live summary',
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'error',
       modelCatalog: {
         defaultModelId: 'fresh-model',
+        status: 'stale',
       },
     });
   });
@@ -1961,12 +1969,14 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: true,
       authMethod: 'oauth_token',
-      statusMessage: null,
+      statusMessage: 'full status should not overwrite live summary',
+      capabilities: { teamLaunch: false },
       subscriptionRateLimits: {
         primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: 1_800 },
         secondary: null,
       },
-      modelCatalogRefreshState: 'ready',
+      modelCatalogRefreshState: 'error',
+      modelCatalog: { status: 'stale' },
     });
   });
 
@@ -2098,8 +2108,10 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(onCodexCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
       authenticated: true,
       authMethod: 'api_key',
-      statusMessage: null,
-      modelCatalogRefreshState: 'ready',
+      statusMessage: 'full status should not overwrite live summary',
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'error',
+      modelCatalog: { status: 'stale' },
     });
   });
 

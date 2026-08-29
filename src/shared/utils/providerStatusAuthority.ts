@@ -80,6 +80,8 @@ export function hasExactReadyDynamicProviderCatalog(provider: CliProviderStatus)
 export function hasAuthoritativeProviderLaunchEvidence(provider: CliProviderStatus): boolean {
   return (
     hasAuthoritativeProviderStatusEvidence(provider) &&
+    provider.authenticated === true &&
+    provider.capabilities.teamLaunch === true &&
     isProviderModelCatalogExactReady(provider) &&
     hasExactReadyDynamicProviderCatalog(provider)
   );

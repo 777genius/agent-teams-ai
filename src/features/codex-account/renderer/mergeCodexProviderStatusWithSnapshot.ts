@@ -1,4 +1,7 @@
-import { hasAuthoritativeProviderLaunchEvidence } from '@shared/utils/providerStatusAuthority';
+import {
+  hasAuthoritativeProviderLaunchEvidence,
+  hasAuthoritativeProviderStatusEvidence,
+} from '@shared/utils/providerStatusAuthority';
 
 import type { CodexAccountSnapshotDto } from '../contracts';
 import type { CliProviderStatus } from '@shared/types';
@@ -217,16 +220,18 @@ export function mergeCodexProviderStatusWithSnapshot(
     },
   };
 
+  const hasStatusAuthority = hasAuthoritativeProviderStatusEvidence(provider);
   if (hasAuthoritativeProviderLaunchEvidence(provider)) {
     return mergedProvider;
   }
 
   return {
     ...mergedProvider,
-    authenticated: false,
-    authMethod: null,
-    verificationState:
-      provider.verificationState === 'error' || provider.verificationState === 'offline'
+    authenticated: hasStatusAuthority ? provider.authenticated : false,
+    authMethod: hasStatusAuthority ? provider.authMethod : null,
+    verificationState: hasStatusAuthority
+      ? provider.verificationState
+      : provider.verificationState === 'error' || provider.verificationState === 'offline'
         ? provider.verificationState
         : 'unknown',
     capabilities: { ...mergedProvider.capabilities, teamLaunch: false },

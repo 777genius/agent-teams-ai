@@ -140,7 +140,7 @@ function createDynamicCatalogProvider(): CliProviderStatus {
       source: 'app-server',
       status: 'ready',
       fetchedAt: '2026-08-29T00:00:00.000Z',
-      staleAt: '2026-08-29T00:10:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
       defaultModelId: 'gpt-5.4',
       defaultLaunchModel: 'gpt-5.4',
       models: [],
@@ -162,6 +162,12 @@ function createAuthoritativeBaseCodexProvider(): CliProviderStatus {
 describe('mergeCodexProviderStatusWithSnapshot', () => {
   it.each([
     ['missing', { modelCatalog: null, modelCatalogRefreshState: 'loading' as const }],
+    [
+      'stale',
+      {
+        modelCatalog: { ...createDynamicCatalogProvider().modelCatalog!, status: 'stale' as const },
+      },
+    ],
     [
       'stale',
       {
@@ -199,7 +205,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
       expect(merged).toMatchObject({
         authenticated: false,
         authMethod: null,
-        verificationState: 'unknown',
+        verificationState: 'verified',
         capabilities: { teamLaunch: false },
         connection: { codex: { launchAllowed: true, effectiveAuthMode: 'chatgpt' } },
       });
@@ -272,6 +278,7 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
 
     expect(merged.authenticated).toBe(true);
     expect(merged.authMethod).toBe('chatgpt');
+    expect(merged.capabilities.teamLaunch).toBe(true);
     expect(merged.statusMessage).toBe('ChatGPT account ready');
     expect(merged.resolvedBackendId).toBe('codex-native');
     expect(merged.connection?.codex?.managedAccount?.email).toBe('belief@example.com');
@@ -283,6 +290,56 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
       selectable: true,
       state: 'ready',
       statusMessage: 'Ready',
+    });
+  });
+
+  it.each([
+    ['missing', { modelCatalog: null, modelCatalogRefreshState: 'loading' as const }],
+    [
+      'expired',
+      {
+        modelCatalog: {
+          ...createDynamicCatalogProvider().modelCatalog!,
+          staleAt: '2026-08-29T00:00:00.000Z',
+        },
+      },
+    ],
+    [
+      'malformed',
+      {
+        modelCatalog: { ...createDynamicCatalogProvider().modelCatalog!, fetchedAt: '' },
+      },
+    ],
+  ])('preserves authoritative auth but revokes launch when catalog evidence is %s', (_label, overrides) => {
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      { ...createAuthoritativeBaseCodexProvider(), ...overrides },
+      createReadyChatgptSnapshot()
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+      connection: { codex: { launchAllowed: true } },
+    });
+    expect(merged.modelCatalog?.status ?? null).toBe(overrides.modelCatalog === null ? null : 'stale');
+  });
+
+  it('keeps authoritative auth but revokes launch when live capability is disabled', () => {
+    const provider = createAuthoritativeBaseCodexProvider();
+    const merged = mergeCodexProviderStatusWithSnapshot(
+      { ...provider, capabilities: { ...provider.capabilities, teamLaunch: false } },
+      createReadyChatgptSnapshot()
+    );
+
+    expect(merged).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+      modelCatalog: { status: 'stale' },
+      connection: { codex: { launchAllowed: true } },
     });
   });
 
