@@ -13,6 +13,7 @@ const ruNotes: Record<string, string> = {
   'Native real-time mailbox': 'Нативный mailbox в реальном времени',
   'Mailboxes + handoffs': 'Mailbox и handoff',
   'Comments + @mentions': 'Комментарии и @mentions',
+  'Cross-session messaging, no shared cross-team task graph': 'Cross-session messaging без общего межкомандного графа задач',
   'Team mailbox, no UI': 'Командный mailbox, без UI',
   'Tasks can link to and block each other': 'Задачи могут связываться и блокировать друг друга',
   'Task deps + grouped work': 'Зависимости задач и группировка работ',
@@ -26,8 +27,8 @@ const ruNotes: Record<string, string> = {
   'Auto-attach, agents read & attach': 'Автоприкрепление, агенты читают и добавляют вложения',
   'Not task-level': 'Не на уровне задач',
   'Docs, attachments, work products': 'Документы, вложения, рабочие артефакты',
-  'Chat session only': 'Только сессия чата',
-  'Chat images only': 'Только изображения в чате',
+  'Prompt context, not task attachments': 'Контекст промпта, не вложения задачи',
+  'Prompt files/images, not task attachments': 'Файлы/изображения в промпте, не вложения задачи',
   'Accept / reject individual hunks': 'Принятие или отклонение отдельных фрагментов',
   'Bring your own review': 'Ревью нужно делать отдельно',
   'With Git support': 'С поддержкой Git',
@@ -41,8 +42,8 @@ const ruNotes: Record<string, string> = {
   'Live agents plan, delegate, work, and review together': 'Живые агенты вместе планируют, делят работу и проводят ревью',
   'Persistent teams with coordination and recovery': 'Постоянные команды с координацией и восстановлением',
   'Durable scheduled agents, less live peer teamwork': 'Надёжные агенты по расписанию, но меньше живой работы друг с другом',
-  'Parallel agents coordinated by one parent': 'Параллельные агенты под управлением одного главного агента',
-  'Experimental teams with known recovery limits': 'Экспериментальные команды с известными ограничениями восстановления',
+  'Parallel agents + subagents, no peer team': 'Параллельные агенты и субагенты, без равноправной команды',
+  'Experimental teams + cross-session messaging; recovery limits': 'Экспериментальные команды и cross-session messaging; ограничения восстановления',
   'Tasks wait for blockers automatically': 'Задачи автоматически ждут блокеры',
   'Dependency waves': 'Волны зависимостей',
   'Blockers + execution locks': 'Блокеры и execution locks',
@@ -51,13 +52,13 @@ const ruNotes: Record<string, string> = {
   'Merge queue': 'Merge queue',
   'Merge queue, no diff UI': 'Merge queue, без diff UI',
   'Approvals + governance': 'Подтверждения и управление',
-  'Approvals, but code review happens elsewhere': 'Подтверждения есть, но код-ревью проводится отдельно',
-  'Accept / reject individual changes': 'Принятие или отклонение отдельных изменений',
+  'Review gates, not inline code review': 'Review gates, но без встроенного inline code review',
+  'Local Agent Review + PR Bugbot': 'Локальный Agent Review и Bugbot для PR',
   'PR/BugBot only': 'Только PR/BugBot',
   'Agent review, no review UI': 'Ревью агентами, без интерфейса ревью',
   'Start free, no signup or API key': 'Бесплатный старт без регистрации и API-ключа',
   'Manual CLI stack': 'Ручной CLI-стек',
-  'One npx terminal command, less convenient than an app': 'Одна npx-команда в терминале, менее удобно, чем приложение',
+  'npx onboarding + browser app': 'Onboarding через npx и приложение в браузере',
   'CLI + env flag': 'CLI и env-флаг',
   'App install + account': 'Установка приложения и аккаунт',
   '5 columns, real-time': '5 колонок, в реальном времени',
@@ -88,7 +89,7 @@ const ruNotes: Record<string, string> = {
   '9 supported runtime and provider paths in one team': '9 runtime- и provider-путей в одной команде',
   'Many providers, terminal-first': 'Много провайдеров, terminal-first',
   'Bring your own agents/runtimes': 'Подключайте своих агентов и runtimes',
-  'Multi-model agents, no shared team': 'Мультимодельные агенты, без общей команды',
+  'Multi-model parent + subagents, no peer team': 'Мультимодельный родитель и субагенты, без равноправной команды',
   'Claude-only experimental teams': 'Экспериментальные команды только для Claude',
   'Teammates, tasks, blockers, handoffs, activity, logs': 'Участники, задачи, блокеры, передачи, активность, логи',
   'Agent tree + feed panels': 'Дерево агентов и панели ленты',
@@ -97,8 +98,8 @@ const ruNotes: Record<string, string> = {
   'Terminal team panel, no graphical UI': 'Командная панель в терминале, без графического UI',
   'Tasks, code, terminal, review, and teammates in one app': 'Задачи, код, терминал, ревью и участники в одном приложении',
   'Mail/feed/dashboard across tools': 'Почта, лента и панель между tools',
-  'Board + transcripts, less live teammate view': 'Доска и транскрипты, меньше live-вида участников',
-  'IDE chats/tasks, not team view': 'IDE-чаты/задачи, не командный вид',
+  'Board + task chats, less live teammate view': 'Доска и чаты задач, меньше live-вида участников',
+  'Agents Window, no peer team workspace': 'Agents Window, без workspace равноправной команды',
   'No desktop UI': 'Нет desktop UI',
   'Clear ready/stuck status with launch diagnostics': 'Понятный статус готовности и проблем с диагностикой запуска',
   'Working, stalled, and failed health with recovery controls': 'Статусы работы, зависания и ошибок с управлением восстановлением',
@@ -115,7 +116,7 @@ const ruNotes: Record<string, string> = {
   'Cost tiers + digest, no hard caps': 'Тарифные уровни и дайджест, без жёстких лимитов',
   'Per-agent budgets + hard stops': 'Бюджеты на агента и жёсткие остановки',
   'Usage + cloud spend limits': 'Usage и лимиты cloud-расходов',
-  '/usage + workspace limits': '/usage и лимиты workspace',
+  'Usage/org limits + print-mode hard cap': 'Лимиты usage/org и жёсткий лимит print mode',
   'OSS + free model with no auth, paid providers optional': 'OSS и бесплатная модель без авторизации, платные провайдеры опциональны',
   'OSS, runtime plans needed': 'OSS, нужны тарифы runtime',
   'OSS, self-hosted + infra': 'OSS, self-hosted и инфраструктура',
@@ -129,18 +130,19 @@ function note(text: string): string {
 
 const sourcesPrefix = computed(() => (
   locale.value === 'ru'
-    ? 'Факты Agent Teams проверены по локальному исходному коду 11 июля 2026; источники конкурентов проверены 11 июля 2026:'
-    : 'Agent Teams product facts checked in local source on July 11, 2026; competitor sources checked on July 11, 2026:'
+    ? 'Факты Agent Teams проверены по локальному исходному коду 27 августа 2026; источники конкурентов проверены 27 августа 2026:'
+    : 'Agent Teams product facts checked in local source on August 27, 2026; competitor sources checked on August 27, 2026:'
 ))
 
 const autonomyRatingNote = computed(() => (
   locale.value === 'ru'
-    ? 'Оценка показывает, насколько хорошо агенты общаются, делят работу и вместе доводят сложные задачи до конца.'
-    : 'Scores measure how well live agents communicate, divide work, and complete complex tasks together.'
+    ? 'Это качественная редакционная оценка документированных возможностей общения, владения задачами, зависимостей, завершения работы и ревью, а не результат бенчмарка.'
+    : 'Live collaboration scores are qualitative editorial assessments of documented communication, task ownership and dependencies, completion, and review capabilities, not benchmark results.'
 ))
 
 const ruSourceLabels: Record<string, string> = {
   'Agent Teams organizations feature': 'фича организаций Agent Teams',
+  'Agent Teams collaboration controller': 'контроллер совместной работы Agent Teams',
   'Agent Teams terminal workspace': 'терминальный workspace Agent Teams',
   'Agent Teams token usage budgets': 'бюджеты расхода токенов Agent Teams',
   'Agent Teams scheduled budget cap': 'лимит бюджета scheduled runs Agent Teams',
@@ -162,17 +164,19 @@ const ruSourceLabels: Record<string, string> = {
   'Cursor Cloud Agents': 'cloud agents Cursor',
   'Cursor Agent Review': 'agent review Cursor',
   'Cursor worktrees': 'worktrees Cursor',
-  'Cursor multitask agents': 'параллельные агенты Cursor',
-  'Cursor cloud subagents': 'cloud-субагенты Cursor',
+  'Cursor Agents Window': 'Agents Window Cursor',
+  'Cursor subagents': 'субагенты Cursor',
   'Cursor Models & Pricing': 'модели и цены Cursor',
   'Cursor Team Pricing': 'team pricing Cursor',
   'Claude Code CLI': 'Claude Code CLI',
   'Claude Code agent teams': 'команды агентов Claude Code',
+  'Claude Code cross-session messaging': 'cross-session messaging Claude Code',
   'Claude Code worktrees': 'worktrees Claude Code',
   'Claude Code subagents': 'сабагенты Claude Code',
   'Claude Code workflows': 'workflows Claude Code',
   'Claude Code costs': 'стоимость Claude Code',
   'Claude pricing': 'цены Claude',
+  'Claude Code release': 'релиз Claude Code',
 }
 
 function sourceLabel(label: string): string {
@@ -202,8 +206,8 @@ const rows = computed<ComparisonRow[]>(() => [
     us: { status: 'yes', power: 9, note: note('Live agents plan, delegate, work, and review together') },
     gastown: { status: 'yes', power: 8, note: note('Persistent teams with coordination and recovery') },
     paperclip: { status: 'partial', power: 7, note: note('Durable scheduled agents, less live peer teamwork') },
-    cursor: { status: 'partial', power: 6, note: note('Parallel agents coordinated by one parent') },
-    claudeCli: { status: 'partial', power: 7, note: note('Experimental teams with known recovery limits') },
+    cursor: { status: 'partial', power: 6, note: note('Parallel agents + subagents, no peer team') },
+    claudeCli: { status: 'partial', power: 7, note: note('Experimental teams + cross-session messaging; recovery limits') },
   },
   {
     feature: t('comparison.features.flexAutonomy'),
@@ -225,15 +229,15 @@ const rows = computed<ComparisonRow[]>(() => [
     feature: t('comparison.features.teamWorkspace'),
     us: { status: 'yes', note: note('Tasks, code, terminal, review, and teammates in one app') },
     gastown: { status: 'partial', note: note('Mail/feed/dashboard across tools') },
-    paperclip: { status: 'partial', note: note('Board + transcripts, less live teammate view') },
-    cursor: { status: 'partial', note: note('IDE chats/tasks, not team view') },
+    paperclip: { status: 'partial', note: note('Board + task chats, less live teammate view') },
+    cursor: { status: 'partial', note: note('Agents Window, no peer team workspace') },
     claudeCli: { status: 'no', note: note('No desktop UI') },
   },
   {
     feature: t('comparison.features.zeroSetup'),
     us: { status: 'yes', note: note('Start free, no signup or API key') },
     gastown: { status: 'no', note: note('Manual CLI stack') },
-    paperclip: { status: 'partial', note: note('One npx terminal command, less convenient than an app') },
+    paperclip: { status: 'partial', note: note('npx onboarding + browser app') },
     cursor: { status: 'partial', note: note('App install + account') },
     claudeCli: { status: 'partial', note: note('CLI + env flag') },
   },
@@ -257,8 +261,8 @@ const rows = computed<ComparisonRow[]>(() => [
     feature: t('comparison.features.reviewWorkflow'),
     us: { status: 'yes', note: note('Agent review plus accept, reject, and comment in the app') },
     gastown: { status: 'partial', note: note('Merge queue, no diff UI') },
-    paperclip: { status: 'partial', note: note('Approvals, but code review happens elsewhere') },
-    cursor: { status: 'yes', note: note('Accept / reject individual changes') },
+    paperclip: { status: 'partial', note: note('Review gates, not inline code review') },
+    cursor: { status: 'yes', note: note('Local Agent Review + PR Bugbot') },
     claudeCli: { status: 'partial', note: note('Agent review, no review UI') },
   },
   {
@@ -267,7 +271,7 @@ const rows = computed<ComparisonRow[]>(() => [
     gastown: { status: 'partial', note: note('Mailboxes + handoffs') },
     paperclip: { status: 'partial', note: note('Comments + @mentions') },
     cursor: { status: 'na' },
-    claudeCli: { status: 'no' },
+    claudeCli: { status: 'partial', note: note('Cross-session messaging, no shared cross-team task graph') },
   },
   {
     feature: t('comparison.features.linkedTasks'),
@@ -298,7 +302,7 @@ const rows = computed<ComparisonRow[]>(() => [
     us: { status: 'yes', note: note('9 supported runtime and provider paths in one team') },
     gastown: { status: 'yes', note: note('Many providers, terminal-first') },
     paperclip: { status: 'yes', note: note('Bring your own agents/runtimes') },
-    cursor: { status: 'partial', note: note('Multi-model agents, no shared team') },
+    cursor: { status: 'partial', note: note('Multi-model parent + subagents, no peer team') },
     claudeCli: { status: 'partial', note: note('Claude-only experimental teams') },
   },
   {
@@ -307,7 +311,7 @@ const rows = computed<ComparisonRow[]>(() => [
     gastown: { status: 'partial', note: note('Cost tiers + digest, no hard caps') },
     paperclip: { status: 'yes', note: note('Per-agent budgets + hard stops') },
     cursor: { status: 'partial', note: note('Usage + cloud spend limits') },
-    claudeCli: { status: 'partial', note: note('/usage + workspace limits') },
+    claudeCli: { status: 'partial', note: note('Usage/org limits + print-mode hard cap') },
   },
   {
     feature: t('comparison.features.worktree'),
@@ -338,8 +342,8 @@ const rows = computed<ComparisonRow[]>(() => [
     us: { status: 'yes', note: note('Auto-attach, agents read & attach') },
     gastown: { status: 'no', note: note('Not task-level') },
     paperclip: { status: 'yes', note: note('Docs, attachments, work products') },
-    cursor: { status: 'partial', note: note('Chat session only') },
-    claudeCli: { status: 'partial', note: note('Chat images only') },
+    cursor: { status: 'partial', note: note('Prompt context, not task attachments') },
+    claudeCli: { status: 'partial', note: note('Prompt files/images, not task attachments') },
   },
   {
     feature: t('comparison.features.price'),
@@ -360,18 +364,10 @@ const competitors = [
 ]
 
 const sourceLinks = [
-  {
-    label: 'Agent Teams organizations feature',
-    href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/organizations/README.md',
-  },
-  {
-    label: 'Agent Teams terminal workspace',
-    href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx',
-  },
-  {
-    label: 'Agent Teams token usage budgets',
-    href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/token-usage/contracts/dto.ts',
-  },
+  { label: 'Agent Teams organizations feature', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/organizations/README.md' },
+  { label: 'Agent Teams collaboration controller', href: 'https://github.com/777genius/agent-teams-ai/tree/main/agent-teams-controller/src/internal' },
+  { label: 'Agent Teams terminal workspace', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/terminal-workspace/renderer/ui/TerminalWorkspacePanel.tsx' },
+  { label: 'Agent Teams token usage budgets', href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/features/token-usage/contracts/dto.ts' },
   {
     label: 'Agent Teams scheduled budget cap',
     href: 'https://github.com/777genius/agent-teams-ai/blob/main/src/main/services/schedule/ScheduledTaskExecutor.ts',
@@ -424,23 +420,25 @@ const sourceLinks = [
     label: 'Paperclip work products',
     href: 'https://github.com/paperclipai/paperclip/blob/master/packages/shared/src/validators/work-product.ts',
   },
-  { label: 'Paperclip release', href: 'https://github.com/paperclipai/paperclip/releases/tag/v2026.707.0' },
-  { label: 'Cursor terminal', href: 'https://cursor.com/docs/agent/terminal' },
+  { label: 'Paperclip release', href: 'https://github.com/paperclipai/paperclip/releases/tag/v2026.824.1' },
+  { label: 'Cursor terminal', href: 'https://cursor.com/docs/agent/tools/terminal' },
   { label: 'Cursor Cloud Agents', href: 'https://cursor.com/docs/cloud-agent' },
   { label: 'Cursor Agent Review', href: 'https://cursor.com/docs/agent/agent-review' },
   { label: 'Cursor Bugbot', href: 'https://cursor.com/docs/bugbot' },
   { label: 'Cursor worktrees', href: 'https://cursor.com/docs/configuration/worktrees' },
-  { label: 'Cursor multitask agents', href: 'https://cursor.com/changelog/04-24-26' },
-  { label: 'Cursor cloud subagents', href: 'https://cursor.com/changelog/cloud-in-agents-window' },
+  { label: 'Cursor Agents Window', href: 'https://cursor.com/docs/agent/agents-window' },
+  { label: 'Cursor subagents', href: 'https://cursor.com/docs/subagents' },
   { label: 'Cursor Models & Pricing', href: 'https://cursor.com/docs/models-and-pricing' },
   { label: 'Cursor Team Pricing', href: 'https://cursor.com/docs/account/teams/pricing' },
   { label: 'Claude Code CLI', href: 'https://code.claude.com/docs/en/cli-usage' },
   { label: 'Claude Code agent teams', href: 'https://code.claude.com/docs/en/agent-teams' },
+  { label: 'Claude Code cross-session messaging', href: 'https://code.claude.com/docs/en/cross-session-messaging' },
   { label: 'Claude Code worktrees', href: 'https://code.claude.com/docs/en/worktrees' },
   { label: 'Claude Code subagents', href: 'https://code.claude.com/docs/en/sub-agents' },
-  { label: 'Claude Code workflows', href: 'https://code.claude.com/docs/en/common-workflows' },
+  { label: 'Claude Code workflows', href: 'https://code.claude.com/docs/en/workflows' },
   { label: 'Claude Code costs', href: 'https://code.claude.com/docs/en/costs' },
   { label: 'Claude pricing', href: 'https://claude.com/pricing' },
+  { label: 'Claude Code release', href: 'https://github.com/anthropics/claude-code/releases/tag/v2.1.246' },
 ]
 
 onMounted(() => {
