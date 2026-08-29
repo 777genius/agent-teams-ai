@@ -139,7 +139,11 @@ function projectProviderAuthority(provider: CliProviderStatus, now: number): Cli
         ? { ...structuredClone(provider.modelCatalog), status: 'stale' }
         : provider.modelCatalog && structuredClone(provider.modelCatalog),
     modelCatalogRefreshState:
-      provider.modelCatalog && !catalogFresh ? 'error' : provider.modelCatalogRefreshState,
+      provider.modelCatalog &&
+      !catalogFresh &&
+      provider.modelCatalogRefreshState !== 'loading'
+        ? 'error'
+        : provider.modelCatalogRefreshState,
     capabilities: {
       ...projected.capabilities,
       teamLaunch:
@@ -408,9 +412,7 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
     const nextProviders = hasProvider
       ? cached.value.providers.map((provider) =>
           provider.providerId === providerStatus.providerId
-            ? hasAuthoritativeProviderStatusEvidence(providerStatus)
-              ? providerStatus
-              : mergeProviderStatusDisplayEvidence(providerStatus, provider)
+            ? mergeProviderStatusDisplayEvidence(providerStatus, provider)
             : provider
         )
       : [...cached.value.providers, providerStatus];

@@ -32,7 +32,6 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
-import { hasAuthoritativeProviderStatusEvidence } from '@shared/utils/providerStatusAuthority';
 import { createHash } from 'crypto';
 import { createWriteStream, existsSync, promises as fsp } from 'fs';
 import http from 'http';
@@ -785,9 +784,7 @@ export class CliInstallerService {
     const nextProviders = hasProvider
       ? this.latestStatusSnapshot.providers.map((provider) =>
           provider.providerId === providerStatus.providerId
-            ? hasAuthoritativeProviderStatusEvidence(providerStatus)
-              ? providerStatus
-              : mergeProviderStatusDisplayEvidence(providerStatus, provider)
+            ? mergeProviderStatusDisplayEvidence(providerStatus, provider)
             : provider
         )
       : [...this.latestStatusSnapshot.providers, providerStatus];

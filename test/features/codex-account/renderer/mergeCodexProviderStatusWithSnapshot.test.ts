@@ -293,6 +293,67 @@ describe('mergeCodexProviderStatusWithSnapshot', () => {
     });
   });
 
+  it('revokes authoritative provider auth and launch when the account snapshot disallows launch', () => {
+    const merged = mergeCodexProviderStatusWithSnapshot(createAuthoritativeBaseCodexProvider(), {
+      ...createReadyChatgptSnapshot(),
+      launchAllowed: false,
+      launchIssueMessage: 'The Codex account is no longer authorized.',
+    });
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+      modelCatalog: { status: 'stale' },
+      connection: { codex: { launchAllowed: false } },
+    });
+  });
+
+  it('preserves a logged-out account catalog only as stale display evidence', () => {
+    const provider = createAuthoritativeBaseCodexProvider();
+    const merged = mergeCodexProviderStatusWithSnapshot(provider, {
+      ...createReadyChatgptSnapshot(),
+      effectiveAuthMode: null,
+      launchAllowed: false,
+      launchIssueMessage: 'Connect a ChatGPT account to use your Codex subscription.',
+      launchReadinessState: 'missing_auth',
+      managedAccount: null,
+      apiKey: {
+        available: false,
+        source: null,
+        sourceLabel: null,
+      },
+      requiresOpenaiAuth: true,
+      localAccountArtifactsPresent: false,
+      localActiveChatgptAccountPresent: false,
+      rateLimits: null,
+    });
+
+    expect(merged).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      capabilities: { teamLaunch: false },
+      modelCatalog: {
+        ...provider.modelCatalog,
+        status: 'stale',
+      },
+      connection: {
+        codex: {
+          effectiveAuthMode: null,
+          launchAllowed: false,
+          launchReadinessState: 'missing_auth',
+          managedAccount: null,
+        },
+      },
+    });
+    expect(merged.models).toEqual(provider.models);
+    expect(merged.availableBackends?.find((option) => option.id === 'codex-native')).toMatchObject({
+      available: false,
+      state: 'authentication-required',
+    });
+  });
+
   it.each([
     ['missing', { modelCatalog: null, modelCatalogRefreshState: 'loading' as const }],
     [

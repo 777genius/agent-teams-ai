@@ -1081,6 +1081,7 @@ describe('CliInstallerService', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'idle',
           statusMessage: null,
           detailMessage: null,
@@ -1149,6 +1150,7 @@ describe('CliInstallerService', () => {
         authenticated: true,
         authMethod: 'opencode_managed',
         verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
         modelVerificationState: 'idle',
         statusMessage: null,
         detailMessage: null,
@@ -1188,9 +1190,10 @@ describe('CliInstallerService', () => {
         'openai/gpt-5.4',
       ]);
       expect(opencode).toMatchObject({
-        authenticated: false,
-        authMethod: null,
+        authenticated: true,
+        authMethod: 'opencode_managed',
         capabilities: { teamLaunch: false },
+        modelCatalog: { status: 'stale' },
         modelCatalogRefreshState: 'loading',
       });
     });
