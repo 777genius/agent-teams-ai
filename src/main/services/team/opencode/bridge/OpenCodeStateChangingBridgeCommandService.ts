@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 
+import { isLowercaseSha256 } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
+
 import {
   assertBridgeEvidenceCanCommitToRuntimeStores,
   createOpenCodeBridgeIdempotencyKey,
@@ -115,6 +117,7 @@ export class OpenCodeStateChangingBridgeCommandService {
     cwd: string;
     timeoutMs: number;
   }): Promise<OpenCodeBridgeResult<TData>> {
+    assertLaunchBehaviorFingerprint(input.command, input.behaviorFingerprint, input.body);
     const normalizedLaneId = input.laneId ?? null;
     const manifest = await this.manifestReader.read(input.teamName, normalizedLaneId);
     const enforceManifestHighWatermark = commandRequiresRuntimeStoreManifestPrecondition(
@@ -254,6 +257,11 @@ export class OpenCodeStateChangingBridgeCommandService {
             input.body
           ),
         });
+        assertLaunchResultBehaviorFingerprint(
+          input.command,
+          input.behaviorFingerprint,
+          result.data
+        );
       } catch (error) {
         await this.ledger.markFailed({
           idempotencyKey,
@@ -340,6 +348,35 @@ export class OpenCodeStateChangingBridgeCommandService {
         : 'OpenCode bridge command timed out; outcome must be reconciled before retry',
       createdAt: completedAt,
     });
+  }
+}
+
+function assertLaunchBehaviorFingerprint(
+  command: OpenCodeBridgeCommandName,
+  behaviorFingerprint: string | null,
+  body: unknown
+): void {
+  if (command !== 'opencode.launchTeam') {
+    return;
+  }
+  if (!isLowercaseSha256(behaviorFingerprint)) {
+    throw new Error('OpenCode launch requires a lowercase SHA-256 behavior fingerprint');
+  }
+  if (!isRecord(body) || body.expectedBehaviorFingerprint !== behaviorFingerprint) {
+    throw new Error('OpenCode launch behavior fingerprint does not match its command body');
+  }
+}
+
+function assertLaunchResultBehaviorFingerprint(
+  command: OpenCodeBridgeCommandName,
+  expectedBehaviorFingerprint: string | null,
+  data: unknown
+): void {
+  if (command !== 'opencode.launchTeam') {
+    return;
+  }
+  if (!isRecord(data) || data.expectedBehaviorFingerprint !== expectedBehaviorFingerprint) {
+    throw new Error('OpenCode launch result behavior fingerprint mismatch');
   }
 }
 

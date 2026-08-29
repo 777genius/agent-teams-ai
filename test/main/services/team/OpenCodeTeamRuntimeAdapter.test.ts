@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 import {
+  createOpenCodeCanonicalProjectPathFingerprint,
+  createOpenCodeExecutionProofHash,
+  createOpenCodeExpectedBehaviorFingerprint,
+} from '../../../../src/main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
+import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeBridgePort,
   type TeamRuntimeLaunchInput,
@@ -152,6 +157,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
               message: 'alice: sample reconcile diagnostic',
             },
           ],
+          expectedBehaviorFingerprint: expectedBehaviorFingerprint('/repo'),
         }) satisfies OpenCodeLaunchTeamCommandData
     );
     const bridge = bridgePort(
@@ -527,11 +533,18 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const worktreePath = '/tmp/generated-worktrees/alice';
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >(async () => successfulOpenCodeLaunchData());
-    const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
-      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-worktree')),
-      launchOpenCodeTeam,
-    });
+    >(async () => successfulOpenCodeLaunchData({ projectPath: worktreePath }));
+    const bridge = bridgePort(
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        executionProof: executionProofFor(worktreePath, 'openai/gpt-5.4-mini'),
+      }),
+      {
+        getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-worktree')),
+        launchOpenCodeTeam,
+      }
+    );
     const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
 
     const result = await adapter.launch(
@@ -598,6 +611,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       },
       warnings: [],
       diagnostics: [],
+      expectedBehaviorFingerprint: expectedBehaviorFingerprint('/repo'),
     }));
     const bridge = bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
       getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-lead')),
@@ -923,15 +937,61 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     await adapter.launch(launchInput());
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
-    expect(launchOpenCodeTeam).toHaveBeenCalledWith(expect.objectContaining({ executionProof }));
+    expect(launchOpenCodeTeam).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executionProof,
+        expectedBehaviorFingerprint:
+          executionProof.expectedBehaviorEvidence.expectedBehaviorFingerprint,
+      })
+    );
   });
 
-  it('does not reuse OAuth execution proof across prepare and launch', async () => {
-    const oauthProof = {
-      ...reusableExecutionProof(),
+  it('blocks missing behavior evidence before state-changing dispatch', async () => {
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >();
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({ state: 'ready', launchAllowed: true, executionProof: undefined })
+      ),
+      getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.diagnostics).toContain(
+      'OpenCode launch requires fresh expected behavior evidence for the selected model'
+    );
+    expect(launchOpenCodeTeam).not.toHaveBeenCalled();
+  });
+
+  it('rejects a ready launch result committed with another behavior digest', async () => {
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(async () => ({
+      ...successfulOpenCodeLaunchData(),
+      expectedBehaviorFingerprint: 'f'.repeat(64),
+    }));
+    const adapter = new OpenCodeTeamRuntimeAdapter(
+      bridgePort(readiness({ state: 'ready', launchAllowed: true }), {
+        getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-proof')),
+        launchOpenCodeTeam,
+      })
+    );
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.diagnostics).toContain('OpenCode launch result behavior fingerprint mismatch');
+  });
+
+  it('retains a fresh OAuth execution proof for its immediate launch', async () => {
+    const oauthProof = executionProofWith({
       credentialMode: 'oauth' as const,
       reusable: false,
-    };
+    });
     const checkReadiness = vi.fn(async () =>
       readiness({ state: 'ready', launchAllowed: true, executionProof: oauthProof })
     );
@@ -949,7 +1009,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
 
     expect(checkReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
-      expect.not.objectContaining({ executionProof: expect.anything() })
+      expect.objectContaining({ executionProof: oauthProof })
     );
   });
 
@@ -1299,6 +1359,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           },
           warnings: [],
           diagnostics: [],
+          expectedBehaviorFingerprint: expectedBehaviorFingerprint('/repo'),
         }) satisfies OpenCodeLaunchTeamCommandData
     );
     const adapter = new OpenCodeTeamRuntimeAdapter(
@@ -1386,10 +1447,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           readiness({
             state: 'ready',
             launchAllowed: true,
-            executionProof: {
-              ...reusableExecutionProof(),
-              capabilitySnapshotId,
-            },
+            executionProof: executionProofWith({ capabilitySnapshotId }),
           })
         );
       }
@@ -1662,6 +1720,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           ],
           manifestHighWatermark: null,
           runtimeStoreManifestHighWatermark: null,
+          expectedBehaviorFingerprint: expectedBehaviorFingerprint('/repo'),
         }) satisfies OpenCodeLaunchTeamCommandData
     );
     const adapter = new OpenCodeTeamRuntimeAdapter(
@@ -2602,11 +2661,24 @@ function runtimeSnapshot(capabilitySnapshotId: string) {
 }
 
 function reusableExecutionProof() {
-  return {
+  return executionProofFor('/repo', 'openai/gpt-5.4-mini');
+}
+
+function executionProofWith(
+  changes: Partial<Omit<ReturnType<typeof reusableExecutionProof>, 'proofHash'>>
+) {
+  const { proofHash: _proofHash, ...unsigned } = reusableExecutionProof();
+  const changed = { ...unsigned, ...changes };
+  return { ...changed, proofHash: createOpenCodeExecutionProofHash(changed) };
+}
+
+function executionProofFor(projectPath: string, fullModelId: string) {
+  const tuple = expectedBehaviorTuple(projectPath, fullModelId);
+  const unsigned = {
     schemaVersion: 1 as const,
     providerId: 'opencode' as const,
-    modelId: 'openai/gpt-5.4-mini',
-    projectPath: '/repo',
+    modelId: fullModelId,
+    projectPath,
     profileRootKey: 'profile-root',
     projectBehaviorFingerprint: 'behavior-v1',
     managedConfigFingerprint: 'config-v1',
@@ -2619,12 +2691,16 @@ function reusableExecutionProof() {
     reusable: true,
     verifiedAt: new Date(Date.now() - 1_000).toISOString(),
     expiresAt: new Date(Date.now() + 45_000).toISOString(),
-    proofHash: 'proof-hash',
+    expectedBehaviorEvidence: {
+      ...tuple,
+      expectedBehaviorFingerprint: createOpenCodeExpectedBehaviorFingerprint(tuple),
+    },
   };
+  return { ...unsigned, proofHash: createOpenCodeExecutionProofHash(unsigned) };
 }
 
 function successfulOpenCodeLaunchData(
-  overrides: { model?: string } = {}
+  overrides: { model?: string; projectPath?: string } = {}
 ): OpenCodeLaunchTeamCommandData {
   return {
     runId: 'run-1',
@@ -2645,6 +2721,12 @@ function successfulOpenCodeLaunchData(
     },
     warnings: [],
     diagnostics: [],
+    expectedBehaviorFingerprint: createOpenCodeExpectedBehaviorFingerprint(
+      expectedBehaviorTuple(
+        overrides.projectPath ?? '/repo',
+        overrides.model ?? 'openai/gpt-5.4-mini'
+      )
+    ),
   };
 }
 
@@ -2717,7 +2799,7 @@ function launchInput(overrides: Partial<TeamRuntimeLaunchInput> = {}): TeamRunti
 function readiness(
   overrides: Partial<OpenCodeTeamLaunchReadiness> = {}
 ): OpenCodeTeamLaunchReadiness {
-  return {
+  const result: OpenCodeTeamLaunchReadiness = {
     state: 'adapter_disabled',
     launchAllowed: false,
     modelId: 'openai/gpt-5.4-mini',
@@ -2741,6 +2823,33 @@ function readiness(
     },
     ...overrides,
   };
+  if (
+    result.launchAllowed &&
+    !Object.prototype.hasOwnProperty.call(overrides, 'executionProof') &&
+    !result.executionProof &&
+    result.modelId
+  ) {
+    result.executionProof = executionProofFor('/repo', result.modelId);
+  }
+  return result;
+}
+
+function expectedBehaviorTuple(projectPath: string, fullModelId: string) {
+  return {
+    canonicalProjectPathFingerprint: createOpenCodeCanonicalProjectPathFingerprint(projectPath),
+    modelProviderId: fullModelId.slice(0, fullModelId.indexOf('/')).toLowerCase(),
+    fullModelId,
+    projectBehaviorFingerprint: 'c'.repeat(64),
+    effectiveConfigFingerprint: 'd'.repeat(64),
+    effectiveSelectedAuthFingerprint: 'e'.repeat(64),
+  };
+}
+
+function expectedBehaviorFingerprint(
+  projectPath: string,
+  fullModelId = 'openai/gpt-5.4-mini'
+): string {
+  return createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorTuple(projectPath, fullModelId));
 }
 
 function launchSnapshot(): PersistedTeamLaunchSnapshot {

@@ -1,5 +1,10 @@
 import { randomUUID } from 'crypto';
 
+import {
+  freshOpenCodeExecutionProof,
+  openCodeReadinessArtifactKey,
+  reusableOpenCodeExecutionProof,
+} from '../opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
 
@@ -28,7 +33,6 @@ import type {
   OpenCodeStopTeamCommandData,
   OpenCodeTeamMemberLaunchBridgeState,
 } from '../opencode/bridge/OpenCodeBridgeCommandContract';
-import type { OpenCodeExecutionProof } from '../opencode/readiness/OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 import type {
@@ -146,38 +150,6 @@ const OPEN_CODE_READINESS_RETRY_DELAYS_MS = [750, 2_000] as const;
 type OpenCodeTeamLaunchReadinessInput = Parameters<
   OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
 >[0];
-
-function openCodeReadinessArtifactKey(input: OpenCodeTeamLaunchReadinessInput): string {
-  return JSON.stringify([
-    normalizeOpenCodeProjectIdentity(input.projectPath),
-    input.selectedModel?.trim() ?? null,
-    input.requireExecutionProbe,
-  ]);
-}
-
-function reusableOpenCodeExecutionProof(
-  readiness: OpenCodeTeamLaunchReadiness | undefined,
-  input: OpenCodeTeamLaunchReadinessInput
-): OpenCodeExecutionProof | null {
-  const proof = readiness?.executionProof;
-  if (
-    !proof ||
-    !proof.reusable ||
-    (proof.credentialMode !== 'api' && proof.credentialMode !== 'none')
-  ) {
-    return null;
-  }
-  const normalizedExpected = normalizeOpenCodeProjectIdentity(input.projectPath);
-  const normalizedProofProject = normalizeOpenCodeProjectIdentity(proof.projectPath);
-  if (
-    proof.modelId !== readiness?.modelId ||
-    normalizedProofProject !== normalizedExpected ||
-    Date.parse(proof.expiresAt) <= Date.now() + 1_000
-  ) {
-    return null;
-  }
-  return proof;
-}
 
 function sleepOpenCodeReadinessRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -405,14 +377,19 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           readinessInput.selectedModel,
           readinessInput.requireExecutionProbe
         ) ?? null);
-    let executionProof = reusableOpenCodeExecutionProof(
-      this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
-        this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
-      readinessInput
-    );
-    if (executionProof?.capabilitySnapshotId !== runtimeSnapshot?.capabilitySnapshotId) {
-      executionProof = null;
+    let proofBinding: ReturnType<typeof freshOpenCodeExecutionProof>;
+    try {
+      proofBinding = freshOpenCodeExecutionProof(
+        this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
+          this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
+        { projectPath: input.cwd, fullModelId: selectedModel }
+      );
+    } catch (error) {
+      return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+        error instanceof Error ? error.message : String(error),
+      ]);
     }
+    let executionProof = proofBinding.proof;
     if (
       !skipReadinessPreflight &&
       this.bridge.getLastOpenCodeRuntimeSnapshot &&
@@ -447,6 +424,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       }),
       leadPrompt: input.prompt?.trim() ?? '',
       expectedCapabilitySnapshotId: snapshot?.capabilitySnapshotId ?? null,
+      expectedBehaviorFingerprint: proofBinding.expectedBehaviorFingerprint,
       manifestHighWatermark: null,
       ...(executionProof ? { executionProof } : {}),
       ...(recoveryAttemptId ? { capabilitySnapshotRecoveryAttemptId: recoveryAttemptId } : {}),
@@ -497,13 +475,17 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         ) ?? null;
       if (refreshedSnapshot?.capabilitySnapshotId) {
         runtimeSnapshot = refreshedSnapshot;
-        executionProof = reusableOpenCodeExecutionProof(
-          this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
-            this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
-          readinessInput
-        );
-        if (executionProof?.capabilitySnapshotId !== runtimeSnapshot.capabilitySnapshotId) {
-          executionProof = null;
+        try {
+          proofBinding = freshOpenCodeExecutionProof(
+            this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
+              this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
+            { projectPath: input.cwd, fullModelId: selectedModel }
+          );
+          executionProof = proofBinding.proof;
+        } catch (error) {
+          return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+            error instanceof Error ? error.message : String(error),
+          ]);
         }
         launchWarnings = mergeDiagnostics(launchWarnings, [
           ...refreshed.warnings,
@@ -525,6 +507,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       }
     }
 
+    if (
+      data.teamLaunchState === 'ready' &&
+      data.expectedBehaviorFingerprint !== proofBinding.expectedBehaviorFingerprint
+    ) {
+      return blockedLaunchResult(input, 'opencode_launch_behavior_fingerprint_mismatch', [
+        'OpenCode launch result behavior fingerprint mismatch',
+      ]);
+    }
     return mapOpenCodeLaunchDataToRuntimeResult(input, data, launchWarnings);
   }
 

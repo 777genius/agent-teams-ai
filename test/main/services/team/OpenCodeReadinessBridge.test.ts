@@ -1169,6 +1169,7 @@ describe('OpenCodeReadinessBridge', () => {
         members: [],
         leadPrompt: '',
         expectedCapabilitySnapshotId: 'cap-1',
+        expectedBehaviorFingerprint: 'a'.repeat(64),
         manifestHighWatermark: 0,
       })
     ).resolves.toMatchObject({
@@ -1184,6 +1185,7 @@ describe('OpenCodeReadinessBridge', () => {
         laneId: 'primary',
         runId: 'run-1',
         capabilitySnapshotId: 'cap-1',
+        behaviorFingerprint: 'a'.repeat(64),
         cwd: '/repo',
       })
     );

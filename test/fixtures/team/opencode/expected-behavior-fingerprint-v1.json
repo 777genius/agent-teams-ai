@@ -1,0 +1,85 @@
+{
+  "schema": "agent-teams.opencode.expected-behavior-fixtures/v1",
+  "cases": [
+    {
+      "name": "baseline",
+      "canonicalProjectPathFingerprint": "adb7c4b03c2a45944679bd43f90a74d024e1c1e6fe2c1a1dcd53319c0c9f3bc1",
+      "modelProviderId": "deepinfra",
+      "fullModelId": "deepinfra/deepseek-ai/DeepSeek-V3.2",
+      "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
+      "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
+      "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
+      "expectedBehaviorFingerprint": "24c90d07dabd7df2da360970e41f28657b043649c4028e50f78ec986bafaf501"
+    },
+    {
+      "name": "project-path-changed",
+      "canonicalProjectPathFingerprint": "5e06dfd2fd18d5deaeafae3fb2d58ee3fcca6b1e61e30c208465cf3df97cdcaa",
+      "modelProviderId": "deepinfra",
+      "fullModelId": "deepinfra/deepseek-ai/DeepSeek-V3.2",
+      "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
+      "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
+      "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
+      "expectedBehaviorFingerprint": "c3c47452569078691de8949c70bdf1a22ff43dd370c8ea697a604018624fe5c1"
+    },
+    {
+      "name": "provider-changed",
+      "canonicalProjectPathFingerprint": "adb7c4b03c2a45944679bd43f90a74d024e1c1e6fe2c1a1dcd53319c0c9f3bc1",
+      "modelProviderId": "custom",
+      "fullModelId": "deepinfra/deepseek-ai/DeepSeek-V3.2",
+      "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
+      "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
+      "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
+      "expectedBehaviorFingerprint": "2a0746d10e6653823ef23f39ae054a2f08325834afae66d4426dfe1298180289"
+    },
+    {
+      "name": "model-changed",
+      "canonicalProjectPathFingerprint": "adb7c4b03c2a45944679bd43f90a74d024e1c1e6fe2c1a1dcd53319c0c9f3bc1",
+      "modelProviderId": "deepinfra",
+      "fullModelId": "deepinfra/deepseek-ai/DeepSeek-V3.3",
+      "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
+      "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
+      "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
+      "expectedBehaviorFingerprint": "3116a6972f07827ef1c7703f43c312408e5542f0918ed6d3f628e5edd6d31a13"
+    },
+    {
+      "name": "project-behavior-changed",
+      "canonicalProjectPathFingerprint": "adb7c4b03c2a45944679bd43f90a74d024e1c1e6fe2c1a1dcd53319c0c9f3bc1",
+      "modelProviderId": "deepinfra",
+      "fullModelId": "deepinfra/deepseek-ai/DeepSeek-V3.2",
+      "projectBehaviorFingerprint": "aa11809ae92bbf6a15a85ef733d61482a9e05b532670c73d1f4896ec0865d148",
+      "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
+      "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
+      "expectedBehaviorFingerprint": "26185690c5032744489e5f33c1216b695208295a0f843c97452354c01ad99392"
+    },
+    {
+      "name": "config-changed",
+      "canonicalProjectPathFingerprint": "adb7c4b03c2a45944679bd43f90a74d024e1c1e6fe2c1a1dcd53319c0c9f3bc1",
+      "modelProviderId": "deepinfra",
+      "fullModelId": "deepinfra/deepseek-ai/DeepSeek-V3.2",
+      "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
+      "effectiveConfigFingerprint": "ddec39a69bb07d759dbeb16b82de862ec614cdbfa95abc4d83db3c461b2dfab7",
+      "effectiveSelectedAuthFingerprint": "312ec4eec185ddaca2e1ef78f616115dcdd002bbd8e921e4b244888bd06a8d51",
+      "expectedBehaviorFingerprint": "1fd4ea0e5a42c17a1362635fbd4618e8bb2a6241a2702518d9efdcc5eaf12058"
+    },
+    {
+      "name": "auth-changed",
+      "canonicalProjectPathFingerprint": "adb7c4b03c2a45944679bd43f90a74d024e1c1e6fe2c1a1dcd53319c0c9f3bc1",
+      "modelProviderId": "deepinfra",
+      "fullModelId": "deepinfra/deepseek-ai/DeepSeek-V3.2",
+      "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
+      "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
+      "effectiveSelectedAuthFingerprint": "6043cc00b51a9f79723af5c236608173271425613547dab08302310000268833",
+      "expectedBehaviorFingerprint": "b80e699c0212bc7a05bf60ecb76ec4418cac5122ca6e8ea5264bb917198c58d1"
+    },
+    {
+      "name": "auth-known-absent",
+      "canonicalProjectPathFingerprint": "adb7c4b03c2a45944679bd43f90a74d024e1c1e6fe2c1a1dcd53319c0c9f3bc1",
+      "modelProviderId": "deepinfra",
+      "fullModelId": "deepinfra/deepseek-ai/DeepSeek-V3.2",
+      "projectBehaviorFingerprint": "98500350e42640c5a60c47289941e72476b3e354f2eb430e2902130735bb3f0d",
+      "effectiveConfigFingerprint": "84901e9251ad44c3bda20d9f2f8ae039b529d3a46c0a61dd2f8b2e8558ecfc40",
+      "effectiveSelectedAuthFingerprint": "9a5fd1a6c36a41f1220b95f95694fa491c40e00c5ae9895c31d4eeeb6958592b",
+      "expectedBehaviorFingerprint": "7e4f89dd8e5db191a8684221bba168bea550bd51c1188a3fd488c316dd15957e"
+    }
+  ]
+}

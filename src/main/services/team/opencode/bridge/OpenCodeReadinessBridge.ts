@@ -693,7 +693,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           laneId: input.laneId,
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
-          behaviorFingerprint: null,
+          behaviorFingerprint: command === 'opencode.launchTeam' ? (body as OpenCodeLaunchTeamCommandBody).expectedBehaviorFingerprint : null,
           body,
           cwd: input.cwd,
           timeoutMs: input.timeoutMs,

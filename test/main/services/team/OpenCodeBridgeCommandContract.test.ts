@@ -8,6 +8,7 @@ import {
   isOpenCodeBridgeCommandName,
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+  OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
   OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
   OPEN_CODE_TASK_LEDGER_EVIDENCE_CONTRACT_VERSION,
   type OpenCodeBridgeCommandEnvelope,
@@ -537,6 +538,8 @@ function peerIdentity(
       ],
       opencodeAppManagedBootstrapContractVersion:
         OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      expectedBehaviorFingerprintSchemaVersion:
+        OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
     },
     runtime: {
       providerId: 'opencode',
