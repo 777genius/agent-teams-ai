@@ -1898,6 +1898,85 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     }
   });
 
+  it('recovers the setup-form connect path (runtime providers connect) from the same verify failure', async () => {
+    const dataHome = process.env.CLAUDE_MULTIMODEL_DATA_HOME ?? '';
+    expect(dataHome).toBeTruthy();
+    const authStorePath = path.join(dataHome, 'opencode', 'auth.json');
+    fs.rmSync(authStorePath, { force: true });
+    const fetchMock = vi.fn(async () => new Response('{"data": []}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const { child } = createSpawnProcess(
+        {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'auth-failed',
+            message:
+              'OpenCode could not verify provider anthropic with 3 model candidates: anthropic/claude-haiku-4-5: Not Found',
+            recoverable: true,
+            diagnostics: null,
+          },
+        },
+        1
+      );
+      spawnCliMock.mockReturnValue(child);
+      execCliMock.mockResolvedValue({
+        stdout: JSON.stringify({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          view: {
+            runtimeId: 'opencode',
+            title: 'OpenCode',
+            runtime: {
+              state: 'ready',
+              cliPath: '/opt/homebrew/bin/opencode',
+              version: '1.0.0',
+              managedProfile: 'active',
+              localAuth: 'synced',
+            },
+            providers: [
+              {
+                providerId: 'anthropic',
+                displayName: 'Anthropic',
+                state: 'connected',
+                ownership: ['managed'],
+                recommended: true,
+                modelCount: 3,
+                defaultModelId: null,
+                authMethods: ['api'],
+                actions: [],
+                detail: null,
+              },
+            ],
+            defaultModel: null,
+            fallbackModel: null,
+            diagnostics: [],
+          },
+        }),
+        stderr: '',
+      });
+
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const response = await client.connectProvider({
+        runtimeId: 'opencode',
+        providerId: 'anthropic',
+        method: 'api',
+        apiKey: 'sk-ant-setup-form-key-1234567890',
+      });
+
+      expect(response.error).toBeUndefined();
+      expect(response.provider?.providerId).toBe('anthropic');
+      expect(response.provider?.state).toBe('connected');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const store = JSON.parse(fs.readFileSync(authStorePath, 'utf8')) as Record<string, unknown>;
+      expect(store.anthropic).toEqual({ type: 'api', key: 'sk-ant-setup-form-key-1234567890' });
+    } finally {
+      vi.unstubAllGlobals();
+      fs.rmSync(authStorePath, { force: true });
+    }
+  });
+
   it('returns non-probe connect failures unchanged without direct provider verification', async () => {
     const dataHome = process.env.CLAUDE_MULTIMODEL_DATA_HOME ?? '';
     const authStorePath = path.join(dataHome, 'opencode', 'auth.json');

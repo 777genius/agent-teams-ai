@@ -10,6 +10,7 @@ import { isOpenCodeProviderVerifyFailure } from './openCodeConnectVerifyFailure'
 import type {
   RuntimeProviderConnectionDto,
   RuntimeProviderManagementConnectApiKeyInput,
+  RuntimeProviderManagementConnectInput,
   RuntimeProviderManagementLoadViewInput,
   RuntimeProviderManagementProviderResponse,
   RuntimeProviderManagementViewResponse,
@@ -36,6 +37,28 @@ const APP_SIDE_API_KEY_VERIFIERS: Readonly<Record<string, AppSideApiKeyVerifier>
  */
 export function resolveOpenCodeGlobalAuthStorePath(): string {
   return path.join(resolveClaudeMultimodelDataHomePath(), 'opencode', 'auth.json');
+}
+
+/**
+ * The setup-form dialog connects through `runtime providers connect` with an
+ * api method instead of `connect-api-key`; its verify probes hit the same
+ * key-not-active-yet failure. Normalize either input shape onto the recovery
+ * input when a key is present (OAuth connects have nothing to recover).
+ */
+export function resolveConnectRecoveryInput(
+  input: RuntimeProviderManagementConnectApiKeyInput | RuntimeProviderManagementConnectInput
+): RuntimeProviderManagementConnectApiKeyInput | null {
+  const isOAuthConnect = 'method' in input && input.method === 'oauth';
+  const apiKey = isOAuthConnect ? '' : (input.apiKey ?? '').trim();
+  if (!apiKey) {
+    return null;
+  }
+  return {
+    runtimeId: input.runtimeId,
+    providerId: input.providerId,
+    apiKey,
+    projectPath: input.projectPath,
+  };
 }
 
 interface OpenCodeAuthStoreCredentialSnapshot {
@@ -172,7 +195,7 @@ export interface OpenCodeConnectApiKeyFallbackOverrides {
  * throws and never replaces a response it could not improve.
  */
 export async function recoverOpenCodeConnectApiKeyVerifyFailure(
-  input: RuntimeProviderManagementConnectApiKeyInput,
+  connectInput: RuntimeProviderManagementConnectApiKeyInput | RuntimeProviderManagementConnectInput,
   response: RuntimeProviderManagementProviderResponse,
   host: OpenCodeConnectApiKeyFallbackHost,
   overrides: OpenCodeConnectApiKeyFallbackOverrides = {}
@@ -180,9 +203,10 @@ export async function recoverOpenCodeConnectApiKeyVerifyFailure(
   if (!isOpenCodeProviderVerifyFailure(response)) {
     return response;
   }
-  const providerId = input.providerId.trim();
+  const input = resolveConnectRecoveryInput(connectInput);
+  const providerId = input?.providerId.trim() ?? '';
   const verifier = (overrides.verifiers ?? APP_SIDE_API_KEY_VERIFIERS)[providerId.toLowerCase()];
-  if (!verifier || !providerId || !input.apiKey.trim()) {
+  if (!input || !verifier || !providerId) {
     return response;
   }
 

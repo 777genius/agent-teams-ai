@@ -2013,7 +2013,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       } else {
         result = await collectSpawnOutput(child, stdinValue);
       }
-      return parseProviderCommandResponse(input.runtimeId, context, result);
+      const parsed = parseProviderCommandResponse(input.runtimeId, context, result);
+      return this.recoverConnectVerifyFailure(input, parsed);
     } catch (error) {
       if (isOAuth) {
         const active = this.activeOAuthOperations.get(oauthOperationId);
@@ -2033,13 +2034,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         }
       }
       const response = extractJsonObjectFromError<RuntimeProviderManagementProviderResponse>(error);
-      if (response) {
-        return response;
-      }
-      return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
-        input.runtimeId,
-        normalizeCommandFailure(error, context)
-      );
+      return response
+        ? this.recoverConnectVerifyFailure(input, response)
+        : commandFailureResponse<RuntimeProviderManagementProviderResponse>(
+            input.runtimeId,
+            normalizeCommandFailure(error, context)
+          );
     } finally {
       if (isOAuth) {
         this.activeOAuthOperations.delete(oauthOperationId);
@@ -2184,14 +2184,14 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         )
       ) as ChildProcessWithoutNullStreams;
       const result = await collectSpawnOutput(child, input.apiKey);
-      return this.recoverConnectApiKeyVerifyFailure(
+      return this.recoverConnectVerifyFailure(
         input,
         parseProviderCommandResponse(input.runtimeId, context, result)
       );
     } catch (error) {
       const response = extractJsonObjectFromError<RuntimeProviderManagementProviderResponse>(error);
       return response
-        ? this.recoverConnectApiKeyVerifyFailure(input, response)
+        ? this.recoverConnectVerifyFailure(input, response)
         : commandFailureResponse<RuntimeProviderManagementProviderResponse>(
             input.runtimeId,
             normalizeCommandFailure(error, context)
@@ -2202,8 +2202,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   }
 
   // See `recoverOpenCodeConnectApiKeyVerifyFailure` for why this exists.
-  private async recoverConnectApiKeyVerifyFailure(
-    input: RuntimeProviderManagementConnectApiKeyInput,
+  private async recoverConnectVerifyFailure(
+    input: RuntimeProviderManagementConnectApiKeyInput | RuntimeProviderManagementConnectInput,
     response: RuntimeProviderManagementProviderResponse
   ): Promise<RuntimeProviderManagementProviderResponse> {
     return recoverOpenCodeConnectApiKeyVerifyFailure(input, response, {
