@@ -1,6 +1,6 @@
 name: Temporary Parallel PR Review
 
-run-name: ${{ format('Parallel review of PR #{0}', inputs.pr_number || vars.REVIEW_CAMPAIGN_PR_NUMBER || '252') }}
+run-name: "${{ format('Parallel review of PR #{0}', inputs.pr_number || vars.REVIEW_CAMPAIGN_PR_NUMBER || '252') }}"
 
 on:
   workflow_dispatch:
