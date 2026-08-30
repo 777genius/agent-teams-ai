@@ -27,7 +27,6 @@ import {
   buildMemberDraftSuggestions,
   buildMembersFromDrafts,
   clearMemberModelOverrides,
-  createMemberDraft,
   normalizeLeadProviderForMode,
   normalizeMemberDraftForProviderMode,
   validateMemberNameInline,
@@ -105,6 +104,7 @@ import { AdvancedCliSection } from './AdvancedCliSection';
 import { AnthropicFastModeSelector } from './AnthropicFastModeSelector';
 import { CodexFastModeSelector } from './CodexFastModeSelector';
 import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexReconnectPrompt';
+import { buildInitialRosterMemberDrafts } from './createTeamInitialRoster';
 import {
   getOrganizationPlacementUnitKindKey,
   getOrganizationPlacementUnitOptions,
@@ -271,22 +271,6 @@ interface ValidationResult {
     cwd?: string;
   };
 }
-
-import { CUSTOM_ROLE, PRESET_ROLES } from '@renderer/constants/teamRoles';
-
-const DEFAULT_MEMBERS: { name: string; roleSelection: string; workflowKind?: 'reviewer' }[] = [
-  {
-    name: 'alice',
-    roleSelection: 'reviewer',
-    workflowKind: 'reviewer',
-  },
-  {
-    name: 'tom',
-    roleSelection: 'developer',
-  },
-  { name: 'bob', roleSelection: 'developer' },
-  { name: 'jack', roleSelection: 'developer' },
-];
 
 /** Mirrors Claude CLI's `zuA()` sanitization: non-alphanumeric → `-`, then lowercase. */
 function sanitizeTeamName(name: string): string {
@@ -1567,26 +1551,9 @@ export const CreateTeamDialog = ({
         setSkipPermissionsRaw(initialData.skipPermissions !== false);
       }
       setMembers(
-        initialData.members.map((m) => {
-          const presetRoles: readonly string[] = PRESET_ROLES;
-          const isPreset = m.role != null && presetRoles.includes(m.role);
-          const isCustom = m.role != null && m.role.length > 0 && !isPreset;
-          return normalizeMemberDraftForProviderMode(
-            createMemberDraft({
-              name: m.name,
-              roleSelection: isCustom ? CUSTOM_ROLE : (m.role ?? ''),
-              customRole: isCustom ? m.role : '',
-              workflow: m.workflow,
-              isolation: m.isolation === 'worktree' ? 'worktree' : undefined,
-              providerId: normalizeOptionalTeamProviderId(m.providerId),
-              providerBackendId: m.providerBackendId,
-              model: m.model ?? '',
-              effort: m.effort,
-              fastMode: m.fastMode,
-              mcpPolicy: m.mcpPolicy,
-            }),
-            multimodelEnabled
-          );
+        buildInitialRosterMemberDrafts({
+          copiedMembers: initialData.members,
+          multimodelEnabled,
         })
       );
       setTeammateWorktreeDefault(
@@ -1601,21 +1568,17 @@ export const CreateTeamDialog = ({
       return;
     }
 
-    const nextDefaultMembers = DEFAULT_MEMBERS.map((member) =>
-      createMemberDraft({
-        name: member.name,
-        roleSelection: member.roleSelection,
-        workflow:
-          member.workflowKind === 'reviewer' ? t('create.defaultWorkflows.reviewer') : undefined,
-      })
-    );
+    const initialRosterDrafts = buildInitialRosterMemberDrafts({ multimodelEnabled });
+    if (initialRosterDrafts.length === 0) {
+      return;
+    }
     setMembers(
       syncModelsWithLead
-        ? nextDefaultMembers
-        : applyStoredCreateTeamMemberRuntimePreferences(nextDefaultMembers)
+        ? initialRosterDrafts
+        : applyStoredCreateTeamMemberRuntimePreferences(initialRosterDrafts)
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialData is checked once on open/draftLoaded
-  }, [open, draftLoaded, t]);
+  }, [open, draftLoaded]);
 
   useEffect(() => {
     if (!open || !draftLoaded || initialData || syncModelsWithLead || members.length === 0) {

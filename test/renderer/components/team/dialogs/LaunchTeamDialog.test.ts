@@ -1247,6 +1247,52 @@ describe('LaunchTeamDialog', () => {
     await act(async () => root.unmount());
   });
 
+  it('opens a brand-new team with the lead only and no pre-stuffed teammates', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const savedMembers = createTeamDraftMock.state.members;
+    createTeamDraftMock.state.members = [];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    try {
+      await act(async () => {
+        root.render(
+          React.createElement(CreateTeamDialog, {
+            open: true,
+            canCreate: true,
+            provisioningErrorsByTeam: {},
+            clearProvisioningError: vi.fn(),
+            existingTeamNames: [],
+            provisioningTeamNames: [],
+            activeTeams: [],
+            defaultProjectPath: '/tmp/project',
+            onClose: vi.fn(),
+            onCreate: vi.fn(async () => {}),
+            onOpenTeam: vi.fn(),
+          })
+        );
+        await flush();
+      });
+
+      // The open effect must not invent teammates (previously alice/tom/bob/jack).
+      const rosterWrites = createTeamDraftMock.state.setMembers.mock.calls.map(([next]: any[]) =>
+        typeof next === 'function' ? next([]) : next
+      );
+      expect(rosterWrites.flatMap((roster: any[]) => roster.map((member) => member.name))).toEqual(
+        []
+      );
+      expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([]);
+    } finally {
+      await act(async () => {
+        root.unmount();
+        await flush();
+      });
+      createTeamDraftMock.state.members = savedMembers;
+    }
+  });
+
   it('forces navigation project mode once and then allows a custom path', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     createTeamDraftMock.state.cwdMode = 'custom';
