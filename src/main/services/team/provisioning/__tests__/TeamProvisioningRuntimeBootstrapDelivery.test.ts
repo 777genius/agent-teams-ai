@@ -98,4 +98,21 @@ describe('TeamProvisioningRuntimeBootstrapDelivery', () => {
     expect(run).toThrow(TeamLaunchValidationError);
     expect(run).toThrow('Mixed teams with an OpenCode lead are not supported in this phase');
   });
+
+  it('does not disguise unexpected coordinator failures as launch validation', () => {
+    const unexpected = new Error('coordinator exploded');
+    const coordinator = {
+      planProvisioningMembers: () => {
+        throw unexpected;
+      },
+    } as Pick<ReturnType<typeof createTeamRuntimeLaneCoordinator>, 'planProvisioningMembers'>;
+
+    expect(() =>
+      planRuntimeLanesOrThrow(coordinator, {
+        leadProviderId: 'codex',
+        members: [member('Ada', 'codex')],
+        hasOpenCodeRuntimeAdapter: true,
+      })
+    ).toThrowError(unexpected);
+  });
 });

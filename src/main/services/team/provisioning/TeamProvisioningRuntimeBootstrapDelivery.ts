@@ -1,5 +1,5 @@
 import { type TeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
-import { getErrorMessage } from '@shared/utils/errorHandling';
+import { TeamRuntimeLanePlanningError } from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
 
 import { TeamLaunchValidationError } from './TeamLaunchValidationError';
 import { isPureOpenCodeProvisioningRequest } from './TeamProvisioningLaunchCompatibility';
@@ -33,9 +33,12 @@ export function planRuntimeLanesOrThrow(
   try {
     return runtimeLaneCoordinator.planProvisioningMembers(input);
   } catch (error) {
-    // Lane-plan rejections (e.g. an OpenCode-led mixed roster) are user-facing
-    // launch blockers; retype them so HTTP surfaces the message instead of 500.
-    throw new TeamLaunchValidationError(getErrorMessage(error));
+    // Only the coordinator's typed lane-plan rejections are user-facing launch
+    // blockers. Unknown failures must retain their original type for 500 handling.
+    if (error instanceof TeamRuntimeLanePlanningError) {
+      throw new TeamLaunchValidationError(error.message);
+    }
+    throw error;
   }
 }
 
