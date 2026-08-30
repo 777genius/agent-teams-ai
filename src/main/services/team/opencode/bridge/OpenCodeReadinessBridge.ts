@@ -7,6 +7,12 @@ import {
   stableHash,
 } from './OpenCodeBridgeCommandContract';
 import { buildOpenCodeBridgeSupportDiagnostic } from './OpenCodeBridgeSupportDiagnostics';
+import {
+  blockedLaunchData,
+  isAmbiguousOpenCodeLaunchFailure,
+  isOpenCodeBridgeEmptyOutputFailure,
+  reconciliationRequiredLaunchData,
+} from './OpenCodeLaunchResultHelpers';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
@@ -140,15 +146,6 @@ function buildSendPayloadHash(input: OpenCodeSendMessageCommandBody): string {
   return stableHash(hashable);
 }
 
-function isOpenCodeBridgeEmptyOutputFailure(result: OpenCodeBridgeResult<unknown>): boolean {
-  return (
-    !result.ok &&
-    result.error.kind === 'contract_violation' &&
-    (result.error.message === 'Bridge stdout was empty' ||
-      result.error.message === 'Bridge stdout was empty after retry')
-  );
-}
-
 export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   private readonly lastRuntimeSnapshotsByProjectPath = new Map<
     string,
@@ -245,7 +242,11 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       cwd: input.projectPath,
       timeoutMs: resolveOpenCodeLaunchTimeoutMs(input, this.options.launchTimeoutMs),
     });
-    return result.ok ? result.data : blockedLaunchData(input.runId, result);
+    return result.ok
+      ? result.data
+      : isAmbiguousOpenCodeLaunchFailure(result)
+        ? reconciliationRequiredLaunchData(input, result)
+        : blockedLaunchData(input.runId, result);
   }
 
   async reconcileOpenCodeTeam(
@@ -693,7 +694,10 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           laneId: input.laneId,
           runId: input.runId,
           capabilitySnapshotId: input.capabilitySnapshotId,
-          behaviorFingerprint: null,
+          behaviorFingerprint:
+            command === 'opencode.launchTeam'
+              ? (body as OpenCodeLaunchTeamCommandBody).expectedBehaviorFingerprint
+              : null,
           body,
           cwd: input.cwd,
           timeoutMs: input.timeoutMs,
@@ -718,33 +722,6 @@ type OpenCodeStateChangingTeamCommandName = Extract<
   | 'opencode.sendMessage'
   | 'opencode.answerPermission'
 >;
-
-function blockedLaunchData(
-  runId: string,
-  result: OpenCodeBridgeResult<unknown>
-): OpenCodeLaunchTeamCommandData {
-  if (result.ok) {
-    throw new Error('blockedLaunchData expects a failed bridge result');
-  }
-  return {
-    runId,
-    teamLaunchState: 'failed',
-    members: {},
-    warnings: [],
-    diagnostics: [
-      {
-        code: result.error.kind,
-        severity: 'error',
-        message: `OpenCode bridge failed: ${result.error.message}`,
-      },
-      ...result.diagnostics.map((event) => ({
-        code: event.type,
-        severity: event.severity,
-        message: event.message,
-      })),
-    ],
-  };
-}
 
 function blockedReadiness(input: {
   state: OpenCodeTeamLaunchReadinessState;

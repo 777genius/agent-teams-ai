@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { ClaudeMultimodelBridgeService } from './ClaudeMultimodelBridgeService';
 
@@ -9,6 +9,7 @@ interface RuntimeStatusMapper {
     providerId: CliProviderId,
     runtimeStatus: unknown
   ) => CliProviderStatus;
+  mergeOpenCodeVerification: (provider: CliProviderStatus, snapshot: unknown) => CliProviderStatus;
 }
 
 function mapRuntimeProviderStatus(
@@ -17,6 +18,27 @@ function mapRuntimeProviderStatus(
 ): CliProviderStatus {
   const service = new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusMapper;
   return service.mapRuntimeProviderStatus(providerId, runtimeStatus);
+}
+
+function verifiedOpenCodeProvider(): CliProviderStatus {
+  return mapRuntimeProviderStatus('opencode', {
+    providerId: 'opencode',
+    supported: true,
+    authenticated: true,
+    authMethod: 'builtin_free',
+    verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    canLoginFromUi: false,
+    capabilities: { teamLaunch: true, oneShot: false, extensions: {} },
+    selectedBackendId: null,
+    resolvedBackendId: null,
+    availableBackends: [],
+    externalRuntimeDiagnostics: [],
+    backend: null,
+    statusMessage: null,
+    detailMessage: null,
+    models: ['opencode/big-pickle'],
+  });
 }
 
 describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
@@ -199,5 +221,45 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
     });
 
     expect(provider.subscriptionRateLimits).toBeNull();
+  });
+
+  test.each([
+    [null, 'unknown'],
+    [
+      {
+        detected: true,
+        hostHealthy: false,
+        probeError: 'host probe failed',
+        diagnostics: ['managed profile drift'],
+      },
+      'error',
+    ],
+  ] as const)('revokes OpenCode launch authority for missing or drifted live evidence', (snapshot, verificationState) => {
+    const service = new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusMapper;
+    const provider = verifiedOpenCodeProvider();
+
+    expect(service.mergeOpenCodeVerification(provider, snapshot)).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState,
+      capabilities: { teamLaunch: false },
+    });
+  });
+
+  test('revokes OpenCode launch authority when live verification throws', async () => {
+    const service = new ClaudeMultimodelBridgeService();
+    vi.spyOn(service, 'getProviderStatus').mockResolvedValue(verifiedOpenCodeProvider());
+    vi.spyOn(
+      service as unknown as { getOpenCodeVerifySnapshot: () => Promise<never> },
+      'getOpenCodeVerifySnapshot'
+    ).mockRejectedValue(new Error('verification transport failed'));
+
+    await expect(service.verifyProviderStatus('/fake/runtime', 'opencode')).resolves.toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'error',
+      capabilities: { teamLaunch: false },
+    });
+    vi.mocked(console.warn).mockClear();
   });
 });

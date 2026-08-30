@@ -3,7 +3,7 @@ name: Public Runtime Bootstrap Smoke
 on:
   workflow_dispatch:
   push:
-    branches: [main, dev]
+    branches: [main]
     paths:
       - 'runtime.lock.json'
       - 'scripts/dev-with-runtime.mjs'

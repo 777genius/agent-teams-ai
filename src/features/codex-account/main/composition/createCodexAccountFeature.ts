@@ -33,6 +33,14 @@ import {
   ensureCodexLegacyAuthFromActiveAccount,
 } from '../infrastructure/detectCodexLocalAccountArtifacts';
 
+import {
+  applyForcedTokenRefreshReuseWindow,
+  type CodexSnapshotRefreshOptions,
+  doRefreshOptionsCover,
+  mergeRefreshOptions,
+  normalizeRefreshOptions,
+} from './codexSnapshotRefreshOptions';
+
 import type { Logger } from '@shared/utils/logger';
 import type { BrowserWindow } from 'electron';
 
@@ -65,11 +73,6 @@ interface CodexRuntimeContext {
 interface CodexLastKnownRuntimeContext {
   payload: CodexRuntimeContext;
   observedAt: number;
-}
-
-interface CodexSnapshotRefreshOptions {
-  includeRateLimits: boolean;
-  forceRefreshToken: boolean;
 }
 
 interface CodexSnapshotRefreshBatch {
@@ -223,41 +226,6 @@ function classifyAppServerFailure(error: unknown): {
   };
 }
 
-function normalizeRefreshOptions(options?: {
-  includeRateLimits?: boolean;
-  forceRefreshToken?: boolean;
-}): CodexSnapshotRefreshOptions {
-  return {
-    includeRateLimits: options?.includeRateLimits === true,
-    forceRefreshToken: options?.forceRefreshToken === true,
-  };
-}
-
-function mergeRefreshOptions(
-  current: CodexSnapshotRefreshOptions | null,
-  next: CodexSnapshotRefreshOptions
-): CodexSnapshotRefreshOptions {
-  if (!current) {
-    return next;
-  }
-
-  return {
-    includeRateLimits: current.includeRateLimits || next.includeRateLimits,
-    forceRefreshToken: current.forceRefreshToken || next.forceRefreshToken,
-  };
-}
-
-function doRefreshOptionsCover(
-  current: CodexSnapshotRefreshOptions | null,
-  requested: CodexSnapshotRefreshOptions
-): boolean {
-  return Boolean(
-    current &&
-    (!requested.includeRateLimits || current.includeRateLimits) &&
-    (!requested.forceRefreshToken || current.forceRefreshToken)
-  );
-}
-
 async function resolveCodexBinaryForAccountSnapshot(): Promise<string | null> {
   const binaryPath = await CodexBinaryResolver.resolve();
   if (binaryPath) {
@@ -306,6 +274,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   private lastKnownAccount: CodexLastKnownAccount | null = null;
   private lastKnownRateLimits: CodexLastKnownRateLimits | null = null;
   private lastKnownRuntimeContext: CodexLastKnownRuntimeContext | null = null;
+  private lastForcedTokenRefreshAtMs = 0;
   private queuedMutationCount = 0;
   private activeMutationCount = 0;
   private disposed = false;
@@ -350,7 +319,11 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     forceRefreshToken?: boolean;
   }): Promise<CodexAccountSnapshotDto> {
     this.ensureActive();
-    const normalizedOptions = normalizeRefreshOptions(options);
+    const normalizedOptions = applyForcedTokenRefreshReuseWindow(
+      normalizeRefreshOptions(options),
+      this.lastForcedTokenRefreshAtMs,
+      Date.now()
+    );
     if (this.refreshBatch?.acceptingRequests) {
       if (
         doRefreshOptionsCover(this.refreshBatch.initialOptions, normalizedOptions) ||
@@ -414,7 +387,18 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       }
 
       const env = this.envBuilder.buildControlPlaneEnv({ binaryPath });
-      await this.loginSessionManager.start({ binaryPath, env, mode: options?.mode });
+      // Only a login that this call actually owns invalidates the forced-rotation reuse
+      // window. A duplicate request (a second click while a login is starting or pending)
+      // is a no-op inside the manager and leaves the credentials untouched, so clearing
+      // the window for it would spend an extra refresh-token rotation on nothing.
+      const started = await this.loginSessionManager.start({
+        binaryPath,
+        env,
+        mode: options?.mode,
+      });
+      if (started) {
+        this.lastForcedTokenRefreshAtMs = 0;
+      }
     });
 
     if (binaryMissing) {
@@ -445,6 +429,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       await this.appServerClient.logout({ binaryPath, env });
       this.lastKnownAccount = null;
       this.lastKnownRateLimits = null;
+      this.lastForcedTokenRefreshAtMs = 0;
       await this.publishLoggedOutSnapshot();
     });
 
@@ -491,6 +476,7 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
     this.lastKnownAccount = null;
     this.lastKnownRateLimits = null;
     this.lastKnownRuntimeContext = null;
+    this.lastForcedTokenRefreshAtMs = 0;
     this.lastPublishedSnapshotUpdatedAtMs = 0;
     this.queuedMutationCount = 0;
     this.activeMutationCount = 0;
@@ -505,9 +491,17 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
 
     while (nextOptions) {
       this.ensureActive();
-      batch.activeOptions = nextOptions;
+      // Queued forced options may have waited behind a rotation that just completed, so the
+      // reuse-window downgrade is re-evaluated per drained iteration.
+      const effectiveOptions = applyForcedTokenRefreshReuseWindow(
+        nextOptions,
+        this.lastForcedTokenRefreshAtMs,
+        Date.now()
+      );
+      batch.activeOptions = effectiveOptions;
       lastSnapshot =
-        this.getCachedSnapshotForOptions(nextOptions) ?? (await this.loadSnapshot(nextOptions));
+        this.getCachedSnapshotForOptions(effectiveOptions) ??
+        (await this.loadSnapshot(effectiveOptions));
       batch.activeOptions = null;
       nextOptions = batch.pendingOptions;
       batch.pendingOptions = null;
@@ -630,6 +624,9 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
         refreshToken: options?.forceRefreshToken ?? false,
         includeRateLimits: shouldRequestRateLimits,
       });
+      if (options?.forceRefreshToken === true) {
+        this.lastForcedTokenRefreshAtMs = Date.now();
+      }
       runtimeContext = createRuntimeContext(binaryPath, accountResult.initialize.codexHome);
       if (runtimeContext.codexHome) {
         this.lastKnownRuntimeContext = {

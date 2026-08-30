@@ -7,7 +7,6 @@ import {
 } from '@features/anthropic-runtime-profile/renderer';
 import {
   isCodexAccountSnapshotPending,
-  mergeCodexCliStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import {
@@ -98,7 +97,8 @@ import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexRec
 import { EffortLevelSelector } from './EffortLevelSelector';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
-import { resolveLaunchDialogPrefill } from './launchDialogPrefill';
+import { normalizeSavedBackendId, resolveLaunchDialogPrefill } from './launchDialogPrefill';
+import { migrateLegacyLaunchDialogStorage } from './launchDialogStorageMigration';
 import {
   buildWorktreePathByMemberName,
   deriveTeammateWorktreeDefault,
@@ -123,6 +123,7 @@ import {
 } from './projectPathOptions';
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
+import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
@@ -292,10 +293,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
-  const effectiveCliStatus = useMemo(
-    () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
-    [loadingCliStatus, codexAccount.snapshot]
-  );
+  const effectiveCliStatus = useAuthorityGatedCliStatus(loadingCliStatus, codexAccount.snapshot);
   const codexSnapshotPending =
     isCodexAccountSnapshotPending(
       codexAccount.loading,
@@ -411,6 +409,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     useState<TeamProviderId | null>(null);
   const prepareRequestSeqRef = useRef(0);
   const appliedDefaultProjectPathRef = useRef<string | null>(null);
+  const hydrationRef = useRef({ key: null as string | null, dirty: false, rosterDirty: false });
   const storeMembers = useStore((s) => selectResolvedMembersForTeamName(s, s.selectedTeamName));
   const previousLaunchParams = useStore((s) =>
     effectiveTeamName ? s.launchParamsByTeam[effectiveTeamName] : undefined
@@ -424,6 +423,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   useEffect(() => {
     if (!open) {
       setProviderSettingsProviderId(null);
+      hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
     }
   }, [open]);
 
@@ -522,6 +522,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
+  const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -707,6 +708,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedProviderId = (value: TeamProviderId): void => {
+    hydrationRef.current.dirty = true;
     const normalizedValue = isLaunchMode
       ? normalizeLeadProviderForMode(value, multimodelEnabled)
       : normalizeOneShotProviderForMode(value, multimodelEnabled);
@@ -728,6 +730,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedModel = (value: string): void => {
+    hydrationRef.current.dirty = true;
     const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
     const nextEffort = getAvailableTeamEffortValue({
       providerId: selectedProviderId,
@@ -745,49 +748,56 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setLimitContext = (value: boolean): void => {
+    hydrationRef.current.dirty = true;
     setLimitContextRaw(value);
     localStorage.setItem('team:lastLimitContext', String(value));
   };
 
   const setSkipPermissions = (value: boolean): void => {
+    hydrationRef.current.dirty = true;
     setSkipPermissionsRaw(value);
     localStorage.setItem('team:lastSkipPermissions', String(value));
   };
 
   const setSelectedEffort = (value: string): void => {
+    // Always an explicit user choice, including Default (''); programmatic clears
+    // go through autoResetSelectedEffort instead.
+    hydrationRef.current.dirty = true;
     setSelectedEffortRaw(value);
     localStorage.setItem('team:lastSelectedEffort', value);
   };
 
+  const autoResetSelectedEffort = (): void => {
+    // EffortLevelSelector clears an unavailable effort through this callback. That
+    // programmatic reset is not a user edit: no hydration cancel, no dirty mark.
+    setSelectedEffortRaw('');
+    localStorage.setItem('team:lastSelectedEffort', '');
+  };
+
   const setSelectedFastMode = (value: TeamFastMode): void => {
+    hydrationRef.current.dirty = true;
     setSelectedFastModeRaw(value);
     localStorage.setItem('team:lastSelectedFastMode', value);
   };
 
-  // ---------------------------------------------------------------------------
-  // localStorage migration: schedule → team namespace (one-time)
-  // ---------------------------------------------------------------------------
+  const setMembersDraftsFromUser = (nextMembers: MemberDraft[]): void => {
+    hydrationRef.current.dirty = true;
+    hydrationRef.current.rosterDirty = true;
+    setMembersDrafts(nextMembers);
+  };
+
+  const setSyncModelsWithLeadFromUser = (value: boolean): void => {
+    hydrationRef.current.dirty = true;
+    setSyncModelsWithLead(value);
+  };
+
+  const setTeammateWorktreeDefaultFromUser = (value: boolean): void => {
+    hydrationRef.current.dirty = true;
+    setTeammateWorktreeDefault(value);
+  };
 
   useEffect(() => {
-    const legacyTeamModel = localStorage.getItem('team:lastSelectedModel');
-    if (
-      legacyTeamModel != null &&
-      localStorage.getItem('team:lastSelectedModel:anthropic') == null
-    ) {
-      localStorage.setItem('team:lastSelectedModel:anthropic', legacyTeamModel);
-    }
-    localStorage.removeItem('team:lastSelectedModel');
-
-    for (const suffix of ['lastSelectedModel', 'lastSelectedEffort']) {
-      const schedKey = `schedule:${suffix}`;
-      const teamKey =
-        suffix === 'lastSelectedModel' ? 'team:lastSelectedModel:anthropic' : `team:${suffix}`;
-      const schedVal = localStorage.getItem(schedKey);
-      if (schedVal != null && localStorage.getItem(teamKey) == null) {
-        localStorage.setItem(teamKey, schedVal);
-      }
-      localStorage.removeItem(schedKey);
-    }
+    migrateLegacyLaunchDialogStorage();
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -795,6 +805,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // ---------------------------------------------------------------------------
 
   const resetFormState = (): void => {
+    hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
     setLocalError(null);
     setIsSubmitting(false);
     setPrepareState('idle');
@@ -893,21 +904,30 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   useEffect(() => {
     if (!open || !isLaunchMode) return;
 
-    const immediateEditableMembers = filterEditableMemberInputs(members);
-    if (immediateEditableMembers.length > 0) {
+    // Hydrate at most once per open dialog, and never on top of user edits.
+    if (hydrationRef.current.dirty || hydrationRef.current.key === effectiveTeamName) return;
+
+    const applyEditableRoster = (savedMembers?: TeamCreateRequest['members']): void => {
+      const inputs =
+        members.length > 0
+          ? filterEditableMemberInputs(members)
+          : filterEditableMemberInputs(savedMembers ?? []);
       setMembersDrafts(
-        createMemberDraftsFromInputs(immediateEditableMembers).map((member) =>
+        createMemberDraftsFromInputs(inputs).map((member) =>
           normalizeMemberDraftForProviderMode(member, multimodelEnabled)
         )
       );
-      setWorktreePathByMemberName(buildWorktreePathByMemberName(immediateEditableMembers));
-      setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(immediateEditableMembers));
-      setSyncModelsWithLead(
-        !immediateEditableMembers.some(
-          (member) => member.providerId || member.model || member.effort
-        )
-      );
-    }
+      setWorktreePathByMemberName(buildWorktreePathByMemberName(inputs));
+      // Roster-derived toggle defaults must not clobber a user toggle made mid-request.
+      if (!hydrationRef.current.dirty) {
+        setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
+        setSyncModelsWithLead(
+          !inputs.some((member) => member.providerId || member.model || member.effort)
+        );
+      }
+    };
+
+    if (filterEditableMemberInputs(members).length > 0) applyEditableRoster();
 
     let cancelled = false;
     void (async () => {
@@ -919,51 +939,28 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       } catch {
         savedRequest = null;
       }
+      // Edits made while the request was in flight win over it, but an unrelated control is
+      // not a roster edit — and with no live members the saved request is its only source.
       if (cancelled) return;
+      if (!hydrationRef.current.rosterDirty) applyEditableRoster(savedRequest?.members);
+      if (hydrationRef.current.dirty) return;
 
-      const editableMembersSource =
-        members.length > 0
-          ? filterEditableMemberInputs(members)
-          : savedRequest?.members && savedRequest.members.length > 0
-            ? filterEditableMemberInputs(savedRequest.members)
-            : [];
       const storedEffort = localStorage.getItem('team:lastSelectedEffort');
-      const savedProviderId = normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null;
-      const savedProviderBackendId =
-        typeof savedRequest?.providerBackendId === 'string' &&
-        savedRequest.providerBackendId.trim().length > 0
-          ? savedRequest.providerBackendId.trim()
-          : null;
-      const storedProviderId = normalizeLeadProviderForMode(
-        getStoredTeamProvider(),
-        multimodelEnabled
-      );
       const launchPrefill = resolveLaunchDialogPrefill({
         members,
         savedRequest,
         previousLaunchParams,
         multimodelEnabled,
-        storedProviderId,
+        storedProviderId: normalizeLeadProviderForMode(getStoredTeamProvider(), multimodelEnabled),
         storedEffort: storedEffort === null ? '' : storedEffort,
         storedFastMode: getStoredTeamFastMode(),
         storedLimitContext: localStorage.getItem('team:lastLimitContext') === 'true',
         getStoredModel: getStoredTeamModel,
       });
-      setSavedLaunchProviderId(savedProviderId);
-      setSavedLaunchProviderBackendId(
-        launchPrefill.providerBackendId ?? savedProviderBackendId ?? null
-      );
+      setSavedLaunchProviderId(normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null);
+      const savedBackendId = normalizeSavedBackendId(savedRequest?.providerBackendId);
+      setSavedLaunchProviderBackendId(launchPrefill.providerBackendId ?? savedBackendId);
 
-      setMembersDrafts(
-        createMemberDraftsFromInputs(editableMembersSource).map((member) =>
-          normalizeMemberDraftForProviderMode(member, multimodelEnabled)
-        )
-      );
-      setWorktreePathByMemberName(buildWorktreePathByMemberName(editableMembersSource));
-      setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(editableMembersSource));
-      setSyncModelsWithLead(
-        !editableMembersSource.some((member) => member.providerId || member.model || member.effort)
-      );
       const leadProviderId = normalizeLeadProviderForMode(
         launchPrefill.providerId,
         multimodelEnabled
@@ -973,10 +970,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSelectedEffortRaw(launchPrefill.effort);
       setSelectedFastModeRaw(launchPrefill.fastMode);
       setLimitContextRaw(launchPrefill.limitContext);
-      setSkipPermissionsRaw(
-        savedRequest?.skipPermissions ??
-          localStorage.getItem('team:lastSkipPermissions') !== 'false'
-      );
+      const storedSkipPermissions = localStorage.getItem('team:lastSkipPermissions') !== 'false';
+      setSkipPermissionsRaw(savedRequest?.skipPermissions ?? storedSkipPermissions);
+      hydrationRef.current.key = effectiveTeamName;
     })();
 
     return () => {
@@ -2280,6 +2276,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setLocalError(modelValidationError);
       return;
     }
+    if (launchGuard.reject(isLaunchMode, () => setLocalError(t('launch.prepare.failed')))) return;
     if (prepareBlocksLaunch) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
@@ -2460,6 +2457,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       launchInFlight ||
       validationErrors.length > 0 ||
       !!modelValidationError ||
+      launchGuard.blocked(isLaunchMode) ||
       hasInvalidLaunchMemberNames ||
       hasDuplicateLaunchMemberNames ||
       prepareBlocksLaunch ||
@@ -2791,7 +2789,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
                 <TeamRosterEditorSection
                   members={membersDrafts}
-                  onMembersChange={setMembersDrafts}
+                  onMembersChange={setMembersDraftsFromUser}
                   validateMemberName={validateMemberNameInline}
                   showWorkflow
                   showJsonEditor
@@ -2818,13 +2816,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onProviderChange={setSelectedProviderId}
                   onModelChange={setSelectedModel}
                   onEffortChange={setSelectedEffort}
+                  onEffortAutoReset={autoResetSelectedEffort}
                   onLimitContextChange={setLimitContext}
                   syncModelsWithTeammates={syncModelsWithLead}
-                  onSyncModelsWithTeammatesChange={setSyncModelsWithLead}
+                  onSyncModelsWithTeammatesChange={setSyncModelsWithLeadFromUser}
                   showWorktreeIsolationControls
                   teammateWorktreeDefault={teammateWorktreeDefault}
                   worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
-                  onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
+                  onTeammateWorktreeDefaultChange={setTeammateWorktreeDefaultFromUser}
                   leadWarningText={leadRuntimeWarningText}
                   memberWarningById={combinedMemberRuntimeWarningById}
                   memberInfoById={memberWorktreeContinuationInfoById}
@@ -3013,6 +3012,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 <EffortLevelSelector
                   value={selectedEffortForCurrentSelection}
                   onValueChange={setSelectedEffort}
+                  onAutoReset={autoResetSelectedEffort}
                   id="dialog-effort"
                   providerId={selectedProviderId}
                   model={selectedModel}
