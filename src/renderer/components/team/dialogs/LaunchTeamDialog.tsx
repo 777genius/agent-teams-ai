@@ -761,12 +761,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedEffort = (value: string): void => {
-    // EffortLevelSelector clears an effort the selected model cannot run by calling this
-    // with ''. That programmatic reset is not a user edit, so it must not cancel hydration
-    // while the saved request is still in flight (hydration key not set yet).
-    if (value !== '' || hydrationRef.current.key !== null) hydrationRef.current.dirty = true;
+    // Every call here is an explicit user choice, including Default (''): the
+    // programmatic clear goes through autoResetSelectedEffort instead.
+    hydrationRef.current.dirty = true;
     setSelectedEffortRaw(value);
     localStorage.setItem('team:lastSelectedEffort', value);
+  };
+
+  const autoResetSelectedEffort = (): void => {
+    // EffortLevelSelector clears an effort the selected model cannot run through this
+    // callback. That programmatic reset is not a user edit, so it must not cancel
+    // hydration or mark the form dirty.
+    setSelectedEffortRaw('');
+    localStorage.setItem('team:lastSelectedEffort', '');
   };
 
   const setSelectedFastMode = (value: TeamFastMode): void => {
@@ -779,6 +786,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     hydrationRef.current.dirty = true;
     hydrationRef.current.rosterDirty = true;
     setMembersDrafts(nextMembers);
+  };
+
+  const setSyncModelsWithLeadFromUser = (value: boolean): void => {
+    hydrationRef.current.dirty = true;
+    setSyncModelsWithLead(value);
+  };
+
+  const setTeammateWorktreeDefaultFromUser = (value: boolean): void => {
+    hydrationRef.current.dirty = true;
+    setTeammateWorktreeDefault(value);
   };
 
   // ---------------------------------------------------------------------------
@@ -925,10 +942,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         )
       );
       setWorktreePathByMemberName(buildWorktreePathByMemberName(inputs));
-      setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
-      setSyncModelsWithLead(
-        !inputs.some((member) => member.providerId || member.model || member.effort)
-      );
+      // The two toggles are roster-derived defaults, so a user toggle made while the
+      // saved request was in flight must win over them.
+      if (!hydrationRef.current.dirty) {
+        setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
+        setSyncModelsWithLead(
+          !inputs.some((member) => member.providerId || member.model || member.effort)
+        );
+      }
     };
 
     if (filterEditableMemberInputs(members).length > 0) applyEditableRoster();
@@ -2818,13 +2839,14 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   onProviderChange={setSelectedProviderId}
                   onModelChange={setSelectedModel}
                   onEffortChange={setSelectedEffort}
+                  onEffortAutoReset={autoResetSelectedEffort}
                   onLimitContextChange={setLimitContext}
                   syncModelsWithTeammates={syncModelsWithLead}
-                  onSyncModelsWithTeammatesChange={setSyncModelsWithLead}
+                  onSyncModelsWithTeammatesChange={setSyncModelsWithLeadFromUser}
                   showWorktreeIsolationControls
                   teammateWorktreeDefault={teammateWorktreeDefault}
                   worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
-                  onTeammateWorktreeDefaultChange={setTeammateWorktreeDefault}
+                  onTeammateWorktreeDefaultChange={setTeammateWorktreeDefaultFromUser}
                   leadWarningText={leadRuntimeWarningText}
                   memberWarningById={combinedMemberRuntimeWarningById}
                   memberInfoById={memberWorktreeContinuationInfoById}
@@ -3013,6 +3035,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 <EffortLevelSelector
                   value={selectedEffortForCurrentSelection}
                   onValueChange={setSelectedEffort}
+                  onAutoReset={autoResetSelectedEffort}
                   id="dialog-effort"
                   providerId={selectedProviderId}
                   model={selectedModel}

@@ -872,10 +872,10 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
-    // EffortLevelSelector clears an effort the selected model cannot run by calling
-    // onValueChange('') from its validation effect. That is not a user edit.
+    // EffortLevelSelector clears an effort the selected model cannot run through the
+    // dedicated auto-reset callback. That is not a user edit.
     await act(async () => {
-      teamRosterEditorSectionMock.lastProps?.onEffortChange('');
+      teamRosterEditorSectionMock.lastProps?.onEffortAutoReset();
       await flush();
     });
 
@@ -894,6 +894,8 @@ describe('LaunchTeamDialog', () => {
     expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
       expect.objectContaining({ name: 'jack' }),
     ]);
+    // The auto reset kept the form pristine, so the saved request fields still hydrate.
+    expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe('codex');
 
     await act(async () => {
       root.unmount();
@@ -955,6 +957,198 @@ describe('LaunchTeamDialog', () => {
     expect(providerBeforeSavedRequest).not.toBe('codex');
     expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe(providerBeforeSavedRequest);
     // ...while the roster the user never touched still hydrates from the saved request.
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('lets an explicit Default effort choice during hydration win over the saved request', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    // The user explicitly picks Default (''), which is indistinguishable from the
+    // programmatic clear by value alone — but it arrives through onEffortChange.
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onEffortChange('');
+      await flush();
+    });
+
+    const providerBeforeSavedRequest = teamRosterEditorSectionMock.lastProps?.providerId;
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(providerBeforeSavedRequest).not.toBe('codex');
+    expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe(providerBeforeSavedRequest);
+    expect(teamRosterEditorSectionMock.lastProps?.effort).toBeUndefined();
+    // The roster the user never touched still hydrates from the saved request.
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps a sync-models toggle made during hydration from being overwritten', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(false);
+
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onSyncModelsWithTeammatesChange(true);
+      await flush();
+    });
+
+    // The saved roster members carry their own models, so re-deriving the toggle from
+    // them would flip it back to false.
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer', model: 'gpt-5.5' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(true);
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps a teammate worktree toggle made during hydration from being overwritten', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.teammateWorktreeDefault).toBe(false);
+
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onTeammateWorktreeDefaultChange(true);
+      await flush();
+    });
+
+    // The saved roster members have no worktree settings, so re-deriving the toggle
+    // from them would flip it back to false.
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.teammateWorktreeDefault).toBe(true);
     expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
       expect.objectContaining({ name: 'jack' }),
     ]);

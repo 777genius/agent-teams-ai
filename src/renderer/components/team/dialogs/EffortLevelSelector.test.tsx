@@ -96,6 +96,19 @@ describe('EffortLevelSelector', () => {
     await unmount();
   });
 
+  it('routes the programmatic clear through onAutoReset when provided', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    providerStatusMock.current = buildCatalogProviderStatus(['low', 'medium', 'high']);
+    const onValueChange = vi.fn();
+    const onAutoReset = vi.fn();
+
+    const unmount = await renderSelector({ value: 'xhigh', onValueChange, onAutoReset });
+
+    expect(onAutoReset).toHaveBeenCalledTimes(1);
+    expect(onValueChange).not.toHaveBeenCalled();
+    await unmount();
+  });
+
   it('leaves an available effort alone', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     providerStatusMock.current = buildCatalogProviderStatus(['low', 'medium', 'high']);
