@@ -38,17 +38,51 @@ const SENSITIVE_ASSIGNMENT_KEYS = new Set([
 
 const TRANSIENT_SERVER_STATUSES = new Set([500, 502, 503, 504, 529]);
 const TERMINAL_CLIENT_STATUSES = new Set([400, 404, 413, 422]);
+// Statuses that a later branch already turns into a retryable disposition. A refresh
+// failure carrying one of these is an outage of the refresh endpoint, not a dead grant.
+const TRANSIENT_RETRY_STATUSES = new Set([408, 409, 429, 500, 502, 503, 504, 529]);
+
+const NETWORK_FAILURE_MARKERS = [
+  'econnreset',
+  'epipe',
+  'etimedout',
+  'connection reset',
+  'connection refused',
+  'network error',
+  'fetch failed',
+  'unable to connect',
+  'connect failed',
+] as const;
+
+const PROVIDER_OVERLOAD_MARKERS = [
+  'overloaded_error',
+  'temporarily unavailable',
+  'service unavailable',
+] as const;
+
+const TRANSIENT_TRANSPORT_MARKERS = [
+  ...NETWORK_FAILURE_MARKERS,
+  ...PROVIDER_OVERLOAD_MARKERS,
+] as const;
 
 // Codex CLI stale-auth signatures: a reused/rotated refresh token or a missing
 // `codex login` is never fixed by re-running the same exec, so the delivery loop
 // must not retry it. Matched against the raw detail because the secret redactor
 // rewrites "token: <word>" sequences, which erases these markers from
 // normalizedDetail (e.g. "Failed to refresh token: ..." loses "token:").
-const CODEX_AUTH_FAILURE_MARKERS = [
+const CODEX_TERMINAL_AUTH_MARKERS = [
   'refresh_token_reused',
-  'failed to refresh token',
+  'invalid_grant',
   'codex_login',
 ] as const;
+
+// A bare "failed to refresh token" only reports that the refresh call did not
+// succeed; it does not say the grant is dead. Classifying it as terminal auth
+// regardless of cause strands the teammate with no recovery job whenever the
+// refresh endpoint has a transient outage (e.g. "Failed to refresh token: API
+// Error: 503"), so it counts as auth failure only when nothing else in the signal
+// points at a retryable transport problem.
+const CODEX_REFRESH_FAILURE_MARKERS = ['failed to refresh token'] as const;
 
 function containsAny(value: string, tokens: readonly string[]): boolean {
   return tokens.some((token) => value.includes(token));
@@ -134,9 +168,21 @@ export function classifyRuntimeFailure(signal: RuntimeFailureSignal): RuntimeFai
   const normalizedDetail = normalizeRuntimeFailureDetail(signal.detail);
   const lower = normalizedDetail.toLowerCase();
   const rawLower = signal.detail.toLowerCase();
-  const statusCode = extractRuntimeFailureStatusCode(normalizedDetail, signal.statusCode);
+  // The redactor rewrites "token: <word>" sequences, so "Failed to refresh token: API
+  // Error: 503" loses its "API Error:" prefix in normalizedDetail. Fall back to the raw
+  // detail so a transient status is not lost; only the number is read from it.
+  const statusCode =
+    extractRuntimeFailureStatusCode(normalizedDetail, signal.statusCode) ??
+    extractRuntimeFailureStatusCode(signal.detail);
   const providerCode = signal.providerCode?.trim().toLowerCase() ?? '';
   const retryAt = resolveRetryAt(signal);
+  const hasTransientTransportEvidence =
+    (statusCode != null && TRANSIENT_RETRY_STATUSES.has(statusCode)) ||
+    providerCode === 'overloaded_error' ||
+    containsAny(rawLower, TRANSIENT_TRANSPORT_MARKERS);
+  const hasCodexAuthFailureMarker =
+    containsAny(rawLower, CODEX_TERMINAL_AUTH_MARKERS) ||
+    (!hasTransientTransportEvidence && containsAny(rawLower, CODEX_REFRESH_FAILURE_MARKERS));
 
   if (signal.phase === 'sdk_retrying') {
     return result('backend_error', 'observe_only', normalizedDetail, {
@@ -172,7 +218,7 @@ export function classifyRuntimeFailure(signal: RuntimeFailureSignal): RuntimeFai
       'permission denied',
       'does not have access',
     ]) ||
-    containsAny(rawLower, CODEX_AUTH_FAILURE_MARKERS)
+    hasCodexAuthFailureMarker
   ) {
     return result('auth_error', 'manual', normalizedDetail, {
       statusCode,
@@ -234,9 +280,8 @@ export function classifyRuntimeFailure(signal: RuntimeFailureSignal): RuntimeFai
 
   if (
     providerCode === 'overloaded_error' ||
-    lower.includes('overloaded_error') ||
-    lower.includes('temporarily unavailable') ||
-    lower.includes('service unavailable')
+    containsAny(lower, PROVIDER_OVERLOAD_MARKERS) ||
+    containsAny(rawLower, PROVIDER_OVERLOAD_MARKERS)
   ) {
     return result('provider_overloaded', 'retry_transient', normalizedDetail, {
       statusCode,
@@ -288,18 +333,11 @@ export function classifyRuntimeFailure(signal: RuntimeFailureSignal): RuntimeFai
     return result('codex_native_timeout', 'retry_transient', normalizedDetail, { statusCode });
   }
 
+  // Raw detail is consulted too: redaction of "token: ETIMEDOUT" style sequences would
+  // otherwise hide a transport failure behind an `unknown`/manual verdict.
   if (
-    containsAny(lower, [
-      'econnreset',
-      'epipe',
-      'etimedout',
-      'connection reset',
-      'connection refused',
-      'network error',
-      'fetch failed',
-      'unable to connect',
-      'connect failed',
-    ])
+    containsAny(lower, NETWORK_FAILURE_MARKERS) ||
+    containsAny(rawLower, NETWORK_FAILURE_MARKERS)
   ) {
     return result('network_error', 'retry_transient', normalizedDetail, { statusCode });
   }
