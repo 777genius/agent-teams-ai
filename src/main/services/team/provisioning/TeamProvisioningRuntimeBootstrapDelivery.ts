@@ -1,5 +1,7 @@
 import { type TeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
+import { getErrorMessage } from '@shared/utils/errorHandling';
 
+import { TeamLaunchValidationError } from './TeamLaunchValidationError';
 import { isPureOpenCodeProvisioningRequest } from './TeamProvisioningLaunchCompatibility';
 import {
   createMixedSecondaryLaneStates as createMixedSecondaryLaneStatesFromPlan,
@@ -28,7 +30,13 @@ export function planRuntimeLanesOrThrow(
     hasOpenCodeRuntimeAdapter: boolean;
   }
 ): TeamRuntimeLanePlan {
-  return runtimeLaneCoordinator.planProvisioningMembers(input);
+  try {
+    return runtimeLaneCoordinator.planProvisioningMembers(input);
+  } catch (error) {
+    // Lane-plan rejections (e.g. an OpenCode-led mixed roster) are user-facing
+    // launch blockers; retype them so HTTP surfaces the message instead of 500.
+    throw new TeamLaunchValidationError(getErrorMessage(error));
+  }
 }
 
 export function createMixedSecondaryLaneStates(

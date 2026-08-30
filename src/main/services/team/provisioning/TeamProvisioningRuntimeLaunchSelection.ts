@@ -36,6 +36,7 @@ import {
   type TeamRuntimeSettingsJson,
 } from '../../runtime/teamRuntimeSettingsBundle';
 
+import { TeamLaunchValidationError } from './TeamLaunchValidationError';
 import { getExplicitLaunchModelSelection } from './TeamProvisioningMemberSpecs';
 
 export interface ProviderModelListCommandResponse {
@@ -530,11 +531,8 @@ export function hasPathBasedSettingsArgs(args: string[]): boolean {
         index += 2;
         continue;
       }
-      if (typeof value !== 'string') {
-        return true;
-      }
-      index += 1;
-      continue;
+      // A trailing `--settings` with no value behaves like a path-based flag.
+      return true;
     }
     const prefix = '--settings=';
     if (arg.startsWith(prefix) && !parseJsonSettingsObject(arg.slice(prefix.length))) {
@@ -811,7 +809,7 @@ export function validateRuntimeLaunchSelection(params: {
     });
     const resolvedLaunchModel = selection.resolvedLaunchModel?.trim() || null;
     if (!resolvedLaunchModel) {
-      throw new Error(
+      throw new TeamLaunchValidationError(
         `${params.actorLabel} could not resolve the selected Anthropic model against the current runtime catalog.`
       );
     }
@@ -820,7 +818,7 @@ export function validateRuntimeLaunchSelection(params: {
       hasAuthoritativeAnthropicLaunchCatalog(params.facts) &&
       !params.facts.modelIds.has(resolvedLaunchModel)
     ) {
-      throw new Error(
+      throw new TeamLaunchValidationError(
         `${params.actorLabel} resolves to Anthropic model "${resolvedLaunchModel}", but the current runtime does not list it as launchable.`
       );
     }
@@ -832,7 +830,7 @@ export function validateRuntimeLaunchSelection(params: {
         runtimeCapabilities: params.facts.runtimeCapabilities,
       });
       if (effortSupport.kind !== 'supported') {
-        throw new Error(
+        throw new TeamLaunchValidationError(
           `${params.actorLabel} uses Anthropic effort "${params.effort}", but ${formatAnthropicEffortSupportFailure(
             {
               effort: params.effort,
@@ -854,7 +852,7 @@ export function validateRuntimeLaunchSelection(params: {
       providerFastModeDefault: params.anthropicFastModeDefault,
     });
     if ((params.fastMode ?? 'inherit') === 'on' && !fastResolution.selectable) {
-      throw new Error(
+      throw new TeamLaunchValidationError(
         `${params.actorLabel} enables Anthropic Fast mode, but ${
           fastResolution.disabledReason ?? 'it is unavailable for the selected runtime or model.'
         }`
@@ -873,12 +871,12 @@ export function validateRuntimeLaunchSelection(params: {
       const supported = catalogModel.supportedReasoningEfforts.length
         ? ` Supported efforts: ${catalogModel.supportedReasoningEfforts.join(', ')}.`
         : ' This model does not support configurable effort.';
-      throw new Error(
+      throw new TeamLaunchValidationError(
         `${params.actorLabel} uses effort "${params.effort}", but ${catalogModel.displayName} does not support it.${supported}`
       );
     }
     if (params.effort && !catalogModel && !isLegacySafeEffort(params.effort)) {
-      throw new Error(
+      throw new TeamLaunchValidationError(
         `${params.actorLabel} uses effort "${params.effort}", but ${params.getProviderLabel(
           params.providerId
         )} currently supports only low, medium, or high effort in Agent Teams.`
@@ -891,7 +889,7 @@ export function validateRuntimeLaunchSelection(params: {
     params.effort &&
     !isCodexEffortRuntimeSupported(params.effort, params.facts.runtimeCapabilities)
   ) {
-    throw new Error(
+    throw new TeamLaunchValidationError(
       `${params.actorLabel} uses Codex effort "${params.effort}", but this Agent Teams runtime does not expose Codex reasoning config passthrough yet. Use low, medium, or high for now.`
     );
   }
@@ -904,7 +902,7 @@ export function validateRuntimeLaunchSelection(params: {
     return;
   }
 
-  throw new Error(
+  throw new TeamLaunchValidationError(
     `${params.actorLabel} uses Codex model "${explicitModel}", but it is not present in the live Codex model catalog. Refresh the catalog or pick a listed Codex model.`
   );
 }
