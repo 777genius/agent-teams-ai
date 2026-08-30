@@ -67,6 +67,39 @@ describe('classifyRuntimeFailure', () => {
     });
   });
 
+  it.each([
+    ['Failed to refresh token: API Error: 503', 'provider_overloaded', 'retry_transient'],
+    ['Failed to refresh token: API Error: 500 internal error', 'backend_error', 'retry_transient'],
+    ['Failed to refresh token: API Error: 429 too many requests', 'rate_limited', 'manual'],
+    ['Failed to refresh token: fetch failed', 'network_error', 'retry_transient'],
+    ['Failed to refresh token: ETIMEDOUT', 'network_error', 'retry_transient'],
+  ] as const)(
+    'keeps a transient refresh-endpoint outage recoverable: %s => %s/%s',
+    (detail, reasonCode, disposition) => {
+      // A bare "failed to refresh token" carrying transient transport evidence is an
+      // outage of the refresh endpoint, not a dead grant. Classifying it as auth_error
+      // would leave the teammate stranded with no recovery job.
+      expect(classifyRuntimeFailure(signal({ detail }))).toMatchObject({
+        reasonCode,
+        disposition,
+      });
+    }
+  );
+
+  it('still classifies refresh-token reuse as terminal auth even behind a transient status', () => {
+    // The kill-loop signature must stay terminal: re-running the same exec replays the
+    // revoked refresh token and re-trips OpenAI's reuse detection.
+    expect(
+      classifyRuntimeFailure(
+        signal({ detail: 'Failed to refresh token: refresh_token_reused (API Error: 503)' })
+      )
+    ).toMatchObject({
+      reasonCode: 'auth_error',
+      disposition: 'manual',
+      actionRequired: true,
+    });
+  });
+
   it('observes active SDK retry without scheduling an outer retry', () => {
     expect(classifyRuntimeFailure(signal({ phase: 'sdk_retrying' }))).toMatchObject({
       disposition: 'observe_only',
