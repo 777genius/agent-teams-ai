@@ -33,6 +33,8 @@ function createServiceDouble(): TeamProvisioningService {
     recordOpenCodeRuntimeTaskEvent: ack,
     recordOpenCodeRuntimeHeartbeat: ack,
     answerOpenCodeRuntimePermission: ack,
+    getMemberSpawnStatuses: async () => ({ runId: 'run', statuses: {} }),
+    getTeamAgentRuntimeSnapshot: async () => null,
   } as unknown as TeamProvisioningService;
 }
 
