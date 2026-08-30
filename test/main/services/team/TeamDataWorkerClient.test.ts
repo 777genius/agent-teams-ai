@@ -242,6 +242,107 @@ describe('TeamDataWorkerClient', () => {
     client.dispose();
   });
 
+  // The UI reads advisories through this worker instance, so the launch-start
+  // reset has to reach it as a run-stamped payload, not a plain invalidation.
+  it('sends a run-stamped advisory reset to the worker', async () => {
+    const { TeamDataWorkerClient } =
+      await import('../../../../src/main/services/team/TeamDataWorkerClient');
+    const client = new TeamDataWorkerClient();
+    await client.getTeamData('my-team');
+    hoisted.workers[0].messages.length = 0;
+
+    client.resetMemberRuntimeAdvisoriesForNewRun('my-team', 1_724_780_000_000);
+    client.resetMemberRuntimeAdvisoriesForNewRun('../escape', 1_724_780_000_000);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(hoisted.workers[0].messages).toHaveLength(1);
+    expect(hoisted.workers[0].messages[0]).toMatchObject({
+      op: 'invalidateMemberRuntimeAdvisory',
+      payload: { teamName: 'my-team', runStartedAtMs: 1_724_780_000_000 },
+    });
+    expect(hoisted.workers[0].messages[0]).not.toHaveProperty('payload.memberName');
+
+    client.dispose();
+  });
+
+  // Every respawn builds a fresh in-memory TeamDataService, so the worker's run
+  // scope starts empty. Without a replay the new worker re-derives the dead
+  // run's advisories and the member card resurrects the previous run's error.
+  it('replays the advisory run-scope floor into a respawned worker before the first read', async () => {
+    const { TeamDataWorkerClient } =
+      await import('../../../../src/main/services/team/TeamDataWorkerClient');
+    const client = new TeamDataWorkerClient();
+    await client.getTeamData('my-team');
+
+    client.resetMemberRuntimeAdvisoriesForNewRun('my-team', 1_724_780_000_000);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // A clean exit is not fatal, so the next request respawns immediately.
+    hoisted.workers[0].handlers.get('exit')?.(0);
+
+    await client.getTeamData('my-team');
+
+    expect(hoisted.workers).toHaveLength(2);
+    expect(hoisted.workers[1].messages).toHaveLength(2);
+    expect(hoisted.workers[1].messages[0]).toMatchObject({
+      op: 'invalidateMemberRuntimeAdvisory',
+      payload: { teamName: 'my-team', runStartedAtMs: 1_724_780_000_000 },
+    });
+    expect(hoisted.workers[1].messages[1]).toMatchObject({
+      op: 'getTeamData',
+      payload: { teamName: 'my-team' },
+    });
+
+    client.dispose();
+  });
+
+  it('defers an advisory reset issued with no live worker and replays it on the next spawn', async () => {
+    const { TeamDataWorkerClient } =
+      await import('../../../../src/main/services/team/TeamDataWorkerClient');
+    const client = new TeamDataWorkerClient();
+
+    client.resetMemberRuntimeAdvisoriesForNewRun('my-team', 1_724_780_000_000);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(hoisted.workers).toHaveLength(0);
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      'advisory run-scope reset not delivered team=my-team runStartedAtMs=1724780000000 liveWorker=false replayOnNextWorkerSpawn=true'
+    );
+    vi.mocked(console.warn).mockClear();
+
+    await client.getTeamData('my-team');
+
+    expect(hoisted.workers).toHaveLength(1);
+    expect(hoisted.workers[0].messages[0]).toMatchObject({
+      op: 'invalidateMemberRuntimeAdvisory',
+      payload: { teamName: 'my-team', runStartedAtMs: 1_724_780_000_000 },
+    });
+
+    client.dispose();
+  });
+
+  it('replays only the latest floor per team and does not replay a rejected team name', async () => {
+    const { TeamDataWorkerClient } =
+      await import('../../../../src/main/services/team/TeamDataWorkerClient');
+    const client = new TeamDataWorkerClient();
+
+    client.resetMemberRuntimeAdvisoriesForNewRun('my-team', 1_724_780_000_000);
+    client.resetMemberRuntimeAdvisoriesForNewRun('my-team', 1_724_781_000_000);
+    client.resetMemberRuntimeAdvisoriesForNewRun('../escape', 1_724_780_000_000);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    vi.mocked(console.warn).mockClear();
+
+    await client.getTeamData('my-team');
+
+    expect(hoisted.workers[0].messages).toHaveLength(2);
+    expect(hoisted.workers[0].messages[0]).toMatchObject({
+      op: 'invalidateMemberRuntimeAdvisory',
+      payload: { teamName: 'my-team', runStartedAtMs: 1_724_781_000_000 },
+    });
+
+    client.dispose();
+  });
+
   it('deduplicates concurrent getMessagesPage calls with the same page key', async () => {
     const { TeamDataWorkerClient } =
       await import('../../../../src/main/services/team/TeamDataWorkerClient');

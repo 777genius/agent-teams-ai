@@ -3438,7 +3438,7 @@ Messages:
         semanticallySufficient: true,
       })
     );
-    expect(advisoryInvalidator).toHaveBeenCalledWith(teamName, 'jack');
+    expect(advisoryInvalidator).toHaveBeenCalledWith(teamName, 'jack', undefined);
     expect(teamChangeEmitter).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'member-advisory',

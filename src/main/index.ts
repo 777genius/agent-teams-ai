@@ -248,6 +248,7 @@ import {
 import { getTeamDataWorkerClient } from './services/team/TeamDataWorkerClient';
 import { getTeamFsWorkerClient } from './services/team/TeamFsWorkerClient';
 import { TeamInboxReader } from './services/team/TeamInboxReader';
+import { createMemberRuntimeAdvisoryInvalidator } from './services/team/TeamMemberRuntimeAdvisoryInvalidation';
 import { TeamMemberRuntimeAdvisoryService } from './services/team/TeamMemberRuntimeAdvisoryService';
 import { createTeamProvisioningMemberWorkSyncBusySignals } from './services/team/provisioning/TeamProvisioningMemberWorkSyncBusySignals';
 import { notifyTeamChangeObserversSafely } from './services/team/TeamChangeFanout';
@@ -2146,10 +2147,9 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setRuntimeRecoveryFailureObserver((failure) =>
     teamRuntimeRecoveryFeature?.observeLeadFailure(failure)
   );
-  teamProvisioningService.setMemberRuntimeAdvisoryInvalidator((teamName, memberName) => {
-    teamDataService?.invalidateMemberRuntimeAdvisory(teamName, memberName);
-    getTeamDataWorkerClient().invalidateMemberRuntimeAdvisory(teamName, memberName);
-  });
+  teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
+    createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
+  );
   publishStartupStatus({
     phase: 'runtime',
     message: 'Resolving local runtime...',
