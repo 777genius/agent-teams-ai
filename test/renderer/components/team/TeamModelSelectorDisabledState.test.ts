@@ -1,15 +1,66 @@
 import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot as createReactRoot, type Root } from 'react-dom/client';
 
 import {
   publishRuntimeProviderDirectoryCache,
   resetRuntimeProviderDirectoryCacheForTests,
 } from '@features/runtime-provider-management/renderer/runtimeProviderDirectoryCache';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type { OpenCodeRuntimeStatus } from '@shared/types';
+
+const mountedRoots = new Set<Root>();
+
+function createRoot(container: Element | DocumentFragment): Root {
+  const reactRoot = createReactRoot(container);
+  let mounted = true;
+  const trackedRoot: Root = {
+    render: (children) => reactRoot.render(children),
+    unmount: () => {
+      if (!mounted) return;
+      mounted = false;
+      mountedRoots.delete(trackedRoot);
+      reactRoot.unmount();
+    },
+  };
+  mountedRoots.add(trackedRoot);
+  return trackedRoot;
+}
+
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T | PromiseLike<T>) => void;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+async function resolveDeferred<T>(
+  deferred: Deferred<T>,
+  value: T
+): Promise<void> {
+  await act(async () => {
+    deferred.resolve(value);
+    await deferred.promise;
+    await Promise.resolve();
+  });
+}
+
+async function hydrateFailClosedAuthorityClocks(): Promise<void> {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+}
 
 vi.mock('@renderer/components/ui/tabs', () => {
   let currentValue = '';
@@ -133,7 +184,20 @@ import { getActiveOpenCodeStickyHeadingIndex } from '@renderer/components/team/d
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 
 describe('TeamModelSelector disabled Codex models', () => {
-  afterEach(() => {
+  beforeEach(() => {
+    vi.stubGlobal('EventSource', undefined);
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      for (const root of [...mountedRoots]) {
+        root.unmount();
+      }
+      await Promise.resolve();
+    });
+    if (vi.isFakeTimers()) {
+      vi.clearAllTimers();
+    }
     resetRuntimeProviderDirectoryCacheForTests();
     document.body.innerHTML = '';
     Reflect.deleteProperty(window, 'electronAPI');
@@ -161,6 +225,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     codexAccountHookState.logout.mockClear();
     useVirtualizerMock.mockClear();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it('shows only Default while Codex runtime models are still loading', async () => {
@@ -1559,6 +1624,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('shows short-lived OpenCode preflight notes as selectable advisory tiles', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -1626,14 +1692,13 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
     const issueButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('big-pickle')
     );
     expect(issueButton).not.toBeNull();
-    await act(async () => {
-      await vi.waitFor(() => expect(issueButton?.getAttribute('aria-disabled')).toBe('false'));
-    });
+    expect(issueButton?.getAttribute('aria-disabled')).toBe('false');
     expect(issueButton?.textContent).toContain('Ping not confirmed');
     expect(issueButton?.className).toContain('bg-amber-300/5');
     expect(issueButton?.className).toContain('border-0');
@@ -2498,6 +2563,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('fail-closes static Anthropic catalogs before accepting live-only selections', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     const onValueChange = vi.fn();
     const staticAnthropicProvider = {
       providerId: 'anthropic',
@@ -2625,14 +2691,13 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('anthropic', {
       silent: false,
       checkReason: 'launch_preflight',
     });
-    await act(async () => {
-      await vi.waitFor(() => expect(onValueChange).toHaveBeenCalledWith(''));
-    });
+    expect(onValueChange).toHaveBeenCalledWith('');
     expect(host.textContent).not.toContain('Mythos 5');
     onValueChange.mockClear();
 
@@ -2652,13 +2717,10 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
-    await act(async () => {
-      await vi.waitFor(() => {
-        expect(host.textContent).toContain('Fable 5');
-        expect(host.textContent).toContain('Mythos 5');
-        expect(host.textContent).toContain('Sonnet 5');
-      });
-    });
+    await hydrateFailClosedAuthorityClocks();
+    expect(host.textContent).toContain('Fable 5');
+    expect(host.textContent).toContain('Mythos 5');
+    expect(host.textContent).toContain('Sonnet 5');
     expect(onValueChange).not.toHaveBeenCalledWith('');
 
     await act(async () => {
@@ -3805,6 +3867,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('keeps ready OpenCode selectable when no role-specific disable is provided', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     storeState.cliStatus = {
       providers: [
         {
@@ -3856,13 +3919,14 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
-    const openCodeButton = Array.from(host.querySelectorAll('button')).find((button) =>
-      button.textContent?.includes('OpenCode')
+    const openCodeButton = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-opencode"]'
     );
-    await act(async () => {
-      await vi.waitFor(() => expect(openCodeButton?.hasAttribute('disabled')).toBe(false));
-    });
+    expect(openCodeButton).not.toBeNull();
+    expect(openCodeButton?.hasAttribute('disabled')).toBe(false);
+    expect(openCodeButton?.getAttribute('aria-disabled')).toBeNull();
 
     await act(async () => {
       openCodeButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -4437,6 +4501,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('renders OpenCode source groups and keeps raw model ids on selection', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     storeState.cliStatus = {
       providers: [
         {
@@ -4494,6 +4559,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent).toContain('OpenAI');
@@ -4512,22 +4578,14 @@ describe('TeamModelSelector disabled Codex models', () => {
 
     expect(openRouterButton).toBeTruthy();
     expect(openRouterButton?.textContent).not.toContain('OpenRouter');
-    await act(async () => {
-      await vi.waitFor(() =>
-        expect(openRouterButton?.getAttribute('aria-disabled')).toBe('false')
-      );
-    });
+    expect(openRouterButton?.getAttribute('aria-disabled')).toBe('false');
 
     await act(async () => {
       openRouterButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await Promise.resolve();
     });
 
-    await act(async () => {
-      await vi.waitFor(() =>
-        expect(onValueChange).toHaveBeenCalledWith('openrouter/moonshotai/kimi-k2')
-      );
-    });
+    expect(onValueChange).toHaveBeenCalledWith('openrouter/moonshotai/kimi-k2');
 
     await act(async () => {
       root.unmount();
@@ -5382,7 +5440,11 @@ describe('TeamModelSelector disabled Codex models', () => {
         },
       ],
     };
-    storeState.fetchCliProviderStatus.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    const firstRefresh = createDeferred<boolean>();
+    const secondRefresh = createDeferred<boolean>();
+    storeState.fetchCliProviderStatus
+      .mockImplementationOnce(() => firstRefresh.promise)
+      .mockImplementationOnce(() => secondRefresh.promise);
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -5402,6 +5464,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    await resolveDeferred(firstRefresh, false);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1_999);
     });
@@ -5412,9 +5475,12 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000);
-    });
+    await resolveDeferred(secondRefresh, true);
+    for (const retryDelay of [2_000, 5_000, 10_000]) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(retryDelay);
+      });
+    }
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
 
     await act(async () => {
@@ -5438,7 +5504,12 @@ describe('TeamModelSelector disabled Codex models', () => {
         },
       ],
     };
-    storeState.fetchCliProviderStatus.mockResolvedValue(false);
+    const refreshAttempts = Array.from({ length: 4 }, () => createDeferred<boolean>());
+    storeState.fetchCliProviderStatus
+      .mockImplementationOnce(() => refreshAttempts[0]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[1]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[2]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[3]!.promise);
 
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -5460,14 +5531,15 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
     ).not.toBeNull();
-    for (const retryDelay of [2_000, 5_000, 10_000]) {
+    for (const [index, retryDelay] of [2_000, 5_000, 10_000].entries()) {
+      await resolveDeferred(refreshAttempts[index]!, false);
       await act(async () => {
         await vi.advanceTimersByTimeAsync(retryDelay);
-        await Promise.resolve();
       });
     }
 
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(4);
+    await resolveDeferred(refreshAttempts[3]!, false);
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-source-loading-skeleton"]')
     ).toBeNull();
@@ -5513,7 +5585,12 @@ describe('TeamModelSelector disabled Codex models', () => {
     };
     storeState.cliProviderStatusByScope[getCliProviderStatusScopeKey('opencode', projectPath)] =
       emptyScopedProvider;
-    storeState.fetchCliProviderStatus.mockResolvedValue(false);
+    const refreshAttempts = Array.from({ length: 4 }, () => createDeferred<boolean>());
+    storeState.fetchCliProviderStatus
+      .mockImplementationOnce(() => refreshAttempts[0]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[1]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[2]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[3]!.promise);
     publishRuntimeProviderDirectoryCache({
       projectPath: null,
       fetchedAt: '2026-07-20T12:00:00.000Z',
@@ -5561,9 +5638,7 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
+    await hydrateFailClosedAuthorityClocks();
 
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-loading-openrouter"]')
@@ -5571,12 +5646,14 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.textContent).toContain('Syncing models');
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalled();
 
-    for (const retryDelay of [2_000, 5_000, 10_000]) {
+    for (const [index, retryDelay] of [2_000, 5_000, 10_000].entries()) {
+      await resolveDeferred(refreshAttempts[index]!, false);
       await act(async () => {
         await vi.advanceTimersByTimeAsync(retryDelay);
-        await Promise.resolve();
       });
+      await hydrateFailClosedAuthorityClocks();
     }
+    await resolveDeferred(refreshAttempts[3]!, false);
 
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-catalog-refresh-error"]')
@@ -5659,7 +5736,13 @@ describe('TeamModelSelector disabled Codex models', () => {
       capabilities: { ...globalProvider.capabilities, teamLaunch: false },
       modelCatalogRefreshState: 'error',
     };
-    storeState.fetchCliProviderStatus.mockResolvedValue(false);
+    const refreshAttempts = Array.from({ length: 5 }, () => createDeferred<boolean>());
+    storeState.fetchCliProviderStatus
+      .mockImplementationOnce(() => refreshAttempts[0]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[1]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[2]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[3]!.promise)
+      .mockImplementationOnce(() => refreshAttempts[4]!.promise);
     publishRuntimeProviderDirectoryCache({
       projectPath: null,
       fetchedAt: '2026-07-20T12:00:00.000Z',
@@ -5683,21 +5766,21 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
+    await hydrateFailClosedAuthorityClocks();
 
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-openrouter"]')
     ).not.toBeNull();
     expect(host.textContent).toContain('moonshotai/kimi-k2.6');
 
-    for (const retryDelay of [2_000, 5_000, 10_000]) {
+    for (const [index, retryDelay] of [2_000, 5_000, 10_000].entries()) {
+      await resolveDeferred(refreshAttempts[index]!, false);
       await act(async () => {
         await vi.advanceTimersByTimeAsync(retryDelay);
-        await Promise.resolve();
       });
+      await hydrateFailClosedAuthorityClocks();
     }
+    await resolveDeferred(refreshAttempts[3]!, false);
 
     expect(storeState.fetchCliProviderStatus).toHaveBeenCalled();
     expect(
@@ -5727,6 +5810,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     ).toBeNull();
 
     await act(async () => {
+      refreshAttempts[4]!.resolve(false);
+      await refreshAttempts[4]!.promise;
+      await Promise.resolve();
       root.unmount();
       await Promise.resolve();
     });
