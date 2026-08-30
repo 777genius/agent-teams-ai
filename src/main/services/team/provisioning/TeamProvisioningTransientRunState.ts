@@ -45,7 +45,10 @@ export interface TeamProvisioningTransientRunStatePorts {
   openCodeMemberInboxRelayInFlight: PrefixScopedDeleteMap;
   openCodeMemberSendInFlightByLane: PrefixScopedDeleteMap;
   openCodePromptDeliveryWatchdogScheduler: { cancelTeam(teamName: string): void };
-  openCodeRuntimeDeliveryAdvisory: { cancelTeam(teamName: string): void };
+  openCodeRuntimeDeliveryAdvisory: {
+    cancelTeam(teamName: string): void;
+    resetTeamForNewRun(teamName: string, runStartedAtMs?: number): void;
+  };
   relayedMemberInboxMessageIds: PrefixScopedDeleteMap;
   liveLeadProcessMessages: DeleteByTeamName;
   relayLeadInboxMessages(teamName: string): Promise<unknown>;
@@ -209,7 +212,7 @@ export class TeamProvisioningTransientRunState {
     deleteKeysWithPrefix(this.ports.openCodeMemberInboxRelayInFlight, `opencode:${teamName}:`);
     deleteKeysWithPrefix(this.ports.openCodeMemberSendInFlightByLane, `opencode-send:${teamName}:`);
     this.ports.openCodePromptDeliveryWatchdogScheduler.cancelTeam(teamName);
-    this.ports.openCodeRuntimeDeliveryAdvisory.cancelTeam(teamName);
+    this.ports.openCodeRuntimeDeliveryAdvisory.resetTeamForNewRun(teamName, this.ports.nowMs());
     deleteKeysWithPrefix(this.ports.relayedMemberInboxMessageIds, `${teamName}:`);
 
     this.ports.liveLeadProcessMessages.delete(teamName);

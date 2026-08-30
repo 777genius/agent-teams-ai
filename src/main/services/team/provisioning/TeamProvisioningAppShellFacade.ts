@@ -1,6 +1,7 @@
 import { TeamProvisioningAppShellBoundary } from './TeamProvisioningAppShellBoundary';
 
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../runtime';
+import type { TeamProvisioningMemberRuntimeAdvisoryInvalidator } from './TeamProvisioningAppShellBoundary';
 import type {
   MemberWorkSyncAcceptedReportChecker,
   MemberWorkSyncProofMissingRecoveryScheduler,
@@ -24,7 +25,7 @@ export abstract class TeamProvisioningAppShellFacade {
   }
 
   setMemberRuntimeAdvisoryInvalidator(
-    invalidator: ((teamName: string, memberName: string) => void) | null
+    invalidator: TeamProvisioningMemberRuntimeAdvisoryInvalidator | null
   ): void {
     this.appShellBoundary.setMemberRuntimeAdvisoryInvalidator(invalidator);
   }

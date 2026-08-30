@@ -704,8 +704,8 @@ export class TeamDataService {
     this.memberRuntimeAdvisoryService.invalidateMemberAdvisory(teamName, memberName);
   }
 
-  invalidateTeamRuntimeAdvisories(teamName: string): void {
-    this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName);
+  invalidateTeamRuntimeAdvisories(teamName: string, runStartedAtMs?: number): void {
+    this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName, runStartedAtMs);
   }
 
   private async getMemberRuntimeAdvisoriesForSnapshot(

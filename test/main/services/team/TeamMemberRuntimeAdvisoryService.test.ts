@@ -1784,4 +1784,156 @@ describe('TeamMemberRuntimeAdvisoryService', () => {
     expect(Array.from(second.keys())).toEqual(['Alice', 'Bob']);
     expect(logsFinder.findMemberLogs.mock.calls.map((call) => call[1])).toEqual(['Alice', 'Bob']);
   });
+
+  // mixrun43: the L2 relaunch showed the lead's memberCardError from L1
+  // (runtimeAdvisoryObservedAt 18:08:39, a dead run's terminal ledger record).
+  it('drops a dead run ledger advisory once a new run raises the floor', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-27T18:20:30.000Z'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-advisory-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'mixrun43';
+    const laneId = 'primary';
+    const deadRunIso = '2026-08-27T18:08:39.000Z';
+    await writeOpenCodeDeliveryFixture({
+      baseDir: tmpDir,
+      teamName,
+      laneId,
+      records: [
+        buildOpenCodeDeliveryRecord({
+          id: 'opencode-prompt:lead-l1',
+          teamName,
+          memberName: 'team-lead',
+          laneId,
+          runId: 'run-l1',
+          createdAt: deadRunIso,
+          updatedAt: deadRunIso,
+          failedAt: deadRunIso,
+          lastAttemptAt: deadRunIso,
+          lastObservedAt: deadRunIso,
+          respondedAt: null,
+        }),
+      ],
+    });
+
+    const service = new TeamMemberRuntimeAdvisoryService({
+      findMemberLogs: vi.fn(async () => []),
+    });
+    const members = [buildMember('team-lead')];
+
+    expect((await service.getMemberAdvisories(teamName, members)).get('team-lead')).toMatchObject({
+      kind: 'api_error',
+      observedAt: deadRunIso,
+    });
+
+    // Flushing the caches alone re-derives the same dead-run evidence.
+    service.invalidateTeamAdvisories(teamName);
+    expect((await service.getMemberAdvisories(teamName, members)).has('team-lead')).toBe(true);
+
+    service.invalidateTeamAdvisories(teamName, Date.parse('2026-08-27T18:20:00.000Z'));
+
+    expect(await service.getMemberAdvisories(teamName, members)).toEqual(new Map());
+    service.invalidateTeamAdvisories(teamName);
+    expect(await service.getMemberAdvisories(teamName, members)).toEqual(new Map());
+  });
+
+  it('keeps a ledger advisory observed after the run floor', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-27T18:26:00.000Z'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-advisory-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'mixrun43';
+    const laneId = 'primary';
+    const freshIso = '2026-08-27T18:21:00.000Z';
+    await writeOpenCodeDeliveryFixture({
+      baseDir: tmpDir,
+      teamName,
+      laneId,
+      records: [
+        buildOpenCodeDeliveryRecord({
+          id: 'opencode-prompt:lead-l2',
+          teamName,
+          memberName: 'team-lead',
+          laneId,
+          runId: 'run-l2',
+          createdAt: freshIso,
+          updatedAt: freshIso,
+          failedAt: freshIso,
+          lastAttemptAt: freshIso,
+          lastObservedAt: freshIso,
+          respondedAt: null,
+        }),
+      ],
+    });
+
+    const service = new TeamMemberRuntimeAdvisoryService({
+      findMemberLogs: vi.fn(async () => []),
+    });
+    service.invalidateTeamAdvisories(teamName, Date.parse('2026-08-27T18:20:00.000Z'));
+
+    expect(
+      (await service.getMemberAdvisories(teamName, [buildMember('team-lead')])).get('team-lead')
+    ).toMatchObject({ kind: 'api_error', observedAt: freshIso });
+  });
+
+  it('raises but never lowers a caller-supplied advisory floor', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-27T18:26:00.000Z'));
+    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'claude-team-advisory-'));
+    setClaudeBasePathOverride(tmpDir);
+
+    const teamName = 'mixrun43';
+    const laneId = 'primary';
+    await writeOpenCodeDeliveryFixture({
+      baseDir: tmpDir,
+      teamName,
+      laneId,
+      records: [
+        buildOpenCodeDeliveryRecord({
+          id: 'opencode-prompt:tom-dead',
+          teamName,
+          memberName: 'tom',
+          laneId,
+          createdAt: '2026-08-27T18:10:00.000Z',
+          updatedAt: '2026-08-27T18:10:00.000Z',
+          failedAt: '2026-08-27T18:10:00.000Z',
+          lastAttemptAt: '2026-08-27T18:10:00.000Z',
+          lastObservedAt: '2026-08-27T18:10:00.000Z',
+          respondedAt: null,
+        }),
+        buildOpenCodeDeliveryRecord({
+          id: 'opencode-prompt:nina-fresh',
+          teamName,
+          memberName: 'nina',
+          laneId,
+          createdAt: '2026-08-27T18:21:00.000Z',
+          updatedAt: '2026-08-27T18:21:00.000Z',
+          failedAt: '2026-08-27T18:21:00.000Z',
+          lastAttemptAt: '2026-08-27T18:21:00.000Z',
+          lastObservedAt: '2026-08-27T18:21:00.000Z',
+          respondedAt: null,
+        }),
+      ],
+    });
+
+    const service = new TeamMemberRuntimeAdvisoryService({
+      findMemberLogs: vi.fn(async () => []),
+    });
+    const members = [buildMember('tom'), buildMember('nina')];
+    service.invalidateTeamAdvisories(teamName, Date.parse('2026-08-27T18:20:00.000Z'));
+
+    expect(Array.from((await service.getMemberAdvisories(teamName, members)).keys())).toEqual([
+      'nina',
+    ]);
+    const withLowerFloor = await service.getMemberAdvisories(teamName, members, {
+      observedAfterMs: Date.parse('2026-08-27T18:00:00.000Z'),
+    });
+    expect(Array.from(withLowerFloor.keys())).toEqual(['nina']);
+    const withHigherFloor = await service.getMemberAdvisories(teamName, members, {
+      observedAfterMs: Date.parse('2026-08-27T18:22:00.000Z'),
+    });
+    expect(withHigherFloor).toEqual(new Map());
+  });
 });

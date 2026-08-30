@@ -291,7 +291,7 @@ describe('TeamProvisioningOpenCodeRuntimeDeliveryAdvisory', () => {
     expect(service.configFacade.readConfigSnapshot).toHaveBeenCalledWith('team-a');
     expect(addTeamNotification).toHaveBeenCalledWith({ teamName: 'team-a' });
     expect(teamChanges).toEqual([{ type: 'member-advisory', teamName: 'team-a' }]);
-    expect(invalidator).toHaveBeenCalledWith('team-a', 'builder');
+    expect(invalidator).toHaveBeenCalledWith('team-a', 'builder', undefined);
     expect(service.sendMessageToRun).toHaveBeenCalledWith(run, 'check delivery');
   });
 });
