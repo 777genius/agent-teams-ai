@@ -54,6 +54,22 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
   };
 }
 
+// Deterministic id per member name: rebuilding drafts from the same inputs
+// (e.g. dialog hydration refires) must not change ids, or roster rows remount
+// and lose focus/local edit state.
+function deterministicMemberDraftId(name: string, usedIds: Set<string>): string | undefined {
+  const base = name.trim().toLowerCase();
+  if (!base) return undefined;
+  let candidate = base;
+  let suffix = 2;
+  while (usedIds.has(candidate)) {
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  usedIds.add(candidate);
+  return candidate;
+}
+
 export function createMemberDraftsFromInputs(
   members: readonly {
     name: string;
@@ -70,6 +86,7 @@ export function createMemberDraftsFromInputs(
     removedAt?: number | string | null;
   }[]
 ): MemberDraft[] {
+  const usedIds = new Set<string>();
   return members
     .filter((member) => !member.removedAt)
     .map((member) => {
@@ -77,6 +94,7 @@ export function createMemberDraftsFromInputs(
       const presetRoles: readonly string[] = PRESET_ROLES;
       const isPreset = presetRoles.includes(role);
       return createMemberDraft({
+        id: deterministicMemberDraftId(member.name, usedIds),
         name: member.name,
         originalName: member.name,
         roleSelection: role ? (isPreset ? role : CUSTOM_ROLE) : '',
