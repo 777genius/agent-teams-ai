@@ -11,7 +11,7 @@ import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { killProcessTree, spawnCli, untrackCliProcess } from '@main/utils/childProcess';
 import { ensureMinimumNodeOldSpaceEnv } from '@main/utils/nodeOptions';
 import { getAppDataPath, getClaudeBasePath } from '@main/utils/pathDecoder';
-import { killProcessByPid } from '@main/utils/processKill';
+import { killProcessByPid, killProcessByPidAndWait } from '@main/utils/processKill';
 import { createLogger } from '@shared/utils/logger';
 
 import { type FileLockOptions, withFileLock } from './fileLock';
@@ -1238,8 +1238,8 @@ export class AgentTeamsMcpHttpServer {
       this.deps.readProcessStartTimeMs ??
       (process.platform === 'win32' ? async () => null : readNativeProcessStartTimeMs);
     const killProcess = this.deps.killProcess ?? killProcessByPid;
-    const forceKillProcess =
-      this.deps.forceKillProcess ?? ((pid: number) => process.kill(pid, 'SIGKILL'));
+    // process.kill() leaves the tree behind on Windows; escalate via taskkill /T.
+    const forceKillProcess = this.deps.forceKillProcess ?? killProcessByPidAndWait;
     const isProcessAlive = this.deps.isProcessAlive ?? isNativeProcessAlive;
     const sleepMs = this.deps.sleepMs ?? sleep;
     const probeHealth = this.deps.probeHealth ?? probeLoopbackHealth;

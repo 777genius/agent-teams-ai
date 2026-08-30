@@ -85,8 +85,13 @@ export async function cleanupManagedOpenCodeServeProcesses(
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
   const readServeHostConfig = options.readServeHostConfig ?? readOpenCodeServeHostConfig;
   const killProcess = options.killProcess;
+  // The escalation after a survived kill must not be weaker than the kill it
+  // follows: on Windows process.kill() terminates that process alone, so the
+  // host's children (cmd.exe for the bash tool, cursor-agent trees) outlive the
+  // sweep as orphans. taskkill /T takes the tree, and the caller has just
+  // re-confirmed this pid's identity.
   const forceKillProcess =
-    options.forceKillProcess ?? ((pid: number) => process.kill(pid, 'SIGKILL'));
+    options.forceKillProcess ?? ((pid: number) => killProcessByPidAndWait(pid, { platform }));
   const isProcessAlive = options.isProcessAlive ?? isNativeProcessAlive;
   const sleepMs = options.sleepMs ?? sleep;
 
