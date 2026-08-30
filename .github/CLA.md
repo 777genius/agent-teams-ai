@@ -18,6 +18,7 @@ You represent that you have the right to grant the above license and that your c
 | Name             | Email                  | Date       |
 | ---------------- | ---------------------- | ---------- |
 | Илия (777genius) | quantjumppro@gmail.com | 2026-02-22 |
+| NeatCode Labs   | 215990881+NeatCode-Labs@users.noreply.github.com | 2026-08-30 |
 
 ---
 
