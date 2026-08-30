@@ -2,6 +2,11 @@ import { resolveAnthropicEffortSupport } from '@features/anthropic-runtime-profi
 import { execCli } from '@main/utils/childProcess';
 import { getClaudeBasePath } from '@main/utils/pathDecoder';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
+import {
+  buildCodexChatGptUnsupportedModelReason,
+  getCodexChatGptUnavailableModelReason,
+} from '@shared/utils/codexChatGptModelSupport';
+import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -11,6 +16,11 @@ import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerC
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 import { getConfiguredCliCommandLabel } from '../cliFlavor';
 
+import {
+  type CodexChatGptModelSupportProbe,
+  type CodexChatGptModelSupportProbeResult,
+  shouldProbeCodexChatGptModelSupport,
+} from './TeamProvisioningCodexChatGptModelGate';
 import { getTeamProviderLabel } from './TeamProvisioningRuntimeDiagnostics';
 import {
   type AuthStatusCommandResponse,
@@ -28,6 +38,7 @@ import type {
   CliProviderStatus,
   EffortLevel,
   TeamProviderId,
+  TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareIssue,
 } from '@shared/types';
 
@@ -139,6 +150,21 @@ export function resolveProviderCompatibilityModel(params: {
     }
   }
 
+  // A ChatGPT-gated Codex model stays listed in the live catalog, so catalog
+  // membership alone must not report it as available.
+  if (params.providerId === 'codex') {
+    const chatGptUnavailableReason = getCodexChatGptUnavailableModelReason({
+      providerStatus: params.runtimeFacts.providerStatus,
+      modelId: resolvedModelId ?? trimmedModelId,
+    });
+    if (chatGptUnavailableReason) {
+      return {
+        kind: 'unavailable',
+        reason: chatGptUnavailableReason,
+      };
+    }
+  }
+
   if (resolvedModelId && (availableModels.size === 0 || availableModels.has(resolvedModelId))) {
     return {
       kind: 'available',
@@ -192,6 +218,30 @@ export interface VerifySelectedProviderModelsPorts {
     limitContext?: boolean;
   }): Promise<RuntimeProviderLaunchFacts>;
   appendPreflightDebugLog?(event: string, data: Record<string, unknown>): void;
+  /**
+   * Deep-verification probe: catalog membership cannot see ChatGPT account
+   * gating, so catalog-available Codex selections are probed one-shot when the
+   * runtime authenticates with a ChatGPT account. Only consulted when
+   * `modelVerificationMode` is `deep` - compatibility checks stay catalog-only.
+   */
+  probeCodexChatGptModelSupport?: CodexChatGptModelSupportProbe;
+}
+
+export interface VerifySelectedProviderModelsInput {
+  claudePath: string;
+  cwd: string;
+  providerId: TeamProviderId;
+  modelIds: string[];
+  modelChecks?: ProviderSelectedModelCheck[];
+  limitContext: boolean;
+  modelVerificationMode?: TeamProvisioningModelVerificationMode;
+}
+
+export interface VerifySelectedProviderModelsResult {
+  details: string[];
+  warnings: string[];
+  blockingMessages: string[];
+  issues?: TeamProvisioningPrepareIssue[];
 }
 
 export async function verifySelectedProviderModelsForProvisioning({
@@ -201,21 +251,11 @@ export async function verifySelectedProviderModelsForProvisioning({
   modelIds,
   modelChecks,
   limitContext,
+  modelVerificationMode,
   ports,
-}: {
-  claudePath: string;
-  cwd: string;
-  providerId: TeamProviderId;
-  modelIds: string[];
-  modelChecks?: ProviderSelectedModelCheck[];
-  limitContext: boolean;
+}: VerifySelectedProviderModelsInput & {
   ports: VerifySelectedProviderModelsPorts;
-}): Promise<{
-  details: string[];
-  warnings: string[];
-  blockingMessages: string[];
-  issues?: TeamProvisioningPrepareIssue[];
-}> {
+}): Promise<VerifySelectedProviderModelsResult> {
   const details: string[] = [];
   const warnings: string[] = [];
   const blockingMessages: string[] = [];
@@ -316,13 +356,81 @@ export async function verifySelectedProviderModelsForProvisioning({
     checksByModelId.set(label, [...(checksByModelId.get(label) ?? []), check]);
   }
 
-  for (const [label, checks] of checksByModelId.entries()) {
-    const outcome = resolveProviderCompatibilityModel({
+  const verifyCodexChatGptModelOutcome = async (
+    label: string,
+    outcome: ProviderCompatibilityModelOutcome
+  ): Promise<ProviderCompatibilityModelOutcome> => {
+    if (
+      outcome.kind === 'unavailable' ||
+      modelVerificationMode !== 'deep' ||
+      !ports.probeCodexChatGptModelSupport
+    ) {
+      return outcome;
+    }
+    // The default sentinel only survives on the REQUESTED selection:
+    // resolveProviderCompatibilityModel turns a default request into the concrete
+    // runtimeFacts.defaultModel, so gating on the resolved id would probe an
+    // implicit default as if the user had picked that model explicitly.
+    const requestedProbeModelId = shouldProbeCodexChatGptModelSupport({
       providerId,
-      requestedModelId: label,
-      runtimeFacts,
-      limitContext,
+      model: label,
+      providerStatus: runtimeFacts.providerStatus,
     });
+    if (!requestedProbeModelId) {
+      return outcome;
+    }
+    // Probe the resolved id so provider-scoped selections hit the real model.
+    const probeModelId =
+      outcome.kind === 'available'
+        ? (outcome.resolvedModelId ?? requestedProbeModelId)
+        : requestedProbeModelId;
+
+    debugLog('provider_model_chatgpt_probe_start', { providerId, cwd, modelId: probeModelId });
+    let probeResult: CodexChatGptModelSupportProbeResult;
+    try {
+      probeResult = await ports.probeCodexChatGptModelSupport({
+        claudePath,
+        cwd,
+        env,
+        providerArgs,
+        modelId: probeModelId,
+      });
+    } catch (error) {
+      // A rejected probe proves nothing about ChatGPT model support, so it must
+      // stay fail-open instead of failing the whole compatibility check.
+      debugLog('provider_model_chatgpt_probe_rejected', {
+        providerId,
+        cwd,
+        modelId: probeModelId,
+        reason: truncatePreflightDebugText(getErrorMessage(error)),
+      });
+      probeResult = { outcome: 'inconclusive' };
+    }
+    debugLog('provider_model_chatgpt_probe_complete', {
+      providerId,
+      cwd,
+      modelId: probeModelId,
+      outcome: probeResult.outcome,
+    });
+    if (probeResult.outcome !== 'unsupported') {
+      return outcome;
+    }
+    return {
+      kind: 'unavailable',
+      reason: buildCodexChatGptUnsupportedModelReason(probeModelId),
+    };
+  };
+
+  for (const [label, checks] of checksByModelId.entries()) {
+    const outcome = await verifyCodexChatGptModelOutcome(
+      label,
+      resolveProviderCompatibilityModel({
+        providerId,
+        requestedModelId: label,
+        runtimeFacts,
+        limitContext,
+      })
+    );
     let effortSupported = true;
     if (outcome.kind !== 'unavailable' && providerId === 'anthropic') {
       for (const check of checks) {

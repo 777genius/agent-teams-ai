@@ -7,8 +7,15 @@ import {
 import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
 import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
+import { getCodexChatGptModeUiDisabledReason } from './teamModelCatalogChatGptGate';
+
 import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
 
+export {
+  CODEX_CHATGPT_UNSUPPORTED_MODEL_UI_DISABLED_REASON,
+  GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON,
+  isCodexChatGptSubscriptionProviderStatus,
+} from './teamModelCatalogChatGptGate';
 export {
   GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
   GPT_5_2_CODEX_UI_DISABLED_MODEL,
@@ -18,7 +25,7 @@ export {
 type SupportedProviderId = CliProviderId | TeamProviderId;
 type RuntimeAwareProviderStatus = Pick<
   CliProviderStatus,
-  'providerId' | 'authMethod' | 'backend' | 'modelCatalog'
+  'providerId' | 'authMethod' | 'backend' | 'connection' | 'modelCatalog' | 'modelAvailability'
 >;
 type RuntimeModelCatalog = NonNullable<RuntimeAwareProviderStatus['modelCatalog']>;
 type RuntimeCatalogModel = RuntimeModelCatalog['models'][number];
@@ -36,8 +43,6 @@ export interface TeamProviderModelOption {
 export const TEAM_MODEL_UI_DISABLED_BADGE_LABEL = 'Disabled';
 export const GPT_5_1_CODEX_MINI_UI_DISABLED_REASON =
   'Temporarily disabled for team agents - this model has been less reliable with task and reply tool contracts.';
-export const GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON =
-  'Temporarily disabled for team agents - this model is not currently available on the Codex native runtime.';
 export const GPT_5_2_CODEX_UI_DISABLED_REASON =
   'Temporarily disabled for team agents - this model is not currently available on the Codex native runtime.';
 export const GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON =
@@ -660,29 +665,12 @@ export function sortTeamProviderModels(
     .map((entry) => entry.model);
 }
 
-export function isCodexChatGptSubscriptionProviderStatus(
-  providerStatus?: RuntimeAwareProviderStatus | null
-): boolean {
-  if (providerStatus?.providerId !== 'codex') {
-    return false;
-  }
-
-  return (
-    providerStatus.authMethod === 'chatgpt' ||
-    providerStatus.backend?.authMethodDetail === 'chatgpt'
-  );
-}
-
 function isRuntimeHiddenTeamModel(
   providerId: SupportedProviderId,
   model: string,
   providerStatus?: RuntimeAwareProviderStatus | null
 ): boolean {
-  return (
-    providerId === 'codex' &&
-    model === 'gpt-5.1-codex-max' &&
-    isCodexChatGptSubscriptionProviderStatus(providerStatus)
-  );
+  return getCodexChatGptModeUiDisabledReason(providerId, model, providerStatus) !== null;
 }
 
 function getRuntimeCatalogLaunchModels(
@@ -828,9 +816,7 @@ export function getRuntimeAwareTeamModelUiDisabledReason(
     return null;
   }
 
-  return isRuntimeHiddenTeamModel(providerId, trimmed, providerStatus)
-    ? GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON
-    : null;
+  return getCodexChatGptModeUiDisabledReason(providerId, trimmed, providerStatus);
 }
 
 export function isTeamModelUiDisabled(

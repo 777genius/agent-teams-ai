@@ -13,6 +13,7 @@ import * as path from 'path';
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 
+import { createCodexChatGptModelSupportProbe } from './TeamProvisioningCodexChatGptModelGate';
 import { pushUniqueSupportDiagnostics } from './TeamProvisioningDiagnosticsHelpers';
 import {
   isAnthropicDirectCredentialAuthSource,
@@ -38,6 +39,8 @@ import {
   PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
   validatePrepareCwd as validatePrepareCwdForProvisioning,
   verifySelectedProviderModelsForProvisioning,
+  type VerifySelectedProviderModelsInput,
+  type VerifySelectedProviderModelsResult,
 } from './TeamProvisioningProviderPreflight';
 import {
   cachedProviderProbeResultToProbeResult,
@@ -63,7 +66,6 @@ import type {
   ProviderProbeCachePort,
 } from './TeamProvisioningProviderProbeCache';
 import type {
-  EffortLevel,
   TeamCreateRequest,
   TeamLaunchRequest,
   TeamProviderId,
@@ -135,19 +137,9 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     opts: { cwd: string; env: NodeJS.ProcessEnv; timeout: number }
   ): Promise<{ stdout: string }>;
   validatePrepareCwd?(cwd: string): Promise<void>;
-  verifySelectedProviderModels?(input: {
-    claudePath: string;
-    cwd: string;
-    providerId: TeamProviderId;
-    modelIds: string[];
-    modelChecks?: { modelId: string; effort?: EffortLevel }[];
-    limitContext: boolean;
-  }): Promise<{
-    details: string[];
-    warnings: string[];
-    blockingMessages: string[];
-    issues?: TeamProvisioningPrepareIssue[];
-  }>;
+  verifySelectedProviderModels?(
+    input: VerifySelectedProviderModelsInput
+  ): Promise<VerifySelectedProviderModelsResult>;
   resolveProviderDefaultModel?(
     claudePath: string,
     cwd: string,
@@ -362,6 +354,7 @@ export class TeamProvisioningPrepareCoordinator {
           modelIds: providerSelectedModelIds,
           modelChecks: providerModelChecks,
           limitContext: opts?.limitContext === true,
+          modelVerificationMode: opts?.modelVerificationMode,
         });
         details.push(...modelVerification.details);
         warnings.push(...modelVerification.warnings);
@@ -529,39 +522,20 @@ export class TeamProvisioningPrepareCoordinator {
     };
   }
 
-  async verifySelectedProviderModels({
-    claudePath,
-    cwd,
-    providerId,
-    modelIds,
-    modelChecks,
-    limitContext,
-  }: {
-    claudePath: string;
-    cwd: string;
-    providerId: TeamProviderId;
-    modelIds: string[];
-    modelChecks?: { modelId: string; effort?: EffortLevel }[];
-    limitContext: boolean;
-  }): Promise<{
-    details: string[];
-    warnings: string[];
-    blockingMessages: string[];
-    issues?: TeamProvisioningPrepareIssue[];
-  }> {
+  async verifySelectedProviderModels(
+    input: VerifySelectedProviderModelsInput
+  ): Promise<VerifySelectedProviderModelsResult> {
     return verifySelectedProviderModelsForProvisioning({
-      claudePath,
-      cwd,
-      providerId,
-      modelIds,
-      modelChecks,
-      limitContext,
+      ...input,
       ports: {
         buildProvisioningEnv: (providerIdForEnv) =>
           this.ports.buildProvisioningEnv(providerIdForEnv),
         readRuntimeProviderLaunchFacts: (params) =>
           this.ports.readRuntimeProviderLaunchFacts(params),
         appendPreflightDebugLog,
+        probeCodexChatGptModelSupport: createCodexChatGptModelSupportProbe({
+          execCli: (binaryPath, args, options) => this.ports.execCli(binaryPath, args, options),
+        }),
       },
     });
   }

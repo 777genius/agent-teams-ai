@@ -186,3 +186,72 @@ describe('validateRuntimeLaunchSelection typed validation errors', () => {
     expect(run).toThrow('uses Anthropic effort "xhigh"');
   });
 });
+
+describe('validateRuntimeLaunchSelection Codex ChatGPT model gate', () => {
+  const emptyFacts: RuntimeProviderLaunchFacts = {
+    defaultModel: null,
+    modelIds: new Set(),
+    modelListParsed: true,
+    modelCatalog: null,
+    runtimeCapabilities: null,
+  };
+
+  it('rejects a catalog-listed Codex model flagged as ChatGPT-unsupported by the probe', () => {
+    const run = (): void =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Member Reviewer',
+        providerId: 'codex',
+        model: 'gpt-5.2',
+        facts: {
+          ...emptyFacts,
+          defaultModel: 'gpt-5.6-sol',
+          // The gated model stays visible in the live catalog (live repro).
+          modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+          providerStatus: {
+            providerId: 'codex',
+            authMethod: 'chatgpt',
+            modelAvailability: [
+              {
+                modelId: 'gpt-5.2',
+                status: 'unavailable',
+                reason:
+                  "The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account.",
+              },
+            ],
+          },
+        },
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Codex',
+      });
+    expect(run).toThrow('not supported when using Codex with a ChatGPT account');
+  });
+
+  it('keeps the same selection launchable when Codex authenticates with an API key', () => {
+    expect(() =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Member Reviewer',
+        providerId: 'codex',
+        model: 'gpt-5.2',
+        facts: {
+          ...emptyFacts,
+          defaultModel: 'gpt-5.6-sol',
+          modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+          providerStatus: {
+            providerId: 'codex',
+            authMethod: 'api_key',
+            modelAvailability: [
+              {
+                modelId: 'gpt-5.2',
+                status: 'unavailable',
+                reason:
+                  "The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account.",
+              },
+            ],
+          },
+        },
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Codex',
+      })
+    ).not.toThrow();
+  });
+});
