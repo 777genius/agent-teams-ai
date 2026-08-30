@@ -957,6 +957,52 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it('completes hydration when the saved request carries a malformed backend id', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      // Legacy/hand-edited persisted config: not a string.
+      providerBackendId: 42,
+      model: 'gpt-5.5',
+      members: [{ name: 'jack', role: 'developer' }],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+    expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe('codex');
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
   it('uses the project-scoped OpenCode teammate model in Create preflight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();

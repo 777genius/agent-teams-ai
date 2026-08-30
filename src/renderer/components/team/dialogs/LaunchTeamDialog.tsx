@@ -98,7 +98,7 @@ import { CodexReconnectPrompt, shouldShowCodexReconnectPrompt } from './CodexRec
 import { EffortLevelSelector } from './EffortLevelSelector';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
-import { resolveLaunchDialogPrefill } from './launchDialogPrefill';
+import { normalizeSavedBackendId, resolveLaunchDialogPrefill } from './launchDialogPrefill';
 import {
   buildWorktreePathByMemberName,
   deriveTeammateWorktreeDefault,
@@ -958,9 +958,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         getStoredModel: getStoredTeamModel,
       });
       setSavedLaunchProviderId(normalizeOptionalTeamProviderId(savedRequest?.providerId) ?? null);
-      setSavedLaunchProviderBackendId(
-        launchPrefill.providerBackendId ?? (savedRequest?.providerBackendId?.trim() || null)
-      );
+      const savedBackendId = normalizeSavedBackendId(savedRequest?.providerBackendId);
+      setSavedLaunchProviderBackendId(launchPrefill.providerBackendId ?? savedBackendId);
 
       applyEditableRoster(savedRequest?.members);
       const leadProviderId = normalizeLeadProviderForMode(
