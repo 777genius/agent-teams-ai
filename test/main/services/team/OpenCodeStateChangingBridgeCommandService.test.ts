@@ -7,6 +7,7 @@ import {
   createOpenCodeBridgeHandshakeIdentityHash,
   OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
+  OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
   OPEN_CODE_FILE_PARTS_CONTRACT_VERSION,
   type OpenCodeBridgeCommandName,
   type OpenCodeBridgeHandshake,
@@ -71,6 +72,98 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     await fs.rm(tempDir, { recursive: true, force: true });
   });
 
+  it('blocks an old orchestrator before state-changing launch dispatch', async () => {
+    const server = peerIdentity('agent_teams_orchestrator');
+    delete server.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion;
+    handshakePort.nextHandshake = buildHandshake({ client: clientIdentity, server });
+
+    await expect(createService().execute(buildLaunchInput())).rejects.toThrow(
+      'expected behavior fingerprint schema version 2 is required'
+    );
+    expect(bridge.calls).toHaveLength(0);
+    await expect(ledger.list()).resolves.toEqual([]);
+  });
+
+  it('rejects missing launch fingerprint before handshake or dispatch', async () => {
+    const input = buildLaunchInput();
+    input.behaviorFingerprint = null;
+
+    await expect(createService().execute(input)).rejects.toThrow(
+      'requires a lowercase SHA-256 behavior fingerprint'
+    );
+    expect(handshakePort.calls).toHaveLength(0);
+    expect(bridge.calls).toHaveLength(0);
+  });
+
+  it('dispatches and hashes a changed launch digest as a distinct request', async () => {
+    bridge.resultFactory = ({ body, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+          expectedBehaviorFingerprint: body.preconditions.expectedBehaviorFingerprint,
+        },
+      });
+    const service = createService();
+    await service.execute(buildLaunchInput());
+    const changed = buildLaunchInput();
+    changed.behaviorFingerprint = 'b'.repeat(64);
+    changed.body = {
+      ...(changed.body as Record<string, unknown>),
+      expectedBehaviorFingerprint: changed.behaviorFingerprint,
+    };
+
+    await service.execute(changed);
+
+    expect(bridge.calls).toHaveLength(2);
+    expect(bridge.calls[1].body.preconditions.idempotencyKey).not.toBe(
+      bridge.calls[0].body.preconditions.idempotencyKey
+    );
+    const entries = await ledger.list();
+    expect(entries[1]?.requestHash).not.toBe(entries[0]?.requestHash);
+  });
+
+  it('keeps a committed launch with a mismatched fingerprint echo reconcilable', async () => {
+    bridge.resultFactory = ({ body, options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+          expectedBehaviorFingerprint: 'f'.repeat(64),
+        },
+      });
+
+    const result = await createService().execute(buildLaunchInput());
+
+    expect(result).toMatchObject({
+      ok: false,
+      requestId: 'cmd-1',
+      error: {
+        kind: 'contract_violation',
+        message: 'OpenCode launch result behavior fingerprint mismatch',
+        retryable: false,
+      },
+    });
+    expect(bridge.calls).toHaveLength(1);
+    const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
+    await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
+      status: 'unknown_after_timeout',
+      retryable: false,
+      lastError: 'OpenCode launch result behavior fingerprint mismatch',
+    });
+    expect(diagnostics.append).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'opencode_bridge_unknown_outcome',
+        message: 'OpenCode bridge command outcome must be reconciled before retry',
+      })
+    );
+    await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+  });
+
   it('rejects state-changing command when bridge handshake has stale manifest high watermark', async () => {
     handshakePort.nextHandshake = buildHandshake({
       client: clientIdentity,
@@ -120,6 +213,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
           runId: 'run-1',
           idempotencyKey: body.preconditions.idempotencyKey,
           runtimeStoreManifestHighWatermark: 10,
+          expectedBehaviorFingerprint: 'a'.repeat(64),
         },
       });
     await expect(service.execute(buildSendInput('acceptance'))).resolves.toMatchObject({
@@ -170,6 +264,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
           runId: 'run-1',
           idempotencyKey: body.preconditions.idempotencyKey,
           runtimeStoreManifestHighWatermark: 10,
+          expectedBehaviorFingerprint: 'a'.repeat(64),
         },
       });
 
@@ -290,6 +385,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
           runId: 'run-1',
           idempotencyKey: body.preconditions.idempotencyKey,
           runtimeStoreManifestHighWatermark: 10,
+          expectedBehaviorFingerprint: 'a'.repeat(64),
         },
       });
     const service = createService();
@@ -305,7 +401,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         handshakeIdentityHash: handshakePort.nextHandshake.identityHash,
         expectedRunId: 'run-1',
         expectedCapabilitySnapshotId: 'cap-1',
-        expectedBehaviorFingerprint: 'behavior-1',
+        expectedBehaviorFingerprint: 'a'.repeat(64),
         expectedManifestHighWatermark: 10,
         commandLeaseId: 'lease-1',
         idempotencyKey: expect.stringMatching(
@@ -619,7 +715,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     const recovery = await service.execute({
       ...buildLaunchInput(),
       body: {
-        prompt: 'launch',
+        ...(buildLaunchInput().body as Record<string, unknown>),
         capabilitySnapshotRecoveryAttemptId: 'opencode-capability-recovery-test',
       },
     });
@@ -653,6 +749,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
           runId: 'run-1',
           idempotencyKey: body.preconditions.idempotencyKey,
           runtimeStoreManifestHighWatermark: 10,
+          expectedBehaviorFingerprint: 'a'.repeat(64),
           diagnostics: [
             {
               code: 'opencode_capability_snapshot_recovery',
@@ -667,7 +764,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     const result = await service.execute({
       ...buildLaunchInput(),
       body: {
-        prompt: 'launch',
+        ...(buildLaunchInput().body as Record<string, unknown>),
         capabilitySnapshotRecoveryAttemptId: 'opencode-capability-recovery-test',
       },
     });
@@ -702,13 +799,14 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
 });
 
 function buildLaunchInput(): Parameters<OpenCodeStateChangingBridgeCommandService['execute']>[0] {
+  const expectedBehaviorFingerprint = 'a'.repeat(64);
   return {
     command: 'opencode.launchTeam',
     teamName: 'team-a',
     runId: 'run-1',
     capabilitySnapshotId: 'cap-1',
-    behaviorFingerprint: 'behavior-1',
-    body: { prompt: 'launch' },
+    behaviorFingerprint: expectedBehaviorFingerprint,
+    body: { prompt: 'launch', expectedBehaviorFingerprint },
     cwd: '/tmp/project',
     timeoutMs: 10_000,
   };
@@ -786,6 +884,7 @@ function bridgeSuccess(
       runId: 'run-1',
       idempotencyKey: 'key-1',
       runtimeStoreManifestHighWatermark: 10,
+      expectedBehaviorFingerprint: 'a'.repeat(64),
     },
     ...overrides,
   };
@@ -812,6 +911,8 @@ function peerIdentity(
       ],
       opencodeAppManagedBootstrapContractVersion:
         OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      expectedBehaviorFingerprintSchemaVersion:
+        OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
     },
     runtime: {
       providerId: 'opencode',
@@ -876,12 +977,26 @@ function buildHandshakeWithAcceptedCommands(
 class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
   calls: Array<{
     command: OpenCodeBridgeCommandName;
-    body: { prompt: string; preconditions: { idempotencyKey: string; commandLeaseId?: string } };
+    body: {
+      prompt: string;
+      preconditions: {
+        idempotencyKey: string;
+        commandLeaseId?: string;
+        expectedBehaviorFingerprint: string | null;
+      };
+    };
     options: { cwd: string; timeoutMs: number; requestId?: string };
   }> = [];
   resultFactory: (input: {
     command: OpenCodeBridgeCommandName;
-    body: { prompt: string; preconditions: { idempotencyKey: string; commandLeaseId?: string } };
+    body: {
+      prompt: string;
+      preconditions: {
+        idempotencyKey: string;
+        commandLeaseId?: string;
+        expectedBehaviorFingerprint: string | null;
+      };
+    };
     options: { cwd: string; timeoutMs: number; requestId?: string };
   }) => OpenCodeBridgeResult<unknown> = ({ body, options }) =>
     bridgeSuccess({
@@ -890,6 +1005,7 @@ class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
         runId: 'run-1',
         idempotencyKey: body.preconditions.idempotencyKey,
         runtimeStoreManifestHighWatermark: 10,
+        expectedBehaviorFingerprint: body.preconditions.expectedBehaviorFingerprint,
       },
     });
 
@@ -902,7 +1018,11 @@ class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
       command,
       body: body as {
         prompt: string;
-        preconditions: { idempotencyKey: string; commandLeaseId?: string };
+        preconditions: {
+          idempotencyKey: string;
+          commandLeaseId?: string;
+          expectedBehaviorFingerprint: string | null;
+        };
       },
       options,
     };
@@ -912,9 +1032,11 @@ class FakeBridgeExecutor implements OpenCodeBridgeCommandExecutor {
 }
 
 class FakeHandshakePort implements OpenCodeBridgeHandshakePort {
+  readonly calls: unknown[] = [];
   constructor(public nextHandshake: OpenCodeBridgeHandshake) {}
 
-  async handshake(): Promise<OpenCodeBridgeHandshake> {
+  async handshake(input?: unknown): Promise<OpenCodeBridgeHandshake> {
+    this.calls.push(input);
     return this.nextHandshake;
   }
 }

@@ -83,6 +83,20 @@ export interface TeamRuntimeLanePlanError {
   message: string;
 }
 
+/** A lane-plan rejection that is safe to surface as launch validation feedback. */
+export class TeamRuntimeLanePlanningError extends Error {
+  readonly reason: TeamRuntimeLanePlanErrorReason | 'missing_opencode_runtime_adapter';
+
+  constructor(
+    message: string,
+    reason: TeamRuntimeLanePlanErrorReason | 'missing_opencode_runtime_adapter'
+  ) {
+    super(message);
+    this.name = 'TeamRuntimeLanePlanningError';
+    this.reason = reason;
+  }
+}
+
 export interface TeamRuntimeLanePlanSuccess {
   ok: true;
   plan: TeamRuntimeLanePlan;
