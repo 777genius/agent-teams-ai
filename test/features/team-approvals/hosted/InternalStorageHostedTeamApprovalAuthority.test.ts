@@ -3,9 +3,9 @@ import { createHash } from 'node:crypto';
 import {
   bindProductHostedProducerInstance,
   bindProductHostedProducerOperation,
-  HostedProducerProvenanceFatalError,
   type HostedProducerProvenance,
-} from '@features/hosted-producer-provenance/main';
+  HostedProducerProvenanceFatalError,
+} from '@features/hosted-producer-provenance/main/hosted';
 import {
   HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
   parseHostedTeamApprovalGeneration,

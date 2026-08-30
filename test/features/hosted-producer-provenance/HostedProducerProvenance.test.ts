@@ -8,15 +8,20 @@ import {
 } from '@features/hosted-producer-provenance/contracts';
 import {
   clearProductHostedProducerProvenance,
+  currentProductHostedProducerProvenance,
+  currentProductHostedProducerSseWriteEmitter,
+  type HostedProducerProvenance,
+  HostedProducerProvenanceFatalError,
+  installProductHostedProducerProvenance,
+} from '@features/hosted-producer-provenance/main/hosted';
+import { resetProductHostedProducerProvenanceForTests } from '@features/hosted-producer-provenance/main/HostedProducerProvenanceRegistry';
+import {
   createBrowserHostedProducerProvenanceFromEnvironment,
   createHostedProducerProvenanceFromEnvironment,
-  currentProductHostedProducerProvenance,
-  HostedProducerProvenanceFatalError,
   type HostedProducerProvenanceOperations,
-  installProductHostedProducerProvenance,
   parseHostedProducerProvenanceContract,
-} from '@features/hosted-producer-provenance/main';
-import { describe, expect, it, vi } from 'vitest';
+} from '@main/composition/hosted/hostedProducerProvenanceComposition';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const DIGEST_A = 'a'.repeat(64);
 const DIGEST_B = 'b'.repeat(64);
@@ -33,6 +38,8 @@ const PRODUCT_OPERATION = Object.freeze({
   requestId: 'request_test',
   sessionId: 'session_test',
 });
+
+afterEach(() => resetProductHostedProducerProvenanceForTests());
 
 function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== 'object') {
@@ -150,6 +157,40 @@ function lines(bytes: readonly number[]): Array<Record<string, unknown>> {
 }
 
 describe('HostedProducerProvenance', () => {
+  it('replaces the cleared SSE sentinel on reinstall and ignores stale cleanup', () => {
+    const provenance = (name: string): HostedProducerProvenance => ({
+      role: 'product-producer',
+      controllerNonce: name.repeat(64),
+      runId: name.repeat(64),
+      emit: vi.fn(),
+      bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => {
+        throw new Error(reason);
+      }),
+      close: vi.fn(),
+    });
+    const first = provenance('a');
+    const second = provenance('b');
+    const firstEmitter = vi.fn(() => true);
+    const secondEmitter = vi.fn(() => true);
+
+    installProductHostedProducerProvenance(first, firstEmitter);
+    expect(currentProductHostedProducerSseWriteEmitter()).toBe(firstEmitter);
+    clearProductHostedProducerProvenance(first);
+    expect(() => currentProductHostedProducerSseWriteEmitter()).toThrow(
+      'producer-provenance-product-sse-emitter-cleared'
+    );
+
+    installProductHostedProducerProvenance(second, secondEmitter);
+    expect(currentProductHostedProducerSseWriteEmitter()).toBe(secondEmitter);
+    clearProductHostedProducerProvenance(first);
+    expect(currentProductHostedProducerSseWriteEmitter()).toBe(secondEmitter);
+    clearProductHostedProducerProvenance(second);
+    expect(() => currentProductHostedProducerSseWriteEmitter()).toThrow(
+      HostedProducerProvenanceFatalError
+    );
+  });
+
   it('stays dormant when the exact environment contract is absent', () => {
     const harness = operations();
     expect(

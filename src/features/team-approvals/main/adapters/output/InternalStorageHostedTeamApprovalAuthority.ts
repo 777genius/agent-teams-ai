@@ -6,7 +6,7 @@ import {
   type ProductHostedProducerOperation,
   productRunIdToProvenanceTeamRunId,
   requireProductHostedProducerOperation,
-} from '@features/hosted-producer-provenance/main';
+} from '@features/hosted-producer-provenance/main/hosted';
 import { parseCursor, parseRunId, parseTeamId, type QueryContext } from '@shared/contracts/hosted';
 
 import {

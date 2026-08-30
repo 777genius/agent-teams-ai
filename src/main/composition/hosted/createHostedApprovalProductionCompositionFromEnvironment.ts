@@ -1,6 +1,5 @@
 import {
   clearProductHostedProducerProvenance,
-  createHostedProducerProvenanceFromEnvironment,
   installProductHostedProducerProvenance,
 } from '@features/hosted-producer-provenance/main';
 
@@ -13,6 +12,8 @@ import {
   createOptionalHostedApprovalProductionComposition,
   type CreateOptionalHostedApprovalProductionCompositionDependencies,
 } from './createHostedApprovalProductionComposition';
+import { createHostedProducerProvenanceFromEnvironment } from './hostedProducerProvenanceComposition';
+import { createProductHostedProducerSseWriteEmitter } from './hostedProducerProvenanceNodeOperations';
 
 import type { HostedOperatorProductionComposition } from './hostedOperatorProductionComposition';
 
@@ -30,7 +31,10 @@ export async function createHostedApprovalProductionCompositionFromEnvironment(
     modulePath: __filename,
   });
   try {
-    installProductHostedProducerProvenance(producerProvenance);
+    installProductHostedProducerProvenance(
+      producerProvenance,
+      createProductHostedProducerSseWriteEmitter(environment)
+    );
   } catch (error) {
     producerProvenance?.close();
     throw error;

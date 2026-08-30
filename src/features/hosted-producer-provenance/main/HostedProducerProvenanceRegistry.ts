@@ -1,4 +1,7 @@
-import type { HostedProducerProvenance } from './HostedProducerProvenance';
+import type {
+  HostedProducerProvenance,
+  ProductSseWriteEmitter,
+} from './HostedProducerProvenanceContracts';
 
 export class HostedProducerProvenanceFatalError extends Error {
   readonly code = 'HOSTED_PRODUCER_PROVENANCE_FATAL';
@@ -23,8 +26,13 @@ export function fatalProvenanceError(error: Error): HostedProducerProvenanceFata
 
 let productProvenance: HostedProducerProvenance | null = null;
 let productProvenancePoison: HostedProducerProvenanceFatalError | null = null;
+const CLEARED_PRODUCT_SSE_WRITE_EMITTER = Symbol('cleared-product-sse-write-emitter');
+let productSseWriteEmitter:
+  | ProductSseWriteEmitter
+  | null
+  | typeof CLEARED_PRODUCT_SSE_WRITE_EMITTER = null;
 
-export function poisonInstalledProductProvenance(
+export function reportProductHostedProducerProvenanceFailure(
   provenance: HostedProducerProvenance,
   fatal: HostedProducerProvenanceFatalError
 ): void {
@@ -32,7 +40,8 @@ export function poisonInstalledProductProvenance(
 }
 
 export function installProductHostedProducerProvenance(
-  provenance: HostedProducerProvenance | null
+  provenance: HostedProducerProvenance | null,
+  sseWriteEmitter?: ProductSseWriteEmitter
 ): void {
   if (provenance === null) return;
   if (provenance.role !== 'product-producer') {
@@ -43,6 +52,7 @@ export function installProductHostedProducerProvenance(
   }
   if (productProvenancePoison !== null) throw productProvenancePoison;
   productProvenance = provenance;
+  productSseWriteEmitter = sseWriteEmitter ?? null;
 }
 
 export function currentProductHostedProducerProvenance(): HostedProducerProvenance | null {
@@ -50,7 +60,24 @@ export function currentProductHostedProducerProvenance(): HostedProducerProvenan
   return productProvenance;
 }
 
+export function currentProductHostedProducerSseWriteEmitter(): ProductSseWriteEmitter | null {
+  if (productProvenancePoison !== null) throw productProvenancePoison;
+  if (productSseWriteEmitter === CLEARED_PRODUCT_SSE_WRITE_EMITTER) {
+    throw new HostedProducerProvenanceFatalError('producer-provenance-product-sse-emitter-cleared');
+  }
+  return productSseWriteEmitter;
+}
+
 export function clearProductHostedProducerProvenance(provenance: HostedProducerProvenance): void {
   if (productProvenancePoison !== null) throw productProvenancePoison;
-  if (productProvenance === provenance) productProvenance = null;
+  if (productProvenance === provenance) {
+    productProvenance = null;
+    productSseWriteEmitter = CLEARED_PRODUCT_SSE_WRITE_EMITTER;
+  }
+}
+
+export function resetProductHostedProducerProvenanceForTests(): void {
+  productProvenance = null;
+  productProvenancePoison = null;
+  productSseWriteEmitter = null;
 }

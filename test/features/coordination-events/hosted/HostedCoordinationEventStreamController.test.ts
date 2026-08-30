@@ -10,8 +10,10 @@ import {
   clearProductHostedProducerProvenance,
   type HostedProducerProvenance,
   installProductHostedProducerProvenance,
-} from '@features/hosted-producer-provenance/main';
-import { describe, expect, it, vi } from 'vitest';
+} from '@features/hosted-producer-provenance/main/hosted';
+import { resetProductHostedProducerProvenanceForTests } from '@features/hosted-producer-provenance/main/HostedProducerProvenanceRegistry';
+import { createProductHostedProducerSseWriteEmitter } from '@main/composition/hosted/hostedProducerProvenanceNodeOperations';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   CoordinationEventEnvelope,
@@ -22,6 +24,8 @@ import type {
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 const cursor = (value: string): ReplayCursor => value as ReplayCursor;
+
+afterEach(() => resetProductHostedProducerProvenanceForTests());
 
 function deferred<T>(): {
   readonly promise: Promise<T>;
@@ -232,6 +236,61 @@ function createWakeups() {
 }
 
 describe('HostedCoordinationEventStreamController', () => {
+  it('fails closed without a raw write after the installed product emitter is cleared', async () => {
+    const provenance: HostedProducerProvenance = {
+      role: 'product-producer',
+      controllerNonce: 'c'.repeat(64),
+      runId: 'd'.repeat(64),
+      emit: vi.fn(),
+      bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => {
+        throw new Error(reason);
+      }),
+      close: vi.fn(),
+    };
+    const emitter = vi.fn(() => true);
+    installProductHostedProducerProvenance(provenance, emitter);
+    clearProductHostedProducerProvenance(provenance);
+
+    const wakeups = createWakeups();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: {
+        replay: vi.fn(async () =>
+          batch({
+            from: 'cursor-0',
+            next: 'cursor-1',
+            events: [event({ sequence: 1 })],
+            hasMore: false,
+          })
+        ),
+      },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
+          projectEvent: vi.fn(async (committed: CoordinationEventEnvelope) => ({
+            scope: committed.scope,
+            eventType: committed.eventType,
+            publicPayload: { publicValue: committed.eventSequence },
+          })),
+        })),
+      },
+      wakeups: wakeups.source,
+      scheduler: new ManualScheduler(),
+    });
+    const reply = createReply();
+
+    await registerHandler(controller)(
+      createRequest({ origin: 'https://host.test', after: 'cursor-0' }),
+      reply.reply
+    );
+
+    expect(reply.raw.frames).toEqual([]);
+    expect(emitter).not.toHaveBeenCalled();
+    expect(reply.raw.writableEnded).toBe(true);
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('flushes an authorized empty stream before the first event or heartbeat', async () => {
     const wakeups = createWakeups();
     const controller = new HostedCoordinationEventStreamController({
@@ -584,7 +643,10 @@ describe('HostedCoordinationEventStreamController', () => {
       ownerGeneration: 7,
       ownerSessionId: 'owner-session_sse',
     });
-    installProductHostedProducerProvenance(provenance);
+    installProductHostedProducerProvenance(
+      provenance,
+      createProductHostedProducerSseWriteEmitter(process.env)
+    );
     const order: string[] = [];
     const wakeups = createWakeups();
     wakeups.source.subscribe.mockImplementation((listener: () => void) => {

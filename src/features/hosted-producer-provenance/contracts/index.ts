@@ -4,6 +4,7 @@ export const HOSTED_PRODUCER_PROVENANCE_CONTRACT =
 export const HOSTED_PRODUCER_PROVENANCE_VERSION = 2 as const;
 export const HOSTED_PRODUCER_PROVENANCE_CONTRACT_SHA256 =
   'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498' as const;
+export { default as HOSTED_PRODUCER_PROVENANCE_CONTRACT_ARTIFACT } from './hosted-producer-provenance-v2.schema.json?raw';
 
 export type HostedProducerProvenanceRole = 'browser' | 'opencode' | 'owner' | 'product-producer';
 export type HostedProducerProvenanceStream =

@@ -6,7 +6,7 @@ import {
   clearProductHostedProducerProvenance,
   type HostedProducerProvenance,
   installProductHostedProducerProvenance,
-} from '@features/hosted-producer-provenance/main';
+} from '@features/hosted-producer-provenance/main/hosted';
 import {
   HOSTED_TEAM_APPROVAL_SCHEMA_VERSION,
   parseHostedTeamApprovalGeneration,

@@ -7,7 +7,7 @@ import {
   isHostedProducerProvenanceFatalError,
   type ProductHostedProducerOperation,
   requireProductHostedProducerInstance,
-} from '@features/hosted-producer-provenance/main';
+} from '@features/hosted-producer-provenance/main/hosted';
 import { createSafeAppError, type QueryContext } from '@shared/contracts/hosted';
 
 import {
@@ -353,7 +353,11 @@ async function handle<T>(
       const invocation = await routeAdmission.invoke(descriptor.id, async () => {
         const context = await createContext(descriptor, request, signal);
         if (signal.aborted || context.signal !== signal) return null;
-        const provenanceOperation = bindProductHostedProducerOperation(context, provenance);
+        const provenanceOperation = bindProductHostedProducerOperation(
+          context,
+          provenance,
+          randomBytes(32).toString('hex')
+        );
         boundOperation = provenanceOperation;
         return Object.freeze({ value: await operation(context), operation: provenanceOperation });
       });

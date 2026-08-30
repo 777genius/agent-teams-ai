@@ -10,6 +10,13 @@ import {
   writeSync,
 } from 'node:fs';
 
+import { HOSTED_PRODUCER_PROVENANCE_ENV } from '@features/hosted-producer-provenance/contracts';
+import {
+  currentProductHostedProducerProvenance,
+  type ProductSseWriteEmitter,
+  requireProductHostedProducerInstance,
+} from '@features/hosted-producer-provenance/main';
+
 const DECIMAL = /^(?:0|[1-9]\d*)$/u;
 
 export interface HostedProducerDerivedIdentity {
@@ -84,7 +91,7 @@ function processStartTicks(): string {
   return startTicks;
 }
 
-export function defaultHostedProducerProvenanceOperations(): HostedProducerProvenanceOperations {
+export function createHostedProducerProvenanceNodeOperations(): HostedProducerProvenanceOperations {
   return Object.freeze({
     deriveIdentity(modulePath: string): HostedProducerDerivedIdentity {
       const executable = hashOpenFile('/proc/self/exe');
@@ -126,4 +133,31 @@ export function defaultHostedProducerProvenanceOperations(): HostedProducerProve
     sync: fdatasyncSync,
     close: closeSync,
   });
+}
+
+export function createProductHostedProducerSseWriteEmitter(
+  environment: Readonly<Record<string, string | undefined>>
+): ProductSseWriteEmitter {
+  return (frame, identity, wrote) => {
+    if (!wrote) return false;
+    const provenance = currentProductHostedProducerProvenance();
+    if (provenance === null) {
+      if (environment[HOSTED_PRODUCER_PROVENANCE_ENV] === undefined) return true;
+      throw new TypeError('producer-provenance-product-required');
+    }
+    const frameBytes = Buffer.from(frame);
+    provenance.emit('productTimeline', {
+      recordType: 'coordination-sse-write-succeeded',
+      operationNonce: randomBytes(32).toString('hex'),
+      native: Object.freeze({
+        ...requireProductHostedProducerInstance(provenance),
+        eventId: identity.eventId,
+        eventType: identity.eventType,
+        frameBytes: frameBytes.byteLength,
+        frameKind: identity.frameKind,
+        frameSha256: createHash('sha256').update(frameBytes).digest('hex'),
+      }),
+    });
+    return true;
+  };
 }

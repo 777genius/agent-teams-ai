@@ -6,7 +6,7 @@ import {
 import {
   bindProductHostedProducerInstance,
   type HostedProducerProvenance,
-} from '@features/hosted-producer-provenance/main';
+} from '@features/hosted-producer-provenance/main/hosted';
 import { HOSTED_READINESS_ROUTE } from '@features/hosted-readiness/contracts';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';

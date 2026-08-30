@@ -1,39 +1,15 @@
-import { randomBytes } from 'node:crypto';
+import {
+  type HostedProducerProvenance,
+  type ProductHostedProducerInstance,
+  type ProductHostedProducerOperation,
+} from './HostedProducerProvenanceContracts';
 
-import type { HostedProducerProvenance } from './HostedProducerProvenance';
 import type { QueryContext } from '@shared/contracts/hosted';
 
 const NONCE = /^[0-9a-f]{64}$/u;
-const PRODUCT_RUN_ID = /^run_([0-9a-f]{32})$/u;
-
-export interface ProductHostedProducerOperation {
-  readonly operationNonce: string;
-  readonly actorId: string;
-  readonly sessionId: string;
-  readonly deploymentId: string;
-  readonly bootId: string;
-  readonly requestId: string;
-  readonly ownerAuthority: string;
-  readonly ownerGeneration: number;
-  readonly ownerSessionId: string;
-}
-
-export function productRunIdToProvenanceTeamRunId(runId: string): string {
-  const match = PRODUCT_RUN_ID.exec(runId);
-  if (match === null) throw new TypeError('producer-provenance-team-run-id');
-  return `team-run_${match[1]}`;
-}
 
 const operations = new WeakMap<QueryContext, ProductHostedProducerOperation>();
 const instances = new WeakMap<HostedProducerProvenance, ProductHostedProducerInstance>();
-
-export interface ProductHostedProducerInstance {
-  readonly deploymentId: string;
-  readonly bootId: string;
-  readonly ownerAuthority: string;
-  readonly ownerGeneration: number;
-  readonly ownerSessionId: string;
-}
 
 export function bindProductHostedProducerInstance(
   provenance: HostedProducerProvenance,
@@ -66,7 +42,7 @@ export function requireProductHostedProducerInstance(
 export function bindProductHostedProducerOperation(
   context: QueryContext,
   provenance: HostedProducerProvenance,
-  operationNonce = randomBytes(32).toString('hex')
+  operationNonce: string
 ): ProductHostedProducerOperation {
   if (!NONCE.test(operationNonce) || operations.has(context)) {
     throw new TypeError('producer-provenance-operation-binding');

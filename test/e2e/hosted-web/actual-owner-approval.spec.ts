@@ -17,10 +17,10 @@ import {
   observedSemanticIdentity,
 } from '../../../scripts/e2e/hosted-actual-owner/evidence';
 import {
-  createBrowserHostedProducerProvenanceFromEnvironment,
   productRunIdToProvenanceTeamRunId,
-} from '../../../src/features/hosted-producer-provenance/main';
+} from '../../../src/features/hosted-producer-provenance/main/hosted';
 import { parseHostedTeamApprovalPage } from '../../../src/features/team-approvals/contracts/hosted';
+import { createBrowserHostedProducerProvenanceFromEnvironment } from '../../../src/main/composition/hosted/hostedProducerProvenanceComposition';
 
 const DESCRIPTOR_FD = 3;
 const OBSERVATION_FD = 4;

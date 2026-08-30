@@ -1,7 +1,7 @@
 import {
-  emitProductSseWrite,
+  currentProductHostedProducerSseWriteEmitter,
   type ProductSseFrameIdentity,
-} from '@features/hosted-producer-provenance/main';
+} from '@features/hosted-producer-provenance/main/hosted';
 
 import {
   type CoordinationEventEnvelope,
@@ -711,7 +711,9 @@ export class HostedCoordinationEventStreamController {
     signal: AbortSignal
   ): Promise<boolean> {
     if (!(await authorizationIsCurrent(authorization, signal))) return false;
-    return emitProductSseWrite(frame, identity, await this.writeBounded(reply, frame, signal));
+    const productSseWriteEmitter = currentProductHostedProducerSseWriteEmitter();
+    const wrote = await this.writeBounded(reply, frame, signal);
+    return productSseWriteEmitter?.(frame, identity, wrote) ?? wrote;
   }
 
   private writeBounded(

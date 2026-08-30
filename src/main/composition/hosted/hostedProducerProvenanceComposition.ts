@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import {
   HOSTED_PRODUCER_PROVENANCE_CONTRACT,
+  HOSTED_PRODUCER_PROVENANCE_CONTRACT_ARTIFACT,
   HOSTED_PRODUCER_PROVENANCE_CONTRACT_SHA256,
   HOSTED_PRODUCER_PROVENANCE_ENV,
   HOSTED_PRODUCER_PROVENANCE_VERSION,
@@ -10,19 +11,20 @@ import {
   type HostedProducerProvenanceEnvironmentContract,
   type HostedProducerProvenanceRole,
   type HostedProducerProvenanceStream,
-} from '../contracts';
-import producerProvenanceContractArtifact from '../contracts/hosted-producer-provenance-v2.schema.json?raw';
+} from '@features/hosted-producer-provenance/contracts';
+import {
+  type HostedProducerProvenance,
+  HostedProducerProvenanceFatalError,
+  isHostedProducerProvenanceFatalError,
+  reportProductHostedProducerProvenanceFailure,
+} from '@features/hosted-producer-provenance/main';
 
 import {
-  defaultHostedProducerProvenanceOperations,
+  createHostedProducerProvenanceNodeOperations,
   type HostedProducerDerivedIdentity,
   type HostedProducerProvenanceOperations,
-} from './HostedProducerProvenanceOperations';
-import {
-  fatalProvenanceError,
-  HostedProducerProvenanceFatalError,
-  poisonInstalledProductProvenance,
-} from './HostedProducerProvenanceRegistry';
+} from './hostedProducerProvenanceNodeOperations';
+export type { HostedProducerProvenanceOperations } from './hostedProducerProvenanceNodeOperations';
 const HEX_64 = /^[0-9a-f]{64}$/u;
 const DECIMAL = /^(?:0|[1-9]\d*)$/u;
 const SAFE_RECORD_TYPE = /^[a-z][a-z0-9-]{0,95}$/u;
@@ -33,6 +35,12 @@ const TEAM_ID = /^team_[0-9a-f]{32}$/u;
 const TEAM_RUN_ID = /^team-run_[0-9a-f]{32}$/u;
 const MAX_LINE_BYTES = 64 * 1024;
 const MAX_CONTRACT_BYTES = 128 * 1024;
+
+function fatalProvenanceError(error: Error): HostedProducerProvenanceFatalError {
+  return isHostedProducerProvenanceFatalError(error)
+    ? error
+    : new HostedProducerProvenanceFatalError('producer-provenance-fatal', { cause: error });
+}
 
 const IMPLEMENTATION_IDS = Object.freeze({
   browser: 'agent-teams.product.browser-observer.v1',
@@ -54,15 +62,6 @@ export interface CreateHostedProducerProvenanceOptions {
   readonly modulePath: string;
   readonly operations?: HostedProducerProvenanceOperations;
   readonly onFailure?: (error: Error) => void;
-}
-export interface HostedProducerProvenance {
-  readonly role: HostedProducerProvenanceRole;
-  readonly controllerNonce: string;
-  readonly runId: string;
-  emit(stream: HostedProducerProvenanceStream, record: HostedProducerNativeRecord): void;
-  poison(reason: string): never;
-  bindInvalidation(invalidate: (error: Error) => void): void;
-  close(): void;
 }
 function canonicalJson(value: unknown): string {
   if (value === null || typeof value === 'boolean' || typeof value === 'string') {
@@ -90,7 +89,7 @@ function canonicalJson(value: unknown): string {
 function sha256(bytes: string | Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
-const contractArtifact = Buffer.from(producerProvenanceContractArtifact, 'utf8');
+const contractArtifact = Buffer.from(HOSTED_PRODUCER_PROVENANCE_CONTRACT_ARTIFACT, 'utf8');
 const contractSha256 = sha256(contractArtifact);
 if (
   contractArtifact.byteLength !== 54_393 ||
@@ -712,7 +711,7 @@ class NativeHostedProducerProvenance implements HostedProducerProvenance {
     if (!this.failed) {
       this.failed = true;
       this.fatalError = fatal;
-      poisonInstalledProductProvenance(this, fatal);
+      reportProductHostedProducerProvenanceFailure(this, fatal);
       try {
         this.onFailure?.(fatal);
       } catch {
@@ -735,7 +734,7 @@ export function createHostedProducerProvenanceFromEnvironment(
   const source = environment[HOSTED_PRODUCER_PROVENANCE_ENV];
   if (source === undefined) return null;
   const contract = parseHostedProducerProvenanceContract(source, options.role);
-  const operations = options.operations ?? defaultHostedProducerProvenanceOperations();
+  const operations = options.operations ?? createHostedProducerProvenanceNodeOperations();
   try {
     const identity = operations.deriveIdentity(options.modulePath);
     if (
