@@ -45,8 +45,25 @@ import {
   type ProviderModelAvailabilityContext,
   type ProviderModelAvailabilitySnapshot,
 } from '../runtime/CliProviderModelAvailabilityService';
+import {
+  createDegradedProviderStatus,
+  mergeProviderStatusDisplayEvidence,
+} from '../runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor';
+
+import {
+  createMismatchedProviderStatus,
+  filterFrontendProviders,
+  FRONTEND_PROVIDER_IDS,
+  getAuthenticatedFrontendProvider,
+  hasAuthenticatedFrontendProvider,
+  isFrontendProvider,
+  projectMismatchedProviderStatus,
+  projectProviderAuthority,
+  projectStatusAuthority,
+  resolvePassiveProviderRuntime,
+} from './cliInstallerStatusAuthority';
 
 import type {
   CliInstallationStatus,
@@ -72,11 +89,6 @@ const GCS_BASE =
   'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases';
 
 const CLI_INSTALLER_PROGRESS_CHANNEL = 'cliInstaller:progress';
-const FRONTEND_MULTIMODEL_PROVIDER_IDS: CliProviderId[] = ['anthropic', 'codex', 'opencode'];
-const FRONTEND_MULTIMODEL_PROVIDER_ID_SET = new Set<CliProviderId>(
-  FRONTEND_MULTIMODEL_PROVIDER_IDS
-);
-
 function getProviderDisplayName(providerId: CliProviderId): string {
   switch (providerId) {
     case 'anthropic':
@@ -88,30 +100,6 @@ function getProviderDisplayName(providerId: CliProviderId): string {
     case 'opencode':
       return 'OpenCode (200+ models)';
   }
-}
-
-function isFrontendMultimodelProviderId(providerId: CliProviderId): boolean {
-  return FRONTEND_MULTIMODEL_PROVIDER_ID_SET.has(providerId);
-}
-
-function getFrontendAuthenticatedProvider(
-  providers: CliProviderStatus[]
-): CliProviderStatus | null {
-  return (
-    providers.find(
-      (provider) => isFrontendMultimodelProviderId(provider.providerId) && provider.authenticated
-    ) ?? null
-  );
-}
-
-function hasFrontendAuthenticatedProvider(providers: CliProviderStatus[]): boolean {
-  return providers.some(
-    (provider) => isFrontendMultimodelProviderId(provider.providerId) && provider.authenticated
-  );
-}
-
-function filterFrontendMultimodelProviders(providers: CliProviderStatus[]): CliProviderStatus[] {
-  return providers.filter((provider) => isFrontendMultimodelProviderId(provider.providerId));
 }
 
 /** Timeout for `claude --version` (ms) */
@@ -224,27 +212,6 @@ function cloneCliInstallationStatus(status: CliInstallationStatus): CliInstallat
       backend: provider.backend ? { ...provider.backend } : null,
       models: [...provider.models],
     })),
-  };
-}
-
-function mergeProviderStatusCatalogCache(
-  incomingProvider: CliProviderStatus,
-  currentProvider: CliProviderStatus
-): CliProviderStatus {
-  const modelCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
-  const incomingRefreshState = incomingProvider.modelCatalogRefreshState ?? null;
-  const shouldPreserveCurrentModels = incomingProvider.models.length === 0;
-
-  return {
-    ...incomingProvider,
-    models: shouldPreserveCurrentModels ? currentProvider.models : incomingProvider.models,
-    modelCatalog,
-    modelCatalogRefreshState:
-      modelCatalog && incomingRefreshState !== 'error'
-        ? 'ready'
-        : (incomingRefreshState ?? currentProvider.modelCatalogRefreshState ?? 'idle'),
-    runtimeCapabilities:
-      incomingProvider.runtimeCapabilities ?? currentProvider.runtimeCapabilities ?? null,
   };
 }
 
@@ -466,6 +433,8 @@ export class CliInstallerService {
   private statusGatherGeneration = 0;
   private readonly latestProviderSignatures = new Map<CliProviderId, string | null>();
 
+  constructor(private readonly now: () => number = Date.now) {}
+
   private rememberHealthyStatus(status: CliInstallationStatus): void {
     if (!status.installed || !status.binaryPath || status.launchError) {
       return;
@@ -603,7 +572,10 @@ export class CliInstallerService {
   }
 
   getLatestStatusSnapshot(): CliInstallationStatus | null {
-    return this.latestStatusSnapshot ? cloneCliInstallationStatus(this.latestStatusSnapshot) : null;
+    const now = this.now();
+    return this.latestStatusSnapshot
+      ? projectStatusAuthority(this.latestStatusSnapshot, now, cloneCliInstallationStatus)
+      : null;
   }
 
   invalidateStatusCache(): void {
@@ -626,7 +598,7 @@ export class CliInstallerService {
     const ui = getCliFlavorUiOptions(flavor);
     const providers =
       flavor === 'agent_teams_orchestrator'
-        ? FRONTEND_MULTIMODEL_PROVIDER_IDS.map((providerId) => ({
+        ? FRONTEND_PROVIDER_IDS.map((providerId) => ({
             providerId,
             displayName: getProviderDisplayName(providerId),
             supported: false,
@@ -681,9 +653,14 @@ export class CliInstallerService {
         this.latestProviderSignatures.set(provider.providerId, null);
       }
     }
+    const projectedStatus = projectStatusAuthority(
+      this.latestStatusSnapshot,
+      this.now(),
+      cloneCliInstallationStatus
+    );
     this.sendProgress({
       type: 'status',
-      status: cloneCliInstallationStatus(this.latestStatusSnapshot),
+      status: projectedStatus,
     });
   }
 
@@ -785,7 +762,7 @@ export class CliInstallerService {
   private updateLatestProviderStatus(providerStatus: CliProviderStatus): void {
     if (
       this.latestStatusSnapshot?.flavor === 'agent_teams_orchestrator' &&
-      !isFrontendMultimodelProviderId(providerStatus.providerId)
+      !isFrontendProvider(providerStatus.providerId)
     ) {
       return;
     }
@@ -807,16 +784,16 @@ export class CliInstallerService {
     const nextProviders = hasProvider
       ? this.latestStatusSnapshot.providers.map((provider) =>
           provider.providerId === providerStatus.providerId
-            ? mergeProviderStatusCatalogCache(providerStatus, provider)
+            ? mergeProviderStatusDisplayEvidence(providerStatus, provider)
             : provider
         )
       : [...this.latestStatusSnapshot.providers, providerStatus];
-    const authenticatedProvider = getFrontendAuthenticatedProvider(nextProviders);
+    const authenticatedProvider = getAuthenticatedFrontendProvider(nextProviders);
 
     this.latestStatusSnapshot = {
       ...this.latestStatusSnapshot,
       providers: nextProviders,
-      authLoggedIn: hasFrontendAuthenticatedProvider(nextProviders),
+      authLoggedIn: hasAuthenticatedFrontendProvider(nextProviders),
       authMethod: authenticatedProvider?.authMethod ?? null,
     };
   }
@@ -894,7 +871,7 @@ export class CliInstallerService {
           }, GET_STATUS_TIMEOUT_MS);
         }),
       ]);
-      return result;
+      return projectStatusAuthority(result, this.now(), cloneCliInstallationStatus);
     } catch (err) {
       runDiag.gatherError = getErrorMessage(err);
       throw err;
@@ -913,25 +890,19 @@ export class CliInstallerService {
     providerId: CliProviderId,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
-    await resolveInteractiveShellEnvBestEffort({
-      timeoutMs: 1_500,
-      fallbackEnv: process.env,
-      background: false,
-    });
-
-    const binaryPath = await ClaudeBinaryResolver.resolve();
-    if (!binaryPath) {
-      return null;
+    // A passive provider refresh may use only the runtime already discovered by
+    // the startup status pass. Cold discovery can invoke an interactive shell.
+    const passiveRuntime = resolvePassiveProviderRuntime(this.latestStatusSnapshot, providerId);
+    if ('errorStatus' in passiveRuntime) {
+      return passiveRuntime.errorStatus;
     }
-
-    const flavor = getConfiguredCliFlavor();
-    if (flavor !== 'agent_teams_orchestrator') {
-      const fullStatus = await this.getStatus();
-      return fullStatus.providers.find((provider) => provider.providerId === providerId) ?? null;
-    }
+    const { binaryPath } = passiveRuntime;
 
     const generation = this.statusGatherGeneration;
     const handleCatalogUpdate = (hydratedProviderStatus: CliProviderStatus): void => {
+      if (hydratedProviderStatus.providerId !== providerId) {
+        return;
+      }
       if (!this.updateLatestProviderStatusIfCurrent(hydratedProviderStatus, generation)) {
         return;
       }
@@ -951,10 +922,14 @@ export class CliInstallerService {
           providerId,
           handleCatalogUpdate
         );
+    const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
+    if (mismatchStatus) {
+      return mismatchStatus;
+    }
     if (!options.projectPath) {
       this.updateLatestProviderStatusIfCurrent(providerStatus, generation);
     }
-    return providerStatus;
+    return projectProviderAuthority(providerStatus, this.now());
   }
 
   async verifyProviderModels(providerId: CliProviderId): Promise<CliProviderStatus | null> {
@@ -985,6 +960,10 @@ export class CliInstallerService {
         binaryPath,
         providerId
       );
+      const mismatchStatus = createMismatchedProviderStatus(providerId, providerStatus);
+      if (mismatchStatus) {
+        return mismatchStatus;
+      }
       const nextProviderStatus = {
         ...providerStatus,
         modelVerificationState: 'idle' as const,
@@ -996,7 +975,7 @@ export class CliInstallerService {
       ) {
         this.publishStatusSnapshot(this.latestStatusSnapshot);
       }
-      return nextProviderStatus;
+      return projectProviderAuthority(nextProviderStatus, this.now());
     }
 
     const providerStatus =
@@ -1005,8 +984,12 @@ export class CliInstallerService {
         binaryPath,
         versionProbe.version
       ) ?? (await this.multimodelBridgeService.getProviderStatus(binaryPath, providerId));
+    const mismatchStatus = createMismatchedProviderStatus(providerId, providerStatus);
+    if (mismatchStatus) {
+      return mismatchStatus;
+    }
     if (generation !== this.statusGatherGeneration) {
-      return providerStatus;
+      return projectProviderAuthority(providerStatus, this.now());
     }
 
     const nextProviderStatus = this.applyProviderModelAvailabilityToProvider(
@@ -1020,7 +1003,7 @@ export class CliInstallerService {
     ) {
       this.publishStatusSnapshot(this.latestStatusSnapshot);
     }
-    return nextProviderStatus;
+    return projectProviderAuthority(nextProviderStatus, this.now());
   }
 
   /**
@@ -1092,10 +1075,16 @@ export class CliInstallerService {
         const recoveredHealthyStatus = this.getRecoverableHealthyStatus(binaryPath);
         if (recoveredHealthyStatus) {
           logger.warn(
-            `CLI version probe failed for ${binaryPath}, reusing last healthy status snapshot: ${versionProbe.error}`
+            `CLI version probe failed for ${binaryPath}, retaining stale display evidence without launch authority: ${versionProbe.error}`
           );
           Object.assign(r, recoveredHealthyStatus, {
             launchError: null,
+            authLoggedIn: false,
+            authMethod: null,
+            authStatusChecking: false,
+            providers: recoveredHealthyStatus.providers.map((provider) =>
+              createDegradedProviderStatus(provider, versionProbe.error)
+            ),
           });
           this.publishStatusSnapshotIfCurrent(r, generation);
           return;
@@ -1251,22 +1240,24 @@ export class CliInstallerService {
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
       result.authStatusChecking = true;
-      let statusTarget = result;
+      let acceptsHydrationUpdates = true;
       const applyProviders = (providersSnapshot: CliProviderStatus[], final: boolean): void => {
-        if (generation !== this.statusGatherGeneration) {
+        if (!acceptsHydrationUpdates || generation !== this.statusGatherGeneration) {
           return;
         }
 
-        const target = statusTarget;
-        const frontendProviders = filterFrontendMultimodelProviders(providersSnapshot);
-        target.providers = frontendProviders;
-        target.authLoggedIn = hasFrontendAuthenticatedProvider(frontendProviders);
-        target.authMethod = getFrontendAuthenticatedProvider(frontendProviders)?.authMethod ?? null;
+        const now = this.now();
+        const frontendProviders = filterFrontendProviders(providersSnapshot).map(
+          (provider) => projectProviderAuthority(provider, now)
+        );
+        result.providers = frontendProviders;
+        result.authLoggedIn = hasAuthenticatedFrontendProvider(frontendProviders);
+        result.authMethod = getAuthenticatedFrontendProvider(frontendProviders)?.authMethod ?? null;
         if (final) {
-          target.authStatusChecking = false;
-          this.rememberHealthyStatus(target);
+          result.authStatusChecking = false;
+          this.rememberHealthyStatus(result);
         }
-        this.publishStatusSnapshot(target);
+        this.publishStatusSnapshot(result);
       };
 
       const completion = this.multimodelBridgeService
@@ -1277,7 +1268,7 @@ export class CliInstallerService {
           applyProviders(providers, true);
         })
         .catch((error) => {
-          if (generation !== this.statusGatherGeneration) {
+          if (!acceptsHydrationUpdates || generation !== this.statusGatherGeneration) {
             return;
           }
 
@@ -1291,7 +1282,8 @@ export class CliInstallerService {
       let timer: ReturnType<typeof setTimeout> | null = null;
       const timeout = new Promise<'timeout'>((resolve) => {
         timer = setTimeout(() => {
-          statusTarget = cloneCliInstallationStatus(result);
+          acceptsHydrationUpdates = false;
+          result.authStatusChecking = false;
           resolve('timeout');
         }, MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS);
         timer.unref?.();

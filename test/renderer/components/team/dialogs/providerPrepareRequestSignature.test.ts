@@ -23,6 +23,44 @@ function providerStatusMap(
 }
 
 describe('providerPrepareRequestSignature', () => {
+  it('changes across catalog freshness and effective launch-authority boundaries', () => {
+    const provider = {
+      providerId: 'anthropic' as const,
+      supported: true,
+      authenticated: true,
+      authMethod: 'api_key',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { teamLaunch: true, oneShot: true },
+      modelCatalog: {
+        providerId: 'anthropic',
+        status: 'ready',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2026-08-29T00:10:00.000Z',
+      },
+    };
+    const signature = (entry: RuntimeSignatureProvider): string =>
+      buildProviderPrepareRuntimeStatusSignature(
+        ['anthropic'],
+        providerStatusMap([['anthropic', entry]])
+      );
+
+    expect(
+      signature({
+        ...provider,
+        modelCatalog: {
+          ...provider.modelCatalog,
+          staleAt: '2026-08-29T00:20:00.000Z',
+        },
+      })
+    ).not.toBe(signature(provider));
+    expect(
+      signature({
+        ...provider,
+        capabilities: { ...provider.capabilities, teamLaunch: false },
+      })
+    ).not.toBe(signature(provider));
+  });
+
   it('stays stable for semantically identical provider runtime snapshots', () => {
     const providerIds = ['codex'] as const;
     const first = buildProviderPrepareRuntimeStatusSignature(

@@ -1,12 +1,16 @@
+import {
+  type TeamRuntimeLanePlan,
+  TeamRuntimeLanePlanningError,
+} from '@features/team-runtime-lanes';
 import { type TeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
 
+import { TeamLaunchValidationError } from './TeamLaunchValidationError';
 import { isPureOpenCodeProvisioningRequest } from './TeamProvisioningLaunchCompatibility';
 import {
   createMixedSecondaryLaneStates as createMixedSecondaryLaneStatesFromPlan,
   type MixedSecondaryRuntimeLaneState,
 } from './TeamProvisioningSecondaryRuntimeRuns';
 
-import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
 
 export function shouldRouteOpenCodeToRuntimeAdapter(
@@ -28,7 +32,16 @@ export function planRuntimeLanesOrThrow(
     hasOpenCodeRuntimeAdapter: boolean;
   }
 ): TeamRuntimeLanePlan {
-  return runtimeLaneCoordinator.planProvisioningMembers(input);
+  try {
+    return runtimeLaneCoordinator.planProvisioningMembers(input);
+  } catch (error) {
+    // Only the coordinator's typed lane-plan rejections are user-facing launch
+    // blockers. Unknown failures must retain their original type for 500 handling.
+    if (error instanceof TeamRuntimeLanePlanningError) {
+      throw new TeamLaunchValidationError(error.message);
+    }
+    throw error;
+  }
 }
 
 export function createMixedSecondaryLaneStates(
