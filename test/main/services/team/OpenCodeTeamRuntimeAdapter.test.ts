@@ -2897,7 +2897,7 @@ function executionProofFor(
     modelId: fullModelId,
     projectPath,
     profileRootKey: 'profile-root',
-    projectBehaviorFingerprint: 'behavior-v1',
+    projectBehaviorFingerprint: tuple.projectBehaviorFingerprint,
     managedConfigFingerprint: 'config-v1',
     managedAuthFingerprint: 'auth-v1',
     binaryPath: '/opt/homebrew/bin/opencode',
