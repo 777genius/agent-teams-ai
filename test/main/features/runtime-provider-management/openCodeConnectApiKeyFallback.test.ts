@@ -352,16 +352,17 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
       createViewResponse([createProviderConnection('anthropic', 'connected')])
     );
 
-    const realReadFile = fs.promises.readFile.bind(fs.promises);
+    const realReadFile: (target: string, encoding: 'utf8') => Promise<string> =
+      fs.promises.readFile.bind(fs.promises);
     let injected = false;
     const readFileSpy = vi
       .spyOn(fs.promises, 'readFile')
-      .mockImplementation(async (target, options) => {
-        const content = await realReadFile(
-          target as Parameters<typeof realReadFile>[0],
-          options as Parameters<typeof realReadFile>[1]
-        );
-        if (!injected && String(target) === authStorePath) {
+      .mockImplementation(async (target: unknown, encoding: unknown) => {
+        if (typeof target !== 'string' || encoding !== 'utf8') {
+          throw new Error('unexpected readFile call in this test');
+        }
+        const content = await realReadFile(target, encoding);
+        if (!injected && target === authStorePath) {
           injected = true;
           // Another writer commits an unrelated provider after our read and
           // before the replacement file is published.
