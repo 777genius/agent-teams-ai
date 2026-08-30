@@ -76,9 +76,9 @@ jobs:
       issues: write
       pull-requests: write
       id-token: write
-    uses: 777genius/review-router/.github/workflows/reviewrouter-reusable.yml@1aca8b39daa6cd88e9708c137a2f0bb083b4d70b
+    uses: 777genius/review-router/.github/workflows/reviewrouter-reusable.yml@e6be5b692319fa9381bfbee34992fb85d5559564
     with:
-      runtime_ref: 1aca8b39daa6cd88e9708c137a2f0bb083b4d70b
+      runtime_ref: e6be5b692319fa9381bfbee34992fb85d5559564
       runtime_config_mode: static
       review_action_v2_mode: disabled
       pr_number: ${{ needs.resolve.outputs.pr_number }}
