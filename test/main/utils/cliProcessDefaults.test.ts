@@ -34,7 +34,12 @@ describe('ensureWindowsSpawnBaseDirEnv', () => {
     expect(env.APPDATA).toBe('C:\\Users\\test\\AppData\\Roaming');
     expect(env.TEMP).toBe('C:\\Users\\test\\AppData\\Local\\Temp');
     expect(env.TMP).toBe('C:\\Users\\test\\AppData\\Local\\Temp');
-    expect('PSModuleAnalysisCachePath' in env).toBe(false);
+    // Pinned unconditionally: descendants outside our control can blank
+    // LOCALAPPDATA for their own children, so the inherited override is the
+    // only guarantee the cache never lands in the workspace cwd.
+    expect(env.PSModuleAnalysisCachePath).toBe(
+      'C:\\Users\\test\\AppData\\Local\\Temp\\PSModuleAnalysisCache'
+    );
   });
 
   it('replaces empty or whitespace-only values that PowerShell would resolve cwd-relative', () => {

@@ -105,9 +105,12 @@ export function ensureWindowsSpawnBaseDirEnv(
   if (!readEnvValue(env, 'TMP')) {
     setEnvValue(env, 'TMP', temp);
   }
-  // Last resort when no user profile is resolvable at all: pin the PowerShell
-  // module analysis cache to the temp dir so it can never land in the cwd.
-  if (!localAppData && !readEnvValue(env, 'PSModuleAnalysisCachePath')) {
+  // Pin the PowerShell module analysis cache to an absolute temp path
+  // unconditionally (fill-only). Descendant processes we do not control (the
+  // closed orchestrator runtime and the shells it spawns) can still blank
+  // LOCALAPPDATA in their own children; this inherited override keeps the
+  // cache out of the team workspace cwd no matter who spawns PowerShell.
+  if (!readEnvValue(env, 'PSModuleAnalysisCachePath')) {
     setEnvValue(env, 'PSModuleAnalysisCachePath', path.win32.join(temp, 'PSModuleAnalysisCache'));
   }
   return env;
