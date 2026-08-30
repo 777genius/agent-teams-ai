@@ -411,7 +411,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     useState<TeamProviderId | null>(null);
   const prepareRequestSeqRef = useRef(0);
   const appliedDefaultProjectPathRef = useRef<string | null>(null);
-  const hydrationRef = useRef<{ key?: string | null; dirty: boolean }>({ key: null, dirty: false });
+  const hydrationRef = useRef({ key: null as string | null, dirty: false, rosterDirty: false });
   const storeMembers = useStore((s) => selectResolvedMembersForTeamName(s, s.selectedTeamName));
   const previousLaunchParams = useStore((s) =>
     effectiveTeamName ? s.launchParamsByTeam[effectiveTeamName] : undefined
@@ -425,7 +425,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   useEffect(() => {
     if (!open) {
       setProviderSettingsProviderId(null);
-      hydrationRef.current = { key: null, dirty: false };
+      hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
     }
   }, [open]);
 
@@ -777,6 +777,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   const setMembersDraftsFromUser = (nextMembers: MemberDraft[]): void => {
     hydrationRef.current.dirty = true;
+    hydrationRef.current.rosterDirty = true;
     setMembersDrafts(nextMembers);
   };
 
@@ -811,7 +812,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // ---------------------------------------------------------------------------
 
   const resetFormState = (): void => {
-    hydrationRef.current = { key: null, dirty: false };
+    hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
     setLocalError(null);
     setIsSubmitting(false);
     setPrepareState('idle');
@@ -942,8 +943,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       } catch {
         savedRequest = null;
       }
-      // User edits made while the saved request was in flight win over it.
-      if (cancelled || hydrationRef.current.dirty) return;
+      // Edits made while the request was in flight win over it, but an unrelated control is
+      // not a roster edit — and with no live members the saved request is its only source.
+      if (cancelled) return;
+      if (!hydrationRef.current.rosterDirty) applyEditableRoster(savedRequest?.members);
+      if (hydrationRef.current.dirty) return;
 
       const storedEffort = localStorage.getItem('team:lastSelectedEffort');
       const launchPrefill = resolveLaunchDialogPrefill({
@@ -961,7 +965,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       const savedBackendId = normalizeSavedBackendId(savedRequest?.providerBackendId);
       setSavedLaunchProviderBackendId(launchPrefill.providerBackendId ?? savedBackendId);
 
-      applyEditableRoster(savedRequest?.members);
       const leadProviderId = normalizeLeadProviderForMode(
         launchPrefill.providerId,
         multimodelEnabled
@@ -971,10 +974,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setSelectedEffortRaw(launchPrefill.effort);
       setSelectedFastModeRaw(launchPrefill.fastMode);
       setLimitContextRaw(launchPrefill.limitContext);
-      setSkipPermissionsRaw(
-        savedRequest?.skipPermissions ??
-          localStorage.getItem('team:lastSkipPermissions') !== 'false'
-      );
+      const storedSkipPermissions = localStorage.getItem('team:lastSkipPermissions') !== 'false';
+      setSkipPermissionsRaw(savedRequest?.skipPermissions ?? storedSkipPermissions);
       hydrationRef.current.key = effectiveTeamName;
     })();
 

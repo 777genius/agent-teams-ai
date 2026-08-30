@@ -901,7 +901,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('still lets a user effort choice during hydration win over the saved request', async () => {
+  it('still lets a user effort choice during hydration win over the saved request fields', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     let resolveSavedRequest: (value: unknown) => void = () => {};
     vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
@@ -937,6 +937,8 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
+    const providerBeforeSavedRequest = teamRosterEditorSectionMock.lastProps?.providerId;
+
     await act(async () => {
       resolveSavedRequest({
         teamName: 'team-alpha',
@@ -949,7 +951,139 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
-    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([]);
+    // The controls the user touched keep their values...
+    expect(providerBeforeSavedRequest).not.toBe('codex');
+    expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe(providerBeforeSavedRequest);
+    // ...while the roster the user never touched still hydrates from the saved request.
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('fills the saved roster when an unrelated control is toggled during hydration', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    // A draft team has no live members, so the saved request is the only roster source.
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onLimitContextChange(true);
+      await flush();
+    });
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+    expect(teamRosterEditorSectionMock.lastProps?.limitContext).toBe(true);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('keeps a roster edit made during hydration from being overwritten', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onMembersChange([
+        {
+          id: 'draft-0',
+          name: 'nina',
+          roleSelection: '',
+          customRole: 'Developer',
+          workflow: '',
+        },
+      ]);
+      await flush();
+    });
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'nina' }),
+    ]);
 
     await act(async () => {
       root.unmount();
