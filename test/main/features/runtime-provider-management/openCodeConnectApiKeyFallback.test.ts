@@ -284,6 +284,28 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('does not activate when the probe signature comes with a credential rejection', async () => {
+    const original: RuntimeProviderManagementProviderResponse = {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      error: {
+        code: 'auth-failed',
+        message:
+          'OpenCode could not verify provider anthropic with 3 model candidates: ' +
+          'anthropic/claude-sonnet-4-5: 401 authentication_error: invalid x-api-key',
+        recoverable: true,
+        diagnostics: null,
+      },
+    };
+
+    const response = await recover(original);
+
+    expect(response).toBe(original);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(host.loadView).not.toHaveBeenCalled();
+    expect(fs.existsSync(authStorePath)).toBe(false);
+  });
+
   it('aborts without writing when the auth store is not valid JSON', async () => {
     fs.writeFileSync(authStorePath, 'not-json{{');
     fetchMock.mockResolvedValue(new Response('{"data": []}', { status: 200 }));

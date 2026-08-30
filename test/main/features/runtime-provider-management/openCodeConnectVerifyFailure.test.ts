@@ -88,6 +88,56 @@ describe('isOpenCodeProviderVerifyFailure', () => {
     ).toBe(false);
   });
 
+  it('refuses failures that carry credential-rejection evidence even with the verify-provider core', () => {
+    for (const message of [
+      'Failed to verify provider: invalid API key',
+      'OpenCode could not verify provider anthropic: the API key is invalid',
+      'Unable to verify provider anthropic with 3 model candidates: ' +
+        'anthropic/claude-sonnet-4-5: 401 authentication_error: invalid x-api-key',
+      'OpenCode could not verify provider anthropic with 1 model candidate: ' +
+        'anthropic/claude-opus-4-1: 403 Forbidden',
+      'Could not verify provider openrouter: invalid credentials',
+      'Cannot verify provider anthropic: Unauthorized',
+      'Failed to verify provider anthropic: permission denied',
+      'Could not verify provider anthropic: not_authenticated',
+    ]) {
+      expect(isOpenCodeProviderVerifyFailure(createFailureResponse({ message }))).toBe(false);
+    }
+  });
+
+  it('refuses when rejection evidence sits in a diagnostics field beside a matching message', () => {
+    expect(
+      isOpenCodeProviderVerifyFailure(
+        createFailureResponse({
+          message: LIVE_VERIFY_FAILURE_MESSAGE,
+          diagnostics: {
+            summary: null,
+            likelyCause: null,
+            binaryPath: null,
+            command: null,
+            projectPath: null,
+            exitCode: 1,
+            stderrPreview: '[31m401 invalid x-api-key[0m',
+            stdoutPreview: null,
+            hints: [],
+          },
+        })
+      )
+    ).toBe(false);
+  });
+
+  it('keeps matching probe failures whose model ids and reasons only look numeric', () => {
+    expect(
+      isOpenCodeProviderVerifyFailure(
+        createFailureResponse({
+          message:
+            'OpenCode could not verify provider anthropic with 2 model candidates: ' +
+            'anthropic/claude-opus-4-1: Not Found; anthropic/claude-4-0403-preview: Not Found',
+        })
+      )
+    ).toBe(true);
+  });
+
   it('never matches a response that already carries a connected provider', () => {
     const response = createFailureResponse({ message: LIVE_VERIFY_FAILURE_MESSAGE });
     expect(
