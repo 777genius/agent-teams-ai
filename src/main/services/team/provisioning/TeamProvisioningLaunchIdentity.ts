@@ -29,6 +29,7 @@ import {
   extractJsonObjectFromCli,
   normalizeProviderModelListModels,
   type ProviderModelListCommandResponse,
+  resolveCodexSelectionFromFacts,
   type RuntimeProviderLaunchFacts,
   type RuntimeStatusCommandResponse,
 } from './TeamProvisioningRuntimeLaunchSelection';
@@ -321,6 +322,7 @@ async function enrichFactsWithCodexChatGptModelGate(params: {
   providerArgs?: string[];
   providerId: TeamProviderId;
   model: string | undefined;
+  resolvedLaunchModel: string | null;
   facts: RuntimeProviderLaunchFacts;
   probe?: CodexChatGptModelSupportProbe;
   probeResultsByModel: Map<string, Promise<CodexChatGptModelSupportProbeResult>>;
@@ -329,25 +331,26 @@ async function enrichFactsWithCodexChatGptModelGate(params: {
   if (!probe) {
     return facts;
   }
-  const modelId = shouldProbeCodexChatGptModelSupport({
+  const requestedModelId = shouldProbeCodexChatGptModelSupport({
     providerId: params.providerId,
     model: params.model,
     providerStatus: facts.providerStatus,
   });
-  if (!modelId) {
+  if (!requestedModelId) {
     return facts;
   }
+  const probeModelId = params.resolvedLaunchModel?.trim() || requestedModelId;
 
-  let resultPromise = params.probeResultsByModel.get(modelId);
+  let resultPromise = params.probeResultsByModel.get(probeModelId);
   if (!resultPromise) {
     resultPromise = probe({
       claudePath: params.claudePath,
       cwd: params.cwd,
       env: params.env,
       providerArgs: params.providerArgs,
-      modelId,
+      modelId: probeModelId,
     });
-    params.probeResultsByModel.set(modelId, resultPromise);
+    params.probeResultsByModel.set(probeModelId, resultPromise);
   }
 
   const probeResult = await resultPromise;
@@ -363,10 +366,12 @@ async function enrichFactsWithCodexChatGptModelGate(params: {
       ...facts.providerStatus,
       modelAvailability: [
         ...(facts.providerStatus.modelAvailability ?? []).filter(
-          (entry) => entry.modelId.trim() !== modelId
+          (entry) => entry.modelId.trim() !== requestedModelId
         ),
         {
-          modelId,
+          // Validation remains keyed by the explicit selector even when the
+          // probe exercises the catalog's resolved launch model.
+          modelId: requestedModelId,
           status: 'unavailable' as const,
           reason: probeResult.message,
           checkedAt: new Date().toISOString(),
@@ -374,6 +379,25 @@ async function enrichFactsWithCodexChatGptModelGate(params: {
       ],
     },
   };
+}
+
+function resolveCodexChatGptProbeLaunchModel(params: {
+  providerId: TeamProviderId;
+  providerBackendId?: TeamProviderBackendId;
+  model?: string;
+  facts: RuntimeProviderLaunchFacts;
+}): string | null {
+  if (params.providerId !== 'codex') {
+    return null;
+  }
+
+  return (
+    resolveCodexSelectionFromFacts({
+      selectedModel: params.model,
+      providerBackendId: params.providerBackendId,
+      facts: params.facts,
+    }).resolvedLaunchModel ?? null
+  );
 }
 
 export async function resolveAndValidateLaunchIdentity(
@@ -418,6 +442,12 @@ export async function resolveAndValidateLaunchIdentity(
       providerArgs: input.providerArgsByProvider?.get(leadProviderId),
       providerId: leadProviderId,
       model: input.request.model,
+      resolvedLaunchModel: resolveCodexChatGptProbeLaunchModel({
+        providerId: leadProviderId,
+        providerBackendId: input.request.providerBackendId,
+        model: input.request.model,
+        facts: leadFacts,
+      }),
       facts: leadFacts,
       probe: ports.probeCodexChatGptModelSupport,
       probeResultsByModel: codexChatGptProbeResultsByModel,
@@ -440,6 +470,12 @@ export async function resolveAndValidateLaunchIdentity(
         providerArgs: input.providerArgsByProvider?.get(memberProviderId),
         providerId: memberProviderId,
         model: member.model,
+        resolvedLaunchModel: resolveCodexChatGptProbeLaunchModel({
+          providerId: memberProviderId,
+          providerBackendId: member.providerBackendId,
+          model: member.model,
+          facts: memberFacts,
+        }),
         facts: memberFacts,
         probe: ports.probeCodexChatGptModelSupport,
         probeResultsByModel: codexChatGptProbeResultsByModel,
@@ -485,6 +521,12 @@ export async function resolveDirectMemberLaunchIdentity(
       providerArgs: input.provisioningEnv.providerArgs,
       providerId: input.providerId,
       model: input.memberSpec.model,
+      resolvedLaunchModel: resolveCodexChatGptProbeLaunchModel({
+        providerId: input.providerId,
+        providerBackendId: input.providerBackendId,
+        model: input.memberSpec.model,
+        facts,
+      }),
       facts,
       probe: ports.probeCodexChatGptModelSupport,
       probeResultsByModel: new Map(),

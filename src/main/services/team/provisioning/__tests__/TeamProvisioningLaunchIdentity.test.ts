@@ -11,7 +11,6 @@ import {
   resolveAndValidateLaunchIdentity,
   resolveDirectMemberLaunchIdentity,
 } from '../TeamProvisioningLaunchIdentity';
-import { getLaunchModelArg } from '../TeamProvisioningRuntimeLaunchSelection';
 
 import type { RuntimeProviderLaunchFacts } from '../TeamProvisioningRuntimeLaunchSelection';
 import type { CliProviderModelCatalog, ProviderModelLaunchIdentity } from '@shared/types';
@@ -462,7 +461,7 @@ describe('codex chatgpt model gate during launch identity validation', () => {
     };
   }
 
-  it('probes the requested selection, which is the id the launch passes to --model', async () => {
+  it('probes the resolved launch model while recording failure against the explicit selector', async () => {
     const facts = buildChatGptCodexFacts();
     const identity = buildLaunchIdentity({
       selectedModel: 'catalog-model',
@@ -473,7 +472,7 @@ describe('codex chatgpt model gate during launch identity validation', () => {
     const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({
       outcome: 'unsupported',
       message:
-        "The 'catalog-model' model is not supported when using Codex with a ChatGPT account.",
+        "The 'catalog-launch' model is not supported when using Codex with a ChatGPT account.",
     });
     const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
 
@@ -493,13 +492,9 @@ describe('codex chatgpt model gate during launch identity validation', () => {
       }
     );
 
-    // buildProviderModelLaunchIdentity resolves the catalog entry to
-    // "catalog-launch", but a Codex launch still spawns with the requested id,
-    // so the probe and the recorded availability fact must key on that id.
-    expect(getLaunchModelArg('codex', 'catalog-model', identity)).toBe('catalog-model');
     expect(probeCodexChatGptModelSupport).toHaveBeenCalledTimes(1);
     expect(probeCodexChatGptModelSupport).toHaveBeenCalledWith(
-      expect.objectContaining({ modelId: 'catalog-model' })
+      expect.objectContaining({ modelId: 'catalog-launch' })
     );
     expect(validatedFacts).toHaveLength(2);
     for (const validated of validatedFacts) {
@@ -538,12 +533,12 @@ describe('codex chatgpt model gate during launch identity validation', () => {
     expect(validatedFacts.every((validated) => validated === facts)).toBe(true);
   });
 
-  it('probes the direct member selection under its own requested model id', async () => {
+  it('probes a direct member under its resolved launch model', async () => {
     const facts = buildChatGptCodexFacts();
     const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({
       outcome: 'unsupported',
       message:
-        "The 'catalog-model' model is not supported when using Codex with a ChatGPT account.",
+        "The 'catalog-launch' model is not supported when using Codex with a ChatGPT account.",
     });
     const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
 
@@ -564,7 +559,7 @@ describe('codex chatgpt model gate during launch identity validation', () => {
     );
 
     expect(probeCodexChatGptModelSupport).toHaveBeenCalledWith(
-      expect.objectContaining({ modelId: 'catalog-model', providerArgs: ['--provider'] })
+      expect.objectContaining({ modelId: 'catalog-launch', providerArgs: ['--provider'] })
     );
     expect(validatedFacts[0]?.providerStatus?.modelAvailability).toEqual([
       expect.objectContaining({ modelId: 'catalog-model', status: 'unavailable' }),
