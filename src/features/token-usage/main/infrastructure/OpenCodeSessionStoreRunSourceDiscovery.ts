@@ -48,18 +48,22 @@ export function resolveClaudeMultimodelDataHomePath(
   const platform = options.platform ?? process.platform;
   const homeDir = options.homeDir ?? os.homedir();
   const env = options.env ?? process.env;
+  // The resolution is parameterised by platform, so it must not join with the
+  // host's separator: asking for a darwin path from Windows has to answer with
+  // a darwin path. Identical to path.* whenever the two agree.
+  const platformPath = platform === 'win32' ? path.win32 : path.posix;
   const explicit = env.CLAUDE_MULTIMODEL_DATA_HOME?.trim();
-  if (explicit && path.isAbsolute(explicit)) return path.normalize(explicit);
+  if (explicit && platformPath.isAbsolute(explicit)) return platformPath.normalize(explicit);
 
   if (platform === 'win32') {
-    const localAppData = env.LOCALAPPDATA?.trim() || path.join(homeDir, 'AppData', 'Local');
-    return path.join(localAppData, 'claude-multimodel-nodejs', 'Data');
+    const localAppData = env.LOCALAPPDATA?.trim() || platformPath.join(homeDir, 'AppData', 'Local');
+    return platformPath.join(localAppData, 'claude-multimodel-nodejs', 'Data');
   }
   if (platform === 'darwin') {
-    return path.join(homeDir, 'Library', 'Application Support', 'claude-multimodel-nodejs');
+    return platformPath.join(homeDir, 'Library', 'Application Support', 'claude-multimodel-nodejs');
   }
-  const xdgDataHome = env.XDG_DATA_HOME?.trim() || path.join(homeDir, '.local', 'share');
-  return path.join(xdgDataHome, 'claude-multimodel-nodejs');
+  const xdgDataHome = env.XDG_DATA_HOME?.trim() || platformPath.join(homeDir, '.local', 'share');
+  return platformPath.join(xdgDataHome, 'claude-multimodel-nodejs');
 }
 
 export class OpenCodeSessionStoreRunSourceDiscovery implements TokenUsageRunSourceDiscoveryPort {

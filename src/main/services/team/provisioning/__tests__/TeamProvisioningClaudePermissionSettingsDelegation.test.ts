@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import { type ClaudePermissionSettingsFilePorts } from '../TeamProvisioningClaudePermissionSettings';
@@ -56,7 +57,7 @@ describe('TeamProvisioningClaudePermissionSettingsDelegation', () => {
       },
     });
     expect(logger.info).toHaveBeenCalledWith(
-      '[alpha] Seeded lead bootstrap MCP rules in /repo/.claude/settings.local.json (3 added)'
+      `[alpha] Seeded lead bootstrap MCP rules in ${path.join('/repo', '.claude', 'settings.local.json')} (3 added)`
     );
     expect(logger.warn).not.toHaveBeenCalled();
   });
