@@ -234,20 +234,17 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       },
       'error',
     ],
-  ] as const)(
-    'revokes OpenCode launch authority for missing or drifted live evidence',
-    (snapshot, verificationState) => {
-      const service = new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusMapper;
-      const provider = verifiedOpenCodeProvider();
+  ] as const)('revokes OpenCode launch authority for missing or drifted live evidence', (snapshot, verificationState) => {
+    const service = new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusMapper;
+    const provider = verifiedOpenCodeProvider();
 
-      expect(service.mergeOpenCodeVerification(provider, snapshot)).toMatchObject({
-        authenticated: false,
-        authMethod: null,
-        verificationState,
-        capabilities: { teamLaunch: false },
-      });
-    }
-  );
+    expect(service.mergeOpenCodeVerification(provider, snapshot)).toMatchObject({
+      authenticated: false,
+      authMethod: null,
+      verificationState,
+      capabilities: { teamLaunch: false },
+    });
+  });
 
   test('revokes OpenCode launch authority when live verification throws', async () => {
     const service = new ClaudeMultimodelBridgeService();

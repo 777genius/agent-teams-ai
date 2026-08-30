@@ -1190,7 +1190,11 @@ export class ProviderConnectionService {
     const customProvider = this.getConfiguredCodexCustomProvider();
     if (customProvider) {
       const catalog = createCodexCustomProviderCatalog(customProvider);
-      const catalogDisplay = mergeProviderCatalogDisplayAuthority(withConnection, catalog, 'ready');
+      const catalogDisplay = mergeProviderCatalogDisplayAuthority(
+        withConnection,
+        catalog,
+        'ready'
+      );
       const statusMessage =
         withConnection.statusMessage ??
         (withConnection.connection?.apiKeyConfigured

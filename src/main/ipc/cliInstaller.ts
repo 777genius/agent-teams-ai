@@ -139,7 +139,9 @@ function projectProviderAuthority(provider: CliProviderStatus, now: number): Cli
         ? { ...structuredClone(provider.modelCatalog), status: 'stale' }
         : provider.modelCatalog && structuredClone(provider.modelCatalog),
     modelCatalogRefreshState:
-      provider.modelCatalog && !catalogFresh && provider.modelCatalogRefreshState !== 'loading'
+      provider.modelCatalog &&
+      !catalogFresh &&
+      provider.modelCatalogRefreshState !== 'loading'
         ? 'error'
         : provider.modelCatalogRefreshState,
     capabilities: {

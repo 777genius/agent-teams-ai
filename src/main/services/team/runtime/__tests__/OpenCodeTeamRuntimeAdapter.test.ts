@@ -96,8 +96,8 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
   });
 
   it('fails closed when launching with confirmed members returns a mismatched fingerprint', async () => {
-    const expectedFingerprint =
-      validExecutionProof().expectedBehaviorEvidence?.expectedBehaviorFingerprint;
+    const expectedFingerprint = validExecutionProof().expectedBehaviorEvidence
+      ?.expectedBehaviorFingerprint;
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >(async () => launchData('confirmed_alive', 'mismatched-fingerprint'));
@@ -115,7 +115,9 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
       expectedFingerprint
     );
     expect(result.teamLaunchState).toBe('partial_failure');
-    expect(result.diagnostics).toEqual(['OpenCode launch result behavior fingerprint mismatch']);
+    expect(result.diagnostics).toEqual([
+      'OpenCode launch result behavior fingerprint mismatch',
+    ]);
     expect(result.members.Worker?.hardFailureReason).toBe(
       'opencode_launch_behavior_fingerprint_mismatch'
     );
@@ -261,8 +263,9 @@ function validExecutionProof(): OpenCodeExecutionProof & {
     effectiveSelectedAuthFingerprint,
     expectedBehaviorFingerprint: '',
   };
-  expectedBehaviorEvidence.expectedBehaviorFingerprint =
-    createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorEvidence);
+  expectedBehaviorEvidence.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(
+    expectedBehaviorEvidence
+  );
   const unsignedProof: Omit<OpenCodeExecutionProof, 'proofHash'> = {
     schemaVersion: 1,
     providerId: 'opencode',

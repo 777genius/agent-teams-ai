@@ -1247,8 +1247,8 @@ export class CliInstallerService {
         }
 
         const now = this.now();
-        const frontendProviders = filterFrontendProviders(providersSnapshot).map((provider) =>
-          projectProviderAuthority(provider, now)
+        const frontendProviders = filterFrontendProviders(providersSnapshot).map(
+          (provider) => projectProviderAuthority(provider, now)
         );
         result.providers = frontendProviders;
         result.authLoggedIn = hasAuthenticatedFrontendProvider(frontendProviders);

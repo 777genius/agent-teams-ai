@@ -467,8 +467,8 @@ function reconcileCliInstallationStatus(
   const mergedProviders =
     current?.flavor === 'agent_teams_orchestrator' &&
     areArraysEqual(providers, current.providers, Object.is)
-      ? current.providers
-      : providers;
+    ? current.providers
+    : providers;
 
   const merged: CliInstallationStatus = {
     ...incoming,

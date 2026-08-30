@@ -12,7 +12,11 @@ import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@s
 
 type CloneInstallationStatus = (status: CliInstallationStatus) => CliInstallationStatus;
 
-export const FRONTEND_PROVIDER_IDS: readonly CliProviderId[] = ['anthropic', 'codex', 'opencode'];
+export const FRONTEND_PROVIDER_IDS: readonly CliProviderId[] = [
+  'anthropic',
+  'codex',
+  'opencode',
+];
 const FRONTEND_PROVIDER_ID_SET = new Set<CliProviderId>(FRONTEND_PROVIDER_IDS);
 
 export function isFrontendProvider(providerId: CliProviderId): boolean {

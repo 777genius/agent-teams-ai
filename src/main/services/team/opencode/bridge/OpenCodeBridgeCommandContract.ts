@@ -70,8 +70,7 @@ export interface OpenCodeLaunchTeamCommandBody {
   leadPrompt: string;
   expectedCapabilitySnapshotId: string | null;
   manifestHighWatermark: number | null;
-  capabilitySnapshotRecoveryAttemptId?: string;
-  executionProof?: OpenCodeExecutionProof;
+  capabilitySnapshotRecoveryAttemptId?: string; executionProof?: OpenCodeExecutionProof;
   expectedBehaviorFingerprint: string;
 }
 export interface OpenCodeRuntimePermissionCommandData {
@@ -104,8 +103,7 @@ export interface OpenCodeLaunchTeamCommandData {
   diagnostics: OpenCodeTeamBridgeDiagnostic[];
   idempotencyKey?: string;
   manifestHighWatermark?: number | null;
-  runtimeStoreManifestHighWatermark?: number | null;
-  durableCheckpoints?: { name: string; memberName?: string | null; observedAt: string }[];
+  runtimeStoreManifestHighWatermark?: number | null; durableCheckpoints?: { name: string; memberName?: string | null; observedAt: string }[];
   expectedBehaviorFingerprint?: string;
 }
 export interface OpenCodeReconcileTeamCommandBody {
@@ -486,8 +484,7 @@ export interface OpenCodeBridgePeerIdentity {
     opencodeTaskLedgerEvidenceContractVersion?: number;
     opencodeAppManagedBootstrapContractVersion?: number;
     opencodeDeliveryAcceptanceContractVersion?: number;
-    opencodeFilePartsContractVersion?: number;
-    expectedBehaviorFingerprintSchemaVersion?: number;
+    opencodeFilePartsContractVersion?: number; expectedBehaviorFingerprintSchemaVersion?: number;
   };
   runtime: {
     providerId: 'opencode';
@@ -743,17 +740,7 @@ export function validateOpenCodeBridgeHandshake(input: {
           'OpenCode app-managed bootstrap is required, but the orchestrator does not advertise contract version 1. Update agent_teams_orchestrator and restart the app.',
       };
     }
-    if (
-      [
-        input.handshake.client.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion,
-        input.handshake.server.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion,
-      ].some((version) => version !== OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION)
-    )
-      return {
-        ok: false,
-        reason:
-          'OpenCode expected behavior fingerprint schema version 2 is required. Update agent_teams_orchestrator and restart the app.',
-      };
+    if ([input.handshake.client.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion, input.handshake.server.bridgeProtocol.expectedBehaviorFingerprintSchemaVersion].some((version) => version !== OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION)) return { ok: false, reason: 'OpenCode expected behavior fingerprint schema version 2 is required. Update agent_teams_orchestrator and restart the app.' };
   }
 
   if (
@@ -1052,8 +1039,7 @@ function isPeerIdentity(value: unknown): value is OpenCodeBridgePeerIdentity {
     !isContractVersion(bridgeProtocol.opencodeTaskLedgerEvidenceContractVersion) ||
     !isContractVersion(bridgeProtocol.opencodeAppManagedBootstrapContractVersion) ||
     !isContractVersion(bridgeProtocol.opencodeDeliveryAcceptanceContractVersion) ||
-    !isContractVersion(bridgeProtocol.opencodeFilePartsContractVersion) ||
-    !isContractVersion(bridgeProtocol.expectedBehaviorFingerprintSchemaVersion)
+    !isContractVersion(bridgeProtocol.opencodeFilePartsContractVersion) || !isContractVersion(bridgeProtocol.expectedBehaviorFingerprintSchemaVersion)
   ) {
     return false;
   }
