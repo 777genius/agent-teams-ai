@@ -1,6 +1,10 @@
 import crypto from 'node:crypto';
 
 import { evaluateCodexLaunchReadiness } from '@features/codex-account';
+import {
+  ANTHROPIC_DEFAULT_API_BASE_URL,
+  verifyAnthropicApiKeyWithApi,
+} from '@main/utils/anthropicApiKeyVerification';
 import { execCli } from '@main/utils/childProcess';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 import {
@@ -32,6 +36,10 @@ import type {
   CodexModelCatalogFeatureFacade,
   CodexModelCatalogRequest,
 } from '@features/codex-model-catalog/main';
+import type {
+  AnthropicApiKeyVerificationResult,
+  AnthropicApiKeyVerifier,
+} from '@main/utils/anthropicApiKeyVerification';
 import type {
   CliProviderAuthMode,
   CliProviderConnectionInfo,
@@ -102,9 +110,7 @@ const CODEX_LAUNCH_CONFIG_SETTINGS_KEY = 'agent_teams_launch_config';
 const CODEX_NATIVE_BACKEND_ID = 'codex-native';
 const CODEX_LOGIN_STATUS_TIMEOUT_MS = 5_000;
 const CODEX_LOGIN_STATUS_CONFIG_OVERRIDES = ['service_tier="fast"'] as const;
-const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
 const ANTHROPIC_API_KEY_VERIFY_CACHE_TTL_MS = 60_000;
-const ANTHROPIC_DEFAULT_API_BASE_URL = 'https://api.anthropic.com';
 const FIRST_PARTY_ANTHROPIC_HOSTS = new Set(['api.anthropic.com', 'api-staging.anthropic.com']);
 const ANTHROPIC_EXTERNAL_BACKEND_ID_SET = new Set<string>(ANTHROPIC_EXTERNAL_BACKEND_IDS);
 const ANTHROPIC_COMPATIBLE_BACKEND_ID_SET = new Set<string>(ANTHROPIC_COMPATIBLE_BACKEND_IDS);
@@ -120,20 +126,6 @@ type CodexCliLoginStatusChecker = (params: {
   binaryPath: string | null;
   env: NodeJS.ProcessEnv;
 }) => Promise<CodexCliLoginStatusCheckResult>;
-
-type AnthropicApiKeyVerificationState = 'valid' | 'invalid' | 'unknown';
-
-interface AnthropicApiKeyVerificationResult {
-  state: AnthropicApiKeyVerificationState;
-  status?: number | null;
-  errorType?: string | null;
-  errorMessage?: string | null;
-}
-
-type AnthropicApiKeyVerifier = (
-  apiKey: string,
-  baseUrl?: string | null
-) => Promise<AnthropicApiKeyVerificationResult>;
 
 type CodexAccountSnapshotReader = Pick<CodexAccountFeatureFacade, 'getSnapshot'> & {
   refreshSnapshot?: CodexAccountFeatureFacade['refreshSnapshot'];
@@ -163,23 +155,6 @@ function normalizeAnthropicApiKeyVerificationMessage(
   }
 
   return 'unknown verification error';
-}
-
-function buildAnthropicModelsUrl(baseUrl?: string | null): string {
-  const url = new URL(baseUrl?.trim() || ANTHROPIC_DEFAULT_API_BASE_URL);
-  let pathname = url.pathname;
-  while (pathname.endsWith('/')) {
-    pathname = pathname.slice(0, -1);
-  }
-  if (pathname.endsWith('/v1/models')) {
-    url.pathname = pathname;
-  } else if (pathname.endsWith('/v1')) {
-    url.pathname = `${pathname}/models`;
-  } else {
-    url.pathname = `${pathname}/v1/models`;
-  }
-  url.search = '';
-  return url.toString();
 }
 
 function isAnthropicCompatibleBaseUrl(baseUrl?: string | null): boolean {
@@ -232,59 +207,6 @@ function isUsableAnthropicCompatibleEndpoint(
     );
   } catch {
     return false;
-  }
-}
-
-async function verifyAnthropicApiKeyWithApi(
-  apiKey: string,
-  baseUrl?: string | null
-): Promise<AnthropicApiKeyVerificationResult> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS);
-  try {
-    const response = await fetch(buildAnthropicModelsUrl(baseUrl), {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-    });
-    const text = await response.text();
-    let body: { error?: { type?: string; message?: string } } | null = null;
-    try {
-      body = text ? (JSON.parse(text) as { error?: { type?: string; message?: string } }) : null;
-    } catch {
-      body = null;
-    }
-
-    if (response.ok) {
-      return { state: 'valid', status: response.status };
-    }
-
-    if (response.status === 401 || response.status === 403) {
-      return {
-        state: 'invalid',
-        status: response.status,
-        errorType: body?.error?.type ?? null,
-        errorMessage: body?.error?.message ?? null,
-      };
-    }
-
-    return {
-      state: 'unknown',
-      status: response.status,
-      errorType: body?.error?.type ?? null,
-      errorMessage: body?.error?.message ?? null,
-    };
-  } catch (error) {
-    return {
-      state: 'unknown',
-      status: null,
-      errorMessage: error instanceof Error ? error.message : String(error),
-    };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

@@ -14,6 +14,9 @@ const killProcessTreeMock = vi.fn();
 const resolveInteractiveShellEnvMock = vi.fn();
 const getAppDataPathMock = vi.fn();
 let appDataRoot = '';
+// The connect fallback writes the OpenCode auth store under the orchestrator
+// data home; keep those writes inside a temp dir instead of the real profile.
+let dataHomeRoot = '';
 
 function createSpawnProcess(
   stdoutPayload: unknown,
@@ -148,14 +151,18 @@ import {
 describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
   beforeAll(() => {
     appDataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-provider-app-data-'));
+    dataHomeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'runtime-provider-data-home-'));
   });
 
   afterAll(() => {
     fs.rmSync(appDataRoot, { recursive: true, force: true });
+    fs.rmSync(dataHomeRoot, { recursive: true, force: true });
+    vi.unstubAllEnvs();
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('CLAUDE_MULTIMODEL_DATA_HOME', dataHomeRoot);
     fs.rmSync(path.join(appDataRoot, 'data'), { recursive: true, force: true });
     resolveBinaryMock.mockResolvedValue('/repo/cli-dev');
     resolveInteractiveShellEnvMock.mockResolvedValue({ PATH: '/Users/test/.bun/bin:/usr/bin' });
@@ -1806,6 +1813,125 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
     expect(response.error?.diagnostics?.stdoutPreview).toBe('not-json');
     expect(stdinWrite).toHaveBeenCalledWith('sk-input-secret-value-123456');
+  });
+
+  it('commits a directly verified Anthropic key and re-reads status when the runtime probe cannot verify it', async () => {
+    const dataHome = process.env.CLAUDE_MULTIMODEL_DATA_HOME ?? '';
+    expect(dataHome).toBeTruthy();
+    const authStorePath = path.join(dataHome, 'opencode', 'auth.json');
+    fs.rmSync(authStorePath, { force: true });
+    const fetchMock = vi.fn(async () => new Response('{"data": []}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const { child } = createSpawnProcess(
+        {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'auth-failed',
+            message:
+              'OpenCode could not verify provider anthropic with 3 model candidates: anthropic/claude-sonnet-4-5: Not Found',
+            recoverable: true,
+            diagnostics: null,
+          },
+        },
+        1
+      );
+      spawnCliMock.mockReturnValue(child);
+      execCliMock.mockResolvedValue({
+        stdout: JSON.stringify({
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          view: {
+            runtimeId: 'opencode',
+            title: 'OpenCode',
+            runtime: {
+              state: 'ready',
+              cliPath: '/opt/homebrew/bin/opencode',
+              version: '1.0.0',
+              managedProfile: 'active',
+              localAuth: 'synced',
+            },
+            providers: [
+              {
+                providerId: 'anthropic',
+                displayName: 'Anthropic',
+                state: 'connected',
+                ownership: ['managed'],
+                recommended: true,
+                modelCount: 3,
+                defaultModelId: null,
+                authMethods: ['api'],
+                actions: [],
+                detail: null,
+              },
+            ],
+            defaultModel: null,
+            fallbackModel: null,
+            diagnostics: [],
+          },
+        }),
+        stderr: '',
+      });
+
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const response = await client.connectWithApiKey({
+        runtimeId: 'opencode',
+        providerId: 'anthropic',
+        apiKey: 'sk-ant-wiring-key-1234567890',
+      });
+
+      expect(response.error).toBeUndefined();
+      expect(response.provider?.providerId).toBe('anthropic');
+      expect(response.provider?.state).toBe('connected');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(execCliMock).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.arrayContaining(['runtime', 'providers', 'view']),
+        expect.anything()
+      );
+      const store = JSON.parse(fs.readFileSync(authStorePath, 'utf8')) as Record<string, unknown>;
+      expect(store.anthropic).toEqual({ type: 'api', key: 'sk-ant-wiring-key-1234567890' });
+    } finally {
+      vi.unstubAllGlobals();
+      fs.rmSync(authStorePath, { force: true });
+    }
+  });
+
+  it('returns non-probe connect failures unchanged without direct provider verification', async () => {
+    const dataHome = process.env.CLAUDE_MULTIMODEL_DATA_HOME ?? '';
+    const authStorePath = path.join(dataHome, 'opencode', 'auth.json');
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const { child } = createSpawnProcess(
+        {
+          schemaVersion: 1,
+          runtimeId: 'opencode',
+          error: {
+            code: 'auth-failed',
+            message: 'Invalid API key',
+            recoverable: true,
+            diagnostics: null,
+          },
+        },
+        1
+      );
+      spawnCliMock.mockReturnValue(child);
+
+      const client = new AgentTeamsRuntimeProviderManagementCliClient();
+      const response = await client.connectWithApiKey({
+        runtimeId: 'opencode',
+        providerId: 'anthropic',
+        apiKey: 'sk-ant-wiring-key-1234567890',
+      });
+
+      expect(response.error?.message).toBe('Invalid API key');
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(fs.existsSync(authStorePath)).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('keeps partial spawn stdout and stderr when a provider command times out', async () => {

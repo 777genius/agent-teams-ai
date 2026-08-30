@@ -3,6 +3,7 @@ import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { execCli, killProcessTree, spawnCli } from '@main/utils/childProcess';
 import { resolveInteractiveShellEnvBestEffort } from '@main/utils/shellEnv';
 
+import { recoverOpenCodeConnectApiKeyVerifyFailure } from './openCodeConnectApiKeyFallback';
 import {
   ensureOpenCodeGlobalDefaultContextPath,
   getOpenCodeGlobalDefaultContextPath,
@@ -1000,6 +1001,36 @@ function collectSpawnOutput(
   });
 }
 
+function parseProviderCommandResponse(
+  runtimeId: RuntimeProviderManagementRuntimeId,
+  context: RuntimeProviderCommandContext,
+  result: { stdout: string; stderr: string; code: number | null; stdinError: string | null }
+): RuntimeProviderManagementProviderResponse {
+  const stderr = mergeSpawnStderrWithStdinError(result);
+  if (result.code === 0) {
+    return extractJsonObjectWithContext<RuntimeProviderManagementProviderResponse>(
+      result.stdout,
+      context,
+      stderr
+    );
+  }
+  try {
+    return sanitizeRuntimeProviderResponse(
+      extractJsonObject<RuntimeProviderManagementProviderResponse>(result.stdout)
+    );
+  } catch {
+    return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
+      runtimeId,
+      formatNonJsonCliOutputError({
+        context,
+        stdout: result.stdout,
+        stderr,
+        exitCode: result.code,
+      })
+    );
+  }
+}
+
 function mergeSpawnStderrWithStdinError(result: {
   stderr: string;
   stdinError: string | null;
@@ -1982,29 +2013,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       } else {
         result = await collectSpawnOutput(child, stdinValue);
       }
-      if (result.code === 0) {
-        return extractJsonObjectWithContext<RuntimeProviderManagementProviderResponse>(
-          result.stdout,
-          context,
-          mergeSpawnStderrWithStdinError(result)
-        );
-      }
-
-      try {
-        return sanitizeRuntimeProviderResponse(
-          extractJsonObject<RuntimeProviderManagementProviderResponse>(result.stdout)
-        );
-      } catch {
-        return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
-          input.runtimeId,
-          formatNonJsonCliOutputError({
-            context,
-            stdout: result.stdout,
-            stderr: mergeSpawnStderrWithStdinError(result),
-            exitCode: result.code,
-          })
-        );
-      }
+      return parseProviderCommandResponse(input.runtimeId, context, result);
     } catch (error) {
       if (isOAuth) {
         const active = this.activeOAuthOperations.get(oauthOperationId);
@@ -2175,41 +2184,32 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         )
       ) as ChildProcessWithoutNullStreams;
       const result = await collectSpawnOutput(child, input.apiKey);
-      if (result.code === 0) {
-        return extractJsonObjectWithContext<RuntimeProviderManagementProviderResponse>(
-          result.stdout,
-          context,
-          mergeSpawnStderrWithStdinError(result)
-        );
-      }
-
-      try {
-        return sanitizeRuntimeProviderResponse(
-          extractJsonObject<RuntimeProviderManagementProviderResponse>(result.stdout)
-        );
-      } catch {
-        return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
-          input.runtimeId,
-          formatNonJsonCliOutputError({
-            context,
-            stdout: result.stdout,
-            stderr: mergeSpawnStderrWithStdinError(result),
-            exitCode: result.code,
-          })
-        );
-      }
+      return this.recoverConnectApiKeyVerifyFailure(
+        input,
+        parseProviderCommandResponse(input.runtimeId, context, result)
+      );
     } catch (error) {
       const response = extractJsonObjectFromError<RuntimeProviderManagementProviderResponse>(error);
-      if (response) {
-        return response;
-      }
-      return commandFailureResponse<RuntimeProviderManagementProviderResponse>(
-        input.runtimeId,
-        normalizeCommandFailure(error, context)
-      );
+      return response
+        ? this.recoverConnectApiKeyVerifyFailure(input, response)
+        : commandFailureResponse<RuntimeProviderManagementProviderResponse>(
+            input.runtimeId,
+            normalizeCommandFailure(error, context)
+          );
     } finally {
       this.invalidateProviderResponseCaches();
     }
+  }
+
+  // See `recoverOpenCodeConnectApiKeyVerifyFailure` for why this exists.
+  private async recoverConnectApiKeyVerifyFailure(
+    input: RuntimeProviderManagementConnectApiKeyInput,
+    response: RuntimeProviderManagementProviderResponse
+  ): Promise<RuntimeProviderManagementProviderResponse> {
+    return recoverOpenCodeConnectApiKeyVerifyFailure(input, response, {
+      loadView: (viewInput) => this.loadView(viewInput),
+      invalidateProviderCaches: () => this.invalidateProviderResponseCaches(),
+    });
   }
 
   async forgetCredential(
