@@ -6,6 +6,13 @@ import path from 'path';
 const CODEX_ACCOUNTS_DIR = path.join(os.homedir(), '.codex', 'accounts');
 const LEGACY_AUTH_SYNC_MARKER_FILE = '.agent-teams-legacy-auth-sync.json';
 
+// Newer Codex CLIs keep auth in their own store (accounts/ registry, sqlite) and
+// never rewrite a leftover legacy ~/.codex/auth.json. Replaying the long-rotated
+// refresh_token from such a stale file trips OpenAI's reuse detection, which
+// revokes the entire token family — so a legacy auth.json only counts as an
+// active account while it is fresh. The stale file is ignored, never deleted.
+const LEGACY_AUTH_STALE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+
 interface CodexAccountsRegistry {
   active_account_id?: string | null;
   active_account_key?: string | null;
@@ -16,6 +23,8 @@ interface CodexAccountsRegistry {
 interface CodexAuthFile {
   auth_mode?: string | null;
   authMode?: string | null;
+  last_refresh?: string | null;
+  lastRefresh?: string | null;
   tokens?: {
     refresh_token?: string | null;
     refreshToken?: string | null;
@@ -86,6 +95,26 @@ function hasChatgptRefreshToken(authFile: CodexAuthFile | null): boolean {
 
 async function readCodexAuthFile(filePath: string): Promise<CodexAuthFile | null> {
   return readJsonFile<CodexAuthFile>(filePath);
+}
+
+function getLastRefreshMs(authFile: CodexAuthFile | null): number | null {
+  const raw = authFile?.last_refresh ?? authFile?.lastRefresh ?? null;
+  if (typeof raw !== 'string') {
+    return null;
+  }
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function isLegacyAuthFileFresh(
+  filePath: string,
+  authFile: CodexAuthFile | null
+): Promise<boolean> {
+  // The in-file last_refresh timestamp is authoritative when present; file mtime
+  // is the fallback. Unknown freshness counts as stale to avoid token-family
+  // revocation from a reused refresh_token.
+  const lastRefreshMs = getLastRefreshMs(authFile) ?? (await getMtimeMs(filePath));
+  return lastRefreshMs !== null && Date.now() - lastRefreshMs <= LEGACY_AUTH_STALE_AFTER_MS;
 }
 
 function getLegacyAuthFilePath(accountsDir: string): string {
@@ -162,14 +191,18 @@ export async function resolveCodexActiveChatgptAuthFile(
 
   if (!hasRegistry) {
     const legacyAuthFile = await readCodexAuthFile(legacyAuthFilePath);
-    return hasChatgptRefreshToken(legacyAuthFile)
-      ? {
-          codexHome,
-          authFilePath: legacyAuthFilePath,
-          source: 'legacy',
-          activeAccountKey: null,
-        }
-      : null;
+    if (!hasChatgptRefreshToken(legacyAuthFile)) {
+      return null;
+    }
+    if (!(await isLegacyAuthFileFresh(legacyAuthFilePath, legacyAuthFile))) {
+      return null;
+    }
+    return {
+      codexHome,
+      authFilePath: legacyAuthFilePath,
+      source: 'legacy',
+      activeAccountKey: null,
+    };
   }
 
   const registry = await readJsonFile<CodexAccountsRegistry>(registryPath);
