@@ -1239,7 +1239,12 @@ export class AgentTeamsMcpHttpServer {
       (process.platform === 'win32' ? async () => null : readNativeProcessStartTimeMs);
     const killProcess = this.deps.killProcess ?? killProcessByPid;
     // process.kill() leaves the tree behind on Windows; escalate via taskkill /T.
-    const forceKillProcess = this.deps.forceKillProcess ?? killProcessByPidAndWait;
+    // On POSIX the first attempt already sent SIGTERM, so escalate with SIGKILL.
+    const forceKillProcess =
+      this.deps.forceKillProcess ??
+      ((pid: number): void => {
+        void killProcessByPidAndWait(pid, { signal: 'SIGKILL' });
+      });
     const isProcessAlive = this.deps.isProcessAlive ?? isNativeProcessAlive;
     const sleepMs = this.deps.sleepMs ?? sleep;
     const probeHealth = this.deps.probeHealth ?? probeLoopbackHealth;

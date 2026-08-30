@@ -89,9 +89,11 @@ export async function cleanupManagedOpenCodeServeProcesses(
   // follows: on Windows process.kill() terminates that process alone, so the
   // host's children (cmd.exe for the bash tool, cursor-agent trees) outlive the
   // sweep as orphans. taskkill /T takes the tree, and the caller has just
-  // re-confirmed this pid's identity.
+  // re-confirmed this pid's identity. On POSIX the first attempt already sent
+  // SIGTERM, so the escalation must use SIGKILL.
   const forceKillProcess =
-    options.forceKillProcess ?? ((pid: number) => killProcessByPidAndWait(pid, { platform }));
+    options.forceKillProcess ??
+    ((pid: number) => killProcessByPidAndWait(pid, { platform, signal: 'SIGKILL' }));
   const isProcessAlive = options.isProcessAlive ?? isNativeProcessAlive;
   const sleepMs = options.sleepMs ?? sleep;
 
