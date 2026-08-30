@@ -18,6 +18,7 @@ import type {
 import type { AnthropicApiKeyVerificationResult } from '@main/utils/anthropicApiKeyVerification';
 
 const AUTH_STORE_MAX_BYTES = 2 * 1024 * 1024;
+const AUTH_STORE_WRITE_MAX_ATTEMPTS = 3;
 
 type AppSideApiKeyVerifier = (apiKey: string) => Promise<AnthropicApiKeyVerificationResult>;
 
@@ -89,11 +90,57 @@ async function readOpenCodeAuthStore(authStorePath: string): Promise<Record<stri
   return { ...(parsed as Record<string, unknown>) };
 }
 
-async function writeOpenCodeAuthStore(
+class OpenCodeAuthStoreConflictError extends Error {}
+
+/**
+ * Read-modify-write of the shared auth store, guarded against a concurrent
+ * writer losing its entry.
+ *
+ * The store holds every provider's credential, so any write has to republish
+ * the whole file. `atomicWriteAsync` publishes by rename, so the file is never
+ * torn — but a plain read-then-write would still overwrite whatever another
+ * writer committed while our replacement was being staged. The `beforeCommit`
+ * seam re-reads the store immediately before the rename and refuses to publish
+ * over content that no longer matches what we read, so a conflicting write is
+ * retried against the freshest snapshot instead of erasing it.
+ *
+ * This is not a true compare-and-swap: the store layer offers no file locking,
+ * so a writer landing between the guard's read and the rename can still be
+ * lost. That window is one rename wide rather than the whole stage-and-fsync,
+ * which is as narrow as this can get without a lock.
+ *
+ * `apply` mutates only this fallback's own provider key and returns false when
+ * there is nothing to write.
+ */
+async function updateOpenCodeAuthStore(
   authStorePath: string,
-  store: Record<string, unknown>
+  apply: (store: Record<string, unknown>) => boolean
 ): Promise<void> {
-  await atomicWriteAsync(authStorePath, `${JSON.stringify(store, null, 2)}\n`, { mode: 0o600 });
+  for (let attempt = 1; attempt <= AUTH_STORE_WRITE_MAX_ATTEMPTS; attempt += 1) {
+    const store = await readOpenCodeAuthStore(authStorePath);
+    const witness = JSON.stringify(store);
+    if (!apply(store)) {
+      return;
+    }
+    try {
+      await atomicWriteAsync(authStorePath, `${JSON.stringify(store, null, 2)}\n`, {
+        mode: 0o600,
+        beforeCommit: async () => {
+          if (JSON.stringify(await readOpenCodeAuthStore(authStorePath)) !== witness) {
+            throw new OpenCodeAuthStoreConflictError();
+          }
+        },
+      });
+      return;
+    } catch (error) {
+      if (!(error instanceof OpenCodeAuthStoreConflictError)) {
+        throw error;
+      }
+    }
+  }
+  throw new Error(
+    `OpenCode auth store at ${authStorePath} kept changing while the credential was written`
+  );
 }
 
 async function commitOpenCodeApiCredential(input: {
@@ -101,13 +148,20 @@ async function commitOpenCodeApiCredential(input: {
   providerId: string;
   apiKey: string;
 }): Promise<OpenCodeAuthStoreCredentialSnapshot> {
-  const store = await readOpenCodeAuthStore(input.authStorePath);
-  const snapshot: OpenCodeAuthStoreCredentialSnapshot = {
-    previousCredential: store[input.providerId],
-    hadPreviousCredential: Object.hasOwn(store, input.providerId),
+  let snapshot: OpenCodeAuthStoreCredentialSnapshot = {
+    previousCredential: undefined,
+    hadPreviousCredential: false,
   };
-  store[input.providerId] = { type: 'api', key: input.apiKey };
-  await writeOpenCodeAuthStore(input.authStorePath, store);
+  await updateOpenCodeAuthStore(input.authStorePath, (store) => {
+    // Re-snapshotted on every attempt so a retry restores what the winning
+    // writer left behind, not what the losing attempt had read.
+    snapshot = {
+      previousCredential: store[input.providerId],
+      hadPreviousCredential: Object.hasOwn(store, input.providerId),
+    };
+    store[input.providerId] = { type: 'api', key: input.apiKey };
+    return true;
+  });
   return snapshot;
 }
 
@@ -127,18 +181,19 @@ async function rollbackOpenCodeApiCredential(input: {
   apiKey: string;
   snapshot: OpenCodeAuthStoreCredentialSnapshot;
 }): Promise<void> {
-  const store = await readOpenCodeAuthStore(input.authStorePath);
-  // Only undo the exact credential this fallback committed; a concurrent
-  // writer's newer entry is never rolled back.
-  if (!isCommittedApiCredential(store[input.providerId], input.apiKey)) {
-    return;
-  }
-  if (input.snapshot.hadPreviousCredential) {
-    store[input.providerId] = input.snapshot.previousCredential;
-  } else {
-    delete store[input.providerId];
-  }
-  await writeOpenCodeAuthStore(input.authStorePath, store);
+  await updateOpenCodeAuthStore(input.authStorePath, (store) => {
+    // Only undo the exact credential this fallback committed; a concurrent
+    // writer's newer entry is never rolled back.
+    if (!isCommittedApiCredential(store[input.providerId], input.apiKey)) {
+      return false;
+    }
+    if (input.snapshot.hadPreviousCredential) {
+      store[input.providerId] = input.snapshot.previousCredential;
+    } else {
+      delete store[input.providerId];
+    }
+    return true;
+  });
 }
 
 function findProviderConnection(

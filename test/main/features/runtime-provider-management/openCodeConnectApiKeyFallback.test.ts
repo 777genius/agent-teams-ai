@@ -318,6 +318,52 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
     expect(host.loadView).not.toHaveBeenCalled();
   });
 
+  it('keeps a concurrent writer that lands between the store read and the publish', async () => {
+    fs.writeFileSync(authStorePath, JSON.stringify({ cursor: { type: 'oauth' } }));
+    fetchMock.mockResolvedValue(new Response('{"data": []}', { status: 200 }));
+    host.loadView.mockResolvedValue(
+      createViewResponse([createProviderConnection('anthropic', 'connected')])
+    );
+
+    const realReadFile = fs.promises.readFile.bind(fs.promises);
+    let injected = false;
+    const readFileSpy = vi
+      .spyOn(fs.promises, 'readFile')
+      .mockImplementation(async (target, options) => {
+        const content = await realReadFile(
+          target as Parameters<typeof realReadFile>[0],
+          options as Parameters<typeof realReadFile>[1]
+        );
+        if (!injected && String(target) === authStorePath) {
+          injected = true;
+          // Another writer commits an unrelated provider after our read and
+          // before the replacement file is published.
+          fs.writeFileSync(
+            authStorePath,
+            JSON.stringify({
+              cursor: { type: 'oauth' },
+              openrouter: { type: 'api', key: 'sk-or-concurrent-000000' },
+            })
+          );
+        }
+        return content;
+      });
+
+    try {
+      const response = await recover(createVerifyFailureResponse());
+
+      expect(response.provider?.state).toBe('connected');
+      expect(readStore(authStorePath)).toEqual({
+        cursor: { type: 'oauth' },
+        openrouter: { type: 'api', key: 'sk-or-concurrent-000000' },
+        anthropic: { type: 'api', key: API_KEY },
+      });
+      expect(fs.readdirSync(tempDir)).toEqual(['auth.json']);
+    } finally {
+      readFileSpy.mockRestore();
+    }
+  });
+
   it('leaves a concurrently replaced credential alone instead of rolling it back', async () => {
     fetchMock.mockResolvedValue(new Response('{"data": []}', { status: 200 }));
     host.loadView.mockImplementation(async () => {
