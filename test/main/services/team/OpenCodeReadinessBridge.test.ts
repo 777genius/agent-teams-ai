@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   OpenCodeReadinessBridge,
   type OpenCodeReadinessBridgeCommandExecutor,
+  type OpenCodeReadinessBridgeOptions,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import {
   REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
@@ -17,6 +18,11 @@ import type {
   OpenCodeSendMessageCommandData,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import type { OpenCodeTeamLaunchReadiness } from '../../../../src/main/services/team/opencode/readiness/OpenCodeTeamLaunchReadiness';
+
+type StateChangingExecuteMock = NonNullable<
+  OpenCodeReadinessBridgeOptions['stateChangingCommands']
+>['execute'] &
+  ReturnType<typeof vi.fn>;
 
 describe('OpenCodeReadinessBridge', () => {
   it('executes the read-only opencode.readiness command and returns readiness data', async () => {
@@ -1169,6 +1175,7 @@ describe('OpenCodeReadinessBridge', () => {
         members: [],
         leadPrompt: '',
         expectedCapabilitySnapshotId: 'cap-1',
+        expectedBehaviorFingerprint: 'a'.repeat(64),
         manifestHighWatermark: 0,
       })
     ).resolves.toMatchObject({
@@ -1184,9 +1191,89 @@ describe('OpenCodeReadinessBridge', () => {
         laneId: 'primary',
         runId: 'run-1',
         capabilitySnapshotId: 'cap-1',
+        behaviorFingerprint: 'a'.repeat(64),
         cwd: '/repo',
       })
     );
+    expect(executor.execute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['post-dispatch timeout', 'timeout', 'launch timed out'],
+    ['transport watchdog timeout', 'transport_watchdog_timeout', 'watchdog timed out'],
+    ['empty output after dispatch', 'contract_violation', 'Bridge stdout was empty'],
+    [
+      'fingerprint echo mismatch',
+      'contract_violation',
+      'OpenCode launch result behavior fingerprint mismatch',
+    ],
+  ] as const)(
+    'preserves reconciliation-required launch state for %s without replay',
+    async (_label, kind, message) => {
+      const body = launchCommandBody();
+      const stateChangingExecute = vi.fn(
+        async <_TBody, TData>() =>
+          bridgeCommandFailure({
+            command: 'opencode.launchTeam',
+            requestId: 'launch-req-unknown',
+            kind,
+            message,
+          }) as OpenCodeBridgeResult<TData>
+      ) as unknown as StateChangingExecuteMock;
+      const executor = fakeExecutor(
+        bridgeFailure('internal_error', 'direct bridge must not run', [])
+      );
+      const bridge = new OpenCodeReadinessBridge(executor, {
+        stateChangingCommands: { execute: stateChangingExecute },
+      });
+
+      await expect(bridge.launchOpenCodeTeam(body)).resolves.toMatchObject({
+        runId: body.runId,
+        teamLaunchState: 'launching',
+        members: {},
+        warnings: [],
+        diagnostics: [
+          expect.objectContaining({
+            code: 'opencode_launch_reconciliation_required',
+            severity: 'warning',
+          }),
+        ],
+        expectedBehaviorFingerprint: body.expectedBehaviorFingerprint,
+      });
+      expect(stateChangingExecute).toHaveBeenCalledTimes(1);
+      expect(executor.execute).not.toHaveBeenCalled();
+    }
+  );
+
+  it('keeps an authoritative launch failure terminal', async () => {
+    const body = launchCommandBody();
+    const stateChangingExecute = vi.fn(
+      async <_TBody, TData>() =>
+        bridgeCommandFailure({
+          command: 'opencode.launchTeam',
+          requestId: 'launch-req-failed',
+          kind: 'provider_error',
+          message: 'authoritative provider rejection',
+        }) as OpenCodeBridgeResult<TData>
+    ) as unknown as StateChangingExecuteMock;
+    const executor = fakeExecutor(
+      bridgeFailure('internal_error', 'commandStatus must not run', [])
+    );
+    const bridge = new OpenCodeReadinessBridge(executor, {
+      stateChangingCommands: { execute: stateChangingExecute },
+    });
+
+    await expect(bridge.launchOpenCodeTeam(body)).resolves.toMatchObject({
+      runId: body.runId,
+      teamLaunchState: 'failed',
+      diagnostics: [
+        expect.objectContaining({
+          code: 'provider_error',
+          severity: 'error',
+        }),
+      ],
+    });
+    expect(stateChangingExecute).toHaveBeenCalledTimes(1);
     expect(executor.execute).not.toHaveBeenCalled();
   });
 
@@ -1260,6 +1347,22 @@ function fakeExecutor(
 ): OpenCodeReadinessBridgeCommandExecutor {
   return {
     execute: vi.fn(async () => result) as OpenCodeReadinessBridgeCommandExecutor['execute'],
+  };
+}
+
+function launchCommandBody() {
+  return {
+    runId: 'run-1',
+    laneId: 'primary',
+    teamId: 'team-a',
+    teamName: 'team-a',
+    projectPath: '/repo',
+    selectedModel: 'openai/gpt-5.4-mini',
+    members: [{ name: 'alice', role: 'Developer', prompt: 'Build it' }],
+    leadPrompt: '',
+    expectedCapabilitySnapshotId: 'cap-1',
+    expectedBehaviorFingerprint: 'a'.repeat(64),
+    manifestHighWatermark: 0,
   };
 }
 
