@@ -65,24 +65,14 @@ const TRANSIENT_TRANSPORT_MARKERS = [
   ...PROVIDER_OVERLOAD_MARKERS,
 ] as const;
 
-// Codex CLI stale-auth signatures: a reused/rotated refresh token or a missing
-// `codex login` is never fixed by re-running the same exec, so the delivery loop
-// must not retry it. Matched against the raw detail because the secret redactor
-// rewrites "token: <word>" sequences, which erases these markers from
-// normalizedDetail (e.g. "Failed to refresh token: ..." loses "token:").
-const CODEX_TERMINAL_AUTH_MARKERS = [
-  'refresh_token_reused',
-  'invalid_grant',
-  'codex_login',
-] as const;
+// Definitive stale-auth signatures are never fixed by re-running the same exec, so the
+// delivery loop must not retry them. Match raw detail because redaction can erase markers.
+const CODEX_TERMINAL_AUTH_MARKERS = ['refresh_token_reused', 'invalid_grant'] as const;
 
-// A bare "failed to refresh token" only reports that the refresh call did not
-// succeed; it does not say the grant is dead. Classifying it as terminal auth
-// regardless of cause strands the teammate with no recovery job whenever the
-// refresh endpoint has a transient outage (e.g. "Failed to refresh token: API
-// Error: 503"), so it counts as auth failure only when nothing else in the signal
-// points at a retryable transport problem.
-const CODEX_REFRESH_FAILURE_MARKERS = ['failed to refresh token'] as const;
+// These markers can describe a dead grant, but Codex also prefixes transient refresh
+// endpoint failures with `codex_login`. They are terminal only when the signal carries no
+// retryable status or transport evidence.
+const CODEX_CONTEXTUAL_AUTH_MARKERS = ['failed to refresh token', 'codex_login'] as const;
 
 function containsAny(value: string, tokens: readonly string[]): boolean {
   return tokens.some((token) => value.includes(token));
@@ -182,7 +172,7 @@ export function classifyRuntimeFailure(signal: RuntimeFailureSignal): RuntimeFai
     containsAny(rawLower, TRANSIENT_TRANSPORT_MARKERS);
   const hasCodexAuthFailureMarker =
     containsAny(rawLower, CODEX_TERMINAL_AUTH_MARKERS) ||
-    (!hasTransientTransportEvidence && containsAny(rawLower, CODEX_REFRESH_FAILURE_MARKERS));
+    (!hasTransientTransportEvidence && containsAny(rawLower, CODEX_CONTEXTUAL_AUTH_MARKERS));
 
   if (signal.phase === 'sdk_retrying') {
     return result('backend_error', 'observe_only', normalizedDetail, {

@@ -73,6 +73,16 @@ describe('classifyRuntimeFailure', () => {
     ['Failed to refresh token: API Error: 429 too many requests', 'rate_limited', 'manual'],
     ['Failed to refresh token: fetch failed', 'network_error', 'retry_transient'],
     ['Failed to refresh token: ETIMEDOUT', 'network_error', 'retry_transient'],
+    [
+      'codex_login: Failed to refresh token: API Error: 503',
+      'provider_overloaded',
+      'retry_transient',
+    ],
+    [
+      'codex_login: Failed to refresh token: fetch failed',
+      'network_error',
+      'retry_transient',
+    ],
   ] as const)(
     'keeps a transient refresh-endpoint outage recoverable: %s => %s/%s',
     (detail, reasonCode, disposition) => {
