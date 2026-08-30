@@ -81,6 +81,37 @@ describe('provider preflight model compatibility', () => {
     });
   });
 
+  it('blocks catalog-listed Codex models the runtime reports as ChatGPT-unsupported', () => {
+    expect(
+      resolveProviderCompatibilityModel({
+        providerId: 'codex',
+        requestedModelId: 'gpt-5.2',
+        runtimeFacts: buildRuntimeFacts({
+          defaultModel: 'gpt-5.6-sol',
+          modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+          providerStatus: {
+            providerId: 'codex',
+            authMethod: 'chatgpt',
+            modelAvailability: [
+              {
+                modelId: 'gpt-5.2',
+                status: 'unavailable',
+                reason:
+                  "The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account.",
+              },
+            ],
+          },
+        }),
+        limitContext: false,
+      })
+    ).toEqual({
+      kind: 'unavailable',
+      reason:
+        "The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account. " +
+        'Switch Codex authentication to an API key or pick a ChatGPT-supported Codex model.',
+    });
+  });
+
   it('blocks ambiguous scoped matches and authoritative catalog misses', () => {
     expect(
       resolveProviderCompatibilityModel({
@@ -159,6 +190,99 @@ describe('provider model verification normalization', () => {
     expect(debugEvents).toEqual([
       'provider_model_catalog_check_start',
       'provider_model_catalog_check_complete',
+    ]);
+  });
+
+  it('fails the model check when the deep ChatGPT probe reports the selection unsupported', async () => {
+    const chatGptFacts = buildRuntimeFacts({
+      defaultModel: 'gpt-5.6-sol',
+      modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+      providerStatus: { providerId: 'codex', authMethod: 'chatgpt' },
+    });
+    const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({
+      outcome: 'unsupported',
+      message: "The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account.",
+    });
+
+    const result = await verifySelectedProviderModelsForProvisioning({
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      providerId: 'codex',
+      modelIds: ['gpt-5.2', 'gpt-5.2'],
+      limitContext: false,
+      modelVerificationMode: 'deep',
+      ports: {
+        buildProvisioningEnv: vi
+          .fn()
+          .mockResolvedValue({ env: { PATH: '/bin' }, providerArgs: ['--provider-arg'] }),
+        readRuntimeProviderLaunchFacts: vi.fn().mockResolvedValue(chatGptFacts),
+        appendPreflightDebugLog: () => undefined,
+        probeCodexChatGptModelSupport,
+      },
+    });
+
+    expect(probeCodexChatGptModelSupport).toHaveBeenCalledOnce();
+    expect(probeCodexChatGptModelSupport).toHaveBeenCalledWith({
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      env: { PATH: '/bin' },
+      providerArgs: ['--provider-arg'],
+      modelId: 'gpt-5.2',
+    });
+    expect(result.blockingMessages).toEqual([
+      'Selected model gpt-5.2 is unavailable. ' +
+        "The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account. " +
+        'Switch Codex authentication to an API key or pick a ChatGPT-supported Codex model.',
+    ]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        providerId: 'codex',
+        modelId: 'gpt-5.2',
+        severity: 'blocking',
+        code: 'model_unavailable',
+      }),
+    ]);
+  });
+
+  it('skips the ChatGPT probe outside ChatGPT auth or outside deep verification', async () => {
+    const probeCodexChatGptModelSupport = vi.fn();
+    const buildVerifyInput = (
+      authMethod: string,
+      modelVerificationMode?: 'compatibility' | 'deep'
+    ) => ({
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      providerId: 'codex' as const,
+      modelIds: ['gpt-5.2'],
+      limitContext: false,
+      ...(modelVerificationMode ? { modelVerificationMode } : {}),
+      ports: {
+        buildProvisioningEnv: vi.fn().mockResolvedValue({ env: { PATH: '/bin' } }),
+        readRuntimeProviderLaunchFacts: vi.fn().mockResolvedValue(
+          buildRuntimeFacts({
+            defaultModel: 'gpt-5.6-sol',
+            modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+            providerStatus: { providerId: 'codex', authMethod },
+          })
+        ),
+        appendPreflightDebugLog: () => undefined,
+        probeCodexChatGptModelSupport,
+      },
+    });
+
+    const apiKeyResult = await verifySelectedProviderModelsForProvisioning(
+      buildVerifyInput('api_key', 'deep')
+    );
+    const compatibilityResult = await verifySelectedProviderModelsForProvisioning(
+      buildVerifyInput('chatgpt', 'compatibility')
+    );
+
+    expect(probeCodexChatGptModelSupport).not.toHaveBeenCalled();
+    expect(apiKeyResult.blockingMessages).toEqual([]);
+    expect(apiKeyResult.details).toEqual(['Selected model gpt-5.2 is available for launch.']);
+    expect(compatibilityResult.blockingMessages).toEqual([]);
+    expect(compatibilityResult.details).toEqual([
+      'Selected model gpt-5.2 is available for launch.',
     ]);
   });
 });

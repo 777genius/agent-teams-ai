@@ -16,6 +16,11 @@ import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerC
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
 
 import {
+  type CodexChatGptModelSupportProbe,
+  type CodexChatGptModelSupportProbeResult,
+  shouldProbeCodexChatGptModelSupport,
+} from './TeamProvisioningCodexChatGptModelGate';
+import {
   PROVIDER_MODEL_LIST_TIMEOUT_MS,
   PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
 } from './TeamProvisioningProviderPreflight';
@@ -103,6 +108,7 @@ export interface LaunchIdentityResolutionPorts {
     limitContext?: boolean;
     facts: RuntimeProviderLaunchFacts;
   }): void;
+  probeCodexChatGptModelSupport?: CodexChatGptModelSupportProbe;
 }
 
 function warnLaunchFactsParseError(params: {
@@ -308,12 +314,78 @@ export function buildDirectMemberLaunchIdentityRequest(input: {
   };
 }
 
+async function enrichFactsWithCodexChatGptModelGate(params: {
+  claudePath: string;
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+  providerArgs?: string[];
+  providerId: TeamProviderId;
+  model: string | undefined;
+  facts: RuntimeProviderLaunchFacts;
+  probe?: CodexChatGptModelSupportProbe;
+  probeResultsByModel: Map<string, Promise<CodexChatGptModelSupportProbeResult>>;
+}): Promise<RuntimeProviderLaunchFacts> {
+  const { probe, facts } = params;
+  if (!probe) {
+    return facts;
+  }
+  const modelId = shouldProbeCodexChatGptModelSupport({
+    providerId: params.providerId,
+    model: params.model,
+    providerStatus: facts.providerStatus,
+  });
+  if (!modelId) {
+    return facts;
+  }
+
+  let resultPromise = params.probeResultsByModel.get(modelId);
+  if (!resultPromise) {
+    resultPromise = probe({
+      claudePath: params.claudePath,
+      cwd: params.cwd,
+      env: params.env,
+      providerArgs: params.providerArgs,
+      modelId,
+    });
+    params.probeResultsByModel.set(modelId, resultPromise);
+  }
+
+  const probeResult = await resultPromise;
+  if (probeResult.outcome !== 'unsupported' || !facts.providerStatus) {
+    return facts;
+  }
+
+  // Record the failed probe as availability facts so validateRuntimeLaunchSelection
+  // rejects the selection through its regular ChatGPT gate.
+  return {
+    ...facts,
+    providerStatus: {
+      ...facts.providerStatus,
+      modelAvailability: [
+        ...(facts.providerStatus.modelAvailability ?? []).filter(
+          (entry) => entry.modelId.trim() !== modelId
+        ),
+        {
+          modelId,
+          status: 'unavailable' as const,
+          reason: probeResult.message,
+          checkedAt: new Date().toISOString(),
+        },
+      ],
+    },
+  };
+}
+
 export async function resolveAndValidateLaunchIdentity(
   input: ResolveAndValidateLaunchIdentityInput,
   ports: LaunchIdentityResolutionPorts
 ): Promise<ProviderModelLaunchIdentity> {
   const leadProviderId = resolveTeamProviderId(input.request.providerId);
   const factsByProvider = new Map<TeamProviderId, RuntimeProviderLaunchFacts>();
+  const codexChatGptProbeResultsByModel = new Map<
+    string,
+    Promise<CodexChatGptModelSupportProbeResult>
+  >();
   const getFacts = async (providerId: TeamProviderId): Promise<RuntimeProviderLaunchFacts> => {
     const cached = factsByProvider.get(providerId);
     if (cached) {
@@ -339,7 +411,17 @@ export async function resolveAndValidateLaunchIdentity(
     effort: input.request.effort,
     fastMode: input.request.fastMode,
     limitContext: input.request.limitContext,
-    facts: leadFacts,
+    facts: await enrichFactsWithCodexChatGptModelGate({
+      claudePath: input.claudePath,
+      cwd: input.cwd,
+      env: input.env,
+      providerArgs: input.providerArgsByProvider?.get(leadProviderId),
+      providerId: leadProviderId,
+      model: input.request.model,
+      facts: leadFacts,
+      probe: ports.probeCodexChatGptModelSupport,
+      probeResultsByModel: codexChatGptProbeResultsByModel,
+    }),
   });
 
   for (const member of input.effectiveMembers) {
@@ -351,7 +433,17 @@ export async function resolveAndValidateLaunchIdentity(
       model: member.model,
       effort: member.effort,
       limitContext: input.request.limitContext,
-      facts: memberFacts,
+      facts: await enrichFactsWithCodexChatGptModelGate({
+        claudePath: input.claudePath,
+        cwd: input.cwd,
+        env: input.env,
+        providerArgs: input.providerArgsByProvider?.get(memberProviderId),
+        providerId: memberProviderId,
+        model: member.model,
+        facts: memberFacts,
+        probe: ports.probeCodexChatGptModelSupport,
+        probeResultsByModel: codexChatGptProbeResultsByModel,
+      }),
     });
   }
 
@@ -386,7 +478,17 @@ export async function resolveDirectMemberLaunchIdentity(
     effort: input.memberSpec.effort,
     fastMode: input.memberSpec.fastMode,
     limitContext: input.requestLimitContext,
-    facts,
+    facts: await enrichFactsWithCodexChatGptModelGate({
+      claudePath: input.claudePath,
+      cwd: input.cwd,
+      env: input.provisioningEnv.env,
+      providerArgs: input.provisioningEnv.providerArgs,
+      providerId: input.providerId,
+      model: input.memberSpec.model,
+      facts,
+      probe: ports.probeCodexChatGptModelSupport,
+      probeResultsByModel: new Map(),
+    }),
   });
   return ports.buildProviderModelLaunchIdentity({
     request,

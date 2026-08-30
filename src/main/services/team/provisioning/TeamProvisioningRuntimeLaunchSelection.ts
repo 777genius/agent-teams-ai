@@ -36,6 +36,7 @@ import {
   type TeamRuntimeSettingsJson,
 } from '../../runtime/teamRuntimeSettingsBundle';
 
+import { assertCodexChatGptLaunchModelSupported } from './TeamProvisioningCodexChatGptModelGate';
 import { getExplicitLaunchModelSelection } from './TeamProvisioningMemberSpecs';
 
 export interface ProviderModelListCommandResponse {
@@ -626,15 +627,7 @@ export async function buildTeamRuntimeLaunchArgsPlan(
   };
 }
 
-export function isProbeTimeoutMessage(message: string): boolean {
-  const lower = message.toLowerCase();
-  return (
-    lower.includes('timeout running:') ||
-    lower.includes('timed out') ||
-    lower.includes('did not complete') ||
-    lower.includes('etimedout')
-  );
-}
+export { isProbeTimeoutMessage } from '../../runtime/providerModelProbe';
 
 export function resolveRequestedLaunchModel(params: {
   providerId: TeamProviderId;
@@ -895,6 +888,13 @@ export function validateRuntimeLaunchSelection(params: {
       `${params.actorLabel} uses Codex effort "${params.effort}", but this Agent Teams runtime does not expose Codex reasoning config passthrough yet. Use low, medium, or high for now.`
     );
   }
+
+  // Runs before the membership early return: gated models stay in the live catalog.
+  assertCodexChatGptLaunchModelSupported({
+    actorLabel: params.actorLabel,
+    explicitModel,
+    providerStatus: params.facts.providerStatus,
+  });
 
   if (!explicitModel || params.facts.modelIds.has(explicitModel)) {
     return;
