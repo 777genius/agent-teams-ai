@@ -98,7 +98,10 @@ describe('CodexLoginSessionManager', () => {
     const fakeSession = createSession();
     deferredSession.resolve(fakeSession.session);
 
-    await Promise.all([firstStart, secondStart]);
+    // The duplicate request must report that it did not take ownership of the login, so
+    // callers do not reset login-scoped state (such as the forced token refresh reuse
+    // window) for a request that never touched the credentials.
+    expect(await Promise.all([firstStart, secondStart])).toEqual([true, false]);
 
     expect(fakeSession.request).toHaveBeenCalledTimes(1);
     expect(openExternalMock).not.toHaveBeenCalled();

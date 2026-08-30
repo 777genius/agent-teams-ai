@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - dev
       # Long-lived integration branches: pushes here previously ran no CI at all,
       # which let multi-day test regressions land unnoticed (they only surfaced
       # through PR #252's merge CI).

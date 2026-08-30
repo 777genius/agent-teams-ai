@@ -21,4 +21,5 @@ export {
   OPEN_CODE_SOLO_MEMBER_NAME,
   OPEN_CODE_SOLO_MEMBER_ROLE,
   planTeamRuntimeLanes,
+  TeamRuntimeLanePlanningError,
 } from './core/domain/planTeamRuntimeLanes';
