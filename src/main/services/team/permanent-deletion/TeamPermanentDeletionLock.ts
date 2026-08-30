@@ -49,6 +49,30 @@ function isEnoent(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === 'ENOENT';
 }
 
+/**
+ * True when publishing the candidate failed because the lock is already held.
+ *
+ * POSIX reports that as EEXIST/ENOTEMPTY (rename cannot replace a non-empty
+ * directory). Windows reports the very same situation as EPERM - and does so
+ * for any rename onto an existing directory - so the lock path is checked
+ * before treating it as contention; without that check every contended
+ * acquisition on Windows failed the whole permanent deletion instead of
+ * waiting for the holder.
+ */
+async function isOccupiedLockRenameError(error: unknown, lockPath: string): Promise<boolean> {
+  const code = (error as NodeJS.ErrnoException).code;
+  if (code === 'EEXIST' || code === 'ENOTEMPTY' || code === 'ENOTDIR' || code === 'EISDIR') {
+    return true;
+  }
+  if (code !== 'EPERM' && code !== 'EACCES') {
+    return false;
+  }
+  return await fs.promises
+    .lstat(lockPath)
+    .then(() => true)
+    .catch(() => false);
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -333,13 +357,7 @@ export class TeamPermanentDeletionLock {
             ownerEntryName,
           };
         } catch (error) {
-          const code = (error as NodeJS.ErrnoException).code;
-          if (
-            code !== 'EEXIST' &&
-            code !== 'ENOTEMPTY' &&
-            code !== 'ENOTDIR' &&
-            code !== 'EISDIR'
-          ) {
+          if (!(await isOccupiedLockRenameError(error, lockPath))) {
             throw error;
           }
           await this.removeStalePermanentDeletionLock(lockPath);
