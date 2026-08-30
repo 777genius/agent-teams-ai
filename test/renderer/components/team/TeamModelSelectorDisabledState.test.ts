@@ -1624,6 +1624,7 @@ describe('TeamModelSelector disabled Codex models', () => {
 
   it('shows short-lived OpenCode preflight notes as selectable advisory tiles', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
       providers: [
@@ -1691,14 +1692,13 @@ describe('TeamModelSelector disabled Codex models', () => {
       );
       await Promise.resolve();
     });
+    await hydrateFailClosedAuthorityClocks();
 
     const issueButton = Array.from(host.querySelectorAll('button')).find((button) =>
       button.textContent?.includes('big-pickle')
     );
     expect(issueButton).not.toBeNull();
-    await act(async () => {
-      await vi.waitFor(() => expect(issueButton?.getAttribute('aria-disabled')).toBe('false'));
-    });
+    expect(issueButton?.getAttribute('aria-disabled')).toBe('false');
     expect(issueButton?.textContent).toContain('Ping not confirmed');
     expect(issueButton?.className).toContain('bg-amber-300/5');
     expect(issueButton?.className).toContain('border-0');
