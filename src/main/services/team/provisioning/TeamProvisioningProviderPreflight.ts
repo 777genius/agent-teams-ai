@@ -365,14 +365,23 @@ export async function verifySelectedProviderModelsForProvisioning({
     ) {
       return outcome;
     }
-    const probeModelId = shouldProbeCodexChatGptModelSupport({
+    // The default sentinel only survives on the REQUESTED selection:
+    // resolveProviderCompatibilityModel turns a default request into the concrete
+    // runtimeFacts.defaultModel, so gating on the resolved id would probe an
+    // implicit default as if the user had picked that model explicitly.
+    const requestedProbeModelId = shouldProbeCodexChatGptModelSupport({
       providerId,
-      model: outcome.kind === 'available' ? (outcome.resolvedModelId ?? label) : label,
+      model: label,
       providerStatus: runtimeFacts.providerStatus,
     });
-    if (!probeModelId) {
+    if (!requestedProbeModelId) {
       return outcome;
     }
+    // Probe the resolved id so provider-scoped selections hit the real model.
+    const probeModelId =
+      outcome.kind === 'available'
+        ? (outcome.resolvedModelId ?? requestedProbeModelId)
+        : requestedProbeModelId;
 
     debugLog('provider_model_chatgpt_probe_start', { providerId, cwd, modelId: probeModelId });
     const probeResult = await ports.probeCodexChatGptModelSupport({

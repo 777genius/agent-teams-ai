@@ -1,3 +1,4 @@
+import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -283,6 +284,43 @@ describe('provider model verification normalization', () => {
     expect(compatibilityResult.blockingMessages).toEqual([]);
     expect(compatibilityResult.details).toEqual([
       'Selected model gpt-5.2 is available for launch.',
+    ]);
+  });
+
+  it('never probes an implicit default selection that resolves to a gated model', async () => {
+    // The default sentinel resolves to runtimeFacts.defaultModel; probing that
+    // resolved id would block a launch the user never explicitly configured.
+    const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({
+      outcome: 'unsupported',
+      message: "The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account.",
+    });
+
+    const result = await verifySelectedProviderModelsForProvisioning({
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      providerId: 'codex',
+      modelIds: [DEFAULT_PROVIDER_MODEL_SELECTION],
+      limitContext: false,
+      modelVerificationMode: 'deep',
+      ports: {
+        buildProvisioningEnv: vi.fn().mockResolvedValue({ env: { PATH: '/bin' } }),
+        readRuntimeProviderLaunchFacts: vi.fn().mockResolvedValue(
+          buildRuntimeFacts({
+            defaultModel: 'gpt-5.2',
+            modelIds: new Set(['gpt-5.2']),
+            providerStatus: { providerId: 'codex', authMethod: 'chatgpt' },
+          })
+        ),
+        appendPreflightDebugLog: () => undefined,
+        probeCodexChatGptModelSupport,
+      },
+    });
+
+    expect(probeCodexChatGptModelSupport).not.toHaveBeenCalled();
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.issues).toBeUndefined();
+    expect(result.details).toEqual([
+      `Selected model ${DEFAULT_PROVIDER_MODEL_SELECTION} is available for launch.`,
     ]);
   });
 });
