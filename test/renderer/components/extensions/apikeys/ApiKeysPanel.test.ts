@@ -326,8 +326,21 @@ describe('ApiKeysPanel', () => {
     });
   });
 
-  it('uses the live Codex snapshot even while multimodel provider status is still loading', async () => {
-    storeState.cliStatus = null;
+  it('uses the live Codex snapshot while multimodel provider status is refreshing', async () => {
+    storeState.cliStatus = createCliStatus();
+    const codexProvider = storeState.cliStatus.providers.find(
+      (provider) => provider.providerId === 'codex'
+    );
+    if (!codexProvider) {
+      throw new Error('Expected the Codex provider fixture');
+    }
+    Object.assign(codexProvider, {
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusCheckErrorCode: undefined,
+    });
     storeState.cliStatusLoading = true;
     codexAccountHookState.snapshot = {
       preferredAuthMode: 'chatgpt',

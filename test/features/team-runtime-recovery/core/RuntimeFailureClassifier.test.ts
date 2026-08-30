@@ -42,12 +42,71 @@ describe('classifyRuntimeFailure', () => {
     ['API Error: 422 invalid input', undefined, 'client_error', 'manual'],
     ['API Error: 401 invalid API key', undefined, 'auth_error', 'manual'],
     ['API Error: 403 forbidden', undefined, 'auth_error', 'manual'],
+    ['stream error: refresh_token_reused', undefined, 'auth_error', 'manual'],
+    ['run codex_login to continue', undefined, 'auth_error', 'manual'],
     ['ENOSPC: no space left on device', undefined, 'filesystem_error', 'manual'],
     ['unexpected tool execution error', undefined, 'unknown', 'manual'],
   ] as const)('%s => %s/%s', (detail, statusCode, reasonCode, disposition) => {
     expect(classifyRuntimeFailure(signal({ detail, statusCode }))).toMatchObject({
       reasonCode,
       disposition,
+    });
+  });
+
+  it('classifies codex refresh-token failures as auth errors even when redaction erases the marker', () => {
+    // The secret redactor rewrites "token: <word>" sequences, so the phrase
+    // "Failed to refresh token:" no longer exists in normalizedDetail — the
+    // classifier must match the raw detail to avoid an endless retry loop.
+    const classified = classifyRuntimeFailure(
+      signal({ detail: 'Failed to refresh token: unexpected status 400 Bad Request' })
+    );
+    expect(classified).toMatchObject({
+      reasonCode: 'auth_error',
+      disposition: 'manual',
+      actionRequired: true,
+    });
+  });
+
+  it.each([
+    ['Failed to refresh token: API Error: 503', 'provider_overloaded', 'retry_transient'],
+    ['Failed to refresh token: API Error: 500 internal error', 'backend_error', 'retry_transient'],
+    ['Failed to refresh token: API Error: 429 too many requests', 'rate_limited', 'manual'],
+    ['Failed to refresh token: fetch failed', 'network_error', 'retry_transient'],
+    ['Failed to refresh token: ETIMEDOUT', 'network_error', 'retry_transient'],
+    [
+      'codex_login: Failed to refresh token: API Error: 503',
+      'provider_overloaded',
+      'retry_transient',
+    ],
+    [
+      'codex_login: Failed to refresh token: fetch failed',
+      'network_error',
+      'retry_transient',
+    ],
+  ] as const)(
+    'keeps a transient refresh-endpoint outage recoverable: %s => %s/%s',
+    (detail, reasonCode, disposition) => {
+      // A bare "failed to refresh token" carrying transient transport evidence is an
+      // outage of the refresh endpoint, not a dead grant. Classifying it as auth_error
+      // would leave the teammate stranded with no recovery job.
+      expect(classifyRuntimeFailure(signal({ detail }))).toMatchObject({
+        reasonCode,
+        disposition,
+      });
+    }
+  );
+
+  it('still classifies refresh-token reuse as terminal auth even behind a transient status', () => {
+    // The kill-loop signature must stay terminal: re-running the same exec replays the
+    // revoked refresh token and re-trips OpenAI's reuse detection.
+    expect(
+      classifyRuntimeFailure(
+        signal({ detail: 'Failed to refresh token: refresh_token_reused (API Error: 503)' })
+      )
+    ).toMatchObject({
+      reasonCode: 'auth_error',
+      disposition: 'manual',
+      actionRequired: true,
     });
   });
 

@@ -20,8 +20,17 @@ import {
 import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
+import {
+  hasAuthoritativeProviderStatusEvidence,
+  isProviderModelCatalogExactReady,
+} from '@shared/utils/providerStatusAuthority';
 
 import { CodexBinaryResolver } from '../services/infrastructure/codexAppServer';
+import {
+  createRuntimeStatusErrorProviderStatus,
+  mergeProviderStatusDisplayEvidence,
+  sanitizeProviderStatusAuthority,
+} from '../services/runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
 
 import type { CliInstallerService } from '../services';
@@ -39,6 +48,7 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 const logger = createLogger('IPC:cliInstaller');
 
 let service: CliInstallerService;
+let readNow: () => number = Date.now;
 const statusInFlight = new Map<CliInstallerProviderStatusMode, Promise<CliInstallationStatus>>();
 const providerStatusInFlight = new Map<string, Promise<CliProviderStatus | null>>();
 const providerRuntimeRequestTails = new Map<CliProviderId, Promise<void>>();
@@ -52,6 +62,7 @@ let statusCacheGeneration = 0;
 const STATUS_CACHE_TTL_MS = 5_000;
 const MAX_PARALLEL_PROVIDER_RUNTIME_REQUESTS = 3;
 const PARALLEL_PROVIDER_STATUS_ENV = 'CLAUDE_TEAM_PARALLEL_PROVIDER_STATUS';
+const CLI_PROVIDER_IDS = new Set<unknown>(['anthropic', 'codex', 'gemini', 'opencode']);
 const FRONTEND_MULTIMODEL_PROVIDER_IDS = new Set<CliProviderId>(['anthropic', 'codex', 'opencode']);
 const INDEPENDENT_PROVIDER_RUNTIME_REQUEST_IDS = new Set<CliProviderId>(['opencode']);
 const MAX_PROVIDER_STATUS_PROJECT_PATH_LENGTH = 4_096;
@@ -90,6 +101,13 @@ function normalizeProviderStatusOptions(options: unknown): CliProviderStatusRequ
   return { projectPath: resolvedProjectPath };
 }
 
+function normalizeProviderId(providerId: unknown): CliProviderId {
+  if (!CLI_PROVIDER_IDS.has(providerId)) {
+    throw new Error('Provider id is invalid');
+  }
+  return providerId as CliProviderId;
+}
+
 function getProviderStatusRequestKey(
   providerId: CliProviderId,
   options: CliProviderStatusRequestOptions
@@ -109,6 +127,52 @@ function getCachedStatusAuthenticatedProvider(
       (provider) => isFrontendMultimodelProviderId(provider.providerId) && provider.authenticated
     ) ?? null
   );
+}
+
+function projectProviderAuthority(provider: CliProviderStatus, now: number): CliProviderStatus {
+  const projected = sanitizeProviderStatusAuthority(structuredClone(provider));
+  const catalogFresh = isProviderModelCatalogExactReady(provider, now);
+  return {
+    ...projected,
+    modelCatalog:
+      provider.modelCatalog && !catalogFresh
+        ? { ...structuredClone(provider.modelCatalog), status: 'stale' }
+        : provider.modelCatalog && structuredClone(provider.modelCatalog),
+    modelCatalogRefreshState:
+      provider.modelCatalog &&
+      !catalogFresh &&
+      provider.modelCatalogRefreshState !== 'loading'
+        ? 'error'
+        : provider.modelCatalogRefreshState,
+    capabilities: {
+      ...projected.capabilities,
+      teamLaunch:
+        hasAuthoritativeProviderStatusEvidence(provider) &&
+        provider.authenticated === true &&
+        provider.capabilities.teamLaunch === true &&
+        catalogFresh,
+    },
+  };
+}
+
+function projectStatusAuthority(status: CliInstallationStatus, now: number): CliInstallationStatus {
+  const providers = status.providers.map((provider) => projectProviderAuthority(provider, now));
+  const authenticatedProvider =
+    status.flavor === 'agent_teams_orchestrator'
+      ? getCachedStatusAuthenticatedProvider(providers)
+      : (providers.find((provider) => provider.authenticated) ?? null);
+  return {
+    ...status,
+    providers,
+    authLoggedIn:
+      status.flavor === 'agent_teams_orchestrator'
+        ? authenticatedProvider !== null
+        : status.authLoggedIn,
+    authMethod:
+      status.flavor === 'agent_teams_orchestrator'
+        ? (authenticatedProvider?.authMethod ?? null)
+        : status.authMethod,
+  };
 }
 
 function normalizeGetStatusOptions(options: unknown): Required<CliInstallerGetStatusOptions> {
@@ -235,8 +299,12 @@ function runProviderRuntimeRequest<T>(
 /**
  * Initializes CLI installer handlers with the service instance.
  */
-export function initializeCliInstallerHandlers(installerService: CliInstallerService): void {
+export function initializeCliInstallerHandlers(
+  installerService: CliInstallerService,
+  now: () => number = Date.now
+): void {
   service = installerService;
+  readNow = now;
   resetProviderRuntimeRequestLimiter();
 }
 
@@ -282,9 +350,9 @@ async function handleGetStatus(
     if (cached && Date.now() - cached.at < STATUS_CACHE_TTL_MS) {
       if (latestSnapshot && canUseStatusForCacheKey(cacheKey, latestSnapshot)) {
         cachedStatus.set(cacheKey, { value: latestSnapshot, at: Date.now() });
-        return { success: true, data: latestSnapshot };
+        return { success: true, data: projectStatusAuthority(latestSnapshot, readNow()) };
       }
-      return { success: true, data: cached.value };
+      return { success: true, data: projectStatusAuthority(cached.value, readNow()) };
     }
 
     if (!statusInFlight.has(cacheKey)) {
@@ -317,7 +385,7 @@ async function handleGetStatus(
     }
 
     const status = await statusInFlight.get(cacheKey)!;
-    return { success: true, data: status };
+    return { success: true, data: projectStatusAuthority(status, readNow()) };
   } catch (error) {
     const msg = getErrorMessage(error);
     logger.error('Error in cliInstaller:getStatus:', msg);
@@ -343,7 +411,9 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
     );
     const nextProviders = hasProvider
       ? cached.value.providers.map((provider) =>
-          provider.providerId === providerStatus.providerId ? providerStatus : provider
+          provider.providerId === providerStatus.providerId
+            ? mergeProviderStatusDisplayEvidence(providerStatus, provider)
+            : provider
         )
       : [...cached.value.providers, providerStatus];
     const authenticatedProvider =
@@ -368,16 +438,17 @@ function patchCachedProviderStatus(providerStatus: CliProviderStatus | null): vo
 
 async function handleGetProviderStatus(
   _event: IpcMainInvokeEvent,
-  providerId: CliProviderId,
+  rawProviderId: unknown,
   rawOptions?: unknown
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
+    const providerId = normalizeProviderId(rawProviderId);
     const options = normalizeProviderStatusOptions(rawOptions);
     const requestKey = getProviderStatusRequestKey(providerId, options);
     const inFlight = providerStatusInFlight.get(requestKey);
     if (inFlight) {
       const status = await inFlight;
-      return { success: true, data: status };
+      return { success: true, data: status ? projectProviderAuthority(status, readNow()) : null };
     }
 
     const generation = statusCacheGeneration;
@@ -386,10 +457,17 @@ async function handleGetProviderStatus(
       currentService.getProviderStatus(providerId, options)
     )
       .then((status) => {
+        const matchedStatus =
+          status && status.providerId !== providerId
+            ? createRuntimeStatusErrorProviderStatus(
+                providerId,
+                new Error('Provider status response did not match the requested provider')
+              )
+            : status;
         if (generation === statusCacheGeneration && !options.projectPath) {
-          patchCachedProviderStatus(status);
+          patchCachedProviderStatus(matchedStatus);
         }
-        return status;
+        return matchedStatus;
       })
       .finally(() => {
         if (providerStatusInFlight.get(requestKey) === request) {
@@ -399,10 +477,13 @@ async function handleGetProviderStatus(
 
     providerStatusInFlight.set(requestKey, request);
     const status = await request;
-    return { success: true, data: status };
+    return {
+      success: true,
+      data: status ? projectProviderAuthority(status, readNow()) : null,
+    };
   } catch (error) {
     const msg = getErrorMessage(error);
-    logger.error(`Error in cliInstaller:getProviderStatus(${providerId}):`, msg);
+    logger.error(`Error in cliInstaller:getProviderStatus(${String(rawProviderId)}):`, msg);
     return { success: false, error: msg };
   }
 }
@@ -420,21 +501,31 @@ async function handleInstall(_event: IpcMainInvokeEvent): Promise<IpcResult<void
 
 async function handleVerifyProviderModels(
   _event: IpcMainInvokeEvent,
-  providerId: CliProviderId
+  rawProviderId: unknown
 ): Promise<IpcResult<CliProviderStatus | null>> {
   try {
+    const providerId = normalizeProviderId(rawProviderId);
     const generation = statusCacheGeneration;
     const currentService = service;
     const status = await runProviderRuntimeRequest(providerId, () =>
       currentService.verifyProviderModels(providerId)
     );
+    const matchedStatus =
+      status?.providerId === providerId
+        ? projectProviderAuthority(status, readNow())
+        : status
+          ? createRuntimeStatusErrorProviderStatus(
+              providerId,
+              new Error('Provider verification response did not match the requested provider')
+            )
+          : null;
     if (generation === statusCacheGeneration) {
-      patchCachedProviderStatus(status);
+      patchCachedProviderStatus(matchedStatus);
     }
-    return { success: true, data: status };
+    return { success: true, data: matchedStatus };
   } catch (error) {
     const msg = getErrorMessage(error);
-    logger.error(`Error in cliInstaller:verifyProviderModels(${providerId}):`, msg);
+    logger.error(`Error in cliInstaller:verifyProviderModels(${String(rawProviderId)}):`, msg);
     return { success: false, error: msg };
   }
 }

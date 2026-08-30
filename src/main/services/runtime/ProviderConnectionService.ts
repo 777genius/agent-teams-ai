@@ -17,6 +17,7 @@ import { ConfigManager } from '../infrastructure/ConfigManager';
 
 import { readClaudeUserAnthropicSettingsAuthEnv } from './claudeUserSettingsEnv';
 import { isCodexExecBinary } from './codexCliBinary';
+import { mergeProviderCatalogDisplayAuthority } from './providerCatalogDisplayAuthority';
 
 import type {
   AnthropicCompatibleEndpointConfig,
@@ -1189,17 +1190,19 @@ export class ProviderConnectionService {
     const customProvider = this.getConfiguredCodexCustomProvider();
     if (customProvider) {
       const catalog = createCodexCustomProviderCatalog(customProvider);
-      const model = catalog.defaultLaunchModel ?? customProvider.model;
+      const catalogDisplay = mergeProviderCatalogDisplayAuthority(
+        withConnection,
+        catalog,
+        'ready'
+      );
       const statusMessage =
         withConnection.statusMessage ??
         (withConnection.connection?.apiKeyConfigured
           ? 'Codex custom provider configured'
           : 'Codex custom provider configured. API key is not set.');
-
       return {
         ...withConnection,
-        models: [model],
-        modelCatalog: catalog,
+        ...catalogDisplay,
         subscriptionRateLimits: null,
         backend: withConnection.backend
           ? {
@@ -1234,7 +1237,6 @@ export class ProviderConnectionService {
       ) {
         return withConnection;
       }
-
       const orchestratorCatalog = isUsableCodexModelCatalog(withConnection.modelCatalog)
         ? withConnection.modelCatalog
         : null;
@@ -1244,11 +1246,11 @@ export class ProviderConnectionService {
       if (!isUsableCodexModelCatalog(catalog)) {
         return withConnection;
       }
-
-      const models = catalog.models
-        .filter((model) => !model.hidden)
-        .map((model) => model.launchModel.trim())
-        .filter(Boolean);
+      const catalogDisplay = mergeProviderCatalogDisplayAuthority(
+        withConnection,
+        catalog,
+        catalog.status === 'ready' ? 'ready' : withConnection.modelCatalogRefreshState
+      );
       const reasoningEfforts = Array.from(
         new Set(
           catalog.models.flatMap<CliProviderReasoningEffort>(
@@ -1267,8 +1269,7 @@ export class ProviderConnectionService {
             };
       return {
         ...withConnection,
-        models: models.length > 0 ? models : withConnection.models,
-        modelCatalog: catalog,
+        ...catalogDisplay,
         runtimeCapabilities: {
           ...withConnection.runtimeCapabilities,
           modelCatalog: modelCatalogCapability,
@@ -1373,11 +1374,9 @@ export class ProviderConnectionService {
       if (apiVerification?.state === 'valid') {
         return {
           ...provider,
-          authenticated: true,
-          authMethod: 'api_key',
           subscriptionRateLimits: null,
-          verificationState: 'verified',
-          statusMessage: 'Connected via API key',
+          statusMessage:
+            'Anthropic API key is configured, but has not been verified by the runtime yet.',
         };
       }
 
