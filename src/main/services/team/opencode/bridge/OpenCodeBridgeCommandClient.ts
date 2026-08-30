@@ -1,6 +1,11 @@
 import { applyOpenCodeAutoUpdatePolicy } from '@main/services/runtime/openCodeAutoUpdatePolicy';
 import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import { execCli } from '@main/utils/childProcess';
+import {
+  ensureOpenCodeProfileNodeModulesJunction,
+  extractProfileIdFromSymlinkError,
+  isOpenCodeNodeModulesSymlinkError,
+} from '@main/utils/openCodeNodeModulesJunction';
 import { createHash, randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -64,6 +69,8 @@ export interface OpenCodeBridgeCommandClientOptions {
   env?: NodeJS.ProcessEnv;
   envProvider?: () => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>;
   keepInputFile?: boolean;
+  /** Test seam; defaults to the real Windows profile junction repair. */
+  ensureWindowsNodeModulesJunction?: (profileId: string, errorMessage: string) => boolean;
 }
 
 const DEFAULT_STDOUT_LIMIT_BYTES = 1_000_000;
@@ -180,6 +187,10 @@ export class OpenCodeBridgeCommandClient {
   private readonly env: NodeJS.ProcessEnv;
   private readonly envProvider: (() => NodeJS.ProcessEnv | Promise<NodeJS.ProcessEnv>) | null;
   private readonly keepInputFile: boolean;
+  private readonly ensureWindowsNodeModulesJunction: (
+    profileId: string,
+    errorMessage: string
+  ) => boolean;
 
   constructor(options: OpenCodeBridgeCommandClientOptions) {
     this.binaryPath = options.binaryPath;
@@ -193,9 +204,62 @@ export class OpenCodeBridgeCommandClient {
     this.env = applyOpenCodeAutoUpdatePolicy(options.env ?? process.env);
     this.envProvider = options.envProvider ?? null;
     this.keepInputFile = options.keepInputFile ?? false;
+    this.ensureWindowsNodeModulesJunction =
+      options.ensureWindowsNodeModulesJunction ?? ensureOpenCodeProfileNodeModulesJunction;
   }
 
   async execute<TBody, TData>(
+    command: OpenCodeBridgeCommandName,
+    body: TBody,
+    options: {
+      cwd: string;
+      timeoutMs: number;
+      requestId?: string;
+      stdoutLimitBytes?: number;
+      stderrLimitBytes?: number;
+    }
+  ): Promise<OpenCodeBridgeResult<TData>> {
+    const result = await this.executeBridgeCommand<TBody, TData>(command, body, options);
+    if (result.ok || !(await this.tryRecoverWindowsNodeModulesJunction(result))) {
+      return result;
+    }
+    return this.executeBridgeCommand<TBody, TData>(command, body, options);
+  }
+
+  /**
+   * opencode recreates the profile node_modules symlink on every launch; on
+   * Windows without Developer Mode that fails with EPERM before the runtime
+   * does any work (the failure surfaces either as a bridge failure envelope or
+   * as a non-zero exit with the EPERM on stderr). Repairing the profile with a
+   * junction and retrying once is safe because the runtime never started.
+   */
+  private async tryRecoverWindowsNodeModulesJunction(
+    failure: OpenCodeBridgeFailure
+  ): Promise<boolean> {
+    const failureText = collectBridgeFailureText(failure);
+    if (!isOpenCodeNodeModulesSymlinkError(failureText)) {
+      return false;
+    }
+    const profileId = extractProfileIdFromSymlinkError(failureText);
+    if (!profileId || !this.ensureWindowsNodeModulesJunction(profileId, failureText)) {
+      return false;
+    }
+    await this.diagnostics
+      ?.append({
+        id: this.diagnosticIdFactory(),
+        type: 'opencode_bridge_windows_node_modules_junction_recovery',
+        providerId: 'opencode',
+        severity: 'warning',
+        message:
+          'Recreated the OpenCode profile node_modules junction after a Windows symlink EPERM; retrying the bridge command once.',
+        data: { command: failure.command, requestId: failure.requestId, profileId },
+        createdAt: this.clock().toISOString(),
+      })
+      .catch(() => undefined);
+    return true;
+  }
+
+  private async executeBridgeCommand<TBody, TData>(
     command: OpenCodeBridgeCommandName,
     body: TBody,
     options: {
@@ -448,6 +512,23 @@ export class OpenCodeBridgeCommandClient {
       diagnostics: [diagnostic],
     };
   }
+}
+
+/**
+ * The symlink EPERM can arrive as the failure envelope message (orchestrator
+ * caught it) or only inside stderr/preview details (process exited non-zero),
+ * so junction recovery inspects every failure text surface at once.
+ */
+function collectBridgeFailureText(failure: OpenCodeBridgeFailure): string {
+  const details: Record<string, unknown> = failure.error.details ?? {};
+  const detailTexts = ['stderr', 'stderrPreview', 'stdoutPreview']
+    .map((key) => details[key])
+    .filter((value): value is string => typeof value === 'string' && value.length > 0);
+  return [
+    failure.error.message,
+    ...detailTexts,
+    ...failure.diagnostics.map((event) => event.message),
+  ].join('\n');
 }
 
 export function redactBridgeDiagnosticText(value: string): string {
