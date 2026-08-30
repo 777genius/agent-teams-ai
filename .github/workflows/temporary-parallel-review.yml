@@ -10,6 +10,14 @@ on:
         required: true
         default: '252'
         type: string
+      shard_selection:
+        description: Run all shards or only shard 0 as a canary
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - '0'
   schedule:
     - cron: '23 * * * *'
 
@@ -58,19 +66,7 @@ jobs:
       fail-fast: false
       max-parallel: 12
       matrix:
-        include:
-          - { shard: 0, label: 1 }
-          - { shard: 1, label: 2 }
-          - { shard: 2, label: 3 }
-          - { shard: 3, label: 4 }
-          - { shard: 4, label: 5 }
-          - { shard: 5, label: 6 }
-          - { shard: 6, label: 7 }
-          - { shard: 7, label: 8 }
-          - { shard: 8, label: 9 }
-          - { shard: 9, label: 10 }
-          - { shard: 10, label: 11 }
-          - { shard: 11, label: 12 }
+        include: ${{ fromJSON(inputs.shard_selection == '0' && '[{"shard":0,"label":1}]' || '[{"shard":0,"label":1},{"shard":1,"label":2},{"shard":2,"label":3},{"shard":3,"label":4},{"shard":4,"label":5},{"shard":5,"label":6},{"shard":6,"label":7},{"shard":7,"label":8},{"shard":8,"label":9},{"shard":9,"label":10},{"shard":10,"label":11},{"shard":11,"label":12}]') }}
     permissions:
       contents: read
       issues: write
@@ -87,4 +83,4 @@ jobs:
       max_changed_lines: '0'
       static_runtime_env_json: ${{ format('{{"REVIEWROUTER_PATH_SHARD_INDEX":"{0}","REVIEWROUTER_PATH_SHARD_COUNT":"12","REVIEWROUTER_HEAD_SHA":"{1}","REVIEW_FOCUS_PROFILE":"critical","REVIEW_DEPTH":"thorough","REVIEW_PROVIDERS":"codex/gpt-5.6-sol","CODEX_MODEL":"gpt-5.6-sol","CODEX_REASONING_EFFORT":"xhigh","CODEX_AGENTIC_CONTEXT":"true","REVIEWROUTER_FORK_AGENTIC_SANDBOX":"true","PROVIDER_LIMIT":"1","PROVIDER_RETRIES":"1","PROVIDER_MAX_PARALLEL":"3","INLINE_MAX_COMMENTS":"500","INLINE_MIN_SEVERITY":"minor","INCREMENTAL_ENABLED":"false","REVIEW_THREAD_LIFECYCLE":"off","REVIEW_ROUTER_PROGRESS_COMMENTS":"never","UPDATE_PR_DESCRIPTION":"false","SKIP_TRIVIAL_CHANGES":"false","SKIP_DEPENDENCY_UPDATES":"false","SKIP_DOCUMENTATION_ONLY":"false","SKIP_FORMATTING_ONLY":"false","SKIP_TEST_FIXTURES":"false","SKIP_CONFIG_FILES":"false","SKIP_BUILD_ARTIFACTS":"false","ENABLE_SECURITY":"true","ENABLE_AST_ANALYSIS":"true","FAIL_ON_SEVERITY":"off","DIFF_MAX_BYTES":"2000000","TARGET_TOKENS_PER_BATCH":"35000","RUN_TIMEOUT_SECONDS":"900"}}', matrix.shard, needs.resolve.outputs.head_sha) }}
     secrets:
-      CODEX_AUTH_JSON: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E18_e64e449dd792733ddd3409e8bca0c1d3 }}
+      CODEX_AUTH_JSON: ${{ secrets.REVIEWROUTER_CODEX_AUTH_JSON_R1163183284_Pc11a7080815e939d_E19_c543a2f6835e527bbdf262538ae05c26 }}
