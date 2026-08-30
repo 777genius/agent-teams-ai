@@ -426,6 +426,17 @@ describe('TeamProvisioning API binders', () => {
         Promise.resolve(ack),
       answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
         Promise.resolve(ack),
+      getMemberSpawnStatuses(this: { runId: string }): Promise<MemberSpawnStatusesSnapshot> {
+        return Promise.resolve({ statuses: {}, runId: this.runId });
+      },
+      getTeamAgentRuntimeSnapshot(this: { runId: string }): Promise<TeamAgentRuntimeSnapshot> {
+        return Promise.resolve({
+          teamName: 'team-http',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          runId: this.runId,
+          members: {},
+        });
+      },
     };
 
     const api = bindTeamHttpHandlerApis(source);
@@ -440,6 +451,7 @@ describe('TeamProvisioning API binders', () => {
       runtimeControl.deliverOpenCodeRuntimeMessage.bind(undefined);
 
     expect(Object.keys(api).sort()).toEqual([
+      'memberDiagnostics',
       'provisioningStart',
       'provisioningStatus',
       'runtime',

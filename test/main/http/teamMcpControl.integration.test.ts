@@ -14,6 +14,7 @@ import type { HttpServices } from '@main/http';
 import type {
   OpenCodeRuntimeControlAck,
   TeamHttpHandlerApis,
+  TeamHttpMemberDiagnosticsApi,
   TeamHttpRuntimeApi,
   TeamProvisioningStartApi,
   TeamProvisioningStatusApi,
@@ -307,6 +308,13 @@ function createServices(claudeRoot: string): {
       Promise.resolve(runtimeAck('accepted')),
   } satisfies TeamRuntimeControlCompatibilityApi;
 
+  const teamMemberDiagnosticsApi = {
+    getMemberSpawnStatuses: () =>
+      Promise.reject(new Error('Unexpected member diagnostics call in the MCP control fixture')),
+    getTeamAgentRuntimeSnapshot: () =>
+      Promise.reject(new Error('Unexpected member diagnostics call in the MCP control fixture')),
+  } satisfies TeamHttpMemberDiagnosticsApi;
+
   return {
     createTeamCalls,
     services: {
@@ -324,6 +332,7 @@ function createServices(claudeRoot: string): {
         taskActivity: teamTaskActivityRepairApi,
         runtime: teamRuntimeApi,
         runtimeControl: teamRuntimeControlApi,
+        memberDiagnostics: teamMemberDiagnosticsApi,
       } satisfies TeamHttpHandlerApis,
     },
   };

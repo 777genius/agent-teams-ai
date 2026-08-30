@@ -41,6 +41,10 @@ function createHttpServices(
         getAliveTeams: unexpectedTeamApiCall,
       },
       runtimeControl: teamRuntimeControlApi,
+      memberDiagnostics: {
+        getMemberSpawnStatuses: unexpectedTeamApiCall,
+        getTeamAgentRuntimeSnapshot: unexpectedTeamApiCall,
+      },
     } satisfies TeamHttpHandlerApis,
   };
 }

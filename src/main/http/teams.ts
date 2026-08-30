@@ -7,6 +7,7 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import {
   HttpBadRequestError,
   parseCreateTeamRequest,
@@ -225,6 +226,15 @@ async function getTeamDataWithRuntimeOverlay(
 }
 
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
+  registerTeamMemberDiagnosticsRoute(app, services, {
+    logger,
+    shouldLogError,
+    getStatusCode,
+    getResponseErrorMessage,
+    createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
+    isTeamNotFoundError,
+  });
+
   app.get('/api/teams', async (_request, reply) => {
     try {
       return reply.send(await getTeamDataApi(services).listTeams());
