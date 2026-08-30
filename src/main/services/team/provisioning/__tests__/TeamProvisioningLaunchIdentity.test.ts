@@ -504,6 +504,78 @@ describe('codex chatgpt model gate during launch identity validation', () => {
     }
   });
 
+  it('passes launch facts through when the probe is supported or inconclusive', async () => {
+    for (const outcome of ['supported', 'inconclusive'] as const) {
+      const facts = buildChatGptCodexFacts();
+      const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({ outcome });
+      const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
+
+      await resolveAndValidateLaunchIdentity(
+        {
+          claudePath: '/bin/claude',
+          cwd: '/repo',
+          env: { PATH: '/bin' },
+          request: { providerId: 'codex', model: 'catalog-model' },
+          effectiveMembers: [{ name: 'CodexPeer', providerId: 'codex', model: 'catalog-model' }],
+        },
+        {
+          readRuntimeProviderLaunchFacts: vi.fn(async () => facts),
+          validateRuntimeLaunchSelection,
+          buildProviderModelLaunchIdentity: vi.fn(() =>
+            buildLaunchIdentity({
+              selectedModel: 'catalog-model',
+              selectedModelKind: 'explicit',
+              resolvedLaunchModel: 'catalog-launch',
+              catalogId: 'catalog-model',
+            })
+          ),
+          probeCodexChatGptModelSupport,
+        }
+      );
+
+      expect(probeCodexChatGptModelSupport).toHaveBeenCalledTimes(1);
+      expect(validatedFacts).toHaveLength(2);
+      expect(validatedFacts.every((validated) => validated === facts)).toBe(true);
+    }
+  });
+
+  it('treats a rejected probe as inconclusive instead of blocking the launch', async () => {
+    const facts = buildChatGptCodexFacts();
+    const probeCodexChatGptModelSupport = vi
+      .fn()
+      .mockRejectedValue(new Error('codex exec crashed: ENOENT'));
+    const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
+
+    await resolveAndValidateLaunchIdentity(
+      {
+        claudePath: '/bin/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        request: { providerId: 'codex', model: 'catalog-model' },
+        effectiveMembers: [{ name: 'CodexPeer', providerId: 'codex', model: 'catalog-model' }],
+      },
+      {
+        readRuntimeProviderLaunchFacts: vi.fn(async () => facts),
+        validateRuntimeLaunchSelection,
+        buildProviderModelLaunchIdentity: vi.fn(() =>
+          buildLaunchIdentity({
+            selectedModel: 'catalog-model',
+            selectedModelKind: 'explicit',
+            resolvedLaunchModel: 'catalog-launch',
+            catalogId: 'catalog-model',
+          })
+        ),
+        probeCodexChatGptModelSupport,
+      }
+    );
+
+    // The cached rejection is normalized once and reused for the member check.
+    expect(probeCodexChatGptModelSupport).toHaveBeenCalledTimes(1);
+    expect(validatedFacts).toHaveLength(2);
+    // Absence of proof is not proof of incompatibility: facts stay untouched.
+    expect(validatedFacts.every((validated) => validated === facts)).toBe(true);
+  });
+
   it('never probes an implicit default selection', async () => {
     const facts = buildChatGptCodexFacts();
     const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({

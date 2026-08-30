@@ -6,6 +6,7 @@ import {
   buildCodexChatGptUnsupportedModelReason,
   getCodexChatGptUnavailableModelReason,
 } from '@shared/utils/codexChatGptModelSupport';
+import { getErrorMessage } from '@shared/utils/errorHandling';
 import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -17,6 +18,7 @@ import { getConfiguredCliCommandLabel } from '../cliFlavor';
 
 import {
   type CodexChatGptModelSupportProbe,
+  type CodexChatGptModelSupportProbeResult,
   shouldProbeCodexChatGptModelSupport,
 } from './TeamProvisioningCodexChatGptModelGate';
 import { getTeamProviderLabel } from './TeamProvisioningRuntimeDiagnostics';
@@ -384,13 +386,26 @@ export async function verifySelectedProviderModelsForProvisioning({
         : requestedProbeModelId;
 
     debugLog('provider_model_chatgpt_probe_start', { providerId, cwd, modelId: probeModelId });
-    const probeResult = await ports.probeCodexChatGptModelSupport({
-      claudePath,
-      cwd,
-      env,
-      providerArgs,
-      modelId: probeModelId,
-    });
+    let probeResult: CodexChatGptModelSupportProbeResult;
+    try {
+      probeResult = await ports.probeCodexChatGptModelSupport({
+        claudePath,
+        cwd,
+        env,
+        providerArgs,
+        modelId: probeModelId,
+      });
+    } catch (error) {
+      // A rejected probe proves nothing about ChatGPT model support, so it must
+      // stay fail-open instead of failing the whole compatibility check.
+      debugLog('provider_model_chatgpt_probe_rejected', {
+        providerId,
+        cwd,
+        modelId: probeModelId,
+        reason: truncatePreflightDebugText(getErrorMessage(error)),
+      });
+      probeResult = { outcome: 'inconclusive' };
+    }
     debugLog('provider_model_chatgpt_probe_complete', {
       providerId,
       cwd,

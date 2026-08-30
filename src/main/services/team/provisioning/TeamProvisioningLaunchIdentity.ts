@@ -11,6 +11,7 @@ import {
 } from '@shared/types';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isUsableCodexModelCatalog } from '@shared/utils/codexModelCatalog';
+import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import { buildProviderControlPlaneCliCommandArgs } from '../../runtime/providerCliCommandArgs';
 import { resolveTeamProviderId } from '../../runtime/providerRuntimeEnv';
@@ -21,8 +22,10 @@ import {
   shouldProbeCodexChatGptModelSupport,
 } from './TeamProvisioningCodexChatGptModelGate';
 import {
+  appendPreflightDebugLog,
   PROVIDER_MODEL_LIST_TIMEOUT_MS,
   PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
+  truncatePreflightDebugText,
 } from './TeamProvisioningProviderPreflight';
 import {
   addModelCatalogLaunchModels,
@@ -349,6 +352,15 @@ async function enrichFactsWithCodexChatGptModelGate(params: {
       env: params.env,
       providerArgs: params.providerArgs,
       modelId: probeModelId,
+    }).catch((error: unknown): CodexChatGptModelSupportProbeResult => {
+      // A rejected probe proves nothing about ChatGPT model support, so it must
+      // stay fail-open instead of blocking the launch with an opaque error.
+      appendPreflightDebugLog('launch_identity_chatgpt_probe_rejected', {
+        providerId: params.providerId,
+        modelId: probeModelId,
+        reason: truncatePreflightDebugText(getErrorMessage(error)),
+      });
+      return { outcome: 'inconclusive' };
     });
     params.probeResultsByModel.set(probeModelId, resultPromise);
   }

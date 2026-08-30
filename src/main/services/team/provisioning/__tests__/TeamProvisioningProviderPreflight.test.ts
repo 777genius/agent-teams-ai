@@ -245,6 +245,71 @@ describe('provider model verification normalization', () => {
     ]);
   });
 
+  it('keeps the model check passing when the deep ChatGPT probe is supported or inconclusive', async () => {
+    for (const outcome of ['supported', 'inconclusive'] as const) {
+      const chatGptFacts = buildRuntimeFacts({
+        defaultModel: 'gpt-5.6-sol',
+        modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+        providerStatus: { providerId: 'codex', authMethod: 'chatgpt' },
+      });
+      const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({ outcome });
+
+      const result = await verifySelectedProviderModelsForProvisioning({
+        claudePath: '/fake/claude',
+        cwd: '/repo',
+        providerId: 'codex',
+        modelIds: ['gpt-5.2'],
+        limitContext: false,
+        modelVerificationMode: 'deep',
+        ports: {
+          buildProvisioningEnv: vi.fn().mockResolvedValue({ env: { PATH: '/bin' } }),
+          readRuntimeProviderLaunchFacts: vi.fn().mockResolvedValue(chatGptFacts),
+          appendPreflightDebugLog: () => undefined,
+          probeCodexChatGptModelSupport,
+        },
+      });
+
+      expect(probeCodexChatGptModelSupport).toHaveBeenCalledOnce();
+      expect(result.blockingMessages).toEqual([]);
+      expect(result.issues).toBeUndefined();
+    }
+  });
+
+  it('treats a rejected deep ChatGPT probe as inconclusive instead of failing the check', async () => {
+    const chatGptFacts = buildRuntimeFacts({
+      defaultModel: 'gpt-5.6-sol',
+      modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+      providerStatus: { providerId: 'codex', authMethod: 'chatgpt' },
+    });
+    const probeCodexChatGptModelSupport = vi
+      .fn()
+      .mockRejectedValue(new Error('codex exec crashed: ENOENT'));
+    const debugEvents: string[] = [];
+
+    const result = await verifySelectedProviderModelsForProvisioning({
+      claudePath: '/fake/claude',
+      cwd: '/repo',
+      providerId: 'codex',
+      modelIds: ['gpt-5.2'],
+      limitContext: false,
+      modelVerificationMode: 'deep',
+      ports: {
+        buildProvisioningEnv: vi.fn().mockResolvedValue({ env: { PATH: '/bin' } }),
+        readRuntimeProviderLaunchFacts: vi.fn().mockResolvedValue(chatGptFacts),
+        appendPreflightDebugLog: (event) => {
+          debugEvents.push(event);
+        },
+        probeCodexChatGptModelSupport,
+      },
+    });
+
+    expect(probeCodexChatGptModelSupport).toHaveBeenCalledOnce();
+    // Absence of proof is not proof of incompatibility: the launch stays fail-open.
+    expect(result.blockingMessages).toEqual([]);
+    expect(result.issues).toBeUndefined();
+    expect(debugEvents).toContain('provider_model_chatgpt_probe_rejected');
+  });
+
   it('skips the ChatGPT probe outside ChatGPT auth or outside deep verification', async () => {
     const probeCodexChatGptModelSupport = vi.fn();
     const buildVerifyInput = (

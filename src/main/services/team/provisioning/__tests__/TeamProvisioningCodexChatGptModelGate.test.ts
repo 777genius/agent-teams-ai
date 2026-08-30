@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { TeamLaunchValidationError } from '../TeamLaunchValidationError';
 import {
   assertCodexChatGptLaunchModelSupported,
   createCodexChatGptModelSupportProbe,
@@ -131,6 +132,8 @@ describe('assertCodexChatGptLaunchModelSupported', () => {
         providerStatus: gatedStatus,
       });
     expect(run).toThrow('not supported when using Codex with a ChatGPT account');
+    // The typed error keeps the HTTP launch surface on its 422 validation contract.
+    expect(run).toThrow(TeamLaunchValidationError);
   });
 
   it('passes default selections, other models, and API-key auth', () => {

@@ -12,6 +12,7 @@ import {
   isProviderModelProbeSuccessOutput,
 } from '../../runtime/providerModelProbe';
 
+import { TeamLaunchValidationError } from './TeamLaunchValidationError';
 import { getExplicitLaunchModelSelection } from './TeamProvisioningMemberSpecs';
 
 import type { TeamProviderId } from '@shared/types';
@@ -105,7 +106,8 @@ export function shouldProbeCodexChatGptModelSupport(params: {
  * Launch blocker shared by launch-identity validation: throws when the runtime
  * availability facts flag the explicitly selected Codex model as unusable with
  * the currently authenticated ChatGPT account. The thrown message carries the
- * runtime's own reason so the user sees why the model was refused.
+ * runtime's own reason so the user sees why the model was refused, and the
+ * typed validation error keeps the HTTP surface on its 422 contract.
  */
 export function assertCodexChatGptLaunchModelSupported(params: {
   actorLabel: string;
@@ -120,7 +122,7 @@ export function assertCodexChatGptLaunchModelSupported(params: {
     modelId: params.explicitModel,
   });
   if (chatGptUnavailableReason) {
-    throw new Error(
+    throw new TeamLaunchValidationError(
       `${params.actorLabel} uses Codex model "${params.explicitModel}", but the Codex runtime reports: ${chatGptUnavailableReason}`
     );
   }
