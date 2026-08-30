@@ -32,6 +32,7 @@ import { applyAppManagedRuntimeSettingsPathEnv } from './TeamProvisioningEnvGuar
 import { mergeProvisioningWarnings } from './TeamProvisioningLaunchCompatibility';
 import { emitProvisioningCheckpoint } from './TeamProvisioningProgressBuffers';
 import { extractCliLogsFromRun } from './TeamProvisioningRetainedLogs';
+import { buildCreateBootstrapUserPrompt } from './TeamProvisioningRosterPrompt';
 import {
   buildRuntimeLaunchWarning,
   getPromptSizeSummary,
@@ -353,7 +354,13 @@ export async function runDeterministicCreateSpawnFlow<
   logger,
   ports,
 }: RunDeterministicCreateSpawnFlowInput<TRun>): Promise<{ runId: string }> {
-  const initialUserPrompt = request.prompt?.trim() ?? '';
+  // Create-mode delivers this deferred prompt before any teammate confirms
+  // bootstrap; the roster wrap keeps the lead from inventing teammate names
+  // or executing teammates' work while they are still joining.
+  const initialUserPrompt = buildCreateBootstrapUserPrompt(
+    request.prompt ?? '',
+    allEffectiveMemberSpecs
+  );
   const promptSize = getPromptSizeSummary(initialUserPrompt);
   let child: SpawnedChild;
   shellEnv.CLAUDE_ENABLE_DETERMINISTIC_TEAM_BOOTSTRAP = '1';

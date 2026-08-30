@@ -1,10 +1,18 @@
+import { unwrapAgentBlock } from '@shared/constants/agentBlocks';
 import { describe, expect, it, vi } from 'vitest';
 
+import {
+  createOpenCodeCanonicalProjectPathFingerprint,
+  createOpenCodeExecutionProofHash,
+  createOpenCodeExpectedBehaviorFingerprint,
+} from '../../opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
+import { buildMemberBootstrapPrompt } from '../OpenCodeMemberBootstrapPrompt';
 import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeBridgePort,
 } from '../OpenCodeTeamRuntimeAdapter';
 
+import type { OpenCodeExecutionProof } from '../../opencode/readiness/OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from '../../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type {
   TeamRuntimeLaunchInput,
@@ -86,6 +94,83 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
       'OpenCode is temporarily unavailable. Retry the launch.'
     );
   });
+
+  it('fails closed when launching with confirmed members returns a mismatched fingerprint', async () => {
+    const expectedFingerprint =
+      validExecutionProof().expectedBehaviorEvidence?.expectedBehaviorFingerprint;
+    const launchOpenCodeTeam = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
+    >(async () => launchData('confirmed_alive', 'mismatched-fingerprint'));
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({ launchAllowed: true, state: 'ready' })
+      ),
+      launchOpenCodeTeam,
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(expectedFingerprint).toBeTruthy();
+    expect(launchOpenCodeTeam.mock.calls[0]?.[0].expectedBehaviorFingerprint).toBe(
+      expectedFingerprint
+    );
+    expect(result.teamLaunchState).toBe('partial_failure');
+    expect(result.diagnostics).toEqual(['OpenCode launch result behavior fingerprint mismatch']);
+    expect(result.members.Worker?.hardFailureReason).toBe(
+      'opencode_launch_behavior_fingerprint_mismatch'
+    );
+  });
+
+  it('preserves partial launch semantics when a non-success result has a mismatched fingerprint', async () => {
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
+        readiness({ launchAllowed: true, state: 'ready' })
+      ),
+      launchOpenCodeTeam: vi.fn(async () => launchData('created', 'mismatched-fingerprint')),
+    });
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.teamLaunchState).toBe('partial_pending');
+    expect(result.launchPhase).toBe('active');
+    expect(result.diagnostics).not.toContain(
+      'OpenCode launch result behavior fingerprint mismatch'
+    );
+  });
+});
+
+describe('buildMemberBootstrapPrompt', () => {
+  it('wraps the unchanged app-managed briefing in the shared agent block', () => {
+    const input = { ...launchInput(), prompt: '  Complete the scoped fix.  ' };
+
+    const prompt = buildMemberBootstrapPrompt(input, input.expectedMembers[0]);
+
+    expect(prompt).toMatch(/^<info_for_agent>\n/);
+    expect(prompt).toMatch(/\n<\/info_for_agent>$/);
+    expect(unwrapAgentBlock(prompt)).toBe(
+      [
+        '<agent_teams_app_managed_bootstrap_briefing>',
+        'AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1',
+        'You are Worker, a worker on team "team-launch".',
+        'Team launch context:\nComplete the scoped fix.',
+        'Workflow:\nImplement the task',
+        '',
+        'This OpenCode session is created, attached, and launch-verified by the desktop app.',
+        'Do not call runtime_bootstrap_checkin or member_briefing just to prove launch readiness.',
+        'Do NOT create local team files, run join scripts, or search the project for a fake team registry.',
+        'That bootstrap restriction is only about team registry/startup files. It does not restrict assigned project work: when a task requires implementation, fixes, review follow-up, or investigation, you may inspect, read/search, and edit files in the project working directory as your available tools allow.',
+        'Use the app MCP tools exposed by the "agent-teams" server for team communication and task state.',
+        'Launch bootstrap is a silent attach, not a user/team conversation turn.',
+        'Do not call task_briefing, message_send, or cross_team_send just to announce readiness, say understood, report no tasks, or ask for work.',
+        'If the briefing says there are no actionable tasks, stay idle silently.',
+        '',
+        'When you need to message the human user, team lead, or another teammate, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.',
+        'Always set from="Worker" when sending a team message from this OpenCode teammate.',
+        'Do not answer team/app messages only as plain assistant text when agent-teams_message_send is available.',
+        '</agent_teams_app_managed_bootstrap_briefing>',
+      ].join('\n')
+    );
+  });
 });
 
 function createHarness() {
@@ -154,27 +239,74 @@ function readiness({
     },
     ...(launchAllowed
       ? {
-          executionProof: {
-            schemaVersion: 1,
-            providerId: 'opencode',
-            modelId,
-            projectPath: '/repo',
-            profileRootKey: 'profile',
-            projectBehaviorFingerprint: 'project',
-            managedConfigFingerprint: 'config',
-            managedAuthFingerprint: 'auth',
-            binaryPath: '/usr/local/bin/opencode',
-            binaryFingerprint: 'binary',
-            opencodeVersion: '1.18.11',
-            capabilitySnapshotId: 'capability-1',
-            credentialMode: 'api',
-            reusable: true,
-            verifiedAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 60_000).toISOString(),
-            proofHash: 'proof',
-          },
+          executionProof: validExecutionProof(),
         }
       : {}),
+  };
+}
+
+function validExecutionProof(): OpenCodeExecutionProof & {
+  expectedBehaviorEvidence: { expectedBehaviorFingerprint: string };
+} {
+  const fullModelId = 'deepinfra/model';
+  const projectBehaviorFingerprint = '1'.repeat(64);
+  const effectiveConfigFingerprint = '2'.repeat(64);
+  const effectiveSelectedAuthFingerprint = '3'.repeat(64);
+  const expectedBehaviorEvidence = {
+    canonicalProjectPathFingerprint: createOpenCodeCanonicalProjectPathFingerprint('/repo'),
+    modelProviderId: 'deepinfra',
+    fullModelId,
+    projectBehaviorFingerprint,
+    effectiveConfigFingerprint,
+    effectiveSelectedAuthFingerprint,
+    expectedBehaviorFingerprint: '',
+  };
+  expectedBehaviorEvidence.expectedBehaviorFingerprint =
+    createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorEvidence);
+  const unsignedProof: Omit<OpenCodeExecutionProof, 'proofHash'> = {
+    schemaVersion: 1,
+    providerId: 'opencode',
+    modelId: fullModelId,
+    projectPath: '/repo',
+    profileRootKey: 'profile',
+    projectBehaviorFingerprint,
+    managedConfigFingerprint: effectiveConfigFingerprint,
+    managedAuthFingerprint: effectiveSelectedAuthFingerprint,
+    binaryPath: '/usr/local/bin/opencode',
+    binaryFingerprint: '4'.repeat(64),
+    opencodeVersion: '1.18.11',
+    capabilitySnapshotId: 'capability-1',
+    credentialMode: 'api',
+    reusable: true,
+    verifiedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    expectedBehaviorEvidence,
+  };
+  return {
+    ...unsignedProof,
+    proofHash: createOpenCodeExecutionProofHash(unsignedProof),
+    expectedBehaviorEvidence,
+  };
+}
+
+function launchData(
+  launchState: 'created' | 'confirmed_alive',
+  expectedBehaviorFingerprint: string
+) {
+  return {
+    runId: 'run-launch',
+    teamLaunchState: 'launching' as const,
+    members: {
+      Worker: {
+        sessionId: 'session-worker',
+        launchState,
+        model: 'deepinfra/model',
+        evidence: [],
+      },
+    },
+    warnings: [],
+    diagnostics: [],
+    expectedBehaviorFingerprint,
   };
 }
 

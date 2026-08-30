@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { TeamLaunchValidationError } from '../TeamLaunchValidationError';
 import { validateRuntimeLaunchSelection } from '../TeamProvisioningRuntimeLaunchSelection';
 
 import type { RuntimeProviderLaunchFacts } from '../TeamProvisioningRuntimeLaunchSelection';
@@ -126,6 +127,63 @@ describe('validateRuntimeLaunchSelection OpenCode catalog effort', () => {
         getProviderLabel: () => 'OpenCode',
       })
     ).toThrow('Kimi K3 does not support it');
+  });
+
+  it('rejects catalog effort mismatches with a typed validation error', () => {
+    expect(() =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Kiro teammate',
+        providerId: 'opencode',
+        model: 'kiro/auto',
+        effort: 'ultra',
+        facts: createKiroFacts(),
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'OpenCode',
+      })
+    ).toThrow(TeamLaunchValidationError);
+  });
+});
+
+describe('validateRuntimeLaunchSelection typed validation errors', () => {
+  const emptyFacts: RuntimeProviderLaunchFacts = {
+    defaultModel: null,
+    modelIds: new Set(),
+    modelListParsed: true,
+    modelCatalog: null,
+    runtimeCapabilities: null,
+  };
+
+  it('rejects a Codex model missing from the live catalog with a typed validation error', () => {
+    const run = () =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Team lead',
+        providerId: 'codex',
+        model: 'gpt-6-codex',
+        facts: {
+          ...emptyFacts,
+          defaultModel: 'gpt-5-codex',
+          modelIds: new Set(['gpt-5-codex']),
+        },
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Codex',
+      });
+    expect(run).toThrow(TeamLaunchValidationError);
+    expect(run).toThrow('not present in the live Codex model catalog');
+  });
+
+  it('rejects an unverifiable Anthropic effort with a typed validation error', () => {
+    const run = () =>
+      validateRuntimeLaunchSelection({
+        actorLabel: 'Team lead',
+        providerId: 'anthropic',
+        model: 'claude-sonnet-4-5',
+        effort: 'xhigh',
+        facts: emptyFacts,
+        anthropicFastModeDefault: false,
+        getProviderLabel: () => 'Claude',
+      });
+    expect(run).toThrow(TeamLaunchValidationError);
+    expect(run).toThrow('uses Anthropic effort "xhigh"');
   });
 });
 

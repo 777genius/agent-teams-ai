@@ -18,6 +18,12 @@ import { CLI_PROVIDER_STATUS_DEFERRED_MESSAGE } from '@shared/types/cliInstaller
 import { createLogger } from '@shared/utils/logger';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
+import {
+  reconcileCliProviderSnapshot,
+  revokeProviderLaunchAuthority,
+  settleCliProviderStatusLoading,
+} from './cliInstallerStatusReconciliation';
+
 import type { AppState } from '../types';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type {
@@ -218,79 +224,6 @@ function hasCodexRuntimeReady(provider: CliProviderStatus | undefined): boolean 
     provider?.providerId === 'codex' &&
     provider.availableBackends?.some((backend) => backend.id === 'codex-native') === true
   );
-}
-
-function mergeProviderCatalogCache(
-  incomingProvider: CliProviderStatus,
-  currentProvider: CliProviderStatus
-): CliProviderStatus {
-  const modelCatalog = incomingProvider.modelCatalog ?? currentProvider.modelCatalog ?? null;
-  const incomingRefreshState = incomingProvider.modelCatalogRefreshState ?? null;
-  const shouldPreserveCurrentModels =
-    incomingProvider.models.length === 0 ||
-    (incomingProvider.providerId === 'opencode' &&
-      incomingProvider.modelCatalog == null &&
-      incomingProvider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
-      currentProvider.models.length > incomingProvider.models.length);
-  return {
-    ...incomingProvider,
-    models: shouldPreserveCurrentModels ? currentProvider.models : incomingProvider.models,
-    modelCatalog,
-    modelCatalogRefreshState:
-      modelCatalog && incomingRefreshState !== 'error'
-        ? 'ready'
-        : (incomingRefreshState ?? currentProvider.modelCatalogRefreshState),
-    runtimeCapabilities:
-      incomingProvider.runtimeCapabilities ?? currentProvider.runtimeCapabilities ?? null,
-  };
-}
-
-/** Keeps last-known readiness while reconciling global or scoped provider catalogs. */
-function reconcileCliProviderSnapshot(
-  currentProvider: CliProviderStatus | undefined,
-  incomingProvider: CliProviderStatus,
-  fallbackReadiness?: CliProviderStatus
-): CliProviderStatus {
-  if (
-    currentProvider &&
-    !isDeferredMultimodelProviderStatus(currentProvider) &&
-    isDeferredMultimodelProviderStatus(incomingProvider)
-  ) {
-    return currentProvider;
-  }
-  const mergedProvider = currentProvider
-    ? mergeProviderCatalogCache(incomingProvider, currentProvider)
-    : incomingProvider;
-  const incomingOwnsReadiness =
-    incomingProvider.statusCheckOutcome === 'authoritative' ||
-    incomingProvider.statusCheckOutcome === undefined;
-  if (incomingOwnsReadiness) {
-    return mergedProvider;
-  }
-  const currentOwnsReadiness = Boolean(
-    currentProvider?.statusCheckOutcome === 'authoritative' ||
-    (currentProvider && currentProvider.statusCheckOutcome === undefined)
-  );
-  const readiness = currentOwnsReadiness ? currentProvider : (fallbackReadiness ?? currentProvider);
-  if (!readiness) {
-    return mergedProvider;
-  }
-  return {
-    ...mergedProvider,
-    supported: readiness.supported,
-    authenticated: readiness.authenticated,
-    authMethod: readiness.authMethod,
-    canLoginFromUi: readiness.canLoginFromUi,
-    capabilities: {
-      ...mergedProvider.capabilities,
-      teamLaunch: readiness.capabilities.teamLaunch,
-    },
-    selectedBackendId: readiness.selectedBackendId,
-    resolvedBackendId: readiness.resolvedBackendId,
-    availableBackends: readiness.availableBackends,
-    backend: readiness.backend,
-    connection: readiness.connection,
-  };
 }
 
 export function getIncompleteMultimodelProviderIds(
@@ -494,18 +427,16 @@ function reconcileCliInstallationStatus(
   current: CliInstallationStatus | null,
   incoming: CliInstallationStatus
 ): CliInstallationStatus {
-  if (
-    current?.flavor !== 'agent_teams_orchestrator' ||
-    incoming.flavor !== 'agent_teams_orchestrator'
-  ) {
+  if (incoming.flavor !== 'agent_teams_orchestrator') {
     if (current && isCliInstallationStatusContentEqual(current, incoming)) {
       return current;
     }
     return incoming;
   }
-  if (!incoming.installed) return incoming;
   const currentProvidersById = new Map(
-    current.providers.map((provider) => [provider.providerId, provider])
+    current?.flavor === 'agent_teams_orchestrator'
+      ? current.providers.map((provider) => [provider.providerId, provider])
+      : []
   );
   const incomingProviderIds = new Set(incoming.providers.map((provider) => provider.providerId));
   const providers = incoming.providers.map((incomingProvider) => {
@@ -519,21 +450,25 @@ function reconcileCliInstallationStatus(
     return reconciledProvider;
   });
 
-  for (const currentProvider of current.providers) {
+  for (const currentProvider of current?.flavor === 'agent_teams_orchestrator'
+    ? current.providers
+    : []) {
     if (
       !incomingProviderIds.has(currentProvider.providerId) &&
       isActiveMultimodelProviderId(currentProvider.providerId) &&
       isHydratedMultimodelProviderStatus(currentProvider)
     ) {
-      providers.push(currentProvider);
+      providers.push(revokeProviderLaunchAuthority(currentProvider));
     }
   }
 
   const authenticatedProvider = getAuthenticatedProvider(providers);
 
-  const mergedProviders = areArraysEqual(providers, current.providers, Object.is)
-    ? current.providers
-    : providers;
+  const mergedProviders =
+    current?.flavor === 'agent_teams_orchestrator' &&
+    areArraysEqual(providers, current.providers, Object.is)
+      ? current.providers
+      : providers;
 
   const merged: CliInstallationStatus = {
     ...incoming,
@@ -544,7 +479,7 @@ function reconcileCliInstallationStatus(
     authMethod: authenticatedProvider?.authMethod ?? null,
   };
 
-  if (isCliInstallationStatusContentEqual(current, merged)) {
+  if (current && isCliInstallationStatusContentEqual(current, merged)) {
     return current;
   }
 
@@ -557,14 +492,12 @@ export function reconcileCliStatus(
 ): CliInstallationStatus;
 export function reconcileCliStatus(
   current: CliProviderStatus | undefined,
-  incoming: CliProviderStatus,
-  fallbackReadiness?: CliProviderStatus
+  incoming: CliProviderStatus
 ): CliProviderStatus;
 /** Reconciles global, scoped, and IPC provider snapshots through one policy. */
 export function reconcileCliStatus(
   current: CliInstallationStatus | CliProviderStatus | null | undefined,
-  incoming: CliInstallationStatus | CliProviderStatus,
-  fallbackReadiness?: CliProviderStatus
+  incoming: CliInstallationStatus | CliProviderStatus
 ): CliInstallationStatus | CliProviderStatus {
   if ('providers' in incoming) {
     return reconcileCliInstallationStatus(
@@ -574,8 +507,7 @@ export function reconcileCliStatus(
   }
   return reconcileCliProviderSnapshot(
     current && !('providers' in current) ? current : undefined,
-    incoming,
-    fallbackReadiness
+    incoming
   );
 }
 
@@ -1296,7 +1228,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     let request!: Promise<boolean>;
     // eslint-disable-next-line prefer-const
     request = (async () => {
-      if (!silent) {
+      if (!silent || projectPath) {
         set((state) => {
           const nextLoading = {
             ...state.cliProviderStatusLoading,
@@ -1306,6 +1238,23 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           return {
             cliStatusError: null,
             cliProviderStatusLoading: nextLoading,
+            cliProviderStatusByScope:
+              projectPath && state.cliProviderStatusByScope[scopeKey]
+                ? setBoundedScopedProviderStatus(
+                    state.cliProviderStatusByScope,
+                    scopeKey,
+                    revokeProviderLaunchAuthority({
+                      ...state.cliProviderStatusByScope[scopeKey],
+                      verificationState: 'unknown',
+                      statusCheckOutcome: 'pending',
+                      statusCheckErrorCode: 'partial_response',
+                      modelCatalogRefreshState: state.cliProviderStatusByScope[scopeKey]
+                        .modelCatalog
+                        ? 'loading'
+                        : 'idle',
+                    })
+                  )
+                : state.cliProviderStatusByScope,
             cliStatus:
               state.cliStatus && isMultimodelCliStatus(state.cliStatus)
                 ? {
@@ -1326,13 +1275,17 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           : projectPath
             ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
             : await api.cliInstaller.getProviderStatus(providerId);
+        const responseMatchesProvider = responseProviderStatus?.providerId === providerId;
         const providerStatus =
-          responseProviderStatus ??
-          createProviderStatusErrorSnapshot({
-            providerId,
-            message: `Provider status unavailable for ${providerId}`,
-            errorCode: 'unavailable',
-          });
+          responseMatchesProvider && responseProviderStatus
+            ? responseProviderStatus
+            : createProviderStatusErrorSnapshot({
+                providerId,
+                message: responseProviderStatus
+                  ? `Provider status response did not match requested provider ${providerId}`
+                  : `Provider status unavailable for ${providerId}`,
+                errorCode: responseProviderStatus ? 'partial_response' : 'unavailable',
+              });
         const requestIsCurrent =
           requestEpoch === cliStatusEpoch &&
           cliProviderStatusActiveRequestIds.get(requestKey) === requestId;
@@ -1353,12 +1306,11 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         }
         set((state) => {
           const currentCliStatus = state.cliStatus;
-          const nextLoading = silent
-            ? state.cliProviderStatusLoading
-            : {
-                ...state.cliProviderStatusLoading,
-                [providerId]: false,
-              };
+          const nextLoading = settleCliProviderStatusLoading(
+            state.cliProviderStatusLoading,
+            providerId,
+            { silent, projectPath }
+          );
 
           if (
             requestEpoch !== cliStatusEpoch ||
@@ -1369,13 +1321,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
           if (projectPath) {
             const previousScopedProvider = state.cliProviderStatusByScope[scopeKey];
-            const globalProvider = getProviderStatus(currentCliStatus, providerId);
             return {
               cliProviderStatusLoading: nextLoading,
               cliProviderStatusByScope: setBoundedScopedProviderStatus(
                 state.cliProviderStatusByScope,
                 scopeKey,
-                reconcileCliStatus(previousScopedProvider, providerStatus, globalProvider)
+                reconcileCliStatus(previousScopedProvider, providerStatus)
               ),
             };
           }
@@ -1468,12 +1419,11 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         logger.error(`Failed to fetch ${providerId} CLI status:`, error);
         set((state) => {
           const currentCliStatus = state.cliStatus;
-          const nextLoading = silent
-            ? state.cliProviderStatusLoading
-            : {
-                ...state.cliProviderStatusLoading,
-                [providerId]: false,
-              };
+          const nextLoading = settleCliProviderStatusLoading(
+            state.cliProviderStatusLoading,
+            providerId,
+            { silent, projectPath }
+          );
 
           if (
             requestEpoch !== cliStatusEpoch ||
@@ -1484,13 +1434,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
           if (projectPath) {
             const currentScopedProvider = state.cliProviderStatusByScope[scopeKey];
-            const globalProvider = getProviderStatus(currentCliStatus, providerId);
             return {
               cliProviderStatusLoading: nextLoading,
               cliProviderStatusByScope: setBoundedScopedProviderStatus(
                 state.cliProviderStatusByScope,
                 scopeKey,
-                reconcileCliStatus(currentScopedProvider, failedProviderStatus, globalProvider)
+                reconcileCliStatus(currentScopedProvider, failedProviderStatus)
               ),
             };
           }
