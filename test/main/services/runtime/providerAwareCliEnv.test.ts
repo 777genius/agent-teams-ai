@@ -1,4 +1,5 @@
 // @vitest-environment node
+import * as fs from 'node:fs';
 import path from 'node:path';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -137,6 +138,45 @@ describe('buildProviderAwareCliEnv', () => {
       'ANTHROPIC_AUTH_TOKEN',
       'OPENAI_API_KEY',
     ]);
+  });
+
+  it('keeps passive status env out of managed runtime, MCP, auth, and launch resolution', async () => {
+    const { buildPassiveProviderStatusCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+    const mkdirSpy = vi.spyOn(fs.promises, 'mkdir');
+    const copyFileSpy = vi.spyOn(fs.promises, 'copyFile');
+    const rmSpy = vi.spyOn(fs.promises, 'rm');
+
+    try {
+      const result = buildPassiveProviderStatusCliEnv({
+        binaryPath: '/mock/runtime',
+        providerId: 'codex',
+        env: { ELECTRON_RUN_AS_NODE: '1' },
+      });
+
+      expect(result.connectionIssues).toEqual({});
+      expect(result.providerArgs).toEqual([]);
+      expect(result.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
+      expect(result.env.CLAUDE_CODE_ENTRY_PROVIDER).toBe('codex');
+      expect(resolveVerifiedAppManagedCodexRuntimeBinaryPathMock).not.toHaveBeenCalled();
+      expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+      expect(isSupportedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+      expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
+      expect(resolvePackagedAgentTeamsMcpEntryMock).not.toHaveBeenCalled();
+      expect(augmentConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+      expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+      expect(getConfiguredConnectionLaunchArgsMock).not.toHaveBeenCalled();
+      expect(getConfiguredConnectionIssuesMock).not.toHaveBeenCalled();
+      expect(augmentAllConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+      expect(applyAllConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+      expect(mkdirSpy).not.toHaveBeenCalled();
+      expect(copyFileSpy).not.toHaveBeenCalled();
+      expect(rmSpy).not.toHaveBeenCalled();
+    } finally {
+      mkdirSpy.mockRestore();
+      copyFileSpy.mockRestore();
+      rmSpy.mockRestore();
+    }
   });
 
   it('builds provider-pinned CLI env and returns provider-specific issues', async () => {

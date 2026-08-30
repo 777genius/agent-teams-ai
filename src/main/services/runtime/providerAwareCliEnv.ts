@@ -46,6 +46,23 @@ export interface ProviderAwareCliEnvResult {
   providerArgs: string[];
 }
 
+/**
+ * Builds the environment for passive runtime status/catalog commands only.
+ * Keep this projection synchronous: passive reads must not enter managed-runtime,
+ * MCP, credential, auth, or launch-argument resolution.
+ */
+export function buildPassiveProviderStatusCliEnv(
+  options: Pick<ProviderAwareCliEnvOptions, 'binaryPath' | 'providerId' | 'env' | 'shellEnv'>
+): ProviderAwareCliEnvResult {
+  const { env } = buildRuntimeBaseEnv({
+    ...options,
+    shellEnv: options.shellEnv ?? getCachedShellEnv() ?? {},
+    mergePathFallbacks: true,
+  });
+  removeGlobalElectronRunAsNodeEnv(env);
+  return { env, connectionIssues: {}, providerArgs: [] };
+}
+
 export function getProviderStatusStoredCredentialAllowlist(
   providerId: ProviderEnvTargetId
 ): readonly string[] | undefined {
