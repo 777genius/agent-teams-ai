@@ -7,7 +7,6 @@ import {
 } from '@features/anthropic-runtime-profile/renderer';
 import {
   isCodexAccountSnapshotPending,
-  mergeCodexCliStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import {
@@ -125,6 +124,7 @@ import {
 } from './projectPathOptions';
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
+import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
@@ -471,10 +471,7 @@ export const CreateTeamDialog = ({
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       Boolean(loadingCliStatus?.providers.some((provider) => provider.providerId === 'codex')),
   });
-  const effectiveCliStatus = useMemo(
-    () => mergeCodexCliStatusWithSnapshot(loadingCliStatus, codexAccount.snapshot),
-    [loadingCliStatus, codexAccount.snapshot]
-  );
+  const effectiveCliStatus = useAuthorityGatedCliStatus(loadingCliStatus, codexAccount.snapshot);
   const codexSnapshotPending =
     isCodexAccountSnapshotPending(
       codexAccount.loading,
@@ -820,6 +817,7 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
+  const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -2104,6 +2102,7 @@ export const CreateTeamDialog = ({
     isNameProvisioning ||
     !requestValidation.valid ||
     !!modelValidationError ||
+    launchGuard.blocked(launchTeam) ||
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission;
 
@@ -2299,6 +2298,7 @@ export const CreateTeamDialog = ({
       setLocalError(modelValidationError);
       return;
     }
+    if (launchGuard.reject(launchTeam, () => setLocalError(t('launch.prepare.failed')))) return;
     if (prepareBlocksCreate) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
