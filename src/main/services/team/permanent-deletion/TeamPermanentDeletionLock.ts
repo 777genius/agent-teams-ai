@@ -58,6 +58,14 @@ function isEnoent(error: unknown): boolean {
  * before treating it as contention; without that check every contended
  * acquisition on Windows failed the whole permanent deletion instead of
  * waiting for the holder.
+ *
+ * The probe is not atomic with the failed rename: the holder can release
+ * between the two, which is exactly the moment the caller is waiting for. A
+ * lock that is already gone is therefore resolved contention and must be
+ * retried, not reported as the stale rename error. Every other probe failure
+ * still surfaces the original error, and the candidate directory was created
+ * in this same directory moments earlier, so a permanent permission problem
+ * cannot hide behind the retry.
  */
 async function isOccupiedLockRenameError(error: unknown, lockPath: string): Promise<boolean> {
   const code = (error as NodeJS.ErrnoException).code;
@@ -70,7 +78,7 @@ async function isOccupiedLockRenameError(error: unknown, lockPath: string): Prom
   return await fs.promises
     .lstat(lockPath)
     .then(() => true)
-    .catch(() => false);
+    .catch((probeError: unknown) => isEnoent(probeError));
 }
 
 function sleep(ms: number): Promise<void> {
