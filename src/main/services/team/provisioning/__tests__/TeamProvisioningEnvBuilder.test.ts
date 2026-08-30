@@ -182,6 +182,42 @@ describe('TeamProvisioningEnvBuilder', () => {
     expect(result.usesAnthropicApiKeyHelper).toBe(false);
   });
 
+  it('carries the Codex API key in the cross-provider patch only for api login mode', async () => {
+    const makePorts = (loginMethod: string) => ({
+      buildProvisioningEnv: vi.fn(async () => ({
+        env: {
+          CODEX_HOME: '/tmp/codex-home',
+          CODEX_CLI_PATH: '/usr/local/bin/codex',
+          CLAUDE_CODE_CODEX_BACKEND: 'api',
+          CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: loginMethod,
+          OPENAI_API_KEY: 'sk-proj-cross-provider',
+          CODEX_API_KEY: 'sk-proj-cross-provider',
+        },
+        authSource: 'codex_runtime' as const,
+        geminiRuntimeAuth: null,
+        providerArgs: [],
+      })),
+      buildRuntimeTurnSettledHookSettingsArgs: vi.fn(async () => []),
+      logger: { error: vi.fn() },
+    });
+
+    const apiMode = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'anthropic',
+      memberSpecs: [{ name: 'Codex', providerId: 'codex', role: 'codex member' }],
+      ports: makePorts('api'),
+    });
+    expect(apiMode.envPatch.OPENAI_API_KEY).toBe('sk-proj-cross-provider');
+    expect(apiMode.envPatch.CODEX_API_KEY).toBe('sk-proj-cross-provider');
+
+    const chatgptMode = await buildCrossProviderMemberArgs({
+      primaryProviderId: 'anthropic',
+      memberSpecs: [{ name: 'Codex', providerId: 'codex', role: 'codex member' }],
+      ports: makePorts('chatgpt'),
+    });
+    expect(chatgptMode.envPatch.OPENAI_API_KEY).toBeUndefined();
+    expect(chatgptMode.envPatch.CODEX_API_KEY).toBeUndefined();
+  });
+
   it('carries Anthropic connection intent through a non-Anthropic primary runtime', async () => {
     const buildProvisioningEnvForMember = vi.fn(async () => ({
       env: {

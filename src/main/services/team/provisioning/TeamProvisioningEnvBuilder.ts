@@ -245,12 +245,26 @@ const CODEX_CROSS_PROVIDER_SAFE_ENV_KEYS = [
   'CODEX_HOME',
 ] as const;
 
+const CODEX_CROSS_PROVIDER_API_KEY_ENV_KEYS = ['OPENAI_API_KEY', 'CODEX_API_KEY'] as const;
+
 function buildCodexCrossProviderSafeEnvPatch(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const envPatch: NodeJS.ProcessEnv = {};
   for (const key of CODEX_CROSS_PROVIDER_SAFE_ENV_KEYS) {
     const value = env[key]?.trim();
     if (value) {
       envPatch[key] = value;
+    }
+  }
+  // A ChatGPT-mode teammate authenticates through CODEX_HOME session files,
+  // but in API-key mode the spawned Codex exec reads only the key env vars —
+  // without them the runtime refuses with "no CODEX_API_KEY or OPENAI_API_KEY
+  // is configured", so the credential must travel with this patch.
+  if (envPatch.CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD === 'api') {
+    for (const key of CODEX_CROSS_PROVIDER_API_KEY_ENV_KEYS) {
+      const value = env[key]?.trim();
+      if (value) {
+        envPatch[key] = value;
+      }
     }
   }
   return envPatch;
