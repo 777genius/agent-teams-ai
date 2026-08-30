@@ -10,6 +10,9 @@ export const ANTHROPIC_DEFAULT_API_BASE_URL = 'https://api.anthropic.com';
 
 const ANTHROPIC_API_KEY_VERIFY_TIMEOUT_MS = 10_000;
 
+/** Undici's wording for a response refused by `redirect: 'error'`. */
+const REDIRECT_REFUSED_RE = /redirect/i;
+
 export type AnthropicApiKeyVerificationState = 'valid' | 'invalid' | 'unknown';
 
 export interface AnthropicApiKeyVerificationResult {
@@ -51,6 +54,14 @@ export async function verifyAnthropicApiKeyWithApi(
     const response = await fetch(buildAnthropicModelsUrl(baseUrl), {
       method: 'GET',
       signal: controller.signal,
+      // A key-verification probe has no legitimate redirect. Following one is
+      // a credential leak: Node strips `Authorization` and `Cookie` on a
+      // cross-origin hop but keeps the nonstandard `x-api-key` below, so an
+      // endpoint answering 30x would hand the key to an unconfigured origin.
+      // Refusing throws, and the catch below reports `unknown` — the probe
+      // could not verify the key, which is recoverable, rather than `invalid`,
+      // which would wrongly condemn a good key.
+      redirect: 'error',
       headers: {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
@@ -84,10 +95,16 @@ export async function verifyAnthropicApiKeyWithApi(
       errorMessage: body?.error?.message ?? null,
     };
   } catch (error) {
+    // `fetch` reports every transport failure as a bare "fetch failed"; the
+    // reason (including a refused redirect) only lives on `cause`.
+    const cause = error instanceof Error ? error.cause : null;
+    const causeMessage = cause instanceof Error ? cause.message : null;
+    const message = error instanceof Error ? error.message : String(error);
     return {
       state: 'unknown',
       status: null,
-      errorMessage: error instanceof Error ? error.message : String(error),
+      errorType: causeMessage && REDIRECT_REFUSED_RE.test(causeMessage) ? 'redirect_refused' : null,
+      errorMessage: causeMessage ? `${message}: ${causeMessage}` : message,
     };
   } finally {
     clearTimeout(timeout);
