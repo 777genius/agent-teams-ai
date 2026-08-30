@@ -245,9 +245,11 @@ export interface OpenCodeConnectApiKeyFallbackOverrides {
  * connect-api-key response carries that probe-failure signature and the app
  * can verify the key directly against the provider API, the valid key is
  * committed to the auth store and provider status is re-read; if the provider
- * still does not report connected, the committed credential is rolled back and
- * the original failure is returned with an explanation. The fallback never
- * throws and never replaces a response it could not improve.
+ * still does not report connected — or the status re-read itself fails — the
+ * committed credential is rolled back and the original failure is returned
+ * with an explanation. Every path that reports failure leaves the auth store
+ * as it found it. The fallback never throws and never replaces a response it
+ * could not improve.
  */
 export async function recoverOpenCodeConnectApiKeyVerifyFailure(
   connectInput: RuntimeProviderManagementConnectApiKeyInput | RuntimeProviderManagementConnectInput,
@@ -265,6 +267,13 @@ export async function recoverOpenCodeConnectApiKeyVerifyFailure(
     return response;
   }
 
+  // Set once the credential is in the store, so any later failure — including
+  // a host that throws instead of returning a failed view — undoes the commit
+  // before the original failure is reported.
+  let committed: {
+    authStorePath: string;
+    snapshot: OpenCodeAuthStoreCredentialSnapshot;
+  } | null = null;
   try {
     const verification = await verifier(input.apiKey);
     if (verification.state !== 'valid') {
@@ -277,6 +286,7 @@ export async function recoverOpenCodeConnectApiKeyVerifyFailure(
       providerId,
       apiKey: input.apiKey,
     });
+    committed = { authStorePath, snapshot };
     host.invalidateProviderCaches();
     const view = await host.loadView({
       runtimeId: input.runtimeId,
@@ -308,7 +318,21 @@ export async function recoverOpenCodeConnectApiKeyVerifyFailure(
       ]
     );
   } catch {
-    // The fallback must never make the original failure worse.
+    // The fallback must never make the original failure worse — and a failure
+    // reported after the commit must not leave the credential behind.
+    if (committed) {
+      await rollbackOpenCodeApiCredential({
+        authStorePath: committed.authStorePath,
+        providerId,
+        apiKey: input.apiKey,
+        snapshot: committed.snapshot,
+      }).catch(() => undefined);
+      try {
+        host.invalidateProviderCaches();
+      } catch {
+        // A cache invalidation that throws is already the failure being handled.
+      }
+    }
     return response;
   }
 }

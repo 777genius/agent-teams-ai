@@ -248,6 +248,33 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
     expect(response.error?.message).toContain(VERIFY_FAILURE_MESSAGE);
   });
 
+  it('rolls back and reports the original failure when the status re-read throws', async () => {
+    fs.writeFileSync(authStorePath, JSON.stringify({ cursor: { type: 'oauth' } }));
+    fetchMock.mockResolvedValue(new Response('{"data": []}', { status: 200 }));
+    host.loadView.mockRejectedValue(new Error('runtime host crashed'));
+
+    const original = createVerifyFailureResponse();
+    const response = await recover(original);
+
+    expect(response).toBe(original);
+    expect(readStore(authStorePath)).toEqual({ cursor: { type: 'oauth' } });
+    expect(fs.readdirSync(tempDir)).toEqual(['auth.json']);
+  });
+
+  it('rolls back when invalidating the provider caches throws after the commit', async () => {
+    fetchMock.mockResolvedValue(new Response('{"data": []}', { status: 200 }));
+    host.invalidateProviderCaches.mockImplementationOnce(() => {
+      throw new Error('cache invalidation failed');
+    });
+
+    const original = createVerifyFailureResponse();
+    const response = await recover(original);
+
+    expect(response).toBe(original);
+    expect(readStore(authStorePath)).toEqual({});
+    expect(host.loadView).not.toHaveBeenCalled();
+  });
+
   it('does not activate for providers without an app-side verifier', async () => {
     const original: RuntimeProviderManagementProviderResponse = {
       ...createVerifyFailureResponse(),
