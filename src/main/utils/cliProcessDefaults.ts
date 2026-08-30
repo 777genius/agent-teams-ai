@@ -111,7 +111,12 @@ export function ensureWindowsSpawnBaseDirEnv(
   // LOCALAPPDATA in their own children; this inherited override keeps the
   // cache out of the team workspace cwd no matter who spawns PowerShell.
   if (!readEnvValue(env, 'PSModuleAnalysisCachePath')) {
-    setEnvValue(env, 'PSModuleAnalysisCachePath', path.win32.join(temp, 'PSModuleAnalysisCache'));
+    const absoluteTemp = path.win32.isAbsolute(temp) ? temp : path.win32.resolve(temp);
+    setEnvValue(
+      env,
+      'PSModuleAnalysisCachePath',
+      path.win32.join(absoluteTemp, 'PSModuleAnalysisCache')
+    );
   }
   return env;
 }

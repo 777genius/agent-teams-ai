@@ -169,6 +169,36 @@ describe('OpenCodeBridgeCommandClient Windows node_modules junction recovery', (
     expect(runner.calls).toHaveLength(2);
     expect(ensureJunction).toHaveBeenCalledTimes(1);
   });
+
+  it('reuses the same request id across a recovery retry', async () => {
+    runner.nextResults = [
+      exitZero(
+        `${JSON.stringify(bridgeFailure('opencode.launchTeam', SYMLINK_EPERM_MESSAGE, 'generated-1'))}\n`
+      ),
+      exitZero(
+        `${JSON.stringify(bridgeSuccess({ requestId: 'generated-1', data: { runId: 'run-1' } }))}\n`
+      ),
+    ];
+    let nextRequestId = 0;
+    const client = new OpenCodeBridgeCommandClient({
+      binaryPath: '/usr/local/bin/agent-teams-controller',
+      tempDirectory: tempDir,
+      processRunner: runner,
+      requestIdFactory: () => `generated-${++nextRequestId}`,
+      env: { PATH: '/usr/bin' },
+      ensureWindowsNodeModulesJunction: (profileId, errorMessage) =>
+        ensureJunction(profileId, errorMessage),
+    });
+
+    await client.execute(
+      'opencode.launchTeam',
+      { runId: 'run-1' },
+      { cwd: '/tmp/project', timeoutMs: 10_000 }
+    );
+
+    expect(runner.calls).toHaveLength(2);
+    expect(runner.requestIds).toEqual(['generated-1', 'generated-1']);
+  });
 });
 
 function createClient(): OpenCodeBridgeCommandClient {
@@ -192,12 +222,13 @@ function exitZero(stdout: string): OpenCodeBridgeProcessRunResult {
 
 function bridgeFailure(
   command: OpenCodeBridgeFailure['command'],
-  message: string
+  message: string,
+  requestId = 'req-1'
 ): OpenCodeBridgeFailure {
   return {
     ok: false,
     schemaVersion: 1,
-    requestId: 'req-1',
+    requestId,
     command,
     completedAt: '2026-04-21T12:00:01.000Z',
     durationMs: 1000,
@@ -237,10 +268,18 @@ function bridgeSuccess(
 
 class FakeBridgeProcessRunner implements OpenCodeBridgeProcessRunner {
   calls: OpenCodeBridgeProcessRunInput[] = [];
+  requestIds: string[] = [];
   nextResults: OpenCodeBridgeProcessRunResult[] = [];
 
   async run(input: OpenCodeBridgeProcessRunInput): Promise<OpenCodeBridgeProcessRunResult> {
     this.calls.push(input);
+    const inputIndex = input.args.indexOf('--input');
+    const inputPath = inputIndex >= 0 ? input.args[inputIndex + 1] : undefined;
+    if (!inputPath) {
+      throw new Error('FakeBridgeProcessRunner missing --input path');
+    }
+    const envelope = JSON.parse(await fs.readFile(inputPath, 'utf8')) as { requestId: string };
+    this.requestIds.push(envelope.requestId);
     const next = this.nextResults.shift();
     if (!next) {
       throw new Error('FakeBridgeProcessRunner has no queued result');

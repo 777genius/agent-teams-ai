@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import path from 'node:path';
 
 import {
   ensureWindowsSpawnBaseDirEnv,
@@ -111,6 +112,21 @@ describe('ensureWindowsSpawnBaseDirEnv', () => {
 
     expect(env.TEMP).toBe('C:\\alt-tmp');
     expect(env.TMP).toBe('C:\\alt-tmp');
+  });
+
+  it('keeps the PowerShell module cache absolute when TEMP is relative', () => {
+    const env: NodeJS.ProcessEnv = { TEMP: 'relative-temp' };
+
+    ensureWindowsSpawnBaseDirEnv(env, {
+      platform: 'win32',
+      processEnv: {},
+      homedir: () => 'C:\\Users\\test',
+    });
+
+    expect(env.PSModuleAnalysisCachePath).toMatch(/PSModuleAnalysisCache$/);
+    expect(
+      env.PSModuleAnalysisCachePath && path.win32.isAbsolute(env.PSModuleAnalysisCachePath)
+    ).toBe(true);
   });
 
   it('pins PSModuleAnalysisCachePath to the temp dir when no user profile is resolvable', () => {

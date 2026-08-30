@@ -219,11 +219,16 @@ export class OpenCodeBridgeCommandClient {
       stderrLimitBytes?: number;
     }
   ): Promise<OpenCodeBridgeResult<TData>> {
-    const result = await this.executeBridgeCommand<TBody, TData>(command, body, options);
+    // A recovery retry is the same logical mutating request. Generate the
+    // request id once so the bridge can deduplicate it after an ambiguous
+    // first outcome.
+    const requestId = options.requestId ?? this.requestIdFactory();
+    const requestOptions = { ...options, requestId };
+    const result = await this.executeBridgeCommand<TBody, TData>(command, body, requestOptions);
     if (result.ok || !(await this.tryRecoverWindowsNodeModulesJunction(result))) {
       return result;
     }
-    return this.executeBridgeCommand<TBody, TData>(command, body, options);
+    return this.executeBridgeCommand<TBody, TData>(command, body, requestOptions);
   }
 
   /**
