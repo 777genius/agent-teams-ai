@@ -39,6 +39,17 @@ const SENSITIVE_ASSIGNMENT_KEYS = new Set([
 const TRANSIENT_SERVER_STATUSES = new Set([500, 502, 503, 504, 529]);
 const TERMINAL_CLIENT_STATUSES = new Set([400, 404, 413, 422]);
 
+// Codex CLI stale-auth signatures: a reused/rotated refresh token or a missing
+// `codex login` is never fixed by re-running the same exec, so the delivery loop
+// must not retry it. Matched against the raw detail because the secret redactor
+// rewrites "token: <word>" sequences, which erases these markers from
+// normalizedDetail (e.g. "Failed to refresh token: ..." loses "token:").
+const CODEX_AUTH_FAILURE_MARKERS = [
+  'refresh_token_reused',
+  'failed to refresh token',
+  'codex_login',
+] as const;
+
 function containsAny(value: string, tokens: readonly string[]): boolean {
   return tokens.some((token) => value.includes(token));
 }
@@ -122,6 +133,7 @@ function result(
 export function classifyRuntimeFailure(signal: RuntimeFailureSignal): RuntimeFailureClassification {
   const normalizedDetail = normalizeRuntimeFailureDetail(signal.detail);
   const lower = normalizedDetail.toLowerCase();
+  const rawLower = signal.detail.toLowerCase();
   const statusCode = extractRuntimeFailureStatusCode(normalizedDetail, signal.statusCode);
   const providerCode = signal.providerCode?.trim().toLowerCase() ?? '';
   const retryAt = resolveRetryAt(signal);
@@ -159,7 +171,8 @@ export function classifyRuntimeFailure(signal: RuntimeFailureSignal): RuntimeFai
       'missing credential',
       'permission denied',
       'does not have access',
-    ])
+    ]) ||
+    containsAny(rawLower, CODEX_AUTH_FAILURE_MARKERS)
   ) {
     return result('auth_error', 'manual', normalizedDetail, {
       statusCode,

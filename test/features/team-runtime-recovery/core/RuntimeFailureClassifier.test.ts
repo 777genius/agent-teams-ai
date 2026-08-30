@@ -42,12 +42,28 @@ describe('classifyRuntimeFailure', () => {
     ['API Error: 422 invalid input', undefined, 'client_error', 'manual'],
     ['API Error: 401 invalid API key', undefined, 'auth_error', 'manual'],
     ['API Error: 403 forbidden', undefined, 'auth_error', 'manual'],
+    ['stream error: refresh_token_reused', undefined, 'auth_error', 'manual'],
+    ['run codex_login to continue', undefined, 'auth_error', 'manual'],
     ['ENOSPC: no space left on device', undefined, 'filesystem_error', 'manual'],
     ['unexpected tool execution error', undefined, 'unknown', 'manual'],
   ] as const)('%s => %s/%s', (detail, statusCode, reasonCode, disposition) => {
     expect(classifyRuntimeFailure(signal({ detail, statusCode }))).toMatchObject({
       reasonCode,
       disposition,
+    });
+  });
+
+  it('classifies codex refresh-token failures as auth errors even when redaction erases the marker', () => {
+    // The secret redactor rewrites "token: <word>" sequences, so the phrase
+    // "Failed to refresh token:" no longer exists in normalizedDetail — the
+    // classifier must match the raw detail to avoid an endless retry loop.
+    const classified = classifyRuntimeFailure(
+      signal({ detail: 'Failed to refresh token: unexpected status 400 Bad Request' })
+    );
+    expect(classified).toMatchObject({
+      reasonCode: 'auth_error',
+      disposition: 'manual',
+      actionRequired: true,
     });
   });
 
