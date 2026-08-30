@@ -20,6 +20,14 @@ import { buildActionModeProtocol } from '../actionModeInstructions';
 import { normalizeLaunchFailureReasonText } from '../TeamLaunchStateEvaluator';
 
 import { getAgentLanguageInstruction } from './TeamProvisioningAgentLanguage';
+import {
+  buildCompactMembersRoster,
+  buildLeadRosterIntegrityRules,
+  buildMembersPrompt,
+  formatWorkflowBlock,
+  getTeammateRosterMembers,
+  indentMultiline,
+} from './TeamProvisioningRosterPrompt';
 
 import type { RuntimeBootstrapMemberMcpLaunchConfig } from './TeamProvisioningBootstrapSpec';
 import type {
@@ -29,6 +37,9 @@ import type {
   TeamProviderId,
   TeamTask,
 } from '@shared/types';
+
+// Re-exported for backwards compatibility: these roster helpers used to live here.
+export { buildCompactMembersRoster, buildMembersPrompt } from './TeamProvisioningRosterPrompt';
 
 const { protocols } = agentTeamsControllerModule;
 
@@ -123,49 +134,6 @@ export function getVisibleTaskReferenceFormattingRule(): string {
 
 /** @deprecated Use wrapAgentBlock from @shared/constants/agentBlocks instead. */
 const wrapInAgentBlock = wrapAgentBlock;
-
-function indentMultiline(text: string, indent: string): string {
-  return text
-    .split(/\r?\n/g)
-    .map((line) => `${indent}${line}`)
-    .join('\n');
-}
-
-function formatWorkflowBlock(workflow: string, indent: string): string {
-  const trimmed = workflow.trim();
-  if (trimmed.length === 0) return '';
-  const body = indentMultiline(trimmed, indent);
-  return `\n${indent}---BEGIN WORKFLOW---\n${body}\n${indent}---END WORKFLOW---`;
-}
-
-export function buildMembersPrompt(members: TeamCreateRequest['members']): string {
-  return members
-    .map((member) => {
-      const rolePart = member.role?.trim() ? ` (role: ${member.role.trim()})` : '';
-      const providerPart =
-        member.providerId && member.providerId !== 'anthropic'
-          ? ` [provider: ${member.providerId}]`
-          : '';
-      const modelPart = member.model?.trim() ? ` [model: ${member.model.trim()}]` : '';
-      const effortPart = member.effort ? ` [effort: ${member.effort}]` : '';
-      const isolationPart = member.isolation === 'worktree' ? ' [isolation: worktree]' : '';
-      const workflowPart = member.workflow?.trim()
-        ? `\n     Workflow/instructions:${formatWorkflowBlock(member.workflow, '       ')}`
-        : '';
-      return `- ${member.name}${rolePart}${providerPart}${modelPart}${effortPart}${isolationPart}${workflowPart}`;
-    })
-    .join('\n');
-}
-
-/** Compact roster: name + role only, no workflow details. Used for post-compact reminders. */
-export function buildCompactMembersRoster(members: TeamCreateRequest['members']): string {
-  return members
-    .map((member) => {
-      const rolePart = member.role?.trim() ? ` (${member.role.trim()})` : '';
-      return `- ${member.name}${rolePart}`;
-    })
-    .join('\n');
-}
 
 export function buildTeammateAgentBlockReminder(): string {
   return [
@@ -906,6 +874,11 @@ export function buildPersistentLeadContext(opts: {
   const membersFooter = membersBlock
     ? `Members:\n${membersBlock}`
     : 'Members: (none — solo team lead)';
+  const teammateRoster = getTeammateRosterMembers(members);
+  const rosterRulesBlock =
+    teammateRoster.length > 0
+      ? `\n\n${buildLeadRosterIntegrityRules(teammateRoster.map((member) => member.name))}`
+      : '';
 
   return `${languageInstruction}
 
@@ -973,7 +946,7 @@ Message formatting:
 ${getVisibleTaskReferenceFormattingRule()}
 ${agentBlockPolicy}
 
-${membersFooter}`;
+${membersFooter}${rosterRulesBlock}`;
 }
 
 export function buildAgentBlockUsagePolicy(): string {
