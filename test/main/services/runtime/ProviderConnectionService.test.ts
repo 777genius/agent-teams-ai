@@ -1038,7 +1038,7 @@ describe('ProviderConnectionService', () => {
     expect(verifyAnthropicApiKey).toHaveBeenCalledWith('stored-key');
   });
 
-  it('reports Anthropic API key mode as connected after direct API verification succeeds', async () => {
+  it('does not promote Anthropic launch authority after direct API verification succeeds', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');
     const verifyAnthropicApiKey = vi.fn().mockResolvedValue({ state: 'valid', status: 200 });
@@ -1061,14 +1061,14 @@ describe('ProviderConnectionService', () => {
       providerId: 'anthropic',
       displayName: 'Anthropic',
       supported: true,
-      authenticated: true,
-      authMethod: 'claude.ai',
-      verificationState: 'verified',
-      statusMessage: 'Connected via Anthropic subscription',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusMessage: 'Runtime did not verify authentication',
       models: ['claude-sonnet-4-6'],
       canLoginFromUi: true,
       capabilities: {
-        teamLaunch: true,
+        teamLaunch: false,
         oneShot: true,
         extensions: { mcp: 'unsupported', skills: 'unsupported', plugins: 'unsupported' },
       },
@@ -1081,10 +1081,12 @@ describe('ProviderConnectionService', () => {
     } as never);
 
     expect(status).toMatchObject({
-      authenticated: true,
-      authMethod: 'api_key',
-      verificationState: 'verified',
-      statusMessage: 'Connected via API key',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      capabilities: { teamLaunch: false },
+      statusMessage:
+        'Anthropic API key is configured, but has not been verified by the runtime yet.',
       connection: {
         configuredAuthMode: 'api_key',
         apiKeyConfigured: true,
@@ -2779,7 +2781,9 @@ describe('ProviderConnectionService', () => {
       authenticated: true,
       authMethod: 'api_key',
       verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
       models: ['gpt-5.4'],
+      modelAvailability: [{ modelId: 'gpt-5.4', status: 'available' }],
       subscriptionRateLimits: {
         primary: null,
         secondary: null,
@@ -2802,6 +2806,7 @@ describe('ProviderConnectionService', () => {
 
     expect(directCatalog).not.toHaveBeenCalled();
     expect(enriched.models).toEqual(['gateway-codex-model']);
+    expect(enriched.modelAvailability).toEqual([]);
     expect(enriched.modelCatalog?.defaultLaunchModel).toBe('gateway-codex-model');
     expect(enriched.modelCatalog?.models).toHaveLength(1);
     expect(enriched.modelCatalog?.models[0]).toMatchObject({
@@ -2815,6 +2820,19 @@ describe('ProviderConnectionService', () => {
     expect(enriched.runtimeCapabilities?.modelCatalog).toEqual({
       dynamic: false,
       source: 'static-fallback',
+    });
+
+    const transient = await service.enrichProviderStatus({
+      ...enriched,
+      verificationState: 'error',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      models: ['retained-model'],
+      modelAvailability: [{ modelId: 'retained-model', status: 'unknown' }],
+    });
+    expect({ models: transient.models, modelAvailability: transient.modelAvailability }).toEqual({
+      models: ['retained-model'],
+      modelAvailability: [{ modelId: 'retained-model', status: 'unknown' }],
     });
   });
 
@@ -2897,6 +2915,7 @@ describe('ProviderConnectionService', () => {
           appServerState: 'healthy',
         },
       },
+      modelCatalogRefreshState: 'ready',
       runtimeCapabilities: {
         modelCatalog: { dynamic: true, source: 'app-server' },
       },
@@ -2914,12 +2933,72 @@ describe('ProviderConnectionService', () => {
     });
 
     expect(directCatalog).not.toHaveBeenCalled();
-    expect(enriched.models).toEqual(['gpt-5.4', 'gpt-5.5']);
+    expect(enriched.models).toEqual(['gpt-5.4']);
     expect(enriched.modelCatalog?.defaultLaunchModel).toBe('gpt-5.4');
     expect(enriched.runtimeCapabilities?.modelCatalog).toEqual({
       dynamic: true,
       source: 'app-server',
     });
+  });
+
+  it('does not synthesize flat models from a stale orchestrator catalog', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn().mockResolvedValue(null) } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    const staleCatalog = {
+      schemaVersion: 1 as const,
+      providerId: 'codex' as const,
+      source: 'app-server' as const,
+      status: 'stale' as const,
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2026-08-29T00:10:00.000Z',
+      defaultModelId: 'gpt-stale',
+      defaultLaunchModel: 'gpt-stale',
+      models: [
+        {
+          id: 'gpt-stale',
+          launchModel: 'gpt-stale',
+          displayName: 'GPT stale',
+          hidden: false,
+          supportedReasoningEfforts: ['low' as const],
+          defaultReasoningEffort: 'low' as const,
+          inputModalities: ['text' as const],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server' as const,
+        },
+      ],
+      diagnostics: { configReadState: 'ready' as const, appServerState: 'healthy' as const },
+    };
+
+    const enriched = await service.enrichProviderStatus({
+      providerId: 'codex',
+      displayName: 'Codex',
+      supported: true,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'transient_error',
+      statusCheckErrorCode: 'timeout',
+      models: ['gpt-previous'],
+      modelCatalog: staleCatalog,
+      modelCatalogRefreshState: 'error',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      canLoginFromUi: false,
+      capabilities: {
+        teamLaunch: false,
+        oneShot: false,
+        extensions: undefined as never,
+      },
+    });
+
+    expect(enriched.modelCatalog).toBe(staleCatalog);
+    expect(enriched.models).toEqual(['gpt-previous']);
+    expect(enriched.models).not.toContain('gpt-stale');
   });
 
   it('skips Codex catalog hydration when summary enrichment disables catalog loading', async () => {

@@ -106,6 +106,12 @@ function getStatusCode(error: unknown, fallback: number = 500): number {
   if (error instanceof Error && error.name === 'RuntimeStaleEvidenceError') {
     return 409;
   }
+  if (error instanceof Error && error.name === 'TeamLaunchValidationError') {
+    // User-facing provisioning launch validation failure; the sub-500 status
+    // makes getResponseErrorMessage return the real message instead of the
+    // opaque "Internal server error".
+    return 422;
+  }
   if (isTeamNotFoundError(error)) {
     return 404;
   }

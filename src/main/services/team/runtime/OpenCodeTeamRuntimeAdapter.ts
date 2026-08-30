@@ -1,5 +1,10 @@
 import { randomUUID } from 'crypto';
 
+import {
+  freshOpenCodeExecutionProof,
+  openCodeReadinessArtifactKey,
+  reusableOpenCodeExecutionProof,
+} from '../opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
 
@@ -7,6 +12,7 @@ import {
   createLocalRuntimeInspectionState,
   preflightOpenCodeLocalModels,
 } from './OpenCodeLocalModelPreflight';
+import { buildMemberBootstrapPrompt } from './OpenCodeMemberBootstrapPrompt';
 import { isTransientOpenCodeReadinessTransportFailure } from './OpenCodeReadinessRetryPolicy';
 
 export type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
@@ -28,7 +34,6 @@ import type {
   OpenCodeStopTeamCommandData,
   OpenCodeTeamMemberLaunchBridgeState,
 } from '../opencode/bridge/OpenCodeBridgeCommandContract';
-import type { OpenCodeExecutionProof } from '../opencode/readiness/OpenCodeExecutionProof';
 import type { OpenCodeTeamLaunchReadiness } from '../opencode/readiness/OpenCodeTeamLaunchReadiness';
 import type { OpenCodeTeamRuntimeAdapterOptions } from './OpenCodeLocalModelPreflight';
 import type {
@@ -146,38 +151,6 @@ const OPEN_CODE_READINESS_RETRY_DELAYS_MS = [750, 2_000] as const;
 type OpenCodeTeamLaunchReadinessInput = Parameters<
   OpenCodeTeamRuntimeBridgePort['checkOpenCodeTeamLaunchReadiness']
 >[0];
-
-function openCodeReadinessArtifactKey(input: OpenCodeTeamLaunchReadinessInput): string {
-  return JSON.stringify([
-    normalizeOpenCodeProjectIdentity(input.projectPath),
-    input.selectedModel?.trim() ?? null,
-    input.requireExecutionProbe,
-  ]);
-}
-
-function reusableOpenCodeExecutionProof(
-  readiness: OpenCodeTeamLaunchReadiness | undefined,
-  input: OpenCodeTeamLaunchReadinessInput
-): OpenCodeExecutionProof | null {
-  const proof = readiness?.executionProof;
-  if (
-    !proof ||
-    !proof.reusable ||
-    (proof.credentialMode !== 'api' && proof.credentialMode !== 'none')
-  ) {
-    return null;
-  }
-  const normalizedExpected = normalizeOpenCodeProjectIdentity(input.projectPath);
-  const normalizedProofProject = normalizeOpenCodeProjectIdentity(proof.projectPath);
-  if (
-    proof.modelId !== readiness?.modelId ||
-    normalizedProofProject !== normalizedExpected ||
-    Date.parse(proof.expiresAt) <= Date.now() + 1_000
-  ) {
-    return null;
-  }
-  return proof;
-}
 
 function sleepOpenCodeReadinessRetry(delayMs: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, delayMs));
@@ -328,7 +301,8 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     // App-managed OpenCode launch requires a fresh capability snapshot from
     // readiness before any state-changing bridge command can run.
     const skipReadinessPreflight = false;
-    let selectedModel = input.model?.trim() ?? '';
+    const requestedModel = input.model?.trim() ?? '';
+    let selectedModel = requestedModel;
     let launchWarnings: string[] = [];
     const localRuntimeInspectionState = createLocalRuntimeInspectionState();
 
@@ -362,7 +336,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
             : prepared.diagnostics;
         return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings);
       }
-      selectedModel = prepared.modelId ?? selectedModel;
+      const readinessModel = prepared.modelId?.trim() ?? '';
+      if (requestedModel && readinessModel !== requestedModel) {
+        return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+          `OpenCode readiness returned model ${readinessModel || '(missing)'} for requested model ${requestedModel}`,
+        ]);
+      }
+      selectedModel = readinessModel || selectedModel;
       launchWarnings = mergeDiagnostics(launchWarnings, prepared.warnings);
     }
 
@@ -405,14 +385,19 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           readinessInput.selectedModel,
           readinessInput.requireExecutionProbe
         ) ?? null);
-    let executionProof = reusableOpenCodeExecutionProof(
-      this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
-        this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
-      readinessInput
-    );
-    if (executionProof?.capabilitySnapshotId !== runtimeSnapshot?.capabilitySnapshotId) {
-      executionProof = null;
+    let proofBinding: ReturnType<typeof freshOpenCodeExecutionProof>;
+    try {
+      proofBinding = freshOpenCodeExecutionProof(
+        this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
+          this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
+        { projectPath: input.cwd, fullModelId: selectedModel }
+      );
+    } catch (error) {
+      return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+        error instanceof Error ? error.message : String(error),
+      ]);
     }
+    let executionProof = proofBinding.proof;
     if (
       !skipReadinessPreflight &&
       this.bridge.getLastOpenCodeRuntimeSnapshot &&
@@ -420,6 +405,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     ) {
       return blockedLaunchResult(input, 'opencode_capability_snapshot_missing', [
         'OpenCode app-managed launch requires a fresh capability snapshot before state-changing launch.',
+      ]);
+    }
+    if (
+      runtimeSnapshot?.capabilitySnapshotId &&
+      executionProof.capabilitySnapshotId !== runtimeSnapshot.capabilitySnapshotId
+    ) {
+      return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+        'OpenCode launch execution proof belongs to another capability snapshot',
       ]);
     }
     this.lastProjectPathByTeamName.set(input.teamName, input.cwd);
@@ -447,6 +440,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       }),
       leadPrompt: input.prompt?.trim() ?? '',
       expectedCapabilitySnapshotId: snapshot?.capabilitySnapshotId ?? null,
+      expectedBehaviorFingerprint: proofBinding.expectedBehaviorFingerprint,
       manifestHighWatermark: null,
       ...(executionProof ? { executionProof } : {}),
       ...(recoveryAttemptId ? { capabilitySnapshotRecoveryAttemptId: recoveryAttemptId } : {}),
@@ -474,7 +468,13 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           mergeDiagnostics(launchWarnings, refreshed.warnings)
         );
       }
-      selectedModel = refreshed.modelId ?? selectedModel;
+      const refreshedModel = refreshed.modelId?.trim() ?? '';
+      if (requestedModel && refreshedModel !== requestedModel) {
+        return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+          `OpenCode readiness returned model ${refreshedModel || '(missing)'} for requested model ${requestedModel}`,
+        ]);
+      }
+      selectedModel = refreshedModel || selectedModel;
       const refreshedLocalModelPreflight = await preflightOpenCodeLocalModels(
         this.options,
         [{ projectPath: input.cwd, modelRoute: selectedModel }],
@@ -497,13 +497,22 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         ) ?? null;
       if (refreshedSnapshot?.capabilitySnapshotId) {
         runtimeSnapshot = refreshedSnapshot;
-        executionProof = reusableOpenCodeExecutionProof(
-          this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
-            this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
-          readinessInput
-        );
-        if (executionProof?.capabilitySnapshotId !== runtimeSnapshot.capabilitySnapshotId) {
-          executionProof = null;
+        try {
+          proofBinding = freshOpenCodeExecutionProof(
+            this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
+              this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
+            { projectPath: input.cwd, fullModelId: selectedModel }
+          );
+          executionProof = proofBinding.proof;
+          if (executionProof.capabilitySnapshotId !== runtimeSnapshot.capabilitySnapshotId) {
+            return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+              'OpenCode launch execution proof belongs to another capability snapshot',
+            ]);
+          }
+        } catch (error) {
+          return blockedLaunchResult(input, 'opencode_expected_behavior_evidence_invalid', [
+            error instanceof Error ? error.message : String(error),
+          ]);
         }
         launchWarnings = mergeDiagnostics(launchWarnings, [
           ...refreshed.warnings,
@@ -525,7 +534,16 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       }
     }
 
-    return mapOpenCodeLaunchDataToRuntimeResult(input, data, launchWarnings);
+    const launchResult = mapOpenCodeLaunchDataToRuntimeResult(input, data, launchWarnings);
+    if (
+      launchResult.teamLaunchState === 'clean_success' &&
+      data.expectedBehaviorFingerprint !== proofBinding.expectedBehaviorFingerprint
+    ) {
+      return blockedLaunchResult(input, 'opencode_launch_behavior_fingerprint_mismatch', [
+        'OpenCode launch result behavior fingerprint mismatch',
+      ]);
+    }
+    return launchResult;
   }
 
   async reconcile(input: TeamRuntimeReconcileInput): Promise<TeamRuntimeReconcileResult> {
@@ -1268,47 +1286,6 @@ function extractCheckpointNames(data: OpenCodeLaunchTeamCommandData): Set<string
     }
   }
   return names;
-}
-
-function buildMemberBootstrapPrompt(
-  input: TeamRuntimeLaunchInput,
-  member: TeamRuntimeLaunchInput['expectedMembers'][number]
-): string {
-  const teamPrompt = input.prompt?.trim();
-  const role = member.role?.trim() || member.workflow?.trim() || 'teammate';
-  const workflow = member.workflow?.trim();
-  const isTeamLead =
-    member.name.trim().toLowerCase() === 'team-lead' || role.trim().toLowerCase() === 'team lead';
-  const identityLine = isTeamLead
-    ? `You are ${member.name}, the team lead for team "${input.teamName}".`
-    : `You are ${member.name}, a ${role} on team "${input.teamName}".`;
-  const messageTargets = isTeamLead
-    ? 'the human user or a teammate'
-    : 'the human user, team lead, or another teammate';
-  const senderRole = isTeamLead ? 'team lead' : 'OpenCode teammate';
-  return [
-    '<agent_teams_app_managed_bootstrap_briefing>',
-    'AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1',
-    identityLine,
-    teamPrompt ? `Team launch context:\n${teamPrompt}` : null,
-    workflow ? `Workflow:\n${workflow}` : null,
-    '',
-    'This OpenCode session is created, attached, and launch-verified by the desktop app.',
-    'Do not call runtime_bootstrap_checkin or member_briefing just to prove launch readiness.',
-    'Do NOT create local team files, run join scripts, or search the project for a fake team registry.',
-    'That bootstrap restriction is only about team registry/startup files. It does not restrict assigned project work: when a task requires implementation, fixes, review follow-up, or investigation, you may inspect, read/search, and edit files in the project working directory as your available tools allow.',
-    'Use the app MCP tools exposed by the "agent-teams" server for team communication and task state.',
-    'Launch bootstrap is a silent attach, not a user/team conversation turn.',
-    'Do not call task_briefing, message_send, or cross_team_send just to announce readiness, say understood, report no tasks, or ask for work.',
-    'If the briefing says there are no actionable tasks, stay idle silently.',
-    '',
-    `When you need to message ${messageTargets}, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.`,
-    `Always set from="${member.name}" when sending a team message from this ${senderRole}.`,
-    'Do not answer team/app messages only as plain assistant text when agent-teams_message_send is available.',
-    '</agent_teams_app_managed_bootstrap_briefing>',
-  ]
-    .filter((line): line is string => line !== null)
-    .join('\n');
 }
 
 function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput): string {

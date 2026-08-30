@@ -84,10 +84,15 @@ function createAnthropicRuntimeStatus(
     .map((model) => String(model.launchModel));
 
   return {
+    providerId: 'anthropic',
     supported: true,
     authenticated: true,
     authMethod: 'claude.ai',
     verificationState: 'verified',
+    statusCheckOutcome: 'authoritative',
+    statusCheckErrorCode: undefined,
+    statusMessage: null,
+    detailMessage: null,
     canLoginFromUi: true,
     capabilities: {
       teamLaunch: true,
@@ -99,6 +104,11 @@ function createAnthropicRuntimeStatus(
         apiKeys: { status: 'supported', ownership: 'shared', reason: null },
       },
     },
+    selectedBackendId: null,
+    resolvedBackendId: null,
+    availableBackends: [],
+    externalRuntimeDiagnostics: [],
+    backend: null,
     models: visibleModels,
     runtimeCapabilities: {
       modelCatalog: {
@@ -116,8 +126,8 @@ function createAnthropicRuntimeStatus(
       providerId: 'anthropic',
       source: catalogSource,
       status: catalogStatus,
-      fetchedAt: '2026-07-02T00:00:00.000Z',
-      staleAt: '2026-07-02T00:10:00.000Z',
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
       defaultModelId: catalogModels[0]?.id ?? null,
       defaultLaunchModel: catalogModels[0]?.launchModel ?? null,
       models: catalogModels,

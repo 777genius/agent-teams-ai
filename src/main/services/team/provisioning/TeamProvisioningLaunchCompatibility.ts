@@ -1,6 +1,8 @@
 import { fromProvisioningMembers } from '@features/team-runtime-lanes';
 import { normalizeOptionalTeamProviderId } from '@shared/utils/teamProvider';
 
+import { TeamLaunchValidationError } from './TeamLaunchValidationError';
+
 import type { TeamCreateRequest } from '@shared/types';
 
 export type TeamLaunchCompatibilityLevel = 'ready' | 'repairable' | 'unsafe';
@@ -79,12 +81,14 @@ export function assertOpenCodeNotLaunchedThroughLegacyProvisioning(request: {
     }))
   );
   if (!lanePlan.ok) {
-    throw new Error(lanePlan.message || getOpenCodeMixedProviderProvisioningError());
+    throw new TeamLaunchValidationError(
+      lanePlan.message || getOpenCodeMixedProviderProvisioningError()
+    );
   }
   if (!isPureOpenCodeProvisioningRequest(request)) {
     return;
   }
-  throw new Error(
+  throw new TeamLaunchValidationError(
     'OpenCode team launch is not enabled in the legacy Claude stream-json provisioning path. ' +
       'Use the gated OpenCode runtime adapter once production launch is enabled.'
   );
@@ -117,7 +121,7 @@ export function assertDeterministicBootstrapPrimaryMemberLimit(memberCount: numb
   if (memberCount <= DETERMINISTIC_BOOTSTRAP_MAX_PRIMARY_MEMBERS) {
     return;
   }
-  throw new Error(
+  throw new TeamLaunchValidationError(
     `Codex deterministic bootstrap currently supports up to ${DETERMINISTIC_BOOTSTRAP_MAX_PRIMARY_MEMBERS} primary teammates; this team has ${memberCount}. Reduce primary teammates or move extra OpenCode members to secondary lanes.`
   );
 }

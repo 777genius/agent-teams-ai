@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { applyAgentTeamsIdentityEnv } from '@main/services/identity/AgentTeamsIdentityStore';
 import { buildEnrichedEnv } from '@main/utils/cliEnv';
+import { ensureWindowsSpawnBaseDirEnv } from '@main/utils/cliProcessDefaults';
 import { getShellPreferredHome } from '@main/utils/shellEnv';
 
 import { configManager } from '../infrastructure/ConfigManager';
@@ -97,6 +98,12 @@ export function buildRuntimeBaseEnv(options: BuildRuntimeBaseEnvOptions = {}): {
     env.HOME = getFirstNonEmptyEnvValue(env.HOME, fallbackHome);
     env.USERPROFILE = getFirstNonEmptyEnvValue(env.USERPROFILE, fallbackHome);
   }
+
+  // Merged env snapshots cannot guarantee the Windows per-user base dirs, and
+  // consumers that bypass the childProcess spawn seam (e.g. the node-pty
+  // embedded terminal) hand this env directly to powershell/cmd children —
+  // without a valid LOCALAPPDATA those recreate their caches cwd-relative.
+  ensureWindowsSpawnBaseDirEnv(env);
 
   if (!options.providerId) {
     return {
