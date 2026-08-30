@@ -38,9 +38,9 @@ import {
   PROVIDER_MODEL_LIST_TIMEOUT_MS,
   PROVIDER_RUNTIME_STATUS_TIMEOUT_MS,
   validatePrepareCwd as validatePrepareCwdForProvisioning,
+  verifySelectedProviderModelsForProvisioning,
   type VerifySelectedProviderModelsInput,
   type VerifySelectedProviderModelsResult,
-  verifySelectedProviderModelsForProvisioning,
 } from './TeamProvisioningProviderPreflight';
 import {
   cachedProviderProbeResultToProbeResult,

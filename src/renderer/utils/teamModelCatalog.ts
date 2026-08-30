@@ -12,15 +12,15 @@ import { getCodexChatGptModeUiDisabledReason } from './teamModelCatalogChatGptGa
 import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export {
-  GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
-  GPT_5_2_CODEX_UI_DISABLED_MODEL,
-  GPT_5_3_CODEX_SPARK_UI_DISABLED_MODEL,
-} from '@shared/utils/providerModelVisibility';
-export {
   CODEX_CHATGPT_UNSUPPORTED_MODEL_UI_DISABLED_REASON,
   GPT_5_1_CODEX_MAX_CHATGPT_UI_DISABLED_REASON,
   isCodexChatGptSubscriptionProviderStatus,
 } from './teamModelCatalogChatGptGate';
+export {
+  GPT_5_1_CODEX_MINI_UI_DISABLED_MODEL,
+  GPT_5_2_CODEX_UI_DISABLED_MODEL,
+  GPT_5_3_CODEX_SPARK_UI_DISABLED_MODEL,
+} from '@shared/utils/providerModelVisibility';
 
 type SupportedProviderId = CliProviderId | TeamProviderId;
 type RuntimeAwareProviderStatus = Pick<
