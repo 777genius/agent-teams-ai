@@ -8,6 +8,7 @@ import {
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 
+import { withCliProcessDefaults } from './cliProcessDefaults';
 import {
   isSameUnixProcessIdentity,
   readUnixProcessTable,
@@ -536,11 +537,6 @@ function spawnWindowsShellFallback(
   });
 }
 
-/** Env vars injected into every spawned agent runtime CLI process. */
-const CLI_ENV_DEFAULTS: Record<string, string> = {
-  CLAUDE_HOOK_JUDGE_MODE: 'true',
-};
-
 const activeCliProcesses = new Set<ChildProcess>();
 
 interface OwnedUnixProcessGroup {
@@ -586,22 +582,6 @@ export function killTrackedCliProcesses(signal: NodeJS.Signals = 'SIGKILL'): voi
       // Best effort during shutdown.
     }
   }
-}
-
-/** Apply shared CLI process defaults without overriding explicit caller choices. */
-function withCliProcessDefaults<
-  T extends {
-    detached?: boolean;
-    env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
-    windowsHide?: boolean;
-  },
->(options: T): T & { detached: boolean; windowsHide: boolean } {
-  return {
-    ...options,
-    detached: options.detached ?? process.platform !== 'win32',
-    windowsHide: options.windowsHide ?? true,
-    env: { ...(options.env ?? process.env), ...CLI_ENV_DEFAULTS },
-  };
 }
 
 /**

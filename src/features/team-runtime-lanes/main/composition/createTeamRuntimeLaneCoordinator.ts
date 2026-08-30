@@ -3,6 +3,7 @@ import {
   fromProvisioningMembers,
   isOpenCodeSideLanePlan,
   type TeamRuntimeLanePlan,
+  TeamRuntimeLanePlanningError,
 } from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
 
 import type { PersistedTeamLaunchSnapshot, TeamCreateRequest, TeamProviderId } from '@shared/types';
@@ -29,11 +30,12 @@ export function createTeamRuntimeLaneCoordinator(): TeamRuntimeLaneCoordinator {
         leadModel: params.leadModel,
       });
       if (!lanePlan.ok) {
-        throw new Error(lanePlan.message);
+        throw new TeamRuntimeLanePlanningError(lanePlan.message, lanePlan.reason);
       }
       if (isOpenCodeSideLanePlan(lanePlan.plan) && !params.hasOpenCodeRuntimeAdapter) {
-        throw new Error(
-          'OpenCode side lanes require the OpenCode runtime adapter to be registered.'
+        throw new TeamRuntimeLanePlanningError(
+          'OpenCode side lanes require the OpenCode runtime adapter to be registered.',
+          'missing_opencode_runtime_adapter'
         );
       }
       return lanePlan.plan;

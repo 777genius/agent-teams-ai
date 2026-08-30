@@ -1,14 +1,27 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { stableHash } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
+import {
+  createOpenCodeBridgeHandshakeIdentityHash,
+  OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+  OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
+  type OpenCodeBridgeCommandName,
+  type OpenCodeBridgeHandshake,
+  type OpenCodeBridgePeerIdentity,
+  type OpenCodeBridgeResult,
+  type RuntimeStoreManifestEvidence,
+  stableHash,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import {
   createOpenCodeBridgeCommandLeaseStore,
   createOpenCodeBridgeCommandLedgerStore,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
+import {
+  type OpenCodeBridgeCommandExecutor,
+  OpenCodeStateChangingBridgeCommandService,
+} from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 
 describe('OpenCodeBridgeCommandLedgerStore', () => {
   let tempDir: string;
@@ -21,7 +34,87 @@ describe('OpenCodeBridgeCommandLedgerStore', () => {
 
   afterEach(async () => {
     await fs.rm(tempDir, { recursive: true, force: true });
+    await expect(fs.stat(tempDir)).rejects.toMatchObject({ code: 'ENOENT' });
   });
+
+  it.each([
+    { outcome: 'completed' as const, expectedError: 'already completed' },
+    {
+      outcome: 'unknown_after_timeout' as const,
+      expectedError: 'outcome must be reconciled before retry',
+    },
+  ])(
+    'does not redispatch $outcome launch work after recreating the service from its durable ledger',
+    async ({ outcome, expectedError }) => {
+      const ledgerPath = path.join(tempDir, 'restart-ledger.json');
+      const leasePath = path.join(tempDir, 'restart-leases.json');
+      let sideEffectDispatches = 0;
+      let nextRequestId = 1;
+      let nextLeaseId = 1;
+
+      const createService = (): OpenCodeStateChangingBridgeCommandService => {
+        const client = bridgePeerIdentity('claude_team');
+        return new OpenCodeStateChangingBridgeCommandService({
+          expectedClientIdentity: client,
+          handshakePort: {
+            handshake: async () =>
+              bridgeHandshake(client, bridgePeerIdentity('agent_teams_orchestrator')),
+          },
+          leaseStore: createOpenCodeBridgeCommandLeaseStore({
+            filePath: leasePath,
+            idFactory: () => `restart-lease-${nextLeaseId++}`,
+            clock: () => now,
+          }),
+          ledger: createOpenCodeBridgeCommandLedgerStore({
+            filePath: ledgerPath,
+            clock: () => now,
+          }),
+          bridge: new RestartBridgeExecutor(() => {
+            sideEffectDispatches += 1;
+            return outcome;
+          }),
+          manifestReader: {
+            read: async (): Promise<RuntimeStoreManifestEvidence> => ({
+              highWatermark: 10,
+              activeRunId: 'run-1',
+              capabilitySnapshotId: 'cap-1',
+            }),
+          },
+          requestIdFactory: () => `restart-request-${nextRequestId++}`,
+          clock: () => now,
+        });
+      };
+
+      await (async () => {
+        const serviceBeforeRestart = createService();
+        const firstResult = await serviceBeforeRestart.execute(restartLaunchInput());
+        expect(firstResult.ok).toBe(outcome === 'completed');
+      })();
+
+      expect(sideEffectDispatches).toBe(1);
+      expect((await fs.stat(ledgerPath)).isFile()).toBe(true);
+
+      await (async () => {
+        const serviceAfterRestart = createService();
+        await expect(serviceAfterRestart.execute(restartLaunchInput())).rejects.toThrow(
+          expectedError
+        );
+      })();
+
+      expect(sideEffectDispatches).toBe(1);
+      const ledgerAfterRestart = createOpenCodeBridgeCommandLedgerStore({
+        filePath: ledgerPath,
+        clock: () => now,
+      });
+      await expect(ledgerAfterRestart.list()).resolves.toEqual([
+        expect.objectContaining({
+          status: outcome,
+          retryable: false,
+          requestId: 'restart-request-1',
+        }),
+      ]);
+    }
+  );
 
   it('blocks idempotency key reuse with a different payload', async () => {
     const ledger = createOpenCodeBridgeCommandLedgerStore({
@@ -232,3 +325,136 @@ describe('OpenCodeBridgeCommandLeaseStore', () => {
     ]);
   });
 });
+
+type RestartOutcome = 'completed' | 'unknown_after_timeout';
+
+class RestartBridgeExecutor implements OpenCodeBridgeCommandExecutor {
+  constructor(private readonly dispatch: () => RestartOutcome) {}
+
+  async execute<TBody, TData>(
+    command: OpenCodeBridgeCommandName,
+    body: TBody,
+    options: {
+      cwd: string;
+      timeoutMs: number;
+      requestId?: string;
+      stdoutLimitBytes?: number;
+      stderrLimitBytes?: number;
+    }
+  ): Promise<OpenCodeBridgeResult<TData>> {
+    const outcome = this.dispatch();
+    const requestId = options.requestId ?? 'restart-request-fallback';
+    const idempotencyKey = (
+      body as { preconditions: { idempotencyKey: string; expectedBehaviorFingerprint: string } }
+    ).preconditions.idempotencyKey;
+
+    if (outcome === 'unknown_after_timeout') {
+      return {
+        ok: false,
+        schemaVersion: 1,
+        requestId,
+        command,
+        completedAt: '2026-04-21T12:00:01.000Z',
+        durationMs: 1_000,
+        error: {
+          kind: 'timeout',
+          message: 'restart-test-timeout',
+          retryable: true,
+        },
+        diagnostics: [],
+      } as OpenCodeBridgeResult<TData>;
+    }
+
+    return {
+      ok: true,
+      schemaVersion: 1,
+      requestId,
+      command,
+      completedAt: '2026-04-21T12:00:01.000Z',
+      durationMs: 1_000,
+      runtime: {
+        providerId: 'opencode',
+        binaryPath: '/test/opencode',
+        binaryFingerprint: 'restart-bin-1',
+        version: '1.0.0',
+        capabilitySnapshotId: 'cap-1',
+      },
+      diagnostics: [],
+      data: {
+        runId: 'run-1',
+        idempotencyKey,
+        runtimeStoreManifestHighWatermark: 10,
+        expectedBehaviorFingerprint: 'a'.repeat(64),
+      } as TData,
+    };
+  }
+}
+
+function restartLaunchInput(): Parameters<OpenCodeStateChangingBridgeCommandService['execute']>[0] {
+  const expectedBehaviorFingerprint = 'a'.repeat(64);
+  return {
+    command: 'opencode.launchTeam',
+    teamName: 'restart-team',
+    runId: 'run-1',
+    capabilitySnapshotId: 'cap-1',
+    behaviorFingerprint: expectedBehaviorFingerprint,
+    body: { prompt: 'restart-safe-launch', expectedBehaviorFingerprint },
+    cwd: '/tmp/restart-test-project',
+    timeoutMs: 10_000,
+  };
+}
+
+function bridgePeerIdentity(peer: OpenCodeBridgePeerIdentity['peer']): OpenCodeBridgePeerIdentity {
+  return {
+    schemaVersion: 1,
+    peer,
+    appVersion: '1.0.0',
+    gitSha: 'restart-test-sha',
+    buildId: 'restart-test-build',
+    bridgeProtocol: {
+      minVersion: 1,
+      currentVersion: 1,
+      supportedCommands: [
+        'opencode.handshake',
+        'opencode.commandStatus',
+        'opencode.launchTeam',
+      ],
+      opencodeAppManagedBootstrapContractVersion:
+        OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      expectedBehaviorFingerprintSchemaVersion:
+        OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
+    },
+    runtime: {
+      providerId: 'opencode',
+      binaryPath: '/test/opencode',
+      binaryFingerprint: 'restart-bin-1',
+      version: '1.0.0',
+      capabilitySnapshotId: 'cap-1',
+      runtimeStoreManifestHighWatermark: 10,
+      activeRunId: 'run-1',
+    },
+    featureFlags: {
+      opencodeTeamLaunch: true,
+      opencodeStateChangingCommands: true,
+    },
+  };
+}
+
+function bridgeHandshake(
+  client: OpenCodeBridgePeerIdentity,
+  server: OpenCodeBridgePeerIdentity
+): OpenCodeBridgeHandshake {
+  const handshakeWithoutHash: Omit<OpenCodeBridgeHandshake, 'identityHash'> = {
+    schemaVersion: 1,
+    requestId: 'restart-handshake-1',
+    client,
+    server,
+    agreedProtocolVersion: 1,
+    acceptedCommands: ['opencode.launchTeam'],
+    serverTime: '2026-04-21T12:00:00.000Z',
+  };
+  return {
+    ...handshakeWithoutHash,
+    identityHash: createOpenCodeBridgeHandshakeIdentityHash(handshakeWithoutHash),
+  };
+}
