@@ -761,7 +761,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedEffort = (value: string): void => {
-    hydrationRef.current.dirty = true;
+    // EffortLevelSelector clears an effort the selected model cannot run by calling this
+    // with ''. That programmatic reset is not a user edit, so it must not cancel hydration
+    // while the saved request is still in flight (hydration key not set yet).
+    if (value !== '' || hydrationRef.current.key !== null) hydrationRef.current.dirty = true;
     setSelectedEffortRaw(value);
     localStorage.setItem('team:lastSelectedEffort', value);
   };

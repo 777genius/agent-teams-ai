@@ -840,6 +840,123 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it('keeps a programmatic effort reset from cancelling saved-request hydration', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    localStorage.setItem('team:lastSelectedEffort', 'xhigh');
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    // EffortLevelSelector clears an effort the selected model cannot run by calling
+    // onValueChange('') from its validation effect. That is not a user edit.
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onEffortChange('');
+      await flush();
+    });
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('still lets a user effort choice during hydration win over the saved request', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    let resolveSavedRequest: (value: unknown) => void = () => {};
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      }) as any
+    );
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+    });
+
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps?.onEffortChange('high');
+      await flush();
+    });
+
+    await act(async () => {
+      resolveSavedRequest({
+        teamName: 'team-alpha',
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        model: 'gpt-5.5',
+        members: [{ name: 'jack', role: 'developer' }],
+      });
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
   it('uses the project-scoped OpenCode teammate model in Create preflight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
