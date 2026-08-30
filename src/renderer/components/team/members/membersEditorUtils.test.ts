@@ -31,14 +31,24 @@ describe('createMemberDraftsFromInputs', () => {
     expect(drafts.map((draft) => draft.id)).toEqual(['alice', 'alice-2', 'alice-3']);
   });
 
-  it('falls back to a generated id for blank names', () => {
-    const [first] = createMemberDraftsFromInputs([{ name: '   ' }]);
-    const [second] = createMemberDraftsFromInputs([{ name: '' }]);
+  it('keeps blank-name ids stable across rebuilds from the same inputs', () => {
+    // The launch dialog applies the roster twice per open (sync pass, then the
+    // saved-request pass), so an unnamed row must not get a fresh id each time.
+    const inputs = [{ name: 'alice' }, { name: '' }, { name: '   ' }];
 
-    expect(first.id).toBeTruthy();
-    expect(second.id).toBeTruthy();
-    // Blank names have no stable identity — generated ids stay unique.
-    expect(first.id).not.toBe(second.id);
+    const first = createMemberDraftsFromInputs(inputs);
+    const second = createMemberDraftsFromInputs(inputs);
+
+    expect(first.map((draft) => draft.id)).toEqual(second.map((draft) => draft.id));
+    expect(new Set(first.map((draft) => draft.id)).size).toBe(3);
+    expect(first.every((draft) => Boolean(draft.id))).toBe(true);
+  });
+
+  it('does not let a blank-name fallback id collide with a real member name', () => {
+    const drafts = createMemberDraftsFromInputs([{ name: 'unnamed-1' }, { name: '' }]);
+
+    expect(drafts[0].id).toBe('unnamed-1');
+    expect(drafts[1].id).not.toBe(drafts[0].id);
   });
 
   it('does not let removed members consume dedupe suffixes', () => {

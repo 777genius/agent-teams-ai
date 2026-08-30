@@ -56,10 +56,11 @@ export function createMemberDraft(initial?: Partial<MemberDraft>): MemberDraft {
 
 // Deterministic id per member name: rebuilding drafts from the same inputs
 // (e.g. dialog hydration refires) must not change ids, or roster rows remount
-// and lose focus/local edit state.
-function deterministicMemberDraftId(name: string, usedIds: Set<string>): string | undefined {
-  const base = name.trim().toLowerCase();
-  if (!base) return undefined;
+// and lose focus/local edit state. Unnamed rows have no name to key on, so they
+// fall back to their position; the shared dedupe keeps that from colliding with
+// a member literally named `unnamed-<n>`.
+function deterministicMemberDraftId(name: string, index: number, usedIds: Set<string>): string {
+  const base = name.trim().toLowerCase() || `unnamed-${index}`;
   let candidate = base;
   let suffix = 2;
   while (usedIds.has(candidate)) {
@@ -89,12 +90,12 @@ export function createMemberDraftsFromInputs(
   const usedIds = new Set<string>();
   return members
     .filter((member) => !member.removedAt)
-    .map((member) => {
+    .map((member, index) => {
       const role = typeof member.role === 'string' ? member.role.trim() : '';
       const presetRoles: readonly string[] = PRESET_ROLES;
       const isPreset = presetRoles.includes(role);
       return createMemberDraft({
-        id: deterministicMemberDraftId(member.name, usedIds),
+        id: deterministicMemberDraftId(member.name, index, usedIds),
         name: member.name,
         originalName: member.name,
         roleSelection: role ? (isPreset ? role : CUSTOM_ROLE) : '',
