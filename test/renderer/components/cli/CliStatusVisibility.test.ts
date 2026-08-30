@@ -3145,10 +3145,29 @@ describe('CLI status visibility during completed install state', () => {
       authLoggedIn: true,
       providers: [
         createCodexNativeRolloutProvider({
-          authenticated: false,
-          authMethod: null,
-          verificationState: 'unknown',
+          authenticated: true,
+          authMethod: 'chatgpt',
+          verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           statusMessage: 'Connect a ChatGPT account to use your Codex subscription.',
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'codex',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-01T00:00:00.000Z',
+            staleAt: '2099-08-01T00:00:00.000Z',
+            defaultModelId: 'gpt-5-codex',
+            defaultLaunchModel: 'gpt-5-codex',
+            models: [
+              {
+                id: 'gpt-5-codex',
+                launchModel: 'gpt-5-codex',
+                displayName: 'GPT-5 Codex',
+              },
+            ],
+          },
           connection: {
             supportsOAuth: false,
             supportsApiKey: true,
@@ -3549,7 +3568,40 @@ describe('CLI status visibility during completed install state', () => {
   it('applies the live Codex snapshot even while the dashboard is still on multimodel loading placeholder state', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
-    storeState.cliStatus = null;
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'agent_teams_orchestrator',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      providers: [
+        createDeferredMultimodelProvider('anthropic', 'Anthropic'),
+        createCodexNativeRolloutProvider({
+          state: 'ready',
+          available: true,
+          statusCheckOutcome: 'authoritative',
+          modelCatalogRefreshState: 'ready',
+          modelCatalog: {
+            schemaVersion: 1,
+            providerId: 'codex',
+            source: 'app-server',
+            status: 'ready',
+            fetchedAt: '2026-08-01T00:00:00.000Z',
+            staleAt: '2099-08-01T00:00:00.000Z',
+            defaultModelId: 'gpt-5-codex',
+            defaultLaunchModel: 'gpt-5-codex',
+            models: [
+              {
+                id: 'gpt-5-codex',
+                launchModel: 'gpt-5-codex',
+                displayName: 'GPT-5 Codex',
+              },
+            ],
+          },
+        }),
+        createDeferredMultimodelProvider('opencode', 'OpenCode'),
+      ],
+    });
     storeState.cliStatusLoading = true;
     codexAccountHookState.snapshot = {
       preferredAuthMode: 'auto',

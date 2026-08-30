@@ -76,6 +76,11 @@ vi.mock('@main/services/team/cliFlavor', () => ({
 }));
 
 vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
+  buildPassiveProviderStatusCliEnv: vi.fn(() => ({
+    env: { HOME: '/Users/tester' },
+    connectionIssues: {},
+    providerArgs: [],
+  })),
   buildProviderAwareCliEnv: vi.fn(async () => ({
     env: { HOME: '/Users/tester' },
     connectionIssues: {},
@@ -122,6 +127,14 @@ function createTestProviderStatus(
   authenticated: boolean,
   authMethod: string | null
 ): CliProviderStatus {
+  const defaultModel =
+    {
+      anthropic: 'opus',
+      codex: 'gpt-5.4',
+      gemini: 'gemini-2.5-pro',
+      opencode: 'opencode/big-pickle',
+    }[providerId] ?? `${providerId}/default`;
+
   return {
     providerId,
     displayName: providerId,
@@ -129,11 +142,12 @@ function createTestProviderStatus(
     authenticated,
     authMethod,
     verificationState: authenticated ? 'verified' : 'unknown',
+    statusCheckOutcome: 'authoritative',
     modelVerificationState: 'idle',
-    modelCatalogRefreshState: 'idle',
+    modelCatalogRefreshState: 'ready',
     statusMessage: null,
     detailMessage: null,
-    models: [],
+    models: [defaultModel],
     modelAvailability: [],
     runtimeCapabilities: null,
     subscriptionRateLimits: null,
@@ -149,7 +163,32 @@ function createTestProviderStatus(
     externalRuntimeDiagnostics: [],
     backend: null,
     connection: null,
-    modelCatalog: null,
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId,
+      source: 'static-fallback',
+      status: 'ready',
+      fetchedAt: '2026-08-29T00:00:00.000Z',
+      staleAt: '2100-08-29T00:10:00.000Z',
+      defaultModelId: defaultModel,
+      defaultLaunchModel: defaultModel,
+      models: [
+        {
+          id: defaultModel,
+          launchModel: defaultModel,
+          displayName: defaultModel,
+          hidden: false,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: ['text'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'static-fallback',
+        },
+      ],
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
   };
 }
 
@@ -171,6 +210,44 @@ describe('CliInstallerService', () => {
       showBinaryPath: true,
     });
     service = new CliInstallerService();
+  });
+
+  it('projects cached snapshots without mutating authoritative source evidence', () => {
+    const staleAt = Date.parse('2026-08-29T00:10:00.000Z');
+    const provider = createTestProviderStatus('codex', true, 'chatgpt');
+    provider.modelCatalog = { ...provider.modelCatalog!, staleAt: new Date(staleAt).toISOString() };
+    const source = {
+      flavor: 'agent_teams_orchestrator' as const,
+      displayName: 'Runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      installed: true,
+      installedVersion: '1.0.0',
+      binaryPath: '/fake/runtime',
+      launchError: null,
+      latestVersion: null,
+      updateAvailable: false,
+      authLoggedIn: true,
+      authStatusChecking: false,
+      authMethod: 'chatgpt',
+      providers: [provider],
+    };
+    let now = staleAt - 1;
+    service = new CliInstallerService(() => now);
+    (service as unknown as { latestStatusSnapshot: typeof source }).latestStatusSnapshot = source;
+
+    expect(service.getLatestStatusSnapshot()?.providers[0].capabilities.teamLaunch).toBe(true);
+    now = staleAt;
+    const expired = service.getLatestStatusSnapshot()!;
+    expect(expired.providers[0]).toMatchObject({
+      authenticated: true,
+      authMethod: 'chatgpt',
+      verificationState: 'verified',
+      capabilities: { teamLaunch: false },
+    });
+    expect(provider.capabilities.teamLaunch).toBe(true);
+    expect(provider.modelCatalog?.status).toBe('ready');
   });
 
   describe('getStatus', () => {
@@ -347,6 +424,49 @@ describe('CliInstallerService', () => {
       expect(service.getLatestStatusSnapshot()?.authLoggedIn).toBe(false);
     });
 
+    it('sanitizes stale catalog authority before publishing aggregate authentication', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'agent_teams_orchestrator',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/agent_teams_orchestrator');
+      vi.mocked(execCli).mockResolvedValueOnce({ stdout: '2.3.4', stderr: '' });
+      const provider = createTestProviderStatus('opencode', true, 'opencode_managed');
+      provider.runtimeCapabilities = { modelCatalog: { dynamic: true, source: 'runtime' } };
+      provider.modelCatalog = {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'stale',
+        fetchedAt: '2026-08-29T00:00:00.000Z',
+        staleAt: '2026-08-29T00:10:00.000Z',
+        defaultModelId: 'openai/model',
+        defaultLaunchModel: 'openai/model',
+        models: [],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      };
+      vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses').mockImplementation(
+        async (_binaryPath, onUpdate) => {
+          onUpdate?.([provider]);
+          return [provider];
+        }
+      );
+
+      const status = await service.getStatus();
+
+      expect(status).toMatchObject({ authLoggedIn: true, authMethod: 'opencode_managed' });
+      expect(status.providers[0]).toMatchObject({
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        modelCatalog: { status: 'stale' },
+        capabilities: { teamLaunch: false },
+      });
+    });
+
     it('defers multimodel provider status probes during lightweight startup status checks', async () => {
       allowConsoleLogs();
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
@@ -442,15 +562,41 @@ describe('CliInstallerService', () => {
         .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
         .mockResolvedValue(providerStatus);
 
+      await service.getStatus({ providerStatusMode: 'defer' });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockClear();
+      resolveInteractiveShellEnvBestEffortMock.mockClear();
+
       const status = await service.getProviderStatus('codex');
 
-      expect(status).toBe(providerStatus);
+      expect(status).toEqual(providerStatus);
+      expect(status).not.toBe(providerStatus);
       expect(execCli).not.toHaveBeenCalled();
+      expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+      expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
       expect(getProviderStatusSpy).toHaveBeenCalledWith(
         '/mock/agent_teams_orchestrator',
         'codex',
         expect.any(Function)
       );
+    });
+
+    it('fails closed without cold runtime or shell discovery on a passive provider refresh', async () => {
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      const getProviderStatusSpy = vi.spyOn(
+        ClaudeMultimodelBridgeService.prototype,
+        'getProviderStatus'
+      );
+
+      const status = await service.getProviderStatus('codex');
+
+      expect(status).toMatchObject({
+        providerId: 'codex',
+        authenticated: false,
+        capabilities: { teamLaunch: false },
+      });
+      expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
+      expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
+      expect(getProviderStatusSpy).not.toHaveBeenCalled();
     });
 
     it('retries the version probe once before marking the runtime unhealthy', async () => {
@@ -584,6 +730,7 @@ describe('CliInstallerService', () => {
               authenticated: true,
               authMethod: 'oauth_token',
               verificationState: 'verified',
+              statusCheckOutcome: 'authoritative',
               modelVerificationState: 'idle',
               statusMessage: null,
               models: [],
@@ -599,9 +746,34 @@ describe('CliInstallerService', () => {
               authenticated: true,
               authMethod: 'oauth_token',
               verificationState: 'verified',
+              statusCheckOutcome: 'authoritative',
               modelVerificationState: 'idle',
+              modelCatalogRefreshState: 'ready',
               statusMessage: null,
               models: ['gpt-5.4', 'gpt-5.4-mini'],
+              modelCatalog: {
+                schemaVersion: 1,
+                providerId: 'codex',
+                source: 'app-server',
+                status: 'ready',
+                fetchedAt: '2026-08-29T00:00:00.000Z',
+                staleAt: '2026-08-29T00:10:00.000Z',
+                defaultModelId: 'gpt-5.4',
+                defaultLaunchModel: 'gpt-5.4',
+                models: [
+                  {
+                    id: 'gpt-5.4',
+                    launchModel: 'gpt-5.4',
+                    displayName: 'GPT-5.4',
+                  },
+                  {
+                    id: 'gpt-5.4-mini',
+                    launchModel: 'gpt-5.4-mini',
+                    displayName: 'GPT-5.4 mini',
+                  },
+                ],
+                diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+              },
               modelAvailability: [],
               canLoginFromUi: true,
               capabilities: { teamLaunch: true, oneShot: true },
@@ -905,7 +1077,7 @@ describe('CliInstallerService', () => {
       expect(verifiedProvider?.modelAvailability).toEqual([]);
     });
 
-    it('keeps non-empty OpenCode refresh models authoritative while preserving catalog metadata', async () => {
+    it('retains OpenCode catalog display metadata without preserving refresh authority', async () => {
       allowConsoleLogs();
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
       vi.mocked(getCliFlavorUiOptions).mockReturnValue({
@@ -931,6 +1103,7 @@ describe('CliInstallerService', () => {
           authenticated: true,
           authMethod: 'opencode_managed',
           verificationState: 'verified',
+          statusCheckOutcome: 'authoritative',
           modelVerificationState: 'idle',
           statusMessage: null,
           detailMessage: null,
@@ -999,6 +1172,7 @@ describe('CliInstallerService', () => {
         authenticated: true,
         authMethod: 'opencode_managed',
         verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
         modelVerificationState: 'idle',
         statusMessage: null,
         detailMessage: null,
@@ -1028,12 +1202,22 @@ describe('CliInstallerService', () => {
       const opencode = latestSnapshot?.providers.find(
         (provider) => provider.providerId === 'opencode'
       );
-      expect(opencode?.models).toEqual(['opencode/big-pickle']);
+      expect(opencode?.models).toEqual([
+        'opencode/big-pickle',
+        'openai/gpt-5.4',
+        'openrouter/openai/gpt-oss-20b:free',
+      ]);
       expect(opencode?.modelCatalog?.models.map((model) => model.id)).toEqual([
         'opencode/big-pickle',
         'openai/gpt-5.4',
       ]);
-      expect(opencode?.modelCatalogRefreshState).toBe('ready');
+      expect(opencode).toMatchObject({
+        authenticated: true,
+        authMethod: 'opencode_managed',
+        capabilities: { teamLaunch: false },
+        modelCatalog: { status: 'stale' },
+        modelCatalogRefreshState: 'loading',
+      });
     });
   });
 
@@ -1202,7 +1386,7 @@ describe('CliInstallerService', () => {
       expect(status.authMethod).toBe('api_key');
     });
 
-    it('returns multimodel metadata before provider status hydration finishes', async () => {
+    it('does not publish provider authority after the initial hydration wait times out', async () => {
       allowConsoleLogs();
       vi.useFakeTimers();
 
@@ -1230,7 +1414,7 @@ describe('CliInstallerService', () => {
       const status = await statusPromise;
       expect(status.installed).toBe(true);
       expect(status.installedVersion).toBe('0.0.45');
-      expect(status.authStatusChecking).toBe(true);
+      expect(status.authStatusChecking).toBe(false);
       expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(
         true
       );
@@ -1245,9 +1429,9 @@ describe('CliInstallerService', () => {
 
       const latest = service.getLatestStatusSnapshot();
       expect(latest?.authStatusChecking).toBe(false);
-      expect(latest?.authLoggedIn).toBe(true);
-      expect(latest?.authMethod).toBe('oauth_token');
-      expect(status.authStatusChecking).toBe(true);
+      expect(latest?.authLoggedIn).toBe(false);
+      expect(latest?.authMethod).toBeNull();
+      expect(status.authStatusChecking).toBe(false);
       expect(status.authLoggedIn).toBe(false);
       expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(
         true
