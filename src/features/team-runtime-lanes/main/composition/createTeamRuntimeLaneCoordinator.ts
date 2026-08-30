@@ -2,8 +2,8 @@ import { buildMixedPersistedLaunchSnapshot } from '@features/team-runtime-lanes/
 import {
   fromProvisioningMembers,
   isOpenCodeSideLanePlan,
-  TeamRuntimeLanePlanningError,
   type TeamRuntimeLanePlan,
+  TeamRuntimeLanePlanningError,
 } from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
 
 import type { PersistedTeamLaunchSnapshot, TeamCreateRequest, TeamProviderId } from '@shared/types';

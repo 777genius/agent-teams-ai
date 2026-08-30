@@ -1,5 +1,8 @@
+import {
+  type TeamRuntimeLanePlan,
+  TeamRuntimeLanePlanningError,
+} from '@features/team-runtime-lanes';
 import { type TeamRuntimeLaneCoordinator } from '@features/team-runtime-lanes/main';
-import { TeamRuntimeLanePlanningError } from '@features/team-runtime-lanes/core/domain/planTeamRuntimeLanes';
 
 import { TeamLaunchValidationError } from './TeamLaunchValidationError';
 import { isPureOpenCodeProvisioningRequest } from './TeamProvisioningLaunchCompatibility';
@@ -8,7 +11,6 @@ import {
   type MixedSecondaryRuntimeLaneState,
 } from './TeamProvisioningSecondaryRuntimeRuns';
 
-import type { TeamRuntimeLanePlan } from '@features/team-runtime-lanes';
 import type { TeamCreateRequest, TeamProviderId } from '@shared/types';
 
 export function shouldRouteOpenCodeToRuntimeAdapter(
