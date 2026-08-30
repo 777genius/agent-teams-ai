@@ -18,12 +18,15 @@ interface LiveSmokeRuntimeModule {
 describe('live smoke runtime launcher paths', () => {
   const repoRoot = '/Users/belief/dev/projects/claude/claude_team';
   const siblingRuntimeRoot = '/Users/belief/dev/projects/claude/agent_teams_orchestrator';
+  // The module resolves its paths, which on Windows also anchors them to the
+  // current drive; the expectations have to go through the same resolution.
+  const expectedPath = (...segments: string[]): string => path.resolve(...segments);
 
   it('defaults live smoke to the source launcher', async () => {
     const { resolveLiveSmokeOrchestratorCliPath } = await loadModule();
 
     expect(resolveLiveSmokeOrchestratorCliPath({ env: {}, repoRoot })).toBe(
-      path.join(siblingRuntimeRoot, 'cli-source')
+      expectedPath(siblingRuntimeRoot, 'cli-source')
     );
   });
 
@@ -35,7 +38,7 @@ describe('live smoke runtime launcher paths', () => {
         env: { CLAUDE_DEV_RUNTIME_ROOT: '/tmp/runtime-source' },
         repoRoot,
       })
-    ).toBe(path.join('/tmp/runtime-source', 'cli-source'));
+    ).toBe(expectedPath('/tmp/runtime-source', 'cli-source'));
   });
 
   it('keeps explicit CLI path overrides authoritative', async () => {
@@ -53,7 +56,7 @@ describe('live smoke runtime launcher paths', () => {
     const { resolveReleaseSmokeOrchestratorCliPath } = await loadModule();
 
     expect(resolveReleaseSmokeOrchestratorCliPath({ env: {}, repoRoot })).toBe(
-      path.join(siblingRuntimeRoot, 'cli')
+      expectedPath(siblingRuntimeRoot, 'cli')
     );
   });
 });

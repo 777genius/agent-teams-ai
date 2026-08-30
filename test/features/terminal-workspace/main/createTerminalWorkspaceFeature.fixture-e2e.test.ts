@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -371,7 +372,7 @@ describe('terminal workspace feature composition fixture-e2e', () => {
     process.env.CLAUDE_TERMINAL_PLATFORM_ROOT = path.join(tempRoot, 'terminal-platform');
 
     expect(terminalWorkspaceFeatureTestInternals.resolveTerminalNodePackageSpecifier()).toBe(
-      `file://${terminalNodePackagePath}`
+      pathToFileURL(terminalNodePackagePath).href
     );
   });
 
@@ -400,7 +401,7 @@ describe('terminal workspace feature composition fixture-e2e', () => {
       bundledRoot
     );
     expect(terminalWorkspaceFeatureTestInternals.resolveTerminalNodePackageSpecifier()).toBe(
-      `file://${terminalNodePackagePath}`
+      pathToFileURL(terminalNodePackagePath).href
     );
     await expect(terminalWorkspaceFeatureTestInternals.resolveDaemonBinaryPath()).resolves.toBe(
       daemonPath
