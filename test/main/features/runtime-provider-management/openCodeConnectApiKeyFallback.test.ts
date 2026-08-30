@@ -131,9 +131,9 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
     );
     fetchMock.mockResolvedValue(new Response('{"data": []}', { status: 200 }));
     let storeAtViewTime: Record<string, unknown> | null = null;
-    host.loadView.mockImplementation(async () => {
+    host.loadView.mockImplementation(() => {
       storeAtViewTime = readStore(authStorePath);
-      return createViewResponse([createProviderConnection('anthropic', 'connected')]);
+      return Promise.resolve(createViewResponse([createProviderConnection('anthropic', 'connected')]));
     });
 
     const response = await recover(createVerifyFailureResponse());
@@ -192,9 +192,9 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
     fs.writeFileSync(authStorePath, JSON.stringify({ cursor: { type: 'oauth' } }));
     fetchMock.mockResolvedValue(new Response('{"data": []}', { status: 200 }));
     let storeAtViewTime: Record<string, unknown> | null = null;
-    host.loadView.mockImplementation(async () => {
+    host.loadView.mockImplementation(() => {
       storeAtViewTime = readStore(authStorePath);
-      return createViewResponse([createProviderConnection('anthropic', 'not-connected')]);
+      return Promise.resolve(createViewResponse([createProviderConnection('anthropic', 'not-connected')]));
     });
 
     const original = createVerifyFailureResponse();
@@ -394,13 +394,13 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
 
   it('leaves a concurrently replaced credential alone instead of rolling it back', async () => {
     fetchMock.mockResolvedValue(new Response('{"data": []}', { status: 200 }));
-    host.loadView.mockImplementation(async () => {
+    host.loadView.mockImplementation(() => {
       // Another writer replaces the entry between the commit and the rollback.
       fs.writeFileSync(
         authStorePath,
         JSON.stringify({ anthropic: { type: 'api', key: 'sk-ant-other-key-000000' } })
       );
-      return createViewResponse([]);
+      return Promise.resolve(createViewResponse([]));
     });
 
     await recover(createVerifyFailureResponse());
