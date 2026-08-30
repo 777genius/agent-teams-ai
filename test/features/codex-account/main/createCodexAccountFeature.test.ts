@@ -132,8 +132,10 @@ vi.mock(
         return structuredClone(loginStateContainer.current);
       }
 
-      async start(): Promise<void> {
-        await loginStartMock();
+      // Mirrors the real manager: `false` means the request was a no-op because a login
+      // was already starting or pending. Tests that do not care opt into a real start.
+      async start(): Promise<boolean> {
+        return (await loginStartMock()) !== false;
       }
 
       async cancel(): Promise<void> {
@@ -1777,6 +1779,196 @@ describe('createCodexAccountFeature', () => {
         ).toBe(true);
       });
     } finally {
+      await feature.dispose();
+    }
+  });
+
+  it('shares one real token rotation across sequential forced refreshes inside the reuse window', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const dateNowSpy = vi.spyOn(Date, 'now');
+
+    try {
+      dateNowSpy.mockReturnValue(1_776_000_000_000);
+      const firstSnapshot = await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      dateNowSpy.mockReturnValue(1_776_000_001_000);
+      const secondSnapshot = await feature.refreshSnapshot({ forceRefreshToken: true });
+      dateNowSpy.mockReturnValue(1_776_000_002_000);
+      const thirdSnapshot = await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      // Past the snapshot cache but still inside the reuse window: a real read happens, yet
+      // the refresh token is not rotated again.
+      dateNowSpy.mockReturnValue(1_776_000_010_000);
+      const fourthSnapshot = await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      for (const snapshot of [firstSnapshot, secondSnapshot, thirdSnapshot, fourthSnapshot]) {
+        expect(snapshot.managedAccount?.email).toBe('user@example.com');
+      }
+      expect(readAccountMock).toHaveBeenCalledTimes(2);
+      expect(readAccountMock.mock.calls[0]?.[0]).toMatchObject({ refreshToken: true });
+      expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({ refreshToken: false });
+      expect(
+        readAccountMock.mock.calls.filter(
+          (call) => (call[0] as { refreshToken?: boolean } | undefined)?.refreshToken === true
+        )
+      ).toHaveLength(1);
+    } finally {
+      dateNowSpy.mockRestore();
+      await feature.dispose();
+    }
+  });
+
+  it('forces a fresh token rotation once the reuse window has elapsed', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const dateNowSpy = vi.spyOn(Date, 'now');
+
+    try {
+      dateNowSpy.mockReturnValue(1_776_000_000_000);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      dateNowSpy.mockReturnValue(1_776_000_030_001);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      expect(readAccountMock).toHaveBeenCalledTimes(2);
+      expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({ refreshToken: true });
+    } finally {
+      dateNowSpy.mockRestore();
+      await feature.dispose();
+    }
+  });
+
+  it('rotates the token again inside the reuse window after an explicit login start', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const dateNowSpy = vi.spyOn(Date, 'now');
+
+    try {
+      dateNowSpy.mockReturnValue(1_776_000_000_000);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      dateNowSpy.mockReturnValue(1_776_000_001_000);
+      await feature.startChatgptLogin();
+
+      dateNowSpy.mockReturnValue(1_776_000_002_000);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      expect(loginStartMock).toHaveBeenCalledTimes(1);
+      expect(readAccountMock).toHaveBeenCalledTimes(2);
+      expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({ refreshToken: true });
+    } finally {
+      dateNowSpy.mockRestore();
+      await feature.dispose();
+    }
+  });
+
+  it('keeps the reuse window after a duplicate login start the manager ignored', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+    // A second login request while one is already starting or pending is a no-op inside
+    // the manager: no app-server is spawned and the credentials are untouched. Resetting
+    // the reuse window for it would rotate the refresh token again for nothing.
+    loginStartMock.mockResolvedValue(false);
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const dateNowSpy = vi.spyOn(Date, 'now');
+
+    try {
+      dateNowSpy.mockReturnValue(1_776_000_000_000);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      dateNowSpy.mockReturnValue(1_776_000_001_000);
+      await feature.startChatgptLogin();
+
+      dateNowSpy.mockReturnValue(1_776_000_010_000);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      expect(loginStartMock).toHaveBeenCalledTimes(1);
+      expect(readAccountMock).toHaveBeenCalledTimes(2);
+      expect(readAccountMock.mock.calls[0]?.[0]).toMatchObject({ refreshToken: true });
+      expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({ refreshToken: false });
+    } finally {
+      dateNowSpy.mockRestore();
+      await feature.dispose();
+    }
+  });
+
+  it('rotates the token again inside the reuse window after an explicit logout', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+    readRateLimitsMock.mockResolvedValue(createRateLimitsResponse());
+    logoutMock.mockResolvedValue({});
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const dateNowSpy = vi.spyOn(Date, 'now');
+
+    try {
+      dateNowSpy.mockReturnValue(1_776_000_000_000);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      dateNowSpy.mockReturnValue(1_776_000_001_000);
+      await feature.logout();
+
+      expect(logoutMock).toHaveBeenCalledTimes(1);
+      expect(readAccountMock).toHaveBeenCalledTimes(2);
+      expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({
+        includeRateLimits: true,
+        refreshToken: true,
+      });
+    } finally {
+      dateNowSpy.mockRestore();
       await feature.dispose();
     }
   });

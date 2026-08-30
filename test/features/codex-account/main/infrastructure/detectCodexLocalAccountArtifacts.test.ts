@@ -247,6 +247,102 @@ describe('detectCodexLocalAccountArtifacts', () => {
     });
   });
 
+  it('ignores a stale legacy auth.json without deleting it when the accounts registry is absent', async () => {
+    const { codexHome, accountsDir } = await makeCodexHome();
+    const legacyAuthPath = path.join(codexHome, 'auth.json');
+    await writeFile(
+      legacyAuthPath,
+      JSON.stringify({ auth_mode: 'chatgpt', tokens: { refresh_token: 'legacy-refresh-token' } }),
+      'utf8'
+    );
+    const staleDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await utimes(legacyAuthPath, staleDate, staleDate);
+
+    await expect(detectCodexLocalAccountState(accountsDir)).resolves.toEqual({
+      hasArtifacts: true,
+      hasActiveChatgptAccount: false,
+    });
+    await expect(resolveCodexActiveChatgptAuthFile(accountsDir)).resolves.toBeNull();
+    await expect(readFile(legacyAuthPath, 'utf8')).resolves.toContain('legacy-refresh-token');
+  });
+
+  it('trusts a stale last_refresh in legacy auth.json content over a fresh file mtime', async () => {
+    const { codexHome, accountsDir } = await makeCodexHome();
+    await writeFile(
+      path.join(codexHome, 'auth.json'),
+      JSON.stringify({
+        auth_mode: 'chatgpt',
+        last_refresh: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+        tokens: { refresh_token: 'legacy-refresh-token' },
+      }),
+      'utf8'
+    );
+
+    await expect(resolveCodexActiveChatgptAuthFile(accountsDir)).resolves.toBeNull();
+  });
+
+  it('accepts a fresh last_refresh in legacy auth.json even when the file mtime is old', async () => {
+    const { codexHome, accountsDir } = await makeCodexHome();
+    const legacyAuthPath = path.join(codexHome, 'auth.json');
+    await writeFile(
+      legacyAuthPath,
+      JSON.stringify({
+        auth_mode: 'chatgpt',
+        last_refresh: new Date().toISOString(),
+        tokens: { refresh_token: 'legacy-refresh-token' },
+      }),
+      'utf8'
+    );
+    const staleDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await utimes(legacyAuthPath, staleDate, staleDate);
+
+    await expect(resolveCodexActiveChatgptAuthFile(accountsDir)).resolves.toMatchObject({
+      authFilePath: legacyAuthPath,
+      source: 'legacy',
+    });
+  });
+
+  it('does not treat a future last_refresh as fresh', async () => {
+    const { codexHome, accountsDir } = await makeCodexHome();
+    const legacyAuthPath = path.join(codexHome, 'auth.json');
+    await writeFile(
+      legacyAuthPath,
+      JSON.stringify({
+        auth_mode: 'chatgpt',
+        last_refresh: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        tokens: { refresh_token: 'legacy-refresh-token' },
+      }),
+      'utf8'
+    );
+
+    await expect(resolveCodexActiveChatgptAuthFile(accountsDir)).resolves.toBeNull();
+  });
+
+  it('keeps reporting local artifacts for a 15-day-old legacy login instead of erasing it', async () => {
+    // A legacy login just past the freshness window is withheld as a *trusted* active
+    // account (replaying its refresh token is what trips reuse detection), but it must
+    // still surface as local account data so callers keep the "reconnect" wording and
+    // the file itself is never touched. It is not a signed-out signal: launch readiness
+    // is decided by the authoritative `codex app-server` account read, not by this flag.
+    const { codexHome, accountsDir } = await makeCodexHome();
+    const legacyAuthPath = path.join(codexHome, 'auth.json');
+    await writeFile(
+      legacyAuthPath,
+      JSON.stringify({
+        auth_mode: 'chatgpt',
+        last_refresh: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+        tokens: { refresh_token: 'legacy-refresh-token' },
+      }),
+      'utf8'
+    );
+
+    await expect(detectCodexLocalAccountState(accountsDir)).resolves.toEqual({
+      hasArtifacts: true,
+      hasActiveChatgptAccount: false,
+    });
+    await expect(readFile(legacyAuthPath, 'utf8')).resolves.toContain('legacy-refresh-token');
+  });
+
   it('keeps artifact detection true but selected-account detection false when the active auth file is missing', async () => {
     const { accountsDir } = await makeCodexHome();
     await writeFile(
