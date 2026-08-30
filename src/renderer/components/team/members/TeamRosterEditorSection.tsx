@@ -40,6 +40,7 @@ interface TeamRosterEditorSectionProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
   onEffortChange: (effort: string) => void;
+  onEffortAutoReset?: () => void;
   onLimitContextChange: (value: boolean) => void;
   syncModelsWithTeammates: boolean;
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
@@ -99,6 +100,7 @@ const TeamRosterEditorSectionImpl = ({
   onProviderChange,
   onModelChange,
   onEffortChange,
+  onEffortAutoReset,
   onLimitContextChange,
   syncModelsWithTeammates,
   onSyncModelsWithTeammatesChange,
@@ -197,6 +199,7 @@ const TeamRosterEditorSectionImpl = ({
             onProviderChange={onProviderChange}
             onModelChange={onModelChange}
             onEffortChange={onEffortChange}
+            onEffortAutoReset={onEffortAutoReset}
             onLimitContextChange={onLimitContextChange}
             syncModelsWithTeammates={syncModelsWithTeammates}
             onSyncModelsWithTeammatesChange={onSyncModelsWithTeammatesChange}

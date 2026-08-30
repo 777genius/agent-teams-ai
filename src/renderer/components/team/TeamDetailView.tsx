@@ -120,6 +120,9 @@ const sumInjectionTokens = tokenMath[
 const LaunchTeamDialog = lazy(() =>
   import('./dialogs/LaunchTeamDialog').then((m) => ({ default: m.LaunchTeamDialog }))
 );
+// Stable empty roster for the draft view: an inline [] would change identity
+// every render and retrigger LaunchTeamDialog's hydration effect.
+const EMPTY_RESOLVED_MEMBERS: ResolvedTeamMember[] = [];
 const ProjectEditorOverlay = lazy(() =>
   import('./editor/ProjectEditorOverlay').then((m) => ({ default: m.ProjectEditorOverlay }))
 );
@@ -1980,7 +1983,7 @@ export const TeamDetailView = memo(function TeamDetailView({
     : null;
   const hasSelectedTeamData = data !== null;
   const membersWithLiveBranches = useMemo(() => {
-    if (!hasSelectedTeamData) return [];
+    if (!hasSelectedTeamData) return EMPTY_RESOLVED_MEMBERS;
 
     return members.map((member) => {
       const memberPath = member.cwd?.trim();
@@ -2887,65 +2890,39 @@ export const TeamDetailView = memo(function TeamDetailView({
       const draftMemberCount = draftTeamSummary?.memberCount ?? 0;
 
       return (
-        <>
-          <div className="size-full overflow-auto p-6">
-            <div ref={provisioningBannerRef}>
-              <TeamProvisioningBanner teamName={teamName} />
-            </div>
-            <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
-              <div className="max-w-md text-center">
-                <p className="text-sm font-medium text-text">{t('detail.draft.title')}</p>
-                <p className="mt-2 text-xs text-text-secondary">
-                  {t('detail.draft.descriptionPrefix')} <strong>{draftDisplayName}</strong>{' '}
-                  {t('detail.draft.descriptionSuffix', {
-                    count: draftMemberCount,
-                    member: t('detail.draft.member', { count: draftMemberCount }),
-                  })}
-                </p>
-                <div className="mt-4 flex justify-center gap-2">
-                  <button
-                    className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
-                    onClick={() => openLaunchDialog('launch')}
-                  >
-                    {t('detail.actions.launch')}
-                  </button>
-                  <button
-                    className="rounded-md bg-surface-raised px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text"
-                    onClick={() => {
-                      void api.teams.deleteDraft(teamName).catch(() => {});
-                    }}
-                  >
-                    {t('detail.actions.delete')}
-                  </button>
-                </div>
+        <div className="size-full overflow-auto p-6">
+          <div ref={provisioningBannerRef}>
+            <TeamProvisioningBanner teamName={teamName} />
+          </div>
+          <div className="flex min-h-[calc(100vh-12rem)] items-center justify-center">
+            <div className="max-w-md text-center">
+              <p className="text-sm font-medium text-text">{t('detail.draft.title')}</p>
+              <p className="mt-2 text-xs text-text-secondary">
+                {t('detail.draft.descriptionPrefix')} <strong>{draftDisplayName}</strong>{' '}
+                {t('detail.draft.descriptionSuffix', {
+                  count: draftMemberCount,
+                  member: t('detail.draft.member', { count: draftMemberCount }),
+                })}
+              </p>
+              <div className="mt-4 flex justify-center gap-2">
+                <button
+                  className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500"
+                  onClick={() => openLaunchDialog('launch')}
+                >
+                  {t('detail.actions.launch')}
+                </button>
+                <button
+                  className="rounded-md bg-surface-raised px-4 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:text-text"
+                  onClick={() => {
+                    void api.teams.deleteDraft(teamName).catch(() => {});
+                  }}
+                >
+                  {t('detail.actions.delete')}
+                </button>
               </div>
             </div>
           </div>
-          {launchDialogOpen && (
-            <Suspense
-              fallback={
-                <LaunchTeamDialogLoadingFallback
-                  mode={launchDialogState.mode}
-                  teamName={teamName}
-                  onClose={closeLaunchDialog}
-                />
-              }
-            >
-              <LaunchTeamDialog
-                mode={launchDialogState.mode}
-                open={launchDialogOpen}
-                teamName={teamName}
-                members={[]}
-                defaultProjectPath={draftTeamSummary?.projectPath}
-                provisioningError={provisioningError}
-                clearProvisioningError={clearProvisioningError}
-                onClose={closeLaunchDialog}
-                onLaunch={handleLaunchDialogSubmit}
-                onRelaunch={handleRelaunchDialogSubmit}
-              />
-            </Suspense>
-          )}
-        </>
+        </div>
       );
     }
 
@@ -3662,32 +3639,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                 </Dialog>
               )}
 
-              {launchDialogOpen && (
-                <Suspense
-                  fallback={
-                    <LaunchTeamDialogLoadingFallback
-                      mode={launchDialogState.mode}
-                      teamName={teamName}
-                      onClose={closeLaunchDialog}
-                    />
-                  }
-                >
-                  <LaunchTeamDialog
-                    mode={launchDialogState.mode}
-                    open={launchDialogOpen}
-                    teamName={teamName}
-                    members={membersWithLiveBranches}
-                    defaultProjectPath={data.config.projectPath}
-                    provisioningError={provisioningError}
-                    clearProvisioningError={clearProvisioningError}
-                    activeTeams={activeTeamsForLaunch}
-                    onClose={closeLaunchDialog}
-                    onLaunch={handleLaunchDialogSubmit}
-                    onRelaunch={handleRelaunchDialogSubmit}
-                  />
-                </Suspense>
-              )}
-
               {sendDialogOpen && (
                 <Suspense fallback={null}>
                   <SendMessageDialogBridge
@@ -3825,11 +3776,44 @@ export const TeamDetailView = memo(function TeamDetailView({
     );
   };
 
+  // The launch dialog renders outside renderBody's branches so a branch change
+  // (e.g. draft view → provisioning view after Launch) does not unmount it and
+  // discard in-progress user edits. The draft view has no resolved members yet.
+  const isDraftTeamView = error === 'TEAM_DRAFT';
+  const launchDialogDefaultProjectPath = isDraftTeamView
+    ? useStore.getState().teamByName[teamName]?.projectPath
+    : data?.config.projectPath;
+
   return (
     <>
       {spawnStatusWatcher}
       {teamAgentRuntimeWatcher}
       {renderBody()}
+      {launchDialogOpen && (
+        <Suspense
+          fallback={
+            <LaunchTeamDialogLoadingFallback
+              mode={launchDialogState.mode}
+              teamName={teamName}
+              onClose={closeLaunchDialog}
+            />
+          }
+        >
+          <LaunchTeamDialog
+            mode={launchDialogState.mode}
+            open={launchDialogOpen}
+            teamName={teamName}
+            members={isDraftTeamView ? EMPTY_RESOLVED_MEMBERS : membersWithLiveBranches}
+            defaultProjectPath={launchDialogDefaultProjectPath}
+            provisioningError={provisioningError}
+            clearProvisioningError={clearProvisioningError}
+            activeTeams={isDraftTeamView ? undefined : activeTeamsForLaunch}
+            onClose={closeLaunchDialog}
+            onLaunch={handleLaunchDialogSubmit}
+            onRelaunch={handleRelaunchDialogSubmit}
+          />
+        </Suspense>
+      )}
     </>
   );
 });

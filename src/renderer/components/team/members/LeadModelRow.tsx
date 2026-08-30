@@ -44,6 +44,7 @@ interface LeadModelRowProps {
   onProviderChange: (providerId: TeamProviderId) => void;
   onModelChange: (model: string) => void;
   onEffortChange: (effort: string) => void;
+  onEffortAutoReset?: () => void;
   onLimitContextChange: (value: boolean) => void;
   syncModelsWithTeammates: boolean;
   onSyncModelsWithTeammatesChange: (value: boolean) => void;
@@ -69,6 +70,7 @@ export const LeadModelRow = ({
   onProviderChange,
   onModelChange,
   onEffortChange,
+  onEffortAutoReset,
   onLimitContextChange,
   syncModelsWithTeammates,
   onSyncModelsWithTeammatesChange,
@@ -286,6 +288,7 @@ export const LeadModelRow = ({
           <EffortLevelSelector
             value={effort ?? ''}
             onValueChange={onEffortChange}
+            onAutoReset={onEffortAutoReset}
             id="lead-effort"
             providerId={providerId}
             model={model}
