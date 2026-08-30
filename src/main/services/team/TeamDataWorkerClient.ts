@@ -345,11 +345,11 @@ export class TeamDataWorkerClient {
    */
   private replayAdvisoryRunFloors(worker: Worker): void {
     for (const [teamName, runStartedAtMs] of this.advisoryRunFloorMsByTeam) {
-      const request = {
+      const request: TeamDataWorkerRequest = {
         id: makeId(),
         op: 'invalidateMemberRuntimeAdvisory',
         payload: { teamName, runStartedAtMs },
-      } as TeamDataWorkerRequest;
+      };
       try {
         worker.postMessage(request);
       } catch (error) {
