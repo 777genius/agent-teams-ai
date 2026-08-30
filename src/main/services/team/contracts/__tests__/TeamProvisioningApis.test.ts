@@ -318,11 +318,13 @@ describe('TeamProvisioning API binders', () => {
     interface TeamDataSource extends TeamHttpDataApi {
       readonly suffix: string;
       createdTeamName: string | null;
+      renamedDraft: string | null;
     }
 
     const source: TeamDataSource = {
       suffix: 'bound',
       createdTeamName: null,
+      renamedDraft: null,
       listTeams(this: TeamDataSource): Promise<TeamSummary[]> {
         return Promise.resolve([
           {
@@ -351,6 +353,14 @@ describe('TeamProvisioning API binders', () => {
         this.createdTeamName = request.teamName;
         return Promise.resolve();
       },
+      renameDraftTeam(
+        this: TeamDataSource,
+        oldTeamName: string,
+        newTeamName: string
+      ): Promise<void> {
+        this.renamedDraft = `${oldTeamName}->${newTeamName}-${this.suffix}`;
+        return Promise.resolve();
+      },
     };
 
     const api = bindTeamHttpDataApi(source);
@@ -373,6 +383,9 @@ describe('TeamProvisioning API binders', () => {
       members: [],
     } as TeamCreateConfigRequest);
     expect(source.createdTeamName).toBe('created-team');
+    const renameDraftTeam = api.renameDraftTeam.bind(undefined);
+    await renameDraftTeam('old-draft', 'new-draft');
+    expect(source.renamedDraft).toBe('old-draft->new-draft-bound');
   });
 
   it('groups HTTP route controls behind narrow facade ports', async () => {
