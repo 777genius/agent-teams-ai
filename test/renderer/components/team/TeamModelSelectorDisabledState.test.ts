@@ -62,6 +62,18 @@ async function hydrateFailClosedAuthorityClocks(): Promise<void> {
   });
 }
 
+// Real-timer counterpart for tests that keep real timers: the fail-closed
+// authority clocks publish their first reading from a setTimeout(0) callback,
+// and that dispatch only flushes when awaited inside act().
+async function flushFailClosedAuthorityClocks(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
 vi.mock('@renderer/components/ui/tabs', () => {
   let currentValue = '';
   let currentOnValueChange: ((value: string) => void) | null = null;
@@ -1811,11 +1823,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(openAiButton?.getAttribute('aria-disabled')).toBe('true');
     expect(openAiButton?.textContent).toContain('Unavailable');
     expect(bigPickleButton).not.toBeNull();
-    await act(async () => {
-      await vi.waitFor(() =>
-        expect(bigPickleButton?.getAttribute('aria-disabled')).toBe('false')
-      );
-    });
+    await flushFailClosedAuthorityClocks();
+    expect(bigPickleButton?.getAttribute('aria-disabled')).toBe('false');
 
     await act(async () => {
       openAiButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -4198,9 +4207,9 @@ describe('TeamModelSelector disabled Codex models', () => {
     ).toBe(true);
     expect(host.textContent).not.toContain('SuperGrok');
 
-    await act(async () => {
-      await vi.waitFor(() => expect(copilotTab?.hasAttribute('disabled')).toBe(false));
-    });
+    await flushFailClosedAuthorityClocks();
+    expect(copilotTab?.hasAttribute('disabled')).toBe(false);
+    expect(copilotTab?.getAttribute('aria-disabled')).toBeNull();
 
     await act(async () => {
       copilotTab?.click();
