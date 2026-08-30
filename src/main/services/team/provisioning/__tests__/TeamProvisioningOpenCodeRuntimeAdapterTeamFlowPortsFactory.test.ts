@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -62,7 +63,7 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterTeamFlowPortsFactory', () => {
     });
 
     await expect(ports.readTeamConfigRaw('alpha')).resolves.toBe('{"teamName":"alpha"}');
-    expect(readRegularFileUtf8).toHaveBeenCalledWith('/teams/alpha/config.json', {
+    expect(readRegularFileUtf8).toHaveBeenCalledWith(path.join('/teams', 'alpha', 'config.json'), {
       timeoutMs: TEAM_JSON_READ_TIMEOUT_MS,
       maxBytes: TEAM_CONFIG_MAX_BYTES,
     });
