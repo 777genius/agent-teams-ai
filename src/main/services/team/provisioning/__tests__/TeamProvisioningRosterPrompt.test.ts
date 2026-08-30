@@ -34,6 +34,34 @@ describe('getTeammateRosterMembers', () => {
       'cursor-worker',
     ]);
   });
+
+  it('keeps teammates whose free-form role merely contains "lead"', () => {
+    const roster: TeamCreateRequest['members'] = [
+      { name: 'team-lead', role: 'lead' },
+      { name: 'ana', role: 'Frontend lead' },
+      { name: 'ben', role: 'Tech Lead' },
+      { name: 'cleo', role: 'team leader' },
+      { name: 'dan', role: 'leadership coach' },
+    ];
+
+    expect(getTeammateRosterMembers(roster).map((member) => member.name)).toEqual([
+      'ana',
+      'ben',
+      'cleo',
+      'dan',
+    ]);
+  });
+
+  it('still excludes the lead by reserved role or canonical name', () => {
+    const roster: TeamCreateRequest['members'] = [
+      { name: 'ana', role: 'Frontend lead' },
+      { name: 'team-lead', role: 'Frontend lead' },
+      { name: 'orchestra', role: 'orchestrator' },
+      { name: 'boss', role: 'Team Lead' },
+    ];
+
+    expect(getTeammateRosterMembers(roster).map((member) => member.name)).toEqual(['ana']);
+  });
 });
 
 describe('buildLeadRosterIntegrityRules', () => {
@@ -75,6 +103,20 @@ describe('buildCreateBootstrapUserPrompt', () => {
 
     expect(wrapped).toContain('Your teammates are EXACTLY: local-worker, cursor-worker.');
     expect(wrapped).not.toContain('EXACTLY: team-lead');
+    expect(wrapped).not.toContain('- team-lead (role: lead)');
+  });
+
+  it('keeps a teammate whose role contains "lead" in the authoritative roster', () => {
+    const wrapped = buildCreateBootstrapUserPrompt('do the thing', [
+      { name: 'team-lead', role: 'lead' },
+      { name: 'ana', role: 'Frontend lead' },
+      ...teammates,
+    ]);
+
+    expect(wrapped).toContain('- ana (role: Frontend lead)');
+    expect(wrapped).toContain(
+      'Your teammates are EXACTLY: ana, local-worker, cursor-worker. No other teammate exists.'
+    );
     expect(wrapped).not.toContain('- team-lead (role: lead)');
   });
 

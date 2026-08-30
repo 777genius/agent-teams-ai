@@ -1,3 +1,5 @@
+import { isLeadMember, isReservedLeadRole } from '@shared/utils/leadDetection';
+
 import type { TeamCreateRequest } from '@shared/types';
 
 export function indentMultiline(text: string, indent: string): string {
@@ -43,8 +45,14 @@ export function buildCompactMembersRoster(members: TeamCreateRequest['members'])
     .join('\n');
 }
 
+// Canonical lead detection only — a free-form teammate role such as
+// "Frontend lead" or "Tech lead" is a normal delegable teammate and must stay
+// in the roster. Only the runtime-owned lead identity (lead agentType, the
+// "team-lead" name, or a role reserved for the lead) is filtered out.
 function isLeadRosterMember(member: TeamCreateRequest['members'][number]): boolean {
-  return Boolean(member.role?.toLowerCase().includes('lead'));
+  if (isLeadMember(member)) return true;
+  const role = member.role?.trim() ?? '';
+  return role.length > 0 && isReservedLeadRole(role);
 }
 
 /** Roster entries the lead may delegate to — every configured member except the lead itself. */
