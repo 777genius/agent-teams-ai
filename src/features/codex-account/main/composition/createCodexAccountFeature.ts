@@ -387,8 +387,18 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
       }
 
       const env = this.envBuilder.buildControlPlaneEnv({ binaryPath });
-      this.lastForcedTokenRefreshAtMs = 0;
-      await this.loginSessionManager.start({ binaryPath, env, mode: options?.mode });
+      // Only a login that this call actually owns invalidates the forced-rotation reuse
+      // window. A duplicate request (a second click while a login is starting or pending)
+      // is a no-op inside the manager and leaves the credentials untouched, so clearing
+      // the window for it would spend an extra refresh-token rotation on nothing.
+      const started = await this.loginSessionManager.start({
+        binaryPath,
+        env,
+        mode: options?.mode,
+      });
+      if (started) {
+        this.lastForcedTokenRefreshAtMs = 0;
+      }
     });
 
     if (binaryMissing) {

@@ -132,8 +132,10 @@ vi.mock(
         return structuredClone(loginStateContainer.current);
       }
 
-      async start(): Promise<void> {
-        await loginStartMock();
+      // Mirrors the real manager: `false` means the request was a no-op because a login
+      // was already starting or pending. Tests that do not care opt into a real start.
+      async start(): Promise<boolean> {
+        return (await loginStartMock()) !== false;
       }
 
       async cancel(): Promise<void> {
@@ -1888,6 +1890,46 @@ describe('createCodexAccountFeature', () => {
       expect(loginStartMock).toHaveBeenCalledTimes(1);
       expect(readAccountMock).toHaveBeenCalledTimes(2);
       expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({ refreshToken: true });
+    } finally {
+      dateNowSpy.mockRestore();
+      await feature.dispose();
+    }
+  });
+
+  it('keeps the reuse window after a duplicate login start the manager ignored', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+    // A second login request while one is already starting or pending is a no-op inside
+    // the manager: no app-server is spawned and the credentials are untouched. Resetting
+    // the reuse window for it would rotate the refresh token again for nothing.
+    loginStartMock.mockResolvedValue(false);
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+    const dateNowSpy = vi.spyOn(Date, 'now');
+
+    try {
+      dateNowSpy.mockReturnValue(1_776_000_000_000);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      dateNowSpy.mockReturnValue(1_776_000_001_000);
+      await feature.startChatgptLogin();
+
+      dateNowSpy.mockReturnValue(1_776_000_010_000);
+      await feature.refreshSnapshot({ forceRefreshToken: true });
+
+      expect(loginStartMock).toHaveBeenCalledTimes(1);
+      expect(readAccountMock).toHaveBeenCalledTimes(2);
+      expect(readAccountMock.mock.calls[0]?.[0]).toMatchObject({ refreshToken: true });
+      expect(readAccountMock.mock.calls[1]?.[0]).toMatchObject({ refreshToken: false });
     } finally {
       dateNowSpy.mockRestore();
       await feature.dispose();
