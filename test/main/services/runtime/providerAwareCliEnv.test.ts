@@ -823,4 +823,23 @@ describe('buildProviderAwareCliEnv', () => {
 
     expect(result.env.CODEX_CLI_PATH).toBeUndefined();
   });
+
+  it('restores Windows per-user base dirs when merged spawn envs dropped or emptied them', async () => {
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true });
+    try {
+      const { buildProviderAwareCliEnv } =
+        await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+      // An empty LOCALAPPDATA is what makes PowerShell children recreate
+      // Microsoft/Windows/PowerShell/ModuleAnalysisCache relative to the cwd.
+      const result = await buildProviderAwareCliEnv({ env: { LOCALAPPDATA: '' } });
+
+      expect(result.env.LOCALAPPDATA?.trim()).toBeTruthy();
+      expect(result.env.APPDATA?.trim()).toBeTruthy();
+      expect(result.env.TEMP?.trim()).toBeTruthy();
+      expect(result.env.TMP?.trim()).toBeTruthy();
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform, configurable: true });
+    }
+  });
 });
