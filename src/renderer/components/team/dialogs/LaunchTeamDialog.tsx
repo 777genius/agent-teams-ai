@@ -98,6 +98,7 @@ import { EffortLevelSelector } from './EffortLevelSelector';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
 import { normalizeSavedBackendId, resolveLaunchDialogPrefill } from './launchDialogPrefill';
+import { migrateLegacyLaunchDialogStorage } from './launchDialogStorageMigration';
 import {
   buildWorktreePathByMemberName,
   deriveTeammateWorktreeDefault,
@@ -759,17 +760,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const setSelectedEffort = (value: string): void => {
-    // Every call here is an explicit user choice, including Default (''): the
-    // programmatic clear goes through autoResetSelectedEffort instead.
+    // Always an explicit user choice, including Default (''); programmatic clears
+    // go through autoResetSelectedEffort instead.
     hydrationRef.current.dirty = true;
     setSelectedEffortRaw(value);
     localStorage.setItem('team:lastSelectedEffort', value);
   };
 
   const autoResetSelectedEffort = (): void => {
-    // EffortLevelSelector clears an effort the selected model cannot run through this
-    // callback. That programmatic reset is not a user edit, so it must not cancel
-    // hydration or mark the form dirty.
+    // EffortLevelSelector clears an unavailable effort through this callback. That
+    // programmatic reset is not a user edit: no hydration cancel, no dirty mark.
     setSelectedEffortRaw('');
     localStorage.setItem('team:lastSelectedEffort', '');
   };
@@ -796,30 +796,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setTeammateWorktreeDefault(value);
   };
 
-  // ---------------------------------------------------------------------------
-  // localStorage migration: schedule → team namespace (one-time)
-  // ---------------------------------------------------------------------------
-
   useEffect(() => {
-    const legacyTeamModel = localStorage.getItem('team:lastSelectedModel');
-    if (
-      legacyTeamModel != null &&
-      localStorage.getItem('team:lastSelectedModel:anthropic') == null
-    ) {
-      localStorage.setItem('team:lastSelectedModel:anthropic', legacyTeamModel);
-    }
-    localStorage.removeItem('team:lastSelectedModel');
-
-    for (const suffix of ['lastSelectedModel', 'lastSelectedEffort']) {
-      const schedKey = `schedule:${suffix}`;
-      const teamKey =
-        suffix === 'lastSelectedModel' ? 'team:lastSelectedModel:anthropic' : `team:${suffix}`;
-      const schedVal = localStorage.getItem(schedKey);
-      if (schedVal != null && localStorage.getItem(teamKey) == null) {
-        localStorage.setItem(teamKey, schedVal);
-      }
-      localStorage.removeItem(schedKey);
-    }
+    migrateLegacyLaunchDialogStorage();
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -940,8 +918,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         )
       );
       setWorktreePathByMemberName(buildWorktreePathByMemberName(inputs));
-      // The two toggles are roster-derived defaults, so a user toggle made while the
-      // saved request was in flight must win over them.
+      // Roster-derived toggle defaults must not clobber a user toggle made mid-request.
       if (!hydrationRef.current.dirty) {
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
         setSyncModelsWithLead(
