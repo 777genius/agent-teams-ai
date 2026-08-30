@@ -114,7 +114,12 @@ async function isLegacyAuthFileFresh(
   // is the fallback. Unknown freshness counts as stale to avoid token-family
   // revocation from a reused refresh_token.
   const lastRefreshMs = getLastRefreshMs(authFile) ?? (await getMtimeMs(filePath));
-  return lastRefreshMs !== null && Date.now() - lastRefreshMs <= LEGACY_AUTH_STALE_AFTER_MS;
+  const now = Date.now();
+  return (
+    lastRefreshMs !== null &&
+    lastRefreshMs <= now &&
+    now - lastRefreshMs <= LEGACY_AUTH_STALE_AFTER_MS
+  );
 }
 
 function getLegacyAuthFilePath(accountsDir: string): string {

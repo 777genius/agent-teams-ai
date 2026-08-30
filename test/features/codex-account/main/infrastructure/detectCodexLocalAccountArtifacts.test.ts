@@ -302,6 +302,22 @@ describe('detectCodexLocalAccountArtifacts', () => {
     });
   });
 
+  it('does not treat a future last_refresh as fresh', async () => {
+    const { codexHome, accountsDir } = await makeCodexHome();
+    const legacyAuthPath = path.join(codexHome, 'auth.json');
+    await writeFile(
+      legacyAuthPath,
+      JSON.stringify({
+        auth_mode: 'chatgpt',
+        last_refresh: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+        tokens: { refresh_token: 'legacy-refresh-token' },
+      }),
+      'utf8'
+    );
+
+    await expect(resolveCodexActiveChatgptAuthFile(accountsDir)).resolves.toBeNull();
+  });
+
   it('keeps reporting local artifacts for a 15-day-old legacy login instead of erasing it', async () => {
     // A legacy login just past the freshness window is withheld as a *trusted* active
     // account (replaying its refresh token is what trips reuse detection), but it must
