@@ -175,7 +175,7 @@ describe('NodeImmutableBackupVerifier', () => {
       const observed = await actualLstat(...args);
       if (String(args[0]) !== manifestPath || manifestLstatCount++ !== 1) return observed;
       return Object.assign(Object.create(Object.getPrototypeOf(observed)), observed, {
-        size: observed.size + 1,
+        size: typeof observed.size === 'bigint' ? observed.size + 1n : observed.size + 1,
       });
     });
     const verifier = new NodeImmutableBackupVerifier(fixture.root);

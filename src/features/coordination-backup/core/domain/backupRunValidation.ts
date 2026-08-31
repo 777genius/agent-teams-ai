@@ -103,7 +103,6 @@ export function validateFenceCompletion(
   if (
     record.fenceCompletion.generation !== record.fence.generation ||
     record.fenceCompletion.disposition !== expectedDisposition ||
-    (expectedDisposition === 'committed' && record.fenceCompletion.status !== 'completed') ||
     (record.fenceCompletion.status === 'pending' && record.fenceCompletion.completedAt !== null) ||
     (record.fenceCompletion.status === 'completed' && !record.fenceCompletion.completedAt)
   ) {
