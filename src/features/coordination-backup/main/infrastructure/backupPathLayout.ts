@@ -102,7 +102,6 @@ export function validateArtifactEntryId(entryId: string): readonly string[] {
     throw new TypeError('coordination-backup-artifact-entry-id-invalid');
   }
   if (
-    segments.length === 1 &&
     [BACKUP_STAGE_OWNER_FILE, BACKUP_ROOT_MANIFEST_FILE, BACKUP_COMMIT_MARKER_FILE].includes(
       segments[0]
     )

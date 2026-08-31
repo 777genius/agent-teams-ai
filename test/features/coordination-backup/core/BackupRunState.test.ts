@@ -19,6 +19,7 @@ import {
   validateCoordinationBackupRestoreSet,
   validateImmutableBackupInspection,
 } from '@features/coordination-backup';
+import { validateFenceCompletion } from '@features/coordination-backup/core/domain/backupRunValidation';
 import {
   parseDeploymentId,
   parseTeamId,
@@ -94,6 +95,23 @@ describe('BackupRun state machine', () => {
       expect.objectContaining<Partial<BackupRunInvariantError>>({
         code: 'missing_transition_evidence',
       })
+    );
+  });
+
+  it('rejects a committed run with a pending writer fence completion', () => {
+    const record = makeRequestedRecord({
+      fence: { generation: 1, admittedRunId: RUN_ID },
+      fenceLeaseId: 'lease-1',
+      fenceCompletion: {
+        generation: 1,
+        disposition: 'committed',
+        status: 'pending',
+        completedAt: null,
+      },
+    });
+
+    expect(() => validateFenceCompletion(record, 'committed')).toThrowError(
+      expect.objectContaining<Partial<BackupRunInvariantError>>({ code: 'invalid_record' })
     );
   });
 

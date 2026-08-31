@@ -117,6 +117,24 @@ describe('NodeBackupPublication', () => {
     await expect(publication.publishSqliteSnapshot(request)).resolves.toMatchObject({ sha256 });
   });
 
+  it('fails closed when the bound backup root is replaced at the same path', async () => {
+    const { root, publication } = await makePublication(roots);
+    await publication.preparePrivateStage(RUN_ID);
+    const movedRoot = `${root}.moved`;
+    await fs.promises.rename(root, movedRoot);
+    roots.push(movedRoot);
+    await fs.promises.mkdir(root, { mode: BACKUP_DIRECTORY_MODE });
+
+    await expect(publication.preparePrivateStage(RUN_ID)).rejects.toThrow(
+      'coordination-backup-publication-root-binding-changed'
+    );
+    await expect(publication.abortUncommittedStage(RUN_ID)).rejects.toThrow(
+      'coordination-backup-publication-root-binding-changed'
+    );
+    await expect(fs.promises.readdir(root)).resolves.toEqual([]);
+    await expect(fs.promises.readdir(movedRoot)).resolves.toContain('.coordination-backup-staging');
+  });
+
   it('refuses a symlinked SQLite artifact ancestor and writes nothing outside the owned stage', async () => {
     const { root, publication } = await makePublication(roots);
     await publication.preparePrivateStage(RUN_ID);
