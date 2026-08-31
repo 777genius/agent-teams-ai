@@ -1,3 +1,4 @@
+import { resolveOpenCodeSelectionScopeDecision } from '@features/runtime-provider-management/renderer';
 import {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
@@ -130,6 +131,60 @@ describe('formatTeamModelSummary', () => {
     expect(getTeamModelSelectionError('anthropic', 'opus')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-8')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-7')).toBeNull();
+  });
+});
+
+describe('resolveOpenCodeSelectionScopeDecision', () => {
+  const oldProjectScope = JSON.stringify(['/projects/old', 'deepinfra']);
+  const newProjectScope = JSON.stringify(['/projects/new', 'deepinfra']);
+  const newSourceScope = JSON.stringify(['/projects/old', 'openrouter']);
+
+  it.each([
+    ['project loading', newProjectScope, 'loading', null],
+    ['project error', newProjectScope, 'error', null],
+    ['project stale', newProjectScope, 'ready', 'stale'],
+    ['project legacy unknown', newProjectScope, 'ready', null],
+    ['source loading', newSourceScope, 'loading', null],
+  ] as const)(
+    'clears an unproved prior selection on a %s transition',
+    (_label, catalogScopeKey, catalogStatus, catalogState) => {
+      expect(
+        resolveOpenCodeSelectionScopeDecision({
+          value: 'deepinfra/old-model',
+          runtimeNormalizedValue: 'deepinfra/old-model',
+          selectionScopeKey: oldProjectScope,
+          catalogScopeKey,
+          catalogStatus,
+          catalogState,
+        })
+      ).toEqual({ normalizedValue: '', preserve: false });
+    }
+  );
+
+  it('preserves a same-scope selection through a refresh failure', () => {
+    expect(
+      resolveOpenCodeSelectionScopeDecision({
+        value: 'deepinfra/kept-model',
+        runtimeNormalizedValue: '',
+        selectionScopeKey: oldProjectScope,
+        catalogScopeKey: oldProjectScope,
+        catalogStatus: 'error',
+        catalogState: 'fresh',
+      })
+    ).toEqual({ normalizedValue: '', preserve: true });
+  });
+
+  it('accepts a transition only after the fresh current scope proves the selection', () => {
+    expect(
+      resolveOpenCodeSelectionScopeDecision({
+        value: 'deepinfra/shared-model',
+        runtimeNormalizedValue: 'deepinfra/shared-model',
+        selectionScopeKey: oldProjectScope,
+        catalogScopeKey: newProjectScope,
+        catalogStatus: 'ready',
+        catalogState: 'fresh',
+      })
+    ).toEqual({ normalizedValue: 'deepinfra/shared-model', preserve: false });
   });
 });
 

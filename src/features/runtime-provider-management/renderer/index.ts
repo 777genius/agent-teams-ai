@@ -16,6 +16,7 @@ export {
 export {
   type OpenCodeProviderModelCatalogResult,
   resolveOpenCodeCatalogSourceProviderId,
+  resolveOpenCodeSelectionScopeDecision,
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';

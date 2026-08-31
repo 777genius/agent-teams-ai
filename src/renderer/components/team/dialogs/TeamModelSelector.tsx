@@ -10,6 +10,7 @@ import {
   type OpenCodeLocalModelSetupTarget,
   ProviderBrandIcon,
   resolveOpenCodeCatalogSourceProviderId,
+  resolveOpenCodeSelectionScopeDecision,
   useOpenCodeLocalModelSetup,
   useOpenCodeLocalProviders,
   useOpenCodeProviderModelCatalog,
@@ -126,14 +127,11 @@ import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export { getProviderScopedTeamModelLabel } from '@renderer/utils/teamModelCatalog';
 
-// --- Provider definitions ---
-
 interface ProviderDef {
   id: TeamProviderId;
   label: string;
   comingSoon: boolean;
 }
-
 interface OpenCodeProviderTabDef {
   id: string;
   label: string;
@@ -141,19 +139,16 @@ interface OpenCodeProviderTabDef {
   connected: boolean;
   directoryModelCount?: number | null;
 }
-
 interface OpenCodeProviderLoadingRowDef {
   label: string;
   sourceId: string;
   status: 'connected' | 'checking';
 }
-
 interface OpenCodeSourceOption {
   id: string;
   label: string;
   count: number;
 }
-
 interface OpenCodeRouteTagOption {
   id: OpenCodeRouteFilterTag;
   label: string;
@@ -458,8 +453,20 @@ function buildOpenCodeVirtualRows({
 
 function getOpenCodeModelGroupStatus(
   routeMetadata: OpenCodeModelOptionMetadata['routeMetadata'],
-  modelId: string
+  modelId: string,
+  knownLocalSourceIds: ReadonlySet<string> = new Set()
 ): OpenCodeModelGroupStatus {
+  const sourceId =
+    routeMetadata?.providerId?.trim().toLowerCase() ??
+    parseOpenCodeQualifiedModelRef(modelId)?.sourceId ??
+    null;
+  if (routeMetadata?.routeKind === 'configured_local' && sourceId) {
+    if (
+      Array.from(knownLocalSourceIds).some((knownId) => knownId.trim().toLowerCase() === sourceId)
+    ) {
+      return 'local';
+    }
+  }
   return getOpenCodeModelRoutePresentationStatus({
     modelId,
     providerId: routeMetadata?.providerId,
@@ -470,9 +477,10 @@ function getOpenCodeModelGroupStatus(
 
 function getOpenCodeRouteFilterTag(
   routeMetadata: OpenCodeModelOptionMetadata['routeMetadata'],
-  modelId: string
+  modelId: string,
+  knownLocalSourceIds?: ReadonlySet<string>
 ): OpenCodeRouteFilterTag | null {
-  const status = getOpenCodeModelGroupStatus(routeMetadata, modelId);
+  const status = getOpenCodeModelGroupStatus(routeMetadata, modelId, knownLocalSourceIds);
   return status === 'connected' || status === 'configured' || status === 'local' ? status : null;
 }
 
@@ -1162,11 +1170,49 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const [codexRuntimeDialogOpen, setCodexRuntimeDialogOpen] = useState(false);
   const multimodelAvailable =
     multimodelEnabled || effectiveCliStatus?.flavor === 'agent_teams_orchestrator';
+  const openCodeLocalProvidersEnabled = multimodelAvailable;
+  const {
+    providers: openCodeLocalProviders,
+    loading: openCodeLocalProvidersLoading,
+    authoritative: openCodeLocalProviderLookupAuthoritative,
+    error: openCodeLocalProviderLookupError,
+    refresh: refreshOpenCodeLocalProviders,
+  } = useOpenCodeLocalProviders({
+    enabled: openCodeLocalProvidersEnabled,
+    projectPath: openCodeCatalogScopeKey || null,
+  });
+  const knownOpenCodeLocalSourceIds = useMemo(
+    () =>
+      new Set(openCodeLocalProviders.map((provider) => provider.providerId.trim().toLowerCase())),
+    [openCodeLocalProviders]
+  );
   const openCodeCatalogSourceProviderId = resolveOpenCodeCatalogSourceProviderId({
     selectedSourceIds: selectedOpenCodeSourceIds,
     selectedModel: effectiveProviderId === 'opencode' ? value : null,
     localModelsSelected: selectedOpenCodeRouteTags.has('local'),
+    knownLocalSourceIds: knownOpenCodeLocalSourceIds,
+    localProviderLookupReady: openCodeLocalProviderLookupAuthoritative,
   });
+  const openCodeSelectionScopeSourceProviderId = resolveOpenCodeCatalogSourceProviderId({
+    selectedSourceIds: selectedOpenCodeSourceIds,
+    selectedModel: effectiveProviderId === 'opencode' ? value : null,
+    localModelsSelected: selectedOpenCodeRouteTags.has('local'),
+    knownLocalSourceIds: knownOpenCodeLocalSourceIds,
+    localProviderLookupReady: true,
+  });
+  const openCodeSelectionCatalogScopeKey = openCodeSelectionScopeSourceProviderId
+    ? JSON.stringify([openCodeCatalogScopeKey || null, openCodeSelectionScopeSourceProviderId])
+    : null;
+  const openCodeSelectionScopeRef = useRef({
+    value,
+    scopeKey: openCodeSelectionCatalogScopeKey,
+  });
+  if (openCodeSelectionScopeRef.current.value !== value) {
+    openCodeSelectionScopeRef.current = {
+      value,
+      scopeKey: openCodeSelectionCatalogScopeKey,
+    };
+  }
   const openCodeScopedCatalog = useOpenCodeProviderModelCatalog({
     enabled:
       effectiveProviderId === 'opencode' &&
@@ -1182,17 +1228,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     effectiveProviderId === 'opencode'
       ? openCodeScopedCatalog.providerStatus
       : passiveRuntimeProviderStatus;
-  const openCodeLocalProvidersEnabled = multimodelAvailable;
-  const {
-    providers: openCodeLocalProviders,
-    loading: openCodeLocalProvidersLoading,
-    authoritative: openCodeLocalProviderLookupAuthoritative,
-    error: openCodeLocalProviderLookupError,
-    refresh: refreshOpenCodeLocalProviders,
-  } = useOpenCodeLocalProviders({
-    enabled: openCodeLocalProvidersEnabled,
-    projectPath: openCodeCatalogScopeKey || null,
-  });
   const openCodeLocalModelOverlay = useMemo(
     () =>
       buildOpenCodeLocalModelOverlay(
@@ -1579,24 +1614,33 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   );
   const catalogHydrationAlreadyRequested =
     catalogHydrationRequestedRef.current.has(effectiveProviderId);
-  const shouldPreserveOpenCodeSelection =
-    effectiveProviderId === 'opencode' &&
-    Boolean(openCodeCatalogSourceProviderId) &&
-    (openCodeScopedCatalog.status !== 'ready' ||
-      openCodeScopedCatalog.catalogState !== 'fresh');
-  const shouldDeferModelNormalization =
-    (effectiveProviderId === 'codex' && codexSnapshotPending) ||
-    providerModelCatalogLoading ||
-    shouldPreserveOpenCodeSelection ||
-    openCodeLocalProvidersLoading ||
-    (effectiveProviderId !== 'opencode' &&
-      shouldHydrateRuntimeModelCatalog &&
-      !catalogHydrationAlreadyRequested);
   const runtimeNormalizedValue = normalizeTeamModelForUi(
     effectiveProviderId,
     value,
     runtimeProviderStatus
   );
+  const openCodeSelectionScopeDecision = resolveOpenCodeSelectionScopeDecision({
+    value,
+    runtimeNormalizedValue,
+    selectionScopeKey: openCodeSelectionScopeRef.current.scopeKey,
+    catalogScopeKey: openCodeSelectionCatalogScopeKey,
+    catalogStatus: openCodeScopedCatalog.status,
+    catalogState: openCodeScopedCatalog.catalogState,
+  });
+  const shouldPreserveOpenCodeSelection =
+    effectiveProviderId === 'opencode' && openCodeSelectionScopeDecision.preserve;
+  const shouldDeferModelNormalization =
+    (effectiveProviderId === 'codex' && codexSnapshotPending) ||
+    (effectiveProviderId === 'opencode'
+      ? shouldPreserveOpenCodeSelection
+      : providerModelCatalogLoading) ||
+    (effectiveProviderId !== 'opencode' &&
+      shouldHydrateRuntimeModelCatalog &&
+      !catalogHydrationAlreadyRequested);
+  const scopeAwareRuntimeNormalizedValue =
+    effectiveProviderId === 'opencode'
+      ? openCodeSelectionScopeDecision.normalizedValue
+      : runtimeNormalizedValue;
   const selectedRuntimeCatalogModel = runtimeProviderStatus?.modelCatalog?.models.find(
     (model) => model.launchModel === value || model.id === value
   );
@@ -1606,7 +1650,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const normalizedValue = resolveTeamModelSelectorValue({
     providerId: effectiveProviderId,
     value,
-    runtimeNormalizedValue,
+    runtimeNormalizedValue: scopeAwareRuntimeNormalizedValue,
     isAppManagedLocalModel: selectedAppManagedLocalModel,
     isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
     isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
@@ -1614,7 +1658,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const selectedUnverifiedLocalModel =
     effectiveProviderId === 'opencode' &&
     normalizedValue === value &&
-    runtimeNormalizedValue !== value;
+    scopeAwareRuntimeNormalizedValue !== value;
   const selectedLocalModelFallbackOption = useMemo<TeamRuntimeModelOption | null>(() => {
     const selectedModel = value.trim();
     if (!selectedUnverifiedLocalModel || !selectedModel) {
@@ -1837,7 +1881,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 : null) || parsedSourceInfo.label,
           }
         : null;
-      const routeTag = getOpenCodeRouteFilterTag(routeMetadata, option.value);
+      const routeTag = getOpenCodeRouteFilterTag(
+        routeMetadata,
+        option.value,
+        knownOpenCodeLocalSourceIds
+      );
 
       return {
         option,
@@ -1864,7 +1912,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         isNew: isRecentlyReleasedModel(catalogModel),
       };
     });
-  }, [effectiveProviderId, modelOptions, runtimeCatalogModelById, t]);
+  }, [effectiveProviderId, knownOpenCodeLocalSourceIds, modelOptions, runtimeCatalogModelById, t]);
   const openCodeModelMetadataByValue = useMemo(
     () => new Map(openCodeModelMetadata.map((metadata) => [metadata.option.value, metadata])),
     [openCodeModelMetadata]
@@ -2352,7 +2400,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       const sourceGroup = metadata.sourceInfo;
       const groupId = sourceGroup ? `source:${sourceGroup.id}` : `route:${metadata.routeGroup.id}`;
       const groupLabel = sourceGroup?.label ?? metadata.routeGroup.label;
-      const groupStatus = getOpenCodeModelGroupStatus(metadata.routeMetadata, option.value);
+      const groupStatus =
+        metadata.routeTag ?? getOpenCodeModelGroupStatus(metadata.routeMetadata, option.value);
       const existingGroup = groups.get(groupId);
       if (existingGroup) {
         existingGroup.options.push(option);
@@ -2451,12 +2500,39 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         addModel(sourceId, option.value);
       }
     }
-    return new Map(
+    const modelCountBySource = new Map(
       Array.from(modelIdsBySource, ([sourceId, modelIds]) => [sourceId, modelIds.size] as const)
     );
-  }, [effectiveProviderId, openCodeModelMetadata, passiveRuntimeProviderStatus, runtimeProviderStatusById]);
+    if (
+      openCodeScopedCatalog.sourceProviderId !== 'opencode' &&
+      openCodeScopedCatalog.sourceProviderId &&
+      openCodeScopedCatalog.freshModelCount !== null
+    ) {
+      modelCountBySource.set(
+        openCodeScopedCatalog.sourceProviderId,
+        openCodeScopedCatalog.freshModelCount
+      );
+    }
+    return modelCountBySource;
+  }, [
+    effectiveProviderId,
+    openCodeModelMetadata,
+    openCodeScopedCatalog.freshModelCount,
+    openCodeScopedCatalog.sourceProviderId,
+    passiveRuntimeProviderStatus,
+    runtimeProviderStatusById,
+  ]);
   const isOpenCodeSourceTabLoadable = (provider: OpenCodeProviderTabDef): boolean => {
     const visibleModelCount = openCodeSourceModelCountById.get(provider.sourceId) ?? 0;
+    const freshScopedModelCount =
+      openCodeScopedCatalog.sourceProviderId === provider.sourceId
+        ? openCodeScopedCatalog.freshModelCount
+        : null;
+    const hasFreshScopedAuthority =
+      provider.sourceId !== 'opencode' && freshScopedModelCount !== null;
+    if (hasFreshScopedAuthority) {
+      return freshScopedModelCount > 0;
+    }
     const scopedLoadPending =
       openCodeScopedCatalog.sourceProviderId === provider.sourceId &&
       openCodeScopedCatalog.status === 'loading';

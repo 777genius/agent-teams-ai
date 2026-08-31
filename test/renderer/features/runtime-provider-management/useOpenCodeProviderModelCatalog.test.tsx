@@ -153,22 +153,46 @@ async function waitForStatus(status: OpenCodeProviderModelCatalogResult['status'
 }
 
 describe('resolveOpenCodeCatalogSourceProviderId', () => {
-  it.each([
-    ['selected provider', new Set([' DeepInfra ']), null, false, 'deepinfra'],
-    ['built-in OpenCode Zen', new Set(['opencode']), null, false, 'opencode'],
-    ['local provider tab', new Set(['ollama']), 'deepinfra/model', false, null],
-    ['multiple source filters', new Set(['deepinfra', 'openrouter']), null, false, null],
-    ['qualified selected model', new Set<string>(), 'OpenRouter/model', false, 'openrouter'],
-    ['explicit local overlay', new Set<string>(), 'deepinfra/model', true, null],
-    ['no concrete source', new Set<string>(), '', false, null],
-  ])('resolves %s deterministically', (_label, selectedSourceIds, selectedModel, local, expected) => {
+  const resolveSource = (
+    overrides: Partial<Parameters<typeof resolveOpenCodeCatalogSourceProviderId>[0]>
+  ): string | null =>
+    resolveOpenCodeCatalogSourceProviderId({
+      selectedSourceIds: new Set(),
+      selectedModel: null,
+      knownLocalSourceIds: new Set(),
+      localProviderLookupReady: true,
+      ...overrides,
+    });
+
+  it('allows explicit remote and built-in source selections while lookup is pending', () => {
     expect(
-      resolveOpenCodeCatalogSourceProviderId({
-        selectedSourceIds,
-        selectedModel,
-        localModelsSelected: local,
+      resolveSource({ selectedSourceIds: new Set([' DeepInfra ']), localProviderLookupReady: false })
+    ).toBe('deepinfra');
+    expect(
+      resolveSource({ selectedSourceIds: new Set(['opencode']), localProviderLookupReady: false })
+    ).toBe('opencode');
+  });
+
+  it('suppresses built-in and known custom local ownership', () => {
+    expect(resolveSource({ selectedSourceIds: new Set(['ollama']) })).toBeNull();
+    expect(
+      resolveSource({
+        selectedModel: 'corp-local/model',
+        knownLocalSourceIds: new Set(['corp-local']),
       })
-    ).toBe(expected);
+    ).toBeNull();
+    expect(resolveSource({ selectedModel: 'deepinfra/model', localModelsSelected: true })).toBeNull();
+  });
+
+  it('fails closed for unresolved, ambiguous, and malformed model-derived ownership', () => {
+    expect(
+      resolveSource({ selectedModel: 'OpenRouter/model', localProviderLookupReady: false })
+    ).toBeNull();
+    expect(resolveSource({ selectedModel: 'OpenRouter/model' })).toBe('openrouter');
+    expect(resolveSource({ selectedModel: 'deepinfra//model' })).toBeNull();
+    expect(
+      resolveSource({ selectedSourceIds: new Set(['deepinfra', 'openrouter']) })
+    ).toBeNull();
   });
 });
 
@@ -198,12 +222,12 @@ describe('useOpenCodeProviderModelCatalog', () => {
           ? response({
               providerId: 'deepinfra',
               models: [model('deepinfra', 'second-model')],
-              defaultModelId: 'deepinfra/first-model',
+              defaultModelId: 'deepinfra/org/first-model',
               catalogState: 'fresh',
             })
           : response({
               providerId: 'deepinfra',
-              models: [model('deepinfra', 'deepinfra/first-model')],
+              models: [model('deepinfra', 'deepinfra/org/first-model')],
               catalogState: 'fresh',
               nextCursor: 'page-2',
             })
@@ -228,11 +252,11 @@ describe('useOpenCodeProviderModelCatalog', () => {
       }),
     ]);
     expect(observed?.providerStatus?.models).toEqual([
-      'deepinfra/first-model',
+      'deepinfra/org/first-model',
       'deepinfra/second-model',
     ]);
     expect(observed?.providerStatus?.modelCatalog?.defaultModelId).toBe(
-      'deepinfra/first-model'
+      'deepinfra/org/first-model'
     );
     expect(observed?.providerStatus?.modelCatalog?.models[0]?.metadata?.opencode).toMatchObject({
       proofState: 'needs_probe',
@@ -260,6 +284,45 @@ describe('useOpenCodeProviderModelCatalog', () => {
     expect(observed?.error).toContain('foreign');
   });
 
+  it.each(['/poisoned', 'deepinfra/', 'deepinfra//model'])(
+    'fails closed for malformed model identifier %s',
+    async (modelId) => {
+      apiMocks.loadModels.mockResolvedValue(
+        response({
+          providerId: 'deepinfra',
+          models: [model('deepinfra', modelId)],
+          catalogState: 'fresh',
+        })
+      );
+
+      await renderHarness({ sourceProviderId: 'deepinfra' });
+      await waitForStatus('error');
+
+      expect(observed?.providerStatus?.models).toEqual([]);
+      expect(observed?.error).toContain('invalid model identifier');
+    }
+  );
+
+  it.each(['/poisoned', 'deepinfra/', 'deepinfra//model'])(
+    'fails closed for malformed default identifier %s',
+    async (defaultModelId) => {
+      apiMocks.loadModels.mockResolvedValue(
+        response({
+          providerId: 'deepinfra',
+          models: [model('deepinfra', 'valid-model')],
+          defaultModelId,
+          catalogState: 'fresh',
+        })
+      );
+
+      await renderHarness({ sourceProviderId: 'deepinfra' });
+      await waitForStatus('error');
+
+      expect(observed?.providerStatus?.models).toEqual([]);
+      expect(observed?.error).toContain('invalid default model identifier');
+    }
+  );
+
   it('treats missing freshness as degraded and never derives execution proof from catalog data', async () => {
     apiMocks.loadModels.mockResolvedValue(
       response({
@@ -273,6 +336,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
     await waitForStatus('ready');
 
     expect(observed?.catalogState).toBeNull();
+    expect(observed?.freshModelCount).toBeNull();
     expect(observed?.providerStatus).toMatchObject({
       authenticated: false,
       verificationState: 'unknown',
@@ -284,6 +348,18 @@ describe('useOpenCodeProviderModelCatalog', () => {
       proofState: 'needs_probe',
       requiresExecutionProof: true,
     });
+  });
+
+  it('reports fresh scoped zero-model authority without treating stale data as authoritative', async () => {
+    apiMocks.loadModels.mockResolvedValue(
+      response({ providerId: 'deepinfra', models: [], catalogState: 'fresh' })
+    );
+
+    await renderHarness({ sourceProviderId: 'deepinfra' });
+    await waitForStatus('ready');
+
+    expect(observed?.freshModelCount).toBe(0);
+    expect(observed?.providerStatus?.models).toEqual([]);
   });
 
   it('retains the last same-scope catalog across a refresh failure without elevating status', async () => {

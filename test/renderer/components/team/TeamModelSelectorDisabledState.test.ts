@@ -10,6 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
 import type {
+  RuntimeLocalProviderListInput,
+  RuntimeLocalProviderListResponse,
   RuntimeProviderManagementLoadModelsInput,
   RuntimeProviderManagementModelsResponse,
 } from '@features/runtime-provider-management/contracts';
@@ -91,12 +93,20 @@ function providerModelsResponse(
 function installLoadModelsApi(
   loadModels: (
     input: RuntimeProviderManagementLoadModelsInput
-  ) => Promise<RuntimeProviderManagementModelsResponse>
+  ) => Promise<RuntimeProviderManagementModelsResponse>,
+  listLocalProviders: (
+    input: RuntimeLocalProviderListInput
+  ) => Promise<RuntimeLocalProviderListResponse> = async (input) => ({
+    schemaVersion: 1,
+    runtimeId: 'opencode',
+    scope: input.scope,
+    providers: [],
+  })
 ): void {
   Object.defineProperty(window, 'electronAPI', {
     configurable: true,
     value: {
-      runtimeProviderManagement: { loadModels },
+      runtimeProviderManagement: { listLocalProviders, loadModels },
     } as unknown as ElectronAPI,
   });
 }
@@ -1478,6 +1488,121 @@ describe('TeamModelSelector disabled Codex models', () => {
       host.querySelector('[data-testid="team-model-selector-opencode-loading-skeleton"]')
     ).toBeNull();
     expect(host.textContent).toContain('stale-local-model');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('never dispatches a remote catalog load for a custom local provider route', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const localLookup = createDeferred<RuntimeLocalProviderListResponse>();
+    const loadModels = vi.fn(async () => providerModelsResponse('corp-local'));
+    installLoadModelsApi(loadModels, () => localLookup.promise);
+    const localModelId = 'corp-local/model';
+    const provider = {
+      providerId: 'opencode',
+      authenticated: true,
+      supported: true,
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      capabilities: { teamLaunch: true },
+      models: [localModelId],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2026-07-20T12:00:00.000Z',
+        staleAt: '2099-07-20T12:10:00.000Z',
+        defaultModelId: localModelId,
+        defaultLaunchModel: localModelId,
+        models: [
+          {
+            id: localModelId,
+            launchModel: localModelId,
+            displayName: 'model',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+            metadata: {
+              opencode: {
+                providerId: 'corp-local',
+                modelId: 'model',
+                sourceLabel: 'Corporate Local',
+                accessKind: 'configured_authless',
+                routeKind: 'configured_local',
+                proofState: 'needs_probe',
+                requiresExecutionProof: true,
+                reason: null,
+              },
+            },
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+      modelVerificationState: 'idle',
+      modelAvailability: [],
+    };
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [provider],
+    };
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamModelSelector, {
+          providerId: 'opencode',
+          onProviderChange: () => undefined,
+          value: localModelId,
+          onValueChange: () => undefined,
+        })
+      );
+      await Promise.resolve();
+    });
+    expect(loadModels).not.toHaveBeenCalled();
+
+    await resolveDeferred(localLookup, {
+      schemaVersion: 1,
+      runtimeId: 'opencode',
+      scope: 'global',
+      providers: [
+        {
+          preset: {
+            id: 'custom',
+            providerId: 'corp-local',
+            displayName: 'Corporate Local',
+            defaultBaseUrl: 'http://127.0.0.1:4444/v1',
+            description: 'Test-only custom local provider',
+            scannable: false,
+          },
+          providerId: 'corp-local',
+          baseUrl: 'http://127.0.0.1:4444/v1',
+          configuredModelIds: ['model'],
+          defaultModelId: 'model',
+          isDefault: true,
+          state: 'available',
+          liveModels: [{ id: 'model', displayName: 'model' }],
+          latencyMs: 1,
+          message: 'Connected',
+        },
+      ],
+    });
+    await vi.waitFor(() => expect(host.textContent).toContain('model'));
+
+    expect(loadModels).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-tabs-value="opencode-local-models"]')).not.toBeNull();
 
     await act(async () => {
       root.unmount();
@@ -4414,17 +4539,13 @@ describe('TeamModelSelector disabled Codex models', () => {
       )
     );
     expect(host.querySelector('[data-tabs-value="opencode-source:github-copilot"]')).not.toBeNull();
-    expect(remountedOnValueChange).not.toHaveBeenCalledWith('');
+    expect(remountedOnValueChange).toHaveBeenCalledWith('');
 
+    const cursorTab = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-cursor-acp"]'
+    );
     await act(async () => {
-      remountedRoot.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange,
-          value: 'cursor-acp/auto',
-          onValueChange: () => undefined,
-        })
-      );
+      cursorTab?.click();
       await Promise.resolve();
     });
     await vi.waitFor(() =>
@@ -4433,9 +4554,6 @@ describe('TeamModelSelector disabled Codex models', () => {
       )
     );
 
-    const cursorTab = host.querySelector<HTMLButtonElement>(
-      '[data-testid="team-model-selector-provider-nav-cursor-acp"]'
-    );
     const openCodeTab = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'OpenCode'
     );
@@ -4449,15 +4567,11 @@ describe('TeamModelSelector disabled Codex models', () => {
       ).map((heading) => heading.textContent)
     ).toContain('Cursor');
 
+    const xiaomiTab = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-provider-nav-xiaomi-token-plan-ams"]'
+    );
     await act(async () => {
-      remountedRoot.render(
-        React.createElement(TeamModelSelector, {
-          providerId: 'opencode',
-          onProviderChange,
-          value: 'xiaomi-token-plan-ams/mimo-v2.5',
-          onValueChange: () => undefined,
-        })
-      );
+      xiaomiTab?.click();
       await Promise.resolve();
     });
     await vi.waitFor(() =>
@@ -4466,9 +4580,6 @@ describe('TeamModelSelector disabled Codex models', () => {
       )
     );
 
-    const xiaomiTab = host.querySelector<HTMLButtonElement>(
-      '[data-testid="team-model-selector-provider-nav-xiaomi-token-plan-ams"]'
-    );
     expect(xiaomiTab?.getAttribute('data-state')).toBe('active');
     expect(host.textContent).toContain('mimo-v2.5');
     expect(host.textContent).not.toContain('gpt-4.1');
@@ -5611,9 +5722,8 @@ describe('TeamModelSelector disabled Codex models', () => {
   it('loads a cold connected provider only after that provider tab is selected', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const projectPath = '/tmp/empty-scoped-catalog-project';
-    const loadModels = vi.fn(
-      () => new Promise<RuntimeProviderManagementModelsResponse>(() => undefined)
-    );
+    const catalogRequest = createDeferred<RuntimeProviderManagementModelsResponse>();
+    const loadModels = vi.fn(() => catalogRequest.promise);
     installLoadModelsApi(loadModels);
     const emptyScopedProvider = {
       providerId: 'opencode',
@@ -5713,6 +5823,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(host.querySelector('[data-tabs-value="opencode-source:openrouter"]')).not.toBeNull();
     expect(host.textContent).toContain('Syncing models');
     expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
+
+    await resolveDeferred(catalogRequest, providerModelsResponse('openrouter', []));
+    await vi.waitFor(() => expect(openRouterTab?.disabled).toBe(true));
+    expect(openRouterTab?.textContent).toContain('0');
+    expect(openRouterTab?.getAttribute('aria-description')).toContain('no available models');
 
     await act(async () => {
       root.unmount();

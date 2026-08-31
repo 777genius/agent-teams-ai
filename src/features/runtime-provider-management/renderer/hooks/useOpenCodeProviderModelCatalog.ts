@@ -38,8 +38,35 @@ export interface OpenCodeProviderModelCatalogResult {
   providerStatus: CliProviderStatus | null | undefined;
   status: CatalogRequestStatus;
   catalogState: CatalogFreshness;
+  freshModelCount: number | null;
   error: string | null;
   refresh: () => void;
+}
+
+export function resolveOpenCodeSelectionScopeDecision(input: {
+  value: string;
+  runtimeNormalizedValue: string;
+  selectionScopeKey: string | null;
+  catalogScopeKey: string | null;
+  catalogStatus: 'idle' | 'loading' | 'ready' | 'error';
+  catalogState: 'fresh' | 'stale' | null;
+}): { normalizedValue: string; preserve: boolean } {
+  if (!input.catalogScopeKey) {
+    return { normalizedValue: input.runtimeNormalizedValue, preserve: false };
+  }
+
+  const sameScope = input.selectionScopeKey === input.catalogScopeKey;
+  const freshAuthority = input.catalogStatus === 'ready' && input.catalogState === 'fresh';
+  return {
+    normalizedValue:
+      sameScope || freshAuthority || !input.value.trim() ? input.runtimeNormalizedValue : '',
+    preserve: sameScope && !freshAuthority,
+  };
+}
+
+function parseStrictQualifiedModelRef(modelId: string | null | undefined) {
+  const parsed = parseOpenCodeQualifiedModelRef(modelId);
+  return parsed && parsed.raw.split('/').every((segment) => segment.length > 0) ? parsed : null;
 }
 
 function normalizeSourceProviderId(sourceProviderId: string | null | undefined): string | null {
@@ -54,7 +81,23 @@ export function resolveOpenCodeCatalogSourceProviderId(input: {
   selectedSourceIds: ReadonlySet<string>;
   selectedModel: string | null | undefined;
   localModelsSelected?: boolean;
+  knownLocalSourceIds: ReadonlySet<string>;
+  localProviderLookupReady: boolean;
 }): string | null {
+  const resolveCandidate = (candidate: string | null | undefined): string | null => {
+    const normalized = candidate?.trim().toLowerCase() ?? '';
+    if (
+      !normalized ||
+      isOpenCodeLocalProviderId(normalized) ||
+      Array.from(input.knownLocalSourceIds).some(
+        (sourceId) => sourceId.trim().toLowerCase() === normalized
+      )
+    ) {
+      return null;
+    }
+    return normalized;
+  };
+
   if (input.localModelsSelected) {
     return null;
   }
@@ -62,29 +105,34 @@ export function resolveOpenCodeCatalogSourceProviderId(input: {
     // An explicit built-in/free or local tab is still an explicit selection. Do not
     // fall back to the previously selected qualified model and fetch that provider.
     for (const selectedSource of input.selectedSourceIds) {
-      return normalizeSourceProviderId(selectedSource);
+      return resolveCandidate(selectedSource);
     }
   }
   if (input.selectedSourceIds.size > 1) {
     return null;
   }
 
-  return normalizeSourceProviderId(
-    parseOpenCodeQualifiedModelRef(input.selectedModel)?.sourceId ?? null
-  );
+  if (!input.localProviderLookupReady) {
+    return null;
+  }
+  return resolveCandidate(parseStrictQualifiedModelRef(input.selectedModel)?.sourceId ?? null);
 }
 
 function qualifyModelId(providerId: string, modelId: string): string {
   const normalizedProviderId = providerId.trim().toLowerCase();
   const normalizedModelId = modelId.trim();
-  if (!normalizedProviderId || !normalizedModelId) {
+  if (!normalizedProviderId || !normalizedModelId || /\s/.test(normalizedModelId)) {
     return '';
   }
-  const parsed = parseOpenCodeQualifiedModelRef(normalizedModelId);
-  if (parsed) {
+  if (normalizedModelId.includes('/')) {
+    const parsed = parseStrictQualifiedModelRef(normalizedModelId);
+    if (!parsed) {
+      return '';
+    }
     return parsed.sourceId === normalizedProviderId ? parsed.raw : '';
   }
-  return `${normalizedProviderId}/${normalizedModelId}`;
+  const parsed = parseStrictQualifiedModelRef(`${normalizedProviderId}/${normalizedModelId}`);
+  return parsed?.sourceId === normalizedProviderId ? parsed.raw : '';
 }
 
 function mapAvailability(model: RuntimeProviderModelDto): CliProviderModelAvailability {
@@ -128,7 +176,7 @@ function mapCatalogModel(
     launchModel,
     displayName:
       model.displayName.trim() ||
-      parseOpenCodeQualifiedModelRef(launchModel)?.modelId ||
+      parseStrictQualifiedModelRef(launchModel)?.modelId ||
       launchModel,
     hidden: false,
     supportedReasoningEfforts: passiveModel?.supportedReasoningEfforts ?? [],
@@ -147,7 +195,7 @@ function mapCatalogModel(
       free: model.free,
       opencode: {
         providerId: model.providerId,
-        modelId: parseOpenCodeQualifiedModelRef(launchModel)?.modelId ?? model.modelId,
+        modelId: parseStrictQualifiedModelRef(launchModel)?.modelId ?? model.modelId,
         sourceLabel: model.sourceLabel.trim() || model.providerId,
         accessKind: model.accessKind ?? 'unknown_model',
         routeKind: model.routeKind ?? 'catalog_provider',
@@ -165,12 +213,12 @@ function mapCatalogModel(
 function sourceIdForCatalogModel(model: CliProviderModelCatalogItem): string | null {
   return (
     normalizeSourceProviderId(model.metadata?.opencode?.providerId) ??
-    normalizeSourceProviderId(parseOpenCodeQualifiedModelRef(model.launchModel)?.sourceId)
+    normalizeSourceProviderId(parseStrictQualifiedModelRef(model.launchModel)?.sourceId)
   );
 }
 
 function sourceIdForModelId(modelId: string): string | null {
-  return normalizeSourceProviderId(parseOpenCodeQualifiedModelRef(modelId)?.sourceId);
+  return normalizeSourceProviderId(parseStrictQualifiedModelRef(modelId)?.sourceId);
 }
 
 function filterPassiveProviderToSource(
@@ -318,7 +366,7 @@ function responseFailure(
     if (modelProviderId !== sourceProviderId) {
       return `The runtime returned a foreign ${model.providerId || 'unknown'} model in the ${sourceProviderId} catalog.`;
     }
-    const qualifiedModel = parseOpenCodeQualifiedModelRef(model.modelId);
+    const qualifiedModel = parseStrictQualifiedModelRef(model.modelId);
     if (qualifiedModel && qualifiedModel.sourceId !== sourceProviderId) {
       return `The runtime returned foreign model ${qualifiedModel.raw} in the ${sourceProviderId} catalog.`;
     }
@@ -326,7 +374,7 @@ function responseFailure(
       return `The runtime returned an invalid model identifier in the ${sourceProviderId} catalog.`;
     }
   }
-  const qualifiedDefault = parseOpenCodeQualifiedModelRef(response.models.defaultModelId);
+  const qualifiedDefault = parseStrictQualifiedModelRef(response.models.defaultModelId);
   if (qualifiedDefault && qualifiedDefault.sourceId !== sourceProviderId) {
     return `The runtime returned foreign default model ${qualifiedDefault.raw} in the ${sourceProviderId} catalog.`;
   }
@@ -532,6 +580,10 @@ export function useOpenCodeProviderModelCatalog(input: {
     providerStatus,
     status: activeState.status,
     catalogState: activeState.catalogState,
+    freshModelCount:
+      activeState.status === 'ready' && activeState.catalogState === 'fresh'
+        ? (activeState.models?.length ?? null)
+        : null,
     error: activeState.error,
     refresh,
   };
