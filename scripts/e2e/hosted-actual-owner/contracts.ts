@@ -313,6 +313,9 @@ export interface OpenCodeProvenanceIdentity {
   readonly provenanceArtifactId: string;
   readonly provenanceArtifactSha256: string;
   readonly buildProvenanceBundleSha256: string;
+  readonly releaseManifestSha256: string;
+  readonly linuxX64ArchiveSha256: string;
+  readonly linuxX64BinarySha256: string;
 }
 
 export interface VerifiedProducerCandidateBinding {
@@ -1400,6 +1403,9 @@ function parseOpenCodeProvenanceIdentity(value: unknown): OpenCodeProvenanceIden
       'provenanceArtifactId',
       'provenanceArtifactSha256',
       'buildProvenanceBundleSha256',
+      'releaseManifestSha256',
+      'linuxX64ArchiveSha256',
+      'linuxX64BinarySha256',
     ],
     'producer_candidate_opencode_provenance'
   );
@@ -1433,11 +1439,20 @@ function parseOpenCodeProvenanceIdentity(value: unknown): OpenCodeProvenanceIden
     !HEX_64.test(item.provenanceArtifactSha256) ||
     typeof item.buildProvenanceBundleSha256 !== 'string' ||
     !HEX_64.test(item.buildProvenanceBundleSha256) ||
+    typeof item.releaseManifestSha256 !== 'string' ||
+    !HEX_64.test(item.releaseManifestSha256) ||
+    typeof item.linuxX64ArchiveSha256 !== 'string' ||
+    !HEX_64.test(item.linuxX64ArchiveSha256) ||
+    typeof item.linuxX64BinarySha256 !== 'string' ||
+    !HEX_64.test(item.linuxX64BinarySha256) ||
     new Set([
       item.candidateArtifactSha256,
       item.provenanceArtifactSha256,
       item.buildProvenanceBundleSha256,
-    ]).size !== 3
+      item.releaseManifestSha256,
+      item.linuxX64ArchiveSha256,
+      item.linuxX64BinarySha256,
+    ]).size !== 6
   ) {
     throw new TypeError('p3c_producer_candidate_opencode_provenance');
   }

@@ -671,7 +671,12 @@ export function parseNativeRuntimeCapture(
   if (!/^[0-9a-f]{64}$/u.test(expectedStackManifestSha256)) {
     throw new Error('p3c_runtime_capture_stack_manifest_identity');
   }
-  if (bytes.length < 2 || bytes.length > 8 * 1024 * 1024 || bytes.at(-1) !== 0x0a) {
+  if (
+    bytes.length < 2 ||
+    bytes.length > 8 * 1024 * 1024 ||
+    bytes.at(-1) !== 0x0a ||
+    (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf)
+  ) {
     throw new Error('p3c_runtime_capture_frame');
   }
   const source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -829,11 +834,36 @@ export function assertNativeSemanticCrossJoin(
     shard.records.slice(1, -1).map((record) => Object.freeze({ record, shardIndex }))
   );
   const shardTokens = new Set(expected.shards.map(({ producerStartToken }) => producerStartToken));
-  const candidates = rawRecords.filter((record) =>
-    shardTokens.has(record.processStartToken) ||
-    (name === 'negativeResultsPath' && record.origin === 'product-http' &&
-      /^cross_team_(?:list|preview|decide)_rejected$/u.test(record.event))
-  );
+  const projectedOpenCodeRecordType = (
+    record: LocatedRawRecord
+  ):
+    | 'hosted-observe'
+    | 'hosted-reply'
+    | 'hosted-reply-raw'
+    | 'conditional-reply-effect'
+    | null => {
+    if (record.origin !== 'opencode') return null;
+    const transport = record.nativeRecord.transport as Record<string, unknown>;
+    if (transport.direction === 'effect') return 'conditional-reply-effect';
+    if (transport.direction === 'request') return 'hosted-reply-raw';
+    if (transport.direction === 'response') return 'hosted-reply';
+    if (transport.direction === 'observation') return 'hosted-observe';
+    return null;
+  };
+  const candidates = rawRecords.filter((record) => {
+    const processSelected =
+      shardTokens.has(record.processStartToken) ||
+      (name === 'negativeResultsPath' &&
+        record.origin === 'product-http' &&
+        /^cross_team_(?:list|preview|decide)_rejected$/u.test(record.event));
+    if (!processSelected) return false;
+    if (name !== 'openCodeTimelinePath' && name !== 'protectedEffectLedgerPath') return true;
+    const projectedType = projectedOpenCodeRecordType(record);
+    return (
+      projectedType !== null &&
+      CAPTURE_NATIVE_RECORD_TYPES[name].includes(projectedType as never)
+    );
+  });
   const fail = (label: string): never => {
     throw new Error(`p3c_runtime_capture_semantic_${label}:${name}`);
   };
@@ -871,6 +901,8 @@ export function assertNativeSemanticCrossJoin(
     }
     if (name === 'openCodeTimelinePath' || name === 'protectedEffectLedgerPath') {
       if (rawRecord.origin !== 'opencode' || transport.kind !== 'opencode') return false;
+      const projectedType = projectedOpenCodeRecordType(rawRecord);
+      if (projectedType === null || projectedType !== nativeRecord.recordType) return false;
       const request = retain(transport.request, 'opencode_request_join');
       const response = retain(transport.response, 'opencode_response_join');
       let requestIdentity: Record<string, unknown>;
@@ -883,7 +915,12 @@ export function assertNativeSemanticCrossJoin(
       const requestId = requestIdentity.requestId ?? requestIdentity.requestID;
       const nullableIdentityMatch = (field: string, expectedValue: string): boolean =>
         native[field] === undefined || native[field] === null || native[field] === expectedValue;
-      const decision = identity.decision === 'allow' ? 'allow_once' : 'reject';
+      const decision =
+        identity.decision === 'deny'
+          ? 'reject'
+          : nativeRecord.recordType === 'conditional-reply-effect'
+            ? 'once'
+            : 'allow_once';
       const responseDigest = native.responseSha256;
       const requestDigest = native.requestBodySha256;
       return (

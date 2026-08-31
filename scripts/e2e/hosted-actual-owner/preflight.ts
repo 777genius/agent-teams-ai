@@ -484,6 +484,9 @@ function assertProducerCandidateDescriptorBindings(
         provenanceArtifactId: identities.provenanceArtifactId,
         provenanceArtifactSha256: identities.provenanceArtifactSha256,
         buildProvenanceBundleSha256: identities.buildProvenanceBundleSha256,
+        releaseManifestSha256: identities.releaseManifestSha256,
+        linuxX64ArchiveSha256: identities.linuxX64ArchiveSha256,
+        linuxX64BinarySha256: identities.linuxX64BinarySha256,
       })
   ) {
     throw new Error('p3c_producer_candidate_provenance_binding');

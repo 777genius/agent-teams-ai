@@ -400,6 +400,9 @@ function signedProducerCandidateFixture(
       provenanceArtifactId: TEST_OPENCODE_IDENTITIES.provenanceArtifactId,
       provenanceArtifactSha256: TEST_OPENCODE_IDENTITIES.provenanceArtifactSha256,
       buildProvenanceBundleSha256: TEST_OPENCODE_IDENTITIES.buildProvenanceBundleSha256,
+      releaseManifestSha256: TEST_OPENCODE_IDENTITIES.releaseManifestSha256,
+      linuxX64ArchiveSha256: TEST_OPENCODE_IDENTITIES.linuxX64ArchiveSha256,
+      linuxX64BinarySha256: TEST_OPENCODE_IDENTITIES.linuxX64BinarySha256,
     },
     producers: [
       {
@@ -964,6 +967,9 @@ describe('signed producer candidate shape', () => {
       ['candidateArtifactId', '18000000003'],
       ['provenanceArtifactId', '18000000004'],
       ['provenanceArtifactSha256', digest('forged-provenance-artifact')],
+      ['releaseManifestSha256', digest('forged-release-manifest')],
+      ['linuxX64ArchiveSha256', digest('forged-linux-x64-archive')],
+      ['linuxX64BinarySha256', digest('forged-linux-x64-binary')],
     ] as const) {
       verifyResignedMutation((changedPayload) => {
         const provenance = changedPayload.openCodeProvenance as Record<string, unknown>;
@@ -4287,6 +4293,126 @@ function nativeCrossJoinFixture(name: 'productTimelinePath' | 'ownerWalTimelineP
   return { fixture, parsedShards, expected };
 }
 
+function nativeOpenCodeCrossJoinFixture(
+  name: 'openCodeTimelinePath' | 'protectedEffectLedgerPath'
+) {
+  const fixture = rawEvidence();
+  const producer = fixture.outcome.starts.find((start) => start.role === 'opencode');
+  if (producer === undefined) throw new Error('fixture_opencode_producer_missing');
+
+  const candidates = fixture.raw.opencode
+    .toString('utf8')
+    .trimEnd()
+    .split('\n')
+    .map((line) => {
+      const raw = JSON.parse(line) as Record<string, unknown>;
+      const payload = JSON.parse(
+        Buffer.from(raw.payloadBase64 as string, 'base64').toString('utf8')
+      ) as Record<string, unknown>;
+      const semanticRecord = JSON.parse(
+        Buffer.from(payload.recordBase64 as string, 'base64').toString('utf8')
+      ) as Record<string, unknown>;
+      const transport = semanticRecord.transport as Record<string, unknown>;
+      const recordType =
+        transport.direction === 'effect'
+          ? 'conditional-reply-effect'
+          : transport.direction === 'request'
+            ? 'hosted-reply-raw'
+            : transport.direction === 'response'
+              ? 'hosted-reply'
+              : transport.direction === 'observation'
+                ? 'hosted-observe'
+                : null;
+      return { raw, semanticRecord, recordType };
+    })
+    .filter(
+      (
+        candidate
+      ): candidate is {
+        raw: Record<string, unknown>;
+        semanticRecord: Record<string, unknown>;
+        recordType:
+          | 'hosted-observe'
+          | 'hosted-reply'
+          | 'hosted-reply-raw'
+          | 'conditional-reply-effect';
+      } =>
+        candidate.raw.processStartToken === producer.startToken &&
+        candidate.recordType !== null &&
+        (name === 'protectedEffectLedgerPath'
+          ? candidate.recordType === 'conditional-reply-effect'
+          : candidate.recordType !== 'conditional-reply-effect')
+    )
+    .sort((left, right) =>
+      BigInt(left.raw.monotonicNs as string) < BigInt(right.raw.monotonicNs as string) ? -1 : 1
+    );
+
+  const semanticRecords = candidates.map(
+    ({ semanticRecord, recordType }, recordIndex) => {
+      const identity = semanticRecord.identity as SemanticIdentity;
+      const transport = semanticRecord.transport as Record<string, unknown>;
+      const retain = (value: unknown) => {
+        const structure = value as Record<string, unknown>;
+        const body = Buffer.from(structure.bodyBase64 as string, 'base64');
+        return { body, sha256: structure.sha256 as string };
+      };
+      const request = retain(transport.request);
+      const response = retain(transport.response);
+      const native =
+        recordType === 'conditional-reply-effect'
+          ? {
+              sessionId: null,
+              requestId: null,
+              decision: identity.decision === 'deny' ? 'reject' : 'once',
+            }
+          : recordType === 'hosted-reply'
+            ? {
+                sessionId: null,
+                requestId: null,
+                decision: identity.decision === 'deny' ? 'reject' : 'allow_once',
+                responseSha256: response.sha256,
+              }
+            : recordType === 'hosted-reply-raw'
+              ? {
+                  sessionId: null,
+                  requestId: null,
+                  requestBodySha256: request.sha256,
+                  responseSha256: response.sha256,
+                }
+              : {
+                  sessionId: null,
+                  responseSha256: response.sha256,
+                };
+      return {
+        stream: RUNTIME_CAPTURE_STREAMS[name],
+        recordType,
+        sequence: recordIndex + 1,
+        previousRecordSha256: digest(`opencode-cross-join-previous:${name}:${recordIndex}`),
+        emissionNonce: digest(`opencode-cross-join-nonce:${name}:${recordIndex}`),
+        producer: {},
+        activation: {
+          controllerNonce: fixture.controllerNonce,
+          runId: fixture.outcome.runId,
+        },
+        native,
+        lineSha256: digest(`opencode-cross-join-line:${name}:${recordIndex}`),
+      };
+    }
+  );
+  const parsedShards = [
+    {
+      producerRole: 'opencode',
+      semanticRecordCount: semanticRecords.length,
+      records: [{ native: {} }, ...semanticRecords, { native: {} }],
+      finalLineSha256: digest(`opencode-cross-join-final:${name}`),
+    },
+  ] as unknown as Parameters<typeof assertNativeSemanticCrossJoin>[1];
+  const expected = {
+    shards: [{ producerStartToken: producer.startToken }],
+  } as unknown as Parameters<typeof assertNativeSemanticCrossJoin>[4];
+  return { fixture, parsedShards, expected };
+}
+
 describe('nonAuthoritative native capture parser goldens', () => {
   const controllerNonce = digest('native-parser-controller');
   const runId = digest('native-parser-run');
@@ -4380,6 +4506,25 @@ describe('nonAuthoritative native capture parser goldens', () => {
     );
     expect(parsed.semanticRecordCount).toBe(1);
     expect(parsed.records).toHaveLength(3);
+  });
+
+  it.each([
+    'conditionalPostLedgerPath',
+    'negativeResultsPath',
+    'openCodeTimelinePath',
+    'ownerWalTimelinePath',
+    'productTimelinePath',
+    'protectedEffectLedgerPath',
+  ] as const)('rejects a raw UTF-8 BOM before decoding the %s native stream', (name) => {
+    expect(() =>
+      parseNativeRuntimeCapture(
+        name,
+        Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), fixedGolden]),
+        fixedControllerNonce,
+        fixedRunId,
+        activation.stackManifestSha256
+      )
+    ).toThrow('p3c_runtime_capture_frame');
   });
 
   it.each([
@@ -4674,6 +4819,74 @@ describe('nonAuthoritative native capture parser goldens', () => {
       ).toThrow(/p3c_runtime_capture_semantic_/u);
     }
   );
+
+  it.each([
+    'openCodeTimelinePath',
+    'protectedEffectLedgerPath',
+  ] as const)('fully cross-joins the selected raw OpenCode records for %s', (name) => {
+    const { fixture, parsedShards, expected } = nativeOpenCodeCrossJoinFixture(name);
+    expect(parsedShards[0]!.semanticRecordCount).toBeGreaterThan(0);
+    expect(() =>
+      assertNativeSemanticCrossJoin(
+        name,
+        parsedShards,
+        fixture.raw,
+        fixture.controllerNonce,
+        expected
+      )
+    ).not.toThrow();
+
+    const missing = structuredClone(parsedShards) as unknown as Parameters<
+      typeof assertNativeSemanticCrossJoin
+    >[1];
+    const records = missing[0]!.records as unknown as Record<string, unknown>[];
+    // Drop the final semantic event so this mutation isolates completeness,
+    // without shifting earlier repeated-event joins into an ordering failure.
+    records.splice(records.length - 2, 1);
+    expect(() =>
+      assertNativeSemanticCrossJoin(
+        name,
+        missing,
+        fixture.raw,
+        fixture.controllerNonce,
+        expected
+      )
+    ).toThrow(`p3c_runtime_capture_semantic_unconsumed_raw:${name}`);
+  });
+
+  it('projects an allow protected effect to the native once decision', () => {
+    const { fixture, parsedShards, expected } =
+      nativeOpenCodeCrossJoinFixture('protectedEffectLedgerPath');
+    expect(() =>
+      assertNativeSemanticCrossJoin(
+        'protectedEffectLedgerPath',
+        parsedShards,
+        fixture.raw,
+        fixture.controllerNonce,
+        expected
+      )
+    ).not.toThrow();
+
+    const changed = structuredClone(parsedShards) as unknown as Parameters<
+      typeof assertNativeSemanticCrossJoin
+    >[1];
+    const allowEffect = changed[0]!.records
+      .slice(1, -1)
+      .find((record) => record.native.decision === 'once');
+    if (allowEffect === undefined) throw new Error('fixture_allow_effect_missing');
+    (allowEffect.native as Record<string, unknown>).decision = 'allow_once';
+    expect(() =>
+      assertNativeSemanticCrossJoin(
+        'protectedEffectLedgerPath',
+        changed,
+        fixture.raw,
+        fixture.controllerNonce,
+        expected
+      )
+    ).toThrow(
+      'p3c_runtime_capture_semantic_unmatched_native:protectedEffectLedgerPath'
+    );
+  });
 
   it('rejects cross-owner mixing between ordered restarted-owner shards', () => {
     const { fixture, parsedShards, expected } = nativeCrossJoinFixture('ownerWalTimelinePath');
