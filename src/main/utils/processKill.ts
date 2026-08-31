@@ -145,3 +145,11 @@ export async function killProcessByPidAndWait(
       (diagnostics.length > 0 ? `: ${diagnostics.join('; ')}` : '')
   );
 }
+
+/**
+ * Fire-and-forget force kill: tree-aware taskkill on Windows, SIGKILL on
+ * POSIX. Callers re-check liveness afterwards instead of awaiting.
+ */
+export function forceKillProcessByPidNoWait(pid: number): void {
+  void killProcessByPidAndWait(pid, { signal: 'SIGKILL' });
+}

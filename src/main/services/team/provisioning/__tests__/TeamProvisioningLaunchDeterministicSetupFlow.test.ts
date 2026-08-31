@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -159,7 +161,8 @@ describe('TeamProvisioningLaunchDeterministicSetupFlow', () => {
     const ports = createPorts({
       getExistingAliveRunId: vi.fn(() => 'run-existing'),
       getExistingRun: vi.fn(() => ({ child: {}, processKilled: false, cancelRequested: false })),
-      getRunTrackedCwd: vi.fn(() => '/tmp'),
+      // The live-run reuse check compares resolved cwds.
+      getRunTrackedCwd: vi.fn(() => path.resolve('/tmp')),
     });
 
     await expect(prepareDeterministicLaunchSetup(request, ports)).resolves.toEqual({
