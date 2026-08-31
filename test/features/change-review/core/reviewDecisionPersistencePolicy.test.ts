@@ -36,8 +36,24 @@ describe('review decision persistence policy', () => {
     [
       {
         filePath: '/safe/file.ts',
+        fileDecision: ['accepted'],
+        hunkDecisions: {},
+      },
+      'Invalid fileDecision',
+    ],
+    [
+      {
+        filePath: '/safe/file.ts',
         fileDecision: 'pending',
         hunkDecisions: { '-1': 'pending' },
+      },
+      'Invalid hunk decision',
+    ],
+    [
+      {
+        filePath: '/safe/file.ts',
+        fileDecision: 'pending',
+        hunkDecisions: { 0: ['rejected'] },
       },
       'Invalid hunk decision',
     ],

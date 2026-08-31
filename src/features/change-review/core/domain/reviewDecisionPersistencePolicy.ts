@@ -27,7 +27,10 @@ export function assertReviewDecisionShape(value: unknown): asserts value is File
   ) {
     throw new Error('Invalid decision.reviewKey');
   }
-  if (!['accepted', 'rejected', 'pending'].includes(String(raw.fileDecision))) {
+  if (
+    typeof raw.fileDecision !== 'string' ||
+    !['accepted', 'rejected', 'pending'].includes(raw.fileDecision)
+  ) {
     throw new Error('Invalid fileDecision');
   }
   if (
@@ -44,7 +47,8 @@ export function assertReviewDecisionShape(value: unknown): asserts value is File
       !/^\d+$/.test(index) ||
       !Number.isSafeInteger(numericIndex) ||
       numericIndex >= MAX_REVIEW_HUNK_DECISIONS_PER_FILE ||
-      !['accepted', 'rejected', 'pending'].includes(String(decision))
+      typeof decision !== 'string' ||
+      !['accepted', 'rejected', 'pending'].includes(decision)
     ) {
       throw new Error('Invalid hunk decision');
     }
