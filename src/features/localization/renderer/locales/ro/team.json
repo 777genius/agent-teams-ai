@@ -312,8 +312,14 @@
       "saved": "Salvat"
     },
     "worktree": {
-      "description": "Rulează acest coechipier într-un git worktree separat. Aplicarea/respingerea modificărilor vizează acel worktree, nu spațiul de lucru al liderului.",
-      "label": "Worktree"
+      "description": "Bifat: folosește un worktree Git separat, creat la pornire dacă este necesar. Worktree-urile existente își păstrează branch-ul curent. Debifat: folosește spațiul de lucru partajat al proiectului; vechiul worktree este păstrat.",
+      "label": "Worktree",
+      "existing": "Ultimul spațiu de lucru: {{path}}. Worktree-ul gestionat este reutilizat dacă este disponibil; altfel, este creat la pornire.",
+      "new": "Worktree: este reutilizat dacă este disponibil; altfel, este creat la pornire. Branch-ul va fi afișat după pornire.",
+      "shared": "Spațiul de lucru partajat al proiectului: {{path}}. Folosește branch-ul proiectului.",
+      "sharedPending": "Spațiu de lucru partajat: este stabilit la pornire împreună cu worktree-ul liderului. Branch-ul va fi afișat după pornire.",
+      "branch": "Branch-ul worktree-ului: {{branch}}",
+      "branchUnavailable": "Indisponibil"
     },
     "addMembers": {
       "title": "Adaugă membri",
@@ -1799,11 +1805,12 @@
       "title": "Membri",
       "addMember": "Adaugă membru",
       "editAsJson": "Editează ca JSON",
-      "runInSeparateWorktrees": "Rulează coechipierii în worktree-uri separate",
+      "runInSeparateWorktrees": "Worktree pentru toți membrii echipei",
       "agentTeamsMcpOnly": "Doar Agent Teams MCP",
       "removedCount": "Eliminați ({{count}})",
       "removedModelLockReason": "Membrii eliminați sunt păstrați pentru istoricul de ștergere temporară. Restaurează-i pentru a edita setările.",
-      "memberNamesUnique": "Numele membrilor trebuie să fie unice"
+      "memberNamesUnique": "Numele membrilor trebuie să fie unice",
+      "worktreeDescription": "Bifat: worktree-uri separate pentru toți membrii. Mixt: doar pentru membrii selectați. Debifat: spațiul de lucru partajat al proiectului. Dezactivarea acestei opțiuni păstrează worktree-urile existente pe disc."
     },
     "stats": {
       "computing": "Se calculează statisticile...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Avansat",
-    "useWorktree": "Folosește worktree",
+    "useWorktree": "Worktree-ul liderului (separat de worktree-urile celorlalți membri)",
     "recent": "Recente",
     "commandPreview": "Previzualizare comandă",
     "customArguments": "Argumente personalizate",

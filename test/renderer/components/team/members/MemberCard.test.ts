@@ -1834,11 +1834,12 @@ describe('MemberCard starting-state visuals', () => {
     });
   });
 
-  it('moves worktree branch details into the worktree badge tooltip', async () => {
+  it('shows a visible branch beside the worktree badge and preserves tooltip details', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const onClick = vi.fn();
 
     await act(async () => {
       root.render(
@@ -1852,6 +1853,7 @@ describe('MemberCard starting-state visuals', () => {
           },
           memberColor: 'turquoise',
           isTeamAlive: true,
+          onClick,
         })
       );
       await Promise.resolve();
@@ -1862,7 +1864,19 @@ describe('MemberCard starting-state visuals', () => {
       'Path: /Users/belief/.claude/team-worktrees/sol-team-proj-abc/room/jack'
     );
     expect(host.textContent).toContain('Branch: agent-teams/room/jack-abc');
-    expect(host.textContent?.match(/agent-teams\/room\/jack-abc/g)).toHaveLength(1);
+    expect(host.querySelector('[data-member-branch]')?.textContent).toBe(
+      'agent-teams/room/jack-abc'
+    );
+    expect(host.querySelector('[data-member-branch]')?.getAttribute('tabindex')).toBe('0');
+    expect(host.querySelector('[data-member-branch]')?.closest('.grid')).toBeNull();
+
+    const branchBadge = host.querySelector('[data-member-branch]') as HTMLElement;
+    await act(async () => {
+      branchBadge.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      branchBadge.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(onClick).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();

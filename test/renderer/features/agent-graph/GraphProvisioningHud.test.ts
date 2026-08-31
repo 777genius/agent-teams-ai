@@ -1,8 +1,8 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { GraphProvisioningHud } from '@features/agent-graph/renderer/ui/GraphProvisioningHud';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => ({
   stepperProps: [] as { active?: boolean }[],
@@ -21,6 +21,7 @@ const hookState = {
     progress: { runId: string };
   } | null,
   runInstanceKey: 'team:run-1:2026-04-13T10:00:00.000Z',
+  launchError: null as string | null,
 };
 
 vi.mock('@renderer/components/team/useTeamProvisioningPresentation', () => ({
@@ -51,7 +52,7 @@ vi.mock('@renderer/components/team/TeamProvisioningPanel', () => ({
     React.createElement(
       'div',
       { 'data-testid': 'panel', 'data-default-logs-open': defaultLogsOpen ? 'true' : 'false' },
-      'provisioning-panel'
+      hookState.launchError ?? 'provisioning-panel'
     ),
 }));
 
@@ -59,9 +60,29 @@ describe('GraphProvisioningHud', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     hookState.presentation = null;
+    hookState.launchError = null;
     hookState.runInstanceKey = 'team:run-1:2026-04-13T10:00:00.000Z';
     hoisted.stepperProps = [];
   });
+
+  it.each([true, false])(
+    'shows an early launch error only on an enabled graph (enabled=%s)',
+    async (enabled) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      hookState.launchError = 'Worktree branch mismatch';
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(GraphProvisioningHud, { teamName: 'northstar-core', enabled })
+        );
+      });
+      expect(host.textContent).toBe(enabled ? hookState.launchError : '');
+      expect(host.querySelector('[data-testid="stepper"]')).toBeNull();
+      await act(async () => root.unmount());
+    }
+  );
 
   it('hides the graph launch hud once provisioning is ready', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);

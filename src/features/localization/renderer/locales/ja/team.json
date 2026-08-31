@@ -312,8 +312,14 @@
       "saved": "保存済み"
     },
     "worktree": {
-      "description": "別のgitワークツリーでこのチームメイトを実行します。 リードワークスペースではなく、ワークツリーが変更対象を適用する/拒否します。",
-      "label": "ワークツリー"
+      "description": "オン: 必要に応じて起動時に作成される別の Git worktree を使用します。既存の worktree は現在のブランチを維持します。オフ: 共有プロジェクトワークスペースを使用し、以前の worktree は保持されます。",
+      "label": "ワークツリー",
+      "existing": "前回のワークスペース: {{path}}。管理対象の worktree が利用可能なら再利用し、なければ起動時に作成します。",
+      "new": "Worktree: 利用可能なら再利用し、なければ起動時に作成します。ブランチは起動後に表示されます。",
+      "shared": "共有プロジェクトワークスペース: {{path}}。プロジェクトのブランチを使用します。",
+      "sharedPending": "共有ワークスペース: 起動時にリードの worktree とともに確定します。ブランチは起動後に表示されます。",
+      "branch": "Worktree のブランチ: {{branch}}",
+      "branchUnavailable": "利用できません"
     },
     "addMembers": {
       "title": "メンバーの追加",
@@ -1799,11 +1805,12 @@
       "title": "メンバー",
       "addMember": "メンバーの追加",
       "editAsJson": "JSONとして編集",
-      "runInSeparateWorktrees": "チームメイトを別のワークツリーで実行する",
+      "runInSeparateWorktrees": "すべてのチームメイトに worktree を使用",
       "agentTeamsMcpOnly": "エージェントチーム MCP のみ",
       "removedCount": "削除({{count}})",
       "removedModelLockReason": "削除されたメンバーは、ソフト削除履歴を保持します。 設定を編集するために復元します。",
-      "memberNamesUnique": "会員名はユニークでなければなりません"
+      "memberNamesUnique": "会員名はユニークでなければなりません",
+      "worktreeDescription": "オン: すべてのチームメイトに個別の worktree を使用します。一部選択: 選択したチームメイトのみに使用します。オフ: 共有プロジェクトワークスペースを使用します。オフにしても既存の worktree はディスクに保持されます。"
     },
     "stats": {
       "computing": "計算の統計...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "アドバンスト",
-    "useWorktree": "ワークツリーを使う",
+    "useWorktree": "リード用 worktree (チームメイト用 worktree とは別)",
     "recent": "最近の投稿",
     "commandPreview": "コマンドプレビュー",
     "customArguments": "カスタム引数",

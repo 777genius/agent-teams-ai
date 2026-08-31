@@ -1,10 +1,13 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const storeState = {
   progress: null as Record<string, unknown> | null,
   cancelProvisioning: vi.fn(),
+  provisioningErrorByTeam: {} as Record<string, string>,
+  clearProvisioningError: vi.fn(),
   retryFailedOpenCodeSecondaryLanes: vi.fn(),
   selectedTeamName: 'northstar-core',
   selectedTeamData: {
@@ -57,8 +60,8 @@ vi.mock('zustand/react/shallow', () => ({
 }));
 
 vi.mock('@renderer/components/ui/button', () => ({
-  Button: ({ children }: { children: React.ReactNode }) =>
-    React.createElement('button', { type: 'button' }, children),
+  Button: ({ children, onClick, 'aria-label': ariaLabel }: React.ComponentProps<'button'>) =>
+    React.createElement('button', { type: 'button', onClick, 'aria-label': ariaLabel }, children),
 }));
 
 vi.mock('@renderer/components/team/ProvisioningProgressBlock', () => ({
@@ -96,6 +99,11 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
 
   beforeEach(() => {
     storeState.selectedTeamName = 'northstar-core';
+    storeState.provisioningErrorByTeam = {};
+    storeState.clearProvisioningError.mockReset();
+    storeState.clearProvisioningError.mockImplementation((teamName: string) => {
+      delete storeState.provisioningErrorByTeam[teamName];
+    });
     storeState.progress = {
       runId: 'run-1',
       teamName: 'northstar-core',
@@ -136,6 +144,80 @@ describe('TeamProvisioningBanner launch-step alignment', () => {
       },
       source: 'merged',
     };
+  });
+
+  it('shows and dismisses an early launch error without inventing runtime progress', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = null;
+    const error =
+      'Worktree for member "Bob" is on "m0merge", expected "agent-teams/team/bob": /test/worktree';
+    storeState.provisioningErrorByTeam = {
+      'northstar-core': error,
+      'other-team': 'Other launch failed',
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+    });
+
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(error);
+    expect(host.textContent).not.toContain('Other launch failed');
+    expect(host.querySelector('[data-testid="progress-block"]')).toBeNull();
+    const dismiss = host.querySelector('button[aria-label]');
+    expect(dismiss).not.toBeNull();
+    await act(async () => {
+      dismiss?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(storeState.clearProvisioningError).toHaveBeenCalledWith('northstar-core');
+    expect(storeState.provisioningErrorByTeam['other-team']).toBe('Other launch failed');
+
+    await act(async () => {
+      root.render(
+        React.createElement(TeamProvisioningBanner, { key: 'reopen', teamName: 'northstar-core' })
+      );
+    });
+    expect(host.textContent).toBe('');
+
+    storeState.provisioningErrorByTeam['northstar-core'] = error;
+    await act(async () => {
+      root.render(
+        React.createElement(TeamProvisioningBanner, { key: 'retry', teamName: 'northstar-core' })
+      );
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain(error);
+    await act(async () => root.unmount());
+  });
+
+  it('does not render another team error when this team has no progress or error', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = null;
+    storeState.provisioningErrorByTeam = { 'other-team': 'Other launch failed' };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+    });
+    expect(host.textContent).toBe('');
+    await act(async () => root.unmount());
+  });
+
+  it('keeps real failed progress instead of rendering a second early-error banner', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.progress = { ...storeState.progress, state: 'failed', message: 'Runtime failed' };
+    storeState.provisioningErrorByTeam = { 'northstar-core': 'Runtime failed' };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(TeamProvisioningBanner, { teamName: 'northstar-core' }));
+    });
+    expect(host.querySelector('[data-testid="progress-block"]')).not.toBeNull();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    await act(async () => root.unmount());
   });
 
   it('keeps Members joining as the active step while teammates are still starting after ready', async () => {

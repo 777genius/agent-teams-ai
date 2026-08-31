@@ -312,8 +312,14 @@
       "saved": "已保存"
     },
     "worktree": {
-      "description": "在单独的 Git worktree中运行该队友。应用/拒绝更改的目标是工作树，而不是主要工作区。",
-      "label": "工作树"
+      "description": "选中: 使用单独的 Git worktree，必要时会在启动时创建。现有 worktree 会保留当前分支。未选中: 使用共享项目工作区，原有 worktree 将予以保留。",
+      "label": "工作树",
+      "existing": "上次使用的工作区: {{path}}。如有可用的托管 worktree 则会复用，否则将在启动时创建。",
+      "new": "Worktree: 如有可用项则会复用，否则将在启动时创建。启动后将显示分支。",
+      "shared": "共享项目工作区: {{path}}。使用项目分支。",
+      "sharedPending": "共享工作区: 启动时与负责人 worktree 一并确定。启动后将显示分支。",
+      "branch": "Worktree 分支: {{branch}}",
+      "branchUnavailable": "不可用"
     },
     "addMembers": {
       "title": "添加成员",
@@ -1799,11 +1805,12 @@
       "title": "成员",
       "addMember": "添加成员",
       "editAsJson": "编辑为 JSON",
-      "runInSeparateWorktrees": "在单独的工作树中运行队友",
+      "runInSeparateWorktrees": "为所有队友使用 worktree",
       "agentTeamsMcpOnly": "仅限 Agent Team MCP",
       "removedCount": "已删除 ({{count}})",
       "removedModelLockReason": "已删除的成员将保留软删除历史记录。恢复它们以编辑设置。",
-      "memberNamesUnique": "成员名称必须是唯一的"
+      "memberNamesUnique": "成员名称必须是唯一的",
+      "worktreeDescription": "选中: 所有队友使用单独的 worktree。部分选中: 仅所选队友使用。未选中: 使用共享项目工作区。关闭此选项后，现有 worktree 仍会保留在磁盘上。"
     },
     "stats": {
       "computing": "计算统计数据…",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "高级",
-    "useWorktree": "使用工作树",
+    "useWorktree": "负责人 worktree (与队友 worktree 分开)",
     "recent": "最近的",
     "commandPreview": "命令预览",
     "customArguments": "自定义参数",

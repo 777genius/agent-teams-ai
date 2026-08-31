@@ -312,8 +312,14 @@
       "saved": "Gespeichert"
     },
     "worktree": {
-      "description": "Führen Sie diesen Teamkollegen in einem separaten Git-Worktree. Bewerben / abwerfen Sie Ziele, die Arbeitstree, nicht den Lead-Workspace.",
-      "label": "Arbeitsstätte"
+      "description": "Aktiviert: Verwendet einen separaten Git-Worktree, der bei Bedarf beim Start erstellt wird. Vorhandene Worktrees behalten ihren aktuellen Branch. Deaktiviert: Verwendet den gemeinsamen Projekt-Workspace; der alte Worktree bleibt erhalten.",
+      "label": "Worktree",
+      "existing": "Letzter Workspace: {{path}}. Der verwaltete Worktree wird wiederverwendet, falls verfügbar; andernfalls wird er beim Start erstellt.",
+      "new": "Worktree: wird wiederverwendet, falls verfügbar; andernfalls beim Start erstellt. Der Branch wird nach dem Start angezeigt.",
+      "shared": "Gemeinsamer Projekt-Workspace: {{path}}. Verwendet den Projekt-Branch.",
+      "sharedPending": "Gemeinsamer Workspace: wird beim Start zusammen mit dem Lead-Worktree ermittelt. Der Branch wird nach dem Start angezeigt.",
+      "branch": "Worktree-Branch: {{branch}}",
+      "branchUnavailable": "Nicht verfügbar"
     },
     "addMembers": {
       "title": "Mitglieder",
@@ -1799,11 +1805,12 @@
       "title": "Mitglieder",
       "addMember": "Mitglied hinzufügen",
       "editAsJson": "Bearbeiten als JSON",
-      "runInSeparateWorktrees": "Führen Sie Teamkollegen in separaten Werkstätten",
+      "runInSeparateWorktrees": "Separate Worktrees für alle Teammitglieder",
       "agentTeamsMcpOnly": "Agent Teams MCP nur",
       "removedCount": "Entzogen ({{count}})",
       "removedModelLockReason": "Die entfernten Mitglieder werden für die Geschichte der Soft delete gehalten. Wiederherstellen Sie sie, um Einstellungen zu bearbeiten.",
-      "memberNamesUnique": "Die Mitgliedstaaten müssen eindeutig sein"
+      "memberNamesUnique": "Die Mitgliedstaaten müssen eindeutig sein",
+      "worktreeDescription": "Aktiviert: separate Worktrees für alle Teammitglieder. Teilweise aktiviert: separate Worktrees nur für ausgewählte Teammitglieder. Deaktiviert: gemeinsamer Projekt-Workspace. Beim Deaktivieren bleiben vorhandene Worktrees auf dem Datenträger erhalten."
     },
     "stats": {
       "computing": "Statistiken...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Erweiterte",
-    "useWorktree": "Arbeitstree verwenden",
+    "useWorktree": "Lead-Worktree (getrennt von den Worktrees der Teammitglieder)",
     "recent": "Vor kurzem",
     "commandPreview": "Befehlsvorschau",
     "customArguments": "Kundenspezifische Argumente",

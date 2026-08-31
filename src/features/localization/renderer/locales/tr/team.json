@@ -312,8 +312,14 @@
       "saved": "Kaydedildi"
     },
     "worktree": {
-      "description": "Bu takım arkadaşını ayrı bir git worktree'de çalıştır. Değişiklikleri uygula/reddet, lider çalışma alanını değil o worktree'yi hedefler.",
-      "label": "Worktree"
+      "description": "İşaretli: gerekirse başlatma sırasında oluşturulan ayrı bir Git worktree'si kullanır. Mevcut worktree'ler geçerli branch'lerini korur. İşaretli değil: paylaşılan proje çalışma alanını kullanır; eski worktree korunur.",
+      "label": "Worktree",
+      "existing": "Son çalışma alanı: {{path}}. Yönetilen worktree varsa yeniden kullanılır; yoksa başlatma sırasında oluşturulur.",
+      "new": "Worktree: varsa yeniden kullanılır; yoksa başlatma sırasında oluşturulur. Branch, başlatmadan sonra gösterilir.",
+      "shared": "Paylaşılan proje çalışma alanı: {{path}}. Projenin branch'ini kullanır.",
+      "sharedPending": "Paylaşılan çalışma alanı: başlatma sırasında lider worktree'siyle birlikte belirlenir. Branch, başlatmadan sonra gösterilir.",
+      "branch": "Worktree branch'i: {{branch}}",
+      "branchUnavailable": "Kullanılamıyor"
     },
     "addMembers": {
       "title": "Üye Ekle",
@@ -1799,11 +1805,12 @@
       "title": "Üyeler",
       "addMember": "Üye ekle",
       "editAsJson": "JSON olarak düzenle",
-      "runInSeparateWorktrees": "Takım arkadaşlarını ayrı worktree'lerde çalıştır",
+      "runInSeparateWorktrees": "Tüm takım arkadaşları için worktree",
       "agentTeamsMcpOnly": "Yalnızca Agent Teams MCP",
       "removedCount": "Kaldırıldı ({{count}})",
       "removedModelLockReason": "Kaldırılan üyeler yumuşak silme geçmişi için korunur. Ayarları düzenlemek için onları geri yükleyin.",
-      "memberNamesUnique": "Üye adları benzersiz olmalıdır"
+      "memberNamesUnique": "Üye adları benzersiz olmalıdır",
+      "worktreeDescription": "İşaretli: tüm takım arkadaşları için ayrı worktree'ler. Karma: yalnızca seçili takım arkadaşları için. İşaretli değil: paylaşılan proje çalışma alanı. Bu seçenek kapatıldığında mevcut worktree'ler diskte tutulur."
     },
     "stats": {
       "computing": "İstatistikler hesaplanıyor...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Gelişmiş",
-    "useWorktree": "Worktree kullan",
+    "useWorktree": "Lider worktree'si (takım arkadaşlarının worktree'lerinden ayrı)",
     "recent": "Son",
     "commandPreview": "Komut önizlemesi",
     "customArguments": "Özel argümanlar",

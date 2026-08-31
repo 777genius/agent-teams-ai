@@ -312,8 +312,14 @@
       "saved": "Đã lưu"
     },
     "worktree": {
-      "description": "Chạy thành viên này trong một git worktree riêng. Áp dụng/từ chối thay đổi nhắm vào worktree đó, không phải không gian làm việc của trưởng nhóm.",
-      "label": "Worktree"
+      "description": "Đã chọn: dùng một Git worktree riêng, được tạo khi khởi chạy nếu cần. Các worktree hiện có giữ nguyên nhánh hiện tại. Bỏ chọn: dùng không gian làm việc chung của dự án; worktree cũ vẫn được giữ lại.",
+      "label": "Worktree",
+      "existing": "Không gian làm việc gần đây nhất: {{path}}. Worktree được quản lý sẽ được dùng lại nếu có; nếu không, worktree sẽ được tạo khi khởi chạy.",
+      "new": "Worktree: được dùng lại nếu có, nếu không sẽ được tạo khi khởi chạy. Nhánh sẽ hiển thị sau khi khởi chạy.",
+      "shared": "Không gian làm việc chung của dự án: {{path}}. Sử dụng nhánh của dự án.",
+      "sharedPending": "Không gian làm việc chung: được xác định khi khởi chạy cùng với worktree của trưởng nhóm. Nhánh sẽ hiển thị sau khi khởi chạy.",
+      "branch": "Nhánh của worktree: {{branch}}",
+      "branchUnavailable": "Không khả dụng"
     },
     "addMembers": {
       "title": "Thêm thành viên",
@@ -1799,11 +1805,12 @@
       "title": "Thành viên",
       "addMember": "Thêm thành viên",
       "editAsJson": "Chỉnh sửa dưới dạng JSON",
-      "runInSeparateWorktrees": "Chạy thành viên trong các worktree riêng",
+      "runInSeparateWorktrees": "Worktree cho tất cả thành viên",
       "agentTeamsMcpOnly": "Chỉ MCP của Agent Teams",
       "removedCount": "Đã xóa ({{count}})",
       "removedModelLockReason": "Các thành viên đã xóa được giữ lại cho lịch sử xóa mềm. Hãy khôi phục họ để chỉnh sửa cài đặt.",
-      "memberNamesUnique": "Tên thành viên phải là duy nhất"
+      "memberNamesUnique": "Tên thành viên phải là duy nhất",
+      "worktreeDescription": "Đã chọn: worktree riêng cho tất cả thành viên. Một phần: chỉ dành cho các thành viên đã chọn. Bỏ chọn: không gian làm việc chung của dự án. Việc tắt tùy chọn này vẫn giữ các worktree hiện có trên đĩa."
     },
     "stats": {
       "computing": "Đang tính toán thống kê...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Nâng cao",
-    "useWorktree": "Dùng worktree",
+    "useWorktree": "Worktree của trưởng nhóm (tách biệt với worktree của thành viên)",
     "recent": "Gần đây",
     "commandPreview": "Xem trước lệnh",
     "customArguments": "Đối số tùy chỉnh",

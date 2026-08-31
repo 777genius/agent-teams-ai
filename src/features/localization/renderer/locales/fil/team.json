@@ -312,8 +312,14 @@
       "saved": "Na-save"
     },
     "worktree": {
-      "description": "Patakbuhin ang teammate na ito sa hiwalay na git worktree. Ang pag-apply/pag-reject ng mga pagbabago ay nakatuon sa worktree na iyon, hindi sa lead workspace.",
-      "label": "Worktree"
+      "description": "Naka-check: gumamit ng hiwalay na Git worktree, na gagawin sa paglunsad kung kailangan. Mananatili sa kasalukuyang branch ang mga dati nang worktree. Hindi naka-check: gamitin ang shared project workspace; pananatilihin ang lumang worktree.",
+      "label": "Worktree",
+      "existing": "Huling workspace: {{path}}. Gagamitin muli ang managed worktree kung available; kung hindi, gagawin ito sa paglunsad.",
+      "new": "Worktree: gagamitin muli kung available, o gagawin sa paglunsad. Ipapakita ang branch pagkatapos ng paglunsad.",
+      "shared": "Shared project workspace: {{path}}. Ginagamit ang project branch.",
+      "sharedPending": "Shared workspace: tutukuyin sa paglunsad kasama ng worktree ng lead. Ipapakita ang branch pagkatapos ng paglunsad.",
+      "branch": "Branch ng worktree: {{branch}}",
+      "branchUnavailable": "Hindi available"
     },
     "addMembers": {
       "title": "Magdagdag ng Mga Miyembro",
@@ -1799,11 +1805,12 @@
       "title": "Mga Miyembro",
       "addMember": "Magdagdag ng miyembro",
       "editAsJson": "I-edit bilang JSON",
-      "runInSeparateWorktrees": "Patakbuhin ang mga teammate sa hiwalay na worktree",
+      "runInSeparateWorktrees": "Worktree para sa lahat ng teammate",
       "agentTeamsMcpOnly": "Agent Teams MCP only",
       "removedCount": "Tinanggal ({{count}})",
       "removedModelLockReason": "Pinapanatili ang mga tinanggal na miyembro para sa soft delete history. Ibalik ang mga ito para i-edit ang mga setting.",
-      "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi"
+      "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi",
+      "worktreeDescription": "Naka-check: magkakahiwalay na worktree para sa lahat ng teammate. Bahagyang naka-check: para lang sa mga napiling teammate. Hindi naka-check: shared project workspace. Kapag in-off ito, mananatili sa disk ang mga dati nang worktree."
     },
     "stats": {
       "computing": "Kinakalkula ang mga stat...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Advanced",
-    "useWorktree": "Gumamit ng worktree",
+    "useWorktree": "Worktree ng lead (hiwalay sa mga worktree ng teammate)",
     "recent": "Kamakailan",
     "commandPreview": "Command preview",
     "customArguments": "Mga custom na argument",

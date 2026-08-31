@@ -312,8 +312,14 @@
       "saved": "Disimpan"
     },
     "worktree": {
-      "description": "Jalankan rakan pasukan ini dalam worktree git berasingan. Terima/tolak perubahan menyasarkan worktree tersebut, bukan ruang kerja ketua.",
-      "label": "Worktree"
+      "description": "Ditandakan: gunakan Git worktree berasingan, yang dicipta semasa pelancaran jika perlu. Worktree sedia ada mengekalkan branch semasanya. Tidak ditandakan: gunakan ruang kerja projek yang dikongsi; worktree lama dikekalkan.",
+      "label": "Worktree",
+      "existing": "Ruang kerja terakhir: {{path}}. Worktree terurus digunakan semula jika tersedia; jika tidak, dicipta semasa pelancaran.",
+      "new": "Worktree: digunakan semula jika tersedia, atau dicipta semasa pelancaran. Branch akan dipaparkan selepas pelancaran.",
+      "shared": "Ruang kerja projek yang dikongsi: {{path}}. Menggunakan branch projek.",
+      "sharedPending": "Ruang kerja yang dikongsi: ditentukan semasa pelancaran bersama worktree ketua. Branch akan dipaparkan selepas pelancaran.",
+      "branch": "Branch worktree: {{branch}}",
+      "branchUnavailable": "Tidak tersedia"
     },
     "addMembers": {
       "title": "Tambah Ahli",
@@ -1799,11 +1805,12 @@
       "title": "Ahli",
       "addMember": "Tambah ahli",
       "editAsJson": "Sunting sebagai JSON",
-      "runInSeparateWorktrees": "Jalankan rakan pasukan dalam worktree berasingan",
+      "runInSeparateWorktrees": "Worktree untuk semua rakan pasukan",
       "agentTeamsMcpOnly": "Agent Teams MCP sahaja",
       "removedCount": "Dibuang ({{count}})",
       "removedModelLockReason": "Ahli yang dibuang dikekalkan untuk sejarah padam lembut. Pulihkan mereka untuk menyunting tetapan.",
-      "memberNamesUnique": "Nama ahli mesti unik"
+      "memberNamesUnique": "Nama ahli mesti unik",
+      "worktreeDescription": "Ditandakan: worktree berasingan untuk semua rakan pasukan. Sebahagian: hanya untuk rakan pasukan yang dipilih. Tidak ditandakan: ruang kerja projek yang dikongsi. Mematikan pilihan ini akan mengekalkan worktree sedia ada pada cakera."
     },
     "stats": {
       "computing": "Mengira statistik...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Lanjutan",
-    "useWorktree": "Guna worktree",
+    "useWorktree": "Worktree ketua (berasingan daripada worktree rakan pasukan)",
     "recent": "Terkini",
     "commandPreview": "Pratonton arahan",
     "customArguments": "Argumen tersuai",

@@ -312,8 +312,14 @@
       "saved": "Tersimpan"
     },
     "worktree": {
-      "description": "Jalankan tim ini di pohon kerja git terpisah. Terapkan / tolak perubahan target yang worktree, bukan area kerja utama.",
-      "label": "worktree"
+      "description": "Dicentang: gunakan Git worktree terpisah, yang dibuat saat peluncuran jika diperlukan. Worktree yang sudah ada tetap menggunakan branch saat ini. Tidak dicentang: gunakan ruang kerja proyek bersama; worktree lama tetap disimpan.",
+      "label": "worktree",
+      "existing": "Ruang kerja terakhir: {{path}}. Worktree terkelola digunakan kembali jika tersedia; jika tidak, dibuat saat peluncuran.",
+      "new": "Worktree: digunakan kembali jika tersedia, atau dibuat saat peluncuran. Branch akan ditampilkan setelah peluncuran.",
+      "shared": "Ruang kerja proyek bersama: {{path}}. Menggunakan branch proyek.",
+      "sharedPending": "Ruang kerja bersama: ditentukan saat peluncuran bersama worktree pemimpin. Branch akan ditampilkan setelah peluncuran.",
+      "branch": "Branch worktree: {{branch}}",
+      "branchUnavailable": "Tidak tersedia"
     },
     "addMembers": {
       "title": "Tambah Anggota",
@@ -1799,11 +1805,12 @@
       "title": "Anggota",
       "addMember": "Tambah anggota",
       "editAsJson": "Sunting sebagai JSON",
-      "runInSeparateWorktrees": "Menjalankan rekan tim di worktree terpisah",
+      "runInSeparateWorktrees": "Worktree untuk semua rekan tim",
       "agentTeamsMcpOnly": "Agen Tim MCP hanya",
       "removedCount": "Dibuang ({{count}})",
       "removedModelLockReason": "Anggota yang dibuang disimpan untuk menghapus sejarah lembut. Kembalikan mereka untuk menyunting pengaturan.",
-      "memberNamesUnique": "Nama anggota harus unik"
+      "memberNamesUnique": "Nama anggota harus unik",
+      "worktreeDescription": "Dicentang: worktree terpisah untuk semua rekan tim. Sebagian dipilih: hanya untuk rekan tim yang dipilih. Tidak dicentang: ruang kerja proyek bersama. Menonaktifkan opsi ini akan tetap menyimpan worktree yang ada di disk."
     },
     "stats": {
       "computing": "Komputer statistik...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Tingkat lanjut",
-    "useWorktree": "Gunakan pohon kerja",
+    "useWorktree": "Worktree pemimpin (terpisah dari worktree rekan tim)",
     "recent": "Terkini",
     "commandPreview": "Pratilik perintah",
     "customArguments": "Argumen gubahan",

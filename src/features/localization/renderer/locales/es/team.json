@@ -312,8 +312,14 @@
       "saved": "Guardado"
     },
     "worktree": {
-      "description": "Ejecute a este compañero en un git worktree separado. Aplicar/rechazar cambios objetivos que worktree, no el espacio de trabajo principal.",
-      "label": "Worktree"
+      "description": "Marcado: usa un worktree de Git independiente, que se crea al iniciar si es necesario. Los worktrees existentes conservan su rama actual. Desmarcado: usa el espacio de trabajo compartido del proyecto; el worktree anterior se conserva.",
+      "label": "Worktree",
+      "existing": "Último espacio de trabajo: {{path}}. El worktree administrado se reutiliza si está disponible; de lo contrario, se crea al iniciar.",
+      "new": "Worktree: se reutiliza si está disponible; de lo contrario, se crea al iniciar. La rama se mostrará después del inicio.",
+      "shared": "Espacio de trabajo compartido del proyecto: {{path}}. Usa la rama del proyecto.",
+      "sharedPending": "Espacio de trabajo compartido: se determina al iniciar junto con el worktree del líder. La rama se mostrará después del inicio.",
+      "branch": "Rama del worktree: {{branch}}",
+      "branchUnavailable": "No disponible"
     },
     "addMembers": {
       "title": "Agregar miembros",
@@ -1799,11 +1805,12 @@
       "title": "Miembros",
       "addMember": "Añadir miembro",
       "editAsJson": "Editar como JSON",
-      "runInSeparateWorktrees": "Corre compañeros de equipo en árboles de trabajo separados",
+      "runInSeparateWorktrees": "Worktree para todos los miembros del equipo",
       "agentTeamsMcpOnly": "Agentes Equipos MCP sólo",
       "removedCount": "Quitado ({{count}})",
       "removedModelLockReason": "Los miembros eliminados se mantienen para la historia de borrado suave. Restaurar los ajustes para editar.",
-      "memberNamesUnique": "Los nombres de los Miembros deben ser únicos"
+      "memberNamesUnique": "Los nombres de los Miembros deben ser únicos",
+      "worktreeDescription": "Marcado: worktrees independientes para todos los miembros. Mixto: solo para los miembros seleccionados. Desmarcado: espacio de trabajo compartido del proyecto. Al desactivarlo, los worktrees existentes se conservan en el disco."
     },
     "stats": {
       "computing": "Estadísticas de computación...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Avances",
-    "useWorktree": "Use worktree",
+    "useWorktree": "Worktree del líder (separado de los worktrees de los demás miembros)",
     "recent": "Recientes",
     "commandPreview": "Previsualización del comando",
     "customArguments": "Argumentos aduaneros",

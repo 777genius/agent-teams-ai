@@ -312,8 +312,14 @@
       "saved": "지원하다"
     },
     "worktree": {
-      "description": "별도의 git worktree에서 이 팀메이트를 실행하십시오. apply/reject는 worktree가 아닌 리드 워크스페이스가 아닌 대상을 변경합니다.",
-      "label": "워크 트리"
+      "description": "선택: 필요하면 시작할 때 생성되는 별도의 Git worktree를 사용합니다. 기존 worktree는 현재 브랜치를 유지합니다. 선택 해제: 공유 프로젝트 작업 공간을 사용하며, 기존 worktree는 그대로 유지됩니다.",
+      "label": "워크 트리",
+      "existing": "마지막 작업 공간: {{path}}. 관리되는 worktree가 있으면 재사용하고, 없으면 시작할 때 생성합니다.",
+      "new": "Worktree: 있으면 재사용하고, 없으면 시작할 때 생성합니다. 브랜치는 시작 후 표시됩니다.",
+      "shared": "공유 프로젝트 작업 공간: {{path}}. 프로젝트 브랜치를 사용합니다.",
+      "sharedPending": "공유 작업 공간: 시작할 때 리드의 worktree와 함께 결정됩니다. 브랜치는 시작 후 표시됩니다.",
+      "branch": "Worktree 브랜치: {{branch}}",
+      "branchUnavailable": "사용할 수 없음"
     },
     "addMembers": {
       "title": "회원 가입",
@@ -1799,11 +1805,12 @@
       "title": "이름 *",
       "addMember": "회원가입",
       "editAsJson": "JSON로 편집",
-      "runInSeparateWorktrees": "별도의 worktrees에서 teammates 실행",
+      "runInSeparateWorktrees": "모든 팀원에 worktree 사용",
       "agentTeamsMcpOnly": "에이전트 팀 MCP 만",
       "removedCount": "제거 ({{count}})",
       "removedModelLockReason": "제거된 회원은 soft delete History에 보관됩니다. 설정을 편집합니다.",
-      "memberNamesUnique": "회원 이름은"
+      "memberNamesUnique": "회원 이름은",
+      "worktreeDescription": "선택: 모든 팀원에게 별도의 worktree를 사용합니다. 일부 선택: 선택한 팀원에게만 사용합니다. 선택 해제: 공유 프로젝트 작업 공간을 사용합니다. 이 옵션을 꺼도 기존 worktree는 디스크에 유지됩니다."
     },
     "stats": {
       "computing": "계산 통계...",
@@ -2401,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "지원하다",
-    "useWorktree": "사용 worktree",
+    "useWorktree": "리드 worktree (팀원 worktree와 별도)",
     "recent": "이름 *",
     "commandPreview": "명령 미리보기",
     "customArguments": "사용자 정의",
