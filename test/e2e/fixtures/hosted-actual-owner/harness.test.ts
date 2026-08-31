@@ -161,16 +161,16 @@ function expectUnusedBase64PadBitAlias(canonical: string): string {
 
 const TEST_OPENCODE_IDENTITIES = Object.freeze({
   repository: REQUIRED_OPENCODE_ACQUISITION.repository,
-  pullRequestHead: REQUIRED_OPENCODE_ACQUISITION.pullRequestHead,
+  pullRequestHead: '2222222222222222222222222222222222222222',
   workflowMergeCommit: '3333333333333333333333333333333333333333',
   releaseSourceCommit: '4444444444444444444444444444444444444444',
   releaseSourceTree: '5555555555555555555555555555555555555555',
   releaseBaseCommit: '6666666666666666666666666666666666666666',
-  workflowRunId: REQUIRED_OPENCODE_ACQUISITION.workflowRunId,
+  workflowRunId: '17000000001',
   workflowRunAttempt: 2,
   workflowRef: 'refs/pull/17/merge',
-  candidateArtifactId: REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId,
-  provenanceArtifactId: REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId,
+  candidateArtifactId: '18000000001',
+  provenanceArtifactId: '18000000002',
   candidateArtifactSha256: digest('r1-candidate-artifact'),
   provenanceArtifactSha256: digest('r1-provenance-artifact'),
   buildProvenanceBundleSha256: digest('r1-build-provenance-bundle'),
@@ -388,7 +388,13 @@ function signedProducerCandidateFixture(
     openCodeProvenance: {
       repository: TEST_OPENCODE_IDENTITIES.repository,
       pullRequestHead: TEST_OPENCODE_IDENTITIES.pullRequestHead,
+      workflowMergeCommit: TEST_OPENCODE_IDENTITIES.workflowMergeCommit,
+      releaseSourceCommit: TEST_OPENCODE_IDENTITIES.releaseSourceCommit,
+      releaseSourceTree: TEST_OPENCODE_IDENTITIES.releaseSourceTree,
+      releaseBaseCommit: TEST_OPENCODE_IDENTITIES.releaseBaseCommit,
       workflowRunId: TEST_OPENCODE_IDENTITIES.workflowRunId,
+      workflowRunAttempt: TEST_OPENCODE_IDENTITIES.workflowRunAttempt,
+      workflowRef: TEST_OPENCODE_IDENTITIES.workflowRef,
       candidateArtifactId: TEST_OPENCODE_IDENTITIES.candidateArtifactId,
       candidateArtifactSha256: TEST_OPENCODE_IDENTITIES.candidateArtifactSha256,
       provenanceArtifactId: TEST_OPENCODE_IDENTITIES.provenanceArtifactId,
@@ -721,6 +727,39 @@ describe('signed producer candidate shape', () => {
     ).toThrow('p3c_producer_candidate_contract');
   });
 
+  it('rejects explicitly missing and duplicate producer roles', () => {
+    const missing = { ...payload, producers: payload.producers.slice(0, -1) };
+    expect(() =>
+      parseSignedProducerCandidatePayload(Buffer.from(canonicalJson(missing)))
+    ).toThrow('p3c_producer_candidate_contract');
+
+    const duplicate = structuredClone(payload);
+    duplicate.producers[3] = structuredClone(duplicate.producers[0]!);
+    expect(() =>
+      parseSignedProducerCandidatePayload(Buffer.from(canonicalJson(duplicate)))
+    ).toThrow('p3c_producer_candidate_roles');
+  });
+
+  it('rejects a raw UTF-8 BOM in the signed candidate and detached signature sidecar', () => {
+    const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+    expect(() =>
+      parseSignedProducerCandidatePayload(Buffer.concat([bom, payloadBytes]))
+    ).toThrow('p3c_producer_candidate_frame');
+
+    const sidecar = {
+      algorithm: 'ed25519',
+      keyId: candidateFixture.keyId,
+      payloadSha256: sha256(payloadBytes),
+      signature: Buffer.alloc(64, 7).toString('base64'),
+    };
+    expect(() =>
+      parseProducerCandidateSignatureSidecar(
+        Buffer.concat([bom, Buffer.from(canonicalJson(sidecar))]),
+        payloadBytes
+      )
+    ).toThrow('p3c_producer_candidate_signature_frame');
+  });
+
   it('keeps candidate, provenance artifact, and provenance bundle identities distinct', () => {
     for (const [targetIdentity, sourceIdentity] of [
       ['candidateArtifactSha256', 'provenanceArtifactSha256'],
@@ -913,6 +952,24 @@ describe('signed producer candidate shape', () => {
       const provenance = changedPayload.openCodeProvenance as Record<string, unknown>;
       provenance.buildProvenanceBundleSha256 = digest('forged-build-provenance-bundle');
     }, 'p3c_producer_candidate_provenance_binding');
+    for (const [field, value] of [
+      ['pullRequestHead', 'a'.repeat(40)],
+      ['workflowMergeCommit', 'b'.repeat(40)],
+      ['releaseSourceCommit', 'c'.repeat(40)],
+      ['releaseSourceTree', 'd'.repeat(40)],
+      ['releaseBaseCommit', 'e'.repeat(40)],
+      ['workflowRunId', '17000000002'],
+      ['workflowRunAttempt', 3],
+      ['workflowRef', 'refs/pull/18/merge'],
+      ['candidateArtifactId', '18000000003'],
+      ['provenanceArtifactId', '18000000004'],
+      ['provenanceArtifactSha256', digest('forged-provenance-artifact')],
+    ] as const) {
+      verifyResignedMutation((changedPayload) => {
+        const provenance = changedPayload.openCodeProvenance as Record<string, unknown>;
+        provenance[field] = value;
+      }, 'p3c_producer_candidate_provenance_binding');
+    }
     verifyResignedMutation((changedPayload) => {
       const producers = changedPayload.producers as Record<string, unknown>[];
       producers[2]!.moduleSha256 = digest('forged-owner-module');
@@ -935,6 +992,11 @@ describe('P3.C exact contract', () => {
     expect(() => parseIntegrationDescriptor(Buffer.from(`${canonicalJson(valid)}\n`))).toThrow(
       'p3c_descriptor_noncanonical'
     );
+    expect(() =>
+      parseIntegrationDescriptor(
+        Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(canonicalJson(valid))])
+      )
+    ).toThrow('p3c_descriptor_encoding');
     const unintegrated = JSON.parse(
       await readFile(
         join(
@@ -1016,6 +1078,27 @@ describe('P3.C exact contract', () => {
         parseIntegrationDescriptor(Buffer.from(canonicalJson(conflatedProvenance)))
       ).toThrow('p3c_opencode_provenance_artifact_bundle_identity_collapsed');
     }
+    const sameArtifactId = structuredClone(valid) as typeof valid;
+    const sameArtifactIdOpenCode = sameArtifactId.openCode as Record<string, unknown>;
+    const sameArtifactIdIdentities = sameArtifactIdOpenCode.identities as Record<string, unknown>;
+    sameArtifactIdIdentities.provenanceArtifactId =
+      sameArtifactIdIdentities.candidateArtifactId;
+    expect(() =>
+      parseIntegrationDescriptor(Buffer.from(canonicalJson(sameArtifactId)))
+    ).toThrow('p3c_opencode_artifact_id_collapsed');
+
+    for (const [targetPin, sourcePin] of [
+      ['provenanceArtifactZip', 'actionsArtifactZip'],
+      ['buildProvenanceBundle', 'provenanceArtifactZip'],
+    ] as const) {
+      const hardLinked = structuredClone(valid) as typeof valid;
+      const openCode = hardLinked.openCode as Record<string, Record<string, unknown>>;
+      openCode[targetPin]!.device = openCode[sourcePin]!.device;
+      openCode[targetPin]!.inode = openCode[sourcePin]!.inode;
+      expect(() =>
+        parseIntegrationDescriptor(Buffer.from(canonicalJson(hardLinked)))
+      ).toThrow('p3c_opencode_artifact_backing_identity_collapsed');
+    }
   });
 
   it('requires a hash-joined, controller-signed freeze, review, and one-run authorization', () => {
@@ -1093,6 +1176,29 @@ describe('P3.C exact contract', () => {
         fixture.producerCandidate.binding
       )
     ).toThrow('p3c_p3c1_freeze_binding');
+  });
+
+  it.each([
+    ['p3c1_freeze', 'freeze'],
+    ['harness_review', 'review'],
+    ['one_run_authorization', 'authorization'],
+  ] as const)('rejects a raw UTF-8 BOM in the canonical %s document', (label, field) => {
+    const fixture = signedControlFixture();
+    const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+    expect(() =>
+      verifyControlDocuments(
+        fixture.descriptor,
+        field === 'freeze' ? Buffer.concat([bom, fixture.freeze]) : fixture.freeze,
+        field === 'review' ? Buffer.concat([bom, fixture.review]) : fixture.review,
+        field === 'authorization'
+          ? Buffer.concat([bom, fixture.authorization])
+          : fixture.authorization,
+        fixture.reviewerPublicKey,
+        fixture.runAuthorizationPublicKey,
+        fixture.trustAnchor,
+        fixture.producerCandidate.binding
+      )
+    ).toThrow(`p3c_${label}_frame`);
   });
 
   it('rejects a harness review signature with non-canonical base64 pad bits', () => {
@@ -4093,6 +4199,8 @@ function nativeCrossJoinFixture(name: 'productTimelinePath' | 'ownerWalTimelineP
     .sort((left, right) =>
       BigInt(left.raw.monotonicNs as string) < BigInt(right.raw.monotonicNs as string) ? -1 : 1
     );
+  // This golden isolates the ordered restart chain. The broad rawEvidence fixture reuses the
+  // initial owner across independent matrix rows, so it is not an all-generations capture proof.
   const producers = fixture.outcome.starts.filter(
     (start) =>
       start.role === role &&
@@ -4567,8 +4675,10 @@ describe('nonAuthoritative native capture parser goldens', () => {
     }
   );
 
-  it('rejects cross-owner mixing between ordered owner-generation shards', () => {
+  it('rejects cross-owner mixing between ordered restarted-owner shards', () => {
     const { fixture, parsedShards, expected } = nativeCrossJoinFixture('ownerWalTimelinePath');
+    expect(parsedShards).toHaveLength(3);
+    expect(parsedShards.every((shard) => shard.semanticRecordCount > 0)).toBe(true);
     expect(() =>
       assertNativeSemanticCrossJoin(
         'ownerWalTimelinePath',

@@ -303,6 +303,14 @@ async function assertExecutingInputs(
 }
 
 function parseCanonicalObject(bytes: Buffer, label: string): Record<string, unknown> {
+  if (
+    bytes.length >= 3 &&
+    bytes[0] === 0xef &&
+    bytes[1] === 0xbb &&
+    bytes[2] === 0xbf
+  ) {
+    throw new Error(`p3c_${label}_frame`);
+  }
   let value: unknown;
   try {
     value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
@@ -464,7 +472,13 @@ function assertProducerCandidateDescriptorBindings(
       canonicalJson({
         repository: identities.repository,
         pullRequestHead: identities.pullRequestHead,
+        workflowMergeCommit: identities.workflowMergeCommit,
+        releaseSourceCommit: identities.releaseSourceCommit,
+        releaseSourceTree: identities.releaseSourceTree,
+        releaseBaseCommit: identities.releaseBaseCommit,
         workflowRunId: identities.workflowRunId,
+        workflowRunAttempt: identities.workflowRunAttempt,
+        workflowRef: identities.workflowRef,
         candidateArtifactId: identities.candidateArtifactId,
         candidateArtifactSha256: identities.candidateArtifactSha256,
         provenanceArtifactId: identities.provenanceArtifactId,

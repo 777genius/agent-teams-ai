@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { createRuntimeInstanceContext } from '@features/runtime-instance-context';
 import { describe, expect, it, vi } from 'vitest';
 
-import { OPENCODE_IDENTITIES } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
+import { REJECTED_HISTORICAL_OPENCODE_IDENTITIES } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import {
   createHostedApprovalProductionComposition,
   createOptionalHostedApprovalProductionComposition,
@@ -108,9 +108,9 @@ const ACTIVATION_PUBLIC_KEY_DIGEST = `sha256:${createHash('sha256')
   .digest('hex')}` as const;
 
 describe('hosted approval production activation', () => {
-  it('uses the frozen actual-owner OpenCode binary identity for candidate activation', () => {
+  it('classifies the fixed activation pin as the rejected historical candidate identity', () => {
     expect(HOSTED_ACTUAL_OWNER_CANDIDATE_OPENCODE_SHA256).toBe(
-      OPENCODE_IDENTITIES.linuxX64BinarySha256
+      REJECTED_HISTORICAL_OPENCODE_IDENTITIES.linuxX64BinarySha256
     );
   });
 

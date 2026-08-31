@@ -116,6 +116,13 @@ launch. Therefore `productionEligible=false`, fixture proofs cannot satisfy acce
 README does not claim producer-native readiness. Fixed hand-authored parser goldens are explicitly
 `nonAuthoritative`; they exercise framing and tamper rejection only.
 
+The complete OpenCode acquisition tuple remains future descriptor material until it is supplied by
+committed, independently accepted acquisition evidence. Admission cross-binds the pull-request head,
+workflow merge, release source/tree/base, workflow ref/run/attempt, distinct artifact IDs, and exact
+acquired file digests across that evidence, the signed producer candidate, the P3.C1 freeze, and the
+verified release provenance. A GitHub artifact digest field is not an acquired archive SHA-256 and
+is never substituted for the digest of bytes read through the admitted file descriptor.
+
 The current hand-written contract digest is
 `f83678990876983c839f32d3c5f0413a2df4a681cfb278a646d3e192b69d13d3`; the parser rejects any
 other value.

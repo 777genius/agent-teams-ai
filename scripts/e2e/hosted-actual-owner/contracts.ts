@@ -49,13 +49,12 @@ export const REJECTED_HISTORICAL_OPENCODE_IDENTITIES = Object.freeze({
   linuxX64BinarySha256: 'cffecbe3ff685de84d7fa028e552c42d15a7c720a8f8d5d1cddd265110e5eb88',
 } as const);
 
-/** Facts published by the accepted r1 GitHub run. Unknown digests remain descriptor material. */
+/**
+ * Canonical repository identity only. Every run-, commit-, artifact-, and digest-level acquisition
+ * identity remains future descriptor material until committed authoritative evidence supplies it.
+ */
 export const REQUIRED_OPENCODE_ACQUISITION = Object.freeze({
   repository: '777genius/opencode-anomaly',
-  pullRequestHead: '8370ab88387ce5f1d0087f432ae88cdd465ca6c5',
-  workflowRunId: '33127332195',
-  candidateArtifactId: '9668982549',
-  provenanceArtifactId: '9668996978',
 } as const);
 
 export const PRODUCER_CANDIDATE_SIGNATURE_DOMAIN =
@@ -270,16 +269,16 @@ export const RUNTIME_CAPTURE_PRODUCER_MAPPINGS = Object.freeze({
 
 export interface OpenCodeCandidateIdentities {
   readonly repository: typeof REQUIRED_OPENCODE_ACQUISITION.repository;
-  readonly pullRequestHead: typeof REQUIRED_OPENCODE_ACQUISITION.pullRequestHead;
+  readonly pullRequestHead: string;
   readonly workflowMergeCommit: string;
   readonly releaseSourceCommit: string;
   readonly releaseSourceTree: string;
   readonly releaseBaseCommit: string;
-  readonly workflowRunId: typeof REQUIRED_OPENCODE_ACQUISITION.workflowRunId;
+  readonly workflowRunId: string;
   readonly workflowRunAttempt: number;
   readonly workflowRef: string;
-  readonly candidateArtifactId: typeof REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId;
-  readonly provenanceArtifactId: typeof REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId;
+  readonly candidateArtifactId: string;
+  readonly provenanceArtifactId: string;
   readonly candidateArtifactSha256: string;
   readonly provenanceArtifactSha256: string;
   readonly buildProvenanceBundleSha256: string;
@@ -301,11 +300,17 @@ export interface SignedProducerIdentity {
 
 export interface OpenCodeProvenanceIdentity {
   readonly repository: typeof REQUIRED_OPENCODE_ACQUISITION.repository;
-  readonly pullRequestHead: typeof REQUIRED_OPENCODE_ACQUISITION.pullRequestHead;
-  readonly workflowRunId: typeof REQUIRED_OPENCODE_ACQUISITION.workflowRunId;
-  readonly candidateArtifactId: typeof REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId;
+  readonly pullRequestHead: string;
+  readonly workflowMergeCommit: string;
+  readonly releaseSourceCommit: string;
+  readonly releaseSourceTree: string;
+  readonly releaseBaseCommit: string;
+  readonly workflowRunId: string;
+  readonly workflowRunAttempt: number;
+  readonly workflowRef: string;
+  readonly candidateArtifactId: string;
   readonly candidateArtifactSha256: string;
-  readonly provenanceArtifactId: typeof REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId;
+  readonly provenanceArtifactId: string;
   readonly provenanceArtifactSha256: string;
   readonly buildProvenanceBundleSha256: string;
 }
@@ -881,18 +886,18 @@ function exactOpenCodeIdentities(value: unknown): OpenCodeCandidateIdentities {
     ) as typeof REQUIRED_OPENCODE_ACQUISITION.repository,
     pullRequestHead: text(
       item.pullRequestHead,
-      new RegExp(`^${REQUIRED_OPENCODE_ACQUISITION.pullRequestHead}$`, 'u'),
+      HEX_40,
       'opencode_pull_request_head'
-    ) as typeof REQUIRED_OPENCODE_ACQUISITION.pullRequestHead,
+    ),
     workflowMergeCommit: text(item.workflowMergeCommit, HEX_40, 'opencode_workflow_merge_commit'),
     releaseSourceCommit: text(item.releaseSourceCommit, HEX_40, 'opencode_release_source_commit'),
     releaseSourceTree: text(item.releaseSourceTree, HEX_40, 'opencode_release_source_tree'),
     releaseBaseCommit: text(item.releaseBaseCommit, HEX_40, 'opencode_release_base_commit'),
     workflowRunId: text(
       item.workflowRunId,
-      new RegExp(`^${REQUIRED_OPENCODE_ACQUISITION.workflowRunId}$`, 'u'),
+      /^[1-9]\d{0,19}$/u,
       'opencode_workflow_run_id'
-    ) as typeof REQUIRED_OPENCODE_ACQUISITION.workflowRunId,
+    ),
     workflowRunAttempt: item.workflowRunAttempt as number,
     workflowRef: text(
       item.workflowRef,
@@ -901,14 +906,14 @@ function exactOpenCodeIdentities(value: unknown): OpenCodeCandidateIdentities {
     ),
     candidateArtifactId: text(
       item.candidateArtifactId,
-      new RegExp(`^${REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId}$`, 'u'),
+      /^[1-9]\d{0,19}$/u,
       'opencode_candidate_artifact_id'
-    ) as typeof REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId,
+    ),
     provenanceArtifactId: text(
       item.provenanceArtifactId,
-      new RegExp(`^${REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId}$`, 'u'),
+      /^[1-9]\d{0,19}$/u,
       'opencode_provenance_artifact_id'
-    ) as typeof REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId,
+    ),
     candidateArtifactSha256: text(
       item.candidateArtifactSha256,
       HEX_64,
@@ -939,6 +944,9 @@ function exactOpenCodeIdentities(value: unknown): OpenCodeCandidateIdentities {
   ) {
     throw new TypeError('p3c_opencode_workflow_run_attempt');
   }
+  if (parsed.candidateArtifactId === parsed.provenanceArtifactId) {
+    throw new TypeError('p3c_opencode_artifact_id_collapsed');
+  }
   if (
     new Set([
       parsed.candidateArtifactSha256,
@@ -952,7 +960,12 @@ function exactOpenCodeIdentities(value: unknown): OpenCodeCandidateIdentities {
   return parsed;
 }
 
+function hasRawUtf8Bom(bytes: Uint8Array): boolean {
+  return bytes.byteLength >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf;
+}
+
 export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescriptor {
+  if (hasRawUtf8Bom(bytes)) throw new TypeError('p3c_descriptor_encoding');
   let source: string;
   try {
     source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -1220,6 +1233,20 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
   const actionsArtifactZip = filePin(openCode.actionsArtifactZip, 'opencode_zip');
   const linuxX64Archive = filePin(openCode.linuxX64Archive, 'opencode_archive');
   const linuxX64Binary = filePin(openCode.linuxX64Binary, 'opencode_binary');
+  const acquiredArtifactFiles = [
+    actionsArtifactZip,
+    provenanceArtifactZip,
+    buildProvenanceBundle,
+  ];
+  const acquiredArtifactBackingIdentities = acquiredArtifactFiles.map(
+    (pin) => `${pin.device}:${pin.inode}`
+  );
+  if (
+    new Set(acquiredArtifactBackingIdentities).size !==
+    acquiredArtifactBackingIdentities.length
+  ) {
+    throw new TypeError('p3c_opencode_artifact_backing_identity_collapsed');
+  }
   if (
     openCodeIdentities.candidateArtifactSha256 !== actionsArtifactZip.sha256 ||
     openCodeIdentities.provenanceArtifactSha256 !== provenanceArtifactZip.sha256 ||
@@ -1336,7 +1363,12 @@ export function parseRunArguments(arguments_: readonly string[]): void {
 }
 
 function parseCanonicalCandidateDocument(bytes: Buffer, label: string): Record<string, unknown> {
-  if (bytes.length < 2 || bytes.length > 1024 * 1024 || bytes.includes(0x0d)) {
+  if (
+    bytes.length < 2 ||
+    bytes.length > 1024 * 1024 ||
+    bytes.includes(0x0d) ||
+    hasRawUtf8Bom(bytes)
+  ) {
     throw new TypeError(`p3c_${label}_frame`);
   }
   const source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -1356,7 +1388,13 @@ function parseOpenCodeProvenanceIdentity(value: unknown): OpenCodeProvenanceIden
     [
       'repository',
       'pullRequestHead',
+      'workflowMergeCommit',
+      'releaseSourceCommit',
+      'releaseSourceTree',
+      'releaseBaseCommit',
       'workflowRunId',
+      'workflowRunAttempt',
+      'workflowRef',
       'candidateArtifactId',
       'candidateArtifactSha256',
       'provenanceArtifactId',
@@ -1367,10 +1405,28 @@ function parseOpenCodeProvenanceIdentity(value: unknown): OpenCodeProvenanceIden
   );
   if (
     item.repository !== REQUIRED_OPENCODE_ACQUISITION.repository ||
-    item.pullRequestHead !== REQUIRED_OPENCODE_ACQUISITION.pullRequestHead ||
-    item.workflowRunId !== REQUIRED_OPENCODE_ACQUISITION.workflowRunId ||
-    item.candidateArtifactId !== REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId ||
-    item.provenanceArtifactId !== REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId ||
+    typeof item.pullRequestHead !== 'string' ||
+    !HEX_40.test(item.pullRequestHead) ||
+    typeof item.workflowMergeCommit !== 'string' ||
+    !HEX_40.test(item.workflowMergeCommit) ||
+    typeof item.releaseSourceCommit !== 'string' ||
+    !HEX_40.test(item.releaseSourceCommit) ||
+    typeof item.releaseSourceTree !== 'string' ||
+    !HEX_40.test(item.releaseSourceTree) ||
+    typeof item.releaseBaseCommit !== 'string' ||
+    !HEX_40.test(item.releaseBaseCommit) ||
+    typeof item.workflowRunId !== 'string' ||
+    !/^[1-9]\d{0,19}$/u.test(item.workflowRunId) ||
+    !Number.isSafeInteger(item.workflowRunAttempt) ||
+    (item.workflowRunAttempt as number) < 1 ||
+    (item.workflowRunAttempt as number) > 100 ||
+    typeof item.workflowRef !== 'string' ||
+    !/^refs\/[A-Za-z0-9._/-]{1,255}$/u.test(item.workflowRef) ||
+    typeof item.candidateArtifactId !== 'string' ||
+    !/^[1-9]\d{0,19}$/u.test(item.candidateArtifactId) ||
+    typeof item.provenanceArtifactId !== 'string' ||
+    !/^[1-9]\d{0,19}$/u.test(item.provenanceArtifactId) ||
+    item.candidateArtifactId === item.provenanceArtifactId ||
     typeof item.candidateArtifactSha256 !== 'string' ||
     !HEX_64.test(item.candidateArtifactSha256) ||
     typeof item.provenanceArtifactSha256 !== 'string' ||
@@ -1394,6 +1450,18 @@ function parseProducerIdentities(
 ): readonly SignedProducerIdentity[] {
   if (!Array.isArray(value) || value.length !== ORDERED_PRODUCER_IDENTITIES.length) {
     throw new TypeError(`p3c_${label}_contract`);
+  }
+  const producerRoles = value.map((candidate) =>
+    candidate && typeof candidate === 'object' && !Array.isArray(candidate)
+      ? (candidate as Record<string, unknown>).role
+      : undefined
+  );
+  const requiredRoles = ORDERED_PRODUCER_IDENTITIES.map(({ role }) => role);
+  if (
+    new Set(producerRoles).size !== requiredRoles.length ||
+    canonicalJson([...producerRoles].sort()) !== canonicalJson([...requiredRoles].sort())
+  ) {
+    throw new TypeError(`p3c_${label}_roles`);
   }
   const repositories = Object.freeze({
     browser: '777genius/agent-teams-ai',
