@@ -8,8 +8,8 @@ import {
   resolveDraftWorkspace,
 } from './memberWorkspace';
 
-const project = '/tmp/issue509-project';
-const isolated = '/tmp/issue509-project-alice';
+const project = '/fixtures/issue509/project';
+const isolated = '/fixtures/issue509/worktrees/alice';
 const paths = { alice: isolated };
 const branches = { [project]: 'main', [isolated]: 'feature/current-work' };
 const member = createMemberDraft({ name: 'alice', originalName: 'alice', isolation: 'worktree' });

@@ -3,11 +3,11 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import type { MemberDraft } from './membersEditorTypes';
 import type { TeamProviderBackendId, TeamProviderId } from '@shared/types';
 
-export type PreviousWorkspaceMember = {
+export interface PreviousWorkspaceMember {
   name: string;
   providerId?: TeamProviderId;
   providerBackendId?: TeamProviderBackendId;
-};
+}
 
 export function resolveBranchDeviation(
   branch: string | null | undefined,
