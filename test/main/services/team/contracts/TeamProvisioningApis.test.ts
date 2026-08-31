@@ -140,6 +140,7 @@ describe('bindTeamHttpHandlerApis', () => {
 
     expectTypeOf<TeamHttpHandlerApis>().toEqualTypeOf<Required<TeamHttpHandlerApis>>();
     expect(sortedKeys(api)).toEqual([
+      'memberDiagnostics',
       'provisioningStart',
       'provisioningStatus',
       'runtime',

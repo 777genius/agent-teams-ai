@@ -150,7 +150,6 @@
     "src/renderer/store/slices/teamSlice.ts": 5111,
     "src/renderer/utils/contextTracker.ts": 1126,
     "src/renderer/utils/memberHelpers.ts": 1756,
-    "src/renderer/utils/memberLaunchDiagnostics.ts": 983,
     "src/renderer/utils/openCodeModelRecommendations.ts": 1335,
     "src/renderer/utils/sessionAnalyzer.ts": 1348,
     "src/renderer/utils/teamModelAvailability.ts": 983,

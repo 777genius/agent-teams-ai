@@ -119,12 +119,22 @@ export interface TeamHttpDataApi {
   renameDraftTeam(oldTeamName: string, newTeamName: string): Promise<void>;
 }
 
+/**
+ * Snapshot reads behind the HTTP member diagnostics route. Same two service
+ * calls the renderer's member detail dialog builds its view from.
+ */
+export interface TeamHttpMemberDiagnosticsApi {
+  getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
+  getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
+}
+
 export interface TeamHttpHandlerApis {
   provisioningStart: TeamProvisioningStartApi;
   provisioningStatus: TeamProvisioningStatusApi;
   taskActivity: TeamTaskActivityRepairApi;
   runtime: TeamHttpRuntimeApi;
   runtimeControl: TeamRuntimeControlCompatibilityApi;
+  memberDiagnostics: TeamHttpMemberDiagnosticsApi;
 }
 
 export interface TeamIpcHandlerApis {
@@ -378,7 +388,8 @@ export function bindTeamHttpHandlerApis(
     TeamProvisioningStatusApi &
     TeamTaskActivityRepairApi &
     TeamHttpRuntimeApi &
-    TeamRuntimeControlCompatibilityApi
+    TeamRuntimeControlCompatibilityApi &
+    TeamHttpMemberDiagnosticsApi
 ): TeamHttpHandlerApis {
   return {
     provisioningStart: bindTeamProvisioningStartApi(source),
@@ -386,6 +397,16 @@ export function bindTeamHttpHandlerApis(
     taskActivity: bindTeamTaskActivityRepairApi(source),
     runtime: bindTeamHttpRuntimeApi(source),
     runtimeControl: bindTeamRuntimeControlCompatibilityApi(source),
+    memberDiagnostics: bindTeamHttpMemberDiagnosticsApi(source),
+  };
+}
+
+export function bindTeamHttpMemberDiagnosticsApi(
+  source: TeamHttpMemberDiagnosticsApi
+): TeamHttpMemberDiagnosticsApi {
+  return {
+    getMemberSpawnStatuses: source.getMemberSpawnStatuses.bind(source),
+    getTeamAgentRuntimeSnapshot: source.getTeamAgentRuntimeSnapshot.bind(source),
   };
 }
 
