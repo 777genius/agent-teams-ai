@@ -148,7 +148,9 @@ export async function clearCancelledAggregateRestartState(input: {
     await input.clearLaunchState(ownedRunId).catch((error: unknown) => {
       input.onLaunchClearError(ownedRunId, error);
     });
-    await input.clearPrimaryLane(ownedRunId);
+    await input.clearPrimaryLane(ownedRunId).catch((error: unknown) => {
+      input.onLaunchClearError(ownedRunId, error);
+    });
   }
 }
 

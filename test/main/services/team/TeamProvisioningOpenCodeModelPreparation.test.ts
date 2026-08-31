@@ -123,6 +123,35 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(debugEvents).toContain('opencode_compatibility_batch_complete');
   });
 
+  it('skips all compatibility processing when no models are selected', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare, availableModels: ['anthropic/sonnet'] });
+    const inspectLocalModelRuntime = vi.fn();
+    const appendPreflightDebugLog = vi.fn();
+
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/project',
+      modelIds: [],
+      verificationMode: 'compatibility',
+      inspectLocalModelRuntime,
+      appendPreflightDebugLog,
+    });
+
+    expect(result).toEqual({
+      details: [],
+      warnings: [],
+      blockingMessages: [],
+      issues: [],
+      supportDiagnostics: [],
+    });
+    expect(prepare).not.toHaveBeenCalled();
+    expect(adapter.readProviderStatus).not.toHaveBeenCalled();
+    expect(inspectLocalModelRuntime).not.toHaveBeenCalled();
+    expect(appendPreflightDebugLog).not.toHaveBeenCalled();
+  });
+
   it.each([
     'stale',
     'malformed',

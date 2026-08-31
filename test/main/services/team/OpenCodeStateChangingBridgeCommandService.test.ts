@@ -1,3 +1,4 @@
+import { OpenCodeBridgeCommandHandshakePort } from '@main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import {
   getOpenCodeRuntimeManifestPath,
@@ -42,7 +43,6 @@ import {
   type OpenCodeBridgeCommandLeaseStore,
   type OpenCodeBridgeCommandLedger,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
-import { OpenCodeBridgeCommandHandshakePort } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import {
   type OpenCodeBridgeCommandExecutor,
   type OpenCodeBridgeHandshakePort,

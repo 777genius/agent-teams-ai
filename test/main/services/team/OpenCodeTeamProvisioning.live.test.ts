@@ -1,3 +1,8 @@
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
+import {
+  OpenCodeRuntimeManifestEvidenceReader,
+  readOpenCodeRuntimeLaneIndex,
+} from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { constants as fsConstants, promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -15,11 +20,6 @@ import {
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeStateChangingBridgeCommandService } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { OpenCodeRuntimeLaunchAuthorityWriter } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
-import {
-  OpenCodeRuntimeManifestEvidenceReader,
-  readOpenCodeRuntimeLaneIndex,
-} from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';

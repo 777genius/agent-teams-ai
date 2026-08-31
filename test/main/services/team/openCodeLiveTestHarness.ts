@@ -1,3 +1,9 @@
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
+import {
+  OpenCodeRuntimeManifestEvidenceReader,
+  readCommittedOpenCodeBootstrapSessionEvidence,
+  readOpenCodeRuntimeLaneIndex,
+} from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import Fastify from 'fastify';
 import { constants as fsConstants, promises as fs } from 'fs';
 import * as os from 'os';
@@ -21,12 +27,6 @@ import {
   type OpenCodeBridgeCommandExecutor,
   OpenCodeStateChangingBridgeCommandService,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { OpenCodeRuntimeLaunchAuthorityWriter } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
-import {
-  OpenCodeRuntimeManifestEvidenceReader,
-  readCommittedOpenCodeBootstrapSessionEvidence,
-  readOpenCodeRuntimeLaneIndex,
-} from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeAdapterOptions,

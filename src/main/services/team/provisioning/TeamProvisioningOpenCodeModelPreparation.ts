@@ -167,7 +167,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
   const supportDiagnostics: TeamProvisioningSupportDiagnostic[] = [];
   const startedAt = Date.now();
 
-  if (modelIds.length === 0 && verificationMode !== 'compatibility') {
+  if (modelIds.length === 0) {
     return { details, warnings, blockingMessages, issues, supportDiagnostics };
   }
 

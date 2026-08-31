@@ -346,64 +346,67 @@ describe('CliInstallerService', () => {
             });
           return providerId === 'anthropic' ? pendingA : pendingB;
         });
-        const listeners: ((status: import('@shared/types').CliInstallationStatus) => void)[] = [];
-        const nextStatus = (
-          predicate: (status: import('@shared/types').CliInstallationStatus) => boolean
-        ) =>
-          new Promise<import('@shared/types').CliInstallationStatus>((resolve) => {
-            listeners.push((status) => {
-              if (predicate(status)) resolve(status);
+        try {
+          const listeners: ((status: import('@shared/types').CliInstallationStatus) => void)[] = [];
+          const nextStatus = (
+            predicate: (status: import('@shared/types').CliInstallationStatus) => boolean
+          ) =>
+            new Promise<import('@shared/types').CliInstallationStatus>((resolve) => {
+              listeners.push((status) => {
+                if (predicate(status)) resolve(status);
+              });
             });
-          });
-        const mockWindow = {
-          isDestroyed: () => false,
-          webContents: {
+          const mockWindow = {
             isDestroyed: () => false,
-            send: (_channel: string, progress: import('@shared/types').CliInstallerProgress) => {
-              const status = progress.status;
-              if (progress.type === 'status' && status)
-                listeners.forEach((listener) => listener(status));
+            webContents: {
+              isDestroyed: () => false,
+              send: (_channel: string, progress: import('@shared/types').CliInstallerProgress) => {
+                const status = progress.status;
+                if (progress.type === 'status' && status)
+                  listeners.forEach((listener) => listener(status));
+              },
             },
-          },
-        };
-        service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
-        await service.getStatus();
-        const aReady = nextStatus((status) =>
-          status.providers.some(
-            (provider) => provider.providerId === 'anthropic' && provider.capabilities.teamLaunch
-          )
-        );
-        resolveA(reply('anthropic', wireProvider('anthropic')));
-        await aReady;
-        revoked = true;
-        expect(await service.getProviderStatus('anthropic')).toMatchObject({
-          authenticated: false,
-          capabilities: { teamLaunch: false },
-        });
-        const bFinished = nextStatus((status) =>
-          status.providers.some(
-            (provider) =>
-              provider.providerId === 'codex' &&
-              provider.modelCatalogRefreshState === (outcome === 'success' ? 'ready' : 'error')
-          )
-        );
-        if (outcome === 'success') resolveB(reply('codex', wireProvider('codex')));
-        else rejectB(new Error('Test-only full status unavailable'));
-        const published = await bFinished;
-        for (const snapshot of [published, service.getLatestStatusSnapshot()!]) {
-          expect(
-            snapshot.providers.find((provider) => provider.providerId === 'anthropic')
-          ).toMatchObject({
+          };
+          service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
+          await service.getStatus();
+          const aReady = nextStatus((status) =>
+            status.providers.some(
+              (provider) => provider.providerId === 'anthropic' && provider.capabilities.teamLaunch
+            )
+          );
+          resolveA(reply('anthropic', wireProvider('anthropic')));
+          await aReady;
+          revoked = true;
+          expect(await service.getProviderStatus('anthropic')).toMatchObject({
             authenticated: false,
-            authMethod: null,
             capabilities: { teamLaunch: false },
           });
-          expect(
-            snapshot.providers.find((provider) => provider.providerId === 'codex')?.capabilities
-              .teamLaunch
-          ).toBe(outcome === 'success');
+          const bFinished = nextStatus((status) =>
+            status.providers.some(
+              (provider) =>
+                provider.providerId === 'codex' &&
+                provider.modelCatalogRefreshState === (outcome === 'success' ? 'ready' : 'error')
+            )
+          );
+          if (outcome === 'success') resolveB(reply('codex', wireProvider('codex')));
+          else rejectB(new Error('Test-only full status unavailable'));
+          const published = await bFinished;
+          for (const snapshot of [published, service.getLatestStatusSnapshot()!]) {
+            expect(
+              snapshot.providers.find((provider) => provider.providerId === 'anthropic')
+            ).toMatchObject({
+              authenticated: false,
+              authMethod: null,
+              capabilities: { teamLaunch: false },
+            });
+            expect(
+              snapshot.providers.find((provider) => provider.providerId === 'codex')?.capabilities
+                .teamLaunch
+            ).toBe(outcome === 'success');
+          }
+        } finally {
+          vi.mocked(execCli).mockReset().mockRejectedValue(new Error('execCli not configured'));
         }
-        vi.mocked(execCli).mockReset().mockRejectedValue(new Error('execCli not configured'));
       }
     );
 
