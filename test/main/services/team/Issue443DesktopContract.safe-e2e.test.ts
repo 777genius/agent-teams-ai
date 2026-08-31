@@ -77,7 +77,7 @@ function fakeExecutableEnv(): NodeJS.ProcessEnv {
 }
 
 interface FakeTrace {
-  kind: 'provider-status' | 'bridge';
+  kind: 'provider-status' | 'provider-models' | 'rejected' | 'bridge';
   pid: number;
   argv: string[];
   cwd: string;
@@ -99,7 +99,7 @@ afterEach(async () => {
 });
 
 describe('issue #443 Desktop real child-process wire contract', () => {
-  it('uses provider-scoped authoritative status through the disposable executable', async () => {
+  it('keeps provider status passive and rejects legacy OpenCode inventory hydration', async () => {
     const fake = await createFake('valid');
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
@@ -118,12 +118,11 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       capabilities: { teamLaunch: true },
     });
     const traces = await fake.traces();
-    expect(traces).toHaveLength(2);
+    expect(traces).toHaveLength(1);
     expect(traces.every((trace) => trace.kind === 'provider-status')).toBe(true);
     expect(traces.every((trace) => trace.cwd === fake.project)).toBe(true);
     expect(traces.map((trace) => trace.argv)).toEqual([
       ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
-      ['runtime', 'status', '--json', '--provider', 'opencode'],
     ]);
     assertProcessesExited(traces);
   });

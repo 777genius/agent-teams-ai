@@ -444,6 +444,8 @@ export interface RuntimeProviderManagementModelsDto {
   models: readonly RuntimeProviderModelDto[];
   defaultModelId: string | null;
   diagnostics: readonly string[];
+  /** Optional while older packaged orchestrators are still supported. */
+  catalogState?: 'fresh' | 'stale';
   totalCount?: number;
   returnedCount?: number;
   limit?: number | null;

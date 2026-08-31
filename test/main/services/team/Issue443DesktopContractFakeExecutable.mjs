@@ -14,9 +14,16 @@ const TRACE_FILE = process.env.ISSUE443_FAKE_TRACE_FILE;
 if (!TRACE_FILE) throw new Error('ISSUE443_FAKE_TRACE_FILE is required');
 
 const argv = process.argv.slice(2);
-if (argv[0] !== 'runtime' || argv[1] !== 'opencode-command') {
+if (argv[0] === 'runtime' && argv[1] === 'status') {
   runProviderStatusCommand();
   process.exit(0);
+}
+if (argv[0] === 'runtime' && argv[1] === 'providers' && argv[2] === 'models') {
+  runProviderModelsCommand();
+  process.exit(0);
+}
+if (argv[0] !== 'runtime' || argv[1] !== 'opencode-command') {
+  rejectCommand('legacy full inventory/model/agent/plugin fanout is forbidden');
 }
 
 if (JSON.stringify(argv.slice(0, 3)) !== JSON.stringify(['runtime', 'opencode-command', '--json'])) {
@@ -101,6 +108,10 @@ else process.stdout.write(outputRaw);
 trace({ ...baseTrace, proofValidation, outputRaw, sideEffectCommitted: envelope.command === 'opencode.launchTeam' });
 
 function runProviderStatusCommand() {
+  const expected = ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'];
+  if (JSON.stringify(argv) !== JSON.stringify(expected)) {
+    rejectCommand('only passive provider-scoped summary status is allowed');
+  }
   const providerIndex = argv.indexOf('--provider');
   const provider = providerIndex < 0 ? null : argv[providerIndex + 1];
   if (provider !== 'opencode') throw new Error(`Unexpected provider scope ${String(provider)}`);
@@ -150,6 +161,76 @@ function runProviderStatusCommand() {
   const outputRaw = JSON.stringify({ schemaVersion: 2, providers: { opencode: payload } });
   trace({ kind: 'provider-status', pid: process.pid, argv, cwd: process.cwd(), outputRaw });
   process.stdout.write(outputRaw);
+}
+
+function runProviderModelsCommand() {
+  const runtimeIndex = argv.indexOf('--runtime');
+  const providerIndex = argv.indexOf('--provider');
+  const runtime = runtimeIndex < 0 ? null : argv[runtimeIndex + 1];
+  const provider = providerIndex < 0 ? null : argv[providerIndex + 1];
+  const allowedFlags = new Set([
+    '--runtime',
+    '--provider',
+    '--json',
+    '--project-path',
+    '--query',
+    '--limit',
+    '--cursor',
+  ]);
+  for (const argument of argv) {
+    if (argument.startsWith('--') && !allowedFlags.has(argument)) {
+      rejectCommand(`unexpected provider-model flag ${argument}`);
+    }
+  }
+  if (runtime !== 'opencode' || !provider || provider === 'opencode') {
+    rejectCommand(`expected a concrete OpenCode source provider, received ${String(provider)}`);
+  }
+
+  const modelByProvider = {
+    deepinfra: MODEL,
+    kiro: 'kiro/poisoned-model',
+    'cursor-acp': 'cursor-acp/poisoned-model',
+  };
+  const modelId = modelByProvider[provider] ?? `${provider}/scoped-model`;
+  const output = {
+    schemaVersion: 1,
+    runtimeId: 'opencode',
+    models: {
+      runtimeId: 'opencode',
+      providerId: provider,
+      models: [{
+        modelId,
+        providerId: provider,
+        displayName: modelId.slice(modelId.indexOf('/') + 1),
+        sourceLabel: provider === 'deepinfra' ? 'DeepInfra' : provider,
+        free: false,
+        default: provider === 'deepinfra',
+        availability: 'available',
+        accessKind: 'credentialed',
+        routeKind: 'connected_provider',
+        proofState: 'not_required',
+        requiresExecutionProof: false,
+        accessReason: null,
+      }],
+      defaultModelId: modelId,
+      diagnostics: [],
+      catalogState: SCENARIO === 'stale-catalog' ? 'stale' : 'fresh',
+      totalCount: 1,
+      returnedCount: 1,
+      limit: null,
+      cursor: null,
+      nextCursor: null,
+    },
+  };
+  const outputRaw = JSON.stringify(output);
+  trace({ kind: 'provider-models', pid: process.pid, argv, cwd: process.cwd(), outputRaw });
+  process.stdout.write(outputRaw);
+}
+
+function rejectCommand(reason) {
+  const outputRaw = `Rejected command: ${reason}`;
+  trace({ kind: 'rejected', pid: process.pid, argv, cwd: process.cwd(), outputRaw });
+  throw new Error(`${outputRaw}: ${JSON.stringify(argv)}`);
 }
 
 function handshake(envelope) {

@@ -85,9 +85,13 @@ export function markProviderCatalogRefreshFailed(
 }
 
 export function canHydrateProviderCatalog(provider: CliProviderStatus): boolean {
+  // OpenCode inventory is intentionally explicit and source-provider scoped through
+  // runtime-provider-management.loadModels. A status refresh must never expand it.
+  if (provider.providerId === 'opencode') {
+    return false;
+  }
   return (
     provider.runtimeCapabilities?.modelCatalog?.dynamic === true &&
-    (provider.statusCheckOutcome === 'authoritative' ||
-      (provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only'))
+    provider.statusCheckOutcome === 'authoritative'
   );
 }
