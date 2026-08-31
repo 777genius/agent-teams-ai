@@ -1810,7 +1810,7 @@
       "removedCount": "Dibuang ({{count}})",
       "removedModelLockReason": "Anggota yang dibuang disimpan untuk menghapus sejarah lembut. Kembalikan mereka untuk menyunting pengaturan.",
       "memberNamesUnique": "Nama anggota harus unik",
-      "worktreeDescription": "Dicentang: worktree terpisah untuk semua rekan tim. Sebagian: hanya untuk rekan tim yang dipilih. Tidak dicentang: ruang kerja proyek bersama. Menonaktifkan opsi ini akan tetap menyimpan worktree yang ada di disk."
+      "worktreeDescription": "Dicentang: worktree terpisah untuk semua rekan tim. Sebagian dipilih: hanya untuk rekan tim yang dipilih. Tidak dicentang: ruang kerja proyek bersama. Menonaktifkan opsi ini akan tetap menyimpan worktree yang ada di disk."
     },
     "stats": {
       "computing": "Komputer statistik...",
