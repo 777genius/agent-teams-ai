@@ -15,7 +15,6 @@ import {
 import {
   canHydrateProviderCatalog,
   markProviderCatalogRefreshFailed,
-  mergeProviderCatalogFields,
 } from './providerCatalogAuthority';
 import { providerConnectionService } from './ProviderConnectionService';
 import {
@@ -25,6 +24,7 @@ import {
   createRuntimeStatusErrorProviderStatus,
   getLegacyProviderStatusCheck,
   mapRuntimeExtensionCapabilities,
+  mergeProviderStatusDisplayEvidence,
   resolveRuntimeProviderStatusCheck,
   type RuntimeExtensionCapabilitiesResponse,
   sanitizeProviderStatusAuthority,
@@ -50,6 +50,12 @@ const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
+
+// Summary updates are snapshots; asynchronous hydration updates contain one provider delta.
+type ProviderStatusesObserver = (
+  providers: CliProviderStatus[],
+  updatedProviderId?: CliProviderId
+) => void;
 
 function getProviderStatusCommandCwd(projectPath: string | null | undefined): string | undefined {
   const normalized = projectPath?.trim();
@@ -1093,12 +1099,13 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private notifyProviderStatuses(
-    onUpdate: ((providers: CliProviderStatus[]) => void) | undefined,
-    providers: CliProviderStatus[]
+    onUpdate: ProviderStatusesObserver | undefined,
+    providers: CliProviderStatus[],
+    updatedProviderId?: CliProviderId
   ): void {
     if (!onUpdate) return;
     try {
-      onUpdate(this.projectProviderStatuses(providers));
+      onUpdate(this.projectProviderStatuses(providers), updatedProviderId);
     } catch (error) {
       logger.warn(
         `Provider status observer failed: ${error instanceof Error ? error.message : String(error)}`
@@ -1307,7 +1314,7 @@ export class ClaudeMultimodelBridgeService {
     binaryPath: string,
     liveProviders: CliProviderStatus[],
     generation: number,
-    onUpdate?: (providers: CliProviderStatus[]) => void
+    onUpdate?: ProviderStatusesObserver
   ): void {
     if (!onUpdate) {
       for (const providerId of DEFAULT_PROVIDER_STATUS_IDS) {
@@ -1354,11 +1361,12 @@ export class ClaudeMultimodelBridgeService {
           }
           providers.set(
             liveProvider.providerId,
-            mergeProviderCatalogFields(currentProvider, hydratedProvider)
+            mergeProviderStatusDisplayEvidence(hydratedProvider, currentProvider)
           );
           this.notifyProviderStatuses(
             onUpdate,
-            this.buildProviderStatusesSnapshot(providers, providerIds)
+            [providers.get(liveProvider.providerId)!],
+            liveProvider.providerId
           );
         })
         .catch((error) => {
@@ -1379,7 +1387,8 @@ export class ClaudeMultimodelBridgeService {
           );
           this.notifyProviderStatuses(
             onUpdate,
-            this.buildProviderStatusesSnapshot(providers, providerIds)
+            [providers.get(liveProvider.providerId)!],
+            liveProvider.providerId
           );
         })
         .finally(() => {
@@ -1527,7 +1536,7 @@ export class ClaudeMultimodelBridgeService {
             )
           ) {
             return sanitizeProviderStatusAuthority(
-              mergeProviderCatalogFields(provider, hydratedProvider)
+              mergeProviderStatusDisplayEvidence(hydratedProvider, provider)
             );
           }
           return sanitizeProviderStatusAuthority(markProviderCatalogRefreshFailed(provider));
@@ -1561,7 +1570,7 @@ export class ClaudeMultimodelBridgeService {
             }
             this.notifyProviderStatus(
               onCatalogUpdate,
-              mergeProviderCatalogFields(provider, hydratedProvider)
+              mergeProviderStatusDisplayEvidence(hydratedProvider, provider)
             );
           })
           .catch((error) => {
@@ -1760,7 +1769,7 @@ export class ClaudeMultimodelBridgeService {
 
   async getProviderStatuses(
     binaryPath: string,
-    onUpdate?: (providers: CliProviderStatus[]) => void
+    onUpdate?: ProviderStatusesObserver
   ): Promise<CliProviderStatus[]> {
     await resolveInteractiveShellEnvBestEffort({
       timeoutMs: 1_500,

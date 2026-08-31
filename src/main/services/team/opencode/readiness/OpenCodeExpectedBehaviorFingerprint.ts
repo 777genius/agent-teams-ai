@@ -35,6 +35,7 @@ interface OpenCodeReadinessIdentity {
   projectPath: string;
   selectedModel: string | null;
   requireExecutionProbe: boolean;
+  skipPermissions?: boolean;
 }
 
 export function openCodeReadinessArtifactKey(input: OpenCodeReadinessIdentity): string {
@@ -42,6 +43,7 @@ export function openCodeReadinessArtifactKey(input: OpenCodeReadinessIdentity): 
     normalizeOpenCodeProjectIdentity(input.projectPath),
     input.selectedModel?.trim() ?? null,
     input.requireExecutionProbe,
+    input.skipPermissions === false ? 'manual' : 'auto',
   ]);
 }
 
@@ -62,8 +64,8 @@ export function reusableOpenCodeExecutionProof(
   const expiresAt = Date.parse(proof.expiresAt);
   if (
     proof.modelId !== readiness?.modelId ||
-    normalizeOpenCodeProjectIdentity(proof.projectPath) !==
-      normalizeOpenCodeProjectIdentity(input.projectPath) ||
+    createOpenCodeCanonicalProjectPathFingerprint(proof.projectPath) !==
+      createOpenCodeCanonicalProjectPathFingerprint(input.projectPath) ||
     !Number.isFinite(expiresAt) ||
     expiresAt <= Date.now() + 1_000
   ) {
@@ -93,8 +95,8 @@ export function freshOpenCodeExecutionProof(
     );
   }
   if (
-    normalizeOpenCodeProjectIdentity(proof.projectPath) !==
-      normalizeOpenCodeProjectIdentity(input.projectPath) ||
+    createOpenCodeCanonicalProjectPathFingerprint(proof.projectPath) !==
+      createOpenCodeCanonicalProjectPathFingerprint(input.projectPath) ||
     !Number.isFinite(Date.parse(proof.expiresAt)) ||
     Date.parse(proof.expiresAt) <= Date.now()
   ) {
@@ -225,8 +227,8 @@ export function validateOpenCodeExpectedBehaviorEvidence(input: {
     throw new Error('OpenCode expected behavior evidence project behavior fingerprint mismatch');
   }
   if (
-    normalizeOpenCodeProjectIdentity(input.executionProof.projectPath) !==
-    normalizeOpenCodeProjectIdentity(input.projectPath)
+    createOpenCodeCanonicalProjectPathFingerprint(input.executionProof.projectPath) !==
+    createOpenCodeCanonicalProjectPathFingerprint(input.projectPath)
   ) {
     throw new Error('OpenCode expected behavior evidence execution proof project mismatch');
   }

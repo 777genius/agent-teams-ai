@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { chmod, copyFile, mkdir, mkdtemp, readdir, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -20,6 +20,11 @@ import { OpenCodeStateChangingBridgeCommandService } from '@main/services/team/o
 import {
   createOpenCodeExpectedBehaviorFingerprint,
 } from '@main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
+import {
+  OpenCodeRuntimeManifestEvidenceReader,
+  setOpenCodeRuntimeActiveRunManifest,
+} from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -124,9 +129,9 @@ describe('issue #443 Desktop real child-process wire contract', () => {
 
   it('crosses the real Desktop child boundary with exact v2 proof bindings and framing', async () => {
     const harness = await realContractHarness('valid');
-    const result = await harness.adapter.launch(launchInput('run-valid', harness.fake.project));
+    const result = await harness.launch(launchInput('run-valid', harness.fake.project));
 
-    expect(result.teamLaunchState).toBe('clean_success');
+    expect(result.teamLaunchState, JSON.stringify(result)).toBe('clean_success');
     expect(result.members.alice).toMatchObject({
       launchState: 'confirmed_alive',
       bootstrapConfirmed: true,
@@ -158,6 +163,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       projectPath: harness.fake.project,
       selectedModel: MODEL,
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
     const handshakeEnvelope = traces[1].envelope as unknown as {
       body: {
@@ -211,7 +217,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     ['handshake fingerprint v1', 'handshake-v1', 0],
   ] as const)('fails closed for %s', async (_label, scenario, expectedLaunches) => {
     const harness = await realContractHarness(scenario);
-    const result = await harness.adapter.launch(launchInput(`run-${scenario}`, harness.fake.project));
+    const result = await harness.launch(launchInput(`run-${scenario}`, harness.fake.project));
 
     expect(result.teamLaunchState).not.toBe('clean_success');
     expect(result.members.alice).not.toMatchObject({ runtimeAlive: true, bootstrapConfirmed: true });
@@ -224,7 +230,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
 
   it('retains a launch with a mismatched fingerprint echo for reconciliation', async () => {
     const harness = await realContractHarness('mismatch-echo');
-    const result = await harness.adapter.launch(
+    const result = await harness.launch(
       launchInput('run-mismatch-echo', harness.fake.project)
     );
 
@@ -243,9 +249,30 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
+  it('keeps a committed launch pending when authority publication fails without redispatching', async () => {
+    const harness = await realContractHarness('valid', new Error('fixture authority write failed'));
+    const result = await harness.launch(launchInput('run-publication-failed', harness.fake.project));
+
+    expect(result.teamLaunchState, JSON.stringify(result)).toBe('partial_pending');
+    expect(result.members.alice).toMatchObject({
+      launchState: 'runtime_pending_bootstrap',
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      hardFailure: false,
+    });
+    expect(harness.ledger.markUnknownAfterTimeout).toHaveBeenCalledTimes(1);
+    expect(harness.ledger.markFailed).not.toHaveBeenCalled();
+    expect(harness.ledger.markCompleted).not.toHaveBeenCalled();
+    const traces = await harness.fake.traces();
+    const launches = traces.filter((trace) => trace.envelope?.command === 'opencode.launchTeam');
+    expect(launches).toHaveLength(1);
+    expect(launches[0].sideEffectCommitted).toBe(true);
+    assertProcessesExited(traces);
+  });
+
   it('treats an unknown launch outcome as non-retryable without duplicating the side effect', async () => {
     const harness = await realContractHarness('unknown-outcome');
-    const result = await harness.adapter.launch(launchInput('run-unknown', harness.fake.project));
+    const result = await harness.launch(launchInput('run-unknown', harness.fake.project));
 
     expect(result.teamLaunchState).toBe('partial_pending');
     expect(result.members.alice).toMatchObject({
@@ -296,7 +323,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
   });
 });
 
-async function realContractHarness(scenario: string) {
+async function realContractHarness(scenario: string, publicationFailure?: Error) {
   const fake = await createFake(scenario);
   const bridge = new OpenCodeBridgeCommandClient({
     binaryPath: fake.executable,
@@ -333,13 +360,19 @@ async function realContractHarness(scenario: string) {
     })),
     release: vi.fn().mockResolvedValue(undefined),
   } as unknown as OpenCodeBridgeCommandLeaseStore;
+  const teamsBasePath = path.join(fake.sandbox, 'teams');
+  const launchAuthorityWriter = new OpenCodeRuntimeLaunchAuthorityWriter({ teamsBasePath });
+  if (publicationFailure) {
+    vi.spyOn(launchAuthorityWriter, 'publish').mockRejectedValue(publicationFailure);
+  }
   const stateChanging = new OpenCodeStateChangingBridgeCommandService({
     expectedClientIdentity: clientIdentity,
     handshakePort: new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity, timeoutMs: 1_000 }),
     leaseStore,
     ledger,
     bridge,
-    manifestReader: { read: async () => ({ highWatermark: 0, activeRunId: null, capabilitySnapshotId: 'issue443-capability-v2' }) },
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath }),
+    launchAuthorityWriter,
     requestIdFactory: sequentialIds('state-change'),
     diagnosticIdFactory: sequentialIds('state-diagnostic'),
     clock: () => new Date(NOW),
@@ -349,11 +382,24 @@ async function realContractHarness(scenario: string) {
     launchTimeoutMs: 1_000,
     stateChangingCommands: stateChanging,
   });
-  return { fake, ledger, adapter: new OpenCodeTeamRuntimeAdapter(readiness) };
+  const adapter = new OpenCodeTeamRuntimeAdapter(readiness);
+  return {
+    fake,
+    ledger,
+    async launch(input: TeamRuntimeLaunchInput) {
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: input.teamName,
+        laneId: input.laneId?.trim() || 'primary',
+        runId: input.runId,
+      });
+      return adapter.launch(input);
+    },
+  };
 }
 
 async function createFake(scenario: string) {
-  const sandbox = await mkdtemp(path.join(tmpdir(), 'issue443-desktop-wire-'));
+  const sandbox = await realpath(await mkdtemp(path.join(tmpdir(), 'issue443-desktop-wire-')));
   sandboxes.push(sandbox);
   const project = path.join(sandbox, 'project');
   const bridgeTemp = path.join(sandbox, 'bridge-inputs');

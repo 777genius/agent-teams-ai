@@ -1,3 +1,22 @@
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
+import {
+  getOpenCodeRuntimeManifestPath,
+  OpenCodeRuntimeManifestEvidenceReader,
+  readCommittedOpenCodeBootstrapSessionEvidence,
+  setOpenCodeRuntimeActiveRunManifest,
+} from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import {
+  createRuntimeStoreManifestStore,
+  createRuntimeStoreReceiptStore,
+  OPENCODE_RUNTIME_STORE_DESCRIPTORS,
+  RuntimeStoreFileInspector,
+  RuntimeStoreRecoveryPlanner,
+} from '@main/services/team/opencode/store/RuntimeStoreManifest';
+import {
+  commitOpenCodeRuntimeBootstrapSessionEvidence,
+  createDefaultOpenCodeRuntimeBootstrapEvidencePorts,
+  stampOpenCodeAppMcpTransportEvidenceIfMissing,
+} from '@main/services/team/provisioning/TeamProvisioningOpenCodeBootstrapEvidence';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -23,9 +42,11 @@ import {
   type OpenCodeBridgeCommandLeaseStore,
   type OpenCodeBridgeCommandLedger,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
+import { OpenCodeBridgeCommandHandshakePort } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import {
   type OpenCodeBridgeCommandExecutor,
   type OpenCodeBridgeHandshakePort,
+  type OpenCodeLaunchAuthorityWriter,
   OpenCodeStateChangingBridgeCommandService,
   type OpenCodeStateChangingBridgeDiagnosticsSink,
   resolveOpenCodeBridgeLeaseAcquireTimeoutMs,
@@ -42,6 +63,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   let handshakePort: FakeHandshakePort;
   let manifestReader: FakeManifestReader;
   let diagnostics: FakeDiagnosticsSink;
+  let launchAuthorityWriter: OpenCodeLaunchAuthorityWriter;
   let clientIdentity: OpenCodeBridgePeerIdentity;
 
   beforeEach(async () => {
@@ -57,11 +79,14 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       idFactory: () => `lease-${nextLeaseId++}`,
       clock: () => now,
     });
+    launchAuthorityWriter = { publish: vi.fn(async () => {}) };
     clientIdentity = peerIdentity('claude_team');
-    handshakePort = new FakeHandshakePort(buildHandshake({
-      client: clientIdentity,
-      server: peerIdentity('agent_teams_orchestrator'),
-    }));
+    handshakePort = new FakeHandshakePort(
+      buildHandshake({
+        client: clientIdentity,
+        server: peerIdentity('agent_teams_orchestrator'),
+      })
+    );
     manifestReader = new FakeManifestReader();
     bridge = new FakeBridgeExecutor();
     diagnostics = new FakeDiagnosticsSink();
@@ -70,6 +95,416 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   afterEach(async () => {
     vi.useRealTimers();
     await fs.rm(tempDir, { recursive: true, force: true });
+  });
+
+  it('publishes validated launch authority before completion and preserves it through bootstrap, transport and stop', async () => {
+    const teamsBasePath = path.join(tempDir, 'teams');
+    const laneId = 'secondary:opencode:alice';
+    const scope = { teamsBasePath, teamName: 'team-a', laneId, runId: 'run-1' };
+    await setOpenCodeRuntimeActiveRunManifest(scope); // Normal provisioning reserves only the run.
+    const manifestPath = getOpenCodeRuntimeManifestPath(teamsBasePath, scope.teamName, laneId);
+    const manifestStore = createRuntimeStoreManifestStore({
+      filePath: manifestPath,
+      teamName: scope.teamName,
+    });
+    const ports = createDefaultOpenCodeRuntimeBootstrapEvidencePorts({ teamsBasePath });
+    const bootstrap = {
+      teamName: scope.teamName,
+      laneId,
+      runId: scope.runId,
+      memberName: 'alice',
+      runtimeSessionId: 'session-alice',
+      observedAt: now.toISOString(),
+    };
+    await commitOpenCodeRuntimeBootstrapSessionEvidence(bootstrap, ports);
+    expect(await manifestStore.read()).toMatchObject({
+      activeRunId: 'run-1',
+      activeCapabilitySnapshotId: null,
+    });
+    const reader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath });
+    const authorityWriter = new OpenCodeRuntimeLaunchAuthorityWriter({ teamsBasePath });
+    const service = createService({
+      manifestReader: reader,
+      launchAuthorityWriter: authorityWriter,
+    });
+    bridge.resultFactory = ({ command, body, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          expectedBehaviorFingerprint: 'a'.repeat(64),
+          runtimeStoreManifestHighWatermark: 10,
+        },
+      });
+    const launch = buildLaunchInput();
+    launch.laneId = laneId;
+    await expect(service.execute(launch)).resolves.toMatchObject({ ok: true });
+    expect(await reader.read(scope.teamName, laneId)).toMatchObject({
+      capabilitySnapshotId: 'cap-1',
+    });
+    expect((await manifestStore.read()).entries[0]?.capabilitySnapshotId).toBeNull(); // No retroactive proof promotion.
+    await commitOpenCodeRuntimeBootstrapSessionEvidence(
+      { ...bootstrap, memberName: 'bob', runtimeSessionId: 'session-bob' },
+      ports
+    );
+    const session = (await readCommittedOpenCodeBootstrapSessionEvidence(scope)).sessions.find(
+      (entry) => entry.memberName === 'bob'
+    )!;
+    ports.getCurrentAgentTeamsMcpHttpTransportEvidence = () => ({
+      schemaVersion: 1,
+      transport: 'httpStream',
+      host: '127.0.0.1',
+      port: 19000,
+      endpoint: '/mcp',
+      url: 'http://127.0.0.1:19000/mcp',
+      urlHash: 'sandbox-transport',
+      generation: 1,
+      observedAt: now.toISOString(),
+    });
+    await stampOpenCodeAppMcpTransportEvidenceIfMissing(session, ports);
+    const persisted = await manifestStore.read();
+    expect(persisted).toMatchObject({
+      activeRunId: 'run-1',
+      activeCapabilitySnapshotId: 'cap-1',
+      activeBehaviorFingerprint: 'a'.repeat(64),
+    });
+    expect(persisted.entries[0]).toMatchObject({
+      capabilitySnapshotId: 'cap-1',
+      behaviorFingerprint: 'a'.repeat(64),
+    });
+    const sessionDescriptor = OPENCODE_RUNTIME_STORE_DESCRIPTORS.find(
+      (entry) => entry.schemaName === 'opencode.sessionStore'
+    )!;
+    const directory = path.dirname(manifestPath);
+    const planner = new RuntimeStoreRecoveryPlanner(
+      [sessionDescriptor],
+      manifestStore,
+      createRuntimeStoreReceiptStore({
+        filePath: path.join(directory, 'opencode-runtime-receipts.json'),
+      }),
+      new RuntimeStoreFileInspector(directory)
+    );
+    await expect(
+      planner.buildPlan({
+        teamName: scope.teamName,
+        expectedRunId: 'run-1',
+        expectedCapabilitySnapshotId: 'cap-1',
+        expectedBehaviorFingerprint: 'a'.repeat(64),
+      })
+    ).resolves.toMatchObject({ readinessImpact: 'none', diagnostics: [] });
+    const stop = buildStopInput();
+    stop.laneId = laneId;
+    stop.capabilitySnapshotId = null;
+    stop.body = { ...(stop.body as object), laneId, expectedCapabilitySnapshotId: null };
+    await expect(service.execute(stop)).resolves.toMatchObject({ ok: true });
+    expect(handshakePort.calls.at(-1)).toMatchObject({
+      expectedCapabilitySnapshotId: 'cap-1',
+      laneId,
+    });
+    // A later run cannot inherit authority, and an old callback cannot rewrite its files or binding.
+    await setOpenCodeRuntimeActiveRunManifest({ ...scope, runId: 'run-2' });
+    expect(await manifestStore.read()).toMatchObject({
+      activeRunId: 'run-2',
+      activeCapabilitySnapshotId: null,
+      activeBehaviorFingerprint: null,
+    });
+    const oldSessionBytes = await fs.readFile(
+      path.join(directory, sessionDescriptor.relativePath),
+      'utf8'
+    );
+    await expect(commitOpenCodeRuntimeBootstrapSessionEvidence(bootstrap, ports)).rejects.toThrow(
+      'active lane run'
+    );
+    expect(await fs.readFile(path.join(directory, sessionDescriptor.relativePath), 'utf8')).toBe(
+      oldSessionBytes
+    );
+    await expect(
+      authorityWriter.publish({
+        teamName: scope.teamName,
+        laneId,
+        runId: 'run-1',
+        capabilitySnapshotId: 'cap-1',
+        behaviorFingerprint: 'a'.repeat(64),
+      })
+    ).rejects.toThrow('active lane run');
+  });
+
+  it('keeps a successful runtime launch uncertain when publishing authority fails', async () => {
+    vi.mocked(launchAuthorityWriter.publish).mockRejectedValue(new Error('active run changed'));
+    const service = createService();
+    const result = await service.execute(buildLaunchInput());
+    expect(result).toMatchObject({
+      ok: false,
+      error: {
+        kind: 'contract_violation',
+        retryable: false,
+        message: expect.stringContaining('reconcile before retry'),
+      },
+      diagnostics: [expect.objectContaining({ type: 'opencode_bridge_unknown_outcome' })],
+    });
+    expect(await ledger.list()).toMatchObject([{ status: 'unknown_after_timeout' }]);
+    await expect(service.execute(buildLaunchInput())).rejects.toThrow(
+      'must be reconciled before retry'
+    );
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it('keeps post-effect uncertainty when ledger and diagnostic storage also fail', async () => {
+    vi.mocked(launchAuthorityWriter.publish).mockRejectedValue(new Error('disk unavailable'));
+    vi.spyOn(ledger, 'markUnknownAfterTimeout').mockRejectedValue(new Error('disk unavailable'));
+    vi.spyOn(diagnostics, 'append').mockRejectedValue(new Error('disk unavailable'));
+    const service = createService();
+    await expect(service.execute(buildLaunchInput())).resolves.toMatchObject({
+      ok: false,
+      error: { retryable: false },
+      diagnostics: [expect.objectContaining({ type: 'opencode_bridge_unknown_outcome' })],
+    });
+    expect(await ledger.list()).toMatchObject([{ status: 'started' }]);
+    await expect(service.execute(buildLaunchInput())).rejects.toThrow('already started');
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it.each([true, false])(
+    'forwards exact launch model and approval scope to the handshake (%s)',
+    async (skipPermissions) => {
+      const input = buildLaunchInput();
+      input.body = { ...(input.body as object), selectedModel: 'openai/gpt-5.4', skipPermissions };
+      await createService().execute(input);
+      expect(handshakePort.calls[0]).toMatchObject({
+        selectedModel: 'openai/gpt-5.4',
+        toolApprovalMode: skipPermissions ? 'auto' : 'manual',
+        teamId: 'team-a',
+        laneId: null,
+        cwd: '/tmp/project',
+        expectedCapabilitySnapshotId: 'cap-1',
+      });
+    }
+  );
+
+  it.each(['wrong-model-snapshot', 'wrong-approval-snapshot'])(
+    'rejects %s before any launch effect',
+    async (capabilitySnapshotId) => {
+      handshakePort.nextHandshake = buildHandshake({
+        client: clientIdentity,
+        server: peerIdentity('agent_teams_orchestrator', { capabilitySnapshotId }),
+      });
+      const input = buildLaunchInput();
+      input.body = {
+        ...(input.body as object),
+        selectedModel: 'openai/gpt-5.4',
+        skipPermissions: false,
+      };
+      await expect(createService().execute(input)).rejects.toThrow('capability snapshot mismatch');
+      expect(bridge.calls).toHaveLength(0);
+      await expect(ledger.list()).resolves.toEqual([]);
+      await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
+    }
+  );
+
+  it('serializes selected profile and exact lane identity onto the handshake wire', async () => {
+    bridge.resultFactory = ({ options }) =>
+      bridgeSuccess({
+        requestId: options.requestId,
+        command: 'opencode.handshake',
+        data: handshakePort.nextHandshake,
+      });
+    const port = new OpenCodeBridgeCommandHandshakePort({ bridge, clientIdentity });
+    await port.handshake({
+      requiredCommand: 'opencode.launchTeam',
+      expectedRunId: 'run-1',
+      expectedCapabilitySnapshotId: 'cap-1',
+      expectedManifestHighWatermark: 10,
+      cwd: '/tmp/project',
+      teamId: 'team-a',
+      laneId: 'primary',
+      selectedModel: 'openai/gpt-5.4',
+      toolApprovalMode: 'manual',
+    });
+    expect(bridge.calls[0]).toMatchObject({
+      command: 'opencode.handshake',
+      body: {
+        teamId: 'team-a',
+        laneId: 'primary',
+        selectedModel: 'openai/gpt-5.4',
+        toolApprovalMode: 'manual',
+        expectedRunId: 'run-1',
+        expectedCapabilitySnapshotId: 'cap-1',
+      },
+      options: { cwd: '/tmp/project' },
+    });
+  });
+
+  it('binds stop to the persisted lane manifest without guessing the project latest model', async () => {
+    const input = buildStopInput();
+    input.capabilitySnapshotId = null;
+    input.body = { ...(input.body as object), expectedCapabilitySnapshotId: null };
+    bridge.resultFactory = ({ command, body, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+        },
+      });
+    await createService().execute(input);
+    expect(handshakePort.calls[0]).toMatchObject({
+      expectedCapabilitySnapshotId: 'cap-1',
+      teamId: 'team-a',
+      laneId: 'primary',
+    });
+    expect(handshakePort.calls[0]).not.toHaveProperty('selectedModel');
+    expect(bridge.calls[0].body).toMatchObject({
+      expectedCapabilitySnapshotId: 'cap-1',
+      preconditions: { expectedCapabilitySnapshotId: 'cap-1' },
+    });
+  });
+
+  it('binds two lanes in one project to their own persisted snapshots', async () => {
+    const readManifest = vi
+      .spyOn(manifestReader, 'read')
+      .mockResolvedValueOnce({
+        highWatermark: 10,
+        activeRunId: 'run-1',
+        capabilitySnapshotId: 'cap-1',
+      })
+      .mockResolvedValueOnce({
+        highWatermark: 10,
+        activeRunId: 'run-1',
+        capabilitySnapshotId: 'cap-2',
+      });
+    let activeCapability = 'cap-1';
+    bridge.resultFactory = ({ command, body, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        runtime: {
+          ...peerIdentity('agent_teams_orchestrator').runtime,
+          capabilitySnapshotId: activeCapability,
+        },
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 10,
+        },
+      });
+    const service = createService();
+    for (const laneId of ['lane-a', 'lane-b']) {
+      activeCapability = laneId === 'lane-a' ? 'cap-1' : 'cap-2';
+      handshakePort.nextHandshake = buildHandshake({
+        client: clientIdentity,
+        server: peerIdentity('agent_teams_orchestrator', {
+          capabilitySnapshotId: activeCapability,
+        }),
+      });
+      const input = buildStopInput();
+      input.laneId = laneId;
+      input.capabilitySnapshotId = null;
+      input.body = { ...(input.body as object), laneId, expectedCapabilitySnapshotId: null };
+      await service.execute(input);
+    }
+    expect(readManifest.mock.calls).toEqual([
+      ['team-a', 'lane-a'],
+      ['team-a', 'lane-b'],
+    ]);
+    expect(handshakePort.calls).toMatchObject([
+      { laneId: 'lane-a', expectedCapabilitySnapshotId: 'cap-1' },
+      { laneId: 'lane-b', expectedCapabilitySnapshotId: 'cap-2' },
+    ]);
+    expect(bridge.calls.map((call) => call.body)).toMatchObject([
+      { laneId: 'lane-a', expectedCapabilitySnapshotId: 'cap-1' },
+      { laneId: 'lane-b', expectedCapabilitySnapshotId: 'cap-2' },
+    ]);
+  });
+
+  it('reconciles with independent app/runtime counters while retaining exact run and capability fences', async () => {
+    clientIdentity.bridgeProtocol.supportedCommands.push('opencode.reconcileTeam');
+    const server = peerIdentity('agent_teams_orchestrator', {
+      runtimeStoreManifestHighWatermark: 0,
+    });
+    server.bridgeProtocol.supportedCommands.push('opencode.reconcileTeam');
+    handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
+      { client: clientIdentity, server },
+      ['opencode.reconcileTeam']
+    );
+    bridge.resultFactory = ({ command, body, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 0,
+        },
+      });
+    const input = { ...buildStopInput(), command: 'opencode.reconcileTeam' as const };
+    const service = createService();
+    await expect(service.execute(input)).resolves.toMatchObject({ ok: true });
+    expect(handshakePort.calls[0]).toMatchObject({
+      expectedManifestHighWatermark: null,
+      expectedRunId: 'run-1',
+      expectedCapabilitySnapshotId: 'cap-1',
+    });
+    await expect(service.execute({ ...input, runId: 'stale-run' })).rejects.toThrow(
+      'persisted lane'
+    );
+    await expect(service.execute({ ...input, capabilitySnapshotId: 'wrong-cap' })).rejects.toThrow(
+      'persisted lane'
+    );
+    expect(bridge.calls).toHaveLength(1);
+  });
+
+  it('marks an empty persisted-lane stop explicitly on handshake and dispatch', async () => {
+    manifestReader.manifest = { highWatermark: 0, activeRunId: null, capabilitySnapshotId: null };
+    const input = buildStopInput();
+    input.capabilitySnapshotId = null;
+    input.body = { ...(input.body as object), expectedCapabilitySnapshotId: null };
+    bridge.resultFactory = ({ command, body, options }) =>
+      bridgeSuccess({
+        command,
+        requestId: options.requestId,
+        data: {
+          runId: 'run-1',
+          idempotencyKey: body.preconditions.idempotencyKey,
+          runtimeStoreManifestHighWatermark: 0,
+        },
+      });
+    await createService().execute(input);
+    expect(handshakePort.calls[0]).toMatchObject({
+      allowEmptyLaneStop: true,
+      expectedCapabilitySnapshotId: null,
+    });
+    expect(bridge.calls[0].body).toMatchObject({
+      allowEmptyLaneStop: true,
+      expectedCapabilitySnapshotId: null,
+    });
+  });
+
+  it.each([
+    'wrong-run',
+    'wrong-caller-snapshot',
+    'wrong-body-snapshot',
+    'missing-snapshot',
+    'wrong-body-lane',
+    'forged-empty-stop',
+  ])('rejects lifecycle %s before handshake or mutation', async (failure) => {
+    const input = buildStopInput();
+    if (failure === 'wrong-run') input.runId = 'another-run';
+    if (failure === 'wrong-caller-snapshot') input.capabilitySnapshotId = 'another-cap';
+    if (failure === 'wrong-body-snapshot')
+      input.body = { ...(input.body as object), expectedCapabilitySnapshotId: 'another-cap' };
+    if (failure === 'forged-empty-stop')
+      input.body = { ...(input.body as object), allowEmptyLaneStop: true };
+    if (failure === 'missing-snapshot') manifestReader.manifest.capabilitySnapshotId = null;
+    if (failure === 'wrong-body-lane')
+      input.body = { ...(input.body as object), laneId: 'other-lane' };
+    await expect(createService().execute(input)).rejects.toThrow(/persisted lane/);
+    expect(handshakePort.calls).toHaveLength(0);
+    expect(bridge.calls).toHaveLength(0);
+    await expect(ledger.list()).resolves.toEqual([]);
   });
 
   it('blocks an old orchestrator before state-changing launch dispatch', async () => {
@@ -250,8 +685,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     );
     expect(bridge.calls).toHaveLength(0);
 
-    server.bridgeProtocol.opencodeFilePartsContractVersion =
-      OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
+    server.bridgeProtocol.opencodeFilePartsContractVersion = OPEN_CODE_FILE_PARTS_CONTRACT_VERSION;
     handshakePort.nextHandshake = buildHandshakeWithAcceptedCommands(
       { client: clientIdentity, server },
       ['opencode.launchTeam', 'opencode.stopTeam', 'opencode.sendMessage']
@@ -306,12 +740,13 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         /^opencode:opencode\.sendMessage:team-a:secondary_opencode_bob:run-1:/
       ),
     });
-    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
-      .resolves.toMatchObject({
-        requestId: 'cmd-1',
-        status: 'completed',
-        retryable: false,
-      });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+    });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
@@ -409,13 +844,14 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
         ),
       },
     });
-    await expect(ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey))
-      .resolves.toMatchObject({
-        requestId: 'cmd-1',
-        status: 'completed',
-        retryable: false,
-        completedAt: '2026-04-21T12:00:00.000Z',
-      });
+    await expect(
+      ledger.getByIdempotencyKey(bridge.calls[0].body.preconditions.idempotencyKey)
+    ).resolves.toMatchObject({
+      requestId: 'cmd-1',
+      status: 'completed',
+      retryable: false,
+      completedAt: '2026-04-21T12:00:00.000Z',
+    });
     await expect(leaseStore.getActive('team-a')).resolves.toBeNull();
   });
 
@@ -522,6 +958,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       ledger,
       bridge,
       manifestReader,
+      launchAuthorityWriter,
       diagnostics,
       requestIdFactory: () => 'cmd-1',
       diagnosticIdFactory: () => 'diag-1',
@@ -609,21 +1046,22 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
   );
 
   it('records empty bridge output as unknown outcome and blocks duplicate retry', async () => {
-    bridge.resultFactory = ({ body, command, options }) => ({
-      ok: false,
-      schemaVersion: 1,
-      requestId: options.requestId,
-      command,
-      completedAt: '2026-04-21T12:00:10.000Z',
-      durationMs: 100,
-      error: {
-        kind: 'contract_violation',
-        message: 'Bridge stdout was empty',
-        retryable: false,
-      },
-      diagnostics: [],
-      data: body,
-    } as OpenCodeBridgeResult<unknown>);
+    bridge.resultFactory = ({ body, command, options }) =>
+      ({
+        ok: false,
+        schemaVersion: 1,
+        requestId: options.requestId,
+        command,
+        completedAt: '2026-04-21T12:00:10.000Z',
+        durationMs: 100,
+        error: {
+          kind: 'contract_violation',
+          message: 'Bridge stdout was empty',
+          retryable: false,
+        },
+        diagnostics: [],
+        data: body,
+      }) as OpenCodeBridgeResult<unknown>;
     const service = createService();
 
     const first = await service.execute(buildLaunchInput());
@@ -641,7 +1079,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     expect(diagnostics.append).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'opencode_bridge_unknown_outcome',
-        message: 'OpenCode bridge command exited without output; outcome must be reconciled before retry',
+        message:
+          'OpenCode bridge command exited without output; outcome must be reconciled before retry',
       })
     );
 
@@ -770,6 +1209,12 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     });
 
     expect(result.ok).toBe(true);
+    expect(launchAuthorityWriter.publish).toHaveBeenCalledWith(
+      expect.objectContaining({
+        capabilitySnapshotId: 'cap-2',
+        behaviorFingerprint: 'a'.repeat(64),
+      })
+    );
     const idempotencyKey = bridge.calls[0].body.preconditions.idempotencyKey;
     await expect(ledger.getByIdempotencyKey(idempotencyKey)).resolves.toMatchObject({
       status: 'completed',
@@ -780,6 +1225,8 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
     overrides: {
       leaseAcquireTimeoutMs?: number;
       leaseAcquireRetryDelayMs?: number;
+      manifestReader?: RuntimeStoreManifestReader;
+      launchAuthorityWriter?: OpenCodeLaunchAuthorityWriter;
     } = {}
   ): OpenCodeStateChangingBridgeCommandService {
     return new OpenCodeStateChangingBridgeCommandService({
@@ -789,6 +1236,7 @@ describe('OpenCodeStateChangingBridgeCommandService', () => {
       ledger,
       bridge,
       manifestReader,
+      launchAuthorityWriter,
       diagnostics,
       requestIdFactory: () => 'cmd-1',
       diagnosticIdFactory: () => 'diag-1',
@@ -909,8 +1357,7 @@ function peerIdentity(
         'opencode.launchTeam',
         'opencode.stopTeam',
       ],
-      opencodeAppManagedBootstrapContractVersion:
-        OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
+      opencodeAppManagedBootstrapContractVersion: OPEN_CODE_APP_MANAGED_BOOTSTRAP_CONTRACT_VERSION,
       expectedBehaviorFingerprintSchemaVersion:
         OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
     },

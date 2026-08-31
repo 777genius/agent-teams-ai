@@ -56,6 +56,7 @@ import {
   type OpenCodeBridgeCommandExecutor,
   OpenCodeStateChangingBridgeCommandService,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import {
   getOpenCodeRuntimeLaneIndexPath,
   getOpenCodeRuntimeManifestPath,
@@ -311,6 +312,11 @@ describe(
     let originalClaudeCliPath: string | undefined;
     let originalWorkspaceTrustEnv: Partial<Record<WorkspaceTrustTestEnvName, string | undefined>>;
 
+    const blockedMixedLaunches: {
+      adapter: { releaseLaunches(): void };
+      run: { mixedSecondaryLaneLaunchQueue?: Promise<void> };
+    }[] = [];
+
     beforeEach(async () => {
       TeamConfigReader.clearCacheForTests();
       ClaudeBinaryResolver.clearCache();
@@ -325,12 +331,25 @@ describe(
     });
 
     afterEach(async () => {
+      // Drain these mocked launches before changing the global sandbox path, even on failure.
+      const launchesToDrain = blockedMixedLaunches.splice(0);
+      for (const { adapter } of launchesToDrain) {
+        adapter.releaseLaunches();
+      }
+      const launchResults = await Promise.allSettled(
+        launchesToDrain.map(({ run }) => run.mixedSecondaryLaneLaunchQueue)
+      );
       TeamConfigReader.clearCacheForTests();
       restoreOptionalEnvValue('CLAUDE_CLI_PATH', originalClaudeCliPath);
       restoreWorkspaceTrustTestEnv(originalWorkspaceTrustEnv);
       ClaudeBinaryResolver.clearCache();
       setClaudeBasePathOverride(null);
       await removeTempDirWithRetries(tempDir);
+      for (const result of launchResults) {
+        if (result.status === 'rejected') {
+          throw result.reason;
+        }
+      }
     });
 
     it('launches a pure OpenCode team through the runtime adapter and exposes live members', async () => {
@@ -455,60 +474,143 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(true);
     });
 
-    it('does not resurrect an untracked pure OpenCode restart cancelled during persistence', async () => {
-      const teamName = 'pure-opencode-untracked-restart-persist-stop-safe-e2e';
-      const adapter = new FakeOpenCodeRuntimeAdapter();
-      const svc = new TeamProvisioningService();
-      svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
+    it.each([
+      { publication: 'before', preserveSuccessor: false },
+      { publication: 'after', preserveSuccessor: false },
+      { publication: 'after', preserveSuccessor: true },
+    ] as const)(
+      'cancels an untracked OpenCode restart $publication snapshot publication (preserve successor: $preserveSuccessor)',
+      async ({ publication, preserveSuccessor }) => {
+        const teamName = 'pure-opencode-untracked-restart-persist-stop-safe-e2e';
+        const adapter = new FakeOpenCodeRuntimeAdapter();
+        const svc = new TeamProvisioningService();
+        svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
 
-      await svc.createTeam(
-        {
-          teamName,
-          cwd: projectPath,
-          providerId: 'opencode',
-          model: 'xai/grok-4.5',
-          skipPermissions: true,
-          members: [{ name: 'alice', role: 'Reviewer', providerId: 'opencode' }],
-        },
-        () => undefined
-      );
+        await svc.createTeam(
+          {
+            teamName,
+            cwd: projectPath,
+            providerId: 'opencode',
+            model: 'xai/grok-4.5',
+            skipPermissions: true,
+            members: [{ name: 'alice', role: 'Reviewer', providerId: 'opencode' }],
+          },
+          () => undefined
+        );
 
-      let markPersistenceEntered!: () => void;
-      let releasePersistence!: () => void;
-      const persistenceEntered = new Promise<void>((resolve) => {
-        markPersistenceEntered = resolve;
-      });
-      const persistenceReleased = new Promise<void>((resolve) => {
-        releasePersistence = resolve;
-      });
-      const originalPersist = (svc as any).persistOpenCodeRuntimeAdapterLaunchResult.bind(svc);
-      vi.spyOn(svc as any, 'persistOpenCodeRuntimeAdapterLaunchResult').mockImplementation(
-        async (...args: unknown[]) => {
-          markPersistenceEntered();
-          await persistenceReleased;
-          return originalPersist(...args);
+        let markPersistenceEntered!: () => void;
+        let releasePersistence!: () => void;
+        const persistenceEntered = new Promise<void>((resolve) => {
+          markPersistenceEntered = resolve;
+        });
+        const persistenceReleased = new Promise<void>((resolve) => {
+          releasePersistence = resolve;
+        });
+        let markCleanupEntered!: () => void;
+        let releaseCleanup!: () => void;
+        const cleanupEntered = new Promise<void>((resolve) => {
+          markCleanupEntered = resolve;
+        });
+        const cleanupReleased = new Promise<void>((resolve) => {
+          releaseCleanup = resolve;
+        });
+        const lifecycle = svc as unknown as {
+          persistOpenCodeRuntimeAdapterLaunchResult(...args: unknown[]): Promise<unknown>;
+          clearPersistedOpenCodeLaunchStateIfOwned(...args: unknown[]): Promise<void>;
+          openCodeAggregatePrimaryRestartByTeam: Map<string, { candidateRunId?: string }>;
+          runTracking: { getTrackedRunId(teamName: string): string | null };
+          launchStateWrittenRunIdByTeam: Map<string, string>;
+          writeLaunchStateSnapshot(
+            teamName: string,
+            snapshot: unknown,
+            options: { runId: string }
+          ): Promise<unknown>;
+        };
+        const originalPersist = lifecycle.persistOpenCodeRuntimeAdapterLaunchResult.bind(svc);
+        vi.spyOn(lifecycle, 'persistOpenCodeRuntimeAdapterLaunchResult').mockImplementation(
+          async (...args: unknown[]) => {
+            const persisted = publication === 'after' ? await originalPersist(...args) : null;
+            markPersistenceEntered();
+            await persistenceReleased;
+            return persisted ?? originalPersist(...args);
+          }
+        );
+        if (preserveSuccessor) {
+          const originalClear = lifecycle.clearPersistedOpenCodeLaunchStateIfOwned.bind(svc);
+          vi.spyOn(lifecycle, 'clearPersistedOpenCodeLaunchStateIfOwned').mockImplementation(
+            async (...args: unknown[]) => {
+              markCleanupEntered();
+              await cleanupReleased;
+              return originalClear(...args);
+            }
+          );
         }
-      );
 
-      const restartExpectation = expect(svc.restartMember(teamName, 'alice')).rejects.toThrow(
-        'was cancelled because team "pure-opencode-untracked-restart-persist-stop-safe-e2e" is no longer running'
-      );
-      await persistenceEntered;
-      const stopPromise = svc.stopTeam(teamName);
-      releasePersistence();
+        const restartExpectation = expect(svc.restartMember(teamName, 'alice')).rejects.toThrow(
+          'was cancelled because team "pure-opencode-untracked-restart-persist-stop-safe-e2e" is no longer running'
+        );
+        let stopPromise: Promise<void> | undefined;
+        const launchStatePath = path.join(getTeamsBasePath(), teamName, 'launch-state.json');
+        try {
+          await persistenceEntered;
+          const candidateRunId = adapter.launchInputs.at(-1)?.runId;
+          expect(candidateRunId).toBeTruthy();
+          expect(candidateRunId).not.toBe(adapter.launchInputs[0]?.runId);
+          const lease = lifecycle.openCodeAggregatePrimaryRestartByTeam.get(teamName);
+          expect(lease?.candidateRunId).toBe(candidateRunId);
+          const publishedSnapshot =
+            publication === 'after' ? JSON.parse(await fs.readFile(launchStatePath, 'utf8')) : null;
+          if (publishedSnapshot) {
+            expect(publishedSnapshot.members.alice.runtimeRunId).toBe(candidateRunId);
+          }
 
-      await stopPromise;
-      await restartExpectation;
-      expect(svc.isTeamAlive(teamName)).toBe(false);
-      await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({
-        lanes: {},
-      });
-      await expect(
-        fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-state.json'), 'utf8')
-      ).rejects.toMatchObject({ code: 'ENOENT' });
-    });
+          stopPromise = svc.stopTeam(teamName);
+          await stopPromise;
+          releasePersistence();
+          let successorSnapshot: typeof publishedSnapshot = null;
+          if (preserveSuccessor) {
+            await cleanupEntered;
+            expect(lifecycle.runTracking.getTrackedRunId(teamName)).toBeNull();
+            const successorRunId = `${candidateRunId}-successor`;
+            successorSnapshot = {
+              ...publishedSnapshot,
+              members: Object.fromEntries(
+                Object.entries(publishedSnapshot.members).map(([name, member]) => [
+                  name,
+                  { ...(member as Record<string, unknown>), runtimeRunId: successorRunId },
+                ])
+              ),
+            };
+            await lifecycle.writeLaunchStateSnapshot(teamName, successorSnapshot, {
+              runId: successorRunId,
+            });
+            expect(lifecycle.launchStateWrittenRunIdByTeam.get(teamName)).toBe(successorRunId);
+            expect(lifecycle.runTracking.getTrackedRunId(teamName)).toBeNull();
+            releaseCleanup();
+          }
+
+          await stopPromise;
+          await restartExpectation;
+          expect(svc.isTeamAlive(teamName)).toBe(false);
+          await expect(
+            readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+          ).resolves.toMatchObject({ lanes: {} });
+          if (preserveSuccessor) {
+            expect(JSON.parse(await fs.readFile(launchStatePath, 'utf8'))).toEqual(
+              successorSnapshot
+            );
+          } else {
+            await expect(fs.readFile(launchStatePath, 'utf8')).rejects.toMatchObject({
+              code: 'ENOENT',
+            });
+          }
+        } finally {
+          releasePersistence();
+          releaseCleanup();
+          await Promise.allSettled([stopPromise, restartExpectation]);
+        }
+      }
+    );
 
     it('keeps the OpenCode lead in primary when teammates use separate model lanes', async () => {
       const teamName = 'pure-opencode-lead-distinct-model-lanes-safe-e2e';
@@ -2663,17 +2765,26 @@ describe(
         () => undefined
       );
 
+      // Keep lane ownership exact; only the bridge watermark is deliberately behind.
+      const capabilitySnapshotId = 'stale-watermark-stop-capability';
+      await createRuntimeStoreManifestStore({
+        filePath: getOpenCodeRuntimeManifestPath(getTeamsBasePath(), teamName, 'primary'),
+        teamName,
+      }).setActiveRun({ runId, capabilitySnapshotId });
+
       const manifestReader = new OpenCodeRuntimeManifestEvidenceReader({
         teamsBasePath: getTeamsBasePath(),
       });
       const manifestBeforeStop = await manifestReader.read(teamName, 'primary');
-      expect(manifestBeforeStop).toMatchObject({ activeRunId: runId });
+      expect(manifestBeforeStop).toMatchObject({ activeRunId: runId, capabilitySnapshotId });
       expect(manifestBeforeStop.highWatermark).toBeGreaterThan(0);
       expect(svc.isTeamAlive(teamName)).toBe(true);
 
       const stopFixture = createStaleWatermarkStopAdapterFixture({
         controlDir: path.join(tempDir, 'opencode-stale-stop-control'),
         manifestReader,
+        runId,
+        capabilitySnapshotId,
       });
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([stopFixture.adapter]));
       const app = Fastify();
@@ -4529,31 +4640,39 @@ describe(
       run.child = { kill: () => undefined };
       trackLiveRun(svc, run);
 
-      await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
-      await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
+      let stopAllPromise: Promise<void> | undefined;
+      try {
+        await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
+        await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopAllTeams();
+        stopAllPromise = svc.stopAllTeams();
 
-      await waitForCondition(() => adapter.stopInputs.length === 1);
-      expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
-        'secondary:opencode:bob',
-      ]);
-      expect(svc.isTeamAlive(teamName)).toBe(false);
+        await waitForCondition(() => adapter.stopInputs.length === 1);
+        expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
+          'secondary:opencode:bob',
+        ]);
+        expect(svc.isTeamAlive(teamName)).toBe(false);
 
-      adapter.releaseLaunches();
-      await waitForCondition(() => adapter.rejectedLaunchCount === 1);
+        adapter.releaseLaunches();
+        await stopAllPromise;
+        await waitForMixedSecondaryLaunchQueue(run);
+        await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
-      await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({
-        lanes: {},
-      });
-      const statuses = await svc.getMemberSpawnStatuses(teamName);
-      expect(statuses.teamLaunchState).not.toBe('partial_failure');
-      expect(statuses.statuses.bob).toMatchObject({ hardFailure: false });
-      expect(statuses.statuses.bob?.launchState).not.toBe('failed_to_start');
-      expect(statuses.statuses.tom).toMatchObject({ hardFailure: false });
-      expect(statuses.statuses.tom?.launchState).not.toBe('failed_to_start');
+        await expect(
+          readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+        ).resolves.toMatchObject({
+          lanes: {},
+        });
+        const statuses = await svc.getMemberSpawnStatuses(teamName);
+        expect(statuses.teamLaunchState).not.toBe('partial_failure');
+        expect(statuses.statuses.bob).toMatchObject({ hardFailure: false });
+        expect(statuses.statuses.bob?.launchState).not.toBe('failed_to_start');
+        expect(statuses.statuses.tom).toMatchObject({ hardFailure: false });
+        expect(statuses.statuses.tom?.launchState).not.toBe('failed_to_start');
+      } finally {
+        adapter.releaseLaunches();
+        await Promise.allSettled([stopAllPromise, run.mixedSecondaryLaneLaunchQueue]);
+      }
     });
 
     it('allows fresh mixed OpenCode secondary lanes after stopAllTeams cancelled in-flight handoff', async () => {
@@ -12328,7 +12447,7 @@ describe(
       run.child = { kill: () => undefined };
       trackLiveRun(svc, run);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       expect(svc.isTeamAlive(teamName)).toBe(false);
       await expect(svc.restartMember(teamName, 'bob')).rejects.toThrow(
@@ -12354,7 +12473,7 @@ describe(
       trackLiveRun(svc, firstRun);
       trackLiveRun(svc, secondRun);
 
-      svc.stopTeam(firstTeamName);
+      await svc.stopTeam(firstTeamName);
 
       expect(svc.isTeamAlive(firstTeamName)).toBe(false);
       expect(svc.isTeamAlive(secondTeamName)).toBe(true);
@@ -18207,7 +18326,7 @@ describe(
         runId: run.runId,
       });
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       expect(svc.getLeadActivityState(teamName)).toEqual({
         state: 'offline',
@@ -19849,10 +19968,11 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19861,6 +19981,7 @@ describe(
       ]);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -19882,10 +20003,11 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19894,6 +20016,7 @@ describe(
       ]);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -19960,10 +20083,11 @@ describe(
       });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
 
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
@@ -19972,6 +20096,7 @@ describe(
       ]);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20009,13 +20134,15 @@ describe(
       trackLiveRun(svc, stoppedRun);
       trackLiveRun(svc, survivingRun);
 
+      blockedMixedLaunches.push({ adapter, run: stoppedRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(stoppedRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() =>
         adapter.pendingLaunchInputs.some((input) => input.teamName === stoppedTeamName)
       );
 
-      svc.stopTeam(stoppedTeamName);
+      await svc.stopTeam(stoppedTeamName);
 
       await waitForCondition(
         () => adapter.stopInputs.filter((input) => input.teamName === stoppedTeamName).length === 1
@@ -20025,6 +20152,8 @@ describe(
       expect(svc.isTeamAlive(survivingTeamName)).toBe(true);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(stoppedRun);
+      await waitForMixedSecondaryLaunchQueue(survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -20062,10 +20191,11 @@ describe(
       const oldRun = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, oldRun);
 
+      blockedMixedLaunches.push({ adapter, run: oldRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -20115,6 +20245,7 @@ describe(
       });
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(oldRun);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20146,10 +20277,11 @@ describe(
       const oldRun = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, oldRun);
 
+      blockedMixedLaunches.push({ adapter, run: oldRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -20198,6 +20330,7 @@ describe(
       });
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(oldRun);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20267,10 +20400,11 @@ describe(
       });
       trackLiveRun(svc, oldRun);
 
+      blockedMixedLaunches.push({ adapter, run: oldRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(oldRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
@@ -20331,6 +20465,7 @@ describe(
       });
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(oldRun);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20365,14 +20500,16 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -20403,14 +20540,16 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -20481,14 +20620,16 @@ describe(
       });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      svc.stopTeam(teamName);
+      await svc.stopTeam(teamName);
       await waitForCondition(() => !svc.isTeamAlive(teamName));
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -20526,6 +20667,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20538,6 +20680,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20558,6 +20701,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20570,6 +20714,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20604,6 +20749,7 @@ describe(
       addGeminiPrimaryToMixedRun(run);
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20616,6 +20762,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20657,6 +20804,7 @@ describe(
       addGeminiPrimaryToMixedRun(cancelledRun);
       trackLiveRun(svc, cancelledRun);
 
+      blockedMixedLaunches.push({ adapter, run: cancelledRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -20669,6 +20817,7 @@ describe(
       expect(svc.isTeamAlive(teamName)).toBe(false);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(cancelledRun);
       await waitForCondition(() => adapter.launchInputs.length === 1);
 
       const cancelledStatuses = await svc.getMemberSpawnStatuses(teamName);
@@ -20688,7 +20837,9 @@ describe(
       addGeminiPrimaryToMixedRun(freshRun);
       trackLiveRun(svc, freshRun);
 
+      blockedMixedLaunches.push({ adapter, run: freshRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
+      await waitForMixedSecondaryLaunchQueue(freshRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
@@ -20740,7 +20891,9 @@ describe(
       trackLiveRun(svc, cancelledRun);
       trackLiveRun(svc, survivingRun);
 
+      blockedMixedLaunches.push({ adapter, run: cancelledRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() =>
         adapter.pendingLaunchInputs.some((input) => input.teamName === cancelledTeamName)
@@ -20757,6 +20910,8 @@ describe(
       expect(svc.isTeamAlive(survivingTeamName)).toBe(true);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -20830,7 +20985,9 @@ describe(
       trackLiveRun(svc, cancelledRun);
       trackLiveRun(svc, survivingRun);
 
+      blockedMixedLaunches.push({ adapter, run: cancelledRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
@@ -20845,6 +21002,8 @@ describe(
       expect(svc.isTeamAlive(survivingTeamName)).toBe(true);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -20897,7 +21056,9 @@ describe(
       trackLiveRun(svc, cancelledRun);
       trackLiveRun(svc, survivingRun);
 
+      blockedMixedLaunches.push({ adapter, run: cancelledRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
@@ -20910,6 +21071,8 @@ describe(
       expect(adapter.stopInputs.some((input) => input.teamName === survivingTeamName)).toBe(false);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -20923,7 +21086,9 @@ describe(
       freshRun.child = { kill: () => undefined };
       trackLiveRun(svc, freshRun);
 
+      blockedMixedLaunches.push({ adapter, run: freshRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
+      await waitForMixedSecondaryLaunchQueue(freshRun);
       await waitForCondition(() => adapter.launchInputs.length === 5);
       await waitForCondition(() =>
         freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
@@ -21003,7 +21168,9 @@ describe(
       trackLiveRun(svc, cancelledRun);
       trackLiveRun(svc, survivingRun);
 
+      blockedMixedLaunches.push({ adapter, run: cancelledRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
+      blockedMixedLaunches.push({ adapter, run: survivingRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(survivingRun);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 2);
 
@@ -21016,6 +21183,8 @@ describe(
       expect(adapter.stopInputs.some((input) => input.teamName === survivingTeamName)).toBe(false);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(cancelledRun);
+      await waitForMixedSecondaryLaunchQueue(survivingRun);
       await waitForCondition(() => adapter.launchInputs.length === 3);
       await waitForCondition(() =>
         survivingRun.mixedSecondaryLanes.every(
@@ -21034,7 +21203,9 @@ describe(
       addGeminiPrimaryToMixedRun(freshRun);
       trackLiveRun(svc, freshRun);
 
+      blockedMixedLaunches.push({ adapter, run: freshRun });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
+      await waitForMixedSecondaryLaunchQueue(freshRun);
       await waitForCondition(() => adapter.launchInputs.length === 5);
       await waitForCondition(() =>
         freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
@@ -21087,6 +21258,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -21094,6 +21266,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -21124,6 +21297,7 @@ describe(
       const run = createMixedLiveRun({ teamName, projectPath, primaryProviderId: 'anthropic' });
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -21131,6 +21305,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -21175,6 +21350,7 @@ describe(
       addGeminiPrimaryToMixedRun(run);
       trackLiveRun(svc, run);
 
+      blockedMixedLaunches.push({ adapter, run });
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
@@ -21182,6 +21358,7 @@ describe(
       await waitForCondition(() => adapter.stopInputs.length === 1);
 
       adapter.releaseLaunches();
+      await waitForMixedSecondaryLaunchQueue(run);
       await waitForCondition(() => adapter.rejectedLaunchCount === 1);
 
       await expect(
@@ -21677,7 +21854,7 @@ describe(
         pendingPermissionRequestIds: ['perm-alice'],
       });
 
-      svc.stopTeam('pending-then-relaunch-opencode-safe-e2e');
+      await svc.stopTeam('pending-then-relaunch-opencode-safe-e2e');
       await waitForCondition(() => adapter.stopInputs.length === 1);
       adapter.setLaunchResult('clean_success');
 
@@ -21713,6 +21890,8 @@ type MixedPrimaryProviderId = 'anthropic' | 'codex';
 function createStaleWatermarkStopAdapterFixture(input: {
   controlDir: string;
   manifestReader: OpenCodeRuntimeManifestEvidenceReader;
+  runId: string;
+  capabilitySnapshotId: string;
 }): {
   adapter: OpenCodeTeamRuntimeAdapter;
   handshakeExpectedWatermarks: Array<number | null>;
@@ -21747,6 +21926,10 @@ function createStaleWatermarkStopAdapterFixture(input: {
           expectedRunId: string | null;
           expectedManifestHighWatermark: number | null;
         };
+        expect(request).toMatchObject({
+          expectedRunId: input.runId,
+          expectedCapabilitySnapshotId: input.capabilitySnapshotId,
+        });
         handshakeExpectedWatermarks.push(request.expectedManifestHighWatermark);
         const server: OpenCodeBridgePeerIdentity = {
           ...clientIdentity,
@@ -21757,9 +21940,9 @@ function createStaleWatermarkStopAdapterFixture(input: {
             binaryPath: 'fixture-opencode',
             binaryFingerprint: 'fixture-opencode-1.18.22',
             version: '1.18.22',
-            capabilitySnapshotId: null,
+            capabilitySnapshotId: input.capabilitySnapshotId,
             runtimeStoreManifestHighWatermark: 0,
-            activeRunId: null,
+            activeRunId: input.runId,
           },
         };
         const handshakeWithoutHash: Omit<OpenCodeBridgeHandshake, 'identityHash'> = {
@@ -21796,6 +21979,14 @@ function createStaleWatermarkStopAdapterFixture(input: {
             idempotencyKey: string;
           };
         };
+        expect(request).toMatchObject({
+          runId: input.runId,
+          expectedCapabilitySnapshotId: input.capabilitySnapshotId,
+          preconditions: {
+            expectedRunId: input.runId,
+            expectedCapabilitySnapshotId: input.capabilitySnapshotId,
+          },
+        });
         stopExpectedWatermarks.push(request.preconditions.expectedManifestHighWatermark);
         stoppedRunIds.push(request.runId);
         return {
@@ -21810,7 +22001,7 @@ function createStaleWatermarkStopAdapterFixture(input: {
             binaryPath: 'fixture-opencode',
             binaryFingerprint: 'fixture-opencode-1.18.22',
             version: '1.18.22',
-            capabilitySnapshotId: null,
+            capabilitySnapshotId: input.capabilitySnapshotId,
           },
           diagnostics: [],
           data: {
@@ -21843,6 +22034,9 @@ function createStaleWatermarkStopAdapterFixture(input: {
     }),
     bridge: executor,
     manifestReader: input.manifestReader,
+    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter({
+      teamsBasePath: getTeamsBasePath(),
+    }),
   });
   const bridge = new OpenCodeReadinessBridge(executor, {
     stateChangingCommands,
@@ -22362,6 +22556,14 @@ class BlockingOpenCodeRuntimeAdapter extends FakeOpenCodeRuntimeAdapter {
   releaseLaunches(): void {
     this.releaseGate?.();
   }
+}
+
+async function waitForMixedSecondaryLaunchQueue(run: {
+  mixedSecondaryLaneLaunchQueue?: Promise<void>;
+}): Promise<void> {
+  const queue = run.mixedSecondaryLaneLaunchQueue;
+  expect(queue).toBeInstanceOf(Promise);
+  await queue;
 }
 
 function latestOpenCodeLaunchRunId(

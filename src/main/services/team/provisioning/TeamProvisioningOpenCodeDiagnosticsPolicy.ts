@@ -233,6 +233,18 @@ export function selectOpenCodePrepareProviderDiagnostic(
 export function selectOpenCodeModelPreparePrimaryReason(
   prepare: Extract<TeamRuntimePrepareResult, { ok: false }>
 ): string {
+  // A typed terminal auth failure outranks occupancy and cached MCP proof notes
+  // collected earlier during the same execution probe.
+  if (prepare.reason === 'not_authenticated') {
+    const authFailure = selectRuntimeDiagnosticClassification(
+      [...prepare.diagnostics, ...prepare.warnings].filter(
+        (entry) => !isGenericOpenCodePersistedFailureReason(entry)
+      )
+    );
+    return authFailure?.reasonCode === 'auth_error'
+      ? (authFailure.normalizedMessage ?? prepare.reason)
+      : prepare.reason;
+  }
   const providerDiagnostic = selectOpenCodePrepareProviderDiagnostic(prepare);
   if (providerDiagnostic) {
     return providerDiagnostic;
@@ -252,6 +264,7 @@ export function isOpenCodeModelPrepareBusyDeferred(
   const candidates = [primaryReason, prepare.reason, ...prepare.diagnostics, ...prepare.warnings];
   return (
     prepare.retryable &&
+    prepare.reason !== 'not_authenticated' &&
     !candidates.some(isOpenCodeModelVerificationTimeoutDiagnostic) &&
     candidates.some(isRetryableOpenCodePreflightBusyDiagnostic)
   );

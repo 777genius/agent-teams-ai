@@ -240,6 +240,50 @@ describe('TeamModelSelector disabled Codex models', () => {
     vi.unstubAllGlobals();
   });
 
+  it('requests only the selected deferred Codex provider once across rerenders', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const providers = ['anthropic', 'codex', 'opencode'].map((providerId) => ({
+      providerId,
+      supported: false,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusMessage: 'Provider status will refresh when needed.',
+      models: [],
+      capabilities: { teamLaunch: false, oneShot: false },
+      modelCatalogRefreshState: 'idle',
+      runtimeCapabilities: null,
+      backend: null,
+    }));
+    storeState.cliStatus = { flavor: 'agent_teams_orchestrator', installed: true, providers };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const props = {
+      providerId: 'codex' as const,
+      onProviderChange: () => undefined,
+      value: '',
+      onValueChange: () => undefined,
+    };
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, props));
+      await Promise.resolve();
+    });
+    await flushFailClosedAuthorityClocks();
+    await act(async () => {
+      root.render(React.createElement(TeamModelSelector, props));
+      await Promise.resolve();
+    });
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
+      silent: false,
+      checkReason: 'launch_preflight',
+    });
+    expect(
+      providers.every((provider) => !provider.capabilities.teamLaunch && !provider.authenticated)
+    ).toBe(true);
+  });
+
   it('shows only Default while Codex runtime models are still loading', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     Object.defineProperty(window, 'electronAPI', { value: {}, configurable: true });

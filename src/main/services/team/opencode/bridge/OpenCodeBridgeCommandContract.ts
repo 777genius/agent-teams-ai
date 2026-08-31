@@ -129,8 +129,8 @@ export interface OpenCodeStopTeamCommandBody {
   manifestHighWatermark?: number | null;
   reason: string;
   force?: boolean;
+  allowEmptyLaneStop?: boolean;
 }
-
 export interface OpenCodeStopTeamCommandData {
   runId: string;
   stopped: boolean;

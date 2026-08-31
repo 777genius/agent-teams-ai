@@ -276,7 +276,7 @@ export function reconcileMultimodelProviderLoading(
       return {
         ...nextLoading,
         [providerId]: provider
-          ? incompleteProviderIds.has(providerId)
+          ? currentLoading[providerId] === true && incompleteProviderIds.has(providerId)
           : currentLoading[providerId] === true,
       };
     },
@@ -1016,7 +1016,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const providerLoading = Object.fromEntries(
       MULTIMODEL_PROVIDER_IDS.map((providerId) => [
         providerId,
-        initialStatus.installed &&
+        hydrateProviders &&
+          initialStatus.installed &&
           !isHydratedMultimodelProviderStatus(
             initialStatus.providers.find((provider) => provider.providerId === providerId)
           ),
@@ -1067,9 +1068,10 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         const nextProviderLoading = Object.fromEntries(
           MULTIMODEL_PROVIDER_IDS.map((providerId) => [
             providerId,
-            !isHydratedMultimodelProviderStatus(
-              nextCliStatus.providers.find((provider) => provider.providerId === providerId)
-            ),
+            hydrateProviders &&
+              !isHydratedMultimodelProviderStatus(
+                nextCliStatus.providers.find((provider) => provider.providerId === providerId)
+              ),
           ])
         ) as Partial<Record<CliProviderId, boolean>>;
         pendingProviderIds = MULTIMODEL_PROVIDER_IDS.filter(

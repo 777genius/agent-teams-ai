@@ -12,6 +12,7 @@ import {
   type OpenCodeCommittedBootstrapSessionEvidence,
   type OpenCodeCommittedBootstrapSessionRecord,
   readCommittedOpenCodeBootstrapSessionEvidence,
+  withOpenCodeRuntimeLaneLifecycleLock,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   createRuntimeStoreManifestStore,
@@ -275,6 +276,16 @@ export async function commitOpenCodeRuntimeBootstrapSessionEvidence(
   input: CommitOpenCodeRuntimeBootstrapSessionEvidenceInput,
   ports: OpenCodeRuntimeBootstrapEvidencePorts
 ): Promise<void> {
+  return withOpenCodeRuntimeLaneLifecycleLock(
+    { teamsBasePath: ports.teamsBasePath, ...input },
+    () => commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(input, ports)
+  );
+}
+
+async function commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(
+  input: CommitOpenCodeRuntimeBootstrapSessionEvidenceInput,
+  ports: OpenCodeRuntimeBootstrapEvidencePorts
+): Promise<void> {
   const paths = getOpenCodeRuntimeSessionStorePaths({
     teamsBasePath: ports.teamsBasePath,
     teamName: input.teamName,
@@ -328,6 +339,7 @@ export async function commitOpenCodeRuntimeBootstrapSessionEvidence(
       runId: input.runId,
       capabilitySnapshotId: null,
       behaviorFingerprint: null,
+      authorityMode: 'metadata-only',
       reason: 'launch_checkpoint',
       writes: [
         {
@@ -353,6 +365,19 @@ export async function commitOpenCodeRuntimeBootstrapSessionEvidence(
 }
 
 export async function stampOpenCodeAppMcpTransportEvidenceIfMissing(
+  session: OpenCodeCommittedBootstrapSessionRecord,
+  ports: OpenCodeRuntimeBootstrapEvidencePorts,
+  options: { overwriteExistingHash?: boolean; runtimeSessionId?: string | null } = {}
+): Promise<void> {
+  await withOpenCodeRuntimeLaneLifecycleLock(
+    { teamsBasePath: ports.teamsBasePath, teamName: session.teamName, laneId: session.laneId },
+    () => stampOpenCodeAppMcpTransportEvidenceIfMissingUnlocked(session, ports, options)
+  ).catch((error) =>
+    ports.warn(`OpenCode app MCP transport evidence update failed: ${getErrorMessage(error)}`)
+  );
+}
+
+async function stampOpenCodeAppMcpTransportEvidenceIfMissingUnlocked(
   session: OpenCodeCommittedBootstrapSessionRecord,
   ports: OpenCodeRuntimeBootstrapEvidencePorts,
   options: {
@@ -441,6 +466,7 @@ export async function stampOpenCodeAppMcpTransportEvidenceIfMissing(
       runId: session.runId,
       capabilitySnapshotId: null,
       behaviorFingerprint: null,
+      authorityMode: 'metadata-only',
       reason: 'delivery_commit',
       writes: [
         {

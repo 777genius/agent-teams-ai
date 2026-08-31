@@ -891,7 +891,7 @@ async function clearOpenCodeRuntimeLaneStorageUnlocked(params: {
   return true;
 }
 
-function withOpenCodeRuntimeLaneLifecycleLock<T>(
+export function withOpenCodeRuntimeLaneLifecycleLock<T>(
   params: { teamsBasePath: string; teamName: string; laneId?: string | null },
   operation: () => Promise<T>
 ): Promise<T> {

@@ -1,13 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { OpenCodeBridgeCommandLedgerError } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandLedgerStore';
 import {
   OpenCodeReadinessBridge,
   type OpenCodeReadinessBridgeCommandExecutor,
   type OpenCodeReadinessBridgeOptions,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
-import {
-  REQUIRED_AGENT_TEAMS_APP_TOOL_IDS,
-} from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
+import { REQUIRED_AGENT_TEAMS_APP_TOOL_IDS } from '../../../../src/main/services/team/opencode/mcp/OpenCodeMcpToolAvailability';
 
 import type {
   OpenCodeBridgeCommandName,
@@ -54,6 +53,48 @@ describe('OpenCodeReadinessBridge', () => {
       capabilitySnapshotId: 'cap-1',
       version: '1.14.19',
     });
+  });
+
+  it('keeps manual and automatic selected-profile snapshots separate', async () => {
+    const autoResult = bridgeSuccess(readiness({ state: 'ready', launchAllowed: true }));
+    const manualResult = {
+      ...autoResult,
+      runtime: { ...autoResult.runtime, capabilitySnapshotId: 'cap-manual' },
+    };
+    const executor = fakeExecutor(autoResult);
+    vi.mocked(executor.execute)
+      .mockResolvedValueOnce(autoResult)
+      .mockResolvedValueOnce(manualResult);
+    const bridge = new OpenCodeReadinessBridge(executor);
+    const input = {
+      projectPath: '/repo',
+      selectedModel: 'openai/gpt-5.4-mini',
+      requireExecutionProbe: true,
+    };
+    await bridge.checkOpenCodeTeamLaunchReadiness({ ...input, skipPermissions: true });
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot('/repo', input.selectedModel, true, false)
+    ).toBeNull();
+    await bridge.checkOpenCodeTeamLaunchReadiness({ ...input, skipPermissions: false });
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot('/repo', input.selectedModel, true, false)
+        ?.capabilitySnapshotId
+    ).toBe('cap-manual');
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot('/repo', input.selectedModel, true, true)
+        ?.capabilitySnapshotId
+    ).toBe('cap-1');
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot('/other-project', input.selectedModel, true, false)
+    ).toBeNull();
+    expect(
+      bridge.getLastOpenCodeRuntimeSnapshot('/repo', 'openai/other-model', true, false)
+    ).toBeNull();
+    expect(executor.execute).toHaveBeenLastCalledWith(
+      'opencode.readiness',
+      expect.objectContaining({ skipPermissions: false }),
+      expect.anything()
+    );
   });
 
   it('maps bridge failures into fail-closed readiness', async () => {
@@ -146,9 +187,7 @@ describe('OpenCodeReadinessBridge', () => {
         summary: 'OpenCode readiness bridge exited without returning diagnostic JSON.',
       }),
     ]);
-    expect(result.supportDiagnostics?.[0]?.copyText).toContain(
-      'Agent Teams OpenCode diagnostics'
-    );
+    expect(result.supportDiagnostics?.[0]?.copyText).toContain('Agent Teams OpenCode diagnostics');
     expect(result.supportDiagnostics?.[0]?.copyText).toContain('outputReadError: ENOENT');
     expect(result.supportDiagnostics?.[0]?.copyText).toContain('appVersion: 1.3.0-test');
     expect(result.supportDiagnostics?.[0]?.copyText).toContain('selectedModel: qwen3.6-2b');
@@ -477,11 +516,13 @@ describe('OpenCodeReadinessBridge', () => {
   });
 
   it('does not fall back to observed mode when forced session refresh contract is missing', async () => {
-    const execute = vi.fn().mockRejectedValueOnce(
-      new Error(
-        'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.'
-      )
-    );
+    const execute = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new Error(
+          'OpenCode delivery acceptance mode is required, but the orchestrator does not advertise contract version 2.'
+        )
+      );
     const executor = {
       execute: execute as unknown as OpenCodeReadinessBridgeCommandExecutor['execute'] &
         ReturnType<typeof vi.fn>,
@@ -738,7 +779,9 @@ describe('OpenCodeReadinessBridge', () => {
           status: 'unknown',
           safeToRetry: false,
           accepted: false,
-          diagnostics: ['No orchestrator-side command outcome record matched the requested OpenCode command.'],
+          diagnostics: [
+            'No orchestrator-side command outcome record matched the requested OpenCode command.',
+          ],
         },
       }),
     ]);
@@ -1241,6 +1284,33 @@ describe('OpenCodeReadinessBridge', () => {
         expectedBehaviorFingerprint: body.expectedBehaviorFingerprint,
       });
       expect(stateChangingExecute).toHaveBeenCalledTimes(1);
+      expect(executor.execute).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    [true, 'OpenCode bridge command outcome must be reconciled before retry'],
+    [true, 'OpenCode bridge command already started'],
+    [false, 'OpenCode bridge command outcome must be reconciled before retry'],
+    [false, 'OpenCode bridge command already started'],
+  ] as const)(
+    'only preserves typed ledger unknown outcomes as pending (%s, %s)',
+    async (typed, message) => {
+      const execute = vi.fn(async () => {
+        throw typed ? new OpenCodeBridgeCommandLedgerError(message) : new Error(message);
+      });
+      const executor = fakeExecutor(bridgeFailure('internal_error', 'must not redispatch', []));
+      const bridge = new OpenCodeReadinessBridge(executor, { stateChangingCommands: { execute } });
+
+      await expect(bridge.launchOpenCodeTeam(launchCommandBody())).resolves.toMatchObject({
+        teamLaunchState: typed ? 'launching' : 'failed',
+        diagnostics: expect.arrayContaining([
+          expect.objectContaining({
+            code: typed ? 'opencode_launch_reconciliation_required' : 'internal_error',
+          }),
+        ]),
+      });
+      expect(execute).toHaveBeenCalledTimes(1);
       expect(executor.execute).not.toHaveBeenCalled();
     }
   );

@@ -20,9 +20,10 @@ import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/open
 import {
   type OpenCodeBridgeCommandExecutor,
   OpenCodeStateChangingBridgeCommandService,
-  type RuntimeStoreManifestReader,
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import {
+  OpenCodeRuntimeManifestEvidenceReader,
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
@@ -36,7 +37,6 @@ import { TeamProvisioningService } from '../../../../src/main/services/team/Team
 import { getClaudeBasePath, getTeamsBasePath } from '../../../../src/main/utils/pathDecoder';
 
 import type { HttpServices } from '../../../../src/main/http';
-import type { RuntimeStoreManifestEvidence } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
 import type { TaskRef } from '../../../../src/shared/types';
 
 const DEFAULT_ORCHESTRATOR_CLI =
@@ -432,18 +432,13 @@ function createStateChangingCommands(input: {
       filePath: path.join(input.controlDir, 'ledger.json'),
     }),
     bridge: input.bridge,
-    manifestReader: new StaticManifestReader(),
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({
+      teamsBasePath: getTeamsBasePath(),
+    }),
+    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter({
+      teamsBasePath: getTeamsBasePath(),
+    }),
   });
-}
-
-class StaticManifestReader implements RuntimeStoreManifestReader {
-  async read(): Promise<RuntimeStoreManifestEvidence> {
-    return {
-      highWatermark: 0,
-      activeRunId: null,
-      capabilitySnapshotId: null,
-    };
-  }
 }
 
 async function assertExecutable(filePath: string): Promise<void> {

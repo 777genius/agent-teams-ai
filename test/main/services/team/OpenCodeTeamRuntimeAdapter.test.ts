@@ -40,6 +40,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: '/repo',
       selectedModel: 'openai/gpt-5.4-mini',
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
     expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
   });
@@ -60,6 +61,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: '/repo',
       selectedModel: null,
       requireExecutionProbe: false,
+      skipPermissions: true,
     });
   });
 
@@ -215,6 +217,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: '/repo',
       selectedModel: 'cursor-acp/auto',
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
   });
 
@@ -351,6 +354,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: '/repo',
       selectedModel: 'ollama/qwen3:8b',
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
     expect(launchOpenCodeTeam).not.toHaveBeenCalled();
     expect(result).toMatchObject({
@@ -567,6 +571,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       projectPath: worktreePath,
       selectedModel: 'openai/gpt-5.4-mini',
       requireExecutionProbe: true,
+      skipPermissions: true,
     });
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -720,14 +725,19 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: checkReadiness,
     });
-    const expectedMembers = ['lead', 'researcher', 'implementer', 'reviewer', 'tester', 'writer'].map(
-      (name) => ({
-        name,
-        providerId: 'opencode' as const,
-        model: 'openai/gpt-5.4-mini',
-        cwd: '/repo',
-      })
-    );
+    const expectedMembers = [
+      'lead',
+      'researcher',
+      'implementer',
+      'reviewer',
+      'tester',
+      'writer',
+    ].map((name) => ({
+      name,
+      providerId: 'opencode' as const,
+      model: 'openai/gpt-5.4-mini',
+      cwd: '/repo',
+    }));
 
     await expect(adapter.prepare(launchInput({ expectedMembers }))).resolves.toEqual({
       ok: false,
@@ -916,6 +926,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(getLastOpenCodeRuntimeSnapshot).toHaveBeenCalledWith(
       '/repo',
       'openai/gpt-5.4-mini',
+      true,
       true
     );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
@@ -953,9 +964,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('rejects readiness evidence for a different requested model before launch', async () => {
-    const launchOpenCodeTeam = vi.fn<
-      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >();
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
         readiness({
@@ -979,9 +989,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('rejects an initial execution proof from a stale capability snapshot', async () => {
-    const launchOpenCodeTeam = vi.fn<
-      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >();
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
         readiness({
@@ -1028,9 +1037,8 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
   });
 
   it('blocks missing behavior evidence before state-changing dispatch', async () => {
-    const launchOpenCodeTeam = vi.fn<
-      NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
-    >();
+    const launchOpenCodeTeam =
+      vi.fn<NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>>();
     const adapter = new OpenCodeTeamRuntimeAdapter({
       checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
         readiness({ state: 'ready', launchAllowed: true, executionProof: undefined })
@@ -1131,9 +1139,22 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
 
     await adapter.prepare(launchInput());
-    await adapter.prepare(launchInput());
+    await adapter.prepare(launchInput({ skipPermissions: undefined }));
 
     expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(1);
+  });
+
+  it('never reuses readiness across approval modes', async () => {
+    const bridge = bridgePort(
+      readiness({ state: 'ready', launchAllowed: true, executionProof: reusableExecutionProof() })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+    await adapter.prepare(launchInput({ skipPermissions: true }));
+    await adapter.prepare(launchInput({ skipPermissions: false }));
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(2);
+    expect(bridge.checkOpenCodeTeamLaunchReadiness).toHaveBeenLastCalledWith(
+      expect.objectContaining({ skipPermissions: false })
+    );
   });
 
   it('refreshes readiness instead of returning cached launch-ready state after proof rejection', async () => {
@@ -1163,14 +1184,15 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >(() => Promise.resolve(successfulOpenCodeLaunchData()));
+    const checkReadiness = vi.fn(async () =>
+      readiness({
+        state: 'ready',
+        launchAllowed: true,
+        executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', 'cap-manual'),
+      })
+    );
     const adapter = new OpenCodeTeamRuntimeAdapter({
-      checkOpenCodeTeamLaunchReadiness: vi.fn(async () =>
-        readiness({
-          state: 'ready',
-          launchAllowed: true,
-          executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', 'cap-manual'),
-        })
-      ),
+      checkOpenCodeTeamLaunchReadiness: checkReadiness,
       getLastOpenCodeRuntimeSnapshot: vi.fn(() => runtimeSnapshot('cap-manual')),
       launchOpenCodeTeam,
     });
@@ -1179,6 +1201,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       teamLaunchState: 'clean_success',
     });
 
+    expect(checkReadiness).toHaveBeenCalledWith(
+      expect.objectContaining({ skipPermissions: false })
+    );
     expect(launchOpenCodeTeam).toHaveBeenCalledWith(
       expect.objectContaining({
         skipPermissions: false,
@@ -1671,11 +1696,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
           readiness({
             state: 'ready',
             launchAllowed: true,
-            executionProof: executionProofFor(
-              '/repo',
-              'openai/gpt-5.4-mini',
-              capabilitySnapshotId
-            ),
+            executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', capabilitySnapshotId),
           })
         );
       }
@@ -2832,11 +2853,7 @@ async function launchWithStaleCapabilitySnapshotRecovery(message: string) {
         readiness({
           state: 'ready',
           launchAllowed: true,
-          executionProof: executionProofFor(
-            '/repo',
-            'openai/gpt-5.4-mini',
-            capabilitySnapshotId
-          ),
+          executionProof: executionProofFor('/repo', 'openai/gpt-5.4-mini', capabilitySnapshotId),
         })
       );
     }

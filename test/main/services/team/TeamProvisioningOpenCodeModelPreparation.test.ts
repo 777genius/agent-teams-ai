@@ -7,19 +7,25 @@ import {
 } from '@main/services/team/provisioning/TeamProvisioningOpenCodeModelPreparation';
 import { describe, expect, it, type Mock, vi } from 'vitest';
 
+import { openCodeProviderStatus } from './fixtures/openCodeProviderStatus';
+
 import type { TeamLaunchRuntimeAdapter } from '@main/services/team/runtime';
 
 type PrepareMock = Mock<TeamLaunchRuntimeAdapter['prepare']>;
 
 type TestAdapter = TeamLaunchRuntimeAdapter & {
   prepare: PrepareMock;
-  getLastOpenCodeTeamLaunchReadiness?: Mock<(cwd: string) => { availableModels?: unknown[] }>;
+  readProviderStatus: Mock;
+  getLastOpenCodeTeamLaunchReadiness?: Mock<(cwd: string) => { availableModels?: string[] }>;
 };
 
-function createAdapter(input: { prepare: PrepareMock; availableModels?: unknown[] }): TestAdapter {
+function createAdapter(input: { prepare: PrepareMock; availableModels?: string[] }): TestAdapter {
   return {
     providerId: 'opencode',
     prepare: input.prepare,
+    readProviderStatus: vi
+      .fn()
+      .mockResolvedValue(openCodeProviderStatus(input.availableModels ?? [])),
     launch: vi.fn(),
     reconcile: vi.fn(),
     stop: vi.fn(),
@@ -94,22 +100,22 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['openrouter/qwen/qwen3-coder', 'missing-model'],
       verificationMode: 'compatibility',
       appendPreflightDebugLog: (event) => debugEvents.push(event),
     });
 
-    expect(prepare).toHaveBeenCalledTimes(1);
-    expect(prepare.mock.calls[0]?.[0]).toMatchObject({
-      model: 'openrouter/qwen/qwen3-coder',
-      runtimeOnly: true,
+    expect(prepare).not.toHaveBeenCalled();
+    expect(adapter.readProviderStatus).toHaveBeenCalledExactlyOnceWith({
+      cwd: '/workspace/project',
     });
     expect(result.details).toEqual([
       'Selected model openrouter/qwen/qwen3-coder is compatible. Deep verification pending.',
       'Selected model missing-model is unavailable. Selected model missing-model was not found in the live provider catalog.',
     ]);
-    expect(result.warnings).toEqual(['runtime note']);
+    expect(result.warnings).toEqual([]);
     expect(result.blockingMessages).toEqual([
       'Selected model missing-model is unavailable. Selected model missing-model was not found in the live provider catalog.',
     ]);
@@ -117,46 +123,131 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(debugEvents).toContain('opencode_compatibility_batch_complete');
   });
 
-  it('defers shared compatibility checks when OpenCode is busy', async () => {
-    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
-      ok: false,
-      providerId: 'opencode',
-      reason: 'unknown_error',
-      retryable: true,
-      diagnostics: ['OpenCode session status busy'],
-      warnings: [],
+  it.each([
+    'stale',
+    'malformed',
+    'empty',
+    'null',
+    'error',
+    'wrong-provider',
+    'unauthenticated',
+    'non-authoritative',
+    'refresh-error',
+  ])('fails closed for %s catalog without consulting launch readiness', async (kind) => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
+    const adapter = createAdapter({ prepare, availableModels: ['anthropic/sonnet'] });
+    const provider = openCodeProviderStatus(['anthropic/sonnet']);
+    if (kind === 'stale') provider.modelCatalog!.staleAt = new Date(0).toISOString();
+    if (kind === 'malformed') provider.modelCatalog!.models[0].launchModel = '';
+    if (kind === 'empty') provider.modelCatalog!.models = [];
+    if (kind === 'wrong-provider') provider.providerId = 'codex';
+    if (kind === 'unauthenticated') provider.authenticated = false;
+    if (kind === 'non-authoritative') provider.statusCheckOutcome = 'model_only';
+    if (kind === 'refresh-error') provider.modelCatalogRefreshState = 'error';
+    adapter.readProviderStatus.mockResolvedValue(kind === 'null' ? null : provider);
+    if (kind === 'error')
+      adapter.readProviderStatus.mockRejectedValue(new Error('catalog timed out'));
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/project',
+      modelIds: ['anthropic/sonnet'],
+      verificationMode: 'compatibility',
     });
-    const adapter = createAdapter({ prepare });
-    const debugEvents: string[] = [];
+    expect(result.blockingMessages).toHaveLength(1);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(adapter.getLastOpenCodeTeamLaunchReadiness).not.toHaveBeenCalled();
+  });
 
+  it('never promotes a previous launch snapshot when the catalog reader is missing', async () => {
+    const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['anthropic/sonnet'] });
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
       cwd: '/workspace/project',
-      modelIds: ['first-model', 'second-model'],
+      modelIds: ['anthropic/sonnet'],
       verificationMode: 'compatibility',
-      appendPreflightDebugLog: (event) => debugEvents.push(event),
     });
+    expect(result.blockingMessages).toHaveLength(1);
+    expect(adapter.prepare).not.toHaveBeenCalled();
+    expect(adapter.getLastOpenCodeTeamLaunchReadiness).not.toHaveBeenCalled();
+  });
 
-    expect(prepare).toHaveBeenCalledTimes(1);
-    expect(prepare.mock.calls[0]?.[0]).toMatchObject({
-      model: 'first-model',
-      runtimeOnly: true,
+  it('reads a fresh catalog for each project instead of reusing another project snapshot', async () => {
+    const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['anthropic/sonnet'] });
+    adapter.readProviderStatus
+      .mockResolvedValueOnce(openCodeProviderStatus(['anthropic/sonnet']))
+      .mockResolvedValueOnce(openCodeProviderStatus(['anthropic/haiku']));
+    const first = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/sandbox/first',
+      modelIds: ['anthropic/sonnet'],
+      verificationMode: 'compatibility',
+    });
+    const second = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/sandbox/second',
+      modelIds: ['anthropic/sonnet'],
+      verificationMode: 'compatibility',
+    });
+    expect(first.blockingMessages).toEqual([]);
+    expect(second.blockingMessages).toHaveLength(1);
+    expect(adapter.readProviderStatus.mock.calls).toEqual([
+      [{ cwd: '/sandbox/first' }],
+      [{ cwd: '/sandbox/second' }],
+    ]);
+    expect(adapter.prepare).not.toHaveBeenCalled();
+  });
+
+  it('keeps deep execution separate and invokes its strict adapter once', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'anthropic/sonnet',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({ prepare });
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/sandbox/project',
+      modelIds: ['anthropic/sonnet'],
+      verificationMode: 'deep',
     });
     expect(result.blockingMessages).toEqual([]);
-    expect(result.warnings).toEqual([
-      'OpenCode is currently busy with another session. Deep model verification will retry when OpenCode is idle.',
-    ]);
-    expect(result.issues).toEqual([
-      {
-        providerId: 'opencode',
-        scope: 'provider',
-        severity: 'warning',
-        code: 'unknown_error',
-        message:
-          'OpenCode is currently busy with another session. Deep model verification will retry when OpenCode is idle.',
+    expect(prepare).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ runtimeOnly: false, model: 'anthropic/sonnet' })
+    );
+    expect(adapter.readProviderStatus).not.toHaveBeenCalled();
+  });
+
+  it('blocks selected route access failures in an otherwise healthy catalog', async () => {
+    const adapter = createAdapter({ prepare: vi.fn(), availableModels: ['anthropic/sonnet'] });
+    const provider = openCodeProviderStatus(['anthropic/sonnet']);
+    provider.modelCatalog!.models[0].metadata = {
+      opencode: {
+        providerId: 'anthropic',
+        modelId: 'sonnet',
+        sourceLabel: null,
+        accessKind: 'not_authenticated',
+        routeKind: 'connected_provider',
+        proofState: 'failed',
+        requiresExecutionProof: true,
+        reason: 'Credentials revoked',
       },
-    ]);
-    expect(debugEvents).toContain('opencode_compatibility_batch_busy_deferred');
+    };
+    adapter.readProviderStatus.mockResolvedValue(provider);
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/project',
+      modelIds: ['anthropic/sonnet'],
+      verificationMode: 'compatibility',
+    });
+    expect(result.blockingMessages).toEqual(['Credentials revoked']);
+    expect(adapter.prepare).not.toHaveBeenCalled();
   });
 
   it.each(['ollama/qwen3-coder:30b', 'cursor-acp/auto', 'kiro/auto'])(
@@ -170,6 +261,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
       const result = await prepareSelectedOpenCodeModelsForProvisioning({
         adapter,
+        readProviderStatus: adapter.readProviderStatus,
         cwd: '/workspace/project',
         modelIds: [modelId],
         verificationMode: 'compatibility',
@@ -184,7 +276,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     }
   );
 
-  it('uses a provider-backed route for shared auth when Cursor also is selected', async () => {
+  it('reads catalog without starting a host when Cursor and cloud models are selected', async () => {
     const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
       ok: true,
       providerId: 'opencode',
@@ -199,14 +291,13 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['cursor-acp/auto', 'openrouter/qwen/qwen3-coder'],
       verificationMode: 'compatibility',
     });
 
-    expect(prepare).toHaveBeenCalledWith(
-      expect.objectContaining({ model: 'openrouter/qwen/qwen3-coder', runtimeOnly: true })
-    );
+    expect(prepare).not.toHaveBeenCalled();
     expect(result.blockingMessages).toEqual([]);
     expect(result.details).toEqual([
       'Selected model cursor-acp/auto is compatible. Deep verification pending.',
@@ -238,6 +329,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['local-lab/team-model'],
       verificationMode: 'compatibility',
@@ -283,20 +375,22 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
       availableModels: ['anthropic/claude-sonnet'],
     });
 
+    adapter.readProviderStatus.mockResolvedValue({
+      ...openCodeProviderStatus(['anthropic/claude-sonnet']),
+      authenticated: false,
+    });
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['local-lab/team-model', 'anthropic/claude-sonnet'],
       verificationMode: 'compatibility',
     });
 
-    expect(prepare.mock.calls.map(([input]) => input.model)).toEqual([
-      'local-lab/team-model',
-      'anthropic/claude-sonnet',
-    ]);
-    expect(result.blockingMessages).toEqual(['No connected OpenCode provider found']);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.blockingMessages).toHaveLength(1);
     expect(result.issues).toEqual([
-      expect.objectContaining({ code: 'not_authenticated', severity: 'blocking' }),
+      expect.objectContaining({ code: 'catalog_unavailable', severity: 'blocking' }),
     ]);
   });
 
@@ -315,6 +409,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['local-lab/missing-model'],
       verificationMode: 'compatibility',
@@ -332,6 +427,42 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     ]);
   });
 
+  it('blocks expired OAuth despite busy and cached-proof notes from the same execution probe', async () => {
+    const authFailure =
+      'Latest assistant message failed with UnknownError - Token refresh failed: 401';
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'not_authenticated',
+      retryable: true,
+      diagnostics: [
+        'OpenCode session status busy',
+        authFailure,
+        'OpenCode retry/error payload exposed a terminal provider failure before polling completed in 5490ms',
+        'opencode_app_mcp_tool_proof_persisted_cache_hit',
+        'Token refresh failed: 401',
+      ],
+      warnings: [],
+    });
+    const result = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter: createAdapter({ prepare }),
+      cwd: '/sandbox/project',
+      modelIds: ['openai/gpt-5.4'],
+      verificationMode: 'deep',
+    });
+    expect(result.blockingMessages).toEqual(['Token refresh failed: 401']);
+    expect(result.warnings).toEqual([]);
+    expect(result.issues).toEqual([
+      expect.objectContaining({
+        code: 'not_authenticated',
+        scope: 'provider',
+        severity: 'blocking',
+        message: 'Token refresh failed: 401',
+      }),
+    ]);
+    expect(prepare).toHaveBeenCalledTimes(1);
+  });
+
   it('defers remaining deep verification when OpenCode is busy', async () => {
     const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
       ok: false,
@@ -345,6 +476,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['first-model', 'second-model'],
       verificationMode: 'deep',
@@ -390,6 +522,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['zai-coding-plan/glm-5.1'],
       verificationMode: 'deep',
@@ -420,6 +553,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['ollama/qwen2.5:0.5b'],
       verificationMode: 'deep',
@@ -466,6 +600,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['ollama/qwen2.5:0.5b'],
       verificationMode: 'deep',
@@ -517,6 +652,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['ollama/qwen3:8b'],
       verificationMode: 'deep',
@@ -546,6 +682,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['ollama/qwen3:8b'],
       verificationMode: 'deep',
@@ -586,6 +723,7 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
 
     const result = await prepareSelectedOpenCodeModelsForProvisioning({
       adapter,
+      readProviderStatus: adapter.readProviderStatus,
       cwd: '/workspace/project',
       modelIds: ['local-lab/team-model'],
       verificationMode: 'deep',

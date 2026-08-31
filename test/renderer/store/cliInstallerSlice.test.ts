@@ -509,9 +509,9 @@ describe('cliInstallerSlice', () => {
           opencode: false,
         })
       ).toEqual({
-        anthropic: true,
-        codex: true,
-        opencode: true,
+        anthropic: false,
+        codex: false,
+        opencode: false,
       });
     });
 
@@ -1251,11 +1251,11 @@ describe('cliInstallerSlice', () => {
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
       expect(useStore.getState().cliStatusLoading).toBe(false);
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
-        anthropic: true,
-        codex: true,
-        opencode: true,
+        anthropic: false,
+        codex: false,
+        opencode: false,
       });
-      expect(useStore.getState().cliStatus?.authStatusChecking).toBe(true);
+      expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
       expect(
         useStore.getState().cliStatus?.providers.map((provider) => provider.statusMessage)
       ).toEqual([
@@ -1264,6 +1264,85 @@ describe('cliInstallerSlice', () => {
         CLI_PROVIDER_STATUS_DEFERRED_MESSAGE,
       ]);
     });
+
+    it.each(['timeout', 'malformed', 'invalidated'] as const)(
+      'settles only the requested provider after deferred startup and a %s result',
+      async (outcome) => {
+        const deferredStatus = createMultimodelStatus([
+          createDeferredProvider('anthropic', 'Anthropic'),
+          createDeferredProvider('codex', 'Codex'),
+          createDeferredProvider('opencode', 'OpenCode'),
+        ]);
+        vi.mocked(api.cliInstaller.getStatus).mockResolvedValue(deferredStatus);
+        await useStore.getState().bootstrapCliStatus({
+          multimodelEnabled: true,
+          providerStatusMode: 'defer',
+        });
+        expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
+        expect(useStore.getState().cliStatus?.authStatusChecking).toBe(false);
+
+        const response = createDeferredValue<CliInstallationStatus['providers'][number] | null>();
+        vi.mocked(api.cliInstaller.getProviderStatus).mockReturnValueOnce(response.promise);
+        const request = useStore.getState().fetchCliProviderStatus('codex', {
+          silent: false,
+          checkReason: 'launch_preflight',
+        });
+        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('codex');
+        expect(useStore.getState().cliProviderStatusLoading).toEqual({
+          anthropic: false,
+          codex: true,
+          opencode: false,
+        });
+        expect(
+          reconcileMultimodelProviderLoading(
+            deferredStatus,
+            useStore.getState().cliProviderStatusLoading
+          ).codex
+        ).toBe(true);
+
+        if (outcome === 'invalidated') await useStore.getState().invalidateCliStatus();
+        response.resolve(
+          outcome === 'malformed'
+            ? null
+            : createMultimodelProvider({
+                providerId: 'codex',
+                displayName: 'Codex',
+                supported: false,
+                authenticated: false,
+                verificationState: 'error',
+                statusCheckOutcome: 'transient_error',
+                statusCheckErrorCode: 'timeout',
+                statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+              })
+        );
+        await request;
+        expect(useStore.getState().cliProviderStatusLoading.codex).not.toBe(true);
+
+        // This is the same reconciliation used for an unrelated provider's status push.
+        useStore.setState((state) => {
+          const status = reconcileCliStatus(state.cliStatus, deferredStatus);
+          return {
+            cliStatus: status,
+            cliProviderStatusLoading: reconcileMultimodelProviderLoading(
+              status,
+              state.cliProviderStatusLoading
+            ),
+          };
+        });
+        expect(useStore.getState().cliProviderStatusLoading).toEqual({
+          anthropic: false,
+          codex: false,
+          opencode: false,
+        });
+        expect(
+          useStore
+            .getState()
+            .cliStatus?.providers.every((provider) => !provider.capabilities.teamLaunch)
+        ).toBe(true);
+        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      }
+    );
 
     it('keeps the current snapshot intact while a full bootstrap loads metadata', async () => {
       const currentStatus = createMultimodelStatus([
@@ -1335,9 +1414,9 @@ describe('cliInstallerSlice', () => {
 
       expect(api.cliInstaller.getProviderStatus).not.toHaveBeenCalled();
       expect(useStore.getState().cliProviderStatusLoading).toEqual({
-        anthropic: true,
-        codex: true,
-        opencode: true,
+        anthropic: false,
+        codex: false,
+        opencode: false,
       });
       expect(useStore.getState().cliStatus?.providers[0]).toMatchObject({ authenticated: false });
       expect(useStore.getState().cliStatus?.providers[2]).toMatchObject({ authenticated: false });

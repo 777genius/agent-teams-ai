@@ -94,6 +94,7 @@ const logger = createLogger('Service:TeamProvisioning');
 export interface OpenCodeAggregatePrimaryRestartLease {
   teamName: string;
   runId: string;
+  candidateRunId?: string;
   memberName: string;
   completion: Promise<void>;
   precedingLifecycleOperations: Promise<void>[];
@@ -443,6 +444,9 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     sourceWarning?: string;
     onProgress: (progress: TeamProvisioningProgress) => void;
   }): Promise<TeamLaunchResponse> {
+    const restartLease = this.openCodeAggregatePrimaryRestartByTeam.get(
+      input.request.teamName.trim().toLowerCase()
+    );
     const configuredLanePlan = this.planRuntimeLanesOrThrow(
       input.request.providerId,
       input.members,
@@ -456,6 +460,13 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     return super.runOpenCodeTeamRuntimeAdapterLaunch({
       ...input,
       members: runtimeLaunchMembers,
+      onProgress: (progress) => {
+        // The initial callback precedes candidate persistence and any caller cancellation.
+        if (restartLease && progress.runId !== restartLease.runId) {
+          restartLease.candidateRunId ??= progress.runId;
+        }
+        input.onProgress(progress);
+      },
     });
   }
 }

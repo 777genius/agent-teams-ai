@@ -1,11 +1,21 @@
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-import { describe, expect, it } from 'vitest';
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  unlinkSync,
+} from 'fs';
+import { tmpdir } from 'os';
+import { join, resolve } from 'path';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   createOpenCodeCanonicalProjectPathFingerprint,
   createOpenCodeExecutionProofHash,
   createOpenCodeExpectedBehaviorFingerprint,
+  freshOpenCodeExecutionProof,
   parseOpenCodeExpectedBehaviorEvidence,
   reusableOpenCodeExecutionProof,
   validateOpenCodeExpectedBehaviorEvidence,
@@ -26,6 +36,104 @@ interface GoldenCase {
 }
 
 describe('OpenCodeExpectedBehaviorFingerprint', () => {
+  const sandboxes: string[] = [];
+  afterEach(() => {
+    for (const sandbox of sandboxes.splice(0)) rmSync(sandbox, { recursive: true, force: true });
+  });
+
+  function projectAlias() {
+    const sandbox = mkdtempSync(join(tmpdir(), 'opencode-proof-path-test-'));
+    sandboxes.push(sandbox);
+    const project = join(sandbox, 'project');
+    const otherProject = join(sandbox, 'other-project');
+    const alias = join(sandbox, 'alias');
+    mkdirSync(project);
+    mkdirSync(otherProject);
+    symlinkSync(project, alias, process.platform === 'win32' ? 'junction' : 'dir');
+    return { project: realpathSync(project), otherProject, alias };
+  }
+
+  function proofForProject(projectPath: string) {
+    const tuple = {
+      ...validEvidence(),
+      canonicalProjectPathFingerprint: createOpenCodeCanonicalProjectPathFingerprint(projectPath),
+    };
+    const expectedBehaviorEvidence = {
+      ...tuple,
+      expectedBehaviorFingerprint: createOpenCodeExpectedBehaviorFingerprint(tuple),
+    };
+    return changedProof({ projectPath, expectedBehaviorEvidence });
+  }
+
+  it('accepts a canonical proof through a real project alias without rewriting signed fields', () => {
+    const { project, alias } = projectAlias();
+    const proof = proofForProject(project);
+    const originalHash = proof.proofHash;
+    const readiness = cachedReadiness(proof);
+    expect(
+      reusableOpenCodeExecutionProof(readiness, { ...validReuseInput(), projectPath: alias })
+    ).toBe(proof);
+    expect(
+      freshOpenCodeExecutionProof(readiness, { projectPath: alias, fullModelId: proof.modelId })
+        .proof
+    ).toBe(proof);
+    expect(
+      validateOpenCodeExpectedBehaviorEvidence({
+        evidence: proof.expectedBehaviorEvidence,
+        executionProof: proof,
+        projectPath: alias,
+        fullModelId: proof.modelId,
+      })
+    ).toEqual(proof.expectedBehaviorEvidence);
+    expect(proof.projectPath).toBe(project);
+    expect(proof.proofHash).toBe(originalHash);
+  });
+
+  it.each(['different directory', 'retargeted alias'] as const)(
+    'rejects proof reuse for a %s',
+    (condition) => {
+      const { project, otherProject, alias } = projectAlias();
+      // With a signed alias path, retargeting changes both live path comparisons;
+      // the original evidence fingerprint must still bind the old canonical target.
+      const proof = proofForProject(condition === 'retargeted alias' ? alias : project);
+      let projectPath = otherProject;
+      if (condition === 'retargeted alias') {
+        unlinkSync(alias);
+        symlinkSync(otherProject, alias, process.platform === 'win32' ? 'junction' : 'dir');
+        projectPath = alias;
+      }
+      const readiness = cachedReadiness(proof);
+      expect(
+        reusableOpenCodeExecutionProof(readiness, { ...validReuseInput(), projectPath })
+      ).toBeNull();
+      expect(() =>
+        freshOpenCodeExecutionProof(readiness, { projectPath, fullModelId: proof.modelId })
+      ).toThrow(/project/);
+      expect(() =>
+        validateOpenCodeExpectedBehaviorEvidence({
+          evidence: proof.expectedBehaviorEvidence,
+          executionProof: proof,
+          projectPath,
+          fullModelId: proof.modelId,
+        })
+      ).toThrow(/project mismatch/);
+    }
+  );
+
+  it('rejects expired proof through an otherwise valid canonical project alias', () => {
+    const { project, alias } = projectAlias();
+    const { proofHash: _hash, ...unsigned } = proofForProject(project);
+    const expired = { ...unsigned, expiresAt: '2020-01-01T00:00:00.000Z' };
+    const proof = { ...expired, proofHash: createOpenCodeExecutionProofHash(expired) };
+    const readiness = cachedReadiness(proof);
+    expect(
+      reusableOpenCodeExecutionProof(readiness, { ...validReuseInput(), projectPath: alias })
+    ).toBeNull();
+    expect(() =>
+      freshOpenCodeExecutionProof(readiness, { projectPath: alias, fullModelId: proof.modelId })
+    ).toThrow(/stale/);
+  });
+
   it('produces every committed issue 443 golden digest exactly', () => {
     const fixture = JSON.parse(
       readFileSync(
@@ -141,23 +249,48 @@ describe('OpenCodeExpectedBehaviorFingerprint', () => {
 
   it.each([
     ['missing evidence', () => changedProof({ expectedBehaviorEvidence: undefined }), {}],
-    ['uppercase evidence', () => changedProof({
-      expectedBehaviorEvidence: { ...validEvidence(), effectiveConfigFingerprint: 'A'.repeat(64) },
-    }), {}],
+    [
+      'uppercase evidence',
+      () =>
+        changedProof({
+          expectedBehaviorEvidence: {
+            ...validEvidence(),
+            effectiveConfigFingerprint: 'A'.repeat(64),
+          },
+        }),
+      {},
+    ],
     ['malformed evidence', () => changedProof({ expectedBehaviorEvidence: null }), {}],
-    ['extra-field evidence', () => changedProof({
-      expectedBehaviorEvidence: { ...validEvidence(), unexpected: true },
-    }), {}],
-    ['digest mismatch', () => changedProof({
-      expectedBehaviorEvidence: { ...validEvidence(), expectedBehaviorFingerprint: 'f'.repeat(64) },
-    }), {}],
+    [
+      'extra-field evidence',
+      () =>
+        changedProof({
+          expectedBehaviorEvidence: { ...validEvidence(), unexpected: true },
+        }),
+      {},
+    ],
+    [
+      'digest mismatch',
+      () =>
+        changedProof({
+          expectedBehaviorEvidence: {
+            ...validEvidence(),
+            expectedBehaviorFingerprint: 'f'.repeat(64),
+          },
+        }),
+      {},
+    ],
     ['requested project mismatch', () => validProof(), { projectPath: '/different/project' }],
     ['requested full-model mismatch', () => validProof(), { selectedModel: 'deepinfra/other' }],
-    ['requested provider mismatch', () => {
-      const evidence = { ...validEvidence(), modelProviderId: 'custom' };
-      evidence.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(evidence);
-      return changedProof({ expectedBehaviorEvidence: evidence });
-    }, {}],
+    [
+      'requested provider mismatch',
+      () => {
+        const evidence = { ...validEvidence(), modelProviderId: 'custom' };
+        evidence.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(evidence);
+        return changedProof({ expectedBehaviorEvidence: evidence });
+      },
+      {},
+    ],
     ['proofHash mismatch', () => ({ ...validProof(), proofHash: '9'.repeat(64) }), {}],
     ['expired proof', () => changedProof({ expiresAt: '2020-01-01T00:00:00.000Z' }), {}],
   ])('rejects cached %s', (_name, buildProof, inputChanges) => {
@@ -171,7 +304,10 @@ describe('OpenCodeExpectedBehaviorFingerprint', () => {
   });
 
   it('rejects stale config or auth evidence after either fingerprint changes', () => {
-    for (const field of ['effectiveConfigFingerprint', 'effectiveSelectedAuthFingerprint'] as const) {
+    for (const field of [
+      'effectiveConfigFingerprint',
+      'effectiveSelectedAuthFingerprint',
+    ] as const) {
       expect(() =>
         parseOpenCodeExpectedBehaviorEvidence({ ...validEvidence(), [field]: '0'.repeat(64) })
       ).toThrow('digest mismatch');
