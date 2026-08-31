@@ -1824,15 +1824,16 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     ]);
   });
 
-  it('uses project catalog without starting OpenCode when compatibility has no selected model', async () => {
+  it('skips project catalog and OpenCode runtime when compatibility has no selected model', async () => {
     const readCatalog = vi
       .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
       .mockResolvedValue(openCodeProviderStatus(['anthropic/sonnet']));
     const prepare = vi.fn();
+    const launch = vi.fn();
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(
       new TeamRuntimeAdapterRegistry([
-        { providerId: 'opencode', prepare, launch: vi.fn(), reconcile: vi.fn(), stop: vi.fn() },
+        { providerId: 'opencode', prepare, launch, reconcile: vi.fn(), stop: vi.fn() },
       ])
     );
     const result = await svc.prepareForProvisioning(tempRoot, {
@@ -1840,10 +1841,9 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       modelVerificationMode: 'compatibility',
     });
     expect(result.ready).toBe(true);
-    expect(readCatalog).toHaveBeenCalledExactlyOnceWith('/fake/claude', 'opencode', undefined, {
-      projectPath: tempRoot,
-    });
+    expect(readCatalog).not.toHaveBeenCalled();
     expect(prepare).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
   });
 
   it('runs OpenCode compatibility-only selected model checks without the deep execution probe', async () => {
