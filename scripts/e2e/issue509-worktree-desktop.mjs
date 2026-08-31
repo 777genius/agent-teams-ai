@@ -360,6 +360,8 @@ async function run() {
     await cdp.screenshot(output);
     evidence.screenshots.push(output);
   };
+  let runError = null;
+  let cleanupError = null;
   try {
     await cdp.send('Runtime.enable');
     await cdp.send('Page.enable');
@@ -614,17 +616,25 @@ async function run() {
     record('All UI interactions preserve Git branch, HEAD, dirty files, and untracked files');
     await json(await artifactFile('evidence.json'), evidence);
   } catch (error) {
+    runError = error;
     await screenshot('failure').catch(() => undefined);
     const body = await cdp.evaluate('document.body.innerText').catch(() => 'CDP unavailable');
-    await json(await artifactFile('failure.json'), {
-      error: String(error),
-      body,
-      evidence,
-    });
-    throw error;
+    try {
+      await json(await artifactFile('failure.json'), {
+        error: String(error),
+        body,
+        evidence,
+      });
+    } catch (reportingError) {
+      process.stderr.write(`Failed to write failure diagnostics: ${reportingError}\n`);
+    }
   } finally {
-    if (git(fixture.worktreePath, 'branch', '--show-current') !== before.branch)
-      await mutateGit(fixture.worktreePath, 'switch', before.branch);
+    try {
+      if (git(fixture.worktreePath, 'branch', '--show-current') !== before.branch)
+        await mutateGit(fixture.worktreePath, 'switch', before.branch);
+    } catch (error) {
+      cleanupError = error;
+    }
     await cdp.send('Emulation.clearDeviceMetricsOverride').catch(() => undefined);
     await cdp
       .evaluate(
@@ -637,8 +647,17 @@ async function run() {
     })()`
       )
       .catch(() => undefined);
-    socket.close();
+    try {
+      socket.close();
+    } catch (error) {
+      cleanupError ??= error;
+    }
   }
+  if (runError) {
+    if (cleanupError) process.stderr.write(`Fixture cleanup failed: ${cleanupError}\n`);
+    throw runError;
+  }
+  if (cleanupError) throw cleanupError;
   process.stdout.write(`Evidence: ${path.join(fixture.artifacts, 'evidence.json')}\n`);
 }
 

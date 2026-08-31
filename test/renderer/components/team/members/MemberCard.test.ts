@@ -1839,6 +1839,7 @@ describe('MemberCard starting-state visuals', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
+    const onClick = vi.fn();
 
     await act(async () => {
       root.render(
@@ -1852,6 +1853,7 @@ describe('MemberCard starting-state visuals', () => {
           },
           memberColor: 'turquoise',
           isTeamAlive: true,
+          onClick,
         })
       );
       await Promise.resolve();
@@ -1867,6 +1869,14 @@ describe('MemberCard starting-state visuals', () => {
     );
     expect(host.querySelector('[data-member-branch]')?.getAttribute('tabindex')).toBe('0');
     expect(host.querySelector('[data-member-branch]')?.closest('.grid')).toBeNull();
+
+    const branchBadge = host.querySelector('[data-member-branch]') as HTMLElement;
+    await act(async () => {
+      branchBadge.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      branchBadge.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      await Promise.resolve();
+    });
+    expect(onClick).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();

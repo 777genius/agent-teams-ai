@@ -6,10 +6,18 @@ export const MemberBranchBadge = ({ branch }: { branch?: string }): React.JSX.El
   return (
     <Tooltip>
       <TooltipTrigger asChild>
+        {/* Keyboard handling keeps branch tooltip keys inside the nested trigger. */}
+        {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
         <span
           // Keyboard users can focus the branch to read its full tooltip.
           // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          }}
           data-member-branch={branch}
           data-runtime-telemetry-exempt="true"
           aria-label={`Branch: ${branch}`}
