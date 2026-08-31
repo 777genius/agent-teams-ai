@@ -28,6 +28,8 @@ on:
       - '.runtime-download/**'
       - 'runtime.lock.json'
       - 'terminal-platform.lock.json'
+      - 'hosted-lifecycle-owner.lock.json'
+      - 'hosted-stack.lock.json'
       - 'vendor/terminal-platform/**'
       - 'test/**'
       - '.github/workflows/**'
@@ -61,6 +63,8 @@ on:
       - '.runtime-download/**'
       - 'runtime.lock.json'
       - 'terminal-platform.lock.json'
+      - 'hosted-lifecycle-owner.lock.json'
+      - 'hosted-stack.lock.json'
       - 'vendor/terminal-platform/**'
       - 'test/**'
       - '.github/workflows/**'
@@ -141,6 +145,9 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=8192
           SOURCE_FILE_SIZE_BASELINE_REF: ${{ steps.architecture-baseline.outputs.ref }}
         run: pnpm validate:ci
+
+      - name: Verify hosted release locks when materialized
+        run: node ./scripts/hosted-release/verify-locks.mjs --if-present
 
   test:
     name: test (${{ matrix.shard }}/2)
