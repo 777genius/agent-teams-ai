@@ -4565,6 +4565,19 @@ describe(
         bob: 'confirmed',
         tom: 'confirmed',
       });
+      let releaseCancelledLaunch!: () => void;
+      const cancelledLaunchReleased = new Promise<void>((resolve) => {
+        releaseCancelledLaunch = resolve;
+      });
+      const originalLaunch = adapter.launch.bind(adapter);
+      let isFirstLaunch = true;
+      vi.spyOn(adapter, 'launch').mockImplementation(async (input) => {
+        const shouldHold = isFirstLaunch;
+        isFirstLaunch = false;
+        const result = await originalLaunch(input);
+        if (shouldHold) await cancelledLaunchReleased;
+        return result;
+      });
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const quiescenceState = svc as unknown as {
@@ -4579,92 +4592,123 @@ describe(
       cancelledRun.child = { kill: () => undefined };
       trackLiveRun(svc, cancelledRun);
 
-      await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
-      await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
+      try {
+        await (svc as any).launchMixedSecondaryLaneIfNeeded(cancelledRun);
+        await waitForCondition(() => adapter.pendingLaunchInputs.length === 1);
 
-      const stopAllPromise = svc.stopAllTeams();
+        const stopAllPromise = svc.stopAllTeams();
 
-      await waitForCondition(() => adapter.stopInputs.length === 1);
-      expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
-        'secondary:opencode:bob',
-      ]);
-      expect(svc.isTeamAlive(teamName)).toBe(false);
+        await waitForCondition(() => adapter.stopInputs.length === 1);
+        expect(adapter.stopInputs.map((input) => input.laneId).sort()).toEqual([
+          'secondary:opencode:bob',
+        ]);
+        expect(svc.isTeamAlive(teamName)).toBe(false);
 
-      adapter.releaseLaunches();
-      await waitForCondition(() => adapter.launchInputs.length === 1);
-      await stopAllPromise;
-      expect(svc.getAliveTeams()).toEqual([]);
-      expect(quiescenceState.aliveRunByTeam.has(teamName)).toBe(false);
-      expect(quiescenceState.provisioningRunByTeam.has(teamName)).toBe(false);
-      expect(quiescenceState.secondaryRuntimeRunByTeam.has(teamName)).toBe(false);
-      expect(quiescenceState.stoppingSecondaryRuntimeTeams.has(teamName)).toBe(false);
-      expect(quiescenceState.teamOpLocks.has(teamName)).toBe(false);
-      await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({
-        lanes: {},
-      });
+        adapter.releaseLaunches();
+        await waitForCondition(() => adapter.launchInputs.length === 1);
+        await stopAllPromise;
+        expect(svc.getAliveTeams()).toEqual([]);
+        expect(quiescenceState.aliveRunByTeam.has(teamName)).toBe(false);
+        expect(quiescenceState.provisioningRunByTeam.has(teamName)).toBe(false);
+        expect(quiescenceState.secondaryRuntimeRunByTeam.has(teamName)).toBe(false);
+        expect(quiescenceState.stoppingSecondaryRuntimeTeams.has(teamName)).toBe(false);
+        expect(quiescenceState.teamOpLocks.has(teamName)).toBe(false);
+        await expect(
+          readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+        ).resolves.toMatchObject({
+          lanes: {},
+        });
 
-      const freshRun = createMixedLiveRun({ teamName, projectPath });
-      freshRun.runId = `${cancelledRun.runId}-fresh`;
-      freshRun.detectedSessionId = 'lead-session-fresh';
-      freshRun.child = { kill: () => undefined };
-      trackLiveRun(svc, freshRun);
+        const freshRun = createMixedLiveRun({ teamName, projectPath });
+        freshRun.runId = `${cancelledRun.runId}-fresh`;
+        freshRun.detectedSessionId = 'lead-session-fresh';
+        freshRun.child = { kill: () => undefined };
+        trackLiveRun(svc, freshRun);
 
-      await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
-      // The fresh pair is serialized behind cancelled-lane cleanup. Full-suite filesystem pressure
-      // can legitimately outlive the short polling default without indicating a stuck handoff.
-      await waitForCondition(() => adapter.launchInputs.length === 3, 60_000);
-      await waitForCondition(() =>
-        freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
-      );
+        await (svc as any).launchMixedSecondaryLaneIfNeeded(freshRun);
+        // Keep the cancelled adapter callback pending while a new generation becomes ready.
+        await waitForCondition(() => adapter.launchInputs.length === 3, 60_000);
+        await waitForCondition(() =>
+          freshRun.mixedSecondaryLanes.every((lane: { state: string }) => lane.state === 'finished')
+        );
 
-      const statuses = await svc.getMemberSpawnStatuses(teamName);
-      expect(statuses.teamLaunchState).toBe('clean_success');
-      expect(statuses.statuses.alice).toMatchObject({
-        status: 'online',
-        launchState: 'confirmed_alive',
-        hardFailure: false,
-      });
-      expect(statuses.statuses.bob).toMatchObject({
-        status: 'online',
-        launchState: 'confirmed_alive',
-        hardFailure: false,
-      });
-      expect(statuses.statuses.tom).toMatchObject({
-        status: 'online',
-        launchState: 'confirmed_alive',
-        hardFailure: false,
-      });
-      const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
-      expect(snapshot).toMatchObject({
-        runId: freshRun.runId,
-        members: {
-          bob: {
-            alive: true,
-            providerId: 'opencode',
-            laneKind: 'secondary',
+        releaseCancelledLaunch();
+        await cancelledRun.mixedSecondaryLaneLaunchQueue;
+        await expect(
+          readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+        ).resolves.toMatchObject({
+          lanes: {
+            'secondary:opencode:bob': { state: 'active' },
+            'secondary:opencode:tom': { state: 'active' },
           },
-          tom: {
-            alive: true,
-            providerId: 'opencode',
-            laneKind: 'secondary',
-          },
-        },
-      });
+        });
 
-      await svc.stopAllTeams();
-      expect(svc.getAliveTeams()).toEqual([]);
-      expect(quiescenceState.aliveRunByTeam.has(teamName)).toBe(false);
-      expect(quiescenceState.provisioningRunByTeam.has(teamName)).toBe(false);
-      expect(quiescenceState.secondaryRuntimeRunByTeam.has(teamName)).toBe(false);
-      expect(quiescenceState.stoppingSecondaryRuntimeTeams.has(teamName)).toBe(false);
-      expect(quiescenceState.teamOpLocks.has(teamName)).toBe(false);
-      await expect(
-        readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
-      ).resolves.toMatchObject({
-        lanes: {},
-      });
+        const statuses = await svc.getMemberSpawnStatuses(teamName);
+        expect(statuses.teamLaunchState, JSON.stringify(statuses, null, 2)).toBe('clean_success');
+        for (const lane of freshRun.mixedSecondaryLanes) {
+          expect(
+            quiescenceState.secondaryRuntimeRunByTeam.get(teamName)?.get(lane.laneId)
+          ).toMatchObject({
+            runId: lane.runId,
+          });
+          await expect(
+            readCommittedOpenCodeBootstrapSessionEvidence({
+              teamsBasePath: getTeamsBasePath(),
+              teamName,
+              laneId: lane.laneId,
+            })
+          ).resolves.toMatchObject({ committed: true, activeRunId: lane.runId });
+        }
+        expect(statuses.statuses.alice).toMatchObject({
+          status: 'online',
+          launchState: 'confirmed_alive',
+          hardFailure: false,
+        });
+        expect(statuses.statuses.bob).toMatchObject({
+          status: 'online',
+          launchState: 'confirmed_alive',
+          hardFailure: false,
+        });
+        expect(statuses.statuses.tom).toMatchObject({
+          status: 'online',
+          launchState: 'confirmed_alive',
+          hardFailure: false,
+        });
+        const snapshot = await svc.getTeamAgentRuntimeSnapshot(teamName);
+        expect(snapshot).toMatchObject({
+          runId: freshRun.runId,
+          members: {
+            bob: {
+              alive: true,
+              providerId: 'opencode',
+              laneKind: 'secondary',
+            },
+            tom: {
+              alive: true,
+              providerId: 'opencode',
+              laneKind: 'secondary',
+            },
+          },
+        });
+
+        await svc.stopAllTeams();
+        expect(svc.getAliveTeams()).toEqual([]);
+        expect(quiescenceState.aliveRunByTeam.has(teamName)).toBe(false);
+        expect(quiescenceState.provisioningRunByTeam.has(teamName)).toBe(false);
+        expect(quiescenceState.secondaryRuntimeRunByTeam.has(teamName)).toBe(false);
+        expect(quiescenceState.stoppingSecondaryRuntimeTeams.has(teamName)).toBe(false);
+        expect(quiescenceState.teamOpLocks.has(teamName)).toBe(false);
+        await expect(
+          readOpenCodeRuntimeLaneIndex(getTeamsBasePath(), teamName)
+        ).resolves.toMatchObject({
+          lanes: {},
+        });
+      } finally {
+        adapter.releaseLaunches();
+        releaseCancelledLaunch();
+        await cancelledRun.mixedSecondaryLaneLaunchQueue;
+        await svc.stopAllTeams();
+      }
     }, 120_000);
 
     it('stopAllTeams stops in-flight mixed OpenCode secondary lanes for multiple teams', async () => {

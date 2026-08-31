@@ -127,6 +127,7 @@ function createPorts(
     clearOpenCodeRuntimeLaneStorage: vi.fn<
       MixedSecondaryLaneLaunchFlowPorts<TestRun>['clearOpenCodeRuntimeLaneStorage']
     >(async () => undefined),
+    deleteSecondaryRuntimeRunIfOwned: vi.fn(() => true),
     deleteSecondaryRuntimeRun:
       vi.fn<MixedSecondaryLaneLaunchFlowPorts<TestRun>['deleteSecondaryRuntimeRun']>(),
     getOpenCodeRuntimeAdapter: vi.fn<

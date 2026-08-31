@@ -127,6 +127,7 @@ function createPorts(
     upsertOpenCodeRuntimeLaneIndexEntry: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['upsertOpenCodeRuntimeLaneIndexEntry']
     >(async () => undefined),
+    deleteSecondaryRuntimeRunIfOwned: vi.fn(() => true),
     deleteSecondaryRuntimeRun:
       vi.fn<MixedSecondaryLaunchQueuePorts<TestRun>['deleteSecondaryRuntimeRun']>(),
     launchSingleMixedSecondaryLane: vi.fn<
@@ -285,7 +286,7 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     expect(ports.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, sameProject);
   });
 
-  it('cleans up and finishes a canceled queued lane before launch', async () => {
+  it('finishes a canceled queued lane without clearing storage it never acquired', async () => {
     const lane = createLane();
     const run = createRun({ cancelRequested: true, mixedSecondaryLanes: [lane] });
     const ports = createPorts();
@@ -293,15 +294,9 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
     await run.mixedSecondaryLaneLaunchQueue;
 
-    expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
-      teamsBasePath: '/teams',
-      teamName: 'team-a',
-      laneId: 'secondary:opencode:bob',
-    });
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith(
-      'team-a',
-      'secondary:opencode:bob'
-    );
+    expect(ports.clearOpenCodeRuntimeLaneStorage).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).not.toHaveBeenCalled();
     expect(lane.state).toBe('finished');
     expect(ports.launchSingleMixedSecondaryLane).not.toHaveBeenCalled();
     expect(ports.publishMixedSecondaryLaneStatusChange).not.toHaveBeenCalled();
@@ -443,5 +438,45 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     expect(ports.getMixedSecondaryLaunchPhase).toHaveBeenCalledWith(run);
     expect(ports.persistLaunchStateSnapshot).toHaveBeenCalledWith(run, 'active');
     expect(ports.launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(2);
+  });
+  it('fences late rejected launch cleanup to the generation captured when queued', async () => {
+    const lane = createLane({ runId: 'cancelled-run' });
+    const run = createRun({ mixedSecondaryLanes: [lane] });
+    let releaseLaunch!: () => void;
+    let markLaunchEntered!: () => void;
+    const launchEntered = new Promise<void>((resolve) => {
+      markLaunchEntered = resolve;
+    });
+    const launchReleased = new Promise<void>((resolve) => {
+      releaseLaunch = resolve;
+    });
+    const ports = createPorts({
+      launchSingleMixedSecondaryLane: vi.fn(async () => {
+        markLaunchEntered();
+        await launchReleased;
+        throw new Error('cancelled launch returned late');
+      }),
+    });
+    launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+    await launchEntered;
+    run.cancelRequested = true;
+    lane.runId = 'fresh-run';
+    lane.state = 'launching';
+    releaseLaunch();
+    await run.mixedSecondaryLaneLaunchQueue;
+
+    expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
+      teamsBasePath: '/teams',
+      teamName: 'team-a',
+      laneId: lane.laneId,
+      expectedRunId: 'cancelled-run',
+    });
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
+      'team-a',
+      lane.laneId,
+      'cancelled-run'
+    );
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(lane).toMatchObject({ runId: 'fresh-run', state: 'launching' });
   });
 });

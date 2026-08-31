@@ -30,6 +30,7 @@ export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunc
     teamsBasePath: string;
     teamName: string;
     laneId: string;
+    expectedRunId: string;
   }): Promise<unknown>;
   upsertOpenCodeRuntimeLaneIndexEntry(input: {
     teamsBasePath: string;
@@ -39,6 +40,7 @@ export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunc
     diagnostics: string[];
   }): Promise<unknown>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
+  deleteSecondaryRuntimeRunIfOwned(teamName: string, laneId: string, runId: string): boolean;
   launchSingleMixedSecondaryLane(run: TRun, lane: MixedSecondaryRuntimeLaneState): Promise<void>;
   publishMixedSecondaryLaneStatusChange(
     run: TRun,
@@ -65,6 +67,7 @@ export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunc
 async function clearQueuedMixedSecondaryLaneStorage<TRun extends MixedSecondaryLaunchQueueRun>(
   run: TRun,
   lane: MixedSecondaryRuntimeLaneState,
+  laneRunId: string,
   ports: MixedSecondaryLaunchQueuePorts<TRun>
 ): Promise<void> {
   await ports
@@ -72,9 +75,10 @@ async function clearQueuedMixedSecondaryLaneStorage<TRun extends MixedSecondaryL
       teamsBasePath: ports.teamsBasePath(),
       teamName: run.teamName,
       laneId: lane.laneId,
+      expectedRunId: laneRunId,
     })
     .catch(() => undefined);
-  ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
+  ports.deleteSecondaryRuntimeRunIfOwned(run.teamName, lane.laneId, laneRunId);
 }
 
 export function launchQueuedMixedSecondaryLaneInBackground<
@@ -90,13 +94,13 @@ export function launchQueuedMixedSecondaryLaneInBackground<
 
   lane.queuedAtMs = lane.queuedAtMs ?? ports.nowMs();
   lane.launchScheduled = true;
-  lane.runId = lane.runId ?? ports.randomUuid();
+  const laneRunId = (lane.runId ??= ports.randomUuid());
 
   const launch = async () => {
     try {
       if (run.cancelRequested || run.processKilled) {
-        await clearQueuedMixedSecondaryLaneStorage(run, lane, ports);
-        lane.state = 'finished';
+        // This queued lane has not acquired runtime storage or registry ownership.
+        if (lane.runId === laneRunId) lane.state = 'finished';
         return;
       }
       const laneCwd = path.resolve(lane.member.cwd?.trim() || run.request.cwd);
@@ -125,8 +129,8 @@ export function launchQueuedMixedSecondaryLaneInBackground<
       }
     } catch (error) {
       if (run.cancelRequested || run.processKilled) {
-        await clearQueuedMixedSecondaryLaneStorage(run, lane, ports);
-        lane.state = 'finished';
+        await clearQueuedMixedSecondaryLaneStorage(run, lane, laneRunId, ports);
+        if (lane.runId === laneRunId) lane.state = 'finished';
         return;
       }
       const message = error instanceof Error ? error.message : String(error);

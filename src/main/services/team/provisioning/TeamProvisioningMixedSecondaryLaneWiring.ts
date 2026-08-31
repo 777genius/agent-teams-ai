@@ -68,6 +68,7 @@ export type TeamProvisioningMixedSecondaryLaneWiringRun = MixedSecondaryLaneLaun
 type LaunchFlowServicePortKey =
   | 'isStoppingSecondaryRuntimeTeam'
   | 'deleteSecondaryRuntimeRun'
+  | 'deleteSecondaryRuntimeRunIfOwned'
   | 'getOpenCodeRuntimeAdapter'
   | 'publishMixedSecondaryLaneStatusChange'
   | 'readLaunchState'
@@ -78,6 +79,7 @@ type LaunchFlowServicePortKey =
 
 type LaunchQueueServicePortKey =
   | 'deleteSecondaryRuntimeRun'
+  | 'deleteSecondaryRuntimeRunIfOwned'
   | 'launchSingleMixedSecondaryLane'
   | 'publishMixedSecondaryLaneStatusChange'
   | 'persistLaunchStateSnapshot'
@@ -147,6 +149,7 @@ export interface TeamProvisioningMixedSecondaryLaneWiringServiceHost<
     buildAggregateLaunchSnapshot: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['buildAggregateLaunchSnapshot'];
   };
   deleteSecondaryRuntimeRun: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['deleteSecondaryRuntimeRun'];
+  deleteSecondaryRuntimeRunIfOwned: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['deleteSecondaryRuntimeRunIfOwned'];
   publishMixedSecondaryLaneStatusChange: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['publishMixedSecondaryLaneStatusChange'];
   setSecondaryRuntimeRun: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['setSecondaryRuntimeRun'];
   buildOpenCodeSecondaryAppManagedLaunchPrompt: TeamProvisioningMixedSecondaryLaneWiringService<TRun>['buildOpenCodeSecondaryAppManagedLaunchPrompt'];
@@ -208,6 +211,8 @@ export function createMixedSecondaryLaneLaunchFlowPorts<
     clearOpenCodeRuntimeLaneStorage,
     deleteSecondaryRuntimeRun: (teamName, laneId) =>
       deps.service.deleteSecondaryRuntimeRun(teamName, laneId),
+    deleteSecondaryRuntimeRunIfOwned: (teamName, laneId, runId) =>
+      deps.service.deleteSecondaryRuntimeRunIfOwned(teamName, laneId, runId),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
     migrateLegacyOpenCodeRuntimeState,
     upsertOpenCodeRuntimeLaneIndexEntry,
@@ -254,6 +259,8 @@ export function createMixedSecondaryLaunchQueuePorts<
     upsertOpenCodeRuntimeLaneIndexEntry,
     deleteSecondaryRuntimeRun: (teamName, laneId) =>
       deps.service.deleteSecondaryRuntimeRun(teamName, laneId),
+    deleteSecondaryRuntimeRunIfOwned: (teamName, laneId, runId) =>
+      deps.service.deleteSecondaryRuntimeRunIfOwned(teamName, laneId, runId),
     launchSingleMixedSecondaryLane: (run, lane) =>
       deps.service.launchSingleMixedSecondaryLane(run, lane),
     publishMixedSecondaryLaneStatusChange: (run, lane) =>
@@ -312,6 +319,8 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
         service.stoppingSecondaryRuntimeTeams.has(teamName),
       deleteSecondaryRuntimeRun: (teamName, laneId) =>
         service.deleteSecondaryRuntimeRun(teamName, laneId),
+      deleteSecondaryRuntimeRunIfOwned: (teamName, laneId, runId) =>
+        service.deleteSecondaryRuntimeRunIfOwned(teamName, laneId, runId),
       getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
       publishMixedSecondaryLaneStatusChange: (run, lane) =>
         service.publishMixedSecondaryLaneStatusChange(run, lane),

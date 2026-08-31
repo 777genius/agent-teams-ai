@@ -94,6 +94,7 @@ function createService(
   return {
     isStoppingSecondaryRuntimeTeam: vi.fn(() => false),
     deleteSecondaryRuntimeRun: vi.fn(),
+    deleteSecondaryRuntimeRunIfOwned: vi.fn(() => true),
     getOpenCodeRuntimeAdapter: vi.fn(() => null),
     publishMixedSecondaryLaneStatusChange: vi.fn(async () => undefined),
     readLaunchState: vi.fn(async () => createSnapshot()),
@@ -293,6 +294,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
         buildAggregateLaunchSnapshot: service.buildAggregateLaunchSnapshot,
       },
       deleteSecondaryRuntimeRun: service.deleteSecondaryRuntimeRun,
+      deleteSecondaryRuntimeRunIfOwned: service.deleteSecondaryRuntimeRunIfOwned,
       publishMixedSecondaryLaneStatusChange: service.publishMixedSecondaryLaneStatusChange,
       setSecondaryRuntimeRun: service.setSecondaryRuntimeRun,
       buildOpenCodeSecondaryAppManagedLaunchPrompt:

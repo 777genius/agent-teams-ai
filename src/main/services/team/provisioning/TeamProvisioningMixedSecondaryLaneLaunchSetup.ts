@@ -25,8 +25,10 @@ export interface MixedSecondaryLaneLaunchSetupPorts<TRun extends MixedSecondaryL
     teamsBasePath: string;
     teamName: string;
     laneId: string;
+    expectedRunId: string;
   }): Promise<unknown>;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
+  deleteSecondaryRuntimeRunIfOwned(teamName: string, laneId: string, runId: string): boolean;
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   migrateLegacyOpenCodeRuntimeState(input: {
     teamsBasePath: string;
@@ -82,6 +84,7 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
   lane.launchStartedAtMs = ports.nowMs();
   lane.queuedAtMs = lane.queuedAtMs ?? lane.launchStartedAtMs;
   const requestedDiagnostics = [...lane.diagnostics];
+  const laneRunId = (lane.runId ??= ports.randomUuid());
   const shouldAbortLaunch = (): boolean =>
     run.cancelRequested || run.processKilled || ports.isStoppingSecondaryRuntimeTeam(run.teamName);
   const finishCancelledLane = async (): Promise<void> => {
@@ -90,10 +93,11 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
         teamsBasePath: ports.teamsBasePath(),
         teamName: run.teamName,
         laneId: lane.laneId,
+        expectedRunId: laneRunId,
       })
       .catch(() => undefined);
-    ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
-    lane.state = 'finished';
+    ports.deleteSecondaryRuntimeRunIfOwned(run.teamName, lane.laneId, laneRunId);
+    if (lane.runId === laneRunId) lane.state = 'finished';
   };
   const baseResult = {
     requestedDiagnostics,
@@ -101,7 +105,7 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
     finishCancelledLane,
   };
   if (shouldAbortLaunch()) {
-    await finishCancelledLane();
+    if (lane.runId === laneRunId) lane.state = 'finished';
     return { ...baseResult, outcome: 'cancelled' };
   }
   const adapter = ports.getOpenCodeRuntimeAdapter();
@@ -145,7 +149,7 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
     laneId: lane.laneId,
   });
   if (shouldAbortLaunch()) {
-    await finishCancelledLane();
+    if (lane.runId === laneRunId) lane.state = 'finished';
     return { ...baseResult, outcome: 'cancelled' };
   }
   await ports.upsertOpenCodeRuntimeLaneIndexEntry({
@@ -156,13 +160,13 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
     diagnostics: migration.diagnostics,
   });
   if (shouldAbortLaunch()) {
-    await finishCancelledLane();
+    // No manifest generation has been acquired yet. Keep provisional metadata
+    // for the next prepare rather than risk clearing a replacement run.
+    if (lane.runId === laneRunId) lane.state = 'finished';
     return { ...baseResult, outcome: 'cancelled' };
   }
 
   lane.state = 'launching';
-  lane.runId = lane.runId ?? ports.randomUuid();
-  const laneRunId = lane.runId;
   lane.warnings = [];
   lane.diagnostics = [...requestedDiagnostics, ...migration.diagnostics];
   const laneCwd = lane.member.cwd?.trim() || run.request.cwd;

@@ -87,6 +87,7 @@ function createPorts(
     clearOpenCodeRuntimeLaneStorage: vi.fn<
       MixedSecondaryLaneLaunchSetupPorts<TestRun>['clearOpenCodeRuntimeLaneStorage']
     >(async () => undefined),
+    deleteSecondaryRuntimeRunIfOwned: vi.fn(() => true),
     deleteSecondaryRuntimeRun:
       vi.fn<MixedSecondaryLaneLaunchSetupPorts<TestRun>['deleteSecondaryRuntimeRun']>(),
     getOpenCodeRuntimeAdapter: vi.fn<
@@ -114,7 +115,7 @@ function createPorts(
 }
 
 describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
-  it('aborts before adapter lookup with storage cleanup and a cancelled result', async () => {
+  it('aborts before adapter lookup without clearing storage it does not own', async () => {
     const lane = createLane();
     const run = createRun({ cancelRequested: true });
     const ports = createPorts({
@@ -131,15 +132,9 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
     expect(lane.state).toBe('finished');
     expect(lane.launchStartedAtMs).toBe(1000);
     expect(lane.queuedAtMs).toBe(1000);
-    expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
-      teamsBasePath: '/teams',
-      teamName: 'team-a',
-      laneId: 'secondary:opencode:bob',
-    });
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith(
-      'team-a',
-      'secondary:opencode:bob'
-    );
+    expect(ports.clearOpenCodeRuntimeLaneStorage).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).not.toHaveBeenCalled();
     expect(ports.getOpenCodeRuntimeAdapter).not.toHaveBeenCalled();
   });
 
@@ -255,7 +250,7 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
     ).toBeLessThan(vi.mocked(ports.readLaunchState).mock.invocationCallOrder[0]);
   });
 
-  it('aborts after migration and index upsert with cleanup and a cancelled result', async () => {
+  it('leaves unowned provisional metadata after cancellation during index setup', async () => {
     const lane = createLane();
     const run = createRun();
     const ports = createPorts({
@@ -285,17 +280,44 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchSetup', () => {
       state: 'active',
       diagnostics: ['migrated diagnostic'],
     });
-    expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
-      teamsBasePath: '/teams',
-      teamName: 'team-a',
-      laneId: 'secondary:opencode:bob',
-    });
-    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledWith(
-      'team-a',
-      'secondary:opencode:bob'
-    );
+    expect(ports.clearOpenCodeRuntimeLaneStorage).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).not.toHaveBeenCalled();
     expect(ports.setSecondaryRuntimeRun).not.toHaveBeenCalled();
     expect(ports.publishMixedSecondaryLaneStatusChange).not.toHaveBeenCalled();
     expect(ports.readLaunchState).not.toHaveBeenCalled();
+  });
+  it('keeps cancellation scoped to its captured generation while cleanup is pending', async () => {
+    const lane = createLane({ runId: 'cancelled-run' });
+    const run = createRun();
+    let releaseCleanup!: () => void;
+    const cleanupReleased = new Promise<void>((resolve) => {
+      releaseCleanup = resolve;
+    });
+    const ports = createPorts({
+      clearOpenCodeRuntimeLaneStorage: vi.fn(async () => cleanupReleased),
+    });
+    const setup = await setupMixedSecondaryLaneLaunch(run, lane, ports);
+    expect(setup.outcome).toBe('ready');
+
+    const cleanup = setup.finishCancelledLane();
+    lane.runId = 'fresh-run';
+    lane.state = 'launching';
+    releaseCleanup();
+    await cleanup;
+
+    expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
+      teamsBasePath: '/teams',
+      teamName: 'team-a',
+      laneId: lane.laneId,
+      expectedRunId: 'cancelled-run',
+    });
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
+      'team-a',
+      lane.laneId,
+      'cancelled-run'
+    );
+    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+    expect(lane).toMatchObject({ runId: 'fresh-run', state: 'launching' });
   });
 });
