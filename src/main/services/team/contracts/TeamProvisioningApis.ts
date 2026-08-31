@@ -116,6 +116,7 @@ export interface TeamHttpDataApi {
   getTeamData(teamName: string): Promise<TeamViewSnapshot>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
+  renameDraftTeam(oldTeamName: string, newTeamName: string): Promise<void>;
 }
 
 export interface TeamHttpHandlerApis {
@@ -368,6 +369,7 @@ export function bindTeamHttpDataApi(source: TeamHttpDataApi): TeamHttpDataApi {
     getTeamData: source.getTeamData.bind(source),
     getSavedRequest: source.getSavedRequest.bind(source),
     createTeamConfig: source.createTeamConfig.bind(source),
+    renameDraftTeam: source.renameDraftTeam.bind(source),
   };
 }
 

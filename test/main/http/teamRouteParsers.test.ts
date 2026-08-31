@@ -285,6 +285,30 @@ describe('HTTP team route parsers', () => {
     expect(parseDraftLaunchCreateRequest(savedRequest, body)).toMatchObject(savedRequest);
   });
 
+  it('uses the final body teamName for a draft launch instead of the stale draft name', () => {
+    const savedRequest: TeamCreateRequest = {
+      teamName: 'signal-ops',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    };
+
+    expect(
+      parseDraftLaunchCreateRequest(savedRequest, { teamName: ' fixteam-test ' })
+    ).toMatchObject({
+      teamName: 'fixteam-test',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    });
+
+    // Without an override the draft directory name stays authoritative.
+    expect(parseDraftLaunchCreateRequest(savedRequest, {}).teamName).toBe('signal-ops');
+
+    expectBadRequest(
+      () => parseDraftLaunchCreateRequest(savedRequest, { teamName: 'Bad Name!' }),
+      'teamName'
+    );
+  });
+
   it('normalizes runtime callback bodies to the route team name', () => {
     expect(withRuntimeTeamName('demo-team', { runId: 'run-1', teamName: ' demo-team ' })).toEqual({
       runId: 'run-1',

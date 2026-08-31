@@ -64,6 +64,9 @@ describe('HTTP team runtime routes', () => {
     const createTeamConfig = vi.fn<(request: TeamCreateConfigRequest) => Promise<void>>(() =>
       Promise.resolve()
     );
+    const renameDraftTeam = vi.fn<(oldTeamName: string, newTeamName: string) => Promise<void>>(() =>
+      Promise.resolve()
+    );
     const resumeTeam = vi.fn<(teamName: string) => void>();
     const teamProvisioningStartApi = {
       createTeam,
@@ -92,9 +95,10 @@ describe('HTTP team runtime routes', () => {
       getTeamData,
       getSavedRequest,
       createTeamConfig,
+      renameDraftTeam,
     } as Pick<
       TeamHttpDataApi,
-      'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig'
+      'listTeams' | 'getTeamData' | 'getSavedRequest' | 'createTeamConfig' | 'renameDraftTeam'
     > as HttpServices['teamDataApi'];
     const teamApis = {
       provisioningStart: teamProvisioningStartApi,
@@ -137,6 +141,7 @@ describe('HTTP team runtime routes', () => {
       getTeamData,
       getSavedRequest,
       createTeamConfig,
+      renameDraftTeam,
       resumeTeam,
     };
   }
@@ -631,6 +636,97 @@ describe('HTTP team runtime routes', () => {
         },
         expect.any(Function)
       );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('renames the draft directory before create when launch carries the final team name', async () => {
+    const { app, createTeam, getSavedRequest, renameDraftTeam, resumeTeam } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'signal-ops',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    });
+    createTeam.mockResolvedValue({ runId: 'run-renamed' });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/signal-ops/launch',
+        payload: {
+          teamName: 'fixteam-test',
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(response.json()).toEqual({ runId: 'run-renamed' });
+      expect(renameDraftTeam).toHaveBeenCalledWith('signal-ops', 'fixteam-test');
+      expect(createTeam).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName: 'fixteam-test', cwd: '/Users/test/project' }),
+        expect.any(Function)
+      );
+      expect(resumeTeam).toHaveBeenCalledWith('fixteam-test');
+      const renameOrder = renameDraftTeam.mock.invocationCallOrder[0];
+      const createOrder = createTeam.mock.invocationCallOrder[0];
+      expect(renameOrder).toBeLessThan(createOrder);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('does not rename the draft directory when the launch body team name matches', async () => {
+    const { app, createTeam, getSavedRequest, renameDraftTeam } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'signal-ops',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    });
+    createTeam.mockResolvedValue({ runId: 'run-same-name' });
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/signal-ops/launch',
+        payload: {
+          teamName: 'signal-ops',
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(renameDraftTeam).not.toHaveBeenCalled();
+      expect(createTeam).toHaveBeenCalledWith(
+        expect.objectContaining({ teamName: 'signal-ops' }),
+        expect.any(Function)
+      );
+    } finally {
+      await app.close();
+    }
+  });
+
+  it('fails the draft launch when the draft directory rename fails', async () => {
+    const { app, createTeam, getSavedRequest, renameDraftTeam } = await createApp();
+    getSavedRequest.mockResolvedValue({
+      teamName: 'signal-ops',
+      cwd: '/Users/test/saved-project',
+      members: [{ name: 'builder' }],
+    });
+    renameDraftTeam.mockRejectedValue(new Error('Team already exists: fixteam-test'));
+
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/teams/signal-ops/launch',
+        payload: {
+          teamName: 'fixteam-test',
+          cwd: '/Users/test/project',
+        },
+      });
+
+      expect(response.statusCode).toBe(409);
+      expect(createTeam).not.toHaveBeenCalled();
     } finally {
       await app.close();
     }

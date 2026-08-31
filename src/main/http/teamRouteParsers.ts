@@ -364,6 +364,9 @@ export function parseDraftLaunchCreateRequest(
   body: unknown
 ): TeamCreateRequest {
   const payload = getObjectPayload(body);
+  const teamName = Object.hasOwn(payload, 'teamName')
+    ? assertProvisioningTeamName(payload.teamName)
+    : savedRequest.teamName;
   const cwd = Object.hasOwn(payload, 'cwd') ? assertAbsoluteCwd(payload.cwd) : savedRequest.cwd;
   if (!cwd) {
     throw new HttpBadRequestError('cwd is required');
@@ -403,7 +406,7 @@ export function parseDraftLaunchCreateRequest(
   }
 
   return {
-    teamName: savedRequest.teamName,
+    teamName,
     displayName: savedRequest.displayName,
     description: savedRequest.description,
     color: savedRequest.color,
