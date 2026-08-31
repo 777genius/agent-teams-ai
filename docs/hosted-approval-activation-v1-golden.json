@@ -13,7 +13,6 @@
   "signing": {
     "algorithm": "Ed25519",
     "contract": "agent-teams.hosted-approval-activation-product-authorship/v1",
-    "testOnlyPrivateKeyPkcs8Pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIAABAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4f\n-----END PRIVATE KEY-----\n",
     "publicKeySpkiDer": "MCowBQYDK2VwAyEAA6EHv_POEL4dcN0Y50vAmWfk1jCbpQ1fHdyGZBJVMbg",
     "publicKeyDigest": "sha256:a050837d85070582ccf7394b0988847cc312cb88259b894899f6f239cf1791a5",
     "contractDigest": "sha256:65409e32179402c96ef629a641dfe9a376f11d1afdd7a2923d1334054dea4aa7"

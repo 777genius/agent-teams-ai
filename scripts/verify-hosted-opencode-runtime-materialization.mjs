@@ -9,6 +9,15 @@ import { fileURLToPath } from 'node:url';
 
 const run = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+function isSafeArchiveBinaryPath(value) {
+  return (
+    typeof value === 'string' &&
+    /^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$/u.test(value) &&
+    !value.split('/').some((part) => !part || part === '.' || part === '..')
+  );
+}
+
 const [manifestInput, platform] = process.argv.slice(2);
 if (!manifestInput || !/^(?:darwin|linux|win32)-(?:arm64|x64)$/u.test(platform ?? '')) {
   throw new Error('usage: verify-hosted-opencode-runtime-materialization <release-manifest> <platform>');
@@ -20,6 +29,9 @@ const lock = JSON.parse(await readFile(resolve(root, 'opencode-hosted-runtime.lo
 const candidatePlatform = platform.replace(/^win32-/u, 'windows-');
 const asset = manifest.assets?.find((value) => `${value.os}-${value.arch}` === candidatePlatform);
 const locked = lock.platforms?.[platform];
+if (asset && !isSafeArchiveBinaryPath(asset.binaryPath)) {
+  throw new Error('hosted-opencode-materialization-unsafe-binary-path');
+}
 if (
   !asset ||
   locked?.status !== 'available' ||
@@ -43,7 +55,7 @@ const archiveKind = asset.archive.endsWith('.tar.gz') ? 'tar.gz' : 'zip';
 const { stdout } = await run(
   archiveKind === 'tar.gz' ? '/usr/bin/tar' : '/usr/bin/unzip',
   archiveKind === 'tar.gz'
-    ? ['-xOzf', archivePath, asset.binaryPath]
+    ? ['-xOzf', archivePath, '--', asset.binaryPath]
     : ['-p', archivePath, asset.binaryPath],
   { encoding: 'buffer', maxBuffer: Math.max(asset.binarySize + 1024, 256 * 1024 * 1024) }
 );

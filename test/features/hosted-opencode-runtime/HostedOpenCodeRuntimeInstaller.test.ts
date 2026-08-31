@@ -157,6 +157,35 @@ describe('hosted OpenCode runtime lock v2', () => {
       ])
     ).rejects.toThrow('hosted-opencode-provenance-invalid:candidate-manifest-required');
   });
+
+  it.each([
+    [
+      'provenance',
+      'scripts/verify-hosted-opencode-runtime-provenance.mjs',
+      'hosted-opencode-provenance-invalid:candidate-binary-path',
+    ],
+    [
+      'materialization',
+      'scripts/verify-hosted-opencode-runtime-materialization.mjs',
+      'hosted-opencode-materialization-unsafe-binary-path',
+    ],
+  ])('%s verification rejects unsafe archive members before reading archives', async (_name, script, error) => {
+    const root = await fs.mkdtemp(path.join(tmpdir(), 'hosted-opencode-verifier-'));
+    try {
+      for (const binaryPath of ['--checkpoint-action=exec=payload/opencode', '../opencode']) {
+        const manifestPath = path.join(root, 'manifest.json');
+        await fs.writeFile(
+          manifestPath,
+          JSON.stringify({ assets: [{ os: 'linux', arch: 'x64', binaryPath }] })
+        );
+        await expect(
+          promisify(execFile)(process.execPath, [path.resolve(script), manifestPath, PLATFORM])
+        ).rejects.toThrow(error);
+      }
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('hosted OpenCode runtime archive safety', () => {

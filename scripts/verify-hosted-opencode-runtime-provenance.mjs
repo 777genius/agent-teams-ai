@@ -27,13 +27,21 @@ async function sha256File(path) {
   return hash.digest('hex');
 }
 
+function isSafeArchiveBinaryPath(value) {
+  return (
+    typeof value === 'string' &&
+    /^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$/u.test(value) &&
+    !value.split('/').some((part) => !part || part === '.' || part === '..')
+  );
+}
+
 async function sha256ArchiveBinary(path, asset) {
   const archiveKind = path.endsWith('.tar.gz') ? 'tar.gz' : path.endsWith('.zip') ? 'zip' : null;
   if (archiveKind === null) throw new Error('archive-kind');
   const executable = archiveKind === 'tar.gz' ? '/usr/bin/tar' : '/usr/bin/unzip';
   const args =
     archiveKind === 'tar.gz'
-      ? ['-xOzf', path, asset.binaryPath]
+      ? ['-xOzf', path, '--', asset.binaryPath]
       : ['-p', path, asset.binaryPath];
   const child = await run(executable, args, {
     encoding: 'buffer',
@@ -70,6 +78,12 @@ if (candidateManifestPath === null) {
 
 const candidateBytes = await readFile(candidateManifestPath);
 const candidate = JSON.parse(candidateBytes.toString('utf8'));
+if (
+  Array.isArray(candidate.assets) &&
+  candidate.assets.some((asset) => !isSafeArchiveBinaryPath(asset?.binaryPath))
+) {
+  throw new Error('hosted-opencode-provenance-invalid:candidate-binary-path');
+}
 const candidateDirectory = dirname(candidateManifestPath);
 const manifestDigest = createHash('sha256').update(candidateBytes).digest('hex');
 
