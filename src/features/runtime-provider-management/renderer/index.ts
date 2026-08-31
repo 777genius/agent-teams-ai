@@ -14,8 +14,8 @@ export {
   useOpenCodeLocalProviders,
 } from './hooks/useOpenCodeLocalProviders';
 export {
-  resolveOpenCodeCatalogSourceProviderId,
   type OpenCodeProviderModelCatalogResult,
+  resolveOpenCodeCatalogSourceProviderId,
   useOpenCodeProviderModelCatalog,
 } from './hooks/useOpenCodeProviderModelCatalog';
 export type { RuntimeProviderOnboardingMode } from './hooks/useRuntimeProviderOnboarding';
