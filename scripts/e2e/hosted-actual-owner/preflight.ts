@@ -20,18 +20,24 @@ import {
   MATRIX_ROWS,
   MAXIMUM_FINAL_RUNS,
   ONE_RUN_AUTHORIZATION_PURPOSE,
-  OPENCODE_IDENTITIES,
   P3C1_FREEZE_PURPOSE,
   P3C_LANE,
+  PRODUCER_CANDIDATE_SIGNATURE_DOMAIN,
   PRODUCT_ORIGIN,
   ROOT_NAMES,
   canonicalJson,
   exactRecord,
+  parseProducerCandidateSignatureSidecarWithBytes,
+  parseSignedProducerCandidatePayload,
   parseIntegrationDescriptor,
   sha256,
   type FilePin,
   type IntegrationDescriptor,
+  type ProducerCandidateSignatureSidecar,
   type RootName,
+  type SignedProducerCandidatePayload,
+  type SignedProducerIdentity,
+  type VerifiedProducerCandidateBinding,
 } from './contracts';
 import {
   readStable,
@@ -102,6 +108,16 @@ export interface PreflightAdmission {
     freezeId: string;
     reviewId: string;
     authorizationId: string;
+  }>;
+  readonly producerCandidate: Readonly<{
+    binding: VerifiedProducerCandidateBinding;
+    payload: SignedProducerCandidatePayload;
+    signature: ProducerCandidateSignatureSidecar;
+    files: Readonly<{
+      payload: FileAnchor;
+      signature: FileAnchor;
+      signerPublicKey: FileAnchor;
+    }>;
   }>;
 }
 
@@ -187,6 +203,9 @@ function assertDescriptorBindings(descriptor: IntegrationDescriptor): void {
     authorization: descriptor.control.oneRunAuthorization,
     reviewerKey: descriptor.control.harnessReviewerPublicKey,
     runAuthorizationKey: descriptor.control.runAuthorizationPublicKey,
+    producerCandidatePayload: descriptor.producerCandidate.payload,
+    producerCandidateSignature: descriptor.producerCandidate.signature,
+    producerCandidateSignerKey: descriptor.producerCandidate.signerPublicKey,
   }))
     assertPinRoot(pin, 'controllerAuthority', `control_${label}`);
   assertPinRoot(descriptor.product.harnessClosure.manifest, 'harness', 'harness');
@@ -217,20 +236,26 @@ function assertDescriptorBindings(descriptor: IntegrationDescriptor): void {
   for (const [label, pin] of Object.entries({
     receipt: descriptor.openCode.acquisitionReceipt,
     manifest: descriptor.openCode.releaseManifest,
-    provenance: descriptor.openCode.buildProvenanceBundle,
+    provenanceArtifactZip: descriptor.openCode.provenanceArtifactZip,
+    provenanceBundle: descriptor.openCode.buildProvenanceBundle,
     zip: descriptor.openCode.actionsArtifactZip,
     archive: descriptor.openCode.linuxX64Archive,
     binary: descriptor.openCode.linuxX64Binary,
   }))
     assertPinRoot(pin, 'openCode', `opencode_${label}`);
   if (
-    descriptor.openCode.releaseManifest.sha256 !== OPENCODE_IDENTITIES.releaseManifestSha256 ||
+    descriptor.openCode.releaseManifest.sha256 !==
+      descriptor.openCode.identities.releaseManifestSha256 ||
     descriptor.openCode.actionsArtifactZip.sha256 !==
-      OPENCODE_IDENTITIES.actionsArtifactZipSha256 ||
+      descriptor.openCode.identities.candidateArtifactSha256 ||
+    descriptor.openCode.provenanceArtifactZip.sha256 !==
+      descriptor.openCode.identities.provenanceArtifactSha256 ||
     descriptor.openCode.buildProvenanceBundle.sha256 !==
-      OPENCODE_IDENTITIES.buildProvenanceBundleSha256 ||
-    descriptor.openCode.linuxX64Archive.sha256 !== OPENCODE_IDENTITIES.linuxX64ArchiveSha256 ||
-    descriptor.openCode.linuxX64Binary.sha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
+      descriptor.openCode.identities.buildProvenanceBundleSha256 ||
+    descriptor.openCode.linuxX64Archive.sha256 !==
+      descriptor.openCode.identities.linuxX64ArchiveSha256 ||
+    descriptor.openCode.linuxX64Binary.sha256 !==
+      descriptor.openCode.identities.linuxX64BinarySha256 ||
     descriptor.p3b2.entry.mode !== 0o555 ||
     descriptor.p3b2.supervisor.mode !== 0o555 ||
     descriptor.openCode.linuxX64Binary.mode !== 0o555 ||
@@ -311,9 +336,15 @@ function verifyAuthoritySignature(
   label: string
 ): void {
   const signature = document[signatureField];
+  const signatureBytes =
+    typeof signature === 'string' &&
+    /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(signature)
+      ? Buffer.from(signature, 'base64')
+      : undefined;
   if (
-    typeof signature !== 'string' ||
-    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(signature)
+    signatureBytes === undefined ||
+    signatureBytes.length !== 64 ||
+    signatureBytes.toString('base64') !== signature
   )
     throw new Error(`p3c_${label}_signature_frame`);
   const unsigned = { ...document };
@@ -326,26 +357,26 @@ function verifyAuthoritySignature(
   }
   if (key.asymmetricKeyType !== 'ed25519') throw new Error('p3c_controller_public_key_type');
   if (
-    !verifySignature(
-      null,
-      Buffer.from(canonicalJson(unsigned)),
-      key,
-      Buffer.from(signature, 'base64')
-    )
+    !verifySignature(null, Buffer.from(canonicalJson(unsigned)), key, signatureBytes)
   )
     throw new Error(`p3c_${label}_signature`);
 }
 
-function signerKeyId(publicKeyBytes: Buffer, role: 'harness-reviewer' | 'run-authorizer'): string {
+function signerKeyId(
+  publicKeyBytes: Buffer,
+  role: 'harness-reviewer' | 'run-authorizer' | 'producer-candidate'
+): string {
   return sha256(`agent-teams.p3c.${role}-key-id/v1\0${publicKeyBytes.toString('base64')}`);
 }
 
 export interface ControllerTrustAnchor {
-  readonly schemaVersion: 1;
-  readonly purpose: 'agent-teams.p3c.controller-trust-anchor/v1';
+  readonly schemaVersion: 2;
+  readonly purpose: 'agent-teams.p3c.controller-trust-anchor/v2';
   readonly authorityEpoch: number;
   readonly harnessReviewerPublicKeySha256: string;
   readonly runAuthorizationPublicKeySha256: string;
+  readonly producerCandidatePublicKeySha256: string;
+  readonly producerCandidateSignerKeyId: string;
   readonly revokedSignerKeyIds: readonly string[];
 }
 
@@ -358,20 +389,30 @@ export function parseControllerTrustAnchor(value: unknown): ControllerTrustAncho
       'authorityEpoch',
       'harnessReviewerPublicKeySha256',
       'runAuthorizationPublicKeySha256',
+      'producerCandidatePublicKeySha256',
+      'producerCandidateSignerKeyId',
       'revokedSignerKeyIds',
     ],
     'controller_trust_anchor'
   );
   if (
-    anchor.schemaVersion !== 1 ||
-    anchor.purpose !== 'agent-teams.p3c.controller-trust-anchor/v1' ||
+    anchor.schemaVersion !== 2 ||
+    anchor.purpose !== 'agent-teams.p3c.controller-trust-anchor/v2' ||
     !Number.isSafeInteger(anchor.authorityEpoch) ||
     (anchor.authorityEpoch as number) < 1 ||
     typeof anchor.harnessReviewerPublicKeySha256 !== 'string' ||
     !/^[0-9a-f]{64}$/u.test(anchor.harnessReviewerPublicKeySha256) ||
     typeof anchor.runAuthorizationPublicKeySha256 !== 'string' ||
     !/^[0-9a-f]{64}$/u.test(anchor.runAuthorizationPublicKeySha256) ||
-    anchor.harnessReviewerPublicKeySha256 === anchor.runAuthorizationPublicKeySha256 ||
+    typeof anchor.producerCandidatePublicKeySha256 !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(anchor.producerCandidatePublicKeySha256) ||
+    typeof anchor.producerCandidateSignerKeyId !== 'string' ||
+    !/^[0-9a-f]{64}$/u.test(anchor.producerCandidateSignerKeyId) ||
+    new Set([
+      anchor.harnessReviewerPublicKeySha256,
+      anchor.runAuthorizationPublicKeySha256,
+      anchor.producerCandidatePublicKeySha256,
+    ]).size !== 3 ||
     !Array.isArray(anchor.revokedSignerKeyIds) ||
     anchor.revokedSignerKeyIds.some(
       (keyId) => typeof keyId !== 'string' || !/^[0-9a-f]{64}$/u.test(keyId)
@@ -380,11 +421,13 @@ export function parseControllerTrustAnchor(value: unknown): ControllerTrustAncho
   )
     throw new Error('p3c_controller_trust_anchor');
   return Object.freeze({
-    schemaVersion: 1,
-    purpose: 'agent-teams.p3c.controller-trust-anchor/v1',
+    schemaVersion: 2,
+    purpose: 'agent-teams.p3c.controller-trust-anchor/v2',
     authorityEpoch: anchor.authorityEpoch as number,
     harnessReviewerPublicKeySha256: anchor.harnessReviewerPublicKeySha256,
     runAuthorizationPublicKeySha256: anchor.runAuthorizationPublicKeySha256,
+    producerCandidatePublicKeySha256: anchor.producerCandidatePublicKeySha256,
+    producerCandidateSignerKeyId: anchor.producerCandidateSignerKeyId,
     revokedSignerKeyIds: Object.freeze([...(anchor.revokedSignerKeyIds as string[])]),
   }) as ControllerTrustAnchor;
 }
@@ -402,6 +445,138 @@ function controllerTrustAnchorFromEnvironment(): ControllerTrustAnchor {
   return parseControllerTrustAnchor(value);
 }
 
+function producerForRole(
+  payload: SignedProducerCandidatePayload,
+  role: SignedProducerIdentity['role']
+): SignedProducerIdentity {
+  const producer = payload.producers.find((candidate) => candidate.role === role);
+  if (!producer) throw new Error(`p3c_producer_candidate_missing_${role}`);
+  return producer;
+}
+
+function assertProducerCandidateDescriptorBindings(
+  descriptor: IntegrationDescriptor,
+  payload: SignedProducerCandidatePayload
+): void {
+  const identities = descriptor.openCode.identities;
+  if (
+    canonicalJson(payload.openCodeProvenance) !==
+      canonicalJson({
+        repository: identities.repository,
+        pullRequestHead: identities.pullRequestHead,
+        workflowRunId: identities.workflowRunId,
+        candidateArtifactId: identities.candidateArtifactId,
+        candidateArtifactSha256: identities.candidateArtifactSha256,
+        provenanceArtifactId: identities.provenanceArtifactId,
+        provenanceArtifactSha256: identities.provenanceArtifactSha256,
+        buildProvenanceBundleSha256: identities.buildProvenanceBundleSha256,
+      })
+  ) {
+    throw new Error('p3c_producer_candidate_provenance_binding');
+  }
+  const expected = Object.freeze({
+    browser: Object.freeze({
+      artifactManifestSha256: descriptor.product.browserBundle.manifestSha256,
+      executableSha256: descriptor.toolchain.node.sha256,
+      moduleSha256: descriptor.product.playwrightSpec.sha256,
+      sourceCommit: descriptor.product.finalHarnessCommit,
+    }),
+    opencode: Object.freeze({
+      artifactManifestSha256: descriptor.openCode.releaseManifest.sha256,
+      executableSha256: descriptor.openCode.linuxX64Binary.sha256,
+      moduleSha256: descriptor.openCode.linuxX64Binary.sha256,
+      sourceCommit: identities.releaseSourceCommit,
+      sourceTree: identities.releaseSourceTree,
+    }),
+    owner: Object.freeze({
+      artifactManifestSha256: descriptor.p3b2.closure.manifestSha256,
+      executableSha256: descriptor.p3b2.entry.sha256,
+      moduleSha256: descriptor.p3b2.entry.sha256,
+      sourceCommit: descriptor.p3b2.resultCommit,
+    }),
+    'product-producer': Object.freeze({
+      artifactManifestSha256: descriptor.product.runtimeClosure.manifestSha256,
+      executableSha256: descriptor.product.compositionEntry.sha256,
+      moduleSha256: descriptor.product.compositionEntry.sha256,
+      sourceCommit: descriptor.authority.auditedProductCommit,
+      sourceTree: descriptor.authority.auditedProductTree,
+    }),
+  } as const);
+  for (const [role, pins] of Object.entries(expected) as Array<
+    [SignedProducerIdentity['role'], (typeof expected)[SignedProducerIdentity['role']]]
+  >) {
+    const producer = producerForRole(payload, role);
+    if (
+      producer.artifactManifestSha256 !== pins.artifactManifestSha256 ||
+      producer.executableSha256 !== pins.executableSha256 ||
+      producer.moduleSha256 !== pins.moduleSha256 ||
+      producer.sourceCommit !== pins.sourceCommit ||
+      ('sourceTree' in pins && producer.sourceTree !== pins.sourceTree)
+    ) {
+      throw new Error(`p3c_producer_candidate_${role}_binding`);
+    }
+  }
+}
+
+export function verifySignedProducerCandidate(
+  descriptor: IntegrationDescriptor,
+  payloadBytes: Buffer,
+  signatureBytes: Buffer,
+  signerPublicKeyBytes: Buffer,
+  trustAnchor: ControllerTrustAnchor
+): Readonly<{
+  binding: VerifiedProducerCandidateBinding;
+  payload: SignedProducerCandidatePayload;
+  signature: ProducerCandidateSignatureSidecar;
+}> {
+  const payload = parseSignedProducerCandidatePayload(payloadBytes);
+  const {
+    sidecar: signature,
+    signatureBytes: decodedSignature,
+  } = parseProducerCandidateSignatureSidecarWithBytes(signatureBytes, payloadBytes);
+  const publicKeySha256 = sha256(signerPublicKeyBytes);
+  const keyId = signerKeyId(signerPublicKeyBytes, 'producer-candidate');
+  const trustAnchorSha256 = sha256(canonicalJson(trustAnchor));
+  let key;
+  try {
+    key = createPublicKey({ key: signerPublicKeyBytes, format: 'der', type: 'spki' });
+  } catch {
+    throw new Error('p3c_producer_candidate_public_key');
+  }
+  if (
+    key.asymmetricKeyType !== 'ed25519' ||
+    !Buffer.from(key.export({ format: 'der', type: 'spki' })).equals(signerPublicKeyBytes) ||
+    publicKeySha256 !== descriptor.producerCandidate.signerPublicKey.sha256 ||
+    publicKeySha256 !== trustAnchor.producerCandidatePublicKeySha256 ||
+    keyId !== signature.keyId ||
+    keyId !== trustAnchor.producerCandidateSignerKeyId ||
+    trustAnchorSha256 !== descriptor.producerCandidate.trustAnchorSha256 ||
+    trustAnchor.revokedSignerKeyIds.includes(keyId) ||
+    sha256(payloadBytes) !== descriptor.producerCandidate.payload.sha256 ||
+    sha256(signatureBytes) !== descriptor.producerCandidate.signature.sha256 ||
+    !verifySignature(
+      null,
+      Buffer.concat([Buffer.from(PRODUCER_CANDIDATE_SIGNATURE_DOMAIN), payloadBytes]),
+      key,
+      decodedSignature
+    )
+  ) {
+    throw new Error('p3c_producer_candidate_signature_binding');
+  }
+  assertProducerCandidateDescriptorBindings(descriptor, payload);
+  const binding = Object.freeze({
+    purpose: 'agent-teams.p3c.verified-producer-candidate/v1' as const,
+    payloadSha256: sha256(payloadBytes),
+    signatureSha256: sha256(signatureBytes),
+    signerKeyId: keyId,
+    signerPublicKeySha256: publicKeySha256,
+    trustAnchorSha256,
+    openCodeProvenance: payload.openCodeProvenance,
+    producers: payload.producers,
+  });
+  return Object.freeze({ binding, payload, signature });
+}
+
 export function verifyControlDocuments(
   descriptor: IntegrationDescriptor,
   freezeBytes: Buffer,
@@ -409,7 +584,8 @@ export function verifyControlDocuments(
   authorizationBytes: Buffer,
   reviewerPublicKeyBytes: Buffer,
   runAuthorizationPublicKeyBytes: Buffer,
-  trustAnchor: ControllerTrustAnchor
+  trustAnchor: ControllerTrustAnchor,
+  producerCandidate: VerifiedProducerCandidateBinding
 ): void {
   const freeze = exactRecord(
     parseCanonicalObject(freezeBytes, 'p3c1_freeze'),
@@ -430,6 +606,8 @@ export function verifyControlDocuments(
       'authorityPolicy',
       'harnessReviewerPublicKeySha256',
       'runAuthorizationPublicKeySha256',
+      'producerCandidatePublicKeySha256',
+      'producerCandidate',
       'productionGates',
     ],
     'p3c1_freeze'
@@ -458,6 +636,7 @@ export function verifyControlDocuments(
     [
       'identities',
       'provenanceReceiptSha256',
+      'provenanceArtifactZipSha256',
       'releaseManifestSha256',
       'buildProvenanceBundleSha256',
       'archiveSha256',
@@ -508,10 +687,11 @@ export function verifyControlDocuments(
     p3b2.supervisorSha256 !== descriptor.p3b2.supervisor.sha256 ||
     p3b2.recipeSha256 !== descriptor.p3b2.recipeSha256 ||
     p3b2.closureMerkleRoot !== descriptor.p3b2.closure.merkleRoot ||
-    p3b2.candidateOpenCodeSha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
+    p3b2.candidateOpenCodeSha256 !== descriptor.openCode.linuxX64Binary.sha256 ||
     p3b2.accepted !== true ||
-    canonicalJson(openCode.identities) !== canonicalJson(OPENCODE_IDENTITIES) ||
+    canonicalJson(openCode.identities) !== canonicalJson(descriptor.openCode.identities) ||
     openCode.provenanceReceiptSha256 !== descriptor.openCode.acquisitionReceipt.sha256 ||
+    openCode.provenanceArtifactZipSha256 !== descriptor.openCode.provenanceArtifactZip.sha256 ||
     openCode.releaseManifestSha256 !== descriptor.openCode.releaseManifest.sha256 ||
     openCode.buildProvenanceBundleSha256 !== descriptor.openCode.buildProvenanceBundle.sha256 ||
     openCode.archiveSha256 !== descriptor.openCode.linuxX64Archive.sha256 ||
@@ -537,14 +717,23 @@ export function verifyControlDocuments(
     freeze.harnessReviewerPublicKeySha256 !== descriptor.control.harnessReviewerPublicKey.sha256 ||
     freeze.runAuthorizationPublicKeySha256 !==
       descriptor.control.runAuthorizationPublicKey.sha256 ||
+    freeze.producerCandidatePublicKeySha256 !==
+      descriptor.producerCandidate.signerPublicKey.sha256 ||
+    canonicalJson(freeze.producerCandidate) !== canonicalJson(producerCandidate) ||
     sha256(reviewerPublicKeyBytes) !== descriptor.control.harnessReviewerPublicKey.sha256 ||
     sha256(runAuthorizationPublicKeyBytes) !==
       descriptor.control.runAuthorizationPublicKey.sha256 ||
     sha256(reviewerPublicKeyBytes) === sha256(runAuthorizationPublicKeyBytes) ||
     sha256(reviewerPublicKeyBytes) !== trustAnchor.harnessReviewerPublicKeySha256 ||
     sha256(runAuthorizationPublicKeyBytes) !== trustAnchor.runAuthorizationPublicKeySha256 ||
+    producerCandidate.signerPublicKeySha256 !==
+      trustAnchor.producerCandidatePublicKeySha256 ||
+    producerCandidate.signerKeyId !== trustAnchor.producerCandidateSignerKeyId ||
+    producerCandidate.trustAnchorSha256 !== sha256(canonicalJson(trustAnchor)) ||
+    producerCandidate.trustAnchorSha256 !== descriptor.producerCandidate.trustAnchorSha256 ||
     trustAnchor.revokedSignerKeyIds.includes(reviewerKeyId) ||
     trustAnchor.revokedSignerKeyIds.includes(authorizerKeyId) ||
+    trustAnchor.revokedSignerKeyIds.includes(producerCandidate.signerKeyId) ||
     canonicalJson(freeze.productionGates) !== canonicalJson(descriptor.productionGates)
   )
     throw new Error('p3c_p3c1_freeze_binding');
@@ -639,7 +828,7 @@ export function verifyControlDocuments(
   );
 }
 
-function verifyAcquisitionReceipt(bytes: Buffer): void {
+function verifyAcquisitionReceipt(bytes: Buffer, descriptor: IntegrationDescriptor): void {
   const value = parseCanonicalObject(bytes, 'acquisition_receipt');
   const receipt = exactRecord(
     value,
@@ -659,7 +848,7 @@ function verifyAcquisitionReceipt(bytes: Buffer): void {
   if (
     receipt.schemaVersion !== 1 ||
     receipt.purpose !== 'agent-teams.p3c.oc-provenance/v1' ||
-    canonicalJson(receipt.identities) !== canonicalJson(OPENCODE_IDENTITIES) ||
+    canonicalJson(receipt.identities) !== canonicalJson(descriptor.openCode.identities) ||
     receipt.result !== 'accepted' ||
     typeof receipt.reviewId !== 'string' ||
     !/^[0-9a-f]{64}$/u.test(receipt.reviewId) ||
@@ -674,7 +863,7 @@ function verifyAcquisitionReceipt(bytes: Buffer): void {
     throw new Error('p3c_acquisition_receipt_binding');
 }
 
-export function verifyReleaseManifest(bytes: Buffer): void {
+export function verifyReleaseManifest(bytes: Buffer, descriptor: IntegrationDescriptor): void {
   let value: unknown;
   try {
     value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
@@ -772,19 +961,20 @@ export function verifyReleaseManifest(bytes: Buffer): void {
     !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/u.test(workflow.repository) ||
     typeof workflow.workflow !== 'string' ||
     workflow.workflow.length < 1 ||
-    workflow.runId !== OPENCODE_IDENTITIES.workflowRunId ||
-    workflow.runAttempt !== OPENCODE_IDENTITIES.workflowRunAttempt ||
+    workflow.repository !== descriptor.openCode.identities.repository ||
+    workflow.runId !== descriptor.openCode.identities.workflowRunId ||
+    workflow.runAttempt !== descriptor.openCode.identities.workflowRunAttempt ||
     typeof workflow.actor !== 'string' ||
     workflow.actor.length < 1 ||
-    workflow.ref !== OPENCODE_IDENTITIES.workflowRef ||
-    workflow.sha !== OPENCODE_IDENTITIES.workflowMergeCommit ||
+    workflow.ref !== descriptor.openCode.identities.workflowRef ||
+    workflow.sha !== descriptor.openCode.identities.workflowMergeCommit ||
     release.version !== '1.18.23-agentteams.1' ||
     release.tag !== 'v1.18.23-agentteams.1' ||
-    release.sourceCommit !== OPENCODE_IDENTITIES.releaseSourceCommit ||
-    release.sourceTree !== OPENCODE_IDENTITIES.releaseSourceTree ||
+    release.sourceCommit !== descriptor.openCode.identities.releaseSourceCommit ||
+    release.sourceTree !== descriptor.openCode.identities.releaseSourceTree ||
     typeof release.artifactTree !== 'string' ||
     !/^[0-9a-f]{40}$/u.test(release.artifactTree) ||
-    release.baseCommit !== OPENCODE_IDENTITIES.releaseBaseCommit ||
+    release.baseCommit !== descriptor.openCode.identities.releaseBaseCommit ||
     typeof release.patchSha256 !== 'string' ||
     !/^[0-9a-f]{64}$/u.test(release.patchSha256) ||
     release.bunVersion !== '1.3.14' ||
@@ -794,8 +984,8 @@ export function verifyReleaseManifest(bytes: Buffer): void {
     invalidAsset ||
     new Set(platforms).size !== assets.length ||
     linux.length !== 1 ||
-    linux[0].archiveSha256 !== OPENCODE_IDENTITIES.linuxX64ArchiveSha256 ||
-    linux[0].binarySha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
+    linux[0].archiveSha256 !== descriptor.openCode.identities.linuxX64ArchiveSha256 ||
+    linux[0].binarySha256 !== descriptor.openCode.identities.linuxX64BinarySha256 ||
     typeof linux[0].archive !== 'string' ||
     typeof linux[0].binaryPath !== 'string' ||
     !Number.isSafeInteger(linux[0].archiveSize) ||
@@ -804,7 +994,11 @@ export function verifyReleaseManifest(bytes: Buffer): void {
     throw new Error('p3c_release_manifest_binding');
 }
 
-export function verifyBuildProvenanceBundle(bundleBytes: Buffer, manifestBytes: Buffer): void {
+export function verifyBuildProvenanceBundle(
+  bundleBytes: Buffer,
+  manifestBytes: Buffer,
+  descriptor: IntegrationDescriptor
+): void {
   let bundleValue: unknown;
   let manifestValue: unknown;
   try {
@@ -945,9 +1139,9 @@ export function verifyBuildProvenanceBundle(bundleBytes: Buffer, manifestBytes: 
     statement.predicateType !== 'https://slsa.dev/provenance/v1' ||
     canonicalJson(actualSubjects) !== canonicalJson(expectedSubjects) ||
     metadata.invocationId !==
-      `https://github.com/777genius/opencode-anomaly/actions/runs/${OPENCODE_IDENTITIES.workflowRunId}/attempts/${OPENCODE_IDENTITIES.workflowRunAttempt}` ||
+      `https://github.com/${descriptor.openCode.identities.repository}/actions/runs/${descriptor.openCode.identities.workflowRunId}/attempts/${descriptor.openCode.identities.workflowRunAttempt}` ||
     !certificateSubjectAltName.includes(
-      `https://github.com/777genius/opencode-anomaly/.github/workflows/hardened-cli-release.yml@${OPENCODE_IDENTITIES.workflowRef}`
+      `https://github.com/${descriptor.openCode.identities.repository}/.github/workflows/hardened-cli-release.yml@${descriptor.openCode.identities.workflowRef}`
     )
   )
     throw new Error('p3c_build_provenance_binding');
@@ -987,7 +1181,7 @@ export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescripto
     supervisor.relativePath !== descriptor.p3b2.supervisor.relativePath ||
     supervisor.sha256 !== descriptor.p3b2.supervisor.sha256 ||
     recipe.closureMerkleRoot !== descriptor.p3b2.closure.merkleRoot ||
-    recipe.candidateOpenCodeSha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
+    recipe.candidateOpenCodeSha256 !== descriptor.openCode.linuxX64Binary.sha256 ||
     canonicalJson(recipe.argv) !==
       canonicalJson(['--runtime-manifest', '/sandbox/runtime-manifest.json']) ||
     recipe.sourceTreeRequired !== false ||
@@ -1229,6 +1423,29 @@ export async function admitIntegration(
       descriptor.control.runAuthorizationPublicKey,
       64 * 1024
     );
+    const producerCandidatePayload = await read(
+      roots.controllerAuthority,
+      descriptor.producerCandidate.payload,
+      1024 * 1024
+    );
+    const producerCandidateSignature = await read(
+      roots.controllerAuthority,
+      descriptor.producerCandidate.signature,
+      64 * 1024
+    );
+    const producerCandidateSignerPublicKey = await read(
+      roots.controllerAuthority,
+      descriptor.producerCandidate.signerPublicKey,
+      64 * 1024
+    );
+    const trustAnchor = controllerTrustAnchorFromEnvironment();
+    const verifiedProducerCandidate = verifySignedProducerCandidate(
+      descriptor,
+      producerCandidatePayload.bytes,
+      producerCandidateSignature.bytes,
+      producerCandidateSignerPublicKey.bytes,
+      trustAnchor
+    );
     verifyControlDocuments(
       descriptor,
       freeze.bytes,
@@ -1236,7 +1453,8 @@ export async function admitIntegration(
       oneRunAuthorization.bytes,
       harnessReviewerPublicKey.bytes,
       runAuthorizationPublicKey.bytes,
-      controllerTrustAnchorFromEnvironment()
+      trustAnchor,
+      verifiedProducerCandidate.binding
     );
     const ownerEntry = await verify(roots.p3b2, descriptor.p3b2.entry, 1024 ** 3);
     const supervisor = await verify(roots.p3b2, descriptor.p3b2.supervisor, 1024 ** 3);
@@ -1288,6 +1506,11 @@ export async function admitIntegration(
       descriptor.openCode.buildProvenanceBundle,
       4 * 1024 * 1024
     );
+    const provenanceArtifactZip = await verify(
+      roots.openCode,
+      descriptor.openCode.provenanceArtifactZip,
+      1024 ** 3
+    );
     const actionsZip = await verify(
       roots.openCode,
       descriptor.openCode.actionsArtifactZip,
@@ -1304,9 +1527,9 @@ export async function admitIntegration(
       descriptor.browser.descriptor,
       4 * 1024 * 1024
     );
-    verifyAcquisitionReceipt(receipt.bytes);
-    verifyReleaseManifest(releaseManifest.bytes);
-    verifyBuildProvenanceBundle(buildProvenanceBundle.bytes, releaseManifest.bytes);
+    verifyAcquisitionReceipt(receipt.bytes, descriptor);
+    verifyReleaseManifest(releaseManifest.bytes, descriptor);
+    verifyBuildProvenanceBundle(buildProvenanceBundle.bytes, releaseManifest.bytes, descriptor);
     verifyBrowserDescriptor(browserDescriptor.bytes, descriptor);
 
     await closeAnchors([
@@ -1317,6 +1540,7 @@ export async function admitIntegration(
       receipt.anchor,
       releaseManifest.anchor,
       buildProvenanceBundle.anchor,
+      provenanceArtifactZip,
       actionsZip,
       platformArchive,
       freeze.anchor,
@@ -1345,6 +1569,16 @@ export async function admitIntegration(
         reviewId: descriptor.control.reviewId,
         authorizationId: descriptor.control.authorizationId,
       }),
+      producerCandidate: Object.freeze({
+        binding: verifiedProducerCandidate.binding,
+        payload: verifiedProducerCandidate.payload,
+        signature: verifiedProducerCandidate.signature,
+        files: Object.freeze({
+          payload: producerCandidatePayload.anchor,
+          signature: producerCandidateSignature.anchor,
+          signerPublicKey: producerCandidateSignerPublicKey.anchor,
+        }),
+      }),
       execution: Object.freeze({
         ownerEntry,
         supervisor,
@@ -1360,7 +1594,11 @@ export async function admitIntegration(
 }
 
 export async function closeAdmission(admission: PreflightAdmission): Promise<void> {
-  await closeAnchors([...Object.values(admission.execution), ...Object.values(admission.roots)]);
+  await closeAnchors([
+    ...Object.values(admission.execution),
+    ...Object.values(admission.producerCandidate.files),
+    ...Object.values(admission.roots),
+  ]);
 }
 
 export async function consumeOneRunAuthorization(

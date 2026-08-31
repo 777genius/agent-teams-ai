@@ -43,6 +43,7 @@ export async function run(arguments_: readonly string[]): Promise<RunResult> {
       captures: driver.captures,
       controllerNonce: descriptor.controllerNonce,
       runId: sandbox.runId,
+      producerCandidatePayloadSha256: admission.producerCandidate.binding.payloadSha256,
       outcome: driver.outcome,
       cleanup,
     });

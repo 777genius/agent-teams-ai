@@ -10,11 +10,11 @@ import {
   OWNER_CHILD_FDS,
   OWNER_SEALED_PROTOCOL_ARGUMENT,
   OWNER_WRAPPER_ARGUMENT,
-  OPENCODE_IDENTITIES,
   OWNER_CHILD_PROTOCOL,
   PRODUCER_PROVENANCE_CONTRACT,
   PRODUCER_PROVENANCE_CONTRACT_SHA256,
   RUNTIME_CAPTURE_NAMES,
+  RUNTIME_CAPTURE_PRODUCER_MAPPINGS,
   RUNTIME_CAPTURE_STREAMS,
   canonicalJson,
   exactRecord,
@@ -24,6 +24,7 @@ import {
   type ClosurePin,
   type RawOrigin,
   type RuntimeCaptureName,
+  type VerifiedProducerCandidateBinding,
 } from './contracts';
 import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
 import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
@@ -122,11 +123,14 @@ export interface SupervisorPlan {
       framing: typeof PRODUCER_PROVENANCE_CONTRACT.framing;
       descriptorSlots: typeof PRODUCER_PROVENANCE_CONTRACT.descriptorSlots;
       verifierMayProduceBytes: false;
-      producerNativeIdentitiesComposed: false;
+      producerNativeIdentitiesComposed: true;
+      captureAuthority: 'verified-signed-four-producer-candidate';
+      producerCandidate: VerifiedProducerCandidateBinding;
+      captureMappings: typeof RUNTIME_CAPTURE_PRODUCER_MAPPINGS;
     }>;
     refs: Readonly<{
       openCode: string;
-      openCodeExecutableSha256: typeof OPENCODE_IDENTITIES.linuxX64BinarySha256;
+      openCodeExecutableSha256: string;
       orchestrator: string;
       product: string;
     }>;
@@ -775,17 +779,24 @@ export function buildSupervisorPlan(
     browser: admission.descriptor.toolchain.node.inode,
     ...Object.fromEntries(CHROMIUM_DESCENDANT_ROLES.map((role) => [role, chromium.inode])),
   } as Record<ProcessEvidenceRole, string>;
+  const producer = (role: 'browser' | 'opencode' | 'owner' | 'product-producer') => {
+    const identity = admission.producerCandidate.payload.producers.find(
+      (candidate) => candidate.role === role
+    );
+    if (!identity) throw new Error(`p3c_supervisor_missing_producer_${role}`);
+    return identity;
+  };
   const expectedProducerArtifactSha256 = Object.freeze({
-    owner: admission.descriptor.p3b2.closure.manifestSha256,
-    opencode: admission.descriptor.openCode.identities.releaseManifestSha256,
-    product: admission.descriptor.product.runtimeClosure.manifestSha256,
-    browser: admission.descriptor.product.browserBundle.manifestSha256,
+    owner: producer('owner').artifactManifestSha256,
+    opencode: producer('opencode').artifactManifestSha256,
+    product: producer('product-producer').artifactManifestSha256,
+    browser: producer('browser').artifactManifestSha256,
   });
   const expectedProducerModuleSha256 = Object.freeze({
-    owner: admission.execution.ownerEntry.pin.sha256,
-    opencode: admission.descriptor.openCode.identities.linuxX64BinarySha256,
-    product: admission.descriptor.product.compositionEntry.sha256,
-    browser: admission.descriptor.product.playwrightSpec.sha256,
+    owner: producer('owner').moduleSha256,
+    opencode: producer('opencode').moduleSha256,
+    product: producer('product-producer').moduleSha256,
+    browser: producer('browser').moduleSha256,
   });
   return Object.freeze({
     schemaVersion: 2,
@@ -814,13 +825,16 @@ export function buildSupervisorPlan(
         framing: PRODUCER_PROVENANCE_CONTRACT.framing,
         descriptorSlots: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots,
         verifierMayProduceBytes: false as const,
-        producerNativeIdentitiesComposed: false as const,
+        producerNativeIdentitiesComposed: true as const,
+        captureAuthority: 'verified-signed-four-producer-candidate' as const,
+        producerCandidate: admission.producerCandidate.binding,
+        captureMappings: RUNTIME_CAPTURE_PRODUCER_MAPPINGS,
       }),
       refs: Object.freeze({
-        openCode: admission.descriptor.openCode.identities.pullRequestHead,
-        openCodeExecutableSha256: OPENCODE_IDENTITIES.linuxX64BinarySha256,
-        orchestrator: admission.descriptor.p3b2.resultCommit,
-        product: admission.descriptor.product.finalHarnessCommit,
+        openCode: producer('opencode').sourceCommit,
+        openCodeExecutableSha256: producer('opencode').executableSha256,
+        orchestrator: producer('owner').sourceCommit,
+        product: producer('browser').sourceCommit,
       }),
     }),
     ownerChildProtocol: Object.freeze({
@@ -3035,18 +3049,11 @@ export async function executeSupervisor(
   sandbox: DisposableSandbox,
   consumedAttempt: WrittenFileEvidence
 ): Promise<SupervisorOutcome> {
-  // The staged r4 executable predates the r307 producer contract. Keep planning/parsing testable,
-  // but never launch a candidate which cannot author the required OpenCode streams itself.
-  if (
-    admission.descriptor.openCode.identities.linuxX64BinarySha256 ===
-    OPENCODE_IDENTITIES.linuxX64BinarySha256
-  ) {
-    throw new Error('p3c_old_opencode_artifact_not_producer_native');
-  }
   await assertSandboxCurrent(sandbox);
   await Promise.all([
     ...Object.values(admission.roots).map(assertRootCurrent),
     ...Object.values(admission.execution).map(assertFileCurrent),
+    ...Object.values(admission.producerCandidate.files).map(assertFileCurrent),
   ]);
   const plan = buildSupervisorPlan(admission, sandbox);
   const ownershipMarker = plan.processOwnership.marker;

@@ -3,7 +3,7 @@ import { readdir, rename } from 'node:fs/promises';
 import { assertRootCurrent, procFdPath, type RootAnchor } from './anchors';
 import {
   MATRIX_ROWS,
-  OPENCODE_IDENTITIES,
+  REJECTED_HISTORICAL_OPENCODE_IDENTITIES,
   P3C_LANE,
   RAW_ORIGINS,
   RAW_RECORD_PURPOSE,
@@ -665,8 +665,12 @@ export function parseNativeRuntimeCapture(
   bytes: Buffer,
   controllerNonce: string,
   runId: string,
+  expectedStackManifestSha256: string,
   runNonces: Set<string> = new Set<string>()
 ): ParsedNativeCapture {
+  if (!/^[0-9a-f]{64}$/u.test(expectedStackManifestSha256)) {
+    throw new Error('p3c_runtime_capture_stack_manifest_identity');
+  }
   if (bytes.length < 2 || bytes.length > 8 * 1024 * 1024 || bytes.at(-1) !== 0x0a) {
     throw new Error('p3c_runtime_capture_frame');
   }
@@ -748,8 +752,7 @@ export function parseNativeRuntimeCapture(
       (producer.pid as number) < 2 ||
       activation.controllerNonce !== controllerNonce ||
       activation.runId !== runId ||
-      typeof activation.stackManifestSha256 !== 'string' ||
-      !/^[0-9a-f]{64}$/u.test(activation.stackManifestSha256) ||
+      activation.stackManifestSha256 !== expectedStackManifestSha256 ||
       !/^[a-z][a-z0-9-]{0,127}$/u.test(item.recordType) ||
       typeof producer.startTicks !== 'string' ||
       !/^(?:0|[1-9]\d*)$/u.test(producer.startTicks) ||
@@ -810,19 +813,16 @@ export function assertNativeSemanticCrossJoin(
   controllerNonce: string,
   expected: ProducerCaptureFileEvidence
 ): void {
-  if (
-    name === 'openCodeTimelinePath' ||
-    name === 'protectedEffectLedgerPath' ||
-    name === 'ownerWalTimelinePath'
-  ) {
-    throw new Error(`p3c_runtime_capture_semantic_mapping_unavailable:${name}`);
-  }
   const origins: readonly RawOrigin[] =
     name === 'negativeResultsPath'
       ? ['browser', 'product-http']
       : name === 'conditionalPostLedgerPath'
         ? ['product-http']
-        : ['product-http', 'product-sse'];
+        : name === 'ownerWalTimelinePath'
+          ? ['owner-wal']
+          : name === 'openCodeTimelinePath' || name === 'protectedEffectLedgerPath'
+            ? ['opencode']
+            : ['product-http', 'product-sse'];
   const rawRecords = origins.flatMap((origin) => parseOrigin(raw[origin], origin, controllerNonce));
   const consumed = new Set<string>();
   const semanticRecords = parsedShards.flatMap((shard, shardIndex) =>
@@ -837,7 +837,10 @@ export function assertNativeSemanticCrossJoin(
   const fail = (label: string): never => {
     throw new Error(`p3c_runtime_capture_semantic_${label}:${name}`);
   };
-  const retain = (value: unknown, label: string): { readonly bytes: number; readonly sha256: string } => {
+  const retain = (
+    value: unknown,
+    label: string
+  ): { readonly body: Buffer; readonly bytes: number; readonly sha256: string } => {
     const structure = exactRecord(value, ['schemaVersion', 'bodyBase64', 'sha256', 'redacted'], label);
     if (structure.schemaVersion !== 1 || structure.redacted !== true ||
       typeof structure.bodyBase64 !== 'string' || typeof structure.sha256 !== 'string') fail('wire');
@@ -845,13 +848,62 @@ export function assertNativeSemanticCrossJoin(
     if (bytes.toString('base64') !== structure.bodyBase64 || sha256(bytes) !== structure.sha256) {
       fail('wire');
     }
-    return Object.freeze({ bytes: bytes.length, sha256: structure.sha256 as string });
+    return Object.freeze({ body: bytes, bytes: bytes.length, sha256: structure.sha256 as string });
   };
   const matches = (nativeRecord: NativeCaptureRecord, rawRecord: LocatedRawRecord): boolean => {
     const native = nativeRecord.native;
     const semantic = rawRecord.nativeRecord;
     const transport = semantic.transport as Record<string, unknown>;
     const identity = rawRecord.semanticIdentity;
+    if (name === 'ownerWalTimelinePath') {
+      if (
+        rawRecord.origin !== 'owner-wal' ||
+        nativeRecord.recordType !== 'owner-wal-published' ||
+        transport.kind !== 'wal' ||
+        transport.ownerGeneration !== rawRecord.ownerGeneration
+      ) {
+        return false;
+      }
+      const record = retain(transport.record, 'owner_wal_record');
+      const wal = exactRecord(native.wal, ['byteSize', 'sha256'], 'owner_native_wal_join');
+      return wal.byteSize === transport.length && wal.sha256 === transport.recordSha256 &&
+        record.bytes === transport.length && record.sha256 === transport.recordSha256;
+    }
+    if (name === 'openCodeTimelinePath' || name === 'protectedEffectLedgerPath') {
+      if (rawRecord.origin !== 'opencode' || transport.kind !== 'opencode') return false;
+      const request = retain(transport.request, 'opencode_request_join');
+      const response = retain(transport.response, 'opencode_response_join');
+      let requestIdentity: Record<string, unknown>;
+      try {
+        requestIdentity = JSON.parse(request.body.toString('utf8')) as Record<string, unknown>;
+      } catch {
+        return false;
+      }
+      const sessionId = requestIdentity.sessionId ?? requestIdentity.sessionID;
+      const requestId = requestIdentity.requestId ?? requestIdentity.requestID;
+      const nullableIdentityMatch = (field: string, expectedValue: string): boolean =>
+        native[field] === undefined || native[field] === null || native[field] === expectedValue;
+      const decision = identity.decision === 'allow' ? 'allow_once' : 'reject';
+      const responseDigest = native.responseSha256;
+      const requestDigest = native.requestBodySha256;
+      return (
+        (native.sessionId === undefined ||
+          native.sessionId === null ||
+          native.sessionId === sessionId) &&
+        (native.requestId === undefined ||
+          native.requestId === null ||
+          native.requestId === requestId) &&
+        nullableIdentityMatch('decision', decision) &&
+        (responseDigest === undefined ||
+          responseDigest === null ||
+          responseDigest === response.sha256) &&
+        (requestDigest === undefined ||
+          requestDigest === null ||
+          requestDigest === request.sha256) &&
+        request.bytes > 0 &&
+        response.bytes > 0
+      );
+    }
     if (name === 'negativeResultsPath') {
       return rawRecord.origin === 'browser' && native.harnessRunId === identity.harnessRunId &&
         native.processStartToken === rawRecord.processStartToken &&
@@ -965,7 +1017,8 @@ function assertProducerCaptureFileEvidence(
     (name === 'openCodeTimelinePath' || name === 'protectedEffectLedgerPath') &&
     expected.shards.some(
       ({ producerModuleSha256 }) =>
-        producerModuleSha256 === OPENCODE_IDENTITIES.linuxX64BinarySha256
+        producerModuleSha256 ===
+        REJECTED_HISTORICAL_OPENCODE_IDENTITIES.linuxX64BinarySha256
     )
   ) {
     throw new Error(`p3c_runtime_capture_old_opencode_artifact:${name}`);
@@ -2622,6 +2675,7 @@ export function assembleEvidence(input: {
   readonly captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>;
   readonly controllerNonce: string;
   readonly runId: string;
+  readonly producerCandidatePayloadSha256: string;
   readonly outcome: SupervisorOutcome;
   readonly cleanup: CleanupResult;
 }): EvidenceDocument {
@@ -2652,6 +2706,7 @@ export function assembleEvidence(input: {
           bytes,
           input.controllerNonce,
           input.runId,
+          input.producerCandidatePayloadSha256,
           runNonces
         );
         assertNativeCaptureKernelBinding(name, parsed, shard, input.outcome);

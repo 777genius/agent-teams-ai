@@ -28,7 +28,11 @@ export const AUDITED_PRODUCT_COMMIT = 'd71671599c062244767494d392575cfacba5e1ff'
 export const AUDITED_PRODUCT_TREE = 'af7fa38ec50893550ce14026c39b428f8dbfd1f2' as const;
 export const P3B_SOURCE_COMMIT = '459eae38e60a1463ca2b7b077047bc18e4ab3bcc' as const;
 
-export const OPENCODE_IDENTITIES = Object.freeze({
+/**
+ * Historical r0 candidate. It is retained only so admission and evidence can explain why bytes
+ * from that superseded candidate are rejected. It is never an accepted descriptor identity.
+ */
+export const REJECTED_HISTORICAL_OPENCODE_IDENTITIES = Object.freeze({
   pullRequestHead: '9fb0d367a9ff28c63b4b90774c9650c3dec19f80',
   workflowMergeCommit: '6cb3c41e74e70915099ef25904df80684e055e82',
   releaseSourceCommit: '9d715ab06095a130c37202ea54437be180323f52',
@@ -44,6 +48,18 @@ export const OPENCODE_IDENTITIES = Object.freeze({
   linuxX64ArchiveSha256: '16de032488890e60c66d90291e2148da556a021590c635e22d3a4ade15b59a61',
   linuxX64BinarySha256: 'cffecbe3ff685de84d7fa028e552c42d15a7c720a8f8d5d1cddd265110e5eb88',
 } as const);
+
+/** Facts published by the accepted r1 GitHub run. Unknown digests remain descriptor material. */
+export const REQUIRED_OPENCODE_ACQUISITION = Object.freeze({
+  repository: '777genius/opencode-anomaly',
+  pullRequestHead: '8370ab88387ce5f1d0087f432ae88cdd465ca6c5',
+  workflowRunId: '33127332195',
+  candidateArtifactId: '9668982549',
+  provenanceArtifactId: '9668996978',
+} as const);
+
+export const PRODUCER_CANDIDATE_SIGNATURE_DOMAIN =
+  'agent-teams.p3c.producer-candidate-signature/v1\0' as const;
 
 export const PRODUCT_ORIGIN = 'http://127.0.0.1:45131' as const;
 export const INTEGRATION_DESCRIPTOR_FD = 3;
@@ -200,6 +216,111 @@ export const RUNTIME_CAPTURE_STREAMS = Object.freeze({
 } as const satisfies Readonly<Record<RuntimeCaptureName, string>>);
 export type ProducerProvenanceStream = (typeof RUNTIME_CAPTURE_STREAMS)[RuntimeCaptureName];
 
+export type ProducerRole = 'browser' | 'opencode' | 'owner' | 'product-producer';
+export type RuntimeProducerRole = 'browser' | 'opencode' | 'owner' | 'product';
+
+export const RUNTIME_CAPTURE_PRODUCER_MAPPINGS = Object.freeze({
+  conditionalPostLedgerPath: Object.freeze({
+    role: 'product-producer',
+    runtimeRole: 'product',
+    stream: 'conditionalPostLedger',
+    descriptorSlot: 9,
+  }),
+  negativeResultsPath: Object.freeze({
+    role: 'browser',
+    runtimeRole: 'browser',
+    stream: 'negativeResults',
+    descriptorSlot: 9,
+  }),
+  openCodeTimelinePath: Object.freeze({
+    role: 'opencode',
+    runtimeRole: 'opencode',
+    stream: 'openCodeTimeline',
+    descriptorSlot: 9,
+  }),
+  ownerWalTimelinePath: Object.freeze({
+    role: 'owner',
+    runtimeRole: 'owner',
+    stream: 'ownerWalTimeline',
+    descriptorSlot: 9,
+  }),
+  productTimelinePath: Object.freeze({
+    role: 'product-producer',
+    runtimeRole: 'product',
+    stream: 'productTimeline',
+    descriptorSlot: 10,
+  }),
+  protectedEffectLedgerPath: Object.freeze({
+    role: 'opencode',
+    runtimeRole: 'opencode',
+    stream: 'protectedEffectLedger',
+    descriptorSlot: 10,
+  }),
+} as const satisfies Readonly<
+  Record<
+    RuntimeCaptureName,
+    Readonly<{
+      role: ProducerRole;
+      runtimeRole: RuntimeProducerRole;
+      stream: ProducerProvenanceStream;
+      descriptorSlot: 9 | 10;
+    }>
+  >
+>);
+
+export interface OpenCodeCandidateIdentities {
+  readonly repository: typeof REQUIRED_OPENCODE_ACQUISITION.repository;
+  readonly pullRequestHead: typeof REQUIRED_OPENCODE_ACQUISITION.pullRequestHead;
+  readonly workflowMergeCommit: string;
+  readonly releaseSourceCommit: string;
+  readonly releaseSourceTree: string;
+  readonly releaseBaseCommit: string;
+  readonly workflowRunId: typeof REQUIRED_OPENCODE_ACQUISITION.workflowRunId;
+  readonly workflowRunAttempt: number;
+  readonly workflowRef: string;
+  readonly candidateArtifactId: typeof REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId;
+  readonly provenanceArtifactId: typeof REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId;
+  readonly candidateArtifactSha256: string;
+  readonly provenanceArtifactSha256: string;
+  readonly buildProvenanceBundleSha256: string;
+  readonly releaseManifestSha256: string;
+  readonly linuxX64ArchiveSha256: string;
+  readonly linuxX64BinarySha256: string;
+}
+
+export interface SignedProducerIdentity {
+  readonly artifactManifestSha256: string;
+  readonly executableSha256: string;
+  readonly implementationId: string;
+  readonly moduleSha256: string;
+  readonly role: ProducerRole;
+  readonly sourceCommit: string;
+  readonly sourceRepository: string;
+  readonly sourceTree: string;
+}
+
+export interface OpenCodeProvenanceIdentity {
+  readonly repository: typeof REQUIRED_OPENCODE_ACQUISITION.repository;
+  readonly pullRequestHead: typeof REQUIRED_OPENCODE_ACQUISITION.pullRequestHead;
+  readonly workflowRunId: typeof REQUIRED_OPENCODE_ACQUISITION.workflowRunId;
+  readonly candidateArtifactId: typeof REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId;
+  readonly candidateArtifactSha256: string;
+  readonly provenanceArtifactId: typeof REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId;
+  readonly provenanceArtifactSha256: string;
+  readonly buildProvenanceBundleSha256: string;
+}
+
+export interface VerifiedProducerCandidateBinding {
+  readonly purpose: 'agent-teams.p3c.verified-producer-candidate/v1';
+  readonly payloadSha256: string;
+  readonly signatureSha256: string;
+  readonly signerKeyId: string;
+  readonly signerPublicKeySha256: string;
+  readonly trustAnchorSha256: string;
+  readonly openCodeProvenance: OpenCodeProvenanceIdentity;
+  readonly producers: readonly SignedProducerIdentity[];
+}
+
 export interface ActualOwnerRuntimeManifest {
   readonly schemaVersion: 1;
   readonly purpose: 'agent-teams.hosted-actual-owner-e2e/v1';
@@ -216,11 +337,14 @@ export interface ActualOwnerRuntimeManifest {
     framing: typeof PRODUCER_PROVENANCE_CONTRACT.framing;
     descriptorSlots: typeof PRODUCER_PROVENANCE_CONTRACT.descriptorSlots;
     verifierMayProduceBytes: false;
-    producerNativeIdentitiesComposed: false;
+    producerNativeIdentitiesComposed: true;
+    captureAuthority: 'verified-signed-four-producer-candidate';
+    producerCandidate: VerifiedProducerCandidateBinding;
+    captureMappings: typeof RUNTIME_CAPTURE_PRODUCER_MAPPINGS;
   }>;
   readonly refs: Readonly<{
     openCode: string;
-    openCodeExecutableSha256: typeof OPENCODE_IDENTITIES.linuxX64BinarySha256;
+    openCodeExecutableSha256: string;
     orchestrator: string;
     product: string;
   }>;
@@ -277,6 +401,12 @@ export interface IntegrationDescriptor {
     readonly harnessReviewerPublicKey: FilePin;
     readonly runAuthorizationPublicKey: FilePin;
   };
+  readonly producerCandidate: {
+    readonly payload: FilePin;
+    readonly signature: FilePin;
+    readonly signerPublicKey: FilePin;
+    readonly trustAnchorSha256: string;
+  };
   readonly roots: Readonly<Record<RootName, RootPin>>;
   readonly product: {
     readonly finalHarnessCommit: string;
@@ -308,8 +438,9 @@ export interface IntegrationDescriptor {
     readonly independentlyAccepted: true;
   };
   readonly openCode: {
-    readonly identities: typeof OPENCODE_IDENTITIES;
+    readonly identities: OpenCodeCandidateIdentities;
     readonly acquisitionReceipt: FilePin;
+    readonly provenanceArtifactZip: FilePin;
     readonly buildProvenanceBundle: FilePin;
     readonly releaseManifest: FilePin;
     readonly actionsArtifactZip: FilePin;
@@ -363,16 +494,8 @@ export const ORDERED_PRODUCER_IDENTITIES = Object.freeze([
 export interface SignedProducerCandidatePayload {
   readonly contract: typeof PRODUCER_PROVENANCE_CONTRACT.contract;
   readonly contractSha256: typeof PRODUCER_PROVENANCE_CONTRACT_SHA256;
-  readonly producers: readonly Readonly<{
-    artifactManifestSha256: string;
-    executableSha256: string;
-    implementationId: string;
-    moduleSha256: string;
-    role: (typeof ORDERED_PRODUCER_IDENTITIES)[number]['role'];
-    sourceCommit: string;
-    sourceRepository: string;
-    sourceTree: string;
-  }>[];
+  readonly openCodeProvenance: OpenCodeProvenanceIdentity;
+  readonly producers: readonly SignedProducerIdentity[];
   readonly productionEligible: false;
   readonly purpose: typeof PRODUCER_CANDIDATE_PURPOSE;
   readonly releaseEligible: false;
@@ -385,6 +508,11 @@ export interface ProducerCandidateSignatureSidecar {
   readonly keyId: string;
   readonly payloadSha256: string;
   readonly signature: string;
+}
+
+export interface ParsedProducerCandidateSignatureSidecar {
+  readonly sidecar: ProducerCandidateSignatureSidecar;
+  readonly signatureBytes: Buffer;
 }
 
 export function sha256(value: string | Uint8Array): string {
@@ -476,13 +604,14 @@ export function assertRuntimeIdentifierSeparation(
 
 export function assertCandidateOpenCodeDigestChain(
   input: Readonly<{
+    expectedExecutableSha256: unknown;
     compiledBuildPin: unknown;
     runtimeRef: unknown;
     rehashedExecutable: unknown;
     signedRouteDigests: readonly unknown[];
   }>
-): typeof OPENCODE_IDENTITIES.linuxX64BinarySha256 {
-  const expected = OPENCODE_IDENTITIES.linuxX64BinarySha256;
+): string {
+  const expected = text(input.expectedExecutableSha256, HEX_64, 'candidate_opencode_expected_sha');
   if (
     input.compiledBuildPin !== expected ||
     input.runtimeRef !== expected ||
@@ -495,7 +624,10 @@ export function assertCandidateOpenCodeDigestChain(
   return expected;
 }
 
-export function parseActualOwnerRuntimeManifest(value: unknown): ActualOwnerRuntimeManifest {
+export function parseActualOwnerRuntimeManifest(
+  value: unknown,
+  expectedProducerCandidate: VerifiedProducerCandidateBinding
+): ActualOwnerRuntimeManifest {
   const item = exactRecord(
     value,
     [
@@ -540,8 +672,14 @@ export function parseActualOwnerRuntimeManifest(value: unknown): ActualOwnerRunt
       'descriptorSlots',
       'verifierMayProduceBytes',
       'producerNativeIdentitiesComposed',
+      'captureAuthority',
+      'producerCandidate',
+      'captureMappings',
     ],
     'runtime_capture_emission_contract'
+  );
+  const producerCandidate = parseVerifiedProducerCandidateBinding(
+    captureEmissionContract.producerCandidate
   );
   if (
     confinedPaths.some((path) => {
@@ -561,7 +699,11 @@ export function parseActualOwnerRuntimeManifest(value: unknown): ActualOwnerRunt
     canonicalJson(captureEmissionContract.descriptorSlots) !==
       canonicalJson(PRODUCER_PROVENANCE_CONTRACT.descriptorSlots) ||
     captureEmissionContract.verifierMayProduceBytes !== false ||
-    captureEmissionContract.producerNativeIdentitiesComposed !== false
+    captureEmissionContract.producerNativeIdentitiesComposed !== true ||
+    captureEmissionContract.captureAuthority !== 'verified-signed-four-producer-candidate' ||
+    canonicalJson(captureEmissionContract.captureMappings) !==
+      canonicalJson(RUNTIME_CAPTURE_PRODUCER_MAPPINGS) ||
+    canonicalJson(producerCandidate) !== canonicalJson(expectedProducerCandidate)
   ) {
     throw new TypeError('p3c_runtime_capture_emission_contract');
   }
@@ -570,14 +712,14 @@ export function parseActualOwnerRuntimeManifest(value: unknown): ActualOwnerRunt
     ['openCode', 'openCodeExecutableSha256', 'orchestrator', 'product'],
     'runtime_refs'
   );
+  const openCodeProducer = producerCandidate.producers.find(({ role }) => role === 'opencode')!;
+  const ownerProducer = producerCandidate.producers.find(({ role }) => role === 'owner')!;
+  const browserProducer = producerCandidate.producers.find(({ role }) => role === 'browser')!;
   if (
-    refs.openCodeExecutableSha256 !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
-    typeof refs.openCode !== 'string' ||
-    !HEX_40.test(refs.openCode) ||
-    typeof refs.orchestrator !== 'string' ||
-    !HEX_40.test(refs.orchestrator) ||
-    typeof refs.product !== 'string' ||
-    !HEX_40.test(refs.product)
+    refs.openCodeExecutableSha256 !== openCodeProducer.executableSha256 ||
+    refs.openCode !== openCodeProducer.sourceCommit ||
+    refs.orchestrator !== ownerProducer.sourceCommit ||
+    refs.product !== browserProducer.sourceCommit
   ) {
     throw new TypeError('p3c_runtime_refs_invalid');
   }
@@ -597,11 +739,14 @@ export function parseActualOwnerRuntimeManifest(value: unknown): ActualOwnerRunt
       framing: PRODUCER_PROVENANCE_CONTRACT.framing,
       descriptorSlots: PRODUCER_PROVENANCE_CONTRACT.descriptorSlots,
       verifierMayProduceBytes: false,
-      producerNativeIdentitiesComposed: false,
+      producerNativeIdentitiesComposed: true,
+      captureAuthority: 'verified-signed-four-producer-candidate',
+      producerCandidate,
+      captureMappings: RUNTIME_CAPTURE_PRODUCER_MAPPINGS,
     }),
     refs: Object.freeze({
       openCode: refs.openCode,
-      openCodeExecutableSha256: OPENCODE_IDENTITIES.linuxX64BinarySha256,
+      openCodeExecutableSha256: openCodeProducer.executableSha256,
       orchestrator: refs.orchestrator,
       product: refs.product,
     }),
@@ -677,12 +822,134 @@ function closurePin(value: unknown, label: string): ClosurePin {
   });
 }
 
-function exactOpenCodeIdentities(value: unknown): typeof OPENCODE_IDENTITIES {
-  const keys = Object.keys(OPENCODE_IDENTITIES);
-  const item = exactRecord(value, keys, 'opencode_identities');
-  if (canonicalJson(item) !== canonicalJson(OPENCODE_IDENTITIES))
-    throw new TypeError('p3c_opencode_identity_pin');
-  return OPENCODE_IDENTITIES;
+export function assertNotRejectedHistoricalOpenCodeCandidate(
+  identities: Readonly<{
+    pullRequestHead: string;
+    workflowRunId: string;
+    candidateArtifactId: string;
+    candidateArtifactSha256: string;
+    buildProvenanceBundleSha256: string;
+    releaseManifestSha256: string;
+    linuxX64ArchiveSha256: string;
+    linuxX64BinarySha256: string;
+  }>
+): void {
+  const historical = REJECTED_HISTORICAL_OPENCODE_IDENTITIES;
+  if (
+    identities.pullRequestHead === historical.pullRequestHead ||
+    identities.workflowRunId === historical.workflowRunId ||
+    identities.candidateArtifactId === historical.artifactId ||
+    identities.candidateArtifactSha256 === historical.actionsArtifactZipSha256 ||
+    identities.buildProvenanceBundleSha256 === historical.buildProvenanceBundleSha256 ||
+    identities.releaseManifestSha256 === historical.releaseManifestSha256 ||
+    identities.linuxX64ArchiveSha256 === historical.linuxX64ArchiveSha256 ||
+    identities.linuxX64BinarySha256 === historical.linuxX64BinarySha256
+  ) {
+    throw new TypeError('p3c_rejected_historical_opencode_candidate');
+  }
+}
+
+function exactOpenCodeIdentities(value: unknown): OpenCodeCandidateIdentities {
+  const item = exactRecord(
+    value,
+    [
+      'repository',
+      'pullRequestHead',
+      'workflowMergeCommit',
+      'releaseSourceCommit',
+      'releaseSourceTree',
+      'releaseBaseCommit',
+      'workflowRunId',
+      'workflowRunAttempt',
+      'workflowRef',
+      'candidateArtifactId',
+      'provenanceArtifactId',
+      'candidateArtifactSha256',
+      'provenanceArtifactSha256',
+      'buildProvenanceBundleSha256',
+      'releaseManifestSha256',
+      'linuxX64ArchiveSha256',
+      'linuxX64BinarySha256',
+    ],
+    'opencode_identities'
+  );
+  const parsed = Object.freeze({
+    repository: text(
+      item.repository,
+      /^777genius\/opencode-anomaly$/u,
+      'opencode_repository'
+    ) as typeof REQUIRED_OPENCODE_ACQUISITION.repository,
+    pullRequestHead: text(
+      item.pullRequestHead,
+      new RegExp(`^${REQUIRED_OPENCODE_ACQUISITION.pullRequestHead}$`, 'u'),
+      'opencode_pull_request_head'
+    ) as typeof REQUIRED_OPENCODE_ACQUISITION.pullRequestHead,
+    workflowMergeCommit: text(item.workflowMergeCommit, HEX_40, 'opencode_workflow_merge_commit'),
+    releaseSourceCommit: text(item.releaseSourceCommit, HEX_40, 'opencode_release_source_commit'),
+    releaseSourceTree: text(item.releaseSourceTree, HEX_40, 'opencode_release_source_tree'),
+    releaseBaseCommit: text(item.releaseBaseCommit, HEX_40, 'opencode_release_base_commit'),
+    workflowRunId: text(
+      item.workflowRunId,
+      new RegExp(`^${REQUIRED_OPENCODE_ACQUISITION.workflowRunId}$`, 'u'),
+      'opencode_workflow_run_id'
+    ) as typeof REQUIRED_OPENCODE_ACQUISITION.workflowRunId,
+    workflowRunAttempt: item.workflowRunAttempt as number,
+    workflowRef: text(
+      item.workflowRef,
+      /^refs\/[A-Za-z0-9._/-]{1,255}$/u,
+      'opencode_workflow_ref'
+    ),
+    candidateArtifactId: text(
+      item.candidateArtifactId,
+      new RegExp(`^${REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId}$`, 'u'),
+      'opencode_candidate_artifact_id'
+    ) as typeof REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId,
+    provenanceArtifactId: text(
+      item.provenanceArtifactId,
+      new RegExp(`^${REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId}$`, 'u'),
+      'opencode_provenance_artifact_id'
+    ) as typeof REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId,
+    candidateArtifactSha256: text(
+      item.candidateArtifactSha256,
+      HEX_64,
+      'opencode_candidate_artifact_sha'
+    ),
+    provenanceArtifactSha256: text(
+      item.provenanceArtifactSha256,
+      HEX_64,
+      'opencode_provenance_artifact_sha'
+    ),
+    buildProvenanceBundleSha256: text(
+      item.buildProvenanceBundleSha256,
+      HEX_64,
+      'opencode_build_provenance_bundle_sha'
+    ),
+    releaseManifestSha256: text(
+      item.releaseManifestSha256,
+      HEX_64,
+      'opencode_release_manifest_sha'
+    ),
+    linuxX64ArchiveSha256: text(item.linuxX64ArchiveSha256, HEX_64, 'opencode_archive_sha'),
+    linuxX64BinarySha256: text(item.linuxX64BinarySha256, HEX_64, 'opencode_binary_sha'),
+  });
+  if (
+    !Number.isSafeInteger(parsed.workflowRunAttempt) ||
+    parsed.workflowRunAttempt < 1 ||
+    parsed.workflowRunAttempt > 100
+  ) {
+    throw new TypeError('p3c_opencode_workflow_run_attempt');
+  }
+  if (
+    new Set([
+      parsed.candidateArtifactSha256,
+      parsed.provenanceArtifactSha256,
+      parsed.buildProvenanceBundleSha256,
+    ]).size !== 3
+  ) {
+    throw new TypeError('p3c_opencode_provenance_artifact_bundle_identity_collapsed');
+  }
+  assertNotRejectedHistoricalOpenCodeCandidate(parsed);
+  return parsed;
 }
 
 export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescriptor {
@@ -711,6 +978,7 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
       'controllerNonce',
       'authority',
       'control',
+      'producerCandidate',
       'roots',
       'product',
       'toolchain',
@@ -782,6 +1050,51 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
       harnessReviewerPublicKey.inode === runAuthorizationPublicKey.inode)
   )
     throw new TypeError('p3c_control_signer_identity_collapsed');
+
+  const producerCandidate = exactRecord(
+    top.producerCandidate,
+    ['payload', 'signature', 'signerPublicKey', 'trustAnchorSha256'],
+    'producer_candidate_descriptor'
+  );
+  const producerCandidatePayload = filePin(
+    producerCandidate.payload,
+    'producer_candidate_payload'
+  );
+  const producerCandidateSignature = filePin(
+    producerCandidate.signature,
+    'producer_candidate_signature'
+  );
+  const producerCandidateSignerPublicKey = filePin(
+    producerCandidate.signerPublicKey,
+    'producer_candidate_signer_public_key'
+  );
+  const producerCandidateTrustAnchorSha256 = text(
+    producerCandidate.trustAnchorSha256,
+    HEX_64,
+    'producer_candidate_trust_anchor_sha'
+  );
+  const candidatePins = [
+    producerCandidatePayload,
+    producerCandidateSignature,
+    producerCandidateSignerPublicKey,
+  ];
+  if (
+    candidatePins.some((pin) => pin.root !== 'controllerAuthority') ||
+    new Set(candidatePins.map((pin) => pin.sha256)).size !== candidatePins.length ||
+    new Set(candidatePins.map((pin) => `${pin.device}:${pin.inode}`)).size !==
+      candidatePins.length ||
+    candidatePins.some(
+      (pin) =>
+        pin.sha256 === harnessReviewerPublicKey.sha256 ||
+        pin.sha256 === runAuthorizationPublicKey.sha256 ||
+        (pin.device === harnessReviewerPublicKey.device &&
+          pin.inode === harnessReviewerPublicKey.inode) ||
+        (pin.device === runAuthorizationPublicKey.device &&
+          pin.inode === runAuthorizationPublicKey.inode)
+    )
+  ) {
+    throw new TypeError('p3c_producer_candidate_file_identity_collapsed');
+  }
 
   const rootsValue = exactRecord(top.roots, ROOT_NAMES, 'roots');
   const roots = Object.fromEntries(
@@ -875,6 +1188,7 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     [
       'identities',
       'acquisitionReceipt',
+      'provenanceArtifactZip',
       'buildProvenanceBundle',
       'releaseManifest',
       'actionsArtifactZip',
@@ -892,6 +1206,30 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
     openCode.releaseEligible !== false
   )
     throw new TypeError('p3c_opencode_gate_drift');
+  const openCodeIdentities = exactOpenCodeIdentities(openCode.identities);
+  const acquisitionReceipt = filePin(openCode.acquisitionReceipt, 'opencode_receipt');
+  const provenanceArtifactZip = filePin(
+    openCode.provenanceArtifactZip,
+    'opencode_provenance_artifact_zip'
+  );
+  const buildProvenanceBundle = filePin(
+    openCode.buildProvenanceBundle,
+    'opencode_build_provenance_bundle'
+  );
+  const releaseManifest = filePin(openCode.releaseManifest, 'opencode_manifest');
+  const actionsArtifactZip = filePin(openCode.actionsArtifactZip, 'opencode_zip');
+  const linuxX64Archive = filePin(openCode.linuxX64Archive, 'opencode_archive');
+  const linuxX64Binary = filePin(openCode.linuxX64Binary, 'opencode_binary');
+  if (
+    openCodeIdentities.candidateArtifactSha256 !== actionsArtifactZip.sha256 ||
+    openCodeIdentities.provenanceArtifactSha256 !== provenanceArtifactZip.sha256 ||
+    openCodeIdentities.buildProvenanceBundleSha256 !== buildProvenanceBundle.sha256 ||
+    openCodeIdentities.releaseManifestSha256 !== releaseManifest.sha256 ||
+    openCodeIdentities.linuxX64ArchiveSha256 !== linuxX64Archive.sha256 ||
+    openCodeIdentities.linuxX64BinarySha256 !== linuxX64Binary.sha256
+  ) {
+    throw new TypeError('p3c_opencode_identity_file_pin_disagreement');
+  }
   const browser = exactRecord(
     top.browser,
     ['origin', 'descriptor', 'workers', 'retries'],
@@ -925,6 +1263,12 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
       oneRunAuthorization: filePin(control.oneRunAuthorization, 'one_run_authorization'),
       harnessReviewerPublicKey,
       runAuthorizationPublicKey,
+    }),
+    producerCandidate: Object.freeze({
+      payload: producerCandidatePayload,
+      signature: producerCandidateSignature,
+      signerPublicKey: producerCandidateSignerPublicKey,
+      trustAnchorSha256: producerCandidateTrustAnchorSha256,
     }),
     roots: Object.freeze(roots),
     product: Object.freeze({
@@ -960,16 +1304,14 @@ export function parseIntegrationDescriptor(bytes: Uint8Array): IntegrationDescri
       independentlyAccepted: true,
     }),
     openCode: Object.freeze({
-      identities: exactOpenCodeIdentities(openCode.identities),
-      acquisitionReceipt: filePin(openCode.acquisitionReceipt, 'opencode_receipt'),
-      buildProvenanceBundle: filePin(
-        openCode.buildProvenanceBundle,
-        'opencode_build_provenance_bundle'
-      ),
-      releaseManifest: filePin(openCode.releaseManifest, 'opencode_manifest'),
-      actionsArtifactZip: filePin(openCode.actionsArtifactZip, 'opencode_zip'),
-      linuxX64Archive: filePin(openCode.linuxX64Archive, 'opencode_archive'),
-      linuxX64Binary: filePin(openCode.linuxX64Binary, 'opencode_binary'),
+      identities: openCodeIdentities,
+      acquisitionReceipt,
+      provenanceArtifactZip,
+      buildProvenanceBundle,
+      releaseManifest,
+      actionsArtifactZip,
+      linuxX64Archive,
+      linuxX64Binary,
       signedBuildProvenance: true,
       productionEligible: false,
       releaseEligible: false,
@@ -1008,12 +1350,115 @@ function parseCanonicalCandidateDocument(bytes: Buffer, label: string): Record<s
   return exactRecord(value, Reflect.ownKeys(value as object) as string[], label);
 }
 
-export function parseSignedProducerCandidatePayload(bytes: Buffer): SignedProducerCandidatePayload {
+function parseOpenCodeProvenanceIdentity(value: unknown): OpenCodeProvenanceIdentity {
+  const item = exactRecord(
+    value,
+    [
+      'repository',
+      'pullRequestHead',
+      'workflowRunId',
+      'candidateArtifactId',
+      'candidateArtifactSha256',
+      'provenanceArtifactId',
+      'provenanceArtifactSha256',
+      'buildProvenanceBundleSha256',
+    ],
+    'producer_candidate_opencode_provenance'
+  );
+  if (
+    item.repository !== REQUIRED_OPENCODE_ACQUISITION.repository ||
+    item.pullRequestHead !== REQUIRED_OPENCODE_ACQUISITION.pullRequestHead ||
+    item.workflowRunId !== REQUIRED_OPENCODE_ACQUISITION.workflowRunId ||
+    item.candidateArtifactId !== REQUIRED_OPENCODE_ACQUISITION.candidateArtifactId ||
+    item.provenanceArtifactId !== REQUIRED_OPENCODE_ACQUISITION.provenanceArtifactId ||
+    typeof item.candidateArtifactSha256 !== 'string' ||
+    !HEX_64.test(item.candidateArtifactSha256) ||
+    typeof item.provenanceArtifactSha256 !== 'string' ||
+    !HEX_64.test(item.provenanceArtifactSha256) ||
+    typeof item.buildProvenanceBundleSha256 !== 'string' ||
+    !HEX_64.test(item.buildProvenanceBundleSha256) ||
+    new Set([
+      item.candidateArtifactSha256,
+      item.provenanceArtifactSha256,
+      item.buildProvenanceBundleSha256,
+    ]).size !== 3
+  ) {
+    throw new TypeError('p3c_producer_candidate_opencode_provenance');
+  }
+  return Object.freeze(item) as unknown as OpenCodeProvenanceIdentity;
+}
+
+function parseProducerIdentities(
+  value: unknown,
+  label: string
+): readonly SignedProducerIdentity[] {
+  if (!Array.isArray(value) || value.length !== ORDERED_PRODUCER_IDENTITIES.length) {
+    throw new TypeError(`p3c_${label}_contract`);
+  }
+  const repositories = Object.freeze({
+    browser: '777genius/agent-teams-ai',
+    opencode: REQUIRED_OPENCODE_ACQUISITION.repository,
+    owner: '777genius/agent_teams_orchestrator',
+    'product-producer': '777genius/agent-teams-ai',
+  } as const);
+  const producers = value.map((candidate, index) => {
+    const producer = exactRecord(
+      candidate,
+      [
+        'artifactManifestSha256', 'executableSha256', 'implementationId', 'moduleSha256',
+        'role', 'sourceCommit', 'sourceRepository', 'sourceTree',
+      ],
+      `${label}_producer_${index}`
+    );
+    const identity = ORDERED_PRODUCER_IDENTITIES[index]!;
+    if (
+      producer.role !== identity.role ||
+      producer.implementationId !== identity.implementationId ||
+      producer.sourceRepository !== repositories[identity.role] ||
+      typeof producer.sourceCommit !== 'string' ||
+      !HEX_40.test(producer.sourceCommit) ||
+      typeof producer.sourceTree !== 'string' ||
+      !HEX_40.test(producer.sourceTree) ||
+      [producer.artifactManifestSha256, producer.executableSha256, producer.moduleSha256].some(
+        (digest) => typeof digest !== 'string' || !HEX_64.test(digest)
+      )
+    ) {
+      throw new TypeError(`p3c_${label}_producer_${index}`);
+    }
+    return Object.freeze(producer) as unknown as SignedProducerIdentity;
+  });
+  const nativeIdentities = producers.map((producer) =>
+    canonicalJson({
+      artifactManifestSha256: producer.artifactManifestSha256,
+      executableSha256: producer.executableSha256,
+      moduleSha256: producer.moduleSha256,
+    })
+  );
+  if (
+    new Set(producers.map(({ role }) => role)).size !== producers.length ||
+    new Set(producers.map(({ implementationId }) => implementationId)).size !== producers.length ||
+    new Set(nativeIdentities).size !== producers.length
+  ) {
+    throw new TypeError(`p3c_${label}_identity_collapsed`);
+  }
+  return Object.freeze(producers);
+}
+
+export function parseSignedProducerCandidatePayload(
+  bytes: Buffer
+): SignedProducerCandidatePayload {
   const item = exactRecord(
     parseCanonicalCandidateDocument(bytes, 'producer_candidate'),
     [
-      'contract', 'contractSha256', 'producers', 'productionEligible', 'purpose',
-      'releaseEligible', 'schemaVersion', 'signedBuildProvenanceRequired',
+      'contract',
+      'contractSha256',
+      'openCodeProvenance',
+      'producers',
+      'productionEligible',
+      'purpose',
+      'releaseEligible',
+      'schemaVersion',
+      'signedBuildProvenanceRequired',
     ],
     'producer_candidate'
   );
@@ -1030,57 +1475,95 @@ export function parseSignedProducerCandidatePayload(bytes: Buffer): SignedProduc
   ) {
     throw new TypeError('p3c_producer_candidate_contract');
   }
-  const producers = item.producers.map((value, index) => {
-    const producer = exactRecord(
-      value,
-      [
-        'artifactManifestSha256', 'executableSha256', 'implementationId', 'moduleSha256',
-        'role', 'sourceCommit', 'sourceRepository', 'sourceTree',
-      ],
-      `producer_candidate_producer_${index}`
-    );
-    const identity = ORDERED_PRODUCER_IDENTITIES[index]!;
-    if (
-      producer.role !== identity.role ||
-      producer.implementationId !== identity.implementationId ||
-      typeof producer.sourceRepository !== 'string' ||
-      !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,255}$/u.test(producer.sourceRepository) ||
-      typeof producer.sourceCommit !== 'string' ||
-      !HEX_40.test(producer.sourceCommit) ||
-      typeof producer.sourceTree !== 'string' ||
-      !HEX_40.test(producer.sourceTree) ||
-      [producer.artifactManifestSha256, producer.executableSha256, producer.moduleSha256].some(
-        (digest) => typeof digest !== 'string' || !HEX_64.test(digest)
-      )
-    ) {
-      throw new TypeError(`p3c_producer_candidate_producer_${index}`);
-    }
-    return Object.freeze(producer) as SignedProducerCandidatePayload['producers'][number];
-  });
-  return Object.freeze({ ...item, producers: Object.freeze(producers) }) as unknown as SignedProducerCandidatePayload;
+  const openCodeProvenance = parseOpenCodeProvenanceIdentity(item.openCodeProvenance);
+  const producers = parseProducerIdentities(item.producers, 'producer_candidate');
+  return Object.freeze({
+    ...item,
+    openCodeProvenance,
+    producers,
+  }) as unknown as SignedProducerCandidatePayload;
 }
 
 export function parseProducerCandidateSignatureSidecar(
   bytes: Buffer,
   payloadBytes: Buffer
 ): ProducerCandidateSignatureSidecar {
+  return parseProducerCandidateSignatureSidecarWithBytes(bytes, payloadBytes).sidecar;
+}
+
+export function parseProducerCandidateSignatureSidecarWithBytes(
+  bytes: Buffer,
+  payloadBytes: Buffer
+): ParsedProducerCandidateSignatureSidecar {
   const item = exactRecord(
     parseCanonicalCandidateDocument(bytes, 'producer_candidate_signature'),
     ['algorithm', 'keyId', 'payloadSha256', 'signature'],
     'producer_candidate_signature'
   );
+  const signatureBytes =
+    typeof item.signature === 'string' &&
+    /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(item.signature)
+      ? Buffer.from(item.signature, 'base64')
+      : undefined;
   if (
     item.algorithm !== 'ed25519' ||
     typeof item.keyId !== 'string' ||
-    !SAFE_ID.test(item.keyId) ||
+    !HEX_64.test(item.keyId) ||
     item.payloadSha256 !== sha256(payloadBytes) ||
-    typeof item.signature !== 'string' ||
-    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(item.signature) ||
-    Buffer.from(item.signature, 'base64').length !== 64
+    signatureBytes === undefined ||
+    signatureBytes.length !== 64 ||
+    signatureBytes.toString('base64') !== item.signature
   ) {
     throw new TypeError('p3c_producer_candidate_signature');
   }
-  return Object.freeze(item) as unknown as ProducerCandidateSignatureSidecar;
+  const sidecar = Object.freeze(item) as unknown as ProducerCandidateSignatureSidecar;
+  return Object.freeze({ sidecar, signatureBytes });
+}
+
+export function parseVerifiedProducerCandidateBinding(
+  value: unknown
+): VerifiedProducerCandidateBinding {
+  const item = exactRecord(
+    value,
+    [
+      'purpose',
+      'payloadSha256',
+      'signatureSha256',
+      'signerKeyId',
+      'signerPublicKeySha256',
+      'trustAnchorSha256',
+      'openCodeProvenance',
+      'producers',
+    ],
+    'verified_producer_candidate'
+  );
+  if (
+    item.purpose !== 'agent-teams.p3c.verified-producer-candidate/v1' ||
+    typeof item.payloadSha256 !== 'string' ||
+    !HEX_64.test(item.payloadSha256) ||
+    typeof item.signatureSha256 !== 'string' ||
+    !HEX_64.test(item.signatureSha256) ||
+    typeof item.signerKeyId !== 'string' ||
+    !HEX_64.test(item.signerKeyId) ||
+    typeof item.signerPublicKeySha256 !== 'string' ||
+    !HEX_64.test(item.signerPublicKeySha256) ||
+    typeof item.trustAnchorSha256 !== 'string' ||
+    !HEX_64.test(item.trustAnchorSha256)
+  ) {
+    throw new TypeError('p3c_verified_producer_candidate_identity');
+  }
+  const openCodeProvenance = parseOpenCodeProvenanceIdentity(item.openCodeProvenance);
+  const producers = parseProducerIdentities(item.producers, 'verified_producer_candidate');
+  return Object.freeze({
+    purpose: 'agent-teams.p3c.verified-producer-candidate/v1',
+    payloadSha256: item.payloadSha256,
+    signatureSha256: item.signatureSha256,
+    signerKeyId: item.signerKeyId,
+    signerPublicKeySha256: item.signerPublicKeySha256,
+    trustAnchorSha256: item.trustAnchorSha256,
+    openCodeProvenance,
+    producers,
+  });
 }
 
 export function validateRecordId(value: unknown, label: string): string {

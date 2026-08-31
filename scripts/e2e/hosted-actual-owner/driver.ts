@@ -5,7 +5,6 @@ import { assertFileCurrent, assertRootCurrent, descriptorMountId, procFdPath } f
 import {
   RAW_ORIGINS,
   RUNTIME_CAPTURE_NAMES,
-  OPENCODE_IDENTITIES,
   sha256,
   type RawOrigin,
   type RuntimeCaptureName,
@@ -116,12 +115,23 @@ async function revalidateBeforeExecution(
   await Promise.all([
     ...Object.values(admission.roots).map(assertRootCurrent),
     ...Object.values(admission.execution).map(assertFileCurrent),
+    ...Object.values(admission.producerCandidate.files).map(assertFileCurrent),
   ]);
   await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
   const freshlyRehashedOpenCode = sha256(await readStable(admission.execution.openCode));
+  const openCodeProducer = admission.producerCandidate.payload.producers.find(
+    ({ role }) => role === 'opencode'
+  );
   if (
-    freshlyRehashedOpenCode !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
-    freshlyRehashedOpenCode !== admission.descriptor.openCode.linuxX64Binary.sha256
+    openCodeProducer === undefined ||
+    freshlyRehashedOpenCode !== openCodeProducer.executableSha256 ||
+    freshlyRehashedOpenCode !== admission.descriptor.openCode.linuxX64Binary.sha256 ||
+    sha256(await readStable(admission.producerCandidate.files.payload)) !==
+      admission.producerCandidate.binding.payloadSha256 ||
+    sha256(await readStable(admission.producerCandidate.files.signature)) !==
+      admission.producerCandidate.binding.signatureSha256 ||
+    sha256(await readStable(admission.producerCandidate.files.signerPublicKey)) !==
+      admission.producerCandidate.binding.signerPublicKeySha256
   ) {
     throw new Error('p3c_driver_candidate_rehash_mismatch');
   }
