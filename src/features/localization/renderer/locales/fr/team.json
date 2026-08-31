@@ -312,14 +312,14 @@
       "saved": "Enregistrer"
     },
     "worktree": {
-      "description": "Exécutez cette coéquipière dans un atelier git séparé. Appliquer/rejeter les changements cible que worktree, pas l'espace de travail principal.",
+      "description": "Coché : utilise un worktree Git distinct, créé au lancement si nécessaire. Les worktrees existants conservent leur branche actuelle. Décoché : utilise l'espace de travail partagé du projet ; l'ancien worktree est conservé.",
       "label": "Arbre de travail",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "Dernier espace de travail : {{path}}. Le worktree géré est réutilisé s'il est disponible ; sinon, il est créé au lancement.",
+      "new": "Worktree : réutilisé s'il est disponible, sinon créé au lancement. La branche sera affichée après le lancement.",
+      "shared": "Espace de travail partagé du projet : {{path}}. Utilise la branche du projet.",
+      "sharedPending": "Espace de travail partagé : déterminé au lancement avec le worktree du responsable. La branche sera affichée après le lancement.",
+      "branch": "Branche du worktree : {{branch}}",
+      "branchUnavailable": "Indisponible"
     },
     "addMembers": {
       "title": "Ajouter des membres",
@@ -1805,12 +1805,12 @@
       "title": "Membres",
       "addMember": "Ajouter un membre",
       "editAsJson": "Modifier comme JSON",
-      "runInSeparateWorktrees": "Exécuter des coéquipiers dans des ateliers distincts",
+      "runInSeparateWorktrees": "Worktree pour tous les membres de l'équipe",
       "agentTeamsMcpOnly": "Équipes d'agents MCP seulement",
       "removedCount": "Supprimé ({{count}})",
       "removedModelLockReason": "Les membres supprimés sont conservés pour l'historique de suppression. Restaurez-les pour modifier les paramètres.",
       "memberNamesUnique": "Les noms des membres doivent être uniques",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "Coché : worktrees distincts pour tous les membres. Mixte : uniquement pour les membres sélectionnés. Décoché : espace de travail partagé du projet. La désactivation conserve les worktrees existants sur le disque."
     },
     "stats": {
       "computing": "Calcul des statistiques...",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Avancé",
-    "useWorktree": "Utiliser l'arbre de travail",
+    "useWorktree": "Worktree du responsable (distinct des worktrees des autres membres)",
     "recent": "Récent",
     "commandPreview": "Aperçu des commandes",
     "customArguments": "Arguments personnalisés",

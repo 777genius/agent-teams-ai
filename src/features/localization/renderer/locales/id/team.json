@@ -312,14 +312,14 @@
       "saved": "Tersimpan"
     },
     "worktree": {
-      "description": "Jalankan tim ini di pohon kerja git terpisah. Terapkan / tolak perubahan target yang worktree, bukan area kerja utama.",
+      "description": "Dicentang: gunakan Git worktree terpisah, yang dibuat saat peluncuran jika diperlukan. Worktree yang sudah ada tetap menggunakan branch saat ini. Tidak dicentang: gunakan ruang kerja proyek bersama; worktree lama tetap disimpan.",
       "label": "worktree",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "Ruang kerja terakhir: {{path}}. Worktree terkelola digunakan kembali jika tersedia; jika tidak, dibuat saat peluncuran.",
+      "new": "Worktree: digunakan kembali jika tersedia, atau dibuat saat peluncuran. Branch akan ditampilkan setelah peluncuran.",
+      "shared": "Ruang kerja proyek bersama: {{path}}. Menggunakan branch proyek.",
+      "sharedPending": "Ruang kerja bersama: ditentukan saat peluncuran bersama worktree pemimpin. Branch akan ditampilkan setelah peluncuran.",
+      "branch": "Branch worktree: {{branch}}",
+      "branchUnavailable": "Tidak tersedia"
     },
     "addMembers": {
       "title": "Tambah Anggota",
@@ -1805,12 +1805,12 @@
       "title": "Anggota",
       "addMember": "Tambah anggota",
       "editAsJson": "Sunting sebagai JSON",
-      "runInSeparateWorktrees": "Menjalankan rekan tim di worktree terpisah",
+      "runInSeparateWorktrees": "Worktree untuk semua rekan tim",
       "agentTeamsMcpOnly": "Agen Tim MCP hanya",
       "removedCount": "Dibuang ({{count}})",
       "removedModelLockReason": "Anggota yang dibuang disimpan untuk menghapus sejarah lembut. Kembalikan mereka untuk menyunting pengaturan.",
       "memberNamesUnique": "Nama anggota harus unik",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "Dicentang: worktree terpisah untuk semua rekan tim. Sebagian: hanya untuk rekan tim yang dipilih. Tidak dicentang: ruang kerja proyek bersama. Menonaktifkan opsi ini akan tetap menyimpan worktree yang ada di disk."
     },
     "stats": {
       "computing": "Komputer statistik...",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Tingkat lanjut",
-    "useWorktree": "Gunakan pohon kerja",
+    "useWorktree": "Worktree pemimpin (terpisah dari worktree rekan tim)",
     "recent": "Terkini",
     "commandPreview": "Pratilik perintah",
     "customArguments": "Argumen gubahan",

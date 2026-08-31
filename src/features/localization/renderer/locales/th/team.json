@@ -312,14 +312,14 @@
       "saved": "บันทึกแล้ว"
     },
     "worktree": {
-      "description": "รันเพื่อนร่วมทีมคนนี้ใน git worktree แยกต่างหาก การยอมรับ/ปฏิเสธการเปลี่ยนแปลงจะกำหนดเป้าหมายไปที่ worktree นั้น ไม่ใช่พื้นที่ทำงานของหัวหน้า",
+      "description": "เลือก: ใช้ Git worktree แยกต่างหาก โดยสร้างเมื่อเริ่มทำงานหากจำเป็น worktree ที่มีอยู่จะคง branch ปัจจุบันไว้ ไม่เลือก: ใช้พื้นที่ทำงานร่วมของโปรเจกต์ โดยเก็บ worktree เดิมไว้",
       "label": "Worktree",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "พื้นที่ทำงานล่าสุด: {{path}} นำ worktree ที่จัดการไว้อยู่แล้วกลับมาใช้หากมี หรือสร้างเมื่อเริ่มทำงาน",
+      "new": "Worktree: นำกลับมาใช้หากมี หรือสร้างเมื่อเริ่มทำงาน branch จะแสดงหลังจากเริ่มทำงาน",
+      "shared": "พื้นที่ทำงานร่วมของโปรเจกต์: {{path}} ใช้ branch ของโปรเจกต์",
+      "sharedPending": "พื้นที่ทำงานร่วม: กำหนดเมื่อเริ่มทำงานพร้อมกับ worktree ของหัวหน้าทีม branch จะแสดงหลังจากเริ่มทำงาน",
+      "branch": "Branch ของ worktree: {{branch}}",
+      "branchUnavailable": "ไม่พร้อมใช้งาน"
     },
     "addMembers": {
       "title": "เพิ่มสมาชิก",
@@ -1805,12 +1805,12 @@
       "title": "สมาชิก",
       "addMember": "เพิ่มสมาชิก",
       "editAsJson": "แก้ไขเป็น JSON",
-      "runInSeparateWorktrees": "รันเพื่อนร่วมทีมใน worktree แยกต่างหาก",
+      "runInSeparateWorktrees": "ใช้ worktree สำหรับเพื่อนร่วมทีมทุกคน",
       "agentTeamsMcpOnly": "Agent Teams MCP เท่านั้น",
       "removedCount": "ลบแล้ว ({{count}})",
       "removedModelLockReason": "สมาชิกที่ถูกลบจะถูกเก็บไว้สำหรับประวัติการลบแบบนุ่มนวล กู้คืนเพื่อแก้ไขการตั้งค่า",
       "memberNamesUnique": "ชื่อสมาชิกต้องไม่ซ้ำกัน",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "เลือก: ใช้ worktree แยกสำหรับเพื่อนร่วมทีมทุกคน เลือกบางส่วน: ใช้เฉพาะเพื่อนร่วมทีมที่เลือก ไม่เลือก: ใช้พื้นที่ทำงานร่วมของโปรเจกต์ การปิดตัวเลือกนี้จะยังเก็บ worktree ที่มีอยู่ไว้บนดิสก์"
     },
     "stats": {
       "computing": "กำลังคำนวณสถิติ...",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "ขั้นสูง",
-    "useWorktree": "ใช้ worktree",
+    "useWorktree": "Worktree ของหัวหน้าทีม (แยกจาก worktree ของเพื่อนร่วมทีม)",
     "recent": "ล่าสุด",
     "commandPreview": "ตัวอย่างคำสั่ง",
     "customArguments": "อาร์กิวเมนต์กำหนดเอง",

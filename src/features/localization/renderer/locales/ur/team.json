@@ -312,14 +312,14 @@
       "saved": "محفوظ کریں"
     },
     "worktree": {
-      "description": "اس ٹیم کو ایک الگ گیٹ کے کام میں چلانے. اطلاق کرنا / اپنے کام کی جگہ پر کام کرنے والے نشانوں کا اطلاق کرنا",
+      "description": "منتخب ہونے پر: یہ ٹیم ممبر ایک علیحدہ worktree میں چلتا ہے۔ اگر موجودہ worktree دوبارہ استعمال کیا جائے تو وہ اپنی موجودہ checkout شدہ برانچ پر ہی کام جاری رکھتا ہے۔ اگر worktree موجود نہ ہو تو اسے لانچ کے وقت بنایا جاتا ہے۔ غیر منتخب ہونے پر: پروجیکٹ کی مشترکہ ورک اسپیس استعمال کرتا ہے۔ انتخاب ہٹانے سے موجودہ worktree حذف نہیں ہوتا۔",
       "label": "جگہ",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "آخری ورک اسپیس: {{path}}۔ دستیاب ہونے پر منظم worktree دوبارہ استعمال ہوگا، ورنہ لانچ کے وقت بنایا جائے گا۔",
+      "new": "Worktree: دستیاب ہونے پر دوبارہ استعمال ہوگا، ورنہ لانچ کے وقت بنایا جائے گا۔ برانچ لانچ کے بعد دکھائی جائے گی۔",
+      "shared": "پروجیکٹ کی مشترکہ ورک اسپیس: {{path}}۔ پروجیکٹ کی برانچ استعمال کرتی ہے۔",
+      "sharedPending": "مشترکہ ورک اسپیس: لانچ کے وقت لیڈ کے worktree کے ساتھ طے ہوگی۔ برانچ لانچ کے بعد دکھائی جائے گی۔",
+      "branch": "Worktree برانچ: {{branch}}",
+      "branchUnavailable": "دستیاب نہیں"
     },
     "addMembers": {
       "title": "ارکان شامل کریں",
@@ -1805,12 +1805,12 @@
       "title": "ممبر",
       "addMember": "ممبر شامل کریں",
       "editAsJson": "مرتب کرو JSON",
-      "runInSeparateWorktrees": "مختلف کام کے درختوں میں ٹیمیں چلاتی ہیں",
+      "runInSeparateWorktrees": "ٹیم کے تمام ممبرز کو علیحدہ worktrees میں چلائیں",
       "agentTeamsMcpOnly": "ایجنٹ ٹیمیں MCP صرف",
       "removedCount": "Removed ({{count}})",
       "removedModelLockReason": "خارج شدہ ارکان کو نرم حذف تاریخ کے لیے رکھا جاتا ہے۔ انہیں ترتیبات بدلنے کی کوشش کریں ۔",
       "memberNamesUnique": "ممبر ناموں کو منفرد ہونا چاہئے",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "منتخب: تمام ٹیم ممبرز کے لیے علیحدہ worktrees۔ جزوی: صرف منتخب ٹیم ممبرز کے لیے۔ غیر منتخب: پروجیکٹ کی مشترکہ ورک اسپیس۔ اسے بند کرنے سے موجودہ worktrees ڈسک پر برقرار رہیں گے۔"
     },
     "stats": {
       "computing": ". . .",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "اعلی",
-    "useWorktree": "کام کے درخت استعمال کریں",
+    "useWorktree": "ٹیم لیڈ کو ایک علیحدہ worktree میں چلائیں۔ ٹیم ممبرز کے worktrees اوپر کنفیگر کیے جاتے ہیں۔",
     "recent": "حال",
     "commandPreview": "کمانڈ پیشگی منظر",
     "customArguments": "منطقی دلائل",

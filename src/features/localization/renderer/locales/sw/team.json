@@ -312,14 +312,14 @@
       "saved": "Imehifadhiwa"
     },
     "worktree": {
-      "description": "Endesha mwenzako huyu wa timu katika git worktree tofauti. Kukubali/kukataa mabadiliko kunalenga worktree hiyo, si eneo-kazi la kiongozi.",
+      "description": "Ikichaguliwa: mwanatimu huyu anaendeshwa katika worktree tofauti. Worktree iliyopo ikitumiwa tena, inaendelea kwenye tawi lake lililo checkout kwa sasa. Ikiwa worktree haipo, itaundwa wakati wa uzinduzi. Isipochaguliwa: anatumia eneo la kazi la pamoja la mradi. Kuondoa chaguo hakufuti worktree iliyopo.",
       "label": "Worktree",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "Eneo la kazi la mwisho: {{path}}. Worktree inayosimamiwa itatumika tena ikiwa inapatikana; vinginevyo itaundwa wakati wa uzinduzi.",
+      "new": "Worktree: itatumika tena ikiwa inapatikana, vinginevyo itaundwa wakati wa uzinduzi. Tawi litaonyeshwa baada ya uzinduzi.",
+      "shared": "Eneo la kazi la pamoja la mradi: {{path}}. Linatumia tawi la mradi.",
+      "sharedPending": "Eneo la kazi la pamoja: litaamuliwa wakati wa uzinduzi pamoja na worktree ya kiongozi. Tawi litaonyeshwa baada ya uzinduzi.",
+      "branch": "Tawi la worktree: {{branch}}",
+      "branchUnavailable": "Haipatikani"
     },
     "addMembers": {
       "title": "Ongeza Wanachama",
@@ -1805,12 +1805,12 @@
       "title": "Wanachama",
       "addMember": "Ongeza mwanachama",
       "editAsJson": "Hariri kama JSON",
-      "runInSeparateWorktrees": "Endesha wenzako wa timu katika worktree tofauti",
+      "runInSeparateWorktrees": "Endesha wanatimu wote katika worktrees tofauti",
       "agentTeamsMcpOnly": "Agent Teams MCP pekee",
       "removedCount": "Waliondolewa ({{count}})",
       "removedModelLockReason": "Wanachama walioondolewa wanahifadhiwa kwa historia ya ufutaji laini. Warejeshe ili kuhariri mipangilio.",
       "memberNamesUnique": "Majina ya wanachama lazima yawe ya kipekee",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "Imechaguliwa: worktrees tofauti kwa wanatimu wote. Mchanganyiko: kwa wanatimu waliochaguliwa pekee. Haijachaguliwa: eneo la kazi la pamoja la mradi. Kuzima chaguo hili huacha worktrees zilizopo kwenye diski."
     },
     "stats": {
       "computing": "Inakokotoa takwimu...",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Kina",
-    "useWorktree": "Tumia worktree",
+    "useWorktree": "Endesha kiongozi wa timu katika worktree tofauti. Worktrees za wanatimu zinasanidiwa hapo juu.",
     "recent": "Hivi karibuni",
     "commandPreview": "Hakikisho la amri",
     "customArguments": "Hoja maalum",

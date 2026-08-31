@@ -312,14 +312,14 @@
       "saved": "Opgeslagen"
     },
     "worktree": {
-      "description": "Voer dit teamlid uit in een aparte git-worktree. Wijzigingen toepassen/afwijzen richt zich op die worktree, niet op de lead-werkruimte.",
+      "description": "Aangevinkt: gebruik een aparte Git-worktree, die indien nodig bij het starten wordt aangemaakt. Bestaande worktrees behouden hun huidige branch. Niet aangevinkt: gebruik de gedeelde projectwerkruimte; de oude worktree blijft behouden.",
       "label": "Worktree",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "Laatste werkruimte: {{path}}. De beheerde worktree wordt indien beschikbaar hergebruikt; anders wordt deze bij het starten aangemaakt.",
+      "new": "Worktree: wordt indien beschikbaar hergebruikt, anders bij het starten aangemaakt. De branch wordt na het starten weergegeven.",
+      "shared": "Gedeelde projectwerkruimte: {{path}}. Gebruikt de branch van het project.",
+      "sharedPending": "Gedeelde werkruimte: wordt bij het starten samen met de worktree van de teamleider bepaald. De branch wordt na het starten weergegeven.",
+      "branch": "Worktree-branch: {{branch}}",
+      "branchUnavailable": "Niet beschikbaar"
     },
     "addMembers": {
       "title": "Leden toevoegen",
@@ -1805,12 +1805,12 @@
       "title": "Leden",
       "addMember": "Lid toevoegen",
       "editAsJson": "Bewerken als JSON",
-      "runInSeparateWorktrees": "Teamleden in aparte worktrees uitvoeren",
+      "runInSeparateWorktrees": "Worktree voor alle teamleden",
       "agentTeamsMcpOnly": "Alleen Agent Teams MCP",
       "removedCount": "Verwijderd ({{count}})",
       "removedModelLockReason": "Verwijderde leden worden bewaard voor de soft-delete-geschiedenis. Herstel ze om instellingen te bewerken.",
       "memberNamesUnique": "Ledennamen moeten uniek zijn",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "Aangevinkt: aparte worktrees voor alle teamleden. Gemengd: alleen voor geselecteerde teamleden. Niet aangevinkt: gedeelde projectwerkruimte. Bij uitschakelen blijven bestaande worktrees op de schijf staan."
     },
     "stats": {
       "computing": "Statistieken berekenen...",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "Geavanceerd",
-    "useWorktree": "Worktree gebruiken",
+    "useWorktree": "Worktree van de teamleider (apart van de worktrees van teamleden)",
     "recent": "Recent",
     "commandPreview": "Commandovoorbeeld",
     "customArguments": "Aangepaste argumenten",

@@ -312,14 +312,14 @@
       "saved": "ذخیره شد"
     },
     "worktree": {
-      "description": "این هم‌تیمی را در یک git worktree جداگانه اجرا کنید. اعمال/رد تغییرات آن worktree را هدف قرار می‌دهد، نه فضای کاری سرتیم را.",
+      "description": "در حالت انتخاب: این هم‌تیمی در یک worktree جداگانه اجرا می‌شود. اگر worktree موجود دوباره استفاده شود، کار را روی شاخه‌ای که اکنون در آن checkout شده ادامه می‌دهد. اگر worktree وجود نداشته باشد، هنگام اجرا ساخته می‌شود. در حالت عدم انتخاب: از فضای کاری مشترک پروژه استفاده می‌کند. برداشتن انتخاب، worktree موجود را حذف نمی‌کند.",
       "label": "Worktree",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "آخرین فضای کاری: {{path}}. اگر worktree مدیریت‌شده موجود باشد دوباره استفاده می‌شود؛ در غیر این صورت هنگام اجرا ساخته می‌شود.",
+      "new": "Worktree: اگر موجود باشد دوباره استفاده می‌شود، وگرنه هنگام اجرا ساخته می‌شود. شاخه پس از اجرا نمایش داده می‌شود.",
+      "shared": "فضای کاری مشترک پروژه: {{path}}. از شاخه پروژه استفاده می‌کند.",
+      "sharedPending": "فضای کاری مشترک: هنگام اجرا همراه با worktree رهبر تعیین می‌شود. شاخه پس از اجرا نمایش داده می‌شود.",
+      "branch": "شاخه worktree: {{branch}}",
+      "branchUnavailable": "در دسترس نیست"
     },
     "addMembers": {
       "title": "افزودن اعضا",
@@ -1805,12 +1805,12 @@
       "title": "اعضا",
       "addMember": "افزودن عضو",
       "editAsJson": "ویرایش به‌صورت JSON",
-      "runInSeparateWorktrees": "اجرای هم‌تیمی‌ها در worktreeهای جداگانه",
+      "runInSeparateWorktrees": "اجرای همه هم‌تیمی‌ها در worktreeهای جداگانه",
       "agentTeamsMcpOnly": "فقط MCP مربوط به Agent Teams",
       "removedCount": "حذف‌شده ({{count}})",
       "removedModelLockReason": "اعضای حذف‌شده برای تاریخچه حذف نرم نگه داشته می‌شوند. برای ویرایش تنظیمات آن‌ها را بازیابی کنید.",
       "memberNamesUnique": "نام اعضا باید یکتا باشند",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "انتخاب‌شده: worktreeهای جداگانه برای همه هم‌تیمی‌ها. حالت ترکیبی: فقط هم‌تیمی‌های انتخاب‌شده. انتخاب‌نشده: فضای کاری مشترک پروژه. با غیرفعال کردن این گزینه، worktreeهای موجود روی دیسک باقی می‌مانند."
     },
     "stats": {
       "computing": "در حال محاسبه آمار...",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "پیشرفته",
-    "useWorktree": "استفاده از worktree",
+    "useWorktree": "رهبر تیم را در یک worktree جداگانه اجرا کنید. worktreeهای هم‌تیمی‌ها در بالا پیکربندی می‌شوند.",
     "recent": "اخیر",
     "commandPreview": "پیش‌نمایش فرمان",
     "customArguments": "آرگومان‌های سفارشی",

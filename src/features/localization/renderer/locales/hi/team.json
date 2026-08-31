@@ -312,14 +312,14 @@
       "saved": "सेव"
     },
     "worktree": {
-      "description": "इस टीममेट को एक अलग गिट वर्कट्री में चलाएं। लागू करें / अस्वीकार करें परिवर्तन लक्ष्य है कि worktree, नहीं नेतृत्व कार्यक्षेत्र.",
+      "description": "चुना होने पर: यह टीम सदस्य एक अलग worktree में चलता है। यदि किसी मौजूदा worktree का दोबारा उपयोग किया जाता है, तो वह वर्तमान में checkout की गई ब्रांच पर ही काम जारी रखता है। यदि worktree मौजूद नहीं है, तो उसे लॉन्च के समय बनाया जाता है। नहीं चुना होने पर: साझा प्रोजेक्ट कार्यक्षेत्र का उपयोग करता है। चयन हटाने से मौजूदा worktree नहीं मिटता।",
       "label": "कर्मचारी",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "पिछला कार्यक्षेत्र: {{path}}। उपलब्ध होने पर प्रबंधित worktree का दोबारा उपयोग किया जाएगा; अन्यथा इसे लॉन्च के समय बनाया जाएगा।",
+      "new": "Worktree: उपलब्ध होने पर दोबारा उपयोग किया जाएगा, अन्यथा लॉन्च के समय बनाया जाएगा। ब्रांच लॉन्च के बाद दिखाई जाएगी।",
+      "shared": "साझा प्रोजेक्ट कार्यक्षेत्र: {{path}}। यह प्रोजेक्ट की ब्रांच का उपयोग करता है।",
+      "sharedPending": "साझा कार्यक्षेत्र: लॉन्च के समय लीड के worktree के साथ तय किया जाएगा। ब्रांच लॉन्च के बाद दिखाई जाएगी।",
+      "branch": "Worktree ब्रांच: {{branch}}",
+      "branchUnavailable": "उपलब्ध नहीं"
     },
     "addMembers": {
       "title": "सदस्य जोड़ें",
@@ -1805,12 +1805,12 @@
       "title": "सदस्य",
       "addMember": "सदस्य जोड़ें",
       "editAsJson": "JSON",
-      "runInSeparateWorktrees": "अलग-अलग कार्य क्षेत्र में टीममेट्स रन करें",
+      "runInSeparateWorktrees": "सभी टीम सदस्यों को अलग-अलग worktrees में चलाएँ",
       "agentTeamsMcpOnly": "एजेंट टीम केवल MCP",
       "removedCount": "हटा दिया गया{{count}})",
       "removedModelLockReason": "हटाए गए सदस्यों को सॉफ्ट डिलीट इतिहास के लिए रखा जाता है। उन्हें सेटिंग्स संपादित करने के लिए पुनर्स्थापित करें।",
       "memberNamesUnique": "सदस्य नाम होना चाहिए",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "चुना हुआ: सभी टीम सदस्यों के लिए अलग worktrees। मिश्रित: केवल चुने हुए टीम सदस्यों के लिए। नहीं चुना हुआ: साझा प्रोजेक्ट कार्यक्षेत्र। इसे बंद करने पर मौजूदा worktrees डिस्क पर बने रहेंगे।"
     },
     "stats": {
       "computing": "कम्प्यूटिंग आँकड़े...",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "उन्नत",
-    "useWorktree": "वर्कट्री का उपयोग करें",
+    "useWorktree": "टीम लीड को एक अलग worktree में चलाएँ। टीम सदस्यों के worktrees ऊपर कॉन्फ़िगर किए जाते हैं।",
     "recent": "हाल का",
     "commandPreview": "कमांड पूर्वावलोकन",
     "customArguments": "कस्टम तर्क",

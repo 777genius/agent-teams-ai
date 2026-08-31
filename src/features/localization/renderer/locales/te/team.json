@@ -312,14 +312,14 @@
       "saved": "సేవ్ చేయబడింది"
     },
     "worktree": {
-      "description": "ఈ టీమ్‌మేట్‌ను ప్రత్యేక git worktree లో రన్ చేయండి. మార్పులను వర్తింపజేయడం/తిరస్కరించడం లీడ్ వర్క్‌స్పేస్ కాకుండా ఆ worktree ను లక్ష్యంగా చేసుకుంటుంది.",
+      "description": "ఎంచుకున్నప్పుడు: ఈ టీమ్ సభ్యుడు ప్రత్యేక worktreeలో రన్ అవుతాడు. ఇప్పటికే ఉన్న worktreeను మళ్లీ ఉపయోగిస్తే, ప్రస్తుతం checkout చేసిన బ్రాంచ్‌పైనే పని కొనసాగిస్తాడు. worktree లేకపోతే, ప్రారంభించేటప్పుడు అది సృష్టించబడుతుంది. ఎంచుకోనప్పుడు: షేర్ చేసిన ప్రాజెక్ట్ వర్క్‌స్పేస్‌ను ఉపయోగిస్తాడు. ఎంపికను తీసివేయడం వల్ల ఇప్పటికే ఉన్న worktree తొలగించబడదు.",
       "label": "Worktree",
-      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
-      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
-      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
-      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
-      "branch": "Worktree branch: {{branch}}",
-      "branchUnavailable": "Not available"
+      "existing": "చివరి వర్క్‌స్పేస్: {{path}}. నిర్వహిత worktree అందుబాటులో ఉంటే మళ్లీ ఉపయోగించబడుతుంది; లేకపోతే ప్రారంభించేటప్పుడు సృష్టించబడుతుంది.",
+      "new": "Worktree: అందుబాటులో ఉంటే మళ్లీ ఉపయోగించబడుతుంది; లేకపోతే ప్రారంభించేటప్పుడు సృష్టించబడుతుంది. ప్రారంభించిన తర్వాత బ్రాంచ్ చూపబడుతుంది.",
+      "shared": "షేర్ చేసిన ప్రాజెక్ట్ వర్క్‌స్పేస్: {{path}}. ప్రాజెక్ట్ బ్రాంచ్‌ను ఉపయోగిస్తుంది.",
+      "sharedPending": "షేర్ చేసిన వర్క్‌స్పేస్: ప్రారంభించేటప్పుడు లీడ్ worktreeతో కలిసి నిర్ణయించబడుతుంది. ప్రారంభించిన తర్వాత బ్రాంచ్ చూపబడుతుంది.",
+      "branch": "Worktree బ్రాంచ్: {{branch}}",
+      "branchUnavailable": "అందుబాటులో లేదు"
     },
     "addMembers": {
       "title": "సభ్యులను జోడించు",
@@ -1805,12 +1805,12 @@
       "title": "సభ్యులు",
       "addMember": "సభ్యుడిని జోడించు",
       "editAsJson": "JSON గా సవరించు",
-      "runInSeparateWorktrees": "టీమ్‌మేట్‌లను ప్రత్యేక worktrees లో రన్ చేయి",
+      "runInSeparateWorktrees": "టీమ్ సభ్యులందరినీ ప్రత్యేక worktreesలో రన్ చేయండి",
       "agentTeamsMcpOnly": "Agent Teams MCP మాత్రమే",
       "removedCount": "తీసివేయబడింది ({{count}})",
       "removedModelLockReason": "తీసివేయబడిన సభ్యులు సాఫ్ట్ డిలీట్ చరిత్ర కోసం ఉంచబడ్డారు. సెట్టింగ్‌లను సవరించడానికి వాటిని పునరుద్ధరించండి.",
       "memberNamesUnique": "సభ్యుల పేర్లు ప్రత్యేకంగా ఉండాలి",
-      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
+      "worktreeDescription": "ఎంచుకున్నది: టీమ్ సభ్యులందరికీ ప్రత్యేక worktrees. మిశ్రమం: ఎంచుకున్న టీమ్ సభ్యులకు మాత్రమే. ఎంచుకోనిది: షేర్ చేసిన ప్రాజెక్ట్ వర్క్‌స్పేస్. దీన్ని ఆఫ్ చేసినా ఇప్పటికే ఉన్న worktrees డిస్క్‌లోనే ఉంటాయి."
     },
     "stats": {
       "computing": "గణాంకాలను లెక్కిస్తోంది...",
@@ -2408,7 +2408,7 @@
   },
   "advancedCli": {
     "title": "ఆధునిక",
-    "useWorktree": "worktree ఉపయోగించు",
+    "useWorktree": "టీమ్ లీడ్‌ను ప్రత్యేక worktreeలో రన్ చేయండి. టీమ్ సభ్యుల worktrees పైన కాన్ఫిగర్ చేయబడతాయి.",
     "recent": "ఇటీవలి",
     "commandPreview": "కమాండ్ ప్రివ్యూ",
     "customArguments": "కస్టమ్ ఆర్గ్యుమెంట్‌లు",
