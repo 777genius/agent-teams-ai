@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { createHash } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { createHash, randomUUID } from 'node:crypto';
+import { mkdir, open, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 const FORMAT = 'hosted-state-compatibility-manifest/v1';
@@ -48,9 +48,16 @@ export async function generateBuiltStateManifest(outputPath = DEFAULT_OUTPUT) {
 }
 
 async function writeAtomic(path, body) {
-  const staging = `${path}.staging`;
-  await writeFile(staging, body, { encoding: 'utf8', flag: 'wx', mode: 0o644 });
-  await rename(staging, path);
+  const staging = `${path}.${randomUUID()}.staging`;
+  const handle = await open(staging, 'wx', 0o644);
+  try {
+    await handle.writeFile(body, 'utf8');
+    await handle.close();
+    await rename(staging, path);
+  } finally {
+    await handle.close();
+    await rm(staging, { force: true });
+  }
 }
 
 function parseArguments(args) {

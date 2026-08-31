@@ -108,7 +108,17 @@ export async function copyVerifiedDescriptor(
       const { bytesRead } = await sourceHandle.read(buffer, 0, length, position);
       if (bytesRead === 0) throw new Error('stopped_stack_archive_entry_truncated');
       copiedHash.update(buffer.subarray(0, bytesRead));
-      await destinationHandle.write(buffer, 0, bytesRead, position);
+      let written = 0;
+      while (written < bytesRead) {
+        const { bytesWritten } = await destinationHandle.write(
+          buffer,
+          written,
+          bytesRead - written,
+          position + written
+        );
+        if (bytesWritten === 0) throw new Error('stopped_stack_archive_entry_write_truncated');
+        written += bytesWritten;
+      }
       position += bytesRead;
     }
     const after = await sourceHandle.stat();
