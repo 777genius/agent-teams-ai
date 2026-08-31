@@ -13,8 +13,6 @@ export const LEGACY_HOSTED_OWNER_LOCK_FILENAME = 'hosted-lifecycle-owner-runtime
 
 const SHA256 = /^sha256:[a-f0-9]{64}$/u;
 const GIT_OBJECT_ID = /^[a-f0-9]{40}$/u;
-const VERSION =
-  /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/u;
 const TAG = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const CAPABILITY = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/u;
 const TEXT = /^[\x20-\x7e]+$/u;
@@ -31,9 +29,75 @@ const stringMatching = (pattern, description) => (value, path) => {
 
 const sha256 = stringMatching(SHA256, 'a lowercase sha256:<64-hex> digest');
 const gitObjectId = stringMatching(GIT_OBJECT_ID, 'a lowercase 40-hex Git object ID');
-const version = stringMatching(VERSION, 'an explicit semantic version');
+const version = (value, path) => {
+  if (typeof value !== 'string' || !isSemanticVersion(value)) {
+    fail(path, 'must be an explicit semantic version');
+  }
+};
 const tag = stringMatching(TAG, 'an explicit immutable tag');
 const text = stringMatching(TEXT, 'non-empty printable ASCII text');
+
+function isSemanticVersion(value) {
+  const buildSeparator = value.indexOf('+');
+  const versionAndPrerelease =
+    buildSeparator === -1 ? value : value.slice(0, buildSeparator);
+  const build = buildSeparator === -1 ? undefined : value.slice(buildSeparator + 1);
+  if (build !== undefined && !hasValidIdentifiers(build, false)) return false;
+
+  const prereleaseSeparator = versionAndPrerelease.indexOf('-');
+  const core =
+    prereleaseSeparator === -1
+      ? versionAndPrerelease
+      : versionAndPrerelease.slice(0, prereleaseSeparator);
+  const prerelease =
+    prereleaseSeparator === -1
+      ? undefined
+      : versionAndPrerelease.slice(prereleaseSeparator + 1);
+  if (prerelease !== undefined && !hasValidIdentifiers(prerelease, true)) return false;
+
+  const coreIdentifiers = core.split('.');
+  return coreIdentifiers.length === 3 && coreIdentifiers.every(isCanonicalNumericIdentifier);
+}
+
+function hasValidIdentifiers(value, rejectLeadingZeroes) {
+  const identifiers = value.split('.');
+  return identifiers.every(
+    (identifier) =>
+      identifier.length > 0 &&
+      isAsciiAlphanumericOrHyphen(identifier) &&
+      (!rejectLeadingZeroes ||
+        !isNumericIdentifier(identifier) ||
+        isCanonicalNumericIdentifier(identifier))
+  );
+}
+
+function isCanonicalNumericIdentifier(value) {
+  return isNumericIdentifier(value) && (value.length === 1 || value[0] !== '0');
+}
+
+function isNumericIdentifier(value) {
+  if (value.length === 0) return false;
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code < 48 || code > 57) return false;
+  }
+  return true;
+}
+
+function isAsciiAlphanumericOrHyphen(value) {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (
+      code !== 45 &&
+      (code < 48 || code > 57) &&
+      (code < 65 || code > 90) &&
+      (code < 97 || code > 122)
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
 
 const safeRelativePath = (value, path) => {
   if (typeof value !== 'string' || value.length === 0 || Buffer.byteLength(value, 'utf8') > 240) {

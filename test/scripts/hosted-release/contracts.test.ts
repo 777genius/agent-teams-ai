@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { execFileSync } from 'node:child_process';
 import { link, mkdir, mkdtemp, realpath, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -270,7 +271,14 @@ describe('hosted release lock contracts', () => {
   });
 
   it('enforces strict SemVer grammar without leading-zero numeric identifiers', () => {
-    for (const validVersion of ['1.2.3-alpha.1+build.01', '1.2.3-123abc']) {
+    for (const validVersion of [
+      '0.0.0',
+      '1.2.3-alpha.1+build.01',
+      '1.2.3-0',
+      '1.2.3-01a',
+      '1.2.3-123abc',
+      '1.2.3-x-y-z.--+build.000',
+    ]) {
       const valid = ownerFixture();
       valid.toolchain.nodeVersion = validVersion;
       expect(parseOwnerLock(canonicalJsonBytes(valid)).toolchain.nodeVersion).toBe(validVersion);
@@ -285,11 +293,38 @@ describe('hosted release lock contracts', () => {
       '1.0.0-',
       '1.0.0-alpha..1',
       '1.0.0+',
+      '1.0.0+build..1',
+      '1.0.0-alpha+build+second',
+      '1.0.0-alpha_beta',
+      '1.0.0-α',
     ]) {
       const invalid = ownerFixture();
       invalid.toolchain.nodeVersion = invalidVersion;
       expect(() => parseOwnerLock(canonicalJsonBytes(invalid))).toThrow(/semantic version/);
     }
+  });
+
+  it('rejects long adversarial SemVer input within a bounded subprocess', () => {
+    const invalid = ownerFixture();
+    invalid.toolchain.nodeVersion = `0.0.0-0.${'--.'.repeat(20_000)}`;
+    const contractsUrl = new URL('../../../scripts/hosted-release/contracts.mjs', import.meta.url).href;
+    const script = `
+      import { readFileSync } from 'node:fs';
+      import { parseOwnerLock } from ${JSON.stringify(contractsUrl)};
+      try {
+        parseOwnerLock(readFileSync(0));
+        process.stdout.write('accepted');
+      } catch (error) {
+        process.stdout.write(String(error));
+      }
+    `;
+
+    const output = execFileSync(process.execPath, ['--input-type=module', '--eval', script], {
+      encoding: 'utf8',
+      input: canonicalJsonBytes(invalid),
+      timeout: 2_000,
+    });
+    expect(output).toContain('must be an explicit semantic version');
   });
 
   it('rejects unsafe paths and non-canonical capability sets', () => {
