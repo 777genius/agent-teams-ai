@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "এই টিমের কাজ করো. উদ্দেশ্য/ কর্ম সংক্রান্ত সূচনাকারীগুলি দ্বারা প্রধান কর্মক্ষেত্রের তথ্য প্রয়োগ করা হবে না।",
-      "label": "কার্যদিবস"
+      "label": "কার্যদিবস",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "সদস্য যোগ করুন",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "এজেন্ট টিমস MCP শুধুমাত্র",
       "removedCount": "Removed ({{count}})",
       "removedModelLockReason": "সকল সদস্যকে সরিয়ে দেওয়া হয়েছে নরম ইতিহাস মুছে ফেলার জন্য। বৈশিষ্ট্যগুলির মান পুনরায় লোড করা হবে",
-      "memberNamesUnique": "নাম হতে হবে"
+      "memberNamesUnique": "নাম হতে হবে",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "পরিসংখ্যান:",

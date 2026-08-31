@@ -313,8 +313,14 @@
       "saved": "Saved"
     },
     "worktree": {
-      "description": "Run this teammate in a separate git worktree. Apply/reject changes targets that worktree, not the lead workspace.",
-      "label": "Worktree"
+      "description": "Checked: use a separate Git worktree, created on launch if needed. Existing worktrees keep their current branch. Unchecked: use the shared project workspace; the old worktree is kept.",
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch."
     },
     "addMembers": {
       "title": "Add Members",
@@ -1841,11 +1847,12 @@
       "title": "Members",
       "addMember": "Add member",
       "editAsJson": "Edit as JSON",
-      "runInSeparateWorktrees": "Run teammates in separate worktrees",
+      "runInSeparateWorktrees": "Worktree for all teammates",
       "agentTeamsMcpOnly": "Agent Teams MCP only",
       "removedCount": "Removed ({{count}})",
       "removedModelLockReason": "Removed members are kept for soft delete history. Restore them to edit settings.",
-      "memberNamesUnique": "Member names must be unique"
+      "memberNamesUnique": "Member names must be unique",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "Computing stats...",
@@ -2448,7 +2455,7 @@
   },
   "advancedCli": {
     "title": "Advanced",
-    "useWorktree": "Use worktree",
+    "useWorktree": "Lead worktree (separate from teammate worktrees)",
     "recent": "Recent",
     "commandPreview": "Command preview",
     "customArguments": "Custom arguments",

@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { TooltipProvider } from '@renderer/components/ui/tooltip';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@renderer/components/ui/button', () => ({
@@ -177,22 +178,24 @@ function renderMembersEditor(props: {
 
   const render = (members: MemberDraft[]): void => {
     root.render(
-      <MembersEditorSection
-        members={members}
-        onChange={onChange}
-        showWorktreeIsolationControls
-        teammateWorktreeDefault={props.teammateWorktreeDefault}
-        softDeleteMembers={props.softDeleteMembers}
-        inheritedProviderId={props.inheritedProviderId}
-        defaultProviderId={props.defaultProviderId}
-        inheritedEffort={props.inheritedEffort}
-        limitContext={props.limitContext}
-        runtimeProviderStatusById={props.runtimeProviderStatusById}
-        singleMemberMode={props.singleMemberMode}
-        leadRuntimeSettingsOnly={props.leadRuntimeSettingsOnly}
-        identityLockReason="locked"
-        draftKeyPrefix="worktree-test"
-      />
+      <TooltipProvider>
+        <MembersEditorSection
+          members={members}
+          onChange={onChange}
+          showWorktreeIsolationControls
+          teammateWorktreeDefault={props.teammateWorktreeDefault}
+          softDeleteMembers={props.softDeleteMembers}
+          inheritedProviderId={props.inheritedProviderId}
+          defaultProviderId={props.defaultProviderId}
+          inheritedEffort={props.inheritedEffort}
+          limitContext={props.limitContext}
+          runtimeProviderStatusById={props.runtimeProviderStatusById}
+          singleMemberMode={props.singleMemberMode}
+          leadRuntimeSettingsOnly={props.leadRuntimeSettingsOnly}
+          identityLockReason="locked"
+          draftKeyPrefix="worktree-test"
+        />
+      </TooltipProvider>
     );
   };
 

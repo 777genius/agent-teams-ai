@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { MemberBranchBadge } from '@renderer/components/team/members/MemberBranchBadge';
 import { Badge } from '@renderer/components/ui/badge';
 import { SyncedLoader2 } from '@renderer/components/ui/SyncedLoader2';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -36,7 +37,6 @@ import {
   Check,
   Clock3,
   Cpu,
-  GitBranch,
   HardDrive,
   Info,
   Layers3,
@@ -1112,12 +1112,6 @@ export const MemberCard = memo(function MemberCard({
               <span className="shrink-0 font-medium text-[var(--color-text)]">
                 {displayMemberName(member.name)}
               </span>
-              {member.gitBranch && !showWorkspaceBadge ? (
-                <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-[var(--color-text-muted)]">
-                  <GitBranch size={10} />
-                  {member.gitBranch}
-                </span>
-              ) : null}
               {showWorkspaceBadge ? (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1556,6 +1550,7 @@ export const MemberCard = memo(function MemberCard({
             </div>
           ) : null}
         </div>
+        <MemberBranchBadge branch={member.gitBranch} />
       </div>
     </div>
   );

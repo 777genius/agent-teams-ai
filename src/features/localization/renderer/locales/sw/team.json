@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "Endesha mwenzako huyu wa timu katika git worktree tofauti. Kukubali/kukataa mabadiliko kunalenga worktree hiyo, si eneo-kazi la kiongozi.",
-      "label": "Worktree"
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "Ongeza Wanachama",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "Agent Teams MCP pekee",
       "removedCount": "Waliondolewa ({{count}})",
       "removedModelLockReason": "Wanachama walioondolewa wanahifadhiwa kwa historia ya ufutaji laini. Warejeshe ili kuhariri mipangilio.",
-      "memberNamesUnique": "Majina ya wanachama lazima yawe ya kipekee"
+      "memberNamesUnique": "Majina ya wanachama lazima yawe ya kipekee",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "Inakokotoa takwimu...",

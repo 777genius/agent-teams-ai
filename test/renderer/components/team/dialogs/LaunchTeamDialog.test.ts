@@ -75,6 +75,8 @@ const storeState = {
   createSchedule,
   updateSchedule,
   repositoryGroups: [],
+  branchByPath: { '/tmp/project': 'main', '/tmp/project/.worktrees/jack': 'feature/current-work' },
+  fetchBranches: vi.fn(async () => {}),
   selectedTeamName: 'team-alpha',
   launchParamsByTeam: {},
   teamByName: {},
@@ -935,8 +937,24 @@ describe('LaunchTeamDialog', () => {
 
     expect(teamRosterEditorSectionMock.lastProps?.memberInfoById).toEqual({
       'draft-0':
-        'This teammate will continue from its existing worktree: /tmp/project/.worktrees/jack',
+        'Worktree branch: feature/current-work\nLast workspace: /tmp/project/.worktrees/jack. Managed worktree reused if available; otherwise created on launch.',
     });
+
+    const isolatedMembers = teamRosterEditorSectionMock.lastProps.members;
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onMembersChange(
+        isolatedMembers.map((member: any) => ({ ...member, isolation: undefined }))
+      );
+      await flush();
+    });
+    expect(teamRosterEditorSectionMock.lastProps.memberInfoById).toEqual({});
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onMembersChange(isolatedMembers);
+      await flush();
+    });
+    expect(teamRosterEditorSectionMock.lastProps.memberInfoById['draft-0']).toContain(
+      'Worktree branch: feature/current-work'
+    );
 
     await act(async () => {
       root.unmount();
@@ -1879,7 +1897,7 @@ describe('LaunchTeamDialog', () => {
 
     expect(teamRosterEditorSectionMock.lastProps?.memberInfoById).toEqual({
       'draft-0':
-        'This teammate will continue from its existing worktree: /tmp/project/.worktrees/jack',
+        'Worktree branch: feature/current-work\nLast workspace: /tmp/project/.worktrees/jack. Managed worktree reused if available; otherwise created on launch.',
     });
 
     await act(async () => {
@@ -3222,7 +3240,9 @@ describe('LaunchTeamDialog', () => {
       ],
     } as any;
     const projectScopeKey = getCliProviderStatusScopeKey('opencode', '/tmp/project');
-    storeState.cliProviderStatusByScope[projectScopeKey] = (storeState.cliStatus as any).providers[0];
+    storeState.cliProviderStatusByScope[projectScopeKey] = (
+      storeState.cliStatus as any
+    ).providers[0];
     fetchCliProviderStatus.mockResolvedValue(true);
 
     let resolvePrepare!: (value: {
@@ -3334,7 +3354,9 @@ describe('LaunchTeamDialog', () => {
         createAuthoritativeProviderStatus('anthropic', ['opus']),
       ],
     } as any;
-    storeState.cliProviderStatusByScope[projectScopeKey] = (storeState.cliStatus as any).providers[0];
+    storeState.cliProviderStatusByScope[projectScopeKey] = (
+      storeState.cliStatus as any
+    ).providers[0];
 
     await act(async () => {
       await renderDialog();
@@ -3415,9 +3437,8 @@ describe('LaunchTeamDialog', () => {
         createAuthoritativeProviderStatus('anthropic', ['sonnet']),
       ],
     } as any;
-    storeState.cliProviderStatusByScope[
-      getCliProviderStatusScopeKey('opencode', '/tmp/project')
-    ] = (storeState.cliStatus as any).providers[0];
+    storeState.cliProviderStatusByScope[getCliProviderStatusScopeKey('opencode', '/tmp/project')] =
+      (storeState.cliStatus as any).providers[0];
     fetchCliProviderStatus.mockResolvedValue(true);
     vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
       teamName: 'team-alpha',

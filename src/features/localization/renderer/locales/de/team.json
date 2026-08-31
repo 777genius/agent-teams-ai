@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "Führen Sie diesen Teamkollegen in einem separaten Git-Worktree. Bewerben / abwerfen Sie Ziele, die Arbeitstree, nicht den Lead-Workspace.",
-      "label": "Arbeitsstätte"
+      "label": "Arbeitsstätte",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "Mitglieder",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "Agent Teams MCP nur",
       "removedCount": "Entzogen ({{count}})",
       "removedModelLockReason": "Die entfernten Mitglieder werden für die Geschichte der Soft delete gehalten. Wiederherstellen Sie sie, um Einstellungen zu bearbeiten.",
-      "memberNamesUnique": "Die Mitgliedstaaten müssen eindeutig sein"
+      "memberNamesUnique": "Die Mitgliedstaaten müssen eindeutig sein",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "Statistiken...",

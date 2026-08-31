@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "별도의 git worktree에서 이 팀메이트를 실행하십시오. apply/reject는 worktree가 아닌 리드 워크스페이스가 아닌 대상을 변경합니다.",
-      "label": "워크 트리"
+      "label": "워크 트리",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "회원 가입",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "에이전트 팀 MCP 만",
       "removedCount": "제거 ({{count}})",
       "removedModelLockReason": "제거된 회원은 soft delete History에 보관됩니다. 설정을 편집합니다.",
-      "memberNamesUnique": "회원 이름은"
+      "memberNamesUnique": "회원 이름은",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "계산 통계...",

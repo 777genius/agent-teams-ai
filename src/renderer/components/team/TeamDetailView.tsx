@@ -23,6 +23,7 @@ import { classifyAnalyticsError, recordTeamStop } from '@renderer/analytics/prod
 import { api } from '@renderer/api';
 import { SessionPanel } from '@renderer/components/chat/session-panel';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
+import { resolveBranchDeviation } from '@renderer/components/team/members/memberWorkspace';
 import { Button } from '@renderer/components/ui/button';
 import {
   Dialog,
@@ -1956,13 +1957,14 @@ export const TeamDetailView = memo(function TeamDetailView({
       uniquePaths.set(key, trimmed);
     };
 
+    addPath(teamProjectPath);
     addPath(leadProjectPath);
     for (const member of members) {
       addPath(member.cwd);
     }
 
     return Array.from(uniquePaths.values());
-  }, [members, leadProjectPath]);
+  }, [members, leadProjectPath, teamProjectPath]);
   const activeBranchSyncPaths = useMemo(
     () => (isThisTabActive ? branchSyncPaths : []),
     [branchSyncPaths, isThisTabActive]
@@ -1981,19 +1983,23 @@ export const TeamDetailView = memo(function TeamDetailView({
   const leadBranch = leadProjectPath
     ? (trackedBranches[normalizePath(leadProjectPath)] ?? null)
     : null;
+  const commonProjectBranch = teamProjectPath
+    ? (trackedBranches[normalizePath(teamProjectPath)] ?? null)
+    : leadBranch;
   const hasSelectedTeamData = data !== null;
   const membersWithLiveBranches = useMemo(() => {
     if (!hasSelectedTeamData) return EMPTY_RESOLVED_MEMBERS;
 
     return members.map((member) => {
-      const memberPath = member.cwd?.trim();
-      const nextGitBranch =
-        memberPath && !isLeadMember(member) && leadBranch !== null
-          ? (() => {
-              const branch = trackedBranches[normalizePath(memberPath)] ?? null;
-              return branch && branch !== leadBranch ? branch : undefined;
-            })()
-          : undefined;
+      const memberPath =
+        member.cwd?.trim() ||
+        (member.isolation === 'worktree' ? null : (teamProjectPath ?? leadProjectPath));
+      const actualBranch = memberPath ? trackedBranches[normalizePath(memberPath)] : null;
+      const nextGitBranch = resolveBranchDeviation(
+        actualBranch,
+        commonProjectBranch,
+        member.isolation === 'worktree'
+      );
 
       if (member.gitBranch === nextGitBranch) {
         return member;
@@ -2007,7 +2013,14 @@ export const TeamDetailView = memo(function TeamDetailView({
       }
       return nextMember;
     });
-  }, [hasSelectedTeamData, leadBranch, members, trackedBranches]);
+  }, [
+    commonProjectBranch,
+    hasSelectedTeamData,
+    leadProjectPath,
+    members,
+    teamProjectPath,
+    trackedBranches,
+  ]);
   const resolvedMemberColorMap = useMemo(
     () => buildMemberColorMap(membersWithLiveBranches),
     [membersWithLiveBranches]

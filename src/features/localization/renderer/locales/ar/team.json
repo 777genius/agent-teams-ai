@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "أديروا هذا الفريق في مكان منفصل التطبيق/التغييرات في الأهداف التي تعمل، وليس مجال العمل الرئيسي.",
-      "label": "Worktree"
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "الأعضاء",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "الوكيل الأفرقة MCP فقط",
       "removedCount": "Removed ({{count}})",
       "removedModelLockReason": "ويُحتفظ بالأعضاء الذين يُنقلون من أجل تاريخ الحذف الناعم. أعدهم إلى أماكن التحرير",
-      "memberNamesUnique": "أسماء الأعضاء يجب أن تكون فريدة"
+      "memberNamesUnique": "أسماء الأعضاء يجب أن تكون فريدة",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "إحصائيات الكمبيوتر...",

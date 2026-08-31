@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "Rulează acest coechipier într-un git worktree separat. Aplicarea/respingerea modificărilor vizează acel worktree, nu spațiul de lucru al liderului.",
-      "label": "Worktree"
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "Adaugă membri",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "Doar Agent Teams MCP",
       "removedCount": "Eliminați ({{count}})",
       "removedModelLockReason": "Membrii eliminați sunt păstrați pentru istoricul de ștergere temporară. Restaurează-i pentru a edita setările.",
-      "memberNamesUnique": "Numele membrilor trebuie să fie unice"
+      "memberNamesUnique": "Numele membrilor trebuie să fie unice",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "Se calculează statisticile...",

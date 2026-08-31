@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "ఈ టీమ్‌మేట్‌ను ప్రత్యేక git worktree లో రన్ చేయండి. మార్పులను వర్తింపజేయడం/తిరస్కరించడం లీడ్ వర్క్‌స్పేస్ కాకుండా ఆ worktree ను లక్ష్యంగా చేసుకుంటుంది.",
-      "label": "Worktree"
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "సభ్యులను జోడించు",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "Agent Teams MCP మాత్రమే",
       "removedCount": "తీసివేయబడింది ({{count}})",
       "removedModelLockReason": "తీసివేయబడిన సభ్యులు సాఫ్ట్ డిలీట్ చరిత్ర కోసం ఉంచబడ్డారు. సెట్టింగ్‌లను సవరించడానికి వాటిని పునరుద్ధరించండి.",
-      "memberNamesUnique": "సభ్యుల పేర్లు ప్రత్యేకంగా ఉండాలి"
+      "memberNamesUnique": "సభ్యుల పేర్లు ప్రత్యేకంగా ఉండాలి",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "గణాంకాలను లెక్కిస్తోంది...",

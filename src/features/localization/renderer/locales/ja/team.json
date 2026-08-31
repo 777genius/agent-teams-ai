@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "別のgitワークツリーでこのチームメイトを実行します。 リードワークスペースではなく、ワークツリーが変更対象を適用する/拒否します。",
-      "label": "ワークツリー"
+      "label": "ワークツリー",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "メンバーの追加",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "エージェントチーム MCP のみ",
       "removedCount": "削除({{count}})",
       "removedModelLockReason": "削除されたメンバーは、ソフト削除履歴を保持します。 設定を編集するために復元します。",
-      "memberNamesUnique": "会員名はユニークでなければなりません"
+      "memberNamesUnique": "会員名はユニークでなければなりません",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "計算の統計...",

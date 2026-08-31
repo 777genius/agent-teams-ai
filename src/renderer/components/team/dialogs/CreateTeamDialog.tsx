@@ -162,6 +162,7 @@ import {
 import { TeammateRuntimeCompatibilityNotice } from './TeammateRuntimeCompatibilityNotice';
 import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
+import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import {
   getWorktreeGitBlockingMessage,
@@ -769,6 +770,12 @@ export const CreateTeamDialog = ({
     selectedProviderId,
     syncModelsWithLead,
   ]);
+  const memberWorkspaceInfo = useMemberWorkspaceInfo({
+    open: open && !soloTeam,
+    members: effectiveMemberDrafts,
+    projectPath: effectiveCwd,
+    hasLeadWorktree: worktreeEnabled && Boolean(worktreeName.trim()),
+  });
   const hasSelectedWorktreeIsolation =
     !soloTeam &&
     effectiveMemberDrafts.some((member) => !member.removedAt && member.isolation === 'worktree');
@@ -2575,6 +2582,7 @@ export const CreateTeamDialog = ({
               leadModelIssueText={leadModelIssueText}
               memberWarningById={teammateRuntimeCompatibility.memberWarningById}
               memberModelIssueById={memberModelIssueById}
+              memberInfoById={memberWorkspaceInfo}
               modelAdvisoryReasonByProvider={
                 shortLivedModelIssueReasons.modelAdvisoryReasonByProvider
               }

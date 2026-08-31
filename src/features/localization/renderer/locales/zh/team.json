@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "在单独的 Git worktree中运行该队友。应用/拒绝更改的目标是工作树，而不是主要工作区。",
-      "label": "工作树"
+      "label": "工作树",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "添加成员",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "仅限 Agent Team MCP",
       "removedCount": "已删除 ({{count}})",
       "removedModelLockReason": "已删除的成员将保留软删除历史记录。恢复它们以编辑设置。",
-      "memberNamesUnique": "成员名称必须是唯一的"
+      "memberNamesUnique": "成员名称必须是唯一的",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "计算统计数据…",

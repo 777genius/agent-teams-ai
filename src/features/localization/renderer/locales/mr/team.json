@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "हा सहकारी वेगळ्या git worktree मध्ये चालवा. बदल लागू करा/नाकारा त्या worktree ला लक्ष्य करते, लीड वर्कस्पेसला नाही.",
-      "label": "Worktree"
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "सदस्य जोडा",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "फक्त Agent Teams MCP",
       "removedCount": "काढले ({{count}})",
       "removedModelLockReason": "काढलेले सदस्य सॉफ्ट डिलीट इतिहासासाठी ठेवले जातात. सेटिंग्ज संपादित करण्यासाठी त्यांना पुनर्संचयित करा.",
-      "memberNamesUnique": "सदस्य नावे अद्वितीय असणे आवश्यक आहे"
+      "memberNamesUnique": "सदस्य नावे अद्वितीय असणे आवश्यक आहे",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "आकडेवारी गणना करत आहे...",

@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "این هم‌تیمی را در یک git worktree جداگانه اجرا کنید. اعمال/رد تغییرات آن worktree را هدف قرار می‌دهد، نه فضای کاری سرتیم را.",
-      "label": "Worktree"
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "افزودن اعضا",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "فقط MCP مربوط به Agent Teams",
       "removedCount": "حذف‌شده ({{count}})",
       "removedModelLockReason": "اعضای حذف‌شده برای تاریخچه حذف نرم نگه داشته می‌شوند. برای ویرایش تنظیمات آن‌ها را بازیابی کنید.",
-      "memberNamesUnique": "نام اعضا باید یکتا باشند"
+      "memberNamesUnique": "نام اعضا باید یکتا باشند",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "در حال محاسبه آمار...",

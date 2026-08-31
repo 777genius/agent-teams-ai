@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "Запустити цього учасника в окремому git worktree. Застосування та відхилення змін буде працювати з цим worktree, а не з робочим простором лідера.",
-      "label": "Робоче дерево"
+      "label": "Робоче дерево",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "Додати учасників",
@@ -1805,7 +1811,8 @@
       "agentTeamsMcpOnly": "Лише Agent Teams MCP",
       "removedCount": "Видалено ({{count}})",
       "removedModelLockReason": "Видалені учасники зберігаються для історії м'якого видалення. Відновіть їх, щоб редагувати налаштування.",
-      "memberNamesUnique": "Імена учасників мають бути унікальними"
+      "memberNamesUnique": "Імена учасників мають бути унікальними",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "Обчислення статистики...",

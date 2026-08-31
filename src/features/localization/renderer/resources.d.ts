@@ -3453,7 +3453,7 @@ export default interface Resources {
       };
       recent: 'Recent';
       title: 'Advanced';
-      useWorktree: 'Use worktree';
+      useWorktree: 'Lead worktree (separate from teammate worktrees)';
       validate: 'Validate';
       validation: {
         allFlagsValid: 'All flags valid';
@@ -4443,8 +4443,14 @@ export default interface Resources {
         saved: 'Saved';
       };
       worktree: {
-        description: 'Run this teammate in a separate git worktree. Apply/reject changes targets that worktree, not the lead workspace.';
+        branch: 'Worktree branch: {{branch}}';
+        branchUnavailable: 'Not available';
+        description: 'Checked: use a separate Git worktree, created on launch if needed. Existing worktrees keep their current branch. Unchecked: use the shared project workspace; the old worktree is kept.';
+        existing: 'Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.';
         label: 'Worktree';
+        new: 'Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.';
+        shared: 'Shared project workspace: {{path}}. Uses the project branch.';
+        sharedPending: 'Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.';
       };
     };
     memberLogStream: {
@@ -4508,8 +4514,9 @@ export default interface Resources {
         memberNamesUnique: 'Member names must be unique';
         removedCount: 'Removed ({{count}})';
         removedModelLockReason: 'Removed members are kept for soft delete history. Restore them to edit settings.';
-        runInSeparateWorktrees: 'Run teammates in separate worktrees';
+        runInSeparateWorktrees: 'Worktree for all teammates';
         title: 'Members';
+        worktreeDescription: 'Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk.';
       };
       executionLog: {
         agentInstructions: 'Agent instructions';

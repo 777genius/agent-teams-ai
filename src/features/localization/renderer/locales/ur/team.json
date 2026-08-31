@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "اس ٹیم کو ایک الگ گیٹ کے کام میں چلانے. اطلاق کرنا / اپنے کام کی جگہ پر کام کرنے والے نشانوں کا اطلاق کرنا",
-      "label": "جگہ"
+      "label": "جگہ",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "ارکان شامل کریں",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "ایجنٹ ٹیمیں MCP صرف",
       "removedCount": "Removed ({{count}})",
       "removedModelLockReason": "خارج شدہ ارکان کو نرم حذف تاریخ کے لیے رکھا جاتا ہے۔ انہیں ترتیبات بدلنے کی کوشش کریں ۔",
-      "memberNamesUnique": "ممبر ناموں کو منفرد ہونا چاہئے"
+      "memberNamesUnique": "ممبر ناموں کو منفرد ہونا چاہئے",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": ". . .",

@@ -165,6 +165,7 @@ import {
   OPENCODE_ONE_SHOT_DISABLED_REASON,
   TeamModelSelector,
 } from './TeamModelSelector';
+import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import {
   getWorktreeGitBlockingMessage,
@@ -452,6 +453,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [maxTurns, setMaxTurns] = useState(50);
   const [maxBudgetUsd, setMaxBudgetUsd] = useState('');
   const [scheduleHydrationKey, setScheduleHydrationKey] = useState<string | null>(null);
+  const [workspaceSourceMembers, setWorkspaceSourceMembers] = useState<
+    TeamCreateRequest['members']
+  >([]);
   const [worktreePathByMemberName, setWorktreePathByMemberName] = useState<Record<string, string>>(
     {}
   );
@@ -918,6 +922,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         )
       );
       setWorktreePathByMemberName(buildWorktreePathByMemberName(inputs));
+      setWorkspaceSourceMembers(inputs);
       // Roster-derived toggle defaults must not clobber a user toggle made mid-request.
       if (!hydrationRef.current.dirty) {
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
@@ -1500,30 +1505,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return warnings;
   }, [memberRuntimeWarningById, teammateRuntimeCompatibility.memberWarningById]);
 
-  const memberWorktreeContinuationInfoById = useMemo(() => {
-    if (!isLaunchMode) {
-      return {};
-    }
-
-    const info: Record<string, string> = {};
-    for (const member of effectiveMemberDrafts) {
-      if (member.removedAt || member.isolation !== 'worktree') {
-        continue;
-      }
-      const lookupName = (member.originalName?.trim() || member.name.trim()).toLowerCase();
-      if (!lookupName) {
-        continue;
-      }
-      const previousWorktreePath = worktreePathByMemberName[lookupName];
-      if (!previousWorktreePath) {
-        continue;
-      }
-      info[member.id] =
-        `This teammate will continue from its existing worktree: ${previousWorktreePath}`;
-    }
-
-    return info;
-  }, [effectiveMemberDrafts, isLaunchMode, worktreePathByMemberName]);
+  const memberWorktreeContinuationInfoById = useMemberWorkspaceInfo({
+    open: open && isLaunchMode,
+    members: effectiveMemberDrafts,
+    projectPath: effectiveCwd,
+    worktreePaths: worktreePathByMemberName,
+    previousProjectPath: isLaunchMode ? props.defaultProjectPath : undefined,
+    previousMembers: workspaceSourceMembers,
+    inheritedProviderId: selectedProviderId,
+    hasLeadWorktree: worktreeEnabled && Boolean(worktreeName.trim()),
+  });
 
   // ---------------------------------------------------------------------------
   // Launch-only effects

@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "இந்த teammate ஐ தனி git worktree இல் இயக்கு. மாற்றங்களைப் பயன்படுத்துதல்/நிராகரித்தல் lead workspace ஐ அல்ல, அந்த worktree ஐ இலக்காகக் கொள்கிறது.",
-      "label": "Worktree"
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "உறுப்பினர்களைச் சேர்",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "Agent Teams MCP only",
       "removedCount": "அகற்றப்பட்டது ({{count}})",
       "removedModelLockReason": "அகற்றப்பட்ட உறுப்பினர்கள் soft delete வரலாற்றுக்காக வைக்கப்படுகிறார்கள். அமைப்புகளைத் திருத்த அவர்களை மீட்டெடுக்கவும்.",
-      "memberNamesUnique": "உறுப்பினர் பெயர்கள் தனித்துவமாக இருக்க வேண்டும்"
+      "memberNamesUnique": "உறுப்பினர் பெயர்கள் தனித்துவமாக இருக்க வேண்டும்",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "stats ஐ கணக்கிடுகிறது...",

@@ -313,7 +313,13 @@
     },
     "worktree": {
       "description": "Patakbuhin ang teammate na ito sa hiwalay na git worktree. Ang pag-apply/pag-reject ng mga pagbabago ay nakatuon sa worktree na iyon, hindi sa lead workspace.",
-      "label": "Worktree"
+      "label": "Worktree",
+      "existing": "Last workspace: {{path}}. Managed worktree reused if available; otherwise created on launch.",
+      "new": "Worktree: reused if available, otherwise created on launch. Branch will be shown after launch.",
+      "shared": "Shared project workspace: {{path}}. Uses the project branch.",
+      "sharedPending": "Shared workspace: resolved on launch with the lead worktree. Branch will be shown after launch.",
+      "branch": "Worktree branch: {{branch}}",
+      "branchUnavailable": "Not available"
     },
     "addMembers": {
       "title": "Magdagdag ng Mga Miyembro",
@@ -1803,7 +1809,8 @@
       "agentTeamsMcpOnly": "Agent Teams MCP only",
       "removedCount": "Tinanggal ({{count}})",
       "removedModelLockReason": "Pinapanatili ang mga tinanggal na miyembro para sa soft delete history. Ibalik ang mga ito para i-edit ang mga setting.",
-      "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi"
+      "memberNamesUnique": "Ang mga pangalan ng miyembro ay dapat natatangi",
+      "worktreeDescription": "Checked: separate worktrees for all teammates. Mixed: only selected teammates. Unchecked: shared project workspace. Turning this off keeps existing worktrees on disk."
     },
     "stats": {
       "computing": "Kinakalkula ang mga stat...",
