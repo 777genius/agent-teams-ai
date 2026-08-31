@@ -44,7 +44,7 @@ export interface OpenCodeProviderModelCatalogResult {
 
 function normalizeSourceProviderId(sourceProviderId: string | null | undefined): string | null {
   const normalized = sourceProviderId?.trim().toLowerCase() ?? '';
-  if (!normalized || normalized === 'opencode' || isOpenCodeLocalProviderId(normalized)) {
+  if (!normalized || isOpenCodeLocalProviderId(normalized)) {
     return null;
   }
   return normalized;
@@ -59,10 +59,11 @@ export function resolveOpenCodeCatalogSourceProviderId(input: {
     return null;
   }
   if (input.selectedSourceIds.size === 1) {
-    const selectedSource = input.selectedSourceIds.values().next().value as string | undefined;
     // An explicit built-in/free or local tab is still an explicit selection. Do not
     // fall back to the previously selected qualified model and fetch that provider.
-    return normalizeSourceProviderId(selectedSource);
+    for (const selectedSource of input.selectedSourceIds) {
+      return normalizeSourceProviderId(selectedSource);
+    }
   }
   if (input.selectedSourceIds.size > 1) {
     return null;
@@ -74,12 +75,16 @@ export function resolveOpenCodeCatalogSourceProviderId(input: {
 }
 
 function qualifyModelId(providerId: string, modelId: string): string {
+  const normalizedProviderId = providerId.trim().toLowerCase();
   const normalizedModelId = modelId.trim();
+  if (!normalizedProviderId || !normalizedModelId) {
+    return '';
+  }
   const parsed = parseOpenCodeQualifiedModelRef(normalizedModelId);
   if (parsed) {
-    return parsed.raw;
+    return parsed.sourceId === normalizedProviderId ? parsed.raw : '';
   }
-  return normalizedModelId ? `${providerId}/${normalizedModelId}` : '';
+  return `${normalizedProviderId}/${normalizedModelId}`;
 }
 
 function mapAvailability(model: RuntimeProviderModelDto): CliProviderModelAvailability {
@@ -117,6 +122,7 @@ function mapCatalogModel(
     return null;
   }
   const passiveModel = findPassiveCatalogModel(passiveProvider, launchModel);
+  const passiveRoute = passiveModel?.metadata?.opencode;
   return {
     id: launchModel,
     launchModel,
@@ -145,8 +151,11 @@ function mapCatalogModel(
         sourceLabel: model.sourceLabel.trim() || model.providerId,
         accessKind: model.accessKind ?? 'unknown_model',
         routeKind: model.routeKind ?? 'catalog_provider',
-        proofState: model.proofState ?? 'needs_probe',
-        requiresExecutionProof: model.requiresExecutionProof ?? false,
+        // Provider-model catalogs describe routes, not execution proof. Preserve
+        // proof already carried by the passive status record, but never mint it
+        // from catalog-only metadata.
+        proofState: passiveRoute?.proofState ?? 'needs_probe',
+        requiresExecutionProof: passiveRoute?.requiresExecutionProof ?? true,
         reason: model.accessReason ?? null,
       },
     },
@@ -184,6 +193,7 @@ function filterPassiveProviderToSource(
   ]);
   const defaultLaunchModel = catalog?.defaultLaunchModel;
   const defaultModelId = catalog?.defaultModelId;
+  const catalogDiagnostics = catalog?.diagnostics;
   return {
     ...provider,
     models,
@@ -202,8 +212,10 @@ function filterPassiveProviderToSource(
             defaultModelId && visibleModelIds.has(defaultModelId) ? defaultModelId : null,
           models: catalogModels,
           diagnostics: {
-            ...catalog.diagnostics,
-            message: error ?? catalog.diagnostics.message ?? null,
+            configReadState: catalogDiagnostics?.configReadState ?? 'failed',
+            appServerState: catalogDiagnostics?.appServerState ?? 'degraded',
+            ...catalogDiagnostics,
+            message: error ?? catalogDiagnostics?.message ?? null,
           },
         }
       : null,
@@ -295,8 +307,34 @@ function responseFailure(
   if (!response.models) {
     return 'The runtime did not return a provider-model catalog.';
   }
+  if (response.models.runtimeId !== 'opencode') {
+    return 'The runtime returned an unsupported provider-model catalog response.';
+  }
   if (response.models.providerId.trim().toLowerCase() !== sourceProviderId) {
     return `The runtime returned models for ${response.models.providerId}, not ${sourceProviderId}.`;
+  }
+  for (const model of response.models.models) {
+    const modelProviderId = model.providerId.trim().toLowerCase();
+    if (modelProviderId !== sourceProviderId) {
+      return `The runtime returned a foreign ${model.providerId || 'unknown'} model in the ${sourceProviderId} catalog.`;
+    }
+    const qualifiedModel = parseOpenCodeQualifiedModelRef(model.modelId);
+    if (qualifiedModel && qualifiedModel.sourceId !== sourceProviderId) {
+      return `The runtime returned foreign model ${qualifiedModel.raw} in the ${sourceProviderId} catalog.`;
+    }
+    if (!qualifyModelId(sourceProviderId, model.modelId)) {
+      return `The runtime returned an invalid model identifier in the ${sourceProviderId} catalog.`;
+    }
+  }
+  const qualifiedDefault = parseOpenCodeQualifiedModelRef(response.models.defaultModelId);
+  if (qualifiedDefault && qualifiedDefault.sourceId !== sourceProviderId) {
+    return `The runtime returned foreign default model ${qualifiedDefault.raw} in the ${sourceProviderId} catalog.`;
+  }
+  if (
+    response.models.defaultModelId !== null &&
+    !qualifyModelId(sourceProviderId, response.models.defaultModelId)
+  ) {
+    return `The runtime returned an invalid default model identifier in the ${sourceProviderId} catalog.`;
   }
   return null;
 }
@@ -365,6 +403,7 @@ export function useOpenCodeProviderModelCatalog(input: {
     );
 
     void (async () => {
+      const isCurrentRequest = (): boolean => requestSequenceRef.current === requestSequence;
       const modelById = new Map<string, RuntimeProviderModelDto>();
       let cursor: string | null = null;
       let defaultModelId: string | null = null;
@@ -374,7 +413,7 @@ export function useOpenCodeProviderModelCatalog(input: {
       const seenCursors = new Set<string>();
 
       for (let page = 0; page < MAX_MODEL_PAGES; page += 1) {
-        if (requestSequenceRef.current !== requestSequence) {
+        if (!isCurrentRequest()) {
           return;
         }
         const response = await api.runtimeProviderManagement.loadModels({
@@ -386,7 +425,7 @@ export function useOpenCodeProviderModelCatalog(input: {
           cursor,
           requestGroupId: requestGroupIdRef.current,
         });
-        if (requestSequenceRef.current !== requestSequence) {
+        if (!isCurrentRequest()) {
           return;
         }
         const failure = responseFailure(response, sourceProviderId);
@@ -414,11 +453,14 @@ export function useOpenCodeProviderModelCatalog(input: {
         if (seenCursors.has(nextCursor) || page === MAX_MODEL_PAGES - 1) {
           throw new Error('The runtime returned an invalid provider-model pagination cursor.');
         }
+        if (!isCurrentRequest()) {
+          return;
+        }
         seenCursors.add(nextCursor);
         cursor = nextCursor;
       }
 
-      if (requestSequenceRef.current !== requestSequence) {
+      if (!isCurrentRequest()) {
         return;
       }
       setState({
@@ -456,19 +498,22 @@ export function useOpenCodeProviderModelCatalog(input: {
     sourceProviderId,
   ]);
 
-  const activeState =
-    scopeKey && state.scopeKey === scopeKey
-      ? state
-      : {
-          scopeKey,
-          status: input.enabled && sourceProviderId ? ('loading' as const) : ('idle' as const),
-          models: null,
-          defaultModelId: null,
-          diagnostics: [],
-          catalogState: null,
-          completedAt: null,
-          error: null,
-        };
+  const activeState = useMemo<ScopedCatalogState>(
+    () =>
+      scopeKey && state.scopeKey === scopeKey
+        ? state
+        : {
+            scopeKey,
+            status: input.enabled && sourceProviderId ? 'loading' : 'idle',
+            models: null,
+            defaultModelId: null,
+            diagnostics: [],
+            catalogState: null,
+            completedAt: null,
+            error: null,
+          },
+    [input.enabled, scopeKey, sourceProviderId, state]
+  );
   const providerStatus = useMemo(
     () =>
       sourceProviderId

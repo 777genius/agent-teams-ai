@@ -132,7 +132,7 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     expect(resolveInteractiveShellEnvBestEffortMock).not.toHaveBeenCalled();
     expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
     expect(enrichProviderStatusMock).not.toHaveBeenCalled();
-    expect(buildPassiveProviderStatusCliEnvMock).toHaveBeenCalledTimes(2);
+    expect(buildPassiveProviderStatusCliEnvMock).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -310,27 +310,17 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     expect(result.capabilities.teamLaunch).toBe(false);
   });
 
-  it('normalizes an exact project cwd and atomically publishes the full status', async () => {
+  it('normalizes an exact project cwd without issuing OpenCode catalog hydration', async () => {
     execCliMock.mockImplementation((_binary, args, options) => {
-      const isSummary = (args as string[]).includes('--summary');
       return commandResult(
-        statusPayload(
-          isSummary
-            ? {
-                statusCheckOutcome: 'model_only',
-                statusCheckErrorCode: 'partial_response',
-                authenticated: false,
-                authMethod: null,
-                capabilities: { teamLaunch: false, oneShot: false, extensions: {} },
-                models: [],
-              }
-            : {
-                authenticated: true,
-                authMethod: 'catalog-must-not-promote-auth',
-                models: ['project/model'],
-                modelCatalog: catalog('project/model'),
-              }
-        )
+        statusPayload({
+          statusCheckOutcome: 'model_only',
+          statusCheckErrorCode: 'partial_response',
+          authenticated: false,
+          authMethod: null,
+          capabilities: { teamLaunch: false, oneShot: false, extensions: {} },
+          models: [],
+        })
       ).then((result) => ({ ...(result as Record<string, unknown>), cwd: options?.cwd }));
     });
     const { ClaudeMultimodelBridgeService } =
@@ -343,28 +333,30 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       { projectPath: '/projects/alpha/../beta' }
     );
 
-    expect(execCliMock).toHaveBeenCalledTimes(2);
-    expect(execCliMock.mock.calls.map((call) => call[2]?.cwd)).toEqual([
-      '/projects/beta',
-      '/projects/beta',
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+    expect(execCliMock.mock.calls.map((call) => call[2]?.cwd)).toEqual(['/projects/beta']);
+    expect(execCliMock.mock.calls[0]?.[1]).toEqual([
+      'runtime',
+      'status',
+      '--json',
+      '--provider',
+      'opencode',
+      '--summary',
     ]);
     expect(result).toMatchObject({
-      authenticated: true,
-      authMethod: 'catalog-must-not-promote-auth',
-      verificationState: 'verified',
-      statusCheckOutcome: 'authoritative',
-      models: ['project/model'],
-      modelCatalog: { defaultModelId: 'project/model' },
-      capabilities: { teamLaunch: true },
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      models: [],
+      modelCatalog: null,
+      capabilities: { teamLaunch: false },
     });
   });
 
-  it('preserves authoritative live evidence when project catalog hydration times out', async () => {
-    execCliMock.mockImplementation((_binary, args) => {
-      if (!(args as string[]).includes('--summary')) {
-        return Promise.reject(new Error('Catalog request timed out'));
-      }
-      return commandResult(
+  it('preserves authoritative OpenCode summary evidence without a second catalog command', async () => {
+    execCliMock.mockImplementation(() =>
+      commandResult(
         statusPayload({
           statusMessage: 'Live status',
           detailMessage: 'Live detail',
@@ -372,8 +364,8 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
           modelCatalog: catalog('opencode/big-pickle'),
           modelCatalogRefreshState: 'ready',
         })
-      );
-    });
+      )
+    );
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
 
@@ -392,75 +384,38 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       statusMessage: 'Live status',
       detailMessage: 'Live detail',
       backend: { kind: 'opencode', label: 'Live backend' },
-      capabilities: { teamLaunch: false },
-      modelCatalogRefreshState: 'error',
-      modelCatalog: { status: 'stale' },
+      capabilities: { teamLaunch: true },
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: { status: 'ready' },
     });
-    expect(vi.mocked(console.warn)).toHaveBeenCalledWith(
-      '[ClaudeMultimodelBridgeService]',
-      expect.stringContaining('Project-scoped provider catalog hydration failed for opencode')
-    );
-    vi.mocked(console.warn).mockClear();
+    expect(execCliMock).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['unknown', 'error'] as const)(
-    'revokes summary authority when the newer full status verification is %s',
-    async (verificationState) => {
-      execCliMock.mockImplementation((_binary, args) => {
-        const isSummary = (args as string[]).includes('--summary');
-        const hydratedCatalog = catalog('project/model');
-        return commandResult(
-          statusPayload(
-            isSummary
-              ? { modelCatalog: undefined }
-              : {
-                  verificationState,
-                  statusMessage: 'Hydration verification incomplete',
-                  detailMessage: `Hydration verification is ${verificationState}`,
-                  models: [],
-                  modelCatalog: {
-                    ...hydratedCatalog,
-                    diagnostics: {
-                      configReadState: 'failed',
-                      appServerState: 'degraded',
-                      message: 'Catalog diagnostics retained',
-                      code: 'catalog-verification-incomplete',
-                    },
-                  },
-                }
-          )
-        );
-      });
-      const { ClaudeMultimodelBridgeService } =
-        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+  it('does not synthesize a catalog command when the OpenCode summary omits one', async () => {
+    execCliMock.mockImplementation(() => commandResult(statusPayload({ modelCatalog: undefined })));
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
 
-      const result = await new ClaudeMultimodelBridgeService().getProviderStatus(
-        '/mock/runtime',
-        'opencode',
-        undefined,
-        { projectPath: '/projects/authority-boundary' }
-      );
+    const result = await new ClaudeMultimodelBridgeService().getProviderStatus(
+      '/mock/runtime',
+      'opencode',
+      undefined,
+      { projectPath: '/projects/authority-boundary' }
+    );
 
-      expect(result).toMatchObject({
-        authenticated: false,
-        authMethod: null,
-        verificationState,
-        statusCheckOutcome: 'authoritative',
-        statusMessage: 'Hydration verification incomplete',
-        detailMessage: `Hydration verification is ${verificationState}`,
-        capabilities: { teamLaunch: false },
-        modelCatalogRefreshState: 'error',
-        modelCatalog: {
-          status: 'stale',
-          diagnostics: {
-            message: 'Catalog diagnostics retained',
-            code: 'catalog-verification-incomplete',
-          },
-        },
-      });
-      expect(execCliMock).toHaveBeenCalledTimes(2);
-    }
-  );
+    expect(result).toMatchObject({
+      authenticated: true,
+      authMethod: 'builtin_free',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      statusMessage: null,
+      detailMessage: null,
+      capabilities: { teamLaunch: false },
+      modelCatalogRefreshState: 'loading',
+      modelCatalog: null,
+    });
+    expect(execCliMock).toHaveBeenCalledTimes(1);
+  });
 
   it.each([
     ['anthropic', 'transient_error', 'error', []],
@@ -526,17 +481,17 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     }
   );
 
-  it('isolates concurrent catalogs by normalized project and generation', async () => {
-    execCliMock.mockImplementation((_binary, args, options) => {
+  it('isolates concurrent passive OpenCode status by normalized project', async () => {
+    execCliMock.mockImplementation((_binary, _args, options) => {
       const cwd = options?.cwd as string;
-      const isSummary = (args as string[]).includes('--summary');
       const modelId = cwd.endsWith('/one') ? 'project-one/model' : 'project-two/model';
       return commandResult(
-        statusPayload(
-          isSummary
-            ? { models: [], authenticated: false, authMethod: null }
-            : { models: [modelId], modelCatalog: catalog(modelId) }
-        )
+        statusPayload({
+          models: [modelId],
+          modelCatalog: catalog(modelId),
+          authenticated: false,
+          authMethod: null,
+        })
       );
     });
     const { ClaudeMultimodelBridgeService } =
@@ -554,13 +509,13 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
 
     expect(one.modelCatalog?.defaultModelId).toBe('project-one/model');
     expect(two.modelCatalog?.defaultModelId).toBe('project-two/model');
-    expect(one).toMatchObject({ authenticated: true, statusCheckOutcome: 'authoritative' });
-    expect(two).toMatchObject({ authenticated: true, statusCheckOutcome: 'authoritative' });
+    expect(one.authenticated).toBe(false);
+    expect(two.authenticated).toBe(false);
     expect(execCliMock.mock.calls.filter((call) => call[2]?.cwd === '/projects/one')).toHaveLength(
-      2
+      1
     );
     expect(execCliMock.mock.calls.filter((call) => call[2]?.cwd === '/projects/two')).toHaveLength(
-      2
+      1
     );
   });
 });

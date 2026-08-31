@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process */
+/* global process, setTimeout */
 
 import { createHash } from 'node:crypto';
 import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
@@ -19,7 +19,7 @@ if (argv[0] === 'runtime' && argv[1] === 'status') {
   process.exit(0);
 }
 if (argv[0] === 'runtime' && argv[1] === 'providers' && argv[2] === 'models') {
-  runProviderModelsCommand();
+  await runProviderModelsCommand();
   process.exit(0);
 }
 if (argv[0] !== 'runtime' || argv[1] !== 'opencode-command') {
@@ -163,7 +163,7 @@ function runProviderStatusCommand() {
   process.stdout.write(outputRaw);
 }
 
-function runProviderModelsCommand() {
+async function runProviderModelsCommand() {
   const runtimeIndex = argv.indexOf('--runtime');
   const providerIndex = argv.indexOf('--provider');
   const runtime = runtimeIndex < 0 ? null : argv[runtimeIndex + 1];
@@ -182,16 +182,28 @@ function runProviderModelsCommand() {
       rejectCommand(`unexpected provider-model flag ${argument}`);
     }
   }
-  if (runtime !== 'opencode' || !provider || provider === 'opencode') {
+  if (runtime !== 'opencode' || !provider) {
     rejectCommand(`expected a concrete OpenCode source provider, received ${String(provider)}`);
+  }
+  if (provider === 'kiro' || provider === 'cursor-acp') {
+    rejectCommand(`poisoned ${provider} provider route must not be queried`);
   }
 
   const modelByProvider = {
     deepinfra: MODEL,
-    kiro: 'kiro/poisoned-model',
-    'cursor-acp': 'cursor-acp/poisoned-model',
+    opencode: 'opencode/nemotron-3-super-free',
   };
-  const modelId = modelByProvider[provider] ?? `${provider}/scoped-model`;
+  const cursorIndex = argv.indexOf('--cursor');
+  const cursor = cursorIndex < 0 ? null : argv[cursorIndex + 1];
+  if (SCENARIO === 'slow-catalog' && provider === 'deepinfra' && !cursor) {
+    trace({ kind: 'provider-models-request', pid: process.pid, argv, cwd: process.cwd(), outputRaw: '' });
+    await new Promise((resolve) => setTimeout(resolve, 10_000));
+  }
+  const paginated = SCENARIO === 'paginated-catalog' && provider === 'deepinfra';
+  const modelId = paginated && cursor === 'deepinfra-page-2'
+    ? 'deepinfra/deepseek-ai/DeepSeek-R1'
+    : (modelByProvider[provider] ?? `${provider}/scoped-model`);
+  const nextCursor = paginated && !cursor ? 'deepinfra-page-2' : null;
   const output = {
     schemaVersion: 1,
     runtimeId: 'opencode',
@@ -203,11 +215,11 @@ function runProviderModelsCommand() {
         providerId: provider,
         displayName: modelId.slice(modelId.indexOf('/') + 1),
         sourceLabel: provider === 'deepinfra' ? 'DeepInfra' : provider,
-        free: false,
+        free: provider === 'opencode',
         default: provider === 'deepinfra',
         availability: 'available',
-        accessKind: 'credentialed',
-        routeKind: 'connected_provider',
+        accessKind: provider === 'opencode' ? 'builtin_free' : 'credentialed',
+        routeKind: provider === 'opencode' ? 'builtin_free' : 'connected_provider',
         proofState: 'not_required',
         requiresExecutionProof: false,
         accessReason: null,
@@ -215,11 +227,11 @@ function runProviderModelsCommand() {
       defaultModelId: modelId,
       diagnostics: [],
       catalogState: SCENARIO === 'stale-catalog' ? 'stale' : 'fresh',
-      totalCount: 1,
+      totalCount: paginated ? 2 : 1,
       returnedCount: 1,
       limit: null,
-      cursor: null,
-      nextCursor: null,
+      cursor,
+      nextCursor,
     },
   };
   const outputRaw = JSON.stringify(output);

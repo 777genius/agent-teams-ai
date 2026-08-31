@@ -7,6 +7,7 @@ import {
   createDegradedProviderStatus,
   mergeProviderStatusDisplayEvidence,
 } from '@main/services/runtime/providerStatusCheckContract';
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
   OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
@@ -27,6 +28,8 @@ import {
 } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { AgentTeamsRuntimeProviderManagementCliClient } from '../../../../src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient';
 
 import type {
   OpenCodeBridgeCommandLeaseStore,
@@ -77,7 +80,12 @@ function fakeExecutableEnv(): NodeJS.ProcessEnv {
 }
 
 interface FakeTrace {
-  kind: 'provider-status' | 'provider-models' | 'rejected' | 'bridge';
+  kind:
+    | 'provider-status'
+    | 'provider-models-request'
+    | 'provider-models'
+    | 'rejected'
+    | 'bridge';
   pid: number;
   argv: string[];
   cwd: string;
@@ -96,6 +104,8 @@ interface FakeTrace {
 
 afterEach(async () => {
   await Promise.all(sandboxes.splice(0).map((sandbox) => rm(sandbox, { recursive: true })));
+  delete process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
+  ClaudeBinaryResolver.clearCache();
 });
 
 describe('issue #443 Desktop real child-process wire contract', () => {
@@ -124,6 +134,116 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     expect(traces.map((trace) => trace.argv)).toEqual([
       ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
     ]);
+    assertProcessesExited(traces);
+  });
+
+  it('routes selected provider pagination through the real provider-management CLI client', async () => {
+    const fake = await createFake('paginated-catalog');
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const firstPage = await client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      limit: 1,
+      requestGroupId: 'issue443-pagination',
+    });
+    expect(firstPage.error).toBeUndefined();
+    const nextCursor = firstPage.models?.nextCursor;
+    expect(nextCursor).toBe('deepinfra-page-2');
+    const secondPage = await client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      limit: 1,
+      cursor: nextCursor,
+      requestGroupId: 'issue443-pagination',
+    });
+
+    expect(firstPage.models?.models.map((model) => model.modelId)).toEqual([MODEL]);
+    expect(secondPage.models?.models.map((model) => model.modelId)).toEqual([
+      'deepinfra/deepseek-ai/DeepSeek-R1',
+    ]);
+    const traces = await fake.traces();
+    expect(traces.map((trace) => trace.kind)).toEqual(['provider-models', 'provider-models']);
+    expect(traces.map((trace) => trace.cwd)).toEqual([fake.project, fake.project]);
+    expect(traces.map((trace) => trace.argv)).toEqual([
+      [
+        'runtime',
+        'providers',
+        'models',
+        '--runtime',
+        'opencode',
+        '--provider',
+        'deepinfra',
+        '--json',
+        '--limit',
+        '1',
+        '--project-path',
+        fake.project,
+      ],
+      [
+        'runtime',
+        'providers',
+        'models',
+        '--runtime',
+        'opencode',
+        '--provider',
+        'deepinfra',
+        '--json',
+        '--limit',
+        '1',
+        '--cursor',
+        'deepinfra-page-2',
+        '--project-path',
+        fake.project,
+      ],
+    ]);
+    expect(traces.some((trace) => trace.argv.includes('kiro'))).toBe(false);
+    expect(traces.some((trace) => trace.argv.includes('cursor-acp'))).toBe(false);
+    assertProcessesExited(traces);
+  });
+
+  it('cancels a superseded provider process and loads built-in OpenCode Zen only', async () => {
+    const fake = await createFake('slow-catalog');
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const slowDeepInfra = client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      requestGroupId: 'issue443-selected-provider',
+    });
+    await vi.waitFor(async () => {
+      expect((await fake.traces()).filter((trace) => trace.kind === 'provider-models-request'))
+        .toHaveLength(1);
+    });
+
+    const builtIn = await client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'opencode',
+      projectPath: fake.project,
+      requestGroupId: 'issue443-selected-provider',
+    });
+    const superseded = await slowDeepInfra;
+
+    expect(superseded.error).toBeDefined();
+    expect(builtIn.models).toMatchObject({
+      providerId: 'opencode',
+      defaultModelId: 'opencode/nemotron-3-super-free',
+    });
+    expect(builtIn.models?.models.map((model) => model.modelId)).toEqual([
+      'opencode/nemotron-3-super-free',
+    ]);
+    const traces = await fake.traces();
+    expect(traces.map((trace) => trace.kind)).toEqual([
+      'provider-models-request',
+      'provider-models',
+    ]);
+    expect(traces.every((trace) => trace.cwd === fake.project)).toBe(true);
+    expect(traces.map((trace) => trace.argv.slice(5, 8))).toEqual([
+      ['--provider', 'deepinfra', '--json'],
+      ['--provider', 'opencode', '--json'],
+    ]);
+    expect(traces.every((trace) => !trace.argv.includes('--request-group-id'))).toBe(true);
     assertProcessesExited(traces);
   });
 
@@ -410,6 +530,8 @@ async function createFake(scenario: string) {
   await chmod(executable, 0o700);
   process.env.ISSUE443_FAKE_SCENARIO = scenario;
   process.env.ISSUE443_FAKE_TRACE_FILE = traceFile;
+  process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = executable;
+  ClaudeBinaryResolver.clearCache();
   return {
     sandbox,
     project,
@@ -417,7 +539,7 @@ async function createFake(scenario: string) {
     executable,
     traceFile,
     async traces(): Promise<FakeTrace[]> {
-      const raw = await readFile(traceFile, 'utf8');
+      const raw = await readFile(traceFile, 'utf8').catch(() => '');
       return raw.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line) as FakeTrace);
     },
     remainingBridgeFiles: () => readdir(bridgeTemp),

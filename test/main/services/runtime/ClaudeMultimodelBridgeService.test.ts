@@ -1708,7 +1708,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
   });
 
-  it('accepts newer authoritative OpenCode auth from full status hydration', async () => {
+  it('keeps OpenCode summary authority passive without automatic catalog hydration', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
 
@@ -1738,66 +1738,6 @@ describe('ClaudeMultimodelBridgeService', () => {
         });
       }
 
-      if (normalizedArgs === 'runtime status --json --provider opencode') {
-        return Promise.resolve({
-          stdout: JSON.stringify({
-            schemaVersion: 2,
-            providers: {
-              opencode: {
-                providerId: 'opencode',
-                displayName: 'OpenCode',
-                supported: true,
-                authenticated: true,
-                authMethod: 'opencode_builtin_free',
-                verificationState: 'verified',
-                canLoginFromUi: false,
-                statusMessage: null,
-                detailMessage: '3 built-in free models',
-                models: ['opencode/big-pickle'],
-                capabilities: { teamLaunch: true, oneShot: false },
-                runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
-                backend: {
-                  kind: 'opencode-cli',
-                  label: 'OpenCode CLI',
-                  authMethodDetail: 'built-in free models',
-                },
-                modelCatalog: {
-                  schemaVersion: 1,
-                  providerId: 'opencode',
-                  source: 'app-server',
-                  status: 'ready',
-                  fetchedAt: '2026-05-25T00:00:00.000Z',
-                  staleAt: '2100-01-01T00:00:00.000Z',
-                  defaultModelId: 'opencode/big-pickle',
-                  defaultLaunchModel: 'opencode/big-pickle',
-                  models: [
-                    {
-                      id: 'opencode/big-pickle',
-                      launchModel: 'opencode/big-pickle',
-                      displayName: 'big-pickle',
-                      hidden: false,
-                      supportedReasoningEfforts: [],
-                      defaultReasoningEffort: null,
-                      inputModalities: ['text'],
-                      supportsPersonality: true,
-                      isDefault: true,
-                      upgrade: false,
-                      source: 'app-server',
-                    },
-                  ],
-                  diagnostics: {
-                    configReadState: 'ready',
-                    appServerState: 'healthy',
-                  },
-                },
-              },
-            },
-          }),
-          stderr: '',
-          exitCode: 0,
-        });
-      }
-
       return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
     });
 
@@ -1817,18 +1757,10 @@ describe('ClaudeMultimodelBridgeService', () => {
       statusMessage: 'No OpenCode providers connected',
       modelCatalogRefreshState: 'loading',
     });
-    await vi.waitFor(() => {
-      expect(onCatalogUpdate).toHaveBeenCalledTimes(1);
-    });
-    expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
-      authenticated: true,
-      authMethod: 'opencode_builtin_free',
-      statusMessage: null,
-      capabilities: { teamLaunch: true },
-      modelCatalogRefreshState: 'ready',
-      modelCatalog: { status: 'ready' },
-      backend: { authMethodDetail: 'built-in free models' },
-    });
+    expect(onCatalogUpdate).not.toHaveBeenCalled();
+    expect(execCliMock.mock.calls.map((call) => call[1])).toEqual([
+      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+    ]);
   });
 
   it('publishes authoritative auth revocation from single-provider full status hydration', async () => {
@@ -2101,20 +2033,8 @@ describe('ClaudeMultimodelBridgeService', () => {
     });
   });
 
-  it('hydrates project-scoped catalogs independently from a global in-flight request', async () => {
-    let resolveGlobalHydration!: (value: {
-      stdout: string;
-      stderr: string;
-      exitCode: number;
-    }) => void;
-    const globalHydration = new Promise<{
-      stdout: string;
-      stderr: string;
-      exitCode: number;
-    }>((resolve) => {
-      resolveGlobalHydration = resolve;
-    });
-    const buildStatus = (defaultModelId?: string) => ({
+  it('keeps global and project-scoped OpenCode status passive and independent', async () => {
+    const buildStatus = (statusMessage: string) => ({
       schemaVersion: 2,
       providers: {
         opencode: {
@@ -2125,35 +2045,10 @@ describe('ClaudeMultimodelBridgeService', () => {
           authMethod: 'opencode_managed',
           verificationState: 'verified',
           canLoginFromUi: false,
-          statusMessage: null,
-          models: defaultModelId ? [defaultModelId] : [],
+          statusMessage,
+          models: [],
           capabilities: { teamLaunch: true, oneShot: false },
           runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
-          ...(defaultModelId
-            ? {
-                modelCatalog: {
-                  schemaVersion: 1,
-                  providerId: 'opencode',
-                  source: 'app-server',
-                  status: 'ready',
-                  fetchedAt: '2026-07-19T00:00:00.000Z',
-                  staleAt: '2100-01-01T00:00:00.000Z',
-                  defaultModelId,
-                  defaultLaunchModel: defaultModelId,
-                  models: [
-                    {
-                      id: defaultModelId,
-                      launchModel: defaultModelId,
-                      displayName: defaultModelId,
-                    },
-                  ],
-                  diagnostics: {
-                    configReadState: 'ready',
-                    appServerState: 'healthy',
-                  },
-                },
-              }
-            : {}),
         },
       },
     });
@@ -2162,20 +2057,12 @@ describe('ClaudeMultimodelBridgeService', () => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
       if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
         return Promise.resolve({
-          stdout: JSON.stringify(buildStatus()),
+          stdout: JSON.stringify(
+            buildStatus(options?.cwd === '/tmp/scoped-project' ? 'scoped' : 'global')
+          ),
           stderr: '',
           exitCode: 0,
         });
-      }
-      if (normalizedArgs === 'runtime status --json --provider opencode') {
-        if (options?.cwd === '/tmp/scoped-project') {
-          return Promise.resolve({
-            stdout: JSON.stringify(buildStatus('ollama/qwen2.5-coder:0.5b')),
-            stderr: '',
-            exitCode: 0,
-          });
-        }
-        return globalHydration;
       }
       return Promise.reject(new Error(`Unexpected execCli call: ${normalizedArgs}`));
     });
@@ -2186,7 +2073,11 @@ describe('ClaudeMultimodelBridgeService', () => {
     const globalUpdate = vi.fn();
     const scopedUpdate = vi.fn();
 
-    await service.getProviderStatus('/mock/agent_teams_orchestrator', 'opencode', globalUpdate);
+    const globalStatus = await service.getProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode',
+      globalUpdate
+    );
     const scopedStatus = await service.getProviderStatus(
       '/mock/agent_teams_orchestrator',
       'opencode',
@@ -2195,28 +2086,17 @@ describe('ClaudeMultimodelBridgeService', () => {
     );
 
     expect(scopedUpdate).not.toHaveBeenCalled();
-    expect(
-      execCliMock.mock.calls.filter(
-        (call) => call[1].join(' ') === 'runtime status --json --provider opencode'
-      )
-    ).toHaveLength(2);
-    expect(scopedStatus).toMatchObject({
-      modelCatalog: { defaultModelId: 'ollama/qwen2.5-coder:0.5b', status: 'ready' },
-      capabilities: { teamLaunch: true },
-    });
-
-    resolveGlobalHydration({
-      stdout: JSON.stringify(buildStatus('opencode/big-pickle')),
-      stderr: '',
-      exitCode: 0,
-    });
-    await vi.waitFor(() => {
-      expect(globalUpdate).toHaveBeenCalledTimes(1);
-    });
-    expect(globalUpdate.mock.calls[0]?.[0]).toMatchObject({
-      modelCatalog: { defaultModelId: 'opencode/big-pickle', status: 'ready' },
-      capabilities: { teamLaunch: true },
-    });
+    expect(globalUpdate).not.toHaveBeenCalled();
+    expect(globalStatus.statusMessage).toBe('global');
+    expect(scopedStatus.statusMessage).toBe('scoped');
+    expect(execCliMock.mock.calls.map((call) => call[1])).toEqual([
+      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+    ]);
+    expect(execCliMock.mock.calls.map((call) => call[2]?.cwd ?? null)).toEqual([
+      null,
+      '/tmp/scoped-project',
+    ]);
   });
 
   it('publishes full Anthropic status and rate limits together while keeping revoked auth closed', async () => {
