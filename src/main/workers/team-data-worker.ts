@@ -106,7 +106,10 @@ parentPort?.on('message', async (msg: TeamDataWorkerRequest) => {
             msg.payload.memberName
           );
         } else {
-          teamDataService.invalidateTeamRuntimeAdvisories(msg.payload.teamName);
+          teamDataService.invalidateTeamRuntimeAdvisories(
+            msg.payload.teamName,
+            msg.payload.runStartedAtMs
+          );
         }
         respond({ id: msg.id, ok: true, result: null, diag: buildDiag() });
         break;

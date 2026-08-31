@@ -22964,8 +22964,11 @@ function expectProcessKillCount(
   expected: number
 ): void {
   const actual = killedPids.filter((killedPid) => killedPid === pid).length;
-  // Windows uses taskkill.exe for process-tree termination, so process.kill is not called.
-  expect(actual).toBe(process.platform === 'win32' ? 0 : expected);
+  // Windows tries taskkill /T first and only signals the PID directly when the
+  // process is still alive afterwards. These PIDs are synthetic and the tracker
+  // mocks process.kill, so the liveness probe always answers "alive" and that
+  // second step always runs - the same single termination as on POSIX.
+  expect(actual).toBe(expected);
 }
 
 function injectStaleTerminalProvisioningRun(

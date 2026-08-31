@@ -228,7 +228,7 @@ describe('OpenCode usage integration', () => {
         homeDir: 'C:\\Users\\test',
         env: { LOCALAPPDATA: 'D:\\Local' },
       })
-    ).toBe(path.join('D:\\Local', 'claude-multimodel-nodejs', 'Data'));
+    ).toBe(path.win32.join('D:\\Local', 'claude-multimodel-nodejs', 'Data'));
     expect(
       resolveClaudeMultimodelDataHomePath({
         platform: 'linux',

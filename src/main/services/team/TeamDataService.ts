@@ -38,6 +38,7 @@ import {
   type LeadSessionParseCacheKey,
 } from './cache/LeadSessionParseCache';
 import { atomicWriteAsync } from './atomicWrite';
+import { renameDraftTeamDirectory } from './draftTeamRename';
 import { extractLeadSessionMessagesFromJsonl } from './leadSessionMessageExtractor';
 import { MemberActivityMetaService } from './MemberActivityMetaService';
 import { mergeLiveLeadProcessMessagesPage } from './mergeLiveLeadProcessMessages';
@@ -704,8 +705,8 @@ export class TeamDataService {
     this.memberRuntimeAdvisoryService.invalidateMemberAdvisory(teamName, memberName);
   }
 
-  invalidateTeamRuntimeAdvisories(teamName: string): void {
-    this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName);
+  invalidateTeamRuntimeAdvisories(teamName: string, runStartedAtMs?: number): void {
+    this.memberRuntimeAdvisoryService.invalidateTeamAdvisories(teamName, runStartedAtMs);
   }
 
   private async getMemberRuntimeAdvisoriesForSnapshot(
@@ -3588,6 +3589,8 @@ export class TeamDataService {
       throw error;
     }
   }
+
+  readonly renameDraftTeam = renameDraftTeamDirectory;
 
   async reconcileTeamArtifacts(
     teamName: string,

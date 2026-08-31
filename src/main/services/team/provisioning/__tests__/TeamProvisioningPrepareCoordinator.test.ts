@@ -260,6 +260,52 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     expect(verifySelectedProviderModels).toHaveBeenCalledOnce();
   });
 
+  it('blocks ChatGPT-gated Codex models during deep verification via the one-shot probe', async () => {
+    const execCli = vi.fn(async (_command: string, args: string[]) => {
+      if (args.includes('-p')) {
+        throw new Error(
+          "400 invalid_request_error: The 'gpt-5.2' model is not supported when using Codex with a ChatGPT account."
+        );
+      }
+      throw new Error(`Unexpected CLI invocation: ${args.join(' ')}`);
+    });
+    const readRuntimeProviderLaunchFacts = vi.fn().mockResolvedValue({
+      defaultModel: 'gpt-5.6-sol',
+      modelIds: new Set(['gpt-5.6-sol', 'gpt-5.2']),
+      modelListParsed: true,
+      modelCatalog: null,
+      runtimeCapabilities: null,
+      providerStatus: { providerId: 'codex', authMethod: 'chatgpt' },
+    });
+    const coordinator = createCoordinator({ execCli, readRuntimeProviderLaunchFacts });
+
+    const deepResult = await coordinator.prepareForProvisioning('/workspace/chatgpt-gate', {
+      providerId: 'codex',
+      modelIds: ['gpt-5.2'],
+      modelVerificationMode: 'deep',
+    });
+    expect(deepResult.ready).toBe(false);
+    expect(deepResult.message).toContain('not supported when using Codex with a ChatGPT account');
+    expect(deepResult.issues).toEqual([
+      expect.objectContaining({
+        providerId: 'codex',
+        modelId: 'gpt-5.2',
+        code: 'model_unavailable',
+      }),
+    ]);
+
+    execCli.mockClear();
+    const compatibilityResult = await coordinator.prepareForProvisioning(
+      '/workspace/chatgpt-gate-compatibility',
+      {
+        providerId: 'codex',
+        modelIds: ['gpt-5.2'],
+      }
+    );
+    expect(compatibilityResult.ready).toBe(true);
+    expect(execCli).not.toHaveBeenCalled();
+  });
+
   it('blocks selected local models that fail the injected runtime-readiness gate', async () => {
     const prepare = vi.fn().mockResolvedValue({
       ok: true,

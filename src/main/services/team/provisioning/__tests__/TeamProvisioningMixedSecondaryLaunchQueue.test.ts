@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -277,7 +279,8 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
       ),
     ]);
     expect(run.mixedSecondarySharedRuntimeFailuresByProject).toEqual(
-      new Map([['/workspace/root', rootFailure]])
+      // The queue keys failures by resolved cwd, which anchors to a drive on Windows.
+      new Map([[path.resolve('/workspace/root'), rootFailure]])
     );
     expect(ports.publishMixedSecondaryLaneStatusChange).toHaveBeenCalledWith(run, sameProject);
   });

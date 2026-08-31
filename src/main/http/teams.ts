@@ -7,6 +7,7 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import {
   HttpBadRequestError,
   parseCreateTeamRequest,
@@ -24,7 +25,9 @@ import type {
 import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
+  TeamCreateResponse,
   TeamLaunchRequest,
+  TeamLaunchResponse,
 } from '@shared/types/team';
 import type { FastifyInstance } from 'fastify';
 
@@ -231,6 +234,15 @@ async function getTeamDataWithRuntimeOverlay(
 }
 
 export function registerTeamRoutes(app: FastifyInstance, services: HttpServices): void {
+  registerTeamMemberDiagnosticsRoute(app, services, {
+    logger,
+    shouldLogError,
+    getStatusCode,
+    getResponseErrorMessage,
+    createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
+    isTeamNotFoundError,
+  });
+
   app.get('/api/teams', async (_request, reply) => {
     try {
       return reply.send(await getTeamDataApi(services).listTeams());
@@ -295,17 +307,24 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
 
         const teamName = validatedTeamName.value!;
         const draftSavedRequest = await getDraftSavedRequest(services, teamName);
-        const response = draftSavedRequest
-          ? await getTeamProvisioningStartApi(services).createTeam(
-              parseDraftLaunchCreateRequest(draftSavedRequest, request.body),
-              () => undefined
-            )
-          : await getTeamProvisioningStartApi(services).launchTeam(
-              parseLaunchRequest(teamName, request.body),
-              () => undefined
-            );
+        let response: TeamCreateResponse | TeamLaunchResponse;
         if (draftSavedRequest) {
-          services.memberWorkSyncFeature?.resumeTeam(teamName);
+          const createRequest = parseDraftLaunchCreateRequest(draftSavedRequest, request.body);
+          if (createRequest.teamName !== teamName) {
+            // The draft directory was created under an earlier name; the final
+            // create must use the final team name for the directory.
+            await getTeamDataApi(services).renameDraftTeam(teamName, createRequest.teamName);
+          }
+          response = await getTeamProvisioningStartApi(services).createTeam(
+            createRequest,
+            () => undefined
+          );
+          services.memberWorkSyncFeature?.resumeTeam(createRequest.teamName);
+        } else {
+          response = await getTeamProvisioningStartApi(services).launchTeam(
+            parseLaunchRequest(teamName, request.body),
+            () => undefined
+          );
         }
         TeamConfigReader.invalidateListTeamsCache();
         return reply.send(response);

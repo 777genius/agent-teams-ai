@@ -1,3 +1,4 @@
+import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -424,5 +425,216 @@ describe('team provisioning launch identity resolution', () => {
       },
       facts,
     });
+  });
+});
+
+describe('codex chatgpt model gate during launch identity validation', () => {
+  // The catalog entry deliberately uses id "catalog-model" with a different
+  // launchModel "catalog-launch" so the requested/resolved split is observable.
+  function buildChatGptCodexFacts(): RuntimeProviderLaunchFacts {
+    return buildFacts({
+      defaultModel: 'catalog-launch',
+      modelIds: new Set(['catalog-model', 'catalog-launch']),
+      modelCatalog: buildCatalog(),
+      providerStatus: {
+        providerId: 'codex',
+        authMethod: 'chatgpt',
+        modelCatalog: buildCatalog(),
+      },
+    });
+  }
+
+  function captureValidatedFacts(): {
+    validateRuntimeLaunchSelection: LaunchIdentityResolutionPorts['validateRuntimeLaunchSelection'];
+    validatedFacts: RuntimeProviderLaunchFacts[];
+  } {
+    const validatedFacts: RuntimeProviderLaunchFacts[] = [];
+    return {
+      validatedFacts,
+      validateRuntimeLaunchSelection: vi.fn(
+        (
+          params: Parameters<LaunchIdentityResolutionPorts['validateRuntimeLaunchSelection']>[0]
+        ) => {
+          validatedFacts.push(params.facts);
+        }
+      ),
+    };
+  }
+
+  it('probes the resolved launch model while recording failure against the explicit selector', async () => {
+    const facts = buildChatGptCodexFacts();
+    const identity = buildLaunchIdentity({
+      selectedModel: 'catalog-model',
+      selectedModelKind: 'explicit',
+      resolvedLaunchModel: 'catalog-launch',
+      catalogId: 'catalog-model',
+    });
+    const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({
+      outcome: 'unsupported',
+      message:
+        "The 'catalog-launch' model is not supported when using Codex with a ChatGPT account.",
+    });
+    const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
+
+    await resolveAndValidateLaunchIdentity(
+      {
+        claudePath: '/bin/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        request: { providerId: 'codex', model: 'catalog-model' },
+        effectiveMembers: [{ name: 'CodexPeer', providerId: 'codex', model: 'catalog-model' }],
+      },
+      {
+        readRuntimeProviderLaunchFacts: vi.fn(async () => facts),
+        validateRuntimeLaunchSelection,
+        buildProviderModelLaunchIdentity: vi.fn(() => identity),
+        probeCodexChatGptModelSupport,
+      }
+    );
+
+    expect(probeCodexChatGptModelSupport).toHaveBeenCalledTimes(1);
+    expect(probeCodexChatGptModelSupport).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: 'catalog-launch' })
+    );
+    expect(validatedFacts).toHaveLength(2);
+    for (const validated of validatedFacts) {
+      expect(validated.providerStatus?.modelAvailability).toEqual([
+        expect.objectContaining({ modelId: 'catalog-model', status: 'unavailable' }),
+      ]);
+    }
+  });
+
+  it('passes launch facts through when the probe is supported or inconclusive', async () => {
+    for (const outcome of ['supported', 'inconclusive'] as const) {
+      const facts = buildChatGptCodexFacts();
+      const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({ outcome });
+      const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
+
+      await resolveAndValidateLaunchIdentity(
+        {
+          claudePath: '/bin/claude',
+          cwd: '/repo',
+          env: { PATH: '/bin' },
+          request: { providerId: 'codex', model: 'catalog-model' },
+          effectiveMembers: [{ name: 'CodexPeer', providerId: 'codex', model: 'catalog-model' }],
+        },
+        {
+          readRuntimeProviderLaunchFacts: vi.fn(async () => facts),
+          validateRuntimeLaunchSelection,
+          buildProviderModelLaunchIdentity: vi.fn(() =>
+            buildLaunchIdentity({
+              selectedModel: 'catalog-model',
+              selectedModelKind: 'explicit',
+              resolvedLaunchModel: 'catalog-launch',
+              catalogId: 'catalog-model',
+            })
+          ),
+          probeCodexChatGptModelSupport,
+        }
+      );
+
+      expect(probeCodexChatGptModelSupport).toHaveBeenCalledTimes(1);
+      expect(validatedFacts).toHaveLength(2);
+      expect(validatedFacts.every((validated) => validated === facts)).toBe(true);
+    }
+  });
+
+  it('treats a rejected probe as inconclusive instead of blocking the launch', async () => {
+    const facts = buildChatGptCodexFacts();
+    const probeCodexChatGptModelSupport = vi
+      .fn()
+      .mockRejectedValue(new Error('codex exec crashed: ENOENT'));
+    const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
+
+    await resolveAndValidateLaunchIdentity(
+      {
+        claudePath: '/bin/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        request: { providerId: 'codex', model: 'catalog-model' },
+        effectiveMembers: [{ name: 'CodexPeer', providerId: 'codex', model: 'catalog-model' }],
+      },
+      {
+        readRuntimeProviderLaunchFacts: vi.fn(async () => facts),
+        validateRuntimeLaunchSelection,
+        buildProviderModelLaunchIdentity: vi.fn(() =>
+          buildLaunchIdentity({
+            selectedModel: 'catalog-model',
+            selectedModelKind: 'explicit',
+            resolvedLaunchModel: 'catalog-launch',
+            catalogId: 'catalog-model',
+          })
+        ),
+        probeCodexChatGptModelSupport,
+      }
+    );
+
+    // The cached rejection is normalized once and reused for the member check.
+    expect(probeCodexChatGptModelSupport).toHaveBeenCalledTimes(1);
+    expect(validatedFacts).toHaveLength(2);
+    // Absence of proof is not proof of incompatibility: facts stay untouched.
+    expect(validatedFacts.every((validated) => validated === facts)).toBe(true);
+  });
+
+  it('never probes an implicit default selection', async () => {
+    const facts = buildChatGptCodexFacts();
+    const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({
+      outcome: 'unsupported',
+      message:
+        "The 'catalog-launch' model is not supported when using Codex with a ChatGPT account.",
+    });
+    const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
+
+    await resolveAndValidateLaunchIdentity(
+      {
+        claudePath: '/bin/claude',
+        cwd: '/repo',
+        env: { PATH: '/bin' },
+        request: { providerId: 'codex', model: DEFAULT_PROVIDER_MODEL_SELECTION },
+        effectiveMembers: [{ name: 'CodexPeer', providerId: 'codex' }],
+      },
+      {
+        readRuntimeProviderLaunchFacts: vi.fn(async () => facts),
+        validateRuntimeLaunchSelection,
+        buildProviderModelLaunchIdentity: vi.fn(() => buildLaunchIdentity()),
+        probeCodexChatGptModelSupport,
+      }
+    );
+
+    expect(probeCodexChatGptModelSupport).not.toHaveBeenCalled();
+    expect(validatedFacts.every((validated) => validated === facts)).toBe(true);
+  });
+
+  it('probes a direct member under its resolved launch model', async () => {
+    const facts = buildChatGptCodexFacts();
+    const probeCodexChatGptModelSupport = vi.fn().mockResolvedValue({
+      outcome: 'unsupported',
+      message:
+        "The 'catalog-launch' model is not supported when using Codex with a ChatGPT account.",
+    });
+    const { validateRuntimeLaunchSelection, validatedFacts } = captureValidatedFacts();
+
+    await resolveDirectMemberLaunchIdentity(
+      {
+        claudePath: '/bin/claude',
+        cwd: '/repo',
+        providerId: 'codex',
+        provisioningEnv: { env: { PATH: '/bin' }, providerArgs: ['--provider'] },
+        memberSpec: { name: 'Worker', model: 'catalog-model' },
+      },
+      {
+        readRuntimeProviderLaunchFacts: vi.fn(async () => facts),
+        validateRuntimeLaunchSelection,
+        buildProviderModelLaunchIdentity: vi.fn(() => buildLaunchIdentity()),
+        probeCodexChatGptModelSupport,
+      }
+    );
+
+    expect(probeCodexChatGptModelSupport).toHaveBeenCalledWith(
+      expect.objectContaining({ modelId: 'catalog-launch', providerArgs: ['--provider'] })
+    );
+    expect(validatedFacts[0]?.providerStatus?.modelAvailability).toEqual([
+      expect.objectContaining({ modelId: 'catalog-model', status: 'unavailable' }),
+    ]);
   });
 });

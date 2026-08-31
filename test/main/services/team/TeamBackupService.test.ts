@@ -733,6 +733,98 @@ describe('TeamBackupService', () => {
     }
   });
 
+  it('retries publishing the lock when the contended lock vanishes during the occupancy probe', async () => {
+    const service = new TeamBackupService();
+    const scope = 'vanishing-contended-lock';
+    const acquireLock = getAcquirePermanentDeletionLock(service);
+    const releaseLock = getReleasePermanentDeletionLock(service);
+    const lockPath = getPermanentDeletionLockPath(hoisted.backupsBase, scope);
+
+    // Windows reports an occupied destination as EPERM, and the holder can
+    // release between that failure and the occupancy probe.
+    const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
+    let publishAttempts = 0;
+    const renameSpy = vi
+      .spyOn(nativeFs.promises, 'rename')
+      .mockImplementation(async (sourcePath, destinationPath) => {
+        if (path.resolve(String(destinationPath)) === path.resolve(lockPath)) {
+          publishAttempts += 1;
+          if (publishAttempts === 1) {
+            throw Object.assign(new Error('EPERM: operation not permitted, rename'), {
+              code: 'EPERM',
+            });
+          }
+        }
+        return realRename(sourcePath, destinationPath);
+      });
+
+    const realLstat = nativeFs.promises.lstat.bind(nativeFs.promises);
+    let occupancyProbes = 0;
+    const lstatSpy = vi.spyOn(nativeFs.promises, 'lstat').mockImplementation(async (targetPath) => {
+      if (path.resolve(String(targetPath)) === path.resolve(lockPath)) {
+        occupancyProbes += 1;
+        if (occupancyProbes === 1) {
+          throw Object.assign(new Error('ENOENT: no such file or directory, lstat'), {
+            code: 'ENOENT',
+          });
+        }
+      }
+      return realLstat(targetPath);
+    });
+
+    let lock: PermanentDeletionTestLock | null = null;
+    try {
+      lock = await acquireLock(scope);
+      expect(lock.lockPath).toBe(lockPath);
+      expect(publishAttempts).toBe(2);
+      await expect(
+        fs.readFile(path.join(lockPath, lock.ownerEntryName), 'utf8')
+      ).resolves.toContain(lock.owner.token);
+    } finally {
+      renameSpy.mockRestore();
+      lstatSpy.mockRestore();
+      if (lock) await releaseLock(lock);
+      await fs.rm(lockPath, { recursive: true, force: true });
+      service.dispose();
+    }
+  });
+
+  it('surfaces a rename permission failure when the occupancy probe fails for another reason', async () => {
+    const service = new TeamBackupService();
+    const scope = 'unprobeable-lock-permission';
+    const acquireLock = getAcquirePermanentDeletionLock(service);
+    const lockPath = getPermanentDeletionLockPath(hoisted.backupsBase, scope);
+
+    const realRename = nativeFs.promises.rename.bind(nativeFs.promises);
+    const renameSpy = vi
+      .spyOn(nativeFs.promises, 'rename')
+      .mockImplementation(async (sourcePath, destinationPath) => {
+        if (path.resolve(String(destinationPath)) === path.resolve(lockPath)) {
+          throw Object.assign(new Error('EPERM: operation not permitted, rename'), {
+            code: 'EPERM',
+          });
+        }
+        return realRename(sourcePath, destinationPath);
+      });
+
+    const realLstat = nativeFs.promises.lstat.bind(nativeFs.promises);
+    const lstatSpy = vi.spyOn(nativeFs.promises, 'lstat').mockImplementation(async (targetPath) => {
+      if (path.resolve(String(targetPath)) === path.resolve(lockPath)) {
+        throw Object.assign(new Error('EACCES: permission denied, lstat'), { code: 'EACCES' });
+      }
+      return realLstat(targetPath);
+    });
+
+    try {
+      await expect(acquireLock(scope)).rejects.toMatchObject({ code: 'EPERM' });
+    } finally {
+      renameSpy.mockRestore();
+      lstatSpy.mockRestore();
+      await fs.rm(lockPath, { recursive: true, force: true });
+      service.dispose();
+    }
+  });
+
   it('does not let a stale releaser displace a recovered owner or admit a third contender', async () => {
     const service = new TeamBackupService();
     const scope = 'exact-release-ownership';

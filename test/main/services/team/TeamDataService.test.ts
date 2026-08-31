@@ -709,6 +709,93 @@ describe('TeamDataService draft metadata', () => {
     });
   });
 
+  it('renames draft team and tasks directories to the final team name', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-draft-rename-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+
+    const service = new TeamDataService();
+    await service.createTeamConfig({
+      teamName: 'signal-ops',
+      displayName: 'Signal Ops',
+      cwd: '/Users/test/project',
+      members: [{ name: 'builder', role: 'Engineer' }],
+    });
+
+    await service.renameDraftTeam('signal-ops', 'fixteam-test');
+
+    await expect(fs.access(path.join(claudeRoot, 'teams', 'signal-ops'))).rejects.toThrow();
+    await expect(fs.access(path.join(claudeRoot, 'tasks', 'signal-ops'))).rejects.toThrow();
+    await expect(
+      fs.access(path.join(claudeRoot, 'teams', 'fixteam-test', 'team.meta.json'))
+    ).resolves.toBeUndefined();
+    await expect(fs.access(path.join(claudeRoot, 'tasks', 'fixteam-test'))).resolves.toBeUndefined();
+
+    await expect(service.getSavedRequest('signal-ops')).resolves.toBeNull();
+    await expect(service.getSavedRequest('fixteam-test')).resolves.toMatchObject({
+      teamName: 'fixteam-test',
+      displayName: 'Signal Ops',
+      cwd: '/Users/test/project',
+      members: [{ name: 'builder', role: 'Engineer' }],
+    });
+  });
+
+  it('is a no-op when the draft rename uses the same team name', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-draft-rename-noop-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+
+    const service = new TeamDataService();
+    await service.createTeamConfig({
+      teamName: 'signal-ops',
+      cwd: '/Users/test/project',
+      members: [],
+    });
+
+    await service.renameDraftTeam('signal-ops', 'signal-ops');
+
+    await expect(
+      fs.access(path.join(claudeRoot, 'teams', 'signal-ops', 'team.meta.json'))
+    ).resolves.toBeUndefined();
+  });
+
+  it('refuses to rename a non-draft team or onto an existing team', async () => {
+    const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-draft-rename-guard-'));
+    tempPaths.push(claudeRoot);
+    setClaudeBasePathOverride(claudeRoot);
+
+    const service = new TeamDataService();
+    await service.createTeamConfig({
+      teamName: 'signal-ops',
+      cwd: '/Users/test/project',
+      members: [],
+    });
+    await service.createTeamConfig({
+      teamName: 'fixteam-test',
+      cwd: '/Users/test/project',
+      members: [],
+    });
+
+    await expect(service.renameDraftTeam('signal-ops', 'fixteam-test')).rejects.toThrow(
+      'Team already exists: fixteam-test'
+    );
+    await expect(service.renameDraftTeam('missing-team', 'brand-new')).rejects.toThrow(
+      'Team not found: missing-team'
+    );
+
+    await fs.writeFile(
+      path.join(claudeRoot, 'teams', 'signal-ops', 'config.json'),
+      '{"name":"signal-ops","members":[]}',
+      'utf8'
+    );
+    await expect(service.renameDraftTeam('signal-ops', 'brand-new')).rejects.toThrow(
+      'Cannot rename non-draft team: signal-ops'
+    );
+    await expect(
+      fs.access(path.join(claudeRoot, 'teams', 'signal-ops', 'team.meta.json'))
+    ).resolves.toBeUndefined();
+  });
+
   it('persists a migrated removal tombstone and makes repeated removal restart-safe', async () => {
     const claudeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'team-data-remove-restart-'));
     tempPaths.push(claudeRoot);

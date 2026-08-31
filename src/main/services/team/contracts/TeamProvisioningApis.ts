@@ -116,6 +116,16 @@ export interface TeamHttpDataApi {
   getTeamData(teamName: string): Promise<TeamViewSnapshot>;
   getSavedRequest(teamName: string): Promise<TeamCreateRequest | null>;
   createTeamConfig(request: TeamCreateConfigRequest): Promise<void>;
+  renameDraftTeam(oldTeamName: string, newTeamName: string): Promise<void>;
+}
+
+/**
+ * Snapshot reads behind the HTTP member diagnostics route. Same two service
+ * calls the renderer's member detail dialog builds its view from.
+ */
+export interface TeamHttpMemberDiagnosticsApi {
+  getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
+  getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
 }
 
 export interface TeamHttpHandlerApis {
@@ -124,6 +134,7 @@ export interface TeamHttpHandlerApis {
   taskActivity: TeamTaskActivityRepairApi;
   runtime: TeamHttpRuntimeApi;
   runtimeControl: TeamRuntimeControlCompatibilityApi;
+  memberDiagnostics: TeamHttpMemberDiagnosticsApi;
 }
 
 export interface TeamIpcHandlerApis {
@@ -368,6 +379,7 @@ export function bindTeamHttpDataApi(source: TeamHttpDataApi): TeamHttpDataApi {
     getTeamData: source.getTeamData.bind(source),
     getSavedRequest: source.getSavedRequest.bind(source),
     createTeamConfig: source.createTeamConfig.bind(source),
+    renameDraftTeam: source.renameDraftTeam.bind(source),
   };
 }
 
@@ -376,7 +388,8 @@ export function bindTeamHttpHandlerApis(
     TeamProvisioningStatusApi &
     TeamTaskActivityRepairApi &
     TeamHttpRuntimeApi &
-    TeamRuntimeControlCompatibilityApi
+    TeamRuntimeControlCompatibilityApi &
+    TeamHttpMemberDiagnosticsApi
 ): TeamHttpHandlerApis {
   return {
     provisioningStart: bindTeamProvisioningStartApi(source),
@@ -384,6 +397,16 @@ export function bindTeamHttpHandlerApis(
     taskActivity: bindTeamTaskActivityRepairApi(source),
     runtime: bindTeamHttpRuntimeApi(source),
     runtimeControl: bindTeamRuntimeControlCompatibilityApi(source),
+    memberDiagnostics: bindTeamHttpMemberDiagnosticsApi(source),
+  };
+}
+
+export function bindTeamHttpMemberDiagnosticsApi(
+  source: TeamHttpMemberDiagnosticsApi
+): TeamHttpMemberDiagnosticsApi {
+  return {
+    getMemberSpawnStatuses: source.getMemberSpawnStatuses.bind(source),
+    getTeamAgentRuntimeSnapshot: source.getTeamAgentRuntimeSnapshot.bind(source),
   };
 }
 
