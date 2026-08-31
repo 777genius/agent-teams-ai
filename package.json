@@ -90,6 +90,7 @@
     "guard:source-file-size": "node ./scripts/ci/check-source-file-size.mjs",
     "guard:source-file-size:ci": "node ./scripts/ci/verify-source-file-size.mjs --require-baseline",
     "guard:team-provisioning-architecture": "node ./scripts/ci/check-team-provisioning-architecture.mjs",
+    "verify:hosted-release-locks": "node ./scripts/hosted-release/verify-locks.mjs --if-present",
     "test:chunks": "tsx test/test-chunk-building.ts",
     "test:semantic": "tsx test/test-semantic-steps.ts",
     "test:noise": "tsx test/test-noise-filtering.ts",
