@@ -5,6 +5,7 @@ export const STACK_LOCK_FILENAME = 'hosted-stack.lock.json';
 export const OWNER_LOCK_TYPE = 'hosted-lifecycle-owner';
 export const STACK_LOCK_TYPE = 'hosted-stack';
 export const LOCK_SCHEMA_VERSION = 1;
+export const MAX_LOCK_BYTES = 1024 * 1024;
 
 // The accepted topology used hosted-lifecycle-owner-runtime.lock.json as a provisional name.
 // P3.S5 standardizes the future materialized lock name above; it does not create that lock.
@@ -34,17 +35,23 @@ const tag = stringMatching(TAG, 'an explicit immutable tag');
 const text = stringMatching(TEXT, 'non-empty printable ASCII text');
 
 const safeRelativePath = (value, path) => {
-  if (typeof value !== 'string' || value.length === 0 || value.length > 240) {
+  if (typeof value !== 'string' || value.length === 0 || Buffer.byteLength(value, 'utf8') > 240) {
     fail(path, 'must be a non-empty bounded relative path');
   }
   if (
     value.startsWith('/') ||
     value.startsWith('\\') ||
     value.includes('\\') ||
-    value.includes('\0') ||
+    value.includes(':') ||
+    Array.from(value).some(
+      (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127
+    ) ||
     value.split('/').some((segment) => segment === '' || segment === '.' || segment === '..')
   ) {
-    fail(path, 'must be a normalized POSIX relative path without traversal');
+    fail(
+      path,
+      'must be a normalized POSIX relative path without traversal, controls, URL/drive syntax, or backslashes'
+    );
   }
 };
 
@@ -241,6 +248,9 @@ export function verifyHostedLockPair(ownerBytes, stackBytes) {
 function parseCanonicalLock(input, schema, filename) {
   if (!Buffer.isBuffer(input) && !(input instanceof Uint8Array)) {
     throw new TypeError(`${filename}: input must be bytes`);
+  }
+  if (input.byteLength > MAX_LOCK_BYTES) {
+    throw new Error(`${filename}: input exceeds the ${MAX_LOCK_BYTES}-byte limit`);
   }
 
   let textValue;

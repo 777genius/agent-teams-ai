@@ -1,18 +1,19 @@
 // @vitest-environment node
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
-  LEGACY_HOSTED_OWNER_LOCK_FILENAME,
-  OWNER_LOCK_FILENAME,
-  STACK_LOCK_FILENAME,
   canonicalJsonBytes,
+  LEGACY_HOSTED_OWNER_LOCK_FILENAME,
+  MAX_LOCK_BYTES,
+  OWNER_LOCK_FILENAME,
   parseOwnerLock,
   parseStackLock,
   sha256Digest,
+  STACK_LOCK_FILENAME,
   verifyHostedLockPair,
 } from '../../../scripts/hosted-release/contracts.mjs';
 import { verifyHostedLocksAtRoot } from '../../../scripts/hosted-release/verify-locks.mjs';
@@ -241,6 +242,15 @@ describe('hosted release lock contracts', () => {
     expect(() => parseOwnerLock(Buffer.from([0xff]))).toThrow(/valid UTF-8/);
   });
 
+  it('bounds raw bytes before parsing and rejects an explicit UTF-8 BOM', () => {
+    const { ownerBytes } = validPair();
+    const withBom = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), ownerBytes]);
+    expect(() => parseOwnerLock(withBom)).toThrow(/malformed JSON|canonical representation/);
+    expect(() => parseOwnerLock(Buffer.alloc(MAX_LOCK_BYTES + 1, 0x20))).toThrow(
+      /exceeds the .*byte limit/
+    );
+  });
+
   it('rejects missing, unknown, malformed, and type-confused identities', () => {
     const missing = ownerFixture() as Record<string, unknown>;
     delete missing.source;
@@ -260,9 +270,21 @@ describe('hosted release lock contracts', () => {
   });
 
   it('rejects unsafe paths and non-canonical capability sets', () => {
-    const unsafe = ownerFixture();
-    unsafe.build.entryPath = '../dist/cli.js';
-    expect(() => parseOwnerLock(canonicalJsonBytes(unsafe))).toThrow(/without traversal/);
+    for (const unsafePath of [
+      '../dist/cli.js',
+      'dist\\cli.js',
+      'C:/dist/cli.js',
+      'https://example.invalid/cli.js',
+      'dist/\ncli.js',
+      'dist/\tcli.js',
+      `dist/${String.fromCharCode(0x7f)}cli.js`,
+    ]) {
+      const unsafe = ownerFixture();
+      unsafe.build.entryPath = unsafePath;
+      expect(() => parseOwnerLock(canonicalJsonBytes(unsafe))).toThrow(
+        /normalized POSIX relative path/
+      );
+    }
 
     const duplicateCapabilities = ownerFixture();
     duplicateCapabilities.protocol.capabilities = ['approval.owner', 'approval.owner'];
@@ -366,10 +388,124 @@ describe('hosted release lock contracts', () => {
     await writeFile(path.join(root, LEGACY_HOSTED_OWNER_LOCK_FILENAME), ownerBytes);
     await expect(verifyHostedLocksAtRoot(root)).rejects.toThrow(/is superseded/);
   });
+
+  it('rejects owner and stack symlinks', async () => {
+    const ownerSymlinkRoot = await temporaryRoot();
+    const ownerPair = validPair();
+    await Promise.all([
+      writeFile(path.join(ownerSymlinkRoot, 'owner-target.json'), ownerPair.ownerBytes),
+      writeFile(path.join(ownerSymlinkRoot, STACK_LOCK_FILENAME), ownerPair.stackBytes),
+    ]);
+    await symlink('owner-target.json', path.join(ownerSymlinkRoot, OWNER_LOCK_FILENAME));
+    await expect(verifyHostedLocksAtRoot(ownerSymlinkRoot)).rejects.toThrow(
+      /regular file.*symlink/
+    );
+
+    const stackSymlinkRoot = await temporaryRoot();
+    const stackPair = validPair();
+    await Promise.all([
+      writeFile(path.join(stackSymlinkRoot, OWNER_LOCK_FILENAME), stackPair.ownerBytes),
+      writeFile(path.join(stackSymlinkRoot, 'stack-target.json'), stackPair.stackBytes),
+    ]);
+    await symlink('stack-target.json', path.join(stackSymlinkRoot, STACK_LOCK_FILENAME));
+    await expect(verifyHostedLocksAtRoot(stackSymlinkRoot)).rejects.toThrow(
+      /regular file.*symlink/
+    );
+  });
+
+  it('does not treat dangling lock symlinks as absent with ifPresent', async () => {
+    const root = await temporaryRoot();
+    await symlink('missing-owner.json', path.join(root, OWNER_LOCK_FILENAME));
+    await expect(verifyHostedLocksAtRoot(root, { ifPresent: true })).rejects.toThrow(
+      /regular file.*symlink/
+    );
+  });
+
+  it('rejects owner and stack identity collapse through hard links', async () => {
+    const root = await temporaryRoot();
+    const { ownerBytes } = validPair();
+    const ownerPath = path.join(root, OWNER_LOCK_FILENAME);
+    await writeFile(ownerPath, ownerBytes);
+    await link(ownerPath, path.join(root, STACK_LOCK_FILENAME));
+    await expect(verifyHostedLocksAtRoot(root)).rejects.toThrow(/hard-linked file/);
+  });
+
+  it('rejects aliases outside the lock pair', async () => {
+    const root = await temporaryRoot();
+    const { ownerBytes, stackBytes } = validPair();
+    const ownerPath = path.join(root, OWNER_LOCK_FILENAME);
+    await writeFile(ownerPath, ownerBytes);
+    await writeFile(path.join(root, STACK_LOCK_FILENAME), stackBytes);
+    await link(ownerPath, path.join(root, 'external-owner-alias.json'));
+    await expect(verifyHostedLocksAtRoot(root)).rejects.toThrow(/hard-linked file/);
+  });
+
+  it('accepts unrelated directory changes in a shared ancestor', async () => {
+    const container = await temporaryRoot();
+    const root = path.join(container, 'locks');
+    await mkdir(root);
+    const { ownerBytes, stackBytes } = validPair();
+    await writeFile(path.join(root, OWNER_LOCK_FILENAME), ownerBytes);
+    await writeFile(path.join(root, STACK_LOCK_FILENAME), stackBytes);
+    await expect(
+      verifyHostedLocksAtRoot(root, {
+        onFileOpened: async (filename) => {
+          await writeFile(path.join(container, `unrelated-${filename}`), 'unrelated job');
+        },
+      })
+    ).resolves.toEqual({ status: 'verified' });
+  });
+
+  it('rejects oversized lock files before reading or parsing them', async () => {
+    const root = await temporaryRoot();
+    const { stackBytes } = validPair();
+    await Promise.all([
+      writeFile(path.join(root, OWNER_LOCK_FILENAME), Buffer.alloc(MAX_LOCK_BYTES + 1, 0x20)),
+      writeFile(path.join(root, STACK_LOCK_FILENAME), stackBytes),
+    ]);
+    await expect(verifyHostedLocksAtRoot(root)).rejects.toThrow(/exceeds the .*byte limit/);
+  });
+
+  it('rejects a symlink in the supplied lock-root ancestry', async () => {
+    const container = await temporaryRoot();
+    const actualRoot = await mkdtemp(path.join(container, 'actual-'));
+    const aliasRoot = path.join(container, 'lock-root-alias');
+    const { ownerBytes, stackBytes } = validPair();
+    await Promise.all([
+      writeFile(path.join(actualRoot, OWNER_LOCK_FILENAME), ownerBytes),
+      writeFile(path.join(actualRoot, STACK_LOCK_FILENAME), stackBytes),
+    ]);
+    await symlink(actualRoot, aliasRoot, 'dir');
+    await expect(verifyHostedLocksAtRoot(aliasRoot)).rejects.toThrow(
+      /root ancestry.*directories.*symlinks/
+    );
+  });
+
+  it('fails closed when a lock changes after its descriptor is opened', async () => {
+    const root = await temporaryRoot();
+    const { ownerBytes, stackBytes } = validPair();
+    const ownerPath = path.join(root, OWNER_LOCK_FILENAME);
+    await Promise.all([
+      writeFile(ownerPath, ownerBytes),
+      writeFile(path.join(root, STACK_LOCK_FILENAME), stackBytes),
+    ]);
+
+    let changed = false;
+    await expect(
+      verifyHostedLocksAtRoot(root, {
+        onFileOpened: async (filename) => {
+          if (!changed && filename === OWNER_LOCK_FILENAME) {
+            changed = true;
+            await writeFile(ownerPath, Buffer.from('{}\n'));
+          }
+        },
+      })
+    ).rejects.toThrow(/changed while it was being read|metadata changed during verification/);
+  });
 });
 
 async function temporaryRoot(): Promise<string> {
-  const directory = await mkdtemp(path.join(os.tmpdir(), 'hosted-release-locks-'));
+  const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), 'hosted-release-locks-')));
   temporaryDirectories.push(directory);
   await mkdir(directory, { recursive: true });
   return directory;
