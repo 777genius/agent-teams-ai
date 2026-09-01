@@ -1068,8 +1068,8 @@ export interface TeamLaunchRequest extends TeamProvisioningTypes.LocalModelLaunc
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
-  /** When true, context window is limited to 200K tokens instead of the default. */
-  limitContext?: boolean;
+  /** When false, teammates use their provider default. */ syncModelsWithLead?: boolean;
+  /** When true, context is limited to 200K tokens. */ limitContext?: boolean;
   /** Legacy flag retained for compatibility. Deterministic bootstrap launches fresh today. */
   clearContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
@@ -1515,8 +1515,8 @@ export interface TeamCreateRequest extends TeamProvisioningTypes.LocalModelLaunc
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
-  /** When true, context window is limited to 200K tokens instead of the default. */
-  limitContext?: boolean;
+  /** When false, teammates use their provider default. */ syncModelsWithLead?: boolean;
+  /** When true, context is limited to 200K tokens. */ limitContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
   /** Worktree name — CLI: --worktree <name>. */
@@ -1538,8 +1538,8 @@ export interface TeamCreateConfigRequest {
   model?: string;
   effort?: EffortLevel;
   fastMode?: TeamFastMode;
-  /** When true, context window is limited to 200K tokens instead of the default. */
-  limitContext?: boolean;
+  /** When false, teammates use their provider default. */ syncModelsWithLead?: boolean;
+  /** When true, context is limited to 200K tokens. */ limitContext?: boolean;
   /** When false, run WITHOUT --dangerously-skip-permissions (manual tool approval). Default: true. */
   skipPermissions?: boolean;
   /** Worktree name — CLI: --worktree <name>. */

@@ -122,6 +122,7 @@ export function buildCreateTeamMetaPayload(
   model: TeamCreateRequest['model'];
   effort: TeamCreateRequest['effort'];
   fastMode: TeamCreateRequest['fastMode'];
+  syncModelsWithLead: TeamCreateRequest['syncModelsWithLead'];
   skipPermissions: TeamCreateRequest['skipPermissions'];
   worktree: TeamCreateRequest['worktree'];
   extraCliArgs: TeamCreateRequest['extraCliArgs'];
@@ -140,6 +141,7 @@ export function buildCreateTeamMetaPayload(
     model: request.model,
     effort: request.effort,
     fastMode: request.fastMode,
+    syncModelsWithLead: request.syncModelsWithLead,
     skipPermissions: request.skipPermissions,
     worktree: request.worktree,
     extraCliArgs: request.extraCliArgs,

@@ -176,7 +176,7 @@
       "superGrokConnected": "SuperGrok OAuth가 저장되었습니다.",
       "superGrokDescription": "OpenCode OAuth를 통해 SuperGrok 구독을 사용하세요.",
       "switchToSuperGrok": "SuperGrok으로 전환",
-      "title": "선택적 공급자 및 계획",
+      "title": "공급자 및 계획",
       "unavailable": "이용 불가",
       "updateForSuperGrok": "OAuth용 OpenCode 업데이트",
       "updateOpenCode": "오픈코드 업데이트",

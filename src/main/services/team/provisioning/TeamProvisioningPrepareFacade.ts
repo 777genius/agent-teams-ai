@@ -198,6 +198,7 @@ export class TeamProvisioningPrepareFacade {
       providerId?: TeamProviderId;
       model?: string;
       effort?: TeamCreateRequest['effort'];
+      syncModelsWithLead?: boolean;
     };
     primaryProviderId?: TeamProviderId;
     primaryEnv?: ProvisioningEnvResolution;

@@ -43,19 +43,21 @@ export function buildEffectiveTeamMemberSpec(
     providerId?: TeamProviderId;
     model?: string;
     effort?: TeamCreateRequest['effort'];
+    syncModelsWithLead?: boolean;
   }
 ): TeamMemberInput {
   const memberProviderId = normalizeTeamMemberProviderId(member.providerId);
   const defaultProviderId = normalizeTeamMemberProviderId(defaults.providerId);
   const effectiveProviderId = memberProviderId ?? defaultProviderId ?? 'anthropic';
   const explicitMemberModel = getExplicitLaunchModelSelection(member.model);
-  const inheritsDefaultRuntime = memberProviderId == null || memberProviderId === defaultProviderId;
+  const usesDefaultProvider = memberProviderId == null || memberProviderId === defaultProviderId;
+  const inheritsLeadModel = defaults.syncModelsWithLead !== false && usesDefaultProvider;
   const model =
     explicitMemberModel ||
-    (inheritsDefaultRuntime ? getExplicitLaunchModelSelection(defaults.model) : undefined) ||
+    (inheritsLeadModel ? getExplicitLaunchModelSelection(defaults.model) : undefined) ||
     undefined;
   const effort =
-    member.effort ?? (inheritsDefaultRuntime && !explicitMemberModel ? defaults.effort : undefined);
+    member.effort ?? (inheritsLeadModel && !explicitMemberModel ? defaults.effort : undefined);
 
   return {
     ...member,
@@ -71,6 +73,7 @@ export function buildEffectiveTeamMemberSpecs(
     providerId?: TeamProviderId;
     model?: string;
     effort?: TeamCreateRequest['effort'];
+    syncModelsWithLead?: boolean;
   }
 ): TeamCreateRequest['members'] {
   return members.map((member) => buildEffectiveTeamMemberSpec(member, defaults));

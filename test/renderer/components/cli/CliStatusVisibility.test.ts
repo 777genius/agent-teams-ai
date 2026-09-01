@@ -1711,6 +1711,129 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('does not report a missing OpenCode CLI when the app-managed runtime is ready', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/app-data/runtimes/opencode/opencode',
+      version: '1.17.18',
+      source: 'app-managed',
+      state: 'ready',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      displayName: 'Multimodel runtime',
+      supportsSelfUpdate: false,
+      showVersionDetails: false,
+      showBinaryPath: false,
+      authLoggedIn: false,
+      providers: [
+        {
+          providerId: 'opencode',
+          displayName: 'OpenCode (200+ models)',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'runtime_missing',
+          statusMessage: 'OpenCode CLI not found in known metadata',
+          detailMessage: 'Passive summary does not verify authentication or launch readiness.',
+          models: [],
+          canLoginFromUi: false,
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+          },
+          backend: null,
+          modelCatalog: null,
+          modelCatalogRefreshState: 'loading',
+          runtimeCapabilities: null,
+        },
+      ],
+    });
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Connected');
+    expect(host.textContent).toContain('Loading models...');
+    expect(host.textContent).not.toContain('OpenCode CLI not found in known metadata');
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps loaded models visible while refreshing and replaces them with the refreshed list', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const createStatus = (models: string[], refreshState: 'loading' | 'ready') =>
+      createInstalledCliStatus({
+        flavor: 'agent_teams_orchestrator',
+        displayName: 'Multimodel runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+        authLoggedIn: true,
+        providers: [
+          createCodexNativeRolloutProvider({
+            state: 'ready',
+            models,
+            modelCatalogRefreshState: refreshState,
+            runtimeCapabilities: {
+              modelCatalog: {
+                dynamic: true,
+                source: 'app-server',
+              },
+            },
+          }),
+        ],
+      });
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createStatus(['gpt-5.4'], 'loading');
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).toContain('Loading models...');
+    expect(
+      Array.from(host.querySelectorAll('span')).some((span) => span.textContent === '5.4')
+    ).toBe(true);
+
+    storeState.cliStatus = createStatus(['gpt-5.5'], 'ready');
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+
+    expect(host.textContent).not.toContain('Loading models...');
+    expect(
+      Array.from(host.querySelectorAll('span')).some((span) => span.textContent === '5.5')
+    ).toBe(true);
+    expect(
+      Array.from(host.querySelectorAll('span')).some((span) => span.textContent === '5.4')
+    ).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
   it('shows OpenCode catalog models on the dashboard when provider models are empty', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
@@ -2289,6 +2412,11 @@ describe('CLI status visibility during completed install state', () => {
       });
       expect(host.textContent).toContain('88%');
       expect(host.textContent).toContain('63%');
+      expect(
+        Array.from(host.querySelectorAll<HTMLElement>('.dashboard-rate-limit-progress')).map(
+          (progress) => progress.style.width
+        )
+      ).toEqual(['88%', '63%']);
       expect(host.querySelectorAll('.skeleton-shimmer')).toHaveLength(2);
 
       await act(async () => {
@@ -3223,6 +3351,11 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).toContain('Weekly left');
     expect(host.textContent).toContain('59%');
     expect(host.textContent).toContain('resets');
+    expect(
+      Array.from(host.querySelectorAll<HTMLElement>('.dashboard-rate-limit-progress')).map(
+        (progress) => progress.style.width
+      )
+    ).toEqual(['95%', '59%']);
 
     const previousSnapshot = codexAccountHookState.snapshot;
     const previousRateLimits = previousSnapshot?.rateLimits;

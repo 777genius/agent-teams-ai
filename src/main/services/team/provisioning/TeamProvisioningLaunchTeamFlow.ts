@@ -196,6 +196,7 @@ export function buildLaunchSyntheticRequest(input: {
     model: input.request.model,
     effort: input.request.effort,
     fastMode: input.request.fastMode,
+    syncModelsWithLead: input.request.syncModelsWithLead,
     skipPermissions: input.request.skipPermissions,
     worktree: input.request.worktree,
     extraCliArgs: input.request.extraCliArgs,

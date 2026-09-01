@@ -915,7 +915,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     // Hydrate at most once per open dialog, and never on top of user edits.
     if (hydrationRef.current.dirty || hydrationRef.current.key === effectiveTeamName) return;
 
-    const applyEditableRoster = (savedMembers?: TeamCreateRequest['members']): void => {
+    const applyEditableRoster = (
+      savedMembers?: TeamCreateRequest['members'],
+      savedSyncModelsWithLead?: boolean
+    ): void => {
       const inputs =
         members.length > 0
           ? filterEditableMemberInputs(members)
@@ -931,7 +934,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       if (!hydrationRef.current.dirty) {
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
         setSyncModelsWithLead(
-          !inputs.some((member) => member.providerId || member.model || member.effort)
+          savedSyncModelsWithLead ??
+            !inputs.some((member) => member.providerId || member.model || member.effort)
         );
       }
     };
@@ -951,7 +955,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       // Edits made while the request was in flight win over it, but an unrelated control is
       // not a roster edit — and with no live members the saved request is its only source.
       if (cancelled) return;
-      if (!hydrationRef.current.rosterDirty) applyEditableRoster(savedRequest?.members);
+      if (!hydrationRef.current.rosterDirty) {
+        applyEditableRoster(savedRequest?.members, savedRequest?.syncModelsWithLead);
+      }
       if (hydrationRef.current.dirty) return;
 
       const storedEffort = localStorage.getItem('team:lastSelectedEffort');
@@ -2334,6 +2340,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
               selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
                 ? selectedFastMode
                 : undefined,
+            syncModelsWithLead,
             limitContext: effectiveAnthropicRuntimeLimitContext,
             skipPermissions,
             allowExperimentalLocalModels: experimentalLocalModelOverrideEnabled || undefined,

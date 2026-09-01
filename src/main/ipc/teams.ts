@@ -167,7 +167,6 @@ import {
   validateTeamName,
 } from './guards';
 import {
-  parseOptionalBoolean,
   parseOptionalLaunchProviderBackendId,
   parseOptionalMemberEffort,
   parseOptionalMemberProviderId,
@@ -175,6 +174,7 @@ import {
   parseOptionalTeamEffort,
   parseOptionalTeamFastMode,
   parseOptionalTeamProviderId,
+  parseTeamProvisioningBooleanOptions,
 } from './teamIpcRequestParsers';
 
 import type {
@@ -2028,16 +2028,11 @@ async function validateProvisioningRequest(
   if (!fastModeValidation.valid) {
     return { valid: false, error: fastModeValidation.error };
   }
-  if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
-    return { valid: false, error: 'limitContext must be a boolean' };
+  const booleanOptionsValidation = parseTeamProvisioningBooleanOptions(payload);
+  if (!booleanOptionsValidation.valid) {
+    return { valid: false, error: booleanOptionsValidation.error };
   }
-  const experimentalModelsValidation = parseOptionalBoolean(
-    payload.allowExperimentalLocalModels,
-    'allowExperimentalLocalModels'
-  );
-  if (!experimentalModelsValidation.valid) {
-    return { valid: false, error: experimentalModelsValidation.error };
-  }
+  const booleanOptions = booleanOptionsValidation.value;
 
   try {
     await fs.promises.mkdir(cwd, { recursive: true });
@@ -2094,10 +2089,10 @@ async function validateProvisioningRequest(
       model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
-      limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
-      skipPermissions:
-        typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-      allowExperimentalLocalModels: experimentalModelsValidation.value,
+      syncModelsWithLead: booleanOptions.syncModelsWithLead,
+      limitContext: booleanOptions.limitContext,
+      skipPermissions: booleanOptions.skipPermissions,
+      allowExperimentalLocalModels: booleanOptions.allowExperimentalLocalModels,
       worktree:
         typeof payload.worktree === 'string' && payload.worktree.trim()
           ? payload.worktree.trim()
@@ -2239,16 +2234,11 @@ async function handleLaunchTeam(
   if (payload.model !== undefined && typeof payload.model !== 'string') {
     return { success: false, error: 'model must be a string' };
   }
-  if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
-    return { success: false, error: 'limitContext must be a boolean' };
+  const booleanOptionsValidation = parseTeamProvisioningBooleanOptions(payload);
+  if (!booleanOptionsValidation.valid) {
+    return { success: false, error: booleanOptionsValidation.error };
   }
-  const experimentalModelsValidation = parseOptionalBoolean(
-    payload.allowExperimentalLocalModels,
-    'allowExperimentalLocalModels'
-  );
-  if (!experimentalModelsValidation.valid) {
-    return { success: false, error: experimentalModelsValidation.error };
-  }
+  const booleanOptions = booleanOptionsValidation.value;
   const providerValidation = parseOptionalTeamProviderId(payload.providerId);
   if (!providerValidation.valid) {
     return { success: false, error: providerValidation.error };
@@ -2316,11 +2306,8 @@ async function handleLaunchTeam(
         ? undefined
         : savedRequest.model;
     const draftLimitContext =
-      typeof payload.limitContext === 'boolean'
-        ? payload.limitContext
-        : providerChangedFromSaved
-          ? undefined
-          : savedRequest.limitContext;
+      booleanOptions.limitContext ??
+      (providerChangedFromSaved ? undefined : savedRequest.limitContext);
 
     const createRequest: TeamCreateRequest = {
       teamName: tn,
@@ -2340,12 +2327,10 @@ async function handleLaunchTeam(
       model: draftModel,
       effort: effortValidation.value,
       fastMode: fastModeValidation.value,
+      syncModelsWithLead: booleanOptions.syncModelsWithLead ?? savedRequest.syncModelsWithLead,
       limitContext: draftLimitContext,
-      skipPermissions:
-        typeof payload.skipPermissions === 'boolean'
-          ? payload.skipPermissions
-          : savedRequest.skipPermissions,
-      allowExperimentalLocalModels: experimentalModelsValidation.value,
+      skipPermissions: booleanOptions.skipPermissions ?? savedRequest.skipPermissions,
+      allowExperimentalLocalModels: booleanOptions.allowExperimentalLocalModels,
       worktree:
         typeof payload.worktree === 'string'
           ? payload.worktree.trim() || undefined
@@ -2435,11 +2420,8 @@ async function handleLaunchTeam(
       : undefined
     : persistedLaunchModel;
   const launchLimitContext =
-    typeof payload.limitContext === 'boolean'
-      ? payload.limitContext
-      : providerChangedFromPersisted
-        ? undefined
-        : persistedMeta?.limitContext;
+    booleanOptions.limitContext ??
+    (providerChangedFromPersisted ? undefined : persistedMeta?.limitContext);
 
   return wrapTeamHandler('launch', async () => {
     addMainBreadcrumb('team', 'launch', { teamName: validatedTeamName.value! });
@@ -2460,11 +2442,12 @@ async function handleLaunchTeam(
           model: rawLaunchModel,
           effort: effortValidation.value,
           fastMode: fastModeValidation.value,
+          syncModelsWithLead:
+            booleanOptions.syncModelsWithLead ?? persistedMeta?.syncModelsWithLead,
           limitContext: launchLimitContext,
           clearContext: payload.clearContext === true ? true : undefined,
-          skipPermissions:
-            typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
-          allowExperimentalLocalModels: experimentalModelsValidation.value,
+          skipPermissions: booleanOptions.skipPermissions,
+          allowExperimentalLocalModels: booleanOptions.allowExperimentalLocalModels,
           worktree:
             typeof payload.worktree === 'string' ? payload.worktree.trim() || undefined : undefined,
           extraCliArgs:
@@ -3901,12 +3884,11 @@ async function handleCreateConfig(
   if (!fastModeValidation.valid) {
     return { success: false, error: fastModeValidation.error };
   }
-  if (payload.limitContext !== undefined && typeof payload.limitContext !== 'boolean') {
-    return { success: false, error: 'limitContext must be a boolean' };
+  const booleanOptionsValidation = parseTeamProvisioningBooleanOptions(payload);
+  if (!booleanOptionsValidation.valid) {
+    return { success: false, error: booleanOptionsValidation.error };
   }
-  if (payload.skipPermissions !== undefined && typeof payload.skipPermissions !== 'boolean') {
-    return { success: false, error: 'skipPermissions must be a boolean' };
-  }
+  const booleanOptions = booleanOptionsValidation.value;
   if (payload.worktree !== undefined) {
     if (typeof payload.worktree !== 'string') {
       return { success: false, error: 'worktree must be a string' };
@@ -4028,9 +4010,9 @@ async function handleCreateConfig(
         model: typeof payload.model === 'string' ? payload.model.trim() || undefined : undefined,
         effort: effortValidation.value,
         fastMode: fastModeValidation.value,
-        limitContext: typeof payload.limitContext === 'boolean' ? payload.limitContext : undefined,
-        skipPermissions:
-          typeof payload.skipPermissions === 'boolean' ? payload.skipPermissions : undefined,
+        syncModelsWithLead: booleanOptions.syncModelsWithLead,
+        limitContext: booleanOptions.limitContext,
+        skipPermissions: booleanOptions.skipPermissions,
         worktree:
           typeof payload.worktree === 'string' && payload.worktree.trim()
             ? payload.worktree.trim()

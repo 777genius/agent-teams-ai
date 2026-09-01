@@ -525,32 +525,36 @@ export const MembersEditorSection = ({
   const masterRosterControls =
     showWorktreeIsolationControls && !singleMemberMode ? (
       <>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex min-w-0 items-center gap-2">
-              <Checkbox
-                id={worktreeDefaultControlId}
-                checked={teammateWorktreeDefaultChecked}
-                disabled={worktreeDefaultDisabled}
-                aria-describedby={`${worktreeDefaultControlId}-description`}
-                onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
-              />
-              <Label
-                htmlFor={worktreeDefaultControlId}
-                className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
-              >
-                {!isFlatRoster ? <GitBranch className="size-3.5 shrink-0" /> : null}
-                <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
-              </Label>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-sm text-xs">
-            {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
-          </TooltipContent>
-        </Tooltip>
-        <span id={`${worktreeDefaultControlId}-description`} className="sr-only">
-          {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
-        </span>
+        {activeMembers.length > 0 ? (
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Checkbox
+                    id={worktreeDefaultControlId}
+                    checked={teammateWorktreeDefaultChecked}
+                    disabled={worktreeDefaultDisabled}
+                    aria-describedby={`${worktreeDefaultControlId}-description`}
+                    onCheckedChange={(checked) => updateTeammateWorktreeDefault(checked === true)}
+                  />
+                  <Label
+                    htmlFor={worktreeDefaultControlId}
+                    className="flex min-w-0 cursor-pointer items-center gap-1.5 text-xs font-normal text-[var(--color-text-secondary)]"
+                  >
+                    {!isFlatRoster ? <GitBranch className="size-3.5 shrink-0" /> : null}
+                    <span className="truncate">{t('members.editor.runInSeparateWorktrees')}</span>
+                  </Label>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-sm text-xs">
+                {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
+              </TooltipContent>
+            </Tooltip>
+            <span id={`${worktreeDefaultControlId}-description`} className="sr-only">
+              {worktreeIsolationDisabledReason ?? t('members.editor.worktreeDescription')}
+            </span>
+          </>
+        ) : null}
         <div className="flex shrink-0 items-center gap-2">
           <Checkbox
             id={agentTeamsMcpDefaultControlId}

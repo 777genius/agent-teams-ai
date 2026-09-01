@@ -9,6 +9,7 @@ import {
   shouldMaskCodexNegativeBootstrapState,
   shouldShowProviderConnectAction,
 } from '@renderer/components/runtime/providerConnectionUi';
+import { shouldShowLoadedProviderModels } from '@renderer/components/runtime/providerModelVisibility';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { describe, expect, it } from 'vitest';
 
@@ -293,6 +294,26 @@ describe('providerConnectionUi', () => {
         },
       })
     ).toBe(false);
+    expect(shouldShowLoadedProviderModels(provider, true)).toBe(false);
+    expect(
+      shouldShowLoadedProviderModels(
+        {
+          ...provider,
+          models: ['opencode/big-pickle', 'openrouter/qwen/qwen3-coder-plus'],
+        },
+        true
+      )
+    ).toBe(true);
+  });
+
+  it('keeps loaded provider models visible while their catalog refreshes', () => {
+    const provider = createCodexProvider({
+      models: ['gpt-5.4'],
+      modelCatalogRefreshState: 'loading',
+    });
+
+    expect(shouldShowLoadedProviderModels(provider, true)).toBe(true);
+    expect(shouldShowLoadedProviderModels(provider, false)).toBe(false);
   });
 
   it('does not describe Anthropic API key mode as subscription connected when the key is missing', () => {

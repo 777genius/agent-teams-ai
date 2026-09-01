@@ -1416,6 +1416,51 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it('restores an explicit sync-off preference for teammates using provider defaults', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      model: 'gpt-5.5',
+      syncModelsWithLead: false,
+      members: [{ name: 'jack', role: 'developer' }],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(false);
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
   it('keeps a teammate worktree toggle made during hydration from being overwritten', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     let resolveSavedRequest: (value: unknown) => void = () => {};
@@ -2406,7 +2451,13 @@ describe('LaunchTeamDialog', () => {
     expect(vi.mocked(api.teams.replaceMembers)).not.toHaveBeenCalled();
 
     const [request, members] = onRelaunch.mock.calls[0] as unknown as [
-      { teamName: string; cwd: string; providerId?: string; model?: string },
+      {
+        teamName: string;
+        cwd: string;
+        providerId?: string;
+        model?: string;
+        syncModelsWithLead?: boolean;
+      },
       Array<{ name: string; providerId?: string; model?: string }>,
     ];
 
@@ -2414,6 +2465,7 @@ describe('LaunchTeamDialog', () => {
     expect(request.cwd).toBe('/tmp/project');
     expect(request.providerId).toBe('anthropic');
     expect(request.model).toBe('opus');
+    expect(request.syncModelsWithLead).toBe(false);
     expect(members).toEqual([
       {
         name: 'alice',

@@ -104,6 +104,7 @@ export interface DeterministicLaunchSetupPorts<TMixedSecondaryLane> {
       providerId?: TeamProviderId;
       model?: string;
       effort?: TeamCreateRequest['effort'];
+      syncModelsWithLead?: boolean;
     };
     primaryProviderId?: TeamProviderId;
     primaryEnv?: ProvisioningEnvResolution;
@@ -323,6 +324,7 @@ export async function prepareDeterministicLaunchSetup<TMixedSecondaryLane>(
         providerId: request.providerId,
         model: request.model,
         effort: request.effort,
+        syncModelsWithLead: request.syncModelsWithLead,
       },
       primaryProviderId: request.providerId,
       primaryEnv: provisioningEnv,

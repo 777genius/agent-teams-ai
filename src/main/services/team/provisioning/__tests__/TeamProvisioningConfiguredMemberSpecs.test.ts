@@ -91,4 +91,31 @@ describe('TeamProvisioningConfiguredMemberSpecs', () => {
       effort: undefined,
     });
   });
+
+  it('does not reapply the lead model during teammate restart when sync is disabled', () => {
+    expect(
+      buildPrimaryOwnedMemberSpecForRuntime({
+        configuredMember: {
+          name: 'Builder',
+          agentType: 'specialist',
+        },
+        request: {
+          providerId: 'codex',
+          providerBackendId: 'codex-native',
+          model: 'gpt-5.6-sol',
+          effort: 'high',
+          fastMode: 'on',
+          syncModelsWithLead: false,
+        },
+      })
+    ).toEqual({
+      name: 'Builder',
+      providerId: 'codex',
+      providerBackendId: 'codex-native',
+      model: undefined,
+      effort: undefined,
+      fastMode: 'on',
+      agentType: 'specialist',
+    });
+  });
 });

@@ -648,7 +648,6 @@ export class TeamProvisioningPrepareCoordinator {
         defaultLaunchModel,
       });
     }
-
     return defaultLaunchModel;
   }
 
@@ -660,6 +659,7 @@ export class TeamProvisioningPrepareCoordinator {
       providerId?: TeamProviderId;
       model?: string;
       effort?: TeamCreateRequest['effort'];
+      syncModelsWithLead?: boolean;
     };
     primaryProviderId?: TeamProviderId;
     primaryEnv?: ProvisioningEnvResolution;

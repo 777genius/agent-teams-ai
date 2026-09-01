@@ -376,6 +376,19 @@ describe('MembersEditorSection runtime model selection', () => {
 });
 
 describe('MembersEditorSection worktree master checkbox', () => {
+  it('shows the bulk worktree control when at least one member is active', () => {
+    const alice = createMemberDraft({ id: 'alice', name: 'alice' });
+    const removedAlice = { ...alice, removedAt: Date.now() };
+    const { host, rerender } = renderMembersEditor({ members: [removedAlice] });
+
+    expect(host.querySelector('#teammate-worktree-default-worktree-test')).toBeNull();
+    expect(host.querySelector('#teammate-agent-teams-mcp-default-worktree-test')).toBeTruthy();
+
+    rerender([alice]);
+
+    expect(masterWorktreeCheckbox(host)).toBeTruthy();
+  });
+
   it('renders indeterminate when only some active members use worktrees', () => {
     const { host } = renderMembersEditor({
       members: [

@@ -53,6 +53,7 @@ import {
   shouldShowProviderStatusSkeleton,
 } from '@renderer/components/runtime/providerConnectionUi';
 import { ProviderModelBadges } from '@renderer/components/runtime/ProviderModelBadges';
+import { shouldShowLoadedProviderModels } from '@renderer/components/runtime/providerModelVisibility';
 import {
   buildProviderRuntimeBackendSummaryText,
   getProviderRuntimeBackendSummary,
@@ -98,6 +99,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 
+import { DashboardRateLimitChips } from './DashboardRateLimitChips';
 import {
   getDashboardRateLimitsForProvider,
   isDashboardRateLimitSubscriptionMode,
@@ -151,67 +153,6 @@ const TerminalModal = lazy(() =>
     default: module.TerminalModal,
   }))
 );
-
-const DashboardRateLimitChips = ({
-  providerId,
-  items,
-  refreshCycle,
-  refreshing,
-}: {
-  providerId: CliProviderId;
-  items: DashboardRateLimitItem[];
-  refreshCycle: number;
-  refreshing: boolean;
-}): React.JSX.Element => {
-  const { t } = useAppTranslation('dashboard');
-
-  return (
-    <div
-      className="flex flex-wrap items-center gap-2"
-      aria-busy={refreshing}
-      aria-label={refreshing ? t('cliStatus.labels.loadingRateLimits') : undefined}
-    >
-      {items.map((item) => (
-        <div
-          key={`${providerId}-${item.label}-${refreshCycle}`}
-          className={`w-fit max-w-full rounded-md border px-2 py-1.5 ${
-            refreshing
-              ? 'skeleton-shimmer'
-              : refreshCycle > 0
-                ? 'dashboard-rate-limit-refreshed'
-                : ''
-          }`}
-          style={{
-            borderColor: 'rgba(74, 222, 128, 0.2)',
-            backgroundColor: 'rgba(74, 222, 128, 0.06)',
-          }}
-        >
-          <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span
-              className="text-[10px] uppercase tracking-[0.06em]"
-              style={{ color: 'var(--color-text-muted)' }}
-            >
-              {item.label}
-            </span>
-            <span
-              className="text-xs font-medium"
-              style={{ color: item.isDepleted ? '#f87171' : '#86efac' }}
-            >
-              {item.remaining}
-            </span>
-            <span
-              className="min-w-0 truncate text-[10px]"
-              style={{ color: 'var(--color-text-secondary)' }}
-              title={item.resetsAt}
-            >
-              • {t('cliStatus.labels.resets', { time: item.resetsAt })}
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const RATE_LIMIT_SKELETON_LABELS = ['5h left', 'Weekly left'] as const;
 
@@ -1204,9 +1145,15 @@ const InstalledBanner = ({
               hasRateLimits: hasDashboardRateLimits,
               loading: rateLimitsLoading,
             });
+            const openCodeRuntimeContradictsMissingMetadata =
+              provider.providerId === 'opencode' &&
+              provider.statusCheckErrorCode === 'runtime_missing' &&
+              isOpenCodeRuntimeUsable(openCodeRuntimeStatus);
             const statusText = showSkeleton
               ? t('cliStatus.actions.checking')
-              : formatProviderStatusText(provider, settingsT);
+              : openCodeRuntimeContradictsMissingMetadata
+                ? t('cliStatus.quickConnect.connected')
+                : formatProviderStatusText(provider, settingsT);
             const modelCatalogLoading =
               provider.modelCatalogRefreshState === 'loading' ||
               isOpenCodeCatalogHydrating(provider);
@@ -1215,6 +1162,7 @@ const InstalledBanner = ({
                 ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
                     .length > 0
                 : provider.models.length > 0;
+            const showProviderModels = shouldShowLoadedProviderModels(provider, hasProviderModels);
             const openCodeDashboardChips = getOpenCodeDashboardChips(provider, t);
             const hasDetailContent = Boolean(
               (provider.backend?.label && !runtimeSummary) ||
@@ -1476,7 +1424,7 @@ const InstalledBanner = ({
                     </button>
                   </div>
                 </div>
-                {!showSkeleton && !modelCatalogLoading && hasProviderModels && (
+                {!showSkeleton && showProviderModels && (
                   <div className="col-span-2">
                     <ProviderModelBadges
                       providerId={provider.providerId}

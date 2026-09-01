@@ -130,3 +130,26 @@ export function parseOptionalBoolean(value: unknown, fieldName: string): ParseRe
     ? { valid: true, value }
     : { valid: false, error: `${fieldName} must be a boolean` };
 }
+
+const TEAM_PROVISIONING_BOOLEAN_FIELDS = [
+  'allowExperimentalLocalModels',
+  'limitContext',
+  'skipPermissions',
+  'syncModelsWithLead',
+] as const;
+
+type TeamProvisioningBooleanOptions = Partial<
+  Record<(typeof TEAM_PROVISIONING_BOOLEAN_FIELDS)[number], boolean>
+>;
+
+export function parseTeamProvisioningBooleanOptions(
+  value: Partial<Record<keyof TeamProvisioningBooleanOptions, unknown>>
+): { valid: true; value: TeamProvisioningBooleanOptions } | { valid: false; error: string } {
+  const options: TeamProvisioningBooleanOptions = {};
+  for (const fieldName of TEAM_PROVISIONING_BOOLEAN_FIELDS) {
+    const parsed = parseOptionalBoolean(value[fieldName], fieldName);
+    if (!parsed.valid) return parsed;
+    options[fieldName] = parsed.value;
+  }
+  return { valid: true, value: options };
+}
