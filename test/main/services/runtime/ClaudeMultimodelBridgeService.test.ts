@@ -468,7 +468,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   });
 
   it.each(
-    (['anthropic', 'codex', 'opencode'] as const).flatMap((providerId) =>
+    (['anthropic', 'codex'] as const).flatMap((providerId) =>
       (['aggregate', 'single', 'project'] as const).map((entrypoint) => ({
         providerId,
         entrypoint,
@@ -536,6 +536,83 @@ describe('ClaudeMultimodelBridgeService', () => {
         modelCatalogRefreshState: 'ready',
         modelCatalog: { providerId, status: 'ready' },
       });
+    }
+  );
+
+  it.each(['aggregate', 'single', 'project'] as const)(
+    'keeps OpenCode launch fail-closed and summary-only via $entrypoint',
+    async (entrypoint) => {
+      execCliMock.mockImplementation((_binaryPath, args) => {
+        const requestedId = args[args.indexOf('--provider') + 1] as CliProviderId;
+        if (!args.includes('--summary')) {
+          return Promise.reject(new Error(`Unexpected non-summary call for ${requestedId}`));
+        }
+
+        const summary = fullStatusFixture(requestedId);
+        return Promise.resolve(
+          statusReply(requestedId, {
+            ...summary,
+            authenticated: false,
+            authMethod: null,
+            statusCheckOutcome: 'model_only',
+            capabilities: { ...summary.capabilities, teamLaunch: false },
+            modelCatalog: null,
+          })
+        );
+      });
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+      const service = new ClaudeMultimodelBridgeService();
+      const onUpdate = vi.fn();
+      const projectPath = '/tmp/status-hydration-test-project';
+      let provider: CliProviderStatus;
+
+      if (entrypoint === 'aggregate') {
+        const providers = await service.getProviderStatuses('/mock/runtime', onUpdate);
+        provider = providers.find((candidate) => candidate.providerId === 'opencode')!;
+        expect(onUpdate).toHaveBeenCalled();
+        expect(
+          onUpdate.mock.calls.every(([, updatedProviderId]) => updatedProviderId === undefined)
+        ).toBe(true);
+      } else if (entrypoint === 'project') {
+        provider = await service.getProviderStatus('/mock/runtime', 'opencode', onUpdate, {
+          projectPath,
+        });
+      } else {
+        provider = await service.getProviderStatus('/mock/runtime', 'opencode', onUpdate);
+      }
+
+      expect(provider).toMatchObject({
+        providerId: 'opencode',
+        authenticated: false,
+        authMethod: null,
+        statusCheckOutcome: 'model_only',
+        capabilities: { teamLaunch: false },
+        modelCatalog: null,
+        modelCatalogRefreshState: 'loading',
+      });
+      if (entrypoint !== 'aggregate') {
+        expect(onUpdate).not.toHaveBeenCalled();
+      }
+
+      const opencodeCalls = execCliMock.mock.calls.filter(
+        (call) => call[1][call[1].indexOf('--provider') + 1] === 'opencode'
+      );
+      expect(opencodeCalls).toHaveLength(1);
+      expect(opencodeCalls[0][1]).toEqual([
+        'runtime',
+        'status',
+        '--json',
+        '--provider',
+        'opencode',
+        '--summary',
+      ]);
+      expect(execCliMock.mock.calls.every((call) => call[1].includes('--summary'))).toBe(true);
+      if (entrypoint === 'project') {
+        expect(opencodeCalls[0][2]?.cwd).toBe(projectPath);
+      } else {
+        expect(opencodeCalls[0][2]?.cwd).toBeUndefined();
+      }
     }
   );
 
