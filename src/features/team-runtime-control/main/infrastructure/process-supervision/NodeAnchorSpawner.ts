@@ -557,20 +557,15 @@ async function runWithinBudget<T>(
       },
       Math.min(5, Math.max(1, Math.ceil(remainingTimeMs)))
     );
-    let operation: Promise<T>;
-    try {
-      operation = effect();
-    } catch (error) {
-      settle(() => reject(error));
-      return;
-    }
-    void operation.then(
-      (value) =>
-        isCancelled(cancellation)
-          ? settle(() => reject(new NodeAnchorCancelledError()))
-          : settle(() => resolve(value)),
-      (error: unknown) => settle(() => reject(error))
-    );
+    void Promise.resolve()
+      .then(effect)
+      .then(
+        (value) =>
+          isCancelled(cancellation)
+            ? settle(() => reject(new NodeAnchorCancelledError()))
+            : settle(() => resolve(value)),
+        (error: unknown) => settle(() => reject(error))
+      );
   });
 }
 

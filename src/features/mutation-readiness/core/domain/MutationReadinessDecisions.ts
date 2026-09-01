@@ -24,6 +24,7 @@ import {
   type WorkspaceBindingReadinessDecision,
 } from '../../contracts';
 
+import { sameExternalWriterEvidence, snapshotRuntimeRoot } from './MutationReadinessEvidence';
 import {
   parseWorkspaceBinding,
   parseWorkspaceRootReference,
@@ -37,25 +38,6 @@ import type { WorkspaceMountBindingRef } from '@features/workspace-registry/cont
 
 const DECIMAL_KERNEL_ID = /^(?:0|[1-9][0-9]*)$/;
 type MutationReadinessRuntimeInstance = MutationReadinessScope['runtimeInstance'];
-type RuntimeRootKind = 'claude' | 'app-data' | 'workspace' | 'temp' | 'logs';
-function snapshotRuntimeRoot<Kind extends RuntimeRootKind>(
-  value: unknown,
-  expectedKind: Kind
-): Readonly<{ kind: Kind; reference: string }> | null {
-  const record = readExactRecord(value, ['kind', 'reference']);
-  const reference = record?.reference;
-  return !(
-    record?.kind !== expectedKind ||
-    typeof reference !== 'string' ||
-    reference.length === 0 ||
-    reference.length > 4_096 ||
-    reference.trim() !== reference ||
-    // eslint-disable-next-line no-control-regex -- Runtime roots reject ASCII controls.
-    /[\x00-\x1f\x7f]/.test(reference)
-  )
-    ? Object.freeze({ kind: expectedKind, reference })
-    : null;
-}
 export type ReadinessEvidenceInspectionOutcome =
   | { readonly status: 'settled'; readonly value: unknown }
   | { readonly status: 'unavailable' | 'timeout' };
@@ -658,34 +640,6 @@ function decideExternalWriter(
     return decision('externalWriter', 'denied', 'external_writer_observation_dirty');
   }
   return decision('externalWriter', 'verified', 'external_writer_coordinated');
-}
-
-function sameExternalWriterEvidence(left: ParsedInspection, right: ParsedInspection): boolean {
-  if (left.status !== 'verified' || right.status !== 'verified') return true;
-  const leftRecord = readExactRecord(left.evidence, [
-    'deploymentId',
-    'bootId',
-    'workspaceBinding',
-    'classification',
-    'coordination',
-    'observation',
-    'fileWriterEpoch',
-    'observationWatermark',
-  ]);
-  const rightRecord = readExactRecord(right.evidence, [
-    'deploymentId',
-    'bootId',
-    'workspaceBinding',
-    'classification',
-    'coordination',
-    'observation',
-    'fileWriterEpoch',
-    'observationWatermark',
-  ]);
-  return (
-    leftRecord?.fileWriterEpoch === rightRecord?.fileWriterEpoch &&
-    leftRecord?.observationWatermark === rightRecord?.observationWatermark
-  );
 }
 
 function decideRecoveryOutbox(
