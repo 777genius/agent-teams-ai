@@ -27,6 +27,7 @@ export interface TeamMetaFile {
   model?: string;
   effort?: string;
   fastMode?: TeamFastMode;
+  syncModelsWithLead?: boolean;
   skipPermissions?: boolean;
   worktree?: string;
   extraCliArgs?: string;
@@ -205,6 +206,8 @@ export class TeamMetaStore {
       model: typeof file.model === 'string' ? file.model.trim() || undefined : undefined,
       effort: typeof file.effort === 'string' ? file.effort.trim() || undefined : undefined,
       fastMode: normalizeFastMode(file.fastMode) ?? undefined,
+      syncModelsWithLead:
+        typeof file.syncModelsWithLead === 'boolean' ? file.syncModelsWithLead : undefined,
       skipPermissions: typeof file.skipPermissions === 'boolean' ? file.skipPermissions : undefined,
       worktree: typeof file.worktree === 'string' ? file.worktree.trim() || undefined : undefined,
       extraCliArgs:
@@ -252,6 +255,7 @@ export class TeamMetaStore {
       model: data.model?.trim() || undefined,
       effort: data.effort?.trim() || undefined,
       fastMode: normalizeFastMode(data.fastMode) ?? undefined,
+      syncModelsWithLead: data.syncModelsWithLead,
       skipPermissions: data.skipPermissions,
       worktree: data.worktree?.trim() || undefined,
       extraCliArgs: data.extraCliArgs?.trim() || undefined,

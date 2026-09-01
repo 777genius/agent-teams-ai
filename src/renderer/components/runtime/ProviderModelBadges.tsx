@@ -51,19 +51,16 @@ function getAvailabilityChip(
   }
 }
 
-function getCatalogBadgeLabel(
+function isCatalogModelFree(
   model: string,
   providerStatus: Pick<CliProviderStatus, 'modelCatalog' | 'providerId'> | null | undefined
-): string | null {
+): boolean {
   const catalogItem = providerStatus?.modelCatalog?.models.find(
     (item) => item.launchModel === model || item.id === model
   );
   const badgeLabel = catalogItem?.badgeLabel?.trim();
   if (providerStatus?.providerId !== 'opencode') {
-    return badgeLabel || (catalogItem?.metadata?.free === true ? 'Free' : null);
-  }
-  if (badgeLabel && badgeLabel.toLowerCase() !== 'free') {
-    return badgeLabel;
+    return catalogItem?.metadata?.free === true || badgeLabel?.toLowerCase() === 'free';
   }
   const route = catalogItem?.metadata?.opencode;
   return isOpenCodeModelExplicitlyFree({
@@ -74,20 +71,7 @@ function getCatalogBadgeLabel(
     accessKind: route?.accessKind,
     free: catalogItem?.metadata?.free,
     badgeLabel,
-  })
-    ? (badgeLabel ?? 'Free')
-    : null;
-}
-
-function normalizeBadgeText(value: string): string {
-  return value.trim().replace(/\s+/g, ' ').toLowerCase();
-}
-
-function shouldRenderCatalogBadge(modelLabel: string, catalogBadgeLabel: string | null): boolean {
-  if (!catalogBadgeLabel) {
-    return false;
-  }
-  return normalizeBadgeText(modelLabel) !== normalizeBadgeText(catalogBadgeLabel);
+  });
 }
 
 function hasChildAfterRowLimit(container: HTMLElement, rowLimit: number): boolean {
@@ -194,52 +178,38 @@ export const ProviderModelBadges = ({
     return () => observer.disconnect();
   }, [expanded, maxCollapsedRows, shouldCollapse]);
 
-  const badgeClassName =
-    'inline-flex items-center gap-1 rounded-md border px-1.5 py-px font-mono text-[10px] leading-4';
-  const badgeStyle = {
-    borderColor: 'var(--color-border-subtle)',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    color: 'var(--color-text-secondary)',
-  };
+  const modelClassName =
+    'inline-flex items-center font-mono text-[11px] leading-5 text-[var(--color-text-secondary)]';
   const buttonClassName =
     'inline-flex items-center gap-1 rounded-full border border-[rgba(59,130,246,0.35)] bg-[rgba(59,130,246,0.12)] px-2 py-px text-[10px] font-medium leading-4 text-[rgb(147,197,253)] transition-colors hover:border-[rgba(59,130,246,0.55)] hover:bg-[rgba(59,130,246,0.18)] hover:text-[rgb(191,219,254)]';
-  const listClassName = cn('flex flex-wrap gap-1.5');
+  const listClassName = cn('flex flex-wrap items-center gap-x-[2ch] gap-y-0.5');
 
-  const renderModelBadge = (model: string, index: number): React.JSX.Element => {
+  const renderModelText = (model: string, index: number): React.JSX.Element => {
     const availabilityStatus = getAvailabilityStatus(model, displayModelAvailability);
     const availabilityReason = getAvailabilityReason(model, displayModelAvailability);
     const availabilityChip = getAvailabilityChip(availabilityStatus, t);
     const modelLabel = formatModelBadgeLabel(providerId, model);
-    const catalogBadgeLabel = getCatalogBadgeLabel(model, providerStatus);
-    const catalogBadgeIsFree = catalogBadgeLabel === 'Free';
-    const localizedCatalogBadgeLabel = catalogBadgeIsFree
-      ? t('providerModelBadges.free')
-      : catalogBadgeLabel;
-    const showCatalogBadge = shouldRenderCatalogBadge(modelLabel, catalogBadgeLabel);
+    const catalogModelIsFree = isCatalogModelFree(model, providerStatus);
+    const hasFollowingModel = index < displayedModels.length - 1;
     const title = [
       availabilityReason ?? availabilityChip,
-      showCatalogBadge && catalogBadgeIsFree ? t('providerModelBadges.freeTooltip') : null,
+      catalogModelIsFree ? t('providerModelBadges.freeTooltip') : null,
     ]
       .filter(Boolean)
       .join(' - ');
 
     return (
-      <span
-        key={`${model}-${index}`}
-        className={badgeClassName}
-        style={badgeStyle}
-        title={title || undefined}
-      >
+      <span key={`${model}-${index}`} className={modelClassName} title={title || undefined}>
         <span>{modelLabel}</span>
-        {showCatalogBadge ? (
-          <span className="rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]">
-            {localizedCatalogBadgeLabel}
+        {catalogModelIsFree ? (
+          <span className="ml-1 rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]">
+            {t('providerModelBadges.free')}
           </span>
         ) : null}
         {availabilityChip ? (
           <span
             className={cn(
-              'rounded px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em]',
+              'ml-1 rounded px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em]',
               availabilityStatus === 'checking'
                 ? 'bg-[rgba(59,130,246,0.12)] text-[var(--color-text-secondary)]'
                 : availabilityStatus === 'unavailable'
@@ -250,18 +220,19 @@ export const ProviderModelBadges = ({
             {availabilityChip}
           </span>
         ) : null}
+        {hasFollowingModel ? <span>,</span> : null}
       </span>
     );
   };
 
   if (!shouldCollapse) {
-    return <div className="flex flex-wrap gap-1.5">{displayedModels.map(renderModelBadge)}</div>;
+    return <div className={listClassName}>{displayedModels.map(renderModelText)}</div>;
   }
 
   return (
     <div className="flex flex-col items-start gap-1.5">
       <div ref={listRef} className={listClassName}>
-        {displayedModels.map(renderModelBadge)}
+        {displayedModels.map(renderModelText)}
         {shouldCollapse && !expanded ? (
           <button type="button" className={buttonClassName} onClick={() => setExpanded(true)}>
             <ChevronDown className="size-3" />

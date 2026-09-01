@@ -23,6 +23,18 @@ describe('ProviderModelBadges', () => {
     document.body.innerHTML = '';
   });
 
+  it('renders model names as comma-separated secondary text instead of badges', () => {
+    const host = render(<ProviderModelBadges providerId="codex" models={['gpt-5.4', 'gpt-5.5']} />);
+    const modelItems = Array.from(host.firstElementChild?.children ?? []) as HTMLElement[];
+
+    expect(host.textContent).toBe('5.5,5.4');
+    expect(modelItems).toHaveLength(2);
+    expect(host.firstElementChild?.className).toContain('gap-x-[2ch]');
+    expect(modelItems[0]?.className).toContain('text-[var(--color-text-secondary)]');
+    expect(modelItems[0]?.className).not.toContain('rounded');
+    expect(modelItems[0]?.className).not.toContain('border');
+  });
+
   it('does not render stale availability chips for OpenCode models', () => {
     const host = render(
       <ProviderModelBadges
@@ -169,6 +181,10 @@ describe('ProviderModelBadges', () => {
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).toContain('GPT-5.4');
     expect(host.textContent?.match(/Free/g)).toHaveLength(1);
+    const freeBadge = Array.from(host.querySelectorAll('span')).find(
+      (element) => element.textContent === 'Free'
+    );
+    expect(freeBadge?.className).toContain('rounded');
   });
 
   it('ignores a stale Free badge on a connected OpenCode provider route', () => {
@@ -355,7 +371,7 @@ describe('ProviderModelBadges', () => {
     expect(host.textContent).toContain('Free');
   });
 
-  it('does not duplicate a catalog badge that matches the displayed model label', () => {
+  it('does not render non-Free catalog labels as badges', () => {
     const host = render(
       <ProviderModelBadges
         providerId="anthropic"
@@ -386,7 +402,7 @@ describe('ProviderModelBadges', () => {
                 isDefault: true,
                 upgrade: false,
                 source: 'anthropic-models-api',
-                badgeLabel: 'Opus 4.6',
+                badgeLabel: 'Recommended',
               },
             ],
             diagnostics: {
@@ -399,6 +415,7 @@ describe('ProviderModelBadges', () => {
     );
 
     expect(host.textContent?.match(/Opus 4\.6/g)).toHaveLength(1);
+    expect(host.textContent).not.toContain('Recommended');
   });
 
   it('does not render duplicate Anthropic Opus 4.8 model badges when the runtime reports the opus alias', () => {

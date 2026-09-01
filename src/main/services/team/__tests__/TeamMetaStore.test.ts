@@ -65,4 +65,16 @@ describe('TeamMetaStore', () => {
       effort: 'medium',
     });
   });
+
+  it('persists an explicit disabled lead-model sync preference', async () => {
+    await new TeamMetaStore().writeMeta('alpha', {
+      cwd: '/sandbox/team',
+      syncModelsWithLead: false,
+      createdAt: 1,
+    });
+
+    expect(JSON.parse(atomicWriteAsync.mock.calls[0]?.[1])).toMatchObject({
+      syncModelsWithLead: false,
+    });
+  });
 });

@@ -649,7 +649,6 @@ export class TeamProvisioningMemberLifecycleController {
       if (provisioningEnv.warning) {
         throw new Error(provisioningEnv.warning);
       }
-
       const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
         claudePath,
         cwd,
@@ -658,6 +657,7 @@ export class TeamProvisioningMemberLifecycleController {
           providerId: resolveTeamProviderId(input.run.request.providerId),
           model: input.run.request.model,
           effort: input.run.request.effort,
+          syncModelsWithLead: input.run.request.syncModelsWithLead,
         },
         primaryProviderId: providerId,
         primaryEnv: provisioningEnv,
@@ -855,7 +855,6 @@ export class TeamProvisioningMemberLifecycleController {
       if (provisioningEnv.warning) {
         throw new Error(provisioningEnv.warning);
       }
-
       const [materializedMemberSpec] = await this.materializeEffectiveTeamMemberSpecs({
         claudePath,
         cwd,
@@ -864,6 +863,7 @@ export class TeamProvisioningMemberLifecycleController {
           providerId: resolveTeamProviderId(input.run.request.providerId),
           model: input.run.request.model,
           effort: input.run.request.effort,
+          syncModelsWithLead: input.run.request.syncModelsWithLead,
         },
         primaryProviderId: providerId,
         primaryEnv: provisioningEnv,
@@ -2077,7 +2077,6 @@ export class TeamProvisioningMemberLifecycleController {
       reason: 'manual_restart',
       assertStillCurrent: assertRuntimeAdapterRunStillCurrent,
     });
-
     assertRuntimeAdapterRunStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
@@ -2092,6 +2091,7 @@ export class TeamProvisioningMemberLifecycleController {
           targetRuntimeMember.effort ??
           (isTeamEffortLevel(teamMeta?.effort) ? teamMeta.effort : undefined),
         fastMode: teamMeta?.fastMode,
+        syncModelsWithLead: teamMeta?.syncModelsWithLead,
         limitContext: teamMeta?.limitContext,
         skipPermissions: teamMeta?.skipPermissions,
         worktree: teamMeta?.worktree,

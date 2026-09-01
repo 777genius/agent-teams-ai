@@ -106,6 +106,7 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
     providerBackendId: launchRequest.providerBackendId,
     model: launchRequest.model,
     effort: launchRequest.effort,
+    syncModelsWithLead: launchRequest.syncModelsWithLead,
     skipPermissions: launchRequest.skipPermissions,
     worktree: launchRequest.worktree,
     extraCliArgs: launchRequest.extraCliArgs,

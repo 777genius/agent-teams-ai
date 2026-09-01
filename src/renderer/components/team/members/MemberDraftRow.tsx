@@ -561,13 +561,13 @@ export const MemberDraftRow = ({
         <div
           className={cn(
             'flex flex-col gap-2 sm:flex-row sm:items-start',
-            isFlatRoster && 'sm:flex-wrap sm:gap-1.5'
+            isFlatRoster && 'sm:flex-nowrap sm:gap-1.5'
           )}
         >
           <div
             className={cn(
               'w-full min-w-0 space-y-1',
-              isFlatRoster ? 'sm:w-[170px] sm:min-w-[170px]' : 'sm:w-[150px] sm:min-w-[150px]'
+              isFlatRoster ? 'sm:w-[170px] sm:min-w-[140px]' : 'sm:w-[150px] sm:min-w-[150px]'
             )}
           >
             <HoverTooltip

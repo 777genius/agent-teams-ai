@@ -904,7 +904,6 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
         try {
           const existingNames = teams.map((t) => t.teamName);
           const uniqueName = generateUniqueName(teamName, existingNames);
-
           const savedRequest = await api.teams.getSavedRequest(teamName).catch(() => null);
           if (savedRequest) {
             setCopyData({
@@ -917,6 +916,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
               model: savedRequest.model,
               effort: savedRequest.effort,
               fastMode: savedRequest.fastMode,
+              syncModelsWithLead: savedRequest.syncModelsWithLead,
               limitContext: savedRequest.limitContext,
               skipPermissions: savedRequest.skipPermissions,
               members: buildCopiedTeamMembers(savedRequest.members),

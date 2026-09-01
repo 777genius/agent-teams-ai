@@ -13,6 +13,7 @@ import type { CliProviderAuthMode, CliProviderStatus } from '@shared/types';
 export interface DashboardRateLimitItem {
   label: string;
   remaining: string;
+  remainingPercent: number;
   resetsAt: string;
   isDepleted: boolean;
 }
@@ -194,6 +195,10 @@ function isRateLimitDepleted(usedPercent: number | null | undefined): boolean {
   return typeof usedPercent === 'number' && Number.isFinite(usedPercent) && usedPercent >= 100;
 }
 
+function getRemainingPercent(usedPercent: number): number {
+  return Math.max(0, Math.min(100, 100 - usedPercent));
+}
+
 function buildRateLimitItem(
   label: string,
   usedPercent: number,
@@ -202,6 +207,7 @@ function buildRateLimitItem(
   return {
     label,
     remaining: formatCodexRemainingPercent(usedPercent) ?? 'Unknown',
+    remainingPercent: getRemainingPercent(usedPercent),
     resetsAt: formatDashboardResetTime(resetsAt),
     isDepleted: isRateLimitDepleted(usedPercent),
   };

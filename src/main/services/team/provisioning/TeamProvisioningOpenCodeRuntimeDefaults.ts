@@ -45,7 +45,9 @@ export async function materializeOpenCodeRuntimeAdapterDefaults<
     providerId: params.request.providerId,
     model: params.request.model,
     effort: params.request.effort,
+    syncModelsWithLead: params.request.syncModelsWithLead,
   });
+  const syncModelsWithLead = params.request.syncModelsWithLead !== false;
   const explicitRootModel = getExplicitLaunchModelSelection(params.request.model);
   const effectiveOpenCodeMembers = effectiveMembers.filter((member) => {
     const providerId = normalizeTeamMemberProviderId(member.providerId) ?? 'opencode';
@@ -58,7 +60,7 @@ export async function materializeOpenCodeRuntimeAdapterDefaults<
         .filter((model): model is string => Boolean(model))
     ),
   ];
-  const inheritedRootModel = explicitRootModel ? undefined : memberModels[0];
+  const inheritedRootModel = explicitRootModel || !syncModelsWithLead ? undefined : memberModels[0];
   const rootModel = explicitRootModel ?? inheritedRootModel;
   const needsMemberModel = effectiveOpenCodeMembers.some((member) => !member.model?.trim());
   if (rootModel && !needsMemberModel) {
@@ -70,7 +72,7 @@ export async function materializeOpenCodeRuntimeAdapterDefaults<
       members: effectiveMembers,
     };
   }
-  if (rootModel) {
+  if (rootModel && syncModelsWithLead) {
     return {
       request: {
         ...params.request,
@@ -118,7 +120,7 @@ export async function materializeOpenCodeRuntimeAdapterDefaults<
   return {
     request: {
       ...params.request,
-      model: normalizedDefaultModel,
+      model: explicitRootModel ?? normalizedDefaultModel,
     } as TRequest,
     members: effectiveMembers.map((member) => {
       const providerId = normalizeTeamMemberProviderId(member.providerId) ?? 'opencode';

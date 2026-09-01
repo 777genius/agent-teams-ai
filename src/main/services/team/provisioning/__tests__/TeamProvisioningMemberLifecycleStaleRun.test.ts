@@ -1354,7 +1354,12 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
       },
       teamMetaStore: {
         async getMeta() {
-          return { providerId: 'opencode', cwd: '/safe-test-project', prompt: 'Continue' };
+          return {
+            providerId: 'opencode',
+            cwd: '/safe-test-project',
+            prompt: 'Continue',
+            syncModelsWithLead: false,
+          };
         },
       },
       persistSentMessage(_teamName, message) {
@@ -1384,6 +1389,7 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
       request: expect.objectContaining({
         teamName: 'team-a',
         providerId: 'opencode',
+        syncModelsWithLead: false,
       }),
       members: [expect.objectContaining({ name: 'Worker', providerId: 'opencode' })],
     });

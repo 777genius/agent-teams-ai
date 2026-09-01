@@ -176,7 +176,7 @@
       "superGrokConnected": "บันทึก OAuth ของ SuperGrok แล้ว",
       "superGrokDescription": "ใช้การสมัคร SuperGrok ผ่าน OAuth ของ OpenCode",
       "switchToSuperGrok": "สลับไปใช้ SuperGrok",
-      "title": "ผู้ให้บริการและแผนเสริม",
+      "title": "ผู้ให้บริการและแผน",
       "unavailable": "ไม่พร้อมใช้งาน",
       "updateForSuperGrok": "อัปเดต OpenCode สำหรับ OAuth",
       "updateOpenCode": "อัปเดต OpenCode",

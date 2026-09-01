@@ -1196,7 +1196,6 @@ export class TeamDataService {
     const membersMeta = await this.membersMetaStore.getMeta(teamName);
     const members = membersMeta?.members ?? [];
     const resolvedProviderId = meta.providerId ?? 'anthropic';
-
     return {
       teamName,
       displayName: meta.displayName,
@@ -1212,6 +1211,7 @@ export class TeamDataService {
       model: meta.model,
       effort: meta.effort as TeamCreateRequest['effort'],
       fastMode: meta.fastMode,
+      syncModelsWithLead: meta.syncModelsWithLead,
       skipPermissions: meta.skipPermissions,
       worktree: meta.worktree,
       extraCliArgs: meta.extraCliArgs,
@@ -3517,7 +3517,6 @@ export class TeamDataService {
       tasksDirectoryCreated = true;
 
       const joinedAt = Date.now();
-
       // Save team-level metadata to team.meta.json (NOT config.json).
       // config.json is CLI territory — created by TeamCreate during provisioning.
       // team.meta.json preserves user's configuration for the Launch flow.
@@ -3532,6 +3531,7 @@ export class TeamDataService {
         model: request.model,
         effort: request.effort,
         fastMode: request.fastMode,
+        syncModelsWithLead: request.syncModelsWithLead,
         skipPermissions: request.skipPermissions,
         worktree: request.worktree,
         extraCliArgs: request.extraCliArgs,

@@ -15,7 +15,7 @@ type ProvisioningMemberSpec = TeamCreateRequest['members'][number];
 
 type PrimaryOwnedRuntimeDefaults = Pick<
   TeamCreateRequest,
-  'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode'
+  'providerId' | 'providerBackendId' | 'model' | 'effort' | 'fastMode' | 'syncModelsWithLead'
 >;
 
 export function buildConfiguredProvisioningMember(
@@ -47,12 +47,12 @@ export function buildPrimaryOwnedMemberSpecForRuntime(input: {
   const configuredSpec = buildConfiguredProvisioningMember(input.configuredMember);
   const defaultProviderId = resolveTeamProviderId(input.request.providerId);
   const memberProviderId = normalizeTeamMemberProviderId(configuredSpec.providerId);
-  const inheritsDefaultRuntime =
-    memberProviderId == null || memberProviderId === defaultProviderId;
+  const inheritsDefaultRuntime = memberProviderId == null || memberProviderId === defaultProviderId;
   const effectiveSpec = buildEffectiveTeamMemberSpec(configuredSpec, {
     providerId: defaultProviderId,
     model: input.request.model,
     effort: input.request.effort,
+    syncModelsWithLead: input.request.syncModelsWithLead,
   });
   const effectiveProviderId = resolveTeamProviderId(effectiveSpec.providerId);
   const providerBackendId =

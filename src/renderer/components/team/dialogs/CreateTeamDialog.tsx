@@ -231,6 +231,7 @@ export interface TeamCopyData extends Pick<
   | 'model'
   | 'effort'
   | 'fastMode'
+  | 'syncModelsWithLead'
   | 'limitContext'
   | 'skipPermissions'
   | 'members'
@@ -1527,14 +1528,16 @@ export const CreateTeamDialog = ({
     }
 
     if (initialData) {
-      const nextSyncModelsWithLead = !initialData.members.some(
-        (member) =>
-          member.providerId ||
-          member.providerBackendId ||
-          member.model ||
-          member.effort ||
-          member.fastMode
-      );
+      const nextSyncModelsWithLead =
+        initialData.syncModelsWithLead ??
+        !initialData.members.some(
+          (member) =>
+            member.providerId ||
+            member.providerBackendId ||
+            member.model ||
+            member.effort ||
+            member.fastMode
+        );
       const copiedProviderId =
         initialData.providerId == null
           ? selectedProviderId
@@ -1986,6 +1989,7 @@ export const CreateTeamDialog = ({
         selectedProviderId === 'anthropic' || selectedProviderId === 'codex'
           ? selectedFastMode
           : undefined,
+      syncModelsWithLead,
       limitContext: effectiveAnthropicRuntimeLimitContext,
       skipPermissions,
       allowExperimentalLocalModels: experimentalLocalModelOverrideEnabled || undefined,
@@ -2005,6 +2009,7 @@ export const CreateTeamDialog = ({
       effectiveModel,
       selectedEffortForCurrentSelection,
       selectedFastMode,
+      syncModelsWithLead,
       effectiveAnthropicRuntimeLimitContext,
       skipPermissions,
       experimentalLocalModelOverrideEnabled,
@@ -2239,7 +2244,6 @@ export const CreateTeamDialog = ({
         activePlacementParent ? getOrganizationUnitLabel(activePlacementParent) : '',
       ].filter(Boolean)
     : [];
-
   const conflictingTeam = useMemo(() => {
     if (!launchTeam) return null;
     if (!activeTeams?.length || !effectiveCwd) return null;
@@ -2309,6 +2313,7 @@ export const CreateTeamDialog = ({
             model: request.model,
             effort: request.effort,
             fastMode: request.fastMode,
+            syncModelsWithLead: request.syncModelsWithLead,
             limitContext: request.limitContext,
             skipPermissions: request.skipPermissions,
             worktree: request.worktree,
@@ -2751,129 +2756,130 @@ export const CreateTeamDialog = ({
 
           <div className="md:col-span-2">
             <OptionalSettingsSection
-              title={t('create.organizationPlacement.title')}
-              description={t('create.organizationPlacement.description')}
-              summary={organizationPlacementSummary}
-            >
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="organization-placement-enabled"
-                    className="mt-1 shrink-0"
-                    checked={organizationPlacementEnabled}
-                    disabled={
-                      organizationStructureLoading ||
-                      organizationPlacementOrganizations.length === 0
-                    }
-                    onCheckedChange={(checked) => setOrganizationPlacementEnabled(checked === true)}
-                  />
-                  <div className="min-w-0 space-y-1">
-                    <Label
-                      htmlFor="organization-placement-enabled"
-                      className="cursor-pointer text-sm font-semibold"
-                    >
-                      {t('create.organizationPlacement.addToOrganization')}
-                    </Label>
-                    {organizationPlacementError ? (
-                      <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
-                        {organizationPlacementError}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <div className="space-y-0.5">
-                      <Label className="text-xs">
-                        {t('create.organizationPlacement.organizationLabel')}
-                      </Label>
-                      <p className="text-[11px] text-[var(--color-text-muted)]">
-                        {t('create.organizationPlacement.organizationHelp')}
-                      </p>
-                    </div>
-                    <Select
-                      value={activePlacementOrganization?.id ?? ''}
-                      disabled={
-                        !organizationPlacementEnabled ||
-                        organizationPlacementOrganizations.length === 0
-                      }
-                      onValueChange={(value) => {
-                        setOrganizationPlacementOrganizationId(value);
-                        const organization = organizationPlacementOrganizations.find(
-                          (candidate) => candidate.id === value
-                        );
-                        setOrganizationPlacementParentId(organization?.rootNodeId ?? '');
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue
-                          placeholder={t('create.organizationPlacement.organizationPlaceholder')}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {organizationPlacementOrganizations.map((organization) => (
-                          <SelectItem key={organization.id} value={organization.id}>
-                            {organization.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <div className="space-y-0.5">
-                      <Label className="text-xs">
-                        {t('create.organizationPlacement.groupOrRootLabel')}
-                      </Label>
-                      <p className="text-[11px] text-[var(--color-text-muted)]">
-                        {t('create.organizationPlacement.groupOrRootHelp')}
-                      </p>
-                    </div>
-                    <Select
-                      value={activePlacementParent?.id ?? ''}
-                      disabled={
-                        !organizationPlacementEnabled ||
-                        organizationPlacementParentOptions.length === 0
-                      }
-                      onValueChange={setOrganizationPlacementParentId}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue
-                          placeholder={t('create.organizationPlacement.groupOrRootPlaceholder')}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {organizationPlacementParentOptions.map((option) => (
-                          <SelectItem key={option.unit.id} value={option.unit.id}>
-                            <span
-                              className="flex min-w-0 items-center gap-2"
-                              style={{ paddingLeft: `${Math.min(option.depth, 6) * 12}px` }}
-                            >
-                              <span className="truncate">
-                                {getOrganizationUnitLabel(option.unit)}
-                              </span>
-                              <span className="shrink-0 text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
-                                {t(getOrganizationPlacementUnitKindKey(option.unit))}
-                              </span>
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-            </OptionalSettingsSection>
-          </div>
-
-          <div className="md:col-span-2">
-            <OptionalSettingsSection
               title={t('create.optional.teamDetailsTitle')}
               description={t('create.optional.teamDetailsDescription')}
-              summary={teamDetailsSummary}
+              summary={[...teamDetailsSummary, ...organizationPlacementSummary]}
             >
               <div className="space-y-4">
+                <div className="space-y-3 border-b border-[var(--color-border)] pb-4">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">
+                      {t('create.organizationPlacement.title')}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {t('create.organizationPlacement.description')}
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="organization-placement-enabled"
+                      className="mt-1 shrink-0"
+                      checked={organizationPlacementEnabled}
+                      disabled={
+                        organizationStructureLoading ||
+                        organizationPlacementOrganizations.length === 0
+                      }
+                      onCheckedChange={(checked) =>
+                        setOrganizationPlacementEnabled(checked === true)
+                      }
+                    />
+                    <div className="min-w-0 space-y-1">
+                      <Label
+                        htmlFor="organization-placement-enabled"
+                        className="cursor-pointer text-sm font-semibold"
+                      >
+                        {t('create.organizationPlacement.addToOrganization')}
+                      </Label>
+                      {organizationPlacementError ? (
+                        <p className="text-[11px]" style={{ color: 'var(--field-error-text)' }}>
+                          {organizationPlacementError}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">
+                          {t('create.organizationPlacement.organizationLabel')}
+                        </Label>
+                        <p className="text-[11px] text-[var(--color-text-muted)]">
+                          {t('create.organizationPlacement.organizationHelp')}
+                        </p>
+                      </div>
+                      <Select
+                        value={activePlacementOrganization?.id ?? ''}
+                        disabled={
+                          !organizationPlacementEnabled ||
+                          organizationPlacementOrganizations.length === 0
+                        }
+                        onValueChange={(value) => {
+                          setOrganizationPlacementOrganizationId(value);
+                          const organization = organizationPlacementOrganizations.find(
+                            (candidate) => candidate.id === value
+                          );
+                          setOrganizationPlacementParentId(organization?.rootNodeId ?? '');
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue
+                            placeholder={t('create.organizationPlacement.organizationPlaceholder')}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizationPlacementOrganizations.map((organization) => (
+                            <SelectItem key={organization.id} value={organization.id}>
+                              {organization.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs">
+                          {t('create.organizationPlacement.groupOrRootLabel')}
+                        </Label>
+                        <p className="text-[11px] text-[var(--color-text-muted)]">
+                          {t('create.organizationPlacement.groupOrRootHelp')}
+                        </p>
+                      </div>
+                      <Select
+                        value={activePlacementParent?.id ?? ''}
+                        disabled={
+                          !organizationPlacementEnabled ||
+                          organizationPlacementParentOptions.length === 0
+                        }
+                        onValueChange={setOrganizationPlacementParentId}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue
+                            placeholder={t('create.organizationPlacement.groupOrRootPlaceholder')}
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {organizationPlacementParentOptions.map((option) => (
+                            <SelectItem key={option.unit.id} value={option.unit.id}>
+                              <span
+                                className="flex min-w-0 items-center gap-2"
+                                style={{ paddingLeft: `${Math.min(option.depth, 6) * 12}px` }}
+                              >
+                                <span className="truncate">
+                                  {getOrganizationUnitLabel(option.unit)}
+                                </span>
+                                <span className="shrink-0 text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+                                  {t(getOrganizationPlacementUnitKindKey(option.unit))}
+                                </span>
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="team-description" className="label-optional">
                     {t('create.fields.description')}

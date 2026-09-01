@@ -200,6 +200,7 @@ export function buildLaunchTeamMetaPayload(input: {
     model: syntheticRequest.model,
     effort: syntheticRequest.effort,
     fastMode: syntheticRequest.fastMode,
+    syncModelsWithLead: syntheticRequest.syncModelsWithLead,
     skipPermissions: syntheticRequest.skipPermissions,
     worktree: syntheticRequest.worktree,
     extraCliArgs: syntheticRequest.extraCliArgs,

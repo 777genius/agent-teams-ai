@@ -164,6 +164,9 @@ export function useOpenCodeCatalogPrefetch({
     if (priority === 'background' && deferBackground) {
       return;
     }
+    if (retryExhaustedRevisionByScopeRef.current.get(normalizedProjectPath) === scopeRevision) {
+      return;
+    }
     if (requestRevisionByScopeRef.current.get(normalizedProjectPath) === scopeRevision) {
       return;
     }

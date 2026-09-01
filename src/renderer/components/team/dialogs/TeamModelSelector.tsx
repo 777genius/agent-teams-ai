@@ -3086,9 +3086,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   return (
     <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
       <div className="mb-5">
-        <Label htmlFor={id} className="label-optional mb-1.5 block">
-          {t('modelSelector.label')}
-        </Label>
         <Tabs
           orientation="vertical"
           value={activeProviderTabId}
