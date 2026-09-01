@@ -78,7 +78,7 @@ export function normalizePassiveCatalogModel(
       : null;
   const routeModelId =
     parseStrictQualifiedModelRef(routeModelIdentity)?.modelId ?? relativeRouteModelId;
-  const qualifiedIdentity = qualifiedIds.values().next().value as string | undefined;
+  const qualifiedIdentity = qualifiedIds.values().next().value;
   const qualifiedRef = parseStrictQualifiedModelRef(qualifiedIdentity);
   if (
     (route?.providerId != null && !routeProviderId) ||
@@ -89,7 +89,7 @@ export function normalizePassiveCatalogModel(
   ) {
     return null;
   }
-  const unqualifiedIdentity = unqualifiedIds.values().next().value as string | undefined;
+  const unqualifiedIdentity = unqualifiedIds.values().next().value;
   if (unqualifiedIdentity) {
     const routeModelId = parseStrictQualifiedModelRef(routeModelIdentity)?.modelId;
     if (!routeProviderId || !routeModelIdentity || routeModelId !== unqualifiedIdentity) {
