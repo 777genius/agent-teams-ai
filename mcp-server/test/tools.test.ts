@@ -854,13 +854,13 @@ describe('agent-teams-mcp tools', () => {
         teamName,
         subject: 'Review MCP adapter',
         owner: 'alice',
-        createdBy: 'ui-fixer',
+        createdBy: 'lead',
         descriptionTaskRefs: [dependencyRef],
         promptTaskRefs: [dependencyRef],
       })
     );
     expect(createdTask.status).toBe('pending');
-    expect(createdTask.historyEvents?.[0]?.actor).toBe('ui-fixer');
+    expect(createdTask.historyEvents?.[0]?.actor).toBe('lead');
     expect(createdTask.descriptionTaskRefs).toEqual([dependencyRef]);
     expect(createdTask.promptTaskRefs).toEqual([dependencyRef]);
 
@@ -1325,8 +1325,21 @@ describe('agent-teams-mcp tools', () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'headless-task-create';
     writeTeamConfig(claudeDir, teamName, {
-      members: [{ name: 'lead', role: 'team-lead' }],
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'removed-member', role: 'developer' },
+      ],
     });
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', teamName, 'members.meta.json'),
+      JSON.stringify({
+        version: 1,
+        members: [
+          { name: 'meta-only', role: 'developer' },
+          { name: 'removed-member', removedAt: Date.now() },
+        ],
+      })
+    );
 
     const leadInboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'lead.json');
     const queuedTask = parseJsonToolResult(
@@ -1341,6 +1354,40 @@ describe('agent-teams-mcp tools', () => {
     expect(queuedTask.status).toBe('pending');
     expect(queuedTask.createdBy).toBeUndefined();
     expect(queuedTask.historyEvents?.[0]?.actor).toBeUndefined();
+    expect(fs.existsSync(leadInboxPath)).toBe(false);
+
+    const taskDir = path.join(claudeDir, 'tasks', teamName);
+    const metaActorTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Accept canonical metadata actor',
+        createdBy: 'META-ONLY',
+      })
+    );
+    expect(metaActorTask.createdBy).toBe('meta-only');
+    expect(metaActorTask.historyEvents?.[0]?.actor).toBe('meta-only');
+
+    const taskFilesBeforeRejectedActor = fs.readdirSync(taskDir);
+    for (const [actorField, actor] of [
+      ['createdBy', 'external-integration'],
+      ['from', 'external-integration'],
+      ['createdBy', 'removed-member'],
+    ] as const) {
+      await expect(
+        getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject: `Reject forged ${actorField} actor`,
+          owner: 'lead',
+          [actorField]: actor,
+          startImmediately: true,
+        })
+      ).rejects.toThrow(
+        `Unknown task actor "${actor}". Use "user" or a configured team member name.`
+      );
+    }
+    expect(fs.readdirSync(taskDir)).toEqual(taskFilesBeforeRejectedActor);
     expect(fs.existsSync(leadInboxPath)).toBe(false);
 
     const activeTask = parseJsonToolResult(
@@ -2229,6 +2276,20 @@ describe('agent-teams-mcp tools', () => {
         timestamp: '2026-03-15T10:00:00.000Z',
         source: 'user_sent',
       });
+
+      const taskDir = path.join(claudeDir, 'tasks', teamName);
+      await expect(
+        getTool('task_create_from_message').execute({
+          claudeDir,
+          teamName,
+          messageId,
+          subject: 'Reject forged message-task actor',
+          createdBy: 'external-integration',
+        })
+      ).rejects.toThrow(
+        'Unknown task actor "external-integration". Use "user" or a configured team member name.'
+      );
+      expect(fs.readdirSync(taskDir)).toEqual([]);
 
       const created = parseJsonToolResult(
         await getTool('task_create_from_message').execute({

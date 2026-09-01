@@ -1,6 +1,5 @@
+import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
 import { describe, expect, it, vi } from 'vitest';
-
-import { FileWatcherStartupCoordinator } from '../../../../src/main/services/infrastructure/FileWatcherStartupCoordinator';
 
 describe('FileWatcherStartupCoordinator', () => {
   it('starts exactly once when main-process services become ready', () => {

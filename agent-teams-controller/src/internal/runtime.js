@@ -447,7 +447,7 @@ async function launchTeam(context, flags = {}) {
     {
       method: 'POST',
       body: request,
-      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms']),
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs ?? flags['wait-timeout-ms']),
     }
   );
 
@@ -471,7 +471,7 @@ async function launchTeam(context, flags = {}) {
     baseUrls,
     context.teamName,
     launch.runId,
-    normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms'])
+    normalizeTimeoutMs(flags.waitTimeoutMs ?? flags['wait-timeout-ms'])
   );
 }
 
