@@ -127,6 +127,29 @@ describe('createLaunchGuard', () => {
     expect(guard.blocked(false, NOW)).toBe(false);
   });
 
+  it('delegates passive OpenCode authority to the strict launch attempt', () => {
+    const provider: CliProviderStatus = {
+      ...createReadyProvider('anthropic'),
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      models: [],
+      modelCatalog: null,
+      modelCatalogRefreshState: 'loading',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      capabilities: {
+        ...createReadyProvider('anthropic').capabilities,
+        teamLaunch: false,
+      },
+    };
+    const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]));
+
+    expect(guard.blockers(true, NOW)).toEqual([]);
+  });
+
   it('reports stale catalog authority even when the provider has an unrelated status detail', () => {
     const provider = createReadyProvider('codex');
     const staleProvider: CliProviderStatus = {

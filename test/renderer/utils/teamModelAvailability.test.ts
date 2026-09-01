@@ -145,6 +145,20 @@ describe('teamModelAvailability', () => {
     expect(isTeamProviderRuntimeStatusLoading('opencode', null, true)).toBe(true);
   });
 
+  it('does not wait for a shared catalog when OpenCode uses provider-scoped app-server catalogs', () => {
+    const providerStatus = createOpenCodeProviderStatus([], {
+      modelCatalogRefreshState: 'loading',
+      runtimeCapabilities: {
+        modelCatalog: { dynamic: true, source: 'app-server' },
+      },
+      statusMessage: 'Passive summary loaded',
+    });
+
+    expect(isTeamProviderModelVerificationPending('opencode', providerStatus)).toBe(false);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, false)).toBe(false);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, true)).toBe(true);
+  });
+
   it('treats only ready, unexpired provider catalogs as fresh', () => {
     const providerStatus = createOpenCodeProviderStatus(['openrouter/openai/gpt-5.4'], {
       modelCatalogRefreshState: 'ready',

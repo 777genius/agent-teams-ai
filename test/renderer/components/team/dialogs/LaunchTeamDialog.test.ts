@@ -799,7 +799,6 @@ describe('LaunchTeamDialog', () => {
         },
       ],
     } as any;
-
     const launchHost = document.createElement('div');
     document.body.appendChild(launchHost);
     const launchDialogRoot = createRoot(launchHost);
@@ -3797,6 +3796,12 @@ describe('LaunchTeamDialog', () => {
         },
       ],
     } as any;
+    await fetchCliProviderStatus('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: '/tmp/project',
+    });
+    fetchCliProviderStatus.mockClear();
     let resolvePrepare!: (value: {
       status: 'ready';
       warnings: [];
@@ -3869,16 +3874,9 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
-
     expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(
       callsAfterSameSignatureRerender
     );
-    expect(host.textContent).not.toContain('All selected providers are ready.');
-    expect(host.textContent).toContain('Runtime environment is not available');
-    const authorityBlockedCreateButton = host.querySelector<HTMLButtonElement>(
-      'button[aria-describedby="create-team-launch-authority-blocker"]'
-    );
-    expect(authorityBlockedCreateButton?.disabled).toBe(true);
 
     await act(async () => {
       root.unmount();

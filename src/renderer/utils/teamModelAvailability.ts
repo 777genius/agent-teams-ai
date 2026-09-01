@@ -202,6 +202,15 @@ export function isTeamProviderModelVerificationPending(
     return true;
   }
 
+  if (
+    providerId === 'opencode' &&
+    providerStatus.runtimeCapabilities?.modelCatalog?.source === 'app-server'
+  ) {
+    // The passive OpenCode status intentionally has no shared catalog. The
+    // model selector owns the selected provider's scoped catalog lifecycle.
+    return false;
+  }
+
   const verificationState = providerStatus.verificationState;
   if (verificationState === 'error' || providerStatus.modelCatalogRefreshState === 'error') {
     return false;

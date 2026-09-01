@@ -74,6 +74,15 @@ export function createLaunchGuard(
 
     return providerIds.flatMap((providerId) => {
       const provider = runtimeProviderStatusById.get(providerId) ?? null;
+      if (
+        providerId === 'opencode' &&
+        provider?.statusCheckOutcome === 'model_only' &&
+        provider.runtimeCapabilities?.modelCatalog?.source === 'app-server'
+      ) {
+        // Passive status cannot authorize a launch. The strict OpenCode launch
+        // attempt performs fresh exact-model proof before creating members.
+        return [];
+      }
       return hasEffectiveProviderLaunchAuthority(provider, now)
         ? []
         : [

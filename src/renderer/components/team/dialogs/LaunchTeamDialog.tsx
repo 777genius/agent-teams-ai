@@ -52,7 +52,7 @@ import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
-import { useOpenCodeCatalogPrefetch } from '@renderer/hooks/useOpenCodeCatalogPrefetch';
+import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -531,15 +531,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
   const launchAuthorityBlockers = launchGuard.blockers(isLaunchMode);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
+  useOpenCodePassiveStatusPrefetch({
+    enabled: open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+    projectPath: effectiveCwd || null,
+  });
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
-  });
-  const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
-    enabled: open && multimodelEnabled,
-    projectPath: effectiveCwd || null,
-    priority: selectedMemberProviders.includes('opencode') ? 'required' : 'background',
-    deferBackground: prepareState === 'loading' || isSubmitting,
   });
   const hasSelectedAnthropicRuntime = isLaunchMode && selectedMemberProviders.includes('anthropic');
   const effectiveAnthropicRuntimeLimitContext =
@@ -613,15 +611,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 runtimeProviderStatusById.get(providerId),
                 cliProviderStatusLoading[providerId] === true ||
                   (providerId === 'codex' && codexSnapshotPending)
-              ) ||
-                (providerId === 'opencode' && openCodeCatalogPending),
+              ),
             ] as const
         )
       ),
     [
       cliProviderStatusLoading,
       codexSnapshotPending,
-      openCodeCatalogPending,
       runtimeProviderStatusById,
       selectedMemberProviders,
     ]

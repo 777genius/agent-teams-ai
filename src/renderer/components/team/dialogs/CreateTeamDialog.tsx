@@ -58,7 +58,7 @@ import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
-import { useOpenCodeCatalogPrefetch } from '@renderer/hooks/useOpenCodeCatalogPrefetch';
+import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -814,15 +814,13 @@ export const CreateTeamDialog = ({
   const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
   const launchAuthorityBlockers = launchGuard.blockers(launchTeam);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
+  useOpenCodePassiveStatusPrefetch({
+    enabled: open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+    projectPath: effectiveCwd || null,
+  });
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
-  });
-  const { requiredCatalogPending: openCodeCatalogPending } = useOpenCodeCatalogPrefetch({
-    enabled: open && multimodelEnabled,
-    projectPath: effectiveCwd || null,
-    priority: selectedMemberProviders.includes('opencode') ? 'required' : 'background',
-    deferBackground: prepareState === 'loading' || isSubmitting,
   });
   const hasSelectedAnthropicRuntime = selectedMemberProviders.includes('anthropic');
   const effectiveAnthropicRuntimeLimitContext = hasSelectedAnthropicRuntime ? limitContext : false;
@@ -898,15 +896,13 @@ export const CreateTeamDialog = ({
                 runtimeProviderStatusById.get(providerId),
                 cliProviderStatusLoading[providerId] === true ||
                   (providerId === 'codex' && codexSnapshotPending)
-              ) ||
-                (providerId === 'opencode' && openCodeCatalogPending),
+              ),
             ] as const
         )
       ),
     [
       cliProviderStatusLoading,
       codexSnapshotPending,
-      openCodeCatalogPending,
       runtimeProviderStatusById,
       selectedMemberProviders,
     ]
