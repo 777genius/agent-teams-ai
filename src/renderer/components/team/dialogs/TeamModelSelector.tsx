@@ -109,6 +109,7 @@ import {
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   deriveOpenCodeSelectionAuthorityState,
+  type OpenCodeSelectionScopeAssociation,
   getActiveOpenCodeStickyHeadingIndex,
   getOpenCodeModelGridColumnCount,
   getOpenCodeSelectionAuthorityScopeKey,
@@ -156,7 +157,6 @@ interface OpenCodeRouteTagOption {
   label: string;
   count: number;
 }
-
 interface OpenCodeSourceInfo {
   id: string;
   label: string;
@@ -1203,7 +1203,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeSelectionAuthorityScopeKey = getOpenCodeSelectionAuthorityScopeKey(
     openCodeCatalogScopeKey, openCodeSelectionScopeSourceProviderId
   );
-  const openCodeSelectionScopeRef = useRef({ value, scopeKey: openCodeSelectionAuthorityScopeKey });
+  const openCodeSelectionScopeRef = useRef<OpenCodeSelectionScopeAssociation>({ value, scopeKey: openCodeSelectionAuthorityScopeKey });
   const openCodeScopedCatalog = useOpenCodeProviderModelCatalog({
     enabled:
       effectiveProviderId === 'opencode' &&
@@ -1621,7 +1621,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       (openCodeScopedCatalog.status === 'ready' &&
         openCodeScopedCatalog.catalogState === 'fresh' &&
         runtimeNormalizedValue === value),
-    localAuthorityLoading: openCodeSelectionScopeSourceProviderId === null && openCodeLocalProvidersLoading,
+    localAuthorityLoading: openCodeCatalogSourceProviderId === null && openCodeLocalProvidersLoading,
   });
   useLayoutEffect(() => {
     openCodeSelectionScopeRef.current = openCodeSelectionAuthority.committed;

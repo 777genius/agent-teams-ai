@@ -6136,8 +6136,34 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('fences a local selection while the next project authority is pending', async () => {
+  it.each([
+    ['confirms', true],
+    ['does not confirm', false],
+  ])('fences a custom local selection while the next project authority %s it', async (
+    _authority,
+    projectBHasCustomProvider
+  ) => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const localModelId = 'corp-local/model';
+    const customLocalProvider = {
+      preset: {
+        id: 'custom' as const,
+        providerId: 'corp-local',
+        displayName: 'Corporate Local',
+        defaultBaseUrl: 'http://127.0.0.1:4444/v1',
+        description: 'Test-only custom local provider',
+        scannable: false,
+      },
+      providerId: 'corp-local',
+      baseUrl: 'http://127.0.0.1:4444/v1',
+      configuredModelIds: ['model'],
+      defaultModelId: 'model',
+      isDefault: true,
+      state: 'available' as const,
+      liveModels: [{ id: 'model', displayName: 'model' }],
+      latencyMs: 1,
+      message: 'Connected',
+    };
     const loadModels = vi.fn(
       () => new Promise<RuntimeProviderManagementModelsResponse>(() => undefined)
     );
@@ -6177,6 +6203,7 @@ describe('TeamModelSelector disabled Codex models', () => {
                   latencyMs: 4,
                   message: 'Connected',
                 },
+                customLocalProvider,
                 ]
               : [],
         };
@@ -6196,7 +6223,7 @@ describe('TeamModelSelector disabled Codex models', () => {
           detailMessage: null,
           statusMessage: null,
           capabilities: { teamLaunch: true, oneShot: false },
-          models: ['lmstudio/qwen-test:0.5b', 'openrouter/moonshotai/kimi-k2'],
+          models: [localModelId, 'openrouter/moonshotai/kimi-k2'],
           modelCatalogRefreshState: 'ready',
           modelCatalog: {
             schemaVersion: 1,
@@ -6205,13 +6232,13 @@ describe('TeamModelSelector disabled Codex models', () => {
             status: 'ready',
             fetchedAt: '2026-07-19T00:00:00.000Z',
             staleAt: '2026-07-19T00:10:00.000Z',
-            defaultModelId: 'lmstudio/qwen-test:0.5b',
-            defaultLaunchModel: 'lmstudio/qwen-test:0.5b',
+            defaultModelId: localModelId,
+            defaultLaunchModel: localModelId,
             models: [
               {
-                id: 'lmstudio/qwen-test:0.5b',
-                launchModel: 'lmstudio/qwen-test:0.5b',
-                displayName: 'qwen-test:0.5b',
+                id: localModelId,
+                launchModel: localModelId,
+                displayName: 'model',
                 hidden: false,
                 supportedReasoningEfforts: [],
                 defaultReasoningEffort: null,
@@ -6222,9 +6249,9 @@ describe('TeamModelSelector disabled Codex models', () => {
                 source: 'app-server',
                 metadata: {
                   opencode: {
-                    providerId: 'lmstudio',
-                    modelId: 'qwen-test:0.5b',
-                    sourceLabel: 'LM Studio',
+                    providerId: 'corp-local',
+                    modelId: 'model',
+                    sourceLabel: 'Corporate Local',
                     accessKind: 'configured_authless',
                     routeKind: 'configured_local',
                     proofState: 'needs_probe',
@@ -6277,7 +6304,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     const renderForProject = async (
       projectPath: string,
       providerId: 'anthropic' | 'opencode' = 'opencode',
-      value = 'lmstudio/qwen-test:0.5b'
+      value = localModelId
     ): Promise<void> => {
       await act(async () => {
         root.render(
@@ -6298,7 +6325,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(
       host.querySelector('[data-testid="team-model-selector-provider-nav-local-models"]')
         ?.textContent
-    ).toContain('1 detected · 3 configured');
+    ).toContain('2 detected · 4 configured');
 
     await renderForProject('/tmp/local-model-project-a');
     expect(host.textContent).toContain('qwen-test:0.5b');
@@ -6367,11 +6394,20 @@ describe('TeamModelSelector disabled Codex models', () => {
     expect(onValueChange).not.toHaveBeenCalledWith('');
 
     await renderForProject('/tmp/local-model-project-a');
+    const selectedLocalRouteTag = host.querySelector<HTMLButtonElement>(
+      '[data-testid="team-model-selector-opencode-route-tag-local"]'
+    );
+    expect(selectedLocalRouteTag?.getAttribute('aria-pressed')).toBe('true');
+    await act(async () => {
+      selectedLocalRouteTag?.click();
+      await Promise.resolve();
+    });
+    expect(selectedLocalRouteTag?.getAttribute('aria-pressed')).toBe('false');
     loadModels.mockClear();
     await renderForProject('/tmp/local-model-project-b');
     const pendingLocalOption = Array.from(
       host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-model-option"]')
-    ).find((option) => option.textContent?.includes('qwen-test:0.5b'));
+    ).find((option) => option.textContent?.includes('Corporate Local'));
     expect(pendingLocalOption).toBeUndefined();
     expect(loadModels).not.toHaveBeenCalled();
     expect(onValueChange).not.toHaveBeenCalledWith('');
@@ -6380,11 +6416,15 @@ describe('TeamModelSelector disabled Codex models', () => {
       schemaVersion: 1,
       runtimeId: 'opencode',
       scope: 'project',
-      providers: [],
+      providers: projectBHasCustomProvider ? [customLocalProvider] : [],
     });
-    expect(host.textContent).not.toContain('qwen-test:0.5b');
-    expect(onValueChange).toHaveBeenCalledWith('');
-    expect(loadModels).not.toHaveBeenCalled();
+    if (projectBHasCustomProvider) {
+      expect(onValueChange).not.toHaveBeenCalledWith('');
+      expect(loadModels).not.toHaveBeenCalled();
+    } else {
+      await vi.waitFor(() => expect(loadModels).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => expect(onValueChange).toHaveBeenCalledWith(''));
+    }
 
     await act(async () => {
       root.unmount();
