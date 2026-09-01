@@ -453,8 +453,11 @@ vi.mock('@renderer/utils/teamModelAvailability', async (importOriginal) => ({
   getTeamModelSelectionError: vi.fn(() => null),
   isTeamModelAvailableForUi: vi.fn(() => true),
   isTeamProviderModelVerificationPending: vi.fn(() => false),
-  isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
   normalizeExplicitTeamModelForUi: vi.fn((_providerId: string, model: string) => model),
+}));
+
+vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', () => ({
+  isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
 }));
 
 vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', () => ({

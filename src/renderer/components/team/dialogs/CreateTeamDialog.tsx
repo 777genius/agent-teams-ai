@@ -88,11 +88,9 @@ import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
 import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
-import {
-  isTeamProviderRuntimeStatusLoading,
-  normalizeExplicitTeamModelForUi,
-} from '@renderer/utils/teamModelAvailability';
+import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
+import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 import { DEFAULT_PROVIDER_MODEL_SELECTION } from '@shared/utils/providerModelSelection';
 import { resolveTeamLeadColorName } from '@shared/utils/teamMemberColors';

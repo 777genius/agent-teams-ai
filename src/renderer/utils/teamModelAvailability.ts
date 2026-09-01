@@ -194,21 +194,19 @@ export function isTeamProviderModelVerificationPending(
   providerId: SupportedProviderId | undefined,
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): boolean {
-  if (!providerId || providerId === 'anthropic' || !providerStatus) {
+  const usesProviderScopedOpenCodeCatalog =
+    providerId === 'opencode' &&
+    providerStatus?.runtimeCapabilities?.modelCatalog?.source === 'app-server';
+  if (
+    !providerId ||
+    providerId === 'anthropic' ||
+    !providerStatus ||
+    usesProviderScopedOpenCodeCatalog
+  ) {
     return false;
   }
-
   if (providerStatus.modelVerificationState === 'verifying') {
     return true;
-  }
-
-  if (
-    providerId === 'opencode' &&
-    providerStatus.runtimeCapabilities?.modelCatalog?.source === 'app-server'
-  ) {
-    // The passive OpenCode status intentionally has no shared catalog. The
-    // model selector owns the selected provider's scoped catalog lifecycle.
-    return false;
   }
 
   const verificationState = providerStatus.verificationState;
@@ -224,9 +222,7 @@ export function isTeamProviderModelVerificationPending(
     return true;
   }
 
-  // A ready catalog is authoritative even when it is stale, degraded, or
-  // unavailable. Callers may retry it in the background, but must not present
-  // a terminal catalog result as an endless initial load.
+  // A terminal catalog must not become an endless initial load.
   if (isTeamProviderModelCatalogSettled(providerId, providerStatus)) {
     return false;
   }
@@ -263,25 +259,6 @@ export function isTeamProviderModelVerificationPending(
   }
 
   return statusMessage.length === 0 || statusMessage === 'checking...';
-}
-
-export function isTeamProviderRuntimeStatusLoading(
-  providerId: SupportedProviderId | undefined,
-  providerStatus?: TeamModelRuntimeProviderStatus | null,
-  providerLoading = false
-): boolean {
-  if (!providerId) {
-    return false;
-  }
-
-  if (isTeamProviderModelVerificationPending(providerId, providerStatus)) {
-    return true;
-  }
-
-  // `providerLoading` is reserved for an explicit, non-silent provider/auth
-  // refresh. Cached model truth may keep a background catalog refresh usable,
-  // but it must not make a real connection check look settled.
-  return providerLoading;
 }
 
 function getFallbackTeamProviderModels(providerId: SupportedProviderId): string[] {

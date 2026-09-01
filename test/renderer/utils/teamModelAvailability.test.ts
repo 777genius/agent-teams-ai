@@ -9,10 +9,10 @@ import {
   isTeamProviderModelCatalogFresh,
   isTeamProviderModelCatalogSettled,
   isTeamProviderModelVerificationPending,
-  isTeamProviderRuntimeStatusLoading,
   normalizeTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
 } from '@renderer/utils/teamModelAvailability';
+import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { describe, expect, it } from 'vitest';
 
 function createCodexProviderStatus(
