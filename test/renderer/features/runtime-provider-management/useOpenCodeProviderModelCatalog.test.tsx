@@ -155,6 +155,7 @@ interface HarnessProps {
   enabled?: boolean;
   sourceProviderId: string | null;
   projectPath?: string | null;
+  refreshRevision?: number;
   passiveProviderStatus?: CliProviderStatus;
 }
 
@@ -167,6 +168,7 @@ function Harness(props: HarnessProps): React.ReactElement {
     enabled: props.enabled ?? true,
     sourceProviderId: props.sourceProviderId,
     projectPath: props.projectPath,
+    refreshRevision: props.refreshRevision,
     passiveProviderStatus: props.passiveProviderStatus ?? passiveStatus(),
   });
   return React.createElement('div');
@@ -243,7 +245,78 @@ describe('useOpenCodeProviderModelCatalog', () => {
       await Promise.resolve();
     });
     document.body.innerHTML = '';
+    vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it('keeps a null-source overview passive while exposing only canonical consistent model IDs', async () => {
+    const passive = passiveStatus([
+      'deepinfra/qualified-model',
+      'metadata-model',
+      'ollama/local-model',
+      '/malformed',
+      'unresolved-model',
+      'ambiguous-model',
+    ]);
+    passive.modelAvailability = [
+      { modelId: 'deepinfra/qualified-model', status: 'available' },
+      { modelId: 'metadata-model', status: 'unknown' },
+      { modelId: '/malformed', status: 'available' },
+    ];
+    passive.modelCatalog = {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'stale',
+      fetchedAt: '2026-08-31T00:00:00.000Z',
+      staleAt: '2026-08-31T00:00:00.000Z',
+      defaultModelId: 'metadata-model',
+      defaultLaunchModel: 'metadata-model',
+      models: [
+        { ...passiveCatalogModel('deepinfra/qualified-model'), metadata: null },
+        passiveCatalogModel('metadata-model'),
+        { ...passiveCatalogModel('unresolved-model'), metadata: null },
+        passiveCatalogModel('deepinfra/conflicting-provider', 'openrouter'),
+        passiveCatalogModel('ambiguous-model', 'deepinfra'),
+        passiveCatalogModel('ambiguous-model', 'openrouter'),
+        passiveCatalogModel('ambiguous-model', 'deepseek'),
+        {
+          ...passiveCatalogModel('deepinfra/conflicting-id'),
+          launchModel: 'openrouter/conflicting-id',
+        },
+        passiveCatalogModel('deepinfra//malformed'),
+      ],
+      diagnostics: { configReadState: 'ready', appServerState: 'degraded' },
+    };
+
+    await renderHarness({ sourceProviderId: null, passiveProviderStatus: passive });
+
+    expect(apiMocks.loadModels).not.toHaveBeenCalled();
+    expect(observed?.status).toBe('idle');
+    expect(observed?.providerStatus?.models).toEqual([
+      'deepinfra/qualified-model',
+      'deepinfra/metadata-model',
+      'ollama/local-model',
+    ]);
+    expect(observed?.providerStatus?.modelCatalog).toMatchObject({
+      status: 'stale',
+      fetchedAt: '2026-08-31T00:00:00.000Z',
+      defaultModelId: 'deepinfra/metadata-model',
+      defaultLaunchModel: 'deepinfra/metadata-model',
+    });
+    expect(
+      observed?.providerStatus?.modelCatalog?.models.map((entry) => entry.launchModel)
+    ).toEqual([
+      'deepinfra/qualified-model',
+      'deepinfra/metadata-model',
+      'deepinfra/ambiguous-model',
+      'openrouter/ambiguous-model',
+      'deepseek/ambiguous-model',
+    ]);
+    expect(observed?.providerStatus?.modelAvailability).toEqual([
+      { modelId: 'deepinfra/qualified-model', status: 'available' },
+      { modelId: 'deepinfra/metadata-model', status: 'unknown' },
+    ]);
   });
 
   it('loads every page for one project/provider and preserves valid qualified IDs', async () => {
@@ -293,6 +366,48 @@ describe('useOpenCodeProviderModelCatalog', () => {
       proofState: 'needs_probe',
       requiresExecutionProof: true,
     });
+  });
+
+  it('bypasses only page one for explicit and revision refreshes', async () => {
+    apiMocks.loadModels.mockImplementation(async (input: RuntimeProviderManagementLoadModelsInput) =>
+      input.cursor
+        ? response({
+            providerId: 'deepinfra',
+            models: [model('deepinfra', 'deepinfra/page-two')],
+            catalogState: 'fresh',
+          })
+        : response({
+            providerId: 'deepinfra',
+            models: [model('deepinfra', 'deepinfra/page-one')],
+            catalogState: 'fresh',
+            nextCursor: 'page-2',
+          })
+    );
+
+    await renderHarness({ sourceProviderId: 'deepinfra', refreshRevision: 0 });
+    await vi.waitFor(() => expect(apiMocks.loadModels).toHaveBeenCalledTimes(2));
+    expect(apiMocks.loadModels.mock.calls.map(([request]) => request.refresh)).toEqual([
+      undefined,
+      undefined,
+    ]);
+
+    await act(async () => {
+      observed?.refresh();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(apiMocks.loadModels).toHaveBeenCalledTimes(4);
+    expect(apiMocks.loadModels.mock.calls.slice(2).map(([request]) => request.refresh)).toEqual([
+      true,
+      undefined,
+    ]);
+
+    await renderHarness({ sourceProviderId: 'deepinfra', refreshRevision: 1 });
+    await vi.waitFor(() => expect(apiMocks.loadModels).toHaveBeenCalledTimes(6));
+    expect(apiMocks.loadModels.mock.calls.slice(4).map(([request]) => request.refresh)).toEqual([
+      true,
+      undefined,
+    ]);
   });
 
   it.each([
@@ -485,6 +600,114 @@ describe('useOpenCodeProviderModelCatalog', () => {
       proofState: 'needs_probe',
       requiresExecutionProof: true,
     });
+  });
+
+  it('carries passive proof only for the same provider and model identity', async () => {
+    const foreignProof = passiveCatalogModel('deepinfra/foreign-proof', 'openrouter');
+    const sameProviderProof = passiveCatalogModel('deepinfra/same-proof');
+    const conflictingIdentityProof = passiveCatalogModel('deepinfra/conflicting-proof');
+    conflictingIdentityProof.launchModel = 'openrouter/conflicting-proof';
+    foreignProof.metadata!.opencode!.proofState = 'verified';
+    foreignProof.metadata!.opencode!.requiresExecutionProof = false;
+    sameProviderProof.metadata!.opencode!.proofState = 'verified';
+    sameProviderProof.metadata!.opencode!.requiresExecutionProof = false;
+    conflictingIdentityProof.metadata!.opencode!.proofState = 'verified';
+    conflictingIdentityProof.metadata!.opencode!.requiresExecutionProof = false;
+    const passive = passiveStatus();
+    passive.modelCatalog = {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'stale',
+      fetchedAt: '2026-08-31T00:00:00.000Z',
+      staleAt: '2026-08-31T00:00:00.000Z',
+      defaultModelId: null,
+      defaultLaunchModel: null,
+      models: [foreignProof, sameProviderProof, conflictingIdentityProof],
+      diagnostics: { configReadState: 'ready', appServerState: 'degraded' },
+    };
+    apiMocks.loadModels.mockResolvedValue(
+      response({
+        providerId: 'deepinfra',
+        models: [
+          model('deepinfra', 'deepinfra/foreign-proof'),
+          model('deepinfra', 'deepinfra/same-proof'),
+          model('deepinfra', 'deepinfra/conflicting-proof'),
+        ],
+        catalogState: 'fresh',
+      })
+    );
+
+    await renderHarness({ sourceProviderId: 'deepinfra', passiveProviderStatus: passive });
+    await waitForStatus('ready');
+
+    const routes = observed?.providerStatus?.modelCatalog?.models.map(
+      (entry) => entry.metadata?.opencode
+    );
+    expect(routes?.[0]).toMatchObject({
+      proofState: 'needs_probe',
+      requiresExecutionProof: true,
+    });
+    expect(routes?.[1]).toMatchObject({
+      proofState: 'verified',
+      requiresExecutionProof: false,
+    });
+    expect(routes?.[2]).toMatchObject({
+      proofState: 'needs_probe',
+      requiresExecutionProof: true,
+    });
+  });
+
+  it('ages synthetic fresh authority to stale while retaining display models', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-01T00:00:00.000Z'));
+    apiMocks.loadModels.mockResolvedValue(
+      response({
+        providerId: 'deepinfra',
+        models: [model('deepinfra', 'deepinfra/retained-model')],
+        catalogState: 'fresh',
+      })
+    );
+
+    await renderHarness({ sourceProviderId: 'deepinfra' });
+    await waitForStatus('ready');
+    expect(observed?.catalogState).toBe('fresh');
+    expect(observed?.freshModelCount).toBe(1);
+    expect(observed?.providerStatus?.modelCatalog?.staleAt).toBe(
+      '2026-09-01T00:02:00.000Z'
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+      observed?.refresh();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(observed?.catalogState).toBe('fresh');
+    const refreshedFetchedAt = observed?.providerStatus?.modelCatalog?.fetchedAt ?? '';
+    const refreshedStaleAt = observed?.providerStatus?.modelCatalog?.staleAt ?? '';
+    expect(Date.parse(refreshedStaleAt) - Date.parse(refreshedFetchedAt)).toBe(120_000);
+
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+    });
+    expect(observed?.catalogState).toBe('fresh');
+
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+      await Promise.resolve();
+    });
+
+    expect(observed?.catalogState).toBe('stale');
+    expect(observed?.freshModelCount).toBeNull();
+    expect(observed?.providerStatus?.models).toEqual(['deepinfra/retained-model']);
+    expect(observed?.providerStatus?.modelCatalog).toMatchObject({
+      status: 'stale',
+      fetchedAt: refreshedFetchedAt,
+      staleAt: refreshedStaleAt,
+    });
+    expect(apiMocks.loadModels).toHaveBeenCalledTimes(2);
   });
 
   it('reports fresh scoped zero-model authority without treating stale data as authoritative', async () => {

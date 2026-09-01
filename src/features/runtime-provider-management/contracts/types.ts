@@ -550,6 +550,8 @@ export interface RuntimeProviderManagementLoadModelsInput {
   query?: string | null;
   limit?: number | null;
   cursor?: string | null;
+  /** Bypass an app-local completed response cache. It is not forwarded to the runtime CLI. */
+  refresh?: boolean | null;
   /** App-local cancellation group. It is not forwarded to the runtime CLI. */
   requestGroupId?: string | null;
 }

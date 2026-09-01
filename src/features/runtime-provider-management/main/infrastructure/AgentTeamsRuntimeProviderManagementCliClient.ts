@@ -2281,7 +2281,10 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.releaseSupersededModelRequest(requestGroupId, cacheKey);
     }
 
-    const cached = this.readModelResponseCache(cacheKey);
+    if (input.refresh === true) {
+      this.modelResponseCache.delete(cacheKey);
+    }
+    const cached = input.refresh === true ? null : this.readModelResponseCache(cacheKey);
     if (cached) {
       if (requestGroupId && this.activeModelRequestGroups.get(requestGroupId) === cacheKey) {
         this.activeModelRequestGroups.delete(requestGroupId);

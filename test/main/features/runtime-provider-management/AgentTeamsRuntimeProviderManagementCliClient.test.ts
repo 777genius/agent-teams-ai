@@ -2547,6 +2547,35 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(execCliMock.mock.calls[2]?.[1]).toEqual(expect.arrayContaining(['--cursor', '100']));
   });
 
+  it('bypasses a completed identical model cache entry when refresh is requested', async () => {
+    let modelLoadCount = 0;
+    execCliMock.mockImplementation(async () => {
+      modelLoadCount += 1;
+      return {
+        stdout: JSON.stringify(
+          createModelsResponse('openrouter', `openrouter/model-${modelLoadCount}`)
+        ),
+        stderr: '',
+      };
+    });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const request = {
+      runtimeId: 'opencode' as const,
+      providerId: 'openrouter',
+      projectPath: '/Users/test/project',
+    };
+
+    const first = await client.loadModels(request);
+    const cached = await client.loadModels(request);
+    const refreshed = await client.loadModels({ ...request, refresh: true });
+
+    expect(cached).toBe(first);
+    expect(first.models?.models[0]?.modelId).toBe('openrouter/model-1');
+    expect(refreshed.models?.models[0]?.modelId).toBe('openrouter/model-2');
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+    expect(execCliMock.mock.calls[1]?.[1]).not.toContain('--refresh');
+  });
+
   it('expires model search responses after their short TTL', async () => {
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000);
     execCliMock.mockResolvedValue({
@@ -2656,7 +2685,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(execCliMock).toHaveBeenCalledTimes(34);
   });
 
-  it('shares an identical in-flight model load without aborting it', async () => {
+  it('shares an identical in-flight model refresh without duplicating or aborting it', async () => {
     let finishCommand: ((value: { stdout: string; stderr: string }) => void) | undefined;
     let commandSignal: AbortSignal | undefined;
     execCliMock.mockImplementationOnce(
@@ -2676,7 +2705,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       requestGroupId: 'provider-model-search',
     } as const;
     const first = client.loadModels(request);
-    const duplicate = client.loadModels({ ...request });
+    const duplicate = client.loadModels({ ...request, refresh: true });
 
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
     expect(commandSignal?.aborted).toBe(false);
