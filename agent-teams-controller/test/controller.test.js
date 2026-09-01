@@ -3383,7 +3383,7 @@ controller.messages.sendMessage({
     }
   });
 
-  it('applies waitTimeoutMs to the initial launch request before readiness polling', async () => {
+  it('clamps waitTimeoutMs 0 for the initial launch request before readiness polling', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
     const calls = [];
@@ -3400,7 +3400,7 @@ controller.messages.sendMessage({
           cwd: '/tmp/project',
           controlUrl: server.baseUrl,
           waitForReady: false,
-          waitTimeoutMs: 1000,
+          waitTimeoutMs: 0,
         })
       ).rejects.toThrow('Timed out calling team control API: /api/teams/my-team/launch');
       expect(calls).toEqual([

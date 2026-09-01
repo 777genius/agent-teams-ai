@@ -2,7 +2,7 @@ import type { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 
 import { agentBlocks, getController } from '../controller';
-import { assertConfiguredTeam } from '../utils/teamConfig';
+import { assertConfiguredTaskActor, assertConfiguredTeam } from '../utils/teamConfig';
 import { jsonTextContent, taskWriteResult, slimTask } from '../utils/format';
 import { taskRefSchema } from '../utils/schemas';
 import {
@@ -40,6 +40,23 @@ function normalizeTaskListLimit(limit: number | undefined): number {
     return DEFAULT_TASK_LIST_LIMIT;
   }
   return Math.min(Math.max(1, Math.floor(limit)), MAX_TASK_LIST_LIMIT);
+}
+
+function resolveTaskCreationActor(params: {
+  teamName: string;
+  claudeDir?: string;
+  createdBy?: string;
+  from?: string;
+}): { createdBy?: string; from?: string } {
+  const explicitActor = params.createdBy?.trim();
+  const fallbackActor = params.from?.trim();
+  const actor = explicitActor || fallbackActor;
+  if (!actor) {
+    return {};
+  }
+
+  const validatedActor = assertConfiguredTaskActor(params.teamName, actor, params.claudeDir);
+  return explicitActor ? { createdBy: validatedActor } : { from: validatedActor };
 }
 
 /** Allowed message source types for task_create_from_message provenance. Fail closed — only explicit user-originated sources. */
@@ -153,12 +170,12 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       assertConfiguredTeam(teamName, claudeDir);
       const controller = getController(teamName, claudeDir);
       const { taskBoard } = controller;
+      const taskActor = resolveTaskCreationActor({ teamName, claudeDir, createdBy, from });
       const payload = buildCreateTaskPayload({
         subject,
         description,
         owner,
-        createdBy,
-        from,
+        ...taskActor,
         blockedBy,
         related,
         prompt,
@@ -299,11 +316,12 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
       }
 
       // 5. Forward into canonical create-task path
+      const taskActor = resolveTaskCreationActor({ teamName, claudeDir, createdBy });
       const payload = buildCreateTaskPayload({
         subject,
         description,
         owner,
-        createdBy,
+        ...taskActor,
         blockedBy,
         related,
         prompt,
