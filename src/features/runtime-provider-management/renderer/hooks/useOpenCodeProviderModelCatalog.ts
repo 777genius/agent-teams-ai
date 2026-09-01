@@ -121,7 +121,12 @@ export function resolveOpenCodeCatalogSourceProviderId(input: {
 function qualifyModelId(providerId: string, modelId: string): string {
   const normalizedProviderId = providerId.trim().toLowerCase();
   const normalizedModelId = modelId.trim();
-  if (!normalizedProviderId || !normalizedModelId || /\s/.test(normalizedModelId)) {
+  if (
+    !normalizedProviderId ||
+    !normalizedModelId ||
+    normalizedModelId !== modelId ||
+    /\s/.test(normalizedModelId)
+  ) {
     return '';
   }
   if (normalizedModelId.includes('/')) {
@@ -210,19 +215,23 @@ function mapCatalogModel(
   };
 }
 
-function sourceIdForCatalogModel(model: CliProviderModelCatalogItem): string | null {
+function normalizePassiveCatalogModel(
+  model: CliProviderModelCatalogItem,
+  expectedSourceProviderId: string
+): CliProviderModelCatalogItem | null {
   const sourceProviderId =
     normalizeSourceProviderId(model.metadata?.opencode?.providerId) ??
     normalizeSourceProviderId(parseStrictQualifiedModelRef(model.launchModel)?.sourceId) ??
     normalizeSourceProviderId(parseStrictQualifiedModelRef(model.id)?.sourceId);
-  if (
-    !sourceProviderId ||
-    !qualifyModelId(sourceProviderId, model.launchModel) ||
-    !qualifyModelId(sourceProviderId, model.id)
-  ) {
+  if (!sourceProviderId || sourceProviderId !== expectedSourceProviderId) {
     return null;
   }
-  return sourceProviderId;
+  const launchModel = qualifyModelId(sourceProviderId, model.launchModel);
+  const id = qualifyModelId(sourceProviderId, model.id);
+  if (!launchModel || !id || launchModel !== id) {
+    return null;
+  }
+  return { ...model, id, launchModel };
 }
 
 function sourceIdForModelId(modelId: string): string | null {
@@ -236,15 +245,24 @@ function filterPassiveProviderToSource(
   error: string | null
 ): CliProviderStatus {
   const catalog = provider.modelCatalog;
-  const catalogModels = (catalog?.models ?? []).filter(
-    (model) => sourceIdForCatalogModel(model) === sourceProviderId
-  );
+  const catalogModels = (catalog?.models ?? []).flatMap((model) => {
+    const normalized = normalizePassiveCatalogModel(model, sourceProviderId);
+    return normalized ? [normalized] : [];
+  });
   const catalogModelIds = new Set(
     catalogModels.flatMap((model) => [model.launchModel, model.id])
   );
-  const models = provider.models.filter(
-    (modelId) =>
-      sourceIdForModelId(modelId) === sourceProviderId || catalogModelIds.has(modelId)
+  const models = Array.from(
+    new Set(
+      provider.models.flatMap((modelId) => {
+        const normalizedModelId = qualifyModelId(sourceProviderId, modelId);
+        return normalizedModelId &&
+          (sourceIdForModelId(modelId) === sourceProviderId ||
+            catalogModelIds.has(normalizedModelId))
+          ? [normalizedModelId]
+          : [];
+      })
+    )
   );
   const visibleModelIds = new Set([
     ...models,
@@ -254,6 +272,15 @@ function filterPassiveProviderToSource(
   const defaultLaunchModel = catalog?.defaultLaunchModel;
   const defaultModelId = catalog?.defaultModelId;
   const catalogDiagnostics = catalog?.diagnostics;
+  const normalizeVisibleModelId = (modelId: string | null | undefined): string | null => {
+    if (!modelId) {
+      return null;
+    }
+    const normalizedModelId = qualifyModelId(sourceProviderId, modelId);
+    return normalizedModelId && visibleModelIds.has(normalizedModelId)
+      ? normalizedModelId
+      : null;
+  };
   return {
     ...provider,
     models,
@@ -264,12 +291,8 @@ function filterPassiveProviderToSource(
       ? {
           ...catalog,
           status: status === 'error' ? 'stale' : catalog.status,
-          defaultLaunchModel:
-            defaultLaunchModel && visibleModelIds.has(defaultLaunchModel)
-              ? defaultLaunchModel
-              : null,
-          defaultModelId:
-            defaultModelId && visibleModelIds.has(defaultModelId) ? defaultModelId : null,
+          defaultLaunchModel: normalizeVisibleModelId(defaultLaunchModel),
+          defaultModelId: normalizeVisibleModelId(defaultModelId),
           models: catalogModels,
           diagnostics: {
             configReadState: catalogDiagnostics?.configReadState ?? 'failed',

@@ -354,7 +354,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
     }
   );
 
-  it('filters malformed and foreign passive models despite same-provider metadata', async () => {
+  it('canonicalizes metadata-backed passive models while rejecting unsafe identifiers', async () => {
     const failedRequest = createDeferred<RuntimeProviderManagementModelsResponse>();
     const passive = passiveStatus([
       '/poisoned',
@@ -370,7 +370,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
       status: 'stale',
       fetchedAt: '2026-08-31T00:00:00.000Z',
       staleAt: '2026-08-31T00:00:00.000Z',
-      defaultModelId: 'kiro/model',
+      defaultModelId: 'unqualified-model',
       defaultLaunchModel: '/poisoned',
       models: [
         passiveCatalogModel('/poisoned'),
@@ -378,6 +378,11 @@ describe('useOpenCodeProviderModelCatalog', () => {
         passiveCatalogModel('kiro/model'),
         passiveCatalogModel('deepinfra/org/nested-model'),
         passiveCatalogModel('unqualified-model'),
+        {
+          ...passiveCatalogModel('deepinfra/id-model'),
+          launchModel: 'deepinfra/launch-model',
+        },
+        passiveCatalogModel(' deepinfra/space-model'),
       ],
       diagnostics: {
         configReadState: 'ready',
@@ -390,15 +395,35 @@ describe('useOpenCodeProviderModelCatalog', () => {
     await waitForStatus('loading');
 
     const expectSafeFallback = (): void => {
-      expect(observed?.providerStatus?.models).toEqual([
+      const providerStatus = observed?.providerStatus;
+      expect(providerStatus?.models).toEqual([
         'deepinfra/org/nested-model',
-        'unqualified-model',
+        'deepinfra/unqualified-model',
       ]);
       expect(
-        observed?.providerStatus?.modelCatalog?.models.map((catalogModel) => catalogModel.id)
-      ).toEqual(['deepinfra/org/nested-model', 'unqualified-model']);
-      expect(observed?.providerStatus?.modelCatalog?.defaultModelId).toBeNull();
-      expect(observed?.providerStatus?.modelCatalog?.defaultLaunchModel).toBeNull();
+        providerStatus?.modelCatalog?.models.map(({ id, launchModel }) => ({ id, launchModel }))
+      ).toEqual([
+        {
+          id: 'deepinfra/org/nested-model',
+          launchModel: 'deepinfra/org/nested-model',
+        },
+        {
+          id: 'deepinfra/unqualified-model',
+          launchModel: 'deepinfra/unqualified-model',
+        },
+      ]);
+      expect(providerStatus?.modelCatalog?.defaultModelId).toBe(
+        'deepinfra/unqualified-model'
+      );
+      expect(providerStatus?.modelCatalog?.defaultLaunchModel).toBeNull();
+      expect(
+        resolveOpenCodeCatalogSourceProviderId({
+          selectedSourceIds: new Set(),
+          selectedModel: providerStatus?.modelCatalog?.models[1]?.launchModel,
+          knownLocalSourceIds: new Set(),
+          localProviderLookupReady: true,
+        })
+      ).toBe('deepinfra');
     };
     expectSafeFallback();
 
