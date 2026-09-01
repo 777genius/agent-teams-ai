@@ -6,6 +6,14 @@ export interface TeamProvisioningStallWarningRequest {
 }
 
 export function isAuthFailureWarning(text: string, source: AuthWarningSource): boolean {
+  // Assistant text is model output: it can quote or paraphrase login messages
+  // without the CLI actually being unauthenticated. Killing the process on that
+  // signal creates a self-sustaining respawn loop; real auth failures still
+  // surface through probe/stderr/pre-complete sources.
+  if (source === 'assistant') {
+    return false;
+  }
+
   const lower = text.toLowerCase();
   const hasExplicitCliAuthSignal =
     lower.includes('not authenticated') ||
@@ -27,7 +35,7 @@ export function isAuthFailureWarning(text: string, source: AuthWarningSource): b
     return true;
   }
 
-  if (source === 'assistant' || source === 'stdout') {
+  if (source === 'stdout') {
     return false;
   }
 

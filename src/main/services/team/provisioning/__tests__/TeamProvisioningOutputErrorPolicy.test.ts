@@ -14,8 +14,18 @@ import {
 describe('team provisioning output error policy', () => {
   it('classifies explicit auth warnings across CLI output sources', () => {
     expect(isAuthFailureWarning('Codex provider is not authenticated', 'stdout')).toBe(true);
-    expect(isAuthFailureWarning('Please run /login first', 'assistant')).toBe(true);
+    expect(isAuthFailureWarning('Please run /login first', 'stderr')).toBe(true);
     expect(isAuthFailureWarning('Run `claude auth login` to continue', 'probe')).toBe(true);
+  });
+
+  it('never treats assistant text as an auth failure signal', () => {
+    // Model output can quote or paraphrase a login prompt without the CLI being
+    // unauthenticated; only the trusted CLI sources may trigger the auth kill.
+    expect(isAuthFailureWarning('Please run /login first', 'assistant')).toBe(false);
+    expect(isAuthFailureWarning('Not logged in · Please run /login', 'assistant')).toBe(false);
+    expect(isAuthFailureWarning('Please run /login first', 'stderr')).toBe(true);
+    expect(isAuthFailureWarning('Please run /login first', 'probe')).toBe(true);
+    expect(isAuthFailureWarning('Please run /login first', 'pre-complete')).toBe(true);
   });
 
   it('treats ambiguous 401 auth text as auth failure only for trusted sources', () => {
