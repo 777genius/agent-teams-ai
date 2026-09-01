@@ -109,10 +109,10 @@ import {
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
   deriveOpenCodeSelectionAuthorityState,
-  type OpenCodeSelectionScopeAssociation,
   getActiveOpenCodeStickyHeadingIndex,
   getOpenCodeModelGridColumnCount,
   getOpenCodeSelectionAuthorityScopeKey,
+  type OpenCodeSelectionScopeAssociation,
   resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
