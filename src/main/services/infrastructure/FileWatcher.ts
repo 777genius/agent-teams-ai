@@ -589,6 +589,7 @@ export class FileWatcher extends EventEmitter {
       getScopedTeamNames: () => this.teamWatchScopeProvider?.() ?? null,
       getScopedInboxTeamNames: () =>
         watcherType === 'teams' ? (this.teamInboxWatchScopeProvider?.() ?? null) : null,
+      backfillInitialScopedInboxFiles: watcherType === 'teams',
     });
 
     if (watcherType === 'teams') {

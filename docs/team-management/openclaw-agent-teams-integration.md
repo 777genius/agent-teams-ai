@@ -539,12 +539,20 @@ Arguments:
   "subject": "Review OpenClaw latest patch",
   "description": "Check correctness, tests, edge cases, and integration risks. Report concrete findings only.",
   "owner": "reviewer",
-  "createdBy": "openclaw",
+  "createdBy": "user",
   "startImmediately": true
 }
 ```
 
 `task_create` requires a configured team, so launch the team first.
+
+This is the raw headless MCP payload. Headless calls do not receive the desktop UI's user
+defaults: `owner` by itself creates a `pending` task. If `createdBy`/`from` is also omitted,
+the task records no creation actor; assigning it to the team lead produces no inbox row because
+lead self-notification is suppressed. Use `createdBy: "user"` plus `startImmediately: true` when
+the task should be `in_progress` and delivered once to the owner. The actor/sender must be either
+`user` or a configured team member; an arbitrary integration name is rejected and does not create
+an inbox row. A blocked task remains pending even with `startImmediately: true`.
 
 ### 6.6 Send a Message To the Team
 

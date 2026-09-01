@@ -3383,6 +3383,38 @@ controller.messages.sendMessage({
     }
   });
 
+  it('applies waitTimeoutMs to the initial launch request before readiness polling', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const calls = [];
+
+    const server = await startControlServer(async ({ method, url, body }) => {
+      calls.push({ method, url, body });
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      return { body: { runId: 'run-too-late' } };
+    });
+
+    try {
+      await expect(
+        controller.runtime.launchTeam({
+          cwd: '/tmp/project',
+          controlUrl: server.baseUrl,
+          waitForReady: false,
+          waitTimeoutMs: 1000,
+        })
+      ).rejects.toThrow('Timed out calling team control API: /api/teams/my-team/launch');
+      expect(calls).toEqual([
+        {
+          method: 'POST',
+          url: '/api/teams/my-team/launch',
+          body: { cwd: '/tmp/project' },
+        },
+      ]);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('forwards OpenCode runtime MCP calls to the app control API', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

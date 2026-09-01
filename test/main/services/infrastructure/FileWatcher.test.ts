@@ -1468,6 +1468,53 @@ describe('FileWatcher', () => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
+  it('replays an existing inbox file from the explicit initial live-team scope', async () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-live-inbox-backfill-'));
+    setClaudeBasePathOverride(tempDir);
+    const projectsDir = path.join(tempDir, 'projects');
+    const todosDir = path.join(tempDir, 'todos');
+    const teamsDir = path.join(tempDir, 'teams');
+    const tasksDir = path.join(tempDir, 'tasks');
+    fs.mkdirSync(projectsDir, { recursive: true });
+    fs.mkdirSync(todosDir, { recursive: true });
+    for (const teamName of ['live-team', 'stopped-team']) {
+      fs.mkdirSync(path.join(teamsDir, teamName, 'inboxes'), { recursive: true });
+      fs.mkdirSync(path.join(tasksDir, teamName), { recursive: true });
+      fs.writeFileSync(path.join(teamsDir, teamName, 'config.json'), '{}', 'utf8');
+      fs.writeFileSync(
+        path.join(teamsDir, teamName, 'inboxes', 'team-lead.json'),
+        '[{"read":false}]',
+        'utf8'
+      );
+    }
+    useRealAccess();
+
+    vi.mocked(fs.watch).mockImplementation(() => createFakeWatcher());
+
+    const dataCache = new DataCache(50, 10, false);
+    const watcher = new FileWatcher(dataCache, projectsDir, todosDir);
+    watcher.setTeamWatchScopeProvider(() => new Set(['live-team']));
+    watcher.setTeamInboxWatchScopeProvider(() => new Set(['live-team']));
+    const events: unknown[] = [];
+    watcher.on('team-change', (event) => events.push(event));
+    watcher.start();
+
+    await vi.waitFor(() => expect(chokidarMock.watch).toHaveBeenCalledTimes(2));
+    getChokidarWatcherForRoot(teamsDir).emit('ready');
+    await vi.waitFor(() => expect(events).toHaveLength(1));
+
+    expect(events).toEqual([
+      {
+        type: 'inbox',
+        teamName: 'live-team',
+        detail: 'inboxes/team-lead.json',
+      },
+    ]);
+
+    watcher.stop();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
   it('emits existing files once when reconciliation discovers new team and task directories', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'filewatcher-chokidar-new-files-'));
     setClaudeBasePathOverride(tempDir);

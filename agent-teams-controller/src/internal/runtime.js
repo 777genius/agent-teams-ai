@@ -447,6 +447,7 @@ async function launchTeam(context, flags = {}) {
     {
       method: 'POST',
       body: request,
+      timeoutMs: normalizeTimeoutMs(flags.waitTimeoutMs || flags['wait-timeout-ms']),
     }
   );
 

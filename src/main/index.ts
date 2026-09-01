@@ -126,6 +126,7 @@ import {
   setAliveTeamsProvider,
   setTeamWatchScopeChangeListener,
 } from '@main/services/infrastructure/teamWatchScope';
+import { FileWatcherStartupCoordinator } from '@main/services/infrastructure/FileWatcherStartupCoordinator';
 import { JsonScheduleRepository } from '@main/services/schedule/JsonScheduleRepository';
 import { ScheduledTaskExecutor } from '@main/services/schedule/ScheduledTaskExecutor';
 import { SchedulerService } from '@main/services/schedule/SchedulerService';
@@ -1136,7 +1137,6 @@ let rendererRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
 let rendererRecoveryAttempts = 0;
 let servicesReady = false;
 let rendererDidFinishLoad = false;
-let fileWatcherStartupStarted = false;
 let backgroundStartupTasksStarted = false;
 let appStartupHandlersRegistered = false;
 
@@ -1147,6 +1147,13 @@ let teamChangeCleanup: (() => void) | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let shutdownComplete = false;
 const startupTimers = new Set<ReturnType<typeof setTimeout>>();
+const fileWatcherStartupCoordinator = new FileWatcherStartupCoordinator({
+  isServicesReady: () => servicesReady,
+  isShutdownStarted,
+  getActiveContext: () => contextRegistry.getActive(),
+  schedule: scheduleStartupTask,
+  platform: process.platform,
+});
 
 const SHUTDOWN_STEP_TIMEOUT_MS = 5_000;
 const STARTUP_RECOVERY_DELAY_MS = 10_000;
@@ -3243,22 +3250,6 @@ function runPostRendererStartupTasks(): void {
     return;
   }
 
-  if (!fileWatcherStartupStarted) {
-    fileWatcherStartupStarted = true;
-    // Start file watchers after both the visible window and main services are ready.
-    const activeContext = contextRegistry.getActive();
-    if (process.platform === 'win32') {
-      scheduleStartupTask(() => {
-        if (!fileWatcherStartupStarted || !servicesReady || !rendererDidFinishLoad) {
-          return;
-        }
-        activeContext.startFileWatcher();
-      }, 1500);
-    } else if (!isShutdownStarted()) {
-      activeContext.startFileWatcher();
-    }
-  }
-
   if (backgroundStartupTasksStarted) {
     return;
   }
@@ -3571,9 +3562,7 @@ function createWindow(): void {
     }
     markRendererUnavailable(mainWindow);
     rendererDidFinishLoad = false;
-    fileWatcherStartupStarted = false;
     branchStatusService?.resetAllTracking();
-    contextRegistry?.getActive()?.stopFileWatcher();
     if (mainWindow) {
       scheduleRendererRecovery(mainWindow);
     }
@@ -3652,6 +3641,7 @@ void app.whenReady().then(async () => {
       ready: true,
       error: null,
     });
+    fileWatcherStartupCoordinator.startWhenServicesReady();
     runPostRendererStartupTasks();
 
     // Listen for notification click events

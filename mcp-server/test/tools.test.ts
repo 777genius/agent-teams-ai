@@ -1321,6 +1321,57 @@ describe('agent-teams-mcp tools', () => {
     );
   });
 
+  it('preserves the raw headless task_create defaults and requires explicit user-origin immediate delivery to the lead', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'headless-task-create';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [{ name: 'lead', role: 'team-lead' }],
+    });
+
+    const leadInboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'lead.json');
+    const queuedTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Queue raw headless work',
+        owner: 'lead',
+      })
+    );
+
+    expect(queuedTask.status).toBe('pending');
+    expect(queuedTask.createdBy).toBeUndefined();
+    expect(queuedTask.historyEvents?.[0]?.actor).toBeUndefined();
+    expect(fs.existsSync(leadInboxPath)).toBe(false);
+
+    const activeTask = parseJsonToolResult(
+      await getTool('task_create').execute({
+        claudeDir,
+        teamName,
+        subject: 'Deliver raw headless work now',
+        owner: 'lead',
+        createdBy: 'user',
+        startImmediately: true,
+      })
+    );
+
+    expect(activeTask.status).toBe('in_progress');
+    expect(activeTask.createdBy).toBe('user');
+    expect(activeTask.historyEvents?.[0]?.actor).toBe('user');
+    const leadInbox = JSON.parse(fs.readFileSync(leadInboxPath, 'utf8'));
+    expect(leadInbox).toHaveLength(1);
+    expect(leadInbox[0]).toMatchObject({
+      from: 'user',
+      to: 'lead',
+      source: 'system_notification',
+    });
+    expect(leadInbox[0].summary).toContain(`#${activeTask.displayId}`);
+
+    expect(getTool('task_create').description).toContain(
+      'Raw/headless calls do not inject a user actor or auto-start'
+    );
+    expect(getTool('task_create').description).toContain("createdBy: 'user'");
+  });
+
   it('uses Codex-native MCP wording for task_create owner notifications', async () => {
     const claudeDir = makeClaudeDir();
     const teamName = 'codex-owner';
