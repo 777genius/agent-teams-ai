@@ -182,9 +182,14 @@ function resolvePassiveRouteModelIdentity(
 ): string | null {
   if (!route) return null;
   const providerId = normalizeProviderIdentity(route.providerId);
-  const modelId = route.modelId;
-  if (!providerId || typeof modelId !== 'string') return null;
-  return qualifyModelId(providerId, modelId);
+  const modelId = route.modelId?.trim();
+  if (!providerId || !modelId || modelId !== route.modelId) return null;
+  const direct = parseStrictQualifiedModelRef(modelId);
+  if (direct?.sourceId === providerId) {
+    return direct.raw;
+  }
+  const parsed = parseStrictQualifiedModelRef(`${providerId}/${modelId}`);
+  return parsed?.sourceId === providerId ? parsed.raw : null;
 }
 function matchingPassiveProofRoute(
   passiveModel: CliProviderModelCatalogItem | null,
@@ -267,9 +272,21 @@ function normalizePassiveCatalogModel(
   if (qualifiedIds.size > 1 || unqualifiedIds.size > 1) return null;
   const route = model.metadata?.opencode;
   const routeProviderId = normalizeProviderIdentity(route?.providerId);
-  const routeModelRef = parseStrictQualifiedModelRef(route?.modelId);
-  const routeModelId = routeModelRef?.modelId ?? (route?.modelId && route.modelId === route.modelId.trim() && !/[\s/]/.test(route.modelId) ? route.modelId : null);
-  const routeModelIdentity = routeModelRef?.raw ?? (routeProviderId && routeModelId ? qualifyModelId(routeProviderId, routeModelId) : null);
+  const rawRouteModelId = route?.modelId;
+  const routeModelRef =
+    typeof rawRouteModelId === 'string' && rawRouteModelId === rawRouteModelId.trim()
+      ? parseStrictQualifiedModelRef(`route/${rawRouteModelId}`)
+      : null;
+  const relativeRouteModelId = routeModelRef?.sourceId === 'route' ? routeModelRef.modelId : null;
+  const directRouteModelRef = parseStrictQualifiedModelRef(rawRouteModelId);
+  const routeModelIdentity =
+    routeProviderId && relativeRouteModelId
+      ? directRouteModelRef?.sourceId === routeProviderId
+        ? directRouteModelRef.raw
+        : parseStrictQualifiedModelRef(`${routeProviderId}/${relativeRouteModelId}`)?.raw ?? null
+      : null;
+  const routeModelId =
+    parseStrictQualifiedModelRef(routeModelIdentity)?.modelId ?? relativeRouteModelId;
   const qualifiedIdentity = qualifiedIds.values().next().value as string | undefined;
   const qualifiedRef = parseStrictQualifiedModelRef(qualifiedIdentity);
   if (
