@@ -320,7 +320,10 @@ export function assertReviewCandidateWithinAuthorization(
     Object.keys(state.fileDecisions).some(
       (key) => !isAuthorizedReviewDecisionKey(canonicalFiles, key, false)
     ) ||
-    Object.keys(state.hunkContextHashesByFile ?? {}).some((key) => !canonicalFiles.has(key))
+    Object.keys(state.hunkContextHashesByFile ?? {}).some((key) => !canonicalFiles.has(key)) ||
+    (state.reviewRedoHistory ?? []).some((entry) =>
+      Object.keys(entry.hunkContextHashesByFile ?? {}).some((key) => !canonicalFiles.has(key))
+    )
   ) {
     throw new Error('Review recovery branch contains decisions outside the active review');
   }

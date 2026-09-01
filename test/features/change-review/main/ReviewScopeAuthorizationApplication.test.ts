@@ -158,6 +158,29 @@ describe('ReviewScopeAuthorizationApplication', () => {
     ).rejects.toThrow('Review mutation refuses symbolic or multiply-linked files');
   });
 
+  it('refuses a dangling reviewed symlink before resolving its target', async () => {
+    if (process.platform === 'win32') return;
+    const root = await mkdtemp(path.join(tmpdir(), 'review-scope-dangling-link-'));
+    temporaryRoots.push(root);
+    const linkPath = path.join(root, 'reviewed.ts');
+    // Paths are derived from a fresh test-only temporary directory.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
+    await symlink(path.join(root, 'missing.ts'), linkPath);
+    const file = createFile(linkPath);
+    const { feature } = createHarness(root, [file]);
+    const { authorization } = await feature.resolveReviewPathAuthorization({
+      teamName: 'safe-team',
+      memberName: 'worker',
+    });
+
+    await expect(
+      feature.validateAuthorizedReviewFilePath(authorization, linkPath, {
+        requireReviewedFile: true,
+        rejectHardlinks: true,
+      })
+    ).rejects.toThrow('Review mutation refuses symbolic or multiply-linked files');
+  });
+
   it('rejects a renderer member that conflicts with authoritative task ownership', async () => {
     const root = await mkdtemp(path.join(tmpdir(), 'review-scope-owner-'));
     temporaryRoots.push(root);

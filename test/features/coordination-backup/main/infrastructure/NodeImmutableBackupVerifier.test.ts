@@ -166,6 +166,30 @@ describe('NodeImmutableBackupVerifier', () => {
     ).resolves.toEqual({ status: 'invalid', reasons: ['commit-marker-mismatch'] });
   });
 
+  it('rejects metadata whose size changes after the descriptor read', async () => {
+    const fixture = await makeSealedFixture(roots);
+    const manifestPath = path.join(fixture.stageDirectory, 'manifest.json');
+    const actualLstat = fs.promises.lstat.bind(fs.promises);
+    let manifestLstatCount = 0;
+    const lstatSpy = vi.spyOn(fs.promises, 'lstat').mockImplementation(async (...args) => {
+      const observed = await actualLstat(...args);
+      if (String(args[0]) !== manifestPath || manifestLstatCount++ !== 1) return observed;
+      return Object.assign(Object.create(Object.getPrototypeOf(observed)), observed, {
+        size: typeof observed.size === 'bigint' ? observed.size + 1n : observed.size + 1,
+      });
+    });
+    const verifier = new NodeImmutableBackupVerifier(fixture.root);
+
+    await expect(
+      verifier.verify({
+        backupRunId: RUN_ID,
+        location: 'staging',
+        expectedPlan: fixture.plan,
+      })
+    ).resolves.toEqual({ status: 'invalid', reasons: ['metadata-changed-during-read'] });
+    lstatSpy.mockRestore();
+  });
+
   it('rejects stage/generation ambiguity without choosing either artifact', async () => {
     const fixture = await makeSealedFixture(roots);
     const publication = await fixture.publication.commitSealedStage({

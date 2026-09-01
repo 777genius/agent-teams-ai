@@ -219,6 +219,37 @@ describe('ReviewDecisionHistoryApplication', () => {
     expect(foreign.mutations.resolveConflictCandidate).not.toHaveBeenCalled();
   });
 
+  it('rejects foreign hunk hashes stored only in redo history', async () => {
+    const harness = createHarness({
+      candidate: conflictCandidate({
+        state: snapshot({
+          reviewRedoHistory: [
+            {
+              action: hunkAction('redo', 0),
+              decisionSnapshot: {
+                hunkDecisions: { [`${REVIEW_KEY}:0`]: 'accepted' },
+                fileDecisions: {},
+              },
+              hunkContextHashesByFile: { [FOREIGN_FILE]: { 0: 'foreign-hash' } },
+            },
+          ],
+        }),
+      }),
+    });
+
+    await expect(
+      harness.application.resolveConflictCandidate(
+        TEAM_NAME,
+        SCOPE_KEY,
+        SCOPE_TOKEN,
+        'candidate-id',
+        'recover-candidate',
+        1
+      )
+    ).rejects.toThrow('outside the active review');
+    expect(harness.mutations.resolveConflictCandidate).not.toHaveBeenCalled();
+  });
+
   it('treats an identical stale save as response-loss without authorization or a second write', async () => {
     const action = hunkAction('accepted', 0);
     const current = loaded({

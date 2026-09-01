@@ -1,7 +1,6 @@
 import {
   createHash,
   createHmac,
-  createPrivateKey,
   createPublicKey,
   generateKeyPairSync,
   sign as signDetached,
@@ -39,6 +38,7 @@ import type { OrchestratorLifecycleOwnerProofKey } from '../../../../src/main/co
 import type { Socket } from 'node:net';
 
 const GOLDEN_PATH = 'docs/hosted-approval-activation-v2-golden.json';
+const LEGACY_GOLDEN_PATH = 'docs/hosted-approval-activation-v1-golden.json';
 const CONTRACT_PATH = 'docs/hosted-approval-activation-v2-contract.json';
 const CHALLENGE = '3'.repeat(64);
 
@@ -49,7 +49,6 @@ interface Golden {
   }>;
   readonly signing: Readonly<{
     contract: string;
-    testOnlyPrivateKeyPkcs8Pem: string;
     publicKeySpkiDerBase64url: string;
     publicKeyDigest: `sha256:${string}`;
     contractDigest: `sha256:${string}`;
@@ -120,6 +119,13 @@ function candidateActivationInput(fixture: Golden): Readonly<{
 }
 
 describe('hosted approval activation-v2', () => {
+  it.each([LEGACY_GOLDEN_PATH, GOLDEN_PATH])('does not publish private signing keys in %s', async (path) => {
+    const fixture = JSON.parse(await readFile(path, 'utf8')) as { signing?: Record<string, unknown> };
+
+    expect(fixture.signing).not.toHaveProperty('testOnlyPrivateKeyPkcs8Pem');
+    expect(JSON.stringify(fixture)).not.toContain('BEGIN PRIVATE KEY');
+  });
+
   it('matches the shared byte-for-byte golden with an independent serializer verifier', async () => {
     const fixture = await golden();
     const key = fixture.proof.testOnlySecretHex as OrchestratorLifecycleOwnerProofKey;
@@ -128,15 +134,15 @@ describe('hosted approval activation-v2', () => {
       fixture.binding,
       fixture.admissionDocument
     );
-    const publication = serializeHostedApprovalRuntimeActivationPublication(
+    const identity = ephemeralSigningIdentity(fixture);
+    const ephemeralPublication = serializeHostedApprovalRuntimeActivationPublication(
       key,
-      signingIdentity(fixture),
+      identity,
       fixture.binding,
       fixture.admissionDocument
     );
 
     expect(serialized).toBe(fixture.publication.serializedSignedEnvelope);
-    expect(publication).toBe(fixture.publication.bytes);
     const contractBytes = await readFile(CONTRACT_PATH);
     expect(`sha256:${createHash('sha256').update(contractBytes).digest('hex')}`).toBe(
       fixture.signing.contractDigest
@@ -276,6 +282,14 @@ describe('hosted approval activation-v2', () => {
         fixture.publication.bytes,
         key,
         publicVerifier(fixture),
+        fixture.binding
+      )
+    ).toEqual(JSON.parse(fixture.admissionDocument));
+    expect(
+      verifyHostedApprovalRuntimeActivationPublication(
+        ephemeralPublication,
+        key,
+        publicVerifierForIdentity(identity),
         fixture.binding
       )
     ).toEqual(JSON.parse(fixture.admissionDocument));
@@ -485,23 +499,24 @@ describe('hosted approval activation-v2', () => {
     const signedEnvelope = sign(unsignedEnvelope, key, 'admission');
     expect(independentVerify(signedEnvelope, key, 'admission').unsigned).toBe(unsignedEnvelope);
 
+    const identity = ephemeralSigningIdentity(fixture);
     const signatureStatement = serializeIndependentSignatureStatement(
       signedEnvelope,
-      fixture.signing.publicKeyDigest,
-      fixture.signing.contractDigest
+      identity.publicKeyDigest,
+      identity.contractDigest
     );
     const signature = signDetached(
       null,
       Buffer.from(signatureStatement),
-      signingIdentity(fixture).privateKey
+      identity.privateKey
     ).toString('base64url');
     const publication = JSON.stringify({
       schemaVersion: 2,
       envelope: JSON.parse(signedEnvelope),
       authorship: {
         algorithm: 'Ed25519',
-        publicKeyDigest: fixture.signing.publicKeyDigest,
-        contractDigest: fixture.signing.contractDigest,
+        publicKeyDigest: identity.publicKeyDigest,
+        contractDigest: identity.contractDigest,
         signature,
       },
     });
@@ -510,7 +525,7 @@ describe('hosted approval activation-v2', () => {
         null,
         Buffer.from(signatureStatement),
         createPublicKey({
-          key: Buffer.from(fixture.signing.publicKeySpkiDerBase64url, 'base64url'),
+          key: identity.publicKeySpkiDer,
           format: 'der',
           type: 'spki',
         }),
@@ -521,7 +536,7 @@ describe('hosted approval activation-v2', () => {
       verifyHostedApprovalRuntimeActivationPublication(
         publication,
         key,
-        publicVerifier(fixture),
+        publicVerifierForIdentity(identity),
         binding
       )
     ).toThrow(/order/u);
@@ -620,14 +635,15 @@ describe('hosted approval activation-v2', () => {
 
   it('loads only the pinned Ed25519 PKCS8 identity from a stable private 0600 file', async () => {
     const fixture = await golden();
+    const identity = ephemeralSigningIdentity(fixture);
     const root = await mkdtemp(join(tmpdir(), 'hosted-activation-key-'));
     const path = join(root, 'product-activation.pkcs8.pem');
     const link = join(root, 'linked-key.pem');
     const admissionPath = join(root, 'admission.json');
     const environment = {
       [HOSTED_APPROVAL_ACTIVATION_SIGNING_KEY_FILE_ENV]: path,
-      [HOSTED_APPROVAL_ACTIVATION_PUBLIC_KEY_DIGEST_ENV]: fixture.signing.publicKeyDigest,
-      [HOSTED_APPROVAL_ACTIVATION_CONTRACT_DIGEST_ENV]: fixture.signing.contractDigest,
+      [HOSTED_APPROVAL_ACTIVATION_PUBLIC_KEY_DIGEST_ENV]: identity.publicKeyDigest,
+      [HOSTED_APPROVAL_ACTIVATION_CONTRACT_DIGEST_ENV]: identity.contractDigest,
     };
     try {
       expect(readHostedApprovalRuntimeActivationSigningIdentity({})).toBeNull();
@@ -642,10 +658,12 @@ describe('hosted approval activation-v2', () => {
           [HOSTED_APPROVAL_ACTIVATION_SIGNING_KEY_FILE_ENV]: join(root, 'missing.pem'),
         })
       ).toThrow(/key-file-invalid/u);
-      await writeFile(path, fixture.signing.testOnlyPrivateKeyPkcs8Pem, { mode: 0o600 });
+      await writeFile(path, identity.privateKey.export({ format: 'pem', type: 'pkcs8' }), {
+        mode: 0o600,
+      });
       expect(readHostedApprovalRuntimeActivationSigningIdentity(environment)).toMatchObject({
-        publicKeyDigest: fixture.signing.publicKeyDigest,
-        contractDigest: fixture.signing.contractDigest,
+        publicKeyDigest: identity.publicKeyDigest,
+        contractDigest: identity.contractDigest,
       });
       expect(() => readHostedApprovalRuntimeActivationPublicationContract(environment)).toThrow(
         /signing-contract-invalid/u
@@ -746,7 +764,7 @@ describe('hosted approval activation-v2', () => {
       binding: fixture.binding,
       admissionDocument: fixture.admissionDocument,
       proofKey: key,
-      signingIdentity: signingIdentity(fixture),
+      signingIdentity: ephemeralSigningIdentity(fixture),
       generateChallenge: () => CHALLENGE,
       inspectSocketIdentity: async () => fixture.binding.ownerBinding.socketIdentity,
       connect: () => socket as unknown as Socket,
@@ -788,7 +806,7 @@ describe('hosted approval activation-v2', () => {
       binding: fixture.binding,
       admissionDocument: fixture.admissionDocument,
       proofKey: key,
-      signingIdentity: signingIdentity(fixture),
+      signingIdentity: ephemeralSigningIdentity(fixture),
       generateChallenge: () => CHALLENGE,
       inspectSocketIdentity: vi.fn(() => inspection),
       connect: originalConnect,
@@ -828,7 +846,7 @@ describe('hosted approval activation-v2', () => {
         binding: candidate.binding,
         admissionDocument: candidate.admissionDocument,
         proofKey: key,
-        signingIdentity: signingIdentity(fixture),
+        signingIdentity: ephemeralSigningIdentity(fixture),
         generateChallenge: () => CHALLENGE,
         inspectSocketIdentity,
         connect,
@@ -853,7 +871,7 @@ describe('hosted approval activation-v2', () => {
       binding: fixture.binding,
       admissionDocument: fixture.admissionDocument,
       proofKey: key,
-      signingIdentity: signingIdentity(fixture),
+      signingIdentity: ephemeralSigningIdentity(fixture),
       generateChallenge: () => CHALLENGE,
       onOwnerLoss: vi.fn(),
     };
@@ -893,7 +911,7 @@ describe('hosted approval activation-v2', () => {
       binding: candidate.binding,
       admissionDocument: candidate.admissionDocument,
       proofKey: key,
-      signingIdentity: signingIdentity(fixture),
+      signingIdentity: ephemeralSigningIdentity(fixture),
       generateChallenge: () => CHALLENGE,
       onOwnerLoss: vi.fn(),
     };
@@ -938,7 +956,7 @@ describe('hosted approval activation-v2', () => {
           binding: candidate.binding,
           admissionDocument: candidate.admissionDocument,
           proofKey: key,
-          signingIdentity: signingIdentity(fixture),
+          signingIdentity: ephemeralSigningIdentity(fixture),
           generateChallenge: () => CHALLENGE,
           onOwnerLoss,
         },
@@ -965,7 +983,7 @@ describe('hosted approval activation-v2', () => {
         binding: candidate.binding,
         admissionDocument: candidate.admissionDocument,
         proofKey: key,
-        signingIdentity: signingIdentity(fixture),
+        signingIdentity: ephemeralSigningIdentity(fixture),
         generateChallenge: () => CHALLENGE,
         onOwnerLoss: vi.fn(),
       },
@@ -995,7 +1013,7 @@ describe('hosted approval activation-v2', () => {
         binding: fixture.binding,
         admissionDocument: fixture.admissionDocument,
         proofKey: key,
-        signingIdentity: signingIdentity(fixture),
+        signingIdentity: ephemeralSigningIdentity(fixture),
         generateChallenge: () => CHALLENGE,
         inspectSocketIdentity,
         connect: () => socket as unknown as Socket,
@@ -1028,7 +1046,7 @@ describe('hosted approval activation-v2', () => {
           binding,
           admissionDocument,
           proofKey: key,
-          signingIdentity: signingIdentity(fixture),
+          signingIdentity: ephemeralSigningIdentity(fixture),
           generateChallenge: () => CHALLENGE,
           onOwnerLoss: vi.fn(),
         },
@@ -1050,7 +1068,7 @@ describe('hosted approval activation-v2', () => {
         binding: fixture.binding,
         admissionDocument: fixture.admissionDocument,
         proofKey: key,
-        signingIdentity: signingIdentity(fixture),
+        signingIdentity: ephemeralSigningIdentity(fixture),
         generateChallenge: () => CHALLENGE,
         inspectSocketIdentity: async () => fixture.binding.ownerBinding.socketIdentity,
         connect: () => socket as unknown as Socket,
@@ -1072,7 +1090,7 @@ describe('hosted approval activation-v2', () => {
         binding: fixture.binding,
         admissionDocument: fixture.admissionDocument,
         proofKey: key,
-        signingIdentity: signingIdentity(fixture),
+        signingIdentity: ephemeralSigningIdentity(fixture),
         generateChallenge: () => CHALLENGE,
         inspectSocketIdentity: async () => fixture.binding.ownerBinding.socketIdentity,
         connect: () => socket as unknown as Socket,
@@ -1184,16 +1202,22 @@ class ActivationPeerSocket extends EventEmitter {
   }
 }
 
-function signingIdentity(fixture: Golden) {
+function ephemeralSigningIdentity(fixture: Golden) {
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const publicKeySpkiDer = publicKey.export({ format: 'der', type: 'spki' });
   return {
-    privateKey: createPrivateKey({
-      key: fixture.signing.testOnlyPrivateKeyPkcs8Pem,
-      format: 'pem',
-      type: 'pkcs8',
-    }),
-    publicKeySpkiDer: Buffer.from(fixture.signing.publicKeySpkiDerBase64url, 'base64url'),
-    publicKeyDigest: fixture.signing.publicKeyDigest,
+    privateKey,
+    publicKeySpkiDer,
+    publicKeyDigest: `sha256:${createHash('sha256').update(publicKeySpkiDer).digest('hex')}` as const,
     contractDigest: fixture.signing.contractDigest,
+  };
+}
+
+function publicVerifierForIdentity(identity: ReturnType<typeof ephemeralSigningIdentity>) {
+  return {
+    publicKeySpkiDer: identity.publicKeySpkiDer,
+    publicKeyDigest: identity.publicKeyDigest,
+    contractDigest: identity.contractDigest,
   };
 }
 

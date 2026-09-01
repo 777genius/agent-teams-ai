@@ -75,6 +75,22 @@ import type { BackupPublicationPort } from '../../core/application';
 
 const NO_FOLLOW = fs.constants.O_NOFOLLOW ?? 0;
 const MARKER_TEMPORARY_PREFIX = `.${BACKUP_COMMIT_MARKER_FILE}.prepare-`;
+
+interface BoundRootIdentity {
+  readonly dev: bigint;
+  readonly ino: bigint;
+}
+
+async function readRootIdentity(root: string): Promise<BoundRootIdentity> {
+  const stat = await fs.promises.stat(root, { bigint: true });
+  if (!stat.isDirectory()) throw publicationError('root-invalid');
+  return { dev: stat.dev, ino: stat.ino };
+}
+
+function sameRootIdentity(left: BoundRootIdentity, right: BoundRootIdentity): boolean {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
 export { measureRegularFile } from './nodeBackupPublicationFs';
 export {
   type BackupArtifactMeasureRequest,
@@ -93,6 +109,7 @@ export class NodeBackupPublication
   private readonly manifestHasher = new NodeBackupManifestHasher();
   private readonly runLocks = new Map<string, Promise<void>>();
   private boundLayout: BackupPathLayout | null = null;
+  private boundRootIdentity: BoundRootIdentity | null = null;
 
   constructor(options: NodeBackupPublicationOptions | string) {
     this.configuredLayout = createBackupPathLayout(
@@ -418,6 +435,9 @@ export class NodeBackupPublication
   }
 
   private async ensureLayout(): Promise<BackupPathLayout> {
+    if (this.boundRootIdentity && !(await lstatOrNull(this.configuredLayout.root))) {
+      throw publicationError('root-binding-changed');
+    }
     await fs.promises.mkdir(this.configuredLayout.root, {
       recursive: true,
       mode: BACKUP_DIRECTORY_MODE,
@@ -427,10 +447,17 @@ export class NodeBackupPublication
       throw publicationError('root-invalid');
     const canonicalRoot = await fs.promises.realpath(this.configuredLayout.root);
     const candidate = createBackupPathLayout(canonicalRoot);
-    if (this.boundLayout && this.boundLayout.root !== candidate.root) {
+    const identity = await readRootIdentity(canonicalRoot);
+    if (
+      this.boundLayout &&
+      (this.boundLayout.root !== candidate.root ||
+        !this.boundRootIdentity ||
+        !sameRootIdentity(this.boundRootIdentity, identity))
+    ) {
       throw publicationError('root-binding-changed');
     }
     this.boundLayout = candidate;
+    this.boundRootIdentity = identity;
 
     await createOrRequirePrivateDirectory(candidate.stagingRoot, candidate.root);
     await createOrRequirePrivateDirectory(candidate.generationsRoot, candidate.root);
@@ -439,12 +466,21 @@ export class NodeBackupPublication
 
   private async findExistingLayout(): Promise<BackupPathLayout | null> {
     const rootStat = await lstatOrNull(this.configuredLayout.root);
-    if (!rootStat) return null;
+    if (!rootStat) {
+      if (this.boundRootIdentity) throw publicationError('root-binding-changed');
+      return null;
+    }
     if (!rootStat.isDirectory() || rootStat.isSymbolicLink())
       throw publicationError('root-invalid');
     const canonicalRoot = await fs.promises.realpath(this.configuredLayout.root);
     const candidate = createBackupPathLayout(canonicalRoot);
-    if (this.boundLayout && this.boundLayout.root !== candidate.root) {
+    const identity = await readRootIdentity(canonicalRoot);
+    if (
+      this.boundLayout &&
+      (this.boundLayout.root !== candidate.root ||
+        !this.boundRootIdentity ||
+        !sameRootIdentity(this.boundRootIdentity, identity))
+    ) {
       throw publicationError('root-binding-changed');
     }
     const [stagingStat, generationsStat] = await Promise.all([
@@ -456,6 +492,7 @@ export class NodeBackupPublication
     await requireDirectory(candidate.stagingRoot, BACKUP_DIRECTORY_MODE, candidate.root);
     await requireDirectory(candidate.generationsRoot, BACKUP_DIRECTORY_MODE, candidate.root);
     this.boundLayout = candidate;
+    this.boundRootIdentity = identity;
     return candidate;
   }
 

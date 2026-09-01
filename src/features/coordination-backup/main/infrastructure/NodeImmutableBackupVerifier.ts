@@ -268,6 +268,7 @@ async function readCanonicalMetadata(
       bytes.byteLength !== descriptor.size ||
       !sameIdentity(descriptor, after) ||
       after.isSymbolicLink() ||
+      after.size !== descriptor.size ||
       after.mode !== descriptor.mode
     ) {
       throw verifierError('metadata-changed-during-read');

@@ -148,6 +148,9 @@ export class ReviewScopeAuthorizationApplication {
     if (!this.isAuthorizedPath(authorization, normalizedPath, targetRealPath)) {
       throw new Error('Review file path is outside the authoritative project/worktree');
     }
+    if (options.rejectHardlinks && targetStat?.kind === 'symbolic-link') {
+      throw new Error('Review mutation refuses symbolic or multiply-linked files');
+    }
     if (options.rejectHardlinks && targetStat && resolvedStat) {
       if (targetStat.kind !== 'symbolic-link' && resolvedStat.linkCount > 1) {
         await this.dependencies.files.cleanupOwnedTemporaryLinks(normalizedPath);
@@ -170,10 +173,7 @@ export class ReviewScopeAuthorizationApplication {
         targetStat.kind !== 'symbolic-link' &&
         resolvedStat.linkCount > 1 &&
         (await this.dependencies.files.isOwnedTransactionHardlink(normalizedPath));
-      if (
-        targetStat.kind === 'symbolic-link' ||
-        (resolvedStat.linkCount > 1 && !ownedReviewTransactionLink)
-      ) {
+      if (resolvedStat.linkCount > 1 && !ownedReviewTransactionLink) {
         throw new Error('Review mutation refuses symbolic or multiply-linked files');
       }
     }
