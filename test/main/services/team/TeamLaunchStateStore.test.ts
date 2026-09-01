@@ -386,6 +386,34 @@ describe('TeamLaunchStateStore', () => {
     }
   });
 
+  it('migrates a legacy partial launch marker before publishing a successor snapshot', async () => {
+    const statePath = getTeamLaunchStatePath('demo');
+    const legacy = JSON.stringify({
+      state: 'partial_launch_failure',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      expectedMembers: ['Builder', 'Reviewer'],
+      confirmedMembers: ['Builder'],
+      missingMembers: ['Reviewer'],
+    });
+    const statSpy = vi.spyOn(fs.promises, 'stat').mockImplementation(async (filePath) => {
+      if (filePath === statePath) {
+        return { isFile: () => true, size: Buffer.byteLength(legacy) } as fs.Stats;
+      }
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+    });
+    const readSpy = vi.spyOn(fs.promises, 'readFile').mockResolvedValue(legacy);
+
+    try {
+      await expect(new TeamLaunchStateStore().write('demo', snapshot())).resolves.toBeUndefined();
+      const persisted = JSON.parse(mocks.atomicWriteAsync.mock.calls[0][1] as string);
+      expect(persisted).toMatchObject({ version: 2, teamName: 'demo' });
+      expect(persisted.members).toHaveProperty('Builder');
+    } finally {
+      statSpy.mockRestore();
+      readSpy.mockRestore();
+    }
+  });
+
   it.each([
     ['future version', JSON.stringify({ version: 3, teamName: 'demo' }), 32],
     ['malformed JSON', '{not-json', 9],

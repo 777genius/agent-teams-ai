@@ -72,7 +72,7 @@ function noFollowReadFlags(): number {
   if (!Number.isSafeInteger(NO_FOLLOW) || NO_FOLLOW <= 0) {
     throw descriptorError('hosted-task-board-descriptor-no-follow-unavailable');
   }
-  return fs.constants.O_RDONLY | NO_FOLLOW;
+  return fs.constants.O_RDONLY | NO_FOLLOW | fs.constants.O_NONBLOCK;
 }
 
 function noFollowDirectoryFlags(): number {

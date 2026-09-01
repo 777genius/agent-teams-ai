@@ -481,7 +481,8 @@ function isSupportedLaunchSummaryDocument(teamName: string, document: JsonRecord
 
 async function readVersionedDocumentForMutation(
   filePath: string,
-  expectedVersion: number
+  expectedVersion: number,
+  teamName?: string
 ): Promise<JsonRecord | null> {
   let stat: fs.Stats;
   try {
@@ -501,6 +502,15 @@ async function readVersionedDocumentForMutation(
     parsed = JSON.parse(raw) as unknown;
   } catch (error) {
     throw new Error('Refusing to replace malformed launch state', { cause: error });
+  }
+  if (
+    expectedVersion === 2 &&
+    teamName !== undefined &&
+    isJsonRecord(parsed) &&
+    parsed.state === 'partial_launch_failure'
+  ) {
+    const normalized = normalizePersistedLaunchSnapshot(teamName, parsed);
+    if (normalized) return normalized as unknown as JsonRecord;
   }
   if (!isJsonRecord(parsed) || parsed.version !== expectedVersion) {
     throw new Error('Refusing to replace unsupported launch state');
@@ -578,7 +588,7 @@ export class TeamLaunchStateStore {
     const launchSummaryPath = getTeamLaunchSummaryPath(teamName);
     try {
       const [existingState, existingSummary] = await Promise.all([
-        readVersionedDocumentForMutation(launchStatePath, 2),
+        readVersionedDocumentForMutation(launchStatePath, 2, teamName),
         readVersionedDocumentForMutation(launchSummaryPath, 1),
       ]);
       if (existingState && !isSupportedLaunchStateDocument(teamName, existingState)) {

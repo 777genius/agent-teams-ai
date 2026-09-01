@@ -660,6 +660,34 @@ function decideExternalWriter(
   return decision('externalWriter', 'verified', 'external_writer_coordinated');
 }
 
+function sameExternalWriterEvidence(left: ParsedInspection, right: ParsedInspection): boolean {
+  if (left.status !== 'verified' || right.status !== 'verified') return true;
+  const leftRecord = readExactRecord(left.evidence, [
+    'deploymentId',
+    'bootId',
+    'workspaceBinding',
+    'classification',
+    'coordination',
+    'observation',
+    'fileWriterEpoch',
+    'observationWatermark',
+  ]);
+  const rightRecord = readExactRecord(right.evidence, [
+    'deploymentId',
+    'bootId',
+    'workspaceBinding',
+    'classification',
+    'coordination',
+    'observation',
+    'fileWriterEpoch',
+    'observationWatermark',
+  ]);
+  return (
+    leftRecord?.fileWriterEpoch === rightRecord?.fileWriterEpoch &&
+    leftRecord?.observationWatermark === rightRecord?.observationWatermark
+  );
+}
+
 function decideRecoveryOutbox(
   inspection: ParsedInspection,
   scope: MutationReadinessScope | null,
@@ -750,6 +778,24 @@ export function decideMutationReadiness(input: {
     if (initialDecision.status === 'denied') return initialDecision;
     return finalDecision;
   };
+  const initialExternalWriter = parseInspection(initial.externalWriter);
+  const finalExternalWriter = parseInspection(final.externalWriter);
+  const initialExternalWriterDecision = decideExternalWriter(
+    initialExternalWriter,
+    input.scope,
+    input.nowMs
+  );
+  const finalExternalWriterDecision = decideExternalWriter(
+    finalExternalWriter,
+    input.scope,
+    input.nowMs
+  );
+  const externalWriter =
+    initialExternalWriterDecision.status === 'verified' &&
+    finalExternalWriterDecision.status === 'verified' &&
+    !sameExternalWriterEvidence(initialExternalWriter, finalExternalWriter)
+      ? decision('externalWriter', 'denied', 'external_writer_observation_dirty')
+      : stableDecision(initialExternalWriterDecision, finalExternalWriterDecision);
   return Object.freeze({
     instanceLease: decideLease(initialLease, finalLease),
     runtimeBinding: stableDecision(
@@ -778,10 +824,7 @@ export function decideMutationReadiness(input: {
       decideFilesystem(parseInspection(initial.filesystem), input.scope, input.nowMs),
       decideFilesystem(parseInspection(final.filesystem), input.scope, input.nowMs)
     ),
-    externalWriter: stableDecision(
-      decideExternalWriter(parseInspection(initial.externalWriter), input.scope, input.nowMs),
-      decideExternalWriter(parseInspection(final.externalWriter), input.scope, input.nowMs)
-    ),
+    externalWriter,
     recoveryOutbox: stableDecision(
       decideRecoveryOutbox(parseInspection(initial.recoveryOutbox), input.scope, input.nowMs),
       decideRecoveryOutbox(parseInspection(final.recoveryOutbox), input.scope, input.nowMs)

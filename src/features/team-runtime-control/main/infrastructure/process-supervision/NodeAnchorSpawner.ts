@@ -128,11 +128,18 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
     let status: Readable | null | undefined;
     let launch: Writable | null | undefined;
     try {
-      const materialization = this.options.materializer.materialize(request);
+      let materialization: Promise<MaterializedNodeAnchorLaunch> | undefined;
       try {
-        materialized = await runWithinDeadline(materialization, deadline, options.cancellation);
+        materialized = await runWithinDeadline(
+          () => {
+            materialization = this.options.materializer.materialize(request);
+            return materialization;
+          },
+          deadline,
+          options.cancellation
+        );
       } catch (error) {
-        void materialization.then(
+        void materialization?.then(
           async (lateMaterialization) => await lateMaterialization.close().catch(() => undefined),
           () => undefined
         );
@@ -140,10 +147,11 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
       }
 
       const [anchorExecutablePath, neutralWorkingDirectory] = await runWithinBudget(
-        Promise.all([
-          resolveRegularFile(this.options.anchorExecutablePath),
-          resolveDirectory(this.options.neutralWorkingDirectory),
-        ]),
+        () =>
+          Promise.all([
+            resolveRegularFile(this.options.anchorExecutablePath),
+            resolveDirectory(this.options.neutralWorkingDirectory),
+          ]),
         remainingNodeAnchorTime(deadline),
         options.cancellation
       );
@@ -210,10 +218,12 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
         throw new NodeAnchorUnavailableError('node-anchor-stdio-unavailable');
       }
 
-      await runWithinDeadline(waitForSpawn(child), deadline, options.cancellation);
+      const spawnedChild = child;
+      const launchStream = launch;
+      await runWithinDeadline(() => waitForSpawn(spawnedChild), deadline, options.cancellation);
       const descriptorClose = materialized.close();
       materialized = undefined;
-      await runWithinDeadline(descriptorClose, deadline, options.cancellation);
+      await runWithinDeadline(() => descriptorClose, deadline, options.cancellation);
       const ownerAttestation = createOwnerAttestation({
         request,
         channelRef,
@@ -223,7 +233,11 @@ export class NodeAnchorSpawner implements AnchorSpawnPort {
         ownerBinding: this.ownerBinding,
       });
       const owningProcess = new NodeAttestedOwningProcess(child, ownerAttestation);
-      await runWithinDeadline(endWithBytes(launch, launchBytes), deadline, options.cancellation);
+      await runWithinDeadline(
+        () => endWithBytes(launchStream, launchBytes),
+        deadline,
+        options.cancellation
+      );
 
       return {
         status: 'spawned',
@@ -258,7 +272,7 @@ class NodeWritableAnchorControlSink implements NodeAnchorControlSink {
   ): Promise<void> {
     if (this.closed) throw new Error('node-anchor-control-closed');
     await runWithinBudget(
-      writeBytes(this.stream, bytes),
+      () => writeBytes(this.stream, bytes),
       options.remainingTimeMs,
       options.cancellation
     );
@@ -270,7 +284,11 @@ class NodeWritableAnchorControlSink implements NodeAnchorControlSink {
   }): Promise<void> {
     if (this.closed) return;
     this.closed = true;
-    await runWithinBudget(endStream(this.stream), options.remainingTimeMs, options.cancellation);
+    await runWithinBudget(
+      () => endStream(this.stream),
+      options.remainingTimeMs,
+      options.cancellation
+    );
   }
 }
 
@@ -297,7 +315,7 @@ class NodeReadableAnchorStatusSource implements NodeAnchorStatusSource {
     { readonly status: 'chunk'; readonly bytes: Uint8Array } | { readonly status: 'eof' }
   > {
     return await runWithinBudget(
-      readChunk(this.stream),
+      () => readChunk(this.stream),
       options.remainingTimeMs,
       options.cancellation
     );
@@ -467,7 +485,7 @@ function requireActiveDeadline(
 }
 
 async function runWithinDeadline<T>(
-  effect: Promise<T>,
+  effect: () => Promise<T>,
   deadline: NodeAnchorDeadline,
   cancellation: RuntimeCancellation
 ): Promise<T> {
@@ -514,7 +532,7 @@ async function waitForChildClose(childClose: Promise<void>, timeoutMs: number): 
 }
 
 async function runWithinBudget<T>(
-  effect: Promise<T>,
+  effect: () => Promise<T>,
   remainingTimeMs: number,
   cancellation: RuntimeCancellation
 ): Promise<T> {
@@ -539,7 +557,14 @@ async function runWithinBudget<T>(
       },
       Math.min(5, Math.max(1, Math.ceil(remainingTimeMs)))
     );
-    void effect.then(
+    let operation: Promise<T>;
+    try {
+      operation = effect();
+    } catch (error) {
+      settle(() => reject(error));
+      return;
+    }
+    void operation.then(
       (value) =>
         isCancelled(cancellation)
           ? settle(() => reject(new NodeAnchorCancelledError()))

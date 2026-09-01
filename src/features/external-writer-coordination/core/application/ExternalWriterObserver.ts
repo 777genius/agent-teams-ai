@@ -167,7 +167,12 @@ export class ExternalWriterObserver {
     return this.schedule(async () => {
       if (this.phase !== 'running') throw new ExternalWriterObserverError('not_running');
       this.selfWriteOperations.begin(operationId, scope);
-      await this.persist();
+      try {
+        await this.persist();
+      } catch (error) {
+        this.selfWriteOperations.release(operationId);
+        throw error;
+      }
     });
   }
 

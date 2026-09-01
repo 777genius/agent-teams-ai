@@ -56,7 +56,7 @@ class MemoryStateStore implements ExternalWriterObservationStateStore {
     return null;
   }
 
-  async listHotTeamIds(): Promise<readonly typeof teamId[]> {
+  async listHotTeamIds(): Promise<readonly (typeof teamId)[]> {
     return [];
   }
 
@@ -327,6 +327,37 @@ describe('ExternalWriterObserver', () => {
     expect(harness.reconciliations).toHaveLength(2);
     expect(harness.reconciliations[1]).toMatchObject({
       fingerprint: { checksum: checksum(hostileContent) },
+      actor: { kind: 'external_file' },
+    });
+  });
+
+  it('releases a self-write operation when its initial checkpoint cannot be persisted', async () => {
+    class FailingBeginStateStore extends MemoryStateStore {
+      failNextSave = false;
+
+      override async save(checkpoint: FileObservationStateCheckpoint): Promise<void> {
+        if (this.failNextSave) {
+          this.failNextSave = false;
+          throw new Error('begin-save-failure');
+        }
+        await super.save(checkpoint);
+      }
+    }
+    const stateStore = new FailingBeginStateStore();
+    const harness = createHarness({ stateStore });
+    await harness.observer.start();
+    stateStore.failNextSave = true;
+
+    await expect(harness.observer.beginSelfWriteOperation('failed-begin', scope)).rejects.toThrow(
+      'begin-save-failure'
+    );
+    harness.contents.set('task-1', bytes('after-failed-begin'));
+    harness.callbacks.onNotification({ kind: 'change', scope, fileKey: 'task-1' });
+    await harness.observer.rescanScope(scope);
+
+    expect(harness.reconciliations).toHaveLength(2);
+    expect(harness.reconciliations[1]).toMatchObject({
+      fingerprint: { checksum: checksum(bytes('after-failed-begin')) },
       actor: { kind: 'external_file' },
     });
   });
@@ -705,9 +736,7 @@ describe('ExternalWriterObserver', () => {
     await harness.observer.start();
     stateStore.failNextSave = true;
 
-    await expect(harness.observer.shutdown(1_000)).rejects.toThrow(
-      'transient-save-failure'
-    );
+    await expect(harness.observer.shutdown(1_000)).rejects.toThrow('transient-save-failure');
     await expect(harness.observer.retryCleanHandoffEligibility()).resolves.toMatchObject({
       status: 'clean',
     });
