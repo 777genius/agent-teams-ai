@@ -591,7 +591,6 @@ export class FileWatcher extends EventEmitter {
         watcherType === 'teams' ? (this.teamInboxWatchScopeProvider?.() ?? null) : null,
       backfillInitialScopedInboxFiles: watcherType === 'teams',
     });
-
     if (watcherType === 'teams') {
       this.teamsRegistry = registry;
     } else {
