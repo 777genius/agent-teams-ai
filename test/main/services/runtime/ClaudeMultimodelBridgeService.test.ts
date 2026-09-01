@@ -540,7 +540,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   );
 
   it.each(['aggregate', 'single', 'project'] as const)(
-    'keeps OpenCode launch fail-closed and summary-only via $entrypoint',
+    'keeps OpenCode launch fail-closed and summary-only via %s',
     async (entrypoint) => {
       execCliMock.mockImplementation((_binaryPath, args) => {
         const requestedId = args[args.indexOf('--provider') + 1] as CliProviderId;

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { api } from '@renderer/api';
-import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
+
+import {
+  parseStrictQualifiedModelRef,
+  qualifyModelId,
+} from '../../core/domain/openCodeModelIdentity';
 
 import {
   normalizePassiveCatalogModel,
@@ -73,11 +77,6 @@ export function resolveOpenCodeSelectionScopeDecision(input: {
   };
 }
 
-function parseStrictQualifiedModelRef(modelId: string | null | undefined) {
-  const parsed = parseOpenCodeQualifiedModelRef(modelId);
-  return parsed && parsed.raw.split('/').every((segment) => segment.length > 0) ? parsed : null;
-}
-
 function normalizeSourceProviderId(sourceProviderId: string | null | undefined): string | null {
   const normalized = sourceProviderId?.trim().toLowerCase() ?? '';
   if (!normalized || isOpenCodeLocalProviderId(normalized)) {
@@ -125,28 +124,6 @@ export function resolveOpenCodeCatalogSourceProviderId(input: {
     return null;
   }
   return resolveCandidate(parseStrictQualifiedModelRef(input.selectedModel)?.sourceId ?? null);
-}
-
-function qualifyModelId(providerId: string, modelId: string): string {
-  const normalizedProviderId = providerId.trim().toLowerCase();
-  const normalizedModelId = modelId.trim();
-  if (
-    !normalizedProviderId ||
-    !normalizedModelId ||
-    normalizedModelId !== modelId ||
-    /\s/.test(normalizedModelId)
-  ) {
-    return '';
-  }
-  if (normalizedModelId.includes('/')) {
-    const parsed = parseStrictQualifiedModelRef(normalizedModelId);
-    if (!parsed) {
-      return '';
-    }
-    return parsed.sourceId === normalizedProviderId ? parsed.raw : '';
-  }
-  const parsed = parseStrictQualifiedModelRef(`${normalizedProviderId}/${normalizedModelId}`);
-  return parsed?.sourceId === normalizedProviderId ? parsed.raw : '';
 }
 
 function mapAvailability(model: RuntimeProviderModelDto): CliProviderModelAvailability {
