@@ -3,6 +3,7 @@ import { getCachedShellEnv } from '@main/utils/shellEnv';
 
 import {
   isSupportedOpenCodeRuntimeBinaryPath,
+  resolveAppManagedOpenCodeRuntimeBinaryPath,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '../infrastructure/OpenCodeRuntimeInstallerService';
 
@@ -46,10 +47,26 @@ export interface ProviderAwareCliEnvResult {
   providerArgs: string[];
 }
 
+function resolveExplicitOpenCodeBinary(
+  options: Pick<ProviderAwareCliEnvOptions, 'env'>
+): string | null {
+  return (
+    [
+      options.env?.[OPENCODE_RUNTIME_BINARY_PATH_ENV],
+      options.env?.[OPENCODE_LEGACY_BINARY_PATH_ENV],
+      process.env[OPENCODE_RUNTIME_BINARY_PATH_ENV],
+      process.env[OPENCODE_LEGACY_BINARY_PATH_ENV],
+    ]
+      .find((candidate): candidate is string => Boolean(candidate?.trim()))
+      ?.trim() ?? null
+  );
+}
+
 /**
  * Builds the environment for passive runtime status/catalog commands only.
- * Keep this projection synchronous: passive reads must not enter managed-runtime,
- * MCP, credential, auth, or launch-argument resolution.
+ * Keep this projection synchronous: passive reads may project existing managed-runtime
+ * manifest metadata, but must not probe/install runtimes or enter MCP, credential,
+ * auth, or launch-argument resolution.
  */
 export function buildPassiveProviderStatusCliEnv(
   options: Pick<ProviderAwareCliEnvOptions, 'binaryPath' | 'providerId' | 'env' | 'shellEnv'>
@@ -59,6 +76,17 @@ export function buildPassiveProviderStatusCliEnv(
     shellEnv: options.shellEnv ?? getCachedShellEnv() ?? {},
     mergePathFallbacks: true,
   });
+  if (!options.providerId || options.providerId === 'opencode') {
+    const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
+    const appManagedOpenCodeBinary = resolveAppManagedOpenCodeRuntimeBinaryPath();
+    if (appManagedOpenCodeBinary && !explicitOpenCodeBinary) {
+      // A cached login shell can retain a stale override after the app installs or updates
+      // its managed runtime. Keep only deliberate call/process overrides authoritative.
+      delete env[OPENCODE_RUNTIME_BINARY_PATH_ENV];
+      delete env[OPENCODE_LEGACY_BINARY_PATH_ENV];
+    }
+    applyOpenCodeRuntimeBinaryEnv(env, explicitOpenCodeBinary ?? appManagedOpenCodeBinary);
+  }
   removeGlobalElectronRunAsNodeEnv(env);
   return { env, connectionIssues: {}, providerArgs: [] };
 }
@@ -107,14 +135,7 @@ export async function buildProviderAwareCliEnv(
     mergePathFallbacks: true,
   });
   if (!resolvedProviderId || resolvedProviderId === 'opencode') {
-    const explicitOpenCodeBinary = [
-      options.env?.[OPENCODE_RUNTIME_BINARY_PATH_ENV],
-      options.env?.[OPENCODE_LEGACY_BINARY_PATH_ENV],
-      process.env[OPENCODE_RUNTIME_BINARY_PATH_ENV],
-      process.env[OPENCODE_LEGACY_BINARY_PATH_ENV],
-    ]
-      .find((candidate): candidate is string => Boolean(candidate?.trim()))
-      ?.trim();
+    const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
     const supportedExplicitOpenCodeBinary =
       explicitOpenCodeBinary &&
       (await isSupportedOpenCodeRuntimeBinaryPath(explicitOpenCodeBinary).catch(() => false))
