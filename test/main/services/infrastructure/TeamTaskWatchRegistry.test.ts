@@ -212,6 +212,51 @@ describe('TeamTaskWatchRegistry scoping', () => {
     });
   });
 
+  it('backfills only explicitly scoped live inboxes on initial startup', async () => {
+    const events: Array<{ eventType: string; relativePath: string }> = [];
+    const registry = new TeamTaskWatchRegistry({
+      kind: 'teams',
+      rootPath: root,
+      onChange: (eventType, relativePath) => {
+        events.push({ eventType, relativePath });
+      },
+      onError: () => {},
+      getScopedTeamNames: () => new Set(['alpha', 'beta']),
+      getScopedInboxTeamNames: () => new Set(['alpha']),
+      backfillInitialScopedInboxFiles: true,
+    });
+
+    await registry.start();
+    chokidarMock.instances.at(-1)?.emit('ready');
+    await vi.waitFor(() => expect(events).toHaveLength(1));
+    await registry.close();
+
+    expect(events).toEqual([
+      {
+        eventType: 'add',
+        relativePath: path.join('alpha', 'inboxes', 'team-lead.json'),
+      },
+    ]);
+  });
+
+  it('keeps the initial baseline silent when inbox scope falls back to all teams', async () => {
+    const onChange = vi.fn();
+    const registry = new TeamTaskWatchRegistry({
+      kind: 'teams',
+      rootPath: root,
+      onChange,
+      onError: () => {},
+      getScopedInboxTeamNames: () => null,
+      backfillInitialScopedInboxFiles: true,
+    });
+
+    await registry.start();
+    chokidarMock.instances.at(-1)?.emit('ready');
+    await registry.close();
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('coalesces a burst of addDir events into a single incremental watcher update', async () => {
     const registry = new TeamTaskWatchRegistry({
       kind: 'teams',

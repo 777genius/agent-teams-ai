@@ -139,8 +139,8 @@ export class ServiceContext {
 
   /**
    * Starts only cache cleanup, deferring FileWatcher to later.
-   * Use this at app startup so the window appears without waiting for fs.watch().
-   * Call startFileWatcher() separately after the window is visible.
+   * Use this at app startup so service construction does not wait for fs.watch().
+   * Call startFileWatcher() separately after main-process services are ready.
    */
   startCacheOnly(): void {
     if (this.disposed) {

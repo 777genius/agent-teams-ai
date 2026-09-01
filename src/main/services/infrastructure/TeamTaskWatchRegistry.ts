@@ -31,6 +31,12 @@ export interface TeamTaskWatchRegistryOptions {
    * fallback.
    */
   getScopedInboxTeamNames?: () => ReadonlySet<string> | null;
+  /**
+   * Replay existing inbox files from an explicit initial inbox scope. This is
+   * used for live teams only, so a task written before watcher readiness is not
+   * lost without replaying inboxes from historical stopped teams.
+   */
+  backfillInitialScopedInboxFiles?: boolean;
 }
 
 const RECONCILE_INTERVAL_MS = 30_000;
@@ -67,7 +73,8 @@ const TEAM_ROOT_FILES = new Set([
  *   Team root/task scope and inbox scope can differ: inboxes are normally only
  *   watched for live/running teams.
  * - Do not enable Chokidar polling here. Polling is owned by FileWatcher fallback.
- * - Initial app startup baseline must stay silent to avoid replaying old files.
+ * - Initial app startup baseline stays silent except for explicitly scoped live
+ *   inboxes when backfillInitialScopedInboxFiles is enabled.
  * - Newly discovered targets are scanned once so files created before rebuild
  *   are not lost.
  */
@@ -268,6 +275,19 @@ export class TeamTaskWatchRegistry {
     watcher.on('unlink', (changedPath) => handleEvent('unlink', changedPath));
     watcher.on('addDir', (changedPath) => handleEvent('addDir', changedPath));
     watcher.on('unlinkDir', (changedPath) => handleEvent('unlinkDir', changedPath));
+    watcher.on('ready', () => {
+      if (this.closed || generation !== this.generation) {
+        return;
+      }
+      // Wait until Chokidar has finished its ignored initial scan, then rescan
+      // only explicitly scoped live inboxes. A file created before ready is in
+      // this rescan; a file created after ready is emitted by Chokidar.
+      void this.emitInitialScopedInboxFiles(targets, generation).catch((error: unknown) => {
+        if (!this.closed && generation === this.generation) {
+          this.options.onError(error);
+        }
+      });
+    });
     watcher.on('error', (error) => {
       if (!this.closed && generation === this.generation) {
         this.options.onError(error);
@@ -304,6 +324,29 @@ export class TeamTaskWatchRegistry {
         }
       }
     }
+  }
+
+  private async emitInitialScopedInboxFiles(targets: string[], generation: number): Promise<void> {
+    if (
+      !this.options.backfillInitialScopedInboxFiles ||
+      this.options.kind !== 'teams' ||
+      !this.options.getScopedInboxTeamNames
+    ) {
+      return;
+    }
+
+    const scopedInboxTeams = this.options.getScopedInboxTeamNames();
+    if (scopedInboxTeams === null) {
+      return;
+    }
+
+    const inboxTargets = targets.filter((targetPath) => {
+      if (path.basename(targetPath) !== 'inboxes') {
+        return false;
+      }
+      return scopedInboxTeams.has(path.basename(path.dirname(targetPath)));
+    });
+    await this.emitExistingFilesForNewTargets(inboxTargets, generation);
   }
 
   private async collectTargets(): Promise<string[]> {

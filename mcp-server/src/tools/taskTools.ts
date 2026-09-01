@@ -90,20 +90,36 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
   server.addTool({
     name: 'task_create',
     description:
-      'Create a team task. Always provide a stable idempotencyKey (or commandId UUID) and reuse it only when retrying the exact same request after timeout or response loss. Use a new key for every distinct task intent.',
+      "Create a team task. Raw/headless calls do not inject a user actor or auto-start: owner without createdBy/from/startImmediately creates a pending task with no recorded actor, and assigning it to the lead suppresses the lead's self-notification. For an immediate user-origin assignment, pass createdBy: 'user' and startImmediately: true. Always provide a stable idempotencyKey (or commandId UUID) and reuse it only when retrying the exact same request after timeout or response loss. Use a new key for every distinct task intent.",
     parameters: z.object({
       ...toolContextSchema,
       subject: z.string().min(1),
       description: z.string().optional(),
-      owner: z.string().optional(),
-      createdBy: z.string().optional(),
-      from: z.string().optional(),
+      owner: z
+        .string()
+        .optional()
+        .describe('Configured teammate to assign. An owner alone does not auto-start the task.'),
+      createdBy: z
+        .string()
+        .optional()
+        .describe(
+          "Explicit creation actor and assignment-notification sender. Use 'user' for a user-origin headless assignment."
+        ),
+      from: z
+        .string()
+        .optional()
+        .describe('Legacy actor/sender alternative, used only when createdBy is omitted.'),
       blockedBy: z.array(z.string().min(1)).optional(),
       related: z.array(z.string().min(1)).optional(),
       prompt: z.string().optional(),
       descriptionTaskRefs: z.array(taskRefSchema).optional(),
       promptTaskRefs: z.array(taskRefSchema).optional(),
-      startImmediately: z.boolean().optional(),
+      startImmediately: z
+        .boolean()
+        .optional()
+        .describe(
+          'Opt in to in_progress when an owner is present. Omitted/false stays pending; blocked tasks stay pending.'
+        ),
       commandId: z
         .string()
         .regex(CANONICAL_TASK_UUID_PATTERN, 'Must be a canonical task UUID (version 1-5)')
