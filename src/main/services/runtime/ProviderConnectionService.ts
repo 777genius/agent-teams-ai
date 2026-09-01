@@ -128,9 +128,8 @@ type CodexCliLoginStatusChecker = (params: {
   env: NodeJS.ProcessEnv;
 }) => Promise<CodexCliLoginStatusCheckResult>;
 
-type CodexAccountSnapshotReader = Pick<CodexAccountFeatureFacade, 'getSnapshot'> & {
-  refreshSnapshot?: CodexAccountFeatureFacade['refreshSnapshot'];
-};
+type CodexAccountSnapshotReader = Pick<CodexAccountFeatureFacade, 'getSnapshot'> &
+  Partial<Pick<CodexAccountFeatureFacade, 'getCachedSnapshot' | 'refreshSnapshot'>>;
 
 interface ProviderStatusEnrichmentOptions {
   hydrateModelCatalog?: boolean;
@@ -809,6 +808,45 @@ export class ProviderConnectionService {
     return env;
   }
 
+  /**
+   * Projects cached Codex account context into a read-only runtime status probe.
+   * This does not decrypt credentials, refresh account state, install runtimes,
+   * or run launch/login commands. The runtime status command remains responsible
+   * for producing authoritative authentication and launch evidence.
+   */
+  async applyPassiveProviderStatusConnectionEnv(
+    env: NodeJS.ProcessEnv,
+    providerId: CliProviderId
+  ): Promise<NodeJS.ProcessEnv> {
+    if (providerId !== 'codex') {
+      return env;
+    }
+
+    const snapshot = this.codexAccountFeature?.getCachedSnapshot?.() ?? null;
+    if (!snapshot) {
+      return env;
+    }
+    applyCodexRuntimeContextEnv(env, snapshot);
+    const readiness = evaluateCodexLaunchReadiness({
+      preferredAuthMode: snapshot.preferredAuthMode,
+      managedAccount: snapshot.managedAccount,
+      apiKey: snapshot.apiKey,
+      appServerState: snapshot.appServerState,
+      appServerStatusMessage: snapshot.appServerStatusMessage,
+      localActiveChatgptAccountPresent: snapshot.localActiveChatgptAccountPresent,
+    });
+
+    if (readiness.effectiveAuthMode === 'chatgpt') {
+      delete env.OPENAI_API_KEY;
+      delete env[CODEX_NATIVE_API_KEY_ENV_VAR];
+      applyCodexForcedLoginMethodEnv(env, 'chatgpt');
+      return env;
+    }
+
+    applyCodexForcedLoginMethodEnv(env, readiness.effectiveAuthMode === 'api_key' ? 'api' : null);
+    return env;
+  }
+
   async applyAllConfiguredConnectionEnv(
     env: NodeJS.ProcessEnv,
     options?: StoredApiKeyAccessOptions
@@ -1112,11 +1150,7 @@ export class ProviderConnectionService {
     const customProvider = this.getConfiguredCodexCustomProvider();
     if (customProvider) {
       const catalog = createCodexCustomProviderCatalog(customProvider);
-      const catalogDisplay = mergeProviderCatalogDisplayAuthority(
-        withConnection,
-        catalog,
-        'ready'
-      );
+      const catalogDisplay = mergeProviderCatalogDisplayAuthority(withConnection, catalog, 'ready');
       const statusMessage =
         withConnection.statusMessage ??
         (withConnection.connection?.apiKeyConfigured

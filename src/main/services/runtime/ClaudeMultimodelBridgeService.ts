@@ -1203,10 +1203,14 @@ export class ClaudeMultimodelBridgeService {
     providerId: CliProviderId,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
-    const { env, connectionIssues } = buildPassiveProviderStatusCliEnv({
+    const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
       binaryPath,
       providerId,
     });
+    const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
+      passiveEnv,
+      providerId
+    );
     return this.getProviderStatusFromRuntimeStatusCommand(
       binaryPath,
       providerId,

@@ -13,6 +13,7 @@ export const WorkspaceTrustLaunchControl = (props: {
   status: WorkspaceTrustDisplayStatus;
   isLaunchMode: boolean;
   disabled: boolean;
+  describedBy?: string;
   busy: boolean;
   submittingLabel: string;
   submitLabel: string;
@@ -37,6 +38,7 @@ export const WorkspaceTrustLaunchControl = (props: {
             : 'bg-emerald-600 text-white hover:bg-emerald-700'
         }
         disabled={props.disabled}
+        aria-describedby={props.describedBy}
         onClick={props.onClick}
       >
         {props.busy ? (
