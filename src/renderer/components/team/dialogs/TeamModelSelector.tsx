@@ -108,6 +108,7 @@ import {
 } from './openCodeRuntimeStatusUi';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
+  deriveOpenCodeSelectionScopeAssociation,
   getActiveOpenCodeStickyHeadingIndex,
   getOpenCodeModelGridColumnCount,
   resolveTeamModelSelectorValue,
@@ -1186,33 +1187,34 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       new Set(openCodeLocalProviders.map((provider) => provider.providerId.trim().toLowerCase())),
     [openCodeLocalProviders]
   );
+  const openCodeAutoFocusIsStale =
+    autoFocusedOpenCodeSourceRef.current !== null && lastAutoFocusedOpenCodeModelRef.current !== value.trim();
   const openCodeCatalogSourceProviderId = resolveOpenCodeCatalogSourceProviderId({
-    selectedSourceIds: selectedOpenCodeSourceIds,
+    selectedSourceIds: openCodeAutoFocusIsStale ? new Set<string>() : selectedOpenCodeSourceIds,
     selectedModel: effectiveProviderId === 'opencode' ? value : null,
-    localModelsSelected: selectedOpenCodeRouteTags.has('local'),
+    localModelsSelected: !openCodeAutoFocusIsStale && selectedOpenCodeRouteTags.has('local'),
     knownLocalSourceIds: knownOpenCodeLocalSourceIds,
     localProviderLookupReady: openCodeLocalProviderLookupAuthoritative,
   });
   const openCodeSelectionScopeSourceProviderId = resolveOpenCodeCatalogSourceProviderId({
-    selectedSourceIds: selectedOpenCodeSourceIds,
+    selectedSourceIds: openCodeAutoFocusIsStale ? new Set<string>() : selectedOpenCodeSourceIds,
     selectedModel: effectiveProviderId === 'opencode' ? value : null,
-    localModelsSelected: selectedOpenCodeRouteTags.has('local'),
+    localModelsSelected: !openCodeAutoFocusIsStale && selectedOpenCodeRouteTags.has('local'),
     knownLocalSourceIds: knownOpenCodeLocalSourceIds,
     localProviderLookupReady: true,
   });
   const openCodeSelectionCatalogScopeKey = openCodeSelectionScopeSourceProviderId
     ? JSON.stringify([openCodeCatalogScopeKey || null, openCodeSelectionScopeSourceProviderId])
     : null;
-  const openCodeSelectionScopeRef = useRef({
+  const openCodeSelectionScopeRef = useRef({ value, scopeKey: openCodeSelectionCatalogScopeKey });
+  const openCodeSelectionScope = deriveOpenCodeSelectionScopeAssociation(
+    openCodeSelectionScopeRef.current,
     value,
-    scopeKey: openCodeSelectionCatalogScopeKey,
-  });
-  if (openCodeSelectionScopeRef.current.value !== value) {
-    openCodeSelectionScopeRef.current = {
-      value,
-      scopeKey: openCodeSelectionCatalogScopeKey,
-    };
-  }
+    openCodeSelectionCatalogScopeKey
+  );
+  useLayoutEffect(() => {
+    openCodeSelectionScopeRef.current = openCodeSelectionScope;
+  }, [openCodeSelectionScope]);
   const openCodeScopedCatalog = useOpenCodeProviderModelCatalog({
     enabled:
       effectiveProviderId === 'opencode' &&
@@ -1622,7 +1624,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const openCodeSelectionScopeDecision = resolveOpenCodeSelectionScopeDecision({
     value,
     runtimeNormalizedValue,
-    selectionScopeKey: openCodeSelectionScopeRef.current.scopeKey,
+    selectionScopeKey: openCodeSelectionScope.scopeKey,
     catalogScopeKey: openCodeSelectionCatalogScopeKey,
     catalogStatus: openCodeScopedCatalog.status,
     catalogState: openCodeScopedCatalog.catalogState,
@@ -1654,6 +1656,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     isAppManagedLocalModel: selectedAppManagedLocalModel,
     isInLocalOverlay: openCodeLocalModelOverlay.modelIds.has(value),
     isLocalLookupAuthoritative: openCodeLocalProviderLookupAuthoritative,
+    shouldPreserveOpenCodeSelection,
   });
   const selectedUnverifiedLocalModel =
     effectiveProviderId === 'opencode' &&

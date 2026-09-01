@@ -211,10 +211,18 @@ function mapCatalogModel(
 }
 
 function sourceIdForCatalogModel(model: CliProviderModelCatalogItem): string | null {
-  return (
+  const sourceProviderId =
     normalizeSourceProviderId(model.metadata?.opencode?.providerId) ??
-    normalizeSourceProviderId(parseStrictQualifiedModelRef(model.launchModel)?.sourceId)
-  );
+    normalizeSourceProviderId(parseStrictQualifiedModelRef(model.launchModel)?.sourceId) ??
+    normalizeSourceProviderId(parseStrictQualifiedModelRef(model.id)?.sourceId);
+  if (
+    !sourceProviderId ||
+    !qualifyModelId(sourceProviderId, model.launchModel) ||
+    !qualifyModelId(sourceProviderId, model.id)
+  ) {
+    return null;
+  }
+  return sourceProviderId;
 }
 
 function sourceIdForModelId(modelId: string): string | null {
@@ -228,11 +236,15 @@ function filterPassiveProviderToSource(
   error: string | null
 ): CliProviderStatus {
   const catalog = provider.modelCatalog;
-  const models = provider.models.filter(
-    (modelId) => sourceIdForModelId(modelId) === sourceProviderId
-  );
   const catalogModels = (catalog?.models ?? []).filter(
     (model) => sourceIdForCatalogModel(model) === sourceProviderId
+  );
+  const catalogModelIds = new Set(
+    catalogModels.flatMap((model) => [model.launchModel, model.id])
+  );
+  const models = provider.models.filter(
+    (modelId) =>
+      sourceIdForModelId(modelId) === sourceProviderId || catalogModelIds.has(modelId)
   );
   const visibleModelIds = new Set([
     ...models,
@@ -379,7 +391,7 @@ function responseFailure(
     return `The runtime returned foreign default model ${qualifiedDefault.raw} in the ${sourceProviderId} catalog.`;
   }
   if (
-    response.models.defaultModelId !== null &&
+    response.models.defaultModelId != null &&
     !qualifyModelId(sourceProviderId, response.models.defaultModelId)
   ) {
     return `The runtime returned an invalid default model identifier in the ${sourceProviderId} catalog.`;

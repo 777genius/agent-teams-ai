@@ -5,6 +5,19 @@ const OPENCODE_ROUTE_KINDS_WITHOUT_NEEDS_TEST_BADGE = new Set(['configured_local
 const OPENCODE_MODEL_GRID_MIN_CARD_WIDTH_PX = 140;
 const OPENCODE_MODEL_GRID_GAP_PX = 6;
 
+export interface OpenCodeSelectionScopeAssociation {
+  readonly value: string;
+  readonly scopeKey: string | null;
+}
+
+export function deriveOpenCodeSelectionScopeAssociation(
+  committed: OpenCodeSelectionScopeAssociation,
+  value: string,
+  scopeKey: string | null
+): OpenCodeSelectionScopeAssociation {
+  return committed.value === value ? committed : { value, scopeKey };
+}
+
 export function getOpenCodeModelGridColumnCount(width: number): number {
   const safeWidth = Number.isFinite(width) ? Math.max(0, width) : 0;
   if (safeWidth <= 0) return 1;
@@ -24,11 +37,14 @@ export function resolveTeamModelSelectorValue(input: {
   isAppManagedLocalModel: boolean;
   isInLocalOverlay: boolean;
   isLocalLookupAuthoritative: boolean;
+  shouldPreserveOpenCodeSelection?: boolean;
 }): string {
   return input.providerId === 'opencode' &&
     (input.isAppManagedLocalModel ||
       input.isInLocalOverlay ||
-      (!input.isLocalLookupAuthoritative && Boolean(parseOpenCodeQualifiedModelRef(input.value))))
+      (input.shouldPreserveOpenCodeSelection !== false &&
+        !input.isLocalLookupAuthoritative &&
+        Boolean(parseOpenCodeQualifiedModelRef(input.value))))
     ? input.value
     : input.runtimeNormalizedValue;
 }

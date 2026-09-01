@@ -8,7 +8,7 @@ import type {
   RuntimeProviderManagementModelsResponse,
   RuntimeProviderModelDto,
 } from '@features/runtime-provider-management/contracts';
-import type { CliProviderStatus } from '@shared/types';
+import type { CliProviderModelCatalogItem, CliProviderStatus } from '@shared/types';
 
 const apiMocks = vi.hoisted(() => ({
   loadModels: vi.fn(),
@@ -117,6 +117,37 @@ function passiveStatus(models: string[] = []): CliProviderStatus {
       },
     },
     backend: { kind: 'opencode', label: 'OpenCode' },
+  };
+}
+
+function passiveCatalogModel(
+  modelId: string,
+  providerId = 'deepinfra'
+): CliProviderModelCatalogItem {
+  return {
+    id: modelId,
+    launchModel: modelId,
+    displayName: modelId,
+    hidden: false,
+    supportedReasoningEfforts: [],
+    defaultReasoningEffort: null,
+    inputModalities: ['text'],
+    supportsPersonality: false,
+    isDefault: false,
+    upgrade: false,
+    source: 'app-server',
+    metadata: {
+      opencode: {
+        providerId,
+        modelId,
+        sourceLabel: providerId,
+        accessKind: 'credentialed',
+        routeKind: 'connected_provider',
+        proofState: 'needs_probe',
+        requiresExecutionProof: true,
+        reason: null,
+      },
+    },
   };
 }
 
@@ -322,6 +353,87 @@ describe('useOpenCodeProviderModelCatalog', () => {
       expect(observed?.error).toContain('invalid default model identifier');
     }
   );
+
+  it('filters malformed and foreign passive models despite same-provider metadata', async () => {
+    const failedRequest = createDeferred<RuntimeProviderManagementModelsResponse>();
+    const passive = passiveStatus([
+      '/poisoned',
+      'deepinfra//model',
+      'kiro/model',
+      'deepinfra/org/nested-model',
+      'unqualified-model',
+    ]);
+    passive.modelCatalog = {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'stale',
+      fetchedAt: '2026-08-31T00:00:00.000Z',
+      staleAt: '2026-08-31T00:00:00.000Z',
+      defaultModelId: 'kiro/model',
+      defaultLaunchModel: '/poisoned',
+      models: [
+        passiveCatalogModel('/poisoned'),
+        passiveCatalogModel('deepinfra//model'),
+        passiveCatalogModel('kiro/model'),
+        passiveCatalogModel('deepinfra/org/nested-model'),
+        passiveCatalogModel('unqualified-model'),
+      ],
+      diagnostics: {
+        configReadState: 'ready',
+        appServerState: 'degraded',
+      },
+    };
+    apiMocks.loadModels.mockImplementation(() => failedRequest.promise);
+
+    await renderHarness({ sourceProviderId: 'deepinfra', passiveProviderStatus: passive });
+    await waitForStatus('loading');
+
+    const expectSafeFallback = (): void => {
+      expect(observed?.providerStatus?.models).toEqual([
+        'deepinfra/org/nested-model',
+        'unqualified-model',
+      ]);
+      expect(
+        observed?.providerStatus?.modelCatalog?.models.map((catalogModel) => catalogModel.id)
+      ).toEqual(['deepinfra/org/nested-model', 'unqualified-model']);
+      expect(observed?.providerStatus?.modelCatalog?.defaultModelId).toBeNull();
+      expect(observed?.providerStatus?.modelCatalog?.defaultLaunchModel).toBeNull();
+    };
+    expectSafeFallback();
+
+    await act(async () => {
+      failedRequest.reject(new Error('catalog timed out'));
+      try {
+        await failedRequest.promise;
+      } catch {
+        // The hook converts the rejected request into scoped error state.
+      }
+    });
+    await waitForStatus('error');
+    expectSafeFallback();
+  });
+
+  it('treats an omitted default as absent and uses the model marked default', async () => {
+    const catalogResponse = response({
+      providerId: 'deepinfra',
+      models: [model('deepinfra', 'deepinfra/default-model', { default: true })],
+      catalogState: 'fresh',
+    });
+    delete (catalogResponse.models as { defaultModelId?: string | null }).defaultModelId;
+    apiMocks.loadModels.mockResolvedValue(catalogResponse);
+
+    await renderHarness({ sourceProviderId: 'deepinfra' });
+    await waitForStatus('ready');
+
+    expect(observed?.providerStatus?.models).toEqual(['deepinfra/default-model']);
+    expect(observed?.providerStatus?.modelCatalog?.defaultModelId).toBe(
+      'deepinfra/default-model'
+    );
+    expect(observed?.providerStatus?.modelCatalog?.defaultLaunchModel).toBe(
+      'deepinfra/default-model'
+    );
+  });
 
   it('treats missing freshness as degraded and never derives execution proof from catalog data', async () => {
     apiMocks.loadModels.mockResolvedValue(

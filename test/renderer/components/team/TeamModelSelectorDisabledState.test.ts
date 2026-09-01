@@ -4750,6 +4750,10 @@ describe('TeamModelSelector disabled Codex models', () => {
     ).toBeNull();
 
     await renderSelector('kiro/auto');
+    expect(
+      host.querySelector('[data-testid="team-model-selector-provider-nav-cursor-acp"]')
+    ).not.toBeNull();
+    expect(host.querySelector('[data-testid="team-model-selector-provider-nav-kiro"]')).not.toBeNull();
     expect(host.querySelector('[data-tabs-value="opencode-source:kiro"]')).not.toBeNull();
     const kiroGroup = Array.from(
       host.querySelectorAll<HTMLElement>('[data-testid="team-model-selector-opencode-group"]')
