@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, relative, resolve } from 'node:path';
+import { dirname, relative, resolve, sep } from 'node:path';
 
 import { format, type Options as PrettierOptions } from 'prettier';
 import ts from 'typescript';
@@ -357,7 +357,9 @@ function getEffectivePublicServiceInstanceMemberNames(): string[] {
 }
 
 function projectRelativePath(filePath: string): string {
-  return relative(process.cwd(), filePath);
+  // Guarded paths are compared against slash-separated literals, so they must
+  // not carry the host separator.
+  return relative(process.cwd(), filePath).split(sep).join('/');
 }
 
 function readGuardedFacadeSource(filePath: string): GuardedFacadeSource {
