@@ -8,6 +8,7 @@ import { OpenCodeAggregatePrimaryProgressPublisher } from './OpenCodeAggregatePr
 import {
   assertAggregatePrimaryStopConfirmed,
   beginAggregatePrimaryRestart,
+  clearCancelledAggregateRestartState,
   clearPersistedAggregateLaunchStateIfOwned,
   getCancelledAggregateLaunchError,
   getCancelledAggregateRestartError,
@@ -50,8 +51,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
     enrichRuntimeAdapterProgressTrace: (progress) =>
       this.runtimeAdapterProgressState.enrichRuntimeAdapterProgressTrace(progress),
-    rememberProgress: (progress) =>
-      this.runtimeAdapterProgressByRunId.set(progress.runId, progress),
+    rememberProgress: (progress) => this.runtimeAdapterProgressByRunId.set(progress.runId, progress),
     invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
   });
   private runAfterInFlightTeamOperation<T>(
@@ -121,18 +121,22 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
   private async clearCancelledOpenCodeAggregateRestartState(
     teamName: string,
     runId: string,
-    confirmedCancelledRestart?: OpenCodeAggregatePrimaryRestartLease
+    cancelledRestart?: OpenCodeAggregatePrimaryRestartLease
   ): Promise<void> {
-    await this.clearPersistedOpenCodeLaunchStateIfOwned(
-      teamName,
+    await clearCancelledAggregateRestartState({
       runId,
-      confirmedCancelledRestart
-    ).catch((error: unknown) => {
-      logger.warn(
-        `[${teamName}] Failed to clear late launch state after cancelled primary restart: ${getErrorMessage(error)}`
-      );
+      restartLease:
+        cancelledRestart ??
+        this.openCodeAggregatePrimaryRestartByTeam.get(teamName.trim().toLowerCase()),
+      clearLaunchState: (ownedId) =>
+        this.clearPersistedOpenCodeLaunchStateIfOwned(teamName, ownedId, cancelledRestart),
+      clearPrimaryLane: (ownedId) =>
+        this.cancellationBoundary.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, ownedId),
+      onLaunchClearError: (ownedId, error) =>
+        logger.warn(
+          `[${teamName}] Failed to clear late launch state for cancelled run ${ownedId}: ${getErrorMessage(error)}`
+        ),
     });
-    await this.cancellationBoundary.clearOpenCodeRuntimeAdapterPrimaryLaneIfOwned(teamName, runId);
   }
 
   private async clearPersistedOpenCodeLaunchStateIfOwned(
@@ -148,8 +152,7 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       lastWrittenRunIds: this.launchStateWrittenRunIdByTeam,
       restarts: this.openCodeAggregatePrimaryRestartByTeam,
       launchStateStore: this.launchStateStore,
-      withLaunchStateLock: (operation) =>
-        this.enqueueLaunchStateStoreOperation(teamName, operation),
+      withLaunchStateLock: (operation) => this.enqueueLaunchStateStoreOperation(teamName, operation),
       invalidateRuntimeSnapshotCaches: (candidateTeamName) =>
         this.invalidateRuntimeSnapshotCaches(candidateTeamName),
     });

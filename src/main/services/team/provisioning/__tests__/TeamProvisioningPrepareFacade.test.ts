@@ -162,6 +162,43 @@ describe('TeamProvisioningPrepareFacade', () => {
     expect(probeClaudeRuntime).toHaveBeenCalledTimes(2);
   });
 
+  it('maps a rejected Claude binary lookup to unavailable OpenCode catalog readiness', async () => {
+    const cwd = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'prepare-facade-catalog-'));
+    const resolveClaudeBinaryPath = vi.fn().mockRejectedValue(new Error('binary lookup failed'));
+    const facade = createFacade({
+      resolveClaudeBinaryPath,
+      getOpenCodeRuntimeAdapter: vi.fn(
+        () =>
+          ({
+            providerId: 'opencode' as const,
+            prepare: vi.fn(),
+            launch: vi.fn(),
+            reconcile: vi.fn(),
+            stop: vi.fn(),
+          })
+      ),
+    });
+
+    const result = await facade.prepareForProvisioning(cwd, {
+      providerId: 'opencode',
+      modelIds: ['openai/gpt-5.6-sol'],
+      modelVerificationMode: 'compatibility',
+    });
+
+    expect(resolveClaudeBinaryPath).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({
+      ready: false,
+      issues: [
+        expect.objectContaining({
+          providerId: 'opencode',
+          severity: 'blocking',
+          code: 'catalog_unavailable',
+          message: 'OpenCode provider catalog could not be read: binary lookup failed',
+        }),
+      ],
+    });
+  });
+
   it('prepares OpenCode runtime adapter launches through explicit facade ports', async () => {
     const cwd = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'prepare-facade-opencode-'));
     const buildProvisioningEnv = vi.fn().mockResolvedValue({

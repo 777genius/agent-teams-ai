@@ -239,6 +239,7 @@ import {
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
+import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
   buildTeamControlApiBaseUrl,
@@ -748,6 +749,7 @@ async function createOpenCodeRuntimeAdapterRegistry(
     gitSha: process.env.VITE_GIT_SHA ?? process.env.GIT_SHA ?? null,
     buildId: process.env.VITE_BUILD_ID ?? process.env.BUILD_ID ?? null,
   });
+  const manifestOptions = { teamsBasePath: getTeamsBasePath() };
   const stateChangingCommands = new OpenCodeStateChangingBridgeCommandService({
     expectedClientIdentity: clientIdentity,
     handshakePort: new OpenCodeBridgeCommandHandshakePort({
@@ -761,9 +763,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
       filePath: join(bridgeControlDir, 'command-ledger.json'),
     }),
     bridge: bridgeClient,
-    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({
-      teamsBasePath: getTeamsBasePath(),
-    }),
+    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter(manifestOptions),
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader(manifestOptions),
   });
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
@@ -776,7 +777,6 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }),
   ]);
 }
-
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;

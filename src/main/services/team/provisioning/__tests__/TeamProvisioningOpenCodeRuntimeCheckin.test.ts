@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync } from 'fs';
 import { join } from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
+import { setOpenCodeRuntimeActiveRunManifest } from '../../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { RuntimeStaleEvidenceError } from '../../opencode/store/RuntimeRunTombstoneStore';
 import { createPersistedLaunchSnapshot } from '../../TeamLaunchStateEvaluator';
 import { createDefaultOpenCodeRuntimeBootstrapEvidencePorts } from '../TeamProvisioningOpenCodeBootstrapEvidence';
@@ -562,6 +563,12 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
     });
 
     try {
+      await setOpenCodeRuntimeActiveRunManifest({
+        teamsBasePath,
+        teamName: 'Team',
+        laneId: 'primary',
+        runId: 'run-1',
+      });
       const checkin = recordOpenCodeRuntimeBootstrapCheckin(
         {
           teamName: 'Team',
@@ -640,6 +647,12 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
       });
 
       try {
+        await setOpenCodeRuntimeActiveRunManifest({
+          teamsBasePath,
+          teamName: 'Team',
+          laneId: 'primary',
+          runId: 'run-current',
+        });
         await expect(
           recordOpenCodeRuntimeBootstrapCheckin(
             {

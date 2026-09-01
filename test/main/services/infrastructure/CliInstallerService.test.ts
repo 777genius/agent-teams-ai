@@ -297,6 +297,222 @@ describe('CliInstallerService', () => {
       await Promise.resolve();
     });
 
+    it.each(['success', 'failure'] as const)(
+      'does not replay revoked auth when another aggregate hydration finishes with %s',
+      async (outcome) => {
+        allowConsoleLogs();
+        vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+        vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+          displayName: 'Runtime',
+          supportsSelfUpdate: false,
+          showVersionDetails: false,
+          showBinaryPath: false,
+        });
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/hydration-runtime');
+        const wireProvider = (providerId: CliProviderId) => {
+          const provider = createTestProviderStatus(providerId, true, 'test-session');
+          return {
+            ...provider,
+            capabilities: { ...provider.capabilities, extensions: {} },
+            runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+          };
+        };
+        const reply = (providerId: CliProviderId, provider: unknown) => ({
+          stdout: JSON.stringify({ schemaVersion: 2, providers: { [providerId]: provider } }),
+          stderr: '',
+        });
+        let resolveA!: (value: ReturnType<typeof reply>) => void;
+        let resolveB!: (value: ReturnType<typeof reply>) => void;
+        let rejectB!: (reason: Error) => void;
+        const pendingA = new Promise<ReturnType<typeof reply>>((resolve) => {
+          resolveA = resolve;
+        });
+        const pendingB = new Promise<ReturnType<typeof reply>>((resolve, reject) => {
+          resolveB = resolve;
+          rejectB = reject;
+        });
+        let revoked = false;
+        vi.mocked(execCli).mockImplementation(async (_binaryPath, args) => {
+          if (args.includes('--version')) return { stdout: '0.0.45', stderr: '' };
+          const providerId = args[args.indexOf('--provider') + 1] as CliProviderId;
+          const full = wireProvider(providerId);
+          if (args.includes('--summary'))
+            return reply(providerId, {
+              ...full,
+              modelCatalog: null,
+              ...(providerId === 'opencode' || (providerId === 'anthropic' && revoked)
+                ? { authenticated: false, authMethod: null, runtimeCapabilities: null }
+                : {}),
+            });
+          return providerId === 'anthropic' ? pendingA : pendingB;
+        });
+        try {
+          const listeners: ((status: import('@shared/types').CliInstallationStatus) => void)[] = [];
+          const nextStatus = (
+            predicate: (status: import('@shared/types').CliInstallationStatus) => boolean
+          ) =>
+            new Promise<import('@shared/types').CliInstallationStatus>((resolve) => {
+              listeners.push((status) => {
+                if (predicate(status)) resolve(status);
+              });
+            });
+          const mockWindow = {
+            isDestroyed: () => false,
+            webContents: {
+              isDestroyed: () => false,
+              send: (_channel: string, progress: import('@shared/types').CliInstallerProgress) => {
+                const status = progress.status;
+                if (progress.type === 'status' && status)
+                  listeners.forEach((listener) => listener(status));
+              },
+            },
+          };
+          service.setMainWindow(mockWindow as unknown as import('electron').BrowserWindow);
+          await service.getStatus();
+          const aReady = nextStatus((status) =>
+            status.providers.some(
+              (provider) => provider.providerId === 'anthropic' && provider.capabilities.teamLaunch
+            )
+          );
+          resolveA(reply('anthropic', wireProvider('anthropic')));
+          await aReady;
+          revoked = true;
+          expect(await service.getProviderStatus('anthropic')).toMatchObject({
+            authenticated: false,
+            capabilities: { teamLaunch: false },
+          });
+          const bFinished = nextStatus((status) =>
+            status.providers.some(
+              (provider) =>
+                provider.providerId === 'codex' &&
+                provider.modelCatalogRefreshState === (outcome === 'success' ? 'ready' : 'error')
+            )
+          );
+          if (outcome === 'success') resolveB(reply('codex', wireProvider('codex')));
+          else rejectB(new Error('Test-only full status unavailable'));
+          const published = await bFinished;
+          for (const snapshot of [published, service.getLatestStatusSnapshot()!]) {
+            expect(
+              snapshot.providers.find((provider) => provider.providerId === 'anthropic')
+            ).toMatchObject({
+              authenticated: false,
+              authMethod: null,
+              capabilities: { teamLaunch: false },
+            });
+            expect(
+              snapshot.providers.find((provider) => provider.providerId === 'codex')?.capabilities
+                .teamLaunch
+            ).toBe(outcome === 'success');
+          }
+        } finally {
+          vi.mocked(execCli).mockReset().mockRejectedValue(new Error('execCli not configured'));
+        }
+      }
+    );
+
+    it('preserves an early full hydration when the aggregate summary promise resolves', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'Runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/hydration-runtime');
+      vi.mocked(execCli).mockResolvedValueOnce({ stdout: '0.0.45', stderr: '' });
+      const ready = createTestProviderStatus('codex', true, 'test-session');
+      const summary = {
+        ...ready,
+        modelCatalog: null,
+        capabilities: { ...ready.capabilities, teamLaunch: false },
+      };
+      const spy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses')
+        .mockImplementation(async (_binaryPath, onUpdate) => {
+          onUpdate?.([summary]);
+          onUpdate?.([ready], 'codex');
+          onUpdate?.([summary], 'opencode');
+          onUpdate?.([summary, summary], 'codex');
+          onUpdate?.([], 'codex');
+          expect(service.getLatestStatusSnapshot()?.providers).toHaveLength(1);
+          expect(service.getLatestStatusSnapshot()?.providers[0].capabilities.teamLaunch).toBe(
+            true
+          );
+          return [summary];
+        });
+      try {
+        const result = await service.getStatus();
+        for (const snapshot of [result, service.getLatestStatusSnapshot()!]) {
+          expect(snapshot.providers[0]).toMatchObject({
+            authenticated: true,
+            capabilities: { teamLaunch: true },
+            modelCatalog: { status: 'ready' },
+          });
+          expect(snapshot.authStatusChecking).toBe(false);
+        }
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('does not copy newer runtime authority into an older finishing status gather', async () => {
+      allowConsoleLogs();
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      vi.mocked(getCliFlavorUiOptions).mockReturnValue({
+        displayName: 'Runtime',
+        supportsSelfUpdate: false,
+        showVersionDetails: false,
+        showBinaryPath: false,
+      });
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/old-runtime');
+      vi.mocked(execCli).mockResolvedValue({ stdout: '0.0.45', stderr: '' });
+      let resolveOld!: (providers: CliProviderStatus[]) => void;
+      let started!: () => void;
+      const oldStarted = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const oldProviders = new Promise<CliProviderStatus[]>((resolve) => {
+        resolveOld = resolve;
+      });
+      const newer = createTestProviderStatus('codex', true, 'new-runtime-session');
+      const spy = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses')
+        .mockImplementation(async (binaryPath) => {
+          if (binaryPath === '/mock/old-runtime') {
+            started();
+            return oldProviders;
+          }
+          return [newer];
+        });
+      try {
+        const oldResult = service.getStatus();
+        await oldStarted;
+        service.invalidateStatusCache();
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/new-runtime');
+        await service.getStatus();
+        resolveOld([createTestProviderStatus('codex', false, null)]);
+        const result = await oldResult;
+        expect(result.binaryPath).toBe('/mock/old-runtime');
+        expect(result.providers.every((provider) => !provider.capabilities.teamLaunch)).toBe(true);
+        expect(
+          result.providers.every((provider) => provider.authMethod !== 'new-runtime-session')
+        ).toBe(true);
+        expect(service.getLatestStatusSnapshot()).toMatchObject({
+          binaryPath: '/mock/new-runtime',
+          providers: [
+            expect.objectContaining({
+              authMethod: 'new-runtime-session',
+              capabilities: expect.objectContaining({ teamLaunch: true }),
+            }),
+          ],
+        });
+      } finally {
+        spy.mockRestore();
+        vi.mocked(execCli).mockReset().mockRejectedValue(new Error('execCli not configured'));
+      }
+    });
+
     it('includes frontend-visible providers in unavailable multimodel bootstrap status', async () => {
       allowConsoleLogs();
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');

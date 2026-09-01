@@ -19,6 +19,7 @@ export function isAmbiguousOpenCodeLaunchFailure(result: OpenCodeBridgeResult<un
     (result.error.kind === 'timeout' ||
       result.error.kind === 'transport_watchdog_timeout' ||
       isOpenCodeBridgeEmptyOutputFailure(result) ||
+      result.diagnostics.some((event) => event.type === 'opencode_bridge_unknown_outcome') ||
       result.error.message === 'OpenCode launch result behavior fingerprint mismatch')
   );
 }

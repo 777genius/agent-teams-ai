@@ -67,11 +67,13 @@ export interface OpenCodeTeamRuntimeBridgePort {
     projectPath: string;
     selectedModel: string | null;
     requireExecutionProbe: boolean;
+    skipPermissions?: boolean;
   }): Promise<OpenCodeTeamLaunchReadiness>;
   getLastOpenCodeRuntimeSnapshot?(
     projectPath: string,
     selectedModel?: string | null,
-    requireExecutionProbe?: boolean
+    requireExecutionProbe?: boolean,
+    skipPermissions?: boolean
   ): OpenCodeBridgeRuntimeSnapshot | null;
   launchOpenCodeTeam?(input: OpenCodeLaunchTeamCommandBody): Promise<OpenCodeLaunchTeamCommandData>;
   reconcileOpenCodeTeam?(
@@ -191,6 +193,7 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         projectPath: input.cwd,
         selectedModel: input.model ?? null,
         requireExecutionProbe: !runtimeOnly,
+        skipPermissions: input.skipPermissions,
       },
       forceReadinessRefresh
     );
@@ -377,19 +380,20 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
       projectPath: input.cwd,
       selectedModel: input.model ?? null,
       requireExecutionProbe: true,
+      skipPermissions: input.skipPermissions,
     };
     let runtimeSnapshot = skipReadinessPreflight
       ? null
       : (this.bridge.getLastOpenCodeRuntimeSnapshot?.(
           input.cwd,
           readinessInput.selectedModel,
-          readinessInput.requireExecutionProbe
+          readinessInput.requireExecutionProbe,
+          readinessInput.skipPermissions
         ) ?? null);
     let proofBinding: ReturnType<typeof freshOpenCodeExecutionProof>;
     try {
       proofBinding = freshOpenCodeExecutionProof(
-        this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
-          this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
+        this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)),
         { projectPath: input.cwd, fullModelId: selectedModel }
       );
     } catch (error) {
@@ -493,14 +497,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
         this.bridge.getLastOpenCodeRuntimeSnapshot?.(
           input.cwd,
           readinessInput.selectedModel,
-          readinessInput.requireExecutionProbe
+          readinessInput.requireExecutionProbe,
+          readinessInput.skipPermissions
         ) ?? null;
       if (refreshedSnapshot?.capabilitySnapshotId) {
         runtimeSnapshot = refreshedSnapshot;
         try {
           proofBinding = freshOpenCodeExecutionProof(
-            this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)) ??
-              this.lastReadinessByProjectPath.get(normalizeOpenCodeProjectIdentity(input.cwd)),
+            this.lastReadinessByArtifactKey.get(openCodeReadinessArtifactKey(readinessInput)),
             { projectPath: input.cwd, fullModelId: selectedModel }
           );
           executionProof = proofBinding.proof;
@@ -570,16 +574,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
     if (this.bridge.reconcileOpenCodeTeam) {
       const projectPath =
         input.expectedMembers[0]?.cwd ?? this.lastProjectPathByTeamName.get(input.teamName);
-      const runtimeSnapshot = projectPath
-        ? (this.bridge.getLastOpenCodeRuntimeSnapshot?.(projectPath) ?? null)
-        : null;
       const data = await this.bridge.reconcileOpenCodeTeam({
         runId: input.runId,
         laneId: input.laneId?.trim() || 'primary',
         teamId: input.teamName,
         teamName: input.teamName,
         projectPath,
-        expectedCapabilitySnapshotId: runtimeSnapshot?.capabilitySnapshotId ?? null,
+        // The command service binds the persisted lane manifest, never a project-latest probe.
+        expectedCapabilitySnapshotId: null,
         manifestHighWatermark: null,
         reconcileAttemptId: `opencode-reconcile-${randomUUID()}`,
         expectedMembers: input.expectedMembers.map((member) => ({
@@ -807,16 +809,14 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
   async stop(input: TeamRuntimeStopInput): Promise<TeamRuntimeStopResult> {
     if (this.bridge.stopOpenCodeTeam) {
       const projectPath = input.cwd ?? this.lastProjectPathByTeamName.get(input.teamName);
-      const runtimeSnapshot = projectPath
-        ? (this.bridge.getLastOpenCodeRuntimeSnapshot?.(projectPath) ?? null)
-        : null;
       const data = await this.bridge.stopOpenCodeTeam({
         runId: input.runId,
         laneId: input.laneId?.trim() || 'primary',
         teamId: input.teamName,
         teamName: input.teamName,
         projectPath,
-        expectedCapabilitySnapshotId: runtimeSnapshot?.capabilitySnapshotId ?? null,
+        // The command service binds the persisted lane manifest, never a project-latest probe.
+        expectedCapabilitySnapshotId: null,
         manifestHighWatermark: null,
         reason: input.reason,
         force: input.force,

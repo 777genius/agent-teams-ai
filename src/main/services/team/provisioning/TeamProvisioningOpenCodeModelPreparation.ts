@@ -1,6 +1,10 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
+import {
+  hasAuthoritativeProviderStatusEvidence,
+  isProviderModelCatalogExactReady,
+} from '@shared/utils/providerStatusAuthority';
 import { randomUUID } from 'crypto';
 
 import {
@@ -14,7 +18,6 @@ import {
   looksLikeOpenCodeProviderPrepareDiagnostic,
   normalizeOpenCodePrepareDiagnostic,
   selectOpenCodeModelPreparePrimaryReason,
-  selectOpenCodePrepareProviderDiagnostic,
 } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
 
 export {
@@ -26,6 +29,7 @@ export {
 
 import type { TeamLaunchRuntimeAdapter, TeamRuntimePrepareResult } from '../runtime';
 import type {
+  CliProviderStatus,
   TeamProvisioningModelVerificationMode,
   TeamProvisioningPrepareIssue,
   TeamProvisioningSupportDiagnostic,
@@ -68,6 +72,7 @@ export interface OpenCodeLocalModelRuntimeReadiness {
 
 export interface OpenCodeSelectedModelPreparationInput {
   adapter: TeamLaunchRuntimeAdapter;
+  readProviderStatus?: (input: { cwd: string }) => Promise<CliProviderStatus | null>;
   cwd: string;
   modelIds: readonly string[];
   verificationMode: TeamProvisioningModelVerificationMode;
@@ -79,10 +84,6 @@ export interface OpenCodeSelectedModelPreparationInput {
     classificationOnly?: boolean;
   }) => Promise<OpenCodeLocalModelRuntimeReadiness | null>;
 }
-
-type OpenCodeLaunchReadinessProvider = TeamLaunchRuntimeAdapter & {
-  getLastOpenCodeTeamLaunchReadiness?: (cwd: string) => { availableModels?: unknown } | null;
-};
 
 const OPENCODE_PROVIDER_SCOPED_PREPARE_FAILURE_REASONS = new Set([
   'not_installed',
@@ -152,6 +153,7 @@ function buildLocalRuntimeInspectionFailure(
 
 export async function prepareSelectedOpenCodeModelsForProvisioning({
   adapter,
+  readProviderStatus,
   cwd,
   modelIds,
   verificationMode,
@@ -170,16 +172,13 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
   }
 
   if (verificationMode === 'compatibility') {
-    const sharedCompatibilityPrepare = await prepareSelectedOpenCodeModelsCompatibilityBatch({
-      adapter,
+    return prepareSelectedOpenCodeModelsCompatibilityBatch({
+      readProviderStatus,
       cwd,
       modelIds,
       appendPreflightDebugLog,
       inspectLocalModelRuntime,
     });
-    if (sharedCompatibilityPrepare) {
-      return sharedCompatibilityPrepare;
-    }
   }
 
   const results = new Array<
@@ -206,7 +205,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
         cwd,
         providerId: 'opencode',
         model: modelId,
-        runtimeOnly: verificationMode === 'compatibility',
+        runtimeOnly: false,
         skipPermissions: true,
         expectedMembers: [],
         previousLaunchState: null,
@@ -322,7 +321,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
     const prepare = await prepareModel(modelId);
     results[index] = { modelId, prepare, localRuntimeReadiness };
 
-    if (verificationMode === 'compatibility' || prepare.ok) {
+    if (prepare.ok) {
       continue;
     }
 
@@ -384,11 +383,9 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
         continue;
       }
       details.push(
-        verificationMode === 'compatibility'
-          ? `Selected model ${modelId} is compatible. Deep verification pending.`
-          : localRuntimeReadiness?.severity === 'ready'
-            ? `Selected model ${modelId} verified for launch with Agent Teams tool coordination.`
-            : `Selected model ${modelId} verified for launch.`
+        localRuntimeReadiness?.severity === 'ready'
+          ? `Selected model ${modelId} verified for launch with Agent Teams tool coordination.`
+          : `Selected model ${modelId} verified for launch.`
       );
       if (verificationMode === 'deep') {
         if (localRuntimeReadiness?.severity === 'ready') {
@@ -449,8 +446,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
 
     const unavailableLine = `Selected model ${modelId} is unavailable. ${primaryReason}`;
     const verificationWarningLine = `Selected model ${modelId} could not be verified. ${primaryReason}`;
-    const issueSeverity =
-      prepare.retryable && verificationMode !== 'compatibility' ? 'warning' : 'blocking';
+    const issueSeverity = prepare.retryable ? 'warning' : 'blocking';
     issues.push({
       providerId: 'opencode',
       modelId,
@@ -461,13 +457,7 @@ export async function prepareSelectedOpenCodeModelsForProvisioning({
     });
     if (prepare.retryable) {
       warnings.push(verificationWarningLine);
-      if (verificationMode === 'compatibility') {
-        blockingMessages.push(verificationWarningLine);
-      }
     } else {
-      if (verificationMode === 'compatibility') {
-        details.push(unavailableLine);
-      }
       blockingMessages.push(unavailableLine);
     }
   }
@@ -513,18 +503,18 @@ export function isProviderScopedOpenCodePrepareFailure(
 }
 
 async function prepareSelectedOpenCodeModelsCompatibilityBatch({
-  adapter,
+  readProviderStatus,
   cwd,
   modelIds,
   appendPreflightDebugLog,
   inspectLocalModelRuntime,
 }: {
-  adapter: TeamLaunchRuntimeAdapter;
+  readProviderStatus?: OpenCodeSelectedModelPreparationInput['readProviderStatus'];
   cwd: string;
   modelIds: readonly string[];
   appendPreflightDebugLog: (event: string, data: Record<string, unknown>) => void;
   inspectLocalModelRuntime?: OpenCodeSelectedModelPreparationInput['inspectLocalModelRuntime'];
-}): Promise<OpenCodeSelectedModelPreparationResult | null> {
+}): Promise<OpenCodeSelectedModelPreparationResult> {
   const details: string[] = [];
   const warnings: string[] = [];
   const blockingMessages: string[] = [];
@@ -563,7 +553,7 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
   for (const modelId of configuredLocalModelIds) {
     details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
   }
-  if (catalogModelIds.length === 0) {
+  if (catalogModelIds.length === 0 && modelIds.length > 0) {
     appendPreflightDebugLog('opencode_compatibility_batch_local_routes_deferred', {
       cwd,
       modelIds,
@@ -571,113 +561,65 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     return { details, warnings, blockingMessages, issues, supportDiagnostics };
   }
 
-  let sharedPrepare = await prepareOpenCodeCompatibilityModel(adapter, cwd, catalogModelIds[0]);
-  if (!sharedPrepare.ok && sharedPrepare.reason === 'not_authenticated') {
-    const failedReadiness = getLastOpenCodeTeamLaunchReadiness(adapter, cwd);
-    const failedAvailableModels = normalizeAvailableModelIds(failedReadiness?.availableModels);
-    const failedAvailableProviderIds = new Set(
-      getOpenCodeCatalogProviderIds(failedAvailableModels)
-    );
-    const deferredModelIds = catalogModelIds.filter((modelId) =>
-      isOpenCodeUnknownProviderRoute(modelId, failedAvailableProviderIds)
-    );
-    if (failedAvailableModels.length > 0 && deferredModelIds.includes(catalogModelIds[0])) {
-      const catalogModelId = catalogModelIds.find((modelId) => !deferredModelIds.includes(modelId));
-      if (!catalogModelId) {
-        for (const modelId of deferredModelIds) {
-          details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
-        }
-        appendPreflightDebugLog('opencode_compatibility_batch_authless_provider_deferred', {
-          cwd,
-          modelIds: deferredModelIds,
-        });
-        return { details, warnings, blockingMessages, issues, supportDiagnostics };
-      }
-      sharedPrepare = await prepareOpenCodeCompatibilityModel(adapter, cwd, catalogModelId);
-    }
+  let provider: CliProviderStatus | null = null;
+  let catalogError =
+    'OpenCode compatibility requires a fresh project-scoped provider catalog. Refresh provider status and retry.';
+  try {
+    provider = (await readProviderStatus?.({ cwd })) ?? null;
+  } catch (error) {
+    catalogError = `OpenCode provider catalog could not be read: ${getErrorMessage(error)}`;
   }
-
-  const sharedPrepareReason = sharedPrepare.ok ? undefined : sharedPrepare.reason;
-  warnings.push(
-    ...sharedPrepare.warnings.map((warning) =>
-      normalizeOpenCodePrepareDiagnostic(warning, sharedPrepareReason)
-    )
-  );
-  appendPreflightDebugLog('opencode_compatibility_batch_shared_prepare', {
-    cwd,
-    modelIds,
-    durationMs: Date.now() - startedAt,
-    ok: sharedPrepare.ok,
-    reason: sharedPrepare.ok ? null : sharedPrepare.reason,
-    diagnostics: sharedPrepare.diagnostics,
-    supportDiagnostics: sharedPrepare.supportDiagnostics?.map((diagnostic) => ({
-      id: diagnostic.id,
-      kind: diagnostic.kind,
-      title: diagnostic.title,
-    })),
-  });
-
-  if (!sharedPrepare.ok) {
-    pushUniqueSupportDiagnostics(supportDiagnostics, sharedPrepare.supportDiagnostics);
-    const providerDiagnostic = selectOpenCodePrepareProviderDiagnostic(sharedPrepare);
-    const primaryReason = normalizeOpenCodePrepareDiagnostic(
-      providerDiagnostic ??
-        sharedPrepare.diagnostics.find((entry) => entry.trim().length > 0) ??
-        sharedPrepare.reason,
-      sharedPrepare.reason
-    );
-    if (isOpenCodeModelPrepareBusyDeferred(sharedPrepare, primaryReason)) {
-      const providerBusyLine = buildOpenCodeProviderVerificationDeferredLine(primaryReason);
-      pushUniqueLine(warnings, providerBusyLine);
-      issues.push({
-        providerId: 'opencode',
-        scope: 'provider',
-        severity: 'warning',
-        code: sharedPrepare.reason,
-        message: providerBusyLine,
-      });
-      appendPreflightDebugLog('opencode_compatibility_batch_busy_deferred', {
-        cwd,
-        modelIds,
-        reason: primaryReason,
-      });
-      return { details, warnings, blockingMessages, issues, supportDiagnostics };
-    }
-    if (primaryReason.trim().length > 0) {
-      details.push(primaryReason);
-      blockingMessages.push(primaryReason);
-    } else {
-      blockingMessages.push(`OpenCode: ${sharedPrepare.reason}`);
-    }
+  if (
+    !provider ||
+    provider.providerId !== 'opencode' ||
+    !provider.supported ||
+    !hasAuthoritativeProviderStatusEvidence(provider) ||
+    !provider.authenticated ||
+    !isProviderModelCatalogExactReady(provider)
+  ) {
+    blockingMessages.push(catalogError);
     issues.push({
       providerId: 'opencode',
       scope: 'provider',
       severity: 'blocking',
-      code: sharedPrepare.reason,
-      message: primaryReason.trim() || `OpenCode: ${sharedPrepare.reason}`,
+      code: 'catalog_unavailable',
+      message: catalogError,
     });
     return { details, warnings, blockingMessages, issues, supportDiagnostics };
   }
-
-  const latestReadiness = getLastOpenCodeTeamLaunchReadiness(adapter, cwd);
-  const availableModels = normalizeAvailableModelIds(latestReadiness?.availableModels);
+  const catalog = provider.modelCatalog!;
+  const availableModels = catalog.models.map((model) => model.launchModel);
   const availableProviderIds = new Set(getOpenCodeCatalogProviderIds(availableModels));
   appendPreflightDebugLog('opencode_compatibility_batch_catalog', {
     cwd,
     modelIds,
     availableModelCount: availableModels.length,
-    availableModelsSample: availableModels.slice(0, 20),
-    fellBackToPerModelPrepare: availableModels.length === 0,
   });
-
-  if (availableModels.length === 0) {
-    return null;
-  }
 
   for (const modelId of catalogModelIds) {
     const resolvedModel = resolveOpenCodeCompatibilityModel(modelId, availableModels);
     if (resolvedModel.ok) {
-      details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
+      const route = catalog.models.find(
+        (model) => model.launchModel === resolvedModel.resolvedModelId
+      )?.metadata?.opencode;
+      if (
+        route?.accessKind === 'not_authenticated' ||
+        route?.accessKind === 'execution_failed' ||
+        route?.proofState === 'failed'
+      ) {
+        const message = route.reason || `OpenCode access verification failed for ${modelId}.`;
+        blockingMessages.push(message);
+        issues.push({
+          providerId: 'opencode',
+          modelId,
+          scope: 'model',
+          severity: 'blocking',
+          code: route.accessKind,
+          message,
+        });
+      } else {
+        details.push(`Selected model ${modelId} is compatible. Deep verification pending.`);
+      }
       continue;
     }
 
@@ -718,57 +660,6 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
   });
 
   return { details, warnings, blockingMessages, issues, supportDiagnostics };
-}
-
-async function prepareOpenCodeCompatibilityModel(
-  adapter: TeamLaunchRuntimeAdapter,
-  cwd: string,
-  model: string
-): Promise<TeamRuntimePrepareResult> {
-  try {
-    return await adapter.prepare({
-      runId: `prepare-${randomUUID()}`,
-      teamName: '__prepare_opencode__',
-      cwd,
-      providerId: 'opencode',
-      model,
-      runtimeOnly: true,
-      skipPermissions: true,
-      expectedMembers: [],
-      previousLaunchState: null,
-    });
-  } catch (error) {
-    const message = getErrorMessage(error).trim() || 'OpenCode model verification failed';
-    return {
-      ok: false,
-      providerId: 'opencode',
-      reason: 'unknown_error',
-      retryable: false,
-      diagnostics: [message],
-      warnings: [],
-    };
-  }
-}
-
-function getLastOpenCodeTeamLaunchReadiness(
-  adapter: TeamLaunchRuntimeAdapter,
-  cwd: string
-): { availableModels?: unknown } | null {
-  const readinessProvider = adapter as OpenCodeLaunchReadinessProvider;
-  return typeof readinessProvider.getLastOpenCodeTeamLaunchReadiness === 'function'
-    ? readinessProvider.getLastOpenCodeTeamLaunchReadiness(cwd)
-    : null;
-}
-
-function normalizeAvailableModelIds(value: unknown): string[] {
-  return Array.from(
-    new Set(
-      (Array.isArray(value) ? value : [])
-        .filter((modelId: unknown): modelId is string => typeof modelId === 'string')
-        .map((modelId: string) => modelId.trim())
-        .filter((modelId: string) => modelId.length > 0)
-    )
-  );
 }
 
 function pushUniqueLine(lines: string[], line: string): void {

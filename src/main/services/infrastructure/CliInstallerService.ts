@@ -53,8 +53,11 @@ import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor';
 
 import {
+  mergeProviderStatusPublication,
+  retainLatestProviderStatus,
+} from './cliInstallerProviderStatusUpdates';
+import {
   createMismatchedProviderStatus,
-  filterFrontendProviders,
   FRONTEND_PROVIDER_IDS,
   getAuthenticatedFrontendProvider,
   hasAuthenticatedFrontendProvider,
@@ -1069,6 +1072,9 @@ export class CliInstallerService {
           this.checkAuthStatus(binaryPath, r, diag, generation),
           r.supportsSelfUpdate ? this.fetchLatestVersion(r) : Promise.resolve(),
         ]);
+        if (generation === this.statusGatherGeneration) {
+          retainLatestProviderStatus(r, this.latestStatusSnapshot);
+        }
         this.rememberHealthyStatus(r);
         this.publishStatusSnapshotIfCurrent(r, generation);
       } else {
@@ -1226,12 +1232,6 @@ export class CliInstallerService {
     result.authMethod = null;
   }
 
-  /**
-   * Check auth status with retry — covers stale lock files after Ctrl+C interruption.
-   * Wrapped in its own timeout to prevent slow auth from blocking the overall status.
-   * Mutates `r` directly so results survive even if the outer Promise.all hasn't resolved.
-   */
-
   private async checkAuthStatus(
     binaryPath: string,
     result: CliInstallationStatus,
@@ -1241,28 +1241,34 @@ export class CliInstallerService {
     if (result.flavor === 'agent_teams_orchestrator') {
       result.authStatusChecking = true;
       let acceptsHydrationUpdates = true;
-      const applyProviders = (providersSnapshot: CliProviderStatus[], final: boolean): void => {
+      const hydratedProviderIds = new Set<CliProviderId>();
+      const applyProviders = (
+        providersSnapshot: CliProviderStatus[],
+        final: boolean,
+        updatedProviderId?: CliProviderId
+      ): void => {
         if (!acceptsHydrationUpdates || generation !== this.statusGatherGeneration) {
           return;
         }
-
-        const now = this.now();
-        const frontendProviders = filterFrontendProviders(providersSnapshot).map(
-          (provider) => projectProviderAuthority(provider, now)
+        const publication = mergeProviderStatusPublication(
+          providersSnapshot,
+          this.latestStatusSnapshot?.providers ?? result.providers,
+          hydratedProviderIds,
+          final,
+          this.now(),
+          updatedProviderId
         );
-        result.providers = frontendProviders;
-        result.authLoggedIn = hasAuthenticatedFrontendProvider(frontendProviders);
-        result.authMethod = getAuthenticatedFrontendProvider(frontendProviders)?.authMethod ?? null;
+        if (!publication) return;
+        Object.assign(result, publication);
         if (final) {
           result.authStatusChecking = false;
           this.rememberHealthyStatus(result);
         }
         this.publishStatusSnapshot(result);
       };
-
       const completion = this.multimodelBridgeService
-        .getProviderStatuses(binaryPath, (providersSnapshot) => {
-          applyProviders(providersSnapshot, false);
+        .getProviderStatuses(binaryPath, (providersSnapshot, updatedProviderId) => {
+          applyProviders(providersSnapshot, false, updatedProviderId);
         })
         .then((providers) => {
           applyProviders(providers, true);
@@ -1271,14 +1277,13 @@ export class CliInstallerService {
           if (!acceptsHydrationUpdates || generation !== this.statusGatherGeneration) {
             return;
           }
-
           const msg = getErrorMessage(error);
           diag.authLastError = msg;
           result.authStatusChecking = false;
           logger.warn(`Provider status check failed for claude-multimodel: ${msg}`);
+          retainLatestProviderStatus(result, this.latestStatusSnapshot);
           this.publishStatusSnapshot(result);
         });
-
       let timer: ReturnType<typeof setTimeout> | null = null;
       const timeout = new Promise<'timeout'>((resolve) => {
         timer = setTimeout(() => {
@@ -1288,7 +1293,6 @@ export class CliInstallerService {
         }, MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS);
         timer.unref?.();
       });
-
       const providerInitialWaitStartedAt = Date.now();
       const outcome = await Promise.race([completion.then(() => 'completed' as const), timeout]);
       diag.providerInitialWaitMs = Date.now() - providerInitialWaitStartedAt;
@@ -1297,6 +1301,9 @@ export class CliInstallerService {
       }
 
       if (outcome === 'timeout') {
+        if (generation === this.statusGatherGeneration) {
+          retainLatestProviderStatus(result, this.latestStatusSnapshot);
+        }
         diag.authTimedOut = true;
         logger.warn(
           `Provider status check still running after ${MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS}ms; returning partial CLI status`

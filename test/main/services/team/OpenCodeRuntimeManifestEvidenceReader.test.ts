@@ -1,17 +1,16 @@
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  OpenCodeRuntimeManifestEvidenceReader,
-  getOpenCodeRuntimeManifestPath,
   getOpenCodeLaneScopedRuntimeFilePath,
   getOpenCodeRuntimeLaneIndexPath,
+  getOpenCodeRuntimeManifestPath,
   getOpenCodeTeamRuntimeDirectory,
   inspectOpenCodeRuntimeLaneStorage,
   migrateLegacyOpenCodeRuntimeState,
+  OpenCodeRuntimeManifestEvidenceReader,
   prepareOpenCodeRuntimeLaneForLaunchGeneration,
   readCommittedOpenCodeBootstrapSessionEvidence,
   readOpenCodeRuntimeLaneIndex,
@@ -20,11 +19,11 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import {
+  createDefaultRuntimeStoreManifest,
   createRuntimeStoreManifestStore,
   createRuntimeStoreReceiptStore,
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
-  createDefaultRuntimeStoreManifest,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
 
 describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
@@ -616,7 +615,7 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
     });
   });
 
-  it('updates raw legacy runtime manifests without dropping existing capability metadata', async () => {
+  it('clears raw legacy launch authority when advancing to a new active run', async () => {
     const teamName = 'team-iota';
     const laneId = 'secondary:opencode:alice';
     const manifestPath = getOpenCodeRuntimeManifestPath(tempDir, teamName, laneId);
@@ -642,8 +641,19 @@ describe('OpenCodeRuntimeManifestEvidenceReader migration', () => {
       new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath: tempDir }).read(teamName, laneId)
     ).resolves.toMatchObject({
       activeRunId: 'run-new',
-      capabilitySnapshotId: 'cap-existing',
+      capabilitySnapshotId: null,
       highWatermark: 0,
+    });
+    await expect(
+      createRuntimeStoreManifestStore({
+        filePath: manifestPath,
+        teamName,
+        clock: () => now,
+      }).read()
+    ).resolves.toMatchObject({
+      activeRunId: 'run-new',
+      activeCapabilitySnapshotId: null,
+      activeBehaviorFingerprint: null,
     });
   });
 

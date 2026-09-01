@@ -15601,6 +15601,11 @@ describe('TeamProvisioningService', () => {
         memberName: 'bob',
         cwd: '/tmp/mixed-team',
       });
+      await seedOpenCodeRuntimeLaneCurrentRunForTest({
+        teamName,
+        laneId,
+        runId,
+      });
 
       await expect(
         svc.recordOpenCodeRuntimeBootstrapCheckin({

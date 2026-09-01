@@ -306,6 +306,37 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     expect(execCli).not.toHaveBeenCalled();
   });
 
+  it('does not report ready when terminal OAuth failure follows an incidental busy status', async () => {
+    const prepare = vi.fn().mockResolvedValue({
+      ok: false,
+      providerId: 'opencode',
+      reason: 'not_authenticated',
+      retryable: true,
+      diagnostics: ['OpenCode session status busy', 'Token refresh failed: 401'],
+      warnings: [],
+    });
+    const coordinator = createCoordinator({
+      getOpenCodeRuntimeAdapter: () => ({
+        providerId: 'opencode',
+        prepare,
+        launch: vi.fn(),
+        reconcile: vi.fn(),
+        stop: vi.fn(),
+      }),
+    });
+    const result = await coordinator.prepareForProvisioning('/sandbox/oauth-expired', {
+      providerId: 'opencode',
+      modelIds: ['openai/gpt-5.4'],
+      modelVerificationMode: 'deep',
+    });
+    expect(result.ready).toBe(false);
+    expect(result.message).toBe('Token refresh failed: 401');
+    expect(result.issues).toEqual([
+      expect.objectContaining({ severity: 'blocking', code: 'not_authenticated' }),
+    ]);
+    expect(result.warnings?.join(' ')).not.toContain('busy');
+  });
+
   it('blocks selected local models that fail the injected runtime-readiness gate', async () => {
     const prepare = vi.fn().mockResolvedValue({
       ok: true,

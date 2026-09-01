@@ -80,6 +80,7 @@ describe('OpenCodeBridgeCommandLedgerStore', () => {
               capabilitySnapshotId: 'cap-1',
             }),
           },
+          launchAuthorityWriter: { publish: async () => undefined },
           requestIdFactory: () => `restart-request-${nextRequestId++}`,
           clock: () => now,
         });

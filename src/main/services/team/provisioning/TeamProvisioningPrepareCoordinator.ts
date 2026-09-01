@@ -148,6 +148,7 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     providerArgs: string[],
     limitContext: boolean
   ): Promise<string | null>;
+  readOpenCodeProviderStatus?: OpenCodeSelectedModelPreparationInput['readProviderStatus'];
   inspectOpenCodeLocalModelRuntime?: OpenCodeSelectedModelPreparationInput['inspectLocalModelRuntime'];
   info(message: string): void;
   warn(message: string): void;
@@ -263,6 +264,7 @@ export class TeamProvisioningPrepareCoordinator {
         : selectedModelIds;
 
       if (providerId === 'opencode') {
+        const verificationMode = opts?.modelVerificationMode ?? 'deep';
         const adapter = this.ports.getOpenCodeRuntimeAdapter();
         if (!adapter) {
           blockingMessages.push(
@@ -270,8 +272,7 @@ export class TeamProvisioningPrepareCoordinator {
           );
           continue;
         }
-
-        if (providerSelectedModelIds.length === 0) {
+        if (providerSelectedModelIds.length === 0 && verificationMode !== 'compatibility') {
           const prepare = await adapter.prepare({
             runId: `prepare-${randomUUID()}`,
             teamName: '__prepare_opencode__',
@@ -305,13 +306,13 @@ export class TeamProvisioningPrepareCoordinator {
           }
           continue;
         }
-
         const openCodeModelPrepare = await prepareSelectedOpenCodeModelsForProvisioning({
           adapter,
           cwd: targetCwd,
           modelIds: providerSelectedModelIds,
-          verificationMode: opts?.modelVerificationMode ?? 'deep',
+          verificationMode,
           appendPreflightDebugLog,
+          readProviderStatus: this.ports.readOpenCodeProviderStatus,
           inspectLocalModelRuntime: this.ports.inspectOpenCodeLocalModelRuntime,
         });
         details.push(...openCodeModelPrepare.details);
@@ -321,7 +322,6 @@ export class TeamProvisioningPrepareCoordinator {
         pushUniqueSupportDiagnostics(supportDiagnostics, openCodeModelPrepare.supportDiagnostics);
         continue;
       }
-
       const cached = this.getFreshCachedProbeResult(targetCwdForValidation, providerId);
       const probeResult = cached
         ? cachedProviderProbeResultToProbeResult(cached)

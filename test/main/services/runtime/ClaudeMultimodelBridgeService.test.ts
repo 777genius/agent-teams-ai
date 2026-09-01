@@ -10,7 +10,7 @@ import { readFile as readFileFixture, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CliProviderStatus } from '@shared/types';
+import type { CliProviderId, CliProviderStatus } from '@shared/types';
 import type { PathLike } from 'fs';
 
 const execCliMock = vi.fn();
@@ -375,6 +375,186 @@ describe('ClaudeMultimodelBridgeService', () => {
       return Promise.reject(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
     });
   });
+
+  function fullStatusFixture(providerId: CliProviderId) {
+    const modelId = `${providerId}-test-model`;
+    return {
+      providerId,
+      supported: true,
+      authenticated: true,
+      authMethod: 'test-session',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
+      canLoginFromUi: true,
+      statusMessage: null,
+      detailMessage: null,
+      models: [modelId],
+      capabilities: { teamLaunch: true, oneShot: true, extensions: {} },
+      selectedBackendId: null,
+      resolvedBackendId: null,
+      availableBackends: [],
+      externalRuntimeDiagnostics: [],
+      backend: null,
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId,
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: new Date(Date.now() - 1_000).toISOString(),
+        staleAt: new Date(Date.now() + 60_000).toISOString(),
+        defaultModelId: modelId,
+        defaultLaunchModel: modelId,
+        models: [{ id: modelId, launchModel: modelId, displayName: modelId }],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+  }
+
+  function statusReply(providerId: CliProviderId, provider: unknown) {
+    return {
+      stdout: JSON.stringify({ schemaVersion: 2, providers: { [providerId]: provider } }),
+      stderr: '',
+      exitCode: 0,
+    };
+  }
+
+  it.each(
+    (['anthropic', 'codex', 'opencode'] as const).flatMap((providerId) =>
+      (['aggregate', 'single', 'project'] as const).map((entrypoint) => ({
+        providerId,
+        entrypoint,
+      }))
+    )
+  )(
+    'restores $providerId launch from a full reply via $entrypoint',
+    async ({ providerId, entrypoint }) => {
+      execCliMock.mockImplementation((_binaryPath, args) => {
+        const requestedId = args[args.indexOf('--provider') + 1] as CliProviderId;
+        const full = fullStatusFixture(requestedId);
+        return Promise.resolve(
+          statusReply(
+            requestedId,
+            args.includes('--summary')
+              ? {
+                  ...full,
+                  modelCatalog: null,
+                  ...(requestedId === 'opencode'
+                    ? { statusCheckOutcome: 'model_only', authenticated: false }
+                    : {}),
+                }
+              : full
+          )
+        );
+      });
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+      const service = new ClaudeMultimodelBridgeService();
+      let resolveReady!: (provider: CliProviderStatus) => void;
+      const ready = new Promise<CliProviderStatus>((resolve) => {
+        resolveReady = resolve;
+      });
+      const onUpdate = (provider: CliProviderStatus) => {
+        if (provider.providerId === providerId && provider.capabilities.teamLaunch)
+          resolveReady(provider);
+      };
+      let hydrated: CliProviderStatus;
+      if (entrypoint === 'project') {
+        hydrated = await service.getProviderStatus('/mock/runtime', providerId, undefined, {
+          projectPath: '/tmp/status-hydration-test-project',
+        });
+        expect(
+          execCliMock.mock.calls.every(
+            (call) => call[2].cwd === '/tmp/status-hydration-test-project'
+          )
+        ).toBe(true);
+      } else {
+        const initial =
+          entrypoint === 'aggregate'
+            ? (
+                await service.getProviderStatuses('/mock/runtime', (providers) =>
+                  providers.forEach(onUpdate)
+                )
+              ).find((provider) => provider.providerId === providerId)!
+            : await service.getProviderStatus('/mock/runtime', providerId, onUpdate);
+        expect(initial.capabilities.teamLaunch).toBe(false);
+        expect(initial.modelCatalog).toBeNull();
+        hydrated = await ready;
+      }
+      expect(hydrated).toMatchObject({
+        authenticated: true,
+        statusCheckOutcome: 'authoritative',
+        capabilities: { teamLaunch: true },
+        modelCatalogRefreshState: 'ready',
+        modelCatalog: { providerId, status: 'ready' },
+      });
+    }
+  );
+
+  it.each([
+    'logged_out',
+    'disabled',
+    'model_only',
+    'transient_error',
+    'empty',
+    'expired',
+    'malformed',
+    'mismatch',
+  ] as const)(
+    'keeps a later %s full response fail-closed after a ready response',
+    async (condition) => {
+      const full = fullStatusFixture('codex');
+      const revoked = {
+        ...full,
+        ...(condition === 'logged_out' ? { authenticated: false, authMethod: null } : {}),
+        ...(condition === 'disabled'
+          ? { capabilities: { ...full.capabilities, teamLaunch: false } }
+          : {}),
+        ...(['model_only', 'transient_error'].includes(condition)
+          ? { statusCheckOutcome: condition }
+          : {}),
+        ...(condition === 'empty' ? { modelCatalog: { ...full.modelCatalog, models: [] } } : {}),
+        ...(condition === 'expired'
+          ? {
+              modelCatalog: {
+                ...full.modelCatalog,
+                staleAt: new Date(Date.now() - 1).toISOString(),
+              },
+            }
+          : {}),
+        ...(condition === 'malformed' ? { capabilities: null } : {}),
+        ...(condition === 'mismatch' ? { providerId: 'opencode' } : {}),
+      };
+      let fullCalls = 0;
+      execCliMock.mockImplementation((_binaryPath, args) =>
+        Promise.resolve(
+          statusReply(
+            'codex',
+            args.includes('--summary')
+              ? { ...full, modelCatalog: null }
+              : ++fullCalls === 1
+                ? full
+                : revoked
+          )
+        )
+      );
+      const { ClaudeMultimodelBridgeService } =
+        await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+      const service = new ClaudeMultimodelBridgeService();
+      const options = { projectPath: '/tmp/status-hydration-test-project' };
+      expect(
+        (await service.getProviderStatus('/mock/runtime', 'codex', undefined, options)).capabilities
+          .teamLaunch
+      ).toBe(true);
+      const result = await service.getProviderStatus('/mock/runtime', 'codex', undefined, options);
+      expect(result.capabilities.teamLaunch).toBe(false);
+      if (result.modelCatalog) expect(result.modelCatalog.status).toBe('stale');
+      if (condition === 'logged_out')
+        expect(result).toMatchObject({ authenticated: false, authMethod: null });
+      if (condition === 'disabled') expect(result.authenticated).toBe(true);
+      expect(fullCalls).toBe(2);
+    }
+  );
 
   it('keeps Gemini out of frontend aggregate status and scopes explicit summary failure', async () => {
     execCliMock.mockImplementation((_binaryPath, args, options) => {
@@ -1309,7 +1489,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(onUpdate.mock.calls.at(-1)?.[0]).toEqual(providers);
   });
 
-  it('rejects contradictory catalog hydration without overwriting live summary auth state', async () => {
+  it('publishes authoritative auth revocation from aggregate full status hydration', async () => {
     const summaryPayloads = {
       anthropic: {
         supported: true,
@@ -1367,7 +1547,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                 ...summaryPayloads.codex,
                 authenticated: false,
                 authMethod: null,
-                statusMessage: 'stale full status should not win',
+                statusMessage: 'Full status reports logged out',
                 modelCatalog: {
                   schemaVersion: 1,
                   providerId: 'codex',
@@ -1455,9 +1635,9 @@ describe('ClaudeMultimodelBridgeService', () => {
     const hydratedProviders = await hydrated;
     const hydratedCodex = hydratedProviders.find((provider) => provider.providerId === 'codex');
     expect(hydratedCodex).toMatchObject({
-      authenticated: true,
-      authMethod: 'api_key',
-      statusMessage: null,
+      authenticated: false,
+      authMethod: null,
+      statusMessage: 'Full status reports logged out',
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'error',
       modelCatalog: { status: 'stale' },
@@ -1480,7 +1660,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
   });
 
-  it('does not promote OpenCode auth from catalog hydration', async () => {
+  it('accepts newer authoritative OpenCode auth from full status hydration', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
 
@@ -1593,17 +1773,17 @@ describe('ClaudeMultimodelBridgeService', () => {
       expect(onCatalogUpdate).toHaveBeenCalledTimes(1);
     });
     expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
-      authenticated: false,
-      authMethod: null,
-      statusMessage: 'No OpenCode providers connected',
-      capabilities: { teamLaunch: false },
-      modelCatalogRefreshState: 'error',
-      modelCatalog: { status: 'stale' },
-      backend: { authMethodDetail: null },
+      authenticated: true,
+      authMethod: 'opencode_builtin_free',
+      statusMessage: null,
+      capabilities: { teamLaunch: true },
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: { status: 'ready' },
+      backend: { authMethodDetail: 'built-in free models' },
     });
   });
 
-  it('rejects a contradictory single-provider catalog after summary refresh', async () => {
+  it('publishes authoritative auth revocation from single-provider full status hydration', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
 
@@ -1645,7 +1825,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                 authMethod: 'oauth_token',
                 verificationState: 'verified',
                 canLoginFromUi: false,
-                statusMessage: 'full status should not overwrite live summary',
+                statusMessage: 'Full status reports logged out',
                 models: ['gpt-5.4'],
                 capabilities: { teamLaunch: true, oneShot: true },
                 runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
@@ -1696,9 +1876,9 @@ describe('ClaudeMultimodelBridgeService', () => {
       expect(onCatalogUpdate).toHaveBeenCalledTimes(1);
     });
     expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
-      authenticated: true,
-      authMethod: 'api_key',
-      statusMessage: null,
+      authenticated: false,
+      authMethod: 'oauth_token',
+      statusMessage: 'Full status reports logged out',
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'error',
       modelCatalog: {
@@ -1772,7 +1952,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                 authMethod: null,
                 verificationState: 'verified',
                 canLoginFromUi: false,
-                statusMessage: 'fresh full status should not overwrite live summary',
+                statusMessage: 'Fresh full status',
                 models: ['gpt-5.4'],
                 capabilities: { teamLaunch: true, oneShot: true },
                 runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
@@ -1829,7 +2009,7 @@ describe('ClaudeMultimodelBridgeService', () => {
             authMethod: null,
             verificationState: 'unknown',
             canLoginFromUi: false,
-            statusMessage: 'full status should not overwrite live summary',
+            statusMessage: 'Full status reports logged out',
             models: ['gpt-5.4'],
             capabilities: { teamLaunch: true, oneShot: true },
             runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
@@ -1861,9 +2041,9 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(fullStatusCalls).toBe(2);
     expect(firstUpdate).not.toHaveBeenCalled();
     expect(secondUpdate.mock.calls[0]?.[0]).toMatchObject({
-      authenticated: true,
-      authMethod: 'api_key',
-      statusMessage: null,
+      authenticated: false,
+      authMethod: null,
+      statusMessage: 'Fresh full status',
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'error',
       modelCatalog: {
@@ -1912,7 +2092,13 @@ describe('ClaudeMultimodelBridgeService', () => {
                   staleAt: '2100-01-01T00:00:00.000Z',
                   defaultModelId,
                   defaultLaunchModel: defaultModelId,
-                  models: [],
+                  models: [
+                    {
+                      id: defaultModelId,
+                      launchModel: defaultModelId,
+                      displayName: defaultModelId,
+                    },
+                  ],
                   diagnostics: {
                     configReadState: 'ready',
                     appServerState: 'healthy',
@@ -1967,7 +2153,8 @@ describe('ClaudeMultimodelBridgeService', () => {
       )
     ).toHaveLength(2);
     expect(scopedStatus).toMatchObject({
-      modelCatalog: { defaultModelId: 'ollama/qwen2.5-coder:0.5b' },
+      modelCatalog: { defaultModelId: 'ollama/qwen2.5-coder:0.5b', status: 'ready' },
+      capabilities: { teamLaunch: true },
     });
 
     resolveGlobalHydration({
@@ -1979,11 +2166,12 @@ describe('ClaudeMultimodelBridgeService', () => {
       expect(globalUpdate).toHaveBeenCalledTimes(1);
     });
     expect(globalUpdate.mock.calls[0]?.[0]).toMatchObject({
-      modelCatalog: { defaultModelId: 'opencode/big-pickle' },
+      modelCatalog: { defaultModelId: 'opencode/big-pickle', status: 'ready' },
+      capabilities: { teamLaunch: true },
     });
   });
 
-  it('does not borrow Anthropic rate-limit evidence from a non-authoritative catalog result', async () => {
+  it('publishes full Anthropic status and rate limits together while keeping revoked auth closed', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
 
@@ -2028,7 +2216,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                 authMethod: 'oauth_token',
                 verificationState: 'verified',
                 canLoginFromUi: true,
-                statusMessage: 'full status should not overwrite live summary',
+                statusMessage: 'Full status reports logged out',
                 models: ['sonnet'],
                 capabilities: { teamLaunch: true, oneShot: true },
                 runtimeCapabilities: {
@@ -2086,11 +2274,14 @@ describe('ClaudeMultimodelBridgeService', () => {
       expect(onCatalogUpdate).toHaveBeenCalledTimes(1);
     });
     expect(onCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
-      authenticated: true,
+      authenticated: false,
       authMethod: 'oauth_token',
-      statusMessage: null,
+      statusMessage: 'Full status reports logged out',
       capabilities: { teamLaunch: false },
-      subscriptionRateLimits: null,
+      subscriptionRateLimits: {
+        primary: { usedPercent: 42, windowDurationMins: 300, resetsAt: 1_800 },
+        secondary: null,
+      },
       modelCatalogRefreshState: 'error',
       modelCatalog: { status: 'stale' },
     });
@@ -2195,7 +2386,7 @@ describe('ClaudeMultimodelBridgeService', () => {
             ...codex,
             authenticated: false,
             authMethod: null,
-            statusMessage: 'full status should not overwrite live summary',
+            statusMessage: 'Full status reports logged out',
             modelCatalog: {
               schemaVersion: 1,
               providerId: 'codex',
@@ -2222,9 +2413,9 @@ describe('ClaudeMultimodelBridgeService', () => {
       expect(onCodexCatalogUpdate).toHaveBeenCalledTimes(1);
     });
     expect(onCodexCatalogUpdate.mock.calls[0]?.[0]).toMatchObject({
-      authenticated: true,
-      authMethod: 'api_key',
-      statusMessage: null,
+      authenticated: false,
+      authMethod: null,
+      statusMessage: 'Full status reports logged out',
       capabilities: { teamLaunch: false },
       modelCatalogRefreshState: 'error',
       modelCatalog: { status: 'stale' },
@@ -2345,7 +2536,7 @@ describe('ClaudeMultimodelBridgeService', () => {
                 ...codexSummaryDisconnected,
                 authenticated: true,
                 authMethod: 'api_key',
-                statusMessage: 'fresh full status should not overwrite live summary',
+                statusMessage: 'Fresh full status',
                 modelCatalog: {
                   schemaVersion: 1,
                   providerId: 'codex',
@@ -2419,7 +2610,7 @@ describe('ClaudeMultimodelBridgeService', () => {
               staleAt: '2100-01-01T00:00:00.000Z',
               defaultModelId: 'old-model',
               defaultLaunchModel: 'old-model',
-              models: [],
+              models: [{ id: 'old-model', launchModel: 'old-model', displayName: 'Old model' }],
               diagnostics: {
                 configReadState: 'skipped',
                 appServerState: 'healthy',

@@ -31,6 +31,7 @@ import {
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
+import { shouldHydrateCodexModelCatalog } from '@renderer/utils/codexCatalogHydration';
 import { isCodexModelCatalogFallbackActive } from '@renderer/utils/codexModelCatalogFallback';
 import {
   GEMINI_UI_DISABLED_BADGE_LABEL,
@@ -662,12 +663,7 @@ function shouldHydrateProviderModelCatalog(
   }
 
   if (providerId === 'codex') {
-    const catalog = providerStatus?.modelCatalog;
-    return (
-      providerStatus?.runtimeCapabilities?.modelCatalog?.dynamic === true &&
-      catalog?.providerId !== 'codex' &&
-      (providerStatus.models.length === 0 || providerStatus.modelCatalogRefreshState === 'idle')
-    );
+    return shouldHydrateCodexModelCatalog(providerStatus);
   }
 
   return false;

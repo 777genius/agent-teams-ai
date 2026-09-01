@@ -1,4 +1,5 @@
 import { buildCodexWorkspaceTrustSettingsArgs } from '@features/workspace-trust/core/domain';
+import { ClaudeMultimodelBridgeService } from '@main/services/runtime/ClaudeMultimodelBridgeService';
 import {
   OPENCODE_WINDOWS_ACCESS_DENIED_MESSAGE,
   OPENCODE_WINDOWS_NODE_MODULES_SYMLINK_PERMISSION_MESSAGE,
@@ -10,6 +11,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { PassThrough } from 'stream';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { openCodeProviderStatus } from './fixtures/openCodeProviderStatus';
 
 vi.mock('@main/services/team/ClaudeBinaryResolver', () => ({
   ClaudeBinaryResolver: { resolve: vi.fn() },
@@ -1173,6 +1176,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
   });
 
   afterEach(async () => {
+    vi.restoreAllMocks();
     await removeTempRoot(tempRoot);
   });
 
@@ -1485,25 +1489,15 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
 
   it('coalesces duplicate OpenCode compatibility preflight requests while prepare is in flight', async () => {
     const prepareGate: { release?: () => void } = {};
-    const prepare = vi.fn(
-      async () =>
-        new Promise<{
-          ok: true;
-          providerId: 'opencode';
-          modelId: null;
-          diagnostics: string[];
-          warnings: string[];
-        }>((resolve) => {
-          prepareGate.release = () =>
-            resolve({
-              ok: true,
-              providerId: 'opencode',
-              modelId: null,
-              diagnostics: [],
-              warnings: [],
-            });
-        })
-    );
+    const prepare = vi.fn();
+    const readCatalog = vi
+      .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+      .mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            prepareGate.release = () => resolve(openCodeProviderStatus(['opencode/big-pickle']));
+          })
+      );
     const registry = new TeamRuntimeAdapterRegistry([
       {
         providerId: 'opencode',
@@ -1541,16 +1535,17 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     const first = svc.prepareForProvisioning(tempRoot, opts);
     const second = svc.prepareForProvisioning(tempRoot, opts);
 
-    for (let attempt = 0; attempt < 20 && prepare.mock.calls.length === 0; attempt += 1) {
+    for (let attempt = 0; attempt < 20 && readCatalog.mock.calls.length === 0; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
-    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(readCatalog).toHaveBeenCalledTimes(1);
     expect(prepareGate.release).toBeTypeOf('function');
     prepareGate.release?.();
 
     const [firstResult, secondResult] = await Promise.all([first, second]);
 
-    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(readCatalog).toHaveBeenCalledTimes(1);
+    expect(prepare).not.toHaveBeenCalled();
     expect(firstResult).not.toBe(secondResult);
     expect(firstResult.ready).toBe(true);
     expect(secondResult.ready).toBe(true);
@@ -1829,6 +1824,28 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     ]);
   });
 
+  it('skips project catalog and OpenCode runtime when compatibility has no selected model', async () => {
+    const readCatalog = vi
+      .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+      .mockResolvedValue(openCodeProviderStatus(['anthropic/sonnet']));
+    const prepare = vi.fn();
+    const launch = vi.fn();
+    const svc = new TeamProvisioningService();
+    svc.setRuntimeAdapterRegistry(
+      new TeamRuntimeAdapterRegistry([
+        { providerId: 'opencode', prepare, launch, reconcile: vi.fn(), stop: vi.fn() },
+      ])
+    );
+    const result = await svc.prepareForProvisioning(tempRoot, {
+      providerId: 'opencode',
+      modelVerificationMode: 'compatibility',
+    });
+    expect(result.ready).toBe(true);
+    expect(readCatalog).not.toHaveBeenCalled();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(launch).not.toHaveBeenCalled();
+  });
+
   it('runs OpenCode compatibility-only selected model checks without the deep execution probe', async () => {
     const prepare = vi.fn(async (input: { model?: string; runtimeOnly?: boolean }) => ({
       ok: true as const,
@@ -1869,6 +1886,11 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         stop: vi.fn(),
       } as any,
     ]);
+    const readCatalog = vi
+      .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+      .mockResolvedValue(
+        openCodeProviderStatus(['opencode/minimax-m2.5-free', 'opencode/nemotron-3-super-free'])
+      );
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -1884,14 +1906,10 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       'Selected model opencode/minimax-m2.5-free is compatible. Deep verification pending.',
       'Selected model opencode/nemotron-3-super-free is compatible. Deep verification pending.',
     ]);
-    expect(prepare).toHaveBeenCalledTimes(1);
-    expect(prepare).toHaveBeenCalledWith(
-      expect.objectContaining({
-        providerId: 'opencode',
-        model: 'opencode/minimax-m2.5-free',
-        runtimeOnly: true,
-      })
-    );
+    expect(prepare).not.toHaveBeenCalled();
+    expect(readCatalog).toHaveBeenCalledExactlyOnceWith('/fake/claude', 'opencode', undefined, {
+      projectPath: tempRoot,
+    });
   });
 
   it('accepts OpenRouter-selected models when OpenCode reports the nested model id without provider prefix', async () => {
@@ -1934,6 +1952,9 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         stop: vi.fn(),
       } as any,
     ]);
+    const readCatalog = vi
+      .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+      .mockResolvedValue(openCodeProviderStatus(['qwen/qwen3-coder']));
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -1948,7 +1969,10 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.details).toEqual([
       'Selected model openrouter/qwen/qwen3-coder is compatible. Deep verification pending.',
     ]);
-    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(readCatalog).toHaveBeenCalledExactlyOnceWith('/fake/claude', 'opencode', undefined, {
+      projectPath: tempRoot,
+    });
   });
 
   it('accepts saved nested OpenRouter model ids when OpenCode reports the provider-scoped id', async () => {
@@ -1991,6 +2015,9 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         stop: vi.fn(),
       } as any,
     ]);
+    const readCatalog = vi
+      .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+      .mockResolvedValue(openCodeProviderStatus(['openrouter/qwen/qwen3-coder']));
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -2005,7 +2032,10 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(result.details).toEqual([
       'Selected model qwen/qwen3-coder is compatible. Deep verification pending.',
     ]);
-    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(readCatalog).toHaveBeenCalledExactlyOnceWith('/fake/claude', 'opencode', undefined, {
+      projectPath: tempRoot,
+    });
   });
 
   it('explains OpenRouter selected-model failures when the current OpenCode catalog has no OpenRouter provider', async () => {
@@ -2048,6 +2078,9 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         stop: vi.fn(),
       } as any,
     ]);
+    const readCatalog = vi
+      .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+      .mockResolvedValue(openCodeProviderStatus(['opencode/minimax-m2.5-free', 'openai/gpt-5.4']));
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -2064,7 +2097,10 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
     expect(result.message).toContain('Live catalog providers: openai, opencode.');
     expect(result.message).toContain('Connect OpenRouter in OpenCode provider management');
-    expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(readCatalog).toHaveBeenCalledExactlyOnceWith('/fake/claude', 'opencode', undefined, {
+      projectPath: tempRoot,
+    });
   });
 
   it('keeps deep OpenCode runtime failures provider-scoped instead of model-scoped', async () => {
@@ -2132,6 +2168,10 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
         stop: vi.fn(),
       } as any,
     ]);
+    vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus').mockResolvedValue({
+      ...openCodeProviderStatus(['opencode/minimax-m2.5-free']),
+      authenticated: false,
+    });
     const svc = new TeamProvisioningService();
     svc.setRuntimeAdapterRegistry(registry);
 
@@ -2143,21 +2183,19 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     });
 
     expect(result.ready).toBe(false);
-    expect(result.message).toBe('OpenCode provider authentication failed');
-    expect(result.details).toEqual(['OpenCode provider authentication failed']);
-    expect(result.warnings).toEqual(['OpenCode provider authentication failed']);
+    expect(result.message).toContain('fresh project-scoped provider catalog');
     expect(result.issues).toEqual([
-      {
+      expect.objectContaining({
         providerId: 'opencode',
         scope: 'provider',
         severity: 'blocking',
-        code: 'not_authenticated',
-        message: 'OpenCode provider authentication failed',
-      },
+        code: 'catalog_unavailable',
+      }),
     ]);
+    expect(prepare).not.toHaveBeenCalled();
   });
 
-  it('keeps shared OpenCode MCP compatibility failures provider-scoped', async () => {
+  it('keeps deep OpenCode MCP failures provider-scoped', async () => {
     const normalizedRuntimeFailure =
       'OpenCode app MCP is unreachable. Retry launch to refresh the app MCP bridge. Details: Unable to connect. Is the computer able to access the url?';
     const prepare = vi.fn(async () => ({
@@ -2186,7 +2224,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       providerId: 'opencode',
       forceFresh: true,
       modelIds: ['opencode/big-pickle'],
-      modelVerificationMode: 'compatibility',
+      modelVerificationMode: 'deep',
     });
 
     expect(result.ready).toBe(false);
@@ -2231,7 +2269,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       providerId: 'opencode',
       forceFresh: true,
       modelIds: ['opencode/big-pickle'],
-      modelVerificationMode: 'compatibility',
+      modelVerificationMode: 'deep',
     });
 
     expect(result.ready).toBe(false);

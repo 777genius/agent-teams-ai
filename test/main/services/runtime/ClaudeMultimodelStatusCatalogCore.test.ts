@@ -309,7 +309,7 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     expect(result.capabilities.teamLaunch).toBe(false);
   });
 
-  it('normalizes an exact project cwd and merges only catalog fields', async () => {
+  it('normalizes an exact project cwd and atomically publishes the full status', async () => {
     execCliMock.mockImplementation((_binary, args, options) => {
       const isSummary = (args as string[]).includes('--summary');
       return commandResult(
@@ -348,13 +348,13 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       '/projects/beta',
     ]);
     expect(result).toMatchObject({
-      authenticated: false,
-      authMethod: null,
-      verificationState: 'unknown',
-      statusCheckOutcome: 'model_only',
+      authenticated: true,
+      authMethod: 'catalog-must-not-promote-auth',
+      verificationState: 'verified',
+      statusCheckOutcome: 'authoritative',
       models: ['project/model'],
       modelCatalog: { defaultModelId: 'project/model' },
-      capabilities: { teamLaunch: false },
+      capabilities: { teamLaunch: true },
     });
   });
 
@@ -403,7 +403,7 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
   });
 
   it.each(['unknown', 'error'] as const)(
-    'preserves verified summary authority when catalog hydration verification is %s',
+    'revokes summary authority when the newer full status verification is %s',
     async (verificationState) => {
       execCliMock.mockImplementation((_binary, args) => {
         const isSummary = (args as string[]).includes('--summary');
@@ -441,12 +441,12 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       );
 
       expect(result).toMatchObject({
-        authenticated: true,
-        authMethod: 'builtin_free',
-        verificationState: 'verified',
+        authenticated: false,
+        authMethod: null,
+        verificationState,
         statusCheckOutcome: 'authoritative',
-        statusMessage: null,
-        detailMessage: null,
+        statusMessage: 'Hydration verification incomplete',
+        detailMessage: `Hydration verification is ${verificationState}`,
         capabilities: { teamLaunch: false },
         modelCatalogRefreshState: 'error',
         modelCatalog: {
@@ -553,8 +553,8 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
 
     expect(one.modelCatalog?.defaultModelId).toBe('project-one/model');
     expect(two.modelCatalog?.defaultModelId).toBe('project-two/model');
-    expect(one.authenticated).toBe(false);
-    expect(two.authenticated).toBe(false);
+    expect(one).toMatchObject({ authenticated: true, statusCheckOutcome: 'authoritative' });
+    expect(two).toMatchObject({ authenticated: true, statusCheckOutcome: 'authoritative' });
     expect(execCliMock.mock.calls.filter((call) => call[2]?.cwd === '/projects/one')).toHaveLength(
       2
     );

@@ -1,11 +1,13 @@
 import { randomUUID } from 'crypto';
 
+import { openCodeReadinessArtifactKey } from '../readiness/OpenCodeExpectedBehaviorFingerprint';
 import { normalizeOpenCodeProjectIdentity } from '../readiness/OpenCodeProjectIdentity';
 
 import {
   OPEN_CODE_DELIVERY_ACCEPTANCE_CONTRACT_VERSION,
   stableHash,
 } from './OpenCodeBridgeCommandContract';
+import { OpenCodeBridgeCommandLedgerError } from './OpenCodeBridgeCommandLedgerStore';
 import { buildOpenCodeBridgeSupportDiagnostic } from './OpenCodeBridgeSupportDiagnostics';
 import {
   blockedLaunchData,
@@ -82,14 +84,7 @@ export interface OpenCodeReadinessBridgeCommandBody {
   projectPath: string;
   selectedModel: string | null;
   requireExecutionProbe: boolean;
-}
-
-function openCodeReadinessArtifactKey(input: OpenCodeReadinessBridgeCommandBody): string {
-  return JSON.stringify([
-    normalizeOpenCodeProjectIdentity(input.projectPath),
-    input.selectedModel?.trim() ?? null,
-    input.requireExecutionProbe,
-  ]);
+  skipPermissions?: boolean;
 }
 
 const DEFAULT_READINESS_TIMEOUT_MS = 300_000;
@@ -209,7 +204,8 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   getLastOpenCodeRuntimeSnapshot(
     projectPath: string,
     selectedModel?: string | null,
-    requireExecutionProbe?: boolean
+    requireExecutionProbe?: boolean,
+    skipPermissions?: boolean
   ): OpenCodeBridgeRuntimeSnapshot | null {
     if (requireExecutionProbe !== undefined) {
       return (
@@ -218,6 +214,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
             projectPath,
             selectedModel: selectedModel ?? null,
             requireExecutionProbe,
+            skipPermissions,
           })
         ) ?? null
       );
@@ -844,6 +841,10 @@ function thrownBridgeFailure<TData>(
   error: unknown
 ): OpenCodeBridgeResult<TData> {
   const message = error instanceof Error ? error.message : String(error);
+  const unknownOutcome =
+    error instanceof OpenCodeBridgeCommandLedgerError &&
+    (message === 'OpenCode bridge command outcome must be reconciled before retry' ||
+      message === 'OpenCode bridge command already started');
   const completedAt = new Date().toISOString();
   return {
     ok: false,
@@ -859,10 +860,12 @@ function thrownBridgeFailure<TData>(
     },
     diagnostics: [
       {
-        type: 'opencode_state_changing_bridge_exception',
+        type: unknownOutcome
+          ? 'opencode_bridge_unknown_outcome'
+          : 'opencode_state_changing_bridge_exception',
         providerId: 'opencode',
         runId,
-        severity: 'error',
+        severity: unknownOutcome ? 'warning' : 'error',
         message,
         createdAt: completedAt,
       },

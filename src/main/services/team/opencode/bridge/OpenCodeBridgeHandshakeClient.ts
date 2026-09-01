@@ -41,6 +41,11 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
     expectedCapabilitySnapshotId: string | null;
     expectedManifestHighWatermark: number | null;
     cwd?: string;
+    allowEmptyLaneStop?: boolean;
+    selectedModel?: string | null;
+    toolApprovalMode?: 'auto' | 'manual';
+    teamId?: string;
+    laneId?: string | null;
   }): Promise<OpenCodeBridgeHandshake> {
     const result = await this.bridge.execute<
       {
@@ -49,6 +54,11 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
         expectedRunId: string | null;
         expectedCapabilitySnapshotId: string | null;
         expectedManifestHighWatermark: number | null;
+        allowEmptyLaneStop?: boolean;
+        selectedModel?: string | null;
+        toolApprovalMode?: 'auto' | 'manual';
+        teamId?: string;
+        laneId?: string | null;
       },
       OpenCodeBridgeHandshake
     >(
@@ -59,6 +69,13 @@ export class OpenCodeBridgeCommandHandshakePort implements OpenCodeBridgeHandsha
         expectedRunId: input.expectedRunId,
         expectedCapabilitySnapshotId: input.expectedCapabilitySnapshotId,
         expectedManifestHighWatermark: input.expectedManifestHighWatermark,
+        ...(input.allowEmptyLaneStop === true ? { allowEmptyLaneStop: true } : {}),
+        ...(input.selectedModel === undefined ? {} : { selectedModel: input.selectedModel }),
+        ...(input.toolApprovalMode === undefined
+          ? {}
+          : { toolApprovalMode: input.toolApprovalMode }),
+        ...(input.teamId === undefined ? {} : { teamId: input.teamId }),
+        ...(input.laneId === undefined ? {} : { laneId: input.laneId }),
       },
       {
         cwd: input.cwd ?? process.cwd(),

@@ -1,3 +1,8 @@
+import { OpenCodeRuntimeLaunchAuthorityWriter } from '@main/services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
+import {
+  OpenCodeRuntimeManifestEvidenceReader,
+  readOpenCodeRuntimeLaneIndex,
+} from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { constants as fsConstants, promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -15,7 +20,6 @@ import {
 } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import { OpenCodeReadinessBridge } from '../../../../src/main/services/team/opencode/bridge/OpenCodeReadinessBridge';
 import { OpenCodeStateChangingBridgeCommandService } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
-import { readOpenCodeRuntimeLaneIndex } from '../../../../src/main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeTeamRuntimeAdapter } from '../../../../src/main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { TeamRuntimeAdapterRegistry } from '../../../../src/main/services/team/runtime/TeamRuntimeAdapter';
 import { resolveAgentTeamsMcpLaunchSpec } from '../../../../src/main/services/team/TeamMcpConfigBuilder';
@@ -25,8 +29,6 @@ import {
   setClaudeBasePathOverride,
 } from '../../../../src/main/utils/pathDecoder';
 
-import type { RuntimeStoreManifestEvidence } from '../../../../src/main/services/team/opencode/bridge/OpenCodeBridgeCommandContract';
-import type { RuntimeStoreManifestReader } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import type { OpenCodeBridgeCommandExecutor } from '../../../../src/main/services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import type { TeamProvisioningProgress } from '../../../../src/shared/types';
 
@@ -415,18 +417,13 @@ function createStateChangingCommands(input: {
       filePath: path.join(input.controlDir, 'ledger.json'),
     }),
     bridge: input.bridge,
-    manifestReader: new StaticManifestReader(),
+    manifestReader: new OpenCodeRuntimeManifestEvidenceReader({
+      teamsBasePath: getTeamsBasePath(),
+    }),
+    launchAuthorityWriter: new OpenCodeRuntimeLaunchAuthorityWriter({
+      teamsBasePath: getTeamsBasePath(),
+    }),
   });
-}
-
-class StaticManifestReader implements RuntimeStoreManifestReader {
-  async read(): Promise<RuntimeStoreManifestEvidence> {
-    return {
-      highWatermark: 0,
-      activeRunId: null,
-      capabilitySnapshotId: null,
-    };
-  }
 }
 
 async function waitUntil(

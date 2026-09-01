@@ -132,6 +132,28 @@ export function getCancelledAggregateLaunchError(teamName: string): Error {
   );
 }
 
+export async function clearCancelledAggregateRestartState(input: {
+  runId: string;
+  restartLease?: OpenCodeAggregatePrimaryRestartLease;
+  clearLaunchState(runId: string): Promise<void>;
+  clearPrimaryLane(runId: string): Promise<void>;
+  onLaunchClearError(runId: string, error: unknown): void;
+}): Promise<void> {
+  const { runId, restartLease } = input;
+  const ownedRunIds =
+    restartLease?.runId === runId && restartLease.cancelRequested && restartLease.candidateRunId
+      ? [runId, restartLease.candidateRunId]
+      : [runId];
+  for (const ownedRunId of ownedRunIds) {
+    await input.clearLaunchState(ownedRunId).catch((error: unknown) => {
+      input.onLaunchClearError(ownedRunId, error);
+    });
+    await input.clearPrimaryLane(ownedRunId).catch((error: unknown) => {
+      input.onLaunchClearError(ownedRunId, error);
+    });
+  }
+}
+
 export async function clearPersistedAggregateLaunchStateIfOwned(input: {
   teamName: string;
   expectedRunId: string;
