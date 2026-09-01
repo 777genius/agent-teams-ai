@@ -1,5 +1,6 @@
 import type { AttachmentMediaType, TaskAttachmentMeta } from '../../../contracts/taskAttachments';
 import type {
+  SavedTaskAttachment,
   TaskAttachmentMetadataPort,
   TaskAttachmentStoragePort,
   TeamTaskBoardLoggerPort,
@@ -55,21 +56,37 @@ export class TaskAttachmentUseCases implements TaskAttachmentOperationsPort {
       try {
         await this.dependencies.metadata.addTaskAttachment(teamName, taskId, attachment.metadata);
         transaction.markCommitted();
-        await attachment.finalize();
-        return attachment.metadata;
       } catch (error) {
-        try {
-          await attachment.rollback();
-        } catch (rollbackError) {
-          this.dependencies.logger.warn(
-            `[teams:saveTaskAttachment] Failed to roll back attachment ${attachmentId}: ${
-              rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
-            }`
-          );
-        }
+        await this.rollbackAttachment(attachment, attachmentId);
         throw error;
       }
+
+      try {
+        await attachment.finalize();
+      } catch (error) {
+        this.dependencies.logger.warn(
+          `[teams:saveTaskAttachment] Failed to finalize attachment ${attachmentId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      }
+      return attachment.metadata;
     });
+  }
+
+  private async rollbackAttachment(
+    attachment: SavedTaskAttachment,
+    attachmentId: string
+  ): Promise<void> {
+    try {
+      await attachment.rollback();
+    } catch (rollbackError) {
+      this.dependencies.logger.warn(
+        `[teams:saveTaskAttachment] Failed to roll back attachment ${attachmentId}: ${
+          rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+        }`
+      );
+    }
   }
 
   get(

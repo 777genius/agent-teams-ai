@@ -299,13 +299,16 @@ describe('InMemoryRuntimePlanAttestationAuthority', () => {
     expect(second).toBe(first);
   });
 
-  it('retains a bounded consumed tombstone and blocks post-consumption reissue', async () => {
+  it('retains consumed tombstones until expiry and then releases capacity', async () => {
     const authoritative = plan();
+    let now = Date.parse('2026-08-07T01:00:00.000Z');
     const authority = createRuntimePlanAttestationAuthority({
       authorityId: AUTHORITY_ID,
       bootId: BOOT_ID,
       plans: planSource(authoritative),
       maxRecords: 1,
+      ttlMs: 1_000,
+      nowEpochMs: () => now,
     });
     const issued = await authority.issue({ candidate: authoritative, binding: binding() });
     if (!issued) throw new Error('expected attestation');
@@ -322,6 +325,21 @@ describe('InMemoryRuntimePlanAttestationAuthority', () => {
         binding: binding({ operationId: 'operation:after-consumed-capacity' }),
       })
     ).resolves.toBeNull();
+
+    now += 1_000;
+    const replacementBinding = binding({ operationId: 'operation:after-expiry' });
+    const replacement = await authority.issue({
+      candidate: authoritative,
+      binding: replacementBinding,
+    });
+    expect(replacement).not.toBeNull();
+    await expect(authority.redeem(replacement, replacementBinding)).resolves.toMatchObject({
+      status: 'redeemed',
+    });
+    await expect(authority.redeem(issued, binding())).resolves.toEqual({
+      status: 'rejected',
+      reason: 'unknown',
+    });
   });
 
   it('invalidates a stale outstanding token when the authoritative plan revision changes', async () => {

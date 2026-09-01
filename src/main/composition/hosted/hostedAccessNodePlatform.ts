@@ -186,8 +186,9 @@ export function createHostedAccessNodeLocalControlTransportFactory(
         },
         close: async () => {
           const activeServer = server;
+          if (activeServer === null) return;
           server = null;
-          if (activeServer !== null) await close(activeServer);
+          await close(activeServer);
           await removeOwnedSocket(false);
         },
       });
