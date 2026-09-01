@@ -54,6 +54,7 @@ vi.mock('@main/services/runtime/providerAwareCliEnv', () => ({
 }));
 vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
   providerConnectionService: {
+    applyPassiveProviderStatusConnectionEnv: (env: NodeJS.ProcessEnv) => Promise.resolve(env),
     enrichProviderStatus: (provider: unknown) => Promise.resolve(provider),
     enrichProviderStatuses: (providers: unknown) => Promise.resolve(providers),
   },

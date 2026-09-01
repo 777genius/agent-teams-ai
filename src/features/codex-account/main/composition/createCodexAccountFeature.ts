@@ -244,6 +244,7 @@ async function resolveCodexBinaryForAccountSnapshot(): Promise<string | null> {
 
 export interface CodexAccountFeatureFacade {
   getSnapshot(): Promise<CodexAccountSnapshotDto>;
+  getCachedSnapshot(): CodexAccountSnapshotDto | null;
   refreshSnapshot(options?: {
     includeRateLimits?: boolean;
     forceRefreshToken?: boolean;
@@ -313,6 +314,8 @@ class CodexAccountFeatureFacadeImpl implements CodexAccountFeatureFacade {
   async getSnapshot(): Promise<CodexAccountSnapshotDto> {
     return this.refreshSnapshot();
   }
+
+  getCachedSnapshot = (): CodexAccountSnapshotDto | null => deepClone(this.snapshotCache);
 
   async refreshSnapshot(options?: {
     includeRateLimits?: boolean;

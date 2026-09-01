@@ -371,6 +371,38 @@ describe('createCodexAccountFeature', () => {
     }
   });
 
+  it('exposes a cloned cached snapshot without refreshing account state', async () => {
+    readAccountMock.mockResolvedValue({
+      account: createAccountResponse(),
+      initialize: {
+        codexHome: '/Users/test/.codex',
+        platformFamily: 'unix',
+        platformOs: 'macos',
+      },
+    });
+
+    const feature = createCodexAccountFeature({
+      logger: createLoggerPort(),
+      configManager: createConfigManager('chatgpt'),
+    });
+
+    try {
+      expect(feature.getCachedSnapshot()).toBeNull();
+      const refreshed = await feature.refreshSnapshot();
+      readAccountMock.mockClear();
+      binaryResolveMock.mockClear();
+
+      const cached = feature.getCachedSnapshot();
+      expect(cached).toEqual(refreshed);
+      expect(cached).not.toBe(refreshed);
+      expect(cached?.runtimeContext).not.toBe(refreshed.runtimeContext);
+      expect(readAccountMock).not.toHaveBeenCalled();
+      expect(binaryResolveMock).not.toHaveBeenCalled();
+    } finally {
+      await feature.dispose();
+    }
+  });
+
   it('retries Codex binary discovery after cold shell env resolves before publishing runtime-missing', async () => {
     getCachedShellEnvMock.mockReturnValue(null);
     binaryResolveMock.mockImplementation(async () =>

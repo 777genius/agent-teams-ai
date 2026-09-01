@@ -125,6 +125,7 @@ import {
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
+import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
@@ -197,6 +198,7 @@ const TEAM_COLOR_NAMES = [
 ] as const;
 
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
+const CREATE_LAUNCH_AUTHORITY_BLOCKER_ID = 'create-team-launch-authority-blocker';
 
 function getProviderLabel(providerId: TeamProviderId): string {
   return getCatalogTeamProviderLabel(providerId) ?? 'Anthropic';
@@ -809,6 +811,8 @@ export const CreateTeamDialog = ({
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
   const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
+  const launchAuthorityBlockers = launchGuard.blockers(launchTeam);
+  const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -2983,7 +2987,10 @@ export const CreateTeamDialog = ({
                 />
               </>
             ) : null}
-            {canCreate && launchTeam && effectivePrepare.state === 'ready' ? (
+            {canCreate &&
+            launchTeam &&
+            effectivePrepare.state === 'ready' &&
+            !launchAuthorityBlocked ? (
               <div>
                 <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
                   <CheckCircle2 className="size-3.5 shrink-0" />
@@ -3014,6 +3021,17 @@ export const CreateTeamDialog = ({
                   </div>
                 ) : null}
               </div>
+            ) : null}
+            {canCreate &&
+            launchTeam &&
+            effectivePrepare.state === 'ready' &&
+            launchAuthorityBlocked ? (
+              <ProviderLaunchAuthorityNotice
+                id={CREATE_LAUNCH_AUTHORITY_BLOCKER_ID}
+                action={t('launch.prepare.action.launch')}
+                blockers={launchAuthorityBlockers}
+                onOpenProviderSettings={setProviderSettingsProviderId}
+              />
             ) : null}
             {canCreate && launchTeam && effectivePrepare.state === 'failed' ? (
               <div className="text-xs">
@@ -3102,6 +3120,11 @@ export const CreateTeamDialog = ({
               <Button
                 size="lg"
                 className="min-w-32 text-sm"
+                aria-describedby={
+                  launchAuthorityBlocked && effectivePrepare.state === 'ready'
+                    ? CREATE_LAUNCH_AUTHORITY_BLOCKER_ID
+                    : undefined
+                }
                 disabled={
                   !canCreate ||
                   !draftLoaded ||

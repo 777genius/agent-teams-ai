@@ -1453,6 +1453,74 @@ describe('ProviderConnectionService', () => {
     });
   });
 
+  it('projects cached ChatGPT runtime context into passive Codex status probes', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const getSnapshot = vi.fn().mockRejectedValue(new Error('passive status must not refresh'));
+    const getCachedSnapshot = vi.fn().mockReturnValue(createCodexSnapshot());
+    const lookupPreferred = vi.fn();
+    const service = new ProviderConnectionService(
+      { lookupPreferred } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    service.setCodexAccountFeature({ getSnapshot, getCachedSnapshot });
+
+    const env = await service.applyPassiveProviderStatusConnectionEnv(
+      {
+        OPENAI_API_KEY: 'must-not-leak-to-chatgpt-status',
+        CODEX_API_KEY: 'must-not-leak-to-chatgpt-status',
+      },
+      'codex'
+    );
+
+    expect(env).toMatchObject({
+      CODEX_CLI_PATH: '/opt/codex/bin/codex',
+      CODEX_HOME: '/Users/tester/.codex-custom',
+      CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+    });
+    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(env.CODEX_API_KEY).toBeUndefined();
+    expect(getCachedSnapshot).toHaveBeenCalledTimes(1);
+    expect(getSnapshot).not.toHaveBeenCalled();
+    expect(lookupPreferred).not.toHaveBeenCalled();
+    expect(execCliMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps passive non-Codex status probes free of account resolution', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const getSnapshot = vi.fn().mockResolvedValue(createCodexSnapshot());
+    const getCachedSnapshot = vi.fn().mockReturnValue(createCodexSnapshot());
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn() } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    service.setCodexAccountFeature({ getSnapshot, getCachedSnapshot });
+    const env = { ANTHROPIC_API_KEY: 'existing' };
+
+    expect(await service.applyPassiveProviderStatusConnectionEnv(env, 'anthropic')).toBe(env);
+    expect(getSnapshot).not.toHaveBeenCalled();
+    expect(getCachedSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('leaves passive Codex status env unchanged when no account snapshot is cached', async () => {
+    const { ProviderConnectionService } =
+      await import('@main/services/runtime/ProviderConnectionService');
+    const getSnapshot = vi.fn().mockRejectedValue(new Error('passive status must not refresh'));
+    const getCachedSnapshot = vi.fn().mockReturnValue(null);
+    const service = new ProviderConnectionService(
+      { lookupPreferred: vi.fn() } as never,
+      { getConfig: () => createConfig('auto') } as never
+    );
+    service.setCodexAccountFeature({ getSnapshot, getCachedSnapshot });
+    const env = { CODEX_CLI_PATH: '/existing/codex' };
+
+    expect(await service.applyPassiveProviderStatusConnectionEnv(env, 'codex')).toBe(env);
+    expect(env).toEqual({ CODEX_CLI_PATH: '/existing/codex' });
+    expect(getCachedSnapshot).toHaveBeenCalledTimes(1);
+    expect(getSnapshot).not.toHaveBeenCalled();
+  });
+
   it('mirrors a stored OpenAI key into CODEX_API_KEY for native Codex launches', async () => {
     const lookupPreferred = vi.fn().mockResolvedValue({
       envVarName: 'OPENAI_API_KEY',

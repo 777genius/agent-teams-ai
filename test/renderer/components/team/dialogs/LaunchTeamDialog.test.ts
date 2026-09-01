@@ -305,16 +305,24 @@ vi.mock('@renderer/components/ui/button', () => ({
     type,
     disabled,
     className,
+    'aria-describedby': ariaDescribedBy,
   }: {
     children: React.ReactNode;
     onClick?: () => void;
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
     className?: string;
+    'aria-describedby'?: string;
   }) =>
     React.createElement(
       'button',
-      { type: type ?? 'button', onClick, disabled, className },
+      {
+        type: type ?? 'button',
+        onClick,
+        disabled,
+        className,
+        'aria-describedby': ariaDescribedBy,
+      },
       children
     ),
 }));
@@ -473,7 +481,17 @@ vi.mock('@renderer/components/team/dialogs/provisioningModelIssues', () => ({
 }));
 
 vi.mock('@renderer/components/team/dialogs/ProvisioningProviderStatusList', () => ({
-  ProvisioningProviderStatusList: () => React.createElement('div', null, 'provider-status-list'),
+  ProvisioningProviderStatusList: ({
+    checks,
+  }: {
+    checks: Array<{ providerId: string; details: string[] }>;
+  }) =>
+    React.createElement(
+      'div',
+      null,
+      'provider-status-list ',
+      checks.flatMap((check) => check.details).join(' ')
+    ),
   deriveEffectiveProvisioningPrepareState: ({
     state,
     message,
@@ -820,6 +838,12 @@ describe('LaunchTeamDialog', () => {
     expect(onLaunch).not.toHaveBeenCalled();
     await act(async () => vi.runOnlyPendingTimersAsync());
     expect(launchButton?.disabled).toBe(true);
+    expect(launchHost.textContent).not.toContain('All selected providers are ready.');
+    expect(launchHost.textContent).toContain('Runtime environment is not available');
+    expect(launchHost.textContent).toContain('verified model catalog is unavailable or stale');
+    expect(launchButton?.getAttribute('aria-describedby')).toBe(
+      'launch-team-launch-authority-blocker'
+    );
     await act(async () => launchDialogRoot.unmount());
 
     vi.setSystemTime(baseTime);
@@ -862,6 +886,78 @@ describe('LaunchTeamDialog', () => {
     await act(async () => vi.runOnlyPendingTimersAsync());
     expect(createButton?.disabled).toBe(true);
     await act(async () => createDialogRoot.unmount());
+  });
+
+  it('shows the Codex account/runtime launch mismatch when Create is disabled', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    localStorage.setItem('team:lastSelectedProvider', 'codex');
+    localStorage.setItem('team:lastSelectedModel:codex', 'gpt-5.5');
+    createTeamDraftMock.state.soloTeam = true;
+    const readyCodex = createAuthoritativeProviderStatus('codex', ['gpt-5.5']);
+    storeState.cliStatus = {
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          ...readyCodex,
+          authenticated: false,
+          authMethod: null,
+          statusMessage: 'Codex native runtime unavailable',
+          detailMessage: 'Codex native runtime requires CODEX_API_KEY or OPENAI_API_KEY.',
+          capabilities: { ...readyCodex.capabilities, teamLaunch: false },
+          connection: {
+            codex: {
+              effectiveAuthMode: 'chatgpt',
+              launchAllowed: true,
+              launchIssueMessage: null,
+              launchReadinessState: 'ready_chatgpt',
+            },
+          },
+        },
+      ],
+    } as any;
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          existingTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate: vi.fn(async () => {}),
+          onOpenTeam: vi.fn(),
+        })
+      );
+      await flush();
+    });
+    for (
+      let attempt = 0;
+      attempt < 10 && !host.textContent?.includes('runtime has not confirmed launch readiness');
+      attempt += 1
+    ) {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await flush();
+      });
+    }
+
+    const createButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-describedby="create-team-launch-authority-blocker"]'
+    );
+    expect(createButton?.disabled).toBe(true);
+    expect(host.textContent).toContain('Runtime environment is not available - launch is blocked');
+    expect(host.textContent).toContain(
+      'ChatGPT account is connected, but the Codex runtime has not confirmed launch readiness'
+    );
+    expect(host.textContent).not.toContain('All selected providers are ready.');
+    expect(host.textContent).not.toContain('CODEX_API_KEY');
+
+    await act(async () => root.unmount());
   });
 
   it('renders relaunch-specific title, warning and submit label', async () => {
@@ -3577,70 +3673,30 @@ describe('LaunchTeamDialog', () => {
       flavor: 'agent_teams_orchestrator',
       providers: [
         {
-          providerId: 'anthropic',
-          supported: true,
-          authenticated: true,
-          authMethod: 'api_key',
-          verificationState: 'verified',
+          ...createAuthoritativeProviderStatus('anthropic', ['haiku']),
           modelVerificationState: 'verified',
-          statusMessage: null,
-          detailMessage: null,
-          models: ['haiku'],
-          modelCatalog: {
-            source: 'live',
-            status: 'ready',
-            models: [{ id: 'haiku' }],
-          },
-          capabilities: {
-            teamLaunch: true,
-            oneShot: true,
-          },
         },
         {
-          providerId: 'codex',
-          supported: true,
-          authenticated: true,
+          ...createAuthoritativeProviderStatus('codex', ['gpt-5.5']),
           authMethod: 'chatgpt',
-          verificationState: 'verified',
           modelVerificationState: 'verified',
-          statusMessage: null,
-          detailMessage: null,
           selectedBackendId: 'codex-native',
           resolvedBackendId: 'codex-native',
-          models: ['gpt-5.5'],
-          modelCatalog: {
-            source: 'app-server',
-            status: 'ready',
-            models: [{ id: 'gpt-5.5' }],
-          },
-          capabilities: {
-            teamLaunch: true,
-            oneShot: true,
-          },
         },
         {
-          providerId: 'opencode',
-          supported: true,
-          authenticated: true,
+          ...createAuthoritativeProviderStatus('opencode', ['opencode/big-pickle']),
           authMethod: 'opencode_managed',
-          verificationState: 'verified',
           modelVerificationState: 'verified',
           statusMessage: 'warming up',
           detailMessage: 'first render',
-          models: ['opencode/big-pickle'],
-          modelCatalog: {
-            source: 'app-server',
-            status: 'ready',
-            models: [{ id: 'opencode/big-pickle' }],
-          },
           capabilities: {
             teamLaunch: true,
             oneShot: false,
+            extensions: createDefaultCliExtensionCapabilities(),
           },
         },
       ],
     } as any;
-
     let resolvePrepare!: (value: {
       status: 'ready';
       warnings: [];
@@ -3717,7 +3773,12 @@ describe('LaunchTeamDialog', () => {
     expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(
       callsAfterSameSignatureRerender
     );
-    expect(host.textContent).toContain('All selected providers are ready.');
+    expect(host.textContent).not.toContain('All selected providers are ready.');
+    expect(host.textContent).toContain('Runtime environment is not available');
+    const authorityBlockedCreateButton = host.querySelector<HTMLButtonElement>(
+      'button[aria-describedby="create-team-launch-authority-blocker"]'
+    );
+    expect(authorityBlockedCreateButton?.disabled).toBe(true);
 
     await act(async () => {
       root.unmount();

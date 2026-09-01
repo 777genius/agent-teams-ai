@@ -22,6 +22,9 @@ const enrichProviderStatusMock = vi.fn((provider, _options?: { hydrateModelCatal
   Promise.resolve(provider)
 );
 const enrichProviderStatusesMock = vi.fn((providers) => Promise.resolve(providers));
+const applyPassiveProviderStatusConnectionEnvMock = vi.fn(
+  (env: NodeJS.ProcessEnv, _providerId: CliProviderId) => Promise.resolve(env)
+);
 
 async function execCliWithAuthoritativeRuntimeFixtures(...args: Parameters<typeof execCliMock>) {
   const result = await execCliMock(...args);
@@ -94,6 +97,9 @@ vi.mock('fs', () => ({
 
 vi.mock('@main/services/runtime/ProviderConnectionService', () => ({
   providerConnectionService: {
+    applyPassiveProviderStatusConnectionEnv: (
+      ...args: Parameters<typeof applyPassiveProviderStatusConnectionEnvMock>
+    ) => applyPassiveProviderStatusConnectionEnvMock(...args),
     enrichProviderStatus: (...args: Parameters<typeof enrichProviderStatusMock>) =>
       enrichProviderStatusMock(...args),
     enrichProviderStatuses: (...args: Parameters<typeof enrichProviderStatusesMock>) =>
@@ -341,6 +347,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    applyPassiveProviderStatusConnectionEnvMock.mockImplementation((env) => Promise.resolve(env));
     resolveInteractiveShellEnvMock.mockResolvedValue({});
     buildProviderAwareCliEnvMock.mockImplementation(
       ({ providerId }: { providerId?: string } = {}) =>
@@ -418,6 +425,47 @@ describe('ClaudeMultimodelBridgeService', () => {
       exitCode: 0,
     };
   }
+
+  it('adds cached ChatGPT context to passive Codex runtime status without using the active env builder', async () => {
+    applyPassiveProviderStatusConnectionEnvMock.mockImplementation(async (env, providerId) => ({
+      ...env,
+      ...(providerId === 'codex'
+        ? {
+            CODEX_CLI_PATH: '/Applications/ChatGPT.app/Contents/Resources/codex',
+            CODEX_HOME: '/Users/tester/.codex',
+            CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+          }
+        : {}),
+    }));
+    execCliMock.mockResolvedValue(statusReply('codex', fullStatusFixture('codex')));
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const service = new ClaudeMultimodelBridgeService();
+
+    const provider = await service.getProviderStatus('/mock/runtime', 'codex');
+
+    expect(provider).toMatchObject({
+      providerId: 'codex',
+      authenticated: true,
+      capabilities: { teamLaunch: true },
+    });
+    expect(applyPassiveProviderStatusConnectionEnvMock).toHaveBeenCalledWith(
+      expect.objectContaining({ CLAUDE_CODE_ENTRY_PROVIDER: 'codex' }),
+      'codex'
+    );
+    expect(execCliMock).toHaveBeenCalledWith(
+      '/mock/runtime',
+      ['runtime', 'status', '--json', '--provider', 'codex', '--summary'],
+      expect.objectContaining({
+        env: expect.objectContaining({
+          CODEX_CLI_PATH: '/Applications/ChatGPT.app/Contents/Resources/codex',
+          CODEX_HOME: '/Users/tester/.codex',
+          CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+        }),
+      })
+    );
+    expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
+  });
 
   it.each(
     (['anthropic', 'codex', 'opencode'] as const).flatMap((providerId) =>

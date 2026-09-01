@@ -79,7 +79,6 @@ import { isTeamProviderId, normalizeOptionalTeamProviderId } from '@shared/utils
 import {
   AlertTriangle,
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   ExternalLink,
@@ -124,6 +123,7 @@ import {
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
+import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
@@ -131,6 +131,7 @@ import {
   runProviderPrepareDiagnostics,
 } from './providerPrepareDiagnostics';
 import { buildProviderPreparePlans, type ProviderPreparePlan } from './providerPreparePlans';
+import { ProviderPrepareReadyNotice } from './ProviderPrepareReadyNotice';
 import {
   buildProviderPrepareModelChecksSignature,
   buildProviderPrepareRuntimeStatusSignature,
@@ -259,6 +260,7 @@ export type LaunchTeamDialogProps =
   | LaunchDialogScheduleMode;
 
 const APP_TEAM_RUNTIME_DISALLOWED_TOOLS = 'TeamDelete,TodoWrite,TaskCreate,TaskUpdate';
+const LAUNCH_AUTHORITY_BLOCKER_ID = 'launch-team-launch-authority-blocker';
 const ANTHROPIC_AGENT_SDK_CREDIT_ARTICLE_URL =
   'https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan';
 
@@ -527,6 +529,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
   const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
+  const launchAuthorityBlockers = launchGuard.blockers(isLaunchMode);
+  const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -3170,39 +3174,26 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 </>
               ) : null}
 
-              {effectivePrepare.state === 'ready' ? (
-                <div>
-                  <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
-                    <CheckCircle2 className="size-3.5 shrink-0" />
-                    <span>
-                      {prepareChecks.some((check) => check.status === 'notes') ||
-                      prepareWarnings.length > 0
-                        ? t('launch.prepare.readyWithNotes')
-                        : t('launch.prepare.ready')}
-                    </span>
-                  </div>
-                  {effectivePrepare.message ? (
-                    <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">
-                      {effectivePrepare.message}
-                    </p>
-                  ) : null}
-                  <ProvisioningProviderStatusList
-                    checks={prepareChecks}
-                    className="mt-1"
-                    onOpenProviderSettings={(providerId) =>
-                      setProviderSettingsProviderId(providerId)
-                    }
-                  />
-                  {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (
-                    <div className="mt-0.5 space-y-0.5 pl-5">
-                      {prepareWarnings.map((warning, index) => (
-                        <p key={`${index}:${warning}`} className="text-[11px] text-sky-300">
-                          {warning}
-                        </p>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
+              {effectivePrepare.state === 'ready' && !launchAuthorityBlocked ? (
+                <ProviderPrepareReadyNotice
+                  checks={prepareChecks}
+                  message={effectivePrepare.message}
+                  warnings={prepareWarnings}
+                  onOpenProviderSettings={setProviderSettingsProviderId}
+                />
+              ) : null}
+
+              {effectivePrepare.state === 'ready' && launchAuthorityBlocked ? (
+                <ProviderLaunchAuthorityNotice
+                  id={LAUNCH_AUTHORITY_BLOCKER_ID}
+                  action={
+                    isRelaunch
+                      ? t('launch.prepare.action.relaunch')
+                      : t('launch.prepare.action.launch')
+                  }
+                  blockers={launchAuthorityBlockers}
+                  onOpenProviderSettings={setProviderSettingsProviderId}
+                />
               ) : null}
 
               {effectivePrepare.state === 'failed' ? (
@@ -3304,6 +3295,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             status={workspaceTrustStatus}
             isLaunchMode={isLaunchMode}
             disabled={isDisabled}
+            describedBy={
+              isLaunchMode && launchAuthorityBlocked && effectivePrepare.state === 'ready'
+                ? LAUNCH_AUTHORITY_BLOCKER_ID
+                : undefined
+            }
             busy={isSubmitting || launchInFlight}
             submittingLabel={submittingLabel}
             submitLabel={submitLabel}
