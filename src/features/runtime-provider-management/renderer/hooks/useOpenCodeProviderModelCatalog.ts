@@ -530,7 +530,7 @@ export function useOpenCodeProviderModelCatalog(input: {
           query: null,
           limit: MODEL_PAGE_SIZE,
           cursor,
-          ...(page === 0 && bypassCompletedCache ? { refresh: true } : {}),
+          ...(bypassCompletedCache ? { refresh: true } : {}),
           requestGroupId: requestGroupIdRef.current,
         });
         if (!isCurrentRequest()) {

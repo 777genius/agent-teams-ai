@@ -368,7 +368,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
     });
   });
 
-  it('bypasses only page one for explicit and revision refreshes', async () => {
+  it('bypasses every page for explicit and revision refreshes', async () => {
     apiMocks.loadModels.mockImplementation(async (input: RuntimeProviderManagementLoadModelsInput) =>
       input.cursor
         ? response({
@@ -399,14 +399,14 @@ describe('useOpenCodeProviderModelCatalog', () => {
     expect(apiMocks.loadModels).toHaveBeenCalledTimes(4);
     expect(apiMocks.loadModels.mock.calls.slice(2).map(([request]) => request.refresh)).toEqual([
       true,
-      undefined,
+      true,
     ]);
 
     await renderHarness({ sourceProviderId: 'deepinfra', refreshRevision: 1 });
     await vi.waitFor(() => expect(apiMocks.loadModels).toHaveBeenCalledTimes(6));
     expect(apiMocks.loadModels.mock.calls.slice(4).map(([request]) => request.refresh)).toEqual([
       true,
-      undefined,
+      true,
     ]);
   });
 
