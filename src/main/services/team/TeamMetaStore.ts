@@ -255,6 +255,7 @@ export class TeamMetaStore {
       model: data.model?.trim() || undefined,
       effort: data.effort?.trim() || undefined,
       fastMode: normalizeFastMode(data.fastMode) ?? undefined,
+      syncModelsWithLead: data.syncModelsWithLead,
       skipPermissions: data.skipPermissions,
       worktree: data.worktree?.trim() || undefined,
       extraCliArgs: data.extraCliArgs?.trim() || undefined,

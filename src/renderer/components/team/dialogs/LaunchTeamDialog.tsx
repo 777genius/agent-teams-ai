@@ -935,11 +935,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         setTeammateWorktreeDefault(deriveTeammateWorktreeDefault(inputs));
         setSyncModelsWithLead(
           savedSyncModelsWithLead ??
-            !inputs.some((member) => member.providerId || member.model || member.effort)
+            !inputs.some(
+              (member) =>
+                member.providerId ||
+                member.providerBackendId ||
+                member.model ||
+                member.effort ||
+                ('fastMode' in member && member.fastMode)
+            )
         );
       }
     };
-
     if (filterEditableMemberInputs(members).length > 0) applyEditableRoster();
 
     let cancelled = false;

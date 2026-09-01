@@ -1461,6 +1461,54 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
+  it('infers legacy sync-off from teammate backend and fast-mode overrides', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'codex',
+      model: 'gpt-5.5',
+      members: [
+        {
+          name: 'jack',
+          role: 'developer',
+          providerBackendId: 'codex-native',
+          fastMode: 'on',
+        },
+      ],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+    });
+
+    expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(false);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
   it('keeps a teammate worktree toggle made during hydration from being overwritten', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     let resolveSavedRequest: (value: unknown) => void = () => {};

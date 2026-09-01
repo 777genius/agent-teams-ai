@@ -2077,7 +2077,6 @@ export class TeamProvisioningMemberLifecycleController {
       reason: 'manual_restart',
       assertStillCurrent: assertRuntimeAdapterRunStillCurrent,
     });
-
     assertRuntimeAdapterRunStillCurrent();
     await this.runOpenCodeTeamRuntimeAdapterLaunch({
       request: {
@@ -2092,6 +2091,7 @@ export class TeamProvisioningMemberLifecycleController {
           targetRuntimeMember.effort ??
           (isTeamEffortLevel(teamMeta?.effort) ? teamMeta.effort : undefined),
         fastMode: teamMeta?.fastMode,
+        syncModelsWithLead: teamMeta?.syncModelsWithLead,
         limitContext: teamMeta?.limitContext,
         skipPermissions: teamMeta?.skipPermissions,
         worktree: teamMeta?.worktree,
