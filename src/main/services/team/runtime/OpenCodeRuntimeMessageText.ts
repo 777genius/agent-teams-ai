@@ -67,7 +67,7 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
     input.actionMode === 'ask'
       ? 'Action mode ASK is read-only for this delivered message: do not edit files, change task state, or run side-effecting tools for this message.'
       : input.actionMode === 'delegate'
-        ? 'Action mode DELEGATE is orchestration-only for this delivered message: pass the task with context instead of implementing or editing files yourself.'
+        ? 'Action mode DELEGATE is orchestration-only for this delivered message: pass the task with context instead of implementing or editing files yourself, then END the turn - never wait or poll for teammates inside the turn (their work is dispatched only after your turn ends).'
         : 'If this delivered message assigns implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in the project working directory as your available tools allow.';
   const requiredMessageEnvelope = JSON.stringify({
     teamName: input.teamName,
