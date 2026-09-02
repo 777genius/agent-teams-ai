@@ -2,8 +2,8 @@ const messageStore = require('./messageStore.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const { isOpenCodeMember } = require('./memberMessagingProtocol.js');
 
-// Owned by idleAckText.js and re-exported by messageStore.js, so the ack
-// vocabulary has one import surface.
+// Owned by idleAckText.js, which messageStore.js also uses for the
+// relay-scoped restatement guard and re-exports.
 const { looksLikeIdleAckOnlyText } = messageStore;
 
 const PLACEHOLDER_TASK_REF_PREFIX = /^\s*#0{8}\b\s*(?:[:.-]\s*)?/i;

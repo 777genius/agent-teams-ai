@@ -328,6 +328,59 @@ function getRepeatedMessageDuplicate(list, row) {
   return null;
 }
 
+const RELAY_SCOPED_RESTATEMENT_NOTICE =
+  'Duplicate message ignored. You already sent the user a visible reply for this app-delivered message (relayOfMessageId). Do not resend or rephrase it; send a new message only after new work or a new inbound message.';
+
+function getTaskRefIds(row) {
+  const taskRefs = Array.isArray(row && row.taskRefs) ? row.taskRefs : [];
+  return new Set(taskRefs.map((ref) => String((ref && ref.taskId) || '').trim()).filter(Boolean));
+}
+
+/**
+ * One visible reply per app-delivered message: `message_send` already states
+ * that contract in words. The app can re-prompt a memoryless lead mid-turn, and
+ * the lead then answers the same relayOfMessageId a second time in different
+ * words, which the byte-identical and word-sequence guards above cannot see.
+ * Two escapes keep the delivery repair loops working: an acknowledgement-only
+ * first reply and a first reply that lacks the task refs this one carries both
+ * still need a real answer to land.
+ */
+function getRelayScopedUserRestatement(list, row) {
+  if (!isUserParticipant(row.to) || isUserParticipant(row.from)) return null;
+  const relayOfMessageId = String((row && row.relayOfMessageId) || '').trim();
+  const from = normalizeComparableParticipant(row.from);
+  const to = normalizeComparableParticipant(row.to);
+  const rowTime = parseRowTimeMs(row);
+  if (!relayOfMessageId || !from || !to || rowTime === null) return null;
+  const requiredTaskIds = getTaskRefIds(row);
+  for (let index = list.length - 1; index >= 0; index -= 1) {
+    const candidate = list[index];
+    if (!candidate) continue;
+    const candidateTime = parseRowTimeMs(candidate);
+    if (candidateTime === null) continue;
+    if (rowTime - candidateTime > REPEATED_MESSAGE_WINDOW_MS) break;
+    if (String(candidate.relayOfMessageId || '').trim() !== relayOfMessageId) continue;
+    if (
+      normalizeComparableParticipant(candidate.from) !== from ||
+      normalizeComparableParticipant(candidate.to) !== to
+    ) {
+      continue;
+    }
+    if (looksLikeIdleAckOnlyText(candidate.text) || looksLikeIdleAckOnlyText(candidate.summary)) {
+      continue;
+    }
+    if (requiredTaskIds.size > 0) {
+      const candidateTaskIds = getTaskRefIds(candidate);
+      const candidateCoversTaskRefs = [...requiredTaskIds].every((taskId) =>
+        candidateTaskIds.has(taskId)
+      );
+      if (!candidateCoversTaskRefs) continue;
+    }
+    return candidate;
+  }
+  return null;
+}
+
 const BOARD_EPOCH_EVENT_TYPES = new Set(['task_created', 'status_changed', 'owner_changed']);
 const POST_COMPLETION_MESSAGE_NOTICE_PREFIX =
   'Duplicate message ignored. Final message already delivered: the board was already complete when you messaged the user at ';
@@ -451,6 +504,10 @@ function appendInboxRow(filePath, row, options = {}) {
     if (duplicate) {
       return { row: duplicate, deduplicated: true };
     }
+    const relayScoped = getRelayScopedUserRestatement(list, row);
+    if (relayScoped) {
+      return { row: relayScoped, deduplicated: true, relayScoped: true };
+    }
     const repeated = getRepeatedMessageDuplicate(list, row);
     if (repeated) {
       return { row: repeated, deduplicated: true, repeated: true };
@@ -504,9 +561,11 @@ function sendInboxMessage(paths, flags) {
           duplicateOfMessageId: appended.row.messageId,
           deduplicationNotice: appended.postCompletion
             ? buildPostCompletionNotice(appended.row)
-            : appended.repeated
-              ? REPEATED_MESSAGE_NOTICE
-              : RUNTIME_DELIVERY_DUPLICATE_NOTICE,
+            : appended.relayScoped
+              ? RELAY_SCOPED_RESTATEMENT_NOTICE
+              : appended.repeated
+                ? REPEATED_MESSAGE_NOTICE
+                : RUNTIME_DELIVERY_DUPLICATE_NOTICE,
         }
       : {}),
   };
