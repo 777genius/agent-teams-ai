@@ -3751,6 +3751,134 @@ controller.messages.sendMessage({
     ]);
   });
 
+  it('suppresses rephrased final messages to the user once the board is complete', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const readUserInbox = () =>
+      JSON.parse(
+        fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json'), 'utf8')
+      ).map((row) => row.text);
+    const clock = { now: Date.parse('2026-08-23T10:00:00.000Z') };
+    vi.useFakeTimers({ now: clock.now, toFake: ['Date'] });
+    const advance = (minutes) => {
+      clock.now += minutes * 60 * 1000;
+      vi.setSystemTime(clock.now);
+    };
+
+    try {
+      // Board not complete: nothing is guarded.
+      const task = controller.tasks.createTask({ subject: 'Write summary', owner: 'alice' });
+      controller.tasks.startTask(task.id, 'alice');
+      advance(1);
+      const progress = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Delegated; working on it.',
+      });
+      expect(progress.deduplicated).toBeUndefined();
+
+      advance(1);
+      controller.tasks.completeTask(task.id, 'alice');
+      advance(1);
+      const final = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'ALL DONE' });
+      expect(final.deduplicated).toBeUndefined();
+
+      // A paraphrase from a later memoryless turn is suppressed with a success-shaped result.
+      advance(2);
+      const recap = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'ALL DONE - docs/PROJECT_SUMMARY.md is written and all tasks are complete.',
+      });
+      expect(recap.deduplicated).toBe(true);
+      expect(recap.duplicateOfMessageId).toBe(final.messageId);
+      expect(recap.deduplicationNotice).toContain('Duplicate message ignored');
+      expect(recap.deduplicationNotice).toContain('Final message already delivered');
+
+      // Comments are not board events: they must not reopen the window.
+      advance(1);
+      controller.tasks.addTaskComment(task.id, { text: 'extra detail', from: 'alice' });
+      advance(1);
+      const afterComment = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Status recap: everything is finished.',
+      });
+      expect(afterComment.deduplicated).toBe(true);
+      expect(readUserInbox()).toEqual(['Delegated; working on it.', 'ALL DONE']);
+
+      // The human wrote again: the answer is delivered.
+      advance(1);
+      controller.messages.sendMessage({ to: 'alice', from: 'user', text: 'thanks, anything else?' });
+      advance(1);
+      const answer = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Nothing else; all work is complete.',
+      });
+      expect(answer.deduplicated).toBeUndefined();
+      advance(1);
+      const answerRecap = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'To recap: nothing else is pending.',
+      });
+      expect(answerRecap.deduplicated).toBe(true);
+
+      // A real board change (new task) opens a new completion epoch.
+      advance(1);
+      const followUp = controller.tasks.createTask({ subject: 'Follow-up', owner: 'alice' });
+      controller.tasks.startTask(followUp.id, 'alice');
+      controller.tasks.completeTask(followUp.id, 'alice');
+      advance(1);
+      const secondFinal = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Follow-up done too.',
+      });
+      expect(secondFinal.deduplicated).toBeUndefined();
+      advance(1);
+      const secondRecap = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Everything including the follow-up is complete.',
+      });
+      expect(secondRecap.deduplicated).toBe(true);
+
+      // Window expiry: a message half an hour later is delivered again.
+      advance(31);
+      const late = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Late status note.' });
+      expect(late.deduplicated).toBeUndefined();
+      expect(readUserInbox()).toEqual([
+        'Delegated; working on it.',
+        'ALL DONE',
+        'Nothing else; all work is complete.',
+        'Follow-up done too.',
+        'Late status note.',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never guards user-directed messages while the board is empty or has open work', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Hello' });
+    const second = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Hello again' });
+    expect(first.deduplicated).toBeUndefined();
+    expect(second.deduplicated).toBeUndefined();
+
+    const done = controller.tasks.createTask({ subject: 'Done task', owner: 'alice' });
+    controller.tasks.startTask(done.id, 'alice');
+    controller.tasks.completeTask(done.id, 'alice');
+    controller.tasks.createTask({ subject: 'Still open', owner: 'bob' });
+    const third = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'One done' });
+    const fourth = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Still one open' });
+    expect(third.deduplicated).toBeUndefined();
+    expect(fourth.deduplicated).toBeUndefined();
+  });
+
   it('suppresses an identical message from the same sender to the same recipient within 30 minutes', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

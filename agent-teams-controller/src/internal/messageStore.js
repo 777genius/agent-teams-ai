@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { writeJsonFileSync } = require('./atomicFile.js');
 const { withFileLockSync } = require('./fileLock.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
+const taskStore = require('./taskStore.js');
 
 function nowIso() {
   return new Date().toISOString();
@@ -295,7 +296,122 @@ function getRepeatedMessageDuplicate(list, row) {
   return null;
 }
 
-function appendInboxRow(filePath, row) {
+const BOARD_EPOCH_EVENT_TYPES = new Set(['task_created', 'status_changed', 'owner_changed']);
+const POST_COMPLETION_MESSAGE_NOTICE_PREFIX =
+  'Duplicate message ignored. Final message already delivered: the board was already complete when you messaged the user at ';
+const POST_COMPLETION_MESSAGE_NOTICE_SUFFIX =
+  ', and no task has been created, started, completed, reopened, or reassigned since. This restatement was not delivered. Send the user another message only after a task changes state or after the user writes to you again.';
+
+function isUserParticipant(value) {
+  return normalizeComparableParticipant(value) === 'user';
+}
+
+/**
+ * Structural board-completion epoch: the newest task_created / status_changed /
+ * owner_changed event across a board whose every live task is completed.
+ * Comments and attachments bump `updatedAt` but are not board events, so they
+ * must not move the epoch (a memoryless lead would otherwise talk its way
+ * around the guard by commenting first). Returns null unless the board is
+ * complete and non-empty.
+ */
+function readBoardCompletionEpoch(paths) {
+  let tasks;
+  try {
+    tasks = taskStore.listTasks(paths);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(tasks) || tasks.length === 0) return null;
+  if (!tasks.every((task) => task && task.status === 'completed')) return null;
+  let lastBoardEventMs = 0;
+  for (const task of tasks) {
+    const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];
+    let sawEvent = false;
+    for (const event of events) {
+      if (!event || !BOARD_EPOCH_EVENT_TYPES.has(event.type)) continue;
+      const ms = Date.parse(event.timestamp);
+      if (Number.isFinite(ms)) {
+        sawEvent = true;
+        if (ms > lastBoardEventMs) lastBoardEventMs = ms;
+      }
+    }
+    for (const raw of [task.createdAt, sawEvent ? undefined : task.updatedAt]) {
+      const ms = Date.parse(raw);
+      if (Number.isFinite(ms) && ms > lastBoardEventMs) lastBoardEventMs = ms;
+    }
+  }
+  return lastBoardEventMs > 0 ? { lastBoardEventMs } : null;
+}
+
+/** True when any inbox holds a message from the human user newer than sinceMs. */
+function hasUserMessageSince(paths, sinceMs) {
+  const inboxDir = path.join(paths.teamDir, 'inboxes');
+  let entries;
+  try {
+    entries = fs.readdirSync(inboxDir);
+  } catch {
+    return false;
+  }
+  for (const entry of entries) {
+    if (!entry.endsWith('.json')) continue;
+    let rows;
+    try {
+      rows = readJson(path.join(inboxDir, entry), []);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(rows)) continue;
+    for (let index = rows.length - 1; index >= 0; index -= 1) {
+      const candidate = rows[index];
+      if (!candidate || !isUserParticipant(candidate.from)) continue;
+      const ms = parseRowTimeMs(candidate);
+      if (ms !== null && ms > sinceMs) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Once the board is complete and the team already messaged the user after the
+ * last board event, further agent->user messages inside the repeat window are
+ * rephrased "ALL DONE" recaps from memoryless turns. Returns the final row they
+ * duplicate, or null when the message must be delivered: board not complete,
+ * this IS the final message, the board moved again, the user wrote again, or
+ * the window expired.
+ */
+function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
+  if (typeof resolveBoardCompletion !== 'function') return null;
+  if (!isUserParticipant(row.to) || isUserParticipant(row.from)) return null;
+  if (!normalizeComparableParticipant(row.from)) return null;
+  const rowTime = parseRowTimeMs(row);
+  if (rowTime === null) return null;
+  const board = resolveBoardCompletion();
+  if (!board || !Number.isFinite(board.lastBoardEventMs)) return null;
+  // The most recent agent->user message sent after the last board event.
+  let finalRow = null;
+  for (let index = list.length - 1; index >= 0; index -= 1) {
+    const candidate = list[index];
+    if (!candidate || !isUserParticipant(candidate.to) || isUserParticipant(candidate.from)) continue;
+    if (!normalizeComparableParticipant(candidate.from)) continue;
+    const candidateTime = parseRowTimeMs(candidate);
+    if (candidateTime === null || candidateTime < board.lastBoardEventMs) continue;
+    finalRow = candidate;
+    break;
+  }
+  if (!finalRow) return null;
+  const finalMs = parseRowTimeMs(finalRow);
+  if (rowTime - finalMs > REPEATED_MESSAGE_WINDOW_MS) return null;
+  if (typeof board.hasUserMessageSince === 'function' && board.hasUserMessageSince(finalMs)) {
+    return null;
+  }
+  return finalRow;
+}
+
+function buildPostCompletionNotice(finalRow) {
+  return `${POST_COMPLETION_MESSAGE_NOTICE_PREFIX}${finalRow.timestamp}${POST_COMPLETION_MESSAGE_NOTICE_SUFFIX}`;
+}
+
+function appendInboxRow(filePath, row, options = {}) {
   return withFileLockSync(filePath, () => {
     const current = readJson(filePath, []);
     const list = Array.isArray(current) ? current : [];
@@ -306,6 +422,14 @@ function appendInboxRow(filePath, row) {
     const repeated = getRepeatedMessageDuplicate(list, row);
     if (repeated) {
       return { row: repeated, deduplicated: true, repeated: true };
+    }
+    const postCompletion = getPostCompletionFinalMessage(
+      list,
+      row,
+      options.resolveBoardCompletion
+    );
+    if (postCompletion) {
+      return { row: postCompletion, deduplicated: true, postCompletion: true };
     }
 
     list.push(row);
@@ -330,7 +454,14 @@ function sendInboxMessage(paths, flags) {
     to: memberName,
     read: false,
   });
-  const appended = appendInboxRow(getInboxPath(paths, memberName), payload);
+  const appended = appendInboxRow(getInboxPath(paths, memberName), payload, {
+    resolveBoardCompletion: () => {
+      const epoch = readBoardCompletionEpoch(paths);
+      return epoch
+        ? { ...epoch, hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs) }
+        : null;
+    },
+  });
   return {
     deliveredToInbox: true,
     messageId: appended.row.messageId,
@@ -339,9 +470,11 @@ function sendInboxMessage(paths, flags) {
       ? {
           deduplicated: true,
           duplicateOfMessageId: appended.row.messageId,
-          deduplicationNotice: appended.repeated
-            ? REPEATED_MESSAGE_NOTICE
-            : RUNTIME_DELIVERY_DUPLICATE_NOTICE,
+          deduplicationNotice: appended.postCompletion
+            ? buildPostCompletionNotice(appended.row)
+            : appended.repeated
+              ? REPEATED_MESSAGE_NOTICE
+              : RUNTIME_DELIVERY_DUPLICATE_NOTICE,
         }
       : {}),
   };
@@ -426,6 +559,7 @@ function lookupMessage(paths, messageId) {
 
 module.exports = {
   appendSentMessage,
+  readBoardCompletionEpoch,
   lookupMessage,
   sendInboxMessage,
 };
