@@ -1066,203 +1066,215 @@ describe('TeamProvisioningMemberLifecycle stale run guards', () => {
     expect(run.memberMcpConfigPaths).toEqual([]);
   });
 
-  it('does not send tmux launch keys after direct tmux config update observes a stale run', async () => {
-    const member: TeamCreateRequest['members'][number] = {
-      name: 'Worker',
-      role: 'Developer',
-      providerId: 'codex',
-    };
-    const run = createRun(member);
-    let aliveRunId: string | null = run.runId;
-    let promptEnqueued = false;
-    const spawnStatuses: string[] = [];
-    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
-      new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
-        ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
-      >
-    );
-    const host = createHost(run, {
-      getAliveRunId: () => aliveRunId,
-      getTrackedRunId: () => aliveRunId,
-      isCurrentTrackedRun: (candidateRun) => aliveRunId === candidateRun.runId,
-      persistInboxMessage() {
-        promptEnqueued = true;
-      },
-      setMemberSpawnStatus(_targetRun, _memberName, status) {
-        spawnStatuses.push(status);
-      },
-    });
-    const controller = new TeamProvisioningMemberLifecycleController(
-      host,
-      immediateOperationUseCases,
-      {
-        restart: {
-          resolveDirectRestartRuntimeCwd: () => process.cwd(),
-          async preparePrimaryOwnedMemberRestartRuntime() {
-            return { directTmuxRestartPaneId: 'pane-1', shouldDirectProcessRestart: false };
-          },
-          async updateDirectTmuxRestartMemberConfig() {
-            aliveRunId = null;
-          },
+  // Direct tmux restart is POSIX-only by contract: isInteractiveShellCommand()
+  // returns false on win32 (tmux runs under WSL there), so the pane-busy guard
+  // fires before the behaviour under test can be reached.
+  it.skipIf(process.platform === 'win32')(
+    'does not send tmux launch keys after direct tmux config update observes a stale run',
+    async () => {
+      const member: TeamCreateRequest['members'][number] = {
+        name: 'Worker',
+        role: 'Developer',
+        providerId: 'codex',
+      };
+      const run = createRun(member);
+      let aliveRunId: string | null = run.runId;
+      let promptEnqueued = false;
+      const spawnStatuses: string[] = [];
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+        new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
+          ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
+        >
+      );
+      const host = createHost(run, {
+        getAliveRunId: () => aliveRunId,
+        getTrackedRunId: () => aliveRunId,
+        isCurrentTrackedRun: (candidateRun) => aliveRunId === candidateRun.runId,
+        persistInboxMessage() {
+          promptEnqueued = true;
         },
-      }
-    );
-
-    await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
-      'Team "team-a" is not currently running'
-    );
-
-    expect(promptEnqueued).toBe(false);
-    expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
-    expect(spawnStatuses).toEqual(['offline', 'spawning']);
-  });
-
-  it('does not persist direct restart config, launch state, messages, or tmux relaunch after run replacement before config write', async () => {
-    const member: TeamCreateRequest['members'][number] = {
-      name: 'Worker',
-      role: 'Developer',
-      providerId: 'codex',
-    };
-    const run = createRun(member);
-    const replacementRun = createRunWithId(member, 'run-2');
-    let aliveRunId: string | null = run.runId;
-    let writtenConfig: string | null = null;
-    let invalidatedConfig = false;
-    let promptEnqueued = false;
-    const launchSnapshots: string[] = [];
-    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
-      new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
-        ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
-      >
-    );
-    const updateDirectTmuxRestartMemberConfig = createUpdateDirectTmuxRestartMemberConfigUseCase({
-      async readTeamConfigJson() {
-        aliveRunId = replacementRun.runId;
-        return `${JSON.stringify(createConfig(member), null, 2)}\n`;
-      },
-      async writeTeamConfigJson(_teamName, contents) {
-        writtenConfig = contents;
-      },
-      invalidateTeamConfig() {
-        invalidatedConfig = true;
-      },
-    });
-    const host = createHost(run, {
-      runs: new Map([
-        [run.runId, run],
-        [replacementRun.runId, replacementRun],
-      ]),
-      getAliveRunId: () => aliveRunId,
-      getTrackedRunId: () => aliveRunId,
-      isCurrentTrackedRun: (candidateRun) => aliveRunId === candidateRun.runId,
-      persistInboxMessage() {
-        promptEnqueued = true;
-      },
-      async persistLaunchStateSnapshot(targetRun) {
-        launchSnapshots.push(targetRun.runId);
-        return null;
-      },
-    });
-    const controller = new TeamProvisioningMemberLifecycleController(
-      host,
-      immediateOperationUseCases,
-      {
-        restart: {
-          resolveDirectRestartRuntimeCwd: () => process.cwd(),
-          async preparePrimaryOwnedMemberRestartRuntime() {
-            return { directTmuxRestartPaneId: 'pane-1', shouldDirectProcessRestart: false };
-          },
-          updateDirectTmuxRestartMemberConfig,
+        setMemberSpawnStatus(_targetRun, _memberName, status) {
+          spawnStatuses.push(status);
         },
-      }
-    );
-
-    await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
-      'Team "team-a" is not currently running'
-    );
-
-    expect(writtenConfig).toBeNull();
-    expect(invalidatedConfig).toBe(false);
-    expect(launchSnapshots).toEqual([]);
-    expect(promptEnqueued).toBe(false);
-    expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
-  });
-
-  it('keeps a successful direct tmux restart resolved when final snapshot persistence fails', async () => {
-    const member: TeamCreateRequest['members'][number] = {
-      name: 'Worker',
-      role: 'Developer',
-      providerId: 'codex',
-    };
-    const run = createRun(member);
-    let writtenConfig: string | null = null;
-    let invalidatedConfig = false;
-    let promptEnqueued = false;
-    let persistenceAttempts = 0;
-    vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
-      new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
-        ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
-      >
-    );
-    const updateDirectTmuxRestartMemberConfig = createUpdateDirectTmuxRestartMemberConfigUseCase({
-      async readTeamConfigJson() {
-        return `${JSON.stringify(createConfig(member), null, 2)}\n`;
-      },
-      async writeTeamConfigJson(_teamName, contents) {
-        writtenConfig = contents;
-      },
-      invalidateTeamConfig() {
-        invalidatedConfig = true;
-      },
-    });
-    const host = createHost(run, {
-      getAliveRunId: () => run.runId,
-      getTrackedRunId: () => run.runId,
-      isCurrentTrackedRun: (candidateRun) => candidateRun === run,
-      persistInboxMessage() {
-        promptEnqueued = true;
-      },
-      async persistLaunchStateSnapshot() {
-        persistenceAttempts += 1;
-        throw new Error('snapshot write failed');
-      },
-    });
-    const controller = new TeamProvisioningMemberLifecycleController(
-      host,
-      immediateOperationUseCases,
-      {
-        restart: {
-          resolveDirectRestartRuntimeCwd: () => process.cwd(),
-          async preparePrimaryOwnedMemberRestartRuntime() {
-            return { directTmuxRestartPaneId: 'pane-1', shouldDirectProcessRestart: false };
+      });
+      const controller = new TeamProvisioningMemberLifecycleController(
+        host,
+        immediateOperationUseCases,
+        {
+          restart: {
+            resolveDirectRestartRuntimeCwd: () => process.cwd(),
+            async preparePrimaryOwnedMemberRestartRuntime() {
+              return { directTmuxRestartPaneId: 'pane-1', shouldDirectProcessRestart: false };
+            },
+            async updateDirectTmuxRestartMemberConfig() {
+              aliveRunId = null;
+            },
           },
-          updateDirectTmuxRestartMemberConfig,
+        }
+      );
+
+      await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
+        'Team "team-a" is not currently running'
+      );
+
+      expect(promptEnqueued).toBe(false);
+      expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
+      expect(spawnStatuses).toEqual(['offline', 'spawning']);
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'does not persist direct restart config, launch state, messages, or tmux relaunch after run replacement before config write',
+    async () => {
+      const member: TeamCreateRequest['members'][number] = {
+        name: 'Worker',
+        role: 'Developer',
+        providerId: 'codex',
+      };
+      const run = createRun(member);
+      const replacementRun = createRunWithId(member, 'run-2');
+      let aliveRunId: string | null = run.runId;
+      let writtenConfig: string | null = null;
+      let invalidatedConfig = false;
+      let promptEnqueued = false;
+      const launchSnapshots: string[] = [];
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+        new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
+          ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
+        >
+      );
+      const updateDirectTmuxRestartMemberConfig = createUpdateDirectTmuxRestartMemberConfigUseCase({
+        async readTeamConfigJson() {
+          aliveRunId = replacementRun.runId;
+          return `${JSON.stringify(createConfig(member), null, 2)}\n`;
         },
-      }
-    );
+        async writeTeamConfigJson(_teamName, contents) {
+          writtenConfig = contents;
+        },
+        invalidateTeamConfig() {
+          invalidatedConfig = true;
+        },
+      });
+      const host = createHost(run, {
+        runs: new Map([
+          [run.runId, run],
+          [replacementRun.runId, replacementRun],
+        ]),
+        getAliveRunId: () => aliveRunId,
+        getTrackedRunId: () => aliveRunId,
+        isCurrentTrackedRun: (candidateRun) => aliveRunId === candidateRun.runId,
+        persistInboxMessage() {
+          promptEnqueued = true;
+        },
+        async persistLaunchStateSnapshot(targetRun) {
+          launchSnapshots.push(targetRun.runId);
+          return null;
+        },
+      });
+      const controller = new TeamProvisioningMemberLifecycleController(
+        host,
+        immediateOperationUseCases,
+        {
+          restart: {
+            resolveDirectRestartRuntimeCwd: () => process.cwd(),
+            async preparePrimaryOwnedMemberRestartRuntime() {
+              return { directTmuxRestartPaneId: 'pane-1', shouldDirectProcessRestart: false };
+            },
+            updateDirectTmuxRestartMemberConfig,
+          },
+        }
+      );
 
-    await controller.restartMember('team-a', 'Worker');
+      await expect(controller.restartMember('team-a', 'Worker')).rejects.toThrow(
+        'Team "team-a" is not currently running'
+      );
 
-    expect(writtenConfig).not.toBeNull();
-    expect(JSON.parse(writtenConfig ?? '{}')).toMatchObject({
-      members: [
-        expect.objectContaining({
-          name: 'Worker',
-          providerId: 'codex',
-          tmuxPaneId: 'pane-1',
-          backendType: 'tmux',
-        }),
-      ],
-    });
-    expect(invalidatedConfig).toBe(true);
-    expect(promptEnqueued).toBe(true);
-    expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
-    expect(persistenceAttempts).toBe(1);
-    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
-      'Failed to persist successful direct restart launch snapshot for Worker: snapshot write failed'
-    );
-    vi.mocked(console.warn).mockClear();
-  });
+      expect(writtenConfig).toBeNull();
+      expect(invalidatedConfig).toBe(false);
+      expect(launchSnapshots).toEqual([]);
+      expect(promptEnqueued).toBe(false);
+      expect(sendKeysToTmuxPaneForCurrentPlatform).not.toHaveBeenCalled();
+    }
+  );
+
+  it.skipIf(process.platform === 'win32')(
+    'keeps a successful direct tmux restart resolved when final snapshot persistence fails',
+    async () => {
+      const member: TeamCreateRequest['members'][number] = {
+        name: 'Worker',
+        role: 'Developer',
+        providerId: 'codex',
+      };
+      const run = createRun(member);
+      let writtenConfig: string | null = null;
+      let invalidatedConfig = false;
+      let promptEnqueued = false;
+      let persistenceAttempts = 0;
+      vi.mocked(listTmuxPaneRuntimeInfoForCurrentPlatform).mockResolvedValue(
+        new Map([['pane-1', { currentCommand: 'bash' }]]) as Awaited<
+          ReturnType<typeof listTmuxPaneRuntimeInfoForCurrentPlatform>
+        >
+      );
+      const updateDirectTmuxRestartMemberConfig = createUpdateDirectTmuxRestartMemberConfigUseCase({
+        async readTeamConfigJson() {
+          return `${JSON.stringify(createConfig(member), null, 2)}\n`;
+        },
+        async writeTeamConfigJson(_teamName, contents) {
+          writtenConfig = contents;
+        },
+        invalidateTeamConfig() {
+          invalidatedConfig = true;
+        },
+      });
+      const host = createHost(run, {
+        getAliveRunId: () => run.runId,
+        getTrackedRunId: () => run.runId,
+        isCurrentTrackedRun: (candidateRun) => candidateRun === run,
+        persistInboxMessage() {
+          promptEnqueued = true;
+        },
+        async persistLaunchStateSnapshot() {
+          persistenceAttempts += 1;
+          throw new Error('snapshot write failed');
+        },
+      });
+      const controller = new TeamProvisioningMemberLifecycleController(
+        host,
+        immediateOperationUseCases,
+        {
+          restart: {
+            resolveDirectRestartRuntimeCwd: () => process.cwd(),
+            async preparePrimaryOwnedMemberRestartRuntime() {
+              return { directTmuxRestartPaneId: 'pane-1', shouldDirectProcessRestart: false };
+            },
+            updateDirectTmuxRestartMemberConfig,
+          },
+        }
+      );
+
+      await controller.restartMember('team-a', 'Worker');
+
+      expect(writtenConfig).not.toBeNull();
+      expect(JSON.parse(writtenConfig ?? '{}')).toMatchObject({
+        members: [
+          expect.objectContaining({
+            name: 'Worker',
+            providerId: 'codex',
+            tmuxPaneId: 'pane-1',
+            backendType: 'tmux',
+          }),
+        ],
+      });
+      expect(invalidatedConfig).toBe(true);
+      expect(promptEnqueued).toBe(true);
+      expect(sendKeysToTmuxPaneForCurrentPlatform).toHaveBeenCalledTimes(1);
+      expect(persistenceAttempts).toBe(1);
+      expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+        'Failed to persist successful direct restart launch snapshot for Worker: snapshot write failed'
+      );
+      vi.mocked(console.warn).mockClear();
+    }
+  );
 
   it('does not persist pure OpenCode restart messages or relaunch after adapter generation replacement before persistence', async () => {
     const member: TeamCreateRequest['members'][number] = {

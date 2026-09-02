@@ -177,35 +177,42 @@ describe('TeamProvisioningPreparePrimaryOwnedMemberRestartRuntimeUseCase', () =>
     ).rejects.toThrow('Member "Worker" uses an in-process runtime and cannot be restarted here');
   });
 
-  it('keeps an idle tmux pane reusable while stopping matching live process handles', async () => {
-    const { calls, ports } = createPorts({
-      paneRuntimeInfo: new Map([['pane-a', { panePid: 410, currentCommand: 'bash' }]]),
-    });
-    const prepareRestartRuntime = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(ports);
+  // POSIX-only: isInteractiveShellCommand() returns false on win32 by contract
+  // (tmux runs under WSL there), so no pane is reusable on this platform.
+  it.skipIf(process.platform === 'win32')(
+    'keeps an idle tmux pane reusable while stopping matching live process handles',
+    async () => {
+      const { calls, ports } = createPorts({
+        paneRuntimeInfo: new Map([['pane-a', { panePid: 410, currentCommand: 'bash' }]]),
+      });
+      const prepareRestartRuntime = createPreparePrimaryOwnedMemberRestartRuntimeUseCase(ports);
 
-    await expect(
-      prepareRestartRuntime({
-        teamName: 'team-a',
-        memberName: 'Worker',
-        persistedRuntimeMembers: [{ name: 'Worker', backendType: 'tmux', tmuxPaneId: ' pane-a ' }],
-        invalidateRuntimeSnapshotCaches: () => undefined,
-        loadLiveRuntimeByMember: async () =>
-          new Map([
-            ['Worker', { alive: true, backendType: 'process', pid: 222 }],
-            ['Other', { alive: true, backendType: 'process', pid: 333 }],
-          ]),
-      })
-    ).resolves.toEqual({
-      directTmuxRestartPaneId: 'pane-a',
-      shouldDirectProcessRestart: true,
-    });
+      await expect(
+        prepareRestartRuntime({
+          teamName: 'team-a',
+          memberName: 'Worker',
+          persistedRuntimeMembers: [
+            { name: 'Worker', backendType: 'tmux', tmuxPaneId: ' pane-a ' },
+          ],
+          invalidateRuntimeSnapshotCaches: () => undefined,
+          loadLiveRuntimeByMember: async () =>
+            new Map([
+              ['Worker', { alive: true, backendType: 'process', pid: 222 }],
+              ['Other', { alive: true, backendType: 'process', pid: 333 }],
+            ]),
+        })
+      ).resolves.toEqual({
+        directTmuxRestartPaneId: 'pane-a',
+        shouldDirectProcessRestart: true,
+      });
 
-    expect(calls.listedPaneIds).toEqual([['pane-a']]);
-    expect(calls.killedPanes).toEqual([]);
-    expect(calls.killedPids).toEqual([222]);
-    expect(calls.waitPidCalls).toEqual([{ pids: [222], timeoutMs: 1_500, pollMs: 100 }]);
-    expect(calls.waitPaneCalls).toEqual([]);
-  });
+      expect(calls.listedPaneIds).toEqual([['pane-a']]);
+      expect(calls.killedPanes).toEqual([]);
+      expect(calls.killedPids).toEqual([222]);
+      expect(calls.waitPidCalls).toEqual([{ pids: [222], timeoutMs: 1_500, pollMs: 100 }]);
+      expect(calls.waitPaneCalls).toEqual([]);
+    }
+  );
 
   it('kills and verifies stale tmux panes when no reusable shell pane is available', async () => {
     const { calls, ports } = createPorts({

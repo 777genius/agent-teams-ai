@@ -675,40 +675,45 @@ describe('TeamMcpConfigBuilder', () => {
     }
   });
 
-  it('prefers strict shell env lookup over fast Node lookup from a minimal GUI PATH', async () => {
-    mockBuiltWorkspaceEntryAvailable();
-    const previousPath = process.env.PATH;
-    process.env.PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(path.delimiter);
-    hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({
-      PATH: ['/strict-shell-node-bin', '/usr/bin'].join(path.delimiter),
-      HOME: '/Users/tester',
-    });
-    hoisted.execCliMock.mockImplementation(async (command, _args, options) => {
-      const env = options?.env as NodeJS.ProcessEnv | undefined;
-      if (env?.PATH?.split(path.delimiter)[0] === '/strict-shell-node-bin') {
-        expect(command).toBe('node');
-        return { stdout: nodeRuntimeProbeStdout('/strict-shell-node-bin/node'), stderr: '' };
-      }
-      return { stdout: nodeRuntimeProbeStdout('/fast/node'), stderr: '' };
-    });
+  // shouldPreferShellNodeProbe() is POSIX-only: the minimal Finder/Dock PATH it
+  // works around does not exist on Windows, where the fast lookup is authoritative.
+  it.skipIf(process.platform === 'win32')(
+    'prefers strict shell env lookup over fast Node lookup from a minimal GUI PATH',
+    async () => {
+      mockBuiltWorkspaceEntryAvailable();
+      const previousPath = process.env.PATH;
+      process.env.PATH = ['/usr/bin', '/bin', '/usr/sbin', '/sbin'].join(path.delimiter);
+      hoisted.resolveInteractiveShellEnvMock.mockResolvedValue({
+        PATH: ['/strict-shell-node-bin', '/usr/bin'].join(path.delimiter),
+        HOME: '/Users/tester',
+      });
+      hoisted.execCliMock.mockImplementation(async (command, _args, options) => {
+        const env = options?.env as NodeJS.ProcessEnv | undefined;
+        if (env?.PATH?.split(path.delimiter)[0] === '/strict-shell-node-bin') {
+          expect(command).toBe('node');
+          return { stdout: nodeRuntimeProbeStdout('/strict-shell-node-bin/node'), stderr: '' };
+        }
+        return { stdout: nodeRuntimeProbeStdout('/fast/node'), stderr: '' };
+      });
 
-    try {
-      const builder = new TeamMcpConfigBuilder();
-      const configPath = await builder.writeConfigFile();
-      createdPaths.push(configPath);
+      try {
+        const builder = new TeamMcpConfigBuilder();
+        const configPath = await builder.writeConfigFile();
+        createdPaths.push(configPath);
 
-      expect(readGeneratedServer(configPath)?.command).toBe('/strict-shell-node-bin/node');
-      expect(hoisted.resolveInteractiveShellEnvMock).toHaveBeenCalledWith(
-        expect.objectContaining({ source: 'mcp-node-runtime' })
-      );
-    } finally {
-      if (previousPath === undefined) {
-        delete process.env.PATH;
-      } else {
-        process.env.PATH = previousPath;
+        expect(readGeneratedServer(configPath)?.command).toBe('/strict-shell-node-bin/node');
+        expect(hoisted.resolveInteractiveShellEnvMock).toHaveBeenCalledWith(
+          expect.objectContaining({ source: 'mcp-node-runtime' })
+        );
+      } finally {
+        if (previousPath === undefined) {
+          delete process.env.PATH;
+        } else {
+          process.env.PATH = previousPath;
+        }
       }
     }
-  });
+  );
 
   it('falls back to strict shell env lookup when the fast Node runtime is too old', async () => {
     mockBuiltWorkspaceEntryAvailable();
