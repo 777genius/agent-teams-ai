@@ -1919,6 +1919,106 @@ controller.messages.sendMessage({
     expect(rows[0].leadSessionId).toBe('lead-session-1');
   });
 
+  it('auto-advances an owned pending task to in_progress on owner comment', () => {
+    const claudeDir = makeClaudeDir();
+    const appController = createController({ teamName: 'my-team', claudeDir });
+    const agentController = createController({
+      teamName: 'my-team',
+      claudeDir,
+      allowUserMessageSender: false,
+    });
+    const task = appController.tasks.createTask({
+      subject: 'Local model workflow',
+      owner: 'bob',
+      notifyOwner: false,
+    });
+    expect(task.status).toBe('pending');
+
+    const commented = agentController.tasks.addTaskComment(task.id, {
+      from: 'bob',
+      text: 'Checked runtime paths, findings attached below.',
+    });
+
+    expect(commented.task.status).toBe('in_progress');
+    const persisted = readTaskFile(claudeDir, task.id);
+    expect(persisted.status).toBe('in_progress');
+    expect(persisted.workIntervals).toHaveLength(1);
+    const statusEvents = (persisted.historyEvents || []).filter(
+      (event) => event.type === 'status_changed'
+    );
+    expect(statusEvents).toEqual([
+      expect.objectContaining({ from: 'pending', to: 'in_progress', actor: 'bob' }),
+    ]);
+
+    const again = agentController.tasks.addTaskComment(task.id, {
+      from: 'bob',
+      text: 'More findings.',
+    });
+    expect(again.task.status).toBe('in_progress');
+    const persistedAgain = readTaskFile(claudeDir, task.id);
+    expect(
+      (persistedAgain.historyEvents || []).filter((event) => event.type === 'status_changed')
+    ).toHaveLength(1);
+  });
+
+  it('does not auto-advance pending tasks on non-owner, lead, user, system, or replayed comments', () => {
+    const claudeDir = makeClaudeDir();
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', 'my-team', 'config.json'),
+      JSON.stringify(
+        {
+          name: 'my-team',
+          leadSessionId: 'lead-session-1',
+          members: [
+            { name: 'alice', role: 'team-lead' },
+            { name: 'bob', role: 'developer' },
+            { name: 'carol', role: 'developer' },
+          ],
+        },
+        null,
+        2
+      )
+    );
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const bobTask = controller.tasks.createTask({
+      subject: 'Stays pending',
+      owner: 'bob',
+      notifyOwner: false,
+    });
+
+    controller.tasks.addTaskComment(bobTask.id, { from: 'carol', text: 'Non-owner note.' });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
+
+    controller.tasks.addTaskComment(bobTask.id, { from: 'user', text: 'User note.' });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
+
+    controller.tasks.addTaskComment(bobTask.id, { from: 'system', text: 'System note.' });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
+
+    const leadTask = controller.tasks.createTask({
+      subject: 'Lead-owned stays pending',
+      owner: 'alice',
+      notifyOwner: false,
+    });
+    controller.tasks.addTaskComment(leadTask.id, { from: 'alice', text: 'Lead planning note.' });
+    expect(controller.tasks.getTask(leadTask.id).status).toBe('pending');
+
+    controller.tasks.addTaskComment(bobTask.id, {
+      id: 'replayed-comment',
+      from: 'bob',
+      text: 'Working on it.',
+    });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('in_progress');
+    controller.tasks.setTaskStatus(bobTask.id, 'pending', 'user');
+    controller.tasks.addTaskComment(bobTask.id, {
+      id: 'replayed-comment',
+      from: 'bob',
+      text: 'Working on it.',
+    });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
+  });
+
   it('normalizes task comment authors at the write boundary', () => {
     const claudeDir = makeClaudeDir();
     fs.writeFileSync(

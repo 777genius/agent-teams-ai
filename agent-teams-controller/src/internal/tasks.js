@@ -54,6 +54,16 @@ function warnNonCritical(message, error) {
     console.warn(`${message}: ${error instanceof Error ? error.message : String(error)}`);
 }
 
+// Diagnostics go to stderr, like warnNonCritical above. This package is loaded
+// inside the stdio MCP server, where stdout carries the JSON-RPC stream, so a
+// console.info/log line here is parsed as a protocol frame and kills the call.
+function logNonCritical(message) {
+    if (typeof console === 'undefined' || typeof console.warn !== 'function') {
+        return;
+    }
+    console.warn(message);
+}
+
 function resolveMemberRuntimeProvider(member) {
     if (isOpenCodeMember(member)) return 'opencode';
     if (isCodexMember(member)) return 'codex';
@@ -524,6 +534,50 @@ function updateTaskFields(context, taskId, fields) {
     });
 }
 
+function maybeAutoStartOwnedPendingTaskOnOwnerComment(context, insertResult, options = {}) {
+    if (options.trustedInternalWrite === true || !insertResult || insertResult.inserted !== true) {
+        return null;
+    }
+    const task = insertResult.task;
+    const comment = insertResult.comment;
+    if (!task || task.status !== 'pending' || !comment) {
+        return null;
+    }
+    if (comment.type && comment.type !== 'regular') {
+        return null;
+    }
+
+    const owner = normalizeActorName(task.owner);
+    const author = normalizeActorName(comment.author);
+    if (!owner || !author || !isSameMember(author, owner)) {
+        return null;
+    }
+    const authorKey = author.toLowerCase();
+    if (authorKey === 'user' || authorKey === 'system') {
+        return null;
+    }
+    const leadName = runtimeHelpers.inferLeadName(context.paths);
+    if (isSameTaskMember(author, leadName, leadName)) {
+        return null;
+    }
+
+    try {
+        let updated = taskStore.setTaskStatus(context.paths, task.id, 'in_progress', author);
+        const state = kanbanStore.readKanbanState(context.paths, context.teamName);
+        if (hasKanbanReference(state, updated.id)) {
+            kanbanStore.clearKanban(context.paths, context.teamName, updated.id, { nextReviewState: 'none' });
+            updated = taskStore.readTask(context.paths, updated.id, { includeDeleted: true });
+        }
+        logNonCritical(
+            `[tasks] auto-advanced task ${task.id} pending -> in_progress after owner comment by ${author}`
+        );
+        return updated;
+    } catch (error) {
+        warnNonCritical(`[tasks] auto-advance to in_progress failed for task ${task.id}`, error);
+        return null;
+    }
+}
+
 function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
     const commentFlags = flags || {};
     const fromRequiredForAgentTool =
@@ -546,7 +600,7 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
     );
     const result = withTeamBoardLock(context.paths, () => {
         readMutableTask(context, taskId, 'adding a comment');
-        return taskStore.addTaskComment(context.paths, taskId, commentFlags.text, {
+        const insertResult = taskStore.addTaskComment(context.paths, taskId, commentFlags.text, {
             author,
             ...(commentFlags.id ? { id: commentFlags.id } : {}),
             ...(commentFlags.createdAt ? { createdAt: commentFlags.createdAt } : {}),
@@ -554,6 +608,12 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
             ...(Array.isArray(commentFlags.taskRefs) ? { taskRefs: commentFlags.taskRefs } : {}),
             ...(Array.isArray(commentFlags.attachments) ? { attachments: commentFlags.attachments } : {}),
         });
+        const autoStartedTask = maybeAutoStartOwnedPendingTaskOnOwnerComment(
+            context,
+            insertResult,
+            options
+        );
+        return autoStartedTask ? { ...insertResult, task: autoStartedTask } : insertResult;
     });
 
     try {
