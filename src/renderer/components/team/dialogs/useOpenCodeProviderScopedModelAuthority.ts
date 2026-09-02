@@ -141,18 +141,20 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
         }
         if (update.mode === 'publish') {
           sourceContributions.delete(publisherToken);
-          sourceContributions.set(publisherToken, update.providerStatus);
-          if (isProviderModelCatalogExactReady(update.providerStatus)) {
-            retainedStatusBySourceId.set(sourceId, update.providerStatus);
+          if (
+            update.providerStatus.modelCatalogRefreshState === 'error' ||
+            isProviderModelCatalogExactReady(update.providerStatus)
+          ) {
+            sourceContributions.set(publisherToken, update.providerStatus);
+          }
+          const statuses = [...sourceContributions.values()];
+          const latestLiveStatus =
+            statuses.findLast((status) => isProviderModelCatalogExactReady(status)) ??
+            statuses.findLast((status) => status.modelCatalogRefreshState === 'error');
+          if (latestLiveStatus) {
+            retainedStatusBySourceId.set(sourceId, latestLiveStatus);
           } else {
-            const latestLiveStatus = [...sourceContributions.values()].findLast((status) =>
-              isProviderModelCatalogExactReady(status)
-            );
-            if (latestLiveStatus) {
-              retainedStatusBySourceId.set(sourceId, latestLiveStatus);
-            } else {
-              retainedStatusBySourceId.set(sourceId, update.providerStatus);
-            }
+            retainedStatusBySourceId.delete(sourceId);
           }
         } else if (update.mode !== 'loading') {
           sourceContributions.delete(publisherToken);

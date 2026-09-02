@@ -2564,7 +2564,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'loading';
   const openCodeCatalogRefreshFailed =
     effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'error';
-  const retryOpenCodeCatalogRefresh = invalidateCliProviderModelCatalog;
+  const retryOpenCodeCatalogRefresh = (): void => {
+    openCodeScopedCatalog.refresh();
+    invalidateCliProviderModelCatalog?.();
+  };
   const retryOpenCodeRuntimeStatus = (): void => {
     void fetchOpenCodeRuntimeStatus();
     void fetchCliProviderStatus('opencode', {
