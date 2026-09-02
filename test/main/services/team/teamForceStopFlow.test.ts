@@ -223,4 +223,53 @@ describe('runTeamForceStopFlow', () => {
     expect(result.clearedPendingDeliveries).toBe(3);
     expect(result.cleanupOutcome).toBe('completed');
   });
+
+  it('persists the stopped state after the cleanup steps have run', async () => {
+    const order: string[] = [];
+    const markTeamStopped = vi.fn(() => {
+      order.push('markTeamStopped');
+      return Promise.resolve();
+    });
+    const ports = createPorts({
+      clearPendingPromptDeliveries: vi.fn(() => {
+        order.push('clearPendingPromptDeliveries');
+        return Promise.resolve({ cleared: 0, diagnostics: [] });
+      }),
+      markTeamStopped,
+    });
+
+    await runTeamForceStopFlow('fixteam', ports);
+
+    expect(markTeamStopped).toHaveBeenCalledWith('fixteam');
+    expect(order).toEqual(['clearPendingPromptDeliveries', 'markTeamStopped']);
+  });
+
+  it('marks the team stopped even when the regular stop never confirmed', async () => {
+    const markTeamStopped = vi.fn(() => Promise.resolve());
+    const ports = createPorts({
+      stopTeam: vi.fn(() => Promise.reject(new Error('did not confirm stop'))),
+      markTeamStopped,
+    });
+
+    const result = await runTeamForceStopFlow('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stop_failed');
+    expect(markTeamStopped).toHaveBeenCalledWith('fixteam');
+  });
+
+  it('reports a failing stopped-state write as a diagnostic instead of failing the force stop', async () => {
+    const ports = createPorts({
+      markTeamStopped: vi.fn(() => Promise.reject(new Error('team directory is read-only'))),
+    });
+
+    const result = await runTeamForceStopFlow('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.diagnostics.join('\n')).toContain(
+      'Stopped-state persistence failed: team directory is read-only'
+    );
+    expect(ports.logWarning).toHaveBeenCalledWith(
+      '[fixteam] Could not persist stopped launch state: team directory is read-only'
+    );
+  });
 });

@@ -58,6 +58,13 @@ export interface TeamForceStopFlowPorts {
   ): Promise<{ cleared: number; diagnostics: string[] }>;
   logWarning(message: string): void;
   stopTimeoutMs?: number;
+  /**
+   * Persist the stopped state: drop the launch publication and write the stop
+   * marker that keeps reconciliation from re-deriving a launch snapshot for a
+   * team the user stopped. Optional so a caller that only wants the process
+   * cleanup - a diagnostic sweep, say - leaves the publication alone.
+   */
+  markTeamStopped?(teamName: string): Promise<void>;
 }
 
 /**
@@ -162,6 +169,7 @@ export async function runTeamForceStopFlow(
   // Catch rows published by this run while its scoped stop was in flight.
   if (ownedLaneIds?.length) await cancelOwnedDeliveries();
 
+  await markStopped(teamName, ports, diagnostics);
   return {
     stopOutcome,
     cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
@@ -169,6 +177,23 @@ export async function runTeamForceStopFlow(
     clearedPendingDeliveries,
     diagnostics,
   };
+}
+
+async function markStopped(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  diagnostics: string[]
+): Promise<void> {
+  if (!ports.markTeamStopped) {
+    return;
+  }
+  try {
+    await ports.markTeamStopped(teamName);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ports.logWarning(`[${teamName}] Could not persist stopped launch state: ${message}`);
+    diagnostics.push(`Stopped-state persistence failed: ${message}`);
+  }
 }
 
 /**

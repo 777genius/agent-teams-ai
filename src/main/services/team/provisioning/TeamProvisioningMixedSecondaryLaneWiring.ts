@@ -16,6 +16,7 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
+import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
@@ -279,6 +280,7 @@ export function createStaleMixedSecondaryRecoveryPorts<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 >(deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>): StaleMixedSecondaryRecoveryPorts {
   return {
+    isTeamLaunchStopped: (teamName) => new TeamLaunchStateStore().isStopped(teamName),
     hasMixedSecondaryLaunchMetadata: (snapshot) =>
       deps.service.hasMixedSecondaryLaunchMetadata(snapshot),
     shouldRecoverStalePersistedMixedLaunchSnapshot: (snapshot) =>

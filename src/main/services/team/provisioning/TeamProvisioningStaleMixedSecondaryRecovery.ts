@@ -85,6 +85,8 @@ export interface StaleMixedSecondaryMemberInput {
 }
 
 export interface StaleMixedSecondaryRecoveryPorts {
+  /** True while the team carries a stop marker: stopped, and not relaunched yet. */
+  isTeamLaunchStopped(teamName: string): Promise<boolean>;
   hasMixedSecondaryLaunchMetadata(snapshot: PersistedTeamLaunchSnapshot | null): boolean;
   shouldRecoverStalePersistedMixedLaunchSnapshot(snapshot: PersistedTeamLaunchSnapshot): boolean;
   readTeamMeta(teamName: string): Promise<StaleMixedSecondaryTeamMeta | null>;
@@ -163,6 +165,12 @@ export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
   persistedSnapshot: PersistedTeamLaunchSnapshot | null,
   ports: StaleMixedSecondaryRecoveryPorts
 ): Promise<PersistedTeamLaunchSnapshot | null> {
+  // A stopped team has nothing to recover: re-deriving lanes from the leftover
+  // metadata of the run that was just stopped produced a phantom
+  // "starting / never spawned" launch snapshot on the team card.
+  if (await ports.isTeamLaunchStopped(teamName)) {
+    return persistedSnapshot;
+  }
   if (
     persistedSnapshot &&
     ports.hasMixedSecondaryLaunchMetadata(persistedSnapshot) &&
@@ -250,10 +258,7 @@ export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
             },
           });
 
-    if (
-      laneIdentity.laneKind !== 'secondary' ||
-      laneIdentity.laneOwnerProviderId !== 'opencode'
-    ) {
+    if (laneIdentity.laneKind !== 'secondary' || laneIdentity.laneOwnerProviderId !== 'opencode') {
       primaryMembers.push(member);
       continue;
     }
