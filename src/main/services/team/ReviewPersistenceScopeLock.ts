@@ -1,7 +1,7 @@
-import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { readProcessStartTimeMs } from '@main/utils/processStartTime';
 import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -15,6 +15,22 @@ const DEFAULT_RETRY_INTERVAL_MS = 25;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 5_000;
 const SQLITE_BUSY_TIMEOUT_MS = 2_000;
 const PROCESS_START_CACHE_TTL_MS = 5_000;
+// A probe that could not observe the owner must expire, or one slow probe becomes a
+// permanent "owner is alive" verdict, but it must not expire per retry: at the 25ms
+// retry cadence a miss shorter than the loop keeps a powershell.exe spawn running for
+// the whole acquire window. A miss therefore covers a stretch of retries, with a floor
+// so a fast loop cannot drive the spawn rate on its own.
+const PROCESS_START_MISS_CACHE_RETRY_INTERVALS = 20;
+const MIN_PROCESS_START_MISS_CACHE_TTL_MS = 1_000;
+// Reading a start time shells out to powershell.exe on Windows, whose startup alone
+// costs the better part of a second on a loaded machine; the margin has to cover
+// that, not the query itself. What is left of the acquire budget caps it, so a probe
+// cannot keep an acquire running seconds past the deadline it promised.
+const PROCESS_START_PROBE_TIMEOUT_MS = 5_000;
+// The cap still has to leave a probe room to answer at all: a short acquire budget
+// that starves every probe could never reclaim a crash-left lease from a recycled pid,
+// and the answer outlives this acquire in the cache anyway.
+const MIN_PROCESS_START_PROBE_TIMEOUT_MS = 1_000;
 const PROCESS_STARTED_AT = Math.floor(Date.now() - process.uptime() * 1_000);
 const LOGICAL_SCOPE_LOCK_TOKEN = 'review-persistence-logical-scope:v1';
 
@@ -36,9 +52,16 @@ interface ReviewScopeLockLease {
   ownerToken: string;
 }
 
+/** What one acquire attempt may still spend on observing the current owner. */
+interface OwnerProbeBudget {
+  deadline: number;
+  retryIntervalMs: number;
+}
+
 const lockDatabases = new Map<string, DatabaseSync>();
 const activeOwnerTokens = new Set<string>();
 const observedProcessStarts = new Map<number, { startedAt: number | null; expiresAt: number }>();
+const pendingProcessStartProbes = new Map<number, Promise<number | null>>();
 
 function getLockDatabasePath(): string {
   return path.join(getTeamsBasePath(), '.review-persistence-locks.sqlite3');
@@ -117,54 +140,51 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-function getProcessStartedAt(pid: number): number | null {
-  if (pid === process.pid) return PROCESS_STARTED_AT;
+function getProcessStartedAt(pid: number, budget: OwnerProbeBudget): Promise<number | null> {
+  if (pid === process.pid) return Promise.resolve(PROCESS_STARTED_AT);
   const cached = observedProcessStarts.get(pid);
-  if (cached && cached.expiresAt > Date.now()) return cached.startedAt;
-  let startedAt: number | null = null;
-  try {
-    if (process.platform === 'win32') {
-      const result = spawnSync(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-NonInteractive',
-          '-Command',
-          `(Get-Process -Id ${pid} -ErrorAction Stop).StartTime.ToUniversalTime().ToString('o')`,
-        ],
-        { encoding: 'utf8', timeout: 1_000, windowsHide: true }
-      );
-      if (result.status === 0) {
-        const parsed = Date.parse(result.stdout.trim());
-        startedAt = Number.isFinite(parsed) ? parsed : null;
-      }
-    } else {
-      const result = spawnSync('ps', ['-o', 'lstart=', '-p', String(pid)], {
-        encoding: 'utf8',
-        timeout: 1_000,
-        windowsHide: true,
-        env: { ...process.env, LC_ALL: 'C' },
-      });
-      if (result.status === 0) {
-        const parsed = Date.parse(result.stdout.trim());
-        startedAt = Number.isFinite(parsed) ? parsed : null;
-      }
-    }
-  } catch {
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.startedAt);
+  const remainingBudgetMs = budget.deadline - Date.now();
+  // The acquire is already over: a spawn started now could only outlive it, so answer
+  // the same "unobservable" the caller would have to assume anyway.
+  if (remainingBudgetMs <= 0) return Promise.resolve(null);
+  const inFlight = pendingProcessStartProbes.get(pid);
+  // Concurrent acquires of different scopes routinely inspect the same owner PID;
+  // joining the in-flight probe keeps that to one process spawn.
+  if (inFlight) return inFlight;
+  const missCacheTtlMs = Math.max(
+    MIN_PROCESS_START_MISS_CACHE_TTL_MS,
+    budget.retryIntervalMs * PROCESS_START_MISS_CACHE_RETRY_INTERVALS
+  );
+  const probe = readProcessStartTimeMs(
+    pid,
+    process.platform,
+    Math.min(
+      PROCESS_START_PROBE_TIMEOUT_MS,
+      Math.max(remainingBudgetMs, MIN_PROCESS_START_PROBE_TIMEOUT_MS)
+    )
+  )
     // If process identity cannot be observed, keep the live PID owner conservatively.
-  }
-  observedProcessStarts.set(pid, {
-    startedAt,
-    expiresAt: Date.now() + PROCESS_START_CACHE_TTL_MS,
-  });
-  return startedAt;
+    .catch(() => null)
+    .then((startedAt) => {
+      observedProcessStarts.set(pid, {
+        startedAt,
+        expiresAt: Date.now() + (startedAt === null ? missCacheTtlMs : PROCESS_START_CACHE_TTL_MS),
+      });
+      return startedAt;
+    })
+    .finally(() => {
+      if (pendingProcessStartProbes.get(pid) === probe) pendingProcessStartProbes.delete(pid);
+    });
+  pendingProcessStartProbes.set(pid, probe);
+  return probe;
 }
 
-function isStaleOwner(row: ReviewScopeLockRow): boolean {
+async function isStaleOwner(row: ReviewScopeLockRow, budget: OwnerProbeBudget): Promise<boolean> {
   if (!isProcessAlive(row.owner_pid)) return true;
   // A recycled PID must not keep a crash-left row forever. The same process can
   // import this module more than once, so tolerate small uptime rounding drift.
-  const observedProcessStart = getProcessStartedAt(row.owner_pid);
+  const observedProcessStart = await getProcessStartedAt(row.owner_pid, budget);
   if (
     observedProcessStart !== null &&
     Math.abs(row.owner_started_at - observedProcessStart) > 10_000
@@ -182,14 +202,22 @@ function rollbackBestEffort(database: DatabaseSync): void {
   }
 }
 
-function tryAcquireLease(database: DatabaseSync, scopeId: string, ownerToken: string): boolean {
+async function tryAcquireLease(
+  database: DatabaseSync,
+  scopeId: string,
+  ownerToken: string,
+  budget: OwnerProbeBudget
+): Promise<boolean> {
   const observed = database
     .prepare(
       'SELECT owner_token, owner_pid, owner_started_at FROM review_scope_locks WHERE scope_id = ?'
     )
     .get(scopeId) as unknown as ReviewScopeLockRow | undefined;
+  // The owner probe must settle before BEGIN IMMEDIATE: awaiting inside the
+  // transaction would hold the write lock across a process spawn. The row is
+  // re-read below because this pre-read can go stale while the probe runs.
   const observedIsStale =
-    !observed || observed.owner_token === ownerToken || isStaleOwner(observed);
+    !observed || observed.owner_token === ownerToken || (await isStaleOwner(observed, budget));
 
   database.exec('BEGIN IMMEDIATE');
   try {
@@ -249,10 +277,11 @@ async function acquireLease(
   const scopeId = buildScopeId(teamName, persistenceScope);
   const ownerToken = randomUUID();
   const deadline = Date.now() + options.acquireTimeoutMs;
+  const budget: OwnerProbeBudget = { deadline, retryIntervalMs: options.retryIntervalMs };
 
   while (true) {
     try {
-      if (tryAcquireLease(database, scopeId, ownerToken)) {
+      if (await tryAcquireLease(database, scopeId, ownerToken, budget)) {
         activeOwnerTokens.add(ownerToken);
         return { database, scopeId, ownerToken };
       }
@@ -371,4 +400,5 @@ export function closeReviewPersistenceScopeLockDatabasesForTests(): void {
   lockDatabases.clear();
   activeOwnerTokens.clear();
   observedProcessStarts.clear();
+  pendingProcessStartProbes.clear();
 }
