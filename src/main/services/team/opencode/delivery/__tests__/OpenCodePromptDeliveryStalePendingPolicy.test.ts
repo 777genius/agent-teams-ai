@@ -10,6 +10,7 @@ import {
   OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON,
   OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS,
   OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS,
+  OPENCODE_REPLY_OPTIONAL_TURN_END_REASON,
   OPENCODE_STALE_PENDING_HARD_CAP_REASON,
   OPENCODE_STALE_PENDING_POLICY_CONFIG,
   OPENCODE_STALE_PENDING_PREEMPTED_REASON,
@@ -346,6 +347,61 @@ describe('decideOpenCodeStalePendingResolution', () => {
         laneKind: 'secondary',
         observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
         observedDiagnostics: [TREATED_IDLE],
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toEqual({ action: 'none' });
+  });
+
+  it('settles secondary-lane reply-optional records (informational, teammate report) once the turn ended', () => {
+    // On live runs a dep-resolved notice to a teammate sat pending for five
+    // minutes although the member had finished its turn - and its task - long
+    // before: nothing in the notice asked for a reply.
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: record({
+          laneId: 'secondary:opencode:scribe',
+          memberName: 'Scribe',
+          replyRecipient: 'system',
+          lastAttemptAt: minutesAgo(1),
+          acceptedAt: minutesAgo(1),
+        }),
+        laneKind: 'secondary',
+        observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
+        observedDiagnostics: [TREATED_IDLE],
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toEqual({ action: 'settle_plain_text', reason: OPENCODE_REPLY_OPTIONAL_TURN_END_REASON });
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: record({
+          laneId: 'secondary:opencode:scribe',
+          memberName: 'Scribe',
+          replyRecipient: 'Muse',
+          lastAttemptAt: minutesAgo(1),
+          acceptedAt: minutesAgo(1),
+        }),
+        laneKind: 'secondary',
+        observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
+        observedDiagnostics: [TREATED_IDLE],
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toEqual({ action: 'settle_plain_text', reason: OPENCODE_REPLY_OPTIONAL_TURN_END_REASON });
+    // Still busy: keep waiting.
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: record({
+          laneId: 'secondary:opencode:scribe',
+          memberName: 'Scribe',
+          replyRecipient: 'system',
+          lastAttemptAt: minutesAgo(1),
+          acceptedAt: minutesAgo(1),
+        }),
+        laneKind: 'secondary',
+        observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
+        observedDiagnostics: [BUSY],
         nowMs: NOW_MS,
         config: POLICY,
       })

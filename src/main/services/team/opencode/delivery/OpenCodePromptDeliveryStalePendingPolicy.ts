@@ -1,3 +1,4 @@
+import { isOpenCodeReplyOptionalDeliveryContract } from './OpenCodeDeliveryReplyContract';
 import {
   hasOpenCodeAcceptedRuntimePrompt,
   isOpenCodeDirectUserPromptDelivery,
@@ -46,6 +47,7 @@ export const OPENCODE_STALE_PENDING_POLICY_CONFIG: OpenCodeStalePendingPolicyCon
 
 export const OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON =
   'opencode_lead_plain_text_turn_end_non_user_message';
+export const OPENCODE_REPLY_OPTIONAL_TURN_END_REASON = 'opencode_reply_optional_delivery_turn_end';
 export const OPENCODE_STALE_PENDING_TERMINAL_REASON =
   'opencode_stale_pending_observe_window_exhausted';
 export const OPENCODE_STALE_PENDING_HARD_CAP_REASON =
@@ -136,6 +138,10 @@ export function isOpenCodePromptDeliveryStalePending(
  *   and session not busy): settle as `responded_plain_text` right away. Lead
  *   replies to teammate reports and system notifications are optional, so a
  *   plain-text turn end is a complete response and read-commit may proceed.
+ * - Any lane, reply-optional delivery (informational notice or teammate
+ *   report), turn ended: same settlement. The member owed no reply, so a
+ *   finished turn is the whole contract; without this the record sat pending
+ *   until the stale window expired.
  * - Stale (older than `config.staleAfterMs`) and the session is not busy:
  *   terminal.
  * - Stale and busy: keep observing; non-user records are capped at
@@ -163,6 +169,9 @@ export function decideOpenCodeStalePendingResolution(input: {
 
   if (input.laneKind === 'primary' && !isUserPrompt && turnEnded) {
     return { action: 'settle_plain_text', reason: OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON };
+  }
+  if (turnEnded && isOpenCodeReplyOptionalDeliveryContract(record.replyRecipient)) {
+    return { action: 'settle_plain_text', reason: OPENCODE_REPLY_OPTIONAL_TURN_END_REASON };
   }
 
   const ageMs = getOpenCodePromptDeliveryPendingAgeMs(record, input.nowMs);
