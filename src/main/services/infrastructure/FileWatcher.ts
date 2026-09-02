@@ -292,6 +292,35 @@ export class FileWatcher extends EventEmitter {
     ]);
   }
 
+  /**
+   * Release the directory watch handles under teams/<team> and tasks/<team>
+   * and keep them released until resumeTeamWatchers. Permanent deletion uses
+   * this: on Windows a watched directory holds an open handle that turns the
+   * detach rename of the team directory into an EPERM no retry can outlast,
+   * because the handle is only released when the watcher closes.
+   *
+   * Returns labels for the watch sets that actually held live targets, so the
+   * caller can log what it released and skip waiting when it released nothing.
+   */
+  async suspendTeamWatchers(teamName: string): Promise<string[]> {
+    const released: string[] = [];
+    if (await this.teamsRegistry?.suspendTeam(teamName)) {
+      released.push('teams-dir-watch');
+    }
+    if (await this.tasksRegistry?.suspendTeam(teamName)) {
+      released.push('tasks-dir-watch');
+    }
+    return released;
+  }
+
+  /** Allow the team's directories to be watched again (see suspendTeamWatchers). */
+  async resumeTeamWatchers(teamName: string): Promise<void> {
+    await Promise.all([
+      this.teamsRegistry?.resumeTeam(teamName),
+      this.tasksRegistry?.resumeTeam(teamName),
+    ]);
+  }
+
   setFileSystemProvider(provider: FileSystemProvider): void {
     this.fsProvider = provider;
   }

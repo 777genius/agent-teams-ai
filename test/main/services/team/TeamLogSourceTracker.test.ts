@@ -137,6 +137,50 @@ describe('TeamLogSourceTracker', () => {
     expect(emitter).not.toHaveBeenCalled();
   });
 
+  it('forceReleaseTeam closes the watcher that stopTracking is not allowed to touch', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-force-release-'));
+    setClaudeBasePathOverride(path.join(tempDir, '.claude'));
+
+    const logsFinder = {
+      getLiveLogSourceWatchContext: vi.fn(async () => ({
+        projectDir: tempDir!,
+        sessionIds: [],
+        watchSessionIds: [],
+      })),
+    } as unknown as TeamMemberLogsFinder;
+
+    const tracker = new TeamLogSourceTracker(logsFinder);
+    tracker.setEmitter(vi.fn<(event: TeamChangeEvent) => void>());
+
+    await tracker.enableTracking('demo', 'stall_monitor');
+    await tracker.enableTracking('demo', 'task_log_stream');
+
+    // This is the premise of the fix: the ordinary teardown only drops the
+    // change-presence consumers, so the watcher - and its handle on
+    // teams/demo/task-log-freshness - is still open afterwards.
+    await tracker.stopTracking('demo');
+    expect(tracker.getSnapshot('demo')).not.toBeNull();
+
+    await expect(tracker.forceReleaseTeam('demo')).resolves.toBe(true);
+    expect(tracker.getSnapshot('demo')).toBeNull();
+
+    // Nothing is left to release, and asking again must say so rather than
+    // reporting a release the caller would then wait 150 ms for.
+    await expect(tracker.forceReleaseTeam('demo')).resolves.toBe(false);
+  });
+
+  it('forceReleaseTeam reports false for a team it never tracked', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-untracked-'));
+    setClaudeBasePathOverride(path.join(tempDir, '.claude'));
+
+    const logsFinder = {
+      getLiveLogSourceWatchContext: vi.fn(async () => null),
+    } as unknown as TeamMemberLogsFinder;
+    const tracker = new TeamLogSourceTracker(logsFinder);
+
+    await expect(tracker.forceReleaseTeam('never-tracked')).resolves.toBe(false);
+  });
+
   it('creates team log freshness dir without creating missing live cwd roots', async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-missing-root-'));
     setClaudeBasePathOverride(path.join(tempDir, '.claude'));

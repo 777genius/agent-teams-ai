@@ -88,8 +88,89 @@ export class TeamTaskWatchRegistry {
   private reconcileInProgress = false;
   private reconcileAgain = false;
   private reconcileDebounceTimer: NodeJS.Timeout | null = null;
+  private readonly suspendedTeams = new Set<string>();
+  private suppressInitialInboxBackfill = false;
 
   constructor(private readonly options: TeamTaskWatchRegistryOptions) {}
+
+  /**
+   * Drop every watch target under this team and keep it out of future
+   * reconciles until resumeTeam. Permanent deletion needs this: on Windows a
+   * watched directory keeps an open handle, and an open handle anywhere in the
+   * tree makes renaming the team directory fail with EPERM for as long as the
+   * watcher lives.
+   *
+   * Returns true when a live watch target was actually released, so the caller
+   * can tell "nothing was holding this team" from "handles were just closed".
+   */
+  async suspendTeam(teamName: string): Promise<boolean> {
+    this.suspendedTeams.add(teamName);
+    const teamPath = path.normalize(path.join(this.options.rootPath, teamName));
+    const teamPathPrefix = teamPath + path.sep;
+    const suspendTargets = [...this.targets].filter(
+      (target) => target === teamPath || target.startsWith(teamPathPrefix)
+    );
+
+    let released = false;
+    if (suspendTargets.length > 0 && this.watcher) {
+      if (process.platform === 'win32') {
+        await this.releaseWatcherForSuspend();
+      } else {
+        this.unwatchSuspendedTargets(suspendTargets);
+      }
+      released = true;
+    }
+
+    await this.reconcileTargets();
+    return released;
+  }
+
+  /** Allow the team's directories to be watched again (see suspendTeam). */
+  async resumeTeam(teamName: string): Promise<void> {
+    if (!this.suspendedTeams.delete(teamName)) {
+      return;
+    }
+    await this.reconcileTargets();
+  }
+
+  /**
+   * Windows only. Chokidar's unwatch() removes paths from the watch set but
+   * leaves the underlying ReadDirectoryChangesW handle on the directory open
+   * until the watcher instance itself closes, so unwatching is not enough to
+   * let the rename through. The instance is closed here and the reconcile that
+   * follows rebuilds it without the suspended team.
+   */
+  private async releaseWatcherForSuspend(): Promise<void> {
+    const watcher = this.watcher;
+    this.watcher = null;
+    // Bump before closing: events already queued on the dying watcher must fail
+    // the generation guard rather than be delivered while it winds down.
+    this.generation += 1;
+    // The rebuild creates a fresh instance, and a fresh instance fires 'ready'.
+    // The initial scoped inbox backfill is designed to run once, on the first
+    // watcher, so replaying it here would redeliver every live inbox message in
+    // the middle of a delete.
+    this.suppressInitialInboxBackfill = true;
+    this.targets = new Set();
+    this.targetKey = '';
+    if (watcher) {
+      await this.closeWatcher(watcher);
+    }
+  }
+
+  /**
+   * Everywhere else. inotify and kqueue release their watch on unwatch, and a
+   * POSIX rename does not care about open descriptors anyway, so the watcher
+   * instance is kept: rebuilding it re-opens a descriptor for every watched
+   * file in every other team.
+   */
+  private unwatchSuspendedTargets(suspendTargets: string[]): void {
+    this.watcher?.unwatch(suspendTargets);
+    for (const target of suspendTargets) {
+      this.targets.delete(target);
+    }
+    this.targetKey = [...this.targets].sort((left, right) => left.localeCompare(right)).join('\n');
+  }
 
   async start(): Promise<void> {
     if (this.closed) {
@@ -234,6 +315,9 @@ export class TeamTaskWatchRegistry {
   private createWatcher(targets: string[], nextKey: string): void {
     const generation = this.generation + 1;
     this.generation = generation;
+    // One-shot, consumed by exactly the instance a suspend rebuild creates.
+    const suppressInitialInboxBackfill = this.suppressInitialInboxBackfill;
+    this.suppressInitialInboxBackfill = false;
 
     const watcher = watch(targets, {
       ignoreInitial: true,
@@ -276,7 +360,7 @@ export class TeamTaskWatchRegistry {
     watcher.on('addDir', (changedPath) => handleEvent('addDir', changedPath));
     watcher.on('unlinkDir', (changedPath) => handleEvent('unlinkDir', changedPath));
     watcher.on('ready', () => {
-      if (this.closed || generation !== this.generation) {
+      if (this.closed || generation !== this.generation || suppressInitialInboxBackfill) {
         return;
       }
       // Wait until Chokidar has finished its ignored initial scan, then rescan
@@ -365,7 +449,7 @@ export class TeamTaskWatchRegistry {
           : scopedTeams;
 
     for (const entry of rootEntries) {
-      if (!entry.isDirectory()) {
+      if (!entry.isDirectory() || this.suspendedTeams.has(entry.name)) {
         continue;
       }
 

@@ -280,6 +280,51 @@ export class TeamLogSourceTracker {
     await this.disableTracking(teamName, 'change_presence');
   }
 
+  /**
+   * Tear down the team's tracking regardless of who still holds an
+   * acquisition. stopTracking only releases the change-presence consumers, so a
+   * watcher acquired by the stall monitor or by a task log stream stays alive
+   * and keeps an open handle on teams/<team>/task-log-freshness - which on
+   * Windows is enough to block renaming the team directory during permanent
+   * deletion. Consumers that had live acquisitions re-warm lazily on their next
+   * enable/ensure call.
+   *
+   * Returns true when a live watcher was actually closed.
+   */
+  async forceReleaseTeam(teamName: string): Promise<boolean> {
+    const state = this.stateByTeam.get(teamName);
+    if (!state) {
+      return false;
+    }
+
+    state.consumerCounts.clear();
+    // Invalidate in-flight initialize/recompute passes so none of them can
+    // rebuild a watcher after this release.
+    state.lifecycleVersion += 1;
+
+    if (state.ensureIdleReleaseTimer) {
+      clearTimeout(state.ensureIdleReleaseTimer);
+      state.ensureIdleReleaseTimer = null;
+    }
+    if (state.refreshTimer) {
+      clearTimeout(state.refreshTimer);
+      state.refreshTimer = null;
+    }
+    if (state.contextRefreshTimer) {
+      clearTimeout(state.contextRefreshTimer);
+      state.contextRefreshTimer = null;
+    }
+
+    const hadWatcher = state.watcher !== null;
+    if (state.watcher) {
+      await state.watcher.close().catch(() => undefined);
+      state.watcher = null;
+    }
+
+    this.stateByTeam.delete(teamName);
+    return hadWatcher;
+  }
+
   async disableTracking(
     teamName: string,
     consumer: TeamLogSourceTrackingConsumer

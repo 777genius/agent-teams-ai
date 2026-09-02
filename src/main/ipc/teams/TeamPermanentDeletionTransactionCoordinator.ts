@@ -36,6 +36,16 @@ export interface TeamPermanentDeletionTransactionCoordinatorPorts {
   lifecycle(): TeamPermanentDeletionLifecycle | null;
   invalidateTeamConfig(teamName: string): void;
   logRecoveryError(teamName: string, error: unknown): void;
+  /**
+   * Close the process's own handles inside teams/<team> and tasks/<team>
+   * (directory watchers and similar team-scoped resources) right before the
+   * destructive detach rename. On Windows any open handle in the tree makes
+   * that rename fail with EPERM, and a watcher handle never clears on its own,
+   * so the transient rename retry cannot recover from one.
+   */
+  releaseTeamScopedResources?(teamName: string): Promise<void>;
+  /** Undo releaseTeamScopedResources once the cleanup attempt is over. */
+  restoreTeamScopedResources?(teamName: string): Promise<void>;
 }
 
 export class TeamPermanentDeletionTransactionCoordinator {
@@ -124,6 +134,33 @@ export class TeamPermanentDeletionTransactionCoordinator {
         return;
       }
     }
+
+    const resourcesReleased = await this.releaseTeamScopedResources(intent.teamName);
+    try {
+      await this.runFencedCleanup(intent);
+    } finally {
+      if (resourcesReleased && this.ports.restoreTeamScopedResources) {
+        await this.ports.restoreTeamScopedResources(intent.teamName).catch(() => undefined);
+      }
+    }
+  }
+
+  private async releaseTeamScopedResources(teamName: string): Promise<boolean> {
+    if (!this.ports.releaseTeamScopedResources) {
+      return false;
+    }
+    try {
+      await this.ports.releaseTeamScopedResources(teamName);
+      return true;
+    } catch {
+      // Best effort: a failed release leaves the rename exactly where it was
+      // before, retrying against whatever still holds the handle.
+      return false;
+    }
+  }
+
+  private async runFencedCleanup(intent: TeamPermanentDeletionIntent): Promise<void> {
+    const backupService = this.getBackupService();
     const cleanupCompleted = await backupService.withPermanentDeletionTargetFence(
       intent,
       async (isTargetCurrent, getTargetProofHooks, isTargetCompleted) => {

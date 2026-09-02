@@ -36,7 +36,11 @@ function createIntent(): TeamPermanentDeletionIntent {
   };
 }
 
-function createHarness(options: { prepareTeamDeletion: () => Promise<void> }): {
+function createHarness(options: {
+  prepareTeamDeletion: () => Promise<void>;
+  releaseTeamScopedResources?: () => Promise<void>;
+  withResourceHooks?: boolean;
+}): {
   coordinator: TeamPermanentDeletionTransactionCoordinator;
   lifecycle: {
     prepareTeamDeletion: ReturnType<typeof vi.fn>;
@@ -45,6 +49,8 @@ function createHarness(options: { prepareTeamDeletion: () => Promise<void> }): {
   };
   permanentlyDeleteTeam: ReturnType<typeof vi.fn>;
   completePermanentDeletion: ReturnType<typeof vi.fn>;
+  releaseTeamScopedResources: ReturnType<typeof vi.fn>;
+  restoreTeamScopedResources: ReturnType<typeof vi.fn>;
 } {
   const intent = createIntent();
   const lifecycle = {
@@ -97,6 +103,10 @@ function createHarness(options: { prepareTeamDeletion: () => Promise<void> }): {
     ),
   } as unknown as TeamBackupService;
 
+  const releaseTeamScopedResources = vi.fn(
+    options.releaseTeamScopedResources ?? (async () => undefined)
+  );
+  const restoreTeamScopedResources = vi.fn(async () => undefined);
   const ports: TeamPermanentDeletionTransactionCoordinatorPorts = {
     backupService: () => backupService,
     dataService: () => ({ permanentlyDeleteTeam }),
@@ -109,6 +119,9 @@ function createHarness(options: { prepareTeamDeletion: () => Promise<void> }): {
     lifecycle: () => lifecycle,
     invalidateTeamConfig: vi.fn(),
     logRecoveryError: vi.fn(),
+    ...(options.withResourceHooks === true
+      ? { releaseTeamScopedResources, restoreTeamScopedResources }
+      : {}),
   };
 
   return {
@@ -116,6 +129,8 @@ function createHarness(options: { prepareTeamDeletion: () => Promise<void> }): {
     lifecycle,
     permanentlyDeleteTeam,
     completePermanentDeletion,
+    releaseTeamScopedResources,
+    restoreTeamScopedResources,
   };
 }
 
@@ -187,5 +202,81 @@ describe('TeamPermanentDeletionTransactionCoordinator quiesce timeout', () => {
 
     expect(harness.permanentlyDeleteTeam).not.toHaveBeenCalled();
     expect(harness.completePermanentDeletion).not.toHaveBeenCalled();
+  });
+});
+
+describe('TeamPermanentDeletionTransactionCoordinator team-scoped resources', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('releases team-scoped handles before the destructive rename and restores after', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: async () => undefined,
+      withResourceHooks: true,
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(deletion).resolves.toBeUndefined();
+
+    const [released] = harness.releaseTeamScopedResources.mock.invocationCallOrder;
+    const [deleted] = harness.permanentlyDeleteTeam.mock.invocationCallOrder;
+    const [restored] = harness.restoreTeamScopedResources.mock.invocationCallOrder;
+    // An open handle inside the tree is only a problem while the rename runs,
+    // so the order is the whole point: release, rename, restore.
+    expect(released).toBeLessThan(deleted);
+    expect(deleted).toBeLessThan(restored);
+  });
+
+  it('restores the handles even when the cleanup throws', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: async () => undefined,
+      withResourceHooks: true,
+    });
+    harness.permanentlyDeleteTeam.mockRejectedValueOnce(new Error('rename refused'));
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    const rejection = expect(deletion).rejects.toThrow('rename refused');
+    await vi.advanceTimersByTimeAsync(0);
+    await rejection;
+
+    expect(harness.restoreTeamScopedResources).toHaveBeenCalledWith('fixteam');
+  });
+
+  it('deletes anyway when the release throws, and then does not restore', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: async () => undefined,
+      withResourceHooks: true,
+      releaseTeamScopedResources: async () => {
+        throw new Error('registry is closed');
+      },
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(deletion).resolves.toBeUndefined();
+
+    // A failed release just leaves the rename where it was before this fix -
+    // retrying against whatever holds the handle. It must not abort the
+    // deletion, and there is nothing to put back.
+    expect(harness.permanentlyDeleteTeam).toHaveBeenCalled();
+    expect(harness.restoreTeamScopedResources).not.toHaveBeenCalled();
+  });
+
+  it('deletes without either hook when no releaser is wired in', async () => {
+    const harness = createHarness({ prepareTeamDeletion: async () => undefined });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(deletion).resolves.toBeUndefined();
+
+    expect(harness.releaseTeamScopedResources).not.toHaveBeenCalled();
+    expect(harness.restoreTeamScopedResources).not.toHaveBeenCalled();
+    expect(harness.permanentlyDeleteTeam).toHaveBeenCalled();
   });
 });

@@ -209,6 +209,7 @@ import type {
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
+import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type {
   AddTaskCommentRequest,
   AgentActionMode,
@@ -537,6 +538,7 @@ let teamPermanentDeletionLifecycle: {
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
+let teamScopedResourceReleaser: TeamScopedResourceReleaser | null = null;
 let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
@@ -579,7 +581,8 @@ export function initializeTeamHandlers(
     prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
-  }
+  },
+  scopedResourceReleaser?: TeamScopedResourceReleaser
 ): void {
   teamDataService = service;
   teamProvisioningStartApi = teamHandlerApis.provisioningStart;
@@ -606,6 +609,7 @@ export function initializeTeamHandlers(
   boardTaskExactLogsService = taskExactLogsService ?? null;
   boardTaskExactLogDetailService = taskExactLogDetailService ?? null;
   teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
+  teamScopedResourceReleaser = scopedResourceReleaser ?? null;
   permanentDeletionCoordinator = new TeamPermanentDeletionTransactionCoordinator({
     backupService: () => teamBackupService,
     dataService: () => getTeamDataService(),
@@ -617,6 +621,12 @@ export function initializeTeamHandlers(
       logger.error(
         `[PermanentDeletion] ${teamName === 'startup' ? 'Startup recovery failed' : `Recovery remains pending for ${teamName}`}: ${String(error)}`
       ),
+    releaseTeamScopedResources: async (teamName) => {
+      await teamScopedResourceReleaser?.release(teamName);
+    },
+    restoreTeamScopedResources: async (teamName) => {
+      await teamScopedResourceReleaser?.restore(teamName);
+    },
   });
   permanentDeletionCoordinator.startRecovery();
 }

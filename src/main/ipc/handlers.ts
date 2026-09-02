@@ -17,6 +17,7 @@
 import { createLogger } from '@shared/utils/logger';
 import { ipcMain } from 'electron';
 
+import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import {
   initializeCliInstallerHandlers,
   registerCliInstallerHandlers,
@@ -211,7 +212,15 @@ export function initializeIpcHandlers(
     boardTaskExactLogsService,
     boardTaskExactLogDetailService,
     launchIoGovernor,
-    teamPermanentDeletionLifecycle
+    teamPermanentDeletionLifecycle,
+    createTeamScopedResourceReleaser({
+      suspendTeamWatchers: (teamName) =>
+        registry.getActive().fileWatcher.suspendTeamWatchers(teamName),
+      resumeTeamWatchers: (teamName) =>
+        registry.getActive().fileWatcher.resumeTeamWatchers(teamName),
+      releaseTeamLogSourceWatcher: async (teamName) =>
+        (await teamLogSourceTracker?.forceReleaseTeam(teamName)) ?? false,
+    })
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,
