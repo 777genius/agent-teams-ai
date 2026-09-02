@@ -3922,6 +3922,59 @@ controller.messages.sendMessage({
     expect(fresh.deduplicated).toBeUndefined();
   });
 
+  it('suppresses a user-directed restatement that only changes punctuation, case or emphasis', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'Created and assigned two tasks: PROJECT_SUMMARY to Scribe, review to Scout.',
+    });
+    expect(first.deduplicated).toBeUndefined();
+
+    const restated = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: '**Created and assigned two tasks** - PROJECT_SUMMARY to Scribe, review to Scout!',
+    });
+    expect(restated.deduplicated).toBe(true);
+    expect(restated.duplicateOfMessageId).toBe(first.messageId);
+
+    const withNewInformation = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'Created and assigned two tasks: PROJECT_SUMMARY to Scribe, review to Scout. Scribe has started.',
+    });
+    expect(withNewInformation.deduplicated).toBeUndefined();
+
+    const inbox = JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json'), 'utf8')
+    );
+    expect(inbox).toHaveLength(2);
+  });
+
+  it('keeps short repeated acknowledgements and teammate messages out of the restatement guard', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Done.' });
+    const second = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Done!' });
+    expect(first.deduplicated).toBeUndefined();
+    expect(second.deduplicated).toBeUndefined();
+
+    const toTeammate = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Handing over the review of docs/PROJECT_SUMMARY.md to you now.',
+    });
+    const restatedToTeammate = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Handing over the review of docs/PROJECT_SUMMARY.md to you now!',
+    });
+    expect(toTeammate.deduplicated).toBeUndefined();
+    expect(restatedToTeammate.deduplicated).toBeUndefined();
+  });
+
   it('does not record pending work sync intents for app-side validation rejections', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

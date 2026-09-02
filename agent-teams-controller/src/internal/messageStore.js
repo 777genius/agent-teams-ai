@@ -227,6 +227,21 @@ function normalizeComparableParticipant(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+/**
+ * Word sequence of a message, with everything that carries no information for
+ * the reader removed: case, markdown emphasis, punctuation, emoji, list
+ * bullets, whitespace. Two agent->user messages with the same word sequence are
+ * the same message restated ("ALL DONE" / "**All done!**"), which is how a
+ * memoryless lead turn re-announces work the user already saw.
+ */
+function normalizeRestatedText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[\p{P}\p{S}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function getRuntimeDeliveryDuplicate(list, row) {
   if (
     row.source !== 'runtime_delivery' ||
@@ -260,6 +275,12 @@ function getRuntimeDeliveryDuplicate(list, row) {
 const REPEATED_MESSAGE_WINDOW_MS = 30 * 60 * 1000;
 const REPEATED_MESSAGE_NOTICE =
   'Duplicate message ignored. You already sent this exact text to this recipient within the last 30 minutes; it was delivered then. Do not resend it and do not rephrase it - send a new message only when you have new information.';
+/**
+ * Length below which two agent->user messages are allowed to share their word
+ * sequence: short acknowledgements ("done", "on it") legitimately repeat for
+ * different tasks, while a restated status update never fits in that space.
+ */
+const RESTATED_MESSAGE_MIN_LENGTH = 40;
 
 function parseRowTimeMs(row) {
   const parsed = Date.parse(row && row.timestamp);
@@ -279,6 +300,11 @@ function getRepeatedMessageDuplicate(list, row) {
   if (!from || !to || !text || rowTime === null) {
     return null;
   }
+  // Same words, different punctuation/case/emphasis: only for what the user
+  // reads, and only for messages long enough that a repeated word sequence
+  // cannot be a coincidence.
+  const restated = to === 'user' && from !== 'user' ? normalizeRestatedText(row.text) : '';
+  const restatedMatches = restated.length >= RESTATED_MESSAGE_MIN_LENGTH;
   for (let index = list.length - 1; index >= 0; index -= 1) {
     const candidate = list[index];
     if (!candidate) continue;
@@ -286,10 +312,15 @@ function getRepeatedMessageDuplicate(list, row) {
     if (candidateTime === null) continue;
     if (rowTime - candidateTime > REPEATED_MESSAGE_WINDOW_MS) break;
     if (
-      normalizeComparableParticipant(candidate.from) === from &&
-      normalizeComparableParticipant(candidate.to) === to &&
-      normalizeComparableText(candidate.text) === text
+      normalizeComparableParticipant(candidate.from) !== from ||
+      normalizeComparableParticipant(candidate.to) !== to
     ) {
+      continue;
+    }
+    if (normalizeComparableText(candidate.text) === text) {
+      return candidate;
+    }
+    if (restatedMatches && normalizeRestatedText(candidate.text) === restated) {
       return candidate;
     }
   }
