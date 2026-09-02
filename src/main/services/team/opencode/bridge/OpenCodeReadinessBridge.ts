@@ -189,7 +189,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
   async launchOpenCodeTeam(
     input: OpenCodeLaunchTeamCommandBody
   ): Promise<OpenCodeLaunchTeamCommandData> {
-    await this.registerAgentTeamsMcpServerForCursorAcp(input);
+    await this.registerAgentTeamsMcpServer(input);
     const result = await this.executeStateChangingCommand<
       OpenCodeLaunchTeamCommandBody,
       OpenCodeLaunchTeamCommandData
@@ -212,11 +212,15 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
    * cursor-agent only exposes the MCP servers listed in its `~/.cursor/mcp.json`,
    * so the endpoint is registered before the launch command runs; otherwise the
    * lead has no callable Agent Teams tools and reaches for helper scripts.
+   *
+   * Deliberately not gated on the model id: `prepare()` may hand the bridge a
+   * selected model whose `cursor-acp/` prefix has already been stripped, and
+   * the registration is a merge-safe no-op for a run that never reads it.
    */
-  private async registerAgentTeamsMcpServerForCursorAcp(
-    input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel' | 'executionProof'>
+  private async registerAgentTeamsMcpServer(
+    input: Pick<OpenCodeLaunchTeamCommandBody, 'executionProof'>
   ): Promise<void> {
-    if (!input.selectedModel.startsWith('cursor-acp/') || !this.options.resolveAgentTeamsMcpUrl) {
+    if (!this.options.resolveAgentTeamsMcpUrl) {
       return;
     }
     await prepareCursorAcpLaunchMcpConfig({

@@ -149,23 +149,26 @@ describe('OpenCodeReadinessBridge cursor-acp MCP registration', () => {
     vi.mocked(prepareCursorAcpLaunchMcpConfig).mockClear();
   });
 
-  it('registers the endpoint with the execution proof profile before launching', async () => {
-    const { bridge, execute } = buildBridge({
-      resolveAgentTeamsMcpUrl: () => 'http://127.0.0.1:9999/mcp#instance-1',
-    });
+  it.each(['cursor-acp/auto', 'grok-4.6-fast'])(
+    'registers the endpoint before launching %s',
+    async (selectedModel) => {
+      const { bridge, execute } = buildBridge({
+        resolveAgentTeamsMcpUrl: () => 'http://127.0.0.1:9999/mcp#instance-1',
+      });
 
-    await expect(
-      bridge.launchOpenCodeTeam({ ...launchBody, selectedModel: 'cursor-acp/auto' })
-    ).resolves.toEqual(launchData);
+      await expect(bridge.launchOpenCodeTeam({ ...launchBody, selectedModel })).resolves.toEqual(
+        launchData
+      );
 
-    expect(prepareCursorAcpLaunchMcpConfig).toHaveBeenCalledWith({
-      profileRootKey: 'account-1',
-      mcpUrl: 'http://127.0.0.1:9999/mcp#instance-1',
-    });
-    expect(vi.mocked(prepareCursorAcpLaunchMcpConfig).mock.invocationCallOrder[0]).toBeLessThan(
-      execute.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER
-    );
-  });
+      expect(prepareCursorAcpLaunchMcpConfig).toHaveBeenCalledWith({
+        profileRootKey: 'account-1',
+        mcpUrl: 'http://127.0.0.1:9999/mcp#instance-1',
+      });
+      expect(vi.mocked(prepareCursorAcpLaunchMcpConfig).mock.invocationCallOrder[0]).toBeLessThan(
+        execute.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER
+      );
+    }
+  );
 
   it('registers nothing when no Agent Teams MCP URL is wired', async () => {
     const { bridge, execute } = buildBridge({});
