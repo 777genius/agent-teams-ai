@@ -17,6 +17,9 @@ export interface TeamProvisioningOpenCodeDeliveryCompositionPorts {
   scheduleOpenCodePromptDeliveryWatchdog: NonNullable<
     OpenCodePromptDeliveryWatchdogCoordinatorPorts['schedulePromptDeliveryWatchdog']
   >;
+  notifyOpenCodeLeadTurnActivity: NonNullable<
+    OpenCodePromptDeliveryWatchdogCoordinatorPorts['notifyLeadTurnActivity']
+  >;
   canDeliverToOpenCodeRuntimeForTeam: OpenCodePromptDeliveryWatchdogCoordinatorPorts['canDeliverToTeamRuntime'];
   tryRecoverOpenCodeRuntimeLanesForDeliveryWatchdog: OpenCodePromptDeliveryWatchdogCoordinatorPorts['recoverRuntimeLanesForWatchdog'];
   openCodeStoppedLaneCleanup: {

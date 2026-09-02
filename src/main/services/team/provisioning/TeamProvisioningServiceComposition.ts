@@ -694,6 +694,7 @@ export function createTeamProvisioningServiceComposition(
       watchdogScheduler: openCodePromptDeliveryWatchdogScheduler,
       schedulePromptDeliveryWatchdog: (input) =>
         servicePorts.scheduleOpenCodePromptDeliveryWatchdog(input),
+      notifyLeadTurnActivity: (input) => servicePorts.notifyOpenCodeLeadTurnActivity(input),
       canDeliverToTeamRuntime: (teamName) =>
         servicePorts.canDeliverToOpenCodeRuntimeForTeam(teamName),
       recoverRuntimeLanesForWatchdog: (teamName, options) =>

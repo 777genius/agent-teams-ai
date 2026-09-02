@@ -123,6 +123,13 @@ interface DeliverableTrackedRun {
   }[];
 }
 
+export interface OpenCodeLeadTurnActivityNotification {
+  teamName: string;
+  memberName: string;
+  laneId: string;
+  state: 'active' | 'idle';
+}
+
 export interface OpenCodeMemberMessageDeliveryServiceDependencies {
   getOpenCodeRuntimeMessageAdapter(): OpenCodeRuntimeMessageAdapter | null;
   readOpenCodeMemberDirectory(teamName: string): Promise<OpenCodeMemberDirectory>;
@@ -253,6 +260,12 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     record: OpenCodePromptDeliveryLedgerRecord,
     detail: string
   ): void;
+  /**
+   * Lead activity for the OpenCode primary lane. A pure-OpenCode lead has no
+   * stdin stream, so "Working"/"Idle" is derived from prompt-delivery turns:
+   * 'active' once a prompt is accepted, 'idle' once the delivery settles.
+   */
+  notifyOpenCodeLeadTurnActivity?(input: OpenCodeLeadTurnActivityNotification): void;
   observeOpenCodeDirectUserDeliveryInlineIfNeeded(input: {
     adapter: OpenCodeRuntimeMessageAdapter;
     ledger: OpenCodePromptDeliveryLedgerStore;

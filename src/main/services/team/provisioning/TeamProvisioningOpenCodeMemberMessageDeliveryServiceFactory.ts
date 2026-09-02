@@ -79,6 +79,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryHost {
   logOpenCodePromptDeliveryEvent: OpenCodeMemberMessageDeliveryFactoryPorts['logOpenCodePromptDeliveryEvent'];
   requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded'];
   emitOpenCodePromptDeliveryTaskLogChange: OpenCodeMemberMessageDeliveryFactoryPorts['emitOpenCodePromptDeliveryTaskLogChange'];
+  notifyOpenCodeLeadTurnActivity?: OpenCodeMemberMessageDeliveryFactoryPorts['notifyOpenCodeLeadTurnActivity'];
   observeOpenCodeDirectUserDeliveryInlineIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['observeOpenCodeDirectUserDeliveryInlineIfNeeded'];
 }
 
@@ -191,6 +192,7 @@ export function createOpenCodeMemberMessageDeliveryServiceFromHost(
       host.requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded(input),
     emitOpenCodePromptDeliveryTaskLogChange: (record, detail) =>
       host.emitOpenCodePromptDeliveryTaskLogChange(record, detail),
+    notifyOpenCodeLeadTurnActivity: (input) => host.notifyOpenCodeLeadTurnActivity?.(input),
     observeOpenCodeDirectUserDeliveryInlineIfNeeded: (input) =>
       host.observeOpenCodeDirectUserDeliveryInlineIfNeeded(input),
   });

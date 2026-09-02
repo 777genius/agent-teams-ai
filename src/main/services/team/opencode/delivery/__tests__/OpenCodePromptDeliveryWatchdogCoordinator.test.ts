@@ -84,14 +84,20 @@ function taskRefsIncludeAll(
   );
 }
 
-function makeCoordinator(overrides: {
-  scheduler?: Pick<OpenCodePromptDeliveryWatchdogScheduler, 'isEnabled' | 'schedule' | 'isStaleError'>;
-  ledger?: OpenCodePromptDeliveryLedgerStore;
-  inboxMessages?: InboxMessage[];
-  activeLaneIds?: string[] | null;
-  members?: string[];
-  logPromptDeliveryEvent?: ReturnType<typeof vi.fn>;
-} = {}) {
+function makeCoordinator(
+  overrides: {
+    scheduler?: Pick<
+      OpenCodePromptDeliveryWatchdogScheduler,
+      'isEnabled' | 'schedule' | 'isStaleError'
+    >;
+    ledger?: OpenCodePromptDeliveryLedgerStore;
+    inboxMessages?: InboxMessage[];
+    activeLaneIds?: string[] | null;
+    members?: string[];
+    logPromptDeliveryEvent?: ReturnType<typeof vi.fn>;
+    notifyLeadTurnActivity?: ReturnType<typeof vi.fn>;
+  } = {}
+) {
   const scheduler =
     overrides.scheduler ??
     ({
@@ -128,6 +134,7 @@ function makeCoordinator(overrides: {
     hasStableInboxMessageId: (message): message is InboxMessage & { messageId: string } =>
       typeof message.messageId === 'string' && message.messageId.trim().length > 0,
     logPromptDeliveryEvent: overrides.logPromptDeliveryEvent ?? vi.fn(),
+    notifyLeadTurnActivity: overrides.notifyLeadTurnActivity,
     nowIso: () => ISO,
     sleep: vi.fn(async () => undefined),
   });
@@ -203,6 +210,48 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
       reason: 'opencode_prompt_delivery_requeued_after_terminal_no_assistant_response',
       scheduledAt: ISO,
     });
+  });
+
+  it("reports the lead turn as 'idle' when a primary-lane delivery is marked terminal", async () => {
+    const notifyLeadTurnActivity = vi.fn();
+    const coordinator = makeCoordinator({ notifyLeadTurnActivity });
+    const markFailedTerminal = vi.fn(async (input: { id: string }) =>
+      record({
+        id: input.id,
+        laneId: 'primary',
+        memberName: 'team-lead',
+        status: 'failed_terminal',
+      })
+    );
+
+    await coordinator.markLedgerFailedTerminal({
+      ledger: { markFailedTerminal } as unknown as OpenCodePromptDeliveryLedgerStore,
+      id: 'record-1',
+      reason: 'opencode_prompt_delivery_failed_terminal',
+      failedAt: ISO,
+    });
+
+    expect(notifyLeadTurnActivity).toHaveBeenCalledWith({
+      teamName: 'team',
+      memberName: 'team-lead',
+      laneId: 'primary',
+      state: 'idle',
+    });
+  });
+
+  it('does not report lead turn activity for secondary-lane terminal marks', async () => {
+    const notifyLeadTurnActivity = vi.fn();
+    const coordinator = makeCoordinator({ notifyLeadTurnActivity });
+    const markFailedTerminal = vi.fn(async () => record({ status: 'failed_terminal' }));
+
+    await coordinator.markLedgerFailedTerminal({
+      ledger: { markFailedTerminal } as unknown as OpenCodePromptDeliveryLedgerStore,
+      id: 'record-1',
+      reason: 'opencode_prompt_delivery_failed_terminal',
+      failedAt: ISO,
+    });
+
+    expect(notifyLeadTurnActivity).not.toHaveBeenCalled();
   });
 
   it('rebuilds missing watchdog ledger records from unread inbox messages', async () => {

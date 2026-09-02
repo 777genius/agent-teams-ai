@@ -2,6 +2,7 @@ import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
 import {
+  type OpenCodeLeadTurnActivityNotification,
   type OpenCodeMemberInboxDelivery,
   type OpenCodeMemberMessageDeliveryInput,
 } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
@@ -44,10 +45,16 @@ const logger = createLogger('Service:TeamProvisioning');
 type OpenCodeMemberMessageDeliveryCompatibilityRuntimeIdentity =
   TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['openCodeRuntimeRecoveryIdentity'];
 
+type OpenCodeMemberMessageDeliveryHostRun = NonNullable<
+  ReturnType<TeamProvisioningOpenCodeMemberMessageDeliveryHost['runs']['get']>
+>;
+
 export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<
   TRun extends TeamProvisioningSendMessageToRunRun,
 > {
   createDeliveryHost(): TeamProvisioningOpenCodeMemberMessageDeliveryHost;
+  /** Tracked run that owns the OpenCode primary lane for a team, if any. */
+  resolveLeadActivityRun(teamName: string): TRun | null;
   inboxRelayHost: TeamProvisioningOpenCodeMemberInboxRelayHost;
   getInboxReader(): ReturnType<
     TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['getInboxReader']
@@ -59,7 +66,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServi
   >;
   getCleanedStoppedTeamOpenCodeRuntimeLanes(): TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['cleanedStoppedTeamOpenCodeRuntimeLanes'];
   isCurrentTrackedRun(run: TRun): boolean;
-  setLeadActivity(run: TRun, state: 'active'): void;
+  setLeadActivity(run: TRun, state: OpenCodeLeadTurnActivityNotification['state']): void;
   logger: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['logger'];
   nowIso: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['nowIso'];
   getErrorMessage: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['getErrorMessage'];
@@ -79,8 +86,9 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServi
   openCodeRuntimeRecoveryIdentity: OpenCodeMemberMessageDeliveryCompatibilityRuntimeIdentity;
   openCodeVisibleReplyProofService: TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost['openCodeVisibleReplyProofService'];
   cleanedStoppedTeamOpenCodeRuntimeLanes: TeamProvisioningOpenCodeMemberInboxRelayBoundaryDeps['cleanedStoppedTeamOpenCodeRuntimeLanes'];
+  runs: { get(runId: string): (TRun & OpenCodeMemberMessageDeliveryHostRun) | undefined };
   isCurrentTrackedRun(run: TRun): boolean;
-  setLeadActivity(run: TRun, state: 'active'): void;
+  setLeadActivity(run: TRun, state: OpenCodeLeadTurnActivityNotification['state']): void;
 }
 
 export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
@@ -151,7 +159,21 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
   protected createOpenCodeMemberMessageDeliveryService(): ReturnType<
     typeof createOpenCodeMemberMessageDeliveryServiceFromHost
   > {
-    return createOpenCodeMemberMessageDeliveryServiceFromHost(this.deps.createDeliveryHost());
+    return createOpenCodeMemberMessageDeliveryServiceFromHost({
+      ...this.deps.createDeliveryHost(),
+      notifyOpenCodeLeadTurnActivity: (input) => this.notifyOpenCodeLeadTurnActivity(input),
+    });
+  }
+
+  /**
+   * Mirrors `sendMessageToRun` -> `setLeadActivity(run, 'active')` for the
+   * OpenCode primary lane, whose lead has no stdin stream. No-op when the team
+   * has no deliverable tracked run.
+   */
+  notifyOpenCodeLeadTurnActivity(input: OpenCodeLeadTurnActivityNotification): void {
+    const run = this.deps.resolveLeadActivityRun(input.teamName);
+    if (!run) return;
+    this.deps.setLeadActivity(run, input.state);
   }
 
   async deliverOpenCodeMemberMessage(
@@ -186,6 +208,10 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
   return new TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun>({
     createDeliveryHost: () =>
       createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromService(service),
+    resolveLeadActivityRun: (teamName) => {
+      const runId = service.runTracking.resolveDeliverableTrackedRuntimeRunId(teamName);
+      return (runId ? service.runs.get(runId) : undefined) ?? null;
+    },
     inboxRelayHost: createTeamProvisioningOpenCodeMemberInboxRelayHostFromService(
       service as unknown as TeamProvisioningOpenCodeMemberInboxRelayServiceHost
     ),
@@ -253,6 +279,10 @@ export abstract class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
         >;
       }
     ).createOpenCodeMemberMessageDeliveryService();
+  }
+
+  protected notifyOpenCodeLeadTurnActivity(input: OpenCodeLeadTurnActivityNotification): void {
+    this.openCodeMemberMessageDeliveryCompatibility.notifyOpenCodeLeadTurnActivity(input);
   }
 
   async deliverOpenCodeMemberMessage(
