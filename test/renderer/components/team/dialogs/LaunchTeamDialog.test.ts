@@ -1477,8 +1477,8 @@ describe('LaunchTeamDialog', () => {
     expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
       expect.objectContaining({
         name: 'jack',
-        providerId: undefined,
-        model: '',
+        providerId: 'opencode',
+        model: 'openrouter/auto',
       }),
     ]);
 

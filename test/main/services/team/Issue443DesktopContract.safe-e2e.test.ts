@@ -27,8 +27,25 @@ import {
   setOpenCodeRuntimeActiveRunManifest,
 } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
-import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+let createLaunchGuard: typeof import('@renderer/components/team/dialogs/providerLaunchAuthority').createLaunchGuard;
+
+// Renderer account/store modules read localStorage during module evaluation,
+// while this contract suite intentionally runs in Vitest's Node environment.
+const localStorageState = new Map<string, string>();
+vi.stubGlobal('localStorage', {
+  getItem: (key: string) => localStorageState.get(key) ?? null,
+  setItem: (key: string, value: string) => { localStorageState.set(key, String(value)); },
+  removeItem: (key: string) => { localStorageState.delete(key); },
+  clear: () => { localStorageState.clear(); },
+  key: (index: number) => [...localStorageState.keys()][index] ?? null,
+  get length() { return localStorageState.size; },
+});
+
+beforeAll(async () => {
+  ({ createLaunchGuard } = await import('@renderer/components/team/dialogs/providerLaunchAuthority'));
+});
 
 import {
   RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
