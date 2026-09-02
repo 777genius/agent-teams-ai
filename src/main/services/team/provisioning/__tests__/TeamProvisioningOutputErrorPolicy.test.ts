@@ -35,11 +35,11 @@ describe('team provisioning output error policy', () => {
     expect(isAuthFailureWarning('Please run /login first', 'pre-complete')).toBe(true);
   });
 
-  it('never treats credential wording in assistant text as an auth failure', () => {
-    // Assistant content is untrusted even when it happens to use the same
-    // wording as a CLI credential error.
-    expect(isAuthFailureWarning('invalid api key', 'assistant')).toBe(false);
-    expect(isAuthFailureWarning('Missing API key for this provider', 'assistant')).toBe(false);
+  it('treats explicit credential errors in assistant text as auth failures', () => {
+    // The CLI can surface these exact credential errors in an assistant-typed
+    // stream message when it has no normal reply to emit.
+    expect(isAuthFailureWarning('invalid api key', 'assistant')).toBe(true);
+    expect(isAuthFailureWarning('Missing API key for this provider', 'assistant')).toBe(true);
     expect(isAuthFailureWarning('API Error: 401 {"type":"error"}', 'assistant')).toBe(false);
   });
 
