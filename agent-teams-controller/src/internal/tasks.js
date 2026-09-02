@@ -7,6 +7,7 @@ const kanbanStore = require('./kanbanStore.js');
 const agenda = require('./agenda.js');
 const { withTeamBoardLock } = require('./boardLock.js');
 const { wrapAgentBlock } = require('./agentBlocks.js');
+const { buildCommentNotificationMessage } = require('./taskCommentNotification.js');
 const { hasExplicitCreationCommand } = require('./taskCreationCommand.js');
 const {
     createMemberMessagingProtocol,
@@ -40,13 +41,6 @@ function mergeMemberRecord(base, overlay) {
         ...(base && typeof base === 'object' ? base : {}),
         ...(overlay && typeof overlay === 'object' ? overlay : {}),
     };
-}
-
-function quoteMarkdown(text) {
-    return String(text)
-        .split('\n')
-        .map((line) => `> ${line}`)
-        .join('\n');
 }
 
 function warnNonCritical(message, error) {
@@ -147,18 +141,6 @@ function mergeTaskRefs(primaryTaskRef, extraTaskRefs) {
         });
     }
     return merged.length > 0 ? merged : undefined;
-}
-
-function buildCommentNotificationMessage(context, task, comment) {
-    const taskLabel = `#${task.displayId || task.id}`;
-    return [
-        `**Comment on task ${taskLabel}** _${task.subject}_`,
-        ``,
-        quoteMarkdown(comment.text),
-        ``,
-        wrapAgentBlock(`Reply to this comment using MCP tool task_add_comment:
-{ teamName: "${context.teamName}", taskId: "${task.id}", text: "<your reply>", from: "<your-name>" }`),
-    ].join('\n');
 }
 
 function hasOpenBlockers(context, task) {
