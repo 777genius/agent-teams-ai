@@ -1992,6 +1992,7 @@ describe('agent-teams-mcp tools', () => {
           teamName,
           to: 'user',
           from: 'alice',
+          leadSessionId: 'session-dedup',
           ...overrides,
         })
       );
@@ -2236,7 +2237,7 @@ describe('agent-teams-mcp tools', () => {
       expect(commented.protocolInstruction).toContain(`#${task.displayId}`);
     });
 
-    it('still instructs on a pending task because the owner comment auto-starts it', async () => {
+    it('leaves a pending task untouched until the owner explicitly starts it', async () => {
       const { claudeDir, teamName } = setupCommentTeam();
       const task = await createOwnedTask(claudeDir, teamName, 'Pending auto-start');
 
@@ -2252,10 +2253,9 @@ describe('agent-teams-mcp tools', () => {
         })
       );
 
-      // maybeAutoStartOwnedPendingTaskOnOwnerComment advances pending -> in_progress
-      // on an owner comment, so the task really is left open by this write.
-      expect(commented.task.status).toBe('in_progress');
-      expect(commented.protocolInstruction).toContain('task_complete');
+      // A comment records progress but is not an implicit task_start command.
+      expect(commented.task.status).toBe('pending');
+      expect(commented.protocolInstruction).toBeUndefined();
     });
 
     it('stays silent on a plain progress comment', async () => {
