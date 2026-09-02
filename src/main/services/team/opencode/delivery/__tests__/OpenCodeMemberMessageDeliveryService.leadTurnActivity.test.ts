@@ -14,6 +14,7 @@ import {
   createOpenCodePromptDeliveryLedgerStore,
   type OpenCodePromptDeliveryLedgerRecord,
 } from '../OpenCodePromptDeliveryLedger';
+import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../OpenCodePromptDeliveryStalePendingPolicy';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../../runtime';
 
@@ -112,6 +113,7 @@ function createDeps(input: {
           ledgerRecord
       ),
     },
+    openCodeStalePendingPolicyConfig: OPENCODE_STALE_PENDING_POLICY_CONFIG,
     isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(
       async ({ ledgerRecord }: { ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null }) =>
         input.readAllowed(ledgerRecord)

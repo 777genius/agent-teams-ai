@@ -13,7 +13,10 @@ import {
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
-import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
+import {
+  preemptStaleOpenCodeActiveDelivery,
+  recoverOpenCodeActiveDeliveryBlocker,
+} from './OpenCodeActiveDeliveryPreemption';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import { isOpenCodeSessionRefreshRetryRecord } from './OpenCodePromptDeliveryFollowUpPolicy';
 import {
@@ -32,6 +35,10 @@ import {
   normalizeOpenCodeDeliveryResponseObservation,
 } from './OpenCodePromptDeliveryReadCommitPolicy';
 import {
+  buildOpenCodeStalePendingPlainTextObservation,
+  decideOpenCodeStalePendingResolution,
+} from './OpenCodePromptDeliveryStalePendingPolicy';
+import {
   isOpenCodePromptDeliveryRetryAttemptDue,
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
 } from './OpenCodePromptDeliveryWatchdog';
@@ -44,6 +51,11 @@ import type {
   OpenCodeMemberMessageDeliveryInput,
   OpenCodeMemberMessageDeliveryServiceDependencies,
 } from './OpenCodeMemberMessageDeliveryPorts';
+import type {
+  OpenCodePromptDeliveryLedgerRecord,
+  OpenCodePromptDeliveryLedgerStore,
+} from './OpenCodePromptDeliveryLedger';
+import type { OpenCodeStalePendingResolution } from './OpenCodePromptDeliveryStalePendingPolicy';
 
 const logger = createLogger('Service:OpenCodeMemberMessageDelivery');
 
@@ -75,6 +87,66 @@ export class OpenCodeMemberMessageDeliveryService {
         `[${teamName}] OpenCode lead turn activity (${state}) notification failed: ${getErrorMessage(error)}`
       );
     }
+  }
+
+  /**
+   * Apply a stale-pending resolution to the ledger. `settle_plain_text` marks
+   * the record responded (plain-text turn end); `fail_terminal` closes it so it
+   * stops blocking the lane. Returns null when nothing was changed.
+   */
+  private async applyStalePendingResolution(input: {
+    ledger: OpenCodePromptDeliveryLedgerStore;
+    ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
+    resolution: OpenCodeStalePendingResolution;
+    teamName: string;
+    memberName: string;
+    laneIdentity: OpenCodeMemberLaneIdentity;
+    eventContext: Record<string, unknown>;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord | null> {
+    const { resolution } = input;
+    if (resolution.action === 'settle_plain_text') {
+      const settled = await input.ledger.applyObservation({
+        id: input.ledgerRecord.id,
+        responseObservation: buildOpenCodeStalePendingPlainTextObservation({
+          record: input.ledgerRecord,
+          reason: resolution.reason,
+        }),
+        diagnostics: [resolution.reason],
+        observedAt: nowIso(),
+      });
+      this.deps.logOpenCodePromptDeliveryEvent(
+        'opencode_prompt_delivery_response_observed',
+        settled,
+        {
+          ...input.eventContext,
+          reason: resolution.reason,
+          stalePendingSettledAsPlainText: true,
+        }
+      );
+      return settled;
+    }
+    if (resolution.action === 'fail_terminal') {
+      const failed = await input.ledger.markFailedTerminal({
+        id: input.ledgerRecord.id,
+        reason: resolution.reason,
+        diagnostics: resolution.diagnostics,
+        failedAt: nowIso(),
+      });
+      this.deps.logOpenCodePromptDeliveryEvent(
+        'opencode_prompt_delivery_terminal_failure',
+        failed,
+        {
+          ...input.eventContext,
+          reason: resolution.reason,
+          stalePending: true,
+        }
+      );
+      this.notifyLeadTurnActivity(input.teamName, input.memberName, input.laneIdentity, 'idle');
+      return failed;
+    }
+    // 'none' and 'keep_observing' fall through to the regular follow-up
+    // scheduling, which already logs each observe cycle.
+    return null;
   }
 
   async deliver(
@@ -379,6 +451,26 @@ export class OpenCodeMemberMessageDeliveryService {
         activeRecord: active,
         teamName,
         memberName: canonicalMemberName,
+      });
+    }
+    if (active && active.inboxMessageId !== messageId && ledger) {
+      const blockingLedger = ledger;
+      active = await preemptStaleOpenCodeActiveDelivery({
+        ports: this.deps,
+        activeRecord: active,
+        incomingMessageId: messageId,
+        incomingReplyRecipient: input.replyRecipient,
+        laneKind: laneIdentity.laneKind,
+        teamName,
+        memberName: canonicalMemberName,
+        settle: async (settlement) =>
+          await this.applyStalePendingResolution({
+            ledger: blockingLedger,
+            teamName,
+            memberName: canonicalMemberName,
+            laneIdentity,
+            ...settlement,
+          }),
       });
     }
     if (active && active.inboxMessageId !== messageId) {
@@ -695,6 +787,61 @@ export class OpenCodeMemberMessageDeliveryService {
             visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
             diagnostics: ledgerRecord.diagnostics,
           };
+        }
+
+        // Stale-pending guard: an accepted prompt the bridge keeps reporting as
+        // `pending` has no attempt budget, so bound it here. A lead plain-text
+        // turn end settles non-user messages; stale idle records go terminal.
+        const staleResolution = decideOpenCodeStalePendingResolution({
+          record: ledgerRecord,
+          laneKind: laneIdentity.laneKind,
+          observation: responseObservation,
+          observedDiagnostics: observed.diagnostics,
+          nowMs: Date.now(),
+          config: this.deps.openCodeStalePendingPolicyConfig,
+        });
+        const staleSettled = await this.applyStalePendingResolution({
+          ledger,
+          ledgerRecord,
+          resolution: staleResolution,
+          teamName,
+          memberName: canonicalMemberName,
+          laneIdentity,
+          eventContext: { observedAfterAcceptedPrompt: true },
+        });
+        if (staleSettled) {
+          ledgerRecord = staleSettled;
+          const settledReadAllowed =
+            ledgerRecord.status === 'responded' &&
+            (await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
+              teamName,
+              memberName: canonicalMemberName,
+              responseState: ledgerRecord.responseState,
+              actionMode: ledgerRecord.actionMode ?? undefined,
+              taskRefs: ledgerRecord.taskRefs,
+              visibleReply: proof.visibleReply,
+              ledgerRecord,
+            }));
+          if (settledReadAllowed || ledgerRecord.status === 'failed_terminal') {
+            this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+            return {
+              delivered: settledReadAllowed,
+              accepted: true,
+              responsePending: false,
+              responseState: ledgerRecord.responseState,
+              ledgerStatus: ledgerRecord.status,
+              ledgerRecordId: ledgerRecord.id,
+              laneId: laneIdentity.laneId,
+              visibleReplyMessageId: ledgerRecord.visibleReplyMessageId ?? undefined,
+              visibleReplyCorrelation: ledgerRecord.visibleReplyCorrelation ?? undefined,
+              ...(settledReadAllowed
+                ? {}
+                : {
+                    reason: ledgerRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+                  }),
+              diagnostics: ledgerRecord.diagnostics,
+            };
+          }
         }
 
         const pendingReason = this.deps.getOpenCodeDeliveryPendingReason({

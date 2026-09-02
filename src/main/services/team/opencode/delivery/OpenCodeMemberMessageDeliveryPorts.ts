@@ -10,6 +10,7 @@ import type {
   OpenCodePromptDeliveryLedgerStore,
   OpenCodePromptDeliveryStatus,
 } from './OpenCodePromptDeliveryLedger';
+import type { OpenCodeStalePendingPolicyConfig } from './OpenCodePromptDeliveryStalePendingPolicy';
 import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog';
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
@@ -220,6 +221,11 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     'isEnabled'
   >;
   openCodePromptDeliveryFollowUpPolicy: Pick<OpenCodePromptDeliveryFollowUpPolicy, 'schedule'>;
+  /**
+   * Windows the stale-pending guard bounds a pending delivery with. Supplied by
+   * whoever composes this service; the policy itself has no defaults.
+   */
+  openCodeStalePendingPolicyConfig: OpenCodeStalePendingPolicyConfig;
   isOpenCodeDeliveryResponseReadCommitAllowed(input: {
     teamName?: string;
     memberName?: string;

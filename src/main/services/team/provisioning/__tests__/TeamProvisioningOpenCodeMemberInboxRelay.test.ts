@@ -638,6 +638,117 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     });
   });
 
+  it('hands a newer user message to the delivery service when a non-user delivery stays pending', async () => {
+    const pendingNotification = message({
+      messageId: 'task-comment-forward:1',
+      from: 'system',
+      source: 'system_notification',
+      messageKind: 'task_comment_notification',
+      text: 'Task comment: section done.',
+    });
+    const teammateReport = message({
+      messageId: 'teammate-report',
+      from: 'Scribe',
+      text: 'done with section 2',
+    });
+    const userFollowUp = message({ messageId: 'user-2', from: 'user', text: 'wrap up please' });
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, input: { messageId?: string; replyRecipient?: string }) =>
+        Promise.resolve(
+          input.replyRecipient === 'user'
+            ? { delivered: true, accepted: true, responsePending: false, laneId: 'primary' }
+            : {
+                delivered: true,
+                accepted: true,
+                responsePending: true,
+                reason: 'opencode_delivery_response_pending',
+              }
+        )
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi
+          .fn()
+          .mockResolvedValue([pendingNotification, teammateReport, userFollowUp]),
+        deliverOpenCodeMemberMessage: deliverOpenCodeMemberMessage as never,
+        markInboxMessagesRead,
+      })
+    );
+
+    // The pending notification is attempted, the teammate report is skipped
+    // (it would only queue behind), and the user message reaches deliver().
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(2);
+    expect(deliverOpenCodeMemberMessage.mock.calls.map(([, input]) => input.messageId)).toEqual([
+      'task-comment-forward:1',
+      'user-2',
+    ]);
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [userFollowUp]);
+    expect(result).toMatchObject({ attempted: 2, delivered: 1, relayed: 1, failed: 0 });
+  });
+
+  it('stops at a pending non-user delivery when no unread user message follows', async () => {
+    const pendingNotification = message({
+      messageId: 'task-comment-forward:1',
+      from: 'system',
+      source: 'system_notification',
+      messageKind: 'task_comment_notification',
+      text: 'Task comment: section done.',
+    });
+    const teammateReport = message({
+      messageId: 'teammate-report',
+      from: 'Scribe',
+      text: 'done with section 2',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn().mockResolvedValue({
+      delivered: true,
+      accepted: true,
+      responsePending: true,
+      reason: 'opencode_delivery_response_pending',
+    });
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([pendingNotification, teammateReport]),
+        deliverOpenCodeMemberMessage,
+      })
+    );
+
+    // Only a user message earns the skip; another non-user notice would just
+    // queue behind the same blocker, so the walk stops instead of looping.
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledOnce();
+    expect(result).toMatchObject({ attempted: 1, delivered: 0 });
+  });
+
+  it('keeps inbox order when the pending delivery is itself a user prompt', async () => {
+    const firstUserPrompt = message({ messageId: 'user-1', from: 'user', text: 'plan it' });
+    const secondUserPrompt = message({ messageId: 'user-2', from: 'user', text: 'and ship it' });
+    const deliverOpenCodeMemberMessage = vi.fn().mockResolvedValue({
+      delivered: true,
+      accepted: true,
+      responsePending: true,
+      reason: 'opencode_delivery_response_pending',
+    });
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([firstUserPrompt, secondUserPrompt]),
+        deliverOpenCodeMemberMessage,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledOnce();
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledWith(
+      'team',
+      expect.objectContaining({ messageId: 'user-1' })
+    );
+    expect(result).toMatchObject({ attempted: 1, delivered: 0 });
+  });
+
   it('projects already-read rows with committed ledger proof as explicit accepted delivery', async () => {
     const committed = ledgerRecord({
       id: 'committed-record',
