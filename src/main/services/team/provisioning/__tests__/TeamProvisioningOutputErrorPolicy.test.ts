@@ -18,14 +18,30 @@ describe('team provisioning output error policy', () => {
     expect(isAuthFailureWarning('Run `claude auth login` to continue', 'probe')).toBe(true);
   });
 
-  it('never treats assistant text as an auth failure signal', () => {
+  it('never treats a quoted or paraphrased login prompt in assistant text as an auth failure', () => {
     // Model output can quote or paraphrase a login prompt without the CLI being
     // unauthenticated; only the trusted CLI sources may trigger the auth kill.
     expect(isAuthFailureWarning('Please run /login first', 'assistant')).toBe(false);
     expect(isAuthFailureWarning('Not logged in · Please run /login', 'assistant')).toBe(false);
+    expect(
+      isAuthFailureWarning(
+        'It looks like you are not authenticated here; please run /login and retry.',
+        'assistant'
+      )
+    ).toBe(false);
+    expect(isAuthFailureWarning('run `claude auth login` to continue', 'assistant')).toBe(false);
     expect(isAuthFailureWarning('Please run /login first', 'stderr')).toBe(true);
     expect(isAuthFailureWarning('Please run /login first', 'probe')).toBe(true);
     expect(isAuthFailureWarning('Please run /login first', 'pre-complete')).toBe(true);
+  });
+
+  it('still treats a credential error the CLI reports as assistant text as an auth failure', () => {
+    // A rejected key surfaces inside an assistant-typed stream message; that is
+    // the CLI's own verdict, not something a model would quote.
+    expect(isAuthFailureWarning('invalid api key', 'assistant')).toBe(true);
+    expect(isAuthFailureWarning('Missing API key for this provider', 'assistant')).toBe(true);
+    // An ambiguous 401 from assistant text stays untrusted, exactly as before.
+    expect(isAuthFailureWarning('API Error: 401 {"type":"error"}', 'assistant')).toBe(false);
   });
 
   it('treats ambiguous 401 auth text as auth failure only for trusted sources', () => {
