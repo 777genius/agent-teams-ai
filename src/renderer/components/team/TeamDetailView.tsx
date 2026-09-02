@@ -10,7 +10,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
@@ -166,10 +165,6 @@ import { ScheduleSection } from './schedule/ScheduleSection';
 import { TeamSidebarHost } from './sidebar/TeamSidebarHost';
 import { TeamSidebarPortalSource } from './sidebar/TeamSidebarPortalSource';
 import { TeamSidebarRail } from './sidebar/TeamSidebarRail';
-import {
-  getTeamPendingRepliesState,
-  setTeamPendingRepliesState,
-} from './sidebar/teamSidebarUiState';
 import { ClaudeLogsSection } from './ClaudeLogsSection';
 import { CollapsibleTeamSection } from './CollapsibleTeamSection';
 // import { deriveLeadLoadButtonLabel } from './lead-load-guards';
@@ -179,15 +174,18 @@ import { ProcessesSection } from './ProcessesSection';
 import { getLaunchJoinMilestonesFromMembers, getLaunchJoinState } from './provisioningSteps';
 import { TeamChangesSection } from './TeamChangesSection';
 import { TeamLoadingSkeleton } from './TeamLoadingSkeleton';
+import { setPendingRepliesForTeam, useTeamPendingReplies } from './teamPendingRepliesStore';
 import { TeamProvisioningBanner } from './TeamProvisioningBanner';
 import { loadTeamSessionMetadata } from './teamSessionFetchGuards';
 import { TeamSessionsSection } from './TeamSessionsSection';
+import { useStableActiveMembers } from './useStableActiveMembers';
 import { useTeamAgentRuntimeWatcher } from './useTeamAgentRuntimeWatcher';
 
 import type { UsageLike } from './context-metric-alias';
 import type { KanbanFilterState } from './kanban/KanbanFilterPopover';
 import type { KanbanSortState } from './kanban/KanbanSortPopover';
 import type { SessionInjection } from './session-injection-types';
+import type { PendingRepliesUpdater } from './teamPendingRepliesStore';
 import type { Session } from '@renderer/types/data';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type {
@@ -422,89 +420,6 @@ function getSummaryKnownTeammateCount(summary: TeamSummary | undefined): number 
   );
 }
 
-function areResolvedMembersEqual(
-  prev: readonly ResolvedTeamMember[],
-  next: readonly ResolvedTeamMember[]
-): boolean {
-  if (prev === next) return true;
-  if (prev.length !== next.length) return false;
-  for (let i = 0; i < prev.length; i++) {
-    const prevMember = prev[i];
-    const nextMember = next[i];
-    if (
-      prevMember.name !== nextMember.name ||
-      prevMember.agentId !== nextMember.agentId ||
-      prevMember.joinedAt !== nextMember.joinedAt ||
-      prevMember.status !== nextMember.status ||
-      prevMember.currentTaskId !== nextMember.currentTaskId ||
-      prevMember.taskCount !== nextMember.taskCount ||
-      prevMember.lastActiveAt !== nextMember.lastActiveAt ||
-      prevMember.messageCount !== nextMember.messageCount ||
-      prevMember.color !== nextMember.color ||
-      prevMember.agentType !== nextMember.agentType ||
-      prevMember.role !== nextMember.role ||
-      prevMember.workflow !== nextMember.workflow ||
-      prevMember.isolation !== nextMember.isolation ||
-      prevMember.providerId !== nextMember.providerId ||
-      prevMember.providerBackendId !== nextMember.providerBackendId ||
-      prevMember.model !== nextMember.model ||
-      prevMember.effort !== nextMember.effort ||
-      prevMember.selectedFastMode !== nextMember.selectedFastMode ||
-      JSON.stringify(prevMember.configuredRuntimeSettings) !==
-        JSON.stringify(nextMember.configuredRuntimeSettings) ||
-      prevMember.resolvedFastMode !== nextMember.resolvedFastMode ||
-      prevMember.laneId !== nextMember.laneId ||
-      prevMember.laneKind !== nextMember.laneKind ||
-      prevMember.laneOwnerProviderId !== nextMember.laneOwnerProviderId ||
-      prevMember.cwd !== nextMember.cwd ||
-      prevMember.gitBranch !== nextMember.gitBranch ||
-      prevMember.removedAt !== nextMember.removedAt ||
-      !areMemberMcpPoliciesEqual(prevMember.mcpPolicy, nextMember.mcpPolicy) ||
-      prevMember.runtimeAdvisory?.kind !== nextMember.runtimeAdvisory?.kind ||
-      prevMember.runtimeAdvisory?.observedAt !== nextMember.runtimeAdvisory?.observedAt ||
-      prevMember.runtimeAdvisory?.retryUntil !== nextMember.runtimeAdvisory?.retryUntil ||
-      prevMember.runtimeAdvisory?.retryDelayMs !== nextMember.runtimeAdvisory?.retryDelayMs ||
-      prevMember.runtimeAdvisory?.reasonCode !== nextMember.runtimeAdvisory?.reasonCode ||
-      prevMember.runtimeAdvisory?.message !== nextMember.runtimeAdvisory?.message
-    ) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function areMemberMcpPoliciesEqual(
-  prev: ResolvedTeamMember['mcpPolicy'],
-  next: ResolvedTeamMember['mcpPolicy']
-): boolean {
-  if (prev === next) return true;
-  if (!prev || !next) return prev === next;
-  return (
-    prev.mode === next.mode &&
-    prev.scopes?.user === next.scopes?.user &&
-    prev.scopes?.project === next.scopes?.project &&
-    prev.scopes?.local === next.scopes?.local &&
-    (prev.serverNames ?? []).length === (next.serverNames ?? []).length &&
-    (prev.serverNames ?? []).every((serverName, index) => serverName === next.serverNames?.[index])
-  );
-}
-
-function useStableActiveMembers(
-  members: readonly ResolvedTeamMember[] | undefined
-): ResolvedTeamMember[] {
-  const filteredMembers = useMemo(
-    () => (members ?? []).filter((member) => !member.removedAt),
-    [members]
-  );
-  const stableMembersRef = useRef(filteredMembers);
-
-  if (!areResolvedMembersEqual(stableMembersRef.current, filteredMembers)) {
-    stableMembersRef.current = filteredMembers;
-  }
-
-  return stableMembersRef.current;
-}
-
 interface TimeWindow {
   start: number;
   end: number;
@@ -605,9 +520,6 @@ type SendMessageDialogBridgeProps = Omit<
   'sending' | 'sendError' | 'sendWarning' | 'sendDebugDetails' | 'lastResult' | 'onSend'
 >;
 type SendMessageDialogOnSend = ComponentProps<typeof SendMessageDialog>['onSend'];
-type PendingRepliesUpdater =
-  | Record<string, number>
-  | ((current: Record<string, number>) => Record<string, number>);
 type SharedTeamMessagesPanelProps = Omit<TeamMessagesPanelBridgeProps, 'position'>;
 type TeamMemberListBridgeProps = Omit<
   ComponentProps<typeof MemberList>,
@@ -635,53 +547,6 @@ interface LeadLoadBridgeProps {
   leadProviderId?: TeamProviderId;
   fallbackProjectRoot?: string;
   isThisTabActive: boolean;
-}
-
-const pendingRepliesCacheByTeam = new Map<string, Record<string, number>>();
-const pendingRepliesListenersByTeam = new Map<string, Set<() => void>>();
-
-function getPendingRepliesSnapshot(teamName: string): Record<string, number> {
-  let snapshot = pendingRepliesCacheByTeam.get(teamName);
-  if (!snapshot) {
-    snapshot = getTeamPendingRepliesState(teamName);
-    pendingRepliesCacheByTeam.set(teamName, snapshot);
-  }
-  return snapshot;
-}
-
-function subscribePendingReplies(teamName: string, listener: () => void): () => void {
-  let listeners = pendingRepliesListenersByTeam.get(teamName);
-  if (!listeners) {
-    listeners = new Set();
-    pendingRepliesListenersByTeam.set(teamName, listeners);
-  }
-  listeners.add(listener);
-  return () => {
-    listeners?.delete(listener);
-    if (listeners?.size === 0) {
-      pendingRepliesListenersByTeam.delete(teamName);
-    }
-  };
-}
-
-function setPendingRepliesForTeam(teamName: string, updater: PendingRepliesUpdater): void {
-  const current = getPendingRepliesSnapshot(teamName);
-  const next = typeof updater === 'function' ? updater(current) : updater;
-  if (next === current) {
-    return;
-  }
-  pendingRepliesCacheByTeam.set(teamName, next);
-  setTeamPendingRepliesState(teamName, next);
-  pendingRepliesListenersByTeam.get(teamName)?.forEach((listener) => listener());
-}
-
-function useTeamPendingReplies(teamName: string): Record<string, number> {
-  const subscribe = useCallback(
-    (listener: () => void) => subscribePendingReplies(teamName, listener),
-    [teamName]
-  );
-  const getSnapshot = useCallback(() => getPendingRepliesSnapshot(teamName), [teamName]);
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 const EMPTY_MESSAGES_PANEL_TASKS: TeamTaskWithKanban[] = [];
