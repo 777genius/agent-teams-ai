@@ -575,8 +575,9 @@ function notifyLeadWhenBoardCompleted(context, completedTask) {
         messageStore.sendInboxMessage(context.paths, {
             member: leadName,
             from: 'system',
-            // Stable per completing task: a repeated task_complete for the same
-            // task cannot produce a second notice.
+            // Stable per completing task, and appendInboxRow refuses a second
+            // row carrying a messageId the inbox already holds, so a repeated
+            // task_complete cannot produce a second notice.
             messageId: `board-complete:${context.teamName}:${completedTask.id}`,
             text,
             summary: `Board complete — ${completedLabel} was the last open task`,

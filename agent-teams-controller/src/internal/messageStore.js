@@ -496,10 +496,35 @@ function buildPostCompletionNotice(finalRow) {
   return `${POST_COMPLETION_MESSAGE_NOTICE_PREFIX}${finalRow.timestamp}${POST_COMPLETION_MESSAGE_NOTICE_SUFFIX}`;
 }
 
+const DUPLICATE_MESSAGE_ID_NOTICE =
+  'Duplicate messageId ignored. This inbox already holds a message with this messageId; it was delivered then. A new message needs a new messageId.';
+
+/**
+ * A caller-supplied messageId is an identity, not a label. lookupMessage()
+ * refuses to resolve an id that appears twice, so a second row carrying an id
+ * the inbox already holds does not just duplicate a message - it makes the
+ * first one unresolvable for task_create_from_message provenance.
+ *
+ * Rows the store ids itself carry a UUID and never collide, so this guard only
+ * ever fires on a caller that deliberately reused an id: a replayed app write,
+ * or a notice whose id is derived from the board event it reports.
+ */
+function getMessageIdDuplicate(list, row) {
+  const messageId = typeof row.messageId === 'string' ? row.messageId.trim() : '';
+  if (!messageId) {
+    return null;
+  }
+  return list.find((candidate) => candidate && candidate.messageId === messageId) || null;
+}
+
 function appendInboxRow(filePath, row, options = {}) {
   return withFileLockSync(filePath, () => {
     const current = readJson(filePath, []);
     const list = Array.isArray(current) ? current : [];
+    const sameMessageId = getMessageIdDuplicate(list, row);
+    if (sameMessageId) {
+      return { row: sameMessageId, deduplicated: true, messageIdMatch: true };
+    }
     const duplicate = getRuntimeDeliveryDuplicate(list, row);
     if (duplicate) {
       return { row: duplicate, deduplicated: true };
@@ -565,7 +590,9 @@ function sendInboxMessage(paths, flags) {
               ? RELAY_SCOPED_RESTATEMENT_NOTICE
               : appended.repeated
                 ? REPEATED_MESSAGE_NOTICE
-                : RUNTIME_DELIVERY_DUPLICATE_NOTICE,
+                : appended.messageIdMatch
+                  ? DUPLICATE_MESSAGE_ID_NOTICE
+                  : RUNTIME_DELIVERY_DUPLICATE_NOTICE,
         }
       : {}),
   };

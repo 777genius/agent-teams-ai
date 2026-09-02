@@ -4205,6 +4205,85 @@ controller.messages.sendMessage({
     );
   });
 
+  it('refuses a second inbox row that reuses a messageId the inbox already holds', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const readBobInbox = () => {
+      const file = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+      return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    };
+
+    const first = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'user',
+      messageId: 'app-write-1',
+      text: 'Please pick up the review.',
+    });
+    expect(first.deduplicated).toBeUndefined();
+
+    // Different words, same identity: the id decides, not the text.
+    const replay = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'user',
+      messageId: 'app-write-1',
+      text: 'Please pick up the review, notes attached.',
+    });
+    expect(replay.deduplicated).toBe(true);
+    expect(replay.messageId).toBe('app-write-1');
+    expect(replay.deduplicationNotice).toContain('Duplicate messageId ignored');
+    expect(readBobInbox()).toHaveLength(1);
+
+    // A distinct identity still lands, and the first id stays resolvable.
+    const distinct = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'user',
+      messageId: 'app-write-2',
+      text: 'Ping me once the review is out.',
+    });
+    expect(distinct.deduplicated).toBeUndefined();
+    expect(readBobInbox()).toHaveLength(2);
+    expect(controller.messages.lookupMessage('app-write-1').message.text).toBe(
+      'Please pick up the review.'
+    );
+  });
+
+  it('does not repeat the board-completion notice once the repeat window has passed', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const leadInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+    const readLeadInbox = () =>
+      fs.existsSync(leadInboxPath) ? JSON.parse(fs.readFileSync(leadInboxPath, 'utf8')) : [];
+    const boardNotices = () =>
+      readLeadInbox().filter((row) => String(row.messageId || '').startsWith('board-complete:'));
+
+    const task = controller.tasks.createTask({ subject: 'Write the note', owner: 'bob' });
+    controller.tasks.completeTask(task.id, 'bob');
+    expect(boardNotices()).toHaveLength(1);
+
+    // Age the lead inbox past the repeated-message window: identical text is
+    // what held the second notice back, and it only holds for 30 minutes.
+    fs.writeFileSync(
+      leadInboxPath,
+      JSON.stringify(
+        readLeadInbox().map((row) => ({
+          ...row,
+          timestamp: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
+        })),
+        null,
+        2
+      )
+    );
+
+    controller.tasks.completeTask(task.id, 'bob');
+    expect(boardNotices()).toHaveLength(1);
+    expect(controller.messages.lookupMessage(boardNotices()[0].messageId).store).toBe('inbox:alice');
+
+    // The next task to finish the board still gets its own notice.
+    const second = controller.tasks.createTask({ subject: 'Review the note', owner: 'bob' });
+    controller.tasks.completeTask(second.id, 'bob');
+    expect(boardNotices()).toHaveLength(2);
+  });
+
   it('does not record pending work sync intents for app-side validation rejections', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
