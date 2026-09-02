@@ -6,6 +6,7 @@ const kanbanStore = require('./kanbanStore.js');
 const agenda = require('./agenda.js');
 const { withTeamBoardLock } = require('./boardLock.js');
 const { wrapAgentBlock } = require('./agentBlocks.js');
+const { hasExplicitCreationCommand } = require('./taskCreationCommand.js');
 const {
     createMemberMessagingProtocol,
     isCodexMember,
@@ -260,6 +261,43 @@ function maybeNotifyTaskOwnerOnComment(context, task, comment, options = {}) {
     });
 }
 
+const TASK_CREATE_DEDUP_WINDOW_MS = 10 * 60 * 1000;
+
+function normalizeDedupText(value) {
+    return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+// Keyless creates carry no caller identity — lead tool loops re-run the same task_create
+// set with fresh task ids — so content (owner + subject + createdBy) is their dedup key.
+function findRecentDuplicateTask(context, taskInput) {
+    const subject = normalizeDedupText(taskInput && taskInput.subject);
+    if (!subject || hasExplicitCreationCommand(taskInput)) {
+        return null;
+    }
+    const owner = normalizeDedupText(taskInput && taskInput.owner);
+    const createdBy =
+        normalizeDedupText(taskInput && taskInput.from) ||
+        normalizeDedupText(taskInput && taskInput.createdBy);
+    const nowMs = Date.now();
+
+    return (
+        taskStore.listTasks(context.paths).find((task) => {
+            if (task.status !== 'pending' && task.status !== 'in_progress') {
+                return false;
+            }
+            if (
+                normalizeDedupText(task.subject) !== subject ||
+                normalizeDedupText(task.owner) !== owner ||
+                normalizeDedupText(task.createdBy) !== createdBy
+            ) {
+                return false;
+            }
+            const createdAtMs = Date.parse(String(task.createdAt || ''));
+            return Number.isFinite(createdAtMs) && nowMs - createdAtMs <= TASK_CREATE_DEDUP_WINDOW_MS;
+        }) || null
+    );
+}
+
 function createTask(context, input) {
     assertTaskCreationCommandScope(context, input);
     let taskInput = input;
@@ -269,7 +307,19 @@ function createTask(context, input) {
             owner: assertKnownTaskActor(context, input.owner, 'task owner'),
         };
     }
-    const task = withTeamBoardLock(context.paths, () => taskStore.createTask(context.paths, taskInput));
+    const { task, deduplicated } = withTeamBoardLock(context.paths, () => {
+        const duplicate = findRecentDuplicateTask(context, taskInput);
+        if (duplicate) {
+            return { task: duplicate, deduplicated: true };
+        }
+        return { task: taskStore.createTask(context.paths, taskInput), deduplicated: false };
+    });
+    if (deduplicated) {
+        logNonCritical(
+            `[tasks] deduplicated task_create for #${task.displayId || task.id}: matching ${task.status} task with same owner/subject/createdBy created within 10 minutes`
+        );
+        return task;
+    }
     if (taskInput && taskInput.notifyOwner !== false) {
         maybeNotifyAssignedOwner(context, task, {
             description: taskInput.description,

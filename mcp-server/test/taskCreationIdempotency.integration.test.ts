@@ -195,6 +195,59 @@ describe('MCP task creation idempotency', () => {
     expect(persisted.creationCommand).toBeUndefined();
   });
 
+  it('keeps distinct request keys distinct even when the subject is identical', async () => {
+    const teamName = 'same-subject-team';
+    const claudeDir = makeTeam(teamName);
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', teamName, 'sentMessages.json'),
+      JSON.stringify([
+        {
+          messageId: 'msg-user-1',
+          from: 'user',
+          to: 'lead',
+          text: 'Review the same area twice',
+          timestamp: '2026-07-22T12:00:00.000Z',
+          source: 'user_sent',
+        },
+      ])
+    );
+    const taskCreateFromMessage = collectTools().get('task_create_from_message')!;
+    const request = {
+      claudeDir,
+      teamName,
+      messageId: 'msg-user-1',
+      subject: 'Review the login flow',
+      owner: 'lead',
+    };
+
+    const keyA = parseJsonToolResult(
+      await taskCreateFromMessage.execute({ ...request, requestKey: 'key-a' })
+    );
+    const keyB = parseJsonToolResult(
+      await taskCreateFromMessage.execute({ ...request, requestKey: 'key-b' })
+    );
+
+    // An explicit requestKey is the caller's intent, so an identical subject on the same
+    // message must not fold two deliberately separate requests into one task.
+    expect(keyB.id).not.toBe(keyA.id);
+    expect(keyA.subject).toBe(keyB.subject);
+    expect(taskFiles(claudeDir, teamName)).toHaveLength(2);
+
+    const keyAReplay = parseJsonToolResult(
+      await taskCreateFromMessage.execute({ ...request, requestKey: 'key-a' })
+    );
+    expect(keyAReplay.id).toBe(keyA.id);
+    expect(taskFiles(claudeDir, teamName)).toHaveLength(2);
+
+    // A keyless create carries no intent to separate, so the 10-minute content dedup
+    // window still collapses a replay of it.
+    const keylessRequest = { ...request, subject: 'Review the settings flow' };
+    const keyless = parseJsonToolResult(await taskCreateFromMessage.execute(keylessRequest));
+    const keylessReplay = parseJsonToolResult(await taskCreateFromMessage.execute(keylessRequest));
+    expect(keylessReplay.id).toBe(keyless.id);
+    expect(taskFiles(claudeDir, teamName)).toHaveLength(3);
+  });
+
   it('uses messageId plus requestKey without collapsing distinct tasks from one message', async () => {
     const teamName = 'message-team';
     const claudeDir = makeTeam(teamName);
@@ -246,22 +299,39 @@ describe('MCP task creation idempotency', () => {
       })
     ).rejects.toThrow('Task creation command conflict');
 
-    const legacyFirst = parseJsonToolResult(
+    // An unkeyed call carries no command identity, so the message id alone must never
+    // collapse two different task intents taken from the same message.
+    const legacyDocs = parseJsonToolResult(
       await taskCreateFromMessage.execute({
         claudeDir,
         teamName,
         messageId: 'msg-user-1',
-        subject: 'Legacy unkeyed task',
+        subject: 'Legacy unkeyed docs task',
       })
     );
-    const legacySecond = parseJsonToolResult(
+    const legacyTests = parseJsonToolResult(
       await taskCreateFromMessage.execute({
         claudeDir,
         teamName,
         messageId: 'msg-user-1',
-        subject: 'Legacy unkeyed task',
+        subject: 'Legacy unkeyed tests task',
       })
     );
-    expect(legacySecond.id).not.toBe(legacyFirst.id);
+    expect(legacyTests.id).not.toBe(legacyDocs.id);
+    expect(taskFiles(claudeDir, teamName)).toHaveLength(4);
+
+    // An unkeyed replay of the same intent is still collapsed, but by the task board's
+    // content dedup (same owner/subject/createdBy within 10 minutes), which is the
+    // authoritative duplicate signal for creates that carry no command identity.
+    const legacyDocsReplay = parseJsonToolResult(
+      await taskCreateFromMessage.execute({
+        claudeDir,
+        teamName,
+        messageId: 'msg-user-1',
+        subject: 'Legacy unkeyed docs task',
+      })
+    );
+    expect(legacyDocsReplay.id).toBe(legacyDocs.id);
+    expect(taskFiles(claudeDir, teamName)).toHaveLength(4);
   });
 });
