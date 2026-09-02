@@ -164,9 +164,14 @@ function lookupMessage(context, messageId) {
   return messageStore.lookupMessage(context.paths, messageId);
 }
 
+function retractUnreadTaskNotifications(context, flags) {
+  return messageStore.retractUnreadTaskNotifications(context.paths, flags);
+}
+
 module.exports = {
   appendSentMessage,
   lookupMessage,
+  retractUnreadTaskNotifications,
   sendMessage,
   sendTrustedMessage,
 };

@@ -401,7 +401,7 @@ function resolveTaskId(context, taskRef) {
 }
 
 function setTaskStatus(context, taskId, status, actor, options = {}) {
-    return withTeamBoardLock(context.paths, () => {
+    const { task, becameDeleted } = withTeamBoardLock(context.paths, () => {
         const before = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
         const normalizedStatus = String(status || '').trim();
         if (before.status === 'deleted' && normalizedStatus !== 'deleted') {
@@ -422,8 +422,26 @@ function setTaskStatus(context, taskId, status, actor, options = {}) {
                 task = taskStore.readTask(context.paths, task.id, { includeDeleted: true });
             }
         }
-        return task;
+        return { task, becameDeleted: before.status !== 'deleted' && task.status === 'deleted' };
     });
+    if (becameDeleted) {
+        retractQueuedNotificationsForDeletedTask(context, task);
+    }
+    return task;
+}
+
+function retractQueuedNotificationsForDeletedTask(context, task) {
+    try {
+        const retractedCount = messages.retractUnreadTaskNotifications(context, {
+            taskId: task.id,
+            displayId: task.displayId || task.id,
+        });
+        logNonCritical(
+            `[tasks] retracted ${retractedCount} queued notification(s) for deleted task ${task.id}`
+        );
+    } catch (error) {
+        warnNonCritical(`[tasks] notification retraction failed for deleted task ${task.id}`, error);
+    }
 }
 
 function hasKanbanReference(state, taskId) {
@@ -531,7 +549,7 @@ function completeTask(context, taskId, actor) {
 }
 
 function softDeleteTask(context, taskId, actor) {
-    return withTeamBoardLock(context.paths, () => {
+    const { task, becameDeleted } = withTeamBoardLock(context.paths, () => {
         const before = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
         const actorForWrite = assertTaskOwnerMutation(context, before, actor, 'delete it', {
             allowLeadOverride: true,
@@ -542,8 +560,12 @@ function softDeleteTask(context, taskId, actor) {
             kanbanStore.clearKanban(context.paths, context.teamName, task.id, { nextReviewState: 'none' });
             task = taskStore.readTask(context.paths, task.id, { includeDeleted: true });
         }
-        return task;
+        return { task, becameDeleted: before.status !== 'deleted' };
     });
+    if (becameDeleted) {
+        retractQueuedNotificationsForDeletedTask(context, task);
+    }
+    return task;
 }
 
 function restoreTask(context, taskId, actor) {

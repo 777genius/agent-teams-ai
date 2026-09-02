@@ -46,6 +46,11 @@ describe('task_create dedup and delete-time notification retraction', () => {
     return JSON.parse(fs.readFileSync(inboxPath, 'utf8'));
   }
 
+  function writeInbox(claudeDir, memberName, rows) {
+    fs.mkdirSync(path.dirname(getInboxPath(claudeDir, memberName)), { recursive: true });
+    fs.writeFileSync(getInboxPath(claudeDir, memberName), JSON.stringify(rows, null, 2));
+  }
+
   describe('task_create content dedup', () => {
     it('returns the existing task when the same content is replayed within the window', () => {
       const claudeDir = makeClaudeDir();
@@ -198,6 +203,90 @@ describe('task_create dedup and delete-time notification retraction', () => {
         from: 'alice',
       });
       expect(afterDeleted.id).not.toBe(afterCompleted.id);
+    });
+  });
+
+  describe('delete-time notification retraction', () => {
+    it('retracts unread system notifications for a task deleted via task_set_status', () => {
+      const claudeDir = makeClaudeDir();
+      const controller = createController({ teamName: 'my-team', claudeDir });
+
+      const task = controller.tasks.createTask({
+        subject: 'Doomed task',
+        owner: 'bob',
+        from: 'alice',
+      });
+
+      const rows = readInbox(claudeDir, 'bob');
+      expect(rows).toHaveLength(1);
+      rows.push(
+        {
+          from: 'alice',
+          to: 'bob',
+          text: 'Unrelated coordination ping',
+          timestamp: new Date().toISOString(),
+          read: false,
+          messageId: 'keep-regular',
+        },
+        {
+          from: 'alice',
+          to: 'bob',
+          text: `Already seen note about #${task.displayId}`,
+          timestamp: new Date().toISOString(),
+          read: true,
+          source: 'system_notification',
+          taskRefs: [{ taskId: task.id, displayId: task.displayId, teamName: 'my-team' }],
+          messageId: 'keep-read',
+        },
+        {
+          from: 'alice',
+          to: 'bob',
+          summary: `Heads up on #${task.displayId}`,
+          text: `Queued follow-up referencing #${task.displayId} without taskRefs`,
+          timestamp: new Date().toISOString(),
+          read: false,
+          source: 'system_notification',
+          messageId: 'drop-display-ref',
+        }
+      );
+      writeInbox(claudeDir, 'bob', rows);
+
+      const deleted = controller.tasks.setTaskStatus(task.id, 'deleted', 'alice');
+      expect(deleted.status).toBe('deleted');
+
+      const remaining = readInbox(claudeDir, 'bob');
+      expect(remaining.map((row) => row.messageId)).toEqual(['keep-regular', 'keep-read']);
+    });
+
+    it('retracts assignment and comment notifications on softDeleteTask and leaves other inboxes intact', () => {
+      const claudeDir = makeClaudeDir();
+      const controller = createController({ teamName: 'my-team', claudeDir });
+
+      const doomed = controller.tasks.createTask({
+        subject: 'Task for bob',
+        owner: 'bob',
+        from: 'alice',
+      });
+      const unrelated = controller.tasks.createTask({
+        subject: 'Task for alice',
+        owner: 'alice',
+        from: 'bob',
+      });
+      controller.tasks.addTaskComment(doomed.id, {
+        text: 'How is it going?',
+        from: 'alice',
+      });
+
+      expect(readInbox(claudeDir, 'bob')).toHaveLength(2);
+      expect(readInbox(claudeDir, 'alice')).toHaveLength(1);
+
+      const deleted = controller.tasks.softDeleteTask(doomed.id, 'alice');
+      expect(deleted.status).toBe('deleted');
+
+      expect(readInbox(claudeDir, 'bob')).toHaveLength(0);
+      const aliceRows = readInbox(claudeDir, 'alice');
+      expect(aliceRows).toHaveLength(1);
+      expect(aliceRows[0].summary).toContain(`#${unrelated.displayId}`);
     });
   });
 });

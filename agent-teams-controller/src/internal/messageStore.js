@@ -571,6 +571,57 @@ function sendInboxMessage(paths, flags) {
   };
 }
 
+function isRetractableTaskNotificationRow(row, taskId, displayToken) {
+  if (!row || typeof row !== 'object') return false;
+  if (row.source !== 'system_notification' || row.read !== false) return false;
+  const taskRefs = Array.isArray(row.taskRefs) ? row.taskRefs : [];
+  if (taskId && taskRefs.some((ref) => ref && String(ref.taskId || '').trim() === taskId)) {
+    return true;
+  }
+  if (!displayToken) return false;
+  return (
+    (typeof row.summary === 'string' && row.summary.includes(displayToken)) ||
+    (typeof row.text === 'string' && row.text.includes(displayToken))
+  );
+}
+
+function retractUnreadTaskNotifications(paths, flags = {}) {
+  const taskId = typeof flags.taskId === 'string' ? flags.taskId.trim() : '';
+  const displayId = typeof flags.displayId === 'string' ? flags.displayId.trim() : '';
+  if (!taskId && !displayId) {
+    throw new Error('Missing taskId');
+  }
+
+  const inboxDir = path.join(paths.teamDir, 'inboxes');
+  let inboxFiles = [];
+  try {
+    inboxFiles = fs.readdirSync(inboxDir).filter((file) => file.endsWith('.json'));
+  } catch {
+    return 0;
+  }
+
+  const displayToken = displayId ? `#${displayId}` : '';
+  let retractedCount = 0;
+  for (const file of inboxFiles) {
+    const filePath = path.join(inboxDir, file);
+    try {
+      withFileLockSync(filePath, () => {
+        const current = readJson(filePath, []);
+        const list = Array.isArray(current) ? current : [];
+        const kept = list.filter(
+          (row) => !isRetractableTaskNotificationRow(row, taskId, displayToken)
+        );
+        if (kept.length === list.length) return;
+        retractedCount += list.length - kept.length;
+        writeJson(filePath, kept);
+      });
+    } catch {
+      // Retraction is best-effort per inbox file; skip unreadable rows.
+    }
+  }
+  return retractedCount;
+}
+
 function appendSentMessage(paths, flags) {
   const payload = buildMessage(flags, {
     from: 'team-lead',
@@ -653,5 +704,6 @@ module.exports = {
   readBoardCompletionEpoch,
   looksLikeIdleAckOnlyText,
   lookupMessage,
+  retractUnreadTaskNotifications,
   sendInboxMessage,
 };
