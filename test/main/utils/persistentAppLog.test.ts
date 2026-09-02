@@ -76,4 +76,40 @@ describe('persistentAppLog', () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+
+  it('persists diagnostic entries that never reached the console', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'agent-teams-persistent-log-'));
+    const warnOutput = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const handle = installPersistentAppLog({
+      directory,
+      appVersion: '2.9.1-test',
+      platform: 'darwin',
+    });
+
+    try {
+      createLogger('Service:TeamProvisioning').diagnostic(
+        '[alpha] opencode_launch_prompt_queued lead=lead messageId=m-1 chars=12'
+      );
+      await handle.flush();
+
+      const records = (await readFile(handle.filePath, 'utf8'))
+        .trim()
+        .split('\n')
+        .map((line) => JSON.parse(line) as Record<string, unknown>);
+
+      expect(records).toHaveLength(1);
+      expect(records[0]).toMatchObject({
+        v: 1,
+        level: 'diagnostic',
+        process: 'main',
+        namespace: 'Service:TeamProvisioning',
+      });
+      expect(String(records[0]?.message)).toContain('opencode_launch_prompt_queued');
+      expect(warnOutput).toHaveBeenCalledTimes(0);
+    } finally {
+      handle.dispose();
+      warnOutput.mockRestore();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
 });
