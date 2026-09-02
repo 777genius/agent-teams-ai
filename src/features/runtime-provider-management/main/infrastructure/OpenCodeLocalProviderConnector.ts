@@ -195,6 +195,11 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                       .map(({ key }) => normalizeRuntimeLocalProviderModelId(key))
                       .filter((modelId): modelId is string => Boolean(modelId))
                   : [];
+              const configuredModelReasoningEffort = readConfiguredModelReasoningEffort({
+                configTree,
+                providerId,
+                modelsNode,
+              });
               const routePrefix = `${providerId}/`;
               const isDefault = configuredDefaultModel?.startsWith(routePrefix) ?? false;
               const smallModelId = configuredSmallModel?.startsWith(routePrefix)
@@ -209,6 +214,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                 baseUrl: target.baseUrl,
                 hasConfiguredApiKey,
                 configuredModelIds,
+                configuredModelReasoningEffort,
                 configuredDefaultModelId,
                 isDefault,
                 smallModelId,
@@ -243,6 +249,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
                 baseUrl: configured.baseUrl,
                 hasConfiguredApiKey: configured.hasConfiguredApiKey,
                 configuredModelIds: configured.configuredModelIds,
+                configuredModelReasoningEffort: configured.configuredModelReasoningEffort,
                 defaultModelId: configured.configuredDefaultModelId,
                 smallModelId: configured.smallModelId,
                 isDefault: configured.isDefault,
@@ -273,6 +280,7 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
               baseUrl: configured.baseUrl,
               hasConfiguredApiKey: false,
               configuredModelIds: configured.configuredModelIds,
+              configuredModelReasoningEffort: configured.configuredModelReasoningEffort,
               defaultModelId: liveDefaultStillAvailable
                 ? configured.configuredDefaultModelId
                 : (configured.configuredDefaultModelId ?? probe.models[0]?.id ?? null),
@@ -806,6 +814,36 @@ export class OpenCodeLocalProviderConnector implements RuntimeLocalProviderConne
   ): RuntimeLocalProviderScanResponse {
     return { schemaVersion: 1, runtimeId: 'opencode', error: { code, message, recoverable: true } };
   }
+}
+
+/**
+ * Reads `options.reasoningEffort` for every configured model of one provider.
+ * Only models that set it explicitly get an entry; the rest are left to the
+ * server default, which is what OpenCode itself sends them with.
+ */
+function readConfiguredModelReasoningEffort(input: {
+  configTree: JsoncNode;
+  providerId: string;
+  modelsNode: JsoncNode | undefined;
+}): Record<string, string> {
+  const configuredModelReasoningEffort: Record<string, string> = {};
+  if (input.modelsNode?.type !== 'object') return configuredModelReasoningEffort;
+  for (const { key } of readObjectEntries(input.modelsNode)) {
+    const modelId = normalizeRuntimeLocalProviderModelId(key);
+    if (!modelId) continue;
+    const reasoningEffort = readStringNode(
+      findNodeAtLocation(input.configTree, [
+        'provider',
+        input.providerId,
+        'models',
+        key,
+        'options',
+        'reasoningEffort',
+      ])
+    )?.trim();
+    if (reasoningEffort) configuredModelReasoningEffort[modelId] = reasoningEffort;
+  }
+  return configuredModelReasoningEffort;
 }
 
 function parseConfigTree(raw: string): JsoncNode {
