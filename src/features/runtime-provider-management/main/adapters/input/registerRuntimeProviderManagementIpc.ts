@@ -726,6 +726,7 @@ export function removeRuntimeProviderManagementIpc(ipcMain: IpcMain): void {
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CONNECT_API_KEY);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_FORGET);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_MODELS);
+  ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_TEST_MODEL);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST);
   ipcMain.removeHandler(RUNTIME_PROVIDER_MANAGEMENT_SET_DEFAULT_MODEL);

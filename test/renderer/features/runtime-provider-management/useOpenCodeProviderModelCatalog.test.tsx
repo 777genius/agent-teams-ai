@@ -208,7 +208,10 @@ describe('resolveOpenCodeCatalogSourceProviderId', () => {
 
   it('allows explicit remote and built-in source selections while lookup is pending', () => {
     expect(
-      resolveSource({ selectedSourceIds: new Set([' DeepInfra ']), localProviderLookupReady: false })
+      resolveSource({
+        selectedSourceIds: new Set([' DeepInfra ']),
+        localProviderLookupReady: false,
+      })
     ).toBe('deepinfra');
     expect(
       resolveSource({ selectedSourceIds: new Set(['opencode']), localProviderLookupReady: false })
@@ -223,7 +226,9 @@ describe('resolveOpenCodeCatalogSourceProviderId', () => {
         knownLocalSourceIds: new Set(['corp-local']),
       })
     ).toBeNull();
-    expect(resolveSource({ selectedModel: 'deepinfra/model', localModelsSelected: true })).toBeNull();
+    expect(
+      resolveSource({ selectedModel: 'deepinfra/model', localModelsSelected: true })
+    ).toBeNull();
   });
 
   it('fails closed for unresolved, ambiguous, and malformed model-derived ownership', () => {
@@ -232,9 +237,7 @@ describe('resolveOpenCodeCatalogSourceProviderId', () => {
     ).toBeNull();
     expect(resolveSource({ selectedModel: 'OpenRouter/model' })).toBe('openrouter');
     expect(resolveSource({ selectedModel: 'deepinfra//model' })).toBeNull();
-    expect(
-      resolveSource({ selectedSourceIds: new Set(['deepinfra', 'openrouter']) })
-    ).toBeNull();
+    expect(resolveSource({ selectedSourceIds: new Set(['deepinfra', 'openrouter']) })).toBeNull();
   });
 });
 
@@ -432,24 +435,28 @@ describe('useOpenCodeProviderModelCatalog', () => {
   });
 
   it('bypasses every page for explicit and revision refreshes', async () => {
-    apiMocks.loadModels.mockImplementation(async (input: RuntimeProviderManagementLoadModelsInput) =>
-      input.cursor
-        ? response({
-            providerId: 'deepinfra',
-            models: [model('deepinfra', 'deepinfra/page-two')],
-            catalogState: 'fresh',
-          })
-        : response({
-            providerId: 'deepinfra',
-            models: [model('deepinfra', 'deepinfra/page-one')],
-            catalogState: 'fresh',
-            nextCursor: 'page-2',
-          })
+    apiMocks.loadModels.mockImplementation(
+      async (input: RuntimeProviderManagementLoadModelsInput) =>
+        input.cursor
+          ? response({
+              providerId: 'deepinfra',
+              models: [model('deepinfra', 'deepinfra/page-two')],
+              catalogState: 'fresh',
+            })
+          : response({
+              providerId: 'deepinfra',
+              models: [model('deepinfra', 'deepinfra/page-one')],
+              catalogState: 'fresh',
+              nextCursor: 'page-2',
+            })
     );
 
     await renderHarness({ sourceProviderId: 'deepinfra', refreshRevision: 0 });
     await vi.waitFor(() => expect(apiMocks.loadModels).toHaveBeenCalledTimes(2));
-    expect(apiMocks.loadModels.mock.calls.map(([request]) => request.refresh)).toEqual([true, true]);
+    expect(apiMocks.loadModels.mock.calls.map(([request]) => request.refresh)).toEqual([
+      true,
+      true,
+    ]);
 
     await act(async () => {
       observed?.refresh();
@@ -509,6 +516,36 @@ describe('useOpenCodeProviderModelCatalog', () => {
     }
   );
 
+  it.each([
+    ['displayName', undefined],
+    ['displayName', 42],
+    ['sourceLabel', undefined],
+    ['sourceLabel', false],
+  ] as const)(
+    'fails closed for malformed %s without projecting the catalog',
+    async (field, value) => {
+      const malformedModel = model('deepinfra', 'malformed-display');
+      Object.assign(malformedModel, { [field]: value });
+      apiMocks.loadModels.mockResolvedValue(
+        response({
+          providerId: 'deepinfra',
+          models: [malformedModel],
+          catalogState: 'fresh',
+        })
+      );
+
+      await renderHarness({
+        sourceProviderId: 'deepinfra',
+        passiveProviderStatus: passiveStatus(['deepinfra/cached']),
+      });
+      await waitForStatus('error');
+
+      expect(observed?.error).toContain('invalid model display fields');
+      expect(observed?.providerStatus?.models).toEqual(['deepinfra/cached']);
+      expect(observed?.providerStatus?.modelCatalog).toBeNull();
+    }
+  );
+
   it('rejects a default that is absent from the complete scoped catalog', async () => {
     apiMocks.loadModels.mockResolvedValue(
       response({
@@ -526,21 +563,22 @@ describe('useOpenCodeProviderModelCatalog', () => {
   });
 
   it('rejects conflicting defaults across catalog pages', async () => {
-    apiMocks.loadModels.mockImplementation(async (input: RuntimeProviderManagementLoadModelsInput) =>
-      input.cursor
-        ? response({
-            providerId: 'deepinfra',
-            models: [model('deepinfra', 'second-model')],
-            defaultModelId: 'second-model',
-            catalogState: 'fresh',
-          })
-        : response({
-            providerId: 'deepinfra',
-            models: [model('deepinfra', 'first-model')],
-            defaultModelId: 'first-model',
-            nextCursor: 'page-2',
-            catalogState: 'fresh',
-          })
+    apiMocks.loadModels.mockImplementation(
+      async (input: RuntimeProviderManagementLoadModelsInput) =>
+        input.cursor
+          ? response({
+              providerId: 'deepinfra',
+              models: [model('deepinfra', 'second-model')],
+              defaultModelId: 'second-model',
+              catalogState: 'fresh',
+            })
+          : response({
+              providerId: 'deepinfra',
+              models: [model('deepinfra', 'first-model')],
+              defaultModelId: 'first-model',
+              nextCursor: 'page-2',
+              catalogState: 'fresh',
+            })
     );
 
     await renderHarness({ sourceProviderId: 'deepinfra' });
@@ -631,9 +669,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
           launchModel: 'deepinfra/unqualified-model',
         },
       ]);
-      expect(providerStatus?.modelCatalog?.defaultModelId).toBe(
-        'deepinfra/unqualified-model'
-      );
+      expect(providerStatus?.modelCatalog?.defaultModelId).toBe('deepinfra/unqualified-model');
       expect(providerStatus?.modelCatalog?.defaultLaunchModel).toBeNull();
       expect(providerStatus?.modelAvailability).toEqual([
         { modelId: 'deepinfra/unqualified-model', status: 'available' },
@@ -674,9 +710,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
     await waitForStatus('ready');
 
     expect(observed?.providerStatus?.models).toEqual(['deepinfra/default-model']);
-    expect(observed?.providerStatus?.modelCatalog?.defaultModelId).toBe(
-      'deepinfra/default-model'
-    );
+    expect(observed?.providerStatus?.modelCatalog?.defaultModelId).toBe('deepinfra/default-model');
     expect(observed?.providerStatus?.modelCatalog?.defaultLaunchModel).toBe(
       'deepinfra/default-model'
     );
@@ -780,9 +814,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
     await waitForStatus('ready');
     expect(observed?.catalogState).toBe('fresh');
     expect(observed?.freshModelCount).toBe(1);
-    expect(observed?.providerStatus?.modelCatalog?.staleAt).toBe(
-      '2026-09-01T00:02:00.000Z'
-    );
+    expect(observed?.providerStatus?.modelCatalog?.staleAt).toBe('2026-09-01T00:02:00.000Z');
 
     await act(async () => {
       vi.advanceTimersByTime(60_000);
@@ -872,9 +904,8 @@ describe('useOpenCodeProviderModelCatalog', () => {
   it('prevents a late old scope page from issuing another request or overwriting the new scope', async () => {
     const oldPage = createDeferred<RuntimeProviderManagementModelsResponse>();
     const newPage = createDeferred<RuntimeProviderManagementModelsResponse>();
-    apiMocks.loadModels.mockImplementation(
-      (input: RuntimeProviderManagementLoadModelsInput) =>
-        input.projectPath === '/projects/old' ? oldPage.promise : newPage.promise
+    apiMocks.loadModels.mockImplementation((input: RuntimeProviderManagementLoadModelsInput) =>
+      input.projectPath === '/projects/old' ? oldPage.promise : newPage.promise
     );
 
     await renderHarness({ sourceProviderId: 'deepinfra', projectPath: '/projects/old' });

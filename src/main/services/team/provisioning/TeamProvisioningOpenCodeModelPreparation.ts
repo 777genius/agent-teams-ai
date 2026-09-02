@@ -570,6 +570,24 @@ async function prepareSelectedOpenCodeModelsCompatibilityBatch({
     catalogError = `OpenCode provider catalog could not be read: ${getErrorMessage(error)}`;
   }
   if (
+    provider?.providerId === 'opencode' &&
+    provider.supported &&
+    provider.statusCheckOutcome === 'model_only'
+  ) {
+    const warning =
+      'OpenCode passive status cannot prove catalog authority. Compatibility is deferred to strict deep verification.';
+    warnings.push(warning);
+    for (const modelId of catalogModelIds) {
+      details.push(`Selected model ${modelId} requires strict deep verification.`);
+    }
+    appendPreflightDebugLog('opencode_compatibility_batch_catalog_deferred', {
+      cwd,
+      modelIds: catalogModelIds,
+      statusCheckOutcome: provider.statusCheckOutcome,
+    });
+    return { details, warnings, blockingMessages, issues, supportDiagnostics };
+  }
+  if (
     !provider ||
     provider.providerId !== 'opencode' ||
     !provider.supported ||

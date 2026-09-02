@@ -404,6 +404,9 @@ function responseFailure(
     if (!qualifyModelId(sourceProviderId, model.modelId)) {
       return `The runtime returned an invalid model identifier in the ${sourceProviderId} catalog.`;
     }
+    if (typeof model.displayName !== 'string' || typeof model.sourceLabel !== 'string') {
+      return `The runtime returned invalid model display fields in the ${sourceProviderId} catalog.`;
+    }
   }
   const qualifiedDefault = parseStrictQualifiedModelRef(response.models.defaultModelId);
   if (qualifiedDefault && qualifiedDefault.sourceId !== sourceProviderId) {

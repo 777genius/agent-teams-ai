@@ -9,6 +9,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
   RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
   RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
   RUNTIME_PROVIDER_MANAGEMENT_CONNECT,
@@ -927,5 +928,31 @@ describe('registerRuntimeProviderManagementIpc', () => {
     expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain('sk-secret-value-123456');
     expect(JSON.stringify(consoleErrorSpy.mock.calls)).not.toContain('provider-token-123456789');
     consoleErrorSpy.mockRestore();
+  });
+
+  it('removes cancel-model-load so teardown can register a fresh handler', () => {
+    const cancelHandlers: Array<(...args: unknown[]) => Promise<unknown>> = [];
+    const ipcMain = {
+      handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+        if (channel !== RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD) return;
+        if (cancelHandlers.length > 0) throw new Error('duplicate cancel-model-load handler');
+        cancelHandlers.push(handler);
+      }),
+      removeHandler: vi.fn((channel: string) => {
+        if (channel === RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD) cancelHandlers.length = 0;
+      }),
+    } as unknown as IpcMain;
+    const feature = {
+      ...createCompanionFeatureStubs(),
+      cancelModelLoad: vi.fn(async () => ({ ok: true })),
+    } as unknown as RuntimeProviderManagementFeatureFacade;
+
+    registerRuntimeProviderManagementIpc(ipcMain, feature);
+    removeRuntimeProviderManagementIpc(ipcMain);
+
+    expect(ipcMain.removeHandler).toHaveBeenCalledWith(
+      RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD
+    );
+    expect(() => registerRuntimeProviderManagementIpc(ipcMain, feature)).not.toThrow();
   });
 });
