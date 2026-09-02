@@ -124,61 +124,67 @@ describe('TeamProvisioningRuntimeResourceSampling', () => {
     ).toBeUndefined();
   });
 
-  it('creates bound runtime snapshot resource sampling ports', async () => {
-    const previousPidusageTelemetry = process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
-    process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = '1';
-    const listRuntimeProcessTable = vi.fn(async () => [
-      { pid: 111, ppid: 1, command: 'runtime', cpu: 4, memory: 100 },
-      { pid: 222, ppid: 111, command: 'child', cpu: 6, memory: 200 },
-    ]);
-    const readPidUsage = vi.fn(async () => ({
-      '111': { cpu: 8, memory: 300 },
-      '222': { cpu: 12, memory: 500 },
-    }));
-    try {
-      const sampling = createSampling({ listRuntimeProcessTable, readPidUsage });
+  // On win32 the usage snapshot tags every process row as 'wsl' and the tree
+  // builder drops those (a WSL pid namespace cannot be sampled from the
+  // Windows host), so the native tree this case asserts is unreachable there.
+  it.skipIf(process.platform === 'win32')(
+    'creates bound runtime snapshot resource sampling ports',
+    async () => {
+      const previousPidusageTelemetry = process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
+      process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = '1';
+      const listRuntimeProcessTable = vi.fn(async () => [
+        { pid: 111, ppid: 1, command: 'runtime', cpu: 4, memory: 100 },
+        { pid: 222, ppid: 111, command: 'child', cpu: 6, memory: 200 },
+      ]);
+      const readPidUsage = vi.fn(async () => ({
+        '111': { cpu: 8, memory: 300 },
+        '222': { cpu: 12, memory: 500 },
+      }));
+      try {
+        const sampling = createSampling({ listRuntimeProcessTable, readPidUsage });
 
-      const ports = sampling.createRuntimeSnapshotResourceSamplingPorts();
-      const rows = await ports.readRuntimeProcessRowsForUsageSnapshot('runtime-team');
-      const trees = ports.buildRuntimeUsageProcessTrees({
-        rootPids: [111],
-        processRows: rows,
-      });
-      const sampledStats = await ports.readProcessUsageStatsByPid([111, 222]);
-      const loadStats = ports.buildRuntimeProcessLoadStats({
-        rootPid: 111,
-        usageStatsByPid: sampledStats,
-        processTree: trees.get(111),
-      });
-      const history = ports.agentRuntimeResourceHistory.record({
-        teamName: 'runtime-team',
-        memberName: 'alice',
-        timestamp: '2026-04-24T12:00:00.000Z',
-        cpuPercent: loadStats?.cpuPercent,
-        rssBytes: loadStats?.rssBytes,
-        pid: 111,
-      });
+        const ports = sampling.createRuntimeSnapshotResourceSamplingPorts();
+        const rows = await ports.readRuntimeProcessRowsForUsageSnapshot('runtime-team');
+        const trees = ports.buildRuntimeUsageProcessTrees({
+          rootPids: [111],
+          processRows: rows,
+        });
+        const sampledStats = await ports.readProcessUsageStatsByPid([111, 222]);
+        const loadStats = ports.buildRuntimeProcessLoadStats({
+          rootPid: 111,
+          usageStatsByPid: sampledStats,
+          processTree: trees.get(111),
+        });
+        const history = ports.agentRuntimeResourceHistory.record({
+          teamName: 'runtime-team',
+          memberName: 'alice',
+          timestamp: '2026-04-24T12:00:00.000Z',
+          cpuPercent: loadStats?.cpuPercent,
+          rssBytes: loadStats?.rssBytes,
+          pid: 111,
+        });
 
-      expect(listRuntimeProcessTable).toHaveBeenCalledTimes(1);
-      expect(readPidUsage).toHaveBeenCalledWith([111, 222], expect.any(Object));
-      expect(trees.get(111)).toEqual({ pids: [111, 222], truncated: false });
-      expect(loadStats).toEqual({
-        childCpuPercent: 12,
-        childRssBytes: 500,
-        cpuPercent: 20,
-        primaryCpuPercent: 8,
-        primaryRssBytes: 300,
-        processCount: 2,
-        rssBytes: 800,
-        runtimeLoadScope: 'process-tree',
-      });
-      expect(history).toEqual([expect.objectContaining({ cpuPercent: 20, rssBytes: 800 })]);
-    } finally {
-      if (previousPidusageTelemetry === undefined) {
-        delete process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
-      } else {
-        process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = previousPidusageTelemetry;
+        expect(listRuntimeProcessTable).toHaveBeenCalledTimes(1);
+        expect(readPidUsage).toHaveBeenCalledWith([111, 222], expect.any(Object));
+        expect(trees.get(111)).toEqual({ pids: [111, 222], truncated: false });
+        expect(loadStats).toEqual({
+          childCpuPercent: 12,
+          childRssBytes: 500,
+          cpuPercent: 20,
+          primaryCpuPercent: 8,
+          primaryRssBytes: 300,
+          processCount: 2,
+          rssBytes: 800,
+          runtimeLoadScope: 'process-tree',
+        });
+        expect(history).toEqual([expect.objectContaining({ cpuPercent: 20, rssBytes: 800 })]);
+      } finally {
+        if (previousPidusageTelemetry === undefined) {
+          delete process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED;
+        } else {
+          process.env.CLAUDE_TEAM_RUNTIME_PIDUSAGE_ENABLED = previousPidusageTelemetry;
+        }
       }
     }
-  });
+  );
 });
