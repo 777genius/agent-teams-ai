@@ -260,15 +260,15 @@ export class TeamProvisioningPrepareCoordinator {
 
       if (providerId === 'opencode') {
         const verificationMode = opts?.modelVerificationMode ?? 'deep';
-        if (providerSelectedModelIds.length === 0) {
-          details.push('OpenCode readiness is deferred until launch has a selected model.');
-          continue;
-        }
         const adapter = this.ports.getOpenCodeRuntimeAdapter();
         if (!adapter) {
           blockingMessages.push(
             'OpenCode team launch is not enabled yet. Production launch requires the gated OpenCode runtime adapter.'
           );
+          continue;
+        }
+        if (providerSelectedModelIds.length === 0) {
+          details.push('OpenCode readiness is deferred until launch has a selected model.');
           continue;
         }
         const openCodeModelPrepare = await prepareSelectedOpenCodeModelsForProvisioning({

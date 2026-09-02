@@ -16,6 +16,7 @@ const apiMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@renderer/api', () => ({
+  isElectronMode: () => true,
   api: {
     runtimeProviderManagement: {
       loadModels: (...args: unknown[]) => apiMocks.loadModels(...args),

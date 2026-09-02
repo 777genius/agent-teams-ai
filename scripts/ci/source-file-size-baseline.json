@@ -101,7 +101,7 @@
     "src/main/workers/team-fs-worker.ts": 2151,
     "src/preload/constants/ipcChannels.ts": 843,
     "src/preload/index.ts": 2094,
-    "src/renderer/api/httpClient.ts": 1907,
+    "src/renderer/api/httpClient.ts": 1864,
     "src/renderer/components/chat/ChatHistory.tsx": 1039,
     "src/renderer/components/chat/viewers/MarkdownViewer.tsx": 1219,
     "src/renderer/components/dashboard/CliStatusBanner.tsx": 2854,

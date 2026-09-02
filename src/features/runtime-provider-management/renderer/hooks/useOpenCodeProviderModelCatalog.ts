@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { api } from '@renderer/api';
+import { api, isElectronMode } from '@renderer/api';
 import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import {
@@ -467,6 +467,9 @@ export function useOpenCodeProviderModelCatalog(input: {
       });
       return;
     }
+    const cancelModelLoad = isElectronMode()
+      ? api.runtimeProviderManagement.cancelModelLoad
+      : undefined;
 
     setState((current) =>
       current.scopeKey === scopeKey
@@ -590,7 +593,6 @@ export function useOpenCodeProviderModelCatalog(input: {
       if (requestSequenceRef.current === requestSequence) {
         requestSequenceRef.current += 1;
       }
-      const cancelModelLoad = api.runtimeProviderManagement.cancelModelLoad;
       if (typeof cancelModelLoad === 'function') {
         void cancelModelLoad({ requestGroupId }).catch(() => undefined);
       }
