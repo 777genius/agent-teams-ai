@@ -94,6 +94,13 @@ export interface OpenCodeMemberInboxDelivery {
     | 'direct_child_message_send'
     | 'plain_assistant_text';
   queuedBehindMessageId?: string;
+  /**
+   * True only when THIS call dispatched a prompt carrying `coalescedNoticeText`
+   * and the runtime accepted it. `delivered` is not proof of dispatch (see the
+   * INVARIANT note at the end of `deliver`), so the inbox relay read-commits
+   * coalesced riders on this flag alone.
+   */
+  coalescedNoticesDelivered?: boolean;
   reason?: string;
   diagnostics?: string[];
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;

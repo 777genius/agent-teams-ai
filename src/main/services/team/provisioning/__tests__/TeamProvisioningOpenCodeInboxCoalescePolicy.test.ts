@@ -1,16 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { isInformationalOpenCodeRuntimeDeliveryDiagnostic } from '../../opencode/delivery/OpenCodeRuntimeDeliveryDiagnostics';
 import {
+  buildOpenCodeCoalesceDeferredDiagnostic,
   buildOpenCodeCoalescedNoticeText,
+  buildOpenCodeCoalesceNotDispatchedDiagnostic,
+  canCoalesceNoticesIntoOpenCodeDelivery,
   COALESCABLE_MESSAGE_KINDS,
   findNextUnreadUserMessageIndex,
   isCoalescableNoticeKind,
+  isOpenCodeCoalescedNoticeDeliveryProven,
   OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT,
   type OpenCodeReplyOptionalCoalescePorts,
   selectOpenCodeReplyOptionalCoalescedFollowers,
 } from '../TeamProvisioningOpenCodeInboxCoalescePolicy';
 
+import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { RelayInboxMessage } from '../TeamProvisioningInboxRelayPolicy';
+
+function ledgerRecord(
+  overrides: Partial<OpenCodePromptDeliveryLedgerRecord> = {}
+): OpenCodePromptDeliveryLedgerRecord {
+  return {
+    id: 'record-1',
+    inboxMessageId: 'anchor',
+    status: 'pending',
+    attempts: 0,
+    acceptedAt: null,
+    inboxReadCommittedAt: null,
+    diagnostics: [],
+    ...overrides,
+  } as OpenCodePromptDeliveryLedgerRecord;
+}
 
 function message(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage {
   return {
@@ -220,6 +241,72 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     expect(text).toContain('--- notice 2 (from system, messageId notice-2');
     expect(text).toContain('second rider');
     expect(text.endsWith('</opencode_coalesced_notices>')).toBe(true);
+  });
+
+  it('only folds riders into an anchor whose prompt body is still going to be sent', () => {
+    // A first attempt at a row nobody has delivered yet.
+    expect(canCoalesceNoticesIntoOpenCodeDelivery(null)).toBe(true);
+    expect(canCoalesceNoticesIntoOpenCodeDelivery(ledgerRecord({ status: 'pending' }))).toBe(true);
+    expect(
+      canCoalesceNoticesIntoOpenCodeDelivery(ledgerRecord({ status: 'retry_scheduled' }))
+    ).toBe(true);
+    expect(
+      canCoalesceNoticesIntoOpenCodeDelivery(ledgerRecord({ status: 'failed_retryable' }))
+    ).toBe(true);
+
+    // The runtime already has the anchor's prompt: this call can only observe
+    // it, so a rider added now would be settled without ever being sent.
+    expect(
+      canCoalesceNoticesIntoOpenCodeDelivery(
+        ledgerRecord({ status: 'pending', acceptedAt: '2026-01-01T00:00:01.000Z' })
+      )
+    ).toBe(false);
+    expect(
+      canCoalesceNoticesIntoOpenCodeDelivery(
+        ledgerRecord({ status: 'pending', runtimePromptMessageId: 'prompt-1' })
+      )
+    ).toBe(false);
+    expect(
+      canCoalesceNoticesIntoOpenCodeDelivery(
+        ledgerRecord({ status: 'pending', inboxReadCommittedAt: '2026-01-01T00:00:02.000Z' })
+      )
+    ).toBe(false);
+    expect(canCoalesceNoticesIntoOpenCodeDelivery(ledgerRecord({ status: 'responded' }))).toBe(
+      false
+    );
+    expect(
+      canCoalesceNoticesIntoOpenCodeDelivery(ledgerRecord({ status: 'failed_terminal' }))
+    ).toBe(false);
+  });
+
+  it('treats only the explicit dispatch proof as proof, never `delivered`', () => {
+    expect(isOpenCodeCoalescedNoticeDeliveryProven({ coalescedNoticesDelivered: true })).toBe(true);
+    expect(isOpenCodeCoalescedNoticeDeliveryProven({ coalescedNoticesDelivered: false })).toBe(
+      false
+    );
+    // A delivery result that says nothing about riders never settles them, even
+    // when it reports a successful delivery.
+    expect(isOpenCodeCoalescedNoticeDeliveryProven({})).toBe(false);
+  });
+
+  it('reports deferred and undispatched riders as informational diagnostics', () => {
+    const deferred = buildOpenCodeCoalesceDeferredDiagnostic({
+      anchorMessageId: 'anchor',
+      deferredMessageId: 'notice-1',
+      record: ledgerRecord({ status: 'pending', acceptedAt: '2026-01-01T00:00:01.000Z' }),
+    });
+    expect(deferred).toContain('anchor');
+    expect(deferred).toContain('deferred=notice-1');
+    expect(isInformationalOpenCodeRuntimeDeliveryDiagnostic(deferred)).toBe(true);
+
+    const notDispatched = buildOpenCodeCoalesceNotDispatchedDiagnostic({
+      anchorMessageId: 'anchor',
+      deferredMessageIds: ['notice-1', 'notice-2'],
+      delivery: { delivered: true, responsePending: true },
+    });
+    expect(notDispatched).toContain('anchor -> notice-1,notice-2');
+    expect(notDispatched).toContain('accepted=unknown');
+    expect(isInformationalOpenCodeRuntimeDeliveryDiagnostic(notDispatched)).toBe(true);
   });
 
   it('finds the next unread user message only for a non-user delivery', () => {

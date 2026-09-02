@@ -135,6 +135,10 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
     delivered: result.ok,
     accepted: result.ok,
     responsePending: legacyWorkSyncResponsePending,
+    // This branch always sends the full body, so riders really were in it.
+    ...(result.ok && message.coalescedNoticeText?.trim()
+      ? { coalescedNoticesDelivered: true }
+      : {}),
     responseState: responseObservation?.state,
     ...(legacyWorkSyncResponsePending
       ? { reason: responseObservation?.reason ?? 'member_work_sync_report_required' }
