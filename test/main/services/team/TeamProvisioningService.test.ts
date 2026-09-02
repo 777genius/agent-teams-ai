@@ -12594,7 +12594,10 @@ describe('TeamProvisioningService', () => {
       const retryText = String(sendMessageToMember.mock.calls[1]?.[0].text ?? '');
       expect(retryText).toContain('relayOfMessageId="msg-visible-required"');
       expect(retryText).toContain('agent-teams_message_send');
-      expect(retryText).toContain('What did you find?');
+      // The runtime accepted the prompt body in this session already, so the
+      // retry names the message instead of asking the question a second time.
+      expect(retryText).toContain('<opencode_delivery_redelivery>');
+      expect(retryText).not.toContain('What did you find?');
     });
 
     it('keeps OpenCode task delivery pending after read-only non-visible tool activity', async () => {

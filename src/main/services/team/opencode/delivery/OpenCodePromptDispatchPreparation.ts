@@ -1,3 +1,5 @@
+import { createLogger } from '@shared/utils/logger';
+
 import { buildOpenCodePromptBodyText } from './OpenCodeMemberMessageDeliveryPorts';
 import {
   buildOpenCodePromptDeliveryAttemptText,
@@ -13,6 +15,8 @@ import type {
 } from './OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodePromptDeliveryLedgerRecord } from './OpenCodePromptDeliveryLedger';
 
+const logger = createLogger('Service:OpenCodePromptDispatchPreparation');
+
 export type OpenCodePromptDispatchPreparationPorts = Pick<
   OpenCodeMemberMessageDeliveryServiceDependencies,
   | 'getOpenCodeDeliveryPendingReason'
@@ -23,6 +27,8 @@ export type OpenCodePromptDispatchPreparationPorts = Pick<
 export interface OpenCodePromptDispatchPlan {
   /** Control API base URL handed to the runtime, or null when this prompt needs none. */
   controlUrl: string | null;
+  /** True when the attempt text carries the redelivery marker instead of the prompt body. */
+  promptBodyAlreadyDelivered: boolean;
   /** Session refresh reason the send must carry, including one derived from a retry record. */
   forceSessionRefreshReason: string | undefined;
   /** The exact text this attempt sends to the runtime. */
@@ -44,7 +50,10 @@ export async function prepareOpenCodePromptDispatch(input: {
   deps: OpenCodePromptDispatchPreparationPorts;
   teamName: string;
   memberName: string;
-  message: Pick<OpenCodeMemberMessageDeliveryInput, 'text' | 'coalescedNoticeText' | 'messageKind'>;
+  message: Pick<
+    OpenCodeMemberMessageDeliveryInput,
+    'text' | 'coalescedNoticeText' | 'messageKind' | 'messageId'
+  >;
   ledgerRecord?: OpenCodePromptDeliveryLedgerRecord | null;
   forceSessionRefreshReason: string | undefined;
 }): Promise<OpenCodePromptDispatchPlan> {
@@ -87,8 +96,24 @@ export async function prepareOpenCodePromptDispatch(input: {
       ledgerRecord.responseState ??
       'session_stale';
   }
+  // The lane ledger is deleted on stop, so accepted-prompt evidence is a
+  // per-launch latch: the body is already in THIS session. A forced session
+  // refresh rebuilds the session without that history, so there the body must
+  // still be redelivered.
+  const promptBodyAlreadyDelivered = Boolean(
+    ledgerRecord && hasOpenCodeAcceptedRuntimePrompt(ledgerRecord) && !forceSessionRefreshReason
+  );
+  if (promptBodyAlreadyDelivered) {
+    logger.diagnostic(
+      `[${input.teamName}] opencode_prompt_delivery_body_suppressed ` +
+        `${input.memberName} msg=${ledgerRecord?.inboxMessageId} ` +
+        `attempts=${ledgerRecord?.attempts} reason=${retryPendingReason}`
+    );
+  }
   const deliveryText = buildOpenCodePromptDeliveryAttemptText({
     text: buildOpenCodePromptBodyText(input.message),
+    omitOriginalPrompt: promptBodyAlreadyDelivered,
+    originalPromptMessageId: ledgerRecord?.inboxMessageId ?? input.message.messageId ?? null,
     controlText: buildOpenCodePromptDeliveryRepairControlText({
       ledgerRecord,
       readAllowed: retryReadAllowed,
@@ -96,5 +121,5 @@ export async function prepareOpenCodePromptDispatch(input: {
       controlUrl,
     }),
   });
-  return { controlUrl, forceSessionRefreshReason, deliveryText };
+  return { controlUrl, forceSessionRefreshReason, promptBodyAlreadyDelivered, deliveryText };
 }
