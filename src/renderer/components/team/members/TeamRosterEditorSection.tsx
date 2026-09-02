@@ -6,6 +6,7 @@ import { LeadModelRow } from './LeadModelRow';
 import { MembersEditorSection } from './MembersEditorSection';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
 
@@ -63,6 +64,7 @@ interface TeamRosterEditorSectionProps {
   modelUnavailableReasonByProvider?: Partial<
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
   >;
+  onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   showWorktreeIsolationControls?: boolean;
   teammateWorktreeDefault?: boolean;
   worktreeIsolationDisabledReason?: string | null;
@@ -117,6 +119,7 @@ const TeamRosterEditorSectionImpl = ({
   modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
+  onOpenCodeProviderScopedStatusChange,
   showWorktreeIsolationControls = false,
   teammateWorktreeDefault = false,
   worktreeIsolationDisabledReason,
@@ -184,6 +187,7 @@ const TeamRosterEditorSectionImpl = ({
       modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
       modelIssueReasonByProvider={modelIssueReasonByProvider}
       modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
+      onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
       showWorktreeIsolationControls={showWorktreeIsolationControls}
       teammateWorktreeDefault={teammateWorktreeDefault}
       worktreeIsolationDisabledReason={worktreeIsolationDisabledReason}
@@ -211,6 +215,7 @@ const TeamRosterEditorSectionImpl = ({
             modelAdvisoryReasonByValue={modelAdvisoryReasonByProvider?.[providerId]}
             modelIssueReasonByValue={modelIssueReasonByProvider?.[providerId]}
             modelUnavailableReasonByValue={modelUnavailableReasonByProvider?.[providerId]}
+            onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
             showAnthropicContextLimit={hasAnthropicRuntime}
             disableAnthropicContextLimit={disableAnthropicContextLimit}
             layoutVariant="flat"

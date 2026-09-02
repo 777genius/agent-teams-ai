@@ -7,29 +7,37 @@ export interface ModelResponseInFlightEntry {
   promise: Promise<RuntimeProviderManagementModelsResponse>;
 }
 
+interface ActiveModelRequestGroup {
+  cacheKey: string;
+  entry: ModelResponseInFlightEntry;
+}
+
 export class RuntimeProviderModelRequestTracker {
   private readonly inFlight = new Map<string, ModelResponseInFlightEntry>();
-  private readonly activeGroups = new Map<string, string>();
+  private readonly activeGroups = new Map<string, ActiveModelRequestGroup>();
 
   clear(abortInFlight: boolean): void {
     if (abortInFlight) {
-      for (const entry of this.inFlight.values()) entry.controller.abort();
+      const entries = new Set(this.inFlight.values());
+      for (const { entry } of this.activeGroups.values()) entries.add(entry);
+      for (const entry of entries) entry.controller.abort();
+      this.activeGroups.clear();
     }
     this.inFlight.clear();
-    this.activeGroups.clear();
   }
 
   releaseSuperseded(requestGroupId: string, nextCacheKey: string): void {
-    const previousCacheKey = this.activeGroups.get(requestGroupId);
-    if (!previousCacheKey || previousCacheKey === nextCacheKey) return;
+    const previous = this.activeGroups.get(requestGroupId);
+    if (!previous || previous.cacheKey === nextCacheKey) return;
     this.activeGroups.delete(requestGroupId);
-    this.releaseSubscriber(previousCacheKey, requestGroupId);
+    this.releaseSubscriber(previous.entry, requestGroupId);
   }
 
-  releaseActiveGroup(requestGroupId: string, cacheKey: string): void {
-    if (this.activeGroups.get(requestGroupId) === cacheKey) {
-      this.activeGroups.delete(requestGroupId);
-    }
+  releaseForCacheHit(requestGroupId: string, cacheKey: string): void {
+    const activeRequest = this.activeGroups.get(requestGroupId);
+    if (!activeRequest || activeRequest.cacheKey !== cacheKey) return;
+    this.activeGroups.delete(requestGroupId);
+    this.releaseSubscriber(activeRequest.entry, requestGroupId);
   }
 
   register(
@@ -38,8 +46,12 @@ export class RuntimeProviderModelRequestTracker {
     requestGroupId: string | null
   ): void {
     if (requestGroupId) {
+      const previous = this.activeGroups.get(requestGroupId);
+      if (previous && previous.entry !== entry) {
+        this.releaseSubscriber(previous.entry, requestGroupId);
+      }
       entry.requestGroups.add(requestGroupId);
-      this.activeGroups.set(requestGroupId, cacheKey);
+      this.activeGroups.set(requestGroupId, { cacheKey, entry });
     } else {
       entry.hasUngroupedSubscriber = true;
     }
@@ -58,23 +70,22 @@ export class RuntimeProviderModelRequestTracker {
   }
 
   cleanup(cacheKey: string, entry: ModelResponseInFlightEntry): void {
-    if (this.inFlight.get(cacheKey) !== entry) return;
-    this.inFlight.delete(cacheKey);
+    if (this.inFlight.get(cacheKey) === entry) this.inFlight.delete(cacheKey);
     for (const requestGroupId of entry.requestGroups) {
-      this.releaseActiveGroup(requestGroupId, cacheKey);
+      if (this.activeGroups.get(requestGroupId)?.entry === entry) {
+        this.activeGroups.delete(requestGroupId);
+      }
     }
   }
 
   cancel(requestGroupId: string): void {
-    const cacheKey = this.activeGroups.get(requestGroupId);
-    if (!cacheKey) return;
+    const activeRequest = this.activeGroups.get(requestGroupId);
+    if (!activeRequest) return;
     this.activeGroups.delete(requestGroupId);
-    this.releaseSubscriber(cacheKey, requestGroupId);
+    this.releaseSubscriber(activeRequest.entry, requestGroupId);
   }
 
-  private releaseSubscriber(cacheKey: string, requestGroupId: string): void {
-    const entry = this.inFlight.get(cacheKey);
-    if (!entry) return;
+  private releaseSubscriber(entry: ModelResponseInFlightEntry, requestGroupId: string): void {
     entry.requestGroups.delete(requestGroupId);
     if (!entry.hasUngroupedSubscriber && entry.requestGroups.size === 0) {
       entry.controller.abort();

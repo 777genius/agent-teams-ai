@@ -2,6 +2,7 @@ import {
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
   isTeamModelAvailableForUi,
+  isTeamProviderModelCatalogFresh,
   normalizeExplicitTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
 } from '@renderer/utils/teamModelAvailability';
@@ -17,10 +18,36 @@ type RuntimeProviderStatusById = ReadonlyMap<
   TeamModelRuntimeProviderStatus | null | undefined
 >;
 type RuntimeProviderLoadingById = ReadonlyMap<TeamProviderId, boolean | undefined>;
+type OpenCodeProviderScopedStatusBySourceId = ReadonlyMap<
+  string,
+  TeamModelRuntimeProviderStatus | null | undefined
+>;
 
 interface OpenCodeLocalModelScope {
   openCodeLocalProviderIds?: ReadonlySet<string>;
   openCodeLocalProviderLookupAuthoritative?: boolean;
+}
+
+interface OpenCodeProviderCatalogScope {
+  openCodeProviderScopedStatusBySourceId?: OpenCodeProviderScopedStatusBySourceId;
+}
+
+function getModelScopedProviderStatus(
+  providerId: TeamProviderId,
+  model: string | null | undefined,
+  runtimeProviderStatusById: RuntimeProviderStatusById,
+  scope: OpenCodeProviderCatalogScope
+): TeamModelRuntimeProviderStatus | null | undefined {
+  if (providerId === 'opencode') {
+    const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId?.trim().toLowerCase();
+    if (sourceId && scope.openCodeProviderScopedStatusBySourceId?.has(sourceId)) {
+      const scopedStatus = scope.openCodeProviderScopedStatusBySourceId.get(sourceId);
+      if (isTeamProviderModelCatalogFresh('opencode', scopedStatus)) {
+        return scopedStatus;
+      }
+    }
+  }
+  return runtimeProviderStatusById.get(providerId);
 }
 
 function shouldPreserveOpenCodeLocalModel(
@@ -75,7 +102,8 @@ export function getDialogTeamModelValidationError(
     validateMembers: boolean;
     runtimeProviderStatusById: RuntimeProviderStatusById;
     runtimeProviderLoadingById: RuntimeProviderLoadingById;
-  } & OpenCodeLocalModelScope
+  } & OpenCodeLocalModelScope &
+    OpenCodeProviderCatalogScope
 ): string | null {
   const getSelectionError = (
     providerId: TeamProviderId,
@@ -84,7 +112,7 @@ export function getDialogTeamModelValidationError(
     const error = getTeamModelSelectionError(
       providerId,
       model ?? undefined,
-      input.runtimeProviderStatusById.get(providerId)
+      getModelScopedProviderStatus(providerId, model, input.runtimeProviderStatusById, input)
     );
     return error && !isKnownOpenCodeLocalModel(providerId, model, input) ? error : null;
   };
@@ -126,7 +154,8 @@ export function resolveProviderScopedMemberModel(
     memberModel?: string | null;
     selectedProviderId: TeamProviderId;
     runtimeProviderStatusById: RuntimeProviderStatusById;
-  } & OpenCodeLocalModelScope
+  } & OpenCodeLocalModelScope &
+    OpenCodeProviderCatalogScope
 ): { providerId: TeamProviderId; model: string } {
   const providerId = resolveMemberProviderForModelScope(input);
   const rawModel = input.memberModel?.trim() ?? '';
@@ -145,7 +174,13 @@ export function resolveProviderScopedMemberModel(
     return { providerId, model: normalizedModel };
   }
 
-  const providerStatus = input.runtimeProviderStatusById.get(providerId) ?? null;
+  const providerStatus =
+    getModelScopedProviderStatus(
+      providerId,
+      normalizedModel,
+      input.runtimeProviderStatusById,
+      input
+    ) ?? null;
   // A cold renderer can hydrate saved team members before provider status and
   // the model catalog arrive. Keep the explicit selection until the runtime
   // has enough information to prove it unavailable; otherwise preflight can
@@ -190,7 +225,8 @@ export function clearInheritedMemberModelsUnavailableForProvider(
     selectedProviderId: TeamProviderId;
     runtimeProviderStatusById: RuntimeProviderStatusById;
     deferredProviderIds?: ReadonlySet<TeamProviderId>;
-  } & OpenCodeLocalModelScope
+  } & OpenCodeLocalModelScope &
+    OpenCodeProviderCatalogScope
 ): { members: MemberDraft[]; changed: boolean } {
   let changed = false;
   const members = input.members.map((member) => {
@@ -232,6 +268,7 @@ export function clearInheritedMemberModelsUnavailableForProvider(
       runtimeProviderStatusById: input.runtimeProviderStatusById,
       openCodeLocalProviderIds: input.openCodeLocalProviderIds,
       openCodeLocalProviderLookupAuthoritative: input.openCodeLocalProviderLookupAuthoritative,
+      openCodeProviderScopedStatusBySourceId: input.openCodeProviderScopedStatusBySourceId,
     });
     if (scoped.model) {
       return member;

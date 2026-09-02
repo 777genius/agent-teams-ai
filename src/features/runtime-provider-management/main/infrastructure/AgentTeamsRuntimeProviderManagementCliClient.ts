@@ -2242,7 +2242,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     if (input.refresh === true) this.modelResponseCache.delete(cacheKey);
     const cached = input.refresh === true ? null : this.readModelResponseCache(cacheKey);
     if (cached) {
-      if (requestGroupId) this.modelRequests.releaseActiveGroup(requestGroupId, cacheKey);
+      if (requestGroupId) this.modelRequests.releaseForCacheHit(requestGroupId, cacheKey);
       return cached;
     }
 

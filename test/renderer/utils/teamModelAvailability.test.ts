@@ -145,7 +145,7 @@ describe('teamModelAvailability', () => {
     expect(isTeamProviderRuntimeStatusLoading('opencode', null, true)).toBe(true);
   });
 
-  it('does not wait for a shared catalog when OpenCode uses provider-scoped app-server catalogs', () => {
+  it('keeps a passive app-server summary pending until its provider-scoped catalog settles', () => {
     const providerStatus = createOpenCodeProviderStatus([], {
       modelCatalogRefreshState: 'loading',
       runtimeCapabilities: {
@@ -154,8 +154,8 @@ describe('teamModelAvailability', () => {
       statusMessage: 'Passive summary loaded',
     });
 
-    expect(isTeamProviderModelVerificationPending('opencode', providerStatus)).toBe(false);
-    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, false)).toBe(false);
+    expect(isTeamProviderModelVerificationPending('opencode', providerStatus)).toBe(true);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, false)).toBe(true);
     expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, true)).toBe(true);
   });
 

@@ -11,6 +11,7 @@ import {
   getProviderScopedTeamModelLabel,
   getTeamProviderLabel,
   TeamModelSelector,
+  type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { RoleSelect } from '@renderer/components/team/RoleSelect';
 import { Button } from '@renderer/components/ui/button';
@@ -114,6 +115,7 @@ interface MemberDraftRowProps {
   modelAdvisoryReasonByProvider?: ModelReasonByProvider;
   modelIssueReasonByProvider?: ModelReasonByProvider;
   modelUnavailableReasonByProvider?: ModelReasonByProvider;
+  onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   showWorktreeIsolationControls?: boolean;
   worktreeIsolationDisabledReason?: string | null;
   onWorktreeIsolationChange?: (id: string, enabled: boolean) => void;
@@ -174,6 +176,7 @@ export const MemberDraftRow = ({
   modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
+  onOpenCodeProviderScopedStatusChange,
   showWorktreeIsolationControls = false,
   worktreeIsolationDisabledReason,
   onWorktreeIsolationChange,
@@ -192,21 +195,17 @@ export const MemberDraftRow = ({
   const [modelExpanded, setModelExpanded] = useState(false);
   const [mcpExpanded, setMcpExpanded] = useState(false);
   const isFlatRoster = layoutVariant === 'flat';
-
   // Pre-warm file list cache when workflow section is expanded
   useFileListCacheWarmer(workflowExpanded && projectPath ? projectPath : null);
-
   const draftKey =
     draftKeyPrefix && (member.name.trim() || member.id)
       ? `${draftKeyPrefix}:workflow:${member.name.trim() || member.id}`
       : null;
-
   const workflowDraft = useDraftPersistence({
     key: draftKey ?? `workflow:${member.id}`,
     initialValue: member.workflow?.trim() ? member.workflow : undefined,
     enabled: !!draftKey,
   });
-
   const chips = useMemo(() => member.workflowChips ?? [], [member.workflowChips]);
 
   const handleWorkflowChange = useCallback(
@@ -965,6 +964,7 @@ export const MemberDraftRow = ({
                 modelUnavailableReasonByValue={
                   modelUnavailableReasonByProvider?.[effectiveProviderId]
                 }
+                onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
               />
               <EffortLevelSelector
                 value={effectiveEffort ?? ''}

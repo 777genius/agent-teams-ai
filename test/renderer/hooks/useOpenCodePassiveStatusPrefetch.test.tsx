@@ -101,6 +101,53 @@ describe('useOpenCodePassiveStatusPrefetch', () => {
     await act(async () => root.unmount());
   });
 
+  it('refetches a previously observed scope after bounded-cache eviction and remount', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const projectPath = '/tmp/passive-status-project';
+    const scopeKey = getCliProviderStatusScopeKey('opencode', projectPath);
+    const providerStatus = {
+      providerId: 'opencode',
+      statusCheckOutcome: 'model_only',
+    };
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(<Harness projectPath={projectPath} />);
+      await Promise.resolve();
+    });
+
+    storeState.cliProviderStatusByScope = { [scopeKey]: providerStatus };
+    await act(async () => {
+      root.render(<Harness projectPath={projectPath} />);
+      await Promise.resolve();
+    });
+
+    storeState.cliProviderStatusByScope = Object.fromEntries(
+      Array.from({ length: 12 }, (_, index) => [
+        getCliProviderStatusScopeKey('opencode', '/tmp/cache-filler-' + index),
+        providerStatus,
+      ])
+    );
+    await act(async () => {
+      root.render(<Harness projectPath="/tmp/cache-filler-11" />);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      root.render(<Harness projectPath={projectPath} />);
+      await Promise.resolve();
+    });
+
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenLastCalledWith('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath,
+    });
+    await act(async () => root.unmount());
+  });
+
   it('does nothing while the OpenCode scope is not selected', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const host = document.createElement('div');

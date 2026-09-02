@@ -22,15 +22,24 @@ export function useOpenCodePassiveStatusPrefetch({
       : null
   );
   const requestedRevisionByScopeRef = useRef(new Map<string, number>());
+  const scopesWithObservedStatusRef = useRef(new Set<string>());
   const activeScopeRef = useRef('');
   const [, publishCompletion] = useReducer((sequence: number) => sequence + 1, 0);
 
   activeScopeRef.current = normalizedProjectPath;
 
   useEffect(() => {
-    if (scopedProviderStatus && !requestedRevisionByScopeRef.current.has(normalizedProjectPath)) {
-      requestedRevisionByScopeRef.current.set(normalizedProjectPath, scopeRevision);
-      return;
+    if (scopedProviderStatus) {
+      scopesWithObservedStatusRef.current.add(normalizedProjectPath);
+      if (!requestedRevisionByScopeRef.current.has(normalizedProjectPath)) {
+        requestedRevisionByScopeRef.current.set(normalizedProjectPath, scopeRevision);
+        return;
+      }
+    } else if (scopesWithObservedStatusRef.current.delete(normalizedProjectPath)) {
+      // A bounded scoped-status cache can evict a previously loaded project while
+      // this hook still remembers its requested revision. Make that scope eligible
+      // for another request without disturbing requests that are still in flight.
+      requestedRevisionByScopeRef.current.delete(normalizedProjectPath);
     }
     if (
       !enabled ||

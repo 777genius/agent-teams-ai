@@ -194,15 +194,7 @@ export function isTeamProviderModelVerificationPending(
   providerId: SupportedProviderId | undefined,
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): boolean {
-  const usesProviderScopedOpenCodeCatalog =
-    providerId === 'opencode' &&
-    providerStatus?.runtimeCapabilities?.modelCatalog?.source === 'app-server';
-  if (
-    !providerId ||
-    providerId === 'anthropic' ||
-    !providerStatus ||
-    usesProviderScopedOpenCodeCatalog
-  ) {
+  if (!providerId || providerId === 'anthropic' || !providerStatus) {
     return false;
   }
   if (providerStatus.modelVerificationState === 'verifying') {
