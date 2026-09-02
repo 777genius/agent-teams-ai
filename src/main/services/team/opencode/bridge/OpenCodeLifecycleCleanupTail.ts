@@ -56,6 +56,14 @@ export interface OpenCodeLifecycleCleanupTailInput {
    * it has no claim to.
    */
   listOwnedLeadWorkspaces?: () => Promise<readonly string[]>;
+  /**
+   * Shutdown only, and optional in the same sense the force-stop flow's port is:
+   * a deployment whose members share a runtime this app can ask to stand down
+   * hands one in, and everywhere else its absence means the step does not
+   * exist. It never rejects; a runtime that cannot be reached is its own
+   * business to report.
+   */
+  releaseSharedRuntime?: () => Promise<void>;
   ports: OpenCodeLifecycleCleanupTailPorts;
 }
 
@@ -120,6 +128,20 @@ export async function runOpenCodeLifecycleCleanupTail(
     },
     ports
   );
+
+  if (reason === 'shutdown' && input.releaseSharedRuntime) {
+    // After the hosts are dead, not before: while one is still up it is a
+    // process of this app that may yet send the runtime a request.
+    try {
+      await input.releaseSharedRuntime();
+    } catch (error) {
+      ports.logWarning(
+        `[OpenCode] shutdown shared runtime release: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
 
   if (reason === 'startup') {
     await runOpenCodeStartupRuntimeSweepTail({
