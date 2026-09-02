@@ -13,6 +13,7 @@ import {
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
+import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
 import { isOpenCodeSessionRefreshRetryRecord } from './OpenCodePromptDeliveryFollowUpPolicy';
 import {
   buildOpenCodePromptDeliveryAttemptId,
@@ -445,54 +446,13 @@ export class OpenCodeMemberMessageDeliveryService {
         })
       : null;
     if (active && active.inboxMessageId !== messageId && ledger) {
-      let proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
+      active = await recoverOpenCodeActiveDeliveryBlocker({
+        ports: this.deps,
         ledger,
-        ledgerRecord: active,
-        teamName,
-        replyRecipient: active.replyRecipient,
-        memberName: canonicalMemberName,
-      });
-      active = proof.ledgerRecord;
-      proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
-        ledger,
-        ledgerRecord: active,
+        activeRecord: active,
         teamName,
         memberName: canonicalMemberName,
-        visibleReply: proof.visibleReply,
       });
-      active = proof.ledgerRecord;
-      const activeReadAllowed = await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
-        teamName,
-        memberName: canonicalMemberName,
-        responseState: active.responseState,
-        actionMode: active.actionMode ?? undefined,
-        taskRefs: active.taskRefs,
-        visibleReply: proof.visibleReply,
-        ledgerRecord: active,
-      });
-      if (activeReadAllowed) {
-        this.deps.logOpenCodePromptDeliveryEvent(
-          'opencode_prompt_delivery_response_observed',
-          active,
-          {
-            visibleReplySemanticallySufficient: true,
-            unblockedNextDelivery: true,
-          }
-        );
-        active = null;
-      } else if (isOpenCodeAcceptedDeliveryMissingPromptProof(active)) {
-        active = await this.deps.markOpenCodeAcceptedDeliveryMissingPromptProofForRetry({
-          ledger,
-          ledgerRecord: active,
-          eventContext: { recoveredActiveBlocker: true },
-        });
-        this.deps.scheduleOpenCodePromptDeliveryWatchdog({
-          teamName,
-          memberName: canonicalMemberName,
-          messageId: active.inboxMessageId,
-          delayMs: 500,
-        });
-      }
     }
     if (active && active.inboxMessageId !== messageId) {
       const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
