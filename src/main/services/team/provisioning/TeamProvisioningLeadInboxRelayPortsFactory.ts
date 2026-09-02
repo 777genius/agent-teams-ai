@@ -144,7 +144,7 @@ export function createTeamProvisioningLeadInboxRelayFlowPorts<TRun extends LeadI
       deps.pushLiveLeadProcessMessage(teamName, message),
     persistSentMessage: (teamName, message) => deps.persistSentMessage(teamName, message),
     emitTeamChange: (event) => deps.emitTeamChange(event),
-    scheduleLeadInboxFollowUpRelay: (teamName) => deps.scheduleLeadInboxFollowUpRelay(teamName),
+    scheduleLeadInboxFollowUpRelay: (...args) => deps.scheduleLeadInboxFollowUpRelay(...args),
     rememberLeadRecoveryMessage: (teamName, messageId) =>
       deps.rememberLeadRecoveryMessage(teamName, messageId),
     rememberSuccessfulLeadRecoveryMessage: (teamName, messageId) =>
@@ -202,7 +202,7 @@ export function createTeamProvisioningLeadInboxRelayPortsDepsFromService<
       service.pushLiveLeadProcessMessage(teamName, message),
     persistSentMessage: (teamName, message) => service.persistSentMessage(teamName, message),
     emitTeamChange: (event) => service.teamChangeEmitter?.(event),
-    scheduleLeadInboxFollowUpRelay: (teamName) => service.scheduleLeadInboxFollowUpRelay(teamName),
+    scheduleLeadInboxFollowUpRelay: (...args) => service.scheduleLeadInboxFollowUpRelay(...args),
     rememberLeadRecoveryMessage: (teamName, messageId) =>
       service.rememberLeadRecoveryMessage(teamName, messageId),
     rememberSuccessfulLeadRecoveryMessage: (teamName, messageId) =>

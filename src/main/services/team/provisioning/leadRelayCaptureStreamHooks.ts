@@ -15,6 +15,8 @@ export interface LeadRelayCaptureStreamState {
   settled: boolean;
   idleHandle: NodeJS.Timeout | null;
   idleMs: number;
+  /** Extends the capture's reply deadline; set by the relay flow that owns the capture. */
+  touch?: () => void;
   resolveOnce: (text: string) => void;
   rejectOnce: (error: string) => void;
 }

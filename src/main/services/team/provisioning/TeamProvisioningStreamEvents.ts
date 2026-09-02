@@ -669,6 +669,9 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
         );
       }
     }
+    if (content.some((block) => block?.type === 'tool_result')) {
+      run.leadRelayCapture?.touch?.();
+    }
     for (const block of content) {
       if (block?.type !== 'tool_result' || typeof block.tool_use_id !== 'string') continue;
       ports.finishRuntimeToolActivity(
@@ -683,6 +686,7 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
   }
   if (msg.type === 'assistant') {
     const content = extractStreamContentBlocks(msg);
+    run.leadRelayCapture?.touch?.();
 
     const hasVisibleSendMessage = hasCapturedVisibleSendMessage(content, run.teamName);
     if (run.leadRelayCapture) {

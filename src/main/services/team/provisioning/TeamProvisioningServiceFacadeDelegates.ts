@@ -256,8 +256,8 @@ export abstract class TeamProvisioningServiceFacadeDelegates extends TeamProvisi
     this.transientRunState.clearLeadInboxFollowUpRelayTimer(teamName);
   }
 
-  protected scheduleLeadInboxFollowUpRelay(teamName: string): void {
-    this.transientRunState.scheduleLeadInboxFollowUpRelay(teamName);
+  protected scheduleLeadInboxFollowUpRelay(teamName: string, delayMs?: number): void {
+    this.transientRunState.scheduleLeadInboxFollowUpRelay(teamName, delayMs);
   }
 
   protected resetTeamScopedTransientStateForNewRun(teamName: string): void {

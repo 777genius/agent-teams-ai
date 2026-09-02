@@ -124,4 +124,57 @@ describe('lead inbox relay prompt', () => {
 
     expect(prompt).toBe(EXPECTED_LEAD_RELAY_PROMPT);
   });
+
+  it('marks only the message ids named as redelivered', () => {
+    const prompt = buildLeadInboxRelayPrompt({
+      teamName: 'alpha',
+      leadName: 'lead',
+      batch: createBatch(),
+      replyVisibility: 'user',
+      teammates: [{ name: 'dev', role: 'engineer' }],
+      workSyncControlUrl: 'http://127.0.0.1:1234',
+      redeliveredMessageIds: new Set(['msg-notify-2']),
+    });
+
+    const rows = prompt.slice(prompt.indexOf('Messages:')).split(/^(?=\d\) From: )/m);
+    const [, firstRow, secondRow, thirdRow] = rows;
+    expect(firstRow).not.toContain('REDELIVERY:');
+    expect(secondRow).toContain(
+      '   REDELIVERY: this exact message was already delivered to you in an earlier turn'
+    );
+    expect(secondRow).toContain('Do NOT re-create tasks, re-send messages, or repeat any side');
+    expect(thirdRow).not.toContain('REDELIVERY:');
+  });
+
+  it('announces the redelivery before the row it belongs to, not after it', () => {
+    const prompt = buildLeadInboxRelayPrompt({
+      teamName: 'alpha',
+      leadName: 'lead',
+      batch: createBatch(),
+      replyVisibility: 'user',
+      teammates: [],
+      workSyncControlUrl: null,
+      redeliveredMessageIds: new Set(['msg-user-1']),
+    });
+    const lines = prompt.split('\n');
+    const rowIndex = lines.indexOf('1) From: user');
+
+    expect(lines[rowIndex + 1]).toContain('REDELIVERY:');
+    expect(lines[rowIndex + 3]).toBe('   Timestamp: 2026-09-01T10:00:00.000Z');
+  });
+
+  it('leaves a first delivery unmarked when the redelivered set is empty or absent', () => {
+    const withEmptySet = buildLeadInboxRelayPrompt({
+      teamName: 'alpha',
+      leadName: 'lead',
+      batch: createBatch(),
+      replyVisibility: 'user',
+      teammates: [{ name: 'dev', role: 'engineer' }],
+      workSyncControlUrl: 'http://127.0.0.1:1234',
+      redeliveredMessageIds: new Set<string>(),
+    });
+
+    expect(withEmptySet).not.toContain('REDELIVERY:');
+    expect(withEmptySet).toBe(EXPECTED_LEAD_RELAY_PROMPT);
+  });
 });

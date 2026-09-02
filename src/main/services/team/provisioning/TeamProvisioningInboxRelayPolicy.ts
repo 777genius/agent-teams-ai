@@ -618,6 +618,7 @@ export function buildLeadInboxRelayPrompt(input: {
   replyVisibility: 'user' | 'internal_activity';
   teammates: { name: string; role?: string }[];
   workSyncControlUrl: string | null;
+  redeliveredMessageIds?: ReadonlySet<string>;
 }): string {
   const rosterContextBlock = buildLeadRosterContextBlock(
     input.teamName,
@@ -668,11 +669,21 @@ export function buildLeadInboxRelayPrompt(input: {
     ),
     ``,
     `Messages:`,
-    ...input.batch.flatMap((message, idx) => formatLeadRelayMessageLines(message, idx)),
+    ...input.batch.flatMap((message, idx) =>
+      formatLeadRelayMessageLines(
+        message,
+        idx,
+        input.redeliveredMessageIds?.has(message.messageId) === true
+      )
+    ),
   ].join('\n');
 }
 
-function formatLeadRelayMessageLines(message: RelayInboxMessage, idx: number): string[] {
+function formatLeadRelayMessageLines(
+  message: RelayInboxMessage,
+  idx: number,
+  isRedelivery = false
+): string[] {
   const summaryLine = message.summary?.trim() ? `Summary: ${message.summary.trim()}` : null;
   const isTaskCreateFromMessageEligible = message.source === 'user_sent';
   const provenanceLines = isTaskCreateFromMessageEligible
@@ -681,6 +692,12 @@ function formatLeadRelayMessageLines(message: RelayInboxMessage, idx: number): s
   const structuredTaskContextBlock = buildLeadInboxTaskContextBlock(message);
   return [
     `${idx + 1}) From: ${message.from || 'unknown'}`,
+    ...(isRedelivery
+      ? [
+          `   REDELIVERY: this exact message was already delivered to you in an earlier turn and you may have already fully handled it.`,
+          `   Before acting on it, check the current board and recent messages (task_list etc.). Do NOT re-create tasks, re-send messages, or repeat any side effect that already exists for this message; if everything is already handled, produce no output for it.`,
+        ]
+      : []),
     `   Timestamp: ${message.timestamp}`,
     ...(summaryLine ? [`   ${summaryLine}`] : []),
     ...(typeof message.messageKind === 'string' && message.messageKind.trim()

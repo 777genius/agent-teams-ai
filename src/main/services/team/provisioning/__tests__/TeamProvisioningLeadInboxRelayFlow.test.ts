@@ -139,6 +139,46 @@ function createPorts(
   };
 }
 
+interface ScheduledTimer {
+  callback: () => void;
+  ms: number;
+  handle: NodeJS.Timeout;
+}
+
+/**
+ * Replaces the flow's timer ports with an observable clock so a test can see which deadline is
+ * armed, which one was retired, and how far the capture believes it has run.
+ */
+function createTimerHarness(ports: TestLeadInboxRelayFlowPorts): {
+  advance: (ms: number) => void;
+  cleared: () => NodeJS.Timeout[];
+  pending: () => ScheduledTimer[];
+} {
+  const scheduled: ScheduledTimer[] = [];
+  const clearedHandles: NodeJS.Timeout[] = [];
+  let clock = 123;
+
+  vi.mocked(ports.nowMs).mockImplementation(() => clock);
+  vi.mocked(ports.setTimeout).mockImplementation((callback, ms) => {
+    const handle = {} as NodeJS.Timeout;
+    scheduled.push({ callback, ms, handle });
+    return handle;
+  });
+  vi.mocked(ports.clearTimeout).mockImplementation((handle) => {
+    clearedHandles.push(handle);
+    const index = scheduled.findIndex((timer) => timer.handle === handle);
+    if (index >= 0) scheduled.splice(index, 1);
+  });
+
+  return {
+    advance: (ms: number) => {
+      clock += ms;
+    },
+    cleared: () => [...clearedHandles],
+    pending: () => [...scheduled],
+  };
+}
+
 describe('lead inbox relay flow', () => {
   it('scans permission requests before provisioning is complete and does not relay', async () => {
     const run = createRun({ provisioningComplete: false });
@@ -206,11 +246,12 @@ describe('lead inbox relay flow', () => {
       scheduled.push({ callback, ms });
       return {} as NodeJS.Timeout;
     });
+    const observedCapture: { requireTerminalResult?: boolean; idleMs?: number } = {};
     vi.mocked(ports.sendMessageToRun).mockImplementation(async () => {
       const capture = run.leadRelayCapture;
       if (!capture) throw new Error('missing capture');
-      expect(capture.requireTerminalResult).toBe(true);
-      expect(capture.idleMs).toBe(15_001);
+      observedCapture.requireTerminalResult = capture.requireTerminalResult;
+      observedCapture.idleMs = capture.idleMs;
       capture.textParts.push('Partial recovery reply.');
       capture.idleHandle = ports.setTimeout(
         () => capture.resolveOnce('Partial recovery reply.'),
@@ -222,8 +263,13 @@ describe('lead inbox relay flow', () => {
       onlyMessageId: 'recovery-1',
     });
     await vi.waitFor(() => expect(ports.sendMessageToRun).toHaveBeenCalledOnce());
-    scheduled.find(({ ms }) => ms === 15_000)?.callback();
+    const captureDeadline = scheduled.find(({ ms }) => ms === 120_000);
+    expect(captureDeadline).toBeDefined();
+    captureDeadline?.callback();
 
+    // Asserted out here, not inside the send mock: the flow swallows a throw from
+    // sendMessageToRun, which would silently turn a failing expectation into a passing test.
+    expect(observedCapture).toEqual({ requireTerminalResult: true, idleMs: 120_001 });
     await expect(relay).resolves.toBe(0);
     expect(ports.rememberSuccessfulLeadRecoveryMessage).not.toHaveBeenCalled();
     expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('recovery-1') ?? false).toBe(false);
@@ -354,5 +400,104 @@ describe('lead inbox relay flow', () => {
 
     await expect(Promise.all([first, queued])).resolves.toEqual([1, 0]);
     expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a delivery alive while the lead proves the turn is running with stream activity', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+    const timers = createTimerHarness(ports);
+
+    vi.mocked(ports.sendMessageToRun).mockImplementation(async () => {
+      const capture = run.leadRelayCapture;
+      if (!capture) throw new Error('missing capture');
+      const armedAtSend = timers.pending();
+      expect(armedAtSend.map(({ ms }) => ms)).toContain(120_000);
+
+      // A tool-only lead turn: no assistant text, only activity. The relay flow's touch must
+      // retire the deadline that was armed at send time instead of letting it fire and declare
+      // the delivered message undelivered.
+      timers.advance(119_000);
+      capture.touch?.();
+      expect(timers.cleared()).toContain(armedAtSend[0]?.handle);
+      expect(timers.pending().map(({ ms }) => ms)).toContain(120_000);
+
+      capture.resolveOnce('Created the tasks.');
+    });
+
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(1);
+
+    expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
+    expect(ports.scheduleLeadInboxFollowUpRelay).not.toHaveBeenCalled();
+    expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('msg-1')).toBe(true);
+    expect(ports.markInboxMessagesRead).toHaveBeenLastCalledWith(
+      'alpha',
+      'team-lead',
+      expect.arrayContaining([expect.objectContaining({ messageId: 'msg-1' })])
+    );
+  });
+
+  it('stops touching a capture that has outlived the absolute delivery cap', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+    const timers = createTimerHarness(ports);
+
+    vi.mocked(ports.sendMessageToRun).mockImplementation(async () => {
+      const capture = run.leadRelayCapture;
+      if (!capture) throw new Error('missing capture');
+      const armedAtSend = timers.pending()[0];
+      timers.advance(600_000);
+      capture.touch?.();
+      expect(timers.cleared()).not.toContain(armedAtSend?.handle);
+      armedAtSend?.callback();
+    });
+
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
+    expect(ports.scheduleLeadInboxFollowUpRelay).toHaveBeenCalledWith('alpha', 10_000);
+  });
+
+  it('backs off before retrying a delivery that produced no proof at all', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+    const timers = createTimerHarness(ports);
+
+    vi.mocked(ports.sendMessageToRun).mockImplementation(async () => {
+      timers
+        .pending()
+        .find(({ ms }) => ms === 120_000)
+        ?.callback();
+    });
+
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
+
+    expect(ports.scheduleLeadInboxFollowUpRelay).toHaveBeenCalledWith('alpha', 10_000);
+    expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('msg-1') ?? false).toBe(false);
+  });
+
+  it('announces a resent message as a redelivery and leaves a fresh row unmarked', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+    const timers = createTimerHarness(ports);
+    vi.mocked(ports.sendMessageToRun).mockImplementationOnce(async (_run, message: string) => {
+      ports.sentMessages.push(message);
+      timers
+        .pending()
+        .find(({ ms }) => ms === 120_000)
+        ?.callback();
+    });
+
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
+    expect(ports.sentMessages[0]).not.toContain('REDELIVERY:');
+
+    vi.mocked(ports.readLeadInboxMessages).mockResolvedValue([
+      createMessage(),
+      createMessage({ messageId: 'msg-2', text: 'A brand new request.' }),
+    ]);
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(2);
+
+    const retryPrompt = ports.sentMessages[1] ?? '';
+    const rows = retryPrompt.slice(retryPrompt.indexOf('Messages:')).split(/^(?=\d\) From: )/m);
+    expect(rows[1]).toContain('REDELIVERY: this exact message was already delivered to you');
+    expect(rows[2]).not.toContain('REDELIVERY:');
   });
 });

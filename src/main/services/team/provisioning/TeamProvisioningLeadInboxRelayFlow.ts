@@ -57,6 +57,7 @@ export interface LeadInboxRelayCapture {
   settled: boolean;
   idleHandle: NodeJS.Timeout | null;
   idleMs: number;
+  touch?: () => void;
   resolveOnce: (text: string) => void;
   rejectOnce: (error: string) => void;
   timeoutHandle: NodeJS.Timeout;
@@ -113,7 +114,7 @@ export interface LeadInboxRelayFlowPorts<TRun extends LeadInboxRelayFlowRun> {
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
   persistSentMessage(teamName: string, message: InboxMessage): void;
   emitTeamChange(event: TeamChangeEvent): void;
-  scheduleLeadInboxFollowUpRelay(teamName: string): void;
+  scheduleLeadInboxFollowUpRelay(teamName: string, delayMs?: number): void;
   rememberLeadRecoveryMessage(teamName: string, messageId: string): void;
   rememberSuccessfulLeadRecoveryMessage(teamName: string, messageId: string): void;
   relayedLeadInboxMessageIds: Map<string, Set<string>>;
@@ -134,7 +135,62 @@ export interface LeadInboxRelayOptions {
   onlyMessageId?: string;
 }
 
+// A lead turn that is running tools produces no assistant text, so a short reply deadline used to
+// declare a delivered message undelivered mid-turn. The deadline is now generous and activity
+// extends it; the absolute cap still bounds a wedged lane.
+const LEAD_RELAY_CAPTURE_TIMEOUT_MS = 120_000;
+const LEAD_RELAY_CAPTURE_ABSOLUTE_CAP_MS = 600_000;
+const LEAD_RELAY_NO_PROOF_RETRY_DELAY_MS = 10_000;
+const LEAD_RELAY_ATTEMPTED_ID_LIMIT = 300;
+
 const leadInboxRelayQueues = new WeakMap<Map<string, Set<string>>, Map<string, Promise<number>>>();
+
+// Message ids already sent to the lead at least once, even without delivery proof, keyed by the
+// same per-service identity map as the relay queues. A retry of such a message is marked as a
+// redelivery in the relay prompt so a memoryless lead checks board state before repeating side
+// effects it may already have performed.
+const attemptedLeadRelayIdsRegistry = new WeakMap<
+  Map<string, Set<string>>,
+  Map<string, Set<string>>
+>();
+
+function getAttemptedLeadRelayIdsByTeam(
+  identity: Map<string, Set<string>>
+): Map<string, Set<string>> {
+  let byTeam = attemptedLeadRelayIdsRegistry.get(identity);
+  if (!byTeam) {
+    byTeam = new Map();
+    attemptedLeadRelayIdsRegistry.set(identity, byTeam);
+  }
+  return byTeam;
+}
+
+function markLeadRelayAttemptsAndCollectRedeliveries(
+  identity: Map<string, Set<string>>,
+  teamName: string,
+  batch: readonly { messageId: string }[]
+): Set<string> {
+  const attemptedByTeam = getAttemptedLeadRelayIdsByTeam(identity);
+  let attemptedIds = attemptedByTeam.get(teamName);
+  if (!attemptedIds) {
+    attemptedIds = new Set<string>();
+    attemptedByTeam.set(teamName, attemptedIds);
+  }
+  const redeliveredMessageIds = new Set(
+    batch
+      .filter((relayMessage) => attemptedIds.has(relayMessage.messageId))
+      .map((relayMessage) => relayMessage.messageId)
+  );
+  for (const relayMessage of batch) {
+    attemptedIds.add(relayMessage.messageId);
+  }
+  while (attemptedIds.size > LEAD_RELAY_ATTEMPTED_ID_LIMIT) {
+    const oldest = attemptedIds.values().next().value;
+    if (oldest === undefined) break;
+    attemptedIds.delete(oldest);
+  }
+  return redeliveredMessageIds;
+}
 
 export async function relayLeadInboxMessagesForTeam<TRun extends LeadInboxRelayFlowRun>(
   teamName: string,
@@ -386,6 +442,11 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     }));
   const workSyncControlUrl = await ports.resolveControlApiBaseUrl();
   run.activeCrossTeamReplyHints = buildLeadActiveCrossTeamReplyHints(batch);
+  const redeliveredMessageIds = markLeadRelayAttemptsAndCollectRedeliveries(
+    ports.relayedLeadInboxMessageIds,
+    teamName,
+    batch
+  );
   const message = buildLeadInboxRelayPrompt({
     teamName,
     leadName,
@@ -393,6 +454,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     replyVisibility,
     teammates: teammateRoster,
     workSyncControlUrl,
+    redeliveredMessageIds,
   });
 
   const capturePromise = startLeadRelayCapture(
@@ -419,7 +481,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     ports.logger.debug(
       `[${teamName}] lead relay did not receive delivery proof; leaving ${batch.length} message(s) unread for retry`
     );
-    ports.scheduleLeadInboxFollowUpRelay(teamName);
+    ports.scheduleLeadInboxFollowUpRelay(teamName, LEAD_RELAY_NO_PROOF_RETRY_DELAY_MS);
     return 0;
   }
   if (recoveryMessageId && captureResult.terminalResultSucceeded) {
@@ -506,17 +568,19 @@ function startLeadRelayCapture<TRun extends LeadInboxRelayFlowRun>(
   leadName: string,
   replyVisibility: 'user' | 'internal_activity',
   recoveryMessageId: string | undefined,
-  ports: Pick<LeadInboxRelayFlowPorts<TRun>, 'clearTimeout' | 'nowIso' | 'setTimeout'>
+  ports: Pick<LeadInboxRelayFlowPorts<TRun>, 'clearTimeout' | 'nowIso' | 'nowMs' | 'setTimeout'>
 ): Promise<string> {
-  const captureTimeoutMs = 15_000;
+  const captureTimeoutMs = LEAD_RELAY_CAPTURE_TIMEOUT_MS;
   // The target stream parser resolves ordinary captures after a short text-idle window. Recovery
   // delivery needs stronger proof: keep its idle deadline beyond the hard capture timeout so only
   // a terminal result can resolve it before the timeout rejects the delivery.
   const captureIdleMs = recoveryMessageId ? captureTimeoutMs + 1 : 800;
+  const captureStartedAtMs = ports.nowMs();
   return new Promise<string>((resolve, reject) => {
-    const timeoutHandle = ports.setTimeout(() => {
+    const onCaptureDeadline = (): void => {
       reject(new Error('Timed out waiting for lead reply'));
-    }, captureTimeoutMs);
+    };
+    const timeoutHandle = ports.setTimeout(onCaptureDeadline, captureTimeoutMs);
     const capture: LeadInboxRelayCapture = {
       leadName,
       startedAt: ports.nowIso(),
@@ -529,6 +593,16 @@ function startLeadRelayCapture<TRun extends LeadInboxRelayFlowRun>(
       idleHandle: null,
       idleMs: captureIdleMs,
       timeoutHandle,
+      // Any lead stream activity (text, tool_use, tool_result) proves the relayed prompt reached a
+      // live lead turn. Extend the reply deadline instead of failing delivery mid-turn: a false
+      // "not delivered" verdict re-sends the same message and a memoryless lead executes it again,
+      // producing duplicate task sets and near-identical user messages.
+      touch: () => {
+        if (capture.settled) return;
+        if (ports.nowMs() - captureStartedAtMs >= LEAD_RELAY_CAPTURE_ABSOLUTE_CAP_MS) return;
+        ports.clearTimeout(capture.timeoutHandle);
+        capture.timeoutHandle = ports.setTimeout(onCaptureDeadline, captureTimeoutMs);
+      },
       resolveOnce: (text: string) => {
         if (capture.settled) return;
         if (recoveryMessageId) {
