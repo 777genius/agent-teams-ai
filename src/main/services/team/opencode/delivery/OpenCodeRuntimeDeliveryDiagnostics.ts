@@ -6,8 +6,9 @@ import {
 import {
   isOpenCodeResolvedBehaviorChangedReason,
   isOpenCodeSessionTransportChangedReason,
-  type OpenCodePromptDeliveryLedgerRecord,
-} from './OpenCodePromptDeliveryLedger';
+} from './OpenCodeSessionRefreshReasonClassifier';
+
+import type { OpenCodePromptDeliveryLedgerRecord } from './OpenCodePromptDeliveryLedger';
 
 export function normalizeOpenCodeRuntimeDeliveryDiagnostic(
   message: string | null | undefined
