@@ -55,6 +55,7 @@ import type {
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
   RuntimeProviderManagementApi,
+  RuntimeProviderManagementRuntimeId,
 } from '@features/runtime-provider-management/contracts';
 import type { TeamImportApi } from '@features/team-import/contracts';
 import type { TerminalWorkspaceElectronApi } from '@features/terminal-workspace/contracts';
@@ -187,6 +188,21 @@ function createBrowserCompanionStatus(
       : 'curl -fsSL https://cli.kiro.dev/install | bash',
     manualUrl: cursor ? 'https://cursor.com/docs/cli/installation' : 'https://kiro.dev/downloads/',
     updatedAt: new Date().toISOString(),
+  };
+}
+
+function createBrowserRuntimeProviderError(
+  runtimeId: RuntimeProviderManagementRuntimeId,
+  code: 'runtime-unhealthy' | 'unsupported-action'
+) {
+  return {
+    schemaVersion: 1 as const,
+    runtimeId,
+    error: {
+      code,
+      message: 'Runtime provider management is not available in browser mode.',
+      recoverable: true,
+    },
   };
 }
 
@@ -1581,101 +1597,31 @@ export class HttpAPIClient implements ElectronAPI {
     runCompanionAction: async (input: RuntimeProviderCompanionActionInput) =>
       createBrowserCompanionStatus(input, 'action'),
     onCompanionProgress: () => () => {},
-    loadView: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'runtime-unhealthy',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    loadProviderDirectory: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'runtime-unhealthy',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    loadSetupForm: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'runtime-unhealthy',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    connectProvider: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    connectWithApiKey: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    forgetCredential: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    loadModels: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
+    loadView: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'runtime-unhealthy'),
+    loadProviderDirectory: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'runtime-unhealthy'),
+    loadSetupForm: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'runtime-unhealthy'),
+    connectProvider: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    connectWithApiKey: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    forgetCredential: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    loadModels: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
     cancelModelLoad: async () => ({
       ok: false,
       error: 'Model catalog cancellation requires desktop.',
     }),
-    testModel: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
+    testModel: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
     cancelModelTest: async () => ({ ok: false, error: 'Model tests require the desktop app.' }),
-    setDefaultModel: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
-    clearProjectDefaultModel: async (input) => ({
-      schemaVersion: 1,
-      runtimeId: input.runtimeId,
-      error: {
-        code: 'unsupported-action',
-        message: 'Runtime provider management is not available in browser mode.',
-        recoverable: true,
-      },
-    }),
+    setDefaultModel: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
+    clearProjectDefaultModel: async (input) =>
+      createBrowserRuntimeProviderError(input.runtimeId, 'unsupported-action'),
     configureModelLimits: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,
