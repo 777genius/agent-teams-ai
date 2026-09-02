@@ -79,7 +79,6 @@ import {
   PROJECT_LIST_FILES,
   RENDERER_BOOT,
   RENDERER_HEARTBEAT,
-  RENDERER_LOG,
   REVIEW_APPLY_DECISIONS,
   REVIEW_CHECK_CONFLICT,
   REVIEW_CLEAR_DECISIONS,
@@ -276,6 +275,8 @@ import {
   CONFIG_UPDATE,
   CONFIG_UPDATE_TRIGGER,
 } from './constants/ipcChannels';
+import { installRendererLogForwarding } from './installRendererLogForwarding';
+import { installSentryRendererIpcBridge } from './installSentryRendererIpcBridge';
 
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
@@ -439,47 +440,6 @@ import type {
 import type { PtySpawnOptions } from '@shared/types/terminal';
 import type { CliArgsValidationResult } from '@shared/utils/cliArgsParser';
 
-type SentryIpcChannel = 'start' | 'scope' | 'envelope' | 'status' | 'structured-log' | 'metric';
-
-interface SentryRendererIpcBridge {
-  sendRendererStart: () => void;
-  sendScope: (scopeJson: string) => void;
-  sendEnvelope: (envelope: Uint8Array | string) => void;
-  sendStatus: (status: unknown) => void;
-  sendStructuredLog: (log: unknown) => void;
-  sendMetric: (metric: unknown) => void;
-}
-
-declare global {
-  interface Window {
-    __SENTRY_IPC__?: Record<string, SentryRendererIpcBridge>;
-  }
-}
-
-const SENTRY_IPC_NAMESPACE = 'sentry-ipc';
-
-function createSentryIpcKey(channel: SentryIpcChannel): string {
-  return `${SENTRY_IPC_NAMESPACE}.${channel}`;
-}
-
-function installSentryRendererIpcBridge(): void {
-  window.__SENTRY_IPC__ = window.__SENTRY_IPC__ || {};
-  if (window.__SENTRY_IPC__[SENTRY_IPC_NAMESPACE]) {
-    return;
-  }
-
-  window.__SENTRY_IPC__[SENTRY_IPC_NAMESPACE] = {
-    sendRendererStart: () => ipcRenderer.send(createSentryIpcKey('start')),
-    sendScope: (scopeJson) => ipcRenderer.send(createSentryIpcKey('scope'), scopeJson),
-    sendEnvelope: (envelope) => ipcRenderer.send(createSentryIpcKey('envelope'), envelope),
-    sendStatus: (status) => ipcRenderer.send(createSentryIpcKey('status'), status),
-    sendStructuredLog: (log) => ipcRenderer.send(createSentryIpcKey('structured-log'), log),
-    sendMetric: (metric) => ipcRenderer.send(createSentryIpcKey('metric'), metric),
-  };
-
-  contextBridge.exposeInMainWorld('__SENTRY_IPC__', window.__SENTRY_IPC__);
-}
-
 // Expose Sentry's classic IPC bridge so packaged renderers do not fall back to sentry-ipc:// fetch.
 try {
   installSentryRendererIpcBridge();
@@ -509,55 +469,6 @@ async function invokeIpcWithResult<T>(channel: string, ...args: unknown[]): Prom
     throw new Error(result.error ?? 'Unknown error');
   }
   return result.data as T;
-}
-
-function formatConsoleArg(arg: unknown): string {
-  if (typeof arg === 'string') return arg;
-  if (arg instanceof Error) return arg.stack ?? arg.message;
-  try {
-    return JSON.stringify(arg);
-  } catch {
-    return String(arg);
-  }
-}
-
-function shouldForwardConsoleText(text: string): boolean {
-  return /^\[[A-Za-z][A-Za-z0-9:_-]{0,79}\](?:\s|$)/.test(text);
-}
-
-const MAX_FORWARDED_RENDERER_LOG_CHARS = 16_000;
-
-function installRendererLogForwarding(): void {
-  const originalWarn = console.warn.bind(console);
-  const originalError = console.error.bind(console);
-
-  console.warn = (...args: unknown[]): void => {
-    originalWarn(...args);
-    try {
-      const text = args.map(formatConsoleArg).join(' ').trim();
-      if (!text || !shouldForwardConsoleText(text)) return;
-      ipcRenderer.send(RENDERER_LOG, {
-        level: 'warn',
-        message: text.slice(0, MAX_FORWARDED_RENDERER_LOG_CHARS),
-      });
-    } catch {
-      // ignore
-    }
-  };
-
-  console.error = (...args: unknown[]): void => {
-    originalError(...args);
-    try {
-      const text = args.map(formatConsoleArg).join(' ').trim();
-      if (!text || !shouldForwardConsoleText(text)) return;
-      ipcRenderer.send(RENDERER_LOG, {
-        level: 'error',
-        message: text.slice(0, MAX_FORWARDED_RENDERER_LOG_CHARS),
-      });
-    } catch {
-      // ignore
-    }
-  };
 }
 
 installRendererLogForwarding();
