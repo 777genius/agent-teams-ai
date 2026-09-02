@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { writeJsonFileSync } = require('./atomicFile.js');
 const { withFileLockSync } = require('./fileLock.js');
+const { looksLikeIdleAckOnlyText } = require('./idleAckText.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const taskStore = require('./taskStore.js');
 
@@ -591,6 +592,7 @@ function lookupMessage(paths, messageId) {
 module.exports = {
   appendSentMessage,
   readBoardCompletionEpoch,
+  looksLikeIdleAckOnlyText,
   lookupMessage,
   sendInboxMessage,
 };
