@@ -23,7 +23,7 @@ describe('killRetainedOpenCodeRuntimeProcessesForTeam', () => {
     vi.clearAllMocks();
   });
 
-  it('fences the managed host sweep by the moment the kill step began', async () => {
+  it('defaults the fence to the moment the kill step began', async () => {
     const before = Date.now();
 
     const result = await killRetainedOpenCodeRuntimeProcessesForTeam({
@@ -45,6 +45,22 @@ describe('killRetainedOpenCodeRuntimeProcessesForTeam', () => {
 
   it('uses the default sweep port, which is enabled, when the caller hands in none', () => {
     expect(DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT.isEnabled()).toBe(true);
+  });
+
+  it('fences the managed host sweep by the time the stop was requested', async () => {
+    const requestedAtMs = Date.parse('2026-09-01T10:00:00.000Z');
+
+    await killRetainedOpenCodeRuntimeProcessesForTeam({
+      teamName: 'fixteam',
+      otherAliveTeams: [],
+      launchStateStore: createLaunchStateStore(),
+      requestedAtMs,
+    });
+
+    expect(cleanupManagedOpenCodeServeProcesses).toHaveBeenCalledWith({
+      mode: 'force',
+      startedBeforeMs: requestedAtMs,
+    });
   });
 
   it('skips the managed host sweep while another team is alive', async () => {

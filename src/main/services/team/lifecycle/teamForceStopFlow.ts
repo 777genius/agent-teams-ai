@@ -29,8 +29,15 @@ const FORCE_STOP_DELIVERY_CANCEL_REASON =
 
 export interface TeamForceStopFlowPorts {
   stopTeam(teamName: string): Promise<void>;
+  /**
+   * `requestedAtMs` is the moment this stop flow began, not the moment the kill
+   * step runs: the regular stop before it can take its whole budget, and a
+   * relaunch of the same team started inside that window owns the host it
+   * created. The kill step must keep it.
+   */
   killRetainedRuntimeProcesses(
-    teamName: string
+    teamName: string,
+    context: { requestedAtMs: number }
   ): Promise<{ killedPids: number[]; diagnostics: string[] }>;
   clearPendingPromptDeliveries(
     teamName: string
@@ -50,6 +57,7 @@ export async function runTeamForceStopFlow(
   ports: TeamForceStopFlowPorts
 ): Promise<TeamForceStopResult> {
   const diagnostics: string[] = [];
+  const stopStartedAtMs = Date.now();
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
@@ -84,7 +92,9 @@ export async function runTeamForceStopFlow(
 
   let killedRuntimePids: number[] = [];
   try {
-    const killResult = await ports.killRetainedRuntimeProcesses(teamName);
+    const killResult = await ports.killRetainedRuntimeProcesses(teamName, {
+      requestedAtMs: stopStartedAtMs,
+    });
     killedRuntimePids = killResult.killedPids;
     diagnostics.push(...killResult.diagnostics);
   } catch (error) {
@@ -163,16 +173,19 @@ function collectPersistedOpenCodeLaneIds(
  * 2. A managed-host sweep for app-managed `opencode serve` hosts whose PIDs
  *    were never persisted. The sweep cannot attribute a host to a team, so it
  *    only runs when no other team is alive, and it is always fenced by the
- *    moment this step began: a host started after that belongs to something
- *    else, and is kept.
+ *    moment the stop was requested: a host started after that belongs to
+ *    something else - a relaunch of this same team racing the stop, most
+ *    likely - and is kept.
  */
 export async function killRetainedOpenCodeRuntimeProcessesForTeam(input: {
   teamName: string;
   otherAliveTeams: readonly string[];
+  /** Defaults to the moment this step begins when a caller has no earlier one. */
+  requestedAtMs?: number;
   launchStateStore?: TeamLaunchStateStore;
   managedHostSweep?: OpenCodeManagedHostSweepPort;
 }): Promise<{ killedPids: number[]; diagnostics: string[] }> {
-  const startedBeforeMs = Date.now();
+  const startedBeforeMs = input.requestedAtMs ?? Date.now();
   const diagnostics: string[] = [];
   const killedPids: number[] = [];
   const launchStateStore = input.launchStateStore ?? new TeamLaunchStateStore();

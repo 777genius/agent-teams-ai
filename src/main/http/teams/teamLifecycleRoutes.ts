@@ -88,9 +88,10 @@ export function registerTeamLifecycleRoutes(
         const teamRuntimeApi = getTeamRuntimeApi(services);
         const result = await runTeamForceStopFlow(teamName, {
           stopTeam: (name) => teamRuntimeApi.stopTeam(name),
-          killRetainedRuntimeProcesses: (name) =>
+          killRetainedRuntimeProcesses: (name, context) =>
             killRetainedOpenCodeRuntimeProcessesForTeam({
               teamName: name,
+              requestedAtMs: context.requestedAtMs,
               otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
             }),
           clearPendingPromptDeliveries: (name) =>

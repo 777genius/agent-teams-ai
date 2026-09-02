@@ -32,12 +32,44 @@ describe('runTeamForceStopFlow', () => {
     const result = await runTeamForceStopFlow('fixteam', ports);
 
     expect(ports.stopTeam).toHaveBeenCalledWith('fixteam');
-    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam');
+    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+    });
     expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam');
     expect(result.stopOutcome).toBe('stopped');
     expect(result.killedRuntimePids).toEqual([4242]);
     expect(result.clearedPendingDeliveries).toBe(2);
     expect(ports.logWarning).not.toHaveBeenCalled();
+  });
+
+  it('hands the kill step the time the stop was requested, not the time it gave up', async () => {
+    // A relaunch of the same team can start a host while the regular stop is
+    // still running, so the fence has to be the start of the flow. The stop
+    // here spends real time before failing, and the two moments must differ.
+    let gaveUpAtMs = 0;
+    const ports = createPorts({
+      stopTeam: vi.fn(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            setTimeout(() => {
+              gaveUpAtMs = Date.now();
+              reject(new Error('did not confirm stop'));
+            }, 40);
+          })
+      ),
+      stopTimeoutMs: 5_000,
+    });
+    const before = Date.now();
+
+    await runTeamForceStopFlow('fixteam', ports);
+
+    const [, context] = ports.killRetainedRuntimeProcesses.mock.calls[0] as [
+      string,
+      { requestedAtMs: number },
+    ];
+    expect(gaveUpAtMs).toBeGreaterThan(0);
+    expect(context.requestedAtMs).toBeGreaterThanOrEqual(before);
+    expect(context.requestedAtMs).toBeLessThan(gaveUpAtMs);
   });
 
   it('continues with the hard kill when the regular stop rejects', async () => {
@@ -50,7 +82,9 @@ describe('runTeamForceStopFlow', () => {
     const result = await runTeamForceStopFlow('fixteam', ports);
 
     expect(result.stopOutcome).toBe('stop_failed');
-    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam');
+    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+    });
     expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam');
     expect(result.killedRuntimePids).toEqual([4242]);
     expect(result.diagnostics.join('\n')).toContain('did not confirm stop');
@@ -64,7 +98,9 @@ describe('runTeamForceStopFlow', () => {
     const result = await runTeamForceStopFlow('fixteam', ports);
 
     expect(result.stopOutcome).toBe('timed_out');
-    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam');
+    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+    });
     expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam');
     expect(result.diagnostics.join('\n')).toContain('timed out after 20ms');
   });

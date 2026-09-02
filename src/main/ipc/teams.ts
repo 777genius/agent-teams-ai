@@ -4203,9 +4203,10 @@ async function handleForceStopTeam(
     addMainBreadcrumb('team', 'forceStop', { teamName: tn });
     return runTeamForceStopFlow(tn, {
       stopTeam: (name) => getTeamRuntimeApi().stopTeam(name),
-      killRetainedRuntimeProcesses: (name) =>
+      killRetainedRuntimeProcesses: (name, context) =>
         killRetainedOpenCodeRuntimeProcessesForTeam({
           teamName: name,
+          requestedAtMs: context.requestedAtMs,
           otherAliveTeams: getTeamRuntimeApi()
             .getAliveTeams()
             .filter((alive) => alive !== name),

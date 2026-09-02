@@ -117,7 +117,7 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
 
     for (const [, ports] of [ipcCall, httpCall]) {
       await ports.stopTeam('fixteam');
-      await ports.killRetainedRuntimeProcesses('fixteam');
+      await ports.killRetainedRuntimeProcesses('fixteam', { requestedAtMs: 1_700_000_000_000 });
       await ports.clearPendingPromptDeliveries('fixteam');
     }
 
@@ -125,11 +125,21 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
     expect(stopTeam).toHaveBeenNthCalledWith(1, 'fixteam');
     expect(stopTeam).toHaveBeenNthCalledWith(2, 'fixteam');
     // The team being stopped is never one of its own "other alive teams".
-    expect(
-      forceStopFlowMocks.killRetainedOpenCodeRuntimeProcessesForTeam.mock.calls
-    ).toEqual([
-      [{ teamName: 'fixteam', otherAliveTeams: ['other-team'] }],
-      [{ teamName: 'fixteam', otherAliveTeams: ['other-team'] }],
+    expect(forceStopFlowMocks.killRetainedOpenCodeRuntimeProcessesForTeam.mock.calls).toEqual([
+      [
+        {
+          teamName: 'fixteam',
+          requestedAtMs: 1_700_000_000_000,
+          otherAliveTeams: ['other-team'],
+        },
+      ],
+      [
+        {
+          teamName: 'fixteam',
+          requestedAtMs: 1_700_000_000_000,
+          otherAliveTeams: ['other-team'],
+        },
+      ],
     ]);
     expect(forceStopFlowMocks.clearPendingOpenCodePromptDeliveriesForTeam.mock.calls).toEqual([
       [{ teamName: 'fixteam' }],
