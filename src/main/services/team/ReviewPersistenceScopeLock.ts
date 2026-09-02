@@ -29,7 +29,8 @@ const MIN_PROCESS_START_MISS_CACHE_TTL_MS = 1_000;
 const PROCESS_START_PROBE_TIMEOUT_MS = 5_000;
 // The cap still has to leave a probe room to answer at all: a short acquire budget
 // that starves every probe could never reclaim a crash-left lease from a recycled pid,
-// and the answer outlives this acquire in the cache anyway.
+// and the answer outlives this acquire in the cache anyway. What the acquire itself
+// waits for is its own budget, never this floor: see settleOwnerProbeWithinBudget.
 const MIN_PROCESS_START_PROBE_TIMEOUT_MS = 1_000;
 const PROCESS_STARTED_AT = Math.floor(Date.now() - process.uptime() * 1_000);
 const LOGICAL_SCOPE_LOCK_TOKEN = 'review-persistence-logical-scope:v1';
@@ -140,14 +141,11 @@ function isProcessAlive(pid: number): boolean {
   }
 }
 
-function getProcessStartedAt(pid: number, budget: OwnerProbeBudget): Promise<number | null> {
-  if (pid === process.pid) return Promise.resolve(PROCESS_STARTED_AT);
-  const cached = observedProcessStarts.get(pid);
-  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.startedAt);
-  const remainingBudgetMs = budget.deadline - Date.now();
-  // The acquire is already over: a spawn started now could only outlive it, so answer
-  // the same "unobservable" the caller would have to assume anyway.
-  if (remainingBudgetMs <= 0) return Promise.resolve(null);
+function startOrJoinProcessStartProbe(
+  pid: number,
+  budget: OwnerProbeBudget,
+  remainingBudgetMs: number
+): Promise<number | null> {
   const inFlight = pendingProcessStartProbes.get(pid);
   // Concurrent acquires of different scopes routinely inspect the same owner PID;
   // joining the in-flight probe keeps that to one process spawn.
@@ -178,6 +176,50 @@ function getProcessStartedAt(pid: number, budget: OwnerProbeBudget): Promise<num
     });
   pendingProcessStartProbes.set(pid, probe);
   return probe;
+}
+
+/**
+ * The probe's clock and the acquire's budget are two different clocks, and this is
+ * where they are kept apart.
+ *
+ * A probe this acquire starts keeps a floor of MIN_PROCESS_START_PROBE_TIMEOUT_MS so
+ * the spawn can answer at all, and a probe joined from another acquire answers on the
+ * timeout whoever started it chose. Either can outlive the acquire waiting here, so
+ * what this acquire waits on is its own remaining budget: an acquire that promised
+ * 100ms must not return a second late because a probe was still thinking.
+ *
+ * An expired budget reads exactly like a probe that could not answer - "start time
+ * unobservable", keep the live owner - which is the conservative direction this
+ * module already takes everywhere. Nothing is cancelled: the probe runs on and files
+ * its answer in `observedProcessStarts`, so the next retry of this acquire, or the
+ * next acquire of any scope with the same owner, reads an answer nobody waited for.
+ */
+function settleOwnerProbeWithinBudget(
+  probe: Promise<number | null>,
+  remainingBudgetMs: number
+): Promise<number | null> {
+  return new Promise((resolve) => {
+    const budgetExpiry = setTimeout(() => resolve(null), remainingBudgetMs);
+    const settle = (startedAt: number | null): void => {
+      clearTimeout(budgetExpiry);
+      resolve(startedAt);
+    };
+    void probe.then(settle, () => settle(null));
+  });
+}
+
+function getProcessStartedAt(pid: number, budget: OwnerProbeBudget): Promise<number | null> {
+  if (pid === process.pid) return Promise.resolve(PROCESS_STARTED_AT);
+  const cached = observedProcessStarts.get(pid);
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.startedAt);
+  const remainingBudgetMs = budget.deadline - Date.now();
+  // The acquire is already over: a spawn started now could only outlive it, so answer
+  // the same "unobservable" the caller would have to assume anyway.
+  if (remainingBudgetMs <= 0) return Promise.resolve(null);
+  return settleOwnerProbeWithinBudget(
+    startOrJoinProcessStartProbe(pid, budget, remainingBudgetMs),
+    remainingBudgetMs
+  );
 }
 
 async function isStaleOwner(row: ReviewScopeLockRow, budget: OwnerProbeBudget): Promise<boolean> {

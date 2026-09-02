@@ -267,6 +267,131 @@ describe('ReviewPersistenceScopeLock', () => {
   });
 
   /**
+   * The probe's floor is not the acquire's floor. A spawned probe may keep a full
+   * second to answer in - a powershell.exe start costs most of that - but an
+   * acquire that asked for a quarter of a second must answer in a quarter of a
+   * second, and the only conservative reading available by then is "start time
+   * unobservable", which keeps the live owner. The probe is not cancelled for it:
+   * its answer still lands in the cache, and the next acquire spends nothing to
+   * read it.
+   */
+  it('answers a sub-second acquire budget while the probe it started runs on', async () => {
+    const { withReviewPersistenceScopeLock } =
+      await import('@main/services/team/ReviewPersistenceScopeLock');
+    const scope = { scopeKey: 'task-task-1', scopeToken: 'task:task-1:probe-outlives-acquire' };
+    await withReviewPersistenceScopeLock(
+      'demo',
+      { scopeKey: 'task-bootstrap', scopeToken: 'bootstrap' },
+      async () => undefined
+    );
+
+    await withLiveForeignProcess(async (childPid) => {
+      seedCrashLeftLease(scope, childPid);
+      let answerProbe!: (startedAt: number) => void;
+      const probeAnswered = new Promise<number>((resolve) => {
+        answerProbe = resolve;
+      });
+      let probeCount = 0;
+      startTimeProbeOverride.read = async () => {
+        probeCount += 1;
+        return probeAnswered;
+      };
+      // Later than the acquire below, and later than the floor a spawned probe keeps.
+      const answerTimer = setTimeout(() => answerProbe(Date.now()), 1_500);
+
+      try {
+        const startedAtMs = Date.now();
+        await expect(
+          withReviewPersistenceScopeLock('demo', scope, async () => 'stolen', {
+            acquireTimeoutMs: 250,
+            retryIntervalMs: 10,
+          })
+        ).rejects.toThrow('busy in another app process');
+
+        expect(Date.now() - startedAtMs).toBeLessThan(1_000);
+        expect(probeCount).toBe(1);
+
+        // The probe was left to finish, so the answer is there for the next acquire
+        // to reclaim the row on without spawning a probe of its own.
+        await probeAnswered;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await expect(
+          withReviewPersistenceScopeLock('demo', scope, async () => 'recovered', {
+            acquireTimeoutMs: 500,
+            retryIntervalMs: 10,
+          })
+        ).resolves.toBe('recovered');
+        expect(probeCount).toBe(1);
+      } finally {
+        clearTimeout(answerTimer);
+      }
+    });
+  });
+
+  /**
+   * Joining an in-flight probe is what keeps concurrent acquires of different
+   * scopes to one process spawn, but the joiner inherits the timeout whoever
+   * started that probe chose - up to the full probe cap. A short-budget acquire
+   * must not be held to another acquire's clock, while the acquire that started
+   * the probe still gets its real answer.
+   */
+  it('holds a joining acquire to its own budget, not to the probe it joined', async () => {
+    const { withReviewPersistenceScopeLock } =
+      await import('@main/services/team/ReviewPersistenceScopeLock');
+    const probeStarter = { scopeKey: 'task-task-1', scopeToken: 'task:task-1:probe-starter' };
+    const probeJoiner = { scopeKey: 'task-task-2', scopeToken: 'task:task-2:probe-joiner' };
+    await withReviewPersistenceScopeLock(
+      'demo',
+      { scopeKey: 'task-bootstrap', scopeToken: 'bootstrap' },
+      async () => undefined
+    );
+
+    await withLiveForeignProcess(async (childPid) => {
+      seedCrashLeftLease(probeStarter, childPid);
+      seedCrashLeftLease(probeJoiner, childPid);
+      let answerProbe!: (startedAt: number) => void;
+      const probeAnswered = new Promise<number>((resolve) => {
+        answerProbe = resolve;
+      });
+      let probeCount = 0;
+      startTimeProbeOverride.read = async () => {
+        probeCount += 1;
+        return probeAnswered;
+      };
+      const answerTimer = setTimeout(() => answerProbe(Date.now()), 1_500);
+
+      try {
+        const patientAcquire = withReviewPersistenceScopeLock(
+          'demo',
+          probeStarter,
+          async () => 'recovered',
+          { acquireTimeoutMs: 5_000, retryIntervalMs: 10 }
+        );
+        for (let attempt = 0; probeCount === 0 && attempt < 200; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+        }
+        expect(probeCount).toBe(1);
+
+        const startedAtMs = Date.now();
+        await expect(
+          withReviewPersistenceScopeLock('demo', probeJoiner, async () => 'stolen', {
+            acquireTimeoutMs: 250,
+            retryIntervalMs: 10,
+          })
+        ).rejects.toThrow('busy in another app process');
+
+        expect(Date.now() - startedAtMs).toBeLessThan(1_000);
+        // One spawn for both acquires: the second joined rather than starting its own.
+        expect(probeCount).toBe(1);
+        // And the acquire that started the probe still waits for what it asked for.
+        await expect(patientAcquire).resolves.toBe('recovered');
+      } finally {
+        clearTimeout(answerTimer);
+      }
+    });
+  });
+
+  /**
    * The reason the probe is awaited before the transaction rather than inside it,
    * asserted rather than claimed in a comment. `BEGIN IMMEDIATE` takes the SQLite
    * write lock for the whole database, so awaiting a process spawn after it would
