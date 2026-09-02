@@ -19,6 +19,7 @@ import {
   selectOpenCodeInboxRelayBatch,
 } from './TeamProvisioningInboxRelayPolicy';
 import { type OpenCodeInboxAttachmentPayloadsResult } from './TeamProvisioningOpenCodeAttachmentPayloads';
+import { findNextUnreadUserMessageIndex } from './TeamProvisioningOpenCodeInboxCoalescePolicy';
 import {
   getActiveOpenCodeMemberInboxRelayWork,
   registerOpenCodeMemberInboxRelayWork,
@@ -639,28 +640,6 @@ async function runOpenCodeMemberInboxRelayWork(
   }
 
   return dedupeOpenCodeMemberInboxRelayDiagnostics(result);
-}
-
-/**
- * Index of the first unread user message after `afterIndex`, or -1. Only a
- * pending non-user delivery yields to a user message; a pending user delivery
- * keeps the inbox order (the next user message queues behind it).
- */
-export function findNextUnreadUserMessageIndex(input: {
-  unread: readonly RelayInboxMessage[];
-  afterIndex: number;
-  currentReplyRecipient: string;
-}): number {
-  if (input.currentReplyRecipient.trim().toLowerCase() === 'user') {
-    return -1;
-  }
-  for (let index = input.afterIndex + 1; index < input.unread.length; index += 1) {
-    const candidate = input.unread[index];
-    if (candidate && !candidate.read && candidate.from.trim().toLowerCase() === 'user') {
-      return index;
-    }
-  }
-  return -1;
 }
 
 export function selectOpenCodeMemberInboxRelayUnreadMessages(input: {
