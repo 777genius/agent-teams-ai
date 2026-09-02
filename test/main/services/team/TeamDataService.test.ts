@@ -824,7 +824,12 @@ describe('TeamDataService draft metadata', () => {
         'cross_team_send',
         'other-team.external',
         'a0123456789abcdef',
-      ].map((name) => fs.writeFile(path.join(teamDir, 'inboxes', `${name}.json`), '[]'))
+      ]
+        // A colon is the alternate-data-stream separator on NTFS, so this inbox file
+        // cannot exist on Windows in the first place. It is background noise for the
+        // removal scan, not a subject of any assertion.
+        .filter((name) => process.platform !== 'win32' || !name.includes(':'))
+        .map((name) => fs.writeFile(path.join(teamDir, 'inboxes', `${name}.json`), '[]'))
     );
 
     await new TeamDataService().removeMember('restart-team', 'alice');
