@@ -35,7 +35,13 @@ export class RuntimeProviderModelRequestTracker {
     requestGroupId: string | null
   ): Promise<RuntimeProviderManagementModelsResponse> | null {
     const current = this.inFlight.get(cacheKey);
-    if (current?.refresh !== true || current.controller.signal.aborted) return null;
+    if (!current || current.controller.signal.aborted) return null;
+    if (
+      current.refresh !== true &&
+      !(requestGroupId && current.requestGroups.has(requestGroupId))
+    ) {
+      return null;
+    }
     this.register(current, cacheKey, requestGroupId);
     return current.promise;
   }

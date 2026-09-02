@@ -637,7 +637,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (!open) {
       return;
     }
-
     setMembersDrafts((prev) => {
       const sanitized = clearInheritedMemberModelsUnavailableForProvider({
         members: prev,
@@ -658,7 +657,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     runtimeProviderStatusById,
     selectedProviderId,
   ]);
-
   useEffect(() => {
     if (multimodelEnabled) {
       return;
@@ -677,7 +675,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return changed ? next : prev;
     });
   }, [multimodelEnabled, selectedProviderId]);
-
   useEffect(() => {
     if (!open || cliStatus || cliStatusLoading) {
       return;
@@ -688,7 +685,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       fetchCliStatus,
     });
   }, [bootstrapCliStatus, cliStatus, cliStatusLoading, fetchCliStatus, multimodelEnabled, open]);
-
   const handleCodexReconnect = React.useCallback(
     (mode: 'browser' | 'device_code' = 'browser') => {
       void (async () => {
@@ -701,7 +697,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Schedule store actions
   const createSchedule = useStore((s) => s.createSchedule);
   const updateSchedule = useStore((s) => s.updateSchedule);
-
   // ---------------------------------------------------------------------------
   // localStorage persistence wrappers
   // ---------------------------------------------------------------------------
@@ -722,7 +717,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setCustomArgsRaw(value);
     localStorage.setItem(`team:lastCustomArgs:${effectiveTeamName}`, value);
   };
-
   const setSelectedProviderId = (value: TeamProviderId): void => {
     hydrationRef.current.dirty = true;
     const normalizedValue = isLaunchMode
@@ -744,7 +738,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       localStorage.setItem('team:lastSelectedEffort', nextEffort);
     }
   };
-
   const setSelectedModel = (value: string): void => {
     hydrationRef.current.dirty = true;
     const normalizedValue = normalizeExplicitTeamModelForUi(selectedProviderId, value);
@@ -762,19 +755,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       localStorage.setItem('team:lastSelectedEffort', nextEffort);
     }
   };
-
   const setLimitContext = (value: boolean): void => {
     hydrationRef.current.dirty = true;
     setLimitContextRaw(value);
     localStorage.setItem('team:lastLimitContext', String(value));
   };
-
   const setSkipPermissions = (value: boolean): void => {
     hydrationRef.current.dirty = true;
     setSkipPermissionsRaw(value);
     localStorage.setItem('team:lastSkipPermissions', String(value));
   };
-
   const setSelectedEffort = (value: string): void => {
     // Always an explicit user choice, including Default (''); programmatic clears
     // go through autoResetSelectedEffort instead.
@@ -855,7 +845,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Populate form in schedule edit mode
   useEffect(() => {
     if (!open || !isSchedule) return;
-
     if (schedule) {
       // Edit mode — populate from existing schedule
       setSchedLabel(schedule.label ?? '');
@@ -919,7 +908,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   useEffect(() => {
     if (!open || !isLaunchMode) return;
-
     // Hydrate at most once per open dialog, and never on top of user edits.
     if (hydrationRef.current.dirty || hydrationRef.current.key === effectiveTeamName) return;
 
@@ -1008,7 +996,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       cancelled = true;
     };
   }, [open, isLaunchMode, effectiveTeamName, members, multimodelEnabled, previousLaunchParams]);
-
   const previousProviderId = useMemo<TeamProviderId | null>(() => {
     if (!isLaunchMode) {
       return null;
@@ -1024,7 +1011,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     }
     return previousProviderId !== selectedProviderId;
   }, [isLaunchMode, previousProviderId, selectedProviderId]);
-
   const effectiveLeadRuntimeModel = useMemo(
     () =>
       computeEffectiveTeamModel(
