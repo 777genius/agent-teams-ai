@@ -8,6 +8,21 @@ import type { AgentActionMode, InboxMessage, TaskRef } from '@shared/types/team'
 export const OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS = 3_000;
 export const OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS = 15_000;
 /**
+ * Retry delay once the runtime has already answered and the answer merely lacks
+ * the proof the delivery requires (the visible reply is not readable yet, the
+ * text was an acknowledgement, ...).
+ *
+ * The default delay assumes a retry lands on a lane that did nothing with the
+ * prompt, where a fast second attempt is free. A lane that answered is in the
+ * opposite situation: one turn regularly spans several assistant messages - a
+ * few task writes, then the reply - and a retry that lands between them puts
+ * the same prompt in front of a member who has no memory of having answered it,
+ * so the user is answered twice. The turn-activity guard already refuses a
+ * retry while output is still arriving, but it can only refuse what it can
+ * observe; the grace is what covers the quiet gaps inside one long turn.
+ */
+export const OPENCODE_PROMPT_DELIVERY_RESPONDED_RETRY_DELAY_MS = 90_000;
+/**
  * Absolute ceiling for deferring a due retry because the turn still looks
  * active: a lane that never stops producing output must not starve the retry
  * budget forever.

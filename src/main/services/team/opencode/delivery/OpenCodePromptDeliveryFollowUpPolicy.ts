@@ -1,5 +1,6 @@
 import {
   isOpenCodePromptDeliveryCancelled,
+  isOpenCodePromptResponseStateResponded,
   OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS,
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
@@ -12,6 +13,7 @@ import {
 import {
   isOpenCodePromptDeliveryObserveLaterResponseState,
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
+  OPENCODE_PROMPT_DELIVERY_RESPONDED_RETRY_DELAY_MS,
   OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS,
 } from './OpenCodePromptDeliveryWatchdog';
 import {
@@ -55,6 +57,15 @@ export function getOpenCodeDeliveryNextDelayMs(input: {
     hasOpenCodeObservedMessageSendToolCall(input.ledgerRecord)
   ) {
     return OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS;
+  }
+  // A retry after an observed answer is a re-prompt, not a first delivery: give
+  // the turn that produced the answer room to finish before asking again.
+  if (
+    input.retry &&
+    input.responseState &&
+    isOpenCodePromptResponseStateResponded(input.responseState)
+  ) {
+    return OPENCODE_PROMPT_DELIVERY_RESPONDED_RETRY_DELAY_MS;
   }
   if (input.retry) {
     return OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS;
