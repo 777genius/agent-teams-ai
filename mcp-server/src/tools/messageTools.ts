@@ -63,10 +63,17 @@ export function registerMessageTools(server: Pick<FastMCP, 'addTool'>) {
         ...(attachments?.length ? { attachments } : {}),
         ...(taskRefs?.length ? { taskRefs } : {}),
       });
-      const protocolInstruction =
-        source === 'runtime_delivery' || relayOfMessageId
-          ? 'Delivered as an app-delivered runtime reply. Stop this turn now; do not call message_send again for the same inbound message.'
-          : 'Delivered. If this answered one app/user instruction, do not call message_send again for the same answer.';
+      const deduplicated =
+        result && typeof result === 'object' && (result as { deduplicated?: unknown }).deduplicated === true;
+      let protocolInstruction =
+        'Delivered. If this answered one app/user instruction, do not call message_send again for the same answer.';
+      if (deduplicated) {
+        protocolInstruction =
+          'Not delivered again: the recipient already has this message (see deduplicationNotice). Stop this turn now; do not resend or rephrase it.';
+      } else if (source === 'runtime_delivery' || relayOfMessageId) {
+        protocolInstruction =
+          'Delivered as an app-delivered runtime reply. Stop this turn now; do not call message_send again for the same inbound message.';
+      }
       const payload =
         result && typeof result === 'object' && !Array.isArray(result)
           ? { ...(result as Record<string, unknown>), protocolInstruction }

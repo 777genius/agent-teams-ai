@@ -1970,6 +1970,62 @@ describe('agent-teams-mcp tools', () => {
     expect(rows[0].taskRefs).toEqual([{ taskId: 'task-1', displayId: 'abcd1234', teamName }]);
   });
 
+  it('tells the model not to resend a deduplicated message', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'dedup-instruction';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
+    const send = async (overrides: Record<string, unknown>) =>
+      parseJsonToolResult(
+        await getTool('message_send').execute({
+          claudeDir,
+          teamName,
+          to: 'user',
+          from: 'alice',
+          ...overrides,
+        })
+      );
+
+    const first = await send({ text: 'Report is written to docs/report.md' });
+    expect(first.deduplicated).toBeUndefined();
+
+    const repeat = await send({ text: 'Report is written to docs/report.md' });
+    expect(repeat.deduplicated).toBe(true);
+    expect(repeat.duplicateOfMessageId).toBe(first.messageId);
+    expect(repeat.deduplicationNotice).toContain('Duplicate message ignored');
+    expect(repeat.protocolInstruction).toContain('do not resend or rephrase it');
+
+    // Negative control: the dedup branch must not swallow the two instructions
+    // that already existed for delivered messages.
+    const fresh = await send({ text: 'One more finding: the report needs a diagram' });
+    expect(fresh.deduplicated).toBeUndefined();
+    expect(fresh.protocolInstruction).toContain(
+      'do not call message_send again for the same answer'
+    );
+
+    const relayed = await send({
+      text: 'Answering the app-delivered prompt',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'msg-inbound-1',
+    });
+    expect(relayed.deduplicated).toBeUndefined();
+    expect(relayed.protocolInstruction).toContain(
+      'do not call message_send again for the same inbound message'
+    );
+
+    const inboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'user.json');
+    const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8')) as Array<{ text: string }>;
+    expect(rows.map((row) => row.text)).toEqual([
+      'Report is written to docs/report.md',
+      'One more finding: the report needs a diagram',
+      'Answering the app-delivered prompt',
+    ]);
+  });
+
   it('uses forced app claude dir over model-supplied claudeDir when configured', async () => {
     const forcedClaudeDir = makeClaudeDir();
     const wrongClaudeDir = makeClaudeDir();
