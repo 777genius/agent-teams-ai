@@ -248,20 +248,123 @@ function maybeNotifyTaskOwnerOnComment(context, task, comment, options = {}) {
 const TASK_CREATE_DEDUP_WINDOW_MS = 10 * 60 * 1000;
 
 function normalizeDedupText(value) {
-    return typeof value === 'string' ? value.trim().toLowerCase() : '';
+    return typeof value === 'string' ? value.trim().toLowerCase().replace(/\s+/g, ' ') : '';
 }
 
-// Keyless creates carry no caller identity — lead tool loops re-run the same task_create
-// set with fresh task ids — so content (owner + subject + createdBy) is their dedup key.
-function findRecentDuplicateTask(context, taskInput) {
-    const subject = normalizeDedupText(taskInput && taskInput.subject);
-    if (!subject || hasExplicitCreationCommand(taskInput)) {
-        return null;
+function normalizeDedupList(value) {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter(Boolean);
     }
-    const owner = normalizeDedupText(taskInput && taskInput.owner);
+    return [];
+}
+
+function normalizeDedupRelations(context, value) {
+    return normalizeDedupList(value)
+        .map((entry) => {
+            try {
+                return taskStore.resolveTaskRef(context.paths, entry, { includeDeleted: true });
+            } catch {
+                return normalizeDedupText(entry);
+            }
+        })
+        .filter(Boolean)
+        .sort();
+}
+
+function normalizeDedupRefs(value) {
+    return normalizeDedupList(value)
+        .map((entry) => {
+            if (!entry || typeof entry !== 'object') return normalizeDedupText(entry);
+            return {
+                taskId: normalizeDedupText(entry.taskId),
+                displayId: normalizeDedupText(entry.displayId),
+                teamName: normalizeDedupText(entry.teamName),
+            };
+        })
+        .filter((entry) => (typeof entry === 'string' ? entry : entry.taskId || entry.displayId))
+        .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+}
+
+function normalizeDedupJson(value) {
+    if (Array.isArray(value)) {
+        return value
+            .map((entry) => normalizeDedupJson(entry))
+            .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)));
+    }
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.keys(value)
+                .sort()
+                .map((key) => [key, normalizeDedupJson(value[key])])
+        );
+    }
+    if (typeof value === 'string') return normalizeDedupText(value);
+    return value ?? null;
+}
+
+function normalizeInitialTaskStatus(taskInput) {
+    if (taskInput && typeof taskInput.status === 'string' && taskInput.status.trim()) {
+        return normalizeDedupText(taskInput.status);
+    }
+    if (taskInput && taskInput.startImmediately === true) return 'in_progress';
+    if (taskInput && Array.isArray(taskInput.historyEvents)) {
+        const created = taskInput.historyEvents.find((event) => event?.type === 'task_created');
+        if (created && typeof created.status === 'string' && created.status.trim()) {
+            return normalizeDedupText(created.status);
+        }
+    }
+    return 'pending';
+}
+
+// Keyless creates carry no caller identity - lead tool loops re-run the same task_create
+// set with fresh task ids. Deduplicate only when the complete semantic creation
+// payload matches, so two tasks with the same title but different work are never
+// collapsed into one row.
+function buildTaskCreationDedupKey(context, taskInput) {
+    const subject = normalizeDedupText(taskInput && taskInput.subject);
+    if (!subject) return null;
     const createdBy =
         normalizeDedupText(taskInput && taskInput.from) ||
         normalizeDedupText(taskInput && taskInput.createdBy);
+    const description = normalizeDedupText(
+        taskInput && taskInput.description !== undefined ? taskInput.description : subject
+    );
+    return JSON.stringify({
+        subject,
+        owner: normalizeDedupText(taskInput && taskInput.owner),
+        createdBy,
+        description,
+        prompt: normalizeDedupText(taskInput && taskInput.prompt),
+        blockedBy: normalizeDedupRelations(
+            context,
+            taskInput && (taskInput.blockedBy ?? taskInput['blocked-by'])
+        ),
+        related: normalizeDedupRelations(context, taskInput && taskInput.related),
+        descriptionTaskRefs: normalizeDedupRefs(taskInput && taskInput.descriptionTaskRefs),
+        promptTaskRefs: normalizeDedupRefs(taskInput && taskInput.promptTaskRefs),
+        activeForm: normalizeDedupText(
+            taskInput && (taskInput.activeForm ?? taskInput['active-form'])
+        ),
+        projectPath: normalizeDedupText(taskInput && taskInput.projectPath),
+        needsClarification: normalizeDedupText(taskInput && taskInput.needsClarification),
+        attachments: normalizeDedupJson(taskInput && taskInput.attachments),
+        sourceMessageId: normalizeDedupText(taskInput && taskInput.sourceMessageId),
+        sourceMessage: normalizeDedupJson(taskInput && taskInput.sourceMessage),
+        initialStatus: normalizeInitialTaskStatus(taskInput),
+    });
+}
+
+function findRecentDuplicateTask(context, taskInput) {
+    const creationKey = buildTaskCreationDedupKey(context, taskInput);
+    const hasExplicitTaskId =
+        typeof taskInput?.id === 'string' && taskInput.id.trim().length > 0;
+    if (!creationKey || hasExplicitTaskId || hasExplicitCreationCommand(taskInput)) {
+        return null;
+    }
     const nowMs = Date.now();
 
     return (
@@ -269,13 +372,7 @@ function findRecentDuplicateTask(context, taskInput) {
             if (task.status !== 'pending' && task.status !== 'in_progress') {
                 return false;
             }
-            if (
-                normalizeDedupText(task.subject) !== subject ||
-                normalizeDedupText(task.owner) !== owner ||
-                normalizeDedupText(task.createdBy) !== createdBy
-            ) {
-                return false;
-            }
+            if (buildTaskCreationDedupKey(context, task) !== creationKey) return false;
             const createdAtMs = Date.parse(String(task.createdAt || ''));
             return Number.isFinite(createdAtMs) && nowMs - createdAtMs <= TASK_CREATE_DEDUP_WINDOW_MS;
         }) || null
@@ -300,7 +397,7 @@ function createTask(context, input) {
     });
     if (deduplicated) {
         logNonCritical(
-            `[tasks] deduplicated task_create for #${task.displayId || task.id}: matching ${task.status} task with same owner/subject/createdBy created within 10 minutes`
+            `[tasks] deduplicated task_create for #${task.displayId || task.id}: matching semantic creation payload within 10 minutes`
         );
         return task;
     }
@@ -716,50 +813,6 @@ function updateTaskFields(context, taskId, fields) {
     });
 }
 
-function maybeAutoStartOwnedPendingTaskOnOwnerComment(context, insertResult, options = {}) {
-    if (options.trustedInternalWrite === true || !insertResult || insertResult.inserted !== true) {
-        return null;
-    }
-    const task = insertResult.task;
-    const comment = insertResult.comment;
-    if (!task || task.status !== 'pending' || !comment) {
-        return null;
-    }
-    if (comment.type && comment.type !== 'regular') {
-        return null;
-    }
-
-    const owner = normalizeActorName(task.owner);
-    const author = normalizeActorName(comment.author);
-    if (!owner || !author || !isSameMember(author, owner)) {
-        return null;
-    }
-    const authorKey = author.toLowerCase();
-    if (authorKey === 'user' || authorKey === 'system') {
-        return null;
-    }
-    const leadName = runtimeHelpers.inferLeadName(context.paths);
-    if (isSameTaskMember(author, leadName, leadName)) {
-        return null;
-    }
-
-    try {
-        let updated = taskStore.setTaskStatus(context.paths, task.id, 'in_progress', author);
-        const state = kanbanStore.readKanbanState(context.paths, context.teamName);
-        if (hasKanbanReference(state, updated.id)) {
-            kanbanStore.clearKanban(context.paths, context.teamName, updated.id, { nextReviewState: 'none' });
-            updated = taskStore.readTask(context.paths, updated.id, { includeDeleted: true });
-        }
-        logNonCritical(
-            `[tasks] auto-advanced task ${task.id} pending -> in_progress after owner comment by ${author}`
-        );
-        return updated;
-    } catch (error) {
-        warnNonCritical(`[tasks] auto-advance to in_progress failed for task ${task.id}`, error);
-        return null;
-    }
-}
-
 function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
     const commentFlags = flags || {};
     const fromRequiredForAgentTool =
@@ -790,12 +843,10 @@ function addTaskCommentWithOptions(context, taskId, flags, options = {}) {
             ...(Array.isArray(commentFlags.taskRefs) ? { taskRefs: commentFlags.taskRefs } : {}),
             ...(Array.isArray(commentFlags.attachments) ? { attachments: commentFlags.attachments } : {}),
         });
-        const autoStartedTask = maybeAutoStartOwnedPendingTaskOnOwnerComment(
-            context,
-            insertResult,
-            options
-        );
-        return autoStartedTask ? { ...insertResult, task: autoStartedTask } : insertResult;
+        // A comment is evidence or coordination, not a start command. Pending
+        // work must move to in_progress only through the explicit task_start
+        // operation, so blocker/busy notes cannot accidentally consume a turn.
+        return insertResult;
     });
 
     try {

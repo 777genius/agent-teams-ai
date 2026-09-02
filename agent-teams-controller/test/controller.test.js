@@ -201,6 +201,40 @@ controller.messages.sendMessage({
     expect(typeof stopped.stoppedAt).toBe('string');
   });
 
+  it('deduplicates only an identical keyless task creation payload', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const firstBlocker = controller.tasks.createTask({ subject: 'First blocker' });
+    const secondBlocker = controller.tasks.createTask({ subject: 'Second blocker' });
+    const base = {
+      subject: 'Prepare the report',
+      owner: 'bob',
+      createdBy: 'alice',
+      prompt: 'Check the source data before writing.',
+      notifyOwner: false,
+    };
+
+    const first = controller.tasks.createTask({
+      ...base,
+      description: 'Use the first data set.',
+      blockedBy: [firstBlocker.id],
+    });
+    const distinct = controller.tasks.createTask({
+      ...base,
+      description: 'Use the second data set.',
+      blockedBy: [secondBlocker.id],
+    });
+    const replay = controller.tasks.createTask({
+      ...base,
+      description: 'Use the first data set.',
+      blockedBy: [firstBlocker.id],
+    });
+
+    expect(distinct.id).not.toBe(first.id);
+    expect(replay.id).toBe(first.id);
+    expect(controller.tasks.listTasks()).toHaveLength(4);
+  });
+
   it('routes task and review lifecycle through taskBoard without changing persisted state', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -2078,7 +2112,7 @@ controller.messages.sendMessage({
     expect(rows[0].leadSessionId).toBe('lead-session-1');
   });
 
-  it('auto-advances an owned pending task to in_progress on owner comment', () => {
+  it('keeps an owned pending task pending until task_start is called', () => {
     const claudeDir = makeClaudeDir();
     const appController = createController({ teamName: 'my-team', claudeDir });
     const agentController = createController({
@@ -2098,26 +2132,24 @@ controller.messages.sendMessage({
       text: 'Checked runtime paths, findings attached below.',
     });
 
-    expect(commented.task.status).toBe('in_progress');
+    expect(commented.task.status).toBe('pending');
     const persisted = readTaskFile(claudeDir, task.id);
-    expect(persisted.status).toBe('in_progress');
-    expect(persisted.workIntervals).toHaveLength(1);
+    expect(persisted.status).toBe('pending');
+    expect(persisted.workIntervals).toBeUndefined();
     const statusEvents = (persisted.historyEvents || []).filter(
       (event) => event.type === 'status_changed'
     );
-    expect(statusEvents).toEqual([
-      expect.objectContaining({ from: 'pending', to: 'in_progress', actor: 'bob' }),
-    ]);
+    expect(statusEvents).toEqual([]);
 
     const again = agentController.tasks.addTaskComment(task.id, {
       from: 'bob',
       text: 'More findings.',
     });
-    expect(again.task.status).toBe('in_progress');
+    expect(again.task.status).toBe('pending');
     const persistedAgain = readTaskFile(claudeDir, task.id);
     expect(
       (persistedAgain.historyEvents || []).filter((event) => event.type === 'status_changed')
-    ).toHaveLength(1);
+    ).toHaveLength(0);
   });
 
   it('does not auto-advance pending tasks on non-owner, lead, user, system, or replayed comments', () => {
@@ -2168,8 +2200,7 @@ controller.messages.sendMessage({
       from: 'bob',
       text: 'Working on it.',
     });
-    expect(controller.tasks.getTask(bobTask.id).status).toBe('in_progress');
-    controller.tasks.setTaskStatus(bobTask.id, 'pending', 'user');
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
     controller.tasks.addTaskComment(bobTask.id, {
       id: 'replayed-comment',
       from: 'bob',
@@ -4145,12 +4176,16 @@ controller.messages.sendMessage({
       to: 'user',
       from: 'alice',
       text: 'ALL DONE',
-      source: 'runtime_delivery',
-      relayOfMessageId: 'notice-1',
+      leadSessionId: 'lead-session-1',
     });
     expect(first.deduplicated).toBeUndefined();
 
-    const repeat = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'ALL DONE' });
+    const repeat = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'ALL DONE',
+      leadSessionId: 'lead-session-1',
+    });
     expect(repeat.deduplicated).toBe(true);
     expect(repeat.duplicateOfMessageId).toBe(first.messageId);
     expect(repeat.deduplicationNotice).toContain('Duplicate message ignored');
@@ -4181,6 +4216,57 @@ controller.messages.sendMessage({
     expect(fresh.deduplicated).toBeUndefined();
   });
 
+  it('scopes repeated-message dedup to delivery context and resets it after user input', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const taskA = controller.tasks.createTask({ subject: 'Task A', notifyOwner: false });
+    const taskB = controller.tasks.createTask({ subject: 'Task B', notifyOwner: false });
+    const taskRef = (task) => [{ taskId: task.id, displayId: task.displayId, teamName: 'my-team' }];
+    const baseTime = Date.parse('2026-08-23T10:00:00.000Z');
+
+    const first = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'The task status is complete.',
+      leadSessionId: 'lead-session-1',
+      taskRefs: taskRef(taskA),
+      timestamp: new Date(baseTime).toISOString(),
+    });
+    const otherTask = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'The task status is complete.',
+      leadSessionId: 'lead-session-1',
+      taskRefs: taskRef(taskB),
+      timestamp: new Date(baseTime + 60_000).toISOString(),
+    });
+    expect(first.deduplicated).toBeUndefined();
+    expect(otherTask.deduplicated).toBeUndefined();
+    expect(otherTask.message.taskRefs).toEqual(taskRef(taskB));
+
+    controller.messages.sendMessage({
+      to: 'alice',
+      from: 'user',
+      text: 'Please clarify the result.',
+      timestamp: new Date(baseTime + 120_000).toISOString(),
+    });
+    const answer = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'The task status is complete.',
+      leadSessionId: 'lead-session-1',
+      taskRefs: taskRef(taskA),
+      timestamp: new Date(baseTime + 180_000).toISOString(),
+    });
+
+    expect(answer.deduplicated).toBeUndefined();
+    expect(
+      JSON.parse(
+        fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json'), 'utf8')
+      )
+    ).toHaveLength(3);
+  });
+
   it('delivers a message the human user repeats to a teammate', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -4201,11 +4287,13 @@ controller.messages.sendMessage({
       to: 'bob',
       from: 'alice',
       text: 'Status on the review?',
+      leadSessionId: 'lead-session-1',
     });
     const agentRepeat = controller.messages.sendMessage({
       to: 'bob',
       from: 'alice',
       text: 'Status on the review?',
+      leadSessionId: 'lead-session-1',
     });
     expect(agentFirst.deduplicated).toBeUndefined();
     expect(agentRepeat.deduplicated).toBe(true);
@@ -4219,6 +4307,7 @@ controller.messages.sendMessage({
       to: 'user',
       from: 'alice',
       text: 'Created and assigned two tasks: PROJECT_SUMMARY to Scribe, review to Scout.',
+      leadSessionId: 'lead-session-1',
     });
     expect(first.deduplicated).toBeUndefined();
 
@@ -4226,6 +4315,7 @@ controller.messages.sendMessage({
       to: 'user',
       from: 'alice',
       text: '**Created and assigned two tasks** - PROJECT_SUMMARY to Scribe, review to Scout!',
+      leadSessionId: 'lead-session-1',
     });
     expect(restated.deduplicated).toBe(true);
     expect(restated.duplicateOfMessageId).toBe(first.messageId);
@@ -4234,6 +4324,7 @@ controller.messages.sendMessage({
       to: 'user',
       from: 'alice',
       text: 'Created and assigned two tasks: PROJECT_SUMMARY to Scribe, review to Scout. Scribe has started.',
+      leadSessionId: 'lead-session-1',
     });
     expect(withNewInformation.deduplicated).toBeUndefined();
 

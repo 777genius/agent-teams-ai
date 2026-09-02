@@ -228,6 +228,56 @@ function normalizeComparableParticipant(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function getMessageSemanticKey(row) {
+  const taskRefs = Array.isArray(row && row.taskRefs)
+    ? row.taskRefs
+        .filter((ref) => ref && typeof ref === 'object')
+        .map((ref) => ({
+          taskId: String(ref.taskId || '').trim(),
+          displayId: String(ref.displayId || '').trim(),
+          teamName: normalizeComparableParticipant(ref.teamName),
+        }))
+        .filter((ref) => ref.taskId || ref.displayId || ref.teamName)
+        .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)))
+    : [];
+  const attachments = Array.isArray(row && row.attachments)
+    ? row.attachments
+        .filter((attachment) => attachment && typeof attachment === 'object')
+        .map((attachment) => ({
+          id: String(attachment.id || '').trim(),
+          filename: String(attachment.filename || '').trim(),
+          mimeType: String(attachment.mimeType || '').trim(),
+          size: Number(attachment.size || 0),
+        }))
+        .filter((attachment) => attachment.id || attachment.filename)
+        .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)))
+    : [];
+  const context = {
+    relayOfMessageId: String((row && row.relayOfMessageId) || '').trim(),
+    leadSessionId: String((row && row.leadSessionId) || '').trim(),
+    conversationId: String((row && row.conversationId) || '').trim(),
+    replyToConversationId: String((row && row.replyToConversationId) || '').trim(),
+    taskRefs,
+    attachments,
+    messageKind: String((row && row.messageKind) || '').trim(),
+    actionMode: String((row && row.actionMode) || '').trim(),
+    workSyncIntent: String((row && row.workSyncIntent) || '').trim(),
+    workSyncIntentKey: String((row && row.workSyncIntentKey) || '').trim(),
+  };
+  const hasExplicitContext =
+    context.relayOfMessageId ||
+    context.leadSessionId ||
+    context.conversationId ||
+    context.replyToConversationId ||
+    context.taskRefs.length > 0 ||
+    context.attachments.length > 0 ||
+    context.messageKind ||
+    context.actionMode ||
+    context.workSyncIntent ||
+    context.workSyncIntentKey;
+  return hasExplicitContext ? JSON.stringify(context) : null;
+}
+
 /**
  * Word sequence of a message, with everything that carries no information for
  * the reader removed: case, markdown emphasis, punctuation, emoji, list
@@ -243,7 +293,7 @@ function normalizeRestatedText(value) {
     .trim();
 }
 
-function getRuntimeDeliveryDuplicate(list, row) {
+function getRuntimeDeliveryDuplicate(list, row, options = {}) {
   if (
     row.source !== 'runtime_delivery' ||
     typeof row.relayOfMessageId !== 'string' ||
@@ -256,6 +306,7 @@ function getRuntimeDeliveryDuplicate(list, row) {
   const from = normalizeComparableParticipant(row.from);
   const to = normalizeComparableParticipant(row.to);
   const text = normalizeComparableText(row.text);
+  const semanticKey = getMessageSemanticKey(row);
   if (!from || !to || !text) {
     return null;
   }
@@ -268,7 +319,11 @@ function getRuntimeDeliveryDuplicate(list, row) {
         String(candidate.relayOfMessageId || '').trim() === relayOfMessageId &&
         normalizeComparableParticipant(candidate.from) === from &&
         normalizeComparableParticipant(candidate.to) === to &&
-        normalizeComparableText(candidate.text) === text
+        normalizeComparableText(candidate.text) === text &&
+        getMessageSemanticKey(candidate) === semanticKey &&
+        (typeof options.hasUserMessageSince !== 'function' ||
+          parseRowTimeMs(candidate) === null ||
+          !options.hasUserMessageSince(parseRowTimeMs(candidate)))
     ) || null
   );
 }
@@ -290,8 +345,9 @@ function parseRowTimeMs(row) {
 
 /**
  * Memoryless lead sessions (orchestrator rebuilds, replayed deliveries)
- * re-send their final "ALL DONE"-style messages on every later wake-up. An
- * identical from/to/text row inside the window is treated as already sent.
+ * re-send their final messages on every later wake-up. An identical
+ * from/to/text row is treated as already sent only when the caller supplied
+ * the same explicit delivery context (relay, session, task refs, etc.).
  *
  * Agent senders only. A human repeating themselves is not a memoryless resend
  * but a deliberate nudge - "continue" typed a second time because nothing
@@ -299,7 +355,7 @@ function parseRowTimeMs(row) {
  * the same identity is caught by its messageId, which is the key the human's
  * own repeats do not share.
  */
-function getRepeatedMessageDuplicate(list, row) {
+function getRepeatedMessageDuplicate(list, row, options = {}) {
   if (isUserParticipant(row.from)) {
     return null;
   }
@@ -307,7 +363,8 @@ function getRepeatedMessageDuplicate(list, row) {
   const to = normalizeComparableParticipant(row.to);
   const text = normalizeComparableText(row.text);
   const rowTime = parseRowTimeMs(row);
-  if (!from || !to || !text || rowTime === null) {
+  const semanticKey = getMessageSemanticKey(row);
+  if (!from || !to || !text || rowTime === null || !semanticKey) {
     return null;
   }
   // Same words, different punctuation/case/emphasis: only for what the user
@@ -324,6 +381,13 @@ function getRepeatedMessageDuplicate(list, row) {
     if (
       normalizeComparableParticipant(candidate.from) !== from ||
       normalizeComparableParticipant(candidate.to) !== to
+    ) {
+      continue;
+    }
+    if (getMessageSemanticKey(candidate) !== semanticKey) continue;
+    if (
+      typeof options.hasUserMessageSince === 'function' &&
+      options.hasUserMessageSince(candidateTime)
     ) {
       continue;
     }
@@ -345,6 +409,15 @@ function getTaskRefIds(row) {
   return new Set(taskRefs.map((ref) => String((ref && ref.taskId) || '').trim()).filter(Boolean));
 }
 
+function getAttachmentIds(row) {
+  const attachments = Array.isArray(row && row.attachments) ? row.attachments : [];
+  return new Set(
+    attachments
+      .map((attachment) => String((attachment && attachment.id) || '').trim())
+      .filter(Boolean)
+  );
+}
+
 /**
  * One visible reply per app-delivered message: `message_send` already states
  * that contract in words. The app can re-prompt a memoryless lead mid-turn, and
@@ -354,7 +427,7 @@ function getTaskRefIds(row) {
  * first reply and a first reply that lacks the task refs this one carries both
  * still need a real answer to land.
  */
-function getRelayScopedUserRestatement(list, row) {
+function getRelayScopedUserRestatement(list, row, options = {}) {
   if (!isUserParticipant(row.to) || isUserParticipant(row.from)) return null;
   const relayOfMessageId = String((row && row.relayOfMessageId) || '').trim();
   const from = normalizeComparableParticipant(row.from);
@@ -378,12 +451,26 @@ function getRelayScopedUserRestatement(list, row) {
     if (looksLikeIdleAckOnlyText(candidate.text) || looksLikeIdleAckOnlyText(candidate.summary)) {
       continue;
     }
+    if (
+      typeof options.hasUserMessageSince === 'function' &&
+      options.hasUserMessageSince(candidateTime)
+    ) {
+      continue;
+    }
     if (requiredTaskIds.size > 0) {
       const candidateTaskIds = getTaskRefIds(candidate);
       const candidateCoversTaskRefs = [...requiredTaskIds].every((taskId) =>
         candidateTaskIds.has(taskId)
       );
       if (!candidateCoversTaskRefs) continue;
+    }
+    const requiredAttachmentIds = getAttachmentIds(row);
+    if (requiredAttachmentIds.size > 0) {
+      const candidateAttachmentIds = getAttachmentIds(candidate);
+      const candidateCoversAttachments = [...requiredAttachmentIds].every((attachmentId) =>
+        candidateAttachmentIds.has(attachmentId)
+      );
+      if (!candidateCoversAttachments) continue;
     }
     return candidate;
   }
@@ -534,17 +621,13 @@ function appendInboxRow(filePath, row, options = {}) {
     if (sameMessageId) {
       return { row: sameMessageId, deduplicated: true, messageIdMatch: true };
     }
-    const duplicate = getRuntimeDeliveryDuplicate(list, row);
+    const duplicate = getRuntimeDeliveryDuplicate(list, row, options);
     if (duplicate) {
       return { row: duplicate, deduplicated: true };
     }
-    const relayScoped = getRelayScopedUserRestatement(list, row);
+    const relayScoped = getRelayScopedUserRestatement(list, row, options);
     if (relayScoped) {
       return { row: relayScoped, deduplicated: true, relayScoped: true };
-    }
-    const repeated = getRepeatedMessageDuplicate(list, row);
-    if (repeated) {
-      return { row: repeated, deduplicated: true, repeated: true };
     }
     const postCompletion = getPostCompletionFinalMessage(
       list,
@@ -553,6 +636,10 @@ function appendInboxRow(filePath, row, options = {}) {
     );
     if (postCompletion) {
       return { row: postCompletion, deduplicated: true, postCompletion: true };
+    }
+    const repeated = getRepeatedMessageDuplicate(list, row, options);
+    if (repeated) {
+      return { row: repeated, deduplicated: true, repeated: true };
     }
 
     list.push(row);
@@ -584,6 +671,7 @@ function sendInboxMessage(paths, flags) {
         ? { ...epoch, hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs) }
         : null;
     },
+    hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
   });
   return {
     deliveredToInbox: true,
