@@ -874,6 +874,7 @@ export interface CliInstallerSlice {
 let cliStatusInFlight: Promise<void> | null = null;
 const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
 let cliStatusEpoch = 0;
+let cliProviderStatusGeneration = 0;
 let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
@@ -1221,6 +1222,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (inFlight) return inFlight;
 
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
+    const requestGeneration = cliProviderStatusGeneration;
     const requestId = ++cliProviderStatusRequestId;
     const silent = options?.silent === true;
     const requestStartedAtMs = Date.now();
@@ -1291,6 +1293,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
               });
         const requestIsCurrent =
           requestEpoch === cliStatusEpoch &&
+          requestGeneration === cliProviderStatusGeneration &&
           cliProviderStatusActiveRequestIds.get(requestKey) === requestId;
         if (
           !silent &&
@@ -1317,6 +1320,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
           if (
             requestEpoch !== cliStatusEpoch ||
+            requestGeneration !== cliProviderStatusGeneration ||
             cliProviderStatusActiveRequestIds.get(requestKey) !== requestId
           ) {
             return {};
@@ -1402,6 +1406,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         });
         const requestIsCurrent =
           requestEpoch === cliStatusEpoch &&
+          requestGeneration === cliProviderStatusGeneration &&
           cliProviderStatusActiveRequestIds.get(requestKey) === requestId;
         if (
           !silent &&
@@ -1430,6 +1435,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
           if (
             requestEpoch !== cliStatusEpoch ||
+            requestGeneration !== cliProviderStatusGeneration ||
             cliProviderStatusActiveRequestIds.get(requestKey) !== requestId
           ) {
             return {};
@@ -1518,6 +1524,9 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   },
 
   invalidateCliProviderModelCatalog: () => {
+    cliProviderStatusGeneration += 1;
+    cliProviderStatusInFlight.clear();
+    cliProviderStatusActiveRequestIds.clear();
     set((state) => ({
       cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
     }));
@@ -1526,6 +1535,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   invalidateCliStatus: async () => {
     clearCodexCatalogLoadingRefresh('codex');
     cliStatusEpoch += 1;
+    cliProviderStatusGeneration += 1;
     cliStatusInFlight = null;
     cliProviderStatusInFlight.clear();
     cliProviderStatusActiveRequestIds.clear();
