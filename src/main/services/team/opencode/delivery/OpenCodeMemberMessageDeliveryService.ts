@@ -18,6 +18,10 @@ import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import { buildOpenCodePromptBodyText } from './OpenCodeMemberMessageDeliveryPorts';
 import {
+  buildOpenCodePromptDeliveryAttemptText,
+  buildOpenCodePromptDeliveryRepairControlText,
+} from './OpenCodePromptDeliveryAttemptText';
+import {
   assertOpenCodePromptDeliveryNotCancelled,
   OpenCodePromptDeliveryCancelledError,
 } from './OpenCodePromptDeliveryCancellationGuard';
@@ -28,8 +32,6 @@ import {
   isOpenCodePromptDeliveryAttemptDue,
 } from './OpenCodePromptDeliveryLedger';
 import {
-  buildOpenCodePromptDeliveryAttemptText,
-  buildOpenCodePromptDeliveryRepairControlText,
   hasOpenCodeAcceptedRuntimePrompt,
   isOpenCodeAcceptedDeliveryMissingPromptProof,
   isOpenCodeDeliveryRetryablePendingResponse,
