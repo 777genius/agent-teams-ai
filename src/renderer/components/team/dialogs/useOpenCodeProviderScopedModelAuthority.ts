@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { CliProviderStatus } from '@shared/types';
+import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 
 export type OpenCodeProviderScopedStatusListener = (
   sourceProviderId: string,
@@ -16,6 +17,7 @@ interface ScopedAuthorityState {
   retainedStatusBySourceId: ReadonlyMap<string, CliProviderStatus>;
 }
 
+const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
 const EMPTY_SCOPED_STATUSES: ReadonlyMap<string, CliProviderStatus> = new Map();
 
 function createEmptyScopedAuthorityState(scopeKey: string): ScopedAuthorityState {
@@ -24,6 +26,33 @@ function createEmptyScopedAuthorityState(scopeKey: string): ScopedAuthorityState
     contributionsBySourceId: new Map(),
     retainedStatusBySourceId: new Map(),
   };
+}
+
+function pruneExpiredContributions(
+  state: ScopedAuthorityState,
+  now: number
+): ScopedAuthorityState {
+  const contributionsBySourceId = new Map<string, ReadonlyMap<symbol, CliProviderStatus>>();
+  const retainedStatusBySourceId = new Map<string, CliProviderStatus>();
+  const sourceIds = new Set([
+    ...state.contributionsBySourceId.keys(),
+    ...state.retainedStatusBySourceId.keys(),
+  ]);
+  for (const sourceId of sourceIds) {
+    const live = new Map(
+      [...(state.contributionsBySourceId.get(sourceId) ?? [])].filter(([, status]) =>
+        isProviderModelCatalogExactReady(status, now)
+      )
+    );
+    if (live.size > 0) contributionsBySourceId.set(sourceId, live);
+    const retained = state.retainedStatusBySourceId.get(sourceId);
+    const selected =
+      retained && isProviderModelCatalogExactReady(retained, now)
+        ? retained
+        : [...live.values()].at(-1);
+    if (selected) retainedStatusBySourceId.set(sourceId, selected);
+  }
+  return { ...state, contributionsBySourceId, retainedStatusBySourceId };
 }
 
 export function useOpenCodeProviderScopedModelAuthority(projectPath: string | null | undefined) {
@@ -37,6 +66,32 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
     );
   }, [scopeKey]);
 
+  const nextStaleAt = useMemo(() => {
+    if (authorityState.scopeKey !== scopeKey) return null;
+    const statuses = [
+      ...authorityState.retainedStatusBySourceId.values(),
+      ...[...authorityState.contributionsBySourceId.values()].flatMap((entries) => [
+        ...entries.values(),
+      ]),
+    ];
+    return statuses.reduce<number | null>((nearest, status) => {
+      const staleAt = Date.parse(status.modelCatalog?.staleAt ?? '');
+      return Number.isFinite(staleAt) && (nearest === null || staleAt < nearest)
+        ? staleAt
+        : nearest;
+    }, null);
+  }, [authorityState, scopeKey]);
+
+  useEffect(() => {
+    if (nextStaleAt === null) return;
+    const delay = Math.max(0, nextStaleAt - Date.now());
+    const timeoutId = window.setTimeout(
+      () => setAuthorityState((current) => pruneExpiredContributions(current, Date.now())),
+      Math.min(delay, MAX_BROWSER_TIMEOUT_MS)
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [nextStaleAt]);
+
   const statusBySourceId = useMemo<ReadonlyMap<string, CliProviderStatus>>(() => {
     if (authorityState.scopeKey !== scopeKey) return EMPTY_SCOPED_STATUSES;
     return authorityState.retainedStatusBySourceId;
@@ -48,22 +103,26 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
       if (!sourceId) return;
       setAuthorityState((current) => {
         if (update.mode !== 'publish' && current.scopeKey !== scopeKey) return current;
+        current = pruneExpiredContributions(
+          current.scopeKey === scopeKey ? current : createEmptyScopedAuthorityState(scopeKey),
+          Date.now()
+        );
         const currentContributions: ReadonlyMap<
           string,
           ReadonlyMap<symbol, CliProviderStatus>
-        > = current.scopeKey === scopeKey
-          ? current.contributionsBySourceId
-          : new Map<string, ReadonlyMap<symbol, CliProviderStatus>>();
+        > = current.contributionsBySourceId;
         const retainedStatusBySourceId = new Map<string, CliProviderStatus>(
-          current.scopeKey === scopeKey ? current.retainedStatusBySourceId : []
+          current.retainedStatusBySourceId
         );
         const sourceContributions = new Map<symbol, CliProviderStatus>(
           currentContributions.get(sourceId) ?? []
         );
         if (update.mode === 'publish') {
           sourceContributions.delete(publisherToken);
-          sourceContributions.set(publisherToken, update.providerStatus);
-          retainedStatusBySourceId.set(sourceId, update.providerStatus);
+          if (isProviderModelCatalogExactReady(update.providerStatus)) {
+            sourceContributions.set(publisherToken, update.providerStatus);
+            retainedStatusBySourceId.set(sourceId, update.providerStatus);
+          }
         } else {
           sourceContributions.delete(publisherToken);
           const latestLiveStatus = [...sourceContributions.values()].at(-1);

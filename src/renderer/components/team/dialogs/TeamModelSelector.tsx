@@ -1234,7 +1234,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     onOpenCodeProviderScopedStatusChange,
     effectiveProviderId === 'opencode' ? openCodeCatalogSourceProviderId : null,
     scopedAuthorityIsFresh ? (openCodeScopedCatalog.providerStatus ?? null) : null,
-    effectiveProviderId === 'opencode' && !scopedAuthorityIsFresh
+    effectiveProviderId === 'opencode' &&
+      !scopedAuthorityIsFresh &&
+      openCodeScopedCatalog.catalogState !== 'stale'
   );
   const openCodeLocalModelOverlay = useMemo(
     () =>
