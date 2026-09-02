@@ -198,7 +198,16 @@ export class TeamProvisioningLaunchStateStoreBoundary {
           (options.requireTrackedRun === true ||
             this.observedTrackedRunIdByTeam.get(teamName) === options.runId)))
     ) {
-      await this.ports.launchStateStore.clear(teamName);
+      // Undo this write; do not erase the publication. Tracking can drop while
+      // the write is in flight - a stop settling, or a successor run taking
+      // over - and by then the launch truth on disk may belong to someone else.
+      // Clearing would delete that newer truth along with the stale write, so
+      // restore what this call overwrote and only clear when there was nothing.
+      if (previousSnapshot) {
+        await this.ports.launchStateStore.write(teamName, previousSnapshot);
+      } else {
+        await this.ports.launchStateStore.clear(teamName);
+      }
       if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeWrite) {
         this.writtenRunIdByTeam.delete(teamName);
       }
@@ -206,7 +215,7 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       this.ports.logDebug(
         `[${teamName}] Removed stale launch-state write for run ${options.runId}`
       );
-      return { snapshot: normalizedSnapshot, wrote: false };
+      return { snapshot: previousSnapshot ?? normalizedSnapshot, wrote: false };
     }
     if (typeof options?.runId === 'string') {
       this.writtenRunIdByTeam.set(teamName, options.runId);

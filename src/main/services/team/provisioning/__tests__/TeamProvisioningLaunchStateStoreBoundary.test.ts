@@ -649,6 +649,40 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     expect(boundary.getWrittenRunIdByTeam().has('demo')).toBe(false);
   });
 
+  it('restores the launch truth a stale snapshot write overwrote', async () => {
+    const newerSnapshot = snapshot({ updatedAt: '2026-01-01T00:00:05.000Z' });
+    const writeStarted = deferred();
+    const writeGate = deferred();
+    let persistedSnapshot: PersistedTeamLaunchSnapshot | null = newerSnapshot;
+    const launchStateStore = {
+      read: vi.fn(async () => persistedSnapshot),
+      write: vi.fn(async (_teamName: string, nextSnapshot: PersistedTeamLaunchSnapshot) => {
+        if (nextSnapshot === newerSnapshot) {
+          persistedSnapshot = nextSnapshot;
+          return;
+        }
+        writeStarted.resolve();
+        await writeGate.promise;
+        persistedSnapshot = nextSnapshot;
+      }),
+      clear: vi.fn(async () => {
+        persistedSnapshot = null;
+      }),
+    };
+    const { boundary, ports, setTrackedRunId } = createBoundary({ launchStateStore });
+
+    const writing = boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
+    await writeStarted.promise;
+    setTrackedRunId(undefined);
+    writeGate.resolve();
+
+    await expect(writing).resolves.toEqual({ snapshot: newerSnapshot, wrote: false });
+    expect(persistedSnapshot).toEqual(newerSnapshot);
+    expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
+    expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
+    expect(boundary.getWrittenRunIdByTeam().has('demo')).toBe(false);
+  });
+
   it('serializes queued operations and only removes the current queue entry', async () => {
     const { boundary } = createBoundary();
     const events: string[] = [];
