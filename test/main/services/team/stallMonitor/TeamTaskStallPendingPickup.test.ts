@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { OpenCodeLaneTurnActivityRegistry } from '../../../../../src/main/services/team/opencode/delivery/OpenCodeLaneTurnActivityRegistry';
+import { getOpenCodeLaneTurnActivityMaxAgeMs } from '../../../../../src/main/services/team/stallMonitor/featureGates';
 import { TeamTaskStallPolicy } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallPolicy';
+import { TeamTaskStallSnapshotSource } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallSnapshotSource';
 
-import type { TeamTaskStallSnapshot } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
+import type {
+  TaskStallEvaluation,
+  TeamTaskStallSnapshot,
+} from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallTypes';
 import type { TeamTask } from '../../../../../src/shared/types';
 
 const UNBLOCKED_AT = '2026-04-19T12:00:00.000Z';
@@ -431,5 +437,166 @@ describe('TeamTaskStallPolicy.evaluatePendingPickup', () => {
 
     expect(first.status).toBe('alert');
     expect(second.epochKey).toBe(first.epochKey);
+  });
+
+  it('stays quiet while the owner lane is mid-turn but not once that sample goes stale', () => {
+    const task = createPendingTask();
+    const activeAt = '2026-04-19T12:00:30.000Z';
+
+    // A fresh sample reaches the branch through openCodeLaneActiveMemberNames.
+    expect(
+      policy.evaluatePendingPickup({
+        now: new Date(PAST_THRESHOLD_AT),
+        task,
+        snapshot: snapshotFor(task, {
+          openCodeLaneActiveMemberNames: new Set(['scout']),
+          openCodeLaneActiveSinceByMemberName: new Map([['scout', activeAt]]),
+        }),
+      })
+    ).toMatchObject({ status: 'skip', skipReason: 'lane_active' });
+
+    // The same sample, once the snapshot source has demoted it for age, is
+    // published as a backdated idle time and stops silencing the branch.
+    expect(
+      policy.evaluatePendingPickup({
+        now: new Date(PAST_THRESHOLD_AT),
+        task,
+        snapshot: snapshotFor(task, {
+          openCodeLaneIdleSinceByMemberName: new Map([['scout', activeAt]]),
+          openCodeLaneStaleActiveSinceByMemberName: new Map([['scout', activeAt]]),
+        }),
+      })
+    ).toMatchObject({ status: 'alert', signal: 'pending_pickup_after_unblock' });
+  });
+
+  it('treats a lane idle time as ordinary evidence: it can delay the alert, never block it', () => {
+    const task = createPendingTask();
+
+    // Later than the unblock, so it moves the clock and holds the alert back.
+    expect(
+      policy.evaluatePendingPickup({
+        now: new Date(PAST_THRESHOLD_AT),
+        task,
+        snapshot: snapshotFor(task, {
+          openCodeLaneIdleSinceByMemberName: new Map([['scout', '2026-04-19T12:06:00.000Z']]),
+        }),
+      })
+    ).toMatchObject({ status: 'skip', skipReason: 'below_threshold' });
+
+    // Absent altogether, the branch judges the task exactly as it did before it
+    // learned to read lanes at all: an unobserved lane is not an active one.
+    const withoutLaneEvidence = policy.evaluatePendingPickup({
+      now: new Date(PAST_THRESHOLD_AT),
+      task,
+      snapshot: snapshotFor(task),
+    });
+    expect(withoutLaneEvidence.status).toBe('alert');
+    expect(withoutLaneEvidence.reason).not.toContain('lane has been idle');
+  });
+});
+
+/**
+ * The end-to-end shape the age bound exists for: a delivery lane accepted a
+ * prompt, never settled, and so keeps advertising the same 'active' sample.
+ * Nothing else in the app will ever contradict that sample, so the bound alone
+ * has to be what lets the pickup alert through.
+ */
+describe('pending pickup behind a delivery lane that never settled', () => {
+  const policy = new TeamTaskStallPolicy();
+
+  function isoAgo(nowMs: number, ageMs: number): string {
+    return new Date(nowMs - ageMs).toISOString();
+  }
+
+  function snapshotSourceFor(
+    task: TeamTask,
+    laneTurnActivity: OpenCodeLaneTurnActivityRegistry
+  ): TeamTaskStallSnapshotSource {
+    return new TeamTaskStallSnapshotSource({
+      transcriptSourceLocator: {
+        getContext: vi.fn(() =>
+          Promise.resolve({
+            projectDir: '/repo/project',
+            projectId: 'project-id',
+            config: {
+              members: [
+                { name: 'team-lead', role: 'team lead', providerId: 'codex' },
+                { name: 'Scout', role: 'Developer', providerId: 'opencode' },
+              ],
+            },
+            sessionIds: [],
+            transcriptFiles: [],
+          })
+        ),
+      } as never,
+      taskReader: {
+        getTasks: vi.fn(() => Promise.resolve([task])),
+        getDeletedTasks: vi.fn(() => Promise.resolve([])),
+      } as never,
+      kanbanManager: {
+        getState: vi.fn(() => Promise.resolve({ teamName: 'demo', tasks: {} })),
+      } as never,
+      transcriptReader: { readFiles: vi.fn(() => Promise.resolve([])) } as never,
+      activityBatchIndexer: { buildIndex: vi.fn(() => new Map()) } as never,
+      freshnessReader: { readSignals: vi.fn(() => Promise.resolve(new Map())) } as never,
+      exactRowReader: { parseFiles: vi.fn(() => Promise.resolve(new Map())) } as never,
+      membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+      openCodeEvidenceSource: {
+        readEvidence: vi.fn(() =>
+          Promise.resolve({ recordsByTaskId: new Map(), exactRowsByFilePath: new Map() })
+        ),
+      } as never,
+      laneTurnActivity,
+    });
+  }
+
+  async function evaluateWithUnsettledLaneOfAge(ageMs: number): Promise<TaskStallEvaluation> {
+    const nowMs = Date.now();
+    const task: TeamTask = {
+      id: 'task-pickup',
+      displayId: 'feed9999',
+      subject: 'Summarize the top-3 risks',
+      owner: 'Scout',
+      status: 'pending',
+      createdAt: isoAgo(nowMs, ageMs),
+    };
+    const laneTurnActivity = new OpenCodeLaneTurnActivityRegistry();
+    laneTurnActivity.note({
+      teamName: 'demo',
+      memberName: 'Scout',
+      laneId: 'secondary:opencode:scout',
+      state: 'active',
+      observedAt: isoAgo(nowMs, ageMs),
+    });
+
+    const snapshot = await snapshotSourceFor(task, laneTurnActivity).getSnapshot('demo');
+    if (!snapshot) {
+      throw new Error('the snapshot source produced no snapshot');
+    }
+    expect(snapshot.pendingPickupTasks?.map((pending) => pending.id)).toEqual(['task-pickup']);
+    return policy.evaluatePendingPickup({ now: new Date(), task, snapshot });
+  }
+
+  it('stays silent while the unsettled sample is still inside the max age', async () => {
+    const maxAgeMs = getOpenCodeLaneTurnActivityMaxAgeMs();
+
+    // Already well past the pickup threshold, so only the lane flag is holding
+    // the alert back - which is the correct call while the turn may be live.
+    await expect(evaluateWithUnsettledLaneOfAge(maxAgeMs - 60_000)).resolves.toMatchObject({
+      status: 'skip',
+      skipReason: 'lane_active',
+    });
+  });
+
+  it('alerts once the unsettled sample outlives the max age, with no probe involved', async () => {
+    const maxAgeMs = getOpenCodeLaneTurnActivityMaxAgeMs();
+
+    // Nothing wrote a settle sample and nothing asked the lane host anything.
+    // The age bound on its own is what ends the silence.
+    await expect(evaluateWithUnsettledLaneOfAge(maxAgeMs + 60_000)).resolves.toMatchObject({
+      status: 'alert',
+      signal: 'pending_pickup_after_unblock',
+      memberName: 'Scout',
+    });
   });
 });

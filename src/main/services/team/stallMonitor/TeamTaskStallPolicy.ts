@@ -21,7 +21,14 @@ const WORK_TOUCH_TOOLS = new Set(['task_start', 'task_add_comment', 'task_set_st
 const REVIEW_TOUCH_TOOLS = new Set(['review_start', 'task_add_comment']);
 
 const ONE_MINUTE_MS = 60_000;
-const WORK_THRESHOLDS_MS: Record<PostTouchStallSignal, number> = {
+/**
+ * Exported because `getOpenCodeLaneTurnActivityMaxAgeMs` has to stay at or above
+ * every threshold in here: the lane-freshness bound demotes a stale 'active'
+ * sample to a backdated idle time, which is what turns `mid_turn_after_touch`
+ * into `turn_ended_after_touch`. The ordering is checked against these numbers
+ * in openCodeLaneTurnFreshness.test.ts instead of being restated in a comment.
+ */
+export const WORK_THRESHOLDS_MS: Record<PostTouchStallSignal, number> = {
   turn_ended_after_touch: 4 * ONE_MINUTE_MS,
   touch_then_other_turns: 5 * ONE_MINUTE_MS,
   mid_turn_after_touch: 10 * ONE_MINUTE_MS,

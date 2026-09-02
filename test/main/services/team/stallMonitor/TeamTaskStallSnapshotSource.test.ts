@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { OpenCodeLaneTurnActivityRegistry } from '../../../../../src/main/services/team/opencode/delivery/OpenCodeLaneTurnActivityRegistry';
+import { getOpenCodeLaneTurnActivityMaxAgeMs } from '../../../../../src/main/services/team/stallMonitor/featureGates';
 import { TeamTaskStallSnapshotSource } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallSnapshotSource';
 
 describe('TeamTaskStallSnapshotSource', () => {
@@ -378,36 +379,72 @@ describe('TeamTaskStallSnapshotSource', () => {
 
   it('splits the recorded OpenCode lane turn samples into idle-since and active sets', async () => {
     const laneTurnActivity = new OpenCodeLaneTurnActivityRegistry();
+    // An idle sample never expires, so it can be as old as the run itself; an
+    // active one is evidence only while it is inside the max age.
+    const bobIdleSince = isoAgo(6 * ONE_HOUR_MS);
+    const carolActiveSince = isoAgo(ONE_MINUTE_MS);
     laneTurnActivity.note({
       teamName: 'demo',
       memberName: 'Bob',
       laneId: 'secondary:opencode:bob',
       state: 'idle',
-      observedAt: '2026-04-19T12:00:30.000Z',
+      observedAt: bobIdleSince,
     });
     laneTurnActivity.note({
       teamName: 'demo',
       memberName: 'Carol',
       laneId: 'secondary:opencode:carol',
       state: 'active',
-      observedAt: '2026-04-19T12:01:00.000Z',
+      observedAt: carolActiveSince,
     });
     laneTurnActivity.note({
       teamName: 'other-team',
       memberName: 'Dave',
       laneId: 'secondary:opencode:dave',
       state: 'active',
-      observedAt: '2026-04-19T12:02:00.000Z',
+      observedAt: isoAgo(ONE_MINUTE_MS),
     });
 
     const snapshot = await snapshotSourceWithLaneTurnActivity(laneTurnActivity).getSnapshot('demo');
 
     expect([...(snapshot?.openCodeLaneIdleSinceByMemberName ?? new Map())]).toEqual([
-      ['bob', '2026-04-19T12:00:30.000Z'],
+      ['bob', bobIdleSince],
     ]);
     expect([...(snapshot?.openCodeLaneActiveMemberNames ?? new Set())]).toEqual(['carol']);
+    expect([...(snapshot?.openCodeLaneActiveSinceByMemberName ?? new Map())]).toEqual([
+      ['carol', carolActiveSince],
+    ]);
+    expect(snapshot?.openCodeLaneStaleActiveSinceByMemberName?.size).toBe(0);
+  });
+
+  it('demotes an active lane sample that has outlived the turn-activity max age', async () => {
+    const staleActiveSince = isoAgo(getOpenCodeLaneTurnActivityMaxAgeMs() + ONE_MINUTE_MS);
+    const laneTurnActivity = new OpenCodeLaneTurnActivityRegistry();
+    laneTurnActivity.note({
+      teamName: 'demo',
+      memberName: 'Carol',
+      laneId: 'secondary:opencode:carol',
+      state: 'active',
+      observedAt: staleActiveSince,
+    });
+
+    const snapshot = await snapshotSourceWithLaneTurnActivity(laneTurnActivity).getSnapshot('demo');
+
+    expect([...(snapshot?.openCodeLaneActiveMemberNames ?? new Set())]).toEqual([]);
+    // Backdated to the original observation, never to the scan time: demoting
+    // to now would restart the pickup clock on every scan.
+    expect(snapshot?.openCodeLaneIdleSinceByMemberName?.get('carol')).toBe(staleActiveSince);
+    expect(snapshot?.openCodeLaneStaleActiveSinceByMemberName?.get('carol')).toBe(staleActiveSince);
+    expect(snapshot?.openCodeLaneActiveSinceByMemberName?.get('carol')).toBeUndefined();
   });
 });
+
+const ONE_MINUTE_MS = 60_000;
+const ONE_HOUR_MS = 60 * ONE_MINUTE_MS;
+
+function isoAgo(ageMs: number): string {
+  return new Date(Date.now() - ageMs).toISOString();
+}
 
 function snapshotSourceWithLaneTurnActivity(
   laneTurnActivity: OpenCodeLaneTurnActivityRegistry

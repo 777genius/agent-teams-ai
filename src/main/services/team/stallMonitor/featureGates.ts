@@ -79,3 +79,29 @@ export function isPendingPickupStallRemediationEnabled(): boolean {
   // Pickup-stall branch for pending tasks whose blockers are all resolved.
   return readEnabledFlag(process.env.CLAUDE_TEAM_PENDING_PICKUP_STALL_REMEDIATION_ENABLED, true);
 }
+
+export function getOpenCodeLaneTurnActivityMaxAgeMs(): number {
+  // A delivery-turn 'active' sample is evidence only while it is fresh. The
+  // registry is written by the delivery service and never expires a sample on
+  // its own, so a lane whose settle path never runs - an accepted prompt whose
+  // retry stays deferred - suppresses every OpenCode stall branch for that
+  // member for as long as the jam lasts.
+  //
+  // ORDERING INVARIANT: this must sit at or above every OpenCode stall
+  // threshold whose `lane_active` guard it can unlock, or the guard becomes
+  // unreachable for exactly the turns it exists to protect. The registry stamps
+  // 'active' once, at prompt acceptance, and never refreshes it during a turn,
+  // so a four-minute bound would demote every OpenCode turn longer than four
+  // minutes: a member five minutes into a legitimate turn would be nudged
+  // mid-generation by the weak-start branch, and the backdated idle time would
+  // rewrite its ten-minute mid-turn signal into the four-minute turn-ended one.
+  // Ten minutes is the largest of those thresholds
+  // (WORK_THRESHOLDS_MS.mid_turn_after_touch in TeamTaskStallPolicy), so a
+  // demoted sample can never make a work branch fire earlier than that branch's
+  // own threshold. The cost is paid by the pickup branch, whose clock then
+  // starts at the demotion instead of at the five-minute mark.
+  //
+  // openCodeLaneTurnFreshness.test.ts holds this ordering as a test, so
+  // lowering the default below any of those thresholds fails the build.
+  return readInt(process.env.CLAUDE_TEAM_OPENCODE_LANE_TURN_ACTIVITY_MAX_AGE_MS, 10 * 60_000);
+}
