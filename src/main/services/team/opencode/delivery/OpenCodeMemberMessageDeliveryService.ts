@@ -15,6 +15,7 @@ import {
 
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
 import { selectOpenCodeDeliveryTurnActivityLogLevel } from './OpenCodeDeliveryTurnActivityLogGate';
+import { noteOpenCodeHeadOfLineBlockDiagnostic } from './OpenCodeHeadOfLineBlockNotice';
 import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import {
@@ -523,7 +524,19 @@ export class OpenCodeMemberMessageDeliveryService {
         laneId: laneIdentity.laneId,
         queuedBehindMessageId: active.inboxMessageId,
         reason: 'opencode_delivery_response_pending',
-        diagnostics: [`OpenCode delivery is queued behind ${active.inboxMessageId}.`],
+        // How long, and how many messages deep. The bare "queued behind <id>"
+        // line could not tell a lane that had been busy for two seconds from one
+        // wedged for a quarter of an hour with a dozen messages waiting.
+        diagnostics: [
+          noteOpenCodeHeadOfLineBlockDiagnostic({
+            teamName,
+            laneId: laneIdentity.laneId,
+            memberName: canonicalMemberName,
+            blocker: active,
+            queuedMessageId: messageId,
+            nowMs: Date.now(),
+          }),
+        ],
       };
     }
 

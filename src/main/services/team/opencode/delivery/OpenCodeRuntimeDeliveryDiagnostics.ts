@@ -22,6 +22,22 @@ export const OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC =
 export const OPENCODE_COALESCE_NOT_DISPATCHED_DIAGNOSTIC =
   'opencode_inbox_relay_coalesced_notices_not_dispatched';
 
+/**
+ * The head-of-line diagnostic, and the marker a blocked lane earns once it has
+ * been blocked long enough to stop being ordinary.
+ *
+ * A lane serialises its prompts, so queueing behind the record that holds it is
+ * how the lane is supposed to work: for the first few minutes the line reports
+ * expected control flow and belongs on the durable diagnostic channel, not on
+ * the member card. Past `OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MS` the same lane
+ * is wedged rather than busy, and the marker is what stops the line being
+ * filtered away as informational - the block becomes visible without a second
+ * diagnostic and without a new threshold anything has to act on.
+ */
+export const OPENCODE_HEAD_OF_LINE_BLOCK_DIAGNOSTIC_PREFIX = 'OpenCode delivery is queued behind ';
+
+export const OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MARKER = 'head_of_line_blocked';
+
 export function normalizeOpenCodeRuntimeDeliveryDiagnostic(
   message: string | null | undefined
 ): string | null {
@@ -90,6 +106,13 @@ function isOpenCodeInboxRelayCoalesceDiagnostic(message: string): boolean {
   );
 }
 
+function isOpenCodeBusyHeadOfLineBlockDiagnostic(message: string): boolean {
+  return (
+    message.startsWith(OPENCODE_HEAD_OF_LINE_BLOCK_DIAGNOSTIC_PREFIX.toLowerCase()) &&
+    !message.includes(OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MARKER)
+  );
+}
+
 function isOpenCodeRuntimeDeliveryCleanSessionRefreshDiagnostic(message: string): boolean {
   return (
     isOpenCodeRuntimeDeliverySessionRefreshScheduledDiagnostic(message) ||
@@ -136,6 +159,7 @@ export function isInformationalOpenCodeRuntimeDeliveryDiagnostic(
     normalized === 'opencode_delivery_response_pending' ||
     Boolean(normalized && isOpenCodeInboxRelayWakeNoOpDiagnostic(normalized)) ||
     Boolean(normalized && isOpenCodeInboxRelayCoalesceDiagnostic(normalized)) ||
+    Boolean(normalized && isOpenCodeBusyHeadOfLineBlockDiagnostic(normalized)) ||
     Boolean(normalized && isOpenCodeRuntimeDeliveryCleanSessionRefreshDiagnostic(normalized))
   );
 }
