@@ -1,23 +1,55 @@
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
+
 import {
   isTeamProviderModelVerificationPending,
   type TeamModelRuntimeProviderStatus,
 } from './teamModelAvailability';
 
-import type { CliProviderId, TeamProviderId } from '@shared/types';
+import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
 
 type SupportedProviderId = CliProviderId | TeamProviderId;
+
+export interface OpenCodeScopedPreparationEvidence {
+  selectedModels: readonly string[];
+  scopedStatusBySourceId: ReadonlyMap<string, CliProviderStatus | null | undefined>;
+}
+
+export function hasSettledOpenCodeScopedPreparation(
+  providerStatus: CliProviderStatus | null | undefined,
+  evidence: OpenCodeScopedPreparationEvidence | undefined,
+  now = Date.now()
+): boolean {
+  if (providerStatus?.statusCheckOutcome !== 'model_only' || !evidence) return false;
+
+  return evidence.selectedModels.every((model) => {
+    const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId?.trim().toLowerCase();
+    if (!sourceId) return true;
+    const scopedStatus = evidence.scopedStatusBySourceId.get(sourceId);
+    return Boolean(scopedStatus && isProviderModelCatalogExactReady(scopedStatus, now));
+  });
+}
 
 export function isTeamProviderRuntimeStatusLoading(
   providerId: SupportedProviderId | undefined,
   providerStatus?: TeamModelRuntimeProviderStatus | null,
-  providerLoading = false
+  providerLoading = false,
+  openCodeEvidence?: OpenCodeScopedPreparationEvidence
 ): boolean {
   if (!providerId) {
     return false;
   }
 
   if (isTeamProviderModelVerificationPending(providerId, providerStatus)) {
-    return true;
+    if (
+      providerId !== 'opencode' ||
+      !hasSettledOpenCodeScopedPreparation(
+        providerStatus as CliProviderStatus | null | undefined,
+        openCodeEvidence
+      )
+    ) {
+      return true;
+    }
   }
 
   // Cached model truth must not make an explicit provider/auth check look settled.

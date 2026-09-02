@@ -113,6 +113,7 @@ import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelO
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
+  getSelectedOpenCodeModels,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
@@ -810,7 +811,27 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
-  const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
+  const openCodePreparationEvidence = useMemo(
+    () => ({
+      selectedModels: getSelectedOpenCodeModels(
+        selectedProviderId,
+        selectedModel,
+        effectiveMemberDrafts
+      ),
+      scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
+    }),
+    [
+      effectiveMemberDrafts,
+      openCodeProviderScopedStatusBySourceId,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
+  const launchGuard = createLaunchGuard(
+    selectedMemberProviders,
+    runtimeProviderStatusById,
+    openCodePreparationEvidence
+  );
   const launchAuthorityBlockers = launchGuard.blockers(launchTeam);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
   useOpenCodePassiveStatusPrefetch({
@@ -892,7 +913,8 @@ export const CreateTeamDialog = ({
                 providerId,
                 runtimeProviderStatusById.get(providerId),
                 cliProviderStatusLoading[providerId] === true ||
-                  (providerId === 'codex' && codexSnapshotPending)
+                  (providerId === 'codex' && codexSnapshotPending),
+                providerId === 'opencode' ? openCodePreparationEvidence : undefined
               ),
             ] as const
         )
@@ -900,6 +922,7 @@ export const CreateTeamDialog = ({
     [
       cliProviderStatusLoading,
       codexSnapshotPending,
+      openCodePreparationEvidence,
       runtimeProviderStatusById,
       selectedMemberProviders,
     ]

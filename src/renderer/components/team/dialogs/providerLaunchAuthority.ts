@@ -6,6 +6,10 @@ import {
   useLaunchAuthorityGatedCliStatus,
 } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import {
+  hasSettledOpenCodeScopedPreparation,
+  type OpenCodeScopedPreparationEvidence,
+} from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import {
   hasAuthoritativeProviderStatusEvidence,
   isProviderModelCatalogExactReady,
 } from '@shared/utils/providerStatusAuthority';
@@ -67,7 +71,8 @@ function getProviderLaunchBlockerDetail(
 
 export function createLaunchGuard(
   providerIds: readonly TeamProviderId[],
-  runtimeProviderStatusById: RuntimeProviderStatusById
+  runtimeProviderStatusById: RuntimeProviderStatusById,
+  openCodeEvidence?: OpenCodeScopedPreparationEvidence
 ): ProviderLaunchGuard {
   const blockers = (enabled: boolean, now: number = Date.now()): ProviderLaunchBlocker[] => {
     if (!enabled) return [];
@@ -77,7 +82,8 @@ export function createLaunchGuard(
       if (
         providerId === 'opencode' &&
         provider?.statusCheckOutcome === 'model_only' &&
-        provider.runtimeCapabilities?.modelCatalog?.source === 'app-server'
+        provider.runtimeCapabilities?.modelCatalog?.source === 'app-server' &&
+        hasSettledOpenCodeScopedPreparation(provider, openCodeEvidence, now)
       ) {
         // Passive status cannot authorize a launch. The strict OpenCode launch
         // attempt performs fresh exact-model proof before creating members.

@@ -111,6 +111,7 @@ import {
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
+  getSelectedOpenCodeModels,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
@@ -531,7 +532,27 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
   );
-  const launchGuard = createLaunchGuard(selectedMemberProviders, runtimeProviderStatusById);
+  const openCodePreparationEvidence = useMemo(
+    () => ({
+      selectedModels: getSelectedOpenCodeModels(
+        selectedProviderId,
+        selectedModel,
+        effectiveMemberDrafts
+      ),
+      scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
+    }),
+    [
+      effectiveMemberDrafts,
+      openCodeProviderScopedStatusBySourceId,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
+  const launchGuard = createLaunchGuard(
+    selectedMemberProviders,
+    runtimeProviderStatusById,
+    openCodePreparationEvidence
+  );
   const launchAuthorityBlockers = launchGuard.blockers(isLaunchMode);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
   useOpenCodePassiveStatusPrefetch({
@@ -608,7 +629,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 providerId,
                 runtimeProviderStatusById.get(providerId),
                 cliProviderStatusLoading[providerId] === true ||
-                  (providerId === 'codex' && codexSnapshotPending)
+                  (providerId === 'codex' && codexSnapshotPending),
+                providerId === 'opencode' ? openCodePreparationEvidence : undefined
               ),
             ] as const
         )
@@ -616,6 +638,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     [
       cliProviderStatusLoading,
       codexSnapshotPending,
+      openCodePreparationEvidence,
       runtimeProviderStatusById,
       selectedMemberProviders,
     ]

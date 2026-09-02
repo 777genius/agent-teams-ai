@@ -1,6 +1,7 @@
 import {
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
+  hasTerminalAuthoritativeModelVerification,
   isTeamModelAvailableForUi,
   isTeamProviderModelCatalogFresh,
   normalizeExplicitTeamModelForUi,
@@ -85,6 +86,26 @@ function isKnownOpenCodeLocalModel(
       (scope.openCodeLocalProviderLookupAuthoritative === true &&
         scope.openCodeLocalProviderIds?.has(sourceId) === true))
   );
+}
+
+export function getSelectedOpenCodeModels(
+  selectedProviderId: TeamProviderId,
+  selectedModel: string | null | undefined,
+  members: readonly MemberDraft[]
+): string[] {
+  const models = selectedProviderId === 'opencode' ? [selectedModel?.trim() ?? ''] : [];
+  for (const member of members) {
+    if (
+      !member.removedAt &&
+      resolveMemberProviderForModelScope({
+        memberProviderId: member.providerId,
+        selectedProviderId,
+      }) === 'opencode'
+    ) {
+      models.push(member.model?.trim() ?? '');
+    }
+  }
+  return models.filter(Boolean);
 }
 
 export function resolveMemberProviderForModelScope(input: {
@@ -216,7 +237,11 @@ function shouldClearOpenCodeModelToDefault(
   ) {
     return false;
   }
-  return getAvailableTeamProviderModels('opencode', providerStatus).length === 0;
+  return (
+    hasTerminalAuthoritativeModelVerification(providerStatus) &&
+    isTeamProviderModelCatalogFresh('opencode', providerStatus) &&
+    getAvailableTeamProviderModels('opencode', providerStatus).length === 0
+  );
 }
 
 export function clearInheritedMemberModelsUnavailableForProvider(
@@ -259,6 +284,13 @@ export function clearInheritedMemberModelsUnavailableForProvider(
         ...member,
         model: '',
       };
+    }
+    if (
+      providerId === 'opencode' &&
+      (!hasTerminalAuthoritativeModelVerification(providerStatus) ||
+        !isTeamProviderModelCatalogFresh('opencode', providerStatus))
+    ) {
+      return member;
     }
     if (
       input.selectedProviderId !== 'anthropic' &&

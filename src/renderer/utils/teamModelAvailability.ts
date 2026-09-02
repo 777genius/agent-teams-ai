@@ -58,6 +58,8 @@ export type TeamModelRuntimeProviderStatus = Pick<
   | 'availableBackends'
   | 'externalRuntimeDiagnostics'
   | 'connection'
+  | 'statusCheckOutcome'
+  | 'statusCheckErrorCode'
 > &
   Partial<Pick<CliProviderStatus, 'verificationState' | 'statusMessage'>>;
 
@@ -187,6 +189,19 @@ export function isTeamProviderModelCatalogSettled(
     providerId &&
     providerStatus?.modelCatalog?.providerId === providerId &&
     providerStatus.modelCatalogRefreshState === 'ready'
+  );
+}
+
+export function hasTerminalAuthoritativeModelVerification(
+  providerStatus?: TeamModelRuntimeProviderStatus | null
+): boolean {
+  return Boolean(
+    providerStatus?.statusCheckOutcome === 'authoritative' &&
+      providerStatus.statusCheckErrorCode == null &&
+      providerStatus.verificationState === 'verified' &&
+      providerStatus.modelCatalogRefreshState === 'ready' &&
+      providerStatus.modelCatalog?.status === 'ready' &&
+      providerStatus.modelVerificationState !== 'verifying'
   );
 }
 

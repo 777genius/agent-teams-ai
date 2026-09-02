@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  hasSettledOpenCodeScopedPreparation,
+  isTeamProviderRuntimeStatusLoading,
+} from '@renderer/utils/teamProviderRuntimeStatusLoading';
+
+import { createLaunchGuard } from './providerLaunchAuthority';
+import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
@@ -149,5 +155,121 @@ describe('getDialogTeamModelValidationError', () => {
         openCodeLocalProviderLookupAuthoritative: true,
       })
     ).toContain('bob: Model "unknown-route/team-model" is not available');
+  });
+
+  it('preserves an inherited OpenCode model until empty-catalog verification is terminal', () => {
+    const savedMember = member({ model: 'openrouter/auto' });
+    const pending = {
+      ...createOpenCodeProviderStatus(),
+      models: [],
+      verificationState: 'unknown' as const,
+      statusCheckOutcome: 'pending' as const,
+      modelCatalogRefreshState: 'loading' as const,
+      modelCatalog: {
+        ...createOpenCodeProviderStatus().modelCatalog!,
+        status: 'degraded' as const,
+        models: [],
+        defaultModelId: null,
+        defaultLaunchModel: null,
+      },
+    };
+    const authoritative = {
+      ...pending,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+      modelCatalogRefreshState: 'ready' as const,
+      modelCatalog: {
+        ...pending.modelCatalog,
+        status: 'ready' as const,
+        fetchedAt: '2026-01-01T00:00:00.000Z',
+        staleAt: '2099-01-01T00:10:00.000Z',
+      },
+    };
+
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [savedMember],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: new Map([['opencode', pending]]),
+      })
+    ).toEqual({ members: [savedMember], changed: false });
+
+    const scoped = createOpenCodeProviderStatus();
+    scoped.modelCatalogRefreshState = 'ready';
+    scoped.modelCatalog = {
+      ...scoped.modelCatalog!,
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+      staleAt: '2099-01-01T00:10:00.000Z',
+    };
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [savedMember],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: new Map([['opencode', pending]]),
+        openCodeProviderScopedStatusBySourceId: new Map([['openrouter', scoped]]),
+      })
+    ).toEqual({ members: [savedMember], changed: false });
+
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [savedMember],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: new Map([['opencode', authoritative]]),
+      })
+    ).toEqual({ members: [{ ...savedMember, model: '' }], changed: true });
+  });
+
+  it('settles model-only preparation only with every selected scoped catalog fresh', () => {
+    const passive = {
+      ...createOpenCodeProviderStatus(),
+      models: [],
+      statusCheckOutcome: 'model_only' as const,
+      verificationState: 'unknown' as const,
+      modelCatalogRefreshState: 'loading' as const,
+      backend: { kind: 'opencode-cli', label: 'OpenCode' },
+      statusMessage: 'Checking...',
+      modelCatalog: {
+        ...createOpenCodeProviderStatus().modelCatalog!,
+        status: 'degraded' as const,
+        models: [],
+        defaultModelId: null,
+        defaultLaunchModel: null,
+      },
+    };
+    const scoped = createOpenCodeProviderStatus();
+    scoped.modelCatalogRefreshState = 'ready';
+    scoped.modelCatalog = {
+      ...scoped.modelCatalog!,
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+      staleAt: '2099-01-01T00:10:00.000Z',
+    };
+    const evidence = {
+      selectedModels: ['openrouter/auto'],
+      scopedStatusBySourceId: new Map([['openrouter', scoped]]),
+    };
+
+    expect(hasSettledOpenCodeScopedPreparation(passive, evidence)).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(
+        passive,
+        { ...evidence, selectedModels: ['openrouter/auto', 'anthropic/claude-sonnet'] }
+      )
+    ).toBe(false);
+    expect(
+      hasSettledOpenCodeScopedPreparation(
+        passive,
+        evidence,
+        Date.parse('2100-01-01T00:00:00.000Z')
+      )
+    ).toBe(false);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, evidence)).toBe(false);
+    expect(createLaunchGuard(['opencode'], new Map([['opencode', passive]]), evidence).blocked(true))
+      .toBe(false);
+
+    const missingEvidence = { ...evidence, scopedStatusBySourceId: new Map() };
+    expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, missingEvidence)).toBe(true);
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), missingEvidence).blocked(true)
+    ).toBe(true);
   });
 });
