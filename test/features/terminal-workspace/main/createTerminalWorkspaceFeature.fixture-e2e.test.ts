@@ -129,7 +129,9 @@ describe('terminal workspace feature composition fixture-e2e', () => {
 
     expect(bootstrap).toMatchObject({
       controlPlaneUrl: 'ws://fixture-control-1',
-      defaultShell: '/bin/zsh',
+      // The default shell comes from the host (cmd.exe on Windows, a login
+      // shell elsewhere); this case is about the daemon and gateway wiring.
+      defaultShell: expect.stringMatching(/\S/),
       projectPath: sandboxProjectPath,
       sessionStreamUrl: 'ws://fixture-stream-1',
       teamName: 'terminal-fixture',
@@ -154,7 +156,7 @@ describe('terminal workspace feature composition fixture-e2e', () => {
       launch: {
         args: [],
         cwd: sandboxProjectPath,
-        program: '/bin/zsh',
+        program: bootstrap.defaultShell,
       },
     });
     expect(compositionFixture.startWorkspaceGatewayNodeServer).toHaveBeenCalledTimes(1);

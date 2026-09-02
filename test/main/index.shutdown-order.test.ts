@@ -7,6 +7,9 @@ const electronMock = vi.hoisted(() => ({
     getVersion: vi.fn(() => '1.3.0'),
     isPackaged: false,
     on: vi.fn(),
+    // src/main/index.ts calls this at module scope on win32, so the mock has to
+    // provide it or importing the module under test throws on Windows hosts.
+    setAppUserModelId: vi.fn(),
     whenReady: vi.fn(() => new Promise<void>(() => undefined)),
   },
   BrowserWindow: class BrowserWindow {
