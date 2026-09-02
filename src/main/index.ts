@@ -253,7 +253,10 @@ import {
   startPeriodicOpenCodeHostStartupLockPurge,
 } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
-import { runOpenCodeStartupRuntimeSweepTail } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+import {
+  reapOrphanedOpenCodeHostsBeforeRuntimeRegistry,
+  runOpenCodeStartupRuntimeSweepTail,
+} from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -2084,6 +2087,19 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
     createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
   );
+  // Awaited, and before the runtime adapter registry exists: a managed host
+  // orphaned by a previous app instance still holds the fixed loopback ports a
+  // new host needs, and whoever gets there first wins. Reaping afterwards would
+  // mean the first launch of this session races a host it cannot see.
+  publishStartupStatus({
+    phase: 'runtime-host-preflight',
+    message: 'Cleaning up stale runtime hosts...',
+  });
+  await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+    appStartedAtMs,
+    logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+    logWarning: (message) => logger.warn(message),
+  });
   publishStartupStatus({
     phase: 'runtime',
     message: 'Resolving local runtime...',

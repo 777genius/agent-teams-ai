@@ -43,8 +43,21 @@ export interface OpenCodeManagedHostProcessCleanupOptions {
 
 const OPENCODE_SERVE_COMMAND_RE =
   /(^|[/\\\s"])opencode(?:\.exe)?(?:"?)(?=\s|$).*?(?:^|\s)serve(?=\s|$)/i;
+// The orchestrator binary is this app's own, bundled or explicitly configured.
+// Standalone user tooling is the plain `opencode` CLI, so an orchestrator serve
+// host is app-managed by the fact that it exists at all.
+const ORCHESTRATOR_SERVE_COMMAND_RE =
+  /(^|[/\\\s"])claude-multimodel(?:\.exe)?(?:"?)(?=\s|$).*?(?:^|\s)serve(?=\s|$)/i;
 const WINDOWS_APP_MANAGED_OPENCODE_SERVE_RE =
   /[\\/]runtimes[\\/]opencode[\\/]versions[\\/][^"'\s]+[\\/]opencode-windows-[^"'\s]+[\\/]opencode\.exe(?:"|\s|$)/i;
+// Strings only this app writes into a managed host's effective OpenCode config:
+// the app-scoped MCP instance fragment, the local MCP launch environment key,
+// the managed teammate agent description. A standalone serve config has none.
+const MANAGED_SERVE_HOST_CONFIG_PATTERNS = [
+  /agent-teams-app-instance=/i,
+  /"AGENT_TEAMS_MCP_CLAUDE_DIR"/,
+  /claude-multimodel runtime orchestration/i,
+] as const;
 const MANAGED_ENV_MARKERS = ['CLAUDE_MULTIMODEL_DATA_HOME=', 'OPENCODE_CONFIG_CONTENT='] as const;
 const MANAGED_ENV_IDENTITY_MARKERS = [
   'AGENT_TEAMS_MCP_CLAUDE_DIR=',
@@ -66,14 +79,21 @@ const MANAGED_INLINE_OPENCODE_CONFIG_PATTERNS = [
  */
 export interface OpenCodeManagedHostSweepPort {
   isEnabled(): boolean;
-  sweepManagedHosts(input: { startedBeforeMs: number }): Promise<OpenCodeManagedHostCleanupResult>;
+  sweepManagedHosts(input: {
+    startedBeforeMs: number;
+    /**
+     * `force` reaps a confirmed-managed host outright; `orphaned` additionally
+     * spares one whose parent is still alive. Defaults to `force`.
+     */
+    mode?: OpenCodeManagedHostCleanupMode;
+  }): Promise<OpenCodeManagedHostCleanupResult>;
 }
 
 export const DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT: OpenCodeManagedHostSweepPort = {
   isEnabled: () => true,
   sweepManagedHosts: (input) =>
     cleanupManagedOpenCodeServeProcesses({
-      mode: 'force',
+      mode: input.mode ?? 'force',
       startedBeforeMs: input.startedBeforeMs,
     }),
 };
@@ -119,7 +139,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
   const sleepMs = options.sleepMs ?? sleep;
 
   for (const row of rows) {
-    if (!isOpenCodeServeCommand(row.command)) {
+    if (!isOpenCodeServeCommand(row.command) && !isOrchestratorServeCommand(row.command)) {
       continue;
     }
     result.scanned += 1;
@@ -137,17 +157,27 @@ export async function cleanupManagedOpenCodeServeProcesses(
     const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
     const details = await readDetails(row.pid);
     const isManagedByWindowsCommand =
-      platform === 'win32' && isAppManagedWindowsOpenCodeServeCommand(row.command);
-    const isManaged =
+      platform === 'win32' &&
+      (isAppManagedWindowsOpenCodeServeCommand(row.command) ||
+        isOrchestratorServeCommand(row.command));
+    let isManaged =
       isManagedByWindowsCommand ||
       Boolean(details && isManagedOpenCodeServeProcessDetails(details));
+    let serveConfig: string | null = null;
+    if (!isManaged && platform === 'win32' && baseUrl) {
+      // Windows cannot read another process's environment, and a runtime
+      // resolved through PATH does not carry the app-managed install path, so
+      // the last way to tell whose host this is asks the host itself over
+      // loopback. Silence still reads as "not ours".
+      serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
+      isManaged = Boolean(serveConfig && isManagedOpenCodeServeHostConfig(serveConfig));
+    }
     const hasRequiredDetailsMarkers =
       requiredDetailsMarkers.length === 0 ||
       Boolean(details && processDetailsIncludeMarkers(details, requiredDetailsMarkers));
-    const serveConfig =
-      requiredServeConfigMarkersAny.length > 0 && baseUrl
-        ? await readServeHostConfig(baseUrl).catch(() => null)
-        : null;
+    if (requiredServeConfigMarkersAny.length > 0 && baseUrl && serveConfig === null) {
+      serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
+    }
     const hasRequiredServeConfigMarker =
       requiredServeConfigMarkersAny.length === 0 ||
       Boolean(serveConfig && stringIncludesAnyMarker(serveConfig, requiredServeConfigMarkersAny));
@@ -394,6 +424,14 @@ export async function cleanupManagedOpenCodeServeProcesses(
 
 export function isOpenCodeServeCommand(command: string): boolean {
   return OPENCODE_SERVE_COMMAND_RE.test(command.trim());
+}
+
+export function isOrchestratorServeCommand(command: string): boolean {
+  return ORCHESTRATOR_SERVE_COMMAND_RE.test(command.trim());
+}
+
+export function isManagedOpenCodeServeHostConfig(config: string): boolean {
+  return MANAGED_SERVE_HOST_CONFIG_PATTERNS.some((pattern) => pattern.test(config));
 }
 
 export function isAppManagedWindowsOpenCodeServeCommand(command: string): boolean {

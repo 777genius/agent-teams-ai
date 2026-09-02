@@ -1,5 +1,6 @@
 import {
   OPEN_CODE_STARTUP_SWEEP_HOST_SETTLE_MS,
+  reapOrphanedOpenCodeHostsBeforeRuntimeRegistry,
   runOpenCodeStartupRuntimeSweepTail,
 } from '@main/services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
 import {
@@ -110,6 +111,50 @@ describe('runOpenCodeStartupRuntimeSweepTail', () => {
     expect(ports.logWarning).toHaveBeenCalledWith(
       '[OpenCode] startup sweep host cleanup: pid=91 identity changed'
     );
+  });
+});
+
+describe('reapOrphanedOpenCodeHostsBeforeRuntimeRegistry', () => {
+  // `orphaned`, not `force`: a host whose parent is still alive may belong to
+  // an active bridge command, and the fence keeps this instance's own work out
+  // of scope entirely.
+  it('reaps only what predates this instance and is no longer parented', async () => {
+    const sweepManagedHosts = vi.fn(() => Promise.resolve(sweepResult({ scanned: 2, killed: 1 })));
+    const logSweepResult = vi.fn();
+
+    await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+      appStartedAtMs: 7_000,
+      sweepManagedHosts,
+      logSweepResult,
+      logWarning: vi.fn(),
+    });
+
+    expect(sweepManagedHosts).toHaveBeenCalledWith({ mode: 'orphaned', startedBeforeMs: 7_000 });
+    expect(logSweepResult).toHaveBeenCalledWith(
+      'opencode_managed_hosts_killed sweep=startup_preflight count=1 scanned=2'
+    );
+  });
+
+  // It is awaited on the startup path, so it must not be able to stop the app -
+  // and a scan that could not run has reaped nothing, so it must not report a
+  // count either.
+  it('reports a failing sweep instead of failing the startup', async () => {
+    const logWarning = vi.fn();
+    const logSweepResult = vi.fn();
+
+    await expect(
+      reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+        appStartedAtMs: 7_000,
+        sweepManagedHosts: () => Promise.reject(new Error('process table unreadable')),
+        logSweepResult,
+        logWarning,
+      })
+    ).resolves.toBeUndefined();
+
+    expect(logWarning).toHaveBeenCalledWith(
+      '[OpenCode] Startup preflight host cleanup failed: Error: process table unreadable'
+    );
+    expect(logSweepResult).not.toHaveBeenCalled();
   });
 });
 

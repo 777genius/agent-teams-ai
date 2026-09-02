@@ -1,6 +1,9 @@
 import { cleanupManagedOpenCodeServeProcesses } from './OpenCodeManagedHostProcessCleanup';
 
-import type { OpenCodeManagedHostCleanupResult } from './OpenCodeManagedHostProcessCleanup';
+import type {
+  OpenCodeManagedHostCleanupMode,
+  OpenCodeManagedHostCleanupResult,
+} from './OpenCodeManagedHostProcessCleanup';
 
 /**
  * Tail of the startup host cleanup: reap the managed host the orchestrator's
@@ -32,11 +35,16 @@ export const OPEN_CODE_STARTUP_SWEEP_HOST_SETTLE_MS = 8_000;
  */
 export type OpenCodeManagedHostSweep = (input: {
   startedBeforeMs: number;
+  /**
+   * `force` reaps a confirmed-managed host outright; `orphaned` additionally
+   * spares one whose parent is still alive. Defaults to `force`.
+   */
+  mode?: OpenCodeManagedHostCleanupMode;
 }) => Promise<OpenCodeManagedHostCleanupResult>;
 
 const sweepManagedHostsByProcessScan: OpenCodeManagedHostSweep = (input) =>
   cleanupManagedOpenCodeServeProcesses({
-    mode: 'force',
+    mode: input.mode ?? 'force',
     startedBeforeMs: input.startedBeforeMs,
   });
 
@@ -79,5 +87,41 @@ export async function runOpenCodeStartupRuntimeSweepTail(
   );
   for (const diagnostic of sweep.diagnostics) {
     ports.logWarning(`[OpenCode] startup sweep host cleanup: ${diagnostic}`);
+  }
+}
+
+/**
+ * Reaps `opencode serve` hosts a previous app instance left behind. It runs
+ * before the runtime adapter registry exists, because an orphan still holds
+ * the fixed loopback ports a new host needs and whoever gets there first wins:
+ * reaping afterwards would mean this session's first launch races a host it
+ * cannot see.
+ *
+ * `orphaned` rather than `force`, and fenced by this instance's start, so it
+ * only reaches a host that is both older than this app and no longer parented
+ * by anything alive - on top of the command-line and environment proof the
+ * scan itself demands. Never throws: the app has to start even when it cannot
+ * clean up first.
+ */
+export async function reapOrphanedOpenCodeHostsBeforeRuntimeRegistry(ports: {
+  appStartedAtMs: number;
+  sweepManagedHosts?: OpenCodeManagedHostSweep;
+  logSweepResult(message: string): void;
+  logWarning(message: string): void;
+}): Promise<void> {
+  const sweepManagedHosts = ports.sweepManagedHosts ?? sweepManagedHostsByProcessScan;
+  try {
+    const sweep = await sweepManagedHosts({
+      mode: 'orphaned',
+      startedBeforeMs: ports.appStartedAtMs,
+    });
+    ports.logSweepResult(
+      `opencode_managed_hosts_killed sweep=startup_preflight count=${sweep.killed} scanned=${sweep.scanned}`
+    );
+    for (const diagnostic of sweep.diagnostics) {
+      ports.logWarning(`[OpenCode] startup preflight cleanup: ${diagnostic}`);
+    }
+  } catch (error) {
+    ports.logWarning(`[OpenCode] Startup preflight host cleanup failed: ${String(error)}`);
   }
 }
