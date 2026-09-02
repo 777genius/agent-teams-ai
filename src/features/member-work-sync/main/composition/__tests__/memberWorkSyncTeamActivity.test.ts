@@ -43,7 +43,11 @@ describe('member work sync team activity', () => {
   });
 
   it('treats a confirmed bootstrap runtime entry as active', () => {
-    for (const pidSource of ['agent_process_table', 'opencode_bridge'] as const) {
+    for (const pidSource of [
+      'agent_process_table',
+      'opencode_bridge',
+      'runtime_bootstrap',
+    ] as const) {
       expect(
         isRuntimeEntryActiveForWorkSync(
           createRuntimeEntry({
@@ -57,13 +61,7 @@ describe('member work sync team activity', () => {
   });
 
   it('does not treat bootstrap-only confirmation as active runtime evidence', () => {
-    for (const pidSource of [
-      undefined,
-      'runtime_bootstrap',
-      'persisted_metadata',
-      'tmux_child',
-      'tmux_pane',
-    ] as const) {
+    for (const pidSource of [undefined, 'persisted_metadata', 'tmux_child', 'tmux_pane'] as const) {
       expect(
         isRuntimeEntryActiveForWorkSync(
           createRuntimeEntry({
@@ -147,11 +145,20 @@ describe('member work sync team activity', () => {
       'permission_blocked',
       'runtime_process_candidate',
       'shell_only',
-      'registered_only',
-      'stale_metadata',
       'not_found',
     ] as const) {
       expect(isRuntimeEntryActiveForWorkSync(createRuntimeEntry({ livenessKind }))).toBe(false);
+    }
+  });
+
+  it('keeps alive between-turn on-demand lanes active despite degraded liveness kinds', () => {
+    for (const livenessKind of ['registered_only', 'stale_metadata'] as const) {
+      expect(isRuntimeEntryActiveForWorkSync(createRuntimeEntry({ livenessKind }))).toBe(true);
+      // Negative control: the alive check still runs first, so a dead entry
+      // with the same degraded kind stays inactive.
+      expect(
+        isRuntimeEntryActiveForWorkSync(createRuntimeEntry({ alive: false, livenessKind }))
+      ).toBe(false);
     }
   });
 

@@ -12,23 +12,28 @@ type RuntimeLivenessKind = NonNullable<TeamAgentRuntimeEntry['livenessKind']>;
 
 const WORK_SYNC_RESERVED_MEMBER_NAMES = new Set(['team-lead', 'user']);
 
+// registered_only / stale_metadata are NOT listed: an on-demand OpenCode lane
+// degrades to those kinds between turns while staying deliverable (alive:true).
+// Entries that are genuinely dead still fail the alive check first.
 const WORK_SYNC_INACTIVE_LIVENESS_KINDS = new Set<RuntimeLivenessKind>([
   'permission_blocked',
   'runtime_process_candidate',
   'shell_only',
-  'registered_only',
-  'stale_metadata',
   'not_found',
 ]);
 
 const WORK_SYNC_BOOTSTRAP_ONLY_PID_SOURCES = new Set<TeamAgentRuntimePidSource>([
-  'runtime_bootstrap',
   'persisted_metadata',
 ]);
 
+// runtime_bootstrap counts as active: an on-demand OpenCode lane holds no live
+// pid between turns, yet a confirmed bootstrap check-in means deliveries reach
+// it (delivery itself spins the runtime up). Rejecting it deadlocks assignment
+// nudges: the lane only earns an opencode_bridge pid AFTER a first delivery.
 const WORK_SYNC_MEMBER_CONFIRMED_BOOTSTRAP_ACTIVE_PID_SOURCES = new Set<TeamAgentRuntimePidSource>([
   'agent_process_table',
   'opencode_bridge',
+  'runtime_bootstrap',
 ]);
 
 const WORK_SYNC_LEAD_CONFIRMED_BOOTSTRAP_ACTIVE_PID_SOURCES = new Set<TeamAgentRuntimePidSource>([
