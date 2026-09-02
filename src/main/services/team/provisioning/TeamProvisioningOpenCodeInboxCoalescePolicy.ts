@@ -5,9 +5,126 @@
  * to deliver it, to skip ahead, or to stop. Everything that answers "which
  * other rows does this delivery cover, and where does the walk go next" lives
  * here, so the relay keeps only the I/O and the ledger bookkeeping.
+ *
+ * The relay owns `resolveOpenCodeMemberInboxDeliveryDecision`, so this module
+ * takes the reply contract of a candidate row as a port instead of importing
+ * it back: the dependency stays one-way and the policy stays testable without
+ * the relay's ledger and delivery ports.
  */
 
+import { isOpenCodeReplyOptionalDeliveryContract } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
+
 import type { RelayInboxMessage } from './TeamProvisioningInboxRelayPolicy';
+import type { InboxMessageKind } from '@shared/types';
+
+/**
+ * How many queued notices may ride along with one anchor delivery.
+ *
+ * This is prompt protection, not throughput tuning: the coalesced block is
+ * appended to a prompt the model has to read in full, and a lead that has been
+ * idle for a while can have far more than this queued. Everything past the
+ * limit simply becomes the anchor of the next relay pass.
+ */
+export const OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT = 8;
+
+/**
+ * Message kinds that may be coalesced, as anchor or as rider. Every other kind
+ * carries its own delivery contract (a work-sync nudge expects a report, a
+ * slash command expects a result, a recovery nudge is idempotency-keyed), so
+ * folding one into somebody else's prompt would drop that contract.
+ */
+export const COALESCABLE_MESSAGE_KINDS: ReadonlySet<InboxMessageKind> = new Set<InboxMessageKind>([
+  'default',
+  'task_comment_notification',
+]);
+
+export function isCoalescableNoticeKind(message: RelayInboxMessage): boolean {
+  return !message.messageKind || COALESCABLE_MESSAGE_KINDS.has(message.messageKind);
+}
+
+export interface OpenCodeReplyOptionalCoalescePorts {
+  /**
+   * Reply recipient the relay would resolve for this row if it were delivered
+   * on its own. A rider must be reply-optional under its own contract, not
+   * under the anchor's.
+   */
+  resolveReplyRecipient(message: RelayInboxMessage): string;
+  /**
+   * True when the row already has a prompt-delivery ledger record. Such a row
+   * is mid-flight (or terminal) in its own right and must keep its own record;
+   * folding it into another prompt would leave that record dangling.
+   */
+  hasExistingRecord(message: RelayInboxMessage): Promise<boolean>;
+}
+
+/**
+ * Reply-optional notices queued directly behind the message at `index` (in
+ * inbox order, stopping at the first message that is not reply-optional, is an
+ * automated nudge, or already has a ledger record). They are delivered in the
+ * same prompt and marked read once that prompt is accepted.
+ *
+ * Ordering matters: the walk stops at the first candidate that fails, it never
+ * skips one. A reply-required message behind a notice therefore ends the run
+ * and stays unread, so it still gets its own prompt and its own reply contract.
+ */
+export async function selectOpenCodeReplyOptionalCoalescedFollowers(input: {
+  unread: readonly RelayInboxMessage[];
+  index: number;
+  anchorReplyRecipient: string;
+  ports: OpenCodeReplyOptionalCoalescePorts;
+}): Promise<RelayInboxMessage[]> {
+  const anchor = input.unread[input.index];
+  if (
+    !anchor ||
+    !isCoalescableNoticeKind(anchor) ||
+    !isOpenCodeReplyOptionalDeliveryContract(input.anchorReplyRecipient)
+  ) {
+    return [];
+  }
+  const followers: RelayInboxMessage[] = [];
+  for (let cursor = input.index + 1; cursor < input.unread.length; cursor += 1) {
+    if (followers.length >= OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT) break;
+    const candidate = input.unread[cursor];
+    if (!candidate || candidate.read || !isCoalescableNoticeKind(candidate)) break;
+    if (typeof candidate.text !== 'string' || candidate.text.trim().length === 0) break;
+    if (!isOpenCodeReplyOptionalDeliveryContract(input.ports.resolveReplyRecipient(candidate))) {
+      break;
+    }
+    if (await input.ports.hasExistingRecord(candidate)) break;
+    followers.push(candidate);
+  }
+  return followers;
+}
+
+/**
+ * The anchor's own text with the riders appended as one tagged block. The
+ * wrapper tells the runtime that everything inside arrived after the anchor and
+ * needs no reply either, so the turn answers the batch at most once instead of
+ * once per notice.
+ */
+export function buildOpenCodeCoalescedNoticeText(
+  text: string,
+  followers: readonly RelayInboxMessage[]
+): string {
+  const lines = [
+    text,
+    '',
+    `<opencode_coalesced_notices count="${followers.length}">`,
+    `${followers.length} further informational notice(s) arrived after the message above and are delivered together with it. They need no reply either; treat everything here as one update and act at most once.`,
+  ];
+  followers.forEach((follower, position) => {
+    const sender =
+      typeof follower.from === 'string' && follower.from.trim() ? follower.from.trim() : 'system';
+    lines.push(
+      `--- notice ${position + 1} (from ${sender}, messageId ${follower.messageId}${
+        follower.timestamp ? `, ${follower.timestamp}` : ''
+      }) ---`,
+      follower.text
+    );
+  });
+  lines.push('</opencode_coalesced_notices>');
+  return lines.join('\n');
+}
 
 /**
  * Index of the first unread user message after `afterIndex`, or -1. Only a
