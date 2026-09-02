@@ -1074,9 +1074,10 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
       const metadata = await buildMixedRuntimeMetadata({ run: currentRun });
       const snapshot = await buildMixedRuntimeSnapshot({ run: currentRun });
 
-      expect(metadata.get('Worker')).toMatchObject({ alive: false });
+      // Ephemeral lane hosts: persisted/registered metadata keeps the member alive between turns.
+      expect(metadata.get('Worker')).toMatchObject({ alive: true });
       expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
-      expect(snapshot.members.Worker).toMatchObject({ alive: false });
+      expect(snapshot.members.Worker).toMatchObject({ alive: true });
       expect(snapshot.members.Worker?.runtimeSessionId).toBeUndefined();
     } finally {
       vi.useRealTimers();
@@ -1095,14 +1096,14 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
       const snapshot = await buildMixedRuntimeSnapshot({ run: currentRun });
 
       expect(metadata.get('Worker')).toMatchObject({
-        alive: false,
+        alive: true,
         livenessKind: 'registered_only',
         runtimeDiagnostic: 'registered runtime metadata without live process',
       });
       expect(metadata.get('Worker')?.metricsPid).toBeUndefined();
       expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
       expect(snapshot.members.Worker).toMatchObject({
-        alive: false,
+        alive: true,
         laneKind: 'secondary',
       });
       expect(snapshot.members.Worker?.runtimeSessionId).toBeUndefined();
@@ -1128,14 +1129,14 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
       });
 
       expect(metadata.get('Worker')).toMatchObject({
-        alive: false,
+        alive: true,
         livenessKind: 'registered_only',
         runtimeDiagnostic: 'registered runtime metadata without live process',
       });
       expect(metadata.get('Worker')?.metricsPid).toBeUndefined();
       expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
       expect(snapshot.members.Worker).toMatchObject({
-        alive: false,
+        alive: true,
         laneKind: 'secondary',
       });
       expect(snapshot.members.Worker?.runtimeSessionId).toBeUndefined();
@@ -1144,52 +1145,69 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
     }
   });
 
-  it.each([
-    {
-      probe: 'dead',
-      processTableAvailable: true,
-      livenessKind: 'stale_metadata',
-      runtimeDiagnostic: 'persisted runtime pid is not alive',
-    },
-    {
-      probe: 'unknown',
-      processTableAvailable: false,
-      livenessKind: 'registered_only',
-      runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
-    },
-  ])(
-    'does not revive exact mixed secondary evidence when its runtime probe is $probe',
-    async ({ processTableAvailable, livenessKind, runtimeDiagnostic }) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(UPDATED_AT));
-      try {
-        const metadata = await buildMixedRuntimeMetadata({
-          processRows: [],
-          processTableAvailable,
-        });
-        const snapshot = await buildMixedRuntimeSnapshot({
-          processRows: [],
-          processTableAvailable,
-        });
+  // The two halves of the asymmetry, side by side: a table that answered is
+  // evidence, a table that could not answer is not.
+  it('does not revive exact mixed secondary evidence when the process table answered without its runtime pid', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const metadata = await buildMixedRuntimeMetadata({
+        processRows: [],
+        processTableAvailable: true,
+      });
+      const snapshot = await buildMixedRuntimeSnapshot({
+        processRows: [],
+        processTableAvailable: true,
+      });
 
-        expect(metadata.get('Worker')).toMatchObject({
-          alive: false,
-          livenessKind,
-          runtimeDiagnostic,
-          runtimeSessionId: 'session-current',
-        });
-        expect(snapshot.members.Worker).toMatchObject({
-          alive: false,
-          livenessKind,
-          runtimeDiagnostic,
-          runtimeSessionId: 'session-current',
-          laneKind: 'secondary',
-        });
-      } finally {
-        vi.useRealTimers();
-      }
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: false,
+        livenessKind: 'stale_metadata',
+        runtimeDiagnostic: 'persisted runtime pid is not alive',
+        runtimeSessionId: 'session-current',
+      });
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: false,
+        livenessKind: 'stale_metadata',
+        runtimeDiagnostic: 'persisted runtime pid is not alive',
+        runtimeSessionId: 'session-current',
+        laneKind: 'secondary',
+      });
+    } finally {
+      vi.useRealTimers();
     }
-  );
+  });
+
+  it('keeps exact mixed secondary evidence deliverable when the process table could not answer', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const metadata = await buildMixedRuntimeMetadata({
+        processRows: [],
+        processTableAvailable: false,
+      });
+      const snapshot = await buildMixedRuntimeSnapshot({
+        processRows: [],
+        processTableAvailable: false,
+      });
+
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: true,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+        runtimeSessionId: 'session-current',
+      });
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: true,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+        runtimeSessionId: 'session-current',
+        laneKind: 'secondary',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('ignores stale runtime adapter run evidence when resolving the active run', async () => {
     vi.useFakeTimers();
