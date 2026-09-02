@@ -40,6 +40,28 @@ const DEFAULT_TEAM_TASK_STALL_SCAN_TIMEOUT_MS = 2 * 60_000;
 const OPENCODE_SKIP_LOG_INTERVAL_MS = 10 * 60_000;
 const OPENCODE_HELD_ALERT_LOG_DELAY_MS = 2 * 60_000;
 
+/** Rungs of the pickup ladder: nudge the owner once, tell the lead once, then stop. */
+const PICKUP_ESCALATION_RUNGS = 2;
+
+interface PickupEscalationState {
+  priorAlertCount: number;
+  clockMs: number;
+}
+
+interface PickupEscalationPlan {
+  ownerAlerts: TaskStallAlert[];
+  leadOnlyAlerts: TaskStallAlert[];
+  silencedAlerts: TaskStallAlert[];
+  /** The subset of silenced alerts whose ladder ran out on this scan; logged once. */
+  newlyExhaustedAlerts: TaskStallAlert[];
+}
+
+/** Missing or unparsable clocks sort last so a known-oldest task wins the scan. */
+function parsePickupClockMs(readyAt: string | undefined): number {
+  const parsed = readyAt ? Date.parse(readyAt) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
+}
+
 function unrefBackgroundTimer(timer: ReturnType<typeof setTimeout>): void {
   const maybeTimer = timer as { unref?: () => void };
   maybeTimer.unref?.();
@@ -291,6 +313,9 @@ export class TeamTaskStallMonitor {
       evaluations.push(this.policy.evaluateWork({ now, task, snapshot }));
     }
     this.logOpenCodeOwnerSkips(snapshot, evaluations, now);
+    for (const task of snapshot.pendingPickupTasks ?? []) {
+      evaluations.push(this.policy.evaluatePendingPickup({ now, task, snapshot }));
+    }
     for (const task of snapshot.reviewOpenTasks) {
       evaluations.push(this.policy.evaluateReview({ now, task, snapshot }));
     }
@@ -302,8 +327,17 @@ export class TeamTaskStallMonitor {
     const journalEvaluations = openCodeOnlyMode
       ? evaluations.filter((evaluation) => this.isOpenCodeOwnerWorkEvaluation(snapshot, evaluation))
       : evaluations;
+    // Pickup candidates must be in this set: the journal prunes any entry whose
+    // task is not active, so leaving them out would reset the two-scan counter
+    // on every scan and the pickup branch would never alert.
     const activeTaskIds = [
-      ...new Set([...snapshot.inProgressTasks, ...snapshot.reviewOpenTasks].map((task) => task.id)),
+      ...new Set(
+        [
+          ...snapshot.inProgressTasks,
+          ...snapshot.reviewOpenTasks,
+          ...(snapshot.pendingPickupTasks ?? []),
+        ].map((task) => task.id)
+      ),
     ];
     const readyEvaluations = await this.journal.reconcileScan({
       teamName,
@@ -325,9 +359,14 @@ export class TeamTaskStallMonitor {
       return;
     }
 
+    const { ownerAlerts, leadOnlyAlerts, silencedAlerts, newlyExhaustedAlerts } =
+      this.planPickupEscalation(alerts, readyEvaluations);
+    this.logExhaustedPickupEscalations(teamName, newlyExhaustedAlerts);
+    const routableAlerts = [...ownerAlerts, ...leadOnlyAlerts];
+
     const alertedEpochKeys = new Set<string>();
-    if (openCodeRemediationEnabled) {
-      const remediatedAlerts = await this.notifier.notifyOpenCodeOwners(teamName, alerts);
+    if (openCodeRemediationEnabled && ownerAlerts.length > 0) {
+      const remediatedAlerts = await this.notifier.notifyOpenCodeOwners(teamName, ownerAlerts);
       if (!this.shouldContinueScan(scanRun)) {
         return;
       }
@@ -336,7 +375,9 @@ export class TeamTaskStallMonitor {
       }
     }
 
-    const leadFallbackAlerts = alerts.filter((alert) => !alertedEpochKeys.has(alert.epochKey));
+    const leadFallbackAlerts = routableAlerts.filter(
+      (alert) => !alertedEpochKeys.has(alert.epochKey)
+    );
     if (leadFallbackAlerts.length > 0 && isTeamTaskStallAlertsEnabled()) {
       await this.notifier.notifyLead(teamName, leadFallbackAlerts);
       if (!this.shouldContinueScan(scanRun)) {
@@ -347,7 +388,13 @@ export class TeamTaskStallMonitor {
       }
     }
 
-    if (alertedEpochKeys.size === 0) {
+    // A silenced rung is journaled too: the cooldown is what keeps an abandoned
+    // task from being re-evaluated on every scan.
+    const journaledAlerts = [
+      ...routableAlerts.filter((alert) => alertedEpochKeys.has(alert.epochKey)),
+      ...silencedAlerts,
+    ];
+    if (journaledAlerts.length === 0) {
       logger.debug(`Task stall monitor shadow-ready alerts for ${teamName}: ${alerts.length}`);
       return;
     }
@@ -356,10 +403,94 @@ export class TeamTaskStallMonitor {
       return;
     }
     await Promise.all(
-      alerts
-        .filter((alert) => alertedEpochKeys.has(alert.epochKey))
-        .map((alert) => this.journal.markAlerted(teamName, alert.epochKey, now.toISOString()))
+      journaledAlerts.map((alert) =>
+        this.journal.markAlerted(teamName, alert.epochKey, now.toISOString())
+      )
     );
+  }
+
+  /**
+   * Pickup alerts climb a bounded ladder - owner nudge, then lead alert, then
+   * silence - and only the oldest pending task per member reaches that member's
+   * lane in one scan. Alerts held back by the per-member cap are left
+   * unjournaled so the next scan reconsiders them instead of burning a rung.
+   */
+  private planPickupEscalation(
+    alerts: TaskStallAlert[],
+    readyEvaluations: TaskStallEvaluation[]
+  ): PickupEscalationPlan {
+    const stateByEpochKey = new Map<string, PickupEscalationState>();
+    for (const evaluation of readyEvaluations) {
+      if (!evaluation.epochKey) continue;
+      stateByEpochKey.set(evaluation.epochKey, {
+        priorAlertCount: evaluation.priorAlertCount ?? 0,
+        clockMs: parsePickupClockMs(evaluation.readyAt),
+      });
+    }
+
+    const plan: PickupEscalationPlan = {
+      ownerAlerts: [],
+      leadOnlyAlerts: [],
+      silencedAlerts: [],
+      newlyExhaustedAlerts: [],
+    };
+    const pickupAlertsByMember = new Map<string, TaskStallAlert[]>();
+    for (const alert of alerts) {
+      if (alert.remediationKind !== 'pending_pickup') {
+        plan.ownerAlerts.push(alert);
+        continue;
+      }
+      const priorAlertCount = stateByEpochKey.get(alert.epochKey)?.priorAlertCount ?? 0;
+      if (priorAlertCount >= PICKUP_ESCALATION_RUNGS) {
+        plan.silencedAlerts.push(alert);
+        if (priorAlertCount === PICKUP_ESCALATION_RUNGS) {
+          plan.newlyExhaustedAlerts.push(alert);
+        }
+        continue;
+      }
+      const memberKey = alert.owner?.trim().toLowerCase() ?? '';
+      const memberAlerts = pickupAlertsByMember.get(memberKey);
+      if (memberAlerts) {
+        memberAlerts.push(alert);
+      } else {
+        pickupAlertsByMember.set(memberKey, [alert]);
+      }
+    }
+
+    for (const memberAlerts of pickupAlertsByMember.values()) {
+      const oldest = [...memberAlerts].sort((left, right) => {
+        const leftMs = stateByEpochKey.get(left.epochKey)?.clockMs ?? Number.POSITIVE_INFINITY;
+        const rightMs = stateByEpochKey.get(right.epochKey)?.clockMs ?? Number.POSITIVE_INFINITY;
+        if (leftMs !== rightMs) {
+          return leftMs < rightMs ? -1 : 1;
+        }
+        return left.taskId.localeCompare(right.taskId);
+      })[0];
+      if (!oldest) continue;
+      if ((stateByEpochKey.get(oldest.epochKey)?.priorAlertCount ?? 0) === 0) {
+        plan.ownerAlerts.push(oldest);
+      } else {
+        plan.leadOnlyAlerts.push(oldest);
+      }
+    }
+
+    return plan;
+  }
+
+  /**
+   * Logged once per epoch, on the scan the ladder runs out. Later scans keep
+   * silencing the same alert but say nothing, so an abandoned task does not
+   * repeat a warn line for the rest of the run.
+   */
+  private logExhaustedPickupEscalations(
+    teamName: string,
+    newlyExhaustedAlerts: TaskStallAlert[]
+  ): void {
+    for (const alert of newlyExhaustedAlerts) {
+      logger.warn(
+        `[${teamName}] Stall monitor stopped escalating task #${alert.displayId} (owner ${alert.owner ?? 'unknown'}): pickup_escalation_exhausted - the owner nudge and the lead alert are spent and the task is still pending.`
+      );
+    }
   }
 
   private buildAlert(
@@ -394,6 +525,7 @@ export class TeamTaskStallMonitor {
       branch: evaluation.branch,
       signal: evaluation.signal,
       ...(evaluation.progressSignal ? { progressSignal: evaluation.progressSignal } : {}),
+      ...(evaluation.remediationKind ? { remediationKind: evaluation.remediationKind } : {}),
       reason: evaluation.reason,
       epochKey: evaluation.epochKey,
       ...(task.owner ? { owner: task.owner } : {}),

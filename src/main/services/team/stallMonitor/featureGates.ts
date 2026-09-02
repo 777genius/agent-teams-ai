@@ -63,3 +63,16 @@ export function getOpenCodeWeakStartStallThresholdMs(): number {
   // Shorter OpenCode threshold for "started work" comments that do not contain concrete progress.
   return readInt(process.env.CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS, 100_000);
 }
+
+export function getPendingPickupStallThresholdMs(): number {
+  // A task with nothing left to wait for is still only pending: the owner already
+  // received the "Dependency resolved" notice and its delivery retries, so this is
+  // a missed pickup, not missing information. 5 minutes is longer than one slow
+  // model turn, and the journal's two-scan rule adds one more scan interval on top.
+  return readInt(process.env.CLAUDE_TEAM_PENDING_PICKUP_STALL_THRESHOLD_MS, 5 * 60_000);
+}
+
+export function isPendingPickupStallRemediationEnabled(): boolean {
+  // Pickup-stall branch for pending tasks whose blockers are all resolved.
+  return readEnabledFlag(process.env.CLAUDE_TEAM_PENDING_PICKUP_STALL_REMEDIATION_ENABLED, true);
+}

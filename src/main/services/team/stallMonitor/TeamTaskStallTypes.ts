@@ -8,7 +8,15 @@ export type TaskStallBranch = 'work' | 'review';
 export type TaskStallSignal =
   | 'turn_ended_after_touch'
   | 'mid_turn_after_touch'
-  | 'touch_then_other_turns';
+  | 'touch_then_other_turns'
+  | 'pending_pickup_after_unblock';
+
+/**
+ * Signals `classifyPostTouchState` can emit. The pickup signal is produced only
+ * by the pending-pickup branch, which reads no transcript, so the post-touch
+ * threshold maps stay exhaustive without an unreachable entry.
+ */
+export type PostTouchStallSignal = Exclude<TaskStallSignal, 'pending_pickup_after_unblock'>;
 
 export type TaskStallEvaluationStatus = 'skip' | 'suspected' | 'alert';
 
@@ -30,7 +38,13 @@ export type TaskStallSkipReason =
   | 'ambiguous_state'
   | 'below_threshold'
   | 'first_scan_only'
-  | 'lane_active';
+  | 'lane_active'
+  | 'pickup_remediation_disabled'
+  | 'task_not_pending'
+  | 'owner_not_opencode'
+  | 'owner_busy_on_other_task'
+  | 'no_unblock_evidence'
+  | 'pickup_escalation_exhausted';
 
 export type ResolvedReviewerSource =
   | 'kanban_state'
@@ -51,7 +65,16 @@ export interface TaskStallEvaluation {
   branch?: TaskStallBranch;
   signal?: TaskStallSignal;
   progressSignal?: TaskProgressSignal;
+  remediationKind?: 'pending_pickup';
   epochKey?: string;
+  /** Pickup-branch clock start; orders the per-member pickup alert cap. */
+  readyAt?: string;
+  /**
+   * Alerts already dispatched for this epoch, stamped by the journal when it
+   * promotes an entry (absent for a first alert). Bounds the pickup escalation
+   * ladder so an abandoned task cannot nudge forever.
+   */
+  priorAlertCount?: number;
   reason: string;
   skipReason?: TaskStallSkipReason;
 }
@@ -91,6 +114,12 @@ export interface TeamTaskStallSnapshot {
   allTasksById: Map<string, TeamTask>;
   inProgressTasks: TeamTask[];
   reviewOpenTasks: TeamTask[];
+  /**
+   * Pending tasks with an owner, candidates for the pickup-stall branch.
+   * Excluded from transcript/exact-row reads on purpose: the branch needs no
+   * transcript evidence, so widening those reads would cost IO per backlog task.
+   */
+  pendingPickupTasks?: TeamTask[];
   resolvedReviewersByTaskId: Map<string, ResolvedReviewer>;
   recordsByTaskId: Map<string, BoardTaskActivityRecord[]>;
   freshnessByTaskId: Map<string, TaskLogFreshnessSignal>;
@@ -128,6 +157,7 @@ export interface TaskStallAlert {
   branch: TaskStallBranch;
   signal: TaskStallSignal;
   progressSignal?: TaskProgressSignal;
+  remediationKind?: 'pending_pickup';
   reason: string;
   epochKey: string;
   owner?: string;
@@ -153,4 +183,6 @@ export interface TaskStallJournalEntry {
   createdAt: string;
   updatedAt: string;
   alertedAt?: string;
+  /** How many alerts this epoch already produced; drives the pickup escalation ladder. */
+  alertCount?: number;
 }

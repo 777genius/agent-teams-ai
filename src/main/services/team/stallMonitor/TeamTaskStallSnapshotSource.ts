@@ -134,6 +134,9 @@ export class TeamTaskStallSnapshotSource {
         }) === 'review'
       );
     });
+    const pendingPickupTasks = workflowActiveTasks.filter(
+      (task) => task.status === 'pending' && Boolean(task.owner?.trim()) && !task.deletedAt
+    );
     const resolvedReviewersByTaskId = buildResolvedReviewerIndex(activeTasks, kanbanState);
     const activityReadsEnabled = isBoardTaskActivityReadEnabled();
     const exactReadsEnabled = isBoardTaskExactLogsReadEnabled();
@@ -204,6 +207,7 @@ export class TeamTaskStallSnapshotSource {
       allTasksById,
       inProgressTasks,
       reviewOpenTasks,
+      pendingPickupTasks,
       resolvedReviewersByTaskId,
       recordsByTaskId: mergedRecordsByTaskId,
       freshnessByTaskId,
