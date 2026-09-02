@@ -82,6 +82,10 @@ describe('TeamProvisioningPromptBuilders', () => {
     expect(prompt).not.toMatch(/gpu|local model/i);
     // The rule keeps its escape hatch: an explicit user instruction or solo mode.
     expect(prompt).toContain('Exception: the user explicitly tells you to do that work yourself');
+    // The first-move rule names the same two escape hatches, so the two rules cannot disagree.
+    expect(prompt).toContain(
+      'Do NOT start implementing yourself unless the user explicitly tells you to do that work yourself, or the team is truly in SOLO MODE (no teammates).'
+    );
   });
 
   it('allows reconnecting members to self-claim only unassigned tasks', () => {
