@@ -1,6 +1,11 @@
 import * as path from 'path';
 
 import {
+  queueLaunchPromptToLeadInbox,
+  resolveOpenCodeAggregateLaunchPromptDelivery,
+  resolveOpenCodeAggregateLaunchPromptLeadName,
+} from './TeamProvisioningOpenCodeAggregateLaunchPrompt';
+import {
   buildOpenCodeAggregateFailureProgress,
   buildOpenCodeAggregateFinalProgress,
   createOpenCodeAggregateProvisioningRun,
@@ -210,12 +215,14 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
   );
   run.progress = launching;
 
+  const promptDelivery = resolveOpenCodeAggregateLaunchPromptDelivery(input.prompt);
+
   try {
     untrackedPrimaryLaunchMayBeRunning = true;
     const primaryResult = await ports.launchOpenCodeAggregatePrimaryLane({
       run,
       adapter: input.adapter,
-      prompt: input.prompt,
+      prompt: promptDelivery.orchestratorPrompt,
       previousLaunchState,
       assertStillCurrentAfterPersistence: () => {
         if (aggregateLaunchNoLongerCurrent()) {
@@ -304,6 +311,20 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       ]),
       ...laneDiagnostics,
     ]);
+    // The lanes are ready and this launch owns the team: hand the launch prompt
+    // to the lead's inbox before the run reports its final progress, so a
+    // refused inbox is visible in the same place as every other lane diagnostic.
+    if (!terminalFailure && promptDelivery.leadInboxPrompt !== null) {
+      await queueLaunchPromptToLeadInbox(
+        {
+          teamName,
+          leadName: resolveOpenCodeAggregateLaunchPromptLeadName(run.effectiveMembers),
+          prompt: promptDelivery.leadInboxPrompt,
+          diagnostics: laneDiagnostics,
+        },
+        ports
+      );
+    }
     const finalProgress = ports.setRuntimeAdapterProgress(
       buildOpenCodeAggregateFinalProgress({
         launching,

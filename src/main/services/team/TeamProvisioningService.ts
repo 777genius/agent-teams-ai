@@ -85,6 +85,29 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
     this.runtimeFailureObservationBoundary.observe(run, this.getRunLeadName(run), failure);
   }
 
+  /**
+   * Launch prompt for an OpenCode team: queued as a normal user inbox message
+   * for the lead once the lanes are ready, so the inbox relay delivers it under
+   * the standard user-reply contract. The orchestrator's own `leadPrompt` slot
+   * replays the prompt on every session rebuild, which a memoryless cloud lead
+   * then re-executes.
+   */
+  async deliverOpenCodeLaunchPromptToLead(input: {
+    teamName: string;
+    leadName: string;
+    prompt: string;
+  }): Promise<void> {
+    const text = input.prompt.trim();
+    if (!text) return;
+    await this.inboxWriter.sendMessage(input.teamName, {
+      member: input.leadName,
+      to: input.leadName,
+      from: 'user',
+      text,
+      source: 'user_sent',
+    });
+  }
+
   async assessLeadRuntimeRestart(input: {
     teamName: string;
     providerId: Exclude<TeamProviderId, 'opencode'>;

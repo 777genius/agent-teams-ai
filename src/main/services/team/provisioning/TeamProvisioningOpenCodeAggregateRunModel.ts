@@ -13,6 +13,7 @@ import type {
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
 } from '../runtime';
+import type { OpenCodeAggregateLaunchPromptPorts } from './TeamProvisioningOpenCodeAggregateLaunchPrompt';
 import type {
   PersistedTeamLaunchSnapshot,
   TeamCreateRequest,
@@ -237,6 +238,7 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktr
   }): Promise<boolean>;
   setSecondaryRuntimeRun(input: SecondaryRuntimeRunEntry & { teamName: string }): void;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
+  deliverOpenCodeLaunchPromptToLead: OpenCodeAggregateLaunchPromptPorts['deliverOpenCodeLaunchPromptToLead'];
 }
 
 export interface RunOpenCodeWorktreeRootAggregateLaunchInput {

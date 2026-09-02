@@ -499,6 +499,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'launchSecondary:secondary:opencode:bob',
       'summarizeLaunchState',
       'persistLaunchState:finished',
+      'deliverLaunchPrompt:team-lead:launch',
       'setProgress:ready',
       'setAliveRun',
       'deleteProvisioningRunIfCurrent',
@@ -1507,6 +1508,128 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(calls).not.toContain('launchPrimary');
     expect(calls).not.toContain('setAliveRun');
   });
+
+  it('queues the launch prompt for the lead inbox and leaves the orchestrator prompt empty', async () => {
+    const lead = member('team-lead');
+    const calls: string[] = [];
+    const provisioningRuns = new Map<string, string>();
+    const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+    const promptedLanes: (string | undefined)[] = [];
+    const deliverOpenCodeLaunchPromptToLead = vi.fn(async () => undefined);
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([lead]),
+        members: [lead],
+        lanePlan: lanePlan({ primaryMembers: [lead] }),
+        prompt: '  review the backlog  ',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+        getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        getRun: (runId) => runById.get(runId),
+        setRun: (runId, run) => runById.set(runId, run),
+        launchOpenCodeAggregatePrimaryLane: async (launchInput) => {
+          promptedLanes.push(launchInput.prompt);
+          return retainableRuntimeResult('team-lead');
+        },
+        deliverOpenCodeLaunchPromptToLead,
+      }
+    );
+
+    // The orchestrator never receives the prompt, so a rebuilt lead session
+    // cannot replay it.
+    expect(promptedLanes).toEqual(['']);
+    expect(deliverOpenCodeLaunchPromptToLead).toHaveBeenCalledTimes(1);
+    expect(deliverOpenCodeLaunchPromptToLead).toHaveBeenCalledWith({
+      teamName: 'open-code-team',
+      leadName: 'team-lead',
+      prompt: 'review the backlog',
+    });
+  });
+
+  it('finishes the launch and records a diagnostic when the lead inbox refuses the prompt', async () => {
+    const lead = member('team-lead');
+    const calls: string[] = [];
+    const provisioningRuns = new Map<string, string>();
+    const aliveRuns = new Map<string, string>();
+    const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+    const published: TeamProvisioningProgress[] = [];
+
+    const result = await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([lead]),
+        members: [lead],
+        lanePlan: lanePlan({ primaryMembers: [lead] }),
+        prompt: 'review the backlog',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+        getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        getRun: (runId) => runById.get(runId),
+        setRun: (runId, run) => runById.set(runId, run),
+        setAliveRunId: (teamName, runId) => aliveRuns.set(teamName, runId),
+        setRuntimeAdapterProgress: (nextProgress) => {
+          published.push(nextProgress);
+          return nextProgress;
+        },
+        launchOpenCodeAggregatePrimaryLane: async () => retainableRuntimeResult('team-lead'),
+        deliverOpenCodeLaunchPromptToLead: async () => {
+          throw new Error('lead inbox is not writable');
+        },
+      }
+    );
+
+    // The prompt is one message; the launch is the whole team.
+    expect(result).toEqual({ runId: 'run-open-code' });
+    expect(aliveRuns.get('open-code-team')).toBe('run-open-code');
+    expect(published.at(-1)).toMatchObject({
+      state: 'ready',
+      cliLogsTail: 'Launch prompt could not be queued for team-lead: lead inbox is not writable',
+    });
+  });
+
+  it('never touches the lead inbox when the launch carries no prompt', async () => {
+    const lead = member('team-lead');
+    const calls: string[] = [];
+    const provisioningRuns = new Map<string, string>();
+    const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+    const promptedLanes: (string | undefined)[] = [];
+    const deliverOpenCodeLaunchPromptToLead = vi.fn(async () => undefined);
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([lead]),
+        members: [lead],
+        lanePlan: lanePlan({ primaryMembers: [lead] }),
+        prompt: '   ',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+        getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        getRun: (runId) => runById.get(runId),
+        setRun: (runId, run) => runById.set(runId, run),
+        launchOpenCodeAggregatePrimaryLane: async (launchInput) => {
+          promptedLanes.push(launchInput.prompt);
+          return retainableRuntimeResult('team-lead');
+        },
+        deliverOpenCodeLaunchPromptToLead,
+      }
+    );
+
+    // A blank prompt is passed through untouched: nothing is queued.
+    expect(promptedLanes).toEqual(['   ']);
+    expect(deliverOpenCodeLaunchPromptToLead).not.toHaveBeenCalled();
+  });
 });
 
 function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunchPorts {
@@ -1628,6 +1751,9 @@ function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunc
     },
     deleteSecondaryRuntimeRun: (_teamName, laneId) => {
       calls.push(`deleteSecondaryRuntimeRun:${laneId}`);
+    },
+    deliverOpenCodeLaunchPromptToLead: async (promptInput) => {
+      calls.push(`deliverLaunchPrompt:${promptInput.leadName}:${promptInput.prompt}`);
     },
   };
 }

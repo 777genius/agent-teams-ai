@@ -200,6 +200,9 @@ function createHost(
       calls.push('persistRuntimeResult');
       return { result };
     },
+    deliverOpenCodeLaunchPromptToLead: async (promptInput) => {
+      calls.push(`deliverLaunchPrompt:${promptInput.leadName}:${promptInput.prompt}`);
+    },
     syncOpenCodeRuntimeToolApprovals: () => {
       calls.push('syncApprovals');
     },
@@ -265,6 +268,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       syncRunMemberSpawnStatusesFromSnapshot: baseHost.syncRunMemberSpawnStatusesFromSnapshot,
       deleteSecondaryRuntimeRun: baseHost.deleteSecondaryRuntimeRun,
       persistOpenCodeRuntimeAdapterLaunchResult: baseHost.persistOpenCodeRuntimeAdapterLaunchResult,
+      deliverOpenCodeLaunchPromptToLead: baseHost.deliverOpenCodeLaunchPromptToLead,
     } satisfies TeamProvisioningOpenCodeLaunchWiringServiceHost<OpenCodeAggregateProvisioningRun>;
     const host = createTeamProvisioningOpenCodeLaunchWiringHostFromService(serviceHost);
 
@@ -389,6 +393,9 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'launchSecondary:secondary:opencode:bob',
       'summarizeAggregateState',
       'persistSnapshot:finished',
+      // Proof the port reached the aggregate launch ports, not the
+      // runtime-adapter launch ports next to them.
+      'deliverLaunchPrompt:team-lead:launch',
       'progress:ready',
       'setAliveRun',
       'invalidateCaches',

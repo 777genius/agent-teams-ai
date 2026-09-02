@@ -25,6 +25,7 @@ import type {
   TeamRuntimeLaunchResult,
   TeamRuntimeMemberSpec,
 } from '../runtime';
+import type { OpenCodeAggregateLaunchPromptPorts } from './TeamProvisioningOpenCodeAggregateLaunchPrompt';
 import type {
   MixedSecondaryRuntimeLaneState,
   SecondaryRuntimeRunEntry,
@@ -122,6 +123,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringHost<Run> {
     result: TeamRuntimeLaunchResult,
     input: TeamRuntimeLaunchInput
   ): Promise<{ result: TeamRuntimeLaunchResult; snapshot?: PersistedTeamLaunchSnapshot }>;
+  deliverOpenCodeLaunchPromptToLead: OpenCodeAggregateLaunchPromptPorts['deliverOpenCodeLaunchPromptToLead'];
   syncOpenCodeRuntimeToolApprovals(input: {
     teamName: string;
     runId: string;
@@ -194,6 +196,7 @@ export interface TeamProvisioningOpenCodeLaunchWiringServiceHost<Run> {
   syncRunMemberSpawnStatusesFromSnapshot: TeamProvisioningOpenCodeLaunchWiringHost<Run>['syncRunMemberSpawnStatusesFromSnapshot'];
   deleteSecondaryRuntimeRun: TeamProvisioningOpenCodeLaunchWiringHost<Run>['deleteSecondaryRuntimeRun'];
   persistOpenCodeRuntimeAdapterLaunchResult: TeamProvisioningOpenCodeLaunchWiringHost<Run>['persistOpenCodeRuntimeAdapterLaunchResult'];
+  deliverOpenCodeLaunchPromptToLead: TeamProvisioningOpenCodeLaunchWiringHost<Run>['deliverOpenCodeLaunchPromptToLead'];
 }
 
 function getRequiredOpenCodeRuntimeAdapter(host: {
@@ -269,6 +272,8 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
     },
     persistOpenCodeRuntimeAdapterLaunchResult: (result, launchInput) =>
       service.persistOpenCodeRuntimeAdapterLaunchResult(result, launchInput),
+    deliverOpenCodeLaunchPromptToLead: (promptInput) =>
+      service.deliverOpenCodeLaunchPromptToLead(promptInput),
     syncOpenCodeRuntimeToolApprovals: (syncInput) =>
       service.toolApprovalFacade.syncOpenCodeRuntimeToolApprovals(syncInput),
     emitTeamChange: (event) => {
@@ -344,6 +349,8 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.persistLaunchStateSnapshot(run as Run, launchPhase),
           syncRunMemberSpawnStatusesFromSnapshot: (run, snapshot) =>
             host.syncRunMemberSpawnStatusesFromSnapshot(run as Run, snapshot),
+          deliverOpenCodeLaunchPromptToLead: (promptInput) =>
+            host.deliverOpenCodeLaunchPromptToLead(promptInput),
           setAliveRunId: (teamName, runId) => {
             host.runTracking.setAliveRunId(teamName, runId);
           },
