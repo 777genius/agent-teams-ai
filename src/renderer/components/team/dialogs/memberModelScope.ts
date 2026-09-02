@@ -240,13 +240,19 @@ export function clearInheritedMemberModelsUnavailableForProvider(
     if (input.deferredProviderIds?.has(providerId)) {
       return member;
     }
-    const providerStatus = input.runtimeProviderStatusById.get(providerId) ?? null;
     if (member.providerId) {
       return member;
     }
     if (shouldPreserveOpenCodeLocalModel(providerId, member.model, input)) {
       return member;
     }
+    const providerStatus =
+      getModelScopedProviderStatus(
+        providerId,
+        member.model,
+        input.runtimeProviderStatusById,
+        input
+      ) ?? null;
     if (shouldClearOpenCodeModelToDefault(providerId, providerStatus)) {
       changed = true;
       return {

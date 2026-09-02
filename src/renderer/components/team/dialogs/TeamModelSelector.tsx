@@ -1095,10 +1095,9 @@ export interface TeamModelSelectorProps {
   modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
-  onOpenCodeProviderScopedStatusChange?: (
-    sourceProviderId: string,
-    providerStatus: CliProviderStatus | null
-  ) => void;
+  onOpenCodeProviderScopedStatusChange?: Parameters<
+    typeof usePublishOpenCodeProviderScopedStatus
+  >[0];
 }
 
 export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
@@ -1234,7 +1233,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   usePublishOpenCodeProviderScopedStatus(
     onOpenCodeProviderScopedStatusChange,
     effectiveProviderId === 'opencode' ? openCodeCatalogSourceProviderId : null,
-    scopedAuthorityIsFresh ? (openCodeScopedCatalog.providerStatus ?? null) : null
+    scopedAuthorityIsFresh ? (openCodeScopedCatalog.providerStatus ?? null) : null,
+    effectiveProviderId === 'opencode' && !scopedAuthorityIsFresh
   );
   const openCodeLocalModelOverlay = useMemo(
     () =>

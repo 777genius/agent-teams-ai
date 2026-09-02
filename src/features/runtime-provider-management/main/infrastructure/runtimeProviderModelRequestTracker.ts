@@ -14,11 +14,12 @@ interface ActiveModelRequestGroup {
 
 export class RuntimeProviderModelRequestTracker {
   private readonly inFlight = new Map<string, ModelResponseInFlightEntry>();
+  private readonly lifecycleEntries = new Set<ModelResponseInFlightEntry>();
   private readonly activeGroups = new Map<string, ActiveModelRequestGroup>();
 
   clear(abortInFlight: boolean): void {
     if (abortInFlight) {
-      const entries = new Set(this.inFlight.values());
+      const entries = new Set(this.lifecycleEntries);
       for (const { entry } of this.activeGroups.values()) entries.add(entry);
       for (const entry of entries) entry.controller.abort();
       this.activeGroups.clear();
@@ -63,6 +64,7 @@ export class RuntimeProviderModelRequestTracker {
 
   set(cacheKey: string, entry: ModelResponseInFlightEntry): void {
     this.inFlight.set(cacheKey, entry);
+    this.lifecycleEntries.add(entry);
   }
 
   discard(cacheKey: string): void {
@@ -71,6 +73,7 @@ export class RuntimeProviderModelRequestTracker {
 
   cleanup(cacheKey: string, entry: ModelResponseInFlightEntry): void {
     if (this.inFlight.get(cacheKey) === entry) this.inFlight.delete(cacheKey);
+    this.lifecycleEntries.delete(entry);
     for (const requestGroupId of entry.requestGroups) {
       if (this.activeGroups.get(requestGroupId)?.entry === entry) {
         this.activeGroups.delete(requestGroupId);

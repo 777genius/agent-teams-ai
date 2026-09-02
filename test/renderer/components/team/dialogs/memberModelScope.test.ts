@@ -286,6 +286,25 @@ describe('memberModelScope', () => {
     ).toEqual({ providerId: 'opencode', model: 'openrouter/provider-model-b' });
   });
 
+  it('consults fresh scoped authority before clearing from a settled empty passive status', () => {
+    const member = draft({ model: 'openrouter/provider-model-b' });
+    const scopedStatus = freshScopedProviderStatus([
+      'openrouter/provider-model-a',
+      'openrouter/provider-model-b',
+    ]);
+
+    expect(
+      clearInheritedMemberModelsUnavailableForProvider({
+        members: [member],
+        selectedProviderId: 'opencode',
+        runtimeProviderStatusById: providerStatuses([
+          providerStatus('opencode', [], { modelCatalogRefreshState: 'ready' }),
+        ]),
+        openCodeProviderScopedStatusBySourceId: new Map([['openrouter', scopedStatus]]),
+      })
+    ).toEqual({ members: [member], changed: false });
+  });
+
   it('rejects an absent model once the selector scoped catalog is authoritatively settled', () => {
     const scopedStatus = freshScopedProviderStatus(['openrouter/provider-model-a']);
 

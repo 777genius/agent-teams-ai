@@ -72,4 +72,23 @@ describe('RuntimeProviderModelRequestTracker', () => {
     expect(visibleEntry.controller.signal.aborted).toBe(true);
     expect(tracker.get('visible-key')).toBeUndefined();
   });
+
+  it('retains a detached ungrouped request for later hard invalidation', () => {
+    const tracker = new RuntimeProviderModelRequestTracker();
+    const detachedEntry = createEntry();
+    tracker.set('local-model-limit', detachedEntry);
+    tracker.register(detachedEntry, 'local-model-limit', null);
+
+    tracker.clear(false);
+    expect(tracker.get('local-model-limit')).toBeUndefined();
+    expect(detachedEntry.controller.signal.aborted).toBe(false);
+
+    const replacementEntry = createEntry();
+    tracker.set('local-model-limit', replacementEntry);
+    tracker.register(replacementEntry, 'local-model-limit', 'replacement-subscriber');
+
+    tracker.clear(true);
+    expect(detachedEntry.controller.signal.aborted).toBe(true);
+    expect(replacementEntry.controller.signal.aborted).toBe(true);
+  });
 });
