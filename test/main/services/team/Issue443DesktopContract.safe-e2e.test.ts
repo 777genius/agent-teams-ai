@@ -29,7 +29,16 @@ import {
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
+  RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+} from '../../../../src/features/runtime-provider-management/contracts';
+import {
+  createRuntimeProviderManagementFeature,
+  registerRuntimeProviderManagementIpc,
+} from '../../../../src/features/runtime-provider-management/main';
 import { AgentTeamsRuntimeProviderManagementCliClient } from '../../../../src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient';
+import { createRuntimeProviderManagementBridge } from '../../../../src/features/runtime-provider-management/preload';
 
 import type {
   OpenCodeBridgeCommandLeaseStore,
@@ -38,6 +47,7 @@ import type {
 import type { OpenCodeExpectedBehaviorTuple } from '@main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import type { TeamRuntimeLaunchInput } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import type { CliProviderStatus } from '@shared/types';
+import type { IpcMain, IpcRenderer } from 'electron';
 
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: () => Promise.resolve({}),
@@ -137,10 +147,10 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
-  it('routes selected provider pagination through the real provider-management CLI client', async () => {
+  it('routes selected provider pagination through the production preload and IPC path', async () => {
     const fake = await createFake('paginated-catalog');
-    const client = new AgentTeamsRuntimeProviderManagementCliClient();
-    const firstPage = await client.loadModels({
+    const desktop = providerManagementDesktopHarness();
+    const firstPage = await desktop.bridge.loadModels({
       runtimeId: 'opencode',
       providerId: 'deepinfra',
       projectPath: fake.project,
@@ -150,7 +160,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     expect(firstPage.error).toBeUndefined();
     const nextCursor = firstPage.models?.nextCursor;
     expect(nextCursor).toBe('deepinfra-page-2');
-    const secondPage = await client.loadModels({
+    const secondPage = await desktop.bridge.loadModels({
       runtimeId: 'opencode',
       providerId: 'deepinfra',
       projectPath: fake.project,
@@ -165,6 +175,10 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     ]);
     const traces = await fake.traces();
     expect(traces.map((trace) => trace.kind)).toEqual(['provider-models', 'provider-models']);
+    expect(desktop.invokedChannels).toEqual([
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+    ]);
     expect(traces.map((trace) => trace.cwd)).toEqual([fake.project, fake.project]);
     expect(traces.map((trace) => trace.argv)).toEqual([
       [
@@ -205,8 +219,8 @@ describe('issue #443 Desktop real child-process wire contract', () => {
 
   it('cancels a superseded provider process and loads built-in OpenCode Zen only', async () => {
     const fake = await createFake('slow-catalog');
-    const client = new AgentTeamsRuntimeProviderManagementCliClient();
-    const slowDeepInfra = client.loadModels({
+    const desktop = providerManagementDesktopHarness();
+    const slowDeepInfra = desktop.bridge.loadModels({
       runtimeId: 'opencode',
       providerId: 'deepinfra',
       projectPath: fake.project,
@@ -220,7 +234,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       { timeout: 5_000, interval: 25 }
     );
 
-    const builtIn = await client.loadModels({
+    const builtIn = await desktop.bridge.loadModels({
       runtimeId: 'opencode',
       providerId: 'opencode',
       projectPath: fake.project,
@@ -241,6 +255,10 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       'provider-models-request',
       'provider-models',
     ]);
+    expect(desktop.invokedChannels).toEqual([
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+    ]);
     expect(traces.every((trace) => trace.cwd === fake.project)).toBe(true);
     expect(traces.map((trace) => trace.argv.slice(5, 8))).toEqual([
       ['--provider', 'deepinfra', '--json'],
@@ -252,8 +270,8 @@ describe('issue #443 Desktop real child-process wire contract', () => {
 
   it('cancels the real provider process when its catalog scope disappears', async () => {
     const fake = await createFake('slow-catalog');
-    const client = new AgentTeamsRuntimeProviderManagementCliClient();
-    const pending = client.loadModels({
+    const desktop = providerManagementDesktopHarness();
+    const pending = desktop.bridge.loadModels({
       runtimeId: 'opencode',
       providerId: 'deepinfra',
       projectPath: fake.project,
@@ -268,13 +286,17 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     );
 
     await expect(
-      client.cancelModelLoad({ requestGroupId: 'issue443-closing-scope' })
+      desktop.bridge.cancelModelLoad({ requestGroupId: 'issue443-closing-scope' })
     ).resolves.toEqual({ ok: true });
     expect((await pending).error).toBeDefined();
 
     const traces = await fake.traces();
     expect(traces.map((trace) => trace.kind)).toEqual(['provider-models-request']);
     assertProcessesExited(traces);
+    expect(desktop.invokedChannels).toEqual([
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+      RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
+    ]);
   });
 
   it('crosses the real Desktop child boundary with exact v2 proof bindings and framing', async () => {
@@ -472,6 +494,38 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     ).toBe(false);
   });
 });
+
+function providerManagementDesktopHarness() {
+  const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+  const ipcMain = {
+    handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+      handlers.set(channel, handler);
+    }),
+  } as unknown as IpcMain;
+  registerRuntimeProviderManagementIpc(
+    ipcMain,
+    createRuntimeProviderManagementFeature({
+      port: new AgentTeamsRuntimeProviderManagementCliClient(),
+    })
+  );
+
+  const invokedChannels: string[] = [];
+  const ipcRenderer = {
+    invoke: vi.fn(async (channel: string, ...args: unknown[]) => {
+      invokedChannels.push(channel);
+      const handler = handlers.get(channel);
+      if (!handler) {
+        throw new Error(`No fake IPC handler registered for ${channel}`);
+      }
+      return handler({}, ...args);
+    }),
+  } as unknown as IpcRenderer;
+
+  return {
+    bridge: createRuntimeProviderManagementBridge(ipcRenderer),
+    invokedChannels,
+  };
+}
 
 async function realContractHarness(scenario: string, publicationFailure?: Error) {
   const fake = await createFake(scenario);
