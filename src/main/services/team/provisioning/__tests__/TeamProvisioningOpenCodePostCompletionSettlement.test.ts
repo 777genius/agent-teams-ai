@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX } from '../TeamProvisioningOpenCodeInboxCoalescePolicy';
 import {
   findFinalUserMessage,
   hasBoardMovedSinceSettlement,
@@ -427,6 +428,46 @@ describe('settleOpenCodePostCompletionNotices', () => {
     expect(outcome.kind === 'catch_up' && outcome.diagnostic).toContain(
       'board moved, delivering anchor as catch-up'
     );
+  });
+
+  it('never absorbs the board completion notice, as anchor or as follower', async () => {
+    const boardComplete = notice({
+      messageId: `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:de5126de`,
+      from: 'system',
+      source: 'system_notification',
+      text: 'Every task on the board is completed.',
+      timestamp: '2026-01-01T10:00:12.000Z',
+    });
+    const anchorMarkRead = vi.fn().mockResolvedValue(undefined);
+
+    // As the anchor: the settled team does not swallow it.
+    await expect(
+      settleOpenCodePostCompletionNotices({
+        unread: [boardComplete],
+        index: 0,
+        anchorReplyRecipient: 'system',
+        anchorHasLedgerRecord: false,
+        ports: createSettlementPorts({ markRead: anchorMarkRead }),
+      })
+    ).resolves.toEqual({ kind: 'deliver' });
+    expect(anchorMarkRead).not.toHaveBeenCalled();
+
+    // Behind an ordinary notice: the commit stops in front of it, so it becomes
+    // the anchor of the next pass instead of being marked read unseen.
+    const anchor = notice();
+    const trailing = notice({ messageId: 'notice-3', timestamp: '2026-01-01T10:00:13.000Z' });
+    const followerMarkRead = vi.fn().mockResolvedValue(undefined);
+
+    const outcome = await settleOpenCodePostCompletionNotices({
+      unread: [anchor, boardComplete, trailing],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      anchorHasLedgerRecord: false,
+      ports: createSettlementPorts({ markRead: followerMarkRead }),
+    });
+
+    expect(followerMarkRead).toHaveBeenCalledWith([anchor]);
+    expect(outcome).toMatchObject({ kind: 'read_committed', messages: [anchor] });
   });
 
   it('leaves the notices unread and delivers normally when the read-commit fails', async () => {

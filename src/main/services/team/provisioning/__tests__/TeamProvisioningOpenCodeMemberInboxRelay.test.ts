@@ -5,6 +5,7 @@ import {
   INBOX_RELAY_IN_FLIGHT_LEASE_MS,
   INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS,
 } from '../TeamProvisioningInboxRelayCandidates';
+import { OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX } from '../TeamProvisioningOpenCodeInboxCoalescePolicy';
 import {
   commitOpenCodeInboxRelayReadAfterDelivery,
   handleOpenCodeInboxAttachmentFailure,
@@ -1186,6 +1187,59 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     );
 
     expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ attempted: 1, delivered: 1 });
+    expect(result.diagnostics ?? []).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_post_completion_read_commit'),
+      ])
+    );
+  });
+
+  it('delivers the board completion notice to the lead even while the team is settled', async () => {
+    const teammateReport = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done.',
+      timestamp: '2026-01-01T10:00:10.000Z',
+    });
+    const boardComplete = message({
+      messageId: `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:de5126de`,
+      from: 'system',
+      source: 'system_notification',
+      text: 'Every task on the board is completed.',
+      timestamp: '2026-01-01T10:00:12.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { messageId?: string }) =>
+        Promise.resolve({ delivered: true, accepted: true, responsePending: false })
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(
+            target === 'user' ? [settledFinalUserMessage()] : [teammateReport, boardComplete]
+          )
+        ) as never,
+        readTaskRefInferenceTasks: vi.fn().mockResolvedValue([settledBoardTask()]),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    // The board notice is the trigger for the lead's closing message, so it
+    // costs its own turn instead of being absorbed with the teammate report
+    // queued beside it - which is what a settled read-commit would have done.
+    expect(deliverOpenCodeMemberMessage.mock.calls.map(([, sent]) => sent.messageId)).toEqual([
+      `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:de5126de`,
+    ]);
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [boardComplete]);
+    expect(markInboxMessagesRead).not.toHaveBeenCalledWith('team', 'team-lead', [
+      boardComplete,
+      teammateReport,
+    ]);
     expect(result).toMatchObject({ attempted: 1, delivered: 1 });
     expect(result.diagnostics ?? []).not.toEqual(
       expect.arrayContaining([
