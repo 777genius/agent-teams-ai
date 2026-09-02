@@ -271,10 +271,35 @@ async function memberWorkSyncStatus(context, flags = {}) {
   );
 }
 
+/**
+ * The report token (issued by member_work_sync_status) carries the member it
+ * was minted for: `wrs:v1.<base64url payload>.<signature>`. A caller that
+ * copies the token but drops memberName made every report fail with "Unknown
+ * member work sync report member: ." and sent the caller into a retry loop.
+ * The payload is read only as a fallback identity hint; the app still verifies
+ * the signature and the member/agenda binding.
+ */
+function memberNameFromReportToken(token) {
+  if (typeof token !== 'string') return '';
+  const parts = token.trim().split('.');
+  if (parts.length < 2 || parts[0] !== 'wrs:v1') return '';
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    return payload && typeof payload.memberName === 'string' ? payload.memberName.trim() : '';
+  } catch {
+    return '';
+  }
+}
+
 async function memberWorkSyncReport(context, flags = {}) {
+  const explicitMemberName =
+    (typeof flags.memberName === 'string' && flags.memberName.trim()) ||
+    (typeof flags.member === 'string' && flags.member.trim()) ||
+    (typeof flags.from === 'string' && flags.from.trim()) ||
+    '';
   const memberName = runtimeHelpers.assertExplicitTeamMemberName(
     context.paths,
-    flags.memberName || flags.member || flags.from,
+    explicitMemberName || memberNameFromReportToken(flags.reportToken || flags['report-token']),
     'member work sync report member'
   );
   const body = compactReportBody(context, memberName, flags);
@@ -305,6 +330,7 @@ async function memberWorkSyncReport(context, flags = {}) {
 }
 
 module.exports = {
+  memberNameFromReportToken,
   memberWorkSyncStatus,
   memberWorkSyncReport,
 };
