@@ -10,20 +10,23 @@ import {
   normalizeTaskChangePresenceFilePath,
 } from './taskChangePresenceUtils';
 import {
+  getPendingUnknownSessionIds,
+  markPendingRefreshAttempt,
+  rememberPendingUnknownSession,
+  removeConfirmedPendingSessions,
+} from './teamLogSourcePendingSessions';
+import { shouldIgnoreLogSourceWatcherPath } from './teamLogSourceWatcherIgnore';
+import {
   BOARD_TASK_CHANGE_FRESHNESS_DIRNAME,
-  BOARD_TASK_CHANGES_DIRNAME,
   BOARD_TASK_LOG_FRESHNESS_DIRNAME,
   BOARD_TASK_LOG_FRESHNESS_FILE_SUFFIX,
   classifyLogSourceWatcherEvent,
-  getRelativeLogSourceParts,
   isAgentTranscriptFileName,
-  MAX_PENDING_UNKNOWN_ROOT_REFRESH_ATTEMPTS,
-  MAX_PENDING_UNKNOWN_ROOT_SESSIONS,
   normalizeLogSourceSessionId,
-  PENDING_UNKNOWN_ROOT_SESSION_TTL_MS,
   TEAM_TASK_LOG_FRESHNESS_DIRNAME,
 } from './teamLogSourceWatchScope';
 
+import type { PendingUnknownSessionCandidate } from './teamLogSourcePendingSessions';
 import type { TeamLogSourceLiveContext, TeamMemberLogsFinder } from './TeamMemberLogsFinder';
 import type { TeamChangeEvent } from '@shared/types';
 import type { FSWatcher } from 'chokidar';
@@ -63,12 +66,6 @@ interface TrackingState {
   ensureIdleReleaseTimer: ReturnType<typeof setTimeout> | null;
 }
 
-interface PendingUnknownSessionCandidate {
-  sessionId: string;
-  expiresAt: number;
-  refreshAttempts: number;
-}
-
 type DecodedFreshnessTaskId =
   | { kind: 'task-id'; taskId: string }
   | { kind: 'opaque-safe-segment' }
@@ -105,60 +102,6 @@ function pathsOverlap(left: string, right: string): boolean {
     !rightToLeft ||
     (!rightToLeft.startsWith('..') && !path.isAbsolute(rightToLeft))
   );
-}
-
-export function shouldIgnoreLogSourceWatcherPath(
-  projectDir: string,
-  watchedPath: string,
-  scope?: {
-    scopedSessionIds?: ReadonlySet<string>;
-    pendingRootSessionIds?: ReadonlySet<string>;
-  }
-): boolean {
-  const parts = getRelativeLogSourceParts(projectDir, watchedPath);
-  if (!parts) {
-    return false;
-  }
-
-  const first = parts[0];
-  if (first === BOARD_TASK_CHANGES_DIRNAME) return true;
-  if (parts.includes('tool-results')) return true;
-  if (parts.includes('memory')) return true;
-  if (first === BOARD_TASK_LOG_FRESHNESS_DIRNAME) return false;
-  if (first === BOARD_TASK_CHANGE_FRESHNESS_DIRNAME) return false;
-
-  const scopedSessionIds = scope?.scopedSessionIds;
-  if (scopedSessionIds) {
-    if (parts.length === 1) {
-      if (first.endsWith('.jsonl')) {
-        const sessionId = normalizeLogSourceSessionId(first.slice(0, -'.jsonl'.length));
-        return (
-          !sessionId ||
-          (!scopedSessionIds.has(sessionId) && !scope?.pendingRootSessionIds?.has(sessionId))
-        );
-      }
-      return !scopedSessionIds.has(first);
-    }
-
-    if (!scopedSessionIds.has(first)) {
-      return true;
-    }
-
-    if (parts[1] === 'subagents') {
-      if (parts.length === 2) return false;
-      if (parts.length === 3) return !isAgentTranscriptFileName(parts[2]);
-    }
-
-    return true;
-  }
-
-  if (parts.length >= 2 && parts[1] === 'subagents') {
-    if (parts.length === 2) return false;
-    if (parts.length === 3) return !isAgentTranscriptFileName(parts[2]);
-    return true;
-  }
-
-  return false;
 }
 
 export class TeamLogSourceTracker {
@@ -478,7 +421,7 @@ export class TeamLogSourceTracker {
     const { targets, scopedSessionIds } = await this.buildScopedWatchTargets(
       context.projectDir,
       context.watchSessionIds,
-      this.getPendingUnknownSessionIds(state),
+      getPendingUnknownSessionIds(state),
       taskFreshnessDirs
     );
     if (!this.isTrackingCurrent(teamName, expectedVersion)) {
@@ -501,7 +444,7 @@ export class TeamLogSourceTracker {
         }
         return shouldIgnoreLogSourceWatcherPath(context.projectDir, watchedPath, {
           scopedSessionIds,
-          pendingRootSessionIds: new Set(this.getPendingUnknownSessionIds(state)),
+          pendingRootSessionIds: new Set(getPendingUnknownSessionIds(state)),
         });
       },
       awaitWriteFinish: {
@@ -683,67 +626,6 @@ export class TeamLogSourceTracker {
     }
   }
 
-  private getPendingUnknownSessionIds(state: TrackingState): string[] {
-    this.prunePendingUnknownSessions(state);
-    return [...state.pendingUnknownSessionIds.keys()];
-  }
-
-  private rememberPendingUnknownSession(
-    state: TrackingState,
-    rawSessionId: string | undefined
-  ): void {
-    const sessionId = normalizeLogSourceSessionId(rawSessionId);
-    if (!sessionId || state.scopedSessionIds.has(sessionId)) {
-      return;
-    }
-
-    const now = Date.now();
-    state.pendingUnknownSessionIds.set(sessionId, {
-      sessionId,
-      expiresAt: now + PENDING_UNKNOWN_ROOT_SESSION_TTL_MS,
-      refreshAttempts: state.pendingUnknownSessionIds.get(sessionId)?.refreshAttempts ?? 0,
-    });
-
-    while (state.pendingUnknownSessionIds.size > MAX_PENDING_UNKNOWN_ROOT_SESSIONS) {
-      const oldest = [...state.pendingUnknownSessionIds.values()].sort(
-        (left, right) => left.expiresAt - right.expiresAt
-      )[0];
-      if (!oldest) break;
-      state.pendingUnknownSessionIds.delete(oldest.sessionId);
-    }
-  }
-
-  private prunePendingUnknownSessions(state: TrackingState): void {
-    const now = Date.now();
-    for (const [sessionId, candidate] of state.pendingUnknownSessionIds.entries()) {
-      if (
-        candidate.expiresAt <= now ||
-        candidate.refreshAttempts >= MAX_PENDING_UNKNOWN_ROOT_REFRESH_ATTEMPTS
-      ) {
-        state.pendingUnknownSessionIds.delete(sessionId);
-      }
-    }
-  }
-
-  private markPendingRefreshAttempt(state: TrackingState): void {
-    for (const candidate of state.pendingUnknownSessionIds.values()) {
-      candidate.refreshAttempts += 1;
-    }
-    this.prunePendingUnknownSessions(state);
-  }
-
-  private removeConfirmedPendingSessions(
-    state: TrackingState,
-    confirmedSessionIds: readonly string[]
-  ): void {
-    for (const rawSessionId of confirmedSessionIds) {
-      const sessionId = normalizeLogSourceSessionId(rawSessionId);
-      if (sessionId) {
-        state.pendingUnknownSessionIds.delete(sessionId);
-      }
-    }
-  }
-
   private scheduleScopedRecompute(teamName: string): void {
     const current = this.stateByTeam.get(teamName);
     if (!current || this.getActiveConsumerCount(current) === 0) {
@@ -767,7 +649,7 @@ export class TeamLogSourceTracker {
     if (!state || this.getActiveConsumerCount(state) === 0) {
       return;
     }
-    this.rememberPendingUnknownSession(state, candidateSessionId);
+    rememberPendingUnknownSession(state, candidateSessionId);
     if (state.contextRefreshTimer) {
       return;
     }
@@ -785,7 +667,7 @@ export class TeamLogSourceTracker {
     if (!state || !this.isTrackingCurrent(teamName, expectedVersion)) {
       return;
     }
-    this.markPendingRefreshAttempt(state);
+    markPendingRefreshAttempt(state);
 
     const previousGeneration = state.snapshot.logSourceGeneration;
     const context = await this.logsFinder.getLiveLogSourceWatchContext(teamName, {
@@ -803,7 +685,7 @@ export class TeamLogSourceTracker {
       return;
     }
 
-    this.removeConfirmedPendingSessions(state, context.watchSessionIds);
+    removeConfirmedPendingSessions(state, context.watchSessionIds);
     state.snapshot = await this.computeSnapshot(context);
     if (!this.isTrackingCurrent(teamName, expectedVersion)) {
       return;
