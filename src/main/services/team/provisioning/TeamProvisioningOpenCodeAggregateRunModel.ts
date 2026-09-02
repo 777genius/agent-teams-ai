@@ -116,7 +116,10 @@ export function createOpenCodeAggregateProvisioningRun(
     lastProvisioningTraceKey: null,
     provisioningOutputIndexByMessageId: new Map(),
     detectedSessionId: null,
-    leadActivityState: 'active' as const,
+    // Seed idle: the aggregate run has no stream turn loop, so lead activity is
+    // driven by prompt-delivery events; seeding 'active' would swallow the first
+    // 'active' transition (setLeadActivity is a pure state-change emitter).
+    leadActivityState: 'idle' as const,
     authFailureRetried: false,
     authRetryInProgress: false,
     leadContextUsage: null,
