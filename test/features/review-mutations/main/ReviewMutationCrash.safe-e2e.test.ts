@@ -76,11 +76,17 @@ async function runWorker(
   });
 }
 
-// The worker kills itself with SIGKILL and the harness asserts exit code 137 /
-// signal SIGKILL; Windows has no POSIX signals, so this matrix is POSIX-only.
-const describePosix = process.platform === 'win32' ? describe.skip : describe;
+function expectAbruptTermination(result: WorkerResult): void {
+  if (process.platform === 'win32') {
+    // The Windows fixture uses TerminateProcess via taskkill. Node reports
+    // that child death with a non-zero exit code (and no POSIX signal).
+    expect(result.signal === null && result.code !== 0, result.stderr).toBe(true);
+    return;
+  }
+  expect(result.signal === 'SIGKILL' || result.code === 137, result.stderr).toBe(true);
+}
 
-describePosix('review mutation crash recovery process E2E', () => {
+describe('review mutation crash recovery process E2E', () => {
   afterEach(async () => {
     await Promise.all(
       temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true }))
@@ -96,7 +102,7 @@ describePosix('review mutation crash recovery process E2E', () => {
     'decisions_committed',
     'complete',
   ] as const)(
-    'recovers exact disk, history revision, and WAL state after SIGKILL at %s',
+    'recovers exact disk, history revision, and WAL state after abrupt worker termination at %s',
     async (crashPoint) => {
       const root = await mkdtemp(path.join(tmpdir(), `review-crash-${crashPoint}-`));
       temporaryRoots.push(root);
@@ -108,7 +114,7 @@ describePosix('review mutation crash recovery process E2E', () => {
       await writeFile(filePath, 'before\n', 'utf8');
 
       const crashed = await runWorker('run', claudeBasePath, filePath, auditPath, crashPoint);
-      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      expectAbruptTermination(crashed);
 
       const recovered = await runWorker('recover', claudeBasePath, filePath, auditPath, 'none');
       expect(recovered.code, recovered.stderr).toBe(0);
@@ -140,7 +146,7 @@ describePosix('review mutation crash recovery process E2E', () => {
     'decisions_committed',
     'complete',
   ] as const)(
-    'recovers a history restore after SIGKILL at %s',
+    'recovers a history restore after abrupt worker termination at %s',
     async (crashPoint) => {
       const root = await mkdtemp(path.join(tmpdir(), `review-history-restore-${crashPoint}-`));
       temporaryRoots.push(root);
@@ -159,7 +165,7 @@ describePosix('review mutation crash recovery process E2E', () => {
         crashPoint,
         'history-restore'
       );
-      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      expectAbruptTermination(crashed);
 
       const recovered = await runWorker(
         'recover',
@@ -198,7 +204,7 @@ describePosix('review mutation crash recovery process E2E', () => {
     await writeFile(filePath, 'before\n', 'utf8');
 
     const crashed = await runWorker('run', claudeBasePath, filePath, auditPath, 'disk_applied');
-    expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+    expectAbruptTermination(crashed);
     await writeFile(filePath, 'external-after-crash\n', 'utf8');
 
     const refused = await runWorker('recover', claudeBasePath, filePath, auditPath, 'none');
@@ -223,7 +229,7 @@ describePosix('review mutation crash recovery process E2E', () => {
     'decisions_committed',
     'complete',
   ] as const)(
-    'recovers disk Redo and both history branches after SIGKILL at %s',
+    'recovers disk Redo and both history branches after abrupt worker termination at %s',
     async (crashPoint) => {
       const root = await mkdtemp(path.join(tmpdir(), `review-disk-redo-crash-${crashPoint}-`));
       temporaryRoots.push(root);
@@ -242,7 +248,7 @@ describePosix('review mutation crash recovery process E2E', () => {
         crashPoint,
         'disk-redo'
       );
-      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      expectAbruptTermination(crashed);
 
       const recovered = await runWorker(
         'recover',
@@ -315,7 +321,7 @@ describePosix('review mutation crash recovery process E2E', () => {
     'decisions_committed',
     'complete',
   ] as const)(
-    'recovers decision-only Redo after SIGKILL at %s',
+    'recovers decision-only Redo after abrupt worker termination at %s',
     async (crashPoint) => {
       const root = await mkdtemp(path.join(tmpdir(), `review-redo-crash-${crashPoint}-`));
       temporaryRoots.push(root);
@@ -334,7 +340,7 @@ describePosix('review mutation crash recovery process E2E', () => {
         crashPoint,
         'decision-only-redo'
       );
-      expect(crashed.signal === 'SIGKILL' || crashed.code === 137, crashed.stderr).toBe(true);
+      expectAbruptTermination(crashed);
 
       const recovered = await runWorker(
         'recover',

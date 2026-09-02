@@ -1,3 +1,4 @@
+import { spawnSync } from 'child_process';
 import { readFile } from 'fs/promises';
 
 import { ReviewMutationCoordinator } from '../../src/features/review-mutations/main';
@@ -123,6 +124,22 @@ async function updateAudit(update: (current: AuditState) => AuditState): Promise
 }
 
 function crashNow(): never {
+  if (process.platform === 'win32') {
+    // Windows has no POSIX SIGKILL delivery. TerminateProcess via taskkill is
+    // the equivalent abrupt child death and leaves the journal at its last
+    // durable checkpoint for the recovery process to resume.
+    const terminated = spawnSync(
+      'taskkill',
+      ['/PID', String(process.pid), '/T', '/F'],
+      { stdio: 'ignore', windowsHide: true }
+    );
+    if (terminated.error || terminated.status !== 0) {
+      // Keep the fixture fail-stop if taskkill is unavailable on a stripped
+      // Windows runner; the parent still observes a non-zero abrupt exit.
+      process.exit(137);
+    }
+    throw new Error('TerminateProcess did not terminate the crash worker');
+  }
   process.kill(process.pid, 'SIGKILL');
   throw new Error('SIGKILL did not terminate the crash worker');
 }
