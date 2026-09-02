@@ -776,6 +776,10 @@ jobs:
           POSTHOG_HOST: https://eu.i.posthog.com
         run: node ./scripts/ci/verify-posthog-release.cjs postbuild
 
+      - name: Stage OpenCode console wrapper (Windows ${{ matrix.arch }})
+        shell: pwsh
+        run: node ./scripts/stage-opencode-console-wrapper.mjs --platform ${{ matrix.runtime_platform }} --require
+
       - name: Verify packaged inputs (Windows)
         shell: bash
         run: |
@@ -787,6 +791,7 @@ jobs:
           test -f resources/terminal-platform/VERSION
           test -f resources/terminal-platform/terminal-daemon.exe
           test -f resources/terminal-platform/terminal-platform-node/index.mjs
+          test -f resources/runtime/opencode-console/opencode.exe
 
       - name: Package (Windows ${{ matrix.arch }})
         env:
