@@ -119,6 +119,7 @@ class TestDiagnosticsPreflightCompatibilityFacade extends TeamProvisioningDiagno
   protected readonly memberSpawnStatusAuditPorts = {} as never;
   protected readonly runtimeSnapshotFacade = {
     getTeamAgentRuntimeSnapshot: vi.fn(),
+    getTeamAgentRuntimeSnapshotReadOnly: vi.fn(),
   };
   protected readonly runtimeSnapshotCacheBoundary = {
     getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),

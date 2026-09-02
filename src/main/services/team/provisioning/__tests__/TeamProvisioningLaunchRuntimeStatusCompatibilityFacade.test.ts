@@ -164,6 +164,9 @@ class TestLaunchRuntimeStatusFacade extends TeamProvisioningLaunchRuntimeStatusC
     getTeamAgentRuntimeSnapshot: vi.fn(
       async () => ({ teamName: 'alpha' }) as TeamAgentRuntimeSnapshot
     ),
+    getTeamAgentRuntimeSnapshotReadOnly: vi.fn(
+      async () => ({ teamName: 'alpha' }) as TeamAgentRuntimeSnapshot
+    ),
   };
   protected readonly reevaluateMemberLaunchStatusBoundary = {
     reevaluateMemberLaunchStatus: vi.fn(async () => undefined),
