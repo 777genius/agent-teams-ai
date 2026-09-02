@@ -1,4 +1,5 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { createLogger } from '@shared/utils/logger';
 import { randomUUID } from 'crypto';
 
 import {
@@ -26,6 +27,7 @@ import type {
   TeamRuntimeMemberSpec,
 } from '../runtime';
 import type { OpenCodeAggregateLaunchPromptPorts } from './TeamProvisioningOpenCodeAggregateLaunchPrompt';
+import type { OpenCodeSharedRuntimeFailureScope } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import type {
   MixedSecondaryRuntimeLaneState,
   SecondaryRuntimeRunEntry,
@@ -40,6 +42,8 @@ import type {
 } from '@shared/types';
 
 export type { OpenCodeAggregateProvisioningRun } from './TeamProvisioningOpenCodeAggregateRun';
+
+const logger = createLogger('Service:TeamProvisioning');
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -285,6 +289,10 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
 export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
   host: TeamProvisioningOpenCodeLaunchWiringHost<Run>
 ): TeamProvisioningOpenCodeLaunchWiring {
+  // One OpenCode host serves every launch of a project, so the shared-runtime
+  // records outlive a single team launch: a relaunch that hits the same timeout
+  // inside the TTL window must not spend a second retry.
+  const sharedRuntimeFailureScope: OpenCodeSharedRuntimeFailureScope = {};
   const launchFailureArtifacts = createOpenCodeLaunchFailureArtifactAdapter({
     getRuntimeAdapterTraceLines: (runId) =>
       host.runtimeAdapterProgressState.getRuntimeAdapterTraceLines(runId),
@@ -390,6 +398,9 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
         {
           randomUUID,
           nowIso,
+          nowMs: () => Date.now(),
+          sharedRuntimeFailureScope,
+          logWarning: (message) => logger.warn(message),
           getStopAllTeamsGeneration: () => host.getStopAllTeamsGeneration(),
           getRuntimeAdapterRun: (teamName) => host.runtimeAdapterRunByTeam.get(teamName),
           stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>

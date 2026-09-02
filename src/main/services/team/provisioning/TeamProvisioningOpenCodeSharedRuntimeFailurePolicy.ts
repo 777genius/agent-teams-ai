@@ -1,5 +1,6 @@
 import { isAutoRetryableOpenCodePreLaunchGate } from '../runtime/OpenCodeLaunchGateResult';
 
+import { sleep } from './TeamProvisioningAsyncUtils';
 import { selectOpenCodeSharedRuntimePreflightFailureDiagnostic } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 
 import type { TeamRuntimeLaunchResult } from '../runtime/TeamRuntimeAdapter';
@@ -115,4 +116,59 @@ export function shouldRetryTransientOpenCodeSharedRuntimeFailure(
   }
   const rootCause = selectOpenCodeSharedRuntimePreflightFailureDiagnostic(result);
   return rootCause !== null && isTransientOpenCodeSharedRuntimeFailure(rootCause);
+}
+
+export interface OpenCodePrimaryTransientSharedRuntimeRetryPorts {
+  nowMs(): number;
+  logWarning(message: string): void;
+  /** False once this launch lost authority: cancelled, or superseded by a newer run. */
+  hasLaunchAuthority(): boolean;
+}
+
+/**
+ * The primary launch has no later lane that could re-attempt the shared runtime
+ * on its behalf: one timeout-class preflight failure fails the whole team at
+ * the readiness gate with every member marked failed_to_start. Grant it what a
+ * secondary lane already gets - one in-place relaunch after the same backoff,
+ * only for the timeout class and only while the pre-launch gate marker is
+ * present - and record the same TTL-scoped failure, so a second timeout inside
+ * the window fails normally instead of retrying forever.
+ */
+export async function launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
+  params: {
+    teamName: string;
+    cwd: string;
+    scope: OpenCodeSharedRuntimeFailureScope;
+    launch: () => Promise<TeamRuntimeLaunchResult>;
+  },
+  ports: OpenCodePrimaryTransientSharedRuntimeRetryPorts
+): Promise<TeamRuntimeLaunchResult> {
+  const result = await params.launch();
+  if (!shouldRetryTransientOpenCodeSharedRuntimeFailure(result)) {
+    trackOpenCodeSharedRuntimeFailureFromResult(params.scope, params.cwd, result, ports.nowMs());
+    return result;
+  }
+  // A record that still blocks proves an earlier attempt already spent this
+  // project's retry inside the TTL window (or failed for a non-transient
+  // reason), so this failure is reported as it stands.
+  const blockingFailure = takeBlockingOpenCodeSharedRuntimeFailure(
+    params.scope,
+    params.cwd,
+    ports.nowMs()
+  );
+  trackOpenCodeSharedRuntimeFailureFromResult(params.scope, params.cwd, result, ports.nowMs());
+  if (blockingFailure !== null || !ports.hasLaunchAuthority()) {
+    return result;
+  }
+  ports.logWarning(
+    `[${params.teamName}] OpenCode primary launch hit a transient shared runtime timeout; retrying once in ${OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS}ms`
+  );
+  await sleep(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+  // The backoff is a window in which a stop or a newer run can take the team.
+  if (!ports.hasLaunchAuthority()) {
+    return result;
+  }
+  const retryResult = await params.launch();
+  trackOpenCodeSharedRuntimeFailureFromResult(params.scope, params.cwd, retryResult, ports.nowMs());
+  return retryResult;
 }

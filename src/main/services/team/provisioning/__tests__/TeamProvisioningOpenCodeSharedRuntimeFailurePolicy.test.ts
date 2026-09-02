@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   isTransientOpenCodeSharedRuntimeFailure,
+  launchOpenCodePrimaryWithTransientSharedRuntimeRetry,
   OPENCODE_TRANSIENT_SHARED_RUNTIME_FAILURE_TTL_MS,
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS,
   type OpenCodeSharedRuntimeFailureScope,
   shouldRetryTransientOpenCodeSharedRuntimeFailure,
   takeBlockingOpenCodeSharedRuntimeFailure,
@@ -194,5 +196,101 @@ describe('TeamProvisioningOpenCodeSharedRuntimeFailurePolicy', () => {
       )
     ).toBe(false);
     expect(shouldRetryTransientOpenCodeSharedRuntimeFailure(null)).toBe(false);
+  });
+
+  describe('launchOpenCodePrimaryWithTransientSharedRuntimeRetry', () => {
+    function retryPorts(overrides: { hasLaunchAuthority?: () => boolean } = {}) {
+      return {
+        nowMs: () => 1_000,
+        logWarning: vi.fn<(message: string) => void>(),
+        hasLaunchAuthority: overrides.hasLaunchAuthority ?? ((): boolean => true),
+      };
+    }
+
+    it('relaunches once for a gated timeout and returns the healthy retry result', async () => {
+      vi.useFakeTimers();
+      try {
+        const scope: OpenCodeSharedRuntimeFailureScope = {};
+        const launch = vi
+          .fn<() => Promise<TeamRuntimeLaunchResult>>()
+          .mockResolvedValueOnce(
+            failureResult({ message: MODELS_QUERY_TIMEOUT, preLaunchGate: retryableGate })
+          )
+          .mockResolvedValueOnce(healthyResult);
+        const ports = retryPorts();
+
+        const pending = launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
+          { teamName: 'team-a', cwd: '/repo', scope, launch },
+          ports
+        );
+        await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+
+        await expect(pending).resolves.toBe(healthyResult);
+        expect(launch).toHaveBeenCalledTimes(2);
+        expect(ports.logWarning).toHaveBeenCalledTimes(1);
+        expect(scope.mixedSecondarySharedRuntimeFailuresByProject?.size).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not relaunch a timeout without the pre-launch gate marker', async () => {
+      const scope: OpenCodeSharedRuntimeFailureScope = {};
+      const failure = failureResult({ message: MODELS_QUERY_TIMEOUT });
+      const launch = vi.fn<() => Promise<TeamRuntimeLaunchResult>>().mockResolvedValue(failure);
+      const ports = retryPorts();
+
+      await expect(
+        launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
+          { teamName: 'team-a', cwd: '/repo', scope, launch },
+          ports
+        )
+      ).resolves.toBe(failure);
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(ports.logWarning).not.toHaveBeenCalled();
+    });
+
+    it('does not relaunch while a record for the project still blocks', async () => {
+      const scope: OpenCodeSharedRuntimeFailureScope = {};
+      trackOpenCodeSharedRuntimeFailureFromResult(
+        scope,
+        '/repo',
+        failureResult({ message: MODELS_QUERY_TIMEOUT }),
+        1_000
+      );
+      const failure = failureResult({
+        message: MODELS_QUERY_TIMEOUT,
+        preLaunchGate: retryableGate,
+      });
+      const launch = vi.fn<() => Promise<TeamRuntimeLaunchResult>>().mockResolvedValue(failure);
+      const ports = retryPorts();
+
+      await expect(
+        launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
+          { teamName: 'team-a', cwd: '/repo', scope, launch },
+          ports
+        )
+      ).resolves.toBe(failure);
+      expect(launch).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not relaunch once the launch has lost authority', async () => {
+      const scope: OpenCodeSharedRuntimeFailureScope = {};
+      const failure = failureResult({
+        message: MODELS_QUERY_TIMEOUT,
+        preLaunchGate: retryableGate,
+      });
+      const launch = vi.fn<() => Promise<TeamRuntimeLaunchResult>>().mockResolvedValue(failure);
+      const ports = retryPorts({ hasLaunchAuthority: () => false });
+
+      await expect(
+        launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
+          { teamName: 'team-a', cwd: '/repo', scope, launch },
+          ports
+        )
+      ).resolves.toBe(failure);
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(ports.logWarning).not.toHaveBeenCalled();
+    });
   });
 });
