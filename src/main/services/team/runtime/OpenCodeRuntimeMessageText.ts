@@ -1,4 +1,7 @@
-import { OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
+import {
+  classifyOpenCodeDeliveryReplyContract,
+  OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT,
+} from '../opencode/delivery/OpenCodeDeliveryReplyContract';
 
 import type { OpenCodeTeamRuntimeMessageInput } from './OpenCodeTeamRuntimeAdapter';
 
@@ -28,8 +31,12 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
   }
 
   const requestedReplyRecipient = input.replyRecipient?.trim() ?? '';
-  const isInformationalNotice =
-    requestedReplyRecipient.toLowerCase() === OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT;
+  const replyContract = classifyOpenCodeDeliveryReplyContract(requestedReplyRecipient);
+  const isInformationalNotice = replyContract === 'informational';
+  // A teammate (not the lead, not the user) sent this message: by team
+  // contract that is a status report. Replies are optional; mandatory replies
+  // produced "received"/"standing by" ping-pong between teammates.
+  const isTeammateReport = replyContract === 'teammate_report';
   const replyRecipient =
     requestedReplyRecipient && !isInformationalNotice ? requestedReplyRecipient : 'user';
   const deliveryContext =
@@ -108,27 +115,37 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
               input.messageId ? `, relayOfMessageId="${input.messageId}"` : ''
             }, plus concrete text and summary.`,
             'Do not send acknowledgement, confirmation, or received-style messages to anyone for this notice.',
+            'Dependency-resolved, task-started, task-completed, and task-comment notices are automated: the app has already notified the task owner. Do NOT forward them, do NOT message the owner to start, continue, or confirm, and do NOT re-assign the task because of them.',
             'If the notice concerns board tasks you own, act through the task tools (task_get, task_start, task_add_comment, task_complete) instead of messaging.',
             'Otherwise end the turn after reading with one short plain-text sentence stating what the notice was about and that no reply is needed. Do not end this turn empty.',
           ]
-        : [
-            'To make your reply visible in the app Messages UI, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send if that is the exposed name).',
-            `Use teamName="${input.teamName}", to="${replyRecipient}", from="${input.memberName}", text, and summary.`,
-            `Required message_send argument envelope: ${requiredMessageEnvelope}. Copy every value exactly, then add non-empty text and summary fields.`,
-            'Before calling message_send, verify that teamName, to, from, text, and summary are all present and are strings.',
-            'Include source="runtime_delivery" in that message_send call.',
-            input.messageId
-              ? `Include relayOfMessageId="${input.messageId}" in that message_send call.`
-              : null,
-            input.taskRefs?.length
-              ? `If taskRefs are present in <opencode_delivery_context>, include taskRefs exactly as provided in that message_send call: ${JSON.stringify(input.taskRefs)}.`
-              : null,
-            'If message_send reports parameter validation failure, correct the missing or invalid arguments from the required envelope and retry exactly once. Do not explain the validation error as the final reply.',
-            'If message_send returns an unavailable, not connected, or missing-tool error, write the exact concise reply as plain assistant text once, then stop.',
-            'After the message_send tool call succeeds, stop immediately. Do not send follow-up confirmations or repeat the same answer.',
-            'You must not end this turn empty.',
-            'Do not answer only with plain assistant text when agent-teams_message_send is available.',
-          ];
+        : isTeammateReport
+          ? [
+              `This delivered app message is a status report from your teammate "${replyRecipient}" (task done/started/progress, or an acknowledgement). It is informational: no reply is expected.`,
+              `Do NOT reply by default. Never send acknowledgement, confirmation, thanks, "received", "noted", "standing by", "no further work", or status-recap messages to "${replyRecipient}" or anyone else for this report: every message you send costs the recipient a full model turn and it will answer back, creating an endless loop.`,
+              'The task board already reflects what the report says (task tools update it directly). Do not forward the report, do not re-assign the task, and do not tell the owner or the next owner to start, continue, or confirm: the app notifies task owners automatically when their work is unblocked or assigned.',
+              `Reply ONLY if the report asks you a direct question, requests a decision or hand-off, or describes a blocker that only you can clear. In that case call agent-teams_message_send exactly once with the envelope ${requiredMessageEnvelope} plus concrete text and summary, then stop.`,
+              `If, after this report, the work the user originally requested is verifiably complete on the board (every task terminal, required deliverables present) and you have not yet told the user, send the user exactly one final message with teamName="${input.teamName}", to="user", from="${input.memberName}", source="runtime_delivery", text, and summary. Never repeat a final message you already sent.`,
+              'Otherwise end the turn with one short plain-text sentence stating what the report was about and that no reply is needed. Do not end this turn empty.',
+            ]
+          : [
+              'To make your reply visible in the app Messages UI, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send if that is the exposed name).',
+              `Use teamName="${input.teamName}", to="${replyRecipient}", from="${input.memberName}", text, and summary.`,
+              `Required message_send argument envelope: ${requiredMessageEnvelope}. Copy every value exactly, then add non-empty text and summary fields.`,
+              'Before calling message_send, verify that teamName, to, from, text, and summary are all present and are strings.',
+              'Include source="runtime_delivery" in that message_send call.',
+              input.messageId
+                ? `Include relayOfMessageId="${input.messageId}" in that message_send call.`
+                : null,
+              input.taskRefs?.length
+                ? `If taskRefs are present in <opencode_delivery_context>, include taskRefs exactly as provided in that message_send call: ${JSON.stringify(input.taskRefs)}.`
+                : null,
+              'If message_send reports parameter validation failure, correct the missing or invalid arguments from the required envelope and retry exactly once. Do not explain the validation error as the final reply.',
+              'If message_send returns an unavailable, not connected, or missing-tool error, write the exact concise reply as plain assistant text once, then stop.',
+              'After the message_send tool call succeeds, stop immediately. Do not send follow-up confirmations or repeat the same answer.',
+              'You must not end this turn empty.',
+              'Do not answer only with plain assistant text when agent-teams_message_send is available.',
+            ];
 
   return [
     '<opencode_app_message_delivery>',

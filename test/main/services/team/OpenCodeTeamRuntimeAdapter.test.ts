@@ -2037,7 +2037,7 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         cwd: '/repo',
         text: 'hello bob',
         messageId: 'msg-1',
-        replyRecipient: 'alice',
+        replyRecipient: 'team-lead',
         actionMode: 'delegate',
         forceSessionRefreshReason: 'opencode_app_mcp_transport_changed:old->new',
         taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
@@ -2068,9 +2068,11 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     });
     const sentText = sendOpenCodeTeamMessage.mock.calls[0]?.[0]?.text ?? '';
     expect(sentText).toContain('hello bob');
-    expect(sentText).toContain('Use teamName="team-a", to="alice", from="bob", text, and summary.');
     expect(sentText).toContain(
-      'Required message_send argument envelope: {"teamName":"team-a","to":"alice","from":"bob","source":"runtime_delivery","relayOfMessageId":"msg-1"'
+      'Use teamName="team-a", to="team-lead", from="bob", text, and summary.'
+    );
+    expect(sentText).toContain(
+      'Required message_send argument envelope: {"teamName":"team-a","to":"team-lead","from":"bob","source":"runtime_delivery","relayOfMessageId":"msg-1"'
     );
     expect(sentText).toContain(
       'If message_send reports parameter validation failure, correct the missing or invalid arguments'
@@ -2088,6 +2090,45 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).not.toContain('The inbound app messageId is');
     expect(sentText).toContain('Do not use SendMessage or runtime_deliver_message');
     expect(sentText).toContain('never use #00000000');
+  });
+
+  it('delivers teammate-originated messages with the reply-optional teammate report contract', async () => {
+    const sendOpenCodeTeamMessage = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
+    >(() =>
+      Promise.resolve({
+        accepted: true,
+        memberName: 'bob',
+        sessionId: 'oc-session-bob',
+        runtimePromptMessageId: 'msg_prompt_1',
+        diagnostics: [],
+      })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter({
+      sendOpenCodeTeamMessage,
+    } as unknown as OpenCodeTeamRuntimeBridgePort);
+
+    await adapter.sendMessageToMember({
+      runId: 'run-1',
+      teamName: 'team-a',
+      laneId: 'secondary:opencode:bob',
+      memberName: 'bob',
+      cwd: '/repo',
+      text: '#abcd1234 done. Review posted in task comment 1234abcd.',
+      messageId: 'msg-1',
+      replyRecipient: 'alice',
+      taskRefs: [{ taskId: 'task-1', displayId: 'abcd1234', teamName: 'team-a' }],
+    });
+
+    const sentText = sendOpenCodeTeamMessage.mock.calls[0]?.[0]?.text ?? '';
+    expect(sentText).toContain('status report from your teammate "alice"');
+    expect(sentText).toContain('Do NOT reply by default');
+    expect(sentText).toContain(
+      '{"teamName":"team-a","to":"alice","from":"bob","source":"runtime_delivery","relayOfMessageId":"msg-1"'
+    );
+    expect(sentText).not.toContain('Required message_send argument envelope');
+    expect(sentText).not.toContain('You must not end this turn empty.');
+    expect(sentText).toContain('Do not end this turn empty.');
   });
 
   it('uses observed settlement for member-work-sync nudges so turn-settled can drive reconcile', async () => {

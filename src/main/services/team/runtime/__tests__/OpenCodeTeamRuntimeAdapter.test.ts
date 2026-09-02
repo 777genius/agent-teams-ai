@@ -178,12 +178,34 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).not.toContain('You must not end this turn empty.');
   });
 
-  it('keeps the visible reply contract for addressable reply recipients', async () => {
-    const text = await deliveredPromptText('lead');
+  it('keeps the visible reply contract for lead reply recipients', async () => {
+    const text = await deliveredPromptText('team-lead');
 
     expect(text).toContain('Required message_send argument envelope');
-    expect(text).toContain('to="lead"');
+    expect(text).toContain('to="team-lead"');
     expect(text).not.toContain('informational system notice');
+    expect(text).not.toContain('status report from your teammate');
+  });
+
+  it('builds a reply-optional teammate report envelope for teammate reply recipients', async () => {
+    const text = await deliveredPromptText('alice');
+
+    expect(text).toContain('status report from your teammate "alice"');
+    expect(text).toContain('Do NOT reply by default');
+    expect(text).toContain('"no further work"');
+    expect(text).toContain('Reply ONLY if the report asks you a direct question');
+    expect(text).toContain('"to":"alice"');
+    expect(text).toContain('to="user"');
+    expect(text).not.toContain('Required message_send argument envelope');
+    expect(text).not.toContain('You must not end this turn empty.');
+    expect(text).not.toContain('informational system notice');
+  });
+
+  it('adds the automated-notice rule to informational envelopes (no owner nudges)', async () => {
+    const text = await deliveredPromptText('system');
+
+    expect(text).toContain('the app has already notified the task owner');
+    expect(text).toContain('do NOT message the owner to start, continue, or confirm');
   });
 
   it('defaults the reply contract to user when no recipient is provided', async () => {
