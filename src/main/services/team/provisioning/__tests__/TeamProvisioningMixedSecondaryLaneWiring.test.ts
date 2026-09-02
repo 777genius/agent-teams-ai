@@ -126,6 +126,7 @@ function createDeps(
     isCurrentTrackedRun: vi.fn(() => true),
     logger: {
       warn: vi.fn(),
+      info: vi.fn(),
     },
   };
 }
@@ -266,7 +267,7 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
   it('builds mixed secondary lane wiring deps from service-shaped dependencies', async () => {
     const service = createService();
     const has = vi.fn(() => true);
-    const logger = { warn: vi.fn() };
+    const logger = { warn: vi.fn(), info: vi.fn() };
     const host = {
       stoppingSecondaryRuntimeTeams: { has },
       appShellBoundary: {

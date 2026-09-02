@@ -412,7 +412,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
         provisioningRunByTeam: new Map(),
         invalidateRuntimeSnapshotCaches: vi.fn(),
         emitTeamChange: vi.fn(),
-        logger: { warn: vi.fn() },
+        logger: { warn: vi.fn(), info: vi.fn() },
         nowIso: () => '2026-01-01T00:00:02.000Z',
       };
       const ports = makePorts({

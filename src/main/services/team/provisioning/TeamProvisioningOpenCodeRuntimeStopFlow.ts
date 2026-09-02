@@ -19,6 +19,7 @@ import type {
 
 interface StopLogger {
   warn(message: string): void;
+  info(message: string): void;
 }
 
 interface RuntimeAdapterRunEntry {
@@ -203,6 +204,9 @@ export async function stopSingleMixedSecondaryRuntimeLane(
   }
 }
 
+/** Lane stops slower than this are logged at warn level: a stop this slow is a problem, not a timing. */
+export const SLOW_SECONDARY_LANE_STOP_WARN_MS = 10_000;
+
 export async function stopMixedSecondaryRuntimeLanes(
   teamName: string,
   ports: OpenCodeRuntimeStopFlowPorts
@@ -223,7 +227,16 @@ export async function stopMixedSecondaryRuntimeLanes(
       throw new Error('OpenCode runtime adapter is unavailable');
     }
     const stopFailures: Error[] = [];
-    for (const secondaryRun of secondaryRuns) {
+    const laneTimings: string[] = [];
+    const startedAtMs = Date.now();
+    // Every lane owns its own host and its own bridge lease, so the lanes stop
+    // concurrently. A sequential walk cost one orchestrator round trip per
+    // lane, which pushed a three-member team past the Stop budget every time
+    // and made the escalation the normal path instead of the exception.
+    const stopSecondaryLane = async (
+      secondaryRun: (typeof secondaryRuns)[number]
+    ): Promise<void> => {
+      const laneStartedAtMs = Date.now();
       try {
         const result = await adapter.stop({
           runId: secondaryRun.runId,
@@ -247,8 +260,10 @@ export async function stopMixedSecondaryRuntimeLanes(
             stopError.message
           }`
         );
-        continue;
+        laneTimings.push(`${secondaryRun.laneId}=${Date.now() - laneStartedAtMs}ms(failed)`);
+        return;
       }
+      laneTimings.push(`${secondaryRun.laneId}=${Date.now() - laneStartedAtMs}ms`);
 
       // adapter.stop is an ownership handoff point. A relaunch may replace
       // the same lane object while it is awaited, so both storage and map
@@ -263,7 +278,7 @@ export async function stopMixedSecondaryRuntimeLanes(
           );
           if (!cleared) {
             if (!isCurrentSecondaryRuntimeRun(teamName, secondaryRun, ports)) {
-              continue;
+              return;
             }
             throw new Error(
               `OpenCode secondary lane ${secondaryRun.laneId} ownership changed before stopped storage cleanup`
@@ -280,6 +295,14 @@ export async function stopMixedSecondaryRuntimeLanes(
           `[${teamName}] Failed to clean stopped OpenCode secondary lane ${secondaryRun.laneId}: ${cleanupError.message}`
         );
       }
+    };
+    await Promise.all(secondaryRuns.map((secondaryRun) => stopSecondaryLane(secondaryRun)));
+    const totalMs = Date.now() - startedAtMs;
+    const timingSummary = `${secondaryRuns.length} secondary lane(s) stopped in ${totalMs}ms [${laneTimings.join(', ')}]`;
+    if (totalMs >= SLOW_SECONDARY_LANE_STOP_WARN_MS) {
+      ports.logger.warn(`[${teamName}] Slow OpenCode stop: ${timingSummary}`);
+    } else {
+      ports.logger.info(`[${teamName}] ${timingSummary}`);
     }
     if (stopFailures.length > 0) {
       throw stopFailures[0];
@@ -316,6 +339,7 @@ export async function stopOpenCodeRuntimeAdapterTeam(
   ports.invalidateRuntimeSnapshotCaches(teamName);
   try {
     const previousLaunchState = await ports.readLaunchState(teamName);
+    const stopStartedAtMs = Date.now();
     const result = await adapter.stop({
       runId,
       laneId: 'primary',
@@ -326,6 +350,14 @@ export async function stopOpenCodeRuntimeAdapterTeam(
       previousLaunchState,
       force: true,
     });
+    const stopMs = Date.now() - stopStartedAtMs;
+    if (stopMs >= SLOW_SECONDARY_LANE_STOP_WARN_MS) {
+      ports.logger.warn(
+        `[${teamName}] Slow OpenCode stop: primary lane stop took ${stopMs}ms (stopped=${String(result.stopped)})`
+      );
+    } else {
+      ports.logger.info(`[${teamName}] OpenCode primary lane stop took ${stopMs}ms`);
+    }
     assertOpenCodeRuntimeStopSucceeded(result, 'OpenCode team did not confirm stop');
 
     if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {

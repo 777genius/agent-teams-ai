@@ -97,7 +97,7 @@ function makePorts(
   progressUpdates: TeamProvisioningProgress[];
   writeLaunchStateSnapshot: ReturnType<typeof vi.fn>;
   clearOpenCodeRuntimeToolApprovals: ReturnType<typeof vi.fn>;
-  logger: { warn: ReturnType<typeof vi.fn> };
+  logger: { warn: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn> };
 } {
   const runtimeAdapterRunByTeam = new Map([
     [
@@ -117,7 +117,7 @@ function makePorts(
   const progressUpdates: TeamProvisioningProgress[] = [];
   const emittedEvents: unknown[] = [];
   const nowIsoValues = [...(input.nowIsoValues ?? [])];
-  const logger = { warn: vi.fn() };
+  const logger = { warn: vi.fn(), info: vi.fn() };
 
   const defaultSecondaryRuns: SecondaryRuntimeRunEntry[] = [
     {
@@ -246,14 +246,14 @@ function makeSingleLaneStopPorts(
   } = {}
 ): SingleMixedSecondaryRuntimeLaneStopPorts & {
   clearCalls: { teamName: string; laneId: string; expectedRunId?: string }[];
-  logger: { warn: ReturnType<typeof vi.fn> };
+  logger: { warn: ReturnType<typeof vi.fn>; info: ReturnType<typeof vi.fn> };
   upsertOpenCodeRuntimeLaneIndexEntry: ReturnType<typeof vi.fn>;
   clearOpenCodeRuntimeLaneStorage: ReturnType<typeof vi.fn>;
   readLaunchState: ReturnType<typeof vi.fn>;
   deleteSecondaryRuntimeRun: ReturnType<typeof vi.fn>;
 } {
   const clearCalls: { teamName: string; laneId: string; expectedRunId?: string }[] = [];
-  const logger = { warn: vi.fn() };
+  const logger = { warn: vi.fn(), info: vi.fn() };
   return {
     teamsBasePath: '/teams',
     getOpenCodeRuntimeAdapter: vi.fn(() =>
@@ -598,6 +598,56 @@ describe('OpenCode runtime stop flow', () => {
     expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
     expect(ports.clearSecondaryRuntimeRuns).not.toHaveBeenCalled();
     expect(ports.stoppingSecondaryRuntimeTeams.has('team-a')).toBe(false);
+  });
+
+  it('stops mixed secondary lanes concurrently and reports the per-lane timings', async () => {
+    const pending = new Map<string, () => void>();
+    const stop = vi.fn(
+      (input: { runId: string; laneId: string; teamName: string }) =>
+        new Promise<{
+          runId: string;
+          teamName: string;
+          stopped: boolean;
+          members: Record<string, never>;
+          warnings: string[];
+          diagnostics: string[];
+        }>((resolve) => {
+          pending.set(input.laneId, () =>
+            resolve({
+              runId: input.runId,
+              teamName: input.teamName,
+              stopped: true,
+              members: {},
+              warnings: [],
+              diagnostics: [],
+            })
+          );
+        })
+    );
+    const ports = makePorts({
+      adapter: makeAdapter(stop as never),
+      previousLaunchState: snapshot(),
+      secondaryRuns: [
+        { runId: 'run-a', providerId: 'opencode', laneId: 'lane-a', memberName: 'A' },
+        { runId: 'run-b', providerId: 'opencode', laneId: 'lane-b', memberName: 'B' },
+        { runId: 'run-c', providerId: 'opencode', laneId: 'lane-c', memberName: 'C' },
+      ],
+    });
+
+    const stopping = stopMixedSecondaryRuntimeLanes('team-a', ports);
+    await vi.waitFor(() => expect(stop).toHaveBeenCalledTimes(3));
+    // All three orchestrator stops are in flight before any of them resolved.
+    expect(pending.size).toBe(3);
+    for (const resolve of pending.values()) resolve();
+    await stopping;
+
+    expect(ports.deleteSecondaryRuntimeRun).toHaveBeenCalledTimes(3);
+    expect(ports.logger.warn).not.toHaveBeenCalled();
+    expect(ports.logger.info).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /3 secondary lane\(s\) stopped in \d+ms \[lane-[abc]=\d+ms, lane-[abc]=\d+ms, lane-[abc]=\d+ms\]/
+      )
+    );
   });
 
   it('stops every mixed secondary lane but retains a lane whose stop throws', async () => {
