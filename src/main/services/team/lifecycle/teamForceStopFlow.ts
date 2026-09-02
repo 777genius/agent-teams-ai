@@ -159,13 +159,32 @@ async function runTeamStopFlow(
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
+  let timedOut = false;
   try {
     const stopAttempt = ports.stopTeam(teamName).then(
-      () => 'stopped' as const,
+      () => {
+        if (timedOut) {
+          ports.logWarning(
+            `[${teamName}] Regular stop finished ${Date.now() - stopStartedAtMs}ms after it started, after the force stop cleanup had already run.`
+          );
+        }
+        return 'stopped' as const;
+      },
       (error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        ports.logWarning(`[${teamName}] Regular stop failed before force stop cleanup: ${message}`);
-        diagnostics.push(`Regular stop failed: ${message}`);
+        if (timedOut) {
+          // Expected once the hard kill already removed the hosts the
+          // orchestrator was still trying to stop: the failure describes a
+          // process that is gone, not a stop this flow still owes the user.
+          ports.logWarning(
+            `[${teamName}] Regular stop failed ${Date.now() - stopStartedAtMs}ms after it started, after the force stop cleanup had already run: ${message}`
+          );
+        } else {
+          ports.logWarning(
+            `[${teamName}] Regular stop failed before force stop cleanup: ${message}`
+          );
+          diagnostics.push(`Regular stop failed: ${message}`);
+        }
         return 'stop_failed' as const;
       }
     );
@@ -177,6 +196,7 @@ async function runTeamStopFlow(
       }),
     ]);
     if (stopOutcome === 'timed_out') {
+      timedOut = true;
       ports.logWarning(
         `[${teamName}] Regular stop did not finish within ${timeoutMs}ms; continuing with force stop cleanup.`
       );
