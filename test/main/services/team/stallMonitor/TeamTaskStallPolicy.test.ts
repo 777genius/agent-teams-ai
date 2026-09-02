@@ -473,7 +473,7 @@ describe('TeamTaskStallPolicy', () => {
 
     expect(
       policy.evaluateWork({
-        now: new Date(touchAtMs + 100_000 - 1),
+        now: new Date(touchAtMs + 300_000 - 1),
         task,
         snapshot,
       })
@@ -484,7 +484,7 @@ describe('TeamTaskStallPolicy', () => {
     });
     expect(
       policy.evaluateWork({
-        now: new Date(touchAtMs + 100_000),
+        now: new Date(touchAtMs + 300_000),
         task,
         snapshot,
       })

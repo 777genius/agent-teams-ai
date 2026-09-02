@@ -26,7 +26,7 @@ describe('stallMonitor feature gates', () => {
     expect(getTeamTaskStallScanIntervalMs()).toBe(30_000);
     expect(getTeamTaskStallStartupGraceMs()).toBe(180_000);
     expect(getTeamTaskStallActivationGraceMs()).toBe(60_000);
-    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(100_000);
+    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(300_000);
     expect(getPendingPickupStallThresholdMs()).toBe(300_000);
     expect(isPendingPickupStallRemediationEnabled()).toBe(true);
   });
@@ -58,7 +58,7 @@ describe('stallMonitor feature gates', () => {
     expect(isOpenCodeTaskStallRemediationEnabled()).toBe(true);
     expect(isTeamTaskStallScannerEnabled()).toBe(true);
     expect(isTeamTaskStallAlertsEnabled()).toBe(true);
-    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(100_000);
+    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(300_000);
   });
 
   it('keeps pending pickup remediation enabled for an unparseable flag', () => {
@@ -115,6 +115,6 @@ describe('stallMonitor feature gates', () => {
     expect(isOpenCodeTaskStallRemediationEnabled()).toBe(true);
     expect(isTeamTaskStallScannerEnabled()).toBe(true);
     expect(isTeamTaskStallAlertsEnabled()).toBe(true);
-    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(100_000);
+    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(300_000);
   });
 });

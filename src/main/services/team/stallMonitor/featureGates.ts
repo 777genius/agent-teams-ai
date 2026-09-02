@@ -60,8 +60,11 @@ export function getTeamTaskStallAlertCooldownMs(): number {
 }
 
 export function getOpenCodeWeakStartStallThresholdMs(): number {
-  // Shorter OpenCode threshold for "started work" comments that do not contain concrete progress.
-  return readInt(process.env.CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS, 100_000);
+  // OpenCode threshold for "started work" comments that do not contain concrete
+  // progress. An OpenCode member routinely needs several minutes for one turn,
+  // and every remediation nudge costs it a full model turn and can derail the
+  // work in progress, so this sits at 5 minutes (previous default was 100 s).
+  return readInt(process.env.CLAUDE_TEAM_OPENCODE_WEAK_START_STALL_THRESHOLD_MS, 5 * 60_000);
 }
 
 export function getPendingPickupStallThresholdMs(): number {
