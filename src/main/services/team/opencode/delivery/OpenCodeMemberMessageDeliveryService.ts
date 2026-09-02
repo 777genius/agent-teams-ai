@@ -374,10 +374,13 @@ export class OpenCodeMemberMessageDeliveryService {
         if (appMcpTransportMismatch) {
           refreshedOpenCodeBootstrapSessionToStamp = bootstrapSession;
           forceOpenCodeSessionRefreshReason = appMcpTransportMismatch;
-          logger.info(
-            `[${teamName}] OpenCode delivery detected stale app MCP transport for ` +
-              `${canonicalMemberName}; requesting bridge session refresh before send. ` +
-              appMcpTransportMismatch
+          // Durable: a forced session refresh is the only trace that this
+          // delivery started from a rebuilt session, and it has to still be
+          // readable when the lane-scoped ledger is gone.
+          logger.diagnostic(
+            `[${teamName}] opencode_delivery_app_mcp_transport_stale ` +
+              `${canonicalMemberName}/${laneIdentity.laneId} ` +
+              `reason=${JSON.stringify(appMcpTransportMismatch)}`
           );
         }
       }
