@@ -17,6 +17,7 @@ export class RuntimeProviderModelRequestTracker {
   private readonly inFlight = new Map<string, ModelResponseInFlightEntry>();
   private readonly lifecycleEntries = new Set<ModelResponseInFlightEntry>();
   private readonly activeGroups = new Map<string, ActiveModelRequestGroup>();
+  private readonly generations = new Map<string, number>();
 
   clear(abortInFlight: boolean): void {
     if (abortInFlight) {
@@ -26,6 +27,30 @@ export class RuntimeProviderModelRequestTracker {
       this.activeGroups.clear();
     }
     this.inFlight.clear();
+    this.generations.clear();
+  }
+
+  reuseRefresh(
+    cacheKey: string,
+    requestGroupId: string | null
+  ): Promise<RuntimeProviderManagementModelsResponse> | null {
+    const current = this.inFlight.get(cacheKey);
+    if (current?.refresh !== true || current.controller.signal.aborted) return null;
+    this.register(current, cacheKey, requestGroupId);
+    return current.promise;
+  }
+
+  beginRefresh(cacheKey: string): void {
+    this.generations.set(cacheKey, this.getGeneration(cacheKey) + 1);
+    this.discard(cacheKey);
+  }
+
+  getGeneration(cacheKey: string): number {
+    return this.generations.get(cacheKey) ?? 0;
+  }
+
+  isGenerationCurrent(cacheKey: string, generation: number): boolean {
+    return generation === this.getGeneration(cacheKey);
   }
 
   releaseSuperseded(requestGroupId: string, nextCacheKey: string): void {

@@ -1309,7 +1309,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private directoryResponseCacheGeneration = 0;
   private readonly modelResponseCache = new Map<string, ModelResponseCacheEntry>();
   private readonly modelRequests = new RuntimeProviderModelRequestTracker();
-  private readonly modelResponseCacheGenerationByKey = new Map<string, number>();
   private readonly activeModelTestRequestGroups = new Map<string, AbortController>();
   private modelResponseCacheGeneration = 0;
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
@@ -1456,7 +1455,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   ): RuntimeProviderManagementModelsResponse {
     if (
       (cacheGeneration !== this.modelResponseCacheGeneration ||
-        cacheKeyGeneration !== (this.modelResponseCacheGenerationByKey.get(cacheKey) ?? 0)) &&
+        !this.modelRequests.isGenerationCurrent(cacheKey, cacheKeyGeneration)) &&
       response.models &&
       !response.error
     ) {
@@ -1485,26 +1484,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private invalidateModelResponseCache(abortInFlight = true): void {
     this.modelResponseCacheGeneration += 1;
     this.modelResponseCache.clear();
-    this.modelResponseCacheGenerationByKey.clear();
     this.modelRequests.clear(abortInFlight);
-  }
-
-  private invalidateModelResponseCacheKey(cacheKey: string): void {
-    this.modelResponseCache.delete(cacheKey);
-    this.modelResponseCacheGenerationByKey.set(
-      cacheKey,
-      (this.modelResponseCacheGenerationByKey.get(cacheKey) ?? 0) + 1
-    );
-    this.modelRequests.discard(cacheKey);
   }
 
   private invalidateProviderResponseCaches(): void {
     this.invalidateDirectoryResponseCache();
     this.invalidateModelResponseCache();
-  }
-
-  private releaseSupersededModelRequest(requestGroupId: string, nextCacheKey: string): void {
-    this.modelRequests.releaseSuperseded(requestGroupId, nextCacheKey);
   }
 
   private beginModelTestRequest(requestGroupId: string | null): AbortController | null {
@@ -2241,21 +2226,15 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     const cacheKey = this.getModelResponseCacheKey(input, projectPath);
     const requestGroupId = input.requestGroupId?.trim() || null;
     if (requestGroupId) {
-      this.releaseSupersededModelRequest(requestGroupId, cacheKey);
+      this.modelRequests.releaseSuperseded(requestGroupId, cacheKey);
     }
-    const currentRequest = this.modelRequests.get(cacheKey);
-    if (
-      input.refresh === true &&
-      currentRequest?.refresh === true &&
-      !currentRequest.controller.signal.aborted
-    ) {
-      this.modelRequests.register(currentRequest, cacheKey, requestGroupId);
-      return currentRequest.promise;
+    const currentRefresh =
+      input.refresh === true ? this.modelRequests.reuseRefresh(cacheKey, requestGroupId) : null;
+    if (currentRefresh) return currentRefresh;
+    if (input.refresh === true) {
+      this.modelResponseCache.delete(cacheKey);
+      this.modelRequests.beginRefresh(cacheKey);
     }
-    // A refresh starts a new catalog generation. Do not let it subscribe to a
-    // pre-refresh request for the same key or that older response can be cached
-    // with a newly extended freshness window.
-    if (input.refresh === true) this.invalidateModelResponseCacheKey(cacheKey);
     const cached = input.refresh === true ? null : this.readModelResponseCache(cacheKey);
     if (cached) {
       if (requestGroupId) this.modelRequests.releaseForCacheHit(requestGroupId, cacheKey);
@@ -2272,7 +2251,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
 
     const controller = new AbortController();
     const cacheGeneration = this.modelResponseCacheGeneration;
-    const cacheKeyGeneration = this.modelResponseCacheGenerationByKey.get(cacheKey) ?? 0;
+    const cacheKeyGeneration = this.modelRequests.getGeneration(cacheKey);
     const promise = this.loadModelsUncached(
       input,
       projectPath,

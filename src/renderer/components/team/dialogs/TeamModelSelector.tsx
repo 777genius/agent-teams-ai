@@ -111,6 +111,7 @@ import {
   deriveOpenCodeSelectionAuthorityState,
   getActiveOpenCodeStickyHeadingIndex,
   getOpenCodeModelGridColumnCount,
+  getOpenCodeSourceInfo,
   getOpenCodeSelectionAuthorityScopeKey,
   type OpenCodeSelectionScopeAssociation,
   resolveTeamModelSelectorValue,
@@ -286,18 +287,6 @@ function getCuratedOpenCodeProviderTab(
     return { sourceId: normalizedSourceId, label: 'Xiaomi MiMo' };
   }
   return null;
-}
-
-function getOpenCodeSourceInfo(model: string): OpenCodeSourceInfo | null {
-  const parsed = parseOpenCodeQualifiedModelRef(model);
-  if (!parsed) {
-    return null;
-  }
-
-  return {
-    id: parsed.sourceId,
-    label: getTeamModelSourceBadgeLabel('opencode', model) ?? parsed.sourceId,
-  };
 }
 
 function isAppManagedOpenCodeLocalModel(

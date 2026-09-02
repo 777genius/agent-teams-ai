@@ -1,3 +1,4 @@
+import { getTeamModelSourceBadgeLabel } from '@renderer/utils/teamModelCatalog';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 
 const OPENCODE_SOURCES_WITHOUT_NEEDS_TEST_BADGE = new Set(['cursor-acp']);
@@ -9,6 +10,15 @@ const OPENCODE_NO_REMOTE_CATALOG_AUTHORITY = '$no-remote-catalog';
 export interface OpenCodeSelectionScopeAssociation {
   readonly value: string;
   readonly scopeKey: string | null;
+}
+
+export function getOpenCodeSourceInfo(model: string): { id: string; label: string } | null {
+  const parsed = parseOpenCodeQualifiedModelRef(model);
+  if (!parsed) return null;
+  return {
+    id: parsed.sourceId,
+    label: getTeamModelSourceBadgeLabel('opencode', model) ?? parsed.sourceId,
+  };
 }
 
 export function deriveOpenCodeSelectionScopeAssociation(
