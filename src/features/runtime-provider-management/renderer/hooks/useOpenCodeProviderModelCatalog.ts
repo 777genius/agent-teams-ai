@@ -470,7 +470,7 @@ export function useOpenCodeProviderModelCatalog(input: {
       return;
     }
     const cancelModelLoad = isElectronMode()
-      ? api.runtimeProviderManagement.cancelModelLoad
+      ? api.runtimeProviderManagement?.cancelModelLoad
       : undefined;
 
     setState((current) =>

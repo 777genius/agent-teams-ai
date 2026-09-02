@@ -2283,7 +2283,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.cleanupModelResponseInFlight(cacheKey, inFlightEntry);
     }
   }
-
   async cancelModelLoad(
     input: RuntimeProviderManagementCancelModelLoadInput
   ): Promise<RuntimeProviderManagementModelTestControlResponse> {

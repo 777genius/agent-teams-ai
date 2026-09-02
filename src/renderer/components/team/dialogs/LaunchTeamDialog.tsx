@@ -112,8 +112,8 @@ import {
   getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
-import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { OpenCodeProviderScopedDialogCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
   isSelectableProjectPathProject,

@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 
 import { useOpenCodeProviderModelCatalog } from '@features/runtime-provider-management/renderer';
-import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 
 import {
   type OpenCodeProviderScopedStatusListener,
@@ -11,17 +11,19 @@ import {
 
 import type { CliProviderStatus } from '@shared/types';
 
-function ScopedCatalogLoader({
-  projectPath,
-  sourceProviderId,
-  passiveProviderStatus,
-  listener,
-}: {
+type ScopedCatalogLoaderProps = Readonly<{
   projectPath: string | null;
   sourceProviderId: string;
   passiveProviderStatus: CliProviderStatus | null | undefined;
   listener: OpenCodeProviderScopedStatusListener;
-}): null {
+}>;
+
+const ScopedCatalogLoader = ({
+  projectPath,
+  sourceProviderId,
+  passiveProviderStatus,
+  listener,
+}: ScopedCatalogLoaderProps): null => {
   const catalog = useOpenCodeProviderModelCatalog({
     enabled: true,
     sourceProviderId,
@@ -36,23 +38,25 @@ function ScopedCatalogLoader({
     catalog.status === 'loading'
   );
   return null;
-}
+};
 
-export function OpenCodeProviderScopedDialogCatalogLoaders({
-  enabled,
-  projectPath,
-  selectedModels,
-  localProviderIds,
-  passiveProviderStatus,
-  listener,
-}: {
+type OpenCodeProviderScopedDialogCatalogLoadersProps = Readonly<{
   enabled: boolean;
   projectPath: string | null | undefined;
   selectedModels: readonly string[];
   localProviderIds: ReadonlySet<string>;
   passiveProviderStatus: CliProviderStatus | null | undefined;
   listener: OpenCodeProviderScopedStatusListener;
-}): React.JSX.Element | null {
+}>;
+
+export const OpenCodeProviderScopedDialogCatalogLoaders = ({
+  enabled,
+  projectPath,
+  selectedModels,
+  localProviderIds,
+  passiveProviderStatus,
+  listener,
+}: OpenCodeProviderScopedDialogCatalogLoadersProps): React.JSX.Element | null => {
   const sourceProviderIds = useMemo(() => {
     if (!enabled) return [];
     const sourceIds = new Set<string>();
@@ -79,4 +83,4 @@ export function OpenCodeProviderScopedDialogCatalogLoaders({
       ))}
     </>
   );
-}
+};

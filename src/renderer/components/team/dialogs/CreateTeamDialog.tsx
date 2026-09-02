@@ -115,8 +115,8 @@ import {
   getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
-import { OptionalSettingsSection } from './OptionalSettingsSection';
 import { OpenCodeProviderScopedDialogCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
   isSelectableProjectPathProject,
@@ -2474,7 +2474,6 @@ export const CreateTeamDialog = ({
             {initialData ? t('create.description.copy') : t('create.description.create')}
           </DialogDescription>
         </DialogHeader>
-
         {conflictingTeam && !conflictDismissed ? (
           <div
             className="rounded-md border p-3 text-xs"
@@ -2506,7 +2505,6 @@ export const CreateTeamDialog = ({
             </div>
           </div>
         ) : null}
-
         {!canCreate ? (
           <p
             className="rounded border p-2 text-xs"
