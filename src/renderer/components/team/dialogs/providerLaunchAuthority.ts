@@ -6,6 +6,7 @@ import {
   useLaunchAuthorityGatedCliStatus,
 } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import {
+  getOpenCodeScopedPreparationFailure,
   hasSettledOpenCodeScopedPreparation,
   type OpenCodeScopedPreparationEvidence,
 } from '@renderer/utils/teamProviderRuntimeStatusLoading';
@@ -31,7 +32,12 @@ export interface ProviderLaunchGuard {
 }
 
 function getProviderStatusDetail(provider: CliProviderStatus): string | null {
-  return provider.detailMessage?.trim() || provider.statusMessage?.trim() || null;
+  return (
+    provider.detailMessage?.trim() ||
+    provider.statusMessage?.trim() ||
+    provider.modelCatalog?.diagnostics.message?.trim() ||
+    null
+  );
 }
 
 function getProviderLaunchBlockerDetail(
@@ -88,6 +94,21 @@ export function createLaunchGuard(
         // Passive status cannot authorize a launch. The strict OpenCode launch
         // attempt performs fresh exact-model proof before creating members.
         return [];
+      }
+      const scopedFailure =
+        providerId === 'opencode'
+          ? getOpenCodeScopedPreparationFailure(openCodeEvidence)
+          : null;
+      if (scopedFailure) {
+        return [
+          {
+            providerId,
+            providerStatus: scopedFailure,
+            detail:
+              getProviderStatusDetail(scopedFailure) ??
+              'The selected provider model catalog could not be refreshed. Refresh provider status.',
+          },
+        ];
       }
       return hasEffectiveProviderLaunchAuthority(provider, now)
         ? []

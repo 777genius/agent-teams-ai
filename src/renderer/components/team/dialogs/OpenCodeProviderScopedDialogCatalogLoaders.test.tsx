@@ -8,6 +8,7 @@ import { OpenCodeProviderScopedDialogCatalogLoaders } from './OpenCodeProviderSc
 import type { CliProviderStatus } from '@shared/types';
 
 const catalogLoads: string[] = [];
+const catalogRefreshRevisions: number[] = [];
 
 function buildStatus(sourceId: string): CliProviderStatus {
   const model = `${sourceId}/model`;
@@ -32,7 +33,14 @@ function buildStatus(sourceId: string): CliProviderStatus {
 }
 
 vi.mock('@features/runtime-provider-management/renderer', () => ({
-  useOpenCodeProviderModelCatalog: ({ sourceProviderId }: { sourceProviderId: string }) => {
+  useOpenCodeProviderModelCatalog: ({
+    sourceProviderId,
+    refreshRevision,
+  }: {
+    sourceProviderId: string;
+    refreshRevision: number;
+  }) => {
+    catalogRefreshRevisions.push(refreshRevision);
     catalogLoads.push(sourceProviderId);
     return {
       sourceProviderId,
@@ -48,6 +56,7 @@ vi.mock('@features/runtime-provider-management/renderer', () => ({
 
 beforeEach(() => {
   catalogLoads.length = 0;
+  catalogRefreshRevisions.length = 0;
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
 });
 
@@ -71,6 +80,7 @@ describe('OpenCodeProviderScopedDialogCatalogLoaders', () => {
             ],
             localProviderIds: new Set(['local-lab']),
             passiveProviderStatus: null,
+            refreshRevision: 7,
             listener: (sourceProviderId, update) => {
               if (update.mode === 'publish') published.push(sourceProviderId);
             },
@@ -80,6 +90,7 @@ describe('OpenCodeProviderScopedDialogCatalogLoaders', () => {
     });
 
     expect(catalogLoads).toEqual(['anthropic', 'openrouter']);
+    expect(catalogRefreshRevisions).toEqual([7, 7]);
     expect(published).toEqual(['anthropic', 'openrouter']);
     await act(async () => root.unmount());
   });
@@ -96,6 +107,7 @@ describe('OpenCodeProviderScopedDialogCatalogLoaders', () => {
             selectedModels: ['openrouter/model-a'],
             localProviderIds: new Set(),
             passiveProviderStatus: null,
+            refreshRevision: 7,
             listener: () => undefined,
           }}
         />

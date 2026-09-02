@@ -421,6 +421,12 @@ function responseFailure(
   return null;
 }
 
+export function normalizeModelResponseDiagnostics(value: unknown): readonly string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+}
+
 function errorMessage(error: unknown): string {
   return error instanceof Error && error.message.trim()
     ? error.message
@@ -470,7 +476,7 @@ export function useOpenCodeProviderModelCatalog(input: {
       return;
     }
     const cancelModelLoad = isElectronMode()
-      ? api.runtimeProviderManagement?.cancelModelLoad.bind(api.runtimeProviderManagement)
+      ? api.runtimeProviderManagement?.cancelModelLoad?.bind(api.runtimeProviderManagement)
       : undefined;
 
     setState((current) =>
@@ -566,7 +572,7 @@ export function useOpenCodeProviderModelCatalog(input: {
           );
           if (normalizedDefaultModelId) defaultModelIds.add(normalizedDefaultModelId);
         }
-        diagnostics = modelPage.diagnostics;
+        diagnostics = normalizeModelResponseDiagnostics(modelPage.diagnostics);
         if (modelPage.catalogState === 'stale') {
           sawStaleCatalog = true;
         } else if (modelPage.catalogState !== 'fresh') {

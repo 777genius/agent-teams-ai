@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { clearMemberModelOverrides } from '@renderer/components/team/members/MembersEditorSection';
 import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
+import { useStore } from '@renderer/store';
 import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 
 import {
@@ -17,7 +18,8 @@ export type OpenCodeProviderScopedStatusListener = (
   sourceProviderId: string,
   update:
     | { mode: 'publish'; providerStatus: CliProviderStatus }
-    | { mode: 'detach' | 'withdraw'; providerStatus: null },
+    | { mode: 'loading' | 'detach' | 'withdraw'; providerStatus: null },
+  generation: number,
   publisherToken: symbol
 ) => void;
 
@@ -25,6 +27,7 @@ interface ScopedAuthorityState {
   scopeKey: string;
   contributionsBySourceId: ReadonlyMap<string, ReadonlyMap<symbol, CliProviderStatus>>;
   retainedStatusBySourceId: ReadonlyMap<string, CliProviderStatus>;
+  generationBySourceId: ReadonlyMap<string, number>;
 }
 
 const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
@@ -35,6 +38,7 @@ function createEmptyScopedAuthorityState(scopeKey: string): ScopedAuthorityState
     scopeKey,
     contributionsBySourceId: new Map(),
     retainedStatusBySourceId: new Map(),
+    generationBySourceId: new Map(),
   };
 }
 
@@ -48,6 +52,7 @@ function pruneExpiredContributions(state: ScopedAuthorityState, now: number): Sc
   for (const sourceId of sourceIds) {
     const live = new Map(
       [...(state.contributionsBySourceId.get(sourceId) ?? [])].filter(([, status]) =>
+        status.modelCatalogRefreshState === 'error' ||
         isProviderModelCatalogExactReady(status, now)
       )
     );
@@ -56,7 +61,9 @@ function pruneExpiredContributions(state: ScopedAuthorityState, now: number): Sc
     const selected =
       retained && isProviderModelCatalogExactReady(retained, now)
         ? retained
-        : [...live.values()].at(-1);
+        : ([...live.values()].findLast((status) =>
+            isProviderModelCatalogExactReady(status, now)
+          ) ?? [...live.values()].at(-1));
     if (selected) retainedStatusBySourceId.set(sourceId, selected);
   }
   return { ...state, contributionsBySourceId, retainedStatusBySourceId };
@@ -82,6 +89,7 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
       ]),
     ];
     return statuses.reduce<number | null>((nearest, status) => {
+      if (!isProviderModelCatalogExactReady(status)) return nearest;
       const staleAt = Date.parse(status.modelCatalog?.staleAt ?? '');
       return Number.isFinite(staleAt) && (nearest === null || staleAt < nearest)
         ? staleAt
@@ -105,7 +113,7 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
   }, [authorityState, scopeKey]);
 
   const publishStatus = useCallback<OpenCodeProviderScopedStatusListener>(
-    (sourceProviderId, update, publisherToken) => {
+    (sourceProviderId, update, generation, publisherToken) => {
       const sourceId = sourceProviderId.trim().toLowerCase();
       if (!sourceId) return;
       setAuthorityState((current) => {
@@ -118,28 +126,40 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
           string,
           ReadonlyMap<symbol, CliProviderStatus>
         > = current.contributionsBySourceId;
+        const generationBySourceId = new Map(current.generationBySourceId);
+        const currentGeneration = generationBySourceId.get(sourceId) ?? -1;
+        if (generation < currentGeneration) return current;
         const retainedStatusBySourceId = new Map<string, CliProviderStatus>(
           current.retainedStatusBySourceId
         );
         const sourceContributions = new Map<symbol, CliProviderStatus>(
-          currentContributions.get(sourceId) ?? []
+          generation > currentGeneration ? [] : (currentContributions.get(sourceId) ?? [])
         );
+        if (generation > currentGeneration) {
+          generationBySourceId.set(sourceId, generation);
+          retainedStatusBySourceId.delete(sourceId);
+        }
         if (update.mode === 'publish') {
           sourceContributions.delete(publisherToken);
+          sourceContributions.set(publisherToken, update.providerStatus);
           if (isProviderModelCatalogExactReady(update.providerStatus)) {
-            sourceContributions.set(publisherToken, update.providerStatus);
             retainedStatusBySourceId.set(sourceId, update.providerStatus);
           } else {
-            const latestLiveStatus = [...sourceContributions.values()].at(-1);
+            const latestLiveStatus = [...sourceContributions.values()].findLast((status) =>
+              isProviderModelCatalogExactReady(status)
+            );
             if (latestLiveStatus) {
               retainedStatusBySourceId.set(sourceId, latestLiveStatus);
             } else {
-              retainedStatusBySourceId.delete(sourceId);
+              retainedStatusBySourceId.set(sourceId, update.providerStatus);
             }
           }
-        } else {
+        } else if (update.mode !== 'loading') {
           sourceContributions.delete(publisherToken);
-          const latestLiveStatus = [...sourceContributions.values()].at(-1);
+          const statuses = [...sourceContributions.values()];
+          const latestLiveStatus =
+            statuses.findLast((status) => isProviderModelCatalogExactReady(status)) ??
+            statuses.at(-1);
           if (latestLiveStatus) {
             retainedStatusBySourceId.set(sourceId, latestLiveStatus);
           } else if (update.mode === 'withdraw') {
@@ -154,7 +174,12 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
         } else {
           contributionsBySourceId.delete(sourceId);
         }
-        return { scopeKey, contributionsBySourceId, retainedStatusBySourceId };
+        return {
+          scopeKey,
+          contributionsBySourceId,
+          retainedStatusBySourceId,
+          generationBySourceId,
+        };
       });
     },
     [scopeKey]
@@ -201,6 +226,7 @@ export function useOpenCodeProviderScopedDialogModelState({
   });
   const [openCodeProviderScopedStatusBySourceId, handleOpenCodeProviderScopedStatusChange] =
     useOpenCodeProviderScopedModelAuthority(projectPath);
+  const catalogRefreshRevision = useStore((state) => state.cliProviderStatusScopeRevision) ?? 0;
   const effectiveMemberDrafts = useMemo(() => {
     const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
     return clearInheritedMemberModelsUnavailableForProvider({
@@ -253,6 +279,7 @@ export function useOpenCodeProviderScopedDialogModelState({
       selectedModels: openCodePreparationEvidence.selectedModels,
       localProviderIds: openCodePreparationEvidence.localSourceIds,
       passiveProviderStatus,
+      refreshRevision: catalogRefreshRevision,
       listener: handleOpenCodeProviderScopedStatusChange,
     },
   };
@@ -262,7 +289,8 @@ export function usePublishOpenCodeProviderScopedStatus(
   listener: OpenCodeProviderScopedStatusListener | undefined,
   sourceProviderId: string | null,
   providerStatus: CliProviderStatus | null,
-  preservePreviousStatus = false
+  preservePreviousStatus = false,
+  generation = 0
 ): void {
   const publisherTokenRef = useRef(Symbol('opencode-provider-scoped-status-publisher'));
 
@@ -270,17 +298,25 @@ export function usePublishOpenCodeProviderScopedStatus(
     if (!listener || !sourceProviderId) return;
     const publisherToken = publisherTokenRef.current;
     return () =>
-      listener(sourceProviderId, { mode: 'detach', providerStatus: null }, publisherToken);
-  }, [listener, sourceProviderId]);
+      listener(
+        sourceProviderId,
+        { mode: 'detach', providerStatus: null },
+        generation,
+        publisherToken
+      );
+  }, [generation, listener, sourceProviderId]);
 
   useEffect(() => {
-    if (!listener || !sourceProviderId || (!providerStatus && preservePreviousStatus)) return;
+    if (!listener || !sourceProviderId) return;
     listener(
       sourceProviderId,
       providerStatus
         ? { mode: 'publish', providerStatus }
-        : { mode: 'withdraw', providerStatus: null },
+        : preservePreviousStatus
+          ? { mode: 'loading', providerStatus: null }
+          : { mode: 'withdraw', providerStatus: null },
+      generation,
       publisherTokenRef.current
     );
-  }, [listener, preservePreviousStatus, providerStatus, sourceProviderId]);
+  }, [generation, listener, preservePreviousStatus, providerStatus, sourceProviderId]);
 }

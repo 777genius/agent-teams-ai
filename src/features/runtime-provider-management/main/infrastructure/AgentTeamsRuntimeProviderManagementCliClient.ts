@@ -1309,6 +1309,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private directoryResponseCacheGeneration = 0;
   private readonly modelResponseCache = new Map<string, ModelResponseCacheEntry>();
   private readonly modelRequests = new RuntimeProviderModelRequestTracker();
+  private readonly modelResponseCacheGenerationByKey = new Map<string, number>();
   private readonly activeModelTestRequestGroups = new Map<string, AbortController>();
   private modelResponseCacheGeneration = 0;
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
@@ -1450,10 +1451,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     cacheKey: string,
     response: RuntimeProviderManagementModelsResponse,
     ttlMs: number,
-    cacheGeneration: number
+    cacheGeneration: number,
+    cacheKeyGeneration: number
   ): RuntimeProviderManagementModelsResponse {
     if (
-      cacheGeneration !== this.modelResponseCacheGeneration &&
+      (cacheGeneration !== this.modelResponseCacheGeneration ||
+        cacheKeyGeneration !== (this.modelResponseCacheGenerationByKey.get(cacheKey) ?? 0)) &&
       response.models &&
       !response.error
     ) {
@@ -1482,7 +1485,17 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private invalidateModelResponseCache(abortInFlight = true): void {
     this.modelResponseCacheGeneration += 1;
     this.modelResponseCache.clear();
+    this.modelResponseCacheGenerationByKey.clear();
     this.modelRequests.clear(abortInFlight);
+  }
+
+  private invalidateModelResponseCacheKey(cacheKey: string): void {
+    this.modelResponseCache.delete(cacheKey);
+    this.modelResponseCacheGenerationByKey.set(
+      cacheKey,
+      (this.modelResponseCacheGenerationByKey.get(cacheKey) ?? 0) + 1
+    );
+    this.modelRequests.discard(cacheKey);
   }
 
   private invalidateProviderResponseCaches(): void {
@@ -2230,7 +2243,19 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     if (requestGroupId) {
       this.releaseSupersededModelRequest(requestGroupId, cacheKey);
     }
-    if (input.refresh === true) this.modelResponseCache.delete(cacheKey);
+    const currentRequest = this.modelRequests.get(cacheKey);
+    if (
+      input.refresh === true &&
+      currentRequest?.refresh === true &&
+      !currentRequest.controller.signal.aborted
+    ) {
+      this.modelRequests.register(currentRequest, cacheKey, requestGroupId);
+      return currentRequest.promise;
+    }
+    // A refresh starts a new catalog generation. Do not let it subscribe to a
+    // pre-refresh request for the same key or that older response can be cached
+    // with a newly extended freshness window.
+    if (input.refresh === true) this.invalidateModelResponseCacheKey(cacheKey);
     const cached = input.refresh === true ? null : this.readModelResponseCache(cacheKey);
     if (cached) {
       if (requestGroupId) this.modelRequests.releaseForCacheHit(requestGroupId, cacheKey);
@@ -2247,15 +2272,18 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
 
     const controller = new AbortController();
     const cacheGeneration = this.modelResponseCacheGeneration;
+    const cacheKeyGeneration = this.modelResponseCacheGenerationByKey.get(cacheKey) ?? 0;
     const promise = this.loadModelsUncached(
       input,
       projectPath,
       cacheKey,
       cacheGeneration,
+      cacheKeyGeneration,
       controller.signal
     );
     const inFlightEntry = {
       controller,
+      refresh: input.refresh === true,
       hasUngroupedSubscriber: false,
       requestGroups: new Set<string>(),
       promise,
@@ -2280,6 +2308,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     projectPath: string | null,
     cacheKey: string,
     cacheGeneration: number,
+    cacheKeyGeneration: number,
     signal: AbortSignal
   ): Promise<RuntimeProviderManagementModelsResponse> {
     const { binaryPath, env } = await resolveCliEnv();
@@ -2333,7 +2362,8 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           stderr
         ),
         this.getModelResponseCacheTtlMs(input),
-        cacheGeneration
+        cacheGeneration,
+        cacheKeyGeneration
       );
     } catch (error) {
       const response = extractJsonObjectFromError<RuntimeProviderManagementModelsResponse>(error);

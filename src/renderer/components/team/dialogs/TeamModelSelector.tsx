@@ -1160,6 +1160,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
   const cliProviderStatusScopeRevision = useStore((s) => s.cliProviderStatusScopeRevision);
+  const invalidateCliProviderModelCatalog = useStore(
+    (s) => s.invalidateCliProviderModelCatalog
+  );
   const fetchCliProviderStatus = useStore((s) => s.fetchCliProviderStatus);
   const openCodeRuntimeStatus = useStore((s) => s.openCodeRuntimeStatus);
   const openCodeRuntimeStatusLoading = useStore((s) => s.openCodeRuntimeStatusLoading);
@@ -1233,10 +1236,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   usePublishOpenCodeProviderScopedStatus(
     onOpenCodeProviderScopedStatusChange,
     effectiveProviderId === 'opencode' ? openCodeCatalogSourceProviderId : null,
-    scopedAuthorityIsFresh ? (openCodeScopedCatalog.providerStatus ?? null) : null,
+    scopedAuthorityIsFresh || openCodeScopedCatalog.status === 'error'
+      ? (openCodeScopedCatalog.providerStatus ?? null)
+      : null,
     effectiveProviderId === 'opencode' &&
       !scopedAuthorityIsFresh &&
-      openCodeScopedCatalog.status === 'loading'
+      openCodeScopedCatalog.status === 'loading',
+    cliProviderStatusScopeRevision
   );
   const openCodeLocalModelOverlay = useMemo(
     () =>
@@ -2558,7 +2564,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'loading';
   const openCodeCatalogRefreshFailed =
     effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'error';
-  const retryOpenCodeCatalogRefresh = openCodeScopedCatalog.refresh;
+  const retryOpenCodeCatalogRefresh = invalidateCliProviderModelCatalog;
   const retryOpenCodeRuntimeStatus = (): void => {
     void fetchOpenCodeRuntimeStatus();
     void fetchCliProviderStatus('opencode', {

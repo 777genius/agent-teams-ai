@@ -15,6 +15,7 @@ type ScopedCatalogLoaderProps = Readonly<{
   projectPath: string | null;
   sourceProviderId: string;
   passiveProviderStatus: CliProviderStatus | null | undefined;
+  refreshRevision: number;
   listener: OpenCodeProviderScopedStatusListener;
 }>;
 
@@ -22,6 +23,7 @@ const ScopedCatalogLoader = ({
   projectPath,
   sourceProviderId,
   passiveProviderStatus,
+  refreshRevision,
   listener,
 }: ScopedCatalogLoaderProps): null => {
   const catalog = useOpenCodeProviderModelCatalog({
@@ -29,13 +31,15 @@ const ScopedCatalogLoader = ({
     sourceProviderId,
     projectPath,
     passiveProviderStatus,
+    refreshRevision,
   });
   const fresh = catalog.status === 'ready' && catalog.catalogState === 'fresh';
   usePublishOpenCodeProviderScopedStatus(
     listener,
     sourceProviderId,
-    fresh ? (catalog.providerStatus ?? null) : null,
-    catalog.status === 'loading'
+    fresh || catalog.status === 'error' ? (catalog.providerStatus ?? null) : null,
+    catalog.status === 'loading',
+    refreshRevision
   );
   return null;
 };
@@ -46,6 +50,7 @@ export type OpenCodeProviderScopedDialogCatalogLoaderConfiguration = Readonly<{
   selectedModels: readonly string[];
   localProviderIds: ReadonlySet<string>;
   passiveProviderStatus: CliProviderStatus | null | undefined;
+  refreshRevision: number;
   listener: OpenCodeProviderScopedStatusListener;
 }>;
 
@@ -62,6 +67,7 @@ export const OpenCodeProviderScopedDialogCatalogLoaders = ({
     selectedModels,
     localProviderIds,
     passiveProviderStatus,
+    refreshRevision,
     listener,
   } = configuration;
   const sourceProviderIds = useMemo(() => {
@@ -85,6 +91,7 @@ export const OpenCodeProviderScopedDialogCatalogLoaders = ({
           projectPath={projectPath?.trim() || null}
           sourceProviderId={sourceProviderId}
           passiveProviderStatus={passiveProviderStatus}
+          refreshRevision={refreshRevision}
           listener={listener}
         />
       ))}

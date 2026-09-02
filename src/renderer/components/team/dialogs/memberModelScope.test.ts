@@ -262,6 +262,37 @@ describe('getDialogTeamModelValidationError', () => {
       createLaunchGuard(['opencode'], new Map([['opencode', passive]]), evidence).blocked(true)
     ).toBe(false);
 
+    const failedScoped = {
+      ...scoped,
+      modelCatalogRefreshState: 'error' as const,
+      modelCatalog: {
+        ...scoped.modelCatalog!,
+        status: 'stale' as const,
+        diagnostics: {
+          ...scoped.modelCatalog!.diagnostics,
+          message: 'Provider catalog refresh failed.',
+        },
+      },
+    };
+    const failedEvidence = {
+      ...evidence,
+      scopedStatusBySourceId: new Map([['openrouter', failedScoped]]),
+    };
+    expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, failedEvidence)).toBe(
+      false
+    );
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), failedEvidence).blockers(
+        true
+      )
+    ).toEqual([
+      expect.objectContaining({
+        providerId: 'opencode',
+        providerStatus: failedScoped,
+        detail: 'Provider catalog refresh failed.',
+      }),
+    ]);
+
     const missingEvidence = { ...evidence, scopedStatusBySourceId: new Map() };
     expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, missingEvidence)).toBe(
       true

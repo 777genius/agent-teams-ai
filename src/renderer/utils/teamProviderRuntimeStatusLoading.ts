@@ -18,6 +18,19 @@ export interface OpenCodeScopedPreparationEvidence {
   localProviderLookupAuthoritative?: boolean;
 }
 
+export function getOpenCodeScopedPreparationFailure(
+  evidence: OpenCodeScopedPreparationEvidence | undefined
+): CliProviderStatus | null {
+  if (!evidence) return null;
+  for (const model of evidence.selectedModels) {
+    const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId?.trim().toLowerCase();
+    if (!sourceId || isOpenCodeLocalProviderId(sourceId)) continue;
+    const scopedStatus = evidence.scopedStatusBySourceId.get(sourceId);
+    if (scopedStatus?.modelCatalogRefreshState === 'error') return scopedStatus;
+  }
+  return null;
+}
+
 export function hasSettledOpenCodeScopedPreparation(
   providerStatus: CliProviderStatus | null | undefined,
   evidence: OpenCodeScopedPreparationEvidence | undefined,
@@ -51,6 +64,12 @@ export function isTeamProviderRuntimeStatusLoading(
   }
 
   if (isTeamProviderModelVerificationPending(providerId, providerStatus)) {
+    if (
+      providerId === 'opencode' &&
+      getOpenCodeScopedPreparationFailure(openCodeEvidence)
+    ) {
+      return false;
+    }
     if (
       providerId !== 'opencode' ||
       !hasSettledOpenCodeScopedPreparation(

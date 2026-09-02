@@ -2,6 +2,7 @@ import type { RuntimeProviderManagementModelsResponse } from '../../contracts';
 
 export interface ModelResponseInFlightEntry {
   controller: AbortController;
+  refresh?: boolean;
   hasUngroupedSubscriber: boolean;
   requestGroups: Set<string>;
   promise: Promise<RuntimeProviderManagementModelsResponse>;

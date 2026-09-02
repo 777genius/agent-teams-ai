@@ -19,7 +19,25 @@ interface PublisherProps {
   id: string;
   status: CliProviderStatus;
   catalogState?: CatalogState;
+  generation?: number;
   statusListener?: OpenCodeProviderScopedStatusListener;
+}
+
+function buildErrorStatus(model: string): CliProviderStatus {
+  const status = buildStatus(model, 5_000);
+  return {
+    ...status,
+    modelCatalogRefreshState: 'error',
+    modelCatalog: {
+      ...status.modelCatalog!,
+      status: 'stale',
+      diagnostics: {
+        configReadState: 'ready',
+        appServerState: 'degraded',
+        message: 'Catalog refresh failed.',
+      },
+    },
+  };
 }
 
 function buildStatus(model: string, lifetimeMs: number): CliProviderStatus {
@@ -47,13 +65,15 @@ const Publisher = ({
   id,
   status,
   catalogState = 'fresh',
+  generation = 0,
   statusListener,
 }: PublisherProps): React.JSX.Element | null => {
   usePublishOpenCodeProviderScopedStatus(
     statusListener,
     id,
-    catalogState === 'fresh' ? status : null,
-    catalogState === 'loading'
+    catalogState === 'fresh' || catalogState === 'error' ? status : null,
+    catalogState === 'loading',
+    generation
   );
   return null;
 };
@@ -142,13 +162,53 @@ describe('useOpenCodeProviderScopedModelAuthority', () => {
     await view.unmount();
   });
 
-  it('preserves authority only while loading and withdraws it on error', async () => {
+  it('preserves authority only while loading and publishes terminal errors', async () => {
     const status = buildStatus('model-a', 5_000);
+    const failed = buildErrorStatus('model-a');
     const view = await renderHarness('/project', [{ id: 'source', status }]);
 
     await view.render('/project', [{ id: 'source', status, catalogState: 'loading' }]);
     expect(statuses.get('source')).toBe(status);
-    await view.render('/project', [{ id: 'source', status, catalogState: 'error' }]);
+    await view.render('/project', [{ id: 'source', status: failed, catalogState: 'error' }]);
+    expect(statuses.get('source')).toBe(failed);
+    await view.unmount();
+  });
+
+  it('invalidates older ready evidence when a newer generation fails', async () => {
+    const ready = buildStatus('model-a', 5_000);
+    const failed = buildErrorStatus('model-a');
+    const view = await renderHarness('/project', [
+      { id: 'source', status: ready, generation: 7 },
+    ]);
+
+    await view.render('/project', [
+      { id: 'source', status: failed, catalogState: 'error', generation: 8 },
+    ]);
+    expect(statuses.get('source')).toBe(failed);
+    await view.unmount();
+  });
+
+  it('deduplicates concurrent publishers within the current generation', async () => {
+    const ready = buildStatus('model-a', 5_000);
+    const failed = buildErrorStatus('model-b');
+    const view = await renderHarness('/project', [
+      { id: 'source', status: ready, generation: 7 },
+      { id: 'source', status: failed, catalogState: 'error', generation: 7 },
+    ]);
+
+    expect(statuses.get('source')).toBe(ready);
+    await view.unmount();
+  });
+
+  it('invalidates older ready evidence while a newer generation refreshes', async () => {
+    const ready = buildStatus('model-a', 5_000);
+    const view = await renderHarness('/project', [
+      { id: 'source', status: ready, generation: 7 },
+    ]);
+
+    await view.render('/project', [
+      { id: 'source', status: ready, catalogState: 'loading', generation: 8 },
+    ]);
     expect(statuses.has('source')).toBe(false);
     await view.unmount();
   });
