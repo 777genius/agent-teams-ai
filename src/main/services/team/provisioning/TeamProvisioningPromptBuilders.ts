@@ -715,6 +715,12 @@ export function buildTeamCtlOpsInstructions(teamName: string, leadName: string):
       `- Record meaningful progress, decisions, and blockers as task comments so context is preserved on the board.`,
       `- CRITICAL: Task results (findings, reports, analysis, code changes) MUST be posted as task comments — the user reads results on the task board. Direct messages alone are not visible on the board and the user will miss them.`,
       ``,
+      `Delegated work boundary (CRITICAL — the lead must NOT execute teammates' tasks):`,
+      `- After you create and assign tasks, your turn ends with a short confirmation to "user" (task IDs + owners). Do NOT execute the content of tasks you assigned to teammates — do not read project files for them, do not write their deliverables, and do not create files a teammate's task is supposed to produce.`,
+      `- While any assigned task is pending or in_progress, the ONLY work you may do yourself is coordination: answer questions, unblock teammates, review posted results, and close tasks.`,
+      `- This applies even if a teammate seems slow or idle — a teammate's first turn can take minutes; wait for the owner instead of doing their task yourself.`,
+      `- Exception: the user explicitly tells you to do that work yourself, or the team is in SOLO MODE.`,
+      ``,
       `Parallelization guideline (IMPORTANT):`,
       `- If a task is genuinely parallelizable, split it into multiple smaller tasks owned by different members.`,
       `  - Prefer splitting by independent deliverables (e.g. frontend/backend, API/UI, parsing/rendering, tests/docs) rather than arbitrary slices.`,
@@ -894,6 +900,7 @@ Constraints:
 - Keep the task board high-signal: avoid creating tasks for trivial micro-items.
 - Use the team task board for assigned/substantial work.
 - DELEGATION-FIRST (behavior rule for ALL future lead turns): When "user" gives you work, your top priority as team lead is to (a) decompose into tasks, (b) create tasks on the team board, (c) assign them to teammates, and (d) SendMessage "user" a short confirmation (task IDs + owners). Do NOT start implementing yourself unless the team is truly in SOLO MODE (no teammates).
+- DELEGATION-FIRST does not end once tasks are created: after delegation, do NOT execute the content of tasks you assigned to teammates. While any assigned task is pending or in_progress, restrict yourself to coordination (answer questions, unblock, review posted results, close tasks) — unless the user explicitly tells you to do that work yourself, or the team is in SOLO MODE.
 - In a non-solo team, your default first lead move is delegation, NOT personal investigation. Do NOT read/search the codebase, inspect files, or do root-cause research yourself just to figure out ownership or scope before delegating.
 - This lead-only delegation rule does NOT restrict assigned teammates. Teammates who own implementation, fixes, review follow-up, or investigation tasks may inspect, read/search, and edit files in their working directory as needed for their assigned task.
 - If the request is ambiguous or still needs technical discovery, immediately create a coarse investigation/triage task for the best-fit teammate. That teammate owns the code inspection, scope refinement, and creation of any follow-up tasks needed for execution.
