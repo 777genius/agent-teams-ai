@@ -1591,7 +1591,10 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       'That bootstrap restriction is only about team registry/startup files'
     );
     expect(launchArg?.members[0]?.prompt).toContain(
-      'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+      'you may inspect, read/search, and edit the PROJECT files that the task itself requires'
+    );
+    expect(launchArg?.members[0]?.prompt).toContain(
+      'registered for you as the MCP server named "agent-teams"'
     );
     expect(launchArg?.members[0]?.prompt).toContain('Launch bootstrap is a silent attach');
     expect(launchArg?.members[0]?.prompt).toContain('stay idle silently');
@@ -2316,8 +2319,9 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
     expect(sentText).toContain('If this delivered message assigns implementation');
     expect(sentText).not.toContain('never wait or poll for teammates inside the turn');
     expect(sentText).toContain(
-      'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+      'you may inspect, read/search, and edit the PROJECT files that the task itself requires'
     );
+    expect(sentText).toContain('go ONLY through the MCP server named "agent-teams"');
     expect(sentText).toContain('A status-only tool call is incomplete');
     expect(sentText).toContain('teamName="team-a"');
     expect(sentText).toContain('memberName="bob"');
