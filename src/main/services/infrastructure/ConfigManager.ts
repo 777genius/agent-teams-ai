@@ -24,7 +24,7 @@ import { DEFAULT_TRIGGERS, TriggerManager } from './TriggerManager';
 import type { CodexAccountAuthMode } from '@features/codex-account/contracts';
 import type { TeamRuntimeRecoveryConfig } from '@features/team-runtime-recovery/contracts';
 import type { TriggerColor } from '@shared/constants/triggerColors';
-import type { SshConnectionProfile } from '@shared/types/api';
+import type { SshConnectionProfile } from '@shared/types';
 
 const logger = createLogger('Service:ConfigManager');
 
