@@ -113,6 +113,7 @@ import {
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import { OpenCodeProviderScopedDialogCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import {
   isDeletedProjectPathSelection,
   isSelectableProjectPathProject,
@@ -2532,6 +2533,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       <DialogContent
         className={isSchedule ? 'max-h-[90vh] max-w-[52rem] overflow-y-auto' : 'max-w-[52rem]'}
       >
+        <OpenCodeProviderScopedDialogCatalogLoaders
+          enabled={
+            open &&
+            isLaunchMode &&
+            multimodelEnabled &&
+            selectedMemberProviders.includes('opencode')
+          }
+          projectPath={effectiveCwd || null}
+          selectedModels={openCodePreparationEvidence.selectedModels}
+          localProviderIds={openCodeLocalModelScope.openCodeLocalProviderIds}
+          passiveProviderStatus={projectScopedOpenCodeStatus}
+          listener={handleOpenCodeProviderScopedStatusChange}
+        />
         <DialogHeader>
           <DialogTitle className="text-sm">{dialogTitle}</DialogTitle>
           <DialogDescription className="text-xs">{dialogDescription}</DialogDescription>

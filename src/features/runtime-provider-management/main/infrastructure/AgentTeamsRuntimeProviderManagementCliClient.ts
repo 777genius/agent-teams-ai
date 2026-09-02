@@ -1456,10 +1456,16 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     cacheGeneration: number
   ): RuntimeProviderManagementModelsResponse {
     if (
-      cacheGeneration === this.modelResponseCacheGeneration &&
+      cacheGeneration !== this.modelResponseCacheGeneration &&
       response.models &&
       !response.error
     ) {
+      return {
+        ...response,
+        models: { ...response.models, catalogState: 'stale' },
+      };
+    }
+    if (response.models && !response.error) {
       this.modelResponseCache.delete(cacheKey);
       this.pruneModelResponseCache();
       this.modelResponseCache.set(cacheKey, {

@@ -1,4 +1,5 @@
 import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 
 import {
@@ -13,6 +14,8 @@ type SupportedProviderId = CliProviderId | TeamProviderId;
 export interface OpenCodeScopedPreparationEvidence {
   selectedModels: readonly string[];
   scopedStatusBySourceId: ReadonlyMap<string, CliProviderStatus | null | undefined>;
+  localSourceIds?: ReadonlySet<string>;
+  localProviderLookupAuthoritative?: boolean;
 }
 
 export function hasSettledOpenCodeScopedPreparation(
@@ -24,7 +27,14 @@ export function hasSettledOpenCodeScopedPreparation(
 
   return evidence.selectedModels.every((model) => {
     const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId?.trim().toLowerCase();
-    if (!sourceId) return true;
+    if (!sourceId) return false;
+    if (
+      isOpenCodeLocalProviderId(sourceId) ||
+      (evidence.localProviderLookupAuthoritative === true &&
+        evidence.localSourceIds?.has(sourceId) === true)
+    ) {
+      return true;
+    }
     const scopedStatus = evidence.scopedStatusBySourceId.get(sourceId);
     return Boolean(scopedStatus && isProviderModelCatalogExactReady(scopedStatus, now));
   });

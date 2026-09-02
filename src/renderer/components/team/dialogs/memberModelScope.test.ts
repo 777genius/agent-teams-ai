@@ -249,26 +249,55 @@ describe('getDialogTeamModelValidationError', () => {
 
     expect(hasSettledOpenCodeScopedPreparation(passive, evidence)).toBe(true);
     expect(
-      hasSettledOpenCodeScopedPreparation(
-        passive,
-        { ...evidence, selectedModels: ['openrouter/auto', 'anthropic/claude-sonnet'] }
-      )
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...evidence,
+        selectedModels: ['openrouter/auto', 'anthropic/claude-sonnet'],
+      })
     ).toBe(false);
     expect(
-      hasSettledOpenCodeScopedPreparation(
-        passive,
-        evidence,
-        Date.parse('2100-01-01T00:00:00.000Z')
-      )
+      hasSettledOpenCodeScopedPreparation(passive, evidence, Date.parse('2100-01-01T00:00:00.000Z'))
     ).toBe(false);
     expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, evidence)).toBe(false);
-    expect(createLaunchGuard(['opencode'], new Map([['opencode', passive]]), evidence).blocked(true))
-      .toBe(false);
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), evidence).blocked(true)
+    ).toBe(false);
 
     const missingEvidence = { ...evidence, scopedStatusBySourceId: new Map() };
-    expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, missingEvidence)).toBe(true);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, missingEvidence)).toBe(
+      true
+    );
     expect(
-      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), missingEvidence).blocked(true)
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), missingEvidence).blocked(
+        true
+      )
     ).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...evidence,
+        selectedModels: ['unqualified-model'],
+      })
+    ).toBe(false);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...missingEvidence,
+        selectedModels: ['ollama/local-model'],
+      })
+    ).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...missingEvidence,
+        selectedModels: ['local-lab/model'],
+        localSourceIds: new Set(['local-lab']),
+        localProviderLookupAuthoritative: true,
+      })
+    ).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...missingEvidence,
+        selectedModels: ['local-lab/model'],
+        localSourceIds: new Set(['local-lab']),
+        localProviderLookupAuthoritative: false,
+      })
+    ).toBe(false);
   });
 });

@@ -14,7 +14,7 @@ import type { CliProviderStatus } from '@shared/types';
 const START = new Date('2026-09-02T00:00:00.000Z').getTime();
 let statuses: ReadonlyMap<string, CliProviderStatus> = new Map();
 
-type CatalogState = 'fresh' | 'loading' | 'stale';
+type CatalogState = 'fresh' | 'loading' | 'stale' | 'error';
 interface PublisherProps {
   id: string;
   status: CliProviderStatus;
@@ -53,7 +53,7 @@ const Publisher = ({
     statusListener,
     id,
     catalogState === 'fresh' ? status : null,
-    catalogState !== 'stale'
+    catalogState === 'loading'
   );
   return null;
 };
@@ -138,6 +138,30 @@ describe('useOpenCodeProviderScopedModelAuthority', () => {
     const view = await renderHarness('/project', [{ id: 'source', status }]);
 
     await view.render('/project', [{ id: 'source', status, catalogState: 'stale' }]);
+    expect(statuses.has('source')).toBe(false);
+    await view.unmount();
+  });
+
+  it('preserves authority only while loading and withdraws it on error', async () => {
+    const status = buildStatus('model-a', 5_000);
+    const view = await renderHarness('/project', [{ id: 'source', status }]);
+
+    await view.render('/project', [{ id: 'source', status, catalogState: 'loading' }]);
+    expect(statuses.get('source')).toBe(status);
+    await view.render('/project', [{ id: 'source', status, catalogState: 'error' }]);
+    expect(statuses.has('source')).toBe(false);
+    await view.unmount();
+  });
+
+  it('withdraws retained authority when a fresh publish is not authoritative', async () => {
+    const status = buildStatus('model-a', 5_000);
+    const rejected = {
+      ...status,
+      modelCatalog: { ...status.modelCatalog!, models: [] },
+    };
+    const view = await renderHarness('/project', [{ id: 'source', status }]);
+
+    await view.render('/project', [{ id: 'source', status: rejected }]);
     expect(statuses.has('source')).toBe(false);
     await view.unmount();
   });

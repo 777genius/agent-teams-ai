@@ -2650,7 +2650,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(modelLoadCount).toBe(2);
 
     finishFirstModelLoad?.({ stdout: JSON.stringify(createModelsResponse()), stderr: '' });
-    await visibleLoad;
+    expect((await visibleLoad).models?.catalogState).toBe('stale');
     await client.loadModels(request);
     expect(modelLoadCount).toBe(2);
   });

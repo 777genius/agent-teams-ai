@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { clearMemberModelOverrides } from '@renderer/components/team/members/MembersEditorSection';
+import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
 import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 
 import {
@@ -128,6 +129,13 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
           if (isProviderModelCatalogExactReady(update.providerStatus)) {
             sourceContributions.set(publisherToken, update.providerStatus);
             retainedStatusBySourceId.set(sourceId, update.providerStatus);
+          } else {
+            const latestLiveStatus = [...sourceContributions.values()].at(-1);
+            if (latestLiveStatus) {
+              retainedStatusBySourceId.set(sourceId, latestLiveStatus);
+            } else {
+              retainedStatusBySourceId.delete(sourceId);
+            }
           }
         } else {
           sourceContributions.delete(publisherToken);
@@ -212,9 +220,13 @@ export function useOpenCodeProviderScopedDialogModelState({
         effectiveMemberDrafts
       ),
       scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
+      localSourceIds: openCodeLocalProviderIds ?? new Set<string>(),
+      localProviderLookupAuthoritative: openCodeLocalProviderLookupAuthoritative === true,
     }),
     [
       effectiveMemberDrafts,
+      openCodeLocalProviderIds,
+      openCodeLocalProviderLookupAuthoritative,
       openCodeProviderScopedStatusBySourceId,
       selectedModel,
       selectedProviderId,

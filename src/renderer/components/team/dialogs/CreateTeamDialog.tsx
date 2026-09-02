@@ -116,6 +116,7 @@ import {
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
+import { OpenCodeProviderScopedDialogCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import {
   isDeletedProjectPathSelection,
   isSelectableProjectPathProject,
@@ -2455,6 +2456,16 @@ export const CreateTeamDialog = ({
       }}
     >
       <DialogContent className="max-w-[52rem]">
+        <OpenCodeProviderScopedDialogCatalogLoaders
+          enabled={
+            open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode')
+          }
+          projectPath={effectiveCwd || null}
+          selectedModels={openCodePreparationEvidence.selectedModels}
+          localProviderIds={openCodeLocalModelScope.openCodeLocalProviderIds}
+          passiveProviderStatus={projectScopedOpenCodeStatus}
+          listener={handleOpenCodeProviderScopedStatusChange}
+        />
         <DialogHeader>
           <DialogTitle className="text-sm">
             {initialData ? t('create.title.copy') : t('create.title.create')}
