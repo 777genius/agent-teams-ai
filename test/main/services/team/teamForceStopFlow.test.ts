@@ -1,4 +1,7 @@
-import { runTeamForceStopFlow } from '@main/services/team/lifecycle/teamForceStopFlow';
+import {
+  runTeamForceStopFlow,
+  stopTeamWithEscalation,
+} from '@main/services/team/lifecycle/teamForceStopFlow';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
@@ -271,5 +274,90 @@ describe('runTeamForceStopFlow', () => {
     expect(ports.logWarning).toHaveBeenCalledWith(
       '[fixteam] Could not persist stopped launch state: team directory is read-only'
     );
+  });
+});
+
+describe('stopTeamWithEscalation', () => {
+  it('touches no other process when the regular stop confirms', async () => {
+    const ports = createPorts({ markTeamStopped: vi.fn(() => Promise.resolve()) });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(ports.stopTeam).toHaveBeenCalledWith('fixteam');
+    expect(ports.killRetainedRuntimeProcesses).not.toHaveBeenCalled();
+    expect(ports.clearPendingPromptDeliveries).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      stopOutcome: 'stopped',
+      cleanupOutcome: 'completed',
+      killedRuntimePids: [],
+      clearedPendingDeliveries: 0,
+      diagnostics: [],
+    });
+    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+  });
+
+  it('does not cancel deliveries up front the way the force stop does', async () => {
+    // The force stop cancels before the stop so a stop that removes the lane
+    // index cannot strand the ledger. A regular Stop cannot: it does not yet
+    // know whether it will have to escalate, and a confirmed Stop must leave
+    // pending work alone.
+    const escalating = createPorts({
+      observeOwnedRuntimeLaneIds: () => Promise.resolve(['primary']),
+    });
+    await stopTeamWithEscalation('fixteam', escalating);
+    expect(escalating.clearPendingPromptDeliveries).not.toHaveBeenCalled();
+
+    const forcing = createPorts({ observeOwnedRuntimeLaneIds: () => Promise.resolve(['primary']) });
+    await runTeamForceStopFlow('fixteam', forcing);
+    expect(forcing.clearPendingPromptDeliveries).toHaveBeenCalled();
+  });
+
+  it('escalates to the force-stop cleanup when the regular stop rejects', async () => {
+    const ports = createPorts({
+      stopTeam: vi.fn(() =>
+        Promise.reject(new Error('did not confirm stop; retaining runtime ownership'))
+      ),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stop_failed');
+    expect(result.killedRuntimePids).toEqual([4242]);
+    expect(result.clearedPendingDeliveries).toBe(2);
+  });
+
+  it('escalates to the force-stop cleanup when the regular stop runs out of budget', async () => {
+    const ports = createPorts({
+      stopTeam: vi.fn(() => new Promise<void>(() => undefined)),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('timed_out');
+    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+    });
+    // The escalated cleanup carries the same run fence the force stop does:
+    // a relaunch started inside the stop budget keeps its deliveries.
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
+    });
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledTimes(1);
+  });
+
+  it('scopes the escalated cancellation to the lanes read before the stop', async () => {
+    const ports = createPorts({
+      observeOwnedRuntimeLaneIds: () => Promise.resolve(['primary']),
+      stopTeam: vi.fn(() => Promise.reject(new Error('did not confirm stop'))),
+    });
+
+    await stopTeamWithEscalation('fixteam', ports);
+
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
+      ownedLaneIds: ['primary'],
+    });
   });
 });

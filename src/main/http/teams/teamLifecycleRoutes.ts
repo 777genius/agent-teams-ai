@@ -13,6 +13,8 @@ import {
   readOpenCodeRuntimeLaneIdsForTeam,
   readOwnedOpenCodeRuntimeRunIdsForTeam,
   runTeamForceStopFlow,
+  STOP_ESCALATION_TIMEOUT_MS,
+  stopTeamWithEscalation,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
@@ -58,9 +60,40 @@ export function registerTeamLifecycleRoutes(
           return reply.status(400).send({ error: validatedTeamName.error });
         }
 
+        const teamName = validatedTeamName.value!;
         const teamRuntimeApi = getTeamRuntimeApi(services);
-        await teamRuntimeApi.stopTeam(validatedTeamName.value!);
-        return reply.send(await teamRuntimeApi.getRuntimeState(validatedTeamName.value!));
+        // Same semantics as the in-app Stop control: the regular stop gets a
+        // bounded budget, and only if it does not deliver does the force-stop
+        // cleanup guarantee the team is down.
+        const result = await stopTeamWithEscalation(teamName, {
+          stopTeam: (name) => teamRuntimeApi.stopTeam(name),
+          observeOwnedRuntimeRunIds: (name) =>
+            readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+          observeOwnedRuntimeLaneIds: (name) =>
+            readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
+          killRetainedRuntimeProcesses: (name, context) =>
+            killRetainedOpenCodeRuntimeProcessesForTeam({
+              teamName: name,
+              requestedAtMs: context.requestedAtMs,
+              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+            }),
+          clearPendingPromptDeliveries: (name, context) =>
+            clearPendingOpenCodePromptDeliveriesForTeam({
+              teamName: name,
+              ownedRunIds: context.ownedRunIds,
+              ownedLaneIds: context.ownedLaneIds,
+              requestedAtMs: context.requestedAtMs,
+            }),
+          logWarning: (message) => logger.warn(message),
+          stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+          markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+        });
+        if (result.stopOutcome !== 'stopped') {
+          logger.warn(
+            `[${teamName}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
+          );
+        }
+        return reply.send(await teamRuntimeApi.getRuntimeState(teamName));
       } catch (error) {
         if (shouldLogError(error)) {
           logger.error(
