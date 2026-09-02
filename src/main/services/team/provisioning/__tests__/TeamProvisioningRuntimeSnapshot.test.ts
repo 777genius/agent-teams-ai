@@ -4,12 +4,14 @@ import {
   buildLiveTeamAgentRuntimeMetadata,
   buildTeamAgentRuntimeSnapshot,
   type PersistedRuntimeMemberLike,
-  type RuntimeAdapterRunSnapshotSource,
-  type TeamProvisioningRuntimeSnapshotRun,
 } from '../TeamProvisioningRuntimeSnapshot';
 
 import type { RuntimeTelemetryProcessTableRow } from '../../TeamRuntimeTelemetry';
 import type { LiveTeamAgentRuntimeMetadata } from '../TeamProvisioningRuntimeMetadataPolicy';
+import type {
+  RuntimeAdapterRunSnapshotSource,
+  TeamProvisioningRuntimeSnapshotRun,
+} from '../TeamProvisioningRuntimeSnapshotTypes';
 import type {
   MemberSpawnStatusEntry,
   MemberSpawnStatusesSnapshot,

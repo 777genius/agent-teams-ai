@@ -9,15 +9,15 @@ import {
 
 import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type { TeamProvisioningRuntimeResourceSampling } from './TeamProvisioningRuntimeResourceSampling';
-import type {
-  PersistedRuntimeMemberLike,
-  RuntimeAdapterRunSnapshotSource,
-  TeamProvisioningRuntimeSnapshotRun,
-} from './TeamProvisioningRuntimeSnapshot';
+import type { PersistedRuntimeMemberLike } from './TeamProvisioningRuntimeSnapshot';
 import type {
   TeamProvisioningAgentRuntimeSnapshotCachePort,
   TeamProvisioningLiveRuntimeMetadataCachePort,
 } from './TeamProvisioningRuntimeSnapshotCache';
+import type {
+  RuntimeAdapterRunSnapshotSource,
+  TeamProvisioningRuntimeSnapshotRun,
+} from './TeamProvisioningRuntimeSnapshotTypes';
 import type {
   TeamProvisioningRuntimeStateProjectionRun,
   TeamProvisioningRuntimeStateProjectionRuntimeAdapterRun,

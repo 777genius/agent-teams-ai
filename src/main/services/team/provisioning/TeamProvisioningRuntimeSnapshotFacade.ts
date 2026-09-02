@@ -1,8 +1,6 @@
 import {
   buildTeamAgentRuntimeSnapshot as buildTeamAgentRuntimeSnapshotHelper,
   type PersistedRuntimeMemberLike,
-  type RuntimeAdapterRunSnapshotSource,
-  type TeamProvisioningRuntimeSnapshotRun,
 } from './TeamProvisioningRuntimeSnapshot';
 import {
   TeamProvisioningRuntimeStateProjection,
@@ -13,6 +11,10 @@ import {
 import type { LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import type { TeamProvisioningRuntimeSnapshotResourceSamplingPorts } from './TeamProvisioningRuntimeResourceSampling';
 import type { TeamProvisioningAgentRuntimeSnapshotCachePort } from './TeamProvisioningRuntimeSnapshotCache';
+import type {
+  RuntimeAdapterRunSnapshotSource,
+  TeamProvisioningRuntimeSnapshotRun,
+} from './TeamProvisioningRuntimeSnapshotTypes';
 import type {
   MemberSpawnStatusesSnapshot,
   PersistedTeamLaunchSnapshot,
