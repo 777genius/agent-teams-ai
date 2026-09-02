@@ -253,13 +253,24 @@ export class TeamInboxWriter {
 
   private getImmutableExplicitMessagePayload(message: InboxMessage): Record<string, unknown> {
     const isRuntimeDelivery = message.source === 'runtime_delivery';
+    // Replayed runtime deliveries keyed by relayOfMessageId may paraphrase
+    // text/summary; drop them from the immutable payload so the duplicate is
+    // dropped silently instead of raising a messageId collision.
+    const isReplayableRuntimeDelivery =
+      isRuntimeDelivery &&
+      typeof message.relayOfMessageId === 'string' &&
+      message.relayOfMessageId.trim().length > 0;
     return {
       from: isRuntimeDelivery ? this.normalizeComparableParticipant(message.from) : message.from,
       to: isRuntimeDelivery ? this.normalizeComparableParticipant(message.to) : message.to,
-      text: isRuntimeDelivery ? this.normalizeComparableText(message.text) : message.text,
+      text: isReplayableRuntimeDelivery
+        ? undefined
+        : isRuntimeDelivery
+          ? this.normalizeComparableText(message.text)
+          : message.text,
       actionMode: message.actionMode,
       commentId: message.commentId,
-      summary: message.summary,
+      summary: isReplayableRuntimeDelivery ? undefined : message.summary,
       relayOfMessageId: isRuntimeDelivery
         ? message.relayOfMessageId?.trim()
         : message.relayOfMessageId,
@@ -541,18 +552,19 @@ export class TeamInboxWriter {
     const relayOfMessageId = payload.relayOfMessageId.trim();
     const from = this.normalizeComparableParticipant(payload.from);
     const to = this.normalizeComparableParticipant(payload.to);
-    const text = this.normalizeComparableText(payload.text);
-    if (!from || !to || !text) {
+    if (!from || !to) {
       return -1;
     }
 
+    // Replayed runtime deliveries of the same original message may arrive as
+    // paraphrases, so (relayOfMessageId, from, to) is the identity — text is
+    // deliberately excluded from the duplicate key.
     return messages.findIndex(
       (candidate) =>
         candidate.source === 'runtime_delivery' &&
         (candidate.relayOfMessageId ?? '').trim() === relayOfMessageId &&
         this.normalizeComparableParticipant(candidate.from) === from &&
-        this.normalizeComparableParticipant(candidate.to) === to &&
-        this.normalizeComparableText(candidate.text) === text
+        this.normalizeComparableParticipant(candidate.to) === to
     );
   }
 

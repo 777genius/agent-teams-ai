@@ -781,6 +781,150 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     });
   });
 
+  it('never turns an unaddressable sender into a reply contract', () => {
+    const taskRef = { teamName: 'team', taskId: 'task-1', displayId: '7' };
+
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'system', taskRefs: [taskRef] }),
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'system' });
+
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'system' }),
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'user' });
+
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: '' }),
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'user' });
+  });
+
+  it('marks system notifications as informational deliveries regardless of sender', () => {
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'lead', source: 'system_notification' }),
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'system' });
+
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'system', source: 'system_notification' }),
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'system' });
+
+    const existing = ledgerRecord({ replyRecipient: 'lead' });
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'system', source: 'system_notification' }),
+        existingRecord: existing,
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'lead' });
+  });
+
+  // Negative control: the taskRefs rule only makes a notice informational when
+  // the sender is unaddressable. A real teammate that happens to attach task
+  // references is still owed an answer, and its name must stay the recipient.
+  it('keeps an addressable teammate with taskRefs on a reply contract', () => {
+    const taskRef = { teamName: 'team', taskId: 'task-1', displayId: '7' };
+
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'alice', taskRefs: [taskRef] }),
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'alice' });
+
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'user', taskRefs: [taskRef] }),
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'user' });
+  });
+
+  // Startup inbox backfill (#534): the task watch registry replays every scoped
+  // inbox file when the app starts. A row that was already read in an earlier
+  // run has been answered; re-delivering it spends a full model turn on a
+  // message the member has already handled.
+  it('never re-delivers an already-read row replayed by the startup inbox backfill', async () => {
+    const backfilled = [message({ messageId: 'backfilled-read', read: true })];
+    const deliverOpenCodeMemberMessage = vi.fn();
+
+    expect(selectOpenCodeMemberInboxRelayUnreadMessages({ inboxMessages: backfilled })).toEqual([]);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+      },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue(backfilled),
+        deliverOpenCodeMemberMessage,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ attempted: 0, delivered: 0, relayed: 0, failed: 0 });
+  });
+
+  it('delivers an unread backfilled row exactly once and not again on the next startup', async () => {
+    const unread = message({ messageId: 'backfilled-unread' });
+    const deliverOpenCodeMemberMessage = vi.fn().mockResolvedValue({ delivered: true });
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const firstStartup = await relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+      },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([unread]),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    expect(firstStartup).toMatchObject({ attempted: 1, delivered: 1, relayed: 1 });
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'worker', [unread]);
+
+    const secondStartup = await relayOpenCodeMemberInboxMessagesWithPorts(
+      {
+        teamName: 'team',
+        memberName: 'worker',
+        relayKey: 'team/worker',
+      },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([{ ...unread, read: true }]),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    expect(secondStartup).toMatchObject({ attempted: 0, delivered: 0, relayed: 0 });
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+  });
+
   it('turns attachment payload failures into terminal ledger records and relay results', async () => {
     const markedAt = '2026-01-01T00:00:00.000Z';
     const pending = ledgerRecord({ id: 'pending-record', createdAt: markedAt });

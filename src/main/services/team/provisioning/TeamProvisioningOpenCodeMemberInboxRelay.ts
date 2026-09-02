@@ -1,3 +1,4 @@
+import { OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
 import {
   hashOpenCodePromptDeliveryPayload,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -638,11 +639,22 @@ export function resolveOpenCodeMemberInboxDeliveryDecision(input: {
   inferredTaskRefs: TaskRef[];
   source?: OpenCodeMemberMessageDeliverySource;
 }): OpenCodeMemberInboxRelayDeliveryDecision {
-  const fallbackReplyRecipient =
-    typeof input.message.from === 'string' &&
-    input.message.from.trim() &&
-    input.message.from.trim().toLowerCase() !== input.memberName.trim().toLowerCase()
-      ? input.message.from.trim()
+  const normalizedFrom = typeof input.message.from === 'string' ? input.message.from.trim() : '';
+  const senderIsUnaddressable =
+    !normalizedFrom ||
+    normalizedFrom.toLowerCase() === OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT;
+  // System/task notifications and taskRef-carrying messages from unaddressable
+  // senders are informational: the informational marker tells the runtime
+  // adapter to build an FYI delivery instead of a message_send reply contract.
+  // A delivery contract must never point at a recipient message_send rejects.
+  const informationalNotice =
+    input.message.source === 'system_notification' ||
+    (senderIsUnaddressable && Boolean(input.message.taskRefs?.length));
+  const fallbackReplyRecipient = informationalNotice
+    ? OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT
+    : !senderIsUnaddressable &&
+        normalizedFrom.toLowerCase() !== input.memberName.trim().toLowerCase()
+      ? normalizedFrom
       : 'user';
   const existingTaskRefs = input.existingRecord?.taskRefs?.length
     ? input.existingRecord.taskRefs

@@ -96,8 +96,8 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
   });
 
   it('fails closed when launching with confirmed members returns a mismatched fingerprint', async () => {
-    const expectedFingerprint = validExecutionProof().expectedBehaviorEvidence
-      ?.expectedBehaviorFingerprint;
+    const expectedFingerprint =
+      validExecutionProof().expectedBehaviorEvidence?.expectedBehaviorFingerprint;
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >(async () => launchData('confirmed_alive', 'mismatched-fingerprint'));
@@ -115,9 +115,7 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
       expectedFingerprint
     );
     expect(result.teamLaunchState).toBe('partial_failure');
-    expect(result.diagnostics).toEqual([
-      'OpenCode launch result behavior fingerprint mismatch',
-    ]);
+    expect(result.diagnostics).toEqual(['OpenCode launch result behavior fingerprint mismatch']);
     expect(result.members.Worker?.hardFailureReason).toBe(
       'opencode_launch_behavior_fingerprint_mismatch'
     );
@@ -138,6 +136,62 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     expect(result.diagnostics).not.toContain(
       'OpenCode launch result behavior fingerprint mismatch'
     );
+  });
+});
+
+describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
+  async function deliveredPromptText(replyRecipient: string | undefined): Promise<string> {
+    const sendOpenCodeTeamMessage = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
+    >(async (_input) => ({
+      accepted: true,
+      memberName: 'Worker',
+      diagnostics: [],
+    }));
+    const bridge = {
+      sendOpenCodeTeamMessage,
+    } as unknown as OpenCodeTeamRuntimeBridgePort;
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    await adapter.sendMessageToMember({
+      teamName: 'team-a',
+      laneId: 'lane-worker',
+      memberName: 'Worker',
+      cwd: '/repo',
+      text: 'Dependency resolved for task 7.',
+      messageId: 'origin-1',
+      replyRecipient,
+      taskRefs: [{ teamName: 'team-a', taskId: 'task-7', displayId: '7' }],
+    });
+
+    const bridgePayload = sendOpenCodeTeamMessage.mock.calls[0]?.[0];
+    return String(bridgePayload?.text ?? '');
+  }
+
+  it('builds an informational FYI envelope for the reserved "system" reply recipient', async () => {
+    const text = await deliveredPromptText('system');
+
+    expect(text).toContain('informational system notice');
+    expect(text).toContain('Never call agent-teams_message_send with to="system"');
+    expect(text).toContain('to="user"');
+    expect(text).not.toContain('Required message_send argument envelope');
+    expect(text).not.toContain('You must not end this turn empty.');
+  });
+
+  it('keeps the visible reply contract for addressable reply recipients', async () => {
+    const text = await deliveredPromptText('lead');
+
+    expect(text).toContain('Required message_send argument envelope');
+    expect(text).toContain('to="lead"');
+    expect(text).not.toContain('informational system notice');
+  });
+
+  it('defaults the reply contract to user when no recipient is provided', async () => {
+    const text = await deliveredPromptText(undefined);
+
+    expect(text).toContain('Required message_send argument envelope');
+    expect(text).toContain('to="user"');
+    expect(text).not.toContain('informational system notice');
   });
 });
 
@@ -263,9 +317,8 @@ function validExecutionProof(): OpenCodeExecutionProof & {
     effectiveSelectedAuthFingerprint,
     expectedBehaviorFingerprint: '',
   };
-  expectedBehaviorEvidence.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(
-    expectedBehaviorEvidence
-  );
+  expectedBehaviorEvidence.expectedBehaviorFingerprint =
+    createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorEvidence);
   const unsignedProof: Omit<OpenCodeExecutionProof, 'proofHash'> = {
     schemaVersion: 1,
     providerId: 'opencode',

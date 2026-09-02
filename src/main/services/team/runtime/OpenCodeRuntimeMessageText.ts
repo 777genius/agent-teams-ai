@@ -1,3 +1,5 @@
+import { OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
+
 import type { OpenCodeTeamRuntimeMessageInput } from './OpenCodeTeamRuntimeAdapter';
 
 export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessageInput): string {
@@ -25,7 +27,11 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
       .join('\n');
   }
 
-  const replyRecipient = input.replyRecipient?.trim() || 'user';
+  const requestedReplyRecipient = input.replyRecipient?.trim() ?? '';
+  const isInformationalNotice =
+    requestedReplyRecipient.toLowerCase() === OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT;
+  const replyRecipient =
+    requestedReplyRecipient && !isInformationalNotice ? requestedReplyRecipient : 'user';
   const deliveryContext =
     input.messageId && (input.taskRefs?.length || input.messageKind)
       ? JSON.stringify({
@@ -93,24 +99,36 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
           `Do not use provider names, runtime names, or team names as memberName; use exactly "${input.memberName}".`,
           'Do not reply only with acknowledgement.',
         ]
-      : [
-          'To make your reply visible in the app Messages UI, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send if that is the exposed name).',
-          `Use teamName="${input.teamName}", to="${replyRecipient}", from="${input.memberName}", text, and summary.`,
-          `Required message_send argument envelope: ${requiredMessageEnvelope}. Copy every value exactly, then add non-empty text and summary fields.`,
-          'Before calling message_send, verify that teamName, to, from, text, and summary are all present and are strings.',
-          'Include source="runtime_delivery" in that message_send call.',
-          input.messageId
-            ? `Include relayOfMessageId="${input.messageId}" in that message_send call.`
-            : null,
-          input.taskRefs?.length
-            ? `If taskRefs are present in <opencode_delivery_context>, include taskRefs exactly as provided in that message_send call: ${JSON.stringify(input.taskRefs)}.`
-            : null,
-          'If message_send reports parameter validation failure, correct the missing or invalid arguments from the required envelope and retry exactly once. Do not explain the validation error as the final reply.',
-          'If message_send returns an unavailable, not connected, or missing-tool error, write the exact concise reply as plain assistant text once, then stop.',
-          'After the message_send tool call succeeds, stop immediately. Do not send follow-up confirmations or repeat the same answer.',
-          'You must not end this turn empty.',
-          'Do not answer only with plain assistant text when agent-teams_message_send is available.',
-        ];
+      : isInformationalNotice
+        ? [
+            'This delivered app message is an informational system notice, not a request from an addressable teammate.',
+            'Do NOT send a visible reply for this notice unless it changes your plan or assigns you concrete new work.',
+            `The sender is not a team member. Never call agent-teams_message_send with to="${OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT}"; that recipient does not exist and the call will fail.`,
+            `Only if the notice changes your plan and a person must know, call agent-teams_message_send once with teamName="${input.teamName}", to="user", from="${input.memberName}", source="runtime_delivery"${
+              input.messageId ? `, relayOfMessageId="${input.messageId}"` : ''
+            }, plus concrete text and summary.`,
+            'Do not send acknowledgement, confirmation, or received-style messages to anyone for this notice.',
+            'If the notice concerns board tasks you own, act through the task tools (task_get, task_start, task_add_comment, task_complete) instead of messaging.',
+            'Otherwise end the turn after reading with one short plain-text sentence stating what the notice was about and that no reply is needed. Do not end this turn empty.',
+          ]
+        : [
+            'To make your reply visible in the app Messages UI, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send if that is the exposed name).',
+            `Use teamName="${input.teamName}", to="${replyRecipient}", from="${input.memberName}", text, and summary.`,
+            `Required message_send argument envelope: ${requiredMessageEnvelope}. Copy every value exactly, then add non-empty text and summary fields.`,
+            'Before calling message_send, verify that teamName, to, from, text, and summary are all present and are strings.',
+            'Include source="runtime_delivery" in that message_send call.',
+            input.messageId
+              ? `Include relayOfMessageId="${input.messageId}" in that message_send call.`
+              : null,
+            input.taskRefs?.length
+              ? `If taskRefs are present in <opencode_delivery_context>, include taskRefs exactly as provided in that message_send call: ${JSON.stringify(input.taskRefs)}.`
+              : null,
+            'If message_send reports parameter validation failure, correct the missing or invalid arguments from the required envelope and retry exactly once. Do not explain the validation error as the final reply.',
+            'If message_send returns an unavailable, not connected, or missing-tool error, write the exact concise reply as plain assistant text once, then stop.',
+            'After the message_send tool call succeeds, stop immediately. Do not send follow-up confirmations or repeat the same answer.',
+            'You must not end this turn empty.',
+            'Do not answer only with plain assistant text when agent-teams_message_send is available.',
+          ];
 
   return [
     '<opencode_app_message_delivery>',
