@@ -37,6 +37,8 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { closeReviewPersistenceScopeLockDatabasesForTests } from '@main/services/team/ReviewPersistenceScopeLock';
+
 import type { IpcResult } from '@shared/types/ipc';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
@@ -284,7 +286,9 @@ describe('review IPC path confinement', () => {
 
   afterEach(async () => {
     removeReviewHandlers(ipcMain);
-    await rm(tmpDir, { recursive: true, force: true });
+    // Windows keeps the sqlite lock database file busy while a handle is open.
+    closeReviewPersistenceScopeLockDatabasesForTests();
+    await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   async function getDisplayedSnapshotToken(
