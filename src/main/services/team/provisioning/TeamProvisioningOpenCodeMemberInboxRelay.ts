@@ -27,6 +27,7 @@ import {
   canCoalesceNoticesIntoOpenCodeDelivery,
   findNextUnreadUserMessageIndex,
   isOpenCodeCoalescedNoticeDeliveryProven,
+  type OpenCodeReplyOptionalCoalescePorts,
   selectOpenCodeReplyOptionalCoalescedFollowers,
 } from './TeamProvisioningOpenCodeInboxCoalescePolicy';
 import {
@@ -45,6 +46,7 @@ import {
   dedupeOpenCodeMemberInboxRelayDiagnostics,
   type OpenCodeMemberInboxRelayResult,
 } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
+import { settleOpenCodePostCompletionNotices } from './TeamProvisioningOpenCodePostCompletionSettlement';
 
 import type {
   OpenCodeMemberIdentityResolution,
@@ -370,6 +372,32 @@ async function runOpenCodeMemberInboxRelayWork(
     return taskRefInferenceTasks;
   };
 
+  // How a queued row is judged as a follower: by its own reply contract and its
+  // own ledger state, never by the anchor's. Both the coalescing prompt and the
+  // post-completion read-commit select followers this way.
+  const coalescePorts: OpenCodeReplyOptionalCoalescePorts = {
+    resolveReplyRecipient: (candidate) =>
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName,
+        message: candidate,
+        existingRecord: null,
+        deliveryMetadata: options.deliveryMetadata,
+        inferredTaskRefs: [],
+        source: options.source,
+      }).replyRecipient,
+    hasExistingRecord: async (candidate) =>
+      Boolean(
+        await promptLedger
+          .getByInboxMessage({
+            teamName,
+            memberName: memberIdentity.canonicalMemberName,
+            laneId: memberIdentity.laneId,
+            inboxMessageId: candidate.messageId,
+          })
+          .catch(() => null)
+      ),
+  };
+
   // Cursor-driven walk: a pending non-user delivery may skip ahead to a newer
   // user message (see findNextUnreadUserMessageIndex) instead of breaking.
   let cursor = 0;
@@ -539,6 +567,47 @@ async function runOpenCodeMemberInboxRelayWork(
       inferredTaskRefs,
       source: options.source,
     });
+    // Settled team (board complete, final user message already sent): this
+    // notice and the reply-optional notices behind it are read-committed
+    // without spending a runtime turn on any of them.
+    const settlement = await settleOpenCodePostCompletionNotices({
+      unread,
+      index,
+      anchorReplyRecipient: deliveryDecision.replyRecipient,
+      anchorHasLedgerRecord: Boolean(existingRecord),
+      ports: {
+        ...coalescePorts,
+        readTasks: readTaskRefInferenceTasks,
+        readTasksAfterCommit: () => ports.readTaskRefInferenceTasks(teamName),
+        readUserInbox: () => ports.readInboxMessages(teamName, 'user'),
+        markRead: (messages) => ports.markInboxMessagesRead(teamName, memberName, messages),
+        logReadCommitFailure: (error) =>
+          ports.logWarning(
+            `[${teamName}] OpenCode inbox relay could not read-commit settled notices for ${memberName}: ${ports.getErrorMessage(
+              error
+            )}`
+          ),
+        isCurrentGeneration,
+      },
+    });
+    if (settlement.kind === 'superseded') {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
+    if (settlement.kind === 'read_committed') {
+      result.relayed += settlement.messages.length;
+      result.diagnostics = [...(result.diagnostics ?? []), settlement.diagnostic];
+      for (let skipIndex = index + 1; skipIndex < unread.length; skipIndex += 1) {
+        if (!settlement.messages.includes(unread[skipIndex])) break;
+        cursor = Math.max(cursor, skipIndex + 1);
+      }
+      continue;
+    }
+    if (settlement.kind === 'catch_up') {
+      // The rows are read, but work reopened during the commit: the anchor is
+      // delivered anyway so the reopened board is not announced to nobody.
+      result.diagnostics = [...(result.diagnostics ?? []), settlement.diagnostic];
+      taskRefInferenceTasks = Promise.resolve(settlement.tasks);
+    }
     result.attempted += 1;
     const attachmentPayloads = await ports.resolveOpenCodeInboxAttachmentPayloads({
       teamName,
@@ -588,28 +657,7 @@ async function runOpenCodeMemberInboxRelayWork(
       unread,
       index,
       anchorReplyRecipient: deliveryDecision.replyRecipient,
-      ports: {
-        resolveReplyRecipient: (candidate) =>
-          resolveOpenCodeMemberInboxDeliveryDecision({
-            memberName,
-            message: candidate,
-            existingRecord: null,
-            deliveryMetadata: options.deliveryMetadata,
-            inferredTaskRefs: [],
-            source: options.source,
-          }).replyRecipient,
-        hasExistingRecord: async (candidate) =>
-          Boolean(
-            await promptLedger
-              .getByInboxMessage({
-                teamName,
-                memberName: memberIdentity.canonicalMemberName,
-                laneId: memberIdentity.laneId,
-                inboxMessageId: candidate.messageId,
-              })
-              .catch(() => null)
-          ),
-      },
+      ports: coalescePorts,
     });
     const coalesced = coalesceAllowed ? coalescable : [];
     if (!isCurrentGeneration()) {

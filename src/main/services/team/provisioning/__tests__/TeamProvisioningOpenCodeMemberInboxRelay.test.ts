@@ -20,6 +20,7 @@ import {
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { OpenCodePromptDeliveryLedgerStore } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { RelayInboxMessage } from '../TeamProvisioningInboxRelayPolicy';
+import type { InboxMessage, TeamTask } from '@shared/types';
 
 function message(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage {
   return {
@@ -30,6 +31,40 @@ function message(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage 
     read: false,
     messageId: 'message-1',
     ...overrides,
+  };
+}
+
+/** A finished board: one completed task whose last board event is the epoch. */
+function settledBoardTask(overrides: Partial<TeamTask> = {}): TeamTask {
+  return {
+    id: 'task-1',
+    subject: 'write the section',
+    status: 'completed',
+    createdAt: '2026-01-01T09:00:00.000Z',
+    // A comment after the completion bumped this; a comment is not a board event.
+    updatedAt: '2026-01-01T10:00:20.000Z',
+    historyEvents: [
+      {
+        id: 'event-1',
+        type: 'status_changed',
+        timestamp: '2026-01-01T10:00:00.000Z',
+        from: 'in_progress',
+        to: 'completed',
+      },
+    ],
+    ...overrides,
+  } as TeamTask;
+}
+
+/** The team's closing message to the user, written after the board completed. */
+function settledFinalUserMessage(): InboxMessage {
+  return {
+    from: 'team-lead',
+    to: 'user',
+    text: 'Everything on the board is done.',
+    timestamp: '2026-01-01T10:00:05.000Z',
+    read: false,
+    messageId: 'final-1',
   };
 }
 
@@ -1012,6 +1047,151 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     expect(deliverAgain).toHaveBeenCalledTimes(1);
     expect(deliverAgain.mock.calls[0]?.[1]?.text).toBe('Work sync check');
     expect(markAgain).not.toHaveBeenCalled();
+  });
+
+  it('read-commits settled notices without spending a runtime turn on any of them', async () => {
+    const anchor = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done.',
+      timestamp: '2026-01-01T10:00:10.000Z',
+    });
+    const follower = message({
+      messageId: 'task-comment-forward:1',
+      from: 'system',
+      source: 'system_notification',
+      messageKind: 'task_comment_notification',
+      text: 'Comment on #de5126de.',
+      timestamp: '2026-01-01T10:00:11.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn().mockResolvedValue({ delivered: true });
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(target === 'user' ? [settledFinalUserMessage()] : [anchor, follower])
+        ) as never,
+        // The only thing that happened after the board completed is a comment,
+        // and a comment is not a board event.
+        readTaskRefInferenceTasks: vi.fn().mockResolvedValue([settledBoardTask()]),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage).not.toHaveBeenCalled();
+    // Relay order puts the system notification first; it anchors, the teammate
+    // report rides along, and both are committed in one pass.
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [follower, anchor]);
+    expect(result).toMatchObject({ attempted: 0, delivered: 0, relayed: 2, failed: 0 });
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_post_completion_read_commit'),
+      ])
+    );
+  });
+
+  it('delivers the anchor as a catch-up when the board moved during the settled read-commit', async () => {
+    const anchor = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done.',
+      timestamp: '2026-01-01T10:00:10.000Z',
+    });
+    const reopenedBoard = [
+      settledBoardTask(),
+      settledBoardTask({
+        id: 'task-2',
+        status: 'pending',
+        createdAt: '2026-01-01T10:00:12.000Z',
+        updatedAt: '2026-01-01T10:00:12.000Z',
+        historyEvents: [
+          {
+            id: 'event-new',
+            type: 'task_created',
+            timestamp: '2026-01-01T10:00:12.000Z',
+            status: 'pending',
+          },
+        ],
+      }),
+    ];
+    const boardReads = [[settledBoardTask()], reopenedBoard];
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { messageId?: string }) =>
+        Promise.resolve({ delivered: true, accepted: true, responsePending: false })
+    );
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(target === 'user' ? [settledFinalUserMessage()] : [anchor])
+        ) as never,
+        readTaskRefInferenceTasks: vi.fn(() =>
+          Promise.resolve(boardReads.shift() ?? reopenedBoard)
+        ) as never,
+        deliverOpenCodeMemberMessage,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.messageId).toBe('scribe-done');
+    expect(result).toMatchObject({ attempted: 1, delivered: 1 });
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('board moved, delivering anchor as catch-up'),
+      ])
+    );
+  });
+
+  it('delivers normally once a board event lands after the team final message', async () => {
+    const anchor = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done.',
+      timestamp: '2026-01-01T10:10:00.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { messageId?: string }) =>
+        Promise.resolve({ delivered: true, accepted: true, responsePending: false })
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(target === 'user' ? [settledFinalUserMessage()] : [anchor])
+        ) as never,
+        // The board changed after the final user message, so that message is no
+        // longer the team's word on the current board.
+        readTaskRefInferenceTasks: vi.fn().mockResolvedValue([
+          settledBoardTask({
+            updatedAt: '2026-01-01T10:09:00.000Z',
+            historyEvents: [
+              {
+                id: 'event-reopen',
+                type: 'status_changed',
+                timestamp: '2026-01-01T10:09:00.000Z',
+                from: 'in_progress',
+                to: 'completed',
+              },
+            ],
+          }),
+        ]),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ attempted: 1, delivered: 1 });
+    expect(result.diagnostics ?? []).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_post_completion_read_commit'),
+      ])
+    );
   });
 
   it('stops at a pending non-user delivery when no unread user message follows', async () => {
