@@ -1,7 +1,7 @@
 import { appendFile, mkdir, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { addLogSink, type LogSinkEntry } from '@shared/utils/logger';
+import { addLogSink, type LogSinkEntry, type LogSinkLevel } from '@shared/utils/logger';
 import { redactSentryEvent } from '@shared/utils/sentryConfig';
 
 const LOG_FILE_NAME = 'app-errors.ndjson';
@@ -28,7 +28,7 @@ export interface PersistentAppLogHandle {
 interface PersistentLogRecord {
   v: 1;
   t: string;
-  level: 'warn' | 'error';
+  level: LogSinkLevel;
   process: 'main' | 'renderer';
   namespace: string;
   appVersion: string;
