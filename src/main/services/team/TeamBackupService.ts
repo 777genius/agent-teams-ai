@@ -77,6 +77,7 @@ const TEAM_ROOT_FILES = [
   'team.meta.json',
   'launch-state.json',
   'launch-summary.json',
+  'launch-stopped.json',
   'kanban-state.json',
   'sentMessages.json',
   'sent-cross-team.json',

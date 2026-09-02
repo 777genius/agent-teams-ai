@@ -34,7 +34,7 @@ export function getTeamLaunchSummaryPath(teamName: string): string {
  * was still on disk. Any new active launch-state write (a real launch)
  * removes it.
  */
-const TEAM_LAUNCH_STOPPED_MARKER_FILE = 'launch-stopped.json';
+export const TEAM_LAUNCH_STOPPED_MARKER_FILE = 'launch-stopped.json';
 
 export function getTeamLaunchStoppedMarkerPath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE);
