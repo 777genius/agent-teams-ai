@@ -57,6 +57,7 @@ export interface UpdateTeamConfigPostLaunchPorts {
   writeConfig(raw: string): Promise<void>;
   invalidateTeam(teamName: string): void;
   scanForNewestSession(projectPath: string, knownSessions: string[]): Promise<string | null>;
+  readMetaMembers(): Promise<readonly TeamMember[]>;
   getLanguage(): string;
   info(message: string): void;
   warn(message: string): void;
@@ -210,6 +211,90 @@ export function buildOpenCodeConfigMemberFromLaunchMember(
   );
 }
 
+export function buildConfigMemberFromMetaMember(
+  teamName: string,
+  member: TeamMember,
+  clock: TeamProvisioningConfigMaterializationClock = {}
+): Record<string, unknown> {
+  const name = member.name.trim();
+  const configMember: Record<string, unknown> = {
+    name,
+    agentId: `${name}@${teamName}`,
+    agentType: member.agentType?.trim() || 'general-purpose',
+    role: member.role?.trim() || undefined,
+    workflow: member.workflow?.trim() || undefined,
+    isolation: member.isolation === 'worktree' ? 'worktree' : undefined,
+    providerId: normalizeOptionalTeamProviderId(member.providerId),
+    model: member.model?.trim() || undefined,
+    effort: isTeamEffortLevel(member.effort) ? member.effort : undefined,
+    mcpPolicy: normalizeTeamMemberMcpPolicy(member.mcpPolicy),
+    cwd: member.cwd?.trim() || undefined,
+    joinedAt: typeof member.joinedAt === 'number' ? member.joinedAt : (clock.now ?? Date.now)(),
+  };
+
+  return Object.fromEntries(
+    Object.entries(configMember).filter(([, value]) => value !== undefined)
+  );
+}
+
+/**
+ * Self-healing roster sync: appends members that exist in members.meta.json but are
+ * missing from config.json members. Members without an authoritative config identity
+ * break OpenCode runtime recipient resolution ("has no authoritative config identity"),
+ * which permanently fails inbox relay to those teammates.
+ */
+export function appendMissingConfigMembersFromMeta(
+  teamName: string,
+  config: Record<string, unknown>,
+  metaMembers: readonly TeamMember[],
+  clock: TeamProvisioningConfigMaterializationClock = {}
+): boolean {
+  const activeMetaMembers = metaMembers.filter((member) => {
+    const name = member.name?.trim() ?? '';
+    const lower = name.toLowerCase();
+    return (
+      name.length > 0 &&
+      !member.removedAt &&
+      lower !== 'user' &&
+      lower !== 'team-lead' &&
+      !isLeadMember(member)
+    );
+  });
+  if (activeMetaMembers.length === 0) {
+    return false;
+  }
+
+  const existingMembers = Array.isArray(config.members)
+    ? (config.members as Record<string, unknown>[])
+    : [];
+  const existingNames = new Set(
+    existingMembers
+      .map((member) =>
+        member && typeof member === 'object' && typeof member.name === 'string'
+          ? member.name.trim().toLowerCase()
+          : ''
+      )
+      .filter(Boolean)
+  );
+
+  const appendedMembers: Record<string, unknown>[] = [];
+  for (const member of activeMetaMembers) {
+    const nameLower = member.name.trim().toLowerCase();
+    if (existingNames.has(nameLower)) {
+      continue;
+    }
+    appendedMembers.push(buildConfigMemberFromMetaMember(teamName, member, clock));
+    existingNames.add(nameLower);
+  }
+
+  if (appendedMembers.length === 0) {
+    return false;
+  }
+
+  config.members = [...existingMembers, ...appendedMembers];
+  return true;
+}
+
 export function collectPostLaunchSessionHistory(config: Record<string, unknown>): string[] {
   const sessionHistory = Array.isArray(config.sessionHistory)
     ? [...(config.sessionHistory as string[])]
@@ -312,6 +397,21 @@ export async function updateTeamConfigPostLaunch(
       color,
       launchState,
     });
+
+    try {
+      const metaMembers = await ports.readMetaMembers();
+      if (appendMissingConfigMembersFromMeta(teamName, config, metaMembers)) {
+        ports.info(
+          `[${teamName}] Synced missing members.meta.json members into config.json members`
+        );
+      }
+    } catch (error) {
+      ports.warn(
+        `[${teamName}] Failed to sync members.meta.json into config members: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
 
     await ports.writeConfig(JSON.stringify(config, null, 2));
     ports.invalidateTeam(teamName);
