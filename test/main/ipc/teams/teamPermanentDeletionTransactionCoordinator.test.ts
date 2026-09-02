@@ -1,0 +1,191 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { TeamPermanentDeletionTransactionCoordinator } from '../../../../src/main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
+
+import type { TeamPermanentDeletionTransactionCoordinatorPorts } from '../../../../src/main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
+import type { TeamAttachmentStore } from '../../../../src/main/services/team/TeamAttachmentStore';
+import type {
+  TeamBackupService,
+  TeamPermanentDeletionIntent,
+} from '../../../../src/main/services/team/TeamBackupService';
+import type { TeamTaskAttachmentStore } from '../../../../src/main/services/team/TeamTaskAttachmentStore';
+
+type PermanentDeletionTarget = TeamPermanentDeletionIntent['completedTargets'][number];
+
+const PREPARE_TIMEOUT_MS = 30_000;
+
+function createIntent(): TeamPermanentDeletionIntent {
+  return {
+    version: 2,
+    teamName: 'fixteam',
+    identityId: '11111111-1111-4111-8111-111111111111',
+    transactionId: '22222222-2222-4222-8222-222222222222',
+    identityKind: 'team',
+    targets: {
+      'team-data': { status: 'present', identity: { dev: 1, ino: 1, birthtimeMs: 1 } },
+      'task-data': { status: 'present', identity: { dev: 1, ino: 2, birthtimeMs: 2 } },
+      'message-attachments': { status: 'present', identity: { dev: 1, ino: 3, birthtimeMs: 3 } },
+      'task-attachments': { status: 'present', identity: { dev: 1, ino: 4, birthtimeMs: 4 } },
+    },
+    targetRemovalProofs: {},
+    completedTargets: [],
+    cleanupCompleted: false,
+    phase: 'prepared',
+    requestedAt: '2026-08-20T12:00:00.000Z',
+    updatedAt: '2026-08-20T12:00:00.000Z',
+  };
+}
+
+function createHarness(options: { prepareTeamDeletion: () => Promise<void> }): {
+  coordinator: TeamPermanentDeletionTransactionCoordinator;
+  lifecycle: {
+    prepareTeamDeletion: ReturnType<typeof vi.fn>;
+    completeTeamDeletion: ReturnType<typeof vi.fn>;
+    resumeTeam: ReturnType<typeof vi.fn>;
+  };
+  permanentlyDeleteTeam: ReturnType<typeof vi.fn>;
+  completePermanentDeletion: ReturnType<typeof vi.fn>;
+} {
+  const intent = createIntent();
+  const lifecycle = {
+    prepareTeamDeletion: vi.fn(options.prepareTeamDeletion),
+    completeTeamDeletion: vi.fn(),
+    resumeTeam: vi.fn(),
+  };
+  const permanentlyDeleteTeam = vi.fn(async () => true);
+  const completePermanentDeletion = vi.fn(async () => undefined);
+  const backupService = {
+    beginPermanentDeletion: vi.fn(async () => intent),
+    commitPermanentDeletionBoundary: vi.fn(
+      async (current: TeamPermanentDeletionIntent) =>
+        ({ ...current, phase: 'deleting' }) as TeamPermanentDeletionIntent
+    ),
+    abortPreparedPermanentDeletion: vi.fn(async () => undefined),
+    listPendingPermanentDeletions: vi.fn(async (): Promise<TeamPermanentDeletionIntent[]> => []),
+    isPermanentDeletionTargetCurrent: vi.fn(async () => true),
+    reconcilePermanentDeletionProgress: vi.fn(
+      async (current: TeamPermanentDeletionIntent) => current
+    ),
+    completePermanentDeletion,
+    withPermanentDeletionTargetFence: vi.fn(
+      (
+        fencedIntent: TeamPermanentDeletionIntent,
+        operation: (
+          isTargetCurrent: () => Promise<boolean>,
+          getTargetProofHooks: (target: PermanentDeletionTarget) => {
+            detachedPath: string;
+            onDetachedValidated: () => Promise<void>;
+            onRemovalDurable: () => Promise<void>;
+          },
+          isTargetCompleted: (target: PermanentDeletionTarget) => boolean
+        ) => Promise<boolean>
+      ) => {
+        const completed = new Set<PermanentDeletionTarget>(fencedIntent.completedTargets);
+        return operation(
+          async () => true,
+          (target) => {
+            completed.add(target);
+            return {
+              detachedPath: `/tmp/detached-${target}`,
+              onDetachedValidated: async () => undefined,
+              onRemovalDurable: async () => undefined,
+            };
+          },
+          (target) => completed.has(target)
+        );
+      }
+    ),
+  } as unknown as TeamBackupService;
+
+  const ports: TeamPermanentDeletionTransactionCoordinatorPorts = {
+    backupService: () => backupService,
+    dataService: () => ({ permanentlyDeleteTeam }),
+    attachmentStore: {
+      deleteTeamAttachments: vi.fn(async () => true),
+    } as unknown as TeamAttachmentStore,
+    taskAttachmentStore: {
+      deleteTeamAttachments: vi.fn(async () => true),
+    } as unknown as TeamTaskAttachmentStore,
+    lifecycle: () => lifecycle,
+    invalidateTeamConfig: vi.fn(),
+    logRecoveryError: vi.fn(),
+  };
+
+  return {
+    coordinator: new TeamPermanentDeletionTransactionCoordinator(ports),
+    lifecycle,
+    permanentlyDeleteTeam,
+    completePermanentDeletion,
+  };
+}
+
+describe('TeamPermanentDeletionTransactionCoordinator quiesce timeout', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('rejects with a concrete error instead of hanging when the quiesce never settles', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: () => new Promise<void>(() => undefined),
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    const rejection = expect(deletion).rejects.toThrow(
+      `Permanent deletion of "fixteam" timed out after ${PREPARE_TIMEOUT_MS}ms waiting for team activity to quiesce`
+    );
+    await vi.advanceTimersByTimeAsync(PREPARE_TIMEOUT_MS);
+    await rejection;
+
+    // Nothing destructive ran, so the team is still on disk and still listed.
+    expect(harness.permanentlyDeleteTeam).not.toHaveBeenCalled();
+    expect(harness.completePermanentDeletion).not.toHaveBeenCalled();
+    expect(harness.lifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+  });
+
+  it('does not fire the timeout when the quiesce settles just under the deadline', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: () =>
+        new Promise<void>((resolve) => setTimeout(resolve, PREPARE_TIMEOUT_MS - 1)),
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    await vi.advanceTimersByTimeAsync(PREPARE_TIMEOUT_MS * 2);
+    await expect(deletion).resolves.toBeUndefined();
+
+    expect(harness.lifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
+      'fixteam',
+      '11111111-1111-4111-8111-111111111111'
+    );
+    expect(harness.permanentlyDeleteTeam).toHaveBeenCalledWith(
+      'fixteam',
+      expect.any(Function),
+      expect.any(Function),
+      expect.objectContaining({
+        teamDataProofHooks: expect.any(Object),
+        taskDataProofHooks: expect.any(Object),
+      })
+    );
+    expect(harness.completePermanentDeletion).toHaveBeenCalled();
+    expect(harness.lifecycle.completeTeamDeletion).toHaveBeenCalledWith('fixteam');
+  });
+
+  it('propagates a quiesce failure unchanged instead of reporting a timeout', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: async () => {
+        throw new Error('quiesce failed');
+      },
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    const rejection = expect(deletion).rejects.toThrow('quiesce failed');
+    await vi.advanceTimersByTimeAsync(PREPARE_TIMEOUT_MS * 2);
+    await rejection;
+
+    expect(harness.permanentlyDeleteTeam).not.toHaveBeenCalled();
+    expect(harness.completePermanentDeletion).not.toHaveBeenCalled();
+  });
+});

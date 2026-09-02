@@ -26,6 +26,8 @@ interface TeamPermanentDeletionLifecycle {
   resumeTeam(teamName: string): void;
 }
 
+const PREPARE_TEAM_DELETION_TIMEOUT_MS = 30_000;
+
 export interface TeamPermanentDeletionTransactionCoordinatorPorts {
   backupService(): TeamBackupService | null;
   dataService(): TeamPermanentDeletionDataPort;
@@ -116,7 +118,7 @@ export class TeamPermanentDeletionTransactionCoordinator {
     }
 
     if (!teamDataAlreadyCompleted) {
-      await this.ports.lifecycle()?.prepareTeamDeletion(intent.teamName, intent.identityId);
+      await this.prepareTeamDeletionWithTimeout(intent.teamName, intent.identityId);
       if (!(await backupService.isPermanentDeletionTargetCurrent(intent))) {
         this.ports.lifecycle()?.resumeTeam(intent.teamName);
         return;
@@ -183,6 +185,45 @@ export class TeamPermanentDeletionTransactionCoordinator {
       this.ports.lifecycle()?.completeTeamDeletion(intent.teamName);
     } else {
       this.ports.lifecycle()?.resumeTeam(intent.teamName);
+    }
+  }
+
+  /**
+   * The quiesce that precedes a permanent deletion drains in-flight team
+   * operations and has no deadline of its own. One wedged operation - a runtime
+   * bridge call that never settles, say - parks the whole deletion with neither
+   * a result nor an error: the dialog closes, the team stays, and nothing is
+   * written anywhere the user can see. Bounding the wait turns that into a
+   * rejection with a message that says what to do about it.
+   */
+  private async prepareTeamDeletionWithTimeout(
+    teamName: string,
+    deletionIdentityId: string
+  ): Promise<void> {
+    const lifecycle = this.ports.lifecycle();
+    if (!lifecycle) return;
+    const preparation = lifecycle.prepareTeamDeletion(teamName, deletionIdentityId);
+    // The quiesce keeps running after a timeout; claim its rejection here so a
+    // late failure cannot surface as an unhandled rejection.
+    void preparation.catch(() => undefined);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      await Promise.race([
+        preparation,
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            reject(
+              new Error(
+                `Permanent deletion of "${teamName}" timed out after ${PREPARE_TEAM_DELETION_TIMEOUT_MS}ms waiting for team activity to quiesce. ` +
+                  'The team was not deleted. Wait for running agents or runtime lanes to settle, then try again.'
+              )
+            );
+          }, PREPARE_TEAM_DELETION_TIMEOUT_MS);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 
