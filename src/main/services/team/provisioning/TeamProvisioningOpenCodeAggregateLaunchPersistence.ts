@@ -132,6 +132,17 @@ export interface LaunchOpenCodeAggregatePrimaryLanePorts {
     state: 'disconnected' | 'failed';
     message: string;
   }): void;
+  /**
+   * The promotion gate every secondary lane already passes. Applied to the
+   * primary lane it is what stops a lead that claims `confirmed_alive` without a
+   * committed session record from being promoted at all.
+   */
+  guardCommittedOpenCodeLaneEvidence?(input: {
+    teamName: string;
+    laneId: string;
+    memberNames: readonly string[];
+    result: TeamRuntimeLaunchResult;
+  }): Promise<TeamRuntimeLaunchResult>;
   logWarning?(message: string): void;
   /** Durable sink for expected operational events, separate from failures. */
   logDiagnostic?(message: string): void;
@@ -237,8 +248,18 @@ export async function launchOpenCodeAggregatePrimaryLane(
       describeBlockedOpenCodePrimaryLaneLaunch({ teamName, runId, result: launchResult })
     );
   }
+  // The gate runs its own commit first, so the persist commit below is
+  // idempotent: the same id/member/run replaces the same session record.
+  const guardedLaunchResult = ports.guardCommittedOpenCodeLaneEvidence
+    ? await ports.guardCommittedOpenCodeLaneEvidence({
+        teamName,
+        laneId: 'primary',
+        memberNames: expectedMembers.map((member) => member.name),
+        result: launchResult,
+      })
+    : launchResult;
   const { snapshot, result } = await ports.persistOpenCodeRuntimeAdapterLaunchResult(
-    launchResult,
+    guardedLaunchResult,
     launchInput
   );
   params.assertStillCurrentAfterPersistence?.();
