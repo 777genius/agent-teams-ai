@@ -39,7 +39,7 @@ import type {
   OpenCodeMemberInboxDelivery,
   OpenCodeMemberMessageDeliveryInput,
   OpenCodeMemberMessageDeliverySource,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodeVisibleReplyProof } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
 import type { AgentActionMode, InboxMessage, TaskRef, TeamTask } from '@shared/types';
 

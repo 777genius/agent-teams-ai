@@ -7,7 +7,7 @@ import {
 import type {
   OpenCodeMemberDirectory,
   OpenCodeMemberIdentityResolution,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 
 export type OpenCodeMemberDeliveryIdentityResolution = OpenCodeMemberIdentityResolution;
 

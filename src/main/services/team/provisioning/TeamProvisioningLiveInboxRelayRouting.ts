@@ -7,7 +7,7 @@ import {
   isCrossTeamToolRecipientName,
 } from './TeamProvisioningCrossTeamRelayHelpers';
 
-import type { OpenCodeMemberInboxDelivery } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import type { OpenCodeMemberInboxDelivery } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type {
   OpenCodeMemberInboxRelayOptions,
   OpenCodeMemberInboxRelayResult,

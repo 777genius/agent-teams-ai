@@ -27,7 +27,7 @@ import type {
   OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,
 } from '../../runtime';
-import type { OpenCodeRuntimeMessageAdapter } from './OpenCodeMemberMessageDeliveryService';
+import type { OpenCodeRuntimeMessageAdapter } from './OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 import type { AgentActionMode, InboxMessage, TaskRef } from '@shared/types/team';
@@ -456,7 +456,10 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
       return 0;
     }
     const activeLaneIds = [
-      ...new Set([...(canDeliverToTeamRuntime ? (activeFromIndex ?? []) : []), ...recoveredLaneIds]),
+      ...new Set([
+        ...(canDeliverToTeamRuntime ? (activeFromIndex ?? []) : []),
+        ...recoveredLaneIds,
+      ]),
     ];
     return await this.scanActiveLanes(teamName, activeLaneIds);
   }
@@ -494,7 +497,9 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
       }
       const members = await this.ports.resolveMembersForRuntimeLane(teamName, laneId);
       for (const memberName of members) {
-        const inboxMessages = await this.ports.getInboxMessages(teamName, memberName).catch(() => []);
+        const inboxMessages = await this.ports
+          .getInboxMessages(teamName, memberName)
+          .catch(() => []);
         for (const message of inboxMessages) {
           if (
             message.read ||

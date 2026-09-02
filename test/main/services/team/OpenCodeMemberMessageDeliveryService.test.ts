@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  OpenCodeMemberMessageDeliveryService,
-  type OpenCodeMemberMessageDeliveryServiceDependencies,
-  type OpenCodeRuntimeMessageAdapter,
-} from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { OpenCodeMemberMessageDeliveryService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService';
 
+import type {
+  OpenCodeMemberMessageDeliveryServiceDependencies,
+  OpenCodeRuntimeMessageAdapter,
+} from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 
 function makeAdapter(

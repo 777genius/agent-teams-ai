@@ -4,7 +4,7 @@ import {
   getOpenCodeRuntimePermissionListingAdapter as getOpenCodeRuntimePermissionListingAdapterFromAdapter,
 } from './TeamProvisioningRuntimeRecipientResolution';
 
-import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeAdapterRegistry } from '../runtime';
 import type {
   MemberWorkSyncAcceptedReportChecker,

@@ -5,7 +5,7 @@ import { createLogger } from '@shared/utils/logger';
 import * as agentTeamsControllerModule from 'agent-teams-controller';
 import { resolve as resolvePath } from 'path';
 
-import { type OpenCodeMemberIdentityResolution } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { type OpenCodeMemberIdentityResolution } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import { type TeamRuntimeStopInput } from '../runtime';
 
 import { TeamProvisioningBootstrapEvidenceCompatibilityFacade } from './TeamProvisioningBootstrapEvidenceCompatibilityFacade';

@@ -4,7 +4,7 @@ import { createLogger } from '@shared/utils/logger';
 import {
   type OpenCodeMemberInboxDelivery,
   type OpenCodeMemberMessageDeliveryInput,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 
 import { type OpenCodeAttachmentPayloadStore } from './TeamProvisioningOpenCodeAttachmentPayloads';
 import {

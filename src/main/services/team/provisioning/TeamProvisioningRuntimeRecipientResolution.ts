@@ -4,7 +4,7 @@ import { inferTeamProviderIdFromModel } from '@shared/utils/teamProvider';
 import { normalizeTeamProviderLike } from './TeamProvisioningMemberSpecs';
 import { resolveOpenCodeSoloRuntimeRecipientProviderId } from './TeamProvisioningOpenCodeSoloRuntime';
 
-import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import type { OpenCodeRuntimeMessageAdapter } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamLaunchRuntimeAdapter, TeamRuntimeProviderId } from '../runtime';
 import type { OpenCodeRuntimePermissionListingAdapter } from './TeamProvisioningOpenCodeRuntimePermissions';
 import type { TeamConfig, TeamMember, TeamProviderId } from '@shared/types';
