@@ -80,19 +80,14 @@ import {
   REVISION_NOTICE_PREFIX,
   trimString,
 } from './messagesPanelLogic';
+import { selectMessagesPanelTeamMentionMeta } from './messagesPanelTeamMentionMeta';
 import { StatusBlock } from './StatusBlock';
 
 import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { ActionMode } from './ActionModeSelector';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type {
-  InboxMessage,
-  ResolvedTeamMember,
-  TaskRef,
-  TeamSummary,
-  TeamTaskWithKanban,
-} from '@shared/types';
+import type { InboxMessage, ResolvedTeamMember, TaskRef, TeamTaskWithKanban } from '@shared/types';
 
 interface TimeWindow {
   start: number;
@@ -105,101 +100,7 @@ const BOTTOM_SHEET_COMPOSER_SNAP_INDEX = 2;
 const BOTTOM_SHEET_FULL_SNAP_INDEX = 4;
 const OPENCODE_RUNTIME_DELIVERY_STATUS_REFRESH_DELAYS_MS = [15_000, 45_000, 90_000] as const;
 const MESSAGES_SCROLL_TOP_PERSIST_DELAY_MS = 100;
-const EMPTY_TEAM_NAMES: string[] = [];
-const EMPTY_TEAM_COLOR_MAP = new Map<string, string>();
 const EMPTY_REPLY_CANDIDATE_MESSAGES: InboxMessage[] = [];
-
-interface TeamMentionMeta {
-  teamNames: string[];
-  teamColorByName: ReadonlyMap<string, string>;
-}
-
-interface TeamMentionEntry {
-  teamName: string;
-  displayName: string;
-  color: string;
-  deletedAt: string;
-}
-
-let cachedTeamMentionSignature = '';
-let cachedTeamMentionSource: readonly TeamSummary[] | null = null;
-let cachedTeamMentionMeta: TeamMentionMeta = {
-  teamNames: EMPTY_TEAM_NAMES,
-  teamColorByName: EMPTY_TEAM_COLOR_MAP,
-};
-
-function encodeTeamMentionParts(parts: readonly string[]): string {
-  return parts.map((part) => `${part.length}:${part}`).join('|');
-}
-
-function compareTeamMentionEntries(a: TeamMentionEntry, b: TeamMentionEntry): number {
-  return (
-    a.teamName.localeCompare(b.teamName, undefined, { sensitivity: 'base' }) ||
-    a.displayName.localeCompare(b.displayName, undefined, { sensitivity: 'base' })
-  );
-}
-
-function getTeamMentionSignature(teams: readonly TeamSummary[]): string {
-  return encodeTeamMentionParts(
-    teams.flatMap((team) => [
-      team.teamName ?? '',
-      team.displayName ?? '',
-      team.color ?? '',
-      team.deletedAt ?? '',
-    ])
-  );
-}
-
-function selectMessagesPanelTeamMentionMeta(teams: readonly TeamSummary[]): TeamMentionMeta {
-  if (teams === cachedTeamMentionSource) {
-    return cachedTeamMentionMeta;
-  }
-
-  const signature = getTeamMentionSignature(teams);
-  if (signature === cachedTeamMentionSignature) {
-    cachedTeamMentionSource = teams;
-    return cachedTeamMentionMeta;
-  }
-
-  const entries = teams
-    .map((team) => ({
-      teamName: team.teamName ?? '',
-      displayName: team.displayName ?? '',
-      color: team.color ?? '',
-      deletedAt: team.deletedAt ?? '',
-    }))
-    .sort(compareTeamMentionEntries);
-
-  if (entries.length === 0) {
-    cachedTeamMentionSource = teams;
-    cachedTeamMentionSignature = signature;
-    cachedTeamMentionMeta = {
-      teamNames: EMPTY_TEAM_NAMES,
-      teamColorByName: EMPTY_TEAM_COLOR_MAP,
-    };
-    return cachedTeamMentionMeta;
-  }
-
-  const teamNames: string[] = [];
-  const teamColorByName = new Map<string, string>();
-
-  for (const entry of entries) {
-    if (!entry.deletedAt && entry.teamName) {
-      teamNames.push(entry.teamName);
-    }
-    if (entry.teamName) {
-      teamColorByName.set(entry.teamName, entry.color);
-    }
-    if (entry.displayName) {
-      teamColorByName.set(entry.displayName, entry.color);
-    }
-  }
-
-  cachedTeamMentionSource = teams;
-  cachedTeamMentionSignature = signature;
-  cachedTeamMentionMeta = { teamNames, teamColorByName };
-  return cachedTeamMentionMeta;
-}
 
 interface MessagesPanelProps {
   teamName: string;
