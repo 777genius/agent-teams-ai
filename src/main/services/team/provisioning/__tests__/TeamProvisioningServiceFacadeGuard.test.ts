@@ -81,6 +81,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'prepareLiveMemberMcpLaunchConfig',
   'pushLiveLeadProcessMessage',
   'reattachOpenCodeOwnedMemberLane',
+  'rebootstrapOpenCodeAggregatePrimaryLane',
   'recordOpenCodeRuntimeBootstrapCheckin',
   'recordOpenCodeRuntimeHeartbeat',
   'recordOpenCodeRuntimeTaskEvent',

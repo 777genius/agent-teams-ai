@@ -26,8 +26,12 @@ import {
 } from './TeamProvisioningMemberLifecycleTypes';
 import {
   createOpenCodeAggregatePrimaryLaneStopPorts,
+  createOpenCodePrimaryLaneRebootstrapPorts,
   type OpenCodeAggregatePrimaryLaneWiringHost,
+  type OpenCodePrimaryLaneRebootstrapWiringHost,
 } from './TeamProvisioningOpenCodeAggregatePrimaryLaneWiring';
+import { hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence } from './TeamProvisioningOpenCodeBootstrapEvidence';
+import { rebootstrapOpenCodeAggregatePrimaryLane as rebootstrapOpenCodeAggregatePrimaryLaneHelper } from './TeamProvisioningOpenCodePrimaryLaneRebootstrap';
 import {
   hasRetainableOpenCodeRuntimeMember,
   isRecoverableOpenCodeRuntimeEvidence,
@@ -51,7 +55,8 @@ const logger = createLogger('Service:TeamProvisioning');
 
 /** Owns serialized lifecycle and aggregate-primary restart orchestration. */
 export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends TeamProvisioningServiceMemberLifecycleFacade {
-  private readonly aggregatePrimaryLaneHost: OpenCodeAggregatePrimaryLaneWiringHost = {
+  private readonly aggregatePrimaryLaneHost: OpenCodeAggregatePrimaryLaneWiringHost &
+    OpenCodePrimaryLaneRebootstrapWiringHost = {
     usesRetainedProgressState: () =>
       Boolean(this.compatibilityDelegation?.retainedProvisioningProgressState),
     setRuntimeAdapterProgress: (progress, onProgress) =>
@@ -71,6 +76,36 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
       this.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
     logWarn: (message) => logger.warn(message),
+    getOpenCodeRuntimeAdapter: () => this.appShellBoundary.getOpenCodeRuntimeAdapter(),
+    resolveActiveRun: (teamName) => {
+      const aliveRunId = this.runTracking.getAliveRunId(teamName);
+      return aliveRunId ? (this.runs.get(aliveRunId) ?? null) : null;
+    },
+    hasManualRestartInFlight: (teamName) =>
+      this.openCodeAggregatePrimaryRestartByTeam.has(teamName.trim().toLowerCase()),
+    hasPrimaryStopInFlight: (teamName) =>
+      this.openCodeRuntimeAdapterStopInFlightByTeam.has(teamName.trim().toLowerCase()),
+    isStopped: (teamName) => this.launchStateStore.isStopped(teamName),
+    getStopAllTeamsGeneration: () => this.stopAllTeamsGeneration,
+    getStopTeamGeneration: (teamName) => this.getStopTeamGeneration(teamName),
+    canDeliverToOpenCodeRuntime: (teamName) =>
+      this.runTracking.canDeliverToOpenCodeRuntimeForTeam(teamName),
+    stopOpenCodeRuntimeAdapterTeam: (teamName, runId) =>
+      this.stopOpenCodeRuntimeAdapterTeam(teamName, runId),
+    setAliveRunId: (teamName, runId) => this.runTracking.setAliveRunId(teamName, runId),
+    launchOpenCodeAggregatePrimaryLane: (input) =>
+      this.launchOpenCodeAggregatePrimaryLane({ ...input, previousLaunchState: null }),
+    hasCommittedLeadSessionEvidence: (input) =>
+      hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence(
+        { ...input, laneId: 'primary' },
+        this.bootstrapEvidenceFacade.createOpenCodeRuntimeBootstrapEvidencePorts()
+      ),
+    persistLaunchStateSnapshot: (run, launchPhase) =>
+      this.persistLaunchStateSnapshot(run, launchPhase),
+    getMixedSecondaryLaunchPhase: (run) => this.getMixedSecondaryLaunchPhase(run),
+    beginRebootstrapLease: (teamName, memberName, runId) =>
+      this.beginOpenCodeAggregatePrimaryRestart(teamName, memberName, runId),
+    resolveLeadName: (run) => this.getRunLeadName(run),
   };
 
   private readonly aggregatePrimaryProgress = new OpenCodeAggregatePrimaryProgressPublisher(
@@ -128,6 +163,27 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     const aliveRunId = this.runTracking.getAliveRunId(teamName);
     const run = aliveRunId ? (this.runs.get(aliveRunId) ?? null) : null;
     return resolveAggregatePrimaryRestartCandidate({ runtimeRun, run, memberName });
+  }
+
+  /**
+   * Delivery-time recovery for a lead whose lane never committed a session.
+   * Serialized behind any in-flight team operation; every refusal gate lives in
+   * the helper, so the exactly-once contract is testable without the facade.
+   */
+  async rebootstrapOpenCodeAggregatePrimaryLane(
+    teamName: string,
+    reason: string
+  ): Promise<boolean> {
+    return this.runAfterInFlightTeamOperation(teamName, async () => {
+      const outcome = await rebootstrapOpenCodeAggregatePrimaryLaneHelper(
+        { teamName, reason },
+        createOpenCodePrimaryLaneRebootstrapPorts(
+          this.aggregatePrimaryLaneHost,
+          this.aggregatePrimaryProgress
+        )
+      );
+      return outcome.rebootstrapped;
+    });
   }
 
   protected async waitForOpenCodeAggregatePrimaryRestart(
