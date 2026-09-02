@@ -266,10 +266,10 @@ describe('getDialogTeamModelValidationError', () => {
       ...scoped,
       modelCatalogRefreshState: 'error' as const,
       modelCatalog: {
-        ...scoped.modelCatalog!,
+        ...scoped.modelCatalog,
         status: 'stale' as const,
         diagnostics: {
-          ...scoped.modelCatalog!.diagnostics,
+          ...scoped.modelCatalog.diagnostics,
           message: 'Provider catalog refresh failed.',
         },
       },
