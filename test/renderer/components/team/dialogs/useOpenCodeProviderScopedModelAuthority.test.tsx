@@ -18,6 +18,25 @@ interface HarnessProps {
   onStatusChange: (statuses: ReadonlyMap<string, CliProviderStatus>) => void;
 }
 
+function freshScopedStatus(model: string, statusMessage?: string): CliProviderStatus {
+  return {
+    providerId: 'opencode',
+    statusCheckOutcome: 'model_only',
+    statusMessage,
+    models: [model],
+    modelCatalogRefreshState: 'ready',
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+      staleAt: '2099-01-01T00:00:00.000Z',
+      models: [{ id: model, launchModel: model, displayName: model }],
+    },
+  } as CliProviderStatus;
+}
+
 function Harness({
   projectPath,
   sourceProviderId,
@@ -46,10 +65,7 @@ afterEach(() => {
 describe('useOpenCodeProviderScopedModelAuthority', () => {
   it('clears project A authority while project B has no fresh result', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const status = {
-      providerId: 'opencode',
-      statusCheckOutcome: 'model_only',
-    } as CliProviderStatus;
+    const status = freshScopedStatus('openrouter/model-a');
     const snapshots: ReadonlyMap<string, CliProviderStatus>[] = [];
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -94,7 +110,7 @@ describe('useOpenCodeProviderScopedModelAuthority', () => {
 
   it('retains sole fresh authority when its publisher detaches on collapse', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const status = { providerId: 'opencode', statusMessage: 'sole' } as CliProviderStatus;
+    const status = freshScopedStatus('openrouter/sole', 'sole');
     const snapshots: ReadonlyMap<string, CliProviderStatus>[] = [];
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -133,8 +149,8 @@ describe('useOpenCodeProviderScopedModelAuthority', () => {
 
   it('keeps another live publisher authoritative when one same-source publisher detaches', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const firstStatus = { providerId: 'opencode', statusMessage: 'first' } as CliProviderStatus;
-    const secondStatus = { providerId: 'opencode', statusMessage: 'second' } as CliProviderStatus;
+    const firstStatus = freshScopedStatus('openrouter/first', 'first');
+    const secondStatus = freshScopedStatus('openrouter/second', 'second');
     const snapshots: ReadonlyMap<string, CliProviderStatus>[] = [];
     const host = document.createElement('div');
     document.body.appendChild(host);
@@ -180,16 +196,8 @@ describe('useOpenCodeProviderScopedModelAuthority', () => {
 
   it('preserves fresh same-scope authority during refresh and replaces it on a definitive result', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    const status = {
-      providerId: 'opencode',
-      statusMessage: 'fresh',
-      models: ['openrouter/provider-model-b'],
-      modelCatalogRefreshState: 'ready',
-    } as CliProviderStatus;
-    const replacement = {
-      providerId: 'opencode',
-      statusMessage: 'replacement',
-    } as CliProviderStatus;
+    const status = freshScopedStatus('openrouter/provider-model-b', 'fresh');
+    const replacement = freshScopedStatus('openrouter/replacement', 'replacement');
     const snapshots: ReadonlyMap<string, CliProviderStatus>[] = [];
     const host = document.createElement('div');
     document.body.appendChild(host);

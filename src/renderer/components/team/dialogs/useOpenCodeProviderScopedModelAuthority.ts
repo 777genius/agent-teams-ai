@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { CliProviderStatus } from '@shared/types';
 import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
+
+import type { CliProviderStatus } from '@shared/types';
 
 export type OpenCodeProviderScopedStatusListener = (
   sourceProviderId: string,

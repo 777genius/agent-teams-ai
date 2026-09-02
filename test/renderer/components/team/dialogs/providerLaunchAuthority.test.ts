@@ -128,6 +128,26 @@ describe('createLaunchGuard', () => {
   });
 
   it('delegates passive OpenCode authority to the strict launch attempt', () => {
+    const model = 'openrouter/auto';
+    const scopedProvider: CliProviderStatus = {
+      ...createReadyProvider('anthropic'),
+      providerId: 'opencode',
+      models: [model],
+      modelCatalog: {
+        ...createReadyProvider('anthropic').modelCatalog!,
+        providerId: 'opencode',
+        defaultModelId: model,
+        defaultLaunchModel: model,
+        models: [
+          {
+            ...createReadyProvider('anthropic').modelCatalog!.models[0]!,
+            id: model,
+            launchModel: model,
+            displayName: model,
+          },
+        ],
+      },
+    };
     const provider: CliProviderStatus = {
       ...createReadyProvider('anthropic'),
       providerId: 'opencode',
@@ -145,7 +165,10 @@ describe('createLaunchGuard', () => {
         teamLaunch: false,
       },
     };
-    const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]));
+    const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]), {
+      selectedModels: [model],
+      scopedStatusBySourceId: new Map([['openrouter', scopedProvider]]),
+    });
 
     expect(guard.blockers(true, NOW)).toEqual([]);
   });

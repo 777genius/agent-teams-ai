@@ -1,15 +1,14 @@
-import { describe, expect, it } from 'vitest';
-
 import {
   hasSettledOpenCodeScopedPreparation,
   isTeamProviderRuntimeStatusLoading,
 } from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import { describe, expect, it } from 'vitest';
 
-import { createLaunchGuard } from './providerLaunchAuthority';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
+import { createLaunchGuard } from './providerLaunchAuthority';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';

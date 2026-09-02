@@ -76,7 +76,7 @@ describe('memberModelScope', () => {
       members: [inheritedStale, explicitGemini],
       selectedProviderId: 'opencode',
       runtimeProviderStatusById: providerStatuses([
-        providerStatus('opencode', ['opencode/minimax-m2.5-free']),
+        terminalAuthoritativeEmptyCatalogStatus(),
       ]),
     });
 
@@ -352,6 +352,25 @@ function freshScopedProviderStatus(models: string[]): CliProviderStatus {
         upgrade: false,
         source: 'app-server',
       })),
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+    },
+  });
+}
+
+function terminalAuthoritativeEmptyCatalogStatus(): CliProviderStatus {
+  return providerStatus('opencode', [], {
+    statusCheckOutcome: 'authoritative',
+    modelCatalogRefreshState: 'ready',
+    modelCatalog: {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2026-01-01T00:00:00.000Z',
+      staleAt: '2099-01-01T00:00:00.000Z',
+      defaultModelId: null,
+      defaultLaunchModel: null,
+      models: [],
       diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
     },
   });

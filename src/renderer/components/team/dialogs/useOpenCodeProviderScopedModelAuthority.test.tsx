@@ -3,13 +3,13 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CliProviderStatus } from '@shared/types';
-
 import {
   type OpenCodeProviderScopedStatusListener,
   useOpenCodeProviderScopedModelAuthority,
   usePublishOpenCodeProviderScopedStatus,
 } from './useOpenCodeProviderScopedModelAuthority';
+
+import type { CliProviderStatus } from '@shared/types';
 
 const START = new Date('2026-09-02T00:00:00.000Z').getTime();
 let statuses: ReadonlyMap<string, CliProviderStatus> = new Map();
