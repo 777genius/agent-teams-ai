@@ -72,7 +72,30 @@
       "externalTeam": "timu ya nje",
       "crossTeamAwaitingReply": "Ujumbe wa timu mtambuka umetumwa, inasubiri jibu",
       "user": "mtumiaji",
-      "awaitingApproval": "inasubiri idhini"
+      "awaitingApproval": "inasubiri idhini",
+      "discardQueued": {
+        "action": "Tupa ujumbe uliopo foleni",
+        "alreadyDelivered": "Hakuna kilichotupwa: ujumbe huo ulikuwa tayari umewasilishwa kwa \"{{member}}\".",
+        "cancelLabel": "Ghairi",
+        "confirmLabel": "Tupa",
+        "count": "{{count}} foleni",
+        "count_few": "{{count}} foleni",
+        "count_many": "{{count}} foleni",
+        "count_one": "{{count}} foleni",
+        "count_other": "{{count}} foleni",
+        "failedFallbackMessage": "Hitilafu isiyotarajiwa imetokea",
+        "failedTitle": "Imeshindwa kutupa ujumbe uliopo foleni",
+        "message": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "message_few": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "message_many": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "message_one": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "message_other": "Tupa ujumbe {{count}} uliopo foleni kwa \"{{member}}\"? Bado haujawasilishwa na utaondolewa kabisa. Ujumbe uliowasilishwa na ujumbe kati ya mawakala hauathiriwi.",
+        "okLabel": "Sawa",
+        "remaining": "Umetupa {{discarded}}. Bado foleni: {{remaining}}.",
+        "resultTitle": "Ujumbe uliopo foleni",
+        "title": "Tupa ujumbe uliopo foleni",
+        "tooltip": "Tupa ujumbe uliopo foleni wa mwanachama huyu"
+      }
     },
     "reply": {
       "replyingTo": "Inajibu",

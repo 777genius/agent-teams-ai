@@ -8,7 +8,12 @@ import { ChevronRight } from 'lucide-react';
 import { ActiveTasksBlock } from '../activity/ActiveTasksBlock';
 import { PendingRepliesBlock } from '../activity/PendingRepliesBlock';
 
-import type { InboxMessage, ResolvedTeamMember, TeamTaskWithKanban } from '@shared/types';
+import type {
+  DiscardQueuedUserMessagesResult,
+  InboxMessage,
+  ResolvedTeamMember,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 interface StatusBlockProps {
   members: ResolvedTeamMember[];
@@ -16,6 +21,10 @@ interface StatusBlockProps {
   messages: InboxMessage[];
   pendingRepliesByMember: Record<string, number>;
   isTeamAlive?: boolean;
+  /** Enables the queued-message discard control on queued pending entries. */
+  teamName?: string;
+  /** Called after a discard attempt resolved on disk, with what it changed. */
+  onQueuedDiscarded?: (memberName: string, result: DiscardQueuedUserMessagesResult) => void;
   /** Where the Messages panel is rendered — 'sidebar' hides "In progress" (already visible in MemberList). */
   position?: 'sidebar' | 'inline';
   /** Overlay keeps the toggle hovering over the previous section, flow keeps it in normal layout. */
@@ -36,6 +45,8 @@ export const StatusBlock = ({
   messages,
   pendingRepliesByMember,
   isTeamAlive,
+  teamName,
+  onQueuedDiscarded,
   position,
   layout = 'overlay',
   onMemberClick,
@@ -115,6 +126,8 @@ export const StatusBlock = ({
               pendingRepliesByMember={pendingRepliesByMember}
               pendingCrossTeamReplies={pendingCrossTeamReplies}
               headerRight={flowInlineToggle}
+              teamName={teamName}
+              onQueuedDiscarded={onQueuedDiscarded}
               onMemberClick={onMemberClick}
             />
           ) : null}

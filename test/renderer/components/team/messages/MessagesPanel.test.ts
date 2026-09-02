@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { MessagesPanel } from '@renderer/components/team/messages/MessagesPanel';
 import {
   buildRevisionNoticeText,
+  countQueuedUserMessages,
   findLatestRevisableUserSentMessage,
   getPendingMemberDeliveryState,
   hasVisibleReplyForSendMessageDiagnostics,
@@ -881,6 +882,51 @@ describe('MessagesPanel idle summary invariants', () => {
 
     expect(getPendingMemberDeliveryState(false, messages, 'alice', sentAtMs)).toBe('queued');
     expect(getPendingMemberDeliveryState(true, messages, 'alice', sentAtMs)).toBe('delivering');
+  });
+
+  it('counts only the undelivered user rows addressed to that member', () => {
+    const messages = [
+      makeMessage({
+        from: 'user',
+        to: 'alice',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:01.000Z',
+        read: false,
+      }),
+      makeMessage({
+        from: 'user',
+        to: 'alice',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:02.000Z',
+        read: false,
+      }),
+      // Negative controls: an agent-to-member row is not the user's to discard,
+      // and a row the runtime already read is history, not a queue entry.
+      makeMessage({
+        from: 'team-lead',
+        to: 'alice',
+        timestamp: '2026-04-08T12:00:03.000Z',
+        read: false,
+      }),
+      makeMessage({
+        from: 'user',
+        to: 'alice',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:04.000Z',
+        read: true,
+      }),
+      makeMessage({
+        from: 'user',
+        to: 'bob',
+        source: 'user_sent',
+        timestamp: '2026-04-08T12:00:05.000Z',
+        read: false,
+      }),
+    ];
+
+    expect(countQueuedUserMessages(messages, 'alice')).toBe(2);
+    expect(countQueuedUserMessages(messages, 'bob')).toBe(1);
+    expect(countQueuedUserMessages(messages, 'team-lead')).toBe(0);
   });
 
   it('marks a pending member message delivered after its inbox row is read', () => {

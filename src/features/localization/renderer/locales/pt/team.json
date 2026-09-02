@@ -72,7 +72,30 @@
       "externalTeam": "equipe externa",
       "crossTeamAwaitingReply": "Mensagem de equipa cruzada enviada, aguardando resposta",
       "user": "usuário",
-      "awaitingApproval": "que aguarda a aprovação"
+      "awaitingApproval": "que aguarda a aprovação",
+      "discardQueued": {
+        "action": "Descartar mensagens na fila",
+        "alreadyDelivered": "Nada foi descartado: essas mensagens já tinham sido entregues a \"{{member}}\".",
+        "cancelLabel": "Cancelar",
+        "confirmLabel": "Descartar",
+        "count": "{{count}} na fila",
+        "count_few": "{{count}} na fila",
+        "count_many": "{{count}} na fila",
+        "count_one": "{{count}} na fila",
+        "count_other": "{{count}} na fila",
+        "failedFallbackMessage": "Ocorreu um erro inesperado",
+        "failedTitle": "Não foi possível descartar as mensagens na fila",
+        "message": "Descartar {{count}} mensagens na fila para \"{{member}}\"? Elas ainda não foram entregues e serão removidas permanentemente. Mensagens entregues e mensagens entre agentes não são afetadas.",
+        "message_few": "Descartar {{count}} mensagens na fila para \"{{member}}\"? Elas ainda não foram entregues e serão removidas permanentemente. Mensagens entregues e mensagens entre agentes não são afetadas.",
+        "message_many": "Descartar {{count}} mensagens na fila para \"{{member}}\"? Elas ainda não foram entregues e serão removidas permanentemente. Mensagens entregues e mensagens entre agentes não são afetadas.",
+        "message_one": "Descartar {{count}} mensagem na fila para \"{{member}}\"? Ela ainda não foi entregue e será removida permanentemente. Mensagens entregues e mensagens entre agentes não são afetadas.",
+        "message_other": "Descartar {{count}} mensagens na fila para \"{{member}}\"? Elas ainda não foram entregues e serão removidas permanentemente. Mensagens entregues e mensagens entre agentes não são afetadas.",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} descartada(s). Ainda na fila: {{remaining}}.",
+        "resultTitle": "Mensagens na fila",
+        "title": "Descartar mensagens na fila",
+        "tooltip": "Descartar as mensagens na fila deste membro"
+      }
     },
     "reply": {
       "replyingTo": "Respondendo a",

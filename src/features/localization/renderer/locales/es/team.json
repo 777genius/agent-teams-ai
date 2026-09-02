@@ -72,7 +72,30 @@
       "externalTeam": "equipo externo",
       "crossTeamAwaitingReply": "Mensaje cruzado enviado, en espera de respuesta",
       "user": "usuario",
-      "awaitingApproval": "en espera de aprobación"
+      "awaitingApproval": "en espera de aprobación",
+      "discardQueued": {
+        "action": "Descartar mensajes en cola",
+        "alreadyDelivered": "No se descartó nada: esos mensajes ya se habían entregado a \"{{member}}\".",
+        "cancelLabel": "Cancelar",
+        "confirmLabel": "Descartar",
+        "count": "{{count}} en cola",
+        "count_few": "{{count}} en cola",
+        "count_many": "{{count}} en cola",
+        "count_one": "{{count}} en cola",
+        "count_other": "{{count}} en cola",
+        "failedFallbackMessage": "Se produjo un error inesperado",
+        "failedTitle": "No se pudieron descartar los mensajes en cola",
+        "message": "¿Descartar {{count}} mensajes en cola para \"{{member}}\"? Todavía no se han entregado y se eliminarán de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "message_few": "¿Descartar {{count}} mensajes en cola para \"{{member}}\"? Todavía no se han entregado y se eliminarán de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "message_many": "¿Descartar {{count}} mensajes en cola para \"{{member}}\"? Todavía no se han entregado y se eliminarán de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "message_one": "¿Descartar {{count}} mensaje en cola para \"{{member}}\"? Todavía no se ha entregado y se eliminará de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "message_other": "¿Descartar {{count}} mensajes en cola para \"{{member}}\"? Todavía no se han entregado y se eliminarán de forma permanente. Los mensajes entregados y los mensajes entre agentes no se ven afectados.",
+        "okLabel": "Aceptar",
+        "remaining": "Se descartaron {{discarded}}. Aún en cola: {{remaining}}.",
+        "resultTitle": "Mensajes en cola",
+        "title": "Descartar mensajes en cola",
+        "tooltip": "Descartar los mensajes en cola de este miembro"
+      }
     },
     "reply": {
       "replyingTo": "Respuesta a",

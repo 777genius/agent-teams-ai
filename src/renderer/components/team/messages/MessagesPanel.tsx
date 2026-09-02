@@ -87,7 +87,13 @@ import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { ActionMode } from './ActionModeSelector';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type { InboxMessage, ResolvedTeamMember, TaskRef, TeamTaskWithKanban } from '@shared/types';
+import type {
+  DiscardQueuedUserMessagesResult,
+  InboxMessage,
+  ResolvedTeamMember,
+  TaskRef,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 interface TimeWindow {
   start: number;
@@ -343,6 +349,24 @@ export const MessagesPanel = memo(function MessagesPanel({
   const handleLoadOlderMessagesClick = useCallback(() => {
     void loadOlderMessages();
   }, [loadOlderMessages]);
+
+  const handleQueuedDiscarded = useCallback(
+    (memberName: string, result: DiscardQueuedUserMessagesResult) => {
+      // Only drop the pending entry when rows really left the inbox. A discard
+      // that removed nothing means the runtime took the message first, so the
+      // entry has to stay and become "delivered" on the next head refresh.
+      if (result.discarded > 0) {
+        onPendingReplyChange((prev) => {
+          if (!(memberName in prev)) return prev;
+          const next = { ...prev };
+          delete next[memberName];
+          return next;
+        });
+      }
+      void refreshTeamMessagesHead(teamName);
+    },
+    [onPendingReplyChange, refreshTeamMessagesHead, teamName]
+  );
 
   const loadingOlderMessages = messagesLoadingOlder;
   const hasMore = messagesHasMore;
@@ -1074,6 +1098,8 @@ export const MessagesPanel = memo(function MessagesPanel({
       messages={effectiveMessages}
       isTeamAlive={isTeamAlive}
       pendingRepliesByMember={pendingRepliesByMember}
+      teamName={teamName}
+      onQueuedDiscarded={handleQueuedDiscarded}
       layout="flow"
       position="inline"
       onMemberClick={onMemberClick}
@@ -1088,6 +1114,8 @@ export const MessagesPanel = memo(function MessagesPanel({
       messages={effectiveMessages}
       isTeamAlive={isTeamAlive}
       pendingRepliesByMember={pendingRepliesByMember}
+      teamName={teamName}
+      onQueuedDiscarded={handleQueuedDiscarded}
       layout="flow"
       position="sidebar"
       onMemberClick={onMemberClick}

@@ -1,6 +1,8 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { api } from '@renderer/api';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { CARD_BG, CARD_BORDER_STYLE, CARD_ICON_MUTED } from '@renderer/constants/cssVariables';
 import { getTeamColorSet, getThemedBadge } from '@renderer/constants/teamColors';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -14,13 +16,20 @@ import {
   getMemberRuntimeAdvisoryTitle,
 } from '@renderer/utils/memberHelpers';
 import { nameColorSet } from '@renderer/utils/projectColor';
-import { Check, Clock3, Loader2, ShieldQuestion, Users } from 'lucide-react';
+import { Check, Clock3, Loader2, ShieldQuestion, Users, X } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { MemberBadge } from '../MemberBadge';
-import { getPendingMemberDeliveryState } from '../messages/messagesPanelLogic';
+import {
+  countQueuedUserMessages,
+  getPendingMemberDeliveryState,
+} from '../messages/messagesPanelLogic';
 
-import type { InboxMessage, ResolvedTeamMember } from '@shared/types';
+import type {
+  DiscardQueuedUserMessagesResult,
+  InboxMessage,
+  ResolvedTeamMember,
+} from '@shared/types';
 import type { ReactNode } from 'react';
 
 export interface PendingCrossTeamReply {
@@ -36,6 +45,10 @@ interface PendingRepliesBlockProps {
   isTeamAlive?: boolean;
   pendingCrossTeamReplies?: PendingCrossTeamReply[];
   headerRight?: ReactNode;
+  /** Enables the queued-message discard control on queued entries. */
+  teamName?: string;
+  /** Called after a discard attempt resolved on disk, with what it changed. */
+  onQueuedDiscarded?: (memberName: string, result: DiscardQueuedUserMessagesResult) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
 }
 
@@ -47,10 +60,69 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
   isTeamAlive,
   pendingCrossTeamReplies = [],
   headerRight,
+  teamName,
+  onQueuedDiscarded,
   onMemberClick,
 }: PendingRepliesBlockProps): React.JSX.Element | null {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
+  const [discardingMember, setDiscardingMember] = useState<string | null>(null);
+
+  const handleDiscardQueued = (memberName: string, queuedCount: number): void => {
+    if (!teamName || discardingMember) return;
+    void (async () => {
+      const confirmed = await confirm({
+        title: t('activity.pendingReplies.discardQueued.title'),
+        message: t('activity.pendingReplies.discardQueued.message', {
+          count: Math.max(queuedCount, 1),
+          member: memberName,
+        }),
+        confirmLabel: t('activity.pendingReplies.discardQueued.confirmLabel'),
+        cancelLabel: t('activity.pendingReplies.discardQueued.cancelLabel'),
+        variant: 'danger',
+      });
+      if (!confirmed) return;
+      setDiscardingMember(memberName);
+      try {
+        const result = await api.teams.discardQueuedUserMessages(teamName, memberName);
+        onQueuedDiscarded?.(memberName, result);
+        // A discard that removed nothing is not a success the user can see: the
+        // runtime consumed the rows between the click and the write. Say so,
+        // and say it when rows arrived meanwhile and are still waiting.
+        if (result.discarded === 0) {
+          void confirm({
+            title: t('activity.pendingReplies.discardQueued.resultTitle'),
+            message: t('activity.pendingReplies.discardQueued.alreadyDelivered', {
+              member: memberName,
+            }),
+            confirmLabel: t('activity.pendingReplies.discardQueued.okLabel'),
+          });
+        } else if (result.remainingQueued > 0) {
+          void confirm({
+            title: t('activity.pendingReplies.discardQueued.resultTitle'),
+            message: t('activity.pendingReplies.discardQueued.remaining', {
+              discarded: result.discarded,
+              remaining: result.remainingQueued,
+            }),
+            confirmLabel: t('activity.pendingReplies.discardQueued.okLabel'),
+          });
+        }
+      } catch (err) {
+        void confirm({
+          title: t('activity.pendingReplies.discardQueued.failedTitle'),
+          message:
+            err instanceof Error
+              ? err.message
+              : t('activity.pendingReplies.discardQueued.failedFallbackMessage'),
+          confirmLabel: t('activity.pendingReplies.discardQueued.okLabel'),
+          variant: 'danger',
+        });
+      } finally {
+        setDiscardingMember(null);
+      }
+    })();
+  };
+
   const pendingApprovals = useStore(useShallow((s) => s.pendingApprovals));
   const colorMap = buildMemberColorMap(members);
   const avatarMap = buildMemberAvatarMap(members);
@@ -116,6 +188,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
             entry.sentAtMs
           );
           const isQueued = deliveryState === 'queued';
+          const queuedCount = isQueued ? countQueuedUserMessages(messages, member.name) : 0;
           const isDelivered = deliveryState === 'delivered';
           const showRuntimeAdvisory = deliveryState === 'delivering' && advisoryLabel !== null;
           const statusLabel = isQueued
@@ -193,7 +266,26 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                   {statusLabel}
                 </span>
                 {isQueued ? (
-                  <Clock3 className="size-3 shrink-0 text-amber-400" />
+                  <>
+                    {queuedCount > 1 ? (
+                      <span className="shrink-0 text-[10px] text-amber-300">
+                        {t('activity.pendingReplies.discardQueued.count', { count: queuedCount })}
+                      </span>
+                    ) : null}
+                    <Clock3 className="size-3 shrink-0 text-amber-400" />
+                    {teamName ? (
+                      <button
+                        type="button"
+                        aria-label={t('activity.pendingReplies.discardQueued.action')}
+                        title={t('activity.pendingReplies.discardQueued.tooltip')}
+                        className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
+                        disabled={discardingMember === member.name}
+                        onClick={() => handleDiscardQueued(member.name, queuedCount)}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    ) : null}
+                  </>
                 ) : isDelivered ? (
                   <Check
                     aria-label={t('messages.delivery.fields.delivered')}

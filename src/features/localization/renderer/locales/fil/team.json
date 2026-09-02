@@ -72,7 +72,30 @@
       "externalTeam": "external na team",
       "crossTeamAwaitingReply": "Naipadala ang cross-team na mensahe, naghihintay ng sagot",
       "user": "user",
-      "awaitingApproval": "naghihintay ng pag-apruba"
+      "awaitingApproval": "naghihintay ng pag-apruba",
+      "discardQueued": {
+        "action": "Itapon ang mga naka-queue na mensahe",
+        "alreadyDelivered": "Walang naitapon: naihatid na ang mga mensaheng iyon kay \"{{member}}\".",
+        "cancelLabel": "Kanselahin",
+        "confirmLabel": "Itapon",
+        "count": "{{count}} naka-queue",
+        "count_few": "{{count}} naka-queue",
+        "count_many": "{{count}} naka-queue",
+        "count_one": "{{count}} naka-queue",
+        "count_other": "{{count}} naka-queue",
+        "failedFallbackMessage": "May naganap na hindi inaasahang error",
+        "failedTitle": "Hindi naitapon ang mga naka-queue na mensahe",
+        "message": "Itapon ang {{count}} naka-queue na mensahe para kay \"{{member}}\"? Hindi pa ito naihahatid at permanenteng aalisin. Hindi maaapektuhan ang mga naihatid na mensahe at ang mga mensahe sa pagitan ng mga agent.",
+        "message_few": "Itapon ang {{count}} naka-queue na mensahe para kay \"{{member}}\"? Hindi pa ito naihahatid at permanenteng aalisin. Hindi maaapektuhan ang mga naihatid na mensahe at ang mga mensahe sa pagitan ng mga agent.",
+        "message_many": "Itapon ang {{count}} naka-queue na mensahe para kay \"{{member}}\"? Hindi pa ito naihahatid at permanenteng aalisin. Hindi maaapektuhan ang mga naihatid na mensahe at ang mga mensahe sa pagitan ng mga agent.",
+        "message_one": "Itapon ang {{count}} naka-queue na mensahe para kay \"{{member}}\"? Hindi pa ito naihahatid at permanenteng aalisin. Hindi maaapektuhan ang mga naihatid na mensahe at ang mga mensahe sa pagitan ng mga agent.",
+        "message_other": "Itapon ang {{count}} naka-queue na mensahe para kay \"{{member}}\"? Hindi pa ito naihahatid at permanenteng aalisin. Hindi maaapektuhan ang mga naihatid na mensahe at ang mga mensahe sa pagitan ng mga agent.",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} ang naitapon. Naka-queue pa rin: {{remaining}}.",
+        "resultTitle": "Mga naka-queue na mensahe",
+        "title": "Itapon ang mga naka-queue na mensahe",
+        "tooltip": "Itapon ang mga naka-queue na mensahe ng miyembrong ito"
+      }
     },
     "reply": {
       "replyingTo": "Sumasagot kay",
