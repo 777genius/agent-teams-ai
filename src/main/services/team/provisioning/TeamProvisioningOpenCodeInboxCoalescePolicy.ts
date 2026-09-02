@@ -49,6 +49,29 @@ export function isCoalescableNoticeKind(message: RelayInboxMessage): boolean {
   return !message.messageKind || COALESCABLE_MESSAGE_KINDS.has(message.messageKind);
 }
 
+/**
+ * Message-id prefix the board uses for its own "every task is completed"
+ * notice to the lead (`board-complete:<team>:<task>`). The prefix is the whole
+ * contract: it is stable per completing task, so a repeated completion cannot
+ * produce a second notice, and it is the only thing that distinguishes this
+ * notice from the ordinary reply-optional traffic it travels with.
+ */
+export const OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX = 'board-complete:';
+
+/**
+ * The board's own completion notice. It looks like an ordinary reply-optional
+ * notice, but it is the trigger for the lead's closing message, so it must
+ * never be absorbed: a team counts as settled the moment ANY teammate messages
+ * the user after the last board event, and a teammate's own completion note is
+ * not the team's final word.
+ */
+export function isBoardCompletionNotice(message: RelayInboxMessage): boolean {
+  return (
+    typeof message.messageId === 'string' &&
+    message.messageId.startsWith(OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX)
+  );
+}
+
 export interface OpenCodeReplyOptionalCoalescePorts {
   /**
    * Reply recipient the relay would resolve for this row if it were delivered

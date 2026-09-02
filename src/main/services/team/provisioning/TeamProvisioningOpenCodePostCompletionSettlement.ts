@@ -24,6 +24,7 @@
 import { isOpenCodeReplyOptionalDeliveryContract } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
 
 import {
+  isBoardCompletionNotice,
   isCoalescableNoticeKind,
   type OpenCodeReplyOptionalCoalescePorts,
   selectOpenCodeSettleableQueuedNotices,
@@ -191,6 +192,11 @@ function buildPostCompletionReadCommitDiagnostic(input: {
  * the prompt; the second, taken after the rows are marked read, catches work
  * that reopened in between. Without it a task created during the commit would
  * lose its notice: the row is already read, and nothing would ever deliver it.
+ *
+ * The board's own completion notice is exempt in both roles - it can neither
+ * anchor a settled commit nor ride along in one - because it is what asks the
+ * lead for the team's closing message. Absorbing it would settle the team on a
+ * message the lead never sent.
  */
 export async function settleOpenCodePostCompletionNotices(input: {
   unread: readonly RelayInboxMessage[];
@@ -208,6 +214,7 @@ export async function settleOpenCodePostCompletionNotices(input: {
     !anchor ||
     input.anchorHasLedgerRecord ||
     !isCoalescableNoticeKind(anchor) ||
+    isBoardCompletionNotice(anchor) ||
     !isOpenCodeReplyOptionalDeliveryContract(input.anchorReplyRecipient)
   ) {
     return { kind: 'deliver' };
@@ -215,13 +222,18 @@ export async function settleOpenCodePostCompletionNotices(input: {
   const settlement = await resolveOpenCodePostCompletionSettlement(input.ports);
   if (!input.ports.isCurrentGeneration()) return { kind: 'superseded' };
   if (!settlement) return { kind: 'deliver' };
-  const followers = await selectOpenCodeSettleableQueuedNotices({
+  const queued = await selectOpenCodeSettleableQueuedNotices({
     unread: input.unread,
     index: input.index,
     anchorReplyRecipient: input.anchorReplyRecipient,
     ports: input.ports,
   });
   if (!input.ports.isCurrentGeneration()) return { kind: 'superseded' };
+  // The exemption holds wherever the board's notice sits in the queue, not only
+  // when it happens to be the anchor: the walk stops in front of it, and it
+  // becomes the anchor of the next iteration, where it is delivered.
+  const boardCompletionIndex = queued.findIndex(isBoardCompletionNotice);
+  const followers = boardCompletionIndex === -1 ? queued : queued.slice(0, boardCompletionIndex);
   const settledBatch = [anchor, ...followers];
   try {
     await input.ports.markRead(settledBatch);
