@@ -15,7 +15,31 @@ import type { PersistedTeamLaunchSnapshot } from '@shared/types';
  * A stop whose lane has no live host process any more is a completed stop:
  * there is nothing left to stop. Only a lane whose recorded host is still
  * running turns an unconfirmed stop into a failure.
+ *
+ * A capability snapshot mismatch is the same trap one step earlier. The stop
+ * is rejected before the bridge handshake even runs - the persisted lane
+ * manifest no longer matches, which happens when the OpenCode user config
+ * changes while lanes are running - so the failure carries no host evidence
+ * at all. When the lane also has no recorded host pid there is nothing
+ * verifiable left to protect, and failing forever kept the team wedged in
+ * memory until the app was restarted. Only that no-evidence mismatch settles
+ * as already stopped; a recorded live host still fails the stop.
  */
+
+const OPEN_CODE_STOP_CAPABILITY_SNAPSHOT_MISMATCH_MARKERS = [
+  'bridge server capability snapshot mismatch',
+  'opencode bridge capability snapshot mismatch',
+  // Rejected before the handshake, by the persisted-manifest precondition.
+  'requires the exact persisted lane run and capability snapshot',
+  'capability snapshot does not match the persisted lane manifest',
+];
+
+function isOpenCodeCapabilitySnapshotMismatchStopDetail(detail: string): boolean {
+  const normalized = detail.toLowerCase();
+  return OPEN_CODE_STOP_CAPABILITY_SNAPSHOT_MISMATCH_MARKERS.some((marker) =>
+    normalized.includes(marker)
+  );
+}
 
 export interface OpenCodeRuntimeStopResultLike {
   stopped?: unknown;
@@ -84,6 +108,9 @@ export function resolveOpenCodeRuntimeStopOutcome(input: {
   if (pids.length > 0 && alivePids.length === 0) {
     return { kind: 'already_stopped', detail, checkedPids: pids };
   }
+  if (pids.length === 0 && isOpenCodeCapabilitySnapshotMismatchStopDetail(detail)) {
+    return { kind: 'already_stopped', detail, checkedPids: [] };
+  }
   return { kind: 'failed', detail, alivePids };
 }
 
@@ -109,8 +136,12 @@ export function assertOpenCodeRuntimeStopEffective(input: {
     throw new Error(`${input.message}${suffix}${alive}`);
   }
   if (outcome.kind === 'already_stopped') {
+    const evidence =
+      outcome.checkedPids.length > 0
+        ? `no recorded host process is alive (checked pid ${outcome.checkedPids.join(', ')})`
+        : 'the capability snapshot mismatch left no recorded host pid to verify';
     input.logWarning(
-      `${input.message}, but no recorded host process is alive (checked pid ${outcome.checkedPids.join(', ')}); treating the runtime as already stopped${
+      `${input.message}, but ${evidence}; treating the runtime as already stopped${
         outcome.detail ? `: ${outcome.detail}` : ''
       }`
     );
