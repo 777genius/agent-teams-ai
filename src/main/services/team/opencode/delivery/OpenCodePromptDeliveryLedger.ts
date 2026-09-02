@@ -3,6 +3,7 @@ import { VersionedJsonStore, VersionedJsonStoreError } from '../store/VersionedJ
 
 import { validateOpenCodePromptDeliveryLedgerRecords } from './OpenCodePromptDeliveryLedgerRecordSchema';
 import { isOpenCodeSessionRefreshResponseState } from './OpenCodeSessionRefreshReasonClassifier';
+import { type OpenCodeTurnProgress, resolveOpenCodeTurnProgress } from './OpenCodeTurnProgress';
 
 import type {
   OpenCodeDeliveryResponseObservation,
@@ -26,7 +27,7 @@ export type OpenCodePromptDeliveryStatus =
   | 'failed_retryable'
   | 'failed_terminal';
 
-export interface OpenCodePromptDeliveryLedgerRecord {
+export interface OpenCodePromptDeliveryLedgerRecord extends OpenCodeTurnProgress {
   id: string;
   teamName: string;
   memberName: string;
@@ -373,6 +374,7 @@ export class OpenCodePromptDeliveryLedgerStore {
     sessionId?: string | null;
     runtimePromptMessageId?: string | null;
     diagnostics?: string[];
+    turnUsedTokens?: number | null;
     observedAt: string;
   }): Promise<OpenCodePromptDeliveryLedgerRecord> {
     return await this.updateExisting(input.id, (record) => {
@@ -453,6 +455,7 @@ export class OpenCodePromptDeliveryLedgerStore {
           : (record.lastSessionRefreshReason ?? null),
         diagnostics: mergeDiagnostics(record.diagnostics, input.diagnostics ?? []),
         updatedAt: input.observedAt,
+        ...resolveOpenCodeTurnProgress(record, input),
       };
     });
   }

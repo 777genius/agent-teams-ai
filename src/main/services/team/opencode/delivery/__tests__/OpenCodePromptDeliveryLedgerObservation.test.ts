@@ -127,4 +127,72 @@ describe('OpenCodePromptDeliveryLedger applyObservation', () => {
       })
     ).toEqual({ active: false, reason: 'turn_idle' });
   });
+
+  it('stamps turn progress from the inferred signals and keeps the stamp when they stop', async () => {
+    const { store, record } = await createPendingRecord();
+    // The prompt's first observation always shows progress: an empty record
+    // gains an assistant message and a tool list.
+    const first = await store.applyObservation({
+      id: record.id,
+      responseObservation: observation(),
+      observedAt: '2026-04-25T10:00:10.000Z',
+    });
+    expect(first.lastTurnProgressAt).toBe('2026-04-25T10:00:10.000Z');
+
+    const repeated = await store.applyObservation({
+      id: record.id,
+      responseObservation: observation(),
+      observedAt: '2026-04-25T10:00:20.000Z',
+    });
+    expect(repeated.lastTurnProgressAt).toBe('2026-04-25T10:00:10.000Z');
+
+    const grown = await store.applyObservation({
+      id: record.id,
+      responseObservation: observation({ toolCallNames: [...OBSERVED_TOOLS, 'read'] }),
+      observedAt: '2026-04-25T10:00:30.000Z',
+    });
+    expect(grown.lastTurnProgressAt).toBe('2026-04-25T10:00:30.000Z');
+  });
+
+  it('keeps a record alive on growing turn spend when no other signal moves', async () => {
+    const { store, record } = await createPendingRecord();
+    await store.applyObservation({
+      id: record.id,
+      responseObservation: observation(),
+      observedAt: '2026-04-25T10:00:10.000Z',
+    });
+
+    // From here on every observation repeats itself, which is what an ACP
+    // bridge reports for a whole agent turn: one assistant message, no new tool
+    // calls. The first usage sample is a baseline and moves nothing.
+    const baseline = await store.applyObservation({
+      id: record.id,
+      responseObservation: observation(),
+      turnUsedTokens: 96_000,
+      observedAt: '2026-04-25T10:00:20.000Z',
+    });
+    expect(baseline).toMatchObject({
+      lastTurnProgressAt: '2026-04-25T10:00:10.000Z',
+      observedTurnUsedTokens: 96_000,
+    });
+
+    const spending = await store.applyObservation({
+      id: record.id,
+      responseObservation: observation(),
+      turnUsedTokens: 183_000,
+      observedAt: '2026-04-25T10:00:30.000Z',
+    });
+    expect(spending).toMatchObject({
+      lastTurnProgressAt: '2026-04-25T10:00:30.000Z',
+      observedTurnUsedTokens: 183_000,
+    });
+
+    const stalled = await store.applyObservation({
+      id: record.id,
+      responseObservation: observation(),
+      turnUsedTokens: 183_000,
+      observedAt: '2026-04-25T10:00:40.000Z',
+    });
+    expect(stalled.lastTurnProgressAt).toBe('2026-04-25T10:00:30.000Z');
+  });
 });
