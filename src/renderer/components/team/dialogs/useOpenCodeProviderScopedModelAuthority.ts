@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { clearMemberModelOverrides } from '@renderer/components/team/members/MembersEditorSection';
-import { isOpenCodeLocalProviderId } from '@shared/utils/opencodeModelRoute';
+import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 
 import {
@@ -165,6 +165,9 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
 
 interface OpenCodeProviderScopedDialogModelStateOptions {
   projectPath: string | null | undefined;
+  catalogEnabled?: boolean;
+  passiveStatusPrefetchEnabled?: boolean;
+  passiveProviderStatus?: CliProviderStatus | null;
   members: readonly MemberDraft[];
   syncModelsWithLead: boolean;
   selectedProviderId: TeamProviderId;
@@ -180,6 +183,9 @@ interface OpenCodeProviderScopedDialogModelStateOptions {
 
 export function useOpenCodeProviderScopedDialogModelState({
   projectPath,
+  catalogEnabled,
+  passiveStatusPrefetchEnabled,
+  passiveProviderStatus,
   members,
   syncModelsWithLead,
   selectedProviderId,
@@ -189,6 +195,10 @@ export function useOpenCodeProviderScopedDialogModelState({
   openCodeLocalProviderIds,
   openCodeLocalProviderLookupAuthoritative,
 }: OpenCodeProviderScopedDialogModelStateOptions) {
+  useOpenCodePassiveStatusPrefetch({
+    enabled: passiveStatusPrefetchEnabled === true,
+    projectPath,
+  });
   const [openCodeProviderScopedStatusBySourceId, handleOpenCodeProviderScopedStatusChange] =
     useOpenCodeProviderScopedModelAuthority(projectPath);
   const effectiveMemberDrafts = useMemo(() => {
@@ -237,6 +247,14 @@ export function useOpenCodeProviderScopedDialogModelState({
     handleOpenCodeProviderScopedStatusChange,
     openCodePreparationEvidence,
     openCodeProviderScopedStatusBySourceId,
+    openCodeCatalogLoaderConfiguration: {
+      enabled: catalogEnabled === true,
+      projectPath,
+      selectedModels: openCodePreparationEvidence.selectedModels,
+      localProviderIds: openCodePreparationEvidence.localSourceIds,
+      passiveProviderStatus,
+      listener: handleOpenCodeProviderScopedStatusChange,
+    },
   };
 }
 

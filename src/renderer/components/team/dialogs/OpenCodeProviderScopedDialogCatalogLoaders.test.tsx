@@ -59,19 +59,21 @@ describe('OpenCodeProviderScopedDialogCatalogLoaders', () => {
     await act(async () => {
       root.render(
         <OpenCodeProviderScopedDialogCatalogLoaders
-          enabled
-          projectPath="/sandbox/project"
-          selectedModels={[
-            'openrouter/model-a',
-            'openrouter/model-b',
-            'anthropic/model-c',
-            'ollama/local-model',
-            'local-lab/model-d',
-          ]}
-          localProviderIds={new Set(['local-lab'])}
-          passiveProviderStatus={null}
-          listener={(sourceProviderId, update) => {
-            if (update.mode === 'publish') published.push(sourceProviderId);
+          configuration={{
+            enabled: true,
+            projectPath: '/sandbox/project',
+            selectedModels: [
+              'openrouter/model-a',
+              'openrouter/model-b',
+              'anthropic/model-c',
+              'ollama/local-model',
+              'local-lab/model-d',
+            ],
+            localProviderIds: new Set(['local-lab']),
+            passiveProviderStatus: null,
+            listener: (sourceProviderId, update) => {
+              if (update.mode === 'publish') published.push(sourceProviderId);
+            },
           }}
         />
       );
@@ -88,12 +90,14 @@ describe('OpenCodeProviderScopedDialogCatalogLoaders', () => {
     await act(async () => {
       root.render(
         <OpenCodeProviderScopedDialogCatalogLoaders
-          enabled
-          projectPath="/sandbox/project"
-          selectedModels={['openrouter/model-a']}
-          localProviderIds={new Set()}
-          passiveProviderStatus={null}
-          listener={() => undefined}
+          configuration={{
+            enabled: true,
+            projectPath: '/sandbox/project',
+            selectedModels: ['openrouter/model-a'],
+            localProviderIds: new Set(),
+            passiveProviderStatus: null,
+            listener: () => undefined,
+          }}
         />
       );
     });

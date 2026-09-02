@@ -58,7 +58,6 @@ import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
-import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -115,7 +114,7 @@ import {
   getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
-import { OpenCodeProviderScopedDialogCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
@@ -747,6 +746,18 @@ export const CreateTeamDialog = ({
     () => getNextSuggestedTeamName(allTakenTeamNames),
     [allTakenTeamNames]
   );
+  const selectedMemberProviders = useMemo<TeamProviderId[]>(() => {
+    if (!multimodelEnabled) return ['anthropic'];
+    if (soloTeam || syncModelsWithLead) return [selectedProviderId];
+    return Array.from(
+      new Set([
+        selectedProviderId,
+        ...members.flatMap((member) =>
+          !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
+        ),
+      ])
+    );
+  }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
   // Clear stale provisioning error when dialog opens
   useEffect(() => {
     if (open && dialogTeamNameKey) {
@@ -756,10 +767,16 @@ export const CreateTeamDialog = ({
   const {
     effectiveMemberDrafts,
     handleOpenCodeProviderScopedStatusChange,
+    openCodeCatalogLoaderConfiguration,
     openCodePreparationEvidence,
     openCodeProviderScopedStatusBySourceId,
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
+    catalogEnabled:
+      open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+    passiveStatusPrefetchEnabled:
+      open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+    passiveProviderStatus: projectScopedOpenCodeStatus,
     members,
     syncModelsWithLead,
     selectedProviderId,
@@ -789,22 +806,6 @@ export const CreateTeamDialog = ({
   );
   const worktreeGitBlocksSubmission = Boolean(worktreeGitBlockingMessage);
   const tmuxRuntime = useTmuxRuntimeReadiness(open && canCreate);
-  const selectedMemberProviders = useMemo<TeamProviderId[]>(() => {
-    if (!multimodelEnabled) {
-      return ['anthropic'];
-    }
-    if (soloTeam || syncModelsWithLead) {
-      return [selectedProviderId];
-    }
-    return Array.from(
-      new Set([
-        selectedProviderId,
-        ...members.flatMap((member) =>
-          !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
-        ),
-      ])
-    );
-  }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
   const launchGuard = createLaunchGuard(
     selectedMemberProviders,
     runtimeProviderStatusById,
@@ -812,10 +813,6 @@ export const CreateTeamDialog = ({
   );
   const launchAuthorityBlockers = launchGuard.blockers(launchTeam);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
-  useOpenCodePassiveStatusPrefetch({
-    enabled: open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
-    projectPath: effectiveCwd || null,
-  });
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -2456,16 +2453,7 @@ export const CreateTeamDialog = ({
       }}
     >
       <DialogContent className="max-w-[52rem]">
-        <OpenCodeProviderScopedDialogCatalogLoaders
-          enabled={
-            open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode')
-          }
-          projectPath={effectiveCwd || null}
-          selectedModels={openCodePreparationEvidence.selectedModels}
-          localProviderIds={openCodeLocalModelScope.openCodeLocalProviderIds}
-          passiveProviderStatus={projectScopedOpenCodeStatus}
-          listener={handleOpenCodeProviderScopedStatusChange}
-        />
+        <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
         <DialogHeader>
           <DialogTitle className="text-sm">
             {initialData ? t('create.title.copy') : t('create.title.create')}

@@ -32,10 +32,7 @@ import {
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
-import {
-  type ModelResponseInFlightEntry,
-  RuntimeProviderModelRequestTracker,
-} from './runtimeProviderModelRequestTracker';
+import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
   sanitizeRuntimeProviderModelTestResponse,
@@ -1497,18 +1494,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     this.modelRequests.releaseSuperseded(requestGroupId, nextCacheKey);
   }
 
-  private registerModelRequestSubscriber(
-    entry: ModelResponseInFlightEntry,
-    cacheKey: string,
-    requestGroupId: string | null
-  ): void {
-    this.modelRequests.register(entry, cacheKey, requestGroupId);
-  }
-
-  private cleanupModelResponseInFlight(cacheKey: string, entry: ModelResponseInFlightEntry): void {
-    this.modelRequests.cleanup(cacheKey, entry);
-  }
-
   private beginModelTestRequest(requestGroupId: string | null): AbortController | null {
     if (!requestGroupId) return null;
     this.activeModelTestRequestGroups.get(requestGroupId)?.abort();
@@ -2256,7 +2241,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     if (existingRequest?.controller.signal.aborted) {
       this.modelRequests.discard(cacheKey);
     } else if (existingRequest) {
-      this.registerModelRequestSubscriber(existingRequest, cacheKey, requestGroupId);
+      this.modelRequests.register(existingRequest, cacheKey, requestGroupId);
       return existingRequest.promise;
     }
 
@@ -2269,18 +2254,18 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       cacheGeneration,
       controller.signal
     );
-    const inFlightEntry: ModelResponseInFlightEntry = {
+    const inFlightEntry = {
       controller,
       hasUngroupedSubscriber: false,
       requestGroups: new Set<string>(),
       promise,
     };
-    this.registerModelRequestSubscriber(inFlightEntry, cacheKey, requestGroupId);
+    this.modelRequests.register(inFlightEntry, cacheKey, requestGroupId);
     this.modelRequests.set(cacheKey, inFlightEntry);
     try {
       return await promise;
     } finally {
-      this.cleanupModelResponseInFlight(cacheKey, inFlightEntry);
+      this.modelRequests.cleanup(cacheKey, inFlightEntry);
     }
   }
   async cancelModelLoad(

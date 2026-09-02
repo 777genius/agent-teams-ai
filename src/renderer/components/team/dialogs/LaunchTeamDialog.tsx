@@ -51,7 +51,6 @@ import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
-import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -112,7 +111,7 @@ import {
   getDialogTeamModelValidationError,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
-import { OpenCodeProviderScopedDialogCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
@@ -493,13 +492,33 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
     [codexSnapshotPending]
   );
+  const selectedMemberProviders = useMemo<TeamProviderId[]>(
+    () =>
+      !multimodelEnabled
+        ? ['anthropic']
+        : Array.from(
+            new Set([
+              selectedProviderId,
+              ...membersDrafts.flatMap((member) =>
+                !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
+              ),
+            ])
+          ),
+    [membersDrafts, multimodelEnabled, selectedProviderId]
+  );
   const {
     effectiveMemberDrafts,
     handleOpenCodeProviderScopedStatusChange,
+    openCodeCatalogLoaderConfiguration,
     openCodePreparationEvidence,
     openCodeProviderScopedStatusBySourceId,
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
+    catalogEnabled:
+      open && isLaunchMode && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+    passiveStatusPrefetchEnabled:
+      open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+    passiveProviderStatus: projectScopedOpenCodeStatus,
     members: membersDrafts,
     syncModelsWithLead,
     selectedProviderId,
@@ -509,20 +528,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     ...openCodeLocalModelScope,
   });
   const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
-  const selectedMemberProviders = useMemo<TeamProviderId[]>(
-    () =>
-      !multimodelEnabled
-        ? ['anthropic']
-        : Array.from(
-            new Set([
-              selectedProviderId,
-              ...effectiveMemberDrafts.flatMap((member) =>
-                !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
-              ),
-            ])
-          ),
-    [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
-  );
   const launchGuard = createLaunchGuard(
     selectedMemberProviders,
     runtimeProviderStatusById,
@@ -530,10 +535,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   );
   const launchAuthorityBlockers = launchGuard.blockers(isLaunchMode);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
-  useOpenCodePassiveStatusPrefetch({
-    enabled: open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
-    projectPath: effectiveCwd || null,
-  });
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -2533,19 +2534,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       <DialogContent
         className={isSchedule ? 'max-h-[90vh] max-w-[52rem] overflow-y-auto' : 'max-w-[52rem]'}
       >
-        <OpenCodeProviderScopedDialogCatalogLoaders
-          enabled={
-            open &&
-            isLaunchMode &&
-            multimodelEnabled &&
-            selectedMemberProviders.includes('opencode')
-          }
-          projectPath={effectiveCwd || null}
-          selectedModels={openCodePreparationEvidence.selectedModels}
-          localProviderIds={openCodeLocalModelScope.openCodeLocalProviderIds}
-          passiveProviderStatus={projectScopedOpenCodeStatus}
-          listener={handleOpenCodeProviderScopedStatusChange}
-        />
+        <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
         <DialogHeader>
           <DialogTitle className="text-sm">{dialogTitle}</DialogTitle>
           <DialogDescription className="text-xs">{dialogDescription}</DialogDescription>

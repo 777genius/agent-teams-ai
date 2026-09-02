@@ -40,7 +40,7 @@ const ScopedCatalogLoader = ({
   return null;
 };
 
-type OpenCodeProviderScopedDialogCatalogLoadersProps = Readonly<{
+export type OpenCodeProviderScopedDialogCatalogLoaderConfiguration = Readonly<{
   enabled: boolean;
   projectPath: string | null | undefined;
   selectedModels: readonly string[];
@@ -49,14 +49,21 @@ type OpenCodeProviderScopedDialogCatalogLoadersProps = Readonly<{
   listener: OpenCodeProviderScopedStatusListener;
 }>;
 
+type OpenCodeProviderScopedDialogCatalogLoadersProps = Readonly<{
+  configuration: OpenCodeProviderScopedDialogCatalogLoaderConfiguration;
+}>;
+
 export const OpenCodeProviderScopedDialogCatalogLoaders = ({
-  enabled,
-  projectPath,
-  selectedModels,
-  localProviderIds,
-  passiveProviderStatus,
-  listener,
+  configuration,
 }: OpenCodeProviderScopedDialogCatalogLoadersProps): React.JSX.Element | null => {
+  const {
+    enabled,
+    projectPath,
+    selectedModels,
+    localProviderIds,
+    passiveProviderStatus,
+    listener,
+  } = configuration;
   const sourceProviderIds = useMemo(() => {
     if (!enabled) return [];
     const sourceIds = new Set<string>();
