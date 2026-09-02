@@ -1,8 +1,13 @@
 import {
+  countLiveRecordedRuntimeHostsForTeam,
+  RUNTIME_HOSTS_POLL_INTERVAL_MS,
   runTeamForceStopFlow,
+  STOP_ESCALATION_TIMEOUT_MS,
   stopTeamWithEscalation,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
 
@@ -359,5 +364,185 @@ describe('stopTeamWithEscalation', () => {
       ownedRunIds: ['run-a'],
       ownedLaneIds: ['primary'],
     });
+  });
+});
+
+describe('stopTeamWithEscalation runtime-host evidence', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** Advances fake time in poll-sized steps, letting each sample settle. */
+  async function advanceThroughSamples(samples: number): Promise<void> {
+    for (let sample = 0; sample < samples; sample += 1) {
+      await vi.advanceTimersByTimeAsync(RUNTIME_HOSTS_POLL_INTERVAL_MS);
+    }
+  }
+
+  it('finishes the moment the recorded hosts are gone instead of waiting out the budget', async () => {
+    let liveHosts = 2;
+    const ports = createPorts({
+      stopTeam: vi.fn(() => new Promise<void>(() => undefined)),
+      stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+      countLiveRuntimeHosts: vi.fn(() => Promise.resolve(liveHosts)),
+    });
+
+    const stopping = stopTeamWithEscalation('fixteam', ports);
+    await advanceThroughSamples(2);
+    liveHosts = 0;
+    await advanceThroughSamples(2);
+    const result = await stopping;
+
+    expect(result.stopOutcome).toBe('runtime_already_down');
+    expect(result.diagnostics.join('\n')).toContain('Runtime hosts were gone');
+    // The team is down but the cleanup still runs: startup locks and pending
+    // deliveries outlive the hosts.
+    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+    });
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
+    });
+  });
+
+  it('samples the hosts on their own evidence after the force stop cancelled deliveries up front', async () => {
+    // The force stop persists the cancellation before it asks for the stop.
+    // That write reaches the delivery ledger, never the launch state the poll
+    // reads, so the poll must still end the wait on host evidence alone and a
+    // lane must not read as down merely because its records were cancelled.
+    const order: string[] = [];
+    let liveHosts = 1;
+    const ports = createPorts({
+      stopTeam: vi.fn(() => new Promise<void>(() => undefined)),
+      stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+      clearPendingPromptDeliveries: vi.fn(() => {
+        order.push('cancel');
+        return Promise.resolve({ cleared: 1, diagnostics: [] });
+      }),
+      countLiveRuntimeHosts: vi.fn(() => {
+        order.push('sample');
+        return Promise.resolve(liveHosts);
+      }),
+    });
+
+    const stopping = runTeamForceStopFlow('fixteam', ports);
+    await advanceThroughSamples(2);
+    expect(order).toEqual(['cancel', 'sample', 'sample', 'sample']);
+    liveHosts = 0;
+    await advanceThroughSamples(1);
+
+    await expect(stopping).resolves.toMatchObject({ stopOutcome: 'runtime_already_down' });
+  });
+
+  it('keeps the previous fixed budget when no host counter is supplied', async () => {
+    const ports = createPorts({
+      stopTeam: vi.fn(() => new Promise<void>(() => undefined)),
+      stopTimeoutMs: 5_000,
+    });
+
+    const stopping = stopTeamWithEscalation('fixteam', ports);
+    await vi.advanceTimersByTimeAsync(4_999);
+    const settledEarly = await Promise.race([stopping.then(() => true), Promise.resolve(false)]);
+    expect(settledEarly).toBe(false);
+    await vi.advanceTimersByTimeAsync(2);
+
+    await expect(stopping).resolves.toMatchObject({ stopOutcome: 'timed_out' });
+  });
+
+  it('never arms the poller when the first sample already reports no live host', async () => {
+    const countLiveRuntimeHosts = vi.fn(() => Promise.resolve(0));
+    const ports = createPorts({
+      stopTeam: vi.fn(() => new Promise<void>(() => undefined)),
+      stopTimeoutMs: 5_000,
+      countLiveRuntimeHosts,
+    });
+
+    const stopping = stopTeamWithEscalation('fixteam', ports);
+    await advanceThroughSamples(4);
+    // A team with nothing recorded must not be read as "everything exited".
+    expect(countLiveRuntimeHosts).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    await expect(stopping).resolves.toMatchObject({ stopOutcome: 'timed_out' });
+  });
+
+  it('stops sampling once the flow leaves the stop phase, including when it throws', async () => {
+    const countLiveRuntimeHosts = vi.fn(() => Promise.resolve(1));
+    const ports = createPorts({
+      stopTeam: vi.fn(() => new Promise<void>(() => undefined)),
+      stopTimeoutMs: 2_000,
+      countLiveRuntimeHosts,
+      killRetainedRuntimeProcesses: vi.fn(() => Promise.reject(new Error('kill exploded'))),
+    });
+
+    const stopping = stopTeamWithEscalation('fixteam', ports);
+    await vi.advanceTimersByTimeAsync(2_000);
+    await stopping;
+    const samplesAtStopEnd = countLiveRuntimeHosts.mock.calls.length;
+    await advanceThroughSamples(5);
+
+    expect(countLiveRuntimeHosts).toHaveBeenCalledTimes(samplesAtStopEnd);
+  });
+});
+
+describe('countLiveRecordedRuntimeHostsForTeam', () => {
+  function launchStateStore(snapshot: PersistedTeamLaunchSnapshot | null): {
+    read: () => Promise<PersistedTeamLaunchSnapshot | null>;
+  } {
+    return { read: () => Promise.resolve(snapshot) };
+  }
+
+  function snapshotWithLanePids(
+    pids: Record<string, number | undefined>
+  ): PersistedTeamLaunchSnapshot {
+    return {
+      members: Object.fromEntries(
+        Object.entries(pids).map(([laneId, runtimePid]) => [
+          laneId,
+          { name: laneId, providerId: 'opencode', laneId, runtimePid },
+        ])
+      ),
+    } as unknown as PersistedTeamLaunchSnapshot;
+  }
+
+  it('counts only the pids the launch state recorded for this team', async () => {
+    const alivePids = new Set([11, 22]);
+
+    const live = await countLiveRecordedRuntimeHostsForTeam({
+      teamName: 'fixteam',
+      launchStateStore: launchStateStore(
+        snapshotWithLanePids({ 'lane-a': 11, 'lane-b': 33, 'lane-c': undefined })
+      ) as never,
+      isRuntimeProcessAlive: (pid) => alivePids.has(pid),
+    });
+
+    expect(live).toBe(1);
+  });
+
+  it('reports no live host when the launch state cannot be read', async () => {
+    const live = await countLiveRecordedRuntimeHostsForTeam({
+      teamName: 'fixteam',
+      launchStateStore: { read: () => Promise.reject(new Error('unreadable')) } as never,
+      isRuntimeProcessAlive: () => true,
+    });
+
+    expect(live).toBe(0);
+  });
+
+  it('does not count a process whose liveness cannot be read', async () => {
+    const live = await countLiveRecordedRuntimeHostsForTeam({
+      teamName: 'fixteam',
+      launchStateStore: launchStateStore(snapshotWithLanePids({ 'lane-a': 11 })) as never,
+      isRuntimeProcessAlive: () => {
+        throw new Error('EPERM');
+      },
+    });
+
+    expect(live).toBe(0);
   });
 });

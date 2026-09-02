@@ -9,6 +9,7 @@
  */
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
+  countLiveRecordedRuntimeHostsForTeam,
   killRetainedOpenCodeRuntimeProcessesForTeam,
   readOpenCodeRuntimeLaneIdsForTeam,
   readOwnedOpenCodeRuntimeRunIdsForTeam,
@@ -27,7 +28,11 @@ import type { FastifyInstance } from 'fastify';
 
 /** Error handling shared with the routes that stayed in `../teams`. */
 export interface TeamLifecycleRouteDeps {
-  logger: { error(message: string, detail: string): void; warn(message: string): void };
+  logger: {
+    error(message: string, detail: string): void;
+    warn(message: string): void;
+    info(message: string): void;
+  };
   shouldLogError: (error: unknown) => boolean;
   getStatusCode: (error: unknown) => number;
   getResponseErrorMessage: (error: unknown) => string;
@@ -86,9 +91,14 @@ export function registerTeamLifecycleRoutes(
             }),
           logWarning: (message) => logger.warn(message),
           stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+          countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
           markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
         });
-        if (result.stopOutcome !== 'stopped') {
+        if (result.stopOutcome === 'runtime_already_down') {
+          logger.info(
+            `[${teamName}] Runtime hosts were already down; finished the stop without the orchestrator acknowledgement (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
+          );
+        } else if (result.stopOutcome !== 'stopped') {
           logger.warn(
             `[${teamName}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
           );
