@@ -55,7 +55,19 @@ function acceptedResult(): OpenCodeTeamRuntimeMessageResult {
   };
 }
 
-function createHarness(ledgerDir: string): {
+function rejectedResult(): OpenCodeTeamRuntimeMessageResult {
+  return {
+    ok: false,
+    providerId: 'opencode',
+    memberName: 'team-lead',
+    diagnostics: ['opencode runtime is not active'],
+  };
+}
+
+function createHarness(
+  ledgerDir: string,
+  runtimeResponse: () => OpenCodeTeamRuntimeMessageResult = acceptedResult
+): {
   service: OpenCodeMemberMessageDeliveryService;
   ledger: OpenCodePromptDeliveryLedgerStore;
   sentTexts: () => string[];
@@ -64,7 +76,7 @@ function createHarness(ledgerDir: string): {
     filePath: join(ledgerDir, 'primary.json'),
   });
   const sendMessageToMember = vi.fn(async (_input: OpenCodeTeamRuntimeMessageInput) =>
-    acceptedResult()
+    runtimeResponse()
   );
   const passthroughProof = vi.fn(async ({ ledgerRecord }: { ledgerRecord: unknown }) => ({
     ledgerRecord,
@@ -234,6 +246,70 @@ describe('OpenCodeMemberMessageDeliveryService coalesced notices', () => {
 
     expect(afterCoalescedRetry?.payloadHash).toBe(afterPlainAttempt?.payloadHash);
     expect(afterCoalescedRetry?.status).not.toBe('failed_terminal');
+  });
+
+  // The settlement rule: only the prompt that actually carried the riders may
+  // settle them. Every other delivery outcome leaves them unread.
+  it('proves dispatch when an accepted prompt carried the block', async () => {
+    const harness = createHarness(ledgerDir);
+
+    const delivery = await harness.service.deliver('team-a', {
+      ...anchorMessage,
+      coalescedNoticeText: COALESCED_BLOCK,
+    });
+
+    expect(delivery.accepted).toBe(true);
+    expect(delivery.coalescedNoticesDelivered).toBe(true);
+  });
+
+  it('never proves dispatch for a delivery that carried no block', async () => {
+    const harness = createHarness(ledgerDir);
+
+    const delivery = await harness.service.deliver('team-a', anchorMessage);
+
+    expect(delivery.accepted).toBe(true);
+    expect(delivery.coalescedNoticesDelivered).toBeUndefined();
+  });
+
+  // `delivered: true` without dispatch: this call sent nothing, it only queued
+  // behind the row that is still occupying the lane.
+  it('withholds the dispatch proof from a delivery that only queued behind another row', async () => {
+    const harness = createHarness(ledgerDir);
+
+    await harness.service.deliver('team-a', anchorMessage);
+    const queued = await harness.service.deliver('team-a', {
+      ...anchorMessage,
+      messageId: 'notice-3',
+      coalescedNoticeText: COALESCED_BLOCK,
+    });
+
+    expect(queued.delivered).toBe(true);
+    expect(queued.queuedBehindMessageId).toBe('notice-1');
+    expect(queued.coalescedNoticesDelivered).toBeUndefined();
+  });
+
+  it('withholds the dispatch proof when the runtime did not accept the prompt', async () => {
+    const harness = createHarness(ledgerDir, rejectedResult);
+
+    const delivery = await harness.service.deliver('team-a', {
+      ...anchorMessage,
+      coalescedNoticeText: COALESCED_BLOCK,
+    });
+
+    expect(delivery.accepted).toBe(false);
+    expect(delivery.coalescedNoticesDelivered).toBeUndefined();
+  });
+
+  it('withholds the dispatch proof when a blank block means nothing rode along', async () => {
+    const harness = createHarness(ledgerDir);
+
+    const delivery = await harness.service.deliver('team-a', {
+      ...anchorMessage,
+      coalescedNoticeText: '   ',
+    });
+
+    expect(delivery.accepted).toBe(true);
+    expect(delivery.coalescedNoticesDelivered).toBeUndefined();
   });
 
   it('ignores a blank coalesced block entirely', async () => {

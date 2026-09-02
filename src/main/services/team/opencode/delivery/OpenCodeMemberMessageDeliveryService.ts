@@ -1198,6 +1198,9 @@ export class OpenCodeMemberMessageDeliveryService {
     );
     const promptAcceptedByObservation = isOpenCodePromptAcceptedByObservation(responseObservation);
     const promptAccepted = promptAcceptedByRuntimeIdentity || promptAcceptedByObservation;
+    // Riders reach the model only when the attempt carrying them is accepted;
+    // every post-dispatch return must repeat that proof or the relay redelivers.
+    const coalescedNoticesDispatched = Boolean(input.coalescedNoticeText?.trim()) && promptAccepted;
     const promptAcceptanceMissingRuntimePromptId =
       result.ok && !promptAcceptedByRuntimeIdentity && !promptAcceptedByObservation;
     const deliveryDiagnostics = promptAcceptanceMissingRuntimePromptId
@@ -1333,6 +1336,7 @@ export class OpenCodeMemberMessageDeliveryService {
           delivered: false,
           accepted: true,
           responsePending: false,
+          ...(coalescedNoticesDispatched ? { coalescedNoticesDelivered: true } : {}),
           responseState: ledgerRecord.responseState,
           ledgerStatus: ledgerRecord.status,
           ledgerRecordId: ledgerRecord.id,
@@ -1422,6 +1426,7 @@ export class OpenCodeMemberMessageDeliveryService {
     }
     return {
       delivered: promptAccepted || acceptanceUnknown,
+      ...(coalescedNoticesDispatched ? { coalescedNoticesDelivered: true } : {}),
       ...(ledgerRecord || responseObservation ? { accepted: promptAccepted } : {}),
       ...(ledgerRecord || responseObservation ? { responsePending } : {}),
       ...(acceptanceUnknown ? { acceptanceUnknown: true } : {}),

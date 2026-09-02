@@ -13,7 +13,14 @@
  */
 
 import { isOpenCodeReplyOptionalDeliveryContract } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
+import { hasOpenCodeAcceptedRuntimePrompt } from '../opencode/delivery/OpenCodePromptDeliveryReadCommitPolicy';
+import {
+  OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC,
+  OPENCODE_COALESCE_NOT_DISPATCHED_DIAGNOSTIC,
+} from '../opencode/delivery/OpenCodeRuntimeDeliveryDiagnostics';
 
+import type { OpenCodeMemberInboxDelivery } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
+import type { OpenCodePromptDeliveryLedgerRecord } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { RelayInboxMessage } from './TeamProvisioningInboxRelayPolicy';
 import type { InboxMessageKind } from '@shared/types';
 
@@ -122,6 +129,74 @@ export function buildOpenCodeCoalescedNoticeText(followers: readonly RelayInboxM
   });
   lines.push('</opencode_coalesced_notices>');
   return lines.join('\n');
+}
+
+/**
+ * A rider may only be folded into an anchor whose prompt body is still going to
+ * be dispatched. Once the runtime has accepted the anchor's prompt, this call
+ * can only observe it, so a rider added now would be marked read without ever
+ * reaching the model. The same holds for a record whose inbox read is already
+ * committed, and for terminal records, which are not going to send anything.
+ */
+export function canCoalesceNoticesIntoOpenCodeDelivery(
+  existingRecord?: OpenCodePromptDeliveryLedgerRecord | null
+): boolean {
+  if (!existingRecord) {
+    return true;
+  }
+  if (existingRecord.inboxReadCommittedAt) {
+    return false;
+  }
+  if (hasOpenCodeAcceptedRuntimePrompt(existingRecord)) {
+    return false;
+  }
+  return (
+    existingRecord.status === 'pending' ||
+    existingRecord.status === 'retry_scheduled' ||
+    existingRecord.status === 'failed_retryable'
+  );
+}
+
+/**
+ * Read-commit riders ONLY on positive proof that this call dispatched a prompt
+ * that contained them and the runtime accepted it. `delivered: true` is not that
+ * proof: several delivery paths return it without sending anything (queued
+ * behind another record, observation-only passes, a response that was already
+ * sufficient).
+ */
+export function isOpenCodeCoalescedNoticeDeliveryProven(
+  delivery: Pick<OpenCodeMemberInboxDelivery, 'coalescedNoticesDelivered'>
+): boolean {
+  return delivery.coalescedNoticesDelivered === true;
+}
+
+export function buildOpenCodeCoalesceDeferredDiagnostic(input: {
+  anchorMessageId: string;
+  deferredMessageId?: string;
+  record?: OpenCodePromptDeliveryLedgerRecord | null;
+}): string {
+  return (
+    `${OPENCODE_COALESCE_DEFERRED_DIAGNOSTIC}: ${input.anchorMessageId} ` +
+    `(status=${input.record?.status ?? 'none'}, acceptedAt=${input.record?.acceptedAt ?? 'none'}, ` +
+    `attempts=${input.record?.attempts ?? 0}); deferred=${input.deferredMessageId ?? 'none'}`
+  );
+}
+
+export function buildOpenCodeCoalesceNotDispatchedDiagnostic(input: {
+  anchorMessageId: string;
+  deferredMessageIds: readonly string[];
+  delivery: Pick<
+    OpenCodeMemberInboxDelivery,
+    'delivered' | 'accepted' | 'responsePending' | 'ledgerStatus'
+  >;
+}): string {
+  return (
+    `${OPENCODE_COALESCE_NOT_DISPATCHED_DIAGNOSTIC}: ${input.anchorMessageId} -> ` +
+    `${input.deferredMessageIds.join(',')} (delivered=${input.delivery.delivered}, ` +
+    `accepted=${input.delivery.accepted ?? 'unknown'}, ` +
+    `responsePending=${input.delivery.responsePending ?? false}, ` +
+    `ledgerStatus=${input.delivery.ledgerStatus ?? 'none'})`
+  );
 }
 
 /**
