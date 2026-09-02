@@ -869,7 +869,7 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
         teamName,
         leadName: '<lead-name>',
         fromName: '<your-name>',
-        text: '#abcd1234 done. Found 3 competitors: two lack kanban, one went closed-source in Jan. Full details in task comment e5f6a7b8. Moving to #efgh5678 next.',
+        text: '#abcd1234 done. Found 3 competitors: two lack kanban, one went closed-source in Jan. Full details in task comment <comment-id>. Moving on to my next task.',
         summary: '#abcd1234 done',
     });
     const runtimeVisibleMessageRule = messagingProtocol.visibleMessageRule
@@ -924,7 +924,7 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
    Do NOT comment on trivial coordination messages. Only comment when the information is valuable context for the task.
 9. When sending a message about a specific task, include its short display label like #<displayId> in your ${messagingProtocol.sendToolName} summary field for traceability.
    - If the message is NOT about a real board task, do NOT include any # task label.
-   - Never invent placeholder task refs such as #00000000 or #<displayId>.
+   - Never invent placeholder task refs such as #00000000 or #<displayId>, and never copy an id straight out of an example: anything in angle brackets is a placeholder you must replace with the real value, and an example id is not a real board id.
 10. In ALL human-facing or teammate-facing message text, when you mention a task reference, ALWAYS write it with a leading # (for example: #abcd1234, not abcd1234 or "task abcd1234").
 11. Review workflow clarity (IMPORTANT):
    - The work task (e.g. #1) is the thing that must end up APPROVED after review.
@@ -1072,7 +1072,7 @@ async function memberBriefing(context, memberName, options = {}) {
         teamName: context.teamName,
         leadName,
         fromName: requestedMemberName,
-        text: '#abcd1234 done. Found 3 competitors, two lack kanban. Full details in task comment e5f6a7b8. Moving to #efgh5678.',
+        text: '#abcd1234 done. Found 3 competitors, two lack kanban. Full details in task comment <comment-id>. Moving on to my next task.',
         summary: '#abcd1234 done',
     });
     const lines = [
@@ -1080,7 +1080,7 @@ async function memberBriefing(context, memberName, options = {}) {
         `Role: ${role}.`,
         `CRITICAL: If a task gets a new comment and you are going to do additional implementation/fix/follow-up work on that same task, FIRST leave a short task comment saying what you are about to do, THEN move it to in_progress with task_start, THEN do the work, and when finished leave a short result comment and move it to done with task_complete. Never skip this comment -> reopen -> work -> comment -> done cycle.`,
         `CRITICAL: When you finish a task, your results (findings, research report, analysis, code changes summary, or any deliverable) MUST be posted as a task comment via task_add_comment BEFORE calling task_complete. Save the comment.id from the response — you will need it in the next step. The task comment is the primary delivery channel — the user reads results on the task board. A direct message to the lead is NOT a substitute: direct messages are ephemeral and not visible on the board. If you only send a direct message without a task comment, the user will never see your work.`,
-        `After task_complete, notify your team lead via ${messagingProtocol.sendLeadPhrase}. Use the comment.id you saved (first 8 characters). Include: task ref, brief summary (2-4 sentences), pointer to full comment, and next step. Example: ${completionNotifyExample}`,
+        `After task_complete, notify your team lead via ${messagingProtocol.sendLeadPhrase}. Use the comment.id you saved (first 8 characters); <comment-id> in the example below is a placeholder, never send it literally. Include: task ref, brief summary (2-4 sentences), pointer to full comment, and next step. Example: ${completionNotifyExample}`,
         ...(messagingProtocol.runtimeProvider !== 'native'
             ? [
                 messagingProtocol.visibleMessageRule,

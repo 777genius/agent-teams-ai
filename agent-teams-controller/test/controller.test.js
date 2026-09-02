@@ -605,7 +605,12 @@ controller.messages.sendMessage({
       'Awareness items are watch-only context and do not authorize you to start work unless the lead reroutes the task or you become the actionOwner.'
     );
     expect(briefing).toContain('After task_complete, notify your team lead via SendMessage.');
-    expect(briefing).toContain('Full details in task comment e5f6a7b8');
+    // Observed on a live run: an 8B teammate copied the example's `e5f6a7b8` and `#efgh5678`
+    // verbatim into a real message to the lead, and the renderer turned the fake
+    // ref into a dead `task://` link. Example ids must not look like board ids.
+    expect(briefing).toContain('Full details in task comment <comment-id>');
+    expect(briefing).not.toContain('e5f6a7b8');
+    expect(briefing).not.toContain('efgh5678');
     expect(briefing).not.toContain('task_get_comment {');
   });
 
@@ -631,8 +636,11 @@ controller.messages.sendMessage({
     expect(briefing).toContain(
       'agent-teams_message_send { teamName: "my-team", to: "alice", from: "bob"'
     );
-    expect(briefing).toContain('Full details in task comment e5f6a7b8');
+    expect(briefing).toContain('Full details in task comment <comment-id>');
+    expect(briefing).not.toContain('e5f6a7b8');
+    expect(briefing).not.toContain('efgh5678');
     expect(briefing).toContain('Never invent placeholder task refs such as #00000000');
+    expect(briefing).toContain('never copy an id straight out of an example');
     expect(briefing).not.toContain('task_get_comment {');
     expect(briefing).not.toContain('notify your team lead via SendMessage');
   });

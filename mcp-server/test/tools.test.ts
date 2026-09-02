@@ -1088,7 +1088,11 @@ describe('agent-teams-mcp tools', () => {
       'Use task_list only to search/browse inventory rows, not as your working queue.'
     );
     expect(memberBriefingText).toContain('Review MCP adapter');
-    expect(memberBriefingText).toContain('Full details in task comment e5f6a7b8');
+    // Observed on a live run: the example's hex-looking ids were copied verbatim by an 8B
+    // teammate, and `#efgh5678` rendered as a dead `task://` link.
+    expect(memberBriefingText).toContain('Full details in task comment <comment-id>');
+    expect(memberBriefingText).not.toContain('e5f6a7b8');
+    expect(memberBriefingText).not.toContain('efgh5678');
     expect(memberBriefingText).not.toContain('task_get_comment {');
 
     const openCodeMemberBriefing = await getTool('member_briefing').execute({
@@ -1103,7 +1107,9 @@ describe('agent-teams-mcp tools', () => {
     expect(openCodeMemberBriefingText).toContain('agent-teams_message_send');
     expect(openCodeMemberBriefingText).toContain('OpenCode bootstrap silence rule');
     expect(openCodeMemberBriefingText).toContain('stop and wait silently');
-    expect(openCodeMemberBriefingText).toContain('Full details in task comment e5f6a7b8');
+    expect(openCodeMemberBriefingText).toContain('Full details in task comment <comment-id>');
+    expect(openCodeMemberBriefingText).not.toContain('e5f6a7b8');
+    expect(openCodeMemberBriefingText).not.toContain('efgh5678');
     expect(openCodeMemberBriefingText).toContain(
       'Never invent placeholder task refs such as #00000000'
     );
