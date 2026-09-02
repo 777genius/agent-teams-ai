@@ -8,6 +8,11 @@
  * is at its size limit while this area still has routes to gain.
  */
 
+import {
+  clearPendingOpenCodePromptDeliveriesForTeam,
+  killRetainedOpenCodeRuntimeProcessesForTeam,
+  runTeamForceStopFlow,
+} from '@main/services/team/lifecycle/teamForceStopFlow';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
@@ -17,7 +22,7 @@ import type { FastifyInstance } from 'fastify';
 
 /** Error handling shared with the routes that stayed in `../teams`. */
 export interface TeamLifecycleRouteDeps {
-  logger: { error(message: string, detail: string): void };
+  logger: { error(message: string, detail: string): void; warn(message: string): void };
   shouldLogError: (error: unknown) => boolean;
   getStatusCode: (error: unknown) => number;
   getResponseErrorMessage: (error: unknown) => string;
@@ -57,6 +62,46 @@ export function registerTeamLifecycleRoutes(
         if (shouldLogError(error)) {
           logger.error(
             `Error in POST /api/teams/${request.params.teamName}/stop:`,
+            getErrorMessage(error)
+          );
+        }
+        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
+      }
+    }
+  );
+
+  // POST /stop answers 500 whenever the runtime is already gone: the stop
+  // command exits non-zero, the run stays tracked, and every retry gets the
+  // same 500. A headless caller had no way out of that loop, so this route
+  // gives it the same escape hatch the in-app control has, through the same
+  // flow: it always answers with what the cleanup did, including when the
+  // regular stop inside it failed.
+  app.post<{ Params: { teamName: string } }>(
+    '/api/teams/:teamName/force-stop',
+    async (request, reply) => {
+      try {
+        const validatedTeamName = validateTeamName(request.params.teamName);
+        if (!validatedTeamName.valid) {
+          return reply.status(400).send({ error: validatedTeamName.error });
+        }
+        const teamName = validatedTeamName.value!;
+        const teamRuntimeApi = getTeamRuntimeApi(services);
+        const result = await runTeamForceStopFlow(teamName, {
+          stopTeam: (name) => teamRuntimeApi.stopTeam(name),
+          killRetainedRuntimeProcesses: (name) =>
+            killRetainedOpenCodeRuntimeProcessesForTeam({
+              teamName: name,
+              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+            }),
+          clearPendingPromptDeliveries: (name) =>
+            clearPendingOpenCodePromptDeliveriesForTeam({ teamName: name }),
+          logWarning: (message) => logger.warn(message),
+        });
+        return reply.send(result);
+      } catch (error) {
+        if (shouldLogError(error)) {
+          logger.error(
+            `Error in POST /api/teams/${request.params.teamName}/force-stop:`,
             getErrorMessage(error)
           );
         }
