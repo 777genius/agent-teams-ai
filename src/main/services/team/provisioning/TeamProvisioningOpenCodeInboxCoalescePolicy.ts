@@ -97,18 +97,16 @@ export async function selectOpenCodeReplyOptionalCoalescedFollowers(input: {
 }
 
 /**
- * The anchor's own text with the riders appended as one tagged block. The
- * wrapper tells the runtime that everything inside arrived after the anchor and
- * needs no reply either, so the turn answers the batch at most once instead of
- * once per notice.
+ * The riders as one tagged block, appended to the anchor's prompt body by the
+ * delivery service. The wrapper tells the runtime that everything inside
+ * arrived after the anchor and needs no reply either, so the turn answers the
+ * batch at most once instead of once per notice.
+ *
+ * The block deliberately excludes the anchor text: it travels as its own
+ * delivery field so the ledger payload hash keeps identifying the inbox row.
  */
-export function buildOpenCodeCoalescedNoticeText(
-  text: string,
-  followers: readonly RelayInboxMessage[]
-): string {
+export function buildOpenCodeCoalescedNoticeText(followers: readonly RelayInboxMessage[]): string {
   const lines = [
-    text,
-    '',
     `<opencode_coalesced_notices count="${followers.length}">`,
     `${followers.length} further informational notice(s) arrived after the message above and are delivered together with it. They need no reply either; treat everything here as one update and act at most once.`,
   ];

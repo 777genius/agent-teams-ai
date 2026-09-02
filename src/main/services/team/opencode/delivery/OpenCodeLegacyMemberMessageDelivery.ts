@@ -1,3 +1,4 @@
+import { buildOpenCodePromptBodyText } from './OpenCodeMemberMessageDeliveryPorts';
 import { normalizeOpenCodeDeliveryResponseObservation } from './OpenCodePromptDeliveryReadCommitPolicy';
 
 import type { OpenCodeCommittedBootstrapSessionRecord } from '../store/OpenCodeRuntimeManifestEvidenceReader';
@@ -62,7 +63,7 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
         laneId,
         memberName,
         cwd,
-        text: message.text,
+        text: buildOpenCodePromptBodyText(message),
         messageId: message.messageId,
         fileParts: input.fileParts,
         replyRecipient: message.replyRecipient,
