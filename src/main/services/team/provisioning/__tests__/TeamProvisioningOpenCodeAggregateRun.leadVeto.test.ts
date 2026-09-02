@@ -132,9 +132,10 @@ function basePorts(
 
 async function runLaunch(
   overrides: Partial<OpenCodeWorktreeRootAggregateLaunchPorts>
-): Promise<{ calls: string[]; progressLog: TeamProvisioningProgress[] }> {
+): Promise<{ calls: string[]; progressLog: TeamProvisioningProgress[]; reports: string[] }> {
   const calls: string[] = [];
   const progressLog: TeamProvisioningProgress[] = [];
+  const reports: string[] = [];
   await runOpenCodeWorktreeRootAggregateLaunch(
     {
       adapter: {} as TeamLaunchRuntimeAdapter,
@@ -144,9 +145,13 @@ async function runLaunch(
       prompt: 'Summarize the repo',
       onProgress: vi.fn(),
     },
-    { ...basePorts(calls, progressLog), ...overrides }
+    {
+      ...basePorts(calls, progressLog),
+      logDiagnostic: (message) => reports.push(message),
+      ...overrides,
+    }
   );
-  return { calls, progressLog };
+  return { calls, progressLog, reports };
 }
 
 describe('OpenCode aggregate launch treats the lead as a veto', () => {
@@ -293,5 +298,95 @@ describe('OpenCode aggregate launch treats the lead as a veto', () => {
     expect(progressLog.at(-1)?.message).toBe('OpenCode member lanes are ready');
     expect(calls).toContain('setAliveRun');
     expect(calls).toContain('deliverLaunchPrompt');
+  });
+});
+
+describe('a blocked primary lane reports why, without changing the launch', () => {
+  const pendingLeadResult = (): ReturnType<typeof buildUncommittedPrimaryLeadLaunchResult> => {
+    const result = buildUncommittedPrimaryLeadLaunchResult();
+    result.members['team-lead'] = {
+      ...result.members['team-lead'],
+      launchState: 'runtime_pending_bootstrap',
+      bootstrapConfirmed: false,
+      runtimeAlive: false,
+      runtimePid: 4321,
+    };
+    return result;
+  };
+
+  // NEGATIVE CONTROL: a team that is not blocked produces ZERO reports.
+  it('emits no report at all for a healthy launch', async () => {
+    const { reports, calls, progressLog } = await runLaunch({
+      hasCommittedOpenCodePrimaryLeadSessionEvidence: async () => true,
+    });
+
+    expect(reports).toEqual([]);
+    expect(progressLog.at(-1)?.cliLogsTail).toBeUndefined();
+    expect(calls).toContain('deliverLaunchPrompt');
+  });
+
+  // NEGATIVE CONTROL: the reports are pure observation. The same launch, run
+  // once with a sink and once with none, produces the identical outcome.
+  it('produces the same launch outcome with and without a report sink', async () => {
+    const withSink = await runLaunch({
+      launchOpenCodeAggregatePrimaryLane: async () => pendingLeadResult(),
+      hasCommittedOpenCodePrimaryLeadSessionEvidence: async () => false,
+    });
+    const withoutSink = await runLaunch({
+      launchOpenCodeAggregatePrimaryLane: async () => pendingLeadResult(),
+      hasCommittedOpenCodePrimaryLeadSessionEvidence: async () => false,
+      logDiagnostic: undefined,
+    });
+
+    expect(withSink.reports.length).toBeGreaterThan(0);
+    expect(withoutSink.calls).toEqual(withSink.calls);
+    // Identical down to the progress tail: the sink is a durable side channel,
+    // never a second source of truth.
+    expect(withoutSink.progressLog).toEqual(withSink.progressLog);
+  });
+
+  it('names the deferred dispatch while the lead bootstrap is pending', async () => {
+    const { reports, progressLog, calls } = await runLaunch({
+      launchOpenCodeAggregatePrimaryLane: async () => pendingLeadResult(),
+      hasCommittedOpenCodePrimaryLeadSessionEvidence: async () => false,
+    });
+
+    expect(reports).toEqual([
+      '[lane-team] opencode_launch_prompt_deferred_until_lead_bootstrap lead=team-lead',
+    ]);
+    // The same text reaches the progress tail the user can already see.
+    expect(progressLog.at(-1)?.cliLogsTail).toContain(
+      'opencode_launch_prompt_deferred_until_lead_bootstrap'
+    );
+    expect(calls).toContain('deliverLaunchPrompt');
+  });
+
+  // The prompt guard is a SECOND gate, on a different question: the veto asks
+  // whether the lead's session is committed, this asks whether the lane holds
+  // any runtime evidence for it at all. A lead that claims `confirmed_alive`
+  // with a committed record but no handle passes the veto and fails this one.
+  it('refuses to burn the prompt on a lead the lane holds no runtime evidence for', async () => {
+    const noEvidenceLead = buildUncommittedPrimaryLeadLaunchResult();
+    noEvidenceLead.members['team-lead'] = {
+      ...noEvidenceLead.members['team-lead'],
+      bootstrapConfirmed: false,
+      runtimeAlive: false,
+      agentToolAccepted: false,
+      runtimeDiagnostic: 'primary lane reported no runtime handle',
+    };
+
+    const { reports, calls, progressLog } = await runLaunch({
+      launchOpenCodeAggregatePrimaryLane: async () => noEvidenceLead,
+      hasCommittedOpenCodePrimaryLeadSessionEvidence: async () => true,
+    });
+
+    expect(calls).not.toContain('deliverLaunchPrompt');
+    expect(reports).toEqual([
+      '[lane-team] opencode_launch_prompt_lead_unavailable lead=team-lead ' +
+        'reason=primary lane reported no runtime handle',
+    ]);
+    // The launch outcome is untouched: the lanes are still promoted.
+    expect(progressLog.at(-1)?.state).toBe('ready');
+    expect(calls).toContain('setAliveRun');
   });
 });

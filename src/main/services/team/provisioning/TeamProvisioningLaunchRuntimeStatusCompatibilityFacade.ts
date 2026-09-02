@@ -192,7 +192,7 @@ export abstract class TeamProvisioningLaunchRuntimeStatusCompatibilityFacade<
   private createOpenCodeLaunchPersistencePorts() {
     return createTeamProvisioningOpenCodeLaunchPersistencePortsFromService(
       this as unknown as TeamProvisioningOpenCodeLaunchPersistenceServiceHost,
-      { nowIso }
+      { nowIso, logDiagnostic: (message) => logger.diagnostic(message) }
     );
   }
 

@@ -254,6 +254,8 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts
   setSecondaryRuntimeRun(input: SecondaryRuntimeRunEntry & { teamName: string }): void;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   deliverOpenCodeLaunchPromptToLead: OpenCodeAggregateLaunchPromptPorts['deliverOpenCodeLaunchPromptToLead'];
+  /** Durable sink for blocked or undeliverable launch reports. */
+  logDiagnostic?(message: string): void;
 }
 
 export interface RunOpenCodeWorktreeRootAggregateLaunchInput {

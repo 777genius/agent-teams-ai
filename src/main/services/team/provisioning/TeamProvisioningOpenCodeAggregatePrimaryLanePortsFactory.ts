@@ -40,6 +40,7 @@ export interface TeamProvisioningOpenCodeAggregatePrimaryLanePortsFactoryDeps {
   setOpenCodeRuntimeActiveRunManifest?: LaunchOpenCodeAggregatePrimaryLanePorts['setOpenCodeRuntimeActiveRunManifest'];
   clearOpenCodeRuntimeLaneStorage?: LaunchOpenCodeAggregatePrimaryLanePorts['clearOpenCodeRuntimeLaneStorage'];
   logWarning?: LaunchOpenCodeAggregatePrimaryLanePorts['logWarning'];
+  logDiagnostic?: LaunchOpenCodeAggregatePrimaryLanePorts['logDiagnostic'];
 }
 
 export function createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromService(
@@ -91,5 +92,6 @@ export function createTeamProvisioningOpenCodeAggregatePrimaryLanePortsFromServi
       service.invalidateRuntimeSnapshotCaches(input.teamName);
     },
     logWarning: deps.logWarning ?? ((message) => logger.warn(message)),
+    logDiagnostic: deps.logDiagnostic ?? ((message) => logger.diagnostic(message)),
   };
 }
