@@ -1,14 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   type OpenCodeMemberInboxRelayResult,
   relayOpenCodeMemberInboxMessagesWithPorts,
 } from '../TeamProvisioningOpenCodeMemberInboxRelay';
 import {
+  OPENCODE_LEAD_ACTIVE_FALLBACK_MS,
   TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService,
   type TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps,
 } from '../TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityFacade';
 
+import type { OpenCodeLeadTurnActivityNotification } from '../../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type { TeamProvisioningOpenCodeMemberMessageDeliveryHost } from '../TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory';
 import type { TeamProvisioningSendMessageToRunRun } from '../TeamProvisioningSendMessageToRunBoundaryFactory';
@@ -173,14 +175,7 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
   });
 
   it('forwards OpenCode lead turn activity to setLeadActivity for the tracked run only', async () => {
-    const run = {
-      teamName: 'team-a',
-      runId: 'run-1',
-      processKilled: false,
-      cancelRequested: false,
-      request: {},
-      child: null,
-    } satisfies TestSendRun;
+    const run = trackedRun();
     const setLeadActivity = vi.fn();
     const resolveLeadActivityRun = vi.fn((teamName: string) =>
       teamName === 'team-a' ? run : null
@@ -221,7 +216,188 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
       [run, 'idle'],
     ]);
   });
+
+  describe('lead active fallback', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('drops a lead turn back to idle when no settle signal ever arrives', async () => {
+      const run = trackedRun();
+      const setLeadActivity = vi.fn();
+      const service = createService({
+        setLeadActivity,
+        resolveLeadActivityRun: () => run,
+      });
+
+      await service.notifyOpenCodeLeadTurnActivity(leadTurnActivity('active'));
+      vi.advanceTimersByTime(OPENCODE_LEAD_ACTIVE_FALLBACK_MS - 1);
+      expect(setLeadActivity.mock.calls).toEqual([[run, 'active']]);
+
+      vi.advanceTimersByTime(1);
+      expect(setLeadActivity.mock.calls).toEqual([
+        [run, 'active'],
+        [run, 'idle'],
+      ]);
+    });
+
+    it('unrefs the fallback timer so it cannot hold the process open', async () => {
+      const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+      const service = createService({ resolveLeadActivityRun: () => trackedRun() });
+
+      await service.notifyOpenCodeLeadTurnActivity(leadTurnActivity('active'));
+
+      expect(setTimeoutSpy).toHaveBeenCalledTimes(1);
+      const timer = setTimeoutSpy.mock.results[0]?.value as { hasRef(): boolean };
+      expect(timer.hasRef()).toBe(false);
+      setTimeoutSpy.mockRestore();
+    });
+
+    it('restarts a single fallback timer instead of accumulating one per active report', async () => {
+      const run = trackedRun();
+      const setLeadActivity = vi.fn();
+      const service = createService({
+        setLeadActivity,
+        resolveLeadActivityRun: () => run,
+      });
+
+      await service.notifyOpenCodeLeadTurnActivity(leadTurnActivity('active'));
+      vi.advanceTimersByTime(OPENCODE_LEAD_ACTIVE_FALLBACK_MS - 1);
+      await service.notifyOpenCodeLeadTurnActivity(leadTurnActivity('active'));
+      expect(vi.getTimerCount()).toBe(1);
+
+      // The first timer would have fired here if it had not been cleared.
+      vi.advanceTimersByTime(1);
+      expect(setLeadActivity.mock.calls).toEqual([
+        [run, 'active'],
+        [run, 'active'],
+      ]);
+
+      vi.advanceTimersByTime(OPENCODE_LEAD_ACTIVE_FALLBACK_MS);
+      expect(setLeadActivity.mock.calls).toEqual([
+        [run, 'active'],
+        [run, 'active'],
+        [run, 'idle'],
+      ]);
+    });
+
+    it('never writes idle twice when a real settle signal beats the fallback', async () => {
+      const run = trackedRun();
+      const setLeadActivity = vi.fn();
+      const service = createService({
+        setLeadActivity,
+        resolveLeadActivityRun: () => run,
+      });
+
+      await service.notifyOpenCodeLeadTurnActivity(leadTurnActivity('active'));
+      await service.notifyOpenCodeLeadTurnActivity(leadTurnActivity('idle'));
+      expect(vi.getTimerCount()).toBe(0);
+
+      vi.advanceTimersByTime(OPENCODE_LEAD_ACTIVE_FALLBACK_MS * 2);
+
+      expect(setLeadActivity.mock.calls).toEqual([
+        [run, 'active'],
+        [run, 'idle'],
+      ]);
+      expect(setLeadActivity.mock.calls.filter(([, state]) => state === 'idle')).toHaveLength(1);
+    });
+
+    it('arms nothing for a team with no tracked run, and no-ops when the run disappears', async () => {
+      const setLeadActivity = vi.fn();
+      const serviceWithoutRun = createService({
+        setLeadActivity,
+        resolveLeadActivityRun: () => null,
+      });
+
+      await expect(
+        serviceWithoutRun.notifyOpenCodeLeadTurnActivity(leadTurnActivity('active'))
+      ).resolves.toBeUndefined();
+      expect(vi.getTimerCount()).toBe(0);
+      expect(setLeadActivity).not.toHaveBeenCalled();
+
+      let trackedRunOrNull: TestSendRun | null = trackedRun();
+      const serviceLosingRun = createService({
+        setLeadActivity,
+        resolveLeadActivityRun: () => trackedRunOrNull,
+      });
+
+      await serviceLosingRun.notifyOpenCodeLeadTurnActivity(leadTurnActivity('active'));
+      trackedRunOrNull = null;
+
+      expect(() => vi.advanceTimersByTime(OPENCODE_LEAD_ACTIVE_FALLBACK_MS)).not.toThrow();
+      expect(setLeadActivity.mock.calls).toEqual([[expect.anything(), 'active']]);
+    });
+
+    it('never arms the fallback for a notification the lead activity guards drop', async () => {
+      const run = trackedRun();
+      const setLeadActivity = vi.fn();
+      const service = createService({
+        setLeadActivity,
+        resolveLeadActivityRun: () => run,
+      });
+
+      for (const dropped of [
+        { ...leadTurnActivity('active'), laneId: 'secondary:opencode:builder' },
+        { ...leadTurnActivity('active'), runId: null },
+        { ...leadTurnActivity('active'), memberName: 'builder' },
+        { ...leadTurnActivity('active'), runId: 'replacement-run' },
+      ]) {
+        await service.notifyOpenCodeLeadTurnActivity(dropped);
+        expect(vi.getTimerCount()).toBe(0);
+      }
+
+      vi.advanceTimersByTime(OPENCODE_LEAD_ACTIVE_FALLBACK_MS * 2);
+      expect(setLeadActivity).not.toHaveBeenCalled();
+    });
+
+    it('keeps a live turn fallback armed when a dropped notification arrives behind it', async () => {
+      const run = trackedRun();
+      const setLeadActivity = vi.fn();
+      const service = createService({
+        setLeadActivity,
+        resolveLeadActivityRun: () => run,
+      });
+
+      await service.notifyOpenCodeLeadTurnActivity(leadTurnActivity('active'));
+      await service.notifyOpenCodeLeadTurnActivity({
+        ...leadTurnActivity('idle'),
+        runId: 'replacement-run',
+      });
+      expect(vi.getTimerCount()).toBe(1);
+
+      vi.advanceTimersByTime(OPENCODE_LEAD_ACTIVE_FALLBACK_MS);
+      expect(setLeadActivity.mock.calls).toEqual([
+        [run, 'active'],
+        [run, 'idle'],
+      ]);
+    });
+  });
 });
+
+function trackedRun(): TestSendRun {
+  return {
+    teamName: 'team-a',
+    runId: 'run-1',
+    processKilled: false,
+    cancelRequested: false,
+    request: {},
+    child: null,
+  } satisfies TestSendRun;
+}
+
+function leadTurnActivity(state: 'active' | 'idle'): OpenCodeLeadTurnActivityNotification {
+  return {
+    teamName: 'team-a',
+    memberName: 'team-lead',
+    laneId: 'primary',
+    runId: 'run-1',
+    state,
+  };
+}
 
 function createService(
   overrides: Partial<TestDeps> = {}
