@@ -2,6 +2,16 @@ import { wrapAgentBlock } from '@shared/constants/agentBlocks';
 
 import type { TeamRuntimeLaunchInput } from './TeamRuntimeAdapter';
 
+function buildHistoricalLaunchContextSection(teamPrompt: string): string {
+  return [
+    'Team launch context (HISTORICAL - already delivered at launch and being executed through the task board):',
+    teamPrompt,
+    'The launch context above is background only. It has already been acted on; the task board and inbox are the source of truth for what remains.',
+    'Never act on the launch context directly from this briefing: do not create tasks, do not send messages, and do not declare completion (for example "ALL DONE") because of it.',
+    'Only act on new messages delivered in this turn, or on current task-board state when a new message asks you to.',
+  ].join('\n');
+}
+
 export function buildMemberBootstrapPrompt(
   input: TeamRuntimeLaunchInput,
   member: TeamRuntimeLaunchInput['expectedMembers'][number]
@@ -22,7 +32,13 @@ export function buildMemberBootstrapPrompt(
     '<agent_teams_app_managed_bootstrap_briefing>',
     'AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1',
     identityLine,
-    teamPrompt ? `Team launch context:\n${teamPrompt}` : null,
+    // The briefing is replayed verbatim every time a memoryless session is
+    // rebuilt. Handed the raw launch prompt again, the rebuilt turn reads it as
+    // a fresh instruction and acts on work that is already underway: it answers
+    // the user again, and on a short prompt it can declare the whole run
+    // complete. Marking the context as history, with an explicit
+    // do-not-act-on-it, is what keeps a rebuild from restarting the launch.
+    teamPrompt ? buildHistoricalLaunchContextSection(teamPrompt) : null,
     workflow ? `Workflow:\n${workflow}` : null,
     '',
     'This OpenCode session is created, attached, and launch-verified by the desktop app.',
