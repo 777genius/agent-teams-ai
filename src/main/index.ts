@@ -143,7 +143,6 @@ import {
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { openCodeRelayDiagnosticsLogGate } from '@main/services/team/opencode/delivery/OpenCodeRelayDiagnosticsLogGate';
 import {
-  buildOpenCodeAppScopedMcpOwnershipMarker,
   buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
@@ -248,16 +247,14 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import {
-  purgeStaleOpenCodeHostStartupLocks,
-  resolveStartupStaleLockMinAgeMs,
-  startPeriodicOpenCodeHostStartupLockPurge,
-} from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
-import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
-import {
-  reapOrphanedOpenCodeHostsBeforeRuntimeRegistry,
-  runOpenCodeStartupRuntimeSweepTail,
-} from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+  buildOpenCodeProcessOwnershipMarkers,
+  cleanupOpenCodeHostProcessFallback,
+  runOpenCodeLifecycleCleanupTail,
+  type OpenCodeLifecycleCleanupTailPorts,
+} from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
+import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -690,6 +687,12 @@ async function createOpenCodeRuntimeAdapterRegistry(
 }
 let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
 
+const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
+  logSweepResult: (message) => logger.diagnostic(message),
+  logWarning: (message) => logger.warn(message),
+  logError: (message) => logger.error(message),
+};
+
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
@@ -725,77 +728,15 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   // reap.
   const sweepCommandSettledAtMs = Date.now();
 
-  if (reason === 'startup' && !registryCleanupAvailable) {
-    logger.warn(
-      '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable'
-    );
-    return;
-  }
-
-  await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
-    mode: reason === 'shutdown' ? 'force' : 'orphaned',
-    excludePids: reason === 'startup' ? registryHostPids : undefined,
-    ...(reason === 'shutdown' ? getOpenCodeProcessOwnershipMarkers() : {}),
-    startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
+  await runOpenCodeLifecycleCleanupTail({
+    reason,
+    registryHostPids,
+    registryCleanupAvailable,
+    appStartedAtMs,
+    sweepCommandSettledAtMs,
+    managedHostInstanceId: openCodeManagedHostInstanceId,
+    ports: openCodeLifecycleCleanupTailPorts,
   });
-
-  if (reason === 'startup') {
-    await runOpenCodeStartupRuntimeSweepTail({
-      sweepCommandSettledAtMs,
-      ownershipMarkers: getOpenCodeProcessOwnershipMarkers(),
-      logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
-      logWarning: (message) => logger.warn(message),
-      logError: (message) => logger.error(message),
-    });
-    // A host that was killed never released its orchestrator startup lock, and
-    // the next launch readiness probe waits on every leftover in turn. The
-    // reap above has just run, so a lock still held open belongs to a live
-    // host: on Windows its unlink fails harmlessly, and where the OS unlinks
-    // an open file instead the floor alone has to keep a host that is starting
-    // right now out of scope.
-    const lockPurge = await purgeStaleOpenCodeHostStartupLocks({
-      minAgeMs: resolveStartupStaleLockMinAgeMs(),
-    });
-    if (lockPurge.removed > 0) {
-      logger.diagnostic(
-        `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`
-      );
-    }
-    for (const diagnostic of lockPurge.diagnostics) {
-      logger.warn(`[OpenCode] startup lock purge: ${diagnostic}`);
-    }
-  }
-}
-
-function getOpenCodeProcessOwnershipMarkers(): Pick<
-  Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
-  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
-> {
-  return process.platform === 'win32'
-    ? {
-        requiredServeConfigMarkersAny: [
-          buildOpenCodeAppScopedMcpOwnershipMarker(openCodeManagedHostInstanceId),
-        ],
-      }
-    : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`] };
-}
-
-async function cleanupOpenCodeHostProcessFallback(
-  label: string,
-  options: Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0]
-): Promise<void> {
-  const fallback = await cleanupManagedOpenCodeServeProcesses(options);
-  if (fallback.killed > 0) {
-    // Durable, not a warning: this is the app's most destructive lifecycle
-    // action, and the count has to still be readable when someone asks why a
-    // host they expected is gone. `info` never reaches a sink at all.
-    logger.diagnostic(
-      `[OpenCode] opencode_managed_hosts_killed sweep=${label} count=${fallback.killed}`
-    );
-  }
-  for (const diagnostic of fallback.diagnostics) {
-    logger.warn(`[OpenCode] ${label} cleanup: ${diagnostic}`);
-  }
 }
 
 // --- Team display name cache (avoid listTeams() on every notification) ---
@@ -3108,10 +3049,14 @@ async function shutdownServices(): Promise<void> {
     await runShutdownStep(
       'OpenCode post-subprocess fallback cleanup',
       () =>
-        cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
-          mode: 'force',
-          ...getOpenCodeProcessOwnershipMarkers(),
-        }),
+        cleanupOpenCodeHostProcessFallback(
+          'post-subprocess shutdown fallback',
+          {
+            mode: 'force',
+            ...buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+          },
+          openCodeLifecycleCleanupTailPorts
+        ),
       5_000
     );
 
