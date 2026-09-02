@@ -14,6 +14,10 @@ import {
   runOpenCodeWorktreeRootAggregateLaunch,
   type RunOpenCodeWorktreeRootAggregateLaunchInput,
 } from './TeamProvisioningOpenCodeAggregateRun';
+import {
+  createDefaultOpenCodeRuntimeBootstrapEvidencePorts,
+  findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence,
+} from './TeamProvisioningOpenCodeBootstrapEvidence';
 import { createOpenCodeLaunchFailureArtifactAdapter } from './TeamProvisioningOpenCodeLaunchFailureArtifact';
 import {
   runOpenCodeTeamRuntimeAdapterLaunch,
@@ -47,6 +51,39 @@ const logger = createLogger('Service:TeamProvisioning');
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+/**
+ * The lead's committed session record, read from disk exactly the way the
+ * delivery path will read it later. This is the launch-time half of the lead
+ * veto; the caller treats a throw as "cannot disprove", never as failure.
+ *
+ * Deliberately NOT `hasDeliverableOpenCodeRuntimeBootstrapSessionEvidence`: that
+ * helper swallows the store read and answers `false`, which the veto reads as
+ * PROOF that no session exists. A concurrent bootstrap check-in holding the
+ * manifest lock - the exact contention this gate races - would then tear a
+ * healthy team down. The read must reject so the caller can map it to "cannot
+ * disprove".
+ */
+async function hasCommittedOpenCodePrimaryLeadSessionEvidence(input: {
+  teamName: string;
+  runId: string;
+  laneId: string;
+  memberName: string;
+}): Promise<boolean> {
+  const ports = createDefaultOpenCodeRuntimeBootstrapEvidencePorts({
+    teamsBasePath: getTeamsBasePath(),
+    warn: (message) => logger.diagnostic(message),
+  });
+  const evidence = await ports.readCommittedBootstrapSessionEvidence({
+    teamsBasePath: ports.teamsBasePath,
+    teamName: input.teamName,
+    laneId: input.laneId,
+  });
+  return (
+    findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence(evidence, input) !=
+    null
+  );
 }
 
 export interface OpenCodeLaunchWiringRuntimeRunEntry {
@@ -394,6 +431,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           },
           deleteSecondaryRuntimeRun: (teamName, laneId) =>
             host.deleteSecondaryRuntimeRun(teamName, laneId),
+          hasCommittedOpenCodePrimaryLeadSessionEvidence,
         }
       ),
     runOpenCodeTeamRuntimeAdapterLaunch: async (input) =>
