@@ -43,12 +43,17 @@ export function getCurrentRuntimeOfflineVisualState(
   if (isLeadMember(member) && runtimeEntry?.backendType === 'lead') {
     return null;
   }
-  if (runtimeEntry?.livenessKind === 'registered_only') {
+  // Ephemeral lane hosts (e.g. OpenCode secondary lanes) keep alive:true while
+  // livenessKind degrades to registered_only/stale_metadata between turns.
+  // Such members are fully functional, so degraded liveness metadata must not
+  // present them as stale/registered while the runtime reports alive.
+  const runtimeReportsAlive = runtimeEntry?.alive === true;
+  if (!runtimeReportsAlive && runtimeEntry?.livenessKind === 'registered_only') {
     return 'registered_only';
   }
   if (
-    runtimeEntry?.livenessKind === 'stale_metadata' ||
-    runtimeEntry?.livenessKind === 'not_found'
+    !runtimeReportsAlive &&
+    (runtimeEntry?.livenessKind === 'stale_metadata' || runtimeEntry?.livenessKind === 'not_found')
   ) {
     return 'stale_runtime';
   }
@@ -61,6 +66,7 @@ export function getCurrentRuntimeOfflineVisualState(
     return 'stale_runtime';
   }
   if (
+    !runtimeReportsAlive &&
     spawnRuntimeAlive === false &&
     (spawnStatus === 'online' || spawnLaunchState === 'confirmed_alive')
   ) {

@@ -995,16 +995,23 @@ export function shouldDisplayMemberCurrentTask({
   ) {
     return false;
   }
+  // Degraded liveness metadata (registered_only/stale_metadata/not_found) is
+  // expected for alive ephemeral lane hosts between turns; only treat it as
+  // task-hiding evidence when the runtime does not report alive. shell_only is
+  // deliberately not in that set: it says the pane holds no agent at all.
+  const runtimeReportsAlive = runtimeEntry?.alive === true;
+  const hasDegradedLivenessMetadata =
+    runtimeEntry?.livenessKind === 'registered_only' ||
+    spawnEntry?.livenessKind === 'registered_only' ||
+    runtimeEntry?.livenessKind === 'stale_metadata' ||
+    spawnEntry?.livenessKind === 'stale_metadata' ||
+    runtimeEntry?.livenessKind === 'not_found' ||
+    spawnEntry?.livenessKind === 'not_found';
   if (
     !useBootstrapConfirmedVisualState &&
     (runtimeEntry?.livenessKind === 'shell_only' ||
       spawnEntry?.livenessKind === 'shell_only' ||
-      runtimeEntry?.livenessKind === 'registered_only' ||
-      spawnEntry?.livenessKind === 'registered_only' ||
-      runtimeEntry?.livenessKind === 'stale_metadata' ||
-      spawnEntry?.livenessKind === 'stale_metadata' ||
-      runtimeEntry?.livenessKind === 'not_found' ||
-      spawnEntry?.livenessKind === 'not_found')
+      (!runtimeReportsAlive && hasDegradedLivenessMetadata))
   ) {
     return false;
   }
