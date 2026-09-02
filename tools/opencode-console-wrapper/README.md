@@ -31,7 +31,7 @@ sibling — and exits `112` with a message on stderr if none of those resolve.
 
 ## Build
 
-```
+```bash
 node scripts/stage-opencode-console-wrapper.mjs
 ```
 
@@ -42,8 +42,10 @@ rest of `resources/runtime`. Set `AGENT_TEAMS_CSC_PATH` to use a different
 compiler, `--require` to turn a skip into a failure, `--clean` to remove the
 staged build.
 
-`pnpm dist`, `pnpm dist:win`, `pnpm dist:win:x64` and `pnpm dist:win:arm64` run
-the staging step before electron-builder; on non-Windows hosts or targets, or
+`pnpm dist:win`, `pnpm dist:win:x64` and `pnpm dist:win:arm64` run the staging
+step with `--require`, so an explicit Windows release build fails rather than
+shipping without the wrapper when no compiler is available. The generic
+`pnpm dist` runs it without `--require`: on a non-Windows host or target, or
 without a compiler, it skips with a notice and the runtime keeps launching the
 real binary directly.
 
