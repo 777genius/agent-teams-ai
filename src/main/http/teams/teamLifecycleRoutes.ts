@@ -15,6 +15,7 @@ import {
   runTeamForceStopFlow,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
@@ -108,6 +109,7 @@ export function registerTeamLifecycleRoutes(
               requestedAtMs: context.requestedAtMs,
             }),
           logWarning: (message) => logger.warn(message),
+          markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
         });
         return reply.send(result);
       } catch (error) {

@@ -162,6 +162,7 @@ import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
+import { TeamLaunchStateStore } from '../services/team/TeamLaunchStateStore';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
@@ -4247,6 +4248,7 @@ async function handleForceStopTeam(
           requestedAtMs: context.requestedAtMs,
         }),
       logWarning: (message) => logger.warn(message),
+      markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
     });
   });
 }
