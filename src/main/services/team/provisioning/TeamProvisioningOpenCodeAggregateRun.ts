@@ -1,6 +1,11 @@
 import * as path from 'path';
 
 import {
+  resolveOpenCodeAggregateLaunchStateForLeadBootstrap,
+  resolveOpenCodeAggregatePrimaryLeadBootstrap,
+  summarizeOpenCodeAggregateLaunchPromotion,
+} from './TeamProvisioningOpenCodeAggregateLaunchPromotion';
+import {
   queueLaunchPromptToLeadInbox,
   resolveOpenCodeAggregateLaunchPromptDelivery,
   resolveOpenCodeAggregateLaunchPromptLeadName,
@@ -18,14 +23,11 @@ import {
   stopAndRollbackOpenCodeAggregateRuntimeLanes,
 } from './TeamProvisioningOpenCodeAggregateRunRollback';
 import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
-import { selectOpenCodeLaunchFailureDiagnostic } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
-import { hasRetainableOpenCodeRuntimeMember } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   takeBlockingOpenCodeSharedRuntimeFailure,
   trackOpenCodeSharedRuntimeFailureFromResult,
 } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
-import type { TeamRuntimeLaunchResult } from '../runtime';
 import type { TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 
 export * from './TeamProvisioningOpenCodeAggregateRunModel';
@@ -274,10 +276,23 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     }
 
     run.provisioningComplete = true;
-    const launchState = ports.summarizeOpenCodeAggregateLaunchState({
-      primaryResult,
-      lanes: run.mixedSecondaryLanes,
-    });
+    // The lead's own bootstrap is resolved BEFORE the aggregate state is
+    // summarized, because it can only ever override that summary.
+    const leadBootstrapOutcome = await resolveOpenCodeAggregatePrimaryLeadBootstrap(
+      { teamName, runId, effectiveMembers: run.effectiveMembers, primaryResult },
+      ports
+    );
+    if (aggregateLaunchNoLongerCurrent()) {
+      return await finishCancelledAggregateLaunch();
+    }
+    const leadBootstrap = leadBootstrapOutcome.state;
+    const launchState = resolveOpenCodeAggregateLaunchStateForLeadBootstrap(
+      ports.summarizeOpenCodeAggregateLaunchState({
+        primaryResult,
+        lanes: run.mixedSecondaryLanes,
+      }),
+      leadBootstrap
+    );
     const launchPhase = launchState === 'partial_pending' ? 'active' : 'finished';
     const snapshot = await ports.persistLaunchStateSnapshot(run, launchPhase);
     if (snapshot) {
@@ -287,26 +302,14 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       return await finishCancelledAggregateLaunch();
     }
 
-    const failed = launchState === 'partial_failure';
-    const retainableResults = [
+    const promotion = summarizeOpenCodeAggregateLaunchPromotion({
+      launchState,
+      leadBootstrap,
+      leadName: leadBootstrapOutcome.leadName,
       primaryResult,
-      ...run.mixedSecondaryLanes.map((lane) => lane.result),
-    ].filter((result): result is TeamRuntimeLaunchResult => result !== null);
-    const partialTeamCanContinue =
-      failed && retainableResults.some((result) => hasRetainableOpenCodeRuntimeMember(result));
-    const terminalFailure = failed && !partialTeamCanContinue;
-    const laneDiagnostics = run.mixedSecondaryLanes.flatMap((lane) => lane.diagnostics);
-    const terminalFailureError = selectOpenCodeLaunchFailureDiagnostic([
-      ...retainableResults.flatMap((launchResult) => [
-        ...Object.values(launchResult.members).flatMap((member) => [
-          member.hardFailureReason,
-          member.runtimeDiagnostic,
-          ...member.diagnostics,
-        ]),
-        ...launchResult.diagnostics,
-      ]),
-      ...laneDiagnostics,
-    ]);
+      lanes: run.mixedSecondaryLanes,
+    });
+    const { laneDiagnostics, terminalFailure } = promotion;
     // The lanes are ready and this launch owns the team: hand the launch prompt
     // to the lead's inbox before the run reports its final progress, so a
     // refused inbox is visible in the same place as every other lane diagnostic.
@@ -332,10 +335,11 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       buildOpenCodeAggregateFinalProgress({
         launching,
         launchState,
+        leadBootstrap,
         laneDiagnostics,
         updatedAt: ports.nowIso(),
-        partialTeamCanContinue,
-        terminalFailureError,
+        partialTeamCanContinue: promotion.partialTeamCanContinue,
+        terminalFailureError: promotion.terminalFailureError,
       }),
       input.onProgress
     );
