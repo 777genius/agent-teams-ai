@@ -21,8 +21,11 @@ import { selectOpenCodeLaunchFailureDiagnostic } from './TeamProvisioningOpenCod
 import {
   hasRetainableOpenCodeRuntimeMember,
   markOpenCodeLaneBlockedBySharedRuntimeFailure,
-  selectOpenCodeSharedRuntimePreflightFailureDiagnostic,
 } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import {
+  takeBlockingOpenCodeSharedRuntimeFailure,
+  trackOpenCodeSharedRuntimeFailureFromResult,
+} from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
 import type { TeamRuntimeLaunchResult } from '../runtime';
 import type { TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
@@ -237,18 +240,18 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
       return await finishCancelledAggregateLaunch();
     }
     if (primaryResult) {
-      const primarySharedFailure =
-        selectOpenCodeSharedRuntimePreflightFailureDiagnostic(primaryResult);
-      if (primarySharedFailure) {
-        run.mixedSecondarySharedRuntimeFailuresByProject.set(primaryCwd, primarySharedFailure);
-      }
+      trackOpenCodeSharedRuntimeFailureFromResult(run, primaryCwd, primaryResult, ports.nowMs());
     }
     for (const lane of run.mixedSecondaryLanes) {
       if (aggregateLaunchNoLongerCurrent()) {
         return await finishCancelledAggregateLaunch();
       }
       const laneCwd = secondaryCwds.get(lane.laneId)!;
-      const sharedRuntimeFailure = run.mixedSecondarySharedRuntimeFailuresByProject.get(laneCwd);
+      const sharedRuntimeFailure = takeBlockingOpenCodeSharedRuntimeFailure(
+        run,
+        laneCwd,
+        ports.nowMs()
+      );
       if (sharedRuntimeFailure) {
         markOpenCodeLaneBlockedBySharedRuntimeFailure({
           teamName,
@@ -268,12 +271,7 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
         return await finishCancelledAggregateLaunch();
       }
       if (lane.result) {
-        const laneSharedFailure = selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
-          lane.result
-        );
-        if (laneSharedFailure) {
-          run.mixedSecondarySharedRuntimeFailuresByProject.set(laneCwd, laneSharedFailure);
-        }
+        trackOpenCodeSharedRuntimeFailureFromResult(run, laneCwd, lane.result, ports.nowMs());
       }
     }
 

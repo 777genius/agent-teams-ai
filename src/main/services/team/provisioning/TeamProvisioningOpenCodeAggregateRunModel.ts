@@ -14,6 +14,7 @@ import type {
   TeamRuntimeLaunchResult,
 } from '../runtime';
 import type { OpenCodeAggregateLaunchPromptPorts } from './TeamProvisioningOpenCodeAggregateLaunchPrompt';
+import type { OpenCodeSharedRuntimeFailuresByProject } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import type {
   PersistedTeamLaunchSnapshot,
   TeamCreateRequest,
@@ -33,7 +34,7 @@ export interface CreateOpenCodeAggregateProvisioningRunParams {
 }
 
 export type OpenCodeAggregateProvisioningRun = ProvisioningRun & {
-  mixedSecondarySharedRuntimeFailuresByProject: Map<string, string>;
+  mixedSecondarySharedRuntimeFailuresByProject: OpenCodeSharedRuntimeFailuresByProject;
 };
 
 export function createOpenCodeAggregateProvisioningRun(
@@ -72,7 +73,7 @@ export function createOpenCodeAggregateProvisioningRun(
     effectiveMembers: params.lanePlan.primaryMembers,
     launchIdentity: null,
     mixedSecondaryLanes: createMixedSecondaryLaneStates(params.lanePlan),
-    mixedSecondarySharedRuntimeFailuresByProject: new Map<string, string>(),
+    mixedSecondarySharedRuntimeFailuresByProject: new Map(),
     lastLogProgressAt: 0,
     lastDataReceivedAt: 0,
     lastStdoutReceivedAt: 0,

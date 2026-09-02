@@ -8,6 +8,7 @@ import {
 import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
 
+import { isRetryableReadinessState, openCodePreLaunchGate } from './OpenCodeLaunchGateResult';
 import {
   createLocalRuntimeInspectionState,
   preflightOpenCodeLocalModels,
@@ -337,7 +338,9 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           prepared.reason === 'mcp_unavailable' || prepared.reason === 'unknown_error'
             ? ['OpenCode is temporarily unavailable. Retry the launch.', ...prepared.diagnostics]
             : prepared.diagnostics;
-        return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings);
+        return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings, {
+          preLaunchGate: true,
+        });
       }
       const readinessModel = prepared.modelId?.trim() ?? '';
       if (requestedModel && readinessModel !== requestedModel) {
@@ -1513,7 +1516,8 @@ function blockedLaunchResult(
   input: TeamRuntimeLaunchInput,
   reason: string,
   diagnostics: string[],
-  warnings: string[] = []
+  warnings: string[] = [],
+  options: { preLaunchGate?: boolean } = {}
 ): TeamRuntimeLaunchResult {
   const readinessFailure =
     reason === 'unknown_error' ||
@@ -1549,18 +1553,10 @@ function blockedLaunchResult(
     members,
     warnings,
     diagnostics,
+    // Attached only where the block provably precedes launchOpenCodeTeam, so an
+    // absent marker always reads as "this launch may already own a host".
+    ...(options.preLaunchGate === true ? { preLaunchGate: openCodePreLaunchGate(reason) } : {}),
   };
-}
-
-function isRetryableReadinessState(state: OpenCodeTeamLaunchReadiness['state']): boolean {
-  return (
-    state === 'not_installed' ||
-    state === 'not_authenticated' ||
-    state === 'runtime_store_blocked' ||
-    state === 'mcp_unavailable' ||
-    state === 'model_unavailable' ||
-    state === 'unknown_error'
-  );
 }
 
 function mergeDiagnostics(left: string[], right: string[]): string[] {

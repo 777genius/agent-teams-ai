@@ -93,11 +93,18 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     expect(result.members.Worker?.hardFailureReason).toBe(
       'OpenCode is temporarily unavailable. Retry the launch.'
     );
+    // The readiness gate ran before launchOpenCodeTeam, so the result carries
+    // the proof that no host or session exists for this run.
+    expect(result.preLaunchGate).toEqual({
+      blocked: true,
+      reason: 'unknown_error',
+      retryable: true,
+    });
   });
 
   it('fails closed when launching with confirmed members returns a mismatched fingerprint', async () => {
-    const expectedFingerprint = validExecutionProof().expectedBehaviorEvidence
-      ?.expectedBehaviorFingerprint;
+    const expectedFingerprint =
+      validExecutionProof().expectedBehaviorEvidence?.expectedBehaviorFingerprint;
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >(async () => launchData('confirmed_alive', 'mismatched-fingerprint'));
@@ -115,12 +122,13 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
       expectedFingerprint
     );
     expect(result.teamLaunchState).toBe('partial_failure');
-    expect(result.diagnostics).toEqual([
-      'OpenCode launch result behavior fingerprint mismatch',
-    ]);
+    expect(result.diagnostics).toEqual(['OpenCode launch result behavior fingerprint mismatch']);
     expect(result.members.Worker?.hardFailureReason).toBe(
       'opencode_launch_behavior_fingerprint_mismatch'
     );
+    // A block found AFTER launchOpenCodeTeam ran is not a pre-launch gate: the
+    // bridge may already own a host, so no caller may relaunch this lane.
+    expect(result.preLaunchGate).toBeUndefined();
   });
 
   it('preserves partial launch semantics when a non-success result has a mismatched fingerprint', async () => {
@@ -263,9 +271,8 @@ function validExecutionProof(): OpenCodeExecutionProof & {
     effectiveSelectedAuthFingerprint,
     expectedBehaviorFingerprint: '',
   };
-  expectedBehaviorEvidence.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(
-    expectedBehaviorEvidence
-  );
+  expectedBehaviorEvidence.expectedBehaviorFingerprint =
+    createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorEvidence);
   const unsignedProof: Omit<OpenCodeExecutionProof, 'proofHash'> = {
     schemaVersion: 1,
     providerId: 'opencode',
