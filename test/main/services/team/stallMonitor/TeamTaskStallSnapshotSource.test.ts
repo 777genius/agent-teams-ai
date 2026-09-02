@@ -5,16 +5,9 @@ import { TeamTaskStallSnapshotSource } from '../../../../../src/main/services/te
 
 describe('TeamTaskStallSnapshotSource', () => {
   it('returns null when transcript context is unavailable', async () => {
-    const source = new TeamTaskStallSnapshotSource(
-      { getContext: vi.fn(async () => null) } as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      {} as never
-    );
+    const source = new TeamTaskStallSnapshotSource({
+      transcriptSourceLocator: { getContext: vi.fn(async () => null) } as never,
+    });
 
     await expect(source.getSnapshot('demo')).resolves.toBeNull();
   });
@@ -133,17 +126,17 @@ describe('TeamTaskStallSnapshotSource', () => {
       })),
     };
 
-    const source = new TeamTaskStallSnapshotSource(
-      locator as never,
-      taskReader as never,
-      kanbanManager as never,
-      transcriptReader as never,
-      batchIndexer as never,
-      freshnessReader as never,
-      exactRowReader as never,
-      membersMetaStore as never,
-      openCodeEvidenceSource as never
-    );
+    const source = new TeamTaskStallSnapshotSource({
+      transcriptSourceLocator: locator as never,
+      taskReader: taskReader as never,
+      kanbanManager: kanbanManager as never,
+      transcriptReader: transcriptReader as never,
+      activityBatchIndexer: batchIndexer as never,
+      freshnessReader: freshnessReader as never,
+      exactRowReader: exactRowReader as never,
+      membersMetaStore: membersMetaStore as never,
+      openCodeEvidenceSource: openCodeEvidenceSource as never,
+    });
 
     const snapshot = await source.getSnapshot('demo');
     const expectedWorkflowActiveTasks = [
@@ -212,8 +205,8 @@ describe('TeamTaskStallSnapshotSource', () => {
         exactRowsByFilePath: new Map(),
       })),
     };
-    const source = new TeamTaskStallSnapshotSource(
-      {
+    const source = new TeamTaskStallSnapshotSource({
+      transcriptSourceLocator: {
         getContext: vi.fn(async () => ({
           projectDir: '/tmp/project',
           projectId: 'project-id',
@@ -227,18 +220,18 @@ describe('TeamTaskStallSnapshotSource', () => {
           transcriptFiles: [],
         })),
       } as never,
-      {
+      taskReader: {
         getTasks: vi.fn(async () => activeTasks),
         getDeletedTasks: vi.fn(async () => []),
       } as never,
-      { getState: vi.fn(async () => ({ teamName: 'demo', tasks: {} })) } as never,
-      { readFiles: vi.fn(async () => []) } as never,
-      { buildIndex: vi.fn(() => new Map()) } as never,
-      freshnessReader as never,
-      exactRowReader as never,
-      { getMembers: vi.fn(async () => []) } as never,
-      openCodeEvidenceSource as never
-    );
+      kanbanManager: { getState: vi.fn(async () => ({ teamName: 'demo', tasks: {} })) } as never,
+      transcriptReader: { readFiles: vi.fn(async () => []) } as never,
+      activityBatchIndexer: { buildIndex: vi.fn(() => new Map()) } as never,
+      freshnessReader: freshnessReader as never,
+      exactRowReader: exactRowReader as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+      openCodeEvidenceSource: openCodeEvidenceSource as never,
+    });
 
     const snapshot = await source.getSnapshot('demo');
 
@@ -257,8 +250,8 @@ describe('TeamTaskStallSnapshotSource', () => {
   });
 
   it('still yields a snapshot for a team with no session ids or transcripts', async () => {
-    const source = new TeamTaskStallSnapshotSource(
-      {
+    const source = new TeamTaskStallSnapshotSource({
+      transcriptSourceLocator: {
         getContext: vi.fn(async () => ({
           projectDir: '/tmp/project',
           projectId: 'project-id',
@@ -267,20 +260,23 @@ describe('TeamTaskStallSnapshotSource', () => {
           transcriptFiles: [],
         })),
       } as never,
-      { getTasks: vi.fn(async () => []), getDeletedTasks: vi.fn(async () => []) } as never,
-      { getState: vi.fn(async () => ({ teamName: 'demo', tasks: {} })) } as never,
-      { readFiles: vi.fn(async () => []) } as never,
-      { buildIndex: vi.fn(() => new Map()) } as never,
-      { readSignals: vi.fn(async () => new Map()) } as never,
-      { parseFiles: vi.fn(async () => new Map()) } as never,
-      { getMembers: vi.fn(async () => []) } as never,
-      {
+      taskReader: {
+        getTasks: vi.fn(async () => []),
+        getDeletedTasks: vi.fn(async () => []),
+      } as never,
+      kanbanManager: { getState: vi.fn(async () => ({ teamName: 'demo', tasks: {} })) } as never,
+      transcriptReader: { readFiles: vi.fn(async () => []) } as never,
+      activityBatchIndexer: { buildIndex: vi.fn(() => new Map()) } as never,
+      freshnessReader: { readSignals: vi.fn(async () => new Map()) } as never,
+      exactRowReader: { parseFiles: vi.fn(async () => new Map()) } as never,
+      membersMetaStore: { getMembers: vi.fn(async () => []) } as never,
+      openCodeEvidenceSource: {
         readEvidence: vi.fn(async () => ({
           recordsByTaskId: new Map(),
           exactRowsByFilePath: new Map(),
         })),
-      } as never
-    );
+      } as never,
+    });
 
     const snapshot = await source.getSnapshot('demo');
 
@@ -326,8 +322,8 @@ describe('TeamTaskStallSnapshotSource', () => {
         toolResultIds: [],
       },
     ];
-    const source = new TeamTaskStallSnapshotSource(
-      {
+    const source = new TeamTaskStallSnapshotSource({
+      transcriptSourceLocator: {
         getContext: vi.fn(async () => ({
           projectDir: '/tmp/project',
           projectId: 'project-id',
@@ -341,37 +337,37 @@ describe('TeamTaskStallSnapshotSource', () => {
           transcriptFiles: [],
         })),
       } as never,
-      {
+      taskReader: {
         getTasks: vi.fn(async () => [task]),
         getDeletedTasks: vi.fn(async () => []),
       } as never,
-      {
+      kanbanManager: {
         getState: vi.fn(async () => ({ teamName: 'demo', tasks: {} })),
       } as never,
-      {
+      transcriptReader: {
         readFiles: vi.fn(async () => {
           throw new Error('transcript reader should not be called');
         }),
       } as never,
-      {
+      activityBatchIndexer: {
         buildIndex: vi.fn(() => new Map()),
       } as never,
-      {
+      freshnessReader: {
         readSignals: vi.fn(async () => new Map()),
       } as never,
-      {
+      exactRowReader: {
         parseFiles: vi.fn(async () => new Map()),
       } as never,
-      {
+      membersMetaStore: {
         getMembers: vi.fn(async () => []),
       } as never,
-      {
+      openCodeEvidenceSource: {
         readEvidence: vi.fn(async () => ({
           recordsByTaskId: new Map([['task-open', [openCodeRecord]]]),
           exactRowsByFilePath: new Map([['opencode-runtime:demo:bob', openCodeRows]]),
         })),
-      } as never
-    );
+      } as never,
+    });
 
     const snapshot = await source.getSnapshot('demo');
 
@@ -416,8 +412,8 @@ describe('TeamTaskStallSnapshotSource', () => {
 function snapshotSourceWithLaneTurnActivity(
   laneTurnActivity: OpenCodeLaneTurnActivityRegistry
 ): TeamTaskStallSnapshotSource {
-  return new TeamTaskStallSnapshotSource(
-    {
+  return new TeamTaskStallSnapshotSource({
+    transcriptSourceLocator: {
       getContext: vi.fn(() =>
         Promise.resolve({
           projectDir: '/repo/project',
@@ -428,17 +424,19 @@ function snapshotSourceWithLaneTurnActivity(
         })
       ),
     } as never,
-    {
+    taskReader: {
       getTasks: vi.fn(() => Promise.resolve([])),
       getDeletedTasks: vi.fn(() => Promise.resolve([])),
     } as never,
-    { getState: vi.fn(() => Promise.resolve({ teamName: 'demo', tasks: {} })) } as never,
-    { readFiles: vi.fn(() => Promise.resolve(new Map())) } as never,
-    { buildIndex: vi.fn(() => new Map()) } as never,
-    { readSignals: vi.fn(() => Promise.resolve(new Map())) } as never,
-    { parseFiles: vi.fn(() => Promise.resolve(new Map())) } as never,
-    { getMembers: vi.fn(() => Promise.resolve([])) } as never,
-    {
+    kanbanManager: {
+      getState: vi.fn(() => Promise.resolve({ teamName: 'demo', tasks: {} })),
+    } as never,
+    transcriptReader: { readFiles: vi.fn(() => Promise.resolve(new Map())) } as never,
+    activityBatchIndexer: { buildIndex: vi.fn(() => new Map()) } as never,
+    freshnessReader: { readSignals: vi.fn(() => Promise.resolve(new Map())) } as never,
+    exactRowReader: { parseFiles: vi.fn(() => Promise.resolve(new Map())) } as never,
+    membersMetaStore: { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+    openCodeEvidenceSource: {
       readEvidence: vi.fn(() =>
         Promise.resolve({
           recordsByTaskId: new Map(),
@@ -446,6 +444,6 @@ function snapshotSourceWithLaneTurnActivity(
         })
       ),
     } as never,
-    laneTurnActivity
-  );
+    laneTurnActivity,
+  });
 }

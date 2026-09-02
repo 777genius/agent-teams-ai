@@ -67,19 +67,50 @@ function buildProviderByMemberName(args: {
   return providerByMemberName;
 }
 
+/**
+ * Collaborators of the snapshot source. Every one has a production default, so
+ * a caller overrides only what it already owns; the object shape keeps that
+ * possible without spelling out the collaborators in front of it positionally.
+ */
+export interface TeamTaskStallSnapshotSourceDeps {
+  transcriptSourceLocator?: TeamTranscriptSourceLocator;
+  taskReader?: TeamTaskReader;
+  kanbanManager?: TeamKanbanManager;
+  transcriptReader?: BoardTaskActivityTranscriptReader;
+  activityBatchIndexer?: BoardTaskActivityBatchIndexer;
+  freshnessReader?: TeamTaskLogFreshnessReader;
+  exactRowReader?: TeamTaskStallExactRowReader;
+  membersMetaStore?: TeamMembersMetaStore;
+  openCodeEvidenceSource?: OpenCodeTaskStallEvidenceSource;
+  laneTurnActivity?: OpenCodeLaneTurnActivityRegistry;
+}
+
 export class TeamTaskStallSnapshotSource {
-  constructor(
-    private readonly transcriptSourceLocator: TeamTranscriptSourceLocator = new TeamTranscriptSourceLocator(),
-    private readonly taskReader: TeamTaskReader = new TeamTaskReader(),
-    private readonly kanbanManager: TeamKanbanManager = new TeamKanbanManager(),
-    private readonly transcriptReader: BoardTaskActivityTranscriptReader = new BoardTaskActivityTranscriptReader(),
-    private readonly activityBatchIndexer: BoardTaskActivityBatchIndexer = new BoardTaskActivityBatchIndexer(),
-    private readonly freshnessReader: TeamTaskLogFreshnessReader = new TeamTaskLogFreshnessReader(),
-    private readonly exactRowReader: TeamTaskStallExactRowReader = new TeamTaskStallExactRowReader(),
-    private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
-    private readonly openCodeEvidenceSource: OpenCodeTaskStallEvidenceSource = new OpenCodeTaskStallEvidenceSource(),
-    private readonly laneTurnActivity: OpenCodeLaneTurnActivityRegistry = openCodeLaneTurnActivityRegistry
-  ) {}
+  private readonly transcriptSourceLocator: TeamTranscriptSourceLocator;
+  private readonly taskReader: TeamTaskReader;
+  private readonly kanbanManager: TeamKanbanManager;
+  private readonly transcriptReader: BoardTaskActivityTranscriptReader;
+  private readonly activityBatchIndexer: BoardTaskActivityBatchIndexer;
+  private readonly freshnessReader: TeamTaskLogFreshnessReader;
+  private readonly exactRowReader: TeamTaskStallExactRowReader;
+  private readonly membersMetaStore: TeamMembersMetaStore;
+  private readonly openCodeEvidenceSource: OpenCodeTaskStallEvidenceSource;
+  private readonly laneTurnActivity: OpenCodeLaneTurnActivityRegistry;
+
+  constructor(deps: TeamTaskStallSnapshotSourceDeps = {}) {
+    this.transcriptSourceLocator =
+      deps.transcriptSourceLocator ?? new TeamTranscriptSourceLocator();
+    this.taskReader = deps.taskReader ?? new TeamTaskReader();
+    this.kanbanManager = deps.kanbanManager ?? new TeamKanbanManager();
+    this.transcriptReader = deps.transcriptReader ?? new BoardTaskActivityTranscriptReader();
+    this.activityBatchIndexer = deps.activityBatchIndexer ?? new BoardTaskActivityBatchIndexer();
+    this.freshnessReader = deps.freshnessReader ?? new TeamTaskLogFreshnessReader();
+    this.exactRowReader = deps.exactRowReader ?? new TeamTaskStallExactRowReader();
+    this.membersMetaStore = deps.membersMetaStore ?? new TeamMembersMetaStore();
+    this.openCodeEvidenceSource =
+      deps.openCodeEvidenceSource ?? new OpenCodeTaskStallEvidenceSource();
+    this.laneTurnActivity = deps.laneTurnActivity ?? openCodeLaneTurnActivityRegistry;
+  }
 
   async getSnapshot(teamName: string): Promise<TeamTaskStallSnapshot | null> {
     const transcriptContext = await this.transcriptSourceLocator.getContext(teamName);
