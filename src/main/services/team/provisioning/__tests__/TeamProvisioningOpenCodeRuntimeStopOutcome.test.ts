@@ -122,6 +122,53 @@ describe('resolveOpenCodeRuntimeStopOutcome', () => {
     expect(outcome).toEqual({ kind: 'failed', detail: '', alivePids: [] });
   });
 
+  it.each([
+    ['Bridge server capability snapshot mismatch'],
+    ['OpenCode bridge capability snapshot mismatch'],
+    ['OpenCode lifecycle command requires the exact persisted lane run and capability snapshot'],
+    ['OpenCode lifecycle capability snapshot does not match the persisted lane manifest'],
+  ])('settles a snapshot-mismatch stop with no recorded host: %s', (detail) => {
+    const outcome = resolveOpenCodeRuntimeStopOutcome({
+      result: { stopped: false, diagnostics: [detail] },
+      laneId: 'lane-a',
+      previousLaunchState: snapshot({ Worker: { laneId: 'lane-a' } }),
+      isRuntimeProcessAlive: () => false,
+    });
+
+    expect(outcome).toEqual({ kind: 'already_stopped', detail, checkedPids: [] });
+  });
+
+  it('still fails a snapshot-mismatch stop whose lane has a live recorded host', () => {
+    const outcome = resolveOpenCodeRuntimeStopOutcome({
+      result: {
+        stopped: false,
+        diagnostics: [
+          'OpenCode lifecycle capability snapshot does not match the persisted lane manifest',
+        ],
+      },
+      laneId: 'lane-a',
+      previousLaunchState: snapshot({ Worker: { laneId: 'lane-a', runtimePid: 101 } }),
+      isRuntimeProcessAlive: () => true,
+    });
+
+    expect(outcome).toEqual({
+      kind: 'failed',
+      detail: 'OpenCode lifecycle capability snapshot does not match the persisted lane manifest',
+      alivePids: [101],
+    });
+  });
+
+  it('still fails an unrelated stop failure that recorded no host pid', () => {
+    const outcome = resolveOpenCodeRuntimeStopOutcome({
+      result: { stopped: false, diagnostics: ['bridge lease acquire timed out'] },
+      laneId: 'lane-a',
+      previousLaunchState: snapshot({ Worker: { laneId: 'lane-a' } }),
+      isRuntimeProcessAlive: () => false,
+    });
+
+    expect(outcome.kind).toBe('failed');
+  });
+
   it('does not read an unreadable process as a live host', () => {
     const outcome = resolveOpenCodeRuntimeStopOutcome({
       result: { stopped: false },
@@ -182,6 +229,28 @@ describe('assertOpenCodeRuntimeStopEffective', () => {
       })
     ).toThrow(
       'OpenCode lane lane-a did not confirm stop: lease still held (host process still alive: pid 101)'
+    );
+  });
+
+  it('says the mismatch is why nothing could be verified when it settles one', () => {
+    const logWarning = vi.fn();
+
+    assertOpenCodeRuntimeStopEffective({
+      result: {
+        stopped: false,
+        diagnostics: [
+          'OpenCode lifecycle command requires the exact persisted lane run and capability snapshot',
+        ],
+      },
+      laneId: 'lane-a',
+      previousLaunchState: snapshot({ Worker: { laneId: 'lane-a' } }),
+      message: 'OpenCode lane lane-a did not confirm stop',
+      logWarning,
+      isRuntimeProcessAlive: () => false,
+    });
+
+    expect(logWarning).toHaveBeenCalledWith(
+      'OpenCode lane lane-a did not confirm stop, but the capability snapshot mismatch left no recorded host pid to verify; treating the runtime as already stopped: OpenCode lifecycle command requires the exact persisted lane run and capability snapshot'
     );
   });
 
