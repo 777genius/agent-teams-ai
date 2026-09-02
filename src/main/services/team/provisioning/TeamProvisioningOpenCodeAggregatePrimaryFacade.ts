@@ -5,7 +5,6 @@ import { createLogger } from '@shared/utils/logger';
 import { type TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import {
-  type OpenCodeAggregatePrimaryLaneStopPorts,
   stopFailedOpenCodeAggregatePrimaryRelaunchCandidate as stopFailedOpenCodeAggregatePrimaryRelaunchCandidateHelper,
   stopUnretainableOpenCodePrimaryLane as stopUnretainableOpenCodePrimaryLaneHelper,
 } from './OpenCodeAggregatePrimaryLaneStopHelpers';
@@ -25,6 +24,10 @@ import {
   type LiveRosterAttachReason,
   type ProvisioningRun as MemberLifecycleProvisioningRun,
 } from './TeamProvisioningMemberLifecycleTypes';
+import {
+  createOpenCodeAggregatePrimaryLaneStopPorts,
+  type OpenCodeAggregatePrimaryLaneWiringHost,
+} from './TeamProvisioningOpenCodeAggregatePrimaryLaneWiring';
 import {
   hasRetainableOpenCodeRuntimeMember,
   isRecoverableOpenCodeRuntimeEvidence,
@@ -48,7 +51,7 @@ const logger = createLogger('Service:TeamProvisioning');
 
 /** Owns serialized lifecycle and aggregate-primary restart orchestration. */
 export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends TeamProvisioningServiceMemberLifecycleFacade {
-  private readonly aggregatePrimaryProgress = new OpenCodeAggregatePrimaryProgressPublisher({
+  private readonly aggregatePrimaryLaneHost: OpenCodeAggregatePrimaryLaneWiringHost = {
     usesRetainedProgressState: () =>
       Boolean(this.compatibilityDelegation?.retainedProvisioningProgressState),
     setRuntimeAdapterProgress: (progress, onProgress) =>
@@ -58,7 +61,22 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     rememberProgress: (progress) =>
       this.runtimeAdapterProgressByRunId.set(progress.runId, progress),
     invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
-  });
+    getRuntimeOwner: (teamName) => this.runtimeAdapterRunByTeam.get(teamName),
+    setRuntimeOwner: (teamName, owner) => {
+      this.runtimeAdapterRunByTeam.set(teamName, owner);
+    },
+    deleteRuntimeOwner: (teamName) => {
+      this.runtimeAdapterRunByTeam.delete(teamName);
+    },
+    getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
+      this.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
+    logWarn: (message) => logger.warn(message),
+  };
+
+  private readonly aggregatePrimaryProgress = new OpenCodeAggregatePrimaryProgressPublisher(
+    this.aggregatePrimaryLaneHost
+  );
+
   private runAfterInFlightTeamOperation<T>(
     teamName: string,
     operation: () => Promise<T>
@@ -480,7 +498,11 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
   }): Promise<void> {
     return stopUnretainableOpenCodePrimaryLaneHelper(
       input,
-      this.createAggregatePrimaryLaneStopPorts(input.run)
+      createOpenCodeAggregatePrimaryLaneStopPorts(
+        this.aggregatePrimaryLaneHost,
+        this.aggregatePrimaryProgress,
+        input.run
+      )
     );
   }
 
@@ -492,28 +514,12 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
   }): Promise<void> {
     return stopFailedOpenCodeAggregatePrimaryRelaunchCandidateHelper(
       input,
-      this.createAggregatePrimaryLaneStopPorts(input.run)
+      createOpenCodeAggregatePrimaryLaneStopPorts(
+        this.aggregatePrimaryLaneHost,
+        this.aggregatePrimaryProgress,
+        input.run
+      )
     );
-  }
-
-  private createAggregatePrimaryLaneStopPorts(
-    run: ProvisioningRun
-  ): OpenCodeAggregatePrimaryLaneStopPorts {
-    return {
-      getRuntimeOwner: (teamName) => this.runtimeAdapterRunByTeam.get(teamName),
-      setRuntimeOwner: (teamName, owner) => {
-        this.runtimeAdapterRunByTeam.set(teamName, owner);
-      },
-      deleteRuntimeOwner: (teamName) => {
-        this.runtimeAdapterRunByTeam.delete(teamName);
-      },
-      getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
-        this.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
-      publishPending: (message) => this.aggregatePrimaryProgress.publishPending(run, message),
-      publishFailed: (message, error) =>
-        this.aggregatePrimaryProgress.publishFailed(run, message, error),
-      logWarn: (message) => logger.warn(message),
-    };
   }
 
   override async attachLiveRosterMember(
