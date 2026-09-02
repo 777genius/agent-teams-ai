@@ -191,6 +191,104 @@ describe('TeamTaskStallSnapshotSource', () => {
     expect(snapshot?.recordsByTaskId).toBe(recordsByTaskId);
   });
 
+  it('collects owned pending tasks without widening any evidence read', async () => {
+    const activeTasks = [
+      { id: 'task-owned-pending', subject: 'Owned pending', status: 'pending', owner: 'Scout' },
+      { id: 'task-unowned-pending', subject: 'Unowned pending', status: 'pending' },
+      {
+        id: 'task-deleted-pending',
+        subject: 'Deleted pending',
+        status: 'pending',
+        owner: 'Scout',
+        deletedAt: '2026-04-19T12:00:00.000Z',
+      },
+      { id: 'task-active', subject: 'Active', status: 'in_progress', owner: 'Scout' },
+    ];
+    const freshnessReader = { readSignals: vi.fn(async () => new Map()) };
+    const exactRowReader = { parseFiles: vi.fn(async () => new Map()) };
+    const openCodeEvidenceSource = {
+      readEvidence: vi.fn(async () => ({
+        recordsByTaskId: new Map(),
+        exactRowsByFilePath: new Map(),
+      })),
+    };
+    const source = new TeamTaskStallSnapshotSource(
+      {
+        getContext: vi.fn(async () => ({
+          projectDir: '/tmp/project',
+          projectId: 'project-id',
+          config: {
+            members: [
+              { name: 'team-lead', role: 'team lead', providerId: 'codex' },
+              { name: 'Scout', role: 'Developer', providerId: 'opencode' },
+            ],
+          },
+          sessionIds: [],
+          transcriptFiles: [],
+        })),
+      } as never,
+      {
+        getTasks: vi.fn(async () => activeTasks),
+        getDeletedTasks: vi.fn(async () => []),
+      } as never,
+      { getState: vi.fn(async () => ({ teamName: 'demo', tasks: {} })) } as never,
+      { readFiles: vi.fn(async () => []) } as never,
+      { buildIndex: vi.fn(() => new Map()) } as never,
+      freshnessReader as never,
+      exactRowReader as never,
+      { getMembers: vi.fn(async () => []) } as never,
+      openCodeEvidenceSource as never
+    );
+
+    const snapshot = await source.getSnapshot('demo');
+
+    expect(snapshot?.pendingPickupTasks?.map((task) => task.id)).toEqual(['task-owned-pending']);
+    // Pickup candidates need no transcript evidence, so the per-scan IO stays
+    // scoped to in-progress and started-review tasks.
+    expect(freshnessReader.readSignals).toHaveBeenCalledWith('/tmp/project', ['task-active'], {
+      teamName: 'demo',
+    });
+    expect(exactRowReader.parseFiles).toHaveBeenCalledWith([]);
+    expect(openCodeEvidenceSource.readEvidence).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tasks: [expect.objectContaining({ id: 'task-active' })],
+      })
+    );
+  });
+
+  it('still yields a snapshot for a team with no session ids or transcripts', async () => {
+    const source = new TeamTaskStallSnapshotSource(
+      {
+        getContext: vi.fn(async () => ({
+          projectDir: '/tmp/project',
+          projectId: 'project-id',
+          config: { members: [{ name: 'acp-lead', role: 'team lead', providerId: 'opencode' }] },
+          sessionIds: [],
+          transcriptFiles: [],
+        })),
+      } as never,
+      { getTasks: vi.fn(async () => []), getDeletedTasks: vi.fn(async () => []) } as never,
+      { getState: vi.fn(async () => ({ teamName: 'demo', tasks: {} })) } as never,
+      { readFiles: vi.fn(async () => []) } as never,
+      { buildIndex: vi.fn(() => new Map()) } as never,
+      { readSignals: vi.fn(async () => new Map()) } as never,
+      { parseFiles: vi.fn(async () => new Map()) } as never,
+      { getMembers: vi.fn(async () => []) } as never,
+      {
+        readEvidence: vi.fn(async () => ({
+          recordsByTaskId: new Map(),
+          exactRowsByFilePath: new Map(),
+        })),
+      } as never
+    );
+
+    const snapshot = await source.getSnapshot('demo');
+
+    expect(snapshot).not.toBeNull();
+    expect(snapshot?.transcriptFiles).toEqual([]);
+    expect(snapshot?.pendingPickupTasks).toEqual([]);
+  });
+
   it('merges OpenCode runtime evidence even when no Claude transcript files are available', async () => {
     const task = {
       id: 'task-open',

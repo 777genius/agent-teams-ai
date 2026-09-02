@@ -886,6 +886,51 @@ describe('TeamTaskStallPolicy', () => {
     expect(evaluation.epochKey).toContain('opencode_no_owner_progress');
   });
 
+  it('lets the work branch keep alerting while the pickup gate is off', () => {
+    vi.stubEnv('CLAUDE_TEAM_PENDING_PICKUP_STALL_REMEDIATION_ENABLED', '0');
+
+    const inProgress: TeamTask = {
+      id: 'task-open-no-progress',
+      displayId: 'feed4444',
+      subject: 'OpenCode no progress',
+      owner: 'alice',
+      status: 'in_progress',
+      workIntervals: [{ startedAt: '2026-04-19T12:00:00.000Z' }],
+    };
+    const pending: TeamTask = {
+      id: 'task-pending',
+      displayId: 'feed5555',
+      subject: 'Never started',
+      owner: 'alice',
+      status: 'pending',
+      createdAt: '2026-04-19T12:00:00.000Z',
+    };
+    const snapshot = createSnapshot({
+      activeTasks: [inProgress, pending],
+      allTasksById: new Map([
+        [inProgress.id, inProgress],
+        [pending.id, pending],
+      ]),
+      inProgressTasks: [inProgress],
+      pendingPickupTasks: [pending],
+      providerByMemberName: new Map([['alice', 'opencode']]),
+    });
+    const now = new Date('2026-04-19T12:07:00.000Z');
+
+    expect(policy.evaluatePendingPickup({ now, task: pending, snapshot })).toMatchObject({
+      status: 'skip',
+      skipReason: 'pickup_remediation_disabled',
+    });
+    expect(policy.evaluateWork({ now, task: inProgress, snapshot })).toMatchObject({
+      status: 'alert',
+      taskId: 'task-open-no-progress',
+      branch: 'work',
+      signal: 'mid_turn_after_touch',
+    });
+
+    vi.unstubAllEnvs();
+  });
+
   it('keeps non-OpenCode no-progress tasks on the existing non-instrumented skip path', () => {
     const task: TeamTask = {
       id: 'task-codex-no-progress',

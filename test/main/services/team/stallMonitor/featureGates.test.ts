@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   getOpenCodeWeakStartStallThresholdMs,
+  getPendingPickupStallThresholdMs,
   getTeamTaskStallActivationGraceMs,
   getTeamTaskStallScanIntervalMs,
   getTeamTaskStallStartupGraceMs,
   isOpenCodeTaskStallRemediationEnabled,
+  isPendingPickupStallRemediationEnabled,
   isTeamTaskStallAlertsEnabled,
   isTeamTaskStallMonitorEnabled,
   isTeamTaskStallScannerEnabled,
@@ -25,6 +27,44 @@ describe('stallMonitor feature gates', () => {
     expect(getTeamTaskStallStartupGraceMs()).toBe(180_000);
     expect(getTeamTaskStallActivationGraceMs()).toBe(60_000);
     expect(getOpenCodeWeakStartStallThresholdMs()).toBe(100_000);
+    expect(getPendingPickupStallThresholdMs()).toBe(300_000);
+    expect(isPendingPickupStallRemediationEnabled()).toBe(true);
+  });
+
+  it('reads the pending pickup gates from the environment', () => {
+    vi.stubEnv('CLAUDE_TEAM_PENDING_PICKUP_STALL_THRESHOLD_MS', '120000');
+    vi.stubEnv('CLAUDE_TEAM_PENDING_PICKUP_STALL_REMEDIATION_ENABLED', '0');
+
+    expect(getPendingPickupStallThresholdMs()).toBe(120_000);
+    expect(isPendingPickupStallRemediationEnabled()).toBe(false);
+  });
+
+  it.each(['0', '-1', 'soon', ''])(
+    'keeps the default pending pickup threshold for the invalid value %j',
+    (value) => {
+      vi.stubEnv('CLAUDE_TEAM_PENDING_PICKUP_STALL_THRESHOLD_MS', value);
+
+      expect(getPendingPickupStallThresholdMs()).toBe(300_000);
+    }
+  );
+
+  it('scopes the pickup gate to the pickup branch alone', () => {
+    vi.stubEnv('CLAUDE_TEAM_PENDING_PICKUP_STALL_REMEDIATION_ENABLED', '0');
+
+    expect(isPendingPickupStallRemediationEnabled()).toBe(false);
+    // Everything the other stall branches read is untouched: the pickup flag is
+    // not a master switch for the monitor.
+    expect(isTeamTaskStallMonitorEnabled()).toBe(true);
+    expect(isOpenCodeTaskStallRemediationEnabled()).toBe(true);
+    expect(isTeamTaskStallScannerEnabled()).toBe(true);
+    expect(isTeamTaskStallAlertsEnabled()).toBe(true);
+    expect(getOpenCodeWeakStartStallThresholdMs()).toBe(100_000);
+  });
+
+  it('keeps pending pickup remediation enabled for an unparseable flag', () => {
+    vi.stubEnv('CLAUDE_TEAM_PENDING_PICKUP_STALL_REMEDIATION_ENABLED', 'maybe');
+
+    expect(isPendingPickupStallRemediationEnabled()).toBe(true);
   });
 
   it('parses truthy and falsy environment values', () => {

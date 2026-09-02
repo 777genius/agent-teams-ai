@@ -2,9 +2,11 @@ import { isTeamTaskBlockedByUnfinishedDependency } from '@shared/utils/teamTaskS
 
 import { getOpenCodeWeakStartStallThresholdMs } from './featureGates';
 import { classifyTaskProgressTouch, type TaskProgressSignal } from './TaskProgressSignalClassifier';
+import { evaluatePendingPickupTask } from './TeamTaskStallPendingPickup';
 
 import type { BoardTaskActivityRecord } from '../taskLogs/activity/BoardTaskActivityRecord';
 import type {
+  PostTouchStallSignal,
   ReviewTaskContext,
   TaskStallBranch,
   TaskStallEvaluation,
@@ -19,12 +21,12 @@ const WORK_TOUCH_TOOLS = new Set(['task_start', 'task_add_comment', 'task_set_st
 const REVIEW_TOUCH_TOOLS = new Set(['review_start', 'task_add_comment']);
 
 const ONE_MINUTE_MS = 60_000;
-const WORK_THRESHOLDS_MS: Record<TaskStallSignal, number> = {
+const WORK_THRESHOLDS_MS: Record<PostTouchStallSignal, number> = {
   turn_ended_after_touch: 4 * ONE_MINUTE_MS,
   touch_then_other_turns: 5 * ONE_MINUTE_MS,
   mid_turn_after_touch: 10 * ONE_MINUTE_MS,
 };
-const REVIEW_THRESHOLDS_MS: Record<TaskStallSignal, number> = {
+const REVIEW_THRESHOLDS_MS: Record<PostTouchStallSignal, number> = {
   turn_ended_after_touch: 5 * ONE_MINUTE_MS,
   touch_then_other_turns: 6 * ONE_MINUTE_MS,
   mid_turn_after_touch: 12 * ONE_MINUTE_MS,
@@ -256,7 +258,7 @@ function classifyPostTouchState(args: {
   rows: TeamTaskStallExactRow[];
   anchorMessageUuid: string;
   anchorToolUseId?: string;
-}): TaskStallSignal | 'ambiguous' {
+}): PostTouchStallSignal | 'ambiguous' {
   const normalizedRows = deduplicateAssistantRowsByRequestId(args.rows, args.anchorToolUseId);
   const anchorIndex = findAnchorRowIndex(
     normalizedRows,
@@ -552,6 +554,14 @@ export class TeamTaskStallPolicy {
           ? `Potential work stall: OpenCode lane idle since ${laneIdleSince} after the last task touch.`
           : `Potential work stall after ${signal.replaceAll('_', ' ')}.`,
     });
+  }
+
+  evaluatePendingPickup(args: {
+    now: Date;
+    task: TeamTask;
+    snapshot: TeamTaskStallSnapshot;
+  }): TaskStallEvaluation {
+    return evaluatePendingPickupTask(args);
   }
 
   evaluateReview(args: {
