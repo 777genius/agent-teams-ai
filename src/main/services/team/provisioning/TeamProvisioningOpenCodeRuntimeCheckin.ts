@@ -20,7 +20,11 @@ import {
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 import { summarizeRuntimeLaunchResultMembers } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import { shouldEmitOpenCodeRuntimeLivenessMemberSpawnChange } from './TeamProvisioningOpenCodeRuntimeLivenessPolicy';
-import { assertOpenCodeRuntimeMemberSessionAcceptedFromState } from './TeamProvisioningOpenCodeRuntimeMemberSessionAcceptance';
+import {
+  applyHealedRuntimeMemberLaneIdentity,
+  assertOpenCodeRuntimeMemberSessionAcceptedFromState,
+  shouldSelfHealMissingHeartbeatMemberIdentity,
+} from './TeamProvisioningOpenCodeRuntimeMemberSessionAcceptance';
 import { resolvePersistedRuntimeMemberIdentity } from './TeamProvisioningPersistedRuntimeMemberIdentity';
 import {
   asRuntimeRecord,
@@ -413,20 +417,33 @@ export async function updateOpenCodeRuntimeMemberLiveness<Run extends OpenCodeRu
         },
         ports
       );
+      const sessionIdentity = {
+        teamName: input.teamName,
+        runId: input.runId,
+        laneId: requiredIdentity.laneId,
+        memberName: input.memberName,
+        runtimeSessionId: input.runtimeSessionId,
+        evidenceKind: requiredIdentity.evidenceKind,
+      };
+      const allowMissingPersistedMember = await shouldSelfHealMissingHeartbeatMemberIdentity(
+        sessionIdentity,
+        previous,
+        () => ports.createOpenCodeRuntimeBootstrapEvidencePorts()
+      );
       assertOpenCodeRuntimeMemberSessionAcceptedFromState(
-        {
-          teamName: input.teamName,
-          runId: input.runId,
-          laneId: requiredIdentity.laneId,
-          memberName: input.memberName,
-          runtimeSessionId: input.runtimeSessionId,
-          evidenceKind: requiredIdentity.evidenceKind,
-        },
+        sessionIdentity,
         previous,
         config,
-        metaMembers
+        metaMembers,
+        { allowMissingPersistedMember }
       );
       const built = buildOpenCodeRuntimeMemberLivenessSnapshot(input, previous, ports);
+      if (allowMissingPersistedMember) {
+        applyHealedRuntimeMemberLaneIdentity(
+          built.snapshot.members[input.memberName],
+          requiredIdentity.laneId
+        );
+      }
       shouldEmitMemberSpawnChange = built.shouldEmitMemberSpawnChange;
       return built.snapshot;
     });

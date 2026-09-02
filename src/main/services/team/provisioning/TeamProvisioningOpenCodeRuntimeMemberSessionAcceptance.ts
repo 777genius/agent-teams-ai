@@ -5,8 +5,26 @@ import {
 
 import { matchesTeamMemberIdentity } from './TeamProvisioningMemberIdentity';
 import { resolveEffectiveConfiguredMember } from './TeamProvisioningMemberStatusProjection';
+import {
+  hasCommittedOpenCodeRuntimeBootstrapSessionEvidence,
+  type OpenCodeRuntimeBootstrapEvidencePorts,
+} from './TeamProvisioningOpenCodeBootstrapEvidence';
 
-import type { PersistedTeamLaunchSnapshot, TeamConfig, TeamMember } from '@shared/types';
+import type {
+  PersistedTeamLaunchMemberState,
+  PersistedTeamLaunchSnapshot,
+  TeamConfig,
+  TeamMember,
+} from '@shared/types';
+
+export interface OpenCodeRuntimeMemberSessionIdentityInput {
+  teamName: string;
+  runId: string;
+  laneId: string;
+  memberName: string;
+  runtimeSessionId: string;
+  evidenceKind: RuntimeEvidenceKind;
+}
 
 export interface OpenCodeRuntimeMemberSessionAcceptancePorts {
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
@@ -15,14 +33,7 @@ export interface OpenCodeRuntimeMemberSessionAcceptancePorts {
 }
 
 export async function assertOpenCodeRuntimeMemberSessionAccepted(
-  input: {
-    teamName: string;
-    runId: string;
-    laneId: string;
-    memberName: string;
-    runtimeSessionId: string;
-    evidenceKind: RuntimeEvidenceKind;
-  },
+  input: OpenCodeRuntimeMemberSessionIdentityInput,
   ports: OpenCodeRuntimeMemberSessionAcceptancePorts
 ): Promise<void> {
   const [snapshot, config, metaMembers] = await Promise.all([
@@ -34,17 +45,11 @@ export async function assertOpenCodeRuntimeMemberSessionAccepted(
 }
 
 export function assertOpenCodeRuntimeMemberSessionAcceptedFromState(
-  input: {
-    teamName: string;
-    runId: string;
-    laneId: string;
-    memberName: string;
-    runtimeSessionId: string;
-    evidenceKind: RuntimeEvidenceKind;
-  },
+  input: OpenCodeRuntimeMemberSessionIdentityInput,
   snapshot: PersistedTeamLaunchSnapshot | null,
   config: TeamConfig | null,
-  metaMembers: readonly TeamMember[]
+  metaMembers: readonly TeamMember[],
+  options: { allowMissingPersistedMember?: boolean } = {}
 ): void {
   if (!config || config.deletedAt) {
     throwRuntimeMemberSessionMismatch(input, 'team configuration is unavailable');
@@ -64,12 +69,14 @@ export function assertOpenCodeRuntimeMemberSessionAcceptedFromState(
   if (configuredMember.providerId !== 'opencode')
     throwRuntimeMemberSessionMismatch(input, 'member is not owned by OpenCode');
 
-  const persistedMember = Object.entries(snapshot?.members ?? {}).find(([memberName]) =>
-    matchesTeamMemberIdentity(memberName, configuredMember.name)
-  )?.[1];
+  const persistedMember = findPersistedLaunchMemberState(snapshot, configuredMember.name);
   const isBootstrapCheckin = input.evidenceKind === 'bootstrap_checkin';
   if (!persistedMember) {
     if (isBootstrapCheckin) return;
+    // Heartbeat self-heal: the caller has already verified lane-scoped committed
+    // bootstrap session evidence for this exact runId + runtime session, so a
+    // missing launch-state entry is a recoverable snapshot gap, not a stale run.
+    if (input.evidenceKind === 'heartbeat' && options.allowMissingPersistedMember) return;
     throwRuntimeMemberSessionMismatch(input, 'member runtime identity is unavailable');
   }
   const persistedRunId = persistedMember.runtimeRunId?.trim();
@@ -94,6 +101,59 @@ export function assertOpenCodeRuntimeMemberSessionAcceptedFromState(
   ) {
     throwRuntimeMemberSessionMismatch(input, 'member runtime session does not match');
   }
+}
+
+/**
+ * A heartbeat may arrive while the persisted launch snapshot no longer carries the
+ * member (snapshot cleared or rewritten). When the lane-scoped committed bootstrap
+ * evidence already pins this exact runId + runtime session, the heartbeat may
+ * re-materialize the member entry instead of being rejected with
+ * "member runtime identity is unavailable".
+ */
+export async function shouldSelfHealMissingHeartbeatMemberIdentity(
+  input: OpenCodeRuntimeMemberSessionIdentityInput,
+  snapshot: PersistedTeamLaunchSnapshot | null,
+  createEvidencePorts: () => OpenCodeRuntimeBootstrapEvidencePorts
+): Promise<boolean> {
+  if (input.evidenceKind !== 'heartbeat') {
+    return false;
+  }
+  if (findPersistedLaunchMemberState(snapshot, input.memberName)) {
+    return false;
+  }
+  return hasCommittedOpenCodeRuntimeBootstrapSessionEvidence(
+    {
+      teamName: input.teamName,
+      runId: input.runId,
+      laneId: input.laneId,
+      memberName: input.memberName,
+      runtimeSessionId: input.runtimeSessionId,
+    },
+    createEvidencePorts()
+  );
+}
+
+/** Restore lane/provider identity on a member entry re-materialized by a heartbeat. */
+export function applyHealedRuntimeMemberLaneIdentity(
+  member: PersistedTeamLaunchMemberState | undefined,
+  laneId: string
+): void {
+  if (!member) {
+    return;
+  }
+  member.providerId ??= 'opencode';
+  member.laneId ??= laneId;
+  member.laneOwnerProviderId ??= 'opencode';
+  member.laneKind ??= laneId === 'primary' ? 'primary' : 'secondary';
+}
+
+function findPersistedLaunchMemberState(
+  snapshot: PersistedTeamLaunchSnapshot | null,
+  memberName: string
+): PersistedTeamLaunchMemberState | undefined {
+  return Object.entries(snapshot?.members ?? {}).find(([persistedName]) =>
+    matchesTeamMemberIdentity(persistedName, memberName)
+  )?.[1];
 }
 
 function throwRuntimeMemberSessionMismatch(
