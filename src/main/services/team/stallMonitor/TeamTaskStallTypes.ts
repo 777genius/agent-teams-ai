@@ -29,7 +29,8 @@ export type TaskStallSkipReason =
   | 'no_open_review_window'
   | 'ambiguous_state'
   | 'below_threshold'
-  | 'first_scan_only';
+  | 'first_scan_only'
+  | 'lane_active';
 
 export type ResolvedReviewerSource =
   | 'kanban_state'
@@ -95,6 +96,14 @@ export interface TeamTaskStallSnapshot {
   freshnessByTaskId: Map<string, TaskLogFreshnessSignal>;
   exactRowsByFilePath: Map<string, TeamTaskStallExactRow[]>;
   providerByMemberName: Map<string, TeamProviderId>;
+  /**
+   * Lower-case member name -> ISO time since which the member's OpenCode lane
+   * has been idle (its last prompt-delivery turn settled). Absent while the
+   * lane is active or was never observed.
+   */
+  openCodeLaneIdleSinceByMemberName?: Map<string, string>;
+  /** Lower-case member names whose OpenCode lane currently runs a prompt-delivery turn. */
+  openCodeLaneActiveMemberNames?: Set<string>;
 }
 
 export interface WorkTaskContext {

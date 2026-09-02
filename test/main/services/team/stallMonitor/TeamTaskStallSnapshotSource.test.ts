@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { OpenCodeLaneTurnActivityRegistry } from '../../../../../src/main/services/team/opencode/delivery/OpenCodeLaneTurnActivityRegistry';
 import { TeamTaskStallSnapshotSource } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallSnapshotSource';
 
 describe('TeamTaskStallSnapshotSource', () => {
@@ -79,7 +80,10 @@ describe('TeamTaskStallSnapshotSource', () => {
       ],
     ]);
     const freshnessByTaskId = new Map([
-      ['task-a', { taskId: 'task-a', updatedAt: '2026-04-19T12:00:00.000Z', filePath: '/tmp/fresh.json' }],
+      [
+        'task-a',
+        { taskId: 'task-a', updatedAt: '2026-04-19T12:00:00.000Z', filePath: '/tmp/fresh.json' },
+      ],
     ]);
     const exactRowsByFilePath = new Map([['/tmp/project/session-b.jsonl', []]]);
 
@@ -158,7 +162,10 @@ describe('TeamTaskStallSnapshotSource', () => {
     expect(freshnessReader.readSignals).toHaveBeenCalledWith('/tmp/project', ['task-a', 'task-b'], {
       teamName: 'demo',
     });
-    expect(exactRowReader.parseFiles).toHaveBeenCalledWith(['/tmp/project/session-a.jsonl', '/tmp/project/session-b.jsonl']);
+    expect(exactRowReader.parseFiles).toHaveBeenCalledWith([
+      '/tmp/project/session-a.jsonl',
+      '/tmp/project/session-b.jsonl',
+    ]);
     expect(openCodeEvidenceSource.readEvidence).toHaveBeenCalledWith({
       teamName: 'demo',
       tasks: [expectedWorkflowActiveTasks[0], expectedWorkflowActiveTasks[1]],
@@ -274,4 +281,73 @@ describe('TeamTaskStallSnapshotSource', () => {
     expect(snapshot?.exactRowsByFilePath.get('opencode-runtime:demo:bob')).toEqual(openCodeRows);
     expect(snapshot?.transcriptFiles).toEqual([]);
   });
+
+  it('splits the recorded OpenCode lane turn samples into idle-since and active sets', async () => {
+    const laneTurnActivity = new OpenCodeLaneTurnActivityRegistry();
+    laneTurnActivity.note({
+      teamName: 'demo',
+      memberName: 'Bob',
+      laneId: 'secondary:opencode:bob',
+      state: 'idle',
+      observedAt: '2026-04-19T12:00:30.000Z',
+    });
+    laneTurnActivity.note({
+      teamName: 'demo',
+      memberName: 'Carol',
+      laneId: 'secondary:opencode:carol',
+      state: 'active',
+      observedAt: '2026-04-19T12:01:00.000Z',
+    });
+    laneTurnActivity.note({
+      teamName: 'other-team',
+      memberName: 'Dave',
+      laneId: 'secondary:opencode:dave',
+      state: 'active',
+      observedAt: '2026-04-19T12:02:00.000Z',
+    });
+
+    const snapshot = await snapshotSourceWithLaneTurnActivity(laneTurnActivity).getSnapshot('demo');
+
+    expect([...(snapshot?.openCodeLaneIdleSinceByMemberName ?? new Map())]).toEqual([
+      ['bob', '2026-04-19T12:00:30.000Z'],
+    ]);
+    expect([...(snapshot?.openCodeLaneActiveMemberNames ?? new Set())]).toEqual(['carol']);
+  });
 });
+
+function snapshotSourceWithLaneTurnActivity(
+  laneTurnActivity: OpenCodeLaneTurnActivityRegistry
+): TeamTaskStallSnapshotSource {
+  return new TeamTaskStallSnapshotSource(
+    {
+      getContext: vi.fn(() =>
+        Promise.resolve({
+          projectDir: '/repo/project',
+          projectId: 'project-id',
+          config: { members: [] },
+          sessionIds: [],
+          transcriptFiles: [],
+        })
+      ),
+    } as never,
+    {
+      getTasks: vi.fn(() => Promise.resolve([])),
+      getDeletedTasks: vi.fn(() => Promise.resolve([])),
+    } as never,
+    { getState: vi.fn(() => Promise.resolve({ teamName: 'demo', tasks: {} })) } as never,
+    { readFiles: vi.fn(() => Promise.resolve(new Map())) } as never,
+    { buildIndex: vi.fn(() => new Map()) } as never,
+    { readSignals: vi.fn(() => Promise.resolve(new Map())) } as never,
+    { parseFiles: vi.fn(() => Promise.resolve(new Map())) } as never,
+    { getMembers: vi.fn(() => Promise.resolve([])) } as never,
+    {
+      readEvidence: vi.fn(() =>
+        Promise.resolve({
+          recordsByTaskId: new Map(),
+          exactRowsByFilePath: new Map(),
+        })
+      ),
+    } as never,
+    laneTurnActivity
+  );
+}
