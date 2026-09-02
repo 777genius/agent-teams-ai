@@ -16,11 +16,6 @@ import {
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
 import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
-import { buildOpenCodePromptBodyText } from './OpenCodeMemberMessageDeliveryPorts';
-import {
-  buildOpenCodePromptDeliveryAttemptText,
-  buildOpenCodePromptDeliveryRepairControlText,
-} from './OpenCodePromptDeliveryAttemptText';
 import {
   assertOpenCodePromptDeliveryNotCancelled,
   OpenCodePromptDeliveryCancelledError,
@@ -48,6 +43,7 @@ import {
   isOpenCodePromptDeliveryRetryAttemptDue,
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
 } from './OpenCodePromptDeliveryWatchdog';
+import { prepareOpenCodePromptDispatch } from './OpenCodePromptDispatchPreparation';
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type {
@@ -1003,52 +999,16 @@ export class OpenCodeMemberMessageDeliveryService {
       }
     }
 
-    const retryReadAllowed = ledgerRecord
-      ? await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
-          teamName,
-          memberName: canonicalMemberName,
-          responseState: ledgerRecord.responseState,
-          actionMode: ledgerRecord.actionMode ?? undefined,
-          taskRefs: ledgerRecord.taskRefs,
-          visibleReply: null,
-          ledgerRecord,
-        })
-      : false;
-    const retryPendingReason = ledgerRecord
-      ? this.deps.getOpenCodeDeliveryPendingReason({
-          responseState: ledgerRecord.responseState,
-          actionMode: ledgerRecord.actionMode,
-          taskRefs: ledgerRecord.taskRefs,
-          visibleReply: null,
-          ledgerRecord,
-        })
-      : 'opencode_delivery_response_pending';
-    const controlUrl =
-      input.messageKind === 'member_work_sync_nudge'
-        ? await this.deps.resolveControlApiBaseUrl()
-        : null;
-    if (
-      !forceOpenCodeSessionRefreshReason &&
-      ledgerRecord?.status === 'retry_scheduled' &&
-      !hasOpenCodeAcceptedRuntimePrompt(ledgerRecord) &&
-      isOpenCodePromptDeliveryAttemptDue(ledgerRecord) &&
-      isOpenCodeSessionRefreshRetryRecord(ledgerRecord, ledgerRecord.lastReason)
-    ) {
-      forceOpenCodeSessionRefreshReason =
-        ledgerRecord.lastSessionRefreshReason ??
-        ledgerRecord.lastReason ??
-        ledgerRecord.responseState ??
-        'session_stale';
-    }
-    const deliveryText = buildOpenCodePromptDeliveryAttemptText({
-      text: buildOpenCodePromptBodyText(input),
-      controlText: buildOpenCodePromptDeliveryRepairControlText({
-        ledgerRecord,
-        readAllowed: retryReadAllowed,
-        pendingReason: retryPendingReason,
-        controlUrl,
-      }),
+    const dispatch = await prepareOpenCodePromptDispatch({
+      deps: this.deps,
+      teamName,
+      memberName: canonicalMemberName,
+      message: input,
+      ledgerRecord,
+      forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
     });
+    const { controlUrl, deliveryText } = dispatch;
+    forceOpenCodeSessionRefreshReason = dispatch.forceSessionRefreshReason;
     await checkpoint();
     let result: OpenCodeTeamRuntimeMessageResult;
     try {
