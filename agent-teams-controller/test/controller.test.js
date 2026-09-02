@@ -568,6 +568,77 @@ controller.messages.sendMessage({
     expect(readCarolInbox()).toHaveLength(4);
   });
 
+  it('wakes the owner of an assigned task whose last blocker is deleted', () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer' },
+      { name: 'carol', role: 'reviewer' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const carolInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'carol.json');
+    const readCarolInbox = () =>
+      fs.existsSync(carolInboxPath) ? JSON.parse(fs.readFileSync(carolInboxPath, 'utf8')) : [];
+
+    const blocker = controller.taskBoard.createTask({ subject: 'Spike the parser', owner: 'bob' });
+    const blocked = controller.taskBoard.createTask({
+      subject: 'Review the parser',
+      owner: 'carol',
+      blockedBy: [blocker.id],
+    });
+    expect(readCarolInbox()).toEqual([]);
+
+    controller.taskBoard.softDeleteTask(blocker.id, 'alice');
+    const woken = readCarolInbox();
+    expect(woken).toHaveLength(1);
+    expect(woken[0].summary).toBe(`Comment on #${blocked.displayId}`);
+    expect(woken[0].text).toContain(`#${blocker.displayId} _Spike the parser_ deleted.`);
+    expect(woken[0].text).toContain('ready to start');
+    expect(controller.taskBoard.getTask(blocked.id).status).toBe('pending');
+
+    // Negative control A: deleting the same task again changes nothing, so the
+    // owner is woken on the transition rather than on every delete call.
+    controller.taskBoard.setTaskStatus(blocker.id, 'deleted', 'alice');
+    expect(readCarolInbox()).toHaveLength(1);
+
+    // Negative control B: with another blocker still open the owner is told
+    // what is left instead of being told to start.
+    const openBlocker = controller.taskBoard.createTask({
+      subject: 'Draft the schema',
+      owner: 'bob',
+    });
+    const droppedBlocker = controller.taskBoard.createTask({
+      subject: 'Pick the format',
+      owner: 'bob',
+    });
+    controller.taskBoard.createTask({
+      subject: 'Write the migration',
+      owner: 'carol',
+      blockedBy: [openBlocker.id, droppedBlocker.id],
+    });
+    controller.taskBoard.softDeleteTask(droppedBlocker.id, 'alice');
+    expect(readCarolInbox()).toHaveLength(2);
+    expect(readCarolInbox().at(-1).text).toContain('Still waiting on');
+    expect(readCarolInbox().at(-1).text).not.toContain('ready to start');
+
+    // Negative control C: a dependent that is already finished is not woken.
+    const lateBlocker = controller.taskBoard.createTask({
+      subject: 'Check the fixtures',
+      owner: 'bob',
+    });
+    const finished = controller.taskBoard.createTask({
+      subject: 'Archive the fixtures',
+      owner: 'carol',
+      blockedBy: [lateBlocker.id],
+    });
+    controller.taskBoard.completeTask(finished.id, 'carol');
+    controller.taskBoard.softDeleteTask(lateBlocker.id, 'alice');
+    expect(readCarolInbox()).toHaveLength(2);
+  });
+
   it('builds member briefing from team config language and known member metadata', async () => {
     const claudeDir = makeClaudeDir();
     const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');

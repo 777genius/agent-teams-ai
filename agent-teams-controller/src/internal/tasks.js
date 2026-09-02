@@ -168,8 +168,9 @@ function maybeNotifyAssignedOwner(context, task, options = {}) {
     // turn on work that cannot start: the owner reads "start now", checks the
     // board, and reports back that it is blocked. For an on-demand local model
     // it also costs a model load. notifyUnblockedOwners() already posts a
-    // dependency-resolved comment when the last blocker completes, and that
-    // comment notification wakes the owner exactly when work can begin.
+    // dependency-resolved comment when the last blocker completes or is
+    // deleted, and that comment notification wakes the owner exactly when work
+    // can begin.
     if (hasOpenBlockers(context, task)) {
         return;
     }
@@ -408,7 +409,7 @@ function setTaskStatus(context, taskId, status, actor, options = {}) {
         return { task, becameDeleted: before.status !== 'deleted' && task.status === 'deleted' };
     });
     if (becameDeleted) {
-        retractQueuedNotificationsForDeletedTask(context, task);
+        runDeletedTaskFollowUps(context, task);
     }
     return task;
 }
@@ -424,6 +425,27 @@ function retractQueuedNotificationsForDeletedTask(context, task) {
         );
     } catch (error) {
         warnNonCritical(`[tasks] notification retraction failed for deleted task ${task.id}`, error);
+    }
+}
+
+/**
+ * What the board owes the rest of the team once a task becomes deleted.
+ * Retraction runs first: it drops unread notices that name this task, and the
+ * dependency notice names it too. Deleting a blocker then clears the way for
+ * its dependents exactly as completing it does, and maybeNotifyAssignedOwner()
+ * stayed silent for as long as that blocker was open - so without the second
+ * half, dropping the only blocker leaves its dependent pending, assigned, and
+ * announced to nobody.
+ */
+function runDeletedTaskFollowUps(context, task) {
+    retractQueuedNotificationsForDeletedTask(context, task);
+    try {
+        notifyUnblockedOwners(context, task, { resolution: 'deleted' });
+    } catch (error) {
+        warnNonCritical(
+            `[tasks] dependency-resolution follow-up failed for deleted task ${task.id}`,
+            error
+        );
     }
 }
 
@@ -455,11 +477,17 @@ function startTask(context, taskId, actor) {
     });
 }
 
-function notifyUnblockedOwners(context, completedTask) {
-    const blockedIds = Array.isArray(completedTask.blocks) ? completedTask.blocks : [];
+/**
+ * Tell the owner of every task this one was blocking that it is out of the way.
+ * A blocker leaves the way in two ways - it is completed, or it is deleted -
+ * and `options.resolution` decides which of the two the owner is told about.
+ */
+function notifyUnblockedOwners(context, resolvedTask, options = {}) {
+    const blockedIds = Array.isArray(resolvedTask.blocks) ? resolvedTask.blocks : [];
     if (blockedIds.length === 0) return;
 
-    const completedLabel = `#${completedTask.displayId || completedTask.id}`;
+    const resolution = options.resolution === 'deleted' ? 'deleted' : 'completed';
+    const completedLabel = `#${resolvedTask.displayId || resolvedTask.id}`;
 
     for (const blockedId of blockedIds) {
         try {
@@ -470,7 +498,7 @@ function notifyUnblockedOwners(context, completedTask) {
             const allBlockerIds = Array.isArray(blockedTask.blockedBy) ? blockedTask.blockedBy : [];
             const pendingBlockerTasks = [];
             for (const id of allBlockerIds) {
-                if (id === completedTask.id) continue;
+                if (id === resolvedTask.id) continue;
                 try {
                     const t = taskStore.readTask(context.paths, id, { includeDeleted: true });
                     if (t.status !== 'completed' && t.status !== 'deleted') {
@@ -483,7 +511,7 @@ function notifyUnblockedOwners(context, completedTask) {
             const blockedLabel = `#${blockedTask.displayId || blockedTask.id}`;
 
             const lines = [
-                `**Dependency resolved** — task ${completedLabel} _${completedTask.subject}_ completed.`,
+                `**Dependency resolved** — task ${completedLabel} _${resolvedTask.subject}_ ${resolution}.`,
                 ``,
                 allResolved
                     ? `All blockers for ${blockedLabel} are resolved — this task is ready to start.`
@@ -503,13 +531,14 @@ function notifyUnblockedOwners(context, completedTask) {
             }
 
             // Stable comment ID prevents duplicates when completeTask is called
-            // multiple times for the same task (e.g. agent retry). addTaskComment
+            // multiple times for the same task (e.g. agent retry), and when a
+            // blocker that already completed is later deleted. addTaskComment
             // in taskStore.js deduplicates by id (line 485).
             addTaskCommentWithOptions(
                 context,
                 blockedTask.id,
                 {
-                    id: `dep-resolved-${completedTask.id}-${blockedTask.id}`,
+                    id: `dep-resolved-${resolvedTask.id}-${blockedTask.id}`,
                     text: lines.join('\n'),
                     from: 'system',
                 },
@@ -619,7 +648,7 @@ function softDeleteTask(context, taskId, actor) {
         return { task, becameDeleted: before.status !== 'deleted' };
     });
     if (becameDeleted) {
-        retractQueuedNotificationsForDeletedTask(context, task);
+        runDeletedTaskFollowUps(context, task);
     }
     return task;
 }
