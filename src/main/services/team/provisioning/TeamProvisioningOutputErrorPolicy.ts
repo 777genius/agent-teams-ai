@@ -8,15 +8,13 @@ export interface TeamProvisioningStallWarningRequest {
 export function isAuthFailureWarning(text: string, source: AuthWarningSource): boolean {
   const lower = text.toLowerCase();
 
-  // Assistant text is model output: it can quote or paraphrase a login prompt
-  // ("please run /login", "not logged in") without the CLI being
-  // unauthenticated, and killing the process on that signal creates a
-  // self-sustaining respawn loop. The one thing an assistant-typed stream
-  // message can carry that is the CLI's own verdict is an explicit credential
-  // error it reports in place of a reply, so only that phrase family counts
-  // from this source; an ambiguous 401 stays untrusted here as it always was.
+  // Assistant text is model output, not a trusted process diagnostic. It can
+  // quote, paraphrase, or invent a credential error, and treating that text as
+  // proof kills a healthy process and starts a self-sustaining respawn loop.
+  // Auth retries must be driven by structured probe/result/exit diagnostics or
+  // trusted stderr, never by unstructured assistant content.
   if (source === 'assistant') {
-    return hasCredentialErrorSignal(lower);
+    return false;
   }
 
   const hasExplicitCliAuthSignal =
@@ -54,10 +52,6 @@ export function isAuthFailureWarning(text: string, source: AuthWarningSource): b
     (lower.includes('unauthorized') &&
       (lower.includes('api') || lower.includes('auth') || lower.includes('login')))
   );
-}
-
-function hasCredentialErrorSignal(lower: string): boolean {
-  return lower.includes('invalid api key') || lower.includes('missing api key');
 }
 
 export function hasApiError(text: string): boolean {

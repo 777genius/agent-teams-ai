@@ -35,12 +35,11 @@ describe('team provisioning output error policy', () => {
     expect(isAuthFailureWarning('Please run /login first', 'pre-complete')).toBe(true);
   });
 
-  it('still treats a credential error the CLI reports as assistant text as an auth failure', () => {
-    // A rejected key surfaces inside an assistant-typed stream message; that is
-    // the CLI's own verdict, not something a model would quote.
-    expect(isAuthFailureWarning('invalid api key', 'assistant')).toBe(true);
-    expect(isAuthFailureWarning('Missing API key for this provider', 'assistant')).toBe(true);
-    // An ambiguous 401 from assistant text stays untrusted, exactly as before.
+  it('never treats credential wording in assistant text as an auth failure', () => {
+    // Assistant content is untrusted even when it happens to use the same
+    // wording as a CLI credential error.
+    expect(isAuthFailureWarning('invalid api key', 'assistant')).toBe(false);
+    expect(isAuthFailureWarning('Missing API key for this provider', 'assistant')).toBe(false);
     expect(isAuthFailureWarning('API Error: 401 {"type":"error"}', 'assistant')).toBe(false);
   });
 
