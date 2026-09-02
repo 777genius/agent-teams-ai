@@ -4,9 +4,13 @@ import { createLogger } from '@shared/utils/logger';
 
 import { type TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
+import {
+  type OpenCodeAggregatePrimaryLaneStopPorts,
+  stopFailedOpenCodeAggregatePrimaryRelaunchCandidate as stopFailedOpenCodeAggregatePrimaryRelaunchCandidateHelper,
+  stopUnretainableOpenCodePrimaryLane as stopUnretainableOpenCodePrimaryLaneHelper,
+} from './OpenCodeAggregatePrimaryLaneStopHelpers';
 import { OpenCodeAggregatePrimaryProgressPublisher } from './OpenCodeAggregatePrimaryProgressPublisher';
 import {
-  assertAggregatePrimaryStopConfirmed,
   beginAggregatePrimaryRestart,
   clearCancelledAggregateRestartState,
   clearPersistedAggregateLaunchStateIfOwned,
@@ -51,7 +55,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       this.runtimeAdapterProgressState.setRuntimeAdapterProgress(progress, onProgress),
     enrichRuntimeAdapterProgressTrace: (progress) =>
       this.runtimeAdapterProgressState.enrichRuntimeAdapterProgressTrace(progress),
-    rememberProgress: (progress) => this.runtimeAdapterProgressByRunId.set(progress.runId, progress),
+    rememberProgress: (progress) =>
+      this.runtimeAdapterProgressByRunId.set(progress.runId, progress),
     invalidateRuntimeSnapshotCaches: (teamName) => this.invalidateRuntimeSnapshotCaches(teamName),
   });
   private runAfterInFlightTeamOperation<T>(
@@ -152,7 +157,8 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
       lastWrittenRunIds: this.launchStateWrittenRunIdByTeam,
       restarts: this.openCodeAggregatePrimaryRestartByTeam,
       launchStateStore: this.launchStateStore,
-      withLaunchStateLock: (operation) => this.enqueueLaunchStateStoreOperation(teamName, operation),
+      withLaunchStateLock: (operation) =>
+        this.enqueueLaunchStateStoreOperation(teamName, operation),
       invalidateRuntimeSnapshotCaches: (candidateTeamName) =>
         this.invalidateRuntimeSnapshotCaches(candidateTeamName),
     });
@@ -466,130 +472,48 @@ export abstract class TeamProvisioningOpenCodeAggregatePrimaryFacade extends Tea
     }
   }
 
-  private async stopUnretainableOpenCodePrimaryLane(input: {
+  private stopUnretainableOpenCodePrimaryLane(input: {
     adapter: TeamLaunchRuntimeAdapter;
     run: ProvisioningRun;
     previousEffectiveMembers: TeamCreateRequest['members'];
     previousLaunchState: Awaited<ReturnType<TeamLaunchStateStore['read']>>;
   }): Promise<void> {
-    const cwd = this.prepareFacade.getOpenCodeRuntimeLaunchCwd(
-      input.run.request.cwd,
-      input.previousEffectiveMembers
+    return stopUnretainableOpenCodePrimaryLaneHelper(
+      input,
+      this.createAggregatePrimaryLaneStopPorts(input.run)
     );
-    const currentOwner = this.runtimeAdapterRunByTeam.get(input.run.teamName);
-    const exactStopOwner = currentOwner ?? {
-      runId: input.run.runId,
-      providerId: 'opencode' as const,
-      cwd,
-      ...(input.run.request.allowExperimentalLocalModels === true
-        ? { allowExperimentalLocalModels: true }
-        : {}),
-    };
-    if (!currentOwner) {
-      this.runtimeAdapterRunByTeam.set(input.run.teamName, exactStopOwner);
-    }
-    this.aggregatePrimaryProgress.publishPending(
-      input.run,
-      'Stopping unretainable OpenCode primary lane'
-    );
-    try {
-      const stopResult = await input.adapter.stop({
-        runId: input.run.runId,
-        laneId: 'primary',
-        teamName: input.run.teamName,
-        cwd,
-        providerId: 'opencode',
-        reason: 'cleanup',
-        previousLaunchState: input.previousLaunchState,
-        force: true,
-      });
-      assertAggregatePrimaryStopConfirmed(stopResult);
-      if (this.runtimeAdapterRunByTeam.get(input.run.teamName) !== exactStopOwner) {
-        throw getCancelledAggregateLaunchError(input.run.teamName);
-      }
-    } catch (error) {
-      if (this.runtimeAdapterRunByTeam.get(input.run.teamName) === exactStopOwner) {
-        this.aggregatePrimaryProgress.publishFailed(
-          input.run,
-          'Unretainable OpenCode primary lane cleanup failed',
-          error
-        );
-      }
-      logger.warn(
-        `[${input.run.teamName}] Failed to stop unretainable OpenCode primary lane: ${getErrorMessage(error)}`
-      );
-      throw error;
-    }
   }
 
-  private async stopFailedOpenCodeAggregatePrimaryRelaunchCandidate(input: {
+  private stopFailedOpenCodeAggregatePrimaryRelaunchCandidate(input: {
     adapter: TeamLaunchRuntimeAdapter;
     run: ProvisioningRun;
     previousLaunchState: Awaited<ReturnType<TeamLaunchStateStore['read']>>;
-    previousOwner:
-      | {
-          runId: string;
-          providerId: string;
-          cwd?: string;
-        }
-      | undefined;
+    previousOwner: { runId: string; providerId: string; cwd?: string } | undefined;
   }): Promise<void> {
-    const currentOwner = this.runtimeAdapterRunByTeam.get(input.run.teamName);
-    if (
-      currentOwner &&
-      (currentOwner === input.previousOwner ||
-        currentOwner.providerId !== 'opencode' ||
-        currentOwner.runId !== input.run.runId)
-    ) {
-      throw getCancelledAggregateLaunchError(input.run.teamName);
-    }
-    const cwd =
-      currentOwner?.cwd ??
-      this.prepareFacade.getOpenCodeRuntimeLaunchCwd(
-        input.run.request.cwd,
-        input.run.effectiveMembers
-      );
-    const expectedOwner = currentOwner ?? {
-      runId: input.run.runId,
-      providerId: 'opencode' as const,
-      cwd,
-      ...(input.run.request.allowExperimentalLocalModels === true
-        ? { allowExperimentalLocalModels: true }
-        : {}),
-    };
-    if (!currentOwner) {
-      this.runtimeAdapterRunByTeam.set(input.run.teamName, expectedOwner);
-    }
-    this.aggregatePrimaryProgress.publishPending(
-      input.run,
-      'Stopping failed OpenCode primary relaunch candidate'
+    return stopFailedOpenCodeAggregatePrimaryRelaunchCandidateHelper(
+      input,
+      this.createAggregatePrimaryLaneStopPorts(input.run)
     );
-    try {
-      const stopResult = await input.adapter.stop({
-        runId: input.run.runId,
-        laneId: 'primary',
-        teamName: input.run.teamName,
-        cwd,
-        providerId: 'opencode',
-        reason: 'cleanup',
-        previousLaunchState: input.previousLaunchState,
-        force: true,
-      });
-      assertAggregatePrimaryStopConfirmed(stopResult);
-      if (this.runtimeAdapterRunByTeam.get(input.run.teamName) !== expectedOwner) {
-        throw getCancelledAggregateLaunchError(input.run.teamName);
-      }
-      this.runtimeAdapterRunByTeam.delete(input.run.teamName);
-    } catch (error) {
-      if (this.runtimeAdapterRunByTeam.get(input.run.teamName) === expectedOwner) {
-        this.aggregatePrimaryProgress.publishFailed(
-          input.run,
-          'Failed OpenCode primary relaunch candidate cleanup failed',
-          error
-        );
-      }
-      throw error;
-    }
+  }
+
+  private createAggregatePrimaryLaneStopPorts(
+    run: ProvisioningRun
+  ): OpenCodeAggregatePrimaryLaneStopPorts {
+    return {
+      getRuntimeOwner: (teamName) => this.runtimeAdapterRunByTeam.get(teamName),
+      setRuntimeOwner: (teamName, owner) => {
+        this.runtimeAdapterRunByTeam.set(teamName, owner);
+      },
+      deleteRuntimeOwner: (teamName) => {
+        this.runtimeAdapterRunByTeam.delete(teamName);
+      },
+      getOpenCodeRuntimeLaunchCwd: (baseCwd, members) =>
+        this.prepareFacade.getOpenCodeRuntimeLaunchCwd(baseCwd, members),
+      publishPending: (message) => this.aggregatePrimaryProgress.publishPending(run, message),
+      publishFailed: (message, error) =>
+        this.aggregatePrimaryProgress.publishFailed(run, message, error),
+      logWarn: (message) => logger.warn(message),
+    };
   }
 
   override async attachLiveRosterMember(
