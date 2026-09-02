@@ -254,6 +254,7 @@ import {
   runOpenCodeLifecycleCleanupTail,
   type OpenCodeLifecycleCleanupTailPorts,
 } from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
+import { releaseLoopbackRuntimesOnAppShutdown } from './services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease';
 import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
 import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
@@ -735,6 +736,7 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
     appStartedAtMs,
     sweepCommandSettledAtMs,
     managedHostInstanceId: openCodeManagedHostInstanceId,
+    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
     ports: openCodeLifecycleCleanupTailPorts,
   });
 }

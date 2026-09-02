@@ -5,6 +5,7 @@ import {
 import {
   countLiveRecordedRuntimeHostsForTeam,
   RUNTIME_HOSTS_POLL_INTERVAL_MS,
+  releaseLoopbackRuntimesReservedByTeam,
   releaseSharedRuntimeResourcesAfterStop,
   runTeamForceStopFlow,
   STOP_ESCALATION_TIMEOUT_MS,
@@ -14,6 +15,15 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const releaseLoopbackRuntimeModels = vi.hoisted(() =>
+  vi.fn<(options: { memberModels: readonly string[] }) => Promise<unknown>>(() =>
+    Promise.resolve({ attempted: [], released: [], diagnostics: [] })
+  )
+);
+vi.mock('@main/services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease', () => ({
+  releaseLoopbackRuntimeModels,
+}));
 
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
@@ -944,5 +954,59 @@ describe('releaseSharedRuntimeResourcesAfterStop', () => {
       'lock purge failed: lock dir gone',
       'Shared runtime release failed: runtime unreachable',
     ]);
+  });
+});
+
+/**
+ * The port implementor. `releaseSharedRuntimeResourcesAfterStop` decides
+ * whether a release happens at all; this decides what it is allowed to touch,
+ * and that is only what the stopped team's own members were running on.
+ */
+describe('releaseLoopbackRuntimesReservedByTeam', () => {
+  const teamsBasePaths: string[] = [];
+
+  afterEach(() => {
+    for (const base of teamsBasePaths.splice(0)) {
+      fs.rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  function writeTeamConfig(config: unknown): string {
+    const base = fs.mkdtempSync(path.join(os.tmpdir(), 'at-teams-'));
+    teamsBasePaths.push(base);
+    fs.mkdirSync(path.join(base, 'fixteam'), { recursive: true });
+    fs.writeFileSync(path.join(base, 'fixteam', 'config.json'), JSON.stringify(config));
+    return base;
+  }
+
+  it('releases only what the team members were configured to run on', async () => {
+    releaseLoopbackRuntimeModels.mockClear();
+    const teamsBasePath = writeTeamConfig({
+      projectPath: '/projects/demo',
+      members: [
+        { name: 'lead', model: 'local-provider/model-a' },
+        { name: 'worker', model: '  ' },
+        { name: 'broken', model: 42 },
+        { name: 'other', model: 'cursor-acp/auto' },
+      ],
+    });
+
+    await releaseLoopbackRuntimesReservedByTeam(teamsBasePath, 'fixteam');
+
+    expect(releaseLoopbackRuntimeModels).toHaveBeenCalledExactlyOnceWith({
+      memberModels: ['local-provider/model-a', 'cursor-acp/auto'],
+    });
+  });
+
+  // Fail closed: an unreadable config means the release has no list to narrow
+  // by, and "no list" must release nothing rather than everything.
+  it('narrows to nothing when the team config cannot be read', async () => {
+    releaseLoopbackRuntimeModels.mockClear();
+    const teamsBasePath = fs.mkdtempSync(path.join(os.tmpdir(), 'at-teams-'));
+    teamsBasePaths.push(teamsBasePath);
+
+    await releaseLoopbackRuntimesReservedByTeam(teamsBasePath, 'fixteam');
+
+    expect(releaseLoopbackRuntimeModels).toHaveBeenCalledExactlyOnceWith({ memberModels: [] });
   });
 });

@@ -11,11 +11,13 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
 import * as fs from 'fs';
+import * as path from 'path';
 
 import {
   PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
   purgeStaleOpenCodeHostStartupLocks,
 } from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
+import { releaseLoopbackRuntimeModels } from '../opencode/bridge/OpenCodeLoopbackRuntimeRelease';
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
@@ -526,6 +528,50 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(_input: {
       'Hard process cleanup is not confirmed: this runtime does not support targeted forced termination that preserves other teams sharing an OpenCode host. Only the regular scoped stop was attempted; shared hosts were left untouched.',
     ],
   };
+}
+
+/**
+ * The models this team's members were configured to run on, read straight off
+ * its config. A config this app cannot read yields an empty list rather than
+ * "unknown": the release below narrows to what this list names, so an
+ * unreadable config has to release nothing at all instead of widening onto
+ * every runtime the user configured.
+ */
+async function readTeamMemberModels(teamsBasePath: string, teamName: string): Promise<string[]> {
+  try {
+    const raw = await fs.promises.readFile(
+      path.join(teamsBasePath, teamName, 'config.json'),
+      'utf8'
+    );
+    const members = (JSON.parse(raw) as { members?: unknown }).members;
+    if (!Array.isArray(members)) return [];
+    return members
+      .map((member) => (member as { model?: unknown } | null)?.model)
+      .filter((model): model is string => typeof model === 'string' && model.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The implementor of `releaseSharedLocalRuntime` this app ships, and the reason
+ * that port exists: the team's members were running on loopback runtimes that
+ * hold a model reserved for them, and once the team is down and no other team
+ * is alive, that reservation belongs to nobody.
+ *
+ * It is the caller of `releaseSharedRuntimeResourcesAfterStop` that hands this
+ * in rather than the flow reaching for it, because only the caller knows the
+ * team is the last one; and it resolves rather than rejects on every runtime
+ * that does not answer, because by this point the stop has already done
+ * everything that mattered.
+ */
+export async function releaseLoopbackRuntimesReservedByTeam(
+  teamsBasePath: string,
+  teamName: string
+): Promise<void> {
+  await releaseLoopbackRuntimeModels({
+    memberModels: await readTeamMemberModels(teamsBasePath, teamName),
+  });
 }
 
 /**

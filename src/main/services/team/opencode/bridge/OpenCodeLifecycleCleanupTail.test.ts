@@ -310,6 +310,71 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
     );
   });
 
+  /**
+   * The shared runtime is released only once the hosts are gone: while one is
+   * still up it is a process of this app that may yet send the runtime work.
+   */
+  it('releases the shared runtime after the shutdown host sweep', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    const releaseSharedRuntime = vi.fn(async () => {
+      steps.push('shared-runtime-release');
+    });
+
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('shutdown'),
+      releaseSharedRuntime,
+      ports: createPorts(),
+    });
+
+    expect(steps).toEqual(['host-process-fallback', 'shared-runtime-release']);
+  });
+
+  it('never releases the shared runtime at startup, where teams are about to run', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    const releaseSharedRuntime = vi.fn(() => Promise.resolve());
+
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('startup'),
+      releaseSharedRuntime,
+      ports: createPorts(),
+    });
+
+    expect(releaseSharedRuntime).not.toHaveBeenCalled();
+  });
+
+  // The port carries no default, so the common case is that no caller supplies
+  // one, and that case has to be indistinguishable from before it existed.
+  it('runs the same shutdown steps when no release port is supplied', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    const ports = createPorts();
+
+    await runOpenCodeLifecycleCleanupTail({ ...baseInput('shutdown'), ports });
+
+    expect(steps).toEqual(['host-process-fallback']);
+    expect(ports.warnings).toEqual([]);
+    expect(ports.sweepResults).toEqual([]);
+  });
+
+  it('reports a failing release as a warning and still finishes the shutdown', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    const ports = createPorts();
+
+    await runOpenCodeLifecycleCleanupTail({
+      ...baseInput('shutdown'),
+      releaseSharedRuntime: () => Promise.reject(new Error('runtime unreachable')),
+      ports,
+    });
+
+    expect(steps).toEqual(['host-process-fallback']);
+    expect(ports.warnings).toEqual([
+      '[OpenCode] shutdown shared runtime release: runtime unreachable',
+    ]);
+  });
+
   it('surfaces what the lead tree sweep kept as a warning', async () => {
     vi.clearAllMocks();
     recordSteps();
