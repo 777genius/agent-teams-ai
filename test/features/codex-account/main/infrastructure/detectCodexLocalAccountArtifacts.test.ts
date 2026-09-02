@@ -302,6 +302,41 @@ describe('detectCodexLocalAccountArtifacts', () => {
     });
   });
 
+  it('treats a legacy auth.json whose mtime is a moment ahead of the clock as fresh', async () => {
+    const { codexHome, accountsDir } = await makeCodexHome();
+    const legacyAuthPath = path.join(codexHome, 'auth.json');
+    await writeFile(
+      legacyAuthPath,
+      JSON.stringify({ auth_mode: 'chatgpt', tokens: { refresh_token: 'legacy-refresh-token' } }),
+      'utf8'
+    );
+    // Filesystem timestamps can round up past Date.now() right after a write.
+    const slightlyAhead = new Date(Date.now() + 1_000);
+    await utimes(legacyAuthPath, slightlyAhead, slightlyAhead);
+
+    await expect(detectCodexLocalAccountState(accountsDir)).resolves.toEqual({
+      hasArtifacts: true,
+      hasActiveChatgptAccount: true,
+    });
+  });
+
+  it('still treats a legacy auth.json whose mtime is well in the future as stale', async () => {
+    const { codexHome, accountsDir } = await makeCodexHome();
+    const legacyAuthPath = path.join(codexHome, 'auth.json');
+    await writeFile(
+      legacyAuthPath,
+      JSON.stringify({ auth_mode: 'chatgpt', tokens: { refresh_token: 'legacy-refresh-token' } }),
+      'utf8'
+    );
+    const farAhead = new Date(Date.now() + 60_000);
+    await utimes(legacyAuthPath, farAhead, farAhead);
+
+    await expect(detectCodexLocalAccountState(accountsDir)).resolves.toEqual({
+      hasArtifacts: true,
+      hasActiveChatgptAccount: false,
+    });
+  });
+
   it('does not treat a future last_refresh as fresh', async () => {
     const { codexHome, accountsDir } = await makeCodexHome();
     const legacyAuthPath = path.join(codexHome, 'auth.json');

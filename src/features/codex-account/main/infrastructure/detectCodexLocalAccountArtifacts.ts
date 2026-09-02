@@ -12,6 +12,7 @@ const LEGACY_AUTH_SYNC_MARKER_FILE = '.agent-teams-legacy-auth-sync.json';
 // revokes the entire token family — so a legacy auth.json only counts as an
 // active account while it is fresh. The stale file is ignored, never deleted.
 const LEGACY_AUTH_STALE_AFTER_MS = 14 * 24 * 60 * 60 * 1000;
+const LEGACY_AUTH_FUTURE_SKEW_TOLERANCE_MS = 5_000;
 
 interface CodexAccountsRegistry {
   active_account_id?: string | null;
@@ -115,9 +116,13 @@ async function isLegacyAuthFileFresh(
   // revocation from a reused refresh_token.
   const lastRefreshMs = getLastRefreshMs(authFile) ?? (await getMtimeMs(filePath));
   const now = Date.now();
+  // A file written a moment ago can carry an mtime a little ahead of Date.now():
+  // filesystem timestamps round up on some hosts and are not read from the same
+  // clock. That is not a future refresh, so a small lead is tolerated; a
+  // timestamp genuinely in the future still counts as unknown, hence stale.
   return (
     lastRefreshMs !== null &&
-    lastRefreshMs <= now &&
+    lastRefreshMs - now <= LEGACY_AUTH_FUTURE_SKEW_TOLERANCE_MS &&
     now - lastRefreshMs <= LEGACY_AUTH_STALE_AFTER_MS
   );
 }
