@@ -432,6 +432,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           deleteSecondaryRuntimeRun: (teamName, laneId) =>
             host.deleteSecondaryRuntimeRun(teamName, laneId),
           hasCommittedOpenCodePrimaryLeadSessionEvidence,
+          logDiagnostic: (message) => logger.diagnostic(message),
         }
       ),
     runOpenCodeTeamRuntimeAdapterLaunch: async (input) =>

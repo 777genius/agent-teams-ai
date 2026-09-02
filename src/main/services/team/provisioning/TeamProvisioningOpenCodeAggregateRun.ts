@@ -24,6 +24,10 @@ import {
 } from './TeamProvisioningOpenCodeAggregateRunRollback';
 import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
 import {
+  describeDeferredOpenCodeLaunchPrompt,
+  describeUnavailableOpenCodeLaunchPromptLead,
+} from './TeamProvisioningOpenCodeBlockedLaunchReporting';
+import {
   takeBlockingOpenCodeSharedRuntimeFailure,
   trackOpenCodeSharedRuntimeFailureFromResult,
 } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
@@ -31,6 +35,20 @@ import {
 import type { TeamLaunchResponse, TeamProvisioningProgress } from '@shared/types';
 
 export * from './TeamProvisioningOpenCodeAggregateRunModel';
+
+/**
+ * One report reaches two places on purpose: the durable sink, so the line
+ * survives a restart, and the launch diagnostics, so the same text is in the
+ * progress tail the user can already see.
+ */
+function report(
+  message: string,
+  diagnostics: string[],
+  ports: Pick<OpenCodeWorktreeRootAggregateLaunchPorts, 'logDiagnostic'>
+): void {
+  diagnostics.push(message);
+  ports.logDiagnostic?.(message);
+}
 
 export async function prepareOpenCodeWorktreeRootAggregateLaunchPreflight(
   input: {
@@ -314,21 +332,42 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
     // to the lead's inbox before the run reports its final progress, so a
     // refused inbox is visible in the same place as every other lane diagnostic.
     if (!terminalFailure && promptDelivery.leadInboxPrompt !== null) {
-      await queueLaunchPromptToLeadInbox(
-        {
-          teamName,
-          leadName: resolveOpenCodeAggregateLaunchPromptLeadName(run.effectiveMembers),
-          prompt: promptDelivery.leadInboxPrompt,
-          diagnostics: laneDiagnostics,
-          isLaunchStillCurrent: () => !aggregateLaunchNoLongerCurrent(),
-        },
-        ports
-      );
-      // Waiting for the lead inbox is an await like any other: a stop or a
-      // successor launch can take the team while it runs, and its state must
-      // not be published over the run that replaced this one.
-      if (aggregateLaunchNoLongerCurrent()) {
-        return await finishCancelledAggregateLaunch();
+      const leadName = resolveOpenCodeAggregateLaunchPromptLeadName(run.effectiveMembers);
+      const unavailableLead = describeUnavailableOpenCodeLaunchPromptLead({
+        teamName,
+        leadName,
+        primaryResult,
+      });
+      if (unavailableLead) {
+        // Queueing here would burn the prompt on a session that does not exist.
+        // Nothing is awaited on this path, so the launch cannot have been taken
+        // since the currency check above and no second check is needed.
+        report(unavailableLead, laneDiagnostics, ports);
+      } else {
+        await queueLaunchPromptToLeadInbox(
+          {
+            teamName,
+            leadName,
+            prompt: promptDelivery.leadInboxPrompt,
+            diagnostics: laneDiagnostics,
+            isLaunchStillCurrent: () => !aggregateLaunchNoLongerCurrent(),
+          },
+          ports
+        );
+        // Waiting for the lead inbox is an await like any other: a stop or a
+        // successor launch can take the team while it runs, and its state must
+        // not be published over the run that replaced this one.
+        if (aggregateLaunchNoLongerCurrent()) {
+          return await finishCancelledAggregateLaunch();
+        }
+        if (leadBootstrap === 'pending') {
+          // Only the bridge dispatch waits; the prompt is already in the inbox.
+          report(
+            describeDeferredOpenCodeLaunchPrompt({ teamName, leadName }),
+            laneDiagnostics,
+            ports
+          );
+        }
       }
     }
     const finalProgress = ports.setRuntimeAdapterProgress(
