@@ -124,6 +124,73 @@ export function selectProvidersUsedByModels(
   return new Map([...origins].filter(([providerId]) => used.has(providerId)));
 }
 
+/**
+ * The fallback for a runtime that has no release endpoint at all. Ollama is the
+ * one in the wild: it answers 404 there, it lists what it currently holds on
+ * `/api/ps`, and it drops a model when a generate call carries `keep_alive: 0`.
+ *
+ * Only a 404 reaches this. A runtime that answers anything else has the
+ * endpoint and failed to serve it, and asking that runtime a second question in
+ * a different protocol would be guessing at what it is.
+ */
+async function evictLoadedModels(
+  origin: string,
+  fetchImpl: typeof fetch
+): Promise<{ evicted: boolean; diagnostics: string[] }> {
+  let loaded: { name?: unknown; model?: unknown }[] = [];
+  try {
+    const response = await fetchImpl(`${origin}/api/ps`, {
+      signal: AbortSignal.timeout(RELEASE_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      return {
+        evicted: false,
+        diagnostics: [`no release endpoint and no loaded-model list (HTTP ${response.status})`],
+      };
+    }
+    const body = (await response.json()) as { models?: unknown };
+    loaded = Array.isArray(body.models) ? (body.models as typeof loaded) : [];
+  } catch (error) {
+    return {
+      evicted: false,
+      diagnostics: [
+        `loaded-model list failed: ${error instanceof Error ? error.message : String(error)}`,
+      ],
+    };
+  }
+
+  const diagnostics: string[] = [];
+  let evicted = false;
+  for (const entry of loaded) {
+    const name =
+      typeof entry.model === 'string'
+        ? entry.model
+        : typeof entry.name === 'string'
+          ? entry.name
+          : null;
+    if (!name) continue;
+    try {
+      const response = await fetchImpl(`${origin}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: name, keep_alive: 0 }),
+        signal: AbortSignal.timeout(RELEASE_TIMEOUT_MS),
+      });
+      if (response.ok) {
+        evicted = true;
+        diagnostics.push(`evicted ${name}`);
+      } else {
+        diagnostics.push(`evicting ${name} returned HTTP ${response.status}`);
+      }
+    } catch (error) {
+      diagnostics.push(
+        `evicting ${name} failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+  return { evicted, diagnostics };
+}
+
 export async function releaseLoopbackRuntimeModels(
   options: LoopbackRuntimeReleaseOptions = {}
 ): Promise<LoopbackRuntimeReleaseResult> {
@@ -147,9 +214,17 @@ export async function releaseLoopbackRuntimeModels(
       });
       if (response.ok) {
         result.released.push(providerId);
-      } else {
-        result.diagnostics.push(`${providerId}: release returned HTTP ${response.status}`);
+        continue;
       }
+      if (response.status === 404) {
+        const eviction = await evictLoadedModels(origin, fetchImpl);
+        if (eviction.evicted) {
+          result.released.push(providerId);
+        }
+        result.diagnostics.push(...eviction.diagnostics.map((entry) => `${providerId}: ${entry}`));
+        continue;
+      }
+      result.diagnostics.push(`${providerId}: release returned HTTP ${response.status}`);
     } catch (error) {
       // A runtime that is already gone, refusing connections or too slow to
       // answer has, in every one of those cases, nothing left to release.

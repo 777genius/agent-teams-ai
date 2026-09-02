@@ -213,6 +213,110 @@ describe('releaseLoopbackRuntimeModels', () => {
   });
 
   /**
+   * A runtime with no release endpoint at all answers 404 there. It still knows
+   * what it is holding, and it drops a model when a generate call carries
+   * keep_alive 0, so the fallback asks it what is loaded and evicts each one.
+   */
+  it('evicts the loaded models of a runtime that has no release endpoint', async () => {
+    const configPath = writeConfig({
+      'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
+    });
+    const calls: { url: string; body?: string }[] = [];
+    const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
+      const url = requestUrl(input);
+      calls.push({ url, body: typeof init?.body === 'string' ? init.body : undefined });
+      if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
+      if (url.endsWith('/api/ps')) {
+        return new Response(JSON.stringify({ models: [{ name: 'model-a' }] }), { status: 200 });
+      }
+      return okOnce();
+    });
+
+    const result = await releaseLoopbackRuntimeModels({
+      configPaths: [configPath],
+      fetchImpl,
+      env: {},
+      memberModels: ['local-provider/model-a'],
+    });
+
+    expect(calls.map((call) => call.url)).toEqual([
+      'http://127.0.0.1:9999/api/models/unload',
+      'http://127.0.0.1:9999/api/ps',
+      'http://127.0.0.1:9999/api/generate',
+    ]);
+    expect(JSON.parse(calls[2]?.body ?? '{}')).toEqual({ model: 'model-a', keep_alive: 0 });
+    expect(result.released).toEqual(['local-provider']);
+    expect(result.diagnostics).toEqual(['local-provider: evicted model-a']);
+  });
+
+  // The other side of that boundary. Only a 404 means "no such endpoint"; any
+  // other error status is a runtime that has one and failed to serve it, and
+  // asking it a second question in a different protocol would be guessing.
+  it('never asks a runtime that answered with an error status what it has loaded', async () => {
+    const configPath = writeConfig({
+      'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
+    });
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('', { status: 500 }));
+
+    const result = await releaseLoopbackRuntimeModels({
+      configPaths: [configPath],
+      fetchImpl,
+      env: {},
+      memberModels: ['local-provider/model-a'],
+    });
+
+    expect(fetchImpl.mock.calls.map((call) => requestUrl(call[0]))).toEqual([
+      'http://127.0.0.1:9999/api/models/unload',
+    ]);
+    expect(result.released).toEqual([]);
+    expect(result.diagnostics).toEqual(['local-provider: release returned HTTP 500']);
+  });
+
+  it('reports a runtime that has neither a release endpoint nor a loaded-model list', async () => {
+    const configPath = writeConfig({
+      'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
+    });
+    const fetchImpl = vi.fn<typeof fetch>(async () => new Response('', { status: 404 }));
+
+    const result = await releaseLoopbackRuntimeModels({
+      configPaths: [configPath],
+      fetchImpl,
+      env: {},
+      memberModels: ['local-provider/model-a'],
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(result.released).toEqual([]);
+    expect(result.diagnostics).toEqual([
+      'local-provider: no release endpoint and no loaded-model list (HTTP 404)',
+    ]);
+  });
+
+  it('holds a runtime released only when a model was actually evicted', async () => {
+    const configPath = writeConfig({
+      'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
+    });
+    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+      const url = requestUrl(input);
+      if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
+      if (url.endsWith('/api/ps')) {
+        return new Response(JSON.stringify({ models: [{ model: 'model-a' }] }), { status: 200 });
+      }
+      return new Response('', { status: 503 });
+    });
+
+    const result = await releaseLoopbackRuntimeModels({
+      configPaths: [configPath],
+      fetchImpl,
+      env: {},
+      memberModels: ['local-provider/model-a'],
+    });
+
+    expect(result.released).toEqual([]);
+    expect(result.diagnostics).toEqual(['local-provider: evicting model-a returned HTTP 503']);
+  });
+
+  /**
    * Every way a loopback runtime can fail to answer ends the same way: a
    * diagnostic and a result the stop can carry. Nothing here may throw, because
    * the caller is a cleanup tail that has already done the work that mattered.
