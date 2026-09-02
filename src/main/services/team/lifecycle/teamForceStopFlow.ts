@@ -21,6 +21,12 @@ import {
 import type { TeamForceStopResult } from '@shared/types';
 
 const DEFAULT_STOP_TIMEOUT_MS = 15_000;
+/**
+ * How long the regular Stop waits for the orchestrator before the cleanup
+ * takes over. Longer than the force-stop default because the user pressed
+ * Stop, not Force stop: the orchestrator deserves the chance to finish first.
+ */
+export const STOP_ESCALATION_TIMEOUT_MS = 20_000;
 const FORCE_STOP_DELIVERY_CANCEL_REASON =
   'force_stop_requested: pending delivery cancelled by user force stop';
 
@@ -77,6 +83,36 @@ export async function runTeamForceStopFlow(
   teamName: string,
   ports: TeamForceStopFlowPorts
 ): Promise<TeamForceStopResult> {
+  return runTeamStopFlow(teamName, ports, { cleanup: 'always' });
+}
+
+/**
+ * The regular Stop, with an escape hatch. The orchestrator's stop gets a
+ * bounded budget and, only when it rejects or runs out of it, the force-stop
+ * cleanup runs: the same hard-cleanup attempt and the same run-fenced delivery
+ * cancellation. A stop that confirms cancels nothing and reaches nothing else -
+ * the user asked for a stop, not for a sweep, and the escalation exists because
+ * the stop sometimes cannot deliver what the user asked for.
+ *
+ * The force stop persists its cancellation before the stop, so a stop that
+ * removes the lane index cannot strand the ledger. A regular Stop cannot: it
+ * does not yet know whether it will have to escalate, so its cancellation runs
+ * after the stop, on the lane scope read before it, and under the same
+ * "the stop did not confirm" decision that gates the cleanup step.
+ */
+export async function stopTeamWithEscalation(
+  teamName: string,
+  ports: TeamForceStopFlowPorts
+): Promise<TeamForceStopResult> {
+  return runTeamStopFlow(teamName, ports, { cleanup: 'on_failure' });
+}
+
+async function runTeamStopFlow(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  options: { cleanup: 'always' | 'on_failure' }
+): Promise<TeamForceStopResult> {
+  const cleanupIsUnconditional = options.cleanup === 'always';
   const diagnostics: string[] = [];
   const stopStartedAtMs = Date.now();
   let ownedRunIds: readonly string[] = [];
@@ -114,7 +150,12 @@ export async function runTeamForceStopFlow(
     }
   };
   // Persist cancellation before stop can remove the lane index or runtime files.
-  await cancelOwnedDeliveries();
+  // A regular Stop has nothing to persist yet: it cancels only when the stop
+  // does not deliver, so its cancellation has to wait for the outcome and runs
+  // on the lane ids read above, which a removed lane index can no longer narrow.
+  if (cleanupIsUnconditional) {
+    await cancelOwnedDeliveries();
+  }
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
@@ -166,8 +207,13 @@ export async function runTeamForceStopFlow(
     }
   }
 
-  // Catch rows published by this run while its scoped stop was in flight.
-  if (ownedLaneIds?.length) await cancelOwnedDeliveries();
+  // Catch rows published by this run while its scoped stop was in flight. For a
+  // regular Stop this is instead the deferred cancellation, and it is the same
+  // decision the kill step just made: a stop that confirmed cancels nothing.
+  const cancelAfterStop = cleanupIsUnconditional
+    ? Boolean(ownedLaneIds?.length)
+    : stopOutcome !== 'stopped';
+  if (cancelAfterStop) await cancelOwnedDeliveries();
 
   await markStopped(teamName, ports, diagnostics);
   return {
