@@ -292,8 +292,17 @@ function parseRowTimeMs(row) {
  * Memoryless lead sessions (orchestrator rebuilds, replayed deliveries)
  * re-send their final "ALL DONE"-style messages on every later wake-up. An
  * identical from/to/text row inside the window is treated as already sent.
+ *
+ * Agent senders only. A human repeating themselves is not a memoryless resend
+ * but a deliberate nudge - "continue" typed a second time because nothing
+ * visibly moved - and the recipient has to see it. An app write replayed under
+ * the same identity is caught by its messageId, which is the key the human's
+ * own repeats do not share.
  */
 function getRepeatedMessageDuplicate(list, row) {
+  if (isUserParticipant(row.from)) {
+    return null;
+  }
   const from = normalizeComparableParticipant(row.from);
   const to = normalizeComparableParticipant(row.to);
   const text = normalizeComparableText(row.text);

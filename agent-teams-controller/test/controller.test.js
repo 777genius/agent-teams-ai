@@ -4110,6 +4110,37 @@ controller.messages.sendMessage({
     expect(fresh.deduplicated).toBeUndefined();
   });
 
+  it('delivers a message the human user repeats to a teammate', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const readBobInbox = () => {
+      const file = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+      return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    };
+
+    const first = controller.messages.sendMessage({ to: 'bob', from: 'user', text: 'continue' });
+    const nudge = controller.messages.sendMessage({ to: 'bob', from: 'user', text: 'continue' });
+    expect(first.deduplicated).toBeUndefined();
+    expect(nudge.deduplicated).toBeUndefined();
+    expect(nudge.messageId).not.toBe(first.messageId);
+    expect(readBobInbox().map((row) => row.text)).toEqual(['continue', 'continue']);
+
+    // The same inbox still collapses the agent's own repeat.
+    const agentFirst = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Status on the review?',
+    });
+    const agentRepeat = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Status on the review?',
+    });
+    expect(agentFirst.deduplicated).toBeUndefined();
+    expect(agentRepeat.deduplicated).toBe(true);
+    expect(readBobInbox()).toHaveLength(3);
+  });
+
   it('suppresses a user-directed restatement that only changes punctuation, case or emphasis', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
