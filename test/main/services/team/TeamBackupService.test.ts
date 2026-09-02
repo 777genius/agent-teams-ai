@@ -310,6 +310,74 @@ describe('TeamBackupService', () => {
     expect(restoredLaunchSummary.teamLaunchState).toBe('partial_pending');
     expect(restoredRuntimeLaneIndex.lanes['secondary:opencode:tom'].state).toBe('active');
     expect(restoredRuntimeManifest.activeRunId).toBe('lane-run-1');
+    // A team that was never stopped gains no stop marker from a restore.
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('does not resurrect launch state for a stopped team from a pre-stop backup', async () => {
+    const service = new TeamBackupService();
+    const teamName = 'stopped-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(teamDir, { recursive: true });
+    const config = {
+      name: 'Stopped Team',
+      projectPath,
+      members: [{ name: 'team-lead', agentType: 'team-lead' }],
+    };
+    const launchState = { version: 2, teamName, launchPhase: 'reconciled', members: {} };
+    const launchSummary = { version: 1, teamName, teamLaunchState: 'partial_failure' };
+    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify(config), 'utf8');
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify(launchState),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify(launchSummary),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // Stop: the store removes both publication files and leaves the marker.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    await fs.writeFile(
+      path.join(teamDir, 'launch-stopped.json'),
+      JSON.stringify({ version: 1, teamName, stoppedAt: '2026-08-23T00:10:00.000Z' }),
+      'utf8'
+    );
+
+    // Partial restore (the config is present): the pre-stop snapshot stays gone.
+    await service.restoreIfNeeded();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+
+    // Once the stop itself is backed up, a full restore after losing the team
+    // directory keeps the team stopped too.
+    await service.backupTeam(teamName);
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(backupDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await fs.rm(teamDir, { recursive: true, force: true });
+    const restored = await service.restoreIfNeeded();
+    service.dispose();
+    expect(restored).toContain(teamName);
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
   });
 
   it('fences startup restore after the durable destructive deletion boundary', async () => {

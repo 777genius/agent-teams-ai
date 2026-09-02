@@ -13,8 +13,10 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
 import { TeamConfigReader } from './TeamConfigReader';
+import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
 const logger = createLogger('TeamBackupService');
+const LAUNCH_STATE_PUBLICATION_FILES = new Set(['launch-state.json', 'launch-summary.json']);
 const DRAFT_DELETION_IDENTITY_FILE = '.permanent-deletion-identity.json';
 
 interface BackupManifest {
@@ -162,8 +164,13 @@ export class TeamBackupRestoreService {
     }
 
     // Restore remaining files
+    const launchStateFrozen = await this.isLaunchStateFrozenByStop(teamName, backupFiles);
     for (const relPath of backupFiles) {
       if (relPath === 'config.json' || relPath === 'manifest.json') continue;
+      if (launchStateFrozen && LAUNCH_STATE_PUBLICATION_FILES.has(relPath)) {
+        logger.info(`[Backup] Skip restore ${teamName}/${relPath}: team is stopped`);
+        continue;
+      }
       try {
         const src = path.join(backupDir, relPath);
         const dest = this.ports.getSourcePathForRelPath(teamName, relPath);
@@ -229,10 +236,15 @@ export class TeamBackupRestoreService {
   ): Promise<number> {
     const backupDir = this.ports.getBackupDir(teamName);
     const backupFiles = await this.ports.enumerateBackupFiles(teamName);
+    const launchStateFrozen = await this.isLaunchStateFrozenByStop(teamName, backupFiles);
     let count = 0;
 
     for (const relPath of backupFiles) {
       if (relPath === 'manifest.json') continue;
+      if (launchStateFrozen && LAUNCH_STATE_PUBLICATION_FILES.has(relPath)) {
+        logger.info(`[Backup] Skip restore ${teamName}/${relPath}: team is stopped`);
+        continue;
+      }
       const dest = this.ports.getSourcePathForRelPath(teamName, relPath);
 
       try {
@@ -295,6 +307,30 @@ export class TeamBackupRestoreService {
 
     void manifest; // fileStats not checked during restore — mtime comparison happens in full restore
     return count;
+  }
+
+  /**
+   * A stopped team - the stop marker is in the live team directory, or it was
+   * already backed up - must not get its last launch-state / launch-summary
+   * back. The backup can still hold the snapshot from before the stop, and
+   * restoring it brings the phantom "launch failed partway / teammate never
+   * spawned" card back after the next app start.
+   */
+  private async isLaunchStateFrozenByStop(
+    teamName: string,
+    backupFiles: readonly string[]
+  ): Promise<boolean> {
+    if (backupFiles.includes(TEAM_LAUNCH_STOPPED_MARKER_FILE)) return true;
+    const liveMarker = this.ports.getSourcePathForRelPath(
+      teamName,
+      TEAM_LAUNCH_STOPPED_MARKER_FILE
+    );
+    try {
+      await fs.promises.access(liveMarker);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private checkIdentityFromConfig(
