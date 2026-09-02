@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   CURSOR_AGENT_TEAMS_MCP_SERVER_NAME,
   ensureCursorAgentTeamsMcpConfig,
+  ensureCursorCliConfigSeed,
   listCursorAcpProfileHomes,
   prepareCursorAcpLaunchMcpConfig,
   resolveCursorAcpProfileHome,
@@ -212,6 +213,86 @@ describe('CursorMcpConfigWriter', () => {
         .map((home) => path.basename(path.dirname(home)))
         .toSorted((a, b) => a.localeCompare(b));
       expect(keys).toEqual(['account-1', 'account-2']);
+    });
+  });
+
+  describe('ensureCursorCliConfigSeed', () => {
+    // Built from one list so the assertion below cannot drift from the fixture.
+    const SECRETS = [
+      'secret-auth-token',
+      'secret-api-key',
+      'secret-cookie',
+      'secret-sign-in',
+      'secret-bearer',
+    ];
+    const [authToken, apiKey, cookie, signIn, bearer] = SECRETS;
+
+    const writeUserCliConfig = async (userHome: string, config: unknown): Promise<void> => {
+      await fs.mkdir(path.join(userHome, '.cursor'), { recursive: true });
+      await fs.writeFile(
+        path.join(userHome, '.cursor', 'cli-config.json'),
+        JSON.stringify(config),
+        'utf8'
+      );
+    };
+
+    it('copies no credential out of the user CLI config, at any depth', async () => {
+      const userHome = path.join(workspace, 'home');
+      const profileHome = path.join(workspace, 'profile');
+      await writeUserCliConfig(userHome, {
+        version: 1,
+        editor: { vimMode: true },
+        authToken,
+        profile: { name: 'example', apiKey },
+        cookies: [cookie],
+        sessions: { last: { password: signIn, bearer } },
+      });
+
+      await expect(ensureCursorCliConfigSeed(profileHome, { homeDir: userHome })).resolves.toBe(
+        'seeded'
+      );
+
+      const seeded = await fs.readFile(
+        path.join(profileHome, '.cursor', 'cli-config.json'),
+        'utf8'
+      );
+      for (const secret of SECRETS) {
+        expect(seeded).not.toContain(secret);
+      }
+      expect(JSON.parse(seeded)).toEqual({
+        version: 1,
+        editor: { vimMode: true },
+        profile: { name: 'example' },
+      });
+    });
+
+    it('seeds a minimal config when the user has none', async () => {
+      const profileHome = path.join(workspace, 'profile');
+
+      await expect(
+        ensureCursorCliConfigSeed(profileHome, { homeDir: path.join(workspace, 'home') })
+      ).resolves.toBe('seeded');
+
+      const seeded = await fs.readFile(
+        path.join(profileHome, '.cursor', 'cli-config.json'),
+        'utf8'
+      );
+      expect(JSON.parse(seeded)).toEqual({ version: 1 });
+    });
+
+    it('never overwrites a CLI config the profile already has', async () => {
+      const profileHome = path.join(workspace, 'profile');
+      const target = path.join(profileHome, '.cursor', 'cli-config.json');
+      await fs.mkdir(path.dirname(target), { recursive: true });
+      await fs.writeFile(target, '{ "version": 2 }', 'utf8');
+      const userHome = path.join(workspace, 'home');
+      await writeUserCliConfig(userHome, { version: 1, authToken });
+
+      await expect(ensureCursorCliConfigSeed(profileHome, { homeDir: userHome })).resolves.toBe(
+        'exists'
+      );
+
+      expect(await fs.readFile(target, 'utf8')).toBe('{ "version": 2 }');
     });
   });
 

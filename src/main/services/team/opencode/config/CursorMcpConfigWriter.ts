@@ -198,7 +198,17 @@ export async function prepareCursorAcpLaunchMcpConfig(input: {
   const targets = Array.from(new Set([...profileHomes, homeDir]));
   logger.info(`Registering the Agent Teams MCP server in ${targets.length} Cursor home(s)`);
   for (const profileHome of targets) {
+    if (profileHome !== homeDir) await seedProfileCursorCliConfig(profileHome, homeDir);
     await registerAgentTeamsMcpServer(profileHome, mcpUrl);
+  }
+}
+
+async function seedProfileCursorCliConfig(profileHome: string, homeDir: string): Promise<void> {
+  try {
+    await ensureCursorCliConfigSeed(profileHome, { homeDir });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    logger.warn(`Cursor CLI config seed failed (${profileHome}): ${detail}`);
   }
 }
 
@@ -218,4 +228,61 @@ async function registerAgentTeamsMcpServer(profileHome: string, mcpUrl: string):
     const detail = error instanceof Error ? error.message : String(error);
     logger.warn(`Cursor MCP config write failed (${profileHome}): ${detail}`);
   }
+}
+
+/**
+ * Key families that may carry a credential. Matching is by family rather than
+ * by exact name because the file is the user's, not ours: `authToken`,
+ * `refreshToken`, `sessionCookie` and `apiKey` are all plausible spellings, and
+ * a name this misses is a credential copied into a second file on disk.
+ */
+const CURSOR_CLI_CONFIG_SECRET_KEY_PATTERN =
+  /auth|token|secret|credential|api[-_]?key|cookie|session|bearer|jwt|password|passphrase|refresh|signature/i;
+
+/**
+ * Drops every secret-shaped key at every depth. A shallow filter would keep a
+ * matching key's siblings but copy the whole value of a non-matching one, so
+ * `{ profile: { apiKey } }` and `{ sessions: { last: { password } } }` would
+ * survive verbatim in a file the app writes somewhere the user did not choose.
+ */
+function stripCursorCliConfigSecrets(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(stripCursorCliConfigSecrets);
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (CURSOR_CLI_CONFIG_SECRET_KEY_PATTERN.test(key)) continue;
+    out[key] = stripCursorCliConfigSecrets(entry);
+  }
+  return out;
+}
+
+/**
+ * Seeds `<profileHome>/.cursor/cli-config.json` from the user's own CLI config
+ * when the profile has none. Without that file cursor-agent lists only its
+ * bundled plugins and ignores every user MCP server, including the one the
+ * previous step registered.
+ */
+export async function ensureCursorCliConfigSeed(
+  profileHome: string,
+  options: { homeDir?: string } = {}
+): Promise<'seeded' | 'exists'> {
+  const target = path.join(profileHome, '.cursor', 'cli-config.json');
+  const existing = await readJsonObject(target);
+  if (existing.kind !== 'missing') return 'exists';
+  const source = await readJsonObject(
+    path.join(options.homeDir ?? os.homedir(), '.cursor', 'cli-config.json')
+  );
+  const seed =
+    source.kind === 'object' ? stripCursorCliConfigSecrets(source.value) : { version: 1 };
+  await atomicWriteAsync(
+    target,
+    `${JSON.stringify(seed, null, 2)}
+`,
+    { mode: 0o600 }
+  );
+  return 'seeded';
 }
