@@ -2,13 +2,9 @@ import { createHash, randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
-export * from './durablePathOperations';
+import { isTransientFsErrorCode, RENAME_PUBLISH_RETRY } from './transientFsRetry';
 
-const RENAME_MAX_ATTEMPTS = 20;
-const RENAME_RETRY_BASE_DELAY_MS = 40;
-const RENAME_RETRY_MAX_DELAY_MS = 250;
-const RENAME_RETRY_JITTER_MS = 25;
-const RETRYABLE_RENAME_CODES = new Set(['EPERM', 'EACCES', 'EBUSY']);
+export * from './durablePathOperations';
 
 export interface AtomicWriteOptions {
   mode?: number;
@@ -173,25 +169,20 @@ function sleepSync(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-function getRenameRetryDelayMs(attempt: number): number {
-  const backoff = Math.min(RENAME_RETRY_BASE_DELAY_MS * attempt, RENAME_RETRY_MAX_DELAY_MS);
-  return backoff + Math.floor(Math.random() * (RENAME_RETRY_JITTER_MS + 1));
-}
-
 async function renameWithRetry(
   src: string,
   dest: string,
   beforeAttempt?: () => Promise<void>
 ): Promise<void> {
-  for (let attempt = 1; attempt <= RENAME_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= RENAME_PUBLISH_RETRY.maxAttempts; attempt++) {
     await beforeAttempt?.();
     try {
       await fs.promises.rename(src, dest);
       return;
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (code && RETRYABLE_RENAME_CODES.has(code) && attempt < RENAME_MAX_ATTEMPTS) {
-        await sleep(getRenameRetryDelayMs(attempt));
+      if (isTransientFsErrorCode(code) && attempt < RENAME_PUBLISH_RETRY.maxAttempts) {
+        await sleep(RENAME_PUBLISH_RETRY.delayMs(attempt));
         continue;
       }
       throw error;
@@ -200,14 +191,14 @@ async function renameWithRetry(
 }
 
 function renameWithRetrySync(src: string, dest: string): void {
-  for (let attempt = 1; attempt <= RENAME_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= RENAME_PUBLISH_RETRY.maxAttempts; attempt++) {
     try {
       fs.renameSync(src, dest);
       return;
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (code && RETRYABLE_RENAME_CODES.has(code) && attempt < RENAME_MAX_ATTEMPTS) {
-        sleepSync(getRenameRetryDelayMs(attempt));
+      if (isTransientFsErrorCode(code) && attempt < RENAME_PUBLISH_RETRY.maxAttempts) {
+        sleepSync(RENAME_PUBLISH_RETRY.delayMs(attempt));
         continue;
       }
       throw error;
@@ -220,7 +211,7 @@ export async function renamePathWithRetry(
   dest: string,
   options: { syncDirectories?: boolean; durability?: 'best-effort' | 'strict' } = {}
 ): Promise<void> {
-  for (let attempt = 1; attempt <= RENAME_MAX_ATTEMPTS; attempt++) {
+  for (let attempt = 1; attempt <= RENAME_PUBLISH_RETRY.maxAttempts; attempt++) {
     try {
       await fs.promises.rename(src, dest);
       if (options.syncDirectories) {
@@ -229,8 +220,8 @@ export async function renamePathWithRetry(
       return;
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code;
-      if (code && RETRYABLE_RENAME_CODES.has(code) && attempt < RENAME_MAX_ATTEMPTS) {
-        await sleep(getRenameRetryDelayMs(attempt));
+      if (isTransientFsErrorCode(code) && attempt < RENAME_PUBLISH_RETRY.maxAttempts) {
+        await sleep(RENAME_PUBLISH_RETRY.delayMs(attempt));
         continue;
       }
       throw error;
