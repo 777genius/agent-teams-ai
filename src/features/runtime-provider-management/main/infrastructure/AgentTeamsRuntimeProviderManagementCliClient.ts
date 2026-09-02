@@ -2228,6 +2228,17 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     if (requestGroupId) {
       this.modelRequests.releaseSuperseded(requestGroupId, cacheKey);
     }
+    const existingRefreshRequest =
+      input.refresh === true ? this.modelRequests.get(cacheKey) : undefined;
+    if (
+      existingRefreshRequest &&
+      !existingRefreshRequest.controller.signal.aborted &&
+      requestGroupId &&
+      existingRefreshRequest.requestGroups.has(requestGroupId)
+    ) {
+      this.modelRequests.register(existingRefreshRequest, cacheKey, requestGroupId);
+      return existingRefreshRequest.promise;
+    }
     const currentRefresh =
       input.refresh === true ? this.modelRequests.reuseRefresh(cacheKey, requestGroupId) : null;
     if (currentRefresh) return currentRefresh;
