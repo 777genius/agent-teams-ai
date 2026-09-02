@@ -256,6 +256,45 @@ function getRuntimeDeliveryDuplicate(list, row) {
   );
 }
 
+const REPEATED_MESSAGE_WINDOW_MS = 30 * 60 * 1000;
+const REPEATED_MESSAGE_NOTICE =
+  'Duplicate message ignored. You already sent this exact text to this recipient within the last 30 minutes; it was delivered then. Do not resend it and do not rephrase it - send a new message only when you have new information.';
+
+function parseRowTimeMs(row) {
+  const parsed = Date.parse(row && row.timestamp);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/**
+ * Memoryless lead sessions (orchestrator rebuilds, replayed deliveries)
+ * re-send their final "ALL DONE"-style messages on every later wake-up. An
+ * identical from/to/text row inside the window is treated as already sent.
+ */
+function getRepeatedMessageDuplicate(list, row) {
+  const from = normalizeComparableParticipant(row.from);
+  const to = normalizeComparableParticipant(row.to);
+  const text = normalizeComparableText(row.text);
+  const rowTime = parseRowTimeMs(row);
+  if (!from || !to || !text || rowTime === null) {
+    return null;
+  }
+  for (let index = list.length - 1; index >= 0; index -= 1) {
+    const candidate = list[index];
+    if (!candidate) continue;
+    const candidateTime = parseRowTimeMs(candidate);
+    if (candidateTime === null) continue;
+    if (rowTime - candidateTime > REPEATED_MESSAGE_WINDOW_MS) break;
+    if (
+      normalizeComparableParticipant(candidate.from) === from &&
+      normalizeComparableParticipant(candidate.to) === to &&
+      normalizeComparableText(candidate.text) === text
+    ) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 function appendInboxRow(filePath, row) {
   return withFileLockSync(filePath, () => {
     const current = readJson(filePath, []);
@@ -263,6 +302,10 @@ function appendInboxRow(filePath, row) {
     const duplicate = getRuntimeDeliveryDuplicate(list, row);
     if (duplicate) {
       return { row: duplicate, deduplicated: true };
+    }
+    const repeated = getRepeatedMessageDuplicate(list, row);
+    if (repeated) {
+      return { row: repeated, deduplicated: true, repeated: true };
     }
 
     list.push(row);
@@ -296,7 +339,9 @@ function sendInboxMessage(paths, flags) {
       ? {
           deduplicated: true,
           duplicateOfMessageId: appended.row.messageId,
-          deduplicationNotice: RUNTIME_DELIVERY_DUPLICATE_NOTICE,
+          deduplicationNotice: appended.repeated
+            ? REPEATED_MESSAGE_NOTICE
+            : RUNTIME_DELIVERY_DUPLICATE_NOTICE,
         }
       : {}),
   };

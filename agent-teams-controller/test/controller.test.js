@@ -3751,6 +3751,49 @@ controller.messages.sendMessage({
     ]);
   });
 
+  it('suppresses an identical message from the same sender to the same recipient within 30 minutes', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'ALL DONE',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'notice-1',
+    });
+    expect(first.deduplicated).toBeUndefined();
+
+    const repeat = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'ALL DONE' });
+    expect(repeat.deduplicated).toBe(true);
+    expect(repeat.duplicateOfMessageId).toBe(first.messageId);
+    expect(repeat.deduplicationNotice).toContain('Duplicate message ignored');
+
+    const rephrased = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'ALL DONE - docs/PROJECT_SUMMARY.md is written.',
+    });
+    expect(rephrased.deduplicated).toBeUndefined();
+
+    const inbox = JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json'), 'utf8')
+    );
+    expect(inbox.map((row) => row.text)).toEqual([
+      'ALL DONE',
+      'ALL DONE - docs/PROJECT_SUMMARY.md is written.',
+    ]);
+
+    const old = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'ping',
+      timestamp: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
+    });
+    expect(old.deduplicated).toBeUndefined();
+    const fresh = controller.messages.sendMessage({ to: 'bob', from: 'alice', text: 'ping' });
+    expect(fresh.deduplicated).toBeUndefined();
+  });
+
   it('does not record pending work sync intents for app-side validation rejections', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
