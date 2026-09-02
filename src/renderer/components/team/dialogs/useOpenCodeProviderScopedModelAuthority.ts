@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { clearMemberModelOverrides } from '@renderer/components/team/members/MembersEditorSection';
 import { isProviderModelCatalogExactReady } from '@shared/utils/providerStatusAuthority';
 
-import type { CliProviderStatus } from '@shared/types';
+import {
+  clearInheritedMemberModelsUnavailableForProvider,
+  getSelectedOpenCodeModels,
+} from './memberModelScope';
+
+import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
+import type { TeamModelRuntimeProviderStatus } from '@renderer/utils/teamModelAvailability';
+import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 export type OpenCodeProviderScopedStatusListener = (
   sourceProviderId: string,
@@ -29,10 +37,7 @@ function createEmptyScopedAuthorityState(scopeKey: string): ScopedAuthorityState
   };
 }
 
-function pruneExpiredContributions(
-  state: ScopedAuthorityState,
-  now: number
-): ScopedAuthorityState {
+function pruneExpiredContributions(state: ScopedAuthorityState, now: number): ScopedAuthorityState {
   const contributionsBySourceId = new Map<string, ReadonlyMap<symbol, CliProviderStatus>>();
   const retainedStatusBySourceId = new Map<string, CliProviderStatus>();
   const sourceIds = new Set([
@@ -148,6 +153,79 @@ export function useOpenCodeProviderScopedModelAuthority(projectPath: string | nu
   );
 
   return [statusBySourceId, publishStatus] as const;
+}
+
+interface OpenCodeProviderScopedDialogModelStateOptions {
+  projectPath: string | null | undefined;
+  members: readonly MemberDraft[];
+  syncModelsWithLead: boolean;
+  selectedProviderId: TeamProviderId;
+  selectedModel: string | null | undefined;
+  runtimeProviderStatusById: ReadonlyMap<
+    TeamProviderId,
+    TeamModelRuntimeProviderStatus | null | undefined
+  >;
+  deferredProviderIds?: ReadonlySet<TeamProviderId>;
+  openCodeLocalProviderIds?: ReadonlySet<string>;
+  openCodeLocalProviderLookupAuthoritative?: boolean;
+}
+
+export function useOpenCodeProviderScopedDialogModelState({
+  projectPath,
+  members,
+  syncModelsWithLead,
+  selectedProviderId,
+  selectedModel,
+  runtimeProviderStatusById,
+  deferredProviderIds,
+  openCodeLocalProviderIds,
+  openCodeLocalProviderLookupAuthoritative,
+}: OpenCodeProviderScopedDialogModelStateOptions) {
+  const [openCodeProviderScopedStatusBySourceId, handleOpenCodeProviderScopedStatusChange] =
+    useOpenCodeProviderScopedModelAuthority(projectPath);
+  const effectiveMemberDrafts = useMemo(() => {
+    const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
+    return clearInheritedMemberModelsUnavailableForProvider({
+      members: [...scopedMembers],
+      selectedProviderId,
+      runtimeProviderStatusById,
+      deferredProviderIds,
+      openCodeLocalProviderIds,
+      openCodeLocalProviderLookupAuthoritative,
+      openCodeProviderScopedStatusBySourceId,
+    }).members;
+  }, [
+    deferredProviderIds,
+    members,
+    openCodeLocalProviderIds,
+    openCodeLocalProviderLookupAuthoritative,
+    openCodeProviderScopedStatusBySourceId,
+    runtimeProviderStatusById,
+    selectedProviderId,
+    syncModelsWithLead,
+  ]);
+  const openCodePreparationEvidence = useMemo(
+    () => ({
+      selectedModels: getSelectedOpenCodeModels(
+        selectedProviderId,
+        selectedModel,
+        effectiveMemberDrafts
+      ),
+      scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
+    }),
+    [
+      effectiveMemberDrafts,
+      openCodeProviderScopedStatusBySourceId,
+      selectedModel,
+      selectedProviderId,
+    ]
+  );
+  return {
+    effectiveMemberDrafts,
+    handleOpenCodeProviderScopedStatusChange,
+    openCodePreparationEvidence,
+    openCodeProviderScopedStatusBySourceId,
+  };
 }
 
 export function usePublishOpenCodeProviderScopedStatus(

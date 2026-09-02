@@ -1,4 +1,4 @@
-import React, { act } from 'react';
+import React, { act, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,13 +13,13 @@ import type { CliProviderStatus } from '@shared/types';
 
 const START = new Date('2026-09-02T00:00:00.000Z').getTime();
 let statuses: ReadonlyMap<string, CliProviderStatus> = new Map();
-let listener: OpenCodeProviderScopedStatusListener | undefined;
 
 type CatalogState = 'fresh' | 'loading' | 'stale';
 interface PublisherProps {
   id: string;
   status: CliProviderStatus;
   catalogState?: CatalogState;
+  statusListener?: OpenCodeProviderScopedStatusListener;
 }
 
 function buildStatus(model: string, lifetimeMs: number): CliProviderStatus {
@@ -43,28 +43,48 @@ function buildStatus(model: string, lifetimeMs: number): CliProviderStatus {
   } as unknown as CliProviderStatus;
 }
 
-function Publisher({ id, status, catalogState = 'fresh' }: PublisherProps) {
+const Publisher = ({
+  id,
+  status,
+  catalogState = 'fresh',
+  statusListener,
+}: PublisherProps): React.JSX.Element | null => {
   usePublishOpenCodeProviderScopedStatus(
-    listener,
+    statusListener,
     id,
     catalogState === 'fresh' ? status : null,
     catalogState !== 'stale'
   );
   return null;
-}
+};
 
-function Harness({ projectPath, publishers }: { projectPath: string; publishers: PublisherProps[] }) {
-  [statuses, listener] = useOpenCodeProviderScopedModelAuthority(projectPath);
+const Harness = ({
+  projectPath,
+  publishers,
+}: {
+  projectPath: string;
+  publishers: PublisherProps[];
+}) => {
+  const [capturedStatuses, capturedListener] = useOpenCodeProviderScopedModelAuthority(projectPath);
+  useEffect(() => {
+    statuses = capturedStatuses;
+  }, [capturedStatuses]);
   return publishers.map((publisher) => (
-    <Publisher key={publisher.id + publisher.status.models[0]} {...publisher} />
+    <Publisher
+      key={publisher.id + publisher.status.models[0]}
+      {...publisher}
+      statusListener={capturedListener}
+    />
   ));
-}
+};
 
 async function renderHarness(projectPath: string, publishers: PublisherProps[]) {
   const host = document.createElement('div');
   const root = createRoot(host);
   const render = async (nextPath: string, nextPublishers: PublisherProps[]) => {
-    await act(async () => root.render(<Harness projectPath={nextPath} publishers={nextPublishers} />));
+    await act(async () =>
+      root.render(<Harness projectPath={nextPath} publishers={nextPublishers} />)
+    );
   };
   await render(projectPath, publishers);
   return {
@@ -80,7 +100,6 @@ beforeEach(() => {
   vi.setSystemTime(START);
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   statuses = new Map();
-  listener = undefined;
 });
 
 afterEach(() => {

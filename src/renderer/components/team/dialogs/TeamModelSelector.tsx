@@ -2482,9 +2482,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     };
     if (effectiveProviderId === 'opencode') {
       for (const metadata of openCodeModelMetadata) {
-        if (!metadata.option.value.trim() || !metadata.sourceInfo) {
-          continue;
-        }
+        if (!metadata.option.value.trim() || !metadata.sourceInfo) continue;
         addModel(metadata.sourceInfo.id, metadata.option.value);
       }
     }

@@ -27,7 +27,6 @@ import {
   buildMemberDraftColorMap,
   buildMemberDraftSuggestions,
   buildMembersFromDrafts,
-  clearMemberModelOverrides,
   createMemberDraftsFromInputs,
   filterEditableMemberInputs,
   normalizeLeadProviderForMode,
@@ -111,7 +110,6 @@ import {
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
-  getSelectedOpenCodeModels,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
@@ -167,7 +165,7 @@ import {
 } from './TeamModelSelector';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
-import { useOpenCodeProviderScopedModelAuthority } from './useOpenCodeProviderScopedModelAuthority';
+import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
 import {
   getWorktreeGitBlockingMessage,
   getWorktreeGitControlDisabledReason,
@@ -490,33 +488,25 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     selectedProviderId,
     members: membersDrafts,
   });
-  const [openCodeProviderScopedStatusBySourceId, handleOpenCodeProviderScopedStatusChange] =
-    useOpenCodeProviderScopedModelAuthority(effectiveCwd);
   const memberModelNormalizationDeferredProviderIds = useMemo<ReadonlySet<TeamProviderId>>(
     () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
     [codexSnapshotPending]
   );
-  const effectiveMemberDrafts = useMemo(() => {
-    const scopedMembers = syncModelsWithLead
-      ? membersDrafts.map(clearMemberModelOverrides)
-      : membersDrafts;
-    return clearInheritedMemberModelsUnavailableForProvider({
-      members: scopedMembers,
-      selectedProviderId,
-      runtimeProviderStatusById,
-      deferredProviderIds: memberModelNormalizationDeferredProviderIds,
-      ...openCodeLocalModelScope,
-      openCodeProviderScopedStatusBySourceId,
-    }).members;
-  }, [
-    memberModelNormalizationDeferredProviderIds,
-    membersDrafts,
-    openCodeLocalModelScope,
+  const {
+    effectiveMemberDrafts,
+    handleOpenCodeProviderScopedStatusChange,
+    openCodePreparationEvidence,
     openCodeProviderScopedStatusBySourceId,
-    runtimeProviderStatusById,
-    selectedProviderId,
+  } = useOpenCodeProviderScopedDialogModelState({
+    projectPath: effectiveCwd,
+    members: membersDrafts,
     syncModelsWithLead,
-  ]);
+    selectedProviderId,
+    selectedModel,
+    runtimeProviderStatusById,
+    deferredProviderIds: memberModelNormalizationDeferredProviderIds,
+    ...openCodeLocalModelScope,
+  });
   const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
   const selectedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
@@ -531,22 +521,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             ])
           ),
     [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
-  );
-  const openCodePreparationEvidence = useMemo(
-    () => ({
-      selectedModels: getSelectedOpenCodeModels(
-        selectedProviderId,
-        selectedModel,
-        effectiveMemberDrafts
-      ),
-      scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
-    }),
-    [
-      effectiveMemberDrafts,
-      openCodeProviderScopedStatusBySourceId,
-      selectedModel,
-      selectedProviderId,
-    ]
   );
   const launchGuard = createLaunchGuard(
     selectedMemberProviders,

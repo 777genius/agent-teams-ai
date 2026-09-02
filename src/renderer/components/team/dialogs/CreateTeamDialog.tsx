@@ -113,7 +113,6 @@ import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelO
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
-  getSelectedOpenCodeModels,
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
@@ -164,7 +163,7 @@ import { computeEffectiveTeamModel } from './TeamModelSelector';
 import { getNextSuggestedTeamName } from './teamNameSets';
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
-import { useOpenCodeProviderScopedModelAuthority } from './useOpenCodeProviderScopedModelAuthority';
+import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
 import {
   getWorktreeGitBlockingMessage,
   getWorktreeGitControlDisabledReason,
@@ -733,8 +732,6 @@ export const CreateTeamDialog = ({
     selectedProviderId,
     members,
   });
-  const [openCodeProviderScopedStatusBySourceId, handleOpenCodeProviderScopedStatusChange] =
-    useOpenCodeProviderScopedModelAuthority(effectiveCwd);
   const memberModelNormalizationDeferredProviderIds = useMemo<ReadonlySet<TeamProviderId>>(
     () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
     [codexSnapshotPending]
@@ -755,25 +752,21 @@ export const CreateTeamDialog = ({
       clearProvisioningError?.(dialogTeamNameKey);
     }
   }, [open, clearProvisioningError, dialogTeamNameKey]);
-  const effectiveMemberDrafts = useMemo(() => {
-    const scopedMembers = syncModelsWithLead ? members.map(clearMemberModelOverrides) : members;
-    return clearInheritedMemberModelsUnavailableForProvider({
-      members: scopedMembers,
-      selectedProviderId,
-      runtimeProviderStatusById,
-      deferredProviderIds: memberModelNormalizationDeferredProviderIds,
-      ...openCodeLocalModelScope,
-      openCodeProviderScopedStatusBySourceId,
-    }).members;
-  }, [
-    memberModelNormalizationDeferredProviderIds,
-    members,
-    openCodeLocalModelScope,
+  const {
+    effectiveMemberDrafts,
+    handleOpenCodeProviderScopedStatusChange,
+    openCodePreparationEvidence,
     openCodeProviderScopedStatusBySourceId,
-    runtimeProviderStatusById,
-    selectedProviderId,
+  } = useOpenCodeProviderScopedDialogModelState({
+    projectPath: effectiveCwd,
+    members,
     syncModelsWithLead,
-  ]);
+    selectedProviderId,
+    selectedModel,
+    runtimeProviderStatusById,
+    deferredProviderIds: memberModelNormalizationDeferredProviderIds,
+    ...openCodeLocalModelScope,
+  });
   const memberWorkspaceInfo = useMemberWorkspaceInfo({
     open: open && !soloTeam,
     members: effectiveMemberDrafts,
@@ -811,22 +804,6 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
-  const openCodePreparationEvidence = useMemo(
-    () => ({
-      selectedModels: getSelectedOpenCodeModels(
-        selectedProviderId,
-        selectedModel,
-        effectiveMemberDrafts
-      ),
-      scopedStatusBySourceId: openCodeProviderScopedStatusBySourceId,
-    }),
-    [
-      effectiveMemberDrafts,
-      openCodeProviderScopedStatusBySourceId,
-      selectedModel,
-      selectedProviderId,
-    ]
-  );
   const launchGuard = createLaunchGuard(
     selectedMemberProviders,
     runtimeProviderStatusById,

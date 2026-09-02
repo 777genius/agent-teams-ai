@@ -553,7 +553,7 @@ async function realContractHarness(scenario: string, publicationFailure?: Error)
   } as unknown as OpenCodeBridgeCommandLedger & Record<string, ReturnType<typeof vi.fn>>;
   let leaseNumber = 0;
   const leaseStore = {
-    acquire: vi.fn(async (input: Record<string, unknown>) => ({
+    acquire: vi.fn((input: Record<string, unknown>) => Promise.resolve({
       ...input,
       leaseId: `issue443-lease-${++leaseNumber}`,
       laneId: input.laneId ?? null,
@@ -591,10 +591,11 @@ async function realContractHarness(scenario: string, publicationFailure?: Error)
     fake,
     ledger,
     async launch(input: TeamRuntimeLaunchInput) {
+      const requestedLaneId = input.laneId?.trim();
       await setOpenCodeRuntimeActiveRunManifest({
         teamsBasePath,
         teamName: input.teamName,
-        laneId: input.laneId?.trim() || 'primary',
+        laneId: requestedLaneId && requestedLaneId.length > 0 ? requestedLaneId : 'primary',
         runId: input.runId,
       });
       return adapter.launch(input);
