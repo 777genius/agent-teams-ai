@@ -19,7 +19,11 @@ import {
   selectOpenCodeInboxRelayBatch,
 } from './TeamProvisioningInboxRelayPolicy';
 import { type OpenCodeInboxAttachmentPayloadsResult } from './TeamProvisioningOpenCodeAttachmentPayloads';
-import { findNextUnreadUserMessageIndex } from './TeamProvisioningOpenCodeInboxCoalescePolicy';
+import {
+  buildOpenCodeCoalescedNoticeText,
+  findNextUnreadUserMessageIndex,
+  selectOpenCodeReplyOptionalCoalescedFollowers,
+} from './TeamProvisioningOpenCodeInboxCoalescePolicy';
 import {
   getActiveOpenCodeMemberInboxRelayWork,
   registerOpenCodeMemberInboxRelayWork,
@@ -554,9 +558,46 @@ async function runOpenCodeMemberInboxRelayWork(
     if (!isCurrentGeneration()) {
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
+    // Reply-optional notices (system/task notifications, teammate reports)
+    // that queued up behind this one ride along in the same prompt: one runtime
+    // turn instead of one per notice. Draining them one at a time made the lead
+    // spend a full turn on every done/started/comment notification, and each
+    // turn is memoryless, so it kept re-answering the same finished work.
+    const coalesced = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread,
+      index,
+      anchorReplyRecipient: deliveryDecision.replyRecipient,
+      ports: {
+        resolveReplyRecipient: (candidate) =>
+          resolveOpenCodeMemberInboxDeliveryDecision({
+            memberName,
+            message: candidate,
+            existingRecord: null,
+            deliveryMetadata: options.deliveryMetadata,
+            inferredTaskRefs: [],
+            source: options.source,
+          }).replyRecipient,
+        hasExistingRecord: async (candidate) =>
+          Boolean(
+            await promptLedger
+              .getByInboxMessage({
+                teamName,
+                memberName: memberIdentity.canonicalMemberName,
+                laneId: memberIdentity.laneId,
+                inboxMessageId: candidate.messageId,
+              })
+              .catch(() => null)
+          ),
+      },
+    });
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
     const delivery = await ports.deliverOpenCodeMemberMessage(teamName, {
       memberName,
-      text: message.text,
+      text: coalesced.length
+        ? buildOpenCodeCoalescedNoticeText(message.text, coalesced)
+        : message.text,
       messageId: message.messageId,
       replyRecipient: deliveryDecision.replyRecipient,
       actionMode: deliveryDecision.actionMode ?? undefined,
@@ -572,6 +613,26 @@ async function runOpenCodeMemberInboxRelayWork(
       return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
     }
     result.lastDelivery = delivery;
+    if (delivery.delivered && coalesced.length > 0) {
+      try {
+        await ports.markInboxMessagesRead(teamName, memberName, coalesced);
+        result.relayed += coalesced.length;
+        result.diagnostics = [
+          ...(result.diagnostics ?? []),
+          `opencode_inbox_relay_coalesced_notices: ${message.messageId} += ${coalesced
+            .map((candidate) => candidate.messageId)
+            .join(',')}`,
+        ];
+      } catch (error) {
+        // The riders stay unread and become their own anchors on the next pass.
+        // The anchor's own read-commit below is unaffected.
+        ports.logWarning(
+          `[${teamName}] OpenCode inbox relay could not mark coalesced notices read for ${memberName}: ${ports.getErrorMessage(
+            error
+          )}`
+        );
+      }
+    }
     if (!delivery.delivered) {
       const failureProjection = projectOpenCodeInboxDeliveryFailure({
         delivery,

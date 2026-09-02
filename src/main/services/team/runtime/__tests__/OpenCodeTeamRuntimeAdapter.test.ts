@@ -210,6 +210,9 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).toContain('Do NOT reply by default');
     expect(text).toContain('"no further work"');
     expect(text).toContain('Reply ONLY if the report asks you a direct question');
+    // The final user message is tied to the report that completed the board, so
+    // a memoryless turn cannot re-send it for a board that was already done.
+    expect(text).toContain('If the board was already complete before this report');
     expect(text).toContain('"to":"alice"');
     expect(text).toContain('to="user"');
     expect(text).not.toContain('Required message_send argument envelope');

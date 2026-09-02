@@ -1,0 +1,243 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import {
+  buildOpenCodeCoalescedNoticeText,
+  COALESCABLE_MESSAGE_KINDS,
+  findNextUnreadUserMessageIndex,
+  isCoalescableNoticeKind,
+  OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT,
+  type OpenCodeReplyOptionalCoalescePorts,
+  selectOpenCodeReplyOptionalCoalescedFollowers,
+} from '../TeamProvisioningOpenCodeInboxCoalescePolicy';
+
+import type { RelayInboxMessage } from '../TeamProvisioningInboxRelayPolicy';
+
+function message(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage {
+  return {
+    from: 'Scribe',
+    to: 'team-lead',
+    text: 'section 2 done',
+    timestamp: '2026-01-01T00:00:00.000Z',
+    read: false,
+    messageId: 'message-1',
+    ...overrides,
+  };
+}
+
+function notices(count: number, prefix = 'notice'): RelayInboxMessage[] {
+  return Array.from({ length: count }, (_unused, index) =>
+    message({
+      messageId: `${prefix}-${index + 1}`,
+      text: `notice body ${index + 1}`,
+      timestamp: `2026-01-01T00:00:0${index}.000Z`,
+    })
+  );
+}
+
+function createPorts(
+  overrides: Partial<OpenCodeReplyOptionalCoalescePorts> = {}
+): OpenCodeReplyOptionalCoalescePorts {
+  return {
+    resolveReplyRecipient: () => 'Scribe',
+    hasExistingRecord: vi.fn().mockResolvedValue(false),
+    ...overrides,
+  };
+}
+
+describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
+  it('coalesces the reply-optional notices queued behind the anchor', async () => {
+    const unread = [message({ messageId: 'anchor' }), ...notices(3)];
+
+    const followers = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread,
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+
+    expect(followers.map((follower) => follower.messageId)).toEqual([
+      'notice-1',
+      'notice-2',
+      'notice-3',
+    ]);
+  });
+
+  it('never coalesces into a reply-required anchor', async () => {
+    const unread = [message({ messageId: 'anchor', from: 'user' }), ...notices(2)];
+
+    const followers = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread,
+      index: 0,
+      anchorReplyRecipient: 'user',
+      ports: createPorts(),
+    });
+
+    expect(followers).toEqual([]);
+  });
+
+  // Negative control 1: the walk stops at the first reply-required row instead
+  // of skipping it, so that row keeps its own prompt and its own reply contract.
+  it('stops coalescing at a reply-required message and leaves everything behind it out', async () => {
+    const unread = [
+      message({ messageId: 'anchor' }),
+      message({ messageId: 'notice-1' }),
+      message({ messageId: 'user-question', from: 'user', text: 'status?' }),
+      message({ messageId: 'notice-2' }),
+    ];
+
+    const followers = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread,
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts({
+        resolveReplyRecipient: (candidate) => (candidate.from === 'user' ? 'user' : 'Scribe'),
+      }),
+    });
+
+    // notice-2 sits behind the user question and is deliberately not pulled
+    // forward: coalescing must never reorder the inbox.
+    expect(followers.map((follower) => follower.messageId)).toEqual(['notice-1']);
+  });
+
+  // Negative control 2: the limit is a hard boundary, tested on both sides.
+  it('coalesces up to the limit and leaves the message past it for the next pass', async () => {
+    expect(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT).toBe(8);
+
+    const atLimit = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread: [
+        message({ messageId: 'anchor' }),
+        ...notices(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT),
+      ],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+    expect(atLimit).toHaveLength(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT);
+    expect(atLimit.at(-1)?.messageId).toBe(`notice-${OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT}`);
+
+    const pastLimit = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread: [
+        message({ messageId: 'anchor' }),
+        ...notices(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT + 1),
+      ],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+    expect(pastLimit).toHaveLength(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT);
+    expect(pastLimit.map((follower) => follower.messageId)).not.toContain(
+      `notice-${OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT + 1}`
+    );
+  });
+
+  // Negative control 4: every kind outside the allowlist carries its own
+  // delivery contract and must never ride inside somebody else's prompt.
+  it('never coalesces a message kind outside the allowlist, as anchor or as rider', async () => {
+    expect([...COALESCABLE_MESSAGE_KINDS]).toEqual(['default', 'task_comment_notification']);
+    expect(isCoalescableNoticeKind(message({ messageKind: 'member_work_sync_nudge' }))).toBe(false);
+    expect(isCoalescableNoticeKind(message({ messageKind: 'task_comment_notification' }))).toBe(
+      true
+    );
+    // An inbox row without an explicit kind is an ordinary message.
+    expect(isCoalescableNoticeKind(message())).toBe(true);
+
+    const riders = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread: [
+        message({ messageId: 'anchor' }),
+        message({ messageId: 'nudge', messageKind: 'member_work_sync_nudge' }),
+        message({ messageId: 'notice-1' }),
+      ],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+    expect(riders).toEqual([]);
+
+    const fromNudgeAnchor = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread: [
+        message({ messageId: 'nudge', messageKind: 'member_work_sync_nudge' }),
+        message({ messageId: 'notice-1' }),
+      ],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+    expect(fromNudgeAnchor).toEqual([]);
+  });
+
+  it('stops at an already read row, an empty row, and a row that already has a ledger record', async () => {
+    const alreadyRead = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread: [
+        message({ messageId: 'anchor' }),
+        message({ messageId: 'notice-1', read: true }),
+        message({ messageId: 'notice-2' }),
+      ],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+    expect(alreadyRead).toEqual([]);
+
+    const blank = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread: [message({ messageId: 'anchor' }), message({ messageId: 'notice-1', text: '   ' })],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+    expect(blank).toEqual([]);
+
+    const withRecord = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread: [
+        message({ messageId: 'anchor' }),
+        message({ messageId: 'notice-1' }),
+        message({ messageId: 'notice-2' }),
+      ],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts({
+        hasExistingRecord: (candidate) => Promise.resolve(candidate.messageId === 'notice-1'),
+      }),
+    });
+    expect(withRecord).toEqual([]);
+  });
+
+  it('builds one tagged block that keeps the anchor text first and names every rider', () => {
+    const text = buildOpenCodeCoalescedNoticeText('anchor body', [
+      message({ messageId: 'notice-1', from: 'Scribe', text: 'first rider' }),
+      message({
+        messageId: 'notice-2',
+        from: '   ',
+        text: 'second rider',
+        timestamp: '2026-01-01T00:00:05.000Z',
+      }),
+    ]);
+
+    expect(text.startsWith('anchor body\n\n')).toBe(true);
+    expect(text).toContain('<opencode_coalesced_notices count="2">');
+    expect(text).toContain('--- notice 1 (from Scribe, messageId notice-1');
+    expect(text).toContain('first rider');
+    // An unaddressable sender is named as the system rather than as an empty
+    // string, so the runtime never reads a blank reply target.
+    expect(text).toContain('--- notice 2 (from system, messageId notice-2');
+    expect(text).toContain('second rider');
+    expect(text.endsWith('</opencode_coalesced_notices>')).toBe(true);
+  });
+
+  it('finds the next unread user message only for a non-user delivery', () => {
+    const unread = [
+      message({ messageId: 'notice-1' }),
+      message({ messageId: 'read-user', from: 'user', read: true }),
+      message({ messageId: 'user-2', from: 'user' }),
+    ];
+
+    expect(
+      findNextUnreadUserMessageIndex({ unread, afterIndex: 0, currentReplyRecipient: 'Scribe' })
+    ).toBe(2);
+    expect(
+      findNextUnreadUserMessageIndex({ unread, afterIndex: 0, currentReplyRecipient: 'user' })
+    ).toBe(-1);
+    expect(
+      findNextUnreadUserMessageIndex({ unread, afterIndex: 2, currentReplyRecipient: 'Scribe' })
+    ).toBe(-1);
+  });
+});
