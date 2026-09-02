@@ -93,7 +93,14 @@ export class OpenCodeRelayDiagnosticsLogGate {
     if (previous?.signature === signature && input.nowMs - previous.loggedAtMs < this.dedupMs) {
       return null;
     }
-    if (!previous && this.lastLogged.size >= this.maxTrackedKeys) {
+    if (previous) {
+      // Eviction below takes the oldest key by INSERTION, and re-setting an existing
+      // key leaves it at the position it first went in at. Deleting it first is what
+      // makes a refresh count as recent: without it a key logged a moment ago can be
+      // evicted ahead of one last logged a window ago, and the condition the operator
+      // is already reading about writes itself again.
+      this.lastLogged.delete(input.dedupKey);
+    } else if (this.lastLogged.size >= this.maxTrackedKeys) {
       const oldestKey = this.lastLogged.keys().next();
       if (!oldestKey.done) {
         this.lastLogged.delete(oldestKey.value);

@@ -101,6 +101,31 @@ describe('OpenCodeRelayDiagnosticsLogGate', () => {
   });
 
   /**
+   * Eviction reads insertion order, and a `Map` keeps a re-set key at the position
+   * it first went in at. So the key whose window was refreshed a moment ago is the
+   * one eviction reaches first, and the busiest lane in the process - the one the
+   * window exists to quieten - is the one that loses its window and writes again.
+   */
+  it('evicts the key logged longest ago, not the one refreshed most recently', () => {
+    const gate = new OpenCodeRelayDiagnosticsLogGate(OPENCODE_RELAY_DIAGNOSTICS_LOG_DEDUP_MS, 2);
+    const CHANGED = ['opencode api error: session not found'];
+    note(gate, { dedupKey: 'demo/refreshed' });
+    note(gate, { dedupKey: 'demo/quiet', nowMs: 1_000 });
+    // A changed condition writes immediately and reopens the window for that key,
+    // which makes it the most recently logged key of the two.
+    note(gate, { dedupKey: 'demo/refreshed', diagnostics: CHANGED, nowMs: 2_000 });
+
+    note(gate, { dedupKey: 'demo/newcomer', nowMs: 3_000 });
+
+    // The refreshed key kept its place and its window.
+    expect(
+      note(gate, { dedupKey: 'demo/refreshed', diagnostics: CHANGED, nowMs: 4_000 })
+    ).toBeNull();
+    // The key nobody has logged since is the one that made room.
+    expect(note(gate, { dedupKey: 'demo/quiet', nowMs: 4_000 })).not.toBeNull();
+  });
+
+  /**
    * Negative control. Expected control flow must not file itself under the
    * durable warning channel, no matter how often the lane repeats it.
    */
