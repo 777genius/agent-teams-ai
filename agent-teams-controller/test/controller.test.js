@@ -1334,7 +1334,11 @@ controller.messages.sendMessage({
     controller.review.requestReview(task.id, { from: 'team-lead' });
 
     const reviewerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
-    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8'));
+    // The reviewer here is also the lead, so the board's completion notice
+    // lands in the same inbox; this case is about the review request.
+    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8')).filter(
+      (row) => !String(row.messageId || '').startsWith('board-complete:')
+    );
 
     expect(inbox).toHaveLength(1);
     expect(inbox[0].text).toContain('<info_for_agent>');
@@ -1359,7 +1363,11 @@ controller.messages.sendMessage({
     });
 
     const reviewerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
-    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8'));
+    // The reviewer here is also the lead, so the board's completion notice
+    // lands in the same inbox; this case is about the review request.
+    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8')).filter(
+      (row) => !String(row.messageId || '').startsWith('board-complete:')
+    );
 
     expect(inbox).toHaveLength(1);
     expect(inbox[0].leadSessionId).toBe('lead-session-1');
@@ -4145,6 +4153,48 @@ controller.messages.sendMessage({
     });
     expect(toTeammate.deduplicated).toBeUndefined();
     expect(restatedToTeammate.deduplicated).toBeUndefined();
+  });
+
+  it('tells the lead when the last open task completes, exactly once', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const readLeadInbox = () => {
+      const file = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+      return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    };
+    const boardNotices = () =>
+      readLeadInbox().filter((row) => String(row.messageId || '').startsWith('board-complete:'));
+
+    const first = controller.tasks.createTask({ subject: 'Write the note', owner: 'bob' });
+    const second = controller.tasks.createTask({ subject: 'Review the note', owner: 'bob' });
+
+    controller.tasks.completeTask(first.id, 'bob');
+    expect(boardNotices()).toHaveLength(0);
+
+    controller.tasks.completeTask(second.id, 'bob');
+    const notices = boardNotices();
+    expect(notices).toHaveLength(1);
+    expect(notices[0].from).toBe('system');
+    expect(notices[0].text).toContain('Board complete');
+    expect(notices[0].text).toContain(`#${second.displayId || second.id}`);
+
+    // A repeated task_complete for the same task must not produce a second one.
+    controller.tasks.completeTask(second.id, 'bob');
+    expect(boardNotices()).toHaveLength(1);
+  });
+
+  it('does not tell the lead about a board it finished itself', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const own = controller.tasks.createTask({ subject: 'Lead handles it', owner: 'alice' });
+
+    controller.tasks.completeTask(own.id, 'alice');
+
+    const file = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+    const rows = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    expect(rows.filter((row) => String(row.messageId || '').startsWith('board-complete:'))).toEqual(
+      []
+    );
   });
 
   it('does not record pending work sync intents for app-side validation rejections', async () => {

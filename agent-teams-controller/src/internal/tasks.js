@@ -1,6 +1,7 @@
 const taskStore = require('./taskStore.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const messages = require('./messages.js');
+const messageStore = require('./messageStore.js');
 const processStore = require('./processStore.js');
 const kanbanStore = require('./kanbanStore.js');
 const agenda = require('./agenda.js');
@@ -538,12 +539,84 @@ function notifyUnblockedOwners(context, completedTask) {
     }
 }
 
+/**
+ * Tell the lead the board is finished.
+ *
+ * A task with dependents wakes them through notifyUnblockedOwners, and every
+ * teammate briefing asks the owner to message the lead after task_complete -
+ * but that is prompt compliance. Observed on a live mixed run: the reviewer
+ * messaged the lead BEFORE completing and sent its completion note to the user
+ * instead, so the last task closed with the lead idle. Every task was done, the
+ * lead was never woken again, and the run never produced its final message.
+ *
+ * The last task reaching a terminal state notifies the lead exactly once, from
+ * the board itself rather than from anyone's good behaviour.
+ */
+function notifyLeadWhenBoardCompleted(context, completedTask) {
+    let tasks;
+    try {
+        tasks = taskStore.listTasks(context.paths);
+    } catch {
+        return;
+    }
+    if (!Array.isArray(tasks) || tasks.length === 0) return;
+    // Work in review or waiting for a fix is not finished, even though the task
+    // itself already carries the completed status.
+    const open = tasks.filter(
+        (task) =>
+            task &&
+            task.status !== 'deleted' &&
+            (task.status !== 'completed' ||
+                task.reviewState === 'review' ||
+                task.reviewState === 'needsFix')
+    );
+    if (open.length > 0) return;
+
+    const leadName = runtimeHelpers.inferLeadName(context.paths);
+    if (!leadName) return;
+    // The owner of the last task is already looking at this board event.
+    if (isSameMember(normalizeActorName(completedTask.owner), leadName)) return;
+
+    const completedLabel = `#${completedTask.displayId || completedTask.id}`;
+    const text = [
+        `**Board complete** — ${completedLabel} _${completedTask.subject}_ was the last open task.`,
+        ``,
+        `Every task on this board is completed. Verify the board yourself before you rely on this notice.`,
+        wrapAgentBlock(
+            `This is the board's own completion signal, not a teammate report.\n` +
+            `If the work the user asked for is finished, send them your final message now.\n` +
+            `If something is still missing, create the follow-up task instead.`
+        ),
+    ].join('\n');
+
+    try {
+        messageStore.sendInboxMessage(context.paths, {
+            member: leadName,
+            from: 'system',
+            // Stable per completing task: a repeated task_complete for the same
+            // task cannot produce a second notice.
+            messageId: `board-complete:${context.teamName}:${completedTask.id}`,
+            text,
+            summary: `Board complete — ${completedLabel} was the last open task`,
+            source: 'system_notification',
+            taskRefs: [buildTaskRef(context, completedTask)].filter(Boolean),
+        });
+    } catch (error) {
+        warnNonCritical(`[tasks] board-completion notice failed for task ${completedTask.id}`, error);
+    }
+}
+
 function completeTask(context, taskId, actor) {
     const task = setTaskStatus(context, taskId, 'completed', actor);
     try {
         notifyUnblockedOwners(context, task);
     } catch (error) {
         warnNonCritical(`[tasks] dependency-resolution follow-up failed for task ${task.id}`, error);
+    }
+    try {
+        notifyLeadWhenBoardCompleted(context, task);
+    } catch (error) {
+        warnNonCritical(`[tasks] board-completion follow-up failed for task ${task.id}`, error);
     }
     return task;
 }
