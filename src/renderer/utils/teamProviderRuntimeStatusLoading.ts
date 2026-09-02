@@ -36,15 +36,20 @@ export function hasSettledOpenCodeScopedPreparation(
   evidence: OpenCodeScopedPreparationEvidence | undefined,
   now = Date.now()
 ): boolean {
-  if (providerStatus?.statusCheckOutcome !== 'model_only' || !evidence) return false;
+  if (
+    providerStatus?.statusCheckOutcome !== 'model_only' ||
+    !evidence ||
+    evidence.selectedModels.length === 0
+  ) {
+    return false;
+  }
 
   return evidence.selectedModels.every((model) => {
     const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId?.trim().toLowerCase();
     if (!sourceId) return false;
     if (
       isOpenCodeLocalProviderId(sourceId) ||
-      (evidence.localProviderLookupAuthoritative === true &&
-        evidence.localSourceIds?.has(sourceId) === true)
+      evidence.localSourceIds?.has(sourceId) === true
     ) {
       return true;
     }

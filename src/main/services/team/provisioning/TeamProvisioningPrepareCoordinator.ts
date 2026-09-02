@@ -707,6 +707,12 @@ export class TeamProvisioningPrepareCoordinator {
         effectiveMembers.push(effectiveMember);
         continue;
       }
+      if (providerId === 'opencode') {
+        throw new Error(
+          'Could not resolve the runtime default model for OpenCode teammates. ' +
+            'Select an explicit model and retry.'
+        );
+      }
 
       effectiveMembers.push({
         ...effectiveMember,

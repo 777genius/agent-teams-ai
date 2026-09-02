@@ -173,6 +173,25 @@ describe('createLaunchGuard', () => {
     expect(guard.blockers(true, NOW)).toEqual([]);
   });
 
+  it('does not authorize model-only OpenCode status without a concrete scoped model', () => {
+    const provider: CliProviderStatus = {
+      ...createReadyProvider('anthropic'),
+      providerId: 'opencode',
+      statusCheckOutcome: 'model_only',
+      runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+      capabilities: {
+        ...createReadyProvider('anthropic').capabilities,
+        teamLaunch: false,
+      },
+    };
+    const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]), {
+      selectedModels: [],
+      scopedStatusBySourceId: new Map(),
+    });
+
+    expect(guard.blocked(true, NOW)).toBe(true);
+  });
+
   it('reports stale catalog authority even when the provider has an unrelated status detail', () => {
     const provider = createReadyProvider('codex');
     const staleProvider: CliProviderStatus = {

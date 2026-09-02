@@ -224,7 +224,14 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     effort: member.effort,
     fastMode: member.fastMode,
   }),
-  clearMemberModelOverrides: (member: unknown) => member,
+  clearMemberModelOverrides: (member: any) => ({
+    ...member,
+    providerId: undefined,
+    providerBackendId: undefined,
+    model: '',
+    effort: undefined,
+    fastMode: undefined,
+  }),
   createMemberDraftsFromInputs: (
     members: Array<{
       name: string;
@@ -457,6 +464,8 @@ vi.mock('@renderer/utils/teamModelAvailability', async (importOriginal) => ({
 }));
 
 vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', () => ({
+  getOpenCodeScopedPreparationFailure: vi.fn(() => null),
+  hasSettledOpenCodeScopedPreparation: vi.fn(() => false),
   isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
 }));
 
@@ -1410,6 +1419,67 @@ describe('LaunchTeamDialog', () => {
     expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(true);
     expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
       expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('uses effective synchronized teammates when selecting providers for prepare', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      syncModelsWithLead: true,
+      members: [
+        {
+          name: 'jack',
+          role: 'developer',
+          providerId: 'opencode',
+          model: 'openrouter/auto',
+        },
+      ],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+      await flush();
+    });
+
+    const preparedProviderIds = vi
+      .mocked(runProviderPrepareDiagnostics)
+      .mock.calls.map((call) => call[0].providerId);
+    expect(preparedProviderIds).toContain('anthropic');
+    expect(preparedProviderIds).not.toContain('opencode');
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({
+        name: 'jack',
+        providerId: undefined,
+        model: '',
+      }),
     ]);
 
     await act(async () => {

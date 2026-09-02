@@ -310,6 +310,12 @@ describe('getDialogTeamModelValidationError', () => {
     ).toBe(false);
     expect(
       hasSettledOpenCodeScopedPreparation(passive, {
+        ...evidence,
+        selectedModels: [],
+      })
+    ).toBe(false);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
         ...missingEvidence,
         selectedModels: ['ollama/local-model'],
       })
@@ -328,6 +334,14 @@ describe('getDialogTeamModelValidationError', () => {
         selectedModels: ['local-lab/model'],
         localSourceIds: new Set(['local-lab']),
         localProviderLookupAuthoritative: false,
+      })
+    ).toBe(true);
+    expect(
+      hasSettledOpenCodeScopedPreparation(passive, {
+        ...missingEvidence,
+        selectedModels: ['unknown-local/model'],
+        localSourceIds: new Set(['local-lab']),
+        localProviderLookupAuthoritative: true,
       })
     ).toBe(false);
   });

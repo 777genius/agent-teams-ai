@@ -492,19 +492,19 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     () => (codexSnapshotPending ? new Set<TeamProviderId>(['codex']) : new Set()),
     [codexSnapshotPending]
   );
-  const selectedMemberProviders = useMemo<TeamProviderId[]>(
+  const requestedMemberProviders = useMemo<TeamProviderId[]>(
     () =>
       !multimodelEnabled
         ? ['anthropic']
         : Array.from(
             new Set([
               selectedProviderId,
-              ...membersDrafts.flatMap((member) =>
+              ...(syncModelsWithLead ? [] : membersDrafts).flatMap((member) =>
                 !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
               ),
             ])
           ),
-    [membersDrafts, multimodelEnabled, selectedProviderId]
+    [membersDrafts, multimodelEnabled, selectedProviderId, syncModelsWithLead]
   );
   const {
     effectiveMemberDrafts,
@@ -515,9 +515,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
     catalogEnabled:
-      open && isLaunchMode && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+      open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode'),
     passiveStatusPrefetchEnabled:
-      open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+      open && multimodelEnabled && requestedMemberProviders.includes('opencode'),
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members: membersDrafts,
     syncModelsWithLead,
@@ -527,6 +527,20 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     deferredProviderIds: memberModelNormalizationDeferredProviderIds,
     ...openCodeLocalModelScope,
   });
+  const selectedMemberProviders = useMemo<TeamProviderId[]>(
+    () =>
+      !multimodelEnabled
+        ? ['anthropic']
+        : Array.from(
+            new Set([
+              selectedProviderId,
+              ...effectiveMemberDrafts.flatMap((member) =>
+                !member.removedAt && isTeamProviderId(member.providerId) ? [member.providerId] : []
+              ),
+            ])
+          ),
+    [effectiveMemberDrafts, multimodelEnabled, selectedProviderId]
+  );
   const tmuxRuntime = useTmuxRuntimeReadiness(open && isLaunchMode);
   const launchGuard = createLaunchGuard(
     selectedMemberProviders,

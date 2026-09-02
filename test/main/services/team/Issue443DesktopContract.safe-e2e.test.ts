@@ -27,6 +27,7 @@ import {
   setOpenCodeRuntimeActiveRunManifest,
 } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
+import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -119,31 +120,88 @@ afterEach(async () => {
 });
 
 describe('issue #443 Desktop real child-process wire contract', () => {
-  it('keeps provider status passive and rejects legacy OpenCode inventory hydration', async () => {
+  it('authorizes model-only OpenCode status only with scoped model evidence', async () => {
     const fake = await createFake('valid');
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
 
-    const selected = await new ClaudeMultimodelBridgeService().getProviderStatus(
+    const passive = await new ClaudeMultimodelBridgeService().getProviderStatus(
       fake.executable,
       'opencode',
       undefined,
       { projectPath: fake.project }
     );
-
-    expect(selected).toMatchObject({
+    expect(passive).toMatchObject({
       providerId: 'opencode',
-      statusCheckOutcome: 'authoritative',
-      modelCatalog: { defaultLaunchModel: MODEL },
-      capabilities: { teamLaunch: true },
+      statusCheckOutcome: 'model_only',
+      modelCatalog: null,
+      capabilities: { teamLaunch: false },
     });
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), {
+        selectedModels: [],
+        scopedStatusBySourceId: new Map(),
+      }).blocked(true)
+    ).toBe(true);
+
+    const scopedResponse = await providerManagementDesktopHarness().bridge.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      requestGroupId: 'issue443-scoped-authority',
+    });
+    expect(scopedResponse.error).toBeUndefined();
+    const scopedStatus: CliProviderStatus = {
+      ...passive,
+      models: [MODEL],
+      modelAvailability: [{ modelId: MODEL, status: 'available' }],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: NOW,
+        staleAt: '2099-01-01T00:00:00.000Z',
+        defaultModelId: MODEL,
+        defaultLaunchModel: MODEL,
+        models: [
+          {
+            id: MODEL,
+            launchModel: MODEL,
+            displayName: MODEL,
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), {
+        selectedModels: [MODEL],
+        scopedStatusBySourceId: new Map([['deepinfra', scopedStatus]]),
+      }).blocked(true)
+    ).toBe(false);
+
     const traces = await fake.traces();
-    expect(traces).toHaveLength(1);
-    expect(traces.every((trace) => trace.kind === 'provider-status')).toBe(true);
+    expect(traces.map((trace) => trace.kind)).toEqual(['provider-status', 'provider-models']);
     expect(traces.every((trace) => trace.cwd === fake.project)).toBe(true);
-    expect(traces.map((trace) => trace.argv)).toEqual([
-      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+    expect(traces[0].argv).toEqual([
+      'runtime',
+      'status',
+      '--json',
+      '--provider',
+      'opencode',
+      '--summary',
     ]);
+    expect(traces[1].argv).toContain('deepinfra');
     assertProcessesExited(traces);
   });
 
@@ -217,14 +275,14 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
-  it('cancels a superseded provider process and loads built-in OpenCode Zen only', async () => {
+  it('cancels an old request group while a replacement group loads built-in OpenCode Zen', async () => {
     const fake = await createFake('slow-catalog');
     const desktop = providerManagementDesktopHarness();
     const slowDeepInfra = desktop.bridge.loadModels({
       runtimeId: 'opencode',
       providerId: 'deepinfra',
       projectPath: fake.project,
-      requestGroupId: 'issue443-selected-provider',
+      requestGroupId: 'issue443-selected-provider-old',
     });
     await vi.waitFor(
       async () => {
@@ -234,13 +292,16 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       { timeout: 5_000, interval: 25 }
     );
 
-    const builtIn = await desktop.bridge.loadModels({
+    const builtInPromise = desktop.bridge.loadModels({
       runtimeId: 'opencode',
       providerId: 'opencode',
       projectPath: fake.project,
-      requestGroupId: 'issue443-selected-provider',
+      requestGroupId: 'issue443-selected-provider-new',
     });
-    const superseded = await slowDeepInfra;
+    void desktop.bridge.cancelModelLoad({
+      requestGroupId: 'issue443-selected-provider-old',
+    });
+    const [builtIn, superseded] = await Promise.all([builtInPromise, slowDeepInfra]);
 
     expect(superseded.error).toBeDefined();
     expect(builtIn.models).toMatchObject({
@@ -258,6 +319,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     expect(desktop.invokedChannels).toEqual([
       RUNTIME_PROVIDER_MANAGEMENT_MODELS,
       RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+      RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
     ]);
     expect(traces.every((trace) => trace.cwd === fake.project)).toBe(true);
     expect(traces.map((trace) => trace.argv.slice(5, 8))).toEqual([

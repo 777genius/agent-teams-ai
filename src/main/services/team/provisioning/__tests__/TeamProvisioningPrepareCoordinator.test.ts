@@ -567,6 +567,26 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     ]);
   });
 
+  it('rejects an OpenCode default without invoking broad model discovery', async () => {
+    const resolveProviderDefaultModel = vi.fn();
+    const buildProvisioningEnv = vi.fn();
+    const coordinator = createCoordinator({
+      buildProvisioningEnv,
+      resolveProviderDefaultModel,
+    });
+
+    await expect(
+      coordinator.materializeEffectiveTeamMemberSpecs({
+        claudePath: '/fake/claude',
+        cwd: '/workspace/materialize',
+        members: [{ name: 'one', role: 'One', providerId: 'opencode' }],
+        defaults: {},
+      })
+    ).rejects.toThrow('Select an explicit model and retry');
+    expect(buildProvisioningEnv).not.toHaveBeenCalled();
+    expect(resolveProviderDefaultModel).not.toHaveBeenCalled();
+  });
+
   it('resolves missing OpenCode worktree member paths through the worktree port', async () => {
     const ensureMemberWorktree = vi
       .fn()
