@@ -111,8 +111,8 @@ import {
   deriveOpenCodeSelectionAuthorityState,
   getActiveOpenCodeStickyHeadingIndex,
   getOpenCodeModelGridColumnCount,
-  getOpenCodeSourceInfo,
   getOpenCodeSelectionAuthorityScopeKey,
+  getOpenCodeSourceInfo,
   type OpenCodeSelectionScopeAssociation,
   resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
@@ -1149,9 +1149,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading ?? {});
   const cliProviderStatusScopeRevision = useStore((s) => s.cliProviderStatusScopeRevision);
-  const invalidateCliProviderModelCatalog = useStore(
-    (s) => s.invalidateCliProviderModelCatalog
-  );
+  const invalidateCliProviderModelCatalog = useStore((s) => s.invalidateCliProviderModelCatalog);
   const fetchCliProviderStatus = useStore((s) => s.fetchCliProviderStatus);
   const openCodeRuntimeStatus = useStore((s) => s.openCodeRuntimeStatus);
   const openCodeRuntimeStatusLoading = useStore((s) => s.openCodeRuntimeStatusLoading);
