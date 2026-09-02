@@ -134,6 +134,10 @@ import { JsonTaskChangePresenceRepository } from '@main/services/team/cache/Json
 import { ChangeExtractorService } from '@main/services/team/ChangeExtractorService';
 import { CrossTeamService } from '@main/services/team/CrossTeamService';
 import { FileContentResolver } from '@main/services/team/FileContentResolver';
+import {
+  buildMemberWorkSyncReviewPickupEscalationMessageId,
+  buildMemberWorkSyncReviewPickupEscalationText,
+} from '@main/services/team/escalation/memberWorkSyncReviewPickupEscalationMessage';
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { openCodeRelayDiagnosticsLogGate } from '@main/services/team/opencode/delivery/OpenCodeRelayDiagnosticsLogGate';
 import {
@@ -168,6 +172,11 @@ import { TeamTranscriptProjectResolver } from '@main/services/team/TeamTranscrip
 import { createTeamProvisioningLeadRuntimeSettingsCapability } from '@main/services/team/provisioning/TeamProvisioningLeadRuntimeSettingsCapability';
 import { killTrackedCliProcesses } from '@main/utils/childProcess';
 import { buildMergedCliPath } from '@main/utils/cliPathMerge';
+import { extractNotificationContent } from '@main/utils/inboxNotificationContent';
+import {
+  formatTokenUsageBudgetMetricLabel,
+  formatTokenUsageBudgetValue,
+} from '@main/utils/tokenUsageBudgetNotificationText';
 import { getWindowsElevationStatus } from '@main/utils/windowsElevation';
 import {
   APP_GET_WINDOWS_ELEVATION_STATUS,
@@ -191,11 +200,9 @@ import {
   WINDOW_ZOOM_FACTOR_CHANGED_CHANNEL,
 } from '@shared/constants';
 import { shouldSuppressDesktopNotificationForInboxText } from '@shared/utils/idleNotificationSemantics';
-import { parseInboxJson } from '@shared/utils/inboxNoise';
 import { createLogger } from '@shared/utils/logger';
 import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
-import { createHash } from 'crypto';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { existsSync } from 'fs';
 import { join } from 'path';
@@ -390,22 +397,6 @@ function readOptionalEnvArgs(name: string): string[] | undefined {
   return args.length > 0 ? args : undefined;
 }
 
-function formatTokenUsageBudgetMetricLabel(metric: 'tokens' | 'apiEquivalentCostUsd'): string {
-  return metric === 'apiEquivalentCostUsd' ? 'API-equivalent' : 'token';
-}
-
-function formatTokenUsageBudgetValue(
-  value: number,
-  metric: 'tokens' | 'apiEquivalentCostUsd'
-): string {
-  if (metric === 'apiEquivalentCostUsd') {
-    return `$${value.toFixed(value >= 10 ? 0 : 2)}`;
-  }
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M tokens`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K tokens`;
-  return `${Math.round(value)} tokens`;
-}
-
 if (
   earlyElectronUserDataMigrationResult.migrated &&
   earlyElectronUserDataMigrationResult.legacyPath &&
@@ -449,68 +440,6 @@ const inboxNotifyTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const INBOX_NOTIFY_DEBOUNCE_MS = 500;
 /** Messages sent from our UI (user_sent) - suppress notifications for these. */
 const suppressedSources = new Set(['user_sent']);
-
-function buildMemberWorkSyncReviewPickupEscalationMessageId(input: {
-  teamName: string;
-  memberName: string;
-  reason: string;
-  reviewRequestEventIds?: readonly string[];
-  taskRefs: readonly { taskId: string; displayId?: string }[];
-}): string {
-  const stableKey = JSON.stringify({
-    teamName: input.teamName,
-    memberName: input.memberName.trim().toLowerCase(),
-    reason: input.reason,
-    reviewRequestEventIds: [...new Set(input.reviewRequestEventIds ?? [])].sort(),
-    taskIds: [...new Set(input.taskRefs.map((taskRef) => taskRef.taskId).filter(Boolean))].sort(),
-  });
-  const digest = createHash('sha256').update(stableKey).digest('hex').slice(0, 20);
-  return `member-work-sync-review-pickup-escalation:${digest}`;
-}
-
-function buildMemberWorkSyncReviewPickupEscalationText(input: {
-  memberName: string;
-  reason: string;
-  diagnostics?: readonly string[];
-  taskRefs: readonly { taskId: string; displayId?: string }[];
-}): string {
-  const taskLines = input.taskRefs.length
-    ? input.taskRefs
-        .map((taskRef) => `- ${taskRef.displayId ?? taskRef.taskId.slice(0, 8)}`)
-        .join('\n')
-    : '- No task refs recorded';
-  const reasonText = describeMemberWorkSyncReviewPickupEscalationReason(input.reason);
-  return [
-    'Review pickup needs lead attention.',
-    '',
-    `Reviewer: ${input.memberName}`,
-    reasonText,
-    '',
-    'Tasks:',
-    taskLines,
-    '',
-    'No review_start, review_approve, or review_request_changes was recorded for the current review request.',
-    'Consider reassigning the reviewer or sending a direct instruction.',
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
-
-function describeMemberWorkSyncReviewPickupEscalationReason(reason: string): string {
-  if (reason.startsWith('provider_not_supported:')) {
-    return 'Direct review-pickup wake is not available for this member runtime, so the lead needs to handle the stuck review.';
-  }
-  if (reason === 'review_pickup_already_delivered_still_stuck') {
-    return 'A review-pickup reminder was delivered, but the review is still waiting for a review tool action.';
-  }
-  if (reason === 'review_pickup_delivery_failed_still_stuck') {
-    return 'The review-pickup reminder could not be delivered reliably, and the review is still waiting.';
-  }
-  if (reason.includes('delivery_port_unavailable')) {
-    return 'No reliable review-pickup delivery path is available for this member runtime.';
-  }
-  return 'The current review request is still waiting for explicit review pickup.';
-}
 
 async function resolveOpenCodeRuntimeBinaryForBridgeEnv(options?: {
   includeShellEnv?: boolean;
@@ -859,25 +788,6 @@ async function resolveTeamDisplayName(teamName: string): Promise<string> {
     expiresAt: Date.now() + TEAM_DISPLAY_NAME_TTL_MS,
   });
   return resolved;
-}
-
-/**
- * Extracts human-readable summary and body from an inbox message.
- * Handles both plain text and serialized JSON ({"type":"message","content":"...","summary":"..."}).
- */
-function extractNotificationContent(text: string): { summary: string; body: string } {
-  const parsed = parseInboxJson(text);
-  if (!parsed) return { summary: text.slice(0, 80), body: text };
-
-  const content = typeof parsed.content === 'string' ? parsed.content : null;
-  const summary = typeof parsed.summary === 'string' ? parsed.summary : null;
-  const message = typeof parsed.message === 'string' ? parsed.message : null;
-
-  const bestBody = content || message || summary || text;
-  const bestSummary =
-    summary || (content ? content.slice(0, 80) : null) || message || text.slice(0, 80);
-
-  return { summary: bestSummary, body: bestBody };
 }
 
 async function notifyNewInboxMessages(teamName: string, detail: string): Promise<void> {
