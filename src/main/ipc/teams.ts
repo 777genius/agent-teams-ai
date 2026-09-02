@@ -160,6 +160,7 @@ import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService'
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
+import { softDeleteTeamWithBestEffortStop } from './teams/teamSoftDeleteFlow';
 import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,
@@ -1337,9 +1338,12 @@ async function handleDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('deleteTeam', async () => {
-    await getTeamRuntimeApi().stopTeam(validated.value!);
-    await getTeamDataService().deleteTeam(validated.value!);
-    getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
+    await softDeleteTeamWithBestEffortStop(validated.value!, {
+      stopTeam: (tn) => getTeamRuntimeApi().stopTeam(tn),
+      softDeleteTeam: (tn) => getTeamDataService().deleteTeam(tn),
+      invalidateTeamConfig: (tn) => getTeamDataWorkerClient().invalidateTeamConfig(tn),
+      logWarning: (message) => logger.warn(message),
+    });
   });
 }
 
