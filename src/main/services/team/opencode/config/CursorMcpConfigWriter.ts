@@ -4,6 +4,8 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import type { Dirent } from 'fs';
+
 /**
  * Registers the Agent Teams MCP HTTP endpoint as a real Cursor MCP server for
  * cursor-acp runs. cursor-agent only exposes the servers it finds in
@@ -73,6 +75,40 @@ type CursorJsonRead =
   | { kind: 'object'; value: Record<string, unknown> }
   | { kind: 'unparsable' };
 
+async function directoryExists(dirPath: string): Promise<boolean> {
+  return fs
+    .stat(dirPath)
+    .then((stats) => stats.isDirectory())
+    .catch(() => false);
+}
+
+/**
+ * Every profile home the app has already created. The execution proof names the
+ * project-root profile, but cursor-agent runs the lead out of the user-home
+ * profile, which is a different key, so registering only the proof home leaves
+ * the lead without tools on exactly the path that matters.
+ */
+export async function listCursorAcpProfileHomes(
+  options: ResolveCursorAcpProfileHomeOptions = {}
+): Promise<string[]> {
+  const probeHome = resolveCursorAcpProfileHome('probe', options);
+  if (!probeHome) return [];
+  const profilesDir = path.dirname(path.dirname(probeHome));
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(profilesDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const homes: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !CURSOR_ACP_PROFILE_KEY_PATTERN.test(entry.name)) continue;
+    const home = path.join(profilesDir, entry.name, 'home');
+    if (await directoryExists(home)) homes.push(home);
+  }
+  return homes;
+}
+
 async function readJsonObject(filePath: string): Promise<CursorJsonRead> {
   let raw: string;
   try {
@@ -135,11 +171,11 @@ export function stripUrlFragment(url: string): string {
 }
 
 /**
- * Launch-time hook: registers the endpoint in the execution proof's profile
- * home and in the real user home (cursor-agent resolves `~/.cursor` from the
- * redirected HOME, so both are load-bearing). Never throws; a launch must
- * proceed even when the config cannot be written, because the briefing then
- * tells the model to report the missing tools instead of scripting around them.
+ * Launch-time hook: registers the endpoint in every existing profile home and
+ * in the real user home (cursor-agent resolves `~/.cursor` from the redirected
+ * HOME, so both are load-bearing). Never throws; a launch must proceed even
+ * when the config cannot be written, because the briefing then tells the model
+ * to report the missing tools instead of scripting around them.
  */
 export async function prepareCursorAcpLaunchMcpConfig(input: {
   profileRootKey: string | undefined;
@@ -152,11 +188,14 @@ export async function prepareCursorAcpLaunchMcpConfig(input: {
   const proofHome = profileRootKey
     ? resolveCursorAcpProfileHome(profileRootKey, input.paths)
     : null;
-  if (!proofHome) {
-    logger.info('cursor-acp launch has no usable execution-proof profile key');
+  const profileHomes = Array.from(
+    new Set([...(proofHome ? [proofHome] : []), ...(await listCursorAcpProfileHomes(input.paths))])
+  );
+  if (profileHomes.length === 0) {
+    logger.info('cursor-acp launch found no per-profile Cursor home to register');
   }
   const homeDir = input.paths?.homeDir ?? os.homedir();
-  const targets = Array.from(new Set([...(proofHome ? [proofHome] : []), homeDir]));
+  const targets = Array.from(new Set([...profileHomes, homeDir]));
   logger.info(`Registering the Agent Teams MCP server in ${targets.length} Cursor home(s)`);
   for (const profileHome of targets) {
     await registerAgentTeamsMcpServer(profileHome, mcpUrl);

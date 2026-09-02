@@ -6,8 +6,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   CURSOR_AGENT_TEAMS_MCP_SERVER_NAME,
   ensureCursorAgentTeamsMcpConfig,
+  listCursorAcpProfileHomes,
   prepareCursorAcpLaunchMcpConfig,
   resolveCursorAcpProfileHome,
+  type ResolveCursorAcpProfileHomeOptions,
   stripUrlFragment,
 } from './CursorMcpConfigWriter';
 
@@ -178,6 +180,41 @@ describe('CursorMcpConfigWriter', () => {
     });
   });
 
+  describe('listCursorAcpProfileHomes', () => {
+    const buildPaths = (dataHome: string): ResolveCursorAcpProfileHomeOptions => ({
+      platform: 'linux',
+      env: { CLAUDE_MULTIMODEL_DATA_HOME: dataHome } as NodeJS.ProcessEnv,
+      homeDir: '/home/example',
+    });
+
+    const profilesDirIn = (dataHome: string): string => path.join(dataHome, 'opencode', 'profiles');
+
+    it('returns nothing when the app has never created a profile directory', async () => {
+      await expect(
+        listCursorAcpProfileHomes(buildPaths(path.join(workspace, 'absent')))
+      ).resolves.toEqual([]);
+    });
+
+    it('returns only the profile directories that already have a home', async () => {
+      const dataHome = path.join(workspace, 'data');
+      const profilesDir = profilesDirIn(dataHome);
+      await fs.mkdir(path.join(profilesDir, 'account-1', 'home'), { recursive: true });
+      await fs.mkdir(path.join(profilesDir, 'account-2', 'home'), { recursive: true });
+      // Created but never populated: the runtime has no home there to register in.
+      await fs.mkdir(path.join(profilesDir, 'account-3'), { recursive: true });
+      // A file where a profile directory would be, and a key the writer rejects.
+      await fs.writeFile(path.join(profilesDir, 'stray.txt'), 'x', 'utf8');
+      await fs.mkdir(path.join(profilesDir, 'account.4', 'home'), { recursive: true });
+
+      const homes = await listCursorAcpProfileHomes(buildPaths(dataHome));
+
+      const keys = homes
+        .map((home) => path.basename(path.dirname(home)))
+        .toSorted((a, b) => a.localeCompare(b));
+      expect(keys).toEqual(['account-1', 'account-2']);
+    });
+  });
+
   describe('stripUrlFragment', () => {
     it('removes the fragment and nothing else', () => {
       expect(stripUrlFragment('http://127.0.0.1:9999/mcp#instance-1')).toBe(
@@ -201,10 +238,13 @@ describe('CursorMcpConfigWriter', () => {
       homeDir,
     });
 
-    it('registers the endpoint in the proof profile home and in the user home', async () => {
+    it('registers the endpoint in every profile home and in the user home', async () => {
       const dataHome = path.join(workspace, 'data');
       const userHome = path.join(workspace, 'home');
       const paths = buildPaths(dataHome, userHome);
+      // The lead runs out of a different profile than the one the proof names.
+      const leadHome = resolveCursorAcpProfileHome('account-2', paths);
+      await fs.mkdir(leadHome!, { recursive: true });
 
       await prepareCursorAcpLaunchMcpConfig({
         profileRootKey: 'account-1',
@@ -214,7 +254,7 @@ describe('CursorMcpConfigWriter', () => {
 
       const profileHome = resolveCursorAcpProfileHome('account-1', paths);
       expect(profileHome).not.toBeNull();
-      for (const home of [profileHome!, userHome]) {
+      for (const home of [profileHome!, leadHome!, userHome]) {
         const written = JSON.parse(await fs.readFile(configPathIn(home), 'utf8')) as {
           mcpServers: Record<string, { url: string }>;
         };
