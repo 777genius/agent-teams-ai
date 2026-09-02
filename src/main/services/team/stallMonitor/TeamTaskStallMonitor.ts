@@ -2,6 +2,7 @@ import { createLogger } from '@shared/utils/logger';
 import { getTaskDisplayId } from '@shared/utils/taskIdentity';
 
 import {
+  getOpenCodeWeakStartStallThresholdMs,
   getTeamTaskStallActivationGraceMs,
   getTeamTaskStallScanIntervalMs,
   getTeamTaskStallStartupGraceMs,
@@ -10,6 +11,7 @@ import {
   isTeamTaskStallMonitorEnabled,
   isTeamTaskStallScannerEnabled,
 } from './featureGates';
+import { getOpenWorkInterval } from './TeamTaskStallPolicy';
 
 import type { ActiveTeamRegistry } from './ActiveTeamRegistry';
 import type { TeamTaskStallJournal } from './TeamTaskStallJournal';
@@ -35,6 +37,8 @@ interface TeamTaskStallScanRun {
 }
 
 const DEFAULT_TEAM_TASK_STALL_SCAN_TIMEOUT_MS = 2 * 60_000;
+const OPENCODE_SKIP_LOG_INTERVAL_MS = 10 * 60_000;
+const OPENCODE_HELD_ALERT_LOG_DELAY_MS = 2 * 60_000;
 
 function unrefBackgroundTimer(timer: ReturnType<typeof setTimeout>): void {
   const maybeTimer = timer as { unref?: () => void };
@@ -286,6 +290,7 @@ export class TeamTaskStallMonitor {
     for (const task of snapshot.inProgressTasks) {
       evaluations.push(this.policy.evaluateWork({ now, task, snapshot }));
     }
+    this.logOpenCodeOwnerSkips(snapshot, evaluations, now);
     for (const task of snapshot.reviewOpenTasks) {
       evaluations.push(this.policy.evaluateReview({ now, task, snapshot }));
     }
@@ -310,6 +315,7 @@ export class TeamTaskStallMonitor {
     if (!this.shouldContinueScan(scanRun)) {
       return;
     }
+    this.logOpenCodeOwnerAlertsHeldByJournal(snapshot, journalEvaluations, readyEvaluations, now);
 
     const alerts = readyEvaluations
       .map((evaluation) => this.buildAlert(snapshot, evaluation))
@@ -398,6 +404,87 @@ export class TeamTaskStallMonitor {
         teamName: snapshot.teamName,
       },
     };
+  }
+
+  /**
+   * Diagnosability: an OpenCode owner whose task has been in progress longer
+   * than the OpenCode stall threshold but was not alerted is logged at warn
+   * level (once per task and reason per cooldown) so the next "the monitor
+   * never fired" report can be read out of the error log instead of guessed at.
+   */
+  private readonly openCodeSkipLogAtByKey = new Map<string, number>();
+  private readonly heldAlertFirstSeenAtByKey = new Map<string, number>();
+
+  private shouldLogOpenCodeSkip(key: string, nowMs: number): boolean {
+    const last = this.openCodeSkipLogAtByKey.get(key);
+    if (last !== undefined && nowMs - last < OPENCODE_SKIP_LOG_INTERVAL_MS) {
+      return false;
+    }
+    this.openCodeSkipLogAtByKey.set(key, nowMs);
+    return true;
+  }
+
+  private describeOpenCodeLane(
+    snapshot: NonNullable<Awaited<ReturnType<TeamTaskStallSnapshotSource['getSnapshot']>>>,
+    owner: string | undefined
+  ): string {
+    const key = owner?.trim().toLowerCase() ?? '';
+    const idleSince = snapshot.openCodeLaneIdleSinceByMemberName?.get(key);
+    if (idleSince) return `lane idle since ${idleSince}`;
+    if (snapshot.openCodeLaneActiveMemberNames?.has(key)) return 'lane active';
+    return 'lane state unknown';
+  }
+
+  private logOpenCodeOwnerSkips(
+    snapshot: NonNullable<Awaited<ReturnType<TeamTaskStallSnapshotSource['getSnapshot']>>>,
+    evaluations: TaskStallEvaluation[],
+    now: Date
+  ): void {
+    const thresholdMs = getOpenCodeWeakStartStallThresholdMs();
+    for (const evaluation of evaluations) {
+      if (evaluation.status !== 'skip' || !evaluation.taskId) continue;
+      const task = snapshot.allTasksById.get(evaluation.taskId);
+      if (!task?.owner || task.status !== 'in_progress') continue;
+      const ownerProviderId = snapshot.providerByMemberName.get(task.owner.trim().toLowerCase());
+      if (ownerProviderId !== 'opencode') continue;
+      const startedAt = getOpenWorkInterval(task)?.startedAt;
+      const inProgressMs = startedAt ? now.getTime() - Date.parse(startedAt) : Number.NaN;
+      if (!Number.isFinite(inProgressMs) || inProgressMs < thresholdMs) continue;
+      const key = `${snapshot.teamName}:${task.id}:${evaluation.skipReason ?? 'skip'}`;
+      if (!this.shouldLogOpenCodeSkip(key, now.getTime())) continue;
+      logger.warn(
+        `[${snapshot.teamName}] Stall monitor did not alert OpenCode task #${getTaskDisplayId(task)} (owner ${task.owner}, in progress ${Math.round(inProgressMs / 60_000)} min): ${evaluation.skipReason ?? 'skip'} - ${evaluation.reason}; ${this.describeOpenCodeLane(snapshot, task.owner)}`
+      );
+    }
+  }
+
+  private logOpenCodeOwnerAlertsHeldByJournal(
+    snapshot: NonNullable<Awaited<ReturnType<TeamTaskStallSnapshotSource['getSnapshot']>>>,
+    evaluations: TaskStallEvaluation[],
+    readyEvaluations: TaskStallEvaluation[],
+    now: Date
+  ): void {
+    const readyKeys = new Set(readyEvaluations.map((evaluation) => evaluation.epochKey));
+    for (const evaluation of evaluations) {
+      if (evaluation.status !== 'alert' || !evaluation.taskId || !evaluation.epochKey) continue;
+      const heldKey = `${snapshot.teamName}:${evaluation.epochKey}`;
+      if (readyKeys.has(evaluation.epochKey)) {
+        this.heldAlertFirstSeenAtByKey.delete(heldKey);
+        continue;
+      }
+      if (!this.isOpenCodeOwnerWorkEvaluation(snapshot, evaluation)) continue;
+      // The journal holds every alert on the scan that first sees it; only a
+      // hold that outlives that rule is worth a log line.
+      const firstSeenAt = this.heldAlertFirstSeenAtByKey.get(heldKey) ?? now.getTime();
+      this.heldAlertFirstSeenAtByKey.set(heldKey, firstSeenAt);
+      if (now.getTime() - firstSeenAt < OPENCODE_HELD_ALERT_LOG_DELAY_MS) continue;
+      const task = snapshot.allTasksById.get(evaluation.taskId);
+      const key = `${heldKey}:journal_hold`;
+      if (!this.shouldLogOpenCodeSkip(key, now.getTime())) continue;
+      logger.warn(
+        `[${snapshot.teamName}] Stall alert for OpenCode task #${task ? getTaskDisplayId(task) : evaluation.taskId} (owner ${evaluation.memberName ?? task?.owner ?? 'unknown'}) is held by the stall journal (cooldown or first-scan rule): ${evaluation.reason}`
+      );
+    }
   }
 
   private isOpenCodeOwnerWorkEvaluation(

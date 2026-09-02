@@ -3,6 +3,10 @@ import {
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
 
+import {
+  type OpenCodeLaneTurnActivityRegistry,
+  openCodeLaneTurnActivityRegistry,
+} from '../opencode/delivery/OpenCodeLaneTurnActivityRegistry';
 import { BoardTaskActivityTranscriptReader } from '../taskLogs/activity/BoardTaskActivityTranscriptReader';
 import { isBoardTaskActivityReadEnabled } from '../taskLogs/activity/featureGates';
 import { TeamTranscriptSourceLocator } from '../taskLogs/discovery/TeamTranscriptSourceLocator';
@@ -73,7 +77,8 @@ export class TeamTaskStallSnapshotSource {
     private readonly freshnessReader: TeamTaskLogFreshnessReader = new TeamTaskLogFreshnessReader(),
     private readonly exactRowReader: TeamTaskStallExactRowReader = new TeamTaskStallExactRowReader(),
     private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
-    private readonly openCodeEvidenceSource: OpenCodeTaskStallEvidenceSource = new OpenCodeTaskStallEvidenceSource()
+    private readonly openCodeEvidenceSource: OpenCodeTaskStallEvidenceSource = new OpenCodeTaskStallEvidenceSource(),
+    private readonly laneTurnActivity: OpenCodeLaneTurnActivityRegistry = openCodeLaneTurnActivityRegistry
   ) {}
 
   async getSnapshot(teamName: string): Promise<TeamTaskStallSnapshot | null> {
@@ -204,7 +209,24 @@ export class TeamTaskStallSnapshotSource {
       freshnessByTaskId,
       exactRowsByFilePath: mergedExactRowsByFilePath,
       providerByMemberName,
+      ...this.collectOpenCodeLaneTurnActivity(teamName),
     };
+  }
+
+  private collectOpenCodeLaneTurnActivity(teamName: string): {
+    openCodeLaneIdleSinceByMemberName: Map<string, string>;
+    openCodeLaneActiveMemberNames: Set<string>;
+  } {
+    const openCodeLaneIdleSinceByMemberName = new Map<string, string>();
+    const openCodeLaneActiveMemberNames = new Set<string>();
+    for (const [memberName, sample] of this.laneTurnActivity.listTeam(teamName)) {
+      if (sample.state === 'idle') {
+        openCodeLaneIdleSinceByMemberName.set(memberName, sample.observedAt);
+      } else {
+        openCodeLaneActiveMemberNames.add(memberName);
+      }
+    }
+    return { openCodeLaneIdleSinceByMemberName, openCodeLaneActiveMemberNames };
   }
 
   private mergeActivityRecords(
