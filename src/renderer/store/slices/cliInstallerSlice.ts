@@ -467,8 +467,8 @@ function reconcileCliInstallationStatus(
   const mergedProviders =
     current?.flavor === 'agent_teams_orchestrator' &&
     areArraysEqual(providers, current.providers, Object.is)
-    ? current.providers
-    : providers;
+      ? current.providers
+      : providers;
 
   const merged: CliInstallationStatus = {
     ...incoming,
@@ -860,6 +860,7 @@ export interface CliInstallerSlice {
     providerId: CliProviderId,
     options?: CliProviderStatusFetchOptions
   ) => Promise<boolean>;
+  invalidateCliProviderModelCatalog: () => void;
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
@@ -1514,6 +1515,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
     cliProviderStatusInFlight.set(requestKey, request);
     return request;
+  },
+
+  invalidateCliProviderModelCatalog: () => {
+    set((state) => ({
+      cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
+    }));
   },
 
   invalidateCliStatus: async () => {

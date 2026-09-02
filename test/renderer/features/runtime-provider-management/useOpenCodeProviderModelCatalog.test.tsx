@@ -74,6 +74,9 @@ function response(input: {
   models?: readonly RuntimeProviderModelDto[];
   defaultModelId?: string | null;
   catalogState?: 'fresh' | 'stale';
+  totalCount?: number;
+  returnedCount?: number;
+  cursor?: string | null;
   nextCursor?: string | null;
 }): RuntimeProviderManagementModelsResponse {
   return {
@@ -86,6 +89,9 @@ function response(input: {
       defaultModelId: input.defaultModelId ?? null,
       diagnostics: [],
       ...(input.catalogState ? { catalogState: input.catalogState } : {}),
+      ...(input.totalCount !== undefined ? { totalCount: input.totalCount } : {}),
+      ...(input.returnedCount !== undefined ? { returnedCount: input.returnedCount } : {}),
+      ...(input.cursor !== undefined ? { cursor: input.cursor } : {}),
       nextCursor: input.nextCursor ?? null,
     },
   };
@@ -350,6 +356,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
         runtimeId: 'opencode',
         providerId: 'deepinfra',
         projectPath: '/projects/one',
+        limit: null,
         cursor: null,
       }),
       expect.objectContaining({
@@ -370,6 +377,58 @@ describe('useOpenCodeProviderModelCatalog', () => {
       proofState: 'needs_probe',
       requiresExecutionProof: true,
     });
+    expect(observed?.catalogState).toBeNull();
+  });
+
+  it('fails closed when catalog totals change between pages', async () => {
+    apiMocks.loadModels.mockImplementation(
+      async (input: RuntimeProviderManagementLoadModelsInput) =>
+        input.cursor
+          ? response({
+              providerId: 'deepinfra',
+              models: [model('deepinfra', 'second-model')],
+              catalogState: 'fresh',
+              totalCount: 3,
+              returnedCount: 1,
+              cursor: 'page-2',
+            })
+          : response({
+              providerId: 'deepinfra',
+              models: [model('deepinfra', 'first-model')],
+              catalogState: 'fresh',
+              totalCount: 2,
+              returnedCount: 1,
+              cursor: null,
+              nextCursor: 'page-2',
+            })
+    );
+
+    await renderHarness({ sourceProviderId: 'deepinfra' });
+    await waitForStatus('error');
+
+    expect(observed?.error).toContain('changed the provider-model total');
+    expect(observed?.catalogState).toBeNull();
+  });
+
+  it('fails closed for duplicate models across catalog pages', async () => {
+    apiMocks.loadModels.mockImplementation(
+      async (input: RuntimeProviderManagementLoadModelsInput) =>
+        response({
+          providerId: 'deepinfra',
+          models: [model('deepinfra', 'same-model')],
+          catalogState: 'fresh',
+          totalCount: 2,
+          returnedCount: 1,
+          cursor: input.cursor,
+          nextCursor: input.cursor ? null : 'page-2',
+        })
+    );
+
+    await renderHarness({ sourceProviderId: 'deepinfra' });
+    await waitForStatus('error');
+
+    expect(observed?.error).toContain('duplicate provider model');
+    expect(observed?.catalogState).toBeNull();
   });
 
   it('bypasses every page for explicit and revision refreshes', async () => {

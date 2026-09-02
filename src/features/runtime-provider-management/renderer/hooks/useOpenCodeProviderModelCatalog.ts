@@ -26,7 +26,6 @@ import type {
   OpenCodeModelRouteMetadata,
 } from '@shared/types';
 
-const MODEL_PAGE_SIZE = 250;
 const MAX_MODEL_PAGES = 20;
 const MODEL_CATALOG_FRESHNESS_MS = 2 * 60_000;
 let nextRequestGroupNumber = 0;
@@ -495,6 +494,8 @@ export function useOpenCodeProviderModelCatalog(input: {
       let diagnostics: readonly string[] = [];
       let sawStaleCatalog = false;
       let sawUnknownCatalogState = false;
+      let sawMultiplePages = false;
+      let expectedTotalCount: number | null = null;
       const seenCursors = new Set<string>();
 
       for (let page = 0; page < MAX_MODEL_PAGES; page += 1) {
@@ -506,7 +507,11 @@ export function useOpenCodeProviderModelCatalog(input: {
           providerId: sourceProviderId,
           projectPath,
           query: null,
-          limit: MODEL_PAGE_SIZE,
+          // The current orchestrator builds the complete provider snapshot before
+          // slicing it. Request that snapshot once so launch authority cannot span
+          // independently refreshed pages. The loop remains for older runtimes that
+          // still paginate an unbounded request.
+          limit: null,
           cursor,
           refresh: true,
           requestGroupId,
@@ -519,9 +524,35 @@ export function useOpenCodeProviderModelCatalog(input: {
           throw new Error(failure);
         }
         const modelPage = response.models!;
+        if (modelPage.cursor !== undefined) {
+          const responseCursor = modelPage.cursor?.trim() || null;
+          if (responseCursor !== cursor) {
+            throw new Error('The runtime returned a mismatched provider-model pagination cursor.');
+          }
+        }
+        if (
+          modelPage.returnedCount !== undefined &&
+          (!Number.isInteger(modelPage.returnedCount) ||
+            modelPage.returnedCount < 0 ||
+            modelPage.returnedCount !== modelPage.models.length)
+        ) {
+          throw new Error('The runtime returned an invalid provider-model page count.');
+        }
+        if (modelPage.totalCount !== undefined) {
+          if (!Number.isInteger(modelPage.totalCount) || modelPage.totalCount < 0) {
+            throw new Error('The runtime returned an invalid provider-model total count.');
+          }
+          if (expectedTotalCount !== null && expectedTotalCount !== modelPage.totalCount) {
+            throw new Error('The runtime changed the provider-model total during pagination.');
+          }
+          expectedTotalCount = modelPage.totalCount;
+        }
         for (const model of modelPage.models) {
           const modelId = qualifyModelId(model.providerId, model.modelId);
           if (modelId) {
+            if (modelById.has(modelId)) {
+              throw new Error('The runtime returned a duplicate provider model across pages.');
+            }
             modelById.set(modelId, model);
           }
         }
@@ -542,6 +573,7 @@ export function useOpenCodeProviderModelCatalog(input: {
         if (!nextCursor) {
           break;
         }
+        sawMultiplePages = true;
         if (seenCursors.has(nextCursor) || page === MAX_MODEL_PAGES - 1) {
           throw new Error('The runtime returned an invalid provider-model pagination cursor.');
         }
@@ -558,12 +590,19 @@ export function useOpenCodeProviderModelCatalog(input: {
       if (defaultModelIds.size > 1) {
         throw new Error('The runtime returned conflicting provider-model catalog defaults.');
       }
+      if (expectedTotalCount !== null && expectedTotalCount !== modelById.size) {
+        throw new Error('The runtime returned an incomplete provider-model catalog.');
+      }
       const defaultModelId = defaultModelIds.values().next().value ?? null;
       if (defaultModelId && !modelById.has(defaultModelId)) {
         throw new Error('The runtime returned a default outside the provider-model catalog.');
       }
       const completedAt = new Date().toISOString();
-      const catalogState = sawUnknownCatalogState ? null : sawStaleCatalog ? 'stale' : 'fresh';
+      // Separate page requests have no shared generation token in the compatibility
+      // contract. Keep their models usable for display, but never grant fresh launch
+      // authority to a response that may have crossed catalog generations.
+      const catalogState =
+        sawUnknownCatalogState || sawMultiplePages ? null : sawStaleCatalog ? 'stale' : 'fresh';
       setState({
         scopeKey,
         status: 'ready',

@@ -267,6 +267,19 @@ describe('cliInstallerSlice', () => {
     });
   });
 
+  it('invalidates mounted provider model catalogs without clearing provider status', () => {
+    const scopedStatus = {
+      'opencode:/tmp/project': createReadyOpenCodeCatalogProvider('ollama/current-model'),
+    };
+    useStore.setState({ cliProviderStatusByScope: scopedStatus });
+
+    useStore.getState().invalidateCliProviderModelCatalog();
+
+    expect(useStore.getState().cliProviderStatusScopeRevision).toBe(1);
+    expect(useStore.getState().cliProviderStatusByScope).toBe(scopedStatus);
+    expect(api.cliInstaller.invalidateStatus).not.toHaveBeenCalled();
+  });
+
   describe('reconcileCliStatus', () => {
     it('keeps last-known readiness for a model-only OpenCode inventory', () => {
       const current = createMultimodelStatus([
