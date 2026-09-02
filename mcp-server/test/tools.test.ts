@@ -2188,6 +2188,188 @@ describe('agent-teams-mcp tools', () => {
     expect(reloaded.comments[0].text).toBe('Comment should persist despite broken inbox');
   });
 
+  describe('task_add_comment completion-claim protocol instruction', () => {
+    function setupCommentTeam() {
+      const claudeDir = makeClaudeDir();
+      const teamName = 'completion-claim';
+      fs.mkdirSync(path.join(claudeDir, 'tasks', teamName), { recursive: true });
+      writeTeamConfig(claudeDir, teamName, {
+        members: [
+          { name: 'lead', role: 'team-lead' },
+          { name: 'alice', role: 'developer' },
+          { name: 'bob', role: 'reviewer' },
+        ],
+      });
+      return { claudeDir, teamName };
+    }
+
+    async function createOwnedTask(claudeDir: string, teamName: string, subject: string) {
+      return parseJsonToolResult(
+        await getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject,
+          owner: 'alice',
+          notifyOwner: false,
+        })
+      );
+    }
+
+    it('tells the owner to call task_complete after a completion-shaped comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Completion claim');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done. Implemented the parser in src/app.ts, tests green.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.task.status).toBe('in_progress');
+      expect(commented.protocolInstruction).toContain('task_complete');
+      expect(commented.protocolInstruction).toContain(`#${task.displayId}`);
+    });
+
+    it('still instructs on a pending task because the owner comment auto-starts it', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Pending auto-start');
+
+      expect(task.status).toBe('pending');
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'Gotovo, spremno za pregled.',
+          from: 'alice',
+        })
+      );
+
+      // maybeAutoStartOwnedPendingTaskOnOwnerComment advances pending -> in_progress
+      // on an owner comment, so the task really is left open by this write.
+      expect(commented.task.status).toBe('in_progress');
+      expect(commented.protocolInstruction).toContain('task_complete');
+    });
+
+    it('stays silent on a plain progress comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Progress note');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'Reading src/app.ts now.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent when the completion-shaped comment asks a question', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Blocking question');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done. Should I also update the docs?',
+          from: 'alice',
+        })
+      );
+
+      // The desktop stall monitor classifies this text as blocker_or_clarification,
+      // so the MCP surface must not answer the same comment with "call
+      // task_complete NOW" and close the task with the question unanswered.
+      expect(commented.task.status).toBe('in_progress');
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent when a non-owner posts the completion-shaped comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Non-owner claim');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done, looks complete to me.',
+          from: 'bob',
+        })
+      );
+
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent once the task is already completed', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Already completed');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+      await getTool('task_complete').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+        actor: 'alice',
+      });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.task.status).toBe('completed');
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('keeps the slim task payload after the execute body restructure', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Slim payload');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.commentId).toBeTruthy();
+      expect(commented.comment.text).toBe('All done.');
+      expect(commented.task.commentCount).toBe(1);
+      expect(commented.task.comments).toBeUndefined();
+      expect(commented.task.historyEvents).toBeUndefined();
+      expect(commented.task.workIntervals).toBeUndefined();
+    });
+  });
+
   it('write operations return slim task and task_list returns allowlisted inventory rows', async () => {
     expect(getTool('task_list').description).toContain(
       'Use it to browse, filter, and drill into inventory, not as a primary working queue.'

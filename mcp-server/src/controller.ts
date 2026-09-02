@@ -20,6 +20,9 @@ type WorkSyncCapableController = ReturnType<typeof createController> & {
 /** Re-export agentBlocks utilities (stripAgentBlocks, wrapAgentBlock, etc.) */
 export const agentBlocks = controllerModule.agentBlocks;
 
+/** Re-export context-free text classifiers (completion-claim shape). */
+export const taskTextSignals = controllerModule.taskTextSignals;
+
 export function getController(teamName: string, claudeDir?: string): WorkSyncCapableController {
   const forcedClaudeDir = process.env[FORCED_CLAUDE_DIR_ENV]?.trim();
   let resolvedClaudeDir = claudeDir;

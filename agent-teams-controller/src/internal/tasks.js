@@ -900,6 +900,7 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
    - After that follow-up work finishes, add a short task comment with the result, what changed, or what you verified.
    - After that, run task_complete again before your reply.
    - Never do comment-driven implementation/fix work while the task is still shown as pending, review, completed, or approved.
+   - A task comment NEVER changes task status. If the comment you just posted says the work is done, your VERY NEXT tool call in this same turn must be task_complete for that task. Never end a turn with a completion note sitting on a task that is still in_progress.
    - After task_complete, send a notification to your team lead via ${messagingProtocol.sendLeadPhrase}. Use the comment.id you saved earlier (first 8 characters). Your message must include: (a) which task is done, (b) a brief summary of the outcome (2-4 sentences), (c) a pointer to the full comment so the lead can fetch it, (d) what you will do next. Do NOT duplicate the entire results.
      Example: ${notifyLeadExample}${runtimeVisibleMessageRule}${runtimeTaskToolHint}
    - After task_complete, call review_request ONLY when review is explicitly expected for THIS task and a concrete reviewer is already known.
