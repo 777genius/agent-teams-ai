@@ -212,10 +212,13 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       projectPath: fake.project,
       requestGroupId: 'issue443-selected-provider',
     });
-    await vi.waitFor(async () => {
-      expect((await fake.traces()).filter((trace) => trace.kind === 'provider-models-request'))
-        .toHaveLength(1);
-    });
+    await vi.waitFor(
+      async () => {
+        expect((await fake.traces()).filter((trace) => trace.kind === 'provider-models-request'))
+          .toHaveLength(1);
+      },
+      { timeout: 5_000, interval: 25 }
+    );
 
     const builtIn = await client.loadModels({
       runtimeId: 'opencode',
@@ -244,6 +247,33 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       ['--provider', 'opencode', '--json'],
     ]);
     expect(traces.every((trace) => !trace.argv.includes('--request-group-id'))).toBe(true);
+    assertProcessesExited(traces);
+  });
+
+  it('cancels the real provider process when its catalog scope disappears', async () => {
+    const fake = await createFake('slow-catalog');
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const pending = client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      requestGroupId: 'issue443-closing-scope',
+    });
+    await vi.waitFor(
+      async () => {
+        expect((await fake.traces()).filter((trace) => trace.kind === 'provider-models-request'))
+          .toHaveLength(1);
+      },
+      { timeout: 5_000, interval: 25 }
+    );
+
+    await expect(
+      client.cancelModelLoad({ requestGroupId: 'issue443-closing-scope' })
+    ).resolves.toEqual({ ok: true });
+    expect((await pending).error).toBeDefined();
+
+    const traces = await fake.traces();
+    expect(traces.map((trace) => trace.kind)).toEqual(['provider-models-request']);
     assertProcessesExited(traces);
   });
 

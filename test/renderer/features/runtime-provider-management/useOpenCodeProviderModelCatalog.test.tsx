@@ -12,12 +12,14 @@ import type { CliProviderModelCatalogItem, CliProviderStatus } from '@shared/typ
 
 const apiMocks = vi.hoisted(() => ({
   loadModels: vi.fn(),
+  cancelModelLoad: vi.fn(async (_input: unknown) => ({ ok: true })),
 }));
 
 vi.mock('@renderer/api', () => ({
   api: {
     runtimeProviderManagement: {
       loadModels: (...args: unknown[]) => apiMocks.loadModels(...args),
+      cancelModelLoad: (input: unknown) => apiMocks.cancelModelLoad(input),
     },
   },
 }));
@@ -233,6 +235,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     apiMocks.loadModels.mockReset();
+    apiMocks.cancelModelLoad.mockClear();
     observed = null;
     host = document.createElement('div');
     document.body.appendChild(host);
@@ -386,10 +389,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
 
     await renderHarness({ sourceProviderId: 'deepinfra', refreshRevision: 0 });
     await vi.waitFor(() => expect(apiMocks.loadModels).toHaveBeenCalledTimes(2));
-    expect(apiMocks.loadModels.mock.calls.map(([request]) => request.refresh)).toEqual([
-      undefined,
-      undefined,
-    ]);
+    expect(apiMocks.loadModels.mock.calls.map(([request]) => request.refresh)).toEqual([true, true]);
 
     await act(async () => {
       observed?.refresh();
@@ -449,6 +449,46 @@ describe('useOpenCodeProviderModelCatalog', () => {
     }
   );
 
+  it('rejects a default that is absent from the complete scoped catalog', async () => {
+    apiMocks.loadModels.mockResolvedValue(
+      response({
+        providerId: 'deepinfra',
+        models: [model('deepinfra', 'present-model')],
+        defaultModelId: 'missing-model',
+        catalogState: 'fresh',
+      })
+    );
+
+    await renderHarness({ sourceProviderId: 'deepinfra' });
+    await waitForStatus('error');
+
+    expect(observed?.error).toContain('default outside');
+  });
+
+  it('rejects conflicting defaults across catalog pages', async () => {
+    apiMocks.loadModels.mockImplementation(async (input: RuntimeProviderManagementLoadModelsInput) =>
+      input.cursor
+        ? response({
+            providerId: 'deepinfra',
+            models: [model('deepinfra', 'second-model')],
+            defaultModelId: 'second-model',
+            catalogState: 'fresh',
+          })
+        : response({
+            providerId: 'deepinfra',
+            models: [model('deepinfra', 'first-model')],
+            defaultModelId: 'first-model',
+            nextCursor: 'page-2',
+            catalogState: 'fresh',
+          })
+    );
+
+    await renderHarness({ sourceProviderId: 'deepinfra' });
+    await waitForStatus('error');
+
+    expect(observed?.error).toContain('conflicting');
+  });
+
   it.each(['/poisoned', 'deepinfra/', 'deepinfra//model'])(
     'fails closed for malformed default identifier %s',
     async (defaultModelId) => {
@@ -478,6 +518,10 @@ describe('useOpenCodeProviderModelCatalog', () => {
       'deepinfra/org/nested-model',
       'unqualified-model',
     ]);
+    passive.modelAvailability = [
+      { modelId: 'unqualified-model', status: 'available' },
+      { modelId: 'kiro/model', status: 'unavailable' },
+    ];
     passive.modelCatalog = {
       schemaVersion: 1,
       providerId: 'opencode',
@@ -531,6 +575,9 @@ describe('useOpenCodeProviderModelCatalog', () => {
         'deepinfra/unqualified-model'
       );
       expect(providerStatus?.modelCatalog?.defaultLaunchModel).toBeNull();
+      expect(providerStatus?.modelAvailability).toEqual([
+        { modelId: 'deepinfra/unqualified-model', status: 'available' },
+      ]);
       expect(
         resolveOpenCodeCatalogSourceProviderId({
           selectedSourceIds: new Set(),
@@ -806,6 +853,9 @@ describe('useOpenCodeProviderModelCatalog', () => {
     expect(observed?.providerStatus?.models).toEqual(['opencode/free-model']);
     expect(observed?.providerStatus?.models).not.toContain('deepinfra/old-model');
     const [oldInput, newInput] = apiMocks.loadModels.mock.calls.map(([input]) => input);
-    expect(oldInput.requestGroupId).toBe(newInput.requestGroupId);
+    expect(oldInput.requestGroupId).not.toBe(newInput.requestGroupId);
+    expect(apiMocks.cancelModelLoad).toHaveBeenCalledWith({
+      requestGroupId: oldInput.requestGroupId,
+    });
   });
 });

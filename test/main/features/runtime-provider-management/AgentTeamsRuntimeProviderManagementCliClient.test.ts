@@ -2766,6 +2766,88 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(execCliMock).toHaveBeenCalledTimes(2);
   });
 
+  it('starts a fresh model load when a provider is reselected before its aborted request settles', async () => {
+    let firstSignal: AbortSignal | undefined;
+    let rejectFirst: ((error: Error) => void) | undefined;
+    let openRouterCalls = 0;
+    execCliMock.mockImplementation(
+      (_binaryPath: string, args: string[], options: { signal?: AbortSignal }) => {
+        const providerIndex = args.indexOf('--provider');
+        const providerId = providerIndex >= 0 ? args[providerIndex + 1] : 'unknown';
+        if (providerId === 'openrouter') {
+          openRouterCalls += 1;
+          if (openRouterCalls === 1) {
+            firstSignal = options.signal;
+            return new Promise<{ stdout: string; stderr: string }>((_resolve, reject) => {
+              rejectFirst = reject;
+            });
+          }
+        }
+        return Promise.resolve({
+          stdout: JSON.stringify(createModelsResponse(providerId, `${providerId}/fresh`)),
+          stderr: '',
+        });
+      }
+    );
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const requestGroupId = 'provider-model-picker';
+    const first = client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      requestGroupId,
+    });
+    await vi.waitFor(() => expect(firstSignal).toBeDefined());
+
+    await client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      requestGroupId,
+    });
+    expect(firstSignal?.aborted).toBe(true);
+
+    const reselected = await client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      requestGroupId,
+    });
+    expect(reselected.models?.models[0]?.modelId).toBe('openrouter/fresh');
+    expect(openRouterCalls).toBe(2);
+
+    rejectFirst?.(new Error('aborted command settled late'));
+    expect((await first).error).toBeDefined();
+  });
+
+  it('cancels a grouped model load when its requesting scope disappears', async () => {
+    let commandSignal: AbortSignal | undefined;
+    execCliMock.mockImplementation(
+      (_binaryPath: string, _args: string[], options: { signal?: AbortSignal }) => {
+        commandSignal = options.signal;
+        return new Promise<{ stdout: string; stderr: string }>((_resolve, reject) => {
+          options.signal?.addEventListener(
+            'abort',
+            () => reject(Object.assign(new Error('Command aborted'), { name: 'AbortError' })),
+            { once: true }
+          );
+        });
+      }
+    );
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const pending = client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      requestGroupId: 'closing-catalog-scope',
+    });
+    await vi.waitFor(() => expect(commandSignal).toBeDefined());
+
+    await expect(
+      client.cancelModelLoad({ requestGroupId: 'closing-catalog-scope' })
+    ).resolves.toEqual({ ok: true });
+    expect(commandSignal?.aborted).toBe(true);
+    expect((await pending).error).toBeDefined();
+  });
+
   it('does not abort a shared model load when an ungrouped caller still needs it', async () => {
     let sharedSignal: AbortSignal | undefined;
     let finishShared: ((value: { stdout: string; stderr: string }) => void) | undefined;

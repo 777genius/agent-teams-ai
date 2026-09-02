@@ -11,6 +11,7 @@ import {
   RUNTIME_PROVIDER_COMPANION_CONNECT,
   RUNTIME_PROVIDER_COMPANION_INSTALL,
   RUNTIME_PROVIDER_COMPANION_STATUS,
+  RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
   RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_TEST,
   RUNTIME_PROVIDER_MANAGEMENT_CLEAR_PROJECT_DEFAULT,
   RUNTIME_PROVIDER_MANAGEMENT_CONFIGURE_MODEL_LIMITS,
@@ -45,6 +46,7 @@ import type {
   RuntimeProviderCompanionActionInput,
   RuntimeProviderCompanionInput,
   RuntimeProviderCompanionStatusDto,
+  RuntimeProviderManagementCancelModelLoadInput,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
   RuntimeProviderManagementClearProjectDefaultInput,
@@ -521,6 +523,26 @@ export function registerRuntimeProviderManagementIpc(
           runtimeId: input.runtimeId,
           error: createUnexpectedRuntimeProviderIpcError('runtime-unhealthy', message),
         };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
+    async (
+      _event,
+      input: RuntimeProviderManagementCancelModelLoadInput
+    ): Promise<RuntimeProviderManagementModelTestControlResponse> => {
+      const requestGroupId = input?.requestGroupId?.trim();
+      if (!requestGroupId || requestGroupId.length > 256) {
+        return { ok: false, error: 'Model load request group is invalid' };
+      }
+      try {
+        return await feature.cancelModelLoad({ requestGroupId });
+      } catch (error) {
+        const message = getRuntimeProviderIpcErrorMessage(error, 'Failed to cancel model load');
+        logger.error('Failed to cancel runtime provider model load', message);
+        return { ok: false, error: message };
       }
     }
   );

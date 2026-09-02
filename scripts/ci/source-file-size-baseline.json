@@ -25,7 +25,7 @@
     "src/features/organizations/core/domain/organizationGraph.ts": 963,
     "src/features/organizations/renderer/adapters/organizationGraphAdapter.ts": 1664,
     "src/features/organizations/renderer/ui/OrganizationEditorPanel.tsx": 942,
-    "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts": 2685,
+    "src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient.ts": 2651,
     "src/features/runtime-provider-management/main/infrastructure/cli-companion/RuntimeProviderCliCompanionService.ts": 838,
     "src/features/runtime-provider-management/main/infrastructure/OpenCodeLocalProviderConnector.ts": 1018,
     "src/features/runtime-provider-management/renderer/hooks/useRuntimeProviderManagement.ts": 2101,

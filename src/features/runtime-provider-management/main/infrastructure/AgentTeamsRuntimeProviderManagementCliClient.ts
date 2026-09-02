@@ -33,12 +33,17 @@ import {
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
 import {
+  type ModelResponseInFlightEntry,
+  RuntimeProviderModelRequestTracker,
+} from './runtimeProviderModelRequestTracker';
+import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
   sanitizeRuntimeProviderModelTestResponse,
   sanitizeRuntimeProviderText,
 } from './runtimeProviderModelTestBoundary';
 
 import type {
+  RuntimeProviderManagementCancelModelLoadInput,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
   RuntimeProviderManagementClearProjectDefaultInput,
@@ -128,13 +133,6 @@ interface DirectoryResponseCacheEntry {
 interface ModelResponseCacheEntry {
   expiresAt: number;
   response: RuntimeProviderManagementModelsResponse;
-}
-
-interface ModelResponseInFlightEntry {
-  controller: AbortController;
-  hasUngroupedSubscriber: boolean;
-  requestGroups: Set<string>;
-  promise: Promise<RuntimeProviderManagementModelsResponse>;
 }
 
 export interface RuntimeProviderOAuthClientDependencies {
@@ -1313,8 +1311,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   >();
   private directoryResponseCacheGeneration = 0;
   private readonly modelResponseCache = new Map<string, ModelResponseCacheEntry>();
-  private readonly modelResponseInFlight = new Map<string, ModelResponseInFlightEntry>();
-  private readonly activeModelRequestGroups = new Map<string, string>();
+  private readonly modelRequests = new RuntimeProviderModelRequestTracker();
   private readonly activeModelTestRequestGroups = new Map<string, AbortController>();
   private modelResponseCacheGeneration = 0;
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
@@ -1482,20 +1479,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private invalidateModelResponseCache(abortInFlight = true): void {
     this.modelResponseCacheGeneration += 1;
     this.modelResponseCache.clear();
-    if (!abortInFlight) {
-      // Detach stale work from deduplication without disrupting callers that
-      // are already displaying it. A refresh can then start a fresh request
-      // immediately, and the detached response cannot repopulate the cache
-      // because its generation no longer matches.
-      this.modelResponseInFlight.clear();
-      this.activeModelRequestGroups.clear();
-      return;
-    }
-    for (const entry of this.modelResponseInFlight.values()) {
-      entry.controller.abort();
-    }
-    this.modelResponseInFlight.clear();
-    this.activeModelRequestGroups.clear();
+    this.modelRequests.clear(abortInFlight);
   }
 
   private invalidateProviderResponseCaches(): void {
@@ -1504,19 +1488,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   }
 
   private releaseSupersededModelRequest(requestGroupId: string, nextCacheKey: string): void {
-    const previousCacheKey = this.activeModelRequestGroups.get(requestGroupId);
-    if (!previousCacheKey || previousCacheKey === nextCacheKey) {
-      return;
-    }
-    this.activeModelRequestGroups.delete(requestGroupId);
-    const previousEntry = this.modelResponseInFlight.get(previousCacheKey);
-    if (!previousEntry) {
-      return;
-    }
-    previousEntry.requestGroups.delete(requestGroupId);
-    if (!previousEntry.hasUngroupedSubscriber && previousEntry.requestGroups.size === 0) {
-      previousEntry.controller.abort();
-    }
+    this.modelRequests.releaseSuperseded(requestGroupId, nextCacheKey);
   }
 
   private registerModelRequestSubscriber(
@@ -1524,24 +1496,11 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     cacheKey: string,
     requestGroupId: string | null
   ): void {
-    if (requestGroupId) {
-      entry.requestGroups.add(requestGroupId);
-      this.activeModelRequestGroups.set(requestGroupId, cacheKey);
-      return;
-    }
-    entry.hasUngroupedSubscriber = true;
+    this.modelRequests.register(entry, cacheKey, requestGroupId);
   }
 
   private cleanupModelResponseInFlight(cacheKey: string, entry: ModelResponseInFlightEntry): void {
-    if (this.modelResponseInFlight.get(cacheKey) !== entry) {
-      return;
-    }
-    this.modelResponseInFlight.delete(cacheKey);
-    for (const requestGroupId of entry.requestGroups) {
-      if (this.activeModelRequestGroups.get(requestGroupId) === cacheKey) {
-        this.activeModelRequestGroups.delete(requestGroupId);
-      }
-    }
+    this.modelRequests.cleanup(cacheKey, entry);
   }
 
   private beginModelTestRequest(requestGroupId: string | null): AbortController | null {
@@ -2283,14 +2242,14 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     if (input.refresh === true) this.modelResponseCache.delete(cacheKey);
     const cached = input.refresh === true ? null : this.readModelResponseCache(cacheKey);
     if (cached) {
-      if (requestGroupId && this.activeModelRequestGroups.get(requestGroupId) === cacheKey) {
-        this.activeModelRequestGroups.delete(requestGroupId);
-      }
+      if (requestGroupId) this.modelRequests.releaseActiveGroup(requestGroupId, cacheKey);
       return cached;
     }
 
-    const existingRequest = this.modelResponseInFlight.get(cacheKey);
-    if (existingRequest) {
+    const existingRequest = this.modelRequests.get(cacheKey);
+    if (existingRequest?.controller.signal.aborted) {
+      this.modelRequests.discard(cacheKey);
+    } else if (existingRequest) {
       this.registerModelRequestSubscriber(existingRequest, cacheKey, requestGroupId);
       return existingRequest.promise;
     }
@@ -2311,12 +2270,19 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       promise,
     };
     this.registerModelRequestSubscriber(inFlightEntry, cacheKey, requestGroupId);
-    this.modelResponseInFlight.set(cacheKey, inFlightEntry);
+    this.modelRequests.set(cacheKey, inFlightEntry);
     try {
       return await promise;
     } finally {
       this.cleanupModelResponseInFlight(cacheKey, inFlightEntry);
     }
+  }
+
+  async cancelModelLoad(
+    input: RuntimeProviderManagementCancelModelLoadInput
+  ): Promise<RuntimeProviderManagementModelTestControlResponse> {
+    this.modelRequests.cancel(input.requestGroupId.trim());
+    return { ok: true };
   }
 
   private async loadModelsUncached(

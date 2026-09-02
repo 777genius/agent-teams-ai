@@ -569,6 +569,10 @@ export interface RuntimeProviderManagementCancelModelTestInput {
   requestGroupId: string;
 }
 
+export interface RuntimeProviderManagementCancelModelLoadInput {
+  requestGroupId: string;
+}
+
 export interface RuntimeProviderManagementModelTestControlResponse {
   ok: boolean;
   error?: string;

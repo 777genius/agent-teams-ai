@@ -109,6 +109,24 @@ function deferredPublication(): {
 }
 
 describe('TeamProvisioningPrepareCoordinator', () => {
+  it('does not run broad OpenCode readiness when automatic diagnostics have no selected model', async () => {
+    const prepare = vi.fn();
+    const coordinator = createCoordinator({
+      getOpenCodeRuntimeAdapter: () => ({ prepare }) as unknown as TeamLaunchRuntimeAdapter,
+    });
+
+    const result = await coordinator.prepareForProvisioning('/workspace/opencode-passive', {
+      providerId: 'opencode',
+      modelVerificationMode: 'deep',
+    });
+
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.ready).toBe(true);
+    expect(result.details).toContain(
+      'OpenCode readiness is deferred until launch has a selected model.'
+    );
+  });
+
   it('coalesces matching prepare requests and returns cloned results', async () => {
     let releaseProbe: ((value: { warning?: string }) => void) | null = null;
     const probeClaudeRuntime = vi.fn(

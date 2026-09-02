@@ -193,9 +193,7 @@ function mapCatalogModel(
     id: launchModel,
     launchModel,
     displayName:
-      model.displayName.trim() ||
-      parseStrictQualifiedModelRef(launchModel)?.modelId ||
-      launchModel,
+      model.displayName.trim() || parseStrictQualifiedModelRef(launchModel)?.modelId || launchModel,
     hidden: false,
     supportedReasoningEfforts: passiveModel?.supportedReasoningEfforts ?? [],
     defaultReasoningEffort: passiveModel?.defaultReasoningEffort ?? null,
@@ -209,7 +207,11 @@ function mapCatalogModel(
     statusMessage: model.accessReason ?? passiveModel?.statusMessage ?? null,
     metadata: {
       ...passiveModel?.metadata,
-      context: model.managedContextTokens ?? model.catalogContextTokens ?? passiveModel?.metadata?.context ?? null,
+      context:
+        model.managedContextTokens ??
+        model.catalogContextTokens ??
+        passiveModel?.metadata?.context ??
+        null,
       free: model.free,
       opencode: {
         providerId: model.providerId,
@@ -242,9 +244,7 @@ function filterPassiveProviderToSource(
     const normalized = normalizePassiveCatalogModel(model, sourceProviderId);
     return normalized ? [normalized.model] : [];
   });
-  const catalogModelIds = new Set(
-    catalogModels.flatMap((model) => [model.launchModel, model.id])
-  );
+  const catalogModelIds = new Set(catalogModels.flatMap((model) => [model.launchModel, model.id]));
   const models = Array.from(
     new Set(
       provider.models.flatMap((modelId) => {
@@ -270,16 +270,15 @@ function filterPassiveProviderToSource(
       return null;
     }
     const normalizedModelId = qualifyModelId(sourceProviderId, modelId);
-    return normalizedModelId && visibleModelIds.has(normalizedModelId)
-      ? normalizedModelId
-      : null;
+    return normalizedModelId && visibleModelIds.has(normalizedModelId) ? normalizedModelId : null;
   };
   return {
     ...provider,
     models,
-    modelAvailability: provider.modelAvailability?.filter((model) =>
-      visibleModelIds.has(model.modelId)
-    ),
+    modelAvailability: provider.modelAvailability?.flatMap((model) => {
+      const modelId = normalizeVisibleModelId(model.modelId);
+      return modelId ? [{ ...model, modelId }] : [];
+    }),
     modelCatalog: catalog
       ? {
           ...catalog,
@@ -296,7 +295,11 @@ function filterPassiveProviderToSource(
         }
       : null,
     modelCatalogRefreshState:
-      status === 'loading' ? 'loading' : status === 'error' ? 'error' : provider.modelCatalogRefreshState,
+      status === 'loading'
+        ? 'loading'
+        : status === 'error'
+          ? 'error'
+          : provider.modelCatalogRefreshState,
   };
 }
 
@@ -310,7 +313,12 @@ function buildScopedProviderStatus(input: {
     return passiveProvider;
   }
   if (!state.models) {
-    return filterPassiveProviderToSource(passiveProvider, sourceProviderId, state.status, state.error);
+    return filterPassiveProviderToSource(
+      passiveProvider,
+      sourceProviderId,
+      state.status,
+      state.error
+    );
   }
 
   const catalogModels = state.models.flatMap((model) => {
@@ -328,10 +336,9 @@ function buildScopedProviderStatus(input: {
         ? 'ready'
         : 'degraded';
   const completedAt = state.completedAt ?? new Date(0).toISOString();
-  const fetchedAt =
-    state.freshUntil
-      ? completedAt
-      : (passiveProvider.modelCatalog?.fetchedAt ?? new Date(0).toISOString());
+  const fetchedAt = state.freshUntil
+    ? completedAt
+    : (passiveProvider.modelCatalog?.fetchedAt ?? new Date(0).toISOString());
   const staleAt = state.freshUntil ?? fetchedAt;
   const catalog: CliProviderModelCatalog = {
     schemaVersion: 1,
@@ -429,10 +436,7 @@ export function useOpenCodeProviderModelCatalog(input: {
   const projectPath = input.projectPath?.trim() || null;
   const scopeKey = sourceProviderId ? JSON.stringify([projectPath, sourceProviderId]) : null;
   const requestSequenceRef = useRef(0);
-  const requestGroupIdRef = useRef(
-    `team-model-selector-catalog:${++nextRequestGroupNumber}`
-  );
-  const refreshTriggerRef = useRef<{ sequence: number; revision: number | undefined } | null>(null);
+  const requestGroupIdRef = useRef(`team-model-selector-catalog:${++nextRequestGroupNumber}`);
   const [refreshSequence, setRefreshSequence] = useState(0);
   const [state, setState] = useState<ScopedCatalogState>({
     scopeKey: null,
@@ -447,14 +451,8 @@ export function useOpenCodeProviderModelCatalog(input: {
   });
 
   useEffect(() => {
-    const previousRefreshTrigger = refreshTriggerRef.current;
-    const refreshTrigger = { sequence: refreshSequence, revision: input.refreshRevision };
-    const bypassCompletedCache =
-      previousRefreshTrigger !== null &&
-      (previousRefreshTrigger.sequence !== refreshTrigger.sequence ||
-        previousRefreshTrigger.revision !== refreshTrigger.revision);
-    refreshTriggerRef.current = refreshTrigger;
     const requestSequence = ++requestSequenceRef.current;
+    const requestGroupId = `${requestGroupIdRef.current}:${requestSequence}`;
     if (!input.enabled || !sourceProviderId || !scopeKey) {
       setState({
         scopeKey: null,
@@ -490,7 +488,7 @@ export function useOpenCodeProviderModelCatalog(input: {
       const isCurrentRequest = (): boolean => requestSequenceRef.current === requestSequence;
       const modelById = new Map<string, RuntimeProviderModelDto>();
       let cursor: string | null = null;
-      let defaultModelId: string | null = null;
+      const defaultModelIds = new Set<string>();
       let diagnostics: readonly string[] = [];
       let sawStaleCatalog = false;
       let sawUnknownCatalogState = false;
@@ -507,8 +505,8 @@ export function useOpenCodeProviderModelCatalog(input: {
           query: null,
           limit: MODEL_PAGE_SIZE,
           cursor,
-          ...(bypassCompletedCache ? { refresh: true } : {}),
-          requestGroupId: requestGroupIdRef.current,
+          refresh: true,
+          requestGroupId,
         });
         if (!isCurrentRequest()) {
           return;
@@ -524,7 +522,13 @@ export function useOpenCodeProviderModelCatalog(input: {
             modelById.set(modelId, model);
           }
         }
-        defaultModelId = modelPage.defaultModelId ?? defaultModelId;
+        if (modelPage.defaultModelId) {
+          const normalizedDefaultModelId = qualifyModelId(
+            sourceProviderId,
+            modelPage.defaultModelId
+          );
+          if (normalizedDefaultModelId) defaultModelIds.add(normalizedDefaultModelId);
+        }
         diagnostics = modelPage.diagnostics;
         if (modelPage.catalogState === 'stale') {
           sawStaleCatalog = true;
@@ -547,6 +551,13 @@ export function useOpenCodeProviderModelCatalog(input: {
 
       if (!isCurrentRequest()) {
         return;
+      }
+      if (defaultModelIds.size > 1) {
+        throw new Error('The runtime returned conflicting provider-model catalog defaults.');
+      }
+      const defaultModelId = defaultModelIds.values().next().value ?? null;
+      if (defaultModelId && !modelById.has(defaultModelId)) {
+        throw new Error('The runtime returned a default outside the provider-model catalog.');
       }
       const completedAt = new Date().toISOString();
       const catalogState = sawUnknownCatalogState ? null : sawStaleCatalog ? 'stale' : 'fresh';
@@ -578,6 +589,10 @@ export function useOpenCodeProviderModelCatalog(input: {
     return () => {
       if (requestSequenceRef.current === requestSequence) {
         requestSequenceRef.current += 1;
+      }
+      const cancelModelLoad = api.runtimeProviderManagement.cancelModelLoad;
+      if (typeof cancelModelLoad === 'function') {
+        void cancelModelLoad({ requestGroupId }).catch(() => undefined);
       }
     };
   }, [

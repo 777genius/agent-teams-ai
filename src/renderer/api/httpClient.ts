@@ -1499,7 +1499,6 @@ export class HttpAPIClient implements ElectronAPI {
       return () => {};
     },
   };
-
   openCodeRuntime: OpenCodeRuntimeAPI = {
     getStatus: async () => ({
       installed: false,
@@ -1645,6 +1644,10 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
+    cancelModelLoad: async () => ({
+      ok: false,
+      error: 'Model catalog cancellation requires desktop.',
+    }),
     testModel: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,
@@ -1664,7 +1667,15 @@ export class HttpAPIClient implements ElectronAPI {
         recoverable: true,
       },
     }),
-    clearProjectDefaultModel: async (input) => ({ schemaVersion: 1, runtimeId: input.runtimeId, error: { code: 'unsupported-action', message: 'Runtime provider management is not available in browser mode.', recoverable: true } }),
+    clearProjectDefaultModel: async (input) => ({
+      schemaVersion: 1,
+      runtimeId: input.runtimeId,
+      error: {
+        code: 'unsupported-action',
+        message: 'Runtime provider management is not available in browser mode.',
+        recoverable: true,
+      },
+    }),
     configureModelLimits: async (input) => ({
       schemaVersion: 1,
       runtimeId: input.runtimeId,
