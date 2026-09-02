@@ -31,6 +31,7 @@ import {
   TEAM_DELETE_DRAFT,
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
+  TEAM_DISCARD_QUEUED_USER_MESSAGES,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
@@ -44,6 +45,7 @@ import {
   TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_QUEUED_USER_MESSAGES,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
@@ -160,6 +162,7 @@ import { TeamWorktreeGitService } from '../services/team/TeamWorktreeGitService'
 import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliveryRelayUi';
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
+import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
 import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,
@@ -221,6 +224,7 @@ import type {
   BoardTaskLogStreamResponse,
   BoardTaskLogStreamSummary,
   CreateTaskRequest,
+  DiscardQueuedUserMessagesResult,
   EffortLevel,
   GlobalTask,
   InboxMessage,
@@ -233,6 +237,7 @@ import type {
   MemberSpawnStatusesSnapshot,
   MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
+  QueuedUserMessagesSnapshot,
   RetryFailedOpenCodeSecondaryLanesResult,
   SendMessageRequest,
   SendMessageResult,
@@ -657,6 +662,8 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
   ipcMain.handle(TEAM_STOP, handleStopTeam);
+  ipcMain.handle(TEAM_GET_QUEUED_USER_MESSAGES, handleGetQueuedUserMessages);
+  ipcMain.handle(TEAM_DISCARD_QUEUED_USER_MESSAGES, handleDiscardQueuedUserMessages);
   ipcMain.handle(TEAM_CREATE_CONFIG, handleCreateConfig);
   ipcMain.handle(TEAM_GET_MEMBER_LOGS, handleGetMemberLogs);
   ipcMain.handle(TEAM_GET_LOGS_FOR_TASK, handleGetLogsForTask);
@@ -746,6 +753,8 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PROCESS_ALIVE);
   ipcMain.removeHandler(TEAM_ALIVE_LIST);
   ipcMain.removeHandler(TEAM_STOP);
+  ipcMain.removeHandler(TEAM_GET_QUEUED_USER_MESSAGES);
+  ipcMain.removeHandler(TEAM_DISCARD_QUEUED_USER_MESSAGES);
   ipcMain.removeHandler(TEAM_CREATE_CONFIG);
   ipcMain.removeHandler(TEAM_GET_MEMBER_LOGS);
   ipcMain.removeHandler(TEAM_GET_LOGS_FOR_TASK);
@@ -4169,6 +4178,60 @@ async function handleStopTeam(
   return wrapTeamHandler('stop', async () => {
     addMainBreadcrumb('team', 'stop', { teamName: validated.value! });
     await getTeamRuntimeApi().stopTeam(validated.value!);
+  });
+}
+
+async function handleGetQueuedUserMessages(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  memberName: unknown
+): Promise<IpcResult<QueuedUserMessagesSnapshot>> {
+  const validatedTeamName = validateTeamName(teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+  const validatedMemberName = validateMemberName(memberName);
+  if (!validatedMemberName.valid) {
+    return { success: false, error: validatedMemberName.error ?? 'Invalid memberName' };
+  }
+  return wrapTeamHandler('getQueuedUserMessages', async () => ({
+    member: validatedMemberName.value!,
+    messages: await listQueuedUserMessages(
+      getTeamsBasePath(),
+      validatedTeamName.value!,
+      validatedMemberName.value!
+    ),
+  }));
+}
+
+async function handleDiscardQueuedUserMessages(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown,
+  memberName: unknown,
+  messageId: unknown
+): Promise<IpcResult<DiscardQueuedUserMessagesResult>> {
+  const validatedTeamName = validateTeamName(teamName);
+  if (!validatedTeamName.valid) {
+    return { success: false, error: validatedTeamName.error ?? 'Invalid teamName' };
+  }
+  const validatedMemberName = validateMemberName(memberName);
+  if (!validatedMemberName.valid) {
+    return { success: false, error: validatedMemberName.error ?? 'Invalid memberName' };
+  }
+  if (messageId !== undefined && (typeof messageId !== 'string' || !messageId.trim())) {
+    return { success: false, error: 'messageId must be a non-empty string when provided' };
+  }
+  return wrapTeamHandler('discardQueuedUserMessages', async () => {
+    const result = await discardQueuedUserMessages(
+      getTeamsBasePath(),
+      validatedTeamName.value!,
+      validatedMemberName.value!,
+      typeof messageId === 'string' ? messageId.trim() : undefined
+    );
+    if (result.discarded > 0) {
+      getTeamDataService().invalidateMessageFeed(validatedTeamName.value!);
+    }
+    return result;
   });
 }
 

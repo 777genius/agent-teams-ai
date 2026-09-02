@@ -310,6 +310,12 @@ export const TEAM_RESTORE_TASK = 'team:restoreTask';
 export const TEAM_ALIVE_LIST = 'team:aliveList';
 export const TEAM_STOP = 'team:stop';
 
+/** List queued (undelivered, from user) inbox messages for a member */
+export const TEAM_GET_QUEUED_USER_MESSAGES = 'team:getQueuedUserMessages';
+
+/** Discard one or all queued (undelivered, from user) inbox messages for a member */
+export const TEAM_DISCARD_QUEUED_USER_MESSAGES = 'team:discardQueuedUserMessages';
+
 /** Create team config without provisioning CLI */
 export const TEAM_CREATE_CONFIG = 'team:createConfig';
 

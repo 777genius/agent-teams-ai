@@ -67,6 +67,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  DiscardQueuedUserMessagesResult,
   GlobalTask,
   KanbanColumnId,
   LeadActivitySnapshot,
@@ -77,6 +78,7 @@ import type {
   MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
+  QueuedUserMessagesSnapshot,
   ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
   SendMessageRequest,
@@ -491,6 +493,15 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;
   stop: (teamName: string) => Promise<void>;
+  getQueuedUserMessages: (
+    teamName: string,
+    memberName: string
+  ) => Promise<QueuedUserMessagesSnapshot>;
+  discardQueuedUserMessages: (
+    teamName: string,
+    memberName: string,
+    messageId?: string
+  ) => Promise<DiscardQueuedUserMessagesResult>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getLogsForTask: (

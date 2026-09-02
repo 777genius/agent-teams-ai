@@ -169,6 +169,7 @@ import {
   TEAM_DELETE_DRAFT,
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
+  TEAM_DISCARD_QUEUED_USER_MESSAGES,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
@@ -182,6 +183,7 @@ import {
   TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_QUEUED_USER_MESSAGES,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
@@ -274,6 +276,7 @@ const TEAM_HANDLER_KEYS = [
   TEAM_DELETE_DRAFT,
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
+  TEAM_DISCARD_QUEUED_USER_MESSAGES,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
@@ -287,6 +290,7 @@ const TEAM_HANDLER_KEYS = [
   TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_QUEUED_USER_MESSAGES,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
@@ -2832,6 +2836,77 @@ describe('ipc teams handlers', () => {
       expect(service.getTeamData).not.toHaveBeenCalled();
     }
   );
+
+  it('invalidates the message feed only when a queued message was actually discarded', async () => {
+    const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-discard-queued-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const inboxDir = path.join(claudeRoot, 'teams', 'my-team', 'inboxes');
+    await fs.promises.mkdir(inboxDir, { recursive: true });
+    const inboxPath = path.join(inboxDir, 'alice.json');
+    await fs.promises.writeFile(
+      inboxPath,
+      JSON.stringify([
+        { from: 'user', to: 'alice', text: 'do the thing', timestamp: 'ts', read: false },
+      ])
+    );
+
+    try {
+      const handler = handlers.get(TEAM_DISCARD_QUEUED_USER_MESSAGES)!;
+
+      const discarded = (await handler({} as never, 'my-team', 'alice', undefined)) as {
+        success: boolean;
+        data?: { discarded: number; remainingQueued: number };
+      };
+      expect(discarded).toEqual({ success: true, data: { discarded: 1, remainingQueued: 0 } });
+      expect(service.invalidateMessageFeed).toHaveBeenCalledWith('my-team');
+
+      service.invalidateMessageFeed.mockClear();
+
+      // The inbox is empty now, so the same call is a no-op. Invalidating the feed
+      // anyway would repaint the message list for nothing on every retry.
+      const noop = (await handler({} as never, 'my-team', 'alice', undefined)) as {
+        success: boolean;
+        data?: { discarded: number; remainingQueued: number };
+      };
+      expect(noop).toEqual({ success: true, data: { discarded: 0, remainingQueued: 0 } });
+      expect(service.invalidateMessageFeed).not.toHaveBeenCalled();
+    } finally {
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+      setClaudeBasePathOverride(null);
+    }
+  });
+
+  it('rejects an unusable messageId before touching the inbox file', async () => {
+    const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-discard-queued-id-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const inboxDir = path.join(claudeRoot, 'teams', 'my-team', 'inboxes');
+    await fs.promises.mkdir(inboxDir, { recursive: true });
+    const inboxPath = path.join(inboxDir, 'alice.json');
+    const original = JSON.stringify([
+      { from: 'user', to: 'alice', text: 'do the thing', timestamp: 'ts', read: false },
+    ]);
+    await fs.promises.writeFile(inboxPath, original);
+
+    try {
+      const handler = handlers.get(TEAM_DISCARD_QUEUED_USER_MESSAGES)!;
+
+      for (const badMessageId of ['', '   ', 42, null]) {
+        const result = (await handler({} as never, 'my-team', 'alice', badMessageId)) as {
+          success: boolean;
+          error?: string;
+        };
+        expect(result.success).toBe(false);
+        expect(result.error).toContain('messageId');
+      }
+
+      // A rejected id must not fall through to the "discard everything" path.
+      expect(await fs.promises.readFile(inboxPath, 'utf8')).toBe(original);
+      expect(service.invalidateMessageFeed).not.toHaveBeenCalled();
+    } finally {
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+      setClaudeBasePathOverride(null);
+    }
+  });
 
   it('classifies draft teams before asking the team-data worker for a full snapshot', async () => {
     const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-draft-get-data-'));

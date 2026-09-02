@@ -79,6 +79,7 @@ import type {
   CreateScheduleInput,
   CreateTaskRequest,
   CrossTeamAPI,
+  DiscardQueuedUserMessagesResult,
   ElectronAPI,
   FileChangeEvent,
   GlobalTask,
@@ -91,6 +92,7 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   PaginatedSessionsResult,
   Project,
+  QueuedUserMessagesSnapshot,
   RepositoryGroup,
   Schedule,
   ScheduleRun,
@@ -1126,6 +1128,16 @@ export class HttpAPIClient implements ElectronAPI {
     },
     stop: async (): Promise<void> => {
       throw new Error('Team stop is not available in browser mode');
+    },
+    getQueuedUserMessages: async (
+      _teamName: string,
+      memberName: string
+    ): Promise<QueuedUserMessagesSnapshot> => {
+      console.warn('[HttpAPIClient] getQueuedUserMessages is not available in browser mode');
+      return { member: memberName, messages: [] };
+    },
+    discardQueuedUserMessages: async (): Promise<DiscardQueuedUserMessagesResult> => {
+      throw new Error('Discarding queued messages is not available in browser mode');
     },
     createConfig: async (): Promise<void> => {
       throw new Error('Team config creation is not available in browser mode');
