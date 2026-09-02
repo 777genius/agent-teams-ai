@@ -935,17 +935,6 @@ function getLaunchVisualStateDotClass(visualState: MemberLaunchVisualState): str
   }
 }
 
-function hasStoppedRuntimeLivenessKind(
-  livenessKind: TeamAgentRuntimeEntry['livenessKind'] | undefined
-): boolean {
-  return (
-    livenessKind === 'not_found' ||
-    livenessKind === 'registered_only' ||
-    livenessKind === 'shell_only' ||
-    livenessKind === 'stale_metadata'
-  );
-}
-
 export function shouldDisplayMemberCurrentTask({
   member,
   isTeamAlive,
