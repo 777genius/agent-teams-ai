@@ -733,7 +733,15 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
       timestamp: '2026-01-01T00:00:05.000Z',
     });
     const deliverOpenCodeMemberMessage = vi.fn(
-      (_teamName: string, input: { messageId?: string; replyRecipient?: string; text: string }) =>
+      (
+        _teamName: string,
+        input: {
+          messageId?: string;
+          replyRecipient?: string;
+          text: string;
+          coalescedNoticeText?: string;
+        }
+      ) =>
         Promise.resolve(
           input.replyRecipient === 'user'
             ? { delivered: true, accepted: true, responsePending: false, laneId: 'primary' }
@@ -773,8 +781,10 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
       'task-comment-forward:1',
       'user-2',
     ]);
-    const coalescedText = deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.text ?? '';
-    expect(coalescedText).toContain('Top 3 risks posted.');
+    // The anchor's own `text` stays the inbox row; the riders travel beside it.
+    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.text).toBe('Top 3 risks posted.');
+    const coalescedText =
+      deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.coalescedNoticeText ?? '';
     expect(coalescedText).toContain('<opencode_coalesced_notices count="3">');
     expect(coalescedText).toContain('notice 1 (from system, messageId task-comment-forward:2');
     expect(coalescedText).toContain('#de5126de done. Risks are on the board.');
@@ -784,6 +794,7 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     expect(coalescedText).not.toContain('status?');
     expect(coalescedText).not.toContain('#a36889d4 done.');
     expect(deliverOpenCodeMemberMessage.mock.calls[1]?.[1]?.text).toBe('status?');
+    expect(deliverOpenCodeMemberMessage.mock.calls[1]?.[1]?.coalescedNoticeText).toBeUndefined();
     expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [
       dependencyResolved,
       drafterStarted,

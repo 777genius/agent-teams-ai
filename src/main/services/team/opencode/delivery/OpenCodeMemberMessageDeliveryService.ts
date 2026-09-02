@@ -16,6 +16,7 @@ import {
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
 import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
+import { buildOpenCodePromptBodyText } from './OpenCodeMemberMessageDeliveryPorts';
 import {
   assertOpenCodePromptDeliveryNotCancelled,
   OpenCodePromptDeliveryCancelledError,
@@ -1038,7 +1039,7 @@ export class OpenCodeMemberMessageDeliveryService {
         'session_stale';
     }
     const deliveryText = buildOpenCodePromptDeliveryAttemptText({
-      text: input.text,
+      text: buildOpenCodePromptBodyText(input),
       controlText: buildOpenCodePromptDeliveryRepairControlText({
         ledgerRecord,
         readAllowed: retryReadAllowed,

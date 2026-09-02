@@ -595,9 +595,10 @@ async function runOpenCodeMemberInboxRelayWork(
     }
     const delivery = await ports.deliverOpenCodeMemberMessage(teamName, {
       memberName,
-      text: coalesced.length
-        ? buildOpenCodeCoalescedNoticeText(message.text, coalesced)
-        : message.text,
+      text: message.text,
+      ...(coalesced.length
+        ? { coalescedNoticeText: buildOpenCodeCoalescedNoticeText(coalesced) }
+        : {}),
       messageId: message.messageId,
       replyRecipient: deliveryDecision.replyRecipient,
       actionMode: deliveryDecision.actionMode ?? undefined,

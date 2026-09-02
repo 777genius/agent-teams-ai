@@ -201,8 +201,8 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     expect(withRecord).toEqual([]);
   });
 
-  it('builds one tagged block that keeps the anchor text first and names every rider', () => {
-    const text = buildOpenCodeCoalescedNoticeText('anchor body', [
+  it('builds one tagged block that names every rider and carries no anchor text', () => {
+    const text = buildOpenCodeCoalescedNoticeText([
       message({ messageId: 'notice-1', from: 'Scribe', text: 'first rider' }),
       message({
         messageId: 'notice-2',
@@ -212,8 +212,7 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
       }),
     ]);
 
-    expect(text.startsWith('anchor body\n\n')).toBe(true);
-    expect(text).toContain('<opencode_coalesced_notices count="2">');
+    expect(text.startsWith('<opencode_coalesced_notices count="2">')).toBe(true);
     expect(text).toContain('--- notice 1 (from Scribe, messageId notice-1');
     expect(text).toContain('first rider');
     // An unaddressable sender is named as the system rather than as an empty
