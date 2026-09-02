@@ -14,6 +14,7 @@ import {
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
+import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import { isOpenCodeSessionRefreshRetryRecord } from './OpenCodePromptDeliveryFollowUpPolicy';
 import {
   buildOpenCodePromptDeliveryAttemptId,
@@ -341,96 +342,22 @@ export class OpenCodeMemberMessageDeliveryService {
     }
 
     if (!this.deps.openCodePromptDeliveryWatchdogScheduler.isEnabled()) {
-      const controlUrl =
-        input.messageKind === 'member_work_sync_nudge'
-          ? await this.deps.resolveControlApiBaseUrl()
-          : null;
-      const result = await this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
-        teamName,
-        laneId: laneIdentity.laneId,
-        memberName: canonicalMemberName,
-        send: async () =>
-          await adapter.sendMessageToMember({
-            ...(runtimeRunId ? { runId: runtimeRunId } : {}),
-            teamName,
-            laneId: laneIdentity.laneId,
-            memberName: canonicalMemberName,
-            cwd,
-            text: input.text,
-            messageId: input.messageId,
-            fileParts: openCodeFileParts,
-            replyRecipient: input.replyRecipient,
-            actionMode: input.actionMode,
-            messageKind: input.messageKind,
-            workSyncIntent: input.workSyncIntent,
-            workSyncReviewRequestEventIds: input.workSyncReviewRequestEventIds,
-            controlUrl: controlUrl ?? undefined,
-            taskRefs: input.taskRefs,
-            forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
-          }),
-      });
-      await this.deps.rememberOpenCodeRuntimePidFromBridge({
+      return await deliverOpenCodeMemberMessageWithoutWatchdog({
+        ports: this.deps,
+        adapter,
+        message: input,
         teamName,
         memberName: canonicalMemberName,
         laneId: laneIdentity.laneId,
-        runId: runtimeRunId,
-        runtimeSessionId: result.sessionId,
-        runtimePid: result.runtimePid,
-        reason: 'opencode_delivery_runtime_pid_observed',
-      });
-      if (result.ok && legacyOpenCodeBootstrapSessionToStamp) {
-        await this.deps.stampOpenCodeAppMcpTransportEvidenceIfMissing(
-          legacyOpenCodeBootstrapSessionToStamp
-        );
-      }
-      if (result.ok && result.sessionId && refreshedOpenCodeBootstrapSessionToStamp) {
-        await this.deps.stampOpenCodeAppMcpTransportEvidenceIfMissing(
-          refreshedOpenCodeBootstrapSessionToStamp,
-          {
-            overwriteExistingHash: true,
-            runtimeSessionId: result.sessionId,
-          }
-        );
-      }
-      const responseObservation = normalizeOpenCodeDeliveryResponseObservation(
-        result.responseObservation
-      );
-      await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
-        teamName,
-        runId: runtimeRunId,
-        laneId: laneIdentity.laneId,
-        memberName: canonicalMemberName,
         cwd,
-        sessionId: result.sessionId,
-        responseState: responseObservation?.state,
-        reason: responseObservation?.reason ?? result.diagnostics[0],
-        diagnostics: result.diagnostics,
+        runtimeRunId,
+        fileParts: openCodeFileParts,
+        forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
+        legacyBootstrapSessionToStamp: legacyOpenCodeBootstrapSessionToStamp,
+        refreshedBootstrapSessionToStamp: refreshedOpenCodeBootstrapSessionToStamp,
         teamColor: config?.color,
         teamDisplayName: config?.name,
       });
-      const legacyWorkSyncReadAllowed =
-        input.messageKind === 'member_work_sync_nudge' && result.ok
-          ? await this.deps.isLegacyOpenCodeMemberWorkSyncReadCommitAllowed({
-              teamName,
-              memberName: canonicalMemberName,
-              workSyncIntent: input.workSyncIntent,
-              responseObservation,
-            })
-          : true;
-      const legacyWorkSyncResponsePending =
-        result.ok && input.messageKind === 'member_work_sync_nudge' && !legacyWorkSyncReadAllowed;
-      return {
-        delivered: result.ok,
-        accepted: result.ok,
-        responsePending: legacyWorkSyncResponsePending,
-        responseState: responseObservation?.state,
-        ...(legacyWorkSyncResponsePending
-          ? { reason: responseObservation?.reason ?? 'member_work_sync_report_required' }
-          : result.ok
-            ? {}
-            : { reason: result.diagnostics[0] ?? 'opencode_message_delivery_failed' }),
-        diagnostics: result.diagnostics,
-      };
     }
 
     const messageId = input.messageId?.trim();
