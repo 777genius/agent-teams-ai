@@ -496,6 +496,78 @@ controller.messages.sendMessage({
     expect(readKanbanFile(claudeDir).tasks[blocked.id]).toBeUndefined();
   });
 
+  it('does not notify the owner of a task whose blockers are still open, and notifies once the last blocker completes', () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer' },
+      { name: 'carol', role: 'reviewer' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const carolInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'carol.json');
+    const readCarolInbox = () =>
+      fs.existsSync(carolInboxPath) ? JSON.parse(fs.readFileSync(carolInboxPath, 'utf8')) : [];
+
+    const blocker = controller.taskBoard.createTask({ subject: 'Write the parser', owner: 'bob' });
+    const blocked = controller.taskBoard.createTask({
+      subject: 'Review the parser',
+      owner: 'carol',
+      blockedBy: [blocker.id],
+    });
+    expect(readCarolInbox()).toEqual([]);
+
+    // Negative control A: the same assignment without blockers is announced at
+    // once, so the guard is not swallowing assignment notices in general.
+    const unblocked = controller.taskBoard.createTask({
+      subject: 'Write the release notes',
+      owner: 'carol',
+    });
+    expect(readCarolInbox().map((row) => row.summary)).toEqual([
+      `New task #${unblocked.displayId} assigned`,
+    ]);
+
+    // Negative control B: the owner is woken exactly once, and at the moment
+    // the work can actually begin.
+    controller.taskBoard.completeTask(blocker.id, 'bob');
+    const afterBlockerCompleted = readCarolInbox();
+    expect(afterBlockerCompleted).toHaveLength(2);
+    expect(afterBlockerCompleted.at(-1).summary).toBe(`Comment on #${blocked.displayId}`);
+    expect(afterBlockerCompleted.at(-1).text).toContain('Dependency resolved');
+
+    // Negative control C: a deleted blocker is not an open blocker.
+    const droppedBlocker = controller.taskBoard.createTask({
+      subject: 'Dropped spike',
+      owner: 'bob',
+    });
+    const dependsOnDropped = controller.taskBoard.createTask({
+      subject: 'Ship the parser',
+      owner: 'bob',
+      blockedBy: [droppedBlocker.id],
+    });
+    controller.taskBoard.softDeleteTask(droppedBlocker.id, 'alice');
+    controller.taskBoard.setTaskOwner(dependsOnDropped.id, 'carol', 'alice');
+    expect(readCarolInbox().at(-1).summary).toBe(`Task #${dependsOnDropped.displayId} assigned`);
+
+    // Negative control D: a blockedBy id that no longer resolves is not an open
+    // blocker either, so a purged row cannot freeze a task forever.
+    const purgedBlocker = controller.taskBoard.createTask({
+      subject: 'Purged spike',
+      owner: 'bob',
+    });
+    const dependsOnPurged = controller.taskBoard.createTask({
+      subject: 'Publish the parser',
+      owner: 'bob',
+      blockedBy: [purgedBlocker.id],
+    });
+    fs.rmSync(path.join(claudeDir, 'tasks', 'my-team', `${purgedBlocker.id}.json`));
+    controller.taskBoard.setTaskOwner(dependsOnPurged.id, 'carol', 'alice');
+    expect(readCarolInbox().at(-1).summary).toBe(`Task #${dependsOnPurged.displayId} assigned`);
+    expect(readCarolInbox()).toHaveLength(4);
+  });
+
   it('builds member briefing from team config language and known member metadata', async () => {
     const claudeDir = makeClaudeDir();
     const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');

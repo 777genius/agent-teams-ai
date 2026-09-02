@@ -159,9 +159,34 @@ function buildCommentNotificationMessage(context, task, comment) {
     ].join('\n');
 }
 
+function hasOpenBlockers(context, task) {
+    const blockerIds = Array.isArray(task.blockedBy) ? task.blockedBy : [];
+    for (const id of blockerIds) {
+        try {
+            const blocker = taskStore.readTask(context.paths, id, { includeDeleted: true });
+            if (blocker.status !== 'completed' && blocker.status !== 'deleted') {
+                return true;
+            }
+        } catch {
+            // missing task = not blocking
+        }
+    }
+    return false;
+}
+
 function maybeNotifyAssignedOwner(context, task, options = {}) {
     const owner = normalizeActorName(task.owner);
     if (!owner || task.status === 'deleted') {
+        return;
+    }
+
+    // Waking the owner of a task whose blockers are still open spends a whole
+    // turn on work that cannot start: the owner reads "start now", checks the
+    // board, and reports back that it is blocked. For an on-demand local model
+    // it also costs a model load. notifyUnblockedOwners() already posts a
+    // dependency-resolved comment when the last blocker completes, and that
+    // comment notification wakes the owner exactly when work can begin.
+    if (hasOpenBlockers(context, task)) {
         return;
     }
 
