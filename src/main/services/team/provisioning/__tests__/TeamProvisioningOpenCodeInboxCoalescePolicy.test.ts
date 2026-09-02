@@ -13,6 +13,7 @@ import {
   OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT,
   type OpenCodeReplyOptionalCoalescePorts,
   selectOpenCodeReplyOptionalCoalescedFollowers,
+  selectOpenCodeSettleableQueuedNotices,
 } from '../TeamProvisioningOpenCodeInboxCoalescePolicy';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
@@ -307,6 +308,74 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     expect(notDispatched).toContain('anchor -> notice-1,notice-2');
     expect(notDispatched).toContain('accepted=unknown');
     expect(isInformationalOpenCodeRuntimeDeliveryDiagnostic(notDispatched)).toBe(true);
+  });
+
+  // The settlement pass read-commits instead of delivering, so the prompt-length
+  // cap does not apply to it. Negative control: the same queue through the
+  // prompt selector stops at the limit.
+  it('selects the whole settleable run past the prompt coalesce limit', async () => {
+    const unread = [
+      message({ messageId: 'anchor' }),
+      ...notices(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT + 4),
+    ];
+
+    const settleable = await selectOpenCodeSettleableQueuedNotices({
+      unread,
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+    expect(settleable).toHaveLength(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT + 4);
+    expect(settleable.at(-1)?.messageId).toBe(
+      `notice-${OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT + 4}`
+    );
+
+    const delivered = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread,
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+    expect(delivered).toHaveLength(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT);
+  });
+
+  // Removing the cap must not loosen any other boundary: the settlement walk
+  // stops exactly where the delivery walk does.
+  it('keeps every non-limit boundary while settling the queued run', async () => {
+    const unread = [
+      message({ messageId: 'anchor' }),
+      message({ messageId: 'notice-1' }),
+      message({ messageId: 'user-question', from: 'user', text: 'status?' }),
+      ...notices(OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT, 'tail'),
+    ];
+
+    const settleable = await selectOpenCodeSettleableQueuedNotices({
+      unread,
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts({
+        resolveReplyRecipient: (candidate) => (candidate.from === 'user' ? 'user' : 'Scribe'),
+      }),
+    });
+    expect(settleable.map((notice) => notice.messageId)).toEqual(['notice-1']);
+
+    const recorded = await selectOpenCodeSettleableQueuedNotices({
+      unread: [message({ messageId: 'anchor' }), ...notices(3)],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts({
+        hasExistingRecord: (candidate) => Promise.resolve(candidate.messageId === 'notice-2'),
+      }),
+    });
+    expect(recorded.map((notice) => notice.messageId)).toEqual(['notice-1']);
+
+    const replyRequiredAnchor = await selectOpenCodeSettleableQueuedNotices({
+      unread: [message({ messageId: 'anchor' }), ...notices(3)],
+      index: 0,
+      anchorReplyRecipient: 'user',
+      ports: createPorts(),
+    });
+    expect(replyRequiredAnchor).toEqual([]);
   });
 
   it('finds the next unread user message only for a non-user delivery', () => {

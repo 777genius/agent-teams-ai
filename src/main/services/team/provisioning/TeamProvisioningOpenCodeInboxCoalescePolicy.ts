@@ -64,22 +64,25 @@ export interface OpenCodeReplyOptionalCoalescePorts {
   hasExistingRecord(message: RelayInboxMessage): Promise<boolean>;
 }
 
+export interface OpenCodeQueuedNoticeSelection {
+  unread: readonly RelayInboxMessage[];
+  index: number;
+  anchorReplyRecipient: string;
+  ports: OpenCodeReplyOptionalCoalescePorts;
+}
+
 /**
- * Reply-optional notices queued directly behind the message at `index` (in
- * inbox order, stopping at the first message that is not reply-optional, is an
- * automated nudge, or already has a ledger record). They are delivered in the
- * same prompt and marked read once that prompt is accepted.
+ * The queue walk shared by both selection policies below. It answers "which
+ * rows directly behind `index` carry no reply contract of their own", and
+ * `limit` is the only thing the two callers disagree about.
  *
  * Ordering matters: the walk stops at the first candidate that fails, it never
  * skips one. A reply-required message behind a notice therefore ends the run
  * and stays unread, so it still gets its own prompt and its own reply contract.
  */
-export async function selectOpenCodeReplyOptionalCoalescedFollowers(input: {
-  unread: readonly RelayInboxMessage[];
-  index: number;
-  anchorReplyRecipient: string;
-  ports: OpenCodeReplyOptionalCoalescePorts;
-}): Promise<RelayInboxMessage[]> {
+async function selectQueuedReplyOptionalNotices(
+  input: OpenCodeQueuedNoticeSelection & { limit: number }
+): Promise<RelayInboxMessage[]> {
   const anchor = input.unread[input.index];
   if (
     !anchor ||
@@ -90,7 +93,7 @@ export async function selectOpenCodeReplyOptionalCoalescedFollowers(input: {
   }
   const followers: RelayInboxMessage[] = [];
   for (let cursor = input.index + 1; cursor < input.unread.length; cursor += 1) {
-    if (followers.length >= OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT) break;
+    if (followers.length >= input.limit) break;
     const candidate = input.unread[cursor];
     if (!candidate || candidate.read || !isCoalescableNoticeKind(candidate)) break;
     if (typeof candidate.text !== 'string' || candidate.text.trim().length === 0) break;
@@ -101,6 +104,37 @@ export async function selectOpenCodeReplyOptionalCoalescedFollowers(input: {
     followers.push(candidate);
   }
   return followers;
+}
+
+/**
+ * Reply-optional notices queued directly behind the message at `index` (in
+ * inbox order, stopping at the first message that is not reply-optional, is an
+ * automated nudge, or already has a ledger record). They are delivered in the
+ * same prompt and marked read once that prompt is accepted.
+ *
+ * Capped at `OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT`, because this selection
+ * becomes prompt text the model has to read in full.
+ */
+export function selectOpenCodeReplyOptionalCoalescedFollowers(
+  input: OpenCodeQueuedNoticeSelection
+): Promise<RelayInboxMessage[]> {
+  return selectQueuedReplyOptionalNotices({
+    ...input,
+    limit: OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT,
+  });
+}
+
+/**
+ * The same queued notices, selected for a pass that read-commits them instead
+ * of delivering them. No prompt is built, so the prompt-length cap does not
+ * apply and the whole queued run settles in this one pass; leaving a remainder
+ * would only make the next relay pass re-derive the same settlement to finish
+ * a job this one could already close.
+ */
+export function selectOpenCodeSettleableQueuedNotices(
+  input: OpenCodeQueuedNoticeSelection
+): Promise<RelayInboxMessage[]> {
+  return selectQueuedReplyOptionalNotices({ ...input, limit: input.unread.length });
 }
 
 /**
