@@ -3,9 +3,11 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   OpenCodeReadinessBridge,
   type OpenCodeReadinessBridgeCommandExecutor,
+} from './OpenCodeReadinessBridge';
+import {
   resolveOpenCodeLaunchTimeoutMs,
   resolveOpenCodeReadinessTimeoutMs,
-} from './OpenCodeReadinessBridge';
+} from './OpenCodeReadinessTimeoutPolicy';
 
 import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
 

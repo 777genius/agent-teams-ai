@@ -15,6 +15,11 @@ import {
   isOpenCodeBridgeEmptyOutputFailure,
   reconciliationRequiredLaunchData,
 } from './OpenCodeLaunchResultHelpers';
+import {
+  OPEN_CODE_BRIDGE_TIMEOUTS_MS,
+  resolveOpenCodeLaunchTimeoutMs,
+  resolveOpenCodeReadinessTimeoutMs,
+} from './OpenCodeReadinessTimeoutPolicy';
 
 import type { OpenCodeTeamRuntimeBridgePort } from '../../runtime/OpenCodeTeamRuntimeAdapter';
 import type {
@@ -46,6 +51,7 @@ import type {
   OpenCodeStopTeamCommandBody,
   OpenCodeStopTeamCommandData,
 } from './OpenCodeBridgeCommandContract';
+import type { OpenCodeReadinessBridgeTimeoutOptions } from './OpenCodeReadinessTimeoutPolicy';
 import type { OpenCodeStateChangingBridgeCommandService } from './OpenCodeStateChangingBridgeCommandService';
 
 export interface OpenCodeLedgerBackfillPort {
@@ -68,14 +74,7 @@ export interface OpenCodeReadinessBridgeCommandExecutor {
   ): Promise<OpenCodeBridgeResult<TData>>;
 }
 
-export interface OpenCodeReadinessBridgeOptions {
-  timeoutMs?: number;
-  launchTimeoutMs?: number;
-  reconcileTimeoutMs?: number;
-  sendTimeoutMs?: number;
-  observeTimeoutMs?: number;
-  stopTimeoutMs?: number;
-  cleanupTimeoutMs?: number;
+export interface OpenCodeReadinessBridgeOptions extends OpenCodeReadinessBridgeTimeoutOptions {
   appVersion?: string;
   stateChangingCommands?: Pick<OpenCodeStateChangingBridgeCommandService, 'execute'>;
 }
@@ -87,54 +86,8 @@ export interface OpenCodeReadinessBridgeCommandBody {
   skipPermissions?: boolean;
 }
 
-const DEFAULT_READINESS_TIMEOUT_MS = 300_000;
-const DEFAULT_LAUNCH_TIMEOUT_MS = 120_000;
-const NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS = 90_000;
-const MAX_NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_MS = 10 * 60_000;
-const DEFAULT_RECONCILE_TIMEOUT_MS = 30_000;
-// Longer than the renderer-facing UI timeout: late OpenCode turns should still
-// finish bridge-side observation and emit member-work-sync signals.
-const DEFAULT_SEND_TIMEOUT_MS = 45_000;
-const DEFAULT_OBSERVE_TIMEOUT_MS = 20_000;
-const DEFAULT_STOP_TIMEOUT_MS = 30_000;
-const DEFAULT_CLEANUP_TIMEOUT_MS = 10_000;
-const DEFAULT_PERMISSION_TIMEOUT_MS = 30_000;
-const DEFAULT_BACKFILL_TIMEOUT_MS = 45_000;
-const DEFAULT_COMMAND_STATUS_TIMEOUT_MS = 5_000;
 const OPEN_CODE_COMPLETED_COMMAND_RECOVERY_MESSAGE =
   'OpenCode bridge command already completed; recover through commandStatus';
-
-export function resolveOpenCodeLaunchTimeoutMs(
-  input: Pick<OpenCodeLaunchTeamCommandBody, 'selectedModel' | 'members'>,
-  configuredTimeoutMs?: number
-): number {
-  if (configuredTimeoutMs !== undefined) {
-    return configuredTimeoutMs;
-  }
-  const usesSerialNativeSubscriptionCli =
-    input.selectedModel.startsWith('cursor-acp/') || input.selectedModel.startsWith('kiro/');
-  if (!usesSerialNativeSubscriptionCli) {
-    return DEFAULT_LAUNCH_TIMEOUT_MS;
-  }
-  const participantCount = Math.max(1, input.members.length + 1);
-  return Math.min(
-    MAX_NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_MS,
-    Math.max(
-      DEFAULT_LAUNCH_TIMEOUT_MS,
-      participantCount * NATIVE_SUBSCRIPTION_CLI_LAUNCH_TIMEOUT_PER_MEMBER_MS
-    )
-  );
-}
-
-export function resolveOpenCodeReadinessTimeoutMs(
-  _selectedModel: string | null,
-  configuredTimeoutMs?: number
-): number {
-  if (configuredTimeoutMs !== undefined) {
-    return configuredTimeoutMs;
-  }
-  return DEFAULT_READINESS_TIMEOUT_MS;
-}
 
 function buildSendPayloadHash(input: OpenCodeSendMessageCommandBody): string {
   const { payloadHash: _payloadHash, settlementMode: _settlementMode, ...hashable } = input;
@@ -259,7 +212,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd,
-      timeoutMs: this.options.reconcileTimeoutMs ?? DEFAULT_RECONCILE_TIMEOUT_MS,
+      timeoutMs: this.options.reconcileTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.reconcile,
     });
     return result.ok ? result.data : blockedLaunchData(input.runId, result);
   }
@@ -275,7 +228,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd,
-      timeoutMs: this.options.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS,
+      timeoutMs: this.options.stopTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.stop,
     });
     if (result.ok) {
       return result.data;
@@ -312,7 +265,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       runId: input.runId,
       capabilitySnapshotId: input.expectedCapabilitySnapshotId ?? null,
       cwd: input.projectPath,
-      timeoutMs: DEFAULT_PERMISSION_TIMEOUT_MS,
+      timeoutMs: OPEN_CODE_BRIDGE_TIMEOUTS_MS.permission,
     });
     return result.ok ? result.data : blockedLaunchData(input.runId, result);
   }
@@ -326,7 +279,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeListRuntimePermissionsCommandData
     >('opencode.listRuntimePermissions', input, {
       cwd,
-      timeoutMs: DEFAULT_PERMISSION_TIMEOUT_MS,
+      timeoutMs: OPEN_CODE_BRIDGE_TIMEOUTS_MS.permission,
     });
     if (result.ok) {
       return result.data;
@@ -349,7 +302,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeCleanupHostsCommandData
     >('opencode.cleanupHosts', input, {
       cwd,
-      timeoutMs: this.options.cleanupTimeoutMs ?? DEFAULT_CLEANUP_TIMEOUT_MS,
+      timeoutMs: this.options.cleanupTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.cleanup,
     });
     if (result.ok) {
       return result.data;
@@ -396,7 +349,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
           behaviorFingerprint: null,
           body: nextBody,
           cwd: nextBody.projectPath,
-          timeoutMs: this.options.sendTimeoutMs ?? DEFAULT_SEND_TIMEOUT_MS,
+          timeoutMs: this.options.sendTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.send,
         });
         return { result, requestId: result.requestId || requestId };
       }
@@ -406,7 +359,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
         OpenCodeSendMessageCommandData
       >('opencode.sendMessage', nextBody, {
         cwd: nextBody.projectPath,
-        timeoutMs: this.options.sendTimeoutMs ?? DEFAULT_SEND_TIMEOUT_MS,
+        timeoutMs: this.options.sendTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.send,
         requestId,
       });
       return { result, requestId: result.requestId || requestId };
@@ -538,7 +491,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeCommandStatusCommandData
     >('opencode.commandStatus', statusBody, {
       cwd: input.body.projectPath,
-      timeoutMs: DEFAULT_COMMAND_STATUS_TIMEOUT_MS,
+      timeoutMs: OPEN_CODE_BRIDGE_TIMEOUTS_MS.commandStatus,
     });
     if (!statusResult.ok) {
       return null;
@@ -598,7 +551,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeObserveMessageDeliveryCommandData
     >('opencode.observeMessageDelivery', input, {
       cwd: input.projectPath,
-      timeoutMs: this.options.observeTimeoutMs ?? DEFAULT_OBSERVE_TIMEOUT_MS,
+      timeoutMs: this.options.observeTimeoutMs ?? OPEN_CODE_BRIDGE_TIMEOUTS_MS.observe,
     });
     if (result.ok) {
       return result.data;
@@ -641,7 +594,7 @@ export class OpenCodeReadinessBridge implements OpenCodeTeamRuntimeBridgePort {
       OpenCodeBackfillTaskLedgerCommandData
     >('opencode.backfillTaskLedger', input, {
       cwd,
-      timeoutMs: DEFAULT_BACKFILL_TIMEOUT_MS,
+      timeoutMs: OPEN_CODE_BRIDGE_TIMEOUTS_MS.backfill,
       stdoutLimitBytes: 2_000_000,
       stderrLimitBytes: 512_000,
     });
