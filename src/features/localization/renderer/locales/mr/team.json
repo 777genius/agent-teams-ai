@@ -1546,6 +1546,11 @@
       "message": "टीम \"{{teamName}}\" कायमस्वरूपी हटवायची? सर्व डेटा गमावला जाईल.",
       "confirmLabel": "कायमचे हटवा",
       "cancelLabel": "रद्द करा"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

@@ -1546,6 +1546,11 @@
       "message": "দল মুছে ফেলুন{{teamName}}\"একলা\"? সব তথ্য মুছে যাবে।",
       "confirmLabel": "মুছে ফেলুন",
       "cancelLabel": "বাতিল"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

@@ -1546,6 +1546,11 @@
       "message": "Team \"{{teamName}}\" permanent verwijderen? Alle gegevens gaan verloren.",
       "confirmLabel": "Definitief verwijderen",
       "cancelLabel": "Annuleren"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

@@ -1546,6 +1546,11 @@
       "message": "ลบทีม \"{{teamName}}\" อย่างถาวรหรือไม่ ข้อมูลทั้งหมดจะสูญหาย",
       "confirmLabel": "ลบถาวร",
       "cancelLabel": "ยกเลิก"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

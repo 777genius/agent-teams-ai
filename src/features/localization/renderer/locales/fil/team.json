@@ -1546,6 +1546,11 @@
       "message": "Tanggalin ang team na \"{{teamName}}\" nang permanente? Mawawala ang lahat ng data.",
       "confirmLabel": "Tanggalin nang permanente",
       "cancelLabel": "Kanselahin"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

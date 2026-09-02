@@ -1588,6 +1588,11 @@
       "message": "Delete team \"{{teamName}}\" permanently? All data will be lost.",
       "confirmLabel": "Delete forever",
       "cancelLabel": "Cancel"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

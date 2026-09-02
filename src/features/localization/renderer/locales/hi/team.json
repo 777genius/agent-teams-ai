@@ -1546,6 +1546,11 @@
       "message": "Delete टीम \"{{teamName}}\" स्थायी रूप से? सभी डेटा खो जाएंगे।",
       "confirmLabel": "हमेशा के लिए हटाएं",
       "cancelLabel": "रद्द करना"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

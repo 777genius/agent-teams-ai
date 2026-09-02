@@ -1546,6 +1546,11 @@
       "message": "팀 삭제 \"{{teamName}}\" 영구적으로? 모든 데이터는 손실됩니다.",
       "confirmLabel": "자주 묻는 질문",
       "cancelLabel": "이름 *"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

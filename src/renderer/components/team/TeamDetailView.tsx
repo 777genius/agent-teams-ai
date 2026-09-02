@@ -107,6 +107,7 @@ import { TrashDialog } from './kanban/TrashDialog';
 import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
+import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
@@ -2616,11 +2617,11 @@ export const TeamDetailView = memo(function TeamDetailView({
         await deleteTeam(teamName);
         if (tabId) closeTab(tabId);
         openTeamsTab();
-      } catch {
-        // error is shown via store
+      } catch (deleteError) {
+        showTeamDeleteError(t, deleteError);
       }
     })();
-  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId]);
+  }, [teamName, deleteTeam, openTeamsTab, closeTab, tabId, reviewLifecycleHostId, t]);
 
   const handleCreateTask = async (request: CreateTaskRequest): Promise<void> => {
     const { owner, prompt, startImmediately, subject } = request;

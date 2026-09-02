@@ -1548,6 +1548,11 @@
       "message": "Видалити команду \"{{teamName}}\" остаточно? Усі дані буде втрачено.",
       "confirmLabel": "Видалити назавжди",
       "cancelLabel": "Скасувати"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

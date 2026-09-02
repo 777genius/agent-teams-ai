@@ -1546,6 +1546,11 @@
       "message": "Ștergi echipa \"{{teamName}}\" permanent? Toate datele vor fi pierdute.",
       "confirmLabel": "Șterge definitiv",
       "cancelLabel": "Anulează"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

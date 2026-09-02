@@ -4291,6 +4291,11 @@ export default interface Resources {
         message: 'Delete draft team "{{teamName}}"? This cannot be undone.';
         title: 'Delete draft';
       };
+      deleteFailed: {
+        confirmLabel: 'OK';
+        fallbackMessage: 'An unexpected error occurred';
+        title: 'Failed to delete team';
+      };
       deleteForever: {
         cancelLabel: 'Cancel';
         confirmLabel: 'Delete forever';

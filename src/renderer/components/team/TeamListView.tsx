@@ -67,6 +67,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { LaunchTeamDialogLoadingFallback } from './dialogs/LaunchTeamDialogLoadingFallback';
 import { executeTeamRelaunch } from './dialogs/teamRelaunchFlow';
 import { buildCopiedTeamMembers } from './teamCopyData';
+import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { TeamEmptyState } from './TeamEmptyState';
 import { EMPTY_TEAM_FILTER, TeamListFilterPopover } from './TeamListFilterPopover';
 import {
@@ -849,11 +850,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           variant: 'danger',
         });
         if (confirmed) {
-          try {
-            await deleteTeam(teamName);
-          } catch {
-            // error via store
-          }
+          await deleteTeam(teamName).catch((error: unknown) => showTeamDeleteError(t, error));
         }
       })();
     },
@@ -886,11 +883,9 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
           variant: 'danger',
         });
         if (confirmed) {
-          try {
-            await permanentlyDeleteTeam(teamName);
-          } catch {
-            // error via store
-          }
+          await permanentlyDeleteTeam(teamName).catch((error: unknown) =>
+            showTeamDeleteError(t, error)
+          );
         }
       })();
     },

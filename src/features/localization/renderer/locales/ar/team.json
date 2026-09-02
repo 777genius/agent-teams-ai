@@ -1546,6 +1546,11 @@
       "message": "يحذف الفريق{{teamName}}بشكل دائم؟ كل البيانات ستضيع",
       "confirmLabel": "تحذف إلى الأبد",
       "cancelLabel": "إلغاء"
+    },
+    "deleteFailed": {
+      "title": "Failed to delete team",
+      "fallbackMessage": "An unexpected error occurred",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {
