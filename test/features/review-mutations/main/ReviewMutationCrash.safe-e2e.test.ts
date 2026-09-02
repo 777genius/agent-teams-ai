@@ -76,7 +76,11 @@ async function runWorker(
   });
 }
 
-describe('review mutation crash recovery process E2E', () => {
+// The worker kills itself with SIGKILL and the harness asserts exit code 137 /
+// signal SIGKILL; Windows has no POSIX signals, so this matrix is POSIX-only.
+const describePosix = process.platform === 'win32' ? describe.skip : describe;
+
+describePosix('review mutation crash recovery process E2E', () => {
   afterEach(async () => {
     await Promise.all(
       temporaryRoots.splice(0).map((root) => rm(root, { recursive: true, force: true }))
