@@ -9,6 +9,7 @@
  */
 
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isProcessAlive } from '@main/utils/processHealth';
 import * as fs from 'fs';
 
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
@@ -17,16 +18,23 @@ import {
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
-import type { TeamForceStopResult } from '@shared/types';
+import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
 
 const DEFAULT_STOP_TIMEOUT_MS = 15_000;
+/** How often the flow re-reads how many recorded runtime hosts are still alive. */
+export const RUNTIME_HOSTS_POLL_INTERVAL_MS = 1_000;
 /**
- * How long the regular Stop waits for the orchestrator before the cleanup
- * takes over. Longer than the force-stop default because the user pressed
- * Stop, not Force stop: the orchestrator deserves the chance to finish first.
+ * Budget for the regular stop before the force-stop cleanup takes over.
+ *
+ * Measured per-lane orchestrator stops run 17-48s - a full capability probe
+ * plus a registry lock per command - so any budget inside that range escalates
+ * a stop that was about to succeed: a 45s budget cut off a lane that confirmed
+ * at 47.6s. `countLiveRuntimeHosts` ends the wait the moment the hosts are
+ * gone, so a healthy stop never spends this budget and it only bounds a hang.
  */
-export const STOP_ESCALATION_TIMEOUT_MS = 20_000;
+export const STOP_ESCALATION_TIMEOUT_MS = 90_000;
 const FORCE_STOP_DELIVERY_CANCEL_REASON =
   'force_stop_requested: pending delivery cancelled by user force stop';
 
@@ -64,6 +72,14 @@ export interface TeamForceStopFlowPorts {
   ): Promise<{ cleared: number; diagnostics: string[] }>;
   logWarning(message: string): void;
   stopTimeoutMs?: number;
+  /**
+   * How many of the team's recorded runtime host processes are still running.
+   * The orchestrator's stop takes 17-48s per lane, so the stop budget has to be
+   * generous; this lets the flow finish as soon as the hosts are actually gone
+   * instead of waiting the budget out. Omitted - or zero live hosts at the
+   * first sample - and the flow waits for the stop or the timeout as before.
+   */
+  countLiveRuntimeHosts?(teamName: string): Promise<number>;
   /**
    * Persist the stopped state: drop the launch publication and write the stop
    * marker that keeps reconciliation from re-deriving a launch snapshot for a
@@ -105,6 +121,115 @@ export async function stopTeamWithEscalation(
   ports: TeamForceStopFlowPorts
 ): Promise<TeamForceStopResult> {
   return runTeamStopFlow(teamName, ports, { cleanup: 'on_failure' });
+}
+
+/**
+ * Resolves once the team's recorded runtime hosts are gone. It starts only
+ * when the first sample sees at least one live host: without that evidence an
+ * empty sample means "nothing was recorded", not "everything exited", and
+ * would end the stop before the orchestrator had done any work at all.
+ */
+function watchRuntimeHostsGone(
+  teamName: string,
+  ports: TeamForceStopFlowPorts
+): { promise: Promise<'runtime_already_down'>; cancel(): void } {
+  let interval: ReturnType<typeof setInterval> | null = null;
+  let cancelled = false;
+  let sampling = false;
+  const cancel = (): void => {
+    cancelled = true;
+    if (interval) {
+      clearInterval(interval);
+      interval = null;
+    }
+  };
+  if (!ports.countLiveRuntimeHosts) {
+    return { promise: new Promise<'runtime_already_down'>(() => {}), cancel };
+  }
+  const promise = new Promise<'runtime_already_down'>((resolve) => {
+    const onSample = (remaining: number): void => {
+      sampling = false;
+      if (!cancelled && remaining <= 0) {
+        cancel();
+        resolve('runtime_already_down');
+      }
+    };
+    const sample = (): void => {
+      if (sampling) return;
+      sampling = true;
+      void countLiveRuntimeHostsSafely(teamName, ports).then(onSample);
+    };
+    const startSampling = (liveHosts: number): void => {
+      if (cancelled || liveHosts <= 0) {
+        return;
+      }
+      interval = setInterval(sample, RUNTIME_HOSTS_POLL_INTERVAL_MS);
+      interval.unref?.();
+    };
+    void countLiveRuntimeHostsSafely(teamName, ports).then(startSampling);
+  });
+  return { promise, cancel };
+}
+
+/**
+ * A probe that cannot answer must not keep the stop waiting, so a failure
+ * counts as "no live hosts" rather than propagating out of the poll.
+ */
+async function countLiveRuntimeHostsSafely(
+  teamName: string,
+  ports: TeamForceStopFlowPorts
+): Promise<number> {
+  try {
+    return (await ports.countLiveRuntimeHosts?.(teamName)) ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * How many of the team's recorded lane host processes are still running. Same
+ * evidence the kill step uses: only pids the launch state recorded for this
+ * team count, so an unrelated process can never keep the stop waiting.
+ */
+export async function countLiveRecordedRuntimeHostsForTeam(input: {
+  teamName: string;
+  launchStateStore?: TeamLaunchStateStore;
+  isRuntimeProcessAlive?: (pid: number) => boolean;
+}): Promise<number> {
+  const launchStateStore = input.launchStateStore ?? new TeamLaunchStateStore();
+  const snapshot = await launchStateStore.read(input.teamName).catch(() => null);
+  const isAlive = input.isRuntimeProcessAlive ?? isProcessAlive;
+  const pids = collectRecordedOpenCodeRuntimePids(snapshot);
+  let live = 0;
+  for (const pid of pids) {
+    try {
+      if (isAlive(pid)) live += 1;
+    } catch {
+      // An unreadable process is not evidence of a live host.
+    }
+  }
+  return live;
+}
+
+/**
+ * The runtime host pids the launch snapshot recorded for this team's OpenCode
+ * lanes. Nothing else counts as evidence: a host this app never wrote down is
+ * not the team's to wait for.
+ */
+function collectRecordedOpenCodeRuntimePids(
+  snapshot: PersistedTeamLaunchSnapshot | null
+): Set<number> {
+  const pids = new Set<number>();
+  for (const member of Object.values(snapshot?.members ?? {})) {
+    if (member.providerId !== 'opencode' || !member.laneId?.trim()) {
+      continue;
+    }
+    const pid = member.runtimePid;
+    if (typeof pid === 'number' && Number.isFinite(pid) && pid > 0) {
+      pids.add(pid);
+    }
+  }
+  return pids;
 }
 
 async function runTeamStopFlow(
@@ -160,6 +285,7 @@ async function runTeamStopFlow(
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
   let timedOut = false;
+  let runtimeHostsGone: { promise: Promise<'runtime_already_down'>; cancel(): void } | null = null;
   try {
     const stopAttempt = ports.stopTeam(teamName).then(
       () => {
@@ -188,8 +314,10 @@ async function runTeamStopFlow(
         return 'stop_failed' as const;
       }
     );
+    runtimeHostsGone = watchRuntimeHostsGone(teamName, ports);
     stopOutcome = await Promise.race([
       stopAttempt,
+      runtimeHostsGone.promise,
       new Promise<'timed_out'>((resolve) => {
         timer = setTimeout(() => resolve('timed_out'), timeoutMs);
         timer.unref?.();
@@ -201,11 +329,19 @@ async function runTeamStopFlow(
         `[${teamName}] Regular stop did not finish within ${timeoutMs}ms; continuing with force stop cleanup.`
       );
       diagnostics.push(`Regular stop timed out after ${timeoutMs}ms`);
+    } else if (stopOutcome === 'runtime_already_down') {
+      timedOut = true;
+      diagnostics.push(
+        `Runtime hosts were gone ${Date.now() - stopStartedAtMs}ms into the stop; finished without waiting for the orchestrator acknowledgement`
+      );
     }
   } finally {
     if (timer) {
       clearTimeout(timer);
     }
+    // Cancelled here rather than after the race so a throw between them - or
+    // any later exit from this block - cannot leave the poller running.
+    runtimeHostsGone?.cancel();
   }
 
   let killedRuntimePids: number[] = [];
