@@ -6,6 +6,18 @@ const { withFileLockSync } = require('./fileLock.js');
 const { looksLikeIdleAckOnlyText } = require('./idleAckText.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const taskStore = require('./taskStore.js');
+const {
+  RUNTIME_DELIVERY_DUPLICATE_NOTICE,
+  REPEATED_MESSAGE_WINDOW_MS,
+  REPEATED_MESSAGE_NOTICE,
+  RELAY_SCOPED_RESTATEMENT_NOTICE,
+  normalizeComparableParticipant,
+  parseRowTimeMs,
+  isUserParticipant,
+  getRuntimeDeliveryDuplicate,
+  getRepeatedMessageDuplicate,
+  getRelayScopedUserRestatement,
+} = require('./messageDeduplication.js');
 
 function nowIso() {
   return new Date().toISOString();
@@ -214,278 +226,11 @@ function appendRow(filePath, row) {
   });
 }
 
-const RUNTIME_DELIVERY_DUPLICATE_NOTICE =
-  'Duplicate runtime_delivery ignored. The visible reply is already recorded for this relayOfMessageId; do not call agent-teams_message_send again with the same text unless you have new information.';
-
-function normalizeComparableText(value) {
-  return String(value || '')
-    .trim()
-    .replace(/\r\n/g, '\n')
-    .replace(/[ \t]+/g, ' ');
-}
-
-function normalizeComparableParticipant(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
-function getMessageSemanticKey(row) {
-  const taskRefs = Array.isArray(row && row.taskRefs)
-    ? row.taskRefs
-        .filter((ref) => ref && typeof ref === 'object')
-        .map((ref) => ({
-          taskId: String(ref.taskId || '').trim(),
-          displayId: String(ref.displayId || '').trim(),
-          teamName: normalizeComparableParticipant(ref.teamName),
-        }))
-        .filter((ref) => ref.taskId || ref.displayId || ref.teamName)
-        .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)))
-    : [];
-  const attachments = Array.isArray(row && row.attachments)
-    ? row.attachments
-        .filter((attachment) => attachment && typeof attachment === 'object')
-        .map((attachment) => ({
-          id: String(attachment.id || '').trim(),
-          filename: String(attachment.filename || '').trim(),
-          mimeType: String(attachment.mimeType || '').trim(),
-          size: Number(attachment.size || 0),
-        }))
-        .filter((attachment) => attachment.id || attachment.filename)
-        .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right)))
-    : [];
-  const context = {
-    relayOfMessageId: String((row && row.relayOfMessageId) || '').trim(),
-    leadSessionId: String((row && row.leadSessionId) || '').trim(),
-    conversationId: String((row && row.conversationId) || '').trim(),
-    replyToConversationId: String((row && row.replyToConversationId) || '').trim(),
-    taskRefs,
-    attachments,
-    messageKind: String((row && row.messageKind) || '').trim(),
-    actionMode: String((row && row.actionMode) || '').trim(),
-    workSyncIntent: String((row && row.workSyncIntent) || '').trim(),
-    workSyncIntentKey: String((row && row.workSyncIntentKey) || '').trim(),
-  };
-  const hasExplicitContext =
-    context.relayOfMessageId ||
-    context.leadSessionId ||
-    context.conversationId ||
-    context.replyToConversationId ||
-    context.taskRefs.length > 0 ||
-    context.attachments.length > 0 ||
-    context.messageKind ||
-    context.actionMode ||
-    context.workSyncIntent ||
-    context.workSyncIntentKey;
-  return hasExplicitContext ? JSON.stringify(context) : null;
-}
-
-/**
- * Word sequence of a message, with everything that carries no information for
- * the reader removed: case, markdown emphasis, punctuation, emoji, list
- * bullets, whitespace. Two agent->user messages with the same word sequence are
- * the same message restated ("ALL DONE" / "**All done!**"), which is how a
- * memoryless lead turn re-announces work the user already saw.
- */
-function normalizeRestatedText(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[\p{P}\p{S}]+/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function getRuntimeDeliveryDuplicate(list, row, options = {}) {
-  if (
-    row.source !== 'runtime_delivery' ||
-    typeof row.relayOfMessageId !== 'string' ||
-    row.relayOfMessageId.trim().length === 0
-  ) {
-    return null;
-  }
-
-  const relayOfMessageId = row.relayOfMessageId.trim();
-  const from = normalizeComparableParticipant(row.from);
-  const to = normalizeComparableParticipant(row.to);
-  const text = normalizeComparableText(row.text);
-  const semanticKey = getMessageSemanticKey(row);
-  if (!from || !to || !text) {
-    return null;
-  }
-
-  return (
-    list.find(
-      (candidate) =>
-        candidate &&
-        candidate.source === 'runtime_delivery' &&
-        String(candidate.relayOfMessageId || '').trim() === relayOfMessageId &&
-        normalizeComparableParticipant(candidate.from) === from &&
-        normalizeComparableParticipant(candidate.to) === to &&
-        normalizeComparableText(candidate.text) === text &&
-        getMessageSemanticKey(candidate) === semanticKey &&
-        (typeof options.hasUserMessageSince !== 'function' ||
-          parseRowTimeMs(candidate) === null ||
-          !options.hasUserMessageSince(parseRowTimeMs(candidate)))
-    ) || null
-  );
-}
-
-const REPEATED_MESSAGE_WINDOW_MS = 30 * 60 * 1000;
-const REPEATED_MESSAGE_NOTICE =
-  'Duplicate message ignored. You already sent this exact text to this recipient within the last 30 minutes; it was delivered then. Do not resend it and do not rephrase it - send a new message only when you have new information.';
-/**
- * Length below which two agent->user messages are allowed to share their word
- * sequence: short acknowledgements ("done", "on it") legitimately repeat for
- * different tasks, while a restated status update never fits in that space.
- */
-const RESTATED_MESSAGE_MIN_LENGTH = 40;
-
-function parseRowTimeMs(row) {
-  const parsed = Date.parse(row && row.timestamp);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-/**
- * Memoryless lead sessions (orchestrator rebuilds, replayed deliveries)
- * re-send their final messages on every later wake-up. An identical
- * from/to/text row is treated as already sent only when the caller supplied
- * the same explicit delivery context (relay, session, task refs, etc.).
- *
- * Agent senders only. A human repeating themselves is not a memoryless resend
- * but a deliberate nudge - "continue" typed a second time because nothing
- * visibly moved - and the recipient has to see it. An app write replayed under
- * the same identity is caught by its messageId, which is the key the human's
- * own repeats do not share.
- */
-function getRepeatedMessageDuplicate(list, row, options = {}) {
-  if (isUserParticipant(row.from)) {
-    return null;
-  }
-  const from = normalizeComparableParticipant(row.from);
-  const to = normalizeComparableParticipant(row.to);
-  const text = normalizeComparableText(row.text);
-  const rowTime = parseRowTimeMs(row);
-  const semanticKey = getMessageSemanticKey(row);
-  if (!from || !to || !text || rowTime === null || !semanticKey) {
-    return null;
-  }
-  // Same words, different punctuation/case/emphasis: only for what the user
-  // reads, and only for messages long enough that a repeated word sequence
-  // cannot be a coincidence.
-  const restated = to === 'user' && from !== 'user' ? normalizeRestatedText(row.text) : '';
-  const restatedMatches = restated.length >= RESTATED_MESSAGE_MIN_LENGTH;
-  for (let index = list.length - 1; index >= 0; index -= 1) {
-    const candidate = list[index];
-    if (!candidate) continue;
-    const candidateTime = parseRowTimeMs(candidate);
-    if (candidateTime === null) continue;
-    if (rowTime - candidateTime > REPEATED_MESSAGE_WINDOW_MS) break;
-    if (
-      normalizeComparableParticipant(candidate.from) !== from ||
-      normalizeComparableParticipant(candidate.to) !== to
-    ) {
-      continue;
-    }
-    if (getMessageSemanticKey(candidate) !== semanticKey) continue;
-    if (
-      typeof options.hasUserMessageSince === 'function' &&
-      options.hasUserMessageSince(candidateTime)
-    ) {
-      continue;
-    }
-    if (normalizeComparableText(candidate.text) === text) {
-      return candidate;
-    }
-    if (restatedMatches && normalizeRestatedText(candidate.text) === restated) {
-      return candidate;
-    }
-  }
-  return null;
-}
-
-const RELAY_SCOPED_RESTATEMENT_NOTICE =
-  'Duplicate message ignored. You already sent the user a visible reply for this app-delivered message (relayOfMessageId). Do not resend or rephrase it; send a new message only after new work or a new inbound message.';
-
-function getTaskRefIds(row) {
-  const taskRefs = Array.isArray(row && row.taskRefs) ? row.taskRefs : [];
-  return new Set(taskRefs.map((ref) => String((ref && ref.taskId) || '').trim()).filter(Boolean));
-}
-
-function getAttachmentIds(row) {
-  const attachments = Array.isArray(row && row.attachments) ? row.attachments : [];
-  return new Set(
-    attachments
-      .map((attachment) => String((attachment && attachment.id) || '').trim())
-      .filter(Boolean)
-  );
-}
-
-/**
- * One visible reply per app-delivered message: `message_send` already states
- * that contract in words. The app can re-prompt a memoryless lead mid-turn, and
- * the lead then answers the same relayOfMessageId a second time in different
- * words, which the byte-identical and word-sequence guards above cannot see.
- * Two escapes keep the delivery repair loops working: an acknowledgement-only
- * first reply and a first reply that lacks the task refs this one carries both
- * still need a real answer to land.
- */
-function getRelayScopedUserRestatement(list, row, options = {}) {
-  if (!isUserParticipant(row.to) || isUserParticipant(row.from)) return null;
-  const relayOfMessageId = String((row && row.relayOfMessageId) || '').trim();
-  const from = normalizeComparableParticipant(row.from);
-  const to = normalizeComparableParticipant(row.to);
-  const rowTime = parseRowTimeMs(row);
-  if (!relayOfMessageId || !from || !to || rowTime === null) return null;
-  const requiredTaskIds = getTaskRefIds(row);
-  for (let index = list.length - 1; index >= 0; index -= 1) {
-    const candidate = list[index];
-    if (!candidate) continue;
-    const candidateTime = parseRowTimeMs(candidate);
-    if (candidateTime === null) continue;
-    if (rowTime - candidateTime > REPEATED_MESSAGE_WINDOW_MS) break;
-    if (String(candidate.relayOfMessageId || '').trim() !== relayOfMessageId) continue;
-    if (
-      normalizeComparableParticipant(candidate.from) !== from ||
-      normalizeComparableParticipant(candidate.to) !== to
-    ) {
-      continue;
-    }
-    if (looksLikeIdleAckOnlyText(candidate.text) || looksLikeIdleAckOnlyText(candidate.summary)) {
-      continue;
-    }
-    if (
-      typeof options.hasUserMessageSince === 'function' &&
-      options.hasUserMessageSince(candidateTime)
-    ) {
-      continue;
-    }
-    if (requiredTaskIds.size > 0) {
-      const candidateTaskIds = getTaskRefIds(candidate);
-      const candidateCoversTaskRefs = [...requiredTaskIds].every((taskId) =>
-        candidateTaskIds.has(taskId)
-      );
-      if (!candidateCoversTaskRefs) continue;
-    }
-    const requiredAttachmentIds = getAttachmentIds(row);
-    if (requiredAttachmentIds.size > 0) {
-      const candidateAttachmentIds = getAttachmentIds(candidate);
-      const candidateCoversAttachments = [...requiredAttachmentIds].every((attachmentId) =>
-        candidateAttachmentIds.has(attachmentId)
-      );
-      if (!candidateCoversAttachments) continue;
-    }
-    return candidate;
-  }
-  return null;
-}
-
 const BOARD_EPOCH_EVENT_TYPES = new Set(['task_created', 'status_changed', 'owner_changed']);
 const POST_COMPLETION_MESSAGE_NOTICE_PREFIX =
   'Duplicate message ignored. Final message already delivered: the board was already complete when you messaged the user at ';
 const POST_COMPLETION_MESSAGE_NOTICE_SUFFIX =
   ', and no task has been created, started, completed, reopened, or reassigned since. This restatement was not delivered. Send the user another message only after a task changes state or after the user writes to you again.';
-
-function isUserParticipant(value) {
-  return normalizeComparableParticipant(value) === 'user';
-}
 
 /**
  * Structural board-completion epoch: the newest task_created / status_changed /
