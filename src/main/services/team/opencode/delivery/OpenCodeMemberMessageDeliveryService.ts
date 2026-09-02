@@ -14,6 +14,7 @@ import {
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
+import { noteOpenCodeLaneTurnActivity } from './OpenCodeLaneTurnActivityRegistry';
 import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import {
@@ -454,21 +455,23 @@ export class OpenCodeMemberMessageDeliveryService {
       laneIdentity.laneKind === 'primary' &&
       isOpenCodeLeadRecipient(canonicalMemberName, directory);
     const activityRunId = runtimeRunId;
+    const notifyLeadTurnActivity = activityRunId
+      ? (notification: Omit<OpenCodeLeadTurnActivityNotification, 'runId'>): void => {
+          this.deps.notifyOpenCodeLeadTurnActivity?.({ ...notification, runId: activityRunId });
+        }
+      : undefined;
     const notifyActivity = (state: OpenCodeLeadTurnActivityNotification['state']): void => {
-      if (!isLeadRecipient || !activityRunId) return;
-      try {
-        this.deps.notifyOpenCodeLeadTurnActivity?.({
+      noteOpenCodeLaneTurnActivity(
+        {
           teamName,
           memberName: canonicalMemberName,
           laneId: laneIdentity.laneId,
-          runId: activityRunId,
+          isLeadRecipient,
           state,
-        });
-      } catch (error) {
-        logger.warn(
-          `[${teamName}] OpenCode lead turn activity (${state}) notification failed: ${getErrorMessage(error)}`
-        );
-      }
+          observedAt: nowIso(),
+        },
+        { notifyLeadTurnActivity, logger }
+      );
     };
     const messageId = input.messageId?.trim();
     const ledger = messageId
