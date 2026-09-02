@@ -561,9 +561,18 @@ export class TeamTaskStallMonitor {
     owner: string | undefined
   ): string {
     const key = owner?.trim().toLowerCase() ?? '';
+    // Timestamp first, always: a bare "lane active" is what made the original
+    // suppression unreadable after the fact.
+    const staleActiveSince = snapshot.openCodeLaneStaleActiveSinceByMemberName?.get(key);
+    if (staleActiveSince) {
+      return `lane turn sample stale-active since ${staleActiveSince} (demoted to idle)`;
+    }
     const idleSince = snapshot.openCodeLaneIdleSinceByMemberName?.get(key);
     if (idleSince) return `lane idle since ${idleSince}`;
-    if (snapshot.openCodeLaneActiveMemberNames?.has(key)) return 'lane active';
+    if (snapshot.openCodeLaneActiveMemberNames?.has(key)) {
+      const activeSince = snapshot.openCodeLaneActiveSinceByMemberName?.get(key);
+      return activeSince ? `lane active since ${activeSince}` : 'lane active';
+    }
     return 'lane state unknown';
   }
 

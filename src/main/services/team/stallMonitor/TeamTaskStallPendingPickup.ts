@@ -129,9 +129,17 @@ function buildPendingPickupEpochKey(args: {
 
 /**
  * "Pickup stall": a pending task has nothing left to wait for - every blocker is
- * resolved, or it never had one - and its owner is not busy on another task.
- * Needs no transcript evidence, which is what makes it work on OpenCode/ACP-lead
- * teams where the lead transcript carries no per-member turn rows.
+ * resolved, or it never had one - its owner is not busy on another task, and its
+ * OpenCode lane is not mid-turn. Needs no transcript evidence, which is what
+ * makes it work on OpenCode/ACP-lead teams where the lead transcript carries no
+ * per-member turn rows.
+ *
+ * `lane_active` below means a *fresh* delivery-turn sample. TeamTaskStallSnapshotSource
+ * demotes an 'active' sample older than getOpenCodeLaneTurnActivityMaxAgeMs (see
+ * openCodeLaneTurnFreshness); without that bound a jammed delivery lane silences the
+ * branch that exists to catch the jam. The gate order and resolvePendingPickupReadyAt
+ * are correct as they stand, so the freshness rule deliberately lives upstream of this
+ * function rather than inside it.
  */
 export function evaluatePendingPickupTask(args: {
   now: Date;
@@ -178,7 +186,24 @@ export function evaluatePendingPickupTask(args: {
     );
   }
 
-  if (args.now.getTime() - Date.parse(readyAt) < getPendingPickupStallThresholdMs()) {
+  if (snapshot.openCodeLaneActiveMemberNames?.has(ownerKey)) {
+    // The lane is still generating its turn; a nudge now would only queue
+    // behind - or derail - work that is already running.
+    return skip(task.id, 'OpenCode lane turn is still active', 'lane_active');
+  }
+
+  // An idle sample is ordinary evidence, not a precondition: it can push the
+  // clock later but never starts it, so a team whose lane was never sampled is
+  // judged exactly as it was before this branch learned to read lanes at all. A
+  // sample demoted for age publishes its ORIGINAL observation time, so the age
+  // bound cannot restart the clock either.
+  const laneIdleSince = snapshot.openCodeLaneIdleSinceByMemberName?.get(ownerKey);
+  const laneIdleSinceMs = laneIdleSince ? Date.parse(laneIdleSince) : Number.NaN;
+  const clockStartMs = Number.isFinite(laneIdleSinceMs)
+    ? Math.max(Date.parse(readyAt), laneIdleSinceMs)
+    : Date.parse(readyAt);
+
+  if (args.now.getTime() - clockStartMs < getPendingPickupStallThresholdMs()) {
     return skip(
       task.id,
       'Pending pickup is still below the configured stall threshold',
@@ -189,6 +214,9 @@ export function evaluatePendingPickupTask(args: {
   const clockLabel = (task.blockedBy ?? []).length
     ? `all blockers resolved at ${readyAt}`
     : `owner has had it since ${readyAt}`;
+  const laneLabel = laneIdleSince
+    ? ` and its OpenCode lane has been idle since ${laneIdleSince}`
+    : '';
   return {
     status: 'alert',
     taskId: task.id,
@@ -198,6 +226,6 @@ export function evaluatePendingPickupTask(args: {
     remediationKind: 'pending_pickup',
     epochKey: buildPendingPickupEpochKey({ task, owner: task.owner, readyAt }),
     readyAt,
-    reason: `Potential pickup stall: ${clockLabel} but the task is still pending and its owner is not working anything else.`,
+    reason: `Potential pickup stall: ${clockLabel} but the task is still pending, its owner is not working anything else${laneLabel}.`,
   };
 }

@@ -133,6 +133,18 @@ export interface TeamTaskStallSnapshot {
   openCodeLaneIdleSinceByMemberName?: Map<string, string>;
   /** Lower-case member names whose OpenCode lane currently runs a prompt-delivery turn. */
   openCodeLaneActiveMemberNames?: Set<string>;
+  /**
+   * Lower-case member name -> ISO time the still-trusted active turn started.
+   * Diagnostics only: without it a suppressed alert logs a bare "lane active"
+   * and leaves no way to tell a live turn from a frozen flag.
+   */
+  openCodeLaneActiveSinceByMemberName?: Map<string, string>;
+  /**
+   * Lower-case member name -> ISO time of an 'active' sample that was demoted
+   * as stale (see openCodeLaneTurnFreshness). Diagnostics only; the demotion
+   * itself is already reflected in the idle/active collections above.
+   */
+  openCodeLaneStaleActiveSinceByMemberName?: Map<string, string>;
 }
 
 export interface WorkTaskContext {

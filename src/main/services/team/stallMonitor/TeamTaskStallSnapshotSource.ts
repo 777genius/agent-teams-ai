@@ -17,6 +17,8 @@ import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked } from '../teamTask
 import { TeamTaskReader } from '../TeamTaskReader';
 
 import { BoardTaskActivityBatchIndexer } from './BoardTaskActivityBatchIndexer';
+import { getOpenCodeLaneTurnActivityMaxAgeMs } from './featureGates';
+import { classifyOpenCodeLaneTurnSample } from './openCodeLaneTurnFreshness';
 import { OpenCodeTaskStallEvidenceSource } from './OpenCodeTaskStallEvidenceSource';
 import { buildResolvedReviewerIndex } from './reviewerResolution';
 import { TeamTaskLogFreshnessReader } from './TeamTaskLogFreshnessReader';
@@ -113,6 +115,11 @@ export class TeamTaskStallSnapshotSource {
   }
 
   async getSnapshot(teamName: string): Promise<TeamTaskStallSnapshot | null> {
+    // One clock reading for the whole scan: the lane-freshness bound below and
+    // the `scannedAt` the alerts are stamped with must not drift apart across
+    // the awaits in between, or a sample can read fresh against one and stale
+    // against the other.
+    const scannedAtMs = Date.now();
     const transcriptContext = await this.transcriptSourceLocator.getContext(teamName);
     if (!transcriptContext) {
       return null;
@@ -226,7 +233,7 @@ export class TeamTaskStallSnapshotSource {
 
     return {
       teamName,
-      scannedAt: new Date().toISOString(),
+      scannedAt: new Date(scannedAtMs).toISOString(),
       projectDir: transcriptContext.projectDir,
       projectId: transcriptContext.projectId,
       leadName: resolveLeadNameFromConfig(transcriptContext.config),
@@ -244,24 +251,56 @@ export class TeamTaskStallSnapshotSource {
       freshnessByTaskId,
       exactRowsByFilePath: mergedExactRowsByFilePath,
       providerByMemberName,
-      ...this.collectOpenCodeLaneTurnActivity(teamName),
+      ...this.collectOpenCodeLaneTurnActivity(teamName, scannedAtMs),
     };
   }
 
-  private collectOpenCodeLaneTurnActivity(teamName: string): {
+  /**
+   * Turn the delivery service's lane-turn samples into the snapshot's owner
+   * liveness evidence, with a staleness bound.
+   *
+   * The registry never expires an 'active' sample on its own, so an unbounded
+   * read lets a jammed delivery lane silence every OpenCode stall branch - the
+   * pickup branch and the in-progress work branch both read the same two
+   * collections. Bounding it here rather than inside either branch fixes both
+   * at once and leaves the evaluation logic untouched.
+   */
+  private collectOpenCodeLaneTurnActivity(
+    teamName: string,
+    nowMs: number
+  ): {
     openCodeLaneIdleSinceByMemberName: Map<string, string>;
     openCodeLaneActiveMemberNames: Set<string>;
+    openCodeLaneActiveSinceByMemberName: Map<string, string>;
+    openCodeLaneStaleActiveSinceByMemberName: Map<string, string>;
   } {
     const openCodeLaneIdleSinceByMemberName = new Map<string, string>();
     const openCodeLaneActiveMemberNames = new Set<string>();
+    const openCodeLaneActiveSinceByMemberName = new Map<string, string>();
+    const openCodeLaneStaleActiveSinceByMemberName = new Map<string, string>();
+    const maxAgeMs = getOpenCodeLaneTurnActivityMaxAgeMs();
+
     for (const [memberName, sample] of this.laneTurnActivity.listTeam(teamName)) {
-      if (sample.state === 'idle') {
-        openCodeLaneIdleSinceByMemberName.set(memberName, sample.observedAt);
-      } else {
+      const verdict = classifyOpenCodeLaneTurnSample({ sample, nowMs, maxAgeMs });
+      if (verdict.treatAsActive) {
         openCodeLaneActiveMemberNames.add(memberName);
       }
+      if (verdict.idleSince) {
+        openCodeLaneIdleSinceByMemberName.set(memberName, verdict.idleSince);
+      }
+      if (verdict.activeSince) {
+        openCodeLaneActiveSinceByMemberName.set(memberName, verdict.activeSince);
+      }
+      if (verdict.staleActiveSince) {
+        openCodeLaneStaleActiveSinceByMemberName.set(memberName, verdict.staleActiveSince);
+      }
     }
-    return { openCodeLaneIdleSinceByMemberName, openCodeLaneActiveMemberNames };
+    return {
+      openCodeLaneIdleSinceByMemberName,
+      openCodeLaneActiveMemberNames,
+      openCodeLaneActiveSinceByMemberName,
+      openCodeLaneStaleActiveSinceByMemberName,
+    };
   }
 
   private mergeActivityRecords(
