@@ -359,6 +359,7 @@
       "cancel": "Abbrechen",
       "delete": "Löschen",
       "editCode": "Code bearbeiten",
+      "forceStop": "Erzwungen stoppen",
       "launch": "Einleitung",
       "remove": "Entfernen",
       "stop": "Stopp.",
@@ -383,6 +384,12 @@
       "member_one": "Mitglied",
       "member_other": "Mitglieder",
       "title": "noch nicht gestartet"
+    },
+    "forceStop": {
+      "cancelLabel": "Abbrechen",
+      "confirmLabel": "Erzwungen stoppen",
+      "message": "\"{{team}}\" erzwungen stoppen? Das unterbricht laufende Arbeit: Zuerst läuft der normale Stopp, dann werden die verbleibenden Laufzeitprozesse des Teams beendet (einschließlich laufender Lead-Züge) und ausstehende Nachrichtenzustellungen abgebrochen. Wartende Nachrichten bleiben im Posteingang.",
+      "title": "Team erzwungen stoppen"
     },
     "invalidTab": "Invalide Team Tab",
     "kanbanSafeData": "Versäumt, Kanban vollständig zu laden. Anzeige sicherer Daten.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Löschen von Team",
       "editTeam": "Team bearbeiten",
       "editUnavailableProvisioning": "Edit-Team ist nicht verfügbar, während die Bereitstellung noch im Gang ist",
+      "forceStopTeam": "Team erzwungen stoppen - unterbricht laufende Arbeit",
       "openBuiltInEditor": "Open-Projekt im integrierten Editor",
       "openTeamGraph": "Teamgraphen öffnen",
       "stopTeam": "Stop Team",

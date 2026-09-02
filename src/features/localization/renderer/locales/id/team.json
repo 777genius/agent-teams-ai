@@ -359,6 +359,7 @@
       "cancel": "Batal",
       "delete": "Hapus",
       "editCode": "Sunting kode",
+      "forceStop": "Hentikan paksa",
       "launch": "Luncurkan",
       "remove": "Hapus",
       "stop": "Berhenti",
@@ -383,6 +384,12 @@
       "member_one": "anggota",
       "member_other": "anggota",
       "title": "Tim belum diluncurkan"
+    },
+    "forceStop": {
+      "cancelLabel": "Batal",
+      "confirmLabel": "Hentikan paksa",
+      "message": "Hentikan paksa \"{{team}}\"? Ini mengganggu pekerjaan yang sedang berjalan: penghentian biasa dijalankan lebih dulu, lalu proses runtime tim yang tersisa dimatikan (termasuk giliran lead yang sedang berjalan) dan pengiriman pesan yang tertunda dibatalkan. Pesan dalam antrean tetap ada di kotak masuk.",
+      "title": "Hentikan paksa tim"
     },
     "invalidTab": "Tab tim tidak valid",
     "kanbanSafeData": "Gagal memuat habis kanban. Menampilkan data aman.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Hapus tim",
       "editTeam": "Sunting tim",
       "editUnavailableProvisioning": "Tim Sunting tidak tersedia ketika pemberian masih dalam proses",
+      "forceStopTeam": "Hentikan paksa tim - mengganggu pekerjaan yang sedang berjalan",
       "openBuiltInEditor": "Buka projek di penyunting bawaan",
       "openTeamGraph": "Buka grafik tim",
       "stopTeam": "Hentikan tim",

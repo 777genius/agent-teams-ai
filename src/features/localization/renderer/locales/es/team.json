@@ -359,6 +359,7 @@
       "cancel": "Cancelar",
       "delete": "Suprimir",
       "editCode": "Editar código",
+      "forceStop": "Parada forzada",
       "launch": "Lanzamiento",
       "remove": "Retirar",
       "stop": "Para.",
@@ -383,6 +384,12 @@
       "member_one": "miembro",
       "member_other": "miembros",
       "title": "Equipo aún no lanzado"
+    },
+    "forceStop": {
+      "cancelLabel": "Cancelar",
+      "confirmLabel": "Forzar parada",
+      "message": "¿Forzar la parada de \"{{team}}\"? Esto interrumpe el trabajo en curso: ejecuta la parada normal y luego termina los procesos de ejecución restantes del equipo (incluidos los turnos del líder en curso) y cancela las entregas de mensajes pendientes. Los mensajes en cola permanecen en la bandeja de entrada.",
+      "title": "Parada forzada del equipo"
     },
     "invalidTab": "Tapa de equipo inválido",
     "kanbanSafeData": "Failed to fully load kanban. Mostrando datos seguros.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Eliminar el equipo",
       "editTeam": "Equipo de edición",
       "editUnavailableProvisioning": "El equipo de edición no está disponible mientras que el suministro sigue en curso",
+      "forceStopTeam": "Parada forzada del equipo: interrumpe el trabajo en curso",
       "openBuiltInEditor": "Proyecto abierto en editor incorporado",
       "openTeamGraph": "Gráfico de equipo abierto",
       "stopTeam": "Para el equipo",

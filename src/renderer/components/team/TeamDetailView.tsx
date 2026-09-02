@@ -83,6 +83,7 @@ import {
   GitBranch,
   History,
   Network,
+  OctagonX,
   Pencil,
   Play,
   Plus,
@@ -1398,6 +1399,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [stoppingTeam, setStoppingTeam] = useState(false);
+  const [forceStoppingTeam, setForceStoppingTeam] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [sendDialogRecipient, setSendDialogRecipient] = useState<string | undefined>(undefined);
   const [sendDialogDefaultText, setSendDialogDefaultText] = useState<string | undefined>(undefined);
@@ -2324,6 +2326,26 @@ export const TeamDetailView = memo(function TeamDetailView({
     }
   }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData]);
 
+  const handleForceStopTeam = useCallback(async (): Promise<void> => {
+    const confirmed = await confirm({
+      title: t('detail.forceStop.title'),
+      message: t('detail.forceStop.message', { team: data?.config.name ?? teamName }),
+      confirmLabel: t('detail.forceStop.confirmLabel'),
+      cancelLabel: t('detail.forceStop.cancelLabel'),
+      variant: 'danger',
+    });
+    if (!confirmed) return;
+    setForceStoppingTeam(true);
+    try {
+      await api.teams.forceStop(teamName);
+      await refreshTeamData(teamName);
+    } catch (err) {
+      console.error('Failed to force stop team:', err);
+    } finally {
+      setForceStoppingTeam(false);
+    }
+  }, [data?.config.name, teamName, refreshTeamData, t]);
+
   // Pick up pending review request from GlobalTaskDetailDialog
   useEffect(() => {
     if (!isThisTabActive) return;
@@ -2924,6 +2946,28 @@ export const TeamDetailView = memo(function TeamDetailView({
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
                           {t('detail.tooltips.stopTeam')}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {data.isAlive && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1 rounded-md border border-red-500/25 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                            disabled={forceStoppingTeam}
+                            onClick={() => void handleForceStopTeam()}
+                          >
+                            <OctagonX
+                              size={12}
+                              className={forceStoppingTeam ? 'animate-pulse' : ''}
+                            />
+                            {t('detail.actions.forceStop')}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          {t('detail.tooltips.forceStopTeam')}
                         </TooltipContent>
                       </Tooltip>
                     )}

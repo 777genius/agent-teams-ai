@@ -359,6 +359,7 @@
       "cancel": "Kanselahin",
       "delete": "Tanggalin",
       "editCode": "I-edit ang code",
+      "forceStop": "Sapilitang ihinto",
       "launch": "Ilunsad",
       "remove": "Tanggalin",
       "stop": "Ihinto",
@@ -383,6 +384,12 @@
       "member_one": "miyembro",
       "member_other": "mga miyembro",
       "title": "Hindi pa nailulunsad ang team"
+    },
+    "forceStop": {
+      "cancelLabel": "Kanselahin",
+      "confirmLabel": "Sapilitang ihinto",
+      "message": "Sapilitang ihinto ang \"{{team}}\"? Naaabala nito ang kasalukuyang trabaho: patatakbuhin muna ang karaniwang paghinto, pagkatapos ay tatapusin ang natitirang mga runtime process ng team (kasama ang mga kasalukuyang turn ng lead) at kakanselahin ang mga nakabinbing paghahatid ng mensahe. Nananatili sa inbox ang mga naka-queue na mensahe.",
+      "title": "Sapilitang ihinto ang team"
     },
     "invalidTab": "Invalid na team tab",
     "kanbanSafeData": "Nabigong ganap na i-load ang kanban. Ipinapakita ang safe na data.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Tanggalin ang team",
       "editTeam": "I-edit ang team",
       "editUnavailableProvisioning": "Hindi available ang pag-edit ng team habang isinasagawa pa ang provisioning",
+      "forceStopTeam": "Sapilitang ihinto ang team - naaabala ang kasalukuyang trabaho",
       "openBuiltInEditor": "Buksan ang proyekto sa built-in editor",
       "openTeamGraph": "Buksan ang team graph",
       "stopTeam": "Ihinto ang team",

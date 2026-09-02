@@ -359,6 +359,7 @@
       "cancel": "キャンセル",
       "delete": "削除",
       "editCode": "編集コード",
+      "forceStop": "強制停止",
       "launch": "リリース",
       "remove": "削除",
       "stop": "ストップ",
@@ -383,6 +384,12 @@
       "member_one": "メンバー",
       "member_other": "メンバー",
       "title": "チームはまだ起動しません"
+    },
+    "forceStop": {
+      "cancelLabel": "キャンセル",
+      "confirmLabel": "強制停止",
+      "message": "「{{team}}」を強制停止しますか？進行中の作業が中断されます。まず通常の停止を実行し、続いてチームに残っているランタイムプロセス（実行中のリードのターンを含む）を終了し、保留中のメッセージ配信をキャンセルします。キューに入っているメッセージは受信トレイに残ります。",
+      "title": "チームを強制停止"
     },
     "invalidTab": "無効なチームタブ",
     "kanbanSafeData": "完全にカンバンをロードできなかった。 安全なデータの表示。",
@@ -417,6 +424,7 @@
       "deleteTeam": "チーム削除",
       "editTeam": "チーム編集",
       "editUnavailableProvisioning": "暫定中にチームを編集することは利用できません。",
+      "forceStopTeam": "チームを強制停止 - 進行中の作業を中断します",
       "openBuiltInEditor": "組み込みエディタでプロジェクトを開く",
       "openTeamGraph": "チームグラフを開く",
       "stopTeam": "チームの停止",

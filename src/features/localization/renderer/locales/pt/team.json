@@ -359,6 +359,7 @@
       "cancel": "Cancelar",
       "delete": "Apagar",
       "editCode": "Editar código",
+      "forceStop": "Paragem forçada",
       "launch": "Lançar",
       "remove": "Remover",
       "stop": "Parar",
@@ -383,6 +384,12 @@
       "member_one": "membro",
       "member_other": "membros",
       "title": "Equipe ainda não lançada"
+    },
+    "forceStop": {
+      "cancelLabel": "Cancelar",
+      "confirmLabel": "Forçar paragem",
+      "message": "Forçar a paragem de \"{{team}}\"? Isto interrompe o trabalho em curso: primeiro é executada a paragem normal e, em seguida, os processos de execução restantes da equipa são terminados (incluindo turnos do líder em curso) e as entregas de mensagens pendentes são canceladas. As mensagens em fila permanecem na caixa de entrada.",
+      "title": "Paragem forçada da equipa"
     },
     "invalidTab": "Página de equipa inválida",
     "kanbanSafeData": "Falha ao carregar completamente o kanban. Mostrando dados seguros.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Apagar a equipa",
       "editTeam": "Editar a equipa",
       "editUnavailableProvisioning": "A equipe de edição não está disponível enquanto o provisionamento ainda está em andamento",
+      "forceStopTeam": "Paragem forçada da equipa - interrompe o trabalho em curso",
       "openBuiltInEditor": "Abrir o projeto no editor incorporado",
       "openTeamGraph": "Abrir gráfico de equipe",
       "stopTeam": "Parar a equipa",

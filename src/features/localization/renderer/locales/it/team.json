@@ -359,6 +359,7 @@
       "cancel": "Annulla",
       "delete": "Elimina",
       "editCode": "Modifica codice",
+      "forceStop": "Arresto forzato",
       "launch": "Avvia",
       "remove": "Rimuovi",
       "stop": "Ferma",
@@ -383,6 +384,12 @@
       "member_one": "membro",
       "member_other": "membri",
       "title": "Team non ancora avviato"
+    },
+    "forceStop": {
+      "cancelLabel": "Annulla",
+      "confirmLabel": "Arresto forzato",
+      "message": "Forzare l'arresto di \"{{team}}\"? Questo interrompe il lavoro in corso: viene eseguito prima l'arresto normale, poi vengono terminati i processi di runtime rimanenti del team (compresi i turni del lead in corso) e vengono annullate le consegne di messaggi in sospeso. I messaggi in coda restano nella posta in arrivo.",
+      "title": "Arresto forzato del team"
     },
     "invalidTab": "Scheda del team non valida",
     "kanbanSafeData": "Impossibile caricare completamente la kanban. Visualizzazione dei dati sicuri.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Elimina team",
       "editTeam": "Modifica team",
       "editUnavailableProvisioning": "La modifica del team non è disponibile mentre il provisioning è ancora in corso",
+      "forceStopTeam": "Arresto forzato del team - interrompe il lavoro in corso",
       "openBuiltInEditor": "Apri il progetto nell'editor integrato",
       "openTeamGraph": "Apri il grafo del team",
       "stopTeam": "Ferma team",

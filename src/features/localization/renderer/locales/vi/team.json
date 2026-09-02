@@ -359,6 +359,7 @@
       "cancel": "Hủy",
       "delete": "Xóa",
       "editCode": "Chỉnh sửa mã",
+      "forceStop": "Buộc dừng",
       "launch": "Khởi chạy",
       "remove": "Xóa",
       "stop": "Dừng",
@@ -383,6 +384,12 @@
       "member_one": "thành viên",
       "member_other": "thành viên",
       "title": "Đội ngũ chưa được khởi chạy"
+    },
+    "forceStop": {
+      "cancelLabel": "Hủy",
+      "confirmLabel": "Buộc dừng",
+      "message": "Buộc dừng \"{{team}}\"? Thao tác này làm gián đoạn công việc đang chạy: trước tiên chạy lệnh dừng thông thường, sau đó kết thúc các tiến trình runtime còn lại của đội ngũ (bao gồm cả lượt của trưởng nhóm đang chạy) và hủy các lần gửi tin nhắn đang chờ. Tin nhắn trong hàng đợi vẫn nằm trong hộp thư đến.",
+      "title": "Buộc dừng đội ngũ"
     },
     "invalidTab": "Tab đội ngũ không hợp lệ",
     "kanbanSafeData": "Không thể tải đầy đủ kanban. Đang hiển thị dữ liệu an toàn.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Xóa đội ngũ",
       "editTeam": "Chỉnh sửa đội ngũ",
       "editUnavailableProvisioning": "Chỉnh sửa đội ngũ không khả dụng khi việc tạo vẫn đang diễn ra",
+      "forceStopTeam": "Buộc dừng đội ngũ - làm gián đoạn công việc đang chạy",
       "openBuiltInEditor": "Mở dự án trong trình soạn thảo tích hợp",
       "openTeamGraph": "Mở đồ thị đội ngũ",
       "stopTeam": "Dừng đội ngũ",

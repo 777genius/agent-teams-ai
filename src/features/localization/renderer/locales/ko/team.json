@@ -359,6 +359,7 @@
       "cancel": "이름 *",
       "delete": "이름 *",
       "editCode": "비밀번호",
+      "forceStop": "강제 중지",
       "launch": "시작하다",
       "remove": "기타 제품",
       "stop": "기타",
@@ -383,6 +384,12 @@
       "member_one": "이름 *",
       "member_other": "이름 *",
       "title": "아직 출시되지 않은 팀"
+    },
+    "forceStop": {
+      "cancelLabel": "취소",
+      "confirmLabel": "강제 중지",
+      "message": "\"{{team}}\"을(를) 강제로 중지할까요? 진행 중인 작업이 중단됩니다. 먼저 일반 중지를 실행한 다음 팀에 남아 있는 런타임 프로세스(진행 중인 리드 턴 포함)를 종료하고 대기 중인 메시지 전달을 취소합니다. 대기열의 메시지는 받은 편지함에 남습니다.",
+      "title": "팀 강제 중지"
     },
     "invalidTab": "잘못된 팀 탭",
     "kanbanSafeData": "완전 부하 kanban에 실패. 안전한 자료 표시.",
@@ -417,6 +424,7 @@
       "deleteTeam": "팀 삭제",
       "editTeam": "편집 팀",
       "editUnavailableProvisioning": "팀 편집은 아직 진행중인 동안 사용할 수 없습니다.",
+      "forceStopTeam": "팀 강제 중지 - 진행 중인 작업이 중단됩니다",
       "openBuiltInEditor": "내장 편집기에서 프로젝트 열기",
       "openTeamGraph": "열린 팀 그래프",
       "stopTeam": "정지 팀",

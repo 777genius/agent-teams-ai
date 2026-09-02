@@ -359,6 +359,7 @@
       "cancel": "Anulează",
       "delete": "Șterge",
       "editCode": "Editează codul",
+      "forceStop": "Oprire forțată",
       "launch": "Lansează",
       "remove": "Elimină",
       "stop": "Oprește",
@@ -383,6 +384,12 @@
       "member_one": "membru",
       "member_other": "membri",
       "title": "Echipa nu a fost încă lansată"
+    },
+    "forceStop": {
+      "cancelLabel": "Anulează",
+      "confirmLabel": "Oprire forțată",
+      "message": "Oprești forțat \"{{team}}\"? Aceasta întrerupe lucrul în curs: se execută mai întâi oprirea obișnuită, apoi se închid procesele de execuție rămase ale echipei (inclusiv turele în curs ale liderului) și se anulează livrările de mesaje în așteptare. Mesajele din coadă rămân în inbox.",
+      "title": "Oprire forțată a echipei"
     },
     "invalidTab": "Filă de echipă invalidă",
     "kanbanSafeData": "Încărcarea completă a kanban-ului a eșuat. Se afișează date sigure.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Șterge echipa",
       "editTeam": "Editează echipa",
       "editUnavailableProvisioning": "Editarea echipei este indisponibilă cât timp aprovizionarea este încă în curs",
+      "forceStopTeam": "Oprire forțată a echipei - întrerupe lucrul în curs",
       "openBuiltInEditor": "Deschide proiectul în editorul integrat",
       "openTeamGraph": "Deschide graficul echipei",
       "stopTeam": "Oprește echipa",

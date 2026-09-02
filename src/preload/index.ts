@@ -156,6 +156,7 @@ import {
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
   TEAM_DISCARD_QUEUED_USER_MESSAGES,
+  TEAM_FORCE_STOP,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
@@ -375,6 +376,7 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamForceStopResult,
   TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
@@ -1073,6 +1075,9 @@ const electronAPI: ElectronAPI = {
     },
     stop: async (teamName: string) => {
       return invokeIpcWithResult<void>(TEAM_STOP, teamName);
+    },
+    forceStop: async (teamName: string) => {
+      return invokeIpcWithResult<TeamForceStopResult>(TEAM_FORCE_STOP, teamName);
     },
     getQueuedUserMessages: async (teamName: string, memberName: string) => {
       return invokeIpcWithResult<QueuedUserMessagesSnapshot>(

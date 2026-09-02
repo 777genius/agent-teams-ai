@@ -359,6 +359,7 @@
       "cancel": "İptal",
       "delete": "Sil",
       "editCode": "Kodu düzenle",
+      "forceStop": "Zorla durdur",
       "launch": "Başlat",
       "remove": "Kaldır",
       "stop": "Durdur",
@@ -383,6 +384,12 @@
       "member_one": "üye",
       "member_other": "üye",
       "title": "Ekip henüz başlatılmadı"
+    },
+    "forceStop": {
+      "cancelLabel": "İptal",
+      "confirmLabel": "Zorla durdur",
+      "message": "\"{{team}}\" zorla durdurulsun mu? Bu, devam eden işi keser: önce normal durdurma çalıştırılır, ardından ekibin kalan çalışma zamanı süreçleri (devam eden lider turları dahil) sonlandırılır ve bekleyen mesaj teslimleri iptal edilir. Kuyruktaki mesajlar gelen kutusunda kalır.",
+      "title": "Ekibi zorla durdur"
     },
     "invalidTab": "Geçersiz ekip sekmesi",
     "kanbanSafeData": "Kanban tam olarak yüklenemedi. Güvenli veri gösteriliyor.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Ekibi sil",
       "editTeam": "Ekibi düzenle",
       "editUnavailableProvisioning": "Sağlama hâlâ devam ederken ekibi düzenleme kullanılamaz",
+      "forceStopTeam": "Ekibi zorla durdur - devam eden işi keser",
       "openBuiltInEditor": "Projeyi yerleşik düzenleyicide aç",
       "openTeamGraph": "Ekip grafiğini aç",
       "stopTeam": "Ekibi durdur",

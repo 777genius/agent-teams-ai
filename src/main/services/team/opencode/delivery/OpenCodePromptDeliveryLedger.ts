@@ -719,6 +719,37 @@ export class OpenCodePromptDeliveryLedgerStore {
       .slice(0, limit);
   }
 
+  /**
+   * Marks every non-terminal delivery record as failed_terminal so the retry
+   * machinery (watchdog, due-attempt selection) stops re-attempting them.
+   * Responded and already-terminal records are left untouched: they are
+   * history, and rewriting them would lose the reason they ended.
+   */
+  async cancelNonTerminalRecords(input: {
+    now: string;
+    reason: string;
+  }): Promise<{ cancelled: number }> {
+    let cancelled = 0;
+    await this.store.updateLocked((records) =>
+      records.map((record) => {
+        if (record.status === 'responded' || record.status === 'failed_terminal') {
+          return record;
+        }
+        cancelled += 1;
+        return {
+          ...record,
+          status: 'failed_terminal' as const,
+          failedAt: input.now,
+          nextAttemptAt: null,
+          lastReason: input.reason,
+          diagnostics: mergeDiagnostics(record.diagnostics, [input.reason]),
+          updatedAt: input.now,
+        };
+      })
+    );
+    return { cancelled };
+  }
+
   async pruneTerminalRecords(input: {
     now: Date;
     respondedRetentionMs?: number;

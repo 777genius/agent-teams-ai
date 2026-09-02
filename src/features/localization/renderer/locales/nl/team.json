@@ -359,6 +359,7 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "editCode": "Code bewerken",
+      "forceStop": "Geforceerd stoppen",
       "launch": "Starten",
       "remove": "Verwijderen",
       "stop": "Stoppen",
@@ -383,6 +384,12 @@
       "member_one": "lid",
       "member_other": "leden",
       "title": "Team nog niet gestart"
+    },
+    "forceStop": {
+      "cancelLabel": "Annuleren",
+      "confirmLabel": "Geforceerd stoppen",
+      "message": "\"{{team}}\" geforceerd stoppen? Dit onderbreekt lopend werk: eerst wordt de gewone stop uitgevoerd, daarna worden de resterende runtimeprocessen van het team beëindigd (inclusief lopende lead-beurten) en worden openstaande berichtbezorgingen geannuleerd. Berichten in de wachtrij blijven in de inbox staan.",
+      "title": "Team geforceerd stoppen"
     },
     "invalidTab": "Ongeldig teamtabblad",
     "kanbanSafeData": "Kon Kanban niet volledig laden. Veilige gegevens worden weergegeven.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Team verwijderen",
       "editTeam": "Team bewerken",
       "editUnavailableProvisioning": "Team bewerken is niet beschikbaar zolang de provisioning nog bezig is",
+      "forceStopTeam": "Team geforceerd stoppen - onderbreekt lopend werk",
       "openBuiltInEditor": "Project openen in ingebouwde editor",
       "openTeamGraph": "Teamgrafiek openen",
       "stopTeam": "Team stoppen",

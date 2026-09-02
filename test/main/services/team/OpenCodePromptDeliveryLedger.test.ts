@@ -1348,4 +1348,91 @@ describe('OpenCodePromptDeliveryLedger', () => {
       active.inboxMessageId,
     ]);
   });
+
+  it('cancels every non-terminal record and leaves finished ones alone', async () => {
+    const store = createStore();
+    const pending = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-pending',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:pending',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    const answered = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jill',
+      laneId: 'secondary:opencode:jill',
+      inboxMessageId: 'msg-answered',
+      inboxTimestamp: '2026-04-25T09:59:05.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:answered',
+      now: '2026-04-25T10:00:05.000Z',
+    });
+    await store.applyObservation({
+      id: answered.id,
+      responseObservation: {
+        state: 'responded_plain_text',
+        deliveredUserMessageId: 'oc-user-9',
+        assistantMessageId: 'oc-assistant-9',
+        toolCallNames: [],
+        visibleMessageToolCallId: null,
+        visibleReplyMessageId: null,
+        visibleReplyCorrelation: null,
+        latestAssistantPreview: 'On it',
+        reason: null,
+      },
+      observedAt: '2026-04-25T10:00:06.000Z',
+    });
+    const alreadyFailed = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'joe',
+      laneId: 'secondary:opencode:joe',
+      inboxMessageId: 'msg-failed',
+      inboxTimestamp: '2026-04-25T09:59:10.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:failed',
+      now: '2026-04-25T10:00:10.000Z',
+    });
+    await store.markFailedTerminal({
+      id: alreadyFailed.id,
+      reason: 'gave up earlier',
+      failedAt: '2026-04-25T10:00:11.000Z',
+    });
+
+    await expect(
+      store.cancelNonTerminalRecords({
+        now: '2026-04-25T10:05:00.000Z',
+        reason: 'force_stop_requested: pending delivery cancelled by user force stop',
+      })
+    ).resolves.toEqual({ cancelled: 1 });
+
+    const records = new Map((await store.list()).map((record) => [record.inboxMessageId, record]));
+    expect(records.get(pending.inboxMessageId)).toMatchObject({
+      status: 'failed_terminal',
+      failedAt: '2026-04-25T10:05:00.000Z',
+      nextAttemptAt: null,
+      lastReason: 'force_stop_requested: pending delivery cancelled by user force stop',
+    });
+    expect(records.get(answered.inboxMessageId)).toMatchObject({ status: 'responded' });
+    expect(records.get(alreadyFailed.inboxMessageId)).toMatchObject({
+      status: 'failed_terminal',
+      failedAt: '2026-04-25T10:00:11.000Z',
+      lastReason: 'gave up earlier',
+    });
+  });
+
+  it('reports zero cancellations when nothing is in flight', async () => {
+    const store = createStore();
+
+    await expect(
+      store.cancelNonTerminalRecords({ now: '2026-04-25T10:05:00.000Z', reason: 'force stop' })
+    ).resolves.toEqual({ cancelled: 0 });
+    await expect(store.list()).resolves.toEqual([]);
+  });
 });

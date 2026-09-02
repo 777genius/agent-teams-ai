@@ -359,6 +359,7 @@
       "cancel": "Batal",
       "delete": "Padam",
       "editCode": "Sunting kod",
+      "forceStop": "Hentikan paksa",
       "launch": "Lancar",
       "remove": "Buang",
       "stop": "Hentikan",
@@ -383,6 +384,12 @@
       "member_one": "ahli",
       "member_other": "ahli",
       "title": "Pasukan belum dilancarkan"
+    },
+    "forceStop": {
+      "cancelLabel": "Batal",
+      "confirmLabel": "Hentikan paksa",
+      "message": "Hentikan paksa \"{{team}}\"? Ini mengganggu kerja yang sedang berjalan: hentian biasa dijalankan dahulu, kemudian proses runtime pasukan yang tinggal dimatikan (termasuk giliran ketua yang sedang berjalan) dan penghantaran mesej yang tertunda dibatalkan. Mesej dalam baris gilir kekal dalam peti masuk.",
+      "title": "Hentikan paksa pasukan"
     },
     "invalidTab": "Tab pasukan tidak sah",
     "kanbanSafeData": "Gagal memuatkan kanban sepenuhnya. Memaparkan data selamat.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Padam pasukan",
       "editTeam": "Sunting pasukan",
       "editUnavailableProvisioning": "Sunting pasukan tidak tersedia semasa peruntukan masih dijalankan",
+      "forceStopTeam": "Hentikan paksa pasukan - mengganggu kerja yang sedang berjalan",
       "openBuiltInEditor": "Buka projek dalam editor terbina dalam",
       "openTeamGraph": "Buka graf pasukan",
       "stopTeam": "Hentikan pasukan",

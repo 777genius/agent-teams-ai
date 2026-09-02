@@ -359,6 +359,7 @@
       "cancel": "取消",
       "delete": "删除",
       "editCode": "编辑代码",
+      "forceStop": "强制停止",
       "launch": "启动",
       "remove": "消除",
       "stop": "停止",
@@ -383,6 +384,12 @@
       "member_one": "成员",
       "member_other": "成员",
       "title": "团队尚未启动"
+    },
+    "forceStop": {
+      "cancelLabel": "取消",
+      "confirmLabel": "强制停止",
+      "message": "强制停止“{{team}}”？这会中断正在进行的工作：先执行常规停止，然后终止团队剩余的运行时进程（包括进行中的负责人回合），并取消待处理的消息投递。排队的消息将保留在收件箱中。",
+      "title": "强制停止团队"
     },
     "invalidTab": "团队选项卡无效",
     "kanbanSafeData": "无法完全加载看板。显示安全数据。",
@@ -417,6 +424,7 @@
       "deleteTeam": "删除团队",
       "editTeam": "编辑团队",
       "editUnavailableProvisioning": "当配置仍在进行时，编辑团队不可用",
+      "forceStopTeam": "强制停止团队 - 会中断正在进行的工作",
       "openBuiltInEditor": "在内置编辑器中打开项目",
       "openTeamGraph": "打开团队图",
       "stopTeam": "停队",

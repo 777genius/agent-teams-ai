@@ -359,6 +359,7 @@
       "cancel": "Ghairi",
       "delete": "Futa",
       "editCode": "Hariri msimbo",
+      "forceStop": "Simamisha kwa nguvu",
       "launch": "Zindua",
       "remove": "Ondoa",
       "stop": "Simamisha",
@@ -383,6 +384,12 @@
       "member_one": "mwanachama",
       "member_other": "wanachama",
       "title": "Timu bado haijazinduliwa"
+    },
+    "forceStop": {
+      "cancelLabel": "Ghairi",
+      "confirmLabel": "Simamisha kwa nguvu",
+      "message": "Simamisha \"{{team}}\" kwa nguvu? Hii hukatiza kazi inayoendelea: kwanza usimamishaji wa kawaida huendeshwa, kisha michakato iliyosalia ya utekelezaji ya timu (pamoja na zamu za kiongozi zinazoendelea) huzimwa na uwasilishaji wa jumbe unaosubiri hughairiwa. Jumbe zilizo kwenye foleni hubaki kwenye kikasha.",
+      "title": "Simamisha timu kwa nguvu"
     },
     "invalidTab": "Kichupo batili cha timu",
     "kanbanSafeData": "Imeshindwa kupakia kanban kikamilifu. Inaonyesha data salama.",
@@ -417,6 +424,7 @@
       "deleteTeam": "Futa timu",
       "editTeam": "Hariri timu",
       "editUnavailableProvisioning": "Hariri timu haipatikani wakati ugavi bado unaendelea",
+      "forceStopTeam": "Simamisha timu kwa nguvu - hukatiza kazi inayoendelea",
       "openBuiltInEditor": "Fungua mradi katika kihariri kilichojengwa ndani",
       "openTeamGraph": "Fungua grafu ya timu",
       "stopTeam": "Simamisha timu",
