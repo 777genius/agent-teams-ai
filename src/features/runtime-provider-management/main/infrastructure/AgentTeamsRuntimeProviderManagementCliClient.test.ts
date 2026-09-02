@@ -27,10 +27,12 @@ import {
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
-  const promise = new Promise<T>((next) => {
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((next, fail) => {
     resolve = next;
+    reject = fail;
   });
-  return { promise, resolve };
+  return { promise, resolve, reject };
 }
 
 function modelResponse(diagnostic: string) {
@@ -85,6 +87,48 @@ describe('AgentTeamsRuntimeProviderManagementCliClient model refresh generations
     oldRequest.resolve({ stdout: modelResponse('old'), stderr: '' });
     await expect(oldLoad).resolves.toMatchObject({
       models: { diagnostics: ['old'], catalogState: 'stale' },
+    });
+
+    await expect(client.loadModels(input)).resolves.toMatchObject({
+      models: { diagnostics: ['fresh'], catalogState: 'fresh' },
+    });
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('fences recovered model JSON from a superseded generation', async () => {
+    const oldRequest = deferred<{ stdout: string; stderr: string }>();
+    const refreshRequest = deferred<{ stdout: string; stderr: string }>();
+    execCliMock
+      .mockReturnValueOnce(oldRequest.promise)
+      .mockReturnValueOnce(refreshRequest.promise);
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const input = {
+      runtimeId: 'opencode' as const,
+      providerId: 'openrouter',
+      projectPath: '/test/project',
+    };
+
+    const oldLoad = client.loadModels(input);
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
+    const refreshedLoad = client.loadModels({ ...input, refresh: true });
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(2));
+
+    refreshRequest.reject(
+      Object.assign(new Error('Command exited after printing JSON'), {
+        stdout: modelResponse('fresh'),
+      })
+    );
+    await expect(refreshedLoad).resolves.toMatchObject({
+      models: { diagnostics: ['fresh'], catalogState: 'fresh' },
+    });
+
+    const abortError = Object.assign(new Error('The operation was aborted'), {
+      name: 'AbortError',
+      stdout: modelResponse('recovered-old'),
+    });
+    oldRequest.reject(abortError);
+    await expect(oldLoad).resolves.toMatchObject({
+      models: { diagnostics: ['recovered-old'], catalogState: 'stale' },
     });
 
     await expect(client.loadModels(input)).resolves.toMatchObject({

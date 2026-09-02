@@ -2297,7 +2297,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         projectPath
       );
     }
-
     let args = [
       'runtime',
       'providers',
@@ -2326,7 +2325,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     if (misconfigured) {
       return misconfigured;
     }
-
+    const cacheTtlMs = this.getModelResponseCacheTtlMs(input);
     try {
       const { stdout, stderr } = await execCli(binaryPath, args, {
         ...runtimeProviderCommandOptions({ env }, projectPath),
@@ -2340,14 +2339,16 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           context,
           stderr
         ),
-        this.getModelResponseCacheTtlMs(input),
+        cacheTtlMs,
         cacheGeneration,
         cacheKeyGeneration
       );
     } catch (error) {
       const response = extractJsonObjectFromError<RuntimeProviderManagementModelsResponse>(error);
       if (response) {
-        return response;
+        return this.writeModelResponseCache(
+          cacheKey, response, cacheTtlMs, cacheGeneration, cacheKeyGeneration
+        );
       }
       return commandFailureResponse<RuntimeProviderManagementModelsResponse>(
         input.runtimeId,

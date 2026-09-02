@@ -35,6 +35,7 @@ type CatalogFreshness = 'fresh' | 'stale' | null;
 
 interface ScopedCatalogState {
   scopeKey: string | null;
+  refreshRevision: number | undefined;
   status: CatalogRequestStatus;
   models: readonly RuntimeProviderModelDto[] | null;
   defaultModelId: string | null;
@@ -448,6 +449,7 @@ export function useOpenCodeProviderModelCatalog(input: {
   const [refreshSequence, setRefreshSequence] = useState(0);
   const [state, setState] = useState<ScopedCatalogState>({
     scopeKey: null,
+    refreshRevision: undefined,
     status: 'idle',
     models: null,
     defaultModelId: null,
@@ -464,6 +466,7 @@ export function useOpenCodeProviderModelCatalog(input: {
     if (!input.enabled || !sourceProviderId || !scopeKey) {
       setState({
         scopeKey: null,
+        refreshRevision: undefined,
         status: 'idle',
         models: null,
         defaultModelId: null,
@@ -480,10 +483,11 @@ export function useOpenCodeProviderModelCatalog(input: {
       : undefined;
 
     setState((current) =>
-      current.scopeKey === scopeKey
+      current.scopeKey === scopeKey && current.refreshRevision === input.refreshRevision
         ? { ...current, status: 'loading', error: null }
         : {
             scopeKey,
+            refreshRevision: input.refreshRevision,
             status: 'loading',
             models: null,
             defaultModelId: null,
@@ -614,6 +618,7 @@ export function useOpenCodeProviderModelCatalog(input: {
         sawUnknownCatalogState || sawMultiplePages ? null : sawStaleCatalog ? 'stale' : 'fresh';
       setState({
         scopeKey,
+        refreshRevision: input.refreshRevision,
         status: 'ready',
         models: Array.from(modelById.values()),
         defaultModelId,
@@ -631,7 +636,7 @@ export function useOpenCodeProviderModelCatalog(input: {
         return;
       }
       setState((current) =>
-        current.scopeKey === scopeKey
+        current.scopeKey === scopeKey && current.refreshRevision === input.refreshRevision
           ? { ...current, status: 'error', error: errorMessage(error) }
           : current
       );
@@ -665,6 +670,7 @@ export function useOpenCodeProviderModelCatalog(input: {
     const timer = window.setTimeout(() => {
       setState((current) =>
         current.scopeKey === state.scopeKey &&
+        current.refreshRevision === state.refreshRevision &&
         current.completedAt === state.completedAt &&
         current.catalogState === 'fresh'
           ? { ...current, catalogState: 'stale' }
@@ -672,14 +678,24 @@ export function useOpenCodeProviderModelCatalog(input: {
       );
     }, delay);
     return () => window.clearTimeout(timer);
-  }, [state.catalogState, state.completedAt, state.freshUntil, state.scopeKey, state.status]);
+  }, [
+    state.catalogState,
+    state.completedAt,
+    state.freshUntil,
+    state.refreshRevision,
+    state.scopeKey,
+    state.status,
+  ]);
 
   const activeState = useMemo<ScopedCatalogState>(
     () =>
-      scopeKey && state.scopeKey === scopeKey
+      scopeKey &&
+      state.scopeKey === scopeKey &&
+      state.refreshRevision === input.refreshRevision
         ? state
         : {
             scopeKey,
+            refreshRevision: input.refreshRevision,
             status: input.enabled && sourceProviderId ? 'loading' : 'idle',
             models: null,
             defaultModelId: null,
@@ -689,7 +705,7 @@ export function useOpenCodeProviderModelCatalog(input: {
             freshUntil: null,
             error: null,
           },
-    [input.enabled, scopeKey, sourceProviderId, state]
+    [input.enabled, input.refreshRevision, scopeKey, sourceProviderId, state]
   );
   const providerStatus = useMemo(
     () =>
