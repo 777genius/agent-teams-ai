@@ -1,4 +1,6 @@
 // @vitest-environment node
+import path from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const execCliMock = vi.fn();
@@ -334,7 +336,9 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     );
 
     expect(execCliMock).toHaveBeenCalledTimes(1);
-    expect(execCliMock.mock.calls.map((call) => call[2]?.cwd)).toEqual(['/projects/beta']);
+    expect(execCliMock.mock.calls.map((call) => call[2]?.cwd)).toEqual([
+      path.resolve('/projects/beta'),
+    ]);
     expect(execCliMock.mock.calls[0]?.[1]).toEqual([
       'runtime',
       'status',
@@ -484,7 +488,8 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
   it('isolates concurrent passive OpenCode status by normalized project', async () => {
     execCliMock.mockImplementation((_binary, _args, options) => {
       const cwd = options?.cwd as string;
-      const modelId = cwd.endsWith('/one') ? 'project-one/model' : 'project-two/model';
+      const modelId =
+        cwd === path.resolve('/projects/one') ? 'project-one/model' : 'project-two/model';
       return commandResult(
         statusPayload({
           models: [modelId],
@@ -511,10 +516,14 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
     expect(two.modelCatalog?.defaultModelId).toBe('project-two/model');
     expect(one.authenticated).toBe(false);
     expect(two.authenticated).toBe(false);
-    expect(execCliMock.mock.calls.filter((call) => call[2]?.cwd === '/projects/one')).toHaveLength(
+    expect(
+      execCliMock.mock.calls.filter((call) => call[2]?.cwd === path.resolve('/projects/one'))
+    ).toHaveLength(
       1
     );
-    expect(execCliMock.mock.calls.filter((call) => call[2]?.cwd === '/projects/two')).toHaveLength(
+    expect(
+      execCliMock.mock.calls.filter((call) => call[2]?.cwd === path.resolve('/projects/two'))
+    ).toHaveLength(
       1
     );
   });
