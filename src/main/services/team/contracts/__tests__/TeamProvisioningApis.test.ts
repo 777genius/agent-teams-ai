@@ -439,10 +439,14 @@ describe('TeamProvisioning API binders', () => {
         Promise.resolve(ack),
       answerOpenCodeRuntimePermission: (): Promise<OpenCodeRuntimeControlAck> =>
         Promise.resolve(ack),
-      getMemberSpawnStatuses(this: { runId: string }): Promise<MemberSpawnStatusesSnapshot> {
+      getMemberSpawnStatusesReadOnly(this: {
+        runId: string;
+      }): Promise<MemberSpawnStatusesSnapshot> {
         return Promise.resolve({ statuses: {}, runId: this.runId });
       },
-      getTeamAgentRuntimeSnapshot(this: { runId: string }): Promise<TeamAgentRuntimeSnapshot> {
+      getTeamAgentRuntimeSnapshotReadOnly(this: {
+        runId: string;
+      }): Promise<TeamAgentRuntimeSnapshot> {
         return Promise.resolve({
           teamName: 'team-http',
           updatedAt: '2026-01-01T00:00:00.000Z',
@@ -472,6 +476,13 @@ describe('TeamProvisioning API binders', () => {
       'taskActivity',
     ]);
     expect(Object.keys(runtime).sort()).toEqual(['getAliveTeams', 'getRuntimeState', 'stopTeam']);
+    // Contract lock: the HTTP member diagnostics facade exposes the write-free
+    // reads and nothing else, so quietly re-pointing it at the mutating getters
+    // is a CI failure rather than a silent behaviour change.
+    expect(Object.keys(api.memberDiagnostics).sort()).toEqual([
+      'getMemberSpawnStatusesReadOnly',
+      'getTeamAgentRuntimeSnapshotReadOnly',
+    ]);
     expect((runtime as unknown as Record<string, unknown>).isTeamAlive).toBeUndefined();
     expect((runtime as unknown as Record<string, unknown>).getCurrentRunId).toBeUndefined();
     await expect(createTeam({} as never, () => undefined)).resolves.toEqual({

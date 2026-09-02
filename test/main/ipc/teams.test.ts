@@ -897,6 +897,26 @@ describe('ipc teams handlers', () => {
     expect(new Set(handlers.keys())).toEqual(new Set(TEAM_HANDLER_KEYS));
   });
 
+  // The exact inverse of the HTTP diagnostics tripwire: the IPC path owns the
+  // launch it is displaying, so it keeps the getter that persists launch state,
+  // repairs task activity and fills the shared cache. Only the write-free HTTP
+  // route reads through `...ReadOnly`.
+  it('reads member spawn statuses through the writing getter, never the write-free one', async () => {
+    const getMemberSpawnStatusesReadOnly = vi.fn();
+    const memberLifecycle = {
+      ...teamHandlerApis.memberLifecycle,
+      getMemberSpawnStatusesReadOnly,
+    };
+
+    initializeTeamHandlers(service as never, { ...teamHandlerApis, memberLifecycle });
+
+    const result = await handlers.get(TEAM_MEMBER_SPAWN_STATUSES)!({} as never, 'my-team');
+
+    expect(result).toMatchObject({ success: true });
+    expect(teamHandlerMocks.getMemberSpawnStatuses).toHaveBeenCalledWith('my-team');
+    expect(getMemberSpawnStatusesReadOnly).not.toHaveBeenCalled();
+  });
+
   it('preserves narrow facade receivers when a team handler invokes its runtime dependency', async () => {
     const runtimeCalls: string[] = [];
     const runtimeFacade = {

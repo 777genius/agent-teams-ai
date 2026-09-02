@@ -77,10 +77,16 @@ describe('HTTP team runtime routes', () => {
       vi.fn<(teamName: string) => Promise<MemberSpawnStatusesSnapshot>>();
     const getTeamAgentRuntimeSnapshot =
       vi.fn<(teamName: string) => Promise<TeamAgentRuntimeSnapshot>>();
+    // The route is write-free by contract, so it may only reach the `...ReadOnly`
+    // members. The mutating names are here purely as tripwires.
+    const getMemberSpawnStatusesWriting = vi.fn<(teamName: string) => Promise<never>>();
+    const getTeamAgentRuntimeSnapshotWriting = vi.fn<(teamName: string) => Promise<never>>();
     const teamMemberDiagnosticsApi = {
-      getMemberSpawnStatuses,
-      getTeamAgentRuntimeSnapshot,
-    } satisfies TeamHttpMemberDiagnosticsApi;
+      getMemberSpawnStatusesReadOnly: getMemberSpawnStatuses,
+      getTeamAgentRuntimeSnapshotReadOnly: getTeamAgentRuntimeSnapshot,
+      getMemberSpawnStatuses: getMemberSpawnStatusesWriting,
+      getTeamAgentRuntimeSnapshot: getTeamAgentRuntimeSnapshotWriting,
+    } as TeamHttpMemberDiagnosticsApi;
     const teamProvisioningStartApi = {
       createTeam,
       launchTeam,
@@ -159,6 +165,8 @@ describe('HTTP team runtime routes', () => {
       resumeTeam,
       getMemberSpawnStatuses,
       getTeamAgentRuntimeSnapshot,
+      getMemberSpawnStatusesWriting,
+      getTeamAgentRuntimeSnapshotWriting,
     };
   }
 
@@ -1440,6 +1448,7 @@ describe('HTTP team runtime routes', () => {
           processCommand: 'opencode serve --port 41231',
           rssBytes: 268_435_456,
           cpuPercent: 11.25,
+          runtimeLoadScope: 'shared-host',
           livenessKind: 'runtime_process',
           runtimeLastSeenAt: '2026-08-27T14:49:31.000Z',
           diagnostics: ['lane bootstrap confirmed'],
@@ -1458,8 +1467,14 @@ describe('HTTP team runtime routes', () => {
   }
 
   it('serves the full per-member spawn and runtime diagnostics projection', async () => {
-    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
-      await createApp();
+    const {
+      app,
+      getTeamData,
+      getMemberSpawnStatuses,
+      getTeamAgentRuntimeSnapshot,
+      getMemberSpawnStatusesWriting,
+      getTeamAgentRuntimeSnapshotWriting,
+    } = await createApp();
     const { memberSnapshot, spawnSnapshot, runtimeSnapshot } = createMixrun42Diagnostics();
     getTeamData.mockResolvedValue(memberSnapshot);
     getMemberSpawnStatuses.mockResolvedValue(spawnSnapshot);
@@ -1475,6 +1490,8 @@ describe('HTTP team runtime routes', () => {
       const body = response.json();
       expect(getMemberSpawnStatuses).toHaveBeenCalledWith('mixrun42');
       expect(getTeamAgentRuntimeSnapshot).toHaveBeenCalledWith('mixrun42');
+      expect(getMemberSpawnStatusesWriting).not.toHaveBeenCalled();
+      expect(getTeamAgentRuntimeSnapshotWriting).not.toHaveBeenCalled();
       expect(body).toMatchObject({
         teamName: 'mixrun42',
         runId: 'run-mixrun42',
@@ -1517,6 +1534,8 @@ describe('HTTP team runtime routes', () => {
         bootstrapConfirmed: true,
         rssBytes: 268_435_456,
         cpuPercent: 11.25,
+        // Lets an external monitor tell a per-member sample from a shared one.
+        runtimeLoadScope: 'shared-host',
         runtimePid: 5151,
         runtimeSessionId: 'ses_olla_mixrun42',
         processCommand: 'opencode serve --port 41231',
