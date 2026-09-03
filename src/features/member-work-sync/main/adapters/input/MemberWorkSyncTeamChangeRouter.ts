@@ -167,6 +167,12 @@ export class MemberWorkSyncTeamChangeRouter {
       if (pending.length === 0) break;
       await Promise.allSettled(pending);
     }
+    // The wait above has no deadline, so a caller that gives up on it resumes
+    // the team while this call is still parked here. Membership of
+    // quiescedTeams is what resumeTeam clears, so it is also the cancellation
+    // signal: without this check the final quiesce below re-suspends the queue
+    // after the resume and nothing is left to lift it again.
+    if (!this.quiescedTeams.has(normalizedTeamName)) return;
     await this.queue.quiesceTeam(normalizedTeamName);
   }
 
