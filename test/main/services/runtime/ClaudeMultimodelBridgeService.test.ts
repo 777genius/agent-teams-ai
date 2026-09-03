@@ -611,7 +611,8 @@ describe('ClaudeMultimodelBridgeService', () => {
         )
       ).toBe(true);
       if (entrypoint === 'project') {
-        expect(opencodeCalls[0][2]?.cwd).toBe(projectPath);
+        // The service resolves the project cwd before spawning.
+        expect(opencodeCalls[0][2]?.cwd).toBe(path.resolve(projectPath));
       } else {
         expect(opencodeCalls[0][2]?.cwd).toBeUndefined();
       }
@@ -2114,6 +2115,10 @@ describe('ClaudeMultimodelBridgeService', () => {
   });
 
   it('keeps global and project-scoped OpenCode status passive and independent', async () => {
+    const scopedProjectPath = '/tmp/scoped-project';
+    // The service resolves the project cwd before spawning, so both the mock's
+    // scope check and the cwd assertion below compare against the resolved form.
+    const resolvedScopedProjectPath = path.resolve(scopedProjectPath);
     const buildStatus = (statusMessage: string) => ({
       schemaVersion: 2,
       providers: {
@@ -2141,7 +2146,7 @@ describe('ClaudeMultimodelBridgeService', () => {
       ) {
         return Promise.resolve({
           stdout: JSON.stringify(
-            buildStatus(options?.cwd === '/tmp/scoped-project' ? 'scoped' : 'global')
+            buildStatus(options?.cwd === resolvedScopedProjectPath ? 'scoped' : 'global')
           ),
           stderr: '',
           exitCode: 0,
@@ -2165,7 +2170,7 @@ describe('ClaudeMultimodelBridgeService', () => {
       '/mock/agent_teams_orchestrator',
       'opencode',
       scopedUpdate,
-      { projectPath: '/tmp/scoped-project' }
+      { projectPath: scopedProjectPath }
     );
 
     expect(scopedUpdate).not.toHaveBeenCalled();
@@ -2178,7 +2183,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     ]);
     expect(execCliMock.mock.calls.map((call) => call[2]?.cwd ?? null)).toEqual([
       null,
-      '/tmp/scoped-project',
+      resolvedScopedProjectPath,
     ]);
   });
 
