@@ -1,7 +1,4 @@
 import {
-  isOpenCodeResolvedBehaviorChangedReason,
-  isOpenCodeSessionRefreshResponseState,
-  isOpenCodeSessionTransportChangedReason,
   OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS,
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
@@ -16,6 +13,11 @@ import {
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
   OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS,
 } from './OpenCodePromptDeliveryWatchdog';
+import {
+  isOpenCodeResolvedBehaviorChangedReason,
+  isOpenCodeSessionRefreshResponseState,
+  isOpenCodeSessionTransportChangedReason,
+} from './OpenCodeSessionRefreshReasonClassifier';
 
 export interface OpenCodePromptDeliveryFollowUpDependencies {
   markFailedTerminal(input: {

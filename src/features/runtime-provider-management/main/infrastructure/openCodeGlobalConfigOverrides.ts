@@ -4,7 +4,10 @@ import * as path from 'node:path';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 import { parse, type ParseError } from 'jsonc-parser';
 
+import { isPathInside } from './openCodeLocalProviderConnectorUtils';
 import { LocalProviderOperationError } from './OpenCodeLocalProviderSupport';
+
+import type { RuntimeLocalProviderScopeDto } from '../../contracts';
 
 export const OPENCODE_GLOBAL_CONFIG_FILENAMES = ['opencode.json', 'opencode.jsonc'] as const;
 export const OPENCODE_PROJECT_CONFIG_CANDIDATES = [
@@ -18,6 +21,23 @@ export interface OpenCodeInlineConfigWriteContext {
   providerId: string;
   setAsDefault?: boolean;
   setAsSmallModel?: boolean;
+}
+
+export interface OpenCodeConfigTarget {
+  readonly scope: RuntimeLocalProviderScopeDto;
+  readonly projectPath?: string;
+  readonly configPath: string;
+  readonly raw: string | null;
+  readonly mode?: number;
+}
+
+interface ReadOpenCodeConfigTargetInput {
+  readonly scope: RuntimeLocalProviderScopeDto;
+  readonly projectPath?: string | null;
+  readonly homePath: string;
+  readonly getEnvironment: () => NodeJS.ProcessEnv;
+  readonly ensureGlobalDirectory?: boolean;
+  readonly inlineContext?: OpenCodeInlineConfigWriteContext;
 }
 
 export function createOpenCodeGlobalConfigEnvironmentResolver(
@@ -119,6 +139,19 @@ export function assertOpenCodeInlineConfigOverrideSafe(
   if (conflict) throw conflict;
 }
 
+export function readOpenCodeConfigTarget(
+  input: ReadOpenCodeConfigTargetInput
+): Promise<OpenCodeConfigTarget> {
+  assertOpenCodeInlineConfigOverrideSafe(input.getEnvironment(), input.inlineContext);
+  return input.scope === 'global'
+    ? readOpenCodeGlobalConfigTarget(
+        input.homePath,
+        input.getEnvironment,
+        input.ensureGlobalDirectory ?? false
+      )
+    : readOpenCodeProjectConfigTarget(input.projectPath);
+}
+
 function readNonEmptyEnvironmentValue(
   environment: NodeJS.ProcessEnv,
   name: 'OPENCODE_CONFIG' | 'XDG_CONFIG_HOME'
@@ -176,4 +209,181 @@ async function resolveComparableConfigPath(value: string, homePath: string): Pro
       candidate = parent;
     }
   }
+}
+
+async function readOpenCodeGlobalConfigTarget(
+  homePath: string,
+  getEnvironment: () => NodeJS.ProcessEnv,
+  ensureDirectory: boolean
+): Promise<OpenCodeConfigTarget> {
+  let realHomePath: string;
+  try {
+    const homeStat = await fs.stat(homePath);
+    if (!homeStat.isDirectory()) throw new Error('not-directory');
+    realHomePath = await fs.realpath(homePath);
+  } catch {
+    throw new LocalProviderOperationError(
+      'config-invalid',
+      'The user home directory is not available for the global OpenCode config.'
+    );
+  }
+
+  const overrideConflict = await getOpenCodeGlobalConfigOverrideConflict(
+    getEnvironment(),
+    realHomePath
+  );
+  if (overrideConflict) throw overrideConflict;
+
+  let configDirectory = realHomePath;
+  for (const segment of ['.config', 'opencode']) {
+    configDirectory = path.join(configDirectory, segment);
+    try {
+      const stat = await fs.lstat(configDirectory);
+      if (stat.isSymbolicLink()) {
+        throw new LocalProviderOperationError(
+          'config-conflict',
+          'The global OpenCode config directory is a symbolic link and must be updated manually.'
+        );
+      }
+      if (!stat.isDirectory()) {
+        throw new LocalProviderOperationError(
+          'config-conflict',
+          'The global OpenCode config path is not a directory.'
+        );
+      }
+    } catch (error) {
+      if (error instanceof LocalProviderOperationError) throw error;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw new LocalProviderOperationError(
+          'config-invalid',
+          'Could not inspect the global OpenCode config directory.'
+        );
+      }
+      if (!ensureDirectory) {
+        return {
+          scope: 'global',
+          configPath: path.join(realHomePath, '.config', 'opencode', 'opencode.json'),
+          raw: null,
+        };
+      }
+      await fs.mkdir(configDirectory, { mode: 0o700 });
+    }
+  }
+
+  const realConfigDirectory = await fs.realpath(configDirectory);
+  if (!isPathInside(realHomePath, realConfigDirectory)) {
+    throw new LocalProviderOperationError(
+      'config-conflict',
+      'The global OpenCode config resolves outside the user home directory.'
+    );
+  }
+
+  const existingConfigs: Array<{ path: string; mode: number }> = [];
+  for (const filename of OPENCODE_GLOBAL_CONFIG_FILENAMES) {
+    const candidate = path.join(realConfigDirectory, filename);
+    try {
+      const stat = await fs.lstat(candidate);
+      if (stat.isSymbolicLink()) {
+        throw new LocalProviderOperationError(
+          'config-conflict',
+          'The global OpenCode config is a symbolic link and must be updated manually.'
+        );
+      }
+      if (stat.isFile()) {
+        existingConfigs.push({ path: candidate, mode: stat.mode & 0o777 });
+      }
+    } catch (error) {
+      if (error instanceof LocalProviderOperationError) throw error;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw new LocalProviderOperationError(
+          'config-invalid',
+          'Could not inspect the global OpenCode config.'
+        );
+      }
+    }
+  }
+  if (existingConfigs.length > 1) {
+    throw new LocalProviderOperationError(
+      'config-conflict',
+      'Both global opencode.json and opencode.jsonc were found. Keep one config file and retry.'
+    );
+  }
+  const existingConfig = existingConfigs[0];
+  const configPath = existingConfig?.path ?? path.join(realConfigDirectory, 'opencode.json');
+  return {
+    scope: 'global',
+    configPath,
+    raw: existingConfig ? await fs.readFile(configPath, 'utf8') : null,
+    mode: existingConfig?.mode,
+  };
+}
+
+async function readOpenCodeProjectConfigTarget(
+  projectPathInput: string | null | undefined
+): Promise<OpenCodeConfigTarget> {
+  const projectPath = projectPathInput?.trim();
+  if (!projectPath) {
+    throw new LocalProviderOperationError(
+      'project-required',
+      'Select a project before loading local providers.'
+    );
+  }
+  let realProjectPath: string;
+  try {
+    const stat = await fs.stat(projectPath);
+    if (!stat.isDirectory()) throw new Error('not-directory');
+    realProjectPath = await fs.realpath(projectPath);
+  } catch {
+    throw new LocalProviderOperationError(
+      'project-required',
+      'The selected project directory is not available.'
+    );
+  }
+
+  const existingConfigs: Array<{ path: string; mode: number }> = [];
+  for (const relativePath of OPENCODE_PROJECT_CONFIG_CANDIDATES) {
+    const candidate = path.join(realProjectPath, relativePath);
+    try {
+      const stat = await fs.lstat(candidate);
+      if (stat.isSymbolicLink()) {
+        throw new LocalProviderOperationError(
+          'config-conflict',
+          'The OpenCode config is a symbolic link and must be updated manually.'
+        );
+      }
+      if (stat.isFile()) {
+        const realConfigPath = await fs.realpath(candidate);
+        if (!isPathInside(realProjectPath, realConfigPath)) {
+          throw new LocalProviderOperationError(
+            'config-conflict',
+            'The OpenCode config resolves outside the selected project and must be updated manually.'
+          );
+        }
+        existingConfigs.push({ path: candidate, mode: stat.mode & 0o777 });
+      }
+    } catch (error) {
+      if (error instanceof LocalProviderOperationError) throw error;
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw new LocalProviderOperationError(
+          'config-invalid',
+          'Could not inspect the OpenCode project config.'
+        );
+      }
+    }
+  }
+  if (existingConfigs.length > 1) {
+    throw new LocalProviderOperationError(
+      'config-conflict',
+      'Multiple OpenCode project configs were found. Keep one config file and retry.'
+    );
+  }
+  const existingConfig = existingConfigs[0];
+  const configPath = existingConfig?.path ?? path.join(realProjectPath, 'opencode.json');
+  return {
+    scope: 'project',
+    projectPath: realProjectPath,
+    configPath,
+    raw: existingConfig ? await fs.readFile(configPath, 'utf8') : null,
+    mode: existingConfig?.mode,
+  };
 }

@@ -11,131 +11,27 @@ const {
     isCodexMember,
     isOpenCodeMember,
 } = require('./memberMessagingProtocol.js');
-
-function normalizeActorName(value) {
-    return typeof value === 'string' && value.trim() ? value.trim() : '';
-}
-
-function isClearOwnerValue(value) {
-    return value == null || value === 'clear' || value === 'none';
-}
-
-function assertKnownTaskActor(context, value, label) {
-    return runtimeHelpers.assertExplicitTeamMemberName(context.paths, value, label, {
-        allowLeadAliases: true,
-    });
-}
-
-function resolveAgentTaskMutationActor(context, actor, action) {
-    const normalizedActor = normalizeActorName(actor);
-    if (context.allowUserMessageSender !== false) {
-        return normalizedActor || undefined;
-    }
-    if (!normalizedActor) {
-        throw new Error(`${action} requires actor to be your configured teammate name.`);
-    }
-    return assertKnownTaskActor(context, normalizedActor, 'task actor');
-}
-
-function isLeadTaskActor(context, actor) {
-    const leadName = runtimeHelpers.inferLeadName(context.paths);
-    return isSameTaskMember(actor, leadName, leadName);
-}
-
-function assertTaskOwnerMutation(context, task, actor, action, options = {}) {
-    const resolvedActor = resolveAgentTaskMutationActor(context, actor, action);
-    if (context.allowUserMessageSender !== false) {
-        return resolvedActor;
-    }
-
-    const owner = normalizeActorName(task && task.owner);
-    const leadName = runtimeHelpers.inferLeadName(context.paths);
-    if (owner && isSameTaskMember(owner, resolvedActor, leadName)) {
-        return resolvedActor;
-    }
-    if (options.allowLeadOverride === true && isLeadTaskActor(context, resolvedActor)) {
-        return resolvedActor;
-    }
-
-    const taskLabel = `#${task.displayId || task.id}`;
-    if (!owner) {
-        throw new Error(
-            `Task ${taskLabel} is unassigned; ${resolvedActor} cannot ${action}. ` +
-                'Claim it with task_set_owner before changing its lifecycle.'
-        );
-    }
-    throw new Error(
-        `Task ${taskLabel} is owned by ${owner}; ${resolvedActor} cannot ${action}. ` +
-            'Refresh with task_get and ask the current owner or lead to reassign it first.'
-    );
-}
-
-function assertTaskOwnerChange(context, task, nextOwner, actor) {
-    const resolvedActor = resolveAgentTaskMutationActor(context, actor, 'task_set_owner');
-    if (context.allowUserMessageSender !== false) {
-        return resolvedActor;
-    }
-
-    const currentOwner = normalizeActorName(task && task.owner);
-    const normalizedNextOwner = normalizeActorName(nextOwner);
-    const leadName = runtimeHelpers.inferLeadName(context.paths);
-    if (isLeadTaskActor(context, resolvedActor)) {
-        return resolvedActor;
-    }
-    if (currentOwner && isSameTaskMember(currentOwner, resolvedActor, leadName)) {
-        return resolvedActor;
-    }
-    if (
-        !currentOwner &&
-        (!normalizedNextOwner || isSameTaskMember(normalizedNextOwner, resolvedActor, leadName))
-    ) {
-        return resolvedActor;
-    }
-
-    const taskLabel = `#${task.displayId || task.id}`;
-    if (!currentOwner) {
-        throw new Error(
-            `Task ${taskLabel} is unassigned; ${resolvedActor} may only assign it to themselves. ` +
-                'Ask the lead to assign another owner.'
-        );
-    }
-    throw new Error(
-        `Task ${taskLabel} is owned by ${currentOwner}; ${resolvedActor} cannot reassign it. ` +
-            'Ask the current owner or lead to hand it off.'
-    );
-}
-
-function assertTaskNotDeleted(task, action) {
-    if (task && task.status === 'deleted') {
-        throw new Error(`Task #${task.displayId || task.id} is deleted; use task_restore before ${action}`);
-    }
-}
-
-function readMutableTask(context, taskId, action) {
-    const task = taskStore.readTask(context.paths, taskId, { includeDeleted: true });
-    assertTaskNotDeleted(task, action);
-    return task;
-}
-
-function isSameMember(left, right) {
-    return normalizeActorName(left).toLowerCase() === normalizeActorName(right).toLowerCase();
-}
-
-function isSameTaskMember(left, right, leadName) {
-    const normalizedLeft = normalizeActorName(left).toLowerCase();
-    const normalizedRight = normalizeActorName(right).toLowerCase();
-    const normalizedLead = normalizeActorName(leadName).toLowerCase();
-    if (!normalizedLeft || !normalizedRight) {
-        return false;
-    }
-    if (normalizedLeft === normalizedRight) {
-        return true;
-    }
-    return (
-        (normalizedLeft === 'team-lead' && normalizedRight === normalizedLead) ||
-        (normalizedRight === 'team-lead' && normalizedLeft === normalizedLead)
-    );
-}
+const {
+    assertKnownTaskActor,
+    assertTaskNotDeleted,
+    assertTaskOwnerChange,
+    assertTaskOwnerMutation,
+    isClearOwnerValue,
+    isSameMember,
+    isSameTaskMember,
+    normalizeActorName,
+    readMutableTask,
+} = require('./taskOwnershipGuards.js');
+const { buildAssignmentMessage } = require('./taskAssignmentMessage.js');
+const { buildMemberLanguageInstruction } = require('./agentLanguage.js');
+const {
+    MEMBER_DELEGATE_DESCRIPTION,
+    buildActionModeProtocolText,
+    buildMemberActionModeProtocol,
+    buildMemberFormattingProtocol,
+    buildMemberProcessProtocol,
+    buildProcessProtocolText,
+} = require('./briefingProtocols.js');
 
 function mergeMemberRecord(base, overlay) {
     return {
@@ -162,66 +58,6 @@ function resolveMemberRuntimeProvider(member) {
     if (isOpenCodeMember(member)) return 'opencode';
     if (isCodexMember(member)) return 'codex';
     return 'native';
-}
-
-function buildAssignmentMessage(context, task, options = {}) {
-    const messagingProtocol = options.messagingProtocol || createMemberMessagingProtocol('native');
-    const description =
-        typeof options.description === 'string' && options.description.trim() ?
-        options.description.trim() :
-        typeof task.description === 'string' && task.description.trim() ?
-        task.description.trim() :
-        '';
-    const prompt =
-        typeof options.prompt === 'string' && options.prompt.trim() ? options.prompt.trim() : '';
-    const taskLabel = `#${task.displayId || task.id}`;
-    const lines = [
-        `New task assigned to you: ${taskLabel} *${task.subject}*`,
-        ``,
-        wrapAgentBlock(`If you are idle and this task is ready to start, start it now. If you are busy, blocked, or still need more context, immediately add a short task comment with the reason and your best ETA or what you are waiting on, and keep this task in TODO until you actually begin.`),
-    ];
-
-    if (description) {
-        lines.push(``, `Description:`, description);
-    }
-
-    if (prompt) {
-        lines.push(``, `Instructions:`, prompt);
-    }
-
-    const notifyLeadExample = messagingProtocol.buildLeadMessageExample({
-        teamName: context.teamName,
-        leadName: '<lead-name>',
-        fromName: '<your-name>',
-        text: `#${task.displayId || task.id} done. <2-4 sentence summary>. Full details in task comment <short-commentId-from-step-5>. Moving to next task.`,
-        summary: `#${task.displayId || task.id} done`,
-    });
-    const runtimeVisibleMessageRule = messagingProtocol.visibleMessageRule
-        ? `\n   ${messagingProtocol.visibleMessageRule}`
-        : '';
-    const runtimeTaskToolHint = messagingProtocol.taskToolHint
-        ? `\n   ${messagingProtocol.taskToolHint}`
-        : '';
-
-    lines.push(
-        ``,
-        wrapAgentBlock(`Use the board MCP tools to work this task correctly:
-1. Check the latest full context before starting:
-   task_get { teamName: "${context.teamName}", taskId: "${task.id}" }
-2. Assignment notifications can become stale after a reassignment or completion. After task_get, compare task.owner with your configured teammate name and check task.status. If task.owner is empty or belongs to someone else, or task.status is completed or deleted, do not start or reopen the task, modify files for it, add a completion comment, or complete it. Stop and wait unless the current owner explicitly asks you to collaborate on fresh follow-up work.
-3. If you are still the current owner, are idle, and the task is ready to start after checking dependencies and context, call task_start now:
-   task_start { teamName: "${context.teamName}", taskId: "${task.id}", actor: "<your-name>" }
-4. If you are still the current owner but are busy on another task, blocked, or still need more context, immediately add a task comment on this task with the reason and your best ETA or what you are waiting on, keep it pending/TODO, and do not call task_start until you truly begin:
-   task_add_comment { teamName: "${context.teamName}", taskId: "${task.id}", text: "<reason + ETA or blocker>", from: "<your-name>" }
-5. When the work is done, FIRST post a task comment with your full results, THEN mark it completed:
-   task_add_comment { teamName: "${context.teamName}", taskId: "${task.id}", text: "<full results>", from: "<your-name>" }
-   The response contains comment.id (UUID). Take its first 8 characters as the short commentId.
-   task_complete { teamName: "${context.teamName}", taskId: "${task.id}", actor: "<your-name>" }
-6. After task_complete, notify your lead via ${messagingProtocol.sendLeadPhrase} with a brief summary and a pointer to the full comment (use the short commentId from step 5).
-   Example: ${notifyLeadExample}${runtimeVisibleMessageRule}${runtimeTaskToolHint}`)
-    );
-
-    return lines.join('\n');
 }
 
 function maybeNotifyPreviousOwnerOnReassignment(context, previousTask, updatedTask, options = {}) {
@@ -816,70 +652,6 @@ function listTaskInventory(context, filters = {}) {
     return agenda.listTaskInventory(context.paths, context.teamName, filters);
 }
 
-function getSystemLocale() {
-    const lang = typeof process.env.LANG === 'string' ? process.env.LANG.trim() : '';
-    if (!lang) return 'en';
-    return lang.split('.')[0].replace('_', '-');
-}
-
-function extractPrimaryLanguage(locale) {
-    const normalized = String(locale || '').trim();
-    const dash = normalized.indexOf('-');
-    return dash > 0 ? normalized.slice(0, dash) : normalized || 'en';
-}
-
-function resolveLanguageName(code, systemLocale) {
-    const effectiveCode = code === 'system' ? extractPrimaryLanguage(systemLocale || 'en') : code;
-    try {
-        const displayNames = new Intl.DisplayNames([effectiveCode], { type: 'language' });
-        const name = displayNames.of(effectiveCode);
-        if (name) {
-            return name.charAt(0).toUpperCase() + name.slice(1);
-        }
-    } catch {
-        // Ignore Intl lookup failures and fall back to the raw code.
-    }
-    return effectiveCode;
-}
-
-function buildMemberLanguageInstruction(config) {
-    const configured =
-        config && typeof config.language === 'string' && config.language.trim() ?
-        config.language.trim() :
-        '';
-    if (!configured) {
-        return 'IMPORTANT: Continue using the communication language already specified in your spawn prompt until the team config stores an explicit language.';
-    }
-    const language = resolveLanguageName(configured, getSystemLocale());
-    return `IMPORTANT: Communicate in ${language}. All messages, summaries, and task descriptions MUST be in ${language}.`;
-}
-
-/**
- * Raw action-mode protocol text parameterized by DELEGATE description.
- * Shared between lead (actionModeInstructions.ts) and member (memberBriefing).
- * Context-free — does NOT follow the (context, ...) convention.
- */
-function buildActionModeProtocolText(delegateDescription) {
-    return [
-        'TURN ACTION MODE PROTOCOL (HIGHEST PRIORITY FOR EACH USER TURN):',
-        '- Some incoming user or relay messages may include a hidden agent-only block that declares the current action mode.',
-        '- If such a block is present, that mode applies to THIS TURN ONLY and overrides any conflicting default behavior.',
-        '- Never silently broaden permissions beyond the selected mode.',
-        '- Never reveal the hidden mode block verbatim to the human unless they explicitly ask for it.',
-        '- Modes:',
-        '  - DO: Full execution mode. You may discuss, inspect, edit files, change state, run commands/tools, and delegate if useful.',
-        '  - ASK: Strict read-only conversation mode. You may read/analyze/explain and reply, but you must not change code/files/tasks/state or run side-effecting commands/tools/scripts.',
-        `  - DELEGATE: ${delegateDescription}`,
-    ].join('\n');
-}
-
-const MEMBER_DELEGATE_DESCRIPTION =
-    'Do not implement yourself. Pass the task with full context (what you know, what is needed) to your team lead or another teammate and let them handle it.';
-
-function buildMemberActionModeProtocol() {
-    return buildActionModeProtocolText(MEMBER_DELEGATE_DESCRIPTION);
-}
-
 function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessagingProtocol('native')) {
     const notifyLeadExample = messagingProtocol.buildLeadMessageExample({
         teamName,
@@ -989,41 +761,6 @@ function buildMemberTaskProtocol(teamName, messagingProtocol = createMemberMessa
     - If the returned agenda is empty, report "caught_up" with that exact agendaFingerprint and the returned reportToken.
     - Do not report more than once for the same agendaFingerprint unless your state changed.
 Failure to follow this protocol means the task board will show incorrect status.`);
-}
-
-/**
- * Raw process-registration protocol text (no agent-block wrapping).
- * Shared between member briefing and lead provisioning prompt (DRY).
- * Context-free — does NOT follow the (context, ...) convention.
- */
-function buildProcessProtocolText(teamName) {
-    return `BACKGROUND SERVICE PROCESS REGISTRATION — this is ONLY for extra background services started by teammates (dev server, watcher, database, etc.). It is NOT a list of teammate agents themselves.
-1. Launch with & to get PID:
-   pnpm dev &
-2. Register immediately with MCP tool process_register (--port and --url are optional, use when the process listens on a port):
-   { teamName: "${teamName}", pid: <PID>, label: "<description>", from: "<your-name>", port?: <PORT>, url?: "http://localhost:<PORT>", command?: "<command>" }
-3. VERIFY registration succeeded (MANDATORY — never skip this step) using MCP tool process_list:
-   { teamName: "${teamName}" }
-   process_list shows ONLY registered background services for the team. It does NOT show whether teammate agents themselves are alive.
-4. When stopping a process, use MCP tool process_stop:
-   { teamName: "${teamName}", pid: <PID> }
-5. To fully remove a process record (e.g. after it has been stopped and is no longer needed), use MCP tool process_unregister:
-   { teamName: "${teamName}", pid: <PID> }
-If verification in step 3 fails or the process is missing from the list, re-register it.`;
-}
-
-function buildMemberProcessProtocol(teamName) {
-    return wrapAgentBlock(buildProcessProtocolText(teamName));
-}
-
-function buildMemberFormattingProtocol() {
-    return wrapAgentBlock(`Hidden internal instructions rule (IMPORTANT):
-- If you send internal operational instructions to another agent/teammate that the human user must NOT see in the UI, wrap ONLY that hidden part in:
-  <info_for_agent>
-  ... hidden instructions only ...
-  </info_for_agent>
-- Keep normal human-readable coordination outside the block.
-- NEVER use agent-only blocks in messages to "user".`);
 }
 
 function normalizeMemberName(value) {

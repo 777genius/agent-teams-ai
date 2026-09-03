@@ -3,8 +3,8 @@ import {
   createOpenCodePromptDeliveryLedgerStore,
   hashOpenCodePromptDeliveryPayload,
   isOpenCodePromptDeliveryAttemptDue,
-  isOpenCodeSessionRefreshResponseState,
 } from '@main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
+import { isOpenCodeSessionRefreshResponseState } from '@main/services/team/opencode/delivery/OpenCodeSessionRefreshReasonClassifier';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';

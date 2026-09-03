@@ -40,6 +40,11 @@ import {
 import { type DataCache } from './DataCache';
 import { LocalFileSystemProvider } from './LocalFileSystemProvider';
 import { type NotificationManager } from './NotificationManager';
+import {
+  collectTasksPollSnapshot,
+  collectTeamsPollSnapshot,
+  isNotFoundError,
+} from './TeamTaskPollSnapshot';
 import { type TeamTaskWatchKind, TeamTaskWatchRegistry } from './TeamTaskWatchRegistry';
 
 import type { FileSystemProvider, FsDirent } from './FileSystemProvider';
@@ -214,7 +219,7 @@ export class FileWatcher extends EventEmitter {
         pollIntervalMs: TEAMS_POLL_INTERVAL_MS,
         createWatcher: ({ onError, isCurrent }) =>
           this.createTeamTaskRegistry('teams', this.teamsPath, onError, isCurrent),
-        collectPollSnapshot: () => this.collectTeamsPollSnapshot(),
+        collectPollSnapshot: () => collectTeamsPollSnapshot(this.teamsPath),
         emitPolledChange: (eventType, relativePath) =>
           this.handleTeamsChange(eventType, relativePath),
         isOwnerActive: () => this.isWatching,
@@ -229,7 +234,7 @@ export class FileWatcher extends EventEmitter {
         pollIntervalMs: TASKS_POLL_INTERVAL_MS,
         createWatcher: ({ onError, isCurrent }) =>
           this.createTeamTaskRegistry('tasks', this.tasksPath, onError, isCurrent),
-        collectPollSnapshot: () => this.collectTasksPollSnapshot(),
+        collectPollSnapshot: () => collectTasksPollSnapshot(this.tasksPath),
         emitPolledChange: (eventType, relativePath) =>
           this.handleTasksChange(eventType, relativePath),
         isOwnerActive: () => this.isWatching,
@@ -622,117 +627,6 @@ export class FileWatcher extends EventEmitter {
     );
   }
 
-  private isNotFoundError(error: unknown): boolean {
-    const code = (error as { code?: unknown } | undefined)?.code;
-    return code === 'ENOENT' || code === '2' || code === 2;
-  }
-
-  private async collectTeamsPollSnapshot(): Promise<Map<string, string>> {
-    const snapshot = new Map<string, string>();
-    const teamEntries = await this.readSnapshotDir(this.teamsPath);
-
-    // Fallback polling mirrors TeamTaskWatchRegistry. Do not recurse into members,
-    // runtime, .opencode-runtime, logs, or other deep trees from here.
-    for (const teamEntry of teamEntries) {
-      if (!teamEntry.isDirectory()) {
-        continue;
-      }
-
-      const teamName = teamEntry.name;
-      const teamPath = path.join(this.teamsPath, teamName);
-      await this.collectPolledDirectoryFiles(
-        snapshot,
-        teamPath,
-        teamName,
-        (fileName) => fileName.endsWith('.json'),
-        { missingAsEmpty: false }
-      );
-
-      await this.collectPolledDirectoryFiles(
-        snapshot,
-        path.join(teamPath, 'inboxes'),
-        `${teamName}/inboxes`,
-        (fileName) => fileName.endsWith('.json'),
-        { missingAsEmpty: true }
-      );
-    }
-
-    return snapshot;
-  }
-
-  private async collectTasksPollSnapshot(): Promise<Map<string, string>> {
-    const snapshot = new Map<string, string>();
-    const teamEntries = await this.readSnapshotDir(this.tasksPath);
-
-    // Keep task fallback scoped to tasks/<team>/*.json. Hidden files and nested
-    // runtime directories are intentionally outside the public team-change surface.
-    for (const teamEntry of teamEntries) {
-      if (!teamEntry.isDirectory()) {
-        continue;
-      }
-
-      const teamName = teamEntry.name;
-      await this.collectPolledDirectoryFiles(
-        snapshot,
-        path.join(this.tasksPath, teamName),
-        teamName,
-        (fileName) => !fileName.startsWith('.') && fileName.endsWith('.json'),
-        { missingAsEmpty: false }
-      );
-    }
-
-    return snapshot;
-  }
-
-  private async collectPolledDirectoryFiles(
-    snapshot: Map<string, string>,
-    dirPath: string,
-    relativeRoot: string,
-    shouldInclude: (fileName: string) => boolean,
-    options: { missingAsEmpty?: boolean } = {}
-  ): Promise<void> {
-    const entries = await this.readSnapshotDir(dirPath, options);
-    for (const entry of entries) {
-      if (!entry.isFile() || !shouldInclude(entry.name)) {
-        continue;
-      }
-      await this.addPolledFile(
-        snapshot,
-        path.join(dirPath, entry.name),
-        `${relativeRoot}/${entry.name}`
-      );
-    }
-  }
-
-  private async addPolledFile(
-    snapshot: Map<string, string>,
-    absolutePath: string,
-    relativePath: string
-  ): Promise<void> {
-    const stats = await fsp.stat(absolutePath);
-    if (!stats.isFile()) {
-      return;
-    }
-    snapshot.set(
-      relativePath,
-      `${stats.dev}:${stats.ino}:${stats.mtimeMs}:${stats.ctimeMs}:${stats.size}`
-    );
-  }
-
-  private async readSnapshotDir(
-    dirPath: string,
-    options: { missingAsEmpty?: boolean } = {}
-  ): Promise<fs.Dirent[]> {
-    try {
-      return await fsp.readdir(dirPath, { withFileTypes: true });
-    } catch (error) {
-      if (this.isNotFoundError(error) && options.missingAsEmpty) {
-        return [];
-      }
-      throw error;
-    }
-  }
-
   // ===========================================================================
   // SSH Polling Mode
   // ===========================================================================
@@ -876,7 +770,7 @@ export class FileWatcher extends EventEmitter {
       }
       return await this.fsProvider.readdir(dirPath);
     } catch (error) {
-      if (this.isNotFoundError(error) && options.missingAsEmpty) {
+      if (isNotFoundError(error) && options.missingAsEmpty) {
         return [];
       }
       throw error;

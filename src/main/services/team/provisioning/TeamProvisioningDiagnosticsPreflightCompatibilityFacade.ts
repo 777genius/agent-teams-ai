@@ -20,7 +20,7 @@ import { type TeamProvisioningLiveLeadMessagePortsBoundary } from './TeamProvisi
 import {
   type OpenCodeMemberInboxDeliveryWakePorts,
   scheduleOpenCodeMemberInboxDeliveryWakeWithPorts,
-} from './TeamProvisioningOpenCodeMemberInboxRelay';
+} from './TeamProvisioningOpenCodeMemberInboxDeliveryWake';
 import { type OpenCodeRuntimeControlAck } from './TeamProvisioningOpenCodeRuntimeCheckin';
 import {
   getOpenCodeMemberDeliveryBusyStatus as getOpenCodeMemberDeliveryBusyStatusWithPorts,

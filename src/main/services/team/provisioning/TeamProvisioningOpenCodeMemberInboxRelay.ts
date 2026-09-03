@@ -6,7 +6,6 @@ import {
 import { isOpenCodeAttachmentDeliveryFailureReason } from '../opencode/delivery/OpenCodeRuntimeDeliveryAdvisoryPolicy';
 
 import {
-  INBOX_RELAY_IN_FLIGHT_LEASE_MS,
   isInboxRelayInFlightTimeoutError,
   waitForInboxRelayInFlight,
 } from './TeamProvisioningInboxRelayCandidates';
@@ -18,24 +17,34 @@ import {
   selectOpenCodeInboxRelayBatch,
 } from './TeamProvisioningInboxRelayPolicy';
 import { type OpenCodeInboxAttachmentPayloadsResult } from './TeamProvisioningOpenCodeAttachmentPayloads';
+import {
+  getActiveOpenCodeMemberInboxRelayWork,
+  registerOpenCodeMemberInboxRelayWork,
+} from './TeamProvisioningOpenCodeMemberInboxRelayLease';
+import {
+  buildOpenCodeInboxReadFailedResult,
+  buildOpenCodeMemberInboxAlreadyReadResult,
+  buildOpenCodeMemberInboxMessageMissingResult,
+  buildOpenCodeMemberInboxQueuedBehindResult,
+  buildOpenCodeMemberInboxRelaySupersededResult,
+  buildOpenCodeMemberInboxRelayTimeoutResult,
+  buildOpenCodeMemberWorkSyncReadWaitingResult,
+  createOpenCodeMemberInboxRelayResult,
+  dedupeOpenCodeMemberInboxRelayDiagnostics,
+  type OpenCodeMemberInboxRelayResult,
+} from './TeamProvisioningOpenCodeMemberInboxRelayResults';
 
 import type {
   OpenCodeMemberIdentityResolution,
   OpenCodeMemberInboxDelivery,
   OpenCodeMemberMessageDeliveryInput,
   OpenCodeMemberMessageDeliverySource,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodeVisibleReplyProof } from '../opencode/delivery/OpenCodePromptDeliveryWatchdog';
 import type { AgentActionMode, InboxMessage, TaskRef, TeamTask } from '@shared/types';
 
-export interface OpenCodeMemberInboxRelayResult {
-  relayed: number;
-  attempted: number;
-  delivered: number;
-  failed: number;
-  lastDelivery?: OpenCodeMemberInboxDelivery;
-  diagnostics?: string[];
-}
+export { scheduleOpenCodeMemberInboxDeliveryWakeWithPorts } from './TeamProvisioningOpenCodeMemberInboxDeliveryWake';
+export type { OpenCodeMemberInboxRelayResult } from './TeamProvisioningOpenCodeMemberInboxRelayResults';
 
 export interface OpenCodeMemberInboxRelayOptions {
   onlyMessageId?: string;
@@ -138,169 +147,6 @@ export interface RelayOpenCodeMemberInboxMessagesPorts {
   logWarning(message: string): void;
   nowIso(): string;
   getErrorMessage(error: unknown): string;
-}
-
-export interface OpenCodeMemberInboxDeliveryWakeInput {
-  teamName: string;
-  memberName: string;
-  messageId: string;
-  delayMs?: number;
-}
-
-export interface OpenCodeMemberInboxDeliveryWakePorts {
-  watchdogScheduler: {
-    isEnabled(): boolean;
-  };
-  scheduleWake(input: {
-    teamName: string;
-    memberName: string;
-    messageId: string;
-    delayMs: number;
-  }): void;
-}
-
-interface OpenCodeMemberInboxRelayLease {
-  generation: number;
-  work: Promise<OpenCodeMemberInboxRelayResult>;
-  expiresAtMs: number;
-  expiryHandle: ReturnType<typeof setTimeout> | null;
-}
-
-const openCodeMemberInboxRelayLeases = new WeakMap<
-  Map<string, Promise<OpenCodeMemberInboxRelayResult>>,
-  Map<string, OpenCodeMemberInboxRelayLease>
->();
-let nextOpenCodeMemberInboxRelayGeneration = 0;
-
-function getOpenCodeMemberInboxRelayLeaseStore(
-  inFlight: Map<string, Promise<OpenCodeMemberInboxRelayResult>>
-): Map<string, OpenCodeMemberInboxRelayLease> {
-  let leases = openCodeMemberInboxRelayLeases.get(inFlight);
-  if (!leases) {
-    leases = new Map();
-    openCodeMemberInboxRelayLeases.set(inFlight, leases);
-  }
-  return leases;
-}
-
-function releaseOpenCodeMemberInboxRelayLease(input: {
-  inFlight: Map<string, Promise<OpenCodeMemberInboxRelayResult>>;
-  relayKey: string;
-  lease: OpenCodeMemberInboxRelayLease;
-}): void {
-  const leases = getOpenCodeMemberInboxRelayLeaseStore(input.inFlight);
-  if (leases.get(input.relayKey)?.generation !== input.lease.generation) {
-    return;
-  }
-  if (input.inFlight.get(input.relayKey) === input.lease.work) {
-    input.inFlight.delete(input.relayKey);
-  }
-  if (input.lease.expiryHandle) {
-    clearTimeout(input.lease.expiryHandle);
-  }
-  leases.delete(input.relayKey);
-}
-
-function claimOpenCodeMemberInboxRelayLease(input: {
-  inFlight: Map<string, Promise<OpenCodeMemberInboxRelayResult>>;
-  relayKey: string;
-  work: Promise<OpenCodeMemberInboxRelayResult>;
-  nowMs?: number;
-}): OpenCodeMemberInboxRelayLease {
-  const leases = getOpenCodeMemberInboxRelayLeaseStore(input.inFlight);
-  const existingLease = leases.get(input.relayKey);
-  if (existingLease?.work === input.work) {
-    return existingLease;
-  }
-
-  const lease: OpenCodeMemberInboxRelayLease = {
-    generation: ++nextOpenCodeMemberInboxRelayGeneration,
-    work: input.work,
-    expiresAtMs: (input.nowMs ?? Date.now()) + INBOX_RELAY_IN_FLIGHT_LEASE_MS,
-    expiryHandle: null,
-  };
-  leases.set(input.relayKey, lease);
-  lease.expiryHandle = setTimeout(
-    () => releaseOpenCodeMemberInboxRelayLease({ ...input, lease }),
-    INBOX_RELAY_IN_FLIGHT_LEASE_MS
-  );
-  lease.expiryHandle.unref?.();
-  void input.work.then(
-    () => releaseOpenCodeMemberInboxRelayLease({ ...input, lease }),
-    () => releaseOpenCodeMemberInboxRelayLease({ ...input, lease })
-  );
-  return lease;
-}
-
-function getActiveOpenCodeMemberInboxRelayWork(input: {
-  inFlight: Map<string, Promise<OpenCodeMemberInboxRelayResult>>;
-  relayKey: string;
-  nowMs?: number;
-}): Promise<OpenCodeMemberInboxRelayResult> | undefined {
-  const work = input.inFlight.get(input.relayKey);
-  if (!work) {
-    return undefined;
-  }
-  const nowMs = input.nowMs ?? Date.now();
-  const lease = claimOpenCodeMemberInboxRelayLease({ ...input, work, nowMs });
-  if (nowMs < lease.expiresAtMs) {
-    return work;
-  }
-  releaseOpenCodeMemberInboxRelayLease({ ...input, lease });
-  return undefined;
-}
-
-function registerOpenCodeMemberInboxRelayWork(input: {
-  inFlight: Map<string, Promise<OpenCodeMemberInboxRelayResult>>;
-  relayKey: string;
-  work: Promise<OpenCodeMemberInboxRelayResult>;
-}): void {
-  input.inFlight.set(input.relayKey, input.work);
-  claimOpenCodeMemberInboxRelayLease(input);
-}
-
-export function createOpenCodeMemberInboxRelayResult(
-  overrides: Partial<OpenCodeMemberInboxRelayResult> = {}
-): OpenCodeMemberInboxRelayResult {
-  return {
-    relayed: 0,
-    attempted: 0,
-    delivered: 0,
-    failed: 0,
-    ...overrides,
-  };
-}
-
-export function dedupeOpenCodeMemberInboxRelayDiagnostics(
-  result: OpenCodeMemberInboxRelayResult
-): OpenCodeMemberInboxRelayResult {
-  if (!result.diagnostics?.length) {
-    return result;
-  }
-  return {
-    ...result,
-    diagnostics: [...new Set(result.diagnostics)],
-  };
-}
-
-export function scheduleOpenCodeMemberInboxDeliveryWakeWithPorts(
-  input: OpenCodeMemberInboxDeliveryWakeInput,
-  ports: OpenCodeMemberInboxDeliveryWakePorts
-): boolean {
-  const teamName = input.teamName.trim();
-  const memberName = input.memberName.trim();
-  const messageId = input.messageId.trim();
-  if (!teamName || !memberName || !messageId || !ports.watchdogScheduler.isEnabled()) {
-    return false;
-  }
-
-  ports.scheduleWake({
-    teamName,
-    memberName,
-    messageId,
-    delayMs: Math.max(0, input.delayMs ?? 500),
-  });
-  return true;
 }
 
 export async function relayOpenCodeMemberInboxMessagesWithPorts(
@@ -763,136 +609,6 @@ async function runOpenCodeMemberInboxRelayWork(
   }
 
   return dedupeOpenCodeMemberInboxRelayDiagnostics(result);
-}
-
-export function buildOpenCodeMemberInboxRelayTimeoutResult(input: {
-  diagnostic: string;
-  attempted: number;
-}): OpenCodeMemberInboxRelayResult {
-  return createOpenCodeMemberInboxRelayResult({
-    attempted: input.attempted,
-    failed: 1,
-    lastDelivery: {
-      delivered: false,
-      accepted: false,
-      responsePending: false,
-      reason: 'opencode_member_inbox_relay_timed_out',
-      diagnostics: [input.diagnostic],
-    },
-    diagnostics: [input.diagnostic],
-  });
-}
-
-export function buildOpenCodeMemberInboxRelaySupersededResult(
-  relayKey: string
-): OpenCodeMemberInboxRelayResult {
-  const diagnostic = `opencode_member_inbox_relay_superseded: ${relayKey}`;
-  return createOpenCodeMemberInboxRelayResult({
-    lastDelivery: {
-      delivered: false,
-      accepted: false,
-      responsePending: false,
-      reason: 'opencode_member_inbox_relay_superseded',
-      diagnostics: [diagnostic],
-    },
-    diagnostics: [diagnostic],
-  });
-}
-
-export function buildOpenCodeMemberInboxAlreadyReadResult(
-  record?: OpenCodePromptDeliveryLedgerRecord | null
-): OpenCodeMemberInboxRelayResult {
-  const committed = Boolean(record?.inboxReadCommittedAt);
-  const diagnostics = [
-    committed ? 'opencode_inbox_read_already_committed' : 'opencode_inbox_message_already_read',
-  ];
-  return createOpenCodeMemberInboxRelayResult({
-    attempted: 1,
-    delivered: 1,
-    lastDelivery: {
-      delivered: true,
-      ...(committed ? { accepted: true, responsePending: false } : {}),
-      ...(record?.responseState ? { responseState: record.responseState } : {}),
-      ...(record?.status ? { ledgerStatus: record.status } : {}),
-      ...(record?.id ? { ledgerRecordId: record.id } : {}),
-      ...(record?.laneId ? { laneId: record.laneId } : {}),
-      ...(record?.visibleReplyMessageId
-        ? { visibleReplyMessageId: record.visibleReplyMessageId }
-        : {}),
-      ...(record?.visibleReplyCorrelation
-        ? { visibleReplyCorrelation: record.visibleReplyCorrelation }
-        : {}),
-      reason: diagnostics[0],
-      diagnostics,
-    },
-    diagnostics,
-  });
-}
-
-export function buildOpenCodeMemberInboxMessageMissingResult(input: {
-  messageId: string;
-  reason: 'opencode_inbox_message_missing' | 'opencode_inbox_message_missing_after_inflight_relay';
-}): OpenCodeMemberInboxRelayResult {
-  const diagnostic = `${input.reason}: ${input.messageId}`;
-  return createOpenCodeMemberInboxRelayResult({
-    attempted: 1,
-    failed: 1,
-    lastDelivery: {
-      delivered: false,
-      reason: input.reason,
-      diagnostics: [diagnostic],
-    },
-    diagnostics: [diagnostic],
-  });
-}
-
-export function buildOpenCodeMemberWorkSyncReadWaitingResult(
-  messageId: string
-): OpenCodeMemberInboxRelayResult {
-  const diagnostic = `opencode_work_sync_read_commit_waiting_for_active_relay: ${messageId}`;
-  return createOpenCodeMemberInboxRelayResult({
-    attempted: 1,
-    lastDelivery: {
-      delivered: true,
-      accepted: false,
-      responsePending: true,
-      reason: 'opencode_work_sync_read_commit_waiting_for_active_relay',
-      diagnostics: [diagnostic],
-    },
-    diagnostics: [diagnostic],
-  });
-}
-
-export function buildOpenCodeMemberInboxQueuedBehindResult(input: {
-  relayKey: string;
-  messageId: string;
-}): OpenCodeMemberInboxRelayResult {
-  const diagnostic = `opencode_inbox_relay_queued_behind_active_relay: ${input.relayKey}/${input.messageId}`;
-  return createOpenCodeMemberInboxRelayResult({
-    attempted: 1,
-    lastDelivery: {
-      delivered: true,
-      accepted: false,
-      responsePending: true,
-      queuedBehindMessageId: input.messageId,
-      reason: 'opencode_inbox_relay_queued_behind_active_relay',
-      diagnostics: [diagnostic],
-    },
-    diagnostics: [diagnostic],
-  });
-}
-
-export function buildOpenCodeInboxReadFailedResult(
-  diagnostic: string
-): OpenCodeMemberInboxRelayResult {
-  return createOpenCodeMemberInboxRelayResult({
-    lastDelivery: {
-      delivered: false,
-      reason: 'opencode_inbox_read_failed',
-      diagnostics: [diagnostic],
-    },
-    diagnostics: [diagnostic],
-  });
 }
 
 export function selectOpenCodeMemberInboxRelayUnreadMessages(input: {

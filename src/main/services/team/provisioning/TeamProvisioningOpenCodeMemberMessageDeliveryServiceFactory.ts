@@ -1,9 +1,4 @@
-import {
-  type OpenCodeMemberInboxDelivery,
-  type OpenCodeMemberMessageDeliveryInput,
-  OpenCodeMemberMessageDeliveryService,
-  type OpenCodeMemberMessageDeliveryServiceDependencies,
-} from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { OpenCodeMemberMessageDeliveryService } from '../opencode/delivery/OpenCodeMemberMessageDeliveryService';
 
 import {
   createDefaultOpenCodeRuntimeBootstrapEvidencePorts,
@@ -13,6 +8,11 @@ import {
   stampOpenCodeAppMcpTransportEvidenceIfMissing,
 } from './TeamProvisioningOpenCodeBootstrapEvidence';
 
+import type {
+  OpenCodeMemberInboxDelivery,
+  OpenCodeMemberMessageDeliveryInput,
+  OpenCodeMemberMessageDeliveryServiceDependencies,
+} from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { TeamProvisioningOpenCodeRuntimeRecoveryFacade } from './TeamProvisioningOpenCodeRuntimeRecoveryFacade';
 import type { TeamProvisioningOpenCodeStoppedLaneCleanupBoundary } from './TeamProvisioningOpenCodeStoppedLaneCleanupBoundary';
 
