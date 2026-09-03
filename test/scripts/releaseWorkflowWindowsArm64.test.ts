@@ -54,9 +54,24 @@ describe('Windows release workflow', () => {
     expect(commands).toContain(
       'stage-terminal-platform-runtime.mjs --platform ${{ matrix.runtime_platform }}'
     );
+    expect(commands).toContain(
+      'stage-opencode-console-wrapper.mjs --platform ${{ matrix.runtime_platform }} --require'
+    );
+    expect(commands).toContain('test -f resources/runtime/opencode-console/opencode.exe');
     expect(commands).toContain('pnpm pack:win:${{ matrix.arch }} --publish never');
     expect(commands).toContain(
       'verifyBundle.cjs "release/${{ matrix.bundle_directory }}" win32 ${{ matrix.arch }}'
     );
+
+    const wrapperStageIndex = commands.indexOf(
+      'stage-opencode-console-wrapper.mjs --platform ${{ matrix.runtime_platform }} --require'
+    );
+    const wrapperVerificationIndex = commands.indexOf(
+      'test -f resources/runtime/opencode-console/opencode.exe'
+    );
+    const packageIndex = commands.indexOf('pnpm pack:win:${{ matrix.arch }} --publish never');
+    expect(wrapperStageIndex).toBeGreaterThanOrEqual(0);
+    expect(wrapperVerificationIndex).toBeGreaterThan(wrapperStageIndex);
+    expect(packageIndex).toBeGreaterThan(wrapperVerificationIndex);
   });
 });

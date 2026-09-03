@@ -270,13 +270,25 @@ function getKnownPrunableNativeArtifactRoot(appOutDir, filePath, targetPlatform,
   return null;
 }
 
+// tools/opencode-console-wrapper, staged by scripts/stage-opencode-console-wrapper.mjs.
+// It is a managed AnyCPU assembly: csc stamps AnyCPU images with the legacy i386
+// machine id even though the CLR loads them natively on x64 and arm64, and the
+// .NET Framework compiler cannot emit an arm64 image at all, so one build serves
+// every Windows architecture and reads back as ia32 here. verifyBundle.cjs
+// inherits this allowance through validateNativeBinaries.
+const OPENCODE_CONSOLE_WRAPPER_PATH = 'resources/runtime/opencode-console/opencode.exe';
+
 function isKnownAllowedNativeMismatch(relativePath, format, archs, targetPlatform) {
   const normalizedPath = relativePath.split(path.sep).join('/');
   const ssh2PageantPath = 'node_modules/ssh2/util/pagent.exe';
+  const isAllowedIa32Path =
+    normalizedPath === ssh2PageantPath ||
+    normalizedPath.endsWith(`/${ssh2PageantPath}`) ||
+    normalizedPath === OPENCODE_CONSOLE_WRAPPER_PATH;
 
   return (
     targetPlatform === 'win32' &&
-    (normalizedPath === ssh2PageantPath || normalizedPath.endsWith(`/${ssh2PageantPath}`)) &&
+    isAllowedIa32Path &&
     format === 'pe' &&
     archs.size === 1 &&
     archs.has('ia32')
@@ -544,6 +556,7 @@ async function afterPack(context) {
 
 module.exports = afterPack;
 module.exports._internal = {
+  OPENCODE_CONSOLE_WRAPPER_PATH,
   detectBinaryMetadata,
   getArchLabel,
   isBinaryCompatible,
