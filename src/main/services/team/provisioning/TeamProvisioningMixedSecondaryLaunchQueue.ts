@@ -1,10 +1,8 @@
 import * as path from 'path';
 
 import { sleep } from './TeamProvisioningAsyncUtils';
-import {
-  appendDiagnosticOnce,
-  markOpenCodeLaneBlockedBySharedRuntimeFailure,
-} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
+import { appendDiagnosticOnce } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS,
   OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_DIAGNOSTIC,

@@ -600,6 +600,57 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(calls).not.toContain('cleanupRun');
   });
 
+  it('never stops a lane that was blocked before launch, whatever its diagnostics say', async () => {
+    const alice = member('alice');
+    const bob = member('bob', { cwd: '/fake/project/./' });
+    const calls: string[] = [];
+    const adapterStop = vi.fn();
+    let capturedRun: OpenCodeAggregateProvisioningRun | null = null;
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: { stop: adapterStop } as unknown as TeamLaunchRuntimeAdapter,
+        request: request([alice, bob]),
+        members: [alice, bob],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        setRun: (_runId, run) => {
+          capturedRun = run;
+        },
+        getRun: () => capturedRun ?? undefined,
+        launchOpenCodeAggregatePrimaryLane: async () => {
+          calls.push('launchPrimary');
+          return sharedPreflightFailureResult(
+            'alice',
+            'Failed to query OpenCode models: request timed out'
+          );
+        },
+        publishMixedSecondaryLaneStatusChange: async (_run, lane) => {
+          calls.push(`publishLane:${lane.laneId}:${lane.state}`);
+          // The rollback classification must survive a reworded diagnostic: the
+          // lane still owns nothing, and that is a fact about the lane.
+          lane.diagnostics = ['OpenCode preflight refused this lane.'];
+        },
+        summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
+      }
+    );
+
+    const run = capturedRun as OpenCodeAggregateProvisioningRun | null;
+    if (!run) throw new Error('Expected captured aggregate run.');
+    expect(run.mixedSecondaryLanes[0]).toMatchObject({
+      state: 'finished',
+      blockedBeforeLaunch: true,
+    });
+    expect(calls).not.toContain('launchSecondary:secondary:opencode:bob');
+    expect(adapterStop).not.toHaveBeenCalled();
+    expect(calls).not.toContain('setSecondaryRuntimeRun:secondary:opencode:bob');
+    expect(calls).toContain('setProgress:failed');
+  });
+
   it('cancels an exact late lane without stopping or clearing newer owners', async () => {
     const alice = member('alice');
     const bob = member('bob');

@@ -17,11 +17,9 @@ import {
   deleteOpenCodeAggregateRuntimeTrackingIfOwned,
   stopAndRollbackOpenCodeAggregateRuntimeLanes,
 } from './TeamProvisioningOpenCodeAggregateRunRollback';
+import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
 import { selectOpenCodeLaunchFailureDiagnostic } from './TeamProvisioningOpenCodeDiagnosticsPolicy';
-import {
-  hasRetainableOpenCodeRuntimeMember,
-  markOpenCodeLaneBlockedBySharedRuntimeFailure,
-} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+import { hasRetainableOpenCodeRuntimeMember } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
   takeBlockingOpenCodeSharedRuntimeFailure,
   trackOpenCodeSharedRuntimeFailureFromResult,

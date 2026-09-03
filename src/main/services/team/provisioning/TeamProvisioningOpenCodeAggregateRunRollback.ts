@@ -1,3 +1,5 @@
+import { wasOpenCodeLaneBlockedBeforeLaunch } from './TeamProvisioningOpenCodeBlockedLanePolicy';
+
 import type { TeamLaunchRuntimeAdapter } from '../runtime';
 import type {
   OpenCodeAggregateProvisioningRun,
@@ -294,12 +296,6 @@ function publishOpenCodeAggregateRollbackFailed(
     run.onProgress
   );
   ports.invalidateRuntimeSnapshotCaches(run.teamName);
-}
-
-function wasOpenCodeLaneBlockedBeforeLaunch(lane: MixedSecondaryRuntimeLaneState): boolean {
-  return lane.diagnostics.some((diagnostic) =>
-    diagnostic.includes('This lane was not attempted because it uses the same project runtime.')
-  );
 }
 
 function retainUntrackedOpenCodeSecondaryLaneForCleanup(
