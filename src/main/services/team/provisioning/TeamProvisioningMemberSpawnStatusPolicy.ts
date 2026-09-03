@@ -17,6 +17,17 @@ export const MEMBER_LAUNCH_GRACE_TIMEOUT_REASON =
  * metadata has been applied to the entry. Evaluating it against a persisted
  * `runtimeAlive: true` that a later liveness check disproves is how a member
  * whose process died mid-launch kept reporting "waiting" forever.
+ *
+ * A member waiting on a permission prompt is excluded: that member has not
+ * failed to start, it is blocked on a human answering, and how long the answer
+ * takes is not the runtime's business. Both markers are checked, because the
+ * two do not always travel together - `deriveMemberLaunchState` reads the
+ * request ids, while a persisted entry can carry the `runtime_pending_permission`
+ * launch state after a liveness pass cleared `runtimeAlive`. Without the
+ * exclusion the grace projection sets `hardFailure`, `deriveMemberLaunchState`
+ * then answers `failed_to_start` (the hard-failure branch runs before the
+ * pending-permission one), and the card claims a teammate crashed while it is
+ * in fact still waiting for the user's approval.
  */
 export function hasExpiredMemberLaunchGrace(
   entry: Pick<
@@ -27,6 +38,7 @@ export function hasExpiredMemberLaunchGrace(
     | 'firstSpawnAcceptedAt'
     | 'hardFailure'
     | 'launchState'
+    | 'pendingPermissionRequestIds'
     | 'runtimeAlive'
   >,
   options: { nowMs: number; graceMs?: number }
@@ -40,6 +52,8 @@ export function hasExpiredMemberLaunchGrace(
     entry.launchState === 'failed_to_start' ||
     entry.launchState === 'confirmed_alive' ||
     entry.launchState === 'skipped_for_launch' ||
+    entry.launchState === 'runtime_pending_permission' ||
+    (entry.pendingPermissionRequestIds?.length ?? 0) > 0 ||
     !entry.firstSpawnAcceptedAt
   ) {
     return false;
