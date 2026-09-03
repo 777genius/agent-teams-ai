@@ -378,6 +378,7 @@ describe('RuntimeProviderQuickConnect', () => {
     const cases = [
       {
         entries: [],
+        loading: false,
         loaded: true,
         authoritativeLoaded: false,
         authoritativePending: false,
@@ -385,6 +386,7 @@ describe('RuntimeProviderQuickConnect', () => {
       },
       {
         entries: [],
+        loading: false,
         loaded: true,
         authoritativeLoaded: false,
         authoritativePending: false,
@@ -392,6 +394,7 @@ describe('RuntimeProviderQuickConnect', () => {
       },
       {
         entries: [entry('openrouter', { state: 'error', setupKind: 'unsupported' })],
+        loading: false,
         loaded: true,
         authoritativeLoaded: true,
         authoritativePending: false,
