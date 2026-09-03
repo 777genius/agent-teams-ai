@@ -353,7 +353,6 @@ export function deriveTeamLaunchAggregateState(
   }
   return 'clean_success';
 }
-
 export function summarizePersistedLaunchMembers(
   expectedMembers: readonly string[],
   members: Record<string, PersistedTeamLaunchMemberState>
@@ -375,7 +374,6 @@ export function summarizePersistedLaunchMembers(
       ...Object.keys(members).map(normalizeMemberName).filter(Boolean),
     ])
   );
-
   for (const memberName of memberNames) {
     const entry = members[memberName];
     if (!entry) {
@@ -398,7 +396,10 @@ export function summarizePersistedLaunchMembers(
     if (preservesStrongRuntimeAlive(entry)) {
       runtimeAlivePendingCount += 1;
     }
-    if (entry.launchState === 'runtime_pending_permission') {
+    if (
+      entry.pendingPermissionRequestIds?.length ||
+      ['runtime_pending_permission', 'permission_pending'].includes(entry.launchState as string)
+    ) {
       permissionPendingCount += 1;
     }
     if (entry.livenessKind === 'shell_only') {
@@ -415,7 +416,6 @@ export function summarizePersistedLaunchMembers(
       noRuntimePendingCount += 1;
     }
   }
-
   return {
     confirmedCount,
     pendingCount,

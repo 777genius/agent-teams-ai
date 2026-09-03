@@ -1796,12 +1796,8 @@ describe('cliInstallerSlice', () => {
 
   describe('fetchCliProviderStatus', () => {
     it('fences an in-flight provider status across a backend catalog invalidation', async () => {
-      const oldBackendRequest = createDeferredValue<
-        CliInstallationStatus['providers'][number]
-      >();
-      const newBackendRequest = createDeferredValue<
-        CliInstallationStatus['providers'][number]
-      >();
+      const oldBackendRequest = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      const newBackendRequest = createDeferredValue<CliInstallationStatus['providers'][number]>();
       const initialProvider = createMultimodelProvider({
         providerId: 'codex',
         displayName: 'Codex',
@@ -1853,9 +1849,7 @@ describe('cliInstallerSlice', () => {
       await expect(oldBackendRefresh).resolves.toBe(false);
 
       expect(
-        useStore
-          .getState()
-          .cliStatus?.providers.find((provider) => provider.providerId === 'codex')
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex')
       ).toMatchObject({
         authenticated: false,
         capabilities: { teamLaunch: false },
@@ -1881,6 +1875,51 @@ describe('cliInstallerSlice', () => {
 
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('opencode', {
         projectPath: '/tmp/local-model-project',
+      });
+    });
+
+    it('rechecks one partial OpenCode status response before settling the provider', async () => {
+      const partialProvider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'pending',
+        statusCheckErrorCode: 'partial_response',
+        modelCatalogRefreshState: 'loading',
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+      });
+      const readyProvider = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
+      useStore.setState({ cliStatus: createMultimodelStatus([partialProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockResolvedValueOnce(partialProvider)
+        .mockResolvedValueOnce(readyProvider);
+
+      await expect(
+        useStore.getState().fetchCliProviderStatus('opencode', {
+          projectPath: '/tmp/partial-opencode',
+        })
+      ).resolves.toBe(true);
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenNthCalledWith(1, 'opencode', {
+        projectPath: '/tmp/partial-opencode',
+      });
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenNthCalledWith(2, 'opencode', {
+        projectPath: '/tmp/partial-opencode',
+      });
+      expect(
+        useStore.getState().cliProviderStatusByScope[
+          getCliProviderStatusScopeKey('opencode', '/tmp/partial-opencode')
+        ]
+      ).toMatchObject({
+        statusCheckOutcome: 'authoritative',
+        modelCatalogRefreshState: 'ready',
       });
     });
 

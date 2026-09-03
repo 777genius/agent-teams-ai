@@ -345,7 +345,6 @@ describe('ClaudeMultimodelBridgeService status/catalog core', () => {
       '--json',
       '--provider',
       'opencode',
-      '--summary',
     ]);
     expect(result).toMatchObject({
       authenticated: false,

@@ -1,3 +1,5 @@
+/* eslint-disable sonarjs/publicly-writable-directories -- Test-only project paths are never written. */
+
 import { describe, expect, test, vi } from 'vitest';
 
 import { ClaudeMultimodelBridgeService } from './ClaudeMultimodelBridgeService';
@@ -234,17 +236,20 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       },
       'error',
     ],
-  ] as const)('revokes OpenCode launch authority for missing or drifted live evidence', (snapshot, verificationState) => {
-    const service = new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusMapper;
-    const provider = verifiedOpenCodeProvider();
+  ] as const)(
+    'revokes OpenCode launch authority for missing or drifted live evidence',
+    (snapshot, verificationState) => {
+      const service = new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusMapper;
+      const provider = verifiedOpenCodeProvider();
 
-    expect(service.mergeOpenCodeVerification(provider, snapshot)).toMatchObject({
-      authenticated: false,
-      authMethod: null,
-      verificationState,
-      capabilities: { teamLaunch: false },
-    });
-  });
+      expect(service.mergeOpenCodeVerification(provider, snapshot)).toMatchObject({
+        authenticated: false,
+        authMethod: null,
+        verificationState,
+        capabilities: { teamLaunch: false },
+      });
+    }
+  );
 
   test('revokes OpenCode launch authority when live verification throws', async () => {
     const service = new ClaudeMultimodelBridgeService();
@@ -262,4 +267,29 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
     });
     vi.mocked(console.warn).mockClear();
   });
+
+  test('requests the full OpenCode status for project-scoped launch checks', async () => {
+    const service = new ClaudeMultimodelBridgeService();
+    const internals = service as unknown as {
+      getProviderStatusFromScopedRuntimeStatus: (
+        binaryPath: string,
+        providerId: CliProviderId,
+        options: { summary?: boolean; projectPath?: string | null }
+      ) => Promise<CliProviderStatus>;
+    };
+    const statusSpy = vi
+      .spyOn(internals, 'getProviderStatusFromScopedRuntimeStatus')
+      .mockResolvedValue(verifiedOpenCodeProvider());
+
+    await service.getProviderStatus('/fake/cli', 'opencode', undefined, {
+      projectPath: '/tmp/sandbox-project',
+    });
+
+    expect(statusSpy).toHaveBeenCalledWith('/fake/cli', 'opencode', {
+      summary: false,
+      projectPath: '/tmp/sandbox-project',
+    });
+  });
 });
+
+/* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after test-only temp path fixtures. */

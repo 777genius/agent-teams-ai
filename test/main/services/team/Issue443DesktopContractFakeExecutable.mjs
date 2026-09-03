@@ -108,9 +108,9 @@ else process.stdout.write(outputRaw);
 trace({ ...baseTrace, proofValidation, outputRaw, sideEffectCommitted: envelope.command === 'opencode.launchTeam' });
 
 function runProviderStatusCommand() {
-  const expected = ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'];
+  const expected = ['runtime', 'status', '--json', '--provider', 'opencode'];
   if (JSON.stringify(argv) !== JSON.stringify(expected)) {
-    rejectCommand('only passive provider-scoped summary status is allowed');
+    rejectCommand('only project-scoped provider status is allowed');
   }
   const providerIndex = argv.indexOf('--provider');
   const provider = providerIndex < 0 ? null : argv[providerIndex + 1];

@@ -619,6 +619,29 @@ async function flush(): Promise<void> {
   await Promise.resolve();
 }
 
+async function confirmLaunchPreflight(
+  host: HTMLElement,
+  label: 'Launch team' | 'Relaunch team' = 'Launch team'
+): Promise<HTMLButtonElement> {
+  const button = Array.from(host.querySelectorAll('button')).find(
+    (candidate) => candidate.textContent === label
+  ) as HTMLButtonElement | undefined;
+  if (!button) {
+    throw new Error(`Expected "${label}" button.`);
+  }
+  await act(async () => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flush();
+  });
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flush();
+    });
+  }
+  return button;
+}
+
 function createAuthoritativeProviderStatus(
   providerId: CliProviderId,
   models: string[]
@@ -751,6 +774,8 @@ describe('LaunchTeamDialog', () => {
     storeState.cliProviderStatusByScope = {};
     storeState.launchParamsByTeam = {};
     createTeamDraftMock.state.members[0].model = 'opencode/big-pickle';
+    createTeamDraftMock.state.members[1].providerId = 'codex';
+    createTeamDraftMock.state.members[1].model = 'gpt-5.5';
     createTeamDraftMock.state.cwdMode = 'project';
     createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
     createTeamDraftMock.state.customCwd = '';
@@ -1147,6 +1172,8 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
+    await confirmLaunchPreflight(host);
+
     expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
       expect.objectContaining({
         name: 'alice',
@@ -1158,12 +1185,14 @@ describe('LaunchTeamDialog', () => {
       vi
         .mocked(runProviderPrepareDiagnostics)
         .mock.calls.find((call) => call[0]?.providerId === 'opencode')?.[0]?.selectedModelChecks
-    ).toEqual([
-      expect.objectContaining({
-        providerId: 'opencode',
-        model: localModel,
-      }),
-    ]);
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          providerId: 'opencode',
+          model: localModel,
+        }),
+      ])
+    );
 
     await act(async () => {
       root.unmount();
@@ -1468,6 +1497,8 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
+
+    await confirmLaunchPreflight(host);
 
     const preparedProviderIds = vi
       .mocked(runProviderPrepareDiagnostics)
@@ -1819,9 +1850,13 @@ describe('LaunchTeamDialog', () => {
   it('uses the project-scoped OpenCode teammate model in Create preflight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
+    localStorage.setItem('team:lastSelectedProvider', 'opencode');
+    localStorage.setItem('team:lastSelectedModel:opencode', 'opencode/big-pickle');
     const localModel = 'ollama/qwen2.5-coder:0.5b';
     const originalModel = createTeamDraftMock.state.members[0].model;
     createTeamDraftMock.state.members[0].model = localModel;
+    createTeamDraftMock.state.members[1].providerId = 'opencode';
+    createTeamDraftMock.state.members[1].model = 'opencode/big-pickle';
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(
       (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
     );
@@ -1842,25 +1877,19 @@ describe('LaunchTeamDialog', () => {
           capabilities: { teamLaunch: true, oneShot: false },
           backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
         },
-        {
-          providerId: 'codex',
-          supported: true,
-          authenticated: true,
-          authMethod: 'oauth',
-          verificationState: 'verified',
-          modelVerificationState: 'idle',
-          modelCatalogRefreshState: 'ready',
-          statusMessage: null,
-          models: ['gpt-5.5'],
-          modelAvailability: [],
-          capabilities: { teamLaunch: true, oneShot: true },
-          backend: { kind: 'codex-native', label: 'Codex native' },
-        },
+        createAuthoritativeProviderStatus('codex', ['gpt-5.5']),
       ],
     } as any;
     storeState.cliProviderStatusByScope = {
       [getCliProviderStatusScopeKey('opencode', '/tmp/project')]: {
         ...(storeState.cliStatus as any).providers[0],
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'model_only',
+        statusCheckErrorCode: 'partial_response',
+        capabilities: { teamLaunch: false, oneShot: false },
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
         models: [localModel],
         modelCatalogRefreshState: 'ready',
         modelCatalog: {
@@ -1872,7 +1901,21 @@ describe('LaunchTeamDialog', () => {
           staleAt: '2099-07-20T00:10:00.000Z',
           defaultModelId: localModel,
           defaultLaunchModel: localModel,
-          models: [],
+          models: [
+            {
+              id: localModel,
+              launchModel: localModel,
+              displayName: localModel,
+              hidden: false,
+              supportedReasoningEfforts: [],
+              defaultReasoningEffort: null,
+              inputModalities: ['text'],
+              supportsPersonality: false,
+              isDefault: true,
+              upgrade: false,
+              source: 'app-server',
+            },
+          ],
           diagnostics: {
             configReadState: 'ready',
             appServerState: 'healthy',
@@ -1903,6 +1946,14 @@ describe('LaunchTeamDialog', () => {
       );
       await flush();
     });
+    const createButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Create'
+    );
+    expect(createButton?.disabled).toBe(false);
+    await act(async () => {
+      createButton?.click();
+      await flush();
+    });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
       await flush();
@@ -1912,12 +1963,14 @@ describe('LaunchTeamDialog', () => {
       vi
         .mocked(runProviderPrepareDiagnostics)
         .mock.calls.find((call) => call[0]?.providerId === 'opencode')?.[0]?.selectedModelChecks
-    ).toEqual([
-      expect.objectContaining({
-        providerId: 'opencode',
-        model: localModel,
-      }),
-    ]);
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          providerId: 'opencode',
+          model: localModel,
+        }),
+      ])
+    );
 
     createTeamDraftMock.state.members[0].model = originalModel;
     await act(async () => {
@@ -1929,11 +1982,15 @@ describe('LaunchTeamDialog', () => {
   it('uses one custom cwd for the scoped OpenCode catalog and Create preflight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
+    localStorage.setItem('team:lastSelectedProvider', 'opencode');
+    localStorage.setItem('team:lastSelectedModel:opencode', 'opencode/big-pickle');
     const customCwd = '/tmp/custom-catalog-project';
     const localModel = 'ollama/qwen2.5-coder:0.5b';
     createTeamDraftMock.state.cwdMode = 'custom';
     createTeamDraftMock.state.customCwd = customCwd;
     createTeamDraftMock.state.members[0].model = localModel;
+    createTeamDraftMock.state.members[1].providerId = 'opencode';
+    createTeamDraftMock.state.members[1].model = 'opencode/big-pickle';
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(
       (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
     );
@@ -1953,11 +2010,18 @@ describe('LaunchTeamDialog', () => {
     };
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
-      providers: [globalProvider],
+      providers: [globalProvider, createAuthoritativeProviderStatus('codex', ['gpt-5.5'])],
     } as any;
     storeState.cliProviderStatusByScope = {
       [getCliProviderStatusScopeKey('opencode', customCwd)]: {
         ...globalProvider,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'model_only',
+        statusCheckErrorCode: 'partial_response',
+        capabilities: { teamLaunch: false, oneShot: false },
+        runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
         models: [localModel],
         modelCatalog: {
           schemaVersion: 1,
@@ -1968,7 +2032,21 @@ describe('LaunchTeamDialog', () => {
           staleAt: '2099-07-20T00:10:00.000Z',
           defaultModelId: localModel,
           defaultLaunchModel: localModel,
-          models: [],
+          models: [
+            {
+              id: localModel,
+              launchModel: localModel,
+              displayName: localModel,
+              hidden: false,
+              supportedReasoningEfforts: [],
+              defaultReasoningEffort: null,
+              inputModalities: ['text'],
+              supportsPersonality: false,
+              isDefault: true,
+              upgrade: false,
+              source: 'app-server',
+            },
+          ],
           diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
         },
       },
@@ -1995,6 +2073,14 @@ describe('LaunchTeamDialog', () => {
       );
       await flush();
     });
+    const createButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Create'
+    );
+    expect(createButton?.disabled).toBe(false);
+    await act(async () => {
+      createButton?.click();
+      await flush();
+    });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
       await flush();
@@ -2011,7 +2097,7 @@ describe('LaunchTeamDialog', () => {
         .mock.calls.find((call) => call[0]?.providerId === 'opencode')?.[0]
     ).toMatchObject({
       cwd: customCwd,
-      selectedModelChecks: [expect.objectContaining({ model: localModel })],
+      selectedModelChecks: expect.arrayContaining([expect.objectContaining({ model: localModel })]),
     });
 
     await act(async () => root.unmount());
@@ -2216,6 +2302,7 @@ describe('LaunchTeamDialog', () => {
     );
     expect(submitButton).toBeTruthy();
 
+    await confirmLaunchPreflight(host);
     await act(async () => {
       submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flush();
@@ -2337,6 +2424,7 @@ describe('LaunchTeamDialog', () => {
     );
     expect(submitButton).toBeTruthy();
 
+    await confirmLaunchPreflight(host);
     await act(async () => {
       submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flush();
@@ -2562,6 +2650,7 @@ describe('LaunchTeamDialog', () => {
     );
     expect(submitButton).toBeTruthy();
 
+    await confirmLaunchPreflight(host, 'Relaunch team');
     await act(async () => {
       submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flush();
@@ -2673,6 +2762,8 @@ describe('LaunchTeamDialog', () => {
         await flush();
       });
     }
+
+    await confirmLaunchPreflight(host);
 
     const opencodePrepareCalls = vi
       .mocked(runProviderPrepareDiagnostics)
@@ -2852,6 +2943,7 @@ describe('LaunchTeamDialog', () => {
     expect(submitButton).toBeTruthy();
     expect(submitButton?.hasAttribute('disabled')).toBe(false);
 
+    await confirmLaunchPreflight(host);
     await act(async () => {
       submitButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await flush();
@@ -3428,7 +3520,19 @@ describe('LaunchTeamDialog', () => {
       await renderDialog();
     });
 
+    expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+    expect(fetchCliProviderStatus).not.toHaveBeenCalled();
+    const initialLaunchButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    await act(async () => {
+      initialLaunchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flush();
+    });
+
     expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
+    expect(initialLaunchButton?.hasAttribute('disabled')).toBe(true);
 
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -3560,6 +3664,15 @@ describe('LaunchTeamDialog', () => {
 
     await act(async () => {
       await renderDialog();
+    });
+
+    const initialLaunchButton = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Launch team'
+    );
+    await act(async () => {
+      initialLaunchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await flush();
     });
 
     const launchButtonWhileChecking = Array.from(host.querySelectorAll('button')).find(
@@ -3762,6 +3875,7 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
+    await confirmLaunchPreflight(host);
     for (
       let attempt = 0;
       attempt < 10 && !host.textContent?.includes('Runtime environment is not available');
@@ -3838,7 +3952,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('keeps create-team preflight alive across same-signature rerenders', async () => {
+  it('does not start create-team preflight across same-signature rerenders before confirmation', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
     storeState.cliStatus = {
@@ -3927,15 +4041,15 @@ describe('LaunchTeamDialog', () => {
       await flush();
     });
 
-    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalled();
+    expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+    expect(fetchCliProviderStatus).not.toHaveBeenCalled();
 
     await act(async () => {
       await renderDialog();
       await flush();
     });
 
-    const callsAfterSameSignatureRerender = vi.mocked(runProviderPrepareDiagnostics).mock.calls
-      .length;
+    expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
 
     await act(async () => {
       resolvePrepare({
@@ -3947,9 +4061,7 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
-    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(
-      callsAfterSameSignatureRerender
-    );
+    expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();
@@ -4007,6 +4119,18 @@ describe('LaunchTeamDialog', () => {
       submitButton?.click();
       await flush();
     });
+    // The first click explicitly authorizes the bounded provider preflight when
+    // the project-scoped OpenCode authority is still unresolved.
+    if (!onCreate.mock.calls.length) {
+      await act(async () => {
+        await flush();
+      });
+      const retrySubmitButton = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Create'
+      );
+      retrySubmitButton?.click();
+      await flush();
+    }
     expect(onCreate).toHaveBeenCalledOnce();
 
     await act(async () => {
