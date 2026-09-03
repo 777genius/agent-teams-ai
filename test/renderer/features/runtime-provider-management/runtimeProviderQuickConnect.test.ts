@@ -177,7 +177,13 @@ describe('RuntimeProviderQuickConnect', () => {
     vi.unstubAllGlobals();
   });
 
-  const renderQuickConnect = async (projectPath: string | null = null): Promise<void> => {
+  const renderQuickConnect = async (
+    projectPath: string | null = null,
+    onOpenCodeProviderAction: (
+      providerId: string,
+      action: 'connect' | 'reconnect' | 'select' | 'settings-connect'
+    ) => void = vi.fn()
+  ): Promise<void> => {
     await act(async () => {
       root.render(
         React.createElement(RuntimeProviderQuickConnect, {
@@ -194,7 +200,7 @@ describe('RuntimeProviderQuickConnect', () => {
           projectPath,
           onInstallOpenCode: vi.fn(),
           onRefreshOpenCode: vi.fn(),
-          onOpenCodeProviderAction: vi.fn(),
+          onOpenCodeProviderAction,
           onBrowseProviders: vi.fn(),
         })
       );
@@ -366,6 +372,48 @@ describe('RuntimeProviderQuickConnect', () => {
 
     expect(onOpenCodeProviderAction).toHaveBeenNthCalledWith(1, 'openrouter', 'select');
     expect(onOpenCodeProviderAction).toHaveBeenNthCalledWith(2, 'vercel', 'settings-connect');
+  });
+
+  it('routes every unavailable gateway state to provider settings', async () => {
+    const cases = [
+      {
+        entries: [],
+        loaded: true,
+        authoritativeLoaded: false,
+        authoritativePending: false,
+        error: 'directory unavailable',
+      },
+      {
+        entries: [],
+        loaded: true,
+        authoritativeLoaded: false,
+        authoritativePending: false,
+        error: null,
+      },
+      {
+        entries: [entry('openrouter', { state: 'error', setupKind: 'unsupported' })],
+        loaded: true,
+        authoritativeLoaded: true,
+        authoritativePending: false,
+        error: null,
+      },
+    ] as const;
+
+    for (const directory of cases) {
+      mocks.directory = { ...directory, refresh: vi.fn() };
+      const onOpenCodeProviderAction = vi.fn();
+      await renderQuickConnect(null, onOpenCodeProviderAction);
+
+      const card = host.querySelector('[data-testid="provider-quick-card-openrouter"]');
+      const action = host.querySelector<HTMLButtonElement>(
+        '[data-testid="provider-quick-action-openrouter"]'
+      );
+      expect(card?.textContent).toContain('cliStatus.quickConnect.checkAndConnect');
+      expect(action).not.toBeNull();
+
+      await act(async () => action?.click());
+      expect(onOpenCodeProviderAction).toHaveBeenCalledWith('openrouter', 'settings-connect');
+    }
   });
 
   it('does not report missing or negative seed providers as not found before reconciliation', async () => {
