@@ -13,6 +13,13 @@ export interface OpenCodeAggregateLaunchPromptPorts {
     teamName: string;
     leadName: string;
     prompt: string;
+    /**
+     * Ownership fence evaluated at the delivery boundary itself, under the
+     * inbox write lock. The lead inbox belongs to the team rather than to one
+     * run, so a launch that lost the team while it was waiting for that lock
+     * must not leave its prompt behind for the run that replaced it.
+     */
+    isLaunchStillCurrent: () => boolean;
   }): Promise<void>;
 }
 
@@ -56,6 +63,7 @@ export async function queueLaunchPromptToLeadInbox(
     leadName: string;
     prompt: string;
     diagnostics: string[];
+    isLaunchStillCurrent: () => boolean;
   },
   ports: OpenCodeAggregateLaunchPromptPorts
 ): Promise<boolean> {
@@ -64,6 +72,7 @@ export async function queueLaunchPromptToLeadInbox(
       teamName: input.teamName,
       leadName: input.leadName,
       prompt: input.prompt,
+      isLaunchStillCurrent: input.isLaunchStillCurrent,
     });
     return true;
   } catch (error) {

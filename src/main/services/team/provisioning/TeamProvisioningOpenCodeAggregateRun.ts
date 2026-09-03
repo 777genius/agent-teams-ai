@@ -319,9 +319,16 @@ export async function runOpenCodeWorktreeRootAggregateLaunch(
           leadName: resolveOpenCodeAggregateLaunchPromptLeadName(run.effectiveMembers),
           prompt: promptDelivery.leadInboxPrompt,
           diagnostics: laneDiagnostics,
+          isLaunchStillCurrent: () => !aggregateLaunchNoLongerCurrent(),
         },
         ports
       );
+      // Waiting for the lead inbox is an await like any other: a stop or a
+      // successor launch can take the team while it runs, and its state must
+      // not be published over the run that replaced this one.
+      if (aggregateLaunchNoLongerCurrent()) {
+        return await finishCancelledAggregateLaunch();
+      }
     }
     const finalProgress = ports.setRuntimeAdapterProgress(
       buildOpenCodeAggregateFinalProgress({

@@ -1515,7 +1515,9 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     const provisioningRuns = new Map<string, string>();
     const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
     const promptedLanes: (string | undefined)[] = [];
-    const deliverOpenCodeLaunchPromptToLead = vi.fn(async () => undefined);
+    const deliverOpenCodeLaunchPromptToLead = vi.fn<
+      OpenCodeWorktreeRootAggregateLaunchPorts['deliverOpenCodeLaunchPromptToLead']
+    >(async () => undefined);
 
     await runOpenCodeWorktreeRootAggregateLaunch(
       {
@@ -1544,11 +1546,15 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     // cannot replay it.
     expect(promptedLanes).toEqual(['']);
     expect(deliverOpenCodeLaunchPromptToLead).toHaveBeenCalledTimes(1);
-    expect(deliverOpenCodeLaunchPromptToLead).toHaveBeenCalledWith({
+    const promptInput = deliverOpenCodeLaunchPromptToLead.mock.calls[0]?.[0];
+    expect(promptInput).toMatchObject({
       teamName: 'open-code-team',
       leadName: 'team-lead',
       prompt: 'review the backlog',
     });
+    // Negative control for the fence: the run that still owns the team reports
+    // itself as current at the write boundary.
+    expect(promptInput?.isLaunchStillCurrent()).toBe(true);
   });
 
   it('finishes the launch and records a diagnostic when the lead inbox refuses the prompt', async () => {
@@ -1594,6 +1600,64 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       cliLogsTail: 'Launch prompt could not be queued for team-lead: lead inbox is not writable',
     });
   });
+
+  it.each([
+    { takenOver: true, label: 'refuses the write and publishes nothing' },
+    { takenOver: false, label: 'writes and publishes' },
+  ])(
+    'a successor that takes the team while the launch prompt is in flight: $label',
+    async ({ takenOver }) => {
+      const lead = member('team-lead');
+      const calls: string[] = [];
+      const provisioningRuns = new Map<string, string>();
+      const aliveRuns = new Map<string, string>();
+      const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+      const deliveryStarted = deferred();
+      const deliveryRelease = deferred();
+      let fenceAtWriteBoundary: boolean | null = null;
+
+      const launch = runOpenCodeWorktreeRootAggregateLaunch(
+        {
+          adapter: {} as TeamLaunchRuntimeAdapter,
+          request: request([lead]),
+          members: [lead],
+          lanePlan: lanePlan({ primaryMembers: [lead] }),
+          prompt: 'review the backlog',
+          onProgress: vi.fn(),
+        },
+        {
+          ...baseAggregatePorts(calls),
+          setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+          getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+          getRun: (runId) => runById.get(runId),
+          setRun: (runId, run) => runById.set(runId, run),
+          setAliveRunId: (teamName, runId) => {
+            calls.push('setAliveRun');
+            aliveRuns.set(teamName, runId);
+          },
+          launchOpenCodeAggregatePrimaryLane: async () => retainableRuntimeResult('team-lead'),
+          deliverOpenCodeLaunchPromptToLead: async (promptInput) => {
+            deliveryStarted.resolve();
+            await deliveryRelease.promise;
+            // Stands in for the inbox writer evaluating the fence once it owns
+            // the inbox lock: a false answer rejects the append.
+            fenceAtWriteBoundary = promptInput.isLaunchStillCurrent();
+          },
+        }
+      );
+
+      await deliveryStarted.promise;
+      if (takenOver) {
+        provisioningRuns.set('open-code-team', 'successor-run');
+      }
+      deliveryRelease.resolve();
+
+      await expect(launch).resolves.toEqual({ runId: 'run-open-code' });
+      expect(fenceAtWriteBoundary).toBe(!takenOver);
+      expect(aliveRuns.has('open-code-team')).toBe(!takenOver);
+      expect(calls.includes('emitTeamProcessChange:ready')).toBe(!takenOver);
+    }
+  );
 
   it('never touches the lead inbox when the launch carries no prompt', async () => {
     const lead = member('team-lead');

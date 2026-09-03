@@ -43,21 +43,31 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPrompt', () => {
     );
   });
 
-  it('queues the prompt as a lead inbox message', async () => {
+  it('queues the prompt as a lead inbox message and hands the fence to the delivery port', async () => {
     const diagnostics: string[] = [];
     const deliverOpenCodeLaunchPromptToLead = vi.fn(async () => undefined);
+    const isLaunchStillCurrent = (): boolean => true;
 
     await expect(
       queueLaunchPromptToLeadInbox(
-        { teamName: 'team-a', leadName: 'captain', prompt: 'ship it', diagnostics },
+        {
+          teamName: 'team-a',
+          leadName: 'captain',
+          prompt: 'ship it',
+          diagnostics,
+          isLaunchStillCurrent,
+        },
         { deliverOpenCodeLaunchPromptToLead }
       )
     ).resolves.toBe(true);
 
+    // The fence itself must reach the write boundary: a predicate that stayed
+    // behind in this module would leave the write unfenced.
     expect(deliverOpenCodeLaunchPromptToLead).toHaveBeenCalledWith({
       teamName: 'team-a',
       leadName: 'captain',
       prompt: 'ship it',
+      isLaunchStillCurrent,
     });
     expect(diagnostics).toEqual([]);
   });
@@ -67,7 +77,13 @@ describe('TeamProvisioningOpenCodeAggregateLaunchPrompt', () => {
 
     await expect(
       queueLaunchPromptToLeadInbox(
-        { teamName: 'team-a', leadName: 'captain', prompt: 'ship it', diagnostics },
+        {
+          teamName: 'team-a',
+          leadName: 'captain',
+          prompt: 'ship it',
+          diagnostics,
+          isLaunchStillCurrent: () => true,
+        },
         {
           deliverOpenCodeLaunchPromptToLead: async () => {
             throw new Error('lead inbox is not writable');

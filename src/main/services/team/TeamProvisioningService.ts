@@ -91,21 +91,30 @@ export class TeamProvisioningService extends TeamProvisioningOpenCodeAggregatePr
    * the standard user-reply contract. The orchestrator's own `leadPrompt` slot
    * replays the prompt on every session rebuild, which a memoryless cloud lead
    * then re-executes.
+   *
+   * The caller's ownership fence is handed to the writer rather than checked
+   * here: the inbox lock is where the wait happens, so that is where a launch
+   * that no longer owns the team has to be refused.
    */
   async deliverOpenCodeLaunchPromptToLead(input: {
     teamName: string;
     leadName: string;
     prompt: string;
+    isLaunchStillCurrent: () => boolean;
   }): Promise<void> {
     const text = input.prompt.trim();
     if (!text) return;
-    await this.inboxWriter.sendMessage(input.teamName, {
-      member: input.leadName,
-      to: input.leadName,
-      from: 'user',
-      text,
-      source: 'user_sent',
-    });
+    await this.inboxWriter.sendMessage(
+      input.teamName,
+      {
+        member: input.leadName,
+        to: input.leadName,
+        from: 'user',
+        text,
+        source: 'user_sent',
+      },
+      { shouldStillWrite: input.isLaunchStillCurrent }
+    );
   }
 
   async assessLeadRuntimeRestart(input: {
