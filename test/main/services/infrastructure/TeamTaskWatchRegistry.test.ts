@@ -58,11 +58,38 @@ const chokidarMock = vi.hoisted(() => {
 
 vi.mock('chokidar', () => ({ watch: chokidarMock.watch }));
 
+// Lets a test park a reconcile pass in the middle of collecting its targets,
+// after the first team is already in the collected set.
+const statGate = vi.hoisted(() => ({ hold: null as Promise<void> | null, parked: false }));
+
+vi.mock('fs/promises', async () => {
+  const actual = await vi.importActual<typeof import('fs/promises')>('fs/promises');
+  return {
+    ...actual,
+    stat: async (...args: Parameters<typeof actual.stat>) => {
+      const stats = await actual.stat(...args);
+      if (statGate.hold) {
+        statGate.parked = true;
+        await statGate.hold;
+      }
+      return stats;
+    },
+  };
+});
+
 import { TeamTaskWatchRegistry } from '../../../../src/main/services/infrastructure/TeamTaskWatchRegistry';
 
 function latestTargets(): string[] {
   const last = chokidarMock.instances.at(-1);
   return (last?.targets ?? []).map((t) => path.normalize(t));
+}
+
+/** Every path handed to a chokidar instance created since `fromCall`. */
+function watchedSince(fromCall: number): string[] {
+  return chokidarMock.watch.mock.calls
+    .slice(fromCall)
+    .flatMap(([targets]) => (Array.isArray(targets) ? targets : [targets]))
+    .map((target) => path.normalize(String(target)));
 }
 
 const originalPlatform = process.platform;
@@ -86,6 +113,8 @@ describe('TeamTaskWatchRegistry scoping', () => {
 
   afterEach(() => {
     setPlatform(originalPlatform);
+    statGate.hold = null;
+    statGate.parked = false;
     fs.rmSync(root, { recursive: true, force: true });
   });
 
@@ -394,6 +423,53 @@ describe('TeamTaskWatchRegistry scoping', () => {
     expect(latestTargets()).not.toContain(path.normalize(path.join(root, 'alpha')));
     expect(latestTargets()).toContain(path.normalize(path.join(root, 'beta')));
 
+    await registry.close();
+  });
+
+  it('does not let a reconcile that started earlier re-watch the suspended team', async () => {
+    setPlatform('win32');
+    const registry = new TeamTaskWatchRegistry({
+      kind: 'teams',
+      rootPath: root,
+      onChange: vi.fn(),
+      onError: vi.fn(),
+    });
+    await registry.start();
+    const watchCallsBeforeSuspend = chokidarMock.watch.mock.calls.length;
+
+    // Park a reconcile pass inside collectTargets, after it has already put
+    // "alpha" in its target list. This is the pass the 30 s interval or a burst
+    // of directory events starts on its own.
+    let releaseReconcile!: () => void;
+    statGate.hold = new Promise<void>((resolve) => {
+      releaseReconcile = () => {
+        statGate.hold = null;
+        resolve();
+      };
+    });
+    const parkedReconcile = registry.requestReconcile();
+    await vi.waitFor(() => {
+      expect(statGate.parked).toBe(true);
+    });
+
+    const suspend = registry.suspendTeam('alpha');
+    setTimeout(releaseReconcile, 0);
+    await suspend;
+
+    // The parked pass has been applied by the time suspension resolves, and it
+    // was applied without the suspended team: the caller renames
+    // teams/alpha next, and on Windows a re-opened watch handle anywhere in
+    // that tree turns the rename into an EPERM no retry can outlast.
+    const rebuilt = watchedSince(watchCallsBeforeSuspend);
+    expect(rebuilt).not.toHaveLength(0);
+    expect(rebuilt).not.toContain(path.normalize(path.join(root, 'alpha')));
+    expect(rebuilt).not.toContain(path.normalize(path.join(root, 'alpha', 'inboxes')));
+    expect(rebuilt).toContain(path.normalize(path.join(root, 'beta')));
+
+    await parkedReconcile;
+    expect(watchedSince(watchCallsBeforeSuspend)).not.toContain(
+      path.normalize(path.join(root, 'alpha'))
+    );
     await registry.close();
   });
 

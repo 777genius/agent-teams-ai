@@ -87,6 +87,7 @@ export class TeamTaskWatchRegistry {
   private generation = 0;
   private reconcileInProgress = false;
   private reconcileAgain = false;
+  private reconcileSettled: Promise<void> | null = null;
   private reconcileDebounceTimer: NodeJS.Timeout | null = null;
   private readonly suspendedTeams = new Set<string>();
   private suppressInitialInboxBackfill = false;
@@ -102,6 +103,11 @@ export class TeamTaskWatchRegistry {
    *
    * Returns true when a live watch target was actually released, so the caller
    * can tell "nothing was holding this team" from "handles were just closed".
+   *
+   * Resolves only once reconciliation has settled, including a pass that was
+   * already running when the call arrived. That pass may be holding a target
+   * list collected before the suspension; it is filtered before it is applied,
+   * and this waits for it so no watcher is created behind the caller's back.
    */
   async suspendTeam(teamName: string): Promise<boolean> {
     this.suspendedTeams.add(teamName);
@@ -121,7 +127,7 @@ export class TeamTaskWatchRegistry {
       released = true;
     }
 
-    await this.reconcileTargets();
+    await this.reconcileTargets({ awaitInFlight: true });
     return released;
   }
 
@@ -242,18 +248,42 @@ export class TeamTaskWatchRegistry {
     }
   }
 
-  private async reconcileTargets(options: { rethrowErrors?: boolean } = {}): Promise<void> {
+  private reconcileTargets(
+    options: { rethrowErrors?: boolean; awaitInFlight?: boolean } = {}
+  ): Promise<void> {
     if (this.closed) {
-      return;
+      return Promise.resolve();
     }
     if (this.reconcileInProgress) {
       this.reconcileAgain = true;
-      return;
+      // awaitInFlight callers need the watch set to be settled when they
+      // resolve, not merely scheduled. suspendTeam is one: its caller renames
+      // the team directory as soon as suspension resolves, and an active pass
+      // applying a target set collected before the suspension would put a
+      // watch handle back inside the tree about to be renamed.
+      return options.awaitInFlight
+        ? (this.reconcileSettled ?? Promise.resolve())
+        : Promise.resolve();
     }
 
+    const pass = this.runReconcilePass(options);
+    // Waiters must not inherit the rejection of a pass they did not request.
+    this.reconcileSettled = pass.then(
+      () => undefined,
+      () => undefined
+    );
+    return pass;
+  }
+
+  private async runReconcilePass(options: { rethrowErrors?: boolean }): Promise<void> {
     this.reconcileInProgress = true;
     try {
-      const targets = await this.collectTargets();
+      // Re-filter here rather than trusting collectTargets alone: a team can be
+      // suspended after this pass read the directory, and applying the stale
+      // list would put a watcher back on the tree that is about to be renamed.
+      const targets = (await this.collectTargets()).filter(
+        (target) => !this.isSuspendedTarget(target)
+      );
       const nextKey = targets.join('\n');
       if (nextKey !== this.targetKey) {
         await this.applyTargetSet(targets, nextKey);
@@ -273,6 +303,16 @@ export class TeamTaskWatchRegistry {
       this.reconcileAgain = false;
       await this.reconcileTargets();
     }
+  }
+
+  private isSuspendedTarget(target: string): boolean {
+    for (const teamName of this.suspendedTeams) {
+      const teamPath = path.normalize(path.join(this.options.rootPath, teamName));
+      if (target === teamPath || target.startsWith(teamPath + path.sep)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private async applyTargetSet(targets: string[], nextKey: string): Promise<void> {
