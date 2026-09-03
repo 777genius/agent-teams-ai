@@ -232,12 +232,16 @@ export class TeamPermanentDeletionTransactionCoordinator {
     await backupService.completePermanentDeletion(intent);
     if (await backupService.isPermanentDeletionTargetCurrent(intent)) {
       this.ports.lifecycle()?.completeTeamDeletion(intent.teamName);
-      return true;
+    } else {
+      // Something else already owns the team name. The identity this intent
+      // targeted is still gone, so the deletion did complete; only the
+      // lifecycle call differs, because the replacement has to be running.
+      // The deletion stays completed for the restore: what was released
+      // belonged to the identity that is gone, and the replacement owns its
+      // own resources.
+      this.ports.lifecycle()?.resumeTeam(intent.teamName);
     }
-    // Something else already owns the team name. The identity this intent
-    // targeted is gone, but a team is live there again.
-    this.ports.lifecycle()?.resumeTeam(intent.teamName);
-    return false;
+    return true;
   }
 
   /**
