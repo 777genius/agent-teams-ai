@@ -624,8 +624,8 @@ export function initializeTeamHandlers(
     releaseTeamScopedResources: async (teamName) => {
       await teamScopedResourceReleaser?.release(teamName);
     },
-    restoreTeamScopedResources: async (teamName) => {
-      await teamScopedResourceReleaser?.restore(teamName);
+    restoreTeamScopedResources: async (teamName, options) => {
+      await teamScopedResourceReleaser?.restore(teamName, options);
     },
   });
   permanentDeletionCoordinator.startRecovery();

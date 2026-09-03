@@ -245,7 +245,45 @@ describe('TeamPermanentDeletionTransactionCoordinator team-scoped resources', ()
     await vi.advanceTimersByTimeAsync(0);
     await rejection;
 
-    expect(harness.restoreTeamScopedResources).toHaveBeenCalledWith('fixteam');
+    // The team is still on disk, so the restore has to be told the deletion did
+    // not complete: resources that only make sense for a live team go back.
+    expect(harness.restoreTeamScopedResources).toHaveBeenCalledWith('fixteam', {
+      deletionCompleted: false,
+    });
+  });
+
+  it('tells the restore that the deletion completed', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: async () => undefined,
+      withResourceHooks: true,
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(deletion).resolves.toBeUndefined();
+
+    expect(harness.restoreTeamScopedResources).toHaveBeenCalledWith('fixteam', {
+      deletionCompleted: true,
+    });
+  });
+
+  it('reports an incomplete cleanup to the restore', async () => {
+    const harness = createHarness({
+      prepareTeamDeletion: async () => undefined,
+      withResourceHooks: true,
+    });
+    // The fence rejected the target: the directory on disk is no longer the one
+    // this intent was written for, so nothing was deleted.
+    harness.permanentlyDeleteTeam.mockResolvedValueOnce(false);
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(deletion).resolves.toBeUndefined();
+
+    expect(harness.completePermanentDeletion).not.toHaveBeenCalled();
+    expect(harness.restoreTeamScopedResources).toHaveBeenCalledWith('fixteam', {
+      deletionCompleted: false,
+    });
   });
 
   it('deletes anyway when the release throws, and then does not restore', async () => {

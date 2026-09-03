@@ -219,7 +219,10 @@ export function initializeIpcHandlers(
       resumeTeamWatchers: (teamName) =>
         registry.getActive().fileWatcher.resumeTeamWatchers(teamName),
       releaseTeamLogSourceWatcher: async (teamName) =>
-        (await teamLogSourceTracker?.forceReleaseTeam(teamName)) ?? false,
+        (await teamLogSourceTracker?.forceReleaseTeam(teamName)) ?? null,
+      restoreTeamLogSourceConsumers: async (teamName, released) => {
+        await teamLogSourceTracker?.restoreReleasedConsumers(teamName, released);
+      },
     })
   );
   initializeConfigHandlers({

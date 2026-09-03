@@ -44,8 +44,16 @@ export interface TeamPermanentDeletionTransactionCoordinatorPorts {
    * so the transient rename retry cannot recover from one.
    */
   releaseTeamScopedResources?(teamName: string): Promise<void>;
-  /** Undo releaseTeamScopedResources once the cleanup attempt is over. */
-  restoreTeamScopedResources?(teamName: string): Promise<void>;
+  /**
+   * Undo releaseTeamScopedResources once the cleanup attempt is over.
+   * `deletionCompleted` says whether the team is actually gone: a released
+   * resource that only makes sense for a team that still exists must be put
+   * back when it is false and left alone when it is true.
+   */
+  restoreTeamScopedResources?(
+    teamName: string,
+    options: { deletionCompleted: boolean }
+  ): Promise<void>;
 }
 
 export class TeamPermanentDeletionTransactionCoordinator {
@@ -136,11 +144,14 @@ export class TeamPermanentDeletionTransactionCoordinator {
     }
 
     const resourcesReleased = await this.releaseTeamScopedResources(intent.teamName);
+    let deletionCompleted = false;
     try {
-      await this.runFencedCleanup(intent);
+      deletionCompleted = await this.runFencedCleanup(intent);
     } finally {
       if (resourcesReleased && this.ports.restoreTeamScopedResources) {
-        await this.ports.restoreTeamScopedResources(intent.teamName).catch(() => undefined);
+        await this.ports
+          .restoreTeamScopedResources(intent.teamName, { deletionCompleted })
+          .catch(() => undefined);
       }
     }
   }
@@ -159,7 +170,8 @@ export class TeamPermanentDeletionTransactionCoordinator {
     }
   }
 
-  private async runFencedCleanup(intent: TeamPermanentDeletionIntent): Promise<void> {
+  /** Resolves true only when the team was really removed and marked complete. */
+  private async runFencedCleanup(intent: TeamPermanentDeletionIntent): Promise<boolean> {
     const backupService = this.getBackupService();
     const cleanupCompleted = await backupService.withPermanentDeletionTargetFence(
       intent,
@@ -215,14 +227,17 @@ export class TeamPermanentDeletionTransactionCoordinator {
     );
     if (!cleanupCompleted) {
       this.ports.lifecycle()?.resumeTeam(intent.teamName);
-      return;
+      return false;
     }
     await backupService.completePermanentDeletion(intent);
     if (await backupService.isPermanentDeletionTargetCurrent(intent)) {
       this.ports.lifecycle()?.completeTeamDeletion(intent.teamName);
-    } else {
-      this.ports.lifecycle()?.resumeTeam(intent.teamName);
+      return true;
     }
+    // Something else already owns the team name. The identity this intent
+    // targeted is gone, but a team is live there again.
+    this.ports.lifecycle()?.resumeTeam(intent.teamName);
+    return false;
   }
 
   /**

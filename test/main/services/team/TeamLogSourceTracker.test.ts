@@ -62,7 +62,7 @@ describe('TeamLogSourceTracker', () => {
         projectDir: tempDir!,
         sessionIds: [],
         watchSessionIds: [],
-})),
+      })),
     } as unknown as TeamMemberLogsFinder;
 
     const tracker = new TeamLogSourceTracker(logsFinder);
@@ -101,7 +101,7 @@ describe('TeamLogSourceTracker', () => {
         projectDir: tempDir!,
         sessionIds: [],
         watchSessionIds: [],
-})),
+      })),
     } as unknown as TeamMemberLogsFinder;
 
     const tracker = new TeamLogSourceTracker(logsFinder);
@@ -161,15 +161,53 @@ describe('TeamLogSourceTracker', () => {
     await tracker.stopTracking('demo');
     expect(tracker.getSnapshot('demo')).not.toBeNull();
 
-    await expect(tracker.forceReleaseTeam('demo')).resolves.toBe(true);
+    const released = await tracker.forceReleaseTeam('demo');
+    expect(released).toEqual({
+      releasedWatcher: true,
+      consumers: [
+        { consumer: 'stall_monitor', count: 1 },
+        { consumer: 'task_log_stream', count: 1 },
+      ],
+    });
     expect(tracker.getSnapshot('demo')).toBeNull();
 
     // Nothing is left to release, and asking again must say so rather than
     // reporting a release the caller would then wait 150 ms for.
-    await expect(tracker.forceReleaseTeam('demo')).resolves.toBe(false);
+    await expect(tracker.forceReleaseTeam('demo')).resolves.toBeNull();
   });
 
-  it('forceReleaseTeam reports false for a team it never tracked', async () => {
+  it('restoreReleasedConsumers puts back the acquisitions a failed deletion took away', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-restore-'));
+    setClaudeBasePathOverride(path.join(tempDir, '.claude'));
+
+    const logsFinder = {
+      getLiveLogSourceWatchContext: vi.fn(async () => ({
+        projectDir: tempDir!,
+        sessionIds: [],
+        watchSessionIds: [],
+      })),
+    } as unknown as TeamMemberLogsFinder;
+
+    const tracker = new TeamLogSourceTracker(logsFinder);
+    tracker.setEmitter(vi.fn<(event: TeamChangeEvent) => void>());
+
+    await tracker.enableTracking('demo', 'stall_monitor');
+    await tracker.enableTracking('demo', 'task_log_stream');
+    const released = await tracker.forceReleaseTeam('demo');
+    expect(tracker.getSnapshot('demo')).toBeNull();
+
+    // The deletion did not happen: the team is still there, and its consumers
+    // - the stall monitor and the task-log stream - still believe they own it.
+    // Neither of them re-acquires on its own.
+    await tracker.restoreReleasedConsumers('demo', released!);
+    expect(tracker.getSnapshot('demo')).not.toBeNull();
+
+    // Every acquisition is back and the watcher is live again: releasing a
+    // second time reports exactly what the first release reported.
+    await expect(tracker.forceReleaseTeam('demo')).resolves.toEqual(released);
+  });
+
+  it('forceReleaseTeam reports nothing for a team it never tracked', async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-untracked-'));
     setClaudeBasePathOverride(path.join(tempDir, '.claude'));
 
@@ -178,7 +216,7 @@ describe('TeamLogSourceTracker', () => {
     } as unknown as TeamMemberLogsFinder;
     const tracker = new TeamLogSourceTracker(logsFinder);
 
-    await expect(tracker.forceReleaseTeam('never-tracked')).resolves.toBe(false);
+    await expect(tracker.forceReleaseTeam('never-tracked')).resolves.toBeNull();
   });
 
   it('creates team log freshness dir without creating missing live cwd roots', async () => {
@@ -297,7 +335,9 @@ describe('TeamLogSourceTracker', () => {
     await new Promise((resolve) => setTimeout(resolve, 350));
 
     await expect(stat(path.join(memberProjectDir, '.board-task-log-freshness'))).rejects.toThrow();
-    await expect(stat(path.join(workspaceProjectDir, '.board-task-log-freshness'))).rejects.toThrow();
+    await expect(
+      stat(path.join(workspaceProjectDir, '.board-task-log-freshness'))
+    ).rejects.toThrow();
 
     const changeTaskId = 'codex-task-2';
     await mkdir(path.join(workspaceProjectDir, '.board-task-change-freshness'), {
@@ -425,7 +465,7 @@ describe('TeamLogSourceTracker', () => {
         projectDir: tempDir!,
         sessionIds: [],
         watchSessionIds: [],
-})),
+      })),
     } as unknown as TeamMemberLogsFinder;
 
     const tracker = new TeamLogSourceTracker(logsFinder);
@@ -506,7 +546,7 @@ describe('TeamLogSourceTracker', () => {
         projectDir: '/tmp/demo',
         sessionIds: [],
         watchSessionIds: [],
-})),
+      })),
     } as unknown as TeamMemberLogsFinder;
     const tracker = new TeamLogSourceTracker(logsFinder);
     const events: string[] = [];
@@ -535,7 +575,7 @@ describe('TeamLogSourceTracker', () => {
         projectDir: tempDir!,
         sessionIds: [],
         watchSessionIds: [],
-})),
+      })),
     } as unknown as TeamMemberLogsFinder;
 
     const tracker = new TeamLogSourceTracker(logsFinder);
@@ -571,7 +611,7 @@ describe('TeamLogSourceTracker', () => {
         projectDir: tempDir!,
         sessionIds: [],
         watchSessionIds: [],
-})),
+      })),
     } as unknown as TeamMemberLogsFinder;
 
     const tracker = new TeamLogSourceTracker(logsFinder);

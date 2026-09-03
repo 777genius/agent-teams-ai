@@ -48,6 +48,22 @@ export type TeamLogSourceTrackingConsumer =
   | 'member_log_stream'
   | 'stall_monitor';
 
+/**
+ * What forceReleaseTeam took away, so a caller that could not finish the
+ * destructive operation it released for can put it back.
+ *
+ * Consumers such as the stall monitor and the task-log stream hold their
+ * acquisition in their own state and only release it when their own lifecycle
+ * ends. They never re-acquire on their own, so dropping their acquisition
+ * without a way to restore it leaves them owning a team whose log-source
+ * events have stopped arriving.
+ */
+export interface TeamLogSourceReleasedConsumers {
+  consumers: readonly { consumer: TeamLogSourceTrackingConsumer; count: number }[];
+  /** True when a live watcher was closed, so a directory handle was really held. */
+  releasedWatcher: boolean;
+}
+
 interface TrackingState {
   watcher: FSWatcher | null;
   projectDir: string | null;
@@ -286,17 +302,25 @@ export class TeamLogSourceTracker {
    * watcher acquired by the stall monitor or by a task log stream stays alive
    * and keeps an open handle on teams/<team>/task-log-freshness - which on
    * Windows is enough to block renaming the team directory during permanent
-   * deletion. Consumers that had live acquisitions re-warm lazily on their next
-   * enable/ensure call.
+   * deletion.
    *
-   * Returns true when a live watcher was actually closed.
+   * Returns the acquisitions it took away, or null when the team was not
+   * tracked at all. The caller must hand that record back to
+   * restoreReleasedConsumers if the operation it released for does not
+   * complete: ActiveTeamRegistry and the task-log-stream handler keep their own
+   * "this team is mine" state and never re-acquire on their own, so a team that
+   * survives a failed deletion would otherwise stay owned by consumers that no
+   * longer receive log-source events.
    */
-  async forceReleaseTeam(teamName: string): Promise<boolean> {
+  async forceReleaseTeam(teamName: string): Promise<TeamLogSourceReleasedConsumers | null> {
     const state = this.stateByTeam.get(teamName);
     if (!state) {
-      return false;
+      return null;
     }
 
+    const consumers = [...state.consumerCounts]
+      .filter(([, count]) => count > 0)
+      .map(([consumer, count]) => ({ consumer, count }));
     state.consumerCounts.clear();
     // Invalidate in-flight initialize/recompute passes so none of them can
     // rebuild a watcher after this release.
@@ -315,14 +339,38 @@ export class TeamLogSourceTracker {
       state.contextRefreshTimer = null;
     }
 
-    const hadWatcher = state.watcher !== null;
+    const releasedWatcher = state.watcher !== null;
     if (state.watcher) {
       await state.watcher.close().catch(() => undefined);
       state.watcher = null;
     }
 
     this.stateByTeam.delete(teamName);
-    return hadWatcher;
+    return { consumers, releasedWatcher };
+  }
+
+  /**
+   * Put back what forceReleaseTeam took away. Used when the destructive
+   * operation the release was for did not complete, so the team is still there
+   * and its consumers still believe they own it. Re-acquiring through
+   * enableTracking rebuilds the watcher exactly once, on the first acquisition.
+   */
+  async restoreReleasedConsumers(
+    teamName: string,
+    released: TeamLogSourceReleasedConsumers
+  ): Promise<void> {
+    for (const { consumer, count } of released.consumers) {
+      for (let acquisition = 0; acquisition < count; acquisition++) {
+        await this.enableTracking(teamName, consumer);
+      }
+    }
+
+    // ensureTracking's acquisition is the only one that is released by a timer
+    // rather than by its owner, and enableTracking does not arm that timer.
+    const state = this.stateByTeam.get(teamName);
+    if (state && (state.consumerCounts.get('change_presence_ensure') ?? 0) > 0) {
+      this.scheduleEnsureTrackingIdleRelease(teamName, state);
+    }
   }
 
   async disableTracking(

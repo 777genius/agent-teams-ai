@@ -1,5 +1,7 @@
 import { createLogger } from '@shared/utils/logger';
 
+import type { TeamLogSourceReleasedConsumers } from '@main/services/team/TeamLogSourceTracker';
+
 const logger = createLogger('TeamScopedResourceReleaser');
 
 /** Give Windows a beat to finish closing the released directory handles. */
@@ -9,13 +11,18 @@ export interface TeamScopedResourceReleaserPorts {
   /** Returns labels for the watch sets that actually held live targets. */
   suspendTeamWatchers(teamName: string): Promise<string[]>;
   resumeTeamWatchers(teamName: string): Promise<void>;
-  /** Returns true when a live log-source watcher was actually closed. */
-  releaseTeamLogSourceWatcher(teamName: string): Promise<boolean>;
+  /** Returns the log-source acquisitions that were cleared, or null for none. */
+  releaseTeamLogSourceWatcher(teamName: string): Promise<TeamLogSourceReleasedConsumers | null>;
+  /** Re-acquire what releaseTeamLogSourceWatcher cleared. */
+  restoreTeamLogSourceConsumers(
+    teamName: string,
+    released: TeamLogSourceReleasedConsumers
+  ): Promise<void>;
 }
 
 export interface TeamScopedResourceReleaser {
   release(teamName: string): Promise<void>;
-  restore(teamName: string): Promise<void>;
+  restore(teamName: string, options?: { deletionCompleted?: boolean }): Promise<void>;
 }
 
 /**
@@ -31,10 +38,20 @@ export interface TeamScopedResourceReleaser {
  * Every step is best effort. A failure to release means the rename falls back
  * to the transient retry, which is exactly where it was before, so one broken
  * releaser must not stop the others from running or abort the deletion.
+ *
+ * Restoring is not symmetric with releasing. The directory watchers are always
+ * resumed, because resuming a team whose directory is gone finds nothing to
+ * watch. The log-source consumers are only put back when the deletion did not
+ * complete: they are owned by the stall monitor and the task-log stream, which
+ * would otherwise keep a team they believe they own without receiving its
+ * events - and re-acquiring them for a team that was actually deleted would
+ * warm a watcher on a directory that no longer exists.
  */
 export function createTeamScopedResourceReleaser(
   ports: TeamScopedResourceReleaserPorts
 ): TeamScopedResourceReleaser {
+  const pendingLogSourceRestore = new Map<string, TeamLogSourceReleasedConsumers>();
+
   return {
     release: async (teamName: string) => {
       const released: string[] = [];
@@ -46,8 +63,12 @@ export function createTeamScopedResourceReleaser(
         );
       }
       try {
-        if (await ports.releaseTeamLogSourceWatcher(teamName)) {
-          released.push('log-source-watch');
+        const logSourceConsumers = await ports.releaseTeamLogSourceWatcher(teamName);
+        if (logSourceConsumers) {
+          pendingLogSourceRestore.set(teamName, logSourceConsumers);
+          if (logSourceConsumers.releasedWatcher) {
+            released.push('log-source-watch');
+          }
         }
       } catch (error) {
         logger.warn(
@@ -66,12 +87,24 @@ export function createTeamScopedResourceReleaser(
         await new Promise((resolve) => setTimeout(resolve, RESOURCE_RELEASE_SETTLE_MS));
       }
     },
-    restore: async (teamName: string) => {
+    restore: async (teamName: string, options: { deletionCompleted?: boolean } = {}) => {
+      const logSourceConsumers = pendingLogSourceRestore.get(teamName);
+      pendingLogSourceRestore.delete(teamName);
       try {
         await ports.resumeTeamWatchers(teamName);
       } catch (error) {
         logger.warn(
           `[PermanentDeletion] Failed to resume team/task watchers for "${teamName}": ${String(error)}`
+        );
+      }
+      if (!logSourceConsumers || options.deletionCompleted === true) {
+        return;
+      }
+      try {
+        await ports.restoreTeamLogSourceConsumers(teamName, logSourceConsumers);
+      } catch (error) {
+        logger.warn(
+          `[PermanentDeletion] Failed to restore log-source consumers for "${teamName}": ${String(error)}`
         );
       }
     },
