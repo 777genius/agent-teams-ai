@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { isOpenCodeReplyOptionalDeliveryContract } from '../../opencode/delivery/OpenCodeDeliveryReplyContract';
 import {
   INBOX_RELAY_IN_FLIGHT_LEASE_MS,
   INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS,
@@ -804,6 +805,65 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
       resolveOpenCodeMemberInboxDeliveryDecision({
         memberName: 'worker',
         message: message({ from: '' }),
+        inferredTaskRefs: [],
+      })
+    ).toMatchObject({ replyRecipient: 'user' });
+  });
+
+  // A task notice from an unaddressable sender that names its task only in the
+  // message text carries inferred references instead of structured taskRefs. It
+  // is the same notice, so it must be delivered as informational: classifying it
+  // as a user reply contract made the runtime demand a visible message_send to
+  // the human user for an automated notice nobody could answer.
+  it('classifies an inferred task-reference notice from an unaddressable sender as informational', () => {
+    const inferred = { teamName: 'team', taskId: 'task-1', displayId: '7' };
+
+    const emptySender = resolveOpenCodeMemberInboxDeliveryDecision({
+      memberName: 'worker',
+      message: message({ from: '', text: 'Dependency resolved for #7.' }),
+      inferredTaskRefs: [inferred],
+    });
+    expect(emptySender).toEqual({
+      replyRecipient: 'system',
+      actionMode: null,
+      taskRefs: [inferred],
+      source: 'watcher',
+    });
+    expect(isOpenCodeReplyOptionalDeliveryContract(emptySender.replyRecipient)).toBe(true);
+
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'system', text: 'Dependency resolved for #7.' }),
+        inferredTaskRefs: [inferred],
+      })
+    ).toMatchObject({ replyRecipient: 'system', taskRefs: [inferred] });
+
+    // Negative controls: inferred references alone never make a delivery
+    // informational. An addressable sender stays the reply recipient — a lead
+    // question about a task is still owed a visible answer — and an
+    // unaddressable sender without any task reference still falls back to
+    // "user" so the message stays answerable.
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'alice', text: 'Can you take #7?' }),
+        inferredTaskRefs: [inferred],
+      })
+    ).toMatchObject({ replyRecipient: 'alice', taskRefs: [inferred] });
+
+    const leadSender = resolveOpenCodeMemberInboxDeliveryDecision({
+      memberName: 'worker',
+      message: message({ from: 'team-lead', text: 'What is the state of #7?' }),
+      inferredTaskRefs: [inferred],
+    });
+    expect(leadSender).toMatchObject({ replyRecipient: 'team-lead', taskRefs: [inferred] });
+    expect(isOpenCodeReplyOptionalDeliveryContract(leadSender.replyRecipient)).toBe(false);
+
+    expect(
+      resolveOpenCodeMemberInboxDeliveryDecision({
+        memberName: 'worker',
+        message: message({ from: 'system' }),
         inferredTaskRefs: [],
       })
     ).toMatchObject({ replyRecipient: 'user' });

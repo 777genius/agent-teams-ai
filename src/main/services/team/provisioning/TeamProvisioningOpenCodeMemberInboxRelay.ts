@@ -643,19 +643,6 @@ export function resolveOpenCodeMemberInboxDeliveryDecision(input: {
   const senderIsUnaddressable =
     !normalizedFrom ||
     normalizedFrom.toLowerCase() === OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT;
-  // System/task notifications and taskRef-carrying messages from unaddressable
-  // senders are informational: the informational marker tells the runtime
-  // adapter to build an FYI delivery instead of a message_send reply contract.
-  // A delivery contract must never point at a recipient message_send rejects.
-  const informationalNotice =
-    input.message.source === 'system_notification' ||
-    (senderIsUnaddressable && Boolean(input.message.taskRefs?.length));
-  const fallbackReplyRecipient = informationalNotice
-    ? OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT
-    : !senderIsUnaddressable &&
-        normalizedFrom.toLowerCase() !== input.memberName.trim().toLowerCase()
-      ? normalizedFrom
-      : 'user';
   const existingTaskRefs = input.existingRecord?.taskRefs?.length
     ? input.existingRecord.taskRefs
     : undefined;
@@ -663,6 +650,25 @@ export function resolveOpenCodeMemberInboxDeliveryDecision(input: {
     ? input.deliveryMetadata.taskRefs
     : undefined;
   const messageTaskRefs = input.message.taskRefs?.length ? input.message.taskRefs : undefined;
+  const taskRefs =
+    existingTaskRefs ?? metadataTaskRefs ?? messageTaskRefs ?? input.inferredTaskRefs;
+  // System/task notifications and taskRef-carrying messages from unaddressable
+  // senders are informational: the informational marker tells the runtime
+  // adapter to build an FYI delivery instead of a message_send reply contract.
+  // A delivery contract must never point at a recipient message_send rejects.
+  // The task references the delivery actually carries decide this, whatever
+  // their origin: a notice that names its task only in the text (inferred
+  // references) is the same task notice as one carrying structured taskRefs,
+  // and both are attached to the delivery below.
+  const informationalNotice =
+    input.message.source === 'system_notification' ||
+    (senderIsUnaddressable && taskRefs.length > 0);
+  const fallbackReplyRecipient = informationalNotice
+    ? OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT
+    : !senderIsUnaddressable &&
+        normalizedFrom.toLowerCase() !== input.memberName.trim().toLowerCase()
+      ? normalizedFrom
+      : 'user';
 
   return {
     replyRecipient:
@@ -674,7 +680,7 @@ export function resolveOpenCodeMemberInboxDeliveryDecision(input: {
       input.deliveryMetadata?.actionMode ??
       input.message.actionMode ??
       null,
-    taskRefs: existingTaskRefs ?? metadataTaskRefs ?? messageTaskRefs ?? input.inferredTaskRefs,
+    taskRefs,
     source: input.existingRecord?.source ?? input.source ?? 'watcher',
   };
 }
