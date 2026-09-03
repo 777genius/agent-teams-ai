@@ -4,15 +4,17 @@ import * as path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { canCreateSymlinks } from '../../../helpers/symlinkSupport';
-
 import { SkillImportService } from '@main/services/extensions/skills/SkillImportService';
+
+import { canCreateSymlinks } from '../../../helpers/symlinkSupport';
 
 describe('SkillImportService', () => {
   const createdDirs: string[] = [];
 
   afterEach(async () => {
-    await Promise.all(createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
+    await Promise.all(
+      createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true }))
+    );
   });
 
   it('skips hidden entries and reports the warning', async () => {
