@@ -47,7 +47,7 @@ interface PendingRepliesBlockProps {
   headerRight?: ReactNode;
   /** Enables the queued-message discard control on queued entries. */
   teamName?: string;
-  /** Called after a discard attempt resolved on disk, with what it changed. */
+  /** Called once a discard attempt settled against the inbox, with what it changed. */
   onQueuedDiscarded?: (memberName: string, result: DiscardQueuedUserMessagesResult) => void;
   onMemberClick?: (member: ResolvedTeamMember) => void;
 }
@@ -68,22 +68,42 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
   const { isLight } = useTheme();
   const [discardingMember, setDiscardingMember] = useState<string | null>(null);
 
-  const handleDiscardQueued = (memberName: string, queuedCount: number): void => {
+  const handleDiscardQueued = (memberName: string): void => {
     if (!teamName || discardingMember) return;
     void (async () => {
-      const confirmed = await confirm({
-        title: t('activity.pendingReplies.discardQueued.title'),
-        message: t('activity.pendingReplies.discardQueued.message', {
-          count: Math.max(queuedCount, 1),
-          member: memberName,
-        }),
-        confirmLabel: t('activity.pendingReplies.discardQueued.confirmLabel'),
-        cancelLabel: t('activity.pendingReplies.discardQueued.cancelLabel'),
-        variant: 'danger',
-      });
-      if (!confirmed) return;
       setDiscardingMember(memberName);
       try {
+        // The message feed is a page of the head, so the queued rows it holds
+        // are a subset of the ones the discard would remove. Ask the inbox
+        // itself before naming a number in a permanent-delete confirmation.
+        const snapshot = await api.teams.getQueuedUserMessages(teamName, memberName);
+        const queuedCount = snapshot.messages.length;
+        if (queuedCount === 0) {
+          // Nothing left to authorise: the runtime consumed the rows between
+          // the render and the click. Report it instead of asking the user to
+          // confirm a delete that would remove nothing, and refresh the head so
+          // the entry can settle into "delivered".
+          onQueuedDiscarded?.(memberName, { discarded: 0, remainingQueued: 0 });
+          void confirm({
+            title: t('activity.pendingReplies.discardQueued.resultTitle'),
+            message: t('activity.pendingReplies.discardQueued.alreadyDelivered', {
+              member: memberName,
+            }),
+            confirmLabel: t('activity.pendingReplies.discardQueued.okLabel'),
+          });
+          return;
+        }
+        const confirmed = await confirm({
+          title: t('activity.pendingReplies.discardQueued.title'),
+          message: t('activity.pendingReplies.discardQueued.message', {
+            count: queuedCount,
+            member: memberName,
+          }),
+          confirmLabel: t('activity.pendingReplies.discardQueued.confirmLabel'),
+          cancelLabel: t('activity.pendingReplies.discardQueued.cancelLabel'),
+          variant: 'danger',
+        });
+        if (!confirmed) return;
         const result = await api.teams.discardQueuedUserMessages(teamName, memberName);
         onQueuedDiscarded?.(memberName, result);
         // A discard that removed nothing is not a success the user can see: the
@@ -188,6 +208,8 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
             entry.sentAtMs
           );
           const isQueued = deliveryState === 'queued';
+          // Badge hint only, and read from the loaded feed: it can undercount a
+          // long queue. The discard confirmation reads the inbox instead.
           const queuedCount = isQueued ? countQueuedUserMessages(messages, member.name) : 0;
           const isDelivered = deliveryState === 'delivered';
           const showRuntimeAdvisory = deliveryState === 'delivering' && advisoryLabel !== null;
@@ -280,7 +302,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                         title={t('activity.pendingReplies.discardQueued.tooltip')}
                         className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
                         disabled={discardingMember === member.name}
-                        onClick={() => handleDiscardQueued(member.name, queuedCount)}
+                        onClick={() => handleDiscardQueued(member.name)}
                       >
                         <X className="size-3" />
                       </button>

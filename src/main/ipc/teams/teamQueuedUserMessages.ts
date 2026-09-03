@@ -121,8 +121,11 @@ export async function listQueuedUserMessages(
     throw new Error('Invalid inbox path');
   }
   const rows = await readInboxRows(inboxPath);
+  // An inbox that cannot be parsed is not an empty inbox. The listing gates a
+  // permanent-delete confirmation, so it has to fail the way the discard does
+  // instead of reporting "nothing queued" for a queue it could not read.
   if (!rows) {
-    return [];
+    throw new Error(`Inbox file for "${member}" is not a valid JSON message list`);
   }
   return listQueuedUserMessagesFromRows(rows);
 }

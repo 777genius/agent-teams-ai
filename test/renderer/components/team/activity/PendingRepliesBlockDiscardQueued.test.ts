@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
   DiscardQueuedUserMessagesResult,
   InboxMessage,
+  QueuedUserMessagesSnapshot,
   ResolvedTeamMember,
 } from '@shared/types';
 import type { Root } from 'react-dom/client';
@@ -22,6 +23,8 @@ const discardQueuedUserMessages =
       messageId?: string
     ) => Promise<DiscardQueuedUserMessagesResult>
   >();
+const getQueuedUserMessages =
+  vi.fn<(teamName: string, memberName: string) => Promise<QueuedUserMessagesSnapshot>>();
 const confirmMock = vi.fn<(options: Record<string, unknown>) => Promise<boolean>>();
 
 vi.mock('@renderer/store', () => ({
@@ -35,6 +38,8 @@ vi.mock('@renderer/hooks/useTheme', () => ({
 vi.mock('@renderer/api', () => ({
   api: {
     teams: {
+      getQueuedUserMessages: (teamName: string, memberName: string) =>
+        getQueuedUserMessages(teamName, memberName),
       discardQueuedUserMessages: (teamName: string, memberName: string, messageId?: string) =>
         discardQueuedUserMessages(teamName, memberName, messageId),
     },
@@ -82,11 +87,24 @@ const queuedMessages = [
   queuedMessage('2026-04-09T09:59:02.000Z'),
 ];
 
+function inboxSnapshot(count: number): QueuedUserMessagesSnapshot {
+  return {
+    member: 'alice',
+    messages: Array.from({ length: count }, (_unused, index) => ({
+      messageId: `inbox-${index}`,
+      text: 'Please check the latest changes',
+      timestamp: '2026-04-09T09:59:00.000Z',
+    })),
+  };
+}
+
 let host: HTMLDivElement;
 let root: Root;
 let onQueuedDiscarded: ReturnType<typeof vi.fn>;
 
-async function renderBlock(props: { teamName?: string } = { teamName: TEAM_NAME }): Promise<void> {
+async function renderBlock(
+  props: { teamName?: string; messages?: InboxMessage[] } = { teamName: TEAM_NAME }
+): Promise<void> {
   await act(async () => {
     root.render(
       React.createElement(PendingRepliesBlock, {
@@ -114,11 +132,13 @@ async function clickDiscard(): Promise<void> {
     button!.click();
     await Promise.resolve();
   });
-  // The handler awaits the confirm dialog and then the IPC call, so both
-  // promise chains have to drain before the outcome is observable.
+  // The handler awaits the queued listing, then the confirm dialog, then the
+  // discard call, so every promise chain has to drain before the outcome is
+  // observable.
   await act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
+    for (let drain = 0; drain < 6; drain += 1) {
+      await Promise.resolve();
+    }
   });
 }
 
@@ -126,6 +146,8 @@ describe('PendingRepliesBlock queued-message discard', () => {
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     discardQueuedUserMessages.mockReset();
+    getQueuedUserMessages.mockReset();
+    getQueuedUserMessages.mockResolvedValue(inboxSnapshot(2));
     confirmMock.mockReset();
     confirmMock.mockResolvedValue(true);
     onQueuedDiscarded = vi.fn();
@@ -161,6 +183,67 @@ describe('PendingRepliesBlock queued-message discard', () => {
         'Discard 2 queued messages for "alice"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.',
       variant: 'danger',
     });
+    expect(getDiscardButton()?.disabled).toBe(false);
+  });
+
+  // Negative control for the count source: the loaded feed holds one queued row
+  // for alice while the inbox holds three. The confirmation has to name the
+  // three the discard will remove, not the one the feed happens to show.
+  it('confirms with the inbox count when the loaded feed is only a page', async () => {
+    getQueuedUserMessages.mockResolvedValue(inboxSnapshot(3));
+    discardQueuedUserMessages.mockResolvedValue({ discarded: 3, remainingQueued: 0 });
+    await renderBlock({ teamName: TEAM_NAME, messages: [queuedMessages[0]] });
+
+    // The badge is fed by the page and stays quiet below two rows.
+    expect(host.textContent).not.toContain('queued');
+    await clickDiscard();
+
+    expect(getQueuedUserMessages).toHaveBeenCalledWith(TEAM_NAME, 'alice');
+    expect(confirmMock.mock.calls[0][0]).toMatchObject({
+      message:
+        'Discard 3 queued messages for "alice"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.',
+    });
+    expect(discardQueuedUserMessages).toHaveBeenCalledWith(TEAM_NAME, 'alice', undefined);
+    expect(onQueuedDiscarded).toHaveBeenCalledWith('alice', { discarded: 3, remainingQueued: 0 });
+    expect(confirmMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports an empty inbox without asking to confirm a delete of nothing', async () => {
+    getQueuedUserMessages.mockResolvedValue(inboxSnapshot(0));
+    await renderBlock();
+
+    await clickDiscard();
+
+    expect(discardQueuedUserMessages).not.toHaveBeenCalled();
+    // The panel still has to refresh the head so the entry can settle into
+    // "delivered" instead of sitting on "queued" forever.
+    expect(onQueuedDiscarded).toHaveBeenCalledWith('alice', { discarded: 0, remainingQueued: 0 });
+    expect(confirmMock).toHaveBeenCalledTimes(1);
+    expect(confirmMock.mock.calls[0][0]).toMatchObject({
+      title: 'Queued messages',
+      message: 'Nothing was discarded: those messages had already been delivered to "alice".',
+    });
+    expect(confirmMock.mock.calls[0][0]).not.toHaveProperty('variant');
+    expect(getDiscardButton()?.disabled).toBe(false);
+  });
+
+  it('surfaces the failure and touches nothing when the queued listing throws', async () => {
+    getQueuedUserMessages.mockRejectedValue(
+      new Error('Inbox file for "alice" is not a valid JSON message list')
+    );
+    await renderBlock();
+
+    await clickDiscard();
+
+    // A count we could not read is not a count we may confirm against.
+    expect(confirmMock).toHaveBeenCalledTimes(1);
+    expect(confirmMock.mock.calls[0][0]).toMatchObject({
+      title: 'Failed to discard queued messages',
+      message: 'Inbox file for "alice" is not a valid JSON message list',
+      variant: 'danger',
+    });
+    expect(discardQueuedUserMessages).not.toHaveBeenCalled();
+    expect(onQueuedDiscarded).not.toHaveBeenCalled();
     expect(getDiscardButton()?.disabled).toBe(false);
   });
 

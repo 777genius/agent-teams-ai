@@ -1129,12 +1129,10 @@ export class HttpAPIClient implements ElectronAPI {
     stop: async (): Promise<void> => {
       throw new Error('Team stop is not available in browser mode');
     },
-    getQueuedUserMessages: async (
-      _teamName: string,
-      memberName: string
-    ): Promise<QueuedUserMessagesSnapshot> => {
-      console.warn('[HttpAPIClient] getQueuedUserMessages is not available in browser mode');
-      return { member: memberName, messages: [] };
+    // An empty snapshot would read as "this member has nothing queued", which
+    // the discard confirmation acts on. Refuse instead, like the discard does.
+    getQueuedUserMessages: async (): Promise<QueuedUserMessagesSnapshot> => {
+      throw new Error('Listing queued messages is not available in browser mode');
     },
     discardQueuedUserMessages: async (): Promise<DiscardQueuedUserMessagesResult> => {
       throw new Error('Discarding queued messages is not available in browser mode');

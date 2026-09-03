@@ -143,8 +143,14 @@ describe('inbox file operations', () => {
     expect(fs.statSync(inboxPath).mtimeMs).toBe(before);
   });
 
-  it('refuses to discard when the inbox file is not a JSON list', async () => {
+  // The listing is what the discard confirmation counts, so an inbox that
+  // cannot be read has to fail the same way the discard does. An empty list
+  // would tell the user the queue is drained while the rows are still on disk.
+  it('refuses to list or discard when the inbox file is not a JSON list', async () => {
     fs.writeFileSync(inboxPath, 'not json');
+    await expect(listQueuedUserMessages(teamsBasePath, TEAM_NAME, MEMBER)).rejects.toThrow(
+      'not a valid JSON message list'
+    );
     await expect(discardQueuedUserMessages(teamsBasePath, TEAM_NAME, MEMBER)).rejects.toThrow(
       'not a valid JSON message list'
     );

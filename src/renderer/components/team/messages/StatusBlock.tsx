@@ -23,7 +23,7 @@ interface StatusBlockProps {
   isTeamAlive?: boolean;
   /** Enables the queued-message discard control on queued pending entries. */
   teamName?: string;
-  /** Called after a discard attempt resolved on disk, with what it changed. */
+  /** Called once a discard attempt settled against the inbox, with what it changed. */
   onQueuedDiscarded?: (memberName: string, result: DiscardQueuedUserMessagesResult) => void;
   /** Where the Messages panel is rendered — 'sidebar' hides "In progress" (already visible in MemberList). */
   position?: 'sidebar' | 'inline';

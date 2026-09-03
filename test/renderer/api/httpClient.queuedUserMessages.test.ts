@@ -15,11 +15,9 @@ class MockEventSource {
 
 describe('HttpAPIClient queued user messages in browser mode', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
-  let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     fetchMock = vi.fn();
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('EventSource', MockEventSource);
   });
@@ -29,19 +27,18 @@ describe('HttpAPIClient queued user messages in browser mode', () => {
     vi.restoreAllMocks();
   });
 
-  it('answers the queued message listing with an empty queue for the requested member', async () => {
+  it('refuses the queued listing instead of answering with an empty queue', async () => {
     const client = new HttpAPIClient('http://127.0.0.1:53123');
 
-    await expect(client.teams.getQueuedUserMessages('demo team', 'bob/qa')).resolves.toEqual({
-      member: 'bob/qa',
-      messages: [],
-    });
+    // Negative control for the discard confirmation: an empty snapshot means
+    // "nothing queued for this member", which the renderer reports as already
+    // delivered. A client that cannot answer must not say that.
+    await expect(client.teams.getQueuedUserMessages('demo team', 'bob/qa')).rejects.toThrow(
+      'Listing queued messages is not available in browser mode'
+    );
     // No HTTP route backs this yet, so the browser client must answer locally
     // rather than call an endpoint that would 404.
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
-      '[HttpAPIClient] getQueuedUserMessages is not available in browser mode'
-    );
   });
 
   it('refuses to discard queued messages instead of pretending it worked', async () => {
