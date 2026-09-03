@@ -14,8 +14,33 @@ import {
 describe('team provisioning output error policy', () => {
   it('classifies explicit auth warnings across CLI output sources', () => {
     expect(isAuthFailureWarning('Codex provider is not authenticated', 'stdout')).toBe(true);
-    expect(isAuthFailureWarning('Please run /login first', 'assistant')).toBe(true);
+    expect(isAuthFailureWarning('Please run /login first', 'stderr')).toBe(true);
     expect(isAuthFailureWarning('Run `claude auth login` to continue', 'probe')).toBe(true);
+  });
+
+  it('never treats a quoted or paraphrased login prompt in assistant text as an auth failure', () => {
+    // Model output can quote or paraphrase a login prompt without the CLI being
+    // unauthenticated; only the trusted CLI sources may trigger the auth kill.
+    expect(isAuthFailureWarning('Please run /login first', 'assistant')).toBe(false);
+    expect(isAuthFailureWarning('Not logged in · Please run /login', 'assistant')).toBe(false);
+    expect(
+      isAuthFailureWarning(
+        'It looks like you are not authenticated here; please run /login and retry.',
+        'assistant'
+      )
+    ).toBe(false);
+    expect(isAuthFailureWarning('run `claude auth login` to continue', 'assistant')).toBe(false);
+    expect(isAuthFailureWarning('Please run /login first', 'stderr')).toBe(true);
+    expect(isAuthFailureWarning('Please run /login first', 'probe')).toBe(true);
+    expect(isAuthFailureWarning('Please run /login first', 'pre-complete')).toBe(true);
+  });
+
+  it('treats explicit credential errors in assistant text as auth failures', () => {
+    // The CLI can surface these exact credential errors in an assistant-typed
+    // stream message when it has no normal reply to emit.
+    expect(isAuthFailureWarning('invalid api key', 'assistant')).toBe(true);
+    expect(isAuthFailureWarning('Missing API key for this provider', 'assistant')).toBe(true);
+    expect(isAuthFailureWarning('API Error: 401 {"type":"error"}', 'assistant')).toBe(false);
   });
 
   it('treats ambiguous 401 auth text as auth failure only for trusted sources', () => {
