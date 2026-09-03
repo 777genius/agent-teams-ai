@@ -6,6 +6,7 @@ const { withFileLockSync } = require('./fileLock.js');
 const { looksLikeIdleAckOnlyText } = require('./idleAckText.js');
 const runtimeHelpers = require('./runtimeHelpers.js');
 const taskStore = require('./taskStore.js');
+const { isTaskOpen } = require('./taskLifecycle.js');
 const {
   RUNTIME_DELIVERY_DUPLICATE_NOTICE,
   REPEATED_MESSAGE_WINDOW_MS,
@@ -234,11 +235,16 @@ const POST_COMPLETION_MESSAGE_NOTICE_SUFFIX =
 
 /**
  * Structural board-completion epoch: the newest task_created / status_changed /
- * owner_changed event across a board whose every live task is completed.
+ * owner_changed event across a board that has no open task left.
  * Comments and attachments bump `updatedAt` but are not board events, so they
  * must not move the epoch (a memoryless lead would otherwise talk its way
  * around the guard by commenting first). Returns null unless the board is
  * complete and non-empty.
+ *
+ * "Open" is `isTaskOpen`, the predicate `notifyLeadWhenBoardCompleted` in
+ * tasks.js also uses, so a task that is completed but still in review or
+ * waiting for a fix keeps the board open here too and the team may still
+ * message the user.
  */
 function readBoardCompletionEpoch(paths) {
   let tasks;
@@ -248,7 +254,7 @@ function readBoardCompletionEpoch(paths) {
     return null;
   }
   if (!Array.isArray(tasks) || tasks.length === 0) return null;
-  if (!tasks.every((task) => task && task.status === 'completed')) return null;
+  if (!tasks.every((task) => task && !isTaskOpen(task))) return null;
   let lastBoardEventMs = 0;
   for (const task of tasks) {
     const events = Array.isArray(task.historyEvents) ? task.historyEvents : [];

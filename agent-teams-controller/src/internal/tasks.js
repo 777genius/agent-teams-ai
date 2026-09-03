@@ -9,6 +9,7 @@ const { withTeamBoardLock } = require('./boardLock.js');
 const { wrapAgentBlock } = require('./agentBlocks.js');
 const { buildCommentNotificationMessage } = require('./taskCommentNotification.js');
 const { findRecentDuplicateTask } = require('./taskCreationDeduplication.js');
+const { isTaskOpen } = require('./taskLifecycle.js');
 const {
     createMemberMessagingProtocol,
     isCodexMember,
@@ -534,17 +535,11 @@ function notifyLeadWhenBoardCompleted(context, completedTask) {
         return;
     }
     if (!Array.isArray(tasks) || tasks.length === 0) return;
-    // Work in review or waiting for a fix is not finished, even though the task
+    // isTaskOpen is shared with the post-completion message guard in
+    // messageStore.js, so the two cannot disagree about a finished board: work
+    // in review or waiting for a fix is not finished, even though the task
     // itself already carries the completed status.
-    const open = tasks.filter(
-        (task) =>
-            task &&
-            task.status !== 'deleted' &&
-            (task.status !== 'completed' ||
-                task.reviewState === 'review' ||
-                task.reviewState === 'needsFix')
-    );
-    if (open.length > 0) return;
+    if (tasks.some((task) => task && isTaskOpen(task))) return;
 
     const leadName = runtimeHelpers.inferLeadName(context.paths);
     if (!leadName) return;
