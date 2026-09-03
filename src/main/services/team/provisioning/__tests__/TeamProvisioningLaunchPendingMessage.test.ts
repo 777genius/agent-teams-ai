@@ -112,6 +112,26 @@ describe('launch pending message helpers', () => {
     expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
   });
 
+  it('uses persisted permission-pending state for snapshot approval copy', () => {
+    const message = buildPendingBootstrapStatusMessage({
+      prefix: 'Finishing launch',
+      run: { expectedMembers: [], memberSpawnStatuses: new Map() },
+      launchSummary: {
+        confirmedCount: 0,
+        pendingCount: 0,
+        runtimeAlivePendingCount: 0,
+      },
+      snapshot: snapshot({
+        expectedMembers: ['api'],
+        members: {
+          api: persistedMember('api', { launchState: 'permission_pending' as never }),
+        },
+      }),
+    });
+
+    expect(message).toBe('Finishing launch — 1 teammate awaiting permission approval');
+  });
+
   it('detects pending launch members from live or persisted expected member counts', () => {
     expect(
       hasPendingLaunchMembers({

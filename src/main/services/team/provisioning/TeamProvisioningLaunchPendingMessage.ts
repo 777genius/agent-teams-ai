@@ -100,7 +100,7 @@ export function buildPendingBootstrapStatusMessage({
     ? getPersistedLaunchMemberNames(snapshot).length
     : (run.expectedMembers?.length ?? 0);
   const permissionPendingCount = snapshot
-    ? countSnapshotPermissionPendingMembers(snapshot)
+    ? (effectiveLaunchSummary.permissionPendingCount ?? 0)
     : countRunPermissionPendingMembers(run);
   if (
     effectiveLaunchSummary.pendingCount > 0 &&
