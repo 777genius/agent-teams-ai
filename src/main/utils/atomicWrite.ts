@@ -211,21 +211,14 @@ export async function renamePathWithRetry(
   dest: string,
   options: { syncDirectories?: boolean; durability?: 'best-effort' | 'strict' } = {}
 ): Promise<void> {
-  for (let attempt = 1; attempt <= RENAME_PUBLISH_RETRY.maxAttempts; attempt++) {
-    try {
-      await fs.promises.rename(src, dest);
-      if (options.syncDirectories) {
-        await syncRenamedDirectories(src, dest, options.durability === 'strict');
-      }
-      return;
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
-      if (isTransientFsErrorCode(code) && attempt < RENAME_PUBLISH_RETRY.maxAttempts) {
-        await sleep(RENAME_PUBLISH_RETRY.delayMs(attempt));
-        continue;
-      }
-      throw error;
-    }
+  // The retry loop covers the rename and nothing else. Once the rename has
+  // succeeded the source name is gone, so retrying anything that follows it -
+  // the directory sync refused with EPERM/EACCES/EBUSY, say - would rename a
+  // path that no longer exists and report ENOENT for data that is in fact
+  // already published. A sync failure is reported as itself.
+  await renameWithRetry(src, dest);
+  if (options.syncDirectories) {
+    await syncRenamedDirectories(src, dest, options.durability === 'strict');
   }
 }
 
