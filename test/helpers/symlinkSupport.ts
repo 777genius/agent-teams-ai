@@ -25,4 +25,4 @@ export function canCreateSymlinks(): boolean {
   return cached;
 }
 
-export const symlinkTestSkipReason = 'symlink creation is not permitted on this machine';
+export const SYMLINK_TEST_SKIP_REASON = 'symlink creation is not permitted on this machine';
