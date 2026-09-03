@@ -26,9 +26,10 @@ export const RecentProjectCard = ({
     <button
       onClick={isDeleted ? undefined : onClick}
       aria-disabled={isDeleted}
+      data-recent-project-cell="project"
       className={cn(
-        'project-row-zebra-card group relative flex min-h-[120px] flex-col overflow-hidden rounded-lg border border-border p-4 text-left transition-all duration-300 hover:border-border-emphasis',
-        isDeleted && 'cursor-default border-red-500/25 bg-red-500/[0.03] hover:border-red-500/35'
+        'project-row-zebra-card group relative flex min-h-[112px] flex-col overflow-hidden p-3.5 text-left transition-colors duration-200 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-emphasis',
+        isDeleted && 'cursor-default bg-red-500/[0.03]'
       )}
     >
       {card.activeTeams && card.activeTeams.length > 0 && (
