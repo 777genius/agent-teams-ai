@@ -1064,15 +1064,21 @@ describe('ReviewDraftHistoryStore', () => {
     await expect(readFile(target, 'utf8')).resolves.toBe('{broken');
 
     await rm(target);
-    if (!canCreateSymlinks()) return;
     const outside = path.join(teamsBasePath, 'outside.json');
     await writeFile(outside, '{}', 'utf8');
-    await symlink(outside, target);
-    await expect(store.load('demo', 'task-123', 'scope-a')).rejects.toThrow(
-      'Unsafe review draft history symlink'
-    );
 
-    await rm(target);
+    // Creating a symlink needs elevation or Developer Mode on Windows, but a
+    // hardlink needs neither on NTFS, so gate only the symlink half. Skipping
+    // both would have left the hardlink guard untested on every unprivileged
+    // Windows machine.
+    if (canCreateSymlinks()) {
+      await symlink(outside, target);
+      await expect(store.load('demo', 'task-123', 'scope-a')).rejects.toThrow(
+        'Unsafe review draft history symlink'
+      );
+      await rm(target);
+    }
+
     await link(outside, target);
     await expect(store.load('demo', 'task-123', 'scope-a')).rejects.toThrow(
       'Unsafe or oversized review draft history file'
