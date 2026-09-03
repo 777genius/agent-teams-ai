@@ -2455,6 +2455,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isDisabled = isLaunchMode
     ? isSubmitting ||
       launchInFlight ||
+      prepareState === 'loading' ||
       validationErrors.length > 0 ||
       !!modelValidationError ||
       (isLaunchMode && prepareState !== 'idle' && launchGuard.blocked(isLaunchMode)) ||

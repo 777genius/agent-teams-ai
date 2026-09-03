@@ -3529,6 +3529,7 @@ describe('LaunchTeamDialog', () => {
     });
 
     expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
+    expect(initialLaunchButton?.hasAttribute('disabled')).toBe(true);
 
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
