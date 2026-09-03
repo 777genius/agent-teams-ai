@@ -160,7 +160,6 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     'error',
     'wrong-provider',
     'unauthenticated',
-    'non-authoritative',
     'refresh-error',
   ])('fails closed for %s catalog without consulting launch readiness', async (kind) => {
     const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>();
@@ -171,7 +170,6 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     if (kind === 'empty') provider.modelCatalog!.models = [];
     if (kind === 'wrong-provider') provider.providerId = 'codex';
     if (kind === 'unauthenticated') provider.authenticated = false;
-    if (kind === 'non-authoritative') provider.statusCheckOutcome = 'model_only';
     if (kind === 'refresh-error') provider.modelCatalogRefreshState = 'error';
     adapter.readProviderStatus.mockResolvedValue(kind === 'null' ? null : provider);
     if (kind === 'error')
@@ -186,6 +184,60 @@ describe('TeamProvisioningOpenCodeModelPreparation', () => {
     expect(result.blockingMessages).toHaveLength(1);
     expect(prepare).not.toHaveBeenCalled();
     expect(adapter.getLastOpenCodeTeamLaunchReadiness).not.toHaveBeenCalled();
+  });
+
+  it('defers model-only passive status to strict deep verification without minting compatibility proof', async () => {
+    const prepare = vi.fn<TeamLaunchRuntimeAdapter['prepare']>().mockResolvedValue({
+      ok: true,
+      providerId: 'opencode',
+      modelId: 'anthropic/sonnet',
+      diagnostics: [],
+      warnings: [],
+    });
+    const adapter = createAdapter({ prepare });
+    const passiveStatus = openCodeProviderStatus(['anthropic/other-model']);
+    passiveStatus.statusCheckOutcome = 'model_only';
+    passiveStatus.verificationState = 'unknown';
+    passiveStatus.authenticated = false;
+    passiveStatus.modelCatalog = null;
+    passiveStatus.modelCatalogRefreshState = 'idle';
+    adapter.readProviderStatus.mockResolvedValue(passiveStatus);
+
+    const compatibility = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/project',
+      modelIds: ['anthropic/sonnet'],
+      verificationMode: 'compatibility',
+    });
+
+    expect(compatibility).toMatchObject({
+      details: ['Selected model anthropic/sonnet requires strict deep verification.'],
+      warnings: [
+        'OpenCode passive status cannot prove catalog authority. Compatibility is deferred to strict deep verification.',
+      ],
+      blockingMessages: [],
+      issues: [],
+    });
+    expect(prepare).not.toHaveBeenCalled();
+
+    const deep = await prepareSelectedOpenCodeModelsForProvisioning({
+      adapter,
+      readProviderStatus: adapter.readProviderStatus,
+      cwd: '/workspace/project',
+      modelIds: ['anthropic/sonnet'],
+      verificationMode: 'deep',
+    });
+
+    expect(deep.blockingMessages).toEqual([]);
+    expect(prepare).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        cwd: '/workspace/project',
+        model: 'anthropic/sonnet',
+        runtimeOnly: false,
+        expectedMembers: [],
+      })
+    );
   });
 
   it('never promotes a previous launch snapshot when the catalog reader is missing', async () => {

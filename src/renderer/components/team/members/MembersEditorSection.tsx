@@ -28,6 +28,7 @@ import {
 } from './membersEditorUtils';
 
 import type { MemberDraft } from './membersEditorTypes';
+import type { TeamModelSelectorProps } from '@renderer/components/team/dialogs/TeamModelSelector';
 import type { InlineChip } from '@renderer/types/inlineChip';
 import type { MentionSuggestion } from '@renderer/types/mention';
 import type { CliProviderStatus, EffortLevel, TeamProviderId } from '@shared/types';
@@ -159,6 +160,7 @@ export interface MembersEditorSectionProps {
   modelUnavailableReasonByProvider?: Partial<
     Record<TeamProviderId, Partial<Record<string, string | null | undefined>>>
   >;
+  onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   disableAddMember?: boolean;
   addMemberLockReason?: string;
   showWorktreeIsolationControls?: boolean;
@@ -211,6 +213,7 @@ export const MembersEditorSection = ({
   modelAdvisoryReasonByProvider,
   modelIssueReasonByProvider,
   modelUnavailableReasonByProvider,
+  onOpenCodeProviderScopedStatusChange,
   disableAddMember = false,
   addMemberLockReason,
   showWorktreeIsolationControls = false,
@@ -690,6 +693,7 @@ export const MembersEditorSection = ({
                   modelAdvisoryReasonByProvider={modelAdvisoryReasonByProvider}
                   modelIssueReasonByProvider={modelIssueReasonByProvider}
                   modelUnavailableReasonByProvider={modelUnavailableReasonByProvider}
+                  onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
                   providerReadyById={providerReadyById}
                   layoutVariant={layoutVariant}
                 />

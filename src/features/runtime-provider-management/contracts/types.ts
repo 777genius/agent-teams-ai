@@ -444,6 +444,8 @@ export interface RuntimeProviderManagementModelsDto {
   models: readonly RuntimeProviderModelDto[];
   defaultModelId: string | null;
   diagnostics: readonly string[];
+  /** Optional while older packaged orchestrators are still supported. */
+  catalogState?: 'fresh' | 'stale';
   totalCount?: number;
   returnedCount?: number;
   limit?: number | null;
@@ -548,6 +550,8 @@ export interface RuntimeProviderManagementLoadModelsInput {
   query?: string | null;
   limit?: number | null;
   cursor?: string | null;
+  /** Bypass an app-local completed response cache. It is not forwarded to the runtime CLI. */
+  refresh?: boolean | null;
   /** App-local cancellation group. It is not forwarded to the runtime CLI. */
   requestGroupId?: string | null;
 }
@@ -562,6 +566,10 @@ export interface RuntimeProviderManagementTestModelInput {
 }
 
 export interface RuntimeProviderManagementCancelModelTestInput {
+  requestGroupId: string;
+}
+
+export interface RuntimeProviderManagementCancelModelLoadInput {
   requestGroupId: string;
 }
 

@@ -9,10 +9,10 @@ import {
   isTeamProviderModelCatalogFresh,
   isTeamProviderModelCatalogSettled,
   isTeamProviderModelVerificationPending,
-  isTeamProviderRuntimeStatusLoading,
   normalizeTeamModelForUi,
   type TeamModelRuntimeProviderStatus,
 } from '@renderer/utils/teamModelAvailability';
+import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { describe, expect, it } from 'vitest';
 
 function createCodexProviderStatus(
@@ -143,6 +143,20 @@ describe('teamModelAvailability', () => {
     expect(isTeamProviderModelVerificationPending('opencode', providerStatus)).toBe(true);
     expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, true)).toBe(true);
     expect(isTeamProviderRuntimeStatusLoading('opencode', null, true)).toBe(true);
+  });
+
+  it('keeps a passive app-server summary pending until its provider-scoped catalog settles', () => {
+    const providerStatus = createOpenCodeProviderStatus([], {
+      modelCatalogRefreshState: 'loading',
+      runtimeCapabilities: {
+        modelCatalog: { dynamic: true, source: 'app-server' },
+      },
+      statusMessage: 'Passive summary loaded',
+    });
+
+    expect(isTeamProviderModelVerificationPending('opencode', providerStatus)).toBe(true);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, false)).toBe(true);
+    expect(isTeamProviderRuntimeStatusLoading('opencode', providerStatus, true)).toBe(true);
   });
 
   it('treats only ready, unexpired provider catalogs as fresh', () => {

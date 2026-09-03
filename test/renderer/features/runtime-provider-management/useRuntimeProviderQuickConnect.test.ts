@@ -110,10 +110,8 @@ describe('useRuntimeProviderQuickConnect', () => {
     current = null;
   });
 
-  it('loads a lightweight summary before silently reconciling it with the live host', async () => {
-    loadProviderDirectory
-      .mockResolvedValueOnce(directoryResponse('zai-coding-plan'))
-      .mockResolvedValueOnce(directoryResponse('github-copilot'));
+  it('keeps the automatic dashboard directory on the passive summary route', async () => {
+    loadProviderDirectory.mockResolvedValueOnce(directoryResponse('zai-coding-plan'));
     await act(async () => root.render(React.createElement(Harness)));
     expect(loadProviderDirectory).not.toHaveBeenCalled();
 
@@ -134,30 +132,17 @@ describe('useRuntimeProviderQuickConnect', () => {
     });
     expect(current?.loaded).toBe(true);
     expect(current?.authoritativeLoaded).toBe(false);
-    expect(current?.authoritativePending).toBe(true);
+    expect(current?.authoritativePending).toBe(false);
     expect(current?.entries[0]?.providerId).toBe('zai-coding-plan');
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(60_000);
     });
 
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
-    expect(loadProviderDirectory.mock.calls[1]?.[0]).toEqual({
-      runtimeId: 'opencode',
-      summary: false,
-      projectPath: '/tmp/test-project',
-      query: null,
-      filter: 'all',
-      limit: 250,
-      cursor: null,
-      refresh: false,
-    });
-    expect(current?.entries[0]?.providerId).toBe('github-copilot');
-    expect(current?.authoritativeLoaded).toBe(true);
-    expect(current?.authoritativePending).toBe(false);
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
     expect(getRuntimeProviderDirectoryCacheSnapshot('/tmp/test-project')).toMatchObject({
-      authoritative: true,
-      entries: [{ providerId: 'github-copilot' }],
+      authoritative: false,
+      entries: [{ providerId: 'zai-coding-plan' }],
     });
   });
 
@@ -169,7 +154,7 @@ describe('useRuntimeProviderQuickConnect', () => {
     expect(loadProviderDirectory).not.toHaveBeenCalled();
   });
 
-  it('forces a fresh directory read after provider settings close', async () => {
+  it('refreshes passive metadata after provider settings close', async () => {
     await act(async () => root.render(React.createElement(Harness)));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(200);
@@ -182,8 +167,8 @@ describe('useRuntimeProviderQuickConnect', () => {
 
     expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
     expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({
-      summary: false,
-      limit: 250,
+      summary: true,
+      limit: 100,
       refresh: true,
     });
   });
@@ -208,146 +193,31 @@ describe('useRuntimeProviderQuickConnect', () => {
     expect(current?.entries[0]?.providerId).toBe('zai-coding-plan');
   });
 
-  it('keeps the fast snapshot when the delayed live reconciliation is unavailable', async () => {
-    loadProviderDirectory
-      .mockResolvedValueOnce(directoryResponse('github-copilot'))
-      .mockResolvedValueOnce({
-        schemaVersion: 1,
-        runtimeId: 'opencode',
-        error: {
-          code: 'runtime-unhealthy',
-          message: 'OpenCode host is starting',
-          recoverable: true,
-        },
-      });
-
-    await act(async () => root.render(React.createElement(Harness)));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3_200);
-    });
-
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
-    expect(current?.entries[0]?.providerId).toBe('github-copilot');
-    expect(current?.authoritativeLoaded).toBe(false);
-    expect(current?.authoritativePending).toBe(true);
-    expect(current?.error).toBeNull();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5_000);
-    });
-
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
-    expect(current?.authoritativeLoaded).toBe(true);
-    expect(current?.authoritativePending).toBe(false);
-  });
-
-  it('bounds recoverable authoritative retries and reports the final failure', async () => {
-    const recoverableFailure = {
-      schemaVersion: 1 as const,
-      runtimeId: 'opencode' as const,
+  it('reports a passive summary failure without escalating to live inventory', async () => {
+    loadProviderDirectory.mockResolvedValueOnce({
+      schemaVersion: 1,
+      runtimeId: 'opencode',
       error: {
         code: 'runtime-unhealthy',
-        message: 'OpenCode host is still starting',
+        message: 'OpenCode metadata is unavailable',
         recoverable: true,
       },
-    };
-    loadProviderDirectory
-      .mockResolvedValueOnce(directoryResponse('openrouter'))
-      .mockResolvedValueOnce(recoverableFailure)
-      .mockResolvedValueOnce(recoverableFailure)
-      .mockResolvedValueOnce(recoverableFailure);
-
-    await act(async () => root.render(React.createElement(Harness)));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3_200);
     });
-
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
-    expect(current?.authoritativePending).toBe(true);
-    expect(current?.error).toBeNull();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(5_000);
-    });
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(3);
-    expect(current?.authoritativePending).toBe(true);
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(10_000);
-    });
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(4);
-    expect(current?.authoritativeLoaded).toBe(false);
-    expect(current?.authoritativePending).toBe(false);
-    expect(current?.error).toBe('OpenCode host is still starting');
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
-    });
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(4);
-  });
-
-  it('does not retry a terminal authoritative failure', async () => {
-    loadProviderDirectory
-      .mockResolvedValueOnce(directoryResponse('openrouter'))
-      .mockResolvedValueOnce({
-        schemaVersion: 1,
-        runtimeId: 'opencode',
-        error: {
-          code: 'invalid-request',
-          message: 'Provider directory request is unsupported',
-          recoverable: false,
-        },
-      });
-
-    await act(async () => root.render(React.createElement(Harness)));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3_200);
-    });
-
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
-    expect(current?.authoritativePending).toBe(false);
-    expect(current?.error).toBe('Provider directory request is unsupported');
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(60_000);
-    });
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
-  });
-
-  it('recovers automatically when the cold-start summary probe fails', async () => {
-    loadProviderDirectory
-      .mockResolvedValueOnce({
-        schemaVersion: 1,
-        runtimeId: 'opencode',
-        error: {
-          code: 'runtime-unhealthy',
-          message: 'OpenCode host is starting',
-          recoverable: true,
-        },
-      })
-      .mockResolvedValueOnce(directoryResponse('openrouter'));
 
     await act(async () => root.render(React.createElement(Harness)));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(200);
     });
 
-    expect(current?.error).toBe('OpenCode host is starting');
-    expect(current?.authoritativePending).toBe(true);
+    expect(current?.error).toBe('OpenCode metadata is unavailable');
+    expect(current?.authoritativePending).toBe(false);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(60_000);
     });
 
-    expect(loadProviderDirectory).toHaveBeenCalledTimes(2);
-    expect(loadProviderDirectory.mock.calls[1]?.[0]).toMatchObject({
-      summary: false,
-      refresh: true,
-    });
-    expect(current?.error).toBeNull();
-    expect(current?.entries[0]?.providerId).toBe('openrouter');
-    expect(current?.authoritativeLoaded).toBe(true);
-    expect(current?.authoritativePending).toBe(false);
+    expect(loadProviderDirectory).toHaveBeenCalledTimes(1);
+    expect(loadProviderDirectory.mock.calls[0]?.[0]).toMatchObject({ summary: true });
   });
 
   it('clears project-scoped provider entries before loading a different project', async () => {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* global process */
+/* global process, setTimeout */
 
 import { createHash } from 'node:crypto';
 import { appendFileSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
@@ -14,9 +14,16 @@ const TRACE_FILE = process.env.ISSUE443_FAKE_TRACE_FILE;
 if (!TRACE_FILE) throw new Error('ISSUE443_FAKE_TRACE_FILE is required');
 
 const argv = process.argv.slice(2);
-if (argv[0] !== 'runtime' || argv[1] !== 'opencode-command') {
+if (argv[0] === 'runtime' && argv[1] === 'status') {
   runProviderStatusCommand();
   process.exit(0);
+}
+if (argv[0] === 'runtime' && argv[1] === 'providers' && argv[2] === 'models') {
+  await runProviderModelsCommand();
+  process.exit(0);
+}
+if (argv[0] !== 'runtime' || argv[1] !== 'opencode-command') {
+  rejectCommand('legacy full inventory/model/agent/plugin fanout is forbidden');
 }
 
 if (JSON.stringify(argv.slice(0, 3)) !== JSON.stringify(['runtime', 'opencode-command', '--json'])) {
@@ -101,16 +108,20 @@ else process.stdout.write(outputRaw);
 trace({ ...baseTrace, proofValidation, outputRaw, sideEffectCommitted: envelope.command === 'opencode.launchTeam' });
 
 function runProviderStatusCommand() {
+  const expected = ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'];
+  if (JSON.stringify(argv) !== JSON.stringify(expected)) {
+    rejectCommand('only passive provider-scoped summary status is allowed');
+  }
   const providerIndex = argv.indexOf('--provider');
   const provider = providerIndex < 0 ? null : argv[providerIndex + 1];
   if (provider !== 'opencode') throw new Error(`Unexpected provider scope ${String(provider)}`);
   const payload = {
     providerId: 'opencode',
     supported: true,
-    authenticated: true,
-    authMethod: 'builtin_free',
-    verificationState: 'verified',
-    statusCheckOutcome: 'authoritative',
+    authenticated: false,
+    authMethod: null,
+    verificationState: 'unknown',
+    statusCheckOutcome: 'model_only',
     canLoginFromUi: false,
     statusMessage: null,
     detailMessage: null,
@@ -118,38 +129,98 @@ function runProviderStatusCommand() {
     resolvedBackendId: 'opencode',
     availableBackends: [],
     externalRuntimeDiagnostics: [],
-    models: [MODEL],
-    capabilities: { teamLaunch: true, oneShot: false, extensions: {} },
+    models: [],
+    modelCatalogRefreshState: 'loading',
+    capabilities: { teamLaunch: false, oneShot: false, extensions: {} },
     backend: { kind: 'opencode', label: 'OpenCode' },
-    runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'runtime' } },
-    modelCatalog: {
-      schemaVersion: 1,
-      providerId: 'opencode',
-      source: 'static-fallback',
-      status: 'ready',
-      fetchedAt: NOW,
-      staleAt: '2099-01-01T00:00:00.000Z',
-      defaultModelId: MODEL,
-      defaultLaunchModel: MODEL,
-      models: [{
-        id: MODEL,
-        launchModel: MODEL,
-        displayName: MODEL,
-        hidden: false,
-        supportedReasoningEfforts: [],
-        defaultReasoningEffort: null,
-        inputModalities: ['text'],
-        supportsPersonality: false,
-        isDefault: true,
-        upgrade: false,
-        source: 'static-fallback',
-      }],
-      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
-    },
+    runtimeCapabilities: { modelCatalog: { dynamic: true, source: 'app-server' } },
+    modelCatalog: null,
   };
   const outputRaw = JSON.stringify({ schemaVersion: 2, providers: { opencode: payload } });
   trace({ kind: 'provider-status', pid: process.pid, argv, cwd: process.cwd(), outputRaw });
   process.stdout.write(outputRaw);
+}
+
+async function runProviderModelsCommand() {
+  const runtimeIndex = argv.indexOf('--runtime');
+  const providerIndex = argv.indexOf('--provider');
+  const runtime = runtimeIndex < 0 ? null : argv[runtimeIndex + 1];
+  const provider = providerIndex < 0 ? null : argv[providerIndex + 1];
+  const allowedFlags = new Set([
+    '--runtime',
+    '--provider',
+    '--json',
+    '--project-path',
+    '--query',
+    '--limit',
+    '--cursor',
+  ]);
+  for (const argument of argv) {
+    if (argument.startsWith('--') && !allowedFlags.has(argument)) {
+      rejectCommand(`unexpected provider-model flag ${argument}`);
+    }
+  }
+  if (runtime !== 'opencode' || !provider) {
+    rejectCommand(`expected a concrete OpenCode source provider, received ${String(provider)}`);
+  }
+  if (provider === 'kiro' || provider === 'cursor-acp') {
+    rejectCommand(`poisoned ${provider} provider route must not be queried`);
+  }
+
+  const modelByProvider = {
+    deepinfra: MODEL,
+    opencode: 'opencode/nemotron-3-super-free',
+  };
+  const cursorIndex = argv.indexOf('--cursor');
+  const cursor = cursorIndex < 0 ? null : argv[cursorIndex + 1];
+  if (SCENARIO === 'slow-catalog' && provider === 'deepinfra' && !cursor) {
+    trace({ kind: 'provider-models-request', pid: process.pid, argv, cwd: process.cwd(), outputRaw: '' });
+    await new Promise((resolve) => setTimeout(resolve, 10_000));
+  }
+  const paginated = SCENARIO === 'paginated-catalog' && provider === 'deepinfra';
+  const modelId = paginated && cursor === 'deepinfra-page-2'
+    ? 'deepinfra/deepseek-ai/DeepSeek-R1'
+    : (modelByProvider[provider] ?? `${provider}/scoped-model`);
+  const nextCursor = paginated && !cursor ? 'deepinfra-page-2' : null;
+  const output = {
+    schemaVersion: 1,
+    runtimeId: 'opencode',
+    models: {
+      runtimeId: 'opencode',
+      providerId: provider,
+      models: [{
+        modelId,
+        providerId: provider,
+        displayName: modelId.slice(modelId.indexOf('/') + 1),
+        sourceLabel: provider === 'deepinfra' ? 'DeepInfra' : provider,
+        free: provider === 'opencode',
+        default: provider === 'deepinfra',
+        availability: 'available',
+        accessKind: provider === 'opencode' ? 'builtin_free' : 'credentialed',
+        routeKind: provider === 'opencode' ? 'builtin_free' : 'connected_provider',
+        proofState: 'not_required',
+        requiresExecutionProof: false,
+        accessReason: null,
+      }],
+      defaultModelId: modelId,
+      diagnostics: [],
+      catalogState: SCENARIO === 'stale-catalog' ? 'stale' : 'fresh',
+      totalCount: paginated ? 2 : 1,
+      returnedCount: 1,
+      limit: null,
+      cursor,
+      nextCursor,
+    },
+  };
+  const outputRaw = JSON.stringify(output);
+  trace({ kind: 'provider-models', pid: process.pid, argv, cwd: process.cwd(), outputRaw });
+  process.stdout.write(outputRaw);
+}
+
+function rejectCommand(reason) {
+  const outputRaw = `Rejected command: ${reason}`;
+  trace({ kind: 'rejected', pid: process.pid, argv, cwd: process.cwd(), outputRaw });
+  throw new Error(`${outputRaw}: ${JSON.stringify(argv)}`);
 }
 
 function handshake(envelope) {

@@ -267,6 +267,19 @@ describe('cliInstallerSlice', () => {
     });
   });
 
+  it('invalidates mounted provider model catalogs without clearing provider status', () => {
+    const scopedStatus = {
+      'opencode:/tmp/project': createReadyOpenCodeCatalogProvider('ollama/current-model'),
+    };
+    useStore.setState({ cliProviderStatusByScope: scopedStatus });
+
+    useStore.getState().invalidateCliProviderModelCatalog();
+
+    expect(useStore.getState().cliProviderStatusScopeRevision).toBe(1);
+    expect(useStore.getState().cliProviderStatusByScope).toBe(scopedStatus);
+    expect(api.cliInstaller.invalidateStatus).not.toHaveBeenCalled();
+  });
+
   describe('reconcileCliStatus', () => {
     it('keeps last-known readiness for a model-only OpenCode inventory', () => {
       const current = createMultimodelStatus([
@@ -1782,6 +1795,75 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('fetchCliProviderStatus', () => {
+    it('fences an in-flight provider status across a backend catalog invalidation', async () => {
+      const oldBackendRequest = createDeferredValue<
+        CliInstallationStatus['providers'][number]
+      >();
+      const newBackendRequest = createDeferredValue<
+        CliInstallationStatus['providers'][number]
+      >();
+      const initialProvider = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        supported: false,
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+        backend: null,
+      });
+      const oldBackendProvider = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        authenticated: true,
+        authMethod: 'legacy-session',
+        selectedBackendId: 'adapter',
+        resolvedBackendId: 'adapter',
+        backend: { kind: 'adapter', label: 'Legacy adapter' },
+      });
+      const newBackendProvider = createMultimodelProvider({
+        providerId: 'codex',
+        displayName: 'Codex',
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+        selectedBackendId: 'codex-native',
+        resolvedBackendId: 'codex-native',
+        backend: { kind: 'codex-native', label: 'Codex native' },
+      });
+      useStore.setState({ cliStatus: createMultimodelStatus([initialProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockReturnValueOnce(oldBackendRequest.promise)
+        .mockReturnValueOnce(newBackendRequest.promise);
+
+      const oldBackendRefresh = useStore.getState().fetchCliProviderStatus('codex');
+      useStore.getState().invalidateCliProviderModelCatalog();
+      const newBackendRefresh = useStore.getState().fetchCliProviderStatus('codex');
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+      newBackendRequest.resolve(newBackendProvider);
+      await expect(newBackendRefresh).resolves.toBe(true);
+      oldBackendRequest.resolve(oldBackendProvider);
+      await expect(oldBackendRefresh).resolves.toBe(false);
+
+      expect(
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'codex')
+      ).toMatchObject({
+        authenticated: false,
+        capabilities: { teamLaunch: false },
+        resolvedBackendId: 'codex-native',
+        backend: { kind: 'codex-native' },
+      });
+    });
+
     it('forwards the selected project when refreshing the OpenCode model catalog', async () => {
       const provider = createMultimodelProvider({
         providerId: 'opencode',

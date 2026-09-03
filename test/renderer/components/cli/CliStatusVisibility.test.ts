@@ -35,6 +35,7 @@ interface StoreState {
   bootstrapCliStatus: ReturnType<typeof vi.fn>;
   fetchCliStatus: ReturnType<typeof vi.fn>;
   fetchCliProviderStatus: ReturnType<typeof vi.fn>;
+  invalidateCliProviderModelCatalog: ReturnType<typeof vi.fn>;
   invalidateCliStatus: ReturnType<typeof vi.fn>;
   installCli: ReturnType<typeof vi.fn>;
   fetchOpenCodeRuntimeStatus: ReturnType<typeof vi.fn>;
@@ -67,6 +68,7 @@ interface StoreState {
 const storeState = {} as StoreState;
 let providerRuntimeSettingsDialogProps: {
   onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
+  onRefreshProvider?: (providerId: string) => Promise<boolean>;
   open?: boolean;
   initialProviderId?: string;
   initialRuntimeProviderId?: string | null;
@@ -165,6 +167,7 @@ vi.mock('@renderer/components/common/ConfirmDialog', () => ({
 vi.mock('@renderer/components/runtime/ProviderRuntimeSettingsDialog', () => ({
   ProviderRuntimeSettingsDialog: (props: {
     onSelectBackend?: (providerId: string, backendId: string) => Promise<void> | void;
+    onRefreshProvider?: (providerId: string) => Promise<boolean>;
     open?: boolean;
     initialProviderId?: string;
     initialRuntimeProviderId?: string | null;
@@ -458,6 +461,7 @@ describe('CLI status visibility during completed install state', () => {
     storeState.bootstrapCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.fetchCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.fetchCliProviderStatus = vi.fn().mockResolvedValue(true);
+    storeState.invalidateCliProviderModelCatalog = vi.fn();
     storeState.invalidateCliStatus = vi.fn().mockResolvedValue(undefined);
     storeState.installCli = vi.fn();
     storeState.fetchOpenCodeRuntimeStatus = vi.fn().mockResolvedValue(undefined);
@@ -2994,6 +2998,44 @@ describe('CLI status visibility during completed install state', () => {
       checkReason: 'launch_preflight',
     });
     expect(onProviderRuntimeChanged).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await Promise.resolve();
+    });
+  });
+
+  it('invalidates the mounted model catalog when provider settings refresh', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const onProviderRuntimeChanged = vi.fn();
+    const providers = [createCodexNativeRolloutProvider()] as unknown as React.ComponentProps<
+      typeof ProvisioningProviderRuntimeSettingsDialog
+    >['providers'];
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(ProvisioningProviderRuntimeSettingsDialog, {
+          openProviderId: 'codex',
+          onOpenProviderIdChange: vi.fn(),
+          providers,
+          onProviderRuntimeChanged,
+        })
+      );
+      await Promise.resolve();
+    });
+
+    const onRefreshProvider = providerRuntimeSettingsDialogProps?.onRefreshProvider;
+    await expect(onRefreshProvider?.('codex')).resolves.toBe(true);
+    expect(storeState.invalidateCliProviderModelCatalog).toHaveBeenCalledTimes(1);
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledWith('codex', {
+      silent: false,
+      checkReason: 'manual_refresh',
+    });
+    expect(onProviderRuntimeChanged).toHaveBeenCalledWith('codex');
 
     await act(async () => {
       root.unmount();

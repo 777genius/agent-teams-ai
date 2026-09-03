@@ -224,7 +224,14 @@ vi.mock('@renderer/components/team/members/MembersEditorSection', () => ({
     effort: member.effort,
     fastMode: member.fastMode,
   }),
-  clearMemberModelOverrides: (member: unknown) => member,
+  clearMemberModelOverrides: (member: any) => ({
+    ...member,
+    providerId: undefined,
+    providerBackendId: undefined,
+    model: '',
+    effort: undefined,
+    fastMode: undefined,
+  }),
   createMemberDraftsFromInputs: (
     members: Array<{
       name: string;
@@ -453,8 +460,13 @@ vi.mock('@renderer/utils/teamModelAvailability', async (importOriginal) => ({
   getTeamModelSelectionError: vi.fn(() => null),
   isTeamModelAvailableForUi: vi.fn(() => true),
   isTeamProviderModelVerificationPending: vi.fn(() => false),
-  isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
   normalizeExplicitTeamModelForUi: vi.fn((_providerId: string, model: string) => model),
+}));
+
+vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', () => ({
+  getOpenCodeScopedPreparationFailure: vi.fn(() => null),
+  hasSettledOpenCodeScopedPreparation: vi.fn(() => false),
+  isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
 }));
 
 vi.mock('@renderer/components/team/dialogs/providerPrepareCacheKey', () => ({
@@ -799,7 +811,6 @@ describe('LaunchTeamDialog', () => {
         },
       ],
     } as any;
-
     const launchHost = document.createElement('div');
     document.body.appendChild(launchHost);
     const launchDialogRoot = createRoot(launchHost);
@@ -1408,6 +1419,67 @@ describe('LaunchTeamDialog', () => {
     expect(teamRosterEditorSectionMock.lastProps?.syncModelsWithTeammates).toBe(true);
     expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
       expect.objectContaining({ name: 'jack' }),
+    ]);
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it('uses effective synchronized teammates when selecting providers for prepare', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.mocked(api.teams.getSavedRequest).mockResolvedValueOnce({
+      teamName: 'team-alpha',
+      cwd: '/tmp/project',
+      providerId: 'anthropic',
+      model: 'opus',
+      syncModelsWithLead: true,
+      members: [
+        {
+          name: 'jack',
+          role: 'developer',
+          providerId: 'opencode',
+          model: 'openrouter/auto',
+        },
+      ],
+    } as any);
+
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+      await flush();
+      await flush();
+      await flush();
+    });
+
+    const preparedProviderIds = vi
+      .mocked(runProviderPrepareDiagnostics)
+      .mock.calls.map((call) => call[0].providerId);
+    expect(preparedProviderIds).toContain('anthropic');
+    expect(preparedProviderIds).not.toContain('opencode');
+    expect(teamRosterEditorSectionMock.lastProps?.members).toEqual([
+      expect.objectContaining({
+        name: 'jack',
+        providerId: 'opencode',
+        model: 'openrouter/auto',
+      }),
     ]);
 
     await act(async () => {
@@ -3797,6 +3869,12 @@ describe('LaunchTeamDialog', () => {
         },
       ],
     } as any;
+    await fetchCliProviderStatus('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: '/tmp/project',
+    });
+    fetchCliProviderStatus.mockClear();
     let resolvePrepare!: (value: {
       status: 'ready';
       warnings: [];
@@ -3869,16 +3947,9 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
-
     expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(
       callsAfterSameSignatureRerender
     );
-    expect(host.textContent).not.toContain('All selected providers are ready.');
-    expect(host.textContent).toContain('Runtime environment is not available');
-    const authorityBlockedCreateButton = host.querySelector<HTMLButtonElement>(
-      'button[aria-describedby="create-team-launch-authority-blocker"]'
-    );
-    expect(authorityBlockedCreateButton?.disabled).toBe(true);
 
     await act(async () => {
       root.unmount();

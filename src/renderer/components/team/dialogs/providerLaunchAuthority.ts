@@ -6,6 +6,11 @@ import {
   useLaunchAuthorityGatedCliStatus,
 } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import {
+  getOpenCodeScopedPreparationFailure,
+  hasSettledOpenCodeScopedPreparation,
+  type OpenCodeScopedPreparationEvidence,
+} from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import {
   hasAuthoritativeProviderStatusEvidence,
   isProviderModelCatalogExactReady,
 } from '@shared/utils/providerStatusAuthority';
@@ -27,7 +32,12 @@ export interface ProviderLaunchGuard {
 }
 
 function getProviderStatusDetail(provider: CliProviderStatus): string | null {
-  return provider.detailMessage?.trim() || provider.statusMessage?.trim() || null;
+  return (
+    provider.detailMessage?.trim() ||
+    provider.statusMessage?.trim() ||
+    provider.modelCatalog?.diagnostics.message?.trim() ||
+    null
+  );
 }
 
 function getProviderLaunchBlockerDetail(
@@ -67,13 +77,39 @@ function getProviderLaunchBlockerDetail(
 
 export function createLaunchGuard(
   providerIds: readonly TeamProviderId[],
-  runtimeProviderStatusById: RuntimeProviderStatusById
+  runtimeProviderStatusById: RuntimeProviderStatusById,
+  openCodeEvidence?: OpenCodeScopedPreparationEvidence
 ): ProviderLaunchGuard {
   const blockers = (enabled: boolean, now: number = Date.now()): ProviderLaunchBlocker[] => {
     if (!enabled) return [];
 
     return providerIds.flatMap((providerId) => {
       const provider = runtimeProviderStatusById.get(providerId) ?? null;
+      if (
+        providerId === 'opencode' &&
+        provider?.statusCheckOutcome === 'model_only' &&
+        provider.runtimeCapabilities?.modelCatalog?.source === 'app-server' &&
+        hasSettledOpenCodeScopedPreparation(provider, openCodeEvidence, now)
+      ) {
+        // Passive status cannot authorize a launch. The strict OpenCode launch
+        // attempt performs fresh exact-model proof before creating members.
+        return [];
+      }
+      const scopedFailure =
+        providerId === 'opencode'
+          ? getOpenCodeScopedPreparationFailure(openCodeEvidence)
+          : null;
+      if (scopedFailure) {
+        return [
+          {
+            providerId,
+            providerStatus: scopedFailure,
+            detail:
+              getProviderStatusDetail(scopedFailure) ??
+              'The selected provider model catalog could not be refreshed. Refresh provider status.',
+          },
+        ];
+      }
       return hasEffectiveProviderLaunchAuthority(provider, now)
         ? []
         : [

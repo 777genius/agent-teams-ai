@@ -2547,6 +2547,35 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(execCliMock.mock.calls[2]?.[1]).toEqual(expect.arrayContaining(['--cursor', '100']));
   });
 
+  it('bypasses a completed identical model cache entry when refresh is requested', async () => {
+    let modelLoadCount = 0;
+    execCliMock.mockImplementation(async () => {
+      modelLoadCount += 1;
+      return {
+        stdout: JSON.stringify(
+          createModelsResponse('openrouter', `openrouter/model-${modelLoadCount}`)
+        ),
+        stderr: '',
+      };
+    });
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const request = {
+      runtimeId: 'opencode' as const,
+      providerId: 'openrouter',
+      projectPath: '/Users/test/project',
+    };
+
+    const first = await client.loadModels(request);
+    const cached = await client.loadModels(request);
+    const refreshed = await client.loadModels({ ...request, refresh: true });
+
+    expect(cached).toBe(first);
+    expect(first.models?.models[0]?.modelId).toBe('openrouter/model-1');
+    expect(refreshed.models?.models[0]?.modelId).toBe('openrouter/model-2');
+    expect(execCliMock).toHaveBeenCalledTimes(2);
+    expect(execCliMock.mock.calls[1]?.[1]).not.toContain('--refresh');
+  });
+
   it('expires model search responses after their short TTL', async () => {
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000);
     execCliMock.mockResolvedValue({
@@ -2621,7 +2650,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(modelLoadCount).toBe(2);
 
     finishFirstModelLoad?.({ stdout: JSON.stringify(createModelsResponse()), stderr: '' });
-    await visibleLoad;
+    expect((await visibleLoad).models?.catalogState).toBe('stale');
     await client.loadModels(request);
     expect(modelLoadCount).toBe(2);
   });
@@ -2656,7 +2685,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(execCliMock).toHaveBeenCalledTimes(34);
   });
 
-  it('shares an identical in-flight model load without aborting it', async () => {
+  it('shares an identical in-flight model refresh without duplicating or aborting it', async () => {
     let finishCommand: ((value: { stdout: string; stderr: string }) => void) | undefined;
     let commandSignal: AbortSignal | undefined;
     execCliMock.mockImplementationOnce(
@@ -2676,7 +2705,7 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
       requestGroupId: 'provider-model-search',
     } as const;
     const first = client.loadModels(request);
-    const duplicate = client.loadModels({ ...request });
+    const duplicate = client.loadModels({ ...request, refresh: true });
 
     await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledTimes(1));
     expect(commandSignal?.aborted).toBe(false);
@@ -2735,6 +2764,88 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     expect(firstSignal?.aborted).toBe(true);
     expect((await first).error).toBeDefined();
     expect(execCliMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('starts a fresh model load when a provider is reselected before its aborted request settles', async () => {
+    let firstSignal: AbortSignal | undefined;
+    let rejectFirst: ((error: Error) => void) | undefined;
+    let openRouterCalls = 0;
+    execCliMock.mockImplementation(
+      (_binaryPath: string, args: string[], options: { signal?: AbortSignal }) => {
+        const providerIndex = args.indexOf('--provider');
+        const providerId = providerIndex >= 0 ? args[providerIndex + 1] : 'unknown';
+        if (providerId === 'openrouter') {
+          openRouterCalls += 1;
+          if (openRouterCalls === 1) {
+            firstSignal = options.signal;
+            return new Promise<{ stdout: string; stderr: string }>((_resolve, reject) => {
+              rejectFirst = reject;
+            });
+          }
+        }
+        return Promise.resolve({
+          stdout: JSON.stringify(createModelsResponse(providerId, `${providerId}/fresh`)),
+          stderr: '',
+        });
+      }
+    );
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const requestGroupId = 'provider-model-picker';
+    const first = client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      requestGroupId,
+    });
+    await vi.waitFor(() => expect(firstSignal).toBeDefined());
+
+    await client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      requestGroupId,
+    });
+    expect(firstSignal?.aborted).toBe(true);
+
+    const reselected = await client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      requestGroupId,
+    });
+    expect(reselected.models?.models[0]?.modelId).toBe('openrouter/fresh');
+    expect(openRouterCalls).toBe(2);
+
+    rejectFirst?.(new Error('aborted command settled late'));
+    expect((await first).error).toBeDefined();
+  });
+
+  it('cancels a grouped model load when its requesting scope disappears', async () => {
+    let commandSignal: AbortSignal | undefined;
+    execCliMock.mockImplementation(
+      (_binaryPath: string, _args: string[], options: { signal?: AbortSignal }) => {
+        commandSignal = options.signal;
+        return new Promise<{ stdout: string; stderr: string }>((_resolve, reject) => {
+          options.signal?.addEventListener(
+            'abort',
+            () => reject(Object.assign(new Error('Command aborted'), { name: 'AbortError' })),
+            { once: true }
+          );
+        });
+      }
+    );
+
+    const client = new AgentTeamsRuntimeProviderManagementCliClient();
+    const pending = client.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'openrouter',
+      requestGroupId: 'closing-catalog-scope',
+    });
+    await vi.waitFor(() => expect(commandSignal).toBeDefined());
+
+    await expect(
+      client.cancelModelLoad({ requestGroupId: 'closing-catalog-scope' })
+    ).resolves.toEqual({ ok: true });
+    expect(commandSignal?.aborted).toBe(true);
+    expect((await pending).error).toBeDefined();
   });
 
   it('does not abort a shared model load when an ungrouped caller still needs it', async () => {

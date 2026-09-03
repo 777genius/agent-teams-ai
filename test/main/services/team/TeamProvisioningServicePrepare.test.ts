@@ -1327,7 +1327,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     expect(ClaudeBinaryResolver.resolve).not.toHaveBeenCalled();
   });
 
-  it('marks model-less OpenCode prepare as runtime-only and keeps model checks strict', async () => {
+  it('defers model-less OpenCode prepare and keeps selected-model checks strict', async () => {
     const prepare = vi.fn(async () => ({
       ok: true as const,
       providerId: 'opencode' as const,
@@ -1355,14 +1355,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       ready: true,
       message: 'CLI is warmed up and ready to launch',
     });
-    expect(prepare).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        providerId: 'opencode',
-        model: undefined,
-        runtimeOnly: true,
-      })
-    );
+    expect(prepare).not.toHaveBeenCalled();
 
     await svc.prepareForProvisioning(tempRoot, {
       providerId: 'opencode',
@@ -1370,7 +1363,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       modelIds: ['opencode/minimax-m2.5-free'],
     });
     expect(prepare).toHaveBeenNthCalledWith(
-      2,
+      1,
       expect.objectContaining({
         providerId: 'opencode',
         model: 'opencode/minimax-m2.5-free',
@@ -1379,7 +1372,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     );
   });
 
-  it('uses OpenCode access-denied warnings as the model-less prepare failure message', async () => {
+  it('uses OpenCode access-denied warnings as the selected-model prepare failure message', async () => {
     const prepare = vi.fn(async () => ({
       ok: false as const,
       providerId: 'opencode' as const,
@@ -1402,6 +1395,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     const result = await svc.prepareForProvisioning(tempRoot, {
       providerId: 'opencode',
       forceFresh: true,
+      modelIds: ['opencode/big-pickle'],
     });
 
     expect(result.ready).toBe(false);
@@ -1438,6 +1432,7 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
     const result = await svc.prepareForProvisioning(tempRoot, {
       providerId: 'opencode',
       forceFresh: true,
+      modelIds: ['opencode/big-pickle'],
     });
 
     expect(result.ready).toBe(false);

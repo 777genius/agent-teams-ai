@@ -489,3 +489,100 @@ describe('OpenCode runtime rejection state', () => {
     }
   });
 });
+
+describe('provider catalog invalidation races', () => {
+  it('clears fenced provider loading without allowing the old request to settle it later', async () => {
+    let resolveStatus!: (value: unknown) => void;
+    const pending = new Promise((resolve) => {
+      resolveStatus = resolve;
+    });
+    const previousApi = window.electronAPI;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: { getProviderStatus: vi.fn(() => pending), verifyProviderModels: vi.fn() },
+      },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+    try {
+      const request = store.getState().fetchCliProviderStatus('codex');
+      expect(store.getState().cliProviderStatusLoading.codex).toBe(true);
+      store.getState().invalidateCliProviderModelCatalog();
+      expect(store.getState().cliProviderStatusLoading.codex).toBeUndefined();
+      resolveStatus({
+        providerId: 'codex',
+        models: [],
+        supported: true,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'authoritative',
+        modelCatalogRefreshState: 'ready',
+        capabilities: { teamLaunch: false, oneShot: false, extensions: {} },
+      });
+      await request;
+      expect(store.getState().cliProviderStatusLoading.codex).toBeUndefined();
+    } finally {
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+    }
+  });
+});
+
+describe('codex catalog watchdog races', () => {
+  it('keeps the newer retry timer when an older request rejects', async () => {
+    vi.useFakeTimers();
+    let rejectFirst!: (reason?: unknown) => void;
+    const first = new Promise((_, reject) => {
+      rejectFirst = reject;
+    });
+    let resolveSecond!: (value: unknown) => void;
+    const second = new Promise((resolve) => {
+      resolveSecond = resolve;
+    });
+    const previousApi = window.electronAPI;
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: {
+        cliInstaller: {
+          getProviderStatus: vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second),
+        },
+      },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+    try {
+      const oldRequest = store.getState().fetchCliProviderStatus('codex');
+      store.getState().invalidateCliProviderModelCatalog();
+      const newerRequest = store.getState().fetchCliProviderStatus('codex');
+      const provider = {
+        ...createLoadingMultimodelCliStatus().providers.find(
+          (item) => item.providerId === 'codex'
+        )!,
+        modelCatalog: null,
+        modelCatalogRefreshState: 'loading' as const,
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+      };
+      resolveSecond(provider);
+      await newerRequest;
+      expect(vi.getTimerCount()).toBe(1);
+      rejectFirst(new Error('superseded'));
+      await oldRequest;
+      vi.mocked(console.error).mockClear();
+      expect(vi.getTimerCount()).toBe(1);
+    } finally {
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+      vi.useRealTimers();
+    }
+  });
+});

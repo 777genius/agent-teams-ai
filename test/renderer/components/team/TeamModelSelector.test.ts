@@ -1,7 +1,13 @@
+import { resolveOpenCodeSelectionScopeDecision } from '@features/runtime-provider-management/renderer';
 import {
   computeEffectiveTeamModel,
   formatTeamModelSummary,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
+import {
+  deriveOpenCodeSelectionScopeAssociation,
+  getOpenCodeSelectionAuthorityScopeKey,
+  resolveTeamModelSelectorValue,
+} from '@renderer/components/team/dialogs/teamModelSelectorUi';
 import {
   getAvailableTeamProviderModels,
   getTeamModelSelectionError,
@@ -130,6 +136,276 @@ describe('formatTeamModelSummary', () => {
     expect(getTeamModelSelectionError('anthropic', 'opus')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-8')).toBeNull();
     expect(getTeamModelSelectionError('anthropic', 'claude-opus-4-7')).toBeNull();
+  });
+});
+
+describe('resolveOpenCodeSelectionScopeDecision', () => {
+  const oldProjectScope = JSON.stringify(['/projects/old', 'deepinfra']);
+  const newProjectScope = JSON.stringify(['/projects/new', 'deepinfra']);
+  const newSourceScope = JSON.stringify(['/projects/old', 'openrouter']);
+
+  it.each([
+    ['project loading', newProjectScope, 'loading', null],
+    ['project error', newProjectScope, 'error', null],
+    ['project stale', newProjectScope, 'ready', 'stale'],
+    ['project legacy unknown', newProjectScope, 'ready', null],
+    ['source loading', newSourceScope, 'loading', null],
+  ] as const)(
+    'clears an unproved prior selection on a %s transition',
+    (_label, catalogScopeKey, catalogStatus, catalogState) => {
+      expect(
+        resolveOpenCodeSelectionScopeDecision({
+          value: 'deepinfra/old-model',
+          runtimeNormalizedValue: 'deepinfra/old-model',
+          selectionScopeKey: oldProjectScope,
+          catalogScopeKey,
+          catalogStatus,
+          catalogState,
+        })
+      ).toEqual({ normalizedValue: '', preserve: false });
+    }
+  );
+
+  it('preserves a same-scope selection through a refresh failure', () => {
+    expect(
+      resolveOpenCodeSelectionScopeDecision({
+        value: 'deepinfra/kept-model',
+        runtimeNormalizedValue: '',
+        selectionScopeKey: oldProjectScope,
+        catalogScopeKey: oldProjectScope,
+        catalogStatus: 'error',
+        catalogState: 'fresh',
+      })
+    ).toEqual({ normalizedValue: '', preserve: true });
+  });
+
+  it('accepts a transition only after the fresh current scope proves the selection', () => {
+    expect(
+      resolveOpenCodeSelectionScopeDecision({
+        value: 'deepinfra/shared-model',
+        runtimeNormalizedValue: 'deepinfra/shared-model',
+        selectionScopeKey: oldProjectScope,
+        catalogScopeKey: newProjectScope,
+        catalogStatus: 'ready',
+        catalogState: 'fresh',
+      })
+    ).toEqual({ normalizedValue: 'deepinfra/shared-model', preserve: false });
+  });
+});
+
+describe('deriveOpenCodeSelectionScopeAssociation', () => {
+  const oldScope = JSON.stringify(['/projects/old', 'deepinfra']);
+  const newProjectScope = JSON.stringify(['/projects/new', 'deepinfra']);
+  const newSourceScope = JSON.stringify(['/projects/old', 'openrouter']);
+
+  it('uses project-bearing authority scopes when no remote catalog is requested', () => {
+    const oldLocalScope = getOpenCodeSelectionAuthorityScopeKey('/projects/old', null);
+    const newLocalScope = getOpenCodeSelectionAuthorityScopeKey('/projects/new', null);
+
+    expect(oldLocalScope).not.toBe(newLocalScope);
+    expect(oldLocalScope).not.toBeNull();
+    expect(getOpenCodeSelectionAuthorityScopeKey('/projects/old', 'OpenRouter')).toBe(
+      newSourceScope
+    );
+  });
+
+  it('gives a genuinely new value the current catalog scope immediately', () => {
+    const committed = { value: 'deepinfra/old-model', scopeKey: oldScope };
+
+    expect(
+      deriveOpenCodeSelectionScopeAssociation(
+        committed,
+        'openrouter/new-model',
+        newSourceScope
+      )
+    ).toEqual({ value: 'openrouter/new-model', scopeKey: newSourceScope });
+  });
+
+  it('retains the committed scope for an unchanged value across a scope transition', () => {
+    const committed = { value: 'deepinfra/old-model', scopeKey: oldScope };
+
+    expect(
+      deriveOpenCodeSelectionScopeAssociation(committed, committed.value, newProjectScope)
+    ).toBe(committed);
+  });
+
+  it('does not mutate committed state when an abandoned candidate is derived and discarded', () => {
+    const committed = Object.freeze({ value: 'deepinfra/old-model', scopeKey: oldScope });
+
+    const abandoned = deriveOpenCodeSelectionScopeAssociation(
+      committed,
+      'openrouter/abandoned-model',
+      newSourceScope
+    );
+
+    expect(abandoned).toEqual({
+      value: 'openrouter/abandoned-model',
+      scopeKey: newSourceScope,
+    });
+    expect(abandoned).not.toBe(committed);
+    expect(committed).toEqual({ value: 'deepinfra/old-model', scopeKey: oldScope });
+    expect(
+      deriveOpenCodeSelectionScopeAssociation(committed, committed.value, newProjectScope)
+    ).toBe(committed);
+  });
+
+  it('still clears an unchanged remote value during a cross-scope pending lookup', () => {
+    const committed = { value: 'deepinfra/old-model', scopeKey: oldScope };
+    const derived = deriveOpenCodeSelectionScopeAssociation(
+      committed,
+      committed.value,
+      newProjectScope
+    );
+
+    const decision = resolveOpenCodeSelectionScopeDecision({
+      value: committed.value,
+      runtimeNormalizedValue: committed.value,
+      selectionScopeKey: derived.scopeKey,
+      catalogScopeKey: newProjectScope,
+      catalogStatus: 'loading',
+      catalogState: null,
+    });
+
+    expect(decision).toEqual({ normalizedValue: '', preserve: false });
+    expect(
+      resolveTeamModelSelectorValue({
+        providerId: 'opencode',
+        value: committed.value,
+        runtimeNormalizedValue: decision.normalizedValue,
+        isAppManagedLocalModel: false,
+        isInLocalOverlay: false,
+        isLocalLookupAuthoritative: false,
+        shouldPreserveOpenCodeSelection: decision.preserve,
+      })
+    ).toBe('');
+  });
+
+  it('preserves a genuinely new same-scope selection during its pending lookup', () => {
+    const value = 'deepinfra/new-model';
+    const derived = deriveOpenCodeSelectionScopeAssociation(
+      { value: 'deepinfra/old-model', scopeKey: oldScope },
+      value,
+      oldScope
+    );
+
+    const decision = resolveOpenCodeSelectionScopeDecision({
+      value,
+      runtimeNormalizedValue: '',
+      selectionScopeKey: derived.scopeKey,
+      catalogScopeKey: oldScope,
+      catalogStatus: 'loading',
+      catalogState: null,
+    });
+
+    expect(decision).toEqual({ normalizedValue: '', preserve: true });
+    expect(
+      resolveTeamModelSelectorValue({
+        providerId: 'opencode',
+        value,
+        runtimeNormalizedValue: decision.normalizedValue,
+        isAppManagedLocalModel: false,
+        isInLocalOverlay: false,
+        isLocalLookupAuthoritative: false,
+        shouldPreserveOpenCodeSelection: decision.preserve,
+      })
+    ).toBe(value);
+  });
+
+  it('fences an unchanged local selection on a project change but preserves same-project deferral', () => {
+    const value = 'ollama/model-a';
+    const oldLocalScope = getOpenCodeSelectionAuthorityScopeKey('/projects/old', null);
+    const newLocalScope = getOpenCodeSelectionAuthorityScopeKey('/projects/new', null);
+    const committed = { value, scopeKey: oldLocalScope };
+    const crossProject = resolveOpenCodeSelectionScopeDecision({
+      value,
+      runtimeNormalizedValue: value,
+      selectionScopeKey: deriveOpenCodeSelectionScopeAssociation(
+        committed,
+        value,
+        newLocalScope
+      ).scopeKey,
+      catalogScopeKey: newLocalScope,
+      catalogStatus: 'idle',
+      catalogState: null,
+    });
+    const sameProject = resolveOpenCodeSelectionScopeDecision({
+      value,
+      runtimeNormalizedValue: '',
+      selectionScopeKey: committed.scopeKey,
+      catalogScopeKey: oldLocalScope,
+      catalogStatus: 'idle',
+      catalogState: null,
+    });
+
+    expect(crossProject).toEqual({ normalizedValue: '', preserve: false });
+    expect(sameProject).toEqual({ normalizedValue: '', preserve: true });
+    expect(
+      resolveTeamModelSelectorValue({
+        providerId: 'opencode',
+        value,
+        runtimeNormalizedValue: crossProject.normalizedValue,
+        isAppManagedLocalModel: true,
+        isInLocalOverlay: true,
+        isLocalLookupAuthoritative: false,
+        shouldPreserveOpenCodeSelection: crossProject.preserve,
+      })
+    ).toBe('');
+    expect(
+      resolveTeamModelSelectorValue({
+        providerId: 'opencode',
+        value,
+        runtimeNormalizedValue: sameProject.normalizedValue,
+        isAppManagedLocalModel: true,
+        isInLocalOverlay: false,
+        isLocalLookupAuthoritative: false,
+        shouldPreserveOpenCodeSelection: sameProject.preserve,
+      })
+    ).toBe(value);
+  });
+});
+
+describe('resolveTeamModelSelectorValue', () => {
+  const input = {
+    providerId: 'opencode',
+    value: 'deepinfra/old-model',
+    runtimeNormalizedValue: '',
+    isAppManagedLocalModel: false,
+    isInLocalOverlay: false,
+    isLocalLookupAuthoritative: false,
+  };
+
+  it('does not restore a qualified selection when its new scope is unproved', () => {
+    expect(
+      resolveTeamModelSelectorValue({
+        ...input,
+        shouldPreserveOpenCodeSelection: false,
+      })
+    ).toBe('');
+  });
+
+  it('preserves a pending qualified local selection only for the same scope', () => {
+    expect(
+      resolveTeamModelSelectorValue({
+        ...input,
+        value: 'local-lab/team-model',
+        shouldPreserveOpenCodeSelection: true,
+      })
+    ).toBe('local-lab/team-model');
+  });
+
+  it.each([
+    ['app-managed', { isAppManagedLocalModel: true, isInLocalOverlay: false }],
+    ['local overlay', { isAppManagedLocalModel: false, isInLocalOverlay: true }],
+  ])('keeps a currently confirmed %s model', (_label, localOwnership) => {
+    expect(
+      resolveTeamModelSelectorValue({
+        ...input,
+        ...localOwnership,
+        value: 'ollama/qwen3-coder:30b',
+        currentLocalAuthorityConfirmsSelection: true,
+        shouldPreserveOpenCodeSelection: false,
+      })
+    ).toBe('ollama/qwen3-coder:30b');
   });
 });
 

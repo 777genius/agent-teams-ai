@@ -7,6 +7,7 @@ import {
   createDegradedProviderStatus,
   mergeProviderStatusDisplayEvidence,
 } from '@main/services/runtime/providerStatusCheckContract';
+import { ClaudeBinaryResolver } from '@main/services/team/ClaudeBinaryResolver';
 import { OpenCodeBridgeCommandClient } from '@main/services/team/opencode/bridge/OpenCodeBridgeCommandClient';
 import {
   OPEN_CODE_EXPECTED_BEHAVIOR_FINGERPRINT_SCHEMA_VERSION,
@@ -26,7 +27,36 @@ import {
   setOpenCodeRuntimeActiveRunManifest,
 } from '@main/services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { OpenCodeTeamRuntimeAdapter } from '@main/services/team/runtime/OpenCodeTeamRuntimeAdapter';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+
+let createLaunchGuard: typeof import('@renderer/components/team/dialogs/providerLaunchAuthority').createLaunchGuard;
+
+// Renderer account/store modules read localStorage during module evaluation,
+// while this contract suite intentionally runs in Vitest's Node environment.
+const localStorageState = new Map<string, string>();
+vi.stubGlobal('localStorage', {
+  getItem: (key: string) => localStorageState.get(key) ?? null,
+  setItem: (key: string, value: string) => { localStorageState.set(key, String(value)); },
+  removeItem: (key: string) => { localStorageState.delete(key); },
+  clear: () => { localStorageState.clear(); },
+  key: (index: number) => [...localStorageState.keys()][index] ?? null,
+  get length() { return localStorageState.size; },
+});
+
+beforeAll(async () => {
+  ({ createLaunchGuard } = await import('@renderer/components/team/dialogs/providerLaunchAuthority'));
+});
+
+import {
+  RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
+  RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+} from '../../../../src/features/runtime-provider-management/contracts';
+import {
+  createRuntimeProviderManagementFeature,
+  registerRuntimeProviderManagementIpc,
+} from '../../../../src/features/runtime-provider-management/main';
+import { AgentTeamsRuntimeProviderManagementCliClient } from '../../../../src/features/runtime-provider-management/main/infrastructure/AgentTeamsRuntimeProviderManagementCliClient';
+import { createRuntimeProviderManagementBridge } from '../../../../src/features/runtime-provider-management/preload';
 
 import type {
   OpenCodeBridgeCommandLeaseStore,
@@ -35,6 +65,7 @@ import type {
 import type { OpenCodeExpectedBehaviorTuple } from '@main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import type { TeamRuntimeLaunchInput } from '@main/services/team/runtime/TeamRuntimeAdapter';
 import type { CliProviderStatus } from '@shared/types';
+import type { IpcMain, IpcRenderer } from 'electron';
 
 vi.mock('@main/utils/shellEnv', () => ({
   resolveInteractiveShellEnvBestEffort: () => Promise.resolve({}),
@@ -77,7 +108,12 @@ function fakeExecutableEnv(): NodeJS.ProcessEnv {
 }
 
 interface FakeTrace {
-  kind: 'provider-status' | 'bridge';
+  kind:
+    | 'provider-status'
+    | 'provider-models-request'
+    | 'provider-models'
+    | 'rejected'
+    | 'bridge';
   pid: number;
   argv: string[];
   cwd: string;
@@ -96,36 +132,250 @@ interface FakeTrace {
 
 afterEach(async () => {
   await Promise.all(sandboxes.splice(0).map((sandbox) => rm(sandbox, { recursive: true })));
+  delete process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH;
+  ClaudeBinaryResolver.clearCache();
 });
 
 describe('issue #443 Desktop real child-process wire contract', () => {
-  it('uses provider-scoped authoritative status through the disposable executable', async () => {
+  it('authorizes model-only OpenCode status only with scoped model evidence', async () => {
     const fake = await createFake('valid');
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
 
-    const selected = await new ClaudeMultimodelBridgeService().getProviderStatus(
+    const passive = await new ClaudeMultimodelBridgeService().getProviderStatus(
       fake.executable,
       'opencode',
       undefined,
       { projectPath: fake.project }
     );
-
-    expect(selected).toMatchObject({
+    expect(passive).toMatchObject({
       providerId: 'opencode',
-      statusCheckOutcome: 'authoritative',
-      modelCatalog: { defaultLaunchModel: MODEL },
-      capabilities: { teamLaunch: true },
+      statusCheckOutcome: 'model_only',
+      modelCatalog: null,
+      capabilities: { teamLaunch: false },
     });
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), {
+        selectedModels: [],
+        scopedStatusBySourceId: new Map(),
+      }).blocked(true)
+    ).toBe(true);
+
+    const scopedResponse = await providerManagementDesktopHarness().bridge.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      requestGroupId: 'issue443-scoped-authority',
+    });
+    expect(scopedResponse.error).toBeUndefined();
+    const scopedStatus: CliProviderStatus = {
+      ...passive,
+      models: [MODEL],
+      modelAvailability: [{ modelId: MODEL, status: 'available' }],
+      modelCatalogRefreshState: 'ready',
+      modelCatalog: {
+        schemaVersion: 1,
+        providerId: 'opencode',
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: NOW,
+        staleAt: '2099-01-01T00:00:00.000Z',
+        defaultModelId: MODEL,
+        defaultLaunchModel: MODEL,
+        models: [
+          {
+            id: MODEL,
+            launchModel: MODEL,
+            displayName: MODEL,
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+          },
+        ],
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      },
+    };
+    expect(
+      createLaunchGuard(['opencode'], new Map([['opencode', passive]]), {
+        selectedModels: [MODEL],
+        scopedStatusBySourceId: new Map([['deepinfra', scopedStatus]]),
+      }).blocked(true)
+    ).toBe(false);
+
     const traces = await fake.traces();
-    expect(traces).toHaveLength(2);
-    expect(traces.every((trace) => trace.kind === 'provider-status')).toBe(true);
+    expect(traces.map((trace) => trace.kind)).toEqual(['provider-status', 'provider-models']);
     expect(traces.every((trace) => trace.cwd === fake.project)).toBe(true);
-    expect(traces.map((trace) => trace.argv)).toEqual([
-      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
-      ['runtime', 'status', '--json', '--provider', 'opencode'],
+    expect(traces[0].argv).toEqual([
+      'runtime',
+      'status',
+      '--json',
+      '--provider',
+      'opencode',
+      '--summary',
     ]);
+    expect(traces[1].argv).toContain('deepinfra');
     assertProcessesExited(traces);
+  });
+
+  it('routes selected provider pagination through the production preload and IPC path', async () => {
+    const fake = await createFake('paginated-catalog');
+    const desktop = providerManagementDesktopHarness();
+    const firstPage = await desktop.bridge.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      limit: 1,
+      requestGroupId: 'issue443-pagination',
+    });
+    expect(firstPage.error).toBeUndefined();
+    const nextCursor = firstPage.models?.nextCursor;
+    expect(nextCursor).toBe('deepinfra-page-2');
+    const secondPage = await desktop.bridge.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      limit: 1,
+      cursor: nextCursor,
+      requestGroupId: 'issue443-pagination',
+    });
+
+    expect(firstPage.models?.models.map((model) => model.modelId)).toEqual([MODEL]);
+    expect(secondPage.models?.models.map((model) => model.modelId)).toEqual([
+      'deepinfra/deepseek-ai/DeepSeek-R1',
+    ]);
+    const traces = await fake.traces();
+    expect(traces.map((trace) => trace.kind)).toEqual(['provider-models', 'provider-models']);
+    expect(desktop.invokedChannels).toEqual([
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+    ]);
+    expect(traces.map((trace) => trace.cwd)).toEqual([fake.project, fake.project]);
+    expect(traces.map((trace) => trace.argv)).toEqual([
+      [
+        'runtime',
+        'providers',
+        'models',
+        '--runtime',
+        'opencode',
+        '--provider',
+        'deepinfra',
+        '--json',
+        '--limit',
+        '1',
+        '--project-path',
+        fake.project,
+      ],
+      [
+        'runtime',
+        'providers',
+        'models',
+        '--runtime',
+        'opencode',
+        '--provider',
+        'deepinfra',
+        '--json',
+        '--limit',
+        '1',
+        '--cursor',
+        'deepinfra-page-2',
+        '--project-path',
+        fake.project,
+      ],
+    ]);
+    expect(traces.some((trace) => trace.argv.includes('kiro'))).toBe(false);
+    expect(traces.some((trace) => trace.argv.includes('cursor-acp'))).toBe(false);
+    assertProcessesExited(traces);
+  });
+
+  it('cancels an old request group while a replacement group loads built-in OpenCode Zen', async () => {
+    const fake = await createFake('slow-catalog');
+    const desktop = providerManagementDesktopHarness();
+    const slowDeepInfra = desktop.bridge.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      requestGroupId: 'issue443-selected-provider-old',
+    });
+    await vi.waitFor(
+      async () => {
+        expect((await fake.traces()).filter((trace) => trace.kind === 'provider-models-request'))
+          .toHaveLength(1);
+      },
+      { timeout: 5_000, interval: 25 }
+    );
+
+    const builtInPromise = desktop.bridge.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'opencode',
+      projectPath: fake.project,
+      requestGroupId: 'issue443-selected-provider-new',
+    });
+    void desktop.bridge.cancelModelLoad({
+      requestGroupId: 'issue443-selected-provider-old',
+    });
+    const [builtIn, superseded] = await Promise.all([builtInPromise, slowDeepInfra]);
+
+    expect(superseded.error).toBeDefined();
+    expect(builtIn.models).toMatchObject({
+      providerId: 'opencode',
+      defaultModelId: 'opencode/nemotron-3-super-free',
+    });
+    expect(builtIn.models?.models.map((model) => model.modelId)).toEqual([
+      'opencode/nemotron-3-super-free',
+    ]);
+    const traces = await fake.traces();
+    expect(traces.map((trace) => trace.kind)).toEqual([
+      'provider-models-request',
+      'provider-models',
+    ]);
+    expect(desktop.invokedChannels).toEqual([
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+      RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
+    ]);
+    expect(traces.every((trace) => trace.cwd === fake.project)).toBe(true);
+    expect(traces.map((trace) => trace.argv.slice(5, 8))).toEqual([
+      ['--provider', 'deepinfra', '--json'],
+      ['--provider', 'opencode', '--json'],
+    ]);
+    expect(traces.every((trace) => !trace.argv.includes('--request-group-id'))).toBe(true);
+    assertProcessesExited(traces);
+  });
+
+  it('cancels the real provider process when its catalog scope disappears', async () => {
+    const fake = await createFake('slow-catalog');
+    const desktop = providerManagementDesktopHarness();
+    const pending = desktop.bridge.loadModels({
+      runtimeId: 'opencode',
+      providerId: 'deepinfra',
+      projectPath: fake.project,
+      requestGroupId: 'issue443-closing-scope',
+    });
+    await vi.waitFor(
+      async () => {
+        expect((await fake.traces()).filter((trace) => trace.kind === 'provider-models-request'))
+          .toHaveLength(1);
+      },
+      { timeout: 5_000, interval: 25 }
+    );
+
+    await expect(
+      desktop.bridge.cancelModelLoad({ requestGroupId: 'issue443-closing-scope' })
+    ).resolves.toEqual({ ok: true });
+    expect((await pending).error).toBeDefined();
+
+    const traces = await fake.traces();
+    expect(traces.map((trace) => trace.kind)).toEqual(['provider-models-request']);
+    assertProcessesExited(traces);
+    expect(desktop.invokedChannels).toEqual([
+      RUNTIME_PROVIDER_MANAGEMENT_MODELS,
+      RUNTIME_PROVIDER_MANAGEMENT_CANCEL_MODEL_LOAD,
+    ]);
   });
 
   it('crosses the real Desktop child boundary with exact v2 proof bindings and framing', async () => {
@@ -324,6 +574,38 @@ describe('issue #443 Desktop real child-process wire contract', () => {
   });
 });
 
+function providerManagementDesktopHarness() {
+  const handlers = new Map<string, (...args: unknown[]) => Promise<unknown>>();
+  const ipcMain = {
+    handle: vi.fn((channel: string, handler: (...args: unknown[]) => Promise<unknown>) => {
+      handlers.set(channel, handler);
+    }),
+  } as unknown as IpcMain;
+  registerRuntimeProviderManagementIpc(
+    ipcMain,
+    createRuntimeProviderManagementFeature({
+      port: new AgentTeamsRuntimeProviderManagementCliClient(),
+    })
+  );
+
+  const invokedChannels: string[] = [];
+  const ipcRenderer = {
+    invoke: vi.fn(async (channel: string, ...args: unknown[]) => {
+      invokedChannels.push(channel);
+      const handler = handlers.get(channel);
+      if (!handler) {
+        throw new Error(`No fake IPC handler registered for ${channel}`);
+      }
+      return handler({}, ...args);
+    }),
+  } as unknown as IpcRenderer;
+
+  return {
+    bridge: createRuntimeProviderManagementBridge(ipcRenderer),
+    invokedChannels,
+  };
+}
+
 async function realContractHarness(scenario: string, publicationFailure?: Error) {
   const fake = await createFake(scenario);
   const bridge = new OpenCodeBridgeCommandClient({
@@ -350,7 +632,7 @@ async function realContractHarness(scenario: string, publicationFailure?: Error)
   } as unknown as OpenCodeBridgeCommandLedger & Record<string, ReturnType<typeof vi.fn>>;
   let leaseNumber = 0;
   const leaseStore = {
-    acquire: vi.fn(async (input: Record<string, unknown>) => ({
+    acquire: vi.fn((input: Record<string, unknown>) => Promise.resolve({
       ...input,
       leaseId: `issue443-lease-${++leaseNumber}`,
       laneId: input.laneId ?? null,
@@ -388,10 +670,11 @@ async function realContractHarness(scenario: string, publicationFailure?: Error)
     fake,
     ledger,
     async launch(input: TeamRuntimeLaunchInput) {
+      const requestedLaneId = input.laneId?.trim();
       await setOpenCodeRuntimeActiveRunManifest({
         teamsBasePath,
         teamName: input.teamName,
-        laneId: input.laneId?.trim() || 'primary',
+        laneId: requestedLaneId && requestedLaneId.length > 0 ? requestedLaneId : 'primary',
         runId: input.runId,
       });
       return adapter.launch(input);
@@ -411,6 +694,8 @@ async function createFake(scenario: string) {
   await chmod(executable, 0o700);
   process.env.ISSUE443_FAKE_SCENARIO = scenario;
   process.env.ISSUE443_FAKE_TRACE_FILE = traceFile;
+  process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = executable;
+  ClaudeBinaryResolver.clearCache();
   return {
     sandbox,
     project,
@@ -418,7 +703,7 @@ async function createFake(scenario: string) {
     executable,
     traceFile,
     async traces(): Promise<FakeTrace[]> {
-      const raw = await readFile(traceFile, 'utf8');
+      const raw = await readFile(traceFile, 'utf8').catch(() => '');
       return raw.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line) as FakeTrace);
     },
     remainingBridgeFiles: () => readdir(bridgeTemp),

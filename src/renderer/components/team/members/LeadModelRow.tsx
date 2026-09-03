@@ -14,6 +14,7 @@ import {
   getProviderScopedTeamModelLabel,
   getTeamProviderLabel,
   TeamModelSelector,
+  type TeamModelSelectorProps,
 } from '@renderer/components/team/dialogs/TeamModelSelector';
 import { Checkbox } from '@renderer/components/ui/checkbox';
 import { Label } from '@renderer/components/ui/label';
@@ -56,6 +57,7 @@ interface LeadModelRowProps {
   modelAdvisoryReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelIssueReasonByValue?: Partial<Record<string, string | null | undefined>>;
   modelUnavailableReasonByValue?: Partial<Record<string, string | null | undefined>>;
+  onOpenCodeProviderScopedStatusChange?: TeamModelSelectorProps['onOpenCodeProviderScopedStatusChange'];
   showAnthropicContextLimit?: boolean;
   disableAnthropicContextLimit?: boolean;
   projectPath?: string | null;
@@ -82,6 +84,7 @@ export const LeadModelRow = ({
   modelAdvisoryReasonByValue,
   modelIssueReasonByValue,
   modelUnavailableReasonByValue,
+  onOpenCodeProviderScopedStatusChange,
   showAnthropicContextLimit = providerId === 'anthropic',
   disableAnthropicContextLimit,
   projectPath,
@@ -284,6 +287,7 @@ export const LeadModelRow = ({
               ...(model.trim() && modelIssueText ? { [model.trim()]: modelIssueText } : {}),
             }}
             modelUnavailableReasonByValue={modelUnavailableReasonByValue}
+            onOpenCodeProviderScopedStatusChange={onOpenCodeProviderScopedStatusChange}
           />
           <EffortLevelSelector
             value={effort ?? ''}

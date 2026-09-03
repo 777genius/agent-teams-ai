@@ -109,6 +109,24 @@ function deferredPublication(): {
 }
 
 describe('TeamProvisioningPrepareCoordinator', () => {
+  it('does not run broad OpenCode readiness when automatic diagnostics have no selected model', async () => {
+    const prepare = vi.fn();
+    const coordinator = createCoordinator({
+      getOpenCodeRuntimeAdapter: () => ({ prepare }) as unknown as TeamLaunchRuntimeAdapter,
+    });
+
+    const result = await coordinator.prepareForProvisioning('/workspace/opencode-passive', {
+      providerId: 'opencode',
+      modelVerificationMode: 'deep',
+    });
+
+    expect(prepare).not.toHaveBeenCalled();
+    expect(result.ready).toBe(true);
+    expect(result.details).toContain(
+      'OpenCode readiness is deferred until launch has a selected model.'
+    );
+  });
+
   it('coalesces matching prepare requests and returns cloned results', async () => {
     let releaseProbe: ((value: { warning?: string }) => void) | null = null;
     const probeClaudeRuntime = vi.fn(
@@ -547,6 +565,26 @@ describe('TeamProvisioningPrepareCoordinator', () => {
       'codex-default',
       undefined,
     ]);
+  });
+
+  it('rejects an OpenCode default without invoking broad model discovery', async () => {
+    const resolveProviderDefaultModel = vi.fn();
+    const buildProvisioningEnv = vi.fn();
+    const coordinator = createCoordinator({
+      buildProvisioningEnv,
+      resolveProviderDefaultModel,
+    });
+
+    await expect(
+      coordinator.materializeEffectiveTeamMemberSpecs({
+        claudePath: '/fake/claude',
+        cwd: '/workspace/materialize',
+        members: [{ name: 'one', role: 'One', providerId: 'opencode' }],
+        defaults: {},
+      })
+    ).rejects.toThrow('Select an explicit model and retry');
+    expect(buildProvisioningEnv).not.toHaveBeenCalled();
+    expect(resolveProviderDefaultModel).not.toHaveBeenCalled();
   });
 
   it('resolves missing OpenCode worktree member paths through the worktree port', async () => {

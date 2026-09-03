@@ -467,8 +467,8 @@ function reconcileCliInstallationStatus(
   const mergedProviders =
     current?.flavor === 'agent_teams_orchestrator' &&
     areArraysEqual(providers, current.providers, Object.is)
-    ? current.providers
-    : providers;
+      ? current.providers
+      : providers;
 
   const merged: CliInstallationStatus = {
     ...incoming,
@@ -860,6 +860,7 @@ export interface CliInstallerSlice {
     providerId: CliProviderId,
     options?: CliProviderStatusFetchOptions
   ) => Promise<boolean>;
+  invalidateCliProviderModelCatalog: () => void;
   invalidateCliStatus: () => Promise<void>;
   installCli: () => void;
   fetchOpenCodeRuntimeStatus: () => Promise<void>;
@@ -873,6 +874,7 @@ export interface CliInstallerSlice {
 let cliStatusInFlight: Promise<void> | null = null;
 const cliProviderStatusInFlight = new Map<string, Promise<boolean>>();
 let cliStatusEpoch = 0;
+let cliProviderStatusGeneration = 0;
 let cliProviderStatusRequestId = 0;
 const cliProviderStatusActiveRequestIds = new Map<string, number>();
 const codexCatalogLoadingRefreshAttempts = new Map<CliProviderId, number>();
@@ -1220,11 +1222,12 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     if (inFlight) return inFlight;
 
     const requestEpoch = options?.epoch ?? cliStatusEpoch;
+    const requestGeneration = cliProviderStatusGeneration;
     const requestId = ++cliProviderStatusRequestId;
     const silent = options?.silent === true;
     const requestStartedAtMs = Date.now();
     const previousProviderStatus = getProviderStatus(get().cliStatus, providerId);
-    cliProviderStatusActiveRequestIds.set(requestKey, requestId);
+    cliProviderStatusActiveRequestIds.set(scopeKey, requestId);
 
     // Assigned before the first awaited continuation and referenced by its own cleanup.
     let request!: Promise<boolean>;
@@ -1290,7 +1293,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
               });
         const requestIsCurrent =
           requestEpoch === cliStatusEpoch &&
-          cliProviderStatusActiveRequestIds.get(requestKey) === requestId;
+          requestGeneration === cliProviderStatusGeneration &&
+          cliProviderStatusActiveRequestIds.get(scopeKey) === requestId;
         if (
           !silent &&
           !verifyModels &&
@@ -1316,7 +1320,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
           if (
             requestEpoch !== cliStatusEpoch ||
-            cliProviderStatusActiveRequestIds.get(requestKey) !== requestId
+            requestGeneration !== cliProviderStatusGeneration ||
+            cliProviderStatusActiveRequestIds.get(scopeKey) !== requestId
           ) {
             return {};
           }
@@ -1401,7 +1406,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         });
         const requestIsCurrent =
           requestEpoch === cliStatusEpoch &&
-          cliProviderStatusActiveRequestIds.get(requestKey) === requestId;
+          requestGeneration === cliProviderStatusGeneration &&
+          cliProviderStatusActiveRequestIds.get(scopeKey) === requestId;
         if (
           !silent &&
           !verifyModels &&
@@ -1429,7 +1435,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
 
           if (
             requestEpoch !== cliStatusEpoch ||
-            cliProviderStatusActiveRequestIds.get(requestKey) !== requestId
+            requestGeneration !== cliProviderStatusGeneration ||
+            cliProviderStatusActiveRequestIds.get(scopeKey) !== requestId
           ) {
             return {};
           }
@@ -1500,14 +1507,16 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
                 },
           };
         });
-        clearCodexCatalogLoadingRefresh(providerId);
+        if (requestIsCurrent) {
+          clearCodexCatalogLoadingRefresh(providerId);
+        }
         return false;
       } finally {
         if (cliProviderStatusInFlight.get(requestKey) === request) {
           cliProviderStatusInFlight.delete(requestKey);
         }
-        if (cliProviderStatusActiveRequestIds.get(requestKey) === requestId) {
-          cliProviderStatusActiveRequestIds.delete(requestKey);
+        if (cliProviderStatusActiveRequestIds.get(scopeKey) === requestId) {
+          cliProviderStatusActiveRequestIds.delete(scopeKey);
         }
       }
     })();
@@ -1516,9 +1525,28 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     return request;
   },
 
+  invalidateCliProviderModelCatalog: () => {
+    const invalidatedProviderIds = new Set<CliProviderId>();
+    for (const requestKey of cliProviderStatusActiveRequestIds.keys()) {
+      invalidatedProviderIds.add(requestKey.split('\0', 1)[0] as CliProviderId);
+    }
+    cliProviderStatusGeneration += 1;
+    cliProviderStatusInFlight.clear();
+    cliProviderStatusActiveRequestIds.clear();
+    set((state) => {
+      const nextLoading = { ...state.cliProviderStatusLoading };
+      for (const providerId of invalidatedProviderIds) delete nextLoading[providerId];
+      return {
+        cliProviderStatusLoading: nextLoading,
+        cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
+      };
+    });
+  },
+
   invalidateCliStatus: async () => {
     clearCodexCatalogLoadingRefresh('codex');
     cliStatusEpoch += 1;
+    cliProviderStatusGeneration += 1;
     cliStatusInFlight = null;
     cliProviderStatusInFlight.clear();
     cliProviderStatusActiveRequestIds.clear();

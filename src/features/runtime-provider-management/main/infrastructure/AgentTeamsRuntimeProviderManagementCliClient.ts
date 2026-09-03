@@ -32,6 +32,7 @@ import {
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
+import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
   sanitizeRuntimeProviderModelTestResponse,
@@ -39,6 +40,7 @@ import {
 } from './runtimeProviderModelTestBoundary';
 
 import type {
+  RuntimeProviderManagementCancelModelLoadInput,
   RuntimeProviderManagementCancelModelTestInput,
   RuntimeProviderManagementCancelOAuthInput,
   RuntimeProviderManagementClearProjectDefaultInput,
@@ -128,13 +130,6 @@ interface DirectoryResponseCacheEntry {
 interface ModelResponseCacheEntry {
   expiresAt: number;
   response: RuntimeProviderManagementModelsResponse;
-}
-
-interface ModelResponseInFlightEntry {
-  controller: AbortController;
-  hasUngroupedSubscriber: boolean;
-  requestGroups: Set<string>;
-  promise: Promise<RuntimeProviderManagementModelsResponse>;
 }
 
 export interface RuntimeProviderOAuthClientDependencies {
@@ -1313,8 +1308,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   >();
   private directoryResponseCacheGeneration = 0;
   private readonly modelResponseCache = new Map<string, ModelResponseCacheEntry>();
-  private readonly modelResponseInFlight = new Map<string, ModelResponseInFlightEntry>();
-  private readonly activeModelRequestGroups = new Map<string, string>();
+  private readonly modelRequests = new RuntimeProviderModelRequestTracker();
   private readonly activeModelTestRequestGroups = new Map<string, AbortController>();
   private modelResponseCacheGeneration = 0;
   private readonly activeOAuthOperations = new Map<string, ActiveRuntimeProviderOAuthOperation>();
@@ -1456,13 +1450,21 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     cacheKey: string,
     response: RuntimeProviderManagementModelsResponse,
     ttlMs: number,
-    cacheGeneration: number
+    cacheGeneration: number,
+    cacheKeyGeneration: number
   ): RuntimeProviderManagementModelsResponse {
     if (
-      cacheGeneration === this.modelResponseCacheGeneration &&
+      (cacheGeneration !== this.modelResponseCacheGeneration ||
+        !this.modelRequests.isGenerationCurrent(cacheKey, cacheKeyGeneration)) &&
       response.models &&
       !response.error
     ) {
+      return {
+        ...response,
+        models: { ...response.models, catalogState: 'stale' },
+      };
+    }
+    if (response.models && !response.error) {
       this.modelResponseCache.delete(cacheKey);
       this.pruneModelResponseCache();
       this.modelResponseCache.set(cacheKey, {
@@ -1482,66 +1484,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private invalidateModelResponseCache(abortInFlight = true): void {
     this.modelResponseCacheGeneration += 1;
     this.modelResponseCache.clear();
-    if (!abortInFlight) {
-      // Detach stale work from deduplication without disrupting callers that
-      // are already displaying it. A refresh can then start a fresh request
-      // immediately, and the detached response cannot repopulate the cache
-      // because its generation no longer matches.
-      this.modelResponseInFlight.clear();
-      this.activeModelRequestGroups.clear();
-      return;
-    }
-    for (const entry of this.modelResponseInFlight.values()) {
-      entry.controller.abort();
-    }
-    this.modelResponseInFlight.clear();
-    this.activeModelRequestGroups.clear();
+    this.modelRequests.clear(abortInFlight);
   }
 
   private invalidateProviderResponseCaches(): void {
     this.invalidateDirectoryResponseCache();
     this.invalidateModelResponseCache();
-  }
-
-  private releaseSupersededModelRequest(requestGroupId: string, nextCacheKey: string): void {
-    const previousCacheKey = this.activeModelRequestGroups.get(requestGroupId);
-    if (!previousCacheKey || previousCacheKey === nextCacheKey) {
-      return;
-    }
-    this.activeModelRequestGroups.delete(requestGroupId);
-    const previousEntry = this.modelResponseInFlight.get(previousCacheKey);
-    if (!previousEntry) {
-      return;
-    }
-    previousEntry.requestGroups.delete(requestGroupId);
-    if (!previousEntry.hasUngroupedSubscriber && previousEntry.requestGroups.size === 0) {
-      previousEntry.controller.abort();
-    }
-  }
-
-  private registerModelRequestSubscriber(
-    entry: ModelResponseInFlightEntry,
-    cacheKey: string,
-    requestGroupId: string | null
-  ): void {
-    if (requestGroupId) {
-      entry.requestGroups.add(requestGroupId);
-      this.activeModelRequestGroups.set(requestGroupId, cacheKey);
-      return;
-    }
-    entry.hasUngroupedSubscriber = true;
-  }
-
-  private cleanupModelResponseInFlight(cacheKey: string, entry: ModelResponseInFlightEntry): void {
-    if (this.modelResponseInFlight.get(cacheKey) !== entry) {
-      return;
-    }
-    this.modelResponseInFlight.delete(cacheKey);
-    for (const requestGroupId of entry.requestGroups) {
-      if (this.activeModelRequestGroups.get(requestGroupId) === cacheKey) {
-        this.activeModelRequestGroups.delete(requestGroupId);
-      }
-    }
   }
 
   private beginModelTestRequest(requestGroupId: string | null): AbortController | null {
@@ -2270,7 +2218,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       this.invalidateProviderResponseCaches();
     }
   }
-
   async loadModels(
     input: RuntimeProviderManagementLoadModelsInput
   ): Promise<RuntimeProviderManagementModelsResponse> {
@@ -2278,52 +2225,65 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     const cacheKey = this.getModelResponseCacheKey(input, projectPath);
     const requestGroupId = input.requestGroupId?.trim() || null;
     if (requestGroupId) {
-      this.releaseSupersededModelRequest(requestGroupId, cacheKey);
+      this.modelRequests.releaseSuperseded(requestGroupId, cacheKey);
     }
-
-    const cached = this.readModelResponseCache(cacheKey);
+    const currentRefresh =
+      input.refresh === true ? this.modelRequests.reuseRefresh(cacheKey, requestGroupId) : null;
+    if (currentRefresh) return currentRefresh;
+    if (input.refresh === true) {
+      this.modelResponseCache.delete(cacheKey);
+      this.modelRequests.beginRefresh(cacheKey);
+    }
+    const cached = input.refresh === true ? null : this.readModelResponseCache(cacheKey);
     if (cached) {
-      if (requestGroupId && this.activeModelRequestGroups.get(requestGroupId) === cacheKey) {
-        this.activeModelRequestGroups.delete(requestGroupId);
-      }
+      if (requestGroupId) this.modelRequests.releaseForCacheHit(requestGroupId, cacheKey);
       return cached;
     }
-
-    const existingRequest = this.modelResponseInFlight.get(cacheKey);
-    if (existingRequest) {
-      this.registerModelRequestSubscriber(existingRequest, cacheKey, requestGroupId);
+    const existingRequest = this.modelRequests.get(cacheKey);
+    if (existingRequest?.controller.signal.aborted) {
+      this.modelRequests.discard(cacheKey);
+    } else if (existingRequest) {
+      this.modelRequests.register(existingRequest, cacheKey, requestGroupId);
       return existingRequest.promise;
     }
-
     const controller = new AbortController();
     const cacheGeneration = this.modelResponseCacheGeneration;
+    const cacheKeyGeneration = this.modelRequests.getGeneration(cacheKey);
     const promise = this.loadModelsUncached(
       input,
       projectPath,
       cacheKey,
       cacheGeneration,
+      cacheKeyGeneration,
       controller.signal
     );
-    const inFlightEntry: ModelResponseInFlightEntry = {
+    const inFlightEntry = {
       controller,
+      refresh: input.refresh === true,
       hasUngroupedSubscriber: false,
       requestGroups: new Set<string>(),
       promise,
     };
-    this.registerModelRequestSubscriber(inFlightEntry, cacheKey, requestGroupId);
-    this.modelResponseInFlight.set(cacheKey, inFlightEntry);
+    this.modelRequests.register(inFlightEntry, cacheKey, requestGroupId);
+    this.modelRequests.set(cacheKey, inFlightEntry);
     try {
       return await promise;
     } finally {
-      this.cleanupModelResponseInFlight(cacheKey, inFlightEntry);
+      this.modelRequests.cleanup(cacheKey, inFlightEntry);
     }
   }
-
+  async cancelModelLoad(
+    input: RuntimeProviderManagementCancelModelLoadInput
+  ): Promise<RuntimeProviderManagementModelTestControlResponse> {
+    this.modelRequests.cancel(input.requestGroupId.trim());
+    return { ok: true };
+  }
   private async loadModelsUncached(
     input: RuntimeProviderManagementLoadModelsInput,
     projectPath: string | null,
     cacheKey: string,
     cacheGeneration: number,
+    cacheKeyGeneration: number,
     signal: AbortSignal
   ): Promise<RuntimeProviderManagementModelsResponse> {
     const { binaryPath, env } = await resolveCliEnv();
@@ -2333,7 +2293,6 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         projectPath
       );
     }
-
     let args = [
       'runtime',
       'providers',
@@ -2362,7 +2321,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     if (misconfigured) {
       return misconfigured;
     }
-
+    const cacheTtlMs = this.getModelResponseCacheTtlMs(input);
     try {
       const { stdout, stderr } = await execCli(binaryPath, args, {
         ...runtimeProviderCommandOptions({ env }, projectPath),
@@ -2376,13 +2335,20 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           context,
           stderr
         ),
-        this.getModelResponseCacheTtlMs(input),
-        cacheGeneration
+        cacheTtlMs,
+        cacheGeneration,
+        cacheKeyGeneration
       );
     } catch (error) {
       const response = extractJsonObjectFromError<RuntimeProviderManagementModelsResponse>(error);
       if (response) {
-        return response;
+        return this.writeModelResponseCache(
+          cacheKey,
+          response,
+          cacheTtlMs,
+          cacheGeneration - (signal.aborted ? 1 : 0),
+          cacheKeyGeneration
+        );
       }
       return commandFailureResponse<RuntimeProviderManagementModelsResponse>(
         input.runtimeId,

@@ -6,7 +6,6 @@ import {
 } from '@features/team-runtime-lanes';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isLeadMember } from '@shared/utils/leadDetection';
-import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -24,10 +23,6 @@ import {
   buildEffectiveTeamMemberSpec,
   normalizeTeamMemberProviderId,
 } from './TeamProvisioningMemberSpecs';
-import {
-  normalizeOpenCodePrepareDiagnostic,
-  selectOpenCodePrepareProviderDiagnostic,
-} from './TeamProvisioningOpenCodeDiagnosticsPolicy';
 import { prepareSelectedOpenCodeModelsForProvisioning } from './TeamProvisioningOpenCodeModelPreparation';
 import { isAuthFailureWarning, isQuotaRetryMessage } from './TeamProvisioningOutputErrorPolicy';
 import { createPrepareForProvisioningInFlightKey as buildPrepareForProvisioningInFlightKey } from './TeamProvisioningPrepareCachePolicy';
@@ -272,38 +267,8 @@ export class TeamProvisioningPrepareCoordinator {
           );
           continue;
         }
-        if (providerSelectedModelIds.length === 0 && verificationMode !== 'compatibility') {
-          const prepare = await adapter.prepare({
-            runId: `prepare-${randomUUID()}`,
-            teamName: '__prepare_opencode__',
-            cwd: targetCwd,
-            providerId: 'opencode',
-            model: undefined,
-            runtimeOnly: true,
-            skipPermissions: true,
-            expectedMembers: [],
-            previousLaunchState: null,
-          });
-          const prepareReason = prepare.ok ? undefined : prepare.reason;
-          details.push(
-            ...prepare.diagnostics.map((diagnostic) =>
-              normalizeOpenCodePrepareDiagnostic(diagnostic, prepareReason)
-            )
-          );
-          warnings.push(
-            ...prepare.warnings.map((warning) =>
-              normalizeOpenCodePrepareDiagnostic(warning, prepareReason)
-            )
-          );
-          pushUniqueSupportDiagnostics(supportDiagnostics, prepare.supportDiagnostics);
-          if (!prepare.ok) {
-            const providerDiagnostic = selectOpenCodePrepareProviderDiagnostic(prepare);
-            blockingMessages.push(
-              providerDiagnostic
-                ? normalizeOpenCodePrepareDiagnostic(providerDiagnostic, prepare.reason)
-                : normalizeOpenCodePrepareDiagnostic(`OpenCode: ${prepare.reason}`, prepare.reason)
-            );
-          }
+        if (providerSelectedModelIds.length === 0) {
+          details.push('OpenCode readiness is deferred until launch has a selected model.');
           continue;
         }
         const openCodeModelPrepare = await prepareSelectedOpenCodeModelsForProvisioning({
@@ -741,6 +706,12 @@ export class TeamProvisioningPrepareCoordinator {
       if (providerId === 'anthropic' || effectiveMember.model?.trim()) {
         effectiveMembers.push(effectiveMember);
         continue;
+      }
+      if (providerId === 'opencode') {
+        throw new Error(
+          'Could not resolve the runtime default model for OpenCode teammates. ' +
+            'Select an explicit model and retry.'
+        );
       }
 
       effectiveMembers.push({
