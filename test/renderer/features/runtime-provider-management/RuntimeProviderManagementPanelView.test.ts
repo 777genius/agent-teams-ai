@@ -315,6 +315,7 @@ describe('RuntimeProviderManagementPanelView', () => {
           actions,
           disabled: false,
           projectPath: '/workspace/project-a',
+          bundledRuntimeVersion: '0.0.74',
         })
       );
       await Promise.resolve();
@@ -363,6 +364,7 @@ describe('RuntimeProviderManagementPanelView', () => {
           actions,
           disabled: false,
           projectPath: '/workspace/project-a',
+          bundledRuntimeVersion: '0.0.74',
         })
       );
       await Promise.resolve();
