@@ -1,3 +1,5 @@
+/* eslint-disable sonarjs/publicly-writable-directories -- Test-only project paths are never written. */
+
 import { describe, expect, test, vi } from 'vitest';
 
 import { ClaudeMultimodelBridgeService } from './ClaudeMultimodelBridgeService';
@@ -289,3 +291,5 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
     });
   });
 });
+
+/* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after test-only temp path fixtures. */
