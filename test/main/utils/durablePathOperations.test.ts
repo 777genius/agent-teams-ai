@@ -13,7 +13,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { removePathWithIdentityFenceAsync } from '../../../src/main/utils/durablePathOperations';
+import { removePathWithIdentityFenceAsync } from '@main/utils/durablePathOperations';
 
 const realRename = fs.promises.rename;
 

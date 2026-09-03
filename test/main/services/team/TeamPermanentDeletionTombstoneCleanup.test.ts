@@ -20,12 +20,12 @@ vi.mock('@shared/utils/logger', () => ({
   }),
 }));
 
-import { TeamPermanentDeletionCoordinator } from '../../../../src/main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator';
-import { TeamPermanentDeletionIntentStore } from '../../../../src/main/services/team/permanent-deletion/TeamPermanentDeletionIntentStore';
-import { TeamPermanentDeletionLock } from '../../../../src/main/services/team/permanent-deletion/TeamPermanentDeletionLock';
+import { TeamPermanentDeletionCoordinator } from '@main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator';
+import { TeamPermanentDeletionIntentStore } from '@main/services/team/permanent-deletion/TeamPermanentDeletionIntentStore';
+import { TeamPermanentDeletionLock } from '@main/services/team/permanent-deletion/TeamPermanentDeletionLock';
 
-import type { TeamPermanentDeletionCoordinatorPorts } from '../../../../src/main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator';
-import type { TeamPermanentDeletionIntent } from '../../../../src/main/services/team/permanent-deletion/TeamPermanentDeletionTypes';
+import type { TeamPermanentDeletionCoordinatorPorts } from '@main/services/team/permanent-deletion/TeamPermanentDeletionCoordinator';
+import type { TeamPermanentDeletionIntent } from '@main/services/team/permanent-deletion/TeamPermanentDeletionTypes';
 
 const TRANSACTION_ID = '22222222-2222-4222-8222-222222222222';
 

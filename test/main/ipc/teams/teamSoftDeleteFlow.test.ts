@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { softDeleteTeamWithBestEffortStop } from '../../../../src/main/ipc/teams/teamSoftDeleteFlow';
+import { softDeleteTeamWithBestEffortStop } from '@main/ipc/teams/teamSoftDeleteFlow';
 
-import type { TeamSoftDeleteFlowPorts } from '../../../../src/main/ipc/teams/teamSoftDeleteFlow';
+import type { TeamSoftDeleteFlowPorts } from '@main/ipc/teams/teamSoftDeleteFlow';
 
 const STOP_TIMEOUT_MS = 5_000;
 

@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TeamPermanentDeletionTransactionCoordinator } from '../../../../src/main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
+import { TeamPermanentDeletionTransactionCoordinator } from '@main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
 
-import type { TeamPermanentDeletionTransactionCoordinatorPorts } from '../../../../src/main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
-import type { TeamAttachmentStore } from '../../../../src/main/services/team/TeamAttachmentStore';
+import type { TeamPermanentDeletionTransactionCoordinatorPorts } from '@main/ipc/teams/TeamPermanentDeletionTransactionCoordinator';
+import type { TeamAttachmentStore } from '@main/services/team/TeamAttachmentStore';
 import type {
   TeamBackupService,
   TeamPermanentDeletionIntent,
-} from '../../../../src/main/services/team/TeamBackupService';
-import type { TeamTaskAttachmentStore } from '../../../../src/main/services/team/TeamTaskAttachmentStore';
+} from '@main/services/team/TeamBackupService';
+import type { TeamTaskAttachmentStore } from '@main/services/team/TeamTaskAttachmentStore';
 
 type PermanentDeletionTarget = TeamPermanentDeletionIntent['completedTargets'][number];
 
