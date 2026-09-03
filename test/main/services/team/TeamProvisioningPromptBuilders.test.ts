@@ -64,6 +64,30 @@ describe('TeamProvisioningPromptBuilders', () => {
     );
   });
 
+  it('tells a non-solo lead not to execute the tasks it delegated', () => {
+    const prompt = buildPersistentLeadContext({
+      teamName: 'signal-ops',
+      leadName: 'lead',
+      isSolo: false,
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'tom', role: 'developer' },
+      ] as TeamCreateRequest['members'],
+    });
+
+    expect(prompt).toContain('Delegated work boundary (CRITICAL');
+    expect(prompt).toContain('DELEGATION-FIRST does not end once tasks are created');
+    expect(prompt).toContain('the ONLY work you may do yourself is coordination');
+    // The boundary is about ownership, not about any particular runtime.
+    expect(prompt).not.toMatch(/gpu|local model/i);
+    // The rule keeps its escape hatch: an explicit user instruction or solo mode.
+    expect(prompt).toContain('Exception: the user explicitly tells you to do that work yourself');
+    // The first-move rule names the same two escape hatches, so the two rules cannot disagree.
+    expect(prompt).toContain(
+      'Do NOT start implementing yourself unless the user explicitly tells you to do that work yourself, or the team is truly in SOLO MODE (no teammates).'
+    );
+  });
+
   it('allows reconnecting members to self-claim only unassigned tasks', () => {
     const prompt = buildReconnectMemberSpawnPrompt(
       { name: 'tom', role: 'developer' },
