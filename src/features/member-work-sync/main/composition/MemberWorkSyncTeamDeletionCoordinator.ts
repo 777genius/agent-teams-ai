@@ -32,12 +32,34 @@ export interface MemberWorkSyncTeamDeletionCoordinatorPorts {
   purgeTeam(teamName: string, deletionIdentityId?: string): Promise<void>;
 }
 
+/**
+ * Preparation quiesces the team before it waits, and the wait has no deadline
+ * of its own. A caller that bounds it has to be able to hand the quiesce back,
+ * or the team stays parked with no result and no error. That is what aborting
+ * through the signal does, and this is the failure both halves report.
+ */
+function abandonedPreparationError(teamName: string): Error {
+  return new Error(
+    `Member work sync deletion preparation for "${teamName}" was abandoned before it completed`
+  );
+}
+
 export class MemberWorkSyncTeamDeletionCoordinator {
   private readonly states = new Map<string, MemberWorkSyncTeamDeletionState>();
 
   constructor(private readonly ports: MemberWorkSyncTeamDeletionCoordinatorPorts) {}
 
-  prepare(teamName: string, deletionIdentityId?: string): Promise<void> {
+  prepare(
+    teamName: string,
+    deletionIdentityId?: string,
+    options: { signal?: AbortSignal } = {}
+  ): Promise<void> {
+    if (options.signal?.aborted === true) {
+      // An abort that arrives before the listener is attached would otherwise
+      // be ignored, and the generation would quiesce the team with nothing left
+      // to release it.
+      return Promise.reject(abandonedPreparationError(teamName));
+    }
     const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
     const currentState = this.states.get(teamKey);
     if (currentState?.preparation) {
@@ -68,10 +90,26 @@ export class MemberWorkSyncTeamDeletionCoordinator {
     state.preparation = preparation;
     this.states.set(teamKey, state);
 
-    void this.prepareGeneration(teamName, quiescedTeamName, state.deletionIdentityId).then(
-      resolvePreparation,
-      rejectPreparation
-    );
+    let aborted = false;
+    const abortPreparation = (): void => {
+      if (aborted || state.preparation !== preparation) return;
+      aborted = true;
+      // Drop this generation before releasing anything: a null preparation
+      // makes its late completion a no-op in finishPreparation, and removing
+      // the state stops a retry from being handed a promise that may never
+      // settle. resumeNow then gives back every quiescence source it took.
+      state.preparation = null;
+      this.resumeNow(teamName, teamKey, state, false);
+      rejectPreparation(abandonedPreparationError(teamName));
+    };
+    options.signal?.addEventListener('abort', abortPreparation, { once: true });
+
+    void this.prepareGeneration(
+      teamName,
+      quiescedTeamName,
+      state.deletionIdentityId,
+      () => aborted
+    ).then(resolvePreparation, rejectPreparation);
     const finishPreparation = (succeeded: boolean): void => {
       if (state.preparation !== preparation) return;
       state.preparation = null;
@@ -136,7 +174,8 @@ export class MemberWorkSyncTeamDeletionCoordinator {
   private async prepareGeneration(
     teamName: string,
     quiescedTeamName: string,
-    deletionIdentityId: string | null
+    deletionIdentityId: string | null,
+    isAborted: () => boolean
   ): Promise<void> {
     this.ports.beginOperationGateQuiesce(quiescedTeamName);
     this.ports.cancelScheduledDispatch(quiescedTeamName);
@@ -145,6 +184,12 @@ export class MemberWorkSyncTeamDeletionCoordinator {
     await this.ports.awaitOperationGateIdle(quiescedTeamName);
     await routerQuiesce;
     await this.ports.awaitAuditIdle(quiescedTeamName);
+    // Everything above is the wait a caller can give up on. Once it has, the
+    // team is running again, so this generation must not carry on into the
+    // destructive half and purge the work-sync state out from under it.
+    if (isAborted()) {
+      throw abandonedPreparationError(teamName);
+    }
     if (deletionIdentityId) {
       await this.ports.purgeTeam(teamName, deletionIdentityId);
     } else {

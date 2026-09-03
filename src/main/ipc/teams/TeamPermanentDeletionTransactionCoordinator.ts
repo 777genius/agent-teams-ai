@@ -21,7 +21,16 @@ interface TeamPermanentDeletionDataPort {
 }
 
 interface TeamPermanentDeletionLifecycle {
-  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
+  /**
+   * Quiesces the team and then waits for it to settle. The wait has no deadline
+   * of its own, so the caller brings one; aborting the signal abandons the
+   * preparation and releases everything it quiesced.
+   */
+  prepareTeamDeletion(
+    teamName: string,
+    deletionIdentityId?: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 }
@@ -251,6 +260,13 @@ export class TeamPermanentDeletionTransactionCoordinator {
    * a result nor an error: the dialog closes, the team stays, and nothing is
    * written anywhere the user can see. Bounding the wait turns that into a
    * rejection with a message that says what to do about it.
+   *
+   * Giving up on the wait is not enough on its own. The preparation quiesced
+   * the team's operation gate, audit journal and router before it started
+   * waiting, and it releases them only once it settles, so an abandoned wait
+   * would leave the team parked for the rest of the session and hand the same
+   * never-settling promise to every retry. The deadline therefore also aborts
+   * the preparation, which releases what it took and lets a retry start fresh.
    */
   private async prepareTeamDeletionWithTimeout(
     teamName: string,
@@ -258,28 +274,36 @@ export class TeamPermanentDeletionTransactionCoordinator {
   ): Promise<void> {
     const lifecycle = this.ports.lifecycle();
     if (!lifecycle) return;
-    const preparation = lifecycle.prepareTeamDeletion(teamName, deletionIdentityId);
+    const abandonPreparation = new AbortController();
+    const preparation = lifecycle.prepareTeamDeletion(teamName, deletionIdentityId, {
+      signal: abandonPreparation.signal,
+    });
     // The quiesce keeps running after a timeout; claim its rejection here so a
     // late failure cannot surface as an unhandled rejection.
     void preparation.catch(() => undefined);
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let timeoutFailure: Error | null = null;
     try {
       await Promise.race([
         preparation,
         new Promise<never>((_resolve, reject) => {
           timer = setTimeout(() => {
-            reject(
-              new Error(
-                `Permanent deletion of "${teamName}" timed out after ${PREPARE_TEAM_DELETION_TIMEOUT_MS}ms waiting for team activity to quiesce. ` +
-                  'The team was not deleted. Wait for running agents or runtime lanes to settle, then try again.'
-              )
+            const failure = new Error(
+              `Permanent deletion of "${teamName}" timed out after ${PREPARE_TEAM_DELETION_TIMEOUT_MS}ms waiting for team activity to quiesce. ` +
+                'The team was not deleted. Wait for running agents or runtime lanes to settle, then try again.'
             );
+            timeoutFailure = failure;
+            reject(failure);
           }, PREPARE_TEAM_DELETION_TIMEOUT_MS);
           timer.unref?.();
         }),
       ]);
     } finally {
       if (timer) clearTimeout(timer);
+      // After the race, so the caller still sees the timeout rather than the
+      // abort. A preparation that failed on its own is left alone: the retry
+      // path deliberately keeps that team quiesced behind its own fence.
+      if (timeoutFailure) abandonPreparation.abort();
     }
   }
 

@@ -37,7 +37,11 @@ function createIntent(): TeamPermanentDeletionIntent {
 }
 
 function createHarness(options: {
-  prepareTeamDeletion: () => Promise<void>;
+  prepareTeamDeletion: (
+    teamName: string,
+    deletionIdentityId?: string,
+    prepareOptions?: { signal?: AbortSignal }
+  ) => Promise<void>;
   releaseTeamScopedResources?: () => Promise<void>;
   withResourceHooks?: boolean;
 }): {
@@ -176,7 +180,8 @@ describe('TeamPermanentDeletionTransactionCoordinator quiesce timeout', () => {
 
     expect(harness.lifecycle.prepareTeamDeletion).toHaveBeenCalledWith(
       'fixteam',
-      '11111111-1111-4111-8111-111111111111'
+      '11111111-1111-4111-8111-111111111111',
+      { signal: expect.any(AbortSignal) }
     );
     expect(harness.permanentlyDeleteTeam).toHaveBeenCalledWith(
       'fixteam',
@@ -191,9 +196,51 @@ describe('TeamPermanentDeletionTransactionCoordinator quiesce timeout', () => {
     expect(harness.lifecycle.completeTeamDeletion).toHaveBeenCalledWith('fixteam');
   });
 
-  it('propagates a quiesce failure unchanged instead of reporting a timeout', async () => {
+  it('abandons the timed-out preparation so its quiesce is released', async () => {
+    let signal: AbortSignal | undefined;
     const harness = createHarness({
-      prepareTeamDeletion: async () => {
+      prepareTeamDeletion: (_teamName, _deletionIdentityId, prepareOptions) => {
+        signal = prepareOptions?.signal;
+        return new Promise<void>(() => undefined);
+      },
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    const rejection = expect(deletion).rejects.toThrow(
+      `Permanent deletion of "fixteam" timed out after ${PREPARE_TIMEOUT_MS}ms`
+    );
+    await vi.advanceTimersByTimeAsync(PREPARE_TIMEOUT_MS);
+    await rejection;
+
+    // Walking away from the wait is not enough: the preparation quiesced the
+    // team before it started waiting and only releases on its own terms, so the
+    // deadline has to tell it to stop. The caller still sees the timeout.
+    expect(signal).toBeDefined();
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('does not abandon a preparation that settled in time', async () => {
+    let signal: AbortSignal | undefined;
+    const harness = createHarness({
+      prepareTeamDeletion: (_teamName, _deletionIdentityId, prepareOptions) => {
+        signal = prepareOptions?.signal;
+        return new Promise<void>((resolve) => setTimeout(resolve, PREPARE_TIMEOUT_MS - 1));
+      },
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam');
+    await vi.advanceTimersByTimeAsync(PREPARE_TIMEOUT_MS * 2);
+    await expect(deletion).resolves.toBeUndefined();
+
+    // The team is deliberately still quiesced here - the deletion is running.
+    expect(signal?.aborted).toBe(false);
+  });
+
+  it('propagates a quiesce failure unchanged instead of reporting a timeout', async () => {
+    let signal: AbortSignal | undefined;
+    const harness = createHarness({
+      prepareTeamDeletion: async (_teamName, _deletionIdentityId, prepareOptions) => {
+        signal = prepareOptions?.signal;
         throw new Error('quiesce failed');
       },
     });
@@ -205,6 +252,9 @@ describe('TeamPermanentDeletionTransactionCoordinator quiesce timeout', () => {
 
     expect(harness.permanentlyDeleteTeam).not.toHaveBeenCalled();
     expect(harness.completePermanentDeletion).not.toHaveBeenCalled();
+    // A preparation that decided for itself keeps its own rules: it left the
+    // team quiesced on purpose so the retry stays fenced behind it.
+    expect(signal?.aborted).toBe(false);
   });
 });
 
