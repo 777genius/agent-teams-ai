@@ -398,6 +398,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
+  const [prepareRequested, setPrepareRequested] = useState(false);
   const [allowExperimentalLocalModels, setAllowExperimentalLocalModels] = useState(false);
   const providerReadyById = useMemo(
     () => getProvisioningProviderReadyById(prepareChecks),
@@ -818,6 +819,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     setPrepareMessage(null);
     setPrepareWarnings([]);
     setPrepareChecks([]);
+    setPrepareRequested(false);
     setAllowExperimentalLocalModels(false);
     setCwdMode('project');
     setSelectedProjectPath('');
@@ -1629,7 +1631,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   // Warm up CLI for the currently selected working directory (launch mode only).
   useEffect(() => {
-    if (!open || !isLaunchMode) {
+    if (!open || !isLaunchMode || !prepareRequested) {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
@@ -1857,6 +1859,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [
     open,
     isLaunchMode,
+    prepareRequested,
     effectiveCwd,
     effectiveAnthropicRuntimeLimitContext,
     prepareProviderInvalidationEpochById,
@@ -2281,7 +2284,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setLocalError(modelValidationError);
       return;
     }
-    if (launchGuard.reject(isLaunchMode, () => setLocalError(t('launch.prepare.failed')))) return;
     if (prepareBlocksLaunch) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
@@ -2312,6 +2314,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         return;
       }
     }
+    if (isLaunchMode && !prepareRequested) {
+      // Preparing a provider can execute a real CLI turn. Require the first
+      // launch click as explicit user confirmation before starting that work.
+      setPrepareRequested(true);
+      setPrepareState('loading');
+      setPrepareMessage(t('launch.prepare.checkingProviders'));
+      return;
+    }
+    if (launchGuard.reject(isLaunchMode, () => setLocalError(t('launch.prepare.failed')))) return;
     setLocalError(null);
     setIsSubmitting(true);
 
@@ -2463,7 +2474,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       launchInFlight ||
       validationErrors.length > 0 ||
       !!modelValidationError ||
-      launchGuard.blocked(isLaunchMode) ||
+      (isLaunchMode && prepareRequested && launchGuard.blocked(isLaunchMode)) ||
       hasInvalidLaunchMemberNames ||
       hasDuplicateLaunchMemberNames ||
       prepareBlocksLaunch ||
@@ -3155,7 +3166,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 readyStatusText="Ready"
                 className="mb-2"
               />
-              {effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading' ? (
+              {prepareRequested &&
+              (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
                 <>
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -3309,7 +3321,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             isLaunchMode={isLaunchMode}
             disabled={isDisabled}
             describedBy={
-              isLaunchMode && launchAuthorityBlocked && effectivePrepare.state === 'ready'
+              isLaunchMode &&
+              prepareRequested &&
+              launchAuthorityBlocked &&
+              effectivePrepare.state === 'ready'
                 ? LAUNCH_AUTHORITY_BLOCKER_ID
                 : undefined
             }

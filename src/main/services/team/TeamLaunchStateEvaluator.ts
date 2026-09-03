@@ -398,7 +398,11 @@ export function summarizePersistedLaunchMembers(
     if (preservesStrongRuntimeAlive(entry)) {
       runtimeAlivePendingCount += 1;
     }
-    if (entry.launchState === 'runtime_pending_permission') {
+    if (
+      entry.launchState === 'runtime_pending_permission' ||
+      (entry.launchState as string) === 'permission_pending' ||
+      (entry.pendingPermissionRequestIds?.length ?? 0) > 0
+    ) {
       permissionPendingCount += 1;
     }
     if (entry.livenessKind === 'shell_only') {

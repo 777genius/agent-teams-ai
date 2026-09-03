@@ -1,3 +1,5 @@
+import { summarizePersistedLaunchMembers } from '../TeamLaunchStateEvaluator';
+
 import { getPersistedLaunchMemberNames } from './TeamProvisioningLaunchStateProjection';
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
 
@@ -76,10 +78,13 @@ export function hasPendingLaunchMembers({
   launchSummary,
   snapshot,
 }: HasPendingLaunchMembersInput): boolean {
+  const effectiveLaunchSummary = snapshot
+    ? summarizePersistedLaunchMembers(snapshot.expectedMembers, snapshot.members)
+    : launchSummary;
   const expectedCount = snapshot
     ? getPersistedLaunchMemberNames(snapshot).length
     : (run.expectedMembers?.length ?? 0);
-  return launchSummary.pendingCount > 0 && expectedCount > 0;
+  return effectiveLaunchSummary.pendingCount > 0 && expectedCount > 0;
 }
 
 export function buildPendingBootstrapStatusMessage({
@@ -88,6 +93,9 @@ export function buildPendingBootstrapStatusMessage({
   launchSummary,
   snapshot,
 }: BuildPendingBootstrapStatusMessageInput): string {
+  const effectiveLaunchSummary = snapshot
+    ? summarizePersistedLaunchMembers(snapshot.expectedMembers, snapshot.members)
+    : launchSummary;
   const expectedTeammateCount = snapshot
     ? getPersistedLaunchMemberNames(snapshot).length
     : (run.expectedMembers?.length ?? 0);
@@ -95,9 +103,9 @@ export function buildPendingBootstrapStatusMessage({
     ? countSnapshotPermissionPendingMembers(snapshot)
     : countRunPermissionPendingMembers(run);
   if (
-    launchSummary.pendingCount > 0 &&
+    effectiveLaunchSummary.pendingCount > 0 &&
     permissionPendingCount > 0 &&
-    permissionPendingCount === launchSummary.pendingCount
+    permissionPendingCount === effectiveLaunchSummary.pendingCount
   ) {
     return `${prefix} — ${
       permissionPendingCount === 1
@@ -106,22 +114,27 @@ export function buildPendingBootstrapStatusMessage({
     }`;
   }
 
-  const runtimeProcessPendingCount = launchSummary.runtimeProcessPendingCount ?? 0;
-  const stillStartingCount = Math.max(0, launchSummary.pendingCount - runtimeProcessPendingCount);
+  const runtimeProcessPendingCount = effectiveLaunchSummary.runtimeProcessPendingCount ?? 0;
+  const stillStartingCount = Math.max(
+    0,
+    effectiveLaunchSummary.pendingCount - runtimeProcessPendingCount
+  );
   const diagnosticParts = [
-    launchSummary.shellOnlyPendingCount ? `${launchSummary.shellOnlyPendingCount} shell-only` : '',
-    launchSummary.runtimeProcessPendingCount
-      ? `${launchSummary.runtimeProcessPendingCount} waiting for bootstrap`
+    effectiveLaunchSummary.shellOnlyPendingCount
+      ? `${effectiveLaunchSummary.shellOnlyPendingCount} shell-only`
       : '',
-    launchSummary.runtimeCandidatePendingCount
-      ? `${launchSummary.runtimeCandidatePendingCount} bootstrap unconfirmed`
+    effectiveLaunchSummary.runtimeProcessPendingCount
+      ? `${effectiveLaunchSummary.runtimeProcessPendingCount} waiting for bootstrap`
       : '',
-    launchSummary.noRuntimePendingCount
-      ? `${launchSummary.noRuntimePendingCount} waiting for runtime`
+    effectiveLaunchSummary.runtimeCandidatePendingCount
+      ? `${effectiveLaunchSummary.runtimeCandidatePendingCount} bootstrap unconfirmed`
+      : '',
+    effectiveLaunchSummary.noRuntimePendingCount
+      ? `${effectiveLaunchSummary.noRuntimePendingCount} waiting for runtime`
       : '',
   ].filter(Boolean);
   const diagnosticSuffix = diagnosticParts.length > 0 ? ` - ${diagnosticParts.join(', ')}` : '';
-  if (launchSummary.confirmedCount === 0) {
+  if (effectiveLaunchSummary.confirmedCount === 0) {
     const allRuntimeAlive =
       runtimeProcessPendingCount > 0 && runtimeProcessPendingCount === expectedTeammateCount;
     return allRuntimeAlive
@@ -131,7 +144,7 @@ export function buildPendingBootstrapStatusMessage({
         : `${prefix} — teammates are still starting${diagnosticSuffix}`;
   }
 
-  return `${prefix} — ${launchSummary.confirmedCount}/${expectedTeammateCount} teammates made contact${runtimeProcessPendingCount > 0 ? `, ${runtimeProcessPendingCount} teammate${runtimeProcessPendingCount === 1 ? '' : 's'} online` : ''}${stillStartingCount > 0 ? `${runtimeProcessPendingCount > 0 ? ', ' : ', '}${stillStartingCount} still joining${diagnosticSuffix}` : ''}`;
+  return `${prefix} — ${effectiveLaunchSummary.confirmedCount}/${expectedTeammateCount} teammates made contact${runtimeProcessPendingCount > 0 ? `, ${runtimeProcessPendingCount} teammate${runtimeProcessPendingCount === 1 ? '' : 's'} online` : ''}${stillStartingCount > 0 ? `${runtimeProcessPendingCount > 0 ? ', ' : ', '}${stillStartingCount} still joining${diagnosticSuffix}` : ''}`;
 }
 
 export function buildAggregatePendingLaunchMessage({
@@ -191,7 +204,7 @@ export function buildAggregatePendingLaunchMessage({
     );
   });
   if (secondaryPendingMembers.length === 0) {
-    return buildPendingBootstrapStatusMessage({ prefix, run, launchSummary });
+    return buildPendingBootstrapStatusMessage({ prefix, run, launchSummary, snapshot });
   }
 
   return `${prefix} - waiting for secondary runtime lane: ${secondaryPendingMembers.join(', ')}`;

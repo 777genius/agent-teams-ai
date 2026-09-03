@@ -32,6 +32,9 @@ export interface ProviderLaunchGuard {
 }
 
 function getProviderStatusDetail(provider: CliProviderStatus): string | null {
+  if (provider.modelCatalogRefreshState === 'loading') {
+    return null;
+  }
   return (
     provider.detailMessage?.trim() ||
     provider.statusMessage?.trim() ||
@@ -96,9 +99,7 @@ export function createLaunchGuard(
         return [];
       }
       const scopedFailure =
-        providerId === 'opencode'
-          ? getOpenCodeScopedPreparationFailure(openCodeEvidence)
-          : null;
+        providerId === 'opencode' ? getOpenCodeScopedPreparationFailure(openCodeEvidence) : null;
       if (scopedFailure) {
         return [
           {

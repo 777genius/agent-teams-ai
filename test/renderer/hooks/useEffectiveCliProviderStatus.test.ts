@@ -24,6 +24,7 @@ vi.mock('@renderer/store', () => ({
 vi.mock('@features/codex-account/renderer', () => ({
   useCodexAccountSnapshot: () => ({ loading: false, snapshot: null, error: null }),
   mergeCodexCliStatusWithSnapshot: (cliStatus: unknown) => cliStatus,
+  mergeCodexProviderStatusWithSnapshot: (providerStatus: unknown) => providerStatus,
   isCodexAccountSnapshotPending: () => false,
 }));
 

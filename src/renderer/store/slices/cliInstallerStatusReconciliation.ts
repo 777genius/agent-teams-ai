@@ -45,6 +45,13 @@ function mergeProviderCatalogCache(
     retainedCatalog && launchUnproved
       ? { ...retainedCatalog, status: 'stale' as const }
       : retainedCatalog;
+  // A partial response means the refresh is still in flight from the user's
+  // perspective. Keep the retained catalog visibly loading instead of turning
+  // that intermediate snapshot into a false error (notably on Anthropic).
+  const catalogRefreshPending =
+    incomingProvider.modelCatalogRefreshState === 'loading' ||
+    incomingProvider.statusCheckOutcome === 'pending' ||
+    incomingProvider.statusCheckErrorCode === 'partial_response';
   return {
     ...incomingProvider,
     supported: incomingProvider.supported,
@@ -76,7 +83,7 @@ function mergeProviderCatalogCache(
     modelCatalog,
     modelCatalogRefreshState:
       modelCatalog && launchUnproved
-        ? incomingProvider.modelCatalogRefreshState === 'loading'
+        ? catalogRefreshPending
           ? 'loading'
           : 'error'
         : (incomingProvider.modelCatalogRefreshState ?? currentProvider.modelCatalogRefreshState),

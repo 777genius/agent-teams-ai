@@ -1884,6 +1884,43 @@ describe('cliInstallerSlice', () => {
       });
     });
 
+    it('rechecks one partial OpenCode status response before settling the provider', async () => {
+      const partialProvider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'pending',
+        statusCheckErrorCode: 'partial_response',
+        modelCatalogRefreshState: 'loading',
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+      });
+      const readyProvider = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
+      useStore.setState({ cliStatus: createMultimodelStatus([partialProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockResolvedValueOnce(partialProvider)
+        .mockResolvedValueOnce(readyProvider);
+
+      await expect(
+        useStore.getState().fetchCliProviderStatus('opencode', {
+          projectPath: '/tmp/partial-opencode',
+        })
+      ).resolves.toBe(true);
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(useStore.getState().cliProviderStatusByScope[
+        getCliProviderStatusScopeKey('opencode', '/tmp/partial-opencode')
+      ]).toMatchObject({
+        statusCheckOutcome: 'authoritative',
+        modelCatalogRefreshState: 'ready',
+      });
+    });
+
     it('reports a scoped OpenCode catalog loaded only after an authoritative ready response', async () => {
       const fetchedAt = new Date();
       const staleAt = new Date(fetchedAt.getTime() + 10 * 60_000);

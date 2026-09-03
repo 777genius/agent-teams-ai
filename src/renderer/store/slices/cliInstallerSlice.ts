@@ -1275,11 +1275,25 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       }
 
       try {
-        const responseProviderStatus = verifyModels
+        let responseProviderStatus = verifyModels
           ? await api.cliInstaller.verifyProviderModels(providerId)
           : projectPath
             ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
             : await api.cliInstaller.getProviderStatus(providerId);
+        // OpenCode's app-server can return a structurally valid but partial
+        // status while its catalog is settling. Recheck once in the same
+        // request, but do not retry the intentional model-only fallback or
+        // any other provider/error indefinitely.
+        if (
+          providerId === 'opencode' &&
+          !verifyModels &&
+          responseProviderStatus?.statusCheckErrorCode === 'partial_response' &&
+          responseProviderStatus.statusCheckOutcome !== 'model_only'
+        ) {
+          responseProviderStatus = projectPath
+            ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
+            : await api.cliInstaller.getProviderStatus(providerId);
+        }
         const responseMatchesProvider = responseProviderStatus?.providerId === providerId;
         const providerStatus =
           responseMatchesProvider && responseProviderStatus

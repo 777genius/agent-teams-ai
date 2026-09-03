@@ -514,6 +514,7 @@ export const CreateTeamDialog = ({
   const [prepareMessage, setPrepareMessage] = useState<string | null>(null);
   const [prepareWarnings, setPrepareWarnings] = useState<string[]>([]);
   const [prepareChecks, setPrepareChecks] = useState<ProvisioningProviderCheck[]>([]);
+  const [prepareRequested, setPrepareRequested] = useState(false);
   const [allowExperimentalLocalModels, setAllowExperimentalLocalModels] = useState(false);
   const {
     available: experimentalLocalModelOverrideAvailable,
@@ -684,6 +685,7 @@ export const CreateTeamDialog = ({
     setPrepareMessage(null);
     setPrepareWarnings([]);
     setPrepareChecks([]);
+    setPrepareRequested(false);
     setAllowExperimentalLocalModels(false);
     setConflictDismissed(false);
   };
@@ -813,6 +815,15 @@ export const CreateTeamDialog = ({
   );
   const launchAuthorityBlockers = launchGuard.blockers(launchTeam);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
+  const launchPreflightCanResolveBlockers =
+    launchAuthorityBlockers.length > 0 &&
+    launchAuthorityBlockers.every(
+      (blocker) =>
+        blocker.providerId === 'opencode' &&
+        (blocker.providerStatus?.statusCheckOutcome === 'model_only' ||
+          (blocker.providerStatus?.statusCheckOutcome === 'pending' &&
+            blocker.providerStatus.statusCheckErrorCode === 'partial_response'))
+    );
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -1204,7 +1215,7 @@ export const CreateTeamDialog = ({
   );
 
   useEffect(() => {
-    if (!open || !canCreate || !launchTeam) {
+    if (!open || !canCreate || !launchTeam || !prepareRequested) {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -1465,6 +1476,7 @@ export const CreateTeamDialog = ({
     open,
     canCreate,
     launchTeam,
+    prepareRequested,
     effectiveCwd,
     effectiveMemberDrafts,
     effectiveAnthropicRuntimeLimitContext,
@@ -2078,7 +2090,7 @@ export const CreateTeamDialog = ({
     isNameProvisioning ||
     !requestValidation.valid ||
     !!modelValidationError ||
-    launchGuard.blocked(launchTeam) ||
+    (launchAuthorityBlocked && !launchPreflightCanResolveBlockers) ||
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission;
 
@@ -2273,6 +2285,15 @@ export const CreateTeamDialog = ({
       setLocalError(modelValidationError);
       return;
     }
+    if (launchTeam && !prepareRequested && launchPreflightCanResolveBlockers) {
+      // A heavy provider/model probe may execute a real CLI turn. Do not run it
+      // merely because the dialog opened; the first launch click explicitly
+      // authorizes the bounded preflight, and a later click performs launch.
+      setPrepareRequested(true);
+      setPrepareState('loading');
+      setPrepareMessage(t('create.prepare.checkingProviders'));
+      return;
+    }
     if (launchGuard.reject(launchTeam, () => setLocalError(t('launch.prepare.failed')))) return;
     if (prepareBlocksCreate) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
@@ -2439,8 +2460,8 @@ export const CreateTeamDialog = ({
   );
   const createActionLabel = isSubmitting
     ? t('create.actions.creating')
-    : launchTeam && (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading')
-      ? t('create.actions.skipPreflightAndCreate')
+    : launchTeam && prepareRequested && effectivePrepare.state === 'loading'
+      ? t('create.prepare.checkingProviders')
       : t('create.actions.create');
   return (
     <Dialog
@@ -2963,18 +2984,13 @@ export const CreateTeamDialog = ({
                 readyStatusText={t('create.prepare.readyStatus')}
               />
             ) : null}
-            {canCreate &&
-            launchTeam &&
-            (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
+            {canCreate && launchTeam && prepareRequested && effectivePrepare.state === 'loading' ? (
               <>
                 <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                   <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   <div>
                     <span>
-                      {effectivePrepare.message ??
-                        (effectivePrepare.state === 'idle'
-                          ? t('create.prepare.checkingProviders')
-                          : t('create.prepare.preparingEnvironment'))}
+                      {effectivePrepare.message ?? t('create.prepare.preparingEnvironment')}
                     </span>
                     <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
                       {t('launch.prepare.preflight', {
@@ -3027,7 +3043,8 @@ export const CreateTeamDialog = ({
             ) : null}
             {canCreate &&
             launchTeam &&
-            effectivePrepare.state === 'ready' &&
+            effectivePrepare.state !== 'loading' &&
+            (!launchPreflightCanResolveBlockers || prepareRequested) &&
             launchAuthorityBlocked ? (
               <ProviderLaunchAuthorityNotice
                 id={CREATE_LAUNCH_AUTHORITY_BLOCKER_ID}
@@ -3124,7 +3141,9 @@ export const CreateTeamDialog = ({
                 size="lg"
                 className="min-w-32 text-sm"
                 aria-describedby={
-                  launchAuthorityBlocked && effectivePrepare.state === 'ready'
+                  launchAuthorityBlocked &&
+                  (!launchPreflightCanResolveBlockers || prepareRequested) &&
+                  effectivePrepare.state !== 'loading'
                     ? CREATE_LAUNCH_AUTHORITY_BLOCKER_ID
                     : undefined
                 }
@@ -3132,6 +3151,7 @@ export const CreateTeamDialog = ({
                   !canCreate ||
                   !draftLoaded ||
                   isSubmitting ||
+                  (prepareRequested && effectivePrepare.state === 'loading') ||
                   hasCreateFormErrors ||
                   prepareBlocksCreate
                 }
