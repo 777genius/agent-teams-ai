@@ -2837,6 +2837,45 @@ describe('ipc teams handlers', () => {
     }
   );
 
+  it('lists the queued user messages from the member inbox under the resolved teams path', async () => {
+    const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-list-queued-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const inboxDir = path.join(claudeRoot, 'teams', 'my-team', 'inboxes');
+    await fs.promises.mkdir(inboxDir, { recursive: true });
+    await fs.promises.writeFile(
+      path.join(inboxDir, 'alice.json'),
+      JSON.stringify([
+        {
+          from: 'user',
+          to: 'alice',
+          text: 'do the thing',
+          timestamp: 'ts',
+          read: false,
+          messageId: 'queued-1',
+        },
+        { from: 'user', to: 'alice', text: 'already read', timestamp: 'ts', read: true },
+      ])
+    );
+
+    try {
+      const handler = handlers.get(TEAM_GET_QUEUED_USER_MESSAGES)!;
+
+      const result = (await handler({} as never, 'my-team', 'alice')) as {
+        success: boolean;
+        data?: { member: string; messages: { messageId: string; text: string }[] };
+      };
+
+      expect(result.success).toBe(true);
+      expect(result.data?.member).toBe('alice');
+      expect(result.data?.messages).toEqual([
+        expect.objectContaining({ messageId: 'queued-1', text: 'do the thing' }),
+      ]);
+    } finally {
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+      setClaudeBasePathOverride(null);
+    }
+  });
+
   it('invalidates the message feed only when a queued message was actually discarded', async () => {
     const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-discard-queued-'));
     setClaudeBasePathOverride(claudeRoot);
