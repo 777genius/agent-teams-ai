@@ -1,3 +1,4 @@
+import { assertOpenCodeRuntimeStopEffective } from './TeamProvisioningOpenCodeRuntimeStopOutcome';
 import { ownsOpenCodeRuntimeAdapterPrimaryLane } from './TeamProvisioningRuntimeAdapterCancellation';
 
 import type {
@@ -21,6 +22,9 @@ interface StopLogger {
   warn(message: string): void;
   info(message: string): void;
 }
+
+/** Process existence probe, so the stop flow does not reach for the OS itself. */
+type RuntimeProcessAliveProbe = (pid: number) => boolean;
 
 interface RuntimeAdapterRunEntry {
   runId: string;
@@ -62,6 +66,7 @@ export interface OpenCodeRuntimeStopFlowPorts {
   emitTeamChange(event: TeamChangeEvent): void;
   logger: StopLogger;
   nowIso(): string;
+  isRuntimeProcessAlive: RuntimeProcessAliveProbe;
 }
 
 export interface SingleMixedSecondaryRuntimeLaneStopRun {
@@ -76,6 +81,7 @@ export interface SingleMixedSecondaryRuntimeLaneStopPorts {
   teamsBasePath: string;
   getOpenCodeRuntimeAdapter(): TeamLaunchRuntimeAdapter | null;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
+  isRuntimeProcessAlive: RuntimeProcessAliveProbe;
   upsertOpenCodeRuntimeLaneIndexEntry(input: {
     teamsBasePath: string;
     teamName: string;
@@ -142,7 +148,14 @@ export async function stopSingleMixedSecondaryRuntimeLane(
       previousLaunchState,
       force: true,
     });
-    assertOpenCodeRuntimeStopSucceeded(result, `OpenCode lane ${lane.laneId} did not confirm stop`);
+    assertOpenCodeRuntimeStopEffective({
+      result,
+      laneId: lane.laneId,
+      previousLaunchState,
+      message: `OpenCode lane ${lane.laneId} did not confirm stop`,
+      logWarning: (message) => ports.logger.warn(`[${run.teamName}] ${message}`),
+      isRuntimeProcessAlive: ports.isRuntimeProcessAlive,
+    });
     keepStopFence = true;
     const cleared = await ports.clearOpenCodeRuntimeLaneStorage({
       teamsBasePath: ports.teamsBasePath,
@@ -248,10 +261,14 @@ export async function stopMixedSecondaryRuntimeLanes(
           previousLaunchState,
           force: true,
         });
-        assertOpenCodeRuntimeStopSucceeded(
+        assertOpenCodeRuntimeStopEffective({
           result,
-          `OpenCode secondary lane ${secondaryRun.laneId} did not confirm stop`
-        );
+          laneId: secondaryRun.laneId,
+          previousLaunchState,
+          message: `OpenCode secondary lane ${secondaryRun.laneId} did not confirm stop`,
+          logWarning: (message) => ports.logger.warn(`[${teamName}] ${message}`),
+          isRuntimeProcessAlive: ports.isRuntimeProcessAlive,
+        });
       } catch (error) {
         const stopError = asError(error);
         stopFailures.push(stopError);
@@ -358,7 +375,14 @@ export async function stopOpenCodeRuntimeAdapterTeam(
     } else {
       ports.logger.info(`[${teamName}] OpenCode primary lane stop took ${stopMs}ms`);
     }
-    assertOpenCodeRuntimeStopSucceeded(result, 'OpenCode team did not confirm stop');
+    assertOpenCodeRuntimeStopEffective({
+      result,
+      laneId: 'primary',
+      previousLaunchState,
+      message: 'OpenCode team did not confirm stop',
+      logWarning: (message) => ports.logger.warn(`[${teamName}] ${message}`),
+      isRuntimeProcessAlive: ports.isRuntimeProcessAlive,
+    });
 
     if (!ownsPrimaryRuntimeLane(teamName, runId, ports)) {
       return;
@@ -419,27 +443,6 @@ export async function stopOpenCodeRuntimeAdapterTeam(
     });
     throw error;
   }
-}
-
-function assertOpenCodeRuntimeStopSucceeded(
-  result: unknown,
-  message: string
-): asserts result is { stopped: true; diagnostics: string[]; warnings: string[] } {
-  if (result && typeof result === 'object' && (result as { stopped?: unknown }).stopped === true) {
-    return;
-  }
-  const stopResult = result as { diagnostics?: unknown; warnings?: unknown } | null;
-  const diagnostics = Array.isArray(stopResult?.diagnostics)
-    ? stopResult.diagnostics.filter((entry): entry is string => typeof entry === 'string')
-    : [];
-  const warnings = Array.isArray(stopResult?.warnings)
-    ? stopResult.warnings.filter((entry): entry is string => typeof entry === 'string')
-    : [];
-  const detail = [...diagnostics, ...warnings]
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .join('; ');
-  throw new Error(detail ? `${message}: ${detail}` : message);
 }
 
 function asError(error: unknown): Error {

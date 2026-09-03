@@ -413,6 +413,7 @@ describe('TeamProvisioningCancellationBoundary', () => {
         invalidateRuntimeSnapshotCaches: vi.fn(),
         emitTeamChange: vi.fn(),
         logger: { warn: vi.fn(), info: vi.fn() },
+        isRuntimeProcessAlive: () => false,
         nowIso: () => '2026-01-01T00:00:02.000Z',
       };
       const ports = makePorts({
