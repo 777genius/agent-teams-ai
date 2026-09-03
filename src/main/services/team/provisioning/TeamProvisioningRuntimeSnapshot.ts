@@ -240,19 +240,30 @@ function suppressRuntimeBootstrapConfirmation(
  * child. Neither carries `--team-name/--agent-id`, so a lane host is matched by
  * pid (or parent pid) plus the opencode serve signature; a flagged process is
  * still only this lane's host when both flags name this team and member.
+ *
+ * `foreignPidNamespaceRows` carries rows read from a table the recorded pid
+ * does not belong to - on win32 the shared table is WSL's `ps` while a lane
+ * host is a native Windows process. A pid match across that boundary is a
+ * collision, so an unrelated WSL `opencode serve` must not pass: such a row
+ * counts only when its command names this team and this member.
  */
 export function findLiveOpenCodeLaneHostRow(params: {
   runtimePid: number | null | undefined;
   teamName: string;
   memberName: string;
   processRows: readonly RuntimeTelemetryProcessTableRow[];
+  foreignPidNamespaceRows?: readonly RuntimeTelemetryProcessTableRow[];
   processTableAvailable: boolean;
 }): RuntimeTelemetryProcessTableRow | null {
   const runtimePid = normalizeRuntimePositiveInteger(params.runtimePid);
   if (!params.processTableAvailable || runtimePid == null) {
     return null;
   }
-  for (const row of params.processRows) {
+  const candidates = [
+    ...params.processRows.map((row) => ({ row, laneFlagsRequired: false })),
+    ...(params.foreignPidNamespaceRows ?? []).map((row) => ({ row, laneFlagsRequired: true })),
+  ];
+  for (const { row, laneFlagsRequired } of candidates) {
     const command = row.command.toLowerCase();
     if (!command.includes('opencode')) continue;
     if (row.pid !== runtimePid && row.ppid !== runtimePid) continue;
@@ -263,7 +274,7 @@ export function findLiveOpenCodeLaneHostRow(params: {
       extractCliArgValues(row.command, '--agent-id').some((memberName) =>
         matchesExactTeamMemberName(memberName, params.memberName)
       );
-    if (flaggedForMember || /\bserve\b/.test(command)) {
+    if (flaggedForMember || (!laneFlagsRequired && /\bserve\b/.test(command))) {
       return row;
     }
   }
@@ -275,6 +286,7 @@ function hasLiveOpenCodeRuntimePidProbe(params: {
   teamName: string;
   memberName: string;
   processRows: readonly RuntimeTelemetryProcessTableRow[];
+  foreignPidNamespaceRows?: readonly RuntimeTelemetryProcessTableRow[];
   processTableAvailable: boolean;
 }): boolean {
   return (
@@ -283,6 +295,7 @@ function hasLiveOpenCodeRuntimePidProbe(params: {
       teamName: params.teamName,
       memberName: params.memberName,
       processRows: params.processRows,
+      foreignPidNamespaceRows: params.foreignPidNamespaceRows,
       processTableAvailable: params.processTableAvailable,
     }) !== null
   );
@@ -1871,6 +1884,14 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     const memberProcessTableAvailable = shouldUseWindowsHostRows
       ? windowsHostProcessTableAvailable || processTableAvailable
       : processTableAvailable;
+    // Once the host table is read, the recorded lane pid is a Windows pid and
+    // the shared rows are WSL's `ps` output - a different pid namespace, where
+    // a bare pid match is a collision rather than evidence. So the lane host
+    // probe takes the host rows as the recorded pid's namespace and the shared
+    // rows as the foreign one, where only this lane's own flags may match. The
+    // merged rows stay as they are for usage sampling and general liveness.
+    const laneHostPidRows = shouldUseWindowsHostRows ? hostProcessRows : processRows;
+    const laneHostForeignPidRows = shouldUseWindowsHostRows ? processRows : [];
     const trackedStatus = findExactTrackedMemberSpawnStatus(run, memberName);
     const launchStatus =
       isLaunchMemberStatusRelevantToRuntimeRun(launchMember, activeRuntimeRunId) && launchMember
@@ -1913,7 +1934,8 @@ export async function buildLiveTeamAgentRuntimeMetadata(
           evidence: adapterEvidence,
           teamName: params.teamName,
           memberName,
-          processRows: memberProcessRows,
+          processRows: laneHostPidRows,
+          foreignPidNamespaceRows: laneHostForeignPidRows,
           processTableAvailable: memberProcessTableAvailable,
         }));
     const resolvedBeforeHostProbe =
@@ -1941,7 +1963,8 @@ export async function buildLiveTeamAgentRuntimeMetadata(
             runtimePid: recordedRuntimePid,
             teamName: params.teamName,
             memberName,
-            processRows: memberProcessRows,
+            processRows: laneHostPidRows,
+            foreignPidNamespaceRows: laneHostForeignPidRows,
             processTableAvailable: memberProcessTableAvailable,
           })
         : null;

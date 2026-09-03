@@ -453,6 +453,38 @@ async function resolveLaneLivenessOnBothPlatforms(options: {
   return { linux, win32 };
 }
 
+/**
+ * The same owned win32 lane with its live `opencode serve` row placed in one
+ * process table or the other. On win32 the shared table is WSL's `ps`, whose
+ * pids are numbered independently of the recorded Windows host pid, so which
+ * table a row arrives in decides whether its pid means anything for this lane.
+ */
+async function resolveWin32LaneLivenessByTable(options: {
+  hostRows: RuntimeTelemetryProcessTableRow[];
+  sharedRows: RuntimeTelemetryProcessTableRow[];
+}): Promise<{ alive: boolean | undefined; livenessKind: string | undefined }> {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(Date.parse(UPDATED_AT) + 5 * 60_000));
+  setPlatform('win32');
+  try {
+    const metadata = await buildPersistedLaneRuntimeMetadata({
+      processRows: options.sharedRows,
+      readWindowsHostProcessRows: vi.fn(async () => ({
+        rows: options.hostRows,
+        processTableAvailable: true,
+      })),
+      runtimeAdapterRunByTeam: new Map([
+        [TEAM_NAME, { runId: RUN_ID, providerId: 'opencode', cwd: WORKDIR, members: {} }],
+      ]),
+    });
+    const worker = metadata.get('Worker');
+    return { alive: worker?.alive, livenessKind: worker?.livenessKind };
+  } finally {
+    setPlatform(ORIGINAL_PLATFORM);
+    vi.useRealTimers();
+  }
+}
+
 async function buildMixedRuntimeSnapshot(
   options: MixedRuntimeFixtureOptions
 ): Promise<Awaited<ReturnType<typeof buildTeamAgentRuntimeSnapshot>>> {
@@ -1498,6 +1530,51 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
       livenessKind: 'runtime_process',
     });
   });
+
+  // On win32 the shared rows are WSL's `ps` output, numbered independently of
+  // the recorded Windows host pid, so an unrelated WSL `opencode serve` can
+  // carry that same pid. Only the Windows host table answers for it - and the
+  // second half keeps that from being satisfied by never promoting anything.
+  it('does not revive a win32 lane from a colliding serve row in the WSL table', async () => {
+    const collidingWslServeHost = await resolveWin32LaneLivenessByTable({
+      hostRows: [
+        {
+          pid: CURRENT_PID + 1,
+          ppid: 1,
+          command: 'opencode serve --hostname 127.0.0.1 --port 62014',
+        },
+      ],
+      sharedRows: sharedOpenCodeHostProcessRows(),
+    });
+    const ownWindowsHost = await resolveWin32LaneLivenessByTable({
+      hostRows: sharedOpenCodeHostProcessRows(),
+      sharedRows: [],
+    });
+
+    expect(collidingWslServeHost).toEqual({
+      alive: false,
+      livenessKind: 'runtime_process_candidate',
+    });
+    expect(ownWindowsHost).toEqual({ alive: true, livenessKind: 'runtime_process' });
+  });
+
+  // The pid is only worthless across that boundary while nothing else ties the
+  // row to this lane: a WSL row whose command names this team and this member
+  // identifies itself, so a member launched inside WSL keeps its evidence.
+  it('still revives a win32 lane from a WSL row flagged for this team and member', async () => {
+    const verdict = await resolveWin32LaneLivenessByTable({
+      hostRows: [],
+      sharedRows: [
+        {
+          pid: CURRENT_PID,
+          ppid: 1,
+          command: `opencode run --team-name ${TEAM_NAME} --agent-id Worker`,
+        },
+      ],
+    });
+
+    expect(verdict).toEqual({ alive: true, livenessKind: 'runtime_process' });
+  });
 });
 
 describe('findLiveOpenCodeLaneHostRow', () => {
@@ -1596,6 +1673,52 @@ describe('findLiveOpenCodeLaneHostRow', () => {
         teamName: TEAM_NAME,
         memberName: 'Worker',
         processRows: [
+          {
+            pid: 7777,
+            ppid: 1,
+            command: `opencode run --team-name ${TEAM_NAME} --agent-id Worker`,
+          },
+        ],
+        processTableAvailable: true,
+      })?.pid
+    ).toBe(7777);
+  });
+
+  // Rows from a table that does not share the recorded pid's namespace reach
+  // the matcher separately: their pid can collide with an unrelated serve host,
+  // so only the lane's own --team-name/--agent-id flags may match there.
+  it('takes a bare pid match from the recorded namespace only', () => {
+    const serveRow: RuntimeTelemetryProcessTableRow = {
+      pid: 31276,
+      ppid: 39012,
+      command: 'opencode serve --hostname 127.0.0.1 --port 65122',
+    };
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 39012,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: [],
+        foreignPidNamespaceRows: [serveRow],
+        processTableAvailable: true,
+      })
+    ).toBeNull();
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 39012,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: [serveRow],
+        processTableAvailable: true,
+      })?.pid
+    ).toBe(31276);
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 7777,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: [],
+        foreignPidNamespaceRows: [
           {
             pid: 7777,
             ppid: 1,
