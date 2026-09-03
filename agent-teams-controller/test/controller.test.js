@@ -201,6 +201,40 @@ controller.messages.sendMessage({
     expect(typeof stopped.stoppedAt).toBe('string');
   });
 
+  it('deduplicates only an identical keyless task creation payload', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const firstBlocker = controller.tasks.createTask({ subject: 'First blocker' });
+    const secondBlocker = controller.tasks.createTask({ subject: 'Second blocker' });
+    const base = {
+      subject: 'Prepare the report',
+      owner: 'bob',
+      createdBy: 'alice',
+      prompt: 'Check the source data before writing.',
+      notifyOwner: false,
+    };
+
+    const first = controller.tasks.createTask({
+      ...base,
+      description: 'Use the first data set.',
+      blockedBy: [firstBlocker.id],
+    });
+    const distinct = controller.tasks.createTask({
+      ...base,
+      description: 'Use the second data set.',
+      blockedBy: [secondBlocker.id],
+    });
+    const replay = controller.tasks.createTask({
+      ...base,
+      description: 'Use the first data set.',
+      blockedBy: [firstBlocker.id],
+    });
+
+    expect(distinct.id).not.toBe(first.id);
+    expect(replay.id).toBe(first.id);
+    expect(controller.tasks.listTasks()).toHaveLength(4);
+  });
+
   it('routes task and review lifecycle through taskBoard without changing persisted state', () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -496,6 +530,149 @@ controller.messages.sendMessage({
     expect(readKanbanFile(claudeDir).tasks[blocked.id]).toBeUndefined();
   });
 
+  it('does not notify the owner of a task whose blockers are still open, and notifies once the last blocker completes', () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer' },
+      { name: 'carol', role: 'reviewer' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const carolInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'carol.json');
+    const readCarolInbox = () =>
+      fs.existsSync(carolInboxPath) ? JSON.parse(fs.readFileSync(carolInboxPath, 'utf8')) : [];
+
+    const blocker = controller.taskBoard.createTask({ subject: 'Write the parser', owner: 'bob' });
+    const blocked = controller.taskBoard.createTask({
+      subject: 'Review the parser',
+      owner: 'carol',
+      blockedBy: [blocker.id],
+    });
+    expect(readCarolInbox()).toEqual([]);
+
+    // Negative control A: the same assignment without blockers is announced at
+    // once, so the guard is not swallowing assignment notices in general.
+    const unblocked = controller.taskBoard.createTask({
+      subject: 'Write the release notes',
+      owner: 'carol',
+    });
+    expect(readCarolInbox().map((row) => row.summary)).toEqual([
+      `New task #${unblocked.displayId} assigned`,
+    ]);
+
+    // Negative control B: the owner is woken exactly once, and at the moment
+    // the work can actually begin.
+    controller.taskBoard.completeTask(blocker.id, 'bob');
+    const afterBlockerCompleted = readCarolInbox();
+    expect(afterBlockerCompleted).toHaveLength(2);
+    expect(afterBlockerCompleted.at(-1).summary).toBe(`Comment on #${blocked.displayId}`);
+    expect(afterBlockerCompleted.at(-1).text).toContain('Dependency resolved');
+
+    // Negative control C: a deleted blocker is not an open blocker.
+    const droppedBlocker = controller.taskBoard.createTask({
+      subject: 'Dropped spike',
+      owner: 'bob',
+    });
+    const dependsOnDropped = controller.taskBoard.createTask({
+      subject: 'Ship the parser',
+      owner: 'bob',
+      blockedBy: [droppedBlocker.id],
+    });
+    controller.taskBoard.softDeleteTask(droppedBlocker.id, 'alice');
+    controller.taskBoard.setTaskOwner(dependsOnDropped.id, 'carol', 'alice');
+    expect(readCarolInbox().at(-1).summary).toBe(`Task #${dependsOnDropped.displayId} assigned`);
+
+    // Negative control D: a blockedBy id that no longer resolves is not an open
+    // blocker either, so a purged row cannot freeze a task forever.
+    const purgedBlocker = controller.taskBoard.createTask({
+      subject: 'Purged spike',
+      owner: 'bob',
+    });
+    const dependsOnPurged = controller.taskBoard.createTask({
+      subject: 'Publish the parser',
+      owner: 'bob',
+      blockedBy: [purgedBlocker.id],
+    });
+    fs.rmSync(path.join(claudeDir, 'tasks', 'my-team', `${purgedBlocker.id}.json`));
+    controller.taskBoard.setTaskOwner(dependsOnPurged.id, 'carol', 'alice');
+    expect(readCarolInbox().at(-1).summary).toBe(`Task #${dependsOnPurged.displayId} assigned`);
+    expect(readCarolInbox()).toHaveLength(4);
+  });
+
+  it('wakes the owner of an assigned task whose last blocker is deleted', () => {
+    const claudeDir = makeClaudeDir();
+    const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.members = [
+      { name: 'alice', role: 'team-lead' },
+      { name: 'bob', role: 'developer' },
+      { name: 'carol', role: 'reviewer' },
+    ];
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const carolInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'carol.json');
+    const readCarolInbox = () =>
+      fs.existsSync(carolInboxPath) ? JSON.parse(fs.readFileSync(carolInboxPath, 'utf8')) : [];
+
+    const blocker = controller.taskBoard.createTask({ subject: 'Spike the parser', owner: 'bob' });
+    const blocked = controller.taskBoard.createTask({
+      subject: 'Review the parser',
+      owner: 'carol',
+      blockedBy: [blocker.id],
+    });
+    expect(readCarolInbox()).toEqual([]);
+
+    controller.taskBoard.softDeleteTask(blocker.id, 'alice');
+    const woken = readCarolInbox();
+    expect(woken).toHaveLength(1);
+    expect(woken[0].summary).toBe(`Comment on #${blocked.displayId}`);
+    expect(woken[0].text).toContain(`#${blocker.displayId} _Spike the parser_ deleted.`);
+    expect(woken[0].text).toContain('ready to start');
+    expect(controller.taskBoard.getTask(blocked.id).status).toBe('pending');
+
+    // Negative control A: deleting the same task again changes nothing, so the
+    // owner is woken on the transition rather than on every delete call.
+    controller.taskBoard.setTaskStatus(blocker.id, 'deleted', 'alice');
+    expect(readCarolInbox()).toHaveLength(1);
+
+    // Negative control B: with another blocker still open the owner is told
+    // what is left instead of being told to start.
+    const openBlocker = controller.taskBoard.createTask({
+      subject: 'Draft the schema',
+      owner: 'bob',
+    });
+    const droppedBlocker = controller.taskBoard.createTask({
+      subject: 'Pick the format',
+      owner: 'bob',
+    });
+    controller.taskBoard.createTask({
+      subject: 'Write the migration',
+      owner: 'carol',
+      blockedBy: [openBlocker.id, droppedBlocker.id],
+    });
+    controller.taskBoard.softDeleteTask(droppedBlocker.id, 'alice');
+    expect(readCarolInbox()).toHaveLength(2);
+    expect(readCarolInbox().at(-1).text).toContain('Still waiting on');
+    expect(readCarolInbox().at(-1).text).not.toContain('ready to start');
+
+    // Negative control C: a dependent that is already finished is not woken.
+    const lateBlocker = controller.taskBoard.createTask({
+      subject: 'Check the fixtures',
+      owner: 'bob',
+    });
+    const finished = controller.taskBoard.createTask({
+      subject: 'Archive the fixtures',
+      owner: 'carol',
+      blockedBy: [lateBlocker.id],
+    });
+    controller.taskBoard.completeTask(finished.id, 'carol');
+    controller.taskBoard.softDeleteTask(lateBlocker.id, 'alice');
+    expect(readCarolInbox()).toHaveLength(2);
+  });
+
   it('builds member briefing from team config language and known member metadata', async () => {
     const claudeDir = makeClaudeDir();
     const configPath = path.join(claudeDir, 'teams', 'my-team', 'config.json');
@@ -533,7 +710,12 @@ controller.messages.sendMessage({
       'Awareness items are watch-only context and do not authorize you to start work unless the lead reroutes the task or you become the actionOwner.'
     );
     expect(briefing).toContain('After task_complete, notify your team lead via SendMessage.');
-    expect(briefing).toContain('Full details in task comment e5f6a7b8');
+    // Observed on a live run: an 8B teammate copied the example's `e5f6a7b8` and `#efgh5678`
+    // verbatim into a real message to the lead, and the renderer turned the fake
+    // ref into a dead `task://` link. Example ids must not look like board ids.
+    expect(briefing).toContain('Full details in task comment <comment-id>');
+    expect(briefing).not.toContain('e5f6a7b8');
+    expect(briefing).not.toContain('efgh5678');
     expect(briefing).not.toContain('task_get_comment {');
   });
 
@@ -559,8 +741,11 @@ controller.messages.sendMessage({
     expect(briefing).toContain(
       'agent-teams_message_send { teamName: "my-team", to: "alice", from: "bob"'
     );
-    expect(briefing).toContain('Full details in task comment e5f6a7b8');
+    expect(briefing).toContain('Full details in task comment <comment-id>');
+    expect(briefing).not.toContain('e5f6a7b8');
+    expect(briefing).not.toContain('efgh5678');
     expect(briefing).toContain('Never invent placeholder task refs such as #00000000');
+    expect(briefing).toContain('never copy an id straight out of an example');
     expect(briefing).not.toContain('task_get_comment {');
     expect(briefing).not.toContain('notify your team lead via SendMessage');
   });
@@ -1262,7 +1447,11 @@ controller.messages.sendMessage({
     controller.review.requestReview(task.id, { from: 'team-lead' });
 
     const reviewerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
-    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8'));
+    // The reviewer here is also the lead, so the board's completion notice
+    // lands in the same inbox; this case is about the review request.
+    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8')).filter(
+      (row) => !String(row.messageId || '').startsWith('board-complete:')
+    );
 
     expect(inbox).toHaveLength(1);
     expect(inbox[0].text).toContain('<info_for_agent>');
@@ -1287,7 +1476,11 @@ controller.messages.sendMessage({
     });
 
     const reviewerInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
-    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8'));
+    // The reviewer here is also the lead, so the board's completion notice
+    // lands in the same inbox; this case is about the review request.
+    const inbox = JSON.parse(fs.readFileSync(reviewerInboxPath, 'utf8')).filter(
+      (row) => !String(row.messageId || '').startsWith('board-complete:')
+    );
 
     expect(inbox).toHaveLength(1);
     expect(inbox[0].leadSessionId).toBe('lead-session-1');
@@ -1917,6 +2110,103 @@ controller.messages.sendMessage({
     expect(rows[0].summary).toContain(`#${task.displayId}`);
     expect(rows[0].text).toContain('I found the root cause.');
     expect(rows[0].leadSessionId).toBe('lead-session-1');
+  });
+
+  it('keeps an owned pending task pending until task_start is called', () => {
+    const claudeDir = makeClaudeDir();
+    const appController = createController({ teamName: 'my-team', claudeDir });
+    const agentController = createController({
+      teamName: 'my-team',
+      claudeDir,
+      allowUserMessageSender: false,
+    });
+    const task = appController.tasks.createTask({
+      subject: 'Local model workflow',
+      owner: 'bob',
+      notifyOwner: false,
+    });
+    expect(task.status).toBe('pending');
+
+    const commented = agentController.tasks.addTaskComment(task.id, {
+      from: 'bob',
+      text: 'Checked runtime paths, findings attached below.',
+    });
+
+    expect(commented.task.status).toBe('pending');
+    const persisted = readTaskFile(claudeDir, task.id);
+    expect(persisted.status).toBe('pending');
+    expect(persisted.workIntervals).toBeUndefined();
+    const statusEvents = (persisted.historyEvents || []).filter(
+      (event) => event.type === 'status_changed'
+    );
+    expect(statusEvents).toEqual([]);
+
+    const again = agentController.tasks.addTaskComment(task.id, {
+      from: 'bob',
+      text: 'More findings.',
+    });
+    expect(again.task.status).toBe('pending');
+    const persistedAgain = readTaskFile(claudeDir, task.id);
+    expect(
+      (persistedAgain.historyEvents || []).filter((event) => event.type === 'status_changed')
+    ).toHaveLength(0);
+  });
+
+  it('does not auto-advance pending tasks on non-owner, lead, user, system, or replayed comments', () => {
+    const claudeDir = makeClaudeDir();
+    fs.writeFileSync(
+      path.join(claudeDir, 'teams', 'my-team', 'config.json'),
+      JSON.stringify(
+        {
+          name: 'my-team',
+          leadSessionId: 'lead-session-1',
+          members: [
+            { name: 'alice', role: 'team-lead' },
+            { name: 'bob', role: 'developer' },
+            { name: 'carol', role: 'developer' },
+          ],
+        },
+        null,
+        2
+      )
+    );
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    const bobTask = controller.tasks.createTask({
+      subject: 'Stays pending',
+      owner: 'bob',
+      notifyOwner: false,
+    });
+
+    controller.tasks.addTaskComment(bobTask.id, { from: 'carol', text: 'Non-owner note.' });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
+
+    controller.tasks.addTaskComment(bobTask.id, { from: 'user', text: 'User note.' });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
+
+    controller.tasks.addTaskComment(bobTask.id, { from: 'system', text: 'System note.' });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
+
+    const leadTask = controller.tasks.createTask({
+      subject: 'Lead-owned stays pending',
+      owner: 'alice',
+      notifyOwner: false,
+    });
+    controller.tasks.addTaskComment(leadTask.id, { from: 'alice', text: 'Lead planning note.' });
+    expect(controller.tasks.getTask(leadTask.id).status).toBe('pending');
+
+    controller.tasks.addTaskComment(bobTask.id, {
+      id: 'replayed-comment',
+      from: 'bob',
+      text: 'Working on it.',
+    });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
+    controller.tasks.addTaskComment(bobTask.id, {
+      id: 'replayed-comment',
+      from: 'bob',
+      text: 'Working on it.',
+    });
+    expect(controller.tasks.getTask(bobTask.id).status).toBe('pending');
   });
 
   it('normalizes task comment authors at the write boundary', () => {
@@ -3749,6 +4039,442 @@ controller.messages.sendMessage({
         }),
       }),
     ]);
+  });
+
+  it('suppresses rephrased final messages to the user once the board is complete', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const readUserInbox = () =>
+      JSON.parse(
+        fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json'), 'utf8')
+      ).map((row) => row.text);
+    const clock = { now: Date.parse('2026-08-23T10:00:00.000Z') };
+    vi.useFakeTimers({ now: clock.now, toFake: ['Date'] });
+    const advance = (minutes) => {
+      clock.now += minutes * 60 * 1000;
+      vi.setSystemTime(clock.now);
+    };
+
+    try {
+      // Board not complete: nothing is guarded.
+      const task = controller.tasks.createTask({ subject: 'Write summary', owner: 'alice' });
+      controller.tasks.startTask(task.id, 'alice');
+      advance(1);
+      const progress = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Delegated; working on it.',
+      });
+      expect(progress.deduplicated).toBeUndefined();
+
+      advance(1);
+      controller.tasks.completeTask(task.id, 'alice');
+      advance(1);
+      const final = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'ALL DONE' });
+      expect(final.deduplicated).toBeUndefined();
+
+      // A paraphrase from a later memoryless turn is suppressed with a success-shaped result.
+      advance(2);
+      const recap = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'ALL DONE - docs/PROJECT_SUMMARY.md is written and all tasks are complete.',
+      });
+      expect(recap.deduplicated).toBe(true);
+      expect(recap.duplicateOfMessageId).toBe(final.messageId);
+      expect(recap.deduplicationNotice).toContain('Duplicate message ignored');
+      expect(recap.deduplicationNotice).toContain('Final message already delivered');
+
+      // Comments are not board events: they must not reopen the window.
+      advance(1);
+      controller.tasks.addTaskComment(task.id, { text: 'extra detail', from: 'alice' });
+      advance(1);
+      const afterComment = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Status recap: everything is finished.',
+      });
+      expect(afterComment.deduplicated).toBe(true);
+      expect(readUserInbox()).toEqual(['Delegated; working on it.', 'ALL DONE']);
+
+      // The human wrote again: the answer is delivered.
+      advance(1);
+      controller.messages.sendMessage({ to: 'alice', from: 'user', text: 'thanks, anything else?' });
+      advance(1);
+      const answer = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Nothing else; all work is complete.',
+      });
+      expect(answer.deduplicated).toBeUndefined();
+      advance(1);
+      const answerRecap = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'To recap: nothing else is pending.',
+      });
+      expect(answerRecap.deduplicated).toBe(true);
+
+      // A real board change (new task) opens a new completion epoch.
+      advance(1);
+      const followUp = controller.tasks.createTask({ subject: 'Follow-up', owner: 'alice' });
+      controller.tasks.startTask(followUp.id, 'alice');
+      controller.tasks.completeTask(followUp.id, 'alice');
+      advance(1);
+      const secondFinal = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Follow-up done too.',
+      });
+      expect(secondFinal.deduplicated).toBeUndefined();
+      advance(1);
+      const secondRecap = controller.messages.sendMessage({
+        to: 'user',
+        from: 'alice',
+        text: 'Everything including the follow-up is complete.',
+      });
+      expect(secondRecap.deduplicated).toBe(true);
+
+      // Window expiry: a message half an hour later is delivered again.
+      advance(31);
+      const late = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Late status note.' });
+      expect(late.deduplicated).toBeUndefined();
+      expect(readUserInbox()).toEqual([
+        'Delegated; working on it.',
+        'ALL DONE',
+        'Nothing else; all work is complete.',
+        'Follow-up done too.',
+        'Late status note.',
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never guards user-directed messages while the board is empty or has open work', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Hello' });
+    const second = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Hello again' });
+    expect(first.deduplicated).toBeUndefined();
+    expect(second.deduplicated).toBeUndefined();
+
+    const done = controller.tasks.createTask({ subject: 'Done task', owner: 'alice' });
+    controller.tasks.startTask(done.id, 'alice');
+    controller.tasks.completeTask(done.id, 'alice');
+    controller.tasks.createTask({ subject: 'Still open', owner: 'bob' });
+    const third = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'One done' });
+    const fourth = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Still one open' });
+    expect(third.deduplicated).toBeUndefined();
+    expect(fourth.deduplicated).toBeUndefined();
+  });
+
+  it('suppresses an identical message from the same sender to the same recipient within 30 minutes', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'ALL DONE',
+      leadSessionId: 'lead-session-1',
+    });
+    expect(first.deduplicated).toBeUndefined();
+
+    const repeat = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'ALL DONE',
+      leadSessionId: 'lead-session-1',
+    });
+    expect(repeat.deduplicated).toBe(true);
+    expect(repeat.duplicateOfMessageId).toBe(first.messageId);
+    expect(repeat.deduplicationNotice).toContain('Duplicate message ignored');
+
+    const rephrased = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'ALL DONE - docs/PROJECT_SUMMARY.md is written.',
+    });
+    expect(rephrased.deduplicated).toBeUndefined();
+
+    const inbox = JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json'), 'utf8')
+    );
+    expect(inbox.map((row) => row.text)).toEqual([
+      'ALL DONE',
+      'ALL DONE - docs/PROJECT_SUMMARY.md is written.',
+    ]);
+
+    const old = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'ping',
+      timestamp: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
+    });
+    expect(old.deduplicated).toBeUndefined();
+    const fresh = controller.messages.sendMessage({ to: 'bob', from: 'alice', text: 'ping' });
+    expect(fresh.deduplicated).toBeUndefined();
+  });
+
+  it('scopes repeated-message dedup to delivery context and resets it after user input', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const taskA = controller.tasks.createTask({ subject: 'Task A', notifyOwner: false });
+    const taskB = controller.tasks.createTask({ subject: 'Task B', notifyOwner: false });
+    const taskRef = (task) => [{ taskId: task.id, displayId: task.displayId, teamName: 'my-team' }];
+    const baseTime = Date.parse('2026-08-23T10:00:00.000Z');
+
+    const first = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'The task status is complete.',
+      leadSessionId: 'lead-session-1',
+      taskRefs: taskRef(taskA),
+      timestamp: new Date(baseTime).toISOString(),
+    });
+    const otherTask = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'The task status is complete.',
+      leadSessionId: 'lead-session-1',
+      taskRefs: taskRef(taskB),
+      timestamp: new Date(baseTime + 60_000).toISOString(),
+    });
+    expect(first.deduplicated).toBeUndefined();
+    expect(otherTask.deduplicated).toBeUndefined();
+    expect(otherTask.message.taskRefs).toEqual(taskRef(taskB));
+
+    controller.messages.sendMessage({
+      to: 'alice',
+      from: 'user',
+      text: 'Please clarify the result.',
+      timestamp: new Date(baseTime + 120_000).toISOString(),
+    });
+    const answer = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'The task status is complete.',
+      leadSessionId: 'lead-session-1',
+      taskRefs: taskRef(taskA),
+      timestamp: new Date(baseTime + 180_000).toISOString(),
+    });
+
+    expect(answer.deduplicated).toBeUndefined();
+    expect(
+      JSON.parse(
+        fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json'), 'utf8')
+      )
+    ).toHaveLength(3);
+  });
+
+  it('delivers a message the human user repeats to a teammate', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const readBobInbox = () => {
+      const file = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+      return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    };
+
+    const first = controller.messages.sendMessage({ to: 'bob', from: 'user', text: 'continue' });
+    const nudge = controller.messages.sendMessage({ to: 'bob', from: 'user', text: 'continue' });
+    expect(first.deduplicated).toBeUndefined();
+    expect(nudge.deduplicated).toBeUndefined();
+    expect(nudge.messageId).not.toBe(first.messageId);
+    expect(readBobInbox().map((row) => row.text)).toEqual(['continue', 'continue']);
+
+    // The same inbox still collapses the agent's own repeat.
+    const agentFirst = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Status on the review?',
+      leadSessionId: 'lead-session-1',
+    });
+    const agentRepeat = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Status on the review?',
+      leadSessionId: 'lead-session-1',
+    });
+    expect(agentFirst.deduplicated).toBeUndefined();
+    expect(agentRepeat.deduplicated).toBe(true);
+    expect(readBobInbox()).toHaveLength(3);
+  });
+
+  it('suppresses a user-directed restatement that only changes punctuation, case or emphasis', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'Created and assigned two tasks: PROJECT_SUMMARY to Scribe, review to Scout.',
+      leadSessionId: 'lead-session-1',
+    });
+    expect(first.deduplicated).toBeUndefined();
+
+    const restated = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: '**Created and assigned two tasks** - PROJECT_SUMMARY to Scribe, review to Scout!',
+      leadSessionId: 'lead-session-1',
+    });
+    expect(restated.deduplicated).toBe(true);
+    expect(restated.duplicateOfMessageId).toBe(first.messageId);
+
+    const withNewInformation = controller.messages.sendMessage({
+      to: 'user',
+      from: 'alice',
+      text: 'Created and assigned two tasks: PROJECT_SUMMARY to Scribe, review to Scout. Scribe has started.',
+      leadSessionId: 'lead-session-1',
+    });
+    expect(withNewInformation.deduplicated).toBeUndefined();
+
+    const inbox = JSON.parse(
+      fs.readFileSync(path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'user.json'), 'utf8')
+    );
+    expect(inbox).toHaveLength(2);
+  });
+
+  it('keeps short repeated acknowledgements and teammate messages out of the restatement guard', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const first = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Done.' });
+    const second = controller.messages.sendMessage({ to: 'user', from: 'alice', text: 'Done!' });
+    expect(first.deduplicated).toBeUndefined();
+    expect(second.deduplicated).toBeUndefined();
+
+    const toTeammate = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Handing over the review of docs/PROJECT_SUMMARY.md to you now.',
+    });
+    const restatedToTeammate = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'alice',
+      text: 'Handing over the review of docs/PROJECT_SUMMARY.md to you now!',
+    });
+    expect(toTeammate.deduplicated).toBeUndefined();
+    expect(restatedToTeammate.deduplicated).toBeUndefined();
+  });
+
+  it('tells the lead when the last open task completes, exactly once', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const readLeadInbox = () => {
+      const file = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+      return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    };
+    const boardNotices = () =>
+      readLeadInbox().filter((row) => String(row.messageId || '').startsWith('board-complete:'));
+
+    const first = controller.tasks.createTask({ subject: 'Write the note', owner: 'bob' });
+    const second = controller.tasks.createTask({ subject: 'Review the note', owner: 'bob' });
+
+    controller.tasks.completeTask(first.id, 'bob');
+    expect(boardNotices()).toHaveLength(0);
+
+    controller.tasks.completeTask(second.id, 'bob');
+    const notices = boardNotices();
+    expect(notices).toHaveLength(1);
+    expect(notices[0].from).toBe('system');
+    expect(notices[0].text).toContain('Board complete');
+    expect(notices[0].text).toContain(`#${second.displayId || second.id}`);
+
+    // A repeated task_complete for the same task must not produce a second one.
+    controller.tasks.completeTask(second.id, 'bob');
+    expect(boardNotices()).toHaveLength(1);
+  });
+
+  it('does not tell the lead about a board it finished itself', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const own = controller.tasks.createTask({ subject: 'Lead handles it', owner: 'alice' });
+
+    controller.tasks.completeTask(own.id, 'alice');
+
+    const file = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+    const rows = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    expect(rows.filter((row) => String(row.messageId || '').startsWith('board-complete:'))).toEqual(
+      []
+    );
+  });
+
+  it('refuses a second inbox row that reuses a messageId the inbox already holds', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const readBobInbox = () => {
+      const file = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'bob.json');
+      return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : [];
+    };
+
+    const first = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'user',
+      messageId: 'app-write-1',
+      text: 'Please pick up the review.',
+    });
+    expect(first.deduplicated).toBeUndefined();
+
+    // Different words, same identity: the id decides, not the text.
+    const replay = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'user',
+      messageId: 'app-write-1',
+      text: 'Please pick up the review, notes attached.',
+    });
+    expect(replay.deduplicated).toBe(true);
+    expect(replay.messageId).toBe('app-write-1');
+    expect(replay.deduplicationNotice).toContain('Duplicate messageId ignored');
+    expect(readBobInbox()).toHaveLength(1);
+
+    // A distinct identity still lands, and the first id stays resolvable.
+    const distinct = controller.messages.sendMessage({
+      to: 'bob',
+      from: 'user',
+      messageId: 'app-write-2',
+      text: 'Ping me once the review is out.',
+    });
+    expect(distinct.deduplicated).toBeUndefined();
+    expect(readBobInbox()).toHaveLength(2);
+    expect(controller.messages.lookupMessage('app-write-1').message.text).toBe(
+      'Please pick up the review.'
+    );
+  });
+
+  it('does not repeat the board-completion notice once the repeat window has passed', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const leadInboxPath = path.join(claudeDir, 'teams', 'my-team', 'inboxes', 'alice.json');
+    const readLeadInbox = () =>
+      fs.existsSync(leadInboxPath) ? JSON.parse(fs.readFileSync(leadInboxPath, 'utf8')) : [];
+    const boardNotices = () =>
+      readLeadInbox().filter((row) => String(row.messageId || '').startsWith('board-complete:'));
+
+    const task = controller.tasks.createTask({ subject: 'Write the note', owner: 'bob' });
+    controller.tasks.completeTask(task.id, 'bob');
+    expect(boardNotices()).toHaveLength(1);
+
+    // Age the lead inbox past the repeated-message window: identical text is
+    // what held the second notice back, and it only holds for 30 minutes.
+    fs.writeFileSync(
+      leadInboxPath,
+      JSON.stringify(
+        readLeadInbox().map((row) => ({
+          ...row,
+          timestamp: new Date(Date.now() - 31 * 60 * 1000).toISOString(),
+        })),
+        null,
+        2
+      )
+    );
+
+    controller.tasks.completeTask(task.id, 'bob');
+    expect(boardNotices()).toHaveLength(1);
+    expect(controller.messages.lookupMessage(boardNotices()[0].messageId).store).toBe('inbox:alice');
+
+    // The next task to finish the board still gets its own notice.
+    const second = controller.tasks.createTask({ subject: 'Review the note', owner: 'bob' });
+    controller.tasks.completeTask(second.id, 'bob');
+    expect(boardNotices()).toHaveLength(2);
   });
 
   it('does not record pending work sync intents for app-side validation rejections', async () => {

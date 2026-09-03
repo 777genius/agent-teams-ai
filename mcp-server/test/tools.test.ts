@@ -1088,7 +1088,11 @@ describe('agent-teams-mcp tools', () => {
       'Use task_list only to search/browse inventory rows, not as your working queue.'
     );
     expect(memberBriefingText).toContain('Review MCP adapter');
-    expect(memberBriefingText).toContain('Full details in task comment e5f6a7b8');
+    // Observed on a live run: the example's hex-looking ids were copied verbatim by an 8B
+    // teammate, and `#efgh5678` rendered as a dead `task://` link.
+    expect(memberBriefingText).toContain('Full details in task comment <comment-id>');
+    expect(memberBriefingText).not.toContain('e5f6a7b8');
+    expect(memberBriefingText).not.toContain('efgh5678');
     expect(memberBriefingText).not.toContain('task_get_comment {');
 
     const openCodeMemberBriefing = await getTool('member_briefing').execute({
@@ -1103,7 +1107,9 @@ describe('agent-teams-mcp tools', () => {
     expect(openCodeMemberBriefingText).toContain('agent-teams_message_send');
     expect(openCodeMemberBriefingText).toContain('OpenCode bootstrap silence rule');
     expect(openCodeMemberBriefingText).toContain('stop and wait silently');
-    expect(openCodeMemberBriefingText).toContain('Full details in task comment e5f6a7b8');
+    expect(openCodeMemberBriefingText).toContain('Full details in task comment <comment-id>');
+    expect(openCodeMemberBriefingText).not.toContain('e5f6a7b8');
+    expect(openCodeMemberBriefingText).not.toContain('efgh5678');
     expect(openCodeMemberBriefingText).toContain(
       'Never invent placeholder task refs such as #00000000'
     );
@@ -1970,6 +1976,63 @@ describe('agent-teams-mcp tools', () => {
     expect(rows[0].taskRefs).toEqual([{ taskId: 'task-1', displayId: 'abcd1234', teamName }]);
   });
 
+  it('tells the model not to resend a deduplicated message', async () => {
+    const claudeDir = makeClaudeDir();
+    const teamName = 'dedup-instruction';
+    writeTeamConfig(claudeDir, teamName, {
+      members: [
+        { name: 'lead', role: 'team-lead' },
+        { name: 'alice', role: 'developer' },
+      ],
+    });
+    const send = async (overrides: Record<string, unknown>) =>
+      parseJsonToolResult(
+        await getTool('message_send').execute({
+          claudeDir,
+          teamName,
+          to: 'user',
+          from: 'alice',
+          leadSessionId: 'session-dedup',
+          ...overrides,
+        })
+      );
+
+    const first = await send({ text: 'Report is written to docs/report.md' });
+    expect(first.deduplicated).toBeUndefined();
+
+    const repeat = await send({ text: 'Report is written to docs/report.md' });
+    expect(repeat.deduplicated).toBe(true);
+    expect(repeat.duplicateOfMessageId).toBe(first.messageId);
+    expect(repeat.deduplicationNotice).toContain('Duplicate message ignored');
+    expect(repeat.protocolInstruction).toContain('do not resend or rephrase it');
+
+    // Negative control: the dedup branch must not swallow the two instructions
+    // that already existed for delivered messages.
+    const fresh = await send({ text: 'One more finding: the report needs a diagram' });
+    expect(fresh.deduplicated).toBeUndefined();
+    expect(fresh.protocolInstruction).toContain(
+      'do not call message_send again for the same answer'
+    );
+
+    const relayed = await send({
+      text: 'Answering the app-delivered prompt',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'msg-inbound-1',
+    });
+    expect(relayed.deduplicated).toBeUndefined();
+    expect(relayed.protocolInstruction).toContain(
+      'do not call message_send again for the same inbound message'
+    );
+
+    const inboxPath = path.join(claudeDir, 'teams', teamName, 'inboxes', 'user.json');
+    const rows = JSON.parse(fs.readFileSync(inboxPath, 'utf8')) as Array<{ text: string }>;
+    expect(rows.map((row) => row.text)).toEqual([
+      'Report is written to docs/report.md',
+      'One more finding: the report needs a diagram',
+      'Answering the app-delivered prompt',
+    ]);
+  });
+
   it('uses forced app claude dir over model-supplied claudeDir when configured', async () => {
     const forcedClaudeDir = makeClaudeDir();
     const wrongClaudeDir = makeClaudeDir();
@@ -2124,6 +2187,187 @@ describe('agent-teams-mcp tools', () => {
 
     expect(reloaded.comments).toHaveLength(1);
     expect(reloaded.comments[0].text).toBe('Comment should persist despite broken inbox');
+  });
+
+  describe('task_add_comment completion-claim protocol instruction', () => {
+    function setupCommentTeam() {
+      const claudeDir = makeClaudeDir();
+      const teamName = 'completion-claim';
+      fs.mkdirSync(path.join(claudeDir, 'tasks', teamName), { recursive: true });
+      writeTeamConfig(claudeDir, teamName, {
+        members: [
+          { name: 'lead', role: 'team-lead' },
+          { name: 'alice', role: 'developer' },
+          { name: 'bob', role: 'reviewer' },
+        ],
+      });
+      return { claudeDir, teamName };
+    }
+
+    async function createOwnedTask(claudeDir: string, teamName: string, subject: string) {
+      return parseJsonToolResult(
+        await getTool('task_create').execute({
+          claudeDir,
+          teamName,
+          subject,
+          owner: 'alice',
+          notifyOwner: false,
+        })
+      );
+    }
+
+    it('tells the owner to call task_complete after a completion-shaped comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Completion claim');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done. Implemented the parser in src/app.ts, tests green.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.task.status).toBe('in_progress');
+      expect(commented.protocolInstruction).toContain('task_complete');
+      expect(commented.protocolInstruction).toContain(`#${task.displayId}`);
+    });
+
+    it('leaves a pending task untouched until the owner explicitly starts it', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Pending auto-start');
+
+      expect(task.status).toBe('pending');
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'Gotovo, spremno za pregled.',
+          from: 'alice',
+        })
+      );
+
+      // A comment records progress but is not an implicit task_start command.
+      expect(commented.task.status).toBe('pending');
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent on a plain progress comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Progress note');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'Reading src/app.ts now.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent when the completion-shaped comment asks a question', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Blocking question');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done. Should I also update the docs?',
+          from: 'alice',
+        })
+      );
+
+      // The desktop stall monitor classifies this text as blocker_or_clarification,
+      // so the MCP surface must not answer the same comment with "call
+      // task_complete NOW" and close the task with the question unanswered.
+      expect(commented.task.status).toBe('in_progress');
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent when a non-owner posts the completion-shaped comment', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Non-owner claim');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done, looks complete to me.',
+          from: 'bob',
+        })
+      );
+
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('stays silent once the task is already completed', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Already completed');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+      await getTool('task_complete').execute({
+        claudeDir,
+        teamName,
+        taskId: task.id,
+        actor: 'alice',
+      });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.task.status).toBe('completed');
+      expect(commented.protocolInstruction).toBeUndefined();
+    });
+
+    it('keeps the slim task payload after the execute body restructure', async () => {
+      const { claudeDir, teamName } = setupCommentTeam();
+      const task = await createOwnedTask(claudeDir, teamName, 'Slim payload');
+
+      await getTool('task_start').execute({ claudeDir, teamName, taskId: task.id, actor: 'alice' });
+
+      const commented = parseJsonToolResult(
+        await getTool('task_add_comment').execute({
+          claudeDir,
+          teamName,
+          taskId: task.id,
+          text: 'All done.',
+          from: 'alice',
+        })
+      );
+
+      expect(commented.commentId).toBeTruthy();
+      expect(commented.comment.text).toBe('All done.');
+      expect(commented.task.commentCount).toBe(1);
+      expect(commented.task.comments).toBeUndefined();
+      expect(commented.task.historyEvents).toBeUndefined();
+      expect(commented.task.workIntervals).toBeUndefined();
+    });
   });
 
   it('write operations return slim task and task_list returns allowlisted inventory rows', async () => {

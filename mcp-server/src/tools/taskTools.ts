@@ -11,6 +11,7 @@ import {
   resolveMessageTaskCommandId,
   resolveOptionalTaskCreateCommandId,
 } from '../utils/taskCreationIdempotency';
+import { buildCommentCompletionInstruction } from './taskCommentInstruction';
 
 /** stripAgentBlocks from canonical agentBlocks module — single source of truth for the tag format. */
 const stripAgentBlocksFn = (text: string): string => agentBlocks.stripAgentBlocks(text);
@@ -561,16 +562,15 @@ export function registerTaskTools(server: Pick<FastMCP, 'addTool'>) {
     }),
     execute: async ({ teamName, claudeDir, taskId, text, from, taskRefs }) => {
       assertConfiguredTeam(teamName, claudeDir);
+      const result = getController(teamName, claudeDir).taskBoard.addTaskComment(taskId, {
+        text,
+        ...(from ? { from } : {}),
+        ...(taskRefs?.length ? { taskRefs } : {}),
+      }) as Record<string, unknown>;
+      const payload = taskWriteResult(result);
+      const protocolInstruction = buildCommentCompletionInstruction(payload);
       return await Promise.resolve(
-        jsonTextContent(
-          taskWriteResult(
-            getController(teamName, claudeDir).taskBoard.addTaskComment(taskId, {
-              text,
-              ...(from ? { from } : {}),
-              ...(taskRefs?.length ? { taskRefs } : {}),
-            }) as Record<string, unknown>
-          )
-        )
+        jsonTextContent(protocolInstruction ? { ...payload, protocolInstruction } : payload)
       );
     },
   });

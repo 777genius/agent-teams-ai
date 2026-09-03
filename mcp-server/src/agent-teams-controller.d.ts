@@ -236,6 +236,13 @@ declare module 'agent-teams-controller' {
 
   export const protocols: ProtocolsApi;
 
+  /** Context-free text classifiers shared with the desktop app. */
+  export interface TaskTextSignalsApi {
+    isTaskCompletionClaimText(text: string): boolean;
+  }
+
+  export const taskTextSignals: TaskTextSignalsApi;
+
   export type AgentTeamsMcpToolGroupId =
     | 'task'
     | 'lead'
