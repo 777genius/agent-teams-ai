@@ -31,7 +31,7 @@ const AUTO_RETRYABLE_PRE_LAUNCH_GATE_REASONS = new Set([
  * bridge command ran. It is only ever attached at such a call site: an absent
  * marker means "no proof", which is the safe reading for every caller.
  */
-export function openCodePreLaunchGate(reason: string): TeamRuntimePreLaunchGate {
+export function buildOpenCodePreLaunchGate(reason: string): TeamRuntimePreLaunchGate {
   return {
     blocked: true,
     reason,

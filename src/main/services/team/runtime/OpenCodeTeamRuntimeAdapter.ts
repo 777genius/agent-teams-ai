@@ -8,7 +8,7 @@ import {
 import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
 
-import { isRetryableReadinessState, openCodePreLaunchGate } from './OpenCodeLaunchGateResult';
+import { buildOpenCodePreLaunchGate, isRetryableReadinessState } from './OpenCodeLaunchGateResult';
 import {
   createLocalRuntimeInspectionState,
   preflightOpenCodeLocalModels,
@@ -1555,7 +1555,9 @@ function blockedLaunchResult(
     diagnostics,
     // Attached only where the block provably precedes launchOpenCodeTeam, so an
     // absent marker always reads as "this launch may already own a host".
-    ...(options.preLaunchGate === true ? { preLaunchGate: openCodePreLaunchGate(reason) } : {}),
+    ...(options.preLaunchGate === true
+      ? { preLaunchGate: buildOpenCodePreLaunchGate(reason) }
+      : {}),
   };
 }
 

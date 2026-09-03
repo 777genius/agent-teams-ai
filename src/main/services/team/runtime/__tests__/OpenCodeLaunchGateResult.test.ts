@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildOpenCodePreLaunchGate,
   isAutoRetryableOpenCodePreLaunchGate,
   isRetryableReadinessState,
-  openCodePreLaunchGate,
 } from '../OpenCodeLaunchGateResult';
 
 describe('OpenCodeLaunchGateResult', () => {
@@ -15,7 +15,7 @@ describe('OpenCodeLaunchGateResult', () => {
   ])('marks %j as auto-retryable', (reason) => {
     expect(isRetryableReadinessState(reason)).toBe(true);
     expect(
-      isAutoRetryableOpenCodePreLaunchGate({ preLaunchGate: openCodePreLaunchGate(reason) })
+      isAutoRetryableOpenCodePreLaunchGate({ preLaunchGate: buildOpenCodePreLaunchGate(reason) })
     ).toBe(true);
   });
 
@@ -25,13 +25,13 @@ describe('OpenCodeLaunchGateResult', () => {
       // Nothing changes while the app waits: only a person can clear these.
       expect(isRetryableReadinessState(reason)).toBe(true);
       expect(
-        isAutoRetryableOpenCodePreLaunchGate({ preLaunchGate: openCodePreLaunchGate(reason) })
+        isAutoRetryableOpenCodePreLaunchGate({ preLaunchGate: buildOpenCodePreLaunchGate(reason) })
       ).toBe(false);
     }
   );
 
   it('treats an unknown gate reason as neither retryable nor auto-retryable', () => {
-    const gate = openCodePreLaunchGate('opencode_capability_snapshot_missing');
+    const gate = buildOpenCodePreLaunchGate('opencode_capability_snapshot_missing');
 
     expect(gate).toEqual({
       blocked: true,
