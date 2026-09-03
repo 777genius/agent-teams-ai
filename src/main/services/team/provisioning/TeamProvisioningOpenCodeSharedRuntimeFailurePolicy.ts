@@ -104,6 +104,28 @@ export function takeBlockingOpenCodeSharedRuntimeFailure(
 }
 
 /**
+ * Drops a non-transient record an earlier launch left for this project.
+ *
+ * A permanent record is what blocks the remaining lanes of the run that saw the
+ * failure, and the run-scoped ledger keeps doing exactly that. The scope shared
+ * across primary launches has a narrower job: stop a relaunch from spending a
+ * second retry inside the transient TTL window. A host-unhealthy or
+ * connection-refused record never expires, so left in that scope it also
+ * cancels the eligible retry of every later launch of the same project - long
+ * after the host was restarted and the condition it describes is gone.
+ */
+export function clearNonTransientOpenCodeSharedRuntimeFailure(
+  scope: OpenCodeSharedRuntimeFailureScope,
+  cwd: string
+): void {
+  const failures = scope.mixedSecondarySharedRuntimeFailuresByProject;
+  const record = failures?.get(cwd);
+  if (record && !record.transient) {
+    failures?.delete(cwd);
+  }
+}
+
+/**
  * A lane launch may be retried in place only when both hold: the failure is the
  * transient timeout class above, and the result's pre-launch gate proves no
  * state-changing bridge command ran, so no host or session can be duplicated.
@@ -143,6 +165,9 @@ export async function launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
   },
   ports: OpenCodePrimaryTransientSharedRuntimeRetryPorts
 ): Promise<TeamRuntimeLaunchResult> {
+  // This call is the project's cross-launch boundary: whatever a previous
+  // launch could not recover from is that launch's verdict, not this one's.
+  clearNonTransientOpenCodeSharedRuntimeFailure(params.scope, params.cwd);
   const result = await params.launch();
   if (!shouldRetryTransientOpenCodeSharedRuntimeFailure(result)) {
     trackOpenCodeSharedRuntimeFailureFromResult(params.scope, params.cwd, result, ports.nowMs());

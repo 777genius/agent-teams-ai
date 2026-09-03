@@ -274,6 +274,54 @@ describe('TeamProvisioningOpenCodeSharedRuntimeFailurePolicy', () => {
       expect(launch).toHaveBeenCalledTimes(1);
     });
 
+    it.each([
+      {
+        label: 'a permanent failure of an earlier launch',
+        earlier: HOST_UNHEALTHY,
+        expectedLaunches: 2,
+      },
+      {
+        label: 'a live transient record of an earlier launch',
+        earlier: MODELS_QUERY_TIMEOUT,
+        expectedLaunches: 1,
+      },
+    ])(
+      '$label decides whether the next launch may retry',
+      async ({ earlier, expectedLaunches }) => {
+        vi.useFakeTimers();
+        try {
+          const scope: OpenCodeSharedRuntimeFailureScope = {};
+          const earlierLaunch = vi
+            .fn<() => Promise<TeamRuntimeLaunchResult>>()
+            .mockResolvedValue(failureResult({ message: earlier }));
+          await launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
+            { teamName: 'team-a', cwd: '/repo', scope, launch: earlierLaunch },
+            retryPorts()
+          );
+          expect(earlierLaunch).toHaveBeenCalledTimes(1);
+
+          const launch = vi
+            .fn<() => Promise<TeamRuntimeLaunchResult>>()
+            .mockResolvedValueOnce(
+              failureResult({ message: MODELS_QUERY_TIMEOUT, preLaunchGate: retryableGate })
+            )
+            .mockResolvedValueOnce(healthyResult);
+          const pending = launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
+            { teamName: 'team-a', cwd: '/repo', scope, launch },
+            retryPorts()
+          );
+          await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+          await pending;
+
+          // A host that was unhealthy at the previous launch is not evidence
+          // about this one; a timeout inside the TTL window still is.
+          expect(launch).toHaveBeenCalledTimes(expectedLaunches);
+        } finally {
+          vi.useRealTimers();
+        }
+      }
+    );
+
     it('does not relaunch once the launch has lost authority', async () => {
       const scope: OpenCodeSharedRuntimeFailureScope = {};
       const failure = failureResult({
