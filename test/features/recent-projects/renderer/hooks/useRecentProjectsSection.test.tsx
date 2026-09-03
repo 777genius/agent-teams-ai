@@ -310,4 +310,32 @@ describe('useRecentProjectsSection', () => {
     expect(storeState.openTeamsTab).toHaveBeenCalledOnce();
     expect(storeState.openTeamsTab).toHaveBeenCalledWith('/tmp/alpha');
   });
+
+  it('opens a selected folder as a synthetic project without using a real dialog', async () => {
+    const selectedPath = '/tmp/recent-projects-select-folder-fixture';
+    const encodedId = '-tmp-recent-projects-select-folder-fixture';
+    apiMock.getDashboardRecentProjects.mockResolvedValue(payload('alpha'));
+    apiMock.config.selectFolders.mockResolvedValue([selectedPath]);
+    apiMock.config.addCustomProjectPath.mockResolvedValue(undefined);
+    storeState.fetchRepositoryGroups.mockResolvedValue(undefined);
+
+    await renderHarness();
+
+    await act(async () => {
+      await latest?.selectProjectFolder();
+      await flushPromises();
+    });
+
+    expect(apiMock.config.selectFolders).toHaveBeenCalledOnce();
+    expect(storeState.fetchRepositoryGroups).toHaveBeenCalledOnce();
+    expect(apiMock.config.addCustomProjectPath).toHaveBeenCalledWith(selectedPath);
+    expect(storeState.repositoryGroups[0]).toEqual(
+      expect.objectContaining({
+        id: encodedId,
+        name: 'recent-projects-select-folder-fixture',
+      })
+    );
+    expect(storeState.fetchSessionsInitial).toHaveBeenCalledWith(encodedId);
+    expect(storeState.openTeamsTab).toHaveBeenCalledWith(selectedPath);
+  });
 });

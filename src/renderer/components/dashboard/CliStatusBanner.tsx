@@ -928,13 +928,15 @@ const InstalledBanner = ({
 
   return (
     <div
-      className={`mb-6 rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
+      className={`mb-6 overflow-hidden rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
       style={{ backgroundColor: INSTALLED_BANNER_BACKGROUND }}
     >
       <div
-        className={`flex items-center justify-between rounded-md ${
+        className={`flex items-center justify-between ${
           showCollapseControl
-            ? '-mx-2 cursor-pointer px-2 py-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/15'
+            ? `${
+                showExpandedContent ? '-mx-4 -mt-3 px-4 pb-1 pt-4' : '-mx-4 -my-2.5 px-4 py-3.5'
+              } cursor-pointer transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/15`
             : ''
         }`}
         role="button"

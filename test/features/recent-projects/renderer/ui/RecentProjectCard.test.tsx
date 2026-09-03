@@ -55,4 +55,29 @@ describe('RecentProjectCard', () => {
     expect(heading?.textContent).toBe('alpha');
     expect(headerRow?.querySelector('svg')).toBeNull();
   });
+
+  it('renders as a flat grid cell without its own border or rounded corners', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+
+    act(() => {
+      root.render(
+        <TooltipProvider>
+          <RecentProjectCard card={card} onClick={vi.fn()} onOpenPath={vi.fn()} />
+        </TooltipProvider>
+      );
+    });
+
+    const projectCell = host.querySelector<HTMLButtonElement>(
+      '[data-recent-project-cell="project"]'
+    );
+
+    expect(projectCell).not.toBeNull();
+    expect(projectCell?.classList.contains('project-row-zebra-card')).toBe(true);
+    expect(projectCell?.classList.contains('border')).toBe(false);
+    expect([...projectCell?.classList ?? []].some((name) => name.startsWith('rounded'))).toBe(
+      false
+    );
+  });
 });
