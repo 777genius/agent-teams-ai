@@ -350,8 +350,8 @@ export const RuntimeProviderQuickConnect = ({
           providerId: gateway.providerId,
           displayName: gateway.displayName,
           description,
-          state: 'unavailable',
-          stateLabel: t('cliStatus.quickConnect.statusUnavailable'),
+          state: 'connectable',
+          stateLabel: t('cliStatus.quickConnect.readyToConnect'),
           actionLabel: t('cliStatus.quickConnect.checkAndConnect'),
           onAction: () => onOpenCodeProviderAction(gateway.providerId, 'settings-connect'),
         };
@@ -376,8 +376,8 @@ export const RuntimeProviderQuickConnect = ({
           providerId: gateway.providerId,
           displayName: gateway.displayName,
           description,
-          state: 'unavailable',
-          stateLabel: t('cliStatus.quickConnect.statusUnavailable'),
+          state: 'connectable',
+          stateLabel: t('cliStatus.quickConnect.readyToConnect'),
           actionLabel: t('cliStatus.quickConnect.checkAndConnect'),
           onAction: () => onOpenCodeProviderAction(gateway.providerId, 'settings-connect'),
         };

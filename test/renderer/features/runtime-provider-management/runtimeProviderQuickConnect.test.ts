@@ -383,6 +383,8 @@ describe('RuntimeProviderQuickConnect', () => {
         authoritativeLoaded: false,
         authoritativePending: false,
         error: 'directory unavailable',
+        expectedState: 'connectable',
+        expectedLabel: 'cliStatus.quickConnect.readyToConnect',
       },
       {
         entries: [],
@@ -391,6 +393,8 @@ describe('RuntimeProviderQuickConnect', () => {
         authoritativeLoaded: false,
         authoritativePending: false,
         error: null,
+        expectedState: 'connectable',
+        expectedLabel: 'cliStatus.quickConnect.readyToConnect',
       },
       {
         entries: [entry('openrouter', { state: 'error', setupKind: 'unsupported' })],
@@ -399,6 +403,8 @@ describe('RuntimeProviderQuickConnect', () => {
         authoritativeLoaded: true,
         authoritativePending: false,
         error: null,
+        expectedState: 'unavailable',
+        expectedLabel: 'cliStatus.quickConnect.notInCatalog',
       },
     ] as const;
 
@@ -411,6 +417,12 @@ describe('RuntimeProviderQuickConnect', () => {
       const action = host.querySelector<HTMLButtonElement>(
         '[data-testid="provider-quick-action-openrouter"]'
       );
+      expect(card?.querySelector(`[title="${directory.expectedLabel}"]`)?.className).toContain(
+        directory.expectedState === 'connectable'
+          ? 'text-sky-300'
+          : 'text-[var(--color-text-muted)]'
+      );
+      expect(card?.textContent).toContain(directory.expectedLabel);
       expect(card?.textContent).toContain('cliStatus.quickConnect.checkAndConnect');
       expect(action).not.toBeNull();
 

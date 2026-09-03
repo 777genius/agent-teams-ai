@@ -1353,7 +1353,9 @@ describe('cliInstallerSlice', () => {
             .getState()
             .cliStatus?.providers.every((provider) => !provider.capabilities.teamLaunch)
         ).toBe(true);
-        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(
+          outcome === 'timeout' ? 2 : 1
+        );
       }
     );
 
@@ -1921,6 +1923,57 @@ describe('cliInstallerSlice', () => {
         statusCheckOutcome: 'authoritative',
         modelCatalogRefreshState: 'ready',
       });
+    });
+
+    it('rechecks one transient provider timeout before replacing connected status', async () => {
+      const connectedProvider = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        authenticated: true,
+        authMethod: 'claude.ai',
+        statusMessage: null,
+        models: ['haiku'],
+        backend: { kind: 'anthropic-api', label: 'Anthropic API' },
+      });
+      const timedOutProvider = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'timeout',
+        statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+      });
+      useStore.setState({ cliStatus: createMultimodelStatus([connectedProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockResolvedValueOnce(timedOutProvider)
+        .mockResolvedValueOnce(connectedProvider);
+
+      await expect(
+        useStore
+          .getState()
+          .fetchCliProviderStatus('anthropic', { checkReason: 'manual_refresh' })
+      ).resolves.toBe(true);
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')
+      ).toMatchObject({
+        authenticated: true,
+        authMethod: 'claude.ai',
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+      });
+      expect(useStore.getState().cliStatusError).toBeNull();
     });
 
     it('reports a scoped OpenCode catalog loaded only after an authoritative ready response', async () => {
