@@ -541,11 +541,11 @@ describe('ClaudeMultimodelBridgeService', () => {
   );
 
   it.each(['aggregate', 'single', 'project'] as const)(
-    'keeps OpenCode launch fail-closed and summary-only via %s',
+    'keeps OpenCode launch fail-closed via %s',
     async (entrypoint) => {
       execCliMock.mockImplementation((_binaryPath, args) => {
         const requestedId = args[args.indexOf('--provider') + 1] as CliProviderId;
-        if (!args.includes('--summary')) {
+        if (!args.includes('--summary') && entrypoint !== 'project') {
           return Promise.reject(new Error(`Unexpected non-summary call for ${requestedId}`));
         }
 
@@ -600,15 +600,16 @@ describe('ClaudeMultimodelBridgeService', () => {
         (call) => call[1][call[1].indexOf('--provider') + 1] === 'opencode'
       );
       expect(opencodeCalls).toHaveLength(1);
-      expect(opencodeCalls[0][1]).toEqual([
-        'runtime',
-        'status',
-        '--json',
-        '--provider',
-        'opencode',
-        '--summary',
-      ]);
-      expect(execCliMock.mock.calls.every((call) => call[1].includes('--summary'))).toBe(true);
+      expect(opencodeCalls[0][1]).toEqual(
+        entrypoint === 'project'
+          ? ['runtime', 'status', '--json', '--provider', 'opencode']
+          : ['runtime', 'status', '--json', '--provider', 'opencode', '--summary']
+      );
+      expect(
+        execCliMock.mock.calls.every(
+          (call) => entrypoint === 'project' || call[1].includes('--summary')
+        )
+      ).toBe(true);
       if (entrypoint === 'project') {
         expect(opencodeCalls[0][2]?.cwd).toBe(projectPath);
       } else {
@@ -1173,7 +1174,7 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     expect(execCliMock).toHaveBeenCalledWith(
       '/mock/agent_teams_orchestrator',
-      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+      ['runtime', 'status', '--json', '--provider', 'opencode'],
       // The service resolves the project cwd before spawning the catalog probe.
       expect.objectContaining({ cwd: path.resolve('/tmp/local-model-project') })
     );
@@ -2134,7 +2135,10 @@ describe('ClaudeMultimodelBridgeService', () => {
 
     execCliMock.mockImplementation((_binaryPath, args, options) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';
-      if (normalizedArgs === 'runtime status --json --provider opencode --summary') {
+      if (
+        normalizedArgs === 'runtime status --json --provider opencode --summary' ||
+        normalizedArgs === 'runtime status --json --provider opencode'
+      ) {
         return Promise.resolve({
           stdout: JSON.stringify(
             buildStatus(options?.cwd === '/tmp/scoped-project' ? 'scoped' : 'global')
@@ -2170,7 +2174,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(scopedStatus.statusMessage).toBe('scoped');
     expect(execCliMock.mock.calls.map((call) => call[1])).toEqual([
       ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
-      ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
+      ['runtime', 'status', '--json', '--provider', 'opencode'],
     ]);
     expect(execCliMock.mock.calls.map((call) => call[2]?.cwd ?? null)).toEqual([
       null,
