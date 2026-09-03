@@ -36,6 +36,37 @@ function createIntent(): TeamPermanentDeletionIntent {
   };
 }
 
+/**
+ * A crash-recovered intent: the listed targets are already proved removed, so
+ * runCleanup skips the pre-flight identity checks for them.
+ */
+function createRecoveredIntent(
+  completedTargets: PermanentDeletionTarget[]
+): TeamPermanentDeletionIntent {
+  const base = createIntent();
+  const targetRemovalProofs = Object.fromEntries(
+    Object.entries(base.targets).flatMap(([target, observed]) =>
+      completedTargets.includes(target as PermanentDeletionTarget) && observed.status === 'present'
+        ? [
+            [
+              target,
+              {
+                version: 1,
+                transactionId: base.transactionId,
+                target,
+                targetIdentity: observed.identity,
+                state: 'removed',
+                detachedAt: base.requestedAt,
+                removedAt: base.updatedAt,
+              },
+            ],
+          ]
+        : []
+    )
+  ) as TeamPermanentDeletionIntent['targetRemovalProofs'];
+  return { ...base, phase: 'deleting', completedTargets, targetRemovalProofs };
+}
+
 function createHarness(options: {
   prepareTeamDeletion: (
     teamName: string,
@@ -44,8 +75,10 @@ function createHarness(options: {
   ) => Promise<void>;
   releaseTeamScopedResources?: () => Promise<void>;
   withResourceHooks?: boolean;
+  intent?: TeamPermanentDeletionIntent;
 }): {
   coordinator: TeamPermanentDeletionTransactionCoordinator;
+  intent: TeamPermanentDeletionIntent;
   lifecycle: {
     prepareTeamDeletion: ReturnType<typeof vi.fn>;
     completeTeamDeletion: ReturnType<typeof vi.fn>;
@@ -57,7 +90,7 @@ function createHarness(options: {
   releaseTeamScopedResources: ReturnType<typeof vi.fn>;
   restoreTeamScopedResources: ReturnType<typeof vi.fn>;
 } {
-  const intent = createIntent();
+  const intent = options.intent ?? createIntent();
   const lifecycle = {
     prepareTeamDeletion: vi.fn(options.prepareTeamDeletion),
     completeTeamDeletion: vi.fn(),
@@ -132,6 +165,7 @@ function createHarness(options: {
 
   return {
     coordinator: new TeamPermanentDeletionTransactionCoordinator(ports),
+    intent,
     lifecycle,
     permanentlyDeleteTeam,
     completePermanentDeletion,
@@ -393,6 +427,83 @@ describe('TeamPermanentDeletionTransactionCoordinator team-scoped resources', ()
     });
     expect(harness.lifecycle.resumeTeam).toHaveBeenCalledWith('fixteam');
     expect(harness.lifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+  });
+
+  it('leaves a replacement alone when it owns the name and nothing is left to detach', async () => {
+    // Crash recovery: teams/<team> and tasks/<team> are already proved gone, so
+    // the pre-flight identity checks are skipped and only the attachment
+    // targets remain. A new team has taken the free name in the meantime.
+    const intent = createRecoveredIntent(['team-data', 'task-data']);
+    const harness = createHarness({
+      prepareTeamDeletion: () => Promise.resolve(),
+      withResourceHooks: true,
+      intent,
+    });
+    harness.isPermanentDeletionTargetCurrent.mockResolvedValue(false);
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam', { existingIntent: intent });
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(deletion).resolves.toBeUndefined();
+
+    // The handles under that name are the replacement's, and this intent has
+    // nothing left to rename, so they must not be touched at all: suspending
+    // its watchers and taking its log-source consumers away would be a
+    // completed deletion's cleanup applied to a live team.
+    expect(harness.releaseTeamScopedResources).not.toHaveBeenCalled();
+    expect(harness.restoreTeamScopedResources).not.toHaveBeenCalled();
+    expect(harness.lifecycle.prepareTeamDeletion).not.toHaveBeenCalled();
+    // The attachment targets are still cleaned up and the replacement keeps its
+    // own lifecycle.
+    expect(harness.completePermanentDeletion).toHaveBeenCalledTimes(1);
+    expect(harness.lifecycle.resumeTeam).toHaveBeenCalledWith('fixteam');
+    expect(harness.lifecycle.completeTeamDeletion).not.toHaveBeenCalled();
+  });
+
+  it('gives a replacement its handles back when task data still needs the release', async () => {
+    // Same recovery, but tasks/<team> is still pending: the rename needs the
+    // watcher suspension, so the release stays enabled.
+    const intent = createRecoveredIntent(['team-data']);
+    const harness = createHarness({
+      prepareTeamDeletion: () => Promise.resolve(),
+      withResourceHooks: true,
+      intent,
+    });
+    harness.isPermanentDeletionTargetCurrent.mockResolvedValue(false);
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam', { existingIntent: intent });
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(deletion).resolves.toBeUndefined();
+
+    expect(harness.releaseTeamScopedResources).toHaveBeenCalledWith('fixteam');
+    expect(harness.completePermanentDeletion).toHaveBeenCalledTimes(1);
+    // The deletion completed, but what was released belongs to the team that
+    // owns the name now, so it goes back the way a rollback puts it back.
+    expect(harness.restoreTeamScopedResources).toHaveBeenCalledWith('fixteam', {
+      deletionCompleted: false,
+    });
+    expect(harness.lifecycle.resumeTeam).toHaveBeenCalledWith('fixteam');
+  });
+
+  it('still reports a completed recovery when the name was never taken', async () => {
+    const intent = createRecoveredIntent(['team-data']);
+    const harness = createHarness({
+      prepareTeamDeletion: () => Promise.resolve(),
+      withResourceHooks: true,
+      intent,
+    });
+
+    const deletion = harness.coordinator.permanentlyDelete('fixteam', { existingIntent: intent });
+    await vi.advanceTimersByTimeAsync(0);
+    await expect(deletion).resolves.toBeUndefined();
+
+    // Negative control for the two above: on the same recovery path with the
+    // name still free, the released handles were this intent's own and the
+    // restore must not put them back on a team that is gone.
+    expect(harness.releaseTeamScopedResources).toHaveBeenCalledWith('fixteam');
+    expect(harness.restoreTeamScopedResources).toHaveBeenCalledWith('fixteam', {
+      deletionCompleted: true,
+    });
+    expect(harness.lifecycle.completeTeamDeletion).toHaveBeenCalledWith('fixteam');
   });
 
   it('deletes anyway when the release throws, and then does not restore', async () => {

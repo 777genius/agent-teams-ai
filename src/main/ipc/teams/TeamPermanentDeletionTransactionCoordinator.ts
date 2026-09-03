@@ -37,6 +37,17 @@ interface TeamPermanentDeletionLifecycle {
 
 const PREPARE_TEAM_DELETION_TIMEOUT_MS = 30_000;
 
+/** What releaseTeamScopedResources did, and whose handles it took. */
+interface TeamScopedResourceRelease {
+  released: boolean;
+  /**
+   * False when a replacement team already owned the name at the moment of the
+   * release, so the handles that were closed are the replacement's and have to
+   * go back whatever the deletion does.
+   */
+  releasedForIntent: boolean;
+}
+
 export interface TeamPermanentDeletionTransactionCoordinatorPorts {
   backupService(): TeamBackupService | null;
   dataService(): TeamPermanentDeletionDataPort;
@@ -152,17 +163,50 @@ export class TeamPermanentDeletionTransactionCoordinator {
       }
     }
 
-    const resourcesReleased = await this.releaseTeamScopedResources(intent.teamName);
+    const release: TeamScopedResourceRelease = { released: false, releasedForIntent: true };
     let deletionCompleted = false;
     try {
-      deletionCompleted = await this.runFencedCleanup(intent);
+      deletionCompleted = await this.runFencedCleanup(intent, teamDataAlreadyCompleted, release);
     } finally {
-      if (resourcesReleased && this.ports.restoreTeamScopedResources) {
+      if (release.released && this.ports.restoreTeamScopedResources) {
         await this.ports
-          .restoreTeamScopedResources(intent.teamName, { deletionCompleted })
+          .restoreTeamScopedResources(intent.teamName, {
+            // Handles taken from a replacement belong to a team that is very
+            // much still there, whatever became of the identity this intent
+            // targeted, so they go back the way a rollback puts them back.
+            deletionCompleted: deletionCompleted && release.releasedForIntent,
+          })
           .catch(() => undefined);
       }
     }
+  }
+
+  /**
+   * The release closes handles by team name, so it may only run once the fence
+   * has established whose team that name is. When team-data is already gone the
+   * pre-flight identity checks are skipped on purpose - the intent's directory
+   * is not there to check - and a replacement can have taken the name in the
+   * meantime. Suspending its watchers and taking away its log-source consumers
+   * for a deletion it has nothing to do with is what this guards: with nothing
+   * left to detach under teams/<team> or tasks/<team> there is no reason to
+   * touch them at all, and the remaining attachment targets are cleaned up
+   * without the release. Task-data still pending is the exception, because its
+   * directory can still need the watcher suspension for the rename.
+   */
+  private async releaseTeamScopedResourcesUnderFence(
+    intent: TeamPermanentDeletionIntent,
+    verifyNameOwnership: boolean,
+    taskDataCompleted: boolean,
+    release: TeamScopedResourceRelease
+  ): Promise<void> {
+    if (verifyNameOwnership) {
+      release.releasedForIntent =
+        await this.getBackupService().isPermanentDeletionTargetCurrent(intent);
+    }
+    if (!release.releasedForIntent && taskDataCompleted) {
+      return;
+    }
+    release.released = await this.releaseTeamScopedResources(intent.teamName);
   }
 
   private async releaseTeamScopedResources(teamName: string): Promise<boolean> {
@@ -180,11 +224,21 @@ export class TeamPermanentDeletionTransactionCoordinator {
   }
 
   /** Resolves true only when the team was really removed and marked complete. */
-  private async runFencedCleanup(intent: TeamPermanentDeletionIntent): Promise<boolean> {
+  private async runFencedCleanup(
+    intent: TeamPermanentDeletionIntent,
+    teamDataAlreadyCompleted: boolean,
+    release: TeamScopedResourceRelease
+  ): Promise<boolean> {
     const backupService = this.getBackupService();
     const cleanupCompleted = await backupService.withPermanentDeletionTargetFence(
       intent,
       async (isTargetCurrent, getTargetProofHooks, isTargetCompleted) => {
+        await this.releaseTeamScopedResourcesUnderFence(
+          intent,
+          teamDataAlreadyCompleted,
+          isTargetCompleted('task-data'),
+          release
+        );
         if (
           (!isTargetCompleted('team-data') || !isTargetCompleted('task-data')) &&
           (await this.ports.dataService().permanentlyDeleteTeam(
