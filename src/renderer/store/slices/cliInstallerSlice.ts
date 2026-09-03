@@ -1227,7 +1227,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
     const silent = options?.silent === true;
     const requestStartedAtMs = Date.now();
     const previousProviderStatus = getProviderStatus(get().cliStatus, providerId);
-    cliProviderStatusActiveRequestIds.set(requestKey, requestId);
+    cliProviderStatusActiveRequestIds.set(scopeKey, requestId);
 
     // Assigned before the first awaited continuation and referenced by its own cleanup.
     let request!: Promise<boolean>;
@@ -1294,7 +1294,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         const requestIsCurrent =
           requestEpoch === cliStatusEpoch &&
           requestGeneration === cliProviderStatusGeneration &&
-          cliProviderStatusActiveRequestIds.get(requestKey) === requestId;
+          cliProviderStatusActiveRequestIds.get(scopeKey) === requestId;
         if (
           !silent &&
           !verifyModels &&
@@ -1321,7 +1321,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           if (
             requestEpoch !== cliStatusEpoch ||
             requestGeneration !== cliProviderStatusGeneration ||
-            cliProviderStatusActiveRequestIds.get(requestKey) !== requestId
+            cliProviderStatusActiveRequestIds.get(scopeKey) !== requestId
           ) {
             return {};
           }
@@ -1407,7 +1407,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
         const requestIsCurrent =
           requestEpoch === cliStatusEpoch &&
           requestGeneration === cliProviderStatusGeneration &&
-          cliProviderStatusActiveRequestIds.get(requestKey) === requestId;
+          cliProviderStatusActiveRequestIds.get(scopeKey) === requestId;
         if (
           !silent &&
           !verifyModels &&
@@ -1436,7 +1436,7 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           if (
             requestEpoch !== cliStatusEpoch ||
             requestGeneration !== cliProviderStatusGeneration ||
-            cliProviderStatusActiveRequestIds.get(requestKey) !== requestId
+            cliProviderStatusActiveRequestIds.get(scopeKey) !== requestId
           ) {
             return {};
           }
@@ -1507,14 +1507,16 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
                 },
           };
         });
-        clearCodexCatalogLoadingRefresh(providerId);
+        if (requestIsCurrent) {
+          clearCodexCatalogLoadingRefresh(providerId);
+        }
         return false;
       } finally {
         if (cliProviderStatusInFlight.get(requestKey) === request) {
           cliProviderStatusInFlight.delete(requestKey);
         }
-        if (cliProviderStatusActiveRequestIds.get(requestKey) === requestId) {
-          cliProviderStatusActiveRequestIds.delete(requestKey);
+        if (cliProviderStatusActiveRequestIds.get(scopeKey) === requestId) {
+          cliProviderStatusActiveRequestIds.delete(scopeKey);
         }
       }
     })();
@@ -1524,12 +1526,21 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
   },
 
   invalidateCliProviderModelCatalog: () => {
+    const invalidatedProviderIds = new Set<CliProviderId>();
+    for (const requestKey of cliProviderStatusActiveRequestIds.keys()) {
+      invalidatedProviderIds.add(requestKey.split('\0', 1)[0] as CliProviderId);
+    }
     cliProviderStatusGeneration += 1;
     cliProviderStatusInFlight.clear();
     cliProviderStatusActiveRequestIds.clear();
-    set((state) => ({
-      cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
-    }));
+    set((state) => {
+      const nextLoading = { ...state.cliProviderStatusLoading };
+      for (const providerId of invalidatedProviderIds) delete nextLoading[providerId];
+      return {
+        cliProviderStatusLoading: nextLoading,
+        cliProviderStatusScopeRevision: state.cliProviderStatusScopeRevision + 1,
+      };
+    });
   },
 
   invalidateCliStatus: async () => {

@@ -2346,7 +2346,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
           cacheKey,
           response,
           cacheTtlMs,
-          cacheGeneration,
+          cacheGeneration - (signal.aborted ? 1 : 0),
           cacheKeyGeneration
         );
       }
