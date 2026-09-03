@@ -826,7 +826,10 @@ function readConfiguredModelReasoningEffort(input: {
   providerId: string;
   modelsNode: JsoncNode | undefined;
 }): Record<string, string> {
-  const configuredModelReasoningEffort: Record<string, string> = {};
+  // A model id is a config key, so it can be the name of an inherited member.
+  // In a null-prototype record `__proto__` is a stored entry instead of a setter
+  // call, and a lookup for an unconfigured `constructor` stays undefined.
+  const configuredModelReasoningEffort = Object.create(null) as Record<string, string>;
   if (input.modelsNode?.type !== 'object') return configuredModelReasoningEffort;
   for (const { key } of readObjectEntries(input.modelsNode)) {
     const modelId = normalizeRuntimeLocalProviderModelId(key);

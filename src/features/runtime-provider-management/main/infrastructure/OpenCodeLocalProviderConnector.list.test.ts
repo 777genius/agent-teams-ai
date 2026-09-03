@@ -159,6 +159,67 @@ describe('OpenCodeLocalProviderConnector local provider list', () => {
     ]);
   });
 
+  it('keeps a configured effort under a model id that names an inherited object member', async () => {
+    const projectPath = path.join(tempDir, 'inherited-key-project');
+    // Written as raw JSON: an object literal would make "__proto__" set the
+    // prototype of the fixture instead of a model entry.
+    await writeOpenCodeConfig(
+      projectPath,
+      [
+        '{',
+        '  "provider": {',
+        '    "ollama": {',
+        '      "npm": "@ai-sdk/openai-compatible",',
+        '      "options": { "baseURL": "http://127.0.0.1:11434/v1" },',
+        '      "models": {',
+        '        "qwen3:8b": { "options": { "reasoningEffort": "high" } },',
+        '        "__proto__": { "options": { "reasoningEffort": "low" } },',
+        '        "toString": { "options": { "reasoningEffort": "none" } },',
+        '        "constructor": {}',
+        '      }',
+        '    }',
+        '  }',
+        '}',
+      ].join('\n')
+    );
+    const fetchImpl = (async () => {
+      throw new TypeError('connection refused');
+    }) as typeof fetch;
+    const connector = new OpenCodeLocalProviderConnector({ fetchImpl });
+
+    const response = await connector.listLocalProviders({
+      runtimeId: 'opencode',
+      scope: 'project',
+      projectPath,
+    });
+
+    // A model id is a config key, so it can name a member every plain object
+    // inherits. The configured effort of such a model still has to be stored and
+    // read back as its own entry, or the probe runs the model in another mode.
+    const configuredModelReasoningEffort = response.providers?.[0]?.configuredModelReasoningEffort;
+    // Looked up by a model id held in a variable, the way the coordination probe
+    // reads this record.
+    const effortOf = (modelId: string): string | undefined =>
+      configuredModelReasoningEffort?.[modelId];
+    expect(effortOf('qwen3:8b')).toBe('high');
+    expect(effortOf('__proto__')).toBe('low');
+    expect(effortOf('toString')).toBe('none');
+    expect(Object.keys(configuredModelReasoningEffort ?? {})).toEqual([
+      'qwen3:8b',
+      '__proto__',
+      'toString',
+    ]);
+    // Negative control: a model that configures no effort has no entry, and must
+    // not answer a lookup with an inherited value either.
+    expect(effortOf('constructor')).toBeUndefined();
+    expect(response.providers?.[0]?.configuredModelIds).toEqual([
+      'qwen3:8b',
+      '__proto__',
+      'toString',
+      'constructor',
+    ]);
+  });
+
   it('returns an empty list when the project has no OpenCode config yet', async () => {
     const projectPath = path.join(tempDir, 'empty-project');
     await fs.mkdir(projectPath, { recursive: true });
