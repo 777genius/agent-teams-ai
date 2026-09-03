@@ -28,7 +28,90 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.12.0 (2026-08-01)
+## Draft: v2.13.0 (2026-09-04)
+
+Target branch: `main`.
+
+Runtime gate:
+
+- Agent Teams runtime: `v0.0.76`.
+- Terminal Platform runtime: `v0.3.3`.
+
+Draft body source for GitHub release:
+
+<!-- RELEASE_BODY_START v2.13.0 -->
+Edit teammate and lead runtime settings without restarting the whole team. This release also strengthens provider launch checks, worktree safety, and team coordination.
+
+### What's New
+
+- Edit teammate provider, model, effort, workflow, worktree, and MCP settings directly from their cards.
+- Change supported lead models and reasoning effort without relaunching healthy teammates.
+- See task attachment mosaics on Kanban cards, with previews that refresh after changes.
+
+### Improvements
+
+- Browse project- and provider-scoped OpenCode catalogs with pagination, freshness indicators, and safer refreshes.
+- Check provider readiness when launching, with clearer blockers and connection guidance.
+- Reuse existing worktrees without resetting branches or local changes, with branch details shown before launch.
+- Team leads now coordinate delegated tasks instead of duplicating their teammates' work.
+
+### Bug Fixes
+
+- Codex ChatGPT logins no longer enter refresh-token revocation loops during team launch.
+- ChatGPT-incompatible Codex models are blocked before launch with a clear explanation.
+- Codex API-key teammates now launch correctly under non-Codex leads.
+- Launch dialog edits no longer revert while saved settings or live status refresh.
+- Windows OpenCode teammates no longer flash console windows during tool calls.
+- Replayed agent turns no longer duplicate tasks, deleted-task notices, or final messages.
+
+### Downloads
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.0/Agent.Teams.AI-2.13.0-arm64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Apple_Silicon-.dmg-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Apple Silicon" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.0/Agent.Teams.AI-2.13.0-x64.dmg">
+    <img src="https://img.shields.io/badge/macOS_Intel-.dmg-434343?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel" />
+  </a>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.0/Agent.Teams.AI.Setup.2.13.0.exe">
+    <img src="https://img.shields.io/badge/Windows_x64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows x64" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.0/Agent.Teams.AI.Setup.2.13.0-arm64.exe">
+    <img src="https://img.shields.io/badge/Windows_ARM64-Download_.exe-0078D4?style=for-the-badge&logo=windows&logoColor=white" alt="Windows ARM64" />
+  </a>
+  <br />
+  <sub>May trigger SmartScreen - click "More info" then "Run anyway"</sub>
+  <br />
+  <sub>Run normally. Administrator mode may be needed only if the app reports a specific OpenCode symlink or permission error.</sub>
+</td>
+<td align="center">
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.0/Agent.Teams.AI-2.13.0.AppImage">
+    <img src="https://img.shields.io/badge/Linux-Download_.AppImage-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux AppImage" />
+  </a>
+  <br />
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.0/agent-teams-ai_2.13.0_amd64.deb">
+    <img src="https://img.shields.io/badge/.deb-E95420?style=flat-square&logo=ubuntu" alt=".deb" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.0/agent-teams-ai-2.13.0.x86_64.rpm">
+    <img src="https://img.shields.io/badge/.rpm-294172?style=flat-square&logo=redhat" alt=".rpm" />
+  </a>&nbsp;
+  <a href="https://github.com/777genius/agent-teams-ai/releases/download/v2.13.0/agent-teams-ai-2.13.0.pacman">
+    <img src="https://img.shields.io/badge/.pacman-1793D1?style=flat-square&logo=archlinux" alt=".pacman" />
+  </a>
+</td>
+</tr>
+</table>
+<!-- RELEASE_BODY_END v2.13.0 -->
+
+## Published: v2.12.0 (2026-08-01)
+
+GitHub release: [v2.12.0](https://github.com/777genius/agent-teams-ai/releases/tag/v2.12.0).
 
 Target branch: `dev`.
 
