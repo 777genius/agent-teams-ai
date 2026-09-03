@@ -4,6 +4,7 @@ import {
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isProcessAlive } from '@main/utils/processHealth';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { randomUUID } from 'crypto';
 
@@ -241,6 +242,7 @@ export function createSingleMixedSecondaryRuntimeLaneStopPorts<
     teamsBasePath: getTeamsBasePath(),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => deps.service.readLaunchState(teamName),
+    isRuntimeProcessAlive: isProcessAlive,
     upsertOpenCodeRuntimeLaneIndexEntry,
     clearOpenCodeRuntimeLaneStorage,
     deleteSecondaryRuntimeRun: (teamName, laneId) =>

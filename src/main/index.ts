@@ -248,6 +248,7 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -678,6 +679,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }),
   ]);
 }
+let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
+
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
@@ -706,6 +709,11 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
     registryCleanupAvailable = !result.diagnostics.some((diagnostic) =>
       diagnostic.startsWith('OpenCode host cleanup bridge failed:')
     );
+  }
+
+  if (reason === 'shutdown') {
+    stopPeriodicOpenCodeHostStartupLockPurge?.();
+    stopPeriodicOpenCodeHostStartupLockPurge = null;
   }
 
   if (reason === 'startup' && !registryCleanupAvailable) {
@@ -2063,6 +2071,10 @@ async function initializeServices(): Promise<void> {
       logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
     );
   }, STARTUP_RECOVERY_DELAY_MS);
+  stopPeriodicOpenCodeHostStartupLockPurge = startPeriodicOpenCodeHostStartupLockPurge({
+    logInfo: (message) => logger.info(message),
+    logWarning: (message) => logger.warn(message),
+  });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
