@@ -7,7 +7,6 @@ import { killProcessByPid } from '@main/utils/processKill';
 import { stripAgentBlocks, wrapAgentBlock } from '@shared/constants/agentBlocks';
 import { getMemberColorByName } from '@shared/constants/memberColors';
 import { isTeamEffortLevel } from '@shared/utils/effortLevels';
-import { classifyIdleNotificationText } from '@shared/utils/idleNotificationSemantics';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { createLogger } from '@shared/utils/logger';
 import { migrateProviderBackendId } from '@shared/utils/providerBackend';
@@ -128,7 +127,6 @@ const LEAD_SESSION_PARSE_CACHE_SCHEMA_VERSION = 'combined-v2';
 const PROCESS_HEALTH_INTERVAL_MS = 2_000;
 const TASK_MAP_YIELD_EVERY = 250;
 const TASK_COMMENT_NOTIFICATION_SOURCE = 'system_notification';
-const PASSIVE_USER_REPLY_LINK_WINDOW_MS = 15_000;
 const MEMBER_RUNTIME_ADVISORY_SNAPSHOT_BUDGET_MS = 250;
 const GLOBAL_TASK_TEAM_CONFIG_CONCURRENCY = 12;
 
@@ -325,31 +323,6 @@ function applyDistinctRosterColors<T extends { name: string; color?: string; rem
     ...member,
     color: colorMap.get(member.name) ?? member.color ?? getMemberColorByName(member.name),
   }));
-}
-
-function normalizePassiveUserReplyLinkText(value: string | undefined): string {
-  if (typeof value !== 'string') return '';
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .replace(/[.!?…]+$/g, '')
-    .trim();
-}
-
-function extractPassiveUserPeerSummaryBody(text: string): string | null {
-  const classified = classifyIdleNotificationText(text);
-  if (classified?.primaryKind !== 'heartbeat' || !classified.peerSummary) {
-    return null;
-  }
-
-  const match = /^\[to\s+user\]\s*(.*)$/i.exec(classified.peerSummary);
-  if (!match) {
-    return null;
-  }
-
-  const body = match[1]?.trim() ?? '';
-  return body.length > 0 ? body : null;
 }
 
 function readConfigForUiSnapshot(
@@ -1056,88 +1029,6 @@ export class TeamDataService {
 
       pendingSlash = null;
     }
-  }
-
-  private linkPassiveUserReplySummaries(messages: InboxMessage[]): InboxMessage[] {
-    const canonicalReplies = messages
-      .map((message) => {
-        const messageId = typeof message.messageId === 'string' ? message.messageId.trim() : '';
-        if (!messageId || message.to !== 'user') {
-          return null;
-        }
-        if (classifyIdleNotificationText(message.text)) {
-          return null;
-        }
-
-        const time = Date.parse(message.timestamp);
-        if (!Number.isFinite(time)) {
-          return null;
-        }
-
-        return {
-          messageId,
-          from: message.from,
-          time,
-          normalizedSummary: normalizePassiveUserReplyLinkText(message.summary),
-          normalizedText: normalizePassiveUserReplyLinkText(message.text),
-        };
-      })
-      .filter((value): value is NonNullable<typeof value> => value !== null);
-
-    if (canonicalReplies.length === 0) {
-      return messages;
-    }
-
-    let didLink = false;
-    const linkedMessages = messages.map((message) => {
-      if (
-        typeof message.relayOfMessageId === 'string' &&
-        message.relayOfMessageId.trim().length > 0
-      ) {
-        return message;
-      }
-
-      const body = extractPassiveUserPeerSummaryBody(message.text);
-      if (!body) {
-        return message;
-      }
-
-      const passiveTime = Date.parse(message.timestamp);
-      if (!Number.isFinite(passiveTime)) {
-        return message;
-      }
-
-      const normalizedBody = normalizePassiveUserReplyLinkText(body);
-      if (!normalizedBody) {
-        return message;
-      }
-
-      const matches = canonicalReplies.filter((candidate) => {
-        if (candidate.from !== message.from) {
-          return false;
-        }
-        const deltaMs = passiveTime - candidate.time;
-        if (deltaMs < 0 || deltaMs > PASSIVE_USER_REPLY_LINK_WINDOW_MS) {
-          return false;
-        }
-        if (candidate.normalizedSummary === normalizedBody) {
-          return true;
-        }
-        return normalizedBody.length >= 6 && candidate.normalizedText.includes(normalizedBody);
-      });
-
-      if (matches.length !== 1) {
-        return message;
-      }
-
-      didLink = true;
-      return {
-        ...message,
-        relayOfMessageId: matches[0].messageId,
-      };
-    });
-
-    return didLink ? linkedMessages : messages;
   }
 
   async getTaskChangePresence(teamName: string): Promise<Record<string, TaskChangePresenceState>> {
