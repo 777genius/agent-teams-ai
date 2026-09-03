@@ -76,7 +76,12 @@ describe('HTTP team runtime routes', () => {
     const getMemberSpawnStatuses =
       vi.fn<(teamName: string) => Promise<MemberSpawnStatusesSnapshot>>();
     const getTeamAgentRuntimeSnapshot =
-      vi.fn<(teamName: string) => Promise<TeamAgentRuntimeSnapshot>>();
+      vi.fn<
+        (
+          teamName: string,
+          options?: { memberSpawnStatuses?: MemberSpawnStatusesSnapshot }
+        ) => Promise<TeamAgentRuntimeSnapshot>
+      >();
     // The route is write-free by contract, so it may only reach the `...ReadOnly`
     // members. The mutating names are here purely as tripwires.
     const getMemberSpawnStatusesWriting = vi.fn<(teamName: string) => Promise<never>>();
@@ -1489,7 +1494,9 @@ describe('HTTP team runtime routes', () => {
       expect(response.statusCode).toBe(200);
       const body = response.json();
       expect(getMemberSpawnStatuses).toHaveBeenCalledWith('mixrun42');
-      expect(getTeamAgentRuntimeSnapshot).toHaveBeenCalledWith('mixrun42');
+      expect(getTeamAgentRuntimeSnapshot).toHaveBeenCalledWith('mixrun42', {
+        memberSpawnStatuses: spawnSnapshot,
+      });
       expect(getMemberSpawnStatusesWriting).not.toHaveBeenCalled();
       expect(getTeamAgentRuntimeSnapshotWriting).not.toHaveBeenCalled();
       expect(body).toMatchObject({
@@ -1614,6 +1621,39 @@ describe('HTTP team runtime routes', () => {
           'bootstrap_timeout',
         ],
       });
+    } finally {
+      await app.close();
+    }
+  });
+
+  // The runtime snapshot builds a spawn-status projection of its own unless it
+  // is handed one, and the read-only projection neither coalesces nor caches.
+  // A second projection is not only wasted work: a launch transition between
+  // the two - the second call here answers for a different run - used to leave
+  // one response describing two runs at once.
+  it('answers a member diagnostics GET from a single spawn-status projection', async () => {
+    const { app, getTeamData, getMemberSpawnStatuses, getTeamAgentRuntimeSnapshot } =
+      await createApp();
+    const { memberSnapshot, spawnSnapshot, runtimeSnapshot } = createMixrun42Diagnostics();
+    getTeamData.mockResolvedValue(memberSnapshot);
+    getMemberSpawnStatuses.mockResolvedValueOnce(spawnSnapshot).mockResolvedValue({
+      ...spawnSnapshot,
+      runId: 'run-mixrun42-next',
+    } as unknown as MemberSpawnStatusesSnapshot);
+    getTeamAgentRuntimeSnapshot.mockResolvedValue(runtimeSnapshot);
+
+    try {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/teams/mixrun42/members/diagnostics',
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(getMemberSpawnStatuses).toHaveBeenCalledTimes(1);
+      expect(getTeamAgentRuntimeSnapshot).toHaveBeenCalledWith('mixrun42', {
+        memberSpawnStatuses: spawnSnapshot,
+      });
+      expect(response.json().runId).toBe('run-mixrun42');
     } finally {
       await app.close();
     }

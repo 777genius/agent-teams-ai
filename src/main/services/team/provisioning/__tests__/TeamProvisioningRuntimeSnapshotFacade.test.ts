@@ -116,6 +116,12 @@ function createFacadeHarness(
       resourceHistory.prune(teamName, activeKeys);
     }
   );
+  const getMemberSpawnStatusesPort = vi.fn(
+    async (): Promise<MemberSpawnStatusesSnapshot> => ({ statuses: {}, runId })
+  );
+  const getMemberSpawnStatusesReadOnlyPort = vi.fn(
+    async (): Promise<MemberSpawnStatusesSnapshot> => ({ statuses: {}, runId })
+  );
   const facade = new TeamProvisioningRuntimeSnapshotFacade({
     runs,
     runtimeAdapterRunByTeam: new Map(),
@@ -151,14 +157,8 @@ function createFacadeHarness(
       members: [],
     }),
     readPersistedRuntimeMembers: () => [],
-    getMemberSpawnStatuses: async (): Promise<MemberSpawnStatusesSnapshot> => ({
-      statuses: {},
-      runId,
-    }),
-    getMemberSpawnStatusesReadOnly: async (): Promise<MemberSpawnStatusesSnapshot> => ({
-      statuses: {},
-      runId,
-    }),
+    getMemberSpawnStatuses: getMemberSpawnStatusesPort,
+    getMemberSpawnStatusesReadOnly: getMemberSpawnStatusesReadOnlyPort,
     getLiveTeamAgentRuntimeMetadata: async () => new Map(),
     createRuntimeSnapshotResourceSamplingPorts: () => ({
       readRuntimeProcessRowsForUsageSnapshot: async () => null,
@@ -183,6 +183,7 @@ function createFacadeHarness(
     facade,
     agentRuntimeSnapshotCache,
     pruneAgentRuntimeResourceHistory,
+    getMemberSpawnStatusesReadOnlyPort,
     getBuildCount: () => buildCount,
     setRunId: (nextRunId: string | null) => {
       runId = nextRunId;
@@ -362,6 +363,54 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
       deferred.resolve(null);
       const [mutatingSnapshot, readOnlySnapshot] = await Promise.all([mutating, readOnly]);
       expect(readOnlySnapshot).toBe(mutatingSnapshot);
+    });
+
+    // The read-only status projection neither coalesces nor fills a cache, so
+    // a caller that needs both halves - the HTTP diagnostics route reports the
+    // statuses next to this snapshot - would otherwise run two of them.
+    it('builds from a status projection the caller already made', async () => {
+      let projectionUsedByBuild: MemberSpawnStatusesSnapshot | undefined;
+      const buildTeamAgentRuntimeSnapshot = vi.fn<BuildTeamAgentRuntimeSnapshotPort>(
+        async (params) => {
+          projectionUsedByBuild = await params.getMemberSpawnStatuses('alpha');
+          return {
+            teamName: 'alpha',
+            updatedAt: '2026-06-20T17:19:11.000Z',
+            runId: params.runId,
+            members: {},
+          };
+        }
+      );
+      const harness = createFacadeHarness({ ttlMs: 0, buildTeamAgentRuntimeSnapshot });
+      harness.setRunId('run-1');
+      const memberSpawnStatuses: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-1' };
+
+      await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', { memberSpawnStatuses });
+
+      expect(projectionUsedByBuild).toBe(memberSpawnStatuses);
+      expect(harness.getMemberSpawnStatusesReadOnlyPort).not.toHaveBeenCalled();
+    });
+
+    // Both directions of the run check: a snapshot built for another run cannot
+    // answer a projection of this one, and one built for the same run still
+    // can - otherwise the rule above would just be "never share anything".
+    it('answers from a shared build only when it describes the run the projection did', async () => {
+      const harness = createFacadeHarness({ ttlMs: 60_000 });
+      harness.setRunId('run-2');
+      const shared = await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      expect(harness.agentRuntimeSnapshotCache.get('alpha')?.snapshot).toBe(shared);
+
+      const staleProjection: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-1' };
+      const rebuilt = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses: staleProjection,
+      });
+      expect(rebuilt).not.toBe(shared);
+
+      const currentProjection: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-2' };
+      const reused = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses: currentProjection,
+      });
+      expect(reused).toBe(shared);
     });
 
     it('starts its own build when the tracked run moved on', async () => {

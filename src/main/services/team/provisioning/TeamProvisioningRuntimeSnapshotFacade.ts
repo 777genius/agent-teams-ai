@@ -147,32 +147,61 @@ export class TeamProvisioningRuntimeSnapshotFacade {
    * remembered in the shared cache, and the shared telemetry history is not
    * pruned. A cached snapshot is still served, and a build already in flight for
    * the same run and cache generation is shared rather than started twice.
+   *
+   * A caller that has already made the read-only status projection - the HTTP
+   * diagnostics route reports it alongside this snapshot - passes it in through
+   * `memberSpawnStatuses` instead of paying for a second one. The read-only
+   * projection neither coalesces nor fills a cache, so without this the two
+   * halves of one response were two independent projections that could describe
+   * two different runs. A projection made for a run that is no longer the
+   * tracked one also stops this call from serving or joining a build made for
+   * the current run, for the same reason.
    */
-  async getTeamAgentRuntimeSnapshotReadOnly(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
+  async getTeamAgentRuntimeSnapshotReadOnly(
+    teamName: string,
+    options?: { memberSpawnStatuses?: MemberSpawnStatusesSnapshot }
+  ): Promise<TeamAgentRuntimeSnapshot> {
     const runId = this.ports.getTrackedRunId(teamName);
-    const cached = this.ports.runtimeSnapshotCache.getCachedAgentRuntimeSnapshot(teamName, runId);
+    const projectedStatuses = options?.memberSpawnStatuses;
+    const sharesOtherBuilds =
+      projectedStatuses === undefined || (projectedStatuses.runId ?? null) === runId;
+    const cached = sharesOtherBuilds
+      ? this.ports.runtimeSnapshotCache.getCachedAgentRuntimeSnapshot(teamName, runId)
+      : undefined;
     if (cached) {
       return cached;
     }
     const generationAtStart =
       this.ports.runtimeSnapshotCache.getRuntimeSnapshotCacheGeneration(teamName);
-    // Riding a build the UI already started performs no write of its own and
-    // keeps a monitor poll from doubling the process sampling work.
-    const mutatingRequest = this.agentRuntimeSnapshotInFlightByTeam.get(teamName);
-    if (matchesInFlightRequest(mutatingRequest, runId, generationAtStart)) {
-      return mutatingRequest.promise;
-    }
-    const existingRequest = this.readOnlyAgentRuntimeSnapshotInFlightByTeam.get(teamName);
-    if (matchesInFlightRequest(existingRequest, runId, generationAtStart)) {
-      return existingRequest.promise;
+    if (sharesOtherBuilds) {
+      // Riding a build the UI already started performs no write of its own and
+      // keeps a monitor poll from doubling the process sampling work.
+      const mutatingRequest = this.agentRuntimeSnapshotInFlightByTeam.get(teamName);
+      if (matchesInFlightRequest(mutatingRequest, runId, generationAtStart)) {
+        return mutatingRequest.promise;
+      }
+      const existingRequest = this.readOnlyAgentRuntimeSnapshotInFlightByTeam.get(teamName);
+      if (matchesInFlightRequest(existingRequest, runId, generationAtStart)) {
+        return existingRequest.promise;
+      }
     }
 
+    const build = this.buildTeamAgentRuntimeSnapshot(teamName, runId, generationAtStart, {
+      readOnly: true,
+      ...(projectedStatuses ? { memberSpawnStatuses: projectedStatuses } : {}),
+    });
+    if (!sharesOtherBuilds) {
+      // Built from a projection of a run that is no longer the tracked one, so
+      // it is this caller's alone: publishing it would hand the next poll a
+      // snapshot made from statuses it never asked for.
+      return build;
+    }
     return this.trackInFlightSnapshot(
       this.readOnlyAgentRuntimeSnapshotInFlightByTeam,
       teamName,
       runId,
       generationAtStart,
-      this.buildTeamAgentRuntimeSnapshot(teamName, runId, generationAtStart, { readOnly: true })
+      build
     );
   }
 
@@ -200,7 +229,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
     teamName: string,
     runId: string | null,
     generationAtStart: number,
-    options?: { readOnly?: boolean }
+    options?: { readOnly?: boolean; memberSpawnStatuses?: MemberSpawnStatusesSnapshot }
   ): Promise<TeamAgentRuntimeSnapshot> {
     const buildSnapshot =
       this.ports.buildTeamAgentRuntimeSnapshot ?? buildTeamAgentRuntimeSnapshotHelper;
@@ -217,10 +246,15 @@ export class TeamProvisioningRuntimeSnapshotFacade {
       readConfigSnapshot: (targetTeamName) => this.ports.readConfigSnapshot(targetTeamName),
       readPersistedRuntimeMembers: (targetTeamName) =>
         this.ports.readPersistedRuntimeMembers(targetTeamName),
-      getMemberSpawnStatuses: (targetTeamName) =>
-        options?.readOnly === true
+      getMemberSpawnStatuses: async (targetTeamName) => {
+        const projected = options?.memberSpawnStatuses;
+        if (projected && targetTeamName === teamName) {
+          return projected;
+        }
+        return options?.readOnly === true
           ? this.ports.getMemberSpawnStatusesReadOnly(targetTeamName)
-          : this.ports.getMemberSpawnStatuses(targetTeamName),
+          : this.ports.getMemberSpawnStatuses(targetTeamName);
+      },
       getLiveTeamAgentRuntimeMetadata: (targetTeamName) =>
         this.ports.getLiveTeamAgentRuntimeMetadata(targetTeamName),
       ...samplingPorts,

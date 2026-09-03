@@ -240,8 +240,17 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
     return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshot(teamName);
   }
 
-  async getTeamAgentRuntimeSnapshotReadOnly(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
-    return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshotReadOnly(teamName);
+  /**
+   * `memberSpawnStatuses` lets a caller that already read
+   * `getMemberSpawnStatusesReadOnly` hand that projection over instead of
+   * paying for a second one - the HTTP diagnostics route reports both in one
+   * response, and only one projection can answer for both halves of it.
+   */
+  async getTeamAgentRuntimeSnapshotReadOnly(
+    teamName: string,
+    options?: { memberSpawnStatuses?: MemberSpawnStatusesSnapshot }
+  ): Promise<TeamAgentRuntimeSnapshot> {
+    return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshotReadOnly(teamName, options);
   }
 
   protected getMemberLaunchGraceKey(run: TRun, memberName: string): string {

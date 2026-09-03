@@ -365,11 +365,18 @@ export function registerTeamMemberDiagnosticsRoute(
             'Team member diagnostics are not available in this mode'
           );
         }
-        const [spawnSnapshot, runtimeSnapshot, memberSnapshots] = await Promise.all([
+        // One status projection answers the whole response. The runtime
+        // snapshot builds its own unless it is given one, and the read-only
+        // projection neither coalesces nor caches, so calling both in parallel
+        // ran two of them - twice the work, and two views that a launch
+        // transition between them could disagree about.
+        const [spawnSnapshot, memberSnapshots] = await Promise.all([
           diagnosticsApi.getMemberSpawnStatusesReadOnly(teamName),
-          diagnosticsApi.getTeamAgentRuntimeSnapshotReadOnly(teamName),
           readMemberSnapshots(services.teamDataApi, teamName, deps.isTeamNotFoundError),
         ]);
+        const runtimeSnapshot = await diagnosticsApi.getTeamAgentRuntimeSnapshotReadOnly(teamName, {
+          memberSpawnStatuses: spawnSnapshot,
+        });
         return reply.send(
           buildTeamMemberDiagnosticsResponse({
             teamName,
