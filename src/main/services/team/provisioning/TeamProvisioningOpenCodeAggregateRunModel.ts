@@ -174,6 +174,13 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktr
   randomUUID(): string;
   nowMs(): number;
   nowIso(): string;
+  /**
+   * Sink for a cause the launch flow answers with a safe default instead of
+   * propagating. Rollback reports "could not confirm every stop" to the user and
+   * a boolean to its caller, so without this the concrete stop or storage error
+   * behind that verdict is lost.
+   */
+  logError(message: string): void;
   setProvisioningRun(teamName: string, runId: string): void;
   getRun(runId: string): OpenCodeAggregateProvisioningRun | undefined;
   setRuntimeAdapterProgress(

@@ -1022,6 +1022,163 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(calls).toContain('emitTeamProcessChange:failed');
   });
 
+  it.each([
+    {
+      label: 'a secondary stop that is not confirmed',
+      failStorageClear: false,
+      expected:
+        '[open-code-team] OpenCode aggregate rollback could not stop tracked secondary lane secondary:opencode:bob (run secondary-run): OpenCode aggregate secondary lane secondary:opencode:bob did not confirm stop: secondary process still running',
+    },
+    {
+      label: 'a secondary storage clear that throws',
+      failStorageClear: true,
+      expected:
+        '[open-code-team] OpenCode aggregate rollback could not clear storage for secondary lane secondary:opencode:bob (run secondary-run): EBUSY: lane storage is locked',
+    },
+  ])('logs the cause behind $label', async ({ failStorageClear, expected }) => {
+    const alice = member('alice');
+    const bob = member('bob');
+    const calls: string[] = [];
+    const logError = vi.fn<(message: string) => void>();
+    let provisioningOwner: string | undefined;
+    let primaryOwner: { runId: string; providerId: 'opencode' } | undefined;
+    let secondaryOwner:
+      | { runId: string; providerId: 'opencode'; laneId: string; memberName: string; cwd: string }
+      | undefined;
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {
+          stop: async (stopInput: TeamRuntimeStopInput) => ({
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: failStorageClear,
+            members: {},
+            warnings: [],
+            diagnostics: failStorageClear ? [] : ['secondary process still running'],
+          }),
+        } as unknown as TeamLaunchRuntimeAdapter,
+        request: request([alice, bob]),
+        members: [alice, bob],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        logError,
+        setProvisioningRun: (_teamName, runId) => {
+          provisioningOwner = runId;
+        },
+        getProvisioningRun: () => provisioningOwner,
+        getRuntimeAdapterRun: () => primaryOwner,
+        getSecondaryRuntimeRun: () => secondaryOwner,
+        stopOpenCodeRuntimeAdapterTeam: async () => {
+          calls.push('stopOwnedPrimary');
+        },
+        launchOpenCodeAggregatePrimaryLane: async () => {
+          primaryOwner = { runId: 'run-open-code', providerId: 'opencode' };
+          return runtimeResult();
+        },
+        launchSingleMixedSecondaryLane: async (_run, lane) => {
+          lane.runId = 'secondary-run';
+          lane.state = 'finished';
+          lane.diagnostics.push('secondary failed');
+          lane.result = runtimeResult({ teamLaunchState: 'partial_failure' });
+          secondaryOwner = {
+            runId: 'secondary-run',
+            providerId: 'opencode',
+            laneId: lane.laneId,
+            memberName: lane.member.name,
+            cwd: PROJECT_CWD,
+          };
+        },
+        clearOpenCodeRuntimeLaneStorage: async (storageInput) => {
+          calls.push(`clearLaneStorage:${storageInput.laneId}`);
+          if (failStorageClear && storageInput.laneId === 'secondary:opencode:bob') {
+            throw new Error('EBUSY: lane storage is locked');
+          }
+          return true;
+        },
+        summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
+      }
+    );
+
+    // The publisher only says a stop could not be confirmed; the cause behind
+    // that verdict has nowhere else to go.
+    expect(logError).toHaveBeenCalledTimes(1);
+    expect(logError).toHaveBeenCalledWith(expected);
+    expect(calls).toContain('stopOwnedPrimary');
+  });
+
+  it('logs nothing when every rollback stop and storage clear succeeds', async () => {
+    const alice = member('alice');
+    const bob = member('bob');
+    const calls: string[] = [];
+    const logError = vi.fn<(message: string) => void>();
+    let provisioningOwner: string | undefined;
+    let primaryOwner: { runId: string; providerId: 'opencode' } | undefined;
+    let secondaryOwner:
+      | { runId: string; providerId: 'opencode'; laneId: string; memberName: string; cwd: string }
+      | undefined;
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {
+          stop: async (stopInput: TeamRuntimeStopInput) => ({
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          }),
+        } as unknown as TeamLaunchRuntimeAdapter,
+        request: request([alice, bob]),
+        members: [alice, bob],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        logError,
+        setProvisioningRun: (_teamName, runId) => {
+          provisioningOwner = runId;
+        },
+        getProvisioningRun: () => provisioningOwner,
+        getRuntimeAdapterRun: () => primaryOwner,
+        getSecondaryRuntimeRun: () => secondaryOwner,
+        stopOpenCodeRuntimeAdapterTeam: async () => {
+          calls.push('stopOwnedPrimary');
+        },
+        launchOpenCodeAggregatePrimaryLane: async () => {
+          primaryOwner = { runId: 'run-open-code', providerId: 'opencode' };
+          return runtimeResult();
+        },
+        launchSingleMixedSecondaryLane: async (_run, lane) => {
+          lane.runId = 'secondary-run';
+          lane.state = 'finished';
+          lane.diagnostics.push('secondary failed');
+          lane.result = runtimeResult({ teamLaunchState: 'partial_failure' });
+          secondaryOwner = {
+            runId: 'secondary-run',
+            providerId: 'opencode',
+            laneId: lane.laneId,
+            memberName: lane.member.name,
+            cwd: PROJECT_CWD,
+          };
+        },
+        summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
+      }
+    );
+
+    // Negative control: a rollback that confirmed everything has no cause to
+    // report, so a successful teardown stays silent.
+    expect(calls).toContain('clearLaneStorage:secondary:opencode:bob');
+    expect(logError).not.toHaveBeenCalled();
+  });
+
   it('does not replace a newer secondary owner after an untracked stop fails', async () => {
     const alice = member('alice');
     const bob = member('bob');
@@ -1703,6 +1860,7 @@ function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunc
     randomUUID: () => 'run-open-code',
     nowMs: () => 1_000,
     nowIso: () => '2026-01-01T00:00:00.000Z',
+    logError: () => undefined,
     getStopAllTeamsGeneration: () => 0,
     getStopTeamGeneration: () => 0,
     getRuntimeAdapterRun: () => undefined,

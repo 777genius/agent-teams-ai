@@ -305,6 +305,10 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           randomUUID,
           nowMs: () => Date.now(),
           nowIso,
+          // error, not warn: the default logger hides warn in production, and a
+          // rollback that could not confirm a stop is exactly what a user needs
+          // the cause of.
+          logError: (message) => logger.error(message),
           getStopAllTeamsGeneration: () => host.getStopAllTeamsGeneration(),
           getStopTeamGeneration: (teamName) => host.getStopTeamGeneration(teamName),
           getRuntimeAdapterRun: (teamName) => host.runtimeAdapterRunByTeam.get(teamName),

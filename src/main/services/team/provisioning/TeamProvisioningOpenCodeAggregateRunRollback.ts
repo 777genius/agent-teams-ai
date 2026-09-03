@@ -10,6 +10,10 @@ import type {
 } from './TeamProvisioningSecondaryRuntimeRuns';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
+function describeAggregateRollbackCause(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
   run: OpenCodeAggregateProvisioningRun,
   input: {
@@ -53,8 +57,11 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
     try {
       await ports.stopOpenCodeRuntimeAdapterTeam(run.teamName, run.runId);
       primaryCleanupConfirmed = true;
-    } catch {
+    } catch (error) {
       rollbackComplete = false;
+      ports.logError(
+        `[${run.teamName}] OpenCode aggregate rollback could not stop the tracked primary lane (run ${run.runId}): ${describeAggregateRollbackCause(error)}`
+      );
     }
   } else if (input.untrackedPrimaryLaunchMayBeRunning) {
     try {
@@ -71,8 +78,11 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
       assertAggregateRuntimeStopConfirmed(stopResult, 'OpenCode aggregate primary lane');
       primaryCleanupConfirmed = true;
       primaryStorageCleanupRequired = true;
-    } catch {
+    } catch (error) {
       rollbackComplete = false;
+      ports.logError(
+        `[${run.teamName}] OpenCode aggregate rollback could not stop the untracked primary lane (run ${run.runId}, cwd ${input.primaryCwd}): ${describeAggregateRollbackCause(error)}`
+      );
       retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
     }
   } else {
@@ -108,8 +118,11 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
           `OpenCode aggregate secondary lane ${lane.laneId}`
         );
         laneCleanupConfirmed = true;
-      } catch {
+      } catch (error) {
         rollbackComplete = false;
+        ports.logError(
+          `[${run.teamName}] OpenCode aggregate rollback could not stop tracked secondary lane ${lane.laneId} (run ${laneRunId}): ${describeAggregateRollbackCause(error)}`
+        );
         continue;
       }
     } else if (
@@ -143,8 +156,11 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
           `OpenCode aggregate secondary lane ${lane.laneId}`
         );
         laneCleanupConfirmed = true;
-      } catch {
+      } catch (error) {
         rollbackComplete = false;
+        ports.logError(
+          `[${run.teamName}] OpenCode aggregate rollback could not stop untracked secondary lane ${lane.laneId} (run ${laneRunId}): ${describeAggregateRollbackCause(error)}`
+        );
         continue;
       }
     }
@@ -170,8 +186,11 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
         laneId: lane.laneId,
         expectedRunId: laneRunId,
       });
-    } catch {
+    } catch (error) {
       rollbackComplete = false;
+      ports.logError(
+        `[${run.teamName}] OpenCode aggregate rollback could not clear storage for secondary lane ${lane.laneId} (run ${laneRunId}): ${describeAggregateRollbackCause(error)}`
+      );
       retainUntrackedOpenCodeSecondaryLaneForCleanup(run, lane, laneRunId, input, ports);
       continue;
     }
@@ -218,8 +237,11 @@ export async function stopAndRollbackOpenCodeAggregateRuntimeLanes(
         laneId: 'primary',
         expectedRunId: run.runId,
       });
-    } catch {
+    } catch (error) {
       rollbackComplete = false;
+      ports.logError(
+        `[${run.teamName}] OpenCode aggregate rollback could not clear storage for the primary lane (run ${run.runId}): ${describeAggregateRollbackCause(error)}`
+      );
       retainUntrackedOpenCodePrimaryLaneForCleanup(run, input.primaryCwd, ports);
     }
     if (!primaryStorageCleared) {
