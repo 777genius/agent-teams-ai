@@ -91,7 +91,7 @@
         "message_one": "Supprimer {{count}} message en attente pour \"{{member}}\" ? Il n'a pas encore été remis et sera supprimé définitivement. Les messages remis et les messages entre agents ne sont pas concernés.",
         "message_other": "Supprimer {{count}} messages en attente pour \"{{member}}\" ? Ils n'ont pas encore été remis et seront supprimés définitivement. Les messages remis et les messages entre agents ne sont pas concernés.",
         "okLabel": "OK",
-        "remaining": "{{discarded}} supprimé(s). Toujours en attente : {{remaining}}.",
+        "remaining": "Messages supprimés : {{discarded}}. Toujours en attente : {{remaining}}.",
         "resultTitle": "Messages en attente",
         "title": "Supprimer les messages en attente",
         "tooltip": "Supprimer les messages en attente de ce membre"

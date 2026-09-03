@@ -72,7 +72,7 @@
       "externalTeam": "외부 팀",
       "crossTeamAwaitingReply": "Cross-team 메시지 전송, 대기 회신",
       "user": "제품정보",
-      "awaitingApproval": "감사의 뜻",
+      "awaitingApproval": "승인 대기 중",
       "discardQueued": {
         "action": "대기 중인 메시지 삭제",
         "alreadyDelivered": "삭제된 항목이 없습니다. 해당 메시지는 이미 \"{{member}}\"에게 전달되었습니다.",

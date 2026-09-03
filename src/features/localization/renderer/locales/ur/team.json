@@ -72,7 +72,7 @@
       "externalTeam": "بیرونی ٹیم",
       "crossTeamAwaitingReply": "کراس کمیون پیام بھیجا گیا، انتظار کرو،",
       "user": "صارف",
-      "awaitingApproval": "مقبولیت کا انتظار کر رہے ہیں",
+      "awaitingApproval": "منظوری کا انتظار",
       "discardQueued": {
         "action": "قطار میں موجود پیغامات مسترد کریں",
         "alreadyDelivered": "کچھ بھی حذف نہیں ہوا: یہ پیغامات پہلے ہی \"{{member}}\" کو پہنچا دیے گئے تھے۔",

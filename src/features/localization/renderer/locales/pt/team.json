@@ -72,7 +72,7 @@
       "externalTeam": "equipe externa",
       "crossTeamAwaitingReply": "Mensagem de equipa cruzada enviada, aguardando resposta",
       "user": "usuário",
-      "awaitingApproval": "que aguarda a aprovação",
+      "awaitingApproval": "aguardando aprovação",
       "discardQueued": {
         "action": "Descartar mensagens na fila",
         "alreadyDelivered": "Nada foi descartado: essas mensagens já tinham sido entregues a \"{{member}}\".",
@@ -91,7 +91,7 @@
         "message_one": "Descartar {{count}} mensagem na fila para \"{{member}}\"? Ela ainda não foi entregue e será removida permanentemente. Mensagens entregues e mensagens entre agentes não são afetadas.",
         "message_other": "Descartar {{count}} mensagens na fila para \"{{member}}\"? Elas ainda não foram entregues e serão removidas permanentemente. Mensagens entregues e mensagens entre agentes não são afetadas.",
         "okLabel": "OK",
-        "remaining": "{{discarded}} descartada(s). Ainda na fila: {{remaining}}.",
+        "remaining": "Mensagens descartadas: {{discarded}}. Ainda na fila: {{remaining}}.",
         "resultTitle": "Mensagens na fila",
         "title": "Descartar mensagens na fila",
         "tooltip": "Descartar as mensagens na fila deste membro"

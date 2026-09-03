@@ -72,7 +72,7 @@
       "externalTeam": "externes Team",
       "crossTeamAwaitingReply": "Cross-Team-Nachricht gesendet, erwartet Antwort",
       "user": "Benutzer",
-      "awaitingApproval": "bis zur Genehmigung",
+      "awaitingApproval": "erwartet Genehmigung",
       "discardQueued": {
         "action": "Wartende Nachrichten verwerfen",
         "alreadyDelivered": "Es wurde nichts verworfen: Diese Nachrichten wurden bereits an \"{{member}}\" zugestellt.",
