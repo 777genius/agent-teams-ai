@@ -777,7 +777,11 @@ export const CreateTeamDialog = ({
     catalogEnabled:
       open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode'),
     passiveStatusPrefetchEnabled:
-      open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+      open &&
+      launchTeam &&
+      prepareRequested &&
+      multimodelEnabled &&
+      selectedMemberProviders.includes('opencode'),
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members,
     syncModelsWithLead,

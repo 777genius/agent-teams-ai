@@ -518,7 +518,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     catalogEnabled:
       open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode'),
     passiveStatusPrefetchEnabled:
-      open && multimodelEnabled && requestedMemberProviders.includes('opencode'),
+      open &&
+      isLaunchMode &&
+      prepareRequested &&
+      multimodelEnabled &&
+      requestedMemberProviders.includes('opencode'),
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members: membersDrafts,
     syncModelsWithLead,

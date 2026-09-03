@@ -3518,6 +3518,7 @@ describe('LaunchTeamDialog', () => {
     });
 
     expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+    expect(fetchCliProviderStatus).not.toHaveBeenCalled();
     const initialLaunchButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );
@@ -4037,6 +4038,7 @@ describe('LaunchTeamDialog', () => {
     });
 
     expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+    expect(fetchCliProviderStatus).not.toHaveBeenCalled();
 
     await act(async () => {
       await renderDialog();
@@ -4113,6 +4115,18 @@ describe('LaunchTeamDialog', () => {
       submitButton?.click();
       await flush();
     });
+    // The first click explicitly authorizes the bounded provider preflight when
+    // the project-scoped OpenCode authority is still unresolved.
+    if (!onCreate.mock.calls.length) {
+      await act(async () => {
+        await flush();
+      });
+      const retrySubmitButton = Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Create'
+      );
+      retrySubmitButton?.click();
+      await flush();
+    }
     expect(onCreate).toHaveBeenCalledOnce();
 
     await act(async () => {
