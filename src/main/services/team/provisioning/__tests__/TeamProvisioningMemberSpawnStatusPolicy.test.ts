@@ -63,6 +63,20 @@ describe('hasExpiredMemberLaunchGrace', () => {
   ])('does not hold when %s', (_case, overrides) => {
     expect(hasExpiredMemberLaunchGrace(entry(overrides), { nowMs: NOW_MS })).toBe(false);
   });
+
+  // A member blocked on a permission prompt has not failed to start: it is
+  // waiting for a human, and how long the human takes is not the runtime's
+  // business. The two markers are asserted separately because they do not
+  // always travel together.
+  it.each([
+    [
+      'the launch state is runtime_pending_permission',
+      { launchState: 'runtime_pending_permission' as const },
+    ],
+    ['a permission request is still pending', { pendingPermissionRequestIds: ['perm-1'] }],
+  ])('does not hold past the grace window when %s', (_case, overrides) => {
+    expect(hasExpiredMemberLaunchGrace(entry(overrides), { nowMs: NOW_MS })).toBe(false);
+  });
 });
 
 describe('applyExpiredLaunchGraceToPersistedStatuses', () => {
@@ -104,6 +118,36 @@ describe('applyExpiredLaunchGraceToPersistedStatuses', () => {
 
     expect(statuses.Worker).toBe(live);
     expect(statuses.Scout).toBe(young);
+  });
+
+  // Both halves of the permission rule in one record: the member waiting on a
+  // prompt is left exactly as it was, while the ordinary waiting member beside
+  // it still fails - so the exclusion cannot be satisfied by a projection that
+  // has quietly stopped failing anyone.
+  it('keeps a member waiting on a permission prompt while an ordinary one still fails', () => {
+    const pendingPermission = entry({
+      launchState: 'runtime_pending_permission',
+      pendingPermissionRequestIds: ['perm-1'],
+    });
+    const statuses: Record<string, MemberSpawnStatusEntry> = {
+      Approver: pendingPermission,
+      Worker: entry(),
+    };
+
+    applyExpiredLaunchGraceToPersistedStatuses(statuses, NOW_MS);
+
+    expect(statuses.Approver).toBe(pendingPermission);
+    expect(statuses.Approver).toMatchObject({
+      status: 'waiting',
+      launchState: 'runtime_pending_permission',
+      hardFailure: false,
+    });
+    expect(statuses.Worker).toMatchObject({
+      status: 'error',
+      launchState: 'failed_to_start',
+      hardFailure: true,
+      hardFailureReason: MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+    });
   });
 
   it('recomputes the same verdict on a second pass instead of accumulating', () => {
