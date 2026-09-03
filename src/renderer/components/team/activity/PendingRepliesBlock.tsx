@@ -77,7 +77,11 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
         // are a subset of the ones the discard would remove. Ask the inbox
         // itself before naming a number in a permanent-delete confirmation.
         const snapshot = await api.teams.getQueuedUserMessages(teamName, memberName);
-        const queuedCount = snapshot.messages.length;
+        // The discard names these rows and only these rows. A message that
+        // reaches the inbox after this listing was never in the confirmation,
+        // so it must survive the write instead of being swept up by it.
+        const confirmedMessageIds = snapshot.messages.map((message) => message.messageId);
+        const queuedCount = confirmedMessageIds.length;
         if (queuedCount === 0) {
           // Nothing left to authorise: the runtime consumed the rows between
           // the render and the click. Report it instead of asking the user to
@@ -104,7 +108,11 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
           variant: 'danger',
         });
         if (!confirmed) return;
-        const result = await api.teams.discardQueuedUserMessages(teamName, memberName);
+        const result = await api.teams.discardQueuedUserMessages(
+          teamName,
+          memberName,
+          confirmedMessageIds
+        );
         onQueuedDiscarded?.(memberName, result);
         // A discard that removed nothing is not a success the user can see: the
         // runtime consumed the rows between the click and the write. Say so,

@@ -1081,12 +1081,16 @@ const electronAPI: ElectronAPI = {
         memberName
       );
     },
-    discardQueuedUserMessages: async (teamName: string, memberName: string, messageId?: string) => {
+    discardQueuedUserMessages: async (
+      teamName: string,
+      memberName: string,
+      messageIds: readonly string[]
+    ) => {
       return invokeIpcWithResult<DiscardQueuedUserMessagesResult>(
         TEAM_DISCARD_QUEUED_USER_MESSAGES,
         teamName,
         memberName,
-        messageId
+        [...messageIds]
       );
     },
     createConfig: async (request: TeamCreateConfigRequest) => {

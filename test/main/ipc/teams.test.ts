@@ -2885,14 +2885,21 @@ describe('ipc teams handlers', () => {
     await fs.promises.writeFile(
       inboxPath,
       JSON.stringify([
-        { from: 'user', to: 'alice', text: 'do the thing', timestamp: 'ts', read: false },
+        {
+          from: 'user',
+          to: 'alice',
+          text: 'do the thing',
+          timestamp: 'ts',
+          read: false,
+          messageId: 'queued-1',
+        },
       ])
     );
 
     try {
       const handler = handlers.get(TEAM_DISCARD_QUEUED_USER_MESSAGES)!;
 
-      const discarded = (await handler({} as never, 'my-team', 'alice', undefined)) as {
+      const discarded = (await handler({} as never, 'my-team', 'alice', ['queued-1'])) as {
         success: boolean;
         data?: { discarded: number; remainingQueued: number };
       };
@@ -2903,7 +2910,7 @@ describe('ipc teams handlers', () => {
 
       // The inbox is empty now, so the same call is a no-op. Invalidating the feed
       // anyway would repaint the message list for nothing on every retry.
-      const noop = (await handler({} as never, 'my-team', 'alice', undefined)) as {
+      const noop = (await handler({} as never, 'my-team', 'alice', ['queued-1'])) as {
         success: boolean;
         data?: { discarded: number; remainingQueued: number };
       };
@@ -2915,32 +2922,91 @@ describe('ipc teams handlers', () => {
     }
   });
 
-  it('rejects an unusable messageId before touching the inbox file', async () => {
+  it('rejects an unusable messageIds list before touching the inbox file', async () => {
     const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-discard-queued-id-'));
     setClaudeBasePathOverride(claudeRoot);
     const inboxDir = path.join(claudeRoot, 'teams', 'my-team', 'inboxes');
     await fs.promises.mkdir(inboxDir, { recursive: true });
     const inboxPath = path.join(inboxDir, 'alice.json');
     const original = JSON.stringify([
-      { from: 'user', to: 'alice', text: 'do the thing', timestamp: 'ts', read: false },
+      {
+        from: 'user',
+        to: 'alice',
+        text: 'do the thing',
+        timestamp: 'ts',
+        read: false,
+        messageId: 'queued-1',
+      },
     ]);
     await fs.promises.writeFile(inboxPath, original);
 
     try {
       const handler = handlers.get(TEAM_DISCARD_QUEUED_USER_MESSAGES)!;
 
-      for (const badMessageId of ['', '   ', 42, null]) {
-        const result = (await handler({} as never, 'my-team', 'alice', badMessageId)) as {
+      // `undefined` and `[]` are the two shapes that used to mean "discard the
+      // whole queue". Both have to be refused now, or the caller could still
+      // reach rows the user was never shown.
+      for (const badMessageIds of [
+        undefined,
+        [],
+        'queued-1',
+        ['', 'queued-1'],
+        ['   '],
+        [42],
+        null,
+      ]) {
+        const result = (await handler({} as never, 'my-team', 'alice', badMessageIds)) as {
           success: boolean;
           error?: string;
         };
         expect(result.success).toBe(false);
-        expect(result.error).toContain('messageId');
+        expect(result.error).toContain('messageIds');
       }
 
-      // A rejected id must not fall through to the "discard everything" path.
+      // A rejected list must not fall through to a wider delete.
       expect(await fs.promises.readFile(inboxPath, 'utf8')).toBe(original);
       expect(service.invalidateMessageFeed).not.toHaveBeenCalled();
+    } finally {
+      await fs.promises.rm(claudeRoot, { recursive: true, force: true });
+      setClaudeBasePathOverride(null);
+    }
+  });
+
+  it('discards only the named rows and reports the ones that arrived meanwhile', async () => {
+    const claudeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ipc-discard-queued-late-'));
+    setClaudeBasePathOverride(claudeRoot);
+    const inboxDir = path.join(claudeRoot, 'teams', 'my-team', 'inboxes');
+    await fs.promises.mkdir(inboxDir, { recursive: true });
+    const inboxPath = path.join(inboxDir, 'alice.json');
+    const queuedRow = (messageId: string, text: string): Record<string, unknown> => ({
+      from: 'user',
+      to: 'alice',
+      text,
+      timestamp: 'ts',
+      read: false,
+      messageId,
+    });
+    await fs.promises.writeFile(
+      inboxPath,
+      JSON.stringify([
+        queuedRow('confirmed-1', 'do the thing'),
+        queuedRow('late-1', 'sent while the dialog was open'),
+      ])
+    );
+
+    try {
+      const handler = handlers.get(TEAM_DISCARD_QUEUED_USER_MESSAGES)!;
+
+      const result = (await handler({} as never, 'my-team', 'alice', ['confirmed-1'])) as {
+        success: boolean;
+        data?: { discarded: number; remainingQueued: number };
+      };
+
+      expect(result).toEqual({ success: true, data: { discarded: 1, remainingQueued: 1 } });
+      const written = JSON.parse(await fs.promises.readFile(inboxPath, 'utf8')) as {
+        messageId: string;
+      }[];
+      expect(written.map((row) => row.messageId)).toEqual(['late-1']);
     } finally {
       await fs.promises.rm(claudeRoot, { recursive: true, force: true });
       setClaudeBasePathOverride(null);

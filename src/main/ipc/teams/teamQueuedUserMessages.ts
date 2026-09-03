@@ -51,20 +51,26 @@ export function listQueuedUserMessagesFromRows(
   return queued;
 }
 
+/**
+ * Removes exactly the queued user rows named by `messageIds`.
+ *
+ * The ids are the ones the caller listed and had confirmed, so a queued row
+ * that reached the inbox after that listing is not named and survives. There is
+ * deliberately no "discard everything" form: it would delete rows nobody was
+ * shown. Ids that no longer match a row are ignored - the runtime consuming a
+ * message first is a normal race, not a failure.
+ */
 export function discardQueuedUserMessagesFromRows(
   rows: readonly unknown[],
-  messageId?: string
+  messageIds: readonly string[]
 ): { kept: unknown[]; discarded: number } {
+  const targeted = new Set(messageIds);
   const kept: unknown[] = [];
   let discarded = 0;
   for (const row of rows) {
     if (isQueuedUserInboxRow(row)) {
-      if (!messageId) {
-        discarded += 1;
-        continue;
-      }
       const rowMessageId = getEffectiveInboxMessageId(row as Record<string, unknown>);
-      if (rowMessageId === messageId) {
+      if (rowMessageId !== null && targeted.has(rowMessageId)) {
         discarded += 1;
         continue;
       }
@@ -130,11 +136,18 @@ export async function listQueuedUserMessages(
   return listQueuedUserMessagesFromRows(rows);
 }
 
+/**
+ * Deletes the named queued user messages from a member inbox under the inbox
+ * lock and reports what changed: `discarded` is how many of the named rows were
+ * still there, `remainingQueued` how many queued rows the inbox still holds -
+ * which, because only named rows are removed, is the count that arrived while
+ * the user was deciding.
+ */
 export async function discardQueuedUserMessages(
   teamsBasePath: string,
   teamName: string,
   member: string,
-  messageId?: string
+  messageIds: readonly string[]
 ): Promise<DiscardQueuedUserMessagesResult> {
   const inboxPath = resolveSafeInboxPath(teamsBasePath, teamName, member);
   if (!inboxPath) {
@@ -148,7 +161,7 @@ export async function discardQueuedUserMessages(
       if (!rows) {
         throw new Error(`Inbox file for "${member}" is not a valid JSON message list`);
       }
-      const { kept, discarded } = discardQueuedUserMessagesFromRows(rows, messageId);
+      const { kept, discarded } = discardQueuedUserMessagesFromRows(rows, messageIds);
       const remainingQueued = listQueuedUserMessagesFromRows(kept).length;
       if (discarded > 0) {
         await atomicWriteAsync(inboxPath, JSON.stringify(kept, null, 2));

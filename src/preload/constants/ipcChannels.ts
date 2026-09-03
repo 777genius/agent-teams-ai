@@ -313,7 +313,7 @@ export const TEAM_STOP = 'team:stop';
 /** List queued (undelivered, from user) inbox messages for a member */
 export const TEAM_GET_QUEUED_USER_MESSAGES = 'team:getQueuedUserMessages';
 
-/** Discard one or all queued (undelivered, from user) inbox messages for a member */
+/** Discard the named queued (undelivered, from user) inbox messages for a member */
 export const TEAM_DISCARD_QUEUED_USER_MESSAGES = 'team:discardQueuedUserMessages';
 
 /** Create team config without provisioning CLI */

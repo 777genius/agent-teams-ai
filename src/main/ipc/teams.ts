@@ -4204,11 +4204,30 @@ async function handleGetQueuedUserMessages(
   }));
 }
 
+/**
+ * The ids are matched verbatim against the ones the listing handed out, so they
+ * are validated but never rewritten - trimming here would stop an id whose own
+ * text carries whitespace from matching its row.
+ */
+function parseQueuedMessageIds(value: unknown): string[] | null {
+  if (!Array.isArray(value) || value.length === 0) {
+    return null;
+  }
+  const messageIds: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== 'string' || !entry.trim()) {
+      return null;
+    }
+    messageIds.push(entry);
+  }
+  return messageIds;
+}
+
 async function handleDiscardQueuedUserMessages(
   _event: IpcMainInvokeEvent,
   teamName: unknown,
   memberName: unknown,
-  messageId: unknown
+  messageIds: unknown
 ): Promise<IpcResult<DiscardQueuedUserMessagesResult>> {
   const validatedTeamName = validateTeamName(teamName);
   if (!validatedTeamName.valid) {
@@ -4218,15 +4237,18 @@ async function handleDiscardQueuedUserMessages(
   if (!validatedMemberName.valid) {
     return { success: false, error: validatedMemberName.error ?? 'Invalid memberName' };
   }
-  if (messageId !== undefined && (typeof messageId !== 'string' || !messageId.trim())) {
-    return { success: false, error: 'messageId must be a non-empty string when provided' };
+  // No fallback to "discard the whole queue": a discard names the rows the user
+  // was shown and confirmed, so an unusable list has to fail instead of widening.
+  const parsedMessageIds = parseQueuedMessageIds(messageIds);
+  if (!parsedMessageIds) {
+    return { success: false, error: 'messageIds must be a non-empty array of message ids' };
   }
   return wrapTeamHandler('discardQueuedUserMessages', async () => {
     const result = await discardQueuedUserMessages(
       getTeamsBasePath(),
       validatedTeamName.value!,
       validatedMemberName.value!,
-      typeof messageId === 'string' ? messageId.trim() : undefined
+      parsedMessageIds
     );
     if (result.discarded > 0) {
       getTeamDataService().invalidateMessageFeed(validatedTeamName.value!);

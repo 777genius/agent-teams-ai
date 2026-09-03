@@ -70,34 +70,39 @@ describe('preload electronAPI queued user message wiring', () => {
     );
   });
 
-  it('forwards the discard target, including "every queued message" as an absent id', async () => {
+  it('forwards the confirmed message ids to the discard channel', async () => {
     const electronAPI = await loadElectronAPI();
     mocks.ipcRenderer.invoke
       .mockResolvedValueOnce({ success: true, data: { discarded: 1, remainingQueued: 0 } })
-      .mockResolvedValueOnce({ success: true, data: { discarded: 3, remainingQueued: 0 } });
+      .mockResolvedValueOnce({ success: true, data: { discarded: 3, remainingQueued: 1 } });
 
     await expect(
-      electronAPI.teams.discardQueuedUserMessages('demo team', 'bob/qa', 'message-1')
+      electronAPI.teams.discardQueuedUserMessages('demo team', 'bob/qa', ['message-1'])
     ).resolves.toEqual({ discarded: 1, remainingQueued: 0 });
     expect(mocks.ipcRenderer.invoke).toHaveBeenNthCalledWith(
       1,
       'team:discardQueuedUserMessages',
       'demo team',
       'bob/qa',
-      'message-1'
+      ['message-1']
     );
 
-    // The main handler reads an absent messageId as "discard the whole queue",
-    // so the argument has to reach it as undefined rather than be dropped.
+    // Every id the confirmation named has to reach main, and nothing else: the
+    // handler deletes exactly this list, so a dropped or widened argument would
+    // change which rows the user authorised.
     await expect(
-      electronAPI.teams.discardQueuedUserMessages('demo team', 'bob/qa')
-    ).resolves.toEqual({ discarded: 3, remainingQueued: 0 });
+      electronAPI.teams.discardQueuedUserMessages('demo team', 'bob/qa', [
+        'message-1',
+        'message-2',
+        'message-3',
+      ])
+    ).resolves.toEqual({ discarded: 3, remainingQueued: 1 });
     expect(mocks.ipcRenderer.invoke).toHaveBeenNthCalledWith(
       2,
       'team:discardQueuedUserMessages',
       'demo team',
       'bob/qa',
-      undefined
+      ['message-1', 'message-2', 'message-3']
     );
   });
 
@@ -111,7 +116,7 @@ describe('preload electronAPI queued user message wiring', () => {
       'Invalid inbox path'
     );
     await expect(
-      electronAPI.teams.discardQueuedUserMessages('demo team', '../escape')
+      electronAPI.teams.discardQueuedUserMessages('demo team', '../escape', ['message-1'])
     ).rejects.toThrow('Invalid inbox path');
   });
 });

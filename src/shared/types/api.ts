@@ -497,10 +497,11 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
     teamName: string,
     memberName: string
   ) => Promise<QueuedUserMessagesSnapshot>;
+  /** Discards exactly the listed queued messages; rows that arrived since stay. */
   discardQueuedUserMessages: (
     teamName: string,
     memberName: string,
-    messageId?: string
+    messageIds: readonly string[]
   ) => Promise<DiscardQueuedUserMessagesResult>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;

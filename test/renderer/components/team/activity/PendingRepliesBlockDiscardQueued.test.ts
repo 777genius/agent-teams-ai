@@ -20,7 +20,7 @@ const discardQueuedUserMessages =
     (
       teamName: string,
       memberName: string,
-      messageId?: string
+      messageIds: readonly string[]
     ) => Promise<DiscardQueuedUserMessagesResult>
   >();
 const getQueuedUserMessages =
@@ -40,8 +40,11 @@ vi.mock('@renderer/api', () => ({
     teams: {
       getQueuedUserMessages: (teamName: string, memberName: string) =>
         getQueuedUserMessages(teamName, memberName),
-      discardQueuedUserMessages: (teamName: string, memberName: string, messageId?: string) =>
-        discardQueuedUserMessages(teamName, memberName, messageId),
+      discardQueuedUserMessages: (
+        teamName: string,
+        memberName: string,
+        messageIds: readonly string[]
+      ) => discardQueuedUserMessages(teamName, memberName, messageIds),
     },
   },
   isElectronMode: () => true,
@@ -172,7 +175,12 @@ describe('PendingRepliesBlock queued-message discard', () => {
     expect(host.textContent).toContain('2 queued');
     await clickDiscard();
 
-    expect(discardQueuedUserMessages).toHaveBeenCalledWith(TEAM_NAME, 'alice', undefined);
+    // Exactly the ids the confirmation counted, and no wildcard: the discard
+    // may only reach rows that were in the snapshot the user said yes to.
+    expect(discardQueuedUserMessages).toHaveBeenCalledWith(TEAM_NAME, 'alice', [
+      'inbox-0',
+      'inbox-1',
+    ]);
     expect(onQueuedDiscarded).toHaveBeenCalledWith('alice', { discarded: 2, remainingQueued: 0 });
     // One dialog only: the confirmation. A clean discard must not stop the user
     // again to report what they just asked for.
@@ -203,7 +211,11 @@ describe('PendingRepliesBlock queued-message discard', () => {
       message:
         'Discard 3 queued messages for "alice"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.',
     });
-    expect(discardQueuedUserMessages).toHaveBeenCalledWith(TEAM_NAME, 'alice', undefined);
+    expect(discardQueuedUserMessages).toHaveBeenCalledWith(TEAM_NAME, 'alice', [
+      'inbox-0',
+      'inbox-1',
+      'inbox-2',
+    ]);
     expect(onQueuedDiscarded).toHaveBeenCalledWith('alice', { discarded: 3, remainingQueued: 0 });
     expect(confirmMock).toHaveBeenCalledTimes(1);
   });
@@ -269,6 +281,12 @@ describe('PendingRepliesBlock queued-message discard', () => {
 
     await clickDiscard();
 
+    // The late rows were never in the confirmed list, so they survived the
+    // write and the user is told they are still waiting.
+    expect(discardQueuedUserMessages).toHaveBeenCalledWith(TEAM_NAME, 'alice', [
+      'inbox-0',
+      'inbox-1',
+    ]);
     expect(onQueuedDiscarded).toHaveBeenCalledWith('alice', { discarded: 1, remainingQueued: 2 });
     expect(confirmMock).toHaveBeenCalledTimes(2);
     expect(confirmMock.mock.calls[1][0]).toMatchObject({

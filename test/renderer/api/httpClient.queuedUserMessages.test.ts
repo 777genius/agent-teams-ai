@@ -45,7 +45,7 @@ describe('HttpAPIClient queued user messages in browser mode', () => {
     const client = new HttpAPIClient('http://127.0.0.1:53123');
 
     await expect(
-      client.teams.discardQueuedUserMessages('demo team', 'bob/qa', 'message-1')
+      client.teams.discardQueuedUserMessages('demo team', 'bob/qa', ['message-1'])
     ).rejects.toThrow('Discarding queued messages is not available in browser mode');
     expect(fetchMock).not.toHaveBeenCalled();
   });
