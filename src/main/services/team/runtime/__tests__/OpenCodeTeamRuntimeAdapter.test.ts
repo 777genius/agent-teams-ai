@@ -1,4 +1,4 @@
-import { unwrapAgentBlock } from '@shared/constants/agentBlocks';
+import { stripAgentBlocks, unwrapAgentBlock } from '@shared/constants/agentBlocks';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -7,6 +7,7 @@ import {
   createOpenCodeExpectedBehaviorFingerprint,
 } from '../../opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { buildMemberBootstrapPrompt } from '../OpenCodeMemberBootstrapPrompt';
+import { buildOpenCodeRuntimeMessageText } from '../OpenCodeRuntimeMessageText';
 import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeBridgePort,
@@ -214,6 +215,53 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).toContain('Required message_send argument envelope');
     expect(text).toContain('to="user"');
     expect(text).not.toContain('informational system notice');
+  });
+});
+
+describe('buildOpenCodeRuntimeMessageText bootstrap check-in retry', () => {
+  it('delivers the retry instructions as agent-only content', () => {
+    const text = buildOpenCodeRuntimeMessageText({
+      runId: 'run-1',
+      teamName: 'team-a',
+      laneId: 'lane-worker',
+      memberName: 'Worker',
+      cwd: '/repo',
+      text: '',
+      messageId: 'bootstrap-checkin-retry-run-1-Worker-ses_1',
+      bootstrapCheckinRetry: {
+        runtimeSessionId: '  ses_1  ',
+        reason: 'runtime_bootstrap_checkin failed: Not connected',
+      },
+    });
+
+    expect(text).toMatch(/^<info_for_agent>/);
+    expect(text).toMatch(/<\/info_for_agent>$/);
+    expect(unwrapAgentBlock(text)).toMatch(/^<opencode_runtime_bootstrap_checkin_retry>/);
+    expect(text).toContain('runtime_bootstrap_checkin failed: Not connected');
+    expect(text).toContain('"runtimeSessionId":"ses_1"');
+    // The retry prompt is app scaffolding end to end. Its own tag is not a
+    // recognized hidden block, so without the agent-block wrapper the raw
+    // instructions stayed visible in message display and activity previews.
+    expect(stripAgentBlocks(text)).toBe('');
+  });
+
+  // Negative control: only the retry branch is wrapped. A normal delivery keeps
+  // the recognized <opencode_app_message_delivery> envelope, and wrapping it
+  // too would have hidden the inbound message the member must answer.
+  it('leaves a normal delivery on the recognized delivery envelope', () => {
+    const text = buildOpenCodeRuntimeMessageText({
+      teamName: 'team-a',
+      laneId: 'lane-worker',
+      memberName: 'Worker',
+      cwd: '/repo',
+      text: 'Please review the diff.',
+      messageId: 'origin-1',
+      replyRecipient: 'team-lead',
+    });
+
+    expect(text).not.toContain('<info_for_agent>');
+    expect(text).toMatch(/^<opencode_app_message_delivery>/);
+    expect(stripAgentBlocks(text)).toContain('Please review the diff.');
   });
 });
 
