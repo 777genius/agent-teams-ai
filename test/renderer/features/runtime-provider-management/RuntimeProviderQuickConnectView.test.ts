@@ -403,7 +403,7 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(onRetryDirectory).toHaveBeenCalledTimes(1);
   });
 
-  it('shows an explicit connect action when a gateway catalog entry is unavailable', async () => {
+  it('shows an available-to-connect label when a gateway catalog entry is unavailable', async () => {
     const onConnect = vi.fn();
     await act(async () => {
       root.render(
@@ -411,7 +411,8 @@ describe('RuntimeProviderQuickConnectView', () => {
           cards: [
             card('openrouter', {
               displayName: 'OpenRouter',
-              stateLabel: 'Status unavailable',
+              state: 'connectable',
+              stateLabel: 'Available to connect',
               actionLabel: 'Check & connect',
               onAction: onConnect,
             }),
@@ -431,6 +432,14 @@ describe('RuntimeProviderQuickConnectView', () => {
     const connect = host.querySelector<HTMLButtonElement>(
       '[data-testid="provider-quick-action-openrouter"]'
     );
+    expect(connect?.closest('[data-testid="provider-quick-card-openrouter"]')?.textContent).toContain(
+      'Available to connect'
+    );
+    expect(
+      connect
+        ?.closest('[data-testid="provider-quick-card-openrouter"]')
+        ?.querySelector('[title="Available to connect"]')?.className
+    ).toContain('text-sky-300');
     expect(connect?.textContent).toContain('Check & connect');
     expect(connect?.disabled).toBe(false);
     act(() => connect?.click());

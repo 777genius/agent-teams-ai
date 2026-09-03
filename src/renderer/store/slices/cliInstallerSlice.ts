@@ -1275,24 +1275,34 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       }
 
       try {
-        let responseProviderStatus = verifyModels
-          ? await api.cliInstaller.verifyProviderModels(providerId)
-          : projectPath
-            ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
-            : await api.cliInstaller.getProviderStatus(providerId);
+        const requestProviderStatus = async (): Promise<CliProviderStatus | null> =>
+          verifyModels
+            ? api.cliInstaller.verifyProviderModels(providerId)
+            : projectPath
+              ? api.cliInstaller.getProviderStatus(providerId, { projectPath })
+              : api.cliInstaller.getProviderStatus(providerId);
+        let responseProviderStatus = await requestProviderStatus();
         // OpenCode's app-server can return a structurally valid but partial
         // status while its catalog is settling. Recheck once in the same
-        // request, but do not retry the intentional model-only fallback or
+        // request. Native status probes can also miss their bounded deadline
+        // while the desktop startup scan is busy, so retry that exact transient
+        // timeout once as well. Never retry intentional model-only fallbacks or
         // any other provider/error indefinitely.
-        if (
+        const shouldRetryOpenCodePartial =
           providerId === 'opencode' &&
           !verifyModels &&
           responseProviderStatus?.statusCheckErrorCode === 'partial_response' &&
-          responseProviderStatus.statusCheckOutcome !== 'model_only'
-        ) {
-          responseProviderStatus = projectPath
-            ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
-            : await api.cliInstaller.getProviderStatus(providerId);
+          responseProviderStatus.statusCheckOutcome !== 'model_only';
+        const shouldRetryTransientTimeout =
+          !verifyModels &&
+          responseProviderStatus?.statusCheckOutcome === 'transient_error' &&
+          responseProviderStatus.statusCheckErrorCode === 'timeout';
+        const requestIsStillCurrent =
+          requestEpoch === cliStatusEpoch &&
+          requestGeneration === cliProviderStatusGeneration &&
+          cliProviderStatusActiveRequestIds.get(scopeKey) === requestId;
+        if (requestIsStillCurrent && (shouldRetryOpenCodePartial || shouldRetryTransientTimeout)) {
+          responseProviderStatus = await requestProviderStatus();
         }
         const responseMatchesProvider = responseProviderStatus?.providerId === providerId;
         const providerStatus =
