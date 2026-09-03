@@ -31,6 +31,21 @@ export interface ProviderLaunchGuard {
   reject(enabled: boolean, onRejected: () => void): boolean;
 }
 
+export function canResolveOpenCodeLaunchBlockers(
+  blockers: readonly ProviderLaunchBlocker[]
+): boolean {
+  return (
+    blockers.length > 0 &&
+    blockers.every(
+      ({ providerId, providerStatus }) =>
+        providerId === 'opencode' &&
+        (providerStatus?.statusCheckOutcome === 'model_only' ||
+          (providerStatus?.statusCheckOutcome === 'pending' &&
+            providerStatus.statusCheckErrorCode === 'partial_response'))
+    )
+  );
+}
+
 function getProviderStatusDetail(provider: CliProviderStatus): string | null {
   if (provider.modelCatalogRefreshState === 'loading') {
     return null;
