@@ -9,6 +9,7 @@ import {
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CliProviderStatus } from '@shared/types';
 
 const storeState = {
@@ -24,7 +25,21 @@ vi.mock('@renderer/store', () => ({
 vi.mock('@features/codex-account/renderer', () => ({
   useCodexAccountSnapshot: () => ({ loading: false, snapshot: null, error: null }),
   mergeCodexCliStatusWithSnapshot: (cliStatus: unknown) => cliStatus,
-  mergeCodexProviderStatusWithSnapshot: (providerStatus: unknown) => providerStatus,
+  mergeCodexProviderStatusWithSnapshot: (
+    providerStatus: CliProviderStatus,
+    snapshot: CodexAccountSnapshotDto | null
+  ) =>
+    snapshot
+      ? {
+          ...providerStatus,
+          authenticated: snapshot.launchAllowed,
+          statusMessage: snapshot.launchIssueMessage ?? 'ChatGPT account ready',
+          capabilities: {
+            ...providerStatus.capabilities,
+            teamLaunch: snapshot.launchAllowed,
+          },
+        }
+      : providerStatus,
   isCodexAccountSnapshotPending: () => false,
 }));
 
@@ -170,6 +185,57 @@ describe('resolveProjectScopedProviderStatus', () => {
     const resolved = resolveProjectScopedProviderStatus('opencode', scoped, status());
     expect(resolved).toEqual(scoped);
     expect(resolved).not.toBe(scoped);
+  });
+
+  it('applies the Codex account snapshot to scoped status before launch gating', () => {
+    const scoped = status({
+      providerId: 'codex',
+      authenticated: false,
+      capabilities: { ...status().capabilities, teamLaunch: false },
+      modelCatalog: {
+        ...status().modelCatalog!,
+        providerId: 'codex',
+        defaultModelId: 'codex/gpt-5.6',
+        defaultLaunchModel: 'codex/gpt-5.6',
+        models: [
+          {
+            ...status().modelCatalog!.models[0],
+            id: 'codex/gpt-5.6',
+            launchModel: 'codex/gpt-5.6',
+          },
+        ],
+      },
+    });
+    const snapshot = {
+      preferredAuthMode: 'chatgpt',
+      effectiveAuthMode: 'chatgpt',
+      launchAllowed: true,
+      launchIssueMessage: null,
+      launchReadinessState: 'ready_chatgpt',
+      appServerState: 'healthy',
+      appServerStatusMessage: null,
+      managedAccount: null,
+      apiKey: { available: false, source: null, sourceLabel: null },
+      requiresOpenaiAuth: true,
+      login: { status: 'idle', error: null, startedAt: null },
+      rateLimits: null,
+      updatedAt: '2026-09-03T20:00:00.000Z',
+    } as const satisfies CodexAccountSnapshotDto;
+
+    const resolved = resolveProjectScopedProviderStatus(
+      'codex',
+      scoped,
+      null,
+      Date.parse('2026-09-03T20:01:00.000Z'),
+      snapshot
+    );
+
+    expect(resolved).toMatchObject({
+      providerId: 'codex',
+      authenticated: true,
+      statusMessage: 'ChatGPT account ready',
+      capabilities: { teamLaunch: true },
+    });
   });
 
   it.each(['pending', 'model_only', 'transient_error'] as const)(

@@ -622,12 +622,15 @@ async function flush(): Promise<void> {
 async function confirmLaunchPreflight(
   host: HTMLElement,
   label: 'Launch team' | 'Relaunch team' = 'Launch team'
-): Promise<HTMLButtonElement | undefined> {
+): Promise<HTMLButtonElement> {
   const button = Array.from(host.querySelectorAll('button')).find(
     (candidate) => candidate.textContent === label
   ) as HTMLButtonElement | undefined;
+  if (!button) {
+    throw new Error(`Expected "${label}" button.`);
+  }
   await act(async () => {
-    button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flush();
   });
   for (let attempt = 0; attempt < 4; attempt += 1) {
