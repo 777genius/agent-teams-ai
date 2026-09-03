@@ -1548,9 +1548,9 @@
       "cancelLabel": "বাতিল"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
-      "confirmLabel": "OK"
+      "title": "দল মুছে ফেলতে ব্যর্থ",
+      "fallbackMessage": "একটি অপ্রত্যাশিত ত্রুটি দেখা দিয়েছে",
+      "confirmLabel": "ঠিক আছে"
     }
   },
   "messageComposer": {

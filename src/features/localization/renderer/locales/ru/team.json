@@ -1586,8 +1586,8 @@
       "cancelLabel": "Отмена"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "Не удалось удалить команду",
+      "fallbackMessage": "Произошла непредвиденная ошибка",
       "confirmLabel": "OK"
     }
   },

@@ -1548,9 +1548,9 @@
       "cancelLabel": "ยกเลิก"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
-      "confirmLabel": "OK"
+      "title": "ลบทีมไม่สำเร็จ",
+      "fallbackMessage": "เกิดข้อผิดพลาดที่ไม่คาดคิด",
+      "confirmLabel": "ตกลง"
     }
   },
   "messageComposer": {

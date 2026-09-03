@@ -1548,9 +1548,9 @@
       "cancelLabel": "取消"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
-      "confirmLabel": "OK"
+      "title": "删除团队失败",
+      "fallbackMessage": "发生意外错误",
+      "confirmLabel": "好的"
     }
   },
   "messageComposer": {

@@ -1548,8 +1548,8 @@
       "cancelLabel": "Batal"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "Gagal menghapus tim",
+      "fallbackMessage": "Terjadi galat yang tak diharapkan",
       "confirmLabel": "OK"
     }
   },

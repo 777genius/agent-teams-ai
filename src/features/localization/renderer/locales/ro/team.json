@@ -1548,8 +1548,8 @@
       "cancelLabel": "Anulează"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "Ștergerea echipei a eșuat",
+      "fallbackMessage": "A apărut o eroare neașteptată",
       "confirmLabel": "OK"
     }
   },

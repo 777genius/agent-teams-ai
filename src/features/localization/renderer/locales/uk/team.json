@@ -1550,8 +1550,8 @@
       "cancelLabel": "Скасувати"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "Не вдалося видалити команду",
+      "fallbackMessage": "Сталася неочікувана помилка",
       "confirmLabel": "OK"
     }
   },

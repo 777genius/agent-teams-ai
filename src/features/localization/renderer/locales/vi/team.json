@@ -1548,8 +1548,8 @@
       "cancelLabel": "Hủy"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "Không thể xóa đội ngũ",
+      "fallbackMessage": "Đã xảy ra lỗi không mong muốn",
       "confirmLabel": "OK"
     }
   },

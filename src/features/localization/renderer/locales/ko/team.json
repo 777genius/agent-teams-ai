@@ -1548,9 +1548,9 @@
       "cancelLabel": "이름 *"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
-      "confirmLabel": "OK"
+      "title": "팀 삭제 실패",
+      "fallbackMessage": "예상치 못한 오류가 발생했습니다",
+      "confirmLabel": "확인"
     }
   },
   "messageComposer": {

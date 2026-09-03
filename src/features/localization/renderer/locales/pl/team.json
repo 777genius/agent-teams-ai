@@ -1548,8 +1548,8 @@
       "cancelLabel": "Anuluj"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "Nie udało się usunąć zespołu",
+      "fallbackMessage": "Wystąpił nieoczekiwany błąd",
       "confirmLabel": "OK"
     }
   },

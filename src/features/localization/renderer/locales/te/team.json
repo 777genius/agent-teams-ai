@@ -1548,9 +1548,9 @@
       "cancelLabel": "రద్దు చేయి"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
-      "confirmLabel": "OK"
+      "title": "టీమ్‌ను తొలగించడం విఫలమైంది",
+      "fallbackMessage": "ఊహించని లోపం సంభవించింది",
+      "confirmLabel": "సరే"
     }
   },
   "messageComposer": {

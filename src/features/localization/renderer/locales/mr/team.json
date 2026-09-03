@@ -1548,9 +1548,9 @@
       "cancelLabel": "रद्द करा"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
-      "confirmLabel": "OK"
+      "title": "टीम हटवणे अयशस्वी",
+      "fallbackMessage": "एक अनपेक्षित त्रुटी आली",
+      "confirmLabel": "ठीक आहे"
     }
   },
   "messageComposer": {

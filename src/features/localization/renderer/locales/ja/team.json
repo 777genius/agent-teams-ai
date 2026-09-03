@@ -1548,8 +1548,8 @@
       "cancelLabel": "キャンセル"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "チームを削除できませんでした",
+      "fallbackMessage": "予期しないエラーが発生しました",
       "confirmLabel": "OK"
     }
   },

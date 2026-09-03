@@ -1548,9 +1548,9 @@
       "cancelLabel": "لغو"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
-      "confirmLabel": "OK"
+      "title": "حذف تیم ناموفق بود",
+      "fallbackMessage": "خطای غیرمنتظره‌ای رخ داد",
+      "confirmLabel": "تأیید"
     }
   },
   "messageComposer": {

@@ -1548,8 +1548,8 @@
       "cancelLabel": "Kanselahin"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "Nabigong tanggalin ang team",
+      "fallbackMessage": "May naganap na hindi inaasahang error",
       "confirmLabel": "OK"
     }
   },

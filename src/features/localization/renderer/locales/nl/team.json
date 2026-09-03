@@ -1548,8 +1548,8 @@
       "cancelLabel": "Annuleren"
     },
     "deleteFailed": {
-      "title": "Failed to delete team",
-      "fallbackMessage": "An unexpected error occurred",
+      "title": "Kon team niet verwijderen",
+      "fallbackMessage": "Er is een onverwachte fout opgetreden",
       "confirmLabel": "OK"
     }
   },
