@@ -425,10 +425,11 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
       expect(harness.getMemberSpawnStatusesReadOnlyPort).not.toHaveBeenCalled();
     });
 
-    // Both directions of the run check: a snapshot built for another run cannot
-    // answer a projection of this one, and one built for the same run still
-    // can - otherwise the rule above would just be "never share anything".
-    it('answers from a shared build only when it describes the run the projection did', async () => {
+    // Both directions of the rule: a caller that supplied a projection is
+    // answered by a build of its own even when the cached snapshot is for the
+    // very same run, and a caller that supplied none still rides that snapshot
+    // - otherwise the rule would just be "never share anything".
+    it('answers a supplied projection with its own build and a plain read from the cache', async () => {
       const harness = createFacadeHarness({ ttlMs: 60_000 });
       harness.setRunId('run-2');
       const shared = await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
@@ -441,10 +442,106 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
       expect(rebuilt).not.toBe(shared);
 
       const currentProjection: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-2' };
-      const reused = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
-        memberSpawnStatuses: currentProjection,
+      const rebuiltForCurrentRun = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly(
+        'alpha',
+        { memberSpawnStatuses: currentProjection }
+      );
+      expect(rebuiltForCurrentRun).not.toBe(shared);
+
+      const polled = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+      expect(polled).toBe(shared);
+    });
+
+    // The snapshot cache is keyed by team and run and nothing in the key says
+    // which status projection filled it, so an entry for the tracked run can
+    // still carry runtime members projected from an earlier read of the
+    // statuses. Serving it to a caller that supplied its own projection is the
+    // two-views defect this parameter exists to remove, in a different order.
+    it('rebuilds rather than serving a cached snapshot made from another projection', async () => {
+      const projectionByBuild: MemberSpawnStatusesSnapshot[] = [];
+      const buildTeamAgentRuntimeSnapshot = vi.fn<BuildTeamAgentRuntimeSnapshotPort>(
+        async (params) => {
+          projectionByBuild.push(await params.getMemberSpawnStatuses(params.teamName));
+          const snapshot: TeamAgentRuntimeSnapshot = {
+            teamName: params.teamName,
+            updatedAt: `2026-06-20T17:19:0${projectionByBuild.length}.000Z`,
+            runId: params.runId,
+            members: {},
+          };
+          // Mirrors the production builder, whose publish the facade drops for
+          // a write-free build.
+          params.rememberAgentRuntimeSnapshot({
+            teamName: params.teamName,
+            runId: params.runId,
+            generationAtStart: params.generationAtStart,
+            snapshot,
+            ttlMs: params.getAgentRuntimeSnapshotCacheTtlMs(params.teamName, params.runId),
+          });
+          return snapshot;
+        }
+      );
+      const harness = createFacadeHarness({ ttlMs: 60_000, buildTeamAgentRuntimeSnapshot });
+      harness.setRunId('run-1');
+
+      const cachedFromFirstProjection = await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      const cacheEntry = harness.agentRuntimeSnapshotCache.get('alpha');
+      expect(cacheEntry?.snapshot).toBe(cachedFromFirstProjection);
+
+      const secondProjection: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-1' };
+      const answered = await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses: secondProjection,
       });
-      expect(reused).toBe(shared);
+
+      expect(projectionByBuild[0]).not.toBe(secondProjection);
+      expect(projectionByBuild[1]).toBe(secondProjection);
+      expect(answered).not.toBe(cachedFromFirstProjection);
+      // The write-free build stays this caller's: the cache keeps the entry the
+      // writing build published.
+      expect(harness.agentRuntimeSnapshotCache.get('alpha')).toBe(cacheEntry);
+      expect(harness.agentRuntimeSnapshotCache.get('alpha')?.snapshot).toBe(
+        cachedFromFirstProjection
+      );
+    });
+
+    // The in-flight maps are keyed the same way, so the same mismatch reaches a
+    // build that has not finished yet - in both directions.
+    it('neither joins nor publishes an in-flight build when the caller supplied a projection', async () => {
+      const gates = [
+        createDeferred<null>(),
+        createDeferred<null>(),
+        createDeferred<null>(),
+        createDeferred<null>(),
+      ];
+      let gateIndex = 0;
+      const harness = createFacadeHarness({
+        ttlMs: 0,
+        getMeta: () => gates[gateIndex++]?.promise ?? Promise.resolve(null),
+      });
+      harness.setRunId('run-1');
+      const memberSpawnStatuses: MemberSpawnStatusesSnapshot = { statuses: {}, runId: 'run-1' };
+
+      const mutating = harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      const alongsideMutating = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses,
+      });
+      expect(harness.getBuildCount()).toBe(2);
+      gates[0]?.resolve(null);
+      gates[1]?.resolve(null);
+      const [mutatingSnapshot, alongsideMutatingSnapshot] = await Promise.all([
+        mutating,
+        alongsideMutating,
+      ]);
+      expect(alongsideMutatingSnapshot).not.toBe(mutatingSnapshot);
+
+      const diagnostics = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha', {
+        memberSpawnStatuses,
+      });
+      const polled = harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+      expect(harness.getBuildCount()).toBe(4);
+      gates[2]?.resolve(null);
+      gates[3]?.resolve(null);
+      const [diagnosticsSnapshot, polledSnapshot] = await Promise.all([diagnostics, polled]);
+      expect(polledSnapshot).not.toBe(diagnosticsSnapshot);
     });
 
     it('starts its own build when the tracked run moved on', async () => {

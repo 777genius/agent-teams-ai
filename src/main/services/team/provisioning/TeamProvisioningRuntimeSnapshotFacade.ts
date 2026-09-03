@@ -147,17 +147,23 @@ export class TeamProvisioningRuntimeSnapshotFacade {
    * spawn statuses come from the read-only projection (the mutating one
    * persists launch state and syncs it back into a live run), the result is not
    * remembered in the shared cache, and the shared telemetry history is not
-   * pruned. A cached snapshot is still served, and a build already in flight for
-   * the same run and cache generation is shared rather than started twice.
+   * pruned. A caller that supplies no projection of its own is still served a
+   * cached snapshot, and a build already in flight for the same run and cache
+   * generation is shared rather than started twice.
    *
    * A caller that has already made the read-only status projection - the HTTP
    * diagnostics route reports it alongside this snapshot - passes it in through
    * `memberSpawnStatuses` instead of paying for a second one. The read-only
    * projection neither coalesces nor fills a cache, so without this the two
    * halves of one response were two independent projections that could describe
-   * two different runs. A projection made for a run that is no longer the
-   * tracked one also stops this call from serving or joining a build made for
-   * the current run, for the same reason.
+   * two different runs. Such a caller is therefore answered only by a build of
+   * its own. The cache and both in-flight maps are keyed by team, run and cache
+   * generation, and no part of that key records which projection produced the
+   * runtime members, so an entry for the very same run can still have been built
+   * from an earlier read of the statuses: serving it, joining it, or publishing
+   * this build for the next poll to join would all pair one caller's statuses
+   * with another's runtime members, which is the defect above in a different
+   * order.
    */
   async getTeamAgentRuntimeSnapshotReadOnly(
     teamName: string,
@@ -165,8 +171,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
   ): Promise<TeamAgentRuntimeSnapshot> {
     const runId = this.ports.getTrackedRunId(teamName);
     const projectedStatuses = options?.memberSpawnStatuses;
-    const sharesOtherBuilds =
-      projectedStatuses === undefined || (projectedStatuses.runId ?? null) === runId;
+    const sharesOtherBuilds = projectedStatuses === undefined;
     const cached = sharesOtherBuilds
       ? this.ports.runtimeSnapshotCache.getCachedAgentRuntimeSnapshot(teamName, runId)
       : undefined;
@@ -193,9 +198,9 @@ export class TeamProvisioningRuntimeSnapshotFacade {
       ...(projectedStatuses ? { memberSpawnStatuses: projectedStatuses } : {}),
     });
     if (!sharesOtherBuilds) {
-      // Built from a projection of a run that is no longer the tracked one, so
-      // it is this caller's alone: publishing it would hand the next poll a
-      // snapshot made from statuses it never asked for.
+      // Built from the caller's own projection, so it is that caller's alone:
+      // publishing it would hand the next poll a snapshot made from statuses it
+      // never asked for.
       return build;
     }
     return this.trackInFlightSnapshot(
