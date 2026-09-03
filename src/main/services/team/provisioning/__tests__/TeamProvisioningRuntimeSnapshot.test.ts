@@ -355,19 +355,21 @@ async function buildMixedRuntimeMetadata(
 }
 
 /**
- * A lane with no provisioning run in flight: the persisted launch snapshot is
- * the only bootstrap evidence left, and its heartbeat has aged out.
+ * A lane whose bootstrap evidence is the persisted launch snapshot and whose
+ * heartbeat has aged out. Without `runtimeAdapterRunByTeam` there is no
+ * provisioning run in flight either, which is the owner-'none' case.
  */
-async function buildUnownedLaneRuntimeMetadata(options: {
+async function buildPersistedLaneRuntimeMetadata(options: {
   processRows: RuntimeTelemetryProcessTableRow[];
   readWindowsHostProcessRows: ReturnType<typeof vi.fn>;
+  runtimeAdapterRunByTeam?: ReadonlyMap<string, RuntimeAdapterRunSnapshotSource>;
 }): Promise<Map<string, LiveTeamAgentRuntimeMetadata>> {
   return buildLiveTeamAgentRuntimeMetadata({
     teamName: TEAM_NAME,
     runId: RUN_ID,
     generationAtStart: 0,
     runs: new Map([[RUN_ID, run()]]),
-    runtimeAdapterRunByTeam: new Map(),
+    runtimeAdapterRunByTeam: options.runtimeAdapterRunByTeam ?? new Map(),
     teamMetaStore: {
       getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
     },
@@ -401,6 +403,54 @@ async function buildUnownedLaneRuntimeMetadata(options: {
     },
     logDebug: vi.fn(),
   });
+}
+
+interface LaneLivenessVerdict {
+  hostRowsRead: boolean;
+  verdict: { alive: boolean | undefined; livenessKind: string | undefined };
+}
+
+/**
+ * The same lane resolved on both sides of the win32 seam. On win32 the lane
+ * host rows reach the resolver through the Windows host table
+ * (`shouldReadWindowsHostRowsForMemberLane`), everywhere else through the
+ * shared process table - the verdict has to come out the same either way.
+ */
+async function resolveLaneLivenessOnBothPlatforms(options: {
+  runtimeAdapterRunByTeam?: ReadonlyMap<string, RuntimeAdapterRunSnapshotSource>;
+}): Promise<Record<'linux' | 'win32', LaneLivenessVerdict>> {
+  const byPlatform = new Map<'linux' | 'win32', LaneLivenessVerdict>();
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(Date.parse(UPDATED_AT) + 5 * 60_000));
+  try {
+    for (const platform of ['linux', 'win32'] as const) {
+      setPlatform(platform);
+      const isWin32 = platform === 'win32';
+      const readWindowsHostProcessRows = vi.fn(async () => ({
+        rows: isWin32 ? sharedOpenCodeHostProcessRows() : [],
+        processTableAvailable: isWin32,
+      }));
+      const metadata = await buildPersistedLaneRuntimeMetadata({
+        processRows: isWin32 ? [] : sharedOpenCodeHostProcessRows(),
+        readWindowsHostProcessRows,
+        runtimeAdapterRunByTeam: options.runtimeAdapterRunByTeam,
+      });
+      const worker = metadata.get('Worker');
+      byPlatform.set(platform, {
+        hostRowsRead: readWindowsHostProcessRows.mock.calls.length > 0,
+        verdict: { alive: worker?.alive, livenessKind: worker?.livenessKind },
+      });
+    }
+  } finally {
+    setPlatform(ORIGINAL_PLATFORM);
+    vi.useRealTimers();
+  }
+  const linux = byPlatform.get('linux');
+  const win32 = byPlatform.get('win32');
+  if (!linux || !win32) {
+    throw new Error('expected a lane verdict on both platforms');
+  }
+  return { linux, win32 };
 }
 
 async function buildMixedRuntimeSnapshot(
@@ -1411,60 +1461,42 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
     }
   });
 
-  it('revives an unowned OpenCode lane from its live serve host on a native process table', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(Date.parse(UPDATED_AT) + 5 * 60_000));
-    const readWindowsHostProcessRows = vi.fn(async () => ({
-      rows: [] as RuntimeTelemetryProcessTableRow[],
-      processTableAvailable: false,
-    }));
-    try {
-      setPlatform('linux');
-      const metadata = await buildUnownedLaneRuntimeMetadata({
-        processRows: sharedOpenCodeHostProcessRows(),
-        readWindowsHostProcessRows,
-      });
+  // With no provisioning run in flight the recorded pid is the only thing
+  // tying the member to a process row, and a pid the OS may have reassigned is
+  // too weak to promote a card back to alive - equally weak whether the row
+  // arrives through the win32 host table or the shared process table. Running
+  // the same lane through both values of the platform seam is what keeps that
+  // one rule from silently becoming two.
+  it('leaves an unowned OpenCode lane unpromoted, identically on win32 and off it', async () => {
+    const { linux, win32 } = await resolveLaneLivenessOnBothPlatforms({});
 
-      // The launch snapshot's heartbeat aged out, so the lane resolves as a
-      // runtime_process_candidate and only the live serve host can promote it.
-      expect(metadata.get('Worker')).toMatchObject({
-        alive: true,
-        livenessKind: 'runtime_process',
-        pidSource: 'opencode_bridge',
-        pid: CURRENT_PID,
-        runtimeDiagnostic: `OpenCode lane host process is alive (pid ${CURRENT_PID})`,
-      });
-      expect(readWindowsHostProcessRows).not.toHaveBeenCalled();
-    } finally {
-      setPlatform(ORIGINAL_PLATFORM);
-      vi.useRealTimers();
-    }
+    expect(win32.hostRowsRead).toBe(true);
+    expect(linux.hostRowsRead).toBe(false);
+    expect(win32.verdict).toEqual(linux.verdict);
+    expect(linux.verdict).toEqual({
+      alive: false,
+      livenessKind: 'runtime_process_candidate',
+    });
   });
 
-  // Negative control for the owner-'none' branch: on win32 the recorded pid is
-  // the only thing tying the member to the host table, so those rows are read
-  // for RSS but must never promote the card back to alive on their own.
-  it('reads the Windows host table for an unowned OpenCode lane without promoting it to alive', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(Date.parse(UPDATED_AT) + 5 * 60_000));
-    const readWindowsHostProcessRows = vi.fn(async () => ({
-      rows: sharedOpenCodeHostProcessRows(),
-      processTableAvailable: true,
-    }));
-    try {
-      setPlatform('win32');
-      const metadata = await buildUnownedLaneRuntimeMetadata({
-        processRows: [],
-        readWindowsHostProcessRows,
-      });
+  // The other side of the same rule: a lane a run in flight owns is verified
+  // against its live serve host, and that verdict is platform-independent too.
+  // Without this case the rule above would also be satisfied by never
+  // promoting anything.
+  it('revives an owned OpenCode lane from its live serve host, identically on win32 and off it', async () => {
+    const { linux, win32 } = await resolveLaneLivenessOnBothPlatforms({
+      runtimeAdapterRunByTeam: new Map([
+        [TEAM_NAME, { runId: RUN_ID, providerId: 'opencode', cwd: WORKDIR, members: {} }],
+      ]),
+    });
 
-      expect(readWindowsHostProcessRows).toHaveBeenCalled();
-      expect(metadata.get('Worker')?.alive).not.toBe(true);
-      expect(metadata.get('Worker')?.livenessKind).not.toBe('runtime_process');
-    } finally {
-      setPlatform(ORIGINAL_PLATFORM);
-      vi.useRealTimers();
-    }
+    expect(win32.hostRowsRead).toBe(true);
+    expect(linux.hostRowsRead).toBe(false);
+    expect(win32.verdict).toEqual(linux.verdict);
+    expect(linux.verdict).toEqual({
+      alive: true,
+      livenessKind: 'runtime_process',
+    });
   });
 });
 

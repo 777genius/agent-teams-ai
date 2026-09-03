@@ -1923,15 +1923,17 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     // A lane whose bootstrap heartbeat aged past the stale window still has a
     // live host process between turns; that host is the liveness truth for an
     // OpenCode lane (the card used to flip idle <-> registered every ~2 min).
-    // With no run in flight (owner 'none') the persisted launch snapshot is the
-    // only bootstrap evidence left, and on Windows its recorded pid is also the
-    // only thing tying this member to the host table probed just above; that
-    // pairing is too weak to promote a card back to alive, so there those rows
-    // stay RSS evidence only. Everywhere else the match runs against the shared
-    // process table this snapshot already trusts, so the override still applies.
+    // With no run in flight (owner 'none', for example right after an app
+    // restart) the persisted launch snapshot is the only bootstrap evidence
+    // left, and its recorded pid is then the only thing tying this member to
+    // any process row - a pid the OS may have handed to another OpenCode host
+    // in the meantime. That pairing is too weak to promote a card back to
+    // alive, and it is exactly as weak wherever the row came from, so the rule
+    // is the same on every platform: the rows stay RSS evidence only, whether
+    // they arrive through the win32 host table or the shared process table.
     const liveLaneHostRow =
       isOpenCodeLaneMember &&
-      (!shouldUseWindowsHostRows || adapterEvidenceResolution.owner !== 'none') &&
+      adapterEvidenceResolution.owner !== 'none' &&
       resolvedBeforeHostProbe.alive !== true &&
       adapterEvidence?.runtimeAlive !== true &&
       adapterEvidence?.bootstrapConfirmed !== true
