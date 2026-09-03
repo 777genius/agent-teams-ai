@@ -4,6 +4,8 @@ import * as path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { canCreateSymlinks } from '../../../helpers/symlinkSupport';
+
 import { SkillImportService } from '@main/services/extensions/skills/SkillImportService';
 
 describe('SkillImportService', () => {
@@ -29,7 +31,7 @@ describe('SkillImportService', () => {
     expect(inspection.warnings).toContain('Hidden files and folders were skipped during import.');
   });
 
-  it('rejects symbolic links in the import source', async () => {
+  it.skipIf(!canCreateSymlinks())('rejects symbolic links in the import source', async () => {
     const sourceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'skill-import-'));
     createdDirs.push(sourceDir);
 

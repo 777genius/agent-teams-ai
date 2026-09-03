@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { createTeamProvisioningMemberLifecycleServiceUseCases } from '../TeamProvisioningMemberLifecycleServiceUseCases';
@@ -142,7 +144,7 @@ describe('TeamProvisioningMemberLifecycleServiceUseCases', () => {
         projectPath: '/safe-test-workspace/team-a',
         runTrackedCwd: '/safe-test-workspace/fallback',
       })
-    ).toBe('/safe-test-workspace/team-a');
+    ).toBe(path.resolve('/safe-test-workspace/team-a'));
     expect(sentMessages).toHaveLength(1);
     expect(sentMessages[0]?.message).toMatchObject({
       from: 'Lead',

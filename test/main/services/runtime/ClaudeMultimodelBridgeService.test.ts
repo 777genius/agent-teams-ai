@@ -513,7 +513,8 @@ describe('ClaudeMultimodelBridgeService', () => {
         });
         expect(
           execCliMock.mock.calls.every(
-            (call) => call[2].cwd === '/tmp/status-hydration-test-project'
+            // The service resolves the project cwd before spawning.
+            (call) => call[2].cwd === path.resolve('/tmp/status-hydration-test-project')
           )
         ).toBe(true);
       } else {
@@ -1173,7 +1174,8 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(execCliMock).toHaveBeenCalledWith(
       '/mock/agent_teams_orchestrator',
       ['runtime', 'status', '--json', '--provider', 'opencode', '--summary'],
-      expect.objectContaining({ cwd: '/tmp/local-model-project' })
+      // The service resolves the project cwd before spawning the catalog probe.
+      expect.objectContaining({ cwd: path.resolve('/tmp/local-model-project') })
     );
   });
 

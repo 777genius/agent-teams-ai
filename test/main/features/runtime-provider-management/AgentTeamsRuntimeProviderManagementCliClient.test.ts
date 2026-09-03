@@ -5,6 +5,8 @@ import path from 'node:path';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { canCreateSymlinks } from '../../../helpers/symlinkSupport';
+
 const buildProviderAwareCliEnvMock = vi.fn();
 const resolveBinaryMock = vi.fn();
 const clearBinaryCacheMock = vi.fn();
@@ -1577,32 +1579,35 @@ describe('AgentTeamsRuntimeProviderManagementCliClient', () => {
     );
   });
 
-  it('rejects runtime symlinks that resolve to the OpenCode CLI binary', async () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-runtime-'));
-    const opencodeTarget = path.join(tempDir, 'opencode');
-    const runtimeLink = path.join(tempDir, 'claude-multimodel');
-    try {
-      fs.writeFileSync(opencodeTarget, '#!/bin/sh\n');
-      fs.symlinkSync(opencodeTarget, runtimeLink);
-      resolveBinaryMock.mockResolvedValue(runtimeLink);
+  it.skipIf(!canCreateSymlinks())(
+    'rejects runtime symlinks that resolve to the OpenCode CLI binary',
+    async () => {
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-runtime-'));
+      const opencodeTarget = path.join(tempDir, 'opencode');
+      const runtimeLink = path.join(tempDir, 'claude-multimodel');
+      try {
+        fs.writeFileSync(opencodeTarget, '#!/bin/sh\n');
+        fs.symlinkSync(opencodeTarget, runtimeLink);
+        resolveBinaryMock.mockResolvedValue(runtimeLink);
 
-      const client = new AgentTeamsRuntimeProviderManagementCliClient();
-      const response = await client.loadView({
-        runtimeId: 'opencode',
-      });
+        const client = new AgentTeamsRuntimeProviderManagementCliClient();
+        const response = await client.loadView({
+          runtimeId: 'opencode',
+        });
 
-      expect(execCliMock).not.toHaveBeenCalled();
-      expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
-      expect(clearBinaryCacheMock).toHaveBeenCalledTimes(1);
-      expect(response.error?.code).toBe('runtime-misconfigured');
-      expect(response.error?.diagnostics?.binaryPath).toBe(runtimeLink);
-      expect(response.error?.message).toContain(
-        'OpenCode provider settings are using the wrong runtime binary.'
-      );
-    } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+        expect(execCliMock).not.toHaveBeenCalled();
+        expect(buildProviderAwareCliEnvMock).not.toHaveBeenCalled();
+        expect(clearBinaryCacheMock).toHaveBeenCalledTimes(1);
+        expect(response.error?.code).toBe('runtime-misconfigured');
+        expect(response.error?.diagnostics?.binaryPath).toBe(runtimeLink);
+        expect(response.error?.message).toContain(
+          'OpenCode provider settings are using the wrong runtime binary.'
+        );
+      } finally {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     }
-  });
+  );
 
   it('rejects OpenCode CLI connect commands before spawning or writing secrets', async () => {
     resolveBinaryMock.mockResolvedValue('/opt/homebrew/bin/opencode.cmd');

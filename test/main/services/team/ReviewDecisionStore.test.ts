@@ -16,6 +16,8 @@ import { tmpdir } from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { canCreateSymlinks } from '../../../helpers/symlinkSupport';
+
 let teamsBasePath: string;
 
 vi.mock('@main/utils/pathDecoder', () => ({
@@ -707,73 +709,81 @@ describe('ReviewDecisionStore', () => {
     );
   });
 
-  it('refuses a symlinked recovery directory without touching external files', async () => {
-    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
-    const store = new ReviewDecisionStore();
-    const scopeToken = 'task:123:req:symlink-conflict:src:one';
-    await store.save('demo', 'task-123', {
-      scopeToken,
-      hunkDecisions: { canonical: 'accepted' },
-      fileDecisions: {},
-      expectedRevision: 0,
-    });
-    const external = path.join(teamsBasePath, 'external-candidate-target');
-    const sentinelName = 'a'.repeat(64) + '.json';
-    await mkdir(external, { recursive: true });
-    await writeFile(path.join(external, sentinelName), 'sentinel', 'utf8');
-    const conflictParent = path.join(
-      teamsBasePath,
-      'demo',
-      'review-decisions',
-      'conflicts',
-      'v1',
-      'task-123'
-    );
-    await mkdir(conflictParent, { recursive: true });
-    await symlink(
-      external,
-      path.join(conflictParent, createHash('sha256').update(scopeToken).digest('hex')),
-      'dir'
-    );
-
-    await expect(
-      store.save('demo', 'task-123', {
+  it.skipIf(!canCreateSymlinks())(
+    'refuses a symlinked recovery directory without touching external files',
+    async () => {
+      const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+      const store = new ReviewDecisionStore();
+      const scopeToken = 'task:123:req:symlink-conflict:src:one';
+      await store.save('demo', 'task-123', {
         scopeToken,
-        hunkDecisions: { local: 'rejected' },
+        hunkDecisions: { canonical: 'accepted' },
         fileDecisions: {},
         expectedRevision: 0,
-      })
-    ).rejects.toThrow('Unsafe persistence directory');
-    await expect(readFile(path.join(external, sentinelName), 'utf8')).resolves.toBe('sentinel');
-    await expect(readdir(external)).resolves.toEqual([sentinelName]);
-  });
-
-  it('fails closed for a symlinked canonical scope directory', async () => {
-    const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
-    const store = new ReviewDecisionStore();
-    const external = await mkdtemp(path.join(tmpdir(), 'external-review-decisions-'));
-    const sentinelPath = path.join(external, 'sentinel.json');
-    try {
-      await writeFile(sentinelPath, 'sentinel', 'utf8');
-      const scopeParent = path.join(teamsBasePath, 'demo', 'review-decisions', 'v2');
-      await mkdir(scopeParent, { recursive: true });
-      await symlink(external, path.join(scopeParent, 'task-123'), 'dir');
+      });
+      const external = path.join(teamsBasePath, 'external-candidate-target');
+      const sentinelName = 'a'.repeat(64) + '.json';
+      await mkdir(external, { recursive: true });
+      await writeFile(path.join(external, sentinelName), 'sentinel', 'utf8');
+      const conflictParent = path.join(
+        teamsBasePath,
+        'demo',
+        'review-decisions',
+        'conflicts',
+        'v1',
+        'task-123'
+      );
+      await mkdir(conflictParent, { recursive: true });
+      await symlink(
+        external,
+        path.join(conflictParent, createHash('sha256').update(scopeToken).digest('hex')),
+        'dir'
+      );
 
       await expect(
         store.save('demo', 'task-123', {
-          scopeToken: 'canonical-symlink-scope',
-          hunkDecisions: { local: 'accepted' },
+          scopeToken,
+          hunkDecisions: { local: 'rejected' },
           fileDecisions: {},
           expectedRevision: 0,
         })
       ).rejects.toThrow('Unsafe persistence directory');
-      await expect(store.clear('demo', 'task-123')).rejects.toThrow('Unsafe persistence directory');
-      await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
-      await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
-    } finally {
-      await rm(external, { recursive: true, force: true });
+      await expect(readFile(path.join(external, sentinelName), 'utf8')).resolves.toBe('sentinel');
+      await expect(readdir(external)).resolves.toEqual([sentinelName]);
     }
-  });
+  );
+
+  it.skipIf(!canCreateSymlinks())(
+    'fails closed for a symlinked canonical scope directory',
+    async () => {
+      const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');
+      const store = new ReviewDecisionStore();
+      const external = await mkdtemp(path.join(tmpdir(), 'external-review-decisions-'));
+      const sentinelPath = path.join(external, 'sentinel.json');
+      try {
+        await writeFile(sentinelPath, 'sentinel', 'utf8');
+        const scopeParent = path.join(teamsBasePath, 'demo', 'review-decisions', 'v2');
+        await mkdir(scopeParent, { recursive: true });
+        await symlink(external, path.join(scopeParent, 'task-123'), 'dir');
+
+        await expect(
+          store.save('demo', 'task-123', {
+            scopeToken: 'canonical-symlink-scope',
+            hunkDecisions: { local: 'accepted' },
+            fileDecisions: {},
+            expectedRevision: 0,
+          })
+        ).rejects.toThrow('Unsafe persistence directory');
+        await expect(store.clear('demo', 'task-123')).rejects.toThrow(
+          'Unsafe persistence directory'
+        );
+        await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
+        await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
+      } finally {
+        await rm(external, { recursive: true, force: true });
+      }
+    }
+  );
 
   it('quarantines an unreadable decision candidate without hiding valid recovery branches', async () => {
     const { ReviewDecisionStore } = await import('@main/services/team/ReviewDecisionStore');

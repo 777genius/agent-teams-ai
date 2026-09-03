@@ -136,8 +136,16 @@ afterEach(async () => {
   ClaudeBinaryResolver.clearCache();
 });
 
+// createFake() copies Issue443DesktopContractFakeExecutable.mjs to an
+// extensionless file and chmods it 0o700. Windows does not honour a shebang, so
+// spawning it fails with ENOENT and every scenario degrades instead of running
+// the contract. Making this portable needs a real executable shim (a .cmd cannot
+// be spawned without shell:true), which is more machinery than the contract is
+// worth; the cases that spawn the fake are POSIX-only until then.
+const itPosix = process.platform === 'win32' ? it.skip : it;
+
 describe('issue #443 Desktop real child-process wire contract', () => {
-  it('authorizes model-only OpenCode status only with scoped model evidence', async () => {
+  itPosix('authorizes model-only OpenCode status only with scoped model evidence', async () => {
     const fake = await createFake('valid');
     const { ClaudeMultimodelBridgeService } =
       await import('@main/services/runtime/ClaudeMultimodelBridgeService');
@@ -222,7 +230,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
-  it('routes selected provider pagination through the production preload and IPC path', async () => {
+  itPosix('routes selected provider pagination through the production preload and IPC path', async () => {
     const fake = await createFake('paginated-catalog');
     const desktop = providerManagementDesktopHarness();
     const firstPage = await desktop.bridge.loadModels({
@@ -292,7 +300,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
-  it('cancels an old request group while a replacement group loads built-in OpenCode Zen', async () => {
+  itPosix('cancels an old request group while a replacement group loads built-in OpenCode Zen', async () => {
     const fake = await createFake('slow-catalog');
     const desktop = providerManagementDesktopHarness();
     const slowDeepInfra = desktop.bridge.loadModels({
@@ -347,7 +355,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
-  it('cancels the real provider process when its catalog scope disappears', async () => {
+  itPosix('cancels the real provider process when its catalog scope disappears', async () => {
     const fake = await createFake('slow-catalog');
     const desktop = providerManagementDesktopHarness();
     const pending = desktop.bridge.loadModels({
@@ -378,7 +386,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     ]);
   });
 
-  it('crosses the real Desktop child boundary with exact v2 proof bindings and framing', async () => {
+  itPosix('crosses the real Desktop child boundary with exact v2 proof bindings and framing', async () => {
     const harness = await realContractHarness('valid');
     const result = await harness.launch(launchInput('run-valid', harness.fake.project));
 
@@ -463,7 +471,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     expect(await harness.fake.remainingBridgeFiles()).toEqual([]);
   });
 
-  it.each([
+  itPosix.each([
     ['stale readiness proof', 'stale-proof', 0],
     ['handshake fingerprint v1', 'handshake-v1', 0],
   ] as const)('fails closed for %s', async (_label, scenario, expectedLaunches) => {
@@ -479,7 +487,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
-  it('retains a launch with a mismatched fingerprint echo for reconciliation', async () => {
+  itPosix('retains a launch with a mismatched fingerprint echo for reconciliation', async () => {
     const harness = await realContractHarness('mismatch-echo');
     const result = await harness.launch(
       launchInput('run-mismatch-echo', harness.fake.project)
@@ -500,7 +508,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
-  it('keeps a committed launch pending when authority publication fails without redispatching', async () => {
+  itPosix('keeps a committed launch pending when authority publication fails without redispatching', async () => {
     const harness = await realContractHarness('valid', new Error('fixture authority write failed'));
     const result = await harness.launch(launchInput('run-publication-failed', harness.fake.project));
 
@@ -521,7 +529,7 @@ describe('issue #443 Desktop real child-process wire contract', () => {
     assertProcessesExited(traces);
   });
 
-  it('treats an unknown launch outcome as non-retryable without duplicating the side effect', async () => {
+  itPosix('treats an unknown launch outcome as non-retryable without duplicating the side effect', async () => {
     const harness = await realContractHarness('unknown-outcome');
     const result = await harness.launch(launchInput('run-unknown', harness.fake.project));
 

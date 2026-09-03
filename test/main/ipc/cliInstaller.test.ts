@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const claudeBinaryResolverClearCacheMock = vi.hoisted(() => vi.fn());
@@ -322,8 +324,10 @@ describe('cliInstaller IPC handlers', () => {
     )) as IpcResult<CliInstallationStatus>;
 
     expect(scoped.data?.models).toEqual(['ollama/qwen2.5:0.5b']);
+    // The handler resolves the path before it reaches the service, which on
+    // Windows also puts the current drive in front of it.
     expect(service.getProviderStatus).toHaveBeenCalledWith('opencode', {
-      projectPath: '/tmp/project-a',
+      projectPath: path.resolve('/tmp/project-a'),
     });
     expect(cached.data?.providers[0]?.models).toEqual(['opencode/big-pickle']);
     expect(service.getStatus).toHaveBeenCalledTimes(1);

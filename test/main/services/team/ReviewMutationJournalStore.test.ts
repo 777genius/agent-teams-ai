@@ -4,6 +4,8 @@ import { tmpdir } from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { canCreateSymlinks } from '../../../helpers/symlinkSupport';
+
 let teamsBasePath: string;
 
 vi.mock('@main/utils/pathDecoder', () => ({
@@ -80,41 +82,44 @@ describe('ReviewMutationJournalStore', () => {
     await expect(store.list('demo', persistenceScope)).resolves.toEqual([]);
   });
 
-  it('fails closed for a symlinked mutation-journal scope', async () => {
-    const { ReviewMutationJournalStore } =
-      await import('@main/services/team/ReviewMutationJournalStore');
-    const store = new ReviewMutationJournalStore();
-    const external = await mkdtemp(path.join(tmpdir(), 'external-review-journal-'));
-    const sentinelPath = path.join(external, 'sentinel.json');
-    try {
-      await writeFile(sentinelPath, 'sentinel', 'utf8');
-      const scopeParent = path.join(
-        teamsBasePath,
-        'demo',
-        'review-decisions',
-        'mutation-journal',
-        persistenceScope.scopeKey
-      );
-      await mkdir(scopeParent, { recursive: true });
-      await symlink(
-        external,
-        path.join(
-          scopeParent,
-          createHash('sha256').update(persistenceScope.scopeToken).digest('hex')
-        ),
-        'dir'
-      );
+  it.skipIf(!canCreateSymlinks())(
+    'fails closed for a symlinked mutation-journal scope',
+    async () => {
+      const { ReviewMutationJournalStore } =
+        await import('@main/services/team/ReviewMutationJournalStore');
+      const store = new ReviewMutationJournalStore();
+      const external = await mkdtemp(path.join(tmpdir(), 'external-review-journal-'));
+      const sentinelPath = path.join(external, 'sentinel.json');
+      try {
+        await writeFile(sentinelPath, 'sentinel', 'utf8');
+        const scopeParent = path.join(
+          teamsBasePath,
+          'demo',
+          'review-decisions',
+          'mutation-journal',
+          persistenceScope.scopeKey
+        );
+        await mkdir(scopeParent, { recursive: true });
+        await symlink(
+          external,
+          path.join(
+            scopeParent,
+            createHash('sha256').update(persistenceScope.scopeToken).digest('hex')
+          ),
+          'dir'
+        );
 
-      await expect(store.prepare(makeInput())).rejects.toThrow('Unsafe persistence directory');
-      await expect(store.list('demo', persistenceScope)).rejects.toThrow(
-        'Unsafe persistence directory'
-      );
-      await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
-      await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
-    } finally {
-      await rm(external, { recursive: true, force: true });
+        await expect(store.prepare(makeInput())).rejects.toThrow('Unsafe persistence directory');
+        await expect(store.list('demo', persistenceScope)).rejects.toThrow(
+          'Unsafe persistence directory'
+        );
+        await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
+        await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
+      } finally {
+        await rm(external, { recursive: true, force: true });
+      }
     }
-  });
+  );
 
   it('persists a decision-only Redo record with no artificial disk step', async () => {
     const { ReviewMutationJournalStore } =

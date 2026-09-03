@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -26,6 +28,9 @@ import type {
 
 type OpenCodeMemberLanePlan = Extract<TeamRuntimeLanePlan, { mode: 'pure_opencode_member_lanes' }>;
 type OpenCodeMember = OpenCodeMemberLanePlan['allMembers'][number];
+
+/** The flow resolves the project cwd, which anchors it to a drive on Windows. */
+const PROJECT_CWD = path.resolve('/fake/project');
 
 const testTeamsBasePath = '/safe-test/teams';
 
@@ -117,7 +122,7 @@ function sharedPreflightFailureResult(
 function request(members: TeamCreateRequest['members']): TeamCreateRequest {
   return {
     teamName: 'open-code-team',
-    cwd: '/fake/project',
+    cwd: PROJECT_CWD,
     providerId: 'opencode',
     members,
   } as TeamCreateRequest;
@@ -141,11 +146,11 @@ function lanePlan(input: {
 
 describe('TeamProvisioningOpenCodeAggregateRun', () => {
   it('builds aggregate defaults with expected members scoped to the primary lane', () => {
-    const alice = member('alice', { cwd: '/fake/project' });
+    const alice = member('alice', { cwd: PROJECT_CWD });
     const bob = member('bob', { cwd: '/fake/project/bob' });
     const request = {
       teamName: 'open-code-team',
-      cwd: '/fake/project',
+      cwd: PROJECT_CWD,
       providerId: 'opencode',
       members: [alice],
       description: 'fake launch request',
@@ -647,7 +652,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
             providerId: 'opencode',
             laneId: lane.laneId,
             memberName: lane.member.name,
-            cwd: '/fake/project',
+            cwd: PROJECT_CWD,
           };
         },
       }
@@ -815,7 +820,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(runtimeOwners.get('open-code-team')).toMatchObject({
       runId: 'run-open-code',
       providerId: 'opencode',
-      cwd: '/fake/project',
+      cwd: PROJECT_CWD,
     });
     expect(progresses.get('run-open-code')?.state).toBe('disconnected');
     expect(delivery.canDeliverToTrackedRuntimeRun('open-code-team', 'run-open-code')).toBe(false);
@@ -904,7 +909,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
             providerId: 'opencode',
             laneId: lane.laneId,
             memberName: lane.member.name,
-            cwd: '/fake/project',
+            cwd: PROJECT_CWD,
           };
         },
         summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
@@ -990,7 +995,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
             providerId: 'opencode',
             laneId: lane.laneId,
             memberName: lane.member.name,
-            cwd: '/fake/project',
+            cwd: PROJECT_CWD,
           };
         },
         summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
@@ -1438,7 +1443,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
         runId: 'run-open-code',
         teamName: 'open-code-team',
         laneId: 'primary',
-        cwd: '/fake/project',
+        cwd: PROJECT_CWD,
         providerId: 'opencode',
         reason: 'cleanup',
         force: true,

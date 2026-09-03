@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -129,12 +131,15 @@ describe('TeamProvisioningVerificationProbePortsFactory', () => {
     await expect(ports.waitForValidConfig(createRun(), 1234)).resolves.toEqual({
       ok: true,
       location: 'configured',
-      configPath: '/teams/atlas-hq/config.json',
+      configPath: path.join('/teams', 'atlas-hq', 'config.json'),
     });
-    expect(readRegularFileUtf8).toHaveBeenCalledWith('/teams/atlas-hq/config.json', {
-      timeoutMs: 5_000,
-      maxBytes: 10_000,
-    });
+    expect(readRegularFileUtf8).toHaveBeenCalledWith(
+      path.join('/teams', 'atlas-hq', 'config.json'),
+      {
+        timeoutMs: 5_000,
+        maxBytes: 10_000,
+      }
+    );
   });
 
   it('wires team-list and inbox probes through injected service ports', async () => {
@@ -159,8 +164,13 @@ describe('TeamProvisioningVerificationProbePortsFactory', () => {
     await expect(ports.waitForMissingInboxes(run)).resolves.toEqual([]);
 
     expect(listTeams).toHaveBeenCalledTimes(1);
-    expect(pathExists).toHaveBeenCalledWith('/teams/atlas-hq/inboxes/Lead.json');
-    expect(pathExists).toHaveBeenCalledWith('/teams/atlas-hq/inboxes/Reviewer.json');
+    // The probe joins the inbox path, which uses the host separator.
+    expect(pathExists).toHaveBeenCalledWith(
+      path.join('/teams', 'atlas-hq', 'inboxes', 'Lead.json')
+    );
+    expect(pathExists).toHaveBeenCalledWith(
+      path.join('/teams', 'atlas-hq', 'inboxes', 'Reviewer.json')
+    );
   });
 
   it('wires timeout completion through composed probe ports and service callbacks', async () => {

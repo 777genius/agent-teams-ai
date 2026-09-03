@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -187,7 +189,7 @@ describe('OpenCode runtime adapter team flow', () => {
     const ports = createPorts(calls, {
       pathExists: async (filePath) => {
         calls.push(`pathExists:${filePath}`);
-        return filePath === '/default/teams/alpha/config.json';
+        return filePath === path.join('/default', 'teams', 'alpha', 'config.json');
       },
     });
 
@@ -196,8 +198,8 @@ describe('OpenCode runtime adapter team flow', () => {
     ).rejects.toThrow('Team already exists (found under /default/teams)');
 
     expect(calls).toEqual([
-      'pathExists:/configured/teams/alpha/config.json',
-      'pathExists:/default/teams/alpha/config.json',
+      `pathExists:${path.join('/configured', 'teams', 'alpha', 'config.json')}`,
+      `pathExists:${path.join('/default', 'teams', 'alpha', 'config.json')}`,
     ]);
   });
 
@@ -212,14 +214,14 @@ describe('OpenCode runtime adapter team flow', () => {
 
     expect(result).toEqual({ runId: 'adapter-run' });
     expect(calls).toEqual([
-      'pathExists:/configured/teams/alpha/config.json',
-      'pathExists:/default/teams/alpha/config.json',
+      `pathExists:${path.join('/configured', 'teams', 'alpha', 'config.json')}`,
+      `pathExists:${path.join('/default', 'teams', 'alpha', 'config.json')}`,
       'ensureCwdExists:/repo',
       'prepareOpenCodeRuntimeAdapterLaunch',
       'getTeamsBasePath',
-      'mkdir:/configured/teams/alpha',
+      `mkdir:${path.join('/configured', 'teams', 'alpha')}`,
       'getTasksBasePath',
-      'mkdir:/configured/tasks/alpha',
+      `mkdir:${path.join('/configured', 'tasks', 'alpha')}`,
       'writeTeamMeta:123:/repo',
       'writeMembersMeta:alice:adapter',
       'writeOpenCodeTeamConfig:alice',

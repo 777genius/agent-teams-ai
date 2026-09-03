@@ -208,7 +208,8 @@ describe('TeamTaskWatchRegistry scoping', () => {
     expect(latestTargets()).toContain(path.normalize(path.join(root, 'beta', 'inboxes')));
     expect(events).toContainEqual({
       eventType: 'add',
-      relativePath: path.join('beta', 'inboxes', 'team-lead.json'),
+      // The registry always emits forward-slash relative paths (see toRelativePath).
+      relativePath: 'beta/inboxes/team-lead.json',
     });
   });
 
@@ -234,7 +235,8 @@ describe('TeamTaskWatchRegistry scoping', () => {
     expect(events).toEqual([
       {
         eventType: 'add',
-        relativePath: path.join('alpha', 'inboxes', 'team-lead.json'),
+        // The registry always emits forward-slash relative paths (see toRelativePath).
+        relativePath: 'alpha/inboxes/team-lead.json',
       },
     ]);
   });

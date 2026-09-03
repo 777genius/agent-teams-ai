@@ -19,6 +19,8 @@ import { tmpdir } from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { canCreateSymlinks } from '../../../helpers/symlinkSupport';
+
 import type { ReviewSerializedEditorState } from '@features/change-review-history/contracts';
 
 let teamsBasePath: string;
@@ -799,72 +801,43 @@ describe('ReviewDraftHistoryStore', () => {
     );
   });
 
-  it('refuses a symlinked manual-edit recovery directory without touching external files', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
-    const store = new ReviewDraftHistoryStore();
-    const scopeToken = 'scope-symlink-conflict';
-    await store.saveEntry('demo', 'task-123', scopeToken, {
-      filePath: '/repo/a.ts',
-      codec: 'codemirror-history-v1',
-      expectedRevision: 0,
-      expectedGeneration: null,
-      revision: 1,
-      diskBaseline: 'A',
-      editorState: editorState('canonical', []),
-    });
-    const external = path.join(teamsBasePath, 'external-draft-candidate-target');
-    const sentinelName = 'b'.repeat(64) + '.json';
-    await mkdir(external, { recursive: true });
-    await writeFile(path.join(external, sentinelName), 'sentinel', 'utf8');
-    const conflictParent = path.join(
-      teamsBasePath,
-      'demo',
-      'review-decisions',
-      'draft-history',
-      'conflicts',
-      'v1',
-      'task-123'
-    );
-    await mkdir(conflictParent, { recursive: true });
-    await symlink(
-      external,
-      path.join(conflictParent, createHash('sha256').update(scopeToken).digest('hex')),
-      'dir'
-    );
-
-    await expect(
-      store.saveEntry('demo', 'task-123', scopeToken, {
+  it.skipIf(!canCreateSymlinks())(
+    'refuses a symlinked manual-edit recovery directory without touching external files',
+    async () => {
+      const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+      const store = new ReviewDraftHistoryStore();
+      const scopeToken = 'scope-symlink-conflict';
+      await store.saveEntry('demo', 'task-123', scopeToken, {
         filePath: '/repo/a.ts',
         codec: 'codemirror-history-v1',
         expectedRevision: 0,
         expectedGeneration: null,
         revision: 1,
         diskBaseline: 'A',
-        editorState: editorState('local', []),
-      })
-    ).rejects.toThrow('Unsafe persistence directory');
-    await expect(readFile(path.join(external, sentinelName), 'utf8')).resolves.toBe('sentinel');
-  });
-
-  it('fails closed for a symlinked canonical manual-edit scope', async () => {
-    const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
-    const store = new ReviewDraftHistoryStore();
-    const external = await mkdtemp(path.join(tmpdir(), 'external-review-drafts-'));
-    const sentinelPath = path.join(external, 'sentinel.json');
-    try {
-      await writeFile(sentinelPath, 'sentinel', 'utf8');
-      const scopeParent = path.join(
+        editorState: editorState('canonical', []),
+      });
+      const external = path.join(teamsBasePath, 'external-draft-candidate-target');
+      const sentinelName = 'b'.repeat(64) + '.json';
+      await mkdir(external, { recursive: true });
+      await writeFile(path.join(external, sentinelName), 'sentinel', 'utf8');
+      const conflictParent = path.join(
         teamsBasePath,
         'demo',
         'review-decisions',
         'draft-history',
-        'v1'
+        'conflicts',
+        'v1',
+        'task-123'
       );
-      await mkdir(scopeParent, { recursive: true });
-      await symlink(external, path.join(scopeParent, 'task-123'), 'dir');
+      await mkdir(conflictParent, { recursive: true });
+      await symlink(
+        external,
+        path.join(conflictParent, createHash('sha256').update(scopeToken).digest('hex')),
+        'dir'
+      );
 
       await expect(
-        store.saveEntry('demo', 'task-123', 'canonical-draft-symlink', {
+        store.saveEntry('demo', 'task-123', scopeToken, {
           filePath: '/repo/a.ts',
           codec: 'codemirror-history-v1',
           expectedRevision: 0,
@@ -874,15 +847,50 @@ describe('ReviewDraftHistoryStore', () => {
           editorState: editorState('local', []),
         })
       ).rejects.toThrow('Unsafe persistence directory');
-      await expect(store.clearScope('demo', 'task-123', 'canonical-draft-symlink')).rejects.toThrow(
-        'Unsafe persistence directory'
-      );
-      await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
-      await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
-    } finally {
-      await rm(external, { recursive: true, force: true });
+      await expect(readFile(path.join(external, sentinelName), 'utf8')).resolves.toBe('sentinel');
     }
-  });
+  );
+
+  it.skipIf(!canCreateSymlinks())(
+    'fails closed for a symlinked canonical manual-edit scope',
+    async () => {
+      const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
+      const store = new ReviewDraftHistoryStore();
+      const external = await mkdtemp(path.join(tmpdir(), 'external-review-drafts-'));
+      const sentinelPath = path.join(external, 'sentinel.json');
+      try {
+        await writeFile(sentinelPath, 'sentinel', 'utf8');
+        const scopeParent = path.join(
+          teamsBasePath,
+          'demo',
+          'review-decisions',
+          'draft-history',
+          'v1'
+        );
+        await mkdir(scopeParent, { recursive: true });
+        await symlink(external, path.join(scopeParent, 'task-123'), 'dir');
+
+        await expect(
+          store.saveEntry('demo', 'task-123', 'canonical-draft-symlink', {
+            filePath: '/repo/a.ts',
+            codec: 'codemirror-history-v1',
+            expectedRevision: 0,
+            expectedGeneration: null,
+            revision: 1,
+            diskBaseline: 'A',
+            editorState: editorState('local', []),
+          })
+        ).rejects.toThrow('Unsafe persistence directory');
+        await expect(
+          store.clearScope('demo', 'task-123', 'canonical-draft-symlink')
+        ).rejects.toThrow('Unsafe persistence directory');
+        await expect(readFile(sentinelPath, 'utf8')).resolves.toBe('sentinel');
+        await expect(readdir(external)).resolves.toEqual(['sentinel.json']);
+      } finally {
+        await rm(external, { recursive: true, force: true });
+      }
+    }
+  );
 
   it('quarantines an unreadable draft candidate without hiding valid recovery branches', async () => {
     const { ReviewDraftHistoryStore } = await import('@features/change-review-history/main');
@@ -1056,6 +1064,7 @@ describe('ReviewDraftHistoryStore', () => {
     await expect(readFile(target, 'utf8')).resolves.toBe('{broken');
 
     await rm(target);
+    if (!canCreateSymlinks()) return;
     const outside = path.join(teamsBasePath, 'outside.json');
     await writeFile(outside, '{}', 'utf8');
     await symlink(outside, target);
