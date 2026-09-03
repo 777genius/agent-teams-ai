@@ -180,8 +180,8 @@ export function createTeamProvisioningRuntimeProjection<
     getMemberSpawnStatuses: deps.getMemberSpawnStatuses,
     getMemberSpawnStatusesReadOnly: deps.getMemberSpawnStatusesReadOnly,
     getLiveTeamAgentRuntimeMetadata,
-    createRuntimeSnapshotResourceSamplingPorts: () =>
-      deps.runtimeResourceSampling.createRuntimeSnapshotResourceSamplingPorts(),
+    createRuntimeSnapshotResourceSamplingPorts: (portOptions) =>
+      deps.runtimeResourceSampling.createRuntimeSnapshotResourceSamplingPorts(portOptions),
     runtimeSnapshotCache: deps.runtimeSnapshotCache,
     getTrackedRunId: (teamName) => deps.runTracking.getTrackedRunId(teamName),
     getAgentRuntimeSnapshotCacheTtlMs: (teamName, runId) =>

@@ -29,6 +29,9 @@ function createDeferred<T>() {
 type BuildTeamAgentRuntimeSnapshotPort = NonNullable<
   TeamProvisioningRuntimeSnapshotFacadePorts['buildTeamAgentRuntimeSnapshot']
 >;
+type RuntimeSnapshotResourceSamplingPorts = ReturnType<
+  TeamProvisioningRuntimeSnapshotFacadePorts['createRuntimeSnapshotResourceSamplingPorts']
+>;
 type RuntimeSnapshotFacadeRun =
   TeamProvisioningRuntimeSnapshotFacadePorts['runs'] extends ReadonlyMap<string, infer T>
     ? T
@@ -116,6 +119,27 @@ function createFacadeHarness(
       resourceHistory.prune(teamName, activeKeys);
     }
   );
+  // Mirrors the production factory: the read-only build is handed the
+  // write-free history port, which reports the series a member already has and
+  // prunes nothing.
+  const createRuntimeSnapshotResourceSamplingPortsSpy = vi.fn(
+    (portOptions?: { readOnly?: boolean }): RuntimeSnapshotResourceSamplingPorts => ({
+      readRuntimeProcessRowsForUsageSnapshot: async () => null,
+      readProcessUsageStatsByPid: async () => new Map(),
+      buildRuntimeUsageProcessTrees: () => new Map(),
+      buildRuntimeProcessLoadStats: () => undefined,
+      agentRuntimeResourceHistory:
+        portOptions?.readOnly === true
+          ? {
+              record: (recordParams) => resourceHistory.read(recordParams),
+              prune: () => undefined,
+            }
+          : {
+              record: (recordParams) => resourceHistory.record(recordParams),
+              prune: pruneAgentRuntimeResourceHistory,
+            },
+    })
+  );
   const getMemberSpawnStatusesPort = vi.fn(
     async (): Promise<MemberSpawnStatusesSnapshot> => ({ statuses: {}, runId })
   );
@@ -160,16 +184,7 @@ function createFacadeHarness(
     getMemberSpawnStatuses: getMemberSpawnStatusesPort,
     getMemberSpawnStatusesReadOnly: getMemberSpawnStatusesReadOnlyPort,
     getLiveTeamAgentRuntimeMetadata: async () => new Map(),
-    createRuntimeSnapshotResourceSamplingPorts: () => ({
-      readRuntimeProcessRowsForUsageSnapshot: async () => null,
-      readProcessUsageStatsByPid: async () => new Map(),
-      buildRuntimeUsageProcessTrees: () => new Map(),
-      buildRuntimeProcessLoadStats: () => undefined,
-      agentRuntimeResourceHistory: {
-        record: (recordParams) => resourceHistory.record(recordParams),
-        prune: pruneAgentRuntimeResourceHistory,
-      },
-    }),
+    createRuntimeSnapshotResourceSamplingPorts: createRuntimeSnapshotResourceSamplingPortsSpy,
     runtimeSnapshotCache,
     getTrackedRunId: () => runId,
     getAgentRuntimeSnapshotCacheTtlMs: () => options.ttlMs ?? 60_000,
@@ -183,6 +198,8 @@ function createFacadeHarness(
     facade,
     agentRuntimeSnapshotCache,
     pruneAgentRuntimeResourceHistory,
+    createRuntimeSnapshotResourceSamplingPortsSpy,
+    resourceHistory,
     getMemberSpawnStatusesReadOnlyPort,
     getBuildCount: () => buildCount,
     setRunId: (nextRunId: string | null) => {
@@ -334,6 +351,23 @@ describe('TeamProvisioningRuntimeSnapshotFacade', () => {
       // that member's accumulated series and restart the sparkline.
       expect(harness.pruneAgentRuntimeResourceHistory).toHaveBeenCalledTimes(1);
       expect(harness.agentRuntimeSnapshotCache.get('alpha')).toBe(cachedAfterMutatingBuild);
+    });
+
+    // Recording a sample is an in-memory write to a history every reader of
+    // this team shares, so the write-free build takes the port that reports a
+    // member's series instead of extending it.
+    it('takes the write-free resource history port', async () => {
+      const harness = createFacadeHarness({ ttlMs: 0 });
+
+      await harness.facade.getTeamAgentRuntimeSnapshot('alpha');
+      expect(harness.createRuntimeSnapshotResourceSamplingPortsSpy).toHaveBeenLastCalledWith(
+        undefined
+      );
+
+      await harness.facade.getTeamAgentRuntimeSnapshotReadOnly('alpha');
+      expect(harness.createRuntimeSnapshotResourceSamplingPortsSpy).toHaveBeenLastCalledWith({
+        readOnly: true,
+      });
     });
 
     it('coalesces concurrent read-only builds for the same tracked run', async () => {

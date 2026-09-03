@@ -59,7 +59,9 @@ export interface TeamProvisioningRuntimeSnapshotFacadePorts {
   getLiveTeamAgentRuntimeMetadata(
     teamName: string
   ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
-  createRuntimeSnapshotResourceSamplingPorts(): TeamProvisioningRuntimeSnapshotResourceSamplingPorts;
+  createRuntimeSnapshotResourceSamplingPorts(options?: {
+    readOnly?: boolean;
+  }): TeamProvisioningRuntimeSnapshotResourceSamplingPorts;
   runtimeSnapshotCache: TeamProvisioningAgentRuntimeSnapshotCachePort<TeamAgentRuntimeSnapshot>;
   getTrackedRunId(teamName: string): string | null;
   getAgentRuntimeSnapshotCacheTtlMs(teamName: string, runId: string | null): number;
@@ -233,7 +235,15 @@ export class TeamProvisioningRuntimeSnapshotFacade {
   ): Promise<TeamAgentRuntimeSnapshot> {
     const buildSnapshot =
       this.ports.buildTeamAgentRuntimeSnapshot ?? buildTeamAgentRuntimeSnapshotHelper;
-    const samplingPorts = this.ports.createRuntimeSnapshotResourceSamplingPorts();
+    // The read-only build takes the write-free history port: it reports the
+    // series a member already has instead of appending this poll's sample to
+    // the history every other reader shares, and it prunes nothing - pruning is
+    // keyed by the keys one build happened to resolve, so a poll that misses a
+    // member's pid would drop that member's whole accumulated series and
+    // restart its sparkline at a single sample.
+    const samplingPorts = this.ports.createRuntimeSnapshotResourceSamplingPorts(
+      options?.readOnly === true ? { readOnly: true } : undefined
+    );
     return buildSnapshot({
       teamName,
       runId,
@@ -258,18 +268,7 @@ export class TeamProvisioningRuntimeSnapshotFacade {
       getLiveTeamAgentRuntimeMetadata: (targetTeamName) =>
         this.ports.getLiveTeamAgentRuntimeMetadata(targetTeamName),
       ...samplingPorts,
-      agentRuntimeResourceHistory:
-        options?.readOnly === true
-          ? {
-              record: (recordParams) =>
-                samplingPorts.agentRuntimeResourceHistory.record(recordParams),
-              // Pruning is keyed by the keys this build happened to resolve, so
-              // a poll that misses one member's pid would drop that member's
-              // whole accumulated series from the shared history and restart
-              // the sparkline at a single sample.
-              prune: () => undefined,
-            }
-          : samplingPorts.agentRuntimeResourceHistory,
+      agentRuntimeResourceHistory: samplingPorts.agentRuntimeResourceHistory,
       getRuntimeSnapshotCacheGeneration: (targetTeamName) =>
         this.ports.runtimeSnapshotCache.getRuntimeSnapshotCacheGeneration(targetTeamName),
       getTrackedRunId: (targetTeamName) => this.ports.getTrackedRunId(targetTeamName),
