@@ -236,12 +236,10 @@ export const RuntimeProviderQuickConnect = ({
   );
   const [localProviderProjects, setLocalProviderProjects] = useState<ProjectPathProject[]>([]);
   const oauthBridgeOutdated = isOpenCodeProviderOAuthBridgeOutdated(openCodeRuntimeStatus);
-
   useEffect(() => {
     if (!localProviderSetupOpen) return;
     setLocalProviderProjectPath(projectPath?.trim() || null);
   }, [localProviderSetupOpen, projectPath]);
-
   useEffect(() => {
     if (!localProviderSetupOpen) return;
     let cancelled = false;
@@ -259,7 +257,6 @@ export const RuntimeProviderQuickConnect = ({
       cancelled = true;
     };
   }, [localProviderProjectPath, localProviderSetupOpen, projectPath, repositoryGroups]);
-
   const refreshConfiguredLocalProvider = useCallback(async (): Promise<void> => {
     directory.refresh();
     await fetchCliProviderStatus('opencode', {
@@ -268,7 +265,6 @@ export const RuntimeProviderQuickConnect = ({
       projectPath: localProviderProjectPath,
     });
   }, [directory, fetchCliProviderStatus, localProviderProjectPath]);
-
   const getCompanionState = useCallback(
     (planId: CompanionPlanId): RuntimeProviderCompanionState =>
       planId === 'kiro' ? kiroCompanion : cursorCompanion,
@@ -356,8 +352,8 @@ export const RuntimeProviderQuickConnect = ({
           description,
           state: 'unavailable',
           stateLabel: t('cliStatus.quickConnect.statusUnavailable'),
-          actionLabel: null,
-          onAction: null,
+          actionLabel: t('cliStatus.quickConnect.checkAndConnect'),
+          onAction: () => onOpenCodeProviderAction(gateway.providerId, 'settings-connect'),
         };
       }
 
@@ -382,8 +378,8 @@ export const RuntimeProviderQuickConnect = ({
           description,
           state: 'unavailable',
           stateLabel: t('cliStatus.quickConnect.statusUnavailable'),
-          actionLabel: null,
-          onAction: null,
+          actionLabel: t('cliStatus.quickConnect.checkAndConnect'),
+          onAction: () => onOpenCodeProviderAction(gateway.providerId, 'settings-connect'),
         };
       }
 
@@ -406,13 +402,17 @@ export const RuntimeProviderQuickConnect = ({
       const actionLabel =
         state === 'connected' || state === 'manual'
           ? t('cliStatus.actions.manage')
-          : state === 'connectable'
-            ? t('cliStatus.actions.connect')
+          : state === 'connectable' || state === 'unavailable'
+            ? t(
+                state === 'connectable'
+                  ? 'cliStatus.actions.connect'
+                  : 'cliStatus.quickConnect.checkAndConnect'
+              )
             : null;
       const onAction =
         state === 'connected' || state === 'manual'
           ? () => onOpenCodeProviderAction(gateway.providerId, 'select')
-          : state === 'connectable'
+          : state === 'connectable' || state === 'unavailable'
             ? () => onOpenCodeProviderAction(gateway.providerId, 'settings-connect')
             : null;
 
