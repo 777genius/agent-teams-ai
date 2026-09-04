@@ -110,6 +110,13 @@ async function selectQueuedReplyOptionalNotices(
   if (
     !anchor ||
     !isCoalescableNoticeKind(anchor) ||
+    // "Its own prompt" cuts both ways: nothing rides along with the board's
+    // completion notice, and (below) the notice never rides along with anything
+    // else. A rider is marked read on the anchor's dispatch, so a notice folded
+    // into somebody else's prompt is answered at most once, together with
+    // whatever it travelled with - and this one is the trigger for a message the
+    // lead has to compose on its own.
+    isBoardCompletionNotice(anchor) ||
     !isOpenCodeReplyOptionalDeliveryContract(input.anchorReplyRecipient)
   ) {
     return [];
@@ -119,6 +126,7 @@ async function selectQueuedReplyOptionalNotices(
     if (followers.length >= input.limit) break;
     const candidate = input.unread[cursor];
     if (!candidate || candidate.read || !isCoalescableNoticeKind(candidate)) break;
+    if (isBoardCompletionNotice(candidate)) break;
     if (typeof candidate.text !== 'string' || candidate.text.trim().length === 0) break;
     if (!isOpenCodeReplyOptionalDeliveryContract(input.ports.resolveReplyRecipient(candidate))) {
       break;
@@ -269,9 +277,46 @@ export function findNextUnreadUserMessageIndex(input: {
   if (input.currentReplyRecipient.trim().toLowerCase() === 'user') {
     return -1;
   }
+  return findNextUnreadUserMessageIndexInOrder(input);
+}
+
+/**
+ * The same scan without the "a pending user delivery keeps the inbox order"
+ * short-circuit: where the next unread user message SITS, regardless of what the
+ * pending delivery owes. It is the bound on a queue jump, not a yield.
+ */
+export function findNextUnreadUserMessageIndexInOrder(input: {
+  unread: readonly RelayInboxMessage[];
+  afterIndex: number;
+}): number {
   for (let index = input.afterIndex + 1; index < input.unread.length; index += 1) {
     const candidate = input.unread[index];
     if (candidate && !candidate.read && candidate.from.trim().toLowerCase() === 'user') {
+      return index;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Index of the first unread board-completion notice after `afterIndex`, or -1.
+ *
+ * A pending delivery normally ends the walk, or yields only to a newer user
+ * message - which skips straight past the completion notice to the message the
+ * pending delivery is already blocked on, so the trigger for the lead's closing
+ * message is never handed to the delivery service at all. It is a terminal,
+ * once-per-board signal, so it may jump the queue. The delivery service still
+ * decides what happens next: while a blocker holds the lane the notice is
+ * refused and queues behind it like anything else, and it is delivered as soon
+ * as the observe loop settles that blocker.
+ */
+export function findNextUnreadBoardCompletionIndex(input: {
+  unread: readonly RelayInboxMessage[];
+  afterIndex: number;
+}): number {
+  for (let index = input.afterIndex + 1; index < input.unread.length; index += 1) {
+    const candidate = input.unread[index];
+    if (candidate && !candidate.read && isBoardCompletionNotice(candidate)) {
       return index;
     }
   }

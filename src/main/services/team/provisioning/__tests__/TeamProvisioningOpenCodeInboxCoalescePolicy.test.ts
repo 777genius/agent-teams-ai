@@ -7,7 +7,9 @@ import {
   buildOpenCodeCoalesceNotDispatchedDiagnostic,
   canCoalesceNoticesIntoOpenCodeDelivery,
   COALESCABLE_MESSAGE_KINDS,
+  findNextUnreadBoardCompletionIndex,
   findNextUnreadUserMessageIndex,
+  findNextUnreadUserMessageIndexInOrder,
   isBoardCompletionNotice,
   isCoalescableNoticeKind,
   isOpenCodeCoalescedNoticeDeliveryProven,
@@ -420,5 +422,86 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     expect(
       findNextUnreadUserMessageIndex({ unread, afterIndex: 2, currentReplyRecipient: 'Scribe' })
     ).toBe(-1);
+  });
+  // NEGATIVE CONTROL: the board's completion notice is what asks the lead for
+  // the team's closing message, so it must be answered on its own turn. A rider
+  // is marked read on somebody else's dispatch and answered at most once with
+  // whatever it travelled with, which is exactly what must not happen to this
+  // one - in either role.
+  it('never lets the board-completion notice carry followers or ride as one', async () => {
+    const boardComplete = message({
+      messageId: `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:de5126de`,
+      from: 'system',
+      text: 'Every task on the board is completed.',
+    });
+
+    // As the anchor: nothing rides along with it.
+    await expect(
+      selectOpenCodeReplyOptionalCoalescedFollowers({
+        unread: [boardComplete, ...notices(2)],
+        index: 0,
+        anchorReplyRecipient: 'system',
+        ports: createPorts({ resolveReplyRecipient: () => 'system' }),
+      })
+    ).resolves.toEqual([]);
+
+    // As a follower: the walk stops in front of it, so it becomes the anchor of
+    // the next pass instead of being marked read inside another prompt.
+    const followers = await selectOpenCodeReplyOptionalCoalescedFollowers({
+      unread: [
+        message({ messageId: 'anchor' }),
+        message({ messageId: 'notice-1' }),
+        boardComplete,
+        message({ messageId: 'notice-2' }),
+      ],
+      index: 0,
+      anchorReplyRecipient: 'Scribe',
+      ports: createPorts(),
+    });
+
+    expect(followers.map((follower) => follower.messageId)).toEqual(['notice-1']);
+  });
+
+  it('recognises the board-completion notice by its message-id prefix alone', () => {
+    expect(
+      isBoardCompletionNotice(
+        message({ messageId: `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:de5126de` })
+      )
+    ).toBe(true);
+    expect(isBoardCompletionNotice(message({ messageId: 'board-completeish:team:x' }))).toBe(false);
+    expect(isBoardCompletionNotice(message({ from: 'system', messageId: 'notice-1' }))).toBe(false);
+  });
+
+  it('finds the next unread board-completion notice wherever it sits in the queue', () => {
+    const unread = [
+      message({ messageId: 'notice-1' }),
+      message({
+        messageId: `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:read`,
+        read: true,
+      }),
+      message({ messageId: 'notice-2' }),
+      message({ messageId: `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:de5126de` }),
+    ];
+
+    expect(findNextUnreadBoardCompletionIndex({ unread, afterIndex: 0 })).toBe(3);
+    expect(findNextUnreadBoardCompletionIndex({ unread, afterIndex: 3 })).toBe(-1);
+    expect(findNextUnreadBoardCompletionIndex({ unread: [], afterIndex: -1 })).toBe(-1);
+  });
+
+  // The bound on a queue jump, not a yield: it reports where the next unread
+  // user message SITS even when the pending delivery is itself a user prompt,
+  // which is the case `findNextUnreadUserMessageIndex` deliberately hides.
+  it('reports the next unread user message in inbox order regardless of the pending delivery', () => {
+    const unread = [
+      message({ messageId: 'user-1', from: 'user' }),
+      message({ messageId: 'notice-1' }),
+      message({ messageId: 'user-2', from: 'user' }),
+    ];
+
+    expect(
+      findNextUnreadUserMessageIndex({ unread, afterIndex: 0, currentReplyRecipient: 'user' })
+    ).toBe(-1);
+    expect(findNextUnreadUserMessageIndexInOrder({ unread, afterIndex: 0 })).toBe(2);
+    expect(findNextUnreadUserMessageIndexInOrder({ unread, afterIndex: 2 })).toBe(-1);
   });
 });
