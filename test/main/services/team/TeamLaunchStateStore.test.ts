@@ -330,6 +330,49 @@ describe('TeamLaunchStateStore', () => {
     await expect(new TeamLaunchStateStore().markStopped('removed-team')).resolves.toBeUndefined();
   });
 
+  it('records the stop marker and still reports a publication that survived the stop', async () => {
+    // read() answers from the launch state and never from the marker, so a
+    // snapshot that could not be revoked is still served. The stop stays final
+    // - the marker is written either way - but the survivor is reported.
+    const stateRemovalError = Object.assign(new Error('state file is busy'), { code: 'EBUSY' });
+    const remove = vi
+      .spyOn(fs.promises, 'rm')
+      .mockRejectedValueOnce(stateRemovalError)
+      .mockResolvedValueOnce(undefined);
+
+    try {
+      await expect(new TeamLaunchStateStore().markStopped('demo')).rejects.toBe(stateRemovalError);
+
+      expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(1);
+      expect(mocks.atomicWriteAsync.mock.calls[0]?.[0]).toBe(
+        getTeamLaunchStoppedMarkerPath('demo')
+      );
+    } finally {
+      remove.mockRestore();
+    }
+  });
+
+  it('reports every publication that survived the stop', async () => {
+    const stateRemovalError = Object.assign(new Error('state file is busy'), { code: 'EBUSY' });
+    const summaryRemovalError = Object.assign(new Error('summary is read-only'), { code: 'EROFS' });
+    const remove = vi
+      .spyOn(fs.promises, 'rm')
+      .mockRejectedValueOnce(stateRemovalError)
+      .mockRejectedValueOnce(summaryRemovalError);
+
+    try {
+      await expect(new TeamLaunchStateStore().markStopped('demo')).rejects.toMatchObject({
+        errors: [stateRemovalError, summaryRemovalError],
+        message: '[demo] Failed to clear launch-state publication',
+      });
+      expect(mocks.atomicWriteAsync.mock.calls[0]?.[0]).toBe(
+        getTeamLaunchStoppedMarkerPath('demo')
+      );
+    } finally {
+      remove.mockRestore();
+    }
+  });
+
   it('ignores a late reconciled launch-state write while the team is stopped', async () => {
     writeStopMarkerOnDisk('demo');
     const stale = { ...snapshot(), launchPhase: 'reconciled' as const };

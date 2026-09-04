@@ -63,6 +63,22 @@ async function isMissingTeamDirectoryWriteRace(
   }
 }
 
+/** Reports the revocation failures the caller has to see; silent when there are none. */
+function throwPublicationRevocationFailure(
+  teamName: string,
+  results: PromiseSettledResult<void>[]
+): void {
+  const errors = results
+    .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+    .map((result) => result.reason);
+  if (errors.length === 1) {
+    throw errors[0];
+  }
+  if (errors.length > 1) {
+    throw new AggregateError(errors, `[${teamName}] Failed to clear launch-state publication`);
+  }
+}
+
 function enqueuePublication(teamName: string, operation: () => Promise<void>): Promise<void> {
   const previous = publicationQueueByTeam.get(teamName);
   const queued = (previous ?? Promise.resolve()).catch(() => undefined).then(operation);
@@ -140,7 +156,7 @@ export class TeamLaunchStateStore {
   /** Stopped team: no launch state, and reconciliation stays off until the next launch. */
   async markStopped(teamName: string): Promise<void> {
     await enqueuePublication(teamName, async () => {
-      await Promise.allSettled([
+      const revocations = await Promise.allSettled([
         fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
         fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
       ]);
@@ -156,6 +172,12 @@ export class TeamLaunchStateStore {
         }
         throw error;
       }
+      // The marker comes first even when a publication file survives, because
+      // a stop the user asked for must stay final for reconciliation. What
+      // must not stay silent is the survivor: read() answers from the launch
+      // state and not from the marker, so a snapshot that could not be removed
+      // is still served to the UI. The caller reports it as a stop diagnostic.
+      throwPublicationRevocationFailure(teamName, revocations);
     });
   }
 
@@ -171,19 +193,13 @@ export class TeamLaunchStateStore {
    */
   async clear(teamName: string): Promise<void> {
     await enqueuePublication(teamName, async () => {
-      const results = await Promise.allSettled([
-        fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
-        fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
-      ]);
-      const errors = results
-        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-        .map((result) => result.reason);
-      if (errors.length === 1) {
-        throw errors[0];
-      }
-      if (errors.length > 1) {
-        throw new AggregateError(errors, `[${teamName}] Failed to clear launch-state publication`);
-      }
+      throwPublicationRevocationFailure(
+        teamName,
+        await Promise.allSettled([
+          fs.promises.rm(getTeamLaunchStatePath(teamName), { force: true }),
+          fs.promises.rm(getTeamLaunchSummaryPath(teamName), { force: true }),
+        ])
+      );
     });
   }
 }
