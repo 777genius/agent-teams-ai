@@ -31,6 +31,11 @@ import {
   selectOpenCodeReplyOptionalCoalescedFollowers,
 } from './TeamProvisioningOpenCodeInboxCoalescePolicy';
 import {
+  commitOpenCodeAlreadyReadInboxRow,
+  isOpenCodeInboxReadCommitOwed,
+  recoverOpenCodeOwedInboxReadCommit,
+} from './TeamProvisioningOpenCodeInboxReadCommitRecovery';
+import {
   getActiveOpenCodeMemberInboxRelayWork,
   registerOpenCodeMemberInboxRelayWork,
 } from './TeamProvisioningOpenCodeMemberInboxRelayLease';
@@ -324,7 +329,7 @@ async function runOpenCodeMemberInboxRelayWork(
   if (onlyMessageId) {
     const targetMessage = inboxMessages.find((message) => message.messageId === onlyMessageId);
     if (targetMessage?.read && targetMessage.messageKind !== 'member_work_sync_nudge') {
-      const alreadyReadRecord = await promptLedger
+      let alreadyReadRecord = await promptLedger
         .getByInboxMessage({
           teamName,
           memberName: memberIdentity.canonicalMemberName,
@@ -334,6 +339,16 @@ async function runOpenCodeMemberInboxRelayWork(
         .catch(() => null);
       if (!isCurrentGeneration()) {
         return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      }
+      if (alreadyReadRecord && !alreadyReadRecord.inboxReadCommittedAt) {
+        // The read row IS the double-delivery guard; a missing ledger stamp is
+        // bookkeeping drift that keeps this record looking like unfinished
+        // work. Align the ledger with the row.
+        alreadyReadRecord = await commitOpenCodeAlreadyReadInboxRow({
+          ledger: promptLedger,
+          record: alreadyReadRecord,
+          ports,
+        });
       }
       return buildOpenCodeMemberInboxAlreadyReadResult(alreadyReadRecord);
     }
@@ -443,105 +458,63 @@ async function runOpenCodeMemberInboxRelayWork(
         existingRecord = requeuedRecord;
       }
     }
-    if (existingRecord?.status === 'failed_terminal') {
-      let recoveredRecord: OpenCodePromptDeliveryLedgerRecord | null = null;
-      let recoveredVisibleReply: OpenCodeVisibleReplyProof | null = null;
-      if (typeof promptLedger.applyDestinationProof === 'function') {
-        try {
-          const proof = await ports.applyDestinationProof({
-            checkpoint: () => {
-              if (!isCurrentGeneration()) throw new OpenCodePromptDeliveryCancelledError();
-            },
-            ledger: promptLedger,
-            ledgerRecord: existingRecord,
-            teamName,
-            replyRecipient: existingRecord.replyRecipient,
-            memberName: memberIdentity.canonicalMemberName,
-          });
-          recoveredRecord = proof.ledgerRecord;
-          recoveredVisibleReply = proof.visibleReply;
-        } catch {
-          recoveredRecord = null;
-          recoveredVisibleReply = null;
-        }
-      }
-      if (!isCurrentGeneration()) {
+    if (existingRecord && isOpenCodeInboxReadCommitOwed(existingRecord)) {
+      // The read flag is still owed for this row: the retry budget is spent, or
+      // the record settled 'responded' through a pass that never came back to
+      // commit. Settle it from existing proof, without a delivery attempt.
+      const recovery = await recoverOpenCodeOwedInboxReadCommit({
+        teamName,
+        memberName,
+        canonicalMemberName: memberIdentity.canonicalMemberName,
+        laneId: memberIdentity.laneId,
+        message,
+        ledger: promptLedger,
+        ledgerRecord: existingRecord,
+        shouldAbort: () => !isCurrentGeneration(),
+        checkpoint: () => {
+          if (!isCurrentGeneration()) throw new OpenCodePromptDeliveryCancelledError();
+        },
+        ports,
+      });
+      if (recovery.outcome === 'aborted') {
         return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
       }
-      const recoveredReadAllowed = recoveredRecord
-        ? await ports.isOpenCodeDeliveryResponseReadCommitAllowed({
-            teamName,
-            memberName: memberIdentity.canonicalMemberName,
-            responseState: recoveredRecord.responseState,
-            actionMode: recoveredRecord.actionMode ?? undefined,
-            taskRefs: recoveredRecord.taskRefs,
-            visibleReply: recoveredVisibleReply,
-            ledgerRecord: recoveredRecord,
-          })
-        : false;
-      if (!isCurrentGeneration()) {
-        return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+      if (recovery.outcome === 'committed') {
+        result.delivered += 1;
+        result.relayed += 1;
+        result.lastDelivery = recovery.delivery;
+        break;
       }
-      if (recoveredRecord && recoveredReadAllowed) {
-        try {
-          await ports.markInboxMessagesRead(teamName, memberName, [message]);
-          const committed = await promptLedger.markInboxReadCommitted({
-            id: recoveredRecord.id,
-            committedAt: ports.nowIso(),
-          });
-          ports.logOpenCodePromptDeliveryEvent(
-            'opencode_prompt_delivery_inbox_committed_read',
-            committed,
-            { recoveredTerminal: true }
-          );
-          result.delivered += 1;
-          result.relayed += 1;
-          result.lastDelivery = {
-            delivered: true,
-            accepted: true,
-            responsePending: false,
-            responseState: committed.responseState,
-            ledgerStatus: committed.status,
-            ledgerRecordId: committed.id,
-            laneId: memberIdentity.laneId,
-            visibleReplyMessageId: committed.visibleReplyMessageId ?? undefined,
-            visibleReplyCorrelation: committed.visibleReplyCorrelation ?? undefined,
-            diagnostics: committed.diagnostics,
-          };
-          break;
-        } catch (error) {
-          const diagnostic = `opencode_inbox_mark_read_failed_after_terminal_recovery: ${ports.getErrorMessage(
-            error
-          )}`;
+      if (recovery.outcome === 'commit_failed') {
+        result.failed += 1;
+        result.lastDelivery = recovery.delivery;
+        result.diagnostics = [...(result.diagnostics ?? []), recovery.diagnostic];
+        break;
+      }
+      if (existingRecord.status === 'failed_terminal') {
+        const diagnostic =
+          existingRecord.lastReason ??
+          `opencode_prompt_delivery_failed_terminal: ${message.messageId}`;
+        result.diagnostics = [...(result.diagnostics ?? []), diagnostic];
+        if (onlyMessageId) {
           result.failed += 1;
           result.lastDelivery = {
             delivered: false,
-            reason: 'opencode_inbox_mark_read_failed_after_terminal_recovery',
-            diagnostics: [diagnostic],
+            accepted: false,
+            ledgerStatus: existingRecord.status,
+            ledgerRecordId: existingRecord.id,
+            laneId: memberIdentity.laneId,
+            reason: existingRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
+            diagnostics: existingRecord.diagnostics.length
+              ? existingRecord.diagnostics
+              : [diagnostic],
           };
-          result.diagnostics = [...(result.diagnostics ?? []), diagnostic];
-          break;
         }
+        continue;
       }
-      const diagnostic =
-        existingRecord.lastReason ??
-        `opencode_prompt_delivery_failed_terminal: ${message.messageId}`;
-      result.diagnostics = [...(result.diagnostics ?? []), diagnostic];
-      if (onlyMessageId) {
-        result.failed += 1;
-        result.lastDelivery = {
-          delivered: false,
-          accepted: false,
-          ledgerStatus: existingRecord.status,
-          ledgerRecordId: existingRecord.id,
-          laneId: memberIdentity.laneId,
-          reason: existingRecord.lastReason ?? 'opencode_prompt_delivery_failed_terminal',
-          diagnostics: existingRecord.diagnostics.length
-            ? existingRecord.diagnostics
-            : [diagnostic],
-        };
-      }
-      continue;
+      // 'responded' without recoverable proof: fall through to the normal
+      // delivery path below - its observe pass, and the plain-text
+      // materialization, are what produce the missing proof.
     }
     const existingTaskRefs = existingRecord?.taskRefs?.length ? existingRecord.taskRefs : undefined;
     const metadataTaskRefs = options.deliveryMetadata?.taskRefs?.length
