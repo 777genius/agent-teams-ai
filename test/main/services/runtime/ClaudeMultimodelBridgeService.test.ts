@@ -2115,6 +2115,7 @@ describe('ClaudeMultimodelBridgeService', () => {
   });
 
   it('keeps global and project-scoped OpenCode status passive and independent', async () => {
+    // eslint-disable-next-line sonarjs/publicly-writable-directories -- Fixture stays a POSIX-absolute literal so path.resolve is exercised; nothing is written to it.
     const scopedProjectPath = '/tmp/scoped-project';
     // The service resolves the project cwd before spawning, so both the mock's
     // scope check and the cwd assertion below compare against the resolved form.
