@@ -317,8 +317,18 @@ export class TeamBackupRestoreService {
     try {
       await fs.promises.access(liveMarker);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      // Only ENOENT proves the marker is gone. A permission or I/O failure is
+      // not evidence that the team was never stopped, and answering "not
+      // stopped" republishes the pre-stop launch state and undoes the stop.
+      // Freezing instead costs the two derived files a reconcile re-derives.
+      if (isEnoent(error)) return false;
+      logger.warn(
+        `[Backup] Could not read the stop marker for ${teamName}; keeping launch state frozen: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return true;
     }
   }
 
