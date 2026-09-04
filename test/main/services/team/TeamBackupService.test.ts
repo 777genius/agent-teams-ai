@@ -380,6 +380,71 @@ describe('TeamBackupService', () => {
     });
   });
 
+  it('does not restore pre-stop launch state when the stop marker cannot be read', async () => {
+    // The live marker is the only evidence a team is stopped until the marker
+    // itself reaches the backup. A read that fails for anything but ENOENT does
+    // not prove the team was never stopped, so it must not license the restore
+    // to put the pre-stop launch publication back and undo the stop.
+    const service = new TeamBackupService();
+    const teamName = 'unreadable-marker-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Unreadable Marker Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'reconciled', members: {} }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify({ version: 1, teamName, teamLaunchState: 'partial_failure' }),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // Stop, before the marker itself reached the backup.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    const markerPath = path.join(teamDir, 'launch-stopped.json');
+    await fs.writeFile(markerPath, JSON.stringify({ version: 1, teamName }), 'utf8');
+
+    const realAccess = nativeFs.promises.access;
+    const accessSpy = vi
+      .spyOn(nativeFs.promises, 'access')
+      .mockImplementation(async (target, mode) => {
+        if (target === markerPath) {
+          throw Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' });
+        }
+        return realAccess(target, mode);
+      });
+
+    await service.restoreIfNeeded();
+    accessSpy.mockRestore();
+    service.dispose();
+
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`Could not read the stop marker for ${teamName}`)
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
   it('does not index a shutdown backup whose manifest could not be persisted', async () => {
     // The shutdown backup copies the files first and writes the registry entry
     // afterwards. A manifest that never landed leaves the backup directory with
