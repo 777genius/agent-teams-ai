@@ -12,6 +12,7 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
 import * as fs from 'fs';
 
+import { purgeStaleOpenCodeHostStartupLocks } from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
@@ -91,6 +92,13 @@ export interface TeamForceStopFlowPorts {
    * cleanup - a diagnostic sweep, say - leaves the publication alone.
    */
   markTeamStopped?(teamName: string): Promise<void>;
+  /**
+   * Runs once the team is down, on both paths: after a stop that confirmed on
+   * its own, and after the force path finished killing. A running team
+   * reserves shared resources that outlive the stop either way, and only the
+   * caller knows whether anything else still needs them.
+   */
+  releaseSharedRuntimeResources?(teamName: string): Promise<{ diagnostics: string[] }>;
 }
 
 /**
@@ -393,6 +401,9 @@ async function runTeamStopFlow(
     : stopOutcome !== 'stopped';
   if (cancelAfterStop) await cancelOwnedDeliveries();
 
+  // After the kills, never before them: a startup lock a live host still holds
+  // open cannot be unlinked, so it is the kill that turns it into an orphan.
+  await releaseSharedRuntimeResources(teamName, ports, diagnostics);
   await markStopped(teamName, ports, diagnostics);
   return {
     stopOutcome,
@@ -401,6 +412,24 @@ async function runTeamStopFlow(
     clearedPendingDeliveries,
     diagnostics,
   };
+}
+
+async function releaseSharedRuntimeResources(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  diagnostics: string[]
+): Promise<void> {
+  if (!ports.releaseSharedRuntimeResources) {
+    return;
+  }
+  try {
+    const released = await ports.releaseSharedRuntimeResources(teamName);
+    diagnostics.push(...released.diagnostics);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ports.logWarning(`[${teamName}] Post-stop resource release failed: ${message}`);
+    diagnostics.push(`Post-stop resource release failed: ${message}`);
+  }
 }
 
 async function markStopped(
@@ -438,6 +467,63 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(_input: {
       'Hard process cleanup is not confirmed: this runtime does not support targeted forced termination that preserves other teams sharing an OpenCode host. Only the regular scoped stop was attempted; shared hosts were left untouched.',
     ],
   };
+}
+
+/**
+ * Releases what a stopped team still holds beyond its own processes. It
+ * signals nothing and kills nothing: by the time it runs, the runtime has
+ * either confirmed the stop or been killed, and what is left are the shared
+ * resources the team reserved while it was alive.
+ *
+ * Two of them, and both only when this was the last team standing. The
+ * orchestrator startup locks of the stopped hosts are then orphans that would
+ * serialise the next launch behind them one at a time.
+ * `releaseSharedLocalRuntime` is a port with no default: a deployment whose
+ * members share a runtime this app can ask to stand down hands one in, and
+ * everywhere else its absence means the step does not exist rather than a
+ * no-op branch the app carries around.
+ */
+export async function releaseSharedRuntimeResourcesAfterStop(input: {
+  teamName: string;
+  otherAliveTeams: readonly string[];
+  releaseSharedLocalRuntime?: () => Promise<void>;
+  purgeHostStartupLocks?: typeof purgeStaleOpenCodeHostStartupLocks;
+}): Promise<{ diagnostics: string[] }> {
+  if (input.otherAliveTeams.length > 0) {
+    return {
+      diagnostics: [
+        `Kept shared runtime resources: other teams are still alive (${input.otherAliveTeams.join(', ')})`,
+      ],
+    };
+  }
+
+  const diagnostics: string[] = [];
+  // Never throws upward: this is a cleanup tail, and a stop that did what it
+  // had to do must not report failure because a lock file was unreadable.
+  try {
+    const purge = input.purgeHostStartupLocks ?? purgeStaleOpenCodeHostStartupLocks;
+    const lockPurge = await purge();
+    if (lockPurge.removed > 0) {
+      diagnostics.push(`Purged ${lockPurge.removed} stale OpenCode host startup lock(s)`);
+    }
+    diagnostics.push(...lockPurge.diagnostics.map((entry) => `lock purge: ${entry}`));
+  } catch (error) {
+    diagnostics.push(
+      `lock purge failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  if (input.releaseSharedLocalRuntime) {
+    try {
+      await input.releaseSharedLocalRuntime();
+      diagnostics.push('Released the shared runtime held for this team');
+    } catch (error) {
+      diagnostics.push(
+        `Shared runtime release failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+  return { diagnostics };
 }
 
 export async function readOpenCodeRuntimeLaneIdsForTeam(

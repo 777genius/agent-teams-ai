@@ -148,6 +148,7 @@ import {
   killRetainedOpenCodeRuntimeProcessesForTeam,
   readOpenCodeRuntimeLaneIdsForTeam,
   readOwnedOpenCodeRuntimeRunIdsForTeam,
+  releaseSharedRuntimeResourcesAfterStop,
   runTeamForceStopFlow,
   STOP_ESCALATION_TIMEOUT_MS,
   stopTeamWithEscalation,
@@ -4245,6 +4246,13 @@ async function handleStopTeam(
       stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
       countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
       markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+      releaseSharedRuntimeResources: (name) =>
+        releaseSharedRuntimeResourcesAfterStop({
+          teamName: name,
+          otherAliveTeams: getTeamRuntimeApi()
+            .getAliveTeams()
+            .filter((alive) => alive !== name),
+        }),
     });
     if (result.stopOutcome === 'runtime_already_down') {
       logger.info(
@@ -4292,6 +4300,13 @@ async function handleForceStopTeam(
         }),
       logWarning: (message) => logger.warn(message),
       markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+      releaseSharedRuntimeResources: (name) =>
+        releaseSharedRuntimeResourcesAfterStop({
+          teamName: name,
+          otherAliveTeams: getTeamRuntimeApi()
+            .getAliveTeams()
+            .filter((alive) => alive !== name),
+        }),
     });
   });
 }

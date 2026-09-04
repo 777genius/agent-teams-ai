@@ -1,7 +1,9 @@
 import {
   PERIODIC_STALE_LOCK_INTERVAL_MS,
   PERIODIC_STALE_LOCK_MIN_AGE_MS,
+  PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
   purgeStaleOpenCodeHostStartupLocks,
+  purgeStaleOpenCodeHostStartupLocksBeforeLaunch,
   resolveOpenCodeHostStartupLocksDir,
   startPeriodicOpenCodeHostStartupLockPurge,
 } from '@main/services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
@@ -84,6 +86,123 @@ describe('purgeStaleOpenCodeHostStartupLocks', () => {
     });
 
     expect(result).toMatchObject({ scanned: 0, removed: 0, kept: 0, diagnostics: [] });
+  });
+
+  // A lock the OS refuses to remove is held by a host that is still running.
+  // That is the expected outcome of a correct purge, not a problem to report,
+  // and treating it as one would bury the failures that do matter.
+  it.each(['EBUSY', 'EPERM', 'EACCES'])(
+    'keeps a lock whose owner is still alive (%s) without reporting a problem',
+    async (code) => {
+      writeLock('held.lock', 20 * 60_000);
+
+      const result = await purgeStaleOpenCodeHostStartupLocks({
+        locksDir,
+        minAgeMs: PERIODIC_STALE_LOCK_MIN_AGE_MS,
+        removeLockEntry: () => Promise.reject(Object.assign(new Error('in use'), { code })),
+      });
+
+      expect(result).toMatchObject({ scanned: 1, removed: 0, kept: 1, diagnostics: [] });
+      expect(fs.existsSync(path.join(locksDir, 'held.lock'))).toBe(true);
+    }
+  );
+
+  it('reports a removal failure that is not a live owner', async () => {
+    writeLock('broken.lock', 20 * 60_000);
+
+    const result = await purgeStaleOpenCodeHostStartupLocks({
+      locksDir,
+      minAgeMs: PERIODIC_STALE_LOCK_MIN_AGE_MS,
+      removeLockEntry: () => Promise.reject(Object.assign(new Error('nope'), { code: 'EIO' })),
+    });
+
+    expect(result).toMatchObject({ scanned: 1, removed: 0, kept: 1 });
+    expect(result.diagnostics).toEqual(['broken.lock: Error: nope']);
+  });
+});
+
+describe('purgeStaleOpenCodeHostStartupLocksBeforeLaunch', () => {
+  it('purges the locks an earlier run left behind and reports the count durably', async () => {
+    writeLock('old.lock', PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS + 60_000);
+    const logRemoved = vi.fn();
+
+    const result = await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
+      teamName: 'fixteam',
+      aliveTeams: [],
+      locksDir,
+      logRemoved,
+    });
+
+    expect(result).toMatchObject({ removed: 1, kept: 0 });
+    expect(fs.existsSync(path.join(locksDir, 'old.lock'))).toBe(false);
+    expect(logRemoved).toHaveBeenCalledWith(
+      'opencode_startup_locks_purged team=fixteam phase=pre_launch removed=1 kept=0'
+    );
+  });
+
+  // A lock younger than the threshold belongs to a host that is starting right
+  // now - possibly this very launch's own - so age is the only thing standing
+  // between the purge and a host it must not disturb.
+  it('keeps a lock younger than the pre-launch threshold', async () => {
+    writeLock('starting.lock', PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS - 5_000);
+    const logRemoved = vi.fn();
+
+    const result = await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
+      teamName: 'fixteam',
+      aliveTeams: [],
+      locksDir,
+      logRemoved,
+    });
+
+    expect(result).toMatchObject({ scanned: 1, removed: 0, kept: 1 });
+    expect(fs.existsSync(path.join(locksDir, 'starting.lock'))).toBe(true);
+    expect(logRemoved).not.toHaveBeenCalled();
+  });
+
+  it('does not purge at all while another team is alive', async () => {
+    writeLock('old.lock', PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS + 60_000);
+
+    const result = await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
+      teamName: 'fixteam',
+      aliveTeams: ['fixteam', 'other-team'],
+      locksDir,
+    });
+
+    expect(result).toBeNull();
+    expect(fs.existsSync(path.join(locksDir, 'old.lock'))).toBe(true);
+  });
+
+  it("treats the launching team's own liveness as no obstacle", async () => {
+    writeLock('old.lock', PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS + 60_000);
+
+    const result = await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
+      teamName: 'fixteam',
+      aliveTeams: ['fixteam'],
+      locksDir,
+    });
+
+    expect(result).toMatchObject({ removed: 1 });
+  });
+
+  // It runs on the way into a launch, so a failure here must cost the launch
+  // nothing at all.
+  it('answers null instead of throwing when the purge itself fails', async () => {
+    const logWarning = vi.fn();
+
+    const result = await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
+      teamName: 'fixteam',
+      aliveTeams: [],
+      locksDir,
+      now: () => {
+        throw new Error('clock unavailable');
+      },
+      logWarning,
+    });
+
+    expect(result).toBeNull();
+    expect(logWarning).toHaveBeenCalledWith(
+      '[fixteam] Pre-launch OpenCode host startup lock purge failed: clock unavailable'
+    );
   });
 });
 

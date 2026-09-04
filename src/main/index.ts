@@ -248,7 +248,10 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
+import {
+  purgeStaleOpenCodeHostStartupLocks,
+  startPeriodicOpenCodeHostStartupLockPurge,
+} from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -724,6 +727,23 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
     ...(reason === 'shutdown' ? getOpenCodeShutdownProcessOwnershipMarkers() : {}),
     startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
   });
+
+  if (reason === 'startup') {
+    // A host that was killed never released its orchestrator startup lock, and
+    // the next launch readiness probe waits on every leftover in turn. The
+    // reap above has just run, so a lock still held open belongs to a live
+    // host and its unlink fails harmlessly; the half-minute floor keeps a host
+    // that is starting right now out of scope.
+    const lockPurge = await purgeStaleOpenCodeHostStartupLocks({ minAgeMs: 30_000 });
+    if (lockPurge.removed > 0) {
+      logger.diagnostic(
+        `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`
+      );
+    }
+    for (const diagnostic of lockPurge.diagnostics) {
+      logger.warn(`[OpenCode] startup lock purge: ${diagnostic}`);
+    }
+  }
 }
 
 function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<

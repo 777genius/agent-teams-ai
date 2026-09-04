@@ -89,6 +89,48 @@ describe('TeamProvisioning API binders', () => {
     ).resolves.toEqual({ runId: 'run-start' });
   });
 
+  it('runs the pre-start step before every create and every launch', async () => {
+    const order: string[] = [];
+    const source: TeamProvisioningStartApi = {
+      createTeam(): Promise<TeamCreateResponse> {
+        order.push('createTeam');
+        return Promise.resolve({ runId: 'run-start' });
+      },
+      launchTeam(): Promise<TeamLaunchResponse> {
+        order.push('launchTeam');
+        return Promise.resolve({ runId: 'run-start' });
+      },
+    };
+
+    const api = bindTeamProvisioningStartApi(source, {
+      beforeStart: (teamName) => {
+        order.push(`beforeStart:${teamName}`);
+        return Promise.resolve();
+      },
+    });
+    await api.createTeam({ teamName: 'team-a', cwd: TEST_TEAM_CWD, members: [] }, () => undefined);
+    await api.launchTeam({ teamName: 'team-b', cwd: TEST_TEAM_CWD }, () => undefined);
+
+    expect(order).toEqual(['beforeStart:team-a', 'createTeam', 'beforeStart:team-b', 'launchTeam']);
+  });
+
+  // It is a preparation step, not a precondition: whatever it does is worth
+  // less than the launch it precedes.
+  it('starts the team anyway when the pre-start step fails', async () => {
+    const source: TeamProvisioningStartApi = {
+      createTeam: () => Promise.resolve({ runId: 'run-start' }),
+      launchTeam: () => Promise.resolve({ runId: 'run-start' }),
+    };
+
+    const api = bindTeamProvisioningStartApi(source, {
+      beforeStart: () => Promise.reject(new Error('lock dir unreadable')),
+    });
+
+    await expect(
+      api.launchTeam({ teamName: 'team-a', cwd: TEST_TEAM_CWD }, () => undefined)
+    ).resolves.toEqual({ runId: 'run-start' });
+  });
+
   it('binds provisioning status methods to the source object', async () => {
     interface StatusSource extends TeamProvisioningStatusApi {
       readonly runId: string;

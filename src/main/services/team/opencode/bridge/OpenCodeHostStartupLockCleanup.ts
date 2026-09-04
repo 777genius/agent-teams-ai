@@ -56,6 +56,14 @@ export interface PurgeOpenCodeHostStartupLocksOptions extends ResolveClaudeMulti
   /** Only remove entries whose mtime is at least this old (0 = everything). */
   minAgeMs?: number;
   now?: () => number;
+  /**
+   * Removes one lock entry; defaults to unlinking it. This is the only step
+   * here that touches the disk destructively, and it is a port because the
+   * outcome that matters most - the OS refusing removal because a live host
+   * still holds the lock open - is a sharing violation no test can provoke the
+   * same way on every platform.
+   */
+  removeLockEntry?: (entry: { path: string; isDirectory: boolean }) => Promise<void>;
 }
 
 export interface PurgeOpenCodeHostStartupLocksResult {
@@ -64,6 +72,14 @@ export interface PurgeOpenCodeHostStartupLocksResult {
   removed: number;
   kept: number;
   diagnostics: string[];
+}
+
+async function unlinkLockEntry(entry: { path: string; isDirectory: boolean }): Promise<void> {
+  if (entry.isDirectory) {
+    await fs.promises.rm(entry.path, { recursive: true, force: false });
+    return;
+  }
+  await fs.promises.unlink(entry.path);
 }
 
 function isHeldError(error: unknown): boolean {
@@ -77,6 +93,7 @@ export async function purgeStaleOpenCodeHostStartupLocks(
   const locksDir = options.locksDir ?? resolveOpenCodeHostStartupLocksDir(options);
   const minAgeMs = Math.max(0, options.minAgeMs ?? 0);
   const nowMs = (options.now ?? Date.now)();
+  const removeLockEntry = options.removeLockEntry ?? unlinkLockEntry;
   const result: PurgeOpenCodeHostStartupLocksResult = {
     locksDir,
     scanned: 0,
@@ -109,11 +126,7 @@ export async function purgeStaleOpenCodeHostStartupLocks(
           continue;
         }
       }
-      if (entry.isDirectory()) {
-        await fs.promises.rm(entryPath, { recursive: true, force: false });
-      } else {
-        await fs.promises.unlink(entryPath);
-      }
+      await removeLockEntry({ path: entryPath, isDirectory: entry.isDirectory() });
       result.removed += 1;
     } catch (error) {
       result.kept += 1;
@@ -123,6 +136,61 @@ export async function purgeStaleOpenCodeHostStartupLocks(
     }
   }
   return result;
+}
+
+/**
+ * Locks of a host that is genuinely starting are at most a few seconds old, so
+ * anything older than this immediately before a launch belongs to a host that
+ * is already gone.
+ */
+export const PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS = 120_000;
+
+/**
+ * Pre-launch purge. A clean (non-escalated) stop leaves the stopped hosts'
+ * startup locks behind, and the orchestrator serialises the next launch behind
+ * every one of them in turn. With no other team alive there is nothing left to
+ * protect, so every lock past the pre-launch threshold goes.
+ *
+ * Returns `null` when it declined to purge or could not: this runs on the way
+ * into a launch and must never be the reason one fails, so it swallows its own
+ * failure rather than propagating it.
+ */
+export async function purgeStaleOpenCodeHostStartupLocksBeforeLaunch(
+  input: Omit<PurgeOpenCodeHostStartupLocksOptions, 'minAgeMs'> & {
+    teamName: string;
+    aliveTeams: readonly string[];
+    logRemoved?: (message: string) => void;
+    logWarning?: (message: string) => void;
+  }
+): Promise<PurgeOpenCodeHostStartupLocksResult | null> {
+  const { teamName, aliveTeams, logRemoved, logWarning, ...purgeOptions } = input;
+  // A lock the team being launched left behind is fair game; one belonging to
+  // a team that is still running is not, and nothing here can tell them apart.
+  if (aliveTeams.some((alive) => alive !== teamName)) {
+    return null;
+  }
+  try {
+    const result = await purgeStaleOpenCodeHostStartupLocks({
+      ...purgeOptions,
+      minAgeMs: PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
+    });
+    if (result.removed > 0) {
+      logRemoved?.(
+        `opencode_startup_locks_purged team=${teamName} phase=pre_launch removed=${result.removed} kept=${result.kept}`
+      );
+    }
+    for (const diagnostic of result.diagnostics) {
+      logWarning?.(`[${teamName}] Pre-launch OpenCode host startup lock purge: ${diagnostic}`);
+    }
+    return result;
+  } catch (error) {
+    logWarning?.(
+      `[${teamName}] Pre-launch OpenCode host startup lock purge failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return null;
+  }
 }
 
 /** A host finishes starting within a couple of minutes; older locks guard nothing. */
