@@ -8,7 +8,7 @@ import {
   qualifyModelId,
 } from '../../core/domain/openCodeModelIdentity';
 
-import { loadOpenCodeScopedCatalog } from './loadOpenCodeScopedCatalog';
+import { loadOpenCodeScopedCatalog, MODEL_CATALOG_FRESHNESS_MS } from './loadOpenCodeScopedCatalog';
 import {
   normalizePassiveCatalogModel,
   normalizePassiveProviderOverview,
@@ -24,7 +24,6 @@ import type {
   OpenCodeModelRouteMetadata,
 } from '@shared/types';
 
-const MODEL_CATALOG_FRESHNESS_MS = 2 * 60_000;
 let nextRequestGroupNumber = 0;
 
 type CatalogRequestStatus = 'idle' | 'loading' | 'ready' | 'error';
