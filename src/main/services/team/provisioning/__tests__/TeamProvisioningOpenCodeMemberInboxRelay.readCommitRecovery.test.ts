@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { isOpenCodePromptDeliveryWatchdogRecordTerminal } from '../../opencode/delivery/OpenCodePromptDeliveryFollowUpPolicy';
 import {
   type RelayOpenCodeMemberInboxMessagesPorts,
   relayOpenCodeMemberInboxMessagesWithPorts,
@@ -342,5 +343,187 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay read-commit recovery', () => 
     expect(result).toMatchObject({
       lastDelivery: { reason: 'opencode_inbox_read_already_committed' },
     });
+  });
+});
+
+describe('TeamProvisioningOpenCodeMemberInboxRelay missing inbox row terminalization', () => {
+  const missingRowInput = {
+    teamName: 'team',
+    memberName: 'worker',
+    relayKey: 'team/worker',
+    options: { onlyMessageId: 'message-1' },
+  };
+
+  it('terminalizes a responded-without-commit record whose inbox row was deleted', async () => {
+    const responded = ledgerRecord();
+    const terminalized = ledgerRecord({
+      status: 'failed_terminal',
+      lastReason: 'opencode_inbox_message_missing',
+      failedAt: NOW_ISO,
+    });
+    const ledger = {
+      getByInboxMessage: vi.fn().mockResolvedValue(responded),
+    } as unknown as OpenCodePromptDeliveryLedgerStore;
+    const markOpenCodePromptLedgerFailedTerminal = vi.fn().mockResolvedValue(terminalized);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      missingRowInput,
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([]),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ledger),
+        markOpenCodePromptLedgerFailedTerminal,
+      })
+    );
+
+    expect(markOpenCodePromptLedgerFailedTerminal).toHaveBeenCalledTimes(1);
+    expect(markOpenCodePromptLedgerFailedTerminal).toHaveBeenCalledWith({
+      ledger,
+      id: 'record-1',
+      reason: 'opencode_inbox_message_missing',
+      diagnostics: ['opencode_inbox_message_missing: message-1'],
+      failedAt: NOW_ISO,
+      eventContext: { inboxRowMissing: true },
+    });
+    expect(result).toMatchObject({
+      failed: 1,
+      lastDelivery: { delivered: false, reason: 'opencode_inbox_message_missing' },
+    });
+    // The stamp is what stops the re-arming: before it, this record still reads
+    // as unfinished work to every pass that looks for some.
+    expect(isOpenCodePromptDeliveryWatchdogRecordTerminal(responded)).toBe(false);
+    expect(isOpenCodePromptDeliveryWatchdogRecordTerminal(terminalized)).toBe(true);
+  });
+
+  it('leaves absent and already-terminal ledger records alone on a missing row', async () => {
+    const markOpenCodePromptLedgerFailedTerminal = vi.fn();
+    const makePorts = (
+      existing: OpenCodePromptDeliveryLedgerRecord | null
+    ): RelayOpenCodeMemberInboxMessagesPorts =>
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([]),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+          getByInboxMessage: vi.fn().mockResolvedValue(existing),
+        })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+        markOpenCodePromptLedgerFailedTerminal,
+      });
+
+    await expect(
+      relayOpenCodeMemberInboxMessagesWithPorts(missingRowInput, makePorts(null))
+    ).resolves.toMatchObject({
+      lastDelivery: { reason: 'opencode_inbox_message_missing' },
+    });
+    await expect(
+      relayOpenCodeMemberInboxMessagesWithPorts(
+        missingRowInput,
+        makePorts(ledgerRecord({ status: 'failed_terminal' }))
+      )
+    ).resolves.toMatchObject({
+      lastDelivery: { reason: 'opencode_inbox_message_missing' },
+    });
+
+    expect(markOpenCodePromptLedgerFailedTerminal).not.toHaveBeenCalled();
+  });
+
+  it('never terminalizes a cancelled record, on either qualifying shape', async () => {
+    // A stopped run's tombstone is settled for good and the ledger refuses
+    // every write to it, so a terminal write from here would only pretend to
+    // have changed something. Without the cancellation branch the first of
+    // these two records is written exactly like a live one.
+    const markOpenCodePromptLedgerFailedTerminal = vi.fn();
+    for (const cancelled of [
+      ledgerRecord({ cancelledAt: NOW_ISO }),
+      ledgerRecord({ status: 'failed_terminal', lastReason: 'force_stop_requested: run-1' }),
+    ]) {
+      await expect(
+        relayOpenCodeMemberInboxMessagesWithPorts(
+          missingRowInput,
+          createRelayPorts({
+            readInboxMessages: vi.fn().mockResolvedValue([]),
+            createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+              getByInboxMessage: vi.fn().mockResolvedValue(cancelled),
+            })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+            markOpenCodePromptLedgerFailedTerminal,
+          })
+        )
+      ).resolves.toMatchObject({
+        lastDelivery: { reason: 'opencode_inbox_message_missing' },
+      });
+    }
+
+    expect(markOpenCodePromptLedgerFailedTerminal).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a transiently unreadable inbox as a deleted row', async () => {
+    const markOpenCodePromptLedgerFailedTerminal = vi.fn();
+
+    await expect(
+      relayOpenCodeMemberInboxMessagesWithPorts(
+        missingRowInput,
+        createRelayPorts({
+          readInboxMessages: vi.fn().mockRejectedValue(new Error('EBUSY: file locked')),
+          markOpenCodePromptLedgerFailedTerminal,
+        })
+      )
+    ).resolves.toMatchObject({
+      lastDelivery: { delivered: false, reason: 'opencode_inbox_read_failed' },
+    });
+
+    expect(markOpenCodePromptLedgerFailedTerminal).not.toHaveBeenCalled();
+  });
+
+  it('does not terminalize from the in-flight path, which cannot prove deletion', async () => {
+    // That path reads the inbox with a swallowed error, so an unreadable file
+    // and a deleted row are indistinguishable there - and it says so with its
+    // own reason.
+    const markOpenCodePromptLedgerFailedTerminal = vi.fn();
+    const inFlight = new Map<string, Promise<never>>();
+    inFlight.set('team/worker', new Promise(() => {}));
+    // The same record the definitive path does settle, so the only difference
+    // between the two cases is which path saw the row go missing.
+    const ledger = {
+      getByInboxMessage: vi.fn().mockResolvedValue(ledgerRecord()),
+    } as unknown as OpenCodePromptDeliveryLedgerStore;
+
+    await expect(
+      relayOpenCodeMemberInboxMessagesWithPorts(
+        missingRowInput,
+        createRelayPorts({
+          inFlight: inFlight as unknown as RelayOpenCodeMemberInboxMessagesPorts['inFlight'],
+          readInboxMessages: vi.fn().mockResolvedValue([]),
+          createOpenCodePromptDeliveryLedger: vi.fn(() => ledger),
+          markOpenCodePromptLedgerFailedTerminal,
+        })
+      )
+    ).resolves.toMatchObject({
+      lastDelivery: { reason: 'opencode_inbox_message_missing_after_inflight_relay' },
+    });
+
+    expect(markOpenCodePromptLedgerFailedTerminal).not.toHaveBeenCalled();
+  });
+
+  it('still relays a live unread row without terminalizing its ledger record', async () => {
+    const markOpenCodePromptLedgerFailedTerminal = vi.fn();
+    const deliverOpenCodeMemberMessage = vi.fn().mockResolvedValue({
+      delivered: true,
+      responsePending: true,
+      reason: 'opencode_delivery_response_pending',
+    });
+
+    await expect(
+      relayOpenCodeMemberInboxMessagesWithPorts(
+        missingRowInput,
+        createRelayPorts({
+          readInboxMessages: vi.fn().mockResolvedValue([message()]),
+          deliverOpenCodeMemberMessage,
+          markOpenCodePromptLedgerFailedTerminal,
+        })
+      )
+    ).resolves.toMatchObject({
+      attempted: 1,
+      lastDelivery: { reason: 'opencode_delivery_response_pending' },
+    });
+
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(markOpenCodePromptLedgerFailedTerminal).not.toHaveBeenCalled();
   });
 });
