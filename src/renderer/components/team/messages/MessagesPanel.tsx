@@ -352,10 +352,16 @@ export const MessagesPanel = memo(function MessagesPanel({
 
   const handleQueuedDiscarded = useCallback(
     (memberName: string, result: DiscardQueuedUserMessagesResult) => {
-      // Only drop the pending entry when rows really left the inbox. A discard
-      // that removed nothing means the runtime took the message first, so the
-      // entry has to stay and become "delivered" on the next head refresh.
-      if (result.discarded > 0) {
+      // Only drop the pending entry when the member's queue is empty and this
+      // discard is what emptied it. A discard that removed nothing means the
+      // runtime took the message first, so the entry has to stay and become
+      // "delivered" on the next head refresh. A discard that removed rows while
+      // others were still queued has to keep it too: nothing recreates the
+      // entry - reconcilePendingRepliesByMember only ever removes, and the head
+      // refresh below reloads messages, not this map - so dropping it would
+      // hide the rows that survived until the user sends the member something
+      // new.
+      if (result.discarded > 0 && result.remainingQueued === 0) {
         onPendingReplyChange((prev) => {
           if (!(memberName in prev)) return prev;
           const next = { ...prev };

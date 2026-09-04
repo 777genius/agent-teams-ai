@@ -992,6 +992,21 @@ describe('MessagesPanel idle summary invariants', () => {
     expect(onPendingReplyChange).not.toHaveBeenCalled();
     expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
 
+    // Negative control for the drop rule: rows left the inbox but a message that
+    // arrived during the confirmation is still queued. Nothing recreates the
+    // pending entry - the head refresh reloads messages, not this map - so
+    // dropping it here would hide the surviving row.
+    onPendingReplyChange.mockClear();
+    storeState.refreshTeamMessagesHead.mockClear();
+
+    await act(async () => {
+      statusBlockProps.onQueuedDiscarded?.('alice', { discarded: 2, remainingQueued: 1 });
+      await Promise.resolve();
+    });
+
+    expect(onPendingReplyChange).not.toHaveBeenCalled();
+    expect(storeState.refreshTeamMessagesHead).toHaveBeenCalledWith('atlas-hq');
+
     await act(async () => {
       root.unmount();
       await Promise.resolve();
