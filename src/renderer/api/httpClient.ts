@@ -116,6 +116,7 @@ import type {
   TeamClaudeLogsResponse,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamForceStopResult,
   TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
@@ -1128,6 +1129,9 @@ export class HttpAPIClient implements ElectronAPI {
     },
     stop: async (): Promise<void> => {
       throw new Error('Team stop is not available in browser mode');
+    },
+    forceStop: async (): Promise<TeamForceStopResult> => {
+      throw new Error('Team force stop is not available in browser mode');
     },
     // An empty snapshot would read as "this member has nothing queued", which
     // the discard confirmation acts on. Refuse instead, like the discard does.

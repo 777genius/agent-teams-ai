@@ -665,6 +665,9 @@ async function createOpenCodeRuntimeAdapterRegistry(
   const readinessBridge = new OpenCodeReadinessBridge(bridgeClient, {
     stateChangingCommands,
     appVersion: clientIdentity.appVersion,
+    // Refresh the live endpoint before Cursor MCP registration, including after server restart.
+    resolveAgentTeamsMcpUrl: async () =>
+      (await resolveBridgeCommandEnv()).CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL,
   });
   openCodeLifecycleBridge = readinessBridge;
   return new TeamRuntimeAdapterRegistry([

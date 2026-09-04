@@ -32,6 +32,7 @@ import {
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
   TEAM_DISCARD_QUEUED_USER_MESSAGES,
+  TEAM_FORCE_STOP,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
@@ -141,6 +142,13 @@ import {
   cloneLaunchIoGovernorPayload,
   type LaunchIoGovernor,
 } from '../services/team/LaunchIoGovernor';
+import {
+  clearPendingOpenCodePromptDeliveriesForTeam,
+  killRetainedOpenCodeRuntimeProcessesForTeam,
+  readOpenCodeRuntimeLaneIdsForTeam,
+  readOwnedOpenCodeRuntimeRunIdsForTeam,
+  runTeamForceStopFlow,
+} from '../services/team/lifecycle/teamForceStopFlow';
 import {
   buildReplaceMembersDiff,
   buildReplaceMembersSummaryMessage,
@@ -255,6 +263,7 @@ import type {
   TeamCreateRequest,
   TeamCreateResponse,
   TeamFastMode,
+  TeamForceStopResult,
   TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
@@ -681,6 +690,7 @@ export function registerTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.handle(TEAM_PROCESS_ALIVE, handleProcessAlive);
   ipcMain.handle(TEAM_ALIVE_LIST, handleAliveList);
   ipcMain.handle(TEAM_STOP, handleStopTeam);
+  ipcMain.handle(TEAM_FORCE_STOP, handleForceStopTeam);
   ipcMain.handle(TEAM_GET_QUEUED_USER_MESSAGES, handleGetQueuedUserMessages);
   ipcMain.handle(TEAM_DISCARD_QUEUED_USER_MESSAGES, handleDiscardQueuedUserMessages);
   ipcMain.handle(TEAM_CREATE_CONFIG, handleCreateConfig);
@@ -772,6 +782,7 @@ export function removeTeamHandlers(ipcMain: IpcMain): void {
   ipcMain.removeHandler(TEAM_PROCESS_ALIVE);
   ipcMain.removeHandler(TEAM_ALIVE_LIST);
   ipcMain.removeHandler(TEAM_STOP);
+  ipcMain.removeHandler(TEAM_FORCE_STOP);
   ipcMain.removeHandler(TEAM_GET_QUEUED_USER_MESSAGES);
   ipcMain.removeHandler(TEAM_DISCARD_QUEUED_USER_MESSAGES);
   ipcMain.removeHandler(TEAM_CREATE_CONFIG);
@@ -4200,6 +4211,43 @@ async function handleStopTeam(
   return wrapTeamHandler('stop', async () => {
     addMainBreadcrumb('team', 'stop', { teamName: validated.value! });
     await getTeamRuntimeApi().stopTeam(validated.value!);
+  });
+}
+
+async function handleForceStopTeam(
+  _event: IpcMainInvokeEvent,
+  teamName: unknown
+): Promise<IpcResult<TeamForceStopResult>> {
+  const validated = validateTeamName(teamName);
+  if (!validated.valid) {
+    return { success: false, error: validated.error ?? 'Invalid teamName' };
+  }
+  return wrapTeamHandler('forceStop', async () => {
+    const tn = validated.value!;
+    addMainBreadcrumb('team', 'forceStop', { teamName: tn });
+    return runTeamForceStopFlow(tn, {
+      stopTeam: (name) => getTeamRuntimeApi().stopTeam(name),
+      observeOwnedRuntimeRunIds: (name) =>
+        readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+      observeOwnedRuntimeLaneIds: (name) =>
+        readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
+      killRetainedRuntimeProcesses: (name, context) =>
+        killRetainedOpenCodeRuntimeProcessesForTeam({
+          teamName: name,
+          requestedAtMs: context.requestedAtMs,
+          otherAliveTeams: getTeamRuntimeApi()
+            .getAliveTeams()
+            .filter((alive) => alive !== name),
+        }),
+      clearPendingPromptDeliveries: (name, context) =>
+        clearPendingOpenCodePromptDeliveriesForTeam({
+          teamName: name,
+          ownedRunIds: context.ownedRunIds,
+          ownedLaneIds: context.ownedLaneIds,
+          requestedAtMs: context.requestedAtMs,
+        }),
+      logWarning: (message) => logger.warn(message),
+    });
   });
 }
 

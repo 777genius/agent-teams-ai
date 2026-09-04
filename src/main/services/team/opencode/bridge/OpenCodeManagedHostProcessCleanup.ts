@@ -175,21 +175,26 @@ export async function cleanupManagedOpenCodeServeProcesses(
         continue;
       }
     }
+    // The start-time fence is mode-independent on purpose: `force` used to
+    // bypass every age check, so a force sweep reaped managed hosts that a
+    // launch racing it had just started. A caller that really does want to
+    // reap everything it can attribute (shutdown) leaves `startedBeforeMs`
+    // unset.
+    if (
+      typeof options.startedBeforeMs === 'number' &&
+      (!Number.isFinite(startedAtMs) ||
+        startedAtMs === null ||
+        startedAtMs >= options.startedBeforeMs)
+    ) {
+      result.candidates.push({
+        pid: row.pid,
+        ppid: row.ppid,
+        action: 'kept_recent',
+        reason: 'process started after this app instance began',
+      });
+      continue;
+    }
     if (options.mode === 'orphaned') {
-      if (
-        typeof options.startedBeforeMs === 'number' &&
-        (!Number.isFinite(startedAtMs) ||
-          startedAtMs === null ||
-          startedAtMs >= options.startedBeforeMs)
-      ) {
-        result.candidates.push({
-          pid: row.pid,
-          ppid: row.ppid,
-          action: 'kept_recent',
-          reason: 'process started after this app instance began',
-        });
-        continue;
-      }
       const parentMayStillOwnProcess =
         platform === 'win32' ? row.ppid > 0 && isProcessAlive(row.ppid) : row.ppid !== 1;
       if (parentMayStillOwnProcess) {

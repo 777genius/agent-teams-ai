@@ -10,6 +10,7 @@ import type {
   OpenCodePromptDeliveryLedgerStore,
   OpenCodePromptDeliveryStatus,
 } from './OpenCodePromptDeliveryLedger';
+import type { OpenCodeStalePendingPolicyConfig } from './OpenCodePromptDeliveryStalePendingPolicy';
 import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog';
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
@@ -123,6 +124,14 @@ interface DeliverableTrackedRun {
   }[];
 }
 
+export interface OpenCodeLeadTurnActivityNotification {
+  teamName: string;
+  memberName: string;
+  laneId: string;
+  runId: string | null;
+  state: 'active' | 'idle';
+}
+
 export interface OpenCodeMemberMessageDeliveryServiceDependencies {
   getOpenCodeRuntimeMessageAdapter(): OpenCodeRuntimeMessageAdapter | null;
   readOpenCodeMemberDirectory(teamName: string): Promise<OpenCodeMemberDirectory>;
@@ -213,6 +222,11 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     'isEnabled'
   >;
   openCodePromptDeliveryFollowUpPolicy: Pick<OpenCodePromptDeliveryFollowUpPolicy, 'schedule'>;
+  /**
+   * Windows the stale-pending guard bounds a pending delivery with. Supplied by
+   * whoever composes this service; the policy itself has no defaults.
+   */
+  openCodeStalePendingPolicyConfig: OpenCodeStalePendingPolicyConfig;
   isOpenCodeDeliveryResponseReadCommitAllowed(input: {
     teamName?: string;
     memberName?: string;
@@ -253,6 +267,12 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     record: OpenCodePromptDeliveryLedgerRecord,
     detail: string
   ): void;
+  /**
+   * Lead activity for the OpenCode primary lane. A pure-OpenCode lead has no
+   * stdin stream, so "Working"/"Idle" is derived from prompt-delivery turns:
+   * 'active' once a prompt is accepted, 'idle' once the delivery settles.
+   */
+  notifyOpenCodeLeadTurnActivity?(input: OpenCodeLeadTurnActivityNotification): void;
   observeOpenCodeDirectUserDeliveryInlineIfNeeded(input: {
     adapter: OpenCodeRuntimeMessageAdapter;
     ledger: OpenCodePromptDeliveryLedgerStore;

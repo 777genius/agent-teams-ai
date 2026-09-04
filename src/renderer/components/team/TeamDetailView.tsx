@@ -83,6 +83,7 @@ import {
   GitBranch,
   History,
   Network,
+  OctagonX,
   Pencil,
   Play,
   Plus,
@@ -109,6 +110,7 @@ import { type MemberActivityFilter, type MemberDetailTab } from './members/membe
 import { deriveMetrics } from './context-metric-alias';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
+import { runTeamForceStopAction } from './teamForceStopAction';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
@@ -1399,6 +1401,7 @@ export const TeamDetailView = memo(function TeamDetailView({
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [stoppingTeam, setStoppingTeam] = useState(false);
+  const [forceStoppingTeam, setForceStoppingTeam] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [sendDialogRecipient, setSendDialogRecipient] = useState<string | undefined>(undefined);
   const [sendDialogDefaultText, setSendDialogDefaultText] = useState<string | undefined>(undefined);
@@ -2325,6 +2328,28 @@ export const TeamDetailView = memo(function TeamDetailView({
     }
   }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData]);
 
+  const handleForceStopTeam = useCallback(async (): Promise<void> => {
+    await runTeamForceStopAction({
+      teamName,
+      labels: {
+        confirmTitle: t('detail.forceStop.title'),
+        confirmMessage: t('detail.forceStop.message', { team: data?.config.name ?? teamName }),
+        confirmLabel: t('detail.forceStop.confirmLabel'),
+        cancelLabel: t('detail.forceStop.cancelLabel'),
+        failureTitle: t('detail.forceStopFailed.title'),
+        failureFallbackMessage: t('detail.forceStopFailed.fallbackMessage'),
+        failureConfirmLabel: t('detail.forceStopFailed.confirmLabel'),
+      },
+      confirm,
+      forceStop: (name) => api.teams.forceStop(name),
+      refreshTeamData: (name) => refreshTeamData(name),
+      setBusy: setForceStoppingTeam,
+      logError: (cause) => console.error('Failed to force stop team:', cause),
+      logRefreshError: (cause) =>
+        console.error('Force stopped the team, but the refresh after it failed:', cause),
+    });
+  }, [data?.config.name, teamName, refreshTeamData, t]);
+
   // Pick up pending review request from GlobalTaskDetailDialog
   useEffect(() => {
     if (!isThisTabActive) return;
@@ -2928,6 +2953,26 @@ export const TeamDetailView = memo(function TeamDetailView({
                         </TooltipContent>
                       </Tooltip>
                     )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1 rounded-md border border-red-500/25 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          disabled={forceStoppingTeam}
+                          onClick={() => void handleForceStopTeam()}
+                        >
+                          <OctagonX
+                            size={12}
+                            className={forceStoppingTeam ? 'animate-pulse' : ''}
+                          />
+                          {t('detail.actions.forceStop')}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        {t('detail.tooltips.forceStopTeam')}
+                      </TooltipContent>
+                    </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
