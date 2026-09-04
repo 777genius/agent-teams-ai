@@ -84,9 +84,9 @@ let terminalModalProps: {
   onExit?: (exitCode: number) => void;
 } | null = null;
 let quickConnectConnectedCount = 0;
-let openCodeCatalogHookInputs: Array<{
+let openCodeCatalogHookInputs: {
   refreshRevision?: number;
-}> = [];
+}[] = [];
 const codexAccountHookState = {
   snapshot: null as CodexAccountSnapshotDto | null,
   loading: false,
@@ -1731,6 +1731,7 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
     expect(host.textContent).not.toContain('OpenCode detected (passive)');
     expect(host.textContent).toContain('big-pickle');
+    expect(openCodeCatalogHookInputs).not.toHaveLength(0);
     expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBeUndefined();
 
     await act(async () => {
