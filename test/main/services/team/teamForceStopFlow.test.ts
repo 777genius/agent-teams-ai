@@ -1,4 +1,8 @@
 import {
+  PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
+  purgeStaleOpenCodeHostStartupLocks,
+} from '@main/services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
+import {
   countLiveRecordedRuntimeHostsForTeam,
   RUNTIME_HOSTS_POLL_INTERVAL_MS,
   releaseSharedRuntimeResourcesAfterStop,
@@ -6,6 +10,9 @@ import {
   STOP_ESCALATION_TIMEOUT_MS,
   stopTeamWithEscalation,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
@@ -798,6 +805,35 @@ describe('releaseSharedRuntimeResourcesAfterStop', () => {
 
     expect(releaseSharedLocalRuntime).toHaveBeenCalledTimes(1);
     expect(result.diagnostics).toEqual(['Released the shared runtime held for this team']);
+  });
+
+  // The alive-team list is read before this step runs, so a launch that starts
+  // in between owns a lock this purge can already see. The age floor is the
+  // only thing that keeps that lock: an unheld one would otherwise be unlinked
+  // and the next host for the same port would start unserialised beside it.
+  it('keeps the startup lock of a host that is starting right now', async () => {
+    const locksDir = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-stop-locks-'));
+    try {
+      const startingLock = path.join(locksDir, 'starting.lock');
+      fs.writeFileSync(startingLock, '');
+      const orphanLock = path.join(locksDir, 'orphan.lock');
+      fs.writeFileSync(orphanLock, '');
+      const orphanMtime = new Date(Date.now() - (PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS + 60_000));
+      fs.utimesSync(orphanLock, orphanMtime, orphanMtime);
+
+      const result = await releaseSharedRuntimeResourcesAfterStop({
+        teamName: 'fixteam',
+        otherAliveTeams: [],
+        purgeHostStartupLocks: (options) =>
+          purgeStaleOpenCodeHostStartupLocks({ ...options, locksDir }),
+      });
+
+      expect(result.diagnostics).toEqual(['Purged 1 stale OpenCode host startup lock(s)']);
+      expect(fs.existsSync(startingLock)).toBe(true);
+      expect(fs.existsSync(orphanLock)).toBe(false);
+    } finally {
+      fs.rmSync(locksDir, { recursive: true, force: true });
+    }
   });
 
   it('never throws: a failing purge or release is reported, not raised', async () => {
