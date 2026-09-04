@@ -90,8 +90,13 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     expect(checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).not.toHaveBeenCalled();
     expect(result.diagnostics).toContain(temporarilyUnavailable.diagnostics[0]);
+    // blockedLaunchResult still prepends its reassurance line ahead of the
+    // readiness diagnostics, but that line is generic UI framing and must not
+    // mask the concrete bridge diagnostic behind it: hardFailureReason is what
+    // a transient shared-runtime failure is pattern-matched against.
+    expect(result.diagnostics[0]).toBe('OpenCode is temporarily unavailable. Retry the launch.');
     expect(result.members.Worker?.hardFailureReason).toBe(
-      'OpenCode is temporarily unavailable. Retry the launch.'
+      'OpenCode provider is temporarily unavailable. Retry shortly.'
     );
     // The readiness gate ran before launchOpenCodeTeam, so the result carries
     // the proof that no host or session exists for this run.
