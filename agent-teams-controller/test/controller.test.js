@@ -4585,6 +4585,19 @@ controller.messages.sendMessage({
     ],
     ['a token with no payload segment at all', 'wrs:v1'],
     ['a value that is not a token', 'bob'],
+    // The two below carry a payload that does name a configured member, so
+    // only the segment count can refuse them. The app's verifier requires
+    // exactly three non-empty segments, so a token of any other arity names
+    // nobody here either, instead of queueing a report for app validation that
+    // the app can only ever reject.
+    [
+      'an unsigned two-segment token',
+      `wrs:v1.${Buffer.from(JSON.stringify({ version: 1, teamName: 'my-team', memberName: 'bob' }), 'utf8').toString('base64url')}`,
+    ],
+    [
+      'a token with a trailing extra segment',
+      `wrs:v1.${Buffer.from(JSON.stringify({ version: 1, teamName: 'my-team', memberName: 'bob' }), 'utf8').toString('base64url')}.signature.extra`,
+    ],
   ])('refuses a report identified only by %s', async (_label, token) => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });
@@ -4596,6 +4609,13 @@ controller.messages.sendMessage({
         reportToken: token,
       })
     ).rejects.toThrow('Unknown member work sync report member');
+    // Refused before anything is written: no pending intent is queued for a
+    // report that never had a usable identity.
+    expect(
+      fs.existsSync(
+        path.join(claudeDir, 'teams', 'my-team', '.member-work-sync', 'pending-reports.json')
+      )
+    ).toBe(false);
   });
 
   it('does not record pending work sync intents for app-side validation rejections', async () => {
