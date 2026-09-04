@@ -149,7 +149,7 @@ describe('OpenCodeReadinessBridge cursor-acp MCP registration', () => {
     vi.mocked(prepareCursorAcpLaunchMcpConfig).mockClear();
   });
 
-  it.each(['cursor-acp/auto', 'grok-4.6-fast'])(
+  it.each(['cursor-acp/auto'])(
     'registers the endpoint before launching %s',
     async (selectedModel) => {
       const { bridge, execute } = buildBridge({
@@ -161,7 +161,6 @@ describe('OpenCodeReadinessBridge cursor-acp MCP registration', () => {
       );
 
       expect(prepareCursorAcpLaunchMcpConfig).toHaveBeenCalledWith({
-        profileRootKey: 'account-1',
         mcpUrl: 'http://127.0.0.1:9999/mcp#instance-1',
       });
       expect(vi.mocked(prepareCursorAcpLaunchMcpConfig).mock.invocationCallOrder[0]).toBeLessThan(

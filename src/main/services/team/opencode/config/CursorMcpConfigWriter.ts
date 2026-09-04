@@ -4,64 +4,14 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import type { Dirent } from 'fs';
-
-/**
- * Registers the Agent Teams MCP HTTP endpoint as a real Cursor MCP server for
- * cursor-acp runs. cursor-agent only exposes the servers it finds in
- * `~/.cursor/mcp.json`, and the app rewrites HOME/USERPROFILE to
- * `<data>/opencode/profiles/<profileRootKey>/home`, so the entry must live in
- * that per-profile home or GetMcpTools/CallMcpTool never see "agent-teams".
- */
-
+/** Cursor native CLI wrappers restore the host home, not the OpenCode profile home. */
 export const CURSOR_AGENT_TEAMS_MCP_SERVER_NAME = 'agent-teams';
-
-const CLAUDE_MULTIMODEL_DATA_DIR_NAME = 'claude-multimodel-nodejs';
-const CURSOR_ACP_PROFILE_KEY_PATTERN = /^[A-Za-z0-9_-]+$/;
 const logger = createLogger('CursorMcpConfigWriter');
 
 export interface CursorMcpConfigWriteResult {
   path: string;
   action: 'created' | 'updated' | 'unchanged' | 'skipped';
-  /** Only set for `skipped`: why the existing file was left exactly as it was. */
-  reason?: 'unparsable-config';
-}
-
-export interface ResolveCursorAcpProfileHomeOptions {
-  platform?: NodeJS.Platform;
-  env?: NodeJS.ProcessEnv;
-  homeDir?: string;
-}
-
-/**
- * Mirrors the app's env-paths data directory (`CLAUDE_MULTIMODEL_DATA_HOME`
- * override, otherwise the env-paths default for the platform).
- */
-export function resolveCursorAcpProfileHome(
-  profileRootKey: string,
-  options: ResolveCursorAcpProfileHomeOptions = {}
-): string | null {
-  const key = profileRootKey.trim();
-  if (!CURSOR_ACP_PROFILE_KEY_PATTERN.test(key)) {
-    return null;
-  }
-  const platform = options.platform ?? process.platform;
-  const env = options.env ?? process.env;
-  const homeDir = options.homeDir ?? os.homedir();
-  const override = env.CLAUDE_MULTIMODEL_DATA_HOME?.trim();
-  let dataDir: string;
-  if (override && path.isAbsolute(override)) {
-    dataDir = path.normalize(override);
-  } else if (platform === 'win32') {
-    const localAppData = env.LOCALAPPDATA?.trim() || path.join(homeDir, 'AppData', 'Local');
-    dataDir = path.join(localAppData, CLAUDE_MULTIMODEL_DATA_DIR_NAME, 'Data');
-  } else if (platform === 'darwin') {
-    dataDir = path.join(homeDir, 'Library', 'Application Support', CLAUDE_MULTIMODEL_DATA_DIR_NAME);
-  } else {
-    const xdgDataHome = env.XDG_DATA_HOME?.trim() || path.join(homeDir, '.local', 'share');
-    dataDir = path.join(xdgDataHome, CLAUDE_MULTIMODEL_DATA_DIR_NAME);
-  }
-  return path.join(dataDir, 'opencode', 'profiles', key, 'home');
+  reason?: 'unparsable-config' | 'user-owned-entry';
 }
 
 /**
@@ -74,40 +24,6 @@ type CursorJsonRead =
   | { kind: 'missing' }
   | { kind: 'object'; value: Record<string, unknown> }
   | { kind: 'unparsable' };
-
-async function directoryExists(dirPath: string): Promise<boolean> {
-  return fs
-    .stat(dirPath)
-    .then((stats) => stats.isDirectory())
-    .catch(() => false);
-}
-
-/**
- * Every profile home the app has already created. The execution proof names the
- * project-root profile, but cursor-agent runs the lead out of the user-home
- * profile, which is a different key, so registering only the proof home leaves
- * the lead without tools on exactly the path that matters.
- */
-export async function listCursorAcpProfileHomes(
-  options: ResolveCursorAcpProfileHomeOptions = {}
-): Promise<string[]> {
-  const probeHome = resolveCursorAcpProfileHome('probe', options);
-  if (!probeHome) return [];
-  const profilesDir = path.dirname(path.dirname(probeHome));
-  let entries: Dirent[];
-  try {
-    entries = await fs.readdir(profilesDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const homes: string[] = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory() || !CURSOR_ACP_PROFILE_KEY_PATTERN.test(entry.name)) continue;
-    const home = path.join(profilesDir, entry.name, 'home');
-    if (await directoryExists(home)) homes.push(home);
-  }
-  return homes;
-}
 
 async function readJsonObject(filePath: string): Promise<CursorJsonRead> {
   let raw: string;
@@ -127,12 +43,34 @@ async function readJsonObject(filePath: string): Promise<CursorJsonRead> {
   }
 }
 
+// Serialize concurrent launches sharing a Cursor home to keep config and ownership aligned.
+const pendingWrites = new Map<string, Promise<CursorMcpConfigWriteResult>>();
+
+export async function ensureCursorAgentTeamsMcpConfig(input: {
+  profileHome: string;
+  mcpUrl: string;
+  serverName?: string;
+}): Promise<CursorMcpConfigWriteResult> {
+  const key = path.resolve(input.profileHome);
+  const previous = pendingWrites.get(key);
+  const next = (previous ? previous.catch(() => undefined) : Promise.resolve()).then(() =>
+    writeCursorAgentTeamsMcpConfig(input)
+  );
+  pendingWrites.set(key, next);
+  try {
+    return await next;
+  } finally {
+    if (pendingWrites.get(key) === next) pendingWrites.delete(key);
+  }
+}
+
 /**
  * Merges `{ mcpServers: { "agent-teams": { type: "http", url } } }` into
  * `<profileHome>/.cursor/mcp.json`, preserving every other server entry and
- * every top-level key, and rewriting only when the stored URL differs.
+ * every top-level key. A sidecar records only entries created by this app.
+ * Existing or subsequently customized entries are never adopted or overwritten.
  */
-export async function ensureCursorAgentTeamsMcpConfig(input: {
+async function writeCursorAgentTeamsMcpConfig(input: {
   profileHome: string;
   mcpUrl: string;
   serverName?: string;
@@ -149,18 +87,55 @@ export async function ensureCursorAgentTeamsMcpConfig(input: {
   }
   const config = existing.kind === 'object' ? existing.value : {};
   const rawServers = config.mcpServers;
+  if (
+    rawServers !== undefined &&
+    (!rawServers || typeof rawServers !== 'object' || Array.isArray(rawServers))
+  ) {
+    return { path: configPath, action: 'skipped', reason: 'unparsable-config' };
+  }
+  const ownershipPath = path.join(input.profileHome, '.cursor', 'mcp.agent-teams-managed.json');
+  const ownership = await readJsonObject(ownershipPath);
+  const ownedServers =
+    ownership.kind === 'object' &&
+    ownership.value.version === 1 &&
+    ownership.value.servers &&
+    typeof ownership.value.servers === 'object' &&
+    !Array.isArray(ownership.value.servers)
+      ? (ownership.value.servers as Record<string, unknown>)
+      : {};
+
   const mcpServers: Record<string, unknown> =
     rawServers && typeof rawServers === 'object' && !Array.isArray(rawServers)
       ? { ...(rawServers as Record<string, unknown>) }
       : {};
   const desired = { type: 'http', url: mcpUrl };
+  if (Object.hasOwn(mcpServers, serverName)) {
+    const entry = mcpServers[serverName];
+    const owned = ownedServers[serverName];
+    // Exact snapshot equality relinquishes ownership after any user customization.
+    if (!owned || JSON.stringify(entry) !== JSON.stringify(owned)) {
+      return { path: configPath, action: 'skipped', reason: 'user-owned-entry' };
+    }
+  }
   if (JSON.stringify(mcpServers[serverName]) === JSON.stringify(desired)) {
     return { path: configPath, action: 'unchanged' };
   }
   mcpServers[serverName] = desired;
   await atomicWriteAsync(configPath, `${JSON.stringify({ ...config, mcpServers }, null, 2)}\n`, {
     mode: 0o600,
+    beforeCommit: async () => {
+      if (JSON.stringify(await readJsonObject(configPath)) !== JSON.stringify(existing)) {
+        throw new Error('Cursor MCP config changed during registration; retry after reviewing it');
+      }
+    },
   });
+  // Publish ownership last: interruption may require manual conflict resolution,
+  // but can never claim an entry that this app did not successfully write.
+  await atomicWriteAsync(
+    ownershipPath,
+    `${JSON.stringify({ version: 1, servers: { ...ownedServers, [serverName]: desired } }, null, 2)}\n`,
+    { mode: 0o600 }
+  );
   return { path: configPath, action: existing.kind === 'object' ? 'updated' : 'created' };
 }
 
@@ -170,63 +145,24 @@ export function stripUrlFragment(url: string): string {
   return hash >= 0 ? url.slice(0, hash) : url;
 }
 
-/**
- * Launch-time hook: registers the endpoint in every existing profile home and
- * in the real user home (cursor-agent resolves `~/.cursor` from the redirected
- * HOME, so both are load-bearing). Never throws; a launch must proceed even
- * when the config cannot be written, because the briefing then tells the model
- * to report the missing tools instead of scripting around them.
- */
+/** Register only the home used by the Cursor native CLI credential bridge. */
 export async function prepareCursorAcpLaunchMcpConfig(input: {
-  profileRootKey: string | undefined;
   mcpUrl: string | undefined;
-  paths?: ResolveCursorAcpProfileHomeOptions;
+  homeDir?: string;
 }): Promise<void> {
   const mcpUrl = stripUrlFragment(input.mcpUrl?.trim() ?? '');
   if (!mcpUrl) return;
-  const profileRootKey = input.profileRootKey?.trim();
-  const proofHome = profileRootKey
-    ? resolveCursorAcpProfileHome(profileRootKey, input.paths)
-    : null;
-  const profileHomes = Array.from(
-    new Set([...(proofHome ? [proofHome] : []), ...(await listCursorAcpProfileHomes(input.paths))])
-  );
-  if (profileHomes.length === 0) {
-    logger.info('cursor-acp launch found no per-profile Cursor home to register');
-  }
-  const homeDir = input.paths?.homeDir ?? os.homedir();
-  const targets = Array.from(new Set([...profileHomes, homeDir]));
-  logger.info(`Registering the Agent Teams MCP server in ${targets.length} Cursor home(s)`);
-  for (const profileHome of targets) {
-    if (profileHome !== homeDir) await seedProfileCursorCliConfig(profileHome, homeDir);
-    await registerAgentTeamsMcpServer(profileHome, mcpUrl);
-  }
-}
-
-/**
- * Both writes are best-effort for the launch but not for the feature: the caller
- * discards the outcome and no launch warning or member diagnostic carries it, so
- * the log entry is the only record that the lead started without the agent-teams
- * server, and it is logged at error for that reason. The `skipped` branch below
- * stays a warning: declining to rewrite a config this module cannot parse is a
- * decision it makes, not a failure it hit.
- */
-async function seedProfileCursorCliConfig(profileHome: string, homeDir: string): Promise<void> {
-  try {
-    await ensureCursorCliConfigSeed(profileHome, { homeDir });
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    logger.error(`Cursor CLI config seed failed (${profileHome}): ${detail}`);
-  }
+  const homeDir = input.homeDir ?? os.homedir();
+  await registerAgentTeamsMcpServer(homeDir, mcpUrl);
 }
 
 async function registerAgentTeamsMcpServer(profileHome: string, mcpUrl: string): Promise<void> {
   try {
     const result = await ensureCursorAgentTeamsMcpConfig({ profileHome, mcpUrl });
     if (result.action === 'skipped') {
-      logger.warn(
-        `Cursor MCP config left untouched (${result.reason}); the lead will have no agent-teams tools from ${result.path}`
-      );
+      const message = `Cursor MCP config left untouched (${result.reason}) at ${result.path}; Agent Teams MCP registration requires manual resolution`;
+      if (result.reason === 'user-owned-entry') logger.error(message);
+      else logger.warn(message);
       return;
     }
     if (result.action !== 'unchanged') {
@@ -236,61 +172,4 @@ async function registerAgentTeamsMcpServer(profileHome: string, mcpUrl: string):
     const detail = error instanceof Error ? error.message : String(error);
     logger.error(`Cursor MCP config write failed (${profileHome}): ${detail}`);
   }
-}
-
-/**
- * Key families that may carry a credential. Matching is by family rather than
- * by exact name because the file is the user's, not ours: `authToken`,
- * `refreshToken`, `sessionCookie` and `apiKey` are all plausible spellings, and
- * a name this misses is a credential copied into a second file on disk.
- */
-const CURSOR_CLI_CONFIG_SECRET_KEY_PATTERN =
-  /auth|token|secret|credential|api[-_]?key|cookie|session|bearer|jwt|password|passphrase|refresh|signature/i;
-
-/**
- * Drops every secret-shaped key at every depth. A shallow filter would keep a
- * matching key's siblings but copy the whole value of a non-matching one, so
- * `{ profile: { apiKey } }` and `{ sessions: { last: { password } } }` would
- * survive verbatim in a file the app writes somewhere the user did not choose.
- */
-function stripCursorCliConfigSecrets(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(stripCursorCliConfigSecrets);
-  }
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-  const out: Record<string, unknown> = {};
-  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    if (CURSOR_CLI_CONFIG_SECRET_KEY_PATTERN.test(key)) continue;
-    out[key] = stripCursorCliConfigSecrets(entry);
-  }
-  return out;
-}
-
-/**
- * Seeds `<profileHome>/.cursor/cli-config.json` from the user's own CLI config
- * when the profile has none. Without that file cursor-agent lists only its
- * bundled plugins and ignores every user MCP server, including the one the
- * previous step registered.
- */
-export async function ensureCursorCliConfigSeed(
-  profileHome: string,
-  options: { homeDir?: string } = {}
-): Promise<'seeded' | 'exists'> {
-  const target = path.join(profileHome, '.cursor', 'cli-config.json');
-  const existing = await readJsonObject(target);
-  if (existing.kind !== 'missing') return 'exists';
-  const source = await readJsonObject(
-    path.join(options.homeDir ?? os.homedir(), '.cursor', 'cli-config.json')
-  );
-  const seed =
-    source.kind === 'object' ? stripCursorCliConfigSecrets(source.value) : { version: 1 };
-  await atomicWriteAsync(
-    target,
-    `${JSON.stringify(seed, null, 2)}
-`,
-    { mode: 0o600 }
-  );
-  return 'seeded';
 }
