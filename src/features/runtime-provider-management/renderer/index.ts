@@ -4,6 +4,7 @@ export {
   isPrivateNetworkRuntimeLocalProviderUrl,
   resolveOpenCodeQuickConnectGate,
 } from '../core/domain';
+export { useOpenCodeConnectedModelCatalog } from './hooks/useOpenCodeConnectedModelCatalog';
 export {
   type OpenCodeLocalModelSetupActionState,
   useOpenCodeLocalModelSetup,
