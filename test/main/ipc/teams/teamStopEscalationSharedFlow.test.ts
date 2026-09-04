@@ -45,6 +45,7 @@ const stopFlowMocks = vi.hoisted(() => ({
   readOwnedOpenCodeRuntimeRunIdsForTeam: vi.fn(() => Promise.resolve(['run-observed'])),
   readOpenCodeRuntimeLaneIdsForTeam: vi.fn(() => Promise.resolve(['primary'])),
   countLiveRecordedRuntimeHostsForTeam: vi.fn(() => Promise.resolve(0)),
+  releaseSharedRuntimeResourcesAfterStop: vi.fn(() => Promise.resolve({ diagnostics: [] })),
   STOP_ESCALATION_TIMEOUT_MS: 90_000,
 }));
 
@@ -168,6 +169,13 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
       await ports.markTeamStopped?.('fixteam');
       expect(ports.countLiveRuntimeHosts).toBeTypeOf('function');
       await expect(ports.countLiveRuntimeHosts?.('fixteam')).resolves.toBe(0);
+      // The release runs only when this was the last team standing, so the
+      // alive-team filter is the whole port: an entry point that forgot to
+      // exclude the team it is stopping would keep the shared runtime and the
+      // orphaned startup locks forever. Called without optional chaining on
+      // purpose - an entry point that dropped the port fails here.
+      expect(ports.releaseSharedRuntimeResources).toBeTypeOf('function');
+      await ports.releaseSharedRuntimeResources!('fixteam');
       expect(ports.stopTimeoutMs).toBe(90_000);
     }
 
@@ -176,6 +184,10 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
     expect(stopFlowMocks.countLiveRecordedRuntimeHostsForTeam.mock.calls).toEqual([
       [{ teamName: 'fixteam' }],
       [{ teamName: 'fixteam' }],
+    ]);
+    expect(stopFlowMocks.releaseSharedRuntimeResourcesAfterStop.mock.calls).toEqual([
+      [{ teamName: 'fixteam', otherAliveTeams: ['other-team'] }],
+      [{ teamName: 'fixteam', otherAliveTeams: ['other-team'] }],
     ]);
 
     expect(stopFlowMocks.readOwnedOpenCodeRuntimeRunIdsForTeam.mock.calls).toEqual([
