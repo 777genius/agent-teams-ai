@@ -72,6 +72,7 @@ import {
   OPENCODE_RUNTIME_STORE_DESCRIPTORS,
   RuntimeStoreBatchWriter,
 } from '../../../../src/main/services/team/opencode/store/RuntimeStoreManifest';
+import { createOpenCodePromptDeliveryLedger } from '../../../../src/main/services/team/provisioning/OpenCodePromptDeliveryQueries';
 import {
   cancelRuntimeAdapterProvisioning,
   type RuntimeAdapterCancellationPorts,
@@ -819,6 +820,51 @@ describe(
         ],
       });
 
+      // Restart preserves the accepted prompt; a new message must wait for its reply.
+      await expect(
+        svc.deliverOpenCodeMemberMessage(teamName, {
+          memberName: 'team-lead',
+          text: 'lead remains addressable after primary teammate restart',
+          messageId: 'msg-opencode-lead-after-primary-restart',
+        })
+      ).resolves.toMatchObject({
+        delivered: true,
+        accepted: false,
+        responsePending: true,
+        queuedBehindMessageId: 'msg-opencode-lead-primary-lane',
+      });
+      expect(adapter.messageInputs).toHaveLength(1);
+      const ledger = createOpenCodePromptDeliveryLedger(teamName, 'primary', {
+        teamsBasePath: getTeamsBasePath(),
+      });
+      const priorDelivery = await ledger.getActiveForMember({
+        teamName,
+        laneId: 'primary',
+        memberName: 'team-lead',
+      });
+      expect(priorDelivery).toMatchObject({
+        runId,
+        inboxMessageId: 'msg-opencode-lead-primary-lane',
+        inboxReadCommittedAt: null,
+      });
+      expect(priorDelivery?.cancelledAt).toBeFalsy();
+      // A correlated reply must recover the preserved prompt through production proof lookup.
+      const userInboxPath = path.join(getTeamsBasePath(), teamName, 'inboxes', 'user.json');
+      await fs.mkdir(path.dirname(userInboxPath), { recursive: true });
+      const replies: InboxMessage[] = await readInboxRows(teamName, 'user').catch(() => []);
+      replies.push({
+        from: 'team-lead',
+        to: 'user',
+        text: 'The primary lane is ready.',
+        summary: 'Primary lane ready',
+        timestamp: new Date().toISOString(),
+        read: false,
+        messageId: 'reply-opencode-lead-primary-lane',
+        relayOfMessageId: 'msg-opencode-lead-primary-lane',
+        source: 'runtime_delivery',
+      });
+      await fs.writeFile(userInboxPath, JSON.stringify(replies), 'utf8');
+
       await expectOpenCodeTrackedPendingDelivery(
         svc.deliverOpenCodeMemberMessage(teamName, {
           memberName: 'team-lead',
@@ -826,6 +872,17 @@ describe(
           messageId: 'msg-opencode-lead-after-primary-restart',
         })
       );
+      const recoveredDelivery = await ledger.getByInboxMessage({
+        memberName: 'team-lead',
+        teamName,
+        laneId: 'primary',
+        inboxMessageId: 'msg-opencode-lead-primary-lane',
+      });
+      expect(recoveredDelivery).toMatchObject({
+        status: 'responded',
+        visibleReplyMessageId: 'reply-opencode-lead-primary-lane',
+      });
+      expect(recoveredDelivery?.cancelledAt).toBeFalsy();
       expect(adapter.messageInputs).toHaveLength(2);
       expect(adapter.messageInputs[1]).toMatchObject({
         runId,
@@ -13947,7 +14004,9 @@ describe(
 
       await expect(delivery).resolves.toMatchObject({
         delivered: false,
-        responseState: 'permission_blocked',
+        accepted: false,
+        responsePending: false,
+        reason: 'opencode_prompt_delivery_cancelled',
       });
       expect(approvalEvents).not.toEqual(
         expect.arrayContaining([
@@ -14018,7 +14077,9 @@ describe(
         })
       ).resolves.toMatchObject({
         delivered: false,
-        responseState: 'permission_blocked',
+        accepted: false,
+        responsePending: false,
+        reason: 'opencode_prompt_delivery_cancelled',
       });
       expect(approvalEvents).not.toEqual(
         expect.arrayContaining([
