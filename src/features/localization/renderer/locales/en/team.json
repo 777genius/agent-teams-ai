@@ -72,7 +72,30 @@
       "externalTeam": "external team",
       "crossTeamAwaitingReply": "Cross-team message sent, awaiting reply",
       "user": "user",
-      "awaitingApproval": "awaiting approval"
+      "awaitingApproval": "awaiting approval",
+      "discardQueued": {
+        "action": "Discard queued messages",
+        "alreadyDelivered": "Nothing was discarded: those messages had already been delivered to \"{{member}}\".",
+        "cancelLabel": "Cancel",
+        "confirmLabel": "Discard",
+        "count": "{{count}} queued",
+        "count_few": "{{count}} queued",
+        "count_many": "{{count}} queued",
+        "count_one": "{{count}} queued",
+        "count_other": "{{count}} queued",
+        "failedFallbackMessage": "An unexpected error occurred",
+        "failedTitle": "Failed to discard queued messages",
+        "message": "Discard {{count}} queued messages for \"{{member}}\"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "message_few": "Discard {{count}} queued messages for \"{{member}}\"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "message_many": "Discard {{count}} queued messages for \"{{member}}\"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "message_one": "Discard {{count}} queued message for \"{{member}}\"? It has not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "message_other": "Discard {{count}} queued messages for \"{{member}}\"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.",
+        "okLabel": "OK",
+        "remaining": "Discarded {{discarded}}. Still queued: {{remaining}}.",
+        "resultTitle": "Queued messages",
+        "title": "Discard queued messages",
+        "tooltip": "Discard this member's queued messages"
+      }
     },
     "reply": {
       "replyingTo": "Replying to",

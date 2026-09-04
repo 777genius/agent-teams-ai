@@ -122,32 +122,7 @@ export const CONFIG_UNHIDE_SESSIONS = 'config:unhideSessions';
 // SSH API Channels
 // =============================================================================
 
-/** Connect to SSH host */
-export const SSH_CONNECT = 'ssh:connect';
-
-/** Disconnect SSH and switch to local */
-export const SSH_DISCONNECT = 'ssh:disconnect';
-
-/** Get current SSH connection state */
-export const SSH_GET_STATE = 'ssh:getState';
-
-/** Test SSH connection without switching */
-export const SSH_TEST = 'ssh:test';
-
-/** Get SSH config hosts from ~/.ssh/config */
-export const SSH_GET_CONFIG_HOSTS = 'ssh:getConfigHosts';
-
-/** Resolve a single SSH config host alias */
-export const SSH_RESOLVE_HOST = 'ssh:resolveHost';
-
-/** Save last SSH connection config */
-export const SSH_SAVE_LAST_CONNECTION = 'ssh:saveLastConnection';
-
-/** Get last saved SSH connection config */
-export const SSH_GET_LAST_CONNECTION = 'ssh:getLastConnection';
-
-/** SSH status event channel (main -> renderer) */
-export const SSH_STATUS = 'ssh:status';
+export * from './sshChannels';
 
 // =============================================================================
 // Updater API Channels
@@ -334,6 +309,12 @@ export const TEAM_RESTORE_TASK = 'team:restoreTask';
 /** Get list of teams with live CLI processes */
 export const TEAM_ALIVE_LIST = 'team:aliveList';
 export const TEAM_STOP = 'team:stop';
+
+/** List queued (undelivered, from user) inbox messages for a member */
+export const TEAM_GET_QUEUED_USER_MESSAGES = 'team:getQueuedUserMessages';
+
+/** Discard the named queued (undelivered, from user) inbox messages for a member */
+export const TEAM_DISCARD_QUEUED_USER_MESSAGES = 'team:discardQueuedUserMessages';
 
 /** Create team config without provisioning CLI */
 export const TEAM_CREATE_CONFIG = 'team:createConfig';

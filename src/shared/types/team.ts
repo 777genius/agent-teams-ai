@@ -615,6 +615,24 @@ export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runti
   messageId: string;
 };
 
+/** Undelivered user message (read: false, from: "user") persisted in a member inbox file. */
+export interface QueuedUserMessageSummary {
+  messageId: string;
+  text: string;
+  timestamp: string;
+  summary?: string;
+}
+
+export interface QueuedUserMessagesSnapshot {
+  member: string;
+  messages: QueuedUserMessageSummary[];
+}
+
+export interface DiscardQueuedUserMessagesResult {
+  discarded: number;
+  remainingQueued: number;
+}
+
 export interface AddTaskCommentRequest {
   text: string;
   attachments?: CommentAttachmentPayload[];

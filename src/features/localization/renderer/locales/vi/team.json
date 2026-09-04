@@ -72,7 +72,30 @@
       "externalTeam": "đội ngũ bên ngoài",
       "crossTeamAwaitingReply": "Đã gửi tin nhắn giữa các đội ngũ, đang chờ phản hồi",
       "user": "người dùng",
-      "awaitingApproval": "đang chờ phê duyệt"
+      "awaitingApproval": "đang chờ phê duyệt",
+      "discardQueued": {
+        "action": "Xóa các tin nhắn đang chờ",
+        "alreadyDelivered": "Không có gì bị xóa: những tin nhắn đó đã được chuyển đến \"{{member}}\".",
+        "cancelLabel": "Hủy bỏ",
+        "confirmLabel": "Xóa",
+        "count": "{{count}} đang chờ",
+        "count_few": "{{count}} đang chờ",
+        "count_many": "{{count}} đang chờ",
+        "count_one": "{{count}} đang chờ",
+        "count_other": "{{count}} đang chờ",
+        "failedFallbackMessage": "Đã xảy ra lỗi không mong muốn",
+        "failedTitle": "Không thể xóa các tin nhắn đang chờ",
+        "message": "Xóa {{count}} tin nhắn đang chờ cho \"{{member}}\"? Chúng chưa được chuyển đi và sẽ bị xóa vĩnh viễn. Các tin nhắn đã chuyển và tin nhắn giữa các tác nhân không bị ảnh hưởng.",
+        "message_few": "Xóa {{count}} tin nhắn đang chờ cho \"{{member}}\"? Chúng chưa được chuyển đi và sẽ bị xóa vĩnh viễn. Các tin nhắn đã chuyển và tin nhắn giữa các tác nhân không bị ảnh hưởng.",
+        "message_many": "Xóa {{count}} tin nhắn đang chờ cho \"{{member}}\"? Chúng chưa được chuyển đi và sẽ bị xóa vĩnh viễn. Các tin nhắn đã chuyển và tin nhắn giữa các tác nhân không bị ảnh hưởng.",
+        "message_one": "Xóa {{count}} tin nhắn đang chờ cho \"{{member}}\"? Tin nhắn chưa được chuyển đi và sẽ bị xóa vĩnh viễn. Các tin nhắn đã chuyển và tin nhắn giữa các tác nhân không bị ảnh hưởng.",
+        "message_other": "Xóa {{count}} tin nhắn đang chờ cho \"{{member}}\"? Chúng chưa được chuyển đi và sẽ bị xóa vĩnh viễn. Các tin nhắn đã chuyển và tin nhắn giữa các tác nhân không bị ảnh hưởng.",
+        "okLabel": "OK",
+        "remaining": "Đã xóa {{discarded}}. Vẫn đang chờ: {{remaining}}.",
+        "resultTitle": "Tin nhắn đang chờ",
+        "title": "Xóa các tin nhắn đang chờ",
+        "tooltip": "Xóa các tin nhắn đang chờ của thành viên này"
+      }
     },
     "reply": {
       "replyingTo": "Đang trả lời",

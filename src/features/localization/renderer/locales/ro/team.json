@@ -72,7 +72,30 @@
       "externalTeam": "echipă externă",
       "crossTeamAwaitingReply": "Mesaj între echipe trimis, se așteaptă răspunsul",
       "user": "utilizator",
-      "awaitingApproval": "se așteaptă aprobarea"
+      "awaitingApproval": "se așteaptă aprobarea",
+      "discardQueued": {
+        "action": "Renunță la mesajele din coadă",
+        "alreadyDelivered": "Nu s-a eliminat nimic: acele mesaje fuseseră deja livrate către \"{{member}}\".",
+        "cancelLabel": "Anulează",
+        "confirmLabel": "Renunță",
+        "count": "{{count}} în coadă",
+        "count_few": "{{count}} în coadă",
+        "count_many": "{{count}} în coadă",
+        "count_one": "{{count}} în coadă",
+        "count_other": "{{count}} în coadă",
+        "failedFallbackMessage": "A apărut o eroare neașteptată",
+        "failedTitle": "Mesajele din coadă nu au putut fi eliminate",
+        "message": "Renunți la {{count}} mesaje din coadă pentru \"{{member}}\"? Nu au fost încă livrate și vor fi eliminate definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "message_few": "Renunți la {{count}} mesaje din coadă pentru \"{{member}}\"? Nu au fost încă livrate și vor fi eliminate definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "message_many": "Renunți la {{count}} de mesaje din coadă pentru \"{{member}}\"? Nu au fost încă livrate și vor fi eliminate definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "message_one": "Renunți la {{count}} mesaj din coadă pentru \"{{member}}\"? Nu a fost încă livrat și va fi eliminat definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "message_other": "Renunți la {{count}} mesaje din coadă pentru \"{{member}}\"? Nu au fost încă livrate și vor fi eliminate definitiv. Mesajele livrate și cele dintre agenți nu sunt afectate.",
+        "okLabel": "OK",
+        "remaining": "Eliminate: {{discarded}}. Rămân în coadă: {{remaining}}.",
+        "resultTitle": "Mesaje în coadă",
+        "title": "Renunță la mesajele din coadă",
+        "tooltip": "Renunță la mesajele din coadă ale acestui membru"
+      }
     },
     "reply": {
       "replyingTo": "Se răspunde la",
