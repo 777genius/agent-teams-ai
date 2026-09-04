@@ -240,8 +240,27 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
         'REPLAY GUARD: this same inbound message may reach you more than once'
       );
       expect(text).toContain('Before acting, check the current task board and your recent sent');
-      expect(text).toContain('do NOT repeat any action and do NOT send another reply');
+      expect(text).toContain('Do NOT redo an action that is already complete');
+      expect(text).toContain('do not create a task that already exists');
+      expect(text).toContain('do not re-send a reply you already sent');
       expect(text).toContain('Never declare overall completion (for example "ALL DONE")');
+    }
+  });
+
+  it('treats unfinished work as work to resume, not as proof the message was handled', async () => {
+    for (const replyRecipient of [undefined, 'user', 'team-lead', 'alice', 'system']) {
+      const text = await deliveredPromptText(replyRecipient);
+
+      expect(text).toContain(
+        'Work that is only started or partly done is NOT handled: continue it and finish what is missing.'
+      );
+      expect(text).toContain(
+        'Only when everything this message asked for is verifiably complete, end the turn'
+      );
+      // The guard must never accept partial progress as proof of handling: a replay that follows
+      // an interruption would then read "work already started" and end the turn on a half-done job.
+      expect(text).not.toContain('work already started');
+      expect(text).not.toContain('do NOT repeat any action and do NOT send another reply');
     }
   });
 

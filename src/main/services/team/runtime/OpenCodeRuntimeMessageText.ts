@@ -161,7 +161,7 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
       ? `<opencode_delivery_context>${deliveryContext}</opencode_delivery_context>`
       : null,
     'You are running in OpenCode, not Claude Code or Codex native.',
-    'REPLAY GUARD: this same inbound message may reach you more than once (delivery retries and session rebuilds replay it). Before acting, check the current task board and your recent sent messages. If they already reflect this message (tasks already created, work already started, reply already sent), do NOT repeat any action and do NOT send another reply; end the turn with one short plain-text line noting it was already handled. Never declare overall completion (for example "ALL DONE") unless the required final state verifiably exists right now.',
+    'REPLAY GUARD: this same inbound message may reach you more than once (delivery retries and session rebuilds replay it). Before acting, check the current task board and your recent sent messages for what this message already produced. Do NOT redo an action that is already complete: do not create a task that already exists, and do not re-send a reply you already sent. Work that is only started or partly done is NOT handled: continue it and finish what is missing. Only when everything this message asked for is verifiably complete, end the turn with one short plain-text line noting it was already handled. Never declare overall completion (for example "ALL DONE") unless the required final state verifiably exists right now.',
     actionModeWorkScopeReminder,
     ...responseInstructions,
     'Do not call runtime_bootstrap_checkin or member_briefing just to answer this delivered app message.',
