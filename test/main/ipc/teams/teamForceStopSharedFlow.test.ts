@@ -22,6 +22,7 @@ vi.mock('@main/services/team/TeamDataWorkerClient', () => ({
 const forceStopFlowMocks = vi.hoisted(() => ({
   runTeamForceStopFlow: vi.fn(async () => ({
     stopOutcome: 'stopped' as const,
+    cleanupOutcome: 'completed' as const,
     killedRuntimePids: [],
     clearedPendingDeliveries: 0,
     diagnostics: [],
@@ -119,7 +120,9 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
     for (const [, ports] of [ipcCall, httpCall]) {
       await ports.stopTeam('fixteam');
       await ports.observeOwnedRuntimeRunIds('fixteam');
-      await ports.killRetainedRuntimeProcesses('fixteam', { requestedAtMs: 1_700_000_000_000 });
+      await ports.killRetainedRuntimeProcesses('fixteam', {
+        requestedAtMs: 1_700_000_000_000,
+      });
       await ports.clearPendingPromptDeliveries('fixteam', {
         requestedAtMs: 1_700_000_000_000,
         ownedRunIds: ['run-observed'],

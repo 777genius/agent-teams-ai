@@ -1359,6 +1359,149 @@ describe('OpenCodePromptDeliveryLedger', () => {
     ]);
   });
 
+  it('keeps persisted cancellation absorbing across every late automatic mutation', async () => {
+    const store = createStore();
+    const input = {
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      runId: 'stopped-run',
+      inboxMessageId: 'stopped-message',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher' as const,
+      replyRecipient: 'user',
+      payloadHash: 'sha256:stopped',
+      now: '2026-04-25T10:00:00.000Z',
+    };
+    const pending = await store.ensurePending(input);
+    await store.cancelNonTerminalRecords({ now: input.now, reason: 'user force stop' });
+    const [cancelled] = await store.list();
+    expect(cancelled.cancelledAt).toBe(input.now);
+    await expect(
+      store.pruneTerminalRecords({ now: new Date('2027-04-25T10:00:00.000Z') })
+    ).resolves.toEqual({ pruned: 0, remaining: 1 });
+    // Reopening models a late callback in another service instance or after restart.
+    const reopened = createStore();
+    const id = pending.id;
+    const late = '2026-04-25T10:01:00.000Z';
+    const responseObservation = {
+      state: 'responded_plain_text' as const,
+      deliveredUserMessageId: 'late-prompt',
+      assistantMessageId: 'late-assistant',
+      toolCallNames: [],
+      visibleMessageToolCallId: null,
+      visibleReplyMessageId: null,
+      visibleReplyCorrelation: null,
+      latestAssistantPreview: 'Late response',
+      reason: null,
+    };
+    const mutations = [
+      () => reopened.applyDeliveryResult({ id, accepted: true, responseObservation, now: late }),
+      () => reopened.applyDeliveryResult({ id, accepted: false, attempted: true, now: late }),
+      () => reopened.applyObservation({ id, responseObservation, observedAt: late }),
+      () =>
+        reopened.applyDestinationProof({
+          id,
+          visibleReplyInbox: 'user',
+          visibleReplyMessageId: 'late-reply',
+          visibleReplyCorrelation: 'plain_assistant_text',
+          semanticallySufficient: true,
+          observedAt: late,
+        }),
+      () =>
+        reopened.markAcceptanceUnknown({ id, reason: 'late', nextAttemptAt: late, markedAt: late }),
+      () =>
+        reopened.markNextAttemptScheduled({
+          id,
+          status: 'retry_scheduled',
+          nextAttemptAt: late,
+          reason: 'late',
+          scheduledAt: late,
+        }),
+      () =>
+        reopened.markSessionRefreshScheduled({
+          id,
+          nextAttemptAt: late,
+          reason: 'late',
+          scheduledAt: late,
+        }),
+      () =>
+        reopened.markSessionStaleObservationScheduled({
+          id,
+          nextAttemptAt: late,
+          reason: 'late',
+          scheduledAt: late,
+        }),
+      () => reopened.markRetryAttempted({ id, attemptedAt: late }),
+      () => reopened.markFailedTerminal({ id, reason: 'late failure', failedAt: late }),
+      () => reopened.markInboxReadCommitted({ id, committedAt: late }),
+      () => reopened.markInboxReadCommitFailed({ id, error: 'late commit error', failedAt: late }),
+      () => reopened.ensurePending({ ...input, payloadHash: 'sha256:changed', now: late }),
+      () =>
+        reopened.ensurePending({ ...input, messageKind: 'task_comment_notification', now: late }),
+    ];
+    for (const mutate of mutations) {
+      await expect(mutate()).resolves.toEqual(cancelled);
+      await expect(reopened.list()).resolves.toEqual([cancelled]);
+    }
+    await expect(reopened.listDue({ now: new Date(late), limit: 10 })).resolves.toEqual([]);
+    await expect(reopened.getActiveForMember(input)).resolves.toBeNull();
+    // A deliberate new message in a successor run remains deliverable.
+    const successor = await reopened.ensurePending({
+      ...input,
+      source: 'manual',
+      inboxMessageId: 'new-manual-message',
+      runId: 'successor-run',
+      now: late,
+    });
+    await expect(
+      reopened.applyDeliveryResult({ id: successor.id, accepted: true, now: late })
+    ).resolves.toMatchObject({ status: 'accepted', runId: 'successor-run' });
+  });
+
+  it('honors cancellation persisted before the explicit marker existed', async () => {
+    const store = await writeCorruptedLedgerRecord((record) => {
+      record.status = 'failed_terminal';
+      record.lastReason = 'force_stop_requested: pending delivery cancelled by user force stop';
+      record.failedAt = record.updatedAt;
+    });
+    const [cancelled] = await store.list();
+    expect(cancelled.cancelledAt).toBeUndefined();
+    await expect(
+      store.pruneTerminalRecords({ now: new Date('2027-04-25T10:00:00.000Z') })
+    ).resolves.toEqual({ pruned: 0, remaining: 1 });
+    await expect(
+      store.applyDeliveryResult({
+        id: cancelled.id,
+        accepted: true,
+        now: '2026-04-25T10:01:00.000Z',
+      })
+    ).resolves.toEqual(cancelled);
+  });
+
+  it('preserves recovery of ordinary terminal failures without a cancellation marker', async () => {
+    const store = createStore();
+    const pending = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'recoverable',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'manual',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:recoverable',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    await store.markFailedTerminal({
+      id: pending.id,
+      reason: 'retry exhausted',
+      failedAt: pending.createdAt,
+    });
+    await expect(
+      store.applyDeliveryResult({ id: pending.id, accepted: true, now: pending.createdAt })
+    ).resolves.toMatchObject({ status: 'accepted' });
+  });
+
   it('cancels every selectable record and leaves finished ones alone', async () => {
     const store = createStore();
     const pending = await store.ensurePending({

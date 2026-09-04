@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Annulla",
       "confirmLabel": "Arresto forzato",
-      "message": "Forzare l'arresto di \"{{team}}\"? Questo interrompe il lavoro in corso: viene eseguito prima l'arresto normale, poi vengono terminati i processi di runtime rimanenti del team (compresi i turni del lead in corso) e vengono annullate le consegne di messaggi in sospeso. I messaggi in coda restano nella posta in arrivo.",
+      "message": "Forzare l'arresto di \"{{team}}\"? Tenta di arrestare questo team e annulla le sue consegne di messaggi in sospeso. L'uscita del runtime non è garantita; gli host runtime condivisi non vengono terminati. I messaggi in coda restano nella posta in arrivo.",
       "title": "Arresto forzato del team"
     },
     "forceStopFailed": {

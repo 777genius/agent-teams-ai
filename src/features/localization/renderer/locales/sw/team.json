@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Ghairi",
       "confirmLabel": "Simamisha kwa nguvu",
-      "message": "Simamisha \"{{team}}\" kwa nguvu? Hii hukatiza kazi inayoendelea: kwanza usimamishaji wa kawaida huendeshwa, kisha michakato iliyosalia ya utekelezaji ya timu (pamoja na zamu za kiongozi zinazoendelea) huzimwa na uwasilishaji wa jumbe unaosubiri hughairiwa. Jumbe zilizo kwenye foleni hubaki kwenye kikasha.",
+      "message": "Simamisha \"{{team}}\" kwa nguvu? Hujaribu kusimamisha timu hii na hughairi uwasilishaji wake wa jumbe unaosubiri. Kufungwa kwa mazingira ya utekelezaji hakuhakikishwi; seva za utekelezaji zinazoshirikiwa hazizimwi. Jumbe zilizo kwenye foleni hubaki kwenye kikasha.",
       "title": "Simamisha timu kwa nguvu"
     },
     "forceStopFailed": {

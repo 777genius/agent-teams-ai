@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Anulează",
       "confirmLabel": "Oprire forțată",
-      "message": "Oprești forțat \"{{team}}\"? Aceasta întrerupe lucrul în curs: se execută mai întâi oprirea obișnuită, apoi se închid procesele de execuție rămase ale echipei (inclusiv turele în curs ale liderului) și se anulează livrările de mesaje în așteptare. Mesajele din coadă rămân în inbox.",
+      "message": "Oprești forțat \"{{team}}\"? Încearcă să oprească această echipă și anulează livrările de mesaje în așteptare ale acesteia. Închiderea mediului de execuție nu este garantată; gazdele de execuție partajate nu sunt oprite. Mesajele din coadă rămân în inbox.",
       "title": "Oprire forțată a echipei"
     },
     "forceStopFailed": {

@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Kanselahin",
       "confirmLabel": "Sapilitang ihinto",
-      "message": "Sapilitang ihinto ang \"{{team}}\"? Naaabala nito ang kasalukuyang trabaho: patatakbuhin muna ang karaniwang paghinto, pagkatapos ay tatapusin ang natitirang mga runtime process ng team (kasama ang mga kasalukuyang turn ng lead) at kakanselahin ang mga nakabinbing paghahatid ng mensahe. Nananatili sa inbox ang mga naka-queue na mensahe.",
+      "message": "Sapilitang ihinto ang \"{{team}}\"? Susubukang ihinto ang team na ito at kakanselahin ang mga nakabinbing paghahatid ng mensahe nito. Hindi garantisadong magsasara ang runtime; hindi ihihinto ang mga shared runtime host. Mananatili sa inbox ang mga naka-queue na mensahe.",
       "title": "Sapilitang ihinto ang team"
     },
     "forceStopFailed": {

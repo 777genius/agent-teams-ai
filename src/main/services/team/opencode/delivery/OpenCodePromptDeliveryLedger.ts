@@ -59,6 +59,8 @@ export interface OpenCodePromptDeliveryLedgerRecord {
   acceptedAt: string | null;
   respondedAt: string | null;
   failedAt: string | null;
+  /** Persisted force cancellation; late automatic writers must leave this row unchanged. */
+  cancelledAt?: string | null;
   inboxReadCommittedAt: string | null;
   inboxReadCommitError: string | null;
   prePromptCursor: string | null;
@@ -176,6 +178,10 @@ export class OpenCodePromptDeliveryLedgerStore {
     await this.store.updateLocked((records) => {
       const existing = records.find((record) => record.id === id);
       if (existing) {
+        if (isOpenCodePromptDeliveryCancelled(existing)) {
+          result = existing;
+          return records;
+        }
         if (existing.payloadHash !== input.payloadHash) {
           const reason = 'opencode_prompt_delivery_payload_mismatch';
           const updated: OpenCodePromptDeliveryLedgerRecord = {
@@ -770,6 +776,7 @@ export class OpenCodePromptDeliveryLedgerStore {
           ...record,
           status: 'failed_terminal' as const,
           failedAt: input.now,
+          cancelledAt: input.now,
           nextAttemptAt: null,
           lastReason: input.reason,
           diagnostics: mergeDiagnostics(record.diagnostics, [input.reason]),
@@ -823,7 +830,7 @@ export class OpenCodePromptDeliveryLedgerStore {
         if (record.id !== id) {
           return record;
         }
-        updated = updater(record);
+        updated = isOpenCodePromptDeliveryCancelled(record) ? record : updater(record);
         return updated;
       })
     );
@@ -1031,6 +1038,7 @@ function isOpenCodePromptDeliveryLedgerRecord(
     isOptionalNullableString(record.acceptedAt) &&
     isOptionalNullableString(record.respondedAt) &&
     isOptionalNullableString(record.failedAt) &&
+    isOptionalNullableString(record.cancelledAt) &&
     isOptionalNullableString(record.inboxReadCommittedAt) &&
     isOptionalNullableString(record.inboxReadCommitError) &&
     isOptionalNullableString(record.prePromptCursor) &&
@@ -1148,6 +1156,15 @@ function isTaskRefArray(value: unknown): value is TaskRef[] {
   );
 }
 
+export function isOpenCodePromptDeliveryCancelled(
+  record: OpenCodePromptDeliveryLedgerRecord
+): boolean {
+  return Boolean(
+    record.cancelledAt ||
+    (record.status === 'failed_terminal' && record.lastReason?.startsWith('force_stop_requested:'))
+  );
+}
+
 function isTerminalForAutomaticSelection(record: OpenCodePromptDeliveryLedgerRecord): boolean {
   if (
     record.status === 'responded' &&
@@ -1210,6 +1227,10 @@ function shouldPruneOpenCodePromptDeliveryRecord(
   respondedRetentionMs: number,
   failedRetentionMs: number
 ): boolean {
+  // Unread inbox rows can outlive the retention window and rebuild a pruned delivery.
+  if (isOpenCodePromptDeliveryCancelled(record)) {
+    return false;
+  }
   if (record.status === 'responded' && record.inboxReadCommittedAt) {
     const committedMs = Date.parse(record.inboxReadCommittedAt);
     return Number.isFinite(committedMs) && nowMs - committedMs >= respondedRetentionMs;

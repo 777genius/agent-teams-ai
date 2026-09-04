@@ -1,20 +1,6 @@
-/**
- * The force stop control's whole sequence: confirm the destructive action, run
- * it, refresh the view, and tell the user when it did not run at all.
- *
- * The two awaits are deliberately separate. Only the first one decides whether
- * the escape hatch ran; once it resolves the runtime is down, and a refresh
- * that fails after it is a stale view, not a stop that did not happen.
- *
- * It lives beside `TeamDetailView` rather than inside it because the failure
- * branch is the only place in that view where an action failure has to reach
- * the user, and a 3.7k-line component is not somewhere a test can reach a
- * three-line branch.
- *
- * Labels are resolved by the caller, so this module carries no i18n coupling
- * and the view keeps its typed `t` calls.
- */
+import type { TeamForceStopResult } from '@shared/types';
 
+/** Confirm, stop, report incomplete cleanup, then refresh independently. */
 export interface TeamForceStopActionLabels {
   confirmTitle: string;
   confirmMessage: string;
@@ -35,7 +21,7 @@ export interface TeamForceStopActionPorts {
     cancelLabel?: string;
     variant?: 'default' | 'danger';
   }): Promise<boolean>;
-  forceStop(teamName: string): Promise<unknown>;
+  forceStop(teamName: string): Promise<TeamForceStopResult>;
   refreshTeamData(teamName: string): Promise<void>;
   /** Drives the control's pending state; never set while the user is deciding. */
   setBusy(busy: boolean): void;
@@ -44,7 +30,12 @@ export interface TeamForceStopActionPorts {
   logRefreshError(error: unknown): void;
 }
 
-export type TeamForceStopActionOutcome = 'cancelled' | 'ran' | 'ran_refresh_failed' | 'failed';
+export type TeamForceStopActionOutcome =
+  | 'cancelled'
+  | 'ran'
+  | 'ran_refresh_failed'
+  | 'incomplete'
+  | 'failed';
 
 export async function runTeamForceStopAction(
   ports: TeamForceStopActionPorts
@@ -60,47 +51,40 @@ export async function runTeamForceStopAction(
     return 'cancelled';
   }
   ports.setBusy(true);
+  const reportFailure = (message: string): void => {
+    void ports.confirm({
+      title: ports.labels.failureTitle,
+      message,
+      confirmLabel: ports.labels.failureConfirmLabel,
+      variant: 'danger',
+    });
+  };
   try {
+    let result: TeamForceStopResult;
     try {
-      await ports.forceStop(ports.teamName);
+      result = await ports.forceStop(ports.teamName);
     } catch (error) {
       ports.logError(error);
-      /*
-       * The flow behind force stop answers with diagnostics even when the
-       * regular stop inside it failed, so a rejection here does not mean "the
-       * stop did not work" - it means the escape hatch never ran. Nothing on
-       * screen says so: the control simply stops pulsing and the team stays
-       * alive. It is also the last thing the user can try from the app, which
-       * is why this one failure gets a dialog while the regular stop beside
-       * it, whose answer to failing is this very control, keeps reporting
-       * through the log.
-       *
-       * The dialog is the pattern the app already uses for a failed
-       * destructive action; see the failed task delete in `GlobalTaskList`.
-       */
-      void ports.confirm({
-        title: ports.labels.failureTitle,
-        message: selectTeamForceStopFailureMessage(error, ports.labels.failureFallbackMessage),
-        confirmLabel: ports.labels.failureConfirmLabel,
-        variant: 'danger',
-      });
+      reportFailure(selectTeamForceStopFailureMessage(error, ports.labels.failureFallbackMessage));
       return 'failed';
     }
+    const incomplete = result.cleanupOutcome !== 'completed';
+    if (incomplete) {
+      ports.logError(result);
+      reportFailure(
+        result.diagnostics.filter((message) => message.trim()).join('\n') ||
+          ports.labels.failureFallbackMessage
+      );
+    }
+    // Even an incomplete stop may change runtime state. A failed refresh must
+    // never obscure its outcome or imply that completed cleanup failed.
     try {
       await ports.refreshTeamData(ports.teamName);
     } catch (refreshError) {
-      /*
-       * The stop has already happened, so the failure dialog above would be a
-       * lie: it says the escape hatch never ran. What failed is the read that
-       * repaints the view, and the app's answer to that is the log plus the
-       * store's own refresh - `refreshTeamData` reports a stale read through
-       * `selectedTeamError` and the polling behind the view retries, which is
-       * also why the regular stop beside this one only logs.
-       */
       ports.logRefreshError(refreshError);
-      return 'ran_refresh_failed';
+      return incomplete ? 'incomplete' : 'ran_refresh_failed';
     }
-    return 'ran';
+    return incomplete ? 'incomplete' : 'ran';
   } finally {
     ports.setBusy(false);
   }

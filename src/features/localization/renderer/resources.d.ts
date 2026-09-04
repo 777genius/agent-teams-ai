@@ -3806,7 +3806,7 @@ export default interface Resources {
       forceStop: {
         cancelLabel: 'Cancel';
         confirmLabel: 'Force stop';
-        message: 'Force stop "{{team}}"? This interrupts work in progress: it runs the regular stop, then kills the team\'s remaining runtime processes (including in-flight lead turns) and cancels pending message deliveries. Queued messages stay in the inbox.';
+        message: 'Force stop "{{team}}"? Attempts to stop this team and cancels its pending message deliveries. Runtime exit is not guaranteed; shared runtime hosts are not terminated. Queued messages stay in the inbox.';
         title: 'Force stop team';
       };
       forceStopFailed: {

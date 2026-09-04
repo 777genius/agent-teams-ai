@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "İptal",
       "confirmLabel": "Zorla durdur",
-      "message": "\"{{team}}\" zorla durdurulsun mu? Bu, devam eden işi keser: önce normal durdurma çalıştırılır, ardından ekibin kalan çalışma zamanı süreçleri (devam eden lider turları dahil) sonlandırılır ve bekleyen mesaj teslimleri iptal edilir. Kuyruktaki mesajlar gelen kutusunda kalır.",
+      "message": "\"{{team}}\" zorla durdurulsun mu? Bu ekibi durdurmayı dener ve bekleyen mesaj teslimlerini iptal eder. Çalışma zamanının kapanması garanti edilmez; paylaşılan çalışma zamanı ana bilgisayarları sonlandırılmaz. Kuyruktaki mesajlar gelen kutusunda kalır.",
       "title": "Ekibi zorla durdur"
     },
     "forceStopFailed": {

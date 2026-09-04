@@ -13,6 +13,10 @@ import {
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
+import {
+  assertOpenCodePromptDeliveryNotCancelled,
+  OpenCodePromptDeliveryCancelledError,
+} from './OpenCodePromptDeliveryCancellationGuard';
 import { isOpenCodeSessionRefreshRetryRecord } from './OpenCodePromptDeliveryFollowUpPolicy';
 import {
   buildOpenCodePromptDeliveryAttemptId,
@@ -51,6 +55,25 @@ export class OpenCodeMemberMessageDeliveryService {
   constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
 
   async deliver(
+    teamName: string,
+    input: OpenCodeMemberMessageDeliveryInput
+  ): Promise<OpenCodeMemberInboxDelivery> {
+    try {
+      return await this.deliverCurrent(teamName, input);
+    } catch (error) {
+      if (!(error instanceof OpenCodePromptDeliveryCancelledError)) throw error;
+      return {
+        delivered: false,
+        accepted: false,
+        responsePending: false,
+        reason: error.message,
+        ledgerStatus: error.record?.status,
+        ledgerRecordId: error.record?.id,
+      };
+    }
+  }
+
+  private async deliverCurrent(
     teamName: string,
     input: OpenCodeMemberMessageDeliveryInput
   ): Promise<OpenCodeMemberInboxDelivery> {
@@ -314,6 +337,21 @@ export class OpenCodeMemberMessageDeliveryService {
       }
     }
 
+    const assertCurrentRun = (): void => {
+      const current =
+        laneIdentity.laneKind === 'primary'
+          ? this.deps.resolveDeliverableTrackedRuntimeRunId(teamName)
+          : this.deps.getCurrentOpenCodeRuntimeRunId(teamName, laneIdentity.laneId);
+      const hadTrackedRun =
+        laneIdentity.laneKind === 'primary' ? trackedRunId : inMemorySecondaryLaneRunId;
+      if (
+        (current && runtimeRunId && current !== runtimeRunId) ||
+        (hadTrackedRun && !current) ||
+        this.deps.stoppingSecondaryRuntimeTeams.has(teamName)
+      ) {
+        throw new OpenCodePromptDeliveryCancelledError();
+      }
+    };
     if (!this.deps.openCodePromptDeliveryWatchdogScheduler.isEnabled()) {
       const controlUrl =
         input.messageKind === 'member_work_sync_nudge'
@@ -323,8 +361,9 @@ export class OpenCodeMemberMessageDeliveryService {
         teamName,
         laneId: laneIdentity.laneId,
         memberName: canonicalMemberName,
-        send: async () =>
-          await adapter.sendMessageToMember({
+        send: async () => {
+          assertCurrentRun();
+          return await adapter.sendMessageToMember({
             ...(runtimeRunId ? { runId: runtimeRunId } : {}),
             teamName,
             laneId: laneIdentity.laneId,
@@ -341,8 +380,10 @@ export class OpenCodeMemberMessageDeliveryService {
             controlUrl: controlUrl ?? undefined,
             taskRefs: input.taskRefs,
             forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
-          }),
+          });
+        },
       });
+      assertCurrentRun();
       await this.deps.rememberOpenCodeRuntimePidFromBridge({
         teamName,
         memberName: canonicalMemberName,
@@ -352,11 +393,13 @@ export class OpenCodeMemberMessageDeliveryService {
         runtimePid: result.runtimePid,
         reason: 'opencode_delivery_runtime_pid_observed',
       });
+      assertCurrentRun();
       if (result.ok && legacyOpenCodeBootstrapSessionToStamp) {
         await this.deps.stampOpenCodeAppMcpTransportEvidenceIfMissing(
           legacyOpenCodeBootstrapSessionToStamp
         );
       }
+      assertCurrentRun();
       if (result.ok && result.sessionId && refreshedOpenCodeBootstrapSessionToStamp) {
         await this.deps.stampOpenCodeAppMcpTransportEvidenceIfMissing(
           refreshedOpenCodeBootstrapSessionToStamp,
@@ -369,6 +412,7 @@ export class OpenCodeMemberMessageDeliveryService {
       const responseObservation = normalizeOpenCodeDeliveryResponseObservation(
         result.responseObservation
       );
+      assertCurrentRun();
       await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
         teamName,
         runId: runtimeRunId,
@@ -391,6 +435,7 @@ export class OpenCodeMemberMessageDeliveryService {
               responseObservation,
             })
           : true;
+      assertCurrentRun();
       const legacyWorkSyncResponsePending =
         result.ok && input.messageKind === 'member_work_sync_nudge' && !legacyWorkSyncReadAllowed;
       return {
@@ -428,6 +473,7 @@ export class OpenCodeMemberMessageDeliveryService {
         memberName: canonicalMemberName,
       });
       active = proof.ledgerRecord;
+      await assertOpenCodePromptDeliveryNotCancelled(ledger, active);
       proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
         ledger,
         ledgerRecord: active,
@@ -436,6 +482,7 @@ export class OpenCodeMemberMessageDeliveryService {
         visibleReply: proof.visibleReply,
       });
       active = proof.ledgerRecord;
+      await assertOpenCodePromptDeliveryNotCancelled(ledger, active);
       const activeReadAllowed = await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
         teamName,
         memberName: canonicalMemberName,
@@ -445,6 +492,7 @@ export class OpenCodeMemberMessageDeliveryService {
         visibleReply: proof.visibleReply,
         ledgerRecord: active,
       });
+      await assertOpenCodePromptDeliveryNotCancelled(ledger, active);
       if (activeReadAllowed) {
         this.deps.logOpenCodePromptDeliveryEvent(
           'opencode_prompt_delivery_response_observed',
@@ -461,6 +509,7 @@ export class OpenCodeMemberMessageDeliveryService {
           ledgerRecord: active,
           eventContext: { recoveredActiveBlocker: true },
         });
+        await assertOpenCodePromptDeliveryNotCancelled(ledger, active);
         this.deps.scheduleOpenCodePromptDeliveryWatchdog({
           teamName,
           memberName: canonicalMemberName,
@@ -518,6 +567,11 @@ export class OpenCodeMemberMessageDeliveryService {
           now,
         })
       : null;
+    const checkpoint = async (): Promise<void> => {
+      await assertOpenCodePromptDeliveryNotCancelled(ledger, ledgerRecord);
+      assertCurrentRun();
+    };
+    await checkpoint();
     if (ledgerRecord?.createdAt === now) {
       this.deps.logOpenCodePromptDeliveryEvent(
         'opencode_prompt_delivery_ledger_created',
@@ -537,6 +591,7 @@ export class OpenCodeMemberMessageDeliveryService {
         memberName: canonicalMemberName,
       });
       ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
       proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
         ledger,
         ledgerRecord,
@@ -545,6 +600,7 @@ export class OpenCodeMemberMessageDeliveryService {
         visibleReply: proof.visibleReply,
       });
       ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
       let readAllowed = await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
         teamName,
         memberName: canonicalMemberName,
@@ -554,6 +610,7 @@ export class OpenCodeMemberMessageDeliveryService {
         visibleReply: proof.visibleReply,
         ledgerRecord,
       });
+      await checkpoint();
       if (readAllowed) {
         this.deps.logOpenCodePromptDeliveryEvent(
           'opencode_prompt_delivery_response_observed',
@@ -578,6 +635,7 @@ export class OpenCodeMemberMessageDeliveryService {
         ledger,
         ledgerRecord,
       });
+      await checkpoint();
 
       if (ledgerRecord.status === 'failed_terminal') {
         this.deps.logOpenCodePromptDeliveryEvent(
@@ -609,6 +667,7 @@ export class OpenCodeMemberMessageDeliveryService {
         const nextAttemptMs = ledgerRecord.nextAttemptAt
           ? Date.parse(ledgerRecord.nextAttemptAt)
           : NaN;
+        await checkpoint();
         this.deps.scheduleOpenCodePromptDeliveryWatchdog({
           teamName,
           memberName: canonicalMemberName,
@@ -673,6 +732,7 @@ export class OpenCodeMemberMessageDeliveryService {
         adapter.observeMessageDelivery &&
         !retryShouldRefreshSessionBeforeObserve
       ) {
+        await checkpoint();
         const observed = await adapter.observeMessageDelivery({
           ...(runtimeRunId ? { runId: runtimeRunId } : {}),
           teamName,
@@ -694,6 +754,7 @@ export class OpenCodeMemberMessageDeliveryService {
             ledgerRecord.runtimePromptMessageId ??
             undefined,
         });
+        await checkpoint();
         await this.deps.rememberOpenCodeRuntimePidFromBridge({
           teamName,
           memberName: canonicalMemberName,
@@ -706,6 +767,7 @@ export class OpenCodeMemberMessageDeliveryService {
         const responseObservation = normalizeOpenCodeDeliveryResponseObservation(
           observed.responseObservation
         );
+        await checkpoint();
         await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
           teamName,
           runId: runtimeRunId,
@@ -737,6 +799,7 @@ export class OpenCodeMemberMessageDeliveryService {
           diagnostics: observed.diagnostics,
           observedAt: nowIso(),
         });
+        await checkpoint();
         proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
           ledger,
           ledgerRecord,
@@ -745,6 +808,7 @@ export class OpenCodeMemberMessageDeliveryService {
           memberName: canonicalMemberName,
         });
         ledgerRecord = proof.ledgerRecord;
+        await checkpoint();
         proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
           ledger,
           ledgerRecord,
@@ -753,6 +817,7 @@ export class OpenCodeMemberMessageDeliveryService {
           visibleReply: proof.visibleReply,
         });
         ledgerRecord = proof.ledgerRecord;
+        await checkpoint();
         readAllowed = await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
           teamName,
           memberName: canonicalMemberName,
@@ -762,6 +827,7 @@ export class OpenCodeMemberMessageDeliveryService {
           visibleReply: proof.visibleReply,
           ledgerRecord,
         });
+        await checkpoint();
         if (readAllowed) {
           this.deps.logOpenCodePromptDeliveryEvent(
             'opencode_prompt_delivery_response_observed',
@@ -928,14 +994,16 @@ export class OpenCodeMemberMessageDeliveryService {
         controlUrl,
       }),
     });
+    await checkpoint();
     let result: OpenCodeTeamRuntimeMessageResult;
     try {
       result = await this.deps.sendOpenCodeMemberMessageToRuntimeSerialized({
         teamName,
         laneId: laneIdentity.laneId,
         memberName: canonicalMemberName,
-        send: async () =>
-          await adapter.sendMessageToMember({
+        send: async () => {
+          await checkpoint();
+          return await adapter.sendMessageToMember({
             ...(runtimeRunId ? { runId: runtimeRunId } : {}),
             teamName,
             laneId: laneIdentity.laneId,
@@ -953,9 +1021,11 @@ export class OpenCodeMemberMessageDeliveryService {
             controlUrl: controlUrl ?? undefined,
             taskRefs: input.taskRefs,
             forceSessionRefreshReason: forceOpenCodeSessionRefreshReason,
-          }),
+          });
+        },
       });
     } catch (error) {
+      await checkpoint();
       const diagnostic = `opencode_message_delivery_exception: ${getErrorMessage(error)}`;
       await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
         teamName,
@@ -990,6 +1060,7 @@ export class OpenCodeMemberMessageDeliveryService {
           reason: diagnostic,
           now: nowIso(),
         });
+        await checkpoint();
         this.deps.emitOpenCodePromptDeliveryTaskLogChange(
           ledgerRecord,
           'opencode-prompt-delivery-send-exception'
@@ -1025,6 +1096,7 @@ export class OpenCodeMemberMessageDeliveryService {
         diagnostics: [diagnostic],
       };
     }
+    await checkpoint();
     await this.deps.rememberOpenCodeRuntimePidFromBridge({
       teamName,
       memberName: canonicalMemberName,
@@ -1034,11 +1106,13 @@ export class OpenCodeMemberMessageDeliveryService {
       runtimePid: result.runtimePid,
       reason: 'opencode_delivery_runtime_pid_observed',
     });
+    await checkpoint();
     if (result.ok && legacyOpenCodeBootstrapSessionToStamp) {
       await this.deps.stampOpenCodeAppMcpTransportEvidenceIfMissing(
         legacyOpenCodeBootstrapSessionToStamp
       );
     }
+    await checkpoint();
     if (result.ok && result.sessionId && refreshedOpenCodeBootstrapSessionToStamp) {
       await this.deps.stampOpenCodeAppMcpTransportEvidenceIfMissing(
         refreshedOpenCodeBootstrapSessionToStamp,
@@ -1051,6 +1125,7 @@ export class OpenCodeMemberMessageDeliveryService {
     const responseObservation = normalizeOpenCodeDeliveryResponseObservation(
       result.responseObservation
     );
+    await checkpoint();
     await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
       teamName,
       runId: runtimeRunId,
@@ -1088,6 +1163,7 @@ export class OpenCodeMemberMessageDeliveryService {
         reason: promptAccepted ? responseObservation?.reason : deliveryDiagnostics[0],
         now: nowIso(),
       });
+      await checkpoint();
       this.deps.emitOpenCodePromptDeliveryTaskLogChange(
         ledgerRecord,
         'opencode-prompt-delivery-session-evidence'
@@ -1100,6 +1176,7 @@ export class OpenCodeMemberMessageDeliveryService {
         memberName: canonicalMemberName,
       });
       ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
       proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
         ledger,
         ledgerRecord,
@@ -1108,6 +1185,7 @@ export class OpenCodeMemberMessageDeliveryService {
         visibleReply: proof.visibleReply,
       });
       ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
       proof = await this.deps.observeOpenCodeDirectUserDeliveryInlineIfNeeded({
         adapter,
         ledger,
@@ -1129,6 +1207,7 @@ export class OpenCodeMemberMessageDeliveryService {
         visibleReply: proof.visibleReply,
       });
       ledgerRecord = proof.ledgerRecord;
+      await checkpoint();
       this.deps.logOpenCodePromptDeliveryEvent(
         promptAccepted
           ? ledgerRecord.status === 'unanswered'
@@ -1168,6 +1247,7 @@ export class OpenCodeMemberMessageDeliveryService {
       visibleReply,
       ledgerRecord,
     });
+    await checkpoint();
     if (ledgerRecord && promptAccepted && !readAllowed) {
       const retry = isOpenCodeDeliveryRetryablePendingResponse({
         ledgerRecord,
@@ -1222,6 +1302,7 @@ export class OpenCodeMemberMessageDeliveryService {
           diagnostics: deliveryDiagnostics,
           markedAt: nowIso(),
         });
+        await checkpoint();
         this.deps.scheduleOpenCodePromptDeliveryWatchdog({
           teamName,
           memberName: canonicalMemberName,
@@ -1244,6 +1325,7 @@ export class OpenCodeMemberMessageDeliveryService {
         });
       }
     }
+    await checkpoint();
     const responseVisibleReplyMessageId =
       ledgerRecord?.visibleReplyMessageId ??
       responseObservation?.visibleReplyMessageId ??

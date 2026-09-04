@@ -1,117 +1,52 @@
 import {
-  DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT,
   killRetainedOpenCodeRuntimeProcessesForTeam,
+  runTeamForceStopFlow,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const cleanupManagedOpenCodeServeProcesses = vi.hoisted(() =>
-  vi.fn(async () => ({ scanned: 0, killed: 0, candidates: [], diagnostics: [] }))
-);
-
+const effects = vi.hoisted(() => ({ kill: vi.fn(), sweep: vi.fn() }));
+vi.mock('@main/utils/processKill', () => ({
+  killProcessByPid: effects.kill,
+  killProcessByPidAndWait: effects.kill,
+}));
 vi.mock('@main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup', () => ({
-  cleanupManagedOpenCodeServeProcesses,
+  cleanupManagedOpenCodeServeProcesses: effects.sweep,
 }));
 
-type KillInput = Parameters<typeof killRetainedOpenCodeRuntimeProcessesForTeam>[0];
+describe('force cleanup of shared OpenCode hosts', () => {
+  it.each([{ otherAliveTeams: [] }, { otherAliveTeams: ['other-team'] }])(
+    'does not signal hosts when other alive teams are %j',
+    async ({ otherAliveTeams }) => {
+      const result = await killRetainedOpenCodeRuntimeProcessesForTeam({
+        teamName: 'sandbox',
+        otherAliveTeams,
+      });
+      expect(result).toMatchObject({ killedPids: [], incomplete: true });
+      expect(result.diagnostics.join(' ')).toContain('sharing an OpenCode host');
+      expect(effects.kill).not.toHaveBeenCalled();
+      expect(effects.sweep).not.toHaveBeenCalled();
+    }
+  );
 
-function createLaunchStateStore(): NonNullable<KillInput['launchStateStore']> {
-  return { read: vi.fn(async () => null) } as unknown as NonNullable<KillInput['launchStateStore']>;
-}
-
-describe('killRetainedOpenCodeRuntimeProcessesForTeam', () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('defaults the fence to the moment the kill step began', async () => {
-    const before = Date.now();
-
-    const result = await killRetainedOpenCodeRuntimeProcessesForTeam({
-      teamName: 'fixteam',
-      otherAliveTeams: [],
-      launchStateStore: createLaunchStateStore(),
+  it('reports unsupported hard cleanup even when scoped stop succeeds, and cancels deliveries', async () => {
+    const clear = vi.fn(async () => ({ cleared: 2, diagnostics: [] }));
+    const result = await runTeamForceStopFlow('sandbox', {
+      stopTeam: async () => {},
+      observeOwnedRuntimeRunIds: async () => ['run-a'],
+      killRetainedRuntimeProcesses: (teamName, context) =>
+        killRetainedOpenCodeRuntimeProcessesForTeam({ teamName, ...context, otherAliveTeams: [] }),
+      clearPendingPromptDeliveries: clear,
+      logWarning: vi.fn(),
     });
-
-    const after = Date.now();
-    expect(cleanupManagedOpenCodeServeProcesses).toHaveBeenCalledTimes(1);
-    const [options] = vi.mocked(cleanupManagedOpenCodeServeProcesses).mock.calls[0] as unknown as [
-      { mode: string; startedBeforeMs?: number },
-    ];
-    expect(options.mode).toBe('force');
-    expect(options.startedBeforeMs).toBeGreaterThanOrEqual(before);
-    expect(options.startedBeforeMs).toBeLessThanOrEqual(after);
-    expect(result.killedPids).toEqual([]);
-  });
-
-  it('uses the default sweep port, which is enabled, when the caller hands in none', () => {
-    expect(DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT.isEnabled()).toBe(true);
-  });
-
-  it('fences the managed host sweep by the time the stop was requested', async () => {
-    const requestedAtMs = Date.parse('2026-09-01T10:00:00.000Z');
-
-    await killRetainedOpenCodeRuntimeProcessesForTeam({
-      teamName: 'fixteam',
-      otherAliveTeams: [],
-      launchStateStore: createLaunchStateStore(),
-      requestedAtMs,
+    expect(result).toMatchObject({
+      stopOutcome: 'stopped',
+      cleanupOutcome: 'incomplete',
+      killedRuntimePids: [],
+      clearedPendingDeliveries: 2,
     });
-
-    expect(cleanupManagedOpenCodeServeProcesses).toHaveBeenCalledWith({
-      mode: 'force',
-      startedBeforeMs: requestedAtMs,
+    expect(clear).toHaveBeenCalledWith('sandbox', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
     });
-  });
-
-  it('skips the managed host sweep while another team is alive', async () => {
-    const result = await killRetainedOpenCodeRuntimeProcessesForTeam({
-      teamName: 'fixteam',
-      otherAliveTeams: ['other-team'],
-      launchStateStore: createLaunchStateStore(),
-    });
-
-    expect(cleanupManagedOpenCodeServeProcesses).not.toHaveBeenCalled();
-    expect(result.diagnostics).toContain(
-      'Skipped managed host sweep: other teams are still alive (other-team)'
-    );
-  });
-
-  it('touches no process and says so when the managed host sweep port is disabled', async () => {
-    const sweepManagedHosts = vi.fn();
-
-    const result = await killRetainedOpenCodeRuntimeProcessesForTeam({
-      teamName: 'fixteam',
-      otherAliveTeams: [],
-      launchStateStore: createLaunchStateStore(),
-      managedHostSweep: { isEnabled: () => false, sweepManagedHosts },
-    });
-
-    expect(sweepManagedHosts).not.toHaveBeenCalled();
-    expect(cleanupManagedOpenCodeServeProcesses).not.toHaveBeenCalled();
-    expect(result.killedPids).toEqual([]);
-    expect(result.diagnostics).toContain(
-      'Skipped managed host sweep: the managed host sweep is disabled for this app instance'
-    );
-  });
-
-  it('reports the pids the sweep killed', async () => {
-    cleanupManagedOpenCodeServeProcesses.mockResolvedValueOnce({
-      scanned: 2,
-      killed: 1,
-      candidates: [
-        { pid: 5150, ppid: 1, action: 'killed', reason: 'managed OpenCode serve cleanup' },
-        { pid: 5151, ppid: 1, action: 'kept_recent', reason: 'process started after this app' },
-      ],
-      diagnostics: [],
-    } as never);
-
-    const result = await killRetainedOpenCodeRuntimeProcessesForTeam({
-      teamName: 'fixteam',
-      otherAliveTeams: [],
-      launchStateStore: createLaunchStateStore(),
-    });
-
-    expect(result.killedPids).toEqual([5150]);
-    expect(result.diagnostics).toContain('Managed host sweep killed 1 host process(es)');
   });
 });

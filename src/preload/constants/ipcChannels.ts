@@ -310,7 +310,7 @@ export const TEAM_RESTORE_TASK = 'team:restoreTask';
 export const TEAM_ALIVE_LIST = 'team:aliveList';
 export const TEAM_STOP = 'team:stop';
 
-/** Force stop: regular stop, then kill retained runtime processes and cancel pending deliveries */
+/** Force stop: bounded scoped stop and pending delivery cancellation with explicit cleanup outcome */
 export const TEAM_FORCE_STOP = 'team:forceStop';
 
 /** List queued (undelivered, from user) inbox messages for a member */

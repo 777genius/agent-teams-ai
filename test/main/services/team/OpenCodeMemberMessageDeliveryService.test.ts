@@ -8,9 +8,7 @@ import type {
 } from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 
-function makeAdapter(
-  sendMessageToMember = vi.fn()
-): OpenCodeRuntimeMessageAdapter {
+function makeAdapter(sendMessageToMember = vi.fn()): OpenCodeRuntimeMessageAdapter {
   return {
     providerId: 'opencode',
     prepare: vi.fn(),
@@ -171,29 +169,26 @@ function makeDeps(
 }
 
 describe('OpenCodeMemberMessageDeliveryService', () => {
-  it(
-    'returns bridge unavailable before reading member directory when runtime adapter is missing',
-    async () => {
-      const readOpenCodeMemberDirectory = vi.fn(async () =>
-        unexpected('readOpenCodeMemberDirectory')
-      );
-      const deps = makeDeps({
-        getOpenCodeRuntimeMessageAdapter: () => null,
-        readOpenCodeMemberDirectory,
-      });
+  it('returns bridge unavailable before reading member directory when runtime adapter is missing', async () => {
+    const readOpenCodeMemberDirectory = vi.fn(async () =>
+      unexpected('readOpenCodeMemberDirectory')
+    );
+    const deps = makeDeps({
+      getOpenCodeRuntimeMessageAdapter: () => null,
+      readOpenCodeMemberDirectory,
+    });
 
-      await expect(
-        new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
-          memberName: 'alice',
-          text: 'hello',
-        })
-      ).resolves.toEqual({
-        delivered: false,
-        reason: 'opencode_runtime_message_bridge_unavailable',
-      });
-      expect(readOpenCodeMemberDirectory).not.toHaveBeenCalled();
-    }
-  );
+    await expect(
+      new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
+        memberName: 'alice',
+        text: 'hello',
+      })
+    ).resolves.toEqual({
+      delivered: false,
+      reason: 'opencode_runtime_message_bridge_unavailable',
+    });
+    expect(readOpenCodeMemberDirectory).not.toHaveBeenCalled();
+  });
 
   it('keeps the legacy unavailable-recipient reason mapping at the facade boundary', async () => {
     const deps = makeDeps({
@@ -286,6 +281,7 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
     });
     const ledger = {
       getActiveForMember: vi.fn(async () => activeRecord),
+      getByInboxMessage: vi.fn(async () => activeRecord),
     };
     const deps = makeDeps({
       getOpenCodeRuntimeMessageAdapter: () => makeAdapter(sendMessageToMember),
@@ -350,13 +346,16 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
     const ledger = {
       getActiveForMember: vi.fn(async () => null),
       ensurePending: vi.fn(async () => pendingRecord),
+      getByInboxMessage: vi.fn(async () => pendingRecord),
       applyDeliveryResult: vi.fn(async () => failedRetryableRecord),
     };
     const deps = makeDeps({
       getOpenCodeRuntimeMessageAdapter: () =>
-        makeAdapter(vi.fn(async () => {
-          throw new Error('bridge down');
-        })),
+        makeAdapter(
+          vi.fn(async () => {
+            throw new Error('bridge down');
+          })
+        ),
       createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
       openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
       openCodeVisibleReplyProofService: {
@@ -400,4 +399,108 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
       reason: 'opencode_message_delivery_exception: bridge down',
     });
   });
+  it.each(['resolve', 'reject', 'observe', 'successor', 'queued'] as const)(
+    'suppresses late %s callbacks after cancellation',
+    async (outcome) => {
+      const pending = makeLedgerRecord(
+        outcome === 'observe'
+          ? {
+              status: 'accepted',
+              responseState: 'pending',
+              runtimePromptMessageId: 'prompt-1',
+            }
+          : {}
+      );
+      let current = pending;
+      let currentRunId = 'run-1';
+      let release!: () => void;
+      let started!: () => void;
+      const entered = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const bridge = vi.fn(async () => {
+        started();
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        if (outcome === 'reject') throw new Error('bridge stopped');
+        return {
+          ok: true,
+          diagnostics: [],
+          runtimePid: 123,
+          sessionId: 'old-session',
+          runtimePromptMessageId: 'prompt-1',
+          responseObservation: { state: 'responded_plain_text' },
+        };
+      });
+      const adapter = makeAdapter(bridge);
+      if (outcome === 'observe') adapter.observeMessageDelivery = bridge as never;
+      const ledger = {
+        getActiveForMember: vi.fn(async () => null),
+        ensurePending: vi.fn(async () => pending),
+        getByInboxMessage: vi.fn(async () => current),
+        applyDeliveryResult: vi.fn(),
+        applyObservation: vi.fn(),
+      };
+      const deps = makeDeps({
+        getOpenCodeRuntimeMessageAdapter: () => adapter,
+        resolveDeliverableTrackedRuntimeRunId: vi.fn(() => currentRunId),
+        sendOpenCodeMemberMessageToRuntimeSerialized: vi.fn(async ({ send }) => {
+          if (outcome === 'queued') {
+            started();
+            await new Promise<void>((resolve) => {
+              release = resolve;
+            });
+          }
+          return await send();
+        }),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
+        openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
+        openCodeVisibleReplyProofService: {
+          applyDestinationProof: vi.fn(async () => ({ ledgerRecord: pending, visibleReply: null })),
+          materializePlainTextReplyIfNeeded: vi.fn(async () => ({
+            ledgerRecord: pending,
+            visibleReply: null,
+          })),
+          findByRelayOfMessageId: vi.fn(async () => null),
+        },
+        isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => false),
+        requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: vi.fn(async () => pending),
+      });
+      const work = new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
+        memberName: 'alice',
+        text: 'ship this',
+        messageId: 'msg-1',
+      });
+      await entered;
+      if (outcome === 'successor') currentRunId = 'run-2';
+      else
+        current = {
+          ...pending,
+          status: 'failed_terminal',
+          cancelledAt: '2026-05-09T12:00:10.000Z',
+          lastReason: 'opencode_prompt_delivery_cancelled',
+        };
+      const proofCallsBeforeCancel = vi.mocked(
+        deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded
+      ).mock.calls.length;
+      release();
+      await expect(work).resolves.toMatchObject({
+        delivered: false,
+        accepted: false,
+        responsePending: false,
+        ...(outcome === 'successor' ? {} : { ledgerStatus: 'failed_terminal' }),
+      });
+      expect(deps.rememberOpenCodeRuntimePidFromBridge).not.toHaveBeenCalled();
+      expect(deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery).not.toHaveBeenCalled();
+      expect(deps.emitOpenCodePromptDeliveryTaskLogChange).not.toHaveBeenCalled();
+      expect(deps.openCodePromptDeliveryFollowUpPolicy.schedule).not.toHaveBeenCalled();
+      expect(ledger.applyDeliveryResult).not.toHaveBeenCalled();
+      expect(ledger.applyObservation).not.toHaveBeenCalled();
+      if (outcome === 'queued') expect(bridge).not.toHaveBeenCalled();
+      expect(
+        deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded
+      ).toHaveBeenCalledTimes(proofCallsBeforeCancel);
+    }
+  );
 });

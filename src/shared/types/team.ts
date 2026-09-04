@@ -616,9 +616,10 @@ export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runti
 };
 
 export interface TeamForceStopResult {
-  /** Outcome of the regular stop flow that runs before the hard kill. */
+  /** Outcome of the bounded regular stop attempt. */
   stopOutcome: 'stopped' | 'stop_failed' | 'timed_out';
-  /** PIDs of retained runtime processes that were killed (process trees on Windows). */
+  /** Incomplete includes unsupported or unconfirmed runtime cleanup. */
+  cleanupOutcome: 'completed' | 'incomplete';
   killedRuntimePids: number[];
   /** Number of pending OpenCode prompt delivery ledger records cancelled. */
   clearedPendingDeliveries: number;

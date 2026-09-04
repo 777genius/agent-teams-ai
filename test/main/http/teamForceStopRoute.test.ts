@@ -19,6 +19,10 @@ vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (importOriginal
   };
 });
 
+vi.mock('@main/services/team/TeamLaunchStateStore', () => ({
+  TeamLaunchStateStore: vi.fn(() => ({ read: vi.fn(async () => null) })),
+}));
+
 import type { HttpServices } from '@main/http';
 import type { FastifyInstance } from 'fastify';
 

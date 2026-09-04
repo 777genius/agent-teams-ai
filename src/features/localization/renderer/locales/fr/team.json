@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Annuler",
       "confirmLabel": "Arrêt forcé",
-      "message": "Forcer l'arrêt de « {{team}} » ? Cela interrompt le travail en cours : l'arrêt normal est d'abord exécuté, puis les processus d'exécution restants de l'équipe sont terminés (y compris les tours du lead en cours) et les livraisons de messages en attente sont annulées. Les messages en file d'attente restent dans la boîte de réception.",
+      "message": "Forcer l'arrêt de \"{{team}}\" ? Tente d'arrêter cette équipe et annule ses livraisons de messages en attente. L'arrêt du moteur d'exécution n'est pas garanti ; les hôtes d'exécution partagés ne sont pas arrêtés. Les messages en file d'attente restent dans la boîte de réception.",
       "title": "Arrêt forcé de l'équipe"
     },
     "forceStopFailed": {

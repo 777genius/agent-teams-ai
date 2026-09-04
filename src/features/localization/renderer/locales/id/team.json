@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Batal",
       "confirmLabel": "Hentikan paksa",
-      "message": "Hentikan paksa \"{{team}}\"? Ini mengganggu pekerjaan yang sedang berjalan: penghentian biasa dijalankan lebih dulu, lalu proses runtime tim yang tersisa dimatikan (termasuk giliran lead yang sedang berjalan) dan pengiriman pesan yang tertunda dibatalkan. Pesan dalam antrean tetap ada di kotak masuk.",
+      "message": "Hentikan paksa \"{{team}}\"? Mencoba menghentikan tim ini dan membatalkan pengiriman pesan tertundanya. Runtime tidak dijamin berhenti; host runtime bersama tidak dihentikan. Pesan dalam antrean tetap ada di kotak masuk.",
       "title": "Hentikan paksa tim"
     },
     "forceStopFailed": {

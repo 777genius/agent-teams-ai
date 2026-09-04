@@ -1,6 +1,10 @@
 import { isLeadMember } from '@shared/utils/leadDetection';
 
 import {
+  assertOpenCodePromptDeliveryNotCancelled,
+  OpenCodePromptDeliveryCancelledError,
+} from './OpenCodePromptDeliveryCancellationGuard';
+import {
   canMaterializeOpenCodePlainTextReply,
   hasOpenCodeObservedMessageSendToolCall,
   isOpenCodeDirectUserPromptDelivery,
@@ -162,6 +166,7 @@ export class OpenCodeVisibleReplyProofService {
   }
 
   private async correlateRecoveredVisibleReply(input: {
+    checkpoint: () => Promise<void>;
     teamName: string;
     inboxName: string;
     memberName: string;
@@ -183,6 +188,7 @@ export class OpenCodeVisibleReplyProofService {
     }
 
     try {
+      await input.checkpoint();
       const correlated = await this.deps.inboxWriter.correlateRuntimeDeliveryReply(input.teamName, {
         inboxName: input.inboxName,
         messageId: input.visibleReply.message.messageId,
@@ -195,6 +201,7 @@ export class OpenCodeVisibleReplyProofService {
           ...input.visibleReply,
           message: correlated.message,
         };
+        await input.checkpoint();
         if (correlated.updated) {
           this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, visibleReply.message);
         }
@@ -215,6 +222,7 @@ export class OpenCodeVisibleReplyProofService {
         diagnostics: [input.diagnostic, 'opencode_visible_reply_relayOfMessageId_repair_not_found'],
       };
     } catch (error) {
+      if (error instanceof OpenCodePromptDeliveryCancelledError) throw error;
       this.deps.warn(
         `[${input.teamName}] Failed to repair OpenCode visible reply relayOfMessageId for ${input.memberName}/${expectedRelayOfMessageId}: ${this.deps.getErrorMessage(error)}`
       );
@@ -227,6 +235,7 @@ export class OpenCodeVisibleReplyProofService {
   }
 
   private async findByObservedMessageId(input: {
+    checkpoint: () => Promise<void>;
     teamName: string;
     replyRecipient?: string | null;
     from: string;
@@ -261,6 +270,7 @@ export class OpenCodeVisibleReplyProofService {
         continue;
       }
       return await this.correlateRecoveredVisibleReply({
+        checkpoint: input.checkpoint,
         teamName: input.teamName,
         inboxName,
         memberName: input.from,
@@ -277,6 +287,7 @@ export class OpenCodeVisibleReplyProofService {
   }
 
   private async findByTaskRefs(input: {
+    checkpoint: () => Promise<void>;
     teamName: string;
     replyRecipient?: string | null;
     from: string;
@@ -334,6 +345,7 @@ export class OpenCodeVisibleReplyProofService {
       return null;
     }
     return await this.correlateRecoveredVisibleReply({
+      checkpoint: input.checkpoint,
       teamName: input.teamName,
       inboxName: match.inboxName,
       memberName: input.from,
@@ -357,6 +369,7 @@ export class OpenCodeVisibleReplyProofService {
   }
 
   private async ensureVisibleReplyTaskRefs(input: {
+    checkpoint: () => Promise<void>;
     teamName: string;
     memberName: string;
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
@@ -383,6 +396,7 @@ export class OpenCodeVisibleReplyProofService {
     }
 
     try {
+      await input.checkpoint();
       const merged = await this.deps.inboxWriter.mergeRuntimeDeliveryTaskRefs(input.teamName, {
         inboxName: input.visibleReply.inboxName,
         messageId,
@@ -395,6 +409,7 @@ export class OpenCodeVisibleReplyProofService {
           ...input.visibleReply,
           message: merged.message,
         };
+        await input.checkpoint();
         if (merged.updated) {
           this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, visibleReply.message);
         }
@@ -412,6 +427,7 @@ export class OpenCodeVisibleReplyProofService {
           : ['visible_reply_missing_task_refs'],
       };
     } catch (error) {
+      if (error instanceof OpenCodePromptDeliveryCancelledError) throw error;
       this.deps.warn(
         `[${input.teamName}] Failed to merge OpenCode runtime delivery taskRefs for ${input.memberName}/${input.ledgerRecord.inboxMessageId}: ${this.deps.getErrorMessage(error)}`
       );
@@ -422,7 +438,19 @@ export class OpenCodeVisibleReplyProofService {
     }
   }
 
-  async applyDestinationProof(input: {
+  async applyDestinationProof(
+    input: Parameters<OpenCodeVisibleReplyProofService['applyDestinationProofCurrent']>[0]
+  ) {
+    try {
+      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord);
+      return await this.applyDestinationProofCurrent(input);
+    } catch (error) {
+      if (!(error instanceof OpenCodePromptDeliveryCancelledError)) throw error;
+      return { ledgerRecord: error.record ?? input.ledgerRecord, visibleReply: null };
+    }
+  }
+
+  private async applyDestinationProofCurrent(input: {
     ledger: OpenCodePromptDeliveryLedgerStore;
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     teamName: string;
@@ -448,6 +476,8 @@ export class OpenCodeVisibleReplyProofService {
     let recoveryDiagnostics: string[] = [];
     if (!visibleReply) {
       const recoveredByMessageId = await this.findByObservedMessageId({
+        checkpoint: () =>
+          assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord),
         teamName: input.teamName,
         replyRecipient: input.replyRecipient ?? input.ledgerRecord.replyRecipient,
         from: input.memberName,
@@ -461,6 +491,8 @@ export class OpenCodeVisibleReplyProofService {
     }
     if (!visibleReply) {
       const recoveredByTaskRefs = await this.findByTaskRefs({
+        checkpoint: () =>
+          assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord),
         teamName: input.teamName,
         replyRecipient: input.replyRecipient ?? input.ledgerRecord.replyRecipient,
         from: input.memberName,
@@ -476,6 +508,7 @@ export class OpenCodeVisibleReplyProofService {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
     const enriched = await this.ensureVisibleReplyTaskRefs({
+      checkpoint: () => assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord),
       teamName: input.teamName,
       memberName: input.memberName,
       ledgerRecord: input.ledgerRecord,
@@ -516,6 +549,7 @@ export class OpenCodeVisibleReplyProofService {
       ],
       observedAt: this.nowIso(),
     });
+    await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord);
     if (shouldEmitRecoveryAdvisoryRefresh) {
       this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(
         input.teamName,
@@ -535,7 +569,21 @@ export class OpenCodeVisibleReplyProofService {
     return normalized.length > 120 ? `${normalized.slice(0, 117).trimEnd()}...` : normalized;
   }
 
-  async materializePlainTextReplyIfNeeded(input: {
+  async materializePlainTextReplyIfNeeded(
+    input: Parameters<
+      OpenCodeVisibleReplyProofService['materializePlainTextReplyIfNeededCurrent']
+    >[0]
+  ) {
+    try {
+      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord);
+      return await this.materializePlainTextReplyIfNeededCurrent(input);
+    } catch (error) {
+      if (!(error instanceof OpenCodePromptDeliveryCancelledError)) throw error;
+      return { ledgerRecord: error.record ?? input.ledgerRecord, visibleReply: null };
+    }
+  }
+
+  private async materializePlainTextReplyIfNeededCurrent(input: {
     ledger: OpenCodePromptDeliveryLedgerStore;
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     teamName: string;
@@ -584,6 +632,8 @@ export class OpenCodeVisibleReplyProofService {
 
     if (existing) {
       const enriched = await this.ensureVisibleReplyTaskRefs({
+        checkpoint: () =>
+          assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord),
         teamName: input.teamName,
         memberName: input.memberName,
         ledgerRecord: input.ledgerRecord,
@@ -610,6 +660,7 @@ export class OpenCodeVisibleReplyProofService {
         ],
         observedAt: this.nowIso(),
       });
+      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord);
       this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, existingForProof.message);
       return { ledgerRecord, visibleReply: existingForProof };
     }
@@ -620,6 +671,7 @@ export class OpenCodeVisibleReplyProofService {
       input.ledgerRecord.updatedAt ??
       this.nowIso();
     try {
+      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord);
       const written = await this.deps.inboxWriter.sendMessage(input.teamName, {
         member: 'user',
         from: input.memberName,
@@ -663,9 +715,11 @@ export class OpenCodeVisibleReplyProofService {
         ],
         observedAt: this.nowIso(),
       });
+      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord);
       this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, visibleReply.message);
       return { ledgerRecord, visibleReply };
     } catch (error) {
+      if (error instanceof OpenCodePromptDeliveryCancelledError) throw error;
       this.deps.warn(
         `[${input.teamName}] Failed to materialize OpenCode plain-text reply for ${input.memberName}/${input.ledgerRecord.inboxMessageId}: ${this.deps.getErrorMessage(error)}`
       );

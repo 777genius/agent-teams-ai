@@ -8,6 +8,15 @@ import type {
   TeamForceStopActionLabels,
   TeamForceStopActionPorts,
 } from '@renderer/components/team/teamForceStopAction';
+import type { TeamForceStopResult } from '@shared/types';
+
+const completedResult: TeamForceStopResult = {
+  cleanupOutcome: 'completed',
+  stopOutcome: 'stopped',
+  killedRuntimePids: [],
+  clearedPendingDeliveries: 0,
+  diagnostics: [],
+};
 
 const labels: TeamForceStopActionLabels = {
   confirmTitle: 'Force stop team',
@@ -33,7 +42,7 @@ function createPorts(
     teamName: 'fixteam',
     labels,
     confirm: vi.fn(() => Promise.resolve(true)),
-    forceStop: vi.fn(() => Promise.resolve(undefined)),
+    forceStop: vi.fn(() => Promise.resolve(completedResult)),
     refreshTeamData: vi.fn(() => Promise.resolve()),
     setBusy: vi.fn(),
     logError: vi.fn(),
@@ -61,6 +70,49 @@ describe('runTeamForceStopAction', () => {
     expect(ports.setBusy.mock.calls).toEqual([[true], [false]]);
     expect(ports.logError).not.toHaveBeenCalled();
     expect(ports.logRefreshError).not.toHaveBeenCalled();
+  });
+
+  it.each(['stop_failed', 'timed_out', 'stopped'] as const)(
+    'reports incomplete cleanup after %s and still refreshes changed state',
+    async (stopOutcome) => {
+      const result: TeamForceStopResult = {
+        ...completedResult,
+        cleanupOutcome: 'incomplete',
+        stopOutcome,
+        killedRuntimePids: [123],
+        diagnostics: ['Runtime 456 could not be stopped'],
+      };
+      const ports = createPorts({ forceStop: vi.fn().mockResolvedValue(result) });
+
+      await expect(runTeamForceStopAction(ports)).resolves.toBe('incomplete');
+
+      expect(ports.confirm).toHaveBeenNthCalledWith(2, {
+        title: labels.failureTitle,
+        message: 'Runtime 456 could not be stopped',
+        confirmLabel: labels.failureConfirmLabel,
+        variant: 'danger',
+      });
+      expect(ports.refreshTeamData).toHaveBeenCalledWith('fixteam');
+      expect(ports.setBusy.mock.calls).toEqual([[true], [false]]);
+    }
+  );
+
+  it('preserves incomplete cleanup feedback when refresh also fails', async () => {
+    const ports = createPorts({
+      forceStop: vi.fn().mockResolvedValue({
+        ...completedResult,
+        cleanupOutcome: 'incomplete',
+        diagnostics: ['  '],
+      }),
+      refreshTeamData: vi.fn().mockRejectedValue(new Error('refresh failed')),
+    });
+
+    await expect(runTeamForceStopAction(ports)).resolves.toBe('incomplete');
+
+    expect(ports.confirm.mock.calls[1][0].message).toBe(labels.failureFallbackMessage);
+    expect(ports.logError).toHaveBeenCalledTimes(1);
+    expect(ports.logRefreshError).toHaveBeenCalledTimes(1);
+    expect(ports.setBusy.mock.calls).toEqual([[true], [false]]);
   });
 
   it('does nothing at all when the user cancels', async () => {
@@ -106,8 +158,8 @@ describe('runTeamForceStopAction', () => {
     // the escape hatch never ran - so it must not appear, and the outcome has
     // to be distinguishable from both a clean run and a failed one.
     let releaseStop: (() => void) | undefined;
-    const stopInFlight = new Promise<void>((resolve) => {
-      releaseStop = resolve;
+    const stopInFlight = new Promise<TeamForceStopResult>((resolve) => {
+      releaseStop = () => resolve(completedResult);
     });
     const ports = createPorts({
       forceStop: vi.fn(() => stopInFlight),

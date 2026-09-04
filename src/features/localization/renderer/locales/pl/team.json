@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Anuluj",
       "confirmLabel": "Wymuś zatrzymanie",
-      "message": "Wymusić zatrzymanie zespołu \"{{team}}\"? Przerwie to trwającą pracę: najpierw uruchamiane jest zwykłe zatrzymanie, a następnie kończone są pozostałe procesy uruchomieniowe zespołu (w tym trwające tury lidera) i anulowane są oczekujące dostarczenia wiadomości. Wiadomości w kolejce pozostają w skrzynce odbiorczej.",
+      "message": "Wymusić zatrzymanie zespołu \"{{team}}\"? Podejmuje próbę zatrzymania tego zespołu i anuluje oczekujące dostarczenia jego wiadomości. Zakończenie środowiska uruchomieniowego nie jest gwarantowane; współdzielone hosty nie są zamykane. Wiadomości w kolejce pozostają w skrzynce odbiorczej.",
       "title": "Wymuś zatrzymanie zespołu"
     },
     "forceStopFailed": {

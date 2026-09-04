@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Hủy",
       "confirmLabel": "Buộc dừng",
-      "message": "Buộc dừng \"{{team}}\"? Thao tác này làm gián đoạn công việc đang chạy: trước tiên chạy lệnh dừng thông thường, sau đó kết thúc các tiến trình runtime còn lại của đội ngũ (bao gồm cả lượt của trưởng nhóm đang chạy) và hủy các lần gửi tin nhắn đang chờ. Tin nhắn trong hàng đợi vẫn nằm trong hộp thư đến.",
+      "message": "Buộc dừng \"{{team}}\"? Thử dừng đội ngũ này và hủy các lần gửi tin nhắn đang chờ của đội. Không đảm bảo runtime sẽ thoát; các máy chủ runtime dùng chung không bị chấm dứt. Tin nhắn trong hàng đợi vẫn nằm trong hộp thư đến.",
       "title": "Buộc dừng đội ngũ"
     },
     "forceStopFailed": {

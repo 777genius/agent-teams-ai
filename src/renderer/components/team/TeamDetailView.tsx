@@ -2952,28 +2952,26 @@ export const TeamDetailView = memo(function TeamDetailView({
                         </TooltipContent>
                       </Tooltip>
                     )}
-                    {data.isAlive && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 gap-1 rounded-md border border-red-500/25 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                            disabled={forceStoppingTeam}
-                            onClick={() => void handleForceStopTeam()}
-                          >
-                            <OctagonX
-                              size={12}
-                              className={forceStoppingTeam ? 'animate-pulse' : ''}
-                            />
-                            {t('detail.actions.forceStop')}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          {t('detail.tooltips.forceStopTeam')}
-                        </TooltipContent>
-                      </Tooltip>
-                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1 rounded-md border border-red-500/25 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          disabled={forceStoppingTeam}
+                          onClick={() => void handleForceStopTeam()}
+                        >
+                          <OctagonX
+                            size={12}
+                            className={forceStoppingTeam ? 'animate-pulse' : ''}
+                          />
+                          {t('detail.actions.forceStop')}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        {t('detail.tooltips.forceStopTeam')}
+                      </TooltipContent>
+                    </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button

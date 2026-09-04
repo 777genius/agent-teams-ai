@@ -1,7 +1,7 @@
 /**
- * Force stop: a best-effort regular stop, then a hard kill of every runtime
- * process the team still owns, then cancellation of the prompt deliveries that
- * are still pending so nothing keeps re-attempting after the team is dead.
+ * Force stop: a bounded scoped stop followed by cancellation of owned pending
+ * deliveries. Hard cleanup is reported as incomplete when the runtime cannot
+ * prove exclusive host ownership; shared OpenCode hosts are never signaled.
  *
  * It lives under `services/team` rather than next to an entry point because
  * both entry points use it: the IPC handler behind the in-app control and the
@@ -11,18 +11,14 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import * as fs from 'fs';
 
-import { cleanupManagedOpenCodeServeProcesses } from '../opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
-import { tryStopPersistedOpenCodeRuntimePidForStoppedLane } from '../provisioning/TeamProvisioningOpenCodeRuntimeLaneCleanup';
-import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
-import type { OpenCodeManagedHostCleanupResult } from '../opencode/bridge/OpenCodeManagedHostProcessCleanup';
-import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
+import type { TeamForceStopResult } from '@shared/types';
 
 const DEFAULT_STOP_TIMEOUT_MS = 15_000;
 const FORCE_STOP_DELIVERY_CANCEL_REASON =
@@ -39,6 +35,7 @@ export interface TeamForceStopFlowPorts {
    * returns nothing, and the cleanup falls back to its own fence.
    */
   observeOwnedRuntimeRunIds(teamName: string): Promise<readonly string[]>;
+
   /**
    * `requestedAtMs` is the moment this stop flow began, not the moment the kill
    * step runs: the regular stop before it can take its whole budget, and a
@@ -48,7 +45,7 @@ export interface TeamForceStopFlowPorts {
   killRetainedRuntimeProcesses(
     teamName: string,
     context: { requestedAtMs: number }
-  ): Promise<{ killedPids: number[]; diagnostics: string[] }>;
+  ): Promise<{ killedPids: number[]; diagnostics: string[]; incomplete?: boolean }>;
   /** Same fence, one level down: the cleanup cancels this run's work only. */
   clearPendingPromptDeliveries(
     teamName: string,
@@ -61,7 +58,7 @@ export interface TeamForceStopFlowPorts {
 /**
  * The regular stop can reject ("did not confirm stop; retaining runtime
  * ownership") or hang on the per-team lock, so it runs under a timeout and
- * never blocks the hard-kill phase. Inbox messages are intentionally left
+ * never blocks pending delivery cancellation. Inbox messages are intentionally left
  * untouched: discarding queued messages is a separate, explicit user action.
  */
 export async function runTeamForceStopFlow(
@@ -78,6 +75,7 @@ export async function runTeamForceStopFlow(
     ports.logWarning(`[${teamName}] Force stop could not read the team's run ids: ${message}`);
     diagnostics.push(`Runtime run ids could not be read: ${message}`);
   }
+  let cleanupIncomplete = false;
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
@@ -117,9 +115,11 @@ export async function runTeamForceStopFlow(
     });
     killedRuntimePids = killResult.killedPids;
     diagnostics.push(...killResult.diagnostics);
+    cleanupIncomplete ||= killResult.incomplete === true;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     ports.logWarning(`[${teamName}] Force stop process kill failed: ${message}`);
+    cleanupIncomplete = true;
     diagnostics.push(`Process kill failed: ${message}`);
   }
 
@@ -131,131 +131,41 @@ export async function runTeamForceStopFlow(
     });
     clearedPendingDeliveries = clearResult.cleared;
     diagnostics.push(...clearResult.diagnostics);
+    cleanupIncomplete ||= clearResult.diagnostics.some((message) => message.startsWith('Failed'));
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     ports.logWarning(`[${teamName}] Force stop delivery cleanup failed: ${message}`);
+    cleanupIncomplete = true;
     diagnostics.push(`Pending delivery cleanup failed: ${message}`);
   }
 
-  return { stopOutcome, killedRuntimePids, clearedPendingDeliveries, diagnostics };
+  return {
+    stopOutcome,
+    cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
+    killedRuntimePids,
+    clearedPendingDeliveries,
+    diagnostics,
+  };
 }
 
 /**
- * The managed-host sweep is the only step that reaches processes this app did
- * not record a PID for, so it is a port rather than a hard-wired call: a
- * deployment that would rather never touch an unattributed host hands in a
- * port that reports itself disabled, and the force stop then confines itself
- * to the PIDs the launch snapshot names.
+ * OpenCode serve hosts are shared across lanes and teams. A persisted PID (or
+ * even a matching process command) is not exclusive ownership. The current
+ * bridge cannot atomically force-terminate only captured hosts while honoring
+ * foreign leases, so the app must report this limit instead of signaling them.
  */
-export interface OpenCodeManagedHostSweepPort {
-  isEnabled(): boolean;
-  sweepManagedHosts(input: { startedBeforeMs: number }): Promise<OpenCodeManagedHostCleanupResult>;
-}
-
-export const DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT: OpenCodeManagedHostSweepPort = {
-  isEnabled: () => true,
-  sweepManagedHosts: (input) =>
-    cleanupManagedOpenCodeServeProcesses({
-      mode: 'force',
-      startedBeforeMs: input.startedBeforeMs,
-    }),
-};
-
-function collectPersistedOpenCodeLaneIds(
-  snapshot: PersistedTeamLaunchSnapshot | null
-): { laneId: string; runtimePid: number | null }[] {
-  const lanes = new Map<string, number | null>();
-  for (const member of Object.values(snapshot?.members ?? {})) {
-    if (member.providerId !== 'opencode') {
-      continue;
-    }
-    const laneId = member.laneId?.trim();
-    if (!laneId) {
-      continue;
-    }
-    const pid =
-      typeof member.runtimePid === 'number' &&
-      Number.isFinite(member.runtimePid) &&
-      member.runtimePid > 0
-        ? member.runtimePid
-        : null;
-    if (!lanes.has(laneId) || (lanes.get(laneId) === null && pid !== null)) {
-      lanes.set(laneId, pid);
-    }
-  }
-  return [...lanes.entries()].map(([laneId, runtimePid]) => ({ laneId, runtimePid }));
-}
-
-/**
- * Kills runtime processes the team still owns after the regular stop:
- *
- * 1. Persisted lane runtime PIDs from the launch snapshot, verified against the
- *    persisted process command before killing (same safety contract as the
- *    stopped-lane cleanup). On Windows the kill uses `taskkill /T`, so the
- *    whole host tree dies.
- * 2. A managed-host sweep for app-managed `opencode serve` hosts whose PIDs
- *    were never persisted. The sweep cannot attribute a host to a team, so it
- *    only runs when no other team is alive, and it is always fenced by the
- *    moment the stop was requested: a host started after that belongs to
- *    something else - a relaunch of this same team racing the stop, most
- *    likely - and is kept.
- */
-export async function killRetainedOpenCodeRuntimeProcessesForTeam(input: {
+export async function killRetainedOpenCodeRuntimeProcessesForTeam(_input: {
   teamName: string;
   otherAliveTeams: readonly string[];
-  /** Defaults to the moment this step begins when a caller has no earlier one. */
   requestedAtMs?: number;
-  launchStateStore?: TeamLaunchStateStore;
-  managedHostSweep?: OpenCodeManagedHostSweepPort;
-}): Promise<{ killedPids: number[]; diagnostics: string[] }> {
-  const startedBeforeMs = input.requestedAtMs ?? Date.now();
-  const diagnostics: string[] = [];
-  const killedPids: number[] = [];
-  const launchStateStore = input.launchStateStore ?? new TeamLaunchStateStore();
-  const snapshot = await launchStateStore.read(input.teamName).catch(() => null);
-
-  for (const lane of collectPersistedOpenCodeLaneIds(snapshot)) {
-    const result = tryStopPersistedOpenCodeRuntimePidForStoppedLane({
-      teamName: input.teamName,
-      laneId: lane.laneId,
-      previousLaunchState: snapshot,
-    });
-    if (result === 'stopped' && lane.runtimePid !== null) {
-      killedPids.push(lane.runtimePid);
-      diagnostics.push(`Killed persisted runtime pid=${lane.runtimePid} for lane ${lane.laneId}`);
-    } else if (result === 'unsafe') {
-      diagnostics.push(
-        `Skipped persisted runtime pid for lane ${lane.laneId}: process identity could not be verified`
-      );
-    }
-  }
-
-  if (input.otherAliveTeams.length > 0) {
-    diagnostics.push(
-      `Skipped managed host sweep: other teams are still alive (${input.otherAliveTeams.join(', ')})`
-    );
-    return { killedPids, diagnostics };
-  }
-
-  const managedHostSweep = input.managedHostSweep ?? DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT;
-  if (!managedHostSweep.isEnabled()) {
-    diagnostics.push(
-      'Skipped managed host sweep: the managed host sweep is disabled for this app instance'
-    );
-    return { killedPids, diagnostics };
-  }
-
-  const sweep = await managedHostSweep.sweepManagedHosts({ startedBeforeMs });
-  for (const candidate of sweep.candidates) {
-    if (candidate.action === 'killed' && !killedPids.includes(candidate.pid)) {
-      killedPids.push(candidate.pid);
-    }
-  }
-  if (sweep.killed > 0) {
-    diagnostics.push(`Managed host sweep killed ${sweep.killed} host process(es)`);
-  }
-  diagnostics.push(...sweep.diagnostics.map((entry) => `Managed host sweep: ${entry}`));
-  return { killedPids, diagnostics };
+}): Promise<{ killedPids: number[]; diagnostics: string[]; incomplete: boolean }> {
+  return {
+    killedPids: [],
+    incomplete: true,
+    diagnostics: [
+      'Hard process cleanup is not confirmed: this runtime does not support targeted forced termination that preserves other teams sharing an OpenCode host. Only the regular scoped stop was attempted; shared hosts were left untouched.',
+    ],
+  };
 }
 
 async function readOpenCodeRuntimeLaneIdsForTeam(

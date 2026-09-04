@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Cancelar",
       "confirmLabel": "Forzar parada",
-      "message": "¿Forzar la parada de \"{{team}}\"? Esto interrumpe el trabajo en curso: ejecuta la parada normal y luego termina los procesos de ejecución restantes del equipo (incluidos los turnos del líder en curso) y cancela las entregas de mensajes pendientes. Los mensajes en cola permanecen en la bandeja de entrada.",
+      "message": "¿Forzar la parada de \"{{team}}\"? Intenta detener este equipo y cancela sus entregas de mensajes pendientes. No se garantiza que el entorno de ejecución termine; los hosts de ejecución compartidos no se detienen. Los mensajes en cola permanecen en la bandeja de entrada.",
       "title": "Parada forzada del equipo"
     },
     "forceStopFailed": {

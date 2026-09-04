@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Cancelar",
       "confirmLabel": "Forçar paragem",
-      "message": "Forçar a paragem de \"{{team}}\"? Isto interrompe o trabalho em curso: primeiro é executada a paragem normal e, em seguida, os processos de execução restantes da equipa são terminados (incluindo turnos do líder em curso) e as entregas de mensagens pendentes são canceladas. As mensagens em fila permanecem na caixa de entrada.",
+      "message": "Forçar a paragem de \"{{team}}\"? Tenta parar esta equipa e cancela as entregas de mensagens pendentes. O encerramento do ambiente de execução não é garantido; os hosts de execução partilhados não são terminados. As mensagens em fila permanecem na caixa de entrada.",
       "title": "Paragem forçada da equipa"
     },
     "forceStopFailed": {

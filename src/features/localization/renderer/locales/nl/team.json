@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Annuleren",
       "confirmLabel": "Geforceerd stoppen",
-      "message": "\"{{team}}\" geforceerd stoppen? Dit onderbreekt lopend werk: eerst wordt de gewone stop uitgevoerd, daarna worden de resterende runtimeprocessen van het team beëindigd (inclusief lopende lead-beurten) en worden openstaande berichtbezorgingen geannuleerd. Berichten in de wachtrij blijven in de inbox staan.",
+      "message": "\"{{team}}\" geforceerd stoppen? Probeert dit team te stoppen en annuleert de openstaande berichtbezorgingen van dit team. Het afsluiten van de runtime is niet gegarandeerd; gedeelde runtimehosts worden niet beëindigd. Berichten in de wachtrij blijven in de inbox.",
       "title": "Team geforceerd stoppen"
     },
     "forceStopFailed": {

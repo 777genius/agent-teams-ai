@@ -388,7 +388,7 @@
     "forceStop": {
       "cancelLabel": "Abbrechen",
       "confirmLabel": "Erzwungen stoppen",
-      "message": "\"{{team}}\" erzwungen stoppen? Das unterbricht laufende Arbeit: Zuerst läuft der normale Stopp, dann werden die verbleibenden Laufzeitprozesse des Teams beendet (einschließlich laufender Lead-Züge) und ausstehende Nachrichtenzustellungen abgebrochen. Wartende Nachrichten bleiben im Posteingang.",
+      "message": "\"{{team}}\" erzwungen stoppen? Versucht, dieses Team zu stoppen, und bricht seine ausstehenden Nachrichtenzustellungen ab. Das Beenden der Laufzeit ist nicht garantiert; gemeinsam genutzte Laufzeithosts werden nicht beendet. Nachrichten in der Warteschlange bleiben im Posteingang.",
       "title": "Team erzwungen stoppen"
     },
     "forceStopFailed": {

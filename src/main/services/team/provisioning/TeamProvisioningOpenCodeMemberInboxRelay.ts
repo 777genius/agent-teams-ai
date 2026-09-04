@@ -553,6 +553,9 @@ async function runOpenCodeMemberInboxRelayWork(
       source: deliveryDecision.source,
       inboxTimestamp: message.timestamp,
     });
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
     result.lastDelivery = delivery;
     if (!delivery.delivered) {
       const failureProjection = projectOpenCodeInboxDeliveryFailure({
