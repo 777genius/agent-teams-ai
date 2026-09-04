@@ -7387,7 +7387,21 @@ describe(
         'secondary:opencode:bob',
         'secondary:opencode:tom',
       ]);
-      expect(snapshot).toBeNull();
+      expect(snapshot).toMatchObject({
+        teamName,
+        launchPhase: 'finished',
+        teamLaunchState: 'clean_success',
+        members: {
+          bob: { launchState: 'confirmed_alive', bootstrapConfirmed: true },
+          tom: { launchState: 'confirmed_alive', bootstrapConfirmed: true },
+        },
+      });
+      await expect(
+        fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-state.json'), 'utf8')
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+      await expect(
+        fs.readFile(path.join(getTeamsBasePath(), teamName, 'launch-summary.json'), 'utf8')
+      ).rejects.toMatchObject({ code: 'ENOENT' });
 
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.teamLaunchState).toBe('clean_success');

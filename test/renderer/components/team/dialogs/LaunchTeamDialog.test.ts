@@ -3574,7 +3574,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('refreshes OpenCode preflight when a checking catalog becomes authoritative', async () => {
+  it('keeps one OpenCode preflight when the same selected catalog becomes authoritative', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -3761,7 +3761,7 @@ describe('LaunchTeamDialog', () => {
     const inFlightOpencodePrepareCalls = vi
       .mocked(runProviderPrepareDiagnostics)
       .mock.calls.filter((call) => call[0]?.providerId === 'opencode');
-    expect(inFlightOpencodePrepareCalls).toHaveLength(2);
+    expect(inFlightOpencodePrepareCalls).toHaveLength(1);
     expect(host.textContent).toContain('All selected providers are ready.');
 
     await act(async () => {
