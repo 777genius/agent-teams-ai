@@ -319,7 +319,42 @@ describe('announcement consumption service', () => {
     expect(f.saved().handledIds).toEqual(['new']);
     expect(await f.service.dismiss('old', f.context)).toEqual({ saved: true });
     expect(f.saved().dismissedIds).toEqual(['old']);
+    expect(await f.service.dismiss('old', f.context)).toEqual({ saved: true });
     expect(await f.service.dismiss('future-id', f.context)).toEqual({ saved: false });
+    await f.service.dispose();
+  });
+  it('keeps a newer manual open authoritative while an automatic claim is committing', async () => {
+    const f = fixture();
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    const prepared = await f.service.prepareAuto(f.context);
+    const originalUpdate = f.repo.update.getMockImplementation()!;
+    let releaseClaim!: () => void;
+    const claimGate = new Promise<void>((resolve) => {
+      releaseClaim = resolve;
+    });
+    f.repo.update.mockImplementationOnce(async (change) => {
+      await claimGate;
+      return originalUpdate(change);
+    });
+    const claiming = f.service.claimAuto(
+      {
+        id: prepared!.announcement.id,
+        revision: prepared!.revision,
+        bodySha256: prepared!.announcement.bodySha256,
+      },
+      f.context
+    );
+    await vi.waitFor(() => expect(f.repo.update).toHaveBeenCalledTimes(1));
+    const manualOpening = f.service.openManual('old', f.context);
+    releaseClaim();
+    await expect(claiming).resolves.toBeNull();
+    await expect(manualOpening).resolves.toMatchObject({ announcement: { id: 'old' } });
+
+    const oldAsset = `https://agentteams.live/announcements/content/old/${'c'.repeat(64)}/assets/old.png`;
+    const newAsset = `https://agentteams.live/announcements/content/new/${'c'.repeat(64)}/assets/new.png`;
+    expect(await f.service.loadAsset(oldAsset, 'old_manual_asset', f.context)).not.toBeNull();
+    expect(await f.service.loadAsset(newAsset, 'stale_auto_asset', f.context)).toBeNull();
     await f.service.dispose();
   });
   it('does not consume when body fails or focus changes during preparation', async () => {

@@ -82,7 +82,7 @@ export class AnnouncementsService {
   private lastReportedStatus: string | null = null;
   private nextRefreshAt = 0;
   private failedBodyKey: string | null = null;
-  private readonly manualOpenTokens = new Map<number, object>();
+  private readonly documentOpenTokens = new Map<number, object>();
 
   constructor(private readonly options: AnnouncementsServiceOptions) {
     this.tracker = new AnnouncementUsageTracker(options.clock);
@@ -119,13 +119,13 @@ export class AnnouncementsService {
   }
   invalidateWindow(id: number): void {
     this.prepared.delete(id);
-    this.manualOpenTokens.delete(id);
+    this.documentOpenTokens.delete(id);
     this.assets.revokeWindow(id);
   }
   unregisterWindow(id: number): Promise<void> {
     this.tracker.unregister(id);
     this.prepared.delete(id);
-    this.manualOpenTokens.delete(id);
+    this.documentOpenTokens.delete(id);
     this.assets.revokeWindow(id);
     return this.lifecycle(async () => {
       if (!this.tracker.hasWindows()) await this.release();
@@ -175,7 +175,7 @@ export class AnnouncementsService {
     this.controller.abort();
     await this.refreshTask;
     this.prepared.clear();
-    this.manualOpenTokens.clear();
+    this.documentOpenTokens.clear();
     this.assets.revokeAll();
     this.fresh = false;
     await this.mutationTail;
@@ -241,7 +241,7 @@ export class AnnouncementsService {
     this.controller.abort();
     await this.refreshTask;
     this.prepared.clear();
-    this.manualOpenTokens.clear();
+    this.documentOpenTokens.clear();
     this.assets.revokeAll();
     await this.mutation(() => this.checkpoint());
     this.emit();
@@ -422,7 +422,10 @@ export class AnnouncementsService {
     input: ClaimAnnouncementInput,
     context: AnnouncementWindowContext
   ): Promise<AnnouncementDocument | null> {
-    return this.mutation(async () => {
+    const token = {};
+    this.documentOpenTokens.set(context.windowId, token);
+    const result = this.mutation(async () => {
+      if (this.documentOpenTokens.get(context.windowId) !== token) return null;
       const prepared = this.prepared.get(context.windowId);
       this.prepared.delete(context.windowId);
       const item = this.candidate(context);
@@ -443,6 +446,7 @@ export class AnnouncementsService {
       await this.checkpoint();
       const rechecked = this.candidate(context);
       if (
+        this.documentOpenTokens.get(context.windowId) !== token ||
         this.storageFailed ||
         generation !== this.generation ||
         rechecked?.id !== item.id ||
@@ -472,6 +476,7 @@ export class AnnouncementsService {
           this.options.clock.now() < Date.parse(entry.validUntil)
       );
       if (
+        this.documentOpenTokens.get(context.windowId) !== token ||
         generation !== this.generation ||
         !context.isReady() ||
         !this.isFresh() ||
@@ -479,7 +484,6 @@ export class AnnouncementsService {
         !stillPublished
       )
         return null;
-      this.manualOpenTokens.delete(context.windowId);
       this.assets.issue(item, context);
       return {
         announcement: documentSummary(item),
@@ -487,25 +491,30 @@ export class AnnouncementsService {
         bodyUrl: prepared.document.bodyUrl,
       };
     });
+    return result.finally(() => {
+      if (this.documentOpenTokens.get(context.windowId) === token)
+        this.documentOpenTokens.delete(context.windowId);
+    });
   }
   async openManual(
     id: string,
     context: AnnouncementWindowContext
   ): Promise<AnnouncementDocument | null> {
     const token = {};
-    this.manualOpenTokens.set(context.windowId, token);
+    this.documentOpenTokens.set(context.windowId, token);
+    this.prepared.delete(context.windowId);
     this.assets.revokeWindow(context.windowId);
     if (!this.owned || this.releasing || this.stopped) {
-      if (this.manualOpenTokens.get(context.windowId) === token)
-        this.manualOpenTokens.delete(context.windowId);
+      if (this.documentOpenTokens.get(context.windowId) === token)
+        this.documentOpenTokens.delete(context.windowId);
       return null;
     }
     const feed = this.options.source.current();
     const item =
       feed && visibleAnnouncements(feed, this.options.clock.now()).find((entry) => entry.id === id);
     if (!item) {
-      if (this.manualOpenTokens.get(context.windowId) === token)
-        this.manualOpenTokens.delete(context.windowId);
+      if (this.documentOpenTokens.get(context.windowId) === token)
+        this.documentOpenTokens.delete(context.windowId);
       return null;
     }
     const generation = this.generation;
@@ -514,7 +523,7 @@ export class AnnouncementsService {
       return await this.mutation(async () => {
         const current = this.options.source.current();
         if (
-          this.manualOpenTokens.get(context.windowId) !== token ||
+          this.documentOpenTokens.get(context.windowId) !== token ||
           !this.owned ||
           this.releasing ||
           this.stopped ||
@@ -538,7 +547,7 @@ export class AnnouncementsService {
         this.emit();
         const latest = this.options.source.current();
         if (
-          this.manualOpenTokens.get(context.windowId) !== token ||
+          this.documentOpenTokens.get(context.windowId) !== token ||
           !this.owned ||
           this.releasing ||
           this.stopped ||
@@ -555,8 +564,8 @@ export class AnnouncementsService {
     } catch {
       return null;
     } finally {
-      if (this.manualOpenTokens.get(context.windowId) === token)
-        this.manualOpenTokens.delete(context.windowId);
+      if (this.documentOpenTokens.get(context.windowId) === token)
+        this.documentOpenTokens.delete(context.windowId);
     }
   }
   loadAsset(
@@ -574,8 +583,8 @@ export class AnnouncementsService {
     return this.mutation(async () => {
       if (!this.owned || this.releasing || this.stopped || this.storageFailed || !this.state)
         return { saved: false };
-      if (!this.state.handledIds.includes(id) && !wasIssued) return { saved: false };
       if (this.state.dismissedIds.includes(id)) return { saved: true };
+      if (!this.state.handledIds.includes(id) && !wasIssued) return { saved: false };
       try {
         this.state = await this.options.repository.update((state) =>
           dismissAnnouncement(state, id)
