@@ -253,24 +253,20 @@ export class TeamInboxWriter {
 
   private getImmutableExplicitMessagePayload(message: InboxMessage): Record<string, unknown> {
     const isRuntimeDelivery = message.source === 'runtime_delivery';
-    // Replayed runtime deliveries keyed by relayOfMessageId may paraphrase
-    // text/summary; drop them from the immutable payload so the duplicate is
-    // dropped silently instead of raising a messageId collision.
-    const isReplayableRuntimeDelivery =
-      isRuntimeDelivery &&
-      typeof message.relayOfMessageId === 'string' &&
-      message.relayOfMessageId.trim().length > 0;
+    // An explicit messageId is a caller-supplied identity claim, not a
+    // best-effort retry match: a second message with the same messageId but
+    // different text/summary is a real content change (e.g. a corrected
+    // reply from a re-attempted read-commit-policy pass), and dropping it
+    // silently would lose it rather than raise the collision the caller can
+    // act on. findRuntimeDeliveryDuplicateIndex below is the separate,
+    // intentionally more tolerant match used for non-explicit retries.
     return {
       from: isRuntimeDelivery ? this.normalizeComparableParticipant(message.from) : message.from,
       to: isRuntimeDelivery ? this.normalizeComparableParticipant(message.to) : message.to,
-      text: isReplayableRuntimeDelivery
-        ? undefined
-        : isRuntimeDelivery
-          ? this.normalizeComparableText(message.text)
-          : message.text,
+      text: isRuntimeDelivery ? this.normalizeComparableText(message.text) : message.text,
       actionMode: message.actionMode,
       commentId: message.commentId,
-      summary: isReplayableRuntimeDelivery ? undefined : message.summary,
+      summary: message.summary,
       relayOfMessageId: isRuntimeDelivery
         ? message.relayOfMessageId?.trim()
         : message.relayOfMessageId,

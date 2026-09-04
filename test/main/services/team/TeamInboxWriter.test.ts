@@ -659,6 +659,39 @@ describe('TeamInboxWriter', () => {
     expect(persisted[0]?.text).toBe('Reply with stable identity');
   });
 
+  it('fails closed when a repeated explicit runtime-delivery messageId carries genuinely different text', async () => {
+    // Two messages sharing messageId + relayOfMessageId are only the same
+    // reply if their content agrees too. A second, substantively different
+    // reply - e.g. a corrected answer from a retried read-commit-policy pass -
+    // must raise the collision, not be silently dropped in favor of the
+    // first (possibly stale or wrong) text.
+    await writer.sendMessage('my-team', {
+      member: 'user',
+      from: 'alice',
+      to: 'user',
+      text: 'The tests are passing',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'inbound-2',
+      messageId: 'runtime-reply-2',
+    });
+
+    await expect(
+      writer.sendMessage('my-team', {
+        member: 'user',
+        from: 'alice',
+        to: 'user',
+        text: 'The tests are failing, I was wrong',
+        source: 'runtime_delivery',
+        relayOfMessageId: 'inbound-2',
+        messageId: 'runtime-reply-2',
+      })
+    ).rejects.toThrow('Inbox messageId collision for immutable payload: runtime-reply-2');
+
+    const userInboxPath = '/mock/teams/my-team/inboxes/user.json';
+    const persisted = JSON.parse(hoisted.files.get(userInboxPath) ?? '[]') as { text: string }[];
+    expect(persisted).toEqual([expect.objectContaining({ text: 'The tests are passing' })]);
+  });
+
   it('merges taskRefs when deduplicating repeated runtime delivery replies', async () => {
     const taskRef = { taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' };
     const first = await writer.sendMessage('my-team', {
