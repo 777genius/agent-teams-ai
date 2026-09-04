@@ -50,6 +50,15 @@ const stopFlowMocks = vi.hoisted(() => ({
 
 vi.mock('@main/services/team/lifecycle/teamForceStopFlow', () => stopFlowMocks);
 
+const launchStateMocks = vi.hoisted(() => ({
+  markStopped: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('@main/services/team/TeamLaunchStateStore', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@main/services/team/TeamLaunchStateStore')>()),
+  TeamLaunchStateStore: vi.fn(() => ({ markStopped: launchStateMocks.markStopped })),
+}));
+
 import { registerTeamRoutes } from '@main/http/teams';
 import Fastify from 'fastify';
 
@@ -150,7 +159,24 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
         ownedRunIds: ['run-observed'],
         ownedLaneIds: ['primary'],
       });
+      // Both ports below are optional on the flow, so nothing but a check here
+      // catches an entry point that dropped one. Without markTeamStopped the
+      // stop is not recorded as final and reconciliation re-derives the run
+      // that was just stopped; without countLiveRuntimeHosts the stop cannot
+      // finish when the hosts are gone and spends the whole budget instead.
+      expect(ports.markTeamStopped).toBeTypeOf('function');
+      await ports.markTeamStopped?.('fixteam');
+      expect(ports.countLiveRuntimeHosts).toBeTypeOf('function');
+      await expect(ports.countLiveRuntimeHosts?.('fixteam')).resolves.toBe(0);
+      expect(ports.stopTimeoutMs).toBe(90_000);
     }
+
+    // Both reach the real collaborators, scoped to the team being stopped.
+    expect(launchStateMocks.markStopped.mock.calls).toEqual([['fixteam'], ['fixteam']]);
+    expect(stopFlowMocks.countLiveRecordedRuntimeHostsForTeam.mock.calls).toEqual([
+      [{ teamName: 'fixteam' }],
+      [{ teamName: 'fixteam' }],
+    ]);
 
     expect(stopFlowMocks.readOwnedOpenCodeRuntimeRunIdsForTeam.mock.calls).toEqual([
       [{ teamName: 'fixteam' }],
