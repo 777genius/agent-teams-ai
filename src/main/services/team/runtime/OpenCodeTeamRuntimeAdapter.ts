@@ -1259,6 +1259,13 @@ function isGenericOpenCodeFailureMessage(message: string): boolean {
   return (
     message === GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON ||
     message.startsWith(`${GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON}:`) ||
+    // Reassurance text prepended ahead of the real readiness diagnostic for
+    // mcp_unavailable/unknown_error (see the prepareOpenCodeLaunch caller).
+    // Without this, it wins as the first "displayable" (non-generic) message
+    // and permanently hides the specific diagnostic behind it - which is what
+    // shouldRetryTransientOpenCodeSharedRuntimeFailure pattern-matches on to
+    // decide whether a timeout is worth retrying.
+    message === 'OpenCode is temporarily unavailable. Retry the launch.' ||
     message.startsWith('OpenCode secondary lane timing:') ||
     message.startsWith(
       'OpenCode bridge reported ready without all required durable checkpoints:'

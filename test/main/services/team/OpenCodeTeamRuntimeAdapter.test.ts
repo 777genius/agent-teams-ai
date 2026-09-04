@@ -6,6 +6,7 @@ import {
   createOpenCodeExecutionProofHash,
   createOpenCodeExpectedBehaviorFingerprint,
 } from '../../../../src/main/services/team/opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
+import { shouldRetryTransientOpenCodeSharedRuntimeFailure } from '../../../../src/main/services/team/provisioning/TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeBridgePort,
@@ -83,7 +84,12 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
       members: {
         alice: {
           launchState: 'failed_to_start',
-          hardFailureReason: 'OpenCode is temporarily unavailable. Retry the launch.',
+          // The prepended reassurance text is generic UI framing, not a
+          // diagnostic: hardFailureReason must be the concrete bridge
+          // message behind it (this is also what a transient shared-runtime
+          // timeout is pattern-matched against to decide whether to retry).
+          hardFailureReason:
+            'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
           diagnostics: [
             'OpenCode is temporarily unavailable. Retry the launch.',
             'OpenCode readiness bridge failed: timeout: OpenCode bridge command timed out',
@@ -92,6 +98,33 @@ describe('OpenCodeTeamRuntimeAdapter', () => {
         },
       },
     });
+  });
+
+  it('makes a real transient shared-runtime timeout retryable through the full launch path', async () => {
+    // End-to-end regression for the transient-retry feature: constructing a
+    // TeamRuntimeLaunchResult by hand (as the failure-policy unit tests do)
+    // cannot catch hardFailureReason being masked by blockedLaunchResult's
+    // own reassurance-text prepending - only driving the real launch() path
+    // can. Before the isGenericOpenCodeFailureMessage fix, the reassurance
+    // text always won as hardFailureReason for this reason, so this pattern
+    // never matched and the retry never fired.
+    const bridge = bridgePort(
+      readiness({
+        state: 'unknown_error',
+        launchAllowed: false,
+        diagnostics: [
+          'Failed to query OpenCode models: OpenCode command timed out after 10000ms',
+        ],
+      })
+    );
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    const result = await adapter.launch(launchInput());
+
+    expect(result.members.alice?.hardFailureReason).toBe(
+      'Failed to query OpenCode models: OpenCode command timed out after 10000ms'
+    );
+    expect(shouldRetryTransientOpenCodeSharedRuntimeFailure(result)).toBe(true);
   });
 
   it('surfaces Cursor quota instead of generic readiness diagnostics on launch', async () => {
