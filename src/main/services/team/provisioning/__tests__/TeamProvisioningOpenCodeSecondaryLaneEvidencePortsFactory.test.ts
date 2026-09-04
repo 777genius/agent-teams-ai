@@ -76,4 +76,61 @@ describe('TeamProvisioningOpenCodeSecondaryLaneEvidencePortsFactory', () => {
     });
     expect(logWarn).toHaveBeenCalledWith('warn');
   });
+
+  // The guard this port feeds reads only an answered `false` as proof that a
+  // member holds no session record. The store reader reports a manifest it
+  // could not read - a lock held by a concurrent bootstrap check-in, say - as
+  // an empty session list, so answering from it would turn that contention
+  // into a downgrade of a healthy member. It has to raise instead.
+  it('raises rather than answering false when the committed store did not answer', async () => {
+    const ports = createTeamProvisioningOpenCodeSecondaryLaneEvidencePortsFromService(
+      createHost(),
+      {
+        getTeamsBasePath: () => '/teams',
+        readCommittedBootstrapSessionEvidence: async () => ({
+          state: 'invalid_store' as const,
+          committed: false,
+          activeRunId: null,
+          sessions: [],
+          diagnostics: ['OpenCode runtime manifest could not be read.'],
+        }),
+        logWarn: vi.fn(),
+      }
+    );
+
+    await expect(
+      ports.hasCommittedOpenCodeLaneMemberSessionEvidence?.({
+        teamName: 'alpha',
+        laneId: 'lane-1',
+        runId: 'run-1',
+        memberName: 'ada',
+      })
+    ).rejects.toThrow('unavailable (invalid_store)');
+  });
+
+  it('answers false when the store answered and holds no record for the member', async () => {
+    const ports = createTeamProvisioningOpenCodeSecondaryLaneEvidencePortsFromService(
+      createHost(),
+      {
+        getTeamsBasePath: () => '/teams',
+        readCommittedBootstrapSessionEvidence: async () => ({
+          state: 'healthy' as const,
+          committed: true,
+          activeRunId: 'run-1',
+          sessions: [],
+          diagnostics: [],
+        }),
+        logWarn: vi.fn(),
+      }
+    );
+
+    await expect(
+      ports.hasCommittedOpenCodeLaneMemberSessionEvidence?.({
+        teamName: 'alpha',
+        laneId: 'lane-1',
+        runId: 'run-1',
+        memberName: 'ada',
+      })
+    ).resolves.toBe(false);
+  });
 });
