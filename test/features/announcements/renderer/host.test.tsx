@@ -81,6 +81,7 @@ beforeEach(() => {
     claimAuto: vi.fn(async () => article),
     openManual: vi.fn(async () => article),
     loadAsset: vi.fn(async () => null),
+    cancelAsset: vi.fn(async () => undefined),
     dismiss: vi.fn(async () => ({ saved: true })),
     onStateChanged: vi.fn((cb) => {
       listener = cb;
@@ -122,6 +123,9 @@ describe('announcement host', () => {
     expect(document.querySelector('[role="dialog"]')).not.toBeNull();
     await render(true, true);
     expect(document.querySelector('[role="dialog"]')).toBeNull();
+    await render(true, false);
+    expect(client.claimAuto).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   });
   it('never auto-claims new data inside history or cascades on close/dismiss event', async () => {
     await render();
@@ -156,7 +160,7 @@ describe('announcement host', () => {
     expect(client.prepareAuto).not.toHaveBeenCalled();
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
-  it('drops a durable claim when focus changes before completion', async () => {
+  it('retains a durable claim when focus changes before completion', async () => {
     let finish!: (value: typeof article) => void;
     vi.mocked(client.prepareAuto).mockResolvedValue({ ...article, revision: 'one' });
     vi.mocked(client.claimAuto).mockImplementation(
@@ -171,6 +175,10 @@ describe('announcement host', () => {
       finish(article);
     });
     expect(document.querySelector('[role="dialog"]')).toBeNull();
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(client.prepareAuto).toHaveBeenCalledTimes(1);
+    expect(client.claimAuto).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
   });
   it('closes on Escape without selecting another announcement', async () => {
     await render(false);

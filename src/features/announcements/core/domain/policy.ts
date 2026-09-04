@@ -1,9 +1,19 @@
+import { ANNOUNCEMENTS_MAX_STATE_IDS } from '../../contracts';
+
 import type {
   Announcement,
   AnnouncementFeed,
   AnnouncementOrderKey,
   AnnouncementState,
 } from '../../contracts';
+
+function cappedIds(values: string[], required?: string): string[] {
+  const unique = [...new Set(values)];
+  if (unique.length <= ANNOUNCEMENTS_MAX_STATE_IDS) return unique;
+  const tail = unique.slice(-ANNOUNCEMENTS_MAX_STATE_IDS);
+  if (!required || tail.includes(required)) return tail;
+  return [...tail.slice(1), required];
+}
 
 export function compareAnnouncementOrder(a: AnnouncementOrderKey, b: AnnouncementOrderKey): number {
   const timeDifference = Date.parse(a.publishedAt) - Date.parse(b.publishedAt);
@@ -48,18 +58,19 @@ export function consumeAnnouncement(
   item: Announcement
 ): AnnouncementState {
   const key = { id: item.id, publishedAt: item.publishedAt };
+  const floor =
+    !state.autoSuppressedThrough || compareAnnouncementOrder(key, state.autoSuppressedThrough) > 0
+      ? key
+      : state.autoSuppressedThrough;
   return {
     ...state,
-    handledIds: [...new Set([...state.handledIds, item.id])],
-    autoSuppressedThrough:
-      !state.autoSuppressedThrough || compareAnnouncementOrder(key, state.autoSuppressedThrough) > 0
-        ? key
-        : state.autoSuppressedThrough,
+    handledIds: cappedIds([...state.handledIds, item.id], floor.id),
+    autoSuppressedThrough: floor,
   };
 }
 
 export function dismissAnnouncement(state: AnnouncementState, id: string): AnnouncementState {
-  return { ...state, dismissedIds: [...new Set([...state.dismissedIds, id])] };
+  return { ...state, dismissedIds: cappedIds([...state.dismissedIds, id]) };
 }
 
 export function createAnnouncementState(

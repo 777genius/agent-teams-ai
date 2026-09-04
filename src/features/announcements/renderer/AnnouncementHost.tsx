@@ -61,14 +61,27 @@ export const AnnouncementHost = ({
         }}
       >
         <header className="border-b border-[var(--color-border)] px-6 pb-3 pr-12 pt-4">
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
-            <Newspaper className="size-3.5" />
-            {t('announcements.title')}
+          <div className="mb-2 flex items-center justify-between gap-4 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+            <span className="flex items-center gap-2">
+              <Newspaper className="size-3.5" />
+              {t('announcements.title')}
+            </span>
+            {host.article && (
+              <time
+                dateTime={host.article.announcement.publishedAt}
+                className="shrink-0 normal-case tracking-normal"
+                aria-hidden="true"
+              >
+                {date(host.article.announcement.publishedAt)}
+              </time>
+            )}
           </div>
           <DialogTitle className="text-xl font-semibold leading-tight tracking-tight">
             {host.article?.announcement.title ?? t('announcements.historyTitle')}
           </DialogTitle>
-          <DialogDescription className="mt-1 text-xs leading-relaxed">
+          <DialogDescription
+            className={host.article ? 'sr-only' : 'mt-1 text-xs leading-relaxed'}
+          >
             {host.article
               ? date(host.article.announcement.publishedAt)
               : t('announcements.description')}

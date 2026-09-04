@@ -926,21 +926,21 @@
     "unassigned": "ยังไม่ได้มอบหมาย"
   },
   "announcements": {
-    "title": "News",
-    "historyTitle": "What’s new",
-    "description": "Updates, improvements, and stories from Agent Teams.",
-    "imageUnavailable": "Image unavailable",
-    "loading": "Loading news…",
-    "loadError": "This article is unavailable. Refresh the news or try again later.",
-    "expired": "No longer current",
-    "empty": "You’re all caught up",
-    "emptyDescription": "Project news will appear here when published.",
-    "allNews": "All news",
+    "title": "ข่าวสาร",
+    "historyTitle": "มีอะไรใหม่",
+    "description": "อัปเดต การปรับปรุง และเรื่องราวจาก Agent Teams",
+    "imageUnavailable": "ไม่สามารถแสดงรูปภาพได้",
+    "loading": "กำลังโหลดข่าวสาร…",
+    "loadError": "ไม่สามารถเปิดบทความนี้ได้ โปรดรีเฟรชข่าวสารหรือลองอีกครั้งภายหลัง",
+    "expired": "ไม่ใช่ข่าวล่าสุดแล้ว",
+    "empty": "คุณอ่านครบแล้ว",
+    "emptyDescription": "ข่าวสารของโปรเจกต์จะปรากฏที่นี่เมื่อเผยแพร่",
+    "allNews": "ข่าวสารทั้งหมด",
     "status": {
-      "offline": "You’re offline. Previously loaded articles are available; images may be missing.",
-      "writer_busy": "News is open in another app instance. You can browse the list here; open articles in the other instance.",
-      "unavailable": "News is available in the desktop app.",
-      "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
+      "offline": "คุณออฟไลน์อยู่ บทความที่โหลดไว้ก่อนหน้ายังอ่านได้ แต่รูปภาพบางรูปอาจไม่แสดง",
+      "writer_busy": "ข่าวสารเปิดอยู่ในแอปอีกหน้าต่างหนึ่ง คุณดูรายการได้ที่นี่ และเปิดบทความในหน้าต่างนั้น",
+      "unavailable": "ข่าวสารพร้อมใช้งานในแอปเดสก์ท็อป",
+      "state_unavailable": "ยังอ่านบทความได้ แต่ไม่สามารถบันทึกความคืบหน้าในขณะนี้ ระบบหยุดแสดงข่าวสารอัตโนมัติชั่วคราว"
     }
   }
 }

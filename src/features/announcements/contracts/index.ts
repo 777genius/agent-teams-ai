@@ -3,7 +3,11 @@ export const ANNOUNCEMENTS_FEED_PATH = '/announcements/feed.v1.json';
 export const ANNOUNCEMENTS_MAX_FEED_BYTES = 512 * 1024;
 export const ANNOUNCEMENTS_MAX_BODY_BYTES = 256 * 1024;
 export const ANNOUNCEMENTS_MAX_ASSET_BYTES = 5 * 1024 * 1024;
+export const ANNOUNCEMENTS_MAX_ARTICLE_ASSET_BYTES = 20 * 1024 * 1024;
+export const ANNOUNCEMENTS_MAX_ASSET_REQUESTS = 64;
+export const ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS = 3;
 export const ANNOUNCEMENTS_MAX_ITEMS = 1000;
+export const ANNOUNCEMENTS_MAX_STATE_IDS = 5000;
 export const ANNOUNCEMENTS_CHANNELS = {
   getSnapshot: 'announcements:getSnapshot',
   refresh: 'announcements:refresh',
@@ -11,6 +15,7 @@ export const ANNOUNCEMENTS_CHANNELS = {
   claimAuto: 'announcements:claimAuto',
   openManual: 'announcements:openManual',
   loadAsset: 'announcements:loadAsset',
+  cancelAsset: 'announcements:cancelAsset',
   dismiss: 'announcements:dismiss',
   stateChanged: 'announcements:stateChanged',
 } as const;
@@ -91,7 +96,8 @@ export interface AnnouncementsApi {
   prepareAuto(): Promise<PreparedAnnouncement | null>;
   claimAuto(input: ClaimAnnouncementInput): Promise<AnnouncementDocument | null>;
   openManual(id: string): Promise<AnnouncementDocument | null>;
-  loadAsset(url: string): Promise<string | null>;
+  loadAsset(url: string, requestId: string): Promise<string | null>;
+  cancelAsset(requestId: string): Promise<void>;
   dismiss(id: string): Promise<{ saved: boolean }>;
   onStateChanged(listener: (snapshot: AnnouncementsSnapshot) => void): () => void;
 }

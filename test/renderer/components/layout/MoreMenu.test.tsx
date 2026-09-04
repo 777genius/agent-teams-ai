@@ -1,9 +1,8 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
+import { MoreMenu } from '@renderer/components/layout/MoreMenu';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-import { MoreMenu } from '../../../../src/renderer/components/layout/MoreMenu';
 
 const openHistory = vi.hoisted(() => vi.fn());
 vi.mock('@features/announcements/renderer', () => ({

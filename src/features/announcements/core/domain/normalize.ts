@@ -1,4 +1,4 @@
-import { ANNOUNCEMENTS_MAX_ITEMS } from '../../contracts';
+import { ANNOUNCEMENTS_MAX_ITEMS, ANNOUNCEMENTS_MAX_STATE_IDS } from '../../contracts';
 
 import type { Announcement, AnnouncementFeed, AnnouncementState } from '../../contracts';
 
@@ -113,6 +113,7 @@ export function normalizeAnnouncementFeed(input: unknown): AnnouncementFeed {
 
 function ids(input: unknown): string[] {
   if (!Array.isArray(input) || !input.every(isAnnouncementId)) return invalid('state ids');
+  if (input.length > ANNOUNCEMENTS_MAX_STATE_IDS) return invalid('too many state ids');
   if (new Set(input).size !== input.length) return invalid('duplicate state ids');
   return [...input] as string[];
 }

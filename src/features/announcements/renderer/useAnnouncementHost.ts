@@ -25,6 +25,7 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
     pending: false,
     retryRequested: false,
     manualRefreshes: 0,
+    pendingClaim: null as AnnouncementDocument | null,
     document: null as AnnouncementDocument | null,
   });
   state.current.ready = ready;
@@ -42,6 +43,8 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
   }, []);
   const close = useCallback(() => {
     const article = state.current.document;
+    if (article && state.current.pendingClaim?.announcement.id === article.announcement.id)
+      state.current.pendingClaim = null;
     changeMode('idle');
     showDocument(null);
     setLoading(false);
@@ -77,6 +80,15 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
         getOverlaySnapshot().generation === overlay.generation &&
         getOverlaySnapshot().count === 0;
       try {
+        if (current.pendingClaim) {
+          const article = current.pendingClaim;
+          current.pendingClaim = null;
+          if (Date.now() < Date.parse(article.announcement.validUntil)) {
+            showDocument(article);
+            changeMode('auto');
+          }
+          return;
+        }
         const prepared = await client.prepareAuto();
         if (!prepared || !valid()) return;
         const article = await client.claimAuto({
@@ -84,8 +96,11 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
           revision: prepared.revision,
           bodySha256: prepared.announcement.bodySha256,
         });
-        // A durable claim is never undone if a higher priority surface wins the race.
-        if (!article || !valid()) return;
+        if (!article) return;
+        if (!valid()) {
+          if (current.alive) current.pendingClaim = article;
+          return;
+        }
         showDocument(article);
         changeMode('auto');
       } catch {
@@ -109,6 +124,13 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
       lastSelection.current = selection;
       setSnapshot(next);
       const open = state.current.document;
+      const claimed = state.current.pendingClaim;
+      if (
+        claimed &&
+        next.checkedAt &&
+        !next.items.some((item) => item.id === claimed.announcement.id)
+      )
+        state.current.pendingClaim = null;
       if (open && next.checkedAt && !next.items.some((item) => item.id === open.announcement.id)) {
         showDocument(null);
         if (state.current.mode === 'auto') changeMode('idle');
@@ -167,6 +189,8 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
       state.current.generation++;
       if (getOverlaySnapshot().count > 0) {
         if (state.current.mode !== 'idle') {
+          if (state.current.mode === 'auto' && state.current.document)
+            state.current.pendingClaim = state.current.document;
           changeMode('idle');
           showDocument(null);
         }
@@ -180,6 +204,7 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
       current.alive = false;
       current.generation++;
       current.articleGeneration++;
+      current.pendingClaim = null;
       offState();
       offHistory();
       offOverlay();
@@ -206,6 +231,8 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
         generation !== state.current.articleGeneration
       )
         return;
+      if (article && state.current.pendingClaim?.announcement.id === article.announcement.id)
+        state.current.pendingClaim = null;
       showDocument(article);
       setError(!article);
     } catch {

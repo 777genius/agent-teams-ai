@@ -926,21 +926,21 @@
     "unassigned": "não atribuído"
   },
   "announcements": {
-    "title": "News",
-    "historyTitle": "What’s new",
-    "description": "Updates, improvements, and stories from Agent Teams.",
-    "imageUnavailable": "Image unavailable",
-    "loading": "Loading news…",
-    "loadError": "This article is unavailable. Refresh the news or try again later.",
-    "expired": "No longer current",
-    "empty": "You’re all caught up",
-    "emptyDescription": "Project news will appear here when published.",
-    "allNews": "All news",
+    "title": "Notícias",
+    "historyTitle": "Novidades",
+    "description": "Atualizações, melhorias e histórias do Agent Teams.",
+    "imageUnavailable": "Imagem indisponível",
+    "loading": "Carregando notícias…",
+    "loadError": "Este artigo não está disponível. Atualize as notícias ou tente novamente mais tarde.",
+    "expired": "Não é mais atual",
+    "empty": "Você está em dia",
+    "emptyDescription": "As notícias do projeto aparecerão aqui quando forem publicadas.",
+    "allNews": "Todas as notícias",
     "status": {
-      "offline": "You’re offline. Previously loaded articles are available; images may be missing.",
-      "writer_busy": "News is open in another app instance. You can browse the list here; open articles in the other instance.",
-      "unavailable": "News is available in the desktop app.",
-      "state_unavailable": "Reading is available, but your progress cannot be saved right now. Automatic news is paused."
+      "offline": "Você está offline. Os artigos carregados anteriormente estão disponíveis; algumas imagens podem não aparecer.",
+      "writer_busy": "As notícias estão abertas em outra instância do aplicativo. Você pode consultar a lista aqui; abra os artigos na outra instância.",
+      "unavailable": "As notícias estão disponíveis no aplicativo para desktop.",
+      "state_unavailable": "A leitura está disponível, mas seu progresso não pode ser salvo agora. As notícias automáticas estão pausadas."
     }
   }
 }

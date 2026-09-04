@@ -7,30 +7,55 @@ import { createMarkdownComponents } from '@renderer/components/chat/markdownComp
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 
+import { AnnouncementAssetLoader } from './AnnouncementAssetLoader';
 import { announcementHeadingIds, announcementUrl } from './markdownPolicy';
 
-const PublishedImage = ({ src, alt }: { src: string; alt?: string }): React.JSX.Element => {
+const PublishedImage = ({
+  src,
+  alt,
+  loader,
+}: {
+  src: string;
+  alt?: string;
+  loader: AnnouncementAssetLoader;
+}): React.JSX.Element => {
   const [failed, setFailed] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const placeholder = useRef<HTMLSpanElement>(null);
   const { t } = useAppTranslation('common');
   useEffect(() => {
     let active = true;
+    let observer: IntersectionObserver | null = null;
     setFailed(false);
     setDataUrl(null);
-    void api.announcements
-      .loadAsset(src)
-      .then((value) => {
-        if (!active) return;
-        if (value) setDataUrl(value);
-        else setFailed(true);
-      })
-      .catch(() => {
-        if (active) setFailed(true);
-      });
+    const load = (): void => {
+      observer?.disconnect();
+      void loader
+        .load(src)
+        .then((value) => {
+          if (!active) return;
+          if (value) setDataUrl(value);
+          else setFailed(true);
+        })
+        .catch(() => {
+          if (active) setFailed(true);
+        });
+    };
+    if (typeof IntersectionObserver === 'undefined' || !placeholder.current) load();
+    else {
+      observer = new IntersectionObserver(
+        (entries) => {
+          if (entries.some((entry) => entry.isIntersecting)) load();
+        },
+        { rootMargin: '320px 0px' }
+      );
+      observer.observe(placeholder.current);
+    }
     return () => {
       active = false;
+      observer?.disconnect();
     };
-  }, [src]);
+  }, [loader, src]);
   return failed ? (
     <span className="my-4 block rounded-lg border border-[var(--color-border)] p-5 text-center text-xs text-[var(--color-text-muted)]">
       {alt || t('announcements.imageUnavailable')}
@@ -46,6 +71,7 @@ const PublishedImage = ({ src, alt }: { src: string; alt?: string }): React.JSX.
     />
   ) : (
     <span
+      ref={placeholder}
       aria-label={alt ?? t('announcements.imageUnavailable')}
       className="my-5 block h-24 max-w-full animate-pulse rounded-xl bg-[var(--color-surface-raised)]"
     />
@@ -60,6 +86,14 @@ export const AnnouncementMarkdown = ({
   bodyUrl: string;
 }): React.JSX.Element => {
   const container = useRef<HTMLDivElement>(null);
+  const assetLoader = useMemo(
+    () => new AnnouncementAssetLoader(api.announcements, bodyUrl),
+    [bodyUrl]
+  );
+  useEffect(() => {
+    assetLoader.retain();
+    return () => assetLoader.release();
+  }, [assetLoader]);
   const components = useMemo(
     () => ({
       ...createMarkdownComponents(null),
@@ -88,10 +122,14 @@ export const AnnouncementMarkdown = ({
       },
       img: ({ src, alt }: { src?: string; alt?: string }) => {
         const target = announcementUrl(src ?? '', bodyUrl, true);
-        return target ? <PublishedImage key={target} src={target} alt={alt} /> : <span>{alt}</span>;
+        return target ? (
+          <PublishedImage key={target} src={target} alt={alt} loader={assetLoader} />
+        ) : (
+          <span>{alt}</span>
+        );
       },
     }),
-    [bodyUrl]
+    [assetLoader, bodyUrl]
   );
   return (
     <div

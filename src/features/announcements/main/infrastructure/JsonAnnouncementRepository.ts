@@ -14,6 +14,19 @@ const durableWrite = (file: string, value: unknown): Promise<void> =>
     durability: 'strict',
     syncDirectory: true,
   });
+const MAX_STATE_FILE_BYTES = 512 * 1024;
+
+async function readJsonBounded(file: string): Promise<unknown> {
+  const handle = await fs.open(file, 'r');
+  try {
+    const buffer = Buffer.alloc(MAX_STATE_FILE_BYTES + 1);
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+    if (bytesRead > MAX_STATE_FILE_BYTES) throw new Error('state_unavailable');
+    return JSON.parse(buffer.subarray(0, bytesRead).toString('utf8')) as unknown;
+  } finally {
+    await handle.close();
+  }
+}
 
 export class JsonAnnouncementRepository implements AnnouncementRepository {
   private state: AnnouncementState | null = null;
@@ -36,7 +49,7 @@ export class JsonAnnouncementRepository implements AnnouncementRepository {
       await syncDirectoryDurably(path.dirname(path.dirname(this.directory)));
       const read = async (name: string): Promise<unknown | undefined> => {
         try {
-          return JSON.parse(await fs.readFile(path.join(this.directory, name), 'utf8')) as unknown;
+          return await readJsonBounded(path.join(this.directory, name));
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
           throw error;

@@ -137,6 +137,10 @@ export class HttpAnnouncementSource implements AnnouncementSource {
           target = next.href;
         }
         if (!response) throw new Error('fetch_failed');
+        const rejectResponse = async (message: string): Promise<never> => {
+          await response?.body?.cancel().catch(() => undefined);
+          throw new Error(message);
+        };
         if (response.status === 304 && kind === 'feed') {
           if (!this.feed || !this.etag) throw new Error('feed_invalid');
           normalizeAnnouncementFeed(this.feed);
@@ -159,7 +163,7 @@ export class HttpAnnouncementSource implements AnnouncementSource {
           }
         }
         if (!response.ok)
-          throw new Error(response.status === 404 ? 'body_missing' : 'fetch_failed');
+          await rejectResponse(response.status === 404 ? 'body_missing' : 'fetch_failed');
         const type = response.headers.get('content-type')?.split(';')[0].trim();
         const allowedTypes =
           kind === 'feed'
@@ -167,10 +171,10 @@ export class HttpAnnouncementSource implements AnnouncementSource {
             : kind === 'body'
               ? ['text/markdown', 'text/plain', 'text/x-markdown']
               : ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif'];
-        if (!type || !allowedTypes.includes(type))
-          throw new Error('feed_invalid');
-        if (!response.body) throw new Error('fetch_failed');
-        const reader = response.body.getReader();
+        if (!type || !allowedTypes.includes(type)) return rejectResponse('feed_invalid');
+        const body = response.body;
+        if (!body) return rejectResponse('fetch_failed');
+        const reader = body.getReader();
         const chunks: Uint8Array[] = [];
         let length = 0;
         try {

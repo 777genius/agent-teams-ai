@@ -7,8 +7,9 @@ import { AnnouncementMarkdown } from '../../../../src/features/announcements/ren
 import { announcementUrl } from '../../../../src/features/announcements/renderer/markdownPolicy';
 const external = vi.hoisted(() => vi.fn());
 const loadAsset = vi.hoisted(() => vi.fn());
+const cancelAsset = vi.hoisted(() => vi.fn(async () => undefined));
 vi.mock('@renderer/api', () => ({
-  api: { announcements: { loadAsset }, openExternal: external },
+  api: { announcements: { loadAsset, cancelAsset }, openExternal: external },
 }));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
@@ -42,6 +43,7 @@ describe('remote Markdown boundary', () => {
     expect(announcementUrl('https://example.com/docs', base)).toBe('https://example.com/docs');
   });
   it('renders GFM tables/images/code/lists/quotes with bounded overflow and no raw HTML', async () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
     loadAsset.mockResolvedValue('data:image/png;base64,iVBORw0KGgo=');
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const mount = document.createElement('div');
@@ -49,12 +51,19 @@ describe('remote Markdown boundary', () => {
     const root = createRoot(mount);
     const markdown =
       '# Release\n\n![Demo](assets/demo.gif)\n\n| A | B |\n| - | - |\n| one | two |\n\n> Quote\n\n- [x] Done\n\n```js\nconst x = 1;\n```\n\n[External](https://example.com/docs) [Task](task://a)\n\n<script>alert(1)</script><iframe src="https://evil.test"></iframe>';
-    await act(async () => root.render(<AnnouncementMarkdown markdown={markdown} bodyUrl={base} />));
+    await act(async () =>
+      root.render(
+        <React.StrictMode>
+          <AnnouncementMarkdown markdown={markdown} bodyUrl={base} />
+        </React.StrictMode>
+      )
+    );
     expect(mount.querySelector('table')).not.toBeNull();
     expect(mount.querySelector('table')?.parentElement?.className).toContain('overflow-x-auto');
     expect(mount.querySelector('pre')?.className).toContain('overflow-x-auto');
     expect(loadAsset).toHaveBeenCalledWith(
-      'https://agentteams.live/announcements/content/release/abcdef/assets/demo.gif'
+      'https://agentteams.live/announcements/content/release/abcdef/assets/demo.gif',
+      expect.stringMatching(/^article_/)
     );
     expect(mount.querySelector('img')?.getAttribute('src')).toBe(
       'data:image/png;base64,iVBORw0KGgo='
@@ -74,5 +83,6 @@ describe('remote Markdown boundary', () => {
     expect(external).toHaveBeenCalledWith('https://example.com/docs');
     await act(async () => root.unmount());
     mount.remove();
+    vi.unstubAllGlobals();
   });
 });

@@ -192,6 +192,18 @@ if (mode === '--seed') {
   assert.equal(pages.length, 1, 'Expected one dev:mcp renderer');
   const client = await connectCdp(pages[0].webSocketDebuggerUrl);
   try {
+    if (scenario === 'rich')
+      await client.inspect(`(async () => {
+        const scroller = document.querySelector('[role="dialog"] [class*="overflow-y-auto"]');
+        if (!scroller) return false;
+        for (let top = 0; top <= scroller.scrollHeight; top += Math.max(200, scroller.clientHeight / 2)) {
+          scroller.scrollTop = top;
+          await new Promise(resolve => setTimeout(resolve, 80));
+        }
+        scroller.scrollTop = 0;
+        await new Promise(resolve => setTimeout(resolve, 250));
+        return true;
+      })()`);
     const state = await client.inspect(
       `(() => ({ text: document.body.innerText, unsafe: window.__announcementUnsafeExecuted === true, badLinks: [...document.querySelectorAll('[role="dialog"] article a')].map(a=>a.getAttribute('href')).filter(h=>h && /^(javascript|file|command|task|team|vscode|data):/i.test(h)), dialogs: [...document.querySelectorAll('[role="dialog"]')].map(e=>e.textContent), images: [...document.images].map(e=>({alt:e.alt,loaded:e.complete && e.naturalWidth>0})), overflow: document.documentElement.scrollWidth > innerWidth }))()`
     );

@@ -71,6 +71,15 @@ describe('durable repository and writer ownership', () => {
     await expect(repo.update((s) => s)).rejects.toThrow('state_unavailable');
     expect(await new JsonAnnouncementRepository(dir).initialize(initial())).toEqual(initial());
   });
+  it('rejects oversized state before JSON parsing', async () => {
+    const dir = await directory();
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, 'initialized.json'), '{"schemaVersion":1}');
+    await writeFile(join(dir, 'state.json'), ' '.repeat(512 * 1024 + 1));
+    await expect(new JsonAnnouncementRepository(dir).initialize(initial())).rejects.toThrow(
+      'state_unavailable'
+    );
+  });
   it('never steals alive/uncertain PID, recovers proven dead, and fences old release', async () => {
     const dir = await directory();
     const first = new AnnouncementWriterOwner(dir);
@@ -249,6 +258,30 @@ describe('announcement consumption service', () => {
     expect(await f.service.claimAuto(input, f.context)).toBe(null);
     expect(await f.service.prepareAuto(f.context)).toBe(null);
     expect(await f.service.dismiss('new')).toEqual({ saved: true });
+    await f.service.dispose();
+  });
+  it('rejects unissued dismissals and deduplicates cancellable asset work', async () => {
+    const f = fixture();
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    expect(await f.service.dismiss('future-id')).toEqual({ saved: false });
+    expect(f.saved().dismissedIds).toEqual([]);
+
+    let finish!: (value: string) => void;
+    f.source.asset.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    const url = 'https://agentteams.live/announcements/content/new/a/assets/demo.png';
+    const first = f.service.loadAsset(url, 'request_1', f.context);
+    const second = f.service.loadAsset(url, 'request_2', f.context);
+    expect(f.source.asset).toHaveBeenCalledTimes(1);
+    f.service.cancelAsset('request_1', f.context);
+    finish('data:image/png;base64,eA==');
+    await expect(first).resolves.toBeNull();
+    await expect(second).resolves.toBe('data:image/png;base64,eA==');
     await f.service.dispose();
   });
   it('does not consume when body fails or focus changes during preparation', async () => {

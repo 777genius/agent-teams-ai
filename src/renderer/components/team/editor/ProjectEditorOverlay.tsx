@@ -20,6 +20,7 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useEditorKeyboardShortcuts } from '@renderer/hooks/useEditorKeyboardShortcuts';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useStore } from '@renderer/store';
 import { buildFileAction, buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
@@ -80,7 +81,7 @@ export const ProjectEditorOverlay = ({
   onEditorAction,
 }: ProjectEditorOverlayProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
-  // Data selectors — grouped with useShallow to prevent unnecessary re-renders
+  useOverlayOccupancy(true);
   const { activeTabId, openTabs, modifiedFiles, saveErrors, externalChanges, conflictFile } =
     useStore(
       useShallow((s) => ({
@@ -93,7 +94,6 @@ export const ProjectEditorOverlay = ({
       }))
     );
 
-  // Actions — stable references in Zustand, no grouping needed
   const openEditor = useStore((s) => s.openEditor);
   const closeEditor = useStore((s) => s.closeEditor);
   const openFile = useStore((s) => s.openFile);
@@ -537,11 +537,11 @@ export const ProjectEditorOverlay = ({
         className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3"
         style={{ paddingLeft: 'var(--macos-traffic-light-padding-left, 72px)' }}
       >
-        <div className="flex items-center gap-2 text-sm text-text-secondary">
-          <span className="font-medium text-text">{projectName}</span>
-          <span className="text-text-muted">{projectPath}</span>
+        <div className="flex min-w-0 items-center gap-2 text-sm text-text-secondary">
+          <span className="shrink-0 font-medium text-text">{projectName}</span>
+          <span className="truncate text-text-muted">{projectPath}</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-1">
           <AnnouncementNewsButton />
           <Tooltip>
             <TooltipTrigger asChild>

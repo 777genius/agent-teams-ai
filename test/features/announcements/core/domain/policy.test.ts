@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ANNOUNCEMENTS_MAX_STATE_IDS } from '../../../../../src/features/announcements/contracts';
 import {
   consumeAnnouncement,
   countOpenInterval,
@@ -111,6 +112,22 @@ describe('strict feed and state boundaries', () => {
     expect(() => normalizeAnnouncementState({ ...state(), firstAppOpenedAt: null })).toThrow(
       'fresh cohort date'
     );
+  });
+  it('bounds persisted identifier cardinality', () => {
+    const handledIds = Array.from(
+      { length: ANNOUNCEMENTS_MAX_STATE_IDS + 1 },
+      (_, index) => `news-${index}`
+    );
+    expect(() =>
+      normalizeAnnouncementState({
+        ...state(),
+        handledIds,
+        autoSuppressedThrough: {
+          id: handledIds.at(-1),
+          publishedAt: '2026-09-01T00:00:00Z',
+        },
+      })
+    ).toThrow('too many state ids');
   });
 });
 

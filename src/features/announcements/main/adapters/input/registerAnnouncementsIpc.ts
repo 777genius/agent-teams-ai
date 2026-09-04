@@ -22,6 +22,10 @@ function validAssetUrl(value: unknown): value is string {
   );
 }
 
+function validRequestId(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(value);
+}
+
 function validClaim(value: unknown): value is ClaimAnnouncementInput {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const input = value as Record<string, unknown>;
@@ -44,12 +48,12 @@ export function registerAnnouncementsIpc(
   const handle = (
     channel: string,
     arity: number,
-    invoke: (context: AnnouncementWindowContext, arg: unknown) => unknown
+    invoke: (context: AnnouncementWindowContext, ...args: unknown[]) => unknown
   ): void => {
     ipcMain.handle(channel, (event, ...args: unknown[]) => {
       const context = contextFor(event);
       if (!context || args.length !== arity) throw new Error('Invalid announcement request');
-      return invoke(context, args[0]);
+      return invoke(context, ...args);
     });
     registered.push(channel);
   };
@@ -64,9 +68,14 @@ export function registerAnnouncementsIpc(
     if (!validId(id)) throw new Error('Invalid announcement request');
     return feature.openManual(id);
   });
-  handle(channels.loadAsset, 1, (_context, url) => {
-    if (!validAssetUrl(url)) throw new Error('Invalid announcement request');
-    return feature.loadAsset(url);
+  handle(channels.loadAsset, 2, (context, url, requestId) => {
+    if (!validAssetUrl(url) || !validRequestId(requestId))
+      throw new Error('Invalid announcement request');
+    return feature.loadAsset(url, requestId, context);
+  });
+  handle(channels.cancelAsset, 1, (context, requestId) => {
+    if (!validRequestId(requestId)) throw new Error('Invalid announcement request');
+    return feature.cancelAsset(requestId, context);
   });
   handle(channels.dismiss, 1, (_context, id) => {
     if (!validId(id)) throw new Error('Invalid announcement request');

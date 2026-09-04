@@ -1,3 +1,4 @@
+import { ANNOUNCEMENTS_MAX_ASSET_REQUESTS, ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS } from '../../contracts';
 import {
   consumeAnnouncement,
   createAnnouncementState,
@@ -75,6 +76,11 @@ export class AnnouncementsService {
   private lastReportedStatus: string | null = null;
   private nextRefreshAt = 0;
   private failedBodyKey: string | null = null;
+  private assetRequests = new Map<string, string>();
+  private assetLoads = new Map<
+    string,
+    { controller: AbortController; consumers: Set<string>; promise: Promise<string> }
+  >();
 
   constructor(private readonly options: AnnouncementsServiceOptions) {
     this.tracker = new AnnouncementUsageTracker(options.clock);
@@ -111,6 +117,7 @@ export class AnnouncementsService {
   unregisterWindow(id: number): Promise<void> {
     this.tracker.unregister(id);
     this.prepared.delete(id);
+    this.cancelWindowAssets(id);
     return this.lifecycle(async () => {
       if (!this.tracker.hasWindows()) await this.release();
     });
@@ -515,22 +522,78 @@ export class AnnouncementsService {
       return null;
     }
   }
-  async loadAsset(url: string): Promise<string | null> {
+  private assetRequestKey(windowId: number, requestId: string): string {
+    return `${windowId}\0${requestId}`;
+  }
+  private cancelWindowAssets(windowId: number): void {
+    const prefix = `${windowId}\0`;
+    for (const key of [...this.assetRequests.keys()]) {
+      if (key.startsWith(prefix)) this.cancelAsset(key.slice(prefix.length), { windowId });
+    }
+  }
+  async loadAsset(
+    url: string,
+    requestId: string,
+    context: Pick<AnnouncementWindowContext, 'windowId'>
+  ): Promise<string | null> {
     if (!this.owned || this.releasing || this.stopped) return null;
+    const requestKey = this.assetRequestKey(context.windowId, requestId);
+    if (
+      this.assetRequests.has(requestKey) ||
+      this.assetRequests.size >= ANNOUNCEMENTS_MAX_ASSET_REQUESTS
+    )
+      return null;
     const generation = this.generation;
+    let load = this.assetLoads.get(url);
+    if (!load) {
+      if (this.assetLoads.size >= ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS) return null;
+      const controller = new AbortController();
+      const ownerController = this.controller;
+      const abort = (): void => controller.abort();
+      ownerController.signal.addEventListener('abort', abort, { once: true });
+      const promise = this.options.source.asset(url, controller.signal).finally(() => {
+        ownerController.signal.removeEventListener('abort', abort);
+        if (this.assetLoads.get(url)?.promise === promise) this.assetLoads.delete(url);
+      });
+      load = { controller, consumers: new Set(), promise };
+      this.assetLoads.set(url, load);
+    }
+    load.consumers.add(requestKey);
+    this.assetRequests.set(requestKey, url);
     try {
-      const dataUrl = await this.options.source.asset(url, this.controller.signal);
-      return this.owned && !this.releasing && !this.stopped && generation === this.generation
+      const dataUrl = await load.promise;
+      return this.owned &&
+        !this.releasing &&
+        !this.stopped &&
+        generation === this.generation &&
+        this.assetRequests.get(requestKey) === url
         ? dataUrl
         : null;
     } catch {
       return null;
+    } finally {
+      this.assetRequests.delete(requestKey);
+      load.consumers.delete(requestKey);
+      if (load.consumers.size === 0 && this.assetLoads.get(url) === load) load.controller.abort();
     }
+  }
+  cancelAsset(
+    requestId: string,
+    context: Pick<AnnouncementWindowContext, 'windowId'>
+  ): void {
+    const requestKey = this.assetRequestKey(context.windowId, requestId);
+    const url = this.assetRequests.get(requestKey);
+    if (!url) return;
+    this.assetRequests.delete(requestKey);
+    const load = this.assetLoads.get(url);
+    load?.consumers.delete(requestKey);
+    if (load?.consumers.size === 0) load.controller.abort();
   }
   dismiss(id: string): Promise<{ saved: boolean }> {
     return this.mutation(async () => {
       if (!this.owned || this.releasing || this.stopped || this.storageFailed || !this.state)
         return { saved: false };
+      if (!this.state.handledIds.includes(id)) return { saved: false };
       if (this.state.dismissedIds.includes(id)) return { saved: true };
       try {
         this.state = await this.options.repository.update((state) =>

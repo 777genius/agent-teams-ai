@@ -89,9 +89,13 @@ describe('anonymous validated announcement source', () => {
     expect((await restored.body(feed.items[0], signal())).markdown).toBe(markdown);
   });
   it('rejects orphan 304, HTML fallback, hash mismatch and oversized bodies', async () => {
+    const htmlFallback = new Response('<html>fallback</html>', {
+      headers: { 'Content-Type': 'text/html' },
+    });
+    const cancelHtmlFallback = vi.spyOn(htmlFallback.body!, 'cancel');
     const f = await setup([
       new Response(null, { status: 304 }),
-      new Response('<html>fallback</html>', { headers: { 'Content-Type': 'text/html' } }),
+      htmlFallback,
       new Response('wrong bytes', { headers: { 'Content-Type': 'text/plain' } }),
       new Response('x'.repeat(ANNOUNCEMENTS_MAX_BODY_BYTES + 1), {
         headers: { 'Content-Type': 'text/plain' },
@@ -99,6 +103,7 @@ describe('anonymous validated announcement source', () => {
     ]);
     await expect(f.source.refresh(signal())).rejects.toThrow();
     await expect(f.source.refresh(signal())).rejects.toThrow();
+    expect(cancelHtmlFallback).toHaveBeenCalledTimes(1);
     await expect(f.source.body(feed.items[0], signal())).rejects.toThrow('body_hash_mismatch');
     await expect(f.source.body(feed.items[0], signal())).rejects.toThrow('response_too_large');
   });

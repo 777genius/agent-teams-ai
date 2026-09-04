@@ -35,6 +35,7 @@ import {
 } from '@renderer/components/ui/alert-dialog';
 import { useContinuousScrollNav } from '@renderer/hooks/useContinuousScrollNav';
 import { useDiffNavigation } from '@renderer/hooks/useDiffNavigation';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -373,6 +374,7 @@ export const ChangeReviewDialog = ({
   onLifecycleFocus,
 }: ChangeReviewDialogProps): React.ReactElement | null => {
   const { t } = useAppTranslation('team');
+  useOverlayOccupancy(open);
   const generatedLifecycleHostId = useId();
   const resolvedLifecycleHostId = lifecycleHostId ?? generatedLifecycleHostId;
   const reviewLifecycleSessionId = useMemo(
@@ -436,9 +438,7 @@ export const ChangeReviewDialog = ({
     globalTasks,
   } = useStore();
 
-  // Build scope keys (pure values - safe to compute before hooks that depend on them)
   const scopeKey = mode === 'task' ? `task:${taskId ?? ''}` : `agent:${memberName ?? ''}`;
-  // Filesystem-safe: use `-` instead of `:` for decision persistence key
   const decisionScopeKey = mode === 'task' ? `task-${taskId ?? ''}` : `agent-${memberName ?? ''}`;
   const decisionScopeToken = useMemo(() => {
     if (
@@ -5049,7 +5049,7 @@ export const ChangeReviewDialog = ({
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
       <div
-        className="flex items-center justify-between border-b border-border bg-surface-sidebar px-4 py-3"
+        className="flex min-w-0 items-center justify-between border-b border-border bg-surface-sidebar px-4 py-3"
         style={
           {
             paddingLeft: isMacElectron
@@ -5059,8 +5059,8 @@ export const ChangeReviewDialog = ({
           } as React.CSSProperties
         }
       >
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-medium text-text">{title}</h2>
+        <div className="flex min-w-0 items-center gap-3">
+          <h2 className="truncate text-sm font-medium text-text">{title}</h2>
           {activeChangeSet && (
             <ViewedProgressBar
               viewed={viewedCount}
@@ -5069,7 +5069,7 @@ export const ChangeReviewDialog = ({
             />
           )}
         </div>
-        <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div className="flex shrink-0 items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <AnnouncementNewsButton />
           <button
             type="button"

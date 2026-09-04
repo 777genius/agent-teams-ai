@@ -215,6 +215,7 @@ export class HttpAPIClient implements ElectronAPI {
     claimAuto: async () => null,
     openManual: async () => null,
     loadAsset: async () => null,
+    cancelAsset: async () => undefined,
     dismiss: async () => ({ saved: false }),
     onStateChanged: () => () => {},
   };
