@@ -359,10 +359,10 @@
       "cancel": "Cancelar",
       "delete": "Suprimir",
       "editCode": "Editar código",
-      "forceStop": "Parada forzada",
       "launch": "Lanzamiento",
       "remove": "Retirar",
       "stop": "Para.",
+      "stopping": "Deteniendo...",
       "task": "Tareas",
       "visualize": "Visualize",
       "usage": "Uso"
@@ -385,16 +385,13 @@
       "member_other": "miembros",
       "title": "Equipo aún no lanzado"
     },
-    "forceStop": {
-      "cancelLabel": "Cancelar",
-      "confirmLabel": "Forzar parada",
-      "message": "¿Forzar la parada de \"{{team}}\"? Intenta detener este equipo y cancela sus entregas de mensajes pendientes. No se garantiza que el entorno de ejecución termine; los hosts de ejecución compartidos no se detienen. Los mensajes en cola permanecen en la bandeja de entrada.",
-      "title": "Parada forzada del equipo"
+    "stopFailed": {
+      "title": "No se pudo detener el equipo",
+      "message": "El equipo sigue en ejecución. Comprueba su estado y pulsa Detener de nuevo."
     },
-    "forceStopFailed": {
-      "confirmLabel": "OK",
-      "fallbackMessage": "Se produjo un error inesperado",
-      "title": "La parada forzada falló"
+    "stopUnknown": {
+      "title": "No se pudo confirmar la detención",
+      "message": "No se recibió respuesta del entorno de ejecución. Actualiza el estado del equipo antes de volver a intentarlo."
     },
     "invalidTab": "Tapa de equipo inválido",
     "kanbanSafeData": "Failed to fully load kanban. Mostrando datos seguros.",
@@ -429,7 +426,6 @@
       "deleteTeam": "Eliminar el equipo",
       "editTeam": "Equipo de edición",
       "editUnavailableProvisioning": "El equipo de edición no está disponible mientras que el suministro sigue en curso",
-      "forceStopTeam": "Parada forzada del equipo: interrumpe el trabajo en curso",
       "openBuiltInEditor": "Proyecto abierto en editor incorporado",
       "openTeamGraph": "Gráfico de equipo abierto",
       "stopTeam": "Para el equipo",

@@ -359,10 +359,10 @@
       "cancel": "이름 *",
       "delete": "이름 *",
       "editCode": "비밀번호",
-      "forceStop": "강제 중지",
       "launch": "시작하다",
       "remove": "기타 제품",
       "stop": "기타",
+      "stopping": "중지 중...",
       "task": "기타",
       "visualize": "제품 설명",
       "usage": "사용량"
@@ -385,16 +385,13 @@
       "member_other": "이름 *",
       "title": "아직 출시되지 않은 팀"
     },
-    "forceStop": {
-      "cancelLabel": "취소",
-      "confirmLabel": "강제 중지",
-      "message": "\"{{team}}\"을(를) 강제로 중지할까요? 이 팀의 중지를 시도하고 대기 중인 메시지 전달을 취소합니다. 런타임 종료는 보장되지 않으며 공유 런타임 호스트는 종료하지 않습니다. 대기열의 메시지는 받은 편지함에 남습니다.",
-      "title": "팀 강제 중지"
+    "stopFailed": {
+      "title": "팀을 중지할 수 없음",
+      "message": "팀이 아직 실행 중입니다. 상태를 확인한 후 중지를 다시 누르세요."
     },
-    "forceStopFailed": {
-      "confirmLabel": "확인",
-      "fallbackMessage": "예상치 못한 오류가 발생했습니다",
-      "title": "강제 중지 실패"
+    "stopUnknown": {
+      "title": "중지를 확인할 수 없음",
+      "message": "런타임 응답을 받지 못했습니다. 다시 시도하기 전에 팀 상태를 새로 고치세요."
     },
     "invalidTab": "잘못된 팀 탭",
     "kanbanSafeData": "완전 부하 kanban에 실패. 안전한 자료 표시.",
@@ -429,7 +426,6 @@
       "deleteTeam": "팀 삭제",
       "editTeam": "편집 팀",
       "editUnavailableProvisioning": "팀 편집은 아직 진행중인 동안 사용할 수 없습니다.",
-      "forceStopTeam": "팀 강제 중지 - 진행 중인 작업이 중단됩니다",
       "openBuiltInEditor": "내장 편집기에서 프로젝트 열기",
       "openTeamGraph": "열린 팀 그래프",
       "stopTeam": "정지 팀",

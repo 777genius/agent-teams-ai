@@ -17,6 +17,7 @@ interface ConfirmDialogState {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'default' | 'danger';
+  mode?: 'confirm' | 'info';
 }
 
 type ConfirmResolver = ((confirmed: boolean) => void) | null;
@@ -45,6 +46,7 @@ export async function confirm(opts: {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'default' | 'danger';
+  mode?: 'confirm' | 'info';
 }): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     // If a previous dialog is open, resolve it as cancelled
@@ -60,6 +62,7 @@ export async function confirm(opts: {
       confirmLabel: opts.confirmLabel,
       cancelLabel: opts.cancelLabel,
       variant: opts.variant,
+      mode: opts.mode,
     });
   });
 }
@@ -150,16 +153,18 @@ export const ConfirmDialog = (): React.JSX.Element | null => {
 
         {/* Actions */}
         <div className="mt-5 flex justify-end gap-3">
-          <button
-            onClick={() => close(false)}
-            className="rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
-            style={{
-              borderColor: 'var(--color-border)',
-              color: 'var(--color-text-secondary)',
-            }}
-          >
-            {state.cancelLabel ?? 'Cancel'}
-          </button>
+          {state.mode !== 'info' && (
+            <button
+              onClick={() => close(false)}
+              className="rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-white/5"
+              style={{
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text-secondary)',
+              }}
+            >
+              {state.cancelLabel ?? 'Cancel'}
+            </button>
+          )}
           <button
             data-confirm-btn
             onClick={() => close(true)}

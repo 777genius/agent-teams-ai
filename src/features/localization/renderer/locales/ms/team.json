@@ -359,10 +359,10 @@
       "cancel": "Batal",
       "delete": "Padam",
       "editCode": "Sunting kod",
-      "forceStop": "Hentikan paksa",
       "launch": "Lancar",
       "remove": "Buang",
       "stop": "Hentikan",
+      "stopping": "Sedang menghentikan...",
       "task": "Tugasan",
       "visualize": "Visualisasikan",
       "usage": "Penggunaan"
@@ -385,16 +385,13 @@
       "member_other": "ahli",
       "title": "Pasukan belum dilancarkan"
     },
-    "forceStop": {
-      "cancelLabel": "Batal",
-      "confirmLabel": "Hentikan paksa",
-      "message": "Hentikan paksa \"{{team}}\"? Cuba menghentikan pasukan ini dan membatalkan penghantaran mesej tertundanya. Penamatan runtime tidak dijamin; hos runtime yang dikongsi tidak ditamatkan. Mesej dalam baris gilir kekal dalam peti masuk.",
-      "title": "Hentikan paksa pasukan"
+    "stopFailed": {
+      "title": "Pasukan tidak dapat dihentikan",
+      "message": "Pasukan masih berjalan. Semak statusnya dan tekan Hentikan sekali lagi."
     },
-    "forceStopFailed": {
-      "confirmLabel": "OK",
-      "fallbackMessage": "Ralat tidak dijangka berlaku",
-      "title": "Hentikan paksa gagal"
+    "stopUnknown": {
+      "title": "Penghentian tidak dapat disahkan",
+      "message": "Respons runtime tidak diterima. Muat semula status pasukan sebelum mencuba lagi."
     },
     "invalidTab": "Tab pasukan tidak sah",
     "kanbanSafeData": "Gagal memuatkan kanban sepenuhnya. Memaparkan data selamat.",
@@ -429,7 +426,6 @@
       "deleteTeam": "Padam pasukan",
       "editTeam": "Sunting pasukan",
       "editUnavailableProvisioning": "Sunting pasukan tidak tersedia semasa peruntukan masih dijalankan",
-      "forceStopTeam": "Hentikan paksa pasukan - mengganggu kerja yang sedang berjalan",
       "openBuiltInEditor": "Buka projek dalam editor terbina dalam",
       "openTeamGraph": "Buka graf pasukan",
       "stopTeam": "Hentikan pasukan",

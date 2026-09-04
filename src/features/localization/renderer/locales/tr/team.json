@@ -359,10 +359,10 @@
       "cancel": "İptal",
       "delete": "Sil",
       "editCode": "Kodu düzenle",
-      "forceStop": "Zorla durdur",
       "launch": "Başlat",
       "remove": "Kaldır",
       "stop": "Durdur",
+      "stopping": "Durduruluyor...",
       "task": "Görev",
       "visualize": "Görselleştir",
       "usage": "Kullanım"
@@ -385,16 +385,13 @@
       "member_other": "üye",
       "title": "Ekip henüz başlatılmadı"
     },
-    "forceStop": {
-      "cancelLabel": "İptal",
-      "confirmLabel": "Zorla durdur",
-      "message": "\"{{team}}\" zorla durdurulsun mu? Bu ekibi durdurmayı dener ve bekleyen mesaj teslimlerini iptal eder. Çalışma zamanının kapanması garanti edilmez; paylaşılan çalışma zamanı ana bilgisayarları sonlandırılmaz. Kuyruktaki mesajlar gelen kutusunda kalır.",
-      "title": "Ekibi zorla durdur"
+    "stopFailed": {
+      "title": "Ekip durdurulamadı",
+      "message": "Ekip hâlâ çalışıyor. Durumunu kontrol edin ve Durdur düğmesine tekrar basın."
     },
-    "forceStopFailed": {
-      "confirmLabel": "Tamam",
-      "fallbackMessage": "Beklenmeyen bir hata oluştu",
-      "title": "Zorla durdurma başarısız oldu"
+    "stopUnknown": {
+      "title": "Durdurma doğrulanamadı",
+      "message": "Çalışma zamanından yanıt alınamadı. Yeniden denemeden önce ekip durumunu yenileyin."
     },
     "invalidTab": "Geçersiz ekip sekmesi",
     "kanbanSafeData": "Kanban tam olarak yüklenemedi. Güvenli veri gösteriliyor.",
@@ -429,7 +426,6 @@
       "deleteTeam": "Ekibi sil",
       "editTeam": "Ekibi düzenle",
       "editUnavailableProvisioning": "Sağlama hâlâ devam ederken ekibi düzenleme kullanılamaz",
-      "forceStopTeam": "Ekibi zorla durdur - devam eden işi keser",
       "openBuiltInEditor": "Projeyi yerleşik düzenleyicide aç",
       "openTeamGraph": "Ekip grafiğini aç",
       "stopTeam": "Ekibi durdur",
