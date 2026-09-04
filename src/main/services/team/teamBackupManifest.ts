@@ -2,6 +2,9 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 import { atomicWriteAsync, atomicWriteSync } from '@main/utils/atomicWrite';
+import { createLogger } from '@shared/utils/logger';
+
+const logger = createLogger('TeamBackupService');
 
 /**
  * The per-team backup manifest: the record that says which identity owns the
@@ -64,7 +67,15 @@ export function writeBackupManifestSync(backupDir: string, manifest: BackupManif
   try {
     const manifestPath = getBackupManifestPath(backupDir);
     atomicWriteSync(manifestPath, JSON.stringify(manifest, null, 2));
-  } catch {
-    // best-effort
+  } catch (error) {
+    // Best-effort, because the shutdown backup must go on to the next team.
+    // Reported all the same: the file copies and the registry entry are
+    // already written by the time this runs, so a manifest that did not land
+    // leaves a backup whose restore reads stale ownership and file stats.
+    logger.warn(
+      `[Backup] Failed to save manifest for ${manifest.teamName}: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
   }
 }
