@@ -1352,7 +1352,11 @@
       "relaunchTeam": "فريق الإطلاق",
       "relaunching": "إعادة إطلاق...",
       "saveChanges": "إنقاذ التغييرات",
-      "saving": "إنقاذ..."
+      "saving": "إنقاذ...",
+      "skipPreflightAndLaunch": "تخطي الفحص المسبق والتشغيل"
+    },
+    "workspaceTrust": {
+      "description": "قد تعمل أوامر المشروع وخوادم MCP عند بدء الفريق."
     },
     "billing": {
       "prefix": "ابتداء من 15 يونيو، 2026، فواتير الأنثروبيك",

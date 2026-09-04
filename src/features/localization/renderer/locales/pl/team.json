@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Uruchom ponownie zespół",
       "relaunching": "Ponowne uruchamianie...",
       "saveChanges": "Zapisz zmiany",
-      "saving": "Zapisywanie..."
+      "saving": "Zapisywanie...",
+      "skipPreflightAndLaunch": "Pomiń kontrolę wstępną i uruchom"
+    },
+    "workspaceTrust": {
+      "description": "Podczas uruchamiania zespołu mogą zostać uruchomione polecenia projektu i serwery MCP."
     },
     "billing": {
       "prefix": "Począwszy od 15 czerwca 2026, Anthropic rozlicza",

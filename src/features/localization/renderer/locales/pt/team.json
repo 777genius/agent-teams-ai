@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Reencaminhar a equipa",
       "relaunching": "A retransmitir...",
       "saveChanges": "Salvar alterações",
-      "saving": "A gravar..."
+      "saving": "A gravar...",
+      "skipPreflightAndLaunch": "Ignorar verificação e iniciar"
+    },
+    "workspaceTrust": {
+      "description": "Comandos do projeto e servidores MCP podem ser executados quando a equipe iniciar."
     },
     "billing": {
       "prefix": "A partir de 15 de junho de 2026, notas antrópicas",

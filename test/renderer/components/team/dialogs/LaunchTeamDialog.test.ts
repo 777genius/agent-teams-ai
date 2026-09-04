@@ -691,6 +691,154 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  it.each([
+    ['create', 'failed'],
+    ['launch', 'failed'],
+    ['create', 'ready'],
+    ['launch', 'ready'],
+  ] as const)(
+    'optional skip %s with %s completion fences duplicates and resumes after rejection without repeating successful diagnostics',
+    async (mode, completion) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      localStorage.setItem('team:lastSelectedProvider', 'anthropic');
+      localStorage.setItem('team:lastSelectedModel:anthropic', 'opus');
+      createTeamDraftMock.state.soloTeam = mode !== 'create';
+      if (mode === 'create') createTeamDraftMock.state.members[1].providerId = 'anthropic';
+      const pending: ((value: any) => void)[] = [];
+      vi.mocked(runProviderPrepareDiagnostics).mockImplementation(({ providerId }) =>
+        providerId === 'opencode'
+          ? Promise.resolve({ status: 'ready', details: [], warnings: [], modelResultsById: {} })
+          : new Promise((resolve) => pending.push(resolve))
+      );
+      let rejectSubmit!: (error: Error) => void;
+      const submit = vi.fn(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectSubmit = reject;
+          })
+      );
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          mode === 'create'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                clearProvisioningError: vi.fn(),
+                existingTeamNames: [],
+                provisioningTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: submit,
+                onOpenTeam: vi.fn(),
+              })
+            : React.createElement(LaunchTeamDialog, {
+                mode: 'launch',
+                open: true,
+                teamName: 'team-alpha',
+                members: [],
+                defaultProjectPath: '/tmp/project',
+                provisioningError: null,
+                clearProvisioningError: vi.fn(),
+                activeTeams: [],
+                onClose: vi.fn(),
+                onLaunch: submit,
+              })
+        );
+        await flush();
+      });
+      const settle = async () => {
+        for (let i = 0; i < 5; i++)
+          await act(async () => {
+            await new Promise((r) => setTimeout(r, 0));
+            await flush();
+          });
+      };
+      await settle();
+      const findButton = (label: string) =>
+        Array.from(host.querySelectorAll('button')).find(
+          (button) => button.textContent?.trim() === label
+        )!;
+      const first = findButton(mode === 'create' ? 'Create' : 'Launch team');
+      await act(async () => {
+        first.click();
+        await flush();
+      });
+      await settle();
+      const skipLabel =
+        mode === 'create' ? 'Skip preflight and create' : 'Skip preflight and launch';
+      const skip = findButton(skipLabel);
+      expect(skip, host.textContent ?? '').toBeDefined();
+      expect(skip.disabled).toBe(false);
+      expect(pending).toHaveLength(1);
+      const base = Date.now();
+      const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2100-01-01T00:00:00.000Z'));
+      await act(async () => {
+        skip.click();
+        await flush();
+      });
+      expect(submit).not.toHaveBeenCalled();
+      now.mockReturnValue(base);
+      const attempt = vi
+        .mocked(runProviderPrepareDiagnostics)
+        .mock.calls.find(([input]) => input.providerId === 'anthropic')![0];
+      await act(async () => {
+        attempt.onModelProgress?.({
+          status: 'failed',
+          details: ['REQUIRED FAILURE'],
+          completedCount: 0,
+          totalCount: 1,
+        });
+        skip.click();
+        await flush();
+      });
+      expect(submit).not.toHaveBeenCalled();
+      await act(async () => {
+        attempt.onModelProgress?.({
+          status: 'checking',
+          details: [],
+          completedCount: 0,
+          totalCount: 1,
+        });
+        await flush();
+      });
+      await act(async () => {
+        skip.click();
+        skip.click();
+        await flush();
+      });
+      expect(submit).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        pending[0]({
+          status: completion,
+          details: ['FENCED OPTIONAL RESULT'],
+          warnings: [],
+          modelResultsById: {},
+        });
+        await flush();
+      });
+      expect(host.textContent).not.toContain('FENCED OPTIONAL RESULT');
+      await act(async () => {
+        rejectSubmit(new Error('submit rejected'));
+        await flush();
+      });
+      await settle();
+      expect(pending).toHaveLength(completion === 'ready' ? 1 : 2);
+      expect(
+        findButton(
+          completion === 'ready' ? (mode === 'create' ? 'Create' : 'Launch team') : skipLabel
+        ).disabled
+      ).toBe(false);
+      expect(submit).toHaveBeenCalledTimes(1);
+      await act(async () => root.unmount());
+      now.mockRestore();
+    }
+  );
+
   beforeEach(() => {
     vi.mocked(runProviderPrepareDiagnostics).mockReset();
     vi.mocked(runProviderPrepareDiagnostics).mockResolvedValue({
@@ -3574,7 +3722,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('refreshes OpenCode preflight when a checking catalog becomes authoritative', async () => {
+  it('keeps one OpenCode preflight when the same selected catalog becomes authoritative', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -3761,7 +3909,7 @@ describe('LaunchTeamDialog', () => {
     const inFlightOpencodePrepareCalls = vi
       .mocked(runProviderPrepareDiagnostics)
       .mock.calls.filter((call) => call[0]?.providerId === 'opencode');
-    expect(inFlightOpencodePrepareCalls).toHaveLength(2);
+    expect(inFlightOpencodePrepareCalls).toHaveLength(1);
     expect(host.textContent).toContain('All selected providers are ready.');
 
     await act(async () => {

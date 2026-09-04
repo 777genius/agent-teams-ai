@@ -1384,7 +1384,8 @@
       "relaunchTeam": "Перезапустить команду",
       "relaunching": "Перезапуск...",
       "saveChanges": "Сохранить изменения",
-      "saving": "Сохранение..."
+      "saving": "Сохранение...",
+      "skipPreflightAndLaunch": "Пропустить проверку и запустить"
     },
     "billing": {
       "prefix": "С 15 июня 2026 года Anthropic списывает использование",
@@ -1439,8 +1440,7 @@
       "title": "Relaunch перезапустит текущий team run"
     },
     "workspaceTrust": {
-      "title": "Первый запуск отметит проект как доверенный",
-      "description": "При старте команды могут выполняться хуки проекта и MCP-серверы."
+      "description": "При старте могут запускаться команды и MCP-серверы из настроек проекта."
     },
     "schedule": {
       "labelOptional": "Label (optional)",

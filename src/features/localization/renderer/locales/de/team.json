@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Relaunch Team",
       "relaunching": "Relaunching...",
       "saveChanges": "Änderungen speichern",
-      "saving": "Sparen..."
+      "saving": "Sparen...",
+      "skipPreflightAndLaunch": "Vorprüfung überspringen und starten"
+    },
+    "workspaceTrust": {
+      "description": "Beim Start des Teams können Projektbefehle und MCP-Server ausgeführt werden."
     },
     "billing": {
       "prefix": "Ab 15. Juni 2026 Anthropische Rechnungen",

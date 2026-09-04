@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Lancarkan semula pasukan",
       "relaunching": "Melancarkan semula...",
       "saveChanges": "Simpan Perubahan",
-      "saving": "Menyimpan..."
+      "saving": "Menyimpan...",
+      "skipPreflightAndLaunch": "Langkau semakan awal dan lancarkan"
+    },
+    "workspaceTrust": {
+      "description": "Arahan projek dan pelayan MCP mungkin berjalan apabila pasukan bermula."
     },
     "billing": {
       "prefix": "Bermula 15 Jun 2026, Anthropic mengenakan bil",

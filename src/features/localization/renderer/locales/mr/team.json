@@ -1352,7 +1352,11 @@
       "relaunchTeam": "टीम पुन्हा सुरू करा",
       "relaunching": "पुन्हा सुरू करत आहे...",
       "saveChanges": "बदल जतन करा",
-      "saving": "जतन करत आहे..."
+      "saving": "जतन करत आहे...",
+      "skipPreflightAndLaunch": "पूर्वतपासणी वगळून सुरू करा"
+    },
+    "workspaceTrust": {
+      "description": "टीम सुरू झाल्यावर प्रकल्पाच्या कमांड आणि MCP सर्व्हर चालू होऊ शकतात."
     },
     "billing": {
       "prefix": "15 जून, 2026 पासून, Anthropic बिल करते",

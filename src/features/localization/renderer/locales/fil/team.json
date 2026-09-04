@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Ilunsad muli ang team",
       "relaunching": "Inilulunsad muli...",
       "saveChanges": "I-save ang mga Pagbabago",
-      "saving": "Sine-save..."
+      "saving": "Sine-save...",
+      "skipPreflightAndLaunch": "Laktawan ang paunang pagsusuri at ilunsad"
+    },
+    "workspaceTrust": {
+      "description": "Maaaring tumakbo ang mga command ng proyekto at MCP server kapag nagsimula ang team."
     },
     "billing": {
       "prefix": "Simula Hunyo 15, 2026, sinisingil ng Anthropic ang",

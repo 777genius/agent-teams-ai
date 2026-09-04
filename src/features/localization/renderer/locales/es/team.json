@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Relaunch team",
       "relaunching": "Relanzar...",
       "saveChanges": "Guardar cambios",
-      "saving": "Salvando..."
+      "saving": "Salvando...",
+      "skipPreflightAndLaunch": "Omitir comprobación e iniciar"
+    },
+    "workspaceTrust": {
+      "description": "Al iniciar el equipo, pueden ejecutarse comandos del proyecto y servidores MCP."
     },
     "billing": {
       "prefix": "A partir del 15 de junio de 2026, facturas antropópicas",

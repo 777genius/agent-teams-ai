@@ -1040,7 +1040,6 @@ export default interface Resources {
       quickConnect: {
         alsoConnectOpenCode: 'Also connect through OpenCode';
         browseAll: 'Browse all providers';
-        setupModelEndpoint: 'Set up model endpoint';
         cancel: 'Cancel';
         checkAndConnect: 'Check & connect';
         checkingOpenCode: 'Checking OpenCode';
@@ -1056,7 +1055,7 @@ export default interface Resources {
         connectSuperGrok: 'Connect SuperGrok';
         connected: 'Connected';
         continue: 'Continue';
-        copilotDescription: 'Use GitHub Copilot through OpenCode. Agent Teams verifies a compatible explicit model for your plan.';
+        copilotDescription: 'Use GitHub Copilot through OpenCode. Agent Teams checks whether OpenCode can select a model allowed by your plan.';
         copyCommand: 'Copy command';
         cursorConnected: 'Cursor account connected';
         cursorDescription: 'Use your Cursor subscription through the managed OpenCode Cursor plugin.';
@@ -1100,6 +1099,7 @@ export default interface Resources {
         requiresOpenCode: 'Requires OpenCode';
         retryInstall: 'Retry installation';
         retryOpenCode: 'Repair OpenCode';
+        setupModelEndpoint: 'Set up model endpoint';
         signIn: 'Sign in';
         signInRequired: 'Sign in required';
         statusUnavailable: 'Status unavailable';
@@ -2677,25 +2677,6 @@ export default interface Resources {
       };
     };
     notifications: {
-      recovery: {
-        title: 'Automatic agent recovery';
-        transient: {
-          label: 'Recover transient runtime errors';
-          description: 'Continue the failed lead or teammate turn after safe transient provider and network errors';
-        };
-        rateLimits: {
-          label: 'Recover rate limits with a reset time';
-          description: 'Continue after a trusted Retry-After or reset time, with a safety buffer';
-        };
-        delay: {
-          label: 'Initial retry delay (seconds)';
-          description: 'Base delay before the first recovery attempt (15-900 seconds)';
-        };
-        attempts: {
-          label: 'Maximum recovery attempts';
-          description: 'Accepted runtime turns per failure chain (1-5)';
-        };
-      };
       dev: {
         descriptionPrefix: 'Notifications may not work in development mode. macOS identifies the app as "Electron" (bundle ID';
         descriptionSuffix: ') instead of the production app name. Check System Settings > Notifications > Electron to verify permissions.';
@@ -2706,6 +2687,25 @@ export default interface Resources {
         empty: 'No repositories ignored';
         selectPlaceholder: 'Select repository to ignore...';
         title: 'Ignored Repositories';
+      };
+      recovery: {
+        attempts: {
+          description: 'Accepted runtime turns per failure chain (1-5)';
+          label: 'Maximum recovery attempts';
+        };
+        delay: {
+          description: 'Base delay before the first recovery attempt (15-900 seconds)';
+          label: 'Initial retry delay (seconds)';
+        };
+        rateLimits: {
+          description: 'Continue after a trusted Retry-After or reset time, with a safety buffer';
+          label: 'Recover rate limits with a reset time';
+        };
+        title: 'Automatic agent recovery';
+        transient: {
+          description: 'Continue the failed lead or teammate turn after safe transient provider and network errors';
+          label: 'Recover transient runtime errors';
+        };
       };
       settings: {
         enabled: {
@@ -4191,6 +4191,7 @@ export default interface Resources {
         relaunching: 'Relaunching...';
         saveChanges: 'Save Changes';
         saving: 'Saving...';
+        skipPreflightAndLaunch: 'Skip preflight and launch';
       };
       billing: {
         prefix: 'Starting June 15, 2026, Anthropic bills';
@@ -4283,8 +4284,7 @@ export default interface Resources {
         selectWorkingDirectory: 'Select working directory (cwd)';
       };
       workspaceTrust: {
-        description: 'Project hooks and MCP servers may run when the team starts.';
-        title: 'First launch will trust this project';
+        description: 'Project commands and MCP servers may run when the team starts.';
       };
     };
     layout: {
@@ -5067,56 +5067,6 @@ export default interface Resources {
         actions: {
           createTeamIn: 'Create team in {{label}}';
         };
-        layout: {
-          switchToHierarchy: 'Switch to hierarchy chart';
-          switchToNested: 'Switch to nested map';
-        };
-        view: {
-          hierarchy: 'Hierarchy';
-          overview: 'Overview';
-          relations: 'Relations';
-          structure: 'Structure';
-        };
-        overviewCard: {
-          activeTasks: '{{count}} active tasks';
-          attention: '{{count}} need attention';
-          summary: '{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents';
-          teamsOnline: '{{onlineCount}}/{{teamCount}} teams online';
-        };
-        toolbar: {
-          animation: 'Animation';
-          connections: 'Connections';
-          filters: 'Map filters';
-          fit: 'Fit meaningful overview';
-          reset: 'Reset search, focus, and filters';
-          tasks: 'Tasks';
-          zoomIn: 'Zoom in';
-          zoomOut: 'Zoom out';
-        };
-        legend: {
-          connection: 'Connection';
-          group: 'Group';
-          hierarchy: 'Hierarchy';
-          online: 'Online';
-          organization: 'Organization';
-        };
-        focus: {
-          clearFocus: 'Clear focus';
-          clearSearch: 'Clear search';
-          collapseBranch: 'Collapse branch';
-          connectedOnly: 'Connected ({{count}})';
-          expandBranch: 'Expand branch';
-          kind: {
-            container: 'group';
-            organization: 'organization';
-            team: 'team';
-          };
-          noResults: 'No results found';
-          pathToRoot: 'Path to root';
-          searchLabel: 'Search organization map';
-          searchPlaceholder: 'Organization, group, team, or task...';
-          taskMatch: 'Task: {{task}}';
-        };
         canvas: {
           activeAgents: '{{count}} active agents';
           activeAgents_few: '{{count}} active agents';
@@ -5135,6 +5085,8 @@ export default interface Resources {
           agents_one: '{{count}} agent';
           agents_other: '{{count}} agents';
           allOrganizations: 'All Organizations';
+          groupSummary: '{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks';
+          minimap: 'Organization map navigation';
           notFound: 'not found';
           offline: 'offline';
           online: 'online';
@@ -5142,9 +5094,7 @@ export default interface Resources {
           orgsAndTeams: '{{orgCount}} orgs - {{teamCount}} teams';
           teamReference: 'team reference';
           teamRole: '{{memberCount}} agents - {{activeCount}} active';
-          groupSummary: '{{teamCount}} teams · {{activeTeamCount}} active · {{taskCount}} tasks';
           teamSummary: '{{status}} · {{activeTaskCount}} active · {{taskCount}} tasks';
-          minimap: 'Organization map navigation';
           teams: '{{count}} teams';
           teams_few: '{{count}} teams';
           teams_many: '{{count}} teams';
@@ -5166,6 +5116,56 @@ export default interface Resources {
           weight_many: 'weight {{count}}';
           weight_one: 'weight {{count}}';
           weight_other: 'weight {{count}}';
+        };
+        focus: {
+          clearFocus: 'Clear focus';
+          clearSearch: 'Clear search';
+          collapseBranch: 'Collapse branch';
+          connectedOnly: 'Connected ({{count}})';
+          expandBranch: 'Expand branch';
+          kind: {
+            container: 'group';
+            organization: 'organization';
+            team: 'team';
+          };
+          noResults: 'No results found';
+          pathToRoot: 'Path to root';
+          searchLabel: 'Search organization map';
+          searchPlaceholder: 'Organization, group, team, or task...';
+          taskMatch: 'Task: {{task}}';
+        };
+        layout: {
+          switchToHierarchy: 'Switch to hierarchy chart';
+          switchToNested: 'Switch to nested map';
+        };
+        legend: {
+          connection: 'Connection';
+          group: 'Group';
+          hierarchy: 'Hierarchy';
+          online: 'Online';
+          organization: 'Organization';
+        };
+        overviewCard: {
+          activeTasks: '{{count}} active tasks';
+          attention: '{{count}} need attention';
+          summary: '{{groupCount}} groups · {{teamCount}} teams · {{agentCount}} agents';
+          teamsOnline: '{{onlineCount}}/{{teamCount}} teams online';
+        };
+        toolbar: {
+          animation: 'Animation';
+          connections: 'Connections';
+          filters: 'Map filters';
+          fit: 'Fit meaningful overview';
+          reset: 'Reset search, focus, and filters';
+          tasks: 'Tasks';
+          zoomIn: 'Zoom in';
+          zoomOut: 'Zoom out';
+        };
+        view: {
+          hierarchy: 'Hierarchy';
+          overview: 'Overview';
+          relations: 'Relations';
+          structure: 'Structure';
         };
       };
       inspector: {
@@ -5775,9 +5775,9 @@ export default interface Resources {
           applyRejections: 'Apply rejected hunks to disk; accepted changes are kept as-is';
           autoOff: 'Auto-mark files as viewed when scrolled to end (OFF)';
           autoOn: 'Auto-mark files as viewed when scrolled to end (ON)';
+          redo: 'Redo last undone review operation (Ctrl+Shift+Z)';
           rejectAll: 'Reject all safely rejectable changes across all files';
           rejectAllDisabled: 'No pending files have a safe original baseline to reject.';
-          redo: 'Redo last undone review operation (Ctrl+Shift+Z)';
           undo: 'Undo last review operation (Ctrl+Z)';
         };
       };

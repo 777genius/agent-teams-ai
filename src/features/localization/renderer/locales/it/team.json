@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Riavvia team",
       "relaunching": "Riavvio in corso...",
       "saveChanges": "Salva modifiche",
-      "saving": "Salvataggio in corso..."
+      "saving": "Salvataggio in corso...",
+      "skipPreflightAndLaunch": "Salta la verifica e avvia"
+    },
+    "workspaceTrust": {
+      "description": "All'avvio del team potrebbero essere eseguiti comandi del progetto e server MCP."
     },
     "billing": {
       "prefix": "A partire dal 15 giugno 2026, Anthropic fattura",

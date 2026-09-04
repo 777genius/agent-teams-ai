@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Khởi chạy lại đội ngũ",
       "relaunching": "Đang khởi chạy lại...",
       "saveChanges": "Lưu thay đổi",
-      "saving": "Đang lưu..."
+      "saving": "Đang lưu...",
+      "skipPreflightAndLaunch": "Bỏ qua kiểm tra trước và khởi chạy"
+    },
+    "workspaceTrust": {
+      "description": "Các lệnh của dự án và máy chủ MCP có thể chạy khi nhóm khởi động."
     },
     "billing": {
       "prefix": "Kể từ ngày 15 tháng 6 năm 2026, Anthropic tính phí",

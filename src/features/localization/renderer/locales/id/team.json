@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Tim relaunch",
       "relaunching": "Relaunching...",
       "saveChanges": "Simpan Perubahan",
-      "saving": "Menyimpan..."
+      "saving": "Menyimpan...",
+      "skipPreflightAndLaunch": "Lewati pemeriksaan awal dan mulai"
+    },
+    "workspaceTrust": {
+      "description": "Perintah proyek dan server MCP dapat berjalan saat tim dimulai."
     },
     "billing": {
       "prefix": "Mulai 15 Juni 2026, tagihan Anthropic",

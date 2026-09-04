@@ -1388,7 +1388,8 @@
       "relaunchTeam": "Relaunch team",
       "relaunching": "Relaunching...",
       "saveChanges": "Save Changes",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "skipPreflightAndLaunch": "Skip preflight and launch"
     },
     "billing": {
       "prefix": "Starting June 15, 2026, Anthropic bills",
@@ -1443,8 +1444,7 @@
       "title": "Relaunch will restart the current team run"
     },
     "workspaceTrust": {
-      "title": "First launch will trust this project",
-      "description": "Project hooks and MCP servers may run when the team starts."
+      "description": "Project commands and MCP servers may run when the team starts."
     },
     "schedule": {
       "labelOptional": "Label (optional)",

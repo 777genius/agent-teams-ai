@@ -1352,7 +1352,11 @@
       "relaunchTeam": "Relansează echipa",
       "relaunching": "Se relansează...",
       "saveChanges": "Salvează modificările",
-      "saving": "Se salvează..."
+      "saving": "Se salvează...",
+      "skipPreflightAndLaunch": "Omite verificarea și lansează"
+    },
+    "workspaceTrust": {
+      "description": "La pornirea echipei se pot executa comenzi ale proiectului și servere MCP."
     },
     "billing": {
       "prefix": "Începând cu 15 iunie 2026, Anthropic facturează",
