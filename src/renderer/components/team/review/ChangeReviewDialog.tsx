@@ -5067,10 +5067,7 @@ export const ChangeReviewDialog = ({
             />
           )}
         </div>
-        <div
-          className="flex shrink-0 items-center gap-1"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
+        <div className="flex shrink-0 items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <AnnouncementNewsButton />
           <button
             type="button"
