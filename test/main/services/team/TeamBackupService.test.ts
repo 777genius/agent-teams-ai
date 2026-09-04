@@ -380,6 +380,58 @@ describe('TeamBackupService', () => {
     });
   });
 
+  it('drops a stop marker the relaunched team no longer has from the shutdown backup', async () => {
+    // Stop, relaunch, shutdown, restore. The synchronous shutdown backup only
+    // adds files, so the marker copied during the stop would outlive it in the
+    // backup and freeze the restore of the launch state the relaunch produced.
+    const service = new TeamBackupService();
+    const teamName = 'relaunched-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Relaunched Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    const markerPath = path.join(teamDir, 'launch-stopped.json');
+    await fs.writeFile(markerPath, JSON.stringify({ version: 1, teamName }), 'utf8');
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+
+    // Relaunch: the store lifts the marker and publishes the launch state.
+    await fs.rm(markerPath, { force: true });
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'active', members: {} }),
+      'utf8'
+    );
+
+    service.runShutdownBackupSync();
+
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(backupDir, 'launch-state.json'))).resolves.toBeUndefined();
+
+    // A full restore after losing the team directory brings the launch back
+    // instead of treating the outlived marker as a current stop.
+    await fs.rm(teamDir, { recursive: true, force: true });
+    const restoringService = new TeamBackupService();
+    await restoringService.initialize();
+    restoringService.dispose();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
   it('does not restore pre-stop launch state when the stop marker cannot be read', async () => {
     // The live marker is the only evidence a team is stopped until the marker
     // itself reaches the backup. A read that fails for anything but ENOENT does
