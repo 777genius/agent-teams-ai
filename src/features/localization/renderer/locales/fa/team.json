@@ -1569,6 +1569,11 @@
       "message": "تیم «{{teamName}}» به‌طور دائمی حذف شود؟ همه داده‌ها از دست خواهند رفت.",
       "confirmLabel": "حذف برای همیشه",
       "cancelLabel": "لغو"
+    },
+    "deleteFailed": {
+      "title": "حذف تیم ناموفق بود",
+      "fallbackMessage": "خطای غیرمنتظره‌ای رخ داد",
+      "confirmLabel": "تأیید"
     }
   },
   "messageComposer": {

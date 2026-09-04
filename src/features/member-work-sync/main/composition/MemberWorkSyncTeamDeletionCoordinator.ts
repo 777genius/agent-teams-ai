@@ -14,6 +14,12 @@ interface MemberWorkSyncTeamDeletionState {
   resumeReleased: boolean;
   quiescedTeamName: string | null;
   deletionIdentityId: string | null;
+  /**
+   * The purge this generation must not hand the team back across: its own once
+   * it has started one, the generation before it until then. Null while no
+   * purge on this team is outstanding.
+   */
+  destructivePhase: Promise<void> | null;
 }
 
 export interface MemberWorkSyncTeamDeletionCoordinatorPorts {
@@ -32,12 +38,46 @@ export interface MemberWorkSyncTeamDeletionCoordinatorPorts {
   purgeTeam(teamName: string, deletionIdentityId?: string): Promise<void>;
 }
 
+/**
+ * Preparation quiesces the team before it waits, and the wait has no deadline
+ * of its own. A caller that bounds it has to be able to hand the quiesce back,
+ * or the team stays parked with no result and no error. That is what aborting
+ * through the signal does, and this is the failure both halves report.
+ */
+function abandonedPreparationError(teamName: string): Error {
+  return new Error(
+    `Member work sync deletion preparation for "${teamName}" was abandoned before it completed`
+  );
+}
+
+/**
+ * How long an abandoned preparation may keep holding the team while the purge
+ * it already started finishes. The purge deletes the team's work-sync state and
+ * cannot be cancelled, so handing the team back on top of a running one lets
+ * work be recreated into a tree that is still being deleted; its settlement is
+ * the correct release point. The bound exists because an unbounded hold is the
+ * defect this whole path was written for - a purge that never settles must not
+ * park the team for the rest of the session. When the grace expires the team is
+ * released anyway and the purge is left to finish on its own.
+ */
+const ABANDONED_PURGE_RELEASE_GRACE_MS = 30_000;
+
 export class MemberWorkSyncTeamDeletionCoordinator {
   private readonly states = new Map<string, MemberWorkSyncTeamDeletionState>();
 
   constructor(private readonly ports: MemberWorkSyncTeamDeletionCoordinatorPorts) {}
 
-  prepare(teamName: string, deletionIdentityId?: string): Promise<void> {
+  prepare(
+    teamName: string,
+    deletionIdentityId?: string,
+    options: { signal?: AbortSignal } = {}
+  ): Promise<void> {
+    if (options.signal?.aborted === true) {
+      // An abort that arrives before the listener is attached would otherwise
+      // be ignored, and the generation would quiesce the team with nothing left
+      // to release it.
+      return Promise.reject(abandonedPreparationError(teamName));
+    }
     const teamKey = normalizeMemberWorkSyncTeamOperationKey(teamName);
     const currentState = this.states.get(teamKey);
     if (currentState?.preparation) {
@@ -48,6 +88,7 @@ export class MemberWorkSyncTeamDeletionCoordinator {
       currentState && !currentState.resumeReleased
         ? (currentState.quiescedTeamName ?? teamName)
         : teamName;
+    const precedingDestructivePhase = currentState?.destructivePhase ?? null;
     const state: MemberWorkSyncTeamDeletionState = {
       status: 'deleting',
       preparation: null,
@@ -57,6 +98,7 @@ export class MemberWorkSyncTeamDeletionCoordinator {
       resumeReleased: false,
       quiescedTeamName,
       deletionIdentityId: deletionIdentityId?.trim() || null,
+      destructivePhase: precedingDestructivePhase,
     };
 
     let resolvePreparation!: () => void;
@@ -68,10 +110,28 @@ export class MemberWorkSyncTeamDeletionCoordinator {
     state.preparation = preparation;
     this.states.set(teamKey, state);
 
-    void this.prepareGeneration(teamName, quiescedTeamName, state.deletionIdentityId).then(
-      resolvePreparation,
-      rejectPreparation
-    );
+    let aborted = false;
+    const abortPreparation = (): void => {
+      if (aborted || state.preparation !== preparation) return;
+      aborted = true;
+      // Drop this generation before anything else: a null preparation makes its
+      // late completion a no-op in finishPreparation, and stops a retry from
+      // being handed a promise that may never settle. The caller is told right
+      // away; giving the quiescence back is the part that has to wait until
+      // this generation can no longer act on the team.
+      state.preparation = null;
+      rejectPreparation(abandonedPreparationError(teamName));
+      this.releaseAbandonedGeneration(teamName, teamKey, state);
+    };
+    options.signal?.addEventListener('abort', abortPreparation, { once: true });
+
+    void this.prepareGeneration(
+      teamName,
+      quiescedTeamName,
+      state,
+      precedingDestructivePhase,
+      () => aborted
+    ).then(resolvePreparation, rejectPreparation);
     const finishPreparation = (succeeded: boolean): void => {
       if (state.preparation !== preparation) return;
       state.preparation = null;
@@ -102,6 +162,7 @@ export class MemberWorkSyncTeamDeletionCoordinator {
         resumeReleased: false,
         quiescedTeamName: null,
         deletionIdentityId: null,
+        destructivePhase: null,
       });
       return;
     }
@@ -136,7 +197,9 @@ export class MemberWorkSyncTeamDeletionCoordinator {
   private async prepareGeneration(
     teamName: string,
     quiescedTeamName: string,
-    deletionIdentityId: string | null
+    state: MemberWorkSyncTeamDeletionState,
+    precedingDestructivePhase: Promise<void> | null,
+    isAborted: () => boolean
   ): Promise<void> {
     this.ports.beginOperationGateQuiesce(quiescedTeamName);
     this.ports.cancelScheduledDispatch(quiescedTeamName);
@@ -145,12 +208,65 @@ export class MemberWorkSyncTeamDeletionCoordinator {
     await this.ports.awaitOperationGateIdle(quiescedTeamName);
     await routerQuiesce;
     await this.ports.awaitAuditIdle(quiescedTeamName);
-    if (deletionIdentityId) {
-      await this.ports.purgeTeam(teamName, deletionIdentityId);
-    } else {
-      await this.ports.purgeTeam(teamName);
+    // Everything above is the wait a caller can give up on. Once it has, the
+    // team is running again, so this generation must not carry on into the
+    // destructive half and purge the work-sync state out from under it.
+    if (isAborted()) {
+      throw abandonedPreparationError(teamName);
     }
+    // An abandoned generation's purge cannot be cancelled, so a retry queues
+    // behind it instead of deleting the same state twice at once.
+    if (precedingDestructivePhase) {
+      await precedingDestructivePhase;
+      if (isAborted()) {
+        throw abandonedPreparationError(teamName);
+      }
+    }
+    const purge = state.deletionIdentityId
+      ? this.ports.purgeTeam(teamName, state.deletionIdentityId)
+      : this.ports.purgeTeam(teamName);
+    // Recorded with no await in between, so an abort either sees no purge of
+    // its own at all or sees exactly the one it has to wait for.
+    state.destructivePhase = purge.then(
+      () => undefined,
+      () => undefined
+    );
+    await purge;
     await this.ports.awaitAuditIdle(quiescedTeamName);
+  }
+
+  /**
+   * Hand back what an abandoned generation quiesced, once it can no longer act
+   * on the team. Before a purge there is nothing uncancellable left to wait for
+   * - a late router quiesce is a no-op once the router has been resumed - so
+   * the release is immediate, which is what the caller's retry needs. Inside a
+   * purge it waits for that purge, or for the grace above, whichever is first.
+   */
+  private releaseAbandonedGeneration(
+    teamName: string,
+    teamKey: string,
+    state: MemberWorkSyncTeamDeletionState
+  ): void {
+    const destructivePhase = state.destructivePhase;
+    if (!destructivePhase) {
+      this.resumeNow(teamName, teamKey, state, false);
+      return;
+    }
+    let graceTimer: ReturnType<typeof setTimeout> | null = null;
+    let released = false;
+    const release = (): void => {
+      if (released) return;
+      released = true;
+      if (graceTimer) clearTimeout(graceTimer);
+      // A newer generation quiesced the team again while this one was settling.
+      // Releasing here would unquiesce that deletion; it owns the release now,
+      // and it inherited this purge as its own preceding destructive phase.
+      if (this.states.get(teamKey) !== state) return;
+      this.resumeNow(teamName, teamKey, state, false);
+    };
+    graceTimer = setTimeout(release, ABANDONED_PURGE_RELEASE_GRACE_MS);
+    graceTimer.unref?.();
+    void destructivePhase.then(release, release);
   }
 
   private beginConfigResumeCheck(

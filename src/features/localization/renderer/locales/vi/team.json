@@ -1569,6 +1569,11 @@
       "message": "Xóa đội ngũ \"{{teamName}}\" vĩnh viễn? Tất cả dữ liệu sẽ bị mất.",
       "confirmLabel": "Xóa vĩnh viễn",
       "cancelLabel": "Hủy"
+    },
+    "deleteFailed": {
+      "title": "Không thể xóa đội ngũ",
+      "fallbackMessage": "Đã xảy ra lỗi không mong muốn",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

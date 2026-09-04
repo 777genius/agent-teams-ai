@@ -21,9 +21,31 @@ interface TeamPermanentDeletionDataPort {
 }
 
 interface TeamPermanentDeletionLifecycle {
-  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
+  /**
+   * Quiesces the team and then waits for it to settle. The wait has no deadline
+   * of its own, so the caller brings one; aborting the signal abandons the
+   * preparation and releases everything it quiesced.
+   */
+  prepareTeamDeletion(
+    teamName: string,
+    deletionIdentityId?: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
+}
+
+const PREPARE_TEAM_DELETION_TIMEOUT_MS = 30_000;
+
+/** What releaseTeamScopedResources did, and whose handles it took. */
+interface TeamScopedResourceRelease {
+  released: boolean;
+  /**
+   * False when a replacement team already owned the name at the moment of the
+   * release, so the handles that were closed are the replacement's and have to
+   * go back whatever the deletion does.
+   */
+  releasedForIntent: boolean;
 }
 
 export interface TeamPermanentDeletionTransactionCoordinatorPorts {
@@ -34,6 +56,24 @@ export interface TeamPermanentDeletionTransactionCoordinatorPorts {
   lifecycle(): TeamPermanentDeletionLifecycle | null;
   invalidateTeamConfig(teamName: string): void;
   logRecoveryError(teamName: string, error: unknown): void;
+  /**
+   * Close the process's own handles inside teams/<team> and tasks/<team>
+   * (directory watchers and similar team-scoped resources) right before the
+   * destructive detach rename. On Windows any open handle in the tree makes
+   * that rename fail with EPERM, and a watcher handle never clears on its own,
+   * so the transient rename retry cannot recover from one.
+   */
+  releaseTeamScopedResources?(teamName: string): Promise<void>;
+  /**
+   * Undo releaseTeamScopedResources once the cleanup attempt is over.
+   * `deletionCompleted` says whether the team is actually gone: a released
+   * resource that only makes sense for a team that still exists must be put
+   * back when it is false and left alone when it is true.
+   */
+  restoreTeamScopedResources?(
+    teamName: string,
+    options: { deletionCompleted: boolean }
+  ): Promise<void>;
 }
 
 export class TeamPermanentDeletionTransactionCoordinator {
@@ -116,15 +156,89 @@ export class TeamPermanentDeletionTransactionCoordinator {
     }
 
     if (!teamDataAlreadyCompleted) {
-      await this.ports.lifecycle()?.prepareTeamDeletion(intent.teamName, intent.identityId);
+      await this.prepareTeamDeletionWithTimeout(intent.teamName, intent.identityId);
       if (!(await backupService.isPermanentDeletionTargetCurrent(intent))) {
         this.ports.lifecycle()?.resumeTeam(intent.teamName);
         return;
       }
     }
+
+    const release: TeamScopedResourceRelease = { released: false, releasedForIntent: true };
+    let deletionCompleted = false;
+    try {
+      deletionCompleted = await this.runFencedCleanup(intent, teamDataAlreadyCompleted, release);
+    } finally {
+      if (release.released && this.ports.restoreTeamScopedResources) {
+        await this.ports
+          .restoreTeamScopedResources(intent.teamName, {
+            // Handles taken from a replacement belong to a team that is very
+            // much still there, whatever became of the identity this intent
+            // targeted, so they go back the way a rollback puts them back.
+            deletionCompleted: deletionCompleted && release.releasedForIntent,
+          })
+          .catch(() => undefined);
+      }
+    }
+  }
+
+  /**
+   * The release closes handles by team name, so it may only run once the fence
+   * has established whose team that name is. When team-data is already gone the
+   * pre-flight identity checks are skipped on purpose - the intent's directory
+   * is not there to check - and a replacement can have taken the name in the
+   * meantime. Suspending its watchers and taking away its log-source consumers
+   * for a deletion it has nothing to do with is what this guards: with nothing
+   * left to detach under teams/<team> or tasks/<team> there is no reason to
+   * touch them at all, and the remaining attachment targets are cleaned up
+   * without the release. Task-data still pending is the exception, because its
+   * directory can still need the watcher suspension for the rename.
+   */
+  private async releaseTeamScopedResourcesUnderFence(
+    intent: TeamPermanentDeletionIntent,
+    verifyNameOwnership: boolean,
+    taskDataCompleted: boolean,
+    release: TeamScopedResourceRelease
+  ): Promise<void> {
+    if (verifyNameOwnership) {
+      release.releasedForIntent =
+        await this.getBackupService().isPermanentDeletionTargetCurrent(intent);
+    }
+    if (!release.releasedForIntent && taskDataCompleted) {
+      return;
+    }
+    release.released = await this.releaseTeamScopedResources(intent.teamName);
+  }
+
+  private async releaseTeamScopedResources(teamName: string): Promise<boolean> {
+    if (!this.ports.releaseTeamScopedResources) {
+      return false;
+    }
+    try {
+      await this.ports.releaseTeamScopedResources(teamName);
+      return true;
+    } catch {
+      // Best effort: a failed release leaves the rename exactly where it was
+      // before, retrying against whatever still holds the handle.
+      return false;
+    }
+  }
+
+  /** Resolves true only when the team was really removed and marked complete. */
+  private async runFencedCleanup(
+    intent: TeamPermanentDeletionIntent,
+    teamDataAlreadyCompleted: boolean,
+    release: TeamScopedResourceRelease
+  ): Promise<boolean> {
+    const backupService = this.getBackupService();
     const cleanupCompleted = await backupService.withPermanentDeletionTargetFence(
       intent,
       async (isTargetCurrent, getTargetProofHooks, isTargetCompleted) => {
+        await this.releaseTeamScopedResourcesUnderFence(
+          intent,
+          teamDataAlreadyCompleted,
+          isTargetCompleted('task-data'),
+          release
+        );
         if (
           (!isTargetCompleted('team-data') || !isTargetCompleted('task-data')) &&
           (await this.ports.dataService().permanentlyDeleteTeam(
@@ -176,13 +290,74 @@ export class TeamPermanentDeletionTransactionCoordinator {
     );
     if (!cleanupCompleted) {
       this.ports.lifecycle()?.resumeTeam(intent.teamName);
-      return;
+      return false;
     }
     await backupService.completePermanentDeletion(intent);
     if (await backupService.isPermanentDeletionTargetCurrent(intent)) {
       this.ports.lifecycle()?.completeTeamDeletion(intent.teamName);
     } else {
+      // Something else already owns the team name. The identity this intent
+      // targeted is still gone, so the deletion did complete; only the
+      // lifecycle call differs, because the replacement has to be running.
+      // The deletion stays completed for the restore: what was released
+      // belonged to the identity that is gone, and the replacement owns its
+      // own resources.
       this.ports.lifecycle()?.resumeTeam(intent.teamName);
+    }
+    return true;
+  }
+
+  /**
+   * The quiesce that precedes a permanent deletion drains in-flight team
+   * operations and has no deadline of its own. One wedged operation - a runtime
+   * bridge call that never settles, say - parks the whole deletion with neither
+   * a result nor an error: the dialog closes, the team stays, and nothing is
+   * written anywhere the user can see. Bounding the wait turns that into a
+   * rejection with a message that says what to do about it.
+   *
+   * Giving up on the wait is not enough on its own. The preparation quiesced
+   * the team's operation gate, audit journal and router before it started
+   * waiting, and it releases them only once it settles, so an abandoned wait
+   * would leave the team parked for the rest of the session and hand the same
+   * never-settling promise to every retry. The deadline therefore also aborts
+   * the preparation, which releases what it took and lets a retry start fresh.
+   */
+  private async prepareTeamDeletionWithTimeout(
+    teamName: string,
+    deletionIdentityId: string
+  ): Promise<void> {
+    const lifecycle = this.ports.lifecycle();
+    if (!lifecycle) return;
+    const abandonPreparation = new AbortController();
+    const preparation = lifecycle.prepareTeamDeletion(teamName, deletionIdentityId, {
+      signal: abandonPreparation.signal,
+    });
+    // The quiesce keeps running after a timeout; claim its rejection here so a
+    // late failure cannot surface as an unhandled rejection.
+    void preparation.catch(() => undefined);
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let timeoutFailure: Error | null = null;
+    try {
+      await Promise.race([
+        preparation,
+        new Promise<never>((_resolve, reject) => {
+          timer = setTimeout(() => {
+            const failure = new Error(
+              `Permanent deletion of "${teamName}" timed out after ${PREPARE_TEAM_DELETION_TIMEOUT_MS}ms waiting for team activity to quiesce. ` +
+                'The team was not deleted. Wait for running agents or runtime lanes to settle, then try again.'
+            );
+            timeoutFailure = failure;
+            reject(failure);
+          }, PREPARE_TEAM_DELETION_TIMEOUT_MS);
+          timer.unref?.();
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+      // After the race, so the caller still sees the timeout rather than the
+      // abort. A preparation that failed on its own is left alone: the retry
+      // path deliberately keeps that team quiesced behind its own fence.
+      if (timeoutFailure) abandonPreparation.abort();
     }
   }
 

@@ -1569,6 +1569,11 @@
       "message": "Futa timu \"{{teamName}}\" kwa kudumu? Data zote zitapotea.",
       "confirmLabel": "Futa kabisa",
       "cancelLabel": "Ghairi"
+    },
+    "deleteFailed": {
+      "title": "Imeshindwa kufuta timu",
+      "fallbackMessage": "Hitilafu isiyotarajiwa imetokea",
+      "confirmLabel": "Sawa"
     }
   },
   "messageComposer": {

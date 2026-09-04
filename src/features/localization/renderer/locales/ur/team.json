@@ -1569,6 +1569,11 @@
       "message": "ٹیم \" حذف کریں{{teamName}}\" دائمی؟ تمام اعداد و شمار ضائع ہو جائیں گے۔",
       "confirmLabel": "ہمیشہ کے لیے حذف کرو",
       "cancelLabel": "منسوخ"
+    },
+    "deleteFailed": {
+      "title": "ٹیم کو حذف کرنے میں ناکامی",
+      "fallbackMessage": "ایک غیر متوقع خرابی پیش آئی",
+      "confirmLabel": "ٹھیک"
     }
   },
   "messageComposer": {

@@ -1607,6 +1607,11 @@
       "message": "Удалить команду «{{teamName}}» навсегда? Все данные будут потеряны.",
       "confirmLabel": "Удалить навсегда",
       "cancelLabel": "Отмена"
+    },
+    "deleteFailed": {
+      "title": "Не удалось удалить команду",
+      "fallbackMessage": "Произошла непредвиденная ошибка",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

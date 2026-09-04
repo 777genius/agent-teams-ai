@@ -1569,6 +1569,11 @@
       "message": "Team löschen \"{{teamName}}\" dauerhaft? Alle Daten werden verloren gehen.",
       "confirmLabel": "Löschen für immer",
       "cancelLabel": "Abbrechen"
+    },
+    "deleteFailed": {
+      "title": "Team konnte nicht gelöscht werden",
+      "fallbackMessage": "Ein unerwarteter Fehler ist aufgetreten",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

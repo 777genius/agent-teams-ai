@@ -1569,6 +1569,11 @@
       "message": "\"{{teamName}}\" ekibi kalıcı olarak silinsin mi? Tüm veriler kaybolacak.",
       "confirmLabel": "Kalıcı olarak sil",
       "cancelLabel": "İptal"
+    },
+    "deleteFailed": {
+      "title": "Ekip silinemedi",
+      "fallbackMessage": "Beklenmeyen bir hata oluştu",
+      "confirmLabel": "Tamam"
     }
   },
   "messageComposer": {

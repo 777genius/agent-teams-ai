@@ -1569,6 +1569,11 @@
       "message": "永久删除团队“{{teamName}}”？所有数据都将丢失。",
       "confirmLabel": "永久删除",
       "cancelLabel": "取消"
+    },
+    "deleteFailed": {
+      "title": "删除团队失败",
+      "fallbackMessage": "发生意外错误",
+      "confirmLabel": "好的"
     }
   },
   "messageComposer": {

@@ -737,8 +737,8 @@ export function createMemberWorkSyncFeature(deps: {
     report: (request) => operationGate.run(request.teamName, () => reporter.execute(request)),
     scheduleProofMissingRecovery: (request) =>
       operationGate.run(request.teamName, () => scheduleProofMissingRecovery(request)),
-    prepareTeamDeletion: (teamName, deletionIdentityId) =>
-      deletionCoordinator.prepare(teamName, deletionIdentityId),
+    prepareTeamDeletion: (teamName, deletionIdentityId, options) =>
+      deletionCoordinator.prepare(teamName, deletionIdentityId, options),
     completeTeamDeletion: (teamName) => deletionCoordinator.complete(teamName),
     resumeTeam: (teamName) => deletionCoordinator.resume(teamName),
     noteTeamChange: (event) => {

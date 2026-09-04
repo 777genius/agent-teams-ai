@@ -1569,6 +1569,11 @@
       "message": "Usunąć zespół \"{{teamName}}\" trwale? Wszystkie dane zostaną utracone.",
       "confirmLabel": "Usuń na zawsze",
       "cancelLabel": "Anuluj"
+    },
+    "deleteFailed": {
+      "title": "Nie udało się usunąć zespołu",
+      "fallbackMessage": "Wystąpił nieoczekiwany błąd",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

@@ -1569,6 +1569,11 @@
       "message": "Eliminare definitivamente il team \"{{teamName}}\"? Tutti i dati andranno persi.",
       "confirmLabel": "Elimina definitivamente",
       "cancelLabel": "Annulla"
+    },
+    "deleteFailed": {
+      "title": "Impossibile eliminare il team",
+      "fallbackMessage": "Si è verificato un errore imprevisto",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

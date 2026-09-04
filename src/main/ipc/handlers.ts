@@ -17,6 +17,7 @@
 import { createLogger } from '@shared/utils/logger';
 import { ipcMain } from 'electron';
 
+import { createTeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import {
   initializeCliInstallerHandlers,
   registerCliInstallerHandlers,
@@ -183,7 +184,11 @@ export function initializeIpcHandlers(
   teamBackupService?: TeamBackupService,
   launchIoGovernor?: LaunchIoGovernor,
   teamPermanentDeletionLifecycle?: {
-    prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
+    prepareTeamDeletion(
+      teamName: string,
+      deletionIdentityId?: string,
+      options?: { signal?: AbortSignal }
+    ): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
   }
@@ -211,7 +216,21 @@ export function initializeIpcHandlers(
     boardTaskExactLogsService,
     boardTaskExactLogDetailService,
     launchIoGovernor,
-    teamPermanentDeletionLifecycle
+    teamPermanentDeletionLifecycle,
+    createTeamScopedResourceReleaser({
+      suspendTeamWatchers: (teamName) =>
+        registry.getActive().fileWatcher.suspendTeamWatchers(teamName),
+      resumeTeamWatchers: (teamName) =>
+        registry.getActive().fileWatcher.resumeTeamWatchers(teamName),
+      releaseTeamLogSourceWatcher: async (teamName) =>
+        (await teamLogSourceTracker?.forceReleaseTeam(teamName)) ?? null,
+      restoreTeamLogSourceConsumers: async (teamName, released) => {
+        await teamLogSourceTracker?.restoreReleasedConsumers(teamName, released);
+      },
+      clearTeamLogSourceSuspension: (teamName) => {
+        teamLogSourceTracker?.resumeSuspendedTeam(teamName);
+      },
+    })
   );
   initializeConfigHandlers({
     onClaudeRootPathUpdated: contextCallbacks.onClaudeRootPathUpdated,

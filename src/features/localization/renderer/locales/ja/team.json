@@ -1569,6 +1569,11 @@
       "message": "チーム「{{teamName}}」を永久に削除しますか? すべてのデータは失われます。",
       "confirmLabel": "永遠に削除",
       "cancelLabel": "キャンセル"
+    },
+    "deleteFailed": {
+      "title": "チームを削除できませんでした",
+      "fallbackMessage": "予期しないエラーが発生しました",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

@@ -2,6 +2,8 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { RENAME_TREE_RETRY, retryOnTransientFsError } from './transientFsRetry';
+
 import type { AtomicCreateResult } from './atomicWrite';
 
 export interface DurablePathIdentity {
@@ -11,6 +13,13 @@ export interface DurablePathIdentity {
 }
 
 export type AtomicPathRemovalResult = 'deleted' | 'missing' | 'changed';
+
+// The identity fence renames a whole directory tree aside and, on failure,
+// renames it back. On Windows either rename can be refused for as long as some
+// other process still holds a handle anywhere inside that tree.
+function renameWithTransientRetry(src: string, dest: string): Promise<void> {
+  return retryOnTransientFsError(() => fs.promises.rename(src, dest), RENAME_TREE_RETRY);
+}
 
 export interface DurablePathRemovalProofHooks {
   /**
@@ -329,7 +338,7 @@ export async function removePathWithIdentityFenceAsync(
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
     try {
-      await fs.promises.rename(detachedPath, targetPath);
+      await renameWithTransientRetry(detachedPath, targetPath);
       detached = false;
       await syncDirectory(dir, options.durability === 'strict');
       return true;
@@ -364,7 +373,7 @@ export async function removePathWithIdentityFenceAsync(
     }
 
     try {
-      await fs.promises.rename(targetPath, detachedPath);
+      await renameWithTransientRetry(targetPath, detachedPath);
       detached = true;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing';

@@ -1569,6 +1569,11 @@
       "message": "team \"{{teamName}}\" ஐ நிரந்தரமாக நீக்கவா? அனைத்து தரவும் இழக்கப்படும்.",
       "confirmLabel": "நிரந்தரமாக நீக்கு",
       "cancelLabel": "ரத்துசெய்"
+    },
+    "deleteFailed": {
+      "title": "team ஐ நீக்க முடியவில்லை",
+      "fallbackMessage": "எதிர்பாராத பிழை ஏற்பட்டது",
+      "confirmLabel": "சரி"
     }
   },
   "messageComposer": {

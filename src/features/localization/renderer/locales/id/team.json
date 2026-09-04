@@ -1569,6 +1569,11 @@
       "message": "Hapus tim \"{{teamName}}\"permanen? Semua data akan hilang.",
       "confirmLabel": "Hapus selamanya",
       "cancelLabel": "Batal"
+    },
+    "deleteFailed": {
+      "title": "Gagal menghapus tim",
+      "fallbackMessage": "Terjadi galat yang tak diharapkan",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

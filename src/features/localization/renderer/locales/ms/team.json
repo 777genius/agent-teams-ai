@@ -1569,6 +1569,11 @@
       "message": "Padam pasukan \"{{teamName}}\" secara kekal? Semua data akan hilang.",
       "confirmLabel": "Padam selama-lamanya",
       "cancelLabel": "Batal"
+    },
+    "deleteFailed": {
+      "title": "Gagal memadam pasukan",
+      "fallbackMessage": "Ralat tidak dijangka berlaku",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

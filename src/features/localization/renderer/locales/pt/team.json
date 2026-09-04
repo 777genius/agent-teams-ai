@@ -1569,6 +1569,11 @@
       "message": "Excluir a equipe \"{{teamName}}\" permanentemente? Todos os dados serão perdidos.",
       "confirmLabel": "Apagar para sempre",
       "cancelLabel": "Cancelar"
+    },
+    "deleteFailed": {
+      "title": "Falha ao excluir a equipe",
+      "fallbackMessage": "Ocorreu um erro inesperado",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

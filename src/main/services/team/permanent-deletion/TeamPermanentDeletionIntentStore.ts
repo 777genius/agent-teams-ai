@@ -196,6 +196,35 @@ export class TeamPermanentDeletionIntentStore {
     }
   }
 
+  /**
+   * Drop tombstones of transactions that are already finished.
+   *
+   * A 'deleted' intent whose cleanup completed describes a transaction with
+   * nothing left to resume: the manifest and the registry entry were durably
+   * marked deleted_by_user before the tombstone was written. Left on disk, it
+   * keeps answering for the team name, so creating a team with the same name
+   * and then deleting it short-circuits against a fence built for a different
+   * identity - the second team could not be deleted at all.
+   *
+   * A tombstone that cannot be removed is only worth a warning: it is the same
+   * situation as before this ran, and startup must not fail over it.
+   */
+  async cleanupCompletedPermanentDeletionIntents(): Promise<void> {
+    for (const intent of [...this.intents.values()]) {
+      if (intent.phase !== 'deleted' || !intent.cleanupCompleted) continue;
+      try {
+        await this.removePermanentDeletionIntent(intent);
+        logger.info(
+          `[Backup] Removed completed permanent deletion tombstone for ${intent.teamName}`
+        );
+      } catch (error) {
+        logger.warn(
+          `[Backup] Failed to remove completed permanent deletion tombstone for ${intent.teamName}: ${String(error)}`
+        );
+      }
+    }
+  }
+
   async savePermanentDeletionIntent(intent: TeamPermanentDeletionIntent): Promise<void> {
     const intentsDir = this.getPermanentDeletionIntentsDir();
     await this.lock.withLock('intent-hierarchy', async () => {

@@ -284,6 +284,30 @@ describe('atomicWriteAsync', () => {
     expect(mockUnlink).not.toHaveBeenCalled();
   });
 
+  it('reports a transient directory-sync failure without renaming a second time', async () => {
+    // The rename has already published the data. Repeating it would only find
+    // that the source name is gone and report ENOENT for a completed move.
+    const syncError = Object.assign(new Error('Directory handle busy'), { code: 'EBUSY' });
+    const missingSource = Object.assign(new Error('No such file or directory'), {
+      code: 'ENOENT',
+    });
+    const sourcePath = path.join(TARGET_DIR, 'source');
+    const destinationPath = path.join(TARGET_DIR, 'destination');
+    mockRename.mockImplementation(() =>
+      mockRename.mock.calls.length > 1 ? Promise.reject(missingSource) : Promise.resolve(undefined)
+    );
+    mockOpen.mockRejectedValue(syncError);
+
+    await expect(
+      renamePathWithRetry(sourcePath, destinationPath, {
+        syncDirectories: true,
+        durability: 'strict',
+      })
+    ).rejects.toThrow('Directory handle busy');
+
+    expect(mockRename).toHaveBeenCalledTimes(1);
+  });
+
   it('does not copy generic managed paths on EXDEV rename failure', async () => {
     const exdevError = Object.assign(new Error('Cross-device link'), { code: 'EXDEV' });
     mockRename.mockRejectedValue(exdevError);

@@ -91,6 +91,7 @@ export class TeamPermanentDeletionCoordinator {
   async initialize(): Promise<void> {
     await this.store.loadPermanentDeletionIntents();
     await this.store.rollbackPreparedPermanentDeletionIntents();
+    await this.store.cleanupCompletedPermanentDeletionIntents();
   }
 
   withSharedLock<T>(scope: string, operation: () => Promise<T>): Promise<T> {

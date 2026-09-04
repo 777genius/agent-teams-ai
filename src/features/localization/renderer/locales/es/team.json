@@ -1569,6 +1569,11 @@
       "message": "Eliminar el equipo \"{{teamName}}\" permanentemente? Todos los datos se perderán.",
       "confirmLabel": "Suprimir para siempre",
       "cancelLabel": "Cancelar"
+    },
+    "deleteFailed": {
+      "title": "No se pudo eliminar el equipo",
+      "fallbackMessage": "Un error inesperado ocurrió",
+      "confirmLabel": "OK"
     }
   },
   "messageComposer": {

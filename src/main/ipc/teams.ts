@@ -163,6 +163,7 @@ import { waitForOpenCodeRuntimeRelayForUi } from './teams/openCodeRuntimeDeliver
 import { teamMessageNotificationScanner } from './teams/teamMessageNotificationScanner';
 import { TeamPermanentDeletionTransactionCoordinator } from './teams/TeamPermanentDeletionTransactionCoordinator';
 import { discardQueuedUserMessages, listQueuedUserMessages } from './teams/teamQueuedUserMessages';
+import { softDeleteTeamWithBestEffortStop } from './teams/teamSoftDeleteFlow';
 import { withTimeoutValue } from './teams/withTimeoutValue';
 import {
   validateFromField,
@@ -211,6 +212,7 @@ import type {
 } from '../services/team/contracts/TeamProvisioningApis';
 import type { TeamBackupService } from '../services/team/TeamBackupService';
 import type { TeamMembersMetaFile } from '../services/team/TeamMembersMetaStore';
+import type { TeamScopedResourceReleaser } from './teams/teamScopedResourceReleaser';
 import type {
   AddTaskCommentRequest,
   AgentActionMode,
@@ -537,10 +539,15 @@ let boardTaskLogStreamService: BoardTaskLogStreamService | null = null;
 let boardTaskExactLogsService: BoardTaskExactLogsService | null = null;
 let boardTaskExactLogDetailService: BoardTaskExactLogDetailService | null = null;
 let teamPermanentDeletionLifecycle: {
-  prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
+  prepareTeamDeletion(
+    teamName: string,
+    deletionIdentityId?: string,
+    options?: { signal?: AbortSignal }
+  ): Promise<void>;
   completeTeamDeletion(teamName: string): void;
   resumeTeam(teamName: string): void;
 } | null = null;
+let teamScopedResourceReleaser: TeamScopedResourceReleaser | null = null;
 let permanentDeletionCoordinator: TeamPermanentDeletionTransactionCoordinator | null = null;
 
 const attachmentStore = new TeamAttachmentStore();
@@ -580,10 +587,15 @@ export function initializeTeamHandlers(
   taskExactLogDetailService?: BoardTaskExactLogDetailService,
   ioGovernor?: LaunchIoGovernor,
   permanentDeletionLifecycle?: {
-    prepareTeamDeletion(teamName: string, deletionIdentityId?: string): Promise<void>;
+    prepareTeamDeletion(
+      teamName: string,
+      deletionIdentityId?: string,
+      options?: { signal?: AbortSignal }
+    ): Promise<void>;
     completeTeamDeletion(teamName: string): void;
     resumeTeam(teamName: string): void;
-  }
+  },
+  scopedResourceReleaser?: TeamScopedResourceReleaser
 ): void {
   teamDataService = service;
   teamProvisioningStartApi = teamHandlerApis.provisioningStart;
@@ -610,6 +622,7 @@ export function initializeTeamHandlers(
   boardTaskExactLogsService = taskExactLogsService ?? null;
   boardTaskExactLogDetailService = taskExactLogDetailService ?? null;
   teamPermanentDeletionLifecycle = permanentDeletionLifecycle ?? null;
+  teamScopedResourceReleaser = scopedResourceReleaser ?? null;
   permanentDeletionCoordinator = new TeamPermanentDeletionTransactionCoordinator({
     backupService: () => teamBackupService,
     dataService: () => getTeamDataService(),
@@ -621,6 +634,12 @@ export function initializeTeamHandlers(
       logger.error(
         `[PermanentDeletion] ${teamName === 'startup' ? 'Startup recovery failed' : `Recovery remains pending for ${teamName}`}: ${String(error)}`
       ),
+    releaseTeamScopedResources: async (teamName) => {
+      await teamScopedResourceReleaser?.release(teamName);
+    },
+    restoreTeamScopedResources: async (teamName, options) => {
+      await teamScopedResourceReleaser?.restore(teamName, options);
+    },
   });
   permanentDeletionCoordinator.startRecovery();
 }
@@ -1346,9 +1365,12 @@ async function handleDeleteTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('deleteTeam', async () => {
-    await getTeamRuntimeApi().stopTeam(validated.value!);
-    await getTeamDataService().deleteTeam(validated.value!);
-    getTeamDataWorkerClient().invalidateTeamConfig(validated.value!);
+    await softDeleteTeamWithBestEffortStop(validated.value!, {
+      stopTeam: (tn) => getTeamRuntimeApi().stopTeam(tn),
+      softDeleteTeam: (tn) => getTeamDataService().deleteTeam(tn),
+      invalidateTeamConfig: (tn) => getTeamDataWorkerClient().invalidateTeamConfig(tn),
+      logWarning: (message) => logger.warn(message),
+    });
   });
 }
 

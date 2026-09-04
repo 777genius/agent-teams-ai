@@ -1569,6 +1569,11 @@
       "message": "టీమ్ \"{{teamName}}\" ను శాశ్వతంగా తొలగించాలా? అన్ని డేటా కోల్పోతుంది.",
       "confirmLabel": "శాశ్వతంగా తొలగించు",
       "cancelLabel": "రద్దు చేయి"
+    },
+    "deleteFailed": {
+      "title": "టీమ్‌ను తొలగించడం విఫలమైంది",
+      "fallbackMessage": "ఊహించని లోపం సంభవించింది",
+      "confirmLabel": "సరే"
     }
   },
   "messageComposer": {
