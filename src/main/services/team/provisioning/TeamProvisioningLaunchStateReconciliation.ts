@@ -654,6 +654,12 @@ export async function guardCommittedOpenCodeLaneEvidence(
   const uncommittedMemberNames = await collectUncommittedOpenCodeLaneMemberNames(
     {
       ...params,
+      // The COMMITTED result, not the one that came in: the commit promotes a
+      // matching app-managed candidate to confirmed, and reading the pre-commit
+      // result made the collector skip exactly those members - the ones whose
+      // confirmation this commit just created and nothing has yet read back the
+      // way the delivery path will.
+      result: committedResult,
       guardedMemberNames,
       laneHasRuntimeEvidenceOnDisk: storage.hasRuntimeEvidenceOnDisk,
     },
@@ -695,8 +701,8 @@ export async function guardCommittedOpenCodeLaneEvidence(
 
   const teamLaunchState = summarizeRuntimeLaunchResultMembers(members);
   return {
-    ...params.result,
-    launchPhase: teamLaunchState === 'clean_success' ? params.result.launchPhase : 'active',
+    ...committedResult,
+    launchPhase: teamLaunchState === 'clean_success' ? committedResult.launchPhase : 'active',
     teamLaunchState,
     members,
     diagnostics: Array.from(new Set([...committedResult.diagnostics, ...diagnostics])),
