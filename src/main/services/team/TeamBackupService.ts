@@ -36,6 +36,7 @@ import {
   writeBackupManifestSync,
 } from './teamBackupManifest';
 import { TeamBackupRestoreService } from './TeamBackupRestoreService';
+import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
 import type { PermanentDeletionLock } from './permanent-deletion/TeamPermanentDeletionLock';
 
@@ -77,7 +78,7 @@ const TEAM_ROOT_FILES = [
   'team.meta.json',
   'launch-state.json',
   'launch-summary.json',
-  'launch-stopped.json',
+  TEAM_LAUNCH_STOPPED_MARKER_FILE,
   'kanban-state.json',
   'sentMessages.json',
   'sent-cross-team.json',
@@ -587,6 +588,7 @@ export class TeamBackupService {
     for (const descriptor of sourceFiles) {
       this.backupSingleFileSync(descriptor, backupDir, manifest);
     }
+    this.pruneStaleStopMarkerBackupSync(teamName, backupDir, manifest);
 
     manifest.lastBackupAt = nowIso();
     this.saveManifestSync(teamName, manifest);
@@ -598,6 +600,26 @@ export class TeamBackupService {
       deletedByUserAt: manifest.deletedByUserAt,
       lastBackupAt: manifest.lastBackupAt,
     };
+  }
+
+  /**
+   * The shutdown backup only adds files, so a stop marker the team no longer
+   * has would stay in the backup and freeze every later restore of its launch
+   * state. Only a proven ENOENT drops it: unreadable is not absent.
+   */
+  private pruneStaleStopMarkerBackupSync(
+    teamName: string,
+    backupDir: string,
+    manifest: BackupManifest
+  ): void {
+    try {
+      fs.statSync(path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE));
+      return;
+    } catch (err: unknown) {
+      if (!isEnoent(err)) return;
+    }
+    fs.rmSync(path.join(backupDir, TEAM_LAUNCH_STOPPED_MARKER_FILE), { force: true });
+    delete manifest.fileStats[TEAM_LAUNCH_STOPPED_MARKER_FILE];
   }
 
   private async backupSingleFile(
