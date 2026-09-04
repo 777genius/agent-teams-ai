@@ -446,12 +446,19 @@ describe('stopTeamWithEscalation runtime-host evidence', () => {
     });
 
     const stopping = stopTeamWithEscalation('fixteam', ports);
+    let settled = false;
+    void stopping.then(() => {
+      settled = true;
+    });
     await vi.advanceTimersByTimeAsync(4_999);
-    const settledEarly = await Promise.race([stopping.then(() => true), Promise.resolve(false)]);
-    expect(settledEarly).toBe(false);
+    expect(settled).toBe(false);
     await vi.advanceTimersByTimeAsync(2);
 
     await expect(stopping).resolves.toMatchObject({ stopOutcome: 'timed_out' });
+    // The same flag on the same promise, one tick past the budget: that is what
+    // makes the reading above evidence that the flow waited rather than a flag
+    // nothing was ever going to set.
+    expect(settled).toBe(true);
   });
 
   it('never arms the poller when the first sample already reports no live host', async () => {
