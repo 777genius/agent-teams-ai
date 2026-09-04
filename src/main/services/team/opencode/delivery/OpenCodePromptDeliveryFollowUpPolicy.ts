@@ -5,6 +5,7 @@ import {
   PRIMARY_LANE_REBOOTSTRAP_RETRY_DELAY_MS,
   type PrimaryLaneBootstrapSelfHealDecision,
 } from './OpenCodePrimaryLaneBootstrapSelfHeal';
+import { OpenCodePromptDeliveryCancelledError } from './OpenCodePromptDeliveryCancellationGuard';
 import { deferOpenCodePromptDeliveryAttempt } from './OpenCodePromptDeliveryDeferral';
 import {
   hashOpenCodePromptDeliveryPayload,
@@ -482,6 +483,17 @@ export interface UndeliverableOpenCodePrimaryLaneBootstrapDeps {
     laneId: string
   ): OpenCodePromptDeliveryLedgerStore;
   openCodePromptDeliveryFollowUpPolicy: Pick<OpenCodePromptDeliveryFollowUpPolicy, 'schedule'>;
+  /**
+   * Bounded, exactly-once lead re-bootstrap. Absent means the refusal is never
+   * escalated and the delivery keeps its old behaviour.
+   */
+  requestOpenCodePrimaryLaneRebootstrap?(input: {
+    teamName: string;
+    laneId: string;
+    memberName: string;
+    runId: string | null;
+    reason: string;
+  }): Promise<PrimaryLaneBootstrapSelfHealDecision>;
   nowIso?(): string;
 }
 
@@ -563,4 +575,61 @@ export async function settleUndeliverableOpenCodePrimaryLaneBootstrap(
         ? Array.from(new Set([diagnostic, ...settled.diagnostics]))
         : delivery.diagnostics,
   };
+}
+
+/**
+ * The whole primary-lane refusal, decided in one place: whether to heal, and how
+ * the relay's row settles when we do.
+ *
+ * `null` means the delivery continues on its unchanged path - no port is wired,
+ * or the probe answered `not_applicable` because the lane's evidence is on disk
+ * after all and the refusal raced the bootstrap commit. Everything else settles
+ * here, because the prevented send was the only path into the follow-up policy.
+ *
+ * A cancelled row never heals. Force stop persists the delivery cancellation
+ * BEFORE it stops the team, so a cancelled row is the earliest proof that this
+ * run is going away - earlier than the tracked run losing its deliverability -
+ * and a re-bootstrap for such a row would race the very stop that cancelled it.
+ */
+export async function healUndeliverableOpenCodePrimaryLaneBootstrap(
+  deps: UndeliverableOpenCodePrimaryLaneBootstrapDeps,
+  message: UndeliverableOpenCodePrimaryLaneBootstrapMessage,
+  input: {
+    teamName: string;
+    laneId: string;
+    memberName: string;
+    runId?: string | null;
+  }
+): Promise<UndeliverableOpenCodePrimaryLaneBootstrapDelivery | null> {
+  if (!deps.requestOpenCodePrimaryLaneRebootstrap) {
+    return null;
+  }
+  const inboxMessageId = message.messageId?.trim();
+  if (inboxMessageId) {
+    const existing = await deps
+      .createOpenCodePromptDeliveryLedger(input.teamName, input.laneId)
+      .getByInboxMessage({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        laneId: input.laneId,
+        inboxMessageId,
+      });
+    if (existing && isOpenCodePromptDeliveryCancelled(existing)) {
+      throw new OpenCodePromptDeliveryCancelledError(existing);
+    }
+  }
+  const decision = await deps.requestOpenCodePrimaryLaneRebootstrap({
+    teamName: input.teamName,
+    laneId: input.laneId,
+    memberName: input.memberName,
+    runId: input.runId ?? null,
+    reason: OPENCODE_PRIMARY_LANE_BOOTSTRAP_MISSING_REASON,
+  });
+  if (decision.action === 'not_applicable') {
+    return null;
+  }
+  return await settleUndeliverableOpenCodePrimaryLaneBootstrap(deps, message, {
+    ...input,
+    decision,
+  });
 }

@@ -82,6 +82,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryHost {
   requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['requeueOpenCodeRuntimeManifestWatermarkDeliveryIfNeeded'];
   emitOpenCodePromptDeliveryTaskLogChange: OpenCodeMemberMessageDeliveryFactoryPorts['emitOpenCodePromptDeliveryTaskLogChange'];
   notifyOpenCodeLeadTurnActivity?: OpenCodeMemberMessageDeliveryFactoryPorts['notifyOpenCodeLeadTurnActivity'];
+  requestOpenCodePrimaryLaneRebootstrap?: OpenCodeMemberMessageDeliveryFactoryPorts['requestOpenCodePrimaryLaneRebootstrap'];
   observeOpenCodeDirectUserDeliveryInlineIfNeeded: OpenCodeMemberMessageDeliveryFactoryPorts['observeOpenCodeDirectUserDeliveryInlineIfNeeded'];
 }
 
@@ -201,6 +202,11 @@ export function createOpenCodeMemberMessageDeliveryServiceFromHost(
     emitOpenCodePromptDeliveryTaskLogChange: (record, detail) =>
       host.emitOpenCodePromptDeliveryTaskLogChange(record, detail),
     notifyOpenCodeLeadTurnActivity: (input) => host.notifyOpenCodeLeadTurnActivity?.(input),
+    // Passed through only when the host has it: an absent port must stay absent
+    // so the delivery service keeps its old primary-lane behaviour.
+    ...(host.requestOpenCodePrimaryLaneRebootstrap
+      ? { requestOpenCodePrimaryLaneRebootstrap: host.requestOpenCodePrimaryLaneRebootstrap }
+      : {}),
     observeOpenCodeDirectUserDeliveryInlineIfNeeded: (input) =>
       host.observeOpenCodeDirectUserDeliveryInlineIfNeeded(input),
   });
