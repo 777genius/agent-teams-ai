@@ -1,3 +1,4 @@
+import { deferOpenCodePromptDeliveryAttempt } from './OpenCodePromptDeliveryDeferral';
 import {
   isOpenCodePromptDeliveryCancelled,
   isOpenCodePromptResponseStateResponded,
@@ -11,6 +12,11 @@ import {
   isOpenCodeNoAssistantDeliveryFailure,
 } from './OpenCodePromptDeliveryReadCommitPolicy';
 import {
+  getOpenCodePromptDeliveryPendingAgeMs,
+  OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS,
+} from './OpenCodePromptDeliveryStalePendingPolicy';
+import {
+  isOpenCodeDeliveryProofPendingReason,
   isOpenCodePromptDeliveryObserveLaterResponseState,
   OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS,
   OPENCODE_PROMPT_DELIVERY_RESPONDED_RETRY_DELAY_MS,
@@ -85,11 +91,17 @@ export function isOpenCodePromptDeliveryWatchdogRecordTerminal(
   if (record.status !== 'responded') {
     return false;
   }
-  return !(
-    record.responseState === 'responded_plain_text' &&
-    !record.visibleReplyMessageId &&
-    !record.inboxReadCommittedAt
-  );
+  // A cancelled record is finished whatever it still owes: its run is gone, so
+  // re-arming a wake for it would ask a runtime that is no longer there.
+  if (isOpenCodePromptDeliveryCancelled(record)) {
+    return true;
+  }
+  // A responded record still owes the inbox read-commit until
+  // `inboxReadCommittedAt` is stamped: the reply proof can land through another
+  // channel after the relay pass that observed the response, and a record the
+  // watchdog treats as terminal is never re-armed - the unread inbox row then
+  // stays unread forever even though the member answered.
+  return Boolean(record.inboxReadCommittedAt);
 }
 
 export function isExplicitOpenCodeSessionRefreshStamp(reason: string | null | undefined): boolean {
@@ -266,13 +278,67 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
       input.ledgerRecord.attempts >= input.ledgerRecord.maxAttempts &&
       !canScheduleNoAssistantRecoveryRetry
     ) {
-      return await this.deps.markFailedTerminal({
-        ledger: input.ledger,
-        id: input.ledgerRecord.id,
-        reason: input.reason,
-        failedAt: now,
-        eventContext: { retry: input.retry },
+      // The attempt budget bounds SENDS. A record whose only missing piece is
+      // the destination proof of an answer the runtime already produced must
+      // not go terminal here: nothing re-arms a terminal record, so its unread
+      // inbox row would stay unread until an unrelated inbox write. Re-arm it
+      // observe-only instead - no further attempt and no further runtime turn
+      // is spent - and let the proof settle it. The stale-pending hard cap
+      // bounds how long the proof may stay missing.
+      const pendingAgeMs = getOpenCodePromptDeliveryPendingAgeMs(input.ledgerRecord, this.nowMs());
+      const proofPendingObserveRearm =
+        isOpenCodeDeliveryProofPendingReason(input.reason) &&
+        hasOpenCodeAcceptedRuntimePrompt(input.ledgerRecord) &&
+        isOpenCodePromptResponseStateResponded(input.ledgerRecord.responseState) &&
+        pendingAgeMs !== null &&
+        pendingAgeMs < OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS;
+      if (!proofPendingObserveRearm) {
+        return await this.deps.markFailedTerminal({
+          ledger: input.ledger,
+          id: input.ledgerRecord.id,
+          reason: input.reason,
+          failedAt: now,
+          eventContext: { retry: input.retry },
+        });
+      }
+      const observeDelayMs = getOpenCodeDeliveryNextDelayMs({
+        responseState: input.ledgerRecord.responseState,
+        retry: true,
+        ledgerRecord: input.ledgerRecord,
       });
+      // A 'responded' record keeps its status - it is already excluded from
+      // automatic selection, so only its durable deadline needs to move. Any
+      // other status is parked as 'accepted' so the next wake observes instead
+      // of dispatching; 'retry_scheduled' would spend another send.
+      const ledgerRecord =
+        input.ledgerRecord.status === 'responded'
+          ? await deferOpenCodePromptDeliveryAttempt({
+              ledger: input.ledger,
+              ledgerRecord: input.ledgerRecord,
+              delayMs: observeDelayMs,
+              nowMs: this.nowMs(),
+            })
+          : await input.ledger.markNextAttemptScheduled({
+              id: input.ledgerRecord.id,
+              status: 'accepted',
+              nextAttemptAt: new Date(this.nowMs() + observeDelayMs).toISOString(),
+              reason: input.reason,
+              scheduledAt: now,
+            });
+      if (isOpenCodePromptDeliveryCancelled(ledgerRecord)) return ledgerRecord;
+      this.deps.logEvent('opencode_prompt_delivery_proof_pending_observe_rearmed', ledgerRecord, {
+        reason: input.reason,
+        attempts: ledgerRecord.attempts,
+        maxAttempts: ledgerRecord.maxAttempts,
+        pendingAgeMs,
+      });
+      this.deps.scheduleWatchdog({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        messageId: input.ledgerRecord.inboxMessageId,
+        delayMs: observeDelayMs,
+      });
+      return ledgerRecord;
     }
     const delayMs = getOpenCodeDeliveryNextDelayMs({
       responseState: input.ledgerRecord.responseState,

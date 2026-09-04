@@ -535,6 +535,24 @@ export class OpenCodePromptDeliveryLedgerStore {
     }));
   }
 
+  /**
+   * Move only the record's due time. Every other scheduling write also rewrites
+   * `status` and `lastReason`, which is wrong for a postponement: nothing was
+   * attempted, so nothing about the record's state changed except when it is
+   * next allowed to be looked at.
+   */
+  async markNextAttemptDeferred(input: {
+    id: string;
+    nextAttemptAt: string;
+    deferredAt: string;
+  }): Promise<OpenCodePromptDeliveryLedgerRecord> {
+    return await this.updateExisting(input.id, (record) => ({
+      ...record,
+      nextAttemptAt: input.nextAttemptAt,
+      updatedAt: input.deferredAt,
+    }));
+  }
+
   async markSessionRefreshScheduled(input: {
     id: string;
     nextAttemptAt: string;

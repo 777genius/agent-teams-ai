@@ -189,6 +189,25 @@ export function isOpenCodeVisibleReplyReadCommitAllowed(input: {
   return input.transcriptOnlyVisibleReply !== true;
 }
 
+/**
+ * Pending reasons that say the runtime accepted the prompt and already
+ * answered, and only the answer's destination proof has not materialized yet -
+ * the reply file write races the observation, or a freshly bootstrapped lane's
+ * reply destination becomes visible only after the attempt budget is spent.
+ *
+ * They are timing and deliverability conditions, not member behavior, so the
+ * attempt cap must not turn them terminal: nothing re-arms a terminal record,
+ * and its unread inbox row would then stay unread until an unrelated inbox
+ * write happened to wake the lane.
+ */
+export function isOpenCodeDeliveryProofPendingReason(reason: string | null | undefined): boolean {
+  const normalized = reason?.trim();
+  return (
+    normalized === 'visible_reply_destination_not_found_yet' ||
+    normalized === 'plain_text_visible_reply_not_materialized_yet'
+  );
+}
+
 export function isOpenCodePromptDeliveryRetryableResponseState(
   state: OpenCodeDeliveryResponseState | undefined
 ): boolean {
