@@ -31,16 +31,20 @@ function isValidState(value: unknown): value is TaskStallJournalState {
 }
 
 // Every signal the journal may round-trip. A signal missing here is dropped on
-// read, which silently resets the two-scan counter for that branch.
-const VALID_SIGNALS = new Set<TaskStallSignal>([
-  'turn_ended_after_touch',
-  'mid_turn_after_touch',
-  'touch_then_other_turns',
-  'pending_pickup_after_unblock',
-]);
+// read, which silently resets the two-scan counter for that branch: that is the
+// bug the pickup signal hit. The mapping is a Record over the union rather than
+// a list, so adding a TaskStallSignal without listing it here fails typecheck
+// instead of failing a branch at runtime.
+const VALID_SIGNAL_BY_NAME: Record<TaskStallSignal, true> = {
+  turn_ended_after_touch: true,
+  mid_turn_after_touch: true,
+  touch_then_other_turns: true,
+  pending_pickup_after_unblock: true,
+};
+const VALID_SIGNALS = new Set<string>(Object.keys(VALID_SIGNAL_BY_NAME));
 
 function isValidSignal(value: unknown): value is TaskStallSignal {
-  return typeof value === 'string' && VALID_SIGNALS.has(value as TaskStallSignal);
+  return typeof value === 'string' && VALID_SIGNALS.has(value);
 }
 
 /**
