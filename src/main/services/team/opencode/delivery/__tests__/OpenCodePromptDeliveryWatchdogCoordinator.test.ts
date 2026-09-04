@@ -235,6 +235,7 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
       teamName: 'team',
       memberName: 'team-lead',
       laneId: 'primary',
+      runId: 'run-1',
       state: 'idle',
     });
   });

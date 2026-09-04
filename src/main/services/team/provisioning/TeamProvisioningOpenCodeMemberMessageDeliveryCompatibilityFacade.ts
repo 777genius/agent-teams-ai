@@ -1,6 +1,7 @@
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
+import { isOpenCodeLeadRecipient } from '../opencode/delivery/OpenCodeLeadTurnActivity';
 import {
   type OpenCodeLeadTurnActivityNotification,
   type OpenCodeMemberInboxDelivery,
@@ -52,6 +53,7 @@ type OpenCodeMemberMessageDeliveryHostRun = NonNullable<
 export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<
   TRun extends TeamProvisioningSendMessageToRunRun,
 > {
+  readLeadActivityDirectory: TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost['openCodeRuntimeRecoveryFacade']['readOpenCodeMemberDirectory'];
   createDeliveryHost(): TeamProvisioningOpenCodeMemberMessageDeliveryHost;
   /** Tracked run that owns the OpenCode primary lane for a team, if any. */
   resolveLeadActivityRun(teamName: string): TRun | null;
@@ -165,15 +167,47 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
     });
   }
 
+  private readonly leadActivityPending = new Map<string, Promise<void>>();
+
   /**
    * Mirrors `sendMessageToRun` -> `setLeadActivity(run, 'active')` for the
    * OpenCode primary lane, whose lead has no stdin stream. No-op when the team
    * has no deliverable tracked run.
    */
-  notifyOpenCodeLeadTurnActivity(input: OpenCodeLeadTurnActivityNotification): void {
-    const run = this.deps.resolveLeadActivityRun(input.teamName);
-    if (!run) return;
-    this.deps.setLeadActivity(run, input.state);
+  notifyOpenCodeLeadTurnActivity(input: OpenCodeLeadTurnActivityNotification): Promise<void> {
+    const key = input.teamName;
+    const pending = (this.leadActivityPending.get(key) ?? Promise.resolve()).then(() =>
+      this.applyOpenCodeLeadTurnActivity(input)
+    );
+    this.leadActivityPending.set(key, pending);
+    void pending.finally(() => {
+      if (this.leadActivityPending.get(key) === pending) this.leadActivityPending.delete(key);
+    });
+    return pending;
+  }
+
+  private async applyOpenCodeLeadTurnActivity(
+    input: OpenCodeLeadTurnActivityNotification
+  ): Promise<void> {
+    if (input.laneId !== 'primary' || !input.runId) return;
+    try {
+      const directory = await this.deps.readLeadActivityDirectory(input.teamName);
+      if (!isOpenCodeLeadRecipient(input.memberName, directory)) return;
+      const run = this.deps.resolveLeadActivityRun(input.teamName);
+      if (
+        !run ||
+        run.runId !== input.runId ||
+        run.processKilled ||
+        run.cancelRequested ||
+        !this.deps.isCurrentTrackedRun(run)
+      )
+        return;
+      this.deps.setLeadActivity(run, input.state);
+    } catch (error) {
+      this.deps.logger.warn(
+        `OpenCode lead activity notification failed: ${this.deps.getErrorMessage(error)}`
+      );
+    }
   }
 
   async deliverOpenCodeMemberMessage(
@@ -206,6 +240,8 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
   >
 ): TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun> {
   return new TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<TRun>({
+    readLeadActivityDirectory: (teamName) =>
+      service.openCodeRuntimeRecoveryFacade.readOpenCodeMemberDirectory(teamName),
     createDeliveryHost: () =>
       createTeamProvisioningOpenCodeMemberMessageDeliveryHostFromService(service),
     resolveLeadActivityRun: (teamName) => {

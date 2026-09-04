@@ -128,6 +128,7 @@ export interface OpenCodeLeadTurnActivityNotification {
   teamName: string;
   memberName: string;
   laneId: string;
+  runId: string | null;
   state: 'active' | 'idle';
 }
 

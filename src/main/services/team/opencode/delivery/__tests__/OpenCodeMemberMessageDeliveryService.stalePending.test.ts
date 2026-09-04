@@ -19,7 +19,6 @@ import { isOpenCodeDeliveryResponseReadCommitAllowed } from '../OpenCodePromptDe
 import {
   OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON,
   OPENCODE_STALE_PENDING_POLICY_CONFIG,
-  OPENCODE_STALE_PENDING_PREEMPTED_REASON,
   OPENCODE_STALE_PENDING_TERMINAL_REASON,
   type OpenCodeStalePendingPolicyConfig,
 } from '../OpenCodePromptDeliveryStalePendingPolicy';
@@ -135,6 +134,7 @@ async function seedAcceptedPendingRecord(
     replyRecipient: input.replyRecipient ?? 'user',
     actionMode: input.actionMode ?? null,
     messageKind: input.messageKind ?? null,
+    workSyncIntent: input.workSyncIntent,
     taskRefs: input.taskRefs ?? [],
     payloadHash: hashOpenCodePromptDeliveryPayload({
       text: input.text,
@@ -439,30 +439,54 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
     ).toBeNull();
   });
 
-  it('lets a new user message preempt a stale non-user record and delivers it', async () => {
-    const harness = createHarness({ ledgerDir, send: async () => acceptedSendResult() });
-    await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 32 });
+  it.each([
+    userMessage,
+    taskCommentNotification,
+    {
+      ...taskCommentNotification,
+      messageId: 'task-start',
+      messageKind: 'default' as const,
+      text: 'Start working on task now. Use task_get and task_complete.',
+      taskRefs: [{ taskId: 'task-1', displayId: '1', teamName: TEAM }],
+    },
+    {
+      ...taskCommentNotification,
+      messageId: 'work-sync',
+      messageKind: 'member_work_sync_nudge' as const,
+      workSyncIntent: 'agenda_sync' as const,
+    },
+  ])('preserves stale busy or unknown accepted work: $messageId', async (message) => {
+    for (const diagnostics of [[BUSY], []]) {
+      const harness = createHarness({
+        ledgerDir,
+        observe: async () => observedResult({ observation: pendingObservation(), diagnostics }),
+      });
+      await seedAcceptedPendingRecord(harness.ledger, message, { ageMinutes: 90 });
+      const delivery = await harness.service.deliver(TEAM, message);
+      expect(delivery).toMatchObject({ accepted: true, responsePending: true });
+      expect(harness.send).not.toHaveBeenCalled();
+      expect(harness.notify).not.toHaveBeenCalledWith(expect.objectContaining({ state: 'idle' }));
+    }
+  });
 
-    const delivery = await harness.service.deliver(TEAM, userMessage);
-
-    expect(harness.send).toHaveBeenCalledTimes(1);
-    expect(delivery).toMatchObject({ delivered: true, accepted: true });
-    expect(delivery.queuedBehindMessageId).toBeUndefined();
-    const records = await harness.ledger.list();
-    const stale = records.find(
-      (record) => record.inboxMessageId === taskCommentNotification.messageId
-    );
-    const fresh = records.find((record) => record.inboxMessageId === userMessage.messageId);
-    expect(stale).toMatchObject({
-      status: 'responded',
-      responseState: 'responded_plain_text',
-      lastReason: OPENCODE_STALE_PENDING_PREEMPTED_REASON,
+  it('queues a new user behind stale busy non-user work until a fresh idle observation', async () => {
+    const harness = createHarness({
+      ledgerDir,
+      send: async () => acceptedSendResult(),
+      observe: async () =>
+        observedResult({ observation: pendingObservation(), diagnostics: [TREATED_IDLE] }),
     });
-    expect(fresh).toMatchObject({ status: 'accepted', replyRecipient: 'user' });
-    // The settled row is handed back to the watchdog so the relay read-commits it.
-    expect(harness.scheduleWatchdog).toHaveBeenCalledWith(
-      expect.objectContaining({ messageId: taskCommentNotification.messageId, delayMs: 500 })
-    );
+    await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 90 });
+    expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({
+      queuedBehindMessageId: taskCommentNotification.messageId,
+    });
+    expect(harness.send).not.toHaveBeenCalled();
+    expect(await harness.service.deliver(TEAM, taskCommentNotification)).toMatchObject({
+      delivered: true,
+      responsePending: false,
+    });
+    expect(await harness.service.deliver(TEAM, userMessage)).toMatchObject({ accepted: true });
+    expect(harness.send).toHaveBeenCalledOnce();
   });
 
   it('still queues a user message behind a non-stale non-user record', async () => {
@@ -478,30 +502,6 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
       reason: 'opencode_delivery_response_pending',
     });
     expect(await harness.ledger.list()).toHaveLength(1);
-  });
-
-  it('bounds the lane by the windows it was composed with', async () => {
-    // The record above stays queued at two minutes under the shipped 5-minute
-    // window; the only change here is the config the service was built with.
-    const harness = createHarness({
-      ledgerDir,
-      send: async () => acceptedSendResult(),
-      stalePendingConfig: { staleAfterMs: 60_000, hardCapMs: 6 * 60_000 },
-    });
-    await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 2 });
-
-    const delivery = await harness.service.deliver(TEAM, userMessage);
-
-    expect(harness.send).toHaveBeenCalledTimes(1);
-    expect(delivery).toMatchObject({ delivered: true, accepted: true });
-    expect(delivery.queuedBehindMessageId).toBeUndefined();
-    const stale = (await harness.ledger.list()).find(
-      (record) => record.inboxMessageId === taskCommentNotification.messageId
-    );
-    expect(stale).toMatchObject({
-      status: 'responded',
-      lastReason: OPENCODE_STALE_PENDING_PREEMPTED_REASON,
-    });
   });
 
   it('never preempts a stale user prompt with another user message', async () => {
@@ -521,4 +521,61 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
       queuedBehindMessageId: 'user-1',
     });
   });
+  it.each(['pending', 'prompt_not_indexed'] as const)(
+    'marks the lead active when unknown acceptance is proven busy by observe (%s)',
+    async (state) => {
+      const ledgerDir = await mkdtemp(join(tmpdir(), 'review565-acceptance-recovery-'));
+      try {
+        const harness = createHarness({
+          ledgerDir,
+          observe: async () =>
+            observedResult({
+              observation: pendingObservation({ state }),
+              diagnostics: [BUSY],
+            }),
+        });
+        const seeded = await harness.ledger.ensurePending({
+          teamName: TEAM,
+          memberName: LEAD,
+          laneId: 'primary',
+          runId: 'run-1',
+          inboxMessageId: userMessage.messageId!,
+          inboxTimestamp: userMessage.inboxTimestamp!,
+          source: userMessage.source!,
+          replyRecipient: userMessage.replyRecipient!,
+          actionMode: userMessage.actionMode,
+          messageKind: userMessage.messageKind,
+          taskRefs: [],
+          now: minutesAgoIso(1),
+          payloadHash: hashOpenCodePromptDeliveryPayload({
+            text: userMessage.text,
+            replyRecipient: userMessage.replyRecipient!,
+            actionMode: userMessage.actionMode,
+            taskRefs: [],
+            source: userMessage.source,
+          }),
+        });
+        await harness.ledger.markAcceptanceUnknown({
+          id: seeded.id,
+          nextAttemptAt: minutesAgoIso(0),
+          reason: 'opencode_prompt_acceptance_missing_runtime_prompt_id',
+          diagnostics: ['send timeout; acceptance unknown'],
+          markedAt: minutesAgoIso(1),
+        });
+        const before = (await harness.ledger.list())[0];
+        expect(before.status).toBe('failed_retryable');
+        expect(before.acceptanceUnknown).toBe(true);
+        expect(before.acceptedAt).toBeNull();
+        expect(before.runtimePromptMessageId).toBeNull();
+        const delivered = await harness.service.deliver(TEAM, userMessage);
+        expect(delivered).toMatchObject({ accepted: true, responsePending: true });
+        expect(harness.observe).toHaveBeenCalledOnce();
+        expect(harness.send).not.toHaveBeenCalled();
+        expect(harness.notify).not.toHaveBeenCalledWith(expect.objectContaining({ state: 'idle' }));
+        expect(harness.notify).toHaveBeenCalledWith(expect.objectContaining({ state: 'active' }));
+      } finally {
+        await rm(ledgerDir, { recursive: true, force: true });
+      }
+    }
+  );
 });

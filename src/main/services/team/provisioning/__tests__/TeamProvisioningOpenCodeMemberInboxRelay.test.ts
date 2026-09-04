@@ -1167,6 +1167,20 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     });
   });
 
+  it('surfaces accepted terminal failures instead of projecting them as pending', () => {
+    expect(
+      projectOpenCodeInboxDeliveryFailure({
+        delivery: {
+          delivered: false,
+          accepted: true,
+          ledgerStatus: 'failed_terminal',
+          reason: 'idle_without_required_reply',
+        },
+        suppressRuntimeInactiveWarning: false,
+      })
+    ).toMatchObject({ result: { failed: 1 }, shouldLogWarning: true });
+  });
+
   it('projects delivery failures without warning for pending acceptance or suppressed runtime inactive', () => {
     expect(
       projectOpenCodeInboxDeliveryFailure({

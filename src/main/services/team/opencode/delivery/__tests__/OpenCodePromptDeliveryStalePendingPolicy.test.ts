@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   buildOpenCodeStalePendingPlainTextObservation,
   decideOpenCodeStalePendingResolution,
-  decideOpenCodeStalePendingUserPreemption,
   getOpenCodeObservedSessionActivity,
   getOpenCodePromptDeliveryPendingAgeMs,
   isOpenCodePromptDeliveryStalePending,
@@ -11,9 +10,7 @@ import {
   OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS,
   OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS,
   OPENCODE_REPLY_OPTIONAL_TURN_END_REASON,
-  OPENCODE_STALE_PENDING_HARD_CAP_REASON,
   OPENCODE_STALE_PENDING_POLICY_CONFIG,
-  OPENCODE_STALE_PENDING_PREEMPTED_REASON,
   OPENCODE_STALE_PENDING_TERMINAL_REASON,
 } from '../OpenCodePromptDeliveryStalePendingPolicy';
 
@@ -200,7 +197,7 @@ describe('decideOpenCodeStalePendingResolution', () => {
         ...tenMinutesBusy,
         config: { staleAfterMs: POLICY.staleAfterMs, hardCapMs: 6 * 60_000 },
       })
-    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_HARD_CAP_REASON });
+    ).toMatchObject({ action: 'keep_observing', reason: 'opencode_stale_pending_session_busy' });
   });
 
   it('settles a lead non-user message immediately once the turn ended (live stuck record)', () => {
@@ -273,10 +270,7 @@ describe('decideOpenCodeStalePendingResolution', () => {
     ).toEqual({ action: 'none' });
   });
 
-  it('still bounds a lane that never reports its session activity', () => {
-    // A lane with no idle evidence at all is not settled as a finished turn,
-    // but it does not block the lane either: at the stale window the unknown
-    // session goes terminal, exactly like an idle one.
+  it('keeps observing a stale lane without fresh session activity', () => {
     expect(
       decideOpenCodeStalePendingResolution({
         record: record(),
@@ -286,10 +280,10 @@ describe('decideOpenCodeStalePendingResolution', () => {
         nowMs: NOW_MS,
         config: POLICY,
       })
-    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_TERMINAL_REASON });
+    ).toMatchObject({ action: 'keep_observing', reason: 'opencode_stale_pending_session_unknown' });
   });
 
-  it('keeps observing a stale busy record until the non-user hard cap, then goes terminal', () => {
+  it('keeps observing busy records past every age window', () => {
     const busy = {
       laneKind: 'primary' as const,
       observation: { state: 'pending' as const, assistantMessageId: null },
@@ -317,9 +311,8 @@ describe('decideOpenCodeStalePendingResolution', () => {
           acceptedAt: overCap,
         }),
       })
-    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_HARD_CAP_REASON });
-    // Boundaries, exactly: a busy session at the stale window is still only
-    // "slow", and it is the hard cap - not the stale window - that ends it.
+    ).toMatchObject({ action: 'keep_observing', reason: 'opencode_stale_pending_session_busy' });
+    // Age boundaries do not change the runtime evidence.
     const atStaleWindow = minutesAgo(OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS / 60_000);
     expect(
       decideOpenCodeStalePendingResolution({
@@ -341,7 +334,7 @@ describe('decideOpenCodeStalePendingResolution', () => {
           acceptedAt: atCap,
         }),
       })
-    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_HARD_CAP_REASON });
+    ).toMatchObject({ action: 'keep_observing', reason: 'opencode_stale_pending_session_busy' });
   });
 
   it('never hard-caps a busy user prompt', () => {
@@ -493,89 +486,6 @@ describe('decideOpenCodeStalePendingResolution', () => {
         })
       ).toEqual({ action: 'none' });
     }
-  });
-});
-
-describe('decideOpenCodeStalePendingUserPreemption', () => {
-  it('lets a new user message preempt a stale non-user record on the lead lane', () => {
-    expect(
-      decideOpenCodeStalePendingUserPreemption({
-        activeRecord: record(),
-        incomingReplyRecipient: 'user',
-        laneKind: 'primary',
-        nowMs: NOW_MS,
-        config: POLICY,
-      })
-    ).toEqual({ action: 'settle_plain_text', reason: OPENCODE_STALE_PENDING_PREEMPTED_REASON });
-    expect(
-      decideOpenCodeStalePendingUserPreemption({
-        activeRecord: record({ observedAssistantMessageId: null }),
-        incomingReplyRecipient: 'user',
-        laneKind: 'primary',
-        nowMs: NOW_MS,
-        config: POLICY,
-      })
-    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_PREEMPTED_REASON });
-    expect(
-      decideOpenCodeStalePendingUserPreemption({
-        activeRecord: record({ laneId: 'secondary:opencode:scribe', replyRecipient: 'team-lead' }),
-        incomingReplyRecipient: 'user',
-        laneKind: 'secondary',
-        nowMs: NOW_MS,
-        config: POLICY,
-      })
-    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_PREEMPTED_REASON });
-  });
-
-  it('keeps queue-behind semantics for non-user senders, user-prompt blockers, and fresh records', () => {
-    expect(
-      decideOpenCodeStalePendingUserPreemption({
-        activeRecord: record(),
-        incomingReplyRecipient: 'Scribe',
-        laneKind: 'primary',
-        nowMs: NOW_MS,
-        config: POLICY,
-      })
-    ).toEqual({ action: 'none' });
-    expect(
-      decideOpenCodeStalePendingUserPreemption({
-        activeRecord: record({ replyRecipient: 'user' }),
-        incomingReplyRecipient: 'user',
-        laneKind: 'primary',
-        nowMs: NOW_MS,
-        config: POLICY,
-      })
-    ).toEqual({ action: 'none' });
-    expect(
-      decideOpenCodeStalePendingUserPreemption({
-        activeRecord: record({
-          lastAttemptAt: minutesAgo(OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS / 60_000 - 1),
-          acceptedAt: minutesAgo(OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS / 60_000 - 1),
-        }),
-        incomingReplyRecipient: 'user',
-        laneKind: 'primary',
-        nowMs: NOW_MS,
-        config: POLICY,
-      })
-    ).toEqual({ action: 'none' });
-  });
-
-  it('takes the stale window from its caller too', () => {
-    const fresh = {
-      activeRecord: record({ lastAttemptAt: minutesAgo(2), acceptedAt: minutesAgo(2) }),
-      incomingReplyRecipient: 'user',
-      laneKind: 'primary' as const,
-      nowMs: NOW_MS,
-    };
-    expect(decideOpenCodeStalePendingUserPreemption({ ...fresh, config: POLICY })).toEqual({
-      action: 'none',
-    });
-    expect(
-      decideOpenCodeStalePendingUserPreemption({
-        ...fresh,
-        config: { staleAfterMs: 60_000, hardCapMs: POLICY.hardCapMs },
-      })
-    ).toEqual({ action: 'settle_plain_text', reason: OPENCODE_STALE_PENDING_PREEMPTED_REASON });
   });
 });
 

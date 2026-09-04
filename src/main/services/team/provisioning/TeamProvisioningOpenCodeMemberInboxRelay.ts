@@ -590,7 +590,7 @@ async function runOpenCodeMemberInboxRelayWork(
       ];
       // A pending non-user delivery (teammate report, system/task notification)
       // must not starve a newer user message: hand that message to the delivery
-      // service, which preempts a stale non-user record or queues behind it.
+      // service, which queues it until fresh observation settles the blocker.
       const nextUserMessageIndex = findNextUnreadUserMessageIndex({
         unread,
         afterIndex: index,
@@ -824,7 +824,7 @@ export function projectOpenCodeInboxDeliveryFailure(input: {
   result: OpenCodeMemberInboxRelayResult;
   shouldLogWarning: boolean;
 } {
-  if (input.delivery.accepted === true) {
+  if (input.delivery.accepted === true && input.delivery.ledgerStatus !== 'failed_terminal') {
     const diagnostics = input.delivery.diagnostics ?? [
       input.delivery.reason ?? 'opencode_delivery_response_pending',
     ];

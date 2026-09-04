@@ -21,8 +21,7 @@ import type { OpenCodePromptDeliveryLedgerRecord } from './OpenCodePromptDeliver
 /** An accepted/pending record older than this (since its last send) is stale. */
 export const OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS = 5 * 60_000;
 /**
- * A stale non-user record whose session still reports busy is settled terminal
- * after this long regardless; user-prompt records are never hard-capped.
+ * Legacy configuration window. Age alone never terminates busy or unknown work.
  */
 export const OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS = 30 * 60_000;
 
@@ -35,7 +34,7 @@ export const OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS = 30 * 60_000;
 export interface OpenCodeStalePendingPolicyConfig {
   /** Age since the last send at which an observe-only pending record is stale. */
   staleAfterMs: number;
-  /** Age at which a stale non-user record settles terminal even while busy. */
+  /** Legacy observation window, retained for callers; never a completion deadline. */
   hardCapMs: number;
 }
 
@@ -131,23 +130,10 @@ export function isOpenCodePromptDeliveryStalePending(
 }
 
 /**
- * Decide what to do with an observe-only pending record after a fresh bridge
- * observation that still did not settle it.
- *
- * - Primary (lead) lane, non-user message, turn ended (assistant message seen
- *   and the session observed idle): settle as `responded_plain_text` right
- *   away. Lead replies to teammate reports and system notifications are
- *   optional, so a plain-text turn end is a complete response and read-commit
- *   may proceed. An unknown session is never a turn end - only the stale
- *   window below bounds a record the bridge reports nothing about.
- * - Any lane, reply-optional delivery (informational notice or teammate
- *   report), turn ended: same settlement. The member owed no reply, so a
- *   finished turn is the whole contract; without this the record sat pending
- *   until the stale window expired.
- * - Stale (older than `config.staleAfterMs`) and the session is not busy:
- *   terminal.
- * - Stale and busy: keep observing; non-user records are capped at
- *   `config.hardCapMs` and then settled terminal.
+ * Only a fresh explicit idle observation may settle an accepted prompt.
+ * Reply-optional deliveries settle after turn proof; reply-required deliveries
+ * retain their proof contract and fail visibly after the idle stale window.
+ * Busy or unknown runtime activity is never completion, regardless of age.
  */
 export function decideOpenCodeStalePendingResolution(input: {
   record: OpenCodePromptDeliveryLedgerRecord;
@@ -161,7 +147,7 @@ export function decideOpenCodeStalePendingResolution(input: {
   if (!isOpenCodePromptDeliveryObserveOnlyPendingRecord(record)) {
     return { action: 'none' };
   }
-  const { staleAfterMs, hardCapMs } = input.config;
+  const { staleAfterMs } = input.config;
   const isUserPrompt = isOpenCodeDirectUserPromptDelivery(record);
   const activity = getOpenCodeObservedSessionActivity(input.observedDiagnostics);
   const assistantMessageSeen = Boolean(
@@ -172,7 +158,12 @@ export function decideOpenCodeStalePendingResolution(input: {
   // the observation said nothing about the session.
   const turnEnded = assistantMessageSeen && activity === 'idle';
 
-  if (input.laneKind === 'primary' && !isUserPrompt && turnEnded) {
+  if (
+    input.laneKind === 'primary' &&
+    !isUserPrompt &&
+    turnEnded &&
+    isOpenCodeReplyOptionalDeliveryContract(record.replyRecipient)
+  ) {
     return { action: 'settle_plain_text', reason: OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON };
   }
   if (turnEnded && isOpenCodeReplyOptionalDeliveryContract(record.replyRecipient)) {
@@ -184,63 +175,14 @@ export function decideOpenCodeStalePendingResolution(input: {
     return { action: 'none' };
   }
   const ageDescription = `accepted prompt has been pending for ${Math.round(ageMs / 1000)}s`;
-  if (activity === 'busy') {
-    if (!isUserPrompt && ageMs >= hardCapMs) {
-      return {
-        action: 'fail_terminal',
-        reason: OPENCODE_STALE_PENDING_HARD_CAP_REASON,
-        diagnostics: [
-          `OpenCode session still reported busy after ${Math.round(hardCapMs / 60_000)} minute(s); ${ageDescription}.`,
-        ],
-      };
-    }
-    return { action: 'keep_observing', reason: 'opencode_stale_pending_session_busy' };
+  if (activity !== 'idle') {
+    return { action: 'keep_observing', reason: `opencode_stale_pending_session_${activity}` };
   }
   return {
     action: 'fail_terminal',
     reason: OPENCODE_STALE_PENDING_TERMINAL_REASON,
     diagnostics: [
       `OpenCode observation never settled the accepted prompt (session ${activity}); ${ageDescription}.`,
-    ],
-  };
-}
-
-/**
- * A new user message must never wait behind a stale non-user record (teammate
- * report, task/system notification). Decide how to settle the blocking record
- * so the user delivery can proceed. Non-stale or user-prompt records keep the
- * normal queue-behind semantics.
- */
-export function decideOpenCodeStalePendingUserPreemption(input: {
-  activeRecord: OpenCodePromptDeliveryLedgerRecord;
-  incomingReplyRecipient?: string | null;
-  laneKind: 'primary' | 'secondary';
-  nowMs: number;
-  config: OpenCodeStalePendingPolicyConfig;
-}): OpenCodeStalePendingResolution {
-  if (input.incomingReplyRecipient?.trim().toLowerCase() !== 'user') {
-    return { action: 'none' };
-  }
-  if (isOpenCodeDirectUserPromptDelivery(input.activeRecord)) {
-    return { action: 'none' };
-  }
-  if (
-    !isOpenCodePromptDeliveryStalePending(
-      input.activeRecord,
-      input.nowMs,
-      input.config.staleAfterMs
-    )
-  ) {
-    return { action: 'none' };
-  }
-  if (input.laneKind === 'primary' && input.activeRecord.observedAssistantMessageId?.trim()) {
-    return { action: 'settle_plain_text', reason: OPENCODE_STALE_PENDING_PREEMPTED_REASON };
-  }
-  return {
-    action: 'fail_terminal',
-    reason: OPENCODE_STALE_PENDING_PREEMPTED_REASON,
-    diagnostics: [
-      'A newer user message preempted this stale non-user delivery so the lane can continue.',
     ],
   };
 }

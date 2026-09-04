@@ -1,12 +1,10 @@
 import { isOpenCodeAcceptedDeliveryMissingPromptProof } from './OpenCodePromptDeliveryReadCommitPolicy';
-import { decideOpenCodeStalePendingUserPreemption } from './OpenCodePromptDeliveryStalePendingPolicy';
 
 import type { OpenCodeMemberMessageDeliveryServiceDependencies } from './OpenCodeMemberMessageDeliveryPorts';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
   OpenCodePromptDeliveryLedgerStore,
 } from './OpenCodePromptDeliveryLedger';
-import type { OpenCodeStalePendingResolution } from './OpenCodePromptDeliveryStalePendingPolicy';
 
 /**
  * Ports needed to decide whether the record currently holding a lane still
@@ -85,61 +83,4 @@ export async function recoverOpenCodeActiveDeliveryBlocker(input: {
     });
   }
   return active;
-}
-
-/**
- * Settles a stale-pending resolution against the ledger. Returns the settled
- * record, or null when the resolution changed nothing.
- */
-export type OpenCodeStalePendingSettler = (input: {
-  ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
-  resolution: OpenCodeStalePendingResolution;
-  eventContext: Record<string, unknown>;
-}) => Promise<OpenCodePromptDeliveryLedgerRecord | null>;
-
-/**
- * A new user message must never wait behind a stale non-user record that the
- * observe loop never settled. Decide whether the blocker can be preempted, and
- * settle it if so.
- *
- * Returns the record that still blocks the lane, or null once it no longer does.
- */
-export async function preemptStaleOpenCodeActiveDelivery(input: {
-  ports: Pick<
-    OpenCodeMemberMessageDeliveryServiceDependencies,
-    'scheduleOpenCodePromptDeliveryWatchdog' | 'openCodeStalePendingPolicyConfig'
-  >;
-  activeRecord: OpenCodePromptDeliveryLedgerRecord;
-  incomingMessageId?: string;
-  incomingReplyRecipient?: string;
-  laneKind: 'primary' | 'secondary';
-  teamName: string;
-  memberName: string;
-  settle: OpenCodeStalePendingSettler;
-}): Promise<OpenCodePromptDeliveryLedgerRecord | null> {
-  const preemption = decideOpenCodeStalePendingUserPreemption({
-    activeRecord: input.activeRecord,
-    incomingReplyRecipient: input.incomingReplyRecipient,
-    laneKind: input.laneKind,
-    nowMs: Date.now(),
-    config: input.ports.openCodeStalePendingPolicyConfig,
-  });
-  const settled = await input.settle({
-    ledgerRecord: input.activeRecord,
-    resolution: preemption,
-    eventContext: { preemptedByUserMessageId: input.incomingMessageId },
-  });
-  if (!settled) {
-    return input.activeRecord;
-  }
-  if (settled.status === 'responded') {
-    // Let the watchdog relay read-commit the settled inbox row.
-    input.ports.scheduleOpenCodePromptDeliveryWatchdog({
-      teamName: input.teamName,
-      memberName: input.memberName,
-      messageId: settled.inboxMessageId,
-      delayMs: 500,
-    });
-  }
-  return null;
 }

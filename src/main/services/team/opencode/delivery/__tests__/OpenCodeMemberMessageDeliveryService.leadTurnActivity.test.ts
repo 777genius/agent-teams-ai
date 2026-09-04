@@ -183,6 +183,7 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
       teamName: 'team-a',
       memberName: 'team-lead',
       laneId: 'primary',
+      runId: 'run-1',
       state: 'active',
     });
   });
@@ -234,6 +235,25 @@ describe('OpenCodeMemberMessageDeliveryService lead turn activity', () => {
       createDeps({
         ledgerDir,
         laneIdentity: SECONDARY_LANE,
+        memberName: 'Muse',
+        send: async () => acceptedResult('Muse'),
+        readAllowed: settleAfterAcceptance,
+        notify,
+      })
+    );
+
+    const delivery = await service.deliver('team-a', { ...leadMessage, memberName: 'Muse' });
+
+    expect(delivery.accepted).toBe(true);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it('never reports lead activity for a same-model primary teammate', async () => {
+    const notify = vi.fn();
+    const service = new OpenCodeMemberMessageDeliveryService(
+      createDeps({
+        ledgerDir,
+        laneIdentity: PRIMARY_LANE,
         memberName: 'Muse',
         send: async () => acceptedResult('Muse'),
         readAllowed: settleAfterAcceptance,

@@ -13,10 +13,8 @@ import {
   recoverStaleOpenCodeRuntimeLaneIndexEntry,
 } from '../store/OpenCodeRuntimeManifestEvidenceReader';
 
-import {
-  preemptStaleOpenCodeActiveDelivery,
-  recoverOpenCodeActiveDeliveryBlocker,
-} from './OpenCodeActiveDeliveryPreemption';
+import { recoverOpenCodeActiveDeliveryBlocker } from './OpenCodeActiveDeliveryPreemption';
+import { isOpenCodeLeadRecipient } from './OpenCodeLeadTurnActivity';
 import { deliverOpenCodeMemberMessageWithoutWatchdog } from './OpenCodeLegacyMemberMessageDelivery';
 import { isOpenCodeSessionRefreshRetryRecord } from './OpenCodePromptDeliveryFollowUpPolicy';
 import {
@@ -37,6 +35,7 @@ import {
 import {
   buildOpenCodeStalePendingPlainTextObservation,
   decideOpenCodeStalePendingResolution,
+  getOpenCodeObservedSessionActivity,
 } from './OpenCodePromptDeliveryStalePendingPolicy';
 import {
   isOpenCodePromptDeliveryRetryAttemptDue,
@@ -47,7 +46,6 @@ import type { OpenCodeTeamRuntimeMessageResult } from '../../runtime';
 import type {
   OpenCodeLeadTurnActivityNotification,
   OpenCodeMemberInboxDelivery,
-  OpenCodeMemberLaneIdentity,
   OpenCodeMemberMessageDeliveryInput,
   OpenCodeMemberMessageDeliveryServiceDependencies,
 } from './OpenCodeMemberMessageDeliveryPorts';
@@ -66,29 +64,6 @@ function nowIso(): string {
 export class OpenCodeMemberMessageDeliveryService {
   constructor(private readonly deps: OpenCodeMemberMessageDeliveryServiceDependencies) {}
 
-  private notifyLeadTurnActivity(
-    teamName: string,
-    memberName: string,
-    laneIdentity: OpenCodeMemberLaneIdentity,
-    state: OpenCodeLeadTurnActivityNotification['state']
-  ): void {
-    if (laneIdentity.laneKind !== 'primary' || !this.deps.notifyOpenCodeLeadTurnActivity) {
-      return;
-    }
-    try {
-      this.deps.notifyOpenCodeLeadTurnActivity({
-        teamName,
-        memberName,
-        laneId: laneIdentity.laneId,
-        state,
-      });
-    } catch (error) {
-      logger.warn(
-        `[${teamName}] OpenCode lead turn activity (${state}) notification failed: ${getErrorMessage(error)}`
-      );
-    }
-  }
-
   /**
    * Apply a stale-pending resolution to the ledger. `settle_plain_text` marks
    * the record responded (plain-text turn end); `fail_terminal` closes it so it
@@ -100,7 +75,7 @@ export class OpenCodeMemberMessageDeliveryService {
     resolution: OpenCodeStalePendingResolution;
     teamName: string;
     memberName: string;
-    laneIdentity: OpenCodeMemberLaneIdentity;
+    notifyActivity: (state: OpenCodeLeadTurnActivityNotification['state']) => void;
     eventContext: Record<string, unknown>;
   }): Promise<OpenCodePromptDeliveryLedgerRecord | null> {
     const { resolution } = input;
@@ -141,7 +116,7 @@ export class OpenCodeMemberMessageDeliveryService {
           stalePending: true,
         }
       );
-      this.notifyLeadTurnActivity(input.teamName, input.memberName, input.laneIdentity, 'idle');
+      input.notifyActivity('idle');
       return failed;
     }
     // 'none' and 'keep_observing' fall through to the regular follow-up
@@ -432,6 +407,26 @@ export class OpenCodeMemberMessageDeliveryService {
       });
     }
 
+    const isLeadRecipient =
+      laneIdentity.laneKind === 'primary' &&
+      isOpenCodeLeadRecipient(canonicalMemberName, directory);
+    const activityRunId = runtimeRunId;
+    const notifyActivity = (state: OpenCodeLeadTurnActivityNotification['state']): void => {
+      if (!isLeadRecipient || !activityRunId) return;
+      try {
+        this.deps.notifyOpenCodeLeadTurnActivity?.({
+          teamName,
+          memberName: canonicalMemberName,
+          laneId: laneIdentity.laneId,
+          runId: activityRunId,
+          state,
+        });
+      } catch (error) {
+        logger.warn(
+          `[${teamName}] OpenCode lead turn activity (${state}) notification failed: ${getErrorMessage(error)}`
+        );
+      }
+    };
     const messageId = input.messageId?.trim();
     const ledger = messageId
       ? this.deps.createOpenCodePromptDeliveryLedger(teamName, laneIdentity.laneId)
@@ -453,26 +448,7 @@ export class OpenCodeMemberMessageDeliveryService {
         memberName: canonicalMemberName,
       });
     }
-    if (active && active.inboxMessageId !== messageId && ledger) {
-      const blockingLedger = ledger;
-      active = await preemptStaleOpenCodeActiveDelivery({
-        ports: this.deps,
-        activeRecord: active,
-        incomingMessageId: messageId,
-        incomingReplyRecipient: input.replyRecipient,
-        laneKind: laneIdentity.laneKind,
-        teamName,
-        memberName: canonicalMemberName,
-        settle: async (settlement) =>
-          await this.applyStalePendingResolution({
-            ledger: blockingLedger,
-            teamName,
-            memberName: canonicalMemberName,
-            laneIdentity,
-            ...settlement,
-          }),
-      });
-    }
+
     if (active && active.inboxMessageId !== messageId) {
       const activeDueMs = active.nextAttemptAt ? Date.parse(active.nextAttemptAt) : NaN;
       this.deps.scheduleOpenCodePromptDeliveryWatchdog({
@@ -564,7 +540,7 @@ export class OpenCodeMemberMessageDeliveryService {
           ledgerRecord,
           { visibleReplySemanticallySufficient: true }
         );
-        this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+        notifyActivity('idle');
         return {
           delivered: true,
           accepted: true,
@@ -589,7 +565,7 @@ export class OpenCodeMemberMessageDeliveryService {
           'opencode_prompt_delivery_terminal_failure',
           ledgerRecord
         );
-        this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+        notifyActivity('idle');
         return {
           delivered: false,
           accepted: false,
@@ -774,7 +750,7 @@ export class OpenCodeMemberMessageDeliveryService {
             ledgerRecord,
             { visibleReplySemanticallySufficient: true }
           );
-          this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+          notifyActivity('idle');
           return {
             delivered: true,
             accepted: true,
@@ -789,12 +765,21 @@ export class OpenCodeMemberMessageDeliveryService {
           };
         }
 
+        if (
+          hasOpenCodeAcceptedRuntimePrompt(ledgerRecord) &&
+          getOpenCodeObservedSessionActivity(observed.diagnostics) !== 'idle' &&
+          (ledgerRecord.responseState === 'pending' ||
+            ledgerRecord.responseState === 'prompt_not_indexed')
+        ) {
+          notifyActivity('active');
+        }
+
         // Stale-pending guard: an accepted prompt the bridge keeps reporting as
         // `pending` has no attempt budget, so bound it here. A lead plain-text
         // turn end settles non-user messages; stale idle records go terminal.
         const staleResolution = decideOpenCodeStalePendingResolution({
           record: ledgerRecord,
-          laneKind: laneIdentity.laneKind,
+          laneKind: isLeadRecipient ? 'primary' : 'secondary',
           observation: responseObservation,
           observedDiagnostics: observed.diagnostics,
           nowMs: Date.now(),
@@ -806,7 +791,7 @@ export class OpenCodeMemberMessageDeliveryService {
           resolution: staleResolution,
           teamName,
           memberName: canonicalMemberName,
-          laneIdentity,
+          notifyActivity,
           eventContext: { observedAfterAcceptedPrompt: true },
         });
         if (staleSettled) {
@@ -823,7 +808,7 @@ export class OpenCodeMemberMessageDeliveryService {
               ledgerRecord,
             }));
           if (settledReadAllowed || ledgerRecord.status === 'failed_terminal') {
-            this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+            notifyActivity('idle');
             return {
               delivered: settledReadAllowed,
               accepted: true,
@@ -871,7 +856,7 @@ export class OpenCodeMemberMessageDeliveryService {
             reason: pendingReason,
           });
           if (ledgerRecord.status === 'failed_terminal') {
-            this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+            notifyActivity('idle');
             return {
               delivered: false,
               accepted: true,
@@ -912,7 +897,7 @@ export class OpenCodeMemberMessageDeliveryService {
             reason: pendingReason,
           });
           if (ledgerRecord.status === 'failed_terminal') {
-            this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+            notifyActivity('idle');
             return {
               delivered: false,
               accepted: true,
@@ -1021,7 +1006,7 @@ export class OpenCodeMemberMessageDeliveryService {
       });
     } catch (error) {
       const diagnostic = `opencode_message_delivery_exception: ${getErrorMessage(error)}`;
-      this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+      notifyActivity('idle');
       await this.deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
         teamName,
         runId: runtimeRunId,
@@ -1158,7 +1143,7 @@ export class OpenCodeMemberMessageDeliveryService {
         'opencode-prompt-delivery-session-evidence'
       );
       if (promptAccepted) {
-        this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'active');
+        notifyActivity('active');
       }
       let proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
         ledger,
@@ -1257,7 +1242,7 @@ export class OpenCodeMemberMessageDeliveryService {
         }),
       });
       if (ledgerRecord.status === 'failed_terminal') {
-        this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+        notifyActivity('idle');
         return {
           delivered: false,
           accepted: true,
@@ -1345,7 +1330,7 @@ export class OpenCodeMemberMessageDeliveryService {
       // Settled in this frame: response read-committable, or the prompt was not
       // (or not provably) accepted. An accepted-but-pending turn stays 'active'
       // until a later observation/watchdog settles it.
-      this.notifyLeadTurnActivity(teamName, canonicalMemberName, laneIdentity, 'idle');
+      notifyActivity('idle');
     }
     return {
       delivered: promptAccepted || acceptanceUnknown,

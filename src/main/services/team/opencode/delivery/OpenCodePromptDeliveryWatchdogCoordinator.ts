@@ -229,8 +229,8 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
   }
 
   private notifyLeadTurnIdle(record: OpenCodePromptDeliveryLedgerRecord): void {
-    // The lead's OpenCode lane is persisted with laneId 'primary'; secondary
-    // lanes carry member-scoped ids and never drive lead activity.
+    // The consumer validates canonical lead identity and current run ownership.
+    // Primary also contains same-model teammates, so lane alone is not proof.
     if (record.laneId !== 'primary' || !this.ports.notifyLeadTurnActivity) {
       return;
     }
@@ -239,6 +239,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
         teamName: record.teamName,
         memberName: record.memberName,
         laneId: record.laneId,
+        runId: record.runId,
         state: 'idle',
       });
     } catch (error) {

@@ -136,7 +136,43 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
     expect(deps.getCleanedStoppedTeamOpenCodeRuntimeLanes).toHaveBeenCalled();
   });
 
-  it('forwards OpenCode lead turn activity to setLeadActivity for the tracked run only', () => {
+  it('ignores an old turn that finishes after a replacement run starts', async () => {
+    let releaseDirectory!: (
+      directory: Awaited<ReturnType<TestDeps['readLeadActivityDirectory']>>
+    ) => void;
+    const directory = new Promise<Awaited<ReturnType<TestDeps['readLeadActivityDirectory']>>>(
+      (resolve) => {
+        releaseDirectory = resolve;
+      }
+    );
+    let run: TestSendRun = {
+      teamName: 'team-a',
+      runId: 'old-run',
+      processKilled: false,
+      cancelRequested: false,
+      request: {},
+      child: null,
+    };
+    const setLeadActivity = vi.fn();
+    const service = createService({
+      setLeadActivity,
+      resolveLeadActivityRun: () => run,
+      readLeadActivityDirectory: () => directory,
+    });
+    const notification = service.notifyOpenCodeLeadTurnActivity({
+      teamName: 'team-a',
+      memberName: 'team-lead',
+      laneId: 'primary',
+      runId: 'old-run',
+      state: 'idle',
+    });
+    run = { ...run, runId: 'new-run' };
+    releaseDirectory({ config: null, teamMeta: null, metaMembers: [] });
+    await notification;
+    expect(setLeadActivity).not.toHaveBeenCalled();
+  });
+
+  it('forwards OpenCode lead turn activity to setLeadActivity for the tracked run only', async () => {
     const run = {
       teamName: 'team-a',
       runId: 'run-1',
@@ -151,25 +187,35 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService', ()
     );
     const service = createService({ setLeadActivity, resolveLeadActivityRun });
 
-    service.notifyOpenCodeLeadTurnActivity({
+    await service.notifyOpenCodeLeadTurnActivity({
       teamName: 'team-a',
       memberName: 'team-lead',
       laneId: 'primary',
+      runId: 'run-1',
       state: 'active',
     });
-    service.notifyOpenCodeLeadTurnActivity({
+    await service.notifyOpenCodeLeadTurnActivity({
       teamName: 'team-a',
       memberName: 'team-lead',
       laneId: 'primary',
+      runId: 'run-1',
       state: 'idle',
     });
-    service.notifyOpenCodeLeadTurnActivity({
+    await service.notifyOpenCodeLeadTurnActivity({
       teamName: 'team-b',
       memberName: 'team-lead',
       laneId: 'primary',
+      runId: 'run-1',
       state: 'active',
     });
 
+    for (const input of [
+      { memberName: 'builder', runId: 'run-1', laneId: 'primary' },
+      { memberName: 'team-lead', runId: 'old-run', laneId: 'primary' },
+      { memberName: 'team-lead', runId: 'run-1', laneId: 'secondary:opencode:builder' },
+    ]) {
+      await service.notifyOpenCodeLeadTurnActivity({ teamName: 'team-a', state: 'idle', ...input });
+    }
     expect(setLeadActivity.mock.calls).toEqual([
       [run, 'active'],
       [run, 'idle'],
@@ -235,6 +281,11 @@ function createDeps(overrides: Partial<TestDeps> = {}): TestDeps {
     isCurrentTrackedRun: vi.fn(() => true),
     setLeadActivity: vi.fn(),
     resolveLeadActivityRun: vi.fn(() => null),
+    readLeadActivityDirectory: vi.fn(async () => ({
+      config: null,
+      teamMeta: null,
+      metaMembers: [],
+    })),
     logger: {
       warn: vi.fn(),
     },
