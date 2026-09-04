@@ -3,10 +3,12 @@ import Fastify from 'fastify';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const killRetainedOpenCodeRuntimeProcessesForTeam = vi.hoisted(() =>
-  vi.fn(async () => ({ killedPids: [4242], diagnostics: ['Killed persisted runtime pid=4242'] }))
+  vi.fn(() =>
+    Promise.resolve({ killedPids: [4242], diagnostics: ['Killed persisted runtime pid=4242'] })
+  )
 );
 const clearPendingOpenCodePromptDeliveriesForTeam = vi.hoisted(() =>
-  vi.fn(async () => ({ cleared: 0, diagnostics: [] }))
+  vi.fn(() => Promise.resolve({ cleared: 0, diagnostics: [] }))
 );
 
 vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (importOriginal) => {
@@ -20,7 +22,7 @@ vi.mock('@main/services/team/lifecycle/teamForceStopFlow', async (importOriginal
 });
 
 vi.mock('@main/services/team/TeamLaunchStateStore', () => ({
-  TeamLaunchStateStore: vi.fn(() => ({ read: vi.fn(async () => null) })),
+  TeamLaunchStateStore: vi.fn(() => ({ read: vi.fn(() => Promise.resolve(null)) })),
 }));
 
 import type { HttpServices } from '@main/http';
@@ -64,7 +66,8 @@ describe('POST /api/teams/:teamName/force-stop', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({
       stopOutcome: 'stopped',
-      killedRuntimePids: [4242],
+      cleanupOutcome: 'completed',
+      killedRuntimePids: [],
       clearedPendingDeliveries: 0,
     });
     expect(stopTeam).toHaveBeenCalledWith('fixteam');
@@ -86,11 +89,11 @@ describe('POST /api/teams/:teamName/force-stop', () => {
       'Regular stop failed before force stop cleanup'
     );
     expect(response.statusCode).toBe(200);
-    const body = response.json() as {
+    const body = response.json<{
       stopOutcome: string;
       killedRuntimePids: number[];
       diagnostics: string[];
-    };
+    }>();
     expect(body.stopOutcome).toBe('stop_failed');
     expect(body.killedRuntimePids).toEqual([4242]);
     expect(body.diagnostics.join('\n')).toContain('did not confirm stop');

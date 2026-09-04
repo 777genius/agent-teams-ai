@@ -466,6 +466,7 @@ export class OpenCodeMemberMessageDeliveryService {
       : null;
     if (active && active.inboxMessageId !== messageId && ledger) {
       let proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
+        checkpoint: assertCurrentRun,
         ledger,
         ledgerRecord: active,
         teamName,
@@ -473,8 +474,9 @@ export class OpenCodeMemberMessageDeliveryService {
         memberName: canonicalMemberName,
       });
       active = proof.ledgerRecord;
-      await assertOpenCodePromptDeliveryNotCancelled(ledger, active);
+      await assertOpenCodePromptDeliveryNotCancelled(ledger, active, assertCurrentRun);
       proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
+        checkpoint: assertCurrentRun,
         ledger,
         ledgerRecord: active,
         teamName,
@@ -482,7 +484,7 @@ export class OpenCodeMemberMessageDeliveryService {
         visibleReply: proof.visibleReply,
       });
       active = proof.ledgerRecord;
-      await assertOpenCodePromptDeliveryNotCancelled(ledger, active);
+      await assertOpenCodePromptDeliveryNotCancelled(ledger, active, assertCurrentRun);
       const activeReadAllowed = await this.deps.isOpenCodeDeliveryResponseReadCommitAllowed({
         teamName,
         memberName: canonicalMemberName,
@@ -492,7 +494,7 @@ export class OpenCodeMemberMessageDeliveryService {
         visibleReply: proof.visibleReply,
         ledgerRecord: active,
       });
-      await assertOpenCodePromptDeliveryNotCancelled(ledger, active);
+      await assertOpenCodePromptDeliveryNotCancelled(ledger, active, assertCurrentRun);
       if (activeReadAllowed) {
         this.deps.logOpenCodePromptDeliveryEvent(
           'opencode_prompt_delivery_response_observed',
@@ -509,7 +511,7 @@ export class OpenCodeMemberMessageDeliveryService {
           ledgerRecord: active,
           eventContext: { recoveredActiveBlocker: true },
         });
-        await assertOpenCodePromptDeliveryNotCancelled(ledger, active);
+        await assertOpenCodePromptDeliveryNotCancelled(ledger, active, assertCurrentRun);
         this.deps.scheduleOpenCodePromptDeliveryWatchdog({
           teamName,
           memberName: canonicalMemberName,
@@ -542,6 +544,7 @@ export class OpenCodeMemberMessageDeliveryService {
       };
     }
 
+    assertCurrentRun();
     let ledgerRecord = messageId
       ? await ledger?.ensurePending({
           teamName,
@@ -584,6 +587,7 @@ export class OpenCodeMemberMessageDeliveryService {
 
     if (ledgerRecord && ledger && messageId) {
       let proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
+        checkpoint: assertCurrentRun,
         ledger,
         ledgerRecord,
         teamName,
@@ -593,6 +597,7 @@ export class OpenCodeMemberMessageDeliveryService {
       ledgerRecord = proof.ledgerRecord;
       await checkpoint();
       proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
+        checkpoint: assertCurrentRun,
         ledger,
         ledgerRecord,
         teamName,
@@ -801,6 +806,7 @@ export class OpenCodeMemberMessageDeliveryService {
         });
         await checkpoint();
         proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
+          checkpoint: assertCurrentRun,
           ledger,
           ledgerRecord,
           teamName,
@@ -810,6 +816,7 @@ export class OpenCodeMemberMessageDeliveryService {
         ledgerRecord = proof.ledgerRecord;
         await checkpoint();
         proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
+          checkpoint: assertCurrentRun,
           ledger,
           ledgerRecord,
           teamName,
@@ -1169,6 +1176,7 @@ export class OpenCodeMemberMessageDeliveryService {
         'opencode-prompt-delivery-session-evidence'
       );
       let proof = await this.deps.openCodeVisibleReplyProofService.applyDestinationProof({
+        checkpoint: assertCurrentRun,
         ledger,
         ledgerRecord,
         teamName,
@@ -1178,6 +1186,7 @@ export class OpenCodeMemberMessageDeliveryService {
       ledgerRecord = proof.ledgerRecord;
       await checkpoint();
       proof = await this.deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
+        checkpoint: assertCurrentRun,
         ledger,
         ledgerRecord,
         teamName,

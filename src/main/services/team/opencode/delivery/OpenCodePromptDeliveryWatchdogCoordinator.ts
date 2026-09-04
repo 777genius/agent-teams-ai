@@ -1,5 +1,6 @@
 import { getErrorMessage as defaultGetErrorMessage } from '@shared/utils/errorHandling';
 
+import { OpenCodePromptDeliveryCancelledError } from './OpenCodePromptDeliveryCancellationGuard';
 import { isOpenCodePromptDeliveryWatchdogRecordTerminal } from './OpenCodePromptDeliveryFollowUpPolicy';
 import {
   hashOpenCodePromptDeliveryPayload,
@@ -263,6 +264,9 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
       const runId = await this.ports.resolveCurrentRuntimeRunId(input.teamName, input.laneId);
       return !input.runtimeRunId || runId === input.runtimeRunId;
     };
+    const checkpoint = async (): Promise<void> => {
+      if (!(await stillCurrent())) throw new OpenCodePromptDeliveryCancelledError(ledgerRecord);
+    };
     if (!(await stillCurrent())) return { ledgerRecord, visibleReply: null };
     const observeMessageDelivery = input.adapter.observeMessageDelivery;
     const readAllowed = await this.isDeliveryResponseReadCommitAllowed({
@@ -404,6 +408,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
       });
       if (!(await stillCurrent())) return { ledgerRecord, visibleReply: null };
       const proof = await this.ports.visibleReplyProofService.applyDestinationProof({
+        checkpoint,
         ledger: input.ledger,
         ledgerRecord,
         teamName: input.teamName,
@@ -414,6 +419,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
       visibleReply = proof.visibleReply;
       const materialized =
         await this.ports.visibleReplyProofService.materializePlainTextReplyIfNeeded({
+          checkpoint,
           ledger: input.ledger,
           ledgerRecord,
           teamName: input.teamName,

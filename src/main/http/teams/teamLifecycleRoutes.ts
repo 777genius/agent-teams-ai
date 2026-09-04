@@ -7,14 +7,15 @@
  * that talk to the runtime control API, and because the router they came from
  * is at its size limit while this area still has routes to gain.
  */
-
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
   killRetainedOpenCodeRuntimeProcessesForTeam,
+  readOpenCodeRuntimeLaneIdsForTeam,
   readOwnedOpenCodeRuntimeRunIdsForTeam,
   runTeamForceStopFlow,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
 import type { HttpServices } from '../index';
@@ -91,6 +92,8 @@ export function registerTeamLifecycleRoutes(
           stopTeam: (name) => teamRuntimeApi.stopTeam(name),
           observeOwnedRuntimeRunIds: (name) =>
             readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+          observeOwnedRuntimeLaneIds: (name) =>
+            readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
           killRetainedRuntimeProcesses: (name, context) =>
             killRetainedOpenCodeRuntimeProcessesForTeam({
               teamName: name,
@@ -101,6 +104,7 @@ export function registerTeamLifecycleRoutes(
             clearPendingOpenCodePromptDeliveriesForTeam({
               teamName: name,
               ownedRunIds: context.ownedRunIds,
+              ownedLaneIds: context.ownedLaneIds,
               requestedAtMs: context.requestedAtMs,
             }),
           logWarning: (message) => logger.warn(message),

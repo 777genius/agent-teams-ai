@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { OpenCodeVisibleReplyProofService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeVisibleReplyProofService';
+
 import { OpenCodeMemberMessageDeliveryService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService';
 
 import type {
@@ -504,3 +506,60 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
     }
   );
 });
+
+it.each([false, true])(
+  'prevents old-run reply writes when successor replaces run during lookup (active blocker: %s)',
+  async (activeBlocker) => {
+    let currentRun = 'run-1';
+    let current = makeLedgerRecord({
+      status: 'responded',
+      responseState: 'responded_plain_text',
+      observedAssistantPreview: 'The requested implementation is complete.',
+    });
+    const sendMessage = vi.fn(() =>
+      Promise.resolve({ messageId: 'reply-old-run', deliveredToInbox: true })
+    );
+    const advisory = vi.fn();
+    const proof = new OpenCodeVisibleReplyProofService({
+      inboxReader: { getMessagesFor: vi.fn(() => Promise.resolve([])) },
+      inboxWriter: {
+        sendMessage,
+        mergeRuntimeDeliveryTaskRefs: vi.fn(),
+        correlateRuntimeDeliveryReply: vi.fn(),
+      },
+      getConfiguredLeadName: vi.fn(() => Promise.resolve(null)),
+      emitRuntimeDeliveryReplyAdvisoryRefresh: advisory,
+      warn: vi.fn(),
+      getErrorMessage: String,
+    });
+    let findCount = 0;
+    vi.spyOn(proof, 'findByRelayOfMessageId').mockImplementation(() => {
+      findCount++;
+      if (findCount === 2) currentRun = 'run-2';
+      return Promise.resolve(null);
+    });
+    const ledger = {
+      getActiveForMember: vi.fn(() => Promise.resolve(current)),
+      ensurePending: vi.fn(() => Promise.resolve(current)),
+      getByInboxMessage: vi.fn(() => Promise.resolve(current)),
+      applyDestinationProof: vi.fn(() => {
+        current = { ...current, visibleReplyMessageId: 'reply-old-run', visibleReplyInbox: 'user' };
+        return Promise.resolve(current);
+      }),
+    };
+    const deps = makeDeps({
+      resolveDeliverableTrackedRuntimeRunId: vi.fn(() => currentRun),
+      openCodePromptDeliveryWatchdogScheduler: { isEnabled: () => true },
+      openCodeVisibleReplyProofService: proof,
+      createOpenCodePromptDeliveryLedger: () => ledger as never,
+    });
+    const result = await new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
+      memberName: 'alice',
+      text: 'hello',
+      messageId: activeBlocker ? 'msg-next' : 'msg-1',
+    });
+    expect(result.reason).toBe('opencode_prompt_delivery_cancelled');
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(advisory).not.toHaveBeenCalled();
+  }
+);

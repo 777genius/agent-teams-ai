@@ -35,6 +35,7 @@ export interface TeamForceStopFlowPorts {
    * returns nothing, and the cleanup falls back to its own fence.
    */
   observeOwnedRuntimeRunIds(teamName: string): Promise<readonly string[]>;
+  observeOwnedRuntimeLaneIds?(teamName: string): Promise<readonly string[]>;
 
   /**
    * `requestedAtMs` is the moment this stop flow began, not the moment the kill
@@ -49,7 +50,11 @@ export interface TeamForceStopFlowPorts {
   /** Same fence, one level down: the cleanup cancels this run's work only. */
   clearPendingPromptDeliveries(
     teamName: string,
-    context: { requestedAtMs: number; ownedRunIds: readonly string[] }
+    context: {
+      requestedAtMs: number;
+      ownedRunIds: readonly string[];
+      ownedLaneIds?: readonly string[];
+    }
   ): Promise<{ cleared: number; diagnostics: string[] }>;
   logWarning(message: string): void;
   stopTimeoutMs?: number;
@@ -76,6 +81,33 @@ export async function runTeamForceStopFlow(
     diagnostics.push(`Runtime run ids could not be read: ${message}`);
   }
   let cleanupIncomplete = false;
+  let ownedLaneIds: readonly string[] | undefined;
+  try {
+    ownedLaneIds = await ports.observeOwnedRuntimeLaneIds?.(teamName);
+  } catch (error) {
+    cleanupIncomplete = true;
+    diagnostics.push(`Runtime lane ids could not be read: ${String(error)}`);
+  }
+  let clearedPendingDeliveries = 0;
+  const cancelOwnedDeliveries = async (): Promise<void> => {
+    try {
+      const clearResult = await ports.clearPendingPromptDeliveries(teamName, {
+        requestedAtMs: stopStartedAtMs,
+        ownedRunIds,
+        ...(ownedLaneIds ? { ownedLaneIds } : {}),
+      });
+      clearedPendingDeliveries += clearResult.cleared;
+      diagnostics.push(...clearResult.diagnostics);
+      cleanupIncomplete ||= clearResult.diagnostics.some((message) => message.startsWith('Failed'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      ports.logWarning(`[${teamName}] Force stop delivery cleanup failed: ${message}`);
+      cleanupIncomplete = true;
+      diagnostics.push(`Pending delivery cleanup failed: ${message}`);
+    }
+  };
+  // Persist cancellation before stop can remove the lane index or runtime files.
+  await cancelOwnedDeliveries();
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
@@ -109,35 +141,26 @@ export async function runTeamForceStopFlow(
   }
 
   let killedRuntimePids: number[] = [];
-  try {
-    const killResult = await ports.killRetainedRuntimeProcesses(teamName, {
-      requestedAtMs: stopStartedAtMs,
-    });
-    killedRuntimePids = killResult.killedPids;
-    diagnostics.push(...killResult.diagnostics);
-    cleanupIncomplete ||= killResult.incomplete === true;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    ports.logWarning(`[${teamName}] Force stop process kill failed: ${message}`);
-    cleanupIncomplete = true;
-    diagnostics.push(`Process kill failed: ${message}`);
+  // A confirmed scoped stop has released this team's sessions. Shared hosts
+  // may still serve other teams and do not require hard cleanup for success.
+  if (stopOutcome !== 'stopped') {
+    try {
+      const killResult = await ports.killRetainedRuntimeProcesses(teamName, {
+        requestedAtMs: stopStartedAtMs,
+      });
+      killedRuntimePids = killResult.killedPids;
+      diagnostics.push(...killResult.diagnostics);
+      cleanupIncomplete ||= killResult.incomplete === true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      ports.logWarning(`[${teamName}] Force stop process kill failed: ${message}`);
+      cleanupIncomplete = true;
+      diagnostics.push(`Process kill failed: ${message}`);
+    }
   }
 
-  let clearedPendingDeliveries = 0;
-  try {
-    const clearResult = await ports.clearPendingPromptDeliveries(teamName, {
-      requestedAtMs: stopStartedAtMs,
-      ownedRunIds,
-    });
-    clearedPendingDeliveries = clearResult.cleared;
-    diagnostics.push(...clearResult.diagnostics);
-    cleanupIncomplete ||= clearResult.diagnostics.some((message) => message.startsWith('Failed'));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    ports.logWarning(`[${teamName}] Force stop delivery cleanup failed: ${message}`);
-    cleanupIncomplete = true;
-    diagnostics.push(`Pending delivery cleanup failed: ${message}`);
-  }
+  // Catch rows published by this run while its scoped stop was in flight.
+  if (ownedLaneIds?.length) await cancelOwnedDeliveries();
 
   return {
     stopOutcome,
@@ -168,11 +191,11 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(_input: {
   };
 }
 
-async function readOpenCodeRuntimeLaneIdsForTeam(
+export async function readOpenCodeRuntimeLaneIdsForTeam(
   teamsBasePath: string,
   teamName: string
 ): Promise<string[]> {
-  const laneIndex = await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName).catch(() => null);
+  const laneIndex = await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName);
   return [
     ...new Set(
       Object.values(laneIndex?.lanes ?? {})
@@ -227,11 +250,13 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
   teamsBasePath?: string;
   now?: () => Date;
   ownedRunIds?: readonly string[];
+  ownedLaneIds?: readonly string[];
   requestedAtMs?: number;
 }): Promise<{ cleared: number; diagnostics: string[] }> {
   const teamsBasePath = input.teamsBasePath ?? getTeamsBasePath();
   const diagnostics: string[] = [];
-  const laneIds = await readOpenCodeRuntimeLaneIdsForTeam(teamsBasePath, input.teamName);
+  const laneIds =
+    input.ownedLaneIds ?? (await readOpenCodeRuntimeLaneIdsForTeam(teamsBasePath, input.teamName));
 
   let cleared = 0;
   let keptForLaterRun = 0;

@@ -442,7 +442,11 @@ export class OpenCodeVisibleReplyProofService {
     input: Parameters<OpenCodeVisibleReplyProofService['applyDestinationProofCurrent']>[0]
   ) {
     try {
-      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord);
+      await assertOpenCodePromptDeliveryNotCancelled(
+        input.ledger,
+        input.ledgerRecord,
+        input.checkpoint
+      );
       return await this.applyDestinationProofCurrent(input);
     } catch (error) {
       if (!(error instanceof OpenCodePromptDeliveryCancelledError)) throw error;
@@ -451,6 +455,7 @@ export class OpenCodeVisibleReplyProofService {
   }
 
   private async applyDestinationProofCurrent(input: {
+    checkpoint?: () => void | Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     teamName: string;
@@ -477,7 +482,11 @@ export class OpenCodeVisibleReplyProofService {
     if (!visibleReply) {
       const recoveredByMessageId = await this.findByObservedMessageId({
         checkpoint: () =>
-          assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord),
+          assertOpenCodePromptDeliveryNotCancelled(
+            input.ledger,
+            input.ledgerRecord,
+            input.checkpoint
+          ),
         teamName: input.teamName,
         replyRecipient: input.replyRecipient ?? input.ledgerRecord.replyRecipient,
         from: input.memberName,
@@ -492,7 +501,11 @@ export class OpenCodeVisibleReplyProofService {
     if (!visibleReply) {
       const recoveredByTaskRefs = await this.findByTaskRefs({
         checkpoint: () =>
-          assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord),
+          assertOpenCodePromptDeliveryNotCancelled(
+            input.ledger,
+            input.ledgerRecord,
+            input.checkpoint
+          ),
         teamName: input.teamName,
         replyRecipient: input.replyRecipient ?? input.ledgerRecord.replyRecipient,
         from: input.memberName,
@@ -508,7 +521,12 @@ export class OpenCodeVisibleReplyProofService {
       return { ledgerRecord: input.ledgerRecord, visibleReply: null };
     }
     const enriched = await this.ensureVisibleReplyTaskRefs({
-      checkpoint: () => assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord),
+      checkpoint: () =>
+        assertOpenCodePromptDeliveryNotCancelled(
+          input.ledger,
+          input.ledgerRecord,
+          input.checkpoint
+        ),
       teamName: input.teamName,
       memberName: input.memberName,
       ledgerRecord: input.ledgerRecord,
@@ -534,6 +552,11 @@ export class OpenCodeVisibleReplyProofService {
         input.ledgerRecord.status === 'failed_terminal' ||
         Boolean(input.ledgerRecord.failedAt) ||
         Boolean(input.ledgerRecord.lastReason?.trim()));
+    await assertOpenCodePromptDeliveryNotCancelled(
+      input.ledger,
+      input.ledgerRecord,
+      input.checkpoint
+    );
     const ledgerRecord = await input.ledger.applyDestinationProof({
       id: input.ledgerRecord.id,
       visibleReplyInbox: visibleReplyForProof.inboxName,
@@ -549,7 +572,7 @@ export class OpenCodeVisibleReplyProofService {
       ],
       observedAt: this.nowIso(),
     });
-    await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord);
+    await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord, input.checkpoint);
     if (shouldEmitRecoveryAdvisoryRefresh) {
       this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(
         input.teamName,
@@ -575,7 +598,11 @@ export class OpenCodeVisibleReplyProofService {
     >[0]
   ) {
     try {
-      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord);
+      await assertOpenCodePromptDeliveryNotCancelled(
+        input.ledger,
+        input.ledgerRecord,
+        input.checkpoint
+      );
       return await this.materializePlainTextReplyIfNeededCurrent(input);
     } catch (error) {
       if (!(error instanceof OpenCodePromptDeliveryCancelledError)) throw error;
@@ -584,6 +611,7 @@ export class OpenCodeVisibleReplyProofService {
   }
 
   private async materializePlainTextReplyIfNeededCurrent(input: {
+    checkpoint?: () => void | Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     teamName: string;
@@ -633,13 +661,22 @@ export class OpenCodeVisibleReplyProofService {
     if (existing) {
       const enriched = await this.ensureVisibleReplyTaskRefs({
         checkpoint: () =>
-          assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord),
+          assertOpenCodePromptDeliveryNotCancelled(
+            input.ledger,
+            input.ledgerRecord,
+            input.checkpoint
+          ),
         teamName: input.teamName,
         memberName: input.memberName,
         ledgerRecord: input.ledgerRecord,
         visibleReply: existing,
       });
       const existingForProof = enriched.visibleReply;
+      await assertOpenCodePromptDeliveryNotCancelled(
+        input.ledger,
+        input.ledgerRecord,
+        input.checkpoint
+      );
       const ledgerRecord = await input.ledger.applyDestinationProof({
         id: input.ledgerRecord.id,
         visibleReplyInbox: existingForProof.inboxName,
@@ -660,7 +697,7 @@ export class OpenCodeVisibleReplyProofService {
         ],
         observedAt: this.nowIso(),
       });
-      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord);
+      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord, input.checkpoint);
       this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, existingForProof.message);
       return { ledgerRecord, visibleReply: existingForProof };
     }
@@ -671,7 +708,11 @@ export class OpenCodeVisibleReplyProofService {
       input.ledgerRecord.updatedAt ??
       this.nowIso();
     try {
-      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, input.ledgerRecord);
+      await assertOpenCodePromptDeliveryNotCancelled(
+        input.ledger,
+        input.ledgerRecord,
+        input.checkpoint
+      );
       const written = await this.deps.inboxWriter.sendMessage(input.teamName, {
         member: 'user',
         from: input.memberName,
@@ -699,6 +740,11 @@ export class OpenCodeVisibleReplyProofService {
           taskRefs: input.ledgerRecord.taskRefs,
         },
       };
+      await assertOpenCodePromptDeliveryNotCancelled(
+        input.ledger,
+        input.ledgerRecord,
+        input.checkpoint
+      );
       const ledgerRecord = await input.ledger.applyDestinationProof({
         id: input.ledgerRecord.id,
         visibleReplyInbox: 'user',
@@ -715,7 +761,7 @@ export class OpenCodeVisibleReplyProofService {
         ],
         observedAt: this.nowIso(),
       });
-      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord);
+      await assertOpenCodePromptDeliveryNotCancelled(input.ledger, ledgerRecord, input.checkpoint);
       this.deps.emitRuntimeDeliveryReplyAdvisoryRefresh(input.teamName, visibleReply.message);
       return { ledgerRecord, visibleReply };
     } catch (error) {

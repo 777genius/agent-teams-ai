@@ -45,6 +45,7 @@ const OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE = 'opencode-delivery-journal.json';
 const OPENCODE_RUNTIME_LANE_DURABLE_FILES = new Set([
   OPENCODE_RUNTIME_DELIVERY_JOURNAL_FILE,
   OPENCODE_RUNTIME_RUN_TOMBSTONES_FILE,
+  'opencode-prompt-delivery-ledger.json',
 ]);
 const OPENCODE_RUNTIME_LANE_DURABLE_ARTIFACTS = new Set([
   ...OPENCODE_RUNTIME_LANE_DURABLE_FILES,
@@ -868,8 +869,7 @@ async function clearOpenCodeRuntimeLaneStorageUnlocked(params: {
     }
   );
   if (laneDirectoryExists) {
-    // The journal owns logical idempotency/recovery across runs, while tombstones enforce
-    // anti-rejoin. Serialize against both durable stores and reset only per-run evidence.
+    // Preserve cross-run delivery/cancellation history; reset only per-run evidence.
     await withFileLock(deliveryJournalPath, () =>
       withFileLock(runTombstonesPath, async () => {
         const entries = await readdir(laneDirectory);

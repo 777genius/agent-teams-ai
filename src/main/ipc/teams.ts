@@ -145,6 +145,7 @@ import {
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
   killRetainedOpenCodeRuntimeProcessesForTeam,
+  readOpenCodeRuntimeLaneIdsForTeam,
   readOwnedOpenCodeRuntimeRunIdsForTeam,
   runTeamForceStopFlow,
 } from '../services/team/lifecycle/teamForceStopFlow';
@@ -4206,6 +4207,8 @@ async function handleForceStopTeam(
       stopTeam: (name) => getTeamRuntimeApi().stopTeam(name),
       observeOwnedRuntimeRunIds: (name) =>
         readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+      observeOwnedRuntimeLaneIds: (name) =>
+        readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
       killRetainedRuntimeProcesses: (name, context) =>
         killRetainedOpenCodeRuntimeProcessesForTeam({
           teamName: name,
@@ -4218,6 +4221,7 @@ async function handleForceStopTeam(
         clearPendingOpenCodePromptDeliveriesForTeam({
           teamName: name,
           ownedRunIds: context.ownedRunIds,
+          ownedLaneIds: context.ownedLaneIds,
           requestedAtMs: context.requestedAtMs,
         }),
       logWarning: (message) => logger.warn(message),

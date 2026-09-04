@@ -35,6 +35,7 @@ const forceStopFlowMocks = vi.hoisted(() => ({
     cleared: 0,
     diagnostics: [],
   })),
+  readOpenCodeRuntimeLaneIdsForTeam: vi.fn(async () => ['primary']),
   readOwnedOpenCodeRuntimeRunIdsForTeam: vi.fn(() => Promise.resolve(['run-observed'])),
 }));
 
@@ -161,6 +162,7 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
           teamName: 'fixteam',
           requestedAtMs: 1_700_000_000_000,
           ownedRunIds: ['run-observed'],
+          ownedLaneIds: undefined,
         },
       ],
       [
@@ -168,6 +170,7 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
           teamName: 'fixteam',
           requestedAtMs: 1_700_000_000_000,
           ownedRunIds: ['run-observed'],
+          ownedLaneIds: undefined,
         },
       ],
     ]);

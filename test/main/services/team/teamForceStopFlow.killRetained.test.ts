@@ -28,11 +28,11 @@ describe('force cleanup of shared OpenCode hosts', () => {
     }
   );
 
-  it('reports unsupported hard cleanup even when scoped stop succeeds, and cancels deliveries', async () => {
-    const clear = vi.fn(async () => ({ cleared: 2, diagnostics: [] }));
+  it('completes confirmed scoped stop without requiring shared host termination', async () => {
+    const clear = vi.fn(() => Promise.resolve({ cleared: 2, diagnostics: [] }));
     const result = await runTeamForceStopFlow('sandbox', {
-      stopTeam: async () => {},
-      observeOwnedRuntimeRunIds: async () => ['run-a'],
+      stopTeam: () => Promise.resolve(),
+      observeOwnedRuntimeRunIds: () => Promise.resolve(['run-a']),
       killRetainedRuntimeProcesses: (teamName, context) =>
         killRetainedOpenCodeRuntimeProcessesForTeam({ teamName, ...context, otherAliveTeams: [] }),
       clearPendingPromptDeliveries: clear,
@@ -40,13 +40,54 @@ describe('force cleanup of shared OpenCode hosts', () => {
     });
     expect(result).toMatchObject({
       stopOutcome: 'stopped',
-      cleanupOutcome: 'incomplete',
+      cleanupOutcome: 'completed',
       killedRuntimePids: [],
       clearedPendingDeliveries: 2,
     });
+    expect(result.diagnostics).toEqual([]);
     expect(clear).toHaveBeenCalledWith('sandbox', {
       requestedAtMs: expect.any(Number),
       ownedRunIds: ['run-a'],
     });
+  });
+  it.each(['failed', 'timeout'] as const)(
+    'retains incomplete for %s scoped stop',
+    async (outcome) => {
+      const result = await runTeamForceStopFlow('sandbox', {
+        stopTeam: () =>
+          outcome === 'failed'
+            ? Promise.reject(new Error('retained'))
+            : new Promise<void>(() => undefined),
+        observeOwnedRuntimeRunIds: () => Promise.resolve(['run-a']),
+        killRetainedRuntimeProcesses: (teamName, context) =>
+          killRetainedOpenCodeRuntimeProcessesForTeam({
+            teamName,
+            ...context,
+            otherAliveTeams: [],
+          }),
+        clearPendingPromptDeliveries: () => Promise.resolve({ cleared: 1, diagnostics: [] }),
+        logWarning: vi.fn(),
+        stopTimeoutMs: 1,
+      });
+      expect(result.cleanupOutcome).toBe('incomplete');
+      expect(result.clearedPendingDeliveries).toBe(1);
+      expect(result.diagnostics.join(' ')).toContain('Hard process cleanup is not confirmed');
+    }
+  );
+  it('reports partial delivery cleanup after successful scoped stop', async () => {
+    const hardCleanup = vi.fn();
+    const result = await runTeamForceStopFlow('sandbox', {
+      stopTeam: () => Promise.resolve(),
+      observeOwnedRuntimeRunIds: () => Promise.resolve(['run-a']),
+      killRetainedRuntimeProcesses: hardCleanup,
+      clearPendingPromptDeliveries: () =>
+        Promise.resolve({
+          cleared: 0,
+          diagnostics: ['Failed to cancel pending deliveries for lane primary'],
+        }),
+      logWarning: vi.fn(),
+    });
+    expect(result.cleanupOutcome).toBe('incomplete');
+    expect(hardCleanup).not.toHaveBeenCalled();
   });
 });

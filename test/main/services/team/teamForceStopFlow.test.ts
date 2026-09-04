@@ -31,21 +31,20 @@ function createPorts(overrides: Partial<TeamForceStopFlowPorts> = {}): {
 }
 
 describe('runTeamForceStopFlow', () => {
-  it('runs the regular stop first and then the cleanup steps', async () => {
+  it('completes confirmed scoped stop and cancels deliveries without hard cleanup', async () => {
     const ports = createPorts();
 
     const result = await runTeamForceStopFlow('fixteam', ports);
 
     expect(ports.stopTeam).toHaveBeenCalledWith('fixteam');
-    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
-      requestedAtMs: expect.any(Number),
-    });
+    expect(ports.killRetainedRuntimeProcesses).not.toHaveBeenCalled();
     expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
       requestedAtMs: expect.any(Number),
       ownedRunIds: ['run-a'],
     });
     expect(result.stopOutcome).toBe('stopped');
-    expect(result.killedRuntimePids).toEqual([4242]);
+    expect(result.cleanupOutcome).toBe('completed');
+    expect(result.killedRuntimePids).toEqual([]);
     expect(result.clearedPendingDeliveries).toBe(2);
     expect(ports.logWarning).not.toHaveBeenCalled();
   });
@@ -102,18 +101,13 @@ describe('runTeamForceStopFlow', () => {
 
     await runTeamForceStopFlow('fixteam', ports);
 
-    expect(order).toEqual(['observe', 'stop', 'clear']);
+    expect(order).toEqual(['observe', 'clear', 'stop']);
     const [, context] = ports.clearPendingPromptDeliveries.mock.calls[0] as [
       string,
       { requestedAtMs: number; ownedRunIds: string[] },
     ];
     expect(context.ownedRunIds).toEqual(['run-a', 'run-a-secondary']);
-    const [, killContext] = ports.killRetainedRuntimeProcesses.mock.calls[0] as [
-      string,
-      { requestedAtMs: number },
-    ];
-    // One fence, two steps: the kill and the cleanup answer to the same moment.
-    expect(context.requestedAtMs).toBe(killContext.requestedAtMs);
+    expect(context.requestedAtMs).toEqual(expect.any(Number));
   });
 
   it('cancels on the age fence alone when the run ids cannot be read', async () => {
@@ -177,12 +171,13 @@ describe('runTeamForceStopFlow', () => {
 
   it('reports a failing kill step as a diagnostic instead of failing the force stop', async () => {
     const ports = createPorts({
+      stopTeam: vi.fn(() => Promise.reject(new Error('stop failed'))),
       killRetainedRuntimeProcesses: vi.fn(() => Promise.reject(new Error('taskkill exited 1'))),
     });
 
     const result = await runTeamForceStopFlow('fixteam', ports);
 
-    expect(result.stopOutcome).toBe('stopped');
+    expect(result.stopOutcome).toBe('stop_failed');
     expect(result.killedRuntimePids).toEqual([]);
     expect(result.diagnostics.join('\n')).toContain('Process kill failed: taskkill exited 1');
     // The delivery cleanup still runs: a failed kill must not strand the ledger.
@@ -201,5 +196,31 @@ describe('runTeamForceStopFlow', () => {
 
     expect(result.clearedPendingDeliveries).toBe(0);
     expect(result.diagnostics.join('\n')).not.toContain('pending prompt delivery record');
+  });
+  it('captures lane scope before stop and cancels again after the lane index is removed', async () => {
+    const order: string[] = [];
+    const clear = vi
+      .fn()
+      .mockResolvedValueOnce({ cleared: 1, diagnostics: [] })
+      .mockResolvedValueOnce({ cleared: 2, diagnostics: [] });
+    const ports = createPorts({
+      observeOwnedRuntimeLaneIds: () => Promise.resolve(['primary']),
+      clearPendingPromptDeliveries: clear,
+      stopTeam: () => {
+        order.push('stop');
+        expect(clear).toHaveBeenCalledTimes(1);
+        return Promise.resolve();
+      },
+    });
+    const result = await runTeamForceStopFlow('fixteam', ports);
+    expect(order).toEqual(['stop']);
+    expect(clear).toHaveBeenCalledTimes(2);
+    expect(clear).toHaveBeenLastCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
+      ownedLaneIds: ['primary'],
+    });
+    expect(result.clearedPendingDeliveries).toBe(3);
+    expect(result.cleanupOutcome).toBe('completed');
   });
 });
