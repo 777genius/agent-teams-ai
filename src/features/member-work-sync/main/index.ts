@@ -9,6 +9,7 @@ export {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
   createMemberWorkSyncFeature,
 } from './composition/createMemberWorkSyncFeature';
+export type { WorkSyncHardFailedMembers } from './composition/memberWorkSyncTeamActivity';
 export {
   buildWorkSyncHardFailedMembers,
   hasUncertainWorkSyncRuntimeActivity,
@@ -18,4 +19,3 @@ export {
   isRuntimeMemberActiveForWorkSync,
   isRuntimeMemberActivityUncertainForWorkSync,
 } from './composition/memberWorkSyncTeamActivity';
-export type { WorkSyncHardFailedMembers } from './composition/memberWorkSyncTeamActivity';
