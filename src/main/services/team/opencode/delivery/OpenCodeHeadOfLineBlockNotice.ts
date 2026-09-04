@@ -40,6 +40,19 @@ export const OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MS = 5 * 60_000;
  */
 export const OPENCODE_HEAD_OF_LINE_BLOCK_MAX_LANES = 512;
 
+/**
+ * How many distinct queued message ids one blocked lane remembers.
+ *
+ * The lane bound above caps how many jams are tracked, not how big one jam may
+ * get: a blocker that never terminalises keeps taking new ids on the same lane
+ * for as long as the inbox keeps producing them. Past this many the depth is
+ * reported as a lower bound (`queuedBehind=256+`) instead of a count, because a
+ * diagnostic that separates "busy" from "wedged" has already said everything it
+ * has to say at 256 waiting messages, and dedup below the cap is what the count
+ * exists for.
+ */
+export const OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS = 256;
+
 interface HeadOfLineBlockState {
   blockerMessageId: string;
   queuedMessageIds: Set<string>;
@@ -54,7 +67,9 @@ export class OpenCodeHeadOfLineBlockTracker {
    *
    * A lane evicted by the bound simply starts counting from 1 again; the count
    * is a diagnostic number, so losing the oldest lane's history is cheaper than
-   * holding it forever.
+   * holding it forever. The same trade caps one lane's id set: at
+   * OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS the count stops rising and is
+   * rendered as a lower bound.
    */
   note(input: { laneKey: string; blockerMessageId: string; queuedMessageId: string }): number {
     const existing = this.stateByLane.get(input.laneKey);
@@ -71,7 +86,9 @@ export class OpenCodeHeadOfLineBlockTracker {
       });
       return 1;
     }
-    existing.queuedMessageIds.add(input.queuedMessageId);
+    if (existing.queuedMessageIds.size < OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS) {
+      existing.queuedMessageIds.add(input.queuedMessageId);
+    }
     return existing.queuedMessageIds.size;
   }
 
@@ -117,12 +134,18 @@ export function describeOpenCodeHeadOfLineBlock(input: {
   // silence is what made this failure invisible, but not four traces a minute.
   const blockedForMin = blockedForMs === null ? null : Math.floor(blockedForMs / 60_000);
   const criticalMarker = critical ? ` ${OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MARKER}` : '';
+  // At the id cap the tracker can no longer tell a new message from one it
+  // already counted, so the depth is a lower bound and says so.
+  const queuedDepth =
+    input.queuedCount >= OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS
+      ? `${input.queuedCount}+`
+      : `${input.queuedCount}`;
   return {
     blockedForMs,
     critical,
     diagnostic:
       `${OPENCODE_HEAD_OF_LINE_BLOCK_DIAGNOSTIC_PREFIX}${input.blocker.inboxMessageId} ` +
-      `(blockedForMin=${blockedForMin ?? 'unknown'} queuedBehind=${input.queuedCount}` +
+      `(blockedForMin=${blockedForMin ?? 'unknown'} queuedBehind=${queuedDepth}` +
       `${criticalMarker}).`,
   };
 }

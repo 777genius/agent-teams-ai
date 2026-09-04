@@ -6,6 +6,7 @@ import {
   noteOpenCodeHeadOfLineBlockDiagnostic,
   OPENCODE_HEAD_OF_LINE_BLOCK_CRITICAL_MS,
   OPENCODE_HEAD_OF_LINE_BLOCK_MAX_LANES,
+  OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS,
   OpenCodeHeadOfLineBlockTracker,
   openCodeHeadOfLineBlockTracker,
 } from '../OpenCodeHeadOfLineBlockNotice';
@@ -176,6 +177,54 @@ describe('OpenCodeHeadOfLineBlockTracker', () => {
     }
 
     expect(tracker.note({ laneKey, blockerMessageId: 'blocker:1', queuedMessageId: 'c' })).toBe(1);
+  });
+
+  it('stops growing one lane at the queued-id bound and reports the depth as a lower bound', () => {
+    const tracker = new OpenCodeHeadOfLineBlockTracker();
+
+    for (let queued = 0; queued < OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS; queued += 1) {
+      tracker.note({ laneKey, blockerMessageId: 'blocker:1', queuedMessageId: `msg:${queued}` });
+    }
+
+    // A blocker that never terminalises keeps taking new ids for as long as the
+    // inbox produces them, so the set - not just the number of lanes - has to
+    // be bounded.
+    expect(
+      tracker.note({ laneKey, blockerMessageId: 'blocker:1', queuedMessageId: 'overflow:1' })
+    ).toBe(OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS);
+    expect(
+      tracker.note({ laneKey, blockerMessageId: 'blocker:1', queuedMessageId: 'overflow:2' })
+    ).toBe(OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS);
+
+    expect(
+      describeOpenCodeHeadOfLineBlock({
+        blocker: blocker(),
+        queuedCount: OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS,
+        nowMs: BLOCKED_SINCE_MS,
+      }).diagnostic
+    ).toContain(`queuedBehind=${OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS}+)`);
+  });
+
+  // NEGATIVE CONTROL: the bound must not turn every depth into a lower bound.
+  // A lane below the cap still reports an exact count, which is the number that
+  // separates a lane with one message waiting from a lane with a dozen.
+  it('reports an exact depth below the queued-id bound', () => {
+    const tracker = new OpenCodeHeadOfLineBlockTracker();
+
+    for (let queued = 0; queued < OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS - 1; queued += 1) {
+      tracker.note({ laneKey, blockerMessageId: 'blocker:1', queuedMessageId: `msg:${queued}` });
+    }
+
+    expect(
+      tracker.note({ laneKey, blockerMessageId: 'blocker:1', queuedMessageId: 'msg:last' })
+    ).toBe(OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS);
+    expect(
+      describeOpenCodeHeadOfLineBlock({
+        blocker: blocker(),
+        queuedCount: OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS - 1,
+        nowMs: BLOCKED_SINCE_MS,
+      }).diagnostic
+    ).toContain(`queuedBehind=${OPENCODE_HEAD_OF_LINE_BLOCK_MAX_QUEUED_IDS - 1})`);
   });
 
   it('holds a lane that is still inside the bound', () => {
