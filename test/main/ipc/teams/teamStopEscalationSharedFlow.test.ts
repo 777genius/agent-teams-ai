@@ -45,11 +45,31 @@ const stopFlowMocks = vi.hoisted(() => ({
   readOwnedOpenCodeRuntimeRunIdsForTeam: vi.fn(() => Promise.resolve(['run-observed'])),
   readOpenCodeRuntimeLaneIdsForTeam: vi.fn(() => Promise.resolve(['primary'])),
   countLiveRecordedRuntimeHostsForTeam: vi.fn(() => Promise.resolve(0)),
-  releaseSharedRuntimeResourcesAfterStop: vi.fn(() => Promise.resolve({ diagnostics: [] })),
+  releaseSharedRuntimeResourcesAfterStop: vi.fn(
+    (_input: {
+      teamName: string;
+      otherAliveTeams: readonly string[];
+      releaseSharedLocalRuntime?: () => Promise<void>;
+    }) => Promise.resolve({ diagnostics: [] as string[] })
+  ),
+  // The mock replaces the whole module, so a name an entry point imports and
+  // this factory omits is wired as `undefined` rather than failing to resolve.
+  releaseLoopbackRuntimesReservedByTeam: vi.fn((_teamsBasePath: string, _teamName: string) =>
+    Promise.resolve()
+  ),
   STOP_ESCALATION_TIMEOUT_MS: 90_000,
 }));
 
 vi.mock('@main/services/team/lifecycle/teamForceStopFlow', () => stopFlowMocks);
+
+const leadTreeReapMocks = vi.hoisted(() => ({
+  reapCursorAgentLeadTreesForStoppedTeam: vi.fn(
+    (_input: { teamName: string; requestedAtMs?: number; otherAliveTeams: readonly string[] }) =>
+      Promise.resolve({ killedPids: [] as number[], diagnostics: [] as string[] })
+  ),
+}));
+
+vi.mock('@main/services/team/lifecycle/teamLeadProcessTreeReap', () => leadTreeReapMocks);
 
 const launchStateMocks = vi.hoisted(() => ({
   markStopped: vi.fn(() => Promise.resolve()),
@@ -176,6 +196,12 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
       // purpose - an entry point that dropped the port fails here.
       expect(ports.releaseSharedRuntimeResources).toBeTypeOf('function');
       await ports.releaseSharedRuntimeResources!('fixteam');
+      // Same shape of gap for the external lead trees: the port has no
+      // default, so an entry point that dropped it leaves a `cursor-agent`
+      // tree holding the cursor proxy port the next launch has to bind, and
+      // nothing anywhere reports that the step did not happen.
+      expect(ports.reapOwnedLeadProcessTrees).toBeTypeOf('function');
+      await ports.reapOwnedLeadProcessTrees!('fixteam', { requestedAtMs: 1_700_000_000_000 });
       expect(ports.stopTimeoutMs).toBe(90_000);
     }
 
@@ -186,8 +212,38 @@ describe('the escalated stop shares one fenced flow between the IPC handler and 
       [{ teamName: 'fixteam' }],
     ]);
     expect(stopFlowMocks.releaseSharedRuntimeResourcesAfterStop.mock.calls).toEqual([
-      [{ teamName: 'fixteam', otherAliveTeams: ['other-team'] }],
-      [{ teamName: 'fixteam', otherAliveTeams: ['other-team'] }],
+      [
+        {
+          teamName: 'fixteam',
+          otherAliveTeams: ['other-team'],
+          releaseSharedLocalRuntime: expect.any(Function) as unknown,
+        },
+      ],
+      [
+        {
+          teamName: 'fixteam',
+          otherAliveTeams: ['other-team'],
+          releaseSharedLocalRuntime: expect.any(Function) as unknown,
+        },
+      ],
+    ]);
+    // The loopback release is reached through that callback and nowhere else,
+    // so an entry point that built the release without it would look identical
+    // here until the callback is actually run.
+    for (const [call] of stopFlowMocks.releaseSharedRuntimeResourcesAfterStop.mock.calls) {
+      await call.releaseSharedLocalRuntime?.();
+    }
+    expect(stopFlowMocks.releaseLoopbackRuntimesReservedByTeam.mock.calls).toEqual([
+      [expect.any(String), 'fixteam'],
+      [expect.any(String), 'fixteam'],
+    ]);
+    // The lead-tree reap is scoped like the release: this team, this stop's
+    // request instant, and every other alive team named so a tree standing in
+    // a directory two teams share is never reaped out from under the one that
+    // is still running.
+    expect(leadTreeReapMocks.reapCursorAgentLeadTreesForStoppedTeam.mock.calls).toEqual([
+      [{ teamName: 'fixteam', requestedAtMs: 1_700_000_000_000, otherAliveTeams: ['other-team'] }],
+      [{ teamName: 'fixteam', requestedAtMs: 1_700_000_000_000, otherAliveTeams: ['other-team'] }],
     ]);
 
     expect(stopFlowMocks.readOwnedOpenCodeRuntimeRunIdsForTeam.mock.calls).toEqual([
