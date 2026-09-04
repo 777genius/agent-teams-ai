@@ -278,11 +278,18 @@ async function memberWorkSyncStatus(context, flags = {}) {
  * member work sync report member: ." and sent the caller into a retry loop.
  * The payload is read only as a fallback identity hint; the app still verifies
  * the signature and the member/agenda binding.
+ *
+ * The shape test is exactly the one the app's verifier applies
+ * (HmacMemberWorkSyncReportTokenAdapter.verify): three non-empty segments and
+ * no fourth. Both segments are base64url, which cannot contain a '.', so a
+ * token of any other arity was never minted here and yields no identity. A
+ * looser test would let a truncated or padded token name a member and queue a
+ * report the app can only reject later.
  */
 function memberNameFromReportToken(token) {
   if (typeof token !== 'string') return '';
   const parts = token.trim().split('.');
-  if (parts.length < 2 || parts[0] !== 'wrs:v1') return '';
+  if (parts.length !== 3 || parts[0] !== 'wrs:v1' || !parts[1] || !parts[2]) return '';
   try {
     const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
     return payload && typeof payload.memberName === 'string' ? payload.memberName.trim() : '';
