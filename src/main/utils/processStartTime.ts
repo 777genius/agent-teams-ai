@@ -39,9 +39,11 @@ export async function readProcessStartTimeMs(
  * stable while the pid is, and a cache that outlived the sweep would hand a
  * recycled pid the identity of its predecessor.
  *
- * A rejected read is cached as `null` rather than re-thrown, so one unreadable
+ * A failed read is cached as `null` rather than re-thrown, so one unreadable
  * pid is one "start time unobservable" answer instead of an exception that ends
- * the sweep for every pid behind it.
+ * the sweep for every pid behind it. A reader is a plain function and not
+ * necessarily an async one, so it can fail before it returns a promise at all;
+ * that is the same answer and never an escaping exception.
  */
 export function createProcessStartTimeCache(
   read: (pid: number) => Promise<number | null>
@@ -52,10 +54,27 @@ export function createProcessStartTimeCache(
     if (cached) {
       return cached;
     }
-    const pending = read(pid).catch(() => null);
+    const pending = readStartTimeOrNull(read, pid);
     cache.set(pid, pending);
     return pending;
   };
+}
+
+/**
+ * One probe, and every way it can fail answers `null`. The reader is called
+ * before the first `await`, so it is still started the moment the first caller
+ * asks for it and a second caller joins that one probe rather than starting
+ * another.
+ */
+async function readStartTimeOrNull(
+  read: (pid: number) => Promise<number | null>,
+  pid: number
+): Promise<number | null> {
+  try {
+    return await read(pid);
+  } catch {
+    return null;
+  }
 }
 
 async function readNativeProcessStartTimeMs(
