@@ -23,6 +23,7 @@ import {
   earlyElectronDevPathOverrideResult,
   earlyElectronUserDataMigrationResult,
 } from './bootstrapUserDataMigration';
+import { earlyAnnouncementsProfile } from './bootstrapAnnouncementsProfile';
 import './sentryBootstrap';
 
 import type {
@@ -205,6 +206,7 @@ import { createLogger } from '@shared/utils/logger';
 import { isReviewPickupEscalationMessage } from '@shared/utils/teamAutomationMessages';
 import { isTeamInternalControlMessageEnvelope } from '@shared/utils/teamInternalControlMessages';
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { AnnouncementsLifecycle } from './announcementsLifecycle';
 import { existsSync } from 'fs';
 import { join } from 'path';
 
@@ -1859,7 +1861,18 @@ function reconfigureLocalContextForClaudeRoot(): void {
 /**
  * Initializes all services.
  */
+const announcementsLifecycle = new AnnouncementsLifecycle();
+
 async function initializeServices(): Promise<void> {
+  void announcementsLifecycle.initialize({
+    userDataPath: app.getPath('userData'),
+    profile: earlyAnnouncementsProfile,
+    production: app.isPackaged,
+    isolatedProfile:
+      !!earlyElectronDevPathOverrideResult.userDataDir &&
+      !!earlyElectronDevPathOverrideResult.claudeRoot,
+    sourceOverride: process.env.AGENT_TEAMS_ANNOUNCEMENTS_FEED_URL,
+  }).catch((error: unknown) => logger.warn('Announcements initialization unavailable', error));
   logger.info('Initializing services...');
   publishStartupStatus({
     phase: 'services',
@@ -2982,6 +2995,7 @@ async function shutdownServices(): Promise<void> {
 
   shutdownPromise = (async () => {
     logger.info('Shutting down services...');
+    await runShutdownStep('announcements cleanup', () => announcementsLifecycle.dispose());
 
     clearStartupTimers();
     clearInboxNotifyTimers();
@@ -3263,6 +3277,7 @@ function createWindow(): void {
     ...(isMac && { trafficLightPosition: getTrafficLightPositionForZoom(1) }),
     title: 'Agent Teams AI',
   });
+  announcementsLifecycle.registerMainWindow(mainWindow);
   markRendererUnavailable(mainWindow);
 
   // Load the renderer

@@ -7,6 +7,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
+import { openAnnouncementHistory } from '@features/announcements/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
@@ -21,6 +22,7 @@ import {
   FileText,
   Gauge,
   MoreHorizontal,
+  Newspaper,
   Puzzle,
   Search,
   Settings,
@@ -127,6 +129,19 @@ export const MoreMenu = ({
 
   // Build menu sections
   const topItems: MenuItem[] = [
+    ...(isElectronMode()
+      ? [
+          {
+            id: 'news',
+            label: t('announcements.title'),
+            icon: Newspaper,
+            onClick: () => {
+              setIsOpen(false);
+              openAnnouncementHistory();
+            },
+          },
+        ]
+      : []),
     {
       id: 'teams',
       label: t('layout.menu.teams'),

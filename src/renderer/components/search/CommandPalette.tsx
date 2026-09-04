@@ -11,6 +11,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useStore } from '@renderer/store';
 import { isImeComposing } from '@renderer/utils/imeComposition';
 import { formatModifierShortcut } from '@renderer/utils/keyboardUtils';
@@ -444,6 +445,8 @@ export const CommandPalette = (): React.JSX.Element | null => {
       </>
     );
   }, []);
+
+  useOverlayOccupancy(commandPaletteOpen);
 
   if (!commandPaletteOpen) {
     return null;

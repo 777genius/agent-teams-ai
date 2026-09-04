@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
 import { markdownComponents } from '@renderer/components/chat/markdownComponents';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useStore } from '@renderer/store';
 import { REHYPE_PLUGINS } from '@renderer/utils/markdownPlugins';
 import { stripDownloadsSection } from '@shared/utils/releaseNotes';
@@ -94,6 +95,8 @@ export const UpdateDialog = (): React.JSX.Element | null => {
     dialog.addEventListener('keydown', handleTab);
     return () => dialog.removeEventListener('keydown', handleTab);
   }, [showUpdateDialog]);
+
+  useOverlayOccupancy(showUpdateDialog);
 
   if (!showUpdateDialog) return null;
 

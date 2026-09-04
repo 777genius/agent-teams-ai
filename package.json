@@ -21,6 +21,9 @@
   },
   "main": "dist-electron/main/index.cjs",
   "scripts": {
+    "announcements:generate": "node scripts/announcements/generate.mjs",
+    "announcements:check": "node scripts/announcements/generate.mjs --check",
+    "announcements:test": "node --test test/features/announcements/publishing/*.test.mjs",
     "preinstall": "node ./scripts/ci/enforce-pnpm-install.mjs",
     "screenshots:previews": "node ./scripts/generate-screenshot-previews.mjs",
     "dev": "node ./scripts/dev-with-runtime.mjs",

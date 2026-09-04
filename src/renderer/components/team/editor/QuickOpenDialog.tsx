@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useStore } from '@renderer/store';
 import { Command } from 'cmdk';
 import { Loader2 } from 'lucide-react';
@@ -33,6 +34,8 @@ export const QuickOpenDialog = ({
   onClose,
   onSelectFile,
 }: QuickOpenDialogProps): React.ReactElement => {
+  useOverlayOccupancy(true);
+
   const { t } = useAppTranslation('team');
   const projectPath = useStore((s) => s.editorProjectPath);
   const dialogRef = useRef<HTMLDivElement>(null);

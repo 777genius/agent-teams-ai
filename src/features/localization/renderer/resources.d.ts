@@ -22,6 +22,24 @@ export default interface Resources {
       showLess: 'Show less';
       showMore: 'Show more';
     };
+    announcements: {
+      allNews: 'All news';
+      description: 'Updates, improvements, and stories from Agent Teams.';
+      empty: 'You’re all caught up';
+      emptyDescription: 'Project news will appear here when published.';
+      expired: 'No longer current';
+      historyTitle: 'What’s new';
+      imageUnavailable: 'Image unavailable';
+      loadError: 'This article is unavailable. Refresh the news or try again later.';
+      loading: 'Loading news…';
+      status: {
+        offline: 'You’re offline. Previously loaded articles are available; images may be missing.';
+        state_unavailable: 'Reading is available, but your progress cannot be saved right now. Automatic news is paused.';
+        unavailable: 'News is available in the desktop app.';
+        writer_busy: 'News is open in another app instance. You can browse the list here; open articles in the other instance.';
+      };
+      title: 'News';
+    };
     brand: {
       claude: 'Claude';
     };

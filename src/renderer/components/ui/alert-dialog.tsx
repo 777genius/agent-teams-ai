@@ -3,6 +3,7 @@ import * as React from 'react';
 
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
 import { buttonVariants } from '@renderer/components/ui/button';
+import { OverlayOccupancyMarker } from '@renderer/hooks/useOverlayOccupancy';
 import { cn } from '@renderer/lib/utils';
 
 const AlertDialog = AlertDialogPrimitive.Root;
@@ -26,9 +27,11 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 
 const AlertDialogContent = React.forwardRef<
   React.ComponentRef<typeof AlertDialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
+  React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content> & {
+    blocksAnnouncements?: boolean;
+  }
+>(({ className, children, blocksAnnouncements = true, ...props }, ref) => (
+  <AlertDialogPortal forceMount={props.forceMount}>
     <AlertDialogOverlay />
     <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center p-4">
       <AlertDialogPrimitive.Content
@@ -38,7 +41,10 @@ const AlertDialogContent = React.forwardRef<
           className
         )}
         {...props}
-      />
+      >
+        <OverlayOccupancyMarker active={blocksAnnouncements} />
+        {children}
+      </AlertDialogPrimitive.Content>
     </div>
   </AlertDialogPortal>
 ));

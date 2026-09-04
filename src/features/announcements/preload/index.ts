@@ -1,0 +1,25 @@
+import {
+  ANNOUNCEMENTS_CHANNELS as channels,
+  type AnnouncementsApi,
+  type AnnouncementsSnapshot,
+} from '@features/announcements/contracts';
+import { ipcRenderer } from 'electron';
+
+export function createAnnouncementsBridge(): AnnouncementsApi {
+  return {
+    getSnapshot: () => ipcRenderer.invoke(channels.getSnapshot),
+    refresh: () => ipcRenderer.invoke(channels.refresh),
+    prepareAuto: () => ipcRenderer.invoke(channels.prepareAuto),
+    claimAuto: (input) => ipcRenderer.invoke(channels.claimAuto, input),
+    openManual: (id) => ipcRenderer.invoke(channels.openManual, id),
+    dismiss: (id) => ipcRenderer.invoke(channels.dismiss, id),
+    onStateChanged: (listener) => {
+      const handler = (_event: Electron.IpcRendererEvent, snapshot: AnnouncementsSnapshot): void =>
+        listener(snapshot);
+      ipcRenderer.on(channels.stateChanged, handler);
+      return () => {
+        ipcRenderer.removeListener(channels.stateChanged, handler);
+      };
+    },
+  };
+}

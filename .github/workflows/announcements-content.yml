@@ -1,0 +1,38 @@
+name: Announcements Content
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  content-check:
+    name: announcements-content-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+      - name: Validate exact source against available Git base
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE: ${{ github.event.before }}
+        run: |
+          base="${PR_BASE:-$PUSH_BASE}"
+          if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            echo "An explicit available Git base is required for content-check."
+            exit 1
+          fi
+          node scripts/announcements/generate.mjs --check --base "$base"
+      - name: Test publishing invariants
+        run: node --test test/features/announcements/publishing/*.test.mjs
+      - name: Generate static announcement artifacts
+        run: node scripts/announcements/generate.mjs

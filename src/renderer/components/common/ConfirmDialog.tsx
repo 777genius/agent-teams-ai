@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { AlertTriangle } from 'lucide-react';
 
 interface ConfirmDialogState {
@@ -105,6 +106,8 @@ export const ConfirmDialog = (): React.JSX.Element | null => {
       btn?.focus();
     }
   }, [state.isOpen]);
+
+  useOverlayOccupancy(state.isOpen);
 
   if (!state.isOpen) return null;
 

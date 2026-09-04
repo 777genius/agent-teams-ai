@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { AnnouncementNewsButton } from '@features/announcements/renderer';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import {
@@ -274,7 +275,6 @@ export const ProjectEditorOverlay = ({
     return () => observer.disconnect();
   }, []);
 
-  // Escape to close + F5 to refresh (with dialog guard)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -533,7 +533,6 @@ export const ProjectEditorOverlay = ({
       aria-modal="true"
       aria-label={t('editor.ariaLabel')}
     >
-      {/* Header */}
       <div
         className="flex h-10 shrink-0 items-center justify-between border-b border-border px-3"
         style={{ paddingLeft: 'var(--macos-traffic-light-padding-left, 72px)' }}
@@ -543,6 +542,7 @@ export const ProjectEditorOverlay = ({
           <span className="text-text-muted">{projectPath}</span>
         </div>
         <div className="flex items-center gap-1">
+          <AnnouncementNewsButton />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
