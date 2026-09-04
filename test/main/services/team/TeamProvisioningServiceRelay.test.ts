@@ -4116,7 +4116,7 @@ Messages:
     }
   });
 
-  it('times out a hung existing lead relay in-flight lock', async () => {
+  it('retains a hung lead relay lock after timeout to prevent duplicate delivery', async () => {
     vi.useFakeTimers();
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
@@ -4137,7 +4137,7 @@ Messages:
             leadInboxRelayInFlight: Map<string, Promise<number>>;
           }
         ).leadInboxRelayInFlight.has(teamName)
-      ).toBe(false);
+      ).toBe(true);
       expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
         'lead_inbox_relay_timed_out'
       );
