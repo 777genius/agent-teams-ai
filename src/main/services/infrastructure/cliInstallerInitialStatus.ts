@@ -13,7 +13,7 @@ const PROVIDER_DISPLAY_NAMES: Record<CliProviderId, string> = {
   opencode: 'OpenCode (200+ models)',
 };
 
-export function createInitialCliInstallationStatus(): CliInstallationStatus {
+export function buildInitialCliInstallationStatus(): CliInstallationStatus {
   const flavor = getConfiguredCliFlavor();
   const ui = getCliFlavorUiOptions(flavor);
   return {
