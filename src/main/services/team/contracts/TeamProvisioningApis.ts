@@ -1,6 +1,7 @@
 import { createLogger } from '@shared/utils/logger';
 
 import { purgeStaleOpenCodeHostStartupLocksBeforeLaunch } from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
+import { whenOpenCodeStartupRuntimeSweepSettled } from '../opencode/bridge/OpenCodeStartupSweepGate';
 
 import type { OpenCodeRuntimeControlAck, OpenCodeRuntimeControlApi } from '../runtime-control';
 import type { TeamProvisioningStatusApi as FeatureTeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
@@ -312,6 +313,12 @@ export interface TeamToolApprovalApi {
   updateToolApprovalSettings(teamName: string, settings: ToolApprovalSettings): void;
 }
 
+export interface TeamProvisioningStartHookInput {
+  teamName: string;
+  request: TeamCreateRequest | TeamLaunchRequest;
+  onProgress: (progress: TeamProvisioningProgress) => void;
+}
+
 export function bindTeamProvisioningStartApi(
   source: TeamProvisioningStartApi,
   options: {
@@ -320,7 +327,7 @@ export function bindTeamProvisioningStartApi(
      * preparation step, never a precondition: a failure is swallowed here so
      * that nothing it does can be the reason a team fails to start.
      */
-    beforeStart?: (teamName: string) => Promise<void>;
+    beforeStart?: (input: TeamProvisioningStartHookInput) => Promise<void>;
   } = {}
 ): TeamProvisioningStartApi {
   const beforeStart = options.beforeStart;
@@ -330,15 +337,15 @@ export function bindTeamProvisioningStartApi(
       launchTeam: source.launchTeam.bind(source),
     };
   }
-  const runBeforeStart = async (teamName: string): Promise<void> => {
+  const runBeforeStart = async (input: TeamProvisioningStartHookInput): Promise<void> => {
     try {
-      await beforeStart(teamName);
+      await beforeStart(input);
     } catch (error) {
       // Durable, not a warning: the start is going ahead regardless, so there
       // is nothing for a developer to act on in the moment - but the line has
       // to survive for whoever asks later why a launch was slow.
       logger.diagnostic(
-        `opencode_pre_start_preparation_failed team=${teamName} reason=${JSON.stringify(
+        `opencode_pre_start_preparation_failed team=${input.teamName} reason=${JSON.stringify(
           error instanceof Error ? error.message : String(error)
         )}`
       );
@@ -346,27 +353,72 @@ export function bindTeamProvisioningStartApi(
   };
   return {
     async createTeam(request, onProgress) {
-      await runBeforeStart(request.teamName);
+      await runBeforeStart({ teamName: request.teamName, request, onProgress });
       return source.createTeam.call(source, request, onProgress);
     },
     async launchTeam(request, onProgress) {
-      await runBeforeStart(request.teamName);
+      await runBeforeStart({ teamName: request.teamName, request, onProgress });
       return source.launchTeam.call(source, request, onProgress);
     },
   };
 }
 
 /**
- * The pre-start step both entry points install: drop the OpenCode host startup
- * locks an earlier run left behind. A clean stop does not release them, and the
- * orchestrator waits on each one in turn during launch readiness, so a launch
- * that follows a few stopped runs can sit in "spawning" for minutes over files
- * that guard nothing.
+ * The startup sweep only reaps `opencode serve` hosts, so a start that cannot
+ * produce one has nothing to lose to it and must never pay the wait. A start
+ * whose provider is not stated is resolved later from the saved config and can
+ * still be OpenCode, so it keeps the wait. A launch request carries no roster:
+ * a mixed team whose lead is not OpenCode relies on the sweep's own start-time
+ * fence rather than on this gate.
  */
-function bindPreLaunchHostLockPurge(source: {
+function startRequestMayRaceOpenCodeStartupSweep(
+  request: TeamCreateRequest | TeamLaunchRequest
+): boolean {
+  if (request.providerId === undefined || request.providerId === 'opencode') {
+    return true;
+  }
+  const members = 'members' in request ? request.members : undefined;
+  return members?.some((member) => member.providerId === 'opencode') === true;
+}
+
+function buildStartupSweepWaitProgress(teamName: string): TeamProvisioningProgress {
+  const observedAt = new Date().toISOString();
+  return {
+    // No run exists before `beforeStart` returns. The pending prefix is the
+    // shape the UI already uses for its own optimistic entry, so the real run
+    // replaces this card instead of competing with it.
+    runId: `pending:${teamName}:opencode-startup-sweep`,
+    teamName,
+    state: 'validating',
+    message: 'Waiting for the startup runtime host cleanup to finish...',
+    startedAt: observedAt,
+    updatedAt: observedAt,
+  };
+}
+
+/**
+ * The pre-start step both entry points install. It clears the two things an
+ * earlier run leaves in a new launch's way: the startup sweep still reaping
+ * hosts, which a launch waits out rather than races, and the OpenCode host
+ * startup locks a clean stop never released, on which the orchestrator waits
+ * one at a time during launch readiness - enough of them and a launch sits in
+ * "spawning" for minutes over files that guard nothing.
+ */
+function bindOpenCodeStartPreparation(source: {
   getAliveTeams(): string[];
-}): (teamName: string) => Promise<void> {
-  return async (teamName) => {
+}): (input: TeamProvisioningStartHookInput) => Promise<void> {
+  return async ({ teamName, request, onProgress }) => {
+    // Belt and braces against the startup runtime sweep: it force-reaps managed
+    // hosts, and a launch that starts inside that window can lose its own
+    // readiness-probe host to it. Serialise instead of racing.
+    if (startRequestMayRaceOpenCodeStartupSweep(request)) {
+      await whenOpenCodeStartupRuntimeSweepSettled({
+        logWaited: (message) => logger.diagnostic(message),
+        // A silent multi-second park reads as a frozen UI and makes an HTTP
+        // client retry into a duplicate launch.
+        onWaitStart: () => onProgress(buildStartupSweepWaitProgress(teamName)),
+      });
+    }
     await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
       teamName,
       aliveTeams: source.getAliveTeams(),
@@ -465,7 +517,7 @@ export function bindTeamHttpHandlerApis(
 ): TeamHttpHandlerApis {
   return {
     provisioningStart: bindTeamProvisioningStartApi(source, {
-      beforeStart: bindPreLaunchHostLockPurge(source),
+      beforeStart: bindOpenCodeStartPreparation(source),
     }),
     provisioningStatus: bindTeamProvisioningStatusApi(source),
     taskActivity: bindTeamTaskActivityRepairApi(source),
@@ -499,7 +551,7 @@ export function bindTeamIpcHandlerApis(
 ): TeamIpcHandlerApis {
   return {
     provisioningStart: bindTeamProvisioningStartApi(source, {
-      beforeStart: bindPreLaunchHostLockPurge(source),
+      beforeStart: bindOpenCodeStartPreparation(source),
     }),
     provisioningStatus: bindTeamProvisioningStatusApi(source),
     preflight: bindTeamProvisioningPreflightApi(source),
