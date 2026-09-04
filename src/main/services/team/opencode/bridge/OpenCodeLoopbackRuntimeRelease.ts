@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { createLogger } from '@shared/utils/logger';
+import { parse as parseJsonc, type ParseError } from 'jsonc-parser';
 
 const logger = createLogger('OpenCodeLoopbackRuntimeRelease');
 
@@ -60,15 +61,40 @@ export interface LoopbackRuntimeReleaseResult {
   diagnostics: string[];
 }
 
-function readJsonObject(filePath: string): Record<string, unknown> | null {
+/**
+ * The opencode config is JSONC wherever it is written, and one of the two paths
+ * probed below is literally named `.jsonc`. Strict `JSON.parse` refuses the
+ * comments and trailing commas a user's own config carries, and the refusal is
+ * silent here: the file is skipped, the provider it configures is never
+ * narrowed to, and the runtime the members were actually running on is never
+ * asked to release anything. Same parser and same options the rest of the app
+ * reads opencode configs with.
+ */
+function readConfigObject(filePath: string): Record<string, unknown> | null {
+  let raw: string;
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? (parsed as Record<string, unknown>)
-      : null;
+    raw = fs.readFileSync(filePath, 'utf8');
   } catch {
+    // A config that is not there is the normal case: at most one of the two
+    // spellings exists, and a user with neither has no local provider at all.
     return null;
   }
+  const errors: ParseError[] = [];
+  const parsed = parseJsonc(raw, errors, {
+    allowTrailingComma: true,
+    disallowComments: false,
+  }) as unknown;
+  if (errors.length > 0) {
+    // A config this app cannot read is worth saying out loud, because the
+    // consequence is a runtime that keeps a model resident with no team left.
+    logger.diagnostic(
+      `[OpenCode] opencode_loopback_runtime_config_unreadable path=${filePath} errors=${errors.length}`
+    );
+    return null;
+  }
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : null;
 }
 
 /**
@@ -86,7 +112,7 @@ export function resolveLocalProviderOrigins(
   ];
   const origins = new Map<string, string>();
   for (const configPath of configPaths) {
-    const providers = readJsonObject(configPath)?.provider;
+    const providers = readConfigObject(configPath)?.provider;
     if (!providers || typeof providers !== 'object') continue;
     for (const [providerId, provider] of Object.entries(providers as Record<string, unknown>)) {
       const providerOptions = (provider as { options?: { baseURL?: unknown } } | null)?.options;
