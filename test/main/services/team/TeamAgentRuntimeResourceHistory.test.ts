@@ -256,4 +256,38 @@ describe('TeamAgentRuntimeResourceHistory', () => {
       })
     ).toBeUndefined();
   });
+
+  // `read` is how a write-free snapshot build reports a member's series: it
+  // answers exactly what `record` would have, minus the sample itself.
+  it('reads a recorded series without appending to it', () => {
+    const history = createHistory();
+    const activeKeys = new Set<string>();
+    const sample = (timestamp: string, rssBytes: number) => ({
+      teamName: 'runtime-team',
+      memberName: 'alice',
+      runId: 'run-1',
+      pidSource: 'tmux_child' as const,
+      pid: 222,
+      timestamp,
+      rssBytes,
+    });
+
+    expect(history.read(sample('2026-04-24T12:00:00.000Z', 100))).toBeUndefined();
+    expect(
+      history.read({ ...sample('2026-04-24T12:00:00.000Z', 100), memberName: ' ' })
+    ).toBeUndefined();
+
+    history.record(sample('2026-04-24T12:00:00.000Z', 100));
+    expect(history.read({ ...sample('2026-04-24T12:01:00.000Z', 999), activeKeys })).toEqual([
+      expect.objectContaining({ rssBytes: 100 }),
+    ]);
+    // The key is announced so a caller that does prune keeps the member.
+    expect([...activeKeys]).toEqual([
+      history.buildKey({ memberName: 'alice', runId: 'run-1', pid: 222, pidSource: 'tmux_child' }),
+    ]);
+
+    // Negative control: the same call through `record` does extend the series,
+    // so an implementation that recorded here would look identical otherwise.
+    expect(history.record(sample('2026-04-24T12:01:00.000Z', 999))).toHaveLength(2);
+  });
 });

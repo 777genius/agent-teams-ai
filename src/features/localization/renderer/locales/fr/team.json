@@ -1788,6 +1788,9 @@
     "createAutomatically": "Si le répertoire n'existe pas, il sera créé automatiquement."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Le coéquipier n'a pas rejoint dans le délai de grâce du lancement."
+    },
     "badges": {
       "worktree": "Arbre de travail"
     },

@@ -1788,6 +1788,9 @@
     "createAutomatically": "หากไดเรกทอรีไม่มีอยู่ จะถูกสร้างขึ้นโดยอัตโนมัติ"
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "เพื่อนร่วมทีมไม่ได้เข้าร่วมภายในช่วงเวลาผ่อนผันของการเริ่ม"
+    },
     "badges": {
       "worktree": "worktree"
     },

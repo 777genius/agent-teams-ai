@@ -1788,6 +1788,9 @@
     "createAutomatically": "디렉토리가 존재하지 않으면 자동으로 생성됩니다."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "팀원이 실행 유예 시간 내에 합류하지 않았습니다."
+    },
     "badges": {
       "worktree": "작업 트리"
     },

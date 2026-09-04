@@ -1788,6 +1788,9 @@
     "createAutomatically": "directory இல்லாவிட்டால், அது தானாக உருவாக்கப்படும்."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "தொடக்கத்தின் சலுகைக் காலத்திற்குள் குழு உறுப்பினர் சேரவில்லை."
+    },
     "badges": {
       "worktree": "worktree"
     },

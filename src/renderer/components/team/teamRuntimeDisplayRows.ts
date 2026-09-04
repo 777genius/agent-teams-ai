@@ -1,3 +1,4 @@
+import { describeMemberLaunchFailureReason } from '@renderer/utils/memberLaunchFailureReasonText';
 import {
   hasUnsafeProvisionedButNotAliveRuntimeEvidence,
   hasUnsafeProvisionedButNotAliveRuntimeEvidenceWithSpawnContext,
@@ -215,7 +216,9 @@ function getSpawnDegradation(spawn?: MemberSpawnStatusEntry): SpawnDegradation |
 
   if (spawn.status === 'error' || spawn.hardFailure === true) {
     const reason =
-      spawn.error ?? spawn.hardFailureReason ?? spawn.runtimeDiagnostic ?? 'Spawn failed';
+      describeMemberLaunchFailureReason(spawn.error ?? spawn.hardFailureReason) ??
+      spawn.runtimeDiagnostic ??
+      'Spawn failed';
     return {
       reason,
       diagnostic: spawn.runtimeDiagnostic ?? reason,

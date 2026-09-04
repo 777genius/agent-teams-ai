@@ -120,12 +120,21 @@ export interface TeamHttpDataApi {
 }
 
 /**
- * Snapshot reads behind the HTTP member diagnostics route. Same two service
- * calls the renderer's member detail dialog builds its view from.
+ * Snapshot reads behind the HTTP member diagnostics route. Same two snapshots
+ * the renderer's member detail dialog builds its view from, but through the
+ * write-free variants: a diagnostics GET must never persist runtime state.
+ *
+ * The runtime snapshot is built from a member spawn status projection of its
+ * own unless it is handed one, which is why the route reads the statuses first
+ * and passes them in: one projection answers the whole response, and both
+ * halves of it then describe the same run.
  */
 export interface TeamHttpMemberDiagnosticsApi {
-  getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
-  getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot>;
+  getMemberSpawnStatusesReadOnly(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
+  getTeamAgentRuntimeSnapshotReadOnly(
+    teamName: string,
+    options?: { memberSpawnStatuses?: MemberSpawnStatusesSnapshot }
+  ): Promise<TeamAgentRuntimeSnapshot>;
 }
 
 export interface TeamHttpHandlerApis {
@@ -405,8 +414,8 @@ export function bindTeamHttpMemberDiagnosticsApi(
   source: TeamHttpMemberDiagnosticsApi
 ): TeamHttpMemberDiagnosticsApi {
   return {
-    getMemberSpawnStatuses: source.getMemberSpawnStatuses.bind(source),
-    getTeamAgentRuntimeSnapshot: source.getTeamAgentRuntimeSnapshot.bind(source),
+    getMemberSpawnStatusesReadOnly: source.getMemberSpawnStatusesReadOnly.bind(source),
+    getTeamAgentRuntimeSnapshotReadOnly: source.getTeamAgentRuntimeSnapshotReadOnly.bind(source),
   };
 }
 

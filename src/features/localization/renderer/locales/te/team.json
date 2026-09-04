@@ -1788,6 +1788,9 @@
     "createAutomatically": "డైరెక్టరీ లేకపోతే, అది స్వయంచాలకంగా సృష్టించబడుతుంది."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "లాంచ్ గ్రేస్ వ్యవధిలో టీమ్‌మేట్ చేరలేదు."
+    },
     "badges": {
       "worktree": "worktree"
     },

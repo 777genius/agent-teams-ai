@@ -1788,6 +1788,9 @@
     "createAutomatically": "Wenn das Verzeichnis nicht existiert, wird es automatisch erstellt."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Teamkollege ist nicht innerhalb des Kulanzfensters des Starts beigetreten."
+    },
     "badges": {
       "worktree": "Arbeitstre"
     },

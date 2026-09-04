@@ -1788,6 +1788,9 @@
     "createAutomatically": "Si el directorio no existe, se creará automáticamente."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "El compañero de equipo no se unió dentro del margen de tiempo del lanzamiento."
+    },
     "badges": {
       "worktree": "worktree"
     },

@@ -17,9 +17,17 @@ import {
   isRegisteredRuntimeMetadataFailureReason,
   stripProcessTableUnavailableDiagnosticSuffix,
 } from '@main/services/team/provisioning/TeamProvisioningLaunchFailurePolicy';
+import { isBootstrapProofClearableLaunchFailureReason } from '@main/services/team/provisioning/TeamProvisioningBootstrapTranscript';
+import { applyExpiredLaunchGraceToPersistedStatuses } from '@main/services/team/provisioning/TeamProvisioningMemberSpawnStatusPolicy';
 import { extractBootstrapFailureReason } from '@main/services/team/provisioning/TeamProvisioningPromptBuilders';
-import { isBootstrapConfirmedProvisionedButNotAliveFailure } from '@shared/utils/teamLaunchFailureReason';
+import {
+  isBootstrapConfirmedProvisionedButNotAliveFailure,
+  LEGACY_MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+  MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+} from '@shared/utils/teamLaunchFailureReason';
 import { describe, expect, it } from 'vitest';
+
+import type { MemberSpawnStatusEntry } from '@shared/types';
 
 describe('TeamProvisioningLaunchFailurePolicy', () => {
   it('recognizes exact launch failure reasons that are safe to auto-clear', () => {
@@ -55,6 +63,53 @@ describe('TeamProvisioningLaunchFailurePolicy', () => {
         'CLI process exited (code ?) - team provisioned but not alive'
       )
     ).toBe(true);
+  });
+
+  // The launch grace verdict is written in one place and read in several, so
+  // the reason the projection actually produces is the only input worth
+  // asserting here - a predicate that matches a hand-typed spelling instead
+  // stops recognising the verdict the moment the writer's wording changes.
+  it('recognizes the launch grace reason the spawn status projection writes', () => {
+    const acceptedAt = '2026-08-27T18:00:00.000Z';
+    const nowMs = Date.parse(acceptedAt) + 10 * 60_000;
+    const statuses: Record<string, MemberSpawnStatusEntry> = {
+      Worker: {
+        status: 'waiting',
+        launchState: 'runtime_pending_bootstrap',
+        agentToolAccepted: true,
+        runtimeAlive: false,
+        bootstrapConfirmed: false,
+        hardFailure: false,
+        firstSpawnAcceptedAt: acceptedAt,
+        updatedAt: acceptedAt,
+      },
+    };
+
+    applyExpiredLaunchGraceToPersistedStatuses(statuses, nowMs);
+    const writtenReason = statuses.Worker?.hardFailureReason;
+
+    expect(writtenReason).toBe(MEMBER_LAUNCH_GRACE_TIMEOUT_REASON);
+    expect(isLaunchGraceWindowFailureReason(writtenReason)).toBe(true);
+    expect(isAutoClearableLaunchFailureReason(writtenReason)).toBe(true);
+    expect(isBootstrapProofClearableLaunchFailureReason(writtenReason)).toBe(true);
+    expect(
+      isAutoClearableLaunchFailureReason(`${writtenReason ?? ''}; process table unavailable`)
+    ).toBe(true);
+  });
+
+  // Launch statuses are persisted, so a team that failed before the identifier
+  // existed still carries the sentence on disk and has to stay clearable.
+  it('still recognizes the launch grace reason in its persisted sentence form', () => {
+    expect(isLaunchGraceWindowFailureReason(LEGACY_MEMBER_LAUNCH_GRACE_TIMEOUT_REASON)).toBe(true);
+    expect(isAutoClearableLaunchFailureReason(LEGACY_MEMBER_LAUNCH_GRACE_TIMEOUT_REASON)).toBe(
+      true
+    );
+    expect(isLaunchGraceWindowFailureReason(' member_launch_grace_timeout ')).toBe(true);
+    expect(isLaunchGraceWindowFailureReason('member launch grace timeout')).toBe(false);
+    expect(isLaunchGraceWindowFailureReason('Teammate was never spawned during launch.')).toBe(
+      false
+    );
+    expect(isLaunchGraceWindowFailureReason()).toBe(false);
   });
 
   it('recognizes bootstrap-specific failure reasons without accepting unrelated text', () => {

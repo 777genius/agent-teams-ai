@@ -1,3 +1,5 @@
+import { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON } from '@shared/utils/teamLaunchFailureReason';
+
 import { matchesObservedMemberNameForExpected } from './TeamProvisioningMemberIdentity';
 import { buildRestartGraceTimeoutReason } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
@@ -69,11 +71,7 @@ function resolveRuntimeMetadataForMember(
 
 export async function reevaluateMemberLaunchStatus<
   TRun extends ReevaluateMemberLaunchStatusRunLike,
->(
-  run: TRun,
-  memberName: string,
-  ports: ReevaluateMemberLaunchStatusPorts<TRun>
-): Promise<void> {
+>(run: TRun, memberName: string, ports: ReevaluateMemberLaunchStatusPorts<TRun>): Promise<void> {
   const current = run.memberSpawnStatuses.get(memberName);
   if (!current) return;
   if (
@@ -87,10 +85,7 @@ export async function reevaluateMemberLaunchStatus<
   await ports.maybeAuditMemberSpawnStatuses(run, { force: true });
   const refreshed = run.memberSpawnStatuses.get(memberName);
   if (!refreshed) return;
-  if (
-    refreshed.launchState === 'failed_to_start' ||
-    refreshed.launchState === 'confirmed_alive'
-  ) {
+  if (refreshed.launchState === 'failed_to_start' || refreshed.launchState === 'confirmed_alive') {
     return;
   }
   const refreshedFirstSpawnAcceptedAt = refreshed.firstSpawnAcceptedAt;
@@ -179,7 +174,7 @@ export async function reevaluateMemberLaunchStatus<
     : (runtimeDiagnostic ??
       (metadata?.livenessKind === 'shell_only'
         ? 'Tmux pane is alive, but no teammate runtime process was found.'
-        : 'Teammate did not join within the launch grace window.'));
+        : MEMBER_LAUNCH_GRACE_TIMEOUT_REASON));
   if (restartPending) {
     run.pendingMemberRestarts.delete(memberName);
   }

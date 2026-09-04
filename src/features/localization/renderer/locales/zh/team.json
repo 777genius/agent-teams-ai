@@ -1788,6 +1788,9 @@
     "createAutomatically": "如果该目录不存在，则会自动创建。"
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "队友未在启动宽限时间内加入。"
+    },
     "badges": {
       "worktree": "工作树"
     },
