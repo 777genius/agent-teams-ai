@@ -391,6 +391,11 @@
       "message": "Forcer l'arrêt de « {{team}} » ? Cela interrompt le travail en cours : l'arrêt normal est d'abord exécuté, puis les processus d'exécution restants de l'équipe sont terminés (y compris les tours du lead en cours) et les livraisons de messages en attente sont annulées. Les messages en file d'attente restent dans la boîte de réception.",
       "title": "Arrêt forcé de l'équipe"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Une erreur inattendue s'est produite",
+      "title": "Échec de l'arrêt forcé"
+    },
     "invalidTab": "Onglet d'équipe non valide",
     "kanbanSafeData": "Échec du chargement complet de kanban. Affichage de données sûres.",
     "loadFailed": "Échec du chargement de l'équipe",

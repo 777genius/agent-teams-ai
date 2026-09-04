@@ -391,6 +391,11 @@
       "message": "Forzare l'arresto di \"{{team}}\"? Questo interrompe il lavoro in corso: viene eseguito prima l'arresto normale, poi vengono terminati i processi di runtime rimanenti del team (compresi i turni del lead in corso) e vengono annullate le consegne di messaggi in sospeso. I messaggi in coda restano nella posta in arrivo.",
       "title": "Arresto forzato del team"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Si è verificato un errore imprevisto",
+      "title": "Arresto forzato non riuscito"
+    },
     "invalidTab": "Scheda del team non valida",
     "kanbanSafeData": "Impossibile caricare completamente la kanban. Visualizzazione dei dati sicuri.",
     "loadFailed": "Impossibile caricare il team",

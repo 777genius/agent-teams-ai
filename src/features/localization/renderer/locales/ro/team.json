@@ -391,6 +391,11 @@
       "message": "Oprești forțat \"{{team}}\"? Aceasta întrerupe lucrul în curs: se execută mai întâi oprirea obișnuită, apoi se închid procesele de execuție rămase ale echipei (inclusiv turele în curs ale liderului) și se anulează livrările de mesaje în așteptare. Mesajele din coadă rămân în inbox.",
       "title": "Oprire forțată a echipei"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "A apărut o eroare neașteptată",
+      "title": "Oprirea forțată a eșuat"
+    },
     "invalidTab": "Filă de echipă invalidă",
     "kanbanSafeData": "Încărcarea completă a kanban-ului a eșuat. Se afișează date sigure.",
     "loadFailed": "Încărcarea echipei a eșuat",

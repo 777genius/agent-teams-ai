@@ -391,6 +391,11 @@
       "message": "Sapilitang ihinto ang \"{{team}}\"? Naaabala nito ang kasalukuyang trabaho: patatakbuhin muna ang karaniwang paghinto, pagkatapos ay tatapusin ang natitirang mga runtime process ng team (kasama ang mga kasalukuyang turn ng lead) at kakanselahin ang mga nakabinbing paghahatid ng mensahe. Nananatili sa inbox ang mga naka-queue na mensahe.",
       "title": "Sapilitang ihinto ang team"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "May naganap na hindi inaasahang error",
+      "title": "Nabigo ang sapilitang paghinto"
+    },
     "invalidTab": "Invalid na team tab",
     "kanbanSafeData": "Nabigong ganap na i-load ang kanban. Ipinapakita ang safe na data.",
     "loadFailed": "Nabigong i-load ang team",

@@ -391,6 +391,11 @@
       "message": "Hentikan paksa \"{{team}}\"? Ini mengganggu kerja yang sedang berjalan: hentian biasa dijalankan dahulu, kemudian proses runtime pasukan yang tinggal dimatikan (termasuk giliran ketua yang sedang berjalan) dan penghantaran mesej yang tertunda dibatalkan. Mesej dalam baris gilir kekal dalam peti masuk.",
       "title": "Hentikan paksa pasukan"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Ralat tidak dijangka berlaku",
+      "title": "Hentikan paksa gagal"
+    },
     "invalidTab": "Tab pasukan tidak sah",
     "kanbanSafeData": "Gagal memuatkan kanban sepenuhnya. Memaparkan data selamat.",
     "loadFailed": "Gagal memuatkan pasukan",

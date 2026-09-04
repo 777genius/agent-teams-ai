@@ -109,6 +109,7 @@ import { MemberDetailDialog } from './members/MemberDetailDialog';
 import { type MemberActivityFilter, type MemberDetailTab } from './members/memberDetailTypes';
 import { deriveMetrics } from './context-metric-alias';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
+import { runTeamForceStopAction } from './teamForceStopAction';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
@@ -2327,23 +2328,23 @@ export const TeamDetailView = memo(function TeamDetailView({
   }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData]);
 
   const handleForceStopTeam = useCallback(async (): Promise<void> => {
-    const confirmed = await confirm({
-      title: t('detail.forceStop.title'),
-      message: t('detail.forceStop.message', { team: data?.config.name ?? teamName }),
-      confirmLabel: t('detail.forceStop.confirmLabel'),
-      cancelLabel: t('detail.forceStop.cancelLabel'),
-      variant: 'danger',
+    await runTeamForceStopAction({
+      teamName,
+      labels: {
+        confirmTitle: t('detail.forceStop.title'),
+        confirmMessage: t('detail.forceStop.message', { team: data?.config.name ?? teamName }),
+        confirmLabel: t('detail.forceStop.confirmLabel'),
+        cancelLabel: t('detail.forceStop.cancelLabel'),
+        failureTitle: t('detail.forceStopFailed.title'),
+        failureFallbackMessage: t('detail.forceStopFailed.fallbackMessage'),
+        failureConfirmLabel: t('detail.forceStopFailed.confirmLabel'),
+      },
+      confirm,
+      forceStop: (name) => api.teams.forceStop(name),
+      refreshTeamData: (name) => refreshTeamData(name),
+      setBusy: setForceStoppingTeam,
+      logError: (cause) => console.error('Failed to force stop team:', cause),
     });
-    if (!confirmed) return;
-    setForceStoppingTeam(true);
-    try {
-      await api.teams.forceStop(teamName);
-      await refreshTeamData(teamName);
-    } catch (err) {
-      console.error('Failed to force stop team:', err);
-    } finally {
-      setForceStoppingTeam(false);
-    }
   }, [data?.config.name, teamName, refreshTeamData, t]);
 
   // Pick up pending review request from GlobalTaskDetailDialog

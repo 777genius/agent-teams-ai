@@ -392,6 +392,11 @@
       "message": "Force stop \"{{team}}\"? This interrupts work in progress: it runs the regular stop, then kills the team's remaining runtime processes (including in-flight lead turns) and cancels pending message deliveries. Queued messages stay in the inbox.",
       "title": "Force stop team"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "An unexpected error occurred",
+      "title": "Force stop failed"
+    },
     "invalidTab": "Invalid team tab",
     "kanbanSafeData": "Failed to fully load kanban. Displaying safe data.",
     "loadFailed": "Failed to load team",

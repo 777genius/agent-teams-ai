@@ -391,6 +391,11 @@
       "message": "\"{{team}}\" erzwungen stoppen? Das unterbricht laufende Arbeit: Zuerst läuft der normale Stopp, dann werden die verbleibenden Laufzeitprozesse des Teams beendet (einschließlich laufender Lead-Züge) und ausstehende Nachrichtenzustellungen abgebrochen. Wartende Nachrichten bleiben im Posteingang.",
       "title": "Team erzwungen stoppen"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Ein unerwarteter Fehler ist aufgetreten",
+      "title": "Erzwungenes Stoppen fehlgeschlagen"
+    },
     "invalidTab": "Invalide Team Tab",
     "kanbanSafeData": "Versäumt, Kanban vollständig zu laden. Anzeige sicherer Daten.",
     "loadFailed": "Team nicht geladen",

@@ -391,6 +391,11 @@
       "message": "Hentikan paksa \"{{team}}\"? Ini mengganggu pekerjaan yang sedang berjalan: penghentian biasa dijalankan lebih dulu, lalu proses runtime tim yang tersisa dimatikan (termasuk giliran lead yang sedang berjalan) dan pengiriman pesan yang tertunda dibatalkan. Pesan dalam antrean tetap ada di kotak masuk.",
       "title": "Hentikan paksa tim"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Terjadi kesalahan yang tidak terduga",
+      "title": "Hentikan paksa gagal"
+    },
     "invalidTab": "Tab tim tidak valid",
     "kanbanSafeData": "Gagal memuat habis kanban. Menampilkan data aman.",
     "loadFailed": "Gagal memuat tim",

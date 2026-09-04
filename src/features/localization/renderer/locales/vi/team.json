@@ -391,6 +391,11 @@
       "message": "Buộc dừng \"{{team}}\"? Thao tác này làm gián đoạn công việc đang chạy: trước tiên chạy lệnh dừng thông thường, sau đó kết thúc các tiến trình runtime còn lại của đội ngũ (bao gồm cả lượt của trưởng nhóm đang chạy) và hủy các lần gửi tin nhắn đang chờ. Tin nhắn trong hàng đợi vẫn nằm trong hộp thư đến.",
       "title": "Buộc dừng đội ngũ"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Đã xảy ra lỗi không mong muốn",
+      "title": "Buộc dừng thất bại"
+    },
     "invalidTab": "Tab đội ngũ không hợp lệ",
     "kanbanSafeData": "Không thể tải đầy đủ kanban. Đang hiển thị dữ liệu an toàn.",
     "loadFailed": "Không thể tải đội ngũ",

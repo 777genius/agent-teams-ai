@@ -391,6 +391,11 @@
       "message": "¿Forzar la parada de \"{{team}}\"? Esto interrumpe el trabajo en curso: ejecuta la parada normal y luego termina los procesos de ejecución restantes del equipo (incluidos los turnos del líder en curso) y cancela las entregas de mensajes pendientes. Los mensajes en cola permanecen en la bandeja de entrada.",
       "title": "Parada forzada del equipo"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Se produjo un error inesperado",
+      "title": "La parada forzada falló"
+    },
     "invalidTab": "Tapa de equipo inválido",
     "kanbanSafeData": "Failed to fully load kanban. Mostrando datos seguros.",
     "loadFailed": "Failed to load team",

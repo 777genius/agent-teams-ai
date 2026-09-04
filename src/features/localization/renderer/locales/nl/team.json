@@ -391,6 +391,11 @@
       "message": "\"{{team}}\" geforceerd stoppen? Dit onderbreekt lopend werk: eerst wordt de gewone stop uitgevoerd, daarna worden de resterende runtimeprocessen van het team beëindigd (inclusief lopende lead-beurten) en worden openstaande berichtbezorgingen geannuleerd. Berichten in de wachtrij blijven in de inbox staan.",
       "title": "Team geforceerd stoppen"
     },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Er is een onverwachte fout opgetreden",
+      "title": "Geforceerd stoppen mislukt"
+    },
     "invalidTab": "Ongeldig teamtabblad",
     "kanbanSafeData": "Kon Kanban niet volledig laden. Veilige gegevens worden weergegeven.",
     "loadFailed": "Kon team niet laden",
