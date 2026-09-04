@@ -13,7 +13,7 @@ import {
 
 let tempRoot = '';
 
-function buildManifest(teamName = 'demo'): BackupManifest {
+function buildManifest(teamName = 'demo', overrides: Partial<BackupManifest> = {}): BackupManifest {
   return {
     teamName,
     identityId: 'identity-1',
@@ -21,6 +21,7 @@ function buildManifest(teamName = 'demo'): BackupManifest {
     firstBackupAt: '2026-01-01T00:00:00.000Z',
     lastBackupAt: '2026-01-01T00:00:00.000Z',
     fileStats: { 'config.json': { mtime: 1, size: 2 } },
+    ...overrides,
   };
 }
 
@@ -40,6 +41,24 @@ describe('writeBackupManifestSync', () => {
 
     expect(fs.existsSync(getBackupManifestPath(backupDir))).toBe(true);
     expect(readBackupManifestSync(backupDir)).toEqual(buildManifest());
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('persists a deleted-by-user manifest with its deletion timestamp', () => {
+    const backupDir = path.join(tempRoot, 'deleted');
+    const deleted = buildManifest('deleted', {
+      status: 'deleted_by_user',
+      deletedByUserAt: '2026-02-01T00:00:00.000Z',
+      projectPath: 'D:/projects/deleted',
+      displayName: 'Deleted team',
+    });
+
+    writeBackupManifestSync(backupDir, deleted);
+
+    const restored = readBackupManifestSync(backupDir);
+    expect(restored).toEqual(deleted);
+    expect(restored?.status).toBe('deleted_by_user');
+    expect(restored?.deletedByUserAt).toBe('2026-02-01T00:00:00.000Z');
     expect(console.warn).not.toHaveBeenCalled();
   });
 
