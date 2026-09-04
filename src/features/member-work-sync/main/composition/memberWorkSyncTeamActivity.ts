@@ -40,6 +40,39 @@ const WORK_SYNC_LEAD_CONFIRMED_BOOTSTRAP_ACTIVE_PID_SOURCES = new Set<TeamAgentR
   'lead_process',
 ]);
 
+/**
+ * Member names (normalized) whose launch hard-failed - grace timeout expired,
+ * bootstrap evidence rejected, etc. A hard-failed member can still resolve
+ * `alive: true` in the runtime snapshot (no pid ever disproves it), which is
+ * correct for the "alive between turns" case this snapshot also has to serve,
+ * but it must never make an assignment nudge target a member that is not
+ * coming back on its own.
+ */
+export type WorkSyncHardFailedMembers = ReadonlySet<string>;
+
+/** Builds the lookup isRuntimeEntryActiveForWorkSync et al. take from a member-spawn-status snapshot. */
+export function buildWorkSyncHardFailedMembers(
+  statuses: Record<string, Pick<{ hardFailure?: boolean }, 'hardFailure'>> | null | undefined
+): WorkSyncHardFailedMembers {
+  const hardFailedMembers = new Set<string>();
+  for (const [memberName, entry] of Object.entries(statuses ?? {})) {
+    if (entry.hardFailure === true) {
+      const normalized = normalizeMemberName(memberName);
+      if (normalized) {
+        hardFailedMembers.add(normalized);
+      }
+    }
+  }
+  return hardFailedMembers;
+}
+
+function isWorkSyncHardFailedMember(
+  entry: Pick<TeamAgentRuntimeEntry, 'memberName'>,
+  hardFailedMembers: WorkSyncHardFailedMembers | undefined
+): boolean {
+  return hardFailedMembers != null && hardFailedMembers.has(normalizeMemberName(entry.memberName));
+}
+
 function isWorkSyncLeadLikeMemberName(memberName: string): boolean {
   const normalized = normalizeMemberName(memberName).replace(/[\s_]+/g, '-');
   return (
@@ -78,7 +111,8 @@ export function isRuntimeEntryActiveForWorkSync(
         'alive' | 'backendType' | 'livenessKind' | 'memberName' | 'pidSource'
       >
     | null
-    | undefined
+    | undefined,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   if (!entry) {
     return false;
@@ -87,6 +121,9 @@ export function isRuntimeEntryActiveForWorkSync(
     entry.backendType === 'lead' ||
     WORK_SYNC_RESERVED_MEMBER_NAMES.has(entry.memberName.trim().toLowerCase())
   ) {
+    return false;
+  }
+  if (isWorkSyncHardFailedMember(entry, hardFailedMembers)) {
     return false;
   }
   if (
@@ -146,22 +183,29 @@ export function hasUncertainWorkSyncRuntimeActivity(
 }
 
 export function hasWorkSyncActiveRuntime(
-  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined
+  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
-  return Object.values(snapshot?.members ?? {}).some(isRuntimeEntryActiveForWorkSync);
+  return Object.values(snapshot?.members ?? {}).some((entry) =>
+    isRuntimeEntryActiveForWorkSync(entry, hardFailedMembers)
+  );
 }
 
 export function hasWorkSyncReachableRuntime(
-  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined
+  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   return Object.values(snapshot?.members ?? {}).some(
-    (entry) => isRuntimeEntryActiveForWorkSync(entry) || isRuntimeLeadEntryActiveForWorkSync(entry)
+    (entry) =>
+      isRuntimeEntryActiveForWorkSync(entry, hardFailedMembers) ||
+      isRuntimeLeadEntryActiveForWorkSync(entry)
   );
 }
 
 export function isRuntimeMemberActiveForWorkSync(
   snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
-  memberName: string
+  memberName: string,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   const normalizedMemberName = normalizeMemberName(memberName);
   if (!normalizedMemberName) {
@@ -170,7 +214,7 @@ export function isRuntimeMemberActiveForWorkSync(
   return Object.values(snapshot?.members ?? {}).some(
     (entry) =>
       normalizeMemberName(entry.memberName) === normalizedMemberName &&
-      (isRuntimeEntryActiveForWorkSync(entry) ||
+      (isRuntimeEntryActiveForWorkSync(entry, hardFailedMembers) ||
         (isWorkSyncLeadLikeMemberName(normalizedMemberName) &&
           isRuntimeLeadEntryActiveForWorkSync(entry)))
   );

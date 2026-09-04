@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildWorkSyncHardFailedMembers,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncActiveRuntime,
   hasWorkSyncReachableRuntime,
@@ -258,5 +259,47 @@ describe('member work sync team activity', () => {
   it('handles missing snapshots as inactive', () => {
     expect(hasWorkSyncActiveRuntime(null)).toBe(false);
     expect(hasWorkSyncActiveRuntime(undefined)).toBe(false);
+  });
+
+  it('does not treat a hard-failed member as active even when the runtime resolver reports alive', () => {
+    // A member whose launch grace timed out has no pid ever recorded, so the
+    // runtime liveness resolver cannot disprove it and reports alive: true -
+    // correct for the "alive between turns" on-demand-lane case, but a hard
+    // failure means it is not coming back on its own. Without the hard-failure
+    // check this stays "active" forever and can be handed assignment nudges.
+    const entry = createRuntimeEntry();
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({ alice: { hardFailure: true } });
+
+    expect(isRuntimeEntryActiveForWorkSync(entry)).toBe(true);
+    expect(isRuntimeEntryActiveForWorkSync(entry, hardFailedMembers)).toBe(false);
+
+    const snapshot = createRuntimeSnapshot({ alice: entry });
+    expect(hasWorkSyncReachableRuntime(snapshot, hardFailedMembers)).toBe(false);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'alice', hardFailedMembers)).toBe(false);
+  });
+
+  it('leaves other members active when only one hard-failed', () => {
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({ memberName: 'alice' }),
+      bob: createRuntimeEntry({ memberName: 'bob' }),
+    });
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({ alice: { hardFailure: true } });
+
+    expect(hasWorkSyncReachableRuntime(snapshot, hardFailedMembers)).toBe(true);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'alice', hardFailedMembers)).toBe(false);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'bob', hardFailedMembers)).toBe(true);
+  });
+
+  it('buildWorkSyncHardFailedMembers only includes members whose hardFailure is true', () => {
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({
+      alice: { hardFailure: true },
+      bob: { hardFailure: false },
+      carol: {},
+    });
+
+    expect(hardFailedMembers.has('alice')).toBe(true);
+    expect(hardFailedMembers.has('bob')).toBe(false);
+    expect(hardFailedMembers.has('carol')).toBe(false);
+    expect(buildWorkSyncHardFailedMembers(null).size).toBe(0);
   });
 });

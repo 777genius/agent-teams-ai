@@ -48,6 +48,12 @@ export function resolveTeamProvisioningRuntimeLiveness(
   const runtimeDiagnostic =
     bootstrapEvidence.runtimeDiagnostic ?? 'runtime heartbeat timestamp is invalid';
   const diagnostic = bootstrapEvidence.diagnostic ?? runtimeDiagnostic;
+  // Deliberately does not follow the "registered_only implies alive" invariant
+  // TeamRuntimeLivenessResolver applies elsewhere: that invariant covers a
+  // member with no evidence to disprove (an on-demand lane between turns).
+  // Here a confirmation WAS observed but its timestamp cannot be trusted, so
+  // this member gets no benefit of the doubt regardless of what re-resolving
+  // without it came back as.
   return {
     ...resolved,
     alive: false,

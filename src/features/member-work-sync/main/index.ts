@@ -10,6 +10,7 @@ export {
   createMemberWorkSyncFeature,
 } from './composition/createMemberWorkSyncFeature';
 export {
+  buildWorkSyncHardFailedMembers,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncActiveRuntime,
   hasWorkSyncReachableRuntime,
@@ -17,3 +18,4 @@ export {
   isRuntimeMemberActiveForWorkSync,
   isRuntimeMemberActivityUncertainForWorkSync,
 } from './composition/memberWorkSyncTeamActivity';
+export type { WorkSyncHardFailedMembers } from './composition/memberWorkSyncTeamActivity';
