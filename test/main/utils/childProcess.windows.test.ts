@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { execCli, spawnCli } from '@main/utils/childProcess';
 import { once } from 'events';
-import { copyFileSync, linkSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { copyFileSync, linkSync, mkdtempSync, writeFileSync } from 'fs';
+import { rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
@@ -35,6 +36,24 @@ function createWindowsArgvFixture(): WindowsArgvFixture {
   return { binaryPath, echoScriptPath, root };
 }
 
+/**
+ * Remove a fixture tree, absorbing the short window in which Windows still
+ * refuses the removal.
+ *
+ * Every process the fixture launches has exited by the time cleanup runs, but
+ * Windows can keep a handle somewhere inside the tree for a few hundred
+ * milliseconds afterwards (antivirus, the search indexer, or handles the kernel
+ * has not reclaimed yet), and the refusal surfaces as EPERM on the fixture
+ * root. `rmSync` cannot absorb that: it reports the first refusal instead of
+ * applying `maxRetries`/`retryDelay` to it, so the synchronous call has no
+ * retry budget at all for this error. The asynchronous `rm` does apply the
+ * budget to EPERM, which is why every other temp-tree cleanup in this suite
+ * awaits it.
+ */
+async function removeFixtureTree(root: string): Promise<void> {
+  await rm(root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+}
+
 describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round trip', () => {
   it('preserves adversarial argv through execCli for a spaced non-ASCII executable path', async () => {
     const fixture = createWindowsArgvFixture();
@@ -49,7 +68,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
       expect(stdout).not.toContain('INJECTED\r\n');
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      await removeFixtureTree(fixture.root);
     }
   }, 30_000);
 
@@ -79,7 +98,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect({ exitCode, signal, stderr }).toEqual({ exitCode: 0, signal: null, stderr: '' });
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      await removeFixtureTree(fixture.root);
     }
   }, 30_000);
 
@@ -102,7 +121,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(stderr).toBe('');
       expect(JSON.parse(stdout)).toEqual(ADVERSARIAL_ARGS);
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      await removeFixtureTree(fixture.root);
     }
   }, 30_000);
 
@@ -126,7 +145,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
       expect(stderr).toBe('');
       expect(JSON.parse(stdout)).toEqual(safeArgs);
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      await removeFixtureTree(fixture.root);
     }
   }, 30_000);
 
@@ -148,7 +167,7 @@ describe.skipIf(process.platform !== 'win32')('Windows CLI shell fallback round 
         })
       ).rejects.toThrow('Unsafe Windows batch positional argument');
     } finally {
-      rmSync(fixture.root, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
+      await removeFixtureTree(fixture.root);
     }
   }, 30_000);
 });
