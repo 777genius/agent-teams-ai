@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useReducer } from 'react';
 import {
   isCodexAccountSnapshotPending,
   mergeCodexCliStatusWithSnapshot,
+  mergeCodexProviderStatusWithSnapshot,
   useCodexAccountSnapshot,
 } from '@features/codex-account/renderer';
 import { useStore } from '@renderer/store';
@@ -16,6 +17,7 @@ import {
   isProviderModelCatalogExactReady,
 } from '@shared/utils/providerStatusAuthority';
 
+import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
 
 export const MAX_BROWSER_TIMEOUT_MS = 2_147_483_647;
@@ -135,13 +137,21 @@ export function resolveProjectScopedProviderStatus(
   providerId: CliProviderId,
   scopedProviderStatus: CliProviderStatus | null,
   globalProviderStatus: CliProviderStatus | null,
-  now: number = Date.now()
+  now: number = Date.now(),
+  codexSnapshot: CodexAccountSnapshotDto | null = null
 ): CliProviderStatus | null {
   if (scopedProviderStatus?.providerId === providerId) {
-    const resolved = reconcileCliStatus(undefined, scopedProviderStatus);
+    // The scoped runtime remains the launch authority. The app-managed Codex
+    // snapshot is shared connection evidence and must be reflected here too,
+    // otherwise the global Ready pill and scoped launch dialog disagree.
+    const scopedWithAccount =
+      providerId === 'codex'
+        ? mergeCodexProviderStatusWithSnapshot(scopedProviderStatus, codexSnapshot)
+        : scopedProviderStatus;
+    const resolved = reconcileCliStatus(undefined, scopedWithAccount);
     return {
       ...resolved,
-      capabilities: gateProviderLaunch(scopedProviderStatus, now).capabilities,
+      capabilities: gateProviderLaunch(scopedWithAccount, now).capabilities,
     };
   }
   if (!globalProviderStatus || globalProviderStatus.providerId !== providerId) {
@@ -226,7 +236,8 @@ export function useEffectiveCliProviderStatus(
       providerId,
       scopedProviderStatus,
       globalProvider ?? null,
-      authorityNow
+      authorityNow,
+      codexAccount.snapshot
     );
     if (!projectProvider) {
       return withCodexSnapshot;

@@ -72,7 +72,30 @@
       "externalTeam": "外部チーム",
       "crossTeamAwaitingReply": "返信をお待ちしています。",
       "user": "ユーザ名",
-      "awaitingApproval": "承認待ち"
+      "awaitingApproval": "承認待ち",
+      "discardQueued": {
+        "action": "キューにあるメッセージを破棄",
+        "alreadyDelivered": "破棄されたものはありません。これらのメッセージはすでに「{{member}}」へ配信済みです。",
+        "cancelLabel": "キャンセル",
+        "confirmLabel": "破棄",
+        "count": "キュー {{count}} 件",
+        "count_few": "キュー {{count}} 件",
+        "count_many": "キュー {{count}} 件",
+        "count_one": "キュー {{count}} 件",
+        "count_other": "キュー {{count}} 件",
+        "failedFallbackMessage": "予期しないエラーが発生しました",
+        "failedTitle": "キューのメッセージを破棄できませんでした",
+        "message": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "message_few": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "message_many": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "message_one": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "message_other": "「{{member}}」宛てのキューにある {{count}} 件のメッセージを破棄しますか？まだ配信されておらず、完全に削除されます。配信済みのメッセージとエージェント間のメッセージには影響しません。",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} 件を破棄しました。キューに残り: {{remaining}} 件。",
+        "resultTitle": "キューのメッセージ",
+        "title": "キューのメッセージを破棄",
+        "tooltip": "このメンバーのキューにあるメッセージを破棄"
+      }
     },
     "reply": {
       "replyingTo": "返信する",
@@ -1793,6 +1816,9 @@
     "createAutomatically": "ディレクトリが存在しない場合、自動的に作成されます。"
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "チームメイトが起動の猶予時間内に参加しませんでした。"
+    },
     "badges": {
       "worktree": "ワークツリー"
     },

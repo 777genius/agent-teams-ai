@@ -76,11 +76,24 @@ async function runWorker(
   });
 }
 
+// TerminateProcess, which taskkill /F issues, sets the victim's exit code to 1.
+const WINDOWS_TERMINATE_PROCESS_EXIT_CODE = 1;
+// The fixture's own fail-stop when taskkill is missing from a stripped runner.
+const WINDOWS_TASKKILL_UNAVAILABLE_EXIT_CODE = 137;
+
 function expectAbruptTermination(result: WorkerResult): void {
   if (process.platform === 'win32') {
-    // The Windows fixture uses TerminateProcess via taskkill. Node reports
-    // that child death with a non-zero exit code (and no POSIX signal).
-    expect(result.signal === null && result.code !== 0, result.stderr).toBe(true);
+    // Windows has no POSIX signal to observe, so the exit code has to carry the
+    // whole assertion. `code !== 0` was too weak for that: it also accepts a
+    // null code, and an uncaught throw exits 1 as well, so it could not tell a
+    // real TerminateProcess from the fixture falling through its own guard.
+    // Pin the two exit codes the fixture can legitimately produce, and require
+    // a silent stderr, which is what separates them from that throw.
+    expect(result.signal, result.stderr).toBeNull();
+    expect(result.stderr).toBe('');
+    expect([WINDOWS_TERMINATE_PROCESS_EXIT_CODE, WINDOWS_TASKKILL_UNAVAILABLE_EXIT_CODE]).toContain(
+      result.code
+    );
     return;
   }
   expect(result.signal === 'SIGKILL' || result.code === 137, result.stderr).toBe(true);

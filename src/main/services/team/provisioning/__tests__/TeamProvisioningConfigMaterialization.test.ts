@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  appendMissingConfigMembersFromMeta,
   applyConfigPostLaunchMaterialization,
   applyEffectiveLaunchStateToConfig,
   buildConfigLaunchCompatibilityReport,
@@ -16,6 +17,12 @@ import {
   getMixedLaunchFallbackRecoveryError,
   isPureOpenCodeProvisioningRequest,
 } from '../TeamProvisioningLaunchCompatibility';
+
+import type { TeamMember } from '@shared/types';
+
+function parseConfigMembers(raw: string): unknown {
+  return (JSON.parse(raw) as { members?: unknown }).members;
+}
 
 describe('team provisioning config materialization', () => {
   it('applies effective launch provider, model, and effort to lead and member config entries', () => {
@@ -128,6 +135,241 @@ describe('team provisioning config materialization', () => {
         joinedAt: 12345,
       },
     ]);
+  });
+
+  it('appends missing members.meta members into config members without duplicating entries', () => {
+    const config: Record<string, unknown> = {
+      members: [
+        { name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' },
+        { name: 'Existing', providerId: 'opencode', model: 'opencode/openai/gpt-5.4' },
+      ],
+    };
+
+    const changed = appendMissingConfigMembersFromMeta(
+      'runtime-team',
+      config,
+      [
+        { name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' },
+        { name: 'user' },
+        { name: 'Removed', providerId: 'opencode', model: 'opencode/x/y', removedAt: 1 },
+        { name: ' existing ', providerId: 'opencode', model: 'opencode/openai/gpt-5.4' },
+        {
+          name: 'Worker',
+          providerId: 'opencode',
+          model: 'opencode/zai-coding-plan/glm-4.6',
+          role: 'Implementer',
+          agentType: 'general-purpose',
+          joinedAt: 111,
+        },
+        { name: 'Builder', providerId: 'anthropic', model: 'claude-sonnet-4-5' },
+      ],
+      { now: () => 999 }
+    );
+
+    expect(changed).toBe(true);
+    expect(config.members).toEqual([
+      { name: 'team-lead', agentType: 'team-lead', providerId: 'anthropic' },
+      { name: 'Existing', providerId: 'opencode', model: 'opencode/openai/gpt-5.4' },
+      {
+        name: 'Worker',
+        agentId: 'Worker@runtime-team',
+        agentType: 'general-purpose',
+        role: 'Implementer',
+        providerId: 'opencode',
+        model: 'opencode/zai-coding-plan/glm-4.6',
+        joinedAt: 111,
+      },
+      {
+        name: 'Builder',
+        agentId: 'Builder@runtime-team',
+        agentType: 'general-purpose',
+        providerId: 'anthropic',
+        model: 'claude-sonnet-4-5',
+        joinedAt: 999,
+      },
+    ]);
+  });
+
+  it.each([
+    ['the runtime-owned lead by name', { name: 'team-lead', providerId: 'anthropic' }],
+    [
+      'the runtime-owned lead by agent type',
+      { name: 'Captain', agentType: 'orchestrator', providerId: 'anthropic' },
+    ],
+    ['the user pseudo-member', { name: 'user' }],
+    [
+      'a member already removed from the roster',
+      { name: 'Scout', providerId: 'opencode', model: 'opencode/x/y', removedAt: 1 },
+    ],
+    ['a blank member name', { name: '   ', providerId: 'opencode' }],
+  ] satisfies [string, TeamMember][])(
+    'never materializes %s into the config member list',
+    (_label, metaMember) => {
+      const configMembers = [{ name: 'team-lead', agentType: 'team-lead' }];
+      const config: Record<string, unknown> = { members: configMembers };
+
+      expect(appendMissingConfigMembersFromMeta('runtime-team', config, [metaMember])).toBe(false);
+      expect(config.members).toBe(configMembers);
+    }
+  );
+
+  it('reports no config change when every active meta member already has a config identity', () => {
+    const members = [
+      { name: 'team-lead', agentType: 'team-lead' },
+      { name: 'Worker', providerId: 'opencode', model: 'opencode/openai/gpt-5.4' },
+    ];
+    const config: Record<string, unknown> = { members };
+
+    expect(
+      appendMissingConfigMembersFromMeta('runtime-team', config, [
+        { name: 'Worker', providerId: 'opencode', model: 'opencode/openai/gpt-5.4' },
+        { name: 'Gone', providerId: 'opencode', model: 'opencode/x/y', removedAt: 42 },
+      ])
+    ).toBe(false);
+    expect(config.members).toBe(members);
+  });
+
+  it('leaves an already-synced config member list untouched on a second sync', () => {
+    const metaMembers: TeamMember[] = [
+      { name: 'Worker', providerId: 'opencode', model: 'opencode/openai/gpt-5.4', joinedAt: 111 },
+    ];
+    const config: Record<string, unknown> = {
+      members: [{ name: 'team-lead', agentType: 'team-lead' }],
+    };
+
+    expect(
+      appendMissingConfigMembersFromMeta('runtime-team', config, metaMembers, { now: () => 999 })
+    ).toBe(true);
+    const afterFirstSync = config.members;
+
+    expect(
+      appendMissingConfigMembersFromMeta('runtime-team', config, metaMembers, { now: () => 1000 })
+    ).toBe(false);
+    expect(config.members).toBe(afterFirstSync);
+  });
+
+  it('syncs members.meta members into config members during post-launch config update', async () => {
+    let writtenRaw = '';
+    const info = vi.fn();
+
+    await updateTeamConfigPostLaunch(
+      {
+        teamName: 'runtime-team',
+        projectPath: '/repo/app',
+        detectedSessionId: 'session-1',
+      },
+      {
+        readConfig: vi.fn().mockResolvedValue(
+          JSON.stringify({
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          })
+        ),
+        writeConfig: vi.fn(async (raw: string) => {
+          writtenRaw = raw;
+        }),
+        invalidateTeam: vi.fn(),
+        scanForNewestSession: vi.fn(),
+        readMetaMembers: vi.fn(async () => [
+          {
+            name: 'Worker',
+            providerId: 'opencode' as const,
+            model: 'opencode/zai-coding-plan/glm-4.6',
+            role: 'Implementer',
+            agentType: 'general-purpose',
+            joinedAt: 111,
+          },
+        ]),
+        getLanguage: () => 'system',
+        info,
+        warn: vi.fn(),
+      }
+    );
+
+    expect(parseConfigMembers(writtenRaw)).toEqual([
+      { name: 'team-lead', agentType: 'team-lead' },
+      {
+        name: 'Worker',
+        agentId: 'Worker@runtime-team',
+        agentType: 'general-purpose',
+        role: 'Implementer',
+        providerId: 'opencode',
+        model: 'opencode/zai-coding-plan/glm-4.6',
+        joinedAt: 111,
+      },
+    ]);
+    expect(info).toHaveBeenCalledWith(
+      '[runtime-team] Synced missing members.meta.json members into config.json members'
+    );
+  });
+
+  it('writes the same member list on a second post-launch update over a synced config', async () => {
+    const writtenRaws: string[] = [];
+    const info = vi.fn();
+    let storedRaw = JSON.stringify({ members: [{ name: 'team-lead', agentType: 'team-lead' }] });
+    const ports = {
+      readConfig: vi.fn(async () => storedRaw),
+      writeConfig: vi.fn(async (raw: string) => {
+        writtenRaws.push(raw);
+        storedRaw = raw;
+      }),
+      invalidateTeam: vi.fn(),
+      scanForNewestSession: vi.fn(),
+      readMetaMembers: vi.fn(async () => [
+        { name: 'Worker', providerId: 'opencode' as const, model: 'opencode/x/y', joinedAt: 111 },
+      ]),
+      getLanguage: () => 'system',
+      info,
+      warn: vi.fn(),
+    };
+    const input = {
+      teamName: 'runtime-team',
+      projectPath: '/repo/app',
+      detectedSessionId: 'session-1',
+    };
+
+    await updateTeamConfigPostLaunch(input, ports);
+    await updateTeamConfigPostLaunch(input, ports);
+
+    const syncLogs = info.mock.calls
+      .map((call) => String(call[0]))
+      .filter((message) => message.includes('Synced missing members.meta.json members'));
+    expect(syncLogs).toHaveLength(1);
+    expect(writtenRaws).toHaveLength(2);
+    expect(parseConfigMembers(writtenRaws[1])).toEqual(parseConfigMembers(writtenRaws[0]));
+  });
+
+  it('keeps the post-launch config write when the members.meta roster cannot be read', async () => {
+    let writtenRaw = '';
+    const warn = vi.fn();
+
+    await updateTeamConfigPostLaunch(
+      {
+        teamName: 'runtime-team',
+        projectPath: '/repo/app',
+        detectedSessionId: 'session-1',
+      },
+      {
+        readConfig: vi.fn().mockResolvedValue(
+          JSON.stringify({
+            members: [{ name: 'team-lead', agentType: 'team-lead' }],
+          })
+        ),
+        writeConfig: vi.fn(async (raw: string) => {
+          writtenRaw = raw;
+        }),
+        invalidateTeam: vi.fn(),
+        scanForNewestSession: vi.fn(),
+        readMetaMembers: vi.fn().mockRejectedValue(new Error('members.meta.json unreadable')),
+        getLanguage: () => 'system',
+        info: vi.fn(),
+        warn,
+      }
+    );
+
+    expect(parseConfigMembers(writtenRaw)).toEqual([{ name: 'team-lead', agentType: 'team-lead' }]);
+    expect(warn).toHaveBeenCalledWith(
+      '[runtime-team] Failed to sync members.meta.json into config members: members.meta.json unreadable'
+    );
   });
 
   it('extracts teammate specs from config and ignores lead, user, removed, and auto-suffixed entries', () => {
@@ -264,6 +506,7 @@ describe('team provisioning config materialization', () => {
         }),
         invalidateTeam,
         scanForNewestSession,
+        readMetaMembers: vi.fn(async () => []),
         getLanguage: () => 'uk',
         info,
         warn: vi.fn(),
@@ -304,6 +547,7 @@ describe('team provisioning config materialization', () => {
         writeConfig,
         invalidateTeam,
         scanForNewestSession: vi.fn(),
+        readMetaMembers: vi.fn(async () => []),
         getLanguage: () => 'system',
         info: vi.fn(),
         warn,

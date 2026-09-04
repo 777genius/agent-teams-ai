@@ -13,17 +13,18 @@ interface RecentProjectsSectionProps {
 const titleWidths = [60, 66, 50, 55, 75, 45, 40, 65];
 const pathWidths = [80, 75, 85, 66, 70, 80, 60, 72];
 
-function SelectProjectFolderCard({
+const SelectProjectFolderCard = ({
   onClick,
 }: Readonly<{
   onClick: () => void;
-}>): React.JSX.Element {
+}>): React.JSX.Element => {
   const { t } = useAppTranslation('dashboard');
   return (
     <button
-      className="hover:bg-surface/30 group relative flex min-h-[120px] flex-col items-center justify-center rounded-lg border border-dashed border-border bg-transparent p-4 transition-all duration-300 hover:border-border-emphasis"
+      className="project-row-zebra-card group relative flex min-h-[112px] flex-col items-center justify-center p-3.5 transition-colors duration-200 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-border-emphasis"
       onClick={onClick}
-      title={t('recentProjects.selectFolderTitle')}
+      aria-label={t('recentProjects.selectFolderTitle')}
+      data-recent-project-cell="select-folder"
     >
       <div className="mb-2 flex size-8 items-center justify-center rounded-md border border-dashed border-border transition-colors duration-300 group-hover:border-border-emphasis">
         <FolderOpen className="size-4 text-text-muted transition-colors group-hover:text-text-secondary" />
@@ -33,7 +34,7 @@ function SelectProjectFolderCard({
       </span>
     </button>
   );
-}
+};
 
 export const RecentProjectsSection = ({
   searchQuery,
@@ -54,14 +55,16 @@ export const RecentProjectsSection = ({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+      <div
+        className="project-row-zebra-grid grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border lg:grid-cols-3 xl:grid-cols-4"
+        data-recent-projects-grid
+      >
         {Array.from({ length: 8 }).map((_, index) => (
           <div
             key={index}
-            className="skeleton-card flex min-h-[120px] flex-col rounded-sm border border-border p-4"
+            className="project-row-zebra-card skeleton-card flex min-h-[112px] flex-col p-3.5"
             style={{
               animationDelay: `${index * 80}ms`,
-              backgroundColor: 'var(--skeleton-base)',
             }}
           >
             <div
@@ -148,7 +151,10 @@ export const RecentProjectsSection = ({
 
   return (
     <div className="space-y-4">
-      <div className="project-row-zebra-grid grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
+      <div
+        className="project-row-zebra-grid grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border lg:grid-cols-3 xl:grid-cols-4"
+        data-recent-projects-grid
+      >
         {hasSelectFolderCard && (
           <SelectProjectFolderCard onClick={() => void selectProjectFolder()} />
         )}

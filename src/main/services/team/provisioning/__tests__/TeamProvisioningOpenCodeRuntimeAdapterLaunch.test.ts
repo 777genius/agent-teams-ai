@@ -7,11 +7,16 @@ import {
   prepareOpenCodeRuntimeAdapterLaunchPreflight,
   runOpenCodeTeamRuntimeAdapterLaunch,
 } from '../TeamProvisioningOpenCodeRuntimeAdapterLaunch';
+import {
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS,
+  type OpenCodeSharedRuntimeFailureScope,
+} from '../TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
 import type {
   TeamLaunchRuntimeAdapter,
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
+  TeamRuntimePreLaunchGate,
 } from '../../runtime';
 import type {
   PersistedTeamLaunchSnapshot,
@@ -697,6 +702,176 @@ describe('TeamProvisioningOpenCodeRuntimeAdapterLaunch', () => {
     expect(consumeCount).toBe(1);
     expect(write).not.toHaveBeenCalled();
   });
+
+  const MODELS_QUERY_TIMEOUT =
+    'Failed to query OpenCode models: OpenCode command timed out after 10000ms';
+  const RETRYABLE_PRE_LAUNCH_GATE: TeamRuntimePreLaunchGate = {
+    blocked: true,
+    reason: 'unknown_error',
+    retryable: true,
+  };
+
+  function transientTimeoutResult(): TeamRuntimeLaunchResult {
+    return runtimeResult({
+      teamLaunchState: 'partial_failure',
+      members: {
+        alice: {
+          memberName: 'alice',
+          providerId: 'opencode',
+          launchState: 'failed_to_start',
+          agentToolAccepted: false,
+          runtimeAlive: false,
+          bootstrapConfirmed: false,
+          hardFailure: true,
+          hardFailureReason: MODELS_QUERY_TIMEOUT,
+          diagnostics: [MODELS_QUERY_TIMEOUT],
+        },
+      },
+      diagnostics: [MODELS_QUERY_TIMEOUT],
+      preLaunchGate: RETRYABLE_PRE_LAUNCH_GATE,
+    });
+  }
+
+  function primaryRetryRequest(): TeamCreateRequest {
+    return {
+      teamName: 'team-a',
+      cwd: '/repo',
+      providerId: 'opencode',
+      members: [{ name: 'alice', role: 'Engineer', providerId: 'opencode' }],
+    } as TeamCreateRequest;
+  }
+
+  function primaryRetryPorts(
+    calls: string[],
+    sharedRuntimeFailureScope: OpenCodeSharedRuntimeFailureScope
+  ): OpenCodeRuntimeAdapterLaunchPorts {
+    const provisioningRuns = new Map<string, string>();
+    return {
+      ...basePorts(calls),
+      sharedRuntimeFailureScope,
+      setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+      getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+      deleteProvisioningRunIfCurrent: (teamName, runId) => {
+        if (provisioningRuns.get(teamName) === runId) provisioningRuns.delete(teamName);
+      },
+    };
+  }
+
+  it('retries a transient shared runtime timeout once and publishes the healthy relaunch', async () => {
+    vi.useFakeTimers();
+    try {
+      const calls: string[] = [];
+      const adapter = {
+        launch: vi
+          .fn<TeamLaunchRuntimeAdapter['launch']>()
+          .mockResolvedValueOnce(transientTimeoutResult())
+          .mockResolvedValueOnce(runtimeResult()),
+      } as unknown as TeamLaunchRuntimeAdapter;
+
+      const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+        {
+          adapter,
+          request: primaryRetryRequest(),
+          members: primaryRetryRequest().members,
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        primaryRetryPorts(calls, {})
+      );
+      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+
+      await expect(launch).resolves.toEqual({ runId: 'run-1' });
+      expect(adapter.launch).toHaveBeenCalledTimes(2);
+      expect(calls).toContain(
+        'logWarning:[team-a] OpenCode primary launch hit a transient shared runtime timeout; ' +
+          `retrying once in ${OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS}ms`
+      );
+      expect(calls).toContain('setAliveRun');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('spends the primary retry once: a second timeout inside the TTL window fails normally', async () => {
+    vi.useFakeTimers();
+    try {
+      const sharedRuntimeFailureScope: OpenCodeSharedRuntimeFailureScope = {};
+      const adapter = {
+        launch: vi.fn<TeamLaunchRuntimeAdapter['launch']>(async () => transientTimeoutResult()),
+      } as unknown as TeamLaunchRuntimeAdapter;
+
+      const first = runOpenCodeTeamRuntimeAdapterLaunch(
+        {
+          adapter,
+          request: primaryRetryRequest(),
+          members: primaryRetryRequest().members,
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        primaryRetryPorts([], sharedRuntimeFailureScope)
+      );
+      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+      await first;
+
+      expect(adapter.launch).toHaveBeenCalledTimes(2);
+
+      const second = runOpenCodeTeamRuntimeAdapterLaunch(
+        {
+          adapter,
+          request: primaryRetryRequest(),
+          members: primaryRetryRequest().members,
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        primaryRetryPorts([], sharedRuntimeFailureScope)
+      );
+      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+      await second;
+
+      // The relaunch seconds later inherits the still-blocking record and does
+      // not spend a fresh retry: one more attempt in total, not two.
+      expect(adapter.launch).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not relaunch when the run lost authority during the transient backoff', async () => {
+    vi.useFakeTimers();
+    try {
+      const calls: string[] = [];
+      const adapter = {
+        launch: vi.fn<TeamLaunchRuntimeAdapter['launch']>(async () => transientTimeoutResult()),
+      } as unknown as TeamLaunchRuntimeAdapter;
+      const provisioningRuns = new Map<string, string>();
+
+      const launch = runOpenCodeTeamRuntimeAdapterLaunch(
+        {
+          adapter,
+          request: primaryRetryRequest(),
+          members: primaryRetryRequest().members,
+          prompt: 'launch',
+          onProgress: vi.fn(),
+        },
+        {
+          ...basePorts(calls),
+          sharedRuntimeFailureScope: {},
+          setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+          getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        }
+      );
+      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS - 1);
+      // A newer run took the team while the backoff was still pending.
+      provisioningRuns.set('team-a', 'successor-run');
+      await vi.advanceTimersByTimeAsync(1);
+
+      await expect(launch).resolves.toEqual({ runId: 'run-1' });
+      expect(adapter.launch).toHaveBeenCalledTimes(1);
+      expect(calls).not.toContain('setAliveRun');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 function deferred<T>() {
@@ -820,6 +995,11 @@ function basePorts(calls: string[]): OpenCodeRuntimeAdapterLaunchPorts {
   return {
     randomUUID: () => 'run-1',
     nowIso: () => '2026-01-01T00:00:00.000Z',
+    nowMs: () => 1234,
+    sharedRuntimeFailureScope: {},
+    logWarning: (message) => {
+      calls.push(`logWarning:${message}`);
+    },
     getStopAllTeamsGeneration: () => 0,
     getRuntimeAdapterRun: () => undefined,
     stopOpenCodeRuntimeAdapterTeam: async () => {

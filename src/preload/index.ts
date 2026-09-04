@@ -155,6 +155,7 @@ import {
   TEAM_DELETE_DRAFT,
   TEAM_DELETE_TASK_ATTACHMENT,
   TEAM_DELETE_TEAM,
+  TEAM_DISCARD_QUEUED_USER_MESSAGES,
   TEAM_GET_AGENT_RUNTIME,
   TEAM_GET_ALL_TASKS,
   TEAM_GET_ATTACHMENTS,
@@ -168,6 +169,7 @@ import {
   TEAM_GET_MESSAGES_PAGE,
   TEAM_GET_OPENCODE_RUNTIME_DELIVERY_STATUS,
   TEAM_GET_PROJECT_BRANCH,
+  TEAM_GET_QUEUED_USER_MESSAGES,
   TEAM_GET_SAVED_REQUEST,
   TEAM_GET_TASK,
   TEAM_GET_TASK_ACTIVITY,
@@ -313,6 +315,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  DiscardQueuedUserMessagesResult,
   ElectronAPI,
   ExecuteReviewMutationRequest,
   ExecuteReviewMutationResult,
@@ -332,6 +335,7 @@ import type {
   OpenCodeRuntimeDeliveryStatus,
   OpenCodeRuntimeStatus,
   ProjectBranchChangeEvent,
+  QueuedUserMessagesSnapshot,
   RejectResult,
   ReplaceMembersRequest,
   RestoreReviewHistoryRequest,
@@ -1069,6 +1073,25 @@ const electronAPI: ElectronAPI = {
     },
     stop: async (teamName: string) => {
       return invokeIpcWithResult<void>(TEAM_STOP, teamName);
+    },
+    getQueuedUserMessages: async (teamName: string, memberName: string) => {
+      return invokeIpcWithResult<QueuedUserMessagesSnapshot>(
+        TEAM_GET_QUEUED_USER_MESSAGES,
+        teamName,
+        memberName
+      );
+    },
+    discardQueuedUserMessages: async (
+      teamName: string,
+      memberName: string,
+      messageIds: readonly string[]
+    ) => {
+      return invokeIpcWithResult<DiscardQueuedUserMessagesResult>(
+        TEAM_DISCARD_QUEUED_USER_MESSAGES,
+        teamName,
+        memberName,
+        [...messageIds]
+      );
     },
     createConfig: async (request: TeamCreateConfigRequest) => {
       return invokeIpcWithResult<void>(TEAM_CREATE_CONFIG, request);

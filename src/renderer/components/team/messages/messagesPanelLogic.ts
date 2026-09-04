@@ -39,6 +39,25 @@ export function getPendingMemberDeliveryState(
   return isTeamAlive === false ? 'queued' : 'delivering';
 }
 
+/** Counts undelivered (read: false) user-sent messages addressed to a member. */
+export function countQueuedUserMessages(
+  messages: readonly InboxMessage[],
+  memberName: string
+): number {
+  const normalizedMemberName = normalizeMessageParticipant(memberName);
+  let count = 0;
+  for (const message of messages) {
+    if (
+      message.read === false &&
+      normalizeMessageParticipant(message.from) === 'user' &&
+      normalizeMessageParticipant(message.to) === normalizedMemberName
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 export function reconcilePendingRepliesByMember(
   pendingRepliesByMember: Record<string, number>,
   messages: InboxMessage[]

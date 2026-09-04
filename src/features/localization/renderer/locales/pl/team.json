@@ -72,7 +72,30 @@
       "externalTeam": "zespół zewnętrzny",
       "crossTeamAwaitingReply": "Wiadomość między zespołami wysłana, oczekiwanie na odpowiedź",
       "user": "użytkownik",
-      "awaitingApproval": "oczekiwanie na zatwierdzenie"
+      "awaitingApproval": "oczekiwanie na zatwierdzenie",
+      "discardQueued": {
+        "action": "Odrzuć oczekujące wiadomości",
+        "alreadyDelivered": "Nic nie zostało odrzucone: te wiadomości zostały już dostarczone do \"{{member}}\".",
+        "cancelLabel": "Anuluj",
+        "confirmLabel": "Odrzuć",
+        "count": "{{count}} w kolejce",
+        "count_few": "{{count}} w kolejce",
+        "count_many": "{{count}} w kolejce",
+        "count_one": "{{count}} w kolejce",
+        "count_other": "{{count}} w kolejce",
+        "failedFallbackMessage": "Wystąpił nieoczekiwany błąd",
+        "failedTitle": "Nie udało się odrzucić oczekujących wiadomości",
+        "message": "Odrzucić {{count}} oczekujących wiadomości dla \"{{member}}\"? Nie zostały jeszcze dostarczone i zostaną trwale usunięte. Wiadomości dostarczone oraz wiadomości między agentami pozostaną nienaruszone.",
+        "message_few": "Odrzucić {{count}} oczekujące wiadomości dla \"{{member}}\"? Nie zostały jeszcze dostarczone i zostaną trwale usunięte. Wiadomości dostarczone oraz wiadomości między agentami pozostaną nienaruszone.",
+        "message_many": "Odrzucić {{count}} oczekujących wiadomości dla \"{{member}}\"? Nie zostały jeszcze dostarczone i zostaną trwale usunięte. Wiadomości dostarczone oraz wiadomości między agentami pozostaną nienaruszone.",
+        "message_one": "Odrzucić {{count}} oczekującą wiadomość dla \"{{member}}\"? Nie została jeszcze dostarczona i zostanie trwale usunięta. Wiadomości dostarczone oraz wiadomości między agentami pozostaną nienaruszone.",
+        "message_other": "Odrzucić {{count}} oczekujących wiadomości dla \"{{member}}\"? Nie zostały jeszcze dostarczone i zostaną trwale usunięte. Wiadomości dostarczone oraz wiadomości między agentami pozostaną nienaruszone.",
+        "okLabel": "OK",
+        "remaining": "Odrzucono: {{discarded}}. Nadal w kolejce: {{remaining}}.",
+        "resultTitle": "Oczekujące wiadomości",
+        "title": "Odrzuć oczekujące wiadomości",
+        "tooltip": "Odrzuć oczekujące wiadomości tego członka"
+      }
     },
     "reply": {
       "replyingTo": "Odpowiedź do",
@@ -1793,6 +1816,9 @@
     "createAutomatically": "Jeśli katalog nie istnieje, zostanie utworzony automatycznie."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Członek zespołu nie dołączył w okresie karencji uruchomienia."
+    },
     "badges": {
       "worktree": "worktree"
     },

@@ -52,6 +52,7 @@ import type {
   ScheduleRun,
   UpdateSchedulePatch,
 } from './schedule';
+import type { SshAPI } from './ssh';
 import type {
   AddMemberRequest,
   AddTaskCommentRequest,
@@ -66,6 +67,7 @@ import type {
   CrossTeamMessage,
   CrossTeamSendRequest,
   CrossTeamSendResult,
+  DiscardQueuedUserMessagesResult,
   GlobalTask,
   KanbanColumnId,
   LeadActivitySnapshot,
@@ -76,6 +78,7 @@ import type {
   MessagesPage,
   OpenCodeRuntimeDeliveryStatus,
   ProjectBranchChangeEvent,
+  QueuedUserMessagesSnapshot,
   ReplaceMembersRequest,
   RetryFailedOpenCodeSecondaryLanesResult,
   SendMessageRequest,
@@ -403,92 +406,6 @@ export interface ContextInfo {
 }
 
 // =============================================================================
-// SSH API
-// =============================================================================
-
-/**
- * SSH connection state.
- */
-export type SshConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
-
-/**
- * SSH authentication method.
- */
-export type SshAuthMethod = 'password' | 'privateKey' | 'agent' | 'auto';
-
-/**
- * SSH config host entry resolved from ~/.ssh/config.
- */
-export interface SshConfigHostEntry {
-  alias: string;
-  hostName?: string;
-  user?: string;
-  port?: number;
-  hasIdentityFile: boolean;
-}
-
-/**
- * SSH connection configuration sent from renderer.
- */
-export interface SshConnectionConfig {
-  host: string;
-  port: number;
-  username: string;
-  authMethod: SshAuthMethod;
-  password?: string;
-  privateKeyPath?: string;
-}
-
-/**
- * Saved SSH connection profile (no password stored).
- */
-export interface SshConnectionProfile {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  username: string;
-  authMethod: SshAuthMethod;
-  privateKeyPath?: string;
-}
-
-/**
- * SSH connection status returned from main process.
- */
-export interface SshConnectionStatus {
-  state: SshConnectionState;
-  host: string | null;
-  error: string | null;
-  remoteProjectsPath: string | null;
-}
-
-/**
- * SSH API exposed via preload.
- */
-/**
- * Saved SSH connection config (no password).
- */
-export interface SshLastConnection {
-  host: string;
-  port: number;
-  username: string;
-  authMethod: SshAuthMethod;
-  privateKeyPath?: string;
-}
-
-export interface SshAPI {
-  connect: (config: SshConnectionConfig) => Promise<SshConnectionStatus>;
-  disconnect: () => Promise<SshConnectionStatus>;
-  getState: () => Promise<SshConnectionStatus>;
-  test: (config: SshConnectionConfig) => Promise<{ success: boolean; error?: string }>;
-  getConfigHosts: () => Promise<SshConfigHostEntry[]>;
-  resolveHost: (alias: string) => Promise<SshConfigHostEntry | null>;
-  saveLastConnection: (config: SshLastConnection) => Promise<void>;
-  getLastConnection: () => Promise<SshLastConnection | null>;
-  onStatus: (callback: (event: unknown, status: SshConnectionStatus) => void) => () => void;
-}
-
-// =============================================================================
 // HTTP Server API
 // =============================================================================
 
@@ -576,6 +493,16 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;
   stop: (teamName: string) => Promise<void>;
+  getQueuedUserMessages: (
+    teamName: string,
+    memberName: string
+  ) => Promise<QueuedUserMessagesSnapshot>;
+  /** Discards exactly the listed queued messages; rows that arrived since stay. */
+  discardQueuedUserMessages: (
+    teamName: string,
+    memberName: string,
+    messageIds: readonly string[]
+  ) => Promise<DiscardQueuedUserMessagesResult>;
   createConfig: (request: TeamCreateConfigRequest) => Promise<void>;
   getMemberLogs: (teamName: string, memberName: string) => Promise<MemberLogSummary[]>;
   getLogsForTask: (

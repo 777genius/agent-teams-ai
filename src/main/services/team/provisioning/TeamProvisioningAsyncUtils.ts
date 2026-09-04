@@ -5,10 +5,14 @@ export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Ensure `cwd` exists as a directory, creating it (recursively) if needed. */
+/** Ensure `cwd` already exists as a directory. Launch must never create a stale project path. */
 export async function ensureCwdExists(cwd: string): Promise<void> {
-  await fs.promises.mkdir(cwd, { recursive: true });
-  const stat = await fs.promises.stat(cwd);
+  const normalizedCwd = cwd.trim();
+  if (!normalizedCwd) {
+    throw new Error('cwd must be a directory');
+  }
+  const canonicalCwd = await fs.promises.realpath(normalizedCwd);
+  const stat = await fs.promises.stat(canonicalCwd);
   if (!stat.isDirectory()) {
     throw new Error('cwd must be a directory');
   }

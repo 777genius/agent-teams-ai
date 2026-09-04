@@ -1353,7 +1353,9 @@ describe('cliInstallerSlice', () => {
             .getState()
             .cliStatus?.providers.every((provider) => !provider.capabilities.teamLaunch)
         ).toBe(true);
-        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(
+          outcome === 'timeout' ? 2 : 1
+        );
       }
     );
 
@@ -1796,12 +1798,8 @@ describe('cliInstallerSlice', () => {
 
   describe('fetchCliProviderStatus', () => {
     it('fences an in-flight provider status across a backend catalog invalidation', async () => {
-      const oldBackendRequest = createDeferredValue<
-        CliInstallationStatus['providers'][number]
-      >();
-      const newBackendRequest = createDeferredValue<
-        CliInstallationStatus['providers'][number]
-      >();
+      const oldBackendRequest = createDeferredValue<CliInstallationStatus['providers'][number]>();
+      const newBackendRequest = createDeferredValue<CliInstallationStatus['providers'][number]>();
       const initialProvider = createMultimodelProvider({
         providerId: 'codex',
         displayName: 'Codex',
@@ -1853,9 +1851,7 @@ describe('cliInstallerSlice', () => {
       await expect(oldBackendRefresh).resolves.toBe(false);
 
       expect(
-        useStore
-          .getState()
-          .cliStatus?.providers.find((provider) => provider.providerId === 'codex')
+        useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex')
       ).toMatchObject({
         authenticated: false,
         capabilities: { teamLaunch: false },
@@ -1882,6 +1878,102 @@ describe('cliInstallerSlice', () => {
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledWith('opencode', {
         projectPath: '/tmp/local-model-project',
       });
+    });
+
+    it('rechecks one partial OpenCode status response before settling the provider', async () => {
+      const partialProvider = createMultimodelProvider({
+        providerId: 'opencode',
+        displayName: 'OpenCode',
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'pending',
+        statusCheckErrorCode: 'partial_response',
+        modelCatalogRefreshState: 'loading',
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+      });
+      const readyProvider = createReadyOpenCodeCatalogProvider('opencode/big-pickle');
+      useStore.setState({ cliStatus: createMultimodelStatus([partialProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockResolvedValueOnce(partialProvider)
+        .mockResolvedValueOnce(readyProvider);
+
+      await expect(
+        useStore.getState().fetchCliProviderStatus('opencode', {
+          projectPath: '/tmp/partial-opencode',
+        })
+      ).resolves.toBe(true);
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenNthCalledWith(1, 'opencode', {
+        projectPath: '/tmp/partial-opencode',
+      });
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenNthCalledWith(2, 'opencode', {
+        projectPath: '/tmp/partial-opencode',
+      });
+      expect(
+        useStore.getState().cliProviderStatusByScope[
+          getCliProviderStatusScopeKey('opencode', '/tmp/partial-opencode')
+        ]
+      ).toMatchObject({
+        statusCheckOutcome: 'authoritative',
+        modelCatalogRefreshState: 'ready',
+      });
+    });
+
+    it('rechecks one transient provider timeout before replacing connected status', async () => {
+      const connectedProvider = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        authenticated: true,
+        authMethod: 'claude.ai',
+        statusMessage: null,
+        models: ['haiku'],
+        backend: { kind: 'anthropic-api', label: 'Anthropic API' },
+      });
+      const timedOutProvider = createMultimodelProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        supported: false,
+        authenticated: false,
+        authMethod: null,
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode: 'timeout',
+        statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+        capabilities: {
+          teamLaunch: false,
+          oneShot: false,
+          extensions: createDefaultCliExtensionCapabilities(),
+        },
+      });
+      useStore.setState({ cliStatus: createMultimodelStatus([connectedProvider]) });
+      vi.mocked(api.cliInstaller.getProviderStatus)
+        .mockResolvedValueOnce(timedOutProvider)
+        .mockResolvedValueOnce(connectedProvider);
+
+      await expect(
+        useStore
+          .getState()
+          .fetchCliProviderStatus('anthropic', { checkReason: 'manual_refresh' })
+      ).resolves.toBe(true);
+
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+      expect(
+        useStore
+          .getState()
+          .cliStatus?.providers.find((provider) => provider.providerId === 'anthropic')
+      ).toMatchObject({
+        authenticated: true,
+        authMethod: 'claude.ai',
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+      });
+      expect(useStore.getState().cliStatusError).toBeNull();
     });
 
     it('reports a scoped OpenCode catalog loaded only after an authoritative ready response', async () => {

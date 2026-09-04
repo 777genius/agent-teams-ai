@@ -385,11 +385,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   });
   const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
-
-  // ---------------------------------------------------------------------------
-  // Launch-only state
-  // ---------------------------------------------------------------------------
-
   const [limitContext, setLimitContextRaw] = useState(
     () => localStorage.getItem('team:lastLimitContext') === 'true'
   );
@@ -420,14 +415,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [savedLaunchProviderBackendId, setSavedLaunchProviderBackendId] = useState<string | null>(
     null
   );
-
   useEffect(() => {
     if (!open) {
       setProviderSettingsProviderId(null);
       hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
     }
   }, [open]);
-
   // Advanced CLI section state (with localStorage persistence)
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(
     () =>
@@ -440,11 +433,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [customArgs, setCustomArgsRaw] = useState(
     () => localStorage.getItem(`team:lastCustomArgs:${effectiveTeamName}`) ?? ''
   );
-
-  // ---------------------------------------------------------------------------
-  // Schedule-only state
-  // ---------------------------------------------------------------------------
-
   const [schedLabel, setSchedLabel] = useState('');
   const [schedExpanded, setSchedExpanded] = useState(true);
   const [cronExpression, setCronExpression] = useState('0 9 * * 1-5');
@@ -506,6 +494,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           ),
     [membersDrafts, multimodelEnabled, selectedProviderId, syncModelsWithLead]
   );
+  const openCodeCatalogEnabled =
+    open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode');
   const {
     effectiveMemberDrafts,
     handleOpenCodeProviderScopedStatusChange,
@@ -514,10 +504,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     openCodeProviderScopedStatusBySourceId,
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
-    catalogEnabled:
-      open && isLaunchMode && multimodelEnabled && requestedMemberProviders.includes('opencode'),
-    passiveStatusPrefetchEnabled:
-      open && multimodelEnabled && requestedMemberProviders.includes('opencode'),
+    catalogEnabled: openCodeCatalogEnabled,
+    passiveStatusPrefetchEnabled: prepareState !== 'idle' && openCodeCatalogEnabled,
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members: membersDrafts,
     syncModelsWithLead,
@@ -1629,7 +1617,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   // Warm up CLI for the currently selected working directory (launch mode only).
   useEffect(() => {
-    if (!open || !isLaunchMode) {
+    if (!open || !isLaunchMode || prepareState === 'idle') {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
@@ -1857,6 +1845,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   }, [
     open,
     isLaunchMode,
+    prepareState,
     effectiveCwd,
     effectiveAnthropicRuntimeLimitContext,
     prepareProviderInvalidationEpochById,
@@ -2281,7 +2270,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setLocalError(modelValidationError);
       return;
     }
-    if (launchGuard.reject(isLaunchMode, () => setLocalError(t('launch.prepare.failed')))) return;
     if (prepareBlocksLaunch) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
@@ -2312,6 +2300,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         return;
       }
     }
+    if (isLaunchMode && prepareState === 'idle') {
+      setPrepareState('loading');
+      setPrepareMessage(t('launch.prepare.checkingProviders'));
+      return;
+    }
+    if (launchGuard.reject(isLaunchMode, () => setLocalError(t('launch.prepare.failed')))) return;
     setLocalError(null);
     setIsSubmitting(true);
 
@@ -2461,9 +2455,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const isDisabled = isLaunchMode
     ? isSubmitting ||
       launchInFlight ||
+      prepareState === 'loading' ||
       validationErrors.length > 0 ||
       !!modelValidationError ||
-      launchGuard.blocked(isLaunchMode) ||
+      (isLaunchMode && prepareState !== 'idle' && launchGuard.blocked(isLaunchMode)) ||
       hasInvalidLaunchMemberNames ||
       hasDuplicateLaunchMemberNames ||
       prepareBlocksLaunch ||
@@ -3155,7 +3150,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 readyStatusText="Ready"
                 className="mb-2"
               />
-              {effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading' ? (
+              {prepareState === 'loading' ? (
                 <>
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -3309,7 +3304,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             isLaunchMode={isLaunchMode}
             disabled={isDisabled}
             describedBy={
-              isLaunchMode && launchAuthorityBlocked && effectivePrepare.state === 'ready'
+              isLaunchMode &&
+              prepareState !== 'idle' &&
+              launchAuthorityBlocked &&
+              effectivePrepare.state === 'ready'
                 ? LAUNCH_AUTHORITY_BLOCKER_ID
                 : undefined
             }

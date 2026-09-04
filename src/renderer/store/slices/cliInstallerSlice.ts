@@ -1275,11 +1275,31 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
       }
 
       try {
-        const responseProviderStatus = verifyModels
-          ? await api.cliInstaller.verifyProviderModels(providerId)
-          : projectPath
-            ? await api.cliInstaller.getProviderStatus(providerId, { projectPath })
-            : await api.cliInstaller.getProviderStatus(providerId);
+        const requestProviderStatus = async (): Promise<CliProviderStatus | null> =>
+          verifyModels
+            ? api.cliInstaller.verifyProviderModels(providerId)
+            : projectPath
+              ? api.cliInstaller.getProviderStatus(providerId, { projectPath })
+              : api.cliInstaller.getProviderStatus(providerId);
+        let responseProviderStatus = await requestProviderStatus();
+        // Retry only bounded partial/timeout startup probes; intentional
+        // model-only fallbacks and other provider errors remain settled.
+        const shouldRetryOpenCodePartial =
+          providerId === 'opencode' &&
+          !verifyModels &&
+          responseProviderStatus?.statusCheckErrorCode === 'partial_response' &&
+          responseProviderStatus.statusCheckOutcome !== 'model_only';
+        const shouldRetryTransientTimeout =
+          !verifyModels &&
+          responseProviderStatus?.statusCheckOutcome === 'transient_error' &&
+          responseProviderStatus.statusCheckErrorCode === 'timeout';
+        const requestIsStillCurrent =
+          requestEpoch === cliStatusEpoch &&
+          requestGeneration === cliProviderStatusGeneration &&
+          cliProviderStatusActiveRequestIds.get(scopeKey) === requestId;
+        if (requestIsStillCurrent && (shouldRetryOpenCodePartial || shouldRetryTransientTimeout)) {
+          responseProviderStatus = await requestProviderStatus();
+        }
         const responseMatchesProvider = responseProviderStatus?.providerId === providerId;
         const providerStatus =
           responseMatchesProvider && responseProviderStatus

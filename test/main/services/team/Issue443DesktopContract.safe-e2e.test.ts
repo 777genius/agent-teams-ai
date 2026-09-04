@@ -224,7 +224,6 @@ describe('issue #443 Desktop real child-process wire contract', () => {
       '--json',
       '--provider',
       'opencode',
-      '--summary',
     ]);
     expect(traces[1].argv).toContain('deepinfra');
     assertProcessesExited(traces);

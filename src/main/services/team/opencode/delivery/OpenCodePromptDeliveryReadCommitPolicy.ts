@@ -1,3 +1,4 @@
+import { isOpenCodeReplyOptionalDeliveryContract } from './OpenCodeDeliveryReplyContract';
 import {
   isOpenCodePromptResponseStateResponded,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -182,6 +183,13 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
       hasAcceptedMemberWorkSyncReport: input.hasAcceptedMemberWorkSyncReport,
     });
   }
+  // Informational notices and teammate reports never require a visible reply:
+  // any assistant response fulfils them. Demanding progress proof or a
+  // semantically sufficient answer here re-prompted members for messages that
+  // asked nothing of them, and every retry cost another model turn.
+  if (isOpenCodeReplyOptionalDeliveryContract(input.ledgerRecord?.replyRecipient)) {
+    return true;
+  }
   if (state === 'responded_plain_text') {
     return isOpenCodePlainTextResponseReadCommitAllowed(input);
   }
@@ -313,7 +321,10 @@ export function getOpenCodeDeliveryPendingReason(input: {
   if (record?.lastReason === 'visible_reply_ack_only_still_requires_answer') {
     return 'visible_reply_ack_only_still_requires_answer';
   }
-  if (state === 'responded_non_visible_tool' || state === 'responded_tool_call') {
+  if (
+    (state === 'responded_non_visible_tool' || state === 'responded_tool_call') &&
+    !isOpenCodeReplyOptionalDeliveryContract(record?.replyRecipient)
+  ) {
     const hasTaskRefs = (input.taskRefs ?? []).length > 0;
     if (!hasTaskRefs && input.actionMode !== 'do' && input.actionMode !== 'delegate') {
       return 'visible_reply_still_required';

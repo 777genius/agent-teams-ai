@@ -72,7 +72,30 @@
       "externalTeam": "外部团队",
       "crossTeamAwaitingReply": "跨团队消息已发送，等待回复",
       "user": "用户",
-      "awaitingApproval": "等待批准"
+      "awaitingApproval": "等待批准",
+      "discardQueued": {
+        "action": "丢弃排队中的消息",
+        "alreadyDelivered": "未丢弃任何内容：这些消息已经送达“{{member}}”。",
+        "cancelLabel": "取消",
+        "confirmLabel": "丢弃",
+        "count": "排队 {{count}} 条",
+        "count_few": "排队 {{count}} 条",
+        "count_many": "排队 {{count}} 条",
+        "count_one": "排队 {{count}} 条",
+        "count_other": "排队 {{count}} 条",
+        "failedFallbackMessage": "发生意外错误",
+        "failedTitle": "无法丢弃排队中的消息",
+        "message": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_few": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_many": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_one": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "message_other": "要丢弃发给“{{member}}”的 {{count}} 条排队消息吗？它们尚未送达，将被永久删除。已送达的消息和代理之间的消息不受影响。",
+        "okLabel": "确定",
+        "remaining": "已丢弃 {{discarded}} 条。仍在排队：{{remaining}} 条。",
+        "resultTitle": "排队中的消息",
+        "title": "丢弃排队中的消息",
+        "tooltip": "丢弃该成员排队中的消息"
+      }
     },
     "reply": {
       "replyingTo": "正在回复",
@@ -1793,6 +1816,9 @@
     "createAutomatically": "如果该目录不存在，则会自动创建。"
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "队友未在启动宽限时间内加入。"
+    },
     "badges": {
       "worktree": "工作树"
     },

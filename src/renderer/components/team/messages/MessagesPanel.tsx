@@ -87,7 +87,13 @@ import type { TimelineItem } from '../activity/LeadThoughtsGroup';
 import type { ActionMode } from './ActionModeSelector';
 import type { MessagesFilterState } from './MessagesFilterPopover';
 import type { TeamMessagesPanelMode } from '@renderer/types/teamMessagesPanelMode';
-import type { InboxMessage, ResolvedTeamMember, TaskRef, TeamTaskWithKanban } from '@shared/types';
+import type {
+  DiscardQueuedUserMessagesResult,
+  InboxMessage,
+  ResolvedTeamMember,
+  TaskRef,
+  TeamTaskWithKanban,
+} from '@shared/types';
 
 interface TimeWindow {
   start: number;
@@ -343,6 +349,30 @@ export const MessagesPanel = memo(function MessagesPanel({
   const handleLoadOlderMessagesClick = useCallback(() => {
     void loadOlderMessages();
   }, [loadOlderMessages]);
+
+  const handleQueuedDiscarded = useCallback(
+    (memberName: string, result: DiscardQueuedUserMessagesResult) => {
+      // Only drop the pending entry when the member's queue is empty and this
+      // discard is what emptied it. A discard that removed nothing means the
+      // runtime took the message first, so the entry has to stay and become
+      // "delivered" on the next head refresh. A discard that removed rows while
+      // others were still queued has to keep it too: nothing recreates the
+      // entry - reconcilePendingRepliesByMember only ever removes, and the head
+      // refresh below reloads messages, not this map - so dropping it would
+      // hide the rows that survived until the user sends the member something
+      // new.
+      if (result.discarded > 0 && result.remainingQueued === 0) {
+        onPendingReplyChange((prev) => {
+          if (!(memberName in prev)) return prev;
+          const next = { ...prev };
+          delete next[memberName];
+          return next;
+        });
+      }
+      void refreshTeamMessagesHead(teamName);
+    },
+    [onPendingReplyChange, refreshTeamMessagesHead, teamName]
+  );
 
   const loadingOlderMessages = messagesLoadingOlder;
   const hasMore = messagesHasMore;
@@ -1074,6 +1104,8 @@ export const MessagesPanel = memo(function MessagesPanel({
       messages={effectiveMessages}
       isTeamAlive={isTeamAlive}
       pendingRepliesByMember={pendingRepliesByMember}
+      teamName={teamName}
+      onQueuedDiscarded={handleQueuedDiscarded}
       layout="flow"
       position="inline"
       onMemberClick={onMemberClick}
@@ -1088,6 +1120,8 @@ export const MessagesPanel = memo(function MessagesPanel({
       messages={effectiveMessages}
       isTeamAlive={isTeamAlive}
       pendingRepliesByMember={pendingRepliesByMember}
+      teamName={teamName}
+      onQueuedDiscarded={handleQueuedDiscarded}
       layout="flow"
       position="sidebar"
       onMemberClick={onMemberClick}

@@ -295,6 +295,18 @@ describe('providerConnectionUi', () => {
       })
     ).toBe(false);
     expect(shouldShowLoadedProviderModels(provider, true)).toBe(false);
+    const passiveProvider: CliProviderStatus = {
+      ...provider,
+      supported: false,
+      authenticated: false,
+      authMethod: null,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      statusCheckErrorCode: 'partial_response',
+      statusMessage: 'OpenCode detected (passive)',
+      capabilities: { ...provider.capabilities, teamLaunch: false },
+    };
+    expect(shouldShowLoadedProviderModels(passiveProvider, true)).toBe(true);
     expect(
       shouldShowLoadedProviderModels(
         {

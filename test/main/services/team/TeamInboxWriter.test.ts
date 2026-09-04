@@ -659,6 +659,39 @@ describe('TeamInboxWriter', () => {
     expect(persisted[0]?.text).toBe('Reply with stable identity');
   });
 
+  it('fails closed when a repeated explicit runtime-delivery messageId carries genuinely different text', async () => {
+    // Two messages sharing messageId + relayOfMessageId are only the same
+    // reply if their content agrees too. A second, substantively different
+    // reply - e.g. a corrected answer from a retried read-commit-policy pass -
+    // must raise the collision, not be silently dropped in favor of the
+    // first (possibly stale or wrong) text.
+    await writer.sendMessage('my-team', {
+      member: 'user',
+      from: 'alice',
+      to: 'user',
+      text: 'The tests are passing',
+      source: 'runtime_delivery',
+      relayOfMessageId: 'inbound-2',
+      messageId: 'runtime-reply-2',
+    });
+
+    await expect(
+      writer.sendMessage('my-team', {
+        member: 'user',
+        from: 'alice',
+        to: 'user',
+        text: 'The tests are failing, I was wrong',
+        source: 'runtime_delivery',
+        relayOfMessageId: 'inbound-2',
+        messageId: 'runtime-reply-2',
+      })
+    ).rejects.toThrow('Inbox messageId collision for immutable payload: runtime-reply-2');
+
+    const userInboxPath = '/mock/teams/my-team/inboxes/user.json';
+    const persisted = JSON.parse(hoisted.files.get(userInboxPath) ?? '[]') as { text: string }[];
+    expect(persisted).toEqual([expect.objectContaining({ text: 'The tests are passing' })]);
+  });
+
   it('merges taskRefs when deduplicating repeated runtime delivery replies', async () => {
     const taskRef = { taskId: 'task-1', displayId: 'abcd1234', teamName: 'my-team' };
     const first = await writer.sendMessage('my-team', {
@@ -810,4 +843,49 @@ describe('TeamInboxWriter', () => {
     expect(persisted).toHaveLength(1);
     expect(persisted[0]).not.toHaveProperty('source');
   });
+
+  it.each([{ lostOwnership: true }, { lostOwnership: false }])(
+    'evaluates shouldStillWrite under the inbox lock (ownership lost: $lostOwnership)',
+    async ({ lostOwnership }) => {
+      let releaseHolder: () => void = () => undefined;
+      let holderInLock: () => void = () => undefined;
+      const holderReachedLock = new Promise<void>((resolve) => {
+        holderInLock = resolve;
+      });
+      const holderRelease = new Promise<void>((resolve) => {
+        releaseHolder = resolve;
+      });
+      // The first writer keeps the inbox lock while the fenced writer queues
+      // behind it, which is the window a pre-lock check cannot see.
+      hoisted.readFile.mockImplementationOnce(async () => {
+        holderInLock();
+        await holderRelease;
+        const error = new Error('ENOENT') as NodeJS.ErrnoException;
+        error.code = 'ENOENT';
+        throw error;
+      });
+      let stillCurrent = true;
+
+      const holder = writer.sendMessage('my-team', { member: 'alice', text: 'holder' });
+      await holderReachedLock;
+      const fenced = writer.sendMessage(
+        'my-team',
+        { member: 'alice', text: 'launch prompt' },
+        { shouldStillWrite: () => stillCurrent }
+      );
+      stillCurrent = !lostOwnership;
+      releaseHolder();
+
+      await holder;
+      const result = await fenced;
+      const persisted = JSON.parse(hoisted.files.get(inboxPath) ?? '[]') as Record<
+        string,
+        unknown
+      >[];
+      expect(result.deliveredToInbox).toBe(!lostOwnership);
+      expect(persisted.map((message) => message.text)).toEqual(
+        lostOwnership ? ['holder'] : ['holder', 'launch prompt']
+      );
+    }
+  );
 });

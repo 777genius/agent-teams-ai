@@ -1,3 +1,4 @@
+import { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON } from '@shared/utils/teamLaunchFailureReason';
 import { describe, expect, it, vi } from 'vitest';
 
 import { MEMBER_BOOTSTRAP_STALL_MS } from '../TeamProvisioningOpenCodeRuntimeEvidencePolicy';
@@ -284,7 +285,7 @@ describe('reevaluateMemberLaunchStatus', () => {
       targetRun,
       'Worker',
       'error',
-      'Teammate did not join within the launch grace window.'
+      MEMBER_LAUNCH_GRACE_TIMEOUT_REASON
     );
   });
 });

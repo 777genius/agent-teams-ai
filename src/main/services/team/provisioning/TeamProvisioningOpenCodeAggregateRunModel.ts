@@ -13,6 +13,8 @@ import type {
   TeamRuntimeLaunchInput,
   TeamRuntimeLaunchResult,
 } from '../runtime';
+import type { OpenCodeAggregateLaunchPromptPorts } from './TeamProvisioningOpenCodeAggregateLaunchPrompt';
+import type { OpenCodeSharedRuntimeFailuresByProject } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import type {
   PersistedTeamLaunchSnapshot,
   TeamCreateRequest,
@@ -32,7 +34,7 @@ export interface CreateOpenCodeAggregateProvisioningRunParams {
 }
 
 export type OpenCodeAggregateProvisioningRun = ProvisioningRun & {
-  mixedSecondarySharedRuntimeFailuresByProject: Map<string, string>;
+  mixedSecondarySharedRuntimeFailuresByProject: OpenCodeSharedRuntimeFailuresByProject;
 };
 
 export function createOpenCodeAggregateProvisioningRun(
@@ -71,7 +73,7 @@ export function createOpenCodeAggregateProvisioningRun(
     effectiveMembers: params.lanePlan.primaryMembers,
     launchIdentity: null,
     mixedSecondaryLanes: createMixedSecondaryLaneStates(params.lanePlan),
-    mixedSecondarySharedRuntimeFailuresByProject: new Map<string, string>(),
+    mixedSecondarySharedRuntimeFailuresByProject: new Map(),
     lastLogProgressAt: 0,
     lastDataReceivedAt: 0,
     lastStdoutReceivedAt: 0,
@@ -172,6 +174,13 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktr
   randomUUID(): string;
   nowMs(): number;
   nowIso(): string;
+  /**
+   * Sink for a cause the launch flow answers with a safe default instead of
+   * propagating. Rollback reports "could not confirm every stop" to the user and
+   * a boolean to its caller, so without this the concrete stop or storage error
+   * behind that verdict is lost.
+   */
+  logError(message: string): void;
   setProvisioningRun(teamName: string, runId: string): void;
   getRun(runId: string): OpenCodeAggregateProvisioningRun | undefined;
   setRuntimeAdapterProgress(
@@ -237,6 +246,7 @@ export interface OpenCodeWorktreeRootAggregateLaunchPorts extends OpenCodeWorktr
   }): Promise<boolean>;
   setSecondaryRuntimeRun(input: SecondaryRuntimeRunEntry & { teamName: string }): void;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
+  deliverOpenCodeLaunchPromptToLead: OpenCodeAggregateLaunchPromptPorts['deliverOpenCodeLaunchPromptToLead'];
 }
 
 export interface RunOpenCodeWorktreeRootAggregateLaunchInput {

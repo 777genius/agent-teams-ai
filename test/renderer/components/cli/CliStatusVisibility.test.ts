@@ -84,6 +84,9 @@ let terminalModalProps: {
   onExit?: (exitCode: number) => void;
 } | null = null;
 let quickConnectConnectedCount = 0;
+let openCodeCatalogHookInputs: {
+  refreshRevision?: number;
+}[] = [];
 const codexAccountHookState = {
   snapshot: null as CodexAccountSnapshotDto | null,
   loading: false,
@@ -116,6 +119,12 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
     await importOriginal<typeof import('@features/runtime-provider-management/renderer')>();
   return {
     ...actual,
+    useOpenCodeProviderModelCatalog: (
+      input: Parameters<typeof actual.useOpenCodeProviderModelCatalog>[0]
+    ) => {
+      openCodeCatalogHookInputs.push(input);
+      return actual.useOpenCodeProviderModelCatalog(input);
+    },
     RuntimeProviderQuickConnect: (props: {
       onOpenCodeProviderAction?: (providerId: string, action: 'connect' | 'select') => void;
       onConnectedCountChange?: (count: number) => void;
@@ -432,6 +441,7 @@ describe('CLI status visibility during completed install state', () => {
     runtimeProviderOnboardingDialogProps = null;
     terminalModalProps = null;
     quickConnectConnectedCount = 0;
+    openCodeCatalogHookInputs = [];
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
     codexAccountHookState.rateLimitsLoading = false;
@@ -1659,9 +1669,16 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('shows OpenCode model loading instead of the summary-only big-pickle badge', async () => {
+  it('shows available models without endless loading for a completed OpenCode passive summary', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/app-data/runtimes/opencode/opencode',
+      version: '1.17.18',
+      source: 'app-managed',
+      state: 'ready',
+    };
     storeState.cliStatus = createInstalledCliStatus({
       flavor: 'agent_teams_orchestrator',
       displayName: 'Multimodel runtime',
@@ -1673,15 +1690,17 @@ describe('CLI status visibility during completed install state', () => {
         {
           providerId: 'opencode',
           displayName: 'OpenCode (200+ models)',
-          supported: true,
-          authenticated: true,
-          authMethod: 'opencode_managed',
-          verificationState: 'verified',
-          statusMessage: null,
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'model_only',
+          statusCheckErrorCode: 'runtime_missing',
+          statusMessage: 'OpenCode detected (passive)',
           models: ['opencode/big-pickle'],
           canLoginFromUi: false,
           capabilities: {
-            teamLaunch: true,
+            teamLaunch: false,
             oneShot: false,
           },
           backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
@@ -1706,8 +1725,14 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Loading models...');
-    expect(host.textContent).not.toContain('big-pickle');
+    expect(host.textContent).toContain('Models available');
+    expect(host.textContent).toContain('Runtime: OpenCode CLI');
+    expect(host.textContent).not.toContain('Loading models...');
+    expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+    expect(host.textContent).not.toContain('OpenCode detected (passive)');
+    expect(host.textContent).toContain('big-pickle');
+    expect(openCodeCatalogHookInputs).not.toHaveLength(0);
+    expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBeUndefined();
 
     await act(async () => {
       root.unmount();

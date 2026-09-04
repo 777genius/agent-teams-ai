@@ -6,6 +6,15 @@
  * member runtime advisory carried on the team view snapshot. This module only
  * merges those already-projected snapshots per member; the classification work
  * stays in the services that produce them.
+ *
+ * This route performs ZERO writes: no launch-state write or clear, no
+ * bootstrap-state clear, no task-activity repair or resume, no run mutation, no
+ * audit-budget consumption, no snapshot-cache write. External monitors poll it
+ * during a launch, and the snapshot getters it used to call were reads that
+ * wrote - they mutated the very run the launch commits from. Hence the
+ * `...ReadOnly` names on the `TeamHttpMemberDiagnosticsApi` contract this route
+ * calls: they carry the guarantee to the boundary so a later refactor cannot
+ * quietly re-point them at the mutating variants.
  */
 
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
@@ -29,6 +38,7 @@ import type {
   TeamAgentRuntimeDiagnosticSeverity,
   TeamAgentRuntimeEntry,
   TeamAgentRuntimeLivenessKind,
+  TeamAgentRuntimeLoadScope,
   TeamAgentRuntimeSnapshot,
   TeamGetDataOptions,
   TeamMemberSnapshot,
@@ -72,6 +82,8 @@ export interface TeamMemberDiagnosticsEntry {
   runtimeAdvisoryMessage?: string;
   rssBytes?: number;
   cpuPercent?: number;
+  /** Whether the sample above covers this member alone or a shared runtime host. */
+  runtimeLoadScope?: TeamAgentRuntimeLoadScope;
   pid?: number;
   runtimePid?: number;
   runtimeSessionId?: string;
@@ -242,6 +254,7 @@ function buildEntry(input: {
     runtimeAdvisoryMessage: boundedDiagnosticString(advisory?.message),
     rssBytes: runtimeEntry?.rssBytes,
     cpuPercent: runtimeEntry?.cpuPercent,
+    runtimeLoadScope: runtimeEntry?.runtimeLoadScope,
     pid: runtimeEntry?.pid,
     runtimePid: runtimeEntry?.runtimePid,
     runtimeSessionId: boundedDiagnosticString(runtimeEntry?.runtimeSessionId),
@@ -352,11 +365,18 @@ export function registerTeamMemberDiagnosticsRoute(
             'Team member diagnostics are not available in this mode'
           );
         }
-        const [spawnSnapshot, runtimeSnapshot, memberSnapshots] = await Promise.all([
-          diagnosticsApi.getMemberSpawnStatuses(teamName),
-          diagnosticsApi.getTeamAgentRuntimeSnapshot(teamName),
+        // One status projection answers the whole response. The runtime
+        // snapshot builds its own unless it is given one, and the read-only
+        // projection neither coalesces nor caches, so calling both in parallel
+        // ran two of them - twice the work, and two views that a launch
+        // transition between them could disagree about.
+        const [spawnSnapshot, memberSnapshots] = await Promise.all([
+          diagnosticsApi.getMemberSpawnStatusesReadOnly(teamName),
           readMemberSnapshots(services.teamDataApi, teamName, deps.isTeamNotFoundError),
         ]);
+        const runtimeSnapshot = await diagnosticsApi.getTeamAgentRuntimeSnapshotReadOnly(teamName, {
+          memberSpawnStatuses: spawnSnapshot,
+        });
         return reply.send(
           buildTeamMemberDiagnosticsResponse({
             teamName,

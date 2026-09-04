@@ -118,6 +118,58 @@ function createPorts(
   return merged;
 }
 
+const aliceOnlyConfig = {
+  name: 'Team',
+  members: [{ name: 'Alice', providerId: 'opencode' }],
+} as TeamConfig;
+
+/**
+ * Committed bootstrap evidence is read per lane, so a lane the heartbeat does not
+ * belong to reads back as "nothing committed here".
+ */
+function createCommittedEvidencePortsFactory(options: {
+  teamsBasePath: string;
+  committedLaneId: string;
+  committedRunId: string;
+  memberName?: string;
+  runtimeSessionId?: string;
+}): OpenCodeRuntimeCheckinPorts<TestRun>['createOpenCodeRuntimeBootstrapEvidencePorts'] {
+  const memberName = options.memberName ?? 'Alice';
+  const runtimeSessionId = options.runtimeSessionId ?? 'session-1';
+  return vi.fn(() => ({
+    ...createDefaultOpenCodeRuntimeBootstrapEvidencePorts({
+      teamsBasePath: options.teamsBasePath,
+    }),
+    readCommittedBootstrapSessionEvidence: vi.fn(async (input: { laneId: string }) =>
+      input.laneId === options.committedLaneId
+        ? {
+            state: 'healthy' as const,
+            committed: true,
+            activeRunId: options.committedRunId,
+            sessions: [
+              {
+                id: runtimeSessionId,
+                teamName: 'Team',
+                memberName,
+                laneId: options.committedLaneId,
+                runId: options.committedRunId,
+                observedAt,
+                source: 'runtime_bootstrap_checkin' as const,
+              },
+            ],
+            diagnostics: [],
+          }
+        : {
+            state: 'healthy' as const,
+            committed: false,
+            activeRunId: null,
+            sessions: [],
+            diagnostics: [],
+          }
+    ),
+  }));
+}
+
 describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
   it('resolves bootstrap check-in idempotency from the launch state port', async () => {
     const snapshot = createPersistedLaunchSnapshot({
@@ -497,6 +549,233 @@ describe('TeamProvisioningOpenCodeRuntimeCheckin', () => {
       expect(writeLaunchState).not.toHaveBeenCalled();
       expect(ports.emitMemberSpawnChange).not.toHaveBeenCalled();
       expect(ports.emitRuntimeMemberSpawnChange).not.toHaveBeenCalled();
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('self-heals a heartbeat missing from the launch snapshot when committed bootstrap evidence matches', async () => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-heartbeat-heal-');
+    // Snapshot was rewritten from a roster that no longer carries Alice at all.
+    const rosterGapSnapshot = createPersistedLaunchSnapshot({
+      teamName: 'Team',
+      expectedMembers: ['Bob'],
+      launchPhase: 'active',
+      members: {
+        Bob: {
+          name: 'Bob',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          runtimeRunId: 'run-1',
+          runtimeSessionId: 'session-bob',
+          lastEvaluatedAt: observedAt,
+        },
+      },
+      updatedAt: observedAt,
+    });
+    const writeLaunchState = vi.fn(
+      async (_teamName: string, _snapshot: PersistedTeamLaunchSnapshot) => undefined
+    );
+    const ports = createPorts({
+      teamsBasePath,
+      readLaunchState: vi.fn(async () => rosterGapSnapshot),
+      readConfigForStrictDecision: vi.fn(async () => aliceOnlyConfig),
+      writeLaunchState,
+      createOpenCodeRuntimeBootstrapEvidencePorts: createCommittedEvidencePortsFactory({
+        teamsBasePath,
+        committedLaneId: 'secondary:opencode:alice',
+        committedRunId: 'run-1',
+      }),
+    });
+
+    try {
+      await expect(
+        recordOpenCodeRuntimeHeartbeat(
+          {
+            teamName: 'Team',
+            runId: 'run-1',
+            memberName: 'Alice',
+            runtimeSessionId: 'session-1',
+            observedAt,
+          },
+          ports
+        )
+      ).resolves.toMatchObject({
+        ok: true,
+        state: 'accepted',
+        memberName: 'Alice',
+        runtimeSessionId: 'session-1',
+      });
+
+      const snapshot = writeLaunchState.mock.calls.at(-1)?.[1];
+      expect(snapshot?.members.Alice).toMatchObject({
+        launchState: 'confirmed_alive',
+        runtimeRunId: 'run-1',
+        runtimeSessionId: 'session-1',
+        providerId: 'opencode',
+        laneId: 'secondary:opencode:alice',
+        laneKind: 'secondary',
+        laneOwnerProviderId: 'opencode',
+      });
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('still rejects a snapshot-less heartbeat without committed bootstrap evidence', async () => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-heartbeat-no-evidence-');
+    const writeLaunchState = vi.fn(async () => undefined);
+    const ports = createPorts({
+      teamsBasePath,
+      readLaunchState: vi.fn(async () => null),
+      readConfigForStrictDecision: vi.fn(async () => aliceOnlyConfig),
+      writeLaunchState,
+      createOpenCodeRuntimeBootstrapEvidencePorts: vi.fn(() =>
+        createDefaultOpenCodeRuntimeBootstrapEvidencePorts({ teamsBasePath })
+      ),
+    });
+
+    try {
+      await expect(
+        recordOpenCodeRuntimeHeartbeat(
+          {
+            teamName: 'Team',
+            runId: 'run-1',
+            memberName: 'Alice',
+            runtimeSessionId: 'session-1',
+            observedAt,
+          },
+          ports
+        )
+      ).rejects.toThrow('member runtime identity is unavailable');
+      expect(writeLaunchState).not.toHaveBeenCalled();
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('still rejects a snapshot-less heartbeat when the committed evidence belongs to another lane', async () => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-heartbeat-other-lane-');
+    const writeLaunchState = vi.fn(async () => undefined);
+    const ports = createPorts({
+      teamsBasePath,
+      readLaunchState: vi.fn(async () => null),
+      readConfigForStrictDecision: vi.fn(async () => aliceOnlyConfig),
+      writeLaunchState,
+      createOpenCodeRuntimeBootstrapEvidencePorts: createCommittedEvidencePortsFactory({
+        teamsBasePath,
+        committedLaneId: 'secondary:opencode:carol',
+        committedRunId: 'run-1',
+      }),
+    });
+
+    try {
+      await expect(
+        recordOpenCodeRuntimeHeartbeat(
+          {
+            teamName: 'Team',
+            runId: 'run-1',
+            memberName: 'Alice',
+            runtimeSessionId: 'session-1',
+            observedAt,
+          },
+          ports
+        )
+      ).rejects.toThrow('member runtime identity is unavailable');
+      expect(writeLaunchState).not.toHaveBeenCalled();
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('still rejects a snapshot-less heartbeat when the committed evidence belongs to another run', async () => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-heartbeat-other-run-');
+    const writeLaunchState = vi.fn(async () => undefined);
+    const ports = createPorts({
+      teamsBasePath,
+      readLaunchState: vi.fn(async () => null),
+      readConfigForStrictDecision: vi.fn(async () => aliceOnlyConfig),
+      writeLaunchState,
+      createOpenCodeRuntimeBootstrapEvidencePorts: createCommittedEvidencePortsFactory({
+        teamsBasePath,
+        committedLaneId: 'secondary:opencode:alice',
+        committedRunId: 'run-0',
+      }),
+    });
+
+    try {
+      await expect(
+        recordOpenCodeRuntimeHeartbeat(
+          {
+            teamName: 'Team',
+            runId: 'run-1',
+            memberName: 'Alice',
+            runtimeSessionId: 'session-1',
+            observedAt,
+          },
+          ports
+        )
+      ).rejects.toThrow('member runtime identity is unavailable');
+      expect(writeLaunchState).not.toHaveBeenCalled();
+    } finally {
+      rmSync(teamsBasePath, { recursive: true, force: true });
+    }
+  });
+
+  it('never reads bootstrap evidence for a heartbeat whose persisted identity already matches', async () => {
+    const teamsBasePath = createSafeTempDir('opencode-runtime-heartbeat-no-heal-');
+    const matchingSnapshot = createPersistedLaunchSnapshot({
+      teamName: 'Team',
+      expectedMembers: ['Alice'],
+      launchPhase: 'active',
+      members: {
+        Alice: {
+          name: 'Alice',
+          launchState: 'confirmed_alive',
+          agentToolAccepted: true,
+          runtimeAlive: true,
+          bootstrapConfirmed: true,
+          hardFailure: false,
+          providerId: 'opencode',
+          laneId: 'secondary:opencode:alice',
+          laneKind: 'secondary',
+          laneOwnerProviderId: 'opencode',
+          runtimeRunId: 'run-1',
+          runtimeSessionId: 'session-1',
+          lastEvaluatedAt: observedAt,
+        },
+      },
+      updatedAt: observedAt,
+    });
+    const createEvidencePorts = createCommittedEvidencePortsFactory({
+      teamsBasePath,
+      committedLaneId: 'secondary:opencode:alice',
+      committedRunId: 'run-1',
+    });
+    const ports = createPorts({
+      teamsBasePath,
+      readLaunchState: vi.fn(async () => matchingSnapshot),
+      readConfigForStrictDecision: vi.fn(async () => aliceOnlyConfig),
+      createOpenCodeRuntimeBootstrapEvidencePorts: createEvidencePorts,
+    });
+
+    try {
+      await expect(
+        recordOpenCodeRuntimeHeartbeat(
+          {
+            teamName: 'Team',
+            runId: 'run-1',
+            memberName: 'Alice',
+            runtimeSessionId: 'session-1',
+            observedAt,
+          },
+          ports
+        )
+      ).resolves.toMatchObject({ ok: true, state: 'accepted' });
+      expect(createEvidencePorts).toHaveBeenCalledTimes(0);
     } finally {
       rmSync(teamsBasePath, { recursive: true, force: true });
     }

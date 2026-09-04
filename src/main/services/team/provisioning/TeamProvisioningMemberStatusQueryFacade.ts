@@ -13,6 +13,7 @@ import {
 import { type BootstrapTranscriptOutcome } from './TeamProvisioningBootstrapTranscript';
 import { buildLaunchDiagnosticsFromRun } from './TeamProvisioningLaunchDiagnostics';
 import { getMemberSpawnStatusesSnapshot } from './TeamProvisioningMemberSpawnSnapshots';
+import { getMemberSpawnStatusesSnapshotReadOnly } from './TeamProvisioningMemberSpawnStatusesReadOnly';
 import {
   createInitialMemberSpawnStatusEntry,
   MEMBER_LAUNCH_GRACE_MS,
@@ -57,7 +58,7 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
   protected abstract readonly membersMetaStore: Pick<TeamMembersMetaStore, 'getMembers'>;
   protected abstract readonly runtimeSnapshotFacade: Pick<
     TeamProvisioningRuntimeSnapshotFacade,
-    'getTeamAgentRuntimeSnapshot'
+    'getTeamAgentRuntimeSnapshot' | 'getTeamAgentRuntimeSnapshotReadOnly'
   >;
   protected abstract readonly reevaluateMemberLaunchStatusBoundary: TeamProvisioningReevaluateMemberLaunchStatusBoundary<TRun>;
   protected abstract readonly pendingTimeouts: Map<string, NodeJS.Timeout>;
@@ -217,8 +218,39 @@ export abstract class TeamProvisioningMemberStatusQueryFacade<
     return getMemberSpawnStatusesSnapshot(teamName, this.createMemberSpawnStatusesSnapshotPorts());
   }
 
+  /**
+   * The write-free projection, for callers that must not disturb a launch (the
+   * HTTP diagnostics route an external monitor polls).
+   *
+   * The IPC/UI path deliberately keeps the writing variant: the persisted-launch
+   * reconcile, the task-activity repair and the expired-launch-grace
+   * persistence only ever run from it, and the renderer already backs its poll
+   * off during launch. Those maintenance jobs riding a getter is why the two
+   * variants have to exist at all; moving them onto their own scheduler would
+   * let this one collapse back into `getMemberSpawnStatuses`.
+   */
+  async getMemberSpawnStatusesReadOnly(teamName: string): Promise<MemberSpawnStatusesSnapshot> {
+    return getMemberSpawnStatusesSnapshotReadOnly(
+      teamName,
+      this.createMemberSpawnStatusesSnapshotPorts()
+    );
+  }
+
   async getTeamAgentRuntimeSnapshot(teamName: string): Promise<TeamAgentRuntimeSnapshot> {
     return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshot(teamName);
+  }
+
+  /**
+   * `memberSpawnStatuses` lets a caller that already read
+   * `getMemberSpawnStatusesReadOnly` hand that projection over instead of
+   * paying for a second one - the HTTP diagnostics route reports both in one
+   * response, and only one projection can answer for both halves of it.
+   */
+  async getTeamAgentRuntimeSnapshotReadOnly(
+    teamName: string,
+    options?: { memberSpawnStatuses?: MemberSpawnStatusesSnapshot }
+  ): Promise<TeamAgentRuntimeSnapshot> {
+    return this.runtimeSnapshotFacade.getTeamAgentRuntimeSnapshotReadOnly(teamName, options);
   }
 
   protected getMemberLaunchGraceKey(run: TRun, memberName: string): string {

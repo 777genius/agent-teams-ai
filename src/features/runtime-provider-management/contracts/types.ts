@@ -681,6 +681,12 @@ export interface RuntimeLocalProviderListEntryDto {
   baseUrl: string;
   hasConfiguredApiKey?: boolean;
   configuredModelIds: readonly string[];
+  /**
+   * `options.reasoningEffort` per configured model id, when set in the config.
+   * The coordination probe mirrors it so it exercises the mode OpenCode runs
+   * the model in (a thinking model behaves differently with thinking off).
+   */
+  configuredModelReasoningEffort?: Readonly<Record<string, string>>;
   defaultModelId: string | null;
   /** Selected lightweight-task model when small_model points at this provider. */
   smallModelId?: string | null;
