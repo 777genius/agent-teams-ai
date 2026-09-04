@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import type { WorkspaceTrustProjectStatusResult } from '../../contracts';
+import type { WorkspaceTrustProjectStatusResult } from '@features/workspace-trust/contracts';
 import type { WorkspaceTrustDisplayStatus } from '../view-models/workspaceTrustLaunchNotice';
 
 export type { WorkspaceTrustDisplayStatus } from '../view-models/workspaceTrustLaunchNotice';

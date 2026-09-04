@@ -835,7 +835,6 @@ describe('LaunchTeamDialog', () => {
       ).toBe(false);
       expect(submit).toHaveBeenCalledTimes(1);
       await act(async () => root.unmount());
-      now.mockRestore();
     }
   );
 
@@ -914,6 +913,7 @@ describe('LaunchTeamDialog', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     document.body.innerHTML = '';
     localStorage.clear();
     vi.useRealTimers();
