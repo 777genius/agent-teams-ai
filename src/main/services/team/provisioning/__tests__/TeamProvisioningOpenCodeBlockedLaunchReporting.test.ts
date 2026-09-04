@@ -91,6 +91,29 @@ describe('describeBlockedOpenCodePrimaryLaneLaunch', () => {
     );
   });
 
+  // The report goes to a durable sink, and a runtime that failed while starting
+  // prints the command line it was given. Nothing downstream redacts a
+  // persisted log line, so the redaction has to happen here.
+  it('redacts secrets out of the member reason and the lane diagnostics', () => {
+    const result = buildFailedOpenCodeLaunchResult(
+      'team-lead',
+      'spawn failed: opencode --api-key sk-abcdefghijklmnop01 serve'
+    );
+    result.diagnostics = ['probe rejected: Authorization: Bearer abc.def'];
+
+    const report = describeBlockedOpenCodePrimaryLaneLaunch({
+      teamName: 'lane-team',
+      runId: 'run-a1',
+      result,
+    });
+
+    expect(report).toBe(
+      '[lane-team] opencode_primary_lane_launch_blocked run=run-a1 preLaunchGate=none ' +
+        'reason=spawn failed: opencode --api-key [redacted] serve members=team-lead ' +
+        'diagnostics=probe rejected: Authorization: Bearer [redacted]'
+    );
+  });
+
   it('falls back to the gate reason when no member carries one', () => {
     const result = buildUncommittedPrimaryLeadLaunchResult({ teamLaunchState: 'partial_failure' });
     result.preLaunchGate = { blocked: true, reason: 'shared_runtime_timeout', retryable: false };
@@ -98,6 +121,27 @@ describe('describeBlockedOpenCodePrimaryLaneLaunch', () => {
     expect(
       describeBlockedOpenCodePrimaryLaneLaunch({ teamName: 'lane-team', runId: 'run-a1', result })
     ).toContain('reason=shared_runtime_timeout');
+  });
+});
+
+describe('describeUnavailableOpenCodeLaunchPromptLead', () => {
+  // Same durable sink, same free-form fields: the lead's own runtime
+  // diagnostic is whatever the bridge printed.
+  it('redacts the reason it quotes from the lead evidence', () => {
+    const result = buildFailedOpenCodeLaunchResult('team-lead', '   ');
+    result.members['team-lead'].runtimeDiagnostic =
+      'host refused: Authorization: Bearer eyJhbGciOi.payload';
+
+    expect(
+      describeUnavailableOpenCodeLaunchPromptLead({
+        teamName: 'lane-team',
+        leadName: 'team-lead',
+        primaryResult: result,
+      })
+    ).toBe(
+      '[lane-team] opencode_launch_prompt_lead_unavailable lead=team-lead ' +
+        'reason=host refused: Authorization: Bearer [redacted]'
+    );
   });
 });
 

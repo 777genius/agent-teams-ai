@@ -1,3 +1,5 @@
+import { normalizeOpenCodeFailureMessage } from '../runtime/OpenCodeLaunchGateResult';
+
 import { isRecoverableOpenCodeRuntimeEvidence } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 
 import type { TeamRuntimeLaunchResult } from '../runtime';
@@ -12,6 +14,12 @@ import type { TeamRuntimeLaunchResult } from '../runtime';
  * Everything here BUILDS A STRING. Nothing in this module writes, persists,
  * promotes or decides a launch outcome, so adding a report can never change what
  * a launch does - only what it says.
+ *
+ * What it says goes to a durable sink, though, and every free-form field it
+ * quotes - member diagnostics, a runtime diagnostic, a hard-failure reason -
+ * carries whatever the runtime printed, up to and including a command line
+ * with a key on it. Each one is normalised on the way in, which is the same
+ * redaction the member-facing failure text already applies.
  */
 
 export function describeBlockedOpenCodePrimaryLaneLaunch(input: {
@@ -23,7 +31,9 @@ export function describeBlockedOpenCodePrimaryLaneLaunch(input: {
     (member) => member.launchState === 'failed_to_start' || member.hardFailure === true
   );
   const reason =
-    failedMembers.find((member) => member.hardFailureReason?.trim())?.hardFailureReason?.trim() ??
+    failedMembers
+      .map((member) => normalizeOpenCodeFailureMessage(member.hardFailureReason))
+      .find((message) => message !== undefined) ??
     input.result.preLaunchGate?.reason ??
     'unknown';
   const gate = input.result.preLaunchGate;
@@ -36,7 +46,12 @@ export function describeBlockedOpenCodePrimaryLaneLaunch(input: {
     `preLaunchGate=${gateSummary}`,
     `reason=${reason}`,
     `members=${failedMembers.map((member) => member.memberName).join('/') || 'none'}`,
-    `diagnostics=${input.result.diagnostics.join('; ') || 'none'}`,
+    `diagnostics=${
+      input.result.diagnostics
+        .map((diagnostic) => normalizeOpenCodeFailureMessage(diagnostic))
+        .filter((diagnostic) => diagnostic !== undefined)
+        .join('; ') || 'none'
+    }`,
   ].join(' ');
 }
 
@@ -121,9 +136,11 @@ export function describeUnavailableOpenCodeLaunchPromptLead(input: {
   }
   const leadEvidence = findOpenCodeLeadEvidence(input.primaryResult, input.leadName);
   const reason =
-    leadEvidence?.hardFailureReason?.trim() ||
-    leadEvidence?.runtimeDiagnostic?.trim() ||
-    input.primaryResult?.diagnostics.find((diagnostic) => diagnostic.trim()) ||
+    normalizeOpenCodeFailureMessage(leadEvidence?.hardFailureReason) ||
+    normalizeOpenCodeFailureMessage(leadEvidence?.runtimeDiagnostic) ||
+    input.primaryResult?.diagnostics
+      .map((diagnostic) => normalizeOpenCodeFailureMessage(diagnostic))
+      .find((diagnostic) => diagnostic !== undefined) ||
     input.primaryResult?.preLaunchGate?.reason ||
     'primary_lane_produced_no_runtime_evidence';
   return (
