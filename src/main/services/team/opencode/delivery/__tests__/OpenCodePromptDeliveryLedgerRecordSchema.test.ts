@@ -68,6 +68,15 @@ describe('validateOpenCodePromptDeliveryLedgerRecords', () => {
       { ...record(), visibleReplyCorrelation: 'guessed' },
       { ...record(), actionMode: 'supervise' },
       { ...record(), diagnostics: null },
+      // A persisted token count that is not a number normalizes to "absent",
+      // so the next sample becomes a baseline instead of progress and the
+      // record ages toward the stale window while its turn is still spending.
+      { ...record(), observedTurnUsedTokens: '96000' },
+      { ...record(), observedTurnUsedTokens: -1 },
+      { ...record(), observedTurnUsedTokens: 1.5 },
+      // A non-string progress stamp reaches Date.parse, which reads a bare
+      // number as a year and hands the pending clock an anchor in the future.
+      { ...record(), lastTurnProgressAt: 12345 },
       (() => {
         const missingPayloadHash: Record<string, unknown> = { ...record() };
         delete missingPayloadHash.payloadHash;
@@ -101,8 +110,25 @@ describe('validateOpenCodePromptDeliveryLedgerRecords', () => {
       visibleReplyCorrelation: 'relayOfMessageId',
       actionMode: 'do',
       taskRefs: [{ taskId: 'task-1', displayId: '1', teamName: 'team' }],
+      lastTurnProgressAt: NOW_ISO,
+      observedTurnUsedTokens: 96_000,
     });
 
     expect(validateOpenCodePromptDeliveryLedgerRecords([enriched])).toEqual([enriched]);
+  });
+
+  // NEGATIVE CONTROL: the turn-progress stamps arrived after the first records
+  // were written, so a ledger from before them has neither field. Requiring
+  // them would quarantine every ledger an upgrade inherits.
+  it('accepts a record written before the turn-progress stamps existed', () => {
+    const legacy = record({ lastTurnProgressAt: null, observedTurnUsedTokens: null });
+    const withoutTheFields: Record<string, unknown> = { ...record() };
+    delete withoutTheFields.lastTurnProgressAt;
+    delete withoutTheFields.observedTurnUsedTokens;
+
+    expect(validateOpenCodePromptDeliveryLedgerRecords([legacy])).toEqual([legacy]);
+    expect(validateOpenCodePromptDeliveryLedgerRecords([withoutTheFields])).toEqual([
+      withoutTheFields,
+    ]);
   });
 });
