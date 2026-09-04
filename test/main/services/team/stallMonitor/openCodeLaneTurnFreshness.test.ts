@@ -15,12 +15,12 @@ import {
   getOpenCodeLaneTurnActivityMaxAgeMs,
   getOpenCodeWeakStartStallThresholdMs,
   getPendingPickupStallThresholdMs,
-} from '../../../../../src/main/services/team/stallMonitor/featureGates';
+} from '@main/services/team/stallMonitor/featureGates';
 import {
   classifyOpenCodeLaneTurnSample,
   resolveOpenCodeLaneTurnActivityMaxAgeMs,
-} from '../../../../../src/main/services/team/stallMonitor/openCodeLaneTurnFreshness';
-import { WORK_THRESHOLDS_MS } from '../../../../../src/main/services/team/stallMonitor/TeamTaskStallPolicy';
+} from '@main/services/team/stallMonitor/openCodeLaneTurnFreshness';
+import { WORK_THRESHOLDS_MS } from '@main/services/team/stallMonitor/TeamTaskStallPolicy';
 
 afterEach(() => {
   vi.unstubAllEnvs();
