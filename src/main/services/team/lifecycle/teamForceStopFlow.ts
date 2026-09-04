@@ -102,6 +102,21 @@ export interface TeamForceStopFlowPorts {
    * caller knows whether anything else still needs them.
    */
   releaseSharedRuntimeResources?(teamName: string): Promise<{ diagnostics: string[] }>;
+  /**
+   * Ends the external lead process trees this stop can prove it owns. Separate
+   * from `killRetainedRuntimeProcesses` because it answers a different
+   * question: that step is about shared runtime hosts, which this app may not
+   * signal at all, while a `cursor-agent --print` lead names the team's own
+   * workspace on its command line and is attributable to a single stop.
+   *
+   * A port with no default, like the release below it: everywhere it is not
+   * handed in, the step does not exist rather than becoming a no-op branch the
+   * flow carries around.
+   */
+  reapOwnedLeadProcessTrees?(
+    teamName: string,
+    context: { requestedAtMs: number }
+  ): Promise<{ killedPids: number[]; diagnostics: string[] }>;
 }
 
 /**
@@ -404,6 +419,21 @@ async function runTeamStopFlow(
     : stopOutcome !== 'stopped';
   if (cancelAfterStop) await cancelOwnedDeliveries();
 
+  // Runs on both paths, unlike the host kill above it. A scoped stop that
+  // confirmed has released the team's sessions and never touched the external
+  // lead: the tree is not a shared host and not something the orchestrator
+  // stops, so a confirmed stop is exactly the case where it is left behind.
+  const reapedTrees = await reapOwnedLeadProcessTrees(
+    teamName,
+    ports,
+    stopStartedAtMs,
+    diagnostics
+  );
+  for (const pid of reapedTrees.killedPids) {
+    if (!killedRuntimePids.includes(pid)) killedRuntimePids.push(pid);
+  }
+  cleanupIncomplete ||= reapedTrees.incomplete;
+
   // After the kills, never before them: a startup lock a live host still holds
   // open cannot be unlinked, so it is the kill that turns it into an orphan.
   await releaseSharedRuntimeResources(teamName, ports, diagnostics);
@@ -415,6 +445,32 @@ async function runTeamStopFlow(
     clearedPendingDeliveries,
     diagnostics,
   };
+}
+
+/**
+ * A reap that throws leaves a tree standing, which is the definition of an
+ * incomplete cleanup - but it never fails the stop, which by this point has
+ * already done everything else it owed the user.
+ */
+async function reapOwnedLeadProcessTrees(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  requestedAtMs: number,
+  diagnostics: string[]
+): Promise<{ killedPids: number[]; incomplete: boolean }> {
+  if (!ports.reapOwnedLeadProcessTrees) {
+    return { killedPids: [], incomplete: false };
+  }
+  try {
+    const reaped = await ports.reapOwnedLeadProcessTrees(teamName, { requestedAtMs });
+    diagnostics.push(...reaped.diagnostics);
+    return { killedPids: reaped.killedPids, incomplete: false };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ports.logWarning(`[${teamName}] Lead process tree reap failed: ${message}`);
+    diagnostics.push(`Lead process tree reap failed: ${message}`);
+    return { killedPids: [], incomplete: true };
+  }
 }
 
 async function releaseSharedRuntimeResources(

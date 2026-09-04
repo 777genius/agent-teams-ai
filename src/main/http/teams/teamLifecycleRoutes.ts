@@ -18,6 +18,7 @@ import {
   STOP_ESCALATION_TIMEOUT_MS,
   stopTeamWithEscalation,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
+import { reapCursorAgentLeadTreesForStoppedTeam } from '@main/services/team/lifecycle/teamLeadProcessTreeReap';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
 import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
@@ -94,6 +95,12 @@ export function registerTeamLifecycleRoutes(
           stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
           countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
           markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+          reapOwnedLeadProcessTrees: (name, context) =>
+            reapCursorAgentLeadTreesForStoppedTeam({
+              teamName: name,
+              requestedAtMs: context.requestedAtMs,
+              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+            }),
           releaseSharedRuntimeResources: (name) =>
             releaseSharedRuntimeResourcesAfterStop({
               teamName: name,
@@ -159,6 +166,12 @@ export function registerTeamLifecycleRoutes(
             }),
           logWarning: (message) => logger.warn(message),
           markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+          reapOwnedLeadProcessTrees: (name, context) =>
+            reapCursorAgentLeadTreesForStoppedTeam({
+              teamName: name,
+              requestedAtMs: context.requestedAtMs,
+              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+            }),
           releaseSharedRuntimeResources: (name) =>
             releaseSharedRuntimeResourcesAfterStop({
               teamName: name,

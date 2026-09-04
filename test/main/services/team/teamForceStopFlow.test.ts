@@ -660,6 +660,102 @@ describe('countLiveRecordedRuntimeHostsForTeam', () => {
   });
 });
 
+describe('post-stop external lead process tree reap', () => {
+  /**
+   * The step the kill above it cannot do. A scoped stop that confirmed has
+   * released the team's sessions and never touched the external lead, which is
+   * exactly the case where the tree is left behind, so unlike the host kill this
+   * runs on both paths.
+   */
+  it('reaps on a stop that confirmed, where the kill step never runs', async () => {
+    const ports = createPorts({
+      reapOwnedLeadProcessTrees: vi.fn(() =>
+        Promise.resolve({
+          killedPids: [8100],
+          diagnostics: ['Reaped 1 cursor-agent process tree(s)'],
+        })
+      ),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(ports.killRetainedRuntimeProcesses).not.toHaveBeenCalled();
+    expect(ports.reapOwnedLeadProcessTrees).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+    });
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.cleanupOutcome).toBe('completed');
+    expect(result.killedRuntimePids).toEqual([8100]);
+    expect(result.diagnostics).toEqual(['Reaped 1 cursor-agent process tree(s)']);
+  });
+
+  // Between the kill and the release: the reap is a kill, and the release
+  // unlinks locks that only a dead process lets go of.
+  it('reaps after the kill step and before the shared runtime release', async () => {
+    const order: string[] = [];
+    const ports = createPorts({
+      stopTeam: vi.fn(() => Promise.reject(new Error('did not confirm stop'))),
+      killRetainedRuntimeProcesses: vi.fn(() => {
+        order.push('kill');
+        return Promise.resolve({ killedPids: [4242], diagnostics: [] });
+      }),
+      reapOwnedLeadProcessTrees: vi.fn(() => {
+        order.push('reap');
+        return Promise.resolve({ killedPids: [8100], diagnostics: [] });
+      }),
+      releaseSharedRuntimeResources: vi.fn(() => {
+        order.push('release');
+        return Promise.resolve({ diagnostics: [] });
+      }),
+    });
+
+    const result = await runTeamForceStopFlow('fixteam', ports);
+
+    expect(order).toEqual(['kill', 'reap', 'release']);
+    expect(result.killedRuntimePids).toEqual([4242, 8100]);
+  });
+
+  // The port has no upstream default, so the common case is that no caller
+  // supplies one, and that case must be indistinguishable from the behaviour
+  // before the port existed.
+  it('behaves exactly as before when no caller supplies the port', async () => {
+    const ports = createPorts({ markTeamStopped: vi.fn(() => Promise.resolve()) });
+    expect(ports.reapOwnedLeadProcessTrees).toBeUndefined();
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result).toEqual({
+      stopOutcome: 'stopped',
+      cleanupOutcome: 'completed',
+      killedRuntimePids: [],
+      clearedPendingDeliveries: 0,
+      diagnostics: [],
+    });
+    expect(ports.logWarning).not.toHaveBeenCalled();
+  });
+
+  /**
+   * A reap that threw left a tree standing, which is what an incomplete cleanup
+   * means - but the stop itself has already done everything else it owed, so it
+   * still finishes and still writes the stopped state.
+   */
+  it('reports a reap that threw as an incomplete cleanup and still finishes the stop', async () => {
+    const ports = createPorts({
+      reapOwnedLeadProcessTrees: vi.fn(() => Promise.reject(new Error('process table unavailable'))),
+      markTeamStopped: vi.fn(() => Promise.resolve()),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.cleanupOutcome).toBe('incomplete');
+    expect(result.diagnostics).toEqual([
+      'Lead process tree reap failed: process table unavailable',
+    ]);
+    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+  });
+});
+
 describe('post-stop shared runtime release', () => {
   it('releases after a stop that confirmed on its own, before the stopped state is written', async () => {
     const order: string[] = [];
