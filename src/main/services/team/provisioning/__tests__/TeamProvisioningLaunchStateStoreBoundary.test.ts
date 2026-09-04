@@ -356,7 +356,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       metaMembers: [{ name: 'Builder', joinedAt: 1 }],
     });
     expect(ports.applyBootstrapStallOverlay).toHaveBeenCalledWith(evidenceOverlay);
-    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', stallOverlay);
+    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', stallOverlay, undefined);
     expect(result).toEqual({ snapshot: stallOverlay, wrote: true });
 
     setTrackedRunId('run-2');
@@ -420,7 +420,11 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     });
     expect(result.snapshot.members.Builder.runtimeRunId).toBeUndefined();
     expect(result.snapshot.members.Builder.runtimeSessionId).toBeUndefined();
-    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', replacementSnapshot);
+    expect(ports.launchStateStore.write).toHaveBeenCalledWith(
+      'demo',
+      replacementSnapshot,
+      undefined
+    );
   });
 
   it.each([
@@ -533,7 +537,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     });
 
     expect(result).toEqual({ snapshot: next, wrote: true });
-    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', next);
+    expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', next, undefined);
   });
 
   it.each([null, undefined])(
@@ -548,7 +552,7 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
       });
 
       expect(result).toEqual({ snapshot: next, wrote: true });
-      expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', next);
+      expect(ports.launchStateStore.write).toHaveBeenCalledWith('demo', next, undefined);
       expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
       expect(boundary.getWrittenRunIdByTeam().get('demo')).toBe('run-1');
       expect(ports.logDebug).not.toHaveBeenCalled();

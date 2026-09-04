@@ -289,6 +289,38 @@ describe('recoverStaleMixedSecondaryLaunchSnapshotWithPorts', () => {
     expect(getWrittenSnapshot()).toBeNull();
   });
 
+  it('publishes the recovered snapshot as a republication so a stop settling meanwhile survives', async () => {
+    // The stop marker check above the recovery cannot cover the runtime probes
+    // that follow it. A stop that lands during them must still win, so the
+    // write is fenced by the marker inside the store's publication queue and
+    // the caller is handed the persisted snapshot rather than the recovery.
+    const persistedSnapshot = createSnapshot({ leadSessionId: 'lead-session' });
+    let stopped = false;
+    const writeOptions: ({ republishesExistingLaunch?: boolean } | undefined)[] = [];
+    const { ports, getAggregateParams } = createPorts({
+      isTeamLaunchStopped: async () => {
+        const wasStopped = stopped;
+        stopped = true;
+        return wasStopped;
+      },
+      writeLaunchStateSnapshot: async (_teamName, snapshot, options) => {
+        writeOptions.push(options);
+        return snapshot;
+      },
+    });
+
+    const result = await recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
+      'team-a',
+      null,
+      persistedSnapshot,
+      ports
+    );
+
+    expect(getAggregateParams()?.secondaryMembers).toHaveLength(1);
+    expect(writeOptions).toEqual([{ republishesExistingLaunch: true }]);
+    expect(result).toBe(persistedSnapshot);
+  });
+
   it('still recovers lane evidence for a team that was never marked stopped', async () => {
     const { ports, getAggregateParams, getWrittenSnapshot } = createPorts({
       isTeamLaunchStopped: async () => false,

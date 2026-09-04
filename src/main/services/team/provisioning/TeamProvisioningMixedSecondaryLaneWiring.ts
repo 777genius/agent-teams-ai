@@ -306,8 +306,8 @@ export function createStaleMixedSecondaryRecoveryPorts<
     nowIso,
     getTeamsBasePath,
     buildAggregateLaunchSnapshot: (input) => deps.service.buildAggregateLaunchSnapshot(input),
-    writeLaunchStateSnapshot: (teamName, snapshot) =>
-      deps.service.writeLaunchStateSnapshot(teamName, snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot, options) =>
+      deps.service.writeLaunchStateSnapshot(teamName, snapshot, options),
   };
 }
 
@@ -362,8 +362,8 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
         ),
       buildAggregateLaunchSnapshot: (input) =>
         service.runtimeLaneCoordinator.buildAggregateLaunchSnapshot(input),
-      writeLaunchStateSnapshot: (teamName, snapshot) =>
-        service.writeLaunchStateSnapshot(teamName, snapshot),
+      writeLaunchStateSnapshot: (teamName, snapshot, writeOptions) =>
+        service.writeLaunchStateSnapshot(teamName, snapshot, writeOptions),
     },
     logger: options.logger,
   };
