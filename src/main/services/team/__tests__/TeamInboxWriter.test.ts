@@ -121,24 +121,58 @@ describe('TeamInboxWriter runtime delivery dedup', () => {
     expect(readInbox('worker')).toHaveLength(2);
   });
 
-  it('silently dedups an explicit messageId replay whose text was paraphrased', async () => {
+  // The paraphrase tolerance at the top of this file is keyed on
+  // (relayOfMessageId, from, to) and applies to deliveries the writer numbers
+  // itself. An explicit messageId is a caller-supplied identity claim instead,
+  // so a replay carrying genuinely different content is a real change and stays
+  // a loud collision rather than being dropped in favour of whichever text
+  // landed first.
+  it('rejects an explicit messageId replay whose text was paraphrased', async () => {
     const first = await writer.sendMessage(
       'team',
       runtimeDeliveryRequest({ messageId: 'explicit-1' })
     );
 
+    await expect(
+      writer.sendMessage(
+        'team',
+        runtimeDeliveryRequest({
+          messageId: 'explicit-1',
+          text: 'Reworded relay of the same origin message.',
+          summary: 'Reworded summary',
+        })
+      )
+    ).rejects.toThrow('Inbox messageId collision for immutable payload: explicit-1');
+
+    const inbox = readInbox('worker');
+    expect(inbox).toHaveLength(1);
+    expect(inbox[0]?.messageId).toBe(first.messageId);
+    expect(inbox[0]?.text).toBe('Dependency resolved, you can start task 7 now.');
+  });
+
+  // Sibling of the case above, over the real inbox file rather than a mocked
+  // one: only genuinely different content fails closed. A retry that merely
+  // reflows whitespace normalizes to the same text, so it still dedups
+  // silently and leaves the stored copy untouched.
+  it('silently dedups an explicit messageId replay that only reflows whitespace', async () => {
+    const first = await writer.sendMessage(
+      'team',
+      runtimeDeliveryRequest({ messageId: 'explicit-3' })
+    );
+
     const replay = await writer.sendMessage(
       'team',
       runtimeDeliveryRequest({
-        messageId: 'explicit-1',
-        text: 'Reworded relay of the same origin message.',
-        summary: 'Reworded summary',
+        messageId: 'explicit-3',
+        text: '  Dependency resolved,   you can start task 7 now.  ',
       })
     );
 
     expect(replay.deduplicated).toBe(true);
     expect(replay.messageId).toBe(first.messageId);
-    expect(readInbox('worker')).toHaveLength(1);
+    const inbox = readInbox('worker');
+    expect(inbox).toHaveLength(1);
+    expect(inbox[0]?.text).toBe('Dependency resolved, you can start task 7 now.');
   });
 
   it('still rejects explicit messageId collisions for non-relay messages', async () => {
