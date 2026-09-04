@@ -5,6 +5,7 @@ import { boundLaunchDiagnostics, buildProgressLogsTail } from '../progressPayloa
 
 import { buildProvisioningTraceDetail } from './TeamProvisioningDiagnosticsHelpers';
 import { buildLaunchDiagnosticsFromRun } from './TeamProvisioningLaunchDiagnostics';
+import { areAllExpectedLaunchMembersConfirmed } from './TeamProvisioningLaunchStateProjection';
 import { extractLogsTail } from './TeamProvisioningLogSlice';
 import {
   appendProvisioningTrace,
@@ -198,4 +199,27 @@ export function emitLogsProgress(run: ProvisioningRun): void {
     ...(assistantOutputChanged && { assistantOutput }),
   };
   run.onProgress(run.progress);
+}
+
+/** Publish late teammate readiness without depending on notification delivery or its one-shot flag. */
+export function publishConfirmedLaunchProgress(run: ProvisioningRun): boolean {
+  if (
+    !run.isLaunch ||
+    run.progress.state !== 'ready' ||
+    run.processKilled ||
+    run.cancelRequested ||
+    !areAllExpectedLaunchMembersConfirmed(run)
+  ) {
+    return false;
+  }
+  const message = `Team launched - all ${run.expectedMembers.length} teammates joined and are ready for tasks.`;
+  if (run.progress.message !== message || run.progress.messageSeverity !== undefined) {
+    run.onProgress(
+      updateProgress(run, 'ready', message, {
+        warnings: run.progress.warnings,
+        error: run.progress.error,
+      })
+    );
+  }
+  return true;
 }

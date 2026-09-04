@@ -7,6 +7,7 @@ import {
   type PrimaryBootstrapTruthRunLike,
 } from './TeamProvisioningPrimaryBootstrapTruthReporting';
 
+import type { LaunchStateWriteOptions } from './TeamProvisioningLaunchStateStoreBoundary';
 import type { MemberSpawnStatusEntry, PersistedTeamLaunchSnapshot } from '@shared/types';
 
 export interface TeamProvisioningPrimaryBootstrapTruthReportingServiceAdapter<
@@ -31,7 +32,8 @@ export interface TeamProvisioningPrimaryBootstrapTruthReportingPortsFactoryDeps<
   readBootstrapLaunchSnapshot(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   writeLaunchStateSnapshot(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: LaunchStateWriteOptions
   ): Promise<PersistedTeamLaunchSnapshot>;
   nowIso(): string;
   logger: {
@@ -95,8 +97,10 @@ export function createTeamProvisioningPrimaryBootstrapTruthReportingDepsFromServ
         service.syncRunMemberSpawnStatusesFromSnapshot(run, snapshot),
     },
     readBootstrapLaunchSnapshot: (teamName) => options.readBootstrapLaunchSnapshot(teamName),
-    writeLaunchStateSnapshot: (teamName, snapshot) =>
-      service.writeLaunchStateSnapshot(teamName, snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot, options) =>
+      options === undefined
+        ? service.writeLaunchStateSnapshot(teamName, snapshot)
+        : service.writeLaunchStateSnapshot(teamName, snapshot, options),
     nowIso: options.nowIso,
     logger: options.logger,
   };
@@ -156,8 +160,17 @@ export function createTeamProvisioningPrimaryBootstrapTruthReportingBoundary<
         return reconciled;
       }
       deps.service.syncRunMemberSpawnStatusesFromSnapshot(run, reconciled);
+      // A completed clean snapshot has already been cleaned up by the persistence owner.
+      // Keep its refreshed evidence in memory; never resurrect its file after a successor/stop.
+      if (
+        snapshot?.teamLaunchState === 'clean_success' &&
+        snapshot.launchPhase !== 'active' &&
+        reconciled.teamLaunchState === 'clean_success'
+      ) {
+        return reconciled;
+      }
       try {
-        return await deps.writeLaunchStateSnapshot(run.teamName, reconciled);
+        return await deps.writeLaunchStateSnapshot(run.teamName, reconciled, { runId: run.runId });
       } catch (error) {
         deps.logger.warn(
           `[${run.teamName}] Failed to persist reconciled launch reporting snapshot: ${getErrorMessage(

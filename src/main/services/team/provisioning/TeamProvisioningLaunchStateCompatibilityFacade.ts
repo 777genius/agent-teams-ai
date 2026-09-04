@@ -44,7 +44,7 @@ import {
   readRegisteredTeamMemberNamesFromConfigDefaults,
 } from './TeamProvisioningRegisteredMemberAudit';
 import { type ProvisioningRun } from './TeamProvisioningRunModel';
-import { nowIso } from './TeamProvisioningRunProgress';
+import { nowIso, publishConfirmedLaunchProgress } from './TeamProvisioningRunProgress';
 import { type LiveTeamAgentRuntimeMetadata } from './TeamProvisioningRuntimeMetadataPolicy';
 import { TeamProvisioningStopCleanupCompatibilityFacade } from './TeamProvisioningStopCleanupCompatibilityFacade';
 
@@ -363,14 +363,7 @@ export function createTeamProvisioningLaunchStateCompatibilityBoundaryFromServic
     },
 
     async maybeFireTeamLaunchedNotificationWhenAllMembersJoined(run) {
-      if (
-        !run.isLaunch ||
-        run.teamLaunchedNotificationFired ||
-        run.processKilled ||
-        run.cancelRequested ||
-        !service.isProvisioningRunPromotedToAlive(run) ||
-        !areAllExpectedLaunchMembersConfirmedHelper(run)
-      ) {
+      if (!service.isProvisioningRunPromotedToAlive(run) || !publishConfirmedLaunchProgress(run)) {
         return;
       }
 
@@ -431,6 +424,7 @@ export function createTeamProvisioningLaunchStateCompatibilityBoundaryFromServic
     },
 
     fireTeamLaunchedNotification(run) {
+      publishConfirmedLaunchProgress(run);
       return service.launchNotifications.fireTeamLaunchedNotification(run);
     },
 

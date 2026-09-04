@@ -53,7 +53,8 @@ export interface TeamProvisioningProviderDiagnosticsRuntime {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId?: TeamProviderId,
-    providerArgs?: string[]
+    providerArgs?: string[],
+    diagnosticModel?: string
   ): Promise<{ warning?: string }>;
   validateAgentTeamsMcpRuntime(
     claudePath: string,
@@ -143,7 +144,8 @@ export function createTeamProvisioningProviderDiagnosticsRuntime(
       cwd,
       env,
       providerId = 'anthropic',
-      providerArgs = []
+      providerArgs = [],
+      diagnosticModel
     ) =>
       runProviderOneShotDiagnosticHelper({
         claudePath,
@@ -151,6 +153,7 @@ export function createTeamProvisioningProviderDiagnosticsRuntime(
         env,
         providerId,
         providerArgs,
+        diagnosticModel,
         ports: getPorts(),
       }),
     validateAgentTeamsMcpRuntime: (

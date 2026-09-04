@@ -98,7 +98,8 @@ function provider(
     authenticated: false,
     authMethod: null,
     verificationState: overrides.authenticated && providerId !== 'gemini' ? 'verified' : 'unknown',
-    statusCheckOutcome: overrides.authenticated && providerId !== 'gemini' ? 'authoritative' : 'pending',
+    statusCheckOutcome:
+      overrides.authenticated && providerId !== 'gemini' ? 'authoritative' : 'pending',
     modelVerificationState: 'idle',
     modelCatalogRefreshState: 'idle',
     statusMessage: null,
@@ -333,11 +334,11 @@ describe('cliInstaller IPC handlers', () => {
     expect(service.getStatus).toHaveBeenCalledTimes(1);
   });
 
-  it('clears Claude and Codex binary resolver caches when status is invalidated', async () => {
+  it('delegates runtime cache invalidation to the service and clears the Codex cache', async () => {
     const result = (await ipcMain.invoke(CLI_INSTALLER_INVALIDATE_STATUS)) as IpcResult<void>;
 
     expect(result.success).toBe(true);
-    expect(claudeBinaryResolverClearCacheMock).toHaveBeenCalledTimes(1);
+    expect(claudeBinaryResolverClearCacheMock).not.toHaveBeenCalled();
     expect(codexBinaryResolverClearCacheMock).toHaveBeenCalledTimes(1);
     expect(service.invalidateStatusCache).toHaveBeenCalledTimes(1);
   });

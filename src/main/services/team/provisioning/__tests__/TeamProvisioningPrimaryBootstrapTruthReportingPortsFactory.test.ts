@@ -226,27 +226,31 @@ describe('TeamProvisioningPrimaryBootstrapTruthReportingPortsFactory', () => {
     });
   });
 
-  it('reconciles final launch reporting through snapshot sync and persistence ports', async () => {
-    const targetRun = run();
-    const targetSnapshot = snapshot({
-      members: { Builder: member() },
-    });
-    const { boundary, service, writeLaunchStateSnapshot } = createBoundary({
-      bootstrapSnapshot: confirmedBootstrapSnapshot(),
-    });
+  it.each(['active', 'finished'] as const)(
+    'persists newly confirmed %s snapshots with run ownership',
+    async (phase) => {
+      const targetRun = run();
+      const targetSnapshot = snapshot({
+        members: { Builder: member() },
+      });
+      targetSnapshot.launchPhase = phase;
+      const { boundary, service, writeLaunchStateSnapshot } = createBoundary({
+        bootstrapSnapshot: confirmedBootstrapSnapshot(),
+      });
 
-    const reconciled = await boundary.reconcileFinalLaunchReportingSnapshot(
-      targetRun,
-      targetSnapshot
-    );
+      const reconciled = await boundary.reconcileFinalLaunchReportingSnapshot(
+        targetRun,
+        targetSnapshot
+      );
 
-    expect(reconciled?.members.Builder.launchState).toBe('confirmed_alive');
-    expect(service.syncRunMemberSpawnStatusesFromSnapshot).toHaveBeenCalledWith(
-      targetRun,
-      reconciled
-    );
-    expect(writeLaunchStateSnapshot).toHaveBeenCalledWith('demo', reconciled);
-  });
+      expect(reconciled?.members.Builder.launchState).toBe('confirmed_alive');
+      expect(service.syncRunMemberSpawnStatusesFromSnapshot).toHaveBeenCalledWith(
+        targetRun,
+        reconciled
+      );
+      expect(writeLaunchStateSnapshot).toHaveBeenCalledWith('demo', reconciled, { runId: 'run-1' });
+    }
+  );
 
   it('returns the reconciled snapshot and warns when final launch reporting persistence fails', async () => {
     const targetRun = run();

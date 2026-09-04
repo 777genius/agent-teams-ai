@@ -1266,7 +1266,8 @@ describe('TeamProvisioningService prepare/auth behavior', () => {
       missingCwd,
       expect.objectContaining({ PATH: '/usr/bin' }),
       'codex',
-      []
+      [],
+      'gpt-5.4'
     );
   });
 

@@ -409,6 +409,43 @@ describe('TeamProvisioningPrepareCoordinator', () => {
     );
   });
 
+  it.each([false, true])(
+    'passes the first explicit selected Codex model to diagnostic (structured=%s)',
+    async (structured) => {
+      const runProviderOneShotDiagnostic = vi.fn().mockResolvedValue({});
+      const coordinator = createCoordinator({
+        runProviderOneShotDiagnostic,
+        verifySelectedProviderModels: vi
+          .fn()
+          .mockResolvedValue({ details: [], warnings: [], blockingMessages: [] }),
+      });
+      await coordinator.prepareForProvisioning('/sandbox/selected-codex-model', {
+        providerId: 'codex',
+        modelVerificationMode: 'deep',
+        modelIds: structured
+          ? ['gpt-5.6-sol']
+          : [' ', '__provider_default__', ' gpt-5.6-luna ', 'gpt-5.6-sol'],
+        ...(structured
+          ? {
+              modelChecks: [
+                { providerId: 'anthropic' as const, model: 'opus' },
+                { providerId: 'codex' as const, model: ' gpt-5.6-luna ' },
+                { providerId: 'codex' as const, model: 'gpt-5.6-sol' },
+              ],
+            }
+          : {}),
+      });
+      expect(runProviderOneShotDiagnostic).toHaveBeenCalledExactlyOnceWith(
+        '/fake/claude',
+        '/sandbox/selected-codex-model',
+        { PATH: '/bin' },
+        'codex',
+        [],
+        'gpt-5.6-luna'
+      );
+    }
+  );
+
   it('treats quota retry one-shot diagnostics as blocking readiness failures', async () => {
     const runProviderOneShotDiagnostic = vi.fn().mockResolvedValue({
       warning: 'Usage limit reached; retry after the quota resets.',

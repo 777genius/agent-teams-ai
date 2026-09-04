@@ -164,7 +164,8 @@ export class TeamProvisioningPersistenceReconcileFacade<
 
     if (filteredSnapshot.teamLaunchState === 'clean_success' && launchPhase !== 'active') {
       await this.clearPersistedLaunchStateNow(run.teamName, { expectedRunId: run.runId });
-      return null;
+      // Disk cleanup must not discard the current evidence needed by live run/status consumers.
+      return filteredSnapshot;
     }
 
     const writeResult = await this.writeLaunchStateSnapshotNow(run.teamName, filteredSnapshot, {

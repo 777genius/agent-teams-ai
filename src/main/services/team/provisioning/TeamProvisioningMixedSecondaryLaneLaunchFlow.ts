@@ -322,6 +322,6 @@ export async function launchSingleMixedSecondaryLaneWithPorts<
     ports.deleteSecondaryRuntimeRun(run.teamName, lane.laneId);
   }
 
-  await ports.publishMixedSecondaryLaneStatusChange(run, lane);
   lane.state = 'finished';
+  await ports.publishMixedSecondaryLaneStatusChange(run, lane);
 }

@@ -1,4 +1,8 @@
 import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
+import {
+  getProviderLaunchReadinessDetail,
+  hasEffectiveProviderLaunchAuthority,
+} from '@renderer/utils/providerReadiness';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { describe, expect, it } from 'vitest';
 
@@ -57,6 +61,34 @@ function createReadyProvider(providerId: 'anthropic' | 'codex'): CliProviderStat
 }
 
 describe('createLaunchGuard', () => {
+  it.each(['codex', 'anthropic'] as const)('shares fail-closed readiness for %s', (providerId) => {
+    const provider = createReadyProvider(providerId);
+    expect(hasEffectiveProviderLaunchAuthority(provider, NOW)).toBe(true);
+    expect(
+      hasEffectiveProviderLaunchAuthority(provider, Date.parse(provider.modelCatalog!.staleAt))
+    ).toBe(false);
+    for (const override of [
+      { modelCatalog: null },
+      { modelCatalogRefreshState: 'loading' as const },
+      { modelCatalogRefreshState: 'error' as const },
+      { authenticated: false },
+      { statusCheckOutcome: 'transient_error' as const },
+      { capabilities: { ...provider.capabilities, teamLaunch: false } },
+    ])
+      expect(hasEffectiveProviderLaunchAuthority({ ...provider, ...override }, NOW)).toBe(false);
+  });
+
+  it('explains catalog expiry before suggesting changes to connected Codex auth', () => {
+    const provider = createReadyProvider('codex');
+    provider.modelCatalogRefreshState = 'error';
+    provider.capabilities.teamLaunch = false;
+    provider.detailMessage = 'ChatGPT account is connected';
+    expect(getProviderLaunchReadinessDetail(provider, NOW)).toContain('catalog');
+    expect(getProviderLaunchReadinessDetail(provider, NOW)).not.toContain('reconnect');
+    provider.modelCatalogRefreshState = 'loading';
+    expect(getProviderLaunchReadinessDetail(provider, NOW)).toContain('being refreshed');
+  });
+
   it('reports no blockers when every selected provider has current launch authority', () => {
     const provider = createReadyProvider('anthropic');
     const guard = createLaunchGuard(['anthropic'], new Map([['anthropic', provider]]));
