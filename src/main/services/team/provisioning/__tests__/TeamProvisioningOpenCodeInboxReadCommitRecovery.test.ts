@@ -57,7 +57,11 @@ function ledgerRecord(
  * port, which would be an unbound method reference.
  */
 function createPorts(
-  options: { readCommitAllowed?: boolean; markInboxMessagesReadError?: Error } = {}
+  options: {
+    readCommitAllowed?: boolean;
+    readCommitPolicyError?: Error;
+    markInboxMessagesReadError?: Error;
+  } = {}
 ): {
   ports: OpenCodeInboxReadCommitRecoveryPorts;
   applyDestinationProof: ReturnType<typeof vi.fn>;
@@ -75,9 +79,9 @@ function createPorts(
   return {
     ports: {
       applyDestinationProof,
-      isOpenCodeDeliveryResponseReadCommitAllowed: vi
-        .fn()
-        .mockResolvedValue(options.readCommitAllowed ?? true),
+      isOpenCodeDeliveryResponseReadCommitAllowed: options.readCommitPolicyError
+        ? vi.fn().mockRejectedValue(options.readCommitPolicyError)
+        : vi.fn().mockResolvedValue(options.readCommitAllowed ?? true),
       markInboxMessagesRead,
       logOpenCodePromptDeliveryEvent,
       nowIso: () => NOW_ISO,
@@ -230,6 +234,36 @@ describe('recoverOpenCodeOwedInboxReadCommit', () => {
     expect(outcome).toEqual({ outcome: 'not_recovered' });
     expect(markInboxMessagesRead).not.toHaveBeenCalled();
     expect(markInboxReadCommitted).not.toHaveBeenCalled();
+  });
+
+  it('reports not_recovered when the read-commit policy itself fails', async () => {
+    // The caller awaits this recovery with no catch of its own, so a rejection
+    // here would end the relay pass before the ordinary delivery path that
+    // handles a message this recovery declined.
+    const { ports, markInboxMessagesRead, logOpenCodePromptDeliveryEvent } = createPorts({
+      readCommitPolicyError: new Error('work sync store unavailable'),
+    });
+    const { ledger, markInboxReadCommitted } = createLedger();
+
+    const outcome = await recoverOpenCodeOwedInboxReadCommit({
+      teamName: 'team',
+      memberName: 'worker',
+      canonicalMemberName: 'worker',
+      laneId: 'lane-worker',
+      message: message(),
+      ledger,
+      ledgerRecord: ledgerRecord(),
+      ports,
+    });
+
+    expect(outcome).toEqual({ outcome: 'not_recovered' });
+    expect(markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(markInboxReadCommitted).not.toHaveBeenCalled();
+    expect(logOpenCodePromptDeliveryEvent).toHaveBeenCalledWith(
+      'opencode_prompt_delivery_read_commit_recovery_policy_failed',
+      expect.objectContaining({ id: 'record-1' }),
+      { error: 'work sync store unavailable' }
+    );
   });
 
   it('reports not_recovered when the ledger cannot re-run the destination proof', async () => {
