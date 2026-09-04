@@ -250,6 +250,8 @@ export class TeamTaskStallMonitor {
     }
 
     const now = new Date();
+    this.pruneDiagnosticState(activeSet, now.getTime());
+
     const eligibleTeamNames: string[] = [];
     for (const teamName of activeTeams) {
       const observation = this.getOrCreateObservation(teamName, now.getTime());
@@ -545,7 +547,7 @@ export class TeamTaskStallMonitor {
    * never fired" report can be read out of the error log instead of guessed at.
    */
   private readonly openCodeSkipLogAtByKey = new Map<string, number>();
-  private readonly heldAlertFirstSeenAtByKey = new Map<string, number>();
+  private readonly heldAlertFirstSeenAtByTeam = new Map<string, Map<string, number>>();
 
   private shouldLogOpenCodeSkip(key: string, nowMs: number): boolean {
     const last = this.openCodeSkipLogAtByKey.get(key);
@@ -554,6 +556,31 @@ export class TeamTaskStallMonitor {
     }
     this.openCodeSkipLogAtByKey.set(key, nowMs);
     return true;
+  }
+
+  /**
+   * Both diagnostic maps are keyed by data that turns over inside a live team -
+   * task ids, and epoch keys that carry a touch timestamp - so the monitor,
+   * which runs for the whole main-process lifetime, would otherwise keep one
+   * dead entry per task and per epoch forever. Neither bound is an arbitrary
+   * cap: each entry is dropped when it can no longer affect a decision.
+   */
+  private pruneDiagnosticState(activeTeamNames: Set<string>, nowMs: number): void {
+    // A rate-limit stamp older than its own interval cannot suppress anything:
+    // shouldLogOpenCodeSkip would return true for that key either way, so
+    // dropping it is exactly equivalent to keeping it.
+    for (const [key, loggedAtMs] of this.openCodeSkipLogAtByKey) {
+      if (nowMs - loggedAtMs >= OPENCODE_SKIP_LOG_INTERVAL_MS) {
+        this.openCodeSkipLogAtByKey.delete(key);
+      }
+    }
+    // Held-alert clocks belong to a team's live scan. A team that is no longer
+    // running has no held alerts, and its next launch starts a fresh journal.
+    for (const teamName of this.heldAlertFirstSeenAtByTeam.keys()) {
+      if (!activeTeamNames.has(teamName)) {
+        this.heldAlertFirstSeenAtByTeam.delete(teamName);
+      }
+    }
   }
 
   private describeOpenCodeLane(
@@ -606,25 +633,32 @@ export class TeamTaskStallMonitor {
     now: Date
   ): void {
     const readyKeys = new Set(readyEvaluations.map((evaluation) => evaluation.epochKey));
+    const previousFirstSeenAt = this.heldAlertFirstSeenAtByTeam.get(snapshot.teamName);
+    // Rebuilt from this scan rather than mutated: an epoch that became ready,
+    // stopped being an OpenCode work alert or left the board entirely is not
+    // carried over, so the map holds only the alerts still being held.
+    const stillHeldFirstSeenAt = new Map<string, number>();
     for (const evaluation of evaluations) {
       if (evaluation.status !== 'alert' || !evaluation.taskId || !evaluation.epochKey) continue;
-      const heldKey = `${snapshot.teamName}:${evaluation.epochKey}`;
-      if (readyKeys.has(evaluation.epochKey)) {
-        this.heldAlertFirstSeenAtByKey.delete(heldKey);
-        continue;
-      }
+      if (readyKeys.has(evaluation.epochKey)) continue;
       if (!this.isOpenCodeOwnerWorkEvaluation(snapshot, evaluation)) continue;
       // The journal holds every alert on the scan that first sees it; only a
       // hold that outlives that rule is worth a log line.
-      const firstSeenAt = this.heldAlertFirstSeenAtByKey.get(heldKey) ?? now.getTime();
-      this.heldAlertFirstSeenAtByKey.set(heldKey, firstSeenAt);
+      const firstSeenAt = previousFirstSeenAt?.get(evaluation.epochKey) ?? now.getTime();
+      stillHeldFirstSeenAt.set(evaluation.epochKey, firstSeenAt);
       if (now.getTime() - firstSeenAt < OPENCODE_HELD_ALERT_LOG_DELAY_MS) continue;
       const task = snapshot.allTasksById.get(evaluation.taskId);
-      const key = `${heldKey}:journal_hold`;
+      const key = `${snapshot.teamName}:${evaluation.epochKey}:journal_hold`;
       if (!this.shouldLogOpenCodeSkip(key, now.getTime())) continue;
       logger.warn(
         `[${snapshot.teamName}] Stall alert for OpenCode task #${task ? getTaskDisplayId(task) : evaluation.taskId} (owner ${evaluation.memberName ?? task?.owner ?? 'unknown'}) is held by the stall journal (cooldown or first-scan rule): ${evaluation.reason}`
       );
+    }
+
+    if (stillHeldFirstSeenAt.size > 0) {
+      this.heldAlertFirstSeenAtByTeam.set(snapshot.teamName, stillHeldFirstSeenAt);
+    } else {
+      this.heldAlertFirstSeenAtByTeam.delete(snapshot.teamName);
     }
   }
 
