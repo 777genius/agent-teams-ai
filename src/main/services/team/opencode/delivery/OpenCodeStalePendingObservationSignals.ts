@@ -75,6 +75,9 @@ export async function readOpenCodeStalePendingTurnUsedTokens(input: {
   }
 }
 
+/** How many records the gate remembers a decision for at once. */
+export const OPENCODE_STALE_PENDING_LOG_GATE_MAX_RECORDS = 512;
+
 /**
  * Last `(action, reason)` recorded durably per ledger record.
  *
@@ -92,8 +95,24 @@ export class OpenCodeStalePendingLogGate {
   /** True when this decision differs from the last one logged for the record. */
   isTransition(recordId: string, action: string, reason: string): boolean {
     const marker = `${action}:${reason}`;
-    if (this.lastLoggedByRecord.get(recordId) === marker) {
+    const previous = this.lastLoggedByRecord.get(recordId);
+    if (previous === marker) {
       return false;
+    }
+    // The default gate is a module singleton in a main process that outlives
+    // every run, and a record only drops out of the map when it reaches a
+    // decision this module is told about. A record whose lane simply
+    // disappeared - the team stopped, the ledger was deleted - never does, so
+    // the map needs a bound of its own. An evicted record just logs its next
+    // repeat durably once, which is the cheap half of this trade.
+    if (
+      previous === undefined &&
+      this.lastLoggedByRecord.size >= OPENCODE_STALE_PENDING_LOG_GATE_MAX_RECORDS
+    ) {
+      const oldest = this.lastLoggedByRecord.keys().next();
+      if (!oldest.done) {
+        this.lastLoggedByRecord.delete(oldest.value);
+      }
     }
     this.lastLoggedByRecord.set(recordId, marker);
     return true;
@@ -133,11 +152,16 @@ export function logOpenCodeStalePendingResolution(
     gate?: OpenCodeStalePendingLogGate;
   }
 ): void {
+  const gate = input.gate ?? openCodeStalePendingLogGate;
+  // 'none' is how a record leaves this loop without a decision: it was
+  // read-committed, it answered, or its turn produced progress and its pending
+  // age fell back under the stale window. Nothing later will report a terminal
+  // decision for it, so this is the last chance to drop its marker.
   if (input.resolution.action === 'none') {
+    gate.forget(input.record.id);
     return;
   }
   const reason = 'reason' in input.resolution ? input.resolution.reason : 'none';
-  const gate = input.gate ?? openCodeStalePendingLogGate;
   const level = gate.isTransition(input.record.id, input.resolution.action, reason)
     ? 'diagnostic'
     : 'info';

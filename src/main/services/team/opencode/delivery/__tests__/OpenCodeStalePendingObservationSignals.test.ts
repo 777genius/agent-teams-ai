@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   logOpenCodeStalePendingResolution,
   OPENCODE_PROMPT_DELIVERY_TURN_USAGE_BASELINE_MS,
+  OPENCODE_STALE_PENDING_LOG_GATE_MAX_RECORDS,
   OpenCodeStalePendingLogGate,
   readOpenCodeStalePendingTurnUsedTokens,
 } from '../OpenCodeStalePendingObservationSignals';
@@ -137,6 +138,34 @@ describe('OpenCodeStalePendingLogGate', () => {
     gate.clear();
     expect(gate.isTransition('rec-2', 'keep_observing', 'busy')).toBe(true);
   });
+
+  it('evicts the oldest record once the bound is reached', () => {
+    const gate = new OpenCodeStalePendingLogGate();
+    gate.isTransition('rec-oldest', 'keep_observing', 'busy');
+
+    for (let index = 0; index < OPENCODE_STALE_PENDING_LOG_GATE_MAX_RECORDS; index += 1) {
+      gate.isTransition(`filler-${index}`, 'keep_observing', 'busy');
+    }
+
+    // A record whose lane simply disappeared never reaches a decision this
+    // module is told about, so without a bound its marker is held for the life
+    // of the process.
+    expect(gate.isTransition('rec-oldest', 'keep_observing', 'busy')).toBe(true);
+  });
+
+  // NEGATIVE CONTROL: the bound must not evict a record that is still inside
+  // it. Dropping a live record's marker would put its repeated decision back in
+  // the durable sink on every observe cycle, which is what the gate prevents.
+  it('keeps a record that is still inside the bound', () => {
+    const gate = new OpenCodeStalePendingLogGate();
+    gate.isTransition('rec-live', 'keep_observing', 'busy');
+
+    for (let index = 0; index < OPENCODE_STALE_PENDING_LOG_GATE_MAX_RECORDS - 1; index += 1) {
+      gate.isTransition(`filler-${index}`, 'keep_observing', 'busy');
+    }
+
+    expect(gate.isTransition('rec-live', 'keep_observing', 'busy')).toBe(false);
+  });
 });
 
 describe('logOpenCodeStalePendingResolution', () => {
@@ -187,6 +216,30 @@ describe('logOpenCodeStalePendingResolution', () => {
     expect(logger.diagnostic.mock.calls[0]?.[0]).toContain('turnActive=true/session_status_busy');
     expect(logger.diagnostic.mock.calls[0]?.[0]).toContain('executionEvidence=true');
     expect(logger.diagnostic.mock.calls[0]?.[0]).toContain('pendingAgeMs=308000');
+  });
+
+  it('forgets a record whose resolution went back to a no-op', () => {
+    const logger = sink();
+    const gate = new OpenCodeStalePendingLogGate();
+    const keepObserving = {
+      ...context,
+      resolution: { action: 'keep_observing' as const, reason: 'opencode_stale_pending_busy' },
+      gate,
+    };
+
+    logOpenCodeStalePendingResolution(logger, keepObserving);
+    // The record left the stale loop without a terminal decision - a turn
+    // progress stamp put its pending age back under the window - so nothing
+    // else will ever drop its marker.
+    logOpenCodeStalePendingResolution(logger, {
+      ...context,
+      resolution: { action: 'none' },
+      gate,
+    });
+    logOpenCodeStalePendingResolution(logger, keepObserving);
+
+    expect(logger.diagnostic).toHaveBeenCalledTimes(2);
+    expect(logger.info).not.toHaveBeenCalled();
   });
 
   it('always writes a terminal decision durably and forgets the record', () => {
