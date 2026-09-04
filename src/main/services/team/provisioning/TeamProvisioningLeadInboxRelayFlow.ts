@@ -599,9 +599,17 @@ function startLeadRelayCapture<TRun extends LeadInboxRelayFlowRun>(
       // producing duplicate task sets and near-identical user messages.
       touch: () => {
         if (capture.settled) return;
-        if (ports.nowMs() - captureStartedAtMs >= LEAD_RELAY_CAPTURE_ABSOLUTE_CAP_MS) return;
+        const remainingCapMs =
+          LEAD_RELAY_CAPTURE_ABSOLUTE_CAP_MS - (ports.nowMs() - captureStartedAtMs);
+        if (remainingCapMs <= 0) return;
         ports.clearTimeout(capture.timeoutHandle);
-        capture.timeoutHandle = ports.setTimeout(onCaptureDeadline, captureTimeoutMs);
+        // The re-armed deadline may never outlive the absolute cap: activity just before the cap
+        // would otherwise buy another full base deadline and keep a wedged lane captured for far
+        // longer than the cap promises.
+        capture.timeoutHandle = ports.setTimeout(
+          onCaptureDeadline,
+          Math.min(captureTimeoutMs, remainingCapMs)
+        );
       },
       resolveOnce: (text: string) => {
         if (capture.settled) return;

@@ -455,6 +455,43 @@ describe('lead inbox relay flow', () => {
     expect(ports.scheduleLeadInboxFollowUpRelay).toHaveBeenCalledWith('alpha', 10_000);
   });
 
+  it('re-arms a touched deadline within what is left of the absolute delivery cap', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+    const timers = createTimerHarness(ports);
+
+    // One millisecond before the cap the lane is still alive, so activity still re-arms the reply
+    // deadline - but a full 120s base deadline here would let the capture run to roughly 720s and
+    // outlive the cap that is supposed to bound a wedged lane.
+    const elapsedMs = 599_999;
+    let retiredDeadlineArmedAtSend = false;
+    let rearmedMs: number | null = null;
+    let pendingMsAfterTouch: number[] = [];
+
+    vi.mocked(ports.sendMessageToRun).mockImplementation(async () => {
+      const capture = run.leadRelayCapture;
+      if (!capture) throw new Error('missing capture');
+      const armedAtSendHandle = timers.pending().find(({ ms }) => ms === 120_000)?.handle;
+
+      timers.advance(elapsedMs);
+      capture.touch?.();
+
+      retiredDeadlineArmedAtSend =
+        armedAtSendHandle !== undefined && timers.cleared().includes(armedAtSendHandle);
+      pendingMsAfterTouch = timers.pending().map(({ ms }) => ms);
+      const rearmed = timers.pending().at(-1);
+      rearmedMs = rearmed?.ms ?? null;
+      rearmed?.callback();
+    });
+
+    await expect(relayLeadInboxMessagesForTeam('alpha', ports)).resolves.toBe(0);
+
+    expect(retiredDeadlineArmedAtSend).toBe(true);
+    expect(rearmedMs).toBe(600_000 - elapsedMs);
+    expect(pendingMsAfterTouch).not.toContain(120_000);
+    expect(ports.scheduleLeadInboxFollowUpRelay).toHaveBeenCalledWith('alpha', 10_000);
+  });
+
   it('backs off before retrying a delivery that produced no proof at all', async () => {
     const run = createRun();
     const ports = createPorts(run, [createMessage()]);
