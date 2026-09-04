@@ -146,6 +146,23 @@ describe('createProcessStartTimeCache', () => {
     expect(read).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * The same fail-safe for a reader that never returns a promise at all. The
+   * parameter is a plain function type, so a reader may reject its argument and
+   * throw where it stands; unguarded, that exception leaves the cache and ends
+   * the destructive sweep that was asking, mid-scan.
+   */
+  it('answers null for a reader that throws before it returns a promise', async () => {
+    const read = vi.fn(() => {
+      throw new Error('probe host is gone');
+    });
+    const cached = createProcessStartTimeCache(read);
+
+    await expect(cached(7)).resolves.toBeNull();
+    await expect(cached(7)).resolves.toBeNull();
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
   it('caches a null answer rather than re-probing a pid that could not be read', async () => {
     const read = vi.fn(() => Promise.resolve(null));
     const cached = createProcessStartTimeCache(read);
