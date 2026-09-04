@@ -219,6 +219,76 @@ describe('TeamLogSourceTracker', () => {
     await expect(tracker.forceReleaseTeam('never-tracked')).resolves.toBeNull();
   });
 
+  it('enableTracking and ensureTracking no-op for a team suspended by forceReleaseTeam', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-suspend-'));
+    setClaudeBasePathOverride(path.join(tempDir, '.claude'));
+
+    const logsFinder = {
+      getLiveLogSourceWatchContext: vi.fn(async () => ({
+        projectDir: tempDir!,
+        sessionIds: [],
+        watchSessionIds: [],
+      })),
+    } as unknown as TeamMemberLogsFinder;
+
+    const tracker = new TeamLogSourceTracker(logsFinder);
+    tracker.setEmitter(vi.fn<(event: TeamChangeEvent) => void>());
+
+    await tracker.enableTracking('demo', 'stall_monitor');
+    await tracker.forceReleaseTeam('demo');
+    expect(tracker.getSnapshot('demo')).toBeNull();
+
+    // A concurrent caller unrelated to the release - e.g. ActiveTeamRegistry's
+    // reconcile picking the stall monitor back up, or a UI log subscription -
+    // must not rebuild a watcher while the destructive rename this release was
+    // for is still in flight.
+    const enableResult = await tracker.enableTracking('demo', 'member_log_stream');
+    expect(enableResult).toEqual({ projectFingerprint: null, logSourceGeneration: null });
+    expect(tracker.getSnapshot('demo')).toBeNull();
+
+    const ensureResult = await tracker.ensureTracking('demo');
+    expect(ensureResult).toEqual({ projectFingerprint: null, logSourceGeneration: null });
+    expect(tracker.getSnapshot('demo')).toBeNull();
+
+    // Once the suspension lifts, tracking works normally again.
+    tracker.resumeSuspendedTeam('demo');
+    await tracker.enableTracking('demo', 'member_log_stream');
+    expect(tracker.getSnapshot('demo')).not.toBeNull();
+  });
+
+  it('resumeSuspendedTeam lifts a suspension without replaying any consumer', async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-resume-only-'));
+    setClaudeBasePathOverride(path.join(tempDir, '.claude'));
+
+    const logsFinder = {
+      getLiveLogSourceWatchContext: vi.fn(async () => ({
+        projectDir: tempDir!,
+        sessionIds: [],
+        watchSessionIds: [],
+      })),
+    } as unknown as TeamMemberLogsFinder;
+
+    const tracker = new TeamLogSourceTracker(logsFinder);
+    tracker.setEmitter(vi.fn<(event: TeamChangeEvent) => void>());
+
+    await tracker.enableTracking('demo', 'stall_monitor');
+    const released = await tracker.forceReleaseTeam('demo');
+    expect(released?.consumers).toEqual([{ consumer: 'stall_monitor', count: 1 }]);
+
+    // This is the "deletion completed" path: nothing is replayed, but a
+    // replacement team created under the same name afterward must be able to
+    // acquire tracking again instead of finding it wedged off forever.
+    tracker.resumeSuspendedTeam('demo');
+    expect(tracker.getSnapshot('demo')).toBeNull();
+
+    await tracker.enableTracking('demo', 'stall_monitor');
+    expect(tracker.getSnapshot('demo')).not.toBeNull();
+    await expect(tracker.forceReleaseTeam('demo')).resolves.toEqual({
+      releasedWatcher: true,
+      consumers: [{ consumer: 'stall_monitor', count: 1 }],
+    });
+  });
+
   it('creates team log freshness dir without creating missing live cwd roots', async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), 'team-log-source-tracker-missing-root-'));
     setClaudeBasePathOverride(path.join(tempDir, '.claude'));

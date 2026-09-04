@@ -227,6 +227,9 @@ export function initializeIpcHandlers(
       restoreTeamLogSourceConsumers: async (teamName, released) => {
         await teamLogSourceTracker?.restoreReleasedConsumers(teamName, released);
       },
+      clearTeamLogSourceSuspension: (teamName) => {
+        teamLogSourceTracker?.resumeSuspendedTeam(teamName);
+      },
     })
   );
   initializeConfigHandlers({

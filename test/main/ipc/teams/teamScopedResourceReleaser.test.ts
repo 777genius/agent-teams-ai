@@ -32,6 +32,7 @@ function createPorts(
     resumeTeamWatchers: vi.fn(async () => undefined),
     releaseTeamLogSourceWatcher: vi.fn(async () => null),
     restoreTeamLogSourceConsumers: vi.fn(async () => undefined),
+    clearTeamLogSourceSuspension: vi.fn(),
     ...overrides,
   };
 }
@@ -150,6 +151,38 @@ describe('createTeamScopedResourceReleaser', () => {
 
     expect(ports.resumeTeamWatchers).toHaveBeenCalledWith('fixteam');
     expect(ports.restoreTeamLogSourceConsumers).not.toHaveBeenCalled();
+  });
+
+  it('clears the log-source suspension even when the deletion completed', async () => {
+    // A replacement team can be created under the same name right after a
+    // successful permanent delete. If the suspension were only lifted by
+    // restoreTeamLogSourceConsumers (skipped here because deletion
+    // completed), that replacement team would never be able to acquire
+    // log-source tracking again.
+    const ports = createPorts({
+      releaseTeamLogSourceWatcher: vi.fn(async () => RELEASED_CONSUMERS),
+    });
+    const releaser = createTeamScopedResourceReleaser(ports);
+
+    const release = releaser.release('fixteam');
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    await release;
+    await releaser.restore('fixteam', { deletionCompleted: true });
+
+    expect(ports.clearTeamLogSourceSuspension).toHaveBeenCalledWith('fixteam');
+  });
+
+  it('clears the log-source suspension even when nothing was released', async () => {
+    const ports = createPorts({
+      suspendTeamWatchers: vi.fn(async () => []),
+      releaseTeamLogSourceWatcher: vi.fn(async () => null),
+    });
+    const releaser = createTeamScopedResourceReleaser(ports);
+
+    await releaser.release('fixteam');
+    await releaser.restore('fixteam', { deletionCompleted: true });
+
+    expect(ports.clearTeamLogSourceSuspension).toHaveBeenCalledWith('fixteam');
   });
 
   it('does not re-acquire twice for one release', async () => {

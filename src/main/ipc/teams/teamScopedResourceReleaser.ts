@@ -18,6 +18,13 @@ export interface TeamScopedResourceReleaserPorts {
     teamName: string,
     released: TeamLogSourceReleasedConsumers
   ): Promise<void>;
+  /**
+   * Lift the suspension releaseTeamLogSourceWatcher put in place, without
+   * replaying any consumer. Called unconditionally on restore, including when
+   * deletion completed, so a replacement team created under the same name is
+   * never left permanently unable to acquire log-source tracking.
+   */
+  clearTeamLogSourceSuspension(teamName: string): void;
 }
 
 export interface TeamScopedResourceReleaser {
@@ -97,6 +104,10 @@ export function createTeamScopedResourceReleaser(
           `[PermanentDeletion] Failed to resume team/task watchers for "${teamName}": ${String(error)}`
         );
       }
+      // Always lift the suspension, independent of whether there is anything
+      // to replay: deletionCompleted === true still means a future team
+      // reusing this name must be able to acquire tracking again.
+      ports.clearTeamLogSourceSuspension(teamName);
       if (!logSourceConsumers || options.deletionCompleted === true) {
         return;
       }

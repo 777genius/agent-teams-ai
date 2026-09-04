@@ -124,6 +124,15 @@ export class TeamLogSourceTracker {
   private readonly stateByTeam = new Map<string, TrackingState>();
   private emitter: ((event: TeamChangeEvent) => void) | null = null;
   private readonly changeListeners = new Set<(teamName: string) => void>();
+  /**
+   * Teams whose tracking forceReleaseTeam took away for a destructive
+   * operation still in flight. While suspended, enableTracking/ensureTracking
+   * no-op instead of rebuilding a watcher: a consumer (the stall monitor via
+   * ActiveTeamRegistry.reconcile(), a UI log subscription, ...) can otherwise
+   * re-acquire and reopen a handle in the same window the permanent-delete
+   * rename needs the directory handle-free for.
+   */
+  private readonly suspendedTeams = new Set<string>();
 
   constructor(private readonly logsFinder: TeamMemberLogsFinder) {}
 
@@ -153,6 +162,9 @@ export class TeamLogSourceTracker {
    * app lifetime once a team's changes were viewed.
    */
   async ensureTracking(teamName: string): Promise<TeamLogSourceSnapshot> {
+    if (this.suspendedTeams.has(teamName)) {
+      return { projectFingerprint: null, logSourceGeneration: null };
+    }
     const state = this.getOrCreateState(teamName);
     this.scheduleEnsureTrackingIdleRelease(teamName, state);
 
@@ -204,6 +216,9 @@ export class TeamLogSourceTracker {
     teamName: string,
     consumer: TeamLogSourceTrackingConsumer
   ): Promise<TeamLogSourceSnapshot> {
+    if (this.suspendedTeams.has(teamName)) {
+      return { projectFingerprint: null, logSourceGeneration: null };
+    }
     const state = this.getOrCreateState(teamName);
     const activeConsumerCountBefore = this.getActiveConsumerCount(state);
     state.consumerCounts.set(consumer, (state.consumerCounts.get(consumer) ?? 0) + 1);
@@ -313,6 +328,10 @@ export class TeamLogSourceTracker {
    * longer receive log-source events.
    */
   async forceReleaseTeam(teamName: string): Promise<TeamLogSourceReleasedConsumers | null> {
+    // Suspend before touching state: a concurrent enableTracking/ensureTracking
+    // call arriving mid-release must not create a fresh watcher behind this
+    // call's back, even when nothing was tracked yet.
+    this.suspendedTeams.add(teamName);
     const state = this.stateByTeam.get(teamName);
     if (!state) {
       return null;
@@ -355,10 +374,22 @@ export class TeamLogSourceTracker {
    * and its consumers still believe they own it. Re-acquiring through
    * enableTracking rebuilds the watcher exactly once, on the first acquisition.
    */
+  /**
+   * Lift a forceReleaseTeam suspension without replaying any consumers. Used
+   * when the destructive operation the release was for actually completed:
+   * there is nothing to re-track for a team that is gone, but a replacement
+   * team created under the same name afterward must not find tracking wedged
+   * off forever.
+   */
+  resumeSuspendedTeam(teamName: string): void {
+    this.suspendedTeams.delete(teamName);
+  }
+
   async restoreReleasedConsumers(
     teamName: string,
     released: TeamLogSourceReleasedConsumers
   ): Promise<void> {
+    this.resumeSuspendedTeam(teamName);
     for (const { consumer, count } of released.consumers) {
       for (let acquisition = 0; acquisition < count; acquisition++) {
         await this.enableTracking(teamName, consumer);
