@@ -315,6 +315,85 @@ describe('releaseLoopbackRuntimeModels', () => {
     expect(result.diagnostics).toEqual(['local-provider: evicted model-a']);
   });
 
+  /**
+   * The narrowing the whole module is built on has to survive the last step.
+   * A loopback runtime is a shared machine service, so what it holds beyond
+   * what the stopped members were running belongs to another application, to
+   * another session, or to a chat window the user has open right now.
+   */
+  it('evicts only the models the stopped members were running', async () => {
+    const configPath = writeConfig({
+      'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
+    });
+    const evicted: string[] = [];
+    const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
+      if (url.endsWith('/api/ps')) {
+        return new Response(
+          JSON.stringify({ models: [{ name: 'model-a' }, { name: 'somebody-elses-model' }] }),
+          { status: 200 }
+        );
+      }
+      evicted.push(
+        String(
+          (JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as { model?: string })
+            .model
+        )
+      );
+      return okOnce();
+    });
+
+    const result = await releaseLoopbackRuntimeModels({
+      configPaths: [configPath],
+      fetchImpl,
+      env: {},
+      memberModels: ['local-provider/model-a'],
+    });
+
+    expect(evicted).toEqual(['model-a']);
+    expect(result.released).toEqual(['local-provider']);
+    expect(result.diagnostics).toEqual([
+      'local-provider: evicted model-a',
+      'local-provider: kept somebody-elses-model: no stopped member was running it',
+    ]);
+  });
+
+  /**
+   * The one case that does drop everything, and the reason the filter is a
+   * `null` rather than an empty set: at app exit there is no team left to
+   * attribute a reservation to, so every loaded model is this app's to release.
+   */
+  it('evicts every loaded model when there is no member to attribute one to', async () => {
+    const configPath = writeConfig({
+      'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
+    });
+    const evicted: string[] = [];
+    const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
+      if (url.endsWith('/api/ps')) {
+        return new Response(
+          JSON.stringify({ models: [{ name: 'model-a' }, { name: 'model-b' }] }),
+          {
+            status: 200,
+          }
+        );
+      }
+      evicted.push(
+        String(
+          (JSON.parse(typeof init?.body === 'string' ? init.body : '{}') as { model?: string })
+            .model
+        )
+      );
+      return okOnce();
+    });
+
+    await releaseLoopbackRuntimeModels({ configPaths: [configPath], fetchImpl, env: {} });
+
+    expect(evicted).toEqual(['model-a', 'model-b']);
+  });
+
   // The other side of that boundary. Only a 404 means "no such endpoint"; any
   // other error status is a runtime that has one and failed to serve it, and
   // asking it a second question in a different protocol would be guessing.

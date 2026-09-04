@@ -151,6 +151,28 @@ export function selectProvidersUsedByModels(
 }
 
 /**
+ * The model names the stopped members ran on one provider, with the provider
+ * prefix taken off, or `null` when there is no member filter at all - the
+ * app-shutdown case, where nothing this app started is left running and every
+ * loaded model is this app's to release.
+ */
+export function selectMemberModelNamesForProvider(
+  providerId: string,
+  memberModels: readonly (string | undefined | null)[] | undefined
+): Set<string> | null {
+  if (!memberModels) return null;
+  const names = new Set<string>();
+  for (const model of memberModels) {
+    const normalized = typeof model === 'string' ? model.trim() : '';
+    const slash = normalized.indexOf('/');
+    if (slash > 0 && normalized.slice(0, slash) === providerId) {
+      names.add(normalized.slice(slash + 1));
+    }
+  }
+  return names;
+}
+
+/**
  * The fallback for a runtime that has no release endpoint at all. Ollama is the
  * one in the wild: it answers 404 there, it lists what it currently holds on
  * `/api/ps`, and it drops a model when a generate call carries `keep_alive: 0`.
@@ -158,10 +180,19 @@ export function selectProvidersUsedByModels(
  * Only a 404 reaches this. A runtime that answers anything else has the
  * endpoint and failed to serve it, and asking that runtime a second question in
  * a different protocol would be guessing at what it is.
+ *
+ * `memberModelNames` carries the module's own rule the last step of the way. A
+ * loopback runtime is a shared machine service: an Ollama the stopped team used
+ * may be holding models for another application, another user session, or a
+ * chat window the user has open right now. Only what the stopped members were
+ * running is evicted; `null` means there is nobody left to attribute a
+ * reservation to, which is the app-shutdown case and the only one that drops
+ * everything.
  */
 async function evictLoadedModels(
   origin: string,
-  fetchImpl: typeof fetch
+  fetchImpl: typeof fetch,
+  memberModelNames: ReadonlySet<string> | null
 ): Promise<{ evicted: boolean; diagnostics: string[] }> {
   let loaded: { name?: unknown; model?: unknown }[] = [];
   try {
@@ -195,6 +226,10 @@ async function evictLoadedModels(
           ? entry.name
           : null;
     if (!name) continue;
+    if (memberModelNames && !memberModelNames.has(name)) {
+      diagnostics.push(`kept ${name}: no stopped member was running it`);
+      continue;
+    }
     try {
       const response = await fetchImpl(`${origin}/api/generate`, {
         method: 'POST',
@@ -243,7 +278,11 @@ export async function releaseLoopbackRuntimeModels(
         continue;
       }
       if (response.status === 404) {
-        const eviction = await evictLoadedModels(origin, fetchImpl);
+        const eviction = await evictLoadedModels(
+          origin,
+          fetchImpl,
+          selectMemberModelNamesForProvider(providerId, options.memberModels)
+        );
         if (eviction.evicted) {
           result.released.push(providerId);
         }
