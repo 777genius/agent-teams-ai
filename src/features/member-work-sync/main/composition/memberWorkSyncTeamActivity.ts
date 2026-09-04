@@ -66,11 +66,18 @@ export function buildWorkSyncHardFailedMembers(
   return hardFailedMembers;
 }
 
+function isWorkSyncHardFailedMemberName(
+  normalizedMemberName: string,
+  hardFailedMembers: WorkSyncHardFailedMembers | undefined
+): boolean {
+  return hardFailedMembers?.has(normalizedMemberName) === true;
+}
+
 function isWorkSyncHardFailedMember(
   entry: Pick<TeamAgentRuntimeEntry, 'memberName'>,
   hardFailedMembers: WorkSyncHardFailedMembers | undefined
 ): boolean {
-  return hardFailedMembers != null && hardFailedMembers.has(normalizeMemberName(entry.memberName));
+  return isWorkSyncHardFailedMemberName(normalizeMemberName(entry.memberName), hardFailedMembers);
 }
 
 function isWorkSyncLeadLikeMemberName(memberName: string): boolean {
@@ -173,12 +180,21 @@ function runtimeEntryMentionsProcessTableUnavailable(
   );
 }
 
+/**
+ * A member whose launch hard-failed is never uncertain: the caller answers null
+ * on uncertainty and then falls back to team-wide liveness, which would hand the
+ * hard-failed member back as active. An unreadable process table only clouds
+ * members whose fate is still open.
+ */
 export function hasUncertainWorkSyncRuntimeActivity(
-  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined
+  snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   return Object.values(snapshot?.members ?? {}).some(
     (entry) =>
-      isRuntimeEntryRelevantForWorkSync(entry) && runtimeEntryMentionsProcessTableUnavailable(entry)
+      isRuntimeEntryRelevantForWorkSync(entry) &&
+      !isWorkSyncHardFailedMember(entry, hardFailedMembers) &&
+      runtimeEntryMentionsProcessTableUnavailable(entry)
   );
 }
 
@@ -222,10 +238,14 @@ export function isRuntimeMemberActiveForWorkSync(
 
 export function isRuntimeMemberActivityUncertainForWorkSync(
   snapshot: Pick<TeamAgentRuntimeSnapshot, 'members'> | null | undefined,
-  memberName: string
+  memberName: string,
+  hardFailedMembers?: WorkSyncHardFailedMembers
 ): boolean {
   const normalizedMemberName = normalizeMemberName(memberName);
   if (!normalizedMemberName) {
+    return false;
+  }
+  if (isWorkSyncHardFailedMemberName(normalizedMemberName, hardFailedMembers)) {
     return false;
   }
   return Object.values(snapshot?.members ?? {}).some(

@@ -290,6 +290,59 @@ describe('member work sync team activity', () => {
     expect(isRuntimeMemberActiveForWorkSync(snapshot, 'bob', hardFailedMembers)).toBe(true);
   });
 
+  it('does not report a hard-failed member as uncertain when the process table is unavailable', () => {
+    // Excluding a hard-failed member from the active check is only half of it:
+    // src/main/index.ts answers null whenever nothing is active but something
+    // is uncertain, and both callers of that null fall back to isTeamAlive() /
+    // hasProvisioningRun(), which hand the same member straight back as active.
+    // A hard failure is already decided, so an unreadable process table cannot
+    // make it uncertain again.
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({
+        memberName: 'alice',
+        livenessKind: 'registered_only',
+        runtimeDiagnostic:
+          'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+      }),
+    });
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({ alice: { hardFailure: true } });
+
+    expect(hasUncertainWorkSyncRuntimeActivity(snapshot)).toBe(true);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'alice')).toBe(true);
+
+    expect(hasUncertainWorkSyncRuntimeActivity(snapshot, hardFailedMembers)).toBe(false);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'alice', hardFailedMembers)).toBe(
+      false
+    );
+
+    // Both work-sync call sites now resolve to a definite false instead of null.
+    expect(hasWorkSyncReachableRuntime(snapshot, hardFailedMembers)).toBe(false);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'alice', hardFailedMembers)).toBe(false);
+  });
+
+  it('keeps a teammate that did not hard-fail uncertain while the process table is unavailable', () => {
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({
+        memberName: 'alice',
+        livenessKind: 'registered_only',
+        runtimeDiagnostic:
+          'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+      }),
+      bob: createRuntimeEntry({
+        memberName: 'bob',
+        alive: false,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+      }),
+    });
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({ alice: { hardFailure: true } });
+
+    expect(hasUncertainWorkSyncRuntimeActivity(snapshot, hardFailedMembers)).toBe(true);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'bob', hardFailedMembers)).toBe(
+      true
+    );
+  });
+
   it('buildWorkSyncHardFailedMembers only includes members whose hardFailure is true', () => {
     const hardFailedMembers = buildWorkSyncHardFailedMembers({
       alice: { hardFailure: true },

@@ -2446,7 +2446,7 @@ async function initializeServices(): Promise<void> {
       }
       const hardFailedMembers = await getMemberWorkSyncHardFailedMembers(teamName);
       const active = hasWorkSyncReachableRuntime(snapshot, hardFailedMembers);
-      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot)) {
+      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot, hardFailedMembers)) {
         return null;
       }
       return active;
@@ -2473,7 +2473,10 @@ async function initializeServices(): Promise<void> {
         input.memberName,
         hardFailedMembers
       );
-      if (!active && isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName)) {
+      if (
+        !active &&
+        isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName, hardFailedMembers)
+      ) {
         return null;
       }
       return active;
