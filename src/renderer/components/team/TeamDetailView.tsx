@@ -2344,6 +2344,8 @@ export const TeamDetailView = memo(function TeamDetailView({
       refreshTeamData: (name) => refreshTeamData(name),
       setBusy: setForceStoppingTeam,
       logError: (cause) => console.error('Failed to force stop team:', cause),
+      logRefreshError: (cause) =>
+        console.error('Force stopped the team, but the refresh after it failed:', cause),
     });
   }, [data?.config.name, teamName, refreshTeamData, t]);
 

@@ -27,6 +27,7 @@ function createPorts(
   refreshTeamData: ReturnType<typeof vi.fn>;
   setBusy: ReturnType<typeof vi.fn>;
   logError: ReturnType<typeof vi.fn>;
+  logRefreshError: ReturnType<typeof vi.fn>;
 } {
   return {
     teamName: 'fixteam',
@@ -36,6 +37,7 @@ function createPorts(
     refreshTeamData: vi.fn(() => Promise.resolve()),
     setBusy: vi.fn(),
     logError: vi.fn(),
+    logRefreshError: vi.fn(),
     ...overrides,
   } as never;
 }
@@ -58,6 +60,7 @@ describe('runTeamForceStopAction', () => {
     expect(ports.refreshTeamData).toHaveBeenCalledWith('fixteam');
     expect(ports.setBusy.mock.calls).toEqual([[true], [false]]);
     expect(ports.logError).not.toHaveBeenCalled();
+    expect(ports.logRefreshError).not.toHaveBeenCalled();
   });
 
   it('does nothing at all when the user cancels', async () => {
@@ -94,19 +97,44 @@ describe('runTeamForceStopAction', () => {
     // run that never happened.
     expect(ports.setBusy.mock.calls).toEqual([[true], [false]]);
     expect(ports.refreshTeamData).not.toHaveBeenCalled();
+    expect(ports.logRefreshError).not.toHaveBeenCalled();
   });
 
-  it('reports a failing refresh the same way', async () => {
+  it('does not report a completed force stop as failed when only the refresh fails', async () => {
+    // The stop is awaited first and on its own, so by the time the refresh
+    // rejects the runtime is already down. The dialog says the opposite - that
+    // the escape hatch never ran - so it must not appear, and the outcome has
+    // to be distinguishable from both a clean run and a failed one.
+    let releaseStop: (() => void) | undefined;
+    const stopInFlight = new Promise<void>((resolve) => {
+      releaseStop = resolve;
+    });
     const ports = createPorts({
+      forceStop: vi.fn(() => stopInFlight),
       refreshTeamData: vi.fn(() => Promise.reject(new Error('refresh failed'))),
     });
 
-    await expect(runTeamForceStopAction(ports)).resolves.toBe('failed');
+    const outcome = runTeamForceStopAction(ports);
+    await vi.waitFor(() => {
+      expect(ports.forceStop).toHaveBeenCalledWith('fixteam');
+    });
+    // The stop is awaited, not fired alongside the refresh: while it is still
+    // in flight nothing has read the team back.
+    expect(ports.refreshTeamData).not.toHaveBeenCalled();
+    releaseStop?.();
 
-    expect(ports.confirm).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ title: 'Force stop failed', message: 'refresh failed' })
-    );
+    await expect(outcome).resolves.toBe('ran_refresh_failed');
+
+    expect(ports.refreshTeamData).toHaveBeenCalledWith('fixteam');
+    // Only the confirmation was shown; no second dialog followed it.
+    expect(ports.confirm).toHaveBeenCalledTimes(1);
+    // The stop is not blamed for a read that failed after it.
+    expect(ports.logError).not.toHaveBeenCalled();
+    expect(ports.logRefreshError).toHaveBeenCalledTimes(1);
+    expect(ports.logRefreshError.mock.calls[0]?.[0]).toBeInstanceOf(Error);
+    expect((ports.logRefreshError.mock.calls[0]?.[0] as Error).message).toBe('refresh failed');
+    // The control is still released.
+    expect(ports.setBusy.mock.calls).toEqual([[true], [false]]);
   });
 });
 
