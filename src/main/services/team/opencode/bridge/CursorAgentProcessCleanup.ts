@@ -90,23 +90,37 @@ const CURSOR_AGENT_PRINT_FLAG = /--print\b/;
 
 /**
  * Normalizes only what two spellings of the same directory may differ in: a
- * trailing separator, separator direction, and case. It deliberately does not
- * resolve, relativize, or shorten, so comparison stays exact - a prefix match
- * would make a stop of `<workspace>` reap the lead of `<workspace>-backup`.
+ * trailing separator, separator direction, and - where the filesystem ignores
+ * it - case. It deliberately does not resolve, relativize, or shorten, so
+ * comparison stays exact - a prefix match would make a stop of `<workspace>`
+ * reap the lead of `<workspace>-backup`.
+ *
+ * Case is folded on Windows and nowhere else. On a case-sensitive filesystem
+ * `/work/Team` and `/work/team` are two directories with two different teams in
+ * them, and folding them together lets a stop of one reap the whole lead tree of
+ * the other. Not folding costs the opposite mistake on a case-insensitive POSIX
+ * volume: two spellings of one directory stop matching and a tree this app owns
+ * is kept. For a sweep that kills whole trees, that is the direction to be wrong
+ * in.
  */
-function normalizeWorkspacePath(value: string): string {
-  const separated = value.trim().replace(/\\/g, '/').toLowerCase();
-  let end = separated.length;
-  while (end > 0 && separated[end - 1] === '/') {
+function normalizeWorkspacePath(value: string, platform: NodeJS.Platform): string {
+  const separated = value.trim().replace(/\\/g, '/');
+  const cased = platform === 'win32' ? separated.toLowerCase() : separated;
+  let end = cased.length;
+  while (end > 0 && cased[end - 1] === '/') {
     end -= 1;
   }
-  return separated.slice(0, end);
+  return cased.slice(0, end);
 }
 
 /** The same exact comparison the sweep uses, for callers that scope it. */
-export function isSameWorkspacePath(left: string, right: string): boolean {
-  const normalizedLeft = normalizeWorkspacePath(left);
-  return normalizedLeft.length > 0 && normalizedLeft === normalizeWorkspacePath(right);
+export function isSameWorkspacePath(
+  left: string,
+  right: string,
+  platform: NodeJS.Platform = process.platform
+): boolean {
+  const normalizedLeft = normalizeWorkspacePath(left, platform);
+  return normalizedLeft.length > 0 && normalizedLeft === normalizeWorkspacePath(right, platform);
 }
 
 export function extractCursorAgentWorkspace(command: string): string | null {
@@ -131,9 +145,10 @@ export async function cleanupCursorAgentProcessTrees(
     diagnostics: [],
   };
 
+  const platform = options.platform ?? process.platform;
   const ownedWorkspaces = new Set(
     (options.ownedWorkspaceCwds ?? [])
-      .map((entry) => normalizeWorkspacePath(entry ?? ''))
+      .map((entry) => normalizeWorkspacePath(entry ?? '', platform))
       .filter((entry) => entry.length > 0)
   );
   if (ownedWorkspaces.size === 0) {
@@ -146,7 +161,6 @@ export async function cleanupCursorAgentProcessTrees(
     return result;
   }
 
-  const platform = options.platform ?? process.platform;
   const listProcessRows =
     options.listProcessRows ??
     (platform === 'win32'
@@ -183,7 +197,7 @@ export async function cleanupCursorAgentProcessTrees(
     // app can name belongs to that root.
     if (rootPids.has(row.ppid)) continue;
     const workspace = extractCursorAgentWorkspace(row.command ?? '');
-    if (!workspace || !ownedWorkspaces.has(normalizeWorkspacePath(workspace))) continue;
+    if (!workspace || !ownedWorkspaces.has(normalizeWorkspacePath(workspace, platform))) continue;
     if (startedBeforeMs !== null) {
       const startedAtMs = await readStartTimeMs(row.pid);
       const verified = typeof startedAtMs === 'number' && Number.isFinite(startedAtMs);

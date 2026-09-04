@@ -64,9 +64,20 @@ describe('cursor-agent tree root detection', () => {
   });
 
   it('compares two spellings of one workspace exactly, and never an empty one', () => {
-    expect(isSameWorkspacePath('c:/workspaces/Example/', WORKSPACE)).toBe(true);
-    expect(isSameWorkspacePath(WORKSPACE, 'C:\\workspaces\\example-backup')).toBe(false);
-    expect(isSameWorkspacePath('   ', '')).toBe(false);
+    expect(isSameWorkspacePath('c:/workspaces/Example/', WORKSPACE, 'win32')).toBe(true);
+    expect(isSameWorkspacePath(WORKSPACE, 'C:\\workspaces\\example-backup', 'win32')).toBe(false);
+    expect(isSameWorkspacePath('   ', '', 'win32')).toBe(false);
+  });
+
+  /**
+   * Case is part of the identity of a POSIX directory, so two teams can work in
+   * `/work/Team` and `/work/team` at the same time. Folding them together would
+   * make the "another live team works here" guard in the stop path answer for
+   * the wrong directory in both directions.
+   */
+  it('keeps two POSIX directories that differ only by case apart', () => {
+    expect(isSameWorkspacePath('/work/Team', '/work/team', 'linux')).toBe(false);
+    expect(isSameWorkspacePath('/work/Team/', '/work/Team', 'linux')).toBe(true);
   });
 });
 
@@ -185,9 +196,32 @@ describe('cleanupCursorAgentProcessTrees', () => {
       ownedWorkspaceCwds: ['c:/workspaces/Example/'],
       listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
       killTree,
+      platform: 'win32',
     });
 
     expect(result.killed).toEqual([10]);
+  });
+
+  /**
+   * The same input off Windows. `/work/Team` and `/work/team` are two
+   * directories there, so a stop that owns one must not reap the lead tree
+   * standing in the other - the sweep kills the whole tree, and the tree it
+   * would take belongs to a team that is still running.
+   */
+  it('never reaps a POSIX lead whose workspace differs from the owned one only by case', async () => {
+    const killTree = vi.fn();
+    const posixLead =
+      '/home/u/.local/cursor-agent/bin/cursor-agent --print --workspace /work/Team --model cursor-grok';
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: ['/work/team'],
+      listProcessRows: () => Promise.resolve([{ pid: 40, ppid: 1, command: posixLead }]),
+      killTree,
+      platform: 'linux',
+    });
+
+    expect(result.killed).toEqual([]);
+    expect(killTree).not.toHaveBeenCalled();
   });
 
   /**
@@ -219,6 +253,7 @@ describe('cleanupCursorAgentProcessTrees', () => {
       ownedWorkspaceCwds: [WORKSPACE],
       listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
       killTree: vi.fn(),
+      platform: 'win32',
     });
 
     expect(diagnostic).toHaveBeenCalledExactlyOnceWith(
