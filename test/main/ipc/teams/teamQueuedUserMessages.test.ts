@@ -144,6 +144,27 @@ describe('inbox file operations', () => {
     await expect(listQueuedUserMessages(teamsBasePath, TEAM_NAME, MEMBER)).resolves.toEqual([]);
   });
 
+  it('rejects a symlinked inboxes directory that escapes the teams root', async () => {
+    // Same defense as TeamInboxWriter.resolveInboxPath: the lexical path stays
+    // under teamsBasePath, but the directory a symlink actually resolves to
+    // does not.
+    const outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), 'queued-inbox-outside-'));
+    try {
+      const inboxDir = path.join(teamsBasePath, TEAM_NAME, 'inboxes');
+      fs.rmSync(inboxDir, { recursive: true, force: true });
+      fs.symlinkSync(outsideDir, inboxDir, process.platform === 'win32' ? 'junction' : 'dir');
+
+      await expect(listQueuedUserMessages(teamsBasePath, TEAM_NAME, MEMBER)).rejects.toThrow(
+        'Invalid inbox path'
+      );
+      await expect(
+        discardQueuedUserMessages(teamsBasePath, TEAM_NAME, MEMBER, ['m1'])
+      ).rejects.toThrow('Invalid inbox path');
+    } finally {
+      fs.rmSync(outsideDir, { recursive: true, force: true });
+    }
+  });
+
   it('discards the confirmed queued messages and preserves the rest on disk', async () => {
     fs.writeFileSync(
       inboxPath,
