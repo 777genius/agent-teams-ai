@@ -1788,6 +1788,9 @@
     "createAutomatically": "اگر ڈائریکٹری موجود نہ ہو تو اسے خودبخود بنایا جائے گا۔"
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "ٹیم ساتھی لانچ کی مہلت کے دوران شامل نہیں ہوا۔"
+    },
     "badges": {
       "worktree": "جگہ"
     },

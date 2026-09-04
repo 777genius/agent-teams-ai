@@ -1788,6 +1788,9 @@
     "createAutomatically": "Iwapo saraka haipo, itaundwa kiotomatiki."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Mwenzako wa timu hakujiunga ndani ya muda wa neema wa uzinduzi."
+    },
     "badges": {
       "worktree": "worktree"
     },

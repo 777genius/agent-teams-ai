@@ -1788,6 +1788,9 @@
     "createAutomatically": "Nếu thư mục không tồn tại, nó sẽ được tạo tự động."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Thành viên không tham gia trong khoảng thời gian ân hạn khởi chạy."
+    },
     "badges": {
       "worktree": "worktree"
     },

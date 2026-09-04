@@ -1788,6 +1788,9 @@
     "createAutomatically": "اگر دایرکتوری وجود نداشته باشد، به‌طور خودکار ایجاد خواهد شد."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "هم‌تیمی در بازه مهلت راه‌اندازی نپیوست."
+    },
     "badges": {
       "worktree": "worktree"
     },

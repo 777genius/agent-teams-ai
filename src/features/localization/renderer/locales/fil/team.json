@@ -1788,6 +1788,9 @@
     "createAutomatically": "Kung hindi umiiral ang directory, awtomatiko itong lilikhain."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Hindi sumali ang teammate sa loob ng palugit na panahon ng paglunsad."
+    },
     "badges": {
       "worktree": "worktree"
     },

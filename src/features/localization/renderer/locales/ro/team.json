@@ -1788,6 +1788,9 @@
     "createAutomatically": "Dacă directorul nu există, va fi creat automat."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Coechipierul nu s-a alăturat în perioada de grație a lansării."
+    },
     "badges": {
       "worktree": "worktree"
     },

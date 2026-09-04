@@ -1788,6 +1788,9 @@
     "createAutomatically": "Dizin mevcut değilse otomatik olarak oluşturulacaktır."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Takım arkadaşı başlatma tolerans süresi içinde katılmadı."
+    },
     "badges": {
       "worktree": "worktree"
     },

@@ -1788,6 +1788,9 @@
     "createAutomatically": "وإذا لم يكن الدليل موجودا، فإنه سيُنشأ تلقائيا."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "لم ينضم زميل الفريق خلال مهلة السماح الخاصة بالإطلاق."
+    },
     "badges": {
       "worktree": "العمل"
     },

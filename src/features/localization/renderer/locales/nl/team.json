@@ -1788,6 +1788,9 @@
     "createAutomatically": "Als de directory niet bestaat, wordt deze automatisch aangemaakt."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Teamlid heeft zich niet binnen de coulanceperiode van de start aangesloten."
+    },
     "badges": {
       "worktree": "worktree"
     },

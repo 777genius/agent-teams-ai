@@ -1788,6 +1788,9 @@
     "createAutomatically": "Bila direktori tidak ada, itu akan dibuat secara otomatis."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Rekan tim tidak bergabung dalam tenggang waktu peluncuran."
+    },
     "badges": {
       "worktree": "pohon kerja"
     },

@@ -1788,6 +1788,9 @@
     "createAutomatically": "Jeśli katalog nie istnieje, zostanie utworzony automatycznie."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Członek zespołu nie dołączył w okresie karencji uruchomienia."
+    },
     "badges": {
       "worktree": "worktree"
     },

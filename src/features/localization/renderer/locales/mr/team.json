@@ -1788,6 +1788,9 @@
     "createAutomatically": "डिरेक्टरी अस्तित्वात नसल्यास, ती आपोआप तयार केली जाईल."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "सहकारी सुरू होण्याच्या सवलत कालावधीत सामील झाला नाही."
+    },
     "badges": {
       "worktree": "worktree"
     },

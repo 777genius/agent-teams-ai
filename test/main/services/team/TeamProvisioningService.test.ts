@@ -287,6 +287,7 @@ import {
   listWindowsProcessTable,
   listWindowsProcessTableSync,
 } from '@main/utils/windowsProcessTable';
+import { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON } from '@shared/utils/teamLaunchFailureReason';
 import {
   AGENT_TEAMS_NAMESPACED_LEAD_BOOTSTRAP_TOOL_NAMES,
   AGENT_TEAMS_NAMESPACED_TEAMMATE_OPERATIONAL_TOOL_NAMES,
@@ -5356,7 +5357,7 @@ describe('TeamProvisioningService', () => {
         livenessSource: undefined,
         livenessKind: 'stale_metadata',
         hardFailure: true,
-        hardFailureReason: 'Teammate did not join within the launch grace window.',
+        hardFailureReason: MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
       });
       expect(result.summary).toMatchObject({
         failedCount: 1,

@@ -1788,6 +1788,9 @@
     "createAutomatically": "ディレクトリが存在しない場合、自動的に作成されます。"
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "チームメイトが起動の猶予時間内に参加しませんでした。"
+    },
     "badges": {
       "worktree": "ワークツリー"
     },

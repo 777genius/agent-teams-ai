@@ -1788,6 +1788,9 @@
     "createAutomatically": "Jika direktori tidak wujud, ia akan dicipta secara automatik."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Rakan pasukan tidak menyertai dalam tempoh tangguh pelancaran."
+    },
     "badges": {
       "worktree": "worktree"
     },

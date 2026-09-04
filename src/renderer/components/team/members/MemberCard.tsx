@@ -23,6 +23,7 @@ import {
   hasMemberLaunchDiagnosticsError,
   normalizeMemberLaunchFailureReason,
 } from '@renderer/utils/memberLaunchDiagnostics';
+import { describeMemberLaunchFailureReason } from '@renderer/utils/memberLaunchFailureReasonText';
 import { getRuntimeMemorySourceLabel } from '@renderer/utils/memberRuntimeSummary';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { deriveTaskDisplayId } from '@shared/utils/taskIdentity';
@@ -946,13 +947,15 @@ export const MemberCard = memo(function MemberCard({
     spawnEntry?.skippedForLaunch === true;
   const showFailedLaunchBadge = !isRemoved && isFailedLaunch;
   const showSkippedLaunchBadge = !isRemoved && isSkippedLaunch;
-  const rawLaunchFailureReason =
+  const launchFailureReasonText = describeMemberLaunchFailureReason(
     spawnError ??
-    spawnEntry?.hardFailureReason ??
-    spawnEntry?.runtimeDiagnostic ??
-    spawnEntry?.error;
+      spawnEntry?.hardFailureReason ??
+      spawnEntry?.runtimeDiagnostic ??
+      spawnEntry?.error,
+    t
+  );
   const launchFailureReason = showFailedLaunchBadge
-    ? normalizeMemberLaunchFailureReason(rawLaunchFailureReason)
+    ? normalizeMemberLaunchFailureReason(launchFailureReasonText)
     : null;
   const hasLiveLaunchControls =
     isTeamAlive === true || isTeamProvisioning === true || isLaunchSettling === true;
@@ -1538,7 +1541,7 @@ export const MemberCard = memo(function MemberCard({
             <div
               data-testid="member-launch-failure-reason"
               className="col-span-2 col-start-2 min-w-0 whitespace-pre-wrap break-words text-[10px] font-medium leading-snug text-red-300/90"
-              title={rawLaunchFailureReason}
+              title={launchFailureReasonText}
             >
               <span>
                 {renderLinkifiedText(launchFailureReason, {

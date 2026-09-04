@@ -1830,6 +1830,9 @@
     "createAutomatically": "If the directory does not exist, it will be created automatically."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Teammate did not join within the launch grace window."
+    },
     "badges": {
       "worktree": "worktree"
     },

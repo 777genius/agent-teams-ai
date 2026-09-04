@@ -4526,6 +4526,9 @@ export default interface Resources {
         memberTurn: '{{member}} turn';
         turn: 'turn';
       };
+      launchFailure: {
+        graceTimeout: 'Teammate did not join within the launch grace window.';
+      };
       leadModel: {
         anthropicContextLimit: 'The 200K context limit is team-wide for Anthropic runtimes in this launch, including custom Anthropic teammates.';
         anthropicTeamWide: 'Anthropic team-wide';
