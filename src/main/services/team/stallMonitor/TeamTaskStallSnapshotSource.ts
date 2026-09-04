@@ -17,8 +17,10 @@ import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked } from '../teamTask
 import { TeamTaskReader } from '../TeamTaskReader';
 
 import { BoardTaskActivityBatchIndexer } from './BoardTaskActivityBatchIndexer';
-import { getOpenCodeLaneTurnActivityMaxAgeMs } from './featureGates';
-import { classifyOpenCodeLaneTurnSample } from './openCodeLaneTurnFreshness';
+import {
+  classifyOpenCodeLaneTurnSample,
+  resolveOpenCodeLaneTurnActivityMaxAgeMs,
+} from './openCodeLaneTurnFreshness';
 import { OpenCodeTaskStallEvidenceSource } from './OpenCodeTaskStallEvidenceSource';
 import { buildResolvedReviewerIndex } from './reviewerResolution';
 import { TeamTaskLogFreshnessReader } from './TeamTaskLogFreshnessReader';
@@ -278,7 +280,7 @@ export class TeamTaskStallSnapshotSource {
     const openCodeLaneActiveMemberNames = new Set<string>();
     const openCodeLaneActiveSinceByMemberName = new Map<string, string>();
     const openCodeLaneStaleActiveSinceByMemberName = new Map<string, string>();
-    const maxAgeMs = getOpenCodeLaneTurnActivityMaxAgeMs();
+    const maxAgeMs = resolveOpenCodeLaneTurnActivityMaxAgeMs();
 
     for (const [memberName, sample] of this.laneTurnActivity.listTeam(teamName)) {
       const verdict = classifyOpenCodeLaneTurnSample({ sample, nowMs, maxAgeMs });

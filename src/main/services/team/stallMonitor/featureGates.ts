@@ -102,6 +102,10 @@ export function getOpenCodeLaneTurnActivityMaxAgeMs(): number {
   // starts at the demotion instead of at the five-minute mark.
   //
   // openCodeLaneTurnFreshness.test.ts holds this ordering as a test, so
-  // lowering the default below any of those thresholds fails the build.
+  // lowering the default below any of those thresholds fails the build. This is
+  // the raw reader: an environment override is not a default and no test can
+  // pin it, so `resolveOpenCodeLaneTurnActivityMaxAgeMs` (openCodeLaneTurnFreshness)
+  // raises an under-floor override back to the floor before the snapshot
+  // applies it. Read that resolver, not this gate, to get the effective bound.
   return readInt(process.env.CLAUDE_TEAM_OPENCODE_LANE_TURN_ACTIVITY_MAX_AGE_MS, 10 * 60_000);
 }
