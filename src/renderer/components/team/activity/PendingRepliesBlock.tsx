@@ -309,7 +309,7 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
                         aria-label={t('activity.pendingReplies.discardQueued.action')}
                         title={t('activity.pendingReplies.discardQueued.tooltip')}
                         className="shrink-0 rounded p-0.5 text-[var(--color-text-muted)] transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-60"
-                        disabled={discardingMember === member.name}
+                        disabled={discardingMember !== null}
                         onClick={() => handleDiscardQueued(member.name)}
                       >
                         <X className="size-3" />
