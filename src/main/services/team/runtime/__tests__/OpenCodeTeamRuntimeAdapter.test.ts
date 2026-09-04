@@ -211,8 +211,15 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).toContain('"no further work"');
     expect(text).toContain('Reply ONLY if the report asks you a direct question');
     // The final user message is tied to the report that completed the board, so
-    // a memoryless turn cannot re-send it for a board that was already done.
+    // a memoryless turn does not re-send it for a board that was already done.
     expect(text).toContain('If the board was already complete before this report');
+    // ... but an already complete board is not proof that the message was sent:
+    // the turn that completed the last task can die before message_send lands,
+    // so the suppression stays a check the lead has to make, never an assertion
+    // the prompt makes for it.
+    expect(text).toContain('check your own recent messages to the user first');
+    expect(text).toContain('send one only if it is verifiably missing');
+    expect(text).not.toContain('the final message was already sent in an earlier turn');
     expect(text).toContain('"to":"alice"');
     expect(text).toContain('to="user"');
     expect(text).not.toContain('Required message_send argument envelope');
