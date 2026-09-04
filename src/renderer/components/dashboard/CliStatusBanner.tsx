@@ -24,7 +24,7 @@ import {
   resolveOpenCodeQuickConnectGate,
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
-  useOpenCodeProviderModelCatalog,
+  useOpenCodeConnectedModelCatalog,
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
@@ -101,11 +101,14 @@ import {
 } from 'lucide-react';
 
 import { DashboardRateLimitChips } from './DashboardRateLimitChips';
+import { canLoadOpenCodeDashboardCatalog } from './openCodeDashboardCatalogPolicy';
+import { ProviderCatalogDiagnostics } from './ProviderCatalogDiagnostics';
 import {
   getDashboardRateLimitsForProvider,
   isDashboardRateLimitSubscriptionMode,
   shouldShowDashboardRateLimitSkeleton,
 } from './providerDashboardRateLimits';
+import { useDashboardStatusRefresh } from './useDashboardStatusRefresh';
 
 import type { DashboardRateLimitItem } from './providerDashboardRateLimits';
 import type { CodexRuntimeStatus } from '@features/codex-runtime-installer/contracts';
@@ -1165,15 +1168,16 @@ const InstalledBanner = ({
                 ? hasProviderModels
                   ? settingsT('providerRuntime.connectionUi.status.modelsAvailable')
                   : provider.modelCatalogRefreshState === 'error'
-                    ? t('cliStatus.provider.modelsUnavailable')
-                    : t('cliStatus.actions.checking')
+                    ? settingsT('providerRuntime.connectionUi.status.unableToVerify')
+                    : provider.modelCatalogRefreshState === 'ready'
+                      ? 'No models from connected providers'
+                      : t('cliStatus.actions.checking')
                 : openCodeRuntimeContradictsMissingMetadata
                   ? t('cliStatus.quickConnect.connected')
                   : formatProviderStatusText(provider, settingsT);
             const modelCatalogLoading =
-              !isPassiveOpenCodeModelSummary &&
-              (provider.modelCatalogRefreshState === 'loading' ||
-                isOpenCodeCatalogHydrating(provider));
+              provider.modelCatalogRefreshState === 'loading' ||
+              (!isPassiveOpenCodeModelSummary && isOpenCodeCatalogHydrating(provider));
             const showProviderModels = shouldShowLoadedProviderModels(provider, hasProviderModels);
             const openCodeDashboardChips = getOpenCodeDashboardChips(provider, t);
             const hasDetailContent = Boolean(
@@ -1182,7 +1186,8 @@ const InstalledBanner = ({
               connectionModeSummary ||
               credentialSummary ||
               !hasProviderModels ||
-              modelCatalogLoading
+              modelCatalogLoading ||
+              provider.modelCatalog?.diagnostics.message
             );
 
             return (
@@ -1250,10 +1255,20 @@ const InstalledBanner = ({
                         {modelCatalogLoading ? (
                           <span>{t('cliStatus.provider.loadingModels')}</span>
                         ) : null}
+                        {provider.providerId === 'opencode' &&
+                        provider.modelCatalog?.diagnostics.message ? (
+                          <ProviderCatalogDiagnostics
+                            message={provider.modelCatalog.diagnostics.message}
+                          />
+                        ) : null}
                         {!hasProviderModels &&
                           !modelCatalogLoading &&
                           !isPassiveOpenCodeModelSummary && (
-                            <span>{t('cliStatus.provider.modelsUnavailable')}</span>
+                            <span>
+                              {provider.providerId === 'opencode'
+                                ? 'No models from connected providers'
+                                : t('cliStatus.provider.modelsUnavailable')}
+                            </span>
                           )}
                       </div>
                     ) : null}
@@ -1608,22 +1623,20 @@ export const CliStatusBanner = ({
   });
   const passiveOpenCodeProvider = useMemo(
     () =>
-      loadingCliStatus?.providers.find(
-        (provider) =>
-          provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only'
-      ) ?? null,
+      loadingCliStatus?.providers.find((provider) => provider.providerId === 'opencode') ?? null,
     [loadingCliStatus?.providers]
   );
-  const openCodeDashboardCatalog = useOpenCodeProviderModelCatalog({
+  const openCodeDashboardCatalog = useOpenCodeConnectedModelCatalog({
     enabled:
       isElectron &&
       multimodelEnabled &&
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
-      Boolean(passiveOpenCodeProvider),
-    sourceProviderId: 'opencode',
+      canLoadOpenCodeDashboardCatalog(passiveOpenCodeProvider, openCodeRuntimeStatus),
+    refreshRevision: providerQuickConnectRefreshKey,
     projectPath: selectedProjectPath,
     passiveProviderStatus: passiveOpenCodeProvider,
   });
+  const refreshOpenCodeDashboardCatalog = openCodeDashboardCatalog.refresh;
   const visibleCliProviders = useMemo(
     () =>
       filterMainScreenCliProviders(loadingCliStatus?.providers ?? []).map((provider) =>
@@ -1794,30 +1807,10 @@ export const CliStatusBanner = ({
     shouldRefreshCodexSubscriptionLimits,
   ]);
 
-  useEffect(() => {
-    if (!isElectron) return;
-    // IMPORTANT: do NOT auto-fetch on mount.
-    // Store initialization already schedules a deferred CLI status check to avoid
-    // competing with initial teams/tasks/project scans.
-    // Keep a low-frequency refresh, but only after we've successfully loaded a status.
-    if (!cliStatus) {
-      return;
-    }
-
-    const interval = setInterval(
-      () => {
-        void refreshCliStatusForCurrentMode({
-          multimodelEnabled,
-          bootstrapCliStatus,
-          fetchCliStatus,
-        });
-      },
-      10 * 60 * 1000
-    );
-
-    return () => clearInterval(interval);
-  }, [bootstrapCliStatus, cliStatus, fetchCliStatus, isElectron, multimodelEnabled]);
-
+  useDashboardStatusRefresh(isElectron && Boolean(cliStatus), () => {
+    refreshOpenCodeDashboardCatalog();
+    void refreshCliStatusForCurrentMode({ multimodelEnabled, bootstrapCliStatus, fetchCliStatus });
+  });
   useEffect(() => {
     if (!isElectron || !shouldPollAnthropicSubscriptionLimits) {
       setAnthropicRateLimitsRefreshing(false);
@@ -1838,6 +1831,7 @@ export const CliStatusBanner = ({
   }, [installCli]);
 
   const handleRefresh = useCallback(() => {
+    refreshOpenCodeDashboardCatalog();
     void (async () => {
       await invalidateCliStatus();
       await refreshCliStatusForCurrentMode({
@@ -1846,14 +1840,25 @@ export const CliStatusBanner = ({
         fetchCliStatus,
       });
     })();
-  }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
+  }, [
+    bootstrapCliStatus,
+    fetchCliStatus,
+    invalidateCliStatus,
+    multimodelEnabled,
+    refreshOpenCodeDashboardCatalog,
+  ]);
 
   const handleOpenCodeRefresh = useCallback(() => {
+    refreshOpenCodeDashboardCatalog();
     void (async () => {
       await invalidateOpenCodeRuntimeStatus();
       await fetchOpenCodeRuntimeStatus();
     })();
-  }, [fetchOpenCodeRuntimeStatus, invalidateOpenCodeRuntimeStatus]);
+  }, [
+    fetchOpenCodeRuntimeStatus,
+    invalidateOpenCodeRuntimeStatus,
+    refreshOpenCodeDashboardCatalog,
+  ]);
 
   const handleToggleProvidersCollapsed = useCallback(() => {
     setProvidersCollapsed((current) => {
@@ -1876,6 +1881,7 @@ export const CliStatusBanner = ({
   }, [codexAccount]);
 
   const recheckAuthState = useCallback(() => {
+    refreshOpenCodeDashboardCatalog();
     setIsVerifyingAuth(true);
     void (async () => {
       try {
@@ -1889,7 +1895,13 @@ export const CliStatusBanner = ({
         setIsVerifyingAuth(false);
       }
     })();
-  }, [bootstrapCliStatus, fetchCliStatus, invalidateCliStatus, multimodelEnabled]);
+  }, [
+    bootstrapCliStatus,
+    fetchCliStatus,
+    invalidateCliStatus,
+    multimodelEnabled,
+    refreshOpenCodeDashboardCatalog,
+  ]);
 
   const handleProviderLogin = useCallback((providerId: CliProviderId) => {
     setProviderTerminal({ providerId, action: 'login' });
@@ -1986,14 +1998,14 @@ export const CliStatusBanner = ({
       providerId: CliProviderId,
       checkReason: AnalyticsProviderCheckReason = 'manual_refresh'
     ) => {
-      await invalidateCliStatus();
+      if (providerId === 'opencode') refreshOpenCodeDashboardCatalog();
       const refreshed = await fetchCliProviderStatus(providerId, { checkReason });
       if (refreshed && providerId === 'anthropic') {
         setAnthropicRateLimitsRefreshVersion((current) => current + 1);
       }
       return refreshed;
     },
-    [fetchCliProviderStatus, invalidateCliStatus]
+    [fetchCliProviderStatus, refreshOpenCodeDashboardCatalog]
   );
 
   const handleProviderBackendChange = useCallback(
@@ -2687,19 +2699,7 @@ export const CliStatusBanner = ({
                 <li>
                   {t('cliStatus.troubleshoot.click')}{' '}
                   <button
-                    onClick={async () => {
-                      setIsVerifyingAuth(true);
-                      try {
-                        await invalidateCliStatus();
-                        if (multimodelEnabled) {
-                          await bootstrapCliStatus({ multimodelEnabled: true });
-                        } else {
-                          await fetchCliStatus();
-                        }
-                      } finally {
-                        setIsVerifyingAuth(false);
-                      }
-                    }}
+                    onClick={recheckAuthState}
                     className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors hover:bg-white/10"
                     style={{
                       color: '#fbbf24',
@@ -2764,19 +2764,7 @@ export const CliStatusBanner = ({
               args={['auth', 'login']}
               onClose={() => {
                 setShowLoginTerminal(false);
-                setIsVerifyingAuth(true);
-                void (async () => {
-                  try {
-                    await invalidateCliStatus();
-                    if (multimodelEnabled) {
-                      await bootstrapCliStatus({ multimodelEnabled: true });
-                    } else {
-                      await fetchCliStatus();
-                    }
-                  } finally {
-                    setIsVerifyingAuth(false);
-                  }
-                })();
+                recheckAuthState();
               }}
               autoCloseOnSuccessMs={4000}
               successMessage={t('cliStatus.labels.loginComplete')}

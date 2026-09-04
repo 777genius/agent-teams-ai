@@ -84,8 +84,10 @@ let terminalModalProps: {
   onExit?: (exitCode: number) => void;
 } | null = null;
 let quickConnectConnectedCount = 0;
+const refreshOpenCodeCatalog = vi.fn();
 let openCodeCatalogHookInputs: {
   refreshRevision?: number;
+  enabled?: boolean;
 }[] = [];
 const codexAccountHookState = {
   snapshot: null as CodexAccountSnapshotDto | null,
@@ -119,13 +121,14 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
     await importOriginal<typeof import('@features/runtime-provider-management/renderer')>();
   return {
     ...actual,
-    useOpenCodeProviderModelCatalog: (
-      input: Parameters<typeof actual.useOpenCodeProviderModelCatalog>[0]
+    useOpenCodeConnectedModelCatalog: (
+      input: Parameters<typeof actual.useOpenCodeConnectedModelCatalog>[0]
     ) => {
       openCodeCatalogHookInputs.push(input);
-      return actual.useOpenCodeProviderModelCatalog(input);
+      return { providerStatus: input.passiveProviderStatus, refresh: refreshOpenCodeCatalog };
     },
     RuntimeProviderQuickConnect: (props: {
+      onRefreshOpenCode?: () => void;
       onOpenCodeProviderAction?: (providerId: string, action: 'connect' | 'select') => void;
       onConnectedCountChange?: (count: number) => void;
     }) => {
@@ -136,6 +139,11 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
       return React.createElement(
         'div',
         { 'data-testid': 'runtime-provider-quick-connect' },
+        React.createElement(
+          'button',
+          { 'data-testid': 'refresh-opencode-runtime', onClick: props.onRefreshOpenCode },
+          'Refresh OpenCode runtime'
+        ),
         React.createElement(
           'button',
           {
@@ -442,6 +450,7 @@ describe('CLI status visibility during completed install state', () => {
     terminalModalProps = null;
     quickConnectConnectedCount = 0;
     openCodeCatalogHookInputs = [];
+    refreshOpenCodeCatalog.mockClear();
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
     codexAccountHookState.rateLimitsLoading = false;
@@ -756,6 +765,7 @@ describe('CLI status visibility during completed install state', () => {
 
     storeState.invalidateCliStatus.mockClear();
     storeState.bootstrapCliStatus.mockClear();
+    expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
 
     await act(async () => {
       terminalModalProps?.onClose?.();
@@ -764,6 +774,7 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
     expect(storeState.bootstrapCliStatus).toHaveBeenCalledTimes(1);
+    expect(refreshOpenCodeCatalog).toHaveBeenCalledOnce();
 
     await act(async () => {
       root.unmount();
@@ -1669,6 +1680,45 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
+  it('shows a bounded catalog failure status and retains complete diagnostic details', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    const diagnostic = 'openrouter: runtime phase timeout with detailed context '.repeat(100);
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      providers: [
+        {
+          ...createDeferredMultimodelProvider('opencode', 'OpenCode'),
+          supported: true,
+          verificationState: 'verified',
+          statusMessage: null,
+          statusCheckOutcome: 'model_only',
+          modelCatalogRefreshState: 'error',
+          modelCatalog: {
+            providerId: 'opencode',
+            models: [],
+            diagnostics: { message: diagnostic },
+          },
+        },
+      ],
+    });
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      expect(host.textContent).toContain('Unable to verify');
+      expect(host.textContent).not.toContain(diagnostic);
+      expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+      const disclosure = Array.from(host.querySelectorAll('button')).find((button) =>
+        button.textContent?.includes('Check failed')
+      )!;
+      await act(async () => disclosure.click());
+      expect(host.querySelector('pre')?.textContent).toBe(diagnostic);
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
   it('shows available models without endless loading for a completed OpenCode passive summary', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
@@ -1732,7 +1782,7 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).not.toContain('OpenCode detected (passive)');
     expect(host.textContent).toContain('big-pickle');
     expect(openCodeCatalogHookInputs).not.toHaveLength(0);
-    expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBeUndefined();
+    expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
 
     await act(async () => {
       root.unmount();
@@ -2235,6 +2285,7 @@ describe('CLI status visibility during completed install state', () => {
 
     storeState.invalidateCliStatus.mockClear();
     storeState.bootstrapCliStatus.mockClear();
+    expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
 
     await act(async () => {
       terminalModalProps?.onClose?.();
@@ -2243,6 +2294,7 @@ describe('CLI status visibility during completed install state', () => {
 
     expect(storeState.invalidateCliStatus).toHaveBeenCalledTimes(1);
     expect(storeState.bootstrapCliStatus).toHaveBeenCalledTimes(1);
+    expect(refreshOpenCodeCatalog).toHaveBeenCalledOnce();
 
     await act(async () => {
       root.unmount();
@@ -4310,6 +4362,103 @@ describe('CLI status visibility during completed install state', () => {
       root.unmount();
       await Promise.resolve();
     });
+  });
+
+  it('refreshes the connected catalog only on the periodic tick, not passive status updates', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    storeState.cliInstallerState = 'idle';
+    const root = createRoot(document.createElement('div'));
+    try {
+      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      storeState.bootstrapCliStatus.mockClear();
+      for (let minute = 1; minute < 10; minute++) {
+        await act(async () => vi.advanceTimersByTime(60_000));
+        storeState.cliStatus = { ...storeState.cliStatus };
+        await act(async () => root.render(React.createElement(CliStatusBanner)));
+      }
+      expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
+      await act(async () => vi.advanceTimersByTime(60_000));
+      expect(refreshOpenCodeCatalog).toHaveBeenCalledOnce();
+      expect(storeState.bootstrapCliStatus).toHaveBeenCalledOnce();
+    } finally {
+      await act(async () => root.unmount());
+      vi.useRealTimers();
+    }
+  });
+
+  it('refreshes the connected catalog when rechecking the OpenCode runtime', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    storeState.cliStatus = createInstalledCliStatus({ flavor: 'agent_teams_orchestrator' });
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      storeState.fetchOpenCodeRuntimeStatus.mockClear();
+      await act(async () => {
+        (
+          host.querySelector('[data-testid="refresh-opencode-runtime"]') as HTMLButtonElement
+        ).click();
+      });
+      expect(refreshOpenCodeCatalog).toHaveBeenCalledOnce();
+      expect(storeState.invalidateOpenCodeRuntimeStatus).toHaveBeenCalledOnce();
+      expect(storeState.fetchOpenCodeRuntimeStatus).toHaveBeenCalledOnce();
+    } finally {
+      await act(async () => root.unmount());
+    }
+  });
+
+  it('keeps other provider authority during scoped Re-check and retries the OpenCode catalog independently', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    storeState.cliInstallerState = 'idle';
+    const anthropic = {
+      ...createApiKeyMisconfiguredProvider('anthropic'),
+      authenticated: true,
+      verificationState: 'verified',
+      statusMessage: 'Ready',
+      models: ['claude-sonnet-4-6'],
+    };
+    const opencode = {
+      ...anthropic,
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      authMethod: 'opencode_managed',
+      models: ['opencode/big-pickle'],
+      statusCheckOutcome: 'model_only',
+    };
+    storeState.cliStatus = createInstalledCliStatus({
+      flavor: 'agent_teams_orchestrator',
+      providers: [anthropic, createCodexNativeRolloutProvider({ state: 'ready' }), opencode],
+    });
+    const host = document.createElement('div');
+    const root = createRoot(host);
+    try {
+      await act(async () => root.render(React.createElement(CliStatusBanner)));
+      storeState.fetchCliProviderStatus.mockClear();
+      await act(async () => {
+        (host.querySelector('[title="Re-check Codex"]') as HTMLButtonElement).click();
+      });
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith('codex', {
+        checkReason: 'manual_refresh',
+      });
+      expect(storeState.invalidateCliStatus).not.toHaveBeenCalled();
+      expect(storeState.invalidateCliProviderModelCatalog).not.toHaveBeenCalled();
+      expect(refreshOpenCodeCatalog).not.toHaveBeenCalled();
+      expect((storeState.cliStatus.providers as unknown[])[0]).toBe(anthropic);
+      expect((storeState.cliStatus.providers as unknown[])[2]).toBe(opencode);
+      expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(true);
+      await act(async () => {
+        (host.querySelector('[title="Re-check OpenCode"]') as HTMLButtonElement).click();
+      });
+      expect(refreshOpenCodeCatalog).toHaveBeenCalledOnce();
+      expect(storeState.fetchCliProviderStatus).toHaveBeenLastCalledWith('opencode', {
+        checkReason: 'manual_refresh',
+      });
+      expect(storeState.invalidateCliStatus).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 
   it('does not spin the provider refresh control during a global CLI refresh once the provider card is already rendered', async () => {
