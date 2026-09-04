@@ -85,11 +85,16 @@ export function blockedLaunchResult(
   warnings: string[] = [],
   options: { preLaunchGate?: boolean } = {}
 ): TeamRuntimeLaunchResult {
+  // Every readiness state prepareOpenCodeLaunch can hand on as `reason`: the
+  // state is a code, and the diagnostics beside it are what a member can be
+  // shown. A state missing from this list reaches the member card as the bare
+  // code with its own diagnostic left unread.
   const readinessFailure =
     reason === 'unknown_error' ||
     reason === 'model_unavailable' ||
     reason === 'not_authenticated' ||
     reason === 'mcp_unavailable' ||
+    reason === 'runtime_store_blocked' ||
     reason === 'not_installed';
   const hardFailureReason = readinessFailure
     ? (firstDisplayableOpenCodeFailureMessage(diagnostics, { includeGeneric: false }) ?? reason)
