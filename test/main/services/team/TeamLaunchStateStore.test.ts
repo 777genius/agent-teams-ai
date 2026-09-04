@@ -393,6 +393,31 @@ describe('TeamLaunchStateStore', () => {
     expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(false);
   });
 
+  it('ignores a republished active snapshot while the team is stopped', async () => {
+    // The rollback of a stale write, and a recovery re-deriving the run that was
+    // just stopped, both republish an active snapshot they read earlier. Neither
+    // is a launch, so the stop stays final over them.
+    writeStopMarkerOnDisk('demo');
+    mocks.atomicWriteAsync.mockResolvedValue(undefined);
+
+    await new TeamLaunchStateStore().write('demo', snapshot(), {
+      republishesExistingLaunch: true,
+    });
+
+    expect(mocks.atomicWriteAsync).not.toHaveBeenCalled();
+    expect(await new TeamLaunchStateStore().isStopped('demo')).toBe(true);
+  });
+
+  it('publishes a republished active snapshot for a team that was never stopped', async () => {
+    mocks.atomicWriteAsync.mockResolvedValue(undefined);
+
+    await new TeamLaunchStateStore().write('demo', snapshot(), {
+      republishesExistingLaunch: true,
+    });
+
+    expect(mocks.atomicWriteAsync).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps the stop marker across a launch-state clear', async () => {
     writeStopMarkerOnDisk('demo');
 

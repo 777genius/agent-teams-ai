@@ -40,6 +40,17 @@ export function getTeamLaunchStoppedMarkerPath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STOPPED_MARKER_FILE);
 }
 
+export interface TeamLaunchStatePublicationOptions {
+  /**
+   * True when the write republishes launch truth that already existed instead
+   * of starting a launch: the rollback of a stale write restoring what it
+   * overwrote, or a recovery re-deriving the run that was just stopped. Only a
+   * launch may lift a stop, so a stop that landed meanwhile stays final over
+   * such a write - it is not published, and it never removes the marker.
+   */
+  republishesExistingLaunch?: boolean;
+}
+
 async function removeStoppedMarkerIfPresent(teamName: string): Promise<void> {
   const markerPath = getTeamLaunchStoppedMarkerPath(teamName);
   if (!fs.existsSync(markerPath)) return;
@@ -115,15 +126,28 @@ export class TeamLaunchStateStore {
     }
   }
 
-  async write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void> {
-    await enqueuePublication(teamName, () => this.writeNow(teamName, snapshot));
+  async write(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: TeamLaunchStatePublicationOptions
+  ): Promise<void> {
+    await enqueuePublication(teamName, () => this.writeNow(teamName, snapshot, options));
   }
 
-  private async writeNow(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void> {
+  private async writeNow(
+    teamName: string,
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: TeamLaunchStatePublicationOptions
+  ): Promise<void> {
     const launchStatePath = getTeamLaunchStatePath(teamName);
     const launchSummaryPath = getTeamLaunchSummaryPath(teamName);
+    // Only a launch supersedes a stop. An active snapshot that merely
+    // republishes what was already on disk is not one, so it is fenced by the
+    // marker exactly like a reconcile write is.
+    const startsLaunch =
+      snapshot.launchPhase === 'active' && options?.republishesExistingLaunch !== true;
     try {
-      if (snapshot.launchPhase !== 'active' && (await this.isStopped(teamName))) {
+      if (!startsLaunch && (await this.isStopped(teamName))) {
         // Late reconcile/finish writes from an abandoned stop or a stale run
         // must not resurrect launch state for a stopped team.
         logger.debug(
@@ -136,7 +160,7 @@ export class TeamLaunchStateStore {
         launchSummaryPath,
         `${JSON.stringify(createPersistedLaunchSummaryProjection(snapshot), null, 2)}\n`
       );
-      if (snapshot.launchPhase === 'active') {
+      if (startsLaunch) {
         // A real launch supersedes any earlier stop.
         await removeStoppedMarkerIfPresent(teamName);
       }

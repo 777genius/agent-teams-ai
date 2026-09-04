@@ -149,8 +149,10 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     await boundary.writeLaunchStateSnapshotNow('demo', nextSnapshot, { runId: 'run-1' });
     await boundary.clearPersistedLaunchStateNow('demo');
 
-    expect(launchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
-    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
+    // A launch write carries no publication options: it is the write allowed to
+    // supersede a stop, so it must not be marked as a republication.
+    expect(launchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot, undefined);
+    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot, undefined);
     expect(launchStateStore.clear).toHaveBeenCalledWith('demo');
     expect(defaultLaunchStateStore.clear).toHaveBeenCalledWith('demo');
     expect(clearBootstrapState).toHaveBeenCalledWith('demo');
@@ -198,8 +200,10 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     const publishing = boundary.writeLaunchStateSnapshot('demo', nextSnapshot);
     await defaultWriteStarted.promise;
 
-    expect(launchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
-    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot);
+    // A launch write carries no publication options: it is the write allowed to
+    // supersede a stop, so it must not be marked as a republication.
+    expect(launchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot, undefined);
+    expect(defaultLaunchStateStore.write).toHaveBeenCalledWith('demo', nextSnapshot, undefined);
     expect(invalidateRuntimeSnapshotCaches).not.toHaveBeenCalled();
 
     defaultWriteGate.resolve();
@@ -681,6 +685,35 @@ describe('TeamProvisioningLaunchStateStoreBoundary', () => {
     expect(ports.launchStateStore.clear).not.toHaveBeenCalled();
     expect(ports.invalidateRuntimeSnapshotCaches).toHaveBeenCalledWith('demo');
     expect(boundary.getWrittenRunIdByTeam().has('demo')).toBe(false);
+  });
+
+  it('restores the overwritten launch truth as a republication so a settled stop survives it', async () => {
+    // The rollback runs after the stale write, so a stop can settle in between.
+    // An active snapshot restored as a launch would republish over that stop and
+    // lift its marker; the restore has to declare that it starts no launch.
+    const previousSnapshot = snapshot({ updatedAt: '2026-01-01T00:00:05.000Z' });
+    const writeStarted = deferred();
+    const writeGate = deferred();
+    const launchStateStore = {
+      read: vi.fn(async () => previousSnapshot),
+      write: vi.fn(async (_teamName: string, nextSnapshot: PersistedTeamLaunchSnapshot) => {
+        if (nextSnapshot === previousSnapshot) return;
+        writeStarted.resolve();
+        await writeGate.promise;
+      }),
+      clear: vi.fn(async () => undefined),
+    };
+    const { boundary, setTrackedRunId } = createBoundary({ launchStateStore });
+
+    const writing = boundary.writeLaunchStateSnapshotNow('demo', snapshot(), { runId: 'run-1' });
+    await writeStarted.promise;
+    setTrackedRunId(undefined);
+    writeGate.resolve();
+
+    await expect(writing).resolves.toMatchObject({ wrote: false });
+    expect(launchStateStore.write).toHaveBeenLastCalledWith('demo', previousSnapshot, {
+      republishesExistingLaunch: true,
+    });
   });
 
   it('serializes queued operations and only removes the current queue entry', async () => {

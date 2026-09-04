@@ -13,10 +13,19 @@ export interface LaunchStateWriteOptions {
   runId?: string;
 }
 
+/** Mirrors `TeamLaunchStatePublicationOptions` on the launch-state store. */
+export interface LaunchStatePublicationOptions {
+  republishesExistingLaunch?: boolean;
+}
+
 export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
   launchStateStore: {
     read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<void>;
     clear(teamName: string): Promise<void>;
   };
   membersMetaStore: {
@@ -47,11 +56,19 @@ export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
 export interface TeamProvisioningLaunchStateStoreBoundaryServiceHost {
   launchStateStore: {
     read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<void>;
     clear?(teamName: string): Promise<void>;
   };
   defaultLaunchStateStore: {
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<void>;
     clear(teamName: string): Promise<void>;
   };
   membersMetaStore: TeamProvisioningLaunchStateStoreBoundaryPorts['membersMetaStore'];
@@ -203,8 +220,12 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       // over - and by then the launch truth on disk may belong to someone else.
       // Clearing would delete that newer truth along with the stale write, so
       // restore what this call overwrote and only clear when there was nothing.
+      // The restore is not a launch: a stop that settled while the write was in
+      // flight has to survive it, marker included.
       if (previousSnapshot) {
-        await this.ports.launchStateStore.write(teamName, previousSnapshot);
+        await this.ports.launchStateStore.write(teamName, previousSnapshot, {
+          republishesExistingLaunch: true,
+        });
       } else {
         await this.ports.launchStateStore.clear(teamName);
       }
@@ -251,10 +272,10 @@ export function createTeamProvisioningLaunchStateStoreBoundaryFromService(
   return new TeamProvisioningLaunchStateStoreBoundary({
     launchStateStore: {
       read: (teamName) => service.launchStateStore.read(teamName),
-      write: async (teamName, snapshot) => {
-        await service.launchStateStore.write(teamName, snapshot);
+      write: async (teamName, snapshot, publicationOptions) => {
+        await service.launchStateStore.write(teamName, snapshot, publicationOptions);
         if (service.launchStateStore !== service.defaultLaunchStateStore) {
-          await service.defaultLaunchStateStore.write(teamName, snapshot);
+          await service.defaultLaunchStateStore.write(teamName, snapshot, publicationOptions);
         }
       },
       clear: async (teamName) => {
