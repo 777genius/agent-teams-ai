@@ -4,6 +4,10 @@ import { lstat, mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import remarkGfm from 'remark-gfm';
+import remarkParse from 'remark-parse';
+import { unified } from 'unified';
+
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const IMAGE = /\.(png|jpe?g|gif|webp|avif)$/i;
@@ -15,6 +19,7 @@ const fail = (message) => {
 };
 const plain = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+const markdownParser = unified().use(remarkParse).use(remarkGfm);
 
 function date(value, field) {
   if (
@@ -146,17 +151,27 @@ async function assets(dir, prefix = 'assets') {
   return result;
 }
 
-function selectedAssets(body, files, id, heroImage) {
+function markdownImageTargets(body, id) {
   const references = new Map();
-  for (const match of body.matchAll(/^\s{0,3}\[([^\]]+)\]:\s*<?([^\s>]+)>?/gm))
-    references.set(match[1].trim().toLowerCase(), match[2]);
-  const targets = new Set();
-  for (const match of body.matchAll(
-    /!\[([^\]]*)\](?:\(\s*(?:<([^>]+)>|([^\s)]+))(?:\s+['"][^\n]*?['"])?\s*\)|\[([^\]]*)\])?/g
-  )) {
-    const target =
-      match[2] ?? match[3] ?? references.get((match[4] || match[1]).trim().toLowerCase());
+  const images = [];
+  const visit = (node) => {
+    if (node.type === 'definition') references.set(node.identifier, node.url);
+    else if (node.type === 'image') images.push(node.url);
+    else if (node.type === 'imageReference') images.push({ reference: node.identifier });
+    if (Array.isArray(node.children)) for (const child of node.children) visit(child);
+  };
+  visit(markdownParser.parse(body));
+  return images.map((image) => {
+    if (typeof image === 'string') return image;
+    const target = references.get(image.reference);
     if (!target) fail(`${id}: unresolved image reference`);
+    return target;
+  });
+}
+
+function selectedAssets(body, files, id, heroImage) {
+  const targets = new Set();
+  for (const target of markdownImageTargets(body, id)) {
     if (
       !target.startsWith('assets/') ||
       target.includes('\\') ||

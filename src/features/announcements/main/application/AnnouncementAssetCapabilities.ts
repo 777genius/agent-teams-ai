@@ -83,8 +83,10 @@ export class AnnouncementAssetCapabilities {
     this.documents.delete(windowId);
   }
 
-  revokeAnnouncement(windowId: number, id: string): void {
-    if (this.documents.get(windowId)?.item.id === id) this.revokeWindow(windowId);
+  revokeAnnouncement(windowId: number, id: string): boolean {
+    if (this.documents.get(windowId)?.item.id !== id) return false;
+    this.revokeWindow(windowId);
+    return true;
   }
 
   revokeAll(): void {

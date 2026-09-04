@@ -82,6 +82,7 @@ export class AnnouncementsService {
   private lastReportedStatus: string | null = null;
   private nextRefreshAt = 0;
   private failedBodyKey: string | null = null;
+  private readonly manualOpenTokens = new Map<number, object>();
 
   constructor(private readonly options: AnnouncementsServiceOptions) {
     this.tracker = new AnnouncementUsageTracker(options.clock);
@@ -118,11 +119,13 @@ export class AnnouncementsService {
   }
   invalidateWindow(id: number): void {
     this.prepared.delete(id);
+    this.manualOpenTokens.delete(id);
     this.assets.revokeWindow(id);
   }
   unregisterWindow(id: number): Promise<void> {
     this.tracker.unregister(id);
     this.prepared.delete(id);
+    this.manualOpenTokens.delete(id);
     this.assets.revokeWindow(id);
     return this.lifecycle(async () => {
       if (!this.tracker.hasWindows()) await this.release();
@@ -172,6 +175,7 @@ export class AnnouncementsService {
     this.controller.abort();
     await this.refreshTask;
     this.prepared.clear();
+    this.manualOpenTokens.clear();
     this.assets.revokeAll();
     this.fresh = false;
     await this.mutationTail;
@@ -237,6 +241,7 @@ export class AnnouncementsService {
     this.controller.abort();
     await this.refreshTask;
     this.prepared.clear();
+    this.manualOpenTokens.clear();
     this.assets.revokeAll();
     await this.mutation(() => this.checkpoint());
     this.emit();
@@ -474,6 +479,7 @@ export class AnnouncementsService {
         !stillPublished
       )
         return null;
+      this.manualOpenTokens.delete(context.windowId);
       this.assets.issue(item, context);
       return {
         announcement: documentSummary(item),
@@ -486,18 +492,29 @@ export class AnnouncementsService {
     id: string,
     context: AnnouncementWindowContext
   ): Promise<AnnouncementDocument | null> {
+    const token = {};
+    this.manualOpenTokens.set(context.windowId, token);
     this.assets.revokeWindow(context.windowId);
-    if (!this.owned || this.releasing || this.stopped) return null;
+    if (!this.owned || this.releasing || this.stopped) {
+      if (this.manualOpenTokens.get(context.windowId) === token)
+        this.manualOpenTokens.delete(context.windowId);
+      return null;
+    }
     const feed = this.options.source.current();
     const item =
       feed && visibleAnnouncements(feed, this.options.clock.now()).find((entry) => entry.id === id);
-    if (!item) return null;
+    if (!item) {
+      if (this.manualOpenTokens.get(context.windowId) === token)
+        this.manualOpenTokens.delete(context.windowId);
+      return null;
+    }
     const generation = this.generation;
     try {
       const body = await this.options.source.body(item, this.controller.signal);
       return await this.mutation(async () => {
         const current = this.options.source.current();
         if (
+          this.manualOpenTokens.get(context.windowId) !== token ||
           !this.owned ||
           this.releasing ||
           this.stopped ||
@@ -521,6 +538,7 @@ export class AnnouncementsService {
         this.emit();
         const latest = this.options.source.current();
         if (
+          this.manualOpenTokens.get(context.windowId) !== token ||
           !this.owned ||
           this.releasing ||
           this.stopped ||
@@ -536,6 +554,9 @@ export class AnnouncementsService {
       });
     } catch {
       return null;
+    } finally {
+      if (this.manualOpenTokens.get(context.windowId) === token)
+        this.manualOpenTokens.delete(context.windowId);
     }
   }
   loadAsset(
@@ -549,11 +570,11 @@ export class AnnouncementsService {
     this.assets.cancel(requestId, context);
   }
   dismiss(id: string, context?: AnnouncementWindowContext): Promise<{ saved: boolean }> {
-    if (context) this.assets.revokeAnnouncement(context.windowId, id);
+    const wasIssued = context ? this.assets.revokeAnnouncement(context.windowId, id) : false;
     return this.mutation(async () => {
       if (!this.owned || this.releasing || this.stopped || this.storageFailed || !this.state)
         return { saved: false };
-      if (!this.state.handledIds.includes(id)) return { saved: false };
+      if (!this.state.handledIds.includes(id) && !wasIssued) return { saved: false };
       if (this.state.dismissedIds.includes(id)) return { saved: true };
       try {
         this.state = await this.options.repository.update((state) =>

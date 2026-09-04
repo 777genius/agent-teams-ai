@@ -287,6 +287,41 @@ describe('announcement consumption service', () => {
     await expect(second).resolves.toBe('data:image/png;base64,eA==');
     await f.service.dispose();
   });
+  it('keeps the newest manual open authoritative when an older request finishes late', async () => {
+    const f = fixture();
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    let finishOld!: (value: { markdown: string; bodyUrl: string }) => void;
+    f.source.body.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finishOld = resolve;
+        })
+    );
+    const oldOpening = f.service.openManual('old', f.context);
+    await vi.waitFor(() => expect(f.source.body).toHaveBeenCalledTimes(1));
+    expect((await f.service.openManual('new', f.context))?.announcement.id).toBe('new');
+    finishOld({ markdown: '# Old', bodyUrl: 'https://agentteams.live/old.md' });
+    await expect(oldOpening).resolves.toBeNull();
+
+    const newAsset = `https://agentteams.live/announcements/content/new/${'c'.repeat(64)}/assets/new.png`;
+    const oldAsset = `https://agentteams.live/announcements/content/old/${'c'.repeat(64)}/assets/old.png`;
+    expect(await f.service.loadAsset(newAsset, 'new_asset', f.context)).not.toBeNull();
+    expect(await f.service.loadAsset(oldAsset, 'old_asset', f.context)).toBeNull();
+    await f.service.dispose();
+  });
+  it('records dismissal of an issued older manual article without accepting arbitrary IDs', async () => {
+    const f = fixture();
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    await f.service.openManual('new', f.context);
+    expect((await f.service.openManual('old', f.context))?.announcement.id).toBe('old');
+    expect(f.saved().handledIds).toEqual(['new']);
+    expect(await f.service.dismiss('old', f.context)).toEqual({ saved: true });
+    expect(f.saved().dismissedIds).toEqual(['old']);
+    expect(await f.service.dismiss('future-id', f.context)).toEqual({ saved: false });
+    await f.service.dispose();
+  });
   it('does not consume when body fails or focus changes during preparation', async () => {
     const f = fixture();
     f.service.registerWindow(1);

@@ -177,6 +177,24 @@ test('missing body/image, traversal, symlinks, nonportable files, invalid utf8 a
   await assert.rejects(generateAnnouncements(f), /symlink/);
 });
 
+test('ignores image syntax inside fenced and inline code', async () => {
+  const f = await fixture();
+  await writeFile(
+    path.join(f.dir, 'body.md'),
+    [
+      '# Markdown image examples',
+      '',
+      '```markdown',
+      '![remote](https://example.com/image.png)',
+      '```',
+      '',
+      '`![missing](assets/missing.png)`',
+    ].join('\n')
+  );
+  const feed = await generateAnnouncements(f);
+  assert.equal(feed.items.length, 1);
+});
+
 test('immutable Git comparison normalizes dates/defaults and prohibits removal or draft rollback', async () => {
   const f = await fixture();
   const baseRef = commit(f);
