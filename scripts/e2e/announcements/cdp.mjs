@@ -49,9 +49,23 @@ export async function connectCdp(url) {
       return result.result.value;
     },
     async click(selector) {
-      const point = await this.inspect(
-        `(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e) return null; const r=e.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`
-      );
+      const documentResult = await send('Runtime.evaluate', { expression: 'document' });
+      const objectId = documentResult.result.objectId;
+      if (!objectId) throw new Error('Missing CDP document object');
+      let point;
+      try {
+        const result = await send('Runtime.callFunctionOn', {
+          objectId,
+          functionDeclaration:
+            'function (selector) { const element = this.querySelector(selector); if (!element) return null; const rect = element.getBoundingClientRect(); return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }; }',
+          arguments: [{ value: selector }],
+          returnByValue: true,
+        });
+        if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
+        point = result.result.value;
+      } finally {
+        await send('Runtime.releaseObject', { objectId });
+      }
       if (!point) throw new Error(`Missing clickable element ${selector}`);
       await send('Input.dispatchMouseEvent', {
         type: 'mousePressed',

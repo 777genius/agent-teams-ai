@@ -112,10 +112,10 @@ if (mode === '--seed') {
               await publishFixture(manifest.root, next);
               offline = false;
             }
-          });
+        });
         await tail;
-        res.writeHead(200);
-        res.end(JSON.stringify({ scenario: next }));
+        res.writeHead(204, { 'X-Content-Type-Options': 'nosniff' });
+        res.end();
         return;
       }
       if (req.method !== 'GET') {
