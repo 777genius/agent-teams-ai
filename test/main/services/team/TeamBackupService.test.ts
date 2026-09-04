@@ -380,6 +380,69 @@ describe('TeamBackupService', () => {
     });
   });
 
+  it('does not index a shutdown backup whose manifest could not be persisted', async () => {
+    // The shutdown backup copies the files first and writes the registry entry
+    // afterwards. A manifest that never landed leaves the backup directory with
+    // new files and the previous ownership and file stats, so the registry must
+    // not advertise it as the current backup.
+    const service = new TeamBackupService();
+    const blockedTeam = 'blocked-manifest-team';
+    const healthyTeam = 'healthy-manifest-team';
+    for (const teamName of [blockedTeam, healthyTeam]) {
+      const teamDir = path.join(hoisted.teamsBase, teamName);
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({
+          name: teamName,
+          projectPath: path.join(tempDir, 'project'),
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        }),
+        'utf8'
+      );
+    }
+
+    await service.initialize();
+    await service.backupTeam(blockedTeam);
+    await service.backupTeam(healthyTeam);
+
+    const registryPath = path.join(hoisted.backupsBase, 'registry.json');
+    const registryBefore = JSON.parse(await fs.readFile(registryPath, 'utf8')) as {
+      teams: Record<string, { lastBackupAt: string }>;
+    };
+
+    // A directory where the manifest belongs: the atomic rename cannot land.
+    const blockedManifest = path.join(hoisted.backupsBase, 'teams', blockedTeam, 'manifest.json');
+    await fs.rm(blockedManifest, { force: true });
+    await fs.mkdir(blockedManifest, { recursive: true });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-04T12:00:00.000Z'));
+    service.runShutdownBackupSync();
+    vi.useRealTimers();
+
+    const registryAfter = JSON.parse(await fs.readFile(registryPath, 'utf8')) as {
+      teams: Record<string, { lastBackupAt: string }>;
+    };
+    expect(registryAfter.teams[blockedTeam].lastBackupAt).toBe(
+      registryBefore.teams[blockedTeam].lastBackupAt
+    );
+    // The loop still reaches every later team: the failure belongs to one team.
+    expect(registryAfter.teams[healthyTeam].lastBackupAt).toBe('2026-09-04T12:00:00.000Z');
+
+    // Both layers report it: the manifest writer names the team, the shutdown
+    // loop names the backup it gave up on.
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`Failed to save manifest for ${blockedTeam}`)
+    );
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`shutdown backup failed for ${blockedTeam}`)
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
   it('fences startup restore after the durable destructive deletion boundary', async () => {
     const teamName = 'delete-crash-team';
     const teamDir = path.join(hoisted.teamsBase, teamName);

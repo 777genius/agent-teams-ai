@@ -68,14 +68,16 @@ export function writeBackupManifestSync(backupDir: string, manifest: BackupManif
     const manifestPath = getBackupManifestPath(backupDir);
     atomicWriteSync(manifestPath, JSON.stringify(manifest, null, 2));
   } catch (error) {
-    // Best-effort, because the shutdown backup must go on to the next team.
-    // Reported all the same: the file copies and the registry entry are
-    // already written by the time this runs, so a manifest that did not land
-    // leaves a backup whose restore reads stale ownership and file stats.
+    // Reported here with the team it belongs to, then propagated: the file
+    // copies are already on disk and the registry entry is written after this
+    // call, so swallowing the failure would index a backup whose manifest
+    // still holds the previous ownership and file stats. The shutdown loop
+    // catches it per team and goes on to the next one.
     logger.warn(
       `[Backup] Failed to save manifest for ${manifest.teamName}: ${
         error instanceof Error ? error.message : String(error)
       }`
     );
+    throw error;
   }
 }
