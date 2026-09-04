@@ -9,11 +9,11 @@ import {
   getBackupManifestPath,
   readBackupManifestSync,
   writeBackupManifestSync,
-} from '../../../../src/main/services/team/teamBackupManifest';
+} from '@main/services/team/teamBackupManifest';
 
 let tempRoot = '';
 
-function manifest(teamName = 'demo'): BackupManifest {
+function buildManifest(teamName = 'demo'): BackupManifest {
   return {
     teamName,
     identityId: 'identity-1',
@@ -36,10 +36,10 @@ describe('writeBackupManifestSync', () => {
   it('persists a manifest a restore can read back', () => {
     const backupDir = path.join(tempRoot, 'demo');
 
-    writeBackupManifestSync(backupDir, manifest());
+    writeBackupManifestSync(backupDir, buildManifest());
 
     expect(fs.existsSync(getBackupManifestPath(backupDir))).toBe(true);
-    expect(readBackupManifestSync(backupDir)).toEqual(manifest());
+    expect(readBackupManifestSync(backupDir)).toEqual(buildManifest());
     expect(console.warn).not.toHaveBeenCalled();
   });
 
@@ -50,7 +50,7 @@ describe('writeBackupManifestSync', () => {
     const backupDir = path.join(tempRoot, 'blocked');
     fs.writeFileSync(backupDir, 'a file where the backup directory belongs');
 
-    expect(() => writeBackupManifestSync(backupDir, manifest('blocked-team'))).not.toThrow();
+    expect(() => writeBackupManifestSync(backupDir, buildManifest('blocked-team'))).not.toThrow();
 
     expect(console.warn).toHaveBeenCalledWith(
       '[TeamBackupService]',
