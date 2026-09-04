@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildLiveTeamAgentRuntimeMetadata,
   buildTeamAgentRuntimeSnapshot,
+  findLiveOpenCodeLaneHostRow,
+  isOpenCodeLaneHostOverridableLiveness,
   type PersistedRuntimeMemberLike,
+  shouldReadWindowsHostRowsForMemberLane,
 } from '../TeamProvisioningRuntimeSnapshot';
 
 import type { RuntimeTelemetryProcessTableRow } from '../../TeamRuntimeTelemetry';
@@ -39,6 +42,14 @@ const UPDATED_AT = '2026-01-01T00:00:00.000Z';
 const CURRENT_PID = 222;
 const OLD_PID = 111;
 const WORKDIR = '/safe-test-workspace/runtime-snapshot-precedence-test';
+const ORIGINAL_PLATFORM = process.platform;
+
+function setPlatform(value: NodeJS.Platform): void {
+  Object.defineProperty(process, 'platform', {
+    value,
+    configurable: true,
+  });
+}
 
 function config(): TeamConfig {
   return {
@@ -341,6 +352,137 @@ async function buildMixedRuntimeMetadata(
     },
     logDebug: vi.fn(),
   });
+}
+
+/**
+ * A lane whose bootstrap evidence is the persisted launch snapshot and whose
+ * heartbeat has aged out. Without `runtimeAdapterRunByTeam` there is no
+ * provisioning run in flight either, which is the owner-'none' case.
+ */
+async function buildPersistedLaneRuntimeMetadata(options: {
+  processRows: RuntimeTelemetryProcessTableRow[];
+  readWindowsHostProcessRows: ReturnType<typeof vi.fn>;
+  runtimeAdapterRunByTeam?: ReadonlyMap<string, RuntimeAdapterRunSnapshotSource>;
+}): Promise<Map<string, LiveTeamAgentRuntimeMetadata>> {
+  return buildLiveTeamAgentRuntimeMetadata({
+    teamName: TEAM_NAME,
+    runId: RUN_ID,
+    generationAtStart: 0,
+    runs: new Map([[RUN_ID, run()]]),
+    runtimeAdapterRunByTeam: options.runtimeAdapterRunByTeam ?? new Map(),
+    teamMetaStore: {
+      getMeta: vi.fn(async () => ({ providerId: 'opencode' as const })),
+    },
+    membersMetaStore: {
+      getMembers: vi.fn(async () => []),
+    },
+    launchStateStore: {
+      read: vi.fn(async () =>
+        launchSnapshot(
+          confirmedOldLaunchMember({
+            model: 'gpt-current',
+            runtimePid: CURRENT_PID,
+            runtimeRunId: RUN_ID,
+            runtimeSessionId: 'session-current',
+          })
+        )
+      ),
+    },
+    readConfigSnapshot: vi.fn(async () => config()),
+    readPersistedRuntimeMembers: vi.fn(() => [] satisfies PersistedRuntimeMemberLike[]),
+    readRuntimeProcessRowsForLiveRuntimeMetadata: vi.fn(async () => ({
+      rows: options.processRows,
+      processTableAvailable: true,
+    })),
+    readWindowsHostProcessRowsForLiveRuntimeMetadata: options.readWindowsHostProcessRows,
+    getRuntimeSnapshotCacheGeneration: vi.fn(() => 0),
+    getTrackedRunId: vi.fn(() => RUN_ID),
+    getAgentRuntimeSnapshotCacheTtlMs: vi.fn(() => 1_000),
+    liveRuntimeMetadataCache: {
+      rememberLiveTeamAgentRuntimeMetadata: vi.fn(),
+    },
+    logDebug: vi.fn(),
+  });
+}
+
+interface LaneLivenessVerdict {
+  hostRowsRead: boolean;
+  verdict: { alive: boolean | undefined; livenessKind: string | undefined };
+}
+
+/**
+ * The same lane resolved on both sides of the win32 seam. On win32 the lane
+ * host rows reach the resolver through the Windows host table
+ * (`shouldReadWindowsHostRowsForMemberLane`), everywhere else through the
+ * shared process table - the verdict has to come out the same either way.
+ */
+async function resolveLaneLivenessOnBothPlatforms(options: {
+  runtimeAdapterRunByTeam?: ReadonlyMap<string, RuntimeAdapterRunSnapshotSource>;
+}): Promise<Record<'linux' | 'win32', LaneLivenessVerdict>> {
+  const byPlatform = new Map<'linux' | 'win32', LaneLivenessVerdict>();
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(Date.parse(UPDATED_AT) + 5 * 60_000));
+  try {
+    for (const platform of ['linux', 'win32'] as const) {
+      setPlatform(platform);
+      const isWin32 = platform === 'win32';
+      const readWindowsHostProcessRows = vi.fn(async () => ({
+        rows: isWin32 ? sharedOpenCodeHostProcessRows() : [],
+        processTableAvailable: isWin32,
+      }));
+      const metadata = await buildPersistedLaneRuntimeMetadata({
+        processRows: isWin32 ? [] : sharedOpenCodeHostProcessRows(),
+        readWindowsHostProcessRows,
+        runtimeAdapterRunByTeam: options.runtimeAdapterRunByTeam,
+      });
+      const worker = metadata.get('Worker');
+      byPlatform.set(platform, {
+        hostRowsRead: readWindowsHostProcessRows.mock.calls.length > 0,
+        verdict: { alive: worker?.alive, livenessKind: worker?.livenessKind },
+      });
+    }
+  } finally {
+    setPlatform(ORIGINAL_PLATFORM);
+    vi.useRealTimers();
+  }
+  const linux = byPlatform.get('linux');
+  const win32 = byPlatform.get('win32');
+  if (!linux || !win32) {
+    throw new Error('expected a lane verdict on both platforms');
+  }
+  return { linux, win32 };
+}
+
+/**
+ * The same owned win32 lane with its live `opencode serve` row placed in one
+ * process table or the other. On win32 the shared table is WSL's `ps`, whose
+ * pids are numbered independently of the recorded Windows host pid, so which
+ * table a row arrives in decides whether its pid means anything for this lane.
+ */
+async function resolveWin32LaneLivenessByTable(options: {
+  hostRows: RuntimeTelemetryProcessTableRow[];
+  sharedRows: RuntimeTelemetryProcessTableRow[];
+}): Promise<{ alive: boolean | undefined; livenessKind: string | undefined }> {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(Date.parse(UPDATED_AT) + 5 * 60_000));
+  setPlatform('win32');
+  try {
+    const metadata = await buildPersistedLaneRuntimeMetadata({
+      processRows: options.sharedRows,
+      readWindowsHostProcessRows: vi.fn(async () => ({
+        rows: options.hostRows,
+        processTableAvailable: true,
+      })),
+      runtimeAdapterRunByTeam: new Map([
+        [TEAM_NAME, { runId: RUN_ID, providerId: 'opencode', cwd: WORKDIR, members: {} }],
+      ]),
+    });
+    const worker = metadata.get('Worker');
+    return { alive: worker?.alive, livenessKind: worker?.livenessKind };
+  } finally {
+    setPlatform(ORIGINAL_PLATFORM);
+    vi.useRealTimers();
+  }
 }
 
 async function buildMixedRuntimeSnapshot(
@@ -1074,9 +1216,10 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
       const metadata = await buildMixedRuntimeMetadata({ run: currentRun });
       const snapshot = await buildMixedRuntimeSnapshot({ run: currentRun });
 
-      expect(metadata.get('Worker')).toMatchObject({ alive: false });
+      // Ephemeral lane hosts: persisted/registered metadata keeps the member alive between turns.
+      expect(metadata.get('Worker')).toMatchObject({ alive: true });
       expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
-      expect(snapshot.members.Worker).toMatchObject({ alive: false });
+      expect(snapshot.members.Worker).toMatchObject({ alive: true });
       expect(snapshot.members.Worker?.runtimeSessionId).toBeUndefined();
     } finally {
       vi.useRealTimers();
@@ -1095,14 +1238,14 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
       const snapshot = await buildMixedRuntimeSnapshot({ run: currentRun });
 
       expect(metadata.get('Worker')).toMatchObject({
-        alive: false,
+        alive: true,
         livenessKind: 'registered_only',
         runtimeDiagnostic: 'registered runtime metadata without live process',
       });
       expect(metadata.get('Worker')?.metricsPid).toBeUndefined();
       expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
       expect(snapshot.members.Worker).toMatchObject({
-        alive: false,
+        alive: true,
         laneKind: 'secondary',
       });
       expect(snapshot.members.Worker?.runtimeSessionId).toBeUndefined();
@@ -1128,14 +1271,14 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
       });
 
       expect(metadata.get('Worker')).toMatchObject({
-        alive: false,
+        alive: true,
         livenessKind: 'registered_only',
         runtimeDiagnostic: 'registered runtime metadata without live process',
       });
       expect(metadata.get('Worker')?.metricsPid).toBeUndefined();
       expect(metadata.get('Worker')?.runtimeSessionId).toBeUndefined();
       expect(snapshot.members.Worker).toMatchObject({
-        alive: false,
+        alive: true,
         laneKind: 'secondary',
       });
       expect(snapshot.members.Worker?.runtimeSessionId).toBeUndefined();
@@ -1144,52 +1287,69 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
     }
   });
 
-  it.each([
-    {
-      probe: 'dead',
-      processTableAvailable: true,
-      livenessKind: 'stale_metadata',
-      runtimeDiagnostic: 'persisted runtime pid is not alive',
-    },
-    {
-      probe: 'unknown',
-      processTableAvailable: false,
-      livenessKind: 'registered_only',
-      runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
-    },
-  ])(
-    'does not revive exact mixed secondary evidence when its runtime probe is $probe',
-    async ({ processTableAvailable, livenessKind, runtimeDiagnostic }) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date(UPDATED_AT));
-      try {
-        const metadata = await buildMixedRuntimeMetadata({
-          processRows: [],
-          processTableAvailable,
-        });
-        const snapshot = await buildMixedRuntimeSnapshot({
-          processRows: [],
-          processTableAvailable,
-        });
+  // The two halves of the asymmetry, side by side: a table that answered is
+  // evidence, a table that could not answer is not.
+  it('does not revive exact mixed secondary evidence when the process table answered without its runtime pid', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const metadata = await buildMixedRuntimeMetadata({
+        processRows: [],
+        processTableAvailable: true,
+      });
+      const snapshot = await buildMixedRuntimeSnapshot({
+        processRows: [],
+        processTableAvailable: true,
+      });
 
-        expect(metadata.get('Worker')).toMatchObject({
-          alive: false,
-          livenessKind,
-          runtimeDiagnostic,
-          runtimeSessionId: 'session-current',
-        });
-        expect(snapshot.members.Worker).toMatchObject({
-          alive: false,
-          livenessKind,
-          runtimeDiagnostic,
-          runtimeSessionId: 'session-current',
-          laneKind: 'secondary',
-        });
-      } finally {
-        vi.useRealTimers();
-      }
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: false,
+        livenessKind: 'stale_metadata',
+        runtimeDiagnostic: 'persisted runtime pid is not alive',
+        runtimeSessionId: 'session-current',
+      });
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: false,
+        livenessKind: 'stale_metadata',
+        runtimeDiagnostic: 'persisted runtime pid is not alive',
+        runtimeSessionId: 'session-current',
+        laneKind: 'secondary',
+      });
+    } finally {
+      vi.useRealTimers();
     }
-  );
+  });
+
+  it('keeps exact mixed secondary evidence deliverable when the process table could not answer', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(UPDATED_AT));
+    try {
+      const metadata = await buildMixedRuntimeMetadata({
+        processRows: [],
+        processTableAvailable: false,
+      });
+      const snapshot = await buildMixedRuntimeSnapshot({
+        processRows: [],
+        processTableAvailable: false,
+      });
+
+      expect(metadata.get('Worker')).toMatchObject({
+        alive: true,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+        runtimeSessionId: 'session-current',
+      });
+      expect(snapshot.members.Worker).toMatchObject({
+        alive: true,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+        runtimeSessionId: 'session-current',
+        laneKind: 'secondary',
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it('ignores stale runtime adapter run evidence when resolving the active run', async () => {
     vi.useFakeTimers();
@@ -1331,5 +1491,351 @@ describe('TeamProvisioningRuntimeSnapshot source precedence', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // With no provisioning run in flight the recorded pid is the only thing
+  // tying the member to a process row, and a pid the OS may have reassigned is
+  // too weak to promote a card back to alive - equally weak whether the row
+  // arrives through the win32 host table or the shared process table. Running
+  // the same lane through both values of the platform seam is what keeps that
+  // one rule from silently becoming two.
+  it('leaves an unowned OpenCode lane unpromoted, identically on win32 and off it', async () => {
+    const { linux, win32 } = await resolveLaneLivenessOnBothPlatforms({});
+
+    expect(win32.hostRowsRead).toBe(true);
+    expect(linux.hostRowsRead).toBe(false);
+    expect(win32.verdict).toEqual(linux.verdict);
+    expect(linux.verdict).toEqual({
+      alive: false,
+      livenessKind: 'runtime_process_candidate',
+    });
+  });
+
+  // The other side of the same rule: a lane a run in flight owns is verified
+  // against its live serve host, and that verdict is platform-independent too.
+  // Without this case the rule above would also be satisfied by never
+  // promoting anything.
+  it('revives an owned OpenCode lane from its live serve host, identically on win32 and off it', async () => {
+    const { linux, win32 } = await resolveLaneLivenessOnBothPlatforms({
+      runtimeAdapterRunByTeam: new Map([
+        [TEAM_NAME, { runId: RUN_ID, providerId: 'opencode', cwd: WORKDIR, members: {} }],
+      ]),
+    });
+
+    expect(win32.hostRowsRead).toBe(true);
+    expect(linux.hostRowsRead).toBe(false);
+    expect(win32.verdict).toEqual(linux.verdict);
+    expect(linux.verdict).toEqual({
+      alive: true,
+      livenessKind: 'runtime_process',
+    });
+  });
+
+  // On win32 the shared rows are WSL's `ps` output, numbered independently of
+  // the recorded Windows host pid, so an unrelated WSL `opencode serve` can
+  // carry that same pid. Only the Windows host table answers for it - and the
+  // second half keeps that from being satisfied by never promoting anything.
+  it('does not revive a win32 lane from a colliding serve row in the WSL table', async () => {
+    const collidingWslServeHost = await resolveWin32LaneLivenessByTable({
+      hostRows: [
+        {
+          pid: CURRENT_PID + 1,
+          ppid: 1,
+          command: 'opencode serve --hostname 127.0.0.1 --port 62014',
+        },
+      ],
+      sharedRows: sharedOpenCodeHostProcessRows(),
+    });
+    const ownWindowsHost = await resolveWin32LaneLivenessByTable({
+      hostRows: sharedOpenCodeHostProcessRows(),
+      sharedRows: [],
+    });
+
+    expect(collidingWslServeHost).toEqual({
+      alive: false,
+      livenessKind: 'runtime_process_candidate',
+    });
+    expect(ownWindowsHost).toEqual({ alive: true, livenessKind: 'runtime_process' });
+  });
+
+  // The pid is only worthless across that boundary while nothing else ties the
+  // row to this lane: a WSL row whose command names this team and this member
+  // identifies itself, so a member launched inside WSL keeps its evidence.
+  it('still revives a win32 lane from a WSL row flagged for this team and member', async () => {
+    const verdict = await resolveWin32LaneLivenessByTable({
+      hostRows: [],
+      sharedRows: [
+        {
+          pid: CURRENT_PID,
+          ppid: 1,
+          command: `opencode run --team-name ${TEAM_NAME} --agent-id Worker`,
+        },
+      ],
+    });
+
+    expect(verdict).toEqual({ alive: true, livenessKind: 'runtime_process' });
+  });
+});
+
+describe('findLiveOpenCodeLaneHostRow', () => {
+  const rows: RuntimeTelemetryProcessTableRow[] = [
+    {
+      pid: 31276,
+      ppid: 39012,
+      command:
+        'C:/ProgramData/agent-teams-ai/runtimes/opencode/opencode.exe serve --hostname 127.0.0.1 --port 65122',
+    },
+    { pid: 4242, ppid: 1, command: 'node something-else.js' },
+    {
+      pid: 5151,
+      ppid: 39012,
+      command:
+        'C:/ProgramData/agent-teams-ai/runtimes/opencode/opencode.exe run --team-name other --agent-id nobody',
+    },
+  ];
+
+  it('matches the serve host by the recorded wrapper pid (parent) or by its own pid', () => {
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 39012,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: rows,
+        processTableAvailable: true,
+      })?.pid
+    ).toBe(31276);
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 31276,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: rows,
+        processTableAvailable: true,
+      })?.pid
+    ).toBe(31276);
+  });
+
+  it('returns null without a pid, without the process table, or for unrelated processes', () => {
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: null,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: rows,
+        processTableAvailable: true,
+      })
+    ).toBeNull();
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 39012,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: rows,
+        processTableAvailable: false,
+      })
+    ).toBeNull();
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 4242,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: rows,
+        processTableAvailable: true,
+      })
+    ).toBeNull();
+    // A flagged opencode process for another member is not this lane's host.
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 5151,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: rows,
+        processTableAvailable: true,
+      })
+    ).toBeNull();
+  });
+
+  // Negative control: 'opencode' in the command line is not on its own a lane
+  // host. Without `serve` the row has to name this team and this member.
+  it('does not match an opencode process that is neither a serve host nor flagged for this lane', () => {
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 7777,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: [{ pid: 7777, ppid: 1, command: 'opencode auth login' }],
+        processTableAvailable: true,
+      })
+    ).toBeNull();
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 7777,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: [
+          {
+            pid: 7777,
+            ppid: 1,
+            command: `opencode run --team-name ${TEAM_NAME} --agent-id Worker`,
+          },
+        ],
+        processTableAvailable: true,
+      })?.pid
+    ).toBe(7777);
+  });
+
+  // Rows from a table that does not share the recorded pid's namespace reach
+  // the matcher separately: their pid can collide with an unrelated serve host,
+  // so only the lane's own --team-name/--agent-id flags may match there.
+  it('takes a bare pid match from the recorded namespace only', () => {
+    const serveRow: RuntimeTelemetryProcessTableRow = {
+      pid: 31276,
+      ppid: 39012,
+      command: 'opencode serve --hostname 127.0.0.1 --port 65122',
+    };
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 39012,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: [],
+        foreignPidNamespaceRows: [serveRow],
+        processTableAvailable: true,
+      })
+    ).toBeNull();
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 39012,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: [serveRow],
+        processTableAvailable: true,
+      })?.pid
+    ).toBe(31276);
+    expect(
+      findLiveOpenCodeLaneHostRow({
+        runtimePid: 7777,
+        teamName: TEAM_NAME,
+        memberName: 'Worker',
+        processRows: [],
+        foreignPidNamespaceRows: [
+          {
+            pid: 7777,
+            ppid: 1,
+            command: `opencode run --team-name ${TEAM_NAME} --agent-id Worker`,
+          },
+        ],
+        processTableAvailable: true,
+      })?.pid
+    ).toBe(7777);
+  });
+});
+
+describe('isOpenCodeLaneHostOverridableLiveness', () => {
+  it.each(['registered_only', 'stale_metadata', 'not_found', 'runtime_process_candidate'] as const)(
+    'overrides %s, which was reached without seeing a process',
+    (livenessKind) => {
+      expect(isOpenCodeLaneHostOverridableLiveness(livenessKind)).toBe(true);
+    }
+  );
+
+  it('overrides an absent liveness kind', () => {
+    expect(isOpenCodeLaneHostOverridableLiveness(undefined)).toBe(true);
+  });
+
+  // Negative control: runtime_process already found a process and shell_only
+  // says the pane holds no agent - a lane host must not overwrite either.
+  it.each(['runtime_process', 'shell_only'] as const)('does not override %s', (livenessKind) => {
+    expect(isOpenCodeLaneHostOverridableLiveness(livenessKind)).toBe(false);
+  });
+});
+
+describe('shouldReadWindowsHostRowsForMemberLane', () => {
+  const laneDefaults = {
+    isOpenCodeLaneMember: true,
+    backendType: 'process' as const,
+    evidenceOwner: 'primary' as const,
+    recordedRuntimePid: CURRENT_PID,
+    adapterRuntimeAlive: undefined,
+    adapterBootstrapConfirmed: undefined,
+  };
+
+  it.each(['primary', 'secondary', 'none'] as const)(
+    'reads the Windows host table for a win32 OpenCode lane owned by %s',
+    (evidenceOwner) => {
+      expect(
+        shouldReadWindowsHostRowsForMemberLane({
+          ...laneDefaults,
+          platform: 'win32',
+          evidenceOwner,
+        })
+      ).toBe(true);
+    }
+  );
+
+  // Negative control: the whole rule is win32-only, and this is the assertion
+  // that says so from a test run on any platform.
+  it.each(['primary', 'secondary', 'none'] as const)(
+    'never reads the Windows host table off win32, owner %s',
+    (evidenceOwner) => {
+      expect(
+        shouldReadWindowsHostRowsForMemberLane({
+          ...laneDefaults,
+          platform: 'linux',
+          evidenceOwner,
+        })
+      ).toBe(false);
+    }
+  );
+
+  it('does not read the host table for an unowned lane with no recorded pid', () => {
+    expect(
+      shouldReadWindowsHostRowsForMemberLane({
+        ...laneDefaults,
+        platform: 'win32',
+        evidenceOwner: 'none',
+        recordedRuntimePid: undefined,
+      })
+    ).toBe(false);
+  });
+
+  it('does not read the host table for a primary lane the adapter already reports live', () => {
+    expect(
+      shouldReadWindowsHostRowsForMemberLane({
+        ...laneDefaults,
+        platform: 'win32',
+        adapterRuntimeAlive: true,
+      })
+    ).toBe(false);
+    expect(
+      shouldReadWindowsHostRowsForMemberLane({
+        ...laneDefaults,
+        platform: 'win32',
+        adapterBootstrapConfirmed: true,
+      })
+    ).toBe(false);
+  });
+
+  it('still reads the host table for a secondary lane the adapter reports live', () => {
+    expect(
+      shouldReadWindowsHostRowsForMemberLane({
+        ...laneDefaults,
+        platform: 'win32',
+        evidenceOwner: 'secondary',
+        adapterRuntimeAlive: true,
+        adapterBootstrapConfirmed: true,
+      })
+    ).toBe(true);
+  });
+
+  it('does not read the host table for a tmux-backed member that is not an OpenCode lane', () => {
+    expect(
+      shouldReadWindowsHostRowsForMemberLane({
+        ...laneDefaults,
+        platform: 'win32',
+        isOpenCodeLaneMember: false,
+        backendType: 'tmux',
+      })
+    ).toBe(false);
   });
 });

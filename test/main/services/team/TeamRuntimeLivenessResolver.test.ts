@@ -236,7 +236,10 @@ describe('resolveTeamMemberRuntimeLiveness', () => {
     );
   });
 
-  it('does not trust a stale persisted pid without current process identity', () => {
+  // A process table that answered without the recorded pid is evidence the
+  // process is gone; only an unavailable table keeps the registration
+  // authoritative (see RuntimeProjectionLiveness.projectRuntimeLiveness).
+  it('does not trust a stale persisted pid when the process table answered without it', () => {
     const result = resolveTeamMemberRuntimeLiveness({
       teamName: 'demo',
       memberName: 'tom',
@@ -251,7 +254,7 @@ describe('resolveTeamMemberRuntimeLiveness', () => {
     expect(result.pidSource).toBe('persisted_metadata');
   });
 
-  it('does not treat a persisted pid as stale when the process table is unavailable', () => {
+  it('keeps a member with persisted metadata deliverable when the process table is unavailable', () => {
     const result = resolveTeamMemberRuntimeLiveness({
       teamName: 'demo',
       memberName: 'tom',
@@ -261,7 +264,7 @@ describe('resolveTeamMemberRuntimeLiveness', () => {
       nowIso: NOW,
     });
 
-    expect(result.alive).toBe(false);
+    expect(result.alive).toBe(true);
     expect(result.livenessKind).toBe('registered_only');
     expect(result.pidSource).toBe('persisted_metadata');
     expect(result.diagnostics).toContain('process table unavailable');

@@ -101,6 +101,7 @@ import type {
   TeamAgentRuntimeBackendType,
   TeamAgentRuntimeDiagnosticSeverity,
   TeamAgentRuntimeEntry,
+  TeamAgentRuntimeLivenessKind,
   TeamAgentRuntimeLoadScope,
   TeamAgentRuntimeResourceSample,
   TeamAgentRuntimeSnapshot,
@@ -232,27 +233,124 @@ function suppressRuntimeBootstrapConfirmation(
   };
 }
 
-function hasLiveOpenCodeRuntimePidProbe(params: {
-  evidence: TeamRuntimeMemberLaunchEvidence | undefined;
+/**
+ * The OpenCode host recorded for a lane is spawned as
+ * `opencode serve --hostname ... --port ...`, on Windows behind the console
+ * wrapper, so the recorded pid is the wrapper and the `serve` process is its
+ * child. Neither carries `--team-name/--agent-id`, so a lane host is matched by
+ * pid (or parent pid) plus the opencode serve signature; a flagged process is
+ * still only this lane's host when both flags name this team and member.
+ *
+ * `foreignPidNamespaceRows` carries rows read from a table the recorded pid
+ * does not belong to - on win32 the shared table is WSL's `ps` while a lane
+ * host is a native Windows process. A pid match across that boundary is a
+ * collision, so an unrelated WSL `opencode serve` must not pass: such a row
+ * counts only when its command names this team and this member.
+ */
+export function findLiveOpenCodeLaneHostRow(params: {
+  runtimePid: number | null | undefined;
   teamName: string;
   memberName: string;
   processRows: readonly RuntimeTelemetryProcessTableRow[];
+  foreignPidNamespaceRows?: readonly RuntimeTelemetryProcessTableRow[];
   processTableAvailable: boolean;
-}): boolean {
-  const runtimePid = normalizeRuntimePositiveInteger(params.evidence?.runtimePid);
+}): RuntimeTelemetryProcessTableRow | null {
+  const runtimePid = normalizeRuntimePositiveInteger(params.runtimePid);
   if (!params.processTableAvailable || runtimePid == null) {
-    return false;
+    return null;
   }
-  return params.processRows.some(
-    (row) =>
-      row.pid === runtimePid &&
-      row.command.toLowerCase().includes('opencode') &&
+  const candidates = [
+    ...params.processRows.map((row) => ({ row, laneFlagsRequired: false })),
+    ...(params.foreignPidNamespaceRows ?? []).map((row) => ({ row, laneFlagsRequired: true })),
+  ];
+  for (const { row, laneFlagsRequired } of candidates) {
+    const command = row.command.toLowerCase();
+    if (!command.includes('opencode')) continue;
+    if (row.pid !== runtimePid && row.ppid !== runtimePid) continue;
+    const flaggedForMember =
       extractCliArgValues(row.command, '--team-name').some(
         (teamName) => teamName === params.teamName
       ) &&
       extractCliArgValues(row.command, '--agent-id').some((memberName) =>
         matchesExactTeamMemberName(memberName, params.memberName)
-      )
+      );
+    if (flaggedForMember || (!laneFlagsRequired && /\bserve\b/.test(command))) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function hasLiveOpenCodeRuntimePidProbe(params: {
+  evidence: TeamRuntimeMemberLaunchEvidence | undefined;
+  teamName: string;
+  memberName: string;
+  processRows: readonly RuntimeTelemetryProcessTableRow[];
+  foreignPidNamespaceRows?: readonly RuntimeTelemetryProcessTableRow[];
+  processTableAvailable: boolean;
+}): boolean {
+  return (
+    findLiveOpenCodeLaneHostRow({
+      runtimePid: params.evidence?.runtimePid,
+      teamName: params.teamName,
+      memberName: params.memberName,
+      processRows: params.processRows,
+      foreignPidNamespaceRows: params.foreignPidNamespaceRows,
+      processTableAvailable: params.processTableAvailable,
+    }) !== null
+  );
+}
+
+/**
+ * A live lane host only overrides a verdict that was reached without seeing a
+ * process: `runtime_process` already found one and `shell_only` says the pane
+ * holds no agent at all, so neither is overridable.
+ */
+export function isOpenCodeLaneHostOverridableLiveness(
+  livenessKind: TeamAgentRuntimeLivenessKind | undefined
+): boolean {
+  return (
+    livenessKind === 'registered_only' ||
+    livenessKind === 'stale_metadata' ||
+    livenessKind === 'not_found' ||
+    livenessKind === 'runtime_process_candidate' ||
+    livenessKind == null
+  );
+}
+
+/**
+ * Windows runs OpenCode lane hosts natively, outside the WSL process table this
+ * snapshot otherwise reads, so every OpenCode lane - primary and secondary -
+ * has to be verified against the Windows host table instead.
+ *
+ * With no provisioning run in flight (owner 'none', for example right after an
+ * app restart) the recorded pid is all that is left to verify, so the host
+ * table is read exactly when such a pid exists: that keeps this an added
+ * evidence source and never turns a pid-less registration into a fresh
+ * process-table verdict.
+ *
+ * `platform` is a parameter rather than a direct `process.platform` read so
+ * both sides of the rule are reachable from a test on either platform.
+ */
+export function shouldReadWindowsHostRowsForMemberLane(params: {
+  platform: NodeJS.Platform;
+  isOpenCodeLaneMember: boolean;
+  backendType: TeamAgentRuntimeBackendType | undefined;
+  evidenceOwner: 'primary' | 'secondary' | 'none';
+  recordedRuntimePid: number | undefined;
+  adapterRuntimeAlive: boolean | undefined;
+  adapterBootstrapConfirmed: boolean | undefined;
+}): boolean {
+  return (
+    params.platform === 'win32' &&
+    (params.isOpenCodeLaneMember || params.backendType !== 'tmux') &&
+    (params.evidenceOwner === 'primary' ||
+      (params.evidenceOwner === 'secondary' && params.isOpenCodeLaneMember) ||
+      (params.evidenceOwner === 'none' &&
+        params.isOpenCodeLaneMember &&
+        params.recordedRuntimePid != null)) &&
+    (params.evidenceOwner === 'secondary' ||
+      (params.adapterRuntimeAlive !== true && params.adapterBootstrapConfirmed !== true))
   );
 }
 
@@ -771,6 +869,8 @@ export async function buildTeamAgentRuntimeSnapshot(
     const runtimeProcessRows =
       runtimeRootOwnersByPid.size > 0
         ? await params.readRuntimeProcessRowsForUsageSnapshot(params.teamName, {
+            // On win32 the Windows host rows are the only ones carrying RAM/CPU for agent
+            // processes; the WSL rows merged with them belong to a different pid namespace.
             includeWindowsHostRows: process.platform === 'win32',
           })
         : null;
@@ -1763,14 +1863,20 @@ export async function buildLiveTeamAgentRuntimeMetadata(
           updatedAt: persistedLaunchSnapshot?.updatedAt ?? nowIso(),
         }
       : undefined;
-    const shouldUseWindowsHostRows =
-      process.platform === 'win32' &&
-      (metadata.providerId === 'opencode' ||
-        launchMember?.providerId === 'opencode' ||
-        metadata.backendType !== 'tmux') &&
-      adapterEvidenceResolution.owner === 'primary' &&
-      adapterEvidence?.runtimeAlive !== true &&
-      adapterEvidence?.bootstrapConfirmed !== true;
+    const isOpenCodeLaneMember =
+      metadata.providerId === 'opencode' || launchMember?.providerId === 'opencode';
+    const recordedRuntimePid = normalizeRuntimePositiveInteger(
+      launchMember?.runtimePid ?? adapterEvidence?.runtimePid ?? metadata.metricsPid
+    );
+    const shouldUseWindowsHostRows = shouldReadWindowsHostRowsForMemberLane({
+      platform: process.platform,
+      isOpenCodeLaneMember,
+      backendType: metadata.backendType,
+      evidenceOwner: adapterEvidenceResolution.owner,
+      recordedRuntimePid,
+      adapterRuntimeAlive: adapterEvidence?.runtimeAlive,
+      adapterBootstrapConfirmed: adapterEvidence?.bootstrapConfirmed,
+    });
     const hostProcessRows = shouldUseWindowsHostRows ? await getWindowsHostProcessRows() : [];
     const memberProcessRows = shouldUseWindowsHostRows
       ? [...hostProcessRows, ...processRows]
@@ -1778,6 +1884,14 @@ export async function buildLiveTeamAgentRuntimeMetadata(
     const memberProcessTableAvailable = shouldUseWindowsHostRows
       ? windowsHostProcessTableAvailable || processTableAvailable
       : processTableAvailable;
+    // Once the host table is read, the recorded lane pid is a Windows pid and
+    // the shared rows are WSL's `ps` output - a different pid namespace, where
+    // a bare pid match is a collision rather than evidence. So the lane host
+    // probe takes the host rows as the recorded pid's namespace and the shared
+    // rows as the foreign one, where only this lane's own flags may match. The
+    // merged rows stay as they are for usage sampling and general liveness.
+    const laneHostPidRows = shouldUseWindowsHostRows ? hostProcessRows : processRows;
+    const laneHostForeignPidRows = shouldUseWindowsHostRows ? processRows : [];
     const trackedStatus = findExactTrackedMemberSpawnStatus(run, memberName);
     const launchStatus =
       isLaunchMemberStatusRelevantToRuntimeRun(launchMember, activeRuntimeRunId) && launchMember
@@ -1820,13 +1934,59 @@ export async function buildLiveTeamAgentRuntimeMetadata(
           evidence: adapterEvidence,
           teamName: params.teamName,
           memberName,
-          processRows: memberProcessRows,
+          processRows: laneHostPidRows,
+          foreignPidNamespaceRows: laneHostForeignPidRows,
           processTableAvailable: memberProcessTableAvailable,
         }));
-    const resolved =
+    const resolvedBeforeHostProbe =
       mixedSecondaryProbe && !mixedSecondaryProbeIsLive
         ? mixedSecondaryProbe
         : resolveTeamProvisioningRuntimeLiveness(livenessInput);
+    // A lane whose bootstrap heartbeat aged past the stale window still has a
+    // live host process between turns; that host is the liveness truth for an
+    // OpenCode lane (the card used to flip idle <-> registered every ~2 min).
+    // With no run in flight (owner 'none', for example right after an app
+    // restart) the persisted launch snapshot is the only bootstrap evidence
+    // left, and its recorded pid is then the only thing tying this member to
+    // any process row - a pid the OS may have handed to another OpenCode host
+    // in the meantime. That pairing is too weak to promote a card back to
+    // alive, and it is exactly as weak wherever the row came from, so the rule
+    // is the same on every platform: the rows stay RSS evidence only, whether
+    // they arrive through the win32 host table or the shared process table.
+    const liveLaneHostRow =
+      isOpenCodeLaneMember &&
+      adapterEvidenceResolution.owner !== 'none' &&
+      resolvedBeforeHostProbe.alive !== true &&
+      adapterEvidence?.runtimeAlive !== true &&
+      adapterEvidence?.bootstrapConfirmed !== true
+        ? findLiveOpenCodeLaneHostRow({
+            runtimePid: recordedRuntimePid,
+            teamName: params.teamName,
+            memberName,
+            processRows: laneHostPidRows,
+            foreignPidNamespaceRows: laneHostForeignPidRows,
+            processTableAvailable: memberProcessTableAvailable,
+          })
+        : null;
+    const resolved =
+      liveLaneHostRow && isOpenCodeLaneHostOverridableLiveness(resolvedBeforeHostProbe.livenessKind)
+        ? {
+            ...resolvedBeforeHostProbe,
+            alive: true,
+            livenessKind: 'runtime_process' as const,
+            pidSource: 'opencode_bridge' as const,
+            pid: liveLaneHostRow.pid,
+            processCommand: liveLaneHostRow.command,
+            runtimeDiagnostic: `OpenCode lane host process is alive (pid ${liveLaneHostRow.pid})`,
+            runtimeDiagnosticSeverity: 'info' as const,
+            diagnostics: [
+              ...new Set([
+                ...resolvedBeforeHostProbe.diagnostics,
+                'matched OpenCode lane host process by recorded runtime pid',
+              ]),
+            ],
+          }
+        : resolvedBeforeHostProbe;
     const runtimeLastSeenAt =
       resolved.runtimeLastSeenAt ?? (isStrongRuntimeEvidence(resolved) ? resolvedAt : undefined);
     const bootstrapTransportDiagnostic =

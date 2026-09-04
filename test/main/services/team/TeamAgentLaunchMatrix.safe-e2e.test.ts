@@ -2248,9 +2248,14 @@ describe(
       });
       expect(svc.isTeamAlive('failed-opencode-safe-e2e')).toBe(false);
 
+      // The failed launch leaves alice with registration metadata and no
+      // runtime pid, which projects as deliverable-but-registered-only: the
+      // team is not alive, but the member card must not claim the runtime was
+      // proven dead when no pid was ever recorded to look up.
       const runtimeSnapshot = await svc.getTeamAgentRuntimeSnapshot('failed-opencode-safe-e2e');
       expect(runtimeSnapshot.members.alice).toMatchObject({
-        alive: false,
+        alive: true,
+        livenessKind: 'registered_only',
         providerId: 'opencode',
         runtimeModel: 'opencode/big-pickle',
       });
@@ -8658,9 +8663,14 @@ describe(
 
       expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
       expect(statuses.teamLaunchState).toBe('partial_pending');
+      // bob's persisted registration alone projects as registered_only/alive,
+      // which lifts the lane out of 'starting' into runtime-pending. The
+      // suffixed heartbeat still must not confirm bootstrap for an OpenCode
+      // lane, so bootstrapConfirmed stays false and no heartbeat is recorded.
       expect(statuses.statuses.bob).toMatchObject({
-        status: 'spawning',
-        launchState: 'starting',
+        status: 'waiting',
+        launchState: 'runtime_pending_bootstrap',
+        livenessKind: 'registered_only',
         bootstrapConfirmed: false,
         hardFailure: false,
       });

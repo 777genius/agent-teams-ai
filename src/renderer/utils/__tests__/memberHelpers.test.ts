@@ -265,6 +265,144 @@ describe('member runtime presentation', () => {
     expect(presentation.dotClass).toContain('bg-red-400');
   });
 
+  it('shows ready status for alive ephemeral lanes with degraded liveness metadata', () => {
+    for (const livenessKind of ['registered_only', 'stale_metadata'] as const) {
+      const presentation = buildMemberLaunchPresentation({
+        member: createMember({ providerId: 'opencode', providerBackendId: undefined }),
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnRuntimeAlive: true,
+        spawnLivenessSource: 'heartbeat',
+        runtimeAdvisory: undefined,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+        runtimeEntry: createLiveRuntime({
+          providerId: 'opencode',
+          providerBackendId: undefined,
+          livenessKind,
+          pid: undefined,
+          rssBytes: undefined,
+        }),
+      });
+
+      expect(presentation.launchVisualState).toBeNull();
+      expect(presentation.launchStatusLabel).toBeNull();
+      expect(presentation.presenceLabel).toBe('working');
+      expect(presentation.dotClass).toContain('bg-emerald-400');
+    }
+  });
+
+  // Negative control: the rule is gated on `alive`, not on the liveness kind.
+  it('keeps stale presentation for degraded liveness metadata without an alive runtime', () => {
+    const buildPresentation = (
+      livenessKind: 'registered_only' | 'stale_metadata'
+    ): ReturnType<typeof buildMemberLaunchPresentation> =>
+      buildMemberLaunchPresentation({
+        member: createMember({ providerId: 'opencode', providerBackendId: undefined }),
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnRuntimeAlive: true,
+        spawnLivenessSource: 'heartbeat',
+        runtimeAdvisory: undefined,
+        isTeamAlive: true,
+        isTeamProvisioning: false,
+        runtimeEntry: createLiveRuntime({
+          providerId: 'opencode',
+          providerBackendId: undefined,
+          alive: false,
+          livenessKind,
+          pid: undefined,
+          rssBytes: undefined,
+        }),
+      });
+
+    const registered = buildPresentation('registered_only');
+    expect(registered.launchVisualState).toBe('registered_only');
+    expect(registered.presenceLabel).toBe('registered');
+    expect(registered.dotClass).toContain('bg-red-400');
+
+    const stale = buildPresentation('stale_metadata');
+    expect(stale.launchVisualState).toBe('stale_runtime');
+    expect(stale.presenceLabel).toBe('stale runtime');
+    expect(stale.dotClass).toContain('bg-red-400');
+  });
+
+  it('keeps task activity visible for alive lanes with degraded liveness metadata', () => {
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: createMember({ providerId: 'opencode', providerBackendId: undefined }),
+        isTeamAlive: true,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnRuntimeAlive: true,
+        runtimeEntry: createLiveRuntime({
+          providerId: 'opencode',
+          providerBackendId: undefined,
+          livenessKind: 'registered_only',
+          pid: undefined,
+          rssBytes: undefined,
+        }),
+      })
+    ).toBe(true);
+  });
+
+  it('hides task activity for degraded liveness metadata without an alive runtime', () => {
+    expect(
+      shouldDisplayMemberCurrentTask({
+        member: createMember({ providerId: 'opencode', providerBackendId: undefined }),
+        isTeamAlive: true,
+        spawnStatus: 'online',
+        spawnLaunchState: 'confirmed_alive',
+        spawnRuntimeAlive: true,
+        runtimeEntry: createLiveRuntime({
+          providerId: 'opencode',
+          providerBackendId: undefined,
+          alive: false,
+          livenessKind: 'registered_only',
+          pid: undefined,
+          rssBytes: undefined,
+        }),
+      })
+    ).toBe(false);
+  });
+
+  // Negative control: shell_only is deliberately outside the degraded set - it
+  // says the pane holds no agent at all, so an alive runtime does not rescue it.
+  it('hides task activity for a shell_only lane even when the runtime reports alive', () => {
+    for (const entry of [
+      { runtimeLivenessKind: 'shell_only' as const, spawnLivenessKind: undefined },
+      { runtimeLivenessKind: 'runtime_process' as const, spawnLivenessKind: 'shell_only' as const },
+    ]) {
+      expect(
+        shouldDisplayMemberCurrentTask({
+          member: createMember({ providerId: 'opencode', providerBackendId: undefined }),
+          isTeamAlive: true,
+          spawnStatus: 'online',
+          spawnLaunchState: 'confirmed_alive',
+          spawnRuntimeAlive: true,
+          spawnEntry: {
+            status: 'online',
+            launchState: 'confirmed_alive',
+            agentToolAccepted: true,
+            runtimeAlive: true,
+            bootstrapConfirmed: true,
+            hardFailure: false,
+            ...(entry.spawnLivenessKind ? { livenessKind: entry.spawnLivenessKind } : {}),
+            updatedAt: '2026-05-18T19:45:00.000Z',
+          },
+          runtimeEntry: createLiveRuntime({
+            providerId: 'opencode',
+            providerBackendId: undefined,
+            alive: true,
+            livenessKind: entry.runtimeLivenessKind,
+            pid: undefined,
+            rssBytes: undefined,
+          }),
+        })
+      ).toBe(false);
+    }
+  });
+
   it('does not require runtime evidence for non-Codex teammates', () => {
     expect(
       shouldDisplayMemberCurrentTask({

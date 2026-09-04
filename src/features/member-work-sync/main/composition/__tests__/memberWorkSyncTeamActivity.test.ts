@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildWorkSyncHardFailedMembers,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncActiveRuntime,
   hasWorkSyncReachableRuntime,
@@ -43,7 +44,11 @@ describe('member work sync team activity', () => {
   });
 
   it('treats a confirmed bootstrap runtime entry as active', () => {
-    for (const pidSource of ['agent_process_table', 'opencode_bridge'] as const) {
+    for (const pidSource of [
+      'agent_process_table',
+      'opencode_bridge',
+      'runtime_bootstrap',
+    ] as const) {
       expect(
         isRuntimeEntryActiveForWorkSync(
           createRuntimeEntry({
@@ -57,13 +62,7 @@ describe('member work sync team activity', () => {
   });
 
   it('does not treat bootstrap-only confirmation as active runtime evidence', () => {
-    for (const pidSource of [
-      undefined,
-      'runtime_bootstrap',
-      'persisted_metadata',
-      'tmux_child',
-      'tmux_pane',
-    ] as const) {
+    for (const pidSource of [undefined, 'persisted_metadata', 'tmux_child', 'tmux_pane'] as const) {
       expect(
         isRuntimeEntryActiveForWorkSync(
           createRuntimeEntry({
@@ -147,11 +146,20 @@ describe('member work sync team activity', () => {
       'permission_blocked',
       'runtime_process_candidate',
       'shell_only',
-      'registered_only',
-      'stale_metadata',
       'not_found',
     ] as const) {
       expect(isRuntimeEntryActiveForWorkSync(createRuntimeEntry({ livenessKind }))).toBe(false);
+    }
+  });
+
+  it('keeps alive between-turn on-demand lanes active despite degraded liveness kinds', () => {
+    for (const livenessKind of ['registered_only', 'stale_metadata'] as const) {
+      expect(isRuntimeEntryActiveForWorkSync(createRuntimeEntry({ livenessKind }))).toBe(true);
+      // Negative control: the alive check still runs first, so a dead entry
+      // with the same degraded kind stays inactive.
+      expect(
+        isRuntimeEntryActiveForWorkSync(createRuntimeEntry({ alive: false, livenessKind }))
+      ).toBe(false);
     }
   });
 
@@ -251,5 +259,100 @@ describe('member work sync team activity', () => {
   it('handles missing snapshots as inactive', () => {
     expect(hasWorkSyncActiveRuntime(null)).toBe(false);
     expect(hasWorkSyncActiveRuntime(undefined)).toBe(false);
+  });
+
+  it('does not treat a hard-failed member as active even when the runtime resolver reports alive', () => {
+    // A member whose launch grace timed out has no pid ever recorded, so the
+    // runtime liveness resolver cannot disprove it and reports alive: true -
+    // correct for the "alive between turns" on-demand-lane case, but a hard
+    // failure means it is not coming back on its own. Without the hard-failure
+    // check this stays "active" forever and can be handed assignment nudges.
+    const entry = createRuntimeEntry();
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({ alice: { hardFailure: true } });
+
+    expect(isRuntimeEntryActiveForWorkSync(entry)).toBe(true);
+    expect(isRuntimeEntryActiveForWorkSync(entry, hardFailedMembers)).toBe(false);
+
+    const snapshot = createRuntimeSnapshot({ alice: entry });
+    expect(hasWorkSyncReachableRuntime(snapshot, hardFailedMembers)).toBe(false);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'alice', hardFailedMembers)).toBe(false);
+  });
+
+  it('leaves other members active when only one hard-failed', () => {
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({ memberName: 'alice' }),
+      bob: createRuntimeEntry({ memberName: 'bob' }),
+    });
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({ alice: { hardFailure: true } });
+
+    expect(hasWorkSyncReachableRuntime(snapshot, hardFailedMembers)).toBe(true);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'alice', hardFailedMembers)).toBe(false);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'bob', hardFailedMembers)).toBe(true);
+  });
+
+  it('does not report a hard-failed member as uncertain when the process table is unavailable', () => {
+    // Excluding a hard-failed member from the active check is only half of it:
+    // src/main/index.ts answers null whenever nothing is active but something
+    // is uncertain, and both callers of that null fall back to isTeamAlive() /
+    // hasProvisioningRun(), which hand the same member straight back as active.
+    // A hard failure is already decided, so an unreadable process table cannot
+    // make it uncertain again.
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({
+        memberName: 'alice',
+        livenessKind: 'registered_only',
+        runtimeDiagnostic:
+          'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+      }),
+    });
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({ alice: { hardFailure: true } });
+
+    expect(hasUncertainWorkSyncRuntimeActivity(snapshot)).toBe(true);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'alice')).toBe(true);
+
+    expect(hasUncertainWorkSyncRuntimeActivity(snapshot, hardFailedMembers)).toBe(false);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'alice', hardFailedMembers)).toBe(
+      false
+    );
+
+    // Both work-sync call sites now resolve to a definite false instead of null.
+    expect(hasWorkSyncReachableRuntime(snapshot, hardFailedMembers)).toBe(false);
+    expect(isRuntimeMemberActiveForWorkSync(snapshot, 'alice', hardFailedMembers)).toBe(false);
+  });
+
+  it('keeps a teammate that did not hard-fail uncertain while the process table is unavailable', () => {
+    const snapshot = createRuntimeSnapshot({
+      alice: createRuntimeEntry({
+        memberName: 'alice',
+        livenessKind: 'registered_only',
+        runtimeDiagnostic:
+          'CLI process exited (code 1) - team provisioned but not alive; process table unavailable',
+      }),
+      bob: createRuntimeEntry({
+        memberName: 'bob',
+        alive: false,
+        livenessKind: 'registered_only',
+        runtimeDiagnostic: 'runtime pid could not be verified because process table is unavailable',
+      }),
+    });
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({ alice: { hardFailure: true } });
+
+    expect(hasUncertainWorkSyncRuntimeActivity(snapshot, hardFailedMembers)).toBe(true);
+    expect(isRuntimeMemberActivityUncertainForWorkSync(snapshot, 'bob', hardFailedMembers)).toBe(
+      true
+    );
+  });
+
+  it('buildWorkSyncHardFailedMembers only includes members whose hardFailure is true', () => {
+    const hardFailedMembers = buildWorkSyncHardFailedMembers({
+      alice: { hardFailure: true },
+      bob: { hardFailure: false },
+      carol: {},
+    });
+
+    expect(hardFailedMembers.has('alice')).toBe(true);
+    expect(hardFailedMembers.has('bob')).toBe(false);
+    expect(hardFailedMembers.has('carol')).toBe(false);
+    expect(buildWorkSyncHardFailedMembers(null).size).toBe(0);
   });
 });

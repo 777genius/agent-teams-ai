@@ -47,6 +47,7 @@ import {
 } from '@features/member-log-stream/main';
 import {
   buildMemberWorkSyncRuntimeTurnSettledEnvironment,
+  buildWorkSyncHardFailedMembers,
   createMemberWorkSyncFeature,
   hasUncertainWorkSyncRuntimeActivity,
   hasWorkSyncReachableRuntime,
@@ -2416,14 +2417,36 @@ async function initializeServices(): Promise<void> {
     memberWorkSyncRuntimeSnapshotInFlightByTeam.set(input.teamName, request);
     return request;
   };
+  // Best-effort: a member the runtime snapshot cannot itself disprove (no pid
+  // recorded, e.g. an OpenCode lane between turns) still resolves alive:true.
+  // That is correct for that case, but not for a member whose launch already
+  // hard-failed - the grace timeout expired, bootstrap evidence was rejected -
+  // which must never be treated as an assignment nudge target. A failure to
+  // read spawn statuses degrades to the pre-existing runtime-only behavior
+  // rather than blocking the activity check.
+  const getMemberWorkSyncHardFailedMembers = async (
+    teamName: string
+  ): Promise<ReturnType<typeof buildWorkSyncHardFailedMembers>> => {
+    try {
+      const snapshot = await teamProvisioningService.getMemberSpawnStatuses(teamName);
+      return buildWorkSyncHardFailedMembers(snapshot.statuses);
+    } catch (error) {
+      memberWorkSyncLogger.warn('member work sync hard-failure lookup failed', {
+        teamName,
+        error: String(error),
+      });
+      return buildWorkSyncHardFailedMembers(null);
+    }
+  };
   const getMemberWorkSyncRuntimeActivity = async (teamName: string): Promise<boolean | null> => {
     try {
       const snapshot = await getMemberWorkSyncRuntimeSnapshot({ teamName });
       if (!snapshot) {
         return null;
       }
-      const active = hasWorkSyncReachableRuntime(snapshot);
-      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot)) {
+      const hardFailedMembers = await getMemberWorkSyncHardFailedMembers(teamName);
+      const active = hasWorkSyncReachableRuntime(snapshot, hardFailedMembers);
+      if (!active && hasUncertainWorkSyncRuntimeActivity(snapshot, hardFailedMembers)) {
         return null;
       }
       return active;
@@ -2444,8 +2467,16 @@ async function initializeServices(): Promise<void> {
       if (!snapshot) {
         return null;
       }
-      const active = isRuntimeMemberActiveForWorkSync(snapshot, input.memberName);
-      if (!active && isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName)) {
+      const hardFailedMembers = await getMemberWorkSyncHardFailedMembers(input.teamName);
+      const active = isRuntimeMemberActiveForWorkSync(
+        snapshot,
+        input.memberName,
+        hardFailedMembers
+      );
+      if (
+        !active &&
+        isRuntimeMemberActivityUncertainForWorkSync(snapshot, input.memberName, hardFailedMembers)
+      ) {
         return null;
       }
       return active;
