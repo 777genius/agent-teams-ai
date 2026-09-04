@@ -7,12 +7,32 @@ import { atomicWriteAsync } from '@main/utils/atomicWrite';
 import {
   type Announcement,
   type AnnouncementFeed,
+  ANNOUNCEMENTS_MAX_ASSET_BYTES,
   ANNOUNCEMENTS_MAX_BODY_BYTES,
   ANNOUNCEMENTS_MAX_FEED_BYTES,
 } from '../../contracts';
 import { normalizeAnnouncementFeed } from '../../core/domain';
 
 import type { AnnouncementSource } from '../../core/application/ports';
+
+const MAX_CACHED_FEED_BYTES = 1024 * 1024;
+
+async function readBoundedText(file: string, limit: number): Promise<string> {
+  const handle = await fs.open(file, 'r');
+  try {
+    const bytes = Buffer.allocUnsafe(limit + 1);
+    let length = 0;
+    while (length < bytes.byteLength) {
+      const result = await handle.read(bytes, length, bytes.byteLength - length, length);
+      if (result.bytesRead === 0) break;
+      length += result.bytesRead;
+    }
+    if (length > limit) throw new Error('cache_too_large');
+    return bytes.subarray(0, length).toString('utf8');
+  } finally {
+    await handle.close();
+  }
+}
 
 async function retryDelay(delay: number, signal: AbortSignal): Promise<void> {
   await new Promise<void>((resolve, reject) => {
@@ -54,23 +74,28 @@ export class HttpAnnouncementSource implements AnnouncementSource {
     return this.feed;
   }
   async loadCached(): Promise<void> {
+    const file = path.join(this.directory, 'feed.json');
     try {
-      const cached = JSON.parse(
-        await fs.readFile(path.join(this.directory, 'feed.json'), 'utf8')
-      ) as { feed: unknown; etag?: string };
+      const cached = JSON.parse(await readBoundedText(file, MAX_CACHED_FEED_BYTES)) as {
+        feed: unknown;
+        etag?: string;
+      };
       this.feed = normalizeAnnouncementFeed(cached.feed);
       this.etag =
         typeof cached.etag === 'string' && cached.etag.length < 1000 ? cached.etag : undefined;
     } catch {
       /* Cache is disposable; corruption never changes consumption state. */
+      this.feed = null;
+      this.etag = undefined;
+      await fs.unlink(file).catch(() => undefined);
     }
   }
-  private async get(
+  private async getBytes(
     url: string,
     limit: number,
-    kind: 'feed' | 'body',
+    kind: 'feed' | 'body' | 'asset',
     signal: AbortSignal
-  ): Promise<{ text: string; etag?: string } | null> {
+  ): Promise<{ bytes: Buffer; etag?: string; type: string } | null> {
     for (let attempt = 0; attempt < 3; attempt++) {
       const controller = new AbortController();
       const abort = (): void => controller.abort();
@@ -86,10 +111,15 @@ export class HttpAnnouncementSource implements AnnouncementSource {
             credentials: 'omit',
             referrerPolicy: 'no-referrer',
             redirect: 'manual',
-            headers:
-              kind === 'feed' && this.etag
-                ? { 'If-None-Match': this.etag, Accept: 'application/json' }
-                : { Accept: kind === 'feed' ? 'application/json' : 'text/markdown,text/plain' },
+            headers: {
+              ...(kind === 'feed' && this.etag ? { 'If-None-Match': this.etag } : {}),
+              Accept:
+                kind === 'feed'
+                  ? 'application/json'
+                  : kind === 'body'
+                    ? 'text/markdown,text/plain'
+                    : 'image/png,image/jpeg,image/gif,image/webp,image/avif',
+            },
           });
           if (![301, 302, 303, 307, 308].includes(response.status)) break;
           const location = response.headers.get('location');
@@ -99,7 +129,8 @@ export class HttpAnnouncementSource implements AnnouncementSource {
             next.origin !== this.origin ||
             next.username ||
             next.password ||
-            !next.pathname.startsWith('/announcements/')
+            !next.pathname.startsWith('/announcements/') ||
+            kind === 'asset'
           )
             throw new Error('fetch_failed');
           await response.body?.cancel();
@@ -130,11 +161,13 @@ export class HttpAnnouncementSource implements AnnouncementSource {
         if (!response.ok)
           throw new Error(response.status === 404 ? 'body_missing' : 'fetch_failed');
         const type = response.headers.get('content-type')?.split(';')[0].trim();
-        if (
+        const allowedTypes =
           kind === 'feed'
-            ? type !== 'application/json'
-            : !['text/markdown', 'text/plain', 'text/x-markdown'].includes(type ?? '')
-        )
+            ? ['application/json']
+            : kind === 'body'
+              ? ['text/markdown', 'text/plain', 'text/x-markdown']
+              : ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/avif'];
+        if (!type || !allowedTypes.includes(type))
           throw new Error('feed_invalid');
         if (!response.body) throw new Error('fetch_failed');
         const reader = response.body.getReader();
@@ -152,8 +185,9 @@ export class HttpAnnouncementSource implements AnnouncementSource {
           await reader.cancel().catch(() => undefined);
         }
         return {
-          text: Buffer.concat(chunks).toString('utf8'),
+          bytes: Buffer.concat(chunks),
           etag: response.headers.get('etag') ?? undefined,
+          type,
         };
       } catch (error) {
         if (signal.aborted || !(error instanceof TypeError) || attempt === 2) throw error;
@@ -165,8 +199,17 @@ export class HttpAnnouncementSource implements AnnouncementSource {
     }
     throw new Error('fetch_failed');
   }
+  private async getText(
+    url: string,
+    limit: number,
+    kind: 'feed' | 'body',
+    signal: AbortSignal
+  ): Promise<{ text: string; etag?: string } | null> {
+    const result = await this.getBytes(url, limit, kind, signal);
+    return result ? { text: result.bytes.toString('utf8'), etag: result.etag } : null;
+  }
   async refresh(signal: AbortSignal): Promise<AnnouncementFeed> {
-    const result = await this.get(this.url, ANNOUNCEMENTS_MAX_FEED_BYTES, 'feed', signal);
+    const result = await this.getText(this.url, ANNOUNCEMENTS_MAX_FEED_BYTES, 'feed', signal);
     if (signal.aborted) throw new Error('aborted');
     if (result) {
       const feed = normalizeAnnouncementFeed(JSON.parse(result.text) as unknown);
@@ -199,7 +242,7 @@ export class HttpAnnouncementSource implements AnnouncementSource {
       createHash('sha256').update(text).digest('hex') === item.bodySha256 &&
       !/^\s*(?:<!doctype\s+html|<html[\s>])/i.test(text);
     try {
-      const text = await fs.readFile(file, 'utf8');
+      const text = await readBoundedText(file, ANNOUNCEMENTS_MAX_BODY_BYTES);
       if (valid(text)) {
         if (!signal.aborted) await fs.utimes(file, new Date(), new Date()).catch(() => undefined);
         return { markdown: text, bodyUrl };
@@ -207,7 +250,8 @@ export class HttpAnnouncementSource implements AnnouncementSource {
     } catch {
       /* Fetch absent or damaged cached content. */
     }
-    const result = await this.get(bodyUrl, ANNOUNCEMENTS_MAX_BODY_BYTES, 'body', signal);
+    await fs.unlink(file).catch(() => undefined);
+    const result = await this.getText(bodyUrl, ANNOUNCEMENTS_MAX_BODY_BYTES, 'body', signal);
     if (!result || !valid(result.text)) throw new Error('body_hash_mismatch');
     if (signal.aborted) throw new Error('aborted');
     await fs.mkdir(this.directory, { recursive: true, mode: 0o700 });
@@ -224,6 +268,27 @@ export class HttpAnnouncementSource implements AnnouncementSource {
       await this.trim();
     }).catch(() => undefined);
     return { markdown: result.text, bodyUrl };
+  }
+  async asset(url: string, signal: AbortSignal): Promise<string> {
+    const target = new URL(url);
+    const belongsToCurrentFeed = this.feed?.items.some((item) => {
+      const body = new URL(item.bodyPath, this.origin);
+      const assetRoot = new URL('assets/', body).pathname;
+      return target.pathname.startsWith(assetRoot) && target.pathname.length > assetRoot.length;
+    });
+    if (
+      target.origin !== this.origin ||
+      target.username ||
+      target.password ||
+      target.search ||
+      target.hash ||
+      /%2f|%5c|%2e/i.test(target.pathname) ||
+      !belongsToCurrentFeed
+    )
+      throw new Error('asset_invalid');
+    const result = await this.getBytes(target.href, ANNOUNCEMENTS_MAX_ASSET_BYTES, 'asset', signal);
+    if (!result || signal.aborted) throw new Error('asset_invalid');
+    return `data:${result.type};base64,${result.bytes.toString('base64')}`;
   }
   private async trim(): Promise<void> {
     const files = (await fs.readdir(this.directory)).filter((name) =>

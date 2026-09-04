@@ -6,7 +6,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { AnnouncementMarkdown } from '../../../../src/features/announcements/renderer/AnnouncementMarkdown';
 import { announcementUrl } from '../../../../src/features/announcements/renderer/markdownPolicy';
 const external = vi.hoisted(() => vi.fn());
-vi.mock('@renderer/api', () => ({ api: { openExternal: external } }));
+const loadAsset = vi.hoisted(() => vi.fn());
+vi.mock('@renderer/api', () => ({
+  api: { announcements: { loadAsset }, openExternal: external },
+}));
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({ t: (key: string) => key }),
 }));
@@ -39,6 +42,7 @@ describe('remote Markdown boundary', () => {
     expect(announcementUrl('https://example.com/docs', base)).toBe('https://example.com/docs');
   });
   it('renders GFM tables/images/code/lists/quotes with bounded overflow and no raw HTML', async () => {
+    loadAsset.mockResolvedValue('data:image/png;base64,iVBORw0KGgo=');
     Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
     const mount = document.createElement('div');
     document.body.append(mount);
@@ -49,12 +53,24 @@ describe('remote Markdown boundary', () => {
     expect(mount.querySelector('table')).not.toBeNull();
     expect(mount.querySelector('table')?.parentElement?.className).toContain('overflow-x-auto');
     expect(mount.querySelector('pre')?.className).toContain('overflow-x-auto');
+    expect(loadAsset).toHaveBeenCalledWith(
+      'https://agentteams.live/announcements/content/release/abcdef/assets/demo.gif'
+    );
+    expect(mount.querySelector('img')?.getAttribute('src')).toBe(
+      'data:image/png;base64,iVBORw0KGgo='
+    );
     expect(mount.querySelector('img')?.getAttribute('referrerpolicy')).toBe('no-referrer');
     expect(mount.querySelector('blockquote')).not.toBeNull();
     expect(mount.querySelector('input[type="checkbox"]')).not.toBeNull();
     expect(mount.querySelector('script,iframe')).toBeNull();
-    expect(mount.querySelectorAll('a')).toHaveLength(1);
-    await act(async () => mount.querySelector('a')!.click());
+    expect(mount.querySelectorAll('a')).toHaveLength(0);
+    const externalButton = [...mount.querySelectorAll('button')].find(
+      (button) => button.textContent === 'External'
+    );
+    expect(externalButton).toBeTruthy();
+    externalButton!.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, button: 1 }));
+    expect(external).not.toHaveBeenCalled();
+    await act(async () => externalButton!.click());
     expect(external).toHaveBeenCalledWith('https://example.com/docs');
     await act(async () => root.unmount());
     mount.remove();

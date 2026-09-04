@@ -1,6 +1,7 @@
 import { act,StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
+import { ConflictDialog } from '@renderer/components/team/review/ConflictDialog';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -120,5 +121,32 @@ describe('overlay occupancy', () => {
     expect(getOverlaySnapshot().count).toBe(1);
     await render(false);
     expect(getOverlaySnapshot().count).toBe(0);
+  });
+
+  it('tracks a raw conflict blocker that does not use the shared dialog primitive', async () => {
+    const render = async (open: boolean): Promise<void> => {
+      await act(async () =>
+        root.render(
+          <>
+            <ConflictDialog
+              open={open}
+              onOpenChange={vi.fn()}
+              filePath="src/example.ts"
+              conflictContent="<<<<<<< current\n=======\n>>>>>>> original"
+              onResolveKeepCurrent={vi.fn()}
+              onResolveUseOriginal={vi.fn()}
+              onResolveManual={vi.fn()}
+            />
+            <Observer />
+          </>
+        )
+      );
+    };
+    await render(false);
+    expect(container.textContent).toBe('0');
+    await render(true);
+    expect(getOverlaySnapshot().count).toBe(1);
+    await render(false);
+    expect(container.textContent).toBe('0');
   });
 });

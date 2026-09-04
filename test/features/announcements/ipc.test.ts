@@ -22,6 +22,7 @@ const feature = {
   prepareAuto: vi.fn(),
   claimAuto: vi.fn(),
   openManual: vi.fn(),
+  loadAsset: vi.fn(),
   dismiss: vi.fn(),
 };
 const context: AnnouncementWindowContext = { windowId: 1, uiGeneration: 0, isReady: () => true };
@@ -55,17 +56,23 @@ describe('announcements IPC boundary', () => {
     }
     expect(() => invoke(channels.prepareAuto, { accumulatedOpenMs: 999999 })).toThrow();
     expect(() => invoke(channels.openManual, 'news', '/tmp')).toThrow();
+    for (const url of [123, '', 'https://example.com/a b.png', 'x'.repeat(2049)])
+      expect(() => invoke(channels.loadAsset, url)).toThrow();
     invoke(channels.claimAuto, claim);
     expect(feature.claimAuto).toHaveBeenCalledWith(claim, context);
     invoke(channels.openManual, 'news');
     expect(feature.openManual).toHaveBeenCalledWith('news');
+    invoke(channels.loadAsset, 'https://agentteams.live/announcements/content/news/a/assets/x.png');
+    expect(feature.loadAsset).toHaveBeenCalledWith(
+      'https://agentteams.live/announcements/content/news/a/assets/x.png'
+    );
   });
   it('unregisters all owned handlers', () => {
     const dispose = registerAnnouncementsIpc(
       feature as unknown as AnnouncementsFeature,
       () => context
     );
-    expect(handlers.size).toBe(6);
+    expect(handlers.size).toBe(7);
     dispose();
     expect(handlers.size).toBe(0);
   });

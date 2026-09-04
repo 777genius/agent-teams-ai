@@ -1,11 +1,14 @@
 import { createHash } from 'node:crypto';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ANNOUNCEMENTS_MAX_BODY_BYTES } from '../../../../src/features/announcements/contracts';
+import {
+  ANNOUNCEMENTS_MAX_ASSET_BYTES,
+  ANNOUNCEMENTS_MAX_BODY_BYTES,
+} from '../../../../src/features/announcements/contracts';
 import {
   createAnnouncementState,
   normalizeAnnouncementFeed,
@@ -109,6 +112,22 @@ describe('anonymous validated announcement source', () => {
     expect(f.source.current()).toEqual(feed);
     expect(f.request).toHaveBeenCalledTimes(2);
   });
+  it('bounds oversized feed and Markdown files before reading disk caches', async () => {
+    const f = await setup([
+      json(),
+      new Response(markdown, { headers: { 'Content-Type': 'text/markdown' } }),
+    ]);
+    await writeFile(join(f.directory, 'feed.json'), 'x'.repeat(1024 * 1024 + 1));
+    await f.source.loadCached();
+    expect(f.source.current()).toBeNull();
+    await f.source.refresh(signal());
+    await writeFile(
+      join(f.directory, `${feed.items[0].id}-${feed.items[0].bodySha256}.md`),
+      'x'.repeat(ANNOUNCEMENTS_MAX_BODY_BYTES + 1)
+    );
+    expect((await f.source.body(feed.items[0], signal())).markdown).toBe(markdown);
+    expect(f.request).toHaveBeenCalledTimes(2);
+  });
   it('rejects cross-origin redirects and bounds transient retries to three', async () => {
     const f = await setup([
       new Response(null, {
@@ -120,6 +139,32 @@ describe('anonymous validated announcement source', () => {
     await expect(f.source.refresh(signal())).rejects.toThrow();
     expect(f.request).toHaveBeenCalledTimes(1);
     await expect(f.source.refresh(signal())).rejects.toThrow();
+    expect(f.request).toHaveBeenCalledTimes(4);
+  });
+  it('loads only bounded image assets from a current feed bundle and rejects redirects', async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    const f = await setup([
+      json(),
+      new Response(png, { headers: { 'Content-Type': 'image/png' } }),
+      new Response(null, {
+        status: 302,
+        headers: { Location: 'https://evil.example/tracker.png' },
+      }),
+      new Response('x'.repeat(ANNOUNCEMENTS_MAX_ASSET_BYTES + 1), {
+        headers: { 'Content-Type': 'image/png' },
+      }),
+    ]);
+    await f.source.refresh(signal());
+    const bodyUrl = new URL(feed.items[0].bodyPath, 'https://agentteams.live');
+    const assetUrl = new URL('assets/demo.png', bodyUrl).href;
+    expect(await f.source.asset(assetUrl, signal())).toBe(
+      `data:image/png;base64,${png.toString('base64')}`
+    );
+    await expect(f.source.asset(assetUrl, signal())).rejects.toThrow('fetch_failed');
+    await expect(f.source.asset(assetUrl, signal())).rejects.toThrow('response_too_large');
+    await expect(
+      f.source.asset('https://agentteams.live/announcements/unpublished/assets/demo.png', signal())
+    ).rejects.toThrow('asset_invalid');
     expect(f.request).toHaveBeenCalledTimes(4);
   });
   it('accepts source override only for explicitly isolated development loopback', () => {

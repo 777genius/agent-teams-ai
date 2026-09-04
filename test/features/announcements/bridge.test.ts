@@ -13,6 +13,9 @@ describe('announcements transport capability', () => {
     const input = { id: 'news', revision: 'a'.repeat(64), bodySha256: 'b'.repeat(64) };
     void api.claimAuto(input);
     expect(renderer.invoke).toHaveBeenCalledWith(channels.claimAuto, input);
+    const assetUrl = 'https://agentteams.live/announcements/content/news/a/assets/x.png';
+    void api.loadAsset(assetUrl);
+    expect(renderer.invoke).toHaveBeenCalledWith(channels.loadAsset, assetUrl);
     const listener = vi.fn();
     const unsubscribe = api.onStateChanged(listener);
     const handler = renderer.on.mock.calls[0][1] as (event: unknown, data: unknown) => void;
@@ -25,10 +28,11 @@ describe('announcements transport capability', () => {
     vi.stubGlobal('EventSource', class { close() {} });
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
     const api = new HttpAPIClient('http://test.invalid').announcements;
-    expect(await api.getSnapshot()).toMatchObject({ status: 'unavailable', autoShowEnabled: false, accumulatedOpenMs: 0 });
+    expect(await api.getSnapshot()).toMatchObject({ status: 'unavailable', autoShowEnabled: false });
     expect(await api.refresh()).toMatchObject({ status: 'unavailable' });
     expect(await api.prepareAuto()).toBeNull();
     expect(await api.openManual('news')).toBeNull();
+    expect(await api.loadAsset('https://agentteams.live/announcements/x.png')).toBeNull();
     expect(await api.dismiss('news')).toEqual({ saved: false });
     expect(fetch).not.toHaveBeenCalled();
   });

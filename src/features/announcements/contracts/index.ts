@@ -2,6 +2,7 @@ export const ANNOUNCEMENTS_ORIGIN = 'https://agentteams.live';
 export const ANNOUNCEMENTS_FEED_PATH = '/announcements/feed.v1.json';
 export const ANNOUNCEMENTS_MAX_FEED_BYTES = 512 * 1024;
 export const ANNOUNCEMENTS_MAX_BODY_BYTES = 256 * 1024;
+export const ANNOUNCEMENTS_MAX_ASSET_BYTES = 5 * 1024 * 1024;
 export const ANNOUNCEMENTS_MAX_ITEMS = 1000;
 export const ANNOUNCEMENTS_CHANNELS = {
   getSnapshot: 'announcements:getSnapshot',
@@ -9,6 +10,7 @@ export const ANNOUNCEMENTS_CHANNELS = {
   prepareAuto: 'announcements:prepareAuto',
   claimAuto: 'announcements:claimAuto',
   openManual: 'announcements:openManual',
+  loadAsset: 'announcements:loadAsset',
   dismiss: 'announcements:dismiss',
   stateChanged: 'announcements:stateChanged',
 } as const;
@@ -18,12 +20,15 @@ export interface AnnouncementOrderKey {
   id: string;
 }
 
-export interface Announcement extends AnnouncementOrderKey {
+export interface AnnouncementSummary extends AnnouncementOrderKey {
   title: string;
   validUntil: string;
+  status: 'published' | 'archived';
+}
+
+export interface Announcement extends AnnouncementSummary {
   showToNewUsers: boolean;
   minUsageMinutes: number;
-  status: 'published' | 'archived';
   bodyPath: string;
   bodySha256: string;
 }
@@ -36,12 +41,13 @@ export interface AnnouncementFeed {
 }
 
 export interface AnnouncementDocument {
-  announcement: Announcement;
+  announcement: AnnouncementSummary;
   markdown: string;
   bodyUrl: string;
 }
 
 export interface PreparedAnnouncement extends AnnouncementDocument {
+  announcement: AnnouncementSummary & Pick<Announcement, 'bodySha256'>;
   revision: string;
 }
 
@@ -67,9 +73,8 @@ export type AnnouncementsStatus =
 export interface AnnouncementsSnapshot {
   status: AnnouncementsStatus;
   revision: string | null;
-  items: Announcement[];
+  items: AnnouncementSummary[];
   candidateId: string | null;
-  accumulatedOpenMs: number;
   checkedAt: string | null;
   autoShowEnabled: boolean;
 }
@@ -86,6 +91,7 @@ export interface AnnouncementsApi {
   prepareAuto(): Promise<PreparedAnnouncement | null>;
   claimAuto(input: ClaimAnnouncementInput): Promise<AnnouncementDocument | null>;
   openManual(id: string): Promise<AnnouncementDocument | null>;
+  loadAsset(url: string): Promise<string | null>;
   dismiss(id: string): Promise<{ saved: boolean }>;
   onStateChanged(listener: (snapshot: AnnouncementsSnapshot) => void): () => void;
 }

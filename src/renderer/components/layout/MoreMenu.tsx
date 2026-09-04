@@ -61,6 +61,7 @@ export const MoreMenu = ({
   const [buttonHover, setButtonHover] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const {
     openCommandPalette,
@@ -137,6 +138,7 @@ export const MoreMenu = ({
             icon: Newspaper,
             onClick: () => {
               setIsOpen(false);
+              triggerRef.current?.focus();
               openAnnouncementHistory();
             },
           },
@@ -274,6 +276,7 @@ export const MoreMenu = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <button
+            ref={triggerRef}
             onClick={() => setIsOpen(!isOpen)}
             onMouseEnter={() => setButtonHover(true)}
             onMouseLeave={() => setButtonHover(false)}

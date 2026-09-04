@@ -13,6 +13,15 @@ function validId(value: unknown): value is string {
   return typeof value === 'string' && /^[a-z0-9][a-z0-9-]{0,79}$/.test(value);
 }
 
+function validAssetUrl(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length > 0 &&
+    value.length <= 2048 &&
+    ![...value].some((character) => character.charCodeAt(0) <= 32)
+  );
+}
+
 function validClaim(value: unknown): value is ClaimAnnouncementInput {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const input = value as Record<string, unknown>;
@@ -54,6 +63,10 @@ export function registerAnnouncementsIpc(
   handle(channels.openManual, 1, (_context, id) => {
     if (!validId(id)) throw new Error('Invalid announcement request');
     return feature.openManual(id);
+  });
+  handle(channels.loadAsset, 1, (_context, url) => {
+    if (!validAssetUrl(url)) throw new Error('Invalid announcement request');
+    return feature.loadAsset(url);
   });
   handle(channels.dismiss, 1, (_context, id) => {
     if (!validId(id)) throw new Error('Invalid announcement request');

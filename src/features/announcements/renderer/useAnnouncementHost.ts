@@ -24,6 +24,7 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
     articleGeneration: 0,
     pending: false,
     retryRequested: false,
+    manualRefreshes: 0,
     document: null as AnnouncementDocument | null,
   });
   state.current.ready = ready;
@@ -101,7 +102,7 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
   );
 
   const receive = useCallback(
-    (next: AnnouncementsSnapshot) => {
+    (next: AnnouncementsSnapshot, allowAuto = true) => {
       if (!state.current.alive) return;
       const selection = `${next.status}:${next.revision}:${next.candidateId}:${next.checkedAt}`;
       const changed = selection !== lastSelection.current;
@@ -114,7 +115,7 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
         else setError(true);
         return;
       }
-      if (changed) void attempt();
+      if (changed && allowAuto && state.current.manualRefreshes === 0) void attempt();
     },
     [attempt, changeMode, showDocument]
   );
@@ -222,13 +223,15 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
     if (article) void client.dismiss(article.announcement.id).catch(() => undefined);
   };
   const refresh = async (): Promise<void> => {
+    state.current.manualRefreshes++;
     setLoading(true);
     setError(false);
     try {
-      receive(await client.refresh());
+      receive(await client.refresh(), false);
     } catch {
       if (state.current.alive) setError(true);
     } finally {
+      state.current.manualRefreshes--;
       if (state.current.alive) setLoading(false);
     }
   };

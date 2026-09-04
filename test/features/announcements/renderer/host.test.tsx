@@ -71,7 +71,6 @@ beforeEach(() => {
     items: [item],
     candidateId: null,
     revision: 'one',
-    accumulatedOpenMs: 0,
     checkedAt: '2026-09-04T00:00:00Z',
     autoShowEnabled: true,
   };
@@ -81,6 +80,7 @@ beforeEach(() => {
     prepareAuto: vi.fn(async () => null),
     claimAuto: vi.fn(async () => article),
     openManual: vi.fn(async () => article),
+    loadAsset: vi.fn(async () => null),
     dismiss: vi.fn(async () => ({ saved: true })),
     onStateChanged: vi.fn((cb) => {
       listener = cb;
@@ -135,6 +135,26 @@ describe('announcement host', () => {
     await click('actions.close');
     await act(async () => listener(snapshot));
     expect(client.prepareAuto).not.toHaveBeenCalled();
+  });
+  it('does not reopen after history closes while a manual refresh is pending', async () => {
+    let finish!: (value: AnnouncementsSnapshot) => void;
+    vi.mocked(client.refresh).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    await render();
+    await act(async () => openAnnouncementHistory());
+    await click('actions.refresh');
+    await click('actions.close');
+    vi.mocked(client.prepareAuto).mockClear().mockResolvedValue({ ...article, revision: 'two' });
+    snapshot = { ...snapshot, revision: 'two', candidateId: item.id };
+    await act(async () => listener(snapshot));
+    expect(client.prepareAuto).not.toHaveBeenCalled();
+    await act(async () => finish(snapshot));
+    expect(client.prepareAuto).not.toHaveBeenCalled();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
   it('drops a durable claim when focus changes before completion', async () => {
     let finish!: (value: typeof article) => void;

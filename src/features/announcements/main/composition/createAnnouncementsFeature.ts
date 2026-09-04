@@ -69,6 +69,9 @@ export function createAnnouncementsFeature(
         body: async () => {
           throw new Error('unavailable');
         },
+        asset: async () => {
+          throw new Error('unavailable');
+        },
       };
   return new AnnouncementsService({
     repository: new JsonAnnouncementRepository(directory),

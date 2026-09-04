@@ -135,11 +135,12 @@ function fixture() {
     current: () => feed,
     loadCached: async () => undefined,
     drain: async () => undefined,
-    refresh: vi.fn(async () => feed),
+    refresh: vi.fn(async (_signal: AbortSignal) => feed),
     body: vi.fn(async () => ({
       markdown: '# News',
       bodyUrl: 'https://agentteams.live/announcements/body.md',
     })),
+    asset: vi.fn(async () => 'data:image/png;base64,eA=='),
   };
   const repo = {
     initialize: async () => saved,
@@ -181,6 +182,48 @@ function fixture() {
   };
 }
 
+describe('announcement freshness lifecycle', () => {
+  it('keeps a successful resume refresh fresh across the first heartbeat after sleep', async () => {
+    vi.useFakeTimers();
+    const f = fixture();
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    f.advance(5000);
+    await vi.advanceTimersByTimeAsync(5000);
+    await f.service.suspend();
+    f.advance(60_000);
+    f.service.resume();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(f.source.refresh).toHaveBeenCalledTimes(2);
+    f.advance(5000);
+    await vi.advanceTimersByTimeAsync(5000);
+    expect((await f.service.getSnapshot()).status).toBe('ready');
+    await f.service.dispose();
+  });
+
+  it('starts a replacement refresh when resume races an aborted in-flight request', async () => {
+    const f = fixture();
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    f.advance(5000);
+    f.source.refresh.mockImplementationOnce(
+      (signal) =>
+        new Promise((_, reject) => {
+          const aborted = (): void => reject(new Error('aborted'));
+          signal.addEventListener('abort', aborted, { once: true });
+          if (signal.aborted) aborted();
+        })
+    );
+    const refreshing = f.service.refresh();
+    const suspending = f.service.suspend();
+    f.service.resume();
+    await Promise.all([refreshing, suspending]);
+    await vi.waitFor(() => expect(f.source.refresh).toHaveBeenCalledTimes(3));
+    expect((await f.service.getSnapshot()).status).toBe('ready');
+    await f.service.dispose();
+  });
+});
+
 describe('announcement consumption service', () => {
   it('precommits newest once and suppresses older announcements through restart', async () => {
     const f = fixture();
@@ -188,9 +231,20 @@ describe('announcement consumption service', () => {
     await f.service.initialize();
     const prepared = await f.service.prepareAuto(f.context);
     expect(prepared?.announcement.id).toBe('new');
+    expect(prepared?.announcement).not.toHaveProperty('bodyPath');
+    expect(prepared?.announcement).not.toHaveProperty('minUsageMinutes');
+    expect(await f.service.getSnapshot()).not.toHaveProperty('accumulatedOpenMs');
+    expect((await f.service.getSnapshot()).items.find((item) => item.id === 'old')).toEqual({
+      id: 'old',
+      title: 'old',
+      publishedAt: '2026-09-01T00:00:00.000Z',
+      validUntil: '2026-09-15T00:00:00.000Z',
+      status: 'published',
+    });
     const input = { id: 'new', revision: f.feed.revision, bodySha256: 'b'.repeat(64) };
     const result = await f.service.claimAuto(input, f.context);
     expect(result?.announcement.id).toBe('new');
+    expect(result?.announcement).not.toHaveProperty('bodySha256');
     expect(f.saved().handledIds).toEqual(['new']);
     expect(await f.service.claimAuto(input, f.context)).toBe(null);
     expect(await f.service.prepareAuto(f.context)).toBe(null);

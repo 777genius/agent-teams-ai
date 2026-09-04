@@ -9,9 +9,11 @@ import {
 import { AnnouncementUsageTracker } from './AnnouncementUsageTracker';
 
 import type {
+  Announcement,
   AnnouncementDocument,
   AnnouncementsSnapshot,
   AnnouncementState,
+  AnnouncementSummary,
   ClaimAnnouncementInput,
   PreparedAnnouncement,
 } from '../../contracts';
@@ -22,6 +24,14 @@ import type {
   AnnouncementSource,
   AnnouncementWindowContext,
 } from '../../core/application/ports';
+
+const summarize = (item: Announcement): AnnouncementSummary => ({
+  id: item.id,
+  title: item.title,
+  publishedAt: item.publishedAt,
+  validUntil: item.validUntil,
+  status: item.status,
+});
 
 export interface AnnouncementsServiceOptions {
   repository: AnnouncementRepository;
@@ -184,8 +194,11 @@ export class AnnouncementsService {
     if (this.stopped) return;
     this.tracker.tick();
     const mono = this.options.clock.monotonic();
-    if (this.previousHeartbeat !== null && mono - this.previousHeartbeat > 15_000)
+    if (this.previousHeartbeat !== null && mono - this.previousHeartbeat > 15_000) {
       this.fresh = false;
+      this.lastRefreshAttempt = -Infinity;
+      this.nextRefreshAt = mono;
+    }
     this.previousHeartbeat = mono;
     if (!this.owned && this.tracker.hasWindows() && mono - this.lastOwnerAttempt >= 30_000)
       void this.lifecycle(() => this.acquire());
@@ -203,6 +216,7 @@ export class AnnouncementsService {
   async suspend(): Promise<void> {
     if (this.suspended) return;
     this.suspended = true;
+    this.previousHeartbeat = null;
     this.tracker.suspend();
     this.fresh = false;
     this.generation++;
@@ -217,8 +231,17 @@ export class AnnouncementsService {
     this.suspended = false;
     this.controller = new AbortController();
     this.tracker.resume();
-    this.lastRefreshAttempt = -Infinity;
-    void this.refresh();
+    const mono = this.options.clock.monotonic();
+    this.previousHeartbeat = mono;
+    this.nextRefreshAt = mono;
+    const pendingRefresh = this.refreshTask;
+    const generation = this.generation;
+    void (async () => {
+      await pendingRefresh;
+      if (this.suspended || this.stopped || !this.owned || generation !== this.generation) return;
+      this.lastRefreshAttempt = -Infinity;
+      await this.refresh();
+    })().catch(() => undefined);
     this.emit();
   }
   private isFresh(): boolean {
@@ -260,12 +283,13 @@ export class AnnouncementsService {
               ? 'offline'
               : 'ready',
       revision: feed?.revision ?? null,
-      items: feed ? visibleAnnouncements(feed, this.options.clock.now()) : [],
+      items: feed
+        ? visibleAnnouncements(feed, this.options.clock.now()).map((item) => summarize(item))
+        : [],
       candidateId:
         ready && feed && state
           ? (selectAutoAnnouncement(feed, state, this.options.clock.now())?.id ?? null)
           : null,
-      accumulatedOpenMs: state?.accumulatedOpenMs ?? 0,
       checkedAt: this.validatedAt === null ? null : new Date(this.validatedAt).toISOString(),
       autoShowEnabled: ready && (feed?.autoShowEnabled ?? false),
     };
@@ -354,7 +378,11 @@ export class AnnouncementsService {
         this.options.source.current()?.revision !== feed.revision
       )
         return null;
-      const document = { announcement: item, ...body, revision: feed.revision };
+      const document = {
+        announcement: { ...summarize(item), bodySha256: item.bodySha256 },
+        ...body,
+        revision: feed.revision,
+      };
       this.prepared.set(context.windowId, {
         generation,
         uiGeneration: context.uiGeneration,
@@ -428,7 +456,11 @@ export class AnnouncementsService {
         this.isFresh() &&
         currentFeed?.revision === input.revision &&
         stillPublished
-        ? prepared.document
+        ? {
+            announcement: summarize(item),
+            markdown: prepared.document.markdown,
+            bodyUrl: prepared.document.bodyUrl,
+          }
         : null;
     });
   }
@@ -477,8 +509,20 @@ export class AnnouncementsService {
           )
         )
           return null;
-        return { announcement: item, ...body };
+        return { announcement: summarize(item), ...body };
       });
+    } catch {
+      return null;
+    }
+  }
+  async loadAsset(url: string): Promise<string | null> {
+    if (!this.owned || this.releasing || this.stopped) return null;
+    const generation = this.generation;
+    try {
+      const dataUrl = await this.options.source.asset(url, this.controller.signal);
+      return this.owned && !this.releasing && !this.stopped && generation === this.generation
+        ? dataUrl
+        : null;
     } catch {
       return null;
     }

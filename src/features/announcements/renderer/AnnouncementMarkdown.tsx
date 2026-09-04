@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
 import { useAppTranslation } from '@features/localization/renderer';
@@ -7,23 +7,47 @@ import { createMarkdownComponents } from '@renderer/components/chat/markdownComp
 import rehypeHighlight from 'rehype-highlight';
 import remarkGfm from 'remark-gfm';
 
-import { announcementHeadingIds,announcementUrl } from './markdownPolicy';
+import { announcementHeadingIds, announcementUrl } from './markdownPolicy';
 
 const PublishedImage = ({ src, alt }: { src: string; alt?: string }): React.JSX.Element => {
   const [failed, setFailed] = useState(false);
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
   const { t } = useAppTranslation('common');
+  useEffect(() => {
+    let active = true;
+    setFailed(false);
+    setDataUrl(null);
+    void api.announcements
+      .loadAsset(src)
+      .then((value) => {
+        if (!active) return;
+        if (value) setDataUrl(value);
+        else setFailed(true);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [src]);
   return failed ? (
     <span className="my-4 block rounded-lg border border-[var(--color-border)] p-5 text-center text-xs text-[var(--color-text-muted)]">
       {alt || t('announcements.imageUnavailable')}
     </span>
-  ) : (
+  ) : dataUrl ? (
     <img
-      src={src}
+      src={dataUrl}
       alt={alt ?? ''}
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
       className="my-5 inline-block h-auto max-h-[60vh] max-w-full rounded-xl object-contain"
+    />
+  ) : (
+    <span
+      aria-label={alt ?? t('announcements.imageUnavailable')}
+      className="my-5 block h-24 max-w-full animate-pulse rounded-xl bg-[var(--color-surface-raised)]"
     />
   );
 };
@@ -43,11 +67,10 @@ export const AnnouncementMarkdown = ({
         const target = announcementUrl(href ?? '', bodyUrl);
         if (!target) return <span>{children}</span>;
         return (
-          <a
-            href={target}
-            className="decoration-current/30 break-words text-[var(--prose-link)] underline underline-offset-4 hover:decoration-current"
-            onClick={(event) => {
-              event.preventDefault();
+          <button
+            type="button"
+            className="decoration-current/30 inline cursor-pointer appearance-none break-words border-0 bg-transparent p-0 text-left text-[var(--prose-link)] underline underline-offset-4 hover:decoration-current"
+            onClick={() => {
               if (target.startsWith('#')) {
                 try {
                   container.current
@@ -60,7 +83,7 @@ export const AnnouncementMarkdown = ({
             }}
           >
             {children}
-          </a>
+          </button>
         );
       },
       img: ({ src, alt }: { src?: string; alt?: string }) => {

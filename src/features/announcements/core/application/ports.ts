@@ -13,6 +13,7 @@ export interface AnnouncementSource {
   loadCached(): Promise<void>;
   refresh(signal: AbortSignal): Promise<AnnouncementFeed>;
   body(item: Announcement, signal: AbortSignal): Promise<{ markdown: string; bodyUrl: string }>;
+  asset(url: string, signal: AbortSignal): Promise<string>;
   current(): AnnouncementFeed | null;
   drain(): Promise<void>;
 }
