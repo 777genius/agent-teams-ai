@@ -345,7 +345,16 @@ async function runOpenCodeMemberInboxRelayWork(
     return taskRefInferenceTasks;
   };
 
-  for (const message of unread) {
+  // Cursor-driven walk: a pending non-user delivery may skip ahead to a newer
+  // user message (see findNextUnreadUserMessageIndex) instead of breaking.
+  let cursor = 0;
+  while (cursor < unread.length) {
+    const index = cursor;
+    cursor += 1;
+    const message = unread[index];
+    if (!message) {
+      break;
+    }
     let existingRecord = await promptLedger
       .getByInboxMessage({
         teamName,
@@ -579,6 +588,18 @@ async function runOpenCodeMemberInboxRelayWork(
         ...(result.diagnostics ?? []),
         ...(delivery.diagnostics ?? [delivery.reason ?? 'opencode_delivery_response_pending']),
       ];
+      // A pending non-user delivery (teammate report, system/task notification)
+      // must not starve a newer user message: hand that message to the delivery
+      // service, which queues it until fresh observation settles the blocker.
+      const nextUserMessageIndex = findNextUnreadUserMessageIndex({
+        unread,
+        afterIndex: index,
+        currentReplyRecipient: deliveryDecision.replyRecipient,
+      });
+      if (nextUserMessageIndex > index) {
+        cursor = nextUserMessageIndex;
+        continue;
+      }
       break;
     }
     const readCommit = await commitOpenCodeInboxRelayReadAfterDelivery({
@@ -610,6 +631,28 @@ async function runOpenCodeMemberInboxRelayWork(
   }
 
   return dedupeOpenCodeMemberInboxRelayDiagnostics(result);
+}
+
+/**
+ * Index of the first unread user message after `afterIndex`, or -1. Only a
+ * pending non-user delivery yields to a user message; a pending user delivery
+ * keeps the inbox order (the next user message queues behind it).
+ */
+export function findNextUnreadUserMessageIndex(input: {
+  unread: readonly RelayInboxMessage[];
+  afterIndex: number;
+  currentReplyRecipient: string;
+}): number {
+  if (input.currentReplyRecipient.trim().toLowerCase() === 'user') {
+    return -1;
+  }
+  for (let index = input.afterIndex + 1; index < input.unread.length; index += 1) {
+    const candidate = input.unread[index];
+    if (candidate && !candidate.read && candidate.from.trim().toLowerCase() === 'user') {
+      return index;
+    }
+  }
+  return -1;
 }
 
 export function selectOpenCodeMemberInboxRelayUnreadMessages(input: {
@@ -781,7 +824,7 @@ export function projectOpenCodeInboxDeliveryFailure(input: {
   result: OpenCodeMemberInboxRelayResult;
   shouldLogWarning: boolean;
 } {
-  if (input.delivery.accepted === true) {
+  if (input.delivery.accepted === true && input.delivery.ledgerStatus !== 'failed_terminal') {
     const diagnostics = input.delivery.diagnostics ?? [
       input.delivery.reason ?? 'opencode_delivery_response_pending',
     ];

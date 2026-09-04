@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { OpenCodeMemberMessageDeliveryService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryStalePendingPolicy';
 
 import type {
   OpenCodeMemberMessageDeliveryServiceDependencies,
@@ -8,9 +9,7 @@ import type {
 } from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryLedger';
 
-function makeAdapter(
-  sendMessageToMember = vi.fn()
-): OpenCodeRuntimeMessageAdapter {
+function makeAdapter(sendMessageToMember = vi.fn()): OpenCodeRuntimeMessageAdapter {
   return {
     providerId: 'opencode',
     prepare: vi.fn(),
@@ -150,6 +149,7 @@ function makeDeps(
     openCodePromptDeliveryFollowUpPolicy: {
       schedule: vi.fn(async () => unexpected('openCodePromptDeliveryFollowUpPolicy.schedule')),
     },
+    openCodeStalePendingPolicyConfig: OPENCODE_STALE_PENDING_POLICY_CONFIG,
     isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => true),
     getOpenCodeDeliveryPendingReason: vi.fn(() => 'opencode_delivery_response_pending'),
     markOpenCodeAcceptedDeliveryMissingPromptProofForRetry: vi.fn(async () =>
@@ -171,29 +171,26 @@ function makeDeps(
 }
 
 describe('OpenCodeMemberMessageDeliveryService', () => {
-  it(
-    'returns bridge unavailable before reading member directory when runtime adapter is missing',
-    async () => {
-      const readOpenCodeMemberDirectory = vi.fn(async () =>
-        unexpected('readOpenCodeMemberDirectory')
-      );
-      const deps = makeDeps({
-        getOpenCodeRuntimeMessageAdapter: () => null,
-        readOpenCodeMemberDirectory,
-      });
+  it('returns bridge unavailable before reading member directory when runtime adapter is missing', async () => {
+    const readOpenCodeMemberDirectory = vi.fn(async () =>
+      unexpected('readOpenCodeMemberDirectory')
+    );
+    const deps = makeDeps({
+      getOpenCodeRuntimeMessageAdapter: () => null,
+      readOpenCodeMemberDirectory,
+    });
 
-      await expect(
-        new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
-          memberName: 'alice',
-          text: 'hello',
-        })
-      ).resolves.toEqual({
-        delivered: false,
-        reason: 'opencode_runtime_message_bridge_unavailable',
-      });
-      expect(readOpenCodeMemberDirectory).not.toHaveBeenCalled();
-    }
-  );
+    await expect(
+      new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
+        memberName: 'alice',
+        text: 'hello',
+      })
+    ).resolves.toEqual({
+      delivered: false,
+      reason: 'opencode_runtime_message_bridge_unavailable',
+    });
+    expect(readOpenCodeMemberDirectory).not.toHaveBeenCalled();
+  });
 
   it('keeps the legacy unavailable-recipient reason mapping at the facade boundary', async () => {
     const deps = makeDeps({
@@ -354,9 +351,11 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
     };
     const deps = makeDeps({
       getOpenCodeRuntimeMessageAdapter: () =>
-        makeAdapter(vi.fn(async () => {
-          throw new Error('bridge down');
-        })),
+        makeAdapter(
+          vi.fn(async () => {
+            throw new Error('bridge down');
+          })
+        ),
       createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
       openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
       openCodeVisibleReplyProofService: {

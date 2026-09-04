@@ -3,6 +3,10 @@ import path from 'path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS,
+  OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS,
+} from '../../opencode/delivery/OpenCodePromptDeliveryStalePendingPolicy';
+import {
   createOpenCodeMemberMessageDeliveryService,
   createOpenCodeMemberMessageDeliveryServiceFromHost,
   createOpenCodeRuntimeBootstrapEvidencePorts,
@@ -140,5 +144,11 @@ describe('TeamProvisioningOpenCodeMemberMessageDeliveryServiceFactory', () => {
       )
     ).toBe(true);
     expect(host.providerRuntime.resolveControlApiBaseUrl()).toBe('http://127.0.0.1:1234');
+    // The stale-pending windows are composed in here, not defaulted inside the
+    // policy, so the shipped pipeline states them exactly once.
+    expect(host.openCodeStalePendingPolicyConfig).toEqual({
+      staleAfterMs: OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS,
+      hardCapMs: OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS,
+    });
   });
 });
