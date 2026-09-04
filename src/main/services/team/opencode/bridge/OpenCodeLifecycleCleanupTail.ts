@@ -1,3 +1,11 @@
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
+
+import { listTeamProjectWorkspaces } from '../../TeamProjectWorkspaces';
+
+import {
+  type CursorAgentTreeSweepPort,
+  DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
+} from './CursorAgentProcessCleanup';
 import {
   purgeStaleOpenCodeHostStartupLocks,
   resolveStartupStaleLockMinAgeMs,
@@ -40,6 +48,14 @@ export interface OpenCodeLifecycleCleanupTailInput {
   /** The instant the registry sweep command settled; the fence for the reap. */
   sweepCommandSettledAtMs: number;
   managedHostInstanceId: string;
+  cursorAgentTreeSweep?: CursorAgentTreeSweepPort;
+  /**
+   * The workspaces this app has teams for. It is the ownership proof the
+   * startup lead-tree reap runs on, so it defaults to the teams on disk rather
+   * than to "everything": a tree whose workspace this app cannot name is a tree
+   * it has no claim to.
+   */
+  listOwnedLeadWorkspaces?: () => Promise<readonly string[]>;
   ports: OpenCodeLifecycleCleanupTailPorts;
 }
 
@@ -130,5 +146,48 @@ export async function runOpenCodeLifecycleCleanupTail(
     for (const diagnostic of lockPurge.diagnostics) {
       ports.logWarning(`[OpenCode] startup lock purge: ${diagnostic}`);
     }
+    await reapOrphanedCursorAgentLeadTrees(input);
+  }
+}
+
+/**
+ * The external half of the startup reap. The sweeps above only see hosts this
+ * app registered; a cursor-acp lead is a `cursor-agent` process tree the
+ * previous app instance spawned, and it outlives the app that started it while
+ * holding the cursor proxy port every later cursor-acp launch has to bind.
+ *
+ * It runs last because the host sweeps are the ones that free the ports a launch
+ * needs first, and under two fences. A tree has to name a workspace this app has
+ * a team for, which is the only attribution available for a process no registry
+ * ever recorded, so a startup that can read no team config reaps nothing rather
+ * than everything. And it has to predate this app instance, which keeps whatever
+ * the session now starting spawns out of scope - a readiness probe most of all.
+ * It never runs on shutdown, where a running tree may belong to a live team.
+ */
+async function reapOrphanedCursorAgentLeadTrees(
+  input: OpenCodeLifecycleCleanupTailInput
+): Promise<void> {
+  const sweepPort = input.cursorAgentTreeSweep ?? DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT;
+  if (!sweepPort.isEnabled()) {
+    input.ports.logSweepResult(
+      'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=sweep_disabled'
+    );
+    return;
+  }
+  const listOwnedLeadWorkspaces =
+    input.listOwnedLeadWorkspaces ?? (() => listTeamProjectWorkspaces(getTeamsBasePath()));
+  const ownedWorkspaceCwds = await listOwnedLeadWorkspaces();
+  if (ownedWorkspaceCwds.length === 0) {
+    input.ports.logSweepResult(
+      'opencode_cursor_agent_trees_reaped sweep=startup count=0 skipped=no_owned_workspace'
+    );
+    return;
+  }
+  const sweep = await sweepPort.sweepCursorAgentTrees({
+    ownedWorkspaceCwds,
+    startedBeforeMs: input.appStartedAtMs,
+  });
+  for (const diagnostic of sweep.diagnostics) {
+    input.ports.logWarning(`[OpenCode] startup cursor-agent sweep: ${diagnostic}`);
   }
 }
