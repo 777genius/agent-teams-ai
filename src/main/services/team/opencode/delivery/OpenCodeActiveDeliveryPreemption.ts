@@ -1,3 +1,4 @@
+import { assertOpenCodePromptDeliveryNotCancelled } from './OpenCodePromptDeliveryCancellationGuard';
 import { isOpenCodeAcceptedDeliveryMissingPromptProof } from './OpenCodePromptDeliveryReadCommitPolicy';
 
 import type { OpenCodeMemberMessageDeliveryServiceDependencies } from './OpenCodeMemberMessageDeliveryPorts';
@@ -29,6 +30,7 @@ export type OpenCodeActiveDeliveryPreemptionPorts = Pick<
  * Returns the record that still blocks the lane, or null once it no longer does.
  */
 export async function recoverOpenCodeActiveDeliveryBlocker(input: {
+  assertCurrentRun: () => void;
   ports: OpenCodeActiveDeliveryPreemptionPorts;
   ledger: OpenCodePromptDeliveryLedgerStore;
   activeRecord: OpenCodePromptDeliveryLedgerRecord;
@@ -38,6 +40,7 @@ export async function recoverOpenCodeActiveDeliveryBlocker(input: {
   const { ports, ledger, teamName, memberName } = input;
   let active = input.activeRecord;
   let proof = await ports.openCodeVisibleReplyProofService.applyDestinationProof({
+    checkpoint: input.assertCurrentRun,
     ledger,
     ledgerRecord: active,
     teamName,
@@ -45,7 +48,9 @@ export async function recoverOpenCodeActiveDeliveryBlocker(input: {
     memberName,
   });
   active = proof.ledgerRecord;
+  await assertOpenCodePromptDeliveryNotCancelled(ledger, active, input.assertCurrentRun);
   proof = await ports.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded({
+    checkpoint: input.assertCurrentRun,
     ledger,
     ledgerRecord: active,
     teamName,
@@ -53,6 +58,7 @@ export async function recoverOpenCodeActiveDeliveryBlocker(input: {
     visibleReply: proof.visibleReply,
   });
   active = proof.ledgerRecord;
+  await assertOpenCodePromptDeliveryNotCancelled(ledger, active, input.assertCurrentRun);
   const activeReadAllowed = await ports.isOpenCodeDeliveryResponseReadCommitAllowed({
     teamName,
     memberName,
@@ -62,6 +68,7 @@ export async function recoverOpenCodeActiveDeliveryBlocker(input: {
     visibleReply: proof.visibleReply,
     ledgerRecord: active,
   });
+  await assertOpenCodePromptDeliveryNotCancelled(ledger, active, input.assertCurrentRun);
   if (activeReadAllowed) {
     ports.logOpenCodePromptDeliveryEvent('opencode_prompt_delivery_response_observed', active, {
       visibleReplySemanticallySufficient: true,
@@ -75,6 +82,7 @@ export async function recoverOpenCodeActiveDeliveryBlocker(input: {
       ledgerRecord: active,
       eventContext: { recoveredActiveBlocker: true },
     });
+    await assertOpenCodePromptDeliveryNotCancelled(ledger, active, input.assertCurrentRun);
     ports.scheduleOpenCodePromptDeliveryWatchdog({
       teamName,
       memberName,

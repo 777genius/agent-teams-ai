@@ -1,5 +1,6 @@
 import { isOpenCodeReplyOptionalDeliveryContract } from './OpenCodeDeliveryReplyContract';
 import {
+  isOpenCodePromptDeliveryCancelled,
   isOpenCodePromptResponseStateResponded,
   type OpenCodePromptDeliveryLedgerRecord,
 } from './OpenCodePromptDeliveryLedger';
@@ -171,6 +172,7 @@ export async function isOpenCodeDeliveryResponseReadCommitAllowed(input: {
     expected: readonly TaskRef[] | undefined
   ) => boolean;
 }): Promise<boolean> {
+  if (input.ledgerRecord && isOpenCodePromptDeliveryCancelled(input.ledgerRecord)) return false;
   const state = input.responseState;
   if (!state || !isOpenCodePromptResponseStateResponded(state)) {
     return false;

@@ -1,4 +1,5 @@
 import {
+  isOpenCodePromptDeliveryCancelled,
   OPENCODE_PROMPT_DELIVERY_SESSION_REFRESH_MAX_ATTEMPTS,
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
@@ -179,6 +180,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
         maxSessionRefreshAttempts,
         diagnostics: ['opencode_session_stale_observe_scheduled_after_accepted_prompt'],
       });
+      if (isOpenCodePromptDeliveryCancelled(ledgerRecord)) return ledgerRecord;
       this.deps.logEvent('opencode_prompt_delivery_response_observed', ledgerRecord, {
         retry: false,
         reason: input.reason,
@@ -229,6 +231,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
         maxSessionRefreshAttempts,
         diagnostics: ['opencode_session_refresh_scheduled_after_resolved_behavior_changed'],
       });
+      if (isOpenCodePromptDeliveryCancelled(ledgerRecord)) return ledgerRecord;
       this.deps.logEvent('opencode_prompt_delivery_session_refresh_scheduled', ledgerRecord, {
         retry: true,
         reason: input.reason,
@@ -273,6 +276,7 @@ export class OpenCodePromptDeliveryFollowUpPolicy {
       reason: input.reason,
       scheduledAt: now,
     });
+    if (isOpenCodePromptDeliveryCancelled(ledgerRecord)) return ledgerRecord;
     this.deps.logEvent(
       input.retry
         ? 'opencode_prompt_delivery_retry_scheduled'

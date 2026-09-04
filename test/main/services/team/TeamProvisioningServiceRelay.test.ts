@@ -3070,6 +3070,7 @@ Messages:
       .mockImplementation(() => undefined);
     const records: any[] = [];
     const ledger = {
+      getByInboxMessage: vi.fn(async () => records[0] ?? null),
       getActiveForMember: vi.fn(async () => null),
       ensurePending: vi.fn(async (input: Record<string, unknown>) => {
         const record = {
@@ -3422,7 +3423,7 @@ Messages:
     service.setTeamChangeEmitter(teamChangeEmitter);
 
     const result = await proofService.applyDestinationProof({
-      ledger: { applyDestinationProof },
+      ledger: { applyDestinationProof, getByInboxMessage: vi.fn(async () => ledgerRecord) },
       ledgerRecord,
       teamName,
       replyRecipient: 'team-lead',
@@ -3519,7 +3520,7 @@ Messages:
     service.setTeamChangeEmitter(teamChangeEmitter);
 
     const result = await proofService.applyDestinationProof({
-      ledger: { applyDestinationProof },
+      ledger: { applyDestinationProof, getByInboxMessage: vi.fn(async () => ledgerRecord) },
       ledgerRecord,
       teamName,
       replyRecipient: 'team-lead',

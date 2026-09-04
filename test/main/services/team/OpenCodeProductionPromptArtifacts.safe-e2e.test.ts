@@ -130,7 +130,8 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
 
     for (const member of launchCommand?.members ?? []) {
       expect(member.prompt).toContain(`You are ${member.name}`);
-      expect(member.prompt).toContain('Team launch context:');
+      expect(member.prompt).toContain('Team launch context (HISTORICAL');
+      expect(member.prompt).toContain('Never act on the launch context directly from this briefing');
       expect(member.prompt).toContain('agent_teams_app_managed_bootstrap_briefing');
       expect(member.prompt).toContain('AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1');
       expect(member.prompt).toContain('agent-teams_message_send');

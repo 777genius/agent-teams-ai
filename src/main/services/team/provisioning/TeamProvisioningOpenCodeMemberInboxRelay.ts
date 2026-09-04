@@ -1,4 +1,5 @@
 import { OPEN_CODE_INFORMATIONAL_NOTICE_REPLY_RECIPIENT } from '../opencode/delivery/OpenCodeDeliveryReplyContract';
+import { OpenCodePromptDeliveryCancelledError } from '../opencode/delivery/OpenCodePromptDeliveryCancellationGuard';
 import {
   hashOpenCodePromptDeliveryPayload,
   type OpenCodePromptDeliveryLedgerRecord,
@@ -98,6 +99,7 @@ export interface RelayOpenCodeMemberInboxMessagesPorts {
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
   }): Promise<OpenCodePromptDeliveryLedgerRecord>;
   applyDestinationProof(input: {
+    checkpoint?: () => void | Promise<void>;
     ledger: OpenCodePromptDeliveryLedgerStore;
     ledgerRecord: OpenCodePromptDeliveryLedgerRecord;
     teamName: string;
@@ -396,6 +398,9 @@ async function runOpenCodeMemberInboxRelayWork(
       if (typeof promptLedger.applyDestinationProof === 'function') {
         try {
           const proof = await ports.applyDestinationProof({
+            checkpoint: () => {
+              if (!isCurrentGeneration()) throw new OpenCodePromptDeliveryCancelledError();
+            },
             ledger: promptLedger,
             ledgerRecord: existingRecord,
             teamName,
@@ -562,6 +567,9 @@ async function runOpenCodeMemberInboxRelayWork(
       source: deliveryDecision.source,
       inboxTimestamp: message.timestamp,
     });
+    if (!isCurrentGeneration()) {
+      return buildOpenCodeMemberInboxRelaySupersededResult(input.relayKey);
+    }
     result.lastDelivery = delivery;
     if (!delivery.delivered) {
       const failureProjection = projectOpenCodeInboxDeliveryFailure({

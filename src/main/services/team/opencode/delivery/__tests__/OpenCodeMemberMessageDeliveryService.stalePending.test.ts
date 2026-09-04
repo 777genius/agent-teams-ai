@@ -180,6 +180,10 @@ function createHarness(input: {
   send?: () => Promise<OpenCodeTeamRuntimeMessageResult>;
   /** Defaults to the windows the production composition wires in. */
   stalePendingConfig?: OpenCodeStalePendingPolicyConfig;
+  beforeRead?: (
+    readInput: ReadCommitPortInput,
+    ledger: OpenCodePromptDeliveryLedgerStore
+  ) => Promise<void>;
 }): Harness {
   const ledger = createOpenCodePromptDeliveryLedgerStore({
     filePath: join(input.ledgerDir, 'primary.json'),
@@ -254,13 +258,14 @@ function createHarness(input: {
     openCodeStalePendingPolicyConfig:
       input.stalePendingConfig ?? OPENCODE_STALE_PENDING_POLICY_CONFIG,
     // Real read-commit semantics: plain-text settles non-user messages only.
-    isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async (readInput: ReadCommitPortInput) =>
-      isOpenCodeDeliveryResponseReadCommitAllowed({
+    isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async (readInput: ReadCommitPortInput) => {
+      await input.beforeRead?.(readInput, ledger);
+      return isOpenCodeDeliveryResponseReadCommitAllowed({
         ...readInput,
         hasAcceptedMemberWorkSyncReport: async () => false,
         taskRefsIncludeAll: () => true,
-      })
-    ),
+      });
+    }),
     getOpenCodeDeliveryPendingReason: vi.fn(() => 'assistant_response_pending'),
     markOpenCodeAcceptedDeliveryMissingPromptProofForRetry: vi.fn(
       async ({ ledgerRecord }: { ledgerRecord: OpenCodePromptDeliveryLedgerRecord }) => ledgerRecord
@@ -579,4 +584,36 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
       }
     }
   );
+});
+
+describe('combined stale settlement cancellation regression', () => {
+  it('rejects success when force cancellation happens during final stale-settlement read proof', async () => {
+    const ledgerDir = await mkdtemp(join(tmpdir(), 'combined-stale-cancel-review-'));
+    try {
+      let cancelled = false;
+      const harness = createHarness({
+        ledgerDir,
+        observe: async () =>
+          observedResult({ observation: pendingObservation(), diagnostics: [TREATED_IDLE] }),
+        beforeRead: async (readInput, ledger) => {
+          if (readInput.ledgerRecord?.responseState === 'responded_plain_text' && !cancelled) {
+            cancelled = true;
+            await ledger.cancelNonTerminalRecords({
+              now: new Date().toISOString(),
+              reason: 'force_stop_requested: independent combined review',
+              ownedRunIds: ['run-1'],
+            });
+          }
+        },
+      });
+      await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 1 });
+      const result = await harness.service.deliver(TEAM, taskCommentNotification);
+      expect(cancelled).toBe(true);
+      expect((await harness.ledger.list())[0].cancelledAt).toBeTruthy();
+      expect(result).toMatchObject({ delivered: false, accepted: false, responsePending: false });
+      expect(harness.notify).not.toHaveBeenCalled();
+    } finally {
+      await rm(ledgerDir, { recursive: true, force: true });
+    }
+  });
 });

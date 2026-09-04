@@ -30,6 +30,7 @@ export type OpenCodeLegacyMemberMessageDeliveryPorts = Pick<
  */
 export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
   ports: OpenCodeLegacyMemberMessageDeliveryPorts;
+  assertCurrentRun: () => void;
   adapter: OpenCodeRuntimeMessageAdapter;
   message: OpenCodeMemberMessageDeliveryInput;
   teamName: string;
@@ -53,8 +54,9 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
     teamName,
     laneId,
     memberName,
-    send: async () =>
-      await input.adapter.sendMessageToMember({
+    send: async () => {
+      input.assertCurrentRun();
+      return await input.adapter.sendMessageToMember({
         ...(runtimeRunId ? { runId: runtimeRunId } : {}),
         teamName,
         laneId,
@@ -71,8 +73,10 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
         controlUrl: controlUrl ?? undefined,
         taskRefs: message.taskRefs,
         forceSessionRefreshReason: input.forceSessionRefreshReason,
-      }),
+      });
+    },
   });
+  input.assertCurrentRun();
   await ports.rememberOpenCodeRuntimePidFromBridge({
     teamName,
     memberName,
@@ -82,9 +86,11 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
     runtimePid: result.runtimePid,
     reason: 'opencode_delivery_runtime_pid_observed',
   });
+  input.assertCurrentRun();
   if (result.ok && input.legacyBootstrapSessionToStamp) {
     await ports.stampOpenCodeAppMcpTransportEvidenceIfMissing(input.legacyBootstrapSessionToStamp);
   }
+  input.assertCurrentRun();
   if (result.ok && result.sessionId && input.refreshedBootstrapSessionToStamp) {
     await ports.stampOpenCodeAppMcpTransportEvidenceIfMissing(
       input.refreshedBootstrapSessionToStamp,
@@ -97,6 +103,7 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
   const responseObservation = normalizeOpenCodeDeliveryResponseObservation(
     result.responseObservation
   );
+  input.assertCurrentRun();
   await ports.maybeSyncOpenCodeRuntimePermissionsAfterDelivery({
     teamName,
     runId: runtimeRunId,
@@ -110,6 +117,7 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
     teamColor: input.teamColor,
     teamDisplayName: input.teamDisplayName,
   });
+  input.assertCurrentRun();
   const legacyWorkSyncReadAllowed =
     message.messageKind === 'member_work_sync_nudge' && result.ok
       ? await ports.isLegacyOpenCodeMemberWorkSyncReadCommitAllowed({
@@ -119,6 +127,7 @@ export async function deliverOpenCodeMemberMessageWithoutWatchdog(input: {
           responseObservation,
         })
       : true;
+  input.assertCurrentRun();
   const legacyWorkSyncResponsePending =
     result.ok && message.messageKind === 'member_work_sync_nudge' && !legacyWorkSyncReadAllowed;
   return {

@@ -359,6 +359,7 @@
       "cancel": "Annuler",
       "delete": "Supprimer",
       "editCode": "Modifier le code",
+      "forceStop": "Arrêt forcé",
       "launch": "Lancement",
       "remove": "Supprimer",
       "stop": "Arrête",
@@ -383,6 +384,17 @@
       "member_one": "membre",
       "member_other": "membres",
       "title": "Équipe non encore lancée"
+    },
+    "forceStop": {
+      "cancelLabel": "Annuler",
+      "confirmLabel": "Arrêt forcé",
+      "message": "Forcer l'arrêt de \"{{team}}\" ? Tente d'arrêter cette équipe et annule ses livraisons de messages en attente. L'arrêt du moteur d'exécution n'est pas garanti ; les hôtes d'exécution partagés ne sont pas arrêtés. Les messages en file d'attente restent dans la boîte de réception.",
+      "title": "Arrêt forcé de l'équipe"
+    },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Une erreur inattendue s'est produite",
+      "title": "Échec de l'arrêt forcé"
     },
     "invalidTab": "Onglet d'équipe non valide",
     "kanbanSafeData": "Échec du chargement complet de kanban. Affichage de données sûres.",
@@ -417,6 +429,7 @@
       "deleteTeam": "Supprimer l'équipe",
       "editTeam": "Éditer l'équipe",
       "editUnavailableProvisioning": "L'équipe d'édition n'est pas disponible pendant que la fourniture est toujours en cours",
+      "forceStopTeam": "Arrêt forcé de l'équipe - interrompt le travail en cours",
       "openBuiltInEditor": "Ouvrir le projet dans l'éditeur intégré",
       "openTeamGraph": "Ouvrir le graphique de l'équipe",
       "stopTeam": "Arrêter l'équipe",

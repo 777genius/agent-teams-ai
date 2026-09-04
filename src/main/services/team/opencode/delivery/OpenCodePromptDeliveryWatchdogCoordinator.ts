@@ -1,8 +1,10 @@
 import { getErrorMessage as defaultGetErrorMessage } from '@shared/utils/errorHandling';
 
+import { OpenCodePromptDeliveryCancelledError } from './OpenCodePromptDeliveryCancellationGuard';
 import { isOpenCodePromptDeliveryWatchdogRecordTerminal } from './OpenCodePromptDeliveryFollowUpPolicy';
 import {
   hashOpenCodePromptDeliveryPayload,
+  isOpenCodePromptDeliveryCancelled,
   type OpenCodePromptDeliveryLedgerRecord,
   type OpenCodePromptDeliveryLedgerStore,
 } from './OpenCodePromptDeliveryLedger';
@@ -276,6 +278,25 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
   }> {
     let ledgerRecord = input.ledgerRecord;
     let visibleReply = input.visibleReply ?? null;
+    const stillCurrent = async (): Promise<boolean> => {
+      const current = await input.ledger.getByInboxMessage({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        laneId: input.laneId,
+        inboxMessageId: ledgerRecord.inboxMessageId,
+      });
+      if (!current || isOpenCodePromptDeliveryCancelled(current)) {
+        ledgerRecord = current ?? ledgerRecord;
+        visibleReply = null;
+        return false;
+      }
+      const runId = await this.ports.resolveCurrentRuntimeRunId(input.teamName, input.laneId);
+      return !input.runtimeRunId || runId === input.runtimeRunId;
+    };
+    const checkpoint = async (): Promise<void> => {
+      if (!(await stillCurrent())) throw new OpenCodePromptDeliveryCancelledError(ledgerRecord);
+    };
+    if (!(await stillCurrent())) return { ledgerRecord, visibleReply: null };
     const observeMessageDelivery = input.adapter.observeMessageDelivery;
     const readAllowed = await this.isDeliveryResponseReadCommitAllowed({
       teamName: input.teamName,
@@ -303,6 +324,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
 
     for (let inlineObserveAttempt = 1; inlineObserveAttempt <= 4; inlineObserveAttempt += 1) {
       await this.ports.sleep(OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS);
+      if (!(await stillCurrent())) return { ledgerRecord, visibleReply: null };
       let observed: OpenCodeTeamRuntimeMessageResult;
       try {
         observed = await observeMessageDelivery.call(input.adapter, {
@@ -327,6 +349,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
             undefined,
         });
       } catch (error) {
+        if (!(await stillCurrent())) return { ledgerRecord, visibleReply: null };
         const reason = `opencode_direct_user_delivery_inline_observe_failed: ${this.ports.getErrorMessage(
           error
         )}`;
@@ -364,6 +387,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
         });
         break;
       }
+      if (!(await stillCurrent())) return { ledgerRecord, visibleReply: null };
       await this.ports.rememberRuntimePidFromBridge({
         teamName: input.teamName,
         memberName: input.memberName,
@@ -373,6 +397,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
         runtimePid: observed.runtimePid,
         reason: 'opencode_delivery_inline_observe_runtime_pid_observed',
       });
+      if (!(await stillCurrent())) return { ledgerRecord, visibleReply: null };
       const observedResponse = normalizeOpenCodeDeliveryResponseObservation(
         observed.responseObservation
       );
@@ -410,7 +435,9 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
         ],
         observedAt: this.ports.nowIso(),
       });
+      if (!(await stillCurrent())) return { ledgerRecord, visibleReply: null };
       const proof = await this.ports.visibleReplyProofService.applyDestinationProof({
+        checkpoint,
         ledger: input.ledger,
         ledgerRecord,
         teamName: input.teamName,
@@ -421,6 +448,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
       visibleReply = proof.visibleReply;
       const materialized =
         await this.ports.visibleReplyProofService.materializePlainTextReplyIfNeeded({
+          checkpoint,
           ledger: input.ledger,
           ledgerRecord,
           teamName: input.teamName,
@@ -585,6 +613,7 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
             nextAttemptAt: now,
             markedAt: now,
           });
+          if (isOpenCodePromptDeliveryCancelled(recovered)) continue;
           this.ports.logPromptDeliveryEvent('opencode_prompt_delivery_retry_scheduled', recovered, {
             acceptanceUnknown: true,
             reason: recovered.lastReason,

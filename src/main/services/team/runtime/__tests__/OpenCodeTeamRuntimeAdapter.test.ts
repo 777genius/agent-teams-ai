@@ -339,6 +339,30 @@ describe('buildOpenCodeRuntimeMessageText bootstrap check-in retry', () => {
 });
 
 describe('buildMemberBootstrapPrompt', () => {
+  it('marks the replayed launch context as history and forbids acting on it', () => {
+    const input = { ...launchInput(), prompt: 'Ship the parser fix.' };
+
+    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, input.expectedMembers[0]));
+
+    expect(briefing).toContain('Team launch context (HISTORICAL');
+    expect(briefing).toContain('Ship the parser fix.');
+    expect(briefing).toContain('Never act on the launch context directly from this briefing');
+    expect(briefing).toContain('do not declare completion (for example "ALL DONE") because of it');
+    // A rebuilt session must never be handed the launch prompt as a live
+    // instruction again; that is the whole failure this guard prevents.
+    expect(briefing).not.toContain('Team launch context:\nShip the parser fix.');
+  });
+
+  it('adds no launch-context section at all when the launch carried no prompt', () => {
+    const input = { ...launchInput(), prompt: '   ' };
+
+    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, input.expectedMembers[0]));
+
+    expect(briefing).not.toContain('Team launch context');
+    expect(briefing).not.toContain('HISTORICAL');
+    expect(briefing).not.toContain('Never act on the launch context');
+  });
+
   it('wraps the unchanged app-managed briefing in the shared agent block', () => {
     const input = { ...launchInput(), prompt: '  Complete the scoped fix.  ' };
 
@@ -351,7 +375,13 @@ describe('buildMemberBootstrapPrompt', () => {
         '<agent_teams_app_managed_bootstrap_briefing>',
         'AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1',
         'You are Worker, a worker on team "team-launch".',
-        'Team launch context:\nComplete the scoped fix.',
+        [
+          'Team launch context (HISTORICAL - already delivered at launch and being executed through the task board):',
+          'Complete the scoped fix.',
+          'The launch context above is background only. It has already been acted on; the task board and inbox are the source of truth for what remains.',
+          'Never act on the launch context directly from this briefing: do not create tasks, do not send messages, and do not declare completion (for example "ALL DONE") because of it.',
+          'Only act on new messages delivered in this turn, or on current task-board state when a new message asks you to.',
+        ].join('\n'),
         'Workflow:\nImplement the task',
         '',
         'This OpenCode session is created, attached, and launch-verified by the desktop app.',
