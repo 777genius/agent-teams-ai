@@ -199,6 +199,63 @@ describe('the promotion gate reads per member, not per lane', () => {
     expect(commit).not.toHaveBeenCalled();
   });
 
+  // The commit promotes a matching app-managed candidate that did not claim
+  // confirmation on the way in. Reading the pre-commit result here made the
+  // collector skip precisely those members, so a promotion the commit had just
+  // created was never read back the way the delivery path reads it - which is
+  // the promotion this gate exists to hold to disk.
+  it('checks a member the commit itself promoted', async () => {
+    const candidate = member('team-lead', {
+      launchState: 'starting',
+      agentToolAccepted: false,
+      runtimeAlive: false,
+      bootstrapConfirmed: false,
+      livenessKind: undefined,
+      bootstrapEvidenceSource: 'app_managed_bootstrap',
+      bootstrapMode: 'app_managed_context',
+      appManagedBootstrapCandidate: {
+        schemaVersion: 1,
+        source: 'app_managed_bootstrap',
+        teamName: 'lane-team',
+        memberName: 'team-lead',
+        runId: 'run-a1',
+        laneId: 'primary',
+        runtimeSessionId: 'session-team-lead',
+        messageID: 'message-1',
+        contextHash: 'context-1',
+        briefingHash: 'briefing-1',
+        injectionVerifiedAt: '2026-08-28T12:20:00.000Z',
+        candidateAt: '2026-08-28T12:20:00.000Z',
+      },
+    });
+    const read = vi.fn(() => Promise.resolve(false));
+
+    const guarded = await guardCommittedOpenCodeLaneEvidence(
+      {
+        teamName: 'lane-team',
+        laneId: 'primary',
+        memberNames: ['team-lead'],
+        result: launchResult([candidate]),
+      },
+      ports({
+        // What the real commit does once it has written the candidate and read
+        // it back: the member now claims confirmation.
+        commitOpenCodeRuntimeAdapterLaunchSessionEvidence: vi.fn(({ result }) =>
+          Promise.resolve({
+            ...result,
+            members: { 'team-lead': member('team-lead') },
+          })
+        ),
+        hasCommittedOpenCodeLaneMemberSessionEvidence: read,
+      })
+    );
+
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(guarded.members['team-lead']?.launchState).toBe('runtime_pending_bootstrap');
+    expect(guarded.members['team-lead']?.bootstrapConfirmed).toBe(false);
+    expect(guarded.diagnostics).toContain(buildMissingOpenCodeSessionRecordDiagnostic('team-lead'));
+  });
+
   it('ignores members that are not named in the guard call', async () => {
     const guarded = await guardCommittedOpenCodeLaneEvidence(
       {
