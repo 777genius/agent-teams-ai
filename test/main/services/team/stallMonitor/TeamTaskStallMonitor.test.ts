@@ -1111,4 +1111,197 @@ describe('TeamTaskStallMonitor', () => {
       await monitor.stop();
     });
   });
+
+  describe('diagnostic state', () => {
+    /**
+     * The monitor lives as long as the main process, so both diagnostic maps
+     * are read directly: their size is the whole behaviour under test and it
+     * has no other observable effect.
+     */
+    function diagnosticState(monitor: TeamTaskStallMonitor): {
+      openCodeSkipLogAtByKey: Map<string, number>;
+      heldAlertFirstSeenAtByTeam: Map<string, Map<string, number>>;
+    } {
+      return monitor as unknown as {
+        openCodeSkipLogAtByKey: Map<string, number>;
+        heldAlertFirstSeenAtByTeam: Map<string, Map<string, number>>;
+      };
+    }
+
+    function stubFastScanEnv(): void {
+      vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '1000');
+      vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+      vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+    }
+
+    const heldTask = {
+      id: 'task-held',
+      displayId: 'abcd1234',
+      subject: 'Held task',
+      owner: 'Scout',
+      status: 'in_progress',
+    };
+
+    function heldAlertMonitor(listActiveTeams: () => Promise<string[]>): {
+      monitor: TeamTaskStallMonitor;
+      evaluateWork: ReturnType<typeof vi.fn>;
+    } {
+      let touch = 0;
+      // A live member touches its task between scans, and the epoch key carries
+      // the touch that produced it, so every scan mints a new key.
+      const evaluateWork = vi.fn(() => {
+        touch += 1;
+        return {
+          status: 'alert',
+          taskId: heldTask.id,
+          branch: 'work',
+          signal: 'turn_ended_after_touch',
+          epochKey: `work-held:touch-${touch}`,
+          reason: 'Potential work stall.',
+        };
+      });
+      const monitor = new TeamTaskStallMonitor(
+        {
+          start: vi.fn(),
+          stop: vi.fn(async () => undefined),
+          noteTeamChange: vi.fn(),
+          listActiveTeams: vi.fn(listActiveTeams),
+        } as never,
+        {
+          getSnapshot: vi.fn(async () => ({
+            teamName: 'demo',
+            inProgressTasks: [heldTask],
+            reviewOpenTasks: [],
+            allTasksById: new Map([[heldTask.id, heldTask]]),
+            providerByMemberName: new Map([['scout', 'opencode']]),
+          })),
+        } as never,
+        { evaluateWork, evaluateReview: vi.fn(), evaluatePendingPickup: vi.fn() } as never,
+        {
+          reconcileScan: vi.fn(async () => []),
+          markAlerted: vi.fn(async () => undefined),
+        } as never,
+        { notifyLead: vi.fn(), notifyOpenCodeOwners: vi.fn(async () => []) } as never
+      );
+      return { monitor, evaluateWork };
+    }
+
+    it('keeps only the held alert clocks the current scan is still holding', async () => {
+      vi.useFakeTimers();
+      stubFastScanEnv();
+      const { monitor, evaluateWork } = heldAlertMonitor(async () => ['demo']);
+
+      monitor.start();
+      await vi.advanceTimersByTimeAsync(2_100);
+      await vi.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
+      await vi.advanceTimersByTimeAsync(1_100);
+
+      expect(evaluateWork).toHaveBeenCalledTimes(3);
+      // Three epochs were held, one at a time. Carrying the retired two would
+      // leak one entry per touch for the life of the process.
+      expect([...(diagnosticState(monitor).heldAlertFirstSeenAtByTeam.get('demo') ?? [])]).toEqual([
+        ['work-held:touch-3', expect.any(Number)],
+      ]);
+
+      await monitor.stop();
+    });
+
+    it('drops the held alert clocks of a team that is no longer running', async () => {
+      vi.useFakeTimers();
+      stubFastScanEnv();
+      let activeTeams = ['demo'];
+      const { monitor } = heldAlertMonitor(async () => activeTeams);
+
+      monitor.start();
+      // The first scan only starts the startup-grace clock; the second one holds.
+      await vi.advanceTimersByTimeAsync(2_100);
+      await vi.advanceTimersByTimeAsync(1_100);
+      expect(diagnosticState(monitor).heldAlertFirstSeenAtByTeam.has('demo')).toBe(true);
+
+      activeTeams = [];
+      await vi.advanceTimersByTimeAsync(1_100);
+
+      expect(diagnosticState(monitor).heldAlertFirstSeenAtByTeam.size).toBe(0);
+
+      await monitor.stop();
+    });
+
+    it('expires an OpenCode skip rate limit once it can no longer suppress a log line', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-04-19T12:00:00.000Z'));
+      // Longer than the 10 minute skip-log interval, so one scan interval is
+      // enough for a stamp from the previous scan to go dead.
+      vi.stubEnv('CLAUDE_TEAM_TASK_STALL_SCAN_INTERVAL_MS', '700000');
+      vi.stubEnv('CLAUDE_TEAM_TASK_STALL_STARTUP_GRACE_MS', '1');
+      vi.stubEnv('CLAUDE_TEAM_TASK_STALL_ACTIVATION_GRACE_MS', '1');
+
+      const skippedTask = (id: string) => ({
+        id,
+        displayId: `disp-${id}`,
+        subject: 'Long running task',
+        owner: 'Scout',
+        status: 'in_progress',
+        workIntervals: [{ startedAt: '2026-04-19T11:50:00.000Z' }],
+      });
+      const firstTask = skippedTask('task-first');
+      const secondTask = skippedTask('task-second');
+      let currentTask = firstTask;
+      const monitor = new TeamTaskStallMonitor(
+        {
+          start: vi.fn(),
+          stop: vi.fn(async () => undefined),
+          noteTeamChange: vi.fn(),
+          listActiveTeams: vi.fn(async () => ['demo']),
+        } as never,
+        {
+          getSnapshot: vi.fn(async () => ({
+            teamName: 'demo',
+            inProgressTasks: [currentTask],
+            reviewOpenTasks: [],
+            allTasksById: new Map([[currentTask.id, currentTask]]),
+            providerByMemberName: new Map([['scout', 'opencode']]),
+            openCodeLaneActiveMemberNames: new Set(['scout']),
+          })),
+        } as never,
+        {
+          evaluateWork: vi.fn(() => ({
+            status: 'skip',
+            taskId: currentTask.id,
+            reason: 'Owner lane is mid-turn',
+            skipReason: 'lane_active',
+          })),
+          evaluateReview: vi.fn(),
+          evaluatePendingPickup: vi.fn(),
+        } as never,
+        {
+          reconcileScan: vi.fn(async () => []),
+          markAlerted: vi.fn(async () => undefined),
+        } as never,
+        { notifyLead: vi.fn(), notifyOpenCodeOwners: vi.fn(async () => []) } as never
+      );
+
+      monitor.start();
+      // The first scan only starts the startup-grace clock; the second one skips
+      // and stamps the first task's rate limit.
+      await vi.advanceTimersByTimeAsync(2_100);
+      await vi.advanceTimersByTimeAsync(700_100);
+      expect([...diagnosticState(monitor).openCodeSkipLogAtByKey.keys()]).toEqual([
+        'demo:task-first:lane_active',
+      ]);
+
+      // The first task leaves the board. Its stamp is now older than the
+      // interval it rate limits, so it cannot suppress anything again.
+      currentTask = secondTask;
+      await vi.advanceTimersByTimeAsync(700_100);
+
+      expect([...diagnosticState(monitor).openCodeSkipLogAtByKey.keys()]).toEqual([
+        'demo:task-second:lane_active',
+      ]);
+
+      expect(vi.mocked(console.warn).mock.calls).toHaveLength(2);
+      vi.mocked(console.warn).mockClear();
+      await monitor.stop();
+    });
+  });
 });
