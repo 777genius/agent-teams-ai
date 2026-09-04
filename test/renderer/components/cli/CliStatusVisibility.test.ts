@@ -1659,7 +1659,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('does not show endless model loading for a completed OpenCode passive summary', async () => {
+  it('shows available models without endless loading for a completed OpenCode passive summary', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
     storeState.cliStatus = createInstalledCliStatus({
@@ -1708,11 +1708,11 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('OpenCode detected (passive)');
+    expect(host.textContent).toContain('Models available');
     expect(host.textContent).toContain('Runtime: OpenCode CLI');
     expect(host.textContent).not.toContain('Loading models...');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
-    expect(host.textContent).not.toContain('big-pickle');
+    expect(host.textContent).toContain('big-pickle');
 
     await act(async () => {
       root.unmount();
