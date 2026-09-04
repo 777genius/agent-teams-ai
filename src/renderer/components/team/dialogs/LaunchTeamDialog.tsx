@@ -51,6 +51,7 @@ import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { useFileListCacheWarmer } from '@renderer/hooks/useFileListCacheWarmer';
+import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -64,7 +65,6 @@ import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { nameColorSet } from '@renderer/utils/projectColor';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
-import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
@@ -112,6 +112,7 @@ import {
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
@@ -121,11 +122,11 @@ import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPath
 import { ProjectPathSelector } from './ProjectPathSelector';
 import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
+import { isSameProviderPrepareAttempt } from './providerPrepareAttemptIdentity';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
   type ProviderPrepareDiagnosticsModelResult,
-  runProviderPrepareDiagnostics,
 } from './providerPrepareDiagnostics';
 import { buildProviderPreparePlans, type ProviderPreparePlan } from './providerPreparePlans';
 import { ProviderPrepareReadyNotice } from './ProviderPrepareReadyNotice';
@@ -277,8 +278,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const cliStatus = useStore((s) => s.cliStatus);
   const cliStatusLoading = useStore((s) => s.cliStatusLoading);
   const cliProviderStatusLoading = useStore((s) => s.cliProviderStatusLoading);
-  const bootstrapCliStatus = useStore((s) => s.bootstrapCliStatus);
-  const fetchCliStatus = useStore((s) => s.fetchCliStatus);
   const isLaunchMode = props.mode === 'launch' || props.mode === 'relaunch';
   const isRelaunch = props.mode === 'relaunch';
   const loadingCliStatus = useMemo(
@@ -360,6 +359,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const [projectsLoadRequested, setProjectsLoadRequested] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionFence] = useState(optionalPreflight.createProviderSubmissionFence);
 
   const [selectedProviderId, setSelectedProviderIdRaw] = useState<TeamProviderId>(() =>
     isLaunchMode
@@ -663,16 +663,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return changed ? next : prev;
     });
   }, [multimodelEnabled, selectedProviderId]);
-  useEffect(() => {
-    if (!open || cliStatus || cliStatusLoading) {
-      return;
-    }
-    void refreshCliStatusForCurrentMode({
-      multimodelEnabled,
-      bootstrapCliStatus,
-      fetchCliStatus,
-    });
-  }, [bootstrapCliStatus, cliStatus, cliStatusLoading, fetchCliStatus, multimodelEnabled, open]);
+  useProviderReadinessRevalidation(open, selectedMemberProviders, cliStatus);
   const handleCodexReconnect = React.useCallback(
     (mode: 'browser' | 'device_code' = 'browser') => {
       void (async () => {
@@ -1617,6 +1608,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   // Warm up CLI for the currently selected working directory (launch mode only).
   useEffect(() => {
+    if (submissionFence.busy) return;
     if (!open || !isLaunchMode || prepareState === 'idle') {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -1661,12 +1653,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     const loadingProviderIds = selectedMemberProviders.filter((providerId) =>
       runtimeProviderLoadingById.get(providerId)
     );
-    const readyProviderIds = selectedMemberProviders.filter(
-      (providerId) => !runtimeProviderLoadingById.get(providerId)
-    );
     const providerPlans = buildProviderPreparePlans({
       cwd: effectiveCwd,
-      providerIds: readyProviderIds,
+      providerIds: selectedMemberProviders,
       selectedModelChecksByProvider,
       backendSummaryByProvider: runtimeBackendSummaryByProviderRef.current,
       limitContext: effectiveAnthropicRuntimeLimitContext,
@@ -1675,6 +1664,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     });
     const changedPlans = providerPlans.filter(
       (plan) =>
+        !runtimeProviderLoadingById.get(plan.providerId) &&
         lastPrepareProviderSignatureByIdRef.current.get(plan.providerId) !== plan.requestSignature
     );
     const loadingMessage = getProvisioningProviderProgressMessage(
@@ -1721,6 +1711,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
     let checks = alignProvisioningChecks(prepareChecksRef.current, selectedMemberProviders);
     for (const providerId of loadingProviderIds) {
+      const current = providerPlans.find(
+        (plan) => plan.providerId === providerId
+      )?.requestSignature;
+      const previous = lastPrepareProviderSignatureByIdRef.current.get(providerId);
+      if (isSameProviderPrepareAttempt(previous, current)) continue;
       lastPrepareProviderSignatureByIdRef.current.delete(providerId);
       prepareProviderRequestSeqByIdRef.current.delete(providerId);
       prepareWarningsByProviderIdRef.current.delete(providerId);
@@ -1771,7 +1766,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       await Promise.all(
         runningPlans.map(async (plan) => {
           try {
-            const prepResult = await runProviderPrepareDiagnostics({
+            const prepResult = await submissionFence.runPreflight(plan, {
               cwd: effectiveCwd,
               providerId: plan.providerId,
               selectedModelIds: plan.selectedModelIds,
@@ -1846,6 +1841,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     open,
     isLaunchMode,
     prepareState,
+    isSubmitting,
+    submissionFence,
     effectiveCwd,
     effectiveAnthropicRuntimeLimitContext,
     prepareProviderInvalidationEpochById,
@@ -2202,10 +2199,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     return new Set(activeNames).size !== activeNames.length;
   }, [isLaunchMode, membersDrafts]);
 
-  // ---------------------------------------------------------------------------
-  // Error
-  // ---------------------------------------------------------------------------
-
   const provisioningError = isLaunchMode ? props.provisioningError : null;
   const activeError = localError ?? modelValidationError ?? provisioningError;
   const effectivePrepare = useMemo(
@@ -2229,6 +2222,15 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   });
   const prepareBlocksLaunch =
     isLaunchMode && effectivePrepare.state === 'failed' && !experimentalLocalModelOverrideEnabled;
+  const canSkipPreflight = () =>
+    isLaunchMode &&
+    prepareState === 'loading' &&
+    optionalPreflight.canSkipOptionalProviderPreflight(
+      selectedMemberProviders,
+      runtimeProviderStatusById,
+      runtimeProviderLoadingById,
+      prepareChecksRef.current
+    );
   const showCodexReconnectPrompt = shouldShowCodexReconnectPrompt({
     effectiveCliStatus,
     selectedProviderIds: selectedMemberProviders,
@@ -2257,11 +2259,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     openTeamTab,
   ]);
 
-  // ---------------------------------------------------------------------------
-  // Submit
-  // ---------------------------------------------------------------------------
-
   const handleSubmit = (): void => {
+    if (submissionFence.busy || isSubmitting || launchInFlight) return;
+    if (prepareState === 'loading' && !canSkipPreflight()) return;
     if (validationErrors.length > 0) {
       setLocalError(validationErrors[0]);
       return;
@@ -2306,6 +2306,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       return;
     }
     if (launchGuard.reject(isLaunchMode, () => setLocalError(t('launch.prepare.failed')))) return;
+    if (!submissionFence.acquire(prepareRequestSeqRef)) return;
     setLocalError(null);
     setIsSubmitting(true);
 
@@ -2425,6 +2426,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           closeDialog();
         }
       } catch (err) {
+        optionalPreflight.resumeInterruptedProviderPreflight(
+          prepareChecksRef.current,
+          lastPrepareProviderSignatureByIdRef.current
+        );
         const message =
           err instanceof Error
             ? err.message
@@ -2443,19 +2448,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
           );
         }
       } finally {
+        submissionFence.release();
         setIsSubmitting(false);
       }
     })();
   };
 
-  // ---------------------------------------------------------------------------
-  // Disabled state
-  // ---------------------------------------------------------------------------
-
   const isDisabled = isLaunchMode
     ? isSubmitting ||
       launchInFlight ||
-      prepareState === 'loading' ||
+      (prepareState === 'loading' && !canSkipPreflight()) ||
       validationErrors.length > 0 ||
       !!modelValidationError ||
       (isLaunchMode && prepareState !== 'idle' && launchGuard.blocked(isLaunchMode)) ||
@@ -2464,9 +2466,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       prepareBlocksLaunch ||
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
-  // Dynamic labels
-  // ---------------------------------------------------------------------------
-
   const dialogTitle = isLaunchMode
     ? isRelaunch
       ? t('launch.title.relaunch')
@@ -2512,10 +2511,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     : isEditing
       ? t('launch.actions.saving')
       : t('launch.actions.creating');
-
-  // ---------------------------------------------------------------------------
-  // Render
-  // ---------------------------------------------------------------------------
 
   return (
     <Dialog
@@ -3136,6 +3131,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             <div className="min-w-0">
               <ProviderActivityStatusStrip
                 cliStatus={effectiveCliStatus}
+                providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
                 sourceCliStatus={loadingCliStatus}
                 cliStatusLoading={cliStatusLoading}
                 cliProviderStatusLoading={cliProviderStatusLoading}
@@ -3313,7 +3309,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
             }
             busy={isSubmitting || launchInFlight}
             submittingLabel={submittingLabel}
-            submitLabel={submitLabel}
+            submitLabel={
+              canSkipPreflight() ? t('launch.actions.skipPreflightAndLaunch') : submitLabel
+            }
             onClick={handleSubmit}
           />
         </DialogFooter>

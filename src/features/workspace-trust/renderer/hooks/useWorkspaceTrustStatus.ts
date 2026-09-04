@@ -2,31 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { api } from '@renderer/api';
 
-import type {
-  WorkspaceTrustProjectStatus,
-  WorkspaceTrustProjectStatusResult,
-} from '../../contracts';
+import type { WorkspaceTrustDisplayStatus } from '../view-models/workspaceTrustLaunchNotice';
+import type { WorkspaceTrustProjectStatusResult } from '@features/workspace-trust/contracts';
+
+export type { WorkspaceTrustDisplayStatus } from '../view-models/workspaceTrustLaunchNotice';
+export { shouldShowWorkspaceTrustLaunchNotice } from '../view-models/workspaceTrustLaunchNotice';
 
 interface WorkspaceTrustStatusSnapshot extends WorkspaceTrustProjectStatusResult {
-  requestKey: string;
-}
-
-export type WorkspaceTrustDisplayStatus = WorkspaceTrustProjectStatus | 'checking';
-
-export function shouldShowWorkspaceTrustLaunchNotice(status: WorkspaceTrustDisplayStatus): boolean {
-  return status === 'untrusted' || status === 'unknown';
+  requestKey: { projectPath: string } | null;
 }
 
 export function useWorkspaceTrustStatus(input: {
   enabled: boolean;
   projectPath: string | null;
 }): WorkspaceTrustDisplayStatus {
+  const projectPath = input.projectPath?.trim() ?? '';
+  // Identity belongs to this open/path lifecycle, not to a cached pathname.
   const requestKey = useMemo(
-    () => (input.enabled ? (input.projectPath?.trim() ?? '') : ''),
-    [input.enabled, input.projectPath]
+    () => (input.enabled && projectPath ? { projectPath } : null),
+    [input.enabled, projectPath]
   );
   const [snapshot, setSnapshot] = useState<WorkspaceTrustStatusSnapshot>({
-    requestKey: '',
+    requestKey: null,
     status: 'disabled',
   });
 
@@ -44,7 +41,7 @@ export function useWorkspaceTrustStatus(input: {
     let cancelled = false;
     const timeoutId = window.setTimeout(() => {
       void workspaceTrustApi
-        .getProjectStatus({ projectPath: requestKey })
+        .getProjectStatus({ projectPath: requestKey.projectPath })
         .then((result) => {
           if (!cancelled) {
             setSnapshot({ requestKey, status: result.status });

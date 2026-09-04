@@ -1365,7 +1365,11 @@
       "relaunchTeam": "Team opnieuw starten",
       "relaunching": "Opnieuw starten...",
       "saveChanges": "Wijzigingen opslaan",
-      "saving": "Opslaan..."
+      "saving": "Opslaan...",
+      "skipPreflightAndLaunch": "Voorcontrole overslaan en starten"
+    },
+    "workspaceTrust": {
+      "description": "Projectopdrachten en MCP-servers kunnen worden uitgevoerd wanneer het team start."
     },
     "billing": {
       "prefix": "Vanaf 15 juni 2026 factureert Anthropic",

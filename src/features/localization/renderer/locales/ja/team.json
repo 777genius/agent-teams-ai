@@ -1365,7 +1365,11 @@
       "relaunchTeam": "チーム紹介",
       "relaunching": "リリース",
       "saveChanges": "変更を保存",
-      "saving": "保存..."
+      "saving": "保存...",
+      "skipPreflightAndLaunch": "事前チェックをスキップして起動"
+    },
+    "workspaceTrust": {
+      "description": "チームの開始時に、プロジェクトのコマンドやMCPサーバーが実行される場合があります。"
     },
     "billing": {
       "prefix": "2026年6月15日(金)より、無農薬請求書",

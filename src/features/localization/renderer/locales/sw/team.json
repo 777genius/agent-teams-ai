@@ -1365,7 +1365,11 @@
       "relaunchTeam": "Zindua tena timu",
       "relaunching": "Inazindua tena...",
       "saveChanges": "Hifadhi Mabadiliko",
-      "saving": "Inahifadhi..."
+      "saving": "Inahifadhi...",
+      "skipPreflightAndLaunch": "Ruka ukaguzi wa awali na uanzishe"
+    },
+    "workspaceTrust": {
+      "description": "Amri za mradi na seva za MCP zinaweza kuendeshwa timu inapoanza."
     },
     "billing": {
       "prefix": "Kuanzia Juni 15, 2026, Anthropic inalipia",

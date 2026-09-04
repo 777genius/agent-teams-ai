@@ -1365,7 +1365,11 @@
       "relaunchTeam": "Relaunch टीम",
       "relaunching": "...",
       "saveChanges": "परिवर्तन सहेजें",
-      "saving": "बचत"
+      "saving": "बचत",
+      "skipPreflightAndLaunch": "पूर्व-जांच छोड़ें और शुरू करें"
+    },
+    "workspaceTrust": {
+      "description": "टीम शुरू होने पर प्रोजेक्ट कमांड और MCP सर्वर चल सकते हैं।"
     },
     "billing": {
       "prefix": "जून 15, 2026, एंथ्रोपिक बिल शुरू",

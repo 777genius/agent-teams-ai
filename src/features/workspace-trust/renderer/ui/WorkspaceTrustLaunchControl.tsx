@@ -1,9 +1,5 @@
-import './workspaceTrustLaunchControl.css';
-
 import { Button } from '@renderer/components/ui/button';
 import { Loader2, Play } from 'lucide-react';
-
-import { shouldShowWorkspaceTrustLaunchNotice } from '../hooks/useWorkspaceTrustStatus';
 
 import { WorkspaceTrustLaunchNotice } from './WorkspaceTrustLaunchNotice';
 
@@ -19,12 +15,6 @@ export const WorkspaceTrustLaunchControl = (props: {
   submitLabel: string;
   onClick: () => void;
 }): React.JSX.Element => {
-  const emphasize =
-    props.isLaunchMode &&
-    shouldShowWorkspaceTrustLaunchNotice(props.status) &&
-    !props.disabled &&
-    !props.busy;
-
   return (
     <div className="flex shrink-0 flex-col items-end gap-2">
       <WorkspaceTrustLaunchNotice status={props.status} />
@@ -32,9 +22,7 @@ export const WorkspaceTrustLaunchControl = (props: {
         size={props.isLaunchMode ? 'lg' : 'sm'}
         className={
           props.isLaunchMode
-            ? `relative h-11 min-w-40 overflow-hidden bg-emerald-600 px-5 text-base font-semibold text-white shadow-md shadow-emerald-950/30 hover:bg-emerald-700 ${
-                emphasize ? 'workspace-trust-launch-cta' : ''
-              }`
+            ? 'h-11 min-w-40 bg-emerald-600 px-5 text-base font-semibold text-white shadow-md shadow-emerald-950/30 hover:bg-emerald-700'
             : 'bg-emerald-600 text-white hover:bg-emerald-700'
         }
         disabled={props.disabled}

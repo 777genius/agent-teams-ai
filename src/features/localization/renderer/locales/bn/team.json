@@ -1365,7 +1365,11 @@
       "relaunchTeam": "পুনরায় আরম্ভ করুন",
       "relaunching": "পুনরায় আরম্ভ করা হচ্ছে...",
       "saveChanges": "০ চ্যানেল",
-      "saving": "ইনস্টল করা হয়েছে..."
+      "saving": "ইনস্টল করা হয়েছে...",
+      "skipPreflightAndLaunch": "প্রাথমিক পরীক্ষা এড়িয়ে চালু করুন"
+    },
+    "workspaceTrust": {
+      "description": "দল শুরু হলে প্রকল্পের কমান্ড ও MCP সার্ভার চলতে পারে।"
     },
     "billing": {
       "prefix": "১৫ জুন থেকে শুরু",

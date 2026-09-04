@@ -1365,7 +1365,11 @@
       "relaunchTeam": "رنگوں کی ٹیم",
       "relaunching": "دوبارہ شروع...",
       "saveChanges": "تبدیلیاں محفوظ کریں",
-      "saving": "محفوظ کیا گیا..."
+      "saving": "محفوظ کیا گیا...",
+      "skipPreflightAndLaunch": "ابتدائی جانچ چھوڑ کر شروع کریں"
+    },
+    "workspaceTrust": {
+      "description": "ٹیم شروع ہونے پر پروجیکٹ کی کمانڈز اور MCP سرورز چل سکتے ہیں۔"
     },
     "billing": {
       "prefix": "15 جون 2026 سے شروع ہوتا ہے ۔",

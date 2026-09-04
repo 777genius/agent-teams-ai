@@ -1365,7 +1365,11 @@
       "relaunchTeam": "Ekibi yeniden başlat",
       "relaunching": "Yeniden başlatılıyor...",
       "saveChanges": "Değişiklikleri Kaydet",
-      "saving": "Kaydediliyor..."
+      "saving": "Kaydediliyor...",
+      "skipPreflightAndLaunch": "Ön kontrolü atla ve başlat"
+    },
+    "workspaceTrust": {
+      "description": "Ekip başladığında proje komutları ve MCP sunucuları çalışabilir."
     },
     "billing": {
       "prefix": "15 Haziran 2026'dan itibaren Anthropic",

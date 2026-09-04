@@ -1365,7 +1365,11 @@
       "relaunchTeam": "重新启动团队",
       "relaunching": "重新启动…",
       "saveChanges": "保存更改",
-      "saving": "保存…"
+      "saving": "保存…",
+      "skipPreflightAndLaunch": "跳过预检并启动"
+    },
+    "workspaceTrust": {
+      "description": "团队启动时可能会运行项目命令和 MCP 服务器。"
     },
     "billing": {
       "prefix": "自 2026 年 6 月 15 日起，Anthropic 账单",

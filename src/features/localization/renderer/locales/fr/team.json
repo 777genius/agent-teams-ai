@@ -1365,7 +1365,11 @@
       "relaunchTeam": "Équipe de relance",
       "relaunching": "Relance...",
       "saveChanges": "Enregistrer les modifications",
-      "saving": "Sauver..."
+      "saving": "Sauver...",
+      "skipPreflightAndLaunch": "Ignorer la vérification et lancer"
+    },
+    "workspaceTrust": {
+      "description": "Des commandes du projet et des serveurs MCP peuvent s'exécuter au démarrage de l'équipe."
     },
     "billing": {
       "prefix": "À compter du 15 juin 2026, Factures anthropiques",

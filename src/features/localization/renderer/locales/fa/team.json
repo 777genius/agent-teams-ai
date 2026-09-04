@@ -1365,7 +1365,11 @@
       "relaunchTeam": "راه‌اندازی مجدد تیم",
       "relaunching": "در حال راه‌اندازی مجدد...",
       "saveChanges": "ذخیره تغییرات",
-      "saving": "در حال ذخیره..."
+      "saving": "در حال ذخیره...",
+      "skipPreflightAndLaunch": "رد کردن بررسی اولیه و اجرا"
+    },
+    "workspaceTrust": {
+      "description": "هنگام شروع تیم، ممکن است فرمان‌های پروژه و سرورهای MCP اجرا شوند."
     },
     "billing": {
       "prefix": "از ۱۵ ژوئن ۲۰۲۶، Anthropic مصرف",

@@ -58,6 +58,7 @@ import { useChipDraftPersistence } from '@renderer/hooks/useChipDraftPersistence
 import { useCreateTeamDraft } from '@renderer/hooks/useCreateTeamDraft';
 import { useDraftPersistence } from '@renderer/hooks/useDraftPersistence';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { useProviderReadinessRevalidation } from '@renderer/hooks/useProviderReadinessRevalidation';
 import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { useTheme } from '@renderer/hooks/useTheme';
@@ -85,7 +86,6 @@ import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInst
 import { isGeminiUiFrozen } from '@renderer/utils/geminiUiFreeze';
 import { normalizePath } from '@renderer/utils/pathNormalize';
 import { resolveUiOwnedProviderBackendId } from '@renderer/utils/providerBackendIdentity';
-import { refreshCliStatusForCurrentMode } from '@renderer/utils/refreshCliStatus';
 import { getAvailableTeamEffortValue } from '@renderer/utils/teamEffortOptions';
 import { normalizeExplicitTeamModelForUi } from '@renderer/utils/teamModelAvailability';
 import { getTeamProviderLabel as getCatalogTeamProviderLabel } from '@renderer/utils/teamModelCatalog';
@@ -107,6 +107,7 @@ import {
   getOrganizationPlacementUnitOptions,
   getOrganizationUnitLabel,
 } from './createTeamOrganizationPlacement';
+import { sanitizeTeamName, validateRequest } from './createTeamSubmissionValidation';
 import { ExperimentalLocalModelOverrideCheckbox } from './ExperimentalLocalModelOverride';
 import { resolveExperimentalLocalModelOverride } from './experimentalLocalModelOverrideState';
 import {
@@ -115,6 +116,7 @@ import {
   resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { OpenCodeProviderScopedDialogCatalogLoaders as ScopedCatalogLoaders } from './OpenCodeProviderScopedDialogCatalogLoaders';
+import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
@@ -128,11 +130,11 @@ import {
   useAuthorityGatedCliStatus,
 } from './providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
+import { isSameProviderPrepareAttempt } from './providerPrepareAttemptIdentity';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
   mergeReusableProviderPrepareModelResults,
   type ProviderPrepareDiagnosticsModelResult,
-  runProviderPrepareDiagnostics,
 } from './providerPrepareDiagnostics';
 import { buildProviderPreparePlans, type ProviderPreparePlan } from './providerPreparePlans';
 import {
@@ -270,27 +272,6 @@ interface CreateTeamDialogProps {
   onOpenTeam: (teamName: string, projectPath?: string) => void;
 }
 
-interface ValidationResult {
-  valid: boolean;
-  errors?: {
-    teamName?: string;
-    members?: string;
-    cwd?: string;
-  };
-}
-
-/** Mirrors Claude CLI's `zuA()` sanitization: non-alphanumeric → `-`, then lowercase. */
-function sanitizeTeamName(name: string): string {
-  let result = name
-    .replace(/[^a-zA-Z0-9]/g, '-')
-    .replace(/-{2,}/g, '-')
-    .toLowerCase();
-  // Trim leading/trailing dashes without backtracking-vulnerable regex
-  while (result.startsWith('-')) result = result.slice(1);
-  while (result.endsWith('-')) result = result.slice(0, -1);
-  return result;
-}
-
 function validateTeamNameInline(
   name: string,
   t: ReturnType<typeof useAppTranslation>['t']
@@ -315,65 +296,6 @@ function buildDefaultTeamDescription(
   return trimmedName.length > 0
     ? t('create.defaultDescription.named', { teamName: trimmedName })
     : t('create.defaultDescription.fallback');
-}
-
-function validateRequest(
-  request: TeamCreateRequest,
-  t: ReturnType<typeof useAppTranslation>['t'],
-  options?: { requireCwd?: boolean }
-): ValidationResult {
-  const requireCwd = options?.requireCwd ?? true;
-  const sanitized = sanitizeTeamName(request.teamName);
-  if (!sanitized) {
-    return {
-      valid: false,
-      errors: {
-        teamName: t('create.validation.nameMustContainLetterOrDigit'),
-      },
-    };
-  }
-  if (sanitized.length > 128) {
-    return {
-      valid: false,
-      errors: {
-        teamName: t('create.validation.nameTooLong'),
-      },
-    };
-  }
-  if (requireCwd && !request.cwd.trim()) {
-    return {
-      valid: false,
-      errors: {
-        cwd: t('create.validation.selectWorkingDirectory'),
-      },
-    };
-  }
-  if (request.members.some((member) => !member.name.trim())) {
-    return {
-      valid: false,
-      errors: {
-        members: t('create.validation.memberNameRequired'),
-      },
-    };
-  }
-  if (request.members.some((member) => validateMemberNameInline(member.name.trim()) !== null)) {
-    return {
-      valid: false,
-      errors: {
-        members: t('create.validation.memberNameInvalid'),
-      },
-    };
-  }
-  const uniqueNames = new Set(request.members.map((member) => member.name.trim().toLowerCase()));
-  if (uniqueNames.size !== request.members.length) {
-    return {
-      valid: false,
-      errors: {
-        members: t('create.validation.memberNamesUnique'),
-      },
-    };
-  }
-  return { valid: true };
 }
 
 type IdleWindow = Window & {
@@ -446,8 +368,6 @@ export const CreateTeamDialog = ({
       cliProviderStatusLoading: s.cliProviderStatusLoading,
     }))
   );
-  const bootstrapCliStatus = useStore((s) => s.bootstrapCliStatus);
-  const fetchCliStatus = useStore((s) => s.fetchCliStatus);
   const openDashboard = useStore((s) => s.openDashboard);
   const loadingCliStatus = useMemo(
     () =>
@@ -545,6 +465,7 @@ export const CreateTeamDialog = ({
     cwd?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionFence] = useState(optionalPreflight.createProviderSubmissionFence);
   const submittedTeamNameRef = useRef<string | null>(null);
   const [organizationStructure, setOrganizationStructure] =
     useState<OrganizationStructurePayload | null>(null);
@@ -1181,16 +1102,7 @@ export const CreateTeamDialog = ({
     }
   }, [members, multimodelEnabled, selectedProviderId, setMembers]);
 
-  useEffect(() => {
-    if (!open || cliStatus || cliStatusLoading) {
-      return;
-    }
-    void refreshCliStatusForCurrentMode({
-      multimodelEnabled,
-      bootstrapCliStatus,
-      fetchCliStatus,
-    });
-  }, [bootstrapCliStatus, cliStatus, cliStatusLoading, fetchCliStatus, multimodelEnabled, open]);
+  useProviderReadinessRevalidation(open, selectedMemberProviders, cliStatus);
 
   const handleCodexReconnect = useCallback(
     (mode: 'browser' | 'device_code' = 'browser') => {
@@ -1202,6 +1114,7 @@ export const CreateTeamDialog = ({
   );
 
   useEffect(() => {
+    if (submissionFence.busy) return;
     if (!open || !canCreate || !launchTeam || prepareState === 'idle') {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);
       prepareRequestSeqRef.current += 1;
@@ -1253,12 +1166,9 @@ export const CreateTeamDialog = ({
     const loadingProviderIds = selectedMemberProviders.filter((providerId) =>
       runtimeProviderLoadingById.get(providerId)
     );
-    const readyProviderIds = selectedMemberProviders.filter(
-      (providerId) => !runtimeProviderLoadingById.get(providerId)
-    );
     const providerPlans = buildProviderPreparePlans({
       cwd: effectiveCwd,
-      providerIds: readyProviderIds,
+      providerIds: selectedMemberProviders,
       selectedModelChecksByProvider,
       backendSummaryByProvider: runtimeBackendSummaryByProviderRef.current,
       limitContext: effectiveAnthropicRuntimeLimitContext,
@@ -1266,6 +1176,7 @@ export const CreateTeamDialog = ({
       cachedModelResultsByCacheKey: prepareModelResultsCacheRef.current,
     });
     const changedPlans = providerPlans.filter((plan) => {
+      if (runtimeProviderLoadingById.get(plan.providerId)) return false;
       const lastSignature = lastPrepareProviderSignatureByIdRef.current.get(plan.providerId);
       const pendingSignature = pendingPrepareProviderSignatureByIdRef.current.get(plan.providerId);
       return lastSignature !== plan.requestSignature && pendingSignature !== plan.requestSignature;
@@ -1314,6 +1225,11 @@ export const CreateTeamDialog = ({
 
     let checks = alignProvisioningChecks(prepareChecksRef.current, selectedMemberProviders);
     for (const providerId of loadingProviderIds) {
+      const current = providerPlans.find(
+        (plan) => plan.providerId === providerId
+      )?.requestSignature;
+      const previous = lastPrepareProviderSignatureByIdRef.current.get(providerId);
+      if (isSameProviderPrepareAttempt(previous, current)) continue;
       lastPrepareProviderSignatureByIdRef.current.delete(providerId);
       pendingPrepareProviderSignatureByIdRef.current.delete(providerId);
       prepareProviderRequestSeqByIdRef.current.delete(providerId);
@@ -1382,7 +1298,7 @@ export const CreateTeamDialog = ({
         await Promise.all(
           runningPlans.map(async (plan) => {
             try {
-              const prepResult = await runProviderPrepareDiagnostics({
+              const prepResult = await submissionFence.runPreflight(plan, {
                 cwd: effectiveCwd,
                 providerId: plan.providerId,
                 selectedModelIds: plan.selectedModelIds,
@@ -1464,6 +1380,8 @@ export const CreateTeamDialog = ({
     canCreate,
     launchTeam,
     prepareState,
+    isSubmitting,
+    submissionFence,
     effectiveCwd,
     effectiveMemberDrafts,
     effectiveAnthropicRuntimeLimitContext,
@@ -2203,6 +2121,15 @@ export const CreateTeamDialog = ({
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
   const prepareBlocksCreate =
     launchTeam && effectivePrepare.state === 'failed' && !experimentalLocalModelOverrideEnabled;
+  const canSkipPreflight = () =>
+    launchTeam &&
+    prepareState === 'loading' &&
+    optionalPreflight.canSkipOptionalProviderPreflight(
+      selectedMemberProviders,
+      runtimeProviderStatusById,
+      runtimeProviderLoadingById,
+      prepareChecksRef.current
+    );
 
   const organizationPlacementOrganizations = organizationStructure?.organizations ?? [];
   const activePlacementOrganization =
@@ -2252,6 +2179,9 @@ export const CreateTeamDialog = ({
   }, [conflictingTeam?.teamName, effectiveCwd]);
 
   const handleSubmit = (): void => {
+    if (!canCreate || !draftLoaded) return;
+    if (submissionFence.busy || isSubmitting) return;
+    if (prepareState === 'loading' && !canSkipPreflight()) return;
     if (allTakenTeamNames.includes(sanitizedTeamName)) {
       const msg = isNameProvisioning
         ? t('create.validation.teamLaunching')
@@ -2290,6 +2220,9 @@ export const CreateTeamDialog = ({
       setLocalError(worktreeGitBlockingMessage);
       return;
     }
+    if (!submissionFence.acquire(prepareRequestSeqRef)) return;
+    cancelScheduledIdleSet(prepareIdleHandlesRef.current);
+    pendingPrepareProviderSignatureByIdRef.current.clear();
     setFieldErrors({});
     setLocalError(null);
     submittedTeamNameRef.current = request.teamName;
@@ -2335,10 +2268,15 @@ export const CreateTeamDialog = ({
           resetFormState();
           onClose();
         } catch (error) {
+          optionalPreflight.resumeInterruptedProviderPreflight(
+            prepareChecksRef.current,
+            lastPrepareProviderSignatureByIdRef.current
+          );
           setLocalError(
             error instanceof Error ? error.message : t('create.errors.createConfigFailed')
           );
         } finally {
+          submissionFence.release();
           submittedTeamNameRef.current = null;
           setIsSubmitting(false);
         }
@@ -2356,10 +2294,15 @@ export const CreateTeamDialog = ({
         resetFormState();
         onClose();
       } catch (error) {
+        optionalPreflight.resumeInterruptedProviderPreflight(
+          prepareChecksRef.current,
+          lastPrepareProviderSignatureByIdRef.current
+        );
         if (error instanceof Error) {
           setLocalError(error.message);
         }
       } finally {
+        submissionFence.release();
         submittedTeamNameRef.current = null;
         setIsSubmitting(false);
       }
@@ -2444,7 +2387,9 @@ export const CreateTeamDialog = ({
   const createActionLabel = isSubmitting
     ? t('create.actions.creating')
     : launchTeam && prepareState === 'loading'
-      ? t('create.prepare.checkingProviders')
+      ? canSkipPreflight()
+        ? t('create.actions.skipPreflightAndCreate')
+        : t('create.prepare.checkingProviders')
       : t('create.actions.create');
   return (
     <Dialog
@@ -2952,6 +2897,7 @@ export const CreateTeamDialog = ({
             {canCreate && launchTeam ? (
               <ProviderActivityStatusStrip
                 cliStatus={effectiveCliStatus}
+                providerStatusOverride={effectiveCwd ? projectScopedOpenCodeStatus : null}
                 sourceCliStatus={loadingCliStatus}
                 cliStatusLoading={cliStatusLoading}
                 cliProviderStatusLoading={cliProviderStatusLoading}
@@ -3134,7 +3080,7 @@ export const CreateTeamDialog = ({
                   !canCreate ||
                   !draftLoaded ||
                   isSubmitting ||
-                  prepareState === 'loading' ||
+                  (prepareState === 'loading' && !canSkipPreflight()) ||
                   hasCreateFormErrors ||
                   prepareBlocksCreate
                 }

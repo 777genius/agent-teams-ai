@@ -1365,7 +1365,11 @@
       "relaunchTeam": "Relaunch 팀",
       "relaunching": "...에",
       "saveChanges": "자주 묻는 질문",
-      "saving": "저장..."
+      "saving": "저장...",
+      "skipPreflightAndLaunch": "사전 검사를 건너뛰고 시작"
+    },
+    "workspaceTrust": {
+      "description": "팀이 시작되면 프로젝트 명령과 MCP 서버가 실행될 수 있습니다."
     },
     "billing": {
       "prefix": "시작 6월 15, 2026, Anthropic 요금",
