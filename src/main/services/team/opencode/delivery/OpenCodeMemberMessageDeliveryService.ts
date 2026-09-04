@@ -22,7 +22,10 @@ import {
   assertOpenCodePromptDeliveryNotCancelled,
   OpenCodePromptDeliveryCancelledError,
 } from './OpenCodePromptDeliveryCancellationGuard';
-import { isOpenCodeSessionRefreshRetryRecord } from './OpenCodePromptDeliveryFollowUpPolicy';
+import {
+  healUndeliverableOpenCodePrimaryLaneBootstrap,
+  isOpenCodeSessionRefreshRetryRecord,
+} from './OpenCodePromptDeliveryFollowUpPolicy';
 import {
   buildOpenCodePromptDeliveryAttemptId,
   hashOpenCodePromptDeliveryPayload,
@@ -373,6 +376,28 @@ export class OpenCodeMemberMessageDeliveryService {
                 'Message was saved and will be retried after runtime check-in.',
             ],
           };
+        }
+        // The primary lane used to fall through and send anyway, into a bridge
+        // that can only refuse a lane with no stored session. Returning the
+        // settled refusal here is what makes the unwinnable send never happen;
+        // a null answer means the lane was not provably unbootstrapped and the
+        // old path stands.
+        //
+        // A team whose tracked run is not deliverable (a stop in flight, or a
+        // cleanup fence owning the lane) is never healed: relaunching there
+        // would race the very stop that is running, and the send path already
+        // reports that refusal with its own reason. `trackedRunId` is exactly
+        // the "this team's run is deliverable right now" answer that fence uses.
+        const healed = trackedRunId
+          ? await healUndeliverableOpenCodePrimaryLaneBootstrap(this.deps, input, {
+              teamName,
+              laneId: laneIdentity.laneId,
+              memberName: canonicalMemberName,
+              runId: runtimeRunId,
+            })
+          : null;
+        if (healed) {
+          return healed;
         }
       } else {
         if (!bootstrapSession.appMcpTransportHash?.trim()) {

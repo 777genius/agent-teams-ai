@@ -1,3 +1,4 @@
+import type { OpenCodePrimaryLaneBootstrapSelfHealPorts } from '../opencode/delivery/OpenCodePrimaryLaneBootstrapSelfHeal';
 import type { OpenCodePromptDeliveryWatchdogCoordinatorPorts } from '../opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
 
 /**
@@ -31,4 +32,25 @@ export interface TeamProvisioningOpenCodeDeliveryCompositionPorts {
     resolveCurrentOpenCodeRuntimeRunId: OpenCodePromptDeliveryWatchdogCoordinatorPorts['resolveCurrentRuntimeRunId'];
   };
   logOpenCodePromptDeliveryEvent: OpenCodePromptDeliveryWatchdogCoordinatorPorts['logPromptDeliveryEvent'];
+}
+
+/**
+ * The service-side half of the primary-lane bootstrap self-heal.
+ *
+ * Declared with the delivery pipeline's other ports rather than in
+ * `TeamProvisioningServiceComposition`: that module is already past the repo's
+ * default source-size limit and builds only against a frozen legacy allowance
+ * the size guard exists to retire, so a delivery port belongs next to the
+ * pipeline it serves rather than against the little headroom left there.
+ *
+ * Both members are optional and both fail safe. Without
+ * `rebootstrapOpenCodeAggregatePrimaryLane` the tracker can decide but never
+ * relaunch, and without `isOpenCodePrimaryLaneSelfHealEnabled` the shipped
+ * default (`OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED`) applies. This is
+ * the single seam for turning the automatic relaunch off: supply a predicate
+ * that returns `false` and nothing else in the app changes.
+ */
+export interface TeamProvisioningOpenCodePrimaryLaneSelfHealPorts {
+  rebootstrapOpenCodeAggregatePrimaryLane?(teamName: string, reason: string): Promise<boolean>;
+  isOpenCodePrimaryLaneSelfHealEnabled?: OpenCodePrimaryLaneBootstrapSelfHealPorts['isOpenCodePrimaryLaneSelfHealEnabled'];
 }

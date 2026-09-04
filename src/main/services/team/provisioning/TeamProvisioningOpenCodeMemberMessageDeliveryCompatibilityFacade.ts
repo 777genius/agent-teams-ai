@@ -1,3 +1,4 @@
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 import { createLogger } from '@shared/utils/logger';
 
@@ -7,8 +8,14 @@ import {
   type OpenCodeMemberInboxDelivery,
   type OpenCodeMemberMessageDeliveryInput,
 } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
+import {
+  OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED,
+  OpenCodePrimaryLaneBootstrapSelfHealTracker,
+} from '../opencode/delivery/OpenCodePrimaryLaneBootstrapSelfHeal';
+import { inspectOpenCodeRuntimeLaneStorage } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { type OpenCodeAttachmentPayloadStore } from './TeamProvisioningOpenCodeAttachmentPayloads';
+import { type TeamProvisioningOpenCodePrimaryLaneSelfHealPorts } from './TeamProvisioningOpenCodeDeliveryComposition';
 import {
   createTeamProvisioningOpenCodeInboxAttachmentPayloadBoundary,
   type TeamProvisioningOpenCodeInboxAttachmentPayloadBoundary,
@@ -52,7 +59,7 @@ type OpenCodeMemberMessageDeliveryHostRun = NonNullable<
 
 export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<
   TRun extends TeamProvisioningSendMessageToRunRun,
-> {
+> extends TeamProvisioningOpenCodePrimaryLaneSelfHealPorts {
   readLeadActivityDirectory: TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost['openCodeRuntimeRecoveryFacade']['readOpenCodeMemberDirectory'];
   createDeliveryHost(): TeamProvisioningOpenCodeMemberMessageDeliveryHost;
   /** Tracked run that owns the OpenCode primary lane for a team, if any. */
@@ -79,6 +86,7 @@ export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServi
 >
   extends
     TeamProvisioningOpenCodeMemberMessageDeliveryServiceHost,
+    TeamProvisioningOpenCodePrimaryLaneSelfHealPorts,
     Omit<
       TeamProvisioningOpenCodeMemberInboxRelayServiceHost,
       'isOpenCodeDeliveryResponseReadCommitAllowed'
@@ -158,6 +166,28 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
     return this.openCodeMemberInboxRelayBoundaryValue;
   }
 
+  /**
+   * One tracker per service instance, never per delivery: the re-bootstrap
+   * budget and the in-flight guard only mean anything if they outlive a single
+   * pass.
+   */
+  private readonly primaryLaneBootstrapSelfHeal = new OpenCodePrimaryLaneBootstrapSelfHealTracker({
+    inspectLaneStorage: ({ teamName, laneId }) =>
+      inspectOpenCodeRuntimeLaneStorage({
+        teamsBasePath: getTeamsBasePath(),
+        teamName,
+        laneId,
+      }),
+    rebootstrapPrimaryLane: async ({ teamName, reason }) =>
+      (await this.deps.rebootstrapOpenCodeAggregatePrimaryLane?.(teamName, reason)) ?? false,
+    isOpenCodePrimaryLaneSelfHealEnabled: () =>
+      this.deps.isOpenCodePrimaryLaneSelfHealEnabled?.() ??
+      OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED,
+    // Durable: an automatic lead relaunch has to still be explainable once the
+    // lane-scoped ledger is gone, and it must not depend on a log level.
+    logWarning: (message) => logger.diagnostic(message),
+  });
+
   protected createOpenCodeMemberMessageDeliveryService(): ReturnType<
     typeof createOpenCodeMemberMessageDeliveryServiceFromHost
   > {
@@ -166,6 +196,8 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
       notifyOpenCodeLeadTurnActivity: (input) => {
         void this.notifyOpenCodeLeadTurnActivity(input);
       },
+      requestOpenCodePrimaryLaneRebootstrap: (input) =>
+        this.primaryLaneBootstrapSelfHeal.request(input),
     });
   }
 
@@ -260,6 +292,15 @@ export function createTeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
     getCleanedStoppedTeamOpenCodeRuntimeLanes: () => service.cleanedStoppedTeamOpenCodeRuntimeLanes,
     isCurrentTrackedRun: (run) => service.isCurrentTrackedRun(run),
     setLeadActivity: (run, state) => service.setLeadActivity(run, state),
+    ...(service.rebootstrapOpenCodeAggregatePrimaryLane
+      ? {
+          rebootstrapOpenCodeAggregatePrimaryLane: (teamName: string, reason: string) =>
+            service.rebootstrapOpenCodeAggregatePrimaryLane!(teamName, reason),
+        }
+      : {}),
+    ...(service.isOpenCodePrimaryLaneSelfHealEnabled
+      ? { isOpenCodePrimaryLaneSelfHealEnabled: service.isOpenCodePrimaryLaneSelfHealEnabled }
+      : {}),
     ...options,
   });
 }

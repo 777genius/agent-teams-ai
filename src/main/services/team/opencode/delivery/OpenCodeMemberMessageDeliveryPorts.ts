@@ -4,6 +4,7 @@ import type {
   TeamLaunchRuntimeAdapter,
 } from '../../runtime';
 import type { OpenCodeCommittedBootstrapSessionRecord } from '../store/OpenCodeRuntimeManifestEvidenceReader';
+import type { PrimaryLaneBootstrapSelfHealDecision } from './OpenCodePrimaryLaneBootstrapSelfHeal';
 import type { OpenCodePromptDeliveryFollowUpPolicy } from './OpenCodePromptDeliveryFollowUpPolicy';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
@@ -306,6 +307,18 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
    * 'active' once a prompt is accepted, 'idle' once the delivery settles.
    */
   notifyOpenCodeLeadTurnActivity?(input: OpenCodeLeadTurnActivityNotification): void;
+  /**
+   * Bounded, exactly-once lead re-bootstrap for a primary lane that holds no
+   * committed runtime session. Absent means the delivery keeps its old
+   * behaviour and the refusal is never escalated.
+   */
+  requestOpenCodePrimaryLaneRebootstrap?(input: {
+    teamName: string;
+    laneId: string;
+    memberName: string;
+    runId: string | null;
+    reason: string;
+  }): Promise<PrimaryLaneBootstrapSelfHealDecision>;
   observeOpenCodeDirectUserDeliveryInlineIfNeeded(input: {
     adapter: OpenCodeRuntimeMessageAdapter;
     ledger: OpenCodePromptDeliveryLedgerStore;

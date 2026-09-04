@@ -4,12 +4,15 @@ import {
   PRIMARY_LANE_REBOOTSTRAP_BUDGET_EXHAUSTED_DIAGNOSTIC,
   PRIMARY_LANE_REBOOTSTRAP_DISABLED_DIAGNOSTIC,
 } from '../OpenCodePrimaryLaneBootstrapSelfHeal';
+import { OpenCodePromptDeliveryCancelledError } from '../OpenCodePromptDeliveryCancellationGuard';
 import {
+  healUndeliverableOpenCodePrimaryLaneBootstrap,
   OpenCodePromptDeliveryFollowUpPolicy,
   settleUndeliverableOpenCodePrimaryLaneBootstrap,
 } from '../OpenCodePromptDeliveryFollowUpPolicy';
 import { isOpenCodePromptDeliveryAttemptDue } from '../OpenCodePromptDeliveryLedger';
 
+import type { PrimaryLaneBootstrapSelfHealDecision } from '../OpenCodePrimaryLaneBootstrapSelfHeal';
 import type {
   OpenCodePromptDeliveryFollowUpDependencies,
   UndeliverableOpenCodePrimaryLaneBootstrapDeps,
@@ -405,5 +408,144 @@ describe('settleUndeliverableOpenCodePrimaryLaneBootstrap', () => {
     expect(createOpenCodePromptDeliveryLedger).not.toHaveBeenCalled();
     expect(delivery.ledgerStatus).toBeUndefined();
     expect(delivery.reason).toBe(MISSING_REASON);
+  });
+});
+
+/**
+ * The delivery service's whole primary-lane refusal, decided in one place: the
+ * service asks this and either returns what it settled or continues unchanged.
+ */
+describe('healUndeliverableOpenCodePrimaryLaneBootstrap', () => {
+  const message = { messageId: 'launch-prompt-1', text: 'Summarize the repo' };
+  const target = {
+    teamName: TEAM_NAME,
+    laneId: 'primary',
+    memberName: MEMBER_NAME,
+    runId: 'run-a1',
+  };
+
+  function createHealDeps(input: {
+    existingRecord?: OpenCodePromptDeliveryLedgerRecord | null;
+    decision?: PrimaryLaneBootstrapSelfHealDecision;
+  }): {
+    deps: UndeliverableOpenCodePrimaryLaneBootstrapDeps;
+    requestOpenCodePrimaryLaneRebootstrap: Mock<
+      NonNullable<
+        UndeliverableOpenCodePrimaryLaneBootstrapDeps['requestOpenCodePrimaryLaneRebootstrap']
+      >
+    >;
+    createOpenCodePromptDeliveryLedger: Mock<
+      UndeliverableOpenCodePrimaryLaneBootstrapDeps['createOpenCodePromptDeliveryLedger']
+    >;
+    markNextAttemptDeferred: PolicyHarness['markNextAttemptDeferred'];
+  } {
+    const { policy, ledger, markNextAttemptDeferred } = createPolicy();
+    Object.assign(ledger, {
+      ensurePending: vi.fn(async () => spentLedgerRecord()),
+      getByInboxMessage: vi.fn(async () => input.existingRecord ?? null),
+    });
+    const createOpenCodePromptDeliveryLedger = vi.fn<
+      UndeliverableOpenCodePrimaryLaneBootstrapDeps['createOpenCodePromptDeliveryLedger']
+    >(() => ledger);
+    const requestOpenCodePrimaryLaneRebootstrap = vi.fn(
+      async () =>
+        input.decision ?? ({ action: 'wait', retryAfterMs: 15_000, diagnostic: 'grace' } as const)
+    );
+    return {
+      deps: {
+        createOpenCodePromptDeliveryLedger,
+        openCodePromptDeliveryFollowUpPolicy: policy,
+        requestOpenCodePrimaryLaneRebootstrap,
+        nowIso: () => new Date(NOW_MS).toISOString(),
+      },
+      requestOpenCodePrimaryLaneRebootstrap,
+      createOpenCodePromptDeliveryLedger,
+      markNextAttemptDeferred,
+    };
+  }
+
+  /**
+   * Negative control on the force-stop ordering: force stop persists the
+   * delivery cancellation BEFORE the stop, so a cancelled row is the earliest
+   * proof the run is going away. Asking for a relaunch there would race the very
+   * stop that cancelled the row.
+   */
+  it('refuses a cancelled row without asking for a relaunch', async () => {
+    const { deps, requestOpenCodePrimaryLaneRebootstrap, markNextAttemptDeferred } = createHealDeps(
+      {
+        existingRecord: {
+          ...spentLedgerRecord(),
+          cancelledAt: new Date(NOW_MS).toISOString(),
+        } as OpenCodePromptDeliveryLedgerRecord,
+      }
+    );
+
+    await expect(
+      healUndeliverableOpenCodePrimaryLaneBootstrap(deps, message, target)
+    ).rejects.toBeInstanceOf(OpenCodePromptDeliveryCancelledError);
+    expect(requestOpenCodePrimaryLaneRebootstrap).not.toHaveBeenCalled();
+    expect(markNextAttemptDeferred).not.toHaveBeenCalled();
+  });
+
+  it('heals a row the stop has not cancelled', async () => {
+    const { deps, requestOpenCodePrimaryLaneRebootstrap, markNextAttemptDeferred } = createHealDeps(
+      {
+        existingRecord: spentLedgerRecord(),
+      }
+    );
+
+    const delivery = await healUndeliverableOpenCodePrimaryLaneBootstrap(deps, message, target);
+
+    expect(requestOpenCodePrimaryLaneRebootstrap).toHaveBeenCalledWith({
+      teamName: TEAM_NAME,
+      laneId: 'primary',
+      memberName: MEMBER_NAME,
+      runId: 'run-a1',
+      reason: MISSING_REASON,
+    });
+    expect(markNextAttemptDeferred).toHaveBeenCalledTimes(1);
+    expect(delivery?.reason).toBe(MISSING_REASON);
+  });
+
+  /**
+   * Negative control: a lane whose evidence turned up after all raced its own
+   * commit, so the delivery must continue on the unchanged path rather than
+   * settle a refusal.
+   */
+  it('returns null when the probe answers not_applicable', async () => {
+    const { deps, markNextAttemptDeferred } = createHealDeps({
+      decision: { action: 'not_applicable', diagnostic: 'raced' },
+    });
+
+    expect(await healUndeliverableOpenCodePrimaryLaneBootstrap(deps, message, target)).toBeNull();
+    expect(markNextAttemptDeferred).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Negative control on the opt-in seam: with no port the refusal is never
+   * escalated and no ledger is opened to decide it.
+   */
+  it('returns null and opens no ledger when no port is wired', async () => {
+    const { deps, createOpenCodePromptDeliveryLedger } = createHealDeps({});
+    delete deps.requestOpenCodePrimaryLaneRebootstrap;
+
+    expect(await healUndeliverableOpenCodePrimaryLaneBootstrap(deps, message, target)).toBeNull();
+    expect(createOpenCodePromptDeliveryLedger).not.toHaveBeenCalled();
+  });
+
+  /** A message the relay does not own has no row to be cancelled. */
+  it('asks for a relaunch without reading a ledger when the message has no id', async () => {
+    const { deps, requestOpenCodePrimaryLaneRebootstrap, createOpenCodePromptDeliveryLedger } =
+      createHealDeps({});
+
+    const delivery = await healUndeliverableOpenCodePrimaryLaneBootstrap(
+      deps,
+      { text: 'Summarize the repo' },
+      target
+    );
+
+    expect(requestOpenCodePrimaryLaneRebootstrap).toHaveBeenCalledTimes(1);
+    expect(createOpenCodePromptDeliveryLedger).not.toHaveBeenCalled();
+    expect(delivery?.reason).toBe(MISSING_REASON);
   });
 });
