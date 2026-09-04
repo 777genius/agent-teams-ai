@@ -155,7 +155,8 @@ function markdownImageTargets(body, id) {
   const references = new Map();
   const images = [];
   const visit = (node) => {
-    if (node.type === 'definition') references.set(node.identifier, node.url);
+    if (node.type === 'definition' && !references.has(node.identifier))
+      references.set(node.identifier, node.url);
     else if (node.type === 'image') images.push(node.url);
     else if (node.type === 'imageReference') images.push({ reference: node.identifier });
     if (Array.isArray(node.children)) for (const child of node.children) visit(child);

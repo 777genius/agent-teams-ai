@@ -5,8 +5,8 @@ Date: 2026-09-05. Verification used the isolated `feat/announcements` worktree f
 ## Automated checks
 
 - Native TypeScript 7 typecheck: passed.
-- Focused Vitest run: 204/204 passed across domain, main, source/cache, shell, IPC, preload, renderer, Markdown, shared overlay behavior, review guards and graph behavior.
-- Publishing invariants: 12/12 passed; immutable-content check against `origin/main` passed.
+- Focused Vitest run: 205/205 passed across domain, main, source/cache, shell, IPC, preload, renderer, Markdown, shared overlay behavior, review guards and graph behavior.
+- Publishing invariants: 13/13 passed; immutable-content check against `origin/main` passed.
 - Actual landing generation: passed, including 121 prerendered routes. The generated deployed-shape feed byte-matches the generator output.
 - `git diff --check` for the implementation scope: passed.
 - Changed-file ESLint passed without warnings. The repository i18n validator still reports its pre-existing cross-catalog backlog; the seven corrected announcement catalogs parse successfully without key changes.

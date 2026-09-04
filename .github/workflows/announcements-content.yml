@@ -19,9 +19,14 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+          cache: pnpm
+      - name: Install announcement parser dependencies
+        run: pnpm install --filter agent-teams-ai --prod --frozen-lockfile --ignore-scripts
       - name: Validate exact source against available Git base
         env:
           PR_BASE: ${{ github.event.pull_request.base.sha }}

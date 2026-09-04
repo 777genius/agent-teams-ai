@@ -195,6 +195,35 @@ test('ignores image syntax inside fenced and inline code', async () => {
   assert.equal(feed.items.length, 1);
 });
 
+test('uses the first CommonMark image reference definition', async () => {
+  const f = await fixture();
+  await writeFile(path.join(f.dir, 'assets', 'first.png'), 'first');
+  await writeFile(path.join(f.dir, 'assets', 'last.png'), 'last');
+  await writeFile(
+    path.join(f.dir, 'body.md'),
+    ['![Example][picture]', '', '[picture]: assets/first.png', '[picture]: assets/last.png'].join(
+      '\n'
+    )
+  );
+  const feed = await generateAnnouncements(f);
+  const bundleDir = path.dirname(
+    path.join(path.dirname(f.outputDir), feed.items[0].bodyPath.replace(/^\//, ''))
+  );
+  assert.equal(await readFile(path.join(bundleDir, 'assets', 'first.png'), 'utf8'), 'first');
+  await assert.rejects(readFile(path.join(bundleDir, 'assets', 'last.png')), /ENOENT/);
+
+  await writeFile(
+    path.join(f.dir, 'body.md'),
+    [
+      '![Example][picture]',
+      '',
+      '[picture]: https://example.com/remote.png',
+      '[picture]: assets/first.png',
+    ].join('\n')
+  );
+  await assert.rejects(generateAnnouncements(f), /image must name an existing local asset/);
+});
+
 test('immutable Git comparison normalizes dates/defaults and prohibits removal or draft rollback', async () => {
   const f = await fixture();
   const baseRef = commit(f);
