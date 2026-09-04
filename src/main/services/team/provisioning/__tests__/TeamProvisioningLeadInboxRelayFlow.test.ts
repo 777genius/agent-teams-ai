@@ -398,8 +398,10 @@ describe('lead inbox relay flow', () => {
     run.cancelRequested = true;
     releaseFirstSend?.();
 
-    await expect(Promise.all([first, queued])).resolves.toEqual([1, 0]);
+    await expect(Promise.all([first, queued])).resolves.toEqual([0, 0]);
     expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1);
+    expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(ports.persistSentMessage).not.toHaveBeenCalled();
   });
 
   it('keeps a delivery alive while the lead proves the turn is running with stream activity', async () => {

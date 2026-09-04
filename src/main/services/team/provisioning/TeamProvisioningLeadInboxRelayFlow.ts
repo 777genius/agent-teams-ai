@@ -24,6 +24,7 @@ import {
 } from './TeamProvisioningInboxRelayPolicy';
 import { scanLeadInboxPermissionRequests } from './TeamProvisioningLeadPermissionScan';
 import { joinLeadRelayCaptureText } from './TeamProvisioningLeadProcessMessages';
+import { cancelRunLeadRelayCapture } from './TeamProvisioningLeadRelayCancellation';
 import { projectLeadRelayReply } from './TeamProvisioningLeadRelayProjection';
 
 import type { InboxMessage, TeamChangeEvent } from '@shared/types';
@@ -368,6 +369,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
   const { nativeMatchedMessageIds, persisted: sameTeamPersisted } =
     await ports.confirmSameTeamNativeMatches(teamName, leadName, remainingUnread);
 
+  if (isStaleRelayRun()) return 0;
   const runStartedAtMs = Date.parse(run.startedAt);
   const deferredByAge = remainingUnread.filter(
     (message) =>
@@ -441,6 +443,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
       ...(member.role?.trim() ? { role: member.role.trim() } : {}),
     }));
   const workSyncControlUrl = await ports.resolveControlApiBaseUrl();
+  if (isStaleRelayRun()) return 0;
   run.activeCrossTeamReplyHints = buildLeadActiveCrossTeamReplyHints(batch);
   const redeliveredMessageIds = markLeadRelayAttemptsAndCollectRedeliveries(
     ports.relayedLeadInboxMessageIds,
@@ -465,17 +468,18 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     ports
   );
 
+  // Observe rejection before sending: stop/cleanup may cancel while transport is pending.
+  const finalizedCapture = finalizeLeadRelayCapture(run, capturePromise, ports);
   try {
-    await ports.sendMessageToRun(run, message);
+    await Promise.race([ports.sendMessageToRun(run, message), finalizedCapture]);
   } catch {
-    if (run.leadRelayCapture) {
-      ports.clearTimeout(run.leadRelayCapture.timeoutHandle);
-      run.leadRelayCapture = null;
-    }
+    cancelRunLeadRelayCapture(run);
+    await finalizedCapture;
     return 0;
   }
 
-  const captureResult = await finalizeLeadRelayCapture(run, capturePromise, ports);
+  const captureResult = await finalizedCapture;
+  if (isStaleRelayRun()) return 0;
   if (!captureResult.deliveryConfirmed) {
     run.activeCrossTeamReplyHints = [];
     ports.logger.debug(
@@ -505,6 +509,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     hasAcceptedLeadWorkSyncReport: ports.hasAcceptedLeadWorkSyncReport,
     scheduleLeadProofMissingWorkSyncRecovery: ports.scheduleLeadProofMissingWorkSyncRecovery,
   });
+  if (isStaleRelayRun()) return 0;
   for (const m of readCommitBatch) {
     relayedIds.add(m.messageId);
   }
@@ -517,6 +522,7 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     }
   }
 
+  if (isStaleRelayRun()) return 0;
   const replyProjection = projectLeadRelayReply({
     replyText: captureResult.replyText,
     relayPrompt: message,
@@ -578,7 +584,7 @@ function startLeadRelayCapture<TRun extends LeadInboxRelayFlowRun>(
   const captureStartedAtMs = ports.nowMs();
   return new Promise<string>((resolve, reject) => {
     const onCaptureDeadline = (): void => {
-      reject(new Error('Timed out waiting for lead reply'));
+      capture.rejectOnce('Timed out waiting for lead reply');
     };
     const timeoutHandle = ports.setTimeout(onCaptureDeadline, captureTimeoutMs);
     const capture: LeadInboxRelayCapture = {

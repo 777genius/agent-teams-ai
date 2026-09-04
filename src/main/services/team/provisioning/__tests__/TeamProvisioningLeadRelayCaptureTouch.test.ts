@@ -132,6 +132,23 @@ describe('lead relay capture activity proof', () => {
     expect(touch).toHaveBeenCalledTimes(1);
   });
 
+  it.each(['processKilled', 'cancelRequested'] as const)(
+    'ignores late stream events after %s',
+    (flag) => {
+      const touch = vi.fn();
+      const run = createRun({ [flag]: true, leadRelayCapture: createCapture(touch) });
+      const ports = createPorts();
+      handleTeamProvisioningStreamJsonMessage(run, toolResultMessage(), ports);
+      handleTeamProvisioningStreamJsonMessage(run, assistantMessage(), ports);
+      handleTeamProvisioningStreamJsonMessage(run, { type: 'result', result: 'Late reply' }, ports);
+      expect(touch).not.toHaveBeenCalled();
+      expect(run.leadRelayCapture?.resolveOnce).not.toHaveBeenCalled();
+      expect(ports.pushLiveLeadTextMessage).not.toHaveBeenCalled();
+      expect(ports.captureSendMessages).not.toHaveBeenCalled();
+      expect(ports.startRuntimeToolActivity).not.toHaveBeenCalled();
+    }
+  );
+
   it('handles the same stream events without a capture and without throwing', () => {
     const run = createRun({ leadRelayCapture: null });
     const ports = createPorts();

@@ -238,11 +238,22 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
       const onlyMessageId = options?.onlyMessageId?.trim() || null;
       const relayKey = teamName;
       const existing = deps.leadInboxRelayInFlight.get(relayKey);
+      // A caller's 120s observation budget is not the activity-extended capture lifetime.
+      // Keep ownership until the work settles (or lifecycle cleanup removes this run).
+      const releaseOwnershipWhenSettled = (work: Promise<number>): void => {
+        const release = (): void => {
+          if (deps.leadInboxRelayInFlight.get(relayKey) === work) {
+            deps.leadInboxRelayInFlight.delete(relayKey);
+          }
+        };
+        void work.then(release, release);
+      };
       const canShareExisting =
         existing &&
         (!leadInboxRelayScopes.has(existing) ||
           leadInboxRelayScopes.get(existing) === onlyMessageId);
       if (existing && canShareExisting) {
+        releaseOwnershipWhenSettled(existing);
         try {
           return await waitForInFlight({
             promise: existing,
@@ -257,10 +268,6 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
             `[${teamName}] lead_inbox_relay_timed_out: ${deps.getErrorMessage(error)}`
           );
           return 0;
-        } finally {
-          if (deps.leadInboxRelayInFlight.get(relayKey) === existing) {
-            deps.leadInboxRelayInFlight.delete(relayKey);
-          }
         }
       }
 
@@ -271,6 +278,7 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
 
       leadInboxRelayScopes.set(work, onlyMessageId);
       deps.leadInboxRelayInFlight.set(relayKey, work);
+      releaseOwnershipWhenSettled(work);
       try {
         return await waitForInFlight({
           promise: work,
@@ -285,10 +293,6 @@ export function createTeamProvisioningLeadInboxRelayPortsBoundary<
           `[${teamName}] lead_inbox_relay_timed_out: ${deps.getErrorMessage(error)}`
         );
         return 0;
-      } finally {
-        if (deps.leadInboxRelayInFlight.get(relayKey) === work) {
-          deps.leadInboxRelayInFlight.delete(relayKey);
-        }
       }
     },
   };

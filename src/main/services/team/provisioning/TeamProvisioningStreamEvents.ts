@@ -642,6 +642,7 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
 ): void {
+  if (run.processKilled || run.cancelRequested) return;
   if (!run.detectedSessionId) {
     const sid = typeof msg.session_id === 'string' ? msg.session_id : undefined;
     if (sid && sid.trim().length > 0) {
@@ -651,7 +652,6 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
       );
     }
   }
-
   if (msg.type === 'user') {
     ports.resetLiveLeadTextBuffer(run);
     const rawUserText = extractStreamUserText(msg);
