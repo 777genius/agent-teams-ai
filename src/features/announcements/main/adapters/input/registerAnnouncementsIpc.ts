@@ -75,7 +75,8 @@ export function registerAnnouncementsIpc(
   });
   handle(channels.cancelAsset, 1, (context, requestId) => {
     if (!validRequestId(requestId)) throw new Error('Invalid announcement request');
-    return feature.cancelAsset(requestId, context);
+    feature.cancelAsset(requestId, context);
+    return undefined;
   });
   handle(channels.dismiss, 1, (_context, id) => {
     if (!validId(id)) throw new Error('Invalid announcement request');
