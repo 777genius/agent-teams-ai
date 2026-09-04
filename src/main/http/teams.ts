@@ -7,6 +7,7 @@ import { constants as fsConstants } from 'fs';
 import { access } from 'fs/promises';
 import { join } from 'path';
 
+import { registerTeamLifecycleRoutes } from './teams/teamLifecycleRoutes';
 import { registerTeamMemberDiagnosticsRoute } from './teamMemberDiagnostics';
 import {
   HttpBadRequestError,
@@ -66,14 +67,6 @@ function getTeamProvisioningStatusApi(services: HttpServices): TeamHttpProvision
   const api = services.teamApis?.provisioningStatus;
   if (!api) {
     throw new HttpFeatureUnavailableError('Team provisioning status is not available in this mode');
-  }
-  return api;
-}
-
-function getTeamRuntimeApi(services: HttpServices): TeamHttpRuntimeApi {
-  const api = services.teamApis?.runtime;
-  if (!api) {
-    throw new HttpFeatureUnavailableError('Team runtime control is not available in this mode');
   }
   return api;
 }
@@ -242,6 +235,13 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
     isTeamNotFoundError,
   });
+  registerTeamLifecycleRoutes(app, services, {
+    logger,
+    shouldLogError,
+    getStatusCode,
+    getResponseErrorMessage,
+    createFeatureUnavailableError: (message) => new HttpFeatureUnavailableError(message),
+  });
 
   app.get('/api/teams', async (_request, reply) => {
     try {
@@ -341,54 +341,6 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
     }
   );
 
-  app.post<{ Params: { teamName: string } }>(
-    '/api/teams/:teamName/stop',
-    async (request, reply) => {
-      try {
-        const validatedTeamName = validateTeamName(request.params.teamName);
-        if (!validatedTeamName.valid) {
-          return reply.status(400).send({ error: validatedTeamName.error });
-        }
-
-        const teamRuntimeApi = getTeamRuntimeApi(services);
-        await teamRuntimeApi.stopTeam(validatedTeamName.value!);
-        return reply.send(await teamRuntimeApi.getRuntimeState(validatedTeamName.value!));
-      } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in POST /api/teams/${request.params.teamName}/stop:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-      }
-    }
-  );
-
-  app.get<{ Params: { teamName: string } }>(
-    '/api/teams/:teamName/runtime',
-    async (request, reply) => {
-      try {
-        const validatedTeamName = validateTeamName(request.params.teamName);
-        if (!validatedTeamName.valid) {
-          return reply.status(400).send({ error: validatedTeamName.error });
-        }
-
-        return reply.send(
-          await getTeamRuntimeApi(services).getRuntimeState(validatedTeamName.value!)
-        );
-      } catch (error) {
-        if (shouldLogError(error)) {
-          logger.error(
-            `Error in GET /api/teams/${request.params.teamName}/runtime:`,
-            getErrorMessage(error)
-          );
-        }
-        return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-      }
-    }
-  );
-
   app.get<{ Params: { runId: string } }>(
     '/api/teams/provisioning/:runId',
     async (request, reply) => {
@@ -411,21 +363,6 @@ export function registerTeamRoutes(app: FastifyInstance, services: HttpServices)
       }
     }
   );
-
-  app.get('/api/teams/runtime/alive', async (_request, reply) => {
-    try {
-      const teamRuntimeApi = getTeamRuntimeApi(services);
-      const runtimeStates = await Promise.all(
-        teamRuntimeApi.getAliveTeams().map((teamName) => teamRuntimeApi.getRuntimeState(teamName))
-      );
-      return reply.send(runtimeStates);
-    } catch (error) {
-      if (shouldLogError(error)) {
-        logger.error('Error in GET /api/teams/runtime/alive:', getErrorMessage(error));
-      }
-      return reply.status(getStatusCode(error)).send({ error: getResponseErrorMessage(error) });
-    }
-  });
 
   app.post<{ Params: { teamName: string }; Body: Record<string, unknown> }>(
     '/api/teams/:teamName/opencode/runtime/bootstrap-checkin',

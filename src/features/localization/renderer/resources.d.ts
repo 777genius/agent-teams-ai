@@ -3769,6 +3769,7 @@ export default interface Resources {
         cancel: 'Cancel';
         delete: 'Delete';
         editCode: 'Edit code';
+        forceStop: 'Force stop';
         launch: 'Launch';
         remove: 'Remove';
         stop: 'Stop';
@@ -3801,6 +3802,17 @@ export default interface Resources {
         member_one: 'member';
         member_other: 'members';
         title: 'Team not launched yet';
+      };
+      forceStop: {
+        cancelLabel: 'Cancel';
+        confirmLabel: 'Force stop';
+        message: 'Force stop "{{team}}"? Attempts to stop this team and cancels its pending message deliveries. Runtime exit is not guaranteed; shared runtime hosts are not terminated. Queued messages stay in the inbox.';
+        title: 'Force stop team';
+      };
+      forceStopFailed: {
+        confirmLabel: 'OK';
+        fallbackMessage: 'An unexpected error occurred';
+        title: 'Force stop failed';
       };
       invalidTab: 'Invalid team tab';
       kanbanSafeData: 'Failed to fully load kanban. Displaying safe data.';
@@ -3835,6 +3847,7 @@ export default interface Resources {
         deleteTeam: 'Delete team';
         editTeam: 'Edit team';
         editUnavailableProvisioning: 'Edit team is unavailable while provisioning is still in progress';
+        forceStopTeam: 'Force stop team - interrupts work in progress';
         openBuiltInEditor: 'Open project in built-in editor';
         openTeamGraph: 'Open team graph';
         openTeamUsage: 'Open usage dashboard';

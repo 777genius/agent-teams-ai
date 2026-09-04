@@ -359,6 +359,7 @@
       "cancel": "Abbrechen",
       "delete": "Löschen",
       "editCode": "Code bearbeiten",
+      "forceStop": "Erzwungen stoppen",
       "launch": "Einleitung",
       "remove": "Entfernen",
       "stop": "Stopp.",
@@ -383,6 +384,17 @@
       "member_one": "Mitglied",
       "member_other": "Mitglieder",
       "title": "noch nicht gestartet"
+    },
+    "forceStop": {
+      "cancelLabel": "Abbrechen",
+      "confirmLabel": "Erzwungen stoppen",
+      "message": "\"{{team}}\" erzwungen stoppen? Versucht, dieses Team zu stoppen, und bricht seine ausstehenden Nachrichtenzustellungen ab. Das Beenden der Laufzeit ist nicht garantiert; gemeinsam genutzte Laufzeithosts werden nicht beendet. Nachrichten in der Warteschlange bleiben im Posteingang.",
+      "title": "Team erzwungen stoppen"
+    },
+    "forceStopFailed": {
+      "confirmLabel": "OK",
+      "fallbackMessage": "Ein unerwarteter Fehler ist aufgetreten",
+      "title": "Erzwungenes Stoppen fehlgeschlagen"
     },
     "invalidTab": "Invalide Team Tab",
     "kanbanSafeData": "Versäumt, Kanban vollständig zu laden. Anzeige sicherer Daten.",
@@ -417,6 +429,7 @@
       "deleteTeam": "Löschen von Team",
       "editTeam": "Team bearbeiten",
       "editUnavailableProvisioning": "Edit-Team ist nicht verfügbar, während die Bereitstellung noch im Gang ist",
+      "forceStopTeam": "Team erzwungen stoppen - unterbricht laufende Arbeit",
       "openBuiltInEditor": "Open-Projekt im integrierten Editor",
       "openTeamGraph": "Teamgraphen öffnen",
       "stopTeam": "Stop Team",

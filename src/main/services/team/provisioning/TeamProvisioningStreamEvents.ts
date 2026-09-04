@@ -9,6 +9,12 @@ import { isAgentTeamsToolUse } from '../agentTeamsToolNames';
 import { isWorkspaceTrustLaunchFailureText } from '../TeamLaunchFailureArtifactPack';
 
 import {
+  appendLeadRelayCaptureAssistantText,
+  isSyntheticLeadTextChunk,
+  type LeadRelayCaptureStreamState,
+  resolveLeadRelayCaptureOnTerminalResult,
+} from './leadRelayCaptureStreamHooks';
+import {
   clearGeminiPostLaunchHydrationState,
   clearPostCompactReminderState,
 } from './TeamProvisioningCleanup';
@@ -57,20 +63,7 @@ export interface TeamProvisioningStreamRun {
   memberSpawnStatuses: Map<string, MemberSpawnStatusEntry>;
   isLaunch: boolean;
   anthropicApiKeyHelper: { directory: string } | null;
-  leadRelayCapture: {
-    textParts: string[];
-    textJoinMode?: 'block' | 'stream';
-    recoveryMessageId?: string;
-    requireTerminalResult?: boolean;
-    terminalResultSucceeded?: boolean;
-    hasVisibleSendMessage?: boolean;
-    hasUserVisibleSendMessage?: boolean;
-    settled: boolean;
-    idleHandle: NodeJS.Timeout | null;
-    idleMs: number;
-    resolveOnce: (text: string) => void;
-    rejectOnce: (error: string) => void;
-  } | null;
+  leadRelayCapture: LeadRelayCaptureStreamState | null;
   pendingToolCalls: ToolCallMeta[];
   liveLeadTextBuffer: unknown;
   silentUserDmForward: { mode: 'user_dm' | 'member_inbox_relay' } | null;
@@ -411,17 +404,6 @@ export function getStableLeadThoughtMessageId(msg: Record<string, unknown>): str
   return null;
 }
 
-function isSyntheticLeadTextChunk(msg: Record<string, unknown>): boolean {
-  const message = (msg.message ?? msg) as Record<string, unknown>;
-  return message.model === '<synthetic>' && message.type === 'message';
-}
-
-function joinLeadRelayCaptureText(
-  capture: NonNullable<TeamProvisioningStreamRun['leadRelayCapture']>
-): string {
-  return capture.textParts.join(capture.textJoinMode === 'stream' ? '' : '\n').trim();
-}
-
 function recordDeterministicBootstrapTracking(
   run: TeamProvisioningStreamRun,
   event: string,
@@ -660,6 +642,7 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
   msg: Record<string, unknown>,
   ports: TeamProvisioningStreamEventPorts<TRun>
 ): void {
+  if (run.processKilled || run.cancelRequested) return;
   if (!run.detectedSessionId) {
     const sid = typeof msg.session_id === 'string' ? msg.session_id : undefined;
     if (sid && sid.trim().length > 0) {
@@ -669,7 +652,6 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
       );
     }
   }
-
   if (msg.type === 'user') {
     ports.resetLiveLeadTextBuffer(run);
     const rawUserText = extractStreamUserText(msg);
@@ -687,6 +669,9 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
         );
       }
     }
+    if (content.some((block) => block?.type === 'tool_result')) {
+      run.leadRelayCapture?.touch?.();
+    }
     for (const block of content) {
       if (block?.type !== 'tool_result' || typeof block.tool_use_id !== 'string') continue;
       ports.finishRuntimeToolActivity(
@@ -701,6 +686,7 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
   }
   if (msg.type === 'assistant') {
     const content = extractStreamContentBlocks(msg);
+    run.leadRelayCapture?.touch?.();
 
     const hasVisibleSendMessage = hasCapturedVisibleSendMessage(content, run.teamName);
     if (run.leadRelayCapture) {
@@ -734,23 +720,11 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
       }
 
       if (run.leadRelayCapture && !run.leadRelayCapture.settled) {
-        const capture = run.leadRelayCapture;
-        if (isSyntheticLeadTextChunk(msg)) {
-          capture.textJoinMode = 'stream';
-        } else if (!capture.textJoinMode) {
-          capture.textJoinMode = 'block';
-        }
-        capture.textParts.push(text);
-        capture.textParts = ports.boundProgressAssistantParts(capture.textParts);
-        if (capture.idleHandle) {
-          clearTimeout(capture.idleHandle);
-        }
-        if (!capture.requireTerminalResult) {
-          capture.idleHandle = setTimeout(() => {
-            const combined = joinLeadRelayCaptureText(capture);
-            capture.resolveOnce(combined);
-          }, capture.idleMs);
-        }
+        appendLeadRelayCaptureAssistantText(run.leadRelayCapture, {
+          text,
+          isSyntheticChunk: isSyntheticLeadTextChunk(msg),
+          boundTextParts: (parts) => ports.boundProgressAssistantParts(parts),
+        });
       } else if (run.provisioningComplete) {
         if (
           !run.silentUserDmForward &&
@@ -978,12 +952,7 @@ function handleSuccessResultMessage<TRun extends TeamProvisioningStreamRun>(
       detail: 'sentMessages.json',
     });
   }
-  if (run.leadRelayCapture) {
-    const capture = run.leadRelayCapture;
-    capture.terminalResultSucceeded = true;
-    const combined = joinLeadRelayCaptureText(capture);
-    capture.resolveOnce(combined);
-  }
+  resolveLeadRelayCaptureOnTerminalResult(run.leadRelayCapture);
   ports.resetLiveLeadTextBuffer(run);
   run.activeCrossTeamReplyHints = [];
   run.pendingInboxRelayCandidates = [];

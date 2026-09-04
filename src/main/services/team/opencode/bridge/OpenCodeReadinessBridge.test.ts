@@ -1,13 +1,22 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+
+import { prepareCursorAcpLaunchMcpConfig } from '../config/CursorMcpConfigWriter';
 
 import {
   OpenCodeReadinessBridge,
   type OpenCodeReadinessBridgeCommandExecutor,
+  type OpenCodeReadinessBridgeOptions,
+} from './OpenCodeReadinessBridge';
+import {
   resolveOpenCodeLaunchTimeoutMs,
   resolveOpenCodeReadinessTimeoutMs,
-} from './OpenCodeReadinessBridge';
+} from './OpenCodeReadinessTimeoutPolicy';
 
 import type { OpenCodeTeamLaunchReadiness } from '../readiness/OpenCodeTeamLaunchReadiness';
+
+vi.mock('../config/CursorMcpConfigWriter', () => ({
+  prepareCursorAcpLaunchMcpConfig: vi.fn(async () => undefined),
+}));
 
 describe('resolveOpenCodeLaunchTimeoutMs', () => {
   it('keeps the standard launch timeout for regular OpenCode providers', () => {
@@ -109,5 +118,65 @@ describe('OpenCodeReadinessBridge project identity', () => {
         configurable: true,
       });
     }
+  });
+});
+
+describe('OpenCodeReadinessBridge cursor-acp MCP registration', () => {
+  const launchData = { runId: 'run-1', teamLaunchState: 'launched', members: {} };
+  const launchBody = {
+    runId: 'run-1',
+    laneId: 'lane-1',
+    teamName: 'team',
+    projectPath: 'C:\\workspaces\\example',
+    members: [],
+    leadPrompt: 'lead',
+    expectedCapabilitySnapshotId: null,
+    executionProof: { profileRootKey: 'account-1' },
+  } as unknown as Parameters<OpenCodeReadinessBridge['launchOpenCodeTeam']>[0];
+
+  const buildBridge = (
+    options: OpenCodeReadinessBridgeOptions
+  ): { bridge: OpenCodeReadinessBridge; execute: Mock } => {
+    const execute = vi.fn(async () => ({ ok: true, data: launchData }));
+    const bridge = new OpenCodeReadinessBridge(
+      { execute } as unknown as OpenCodeReadinessBridgeCommandExecutor,
+      options
+    );
+    return { bridge, execute };
+  };
+
+  beforeEach(() => {
+    vi.mocked(prepareCursorAcpLaunchMcpConfig).mockClear();
+  });
+
+  it.each(['cursor-acp/auto'])(
+    'registers the endpoint before launching %s',
+    async (selectedModel) => {
+      const { bridge, execute } = buildBridge({
+        resolveAgentTeamsMcpUrl: () => 'http://127.0.0.1:9999/mcp#instance-1',
+      });
+
+      await expect(bridge.launchOpenCodeTeam({ ...launchBody, selectedModel })).resolves.toEqual(
+        launchData
+      );
+
+      expect(prepareCursorAcpLaunchMcpConfig).toHaveBeenCalledWith({
+        mcpUrl: 'http://127.0.0.1:9999/mcp#instance-1',
+      });
+      expect(vi.mocked(prepareCursorAcpLaunchMcpConfig).mock.invocationCallOrder[0]).toBeLessThan(
+        execute.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER
+      );
+    }
+  );
+
+  it('registers nothing when no Agent Teams MCP URL is wired', async () => {
+    const { bridge, execute } = buildBridge({});
+
+    await expect(
+      bridge.launchOpenCodeTeam({ ...launchBody, selectedModel: 'cursor-acp/auto' })
+    ).resolves.toEqual(launchData);
+
+    expect(prepareCursorAcpLaunchMcpConfig).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 });

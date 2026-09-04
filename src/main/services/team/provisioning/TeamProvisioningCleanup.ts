@@ -2,6 +2,10 @@ import {
   removeDeterministicBootstrapSpecFile,
   removeDeterministicBootstrapUserPromptFile,
 } from './TeamProvisioningBootstrapSpec';
+import {
+  cancelRunLeadRelayCapture,
+  type LeadRelayCaptureOwner,
+} from './TeamProvisioningLeadRelayCancellation';
 
 import type { TeamProvisioningProgress } from '@shared/types';
 import type { ChildProcess } from 'child_process';
@@ -36,7 +40,7 @@ export function clearGeminiPostLaunchHydrationState(run: GeminiPostLaunchHydrati
 }
 
 export interface TeamProvisioningCleanupRun
-  extends PostCompactReminderStateRun, GeminiPostLaunchHydrationStateRun {
+  extends PostCompactReminderStateRun, GeminiPostLaunchHydrationStateRun, LeadRelayCaptureOwner {
   runId: string;
   teamName: string;
   progress: TeamProvisioningProgress;
@@ -199,6 +203,7 @@ export function cleanupProvisioningRun<TRun extends TeamProvisioningCleanupRun>(
   run: TRun,
   ports: TeamProvisioningCleanupPorts<TRun>
 ): void {
+  cancelRunLeadRelayCapture(run);
   const currentProvisioningRunId = ports.provisioningRunByTeam.get(run.teamName) ?? null;
   const currentAliveRunId = ports.aliveRunByTeam.get(run.teamName) ?? null;
   const currentTrackedRunId = ports.getTrackedRunId(run.teamName);

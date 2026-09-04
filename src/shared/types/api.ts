@@ -94,6 +94,7 @@ import type {
   TeamCreateConfigRequest,
   TeamCreateRequest,
   TeamCreateResponse,
+  TeamForceStopResult,
   TeamGetDataOptions,
   TeamLaunchFailureDiagnosticsBundle,
   TeamLaunchRequest,
@@ -493,6 +494,7 @@ export interface TeamsAPI extends TeamMemberSettingsApi {
   processAlive: (teamName: string) => Promise<boolean>;
   aliveList: () => Promise<string[]>;
   stop: (teamName: string) => Promise<void>;
+  forceStop: (teamName: string) => Promise<TeamForceStopResult>;
   getQueuedUserMessages: (
     teamName: string,
     memberName: string

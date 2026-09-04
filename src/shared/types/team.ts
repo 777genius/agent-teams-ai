@@ -615,6 +615,17 @@ export type OpenCodeRuntimeDeliveryStatus = NonNullable<SendMessageResult['runti
   messageId: string;
 };
 
+export interface TeamForceStopResult {
+  /** Outcome of the bounded regular stop attempt. */
+  stopOutcome: 'stopped' | 'stop_failed' | 'timed_out';
+  /** Incomplete includes unsupported or unconfirmed runtime cleanup. */
+  cleanupOutcome: 'completed' | 'incomplete';
+  killedRuntimePids: number[];
+  /** Number of pending OpenCode prompt delivery ledger records cancelled. */
+  clearedPendingDeliveries: number;
+  diagnostics: string[];
+}
+
 /** Undelivered user message (read: false, from: "user") persisted in a member inbox file. */
 export interface QueuedUserMessageSummary {
   messageId: string;

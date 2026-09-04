@@ -319,7 +319,9 @@ describe('OpenCodePromptDeliveryLedger', () => {
     const failed = await store.markFailedTerminal({
       id: acceptanceUnknown.id,
       reason: 'opencode_session_stale_observe_loop_after_accepted_prompt',
-      diagnostics: ['OpenCode session stayed stale while observing an accepted prompt after 5 attempt(s).'],
+      diagnostics: [
+        'OpenCode session stayed stale while observing an accepted prompt after 5 attempt(s).',
+      ],
       failedAt: '2026-04-25T10:00:05.000Z',
     });
 
@@ -340,7 +342,9 @@ describe('OpenCodePromptDeliveryLedger', () => {
     expect(recovered.nextAttemptAt).toBeNull();
     expect(recovered.acceptanceUnknown).toBe(false);
     expect(recovered.visibleReplyMessageId).toBe('reply-recovered');
-    expect(recovered.diagnostics).toContain('opencode_session_stale_observe_loop_after_accepted_prompt');
+    expect(recovered.diagnostics).toContain(
+      'opencode_session_stale_observe_loop_after_accepted_prompt'
+    );
     expect(recovered.diagnostics).toContain('opencode_visible_reply_recovered_by_task_refs');
   });
 
@@ -629,8 +633,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
     ).toBe(true);
     expect(
       isOpenCodeSessionRefreshResponseState({
-        reason:
-          'resolved_behavior_changed:old->new opencode_app_mcp_transport_changed:a->b',
+        reason: 'resolved_behavior_changed:old->new opencode_app_mcp_transport_changed:a->b',
       })
     ).toBe(true);
     expect(
@@ -766,7 +769,16 @@ describe('OpenCodePromptDeliveryLedger', () => {
         reason: 'resolved_behavior_changed:old->new_permission_denied',
       })
     ).toBe(false);
-    for (const suffix of ['error', 'failed', 'failure', 'aborted', 'canceled', 'cancelled', 'interrupted', 'enospc']) {
+    for (const suffix of [
+      'error',
+      'failed',
+      'failure',
+      'aborted',
+      'canceled',
+      'cancelled',
+      'interrupted',
+      'enospc',
+    ]) {
       expect(
         isOpenCodeSessionRefreshResponseState({
           reason: `resolved_behavior_changed:old->new_${suffix}`,
@@ -999,9 +1011,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
     });
 
     expect(record.messageKind).toBe('task_stall_remediation');
-    await expect(store.list()).resolves.toMatchObject([
-      { messageKind: 'task_stall_remediation' },
-    ]);
+    await expect(store.list()).resolves.toMatchObject([{ messageKind: 'task_stall_remediation' }]);
   });
 
   it('upgrades acceptance-unknown records when exact observation finds the prompt', async () => {
@@ -1347,5 +1357,428 @@ describe('OpenCodePromptDeliveryLedger', () => {
     expect((await store.list()).map((record) => record.inboxMessageId)).toEqual([
       active.inboxMessageId,
     ]);
+  });
+
+  it('keeps persisted cancellation absorbing across every late automatic mutation', async () => {
+    const store = createStore();
+    const input = {
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      runId: 'stopped-run',
+      inboxMessageId: 'stopped-message',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher' as const,
+      replyRecipient: 'user',
+      payloadHash: 'sha256:stopped',
+      now: '2026-04-25T10:00:00.000Z',
+    };
+    const pending = await store.ensurePending(input);
+    await store.cancelNonTerminalRecords({ now: input.now, reason: 'user force stop' });
+    const [cancelled] = await store.list();
+    expect(cancelled.cancelledAt).toBe(input.now);
+    await expect(
+      store.pruneTerminalRecords({ now: new Date('2027-04-25T10:00:00.000Z') })
+    ).resolves.toEqual({ pruned: 0, remaining: 1 });
+    // Reopening models a late callback in another service instance or after restart.
+    const reopened = createStore();
+    const id = pending.id;
+    const late = '2026-04-25T10:01:00.000Z';
+    const responseObservation = {
+      state: 'responded_plain_text' as const,
+      deliveredUserMessageId: 'late-prompt',
+      assistantMessageId: 'late-assistant',
+      toolCallNames: [],
+      visibleMessageToolCallId: null,
+      visibleReplyMessageId: null,
+      visibleReplyCorrelation: null,
+      latestAssistantPreview: 'Late response',
+      reason: null,
+    };
+    const mutations = [
+      () => reopened.applyDeliveryResult({ id, accepted: true, responseObservation, now: late }),
+      () => reopened.applyDeliveryResult({ id, accepted: false, attempted: true, now: late }),
+      () => reopened.applyObservation({ id, responseObservation, observedAt: late }),
+      () =>
+        reopened.applyDestinationProof({
+          id,
+          visibleReplyInbox: 'user',
+          visibleReplyMessageId: 'late-reply',
+          visibleReplyCorrelation: 'plain_assistant_text',
+          semanticallySufficient: true,
+          observedAt: late,
+        }),
+      () =>
+        reopened.markAcceptanceUnknown({ id, reason: 'late', nextAttemptAt: late, markedAt: late }),
+      () =>
+        reopened.markNextAttemptScheduled({
+          id,
+          status: 'retry_scheduled',
+          nextAttemptAt: late,
+          reason: 'late',
+          scheduledAt: late,
+        }),
+      () =>
+        reopened.markSessionRefreshScheduled({
+          id,
+          nextAttemptAt: late,
+          reason: 'late',
+          scheduledAt: late,
+        }),
+      () =>
+        reopened.markSessionStaleObservationScheduled({
+          id,
+          nextAttemptAt: late,
+          reason: 'late',
+          scheduledAt: late,
+        }),
+      () => reopened.markRetryAttempted({ id, attemptedAt: late }),
+      () => reopened.markFailedTerminal({ id, reason: 'late failure', failedAt: late }),
+      () => reopened.markInboxReadCommitted({ id, committedAt: late }),
+      () => reopened.markInboxReadCommitFailed({ id, error: 'late commit error', failedAt: late }),
+      () => reopened.ensurePending({ ...input, payloadHash: 'sha256:changed', now: late }),
+      () =>
+        reopened.ensurePending({ ...input, messageKind: 'task_comment_notification', now: late }),
+    ];
+    for (const mutate of mutations) {
+      await expect(mutate()).resolves.toEqual(cancelled);
+      await expect(reopened.list()).resolves.toEqual([cancelled]);
+    }
+    await expect(reopened.listDue({ now: new Date(late), limit: 10 })).resolves.toEqual([]);
+    await expect(reopened.getActiveForMember(input)).resolves.toBeNull();
+    // A deliberate new message in a successor run remains deliverable.
+    const successor = await reopened.ensurePending({
+      ...input,
+      source: 'manual',
+      inboxMessageId: 'new-manual-message',
+      runId: 'successor-run',
+      now: late,
+    });
+    await expect(
+      reopened.applyDeliveryResult({ id: successor.id, accepted: true, now: late })
+    ).resolves.toMatchObject({ status: 'accepted', runId: 'successor-run' });
+  });
+
+  it('honors cancellation persisted before the explicit marker existed', async () => {
+    const store = await writeCorruptedLedgerRecord((record) => {
+      record.status = 'failed_terminal';
+      record.lastReason = 'force_stop_requested: pending delivery cancelled by user force stop';
+      record.failedAt = record.updatedAt;
+    });
+    const [cancelled] = await store.list();
+    expect(cancelled.cancelledAt).toBeUndefined();
+    await expect(
+      store.pruneTerminalRecords({ now: new Date('2027-04-25T10:00:00.000Z') })
+    ).resolves.toEqual({ pruned: 0, remaining: 1 });
+    await expect(
+      store.applyDeliveryResult({
+        id: cancelled.id,
+        accepted: true,
+        now: '2026-04-25T10:01:00.000Z',
+      })
+    ).resolves.toEqual(cancelled);
+  });
+
+  it('preserves recovery of ordinary terminal failures without a cancellation marker', async () => {
+    const store = createStore();
+    const pending = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'recoverable',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'manual',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:recoverable',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    await store.markFailedTerminal({
+      id: pending.id,
+      reason: 'retry exhausted',
+      failedAt: pending.createdAt,
+    });
+    await expect(
+      store.applyDeliveryResult({ id: pending.id, accepted: true, now: pending.createdAt })
+    ).resolves.toMatchObject({ status: 'accepted' });
+  });
+
+  it('cancels every selectable record and leaves finished ones alone', async () => {
+    const store = createStore();
+    const pending = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jack',
+      laneId: 'secondary:opencode:jack',
+      inboxMessageId: 'msg-pending',
+      inboxTimestamp: '2026-04-25T09:59:00.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:pending',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    const answered = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'jill',
+      laneId: 'secondary:opencode:jill',
+      inboxMessageId: 'msg-answered',
+      inboxTimestamp: '2026-04-25T09:59:05.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:answered',
+      now: '2026-04-25T10:00:05.000Z',
+    });
+    await store.applyObservation({
+      id: answered.id,
+      responseObservation: {
+        state: 'responded_visible_message',
+        deliveredUserMessageId: 'oc-user-9',
+        assistantMessageId: 'oc-assistant-9',
+        toolCallNames: ['message_send'],
+        visibleMessageToolCallId: 'oc-tool-9',
+        visibleReplyMessageId: 'inbox-9',
+        visibleReplyCorrelation: 'direct_child_message_send',
+        latestAssistantPreview: 'On it',
+        reason: null,
+      },
+      observedAt: '2026-04-25T10:00:06.000Z',
+    });
+    const alreadyFailed = await store.ensurePending({
+      teamName: 'team-a',
+      memberName: 'joe',
+      laneId: 'secondary:opencode:joe',
+      inboxMessageId: 'msg-failed',
+      inboxTimestamp: '2026-04-25T09:59:10.000Z',
+      source: 'watcher',
+      replyRecipient: 'user',
+      payloadHash: 'sha256:failed',
+      now: '2026-04-25T10:00:10.000Z',
+    });
+    await store.markFailedTerminal({
+      id: alreadyFailed.id,
+      reason: 'gave up earlier',
+      failedAt: '2026-04-25T10:00:11.000Z',
+    });
+
+    await expect(
+      store.cancelNonTerminalRecords({
+        now: '2026-04-25T10:05:00.000Z',
+        reason: 'force_stop_requested: pending delivery cancelled by user force stop',
+      })
+    ).resolves.toEqual({ cancelled: 1, keptForLaterRun: 0 });
+
+    const records = new Map((await store.list()).map((record) => [record.inboxMessageId, record]));
+    expect(records.get(pending.inboxMessageId)).toMatchObject({
+      status: 'failed_terminal',
+      failedAt: '2026-04-25T10:05:00.000Z',
+      nextAttemptAt: null,
+      lastReason: 'force_stop_requested: pending delivery cancelled by user force stop',
+    });
+    expect(records.get(answered.inboxMessageId)).toMatchObject({ status: 'responded' });
+    expect(records.get(alreadyFailed.inboxMessageId)).toMatchObject({
+      status: 'failed_terminal',
+      failedAt: '2026-04-25T10:00:11.000Z',
+      lastReason: 'gave up earlier',
+    });
+  });
+
+  it('cancels a responded record the automatic selection can still pick up', async () => {
+    const store = createStore();
+    async function seedResponded(input: {
+      memberName: string;
+      inboxMessageId: string;
+      state: 'responded_plain_text' | 'responded_visible_message';
+      visibleReplyMessageId: string | null;
+      committedAt?: string;
+    }): Promise<string> {
+      const record = await store.ensurePending({
+        teamName: 'team-a',
+        memberName: input.memberName,
+        laneId: 'secondary:opencode:jack',
+        inboxMessageId: input.inboxMessageId,
+        inboxTimestamp: '2026-04-25T09:59:00.000Z',
+        source: 'watcher',
+        replyRecipient: 'user',
+        payloadHash: `sha256:${input.inboxMessageId}`,
+        now: '2026-04-25T10:00:00.000Z',
+      });
+      await store.applyObservation({
+        id: record.id,
+        responseObservation: {
+          state: input.state,
+          deliveredUserMessageId: `oc-user-${input.inboxMessageId}`,
+          assistantMessageId: `oc-assistant-${input.inboxMessageId}`,
+          toolCallNames: input.visibleReplyMessageId ? ['message_send'] : [],
+          visibleMessageToolCallId: input.visibleReplyMessageId ? 'oc-tool-1' : null,
+          visibleReplyMessageId: input.visibleReplyMessageId,
+          visibleReplyCorrelation: input.visibleReplyMessageId ? 'direct_child_message_send' : null,
+          latestAssistantPreview: 'Working on it',
+          reason: null,
+        },
+        observedAt: '2026-04-25T10:00:06.000Z',
+      });
+      if (input.committedAt) {
+        await store.markInboxReadCommitted({ id: record.id, committedAt: input.committedAt });
+      }
+      return record.id;
+    }
+
+    // Plain text with nothing to show for it: no visible reply and no committed
+    // inbox read, so the automatic selection still owes this one an attempt.
+    const stillSelectable = await seedResponded({
+      memberName: 'jack',
+      inboxMessageId: 'msg-plain',
+      state: 'responded_plain_text',
+      visibleReplyMessageId: null,
+    });
+    const committedRead = await seedResponded({
+      memberName: 'jill',
+      inboxMessageId: 'msg-plain-committed',
+      state: 'responded_plain_text',
+      visibleReplyMessageId: null,
+      committedAt: '2026-04-25T10:00:07.000Z',
+    });
+    const visibleReply = await seedResponded({
+      memberName: 'joe',
+      inboxMessageId: 'msg-visible',
+      state: 'responded_visible_message',
+      visibleReplyMessageId: 'inbox-7',
+    });
+    const due = await store.listDue({ now: new Date('2026-04-25T10:04:00.000Z'), limit: 10 });
+    expect(due.map((record) => record.id)).toEqual([stillSelectable]);
+    const before = new Map((await store.list()).map((record) => [record.id, record]));
+
+    await expect(
+      store.cancelNonTerminalRecords({
+        now: '2026-04-25T10:05:00.000Z',
+        reason: 'force_stop_requested: pending delivery cancelled by user force stop',
+      })
+    ).resolves.toEqual({ cancelled: 1, keptForLaterRun: 0 });
+
+    const after = new Map((await store.list()).map((record) => [record.id, record]));
+    expect(after.get(stillSelectable)).toMatchObject({
+      status: 'failed_terminal',
+      failedAt: '2026-04-25T10:05:00.000Z',
+      nextAttemptAt: null,
+    });
+    await expect(
+      store.listDue({ now: new Date('2026-04-25T10:06:00.000Z'), limit: 10 })
+    ).resolves.toEqual([]);
+    // Negative control: the two records the same predicate calls terminal are
+    // untouched, field for field.
+    expect(after.get(committedRead)).toEqual(before.get(committedRead));
+    expect(after.get(visibleReply)).toEqual(before.get(visibleReply));
+  });
+
+  it('cancels only the work the stopping run owned', async () => {
+    // One lane, two runs: a force stop of run-a runs while a relaunch has
+    // already published run-b into the same lane and queued work there.
+    const store = createStore();
+    const seed = async (input: {
+      inboxMessageId: string;
+      runId: string | null;
+      now: string;
+    }): Promise<string> =>
+      (
+        await store.ensurePending({
+          teamName: 'team-a',
+          memberName: 'jack',
+          laneId: 'secondary:opencode:jack',
+          runId: input.runId,
+          inboxMessageId: input.inboxMessageId,
+          inboxTimestamp: '2026-04-25T09:59:00.000Z',
+          source: 'watcher',
+          replyRecipient: 'user',
+          payloadHash: `sha256:${input.inboxMessageId}`,
+          now: input.now,
+        })
+      ).id;
+    const stoppingRunEarly = await seed({
+      inboxMessageId: 'msg-a-early',
+      runId: 'run-a',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    const stoppingRunLate = await seed({
+      inboxMessageId: 'msg-a-late',
+      runId: 'run-a',
+      now: '2026-04-25T10:10:00.000Z',
+    });
+    const laterRun = await seed({
+      inboxMessageId: 'msg-b',
+      runId: 'run-b',
+      now: '2026-04-25T10:10:00.000Z',
+    });
+    const unattributedBefore = await seed({
+      inboxMessageId: 'msg-none-before',
+      runId: null,
+      now: '2026-04-25T09:58:00.000Z',
+    });
+    const unattributedAfter = await seed({
+      inboxMessageId: 'msg-none-after',
+      runId: null,
+      now: '2026-04-25T10:11:00.000Z',
+    });
+
+    await expect(
+      store.cancelNonTerminalRecords({
+        now: '2026-04-25T10:12:00.000Z',
+        reason: 'force_stop_requested: pending delivery cancelled by user force stop',
+        ownedRunIds: ['run-a'],
+        createdAtOrBeforeMs: Date.parse('2026-04-25T10:05:00.000Z'),
+      })
+    ).resolves.toEqual({ cancelled: 3, keptForLaterRun: 2 });
+
+    const statuses = new Map((await store.list()).map((record) => [record.id, record.status]));
+    // Owned by the stopped run whatever the age, plus the unattributed record
+    // that already existed when the stop was asked for.
+    expect(statuses.get(stoppingRunEarly)).toBe('failed_terminal');
+    expect(statuses.get(stoppingRunLate)).toBe('failed_terminal');
+    expect(statuses.get(unattributedBefore)).toBe('failed_terminal');
+    // The relaunch keeps its work, and so does anything that appeared after the
+    // stop was asked for without naming a run.
+    expect(statuses.get(laterRun)).toBe('pending');
+    expect(statuses.get(unattributedAfter)).toBe('pending');
+    await expect(
+      store.listDue({ now: new Date('2026-04-25T10:13:00.000Z'), limit: 10 })
+    ).resolves.toMatchObject([{ id: laterRun }, { id: unattributedAfter }]);
+  });
+
+  it('cancels everything selectable when the caller names no run and no moment', async () => {
+    // Negative control for the fence: an unfenced caller still gets the whole
+    // lane, so the scoping is the fence and not a change of default.
+    const store = createStore();
+    for (const [inboxMessageId, runId] of [
+      ['msg-a', 'run-a'],
+      ['msg-b', 'run-b'],
+      ['msg-none', null],
+    ] as const) {
+      await store.ensurePending({
+        teamName: 'team-a',
+        memberName: 'jack',
+        laneId: 'secondary:opencode:jack',
+        runId,
+        inboxMessageId,
+        inboxTimestamp: '2026-04-25T09:59:00.000Z',
+        source: 'watcher',
+        replyRecipient: 'user',
+        payloadHash: `sha256:${inboxMessageId}`,
+        now: '2026-04-25T10:10:00.000Z',
+      });
+    }
+
+    await expect(
+      store.cancelNonTerminalRecords({
+        now: '2026-04-25T10:12:00.000Z',
+        reason: 'force stop',
+      })
+    ).resolves.toEqual({ cancelled: 3, keptForLaterRun: 0 });
+    expect((await store.list()).every((record) => record.status === 'failed_terminal')).toBe(true);
+  });
+
+  it('reports zero cancellations when nothing is in flight', async () => {
+    const store = createStore();
+
+    await expect(
+      store.cancelNonTerminalRecords({ now: '2026-04-25T10:05:00.000Z', reason: 'force stop' })
+    ).resolves.toEqual({ cancelled: 0, keptForLaterRun: 0 });
+    await expect(store.list()).resolves.toEqual([]);
   });
 });
