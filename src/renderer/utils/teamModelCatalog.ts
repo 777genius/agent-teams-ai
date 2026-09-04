@@ -72,28 +72,6 @@ const ANTHROPIC_VISIBLE_MODEL_FALLBACKS = [
   'claude-opus-4-7[1m]',
 ] as const;
 
-const ANTHROPIC_MODEL_ORDER = [
-  'fable',
-  'claude-fable-5',
-  'claude-mythos-5',
-  'haiku',
-  'claude-haiku-4-5-20251001',
-  'claude-haiku-4-5',
-  'opus',
-  'opus[1m]',
-  'claude-opus-4-8',
-  'claude-opus-4-8[1m]',
-  'claude-opus-4-7',
-  'claude-opus-4-7[1m]',
-  'claude-opus-4-6',
-  'claude-opus-4-6[1m]',
-  'claude-sonnet-5',
-  'sonnet',
-  'sonnet[1m]',
-  'claude-sonnet-4-6',
-  'claude-sonnet-4-6[1m]',
-] as const;
-
 const TEAM_MODEL_LABEL_OVERRIDES: Record<string, string> = {
   default: 'Default',
   ...ANTHROPIC_ALIAS_LABELS,
@@ -181,7 +159,7 @@ const TEAM_PROVIDER_MODEL_OPTIONS: Record<SupportedProviderId, readonly TeamProv
 type AnthropicAliasFamily = keyof typeof ANTHROPIC_ALIAS_LABELS;
 
 const TEAM_PROVIDER_MODEL_ORDER: Record<SupportedProviderId, Map<string, number>> = {
-  anthropic: new Map(ANTHROPIC_MODEL_ORDER.map((model, index) => [model, index])),
+  anthropic: new Map(),
   codex: new Map(TEAM_PROVIDER_MODEL_OPTIONS.codex.map((option, index) => [option.value, index])),
   gemini: new Map(TEAM_PROVIDER_MODEL_OPTIONS.gemini.map((option, index) => [option.value, index])),
   opencode: new Map(
@@ -257,6 +235,11 @@ function formatParsedClaudeModelLabel(model: string): string | null {
   }
 
   const { baseModel, hasOneMillion } = splitOneMillionContextSuffix(trimmed);
+  const simpleModel = /^claude-([a-z]+)-(\d+(?:\.\d+)?)$/i.exec(baseModel);
+  if (simpleModel) {
+    const family = simpleModel[1].toLowerCase();
+    return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${simpleModel[2]}${hasOneMillion ? ' (1M)' : ''}`;
+  }
   const parsedModel = parseModelString(baseModel);
   if (!parsedModel) {
     return null;
@@ -634,8 +617,12 @@ export function sortTeamProviderModels(
   const order = TEAM_PROVIDER_MODEL_ORDER[providerId];
 
   const sorted = [...deduped].sort((left, right) => {
-    if (providerId === 'codex') {
-      const versionOrder = compareTeamModelVersionsDescending(left, right);
+    const leftLabel =
+      providerId === 'anthropic' ? (getTeamModelBadgeLabel(providerId, left) ?? left) : left;
+    const rightLabel =
+      providerId === 'anthropic' ? (getTeamModelBadgeLabel(providerId, right) ?? right) : right;
+    if (providerId !== 'opencode') {
+      const versionOrder = compareTeamModelVersionsDescending(leftLabel, rightLabel);
       if (versionOrder !== 0) {
         return versionOrder;
       }
@@ -645,7 +632,7 @@ export function sortTeamProviderModels(
     if (leftRank !== rightRank) {
       return leftRank - rightRank;
     }
-    return left.localeCompare(right);
+    return leftLabel.localeCompare(rightLabel) || left.localeCompare(right);
   });
 
   if (providerId !== 'opencode') {
