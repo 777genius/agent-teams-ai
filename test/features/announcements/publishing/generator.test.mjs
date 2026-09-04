@@ -242,3 +242,47 @@ test('asset size, root/output symlinks and malformed config fail before replacin
   await symlink(f.outputDir, outputAlias);
   await assert.rejects(generateAnnouncements({ ...f, outputDir: outputAlias }), /symlink/);
 });
+
+test('allows 64 unique assets and deduplicates heroImage against Markdown references', async () => {
+  const f = await fixture();
+  const references = ['![banner](assets/banner.png)'];
+  for (let index = 0; index < 63; index++) {
+    const name = `image-${String(index).padStart(2, '0')}.png`;
+    await writeFile(path.join(f.dir, 'assets', name), 'x');
+    references.push(`![${index}](assets/${name})`);
+  }
+  await writeFile(path.join(f.dir, 'assets', 'unused.png'), 'unused');
+  await writeFile(path.join(f.dir, 'body.md'), references.join('\n'));
+  const feed = await generateAnnouncements(f);
+  const bundleDir = path.dirname(
+    path.join(path.dirname(f.outputDir), feed.items[0].bodyPath.replace(/^\//, ''))
+  );
+  await assert.rejects(readFile(path.join(bundleDir, 'assets', 'unused.png')), /ENOENT/);
+
+  await writeFile(path.join(f.dir, 'assets', 'image-63.png'), 'x');
+  await writeFile(
+    path.join(f.dir, 'body.md'),
+    `${references.join('\n')}\n![64](assets/image-63.png)`
+  );
+  await assert.rejects(generateAnnouncements(f), /exceeds 64 unique assets/);
+});
+
+test('allows exactly 20 MiB of document assets and rejects one byte over', async () => {
+  const f = await fixture();
+  const references = ['![banner](assets/banner.png)'];
+  const bytesPerAsset = (20 * 1024 * 1024 - 4) / 4;
+  for (let index = 0; index < 4; index++) {
+    const name = `large-${index}.png`;
+    await writeFile(path.join(f.dir, 'assets', name), Buffer.alloc(bytesPerAsset));
+    references.push(`![${index}](assets/${name})`);
+  }
+  await writeFile(path.join(f.dir, 'body.md'), references.join('\n'));
+  await generateAnnouncements(f);
+
+  await writeFile(path.join(f.dir, 'assets', 'over.png'), 'x');
+  await writeFile(
+    path.join(f.dir, 'body.md'),
+    `${references.join('\n')}\n![over](assets/over.png)`
+  );
+  await assert.rejects(generateAnnouncements(f), /exceed 20 MiB in aggregate/);
+});

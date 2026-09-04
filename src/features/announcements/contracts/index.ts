@@ -29,10 +29,10 @@ export interface AnnouncementSummary extends AnnouncementOrderKey {
   title: string;
   validUntil: string;
   status: 'published' | 'archived';
-  heroImagePath?: string;
 }
 
 export interface Announcement extends AnnouncementSummary {
+  heroImagePath?: string;
   showToNewUsers: boolean;
   minUsageMinutes: number;
   bodyPath: string;
@@ -47,7 +47,7 @@ export interface AnnouncementFeed {
 }
 
 export interface AnnouncementDocument {
-  announcement: AnnouncementSummary;
+  announcement: AnnouncementSummary & Pick<Announcement, 'heroImagePath'>;
   markdown: string;
   bodyUrl: string;
 }

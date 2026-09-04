@@ -162,13 +162,25 @@ describe('anonymous validated announcement source', () => {
     await f.source.refresh(signal());
     const bodyUrl = new URL(feed.items[0].bodyPath, 'https://agentteams.live');
     const assetUrl = new URL('assets/demo.png', bodyUrl).href;
-    expect(await f.source.asset(assetUrl, signal())).toBe(
-      `data:image/png;base64,${png.toString('base64')}`
-    );
-    await expect(f.source.asset(assetUrl, signal())).rejects.toThrow('fetch_failed');
-    await expect(f.source.asset(assetUrl, signal())).rejects.toThrow('response_too_large');
+    expect(
+      await f.source.asset(assetUrl, bodyUrl.href, ANNOUNCEMENTS_MAX_ASSET_BYTES, signal())
+    ).toEqual({
+      dataUrl: `data:image/png;base64,${png.toString('base64')}`,
+      decodedBytes: png.byteLength,
+    });
     await expect(
-      f.source.asset('https://agentteams.live/announcements/unpublished/assets/demo.png', signal())
+      f.source.asset(assetUrl, bodyUrl.href, ANNOUNCEMENTS_MAX_ASSET_BYTES, signal())
+    ).rejects.toThrow('fetch_failed');
+    await expect(
+      f.source.asset(assetUrl, bodyUrl.href, ANNOUNCEMENTS_MAX_ASSET_BYTES, signal())
+    ).rejects.toThrow('response_too_large');
+    await expect(
+      f.source.asset(
+        'https://agentteams.live/announcements/unpublished/assets/demo.png',
+        bodyUrl.href,
+        ANNOUNCEMENTS_MAX_ASSET_BYTES,
+        signal()
+      )
     ).rejects.toThrow('asset_invalid');
     expect(f.request).toHaveBeenCalledTimes(4);
   });
@@ -265,7 +277,11 @@ it('drains an in-flight atomic body write before ownership can transfer and prun
   });
   service.registerWindow(1);
   await service.initialize();
-  const article = service.openManual('hello');
+  const article = service.openManual('hello', {
+    windowId: 1,
+    uiGeneration: 1,
+    isReady: () => true,
+  });
   await writing;
   const closing = service.unregisterWindow(1);
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -286,4 +302,16 @@ it('drains an in-flight atomic body write before ownership can transfer and prun
   await source.drain();
   expect((await readdir(f.directory)).some((name) => name.endsWith('.md'))).toBe(false);
   await service.dispose();
+});
+
+it('cancels redirect bodies before every invalid redirect branch', async () => {
+  for (const response of [
+    new Response('redirect', { status: 302 }),
+    new Response('redirect', { status: 302, headers: { Location: 'https://evil.example/x' } }),
+  ]) {
+    const cancel = vi.spyOn(response.body!, 'cancel');
+    const f = await setup([response]);
+    await expect(f.source.refresh(signal())).rejects.toThrow('fetch_failed');
+    expect(cancel).toHaveBeenCalledOnce();
+  }
 });

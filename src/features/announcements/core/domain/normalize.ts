@@ -157,11 +157,14 @@ export function normalizeAnnouncementState(input: unknown): AnnouncementState {
     };
   }
   const handledIds = ids(state.handledIds);
+  const dismissedIds = ids(state.dismissedIds);
+  if (handledIds.length + dismissedIds.length > ANNOUNCEMENTS_MAX_STATE_IDS)
+    return invalid('too many state ids');
   if (handledIds.length > 0 && autoSuppressedThrough === null) return invalid('missing floor');
   if (autoSuppressedThrough !== null && !handledIds.includes(autoSuppressedThrough.id)) {
     return invalid('unhandled floor');
   }
-  return {
+  const normalized: AnnouncementState = {
     schemaVersion: 1,
     origin: state.origin,
     firstAppOpenedAt,
@@ -169,6 +172,9 @@ export function normalizeAnnouncementState(input: unknown): AnnouncementState {
     accumulatedOpenMs: nonnegativeInteger(state.accumulatedOpenMs, 'accumulatedOpenMs'),
     autoSuppressedThrough,
     handledIds,
-    dismissedIds: ids(state.dismissedIds),
+    dismissedIds,
   };
+  if (new TextEncoder().encode(JSON.stringify(normalized)).byteLength > 512 * 1024)
+    return invalid('state too large');
+  return normalized;
 }

@@ -25,8 +25,10 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
     pending: false,
     retryRequested: false,
     manualRefreshes: 0,
-    pendingClaim: null as AnnouncementDocument | null,
+    pendingClaim: null as { article: AnnouncementDocument; revision: string } | null,
     document: null as AnnouncementDocument | null,
+    snapshot: null as AnnouncementsSnapshot | null,
+    autoSuppressedIds: new Set<string>(),
   });
   state.current.ready = ready;
 
@@ -43,7 +45,9 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
   }, []);
   const close = useCallback(() => {
     const article = state.current.document;
-    if (article && state.current.pendingClaim?.announcement.id === article.announcement.id)
+    if (article && state.current.mode === 'auto')
+      state.current.autoSuppressedIds.add(article.announcement.id);
+    if (article && state.current.pendingClaim?.article.announcement.id === article.announcement.id)
       state.current.pendingClaim = null;
     changeMode('idle');
     showDocument(null);
@@ -51,6 +55,27 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
     setError(false);
     if (article) void client.dismiss(article.announcement.id).catch(() => undefined);
   }, [changeMode, client, showDocument]);
+
+  const dismissDocument = useCallback(
+    (article: AnnouncementDocument): void => {
+      state.current.autoSuppressedIds.add(article.announcement.id);
+      void client.dismiss(article.announcement.id).catch(() => undefined);
+    },
+    [client]
+  );
+
+  const snapshotAllows = (id: string, revision: string, requireCandidate: boolean): boolean => {
+    const value = state.current.snapshot;
+    return Boolean(
+      value &&
+      value.status === 'ready' &&
+      value.autoShowEnabled &&
+      value.revision === revision &&
+      (!requireCandidate || value.candidateId === id) &&
+      !state.current.autoSuppressedIds.has(id) &&
+      value.items.some((item) => item.id === id && item.status === 'published')
+    );
+  };
 
   const attempt = useCallback(
     async function runAttempt() {
@@ -81,24 +106,36 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
         getOverlaySnapshot().count === 0;
       try {
         if (current.pendingClaim) {
-          const article = current.pendingClaim;
-          current.pendingClaim = null;
-          if (Date.now() < Date.parse(article.announcement.validUntil)) {
-            showDocument(article);
+          const pending = current.pendingClaim;
+          if (
+            snapshotAllows(pending.article.announcement.id, pending.revision, false) &&
+            Date.now() < Date.parse(pending.article.announcement.validUntil)
+          ) {
+            showDocument(pending.article);
             changeMode('auto');
+          } else {
+            current.pendingClaim = null;
+            dismissDocument(pending.article);
           }
           return;
         }
         const prepared = await client.prepareAuto();
         if (!prepared || !valid()) return;
+        if (!snapshotAllows(prepared.announcement.id, prepared.revision, true)) return;
         const article = await client.claimAuto({
           id: prepared.announcement.id,
           revision: prepared.revision,
           bodySha256: prepared.announcement.bodySha256,
         });
         if (!article) return;
+        current.pendingClaim = { article, revision: prepared.revision };
+        if (!snapshotAllows(article.announcement.id, prepared.revision, false)) {
+          current.pendingClaim = null;
+          dismissDocument(article);
+          return;
+        }
         if (!valid()) {
-          if (current.alive) current.pendingClaim = article;
+          if (!current.alive) current.pendingClaim = null;
           return;
         }
         showDocument(article);
@@ -113,7 +150,7 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
         }
       }
     },
-    [changeMode, client, showDocument]
+    [changeMode, client, dismissDocument, showDocument]
   );
 
   const receive = useCallback(
@@ -122,15 +159,18 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
       const selection = `${next.status}:${next.revision}:${next.candidateId}:${next.checkedAt}`;
       const changed = selection !== lastSelection.current;
       lastSelection.current = selection;
+      state.current.snapshot = next;
       setSnapshot(next);
       const open = state.current.document;
       const claimed = state.current.pendingClaim;
-      if (
-        claimed &&
-        next.checkedAt &&
-        !next.items.some((item) => item.id === claimed.announcement.id)
-      )
+      if (claimed && !snapshotAllows(claimed.article.announcement.id, claimed.revision, false)) {
         state.current.pendingClaim = null;
+        dismissDocument(claimed.article);
+        if (state.current.mode === 'auto') {
+          changeMode('idle');
+          showDocument(null);
+        }
+      }
       if (open && next.checkedAt && !next.items.some((item) => item.id === open.announcement.id)) {
         showDocument(null);
         if (state.current.mode === 'auto') changeMode('idle');
@@ -139,7 +179,7 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
       }
       if (changed && allowAuto && state.current.manualRefreshes === 0) void attempt();
     },
-    [attempt, changeMode, showDocument]
+    [attempt, changeMode, dismissDocument, showDocument]
   );
 
   useEffect(() => {
@@ -189,8 +229,13 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
       state.current.generation++;
       if (getOverlaySnapshot().count > 0) {
         if (state.current.mode !== 'idle') {
-          if (state.current.mode === 'auto' && state.current.document)
-            state.current.pendingClaim = state.current.document;
+          if (
+            state.current.mode === 'auto' &&
+            state.current.document &&
+            state.current.pendingClaim?.article.announcement.id !==
+              state.current.document.announcement.id
+          )
+            dismissDocument(state.current.document);
           changeMode('idle');
           showDocument(null);
         }
@@ -214,7 +259,7 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [attempt, changeMode, client, receive, showDocument]);
+  }, [attempt, changeMode, client, dismissDocument, receive, showDocument]);
   useEffect(() => {
     if (ready) void attempt();
   }, [ready, attempt]);
@@ -231,7 +276,10 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
         generation !== state.current.articleGeneration
       )
         return;
-      if (article && state.current.pendingClaim?.announcement.id === article.announcement.id)
+      if (
+        article &&
+        state.current.pendingClaim?.article.announcement.id === article.announcement.id
+      )
         state.current.pendingClaim = null;
       showDocument(article);
       setError(!article);
@@ -262,6 +310,14 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
       if (state.current.alive) setLoading(false);
     }
   };
+  const markAutoPainted = useCallback((): void => {
+    const pending = state.current.pendingClaim;
+    if (
+      state.current.mode === 'auto' &&
+      pending?.article.announcement.id === state.current.document?.announcement.id
+    )
+      state.current.pendingClaim = null;
+  }, []);
   return {
     mode,
     article: documentState,
@@ -272,5 +328,6 @@ export function useAnnouncementHost(client: AnnouncementsApi, ready: boolean) {
     openArticle,
     back,
     refresh,
+    markAutoPainted,
   };
 }

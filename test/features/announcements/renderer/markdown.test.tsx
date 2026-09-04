@@ -58,7 +58,6 @@ describe('remote Markdown boundary', () => {
             markdown={markdown}
             bodyUrl={base}
             heroImagePath="/announcements/content/release/abcdef/assets/demo.gif"
-            heroImageAlt="Release cover"
           />
         </React.StrictMode>
       )
@@ -75,7 +74,8 @@ describe('remote Markdown boundary', () => {
     );
     expect(mount.querySelector('img')?.getAttribute('referrerpolicy')).toBe('no-referrer');
     const hero = mount.querySelector('[data-announcement-hero]');
-    expect(hero?.getAttribute('alt')).toBe('Release cover');
+    expect(hero?.getAttribute('alt')).toBe('');
+    expect(hero?.getAttribute('aria-hidden')).toBe('true');
     expect(hero?.className).toContain('aspect-[55/12]');
     expect(hero?.className).toContain('w-full');
     expect(loadAsset).toHaveBeenCalledTimes(1);
@@ -83,13 +83,15 @@ describe('remote Markdown boundary', () => {
     expect(mount.querySelector('input[type="checkbox"]')).not.toBeNull();
     expect(mount.querySelector('script,iframe')).toBeNull();
     expect(mount.querySelectorAll('a')).toHaveLength(0);
-    const externalButton = [...mount.querySelectorAll('button')].find(
-      (button) => button.textContent === 'External'
-    );
-    expect(externalButton).toBeTruthy();
-    externalButton!.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, button: 1 }));
+    const externalLink = mount.querySelector('[role="link"]')!;
+    expect(externalLink.textContent).toBe('External');
+    expect(externalLink.getAttribute('href')).toBeNull();
+    expect(externalLink.getAttribute('tabindex')).toBe('0');
+    externalLink.dispatchEvent(new MouseEvent('auxclick', { bubbles: true, button: 1 }));
     expect(external).not.toHaveBeenCalled();
-    await act(async () => externalButton!.click());
+    await act(async () =>
+      externalLink.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    );
     expect(external).toHaveBeenCalledWith('https://example.com/docs');
     await act(async () => root.unmount());
     mount.remove();

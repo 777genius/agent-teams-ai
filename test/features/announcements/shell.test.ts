@@ -20,7 +20,7 @@ vi.mock('electron', async () => {
   const { EventEmitter } = await import('node:events');
   return { powerMonitor: new EventEmitter() };
 });
-import { type BrowserWindow, type IpcMainInvokeEvent,powerMonitor } from 'electron';
+import { type BrowserWindow, type IpcMainInvokeEvent, powerMonitor } from 'electron';
 
 import { AnnouncementsLifecycle } from '../../../src/main/announcementsLifecycle';
 
@@ -95,6 +95,7 @@ function fakeFeature() {
   const feature = {
     initialize: vi.fn(async () => {}),
     registerWindow: vi.fn(),
+    invalidateWindow: vi.fn(),
     unregisterWindow: vi.fn(async () => {}),
     foreground: vi.fn(),
     suspend: vi.fn(async () => {}),
@@ -114,7 +115,7 @@ const options = {
 };
 
 describe('main window lifecycle ownership', () => {
-  it('records default-show before services, ignores unshown/helper windows, and invalidates claims on blur', async () => {
+  it('invalidates auto claims on blur without revoking the open document', async () => {
     const feature = fakeFeature();
     const lifecycle = new AnnouncementsLifecycle();
     const main = fakeWindow(1);
@@ -127,7 +128,7 @@ describe('main window lifecycle ownership', () => {
     expect(feature.registerWindow.mock.calls).toEqual([[1, expect.any(String)]]);
     const contextFor = mocks.register.mock.calls[0][1] as (
       event: IpcMainInvokeEvent
-    ) => { isReady: () => boolean } | null;
+    ) => { documentGeneration: number; isReady: () => boolean } | null;
     const event = {
       sender: main.webContents,
       senderFrame: main.webContents.mainFrame,
@@ -136,6 +137,12 @@ describe('main window lifecycle ownership', () => {
     expect(context.isReady()).toBe(true);
     main.emit('blur');
     expect(context.isReady()).toBe(false);
+    main.emit('hide');
+    expect(feature.invalidateWindow).not.toHaveBeenCalled();
+    expect(contextFor(event)?.documentGeneration).toBe(0);
+    main.webContents.emit('did-start-loading');
+    expect(feature.invalidateWindow).toHaveBeenCalledWith(1);
+    expect(contextFor(event)?.documentGeneration).toBe(1);
     expect(
       contextFor({ sender: main.webContents, senderFrame: {} } as unknown as IpcMainInvokeEvent)
     ).toBeNull();
@@ -146,6 +153,7 @@ describe('main window lifecycle ownership', () => {
       } as unknown as IpcMainInvokeEvent)
     ).toBeNull();
     main.emit('closed');
+    expect(feature.invalidateWindow).toHaveBeenCalledTimes(2);
     expect(feature.unregisterWindow).toHaveBeenCalledWith(1);
     await lifecycle.dispose();
   });

@@ -20,7 +20,6 @@ import {
 } from '@renderer/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { useEditorKeyboardShortcuts } from '@renderer/hooks/useEditorKeyboardShortcuts';
-import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useStore } from '@renderer/store';
 import { buildFileAction, buildSelectionAction } from '@renderer/utils/buildSelectionAction';
 import { shortcutLabel } from '@renderer/utils/platformKeys';
@@ -81,7 +80,6 @@ export const ProjectEditorOverlay = ({
   onEditorAction,
 }: ProjectEditorOverlayProps): React.ReactElement => {
   const { t } = useAppTranslation('team');
-  useOverlayOccupancy(true);
   const { activeTabId, openTabs, modifiedFiles, saveErrors, externalChanges, conflictFile } =
     useStore(
       useShallow((s) => ({

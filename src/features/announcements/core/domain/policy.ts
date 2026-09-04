@@ -7,12 +7,13 @@ import type {
   AnnouncementState,
 } from '../../contracts';
 
-function cappedIds(values: string[], required?: string): string[] {
+function cappedIds(values: string[], maximum: number, required?: string): string[] {
+  if (maximum <= 0) return [];
   const unique = [...new Set(values)];
-  if (unique.length <= ANNOUNCEMENTS_MAX_STATE_IDS) return unique;
-  const tail = unique.slice(-ANNOUNCEMENTS_MAX_STATE_IDS);
+  if (unique.length <= maximum) return unique;
+  const tail = unique.slice(-maximum);
   if (!required || tail.includes(required)) return tail;
-  return [...tail.slice(1), required];
+  return maximum === 0 ? [] : [...tail.slice(1), required];
 }
 
 export function compareAnnouncementOrder(a: AnnouncementOrderKey, b: AnnouncementOrderKey): number {
@@ -62,15 +63,23 @@ export function consumeAnnouncement(
     !state.autoSuppressedThrough || compareAnnouncementOrder(key, state.autoSuppressedThrough) > 0
       ? key
       : state.autoSuppressedThrough;
+  // The maximum order floor suppresses every older handled ID, so persisting only
+  // its witness preserves replay protection and leaves room for dismissal history.
+  const handledIds = [floor.id];
   return {
     ...state,
-    handledIds: cappedIds([...state.handledIds, item.id], floor.id),
+    handledIds,
+    dismissedIds: cappedIds(state.dismissedIds, ANNOUNCEMENTS_MAX_STATE_IDS - handledIds.length),
     autoSuppressedThrough: floor,
   };
 }
 
 export function dismissAnnouncement(state: AnnouncementState, id: string): AnnouncementState {
-  return { ...state, dismissedIds: cappedIds([...state.dismissedIds, id]) };
+  const maximum = ANNOUNCEMENTS_MAX_STATE_IDS - state.handledIds.length;
+  return {
+    ...state,
+    dismissedIds: cappedIds([...state.dismissedIds, id], maximum, id),
+  };
 }
 
 export function createAnnouncementState(

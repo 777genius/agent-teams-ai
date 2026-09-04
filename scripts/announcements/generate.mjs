@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SLUG = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const IMAGE = /\.(png|jpe?g|gif|webp|avif)$/i;
+const MAX_DOCUMENT_ASSETS = 64;
+const MAX_DOCUMENT_ASSET_BYTES = 20 * 1024 * 1024;
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const fail = (message) => {
   throw new Error(`Announcements: ${message}`);
@@ -144,20 +146,17 @@ async function assets(dir, prefix = 'assets') {
   return result;
 }
 
-function validateImages(body, files, id) {
+function selectedAssets(body, files, id, heroImage) {
   const references = new Map();
   for (const match of body.matchAll(/^\s{0,3}\[([^\]]+)\]:\s*<?([^\s>]+)>?/gm))
     references.set(match[1].trim().toLowerCase(), match[2]);
-  const targets = [];
+  const targets = new Set();
   for (const match of body.matchAll(
     /!\[([^\]]*)\](?:\(\s*(?:<([^>]+)>|([^\s)]+))(?:\s+['"][^\n]*?['"])?\s*\)|\[([^\]]*)\])?/g
   )) {
     const target =
       match[2] ?? match[3] ?? references.get((match[4] || match[1]).trim().toLowerCase());
     if (!target) fail(`${id}: unresolved image reference`);
-    targets.push(target);
-  }
-  for (const target of targets) {
     if (
       !target.startsWith('assets/') ||
       target.includes('\\') ||
@@ -165,7 +164,15 @@ function validateImages(body, files, id) {
       !files.has(target)
     )
       fail(`${id}: image must name an existing local asset: ${target}`);
+    targets.add(target);
   }
+  if (heroImage) {
+    if (!files.has(heroImage)) fail(`${id}: heroImage must name an existing local asset`);
+    targets.add(heroImage);
+  }
+  if (targets.size > MAX_DOCUMENT_ASSETS)
+    fail(`${id}: document exceeds ${MAX_DOCUMENT_ASSETS} unique assets`);
+  return new Map([...targets].sort(compare).map((target) => [target, files.get(target)]));
 }
 
 function git(repoDir, args) {
@@ -236,17 +243,22 @@ export async function generateAnnouncements({
       fail(`${folder}: body must be UTF-8`);
     }
     const files = names.includes('assets') ? await assets(path.join(dir, 'assets')) : new Map();
-    validateImages(markdown, files, folder);
-    if (meta.heroImage && !files.has(meta.heroImage))
-      fail(`${folder}: heroImage must name an existing local asset`);
-    files.set('body.md', body);
-    const manifest = [...files]
+    const documentAssets = selectedAssets(markdown, files, folder, meta.heroImage);
+    const emittedFiles = new Map(documentAssets);
+    emittedFiles.set('body.md', body);
+    const manifest = [...emittedFiles]
       .sort(([a], [b]) => compare(a, b))
       .map(([name, data]) => [name, sha(data)]);
     const bundle = sha(JSON.stringify(manifest));
     if (meta.status === 'draft' || meta.status === 'withdrawn') continue;
+    const documentAssetBytes = [...documentAssets.values()].reduce(
+      (sum, data) => sum + data.byteLength,
+      0
+    );
+    if (documentAssetBytes > MAX_DOCUMENT_ASSET_BYTES)
+      fail(`${folder}: document assets exceed 20 MiB in aggregate`);
     const prefix = `content/${meta.id}/${bundle}`;
-    for (const [name, data] of files) outputFiles.set(`${prefix}/${name}`, data);
+    for (const [name, data] of emittedFiles) outputFiles.set(`${prefix}/${name}`, data);
     const { heroImage, ...feedMeta } = meta;
     items.push({
       ...feedMeta,

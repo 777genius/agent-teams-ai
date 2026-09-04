@@ -247,3 +247,69 @@ describe('monotonic accounting', () => {
     expect(countOpenInterval(null, 100000, true).elapsedMs).toBe(0);
   });
 });
+
+describe('shared persisted state bound', () => {
+  it('round-trips maximum-cardinality long IDs within 512KiB', () => {
+    const ids = Array.from(
+      { length: ANNOUNCEMENTS_MAX_STATE_IDS },
+      (_, index) => `a${index.toString().padStart(4, '0')}${'x'.repeat(74)}`
+    );
+    const normalized = normalizeAnnouncementState({ ...state(), dismissedIds: ids });
+    expect(new TextEncoder().encode(JSON.stringify(normalized)).byteLength).toBeLessThanOrEqual(
+      512 * 1024
+    );
+    expect(normalizeAnnouncementState(JSON.parse(JSON.stringify(normalized)))).toEqual(normalized);
+  });
+
+  it('applies the ID cardinality as a shared total', () => {
+    const handledIds = ['handled'];
+    const dismissedIds = Array.from(
+      { length: ANNOUNCEMENTS_MAX_STATE_IDS },
+      (_, index) => `d${index.toString().padStart(4, '0')}`
+    );
+    expect(() =>
+      normalizeAnnouncementState({
+        ...state(),
+        handledIds,
+        dismissedIds,
+        autoSuppressedThrough: { id: 'handled', publishedAt: '2026-01-01T00:00:00Z' },
+      })
+    ).toThrow('too many state ids');
+  });
+});
+
+it('keeps long-running consume and dismiss transitions within the shared writable bound', () => {
+  let current = state();
+  for (let index = 0; index < ANNOUNCEMENTS_MAX_STATE_IDS + 200; index++) {
+    const id = `announcement-${index}`;
+    const announcement = normalizeAnnouncement(
+      item(id, {
+        publishedAt: new Date(Date.parse('2026-01-01T00:00:00Z') + index * 1000).toISOString(),
+      })
+    );
+    current = consumeAnnouncement(current, announcement);
+    current = dismissAnnouncement(current, id);
+    current = normalizeAnnouncementState(current);
+  }
+  expect(current.handledIds).toEqual([current.autoSuppressedThrough!.id]);
+  expect(current.handledIds.length + current.dismissedIds.length).toBeLessThanOrEqual(
+    ANNOUNCEMENTS_MAX_STATE_IDS
+  );
+  expect(normalizeAnnouncementState(JSON.parse(JSON.stringify(current)))).toEqual(current);
+});
+
+it('keeps dismissal writable when handled history already consumes the full bound', () => {
+  const handledIds = Array.from(
+    { length: ANNOUNCEMENTS_MAX_STATE_IDS },
+    (_, index) => `handled-${index}`
+  );
+  const full = {
+    ...state(),
+    handledIds,
+    autoSuppressedThrough: { id: handledIds.at(-1)!, publishedAt: '2026-01-01T00:00:00Z' },
+  };
+  const dismissed = dismissAnnouncement(full, handledIds.at(-1)!);
+  expect(dismissed.dismissedIds).toEqual([]);
+  const normalized = normalizeAnnouncementState(dismissed);
+  expect(normalizeAnnouncementState(normalized)).toEqual(normalized);
+});

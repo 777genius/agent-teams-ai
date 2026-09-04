@@ -1,5 +1,10 @@
 import type { Announcement, AnnouncementFeed, AnnouncementState } from '../../contracts';
 
+export interface AnnouncementAssetResult {
+  dataUrl: string;
+  decodedBytes: number;
+}
+
 export interface AnnouncementClock {
   now(): number;
   monotonic(): number;
@@ -13,7 +18,12 @@ export interface AnnouncementSource {
   loadCached(): Promise<void>;
   refresh(signal: AbortSignal): Promise<AnnouncementFeed>;
   body(item: Announcement, signal: AbortSignal): Promise<{ markdown: string; bodyUrl: string }>;
-  asset(url: string, signal: AbortSignal): Promise<string>;
+  asset(
+    url: string,
+    bodyUrl: string,
+    maxBytes: number,
+    signal: AbortSignal
+  ): Promise<AnnouncementAssetResult>;
   current(): AnnouncementFeed | null;
   drain(): Promise<void>;
 }
@@ -24,5 +34,6 @@ export interface AnnouncementOwner {
 export interface AnnouncementWindowContext {
   windowId: number;
   uiGeneration: number;
+  documentGeneration?: number;
   isReady(): boolean;
 }

@@ -149,7 +149,7 @@ function fixture() {
       markdown: '# News',
       bodyUrl: 'https://agentteams.live/announcements/body.md',
     })),
-    asset: vi.fn(async () => 'data:image/png;base64,eA=='),
+    asset: vi.fn(async () => ({ dataUrl: 'data:image/png;base64,eA==', decodedBytes: 1 })),
   };
   const repo = {
     initialize: async () => saved,
@@ -266,20 +266,23 @@ describe('announcement consumption service', () => {
     await f.service.initialize();
     expect(await f.service.dismiss('future-id')).toEqual({ saved: false });
     expect(f.saved().dismissedIds).toEqual([]);
+    const url = `https://agentteams.live/announcements/content/new/${'c'.repeat(64)}/assets/demo.png`;
+    expect(await f.service.loadAsset(url, 'unissued', f.context)).toBeNull();
 
-    let finish!: (value: string) => void;
+    let finish!: (value: { dataUrl: string; decodedBytes: number }) => void;
     f.source.asset.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           finish = resolve;
         })
     );
-    const url = 'https://agentteams.live/announcements/content/new/a/assets/demo.png';
+    await f.service.openManual('new', f.context);
     const first = f.service.loadAsset(url, 'request_1', f.context);
     const second = f.service.loadAsset(url, 'request_2', f.context);
+    await Promise.resolve();
     expect(f.source.asset).toHaveBeenCalledTimes(1);
     f.service.cancelAsset('request_1', f.context);
-    finish('data:image/png;base64,eA==');
+    finish({ dataUrl: 'data:image/png;base64,eA==', decodedBytes: 1 });
     await expect(first).resolves.toBeNull();
     await expect(second).resolves.toBe('data:image/png;base64,eA==');
     await f.service.dispose();
@@ -289,7 +292,7 @@ describe('announcement consumption service', () => {
     f.service.registerWindow(1);
     await f.service.initialize();
     f.source.body.mockRejectedValueOnce(new Error('404'));
-    expect(await f.service.openManual('new')).toBe(null);
+    expect(await f.service.openManual('new', f.context)).toBe(null);
     expect(f.saved().handledIds).toEqual([]);
     let ready = true;
     f.source.body.mockImplementationOnce(async () => {
@@ -305,7 +308,7 @@ describe('announcement consumption service', () => {
     f.service.registerWindow(1);
     await f.service.initialize();
     f.fail();
-    expect((await f.service.openManual('new'))?.announcement.id).toBe('new');
+    expect((await f.service.openManual('new', f.context))?.announcement.id).toBe('new');
     expect((await f.service.getSnapshot()).status).toBe('state_unavailable');
     expect(await f.service.prepareAuto(f.context)).toBe(null);
     expect(await f.service.dismiss('new')).toEqual({ saved: false });
@@ -317,7 +320,7 @@ describe('announcement consumption service', () => {
     f.service.registerWindow(1);
     await f.service.initialize();
     expect((await f.service.getSnapshot()).status).toBe('writer_busy');
-    expect(await f.service.openManual('new')).toBe(null);
+    expect(await f.service.openManual('new', f.context)).toBe(null);
     await f.service.dispose();
     const g = fixture();
     g.service.registerWindow(1);
@@ -353,7 +356,7 @@ it('discards stale body callback after last-window ownership handoff', async () 
         finish = resolve;
       })
   );
-  const opening = f.service.openManual('new');
+  const opening = f.service.openManual('new', f.context);
   await f.service.unregisterWindow(1);
   finish({ markdown: '# News', bodyUrl: 'https://agentteams.live/announcements/x' });
   expect(await opening).toBe(null);
@@ -436,7 +439,7 @@ it('does not return a manual article withdrawn while consumption is being persis
     f.feed.items = [];
     return next;
   });
-  expect(await f.service.openManual('new')).toBe(null);
+  expect(await f.service.openManual('new', f.context)).toBe(null);
   await f.service.dispose();
 });
 
@@ -456,4 +459,163 @@ it.each([
   const owner = new AnnouncementWriterOwner(dir, () => 'dead');
   expect(await owner.acquire()).toBe(true);
   await owner.release();
+});
+
+describe('issued document asset quotas', () => {
+  it('keeps the exact issued bundle across feed refresh and revokes it on dismiss/navigation', async () => {
+    const f = fixture();
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    const opened = await f.service.openManual('new', f.context);
+    const oldUrl = `https://agentteams.live/announcements/content/new/${'c'.repeat(64)}/assets/hero.png`;
+    f.feed.items.find((item) => item.id === 'new')!.bodyPath =
+      `/announcements/content/new/${'d'.repeat(64)}/body.md`;
+    expect(await f.service.loadAsset(oldUrl, 'old_bundle', f.context)).toBe(
+      'data:image/png;base64,eA=='
+    );
+    expect(f.source.asset).toHaveBeenCalledWith(
+      oldUrl,
+      `/announcements/content/new/${'c'.repeat(64)}/body.md`,
+      20 * 1024 * 1024,
+      expect.any(AbortSignal)
+    );
+    await f.service.dismiss(opened!.announcement.id, f.context);
+    expect(await f.service.loadAsset(oldUrl, 'closed', f.context)).toBeNull();
+
+    await f.service.openManual('new', { ...f.context, uiGeneration: 2 });
+    expect(
+      await f.service.loadAsset(oldUrl, 'navigated', { ...f.context, uiGeneration: 3 })
+    ).toBeNull();
+    await f.service.dispose();
+  });
+
+  it('enforces 64 unique, 20MiB accepted, and 3 concurrent per issued document', async () => {
+    const f = fixture();
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    await f.service.openManual('new', f.context);
+    const root = `https://agentteams.live/announcements/content/new/${'c'.repeat(64)}/assets/`;
+    for (let index = 0; index < 64; index++) {
+      expect(
+        await f.service.loadAsset(`${root}${index}.png`, `r${index}`, f.context)
+      ).not.toBeNull();
+    }
+    expect(await f.service.loadAsset(`${root}overflow.png`, 'overflow', f.context)).toBeNull();
+    expect(await f.service.loadAsset(`${root}0.png`, 'after_exhaustion', f.context)).toBeNull();
+
+    await f.service.openManual('new', f.context);
+    f.source.asset.mockResolvedValueOnce({
+      dataUrl: 'data:image/png;base64,',
+      decodedBytes: 20 * 1024 * 1024,
+    });
+    expect(await f.service.loadAsset(`${root}full.png`, 'full', f.context)).not.toBeNull();
+    expect(await f.service.loadAsset(`${root}extra.png`, 'extra', f.context)).toBeNull();
+
+    await f.service.openManual('new', f.context);
+    const finishes: Array<(value: { dataUrl: string; decodedBytes: number }) => void> = [];
+    f.source.asset.mockImplementation(() => new Promise((resolve) => finishes.push(resolve)));
+    const callsBeforeConcurrent = f.source.asset.mock.calls.length;
+    const pending = [0, 1, 2].map((index) =>
+      f.service.loadAsset(`${root}c${index}.png`, `c${index}`, f.context)
+    );
+    await Promise.resolve();
+    const queued = f.service.loadAsset(`${root}c3.png`, 'c3', f.context);
+    expect(f.source.asset.mock.calls.length - callsBeforeConcurrent).toBe(3);
+    finishes[0]({ dataUrl: 'data:image/png;base64,eA==', decodedBytes: 1 });
+    await pending[0];
+    await Promise.resolve();
+    expect(f.source.asset.mock.calls.length - callsBeforeConcurrent).toBe(4);
+    for (const finish of finishes.slice(1))
+      finish({ dataUrl: 'data:image/png;base64,eA==', decodedBytes: 1 });
+    expect(await Promise.all([...pending.slice(1), queued])).toEqual([
+      'data:image/png;base64,eA==',
+      'data:image/png;base64,eA==',
+      'data:image/png;base64,eA==',
+    ]);
+    await f.service.dispose();
+  });
+
+  it('does not expose hero paths in list snapshots but includes hero in opened documents', async () => {
+    const f = fixture();
+    const newest = f.feed.items.find((item) => item.id === 'new')!;
+    newest.heroImagePath = `${newest.bodyPath.slice(0, -'body.md'.length)}assets/hero.png`;
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    expect(
+      (await f.service.getSnapshot()).items.find((item) => item.id === 'new')
+    ).not.toHaveProperty('heroImagePath');
+    expect((await f.service.openManual('new', f.context))?.announcement.heroImagePath).toBe(
+      newest.heroImagePath
+    );
+    await f.service.dispose();
+  });
+});
+
+it('shares three asset network slots globally and queues another window', async () => {
+  const f = fixture();
+  const second = { windowId: 2, uiGeneration: 1, isReady: () => true };
+  f.service.registerWindow(1);
+  f.service.registerWindow(2);
+  await f.service.initialize();
+  await f.service.openManual('new', f.context);
+  await f.service.openManual('new', second);
+  const root = `https://agentteams.live/announcements/content/new/${'c'.repeat(64)}/assets/`;
+  const finishes: Array<(value: { dataUrl: string; decodedBytes: number }) => void> = [];
+  f.source.asset.mockImplementation(() => new Promise((resolve) => finishes.push(resolve)));
+  const callsBeforeGlobal = f.source.asset.mock.calls.length;
+  const first = [0, 1, 2].map((index) =>
+    f.service.loadAsset(`${root}w1-${index}.png`, `w1-${index}`, f.context)
+  );
+  const queued = f.service.loadAsset(`${root}w2.png`, 'w2', second);
+  await Promise.resolve();
+  expect(f.source.asset.mock.calls.length - callsBeforeGlobal).toBe(3);
+  finishes[0]({ dataUrl: 'data:image/png;base64,eA==', decodedBytes: 1 });
+  await first[0];
+  await Promise.resolve();
+  expect(f.source.asset.mock.calls.length - callsBeforeGlobal).toBe(4);
+  for (const finish of finishes.slice(1))
+    finish({ dataUrl: 'data:image/png;base64,eA==', decodedBytes: 1 });
+  expect(await queued).toBe('data:image/png;base64,eA==');
+  await Promise.all(first.slice(1));
+  await f.service.dispose();
+});
+
+it('bounds pending request consumers even when all request IDs target one asset', async () => {
+  const f = fixture();
+  f.service.registerWindow(1);
+  await f.service.initialize();
+  await f.service.openManual('new', f.context);
+  const callsBefore = f.source.asset.mock.calls.length;
+  f.source.asset.mockImplementationOnce(() => new Promise(() => undefined));
+  const url = `https://agentteams.live/announcements/content/new/${'c'.repeat(64)}/assets/shared.png`;
+  const pending = Array.from({ length: 64 }, (_, index) =>
+    f.service.loadAsset(url, `shared-${index}`, f.context)
+  );
+  expect(await f.service.loadAsset(url, 'shared-overflow', f.context)).toBeNull();
+  expect(f.source.asset.mock.calls.length - callsBefore).toBe(0);
+  expect(await Promise.all(pending)).toEqual(Array.from({ length: 64 }, () => null));
+  await f.service.dispose();
+});
+
+it('keeps opened document assets across focus changes but revokes on document navigation', async () => {
+  const f = fixture();
+  f.service.registerWindow(1);
+  await f.service.initialize();
+  const openedContext = { ...f.context, documentGeneration: 7 };
+  await f.service.openManual('new', openedContext);
+  const url = `https://agentteams.live/announcements/content/new/${'c'.repeat(64)}/assets/lazy.png`;
+  expect(
+    await f.service.loadAsset(url, 'after-blur', {
+      ...openedContext,
+      uiGeneration: openedContext.uiGeneration + 2,
+    })
+  ).toBe('data:image/png;base64,eA==');
+  expect(
+    await f.service.loadAsset(url, 'after-navigation', {
+      ...openedContext,
+      uiGeneration: openedContext.uiGeneration + 3,
+      documentGeneration: openedContext.documentGeneration + 1,
+    })
+  ).toBeNull();
+  await f.service.dispose();
 });

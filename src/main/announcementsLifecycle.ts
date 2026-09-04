@@ -16,6 +16,7 @@ interface MainWindowRecord {
   window: BrowserWindow;
   openedAt: string | undefined;
   generation: number;
+  documentGeneration: number;
 }
 
 /** Created before the first BrowserWindow, attached to services later. */
@@ -34,7 +35,12 @@ export class AnnouncementsLifecycle {
   };
 
   registerMainWindow(window: BrowserWindow): void {
-    const record: MainWindowRecord = { window, openedAt: undefined, generation: 0 };
+    const record: MainWindowRecord = {
+      window,
+      openedAt: undefined,
+      generation: 0,
+      documentGeneration: 0,
+    };
     this.windows.set(window.id, record);
     const shown = (): void => {
       if (!record.openedAt) {
@@ -46,17 +52,22 @@ export class AnnouncementsLifecycle {
     window.on('show', shown);
     // BrowserWindow defaults to show:true: its initial show precedes registration.
     if (window.isVisible()) shown();
-    const invalidate = (): void => {
+    const invalidateAutoAttempt = (): void => {
       record.generation += 1;
     };
-    window.on('blur', invalidate);
-    window.on('hide', invalidate);
-    window.webContents.on('did-start-loading', invalidate);
+    const invalidateDocument = (): void => {
+      invalidateAutoAttempt();
+      record.documentGeneration += 1;
+      this.feature?.invalidateWindow(window.id);
+    };
+    window.on('blur', invalidateAutoAttempt);
+    window.on('hide', invalidateAutoAttempt);
+    window.webContents.on('did-start-loading', invalidateDocument);
     window.on('focus', () => {
       this.feature?.foreground();
     });
     window.once('closed', () => {
-      invalidate();
+      invalidateDocument();
       this.windows.delete(window.id);
       void this.feature?.unregisterWindow(window.id);
     });
@@ -107,6 +118,7 @@ export class AnnouncementsLifecycle {
     return {
       windowId: record.window.id,
       uiGeneration: generation,
+      documentGeneration: record.documentGeneration,
       isReady: () =>
         !this.disposed &&
         this.windows.get(record.window.id) === record &&

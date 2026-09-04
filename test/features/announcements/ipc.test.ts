@@ -60,13 +60,15 @@ describe('announcements IPC boundary', () => {
     for (const url of [123, '', 'https://example.com/a b.png', 'x'.repeat(2049)])
       expect(() => invoke(channels.loadAsset, url, 'request_1')).toThrow();
     for (const requestId of ['', '../bad', 'x'.repeat(65), {}]) {
-      expect(() => invoke(channels.loadAsset, 'https://agentteams.live/a.png', requestId)).toThrow();
+      expect(() =>
+        invoke(channels.loadAsset, 'https://agentteams.live/a.png', requestId)
+      ).toThrow();
       expect(() => invoke(channels.cancelAsset, requestId)).toThrow();
     }
     invoke(channels.claimAuto, claim);
     expect(feature.claimAuto).toHaveBeenCalledWith(claim, context);
     invoke(channels.openManual, 'news');
-    expect(feature.openManual).toHaveBeenCalledWith('news');
+    expect(feature.openManual).toHaveBeenCalledWith('news', context);
     invoke(
       channels.loadAsset,
       'https://agentteams.live/announcements/content/news/a/assets/x.png',
@@ -79,6 +81,8 @@ describe('announcements IPC boundary', () => {
     );
     invoke(channels.cancelAsset, 'request_1');
     expect(feature.cancelAsset).toHaveBeenCalledWith('request_1', context);
+    invoke(channels.dismiss, 'news');
+    expect(feature.dismiss).toHaveBeenCalledWith('news', context);
   });
   it('unregisters all owned handlers', () => {
     const dispose = registerAnnouncementsIpc(

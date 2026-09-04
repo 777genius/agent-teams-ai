@@ -66,7 +66,7 @@ export function registerAnnouncementsIpc(
   });
   handle(channels.openManual, 1, (_context, id) => {
     if (!validId(id)) throw new Error('Invalid announcement request');
-    return feature.openManual(id);
+    return feature.openManual(id, _context);
   });
   handle(channels.loadAsset, 2, (context, url, requestId) => {
     if (!validAssetUrl(url) || !validRequestId(requestId))
@@ -80,7 +80,7 @@ export function registerAnnouncementsIpc(
   });
   handle(channels.dismiss, 1, (_context, id) => {
     if (!validId(id)) throw new Error('Invalid announcement request');
-    return feature.dismiss(id);
+    return feature.dismiss(id, _context);
   });
   return () => {
     for (const channel of registered) ipcMain.removeHandler(channel);

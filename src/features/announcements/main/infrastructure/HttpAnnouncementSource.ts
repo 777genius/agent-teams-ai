@@ -123,7 +123,8 @@ export class HttpAnnouncementSource implements AnnouncementSource {
           });
           if (![301, 302, 303, 307, 308].includes(response.status)) break;
           const location = response.headers.get('location');
-          if (!location) throw new Error('fetch_failed');
+          await response.body?.cancel().catch(() => undefined);
+          if (!location || redirects === 3) throw new Error('fetch_failed');
           const next = new URL(location, target);
           if (
             next.origin !== this.origin ||
@@ -133,7 +134,6 @@ export class HttpAnnouncementSource implements AnnouncementSource {
             kind === 'asset'
           )
             throw new Error('fetch_failed');
-          await response.body?.cancel();
           target = next.href;
         }
         if (!response) throw new Error('fetch_failed');
@@ -273,26 +273,40 @@ export class HttpAnnouncementSource implements AnnouncementSource {
     }).catch(() => undefined);
     return { markdown: result.text, bodyUrl };
   }
-  async asset(url: string, signal: AbortSignal): Promise<string> {
+  async asset(
+    url: string,
+    bodyUrl: string,
+    maxBytes: number,
+    signal: AbortSignal
+  ): Promise<{ dataUrl: string; decodedBytes: number }> {
     const target = new URL(url);
-    const belongsToCurrentFeed = this.feed?.items.some((item) => {
-      const body = new URL(item.bodyPath, this.origin);
-      const assetRoot = new URL('assets/', body).pathname;
-      return target.pathname.startsWith(assetRoot) && target.pathname.length > assetRoot.length;
-    });
+    const body = new URL(bodyUrl, this.origin);
+    const assetRoot = new URL('assets/', body);
     if (
+      !Number.isSafeInteger(maxBytes) ||
+      maxBytes <= 0 ||
       target.origin !== this.origin ||
+      target.origin !== assetRoot.origin ||
       target.username ||
       target.password ||
       target.search ||
       target.hash ||
       /%2f|%5c|%2e/i.test(target.pathname) ||
-      !belongsToCurrentFeed
+      !target.pathname.startsWith(assetRoot.pathname) ||
+      target.pathname.length === assetRoot.pathname.length
     )
       throw new Error('asset_invalid');
-    const result = await this.getBytes(target.href, ANNOUNCEMENTS_MAX_ASSET_BYTES, 'asset', signal);
+    const result = await this.getBytes(
+      target.href,
+      Math.min(ANNOUNCEMENTS_MAX_ASSET_BYTES, maxBytes),
+      'asset',
+      signal
+    );
     if (!result || signal.aborted) throw new Error('asset_invalid');
-    return `data:${result.type};base64,${result.bytes.toString('base64')}`;
+    return {
+      dataUrl: `data:${result.type};base64,${result.bytes.toString('base64')}`,
+      decodedBytes: result.bytes.byteLength,
+    };
   }
   private async trim(): Promise<void> {
     const files = (await fs.readdir(this.directory)).filter((name) =>

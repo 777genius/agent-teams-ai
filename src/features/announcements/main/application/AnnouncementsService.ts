@@ -1,8 +1,4 @@
 import {
-  ANNOUNCEMENTS_MAX_ASSET_REQUESTS,
-  ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS,
-} from '../../contracts';
-import {
   consumeAnnouncement,
   createAnnouncementState,
   dismissAnnouncement,
@@ -10,6 +6,7 @@ import {
   visibleAnnouncements,
 } from '../../core/domain';
 
+import { AnnouncementAssetCapabilities } from './AnnouncementAssetCapabilities';
 import { AnnouncementUsageTracker } from './AnnouncementUsageTracker';
 
 import type {
@@ -35,6 +32,10 @@ const summarize = (item: Announcement): AnnouncementSummary => ({
   publishedAt: item.publishedAt,
   validUntil: item.validUntil,
   status: item.status,
+});
+
+const documentSummary = (item: Announcement) => ({
+  ...summarize(item),
   ...(item.heroImagePath ? { heroImagePath: item.heroImagePath } : {}),
 });
 
@@ -51,6 +52,7 @@ export interface AnnouncementsServiceOptions {
 
 export class AnnouncementsService {
   private readonly tracker: AnnouncementUsageTracker;
+  private readonly assets: AnnouncementAssetCapabilities;
   private state: AnnouncementState | null = null;
   private owned = false;
   private releasing = false;
@@ -80,14 +82,10 @@ export class AnnouncementsService {
   private lastReportedStatus: string | null = null;
   private nextRefreshAt = 0;
   private failedBodyKey: string | null = null;
-  private assetRequests = new Map<string, string>();
-  private assetLoads = new Map<
-    string,
-    { controller: AbortController; consumers: Set<string>; promise: Promise<string> }
-  >();
 
   constructor(private readonly options: AnnouncementsServiceOptions) {
     this.tracker = new AnnouncementUsageTracker(options.clock);
+    this.assets = new AnnouncementAssetCapabilities(options.source);
     this.firstOpenedAt = options.firstOpenedAt;
   }
   private lifecycle<T>(operation: () => Promise<T>): Promise<T> {
@@ -118,10 +116,14 @@ export class AnnouncementsService {
     this.tracker.register(id);
     if (this.initialized) void this.lifecycle(() => this.acquire());
   }
+  invalidateWindow(id: number): void {
+    this.prepared.delete(id);
+    this.assets.revokeWindow(id);
+  }
   unregisterWindow(id: number): Promise<void> {
     this.tracker.unregister(id);
     this.prepared.delete(id);
-    this.cancelWindowAssets(id);
+    this.assets.revokeWindow(id);
     return this.lifecycle(async () => {
       if (!this.tracker.hasWindows()) await this.release();
     });
@@ -170,6 +172,7 @@ export class AnnouncementsService {
     this.controller.abort();
     await this.refreshTask;
     this.prepared.clear();
+    this.assets.revokeAll();
     this.fresh = false;
     await this.mutationTail;
     await this.checkpoint();
@@ -234,6 +237,7 @@ export class AnnouncementsService {
     this.controller.abort();
     await this.refreshTask;
     this.prepared.clear();
+    this.assets.revokeAll();
     await this.mutation(() => this.checkpoint());
     this.emit();
   }
@@ -390,7 +394,7 @@ export class AnnouncementsService {
       )
         return null;
       const document = {
-        announcement: { ...summarize(item), bodySha256: item.bodySha256 },
+        announcement: { ...documentSummary(item), bodySha256: item.bodySha256 },
         ...body,
         revision: feed.revision,
       };
@@ -462,20 +466,27 @@ export class AnnouncementsService {
           Date.parse(entry.publishedAt) <= this.options.clock.now() &&
           this.options.clock.now() < Date.parse(entry.validUntil)
       );
-      return generation === this.generation &&
-        context.isReady() &&
-        this.isFresh() &&
-        currentFeed?.revision === input.revision &&
-        stillPublished
-        ? {
-            announcement: summarize(item),
-            markdown: prepared.document.markdown,
-            bodyUrl: prepared.document.bodyUrl,
-          }
-        : null;
+      if (
+        generation !== this.generation ||
+        !context.isReady() ||
+        !this.isFresh() ||
+        currentFeed?.revision !== input.revision ||
+        !stillPublished
+      )
+        return null;
+      this.assets.issue(item, context);
+      return {
+        announcement: documentSummary(item),
+        markdown: prepared.document.markdown,
+        bodyUrl: prepared.document.bodyUrl,
+      };
     });
   }
-  async openManual(id: string): Promise<AnnouncementDocument | null> {
+  async openManual(
+    id: string,
+    context: AnnouncementWindowContext
+  ): Promise<AnnouncementDocument | null> {
+    this.assets.revokeWindow(context.windowId);
     if (!this.owned || this.releasing || this.stopped) return null;
     const feed = this.options.source.current();
     const item =
@@ -520,77 +531,25 @@ export class AnnouncementsService {
           )
         )
           return null;
-        return { announcement: summarize(item), ...body };
+        this.assets.issue(item, context);
+        return { announcement: documentSummary(item), ...body };
       });
     } catch {
       return null;
     }
   }
-  private assetRequestKey(windowId: number, requestId: string): string {
-    return `${windowId}\0${requestId}`;
-  }
-  private cancelWindowAssets(windowId: number): void {
-    const prefix = `${windowId}\0`;
-    for (const key of [...this.assetRequests.keys()]) {
-      if (key.startsWith(prefix)) this.cancelAsset(key.slice(prefix.length), { windowId });
-    }
-  }
-  async loadAsset(
+  loadAsset(
     url: string,
     requestId: string,
-    context: Pick<AnnouncementWindowContext, 'windowId'>
+    context: AnnouncementWindowContext
   ): Promise<string | null> {
-    if (!this.owned || this.releasing || this.stopped) return null;
-    const requestKey = this.assetRequestKey(context.windowId, requestId);
-    if (
-      this.assetRequests.has(requestKey) ||
-      this.assetRequests.size >= ANNOUNCEMENTS_MAX_ASSET_REQUESTS
-    )
-      return null;
-    const generation = this.generation;
-    let load = this.assetLoads.get(url);
-    if (!load) {
-      if (this.assetLoads.size >= ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS) return null;
-      const controller = new AbortController();
-      const ownerController = this.controller;
-      const abort = (): void => controller.abort();
-      ownerController.signal.addEventListener('abort', abort, { once: true });
-      const promise = this.options.source.asset(url, controller.signal).finally(() => {
-        ownerController.signal.removeEventListener('abort', abort);
-        if (this.assetLoads.get(url)?.promise === promise) this.assetLoads.delete(url);
-      });
-      load = { controller, consumers: new Set(), promise };
-      this.assetLoads.set(url, load);
-    }
-    load.consumers.add(requestKey);
-    this.assetRequests.set(requestKey, url);
-    try {
-      const dataUrl = await load.promise;
-      return this.owned &&
-        !this.releasing &&
-        !this.stopped &&
-        generation === this.generation &&
-        this.assetRequests.get(requestKey) === url
-        ? dataUrl
-        : null;
-    } catch {
-      return null;
-    } finally {
-      this.assetRequests.delete(requestKey);
-      load.consumers.delete(requestKey);
-      if (load.consumers.size === 0 && this.assetLoads.get(url) === load) load.controller.abort();
-    }
+    return this.assets.load(url, requestId, context);
   }
-  cancelAsset(requestId: string, context: Pick<AnnouncementWindowContext, 'windowId'>): void {
-    const requestKey = this.assetRequestKey(context.windowId, requestId);
-    const url = this.assetRequests.get(requestKey);
-    if (!url) return;
-    this.assetRequests.delete(requestKey);
-    const load = this.assetLoads.get(url);
-    load?.consumers.delete(requestKey);
-    if (load?.consumers.size === 0) load.controller.abort();
+  cancelAsset(requestId: string, context: AnnouncementWindowContext): void {
+    this.assets.cancel(requestId, context);
   }
-  dismiss(id: string): Promise<{ saved: boolean }> {
+  dismiss(id: string, context?: AnnouncementWindowContext): Promise<{ saved: boolean }> {
+    if (context) this.assets.revokeAnnouncement(context.windowId, id);
     return this.mutation(async () => {
       if (!this.owned || this.releasing || this.stopped || this.storageFailed || !this.state)
         return { saved: false };

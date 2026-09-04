@@ -10,7 +10,6 @@ import { AnnouncementNewsButton } from '@features/announcements/renderer';
 import { TerminalWorkspaceFloatingLauncher } from '@features/terminal-workspace/renderer';
 import { TeamSidebarHost } from '@renderer/components/team/sidebar/TeamSidebarHost';
 import { useTeamSidebarPortalSnapshot } from '@renderer/components/team/sidebar/TeamSidebarPortalManager';
-import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 
 import { useGraphMessagesPanel } from '../hooks/useGraphMessagesPanel';
 import { useGraphSidebarVisibility } from '../hooks/useGraphSidebarVisibility';
@@ -48,7 +47,6 @@ export const TeamGraphOverlay = ({
   onToggleSidebar,
   messagesPanelEnabled = true,
 }: TeamGraphOverlayProps): React.JSX.Element => {
-  useOverlayOccupancy(true);
   const graphData = useTeamGraphAdapter(teamName);
   const {
     openTeamPage: openTeamTab,

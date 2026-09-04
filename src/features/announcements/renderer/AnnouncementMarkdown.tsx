@@ -61,19 +61,21 @@ const PublishedImage = ({
   return failed ? (
     <span
       data-announcement-hero={hero ? '' : undefined}
+      aria-hidden={hero || undefined}
       className={
         hero
           ? 'flex aspect-[55/12] w-full items-center justify-center bg-[var(--color-surface-raised)] p-5 text-center text-xs text-[var(--color-text-muted)]'
           : 'my-4 block rounded-lg border border-[var(--color-border)] p-5 text-center text-xs text-[var(--color-text-muted)]'
       }
     >
-      {alt || t('announcements.imageUnavailable')}
+      {hero ? null : alt || t('announcements.imageUnavailable')}
     </span>
   ) : dataUrl ? (
     <img
       data-announcement-hero={hero ? '' : undefined}
       src={dataUrl}
-      alt={alt ?? ''}
+      alt={hero ? '' : (alt ?? '')}
+      aria-hidden={hero || undefined}
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
@@ -87,7 +89,8 @@ const PublishedImage = ({
     <span
       ref={placeholder}
       data-announcement-hero={hero ? '' : undefined}
-      aria-label={alt ?? t('announcements.imageUnavailable')}
+      aria-label={hero ? undefined : (alt ?? t('announcements.imageUnavailable'))}
+      aria-hidden={hero || undefined}
       className={
         hero
           ? 'block aspect-[55/12] w-full animate-pulse bg-[var(--color-surface-raised)]'
@@ -101,13 +104,11 @@ export const AnnouncementMarkdown = ({
   markdown,
   bodyUrl,
   heroImagePath,
-  heroImageAlt,
   notice,
 }: {
   markdown: string;
   bodyUrl: string;
   heroImagePath?: string;
-  heroImageAlt?: string;
   notice?: React.ReactNode;
 }): React.JSX.Element => {
   const container = useRef<HTMLDivElement>(null);
@@ -126,12 +127,13 @@ export const AnnouncementMarkdown = ({
       a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
         const target = announcementUrl(href ?? '', bodyUrl);
         if (!target) return <span>{children}</span>;
-        return (
-          <button
-            type="button"
-            className="decoration-current/30 inline cursor-pointer appearance-none break-words border-0 bg-transparent p-0 text-left text-[var(--prose-link)] underline underline-offset-4 hover:decoration-current"
-            onClick={() => {
-              if (target.startsWith('#')) {
+        if (target.startsWith('#')) {
+          return (
+            <a
+              href={target}
+              className="decoration-current/30 break-words text-[var(--prose-link)] underline underline-offset-4 hover:decoration-current"
+              onClick={(event) => {
+                event.preventDefault();
                 try {
                   container.current
                     ?.querySelector(`#${CSS.escape(decodeURIComponent(target.slice(1)))}`)
@@ -139,11 +141,26 @@ export const AnnouncementMarkdown = ({
                 } catch {
                   /* Invalid fragment. */
                 }
-              } else void api.openExternal(target);
+              }}
+            >
+              {children}
+            </a>
+          );
+        }
+        return (
+          <span
+            role="link"
+            tabIndex={0}
+            className="decoration-current/30 cursor-pointer break-words text-[var(--prose-link)] underline underline-offset-4 hover:decoration-current"
+            onClick={() => void api.openExternal(target)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              void api.openExternal(target);
             }}
           >
             {children}
-          </button>
+          </span>
         );
       },
       img: ({ src, alt }: { src?: string; alt?: string }) => {
@@ -159,9 +176,7 @@ export const AnnouncementMarkdown = ({
   );
   return (
     <>
-      {heroImageUrl && (
-        <PublishedImage src={heroImageUrl} alt={heroImageAlt} loader={assetLoader} hero />
-      )}
+      {heroImageUrl && <PublishedImage src={heroImageUrl} loader={assetLoader} hero />}
       <div
         ref={container}
         className="min-w-0 break-words px-6 py-5 [overflow-wrap:anywhere] [&_pre]:max-w-full [&_pre]:whitespace-pre [&_table]:w-max [&_table]:min-w-full"

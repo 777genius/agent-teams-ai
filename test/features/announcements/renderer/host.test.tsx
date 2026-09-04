@@ -69,7 +69,7 @@ beforeEach(() => {
   snapshot = {
     status: 'ready',
     items: [item],
-    candidateId: null,
+    candidateId: item.id,
     revision: 'one',
     checkedAt: '2026-09-04T00:00:00Z',
     autoShowEnabled: true,
@@ -125,7 +125,60 @@ describe('announcement host', () => {
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     await render(true, false);
     expect(client.claimAuto).toHaveBeenCalledTimes(1);
-    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(client.dismiss).toHaveBeenCalledWith(item.id);
+  });
+  it('accepts the durable result after main emits its consumed candidate snapshot', async () => {
+    let finish!: (value: typeof article) => void;
+    vi.mocked(client.prepareAuto).mockResolvedValue({ ...article, revision: 'one' });
+    vi.mocked(client.claimAuto).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    await render();
+    await act(async () => listener({ ...snapshot, candidateId: null }));
+    await act(async () => finish(article));
+    expect(document.body.textContent).toContain('Highlights');
+    expect(client.dismiss).not.toHaveBeenCalled();
+  });
+  it('retains a durable claim only when displaced before its first paint', async () => {
+    let finish!: (value: typeof article) => void;
+    vi.mocked(client.prepareAuto).mockResolvedValue({ ...article, revision: 'one' });
+    vi.mocked(client.claimAuto).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    await render();
+    await render(true, true);
+    await act(async () => finish(article));
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(client.dismiss).not.toHaveBeenCalled();
+    await render(true, false);
+    expect(document.body.textContent).toContain('Highlights');
+    expect(client.claimAuto).toHaveBeenCalledTimes(1);
+  });
+  it.each([
+    ['kill switch', { status: 'disabled' as const, autoShowEnabled: false, candidateId: null }],
+    ['archived item', { candidateId: null, items: [{ ...item, status: 'archived' as const }] }],
+    ['revision change', { revision: 'two', candidateId: null }],
+  ])('invalidates a durable pending claim after %s', async (_label, change) => {
+    let finish!: (value: typeof article) => void;
+    vi.mocked(client.prepareAuto).mockResolvedValue({ ...article, revision: 'one' });
+    vi.mocked(client.claimAuto).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    await render();
+    await act(async () => listener({ ...snapshot, ...change }));
+    await act(async () => finish(article));
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(client.dismiss).toHaveBeenCalledWith(item.id);
   });
   it('never auto-claims new data inside history or cascades on close/dismiss event', async () => {
     await render();
@@ -152,7 +205,9 @@ describe('announcement host', () => {
     await act(async () => openAnnouncementHistory());
     await click('actions.refresh');
     await click('actions.close');
-    vi.mocked(client.prepareAuto).mockClear().mockResolvedValue({ ...article, revision: 'two' });
+    vi.mocked(client.prepareAuto)
+      .mockClear()
+      .mockResolvedValue({ ...article, revision: 'two' });
     snapshot = { ...snapshot, revision: 'two', candidateId: item.id };
     await act(async () => listener(snapshot));
     expect(client.prepareAuto).not.toHaveBeenCalled();
@@ -295,6 +350,24 @@ describe('announcement host', () => {
     );
     await act(async () => (footer as HTMLButtonElement).click());
     expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+  it('keeps the article visible and announces refresh progress', async () => {
+    let finish!: (value: AnnouncementsSnapshot) => void;
+    vi.mocked(client.prepareAuto).mockResolvedValue({ ...article, revision: 'one' });
+    await render();
+    vi.mocked(client.refresh).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    await click('actions.refresh');
+    expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(document.querySelector('[role="status"]')?.textContent).toContain(
+      'announcements.loading'
+    );
+    expect(document.body.textContent).toContain('Highlights');
+    await act(async () => finish(snapshot));
   });
   it('shows writer busy without allowing article consumption', async () => {
     snapshot = { ...snapshot, status: 'writer_busy' };

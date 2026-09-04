@@ -4,13 +4,13 @@ Date: 2026-09-05. Verification used the isolated `feat/announcements` worktree f
 
 ## Automated checks
 
-- `pnpm typecheck`: passed.
-- Focused Vitest run: 118/118 passed across domain, main, source/cache, shell, IPC, preload, renderer, Markdown, shared overlay behavior and the graph Escape boundary.
-- Publishing invariants: 9/9 passed; immutable-content check against `HEAD` passed.
+- Native TypeScript 7 typecheck: passed.
+- Focused Vitest run: 202/202 passed across domain, main, source/cache, shell, IPC, preload, renderer, Markdown, shared overlay behavior, review guards and graph behavior.
+- Publishing invariants: 11/11 passed; immutable-content check against `origin/main` passed.
 - Actual landing generation: passed, including 121 prerendered routes. The generated deployed-shape feed byte-matches the generator output.
 - `git diff --check` for the implementation scope: passed.
 - Changed-file ESLint passed without warnings. The repository i18n validator still reports its pre-existing cross-catalog backlog; the seven corrected announcement catalogs parse successfully without key changes.
-- The source-size guard passed for 2,767 production files and all frozen legacy caps.
+- The source-size guard passed for 2,768 production files and all frozen legacy caps.
 
 Production author content contains only `feed.config.json`. Both `landing/public/announcements/feed.v1.json` and the generated Nuxt output contain `autoShowEnabled: false`, `items: []`, revision `67851cfed97b51f4caa7c2ebb4e861ea2a294338c423590feca54d2b0b313a3c`.
 
@@ -18,7 +18,7 @@ Production author content contains only `feed.config.json`. Both `landing/public
 
 Every run used a separate temporary Electron `userData` root and Claude root, a loopback-only content server, an explicitly verified Electron PID and the `dev:mcp` renderer CDP endpoint. No project, team, agent, terminal, provider action or native folder picker was opened. Native focus was staged only for the owned temporary window; all workflow input used CDP clicks and keys.
 
-After the review fixes were committed, a clean-profile regression repeated automatic rich-content delivery, bounded asset loading, close persistence, restart suppression and manual access to all ten history items on the final branch head.
+The isolated Electron regression ran at `f2f0b6a0513d9db49c8ef3786a31c74922ca09f3`. It repeated automatic rich-content delivery, bounded asset loading, close persistence, restart suppression and manual access to all ten history items. Later review fixes cover lifecycle, accessibility and main-owned asset quotas with focused automated tests. The Electron UI was not relaunched after the user requested background-only verification. The current E2E helper was syntax-checked and now requires a real loaded hero image instead of accepting its fallback placeholder.
 
 Verified behavior:
 

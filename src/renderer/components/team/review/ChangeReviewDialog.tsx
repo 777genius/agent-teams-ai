@@ -35,7 +35,6 @@ import {
 } from '@renderer/components/ui/alert-dialog';
 import { useContinuousScrollNav } from '@renderer/hooks/useContinuousScrollNav';
 import { useDiffNavigation } from '@renderer/hooks/useDiffNavigation';
-import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useViewedFiles } from '@renderer/hooks/useViewedFiles';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
@@ -374,7 +373,6 @@ export const ChangeReviewDialog = ({
   onLifecycleFocus,
 }: ChangeReviewDialogProps): React.ReactElement | null => {
   const { t } = useAppTranslation('team');
-  useOverlayOccupancy(open);
   const generatedLifecycleHostId = useId();
   const resolvedLifecycleHostId = lifecycleHostId ?? generatedLifecycleHostId;
   const reviewLifecycleSessionId = useMemo(
@@ -5069,7 +5067,10 @@ export const ChangeReviewDialog = ({
             />
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+        <div
+          className="flex shrink-0 items-center gap-1"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+        >
           <AnnouncementNewsButton />
           <button
             type="button"

@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
 import { Button } from '@renderer/components/ui/button';
@@ -46,6 +48,10 @@ export const AnnouncementHost = ({
           : status === 'state_unavailable'
             ? 'announcements.status.state_unavailable'
             : null;
+  const markAutoPainted = host.markAutoPainted;
+  useEffect(() => {
+    if (host.mode === 'auto' && host.article) markAutoPainted();
+  }, [host.article, host.mode, markAutoPainted]);
   return (
     <Dialog
       open={host.mode !== 'idle'}
@@ -86,6 +92,7 @@ export const AnnouncementHost = ({
           </DialogDescription>
         </header>
         <div
+          aria-busy={host.loading}
           className="min-h-0 min-w-0 overflow-y-auto overscroll-contain"
           style={{ maxHeight: 'min(66vh, 720px)' }}
         >
@@ -95,7 +102,6 @@ export const AnnouncementHost = ({
                 markdown={host.article.markdown}
                 bodyUrl={host.article.bodyUrl}
                 heroImagePath={host.article.announcement.heroImagePath}
-                heroImageAlt={host.article.announcement.title}
                 notice={
                   <>
                     {statusKey && (
@@ -109,6 +115,11 @@ export const AnnouncementHost = ({
                     {host.error && (
                       <p role="alert" className="mb-4 text-sm text-[var(--color-text-muted)]">
                         {t('announcements.loadError')}
+                      </p>
+                    )}
+                    {host.loading && (
+                      <p role="status" className="mb-4 text-sm text-[var(--color-text-muted)]">
+                        {t('announcements.loading')}
                       </p>
                     )}
                     {Date.now() >= Date.parse(host.article.announcement.validUntil) && (
