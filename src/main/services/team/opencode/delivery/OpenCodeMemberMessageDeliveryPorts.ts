@@ -13,6 +13,7 @@ import type {
 import type { OpenCodeStalePendingPolicyConfig } from './OpenCodePromptDeliveryStalePendingPolicy';
 import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog';
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
+import type { OpenCodeMemberContextUsageProbe } from './OpenCodeStalePendingObservationSignals';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 import type {
   AgentActionMode,
@@ -185,6 +186,12 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     member: TeamMember;
     projectPath: string | null;
   }): Promise<boolean>;
+  /**
+   * Runtime turn/context token usage for a lane member: the only progress proof
+   * an ACP bridge produces. Unset, the probe short-circuits and the
+   * stale-pending clock is pure wall time.
+   */
+  readOpenCodeMemberContextUsage?: OpenCodeMemberContextUsageProbe;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName: string): void;
   findDeliverableOpenCodeRuntimeBootstrapSessionEvidence(input: {

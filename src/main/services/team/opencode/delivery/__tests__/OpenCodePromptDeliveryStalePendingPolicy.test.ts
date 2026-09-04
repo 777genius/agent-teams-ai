@@ -5,14 +5,18 @@ import {
   decideOpenCodeStalePendingResolution,
   getOpenCodeObservedSessionActivity,
   getOpenCodePromptDeliveryPendingAgeMs,
+  hasOpenCodeAcceptedPromptExecutionEvidence,
+  hasOpenCodeObservedTurnEndHeuristic,
   isOpenCodePromptDeliveryStalePending,
   OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON,
   OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS,
   OPENCODE_PROMPT_DELIVERY_STALE_PENDING_MS,
   OPENCODE_REPLY_OPTIONAL_TURN_END_REASON,
+  OPENCODE_STALE_PENDING_EXECUTION_EVIDENCE_REASON,
   OPENCODE_STALE_PENDING_POLICY_CONFIG,
   OPENCODE_STALE_PENDING_TERMINAL_REASON,
 } from '../OpenCodePromptDeliveryStalePendingPolicy';
+import { decideOpenCodePromptDeliveryTurnActivity } from '../OpenCodePromptDeliveryWatchdog';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '../OpenCodePromptDeliveryLedger';
 
@@ -20,6 +24,7 @@ const NOW_MS = Date.parse('2026-08-22T18:20:00.000Z');
 /** The shipped windows. The policy has no defaults, so every call states them. */
 const POLICY = OPENCODE_STALE_PENDING_POLICY_CONFIG;
 const BUSY = 'OpenCode session status busy';
+const IDLE = 'OpenCode session status idle';
 const TREATED_IDLE =
   'OpenCode session status was busy but transcript has a completed assistant response for the latest user message; treating session as idle';
 
@@ -84,10 +89,46 @@ function record(
 describe('getOpenCodeObservedSessionActivity', () => {
   it('classifies busy, treated-idle, and unknown bridge diagnostics', () => {
     expect(getOpenCodeObservedSessionActivity([BUSY])).toBe('busy');
-    expect(getOpenCodeObservedSessionActivity([BUSY, TREATED_IDLE])).toBe('idle');
+    // The raw status is the bridge speaking; "treating session as idle" is a
+    // transcript-shape guess, and an ACP bridge carries both strings in every
+    // observation of a turn that is still spending tokens.
+    expect(getOpenCodeObservedSessionActivity([BUSY, TREATED_IDLE])).toBe('busy');
+    expect(getOpenCodeObservedSessionActivity([TREATED_IDLE, BUSY])).toBe('busy');
+    expect(getOpenCodeObservedSessionActivity([TREATED_IDLE])).toBe('idle');
     expect(getOpenCodeObservedSessionActivity(['OpenCode session status idle'])).toBe('idle');
     expect(getOpenCodeObservedSessionActivity(['OpenCode app MCP is connected.'])).toBe('unknown');
     expect(getOpenCodeObservedSessionActivity(undefined)).toBe('unknown');
+  });
+
+  it('reads the turn-end heuristic independently of who wins the activity vote', () => {
+    expect(hasOpenCodeObservedTurnEndHeuristic([BUSY, TREATED_IDLE])).toBe(true);
+    expect(hasOpenCodeObservedTurnEndHeuristic(['OpenCode session status idle'])).toBe(true);
+    expect(hasOpenCodeObservedTurnEndHeuristic([BUSY])).toBe(false);
+    expect(hasOpenCodeObservedTurnEndHeuristic(undefined)).toBe(false);
+  });
+
+  it('agrees with the turn-activity policy over the same diagnostics array', () => {
+    for (const diagnostics of [
+      [BUSY],
+      [TREATED_IDLE],
+      [BUSY, TREATED_IDLE],
+      [TREATED_IDLE, BUSY],
+      [],
+      ['OpenCode app MCP is connected.'],
+    ]) {
+      const turnActivity = decideOpenCodePromptDeliveryTurnActivity({
+        previousAssistantMessageId: '',
+        previousToolCallCount: 0,
+        previousAssistantPreview: '',
+        observation: null,
+        observedDiagnostics: diagnostics,
+        pendingAgeMs: null,
+      });
+      expect({
+        diagnostics,
+        busy: getOpenCodeObservedSessionActivity(diagnostics) === 'busy',
+      }).toEqual({ diagnostics, busy: turnActivity.reason === 'session_status_busy' });
+    }
   });
 });
 
@@ -106,6 +147,52 @@ describe('stale-pending detection', () => {
         NOW_MS
       )
     ).toBeNull();
+  });
+
+  // Negative control: a turn that keeps producing output must never reach the
+  // stale window, so the anchor has to move with the turn, not with the send.
+  it('measures silence from the last turn progress once the turn produced output', () => {
+    expect(
+      getOpenCodePromptDeliveryPendingAgeMs(record({ lastTurnProgressAt: minutesAgo(2) }), NOW_MS)
+    ).toBe(2 * 60_000);
+    expect(
+      isOpenCodePromptDeliveryStalePending(
+        record({ lastTurnProgressAt: minutesAgo(2) }),
+        NOW_MS,
+        POLICY.staleAfterMs
+      )
+    ).toBe(false);
+    // Without the stamp the same record is 32 minutes stale.
+    expect(isOpenCodePromptDeliveryStalePending(record(), NOW_MS, POLICY.staleAfterMs)).toBe(true);
+  });
+
+  it('reports execution evidence only for an accepted prompt the runtime acted on', () => {
+    expect(hasOpenCodeAcceptedPromptExecutionEvidence(record())).toBe(true);
+    expect(
+      hasOpenCodeAcceptedPromptExecutionEvidence(
+        record({ observedToolCallNames: [], observedAssistantMessageId: null })
+      )
+    ).toBe(false);
+    expect(
+      hasOpenCodeAcceptedPromptExecutionEvidence(
+        record({
+          observedToolCallNames: [],
+          observedAssistantMessageId: null,
+          observedAssistantPreview: 'partial answer',
+        })
+      )
+    ).toBe(true);
+    expect(
+      hasOpenCodeAcceptedPromptExecutionEvidence(
+        record({
+          acceptedAt: null,
+          runtimePromptMessageId: null,
+          runtimePromptMessageIds: [],
+          lastRuntimePromptMessageId: null,
+          deliveredUserMessageId: null,
+        })
+      )
+    ).toBe(false);
   });
 
   it('only flags accepted observe-only records past the stale window', () => {
@@ -183,7 +270,7 @@ describe('decideOpenCodeStalePendingResolution', () => {
     expect(
       decideOpenCodeStalePendingResolution({
         ...tenMinutesIdle,
-        config: { staleAfterMs: 20 * 60_000, hardCapMs: POLICY.hardCapMs },
+        config: { ...POLICY, staleAfterMs: 20 * 60_000 },
       })
     ).toEqual({ action: 'none' });
 
@@ -195,7 +282,7 @@ describe('decideOpenCodeStalePendingResolution', () => {
     expect(
       decideOpenCodeStalePendingResolution({
         ...tenMinutesBusy,
-        config: { staleAfterMs: POLICY.staleAfterMs, hardCapMs: 6 * 60_000 },
+        config: { ...POLICY, hardCapMs: 6 * 60_000 },
       })
     ).toMatchObject({ action: 'keep_observing', reason: 'opencode_stale_pending_session_busy' });
   });
@@ -211,6 +298,61 @@ describe('decideOpenCodeStalePendingResolution', () => {
         config: POLICY,
       })
     ).toEqual({ action: 'settle_plain_text', reason: OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON });
+  });
+
+  it('settles a lead non-user message on the shape that always carries the raw busy line', () => {
+    // An ACP bridge emits the busy line together with the turn-end heuristic for
+    // its whole turn. Gating settlement on the raw status alone left every
+    // teammate report and notification pending until the hard cap failed it and
+    // dropped the read-commit; the heuristic closes the turn for settlement.
+    for (const observedDiagnostics of [
+      [BUSY, TREATED_IDLE],
+      [TREATED_IDLE, BUSY],
+    ]) {
+      expect(
+        decideOpenCodeStalePendingResolution({
+          record: record({ lastAttemptAt: minutesAgo(0), acceptedAt: minutesAgo(0) }),
+          laneKind: 'primary',
+          observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
+          observedDiagnostics,
+          turnActivity: { active: true, reason: 'session_status_busy' },
+          nowMs: NOW_MS,
+          config: POLICY,
+        })
+      ).toEqual({ action: 'settle_plain_text', reason: OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON });
+    }
+  });
+
+  it('does not settle a busy lead turn without the turn-end heuristic', () => {
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: record({ lastAttemptAt: minutesAgo(0), acceptedAt: minutesAgo(0) }),
+        laneKind: 'primary',
+        observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
+        observedDiagnostics: [BUSY],
+        turnActivity: { active: true, reason: 'session_status_busy' },
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toEqual({ action: 'none' });
+  });
+
+  it('keeps the turn open while this observation itself produced new output', () => {
+    // Fresh tool calls outrank a transcript-shape guess, unlike the permanent
+    // `session_status_busy` line.
+    for (const observedDiagnostics of [[BUSY, TREATED_IDLE], [TREATED_IDLE], []]) {
+      expect(
+        decideOpenCodeStalePendingResolution({
+          record: record({ lastAttemptAt: minutesAgo(0), acceptedAt: minutesAgo(0) }),
+          laneKind: 'primary',
+          observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
+          observedDiagnostics,
+          turnActivity: { active: true, reason: 'tool_calls_progressed' },
+          nowMs: NOW_MS,
+          config: POLICY,
+        })
+      ).toEqual({ action: 'none' });
+    }
   });
 
   it('does not settle a lead non-user message while the session is busy and fresh', () => {
@@ -351,13 +493,131 @@ describe('decideOpenCodeStalePendingResolution', () => {
     ).toEqual({ action: 'keep_observing', reason: 'opencode_stale_pending_session_busy' });
   });
 
+  it('never fails a busy accepted user prompt terminal, however long it stays busy', () => {
+    // The launch prompt was accepted, tasks were created through the app MCP and
+    // the turn kept spending tokens, yet every observation carried both the busy
+    // line and the turn-end heuristic and the record went terminal at ~5 minutes.
+    // The raw busy line now decides activity, so this shape keeps being observed.
+    const staleByLaunch = minutesAgo(308 / 60);
+    for (const observedDiagnostics of [
+      [BUSY, TREATED_IDLE],
+      [TREATED_IDLE, BUSY],
+    ]) {
+      expect(
+        decideOpenCodeStalePendingResolution({
+          record: record({
+            replyRecipient: 'user',
+            messageKind: 'default',
+            observedToolCallNames: [],
+            observedAssistantMessageId: null,
+            lastAttemptAt: staleByLaunch,
+            acceptedAt: staleByLaunch,
+          }),
+          laneKind: 'primary',
+          observation: { state: 'pending', assistantMessageId: null },
+          observedDiagnostics,
+          turnActivity: { active: true, reason: 'session_status_busy' },
+          nowMs: NOW_MS,
+          config: POLICY,
+        })
+      ).toEqual({ action: 'keep_observing', reason: 'opencode_stale_pending_session_busy' });
+    }
+  });
+
+  it('keeps a stale record alive on turn activity alone when the bridge reports no status', () => {
+    // An unknown session already keeps being observed; the turn-activity vote
+    // adds nothing here, and the reason still names what the bridge reported.
+    const stale = minutesAgo(308 / 60);
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: record({
+          replyRecipient: 'user',
+          observedAssistantMessageId: null,
+          lastAttemptAt: stale,
+          acceptedAt: stale,
+        }),
+        laneKind: 'primary',
+        observation: { state: 'pending', assistantMessageId: null },
+        observedDiagnostics: [],
+        turnActivity: { active: true, reason: 'tool_calls_progressed' },
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toEqual({ action: 'keep_observing', reason: 'opencode_stale_pending_session_unknown' });
+  });
+
+  it('keeps an explicitly idle session under observation while the turn activity says otherwise', () => {
+    // The one case where the turn-activity vote decides on its own: the bridge
+    // called the session idle, but this very observation added tool calls. The
+    // terminal decision waits; nothing here can shorten a busy lane instead.
+    const stale = minutesAgo(308 / 60);
+    const idleButProgressing = {
+      record: record({
+        replyRecipient: 'user',
+        observedAssistantMessageId: null,
+        observedToolCallNames: [],
+        lastAttemptAt: stale,
+        acceptedAt: stale,
+      }),
+      laneKind: 'primary' as const,
+      observation: { state: 'pending' as const, assistantMessageId: null },
+      observedDiagnostics: [IDLE],
+      nowMs: NOW_MS,
+      config: POLICY,
+    };
+    expect(
+      decideOpenCodeStalePendingResolution({
+        ...idleButProgressing,
+        turnActivity: { active: true, reason: 'tool_calls_progressed' },
+      })
+    ).toEqual({ action: 'keep_observing', reason: 'opencode_stale_pending_session_idle' });
+    expect(
+      decideOpenCodeStalePendingResolution({
+        ...idleButProgressing,
+        turnActivity: { active: false, reason: 'turn_idle' },
+      })
+    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_TERMINAL_REASON });
+  });
+
+  it('downgrades the terminal decision when the prompt was accepted and acted on', () => {
+    const stale = minutesAgo(308 / 60);
+    const idleStaleUserPrompt = {
+      record: record({ replyRecipient: 'user', lastAttemptAt: stale, acceptedAt: stale }),
+      laneKind: 'primary' as const,
+      observation: { state: 'pending' as const, assistantMessageId: 'msg_assistant' },
+      observedDiagnostics: [TREATED_IDLE],
+      turnActivity: { active: false, reason: 'turn_idle' },
+      nowMs: NOW_MS,
+      config: POLICY,
+    };
+    expect(
+      decideOpenCodeStalePendingResolution({ ...idleStaleUserPrompt, hasExecutionEvidence: true })
+    ).toEqual({
+      action: 'keep_observing',
+      reason: OPENCODE_STALE_PENDING_EXECUTION_EVIDENCE_REASON,
+    });
+    expect(
+      decideOpenCodeStalePendingResolution({ ...idleStaleUserPrompt, hasExecutionEvidence: false })
+    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_TERMINAL_REASON });
+    // Evidence is not a licence to hold the lane forever: past the hard cap a
+    // silent session settles terminal anyway.
+    const overCap = minutesAgo(OPENCODE_PROMPT_DELIVERY_STALE_PENDING_HARD_CAP_MS / 60_000 + 1);
+    expect(
+      decideOpenCodeStalePendingResolution({
+        ...idleStaleUserPrompt,
+        record: record({ replyRecipient: 'user', lastAttemptAt: overCap, acceptedAt: overCap }),
+        hasExecutionEvidence: true,
+      })
+    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_TERMINAL_REASON });
+  });
+
   it('marks a stale idle user prompt terminal instead of faking a plain-text reply', () => {
     expect(
       decideOpenCodeStalePendingResolution({
         record: record({ replyRecipient: 'user' }),
         laneKind: 'primary',
         observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
-        observedDiagnostics: [BUSY, TREATED_IDLE],
+        observedDiagnostics: [TREATED_IDLE],
         nowMs: NOW_MS,
         config: POLICY,
       })
