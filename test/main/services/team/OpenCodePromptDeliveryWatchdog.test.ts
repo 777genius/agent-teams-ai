@@ -131,6 +131,7 @@ describe('OpenCodePromptDeliveryWatchdogScheduler isolation', () => {
       info: vi.fn(),
       warn: vi.fn(),
       debug: vi.fn(),
+      diagnostic: vi.fn(),
       getErrorMessage: (error) => String(error),
     });
   }
