@@ -203,12 +203,20 @@ export async function prepareCursorAcpLaunchMcpConfig(input: {
   }
 }
 
+/**
+ * Both writes are best-effort for the launch but not for the feature: the caller
+ * discards the outcome and no launch warning or member diagnostic carries it, so
+ * the log entry is the only record that the lead started without the agent-teams
+ * server, and it is logged at error for that reason. The `skipped` branch below
+ * stays a warning: declining to rewrite a config this module cannot parse is a
+ * decision it makes, not a failure it hit.
+ */
 async function seedProfileCursorCliConfig(profileHome: string, homeDir: string): Promise<void> {
   try {
     await ensureCursorCliConfigSeed(profileHome, { homeDir });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    logger.warn(`Cursor CLI config seed failed (${profileHome}): ${detail}`);
+    logger.error(`Cursor CLI config seed failed (${profileHome}): ${detail}`);
   }
 }
 
@@ -226,7 +234,7 @@ async function registerAgentTeamsMcpServer(profileHome: string, mcpUrl: string):
     }
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    logger.warn(`Cursor MCP config write failed (${profileHome}): ${detail}`);
+    logger.error(`Cursor MCP config write failed (${profileHome}): ${detail}`);
   }
 }
 

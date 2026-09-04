@@ -1,7 +1,8 @@
+import { addLogSink, type LogSinkEntry } from '@shared/utils/logger';
 import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   CURSOR_AGENT_TEAMS_MCP_SERVER_NAME,
@@ -377,6 +378,114 @@ describe('CursorMcpConfigWriter', () => {
       await expect(fs.readFile(configPathIn(userHome), 'utf8')).resolves.toContain(
         CURSOR_AGENT_TEAMS_MCP_SERVER_NAME
       );
+    });
+
+    /**
+     * The level is the whole signal here: the launch discards the outcome, so a
+     * registration that did not happen is recorded nowhere else.
+     */
+    describe('failure logging', () => {
+      const captureWriterLogs = (): {
+        entries: LogSinkEntry[];
+        consoleErrorCalls: string[];
+        restore: () => void;
+      } => {
+        const entries: LogSinkEntry[] = [];
+        const removeSink = addLogSink((entry) => {
+          if (entry.namespace === 'CursorMcpConfigWriter') entries.push(entry);
+        });
+        const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+        // `mockRestore` clears the call history, so it is copied out first.
+        const consoleErrorCalls: string[] = [];
+        return {
+          entries,
+          consoleErrorCalls,
+          restore: (): void => {
+            removeSink();
+            consoleErrorCalls.push(...consoleError.mock.calls.map((call) => String(call[1])));
+            consoleWarn.mockRestore();
+            consoleError.mockRestore();
+          },
+        };
+      };
+
+      it('records a failed write at error level, once per failing step', async () => {
+        const userHome = path.join(workspace, 'home');
+        const paths = buildPaths(path.join(workspace, 'data'), userHome);
+        const profileHome = resolveCursorAcpProfileHome('account-1', paths);
+        await fs.mkdir(profileHome!, { recursive: true });
+        // `.cursor` is a file, so neither the seed nor the entry can be written there.
+        await fs.writeFile(path.join(profileHome!, '.cursor'), 'not a directory', 'utf8');
+        const logs = captureWriterLogs();
+
+        try {
+          await prepareCursorAcpLaunchMcpConfig({
+            profileRootKey: 'account-1',
+            mcpUrl: MCP_URL,
+            paths,
+          });
+        } finally {
+          logs.restore();
+        }
+
+        expect(logs.entries.map((entry) => [entry.level, String(entry.args[0])])).toEqual([
+          ['error', expect.stringContaining('Cursor CLI config seed failed')],
+          ['error', expect.stringContaining('Cursor MCP config write failed')],
+        ]);
+        // Error is also the only level that survives the production console threshold.
+        expect(logs.consoleErrorCalls).toEqual([
+          expect.stringContaining('Cursor CLI config seed failed'),
+          expect.stringContaining('Cursor MCP config write failed'),
+        ]);
+        // The launch still proceeds, and the home that can take the entry gets it.
+        await expect(fs.readFile(configPathIn(userHome), 'utf8')).resolves.toContain(
+          CURSOR_AGENT_TEAMS_MCP_SERVER_NAME
+        );
+      });
+
+      it('logs nothing durable when every home takes the entry', async () => {
+        const userHome = path.join(workspace, 'home');
+        const paths = buildPaths(path.join(workspace, 'data'), userHome);
+        const logs = captureWriterLogs();
+
+        try {
+          await prepareCursorAcpLaunchMcpConfig({
+            profileRootKey: 'account-1',
+            mcpUrl: MCP_URL,
+            paths,
+          });
+        } finally {
+          logs.restore();
+        }
+
+        expect(logs.entries).toEqual([]);
+        await expect(fs.readFile(configPathIn(userHome), 'utf8')).resolves.toContain(
+          CURSOR_AGENT_TEAMS_MCP_SERVER_NAME
+        );
+      });
+
+      it('keeps the deliberate skip on an unparsable config at warning level', async () => {
+        const userHome = path.join(workspace, 'home');
+        const paths = buildPaths(path.join(workspace, 'data'), userHome);
+        // Cursor tolerates JSONC; declining to rewrite that file is a decision.
+        await writeConfig(userHome, '{ /* mine */ "mcpServers": {} }');
+        const logs = captureWriterLogs();
+
+        try {
+          await prepareCursorAcpLaunchMcpConfig({
+            profileRootKey: 'account-1',
+            mcpUrl: MCP_URL,
+            paths,
+          });
+        } finally {
+          logs.restore();
+        }
+
+        expect(logs.entries.map((entry) => entry.level)).toEqual(['warn']);
+        expect(String(logs.entries[0]?.args[0])).toContain('Cursor MCP config left untouched');
+        expect(logs.consoleErrorCalls).toEqual([]);
+      });
     });
   });
 });
