@@ -25,7 +25,9 @@ import {
   buildOpenCodeCoalescedNoticeText,
   buildOpenCodeCoalesceNotDispatchedDiagnostic,
   canCoalesceNoticesIntoOpenCodeDelivery,
+  findNextUnreadBoardCompletionIndex,
   findNextUnreadUserMessageIndex,
+  findNextUnreadUserMessageIndexInOrder,
   isOpenCodeCoalescedNoticeDeliveryProven,
   type OpenCodeReplyOptionalCoalescePorts,
   selectOpenCodeReplyOptionalCoalescedFollowers,
@@ -750,8 +752,33 @@ async function runOpenCodeMemberInboxRelayWork(
         afterIndex: index,
         currentReplyRecipient: deliveryDecision.replyRecipient,
       });
-      if (nextUserMessageIndex > index) {
-        cursor = nextUserMessageIndex;
+      // ... and it must not skip over the board-completion notice on the way
+      // there, nor starve it when the pending delivery is itself a user prompt.
+      const nextBoardCompletionIndex = findNextUnreadBoardCompletionIndex({
+        unread,
+        afterIndex: index,
+      });
+      // The jump may skip the blocker; it must never skip an OLDER unread user
+      // message. `findNextUnreadUserMessageIndex` reports -1 when the pending
+      // delivery is itself a user prompt - the inbox order stands, that message
+      // queues behind it - which would let the completion notice overtake a
+      // "stop, change of plan" that arrived first, and the lead would compose
+      // its closing message for a mandate the user had already withdrawn. So
+      // bound the jump by inbox order rather than by the yield rule.
+      const nextUserMessageInOrderIndex = findNextUnreadUserMessageIndexInOrder({
+        unread,
+        afterIndex: index,
+      });
+      const boundedBoardCompletionIndex =
+        nextBoardCompletionIndex > index && nextUserMessageInOrderIndex > index
+          ? Math.min(nextBoardCompletionIndex, nextUserMessageInOrderIndex)
+          : nextBoardCompletionIndex;
+      const nextIndices = [nextUserMessageIndex, boundedBoardCompletionIndex].filter(
+        (candidate) => candidate > index
+      );
+      if (nextIndices.length > 0) {
+        // The earliest of the two, so the walk never runs the inbox backwards.
+        cursor = Math.min(...nextIndices);
         continue;
       }
       break;
