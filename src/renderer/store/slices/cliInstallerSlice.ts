@@ -1282,12 +1282,8 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
               ? api.cliInstaller.getProviderStatus(providerId, { projectPath })
               : api.cliInstaller.getProviderStatus(providerId);
         let responseProviderStatus = await requestProviderStatus();
-        // OpenCode's app-server can return a structurally valid but partial
-        // status while its catalog is settling. Recheck once in the same
-        // request. Native status probes can also miss their bounded deadline
-        // while the desktop startup scan is busy, so retry that exact transient
-        // timeout once as well. Never retry intentional model-only fallbacks or
-        // any other provider/error indefinitely.
+        // Retry only bounded partial/timeout startup probes; intentional
+        // model-only fallbacks and other provider errors remain settled.
         const shouldRetryOpenCodePartial =
           providerId === 'opencode' &&
           !verifyModels &&
