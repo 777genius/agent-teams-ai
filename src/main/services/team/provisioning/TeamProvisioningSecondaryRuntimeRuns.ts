@@ -31,6 +31,13 @@ export interface MixedSecondaryRuntimeLaneState {
   queuedAtMs?: number;
   launchStartedAtMs?: number;
   launchFinishedAtMs?: number;
+  /**
+   * Set when the lane was finished before it was ever handed to the runtime,
+   * because the shared project runtime had already failed. Teardown reads it to
+   * tell a lane that owns nothing from one that owns a process, so it must stay
+   * a fact about the lane rather than a phrase in its user-facing diagnostics.
+   */
+  blockedBeforeLaunch?: true;
 }
 
 export interface SecondaryRuntimeRunEntry {

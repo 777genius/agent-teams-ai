@@ -55,6 +55,7 @@ export interface TeamProvisioningRuntimeProjectionFactoryDeps<
   readConfigSnapshot: TeamProvisioningRuntimeSnapshotFacadePorts['readConfigSnapshot'];
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
   getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
+  getMemberSpawnStatusesReadOnly(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
   getLiveTeamAgentRuntimeMetadata?(
     teamName: string
   ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
@@ -97,6 +98,7 @@ export interface TeamProvisioningRuntimeProjectionServiceHost<
   readConfigSnapshot: TeamProvisioningRuntimeSnapshotFacadePorts['readConfigSnapshot'];
   readPersistedRuntimeMembers(teamName: string): PersistedRuntimeMemberLike[];
   getMemberSpawnStatuses(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
+  getMemberSpawnStatusesReadOnly(teamName: string): Promise<MemberSpawnStatusesSnapshot>;
   getLiveTeamAgentRuntimeMetadata(
     teamName: string
   ): Promise<Map<string, LiveTeamAgentRuntimeMetadata>>;
@@ -176,9 +178,10 @@ export function createTeamProvisioningRuntimeProjection<
     readConfigSnapshot: deps.readConfigSnapshot,
     readPersistedRuntimeMembers: deps.readPersistedRuntimeMembers,
     getMemberSpawnStatuses: deps.getMemberSpawnStatuses,
+    getMemberSpawnStatusesReadOnly: deps.getMemberSpawnStatusesReadOnly,
     getLiveTeamAgentRuntimeMetadata,
-    createRuntimeSnapshotResourceSamplingPorts: () =>
-      deps.runtimeResourceSampling.createRuntimeSnapshotResourceSamplingPorts(),
+    createRuntimeSnapshotResourceSamplingPorts: (portOptions) =>
+      deps.runtimeResourceSampling.createRuntimeSnapshotResourceSamplingPorts(portOptions),
     runtimeSnapshotCache: deps.runtimeSnapshotCache,
     getTrackedRunId: (teamName) => deps.runTracking.getTrackedRunId(teamName),
     getAgentRuntimeSnapshotCacheTtlMs: (teamName, runId) =>
@@ -219,6 +222,7 @@ export function createTeamProvisioningRuntimeProjectionDepsFromService<
     readConfigSnapshot: (teamName) => service.readConfigSnapshot(teamName),
     readPersistedRuntimeMembers: (teamName) => service.readPersistedRuntimeMembers(teamName),
     getMemberSpawnStatuses: (teamName) => service.getMemberSpawnStatuses(teamName),
+    getMemberSpawnStatusesReadOnly: (teamName) => service.getMemberSpawnStatusesReadOnly(teamName),
     getLiveTeamAgentRuntimeMetadata: (teamName) =>
       service.getLiveTeamAgentRuntimeMetadata(teamName),
     runtimeSnapshotCache: service.runtimeSnapshotCacheBoundary,

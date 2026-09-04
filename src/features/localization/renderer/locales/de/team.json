@@ -72,7 +72,30 @@
       "externalTeam": "externes Team",
       "crossTeamAwaitingReply": "Cross-Team-Nachricht gesendet, erwartet Antwort",
       "user": "Benutzer",
-      "awaitingApproval": "bis zur Genehmigung"
+      "awaitingApproval": "erwartet Genehmigung",
+      "discardQueued": {
+        "action": "Wartende Nachrichten verwerfen",
+        "alreadyDelivered": "Es wurde nichts verworfen: Diese Nachrichten wurden bereits an \"{{member}}\" zugestellt.",
+        "cancelLabel": "Abbrechen",
+        "confirmLabel": "Verwerfen",
+        "count": "{{count}} wartend",
+        "count_few": "{{count}} wartend",
+        "count_many": "{{count}} wartend",
+        "count_one": "{{count}} wartend",
+        "count_other": "{{count}} wartend",
+        "failedFallbackMessage": "Ein unerwarteter Fehler ist aufgetreten",
+        "failedTitle": "Wartende Nachrichten konnten nicht verworfen werden",
+        "message": "{{count}} wartende Nachrichten für \"{{member}}\" verwerfen? Sie wurden noch nicht zugestellt und werden endgültig entfernt. Zugestellte Nachrichten und Nachrichten zwischen Agenten sind nicht betroffen.",
+        "message_few": "{{count}} wartende Nachrichten für \"{{member}}\" verwerfen? Sie wurden noch nicht zugestellt und werden endgültig entfernt. Zugestellte Nachrichten und Nachrichten zwischen Agenten sind nicht betroffen.",
+        "message_many": "{{count}} wartende Nachrichten für \"{{member}}\" verwerfen? Sie wurden noch nicht zugestellt und werden endgültig entfernt. Zugestellte Nachrichten und Nachrichten zwischen Agenten sind nicht betroffen.",
+        "message_one": "{{count}} wartende Nachricht für \"{{member}}\" verwerfen? Sie wurde noch nicht zugestellt und wird endgültig entfernt. Zugestellte Nachrichten und Nachrichten zwischen Agenten sind nicht betroffen.",
+        "message_other": "{{count}} wartende Nachrichten für \"{{member}}\" verwerfen? Sie wurden noch nicht zugestellt und werden endgültig entfernt. Zugestellte Nachrichten und Nachrichten zwischen Agenten sind nicht betroffen.",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} verworfen. Weiterhin wartend: {{remaining}}.",
+        "resultTitle": "Wartende Nachrichten",
+        "title": "Wartende Nachrichten verwerfen",
+        "tooltip": "Wartende Nachrichten dieses Mitglieds verwerfen"
+      }
     },
     "reply": {
       "replyingTo": "Antwort",
@@ -1788,6 +1811,9 @@
     "createAutomatically": "Wenn das Verzeichnis nicht existiert, wird es automatisch erstellt."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Teamkollege ist nicht innerhalb des Kulanzfensters des Starts beigetreten."
+    },
     "badges": {
       "worktree": "Arbeitstre"
     },

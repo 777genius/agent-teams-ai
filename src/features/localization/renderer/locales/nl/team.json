@@ -72,7 +72,30 @@
       "externalTeam": "extern team",
       "crossTeamAwaitingReply": "Bericht tussen teams verzonden, wachten op antwoord",
       "user": "gebruiker",
-      "awaitingApproval": "wachten op goedkeuring"
+      "awaitingApproval": "wachten op goedkeuring",
+      "discardQueued": {
+        "action": "Wachtende berichten verwijderen",
+        "alreadyDelivered": "Er is niets verwijderd: die berichten waren al bezorgd bij \"{{member}}\".",
+        "cancelLabel": "Annuleren",
+        "confirmLabel": "Verwijderen",
+        "count": "{{count}} in wachtrij",
+        "count_few": "{{count}} in wachtrij",
+        "count_many": "{{count}} in wachtrij",
+        "count_one": "{{count}} in wachtrij",
+        "count_other": "{{count}} in wachtrij",
+        "failedFallbackMessage": "Er is een onverwachte fout opgetreden",
+        "failedTitle": "Wachtende berichten konden niet worden verwijderd",
+        "message": "{{count}} wachtende berichten voor \"{{member}}\" verwijderen? Ze zijn nog niet bezorgd en worden definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "message_few": "{{count}} wachtende berichten voor \"{{member}}\" verwijderen? Ze zijn nog niet bezorgd en worden definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "message_many": "{{count}} wachtende berichten voor \"{{member}}\" verwijderen? Ze zijn nog niet bezorgd en worden definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "message_one": "{{count}} wachtend bericht voor \"{{member}}\" verwijderen? Het is nog niet bezorgd en wordt definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "message_other": "{{count}} wachtende berichten voor \"{{member}}\" verwijderen? Ze zijn nog niet bezorgd en worden definitief verwijderd. Bezorgde berichten en berichten tussen agents blijven ongemoeid.",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} verwijderd. Nog in wachtrij: {{remaining}}.",
+        "resultTitle": "Wachtende berichten",
+        "title": "Wachtende berichten verwijderen",
+        "tooltip": "Wachtende berichten van dit lid verwijderen"
+      }
     },
     "reply": {
       "replyingTo": "Reageert op",
@@ -1788,6 +1811,9 @@
     "createAutomatically": "Als de directory niet bestaat, wordt deze automatisch aangemaakt."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Teamlid heeft zich niet binnen de coulanceperiode van de start aangesloten."
+    },
     "badges": {
       "worktree": "worktree"
     },

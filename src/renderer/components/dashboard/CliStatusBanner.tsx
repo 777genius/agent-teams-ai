@@ -24,6 +24,7 @@ import {
   resolveOpenCodeQuickConnectGate,
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
+  useOpenCodeProviderModelCatalog,
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
@@ -928,13 +929,15 @@ const InstalledBanner = ({
 
   return (
     <div
-      className={`mb-6 rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
+      className={`mb-6 overflow-hidden rounded-lg px-4 ${showExpandedContent ? `py-3 ${BANNER_MIN_H}` : 'py-2.5'}`}
       style={{ backgroundColor: INSTALLED_BANNER_BACKGROUND }}
     >
       <div
-        className={`flex items-center justify-between rounded-md ${
+        className={`flex items-center justify-between ${
           showCollapseControl
-            ? '-mx-2 cursor-pointer px-2 py-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/15'
+            ? `${
+                showExpandedContent ? '-mx-4 -mt-3 px-4 pb-1 pt-4' : '-mx-4 -my-2.5 px-4 py-3.5'
+              } cursor-pointer transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/15`
             : ''
         }`}
         role="button"
@@ -1149,19 +1152,28 @@ const InstalledBanner = ({
               provider.providerId === 'opencode' &&
               provider.statusCheckErrorCode === 'runtime_missing' &&
               isOpenCodeRuntimeUsable(openCodeRuntimeStatus);
-            const statusText = showSkeleton
-              ? t('cliStatus.actions.checking')
-              : openCodeRuntimeContradictsMissingMetadata
-                ? t('cliStatus.quickConnect.connected')
-                : formatProviderStatusText(provider, settingsT);
-            const modelCatalogLoading =
-              provider.modelCatalogRefreshState === 'loading' ||
-              isOpenCodeCatalogHydrating(provider);
+            const isPassiveOpenCodeModelSummary =
+              provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only';
             const hasProviderModels =
               provider.providerId === 'opencode'
                 ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
                     .length > 0
                 : provider.models.length > 0;
+            const statusText = showSkeleton
+              ? t('cliStatus.actions.checking')
+              : isPassiveOpenCodeModelSummary
+                ? hasProviderModels
+                  ? settingsT('providerRuntime.connectionUi.status.modelsAvailable')
+                  : provider.modelCatalogRefreshState === 'error'
+                    ? t('cliStatus.provider.modelsUnavailable')
+                    : t('cliStatus.actions.checking')
+                : openCodeRuntimeContradictsMissingMetadata
+                  ? t('cliStatus.quickConnect.connected')
+                  : formatProviderStatusText(provider, settingsT);
+            const modelCatalogLoading =
+              !isPassiveOpenCodeModelSummary &&
+              (provider.modelCatalogRefreshState === 'loading' ||
+                isOpenCodeCatalogHydrating(provider));
             const showProviderModels = shouldShowLoadedProviderModels(provider, hasProviderModels);
             const openCodeDashboardChips = getOpenCodeDashboardChips(provider, t);
             const hasDetailContent = Boolean(
@@ -1238,9 +1250,11 @@ const InstalledBanner = ({
                         {modelCatalogLoading ? (
                           <span>{t('cliStatus.provider.loadingModels')}</span>
                         ) : null}
-                        {!hasProviderModels && !modelCatalogLoading && (
-                          <span>{t('cliStatus.provider.modelsUnavailable')}</span>
-                        )}
+                        {!hasProviderModels &&
+                          !modelCatalogLoading &&
+                          !isPassiveOpenCodeModelSummary && (
+                            <span>{t('cliStatus.provider.modelsUnavailable')}</span>
+                          )}
                       </div>
                     ) : null}
                     {!showSkeleton && codexDashboardHint ? (
@@ -1592,14 +1606,34 @@ export const CliStatusBanner = ({
     initialRefreshDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
     initialRefreshMaxDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   });
+  const passiveOpenCodeProvider = useMemo(
+    () =>
+      loadingCliStatus?.providers.find(
+        (provider) =>
+          provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only'
+      ) ?? null,
+    [loadingCliStatus?.providers]
+  );
+  const openCodeDashboardCatalog = useOpenCodeProviderModelCatalog({
+    enabled:
+      isElectron &&
+      multimodelEnabled &&
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      Boolean(passiveOpenCodeProvider),
+    sourceProviderId: 'opencode',
+    projectPath: selectedProjectPath,
+    passiveProviderStatus: passiveOpenCodeProvider,
+  });
   const visibleCliProviders = useMemo(
     () =>
       filterMainScreenCliProviders(loadingCliStatus?.providers ?? []).map((provider) =>
-        provider.providerId === 'codex'
-          ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
-          : provider
+        provider.providerId === 'opencode' && openCodeDashboardCatalog.providerStatus
+          ? openCodeDashboardCatalog.providerStatus
+          : provider.providerId === 'codex'
+            ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
+            : provider
       ),
-    [loadingCliStatus?.providers, codexAccount.snapshot]
+    [loadingCliStatus?.providers, codexAccount.snapshot, openCodeDashboardCatalog.providerStatus]
   );
   const loadingCliProviderMap = useMemo(
     () =>

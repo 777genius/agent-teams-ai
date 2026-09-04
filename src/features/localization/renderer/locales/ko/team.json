@@ -72,7 +72,30 @@
       "externalTeam": "외부 팀",
       "crossTeamAwaitingReply": "Cross-team 메시지 전송, 대기 회신",
       "user": "제품정보",
-      "awaitingApproval": "감사의 뜻"
+      "awaitingApproval": "승인 대기 중",
+      "discardQueued": {
+        "action": "대기 중인 메시지 삭제",
+        "alreadyDelivered": "삭제된 항목이 없습니다. 해당 메시지는 이미 \"{{member}}\"에게 전달되었습니다.",
+        "cancelLabel": "취소",
+        "confirmLabel": "삭제",
+        "count": "대기 {{count}}건",
+        "count_few": "대기 {{count}}건",
+        "count_many": "대기 {{count}}건",
+        "count_one": "대기 {{count}}건",
+        "count_other": "대기 {{count}}건",
+        "failedFallbackMessage": "예기치 않은 오류가 발생했습니다",
+        "failedTitle": "대기 중인 메시지를 삭제하지 못했습니다",
+        "message": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "message_few": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "message_many": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "message_one": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "message_other": "\"{{member}}\"에게 대기 중인 메시지 {{count}}건을 삭제할까요? 아직 전달되지 않았으며 영구히 삭제됩니다. 전달된 메시지와 에이전트 간 메시지는 영향을 받지 않습니다.",
+        "okLabel": "확인",
+        "remaining": "{{discarded}}건을 삭제했습니다. 아직 대기 중: {{remaining}}건.",
+        "resultTitle": "대기 중인 메시지",
+        "title": "대기 중인 메시지 삭제",
+        "tooltip": "이 멤버의 대기 중인 메시지 삭제"
+      }
     },
     "reply": {
       "replyingTo": "관련 기사",
@@ -1788,6 +1811,9 @@
     "createAutomatically": "디렉토리가 존재하지 않으면 자동으로 생성됩니다."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "팀원이 실행 유예 시간 내에 합류하지 않았습니다."
+    },
     "badges": {
       "worktree": "작업 트리"
     },

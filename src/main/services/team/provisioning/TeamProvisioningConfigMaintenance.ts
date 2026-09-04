@@ -136,6 +136,7 @@ export class TeamProvisioningConfigMaintenance {
         readConfig: () => this.readTeamConfig(configPath),
         writeConfig: (raw) => this.options.ports.writeFileUtf8(configPath, raw),
         invalidateTeam: (name) => this.options.ports.invalidateTeam(name),
+        readMetaMembers: () => this.options.ports.membersMetaStore.getMembers(teamName),
         scanForNewestSession: (scanProjectPath, knownSessions) =>
           this.options.ports.scanForNewestProjectSession({
             projectPath: scanProjectPath,

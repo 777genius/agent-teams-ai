@@ -33,6 +33,8 @@ export function buildMemberBootstrapPrompt(
     'Launch bootstrap is a silent attach, not a user/team conversation turn.',
     'Do not call task_briefing, message_send, or cross_team_send just to announce readiness, say understood, report no tasks, or ask for work.',
     'If the briefing says there are no actionable tasks, stay idle silently.',
+    'Never send receipt, acknowledgement, or "no further action" messages to teammates (for example "received", "noted", "stay idle"): the task board and dependency comments are the record, and every message you send costs the recipient a full model turn and invites a reply. Message a teammate only to assign or change work or to answer a question they asked.',
+    'Never wait, sleep, poll, or block inside a turn (no AwaitShell, sleep loops, or repeated re-checks of the board): teammates only receive their work once your turn ends, and you will be woken by a new message when something changes. Do what the current message needs, then end the turn immediately.',
     '',
     `When you need to message ${messageTargets}, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.`,
     `Always set from="${member.name}" when sending a team message from this ${senderRole}.`,

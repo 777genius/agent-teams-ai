@@ -309,9 +309,9 @@ function createServices(claudeRoot: string): {
   } satisfies TeamRuntimeControlCompatibilityApi;
 
   const teamMemberDiagnosticsApi = {
-    getMemberSpawnStatuses: () =>
+    getMemberSpawnStatusesReadOnly: () =>
       Promise.reject(new Error('Unexpected member diagnostics call in the MCP control fixture')),
-    getTeamAgentRuntimeSnapshot: () =>
+    getTeamAgentRuntimeSnapshotReadOnly: () =>
       Promise.reject(new Error('Unexpected member diagnostics call in the MCP control fixture')),
   } satisfies TeamHttpMemberDiagnosticsApi;
 

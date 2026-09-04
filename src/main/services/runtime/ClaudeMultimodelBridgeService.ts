@@ -1519,7 +1519,10 @@ export class ClaudeMultimodelBridgeService {
     let backgroundHydrationOwnsGenerationCleanup = false;
     try {
       const provider = await this.getProviderStatusFromScopedRuntimeStatus(binaryPath, providerId, {
-        summary: true,
+        // OpenCode's passive summary intentionally omits authentication and its
+        // model catalog. A project-scoped launch check needs the exact catalog,
+        // otherwise a healthy installed CLI is misclassified as runtime_missing.
+        summary: providerId !== 'opencode' || !projectPath,
         projectPath,
       });
       if (projectPath && canHydrateProviderCatalog(provider)) {

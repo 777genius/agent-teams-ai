@@ -80,6 +80,7 @@ class TestMemberStatusQueryFacade extends TeamProvisioningMemberStatusQueryFacad
   protected readonly memberSpawnStatusAuditPorts = {} as never;
   protected readonly runtimeSnapshotFacade = {
     getTeamAgentRuntimeSnapshot: this.getTeamAgentRuntimeSnapshotMock,
+    getTeamAgentRuntimeSnapshotReadOnly: this.getTeamAgentRuntimeSnapshotMock,
   };
   protected readonly reevaluateMemberLaunchStatusBoundary = {
     createPorts: vi.fn(),

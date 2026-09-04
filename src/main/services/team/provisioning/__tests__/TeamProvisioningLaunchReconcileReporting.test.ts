@@ -1,3 +1,7 @@
+import {
+  LEGACY_MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+  MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+} from '@shared/utils/teamLaunchFailureReason';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -72,7 +76,7 @@ describe('launch reconcile reporting helpers', () => {
       agentToolAccepted: true,
       firstSpawnAcceptedAt: acceptedAt,
       hardFailure: true,
-      hardFailureReason: 'Teammate did not join within the launch grace window.',
+      hardFailureReason: LEGACY_MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
       sources: { hardFailureSignal: true },
       diagnostics: ['launch failure observed'],
     });
@@ -126,6 +130,77 @@ describe('launch reconcile reporting helpers', () => {
       hardFailure: true,
       sources: { hardFailureSignal: true },
       diagnostics: ['launch failure observed'],
+    });
+  });
+
+  // The same reconcile, driven by the reason the launch grace projection writes
+  // today. A predicate that only knows the older sentence leaves this member
+  // failed forever: runtime proof arrives, and nothing clears the failure.
+  it('clears an identifier-form launch grace failure once runtime proof arrives', async () => {
+    const findBootstrapRuntimeProofObservedAt = vi.fn(async () => observedAt);
+    const runtime = new Map<string, LiveTeamAgentRuntimeMetadata>([
+      ['Builder', { alive: true, livenessKind: 'runtime_process', pidSource: 'runtime_bootstrap' }],
+    ]);
+    const current = member({
+      launchState: 'failed_to_start',
+      agentToolAccepted: true,
+      firstSpawnAcceptedAt: acceptedAt,
+      hardFailure: true,
+      hardFailureReason: MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
+      sources: { hardFailureSignal: true },
+    });
+
+    const next = await reconcilePersistedLaunchMember({
+      teamName: 'demo',
+      expected: 'Builder',
+      current,
+      bootstrapMember: undefined,
+      persistedMemberNames: ['Builder'],
+      configMembers: new Set(['Builder']),
+      configBootstrapRunIds: new Map(),
+      leadInboxMessages: [],
+      liveRuntimeByMember: runtime,
+      launchPhase: 'active',
+      now: at,
+      ports: ports({ findBootstrapRuntimeProofObservedAt }),
+    });
+
+    expect(next).toMatchObject({
+      launchState: 'confirmed_alive',
+      bootstrapConfirmed: true,
+      hardFailure: false,
+      hardFailureReason: undefined,
+      sources: { hardFailureSignal: undefined },
+    });
+  });
+
+  // The reconcile is also a writer of the launch grace verdict, and it has to
+  // write the identifier every other reader compares against.
+  it('records an expired launch grace as the shared grace timeout identifier', async () => {
+    const current = member({
+      agentToolAccepted: true,
+      firstSpawnAcceptedAt: '2025-12-31T23:00:00.000Z',
+    });
+
+    const next = await reconcilePersistedLaunchMember({
+      teamName: 'demo',
+      expected: 'Builder',
+      current,
+      bootstrapMember: undefined,
+      persistedMemberNames: ['Builder'],
+      configMembers: new Set(['Builder']),
+      configBootstrapRunIds: new Map(),
+      leadInboxMessages: [],
+      liveRuntimeByMember: new Map(),
+      launchPhase: 'active',
+      now: at,
+      ports: ports(),
+    });
+
+    expect(next).toMatchObject({
+      launchState: 'failed_to_start',
+      hardFailure: true,
+      hardFailureReason: MEMBER_LAUNCH_GRACE_TIMEOUT_REASON,
     });
   });
 

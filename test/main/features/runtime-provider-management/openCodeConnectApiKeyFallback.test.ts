@@ -133,7 +133,9 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
     let storeAtViewTime: Record<string, unknown> | null = null;
     host.loadView.mockImplementation(() => {
       storeAtViewTime = readStore(authStorePath);
-      return Promise.resolve(createViewResponse([createProviderConnection('anthropic', 'connected')]));
+      return Promise.resolve(
+        createViewResponse([createProviderConnection('anthropic', 'connected')])
+      );
     });
 
     const response = await recover(createVerifyFailureResponse());
@@ -194,7 +196,9 @@ describe('recoverOpenCodeConnectApiKeyVerifyFailure', () => {
     let storeAtViewTime: Record<string, unknown> | null = null;
     host.loadView.mockImplementation(() => {
       storeAtViewTime = readStore(authStorePath);
-      return Promise.resolve(createViewResponse([createProviderConnection('anthropic', 'not-connected')]));
+      return Promise.resolve(
+        createViewResponse([createProviderConnection('anthropic', 'not-connected')])
+      );
     });
 
     const original = createVerifyFailureResponse();

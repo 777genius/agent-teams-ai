@@ -72,7 +72,30 @@
       "externalTeam": "tim eksternal",
       "crossTeamAwaitingReply": "Pesan Cross- tim dikirim, menunggu balasan",
       "user": "pengguna",
-      "awaitingApproval": "menunggu persetujuan"
+      "awaitingApproval": "menunggu persetujuan",
+      "discardQueued": {
+        "action": "Buang pesan dalam antrean",
+        "alreadyDelivered": "Tidak ada yang dibuang: pesan tersebut sudah terkirim ke \"{{member}}\".",
+        "cancelLabel": "Batal",
+        "confirmLabel": "Buang",
+        "count": "{{count}} dalam antrean",
+        "count_few": "{{count}} dalam antrean",
+        "count_many": "{{count}} dalam antrean",
+        "count_one": "{{count}} dalam antrean",
+        "count_other": "{{count}} dalam antrean",
+        "failedFallbackMessage": "Terjadi kesalahan tak terduga",
+        "failedTitle": "Gagal membuang pesan dalam antrean",
+        "message": "Buang {{count}} pesan dalam antrean untuk \"{{member}}\"? Pesan belum terkirim dan akan dihapus permanen. Pesan yang sudah terkirim dan pesan antar-agen tidak terpengaruh.",
+        "message_few": "Buang {{count}} pesan dalam antrean untuk \"{{member}}\"? Pesan belum terkirim dan akan dihapus permanen. Pesan yang sudah terkirim dan pesan antar-agen tidak terpengaruh.",
+        "message_many": "Buang {{count}} pesan dalam antrean untuk \"{{member}}\"? Pesan belum terkirim dan akan dihapus permanen. Pesan yang sudah terkirim dan pesan antar-agen tidak terpengaruh.",
+        "message_one": "Buang {{count}} pesan dalam antrean untuk \"{{member}}\"? Pesan belum terkirim dan akan dihapus permanen. Pesan yang sudah terkirim dan pesan antar-agen tidak terpengaruh.",
+        "message_other": "Buang {{count}} pesan dalam antrean untuk \"{{member}}\"? Pesan belum terkirim dan akan dihapus permanen. Pesan yang sudah terkirim dan pesan antar-agen tidak terpengaruh.",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} dibuang. Masih dalam antrean: {{remaining}}.",
+        "resultTitle": "Pesan dalam antrean",
+        "title": "Buang pesan dalam antrean",
+        "tooltip": "Buang pesan dalam antrean anggota ini"
+      }
     },
     "reply": {
       "replyingTo": "Menjawab ke",
@@ -1788,6 +1811,9 @@
     "createAutomatically": "Bila direktori tidak ada, itu akan dibuat secara otomatis."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Rekan tim tidak bergabung dalam tenggang waktu peluncuran."
+    },
     "badges": {
       "worktree": "pohon kerja"
     },

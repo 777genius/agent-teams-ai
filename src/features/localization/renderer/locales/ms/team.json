@@ -72,7 +72,30 @@
       "externalTeam": "pasukan luaran",
       "crossTeamAwaitingReply": "Mesej merentas pasukan dihantar, menunggu balasan",
       "user": "pengguna",
-      "awaitingApproval": "menunggu kelulusan"
+      "awaitingApproval": "menunggu kelulusan",
+      "discardQueued": {
+        "action": "Buang mesej dalam baris gilir",
+        "alreadyDelivered": "Tiada apa-apa dibuang: mesej itu sudah dihantar kepada \"{{member}}\".",
+        "cancelLabel": "Batal",
+        "confirmLabel": "Buang",
+        "count": "{{count}} dalam baris gilir",
+        "count_few": "{{count}} dalam baris gilir",
+        "count_many": "{{count}} dalam baris gilir",
+        "count_one": "{{count}} dalam baris gilir",
+        "count_other": "{{count}} dalam baris gilir",
+        "failedFallbackMessage": "Ralat tidak dijangka berlaku",
+        "failedTitle": "Gagal membuang mesej dalam baris gilir",
+        "message": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "message_few": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "message_many": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "message_one": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "message_other": "Buang {{count}} mesej dalam baris gilir untuk \"{{member}}\"? Mesej belum dihantar dan akan dipadamkan secara kekal. Mesej yang telah dihantar dan mesej antara ejen tidak terjejas.",
+        "okLabel": "OK",
+        "remaining": "{{discarded}} dibuang. Masih dalam baris gilir: {{remaining}}.",
+        "resultTitle": "Mesej dalam baris gilir",
+        "title": "Buang mesej dalam baris gilir",
+        "tooltip": "Buang mesej dalam baris gilir ahli ini"
+      }
     },
     "reply": {
       "replyingTo": "Membalas kepada",
@@ -1788,6 +1811,9 @@
     "createAutomatically": "Jika direktori tidak wujud, ia akan dicipta secara automatik."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Rakan pasukan tidak menyertai dalam tempoh tangguh pelancaran."
+    },
     "badges": {
       "worktree": "worktree"
     },

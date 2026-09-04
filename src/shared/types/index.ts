@@ -30,6 +30,9 @@ export type * from './team';
 // Re-export Schedule types
 export type * from './schedule';
 
+// Re-export SSH types
+export type * from './ssh';
+
 // Re-export Review types (Phase 1)
 export type * from './review';
 

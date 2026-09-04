@@ -2,11 +2,43 @@ import { describe, expect, it } from 'vitest';
 
 import {
   choosePreferredLaunchStateSummary,
+  createLaunchStateSummary,
   createPersistedLaunchSummaryProjection,
   shouldSuppressLegacyLaunchArtifactHeuristic,
 } from '../../../../src/main/services/team/TeamLaunchSummaryProjection';
 
 describe('TeamLaunchSummaryProjection', () => {
+  it('recomputes counts from durable member states instead of a stale summary cache', () => {
+    const snapshot = {
+      version: 2,
+      teamName: 'fresh-roster-team',
+      updatedAt: '2026-09-03T20:00:00.000Z',
+      launchPhase: 'active',
+      expectedMembers: ['alice', 'bob', 'cara'],
+      members: {
+        alice: { name: 'alice', launchState: 'confirmed_alive' },
+        bob: { name: 'bob', launchState: 'confirmed_alive' },
+        cara: { name: 'cara', launchState: 'confirmed_alive' },
+      },
+      summary: {
+        confirmedCount: 2,
+        pendingCount: 1,
+        failedCount: 0,
+        runtimeAlivePendingCount: 1,
+      },
+      teamLaunchState: 'partial_pending',
+    } as never;
+
+    expect(createLaunchStateSummary(snapshot)).toMatchObject({
+      expectedMemberCount: 3,
+      confirmedCount: 3,
+      confirmedMemberCount: 3,
+      pendingCount: 0,
+      failedCount: 0,
+      teamLaunchState: 'clean_success',
+    });
+  });
+
   it('ignores stale terminal bootstrap-only pending summaries when canonical launch truth is missing', () => {
     const summary = choosePreferredLaunchStateSummary({
       bootstrapSnapshot: {

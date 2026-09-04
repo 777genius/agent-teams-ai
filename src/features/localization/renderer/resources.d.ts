@@ -3407,6 +3407,29 @@ export default interface Resources {
         awaitingApproval: 'awaiting approval';
         awaitingReply: 'awaiting reply';
         crossTeamAwaitingReply: 'Cross-team message sent, awaiting reply';
+        discardQueued: {
+          action: 'Discard queued messages';
+          alreadyDelivered: 'Nothing was discarded: those messages had already been delivered to "{{member}}".';
+          cancelLabel: 'Cancel';
+          confirmLabel: 'Discard';
+          count: '{{count}} queued';
+          count_few: '{{count}} queued';
+          count_many: '{{count}} queued';
+          count_one: '{{count}} queued';
+          count_other: '{{count}} queued';
+          failedFallbackMessage: 'An unexpected error occurred';
+          failedTitle: 'Failed to discard queued messages';
+          message: 'Discard {{count}} queued messages for "{{member}}"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          message_few: 'Discard {{count}} queued messages for "{{member}}"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          message_many: 'Discard {{count}} queued messages for "{{member}}"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          message_one: 'Discard {{count}} queued message for "{{member}}"? It has not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          message_other: 'Discard {{count}} queued messages for "{{member}}"? They have not been delivered yet and will be removed permanently. Delivered and agent-to-agent messages are not affected.';
+          okLabel: 'OK';
+          remaining: 'Discarded {{discarded}}. Still queued: {{remaining}}.';
+          resultTitle: 'Queued messages';
+          title: 'Discard queued messages';
+          tooltip: "Discard this member's queued messages";
+        };
         externalTeam: 'external team';
         messageSentAwaitingReply: 'Message sent, awaiting reply';
         openMember: 'Open member';
@@ -4525,6 +4548,9 @@ export default interface Resources {
         emptyUserMessage: '{{time}} - (empty)';
         memberTurn: '{{member}} turn';
         turn: 'turn';
+      };
+      launchFailure: {
+        graceTimeout: 'Teammate did not join within the launch grace window.';
       };
       leadModel: {
         anthropicContextLimit: 'The 200K context limit is team-wide for Anthropic runtimes in this launch, including custom Anthropic teammates.';

@@ -403,6 +403,49 @@ describe('RuntimeProviderQuickConnectView', () => {
     expect(onRetryDirectory).toHaveBeenCalledTimes(1);
   });
 
+  it('shows an available-to-connect label when a gateway catalog entry is unavailable', async () => {
+    const onConnect = vi.fn();
+    await act(async () => {
+      root.render(
+        React.createElement(RuntimeProviderQuickConnectView, {
+          cards: [
+            card('openrouter', {
+              displayName: 'OpenRouter',
+              state: 'connectable',
+              stateLabel: 'Available to connect',
+              actionLabel: 'Check & connect',
+              onAction: onConnect,
+            }),
+          ],
+          gate: 'ready',
+          runtimeStatus: null,
+          directoryError: null,
+          onInstallOpenCode: vi.fn(),
+          onRefreshOpenCode: vi.fn(),
+          onRetryDirectory: vi.fn(),
+          onSetupLocalModel: vi.fn(),
+          onBrowseProviders: vi.fn(),
+        })
+      );
+    });
+
+    const connect = host.querySelector<HTMLButtonElement>(
+      '[data-testid="provider-quick-action-openrouter"]'
+    );
+    expect(connect?.closest('[data-testid="provider-quick-card-openrouter"]')?.textContent).toContain(
+      'Available to connect'
+    );
+    expect(
+      connect
+        ?.closest('[data-testid="provider-quick-card-openrouter"]')
+        ?.querySelector('[title="Available to connect"]')?.className
+    ).toContain('text-sky-300');
+    expect(connect?.textContent).toContain('Check & connect');
+    expect(connect?.disabled).toBe(false);
+    act(() => connect?.click());
+    expect(onConnect).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps OpenCode plugin plans visible but disabled when the runtime is missing', async () => {
     const onOpenCodeProviderAction = vi.fn();
 

@@ -2,13 +2,17 @@ import {
   isNativeAppManagedBootstrapCheckText,
   isNativeBootstrapControlText,
 } from '@shared/utils/teamInternalControlMessages';
-import { stripProcessTableUnavailableDiagnosticSuffix } from '@shared/utils/teamLaunchFailureReason';
+import {
+  isLaunchGraceWindowFailureReason,
+  stripProcessTableUnavailableDiagnosticSuffix,
+} from '@shared/utils/teamLaunchFailureReason';
 
 import { mentionsProcessTableUnavailable } from './TeamProvisioningLaunchDiagnostics';
 import { isBootstrapInstructionPrompt } from './TeamProvisioningPromptBuilders';
 
 export {
   isCliProvisionedButNotAliveFailureReason,
+  isLaunchGraceWindowFailureReason,
   isProvisionedButNotAliveFailureReason,
   stripProcessTableUnavailableDiagnosticSuffix,
 } from '@shared/utils/teamLaunchFailureReason';
@@ -17,10 +21,6 @@ import type { MemberLaunchState } from '@shared/types';
 
 export function isNeverSpawnedDuringLaunchReason(reason?: string): boolean {
   return reason?.trim() === 'Teammate was never spawned during launch.';
-}
-
-export function isLaunchGraceWindowFailureReason(reason?: string): boolean {
-  return reason?.trim() === 'Teammate did not join within the launch grace window.';
 }
 
 export function isConfigRegistrationFailureReason(reason?: string): boolean {

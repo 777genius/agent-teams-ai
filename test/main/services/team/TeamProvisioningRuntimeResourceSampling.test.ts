@@ -124,6 +124,45 @@ describe('TeamProvisioningRuntimeResourceSampling', () => {
     ).toBeUndefined();
   });
 
+  // The read-only snapshot build shares this history with every other reader
+  // of the team, so an observation endpoint polling it may report the series a
+  // member already has but must not append to it, and must not prune it.
+  it('creates a write-free history port for a read-only snapshot build', () => {
+    const sampling = createSampling();
+    const writingPorts = sampling.createRuntimeSnapshotResourceSamplingPorts();
+    const readOnlyPorts = sampling.createRuntimeSnapshotResourceSamplingPorts({ readOnly: true });
+    const sample = (timestamp: string, rssBytes: number) => ({
+      teamName: 'runtime-team',
+      memberName: 'alice',
+      runId: 'run-1',
+      pid: 111,
+      timestamp,
+      rssBytes,
+    });
+
+    expect(
+      readOnlyPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:00:00.000Z', 100))
+    ).toBeUndefined();
+    // Negative control: the writing port is what puts a sample in the history,
+    // so a read-only port that quietly recorded would be indistinguishable.
+    expect(
+      writingPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:01:00.000Z', 200))
+    ).toEqual([expect.objectContaining({ rssBytes: 200 })]);
+    expect(
+      readOnlyPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:02:00.000Z', 300))
+    ).toEqual([expect.objectContaining({ rssBytes: 200 })]);
+
+    readOnlyPorts.agentRuntimeResourceHistory.prune('runtime-team', new Set());
+    expect(
+      readOnlyPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:03:00.000Z', 400))
+    ).toEqual([expect.objectContaining({ rssBytes: 200 })]);
+    // Negative control for the prune half, on the same history.
+    writingPorts.agentRuntimeResourceHistory.prune('runtime-team', new Set());
+    expect(
+      readOnlyPorts.agentRuntimeResourceHistory.record(sample('2026-04-24T12:04:00.000Z', 500))
+    ).toBeUndefined();
+  });
+
   // On win32 the usage snapshot tags every process row as 'wsl' and the tree
   // builder drops those (a WSL pid namespace cannot be sampled from the
   // Windows host), so the native tree this case asserts is unreachable there.

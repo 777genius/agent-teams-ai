@@ -72,7 +72,30 @@
       "externalTeam": "team esterno",
       "crossTeamAwaitingReply": "Messaggio tra team inviato, in attesa di risposta",
       "user": "utente",
-      "awaitingApproval": "in attesa di approvazione"
+      "awaitingApproval": "in attesa di approvazione",
+      "discardQueued": {
+        "action": "Elimina i messaggi in coda",
+        "alreadyDelivered": "Non è stato eliminato nulla: quei messaggi erano già stati consegnati a \"{{member}}\".",
+        "cancelLabel": "Annulla",
+        "confirmLabel": "Elimina",
+        "count": "{{count}} in coda",
+        "count_few": "{{count}} in coda",
+        "count_many": "{{count}} in coda",
+        "count_one": "{{count}} in coda",
+        "count_other": "{{count}} in coda",
+        "failedFallbackMessage": "Si è verificato un errore imprevisto",
+        "failedTitle": "Impossibile eliminare i messaggi in coda",
+        "message": "Eliminare {{count}} messaggi in coda per \"{{member}}\"? Non sono ancora stati consegnati e verranno rimossi definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "message_few": "Eliminare {{count}} messaggi in coda per \"{{member}}\"? Non sono ancora stati consegnati e verranno rimossi definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "message_many": "Eliminare {{count}} messaggi in coda per \"{{member}}\"? Non sono ancora stati consegnati e verranno rimossi definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "message_one": "Eliminare {{count}} messaggio in coda per \"{{member}}\"? Non è ancora stato consegnato e verrà rimosso definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "message_other": "Eliminare {{count}} messaggi in coda per \"{{member}}\"? Non sono ancora stati consegnati e verranno rimossi definitivamente. I messaggi consegnati e quelli tra agenti non vengono modificati.",
+        "okLabel": "OK",
+        "remaining": "Eliminati {{discarded}}. Ancora in coda: {{remaining}}.",
+        "resultTitle": "Messaggi in coda",
+        "title": "Elimina i messaggi in coda",
+        "tooltip": "Elimina i messaggi in coda di questo membro"
+      }
     },
     "reply": {
       "replyingTo": "In risposta a",
@@ -1788,6 +1811,9 @@
     "createAutomatically": "Se la directory non esiste, verrà creata automaticamente."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Il membro del team non si è unito entro il margine di tempo dell'avvio."
+    },
     "badges": {
       "worktree": "worktree"
     },

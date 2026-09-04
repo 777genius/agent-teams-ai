@@ -3554,7 +3554,10 @@ describe('useRuntimeProviderManagement', () => {
     });
     const root = createRoot(host);
     await act(async () => {
-      root.render(React.createElement(EnabledHarness, { projectPath: '/tmp/project-a' }));
+      root.render(React.createElement(EnabledHarness, {
+        projectPath: '/tmp/project-a',
+        bundledRuntimeVersion: '0.0.74',
+      }));
       await Promise.resolve();
     });
 

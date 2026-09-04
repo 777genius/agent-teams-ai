@@ -122,7 +122,11 @@ import {
 } from './projectPathOptions';
 import { loadProjectPathProjects, type ProjectPathProject } from './projectPathProjects';
 import { ProjectPathSelector } from './ProjectPathSelector';
-import { createLaunchGuard, useAuthorityGatedCliStatus } from './providerLaunchAuthority';
+import {
+  canResolveOpenCodeLaunchBlockers,
+  createLaunchGuard,
+  useAuthorityGatedCliStatus,
+} from './providerLaunchAuthority';
 import { ProviderLaunchAuthorityNotice } from './ProviderLaunchAuthorityNotice';
 import { buildProviderPrepareModelCacheKey } from './providerPrepareCacheKey';
 import {
@@ -500,12 +504,9 @@ export const CreateTeamDialog = ({
     isLoaded: draftLoaded,
     clearDraft,
   } = useCreateTeamDraft();
-
   const descriptionDraft = useDraftPersistence({ key: 'createTeam:description' });
   const promptDraft = useDraftPersistence({ key: 'createTeam:prompt' });
   const promptChipDraft = useChipDraftPersistence('createTeam:prompt:chips');
-
-  // ── Transient UI state (NOT persisted) ───────────────────────────────
   const [projects, setProjects] = useState<ProjectPathProject[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
@@ -565,17 +566,13 @@ export const CreateTeamDialog = ({
   const [selectedEffort, setSelectedEffortRaw] = useState(getStoredCreateTeamEffort);
   const [selectedFastMode, setSelectedFastModeRaw] = useState<TeamFastMode>(getStoredTeamFastMode);
   const [anthropicRuntimeNotice, setAnthropicRuntimeNotice] = useState<string | null>(null);
-
-  // Advanced CLI section state (use teamName-derived key for localStorage)
   const advancedKey = useMemo(() => sanitizeTeamName(teamName.trim()) || '_new_', [teamName]);
   const [worktreeEnabled, setWorktreeEnabledRaw] = useState(false);
   const [worktreeName, setWorktreeNameRaw] = useState('');
   const [customArgs, setCustomArgsRaw] = useState('');
-
   useEffect(() => {
     migrateLegacyCreateTeamPreferences();
   }, []);
-
   useEffect(() => {
     if (!open) {
       setProviderSettingsProviderId(null);
@@ -758,7 +755,8 @@ export const CreateTeamDialog = ({
       ])
     );
   }, [members, multimodelEnabled, selectedProviderId, soloTeam, syncModelsWithLead]);
-  // Clear stale provisioning error when dialog opens
+  const openCodeCatalogEnabled =
+    open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode');
   useEffect(() => {
     if (open && dialogTeamNameKey) {
       clearProvisioningError?.(dialogTeamNameKey);
@@ -772,10 +770,8 @@ export const CreateTeamDialog = ({
     openCodeProviderScopedStatusBySourceId,
   } = useOpenCodeProviderScopedDialogModelState({
     projectPath: effectiveCwd,
-    catalogEnabled:
-      open && launchTeam && multimodelEnabled && selectedMemberProviders.includes('opencode'),
-    passiveStatusPrefetchEnabled:
-      open && multimodelEnabled && selectedMemberProviders.includes('opencode'),
+    catalogEnabled: openCodeCatalogEnabled,
+    passiveStatusPrefetchEnabled: prepareState !== 'idle' && openCodeCatalogEnabled,
     passiveProviderStatus: projectScopedOpenCodeStatus,
     members,
     syncModelsWithLead,
@@ -813,6 +809,8 @@ export const CreateTeamDialog = ({
   );
   const launchAuthorityBlockers = launchGuard.blockers(launchTeam);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
+  const launchPreflightCanResolveBlockers =
+    canResolveOpenCodeLaunchBlockers(launchAuthorityBlockers);
   const workspaceTrustStatus = useWorkspaceTrustStatus({
     enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
     projectPath: effectiveCwd || null,
@@ -1204,7 +1202,7 @@ export const CreateTeamDialog = ({
   );
 
   useEffect(() => {
-    if (!open || !canCreate || !launchTeam) {
+    if (!open || !canCreate || !launchTeam || prepareState === 'idle') {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -1465,6 +1463,7 @@ export const CreateTeamDialog = ({
     open,
     canCreate,
     launchTeam,
+    prepareState,
     effectiveCwd,
     effectiveMemberDrafts,
     effectiveAnthropicRuntimeLimitContext,
@@ -2078,7 +2077,7 @@ export const CreateTeamDialog = ({
     isNameProvisioning ||
     !requestValidation.valid ||
     !!modelValidationError ||
-    launchGuard.blocked(launchTeam) ||
+    (launchAuthorityBlocked && !launchPreflightCanResolveBlockers) ||
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission;
 
@@ -2273,6 +2272,11 @@ export const CreateTeamDialog = ({
       setLocalError(modelValidationError);
       return;
     }
+    if (launchTeam && prepareState === 'idle' && launchPreflightCanResolveBlockers) {
+      setPrepareState('loading');
+      setPrepareMessage(t('create.prepare.checkingProviders'));
+      return;
+    }
     if (launchGuard.reject(launchTeam, () => setLocalError(t('launch.prepare.failed')))) return;
     if (prepareBlocksCreate) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
@@ -2439,8 +2443,8 @@ export const CreateTeamDialog = ({
   );
   const createActionLabel = isSubmitting
     ? t('create.actions.creating')
-    : launchTeam && (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading')
-      ? t('create.actions.skipPreflightAndCreate')
+    : launchTeam && prepareState === 'loading'
+      ? t('create.prepare.checkingProviders')
       : t('create.actions.create');
   return (
     <Dialog
@@ -2963,18 +2967,13 @@ export const CreateTeamDialog = ({
                 readyStatusText={t('create.prepare.readyStatus')}
               />
             ) : null}
-            {canCreate &&
-            launchTeam &&
-            (effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading') ? (
+            {canCreate && launchTeam && prepareState === 'loading' ? (
               <>
                 <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                   <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   <div>
                     <span>
-                      {effectivePrepare.message ??
-                        (effectivePrepare.state === 'idle'
-                          ? t('create.prepare.checkingProviders')
-                          : t('create.prepare.preparingEnvironment'))}
+                      {effectivePrepare.message ?? t('create.prepare.preparingEnvironment')}
                     </span>
                     <p className="mt-0.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
                       {t('launch.prepare.preflight', {
@@ -3027,7 +3026,8 @@ export const CreateTeamDialog = ({
             ) : null}
             {canCreate &&
             launchTeam &&
-            effectivePrepare.state === 'ready' &&
+            effectivePrepare.state !== 'loading' &&
+            (!launchPreflightCanResolveBlockers || prepareState !== 'idle') &&
             launchAuthorityBlocked ? (
               <ProviderLaunchAuthorityNotice
                 id={CREATE_LAUNCH_AUTHORITY_BLOCKER_ID}
@@ -3124,7 +3124,9 @@ export const CreateTeamDialog = ({
                 size="lg"
                 className="min-w-32 text-sm"
                 aria-describedby={
-                  launchAuthorityBlocked && effectivePrepare.state === 'ready'
+                  launchAuthorityBlocked &&
+                  (!launchPreflightCanResolveBlockers || prepareState !== 'idle') &&
+                  effectivePrepare.state !== 'loading'
                     ? CREATE_LAUNCH_AUTHORITY_BLOCKER_ID
                     : undefined
                 }
@@ -3132,6 +3134,7 @@ export const CreateTeamDialog = ({
                   !canCreate ||
                   !draftLoaded ||
                   isSubmitting ||
+                  prepareState === 'loading' ||
                   hasCreateFormErrors ||
                   prepareBlocksCreate
                 }

@@ -72,7 +72,30 @@
       "externalTeam": "harici ekip",
       "crossTeamAwaitingReply": "Ekipler arası mesaj gönderildi, yanıt bekleniyor",
       "user": "kullanıcı",
-      "awaitingApproval": "onay bekleniyor"
+      "awaitingApproval": "onay bekleniyor",
+      "discardQueued": {
+        "action": "Kuyruktaki mesajları sil",
+        "alreadyDelivered": "Hiçbir şey silinmedi: bu mesajlar \"{{member}}\" üyesine zaten teslim edilmişti.",
+        "cancelLabel": "İptal",
+        "confirmLabel": "Sil",
+        "count": "kuyrukta {{count}}",
+        "count_few": "kuyrukta {{count}}",
+        "count_many": "kuyrukta {{count}}",
+        "count_one": "kuyrukta {{count}}",
+        "count_other": "kuyrukta {{count}}",
+        "failedFallbackMessage": "Beklenmeyen bir hata oluştu",
+        "failedTitle": "Kuyruktaki mesajlar silinemedi",
+        "message": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmediler ve kalıcı olarak kaldırılacaklar. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "message_few": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmediler ve kalıcı olarak kaldırılacaklar. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "message_many": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmediler ve kalıcı olarak kaldırılacaklar. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "message_one": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmedi ve kalıcı olarak kaldırılacak. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "message_other": "\"{{member}}\" için kuyruktaki {{count}} mesaj silinsin mi? Henüz teslim edilmediler ve kalıcı olarak kaldırılacaklar. Teslim edilmiş mesajlar ve ajanlar arası mesajlar etkilenmez.",
+        "okLabel": "Tamam",
+        "remaining": "{{discarded}} silindi. Kuyrukta kalan: {{remaining}}.",
+        "resultTitle": "Kuyruktaki mesajlar",
+        "title": "Kuyruktaki mesajları sil",
+        "tooltip": "Bu üyenin kuyruktaki mesajlarını sil"
+      }
     },
     "reply": {
       "replyingTo": "Şuna yanıt veriliyor:",
@@ -1788,6 +1811,9 @@
     "createAutomatically": "Dizin mevcut değilse otomatik olarak oluşturulacaktır."
   },
   "members": {
+    "launchFailure": {
+      "graceTimeout": "Takım arkadaşı başlatma tolerans süresi içinde katılmadı."
+    },
     "badges": {
       "worktree": "worktree"
     },

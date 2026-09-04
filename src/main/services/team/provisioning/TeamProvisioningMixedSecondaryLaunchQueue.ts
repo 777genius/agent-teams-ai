@@ -1,9 +1,16 @@
 import * as path from 'path';
 
+import { sleep } from './TeamProvisioningAsyncUtils';
+import { markOpenCodeLaneBlockedBySharedRuntimeFailure } from './TeamProvisioningOpenCodeBlockedLanePolicy';
+import { appendDiagnosticOnce } from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
 import {
-  markOpenCodeLaneBlockedBySharedRuntimeFailure,
-  selectOpenCodeSharedRuntimePreflightFailureDiagnostic,
-} from './TeamProvisioningOpenCodeRuntimeEvidencePolicy';
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS,
+  OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_DIAGNOSTIC,
+  type OpenCodeSharedRuntimeFailuresByProject,
+  shouldRetryTransientOpenCodeSharedRuntimeFailure,
+  takeBlockingOpenCodeSharedRuntimeFailure,
+  trackOpenCodeSharedRuntimeFailureFromResult,
+} from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -19,7 +26,7 @@ export interface MixedSecondaryLaunchQueueRun {
   processKilled: boolean;
   mixedSecondaryLanes?: MixedSecondaryRuntimeLaneState[];
   mixedSecondaryLaneLaunchQueue?: Promise<void>;
-  mixedSecondarySharedRuntimeFailuresByProject?: Map<string, string>;
+  mixedSecondarySharedRuntimeFailuresByProject?: OpenCodeSharedRuntimeFailuresByProject;
 }
 
 export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunchQueueRun> {
@@ -104,7 +111,11 @@ export function launchQueuedMixedSecondaryLaneInBackground<
         return;
       }
       const laneCwd = path.resolve(lane.member.cwd?.trim() || run.request.cwd);
-      const sharedRuntimeFailure = run.mixedSecondarySharedRuntimeFailuresByProject?.get(laneCwd);
+      const sharedRuntimeFailure = takeBlockingOpenCodeSharedRuntimeFailure(
+        run,
+        laneCwd,
+        ports.nowMs()
+      );
       if (sharedRuntimeFailure) {
         markOpenCodeLaneBlockedBySharedRuntimeFailure({
           teamName: run.teamName,
@@ -118,14 +129,33 @@ export function launchQueuedMixedSecondaryLaneInBackground<
       }
       lane.state = 'launching';
       await ports.launchSingleMixedSecondaryLane(run, lane);
-      if (lane.result) {
-        const nextSharedRuntimeFailure = selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
-          lane.result
+      if (
+        shouldRetryTransientOpenCodeSharedRuntimeFailure(lane.result) &&
+        !run.cancelRequested &&
+        !run.processKilled
+      ) {
+        // The pre-launch gate on the failed result proves the state-changing
+        // bridge command never ran, so one in-place relaunch cannot duplicate a
+        // host or a session.
+        ports.logger.warn(
+          `[${run.teamName}] OpenCode secondary lane ${lane.laneId} hit a transient shared runtime timeout; retrying once in ${OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS}ms`
         );
-        if (nextSharedRuntimeFailure) {
-          run.mixedSecondarySharedRuntimeFailuresByProject ??= new Map();
-          run.mixedSecondarySharedRuntimeFailuresByProject.set(laneCwd, nextSharedRuntimeFailure);
+        lane.diagnostics = appendDiagnosticOnce(
+          lane.diagnostics,
+          OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_DIAGNOSTIC
+        );
+        await sleep(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS);
+        // The backoff is a window in which the lane can change hands (a manual
+        // lane retry or a relaunch assigns a new lane run id). Only the run that
+        // observed the timeout may relaunch, mirroring the cancelled-lane fence.
+        if (!run.cancelRequested && !run.processKilled && lane.runId === laneRunId) {
+          lane.state = 'launching';
+          lane.result = null;
+          await ports.launchSingleMixedSecondaryLane(run, lane);
         }
+      }
+      if (lane.result) {
+        trackOpenCodeSharedRuntimeFailureFromResult(run, laneCwd, lane.result, ports.nowMs());
       }
     } catch (error) {
       if (run.cancelRequested || run.processKilled) {
@@ -146,13 +176,7 @@ export function launchQueuedMixedSecondaryLaneInBackground<
       lane.warnings = [];
       lane.diagnostics = [...lane.diagnostics, message];
       const laneCwd = path.resolve(lane.member.cwd?.trim() || run.request.cwd);
-      const sharedRuntimeFailure = selectOpenCodeSharedRuntimePreflightFailureDiagnostic(
-        lane.result
-      );
-      if (sharedRuntimeFailure) {
-        run.mixedSecondarySharedRuntimeFailuresByProject ??= new Map();
-        run.mixedSecondarySharedRuntimeFailuresByProject.set(laneCwd, sharedRuntimeFailure);
-      }
+      trackOpenCodeSharedRuntimeFailureFromResult(run, laneCwd, lane.result, ports.nowMs());
       await ports
         .upsertOpenCodeRuntimeLaneIndexEntry({
           teamsBasePath: ports.teamsBasePath(),

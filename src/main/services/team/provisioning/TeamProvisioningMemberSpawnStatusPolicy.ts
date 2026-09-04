@@ -1,3 +1,5 @@
+import { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON } from '@shared/utils/teamLaunchFailureReason';
+
 import { deriveMemberLaunchState } from './TeamProvisioningLaunchFailurePolicy';
 
 import type { MemberSpawnStatusEntry, PersistedTeamLaunchSummary } from '@shared/types';
@@ -6,8 +8,7 @@ export const TASK_ACTIVITY_RUNTIME_PAUSE_GRACE_MS = 5_000;
 export const MEMBER_SPAWN_AUDIT_WARNING_THROTTLE_MS = 10_000;
 export const MEMBER_LAUNCH_GRACE_MS = 120_000;
 
-export const MEMBER_LAUNCH_GRACE_TIMEOUT_REASON =
-  'Teammate did not join within the launch grace window.';
+export { MEMBER_LAUNCH_GRACE_TIMEOUT_REASON };
 
 /**
  * True when a member that accepted the agent tool never joined and its runtime

@@ -25,6 +25,9 @@ const TEAM_PROVISIONING_SERVICE_CLASS_NAME = 'TeamProvisioningService';
 const DECLARED_PUBLIC_SERVICE_ENTRYPOINTS = [
   'assessLeadRuntimeRestart',
   'createTeam',
+  // The launch prompt reaches the lead through the inbox rather than the
+  // orchestrator leadPrompt, and the launch flow drives it from outside.
+  'deliverOpenCodeLaunchPromptToLead',
   'launchTeam',
   'restartLeadRuntime',
   'setRuntimeRecoveryFailureObserver',
@@ -40,6 +43,7 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'cleanupPrelaunchBackup',
   'clearPendingCrossTeamReplyExpectation',
   'createTeam',
+  'deliverOpenCodeLaunchPromptToLead',
   'deliverOpenCodeMemberMessage',
   'deliverOpenCodeRuntimeMessage',
   'detachLiveRosterMember',
@@ -58,12 +62,14 @@ const DOCUMENTED_EFFECTIVE_PUBLIC_SERVICE_INSTANCE_MEMBERS = [
   'getLiveLeadProcessMessages',
   'getMemberToolApprovalBusyStatus',
   'getMemberSpawnStatuses',
+  'getMemberSpawnStatusesReadOnly',
   'getOpenCodeMemberDeliveryBusyStatus',
   'getOpenCodeRuntimeAdapter',
   'getOpenCodeRuntimeDeliveryStatus',
   'getProvisioningStatus',
   'getRuntimeState',
   'getTeamAgentRuntimeSnapshot',
+  'getTeamAgentRuntimeSnapshotReadOnly',
   'hasActiveTeamRuntimes',
   'hasProvisioningRun',
   'initializeToolApprovalSettingsForLaunch',
