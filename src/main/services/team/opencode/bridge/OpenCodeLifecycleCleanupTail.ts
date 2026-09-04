@@ -116,59 +116,85 @@ export async function runOpenCodeLifecycleCleanupTail(
     return;
   }
 
-  await cleanupOpenCodeHostProcessFallback(
-    `${reason} fallback`,
-    {
-      mode: reason === 'shutdown' ? 'force' : 'orphaned',
-      excludePids: reason === 'startup' ? input.registryHostPids : undefined,
-      ...(reason === 'shutdown'
-        ? buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId)
-        : {}),
-      startedBeforeMs: reason === 'startup' ? input.appStartedAtMs : null,
-    },
-    ports
+  await runIndependentStep(`${reason} fallback`, ports, () =>
+    cleanupOpenCodeHostProcessFallback(
+      `${reason} fallback`,
+      {
+        mode: reason === 'shutdown' ? 'force' : 'orphaned',
+        excludePids: reason === 'startup' ? input.registryHostPids : undefined,
+        ...(reason === 'shutdown'
+          ? buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId)
+          : {}),
+        startedBeforeMs: reason === 'startup' ? input.appStartedAtMs : null,
+      },
+      ports
+    )
   );
 
   if (reason === 'shutdown' && input.releaseSharedRuntime) {
     // After the hosts are dead, not before: while one is still up it is a
     // process of this app that may yet send the runtime a request.
-    try {
-      await input.releaseSharedRuntime();
-    } catch (error) {
-      ports.logWarning(
-        `[OpenCode] shutdown shared runtime release: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
+    await runIndependentStep('shutdown shared runtime release', ports, input.releaseSharedRuntime);
   }
 
   if (reason === 'startup') {
-    await runOpenCodeStartupRuntimeSweepTail({
-      sweepCommandSettledAtMs: input.sweepCommandSettledAtMs,
-      ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId),
-      logSweepResult: (message) => ports.logSweepResult(`[OpenCode] ${message}`),
-      logWarning: (message) => ports.logWarning(message),
-      logError: (message) => ports.logError(message),
-    });
+    // Never rejects on its own account, and is run through the same guard as
+    // the rest so that stays a property of this sequence rather than of one
+    // module's internals.
+    await runIndependentStep('startup runtime sweep', ports, () =>
+      runOpenCodeStartupRuntimeSweepTail({
+        sweepCommandSettledAtMs: input.sweepCommandSettledAtMs,
+        ownershipMarkers: buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId),
+        logSweepResult: (message) => ports.logSweepResult(`[OpenCode] ${message}`),
+        logWarning: (message) => ports.logWarning(message),
+        logError: (message) => ports.logError(message),
+      })
+    );
     // A host that was killed never released its orchestrator startup lock, and
     // the next launch readiness probe waits on every leftover in turn. The
     // reap above has just run, so a lock still held open belongs to a live
     // host: on Windows its unlink fails harmlessly, and where the OS unlinks
     // an open file instead the floor alone has to keep a host that is starting
     // right now out of scope.
-    const lockPurge = await purgeStaleOpenCodeHostStartupLocks({
-      minAgeMs: resolveStartupStaleLockMinAgeMs(),
+    await runIndependentStep('startup lock purge', ports, async () => {
+      const lockPurge = await purgeStaleOpenCodeHostStartupLocks({
+        minAgeMs: resolveStartupStaleLockMinAgeMs(),
+      });
+      if (lockPurge.removed > 0) {
+        ports.logSweepResult(
+          `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`
+        );
+      }
+      for (const diagnostic of lockPurge.diagnostics) {
+        ports.logWarning(`[OpenCode] startup lock purge: ${diagnostic}`);
+      }
     });
-    if (lockPurge.removed > 0) {
-      ports.logSweepResult(
-        `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`
-      );
-    }
-    for (const diagnostic of lockPurge.diagnostics) {
-      ports.logWarning(`[OpenCode] startup lock purge: ${diagnostic}`);
-    }
-    await reapOrphanedCursorAgentLeadTrees(input);
+    await runIndependentStep('startup cursor-agent sweep', ports, () =>
+      reapOrphanedCursorAgentLeadTrees(input)
+    );
+  }
+}
+
+/**
+ * Every step of this tail is best effort, and none of them is a precondition of
+ * the next: the process table a sweep reads can refuse to answer, and a
+ * rejection that leaves this function takes the steps behind it with it. The
+ * stale-lock purge is the one that matters most, because the locks a failed
+ * reap could not clear are exactly what the next launch queues behind - which
+ * is the same failure the startup runtime sweep already guards internally, one
+ * step earlier in the sequence.
+ */
+async function runIndependentStep(
+  label: string,
+  ports: OpenCodeLifecycleCleanupTailPorts,
+  step: () => Promise<void>
+): Promise<void> {
+  try {
+    await step();
+  } catch (error) {
+    ports.logWarning(
+      `[OpenCode] ${label} failed: ${error instanceof Error ? error.message : String(error)}`
+    );
   }
 }
 
