@@ -123,7 +123,7 @@ function cleanupRun(
     activeCrossTeamReplyHints: [{}],
     pendingInboxRelayCandidates: [{}],
     pendingApprovals: new Map([['approval-1', {}]]),
-    mcpConfigPath: '/tmp/team-a-mcp.json',
+    mcpConfigPath: null,
     bootstrapSpecPath: null,
     bootstrapUserPromptPath: null,
     pendingPostCompactReminder: true,
@@ -249,9 +249,9 @@ function makePorts(
 describe('lead relay lifecycle integration', () => {
   afterEach(() => vi.useRealTimers());
 
-  it.each([false, true])(
-    'releases stopped capture before relaunch (transport pending: %s)',
-    async (pendingSend) => {
+  it.each(['sent', 'pending', 'captured-pending'] as const)(
+    'releases stopped capture before relaunch (transport: %s)',
+    async (transport) => {
       vi.useFakeTimers();
       const oldRun = {
         ...cleanupRun({
@@ -264,6 +264,7 @@ describe('lead relay lifecycle integration', () => {
         child: new ChildProcess(),
       };
       let currentRun: LeadInboxRelayFlowRun = oldRun;
+      let rejectOldSend: ((error: Error) => void) | undefined;
       const deps = createDeps({
         getAliveRunId: () => currentRun.runId,
         getRun: (id) => (id === currentRun.runId ? currentRun : undefined),
@@ -287,14 +288,19 @@ describe('lead relay lifecycle integration', () => {
         nowMs: () => Date.now(),
         sendMessageToRun: vi.fn(async (run) => {
           if (run.runId === 'run-2') run.leadRelayCapture?.resolveOnce('Handled');
-          else if (pendingSend) await new Promise<void>(() => undefined);
+          else if (transport !== 'sent') {
+            if (transport === 'captured-pending') run.leadRelayCapture?.resolveOnce('Early reply');
+            await new Promise<void>((_resolve, reject) => {
+              rejectOldSend = reject;
+            });
+          }
         }),
       });
       const boundary = createTeamProvisioningLeadInboxRelayPortsBoundary(deps);
       const first = boundary.relayLeadInboxMessages('alpha');
       await vi.advanceTimersByTimeAsync(1);
       expect(deps.sendMessageToRun).toHaveBeenCalledTimes(1);
-      const oldCapture = oldRun.leadRelayCapture!;
+      const oldCapture = oldRun.leadRelayCapture;
       oldRun.cancelRequested = true;
       oldRun.processKilled = true;
       cleanupProvisioningRun(oldRun, {
@@ -314,10 +320,11 @@ describe('lead relay lifecycle integration', () => {
       expect(await first).toBe(0);
       expect(await second).toBe(1);
       expect(deps.sendMessageToRun).toHaveBeenCalledTimes(2);
-      expect(oldCapture.settled).toBe(true);
+      if (oldCapture) expect(oldCapture.settled).toBe(true);
       expect(oldRun.leadRelayCapture).toBeNull();
-      oldCapture.touch?.();
-      oldCapture.resolveOnce('Late reply from old run');
+      rejectOldSend?.(new Error('Late transport rejection'));
+      oldCapture?.touch?.();
+      oldCapture?.resolveOnce('Late reply from old run');
       await vi.advanceTimersByTimeAsync(600_000);
       expect(deps.markInboxMessagesRead).toHaveBeenCalledTimes(1);
       expect(deps.markInboxMessagesRead).toHaveBeenCalledWith('alpha', 'team-lead', [
@@ -372,6 +379,50 @@ describe('lead relay lifecycle integration', () => {
     expect(deps.markInboxMessagesRead).not.toHaveBeenCalled();
     expect(deps.scheduleLeadInboxFollowUpRelay).toHaveBeenCalledWith('alpha', 10_000);
     capture.touch?.();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('bounds pending transport at 600 seconds even after successful capture', async () => {
+    vi.useFakeTimers();
+    const run = createRun();
+    const deps = createDeps({
+      getRun: () => run,
+      readConfigForObservation: async () => ({
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      readLeadInboxMessages: async () => [
+        {
+          from: 'user',
+          to: 'team-lead',
+          text: 'Continue my task',
+          messageId: 'msg-1',
+          timestamp: '2026-01-01T00:01:00.000Z',
+          read: false,
+          source: 'user_sent',
+        },
+      ],
+      setTimeout: (cb, ms) => setTimeout(cb, ms),
+      clearTimeout: (timer) => clearTimeout(timer),
+      nowMs: () => Date.now(),
+      sendMessageToRun: () => {
+        run.leadRelayCapture?.resolveOnce('Early reply');
+        return new Promise<void>(() => undefined);
+      },
+    });
+    let completed = false;
+    const delivery = relayLeadInboxMessagesForTeam(
+      'alpha',
+      createTeamProvisioningLeadInboxRelayFlowPorts(deps)
+    ).then((result) => {
+      completed = true;
+      return result;
+    });
+    await vi.advanceTimersByTimeAsync(599_999);
+    expect(completed).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await delivery).toBe(0);
+    expect(deps.markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(deps.persistSentMessage).not.toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
   });
 

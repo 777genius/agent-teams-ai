@@ -5,6 +5,7 @@ import {
   type LeadInboxRelayFlowRun,
   relayLeadInboxMessagesForTeam,
 } from '../TeamProvisioningLeadInboxRelayFlow';
+import { cancelRunLeadRelayCapture } from '../TeamProvisioningLeadRelayCancellation';
 
 import type { InboxMessage, TeamChangeEvent } from '@shared/types';
 
@@ -224,6 +225,73 @@ describe('lead inbox relay flow', () => {
       { type: 'inbox', teamName: 'alpha', detail: 'lead-process-reply' },
     ]);
     expect(run.leadRelayCapture).toBeNull();
+  });
+
+  it('does not dispatch transport when cancellation wins the queued microtask', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage()]);
+    ports.setTimeout.mockImplementation((_callback, ms) => {
+      if (ms === 600_000) queueMicrotask(() => cancelRunLeadRelayCapture(run));
+      return {} as NodeJS.Timeout;
+    });
+    expect(await relayLeadInboxMessagesForTeam('alpha', ports)).toBe(0);
+    expect(ports.sendMessageToRun).not.toHaveBeenCalled();
+    expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(ports.persistSentMessage).not.toHaveBeenCalled();
+  });
+
+  it.each(['resolve', 'reject'] as const)(
+    'waits for transport after successful capture (%s)',
+    async (outcome) => {
+      const run = createRun();
+      const ports = createPorts(run, [createMessage()]);
+      let resolveSend!: () => void;
+      let rejectSend!: (error: Error) => void;
+      const send = new Promise<void>((resolve, reject) => {
+        resolveSend = resolve;
+        rejectSend = reject;
+      });
+      ports.sendMessageToRun.mockImplementation(() => {
+        run.leadRelayCapture?.resolveOnce('Handled your request.');
+        return send;
+      });
+      let completed = false;
+      const delivery = relayLeadInboxMessagesForTeam('alpha', ports).then((result) => {
+        completed = true;
+        return result;
+      });
+      await vi.waitFor(() => expect(ports.sendMessageToRun).toHaveBeenCalledTimes(1));
+      expect(completed).toBe(false);
+      expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+      expect(ports.persistSentMessage).not.toHaveBeenCalled();
+      expect(ports.relayedLeadInboxMessageIds.get('alpha')?.has('msg-1') ?? false).toBe(false);
+
+      if (outcome === 'resolve') resolveSend();
+      else rejectSend(new Error('Transport failed after reply capture'));
+      expect(await delivery).toBe(outcome === 'resolve' ? 1 : 0);
+      expect(ports.markInboxMessagesRead).toHaveBeenCalledTimes(outcome === 'resolve' ? 1 : 0);
+      expect(ports.persistSentMessage).toHaveBeenCalledTimes(outcome === 'resolve' ? 1 : 0);
+    }
+  );
+
+  it('does not schedule work-sync recovery after cancellation during proof lookup', async () => {
+    const run = createRun();
+    const ports = createPorts(run, [createMessage({ messageKind: 'member_work_sync_nudge' })]);
+    let resolveProof!: (accepted: boolean) => void;
+    ports.hasAcceptedLeadWorkSyncReport = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveProof = resolve;
+        })
+    );
+    const delivery = relayLeadInboxMessagesForTeam('alpha', ports);
+    await vi.waitFor(() => expect(ports.hasAcceptedLeadWorkSyncReport).toHaveBeenCalledTimes(1));
+    run.cancelRequested = true;
+    resolveProof(false);
+    expect(await delivery).toBe(0);
+    expect(ports.scheduleLeadProofMissingWorkSyncRecovery).not.toHaveBeenCalled();
+    expect(ports.markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(ports.persistSentMessage).not.toHaveBeenCalled();
   });
 
   it('records recovery delivery only after terminal-result capture resolution', async () => {

@@ -24,7 +24,10 @@ import {
 } from './TeamProvisioningInboxRelayPolicy';
 import { scanLeadInboxPermissionRequests } from './TeamProvisioningLeadPermissionScan';
 import { joinLeadRelayCaptureText } from './TeamProvisioningLeadProcessMessages';
-import { cancelRunLeadRelayCapture } from './TeamProvisioningLeadRelayCancellation';
+import {
+  cancelRunLeadRelayCapture,
+  observeRunLeadRelayCancellation,
+} from './TeamProvisioningLeadRelayCancellation';
 import { projectLeadRelayReply } from './TeamProvisioningLeadRelayProjection';
 
 import type { InboxMessage, TeamChangeEvent } from '@shared/types';
@@ -468,17 +471,39 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     ports
   );
 
-  // Observe rejection before sending: stop/cleanup may cancel while transport is pending.
+  // Cancellation stays owned until transport settles, even if reply capture finishes first.
+  const cancellation = observeRunLeadRelayCancellation(run);
+  const transportDeadline = ports.setTimeout(
+    () => cancelRunLeadRelayCapture(run),
+    LEAD_RELAY_CAPTURE_ABSOLUTE_CAP_MS
+  );
   const finalizedCapture = finalizeLeadRelayCapture(run, capturePromise, ports);
+  let captureResult: Awaited<typeof finalizedCapture>;
   try {
-    await Promise.race([ports.sendMessageToRun(run, message), finalizedCapture]);
+    const send = Promise.resolve().then(() => {
+      if (cancellation.isCancelled() || isStaleRelayRun()) return;
+      return ports.sendMessageToRun(run, message);
+    });
+    captureResult = await Promise.race([
+      cancellation.cancelled,
+      // Failed capture drains pending transport; successful capture requires transport success.
+      finalizedCapture.then((result) =>
+        result.deliveryConfirmed ? send.then(() => result) : result
+      ),
+      send.then(() => {
+        ports.clearTimeout(transportDeadline);
+        return finalizedCapture;
+      }),
+    ]);
   } catch {
     cancelRunLeadRelayCapture(run);
     await finalizedCapture;
     return 0;
+  } finally {
+    cancellation.dispose();
+    ports.clearTimeout(transportDeadline);
   }
 
-  const captureResult = await finalizedCapture;
   if (isStaleRelayRun()) return 0;
   if (!captureResult.deliveryConfirmed) {
     run.activeCrossTeamReplyHints = [];
@@ -507,7 +532,10 @@ async function runLeadInboxRelayForTeam<TRun extends LeadInboxRelayFlowRun>(
     leadName,
     batch,
     hasAcceptedLeadWorkSyncReport: ports.hasAcceptedLeadWorkSyncReport,
-    scheduleLeadProofMissingWorkSyncRecovery: ports.scheduleLeadProofMissingWorkSyncRecovery,
+    scheduleLeadProofMissingWorkSyncRecovery: (input) =>
+      isStaleRelayRun()
+        ? Promise.resolve(false)
+        : ports.scheduleLeadProofMissingWorkSyncRecovery(input),
   });
   if (isStaleRelayRun()) return 0;
   for (const m of readCommitBatch) {
