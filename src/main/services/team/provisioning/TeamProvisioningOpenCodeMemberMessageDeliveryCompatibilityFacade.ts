@@ -163,7 +163,9 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
   > {
     return createOpenCodeMemberMessageDeliveryServiceFromHost({
       ...this.deps.createDeliveryHost(),
-      notifyOpenCodeLeadTurnActivity: (input) => this.notifyOpenCodeLeadTurnActivity(input),
+      notifyOpenCodeLeadTurnActivity: (input) => {
+        void this.notifyOpenCodeLeadTurnActivity(input);
+      },
     });
   }
 
@@ -318,7 +320,7 @@ export abstract class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibility
   }
 
   protected notifyOpenCodeLeadTurnActivity(input: OpenCodeLeadTurnActivityNotification): void {
-    this.openCodeMemberMessageDeliveryCompatibility.notifyOpenCodeLeadTurnActivity(input);
+    void this.openCodeMemberMessageDeliveryCompatibility.notifyOpenCodeLeadTurnActivity(input);
   }
 
   async deliverOpenCodeMemberMessage(

@@ -331,6 +331,7 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
     });
     expect(harness.followUpSchedule).not.toHaveBeenCalled();
     expect(harness.notify).toHaveBeenCalledWith(expect.objectContaining({ state: 'idle' }));
+    expect(harness.notify).not.toHaveBeenCalledWith(expect.objectContaining({ state: 'active' }));
   });
 
   it('keeps a fresh busy non-user delivery pending (normal observe follow-up)', async () => {
