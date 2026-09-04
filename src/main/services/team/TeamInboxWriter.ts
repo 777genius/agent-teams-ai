@@ -253,6 +253,13 @@ export class TeamInboxWriter {
 
   private getImmutableExplicitMessagePayload(message: InboxMessage): Record<string, unknown> {
     const isRuntimeDelivery = message.source === 'runtime_delivery';
+    // An explicit messageId is a caller-supplied identity claim, not a
+    // best-effort retry match: a second message with the same messageId but
+    // different text/summary is a real content change (e.g. a corrected
+    // reply from a re-attempted read-commit-policy pass), and dropping it
+    // silently would lose it rather than raise the collision the caller can
+    // act on. findRuntimeDeliveryDuplicateIndex below is the separate,
+    // intentionally more tolerant match used for non-explicit retries.
     return {
       from: isRuntimeDelivery ? this.normalizeComparableParticipant(message.from) : message.from,
       to: isRuntimeDelivery ? this.normalizeComparableParticipant(message.to) : message.to,
@@ -541,18 +548,19 @@ export class TeamInboxWriter {
     const relayOfMessageId = payload.relayOfMessageId.trim();
     const from = this.normalizeComparableParticipant(payload.from);
     const to = this.normalizeComparableParticipant(payload.to);
-    const text = this.normalizeComparableText(payload.text);
-    if (!from || !to || !text) {
+    if (!from || !to) {
       return -1;
     }
 
+    // Replayed runtime deliveries of the same original message may arrive as
+    // paraphrases, so (relayOfMessageId, from, to) is the identity — text is
+    // deliberately excluded from the duplicate key.
     return messages.findIndex(
       (candidate) =>
         candidate.source === 'runtime_delivery' &&
         (candidate.relayOfMessageId ?? '').trim() === relayOfMessageId &&
         this.normalizeComparableParticipant(candidate.from) === from &&
-        this.normalizeComparableParticipant(candidate.to) === to &&
-        this.normalizeComparableText(candidate.text) === text
+        this.normalizeComparableParticipant(candidate.to) === to
     );
   }
 

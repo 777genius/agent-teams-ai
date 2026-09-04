@@ -1,4 +1,4 @@
-import { unwrapAgentBlock } from '@shared/constants/agentBlocks';
+import { stripAgentBlocks, unwrapAgentBlock } from '@shared/constants/agentBlocks';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -7,6 +7,7 @@ import {
   createOpenCodeExpectedBehaviorFingerprint,
 } from '../../opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
 import { buildMemberBootstrapPrompt } from '../OpenCodeMemberBootstrapPrompt';
+import { buildOpenCodeRuntimeMessageText } from '../OpenCodeRuntimeMessageText';
 import {
   OpenCodeTeamRuntimeAdapter,
   type OpenCodeTeamRuntimeBridgePort,
@@ -96,8 +97,8 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
   });
 
   it('fails closed when launching with confirmed members returns a mismatched fingerprint', async () => {
-    const expectedFingerprint = validExecutionProof().expectedBehaviorEvidence
-      ?.expectedBehaviorFingerprint;
+    const expectedFingerprint =
+      validExecutionProof().expectedBehaviorEvidence?.expectedBehaviorFingerprint;
     const launchOpenCodeTeam = vi.fn<
       NonNullable<OpenCodeTeamRuntimeBridgePort['launchOpenCodeTeam']>
     >(async () => launchData('confirmed_alive', 'mismatched-fingerprint'));
@@ -115,9 +116,7 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
       expectedFingerprint
     );
     expect(result.teamLaunchState).toBe('partial_failure');
-    expect(result.diagnostics).toEqual([
-      'OpenCode launch result behavior fingerprint mismatch',
-    ]);
+    expect(result.diagnostics).toEqual(['OpenCode launch result behavior fingerprint mismatch']);
     expect(result.members.Worker?.hardFailureReason).toBe(
       'opencode_launch_behavior_fingerprint_mismatch'
     );
@@ -138,6 +137,131 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     expect(result.diagnostics).not.toContain(
       'OpenCode launch result behavior fingerprint mismatch'
     );
+  });
+});
+
+describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
+  async function deliveredPromptText(replyRecipient: string | undefined): Promise<string> {
+    const sendOpenCodeTeamMessage = vi.fn<
+      NonNullable<OpenCodeTeamRuntimeBridgePort['sendOpenCodeTeamMessage']>
+    >(async (_input) => ({
+      accepted: true,
+      memberName: 'Worker',
+      diagnostics: [],
+    }));
+    const bridge = {
+      sendOpenCodeTeamMessage,
+    } as unknown as OpenCodeTeamRuntimeBridgePort;
+    const adapter = new OpenCodeTeamRuntimeAdapter(bridge);
+
+    await adapter.sendMessageToMember({
+      teamName: 'team-a',
+      laneId: 'lane-worker',
+      memberName: 'Worker',
+      cwd: '/repo',
+      text: 'Dependency resolved for task 7.',
+      messageId: 'origin-1',
+      replyRecipient,
+      taskRefs: [{ teamName: 'team-a', taskId: 'task-7', displayId: '7' }],
+    });
+
+    const bridgePayload = sendOpenCodeTeamMessage.mock.calls[0]?.[0];
+    return String(bridgePayload?.text ?? '');
+  }
+
+  it('builds an informational FYI envelope for the reserved "system" reply recipient', async () => {
+    const text = await deliveredPromptText('system');
+
+    expect(text).toContain('informational system notice');
+    expect(text).toContain('Never call agent-teams_message_send with to="system"');
+    expect(text).toContain('to="user"');
+    expect(text).not.toContain('Required message_send argument envelope');
+    expect(text).not.toContain('You must not end this turn empty.');
+  });
+
+  it('keeps the visible reply contract for lead reply recipients', async () => {
+    const text = await deliveredPromptText('team-lead');
+
+    expect(text).toContain('Required message_send argument envelope');
+    expect(text).toContain('to="team-lead"');
+    expect(text).not.toContain('informational system notice');
+    expect(text).not.toContain('status report from your teammate');
+  });
+
+  it('builds a reply-optional teammate report envelope for teammate reply recipients', async () => {
+    const text = await deliveredPromptText('alice');
+
+    expect(text).toContain('status report from your teammate "alice"');
+    expect(text).toContain('Do NOT reply by default');
+    expect(text).toContain('"no further work"');
+    expect(text).toContain('Reply ONLY if the report asks you a direct question');
+    expect(text).toContain('"to":"alice"');
+    expect(text).toContain('to="user"');
+    expect(text).not.toContain('Required message_send argument envelope');
+    expect(text).not.toContain('You must not end this turn empty.');
+    expect(text).not.toContain('informational system notice');
+  });
+
+  it('adds the automated-notice rule to informational envelopes (no owner nudges)', async () => {
+    const text = await deliveredPromptText('system');
+
+    expect(text).toContain('the app has already notified the task owner');
+    expect(text).toContain('do NOT message the owner to start, continue, or confirm');
+  });
+
+  it('defaults the reply contract to user when no recipient is provided', async () => {
+    const text = await deliveredPromptText(undefined);
+
+    expect(text).toContain('Required message_send argument envelope');
+    expect(text).toContain('to="user"');
+    expect(text).not.toContain('informational system notice');
+  });
+});
+
+describe('buildOpenCodeRuntimeMessageText bootstrap check-in retry', () => {
+  it('delivers the retry instructions as agent-only content', () => {
+    const text = buildOpenCodeRuntimeMessageText({
+      runId: 'run-1',
+      teamName: 'team-a',
+      laneId: 'lane-worker',
+      memberName: 'Worker',
+      cwd: '/repo',
+      text: '',
+      messageId: 'bootstrap-checkin-retry-run-1-Worker-ses_1',
+      bootstrapCheckinRetry: {
+        runtimeSessionId: '  ses_1  ',
+        reason: 'runtime_bootstrap_checkin failed: Not connected',
+      },
+    });
+
+    expect(text).toMatch(/^<info_for_agent>/);
+    expect(text).toMatch(/<\/info_for_agent>$/);
+    expect(unwrapAgentBlock(text)).toMatch(/^<opencode_runtime_bootstrap_checkin_retry>/);
+    expect(text).toContain('runtime_bootstrap_checkin failed: Not connected');
+    expect(text).toContain('"runtimeSessionId":"ses_1"');
+    // The retry prompt is app scaffolding end to end. Its own tag is not a
+    // recognized hidden block, so without the agent-block wrapper the raw
+    // instructions stayed visible in message display and activity previews.
+    expect(stripAgentBlocks(text)).toBe('');
+  });
+
+  // Negative control: only the retry branch is wrapped. A normal delivery keeps
+  // the recognized <opencode_app_message_delivery> envelope, and wrapping it
+  // too would have hidden the inbound message the member must answer.
+  it('leaves a normal delivery on the recognized delivery envelope', () => {
+    const text = buildOpenCodeRuntimeMessageText({
+      teamName: 'team-a',
+      laneId: 'lane-worker',
+      memberName: 'Worker',
+      cwd: '/repo',
+      text: 'Please review the diff.',
+      messageId: 'origin-1',
+      replyRecipient: 'team-lead',
+    });
+
+    expect(text).not.toContain('<info_for_agent>');
+    expect(text).toMatch(/^<opencode_app_message_delivery>/);
+    expect(stripAgentBlocks(text)).toContain('Please review the diff.');
   });
 });
 
@@ -165,6 +289,8 @@ describe('buildMemberBootstrapPrompt', () => {
         'Launch bootstrap is a silent attach, not a user/team conversation turn.',
         'Do not call task_briefing, message_send, or cross_team_send just to announce readiness, say understood, report no tasks, or ask for work.',
         'If the briefing says there are no actionable tasks, stay idle silently.',
+        'Never send receipt, acknowledgement, or "no further action" messages to teammates (for example "received", "noted", "stay idle"): the task board and dependency comments are the record, and every message you send costs the recipient a full model turn and invites a reply. Message a teammate only to assign or change work or to answer a question they asked.',
+        'Never wait, sleep, poll, or block inside a turn (no AwaitShell, sleep loops, or repeated re-checks of the board): teammates only receive their work once your turn ends, and you will be woken by a new message when something changes. Do what the current message needs, then end the turn immediately.',
         '',
         'When you need to message the human user, team lead, or another teammate, call MCP tool agent-teams_message_send (or mcp__agent-teams__message_send) with teamName, to, from, text, and optional summary.',
         'Always set from="Worker" when sending a team message from this OpenCode teammate.',
@@ -172,6 +298,22 @@ describe('buildMemberBootstrapPrompt', () => {
         '</agent_teams_app_managed_bootstrap_briefing>',
       ].join('\n')
     );
+  });
+
+  it('forbids receipt messages and in-turn waiting for every team, without runtime-specific rationale', () => {
+    const input = launchInput();
+
+    const prompt = buildMemberBootstrapPrompt(input, input.expectedMembers[0]);
+
+    expect(prompt).toContain(
+      'Never send receipt, acknowledgement, or "no further action" messages'
+    );
+    expect(prompt).toContain('costs the recipient a full model turn and invites a reply');
+    expect(prompt).toContain('Never wait, sleep, poll, or block inside a turn');
+    expect(prompt).toContain('teammates only receive their work once your turn ends');
+    // The rationale has to hold for any team on any runtime: no host-specific
+    // or model-specific justification may leak into a launch briefing.
+    expect(prompt).not.toMatch(/gpu|local model/i);
   });
 });
 
@@ -263,9 +405,8 @@ function validExecutionProof(): OpenCodeExecutionProof & {
     effectiveSelectedAuthFingerprint,
     expectedBehaviorFingerprint: '',
   };
-  expectedBehaviorEvidence.expectedBehaviorFingerprint = createOpenCodeExpectedBehaviorFingerprint(
-    expectedBehaviorEvidence
-  );
+  expectedBehaviorEvidence.expectedBehaviorFingerprint =
+    createOpenCodeExpectedBehaviorFingerprint(expectedBehaviorEvidence);
   const unsignedProof: Omit<OpenCodeExecutionProof, 'proofHash'> = {
     schemaVersion: 1,
     providerId: 'opencode',
