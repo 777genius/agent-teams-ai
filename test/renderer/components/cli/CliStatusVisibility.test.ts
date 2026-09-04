@@ -84,6 +84,9 @@ let terminalModalProps: {
   onExit?: (exitCode: number) => void;
 } | null = null;
 let quickConnectConnectedCount = 0;
+let openCodeCatalogHookInputs: Array<{
+  refreshRevision?: number;
+}> = [];
 const codexAccountHookState = {
   snapshot: null as CodexAccountSnapshotDto | null,
   loading: false,
@@ -116,6 +119,12 @@ vi.mock('@features/runtime-provider-management/renderer', async (importOriginal)
     await importOriginal<typeof import('@features/runtime-provider-management/renderer')>();
   return {
     ...actual,
+    useOpenCodeProviderModelCatalog: (
+      input: Parameters<typeof actual.useOpenCodeProviderModelCatalog>[0]
+    ) => {
+      openCodeCatalogHookInputs.push(input);
+      return actual.useOpenCodeProviderModelCatalog(input);
+    },
     RuntimeProviderQuickConnect: (props: {
       onOpenCodeProviderAction?: (providerId: string, action: 'connect' | 'select') => void;
       onConnectedCountChange?: (count: number) => void;
@@ -432,6 +441,7 @@ describe('CLI status visibility during completed install state', () => {
     runtimeProviderOnboardingDialogProps = null;
     terminalModalProps = null;
     quickConnectConnectedCount = 0;
+    openCodeCatalogHookInputs = [];
     codexAccountHookState.snapshot = null;
     codexAccountHookState.loading = false;
     codexAccountHookState.rateLimitsLoading = false;
@@ -1713,6 +1723,7 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).not.toContain('Loading models...');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
     expect(host.textContent).toContain('big-pickle');
+    expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBeUndefined();
 
     await act(async () => {
       root.unmount();

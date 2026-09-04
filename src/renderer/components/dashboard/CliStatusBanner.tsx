@@ -1622,7 +1622,6 @@ export const CliStatusBanner = ({
       Boolean(passiveOpenCodeProvider),
     sourceProviderId: 'opencode',
     projectPath: selectedProjectPath,
-    refreshRevision: providerQuickConnectRefreshKey,
     passiveProviderStatus: passiveOpenCodeProvider,
   });
   const visibleCliProviders = useMemo(
