@@ -3,8 +3,8 @@ import { isWindowsReservedFileName } from '@main/utils/pathValidation';
 const TEAM_NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,127}$/;
 const MEMBER_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$/;
 
-const RESERVED_MEMBER_NAMES = new Set<string>(['user']);
-const RESERVED_TEAMMATE_NAMES = new Set<string>(['team-lead']);
+const RESERVED_MEMBER_NAMES = new Set<string>(['user', 'system']);
+const RESERVED_TEAMMATE_NAMES = new Set<string>(['team-lead', 'system']);
 
 export interface TeamIdentifierValidationResult<T> {
   valid: boolean;
