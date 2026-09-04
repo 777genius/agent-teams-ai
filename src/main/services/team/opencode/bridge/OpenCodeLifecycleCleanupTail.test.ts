@@ -371,7 +371,35 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
 
     expect(steps).toEqual(['host-process-fallback']);
     expect(ports.warnings).toEqual([
-      '[OpenCode] shutdown shared runtime release: runtime unreachable',
+      '[OpenCode] shutdown shared runtime release failed: runtime unreachable',
+    ]);
+  });
+
+  /**
+   * Every step here is best effort and none is a precondition of the next. The
+   * process table the first sweep reads can refuse to answer, and letting that
+   * rejection leave this function took the stale-lock purge with it - the locks
+   * a failed reap could not clear being exactly what the next launch then
+   * queues behind.
+   */
+  it('runs the rest of the startup tail after the host process sweep fails', async () => {
+    vi.clearAllMocks();
+    recordSteps();
+    cleanupManagedOpenCodeServeProcesses.mockRejectedValueOnce(
+      new Error('process table unavailable')
+    );
+    const ports = createPorts();
+
+    await runOpenCodeLifecycleCleanupTail({ ...baseInput('startup'), ports });
+
+    expect(steps).toEqual([
+      'startup-runtime-sweep-tail',
+      'startup-lock-purge',
+      'cursor-agent-tree-sweep',
+    ]);
+    expect(sweepCursorAgentTrees).toHaveBeenCalledOnce();
+    expect(ports.warnings).toEqual([
+      '[OpenCode] startup fallback failed: process table unavailable',
     ]);
   });
 
