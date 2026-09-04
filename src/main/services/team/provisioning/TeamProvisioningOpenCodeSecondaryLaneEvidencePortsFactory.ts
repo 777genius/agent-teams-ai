@@ -7,7 +7,10 @@ import {
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 
 import { type GuardCommittedOpenCodeSecondaryLaneEvidencePorts } from './TeamProvisioningLaunchStateReconciliation';
-import { findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence } from './TeamProvisioningOpenCodeBootstrapEvidence';
+import {
+  findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence,
+  requireAnsweredOpenCodeCommittedBootstrapSessionEvidence,
+} from './TeamProvisioningOpenCodeBootstrapEvidence';
 
 export interface TeamProvisioningOpenCodeSecondaryLaneEvidenceServiceHost {
   commitOpenCodeRuntimeAdapterLaunchSessionEvidence: GuardCommittedOpenCodeSecondaryLaneEvidencePorts['commitOpenCodeRuntimeAdapterLaunchSessionEvidence'];
@@ -53,6 +56,8 @@ export function createTeamProvisioningOpenCodeSecondaryLaneEvidencePortsFromServ
       }),
     // Per-member, not per-lane: the lane flag is true as soon as ONE member
     // commits, which is how a committed teammate hid a lead with no record.
+    // An unanswered store is raised, not matched: the guard reads only an
+    // answered `false` as proof, and a read that failed proves nothing.
     hasCommittedOpenCodeLaneMemberSessionEvidence: async ({
       teamName,
       laneId,
@@ -60,11 +65,13 @@ export function createTeamProvisioningOpenCodeSecondaryLaneEvidencePortsFromServ
       memberName,
     }) =>
       findDeliverableOpenCodeRuntimeBootstrapSessionEvidenceInCommittedEvidence(
-        await readCommittedBootstrapSessionEvidence({
-          teamsBasePath: getTeamsBasePath(),
-          teamName,
-          laneId,
-        }),
+        requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(
+          await readCommittedBootstrapSessionEvidence({
+            teamsBasePath: getTeamsBasePath(),
+            teamName,
+            laneId,
+          })
+        ),
         { teamName, laneId, runId, memberName }
       ) != null,
     logWarn: (message) => deps.logWarn(message),
