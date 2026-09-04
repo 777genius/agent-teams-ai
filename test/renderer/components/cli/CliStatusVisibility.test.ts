@@ -1672,6 +1672,13 @@ describe('CLI status visibility during completed install state', () => {
   it('shows available models without endless loading for a completed OpenCode passive summary', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
+    storeState.openCodeRuntimeStatus = {
+      installed: true,
+      binaryPath: '/app-data/runtimes/opencode/opencode',
+      version: '1.17.18',
+      source: 'app-managed',
+      state: 'ready',
+    };
     storeState.cliStatus = createInstalledCliStatus({
       flavor: 'agent_teams_orchestrator',
       displayName: 'Multimodel runtime',
@@ -1688,7 +1695,7 @@ describe('CLI status visibility during completed install state', () => {
           authMethod: null,
           verificationState: 'unknown',
           statusCheckOutcome: 'model_only',
-          statusCheckErrorCode: 'partial_response',
+          statusCheckErrorCode: 'runtime_missing',
           statusMessage: 'OpenCode detected (passive)',
           models: ['opencode/big-pickle'],
           canLoginFromUi: false,
@@ -1722,6 +1729,7 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).toContain('Runtime: OpenCode CLI');
     expect(host.textContent).not.toContain('Loading models...');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');
+    expect(host.textContent).not.toContain('OpenCode detected (passive)');
     expect(host.textContent).toContain('big-pickle');
     expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBeUndefined();
 

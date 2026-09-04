@@ -1161,14 +1161,14 @@ const InstalledBanner = ({
                 : provider.models.length > 0;
             const statusText = showSkeleton
               ? t('cliStatus.actions.checking')
-              : openCodeRuntimeContradictsMissingMetadata
-                ? t('cliStatus.quickConnect.connected')
-                : isPassiveOpenCodeModelSummary
-                  ? hasProviderModels
-                    ? settingsT('providerRuntime.connectionUi.status.modelsAvailable')
-                    : provider.modelCatalogRefreshState === 'error'
-                      ? t('cliStatus.provider.modelsUnavailable')
-                      : t('cliStatus.actions.checking')
+              : isPassiveOpenCodeModelSummary
+                ? hasProviderModels
+                  ? settingsT('providerRuntime.connectionUi.status.modelsAvailable')
+                  : provider.modelCatalogRefreshState === 'error'
+                    ? t('cliStatus.provider.modelsUnavailable')
+                    : t('cliStatus.actions.checking')
+                : openCodeRuntimeContradictsMissingMetadata
+                  ? t('cliStatus.quickConnect.connected')
                   : formatProviderStatusText(provider, settingsT);
             const modelCatalogLoading =
               !isPassiveOpenCodeModelSummary &&
