@@ -82,6 +82,20 @@ describe('OpenCodeLaunchGateResult', () => {
     });
   });
 
+  // `runtime_store_blocked` is a readiness state like the other five, and the
+  // runtime-store check hands its own diagnostics on with it. Leaving it out of
+  // the readiness set showed the member the bare code and dropped the one line
+  // that says which store is blocked.
+  it('resolves a blocked runtime store to its readiness diagnostic', () => {
+    const result = blockedLaunchResult(launchInput(), 'runtime_store_blocked', [
+      'OpenCode runtime store opencode.sessionStore is quarantined: invalid_json',
+    ]);
+
+    expect(result.members['team-lead'].hardFailureReason).toBe(
+      'OpenCode runtime store opencode.sessionStore is quarantined: invalid_json'
+    );
+  });
+
   it('reports a non-readiness reason verbatim instead of mining the diagnostics', () => {
     const result = blockedLaunchResult(launchInput(), 'opencode_launch_bridge_missing', [
       'OpenCode state-changing launch bridge is not registered.',
