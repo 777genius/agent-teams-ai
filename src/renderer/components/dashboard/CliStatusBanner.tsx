@@ -24,6 +24,7 @@ import {
   resolveOpenCodeQuickConnectGate,
   RuntimeProviderOnboardingDialog,
   RuntimeProviderQuickConnect,
+  useOpenCodeProviderModelCatalog,
 } from '@features/runtime-provider-management/renderer';
 import { api, isElectronMode } from '@renderer/api';
 import atlasCloudLogo from '@renderer/assets/atlascloud-logo.svg';
@@ -1151,22 +1152,28 @@ const InstalledBanner = ({
               provider.providerId === 'opencode' &&
               provider.statusCheckErrorCode === 'runtime_missing' &&
               isOpenCodeRuntimeUsable(openCodeRuntimeStatus);
-            const statusText = showSkeleton
-              ? t('cliStatus.actions.checking')
-              : openCodeRuntimeContradictsMissingMetadata
-                ? t('cliStatus.quickConnect.connected')
-                : formatProviderStatusText(provider, settingsT);
             const isPassiveOpenCodeModelSummary =
               provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only';
-            const modelCatalogLoading =
-              !isPassiveOpenCodeModelSummary &&
-              (provider.modelCatalogRefreshState === 'loading' ||
-                isOpenCodeCatalogHydrating(provider));
             const hasProviderModels =
               provider.providerId === 'opencode'
                 ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
                     .length > 0
                 : provider.models.length > 0;
+            const statusText = showSkeleton
+              ? t('cliStatus.actions.checking')
+              : isPassiveOpenCodeModelSummary
+                ? hasProviderModels
+                  ? settingsT('providerRuntime.connectionUi.status.modelsAvailable')
+                  : provider.modelCatalogRefreshState === 'error'
+                    ? t('cliStatus.provider.modelsUnavailable')
+                    : t('cliStatus.actions.checking')
+                : openCodeRuntimeContradictsMissingMetadata
+                  ? t('cliStatus.quickConnect.connected')
+                  : formatProviderStatusText(provider, settingsT);
+            const modelCatalogLoading =
+              !isPassiveOpenCodeModelSummary &&
+              (provider.modelCatalogRefreshState === 'loading' ||
+                isOpenCodeCatalogHydrating(provider));
             const showProviderModels = shouldShowLoadedProviderModels(provider, hasProviderModels);
             const openCodeDashboardChips = getOpenCodeDashboardChips(provider, t);
             const hasDetailContent = Boolean(
@@ -1599,14 +1606,34 @@ export const CliStatusBanner = ({
     initialRefreshDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MIN_DELAY_MS,
     initialRefreshMaxDelayMs: CODEX_ACCOUNT_STARTUP_IDLE_MAX_DELAY_MS,
   });
+  const passiveOpenCodeProvider = useMemo(
+    () =>
+      loadingCliStatus?.providers.find(
+        (provider) =>
+          provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only'
+      ) ?? null,
+    [loadingCliStatus?.providers]
+  );
+  const openCodeDashboardCatalog = useOpenCodeProviderModelCatalog({
+    enabled:
+      isElectron &&
+      multimodelEnabled &&
+      loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      Boolean(passiveOpenCodeProvider),
+    sourceProviderId: 'opencode',
+    projectPath: selectedProjectPath,
+    passiveProviderStatus: passiveOpenCodeProvider,
+  });
   const visibleCliProviders = useMemo(
     () =>
       filterMainScreenCliProviders(loadingCliStatus?.providers ?? []).map((provider) =>
-        provider.providerId === 'codex'
-          ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
-          : provider
+        provider.providerId === 'opencode' && openCodeDashboardCatalog.providerStatus
+          ? openCodeDashboardCatalog.providerStatus
+          : provider.providerId === 'codex'
+            ? mergeCodexProviderStatusWithSnapshot(provider, codexAccount.snapshot)
+            : provider
       ),
-    [loadingCliStatus?.providers, codexAccount.snapshot]
+    [loadingCliStatus?.providers, codexAccount.snapshot, openCodeDashboardCatalog.providerStatus]
   );
   const loadingCliProviderMap = useMemo(
     () =>
