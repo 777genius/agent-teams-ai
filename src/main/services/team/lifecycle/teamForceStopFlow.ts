@@ -236,9 +236,9 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(input: {
 }
 
 /**
- * Cancels every non-terminal OpenCode prompt delivery ledger record for the
- * team so the delivery watchdog stops retrying after the force stop. Inbox
- * rows are not modified.
+ * Cancels every OpenCode prompt delivery ledger record the automatic selection
+ * can still pick up for the team, so the delivery watchdog stops retrying after
+ * the force stop. Inbox rows are not modified.
  */
 export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
   teamName: string;

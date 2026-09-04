@@ -1349,7 +1349,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
     ]);
   });
 
-  it('cancels every non-terminal record and leaves finished ones alone', async () => {
+  it('cancels every selectable record and leaves finished ones alone', async () => {
     const store = createStore();
     const pending = await store.ensurePending({
       teamName: 'team-a',
@@ -1376,13 +1376,13 @@ describe('OpenCodePromptDeliveryLedger', () => {
     await store.applyObservation({
       id: answered.id,
       responseObservation: {
-        state: 'responded_plain_text',
+        state: 'responded_visible_message',
         deliveredUserMessageId: 'oc-user-9',
         assistantMessageId: 'oc-assistant-9',
-        toolCallNames: [],
-        visibleMessageToolCallId: null,
-        visibleReplyMessageId: null,
-        visibleReplyCorrelation: null,
+        toolCallNames: ['message_send'],
+        visibleMessageToolCallId: 'oc-tool-9',
+        visibleReplyMessageId: 'inbox-9',
+        visibleReplyCorrelation: 'direct_child_message_send',
         latestAssistantPreview: 'On it',
         reason: null,
       },
@@ -1425,6 +1425,94 @@ describe('OpenCodePromptDeliveryLedger', () => {
       failedAt: '2026-04-25T10:00:11.000Z',
       lastReason: 'gave up earlier',
     });
+  });
+
+  it('cancels a responded record the automatic selection can still pick up', async () => {
+    const store = createStore();
+    async function seedResponded(input: {
+      memberName: string;
+      inboxMessageId: string;
+      state: 'responded_plain_text' | 'responded_visible_message';
+      visibleReplyMessageId: string | null;
+      committedAt?: string;
+    }): Promise<string> {
+      const record = await store.ensurePending({
+        teamName: 'team-a',
+        memberName: input.memberName,
+        laneId: 'secondary:opencode:jack',
+        inboxMessageId: input.inboxMessageId,
+        inboxTimestamp: '2026-04-25T09:59:00.000Z',
+        source: 'watcher',
+        replyRecipient: 'user',
+        payloadHash: `sha256:${input.inboxMessageId}`,
+        now: '2026-04-25T10:00:00.000Z',
+      });
+      await store.applyObservation({
+        id: record.id,
+        responseObservation: {
+          state: input.state,
+          deliveredUserMessageId: `oc-user-${input.inboxMessageId}`,
+          assistantMessageId: `oc-assistant-${input.inboxMessageId}`,
+          toolCallNames: input.visibleReplyMessageId ? ['message_send'] : [],
+          visibleMessageToolCallId: input.visibleReplyMessageId ? 'oc-tool-1' : null,
+          visibleReplyMessageId: input.visibleReplyMessageId,
+          visibleReplyCorrelation: input.visibleReplyMessageId ? 'direct_child_message_send' : null,
+          latestAssistantPreview: 'Working on it',
+          reason: null,
+        },
+        observedAt: '2026-04-25T10:00:06.000Z',
+      });
+      if (input.committedAt) {
+        await store.markInboxReadCommitted({ id: record.id, committedAt: input.committedAt });
+      }
+      return record.id;
+    }
+
+    // Plain text with nothing to show for it: no visible reply and no committed
+    // inbox read, so the automatic selection still owes this one an attempt.
+    const stillSelectable = await seedResponded({
+      memberName: 'jack',
+      inboxMessageId: 'msg-plain',
+      state: 'responded_plain_text',
+      visibleReplyMessageId: null,
+    });
+    const committedRead = await seedResponded({
+      memberName: 'jill',
+      inboxMessageId: 'msg-plain-committed',
+      state: 'responded_plain_text',
+      visibleReplyMessageId: null,
+      committedAt: '2026-04-25T10:00:07.000Z',
+    });
+    const visibleReply = await seedResponded({
+      memberName: 'joe',
+      inboxMessageId: 'msg-visible',
+      state: 'responded_visible_message',
+      visibleReplyMessageId: 'inbox-7',
+    });
+    const due = await store.listDue({ now: new Date('2026-04-25T10:04:00.000Z'), limit: 10 });
+    expect(due.map((record) => record.id)).toEqual([stillSelectable]);
+    const before = new Map((await store.list()).map((record) => [record.id, record]));
+
+    await expect(
+      store.cancelNonTerminalRecords({
+        now: '2026-04-25T10:05:00.000Z',
+        reason: 'force_stop_requested: pending delivery cancelled by user force stop',
+      })
+    ).resolves.toEqual({ cancelled: 1 });
+
+    const after = new Map((await store.list()).map((record) => [record.id, record]));
+    expect(after.get(stillSelectable)).toMatchObject({
+      status: 'failed_terminal',
+      failedAt: '2026-04-25T10:05:00.000Z',
+      nextAttemptAt: null,
+    });
+    await expect(
+      store.listDue({ now: new Date('2026-04-25T10:06:00.000Z'), limit: 10 })
+    ).resolves.toEqual([]);
+    // Negative control: the two records the same predicate calls terminal are
+    // untouched, field for field.
+    expect(after.get(committedRead)).toEqual(before.get(committedRead));
+    expect(after.get(visibleReply)).toEqual(before.get(visibleReply));
   });
 
   it('reports zero cancellations when nothing is in flight', async () => {

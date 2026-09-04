@@ -720,10 +720,18 @@ export class OpenCodePromptDeliveryLedgerStore {
   }
 
   /**
-   * Marks every non-terminal delivery record as failed_terminal so the retry
-   * machinery (watchdog, due-attempt selection) stops re-attempting them.
-   * Responded and already-terminal records are left untouched: they are
-   * history, and rewriting them would lose the reason they ended.
+   * Marks every record the automatic selection can still pick up as
+   * failed_terminal so the retry machinery (watchdog, due-attempt selection)
+   * stops re-attempting them.
+   *
+   * The guard is `isTerminalForAutomaticSelection`, the same predicate
+   * `listDue` and `getActiveForMember` filter by, so what this cancels is
+   * exactly what they can still return. A record that answered in plain text
+   * with no visible reply and no committed inbox read is not finished for that
+   * purpose whatever its status says, and a missing `nextAttemptAt` makes it
+   * due, so a status-only guard left the force stop with work still queued
+   * against it. Records the predicate calls terminal are history and keep the
+   * reason they ended.
    */
   async cancelNonTerminalRecords(input: {
     now: string;
@@ -732,7 +740,7 @@ export class OpenCodePromptDeliveryLedgerStore {
     let cancelled = 0;
     await this.store.updateLocked((records) =>
       records.map((record) => {
-        if (record.status === 'responded' || record.status === 'failed_terminal') {
+        if (isTerminalForAutomaticSelection(record)) {
           return record;
         }
         cancelled += 1;
