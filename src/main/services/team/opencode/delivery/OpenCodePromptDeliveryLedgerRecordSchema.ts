@@ -132,6 +132,8 @@ function isOpenCodePromptDeliveryLedgerRecord(
     isOptionalNullableString(record.observedAssistantPreview) &&
     isStringArray(record.observedToolCallNames) &&
     isOptionalNullableString(record.observedVisibleMessageId) &&
+    isOptionalNullableString(record.lastTurnProgressAt) &&
+    isOptionalNullableNonNegativeInteger(record.observedTurnUsedTokens) &&
     isOptionalNullableString(record.visibleReplyMessageId) &&
     isOptionalNullableString(record.visibleReplyInbox) &&
     isOptionalNullableVisibleReplyCorrelation(record.visibleReplyCorrelation) &&
@@ -221,6 +223,18 @@ function isNonNegativeInteger(value: unknown): value is number {
 
 function isOptionalNonNegativeInteger(value: unknown): value is number | undefined {
   return value === undefined || isNonNegativeInteger(value);
+}
+
+/**
+ * The turn-progress stamps are written normalized - a floored non-negative
+ * integer or null - so anything else on disk is not a stamp this app wrote.
+ * Accepting it would be worse than rejecting the file: a string token count
+ * normalizes to "absent", which turns the next sample into a fresh baseline
+ * instead of progress, and the record then ages toward the stale window while
+ * its turn is demonstrably still spending tokens.
+ */
+function isOptionalNullableNonNegativeInteger(value: unknown): value is number | null | undefined {
+  return value === undefined || value === null || isNonNegativeInteger(value);
 }
 
 function isTaskRefArray(value: unknown): value is TaskRef[] {
