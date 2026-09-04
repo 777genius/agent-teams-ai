@@ -693,7 +693,6 @@ let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
-  const sweepCommandIssuedAtMs = Date.now();
   if (openCodeLifecycleBridge) {
     const result = await openCodeLifecycleBridge.cleanupOpenCodeHosts({
       reason,
@@ -720,6 +719,11 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
       diagnostic.startsWith('OpenCode host cleanup bridge failed:')
     );
   }
+  // After the command, not before it: the managed host the registry sweep
+  // boots in this process directory is younger than the moment the command was
+  // issued, so an issue-time fence keeps the one host the tail below exists to
+  // reap.
+  const sweepCommandSettledAtMs = Date.now();
 
   if (reason === 'startup' && !registryCleanupAvailable) {
     logger.warn(
@@ -731,13 +735,14 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
     mode: reason === 'shutdown' ? 'force' : 'orphaned',
     excludePids: reason === 'startup' ? registryHostPids : undefined,
-    ...(reason === 'shutdown' ? getOpenCodeShutdownProcessOwnershipMarkers() : {}),
+    ...(reason === 'shutdown' ? getOpenCodeProcessOwnershipMarkers() : {}),
     startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
   });
 
   if (reason === 'startup') {
     await runOpenCodeStartupRuntimeSweepTail({
-      sweepCommandIssuedAtMs,
+      sweepCommandSettledAtMs,
+      ownershipMarkers: getOpenCodeProcessOwnershipMarkers(),
       logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
       logWarning: (message) => logger.warn(message),
     });
@@ -758,7 +763,7 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   }
 }
 
-function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<
+function getOpenCodeProcessOwnershipMarkers(): Pick<
   Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
   'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
 > {
@@ -3101,7 +3106,7 @@ async function shutdownServices(): Promise<void> {
       () =>
         cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
           mode: 'force',
-          ...getOpenCodeShutdownProcessOwnershipMarkers(),
+          ...getOpenCodeProcessOwnershipMarkers(),
         }),
       5_000
     );
