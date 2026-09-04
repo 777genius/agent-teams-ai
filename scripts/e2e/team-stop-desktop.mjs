@@ -37,6 +37,7 @@ const expectedApiModulePaths = new Set([
 // This is intentionally the post-Vite transform, not the TypeScript source.
 const apiNeedle = 'function getImpl() {\n  if (window.electronAPI) return window.electronAPI;';
 const appLogTail = [];
+const appLogRemainder = { stdout: '', stderr: '' };
 let appProcess = null;
 let appProcessGroupId = null;
 let cdp = null;
@@ -46,9 +47,11 @@ function argument(name) {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-function rememberAppLog(chunk) {
+function rememberAppLog(chunk, stream) {
   const text = chunk.toString();
-  appLogTail.push(...text.split(/\r?\n/).filter(Boolean));
+  const lines = `${appLogRemainder[stream]}${text}`.split(/\r?\n/);
+  appLogRemainder[stream] = lines.pop() ?? '';
+  appLogTail.push(...lines.filter(Boolean));
   if (appLogTail.length > 250) appLogTail.splice(0, appLogTail.length - 250);
   if (process.env.AGENT_TEAMS_STOP_E2E_VERBOSE === '1') process.stdout.write(text);
 }
@@ -327,9 +330,9 @@ async function startApp(fixture) {
     env,
   });
   appProcessGroupId = appProcess.pid;
-  appProcess.stdout.on('data', rememberAppLog);
-  appProcess.stderr.on('data', rememberAppLog);
-  appProcess.once('error', (error) => rememberAppLog(`spawn error: ${error.message}`));
+  appProcess.stdout.on('data', (chunk) => rememberAppLog(chunk, 'stdout'));
+  appProcess.stderr.on('data', (chunk) => rememberAppLog(chunk, 'stderr'));
+  appProcess.once('error', (error) => rememberAppLog(`spawn error: ${error.message}\n`, 'stderr'));
   const exitedBeforeRenderer = new Promise((_, reject) => {
     appProcess.once('exit', (code, signal) => {
       reject(
@@ -433,11 +436,26 @@ class CdpClient {
 
   async waitFor(expression, label, timeoutMs = 30_000) {
     const deadline = Date.now() + timeoutMs;
+    let lastTransientError = null;
     while (Date.now() < deadline) {
-      if (await this.evaluate(`Boolean(${expression})`)) return;
+      try {
+        if (await this.evaluate(`Boolean(${expression})`)) return;
+        lastTransientError = null;
+      } catch (error) {
+        if (
+          !/execution context was destroyed|cannot find (?:default )?execution context/i.test(
+            String(error)
+          )
+        ) {
+          throw error;
+        }
+        lastTransientError = error;
+      }
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    throw new Error(`Timed out waiting for ${label}`);
+    throw new Error(
+      `Timed out waiting for ${label}${lastTransientError ? `: ${String(lastTransientError)}` : ''}`
+    );
   }
 
   async rect(expression) {
@@ -526,8 +544,6 @@ class CdpClient {
 
   async key(key, code = key) {
     const virtualKey = key === 'Enter' ? 13 : key === 'Escape' ? 27 : key === 'Tab' ? 9 : 0;
-    const macNativeKey = key === 'Enter' ? 36 : key === 'Escape' ? 53 : key === 'Tab' ? 48 : 0;
-    const nativeKey = process.platform === 'darwin' ? macNativeKey : virtualKey;
     await this.send('Page.bringToFront');
     await this.send('Emulation.setFocusEmulationEnabled', { enabled: true });
     await this.waitFor('document.hasFocus()', 'focused renderer before keyboard input');
@@ -536,7 +552,6 @@ class CdpClient {
       key,
       code,
       windowsVirtualKeyCode: virtualKey,
-      nativeVirtualKeyCode: nativeKey,
       ...(key === 'Enter' ? { text: '\r', unmodifiedText: '\r' } : {}),
     });
     await this.send('Input.dispatchKeyEvent', {
@@ -544,7 +559,6 @@ class CdpClient {
       key,
       code,
       windowsVirtualKeyCode: virtualKey,
-      nativeVirtualKeyCode: nativeKey,
     });
   }
 
@@ -763,8 +777,9 @@ const visible = (expression) => `(() => {
   const rect = element.getBoundingClientRect();
   return rect.width > 0 && rect.height > 0 ? element : null;
 })()`;
-const teamCard = (teamName) => `Array.from(document.querySelectorAll('[role="button"]'))
-  .find((element) => element.querySelector('h3')?.textContent?.trim() === ${JSON.stringify(teamName)})`;
+const teamCard = () => `Array.from(document.querySelectorAll('[role="button"]'))
+  .find((element) => element.querySelector('h3')?.textContent?.trim() ===
+    window.__teamStopE2E?.teamName)`;
 const listStop = (
   teamName
 ) => `Array.from((${teamCard(teamName)})?.querySelectorAll('button') ?? [])
@@ -882,16 +897,19 @@ async function run() {
     evidence.screenshots.push(file);
   };
   const counts = () =>
-    cdp.evaluate(`({
-    stop: window.__teamStopE2E.stopCalls,
-    forceStop: window.__teamStopE2E.forceStopCalls,
-    probe: window.__teamStopE2E.processAliveCalls,
-    getData: window.__teamStopE2E.getDataCalls,
-    getDataThrows: window.__teamStopE2E.getDataThrowCalls,
-    list: window.__teamStopE2E.listCalls,
-    alive: window.__teamStopE2E.alive,
-    deferred: Boolean(window.__teamStopE2E.deferred)
-  })`);
+    cdp.evaluate(`(() => {
+      const state = window.__teamStopE2E;
+      return state ? {
+        stop: state.stopCalls,
+        forceStop: state.forceStopCalls,
+        probe: state.processAliveCalls,
+        getData: state.getDataCalls,
+        getDataThrows: state.getDataThrowCalls,
+        list: state.listCalls,
+        alive: state.alive,
+        deferred: Boolean(state.deferred)
+      } : null;
+    })()`);
   const reset = async (mode) => {
     assert.equal(
       (await counts()).deferred,
@@ -983,26 +1001,39 @@ async function run() {
       const button = document.activeElement;
       if (!(button instanceof HTMLButtonElement)) throw new Error('Dialog action lost focus');
       window.__teamStopE2E.keyboardProof = [];
-      for (const type of ['keydown', 'keyup', 'click']) {
+      for (const type of ['keydown', 'keypress', 'keyup', 'click']) {
         document.addEventListener(type, (event) => {
           if (type === 'click' && event.target !== button) return;
           window.__teamStopE2E.keyboardProof.push({
             type: event.type,
             key: event.key ?? null,
             code: event.code ?? null,
-            trusted: event.isTrusted
+            trusted: event.isTrusted,
+            defaultPrevented: event.defaultPrevented,
+            target: event.target instanceof HTMLElement ? {
+              tag: event.target.tagName,
+              text: event.target.textContent?.trim() ?? ''
+            } : null,
+            active: document.activeElement instanceof HTMLElement ? {
+              tag: document.activeElement.tagName,
+              text: document.activeElement.textContent?.trim() ?? ''
+            } : null
           });
-        }, { capture: true, once: true });
+        }, { once: true });
       }
     })()`);
     await cdp.key('Enter', 'Enter');
     await cdp.waitFor(`!${dialog}`, 'dialog keyboard close');
     const keyboardProof = await cdp.evaluate('window.__teamStopE2E.keyboardProof');
-    assert.deepEqual(
-      keyboardProof.map((event) => event.type),
-      ['keydown', 'click', 'keyup'],
+    const eventTypes = keyboardProof.map((event) => event.type);
+    assert.equal(
+      eventTypes[0],
+      'keydown',
       `Unexpected dialog keyboard events: ${JSON.stringify(keyboardProof)}`
     );
+    assert(eventTypes.includes('keypress'), 'Dialog Enter must produce a keypress event');
+    assert(eventTypes.includes('keyup'), 'Dialog Enter must produce a keyup event');
+    assert(eventTypes.includes('click'), 'Dialog Enter must produce a native click');
     assert(
       keyboardProof.every((event) => event.trusted),
       'Dialog keyboard events must be trusted'
@@ -1104,7 +1135,7 @@ async function run() {
       await cdp.waitFor(
         `(() => { const state = window.__agentTeamsDevStore?.getState(); return Boolean(
           state?.paneLayout?.focusedPaneId && state?.paneLayout?.panes?.length && !state?.teamsLoading &&
-          state?.teams?.some((team) => team.teamName === ${JSON.stringify(fixture.teamName)})); })()`,
+          state?.teams?.some((team) => team.teamName === window.__teamStopE2E?.teamName)); })()`,
         'hydrated team store after renderer reload',
         60_000
       );
@@ -1119,7 +1150,7 @@ async function run() {
       await cdp.click(teamCard(fixture.teamName));
       await cdp.waitFor(
         `(() => { const tab = ${activeTeamTab}; return tab?.type === 'team' &&
-          tab.teamName === ${JSON.stringify(fixture.teamName)}; })()`,
+          tab.teamName === window.__teamStopE2E?.teamName; })()`,
         'active fixture Team Details tab',
         60_000
       );
@@ -1192,7 +1223,10 @@ async function run() {
     await setViewport(1280, 900);
     await freshList('transport_offline');
     await cdp.click(listStop(fixture.teamName));
-    await cdp.waitFor('window.__teamStopE2E.processAliveCalls === 1', 'list offline process probe');
+    await cdp.waitFor(
+      'window.__teamStopE2E?.processAliveCalls === 1',
+      'list offline process probe'
+    );
     await cdp.waitFor(
       `!(${listStop(fixture.teamName)})`,
       'list transport error with offline probe becomes success'
@@ -1250,7 +1284,7 @@ async function run() {
     await setViewport(1280, 900);
     await freshDetails('transport_offline');
     await cdp.click(detailStop);
-    await cdp.waitFor('window.__teamStopE2E.processAliveCalls === 1', 'offline process probe');
+    await cdp.waitFor('window.__teamStopE2E?.processAliveCalls === 1', 'offline process probe');
     await cdp.waitFor(`!(${detailStop})`, 'transport error with offline probe becomes success');
     assert.equal(await cdp.evaluate(`Boolean(${dialog})`), false);
     assert.equal((await counts()).stop, 1);
@@ -1269,7 +1303,7 @@ async function run() {
     await screenshot('05-details-still-running-dialog');
     await closeInfoDialogWithKeyboard();
     await cdp.click(detailStop);
-    await cdp.waitFor('window.__teamStopE2E.stopCalls === 2', 'manual Stop retry');
+    await cdp.waitFor('window.__teamStopE2E?.stopCalls === 2', 'manual Stop retry');
     assert.equal((await counts()).forceStop, 0);
     await closeInfoDialogWithKeyboard();
     record('still-running dialog has one focused Close action and retries only manually');
@@ -1294,7 +1328,7 @@ async function run() {
     const getDataBeforeRefreshFailure = (await counts()).getData;
     await cdp.click(detailStop);
     await cdp.waitFor(
-      `window.__teamStopE2E.stopCalls === 1 &&
+      `window.__teamStopE2E?.stopCalls === 1 &&
       !document.querySelector('[role="dialog"]') && !(${detailStop})?.disabled`,
       'refresh failure settles'
     );
