@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { api } from '@renderer/api';
@@ -18,16 +18,45 @@ export interface TeamStopControl {
   stopTeam(teamName: string, options: StopTeamOptions): Promise<TeamStopActionOutcome | null>;
 }
 
+const stoppingTeamListeners = new Set<() => void>();
+let stoppingTeamsSnapshot: ReadonlySet<string> = new Set();
+
+function subscribeToStoppingTeams(listener: () => void): () => void {
+  stoppingTeamListeners.add(listener);
+  return () => stoppingTeamListeners.delete(listener);
+}
+
+function getStoppingTeamsSnapshot(): ReadonlySet<string> {
+  return stoppingTeamsSnapshot;
+}
+
+function acquireTeamStop(teamName: string): boolean {
+  if (stoppingTeamsSnapshot.has(teamName)) return false;
+  stoppingTeamsSnapshot = new Set(stoppingTeamsSnapshot).add(teamName);
+  stoppingTeamListeners.forEach((listener) => listener());
+  return true;
+}
+
+function releaseTeamStop(teamName: string): void {
+  if (!stoppingTeamsSnapshot.has(teamName)) return;
+  const next = new Set(stoppingTeamsSnapshot);
+  next.delete(teamName);
+  stoppingTeamsSnapshot = next;
+  stoppingTeamListeners.forEach((listener) => listener());
+}
+
 export function useTeamStopControl(): TeamStopControl {
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
-  const inFlightRef = useRef(new Set<string>());
-  const [stoppingTeams, setStoppingTeams] = useState<ReadonlySet<string>>(new Set());
+  const stoppingTeams = useSyncExternalStore(
+    subscribeToStoppingTeams,
+    getStoppingTeamsSnapshot,
+    getStoppingTeamsSnapshot
+  );
 
   const stopTeam = useCallback(
     async (teamName: string, options: StopTeamOptions): Promise<TeamStopActionOutcome | null> => {
-      if (inFlightRef.current.has(teamName)) return null;
-      inFlightRef.current.add(teamName);
+      if (!acquireTeamStop(teamName)) return null;
       let actionError: unknown;
       try {
         const outcome = await runTeamStopAction({
@@ -35,13 +64,7 @@ export function useTeamStopControl(): TeamStopControl {
           stop: (name) => api.teams.stop(name),
           processAlive: (name) => api.teams.processAlive(name),
           refresh: options.refresh,
-          setBusy: (busy) =>
-            setStoppingTeams((current) => {
-              const next = new Set(current);
-              if (busy) next.add(teamName);
-              else next.delete(teamName);
-              return next;
-            }),
+          setBusy: () => undefined,
           reportFailure: (kind) => {
             const unknown = kind === 'status_unknown';
             void confirm({
@@ -56,12 +79,12 @@ export function useTeamStopControl(): TeamStopControl {
             console.error('Team stop operation failed:', error);
           },
           logRefreshError: (error) =>
-            console.error('Team stopped, but its status refresh failed:', error),
+            console.error('Team status refresh failed after Stop request:', error),
         });
         options.onOutcome(outcome, actionError);
         return outcome;
       } finally {
-        inFlightRef.current.delete(teamName);
+        releaseTeamStop(teamName);
       }
     },
     [t, tCommon]

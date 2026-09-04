@@ -201,7 +201,10 @@ async function validateFixture(fixtureFile) {
       assert(valueStat.isDirectory());
     }
   }
-  assert((await stat(fixture.runtimeWrapperPath)).mode & 0o111, 'Fixture runtime wrapper is not executable');
+  assert(
+    (await stat(fixture.runtimeWrapperPath)).mode & 0o111,
+    'Fixture runtime wrapper is not executable'
+  );
   assert(/^\d+\.\d+\.\d+$/.test(fixture.deliveryRuntimeVersion));
   await contained(fixtureFile);
   await contained(path.join(fixture.claudeRoot, 'teams', fixture.teamName, 'config.json'));
@@ -228,7 +231,11 @@ function assertNoMatchingTeamProcess(teamName) {
   const collisions = processTable
     .split(/\r?\n/)
     .filter((line) => teamArgument.test(line) || agentArgument.test(line));
-  assert.deepEqual(collisions, [], `Fixture identity collides with a live process: ${collisions.join('\n')}`);
+  assert.deepEqual(
+    collisions,
+    [],
+    `Fixture identity collides with a live process: ${collisions.join('\n')}`
+  );
 }
 
 async function expectedDevMcpPort(preferred = 9222) {
@@ -300,6 +307,8 @@ async function startApp(fixture) {
     XDG_CACHE_HOME: fixture.xdgCacheHome,
     XDG_STATE_HOME: fixture.xdgStateHome,
     XDG_RUNTIME_DIR: fixture.xdgRuntimeDir,
+    // Avoid reading the user's interactive zsh profiles in this disposable UI fixture.
+    SHELL: '/bin/sh',
     CLAUDE_TEAM_OPENCODE_MCP_HTTP: '0',
     NODE_BINARY: nodeBinary,
     // This executable answers only --version and denies every bridge/lifecycle
@@ -415,7 +424,9 @@ class CdpClient {
       returnByValue: true,
     });
     if (response.exceptionDetails) {
-      throw new Error(response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed');
+      throw new Error(
+        response.exceptionDetails.exception?.description ?? 'Renderer evaluation failed'
+      );
     }
     return response.result.value;
   }
@@ -441,58 +452,99 @@ class CdpClient {
     })()`);
   }
 
+  async inputPoint(expression) {
+    return this.evaluate(`(async () => {
+      const element = (${expression});
+      if (!(element instanceof HTMLElement)) return null;
+      element.scrollIntoView({ block: 'center', inline: 'center' });
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const rect = element.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return null;
+      const candidates = [
+        [0.5, 0.5], [0.35, 0.5], [0.65, 0.5], [0.5, 0.35], [0.5, 0.65]
+      ];
+      for (const [xRatio, yRatio] of candidates) {
+        const x = rect.left + rect.width * xRatio;
+        const y = rect.top + rect.height * yRatio;
+        const hit = document.elementFromPoint(x, y);
+        if (hit && (hit === element || element.contains(hit))) return { x, y };
+      }
+      return null;
+    })()`);
+  }
+
   async moveTo(expression) {
-    const rect = await this.rect(expression);
-    assert(rect, `Element is not visible: ${expression}`);
-    await this.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
+    await this.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: 1,
+      y: 1,
+      pointerType: 'mouse',
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const point = await this.inputPoint(expression);
+    assert(point, `Element is not hit-testable: ${expression}`);
+    await this.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: point.x,
+      y: point.y,
+      pointerType: 'mouse',
+    });
+    await this.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: point.x + 0.25,
+      y: point.y,
+      pointerType: 'mouse',
+    });
   }
 
   async click(expression) {
-    const rect = await this.rect(expression);
-    assert(rect, `Element is not visible: ${expression}`);
-    await this.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
+    const point = await this.inputPoint(expression);
+    assert(point, `Element is not hit-testable: ${expression}`);
+    await this.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: point.x,
+      y: point.y,
+      pointerType: 'mouse',
+    });
     await this.send('Input.dispatchMouseEvent', {
       type: 'mousePressed',
-      x: rect.x,
-      y: rect.y,
+      x: point.x,
+      y: point.y,
       button: 'left',
       clickCount: 1,
+      pointerType: 'mouse',
     });
     await this.send('Input.dispatchMouseEvent', {
       type: 'mouseReleased',
-      x: rect.x,
-      y: rect.y,
+      x: point.x,
+      y: point.y,
       button: 'left',
       clickCount: 1,
+      pointerType: 'mouse',
     });
   }
 
   async key(key, code = key) {
     const virtualKey = key === 'Enter' ? 13 : key === 'Escape' ? 27 : key === 'Tab' ? 9 : 0;
+    const macNativeKey = key === 'Enter' ? 36 : key === 'Escape' ? 53 : key === 'Tab' ? 48 : 0;
+    const nativeKey = process.platform === 'darwin' ? macNativeKey : virtualKey;
+    await this.send('Page.bringToFront');
+    await this.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+    await this.waitFor('document.hasFocus()', 'focused renderer before keyboard input');
     await this.send('Input.dispatchKeyEvent', {
-      type: 'rawKeyDown',
+      type: 'keyDown',
       key,
       code,
       windowsVirtualKeyCode: virtualKey,
-      nativeVirtualKeyCode: virtualKey,
+      nativeVirtualKeyCode: nativeKey,
+      ...(key === 'Enter' ? { text: '\r', unmodifiedText: '\r' } : {}),
     });
-    if (key === 'Enter') {
-      await this.send('Input.dispatchKeyEvent', {
-        type: 'char',
-        key,
-        code,
-        text: '\r',
-        unmodifiedText: '\r',
-        windowsVirtualKeyCode: virtualKey,
-        nativeVirtualKeyCode: virtualKey,
-      });
-    }
     await this.send('Input.dispatchKeyEvent', {
       type: 'keyUp',
       key,
       code,
       windowsVirtualKeyCode: virtualKey,
-      nativeVirtualKeyCode: virtualKey,
+      nativeVirtualKeyCode: nativeKey,
     });
   }
 
@@ -521,6 +573,7 @@ function fixtureBootstrap(fixture) {
       forceStopCalls: 0,
       processAliveCalls: 0,
       getDataCalls: 0,
+      getDataThrowCalls: 0,
       listCalls: 0,
       deferred: null,
       reset(mode = 'success') {
@@ -531,6 +584,7 @@ function fixtureBootstrap(fixture) {
         this.forceStopCalls = 0;
         this.processAliveCalls = 0;
         this.getDataCalls = 0;
+        this.getDataThrowCalls = 0;
         this.listCalls = 0;
       },
       resolveStop() {
@@ -557,6 +611,7 @@ function fixtureBootstrap(fixture) {
               state.getDataCalls += 1;
               if (teamName !== state.teamName) throw new Error('Unexpected team getData: ' + teamName);
               if (state.mode === 'refresh_throw' && state.stopCalls > 0) {
+                state.getDataThrowCalls += 1;
                 throw new Error('fixture refresh failed after successful stop');
               }
               const result = await realApi.teams.getData(teamName, ...args);
@@ -652,10 +707,12 @@ async function installApiInterception(client, fixture) {
     } catch (error) {
       patchError = error;
       rejectFirstPatch(error);
-      await client.send('Fetch.failRequest', {
-        requestId: event.requestId,
-        errorReason: 'Failed',
-      }).catch(() => undefined);
+      await client
+        .send('Fetch.failRequest', {
+          requestId: event.requestId,
+          errorReason: 'Failed',
+        })
+        .catch(() => undefined);
     }
   });
   await client.send('Network.enable');
@@ -675,7 +732,9 @@ async function installApiInterception(client, fixture) {
             reject(
               new Error(
                 `API module was not intercepted; observed ${JSON.stringify(
-                  [...observedScriptPaths].filter((value) => /api|renderer/i.test(value)).slice(-100)
+                  [...observedScriptPaths]
+                    .filter((value) => /api|renderer/i.test(value))
+                    .slice(-100)
                 )}`
               )
             ),
@@ -706,7 +765,9 @@ const visible = (expression) => `(() => {
 })()`;
 const teamCard = (teamName) => `Array.from(document.querySelectorAll('[role="button"]'))
   .find((element) => element.querySelector('h3')?.textContent?.trim() === ${JSON.stringify(teamName)})`;
-const listStop = (teamName) => `Array.from((${teamCard(teamName)})?.querySelectorAll('button') ?? [])
+const listStop = (
+  teamName
+) => `Array.from((${teamCard(teamName)})?.querySelectorAll('button') ?? [])
   .find((button) => /stop/i.test(button.getAttribute('aria-label') ?? '') &&
     !/force/i.test(button.getAttribute('aria-label') ?? ''))`;
 const detailStop = `Array.from(document.querySelectorAll('button')).find((button) =>
@@ -718,6 +779,13 @@ const activeTabType = `(() => {
   const pane = state?.paneLayout?.panes?.find((candidate) =>
     candidate.id === state.paneLayout.focusedPaneId);
   return pane?.tabs?.find((tab) => tab.id === pane.activeTabId)?.type ?? null;
+})()`;
+const activeTeamTab = `(() => {
+  const state = window.__agentTeamsDevStore?.getState();
+  const pane = state?.paneLayout?.panes?.find((candidate) =>
+    candidate.id === state.paneLayout.focusedPaneId);
+  const tab = pane?.tabs?.find((candidate) => candidate.id === pane.activeTabId);
+  return tab?.type === 'team' ? { type: tab.type, teamName: tab.teamName } : null;
 })()`;
 
 function isProcessGroupAlive(processGroupId) {
@@ -813,17 +881,23 @@ async function run() {
     await cdp.screenshot(file);
     evidence.screenshots.push(file);
   };
-  const counts = () => cdp.evaluate(`({
+  const counts = () =>
+    cdp.evaluate(`({
     stop: window.__teamStopE2E.stopCalls,
     forceStop: window.__teamStopE2E.forceStopCalls,
     probe: window.__teamStopE2E.processAliveCalls,
     getData: window.__teamStopE2E.getDataCalls,
+    getDataThrows: window.__teamStopE2E.getDataThrowCalls,
     list: window.__teamStopE2E.listCalls,
     alive: window.__teamStopE2E.alive,
     deferred: Boolean(window.__teamStopE2E.deferred)
   })`);
   const reset = async (mode) => {
-    assert.equal((await counts()).deferred, false, 'Pending fixture Stop must be settled before reset');
+    assert.equal(
+      (await counts()).deferred,
+      false,
+      'Pending fixture Stop must be settled before reset'
+    );
     await cdp.evaluate(`window.__teamStopE2E.reset(${JSON.stringify(mode)})`);
   };
   const setViewport = async (width, height = 900) => {
@@ -863,7 +937,7 @@ async function run() {
     return fit;
   };
   const openList = async () => {
-    await cdp.evaluate(`window.__agentTeamsDevStore.getState().openTab({type:'teams', label:'Teams'})`);
+    await cdp.evaluate(`window.__agentTeamsDevStore.getState().openTeamsTab()`);
     await cdp.waitFor(`${activeTabType} === 'teams'`, 'active Teams tab');
     await cdp.waitFor(`Boolean(${teamCard(fixture.teamName)})`, 'fixture Team List card');
     assert(await cdp.rect(teamCard(fixture.teamName)), 'Fixture Team List card is not visible');
@@ -876,11 +950,20 @@ async function run() {
         return /^(stop|stopping(?:\.\.\.)?|stop team)$/i.test(name) &&
           button.getBoundingClientRect().width > 0;
       });
-      return { count: stop.length, names: stop.map((button) =>
-        (button.getAttribute('aria-label') ?? button.textContent ?? '').trim()) };
+      const forceStop = Array.from(root.querySelectorAll('button')).filter((button) => {
+        const name = (button.getAttribute('aria-label') ?? button.textContent ?? '').trim();
+        return /force\s*stop/i.test(name) && button.getBoundingClientRect().width > 0;
+      });
+      return {
+        count: stop.length,
+        names: stop.map((button) =>
+          (button.getAttribute('aria-label') ?? button.textContent ?? '').trim()),
+        forceStopNames: forceStop.map((button) =>
+          (button.getAttribute('aria-label') ?? button.textContent ?? '').trim())
+      };
     })()`);
     assert.equal(result.count, 1, `Expected one Stop control, got ${JSON.stringify(result.names)}`);
-    assert(!result.names.some((name) => /force/i.test(name)), 'Force stop must not be visible');
+    assert.deepEqual(result.forceStopNames, [], 'Force Stop must not be visible');
   };
   const closeInfoDialogWithKeyboard = async () => {
     await cdp.waitFor(visible(dialog), 'information dialog');
@@ -890,15 +973,47 @@ async function run() {
       return { buttons: buttons.map((button) => button.textContent?.trim()),
         focused: root.contains(document.activeElement), activeText: document.activeElement?.textContent?.trim() };
     })()`);
-    assert.equal(info.buttons.length, 1, `Expected one dialog action: ${JSON.stringify(info.buttons)}`);
+    assert.equal(
+      info.buttons.length,
+      1,
+      `Expected one dialog action: ${JSON.stringify(info.buttons)}`
+    );
     assert.equal(info.focused, true, 'Dialog action must receive keyboard focus');
+    await cdp.evaluate(`(() => {
+      const button = document.activeElement;
+      if (!(button instanceof HTMLButtonElement)) throw new Error('Dialog action lost focus');
+      window.__teamStopE2E.keyboardProof = [];
+      for (const type of ['keydown', 'keyup', 'click']) {
+        document.addEventListener(type, (event) => {
+          if (type === 'click' && event.target !== button) return;
+          window.__teamStopE2E.keyboardProof.push({
+            type: event.type,
+            key: event.key ?? null,
+            code: event.code ?? null,
+            trusted: event.isTrusted
+          });
+        }, { capture: true, once: true });
+      }
+    })()`);
     await cdp.key('Enter', 'Enter');
     await cdp.waitFor(`!${dialog}`, 'dialog keyboard close');
+    const keyboardProof = await cdp.evaluate('window.__teamStopE2E.keyboardProof');
+    assert.deepEqual(
+      keyboardProof.map((event) => event.type),
+      ['keydown', 'click', 'keyup'],
+      `Unexpected dialog keyboard events: ${JSON.stringify(keyboardProof)}`
+    );
+    assert(
+      keyboardProof.every((event) => event.trusted),
+      'Dialog keyboard events must be trusted'
+    );
   };
 
   try {
     if (externalCdp) {
-      const endpoint = new URL(externalCdp.includes('://') ? externalCdp : `http://127.0.0.1:${externalCdp}`);
+      const endpoint = new URL(
+        externalCdp.includes('://') ? externalCdp : `http://127.0.0.1:${externalCdp}`
+      );
       assert(['127.0.0.1', 'localhost'].includes(endpoint.hostname));
       port = Number(endpoint.port || 9222);
       renderer = await waitForRenderer(port);
@@ -908,7 +1023,9 @@ async function run() {
     }
     evidence.cdpPort = port;
     process.stdout.write(`Using isolated dev:mcp CDP port ${port}\n`);
-    assert(renderer.url.includes(path.basename(repoRoot)) || renderer.url.startsWith('http://localhost:'));
+    assert(
+      renderer.url.includes(path.basename(repoRoot)) || renderer.url.startsWith('http://localhost:')
+    );
     cdp = await CdpClient.connect(renderer.webSocketDebuggerUrl);
     await cdp.send('Runtime.enable');
     await cdp.send('Page.enable');
@@ -916,13 +1033,21 @@ async function run() {
     await cdp.send('Overlay.enable');
     await cdp.send('Overlay.setShowViewportSizeOnResize', { show: false });
     await cdp.send('Page.bringToFront');
-    await cdp.waitFor('window.electronAPI?.teams && window.__agentTeamsDevStore', 'native API and dev store', 60_000);
+    await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+    await cdp.waitFor(
+      'window.electronAPI?.teams && window.__agentTeamsDevStore',
+      'native API and dev store',
+      60_000
+    );
     if (!externalCdp) {
-      await waitForAppLog('Startup fallback cleanup skipped because host registry cleanup is unavailable');
+      await waitForAppLog(
+        'Startup fallback cleanup skipped because host registry cleanup is unavailable'
+      );
       assert(
-        !appLogTail.some((line) =>
-          line.includes('[OpenCode] startup fallback cleanup:') ||
-          line.includes('Failed to kill managed OpenCode serve pid=')
+        !appLogTail.some(
+          (line) =>
+            line.includes('[OpenCode] startup fallback cleanup:') ||
+            line.includes('Failed to kill managed OpenCode serve pid=')
         ),
         'Offline UI fixture reached global OpenCode process fallback'
       );
@@ -930,9 +1055,14 @@ async function run() {
         .split(/\r?\n/)
         .filter(Boolean)
         .map((line) => JSON.parse(line));
-      assert(deniedRuntimeCalls.length >= 1, 'Fixture runtime wrapper did not deny startup cleanup');
+      assert(
+        deniedRuntimeCalls.length >= 1,
+        'Fixture runtime wrapper did not deny startup cleanup'
+      );
       evidence.deniedRuntimeCalls = deniedRuntimeCalls;
-      record('fixture runtime denied startup bridge commands and global process fallback was skipped');
+      record(
+        'fixture runtime denied startup bridge commands and global process fallback was skipped'
+      );
     }
 
     const native = await cdp.evaluate(`(async () => {
@@ -943,7 +1073,9 @@ async function run() {
       return { teams: teams.map((team) => ({teamName: team.teamName, projectPath: team.projectPath})),
         dataTeam: data?.teamName, dataProject: data?.config?.projectPath };
     })()`);
-    assert.deepEqual(native.teams, [{ teamName: fixture.teamName, projectPath: fixture.projectPath }]);
+    assert.deepEqual(native.teams, [
+      { teamName: fixture.teamName, projectPath: fixture.projectPath },
+    ]);
     assert.equal(native.dataTeam, fixture.teamName);
     assert.equal(native.dataProject, fixture.projectPath);
     record('native Electron API exposes only the disposable fixture and project root');
@@ -953,14 +1085,17 @@ async function run() {
     await cdp.waitFor('window.__teamStopE2E?.createApi', 'intercepted renderer API');
     assert(getPatchCount() >= 1);
     record('exact Vite API response patched while native preload API stayed frozen');
-    const freshDetails = async (mode) => {
+    const reloadFixture = async (mode) => {
       const previousPatchCount = getPatchCount();
       await cdp.send('Page.reload', { ignoreCache: true });
       const repatchDeadline = Date.now() + 60_000;
       while (getPatchCount() <= previousPatchCount && Date.now() < repatchDeadline) {
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      assert(getPatchCount() > previousPatchCount, 'Renderer reload did not reapply API interception');
+      assert(
+        getPatchCount() > previousPatchCount,
+        'Renderer reload did not reapply API interception'
+      );
       await cdp.waitFor(
         'window.__teamStopE2E && window.__agentTeamsDevStore && window.electronAPI?.teams',
         'fixture API after renderer reload',
@@ -974,8 +1109,20 @@ async function run() {
         60_000
       );
       await reset(mode);
+    };
+    const freshList = async (mode) => {
+      await reloadFixture(mode);
       await openList();
+    };
+    const freshDetails = async (mode) => {
+      await freshList(mode);
       await cdp.click(teamCard(fixture.teamName));
+      await cdp.waitFor(
+        `(() => { const tab = ${activeTeamTab}; return tab?.type === 'team' &&
+          tab.teamName === ${JSON.stringify(fixture.teamName)}; })()`,
+        'active fixture Team Details tab',
+        60_000
+      );
       await cdp.waitFor(visible(detailStop), 'detail Stop button', 60_000);
     };
 
@@ -998,12 +1145,20 @@ async function run() {
     await cdp.key('Escape', 'Escape');
     await cdp.waitFor('!document.querySelector(\'[role="tooltip"]\')', 'hover tooltip close');
     for (let index = 0; index < 30; index += 1) {
-      const focused = await cdp.evaluate(`document.activeElement === (${listStop(fixture.teamName)})`);
+      const focused = await cdp.evaluate(
+        `document.activeElement === (${listStop(fixture.teamName)})`
+      );
       if (focused) break;
       await cdp.key('Tab', 'Tab');
     }
-    assert.equal(await cdp.evaluate(`document.activeElement === (${listStop(fixture.teamName)})`), true);
-    await cdp.waitFor('document.querySelector(\'[role="tooltip"]\')', 'Stop tooltip on keyboard focus');
+    assert.equal(
+      await cdp.evaluate(`document.activeElement === (${listStop(fixture.teamName)})`),
+      true
+    );
+    await cdp.waitFor(
+      'document.querySelector(\'[role="tooltip"]\')',
+      'Stop tooltip on keyboard focus'
+    );
     const listTabBefore = await cdp.evaluate(`window.__agentTeamsDevStore.getState().activeTabId`);
     await cdp.key('Enter', 'Enter');
     await cdp.key('Enter', 'Enter');
@@ -1014,7 +1169,10 @@ async function run() {
     assert.equal(listCounts.probe, 0);
     assert.equal(listCounts.alive, true);
     assert.equal(listCounts.deferred, true);
-    assert.equal(await cdp.evaluate(`window.__agentTeamsDevStore.getState().activeTabId`), listTabBefore);
+    assert.equal(
+      await cdp.evaluate(`window.__agentTeamsDevStore.getState().activeTabId`),
+      listTabBefore
+    );
     const listBusy = await cdp.evaluate(`(() => { const button = ${listStop(fixture.teamName)};
       return { disabled: button.disabled, busy: button.getAttribute('aria-busy'), name: button.getAttribute('aria-label') }; })()`);
     assert.equal(listBusy.disabled, true);
@@ -1030,6 +1188,40 @@ async function run() {
     await cdp.evaluate('window.__teamStopE2E.resolveStop()');
     await cdp.waitFor(`!(${listStop(fixture.teamName)})`, 'list success becomes offline');
     assert.equal((await counts()).forceStop, 0);
+
+    await setViewport(1280, 900);
+    await freshList('transport_offline');
+    await cdp.click(listStop(fixture.teamName));
+    await cdp.waitFor('window.__teamStopE2E.processAliveCalls === 1', 'list offline process probe');
+    await cdp.waitFor(
+      `!(${listStop(fixture.teamName)})`,
+      'list transport error with offline probe becomes success'
+    );
+    assert.equal(await cdp.evaluate(`Boolean(${dialog})`), false);
+    assert.equal((await counts()).stop, 1);
+
+    await freshList('still_running');
+    await cdp.click(listStop(fixture.teamName));
+    await cdp.waitFor(visible(dialog), 'list still-running dialog');
+    assert(
+      /still running|still works|works still/i.test(await cdp.evaluate(`(${dialog}).innerText`))
+    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal((await counts()).stop, 1);
+    assert.equal((await counts()).forceStop, 0);
+    await closeInfoDialogWithKeyboard();
+
+    await freshList('status_unknown');
+    await cdp.click(listStop(fixture.teamName));
+    await cdp.waitFor(visible(dialog), 'list unknown-status dialog');
+    assert(/confirm|runtime|status/i.test(await cdp.evaluate(`(${dialog}).innerText`)));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const listUnknownCounts = await counts();
+    assert.equal(listUnknownCounts.stop, 1);
+    assert.equal(listUnknownCounts.probe, 1);
+    assert.equal(listUnknownCounts.forceStop, 0);
+    await closeInfoDialogWithKeyboard();
+    record('Team List reports transport outcomes without automatic retry or Force Stop');
 
     await setViewport(1280, 900);
     await freshDetails('deferred');
@@ -1099,35 +1291,57 @@ async function run() {
     record('probe failure reports unknown status without automatic retry or Force Stop');
 
     await freshDetails('refresh_throw');
+    const getDataBeforeRefreshFailure = (await counts()).getData;
     await cdp.click(detailStop);
-    await cdp.waitFor(`window.__teamStopE2E.stopCalls === 1 &&
-      !document.querySelector('[role="dialog"]') && !(${detailStop})?.disabled`, 'refresh failure settles');
+    await cdp.waitFor(
+      `window.__teamStopE2E.stopCalls === 1 &&
+      !document.querySelector('[role="dialog"]') && !(${detailStop})?.disabled`,
+      'refresh failure settles'
+    );
     await new Promise((resolve) => setTimeout(resolve, 200));
     const refreshCounts = await counts();
     assert.equal(refreshCounts.stop, 1);
     assert.equal(refreshCounts.forceStop, 0);
     assert.equal(refreshCounts.alive, false);
-    assert(refreshCounts.getData >= 1, 'Refresh stub must have been exercised');
+    assert.equal(
+      refreshCounts.getDataThrows,
+      1,
+      'Post-Stop refresh must exercise the throwing stub'
+    );
+    assert(
+      refreshCounts.getData > getDataBeforeRefreshFailure,
+      'Post-Stop refresh must make a new getData call'
+    );
     record('refresh failure preserves successful Stop outcome and does not escape to real APIs');
 
-    assert(getPatchCount() >= 1, 'Fetch interception must remain installed through renderer reload/HMR');
+    assert(
+      getPatchCount() >= 1,
+      'Fetch interception must remain installed through renderer reload/HMR'
+    );
     evidence.fetchPatchCount = getPatchCount();
     evidence.finalCounters = await counts();
     await json(path.join(evidenceRoot, 'evidence.json'), evidence);
     succeeded = true;
-    process.stdout.write(`Team Stop desktop E2E passed with ${evidence.assertions.length} assertions.\n`);
+    process.stdout.write(
+      `Team Stop desktop E2E passed with ${evidence.assertions.length} assertions.\n`
+    );
   } catch (error) {
     evidence.error = error instanceof Error ? error.stack : String(error);
     evidence.appLogTail = appLogTail;
     if (cdp) {
-      evidence.rendererDiagnostics = await cdp.evaluate(`(() => ({
+      evidence.rendererDiagnostics = await cdp
+        .evaluate(
+          `(() => ({
         fixture: window.__teamStopE2E ? {
           stopCalls: window.__teamStopE2E.stopCalls,
           forceStopCalls: window.__teamStopE2E.forceStopCalls,
           processAliveCalls: window.__teamStopE2E.processAliveCalls,
+          getDataCalls: window.__teamStopE2E.getDataCalls,
+          getDataThrowCalls: window.__teamStopE2E.getDataThrowCalls,
           alive: window.__teamStopE2E.alive,
           deferred: Boolean(window.__teamStopE2E.deferred)
         } : null,
+        keyboardProof: window.__teamStopE2E?.keyboardProof ?? null,
         activeElement: document.activeElement ? {
           tag: document.activeElement.tagName,
           text: document.activeElement.textContent?.trim(),
@@ -1145,7 +1359,9 @@ async function run() {
           disabled: button.disabled,
           rect: button.getBoundingClientRect().toJSON()
         }))
-      }))()` ).catch((diagnosticError) => ({ error: String(diagnosticError) }));
+      }))()`
+        )
+        .catch((diagnosticError) => ({ error: String(diagnosticError) }));
       await cdp.screenshot(path.join(evidenceRoot, 'failure-renderer.png')).catch(() => undefined);
     }
     await json(path.join(evidenceRoot, 'failure.json'), evidence).catch(() => undefined);
@@ -1156,7 +1372,9 @@ async function run() {
     if (seeded && succeeded && process.env.AGENT_TEAMS_STOP_E2E_KEEP !== '1') {
       await rm(seeded.fixture.root, { recursive: true, force: true });
     } else if (seeded && !succeeded) {
-      process.stderr.write(`Retained failed disposable fixture for diagnosis: ${seeded.fixture.root}\n`);
+      process.stderr.write(
+        `Retained failed disposable fixture for diagnosis: ${seeded.fixture.root}\n`
+      );
     }
   }
 }

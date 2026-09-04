@@ -28,44 +28,94 @@ function Harness({ capture }: { capture(value: TeamStopControl): void }): React.
 
 describe('useTeamStopControl', () => {
   let host: HTMLDivElement;
-  let root: ReturnType<typeof createRoot>;
-  let control!: TeamStopControl;
+  let root: ReturnType<typeof createRoot> | undefined;
+  let controls!: Record<'first' | 'second', TeamStopControl>;
 
   beforeEach(async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     root = createRoot(host);
+    controls = {} as Record<'first' | 'second', TeamStopControl>;
     mocks.processAlive.mockResolvedValue(false);
-    await act(async () => root.render(<Harness capture={(value) => (control = value)} />));
+    await act(async () =>
+      root?.render(
+        <>
+          <Harness capture={(value) => (controls.first = value)} />
+          <Harness capture={(value) => (controls.second = value)} />
+        </>
+      )
+    );
   });
 
   afterEach(async () => {
-    await act(async () => root.unmount());
+    await act(async () => root?.unmount());
     vi.clearAllMocks();
     vi.unstubAllGlobals();
   });
 
-  it('suppresses a same-tick duplicate and records one outcome', async () => {
-    let resolveStop!: () => void;
-    mocks.stop.mockImplementation(() => new Promise<void>((resolve) => (resolveStop = resolve)));
-    const onOutcome = vi.fn();
-    const options = { refresh: vi.fn().mockResolvedValue(undefined), onOutcome };
+  it('shares busy state and duplicate suppression between consumers while teams stay independent', async () => {
+    const resolvers = new Map<string, () => void>();
+    mocks.stop.mockImplementation(
+      (teamName: string) =>
+        new Promise<void>((resolve) => {
+          resolvers.set(teamName, resolve);
+        })
+    );
+    const firstOutcome = vi.fn();
+    const duplicateOutcome = vi.fn();
+    const otherOutcome = vi.fn();
 
     let first!: Promise<unknown>;
     let duplicate!: Promise<unknown>;
+    let other!: Promise<unknown>;
     await act(async () => {
-      first = control.stopTeam('demo-team', options);
-      duplicate = control.stopTeam('demo-team', options);
+      first = controls.first.stopTeam('demo-team', {
+        refresh: vi.fn().mockResolvedValue(undefined),
+        onOutcome: firstOutcome,
+      });
+      duplicate = controls.second.stopTeam('demo-team', {
+        refresh: vi.fn().mockResolvedValue(undefined),
+        onOutcome: duplicateOutcome,
+      });
+      other = controls.second.stopTeam('other-team', {
+        refresh: vi.fn().mockResolvedValue(undefined),
+        onOutcome: otherOutcome,
+      });
       await Promise.resolve();
     });
     await expect(duplicate).resolves.toBeNull();
-    expect(mocks.stop).toHaveBeenCalledTimes(1);
+    expect(mocks.stop).toHaveBeenCalledTimes(2);
+    expect(controls.first.isStopping('demo-team')).toBe(true);
+    expect(controls.second.isStopping('demo-team')).toBe(true);
+    expect(controls.first.isStopping('other-team')).toBe(true);
+    expect(duplicateOutcome).not.toHaveBeenCalled();
 
     await act(async () => {
-      resolveStop();
+      resolvers.get('other-team')?.();
+      await other;
+    });
+    expect(controls.first.isStopping('demo-team')).toBe(true);
+    expect(controls.second.isStopping('other-team')).toBe(false);
+    expect(otherOutcome).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolvers.get('demo-team')?.();
       await first;
     });
-    expect(onOutcome).toHaveBeenCalledTimes(1);
+    expect(controls.first.isStopping('demo-team')).toBe(false);
+    expect(controls.second.isStopping('demo-team')).toBe(false);
+    expect(firstOutcome).toHaveBeenCalledTimes(1);
+    expect(duplicateOutcome).not.toHaveBeenCalled();
+
+    mocks.stop.mockResolvedValueOnce(undefined);
+    await act(async () => {
+      await controls.second.stopTeam('demo-team', {
+        refresh: vi.fn().mockResolvedValue(undefined),
+        onOutcome: firstOutcome,
+      });
+    });
+    expect(mocks.stop).toHaveBeenCalledTimes(3);
+    expect(firstOutcome).toHaveBeenCalledTimes(2);
   });
 
   it('allows one explicit manual retry after the previous request settles', async () => {
@@ -74,11 +124,30 @@ describe('useTeamStopControl', () => {
     const onOutcome = vi.fn();
     const options = { refresh: vi.fn().mockResolvedValue(undefined), onOutcome };
 
-    await act(async () => void (await control.stopTeam('demo-team', options)));
-    await act(async () => void (await control.stopTeam('demo-team', options)));
+    await act(async () => void (await controls.first.stopTeam('demo-team', options)));
+    await act(async () => void (await controls.second.stopTeam('demo-team', options)));
 
     expect(mocks.stop).toHaveBeenCalledTimes(2);
     expect(onOutcome).toHaveBeenCalledTimes(2);
     expect(mocks.confirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('releases a pending stop safely after all consumers unmount', async () => {
+    let resolveStop!: () => void;
+    mocks.stop.mockImplementation(() => new Promise<void>((resolve) => (resolveStop = resolve)));
+
+    let pending!: Promise<unknown>;
+    await act(async () => {
+      pending = controls.first.stopTeam('demo-team', {
+        refresh: vi.fn().mockResolvedValue(undefined),
+        onOutcome: vi.fn(),
+      });
+      await Promise.resolve();
+    });
+    await act(async () => root?.unmount());
+    root = undefined;
+
+    resolveStop();
+    await expect(pending).resolves.toBe('stopped');
   });
 });
