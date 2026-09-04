@@ -295,6 +295,27 @@ describe('PendingRepliesBlock queued-message discard', () => {
     });
   });
 
+  // Negative control for the "already delivered" branch: every confirmed row was
+  // consumed before the locked rewrite, so nothing was discarded, but a row that
+  // arrived meanwhile is still queued. Reading only `discarded` here reports an
+  // empty queue and hides that row; the remaining count has to win.
+  it('reports the row still queued when the confirmed rows were consumed first', async () => {
+    discardQueuedUserMessages.mockResolvedValue({ discarded: 0, remainingQueued: 1 });
+    await renderBlock();
+
+    await clickDiscard();
+
+    expect(onQueuedDiscarded).toHaveBeenCalledWith('alice', { discarded: 0, remainingQueued: 1 });
+    expect(confirmMock).toHaveBeenCalledTimes(2);
+    expect(confirmMock.mock.calls[1][0]).toMatchObject({
+      title: 'Queued messages',
+      message: 'Discarded 0. Still queued: 1.',
+    });
+    expect(confirmMock.mock.calls[1][0]).not.toMatchObject({
+      message: 'Nothing was discarded: those messages had already been delivered to "alice".',
+    });
+  });
+
   it('surfaces the failure and keeps the pending entry when the discard throws', async () => {
     discardQueuedUserMessages.mockRejectedValue(
       new Error('Inbox file for "alice" is not a valid JSON message list')

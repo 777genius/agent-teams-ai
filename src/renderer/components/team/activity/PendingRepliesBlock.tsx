@@ -114,23 +114,26 @@ export const PendingRepliesBlock = memo(function PendingRepliesBlock({
           confirmedMessageIds
         );
         onQueuedDiscarded?.(memberName, result);
-        // A discard that removed nothing is not a success the user can see: the
-        // runtime consumed the rows between the click and the write. Say so,
-        // and say it when rows arrived meanwhile and are still waiting.
-        if (result.discarded === 0) {
-          void confirm({
-            title: t('activity.pendingReplies.discardQueued.resultTitle'),
-            message: t('activity.pendingReplies.discardQueued.alreadyDelivered', {
-              member: memberName,
-            }),
-            confirmLabel: t('activity.pendingReplies.discardQueued.okLabel'),
-          });
-        } else if (result.remainingQueued > 0) {
+        // A queue that is not empty decides the message, whatever was removed.
+        // The confirmed rows can all be gone by the time the locked rewrite runs
+        // while a row that arrived meanwhile is still waiting: that ends as
+        // discarded 0 with remainingQueued above zero, and calling it "already
+        // delivered" would hide the row the member is still holding. Only an
+        // empty queue may say that, and only a clean discard says nothing.
+        if (result.remainingQueued > 0) {
           void confirm({
             title: t('activity.pendingReplies.discardQueued.resultTitle'),
             message: t('activity.pendingReplies.discardQueued.remaining', {
               discarded: result.discarded,
               remaining: result.remainingQueued,
+            }),
+            confirmLabel: t('activity.pendingReplies.discardQueued.okLabel'),
+          });
+        } else if (result.discarded === 0) {
+          void confirm({
+            title: t('activity.pendingReplies.discardQueued.resultTitle'),
+            message: t('activity.pendingReplies.discardQueued.alreadyDelivered', {
+              member: memberName,
             }),
             confirmLabel: t('activity.pendingReplies.discardQueued.okLabel'),
           });
