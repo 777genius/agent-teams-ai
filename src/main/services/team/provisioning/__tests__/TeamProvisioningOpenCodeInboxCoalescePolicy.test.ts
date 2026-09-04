@@ -8,8 +8,10 @@ import {
   canCoalesceNoticesIntoOpenCodeDelivery,
   COALESCABLE_MESSAGE_KINDS,
   findNextUnreadUserMessageIndex,
+  isBoardCompletionNotice,
   isCoalescableNoticeKind,
   isOpenCodeCoalescedNoticeDeliveryProven,
+  OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX,
   OPENCODE_REPLY_OPTIONAL_COALESCE_LIMIT,
   type OpenCodeReplyOptionalCoalescePorts,
   selectOpenCodeReplyOptionalCoalescedFollowers,
@@ -278,6 +280,30 @@ describe('TeamProvisioningOpenCodeInboxCoalescePolicy', () => {
     expect(
       canCoalesceNoticesIntoOpenCodeDelivery(ledgerRecord({ status: 'failed_terminal' }))
     ).toBe(false);
+  });
+
+  it('recognises the board completion notice by its message-id prefix alone', () => {
+    // This guard is the only thing that keeps the board's own completion notice
+    // out of a settled read-commit, so it is pinned here directly rather than
+    // only through the relay. The prefix is the whole contract: the notice is
+    // ordinary reply-optional traffic in every other respect.
+    expect(
+      isBoardCompletionNotice(
+        message({ messageId: `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team-a:task-1` })
+      )
+    ).toBe(true);
+    expect(isBoardCompletionNotice(message({ messageId: 'scribe-done' }))).toBe(false);
+    // A prefix that only appears later in the id is a different message.
+    expect(
+      isBoardCompletionNotice(
+        message({ messageId: `relay:${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}task-1` })
+      )
+    ).toBe(false);
+    // Inbox rows are read off disk, so a row can reach the walk without a
+    // usable id at all; that is not the board's notice either.
+    expect(isBoardCompletionNotice(message({ messageId: undefined as unknown as string }))).toBe(
+      false
+    );
   });
 
   it('treats only the explicit dispatch proof as proof, never `delivered`', () => {
