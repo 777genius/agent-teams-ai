@@ -12,7 +12,10 @@ import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
 import * as fs from 'fs';
 
-import { purgeStaleOpenCodeHostStartupLocks } from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
+import {
+  PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
+  purgeStaleOpenCodeHostStartupLocks,
+} from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
@@ -502,7 +505,12 @@ export async function releaseSharedRuntimeResourcesAfterStop(input: {
   // had to do must not report failure because a lock file was unreadable.
   try {
     const purge = input.purgeHostStartupLocks ?? purgeStaleOpenCodeHostStartupLocks;
-    const lockPurge = await purge();
+    // Same age floor the pre-launch purge uses, and for the same reason: the
+    // alive-team list was read before this ran, so a launch that started in
+    // between holds a lock this purge can see. Without the floor an unheld
+    // lock of a host that is starting right now is removed, and the next host
+    // for the same port starts unserialised beside it.
+    const lockPurge = await purge({ minAgeMs: PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS });
     if (lockPurge.removed > 0) {
       diagnostics.push(`Purged ${lockPurge.removed} stale OpenCode host startup lock(s)`);
     }
