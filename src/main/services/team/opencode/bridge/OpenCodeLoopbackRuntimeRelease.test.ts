@@ -11,6 +11,18 @@ import {
   selectProvidersUsedByModels,
 } from './OpenCodeLoopbackRuntimeRelease';
 
+const diagnostic = vi.hoisted(() => vi.fn());
+
+vi.mock('@shared/utils/logger', () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    diagnostic,
+  }),
+}));
+
 const tempDirs: string[] = [];
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
@@ -75,6 +87,60 @@ describe('resolveLocalProviderOrigins', () => {
     });
 
     expect([...resolveLocalProviderOrigins({ configPaths: [configPath] })]).toEqual([]);
+  });
+
+  /**
+   * `opencode.jsonc` is one of the two paths this module probes, and a user's
+   * own config carries what the extension promises: comments and a trailing
+   * comma. Read as strict JSON the file parses to nothing, the provider the
+   * members were running on is never narrowed to, and the runtime keeps the
+   * model resident with no team left to serve.
+   */
+  it('reads a jsonc config with comments and a trailing comma', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'at-opencode-jsonc-'));
+    tempDirs.push(dir);
+    const configPath = path.join(dir, 'opencode.jsonc');
+    fs.writeFileSync(
+      configPath,
+      [
+        '{',
+        '  // the runtime this machine serves models from',
+        '  "provider": {',
+        '    "local-provider": { "options": { "baseURL": "http://127.0.0.1:9999/v1" } },',
+        '  },',
+        '}',
+        '',
+      ].join('\n')
+    );
+
+    expect([...resolveLocalProviderOrigins({ configPaths: [configPath] })]).toEqual([
+      ['local-provider', 'http://127.0.0.1:9999'],
+    ]);
+  });
+
+  it('reports a config it could not parse instead of skipping it in silence', () => {
+    diagnostic.mockClear();
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'at-opencode-broken-'));
+    tempDirs.push(dir);
+    const configPath = path.join(dir, 'opencode.jsonc');
+    fs.writeFileSync(configPath, '{ "provider": [[[ ');
+
+    expect([...resolveLocalProviderOrigins({ configPaths: [configPath] })]).toEqual([]);
+    expect(diagnostic).toHaveBeenCalledOnce();
+    expect(String(diagnostic.mock.calls[0]?.[0])).toContain(
+      'opencode_loopback_runtime_config_unreadable'
+    );
+  });
+
+  it('says nothing about a config that is simply not there', () => {
+    diagnostic.mockClear();
+
+    expect([
+      ...resolveLocalProviderOrigins({
+        configPaths: [path.join(os.tmpdir(), 'at-opencode-absent', 'opencode.jsonc')],
+      }),
+    ]).toEqual([]);
+    expect(diagnostic).not.toHaveBeenCalled();
   });
 });
 
