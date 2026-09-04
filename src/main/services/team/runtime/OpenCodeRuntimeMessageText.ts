@@ -75,8 +75,10 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
     input.actionMode === 'ask'
       ? 'Action mode ASK is read-only for this delivered message: do not edit files, change task state, or run side-effecting tools for this message.'
       : input.actionMode === 'delegate'
-        ? 'Action mode DELEGATE is orchestration-only for this delivered message: pass the task with context instead of implementing or editing files yourself, then END the turn - never wait or poll for teammates inside the turn (their work is dispatched only after your turn ends).'
-        : 'If this delivered message assigns implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit files in the project working directory as your available tools allow.';
+        ? 'Action mode DELEGATE is orchestration-only for this delivered message: pass the task with context instead of implementing or editing files yourself, then END the turn - never wait or poll for teammates inside the turn (their work is dispatched only after your turn ends). DELEGATE mode also forbids writing any file, including helper scripts, in the working directory.'
+        : 'If this delivered message assigns implementation, fixes, review follow-up, or concrete investigation, you may inspect, read/search, and edit the PROJECT files that the task itself requires, as your available tools allow. This never includes creating scripts or files whose purpose is to call Agent Teams.';
+  const teamToolAccessRule =
+    'Team communication and task state go ONLY through the MCP server named "agent-teams" (GetMcpTools / CallMcpTool with server "agent-teams", or the agent-teams_* tool names if listed); if that server is missing, stop and report it. Never call the Agent Teams HTTP endpoint yourself (no curl, node, PowerShell, or scripts against 127.0.0.1/mcp or CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL), never search ~/.claude, AppData, or netstat for ports, sessions, or task files, and never create helper, wrapper, or scratch files (for example _lead_*.js) to call team tools.';
   const requiredMessageEnvelope = JSON.stringify({
     teamName: input.teamName,
     to: replyRecipient,
@@ -150,6 +152,7 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
                 : null,
               'If message_send reports parameter validation failure, correct the missing or invalid arguments from the required envelope and retry exactly once. Do not explain the validation error as the final reply.',
               'If message_send returns an unavailable, not connected, or missing-tool error, write the exact concise reply as plain assistant text once, then stop.',
+              'If any agent-teams tool (message_send, task_create, task_list, ...) is unavailable or errors, reply once in plain text quoting the exact tool name and error text; do not retry via HTTP, scripts, or by reading team files on disk.',
               'After the message_send tool call succeeds, stop immediately. Do not send follow-up confirmations or repeat the same answer.',
               'You must not end this turn empty.',
               'Do not answer only with plain assistant text when agent-teams_message_send is available.',
@@ -163,6 +166,7 @@ export function buildOpenCodeRuntimeMessageText(input: OpenCodeTeamRuntimeMessag
     'You are running in OpenCode, not Claude Code or Codex native.',
     'REPLAY GUARD: this same inbound message may reach you more than once (delivery retries and session rebuilds replay it). Before acting, check the current task board and your recent sent messages for what this message already produced. Do NOT redo an action that is already complete: do not create a task that already exists, and do not re-send a reply you already sent. Work that is only started or partly done is NOT handled: continue it and finish what is missing. Only when everything this message asked for is verifiably complete, end the turn with one short plain-text line noting it was already handled. Never declare overall completion (for example "ALL DONE") unless the required final state verifiably exists right now.',
     actionModeWorkScopeReminder,
+    teamToolAccessRule,
     ...responseInstructions,
     'Do not call runtime_bootstrap_checkin or member_briefing just to answer this delivered app message.',
     'Do not use SendMessage or runtime_deliver_message for ordinary visible replies.',

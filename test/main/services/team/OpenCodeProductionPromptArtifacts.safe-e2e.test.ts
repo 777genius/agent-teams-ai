@@ -69,7 +69,11 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     const launchInput = captureAdapter.launchInputs[0];
     expect(launchInput).toBeDefined();
     expect(launchInput?.prompt ?? '').toContain('production desktop app');
-    expect(launchInput?.expectedMembers.map((member) => member.name)).toEqual(['team-lead', 'bob', 'jack']);
+    expect(launchInput?.expectedMembers.map((member) => member.name)).toEqual([
+      'team-lead',
+      'bob',
+      'jack',
+    ]);
     expect(launchInput?.prompt?.length ?? 0).toBeGreaterThan(1_500);
 
     const bridgeCapture = createCapturingOpenCodeBridge(selectedModel);
@@ -118,7 +122,11 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
     expect(launchCommand?.leadPrompt).toContain('OpenCode members bootstrap silently');
     expect(launchCommand?.leadPrompt.length ?? 0).toBeGreaterThan(1_500);
     expect(launchCommand?.leadPrompt.length ?? 0).toBeLessThan(80_000);
-    expect(launchCommand?.members.map((member) => member.name)).toEqual(['team-lead', 'bob', 'jack']);
+    expect(launchCommand?.members.map((member) => member.name)).toEqual([
+      'team-lead',
+      'bob',
+      'jack',
+    ]);
 
     for (const member of launchCommand?.members ?? []) {
       expect(member.prompt).toContain(`You are ${member.name}`);
@@ -131,8 +139,9 @@ describe('OpenCode production prompt artifacts safe e2e', () => {
         'That bootstrap restriction is only about team registry/startup files'
       );
       expect(member.prompt).toContain(
-        'you may inspect, read/search, and edit files in the project working directory as your available tools allow'
+        'you may inspect, read/search, and edit the PROJECT files that the task itself requires'
       );
+      expect(member.prompt).toContain('registered for you as the MCP server named "agent-teams"');
       expect(member.prompt).toContain('stay idle silently');
       expect(member.prompt).not.toContain('Call SendMessage');
       expect(member.prompt).not.toContain('Use SendMessage');
