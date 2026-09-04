@@ -12,24 +12,13 @@ import {
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 
+import { type BackupManifest } from './teamBackupManifest';
 import { TeamConfigReader } from './TeamConfigReader';
 import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
 
 const logger = createLogger('TeamBackupService');
 const LAUNCH_STATE_PUBLICATION_FILES = new Set(['launch-state.json', 'launch-summary.json']);
 const DRAFT_DELETION_IDENTITY_FILE = '.permanent-deletion-identity.json';
-
-interface BackupManifest {
-  teamName: string;
-  identityId: string;
-  projectPath?: string;
-  displayName?: string;
-  status: 'active' | 'deleted_by_user';
-  deletedByUserAt?: string;
-  firstBackupAt: string;
-  lastBackupAt: string;
-  fileStats: Record<string, { mtime: number; size: number }>;
-}
 
 type SourceConfigObservation =
   | {
