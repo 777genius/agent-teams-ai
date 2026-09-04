@@ -1659,7 +1659,7 @@ describe('CLI status visibility during completed install state', () => {
     });
   });
 
-  it('shows OpenCode model loading instead of the summary-only big-pickle badge', async () => {
+  it('does not show endless model loading for a completed OpenCode passive summary', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     storeState.cliInstallerState = 'idle';
     storeState.cliStatus = createInstalledCliStatus({
@@ -1673,15 +1673,17 @@ describe('CLI status visibility during completed install state', () => {
         {
           providerId: 'opencode',
           displayName: 'OpenCode (200+ models)',
-          supported: true,
-          authenticated: true,
-          authMethod: 'opencode_managed',
-          verificationState: 'verified',
-          statusMessage: null,
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'model_only',
+          statusCheckErrorCode: 'partial_response',
+          statusMessage: 'OpenCode detected (passive)',
           models: ['opencode/big-pickle'],
           canLoginFromUi: false,
           capabilities: {
-            teamLaunch: true,
+            teamLaunch: false,
             oneShot: false,
           },
           backend: { kind: 'opencode-cli', label: 'OpenCode CLI' },
@@ -1706,7 +1708,10 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Loading models...');
+    expect(host.textContent).toContain('OpenCode detected (passive)');
+    expect(host.textContent).toContain('Runtime: OpenCode CLI');
+    expect(host.textContent).not.toContain('Loading models...');
+    expect(host.textContent).not.toContain('Models unavailable for this runtime build');
     expect(host.textContent).not.toContain('big-pickle');
 
     await act(async () => {
