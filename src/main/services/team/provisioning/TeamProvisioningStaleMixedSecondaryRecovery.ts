@@ -147,7 +147,8 @@ export interface StaleMixedSecondaryRecoveryPorts {
   }): PersistedTeamLaunchSnapshot;
   writeLaunchStateSnapshot(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: { republishesExistingLaunch?: boolean }
   ): Promise<PersistedTeamLaunchSnapshot | null>;
 }
 
@@ -423,5 +424,14 @@ export async function recoverStaleMixedSecondaryLaunchSnapshotWithPorts(
     primaryStatuses,
     secondaryMembers,
   });
-  return ports.writeLaunchStateSnapshot(teamName, recoveredSnapshot);
+  // Re-deriving the lanes takes runtime probes, so a stop can settle between
+  // the check above and this write. The write declares that it starts no
+  // launch: the store fences it with the stop marker inside its publication
+  // queue, which no stop can slip through, and a stopped team keeps its stop.
+  const recovered = await ports.writeLaunchStateSnapshot(teamName, recoveredSnapshot, {
+    republishesExistingLaunch: true,
+  });
+  // Nothing was published for a team that was stopped meanwhile, so the caller
+  // must not be handed a recovered snapshot either.
+  return (await ports.isTeamLaunchStopped(teamName)) ? persistedSnapshot : recovered;
 }

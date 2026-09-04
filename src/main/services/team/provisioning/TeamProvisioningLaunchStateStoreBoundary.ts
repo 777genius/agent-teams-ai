@@ -11,6 +11,12 @@ export interface LaunchStateWriteOptions {
   allowNoopSkip?: boolean;
   requireTrackedRun?: boolean;
   runId?: string;
+  /**
+   * True when the snapshot republishes launch truth that already existed
+   * instead of starting a launch. Forwarded to the store, where it keeps a stop
+   * that settled during the write final over this publication.
+   */
+  republishesExistingLaunch?: boolean;
 }
 
 /** Mirrors `TeamLaunchStatePublicationOptions` on the launch-state store. */
@@ -202,7 +208,11 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       return { snapshot: previousSnapshot, wrote: false };
     }
     const writtenRunIdBeforeWrite = this.writtenRunIdByTeam.get(teamName);
-    await this.ports.launchStateStore.write(teamName, normalizedSnapshot);
+    await this.ports.launchStateStore.write(
+      teamName,
+      normalizedSnapshot,
+      options?.republishesExistingLaunch === true ? { republishesExistingLaunch: true } : undefined
+    );
     const trackedRunIdAfterWrite =
       typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
     if (typeof options?.runId === 'string' && trackedRunIdAfterWrite === options.runId) {
