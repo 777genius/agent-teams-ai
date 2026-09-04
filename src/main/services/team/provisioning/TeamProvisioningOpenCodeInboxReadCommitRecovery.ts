@@ -125,8 +125,14 @@ export async function recoverOpenCodeOwedInboxReadCommit(input: {
   if (input.shouldAbort?.()) {
     return { outcome: 'aborted' };
   }
-  const recoveredReadAllowed = recoveredRecord
-    ? await input.ports.isOpenCodeDeliveryResponseReadCommitAllowed({
+  // Every other step of this recovery degrades to "not recovered" rather than
+  // throwing, and the policy has to as well: the caller awaits this without a
+  // catch of its own, so a rejection here would end the whole relay pass -
+  // including the ordinary delivery of the message this recovery declined.
+  let recoveredReadAllowed = false;
+  if (recoveredRecord) {
+    try {
+      recoveredReadAllowed = await input.ports.isOpenCodeDeliveryResponseReadCommitAllowed({
         teamName: input.teamName,
         memberName: input.canonicalMemberName,
         responseState: recoveredRecord.responseState,
@@ -134,8 +140,16 @@ export async function recoverOpenCodeOwedInboxReadCommit(input: {
         taskRefs: recoveredRecord.taskRefs,
         visibleReply: recoveredVisibleReply,
         ledgerRecord: recoveredRecord,
-      })
-    : false;
+      });
+    } catch (error) {
+      recoveredReadAllowed = false;
+      input.ports.logOpenCodePromptDeliveryEvent(
+        'opencode_prompt_delivery_read_commit_recovery_policy_failed',
+        recoveredRecord,
+        { error: input.ports.getErrorMessage(error) }
+      );
+    }
+  }
   if (input.shouldAbort?.()) {
     return { outcome: 'aborted' };
   }
