@@ -8,6 +8,7 @@ import {
 import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
 
+import { buildOpenCodePreLaunchGate, isRetryableReadinessState } from './OpenCodeLaunchGateResult';
 import {
   createLocalRuntimeInspectionState,
   preflightOpenCodeLocalModels,
@@ -338,7 +339,9 @@ export class OpenCodeTeamRuntimeAdapter implements TeamLaunchRuntimeAdapter {
           prepared.reason === 'mcp_unavailable' || prepared.reason === 'unknown_error'
             ? ['OpenCode is temporarily unavailable. Retry the launch.', ...prepared.diagnostics]
             : prepared.diagnostics;
-        return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings);
+        return blockedLaunchResult(input, prepared.reason, diagnostics, prepared.warnings, {
+          preLaunchGate: true,
+        });
       }
       const readinessModel = prepared.modelId?.trim() ?? '';
       if (requestedModel && readinessModel !== requestedModel) {
@@ -1257,6 +1260,13 @@ function isGenericOpenCodeFailureMessage(message: string): boolean {
   return (
     message === GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON ||
     message.startsWith(`${GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON}:`) ||
+    // Reassurance text prepended ahead of the real readiness diagnostic for
+    // mcp_unavailable/unknown_error (see the prepareOpenCodeLaunch caller).
+    // Without this, it wins as the first "displayable" (non-generic) message
+    // and permanently hides the specific diagnostic behind it - which is what
+    // shouldRetryTransientOpenCodeSharedRuntimeFailure pattern-matches on to
+    // decide whether a timeout is worth retrying.
+    message === 'OpenCode is temporarily unavailable. Retry the launch.' ||
     message.startsWith('OpenCode secondary lane timing:') ||
     message.startsWith(
       'OpenCode bridge reported ready without all required durable checkpoints:'
@@ -1369,7 +1379,8 @@ function blockedLaunchResult(
   input: TeamRuntimeLaunchInput,
   reason: string,
   diagnostics: string[],
-  warnings: string[] = []
+  warnings: string[] = [],
+  options: { preLaunchGate?: boolean } = {}
 ): TeamRuntimeLaunchResult {
   const readinessFailure =
     reason === 'unknown_error' ||
@@ -1405,18 +1416,12 @@ function blockedLaunchResult(
     members,
     warnings,
     diagnostics,
+    // Attached only where the block provably precedes launchOpenCodeTeam, so an
+    // absent marker always reads as "this launch may already own a host".
+    ...(options.preLaunchGate === true
+      ? { preLaunchGate: buildOpenCodePreLaunchGate(reason) }
+      : {}),
   };
-}
-
-function isRetryableReadinessState(state: OpenCodeTeamLaunchReadiness['state']): boolean {
-  return (
-    state === 'not_installed' ||
-    state === 'not_authenticated' ||
-    state === 'runtime_store_blocked' ||
-    state === 'mcp_unavailable' ||
-    state === 'model_unavailable' ||
-    state === 'unknown_error'
-  );
 }
 
 function mergeDiagnostics(left: string[], right: string[]): string[] {

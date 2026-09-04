@@ -1,4 +1,8 @@
+import * as path from 'path';
+
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
+
+import { launchOpenCodePrimaryWithTransientSharedRuntimeRetry } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 
 import type {
   TeamLaunchRuntimeAdapter,
@@ -7,6 +11,7 @@ import type {
   TeamRuntimeMemberSpec,
 } from '../runtime';
 import type { OpenCodeLaunchFailureArtifactPort } from './TeamProvisioningOpenCodeLaunchFailureArtifact';
+import type { OpenCodeSharedRuntimeFailureScope } from './TeamProvisioningOpenCodeSharedRuntimeFailurePolicy';
 import type {
   PersistedTeamLaunchSnapshot,
   TeamCreateRequest,
@@ -65,6 +70,14 @@ export interface OpenCodeRuntimeAdapterLaunchPreflightPorts {
 export interface OpenCodeRuntimeAdapterLaunchPorts extends OpenCodeRuntimeAdapterLaunchPreflightPorts {
   randomUUID(): string;
   nowIso(): string;
+  nowMs(): number;
+  /**
+   * Shared-runtime failure records of every project this composition root has
+   * launched. They outlive a single launch so the one-shot transient retry
+   * cannot repeat inside a record's TTL window.
+   */
+  sharedRuntimeFailureScope: OpenCodeSharedRuntimeFailureScope;
+  logWarning(message: string): void;
   setProvisioningRun(teamName: string, runId: string): void;
   setRuntimeAdapterProgress(
     progress: TeamProvisioningProgress,
@@ -463,7 +476,21 @@ export async function runOpenCodeTeamRuntimeAdapterLaunch(
     if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }
-    const launchResult = await input.adapter.launch(launchInput);
+    const launchResult = await launchOpenCodePrimaryWithTransientSharedRuntimeRetry(
+      {
+        teamName,
+        cwd: path.resolve(launchCwd),
+        scope: ports.sharedRuntimeFailureScope,
+        launch: () => input.adapter.launch(launchInput),
+      },
+      {
+        nowMs: () => ports.nowMs(),
+        logWarning: (message) => ports.logWarning(message),
+        // A relaunch must not race a stop, and the marker stays unconsumed so
+        // the authority checks below still observe it.
+        hasLaunchAuthority: () => hasOpenCodeLaunchAuthority(ports, teamName, runId),
+      }
+    );
     if (!hasOpenCodeLaunchAuthority(ports, teamName, runId)) {
       return finishOpenCodeLaunchAuthorityLoss(ports, teamName, runId);
     }

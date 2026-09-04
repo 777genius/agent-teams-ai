@@ -91,9 +91,21 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     expect(checkOpenCodeTeamLaunchReadiness).toHaveBeenCalledTimes(2);
     expect(launchOpenCodeTeam).not.toHaveBeenCalled();
     expect(result.diagnostics).toContain(temporarilyUnavailable.diagnostics[0]);
+    // blockedLaunchResult still prepends its reassurance line ahead of the
+    // readiness diagnostics, but that line is generic UI framing and must not
+    // mask the concrete bridge diagnostic behind it: hardFailureReason is what
+    // a transient shared-runtime failure is pattern-matched against.
+    expect(result.diagnostics[0]).toBe('OpenCode is temporarily unavailable. Retry the launch.');
     expect(result.members.Worker?.hardFailureReason).toBe(
-      'OpenCode is temporarily unavailable. Retry the launch.'
+      'OpenCode provider is temporarily unavailable. Retry shortly.'
     );
+    // The readiness gate ran before launchOpenCodeTeam, so the result carries
+    // the proof that no host or session exists for this run.
+    expect(result.preLaunchGate).toEqual({
+      blocked: true,
+      reason: 'unknown_error',
+      retryable: true,
+    });
   });
 
   it('fails closed when launching with confirmed members returns a mismatched fingerprint', async () => {
@@ -120,6 +132,9 @@ describe('OpenCodeTeamRuntimeAdapter launch readiness', () => {
     expect(result.members.Worker?.hardFailureReason).toBe(
       'opencode_launch_behavior_fingerprint_mismatch'
     );
+    // A block found AFTER launchOpenCodeTeam ran is not a pre-launch gate: the
+    // bridge may already own a host, so no caller may relaunch this lane.
+    expect(result.preLaunchGate).toBeUndefined();
   });
 
   it('preserves partial launch semantics when a non-success result has a mismatched fingerprint', async () => {

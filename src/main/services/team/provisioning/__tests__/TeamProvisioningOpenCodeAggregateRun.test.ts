@@ -499,6 +499,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       'launchSecondary:secondary:opencode:bob',
       'summarizeLaunchState',
       'persistLaunchState:finished',
+      'deliverLaunchPrompt:team-lead:launch',
       'setProgress:ready',
       'setAliveRun',
       'deleteProvisioningRunIfCurrent',
@@ -597,6 +598,57 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(calls).toContain('setProgress:ready');
     expect(calls).toContain('setAliveRun');
     expect(calls).not.toContain('cleanupRun');
+  });
+
+  it('never stops a lane that was blocked before launch, whatever its diagnostics say', async () => {
+    const alice = member('alice');
+    const bob = member('bob', { cwd: '/fake/project/./' });
+    const calls: string[] = [];
+    const adapterStop = vi.fn();
+    let capturedRun: OpenCodeAggregateProvisioningRun | null = null;
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: { stop: adapterStop } as unknown as TeamLaunchRuntimeAdapter,
+        request: request([alice, bob]),
+        members: [alice, bob],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        setRun: (_runId, run) => {
+          capturedRun = run;
+        },
+        getRun: () => capturedRun ?? undefined,
+        launchOpenCodeAggregatePrimaryLane: async () => {
+          calls.push('launchPrimary');
+          return sharedPreflightFailureResult(
+            'alice',
+            'Failed to query OpenCode models: request timed out'
+          );
+        },
+        publishMixedSecondaryLaneStatusChange: async (_run, lane) => {
+          calls.push(`publishLane:${lane.laneId}:${lane.state}`);
+          // The rollback classification must survive a reworded diagnostic: the
+          // lane still owns nothing, and that is a fact about the lane.
+          lane.diagnostics = ['OpenCode preflight refused this lane.'];
+        },
+        summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
+      }
+    );
+
+    const run = capturedRun as OpenCodeAggregateProvisioningRun | null;
+    if (!run) throw new Error('Expected captured aggregate run.');
+    expect(run.mixedSecondaryLanes[0]).toMatchObject({
+      state: 'finished',
+      blockedBeforeLaunch: true,
+    });
+    expect(calls).not.toContain('launchSecondary:secondary:opencode:bob');
+    expect(adapterStop).not.toHaveBeenCalled();
+    expect(calls).not.toContain('setSecondaryRuntimeRun:secondary:opencode:bob');
+    expect(calls).toContain('setProgress:failed');
   });
 
   it('cancels an exact late lane without stopping or clearing newer owners', async () => {
@@ -1019,6 +1071,163 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(calls).not.toContain('deleteSecondaryRuntimeRun:secondary:opencode:bob');
     expect(cleanupRun).not.toHaveBeenCalled();
     expect(calls).toContain('emitTeamProcessChange:failed');
+  });
+
+  it.each([
+    {
+      label: 'a secondary stop that is not confirmed',
+      failStorageClear: false,
+      expected:
+        '[open-code-team] OpenCode aggregate rollback could not stop tracked secondary lane secondary:opencode:bob (run secondary-run): OpenCode aggregate secondary lane secondary:opencode:bob did not confirm stop: secondary process still running',
+    },
+    {
+      label: 'a secondary storage clear that throws',
+      failStorageClear: true,
+      expected:
+        '[open-code-team] OpenCode aggregate rollback could not clear storage for secondary lane secondary:opencode:bob (run secondary-run): EBUSY: lane storage is locked',
+    },
+  ])('logs the cause behind $label', async ({ failStorageClear, expected }) => {
+    const alice = member('alice');
+    const bob = member('bob');
+    const calls: string[] = [];
+    const logError = vi.fn<(message: string) => void>();
+    let provisioningOwner: string | undefined;
+    let primaryOwner: { runId: string; providerId: 'opencode' } | undefined;
+    let secondaryOwner:
+      | { runId: string; providerId: 'opencode'; laneId: string; memberName: string; cwd: string }
+      | undefined;
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {
+          stop: async (stopInput: TeamRuntimeStopInput) => ({
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: failStorageClear,
+            members: {},
+            warnings: [],
+            diagnostics: failStorageClear ? [] : ['secondary process still running'],
+          }),
+        } as unknown as TeamLaunchRuntimeAdapter,
+        request: request([alice, bob]),
+        members: [alice, bob],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        logError,
+        setProvisioningRun: (_teamName, runId) => {
+          provisioningOwner = runId;
+        },
+        getProvisioningRun: () => provisioningOwner,
+        getRuntimeAdapterRun: () => primaryOwner,
+        getSecondaryRuntimeRun: () => secondaryOwner,
+        stopOpenCodeRuntimeAdapterTeam: async () => {
+          calls.push('stopOwnedPrimary');
+        },
+        launchOpenCodeAggregatePrimaryLane: async () => {
+          primaryOwner = { runId: 'run-open-code', providerId: 'opencode' };
+          return runtimeResult();
+        },
+        launchSingleMixedSecondaryLane: async (_run, lane) => {
+          lane.runId = 'secondary-run';
+          lane.state = 'finished';
+          lane.diagnostics.push('secondary failed');
+          lane.result = runtimeResult({ teamLaunchState: 'partial_failure' });
+          secondaryOwner = {
+            runId: 'secondary-run',
+            providerId: 'opencode',
+            laneId: lane.laneId,
+            memberName: lane.member.name,
+            cwd: PROJECT_CWD,
+          };
+        },
+        clearOpenCodeRuntimeLaneStorage: async (storageInput) => {
+          calls.push(`clearLaneStorage:${storageInput.laneId}`);
+          if (failStorageClear && storageInput.laneId === 'secondary:opencode:bob') {
+            throw new Error('EBUSY: lane storage is locked');
+          }
+          return true;
+        },
+        summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
+      }
+    );
+
+    // The publisher only says a stop could not be confirmed; the cause behind
+    // that verdict has nowhere else to go.
+    expect(logError).toHaveBeenCalledTimes(1);
+    expect(logError).toHaveBeenCalledWith(expected);
+    expect(calls).toContain('stopOwnedPrimary');
+  });
+
+  it('logs nothing when every rollback stop and storage clear succeeds', async () => {
+    const alice = member('alice');
+    const bob = member('bob');
+    const calls: string[] = [];
+    const logError = vi.fn<(message: string) => void>();
+    let provisioningOwner: string | undefined;
+    let primaryOwner: { runId: string; providerId: 'opencode' } | undefined;
+    let secondaryOwner:
+      | { runId: string; providerId: 'opencode'; laneId: string; memberName: string; cwd: string }
+      | undefined;
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {
+          stop: async (stopInput: TeamRuntimeStopInput) => ({
+            runId: stopInput.runId,
+            teamName: stopInput.teamName,
+            stopped: true,
+            members: {},
+            warnings: [],
+            diagnostics: [],
+          }),
+        } as unknown as TeamLaunchRuntimeAdapter,
+        request: request([alice, bob]),
+        members: [alice, bob],
+        lanePlan: lanePlan({ primaryMembers: [alice], sideMembers: [bob] }),
+        prompt: 'launch',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        logError,
+        setProvisioningRun: (_teamName, runId) => {
+          provisioningOwner = runId;
+        },
+        getProvisioningRun: () => provisioningOwner,
+        getRuntimeAdapterRun: () => primaryOwner,
+        getSecondaryRuntimeRun: () => secondaryOwner,
+        stopOpenCodeRuntimeAdapterTeam: async () => {
+          calls.push('stopOwnedPrimary');
+        },
+        launchOpenCodeAggregatePrimaryLane: async () => {
+          primaryOwner = { runId: 'run-open-code', providerId: 'opencode' };
+          return runtimeResult();
+        },
+        launchSingleMixedSecondaryLane: async (_run, lane) => {
+          lane.runId = 'secondary-run';
+          lane.state = 'finished';
+          lane.diagnostics.push('secondary failed');
+          lane.result = runtimeResult({ teamLaunchState: 'partial_failure' });
+          secondaryOwner = {
+            runId: 'secondary-run',
+            providerId: 'opencode',
+            laneId: lane.laneId,
+            memberName: lane.member.name,
+            cwd: PROJECT_CWD,
+          };
+        },
+        summarizeOpenCodeAggregateLaunchState: () => 'partial_failure',
+      }
+    );
+
+    // Negative control: a rollback that confirmed everything has no cause to
+    // report, so a successful teardown stays silent.
+    expect(calls).toContain('clearLaneStorage:secondary:opencode:bob');
+    expect(logError).not.toHaveBeenCalled();
   });
 
   it('does not replace a newer secondary owner after an untracked stop fails', async () => {
@@ -1507,6 +1716,192 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(calls).not.toContain('launchPrimary');
     expect(calls).not.toContain('setAliveRun');
   });
+
+  it('queues the launch prompt for the lead inbox and leaves the orchestrator prompt empty', async () => {
+    const lead = member('team-lead');
+    const calls: string[] = [];
+    const provisioningRuns = new Map<string, string>();
+    const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+    const promptedLanes: (string | undefined)[] = [];
+    const deliverOpenCodeLaunchPromptToLead = vi.fn<
+      OpenCodeWorktreeRootAggregateLaunchPorts['deliverOpenCodeLaunchPromptToLead']
+    >(async () => undefined);
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([lead]),
+        members: [lead],
+        lanePlan: lanePlan({ primaryMembers: [lead] }),
+        prompt: '  review the backlog  ',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+        getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        getRun: (runId) => runById.get(runId),
+        setRun: (runId, run) => runById.set(runId, run),
+        launchOpenCodeAggregatePrimaryLane: async (launchInput) => {
+          promptedLanes.push(launchInput.prompt);
+          return retainableRuntimeResult('team-lead');
+        },
+        deliverOpenCodeLaunchPromptToLead,
+      }
+    );
+
+    // The orchestrator never receives the prompt, so a rebuilt lead session
+    // cannot replay it.
+    expect(promptedLanes).toEqual(['']);
+    expect(deliverOpenCodeLaunchPromptToLead).toHaveBeenCalledTimes(1);
+    const promptInput = deliverOpenCodeLaunchPromptToLead.mock.calls[0]?.[0];
+    expect(promptInput).toMatchObject({
+      teamName: 'open-code-team',
+      leadName: 'team-lead',
+      prompt: 'review the backlog',
+    });
+    // Negative control for the fence: the run that still owns the team reports
+    // itself as current at the write boundary.
+    expect(promptInput?.isLaunchStillCurrent()).toBe(true);
+  });
+
+  it('finishes the launch and records a diagnostic when the lead inbox refuses the prompt', async () => {
+    const lead = member('team-lead');
+    const calls: string[] = [];
+    const provisioningRuns = new Map<string, string>();
+    const aliveRuns = new Map<string, string>();
+    const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+    const published: TeamProvisioningProgress[] = [];
+
+    const result = await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([lead]),
+        members: [lead],
+        lanePlan: lanePlan({ primaryMembers: [lead] }),
+        prompt: 'review the backlog',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+        getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        getRun: (runId) => runById.get(runId),
+        setRun: (runId, run) => runById.set(runId, run),
+        setAliveRunId: (teamName, runId) => aliveRuns.set(teamName, runId),
+        setRuntimeAdapterProgress: (nextProgress) => {
+          published.push(nextProgress);
+          return nextProgress;
+        },
+        launchOpenCodeAggregatePrimaryLane: async () => retainableRuntimeResult('team-lead'),
+        deliverOpenCodeLaunchPromptToLead: async () => {
+          throw new Error('lead inbox is not writable');
+        },
+      }
+    );
+
+    // The prompt is one message; the launch is the whole team.
+    expect(result).toEqual({ runId: 'run-open-code' });
+    expect(aliveRuns.get('open-code-team')).toBe('run-open-code');
+    expect(published.at(-1)).toMatchObject({
+      state: 'ready',
+      cliLogsTail: 'Launch prompt could not be queued for team-lead: lead inbox is not writable',
+    });
+  });
+
+  it.each([
+    { takenOver: true, label: 'refuses the write and publishes nothing' },
+    { takenOver: false, label: 'writes and publishes' },
+  ])(
+    'a successor that takes the team while the launch prompt is in flight: $label',
+    async ({ takenOver }) => {
+      const lead = member('team-lead');
+      const calls: string[] = [];
+      const provisioningRuns = new Map<string, string>();
+      const aliveRuns = new Map<string, string>();
+      const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+      const deliveryStarted = deferred();
+      const deliveryRelease = deferred();
+      let fenceAtWriteBoundary: boolean | null = null;
+
+      const launch = runOpenCodeWorktreeRootAggregateLaunch(
+        {
+          adapter: {} as TeamLaunchRuntimeAdapter,
+          request: request([lead]),
+          members: [lead],
+          lanePlan: lanePlan({ primaryMembers: [lead] }),
+          prompt: 'review the backlog',
+          onProgress: vi.fn(),
+        },
+        {
+          ...baseAggregatePorts(calls),
+          setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+          getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+          getRun: (runId) => runById.get(runId),
+          setRun: (runId, run) => runById.set(runId, run),
+          setAliveRunId: (teamName, runId) => {
+            calls.push('setAliveRun');
+            aliveRuns.set(teamName, runId);
+          },
+          launchOpenCodeAggregatePrimaryLane: async () => retainableRuntimeResult('team-lead'),
+          deliverOpenCodeLaunchPromptToLead: async (promptInput) => {
+            deliveryStarted.resolve();
+            await deliveryRelease.promise;
+            // Stands in for the inbox writer evaluating the fence once it owns
+            // the inbox lock: a false answer rejects the append.
+            fenceAtWriteBoundary = promptInput.isLaunchStillCurrent();
+          },
+        }
+      );
+
+      await deliveryStarted.promise;
+      if (takenOver) {
+        provisioningRuns.set('open-code-team', 'successor-run');
+      }
+      deliveryRelease.resolve();
+
+      await expect(launch).resolves.toEqual({ runId: 'run-open-code' });
+      expect(fenceAtWriteBoundary).toBe(!takenOver);
+      expect(aliveRuns.has('open-code-team')).toBe(!takenOver);
+      expect(calls.includes('emitTeamProcessChange:ready')).toBe(!takenOver);
+    }
+  );
+
+  it('never touches the lead inbox when the launch carries no prompt', async () => {
+    const lead = member('team-lead');
+    const calls: string[] = [];
+    const provisioningRuns = new Map<string, string>();
+    const runById = new Map<string, OpenCodeAggregateProvisioningRun>();
+    const promptedLanes: (string | undefined)[] = [];
+    const deliverOpenCodeLaunchPromptToLead = vi.fn(async () => undefined);
+
+    await runOpenCodeWorktreeRootAggregateLaunch(
+      {
+        adapter: {} as TeamLaunchRuntimeAdapter,
+        request: request([lead]),
+        members: [lead],
+        lanePlan: lanePlan({ primaryMembers: [lead] }),
+        prompt: '   ',
+        onProgress: vi.fn(),
+      },
+      {
+        ...baseAggregatePorts(calls),
+        setProvisioningRun: (teamName, runId) => provisioningRuns.set(teamName, runId),
+        getProvisioningRun: (teamName) => provisioningRuns.get(teamName),
+        getRun: (runId) => runById.get(runId),
+        setRun: (runId, run) => runById.set(runId, run),
+        launchOpenCodeAggregatePrimaryLane: async (launchInput) => {
+          promptedLanes.push(launchInput.prompt);
+          return retainableRuntimeResult('team-lead');
+        },
+        deliverOpenCodeLaunchPromptToLead,
+      }
+    );
+
+    // A blank prompt is passed through untouched: nothing is queued.
+    expect(promptedLanes).toEqual(['   ']);
+    expect(deliverOpenCodeLaunchPromptToLead).not.toHaveBeenCalled();
+  });
 });
 
 function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunchPorts {
@@ -1516,6 +1911,7 @@ function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunc
     randomUUID: () => 'run-open-code',
     nowMs: () => 1_000,
     nowIso: () => '2026-01-01T00:00:00.000Z',
+    logError: () => undefined,
     getStopAllTeamsGeneration: () => 0,
     getStopTeamGeneration: () => 0,
     getRuntimeAdapterRun: () => undefined,
@@ -1628,6 +2024,9 @@ function baseAggregatePorts(calls: string[]): OpenCodeWorktreeRootAggregateLaunc
     },
     deleteSecondaryRuntimeRun: (_teamName, laneId) => {
       calls.push(`deleteSecondaryRuntimeRun:${laneId}`);
+    },
+    deliverOpenCodeLaunchPromptToLead: async (promptInput) => {
+      calls.push(`deliverLaunchPrompt:${promptInput.leadName}:${promptInput.prompt}`);
     },
   };
 }

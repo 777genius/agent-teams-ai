@@ -114,8 +114,26 @@ export interface CorrelateRuntimeDeliveryReplyResult {
   message?: InboxMessage & { messageId: string };
 }
 
+export interface SendInboxMessageOptions {
+  /**
+   * Evaluated once inside the inbox write lock, immediately before the message
+   * is appended. A false result rejects the write instead of queueing it.
+   *
+   * Acquiring the inbox lock is an unbounded wait behind every other writer of
+   * the same file, so a caller whose authority can expire (a team launch that a
+   * successor run takes over, for example) would otherwise enqueue a message
+   * that only its successor sees. The check runs under the lock, so it observes
+   * the state that holds at the moment this writer is allowed to append.
+   */
+  shouldStillWrite?: () => boolean;
+}
+
 export class TeamInboxWriter {
-  async sendMessage(teamName: string, request: SendMessageRequest): Promise<SendMessageResult> {
+  async sendMessage(
+    teamName: string,
+    request: SendMessageRequest,
+    options?: SendInboxMessageOptions
+  ): Promise<SendMessageResult> {
     const inboxPath = resolveInboxPath(teamName, request.member);
     const explicitMessageId = request.messageId?.trim();
     const messageId = explicitMessageId || randomUUID();
@@ -163,9 +181,14 @@ export class TeamInboxWriter {
     };
     let resultMessageId = messageId;
     let resultDeduplicated = false;
+    let rejectedByPrecondition = false;
 
     await withFileLock(inboxPath, async () => {
       await withInboxLock(inboxPath, async () => {
+        if (options?.shouldStillWrite && !options.shouldStillWrite()) {
+          rejectedByPrecondition = true;
+          return;
+        }
         for (let attempt = 0; attempt < 3; attempt++) {
           const list = await this.readInbox(inboxPath);
           const explicitDuplicateIndex = explicitMessageId
@@ -218,6 +241,9 @@ export class TeamInboxWriter {
       });
     });
 
+    if (rejectedByPrecondition) {
+      return { deliveredToInbox: false, messageId };
+    }
     return {
       deliveredToInbox: true,
       messageId: resultMessageId,
