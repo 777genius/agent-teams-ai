@@ -29,7 +29,10 @@ import type {
   OpenCodeTeamRuntimeMessageInput,
   OpenCodeTeamRuntimeMessageResult,
 } from '../../runtime';
-import type { OpenCodeRuntimeMessageAdapter } from './OpenCodeMemberMessageDeliveryPorts';
+import type {
+  OpenCodeLeadTurnActivityNotification,
+  OpenCodeRuntimeMessageAdapter,
+} from './OpenCodeMemberMessageDeliveryPorts';
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 import type { AgentActionMode, InboxMessage, TaskRef } from '@shared/types/team';
@@ -81,6 +84,8 @@ export interface OpenCodePromptDeliveryWatchdogCoordinatorPorts {
     messageId?: string | null;
     delayMs: number;
   }): void;
+  /** Lead turn settled asynchronously on the OpenCode primary lane (see delivery service). */
+  notifyLeadTurnActivity?(input: OpenCodeLeadTurnActivityNotification): void;
   canDeliverToTeamRuntime(teamName: string): boolean;
   recoverRuntimeLanesForWatchdog(
     teamName: string,
@@ -221,7 +226,31 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
     this.ports.logPromptDeliveryEvent('opencode_prompt_delivery_terminal_failure', failed, {
       ...failurePlan.eventExtra,
     });
+    this.notifyLeadTurnIdle(failed);
     return failed;
+  }
+
+  private notifyLeadTurnIdle(record: OpenCodePromptDeliveryLedgerRecord): void {
+    // The consumer validates canonical lead identity and current run ownership.
+    // Primary also contains same-model teammates, so lane alone is not proof.
+    if (record.laneId !== 'primary' || !this.ports.notifyLeadTurnActivity) {
+      return;
+    }
+    try {
+      this.ports.notifyLeadTurnActivity({
+        teamName: record.teamName,
+        memberName: record.memberName,
+        laneId: record.laneId,
+        runId: record.runId,
+        state: 'idle',
+      });
+    } catch (error) {
+      this.ports.warn(
+        `[${record.teamName}] OpenCode lead turn activity (idle) notification failed: ${this.ports.getErrorMessage(
+          error
+        )}`
+      );
+    }
   }
 
   async observeDirectUserDeliveryInlineIfNeeded(input: {

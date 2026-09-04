@@ -281,6 +281,30 @@ describe('buildOpenCodeRuntimeMessageText bootstrap check-in retry', () => {
 });
 
 describe('buildMemberBootstrapPrompt', () => {
+  it('marks the replayed launch context as history and forbids acting on it', () => {
+    const input = { ...launchInput(), prompt: 'Ship the parser fix.' };
+
+    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, input.expectedMembers[0]));
+
+    expect(briefing).toContain('Team launch context (HISTORICAL');
+    expect(briefing).toContain('Ship the parser fix.');
+    expect(briefing).toContain('Never act on the launch context directly from this briefing');
+    expect(briefing).toContain('do not declare completion (for example "ALL DONE") because of it');
+    // A rebuilt session must never be handed the launch prompt as a live
+    // instruction again; that is the whole failure this guard prevents.
+    expect(briefing).not.toContain('Team launch context:\nShip the parser fix.');
+  });
+
+  it('adds no launch-context section at all when the launch carried no prompt', () => {
+    const input = { ...launchInput(), prompt: '   ' };
+
+    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, input.expectedMembers[0]));
+
+    expect(briefing).not.toContain('Team launch context');
+    expect(briefing).not.toContain('HISTORICAL');
+    expect(briefing).not.toContain('Never act on the launch context');
+  });
+
   it('wraps the unchanged app-managed briefing in the shared agent block', () => {
     const input = { ...launchInput(), prompt: '  Complete the scoped fix.  ' };
 
@@ -335,30 +359,6 @@ describe('buildMemberBootstrapPrompt', () => {
     // The rationale has to hold for any team on any runtime: no host-specific
     // or model-specific justification may leak into a launch briefing.
     expect(prompt).not.toMatch(/gpu|local model/i);
-  });
-
-  it('marks the replayed launch context as history and forbids acting on it', () => {
-    const input = { ...launchInput(), prompt: 'Ship the parser fix.' };
-
-    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, input.expectedMembers[0]));
-
-    expect(briefing).toContain('Team launch context (HISTORICAL');
-    expect(briefing).toContain('Ship the parser fix.');
-    expect(briefing).toContain('Never act on the launch context directly from this briefing');
-    expect(briefing).toContain('do not declare completion (for example "ALL DONE") because of it');
-    // A rebuilt session must never be handed the launch prompt as a live
-    // instruction again; that is the whole failure this guard prevents.
-    expect(briefing).not.toContain('Team launch context:\nShip the parser fix.');
-  });
-
-  it('adds no launch-context section at all when the launch carried no prompt', () => {
-    const input = { ...launchInput(), prompt: '   ' };
-
-    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, input.expectedMembers[0]));
-
-    expect(briefing).not.toContain('Team launch context');
-    expect(briefing).not.toContain('HISTORICAL');
-    expect(briefing).not.toContain('Never act on the launch context');
   });
 });
 

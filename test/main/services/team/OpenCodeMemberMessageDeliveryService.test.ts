@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { OpenCodeVisibleReplyProofService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeVisibleReplyProofService';
-
 import { OpenCodeMemberMessageDeliveryService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeMemberMessageDeliveryService';
+import { OPENCODE_STALE_PENDING_POLICY_CONFIG } from '../../../../src/main/services/team/opencode/delivery/OpenCodePromptDeliveryStalePendingPolicy';
+import { OpenCodeVisibleReplyProofService } from '../../../../src/main/services/team/opencode/delivery/OpenCodeVisibleReplyProofService';
 
 import type {
   OpenCodeMemberMessageDeliveryServiceDependencies,
@@ -150,6 +150,7 @@ function makeDeps(
     openCodePromptDeliveryFollowUpPolicy: {
       schedule: vi.fn(async () => unexpected('openCodePromptDeliveryFollowUpPolicy.schedule')),
     },
+    openCodeStalePendingPolicyConfig: OPENCODE_STALE_PENDING_POLICY_CONFIG,
     isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => true),
     getOpenCodeDeliveryPendingReason: vi.fn(() => 'opencode_delivery_response_pending'),
     markOpenCodeAcceptedDeliveryMissingPromptProofForRetry: vi.fn(async () =>
@@ -401,6 +402,116 @@ describe('OpenCodeMemberMessageDeliveryService', () => {
       reason: 'opencode_message_delivery_exception: bridge down',
     });
   });
+  it.each(['queued', 'pid', 'permissions', 'read'] as const)(
+    'fences legacy delivery when its run changes during %s',
+    async (phase) => {
+      let runId = 'run-1';
+      const bridge = vi.fn(async () => ({ ok: true, diagnostics: [], sessionId: 'old-session' }));
+      const deps = makeDeps({
+        getOpenCodeRuntimeMessageAdapter: () => makeAdapter(bridge),
+        resolveDeliverableTrackedRuntimeRunId: vi.fn(() => runId),
+        sendOpenCodeMemberMessageToRuntimeSerialized: vi.fn(async ({ send }) => {
+          if (phase === 'queued') runId = 'run-2';
+          return await send();
+        }),
+        rememberOpenCodeRuntimePidFromBridge: vi.fn(async () => {
+          if (phase === 'pid') runId = 'run-2';
+        }),
+        maybeSyncOpenCodeRuntimePermissionsAfterDelivery: vi.fn(async () => {
+          if (phase === 'permissions') runId = 'run-2';
+        }),
+        isLegacyOpenCodeMemberWorkSyncReadCommitAllowed: vi.fn(async () => {
+          if (phase === 'read') runId = 'run-2';
+          return true;
+        }),
+      });
+      await expect(
+        new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
+          memberName: 'alice',
+          text: 'sync',
+          messageId: 'msg-1',
+          messageKind: 'member_work_sync_nudge',
+        })
+      ).resolves.toMatchObject({ delivered: false, accepted: false, responsePending: false });
+      if (phase === 'queued') {
+        expect(bridge).not.toHaveBeenCalled();
+        expect(deps.rememberOpenCodeRuntimePidFromBridge).not.toHaveBeenCalled();
+      }
+      if (phase === 'queued' || phase === 'pid') {
+        expect(deps.maybeSyncOpenCodeRuntimePermissionsAfterDelivery).not.toHaveBeenCalled();
+      }
+      if (phase !== 'read') {
+        expect(deps.isLegacyOpenCodeMemberWorkSyncReadCommitAllowed).not.toHaveBeenCalled();
+      }
+    }
+  );
+
+  it.each(['busy', 'unknown', 'cancelled-proof', 'superseded-proof'] as const)(
+    'keeps the next delivery blocked by a %s active record',
+    async (state) => {
+      const active = makeLedgerRecord({
+        status: 'accepted',
+        responseState: 'pending',
+        inboxMessageId: 'older-message',
+        runtimePromptMessageId: 'prompt-1',
+        acceptanceUnknown: state === 'unknown',
+      });
+      let current = active;
+      let runId = 'run-1';
+      const ledger = {
+        getActiveForMember: vi.fn(async () => active),
+        getByInboxMessage: vi.fn(async () => current),
+        ensurePending: vi.fn(),
+      };
+      const bridge = vi.fn();
+      const deps = makeDeps({
+        getOpenCodeRuntimeMessageAdapter: () => makeAdapter(bridge),
+        resolveDeliverableTrackedRuntimeRunId: vi.fn(() => runId),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ledger as never),
+        openCodePromptDeliveryWatchdogScheduler: { isEnabled: vi.fn(() => true) },
+        openCodeVisibleReplyProofService: {
+          applyDestinationProof: vi.fn(async () => {
+            if (state === 'superseded-proof') runId = 'run-2';
+            if (state === 'cancelled-proof')
+              current = {
+                ...active,
+                status: 'failed_terminal',
+                cancelledAt: '2026-05-09T12:00:10.000Z',
+                lastReason: 'opencode_prompt_delivery_cancelled',
+              };
+            return { ledgerRecord: active, visibleReply: null };
+          }),
+          materializePlainTextReplyIfNeeded: vi.fn(async () => ({
+            ledgerRecord: active,
+            visibleReply: null,
+          })),
+          findByRelayOfMessageId: vi.fn(async () => null),
+        },
+        isOpenCodeDeliveryResponseReadCommitAllowed: vi.fn(async () => false),
+        scheduleOpenCodePromptDeliveryWatchdog: vi.fn(),
+      });
+      const result = await new OpenCodeMemberMessageDeliveryService(deps).deliver('team-a', {
+        memberName: 'alice',
+        text: 'next',
+        messageId: 'msg-1',
+      });
+      expect(bridge).not.toHaveBeenCalled();
+      expect(ledger.ensurePending).not.toHaveBeenCalled();
+      if (state === 'cancelled-proof' || state === 'superseded-proof') {
+        expect(result).toMatchObject({ delivered: false, responsePending: false });
+        expect(
+          deps.openCodeVisibleReplyProofService.materializePlainTextReplyIfNeeded
+        ).not.toHaveBeenCalled();
+        expect(deps.scheduleOpenCodePromptDeliveryWatchdog).not.toHaveBeenCalled();
+      } else {
+        expect(result).toMatchObject({
+          responsePending: true,
+          queuedBehindMessageId: 'older-message',
+        });
+      }
+    }
+  );
+
   it.each(['resolve', 'reject', 'observe', 'successor', 'queued'] as const)(
     'suppresses late %s callbacks after cancellation',
     async (outcome) => {

@@ -12,7 +12,13 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
     const service = {
       canDeliverToOpenCodeRuntimeForTeam: vi.fn(() => true),
       tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: vi.fn(async () => true),
-      relayOpenCodeMemberInboxMessages: vi.fn(async () => undefined),
+      relayOpenCodeMemberInboxMessages: vi.fn(async () => ({
+        attempted: 0,
+        delivered: 0,
+        relayed: 0,
+        failed: 0,
+        skipped: 0,
+      })),
       inboxReader: {
         getMessagesFor: vi.fn(async () => [{ messageId: 'message-1', read: false }]),
       },
@@ -68,6 +74,40 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
       service.openCodeRuntimeRecoveryIdentity.isOpenCodeRuntimeLaneIndexActive
     ).toHaveBeenCalledWith('alpha', 'lane-builder');
 
+    service.relayOpenCodeMemberInboxMessages.mockClear();
+    service.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+      attempted: 1,
+      delivered: 0,
+      relayed: 0,
+      failed: 1,
+      skipped: 0,
+      lastDelivery: {
+        delivered: false,
+        accepted: true,
+        ledgerStatus: 'failed_terminal',
+        reason: 'opencode_stale_pending_observe_window_exhausted',
+      },
+    } as never);
+    await deps.relay({ teamName: 'alpha', memberName: 'Builder', messageId: 'message-1' });
+    expect(service.relayOpenCodeMemberInboxMessages.mock.calls).toEqual([
+      ['alpha', 'Builder', { onlyMessageId: 'message-1', source: 'watchdog' }],
+      ['alpha', 'Builder', { source: 'watchdog' }],
+    ]);
+
+    for (const reason of ['opencode_prompt_delivery_cancelled', 'force_stop_requested']) {
+      service.relayOpenCodeMemberInboxMessages.mockClear();
+      service.relayOpenCodeMemberInboxMessages.mockResolvedValueOnce({
+        attempted: 0,
+        delivered: 0,
+        relayed: 0,
+        failed: 1,
+        skipped: 0,
+        lastDelivery: { delivered: false, ledgerStatus: 'failed_terminal', reason },
+      } as never);
+      await deps.relay({ teamName: 'alpha', memberName: 'Builder', messageId: 'old-run-message' });
+      expect(service.relayOpenCodeMemberInboxMessages).toHaveBeenCalledOnce();
+    }
+
     deps.info('info');
     deps.warn('warn');
     deps.debug('debug');
@@ -81,7 +121,13 @@ describe('TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerFactory', () =>
       {
         canDeliverToOpenCodeRuntimeForTeam: () => true,
         tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery: async () => true,
-        relayOpenCodeMemberInboxMessages: async () => undefined,
+        relayOpenCodeMemberInboxMessages: async () => ({
+          attempted: 0,
+          delivered: 0,
+          relayed: 0,
+          failed: 0,
+          skipped: 0,
+        }),
         inboxReader: {
           getMessagesFor: async () => [],
         },

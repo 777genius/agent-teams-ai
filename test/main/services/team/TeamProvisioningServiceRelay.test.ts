@@ -2853,7 +2853,7 @@ Messages:
     expect(rows[0].read).toBe(false);
   });
 
-  it('keeps accepted OpenCode prompt rows pending without warning when response proof is terminally absent', async () => {
+  it('reports accepted OpenCode terminal proof failures while preserving the unread inbox row', async () => {
     const service = new TeamProvisioningService();
     const teamName = 'my-team';
     hoisted.files.set(
@@ -2897,7 +2897,7 @@ Messages:
       relayed: 0,
       attempted: 1,
       delivered: 0,
-      failed: 0,
+      failed: 1,
       lastDelivery: {
         delivered: false,
         accepted: true,
@@ -2906,9 +2906,11 @@ Messages:
         reason: 'empty_assistant_turn',
       },
     });
-    expect(vi.mocked(console.warn)).not.toHaveBeenCalledWith(
-      expect.stringContaining('OpenCode inbox relay failed')
+    expect(vi.mocked(console.warn)).toHaveBeenCalledOnce();
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
+      '[my-team] OpenCode inbox relay failed for jack/opencode-accepted-terminal-empty-1: empty_assistant_turn'
     );
+    vi.mocked(console.warn).mockClear();
     const rows = JSON.parse(hoisted.files.get(`/mock/teams/${teamName}/inboxes/jack.json`) ?? '[]');
     expect(rows[0].read).toBe(false);
   });
@@ -3068,6 +3070,7 @@ Messages:
       .mockImplementation(() => undefined);
     const records: any[] = [];
     const ledger = {
+      getByInboxMessage: vi.fn(async () => records[0] ?? null),
       getActiveForMember: vi.fn(async () => null),
       ensurePending: vi.fn(async (input: Record<string, unknown>) => {
         const record = {
@@ -3420,7 +3423,7 @@ Messages:
     service.setTeamChangeEmitter(teamChangeEmitter);
 
     const result = await proofService.applyDestinationProof({
-      ledger: { applyDestinationProof },
+      ledger: { applyDestinationProof, getByInboxMessage: vi.fn(async () => ledgerRecord) },
       ledgerRecord,
       teamName,
       replyRecipient: 'team-lead',
@@ -3517,7 +3520,7 @@ Messages:
     service.setTeamChangeEmitter(teamChangeEmitter);
 
     const result = await proofService.applyDestinationProof({
-      ledger: { applyDestinationProof },
+      ledger: { applyDestinationProof, getByInboxMessage: vi.fn(async () => ledgerRecord) },
       ledgerRecord,
       teamName,
       replyRecipient: 'team-lead',
