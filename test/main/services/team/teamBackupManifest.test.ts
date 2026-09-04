@@ -62,14 +62,15 @@ describe('writeBackupManifestSync', () => {
     expect(console.warn).not.toHaveBeenCalled();
   });
 
-  it('reports the team whose manifest could not be persisted', () => {
-    // The shutdown backup copies the files and updates the registry before it
-    // saves the manifest, so a write that fails silently leaves a backup that
-    // restores from stale ownership and stale file stats with nothing said.
+  it('reports and propagates the team whose manifest could not be persisted', () => {
+    // The shutdown backup copies the files first and indexes the team in the
+    // registry afterwards, so a write that fails silently leaves a registry
+    // entry pointing at a backup whose manifest still holds the previous
+    // ownership and file stats. The caller has to see the failure.
     const backupDir = path.join(tempRoot, 'blocked');
     fs.writeFileSync(backupDir, 'a file where the backup directory belongs');
 
-    expect(() => writeBackupManifestSync(backupDir, buildManifest('blocked-team'))).not.toThrow();
+    expect(() => writeBackupManifestSync(backupDir, buildManifest('blocked-team'))).toThrow();
 
     expect(console.warn).toHaveBeenCalledWith(
       '[TeamBackupService]',
