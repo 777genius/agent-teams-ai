@@ -1,3 +1,7 @@
+import { createLogger } from '@shared/utils/logger';
+
+import { purgeStaleOpenCodeHostStartupLocksBeforeLaunch } from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
+
 import type { OpenCodeRuntimeControlAck, OpenCodeRuntimeControlApi } from '../runtime-control';
 import type { TeamProvisioningStatusApi as FeatureTeamProvisioningStatusApi } from '@features/team-provisioning/contracts';
 import type {
@@ -29,6 +33,8 @@ import type {
   TeamViewSnapshot,
   ToolApprovalSettings,
 } from '@shared/types/team';
+
+const logger = createLogger('Service:TeamProvisioningApis');
 
 export interface TeamProvisioningStartApi {
   createTeam(
@@ -307,11 +313,68 @@ export interface TeamToolApprovalApi {
 }
 
 export function bindTeamProvisioningStartApi(
-  source: TeamProvisioningStartApi
+  source: TeamProvisioningStartApi,
+  options: {
+    /**
+     * Runs immediately before every create and every launch. It is a
+     * preparation step, never a precondition: a failure is swallowed here so
+     * that nothing it does can be the reason a team fails to start.
+     */
+    beforeStart?: (teamName: string) => Promise<void>;
+  } = {}
 ): TeamProvisioningStartApi {
+  const beforeStart = options.beforeStart;
+  if (!beforeStart) {
+    return {
+      createTeam: source.createTeam.bind(source),
+      launchTeam: source.launchTeam.bind(source),
+    };
+  }
+  const runBeforeStart = async (teamName: string): Promise<void> => {
+    try {
+      await beforeStart(teamName);
+    } catch (error) {
+      // Durable, not a warning: the start is going ahead regardless, so there
+      // is nothing for a developer to act on in the moment - but the line has
+      // to survive for whoever asks later why a launch was slow.
+      logger.diagnostic(
+        `opencode_pre_start_preparation_failed team=${teamName} reason=${JSON.stringify(
+          error instanceof Error ? error.message : String(error)
+        )}`
+      );
+    }
+  };
   return {
-    createTeam: source.createTeam.bind(source),
-    launchTeam: source.launchTeam.bind(source),
+    async createTeam(request, onProgress) {
+      await runBeforeStart(request.teamName);
+      return source.createTeam.call(source, request, onProgress);
+    },
+    async launchTeam(request, onProgress) {
+      await runBeforeStart(request.teamName);
+      return source.launchTeam.call(source, request, onProgress);
+    },
+  };
+}
+
+/**
+ * The pre-start step both entry points install: drop the OpenCode host startup
+ * locks an earlier run left behind. A clean stop does not release them, and the
+ * orchestrator waits on each one in turn during launch readiness, so a launch
+ * that follows a few stopped runs can sit in "spawning" for minutes over files
+ * that guard nothing.
+ */
+function bindPreLaunchHostLockPurge(source: {
+  getAliveTeams(): string[];
+}): (teamName: string) => Promise<void> {
+  return async (teamName) => {
+    await purgeStaleOpenCodeHostStartupLocksBeforeLaunch({
+      teamName,
+      aliveTeams: source.getAliveTeams(),
+      // Durable, not a warning: this is the counter that explains a launch
+      // which was slow before and is not any more.
+      logRemoved: (message) => logger.diagnostic(message),
+      logWarning: (message) => logger.warn(message),
+    });
   };
 }
 
@@ -401,7 +464,9 @@ export function bindTeamHttpHandlerApis(
     TeamHttpMemberDiagnosticsApi
 ): TeamHttpHandlerApis {
   return {
-    provisioningStart: bindTeamProvisioningStartApi(source),
+    provisioningStart: bindTeamProvisioningStartApi(source, {
+      beforeStart: bindPreLaunchHostLockPurge(source),
+    }),
     provisioningStatus: bindTeamProvisioningStatusApi(source),
     taskActivity: bindTeamTaskActivityRepairApi(source),
     runtime: bindTeamHttpRuntimeApi(source),
@@ -433,7 +498,9 @@ export function bindTeamIpcHandlerApis(
     TeamToolApprovalApi
 ): TeamIpcHandlerApis {
   return {
-    provisioningStart: bindTeamProvisioningStartApi(source),
+    provisioningStart: bindTeamProvisioningStartApi(source, {
+      beforeStart: bindPreLaunchHostLockPurge(source),
+    }),
     provisioningStatus: bindTeamProvisioningStatusApi(source),
     preflight: bindTeamProvisioningPreflightApi(source),
     provisioningRun: bindTeamProvisioningRunApi(source),

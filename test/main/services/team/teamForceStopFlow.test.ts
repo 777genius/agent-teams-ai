@@ -1,6 +1,7 @@
 import {
   countLiveRecordedRuntimeHostsForTeam,
   RUNTIME_HOSTS_POLL_INTERVAL_MS,
+  releaseSharedRuntimeResourcesAfterStop,
   runTeamForceStopFlow,
   STOP_ESCALATION_TIMEOUT_MS,
   stopTeamWithEscalation,
@@ -649,5 +650,167 @@ describe('countLiveRecordedRuntimeHostsForTeam', () => {
     });
 
     expect(live).toBe(0);
+  });
+});
+
+describe('post-stop shared runtime release', () => {
+  it('releases after a stop that confirmed on its own, before the stopped state is written', async () => {
+    const order: string[] = [];
+    const ports = createPorts({
+      releaseSharedRuntimeResources: vi.fn(() => {
+        order.push('release');
+        return Promise.resolve({ diagnostics: ['Purged 3 stale OpenCode host startup lock(s)'] });
+      }),
+      markTeamStopped: vi.fn(() => {
+        order.push('markStopped');
+        return Promise.resolve();
+      }),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(ports.releaseSharedRuntimeResources).toHaveBeenCalledWith('fixteam');
+    expect(ports.killRetainedRuntimeProcesses).not.toHaveBeenCalled();
+    expect(order).toEqual(['release', 'markStopped']);
+    expect(result.diagnostics).toEqual(['Purged 3 stale OpenCode host startup lock(s)']);
+  });
+
+  // The kill has to come first: a lock a live host still holds open cannot be
+  // unlinked, so releasing before the kill would leave every lock behind. The
+  // kill step only runs when the stop did not confirm, so the stop rejects here.
+  it('releases after the kill step on the force path', async () => {
+    const order: string[] = [];
+    const ports = createPorts({
+      stopTeam: vi.fn(() => Promise.reject(new Error('did not confirm stop'))),
+      killRetainedRuntimeProcesses: vi.fn(() => {
+        order.push('kill');
+        return Promise.resolve({ killedPids: [4242], diagnostics: [] });
+      }),
+      releaseSharedRuntimeResources: vi.fn(() => {
+        order.push('release');
+        return Promise.resolve({ diagnostics: [] });
+      }),
+    });
+
+    await runTeamForceStopFlow('fixteam', ports);
+
+    expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalled();
+    expect(order).toEqual(['kill', 'release']);
+  });
+
+  // The port has no upstream default, so the overwhelmingly common case is
+  // that no caller supplies one. That case must be indistinguishable from the
+  // behaviour before the port existed.
+  it('behaves exactly as before when no caller supplies the port', async () => {
+    const ports = createPorts({ markTeamStopped: vi.fn(() => Promise.resolve()) });
+    expect(ports.releaseSharedRuntimeResources).toBeUndefined();
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result).toEqual({
+      stopOutcome: 'stopped',
+      cleanupOutcome: 'completed',
+      killedRuntimePids: [],
+      clearedPendingDeliveries: 0,
+      diagnostics: [],
+    });
+    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+    expect(ports.logWarning).not.toHaveBeenCalled();
+  });
+
+  it('records a failed release as a diagnostic and still writes the stopped state', async () => {
+    const ports = createPorts({
+      releaseSharedRuntimeResources: vi.fn(() => Promise.reject(new Error('data dir gone'))),
+      markTeamStopped: vi.fn(() => Promise.resolve()),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.diagnostics).toEqual(['Post-stop resource release failed: data dir gone']);
+    expect(ports.markTeamStopped).toHaveBeenCalledWith('fixteam');
+  });
+});
+
+describe('releaseSharedRuntimeResourcesAfterStop', () => {
+  const purgedNothing = () =>
+    Promise.resolve({ locksDir: '/locks', scanned: 0, removed: 0, kept: 0, diagnostics: [] });
+
+  it('releases nothing at all while another team is alive', async () => {
+    const purgeHostStartupLocks = vi.fn(purgedNothing);
+    const releaseSharedLocalRuntime = vi.fn(() => Promise.resolve());
+
+    const result = await releaseSharedRuntimeResourcesAfterStop({
+      teamName: 'fixteam',
+      otherAliveTeams: ['other-team'],
+      purgeHostStartupLocks,
+      releaseSharedLocalRuntime,
+    });
+
+    expect(purgeHostStartupLocks).not.toHaveBeenCalled();
+    expect(releaseSharedLocalRuntime).not.toHaveBeenCalled();
+    expect(result.diagnostics).toEqual([
+      'Kept shared runtime resources: other teams are still alive (other-team)',
+    ]);
+  });
+
+  it('purges the orphaned host startup locks when this was the last team', async () => {
+    const result = await releaseSharedRuntimeResourcesAfterStop({
+      teamName: 'fixteam',
+      otherAliveTeams: [],
+      purgeHostStartupLocks: () =>
+        Promise.resolve({
+          locksDir: '/locks',
+          scanned: 4,
+          removed: 3,
+          kept: 1,
+          diagnostics: ['host-2.lock: Error: EIO'],
+        }),
+    });
+
+    expect(result.diagnostics).toEqual([
+      'Purged 3 stale OpenCode host startup lock(s)',
+      'lock purge: host-2.lock: Error: EIO',
+    ]);
+  });
+
+  // The port carries no upstream default: with no port handed in there is no
+  // release step at all, and the result must be the lock purge and nothing else.
+  it('has no shared-runtime step when no release port is supplied', async () => {
+    const result = await releaseSharedRuntimeResourcesAfterStop({
+      teamName: 'fixteam',
+      otherAliveTeams: [],
+      purgeHostStartupLocks: purgedNothing,
+    });
+
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it('runs the supplied release port and reports it', async () => {
+    const releaseSharedLocalRuntime = vi.fn(() => Promise.resolve());
+
+    const result = await releaseSharedRuntimeResourcesAfterStop({
+      teamName: 'fixteam',
+      otherAliveTeams: [],
+      purgeHostStartupLocks: purgedNothing,
+      releaseSharedLocalRuntime,
+    });
+
+    expect(releaseSharedLocalRuntime).toHaveBeenCalledTimes(1);
+    expect(result.diagnostics).toEqual(['Released the shared runtime held for this team']);
+  });
+
+  it('never throws: a failing purge or release is reported, not raised', async () => {
+    const result = await releaseSharedRuntimeResourcesAfterStop({
+      teamName: 'fixteam',
+      otherAliveTeams: [],
+      purgeHostStartupLocks: () => Promise.reject(new Error('lock dir gone')),
+      releaseSharedLocalRuntime: () => Promise.reject(new Error('runtime unreachable')),
+    });
+
+    expect(result.diagnostics).toEqual([
+      'lock purge failed: lock dir gone',
+      'Shared runtime release failed: runtime unreachable',
+    ]);
   });
 });
