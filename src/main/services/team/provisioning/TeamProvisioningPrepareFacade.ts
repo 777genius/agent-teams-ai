@@ -43,7 +43,8 @@ export interface TeamProvisioningPrepareFacadePorts {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId: TeamProviderId,
-    providerArgs: string[]
+    providerArgs: string[],
+    diagnosticModel?: string
   ): Promise<{ warning?: string }>;
   readRuntimeProviderLaunchFacts(params: {
     claudePath: string;
@@ -117,14 +118,8 @@ export function createTeamProvisioningPrepareFacadeFromService(
     getOpenCodeRuntimeAdapter: () => service.appShellBoundary.getOpenCodeRuntimeAdapter(),
     buildProvisioningEnv: (providerId, providerBackendId, envOptions) =>
       service.buildProvisioningEnv(providerId, providerBackendId, envOptions),
-    runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs) =>
-      service.providerRuntime.runProviderOneShotDiagnostic(
-        claudePath,
-        cwd,
-        env,
-        providerId,
-        providerArgs
-      ),
+    runProviderOneShotDiagnostic: (...args) =>
+      service.providerRuntime.runProviderOneShotDiagnostic(...args),
     readRuntimeProviderLaunchFacts: (params) => service.readRuntimeProviderLaunchFacts(params),
     resolveClaudeBinaryPath: options.resolveClaudeBinaryPath,
     probeClaudeRuntime: (claudePath, cwd, env, providerId, providerArgs) =>
@@ -155,8 +150,7 @@ export class TeamProvisioningPrepareFacade {
       getOpenCodeRuntimeAdapter: () => ports.getOpenCodeRuntimeAdapter(),
       buildProvisioningEnv: (providerId, providerBackendId, options) =>
         ports.buildProvisioningEnv(providerId, providerBackendId, options),
-      runProviderOneShotDiagnostic: (claudePath, cwd, env, providerId, providerArgs) =>
-        ports.runProviderOneShotDiagnostic(claudePath, cwd, env, providerId, providerArgs),
+      runProviderOneShotDiagnostic: (...args) => ports.runProviderOneShotDiagnostic(...args),
       readRuntimeProviderLaunchFacts: (params) => ports.readRuntimeProviderLaunchFacts(params),
       resolveClaudeBinaryPath: this.resolveClaudeBinaryPath,
       probeClaudeRuntime: (claudePath, cwd, env, providerId, providerArgs) =>

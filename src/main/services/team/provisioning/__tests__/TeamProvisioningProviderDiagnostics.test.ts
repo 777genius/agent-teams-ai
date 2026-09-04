@@ -334,6 +334,30 @@ describe('TeamProvisioningProviderDiagnostics MCP helpers', () => {
 /* eslint-enable sonarjs/publicly-writable-directories -- Re-enable after temp-path fixtures. */
 
 describe('TeamProvisioningProviderDiagnostics provider probes', () => {
+  it.each([
+    ['gpt-5.6-luna', 'custom-codex', 'gpt-5.6-luna'],
+    [undefined, 'custom-codex', 'custom-codex'],
+    ['  ', null, 'gpt-5.6-sol'],
+  ])(
+    'uses selected diagnostic model %s before custom/default fallback',
+    async (diagnosticModel, customModel, expected) => {
+      const ports = createFakePorts({
+        getConfiguredCodexCustomProviderModel: vi.fn().mockReturnValue(customModel),
+      });
+      await runProviderOneShotDiagnostic({
+        claudePath: '/fake/cli',
+        cwd: '/sandbox/model-probe',
+        env: {},
+        providerId: 'codex',
+        diagnosticModel: diagnosticModel ?? undefined,
+        ports,
+      });
+      const args = vi.mocked(ports.spawnProbe).mock.calls[0]![1];
+      expect(args[args.indexOf('--model') + 1]).toBe(expected);
+      expect(args.filter((arg) => arg === '--model')).toHaveLength(1);
+    }
+  );
+
   it('runs the one-shot diagnostic through fake probe ports', async () => {
     const debugEvents: string[] = [];
     const spawnProbe = vi

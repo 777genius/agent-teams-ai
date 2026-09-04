@@ -12,10 +12,7 @@ import {
   getCliProviderStatusScopeKey,
   reconcileCliStatus,
 } from '@renderer/store/slices/cliInstallerSlice';
-import {
-  hasAuthoritativeProviderStatusEvidence,
-  isProviderModelCatalogExactReady,
-} from '@shared/utils/providerStatusAuthority';
+import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 
 import type { CodexAccountSnapshotDto } from '@features/codex-account/contracts';
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
@@ -51,18 +48,7 @@ function useConservativeNow(source: unknown): readonly [number, (now: number) =>
   return [Object.is(snapshot.source, source) ? snapshot.now : Number.POSITIVE_INFINITY, publishNow];
 }
 
-export function hasEffectiveProviderLaunchAuthority(
-  provider: CliProviderStatus | null | undefined,
-  now: number = Date.now()
-): boolean {
-  return Boolean(
-    provider &&
-    hasAuthoritativeProviderStatusEvidence(provider) &&
-    provider.authenticated === true &&
-    provider.capabilities.teamLaunch === true &&
-    isProviderModelCatalogExactReady(provider, now)
-  );
-}
+export { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 
 function gateProviderLaunch(provider: CliProviderStatus, now: number): CliProviderStatus {
   return {

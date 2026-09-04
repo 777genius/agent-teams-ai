@@ -122,6 +122,30 @@ describe('ClaudeBinaryResolver', () => {
     expect(mockResolveInteractiveShellEnvBestEffort).not.toHaveBeenCalled();
   });
 
+  it.each(['/test/new-runtime', null])(
+    'does not join or cache an obsolete lookup after invalidation to %s',
+    async (nextBinary) => {
+      let releaseOld!: () => void;
+      const pending = new Promise<void>((resolve) => {
+        releaseOld = resolve;
+      });
+      accessMock.mockImplementation(async (filePath) => {
+        if (filePath === '/test/old-runtime') return pending;
+        if (filePath === '/test/new-runtime') return;
+        throw new Error('ENOENT');
+      });
+      const { ClaudeBinaryResolver } = await import('@main/services/team/ClaudeBinaryResolver');
+      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = '/test/old-runtime';
+      const old = ClaudeBinaryResolver.resolve();
+      ClaudeBinaryResolver.clearCache();
+      process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = nextBinary ?? '/test/missing-runtime';
+      await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(nextBinary);
+      releaseOld();
+      await expect(old).resolves.toBe('/test/old-runtime');
+      await expect(ClaudeBinaryResolver.resolve()).resolves.toBe(nextBinary);
+    }
+  );
+
   it('prefers the dedicated CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH override', async () => {
     const expectedBinary = '/Users/belief/dev/projects/claude/agent_teams_orchestrator/cli-dev';
     process.env.CLAUDE_AGENT_TEAMS_ORCHESTRATOR_CLI_PATH = expectedBinary;

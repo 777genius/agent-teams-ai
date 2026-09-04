@@ -88,6 +88,69 @@ function renderStrip(
 }
 
 describe('ProviderActivityStatusStrip', () => {
+  it.each([
+    ['codex', true],
+    ['codex', false],
+    ['opencode', true],
+  ] as const)(
+    'shows Ready only with complete launch authority (%s teamLaunch=%s)',
+    async (providerId, teamLaunch) => {
+      const provider = createProvider({
+        providerId,
+        displayName: 'Codex',
+        authenticated: true,
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        modelCatalogRefreshState: 'ready',
+      });
+      provider.capabilities.teamLaunch = teamLaunch;
+      provider.modelCatalog = {
+        schemaVersion: 1,
+        providerId,
+        source: 'app-server',
+        status: 'ready',
+        fetchedAt: '2020-01-01T00:00:00.000Z',
+        staleAt: '2100-01-01T00:00:00.000Z',
+        defaultModelId: 'model',
+        defaultLaunchModel: 'model',
+        diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+        models: [
+          {
+            id: 'model',
+            launchModel: 'model',
+            displayName: 'Model',
+            hidden: false,
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            inputModalities: ['text'],
+            supportsPersonality: false,
+            isDefault: true,
+            upgrade: false,
+            source: 'app-server',
+          },
+        ],
+      };
+      const host = document.createElement('div');
+      let root!: ReturnType<typeof createRoot>;
+      await act(async () => {
+        root = renderStrip(host, {
+          cliStatus: createMultimodelStatus([
+            providerId === 'opencode'
+              ? { ...provider, modelCatalogRefreshState: 'loading' }
+              : provider,
+          ]),
+          providerStatusOverride: providerId === 'opencode' ? provider : null,
+          cliProviderStatusLoading: providerId === 'opencode' ? { opencode: true } : {},
+          showReadyProviders: true,
+          readyStatusText: 'Ready',
+        });
+      });
+      expect(host.textContent?.includes('Ready')).toBe(teamLaunch);
+      if (!teamLaunch) expect(host.textContent).toContain('Needs attention');
+      await act(async () => root.unmount());
+    }
+  );
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });
@@ -166,7 +229,7 @@ describe('ProviderActivityStatusStrip', () => {
     });
   });
 
-  it('keeps completed providers visible as Checked while the same cycle still has loading work, then hides when clean', async () => {
+  it('never marks finished but unauthorized providers Checked or hides their blockers', async () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const root = createRoot(host);
@@ -224,7 +287,8 @@ describe('ProviderActivityStatusStrip', () => {
     });
 
     expect(host.textContent).toContain('Anthropic');
-    expect(host.textContent).toContain('Checked');
+    expect(host.textContent).not.toContain('Checked');
+    expect(host.textContent).toContain('Needs attention');
     expect(host.textContent).toContain('Codex');
     expect(host.textContent).toContain('Checking...');
 
@@ -256,7 +320,9 @@ describe('ProviderActivityStatusStrip', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toBe('');
+    expect(host.textContent).toContain('Needs attention');
+    expect(host.textContent).not.toContain('catalog');
+    expect(host.textContent).not.toContain('Checked');
 
     await act(async () => {
       root.unmount();
@@ -284,7 +350,7 @@ describe('ProviderActivityStatusStrip', () => {
     });
 
     expect(host.textContent).toContain('Anthropic');
-    expect(host.textContent).toContain('Failed to refresh anthropic status');
+    expect(host.textContent).toContain('Needs attention');
 
     await act(async () => {
       root.unmount();
@@ -320,7 +386,7 @@ describe('ProviderActivityStatusStrip', () => {
     });
 
     expect(host.textContent).toContain('Codex');
-    expect(host.textContent).toContain('Failed to refresh Codex status');
+    expect(host.textContent).toContain('Needs attention');
     expect(host.textContent).not.toContain('Checking...');
 
     await act(async () => {

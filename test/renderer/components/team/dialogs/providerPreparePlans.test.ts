@@ -28,7 +28,7 @@ function modelChecksMap(
 }
 
 describe('providerPreparePlans', () => {
-  it('keeps unchanged provider signatures and cache keys stable when another provider changes', () => {
+  it('invalidates auth proof without scheduling another paid attempt or changing other providers', () => {
     const providerIds: TeamProviderId[] = ['codex', 'opencode'];
     const selectedModelChecksByProvider = modelChecksMap([
       ['codex', [{ providerId: 'codex', model: 'gpt-5.5' }]],
@@ -106,8 +106,11 @@ describe('providerPreparePlans', () => {
     const firstByProvider = new Map(first.map((plan) => [plan.providerId, plan]));
     const secondByProvider = new Map(second.map((plan) => [plan.providerId, plan]));
 
-    expect(firstByProvider.get('codex')?.requestSignature).not.toBe(
+    expect(firstByProvider.get('codex')?.requestSignature).toBe(
       secondByProvider.get('codex')?.requestSignature
+    );
+    expect(firstByProvider.get('codex')?.cacheKey).not.toBe(
+      secondByProvider.get('codex')?.cacheKey
     );
     expect(firstByProvider.get('opencode')?.requestSignature).toBe(
       secondByProvider.get('opencode')?.requestSignature

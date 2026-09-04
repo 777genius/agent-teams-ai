@@ -186,6 +186,11 @@ describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
       getOpenCodeRuntimeAdapter: vi.fn<
         MixedSecondaryLaneLaunchFlowPorts<TestRun>['getOpenCodeRuntimeAdapter']
       >(() => adapter),
+      publishMixedSecondaryLaneStatusChange: vi.fn(async (_run, publishedLane) => {
+        if (!publishedLane.result) return;
+        expect(publishedLane.state).toBe('finished');
+        expect(publishedLane.result?.members.Bob.bootstrapConfirmed).toBe(true);
+      }),
       prepareOpenCodeRuntimeLaneForLaunchGeneration: vi
         .fn<
           MixedSecondaryLaneLaunchFlowPorts<TestRun>['prepareOpenCodeRuntimeLaneForLaunchGeneration']

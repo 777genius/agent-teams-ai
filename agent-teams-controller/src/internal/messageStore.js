@@ -297,8 +297,29 @@ function hasUserMessageSince(paths, sinceMs) {
   return false;
 }
 
+function isReplyToHumanMessage(paths, row) {
+  const relayId = String(row.relayOfMessageId || '').trim();
+  if (!relayId) return false;
+  try {
+    const { message, store } = lookupMessage(paths, relayId);
+    const sender = normalizeComparableParticipant(row.from);
+    const recipient = normalizeComparableParticipant(message.to);
+    const addressedToSender = store === 'sent'
+      ? recipient === sender
+      : normalizeComparableParticipant(store) === `inbox:${sender}` && (!recipient || recipient === sender);
+    const requestTime = parseRowTimeMs(message);
+    const replyTime = parseRowTimeMs(row);
+    return isUserParticipant(message.from) && message.source !== 'system_notification' &&
+      addressedToSender &&
+      requestTime !== null && replyTime !== null && requestTime <= replyTime;
+  } catch {
+    // Unknown or ambiguous relay IDs cannot bypass completed-board deduplication.
+    return false;
+  }
+}
+
 /**
- * Once the board is complete and the team already messaged the user after the
+ * Once the board is complete and this sender already messaged the user after the
  * last board event, further agent->user messages inside the repeat window are
  * rephrased "ALL DONE" recaps from memoryless turns. Returns the final row they
  * duplicate, or null when the message must be delivered: board not complete,
@@ -313,18 +334,22 @@ function getPostCompletionFinalMessage(list, row, resolveBoardCompletion) {
   if (rowTime === null) return null;
   const board = resolveBoardCompletion();
   if (!board || !Number.isFinite(board.lastBoardEventMs)) return null;
-  // The most recent agent->user message sent after the last board event.
+  // Another member's final reply cannot satisfy this sender's delivery obligation.
   let finalRow = null;
   for (let index = list.length - 1; index >= 0; index -= 1) {
     const candidate = list[index];
     if (!candidate || !isUserParticipant(candidate.to) || isUserParticipant(candidate.from)) continue;
-    if (!normalizeComparableParticipant(candidate.from)) continue;
+    if (normalizeComparableParticipant(candidate.from) !== normalizeComparableParticipant(row.from)) continue;
     const candidateTime = parseRowTimeMs(candidate);
     if (candidateTime === null || candidateTime < board.lastBoardEventMs) continue;
     finalRow = candidate;
     break;
   }
   if (!finalRow) return null;
+  if (String(row.relayOfMessageId || '').trim() !== String(finalRow.relayOfMessageId || '').trim() &&
+      typeof board.isReplyToHumanMessage === 'function' && board.isReplyToHumanMessage(row)) {
+    return null;
+  }
   const finalMs = parseRowTimeMs(finalRow);
   if (rowTime - finalMs > REPEATED_MESSAGE_WINDOW_MS) return null;
   if (typeof board.hasUserMessageSince === 'function' && board.hasUserMessageSince(finalMs)) {
@@ -413,7 +438,11 @@ function sendInboxMessage(paths, flags) {
     resolveBoardCompletion: () => {
       const epoch = readBoardCompletionEpoch(paths);
       return epoch
-        ? { ...epoch, hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs) }
+        ? {
+            ...epoch,
+            hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),
+            isReplyToHumanMessage: (row) => isReplyToHumanMessage(paths, row),
+          }
         : null;
     },
     hasUserMessageSince: (sinceMs) => hasUserMessageSince(paths, sinceMs),

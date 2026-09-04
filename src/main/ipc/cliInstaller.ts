@@ -31,7 +31,6 @@ import {
   mergeProviderStatusDisplayEvidence,
   sanitizeProviderStatusAuthority,
 } from '../services/runtime/providerStatusCheckContract';
-import { ClaudeBinaryResolver } from '../services/team/ClaudeBinaryResolver';
 
 import type { CliInstallerService } from '../services';
 import type {
@@ -139,9 +138,7 @@ function projectProviderAuthority(provider: CliProviderStatus, now: number): Cli
         ? { ...structuredClone(provider.modelCatalog), status: 'stale' }
         : provider.modelCatalog && structuredClone(provider.modelCatalog),
     modelCatalogRefreshState:
-      provider.modelCatalog &&
-      !catalogFresh &&
-      provider.modelCatalogRefreshState !== 'loading'
+      provider.modelCatalog && !catalogFresh && provider.modelCatalogRefreshState !== 'loading'
         ? 'error'
         : provider.modelCatalogRefreshState,
     capabilities: {
@@ -535,7 +532,6 @@ function handleInvalidateStatus(_event: IpcMainInvokeEvent): IpcResult<void> {
   cachedStatus.clear();
   statusInFlight.clear();
   providerStatusInFlight.clear();
-  ClaudeBinaryResolver.clearCache();
   CodexBinaryResolver.clearCache();
   service.invalidateStatusCache();
   return { success: true, data: undefined };

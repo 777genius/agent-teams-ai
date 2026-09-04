@@ -5,15 +5,12 @@ import {
   hasEffectiveProviderLaunchAuthority,
   useLaunchAuthorityGatedCliStatus,
 } from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { getProviderLaunchReadinessDetail } from '@renderer/utils/providerReadiness';
 import {
   getOpenCodeScopedPreparationFailure,
   hasSettledOpenCodeScopedPreparation,
   type OpenCodeScopedPreparationEvidence,
 } from '@renderer/utils/teamProviderRuntimeStatusLoading';
-import {
-  hasAuthoritativeProviderStatusEvidence,
-  isProviderModelCatalogExactReady,
-} from '@shared/utils/providerStatusAuthority';
 
 import type { CliInstallationStatus, CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -58,41 +55,6 @@ function getProviderStatusDetail(provider: CliProviderStatus): string | null {
   );
 }
 
-function getProviderLaunchBlockerDetail(
-  providerId: TeamProviderId,
-  provider: CliProviderStatus | null | undefined,
-  now: number
-): string {
-  if (!provider) {
-    return 'Provider launch status is unavailable. Refresh the provider status.';
-  }
-
-  const statusDetail = getProviderStatusDetail(provider);
-  const connectedCodexAccount =
-    providerId === 'codex' && provider.connection?.codex?.launchAllowed === true;
-  if (connectedCodexAccount) {
-    return (
-      'The ChatGPT account is connected, but the Codex runtime has not confirmed launch ' +
-      'readiness. Refresh Codex status or reconnect ChatGPT in provider settings.'
-    );
-  }
-
-  if (!hasAuthoritativeProviderStatusEvidence(provider)) {
-    return statusDetail ?? 'Provider launch status could not be verified. Refresh provider status.';
-  }
-  if (provider.authenticated !== true) {
-    return statusDetail ?? 'Authentication is required before this provider can launch.';
-  }
-  if (!isProviderModelCatalogExactReady(provider, now)) {
-    return 'The verified model catalog is unavailable or stale. Refresh provider status.';
-  }
-  if (provider.capabilities.teamLaunch !== true) {
-    return statusDetail ?? 'This provider runtime is not available for team launch.';
-  }
-
-  return 'Provider launch readiness could not be confirmed. Refresh provider status.';
-}
-
 export function createLaunchGuard(
   providerIds: readonly TeamProviderId[],
   runtimeProviderStatusById: RuntimeProviderStatusById,
@@ -132,7 +94,7 @@ export function createLaunchGuard(
             {
               providerId,
               providerStatus: provider,
-              detail: getProviderLaunchBlockerDetail(providerId, provider, now),
+              detail: getProviderLaunchReadinessDetail(provider, now),
             },
           ];
     });

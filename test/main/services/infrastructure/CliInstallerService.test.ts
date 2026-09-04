@@ -796,6 +796,129 @@ describe('CliInstallerService', () => {
       );
     });
 
+    it.each(['/mock/old-runtime', '/mock/new-runtime', null])(
+      'rediscovers %s after invalidation without all-provider probes',
+      async (binaryPath) => {
+        allowConsoleLogs();
+        vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/old-runtime');
+        await service.getStatus({ providerStatusMode: 'defer' });
+        const provider = createTestProviderStatus('codex', true, 'chatgpt');
+        const scoped = vi
+          .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+          .mockResolvedValue(provider);
+        const all = vi.spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatuses');
+        vi.mocked(ClaudeBinaryResolver.resolve).mockClear().mockResolvedValue(binaryPath);
+        vi.mocked(execCli).mockClear();
+        service.invalidateStatusCache();
+        expect(service.getLatestStatusSnapshot()).toBeNull();
+        const status = await service.getProviderStatus('codex');
+        expect(ClaudeBinaryResolver.resolve).toHaveBeenCalledTimes(1);
+        expect(all).not.toHaveBeenCalled();
+        expect(execCli).not.toHaveBeenCalled();
+        if (binaryPath) {
+          expect(scoped).toHaveBeenCalledWith(binaryPath, 'codex', expect.any(Function));
+          expect(status).toEqual(provider);
+          expect(service.getLatestStatusSnapshot()).toMatchObject({
+            binaryPath,
+            authLoggedIn: true,
+            authMethod: 'chatgpt',
+          });
+        } else {
+          expect(scoped).not.toHaveBeenCalled();
+          expect(status).toMatchObject({
+            authenticated: false,
+            capabilities: { teamLaunch: false },
+          });
+        }
+        scoped.mockRestore();
+        all.mockRestore();
+      }
+    );
+
+    it('coalesces invalidated discovery and fences an obsolete discovery result', async () => {
+      vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+      let resolveOld!: (value: string | null) => void;
+      vi.mocked(ClaudeBinaryResolver.resolve).mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveOld = resolve;
+        })
+      );
+      const scoped = vi
+        .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+        .mockImplementation(async (_binary, id) => createTestProviderStatus(id, true, 'chatgpt'));
+      service.invalidateStatusCache();
+      const old = service.getProviderStatus('codex');
+      service.invalidateStatusCache();
+      vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/new-runtime');
+      await Promise.all([
+        service.getProviderStatus('codex'),
+        service.getProviderStatus('anthropic'),
+      ]);
+      expect(ClaudeBinaryResolver.resolve).toHaveBeenCalledTimes(2);
+      resolveOld('/mock/old-runtime');
+      expect(await old).toMatchObject({
+        authenticated: false,
+        capabilities: { teamLaunch: false },
+      });
+      expect(scoped).toHaveBeenCalledTimes(2);
+      expect(service.getLatestStatusSnapshot()).toMatchObject({
+        binaryPath: '/mock/new-runtime',
+        authLoggedIn: true,
+      });
+      expect(
+        service.getLatestStatusSnapshot()?.providers.filter((p) => p.authenticated)
+      ).toHaveLength(2);
+      scoped.mockRestore();
+    });
+
+    it.each([false, true])(
+      'publishes peer authority across scoped hydration only without global invalidation (%s)',
+      async (invalidateRuntime) => {
+        allowConsoleLogs();
+        vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
+        vi.mocked(ClaudeBinaryResolver.resolve).mockResolvedValue('/mock/runtime');
+        await service.getStatus({ providerStatusMode: 'defer' });
+        const peers = [
+          createTestProviderStatus('anthropic', true, 'oauth_token'),
+          createTestProviderStatus('opencode', true, 'api_key'),
+        ];
+        let hydrateCodex: ((status: CliProviderStatus) => void) | undefined;
+        const scoped = vi
+          .spyOn(ClaudeMultimodelBridgeService.prototype, 'getProviderStatus')
+          .mockImplementation(async (_binary, providerId, onCatalogUpdate) => {
+            if (providerId === 'codex') hydrateCodex = onCatalogUpdate;
+            return (
+              peers.find((provider) => provider.providerId === providerId) ??
+              createTestProviderStatus('codex', true, 'chatgpt')
+            );
+          });
+        await service.getProviderStatus('anthropic');
+        await service.getProviderStatus('opencode');
+        const window = {
+          isDestroyed: () => false,
+          webContents: { send: vi.fn(), isDestroyed: () => false },
+        };
+        service.setMainWindow(window as unknown as import('electron').BrowserWindow);
+        if (invalidateRuntime) service.invalidateStatusCache();
+        await service.getProviderStatus('codex');
+        expect(hydrateCodex).toBeTypeOf('function');
+        hydrateCodex!(createTestProviderStatus('codex', true, 'chatgpt'));
+        const published = window.webContents.send.mock.calls.at(-1)?.[1];
+        expect(published).toMatchObject({ type: 'status', status: { installed: true } });
+        for (const peer of peers) {
+          expect(published.status.providers).toContainEqual(
+            expect.objectContaining({
+              providerId: peer.providerId,
+              authenticated: !invalidateRuntime,
+              capabilities: expect.objectContaining({ teamLaunch: !invalidateRuntime }),
+            })
+          );
+        }
+        scoped.mockRestore();
+      }
+    );
+
     it('fails closed without cold runtime or shell discovery on a passive provider refresh', async () => {
       vi.mocked(getConfiguredCliFlavor).mockReturnValue('agent_teams_orchestrator');
       const getProviderStatusSpy = vi.spyOn(
@@ -1689,6 +1812,7 @@ describe('CliInstallerService', () => {
 
       service.invalidateStatusCache();
       expect(service.getLatestStatusSnapshot()).toBeNull();
+      expect(ClaudeBinaryResolver.clearCache).toHaveBeenCalled();
       expect(hydrationInvalidationSpy).toHaveBeenCalledTimes(1);
 
       resolveProviders([
@@ -1760,7 +1884,10 @@ describe('CliInstallerService', () => {
         verificationState: 'error',
         statusMessage: 'stale codex state',
       });
-      await staleRefresh;
+      expect(await staleRefresh).toMatchObject({
+        authenticated: false,
+        capabilities: { teamLaunch: false },
+      });
 
       const latestCodex = service
         .getLatestStatusSnapshot()

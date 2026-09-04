@@ -2,12 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { isElectronMode } from '@renderer/api';
-import {
-  formatProviderStatusText,
-  shouldMaskCodexNegativeBootstrapState,
-} from '@renderer/components/runtime/providerConnectionUi';
+import { shouldMaskCodexNegativeBootstrapState } from '@renderer/components/runtime/providerConnectionUi';
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
+import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 import { isTeamProviderModelVerificationPending } from '@renderer/utils/teamModelAvailability';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
@@ -24,6 +22,7 @@ interface ProviderActivityState {
 interface ProviderActivityStatusStripProps {
   readonly cliStatus: CliInstallationStatus | null | undefined;
   readonly sourceCliStatus?: CliInstallationStatus | null;
+  readonly providerStatusOverride?: CliProviderStatus | null;
   readonly cliStatusLoading: boolean;
   readonly cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
   readonly multimodelEnabled: boolean;
@@ -79,6 +78,7 @@ function areProviderIdListsEqual(nextIds: CliProviderId[], prevIds: CliProviderI
 function useProviderActivityDisplay({
   cliStatus,
   sourceCliStatus,
+  providerStatusOverride,
   cliStatusLoading,
   cliProviderStatusLoading,
   multimodelEnabled,
@@ -89,6 +89,7 @@ function useProviderActivityDisplay({
   ProviderActivityStatusStripProps,
   | 'cliStatus'
   | 'sourceCliStatus'
+  | 'providerStatusOverride'
   | 'cliStatusLoading'
   | 'cliProviderStatusLoading'
   | 'multimodelEnabled'
@@ -124,10 +125,15 @@ function useProviderActivityDisplay({
       (provider) => !providerIdSet || providerIdSet.has(provider.providerId)
     );
 
-    return visibleProviders.map((provider) => {
+    return visibleProviders.map((globalProvider) => {
+      const overridden = providerStatusOverride?.providerId === globalProvider.providerId;
+      const provider = overridden ? providerStatusOverride : globalProvider;
       const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
       const loading =
-        isProviderCardLoading(provider, cliProviderStatusLoading[provider.providerId] === true) ||
+        isProviderCardLoading(
+          provider,
+          !overridden && cliProviderStatusLoading[provider.providerId] === true
+        ) ||
         (provider.providerId === 'codex' && codexSnapshotPending) ||
         shouldMaskCodexNegativeBootstrapState(sourceProvider, provider, {
           providerLoading: cliProviderStatusLoading[provider.providerId] === true,
@@ -136,7 +142,7 @@ function useProviderActivityDisplay({
       return {
         provider,
         loading,
-        error: !loading && provider.verificationState === 'error',
+        error: !loading && !hasEffectiveProviderLaunchAuthority(provider),
       };
     });
   }, [
@@ -145,6 +151,7 @@ function useProviderActivityDisplay({
     providerIdSet,
     renderCliStatus?.providers,
     sourceProviderMap,
+    providerStatusOverride,
   ]);
 
   const visibleProviderIds = useMemo(
@@ -232,6 +239,7 @@ function useProviderActivityDisplay({
 export const ProviderActivityStatusStrip = ({
   cliStatus,
   sourceCliStatus,
+  providerStatusOverride,
   cliStatusLoading,
   cliProviderStatusLoading,
   multimodelEnabled,
@@ -244,10 +252,12 @@ export const ProviderActivityStatusStrip = ({
   readyStatusText,
 }: ProviderActivityStatusStripProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
+  const { t: teamT } = useAppTranslation('team');
   const effectiveLabel = label ?? t('providerRuntime.connectionUi.status.providerActivity');
   const { displayProviderIds, providerStateMap, shouldRender } = useProviderActivityDisplay({
     cliStatus,
     sourceCliStatus,
+    providerStatusOverride,
     cliStatusLoading,
     cliProviderStatusLoading,
     multimodelEnabled,
@@ -296,7 +306,7 @@ export const ProviderActivityStatusStrip = ({
             tone === 'loading'
               ? t('providerRuntime.connectionUi.status.checking')
               : tone === 'error'
-                ? formatProviderStatusText(providerState.provider, t)
+                ? teamT('provisioning.providerStatus.detailSummary.needsAttention')
                 : t('providerRuntime.connectionUi.status.checked');
           const displayStatusText =
             tone === 'checked' && readyStatusText ? readyStatusText : statusText;
@@ -326,11 +336,7 @@ export const ProviderActivityStatusStrip = ({
               <span className="shrink-0 font-medium" style={{ color: styles.textColor }}>
                 {providerState.provider.displayName}
               </span>
-              <span
-                className="max-w-[280px] truncate"
-                style={{ color: styles.statusColor }}
-                title={displayStatusText}
-              >
+              <span className="max-w-[280px] truncate" style={{ color: styles.statusColor }}>
                 {displayStatusText}
               </span>
             </div>

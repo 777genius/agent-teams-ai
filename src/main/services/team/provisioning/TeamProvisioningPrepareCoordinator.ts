@@ -6,6 +6,7 @@ import {
 } from '@features/team-runtime-lanes';
 import { resolveAnthropicLaunchModel } from '@shared/utils/anthropicLaunchModel';
 import { isLeadMember } from '@shared/utils/leadDetection';
+import { isDefaultProviderModelSelection } from '@shared/utils/providerModelSelection';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -103,7 +104,8 @@ export interface TeamProvisioningPrepareCoordinatorPorts {
     cwd: string,
     env: NodeJS.ProcessEnv,
     providerId: TeamProviderId,
-    providerArgs: string[]
+    providerArgs: string[],
+    diagnosticModel?: string
   ): Promise<{ warning?: string }>;
   readRuntimeProviderLaunchFacts(params: {
     claudePath: string;
@@ -374,12 +376,17 @@ export class TeamProvisioningPrepareCoordinator {
           warnings.push(prefixedWarning);
           return;
         }
+        const diagnosticModel =
+          providerId === 'codex'
+            ? providerSelectedModelIds.find((model) => !isDefaultProviderModelSelection(model))
+            : undefined;
         const diagnostic = await this.ports.runProviderOneShotDiagnostic(
           probeResult.claudePath,
           targetCwd,
           resolvedEnv.env,
           providerId,
-          resolvedEnv.providerArgs ?? []
+          resolvedEnv.providerArgs ?? [],
+          ...(diagnosticModel ? ([diagnosticModel] as const) : [])
         );
         if (diagnostic.warning) {
           const prefixedWarning =

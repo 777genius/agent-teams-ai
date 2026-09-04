@@ -47,18 +47,19 @@ import {
 } from '../runtime/CliProviderModelAvailabilityService';
 import {
   createDegradedProviderStatus,
+  createRuntimeStatusErrorProviderStatus,
   mergeProviderStatusDisplayEvidence,
 } from '../runtime/providerStatusCheckContract';
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor';
 
+import { createInitialCliInstallationStatus } from './cliInstallerInitialStatus';
 import {
   mergeProviderStatusPublication,
   retainLatestProviderStatus,
 } from './cliInstallerProviderStatusUpdates';
 import {
   createMismatchedProviderStatus,
-  FRONTEND_PROVIDER_IDS,
   getAuthenticatedFrontendProvider,
   hasAuthenticatedFrontendProvider,
   isFrontendProvider,
@@ -92,18 +93,6 @@ const GCS_BASE =
   'https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases';
 
 const CLI_INSTALLER_PROGRESS_CHANNEL = 'cliInstaller:progress';
-function getProviderDisplayName(providerId: CliProviderId): string {
-  switch (providerId) {
-    case 'anthropic':
-      return 'Anthropic';
-    case 'codex':
-      return 'Codex';
-    case 'gemini':
-      return 'Gemini';
-    case 'opencode':
-      return 'OpenCode (200+ models)';
-  }
-}
 
 /** Timeout for `claude --version` (ms) */
 const VERSION_TIMEOUT_MS = 10_000;
@@ -431,6 +420,7 @@ export class CliInstallerService {
     }
   );
   private latestStatusSnapshot: CliInstallationStatus | null = null;
+  private runtimeRefresh: Promise<string | null> | 'required' | null = null;
   private lastHealthyStatusSnapshot: CliInstallationStatus | null = null;
   private lastHealthyStatusObservedAt = 0;
   private statusGatherGeneration = 0;
@@ -584,6 +574,8 @@ export class CliInstallerService {
   invalidateStatusCache(): void {
     this.statusGatherGeneration += 1;
     this.latestStatusSnapshot = null;
+    this.runtimeRefresh = 'required';
+    ClaudeBinaryResolver.clearCache();
     this.latestProviderSignatures.clear();
     this.modelAvailabilityService.invalidate();
     this.multimodelBridgeService.invalidateProviderStatusHydrations();
@@ -597,47 +589,28 @@ export class CliInstallerService {
   }
 
   private createInitialStatus(): CliInstallationStatus {
-    const flavor = getConfiguredCliFlavor();
-    const ui = getCliFlavorUiOptions(flavor);
-    const providers =
-      flavor === 'agent_teams_orchestrator'
-        ? FRONTEND_PROVIDER_IDS.map((providerId) => ({
-            providerId,
-            displayName: getProviderDisplayName(providerId),
-            supported: false,
-            authenticated: false,
-            authMethod: null,
-            verificationState: 'unknown' as const,
-            modelVerificationState: 'idle' as const,
-            statusMessage: 'Checking...',
-            models: [],
-            modelAvailability: [],
-            canLoginFromUi: providerId !== 'opencode',
-            capabilities: {
-              teamLaunch: false,
-              oneShot: false,
-              extensions: createDefaultCliExtensionCapabilities(),
-            },
-            backend: null,
-          }))
-        : [];
-    return {
-      flavor,
-      displayName: ui.displayName,
-      supportsSelfUpdate: ui.supportsSelfUpdate,
-      showVersionDetails: ui.showVersionDetails,
-      showBinaryPath: ui.showBinaryPath,
-      installed: false,
-      installedVersion: null,
-      binaryPath: null,
-      launchError: null,
-      latestVersion: null,
-      updateAvailable: false,
-      authLoggedIn: false,
-      authStatusChecking: true,
-      authMethod: null,
-      providers,
-    };
+    return createInitialCliInstallationStatus();
+  }
+
+  private async refreshInvalidatedRuntime(generation: number): Promise<void> {
+    if (!this.runtimeRefresh) return;
+    const initial = this.createInitialStatus();
+    const request =
+      this.runtimeRefresh === 'required' ? ClaudeBinaryResolver.resolve() : this.runtimeRefresh;
+    this.runtimeRefresh = request;
+    try {
+      const binaryPath = await request;
+      if (generation !== this.statusGatherGeneration || this.runtimeRefresh !== request) return;
+      initial.binaryPath = binaryPath;
+      initial.installed = binaryPath !== null;
+      initial.authStatusChecking = false;
+      this.markProvidersDeferred(initial);
+      this.latestStatusSnapshot = initial;
+      this.runtimeRefresh = null;
+    } catch (error) {
+      if (this.runtimeRefresh === request) this.runtimeRefresh = 'required';
+      throw error;
+    }
   }
 
   private publishStatusSnapshot(status: CliInstallationStatus): void {
@@ -853,6 +826,7 @@ export class CliInstallerService {
     const statusStartedAt = Date.now();
     const providerStatusMode: CliInstallerProviderStatusMode = options.providerStatusMode ?? 'full';
     const generation = ++this.statusGatherGeneration;
+    this.runtimeRefresh = null;
     const result = this.createInitialStatus();
     this.latestProviderSignatures.clear();
     this.latestStatusSnapshot = cloneCliInstallationStatus(result);
@@ -893,15 +867,21 @@ export class CliInstallerService {
     providerId: CliProviderId,
     options: CliProviderStatusRequestOptions = {}
   ): Promise<CliProviderStatus | null> {
-    // A passive provider refresh may use only the runtime already discovered by
-    // the startup status pass. Cold discovery can invoke an interactive shell.
+    // Cold polling stays passive. Explicit invalidation requests runtime-only rediscovery.
+    const generation = this.statusGatherGeneration;
+    await this.refreshInvalidatedRuntime(generation);
+    const obsoleteStatus = () =>
+      createRuntimeStatusErrorProviderStatus(
+        providerId,
+        new Error('Provider runtime changed during status check. Refresh to retry.')
+      );
+    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
     const passiveRuntime = resolvePassiveProviderRuntime(this.latestStatusSnapshot, providerId);
     if ('errorStatus' in passiveRuntime) {
       return passiveRuntime.errorStatus;
     }
     const { binaryPath } = passiveRuntime;
 
-    const generation = this.statusGatherGeneration;
     const handleCatalogUpdate = (hydratedProviderStatus: CliProviderStatus): void => {
       if (hydratedProviderStatus.providerId !== providerId) {
         return;
@@ -925,6 +905,7 @@ export class CliInstallerService {
           providerId,
           handleCatalogUpdate
         );
+    if (generation !== this.statusGatherGeneration) return obsoleteStatus();
     const mismatchStatus = projectMismatchedProviderStatus(providerId, providerStatus, this.now());
     if (mismatchStatus) {
       return mismatchStatus;

@@ -1287,7 +1287,6 @@ export async function runProviderPrepareDiagnostics({
           runtimeDetailLines = [];
           runtimeWarnings = [];
         }
-
         for (const modelId of uncachedModelIds) {
           const compatibilityResolution = resolveModelResultFromCompatibilityBatch(
             providerId,
@@ -1555,18 +1554,19 @@ export async function runProviderPrepareDiagnostics({
             )
           );
         }
-
         emitProgress();
-
         if (!hasFailure) {
           try {
             const deepResult = await prepareProvisioning(
               cwd,
               providerId,
               [providerId],
-              undefined,
+              providerId === 'codex' ? uncachedModelIds : undefined,
               limitContext,
-              'deep'
+              'deep',
+              ...(providerId === 'codex' && hasExplicitModelChecks
+                ? [selectModelChecksForIds(normalizedModelChecks, uncachedModelIds)]
+                : [])
             );
             runtimeDetailLines = createRuntimeDetailLines(deepResult, providerId).filter(
               (entry) => !isModelScopedEntryForAnyModel(uncachedModelIds, entry)
