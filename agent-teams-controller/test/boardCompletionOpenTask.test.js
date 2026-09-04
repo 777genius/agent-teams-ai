@@ -195,6 +195,75 @@ describe('board completion is one question with one answer', () => {
     });
   });
 
+  it.each([false, true])('delivers one final after approval (fix cycle: %s)', (needsFix) => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const send = (text) => controller.messages.sendMessage({ to: 'user', from: 'alice', text });
+    withClock((advance) => {
+      const task = controller.tasks.createTask({ subject: 'Sandbox review', owner: 'bob' });
+      advance(1);
+      controller.tasks.completeTask(task.id, 'bob');
+      controller.review.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+      controller.review.startReview(task.id, { from: 'alice' });
+      if (needsFix) {
+        advance(1);
+        controller.review.requestChanges(task.id, { from: 'alice', comment: 'Add evidence' });
+        expect(send('The reviewer requested more evidence.').deduplicated).toBeUndefined();
+        advance(1);
+        controller.tasks.completeTask(task.id, 'bob');
+        expect(controller.tasks.getTask(task.id).reviewState).toBe('needsFix');
+        expect(send('The evidence is ready for another pass.').deduplicated).toBeUndefined();
+        advance(1);
+        controller.review.requestReview(task.id, { from: 'alice', reviewer: 'alice' });
+        controller.review.startReview(task.id, { from: 'alice' });
+      }
+      advance(1);
+      expect(send('Review is in progress.').deduplicated).toBeUndefined();
+      advance(1);
+      controller.review.approveReview(task.id, { from: 'alice', note: 'Evidence accepted' });
+      advance(1);
+      const final = send('Review approved. The result is ready.');
+      expect(final.deduplicated).toBeUndefined();
+      advance(1);
+      expect(send('Everything is now finished.').duplicateOfMessageId).toBe(final.messageId);
+      // Approval retries and metadata edits must not reset the guard.
+      advance(1);
+      expect(controller.review.approveReview(task.id, { from: 'alice' }).alreadyApproved).toBe(true);
+      controller.tasks.addTaskComment(task.id, { from: 'alice', text: 'Archival note' });
+      controller.tasks.addTaskAttachmentMeta(task.id, {
+        id: 'sandbox-evidence',
+        filename: 'evidence.txt',
+        mimeType: 'text/plain',
+        size: 0,
+      });
+      advance(1);
+      expect(send('A recap of the approved result.').duplicateOfMessageId).toBe(final.messageId);
+      expect(readInbox(claudeDir, 'user')).toHaveLength(needsFix ? 4 : 2);
+    });
+  });
+
+  it('retains the updatedAt fallback for legacy tasks without history events', () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const send = (text) => controller.messages.sendMessage({ to: 'user', from: 'alice', text });
+    withClock((advance) => {
+      const task = controller.tasks.createTask({ subject: 'Legacy sandbox task', owner: 'bob' });
+      advance(1);
+      send('Legacy work in progress.');
+      advance(1);
+      controller.tasks.updateTask(task.id, (persisted) => {
+        persisted.status = 'completed';
+        delete persisted.historyEvents;
+        return persisted;
+      });
+      advance(1);
+      const final = send('Legacy work done.');
+      expect(final.deduplicated).toBeUndefined();
+      advance(1);
+      expect(send('Legacy final recap.').duplicateOfMessageId).toBe(final.messageId);
+    });
+  });
+
   it('routes both sites through the shared predicate instead of restating the rule', () => {
     const internalDir = path.join(__dirname, '..', 'src', 'internal');
     const messageStoreSource = fs.readFileSync(path.join(internalDir, 'messageStore.js'), 'utf8');
