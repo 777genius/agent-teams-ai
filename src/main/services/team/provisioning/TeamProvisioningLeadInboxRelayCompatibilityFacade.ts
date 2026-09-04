@@ -114,7 +114,7 @@ export interface TeamProvisioningLeadInboxRelayCompatibilityHost<
   pushLiveLeadProcessMessage(teamName: string, message: InboxMessage): void;
   persistSentMessage(teamName: string, message: InboxMessage): void;
   emitTeamChange(event: TeamChangeEvent): void;
-  scheduleLeadInboxFollowUpRelay(teamName: string): void;
+  scheduleLeadInboxFollowUpRelay(teamName: string, delayMs?: number): void;
   trimRelayedSet(relayedIds: Set<string>): Set<string>;
   hasAcceptedMemberWorkSyncReport(input: {
     teamName: string;
@@ -225,8 +225,7 @@ export function createTeamProvisioningLeadInboxRelayCompatibilityFacadeFromServi
         service.pushLiveLeadProcessMessage(teamName, message),
       persistSentMessage: (teamName, message) => service.persistSentMessage(teamName, message),
       emitTeamChange: (event) => service.teamChangeEmitter?.(event),
-      scheduleLeadInboxFollowUpRelay: (teamName) =>
-        service.scheduleLeadInboxFollowUpRelay(teamName),
+      scheduleLeadInboxFollowUpRelay: (...args) => service.scheduleLeadInboxFollowUpRelay(...args),
       trimRelayedSet: (relayedIds) => service.trimRelayedSet(relayedIds),
       hasAcceptedMemberWorkSyncReport: (input) =>
         service.memberWorkSyncProofBoundary.hasAcceptedMemberWorkSyncReport(input),
@@ -299,8 +298,8 @@ export class TeamProvisioningLeadInboxRelayCompatibilityFacade<
         this.host.pushLiveLeadProcessMessage(teamName, message),
       persistSentMessage: (teamName, message) => this.host.persistSentMessage(teamName, message),
       emitTeamChange: (event) => this.host.emitTeamChange(event),
-      scheduleLeadInboxFollowUpRelay: (teamName) =>
-        this.host.scheduleLeadInboxFollowUpRelay(teamName),
+      scheduleLeadInboxFollowUpRelay: (...args) =>
+        this.host.scheduleLeadInboxFollowUpRelay(...args),
       rememberLeadRecoveryMessage: (teamName, messageId) =>
         this.rememberLeadRecoveryMessage(teamName, messageId),
       rememberSuccessfulLeadRecoveryMessage: (teamName, messageId) =>

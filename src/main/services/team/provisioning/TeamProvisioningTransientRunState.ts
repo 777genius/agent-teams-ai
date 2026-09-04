@@ -175,7 +175,7 @@ export class TeamProvisioningTransientRunState {
     }
   }
 
-  scheduleLeadInboxFollowUpRelay(teamName: string): void {
+  scheduleLeadInboxFollowUpRelay(teamName: string, delayMs = 50): void {
     const key = `lead-inbox-follow-up:${teamName}`;
     if (this.ports.pendingTimeouts.has(key)) return;
 
@@ -186,7 +186,7 @@ export class TeamProvisioningTransientRunState {
         .catch((error: unknown) =>
           this.ports.warn(`[${teamName}] lead inbox follow-up relay failed: ${String(error)}`)
         );
-    }, 50);
+    }, delayMs);
     timer.unref?.();
     this.ports.pendingTimeouts.set(key, timer);
   }
