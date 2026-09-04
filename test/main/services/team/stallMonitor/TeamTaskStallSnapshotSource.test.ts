@@ -1,4 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// The under-floor override below is reported through the shared logger, and the
+// suite fails any test that reaches console.warn.
+vi.mock('@shared/utils/logger', () => ({
+  createLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  }),
+}));
 
 import { OpenCodeLaneTurnActivityRegistry } from '../../../../../src/main/services/team/opencode/delivery/OpenCodeLaneTurnActivityRegistry';
 import { getOpenCodeLaneTurnActivityMaxAgeMs } from '../../../../../src/main/services/team/stallMonitor/featureGates';
@@ -437,6 +448,31 @@ describe('TeamTaskStallSnapshotSource', () => {
     expect(snapshot?.openCodeLaneStaleActiveSinceByMemberName?.get('carol')).toBe(staleActiveSince);
     expect(snapshot?.openCodeLaneActiveSinceByMemberName?.get('carol')).toBeUndefined();
   });
+
+  it('keeps a live lane active when the max-age override is below the ordering floor', async () => {
+    // 60 s is a positive integer, so the gate reader accepts it. Applied
+    // literally it would publish a member six minutes into an ordinary turn as
+    // idle, and the weak-start branch would nudge mid-generation.
+    vi.stubEnv('CLAUDE_TEAM_OPENCODE_LANE_TURN_ACTIVITY_MAX_AGE_MS', '60000');
+    const activeSince = isoAgo(6 * ONE_MINUTE_MS);
+    const laneTurnActivity = new OpenCodeLaneTurnActivityRegistry();
+    laneTurnActivity.note({
+      teamName: 'demo',
+      memberName: 'Carol',
+      laneId: 'secondary:opencode:carol',
+      state: 'active',
+      observedAt: activeSince,
+    });
+
+    const snapshot = await snapshotSourceWithLaneTurnActivity(laneTurnActivity).getSnapshot('demo');
+
+    expect([...(snapshot?.openCodeLaneActiveMemberNames ?? new Set())]).toEqual(['carol']);
+    expect(snapshot?.openCodeLaneStaleActiveSinceByMemberName?.size).toBe(0);
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 const ONE_MINUTE_MS = 60_000;

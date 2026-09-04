@@ -1,3 +1,12 @@
+import { createLogger } from '@shared/utils/logger';
+
+import {
+  getOpenCodeLaneTurnActivityMaxAgeMs,
+  getOpenCodeWeakStartStallThresholdMs,
+  getPendingPickupStallThresholdMs,
+} from './featureGates';
+import { WORK_THRESHOLDS_MS } from './TeamTaskStallPolicy';
+
 import type { OpenCodeLaneTurnActivitySample } from '../opencode/delivery/OpenCodeLaneTurnActivityRegistry';
 
 /**
@@ -27,6 +36,58 @@ import type { OpenCodeLaneTurnActivitySample } from '../opencode/delivery/OpenCo
  * makes a stale flag from any future cause - including a lane nothing tries to
  * dispatch to - unable to silence pickup detection.
  */
+
+const logger = createLogger('Service:OpenCodeLaneTurnFreshness');
+
+/** Remembers the last override reported as out of range so a misconfigured
+ * install gets one warn line, not one per scan. */
+let lastReportedUnderfloorMaxAgeMs: number | null = null;
+
+/**
+ * The smallest age bound that still satisfies the ordering invariant: every
+ * OpenCode stall threshold whose `lane_active` guard a demotion can unlock.
+ * Read live, because the weak-start and pickup thresholds are themselves
+ * overridable and raising either raises this floor with it.
+ */
+function getOpenCodeLaneTurnActivityMaxAgeFloorMs(): number {
+  return Math.max(
+    ...Object.values(WORK_THRESHOLDS_MS),
+    getOpenCodeWeakStartStallThresholdMs(),
+    getPendingPickupStallThresholdMs()
+  );
+}
+
+/**
+ * The age bound the snapshot actually applies.
+ *
+ * `getOpenCodeLaneTurnActivityMaxAgeMs` reads a positive integer from the
+ * environment and nothing more, so an override below the floor above would
+ * demote a lane in the middle of a legitimate turn: at
+ * CLAUDE_TEAM_OPENCODE_LANE_TURN_ACTIVITY_MAX_AGE_MS=60000 a member one minute
+ * into a five-minute turn is published as idle, the `lane_active` guard the
+ * weak-start branch relies on never fires, and the nudge lands mid-generation -
+ * the exact failure the guard exists to prevent. The invariant is only tested
+ * against the default, and a default is not a bound.
+ *
+ * An under-floor override is therefore raised to the floor rather than
+ * accepted: it can still be set higher, which is always safe (a lane stays
+ * trusted for longer), but it cannot be set to a value that switches the guard
+ * off.
+ */
+export function resolveOpenCodeLaneTurnActivityMaxAgeMs(): number {
+  const configuredMs = getOpenCodeLaneTurnActivityMaxAgeMs();
+  const floorMs = getOpenCodeLaneTurnActivityMaxAgeFloorMs();
+  if (configuredMs >= floorMs) {
+    return configuredMs;
+  }
+  if (lastReportedUnderfloorMaxAgeMs !== configuredMs) {
+    lastReportedUnderfloorMaxAgeMs = configuredMs;
+    logger.warn(
+      `CLAUDE_TEAM_OPENCODE_LANE_TURN_ACTIVITY_MAX_AGE_MS=${configuredMs} is below the ${floorMs}ms OpenCode stall floor and would demote a lane mid-turn; using ${floorMs}ms`
+    );
+  }
+  return floorMs;
+}
 
 export interface OpenCodeLaneTurnVerdict {
   /** Whether the pickup and work branches should treat the owner as mid-turn. */
