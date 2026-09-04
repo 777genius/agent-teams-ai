@@ -53,7 +53,7 @@ import {
 import { ClaudeBinaryResolver } from '../team/ClaudeBinaryResolver';
 import { getCliFlavorUiOptions, getConfiguredCliFlavor } from '../team/cliFlavor';
 
-import { createInitialCliInstallationStatus } from './cliInstallerInitialStatus';
+import { buildInitialCliInstallationStatus } from './cliInstallerInitialStatus';
 import {
   mergeProviderStatusPublication,
   retainLatestProviderStatus,
@@ -589,7 +589,7 @@ export class CliInstallerService {
   }
 
   private createInitialStatus(): CliInstallationStatus {
-    return createInitialCliInstallationStatus();
+    return buildInitialCliInstallationStatus();
   }
 
   private async refreshInvalidatedRuntime(generation: number): Promise<void> {

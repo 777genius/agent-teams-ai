@@ -1109,6 +1109,7 @@ function createMemberSpawnRun(params?: {
   runId?: string;
   teamName?: string;
   startedAt?: string;
+  progressState?: 'verifying' | 'ready';
   expectedMembers?: string[];
   memberSpawnStatuses?: Map<string, Record<string, unknown>>;
   memberSpawnLeadInboxCursorByMember?: Map<string, { timestamp: string; messageId: string }>;
@@ -1140,7 +1141,22 @@ function createMemberSpawnRun(params?: {
     memberSpawnToolUseIds: new Map(),
     pendingMemberRestarts: new Map(),
     memberSpawnLeadInboxCursorByMember: params?.memberSpawnLeadInboxCursorByMember ?? new Map(),
+    progress: {
+      runId: params?.runId ?? 'run-member-spawn-1',
+      teamName,
+      state: params?.progressState ?? 'verifying',
+      message: 'Waiting for teammates to join.',
+      startedAt: params?.startedAt ?? new Date(Date.now() - 60_000).toISOString(),
+      updatedAt: params?.startedAt ?? new Date().toISOString(),
+    },
+    onProgress: vi.fn(),
+    processKilled: false,
+    cancelRequested: false,
+    provisioningTraceLines: [],
     provisioningOutputParts: [],
+    provisioningOutputIndexByMessageId: new Map(),
+    stallWarningIndex: null,
+    apiRetryWarningIndex: null,
     activeToolCalls: new Map(),
     isLaunch: false,
     provisioningComplete: false,
@@ -1537,13 +1553,17 @@ describe('TeamProvisioningService', () => {
       try {
         const svc = new TeamProvisioningService();
         const run = {
+          ...createMemberSpawnRun({
+            runId: 'run-late-all-joined',
+            teamName: 'late-all-joined-team',
+            progressState: 'ready',
+          }),
           runId: 'run-late-all-joined',
           teamName: 'late-all-joined-team',
           isLaunch: true,
           provisioningComplete: true,
           processKilled: false,
           cancelRequested: false,
-          progress: { state: 'ready' },
           request: {
             cwd: tempClaudeRoot,
             displayName: 'late-all-joined-team',
@@ -1618,6 +1638,11 @@ describe('TeamProvisioningService', () => {
       try {
         const svc = new TeamProvisioningService();
         const run = {
+          ...createMemberSpawnRun({
+            runId: 'run-early-launch-toast',
+            teamName: 'early-launch-toast-team',
+            progressState: 'ready',
+          }),
           runId: 'run-early-launch-toast',
           teamName: 'early-launch-toast-team',
           isLaunch: true,
@@ -1723,13 +1748,17 @@ describe('TeamProvisioningService', () => {
           diagnostics: [],
         };
         const run = {
+          ...createMemberSpawnRun({
+            runId: 'run-mixed-lane-race',
+            teamName: 'mixed-lane-race-team',
+            progressState: 'ready',
+          }),
           runId: 'run-mixed-lane-race',
           teamName: 'mixed-lane-race-team',
           isLaunch: true,
           provisioningComplete: true,
           processKilled: false,
           cancelRequested: false,
-          progress: { state: 'ready' },
           request: {
             cwd: tempClaudeRoot,
             displayName: 'mixed-lane-race-team',
@@ -32465,7 +32494,15 @@ describe('TeamProvisioningService', () => {
       }
     ).persistLaunchStateSnapshot(run, 'finished');
 
-    expect(snapshot).toBeNull();
+    expect(snapshot).toMatchObject({
+      teamName,
+      launchPhase: 'finished',
+      teamLaunchState: 'clean_success',
+      members: { jack: { launchState: 'confirmed_alive', bootstrapConfirmed: true } },
+    });
+    await expect(
+      fsPromises.readFile(getTeamLaunchSummaryPath(teamName), 'utf8')
+    ).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(
       fsPromises.readFile(getTeamLaunchStatePath(teamName), 'utf8')
     ).rejects.toMatchObject({

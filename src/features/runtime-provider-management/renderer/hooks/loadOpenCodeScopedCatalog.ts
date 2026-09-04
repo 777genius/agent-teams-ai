@@ -11,7 +11,7 @@ import type {
 } from '../../contracts';
 
 const MAX_MODEL_PAGES = 20;
-const MODEL_CATALOG_FRESHNESS_MS = 2 * 60_000;
+export const MODEL_CATALOG_FRESHNESS_MS = 2 * 60_000;
 function responseFailure(
   response: RuntimeProviderManagementModelsResponse,
   sourceProviderId: string

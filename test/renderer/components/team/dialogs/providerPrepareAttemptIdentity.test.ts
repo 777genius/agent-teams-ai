@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
-function plan(provider: CliProviderStatus, cwd = '/sandbox/one', model = 'gpt-5.6-luna') {
+function buildPlan(provider: CliProviderStatus, cwd = '/sandbox/one', model = 'gpt-5.6-luna') {
   return buildProviderPreparePlans({
     cwd,
     providerIds: ['codex'],
@@ -22,21 +22,21 @@ describe('paid prepare attempt identity', () => {
     const provider = createLoadingMultimodelCliStatus().providers.find(
       (p) => p.providerId === 'codex'
     )!;
-    const previous = plan(provider).requestSignature;
-    expect(isSameProviderPrepareAttempt(previous, plan(provider).requestSignature)).toBe(true);
+    const previous = buildPlan(provider).requestSignature;
+    expect(isSameProviderPrepareAttempt(previous, buildPlan(provider).requestSignature)).toBe(true);
     expect(
-      isSameProviderPrepareAttempt(previous, plan(provider, '/sandbox/two').requestSignature)
+      isSameProviderPrepareAttempt(previous, buildPlan(provider, '/sandbox/two').requestSignature)
     ).toBe(false);
     expect(
       isSameProviderPrepareAttempt(
         previous,
-        plan(provider, '/sandbox/one', 'gpt-5.6-sol').requestSignature
+        buildPlan(provider, '/sandbox/one', 'gpt-5.6-sol').requestSignature
       )
     ).toBe(false);
     expect(
       isSameProviderPrepareAttempt(
         previous,
-        plan({ ...provider, selectedBackendId: 'custom' }).requestSignature
+        buildPlan({ ...provider, selectedBackendId: 'custom' }).requestSignature
       )
     ).toBe(false);
     expect(isSameProviderPrepareAttempt(undefined, previous)).toBe(false);
@@ -46,8 +46,8 @@ describe('paid prepare attempt identity', () => {
     const provider = createLoadingMultimodelCliStatus().providers.find(
       (p) => p.providerId === 'codex'
     )!;
-    const initial = plan(provider);
-    const refreshed = plan({
+    const initial = buildPlan(provider);
+    const refreshed = buildPlan({
       ...provider,
       authenticated: true,
       statusCheckOutcome: 'authoritative',
@@ -56,13 +56,13 @@ describe('paid prepare attempt identity', () => {
     });
     expect(refreshed.requestSignature).toBe(initial.requestSignature);
     expect(refreshed.cacheKey).not.toBe(initial.cacheKey);
-    expect(plan(provider, '/sandbox/two').requestSignature).not.toBe(initial.requestSignature);
-    expect(plan(provider, '/sandbox/one', 'gpt-5.6-sol').requestSignature).not.toBe(
+    expect(buildPlan(provider, '/sandbox/two').requestSignature).not.toBe(initial.requestSignature);
+    expect(buildPlan(provider, '/sandbox/one', 'gpt-5.6-sol').requestSignature).not.toBe(
       initial.requestSignature
     );
-    expect(plan({ ...provider, selectedBackendId: 'another-backend' }).requestSignature).not.toBe(
-      initial.requestSignature
-    );
+    expect(
+      buildPlan({ ...provider, selectedBackendId: 'another-backend' }).requestSignature
+    ).not.toBe(initial.requestSignature);
     const connected = {
       ...provider,
       connection: {
@@ -75,8 +75,8 @@ describe('paid prepare attempt identity', () => {
       },
     };
     expect(
-      plan({ ...connected, connection: { ...connected.connection, apiKeyConfigured: true } })
+      buildPlan({ ...connected, connection: { ...connected.connection, apiKeyConfigured: true } })
         .requestSignature
-    ).not.toBe(plan(connected).requestSignature);
+    ).not.toBe(buildPlan(connected).requestSignature);
   });
 });
