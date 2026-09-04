@@ -16,6 +16,7 @@ it('keeps the committed callback while a concurrent render is suspended', async 
     useDashboardStatusRefresh(true, () => refresh(update));
     if (update === 1) {
       suspendedRender();
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- React Suspense requires a pending thenable to suspend this render.
       throw pending;
     }
     return null;
