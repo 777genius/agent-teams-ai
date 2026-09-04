@@ -5,6 +5,7 @@ import {
   isAnthropicOneMillionContextTeamModel,
   isAnthropicSonnetOneMillionContextTeamModel,
   isAnthropicSonnetTeamModel,
+  sortTeamProviderModels,
 } from '@renderer/utils/teamModelCatalog';
 import { describe, expect, it } from 'vitest';
 
@@ -19,6 +20,59 @@ describe('teamModelCatalog', () => {
       'gpt-5.5',
       'glm-5',
       'glm-4.7',
+    ]);
+  });
+
+  it('sorts future Anthropic versions before older curated models and resolves alias versions', () => {
+    const models = ['fable', 'claude-fable-5-1', 'claude-fable-5-10', 'claude-opus-5', 'opus'];
+    const original = [...models];
+
+    expect(sortTeamProviderModels('anthropic', models)).toEqual([
+      'claude-fable-5-10',
+      'claude-fable-5-1',
+      'fable',
+      'claude-opus-5',
+      'opus',
+    ]);
+    expect(models).toEqual(original);
+    expect(getTeamModelBadgeLabel('anthropic', 'claude-opus-5')).toBe('Opus 5');
+    expect(getTeamModelBadgeLabel('anthropic', 'claude-fable-5.1')).toBe('Fable 5.1');
+  });
+
+  it('ignores dated Anthropic snapshots when comparing versions and keeps distinct launch ids', () => {
+    const models = [
+      'claude-haiku-4-5-20251001',
+      'haiku',
+      'claude-opus-4-8[1m]',
+      'opus',
+      'claude-opus-4-8',
+      'claude-3-7-sonnet-20250219',
+    ];
+
+    expect(sortTeamProviderModels('anthropic', models)).toEqual([
+      'claude-opus-4-8',
+      'opus',
+      'claude-opus-4-8[1m]',
+      'claude-haiku-4-5-20251001',
+      'haiku',
+      'claude-3-7-sonnet-20250219',
+    ]);
+    expect(getTeamModelBadgeLabel('anthropic', 'claude-opus-5[1m]')).toBe('Opus 5 (1M)');
+  });
+
+  it('sorts newer Gemini versions ahead of curated models and preserves equal-version priorities', () => {
+    expect(
+      sortTeamProviderModels('gemini', [
+        'gemini-2.5-flash',
+        'gemini-3.1-pro-preview',
+        'gemini-2.5-pro',
+        'gemini-3.10-pro-preview',
+      ])
+    ).toEqual([
+      'gemini-3.10-pro-preview',
+      'gemini-3.1-pro-preview',
+      'gemini-2.5-pro',
+      'gemini-2.5-flash',
     ]);
   });
 
@@ -48,16 +102,16 @@ describe('teamModelCatalog', () => {
       ])
     ).toEqual([
       'fable',
-      'claude-haiku-4-5-20251001',
+      'claude-sonnet-5',
       'claude-opus-4-8',
       'claude-opus-4-8[1m]',
       'claude-opus-4-7',
       'claude-opus-4-7[1m]',
       'claude-opus-4-6',
       'claude-opus-4-6[1m]',
-      'claude-sonnet-5',
       'claude-sonnet-4-6',
       'claude-sonnet-4-6[1m]',
+      'claude-haiku-4-5-20251001',
     ]);
   });
 

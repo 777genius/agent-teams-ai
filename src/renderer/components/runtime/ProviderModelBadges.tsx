@@ -116,8 +116,23 @@ export const ProviderModelBadges = ({
   const [collapsedModelLimit, setCollapsedModelLimit] = useState<number | null>(null);
   const [measureTick, setMeasureTick] = useState(0);
   const listRef = useRef<HTMLDivElement | null>(null);
-  const visibleModels = getVisibleTeamProviderModels(providerId, models, providerStatus);
   const displayModelAvailability = providerId === 'opencode' ? undefined : modelAvailability;
+  const seenModelBadges = new Set<string>();
+  const visibleModels = getVisibleTeamProviderModels(providerId, models, providerStatus).filter(
+    (model) => {
+      // Collapse aliases/snapshots only in this summary, preserving launch IDs in selectors.
+      // Different availability or pricing information must remain visible.
+      const key = JSON.stringify([
+        providerId === 'anthropic' ? formatModelBadgeLabel(providerId, model) : model,
+        getAvailabilityStatus(model, displayModelAvailability),
+        getAvailabilityReason(model, displayModelAvailability),
+        isCatalogModelFree(model, providerStatus),
+      ]);
+      if (seenModelBadges.has(key)) return false;
+      seenModelBadges.add(key);
+      return true;
+    }
+  );
   const shouldCollapse =
     typeof collapseAfter === 'number' && collapseAfter > 0 && visibleModels.length > collapseAfter;
   const collapsedBaseLimit = shouldCollapse ? collapseAfter : visibleModels.length;

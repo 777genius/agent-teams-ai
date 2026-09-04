@@ -428,6 +428,75 @@ describe('ProviderModelBadges', () => {
     expect(renderedModelLabels).toContain('Opus 4.8 (1M)');
   });
 
+  it('shows newer Anthropic versions first and deduplicates aliases and dated snapshots', () => {
+    const host = render(
+      <ProviderModelBadges
+        providerId="anthropic"
+        models={[
+          'fable',
+          'claude-fable-5',
+          'claude-fable-5-1',
+          'haiku',
+          'claude-haiku-4-5',
+          'claude-haiku-4-5-20251001',
+          'opus',
+          'claude-opus-4-8',
+          'opus[1m]',
+          'claude-opus-4-8[1m]',
+          'sonnet',
+          'claude-sonnet-4-6',
+          'sonnet[1m]',
+          'claude-sonnet-4-6[1m]',
+        ]}
+        collapseAfter={2}
+      />
+    );
+
+    expect(host.textContent).toBe('Fable 5.1,Fable 5+8 more');
+    act(() => {
+      host.querySelector('button')?.click();
+    });
+    const labels = Array.from(host.firstElementChild?.firstElementChild?.children ?? []).map(
+      (item) => item.firstElementChild?.textContent
+    );
+    expect(labels).toEqual([
+      'Fable 5.1',
+      'Fable 5',
+      'Sonnet 5',
+      'Opus 4.8',
+      'Opus 4.8 (1M)',
+      'Opus 4.7',
+      'Opus 4.7 (1M)',
+      'Sonnet 4.6',
+      'Sonnet 4.6 (1M)',
+      'Haiku 4.5',
+    ]);
+  });
+
+  it('preserves distinct availability information for otherwise identical Anthropic labels', () => {
+    const host = render(
+      <ProviderModelBadges
+        providerId="anthropic"
+        models={['opus', 'claude-opus-4-8']}
+        modelAvailability={[
+          { modelId: 'opus', status: 'available', checkedAt: '2026-09-04T00:00:00Z' },
+          {
+            modelId: 'claude-opus-4-8',
+            status: 'unavailable',
+            reason: 'Access denied',
+            checkedAt: '2026-09-04T00:00:00Z',
+          },
+        ]}
+      />
+    );
+
+    expect(host.textContent).toContain('Unavailable');
+    const labels = Array.from(host.firstElementChild?.children ?? []).map(
+      (item) => item.firstElementChild?.textContent
+    );
+    expect(labels.filter((label) => label === 'Opus 4.8')).toHaveLength(2);
+  });
+
   it('collapses long model lists and expands them inline without an internal scroll area', () => {
     const models = Array.from(
       { length: 18 },
