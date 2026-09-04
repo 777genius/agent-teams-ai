@@ -23,7 +23,7 @@ function sweepPorts(
   overrides: Partial<Parameters<typeof runOpenCodeStartupRuntimeSweepTail>[0]> = {}
 ) {
   return {
-    sweepCommandIssuedAtMs: 1_000,
+    sweepCommandSettledAtMs: 1_000,
     logSweepResult: vi.fn(),
     logWarning: vi.fn(),
     waitMs: vi.fn(() => Promise.resolve()),
@@ -32,10 +32,14 @@ function sweepPorts(
 }
 
 describe('runOpenCodeStartupRuntimeSweepTail', () => {
-  it('fences the reap by the moment the sweep command was issued', async () => {
+  // The fence is the moment the registry sweep command SETTLED. The host this
+  // tail exists to reap is the one that command boots, so it starts after the
+  // command was issued: an issue-time fence classifies it `kept_recent` and the
+  // tail reaps nothing it was written for.
+  it('fences the reap by the moment the sweep command settled', async () => {
     const sweepManagedHosts = vi.fn(() => Promise.resolve(sweepResult({ scanned: 3, killed: 1 })));
     const ports = sweepPorts({
-      sweepCommandIssuedAtMs: 4_242,
+      sweepCommandSettledAtMs: 4_242,
       sweepManagedHosts,
     });
 
@@ -46,6 +50,26 @@ describe('runOpenCodeStartupRuntimeSweepTail', () => {
     expect(ports.logSweepResult).toHaveBeenCalledWith(
       'opencode_managed_hosts_killed sweep=startup count=1 scanned=3'
     );
+  });
+
+  // The tail runs in `force` mode with no lineage check, so the start-time
+  // fence alone would let it reap an orchestrator host of another install, or
+  // one a user started themselves, purely because its command line names this
+  // app's own binary. The instance markers are what make that impossible.
+  it('carries the ownership markers of this app instance into the reap', async () => {
+    const sweepManagedHosts = vi.fn(() => Promise.resolve(sweepResult()));
+    const ports = sweepPorts({
+      sweepCommandSettledAtMs: 4_242,
+      ownershipMarkers: { requiredDetailsMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID=9-1000'] },
+      sweepManagedHosts,
+    });
+
+    await runOpenCodeStartupRuntimeSweepTail(ports);
+
+    expect(sweepManagedHosts).toHaveBeenCalledWith({
+      startedBeforeMs: 4_242,
+      requiredDetailsMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID=9-1000'],
+    });
   });
 
   // The settle window comes first or the reap finds nothing: the orchestrator

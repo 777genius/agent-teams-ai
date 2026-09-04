@@ -3,6 +3,7 @@ import { cleanupManagedOpenCodeServeProcesses } from './OpenCodeManagedHostProce
 import type {
   OpenCodeManagedHostCleanupMode,
   OpenCodeManagedHostCleanupResult,
+  OpenCodeManagedHostProcessCleanupOptions,
 } from './OpenCodeManagedHostProcessCleanup';
 
 /**
@@ -16,11 +17,13 @@ import type {
  * servers. Nothing else reaps it, because it is not in the registry the sweep
  * just cleaned.
  *
- * Every step here is destructive, so every step is fenced by a start time:
- * nothing this app instance started after the fence may be killed. Without one
- * the sweep reaped the `opencode serve` host of a readiness probe a user
- * launch had just started, and refused that launch before its first
- * state-changing bridge command.
+ * Every step here is destructive, so every step is fenced twice. A start time
+ * keeps out anything younger than the fence: without it the sweep reaped the
+ * `opencode serve` host of a readiness probe a user launch had just started,
+ * and refused that launch before its first state-changing bridge command. And
+ * this app instance's own ownership markers keep out every host it did not
+ * start, so a second install, or an orchestrator a user runs themselves, is
+ * never a candidate for the reap however old it is.
  */
 
 /** How long the orchestrator may still be booting its sweep host. */
@@ -33,30 +36,58 @@ export const OPEN_CODE_STARTUP_SWEEP_HOST_SETTLE_MS = 8_000;
  * names it an app-managed OpenCode host is ever signalled, so nothing reached
  * from here is a host this app merely recorded a pid for.
  */
-export type OpenCodeManagedHostSweep = (input: {
-  startedBeforeMs: number;
-  /**
-   * `force` reaps a confirmed-managed host outright; `orphaned` additionally
-   * spares one whose parent is still alive. Defaults to `force`.
-   */
-  mode?: OpenCodeManagedHostCleanupMode;
-}) => Promise<OpenCodeManagedHostCleanupResult>;
+export type OpenCodeManagedHostSweep = (
+  input: OpenCodeManagedHostOwnershipMarkers & {
+    startedBeforeMs: number;
+    /**
+     * `force` reaps a confirmed-managed host outright; `orphaned` additionally
+     * spares one whose parent is still alive. Defaults to `force`.
+     */
+    mode?: OpenCodeManagedHostCleanupMode;
+  }
+) => Promise<OpenCodeManagedHostCleanupResult>;
+
+/**
+ * Strings only a host this app instance started carries: its own environment
+ * off Windows, and - because Windows forbids reading another process's
+ * environment - its own answer over loopback there.
+ */
+export type OpenCodeManagedHostOwnershipMarkers = Pick<
+  OpenCodeManagedHostProcessCleanupOptions,
+  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
+>;
 
 const sweepManagedHostsByProcessScan: OpenCodeManagedHostSweep = (input) =>
   cleanupManagedOpenCodeServeProcesses({
     mode: input.mode ?? 'force',
     startedBeforeMs: input.startedBeforeMs,
+    ...(input.requiredDetailsMarkers
+      ? { requiredDetailsMarkers: input.requiredDetailsMarkers }
+      : {}),
+    ...(input.requiredServeConfigMarkersAny
+      ? { requiredServeConfigMarkersAny: input.requiredServeConfigMarkersAny }
+      : {}),
   });
 
 export interface OpenCodeStartupRuntimeSweepPorts {
   /**
-   * The instant the registry sweep command was issued, and the fence for the
-   * reap below. Fencing it by app start instead would make it a guaranteed
-   * no-op: the sweep host is booted by this app instance, so it is always
-   * younger than app start and would always be kept. A host younger than the
-   * sweep command may belong to an in-flight launch and is still kept.
+   * The instant the registry sweep command SETTLED, and the fence for the reap
+   * below. The host this tail exists to reap is booted by that command, so it
+   * is younger than the moment the command was issued and older than the moment
+   * it returned; fencing by either app start or the issue instant keeps it
+   * every time and makes the whole tail a no-op. A host younger than the
+   * settled command may belong to an in-flight launch and is still kept, and
+   * the startup sweep gate parks a launch requested inside the window rather
+   * than letting it race the reap.
    */
-  sweepCommandIssuedAtMs: number;
+  sweepCommandSettledAtMs: number;
+  /**
+   * Proof of ownership the reap adds to the scan's own command-line check. The
+   * host booted by the registry sweep command inherits this instance's bridge
+   * environment, so it carries them; a host of another install, or one a user
+   * started, does not and is kept.
+   */
+  ownershipMarkers?: OpenCodeManagedHostOwnershipMarkers;
   sweepManagedHosts?: OpenCodeManagedHostSweep;
   /** Durable counter for the app's most destructive startup action. */
   logSweepResult(message: string): void;
@@ -87,7 +118,10 @@ export async function runOpenCodeStartupRuntimeSweepTail(
   // purge with it, and the locks of the hosts it did not reach are exactly the
   // ones the next launch then queues behind.
   try {
-    const sweep = await sweepManagedHosts({ startedBeforeMs: ports.sweepCommandIssuedAtMs });
+    const sweep = await sweepManagedHosts({
+      startedBeforeMs: ports.sweepCommandSettledAtMs,
+      ...(ports.ownershipMarkers ?? {}),
+    });
     ports.logSweepResult(
       `opencode_managed_hosts_killed sweep=startup count=${sweep.killed} scanned=${sweep.scanned}`
     );
