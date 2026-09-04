@@ -1156,9 +1156,12 @@ const InstalledBanner = ({
               : openCodeRuntimeContradictsMissingMetadata
                 ? t('cliStatus.quickConnect.connected')
                 : formatProviderStatusText(provider, settingsT);
+            const isPassiveOpenCodeModelSummary =
+              provider.providerId === 'opencode' && provider.statusCheckOutcome === 'model_only';
             const modelCatalogLoading =
-              provider.modelCatalogRefreshState === 'loading' ||
-              isOpenCodeCatalogHydrating(provider);
+              !isPassiveOpenCodeModelSummary &&
+              (provider.modelCatalogRefreshState === 'loading' ||
+                isOpenCodeCatalogHydrating(provider));
             const hasProviderModels =
               provider.providerId === 'opencode'
                 ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
@@ -1240,9 +1243,11 @@ const InstalledBanner = ({
                         {modelCatalogLoading ? (
                           <span>{t('cliStatus.provider.loadingModels')}</span>
                         ) : null}
-                        {!hasProviderModels && !modelCatalogLoading && (
-                          <span>{t('cliStatus.provider.modelsUnavailable')}</span>
-                        )}
+                        {!hasProviderModels &&
+                          !modelCatalogLoading &&
+                          !isPassiveOpenCodeModelSummary && (
+                            <span>{t('cliStatus.provider.modelsUnavailable')}</span>
+                          )}
                       </div>
                     ) : null}
                     {!showSkeleton && codexDashboardHint ? (
