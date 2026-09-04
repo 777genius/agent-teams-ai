@@ -1,5 +1,6 @@
 /* eslint-disable sonarjs/publicly-writable-directories -- Test-only project paths are never written. */
 
+import * as path from 'path';
 import { describe, expect, test, vi } from 'vitest';
 
 import { ClaudeMultimodelBridgeService } from './ClaudeMultimodelBridgeService';
@@ -269,6 +270,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
   });
 
   test('requests the full OpenCode status for project-scoped launch checks', async () => {
+    const projectPath = '/tmp/sandbox-project';
     const service = new ClaudeMultimodelBridgeService();
     const internals = service as unknown as {
       getProviderStatusFromScopedRuntimeStatus: (
@@ -282,12 +284,13 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       .mockResolvedValue(verifiedOpenCodeProvider());
 
     await service.getProviderStatus('/fake/cli', 'opencode', undefined, {
-      projectPath: '/tmp/sandbox-project',
+      projectPath,
     });
 
+    // The service resolves the project path before scoping the status request.
     expect(statusSpy).toHaveBeenCalledWith('/fake/cli', 'opencode', {
       summary: false,
-      projectPath: '/tmp/sandbox-project',
+      projectPath: path.resolve(projectPath),
     });
   });
 });
