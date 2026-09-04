@@ -1,3 +1,4 @@
+import { isOpenCodePromptDeliveryWatchdogRecordTerminal } from '../opencode/delivery/OpenCodePromptDeliveryFollowUpPolicy';
 import { isOpenCodePromptDeliveryCancelled } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 
 import type { OpenCodeMemberInboxDelivery } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
@@ -181,6 +182,72 @@ export async function recoverOpenCodeOwedInboxReadCommit(input: {
         diagnostics: [diagnostic],
       },
     };
+  }
+}
+
+const OPENCODE_INBOX_MESSAGE_MISSING_TERMINAL_REASON = 'opencode_inbox_message_missing';
+
+/**
+ * The relay read the inbox successfully and the target row is not in it: the
+ * row was DELETED, not momentarily unreadable - a failed inbox read surfaces as
+ * `opencode_inbox_read_failed` before the missing check and never reaches this
+ * path, and the in-flight fast path, which cannot tell the two apart, reports
+ * its own reason instead.
+ *
+ * With the row gone there is nothing left to deliver and nothing to
+ * read-commit, so a non-terminal record - typically 'responded' still owing
+ * `inboxReadCommittedAt` - would be re-armed by every pass that looks for
+ * unfinished work, for the life of the team, and each wake would find the same
+ * nothing. Settle the record instead; the reason records why.
+ *
+ * Best-effort: a failed lookup or write leaves the record for the next wake.
+ */
+export async function terminalizeOpenCodeMissingInboxRowRecord(input: {
+  teamName: string;
+  canonicalMemberName: string;
+  laneId: string;
+  inboxMessageId: string;
+  ledger: OpenCodePromptDeliveryLedgerStore;
+  ports: {
+    markOpenCodePromptLedgerFailedTerminal(input: {
+      ledger: OpenCodePromptDeliveryLedgerStore;
+      id: string;
+      reason: string;
+      diagnostics?: string[];
+      failedAt: string;
+      eventContext?: Record<string, unknown>;
+    }): Promise<OpenCodePromptDeliveryLedgerRecord>;
+    nowIso(): string;
+  };
+}): Promise<void> {
+  const record = await input.ledger
+    .getByInboxMessage({
+      teamName: input.teamName,
+      memberName: input.canonicalMemberName,
+      laneId: input.laneId,
+      inboxMessageId: input.inboxMessageId,
+    })
+    .catch(() => null);
+  // A cancelled record is already settled for good: the ledger refuses every
+  // write to it, so terminalizing here would only pretend to have changed it.
+  if (
+    !record ||
+    isOpenCodePromptDeliveryCancelled(record) ||
+    isOpenCodePromptDeliveryWatchdogRecordTerminal(record)
+  ) {
+    return;
+  }
+  try {
+    await input.ports.markOpenCodePromptLedgerFailedTerminal({
+      ledger: input.ledger,
+      id: record.id,
+      reason: OPENCODE_INBOX_MESSAGE_MISSING_TERMINAL_REASON,
+      diagnostics: [`${OPENCODE_INBOX_MESSAGE_MISSING_TERMINAL_REASON}: ${input.inboxMessageId}`],
+      failedAt: input.ports.nowIso(),
+      eventContext: { inboxRowMissing: true },
+    });
+  } catch {
+    // Left non-terminal: the next wake re-runs this settlement.
   }
 }
 

@@ -34,6 +34,7 @@ import {
   commitOpenCodeAlreadyReadInboxRow,
   isOpenCodeInboxReadCommitOwed,
   recoverOpenCodeOwedInboxReadCommit,
+  terminalizeOpenCodeMissingInboxRowRecord,
 } from './TeamProvisioningOpenCodeInboxReadCommitRecovery';
 import {
   getActiveOpenCodeMemberInboxRelayWork,
@@ -353,6 +354,17 @@ async function runOpenCodeMemberInboxRelayWork(
       return buildOpenCodeMemberInboxAlreadyReadResult(alreadyReadRecord);
     }
     if (!targetMessage) {
+      // Definitively missing: the inbox read above succeeded, so the row was
+      // deleted rather than momentarily unreadable. Settle the ledger record,
+      // or every later pass re-arms this wake to find the same nothing.
+      await terminalizeOpenCodeMissingInboxRowRecord({
+        teamName,
+        canonicalMemberName: memberIdentity.canonicalMemberName,
+        laneId: memberIdentity.laneId,
+        inboxMessageId: onlyMessageId,
+        ledger: promptLedger,
+        ports,
+      });
       return buildOpenCodeMemberInboxMessageMissingResult({
         messageId: onlyMessageId,
         reason: 'opencode_inbox_message_missing',
