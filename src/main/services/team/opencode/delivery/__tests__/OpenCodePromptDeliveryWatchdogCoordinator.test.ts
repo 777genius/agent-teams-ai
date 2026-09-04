@@ -377,6 +377,7 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
         info: vi.fn(),
         warn: vi.fn(),
         debug: vi.fn(),
+        diagnostic: vi.fn(),
         getErrorMessage: String,
       });
       try {
