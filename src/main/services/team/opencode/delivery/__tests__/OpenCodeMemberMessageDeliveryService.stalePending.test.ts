@@ -350,6 +350,29 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
     expect(record?.status).toBe('accepted');
   });
 
+  it('keeps a fresh non-user delivery pending when the bridge reports no session activity', async () => {
+    // The observation says `pending` with an assistant message - the state of a
+    // turn whose tool calls are still running - and the bridge said nothing
+    // about the session. That is not a turn end, so nothing is settled.
+    const harness = createHarness({
+      ledgerDir,
+      observe: async () => observedResult({ observation: pendingObservation(), diagnostics: [] }),
+    });
+    await seedAcceptedPendingRecord(harness.ledger, taskCommentNotification, { ageMinutes: 1 });
+
+    const delivery = await harness.service.deliver(TEAM, taskCommentNotification);
+
+    expect(delivery).toMatchObject({ accepted: true, responsePending: true });
+    expect(harness.followUpSchedule).toHaveBeenCalledTimes(1);
+    const [record] = await harness.ledger.list();
+    expect(record).toMatchObject({ status: 'accepted', responseState: 'pending' });
+    expect(harness.logEvent).not.toHaveBeenCalledWith(
+      'opencode_prompt_delivery_response_observed',
+      expect.anything(),
+      expect.objectContaining({ stalePendingSettledAsPlainText: true })
+    );
+  });
+
   it('keeps observing a stale non-user delivery while the session is still busy', async () => {
     const harness = createHarness({
       ledgerDir,

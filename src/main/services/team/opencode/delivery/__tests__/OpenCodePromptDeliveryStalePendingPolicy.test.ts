@@ -229,6 +229,66 @@ describe('decideOpenCodeStalePendingResolution', () => {
     ).toEqual({ action: 'none' });
   });
 
+  it('does not settle a fresh record while the observation carries no session activity', () => {
+    // An assistant message row exists from the first observation of a running
+    // turn (the bridge classifies "direct child has running tool calls" as
+    // `pending`), so the assistant message alone is not proof the turn ended.
+    // Absent diagnostics, or a raw status this policy does not read as busy,
+    // are not idle evidence either: without one the record keeps waiting.
+    const running = {
+      record: record({ lastAttemptAt: minutesAgo(1), acceptedAt: minutesAgo(1) }),
+      laneKind: 'primary' as const,
+      observation: { state: 'pending' as const, assistantMessageId: 'msg_assistant' },
+      nowMs: NOW_MS,
+      config: POLICY,
+    };
+    expect(
+      decideOpenCodeStalePendingResolution({ ...running, observedDiagnostics: undefined })
+    ).toEqual({ action: 'none' });
+    expect(decideOpenCodeStalePendingResolution({ ...running, observedDiagnostics: [] })).toEqual({
+      action: 'none',
+    });
+    expect(
+      decideOpenCodeStalePendingResolution({
+        ...running,
+        observedDiagnostics: ['OpenCode session status retry'],
+      })
+    ).toEqual({ action: 'none' });
+    // Same for the reply-optional contract, which settles on any lane.
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: record({
+          laneId: 'secondary:opencode:scribe',
+          memberName: 'Scribe',
+          replyRecipient: 'system',
+          lastAttemptAt: minutesAgo(1),
+          acceptedAt: minutesAgo(1),
+        }),
+        laneKind: 'secondary',
+        observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
+        observedDiagnostics: undefined,
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toEqual({ action: 'none' });
+  });
+
+  it('still bounds a lane that never reports its session activity', () => {
+    // A lane with no idle evidence at all is not settled as a finished turn,
+    // but it does not block the lane either: at the stale window the unknown
+    // session goes terminal, exactly like an idle one.
+    expect(
+      decideOpenCodeStalePendingResolution({
+        record: record(),
+        laneKind: 'primary',
+        observation: { state: 'pending', assistantMessageId: 'msg_assistant' },
+        observedDiagnostics: undefined,
+        nowMs: NOW_MS,
+        config: POLICY,
+      })
+    ).toMatchObject({ action: 'fail_terminal', reason: OPENCODE_STALE_PENDING_TERMINAL_REASON });
+  });
+
   it('keeps observing a stale busy record until the non-user hard cap, then goes terminal', () => {
     const busy = {
       laneKind: 'primary' as const,

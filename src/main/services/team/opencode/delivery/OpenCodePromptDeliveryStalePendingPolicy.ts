@@ -135,9 +135,11 @@ export function isOpenCodePromptDeliveryStalePending(
  * observation that still did not settle it.
  *
  * - Primary (lead) lane, non-user message, turn ended (assistant message seen
- *   and session not busy): settle as `responded_plain_text` right away. Lead
- *   replies to teammate reports and system notifications are optional, so a
- *   plain-text turn end is a complete response and read-commit may proceed.
+ *   and the session observed idle): settle as `responded_plain_text` right
+ *   away. Lead replies to teammate reports and system notifications are
+ *   optional, so a plain-text turn end is a complete response and read-commit
+ *   may proceed. An unknown session is never a turn end - only the stale
+ *   window below bounds a record the bridge reports nothing about.
  * - Any lane, reply-optional delivery (informational notice or teammate
  *   report), turn ended: same settlement. The member owed no reply, so a
  *   finished turn is the whole contract; without this the record sat pending
@@ -165,7 +167,10 @@ export function decideOpenCodeStalePendingResolution(input: {
   const assistantMessageSeen = Boolean(
     input.observation?.assistantMessageId?.trim() || record.observedAssistantMessageId?.trim()
   );
-  const turnEnded = assistantMessageSeen && activity !== 'busy';
+  // A turn end has to be observed, not inferred from silence: the assistant
+  // message row already exists while the turn runs, and `unknown` only means
+  // the observation said nothing about the session.
+  const turnEnded = assistantMessageSeen && activity === 'idle';
 
   if (input.laneKind === 'primary' && !isUserPrompt && turnEnded) {
     return { action: 'settle_plain_text', reason: OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON };
