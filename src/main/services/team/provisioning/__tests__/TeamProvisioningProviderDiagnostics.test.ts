@@ -352,7 +352,7 @@ describe('TeamProvisioningProviderDiagnostics provider probes', () => {
         diagnosticModel: diagnosticModel ?? undefined,
         ports,
       });
-      const args = vi.mocked(ports.spawnProbe).mock.calls[0]![1];
+      const args = vi.mocked(ports.spawnProbe).mock.calls[0][1];
       expect(args[args.indexOf('--model') + 1]).toBe(expected);
       expect(args.filter((arg) => arg === '--model')).toHaveLength(1);
     }
