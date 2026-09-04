@@ -34,6 +34,7 @@ const forceStopFlowMocks = vi.hoisted(() => ({
     cleared: 0,
     diagnostics: [],
   })),
+  readOwnedOpenCodeRuntimeRunIdsForTeam: vi.fn(() => Promise.resolve(['run-observed'])),
 }));
 
 vi.mock('@main/services/team/lifecycle/teamForceStopFlow', () => forceStopFlowMocks);
@@ -117,8 +118,12 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
 
     for (const [, ports] of [ipcCall, httpCall]) {
       await ports.stopTeam('fixteam');
+      await ports.observeOwnedRuntimeRunIds('fixteam');
       await ports.killRetainedRuntimeProcesses('fixteam', { requestedAtMs: 1_700_000_000_000 });
-      await ports.clearPendingPromptDeliveries('fixteam');
+      await ports.clearPendingPromptDeliveries('fixteam', {
+        requestedAtMs: 1_700_000_000_000,
+        ownedRunIds: ['run-observed'],
+      });
     }
 
     expect(stopTeam).toHaveBeenCalledTimes(2);
@@ -141,9 +146,27 @@ describe('force stop shares one flow between the IPC handler and the HTTP route'
         },
       ],
     ]);
+    // Both entry points read the run ids the cleanup is fenced to, and both
+    // hand the flow's fence straight through to it.
+    expect(forceStopFlowMocks.readOwnedOpenCodeRuntimeRunIdsForTeam.mock.calls).toEqual([
+      [{ teamName: 'fixteam' }],
+      [{ teamName: 'fixteam' }],
+    ]);
     expect(forceStopFlowMocks.clearPendingOpenCodePromptDeliveriesForTeam.mock.calls).toEqual([
-      [{ teamName: 'fixteam' }],
-      [{ teamName: 'fixteam' }],
+      [
+        {
+          teamName: 'fixteam',
+          requestedAtMs: 1_700_000_000_000,
+          ownedRunIds: ['run-observed'],
+        },
+      ],
+      [
+        {
+          teamName: 'fixteam',
+          requestedAtMs: 1_700_000_000_000,
+          ownedRunIds: ['run-observed'],
+        },
+      ],
     ]);
   });
 });

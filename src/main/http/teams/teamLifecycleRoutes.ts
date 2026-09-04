@@ -11,6 +11,7 @@
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
   killRetainedOpenCodeRuntimeProcessesForTeam,
+  readOwnedOpenCodeRuntimeRunIdsForTeam,
   runTeamForceStopFlow,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
@@ -88,14 +89,20 @@ export function registerTeamLifecycleRoutes(
         const teamRuntimeApi = getTeamRuntimeApi(services);
         const result = await runTeamForceStopFlow(teamName, {
           stopTeam: (name) => teamRuntimeApi.stopTeam(name),
+          observeOwnedRuntimeRunIds: (name) =>
+            readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
           killRetainedRuntimeProcesses: (name, context) =>
             killRetainedOpenCodeRuntimeProcessesForTeam({
               teamName: name,
               requestedAtMs: context.requestedAtMs,
               otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
             }),
-          clearPendingPromptDeliveries: (name) =>
-            clearPendingOpenCodePromptDeliveriesForTeam({ teamName: name }),
+          clearPendingPromptDeliveries: (name, context) =>
+            clearPendingOpenCodePromptDeliveriesForTeam({
+              teamName: name,
+              ownedRunIds: context.ownedRunIds,
+              requestedAtMs: context.requestedAtMs,
+            }),
           logWarning: (message) => logger.warn(message),
         });
         return reply.send(result);

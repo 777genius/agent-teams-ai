@@ -7,17 +7,22 @@ function createPorts(overrides: Partial<TeamForceStopFlowPorts> = {}): {
   [K in keyof TeamForceStopFlowPorts]: TeamForceStopFlowPorts[K];
 } & {
   stopTeam: ReturnType<typeof vi.fn>;
+  observeOwnedRuntimeRunIds: ReturnType<typeof vi.fn>;
   killRetainedRuntimeProcesses: ReturnType<typeof vi.fn>;
   clearPendingPromptDeliveries: ReturnType<typeof vi.fn>;
   logWarning: ReturnType<typeof vi.fn>;
 } {
   return {
     stopTeam: vi.fn(() => Promise.resolve()),
+    observeOwnedRuntimeRunIds: vi.fn(() => Promise.resolve(['run-a'])),
     killRetainedRuntimeProcesses: vi.fn(() =>
       Promise.resolve({ killedPids: [4242], diagnostics: ['Killed persisted runtime pid=4242'] })
     ),
     clearPendingPromptDeliveries: vi.fn(() =>
-      Promise.resolve({ cleared: 2, diagnostics: ['Cancelled 2 pending prompt delivery record(s)'] })
+      Promise.resolve({
+        cleared: 2,
+        diagnostics: ['Cancelled 2 pending prompt delivery record(s)'],
+      })
     ),
     logWarning: vi.fn(),
     stopTimeoutMs: 20,
@@ -35,7 +40,10 @@ describe('runTeamForceStopFlow', () => {
     expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
       requestedAtMs: expect.any(Number),
     });
-    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam');
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
+    });
     expect(result.stopOutcome).toBe('stopped');
     expect(result.killedRuntimePids).toEqual([4242]);
     expect(result.clearedPendingDeliveries).toBe(2);
@@ -72,6 +80,62 @@ describe('runTeamForceStopFlow', () => {
     expect(context.requestedAtMs).toBeLessThan(gaveUpAtMs);
   });
 
+  it('reads the run ids before it asks for the stop and fences the cleanup with them', async () => {
+    // The delivery ledger is keyed by lane, and a relaunch of the same team
+    // reuses the lane. Reading the run ids after the stop would name the
+    // successor, so the read has to happen before the stop is even asked for.
+    const order: string[] = [];
+    const ports = createPorts({
+      observeOwnedRuntimeRunIds: vi.fn(() => {
+        order.push('observe');
+        return Promise.resolve(['run-a', 'run-a-secondary']);
+      }),
+      stopTeam: vi.fn(() => {
+        order.push('stop');
+        return Promise.resolve();
+      }),
+      clearPendingPromptDeliveries: vi.fn(() => {
+        order.push('clear');
+        return Promise.resolve({ cleared: 1, diagnostics: [] });
+      }),
+    });
+
+    await runTeamForceStopFlow('fixteam', ports);
+
+    expect(order).toEqual(['observe', 'stop', 'clear']);
+    const [, context] = ports.clearPendingPromptDeliveries.mock.calls[0] as [
+      string,
+      { requestedAtMs: number; ownedRunIds: string[] },
+    ];
+    expect(context.ownedRunIds).toEqual(['run-a', 'run-a-secondary']);
+    const [, killContext] = ports.killRetainedRuntimeProcesses.mock.calls[0] as [
+      string,
+      { requestedAtMs: number },
+    ];
+    // One fence, two steps: the kill and the cleanup answer to the same moment.
+    expect(context.requestedAtMs).toBe(killContext.requestedAtMs);
+  });
+
+  it('cancels on the age fence alone when the run ids cannot be read', async () => {
+    const ports = createPorts({
+      observeOwnedRuntimeRunIds: vi.fn(() => Promise.reject(new Error('lane index unreadable'))),
+    });
+
+    const result = await runTeamForceStopFlow('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stopped');
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: [],
+    });
+    expect(result.diagnostics.join('\n')).toContain(
+      'Runtime run ids could not be read: lane index unreadable'
+    );
+    expect(ports.logWarning).toHaveBeenCalledWith(
+      "[fixteam] Force stop could not read the team's run ids: lane index unreadable"
+    );
+  });
+
   it('continues with the hard kill when the regular stop rejects', async () => {
     const ports = createPorts({
       stopTeam: vi.fn(() =>
@@ -85,7 +149,10 @@ describe('runTeamForceStopFlow', () => {
     expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
       requestedAtMs: expect.any(Number),
     });
-    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam');
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
+    });
     expect(result.killedRuntimePids).toEqual([4242]);
     expect(result.diagnostics.join('\n')).toContain('did not confirm stop');
   });
@@ -101,7 +168,10 @@ describe('runTeamForceStopFlow', () => {
     expect(ports.killRetainedRuntimeProcesses).toHaveBeenCalledWith('fixteam', {
       requestedAtMs: expect.any(Number),
     });
-    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam');
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
+    });
     expect(result.diagnostics.join('\n')).toContain('timed out after 20ms');
   });
 
@@ -116,7 +186,10 @@ describe('runTeamForceStopFlow', () => {
     expect(result.killedRuntimePids).toEqual([]);
     expect(result.diagnostics.join('\n')).toContain('Process kill failed: taskkill exited 1');
     // The delivery cleanup still runs: a failed kill must not strand the ledger.
-    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam');
+    expect(ports.clearPendingPromptDeliveries).toHaveBeenCalledWith('fixteam', {
+      requestedAtMs: expect.any(Number),
+      ownedRunIds: ['run-a'],
+    });
   });
 
   it('reports zero cleared deliveries when the team has none pending', async () => {

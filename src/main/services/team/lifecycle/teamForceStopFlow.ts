@@ -15,6 +15,7 @@ import { cleanupManagedOpenCodeServeProcesses } from '../opencode/bridge/OpenCod
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
+  OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { tryStopPersistedOpenCodeRuntimePidForStoppedLane } from '../provisioning/TeamProvisioningOpenCodeRuntimeLaneCleanup';
@@ -30,6 +31,15 @@ const FORCE_STOP_DELIVERY_CANCEL_REASON =
 export interface TeamForceStopFlowPorts {
   stopTeam(teamName: string): Promise<void>;
   /**
+   * The runtime run ids the team owns, read before the regular stop is asked
+   * for. It has to be before: the delivery ledger is keyed by lane and a lane
+   * is reused, so a relaunch started inside the stop window publishes its own
+   * run into the same lane, and a read taken afterwards would name the
+   * successor instead of the run being torn down. A port that cannot answer
+   * returns nothing, and the cleanup falls back to its own fence.
+   */
+  observeOwnedRuntimeRunIds(teamName: string): Promise<readonly string[]>;
+  /**
    * `requestedAtMs` is the moment this stop flow began, not the moment the kill
    * step runs: the regular stop before it can take its whole budget, and a
    * relaunch of the same team started inside that window owns the host it
@@ -39,8 +49,10 @@ export interface TeamForceStopFlowPorts {
     teamName: string,
     context: { requestedAtMs: number }
   ): Promise<{ killedPids: number[]; diagnostics: string[] }>;
+  /** Same fence, one level down: the cleanup cancels this run's work only. */
   clearPendingPromptDeliveries(
-    teamName: string
+    teamName: string,
+    context: { requestedAtMs: number; ownedRunIds: readonly string[] }
   ): Promise<{ cleared: number; diagnostics: string[] }>;
   logWarning(message: string): void;
   stopTimeoutMs?: number;
@@ -58,6 +70,14 @@ export async function runTeamForceStopFlow(
 ): Promise<TeamForceStopResult> {
   const diagnostics: string[] = [];
   const stopStartedAtMs = Date.now();
+  let ownedRunIds: readonly string[] = [];
+  try {
+    ownedRunIds = await ports.observeOwnedRuntimeRunIds(teamName);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ports.logWarning(`[${teamName}] Force stop could not read the team's run ids: ${message}`);
+    diagnostics.push(`Runtime run ids could not be read: ${message}`);
+  }
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
@@ -105,7 +125,10 @@ export async function runTeamForceStopFlow(
 
   let clearedPendingDeliveries = 0;
   try {
-    const clearResult = await ports.clearPendingPromptDeliveries(teamName);
+    const clearResult = await ports.clearPendingPromptDeliveries(teamName, {
+      requestedAtMs: stopStartedAtMs,
+      ownedRunIds,
+    });
     clearedPendingDeliveries = clearResult.cleared;
     diagnostics.push(...clearResult.diagnostics);
   } catch (error) {
@@ -235,30 +258,73 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(input: {
   return { killedPids, diagnostics };
 }
 
-/**
- * Cancels every OpenCode prompt delivery ledger record the automatic selection
- * can still pick up for the team, so the delivery watchdog stops retrying after
- * the force stop. Inbox rows are not modified.
- */
-export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
-  teamName: string;
-  teamsBasePath?: string;
-  now?: () => Date;
-}): Promise<{ cleared: number; diagnostics: string[] }> {
-  const teamsBasePath = input.teamsBasePath ?? getTeamsBasePath();
-  const diagnostics: string[] = [];
-  const laneIndex = await readOpenCodeRuntimeLaneIndex(teamsBasePath, input.teamName).catch(
-    () => null
-  );
-  const laneIds = [
+async function readOpenCodeRuntimeLaneIdsForTeam(
+  teamsBasePath: string,
+  teamName: string
+): Promise<string[]> {
+  const laneIndex = await readOpenCodeRuntimeLaneIndex(teamsBasePath, teamName).catch(() => null);
+  return [
     ...new Set(
       Object.values(laneIndex?.lanes ?? {})
         .map((entry) => entry.laneId.trim())
         .filter(Boolean)
     ),
   ];
+}
+
+/**
+ * The OpenCode runtime run ids the team owns, one per lane, read from the same
+ * durable manifest the delivery services stamp onto the ledger records they
+ * create. This is what makes the delivery cleanup scopable: without it the
+ * cleanup can only say "everything in this lane", and a lane belongs to
+ * whichever run is using it now, not to the run being torn down.
+ */
+export async function readOwnedOpenCodeRuntimeRunIdsForTeam(input: {
+  teamName: string;
+  teamsBasePath?: string;
+}): Promise<string[]> {
+  const teamsBasePath = input.teamsBasePath ?? getTeamsBasePath();
+  const reader = new OpenCodeRuntimeManifestEvidenceReader({ teamsBasePath });
+  const runIds = new Set<string>();
+  for (const laneId of await readOpenCodeRuntimeLaneIdsForTeam(teamsBasePath, input.teamName)) {
+    const evidence = await reader.read(input.teamName, laneId).catch(() => null);
+    const runId = evidence?.activeRunId?.trim();
+    if (runId) {
+      runIds.add(runId);
+    }
+  }
+  return [...runIds];
+}
+
+/**
+ * Cancels every OpenCode prompt delivery ledger record the automatic selection
+ * can still pick up for the team, so the delivery watchdog stops retrying after
+ * the force stop. Inbox rows are not modified.
+ *
+ * The cancellation is fenced to the run the stop is tearing down. Nothing holds
+ * a lock across a force stop - the per-team lock is taken and released inside
+ * the regular stop, and the kill and cleanup steps run outside it - so a
+ * relaunch of the same team started while the stop hangs can publish its own
+ * run into the same lane and have deliveries pending there before this step
+ * runs. Cancelling by lane alone would mark the successor's work
+ * `failed_terminal` and its members would sit on messages nothing retries.
+ * `ownedRunIds` names what the stop found, and `requestedAtMs` covers what
+ * carries no run id or was written by a run this app could not name: a record
+ * that appeared after the stop was asked for is somebody else's.
+ */
+export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
+  teamName: string;
+  teamsBasePath?: string;
+  now?: () => Date;
+  ownedRunIds?: readonly string[];
+  requestedAtMs?: number;
+}): Promise<{ cleared: number; diagnostics: string[] }> {
+  const teamsBasePath = input.teamsBasePath ?? getTeamsBasePath();
+  const diagnostics: string[] = [];
+  const laneIds = await readOpenCodeRuntimeLaneIdsForTeam(teamsBasePath, input.teamName);
 
   let cleared = 0;
+  let keptForLaterRun = 0;
   for (const laneId of laneIds) {
     const ledgerPath = getOpenCodeLaneScopedRuntimeFilePath({
       teamsBasePath,
@@ -274,8 +340,11 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
       const result = await ledger.cancelNonTerminalRecords({
         now: (input.now?.() ?? new Date()).toISOString(),
         reason: FORCE_STOP_DELIVERY_CANCEL_REASON,
+        ownedRunIds: input.ownedRunIds,
+        createdAtOrBeforeMs: input.requestedAtMs,
       });
       cleared += result.cancelled;
+      keptForLaterRun += result.keptForLaterRun;
     } catch (error) {
       diagnostics.push(
         `Failed to cancel pending deliveries for lane ${laneId}: ${
@@ -286,6 +355,11 @@ export async function clearPendingOpenCodePromptDeliveriesForTeam(input: {
   }
   if (cleared > 0) {
     diagnostics.push(`Cancelled ${cleared} pending prompt delivery record(s)`);
+  }
+  if (keptForLaterRun > 0) {
+    diagnostics.push(
+      `Kept ${keptForLaterRun} pending prompt delivery record(s) that a later run owns`
+    );
   }
   return { cleared, diagnostics };
 }

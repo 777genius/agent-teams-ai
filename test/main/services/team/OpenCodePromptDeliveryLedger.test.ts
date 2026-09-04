@@ -319,7 +319,9 @@ describe('OpenCodePromptDeliveryLedger', () => {
     const failed = await store.markFailedTerminal({
       id: acceptanceUnknown.id,
       reason: 'opencode_session_stale_observe_loop_after_accepted_prompt',
-      diagnostics: ['OpenCode session stayed stale while observing an accepted prompt after 5 attempt(s).'],
+      diagnostics: [
+        'OpenCode session stayed stale while observing an accepted prompt after 5 attempt(s).',
+      ],
       failedAt: '2026-04-25T10:00:05.000Z',
     });
 
@@ -340,7 +342,9 @@ describe('OpenCodePromptDeliveryLedger', () => {
     expect(recovered.nextAttemptAt).toBeNull();
     expect(recovered.acceptanceUnknown).toBe(false);
     expect(recovered.visibleReplyMessageId).toBe('reply-recovered');
-    expect(recovered.diagnostics).toContain('opencode_session_stale_observe_loop_after_accepted_prompt');
+    expect(recovered.diagnostics).toContain(
+      'opencode_session_stale_observe_loop_after_accepted_prompt'
+    );
     expect(recovered.diagnostics).toContain('opencode_visible_reply_recovered_by_task_refs');
   });
 
@@ -629,8 +633,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
     ).toBe(true);
     expect(
       isOpenCodeSessionRefreshResponseState({
-        reason:
-          'resolved_behavior_changed:old->new opencode_app_mcp_transport_changed:a->b',
+        reason: 'resolved_behavior_changed:old->new opencode_app_mcp_transport_changed:a->b',
       })
     ).toBe(true);
     expect(
@@ -766,7 +769,16 @@ describe('OpenCodePromptDeliveryLedger', () => {
         reason: 'resolved_behavior_changed:old->new_permission_denied',
       })
     ).toBe(false);
-    for (const suffix of ['error', 'failed', 'failure', 'aborted', 'canceled', 'cancelled', 'interrupted', 'enospc']) {
+    for (const suffix of [
+      'error',
+      'failed',
+      'failure',
+      'aborted',
+      'canceled',
+      'cancelled',
+      'interrupted',
+      'enospc',
+    ]) {
       expect(
         isOpenCodeSessionRefreshResponseState({
           reason: `resolved_behavior_changed:old->new_${suffix}`,
@@ -999,9 +1011,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
     });
 
     expect(record.messageKind).toBe('task_stall_remediation');
-    await expect(store.list()).resolves.toMatchObject([
-      { messageKind: 'task_stall_remediation' },
-    ]);
+    await expect(store.list()).resolves.toMatchObject([{ messageKind: 'task_stall_remediation' }]);
   });
 
   it('upgrades acceptance-unknown records when exact observation finds the prompt', async () => {
@@ -1410,7 +1420,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
         now: '2026-04-25T10:05:00.000Z',
         reason: 'force_stop_requested: pending delivery cancelled by user force stop',
       })
-    ).resolves.toEqual({ cancelled: 1 });
+    ).resolves.toEqual({ cancelled: 1, keptForLaterRun: 0 });
 
     const records = new Map((await store.list()).map((record) => [record.inboxMessageId, record]));
     expect(records.get(pending.inboxMessageId)).toMatchObject({
@@ -1498,7 +1508,7 @@ describe('OpenCodePromptDeliveryLedger', () => {
         now: '2026-04-25T10:05:00.000Z',
         reason: 'force_stop_requested: pending delivery cancelled by user force stop',
       })
-    ).resolves.toEqual({ cancelled: 1 });
+    ).resolves.toEqual({ cancelled: 1, keptForLaterRun: 0 });
 
     const after = new Map((await store.list()).map((record) => [record.id, record]));
     expect(after.get(stillSelectable)).toMatchObject({
@@ -1515,12 +1525,117 @@ describe('OpenCodePromptDeliveryLedger', () => {
     expect(after.get(visibleReply)).toEqual(before.get(visibleReply));
   });
 
+  it('cancels only the work the stopping run owned', async () => {
+    // One lane, two runs: a force stop of run-a runs while a relaunch has
+    // already published run-b into the same lane and queued work there.
+    const store = createStore();
+    const seed = async (input: {
+      inboxMessageId: string;
+      runId: string | null;
+      now: string;
+    }): Promise<string> =>
+      (
+        await store.ensurePending({
+          teamName: 'team-a',
+          memberName: 'jack',
+          laneId: 'secondary:opencode:jack',
+          runId: input.runId,
+          inboxMessageId: input.inboxMessageId,
+          inboxTimestamp: '2026-04-25T09:59:00.000Z',
+          source: 'watcher',
+          replyRecipient: 'user',
+          payloadHash: `sha256:${input.inboxMessageId}`,
+          now: input.now,
+        })
+      ).id;
+    const stoppingRunEarly = await seed({
+      inboxMessageId: 'msg-a-early',
+      runId: 'run-a',
+      now: '2026-04-25T10:00:00.000Z',
+    });
+    const stoppingRunLate = await seed({
+      inboxMessageId: 'msg-a-late',
+      runId: 'run-a',
+      now: '2026-04-25T10:10:00.000Z',
+    });
+    const laterRun = await seed({
+      inboxMessageId: 'msg-b',
+      runId: 'run-b',
+      now: '2026-04-25T10:10:00.000Z',
+    });
+    const unattributedBefore = await seed({
+      inboxMessageId: 'msg-none-before',
+      runId: null,
+      now: '2026-04-25T09:58:00.000Z',
+    });
+    const unattributedAfter = await seed({
+      inboxMessageId: 'msg-none-after',
+      runId: null,
+      now: '2026-04-25T10:11:00.000Z',
+    });
+
+    await expect(
+      store.cancelNonTerminalRecords({
+        now: '2026-04-25T10:12:00.000Z',
+        reason: 'force_stop_requested: pending delivery cancelled by user force stop',
+        ownedRunIds: ['run-a'],
+        createdAtOrBeforeMs: Date.parse('2026-04-25T10:05:00.000Z'),
+      })
+    ).resolves.toEqual({ cancelled: 3, keptForLaterRun: 2 });
+
+    const statuses = new Map((await store.list()).map((record) => [record.id, record.status]));
+    // Owned by the stopped run whatever the age, plus the unattributed record
+    // that already existed when the stop was asked for.
+    expect(statuses.get(stoppingRunEarly)).toBe('failed_terminal');
+    expect(statuses.get(stoppingRunLate)).toBe('failed_terminal');
+    expect(statuses.get(unattributedBefore)).toBe('failed_terminal');
+    // The relaunch keeps its work, and so does anything that appeared after the
+    // stop was asked for without naming a run.
+    expect(statuses.get(laterRun)).toBe('pending');
+    expect(statuses.get(unattributedAfter)).toBe('pending');
+    await expect(
+      store.listDue({ now: new Date('2026-04-25T10:13:00.000Z'), limit: 10 })
+    ).resolves.toMatchObject([{ id: laterRun }, { id: unattributedAfter }]);
+  });
+
+  it('cancels everything selectable when the caller names no run and no moment', async () => {
+    // Negative control for the fence: an unfenced caller still gets the whole
+    // lane, so the scoping is the fence and not a change of default.
+    const store = createStore();
+    for (const [inboxMessageId, runId] of [
+      ['msg-a', 'run-a'],
+      ['msg-b', 'run-b'],
+      ['msg-none', null],
+    ] as const) {
+      await store.ensurePending({
+        teamName: 'team-a',
+        memberName: 'jack',
+        laneId: 'secondary:opencode:jack',
+        runId,
+        inboxMessageId,
+        inboxTimestamp: '2026-04-25T09:59:00.000Z',
+        source: 'watcher',
+        replyRecipient: 'user',
+        payloadHash: `sha256:${inboxMessageId}`,
+        now: '2026-04-25T10:10:00.000Z',
+      });
+    }
+
+    await expect(
+      store.cancelNonTerminalRecords({
+        now: '2026-04-25T10:12:00.000Z',
+        reason: 'force stop',
+      })
+    ).resolves.toEqual({ cancelled: 3, keptForLaterRun: 0 });
+    expect((await store.list()).every((record) => record.status === 'failed_terminal')).toBe(true);
+  });
+
   it('reports zero cancellations when nothing is in flight', async () => {
     const store = createStore();
 
     await expect(
       store.cancelNonTerminalRecords({ now: '2026-04-25T10:05:00.000Z', reason: 'force stop' })
-    ).resolves.toEqual({ cancelled: 0 });
+    ).resolves.toEqual({ cancelled: 0, keptForLaterRun: 0 });
     await expect(store.list()).resolves.toEqual([]);
   });
 });
