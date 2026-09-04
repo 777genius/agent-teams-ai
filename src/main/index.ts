@@ -712,11 +712,6 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
     );
   }
 
-  if (reason === 'shutdown') {
-    stopPeriodicOpenCodeHostStartupLockPurge?.();
-    stopPeriodicOpenCodeHostStartupLockPurge = null;
-  }
-
   if (reason === 'startup' && !registryCleanupAvailable) {
     logger.warn(
       '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable'
@@ -3018,6 +3013,11 @@ async function shutdownServices(): Promise<void> {
 
     clearStartupTimers();
     clearInboxNotifyTimers();
+    // Ahead of the first awaited step: runShutdownStep stops waiting on a step
+    // that hangs, it does not cancel it, so no awaited step may decide whether
+    // the background lock purge is still running.
+    stopPeriodicOpenCodeHostStartupLockPurge?.();
+    stopPeriodicOpenCodeHostStartupLockPurge = null;
 
     await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
       teamProvisioningService?.setRuntimeRecoveryFailureObserver(null);
