@@ -81,12 +81,21 @@ export async function runOpenCodeStartupRuntimeSweepTail(
     ports.waitMs ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   await waitMs(OPEN_CODE_STARTUP_SWEEP_HOST_SETTLE_MS);
 
-  const sweep = await sweepManagedHosts({ startedBeforeMs: ports.sweepCommandIssuedAtMs });
-  ports.logSweepResult(
-    `opencode_managed_hosts_killed sweep=startup count=${sweep.killed} scanned=${sweep.scanned}`
-  );
-  for (const diagnostic of sweep.diagnostics) {
-    ports.logWarning(`[OpenCode] startup sweep host cleanup: ${diagnostic}`);
+  // Never throws, for the same reason the preflight reap does not: this runs
+  // inside the startup host cleanup and the stale-lock purge comes after it.
+  // A scan that could not read the process table would otherwise take the
+  // purge with it, and the locks of the hosts it did not reach are exactly the
+  // ones the next launch then queues behind.
+  try {
+    const sweep = await sweepManagedHosts({ startedBeforeMs: ports.sweepCommandIssuedAtMs });
+    ports.logSweepResult(
+      `opencode_managed_hosts_killed sweep=startup count=${sweep.killed} scanned=${sweep.scanned}`
+    );
+    for (const diagnostic of sweep.diagnostics) {
+      ports.logWarning(`[OpenCode] startup sweep host cleanup: ${diagnostic}`);
+    }
+  } catch (error) {
+    ports.logWarning(`[OpenCode] Startup sweep host cleanup failed: ${String(error)}`);
   }
 }
 

@@ -100,6 +100,23 @@ describe('runOpenCodeStartupRuntimeSweepTail', () => {
     }
   });
 
+  // The caller runs the stale-lock purge straight after this tail, and the
+  // locks left by hosts the reap could not reach are the ones the next launch
+  // queues behind. A rejected scan must therefore end here, not take the purge
+  // with it.
+  it('reports a failing reap instead of aborting the cleanup that follows it', async () => {
+    const ports = sweepPorts({
+      sweepManagedHosts: () => Promise.reject(new Error('process table unreadable')),
+    });
+
+    await expect(runOpenCodeStartupRuntimeSweepTail(ports)).resolves.toBeUndefined();
+
+    expect(ports.logWarning).toHaveBeenCalledWith(
+      '[OpenCode] Startup sweep host cleanup failed: Error: process table unreadable'
+    );
+    expect(ports.logSweepResult).not.toHaveBeenCalled();
+  });
+
   it('reports what the sweep could not do without failing the startup', async () => {
     const ports = sweepPorts({
       sweepManagedHosts: () =>
