@@ -59,6 +59,8 @@ export interface OpenCodePromptDeliveryLedgerRecord {
   acceptedAt: string | null;
   respondedAt: string | null;
   failedAt: string | null;
+  /** Persisted force cancellation; late automatic writers must leave this row unchanged. */
+  cancelledAt?: string | null;
   inboxReadCommittedAt: string | null;
   inboxReadCommitError: string | null;
   prePromptCursor: string | null;
@@ -176,6 +178,10 @@ export class OpenCodePromptDeliveryLedgerStore {
     await this.store.updateLocked((records) => {
       const existing = records.find((record) => record.id === id);
       if (existing) {
+        if (isOpenCodePromptDeliveryCancelled(existing)) {
+          result = existing;
+          return records;
+        }
         if (existing.payloadHash !== input.payloadHash) {
           const reason = 'opencode_prompt_delivery_payload_mismatch';
           const updated: OpenCodePromptDeliveryLedgerRecord = {
@@ -719,6 +725,68 @@ export class OpenCodePromptDeliveryLedgerStore {
       .slice(0, limit);
   }
 
+  /**
+   * Marks every record the automatic selection can still pick up as
+   * failed_terminal so the retry machinery (watchdog, due-attempt selection)
+   * stops re-attempting them.
+   *
+   * The guard is `isTerminalForAutomaticSelection`, the same predicate
+   * `listDue` and `getActiveForMember` filter by, so what this cancels is
+   * exactly what they can still return. A record that answered in plain text
+   * with no visible reply and no committed inbox read is not finished for that
+   * purpose whatever its status says, and a missing `nextAttemptAt` makes it
+   * due, so a status-only guard left the force stop with work still queued
+   * against it. Records the predicate calls terminal are history and keep the
+   * reason they ended.
+   *
+   * The lane ledger outlives the run that wrote it, so the caller also says
+   * which work is its own: see `isInCancellationScope`.
+   */
+  async cancelNonTerminalRecords(input: {
+    now: string;
+    reason: string;
+    /**
+     * The runs the caller is cancelling for. A record stamped with one of them
+     * is cancelled whatever its age. Empty or omitted means the caller could
+     * not observe a run, and only `createdAtOrBeforeMs` decides.
+     */
+    ownedRunIds?: readonly string[];
+    /**
+     * Cancels a record created at or before this moment whatever its run, so a
+     * caller that observed no run id still cancels the work that existed when
+     * it asked. Omitted means every selectable record is in scope.
+     */
+    createdAtOrBeforeMs?: number;
+  }): Promise<{ cancelled: number; keptForLaterRun: number }> {
+    const ownedRunIds = new Set((input.ownedRunIds ?? []).filter((runId) => runId.trim()));
+    const createdAtOrBeforeMs = input.createdAtOrBeforeMs ?? null;
+    let cancelled = 0;
+    let keptForLaterRun = 0;
+    await this.store.updateLocked((records) =>
+      records.map((record) => {
+        if (isTerminalForAutomaticSelection(record)) {
+          return record;
+        }
+        if (!isInCancellationScope(record, ownedRunIds, createdAtOrBeforeMs)) {
+          keptForLaterRun += 1;
+          return record;
+        }
+        cancelled += 1;
+        return {
+          ...record,
+          status: 'failed_terminal' as const,
+          failedAt: input.now,
+          cancelledAt: input.now,
+          nextAttemptAt: null,
+          lastReason: input.reason,
+          diagnostics: mergeDiagnostics(record.diagnostics, [input.reason]),
+          updatedAt: input.now,
+        };
+      })
+    );
+    return { cancelled, keptForLaterRun };
+  }
+
   async pruneTerminalRecords(input: {
     now: Date;
     respondedRetentionMs?: number;
@@ -762,7 +830,7 @@ export class OpenCodePromptDeliveryLedgerStore {
         if (record.id !== id) {
           return record;
         }
-        updated = updater(record);
+        updated = isOpenCodePromptDeliveryCancelled(record) ? record : updater(record);
         return updated;
       })
     );
@@ -970,6 +1038,7 @@ function isOpenCodePromptDeliveryLedgerRecord(
     isOptionalNullableString(record.acceptedAt) &&
     isOptionalNullableString(record.respondedAt) &&
     isOptionalNullableString(record.failedAt) &&
+    isOptionalNullableString(record.cancelledAt) &&
     isOptionalNullableString(record.inboxReadCommittedAt) &&
     isOptionalNullableString(record.inboxReadCommitError) &&
     isOptionalNullableString(record.prePromptCursor) &&
@@ -1087,6 +1156,15 @@ function isTaskRefArray(value: unknown): value is TaskRef[] {
   );
 }
 
+export function isOpenCodePromptDeliveryCancelled(
+  record: OpenCodePromptDeliveryLedgerRecord
+): boolean {
+  return Boolean(
+    record.cancelledAt ||
+    (record.status === 'failed_terminal' && record.lastReason?.startsWith('force_stop_requested:'))
+  );
+}
+
 function isTerminalForAutomaticSelection(record: OpenCodePromptDeliveryLedgerRecord): boolean {
   if (
     record.status === 'responded' &&
@@ -1097,6 +1175,31 @@ function isTerminalForAutomaticSelection(record: OpenCodePromptDeliveryLedgerRec
     return false;
   }
   return record.status === 'failed_terminal' || record.status === 'responded';
+}
+
+/**
+ * A lane ledger is keyed by lane, not by run, and a lane is reused: a relaunch
+ * of the same team writes its records into the same file. A cancellation must
+ * therefore say what it owns. A record is in scope when the caller observed the
+ * run that stamped it, or when it already existed at the moment the caller
+ * asked; a record that appeared after that moment and carries a run the caller
+ * never saw belongs to whatever started after it, and survives. A record whose
+ * `createdAt` cannot be read is in scope, because an unreadable timestamp is
+ * not evidence of a later run.
+ */
+function isInCancellationScope(
+  record: OpenCodePromptDeliveryLedgerRecord,
+  ownedRunIds: ReadonlySet<string>,
+  createdAtOrBeforeMs: number | null
+): boolean {
+  if (record.runId && ownedRunIds.has(record.runId)) {
+    return true;
+  }
+  if (createdAtOrBeforeMs === null) {
+    return true;
+  }
+  const createdAtMs = Date.parse(record.createdAt);
+  return !Number.isFinite(createdAtMs) || createdAtMs <= createdAtOrBeforeMs;
 }
 
 function compareOpenCodePromptDeliveryDueOrder(
@@ -1124,6 +1227,10 @@ function shouldPruneOpenCodePromptDeliveryRecord(
   respondedRetentionMs: number,
   failedRetentionMs: number
 ): boolean {
+  // Unread inbox rows can outlive the retention window and rebuild a pruned delivery.
+  if (isOpenCodePromptDeliveryCancelled(record)) {
+    return false;
+  }
   if (record.status === 'responded' && record.inboxReadCommittedAt) {
     const committedMs = Date.parse(record.inboxReadCommittedAt);
     return Number.isFinite(committedMs) && nowMs - committedMs >= respondedRetentionMs;

@@ -231,6 +231,64 @@ describe('OpenCodeTeamRuntimeAdapter delivery prompt contracts', () => {
     expect(text).toContain('to="user"');
     expect(text).not.toContain('informational system notice');
   });
+
+  it('carries the replay guard on every delivered app message, whatever the reply contract', async () => {
+    for (const replyRecipient of [undefined, 'user', 'team-lead', 'alice', 'system']) {
+      const text = await deliveredPromptText(replyRecipient);
+
+      expect(text).toContain(
+        'REPLAY GUARD: this same inbound message may reach you more than once'
+      );
+      expect(text).toContain('Before acting, check the current task board and your recent sent');
+      expect(text).toContain('Do NOT redo an action that is already complete');
+      expect(text).toContain('do not create a task that already exists');
+      expect(text).toContain('do not re-send a reply you already sent');
+      expect(text).toContain('Never declare overall completion (for example "ALL DONE")');
+    }
+  });
+
+  it('treats unfinished work as work to resume, not as proof the message was handled', async () => {
+    for (const replyRecipient of [undefined, 'user', 'team-lead', 'alice', 'system']) {
+      const text = await deliveredPromptText(replyRecipient);
+
+      expect(text).toContain(
+        'Work that is only started or partly done is NOT handled: continue it and finish what is missing.'
+      );
+      expect(text).toContain(
+        'Only when everything this message asked for is verifiably complete, end the turn'
+      );
+      // The guard must never accept partial progress as proof of handling: a replay that follows
+      // an interruption would then read "work already started" and end the turn on a half-done job.
+      expect(text).not.toContain('work already started');
+      expect(text).not.toContain('do NOT repeat any action and do NOT send another reply');
+    }
+  });
+
+  it('states the replay guard before the reply instructions it constrains', async () => {
+    const lines = (await deliveredPromptText('team-lead')).split('\n');
+    const guardIndex = lines.findIndex((line) => line.startsWith('REPLAY GUARD:'));
+    const replyIndex = lines.findIndex((line) =>
+      line.startsWith('Required message_send argument envelope')
+    );
+
+    expect(guardIndex).toBeGreaterThanOrEqual(0);
+    expect(replyIndex).toBeGreaterThan(guardIndex);
+  });
+
+  it('keeps the replay guard out of the bootstrap check-in retry envelope', () => {
+    const text = buildOpenCodeRuntimeMessageText({
+      runId: 'run-1',
+      teamName: 'team-a',
+      laneId: 'lane-worker',
+      memberName: 'Worker',
+      cwd: '/repo',
+      text: 'Attach and commit runtime evidence.',
+      bootstrapCheckinRetry: { runtimeSessionId: 'session-1' },
+    });
+
+    expect(text).toContain('<opencode_runtime_bootstrap_checkin_retry>');
+    expect(text).not.toContain('REPLAY GUARD');
+  });
 });
 
 describe('buildOpenCodeRuntimeMessageText bootstrap check-in retry', () => {
@@ -281,6 +339,30 @@ describe('buildOpenCodeRuntimeMessageText bootstrap check-in retry', () => {
 });
 
 describe('buildMemberBootstrapPrompt', () => {
+  it('marks the replayed launch context as history and forbids acting on it', () => {
+    const input = { ...launchInput(), prompt: 'Ship the parser fix.' };
+
+    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, input.expectedMembers[0]));
+
+    expect(briefing).toContain('Team launch context (HISTORICAL');
+    expect(briefing).toContain('Ship the parser fix.');
+    expect(briefing).toContain('Never act on the launch context directly from this briefing');
+    expect(briefing).toContain('do not declare completion (for example "ALL DONE") because of it');
+    // A rebuilt session must never be handed the launch prompt as a live
+    // instruction again; that is the whole failure this guard prevents.
+    expect(briefing).not.toContain('Team launch context:\nShip the parser fix.');
+  });
+
+  it('adds no launch-context section at all when the launch carried no prompt', () => {
+    const input = { ...launchInput(), prompt: '   ' };
+
+    const briefing = unwrapAgentBlock(buildMemberBootstrapPrompt(input, input.expectedMembers[0]));
+
+    expect(briefing).not.toContain('Team launch context');
+    expect(briefing).not.toContain('HISTORICAL');
+    expect(briefing).not.toContain('Never act on the launch context');
+  });
+
   it('wraps the unchanged app-managed briefing in the shared agent block', () => {
     const input = { ...launchInput(), prompt: '  Complete the scoped fix.  ' };
 
@@ -293,14 +375,22 @@ describe('buildMemberBootstrapPrompt', () => {
         '<agent_teams_app_managed_bootstrap_briefing>',
         'AGENT_TEAMS_APP_MANAGED_BOOTSTRAP_V1',
         'You are Worker, a worker on team "team-launch".',
-        'Team launch context:\nComplete the scoped fix.',
+        [
+          'Team launch context (HISTORICAL - already delivered at launch and being executed through the task board):',
+          'Complete the scoped fix.',
+          'The launch context above is background only. It has already been acted on; the task board and inbox are the source of truth for what remains.',
+          'Never act on the launch context directly from this briefing: do not create tasks, do not send messages, and do not declare completion (for example "ALL DONE") because of it.',
+          'Only act on new messages delivered in this turn, or on current task-board state when a new message asks you to.',
+        ].join('\n'),
         'Workflow:\nImplement the task',
         '',
         'This OpenCode session is created, attached, and launch-verified by the desktop app.',
         'Do not call runtime_bootstrap_checkin or member_briefing just to prove launch readiness.',
         'Do NOT create local team files, run join scripts, or search the project for a fake team registry.',
-        'That bootstrap restriction is only about team registry/startup files. It does not restrict assigned project work: when a task requires implementation, fixes, review follow-up, or investigation, you may inspect, read/search, and edit files in the project working directory as your available tools allow.',
+        'That bootstrap restriction is only about team registry/startup files. It does not restrict assigned project work: when a task requires implementation, fixes, review follow-up, or investigation, you may inspect, read/search, and edit the PROJECT files that the task itself requires, as your available tools allow. This never includes creating scripts or files whose purpose is to call Agent Teams.',
         'Use the app MCP tools exposed by the "agent-teams" server for team communication and task state.',
+        'Team communication and task state go ONLY through the Agent Teams MCP server: it is registered for you as the MCP server named "agent-teams" (use GetMcpTools / CallMcpTool with server "agent-teams", or the agent-teams_* / mcp__agent-teams__* tool names if they appear in your tool list). If the "agent-teams" server is missing, stop and report it. Never talk to the Agent Teams HTTP endpoint yourself: do not use curl, node, PowerShell, or any script against 127.0.0.1/mcp or CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL, and do not search ~/.claude, AppData, or netstat for ports, sessions, or task files.',
+        'Never create helper, wrapper, scratch, or dump files (for example _lead_*.js, _tmp_*.txt, *.ps1) in the project working directory or anywhere else to call team tools. If an agent-teams tool is missing, unreachable, or returns an error, stop and report the exact tool name and error text in your reply instead of working around it.',
         'Launch bootstrap is a silent attach, not a user/team conversation turn.',
         'Do not call task_briefing, message_send, or cross_team_send just to announce readiness, say understood, report no tasks, or ask for work.',
         'If the briefing says there are no actionable tasks, stay idle silently.',
@@ -329,6 +419,17 @@ describe('buildMemberBootstrapPrompt', () => {
     // The rationale has to hold for any team on any runtime: no host-specific
     // or model-specific justification may leak into a launch briefing.
     expect(prompt).not.toMatch(/gpu|local model/i);
+  });
+
+  it('does not carry the delivered-message replay guard', () => {
+    const input = launchInput();
+
+    const prompt = buildMemberBootstrapPrompt(input, input.expectedMembers[0]);
+
+    // The launch briefing is not a delivered message: there is nothing to have already
+    // handled, and a replay guard there would tell a fresh member to check a board that
+    // cannot yet reflect any work of its own.
+    expect(prompt).not.toContain('REPLAY GUARD');
   });
 });
 

@@ -2,6 +2,10 @@ import {
   type AnthropicApiKeyHelperRunOwner,
   cleanupRunOwnedAnthropicApiKeyHelper,
 } from './TeamProvisioningAnthropicApiKeyHelperLease';
+import {
+  cancelRunLeadRelayCapture,
+  type LeadRelayCaptureOwner,
+} from './TeamProvisioningLeadRelayCancellation';
 
 import type { TeamProvisioningProgress } from '@shared/types';
 
@@ -24,7 +28,8 @@ async function awaitAllOwnedProcessStops(stops: Promise<void>[]): Promise<void> 
   }
 }
 
-export interface TeamProvisioningStopRun extends AnthropicApiKeyHelperRunOwner {
+export interface TeamProvisioningStopRun
+  extends AnthropicApiKeyHelperRunOwner, LeadRelayCaptureOwner {
   runId: string;
   teamName: string;
   processKilled: boolean;
@@ -157,6 +162,7 @@ async function stopTeamRuntimeFlow<TRun extends TeamProvisioningStopRun>(
     }
     return;
   }
+  cancelRunLeadRelayCapture(run);
   if (run.processKilled || run.cancelRequested) {
     await awaitAllOwnedProcessStops([
       ports.killTeamProcessAndWait(run.child),

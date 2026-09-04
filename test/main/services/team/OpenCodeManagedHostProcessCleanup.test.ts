@@ -332,6 +332,96 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
     expect(result.candidates[0]).toMatchObject({ pid: 400, action: 'killed' });
   });
 
+  it('keeps a managed process that started after the force sweep was requested', async () => {
+    const killProcess = vi.fn();
+    const requestedAtMs = Date.parse('2026-05-13T17:00:00.000Z');
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'darwin',
+      startedBeforeMs: requestedAtMs,
+      listProcessRows: () =>
+        resolved([
+          {
+            pid: 401,
+            ppid: 123,
+            command: '/opt/homebrew/bin/opencode serve --hostname 127.0.0.1 --port 3000',
+          },
+        ]),
+      readProcessDetails: () => resolved(MANAGED_DETAILS),
+      readProcessStartTimeMs: () => resolved(requestedAtMs + 1_000),
+      disposeServeHost: () => resolved(undefined),
+      isProcessAlive: () => true,
+      killProcess,
+    });
+
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(result.killed).toBe(0);
+    expect(result.candidates[0]).toMatchObject({ pid: 401, action: 'kept_recent' });
+  });
+
+  it('kills a managed process that started before the force sweep was requested', async () => {
+    const killProcess = vi.fn();
+    const requestedAtMs = Date.parse('2026-05-13T17:00:00.000Z');
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'darwin',
+      startedBeforeMs: requestedAtMs,
+      listProcessRows: () =>
+        resolved([
+          {
+            pid: 401,
+            ppid: 123,
+            command: '/opt/homebrew/bin/opencode serve --hostname 127.0.0.1 --port 3000',
+          },
+        ]),
+      readProcessDetails: () => resolved(MANAGED_DETAILS),
+      readProcessStartTimeMs: () => resolved(requestedAtMs - 1_000),
+      disposeServeHost: () => resolved(undefined),
+      isProcessAlive: () => false,
+      killProcess,
+    });
+
+    expect(killProcess).toHaveBeenCalledWith(401);
+    expect(result.candidates[0]).toMatchObject({ pid: 401, action: 'killed' });
+  });
+
+  it('never kills a standalone opencode serve without the managed markers, even in force mode', async () => {
+    const killProcess = vi.fn();
+    const forceKillProcess = vi.fn();
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'darwin',
+      listProcessRows: () =>
+        resolved([
+          {
+            pid: 909,
+            ppid: 1,
+            command: '/usr/local/bin/opencode serve --hostname 127.0.0.1 --port 4096',
+          },
+        ]),
+      readProcessDetails: () =>
+        resolved('/usr/local/bin/opencode serve --hostname 127.0.0.1 --port 4096 HOME=/home/user'),
+      disposeServeHost: () => resolved(undefined),
+      isProcessAlive: () => true,
+      killProcess,
+      forceKillProcess,
+    });
+
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(forceKillProcess).not.toHaveBeenCalled();
+    expect(result.killed).toBe(0);
+    expect(result.candidates).toEqual([
+      expect.objectContaining({
+        pid: 909,
+        action: 'kept_unmanaged',
+        reason: 'process does not carry Agent Teams managed OpenCode environment markers',
+      }),
+    ]);
+  });
+
   it('escalates force cleanup when a managed OpenCode serve process survives SIGTERM', async () => {
     const killProcess = vi.fn();
     let processAlive = true;

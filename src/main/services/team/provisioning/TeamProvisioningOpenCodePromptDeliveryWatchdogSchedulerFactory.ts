@@ -1,7 +1,10 @@
+import { OPENCODE_STALE_PENDING_TERMINAL_REASON } from '../opencode/delivery/OpenCodePromptDeliveryStalePendingPolicy';
 import {
   OpenCodePromptDeliveryWatchdogScheduler,
   type OpenCodePromptDeliveryWatchdogSchedulerDependencies,
 } from '../opencode/delivery/OpenCodePromptDeliveryWatchdogScheduler';
+
+import type { OpenCodeMemberInboxRelayResult } from './TeamProvisioningOpenCodeMemberInboxRelay';
 
 export interface TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost {
   canDeliverToOpenCodeRuntimeForTeam(teamName: string): boolean;
@@ -12,8 +15,8 @@ export interface TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceH
   relayOpenCodeMemberInboxMessages(
     teamName: string,
     memberName: string,
-    options: { onlyMessageId: string; source: 'watchdog' }
-  ): Promise<unknown>;
+    options: { onlyMessageId?: string; source: 'watchdog' }
+  ): Promise<OpenCodeMemberInboxRelayResult>;
   inboxReader: {
     getMessagesFor(
       teamName: string,
@@ -50,10 +53,25 @@ export function createOpenCodePromptDeliveryWatchdogSchedulerDepsFromService(
     recoverBeforeDelivery: (input) =>
       service.tryRecoverOpenCodeRuntimeLaneForConfiguredMemberBeforeDelivery(input),
     relay: async (input) => {
-      await service.relayOpenCodeMemberInboxMessages(input.teamName, input.memberName, {
-        onlyMessageId: input.messageId,
-        source: 'watchdog',
-      });
+      const result = await service.relayOpenCodeMemberInboxMessages(
+        input.teamName,
+        input.memberName,
+        {
+          onlyMessageId: input.messageId,
+          source: 'watchdog',
+        }
+      );
+      // Terminal ledger writes do not emit an inbox event. Wake queued rows once,
+      // while preserving the failed row as unread for explicit manual recovery.
+      if (
+        result.lastDelivery?.ledgerStatus === 'failed_terminal' &&
+        result.lastDelivery.reason === OPENCODE_STALE_PENDING_TERMINAL_REASON &&
+        service.canDeliverToOpenCodeRuntimeForTeam(input.teamName)
+      ) {
+        await service.relayOpenCodeMemberInboxMessages(input.teamName, input.memberName, {
+          source: 'watchdog',
+        });
+      }
     },
     getInboxMessages: (input) =>
       service.inboxReader.getMessagesFor(input.teamName, input.memberName),

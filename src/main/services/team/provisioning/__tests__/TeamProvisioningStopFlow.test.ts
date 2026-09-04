@@ -132,6 +132,31 @@ function makePorts(
 }
 
 describe('team provisioning stop flow', () => {
+  it('cancels the owning relay before waiting for process termination', async () => {
+    const rejectOnce = vi.fn();
+    const run = { ...makeRun('run-1'), leadRelayCapture: { rejectOnce } };
+    const ports = makePorts(
+      'team-a',
+      new Map([[run.runId, run]]),
+      new Map([['team-a', run.runId]])
+    );
+    let finishStop!: () => void;
+    ports.killTeamProcessAndWait.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishStop = resolve;
+        })
+    );
+    const stopping = stopTeamFlow('team-a', ports);
+    await vi.waitFor(() => expect(ports.killTeamProcessAndWait).toHaveBeenCalled());
+    expect(rejectOnce).toHaveBeenCalledOnce();
+    expect(run.leadRelayCapture).toBeNull();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    finishStop();
+    await stopping;
+    expect(ports.cleanupRun).toHaveBeenCalledWith(run);
+  });
+
   it('cancels pending adapter launches before waiting for a slow roster-aware team stop', async () => {
     let releaseInitialStop!: () => void;
     const initialStopGate = new Promise<void>((resolve) => {

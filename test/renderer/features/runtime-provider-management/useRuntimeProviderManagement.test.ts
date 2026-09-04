@@ -1,5 +1,5 @@
 import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot as createReactRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -126,9 +126,16 @@ function createEmptyDirectoryResponse(
 }
 
 describe('useRuntimeProviderManagement', () => {
+  const roots = new Set<ReturnType<typeof createReactRoot>>();
   let host: HTMLDivElement;
   let state: RuntimeProviderManagementState | null = null;
   let actions: RuntimeProviderManagementActions | null = null;
+
+  function createRoot(container: HTMLDivElement): ReturnType<typeof createReactRoot> {
+    const root = createReactRoot(container);
+    roots.add(root);
+    return root;
+  }
 
   function Harness(): React.ReactElement {
     const hook = useRuntimeProviderManagement({
@@ -199,7 +206,12 @@ describe('useRuntimeProviderManagement', () => {
     actions = null;
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Removing DOM alone leaves effects alive and able to overwrite the next test's state.
+    await act(async () => {
+      for (const root of roots) root.unmount();
+    });
+    roots.clear();
     Reflect.deleteProperty(window, 'electronAPI');
     document.body.innerHTML = '';
     vi.unstubAllGlobals();
