@@ -3,6 +3,7 @@ import {
   type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
 import { killProcessByPid, killProcessByPidAndWait } from '@main/utils/processKill';
+import { readProcessStartTimeMs } from '@main/utils/processStartTime';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { execFile, type ExecFileException } from 'child_process';
 
@@ -56,6 +57,27 @@ const MANAGED_INLINE_OPENCODE_CONFIG_PATTERNS = [
   /OPENCODE_CONFIG_CONTENT=[\s\S]*"(?:agent-teams|agent_teams|mcp__agent-teams|mcp__agent_teams)_\*"/i,
 ] as const;
 
+/**
+ * The managed-host sweep is the only cleanup step that reaches processes this
+ * app never recorded a pid for, so every path that uses it goes through a port
+ * rather than calling the sweep directly: a deployment that would rather never
+ * touch an unattributed host hands in a port that reports itself disabled, and
+ * each caller then confines itself to what it can name.
+ */
+export interface OpenCodeManagedHostSweepPort {
+  isEnabled(): boolean;
+  sweepManagedHosts(input: { startedBeforeMs: number }): Promise<OpenCodeManagedHostCleanupResult>;
+}
+
+export const DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT: OpenCodeManagedHostSweepPort = {
+  isEnabled: () => true,
+  sweepManagedHosts: (input) =>
+    cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      startedBeforeMs: input.startedBeforeMs,
+    }),
+};
+
 export async function cleanupManagedOpenCodeServeProcesses(
   options: OpenCodeManagedHostProcessCleanupOptions
 ): Promise<OpenCodeManagedHostCleanupResult> {
@@ -80,8 +102,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
     options.readProcessDetails ??
     (platform === 'win32' ? async () => null : readNativeProcessCommandWithEnv);
   const readStartTimeMs =
-    options.readProcessStartTimeMs ??
-    (platform === 'win32' ? readWindowsProcessStartTimeMs : readNativeProcessStartTimeMs);
+    options.readProcessStartTimeMs ?? ((pid: number) => readProcessStartTimeMs(pid, platform));
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
   const readServeHostConfig = options.readServeHostConfig ?? readOpenCodeServeHostConfig;
   const killProcess = options.killProcess;
@@ -467,39 +488,6 @@ async function readOpenCodeServeHostConfig(baseUrl: string): Promise<string | nu
 
 async function readNativeProcessCommandWithEnv(pid: number): Promise<string | null> {
   return execFileText('ps', ['eww', '-p', String(pid), '-o', 'command='], 2_000, 2 * 1024 * 1024);
-}
-
-async function readNativeProcessStartTimeMs(pid: number): Promise<number | null> {
-  const output = await execFileText('ps', ['-p', String(pid), '-o', 'lstart='], 2_000, 64 * 1024);
-  if (!output) {
-    return null;
-  }
-  const parsed = Date.parse(output.trim());
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-async function readWindowsProcessStartTimeMs(pid: number): Promise<number | null> {
-  const normalizedPid = Math.trunc(pid);
-  if (!Number.isFinite(normalizedPid) || normalizedPid <= 0) {
-    return null;
-  }
-
-  const script = [
-    '$ErrorActionPreference = "Stop"',
-    `$process = Get-Process -Id ${normalizedPid} -ErrorAction Stop`,
-    '$process.StartTime.ToUniversalTime().ToString("o")',
-  ].join('; ');
-  const output = await execFileText(
-    'powershell.exe',
-    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
-    2_000,
-    64 * 1024
-  );
-  if (!output) {
-    return null;
-  }
-  const parsed = Date.parse(output.trim());
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function isNativeProcessAlive(pid: number): boolean {
