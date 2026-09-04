@@ -55,8 +55,6 @@ function png(width, height, diagram = false) {
 export function richMarkdown(edit = false) {
   return `# Desktop announcements ${edit ? 'UPDATED SAME ID' : 'rich fixture'} 🚀
 
-![Blue violet banner](assets/banner.png)
-
 ## Typography and structure
 
 **Bold**, *italic*, ***both***, ~~struck~~ and \`inline code\`. Русский текст, 日本語, café, emoji 👩🏽‍💻.
@@ -173,6 +171,7 @@ export async function publishFixture(root, scenario = 'ten') {
         publishedAt: new Date(now - age).toISOString(),
         showToNewUsers: scenario !== 'cohort',
         minUsageMinutes: 30,
+        heroImage: 'assets/banner.png',
       })
     );
     // Stable timestamps ensure editing the same ID does not accidentally create new order keys.
@@ -199,6 +198,10 @@ export async function publishFixture(root, scenario = 'ten') {
           const meta = { ...item };
           delete meta.bodyPath;
           delete meta.bodySha256;
+          if (meta.heroImagePath) {
+            meta.heroImage = meta.heroImagePath.slice(meta.heroImagePath.indexOf('/assets/') + 1);
+            delete meta.heroImagePath;
+          }
           return [meta.id, meta];
         })
       )

@@ -79,86 +79,107 @@ export const AnnouncementHost = ({
           <DialogTitle className="text-xl font-semibold leading-tight tracking-tight">
             {host.article?.announcement.title ?? t('announcements.historyTitle')}
           </DialogTitle>
-          <DialogDescription
-            className={host.article ? 'sr-only' : 'mt-1 text-xs leading-relaxed'}
-          >
+          <DialogDescription className={host.article ? 'sr-only' : 'mt-1 text-xs leading-relaxed'}>
             {host.article
               ? date(host.article.announcement.publishedAt)
               : t('announcements.description')}
           </DialogDescription>
         </header>
         <div
-          className="min-h-0 min-w-0 overflow-y-auto overscroll-contain px-6 py-5"
+          className="min-h-0 min-w-0 overflow-y-auto overscroll-contain"
           style={{ maxHeight: 'min(66vh, 720px)' }}
         >
-          {statusKey && (
-            <p
-              role="status"
-              className="mb-4 rounded-lg bg-[var(--color-surface-raised)] p-3 text-xs leading-relaxed text-[var(--color-text-muted)]"
-            >
-              {t(statusKey)}
-            </p>
-          )}
-          {host.error && (
-            <p role="alert" className="mb-4 text-sm text-[var(--color-text-muted)]">
-              {t('announcements.loadError')}
-            </p>
-          )}
-          {host.loading && (
-            <p role="status" className="py-5 text-center text-sm text-[var(--color-text-muted)]">
-              {t('announcements.loading')}
-            </p>
-          )}
           {host.article ? (
             <article>
-              {Date.now() >= Date.parse(host.article.announcement.validUntil) && (
-                <p className="mb-5 text-xs text-[var(--color-text-muted)]">
-                  {t('announcements.expired')}
-                </p>
-              )}
               <AnnouncementMarkdown
                 markdown={host.article.markdown}
                 bodyUrl={host.article.bodyUrl}
+                heroImagePath={host.article.announcement.heroImagePath}
+                heroImageAlt={host.article.announcement.title}
+                notice={
+                  <>
+                    {statusKey && (
+                      <p
+                        role="status"
+                        className="mb-4 rounded-lg bg-[var(--color-surface-raised)] p-3 text-xs leading-relaxed text-[var(--color-text-muted)]"
+                      >
+                        {t(statusKey)}
+                      </p>
+                    )}
+                    {host.error && (
+                      <p role="alert" className="mb-4 text-sm text-[var(--color-text-muted)]">
+                        {t('announcements.loadError')}
+                      </p>
+                    )}
+                    {Date.now() >= Date.parse(host.article.announcement.validUntil) && (
+                      <p className="mb-5 text-xs text-[var(--color-text-muted)]">
+                        {t('announcements.expired')}
+                      </p>
+                    )}
+                  </>
+                }
               />
             </article>
           ) : (
-            !host.loading && (
-              <div className="space-y-2">
-                {items.length === 0 && (
-                  <div className="py-10 text-center">
-                    <Newspaper className="mx-auto mb-4 size-8 text-[var(--color-text-muted)]" />
-                    <p className="text-sm font-medium text-[var(--color-text)]">
-                      {t('announcements.empty')}
-                    </p>
-                    <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-                      {t('announcements.emptyDescription')}
-                    </p>
-                  </div>
-                )}
-                {items.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    disabled={unavailable}
-                    onClick={() => void host.openArticle(item.id)}
-                    className="group flex w-full items-center justify-between gap-5 rounded-xl border border-[var(--color-border)] p-4 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-border-emphasis)] disabled:opacity-50"
-                  >
-                    <span className="min-w-0">
-                      <span className="mb-2 block text-xs text-[var(--color-text-muted)]">
-                        {date(item.publishedAt)}
-                        {Date.now() >= Date.parse(item.validUntil)
-                          ? ` · ${t('announcements.expired')}`
-                          : ''}
+            <div className="px-6 py-5">
+              {statusKey && (
+                <p
+                  role="status"
+                  className="mb-4 rounded-lg bg-[var(--color-surface-raised)] p-3 text-xs leading-relaxed text-[var(--color-text-muted)]"
+                >
+                  {t(statusKey)}
+                </p>
+              )}
+              {host.error && (
+                <p role="alert" className="mb-4 text-sm text-[var(--color-text-muted)]">
+                  {t('announcements.loadError')}
+                </p>
+              )}
+              {host.loading ? (
+                <p
+                  role="status"
+                  className="py-5 text-center text-sm text-[var(--color-text-muted)]"
+                >
+                  {t('announcements.loading')}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {items.length === 0 && (
+                    <div className="py-10 text-center">
+                      <Newspaper className="mx-auto mb-4 size-8 text-[var(--color-text-muted)]" />
+                      <p className="text-sm font-medium text-[var(--color-text)]">
+                        {t('announcements.empty')}
+                      </p>
+                      <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+                        {t('announcements.emptyDescription')}
+                      </p>
+                    </div>
+                  )}
+                  {items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      disabled={unavailable}
+                      onClick={() => void host.openArticle(item.id)}
+                      className="group flex w-full items-center justify-between gap-5 rounded-xl border border-[var(--color-border)] p-4 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-border-emphasis)] disabled:opacity-50"
+                    >
+                      <span className="min-w-0">
+                        <span className="mb-2 block text-xs text-[var(--color-text-muted)]">
+                          {date(item.publishedAt)}
+                          {Date.now() >= Date.parse(item.validUntil)
+                            ? ` · ${t('announcements.expired')}`
+                            : ''}
+                        </span>
+                        <span className="block break-words text-sm font-medium text-[var(--color-text)]">
+                          {item.title}
+                        </span>
                       </span>
-                      <span className="block break-words text-sm font-medium text-[var(--color-text)]">
-                        {item.title}
-                      </span>
-                    </span>
-                    <ArrowUpRight className="size-4 shrink-0 text-[var(--color-text-muted)]" />
-                  </button>
-                ))}
-              </div>
-            )
+                      <ArrowUpRight className="size-4 shrink-0 text-[var(--color-text-muted)]" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
         <footer className="flex items-center justify-between gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface-raised)] px-6 py-2.5">

@@ -33,7 +33,7 @@ Reseeding refuses an active sandbox Electron process. Preserve existing state fi
 
 ## Rich Markdown and safety
 
-Fixture content covers headings 1-6, bold/italic/strike, nested quotes, ordered/nested/task lists, GFM rich table and links, inline code, TypeScript/Python/JSON/Bash/text fences, 35 long code lines, an unbroken word, Cyrillic/Japanese/emoji, a wide PNG banner, authored raster pipeline, and tiny GIF.
+Fixture content covers headings 1-6, bold/italic/strike, nested quotes, ordered/nested/task lists, GFM rich table and links, inline code, TypeScript/Python/JSON/Bash/text fences, 35 long code lines, an unbroken word, Cyrillic/Japanese/emoji, an edge-to-edge 1100 x 240 title banner, authored raster pipeline, and tiny GIF.
 
 - [ ] Review desktop wide/narrow widths in light and dark themes. Capture actual renderer PNGs for each. Check modal title/footer, body scrolling, table/code horizontal scrolling, no viewport overflow, and readable colors.
 - [ ] Scroll entire document and inspect all three loaded images. `--verify --scenario rich` checks body completion, image loading and viewport overflow; capture additional scrolled screenshots for table/code sections.

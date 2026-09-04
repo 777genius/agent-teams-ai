@@ -112,7 +112,7 @@ if (mode === '--seed') {
               await publishFixture(manifest.root, next);
               offline = false;
             }
-        });
+          });
         await tail;
         res.writeHead(204, { 'X-Content-Type-Options': 'nosniff' });
         res.end();
@@ -192,20 +192,26 @@ if (mode === '--seed') {
   assert.equal(pages.length, 1, 'Expected one dev:mcp renderer');
   const client = await connectCdp(pages[0].webSocketDebuggerUrl);
   try {
-    if (scenario === 'rich')
-      await client.inspect(`(async () => {
+    if (scenario === 'rich') {
+      const scroll = await client.inspect(`(() => {
         const scroller = document.querySelector('[role="dialog"] [class*="overflow-y-auto"]');
-        if (!scroller) return false;
-        for (let top = 0; top <= scroller.scrollHeight; top += Math.max(200, scroller.clientHeight / 2)) {
-          scroller.scrollTop = top;
-          await new Promise(resolve => setTimeout(resolve, 80));
-        }
-        scroller.scrollTop = 0;
-        await new Promise(resolve => setTimeout(resolve, 250));
-        return true;
+        return scroller ? { height: scroller.scrollHeight, step: Math.max(200, scroller.clientHeight / 2) } : null;
       })()`);
+      assert(scroll, 'Rich article scroller not found');
+      assert(scroll.height / scroll.step < 100, 'Rich article exceeds bounded scroll steps');
+      for (let top = 0; top <= scroll.height; top += scroll.step) {
+        await client.inspect(
+          `document.querySelector('[role="dialog"] [class*="overflow-y-auto"]').scrollTop = ${top}`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 80));
+      }
+      await client.inspect(
+        `document.querySelector('[role="dialog"] [class*="overflow-y-auto"]').scrollTop = 0`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
     const state = await client.inspect(
-      `(() => ({ text: document.body.innerText, unsafe: window.__announcementUnsafeExecuted === true, badLinks: [...document.querySelectorAll('[role="dialog"] article a')].map(a=>a.getAttribute('href')).filter(h=>h && /^(javascript|file|command|task|team|vscode|data):/i.test(h)), dialogs: [...document.querySelectorAll('[role="dialog"]')].map(e=>e.textContent), images: [...document.images].map(e=>({alt:e.alt,loaded:e.complete && e.naturalWidth>0})), overflow: document.documentElement.scrollWidth > innerWidth }))()`
+      `(() => { const dialog = document.querySelector('[role="dialog"]'); const header = dialog?.querySelector('header'); const hero = dialog?.querySelector('[data-announcement-hero]'); const scroller = hero?.closest('[class*="overflow-y-auto"]'); const sr = scroller?.getBoundingClientRect(); const hr = header?.getBoundingClientRect(); const ir = hero?.getBoundingClientRect(); return { text: document.body.innerText, unsafe: window.__announcementUnsafeExecuted === true, badLinks: [...document.querySelectorAll('[role="dialog"] article a')].map(a=>a.getAttribute('href')).filter(h=>h && /^(javascript|file|command|task|team|vscode|data):/i.test(h)), dialogs: [...document.querySelectorAll('[role="dialog"]')].map(e=>e.textContent), images: [...document.images].map(e=>({alt:e.alt,loaded:e.complete && e.naturalWidth>0})), hero: hero ? { loaded: hero.tagName !== 'IMG' || (hero.complete && hero.naturalWidth > 0), left: ir.left, right: ir.right, top: ir.top, ratio: ir.width / ir.height, contentLeft: sr.left, contentRight: sr.right, headerBottom: hr.bottom } : null, overflow: document.documentElement.scrollWidth > innerWidth }; })()`
     );
     assert.equal(state.unsafe, false);
     assert.equal(state.badLinks.length, 0);
@@ -219,11 +225,12 @@ if (mode === '--seed') {
     if (scenario === 'rich') {
       assert(state.text.includes('End of rich fixture.'), 'Rich body not open');
       assert.equal(state.overflow, false, 'Viewport has horizontal overflow');
-      for (const alt of [
-        'Blue violet banner',
-        'Pipeline diagram: three blue stages connected in sequence',
-        'Tiny GIF',
-      ])
+      assert(state.hero?.loaded, 'Hero image did not load');
+      assert(Math.abs(state.hero.left - state.hero.contentLeft) < 1, 'Hero is not flush left');
+      assert(Math.abs(state.hero.right - state.hero.contentRight) < 1, 'Hero is not flush right');
+      assert(Math.abs(state.hero.top - state.hero.headerBottom) < 1, 'Hero is not flush to header');
+      assert(Math.abs(state.hero.ratio - 55 / 12) < 0.05, 'Hero aspect ratio changed');
+      for (const alt of ['Pipeline diagram: three blue stages connected in sequence', 'Tiny GIF'])
         assert(
           state.images.some((image) => image.alt === alt && image.loaded),
           `Image did not load: ${alt}`

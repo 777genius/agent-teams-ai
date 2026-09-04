@@ -1,4 +1,7 @@
-import { ANNOUNCEMENTS_MAX_ASSET_REQUESTS, ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS } from '../../contracts';
+import {
+  ANNOUNCEMENTS_MAX_ASSET_REQUESTS,
+  ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS,
+} from '../../contracts';
 import {
   consumeAnnouncement,
   createAnnouncementState,
@@ -32,6 +35,7 @@ const summarize = (item: Announcement): AnnouncementSummary => ({
   publishedAt: item.publishedAt,
   validUntil: item.validUntil,
   status: item.status,
+  ...(item.heroImagePath ? { heroImagePath: item.heroImagePath } : {}),
 });
 
 export interface AnnouncementsServiceOptions {
@@ -577,10 +581,7 @@ export class AnnouncementsService {
       if (load.consumers.size === 0 && this.assetLoads.get(url) === load) load.controller.abort();
     }
   }
-  cancelAsset(
-    requestId: string,
-    context: Pick<AnnouncementWindowContext, 'windowId'>
-  ): void {
+  cancelAsset(requestId: string, context: Pick<AnnouncementWindowContext, 'windowId'>): void {
     const requestKey = this.assetRequestKey(context.windowId, requestId);
     const url = this.assetRequests.get(requestKey);
     if (!url) return;

@@ -61,6 +61,10 @@ export function normalizeMetadata(value, folder) {
     !Number.isSafeInteger(minUsageMinutes * 60000)
   )
     fail(`${folder}: invalid minUsageMinutes`);
+  const heroImage =
+    value.heroImage === undefined
+      ? undefined
+      : localImagePath(value.heroImage, `${folder}.heroImage`);
   return {
     id: value.id,
     title: value.title.trim(),
@@ -69,6 +73,7 @@ export function normalizeMetadata(value, folder) {
     status: value.status,
     showToNewUsers,
     minUsageMinutes,
+    ...(heroImage ? { heroImage } : {}),
   };
 }
 
@@ -85,6 +90,16 @@ function portable(name) {
     /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)
   )
     fail(`nonportable filename: ${name}`);
+}
+
+function localImagePath(value, field) {
+  if (typeof value !== 'string' || !value.startsWith('assets/') || !IMAGE.test(value))
+    fail(`${field} must name a local image under assets/`);
+  const segments = value.split('/');
+  if (segments.length < 2 || segments.some((segment) => segment === '.' || segment === '..'))
+    fail(`${field} must name a local image under assets/`);
+  for (const segment of segments) portable(segment);
+  return value;
 }
 
 async function entries(dir) {
@@ -222,6 +237,8 @@ export async function generateAnnouncements({
     }
     const files = names.includes('assets') ? await assets(path.join(dir, 'assets')) : new Map();
     validateImages(markdown, files, folder);
+    if (meta.heroImage && !files.has(meta.heroImage))
+      fail(`${folder}: heroImage must name an existing local asset`);
     files.set('body.md', body);
     const manifest = [...files]
       .sort(([a], [b]) => compare(a, b))
@@ -230,7 +247,13 @@ export async function generateAnnouncements({
     if (meta.status === 'draft' || meta.status === 'withdrawn') continue;
     const prefix = `content/${meta.id}/${bundle}`;
     for (const [name, data] of files) outputFiles.set(`${prefix}/${name}`, data);
-    items.push({ ...meta, bodyPath: `/announcements/${prefix}/body.md`, bodySha256: sha(body) });
+    const { heroImage, ...feedMeta } = meta;
+    items.push({
+      ...feedMeta,
+      bodyPath: `/announcements/${prefix}/body.md`,
+      bodySha256: sha(body),
+      ...(heroImage ? { heroImagePath: `/announcements/${prefix}/${heroImage}` } : {}),
+    });
   }
   if (items.length > 1000) fail('feed exceeds 1000 items');
   items.sort((a, b) => compare(b.publishedAt, a.publishedAt) || compare(b.id, a.id));

@@ -54,7 +54,12 @@ describe('remote Markdown boundary', () => {
     await act(async () =>
       root.render(
         <React.StrictMode>
-          <AnnouncementMarkdown markdown={markdown} bodyUrl={base} />
+          <AnnouncementMarkdown
+            markdown={markdown}
+            bodyUrl={base}
+            heroImagePath="/announcements/content/release/abcdef/assets/demo.gif"
+            heroImageAlt="Release cover"
+          />
         </React.StrictMode>
       )
     );
@@ -69,6 +74,11 @@ describe('remote Markdown boundary', () => {
       'data:image/png;base64,iVBORw0KGgo='
     );
     expect(mount.querySelector('img')?.getAttribute('referrerpolicy')).toBe('no-referrer');
+    const hero = mount.querySelector('[data-announcement-hero]');
+    expect(hero?.getAttribute('alt')).toBe('Release cover');
+    expect(hero?.className).toContain('aspect-[55/12]');
+    expect(hero?.className).toContain('w-full');
+    expect(loadAsset).toHaveBeenCalledTimes(1);
     expect(mount.querySelector('blockquote')).not.toBeNull();
     expect(mount.querySelector('input[type="checkbox"]')).not.toBeNull();
     expect(mount.querySelector('script,iframe')).toBeNull();

@@ -15,6 +15,8 @@ Create a lowercase slug directory (1-80 characters, letters/digits/hyphens), wit
 
 Defaults: `validUntil` is 14 days after publication, `showToNewUsers` is true, `minUsageMinutes` is 30. Explicit false and zero are preserved. `validUntil` must be later than publication; null is invalid. Dates need timezone information. Title is plain text, max 200 characters. Unknown metadata fields do not affect output.
 
+Set the optional title banner in `meta.json` with `"heroImage": "assets/hero.png"`. The file must be a local PNG, JPEG, GIF, WebP or AVIF inside that announcement's `assets/` directory. The generator publishes it as an immutable `heroImagePath`; the desktop renders it edge to edge directly below the header at a 55:12 aspect ratio. Use a 1100 x 240 image to avoid cropping.
+
 Reference images using `![Description](assets/banner.webp)`. Inline and reference-style images must resolve to local assets. Supported extensions: png, jpg, jpeg, gif, webp, avif. Filenames use portable ASCII letters/digits/dot/underscore/hyphen; reserved Windows filenames, case collisions, symlinks, traversal and unlisted files are rejected. Limits: 5 MiB per image, 256 KiB per body, 512 KiB/1000 items per feed. Raw bytes, including CRLF, are preserved. HTML is not a supported content format; the desktop reader sanitizes Markdown.
 
 Change status to `published` to publish, `archived` to retain manual history without automatic display, or `withdrawn` to remove it from the feed. Drafts are excluded. Future publications are included in static output but hidden by clients until their date. None of these statuses make committed content private.

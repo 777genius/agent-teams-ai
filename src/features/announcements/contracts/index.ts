@@ -29,6 +29,7 @@ export interface AnnouncementSummary extends AnnouncementOrderKey {
   title: string;
   validUntil: string;
   status: 'published' | 'archived';
+  heroImagePath?: string;
 }
 
 export interface Announcement extends AnnouncementSummary {

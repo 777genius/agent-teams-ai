@@ -28,6 +28,7 @@ async function fixture(meta = {}) {
     title: ' Example ',
     publishedAt: '2026-09-04T12:00:00Z',
     status: 'published',
+    heroImage: 'assets/banner.png',
     ...meta,
   };
   await writeFile(path.join(dir, 'meta.json'), JSON.stringify(value));
@@ -67,6 +68,10 @@ test('deterministic bytes, defaults, CRLF hash and local HTTP paths', async () =
   assert.equal(feed.items[0].validUntil, '2026-09-18T12:00:00.000Z');
   assert.equal(feed.items[0].minUsageMinutes, 30);
   assert.equal(feed.items[0].showToNewUsers, true);
+  assert.match(
+    feed.items[0].heroImagePath,
+    /^\/announcements\/content\/example\/[a-f0-9]{64}\/assets\/banner\.png$/
+  );
   const server = createServer(async (req, res) => {
     try {
       res.end(await readFile(path.join(path.dirname(f.outputDir), req.url)));
@@ -132,6 +137,9 @@ test('bad metadata rejects entire build', async () => {
     { minUsageMinutes: 1.5 },
     { minUsageMinutes: Number.MAX_SAFE_INTEGER },
     { showToNewUsers: 'false' },
+    { heroImage: null },
+    { heroImage: '../banner.png' },
+    { heroImage: 'https://example.com/banner.png' },
     { id: '../example' },
     { status: 'other' },
     { title: '<script>' },
@@ -159,6 +167,9 @@ test('missing body/image, traversal, symlinks, nonportable files, invalid utf8 a
   await rm(path.join(f.dir, 'body.md'));
   await assert.rejects(generateAnnouncements(f), /ENOENT/);
   await writeFile(path.join(f.dir, 'body.md'), 'ok');
+  await metadata(f, { heroImage: 'assets/missing.png' });
+  await assert.rejects(generateAnnouncements(f), /heroImage/);
+  await metadata(f, { heroImage: 'assets/banner.png' });
   await writeFile(path.join(f.dir, 'assets/con.png'), 'bad');
   await assert.rejects(generateAnnouncements(f), /nonportable/);
   await rm(path.join(f.dir, 'assets/con.png'));

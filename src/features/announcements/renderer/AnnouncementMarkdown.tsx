@@ -14,10 +14,12 @@ const PublishedImage = ({
   src,
   alt,
   loader,
+  hero = false,
 }: {
   src: string;
   alt?: string;
   loader: AnnouncementAssetLoader;
+  hero?: boolean;
 }): React.JSX.Element => {
   const [failed, setFailed] = useState(false);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
@@ -57,23 +59,40 @@ const PublishedImage = ({
     };
   }, [loader, src]);
   return failed ? (
-    <span className="my-4 block rounded-lg border border-[var(--color-border)] p-5 text-center text-xs text-[var(--color-text-muted)]">
+    <span
+      data-announcement-hero={hero ? '' : undefined}
+      className={
+        hero
+          ? 'flex aspect-[55/12] w-full items-center justify-center bg-[var(--color-surface-raised)] p-5 text-center text-xs text-[var(--color-text-muted)]'
+          : 'my-4 block rounded-lg border border-[var(--color-border)] p-5 text-center text-xs text-[var(--color-text-muted)]'
+      }
+    >
       {alt || t('announcements.imageUnavailable')}
     </span>
   ) : dataUrl ? (
     <img
+      data-announcement-hero={hero ? '' : undefined}
       src={dataUrl}
       alt={alt ?? ''}
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setFailed(true)}
-      className="my-5 inline-block h-auto max-h-[60vh] max-w-full rounded-xl object-contain"
+      className={
+        hero
+          ? 'block aspect-[55/12] w-full object-cover'
+          : 'my-5 inline-block h-auto max-h-[60vh] max-w-full rounded-xl object-contain'
+      }
     />
   ) : (
     <span
       ref={placeholder}
+      data-announcement-hero={hero ? '' : undefined}
       aria-label={alt ?? t('announcements.imageUnavailable')}
-      className="my-5 block h-24 max-w-full animate-pulse rounded-xl bg-[var(--color-surface-raised)]"
+      className={
+        hero
+          ? 'block aspect-[55/12] w-full animate-pulse bg-[var(--color-surface-raised)]'
+          : 'my-5 block h-24 max-w-full animate-pulse rounded-xl bg-[var(--color-surface-raised)]'
+      }
     />
   );
 };
@@ -81,9 +100,15 @@ const PublishedImage = ({
 export const AnnouncementMarkdown = ({
   markdown,
   bodyUrl,
+  heroImagePath,
+  heroImageAlt,
+  notice,
 }: {
   markdown: string;
   bodyUrl: string;
+  heroImagePath?: string;
+  heroImageAlt?: string;
+  notice?: React.ReactNode;
 }): React.JSX.Element => {
   const container = useRef<HTMLDivElement>(null);
   const assetLoader = useMemo(
@@ -94,6 +119,7 @@ export const AnnouncementMarkdown = ({
     assetLoader.retain();
     return () => assetLoader.release();
   }, [assetLoader]);
+  const heroImageUrl = heroImagePath ? announcementUrl(heroImagePath, bodyUrl, true) : null;
   const components = useMemo(
     () => ({
       ...createMarkdownComponents(null),
@@ -132,23 +158,29 @@ export const AnnouncementMarkdown = ({
     [assetLoader, bodyUrl]
   );
   return (
-    <div
-      ref={container}
-      className="min-w-0 break-words [overflow-wrap:anywhere] [&_pre]:max-w-full [&_pre]:whitespace-pre [&_table]:w-max [&_table]:min-w-full"
-    >
-      <ReactMarkdown
-        skipHtml
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={
-          markdown.length <= 32_768
-            ? [announcementHeadingIds, rehypeHighlight]
-            : [announcementHeadingIds]
-        }
-        components={components}
-        urlTransform={(url) => url}
+    <>
+      {heroImageUrl && (
+        <PublishedImage src={heroImageUrl} alt={heroImageAlt} loader={assetLoader} hero />
+      )}
+      <div
+        ref={container}
+        className="min-w-0 break-words px-6 py-5 [overflow-wrap:anywhere] [&_pre]:max-w-full [&_pre]:whitespace-pre [&_table]:w-max [&_table]:min-w-full"
       >
-        {markdown}
-      </ReactMarkdown>
-    </div>
+        {notice}
+        <ReactMarkdown
+          skipHtml
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={
+            markdown.length <= 32_768
+              ? [announcementHeadingIds, rehypeHighlight]
+              : [announcementHeadingIds]
+          }
+          components={components}
+          urlTransform={(url) => url}
+        >
+          {markdown}
+        </ReactMarkdown>
+      </div>
+    </>
   );
 };

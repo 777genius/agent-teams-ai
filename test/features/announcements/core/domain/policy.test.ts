@@ -55,6 +55,22 @@ describe('strict feed and state boundaries', () => {
     });
     expect(normalizeAnnouncementDate('2026-09-04T14:00:00+02:00')).toBe('2026-09-04T12:00:00.000Z');
   });
+  it('accepts an optional hero image only from the article bundle', () => {
+    const value = item('hello');
+    const bundleRoot = value.bodyPath.slice(0, -'body.md'.length);
+    expect(
+      normalizeAnnouncement({ ...value, heroImagePath: `${bundleRoot}assets/hero.png` })
+        .heroImagePath
+    ).toBe(`${bundleRoot}assets/hero.png`);
+    for (const heroImagePath of [
+      null,
+      '/announcements/content/hello/other/assets/hero.png',
+      `${bundleRoot}assets/../hero.png`,
+      `${bundleRoot}assets/hero.svg`,
+      'https://agentteams.live/announcements/content/hello/assets/hero.png',
+    ])
+      expect(() => normalizeAnnouncement({ ...value, heroImagePath })).toThrow('heroImagePath');
+  });
   it.each([
     '2026-02-30T00:00:00Z',
     '2026-09-01',

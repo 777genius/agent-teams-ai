@@ -4,6 +4,8 @@ import type { Announcement, AnnouncementFeed, AnnouncementState } from '../../co
 
 const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,79}$/;
 const HASH_PATTERN = /^[a-f0-9]{64}$/;
+const ASSET_SEGMENT_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,119}$/;
+const IMAGE_EXTENSION_PATTERN = /\.(?:png|jpe?g|gif|webp|avif)$/i;
 const DATE_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(Z|[+-]\d{2}:\d{2})$/;
 
@@ -80,6 +82,22 @@ export function normalizeAnnouncement(input: unknown): Announcement {
   ) {
     return invalid('bodyPath');
   }
+  let heroImagePath: string | undefined;
+  if (Object.hasOwn(item, 'heroImagePath')) {
+    if (typeof item.heroImagePath !== 'string') return invalid('heroImagePath');
+    const assetPrefix = `${item.bodyPath.slice(0, -'body.md'.length)}assets/`;
+    const relative = item.heroImagePath.slice(assetPrefix.length);
+    const segments = relative.split('/');
+    if (
+      !item.heroImagePath.startsWith(assetPrefix) ||
+      segments.length === 0 ||
+      !segments.every((segment) => ASSET_SEGMENT_PATTERN.test(segment)) ||
+      !IMAGE_EXTENSION_PATTERN.test(segments.at(-1) ?? '')
+    ) {
+      return invalid('heroImagePath');
+    }
+    heroImagePath = item.heroImagePath;
+  }
   return {
     id: item.id,
     title: item.title.trim(),
@@ -90,6 +108,7 @@ export function normalizeAnnouncement(input: unknown): Announcement {
     status: item.status,
     bodyPath: item.bodyPath,
     bodySha256: item.bodySha256,
+    ...(heroImagePath ? { heroImagePath } : {}),
   };
 }
 
