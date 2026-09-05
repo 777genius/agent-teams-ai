@@ -34,16 +34,18 @@ const passive = {
 } as unknown as CliProviderStatus;
 let observed: ReturnType<typeof useOpenCodeConnectedModelCatalog>;
 const Probe = ({
+  enabled = true,
   projectPath = '/sandbox/a',
   refreshRevision,
   periodic = false,
 }: {
+  enabled?: boolean;
   projectPath?: string;
   refreshRevision?: number;
   periodic?: boolean;
 }) => {
   observed = useOpenCodeConnectedModelCatalog({
-    enabled: true,
+    enabled,
     projectPath,
     passiveProviderStatus: passive,
     refreshRevision,
@@ -149,6 +151,17 @@ describe('connected OpenCode dashboard catalog', () => {
       'opencode/model-1',
       'openrouter/model-0',
     ]);
+  });
+  it('keeps the scoped catalog visible while provider refresh pauses catalog I/O', async () => {
+    await act(async () => root.render(<Probe />));
+    expect(observed.providerStatus?.models).toEqual(['opencode/model-0', 'openrouter/model-0']);
+
+    await act(async () => root.render(<Probe enabled={false} />));
+    expect(observed.providerStatus?.models).toEqual(['opencode/model-0', 'openrouter/model-0']);
+    expect(observed.providerStatus?.modelCatalogRefreshState).toBe('ready');
+
+    await act(async () => root.render(<Probe enabled={false} projectPath="/sandbox/b" />));
+    expect(observed.providerStatus).toBe(passive);
   });
   it.each(['not-connected', 'available', 'ignored'])(
     'includes built-in OpenCode models in %s state without granting readiness',

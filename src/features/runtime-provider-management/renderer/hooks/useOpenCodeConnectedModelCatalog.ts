@@ -191,8 +191,12 @@ export function useOpenCodeConnectedModelCatalog(input: {
 
   const providerStatus = useMemo(() => {
     const passive = input.passiveProviderStatus;
-    if (!passive || !input.enabled) return passive;
-    const active = state.scope === scope ? state : { loading: true, models: [], errors: [] };
+    const hasScopedState = state.scope === scope;
+    if (!passive || (!input.enabled && !hasScopedState)) return passive;
+    // A provider re-check temporarily pauses catalog I/O to avoid contending on
+    // the OpenCode profile. Keep rendering the last-good catalog for this scope
+    // while that pause is active instead of flashing an empty/loading summary.
+    const active = hasScopedState ? state : { loading: true, models: [], errors: [] };
     const models = [
       ...new Map(
         active.models.flatMap((model) => {
