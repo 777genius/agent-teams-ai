@@ -38,6 +38,7 @@ interface ProviderActivityStatusStripProps {
   readonly layout?: 'inline' | 'stacked';
   readonly showReadyProviders?: boolean;
   readonly readyStatusText?: string;
+  readonly showDetailMessages?: boolean;
 }
 
 function getActivityToneStyles(tone: 'loading' | 'checked' | 'error'): {
@@ -260,6 +261,7 @@ export const ProviderActivityStatusStrip = ({
   layout = 'inline',
   showReadyProviders = false,
   readyStatusText,
+  showDetailMessages = false,
 }: ProviderActivityStatusStripProps): React.JSX.Element | null => {
   const { t } = useAppTranslation('settings');
   const { t: teamT } = useAppTranslation('team');
@@ -289,6 +291,13 @@ export const ProviderActivityStatusStrip = ({
     layout === 'stacked'
       ? 'flex min-w-0 w-full flex-wrap items-center gap-1.5'
       : 'flex min-w-0 flex-1 flex-wrap items-center gap-2';
+  const detailMessages = showDetailMessages
+    ? displayProviderIds.flatMap((providerId) => {
+        const provider = providerStateMap.get(providerId)?.provider;
+        const message = provider?.statusMessage?.trim() || provider?.detailMessage?.trim();
+        return provider && message ? [{ providerId, provider, message }] : [];
+      })
+    : [];
 
   return (
     <div className={rootClassName}>
@@ -354,6 +363,16 @@ export const ProviderActivityStatusStrip = ({
           );
         })}
       </div>
+      {detailMessages.length > 0 ? (
+        <div className="space-y-0.5 text-[10px] leading-relaxed text-[var(--color-text-muted)]">
+          {detailMessages.map(({ providerId, provider, message }) => (
+            <p key={providerId} data-testid={`provider-activity-detail-${providerId}`}>
+              {detailMessages.length > 1 ? `${provider.displayName}: ` : ''}
+              {message}
+            </p>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 };
