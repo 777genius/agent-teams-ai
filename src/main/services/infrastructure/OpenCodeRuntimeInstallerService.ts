@@ -26,6 +26,12 @@ import {
   pathProbeInFlight,
   runtimeBinaryResolveCache,
   runtimeBinaryResolveInFlight,
+  setPathProbeCacheEntry,
+  setPathProbeInFlight,
+  setRuntimeBinaryResolveCacheEntry,
+  setRuntimeBinaryResolveInFlight,
+  setVersionProbeCacheEntry,
+  setVersionProbeInFlight,
   versionProbeCache,
   versionProbeInFlight,
 } from './openCodeRuntimeResolverCache';
@@ -277,7 +283,7 @@ async function probeOpenCodeBinaryVersionCached(
   const request = probeOpenCodeBinaryVersion(binaryPath)
     .then((result) => {
       if (cacheGeneration === getOpenCodeRuntimeResolverCacheGeneration()) {
-        versionProbeCache.set(cacheKey, {
+        setVersionProbeCacheEntry(cacheKey, {
           result,
           cachedAt: Date.now(),
           ttlMs: getVersionProbeTtlMs(result),
@@ -290,7 +296,7 @@ async function probeOpenCodeBinaryVersionCached(
         versionProbeInFlight.delete(cacheKey);
       }
     });
-  versionProbeInFlight.set(cacheKey, request);
+  setVersionProbeInFlight(cacheKey, request);
   return request;
 }
 
@@ -417,7 +423,7 @@ async function probeFirstWorkingPathOpenCodeBinaryCached(
   const request = probeFirstWorkingPathOpenCodeBinary(options)
     .then((result) => {
       if (cacheGeneration === getOpenCodeRuntimeResolverCacheGeneration()) {
-        pathProbeCache.set(cacheKey, {
+        setPathProbeCacheEntry(cacheKey, {
           result,
           cachedAt: Date.now(),
           ttlMs: getPathProbeTtlMs(result),
@@ -430,7 +436,7 @@ async function probeFirstWorkingPathOpenCodeBinaryCached(
         pathProbeInFlight.delete(cacheKey);
       }
     });
-  pathProbeInFlight.set(cacheKey, request);
+  setPathProbeInFlight(cacheKey, request);
   return request;
 }
 
@@ -461,7 +467,7 @@ export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
     (await resolveVerifiedPathOpenCodeBinaryPath(options)))()
     .then((binaryPath) => {
       if (cacheGeneration === getOpenCodeRuntimeResolverCacheGeneration()) {
-        runtimeBinaryResolveCache.set(cacheKey, {
+        setRuntimeBinaryResolveCacheEntry(cacheKey, {
           binaryPath,
           cachedAt: Date.now(),
           ttlMs: getRuntimeBinaryResolveTtlMs(binaryPath),
@@ -474,7 +480,7 @@ export async function resolveVerifiedOpenCodeRuntimeBinaryPath(
         runtimeBinaryResolveInFlight.delete(cacheKey);
       }
     });
-  runtimeBinaryResolveInFlight.set(cacheKey, request);
+  setRuntimeBinaryResolveInFlight(cacheKey, request);
   return request;
 }
 

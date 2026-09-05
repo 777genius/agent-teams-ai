@@ -27,6 +27,45 @@ export const pathProbeInFlight = new Map<string, Promise<VerifiedOpenCodeBinaryP
 export const runtimeBinaryResolveCache = new Map<string, CachedRuntimeBinaryResolve>();
 export const runtimeBinaryResolveInFlight = new Map<string, Promise<string | null>>();
 
+export function setVersionProbeCacheEntry(
+  key: string,
+  value: CachedResult<OpenCodeBinaryVersionProbe>
+): void {
+  versionProbeCache.set(key, value);
+}
+
+export function setVersionProbeInFlight(
+  key: string,
+  value: Promise<OpenCodeBinaryVersionProbe>
+): void {
+  versionProbeInFlight.set(key, value);
+}
+
+export function setPathProbeCacheEntry(
+  key: string,
+  value: CachedResult<VerifiedOpenCodeBinaryProbe>
+): void {
+  pathProbeCache.set(key, value);
+}
+
+export function setPathProbeInFlight(
+  key: string,
+  value: Promise<VerifiedOpenCodeBinaryProbe>
+): void {
+  pathProbeInFlight.set(key, value);
+}
+
+export function setRuntimeBinaryResolveCacheEntry(
+  key: string,
+  value: CachedRuntimeBinaryResolve
+): void {
+  runtimeBinaryResolveCache.set(key, value);
+}
+
+export function setRuntimeBinaryResolveInFlight(key: string, value: Promise<string | null>): void {
+  runtimeBinaryResolveInFlight.set(key, value);
+}
+
 let generation = 0;
 
 export function getOpenCodeRuntimeResolverCacheGeneration(): number {
@@ -46,7 +85,7 @@ export function clearOpenCodeRuntimeResolverCache(): void {
 /** Reuses only a fresh path that an earlier active probe already verified. */
 export function resolveCachedVerifiedOpenCodeRuntimeBinaryPath(): string | null {
   const now = Date.now();
-  const candidates: Array<{ binaryPath: string; cachedAt: number }> = [];
+  const candidates: { binaryPath: string; cachedAt: number }[] = [];
   for (const cached of runtimeBinaryResolveCache.values()) {
     if (
       cached.binaryPath &&
