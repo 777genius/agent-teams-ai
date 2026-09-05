@@ -109,27 +109,32 @@ export async function runOpenCodeLifecycleCleanupTail(
 ): Promise<void> {
   const { reason, ports } = input;
 
+  // The keep list is the only thing that spares a live registry host from the
+  // startup fallback, so a registry sweep that failed disqualifies the fallback
+  // - and nothing else. The steps behind it do not consult that list: the lock
+  // purge is fenced by file age and the cursor-agent sweep by the workspaces
+  // this app owns. Skipping those too left the next launch queued behind
+  // exactly the stale locks this tail exists to clear.
   if (reason === 'startup' && !input.registryCleanupAvailable) {
     ports.logWarning(
       '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable'
     );
-    return;
+  } else {
+    await runIndependentStep(`${reason} fallback`, ports, () =>
+      cleanupOpenCodeHostProcessFallback(
+        `${reason} fallback`,
+        {
+          mode: reason === 'shutdown' ? 'force' : 'orphaned',
+          excludePids: reason === 'startup' ? input.registryHostPids : undefined,
+          ...(reason === 'shutdown'
+            ? buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId)
+            : {}),
+          startedBeforeMs: reason === 'startup' ? input.appStartedAtMs : null,
+        },
+        ports
+      )
+    );
   }
-
-  await runIndependentStep(`${reason} fallback`, ports, () =>
-    cleanupOpenCodeHostProcessFallback(
-      `${reason} fallback`,
-      {
-        mode: reason === 'shutdown' ? 'force' : 'orphaned',
-        excludePids: reason === 'startup' ? input.registryHostPids : undefined,
-        ...(reason === 'shutdown'
-          ? buildOpenCodeProcessOwnershipMarkers(input.managedHostInstanceId)
-          : {}),
-        startedBeforeMs: reason === 'startup' ? input.appStartedAtMs : null,
-      },
-      ports
-    )
-  );
 
   if (reason === 'shutdown' && input.releaseSharedRuntime) {
     // After the hosts are dead, not before: while one is still up it is a

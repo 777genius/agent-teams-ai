@@ -189,7 +189,14 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
     );
   });
 
-  it('kills nothing at startup when the registry sweep could not answer', async () => {
+  /**
+   * The keep list a failed registry sweep did not produce is what the process
+   * fallback needs to spare a live host, so that step goes. The steps behind it
+   * are scoped by file age and by this app's own workspaces, so they still run:
+   * the stale locks a skipped purge leaves behind are exactly what the next
+   * launch queues on.
+   */
+  it('skips only the host fallback at startup when the registry sweep could not answer', async () => {
     vi.clearAllMocks();
     recordSteps();
     const ports = createPorts();
@@ -200,7 +207,12 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
       ports,
     });
 
-    expect(steps).toEqual([]);
+    expect(steps).toEqual([
+      'startup-runtime-sweep-tail',
+      'startup-lock-purge',
+      'cursor-agent-tree-sweep',
+    ]);
+    expect(steps).not.toContain('host-process-fallback');
     expect(ports.warnings).toEqual([
       '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable',
     ]);
