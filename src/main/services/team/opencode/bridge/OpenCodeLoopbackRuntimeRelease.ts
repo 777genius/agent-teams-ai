@@ -40,6 +40,15 @@ export const RUNTIME_RELEASE_DISABLED_ENV = 'AGENT_TEAMS_RUNTIME_RELEASE_DISABLE
  */
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1', '[::1]']);
 const RELEASE_TIMEOUT_MS = 5_000;
+/**
+ * A ceiling on the fallback eviction as a whole. The loaded-model list comes
+ * from the runtime, so nothing here bounds its length, and at app shutdown
+ * there is no member filter to narrow it either. One stalled entry costs a
+ * whole request timeout, and the entries are walked one at a time, so a runtime
+ * that has stopped answering turns a shutdown the user is waiting on into
+ * minutes. Requests already sent keep their own timeout; this stops new ones.
+ */
+const EVICTION_TOTAL_BUDGET_MS = 15_000;
 
 export interface LoopbackRuntimeReleaseOptions {
   env?: NodeJS.ProcessEnv;
@@ -52,6 +61,10 @@ export interface LoopbackRuntimeReleaseOptions {
   memberModels?: readonly (string | undefined | null)[];
   fetchImpl?: typeof fetch;
   configPaths?: readonly string[];
+  /** Fences one HTTP call. Defaults to five seconds. */
+  requestTimeoutMs?: number;
+  /** Fences the fallback eviction loop as a whole. Defaults to fifteen seconds. */
+  evictionBudgetMs?: number;
 }
 
 export interface LoopbackRuntimeReleaseResult {
@@ -74,9 +87,19 @@ function readConfigObject(filePath: string): Record<string, unknown> | null {
   let raw: string;
   try {
     raw = fs.readFileSync(filePath, 'utf8');
-  } catch {
+  } catch (error) {
     // A config that is not there is the normal case: at most one of the two
     // spellings exists, and a user with neither has no local provider at all.
+    // A config that is there and could not be read is not that, and it has the
+    // same consequence as one that could not be parsed - the provider it
+    // configures is never narrowed to, and its runtime keeps a model resident
+    // for a team that is gone - so it is reported the same way.
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      logger.diagnostic(
+        `[OpenCode] opencode_loopback_runtime_config_unreadable path=${filePath} ` +
+          `error=${error instanceof Error ? error.message : String(error)}`
+      );
+    }
     return null;
   }
   const errors: ParseError[] = [];
@@ -192,12 +215,14 @@ export function selectMemberModelNamesForProvider(
 async function evictLoadedModels(
   origin: string,
   fetchImpl: typeof fetch,
-  memberModelNames: ReadonlySet<string> | null
+  memberModelNames: ReadonlySet<string> | null,
+  bounds: { requestTimeoutMs: number; evictionBudgetMs: number }
 ): Promise<{ evicted: boolean; diagnostics: string[] }> {
   let loaded: { name?: unknown; model?: unknown }[] = [];
   try {
     const response = await fetchImpl(`${origin}/api/ps`, {
-      signal: AbortSignal.timeout(RELEASE_TIMEOUT_MS),
+      redirect: 'error',
+      signal: AbortSignal.timeout(bounds.requestTimeoutMs),
     });
     if (!response.ok) {
       return {
@@ -218,7 +243,16 @@ async function evictLoadedModels(
 
   const diagnostics: string[] = [];
   let evicted = false;
+  const evictionDeadlineMs = Date.now() + bounds.evictionBudgetMs;
+  let reached = 0;
   for (const entry of loaded) {
+    if (Date.now() >= evictionDeadlineMs) {
+      diagnostics.push(
+        `eviction budget of ${bounds.evictionBudgetMs}ms spent: ${loaded.length - reached} loaded model(s) not reached`
+      );
+      break;
+    }
+    reached += 1;
     const name =
       typeof entry.model === 'string'
         ? entry.model
@@ -235,7 +269,8 @@ async function evictLoadedModels(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: name, keep_alive: 0 }),
-        signal: AbortSignal.timeout(RELEASE_TIMEOUT_MS),
+        redirect: 'error',
+        signal: AbortSignal.timeout(bounds.requestTimeoutMs),
       });
       if (response.ok) {
         evicted = true;
@@ -265,13 +300,18 @@ export async function releaseLoopbackRuntimeModels(
     options.memberModels
   );
   const fetchImpl = options.fetchImpl ?? fetch;
+  const bounds = {
+    requestTimeoutMs: options.requestTimeoutMs ?? RELEASE_TIMEOUT_MS,
+    evictionBudgetMs: options.evictionBudgetMs ?? EVICTION_TOTAL_BUDGET_MS,
+  };
   for (const [providerId, origin] of origins) {
     const url = `${origin}/api/models/unload`;
     result.attempted.push(url);
     try {
       const response = await fetchImpl(url, {
         method: 'POST',
-        signal: AbortSignal.timeout(RELEASE_TIMEOUT_MS),
+        redirect: 'error',
+        signal: AbortSignal.timeout(bounds.requestTimeoutMs),
       });
       if (response.ok) {
         result.released.push(providerId);
@@ -281,7 +321,8 @@ export async function releaseLoopbackRuntimeModels(
         const eviction = await evictLoadedModels(
           origin,
           fetchImpl,
-          selectMemberModelNamesForProvider(providerId, options.memberModels)
+          selectMemberModelNamesForProvider(providerId, options.memberModels),
+          bounds
         );
         if (eviction.evicted) {
           result.released.push(providerId);
