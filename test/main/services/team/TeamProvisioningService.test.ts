@@ -19540,7 +19540,13 @@ describe('TeamProvisioningService', () => {
 
       expect(adapterLaunch).toHaveBeenCalledTimes(1);
       expect(adapterStop).toHaveBeenCalledTimes(1);
-      expect(progress.at(-1)).toMatchObject({ state: 'failed', error: rootCause });
+      // The lead is a veto: the failure artifact now LEADS with the lead reason
+      // and keeps the shared-runtime root cause behind it.
+      expect(progress.at(-1)).toMatchObject({
+        state: 'failed',
+        error: expect.stringContaining(rootCause),
+      });
+      expect(progress.at(-1)?.error).toContain('team-lead');
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.statuses.alice).toMatchObject({
         status: 'error',

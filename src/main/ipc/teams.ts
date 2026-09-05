@@ -144,11 +144,17 @@ import {
 } from '../services/team/LaunchIoGovernor';
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
+  countLiveRecordedRuntimeHostsForTeam,
   killRetainedOpenCodeRuntimeProcessesForTeam,
   readOpenCodeRuntimeLaneIdsForTeam,
   readOwnedOpenCodeRuntimeRunIdsForTeam,
+  releaseLoopbackRuntimesReservedByTeam,
+  releaseSharedRuntimeResourcesAfterStop,
   runTeamForceStopFlow,
+  STOP_ESCALATION_TIMEOUT_MS,
+  stopTeamWithEscalation,
 } from '../services/team/lifecycle/teamForceStopFlow';
+import { reapCursorAgentLeadTreesForStoppedTeam } from '../services/team/lifecycle/teamLeadProcessTreeReap';
 import {
   buildReplaceMembersDiff,
   buildReplaceMembersSummaryMessage,
@@ -162,6 +168,7 @@ import { TeamAttachmentStore } from '../services/team/TeamAttachmentStore';
 import { TeamConfigReader } from '../services/team/TeamConfigReader';
 import { capMessagesPageLiveOverlay } from '../services/team/teamInboxOrdering';
 import { readTeamLaunchFailureDiagnosticsBundle } from '../services/team/TeamLaunchFailureArtifactPack';
+import { TeamLaunchStateStore } from '../services/team/TeamLaunchStateStore';
 import { TeamMembersMetaStore } from '../services/team/TeamMembersMetaStore';
 import { TeamMetaStore } from '../services/team/TeamMetaStore';
 import { TeamTaskAttachmentStore } from '../services/team/TeamTaskAttachmentStore';
@@ -4209,8 +4216,65 @@ async function handleStopTeam(
     return { success: false, error: validated.error ?? 'Invalid teamName' };
   }
   return wrapTeamHandler('stop', async () => {
-    addMainBreadcrumb('team', 'stop', { teamName: validated.value! });
-    await getTeamRuntimeApi().stopTeam(validated.value!);
+    const tn = validated.value!;
+    addMainBreadcrumb('team', 'stop', { teamName: tn });
+    // The regular stop can reject or hang: the orchestrator holds a per-team
+    // lock, and a stop command that exits non-zero or never returns leaves the
+    // host running with the run still tracked as alive. The user pressed Stop
+    // and expects the team to be stopped, so the force-stop cleanup takes over
+    // when the regular stop does not confirm within its budget.
+    const result = await stopTeamWithEscalation(tn, {
+      stopTeam: (name) => getTeamRuntimeApi().stopTeam(name),
+      observeOwnedRuntimeRunIds: (name) =>
+        readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+      observeOwnedRuntimeLaneIds: (name) =>
+        readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
+      killRetainedRuntimeProcesses: (name, context) =>
+        killRetainedOpenCodeRuntimeProcessesForTeam({
+          teamName: name,
+          requestedAtMs: context.requestedAtMs,
+          otherAliveTeams: getTeamRuntimeApi()
+            .getAliveTeams()
+            .filter((alive) => alive !== name),
+        }),
+      clearPendingPromptDeliveries: (name, context) =>
+        clearPendingOpenCodePromptDeliveriesForTeam({
+          teamName: name,
+          ownedRunIds: context.ownedRunIds,
+          ownedLaneIds: context.ownedLaneIds,
+          requestedAtMs: context.requestedAtMs,
+        }),
+      logWarning: (message) => logger.warn(message),
+      stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+      countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
+      markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+      reapOwnedLeadProcessTrees: (name, context) =>
+        reapCursorAgentLeadTreesForStoppedTeam({
+          teamName: name,
+          requestedAtMs: context.requestedAtMs,
+          otherAliveTeams: getTeamRuntimeApi()
+            .getAliveTeams()
+            .filter((alive) => alive !== name),
+        }),
+      releaseSharedRuntimeResources: (name) =>
+        releaseSharedRuntimeResourcesAfterStop({
+          teamName: name,
+          otherAliveTeams: getTeamRuntimeApi()
+            .getAliveTeams()
+            .filter((alive) => alive !== name),
+          releaseSharedLocalRuntime: () =>
+            releaseLoopbackRuntimesReservedByTeam(getTeamsBasePath(), name),
+        }),
+    });
+    if (result.stopOutcome === 'runtime_already_down') {
+      logger.info(
+        `[${tn}] Runtime hosts were already down; finished the stop without the orchestrator acknowledgement (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
+      );
+    } else if (result.stopOutcome !== 'stopped') {
+      logger.warn(
+        `[${tn}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
+      );
+    }
   });
 }
 
@@ -4247,6 +4311,24 @@ async function handleForceStopTeam(
           requestedAtMs: context.requestedAtMs,
         }),
       logWarning: (message) => logger.warn(message),
+      markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+      reapOwnedLeadProcessTrees: (name, context) =>
+        reapCursorAgentLeadTreesForStoppedTeam({
+          teamName: name,
+          requestedAtMs: context.requestedAtMs,
+          otherAliveTeams: getTeamRuntimeApi()
+            .getAliveTeams()
+            .filter((alive) => alive !== name),
+        }),
+      releaseSharedRuntimeResources: (name) =>
+        releaseSharedRuntimeResourcesAfterStop({
+          teamName: name,
+          otherAliveTeams: getTeamRuntimeApi()
+            .getAliveTeams()
+            .filter((alive) => alive !== name),
+          releaseSharedLocalRuntime: () =>
+            releaseLoopbackRuntimesReservedByTeam(getTeamsBasePath(), name),
+        }),
     });
   });
 }

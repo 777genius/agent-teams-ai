@@ -1,5 +1,6 @@
-import { describe, expect, expectTypeOf, it } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
+import { beginOpenCodeStartupRuntimeSweep } from '../../opencode/bridge/OpenCodeStartupSweepGate';
 import {
   bindTeamClaudeLogsApi,
   bindTeamCrossTeamMessagingApi,
@@ -86,6 +87,48 @@ describe('TeamProvisioning API binders', () => {
     ).resolves.toEqual({ runId: 'run-start' });
     await expect(
       launchTeam({ teamName: 'team-start', cwd: TEST_TEAM_CWD }, () => undefined)
+    ).resolves.toEqual({ runId: 'run-start' });
+  });
+
+  it('runs the pre-start step before every create and every launch', async () => {
+    const order: string[] = [];
+    const source: TeamProvisioningStartApi = {
+      createTeam(): Promise<TeamCreateResponse> {
+        order.push('createTeam');
+        return Promise.resolve({ runId: 'run-start' });
+      },
+      launchTeam(): Promise<TeamLaunchResponse> {
+        order.push('launchTeam');
+        return Promise.resolve({ runId: 'run-start' });
+      },
+    };
+
+    const api = bindTeamProvisioningStartApi(source, {
+      beforeStart: ({ teamName }) => {
+        order.push(`beforeStart:${teamName}`);
+        return Promise.resolve();
+      },
+    });
+    await api.createTeam({ teamName: 'team-a', cwd: TEST_TEAM_CWD, members: [] }, () => undefined);
+    await api.launchTeam({ teamName: 'team-b', cwd: TEST_TEAM_CWD }, () => undefined);
+
+    expect(order).toEqual(['beforeStart:team-a', 'createTeam', 'beforeStart:team-b', 'launchTeam']);
+  });
+
+  // It is a preparation step, not a precondition: whatever it does is worth
+  // less than the launch it precedes.
+  it('starts the team anyway when the pre-start step fails', async () => {
+    const source: TeamProvisioningStartApi = {
+      createTeam: () => Promise.resolve({ runId: 'run-start' }),
+      launchTeam: () => Promise.resolve({ runId: 'run-start' }),
+    };
+
+    const api = bindTeamProvisioningStartApi(source, {
+      beforeStart: () => Promise.reject(new Error('lock dir unreadable')),
+    });
+
+    await expect(
+      api.launchTeam({ teamName: 'team-a', cwd: TEST_TEAM_CWD }, () => undefined)
     ).resolves.toEqual({ runId: 'run-start' });
   });
 
@@ -1133,6 +1176,81 @@ describe('TeamProvisioning API binders', () => {
       teamName: 'team-bound',
       settings,
       sourceName: 'approval-source',
+    });
+  });
+});
+
+describe('the OpenCode start preparation both entry points install', () => {
+  function startApiFor(
+    request: TeamCreateRequest,
+    onProgress: (progress: TeamProvisioningProgress) => void
+  ): Promise<void> {
+    const declared: Record<string, unknown> = {
+      createTeam: () => Promise.resolve({ runId: 'run-start' }),
+      launchTeam: () => Promise.resolve({ runId: 'run-start' }),
+      // No other team alive would let the lock purge reach the real data
+      // directory; a second live team keeps this test off the filesystem.
+      getAliveTeams: () => ['someone-else'],
+    };
+    // The aggregate binder binds every method on the service; only the start
+    // path is exercised here, so the rest resolve to a shared no-op.
+    const source = new Proxy(declared, {
+      get: (target, key: string) => target[key] ?? (() => Promise.resolve(undefined)),
+    }) as unknown as Parameters<typeof bindTeamHttpHandlerApis>[0];
+
+    return bindTeamHttpHandlerApis(source)
+      .provisioningStart.createTeam(request, onProgress)
+      .then(() => undefined);
+  }
+
+  // A start that cannot produce an `opencode serve` host has nothing to lose to
+  // the sweep, and must not be parked behind it.
+  it('does not wait for the startup sweep when no member can be an OpenCode host', async () => {
+    const settle = beginOpenCodeStartupRuntimeSweep();
+    const onProgress = vi.fn();
+
+    try {
+      await startApiFor(
+        {
+          teamName: 'team-a',
+          cwd: TEST_TEAM_CWD,
+          providerId: 'claude',
+          members: [{ name: 'lead', role: 'Lead', providerId: 'claude' }],
+        } as unknown as TeamCreateRequest,
+        onProgress
+      );
+    } finally {
+      settle();
+    }
+
+    expect(onProgress).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['an OpenCode start', { providerId: 'opencode' }],
+    ['a start whose provider is resolved later', {}],
+    ['a mixed team with one OpenCode member', { providerId: 'claude' }],
+  ])('waits for the startup sweep and reports the wait for %s', async (_label, requestShape) => {
+    const settle = beginOpenCodeStartupRuntimeSweep();
+    const onProgress = vi.fn();
+
+    const started = startApiFor(
+      {
+        teamName: 'team-a',
+        cwd: TEST_TEAM_CWD,
+        ...requestShape,
+        members: [{ name: 'lead', role: 'Lead', providerId: 'opencode' }],
+      } as unknown as TeamCreateRequest,
+      onProgress
+    );
+    settle();
+    await started;
+
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress.mock.calls[0][0]).toMatchObject({
+      runId: 'pending:team-a:opencode-startup-sweep',
+      teamName: 'team-a',
+      state: 'validating',
     });
   });
 });

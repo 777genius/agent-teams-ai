@@ -9,18 +9,39 @@
  */
 
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isProcessAlive } from '@main/utils/processHealth';
 import * as fs from 'fs';
+import * as path from 'path';
 
+import {
+  PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
+  purgeStaleOpenCodeHostStartupLocks,
+} from '../opencode/bridge/OpenCodeHostStartupLockCleanup';
+import { releaseLoopbackRuntimeModels } from '../opencode/bridge/OpenCodeLoopbackRuntimeRelease';
 import { createOpenCodePromptDeliveryLedgerStore } from '../opencode/delivery/OpenCodePromptDeliveryLedger';
 import {
   getOpenCodeLaneScopedRuntimeFilePath,
   OpenCodeRuntimeManifestEvidenceReader,
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
+import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
-import type { TeamForceStopResult } from '@shared/types';
+import type { TeamLaunchStateReadResult } from '../TeamLaunchStateStore';
+import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
 
 const DEFAULT_STOP_TIMEOUT_MS = 15_000;
+/** How often the flow re-reads how many recorded runtime hosts are still alive. */
+export const RUNTIME_HOSTS_POLL_INTERVAL_MS = 1_000;
+/**
+ * Budget for the regular stop before the force-stop cleanup takes over.
+ *
+ * Measured per-lane orchestrator stops run 17-48s - a full capability probe
+ * plus a registry lock per command - so any budget inside that range escalates
+ * a stop that was about to succeed: a 45s budget cut off a lane that confirmed
+ * at 47.6s. `countLiveRuntimeHosts` ends the wait the moment the hosts are
+ * gone, so a healthy stop never spends this budget and it only bounds a hang.
+ */
+export const STOP_ESCALATION_TIMEOUT_MS = 90_000;
 const FORCE_STOP_DELIVERY_CANCEL_REASON =
   'force_stop_requested: pending delivery cancelled by user force stop';
 
@@ -58,6 +79,46 @@ export interface TeamForceStopFlowPorts {
   ): Promise<{ cleared: number; diagnostics: string[] }>;
   logWarning(message: string): void;
   stopTimeoutMs?: number;
+  /**
+   * How many of the team's recorded runtime host processes are still running.
+   * The orchestrator's stop takes 17-48s per lane, so the stop budget has to be
+   * generous; this lets the flow finish as soon as the hosts are actually gone
+   * instead of waiting the budget out. Omitted - or zero live hosts at the
+   * first sample - and the flow waits for the stop or the timeout as before.
+   *
+   * `null` means the probe could not answer. It is not zero: only a count the
+   * probe actually established may end the stop early.
+   */
+  countLiveRuntimeHosts?(teamName: string): Promise<number | null>;
+  /**
+   * Persist the stopped state: drop the launch publication and write the stop
+   * marker that keeps reconciliation from re-deriving a launch snapshot for a
+   * team the user stopped. Optional so a caller that only wants the process
+   * cleanup - a diagnostic sweep, say - leaves the publication alone.
+   */
+  markTeamStopped?(teamName: string): Promise<void>;
+  /**
+   * Runs once the team is down, on both paths: after a stop that confirmed on
+   * its own, and after the force path finished killing. A running team
+   * reserves shared resources that outlive the stop either way, and only the
+   * caller knows whether anything else still needs them.
+   */
+  releaseSharedRuntimeResources?(teamName: string): Promise<{ diagnostics: string[] }>;
+  /**
+   * Ends the external lead process trees this stop can prove it owns. Separate
+   * from `killRetainedRuntimeProcesses` because it answers a different
+   * question: that step is about shared runtime hosts, which this app may not
+   * signal at all, while a `cursor-agent --print` lead names the team's own
+   * workspace on its command line and is attributable to a single stop.
+   *
+   * A port with no default, like the release below it: everywhere it is not
+   * handed in, the step does not exist rather than becoming a no-op branch the
+   * flow carries around.
+   */
+  reapOwnedLeadProcessTrees?(
+    teamName: string,
+    context: { requestedAtMs: number }
+  ): Promise<{ killedPids: number[]; incomplete?: boolean; diagnostics: string[] }>;
 }
 
 /**
@@ -70,6 +131,163 @@ export async function runTeamForceStopFlow(
   teamName: string,
   ports: TeamForceStopFlowPorts
 ): Promise<TeamForceStopResult> {
+  return runTeamStopFlow(teamName, ports, { cleanup: 'always' });
+}
+
+/**
+ * The regular Stop, with an escape hatch. The orchestrator's stop gets a
+ * bounded budget and, only when it rejects or runs out of it, the force-stop
+ * cleanup runs: the same hard-cleanup attempt and the same run-fenced delivery
+ * cancellation. A stop that confirms cancels nothing and reaches nothing else -
+ * the user asked for a stop, not for a sweep, and the escalation exists because
+ * the stop sometimes cannot deliver what the user asked for.
+ *
+ * The force stop persists its cancellation before the stop, so a stop that
+ * removes the lane index cannot strand the ledger. A regular Stop cannot: it
+ * does not yet know whether it will have to escalate, so its cancellation runs
+ * after the stop, on the lane scope read before it, and under the same
+ * "the stop did not confirm" decision that gates the cleanup step.
+ */
+export async function stopTeamWithEscalation(
+  teamName: string,
+  ports: TeamForceStopFlowPorts
+): Promise<TeamForceStopResult> {
+  return runTeamStopFlow(teamName, ports, { cleanup: 'on_failure' });
+}
+
+/**
+ * Resolves once the team's recorded runtime hosts are gone. It starts only
+ * when the first sample sees at least one live host: without that evidence an
+ * empty sample means "nothing was recorded", not "everything exited", and
+ * would end the stop before the orchestrator had done any work at all.
+ */
+function watchRuntimeHostsGone(
+  teamName: string,
+  ports: TeamForceStopFlowPorts
+): { promise: Promise<'runtime_already_down'>; cancel(): void } {
+  let interval: ReturnType<typeof setInterval> | null = null;
+  let cancelled = false;
+  let sampling = false;
+  const cancel = (): void => {
+    cancelled = true;
+    if (interval) {
+      clearInterval(interval);
+      interval = null;
+    }
+  };
+  if (!ports.countLiveRuntimeHosts) {
+    return { promise: new Promise<'runtime_already_down'>(() => {}), cancel };
+  }
+  const promise = new Promise<'runtime_already_down'>((resolve) => {
+    const onSample = (remaining: number | null): void => {
+      sampling = false;
+      // `null` is a sample that could not answer. Ending the stop on it would
+      // report hosts as gone on evidence that never looked at one.
+      if (!cancelled && remaining !== null && remaining <= 0) {
+        cancel();
+        resolve('runtime_already_down');
+      }
+    };
+    const sample = (): void => {
+      if (sampling) return;
+      sampling = true;
+      void countLiveRuntimeHostsSafely(teamName, ports).then(onSample);
+    };
+    const startSampling = (liveHosts: number | null): void => {
+      if (cancelled || liveHosts === null || liveHosts <= 0) {
+        return;
+      }
+      interval = setInterval(sample, RUNTIME_HOSTS_POLL_INTERVAL_MS);
+      interval.unref?.();
+    };
+    void countLiveRuntimeHostsSafely(teamName, ports).then(startSampling);
+  });
+  return { promise, cancel };
+}
+
+/**
+ * A probe that cannot answer must not propagate out of the poll - and must not
+ * be read as "no live hosts" either. A rejection, or a count the probe itself
+ * could not establish, becomes `null`: unknown, not zero. The stop then waits
+ * for the orchestrator or the timeout, the same as if nothing had been sampled.
+ */
+async function countLiveRuntimeHostsSafely(
+  teamName: string,
+  ports: TeamForceStopFlowPorts
+): Promise<number | null> {
+  try {
+    return (await ports.countLiveRuntimeHosts?.(teamName)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * How many of the team's recorded lane host processes are still running. Same
+ * evidence the kill step uses: only pids the launch state recorded for this
+ * team count, so an unrelated process can never keep the stop waiting.
+ *
+ * `null` when the launch state could not be read. A team that published no
+ * launch state has no recorded hosts and counts zero; a launch state this app
+ * failed to read names no host either, but that is the probe being blind, and
+ * the stop must not take it for a team that has finished exiting.
+ */
+export async function countLiveRecordedRuntimeHostsForTeam(input: {
+  teamName: string;
+  launchStateStore?: TeamLaunchStateStore;
+  isRuntimeProcessAlive?: (pid: number) => boolean;
+}): Promise<number | null> {
+  const launchStateStore = input.launchStateStore ?? new TeamLaunchStateStore();
+  const launchState = await launchStateStore.readResult(input.teamName).catch(
+    (error: unknown): TeamLaunchStateReadResult => ({
+      status: 'unreadable',
+      reason: error instanceof Error ? error.message : String(error),
+    })
+  );
+  if (launchState.status === 'unreadable') {
+    return null;
+  }
+  const snapshot = launchState.status === 'snapshot' ? launchState.snapshot : null;
+  const isAlive = input.isRuntimeProcessAlive ?? isProcessAlive;
+  const pids = collectRecordedOpenCodeRuntimePids(snapshot);
+  let live = 0;
+  for (const pid of pids) {
+    try {
+      if (isAlive(pid)) live += 1;
+    } catch {
+      // An unreadable process is not evidence of a live host.
+    }
+  }
+  return live;
+}
+
+/**
+ * The runtime host pids the launch snapshot recorded for this team's OpenCode
+ * lanes. Nothing else counts as evidence: a host this app never wrote down is
+ * not the team's to wait for.
+ */
+function collectRecordedOpenCodeRuntimePids(
+  snapshot: PersistedTeamLaunchSnapshot | null
+): Set<number> {
+  const pids = new Set<number>();
+  for (const member of Object.values(snapshot?.members ?? {})) {
+    if (member.providerId !== 'opencode' || !member.laneId?.trim()) {
+      continue;
+    }
+    const pid = member.runtimePid;
+    if (typeof pid === 'number' && Number.isFinite(pid) && pid > 0) {
+      pids.add(pid);
+    }
+  }
+  return pids;
+}
+
+async function runTeamStopFlow(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  options: { cleanup: 'always' | 'on_failure' }
+): Promise<TeamForceStopResult> {
+  const cleanupIsUnconditional = options.cleanup === 'always';
   const diagnostics: string[] = [];
   const stopStartedAtMs = Date.now();
   let ownedRunIds: readonly string[] = [];
@@ -107,37 +325,73 @@ export async function runTeamForceStopFlow(
     }
   };
   // Persist cancellation before stop can remove the lane index or runtime files.
-  await cancelOwnedDeliveries();
+  // A regular Stop has nothing to persist yet: it cancels only when the stop
+  // does not deliver, so its cancellation has to wait for the outcome and runs
+  // on the lane ids read above, which a removed lane index can no longer narrow.
+  if (cleanupIsUnconditional) {
+    await cancelOwnedDeliveries();
+  }
   const timeoutMs = ports.stopTimeoutMs ?? DEFAULT_STOP_TIMEOUT_MS;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let stopOutcome: TeamForceStopResult['stopOutcome'];
+  let timedOut = false;
+  let runtimeHostsGone: { promise: Promise<'runtime_already_down'>; cancel(): void } | null = null;
   try {
     const stopAttempt = ports.stopTeam(teamName).then(
-      () => 'stopped' as const,
+      () => {
+        if (timedOut) {
+          ports.logWarning(
+            `[${teamName}] Regular stop finished ${Date.now() - stopStartedAtMs}ms after it started, after the force stop cleanup had already run.`
+          );
+        }
+        return 'stopped' as const;
+      },
       (error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        ports.logWarning(`[${teamName}] Regular stop failed before force stop cleanup: ${message}`);
-        diagnostics.push(`Regular stop failed: ${message}`);
+        if (timedOut) {
+          // Expected once the hard kill already removed the hosts the
+          // orchestrator was still trying to stop: the failure describes a
+          // process that is gone, not a stop this flow still owes the user.
+          ports.logWarning(
+            `[${teamName}] Regular stop failed ${Date.now() - stopStartedAtMs}ms after it started, after the force stop cleanup had already run: ${message}`
+          );
+        } else {
+          ports.logWarning(
+            `[${teamName}] Regular stop failed before force stop cleanup: ${message}`
+          );
+          diagnostics.push(`Regular stop failed: ${message}`);
+        }
         return 'stop_failed' as const;
       }
     );
+    runtimeHostsGone = watchRuntimeHostsGone(teamName, ports);
     stopOutcome = await Promise.race([
       stopAttempt,
+      runtimeHostsGone.promise,
       new Promise<'timed_out'>((resolve) => {
         timer = setTimeout(() => resolve('timed_out'), timeoutMs);
         timer.unref?.();
       }),
     ]);
     if (stopOutcome === 'timed_out') {
+      timedOut = true;
       ports.logWarning(
         `[${teamName}] Regular stop did not finish within ${timeoutMs}ms; continuing with force stop cleanup.`
       );
       diagnostics.push(`Regular stop timed out after ${timeoutMs}ms`);
+    } else if (stopOutcome === 'runtime_already_down') {
+      timedOut = true;
+      diagnostics.push(
+        `Runtime hosts were gone ${Date.now() - stopStartedAtMs}ms into the stop; finished without waiting for the orchestrator acknowledgement`
+      );
     }
   } finally {
     if (timer) {
       clearTimeout(timer);
     }
+    // Cancelled here rather than after the race so a throw between them - or
+    // any later exit from this block - cannot leave the poller running.
+    runtimeHostsGone?.cancel();
   }
 
   let killedRuntimePids: number[] = [];
@@ -159,9 +413,33 @@ export async function runTeamForceStopFlow(
     }
   }
 
-  // Catch rows published by this run while its scoped stop was in flight.
-  if (ownedLaneIds?.length) await cancelOwnedDeliveries();
+  // Catch rows published by this run while its scoped stop was in flight. For a
+  // regular Stop this is instead the deferred cancellation, and it is the same
+  // decision the kill step just made: a stop that confirmed cancels nothing.
+  const cancelAfterStop = cleanupIsUnconditional
+    ? Boolean(ownedLaneIds?.length)
+    : stopOutcome !== 'stopped';
+  if (cancelAfterStop) await cancelOwnedDeliveries();
 
+  // Runs on both paths, unlike the host kill above it. A scoped stop that
+  // confirmed has released the team's sessions and never touched the external
+  // lead: the tree is not a shared host and not something the orchestrator
+  // stops, so a confirmed stop is exactly the case where it is left behind.
+  const reapedTrees = await reapOwnedLeadProcessTrees(
+    teamName,
+    ports,
+    stopStartedAtMs,
+    diagnostics
+  );
+  for (const pid of reapedTrees.killedPids) {
+    if (!killedRuntimePids.includes(pid)) killedRuntimePids.push(pid);
+  }
+  cleanupIncomplete ||= reapedTrees.incomplete;
+
+  // After the kills, never before them: a startup lock a live host still holds
+  // open cannot be unlinked, so it is the kill that turns it into an orphan.
+  await releaseSharedRuntimeResources(teamName, ports, diagnostics);
+  await markStopped(teamName, ports, diagnostics);
   return {
     stopOutcome,
     cleanupOutcome: stopOutcome === 'stopped' && !cleanupIncomplete ? 'completed' : 'incomplete',
@@ -169,6 +447,71 @@ export async function runTeamForceStopFlow(
     clearedPendingDeliveries,
     diagnostics,
   };
+}
+
+/**
+ * A reap that throws leaves a tree standing, which is the definition of an
+ * incomplete cleanup - but it never fails the stop, which by this point has
+ * already done everything else it owed the user.
+ */
+async function reapOwnedLeadProcessTrees(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  requestedAtMs: number,
+  diagnostics: string[]
+): Promise<{ killedPids: number[]; incomplete: boolean }> {
+  if (!ports.reapOwnedLeadProcessTrees) {
+    return { killedPids: [], incomplete: false };
+  }
+  try {
+    const reaped = await ports.reapOwnedLeadProcessTrees(teamName, { requestedAtMs });
+    diagnostics.push(...reaped.diagnostics);
+    // A reap that resolved still leaves the cleanup incomplete when a tree it
+    // targeted refused to die: the sweep reports that per tree and carries on,
+    // and a stop that called itself completed over it would be claiming a
+    // workspace is free while the process holding it is still running.
+    return { killedPids: reaped.killedPids, incomplete: reaped.incomplete === true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ports.logWarning(`[${teamName}] Lead process tree reap failed: ${message}`);
+    diagnostics.push(`Lead process tree reap failed: ${message}`);
+    return { killedPids: [], incomplete: true };
+  }
+}
+
+async function releaseSharedRuntimeResources(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  diagnostics: string[]
+): Promise<void> {
+  if (!ports.releaseSharedRuntimeResources) {
+    return;
+  }
+  try {
+    const released = await ports.releaseSharedRuntimeResources(teamName);
+    diagnostics.push(...released.diagnostics);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ports.logWarning(`[${teamName}] Post-stop resource release failed: ${message}`);
+    diagnostics.push(`Post-stop resource release failed: ${message}`);
+  }
+}
+
+async function markStopped(
+  teamName: string,
+  ports: TeamForceStopFlowPorts,
+  diagnostics: string[]
+): Promise<void> {
+  if (!ports.markTeamStopped) {
+    return;
+  }
+  try {
+    await ports.markTeamStopped(teamName);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    ports.logWarning(`[${teamName}] Could not persist stopped launch state: ${message}`);
+    diagnostics.push(`Stopped-state persistence failed: ${message}`);
+  }
 }
 
 /**
@@ -189,6 +532,112 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(_input: {
       'Hard process cleanup is not confirmed: this runtime does not support targeted forced termination that preserves other teams sharing an OpenCode host. Only the regular scoped stop was attempted; shared hosts were left untouched.',
     ],
   };
+}
+
+/**
+ * The models this team's members were configured to run on, read straight off
+ * its config. A config this app cannot read yields an empty list rather than
+ * "unknown": the release below narrows to what this list names, so an
+ * unreadable config has to release nothing at all instead of widening onto
+ * every runtime the user configured.
+ */
+async function readTeamMemberModels(teamsBasePath: string, teamName: string): Promise<string[]> {
+  try {
+    const raw = await fs.promises.readFile(
+      path.join(teamsBasePath, teamName, 'config.json'),
+      'utf8'
+    );
+    const members = (JSON.parse(raw) as { members?: unknown }).members;
+    if (!Array.isArray(members)) return [];
+    return members
+      .map((member) => (member as { model?: unknown } | null)?.model)
+      .filter((model): model is string => typeof model === 'string' && model.trim().length > 0);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The implementor of `releaseSharedLocalRuntime` this app ships, and the reason
+ * that port exists: the team's members were running on loopback runtimes that
+ * hold a model reserved for them, and once the team is down and no other team
+ * is alive, that reservation belongs to nobody.
+ *
+ * It is the caller of `releaseSharedRuntimeResourcesAfterStop` that hands this
+ * in rather than the flow reaching for it, because only the caller knows the
+ * team is the last one; and it resolves rather than rejects on every runtime
+ * that does not answer, because by this point the stop has already done
+ * everything that mattered.
+ */
+export async function releaseLoopbackRuntimesReservedByTeam(
+  teamsBasePath: string,
+  teamName: string
+): Promise<void> {
+  await releaseLoopbackRuntimeModels({
+    memberModels: await readTeamMemberModels(teamsBasePath, teamName),
+  });
+}
+
+/**
+ * Releases what a stopped team still holds beyond its own processes. It
+ * signals nothing and kills nothing: by the time it runs, the runtime has
+ * either confirmed the stop or been killed, and what is left are the shared
+ * resources the team reserved while it was alive.
+ *
+ * Two of them, and both only when this was the last team standing. The
+ * orchestrator startup locks of the stopped hosts are then orphans that would
+ * serialise the next launch behind them one at a time.
+ * `releaseSharedLocalRuntime` is a port with no default: a deployment whose
+ * members share a runtime this app can ask to stand down hands one in, and
+ * everywhere else its absence means the step does not exist rather than a
+ * no-op branch the app carries around.
+ */
+export async function releaseSharedRuntimeResourcesAfterStop(input: {
+  teamName: string;
+  otherAliveTeams: readonly string[];
+  releaseSharedLocalRuntime?: () => Promise<void>;
+  purgeHostStartupLocks?: typeof purgeStaleOpenCodeHostStartupLocks;
+}): Promise<{ diagnostics: string[] }> {
+  if (input.otherAliveTeams.length > 0) {
+    return {
+      diagnostics: [
+        `Kept shared runtime resources: other teams are still alive (${input.otherAliveTeams.join(', ')})`,
+      ],
+    };
+  }
+
+  const diagnostics: string[] = [];
+  // Never throws upward: this is a cleanup tail, and a stop that did what it
+  // had to do must not report failure because a lock file was unreadable.
+  try {
+    const purge = input.purgeHostStartupLocks ?? purgeStaleOpenCodeHostStartupLocks;
+    // Same age floor the pre-launch purge uses, and for the same reason: the
+    // alive-team list was read before this ran, so a launch that started in
+    // between holds a lock this purge can see. Without the floor an unheld
+    // lock of a host that is starting right now is removed, and the next host
+    // for the same port starts unserialised beside it.
+    const lockPurge = await purge({ minAgeMs: PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS });
+    if (lockPurge.removed > 0) {
+      diagnostics.push(`Purged ${lockPurge.removed} stale OpenCode host startup lock(s)`);
+    }
+    diagnostics.push(...lockPurge.diagnostics.map((entry) => `lock purge: ${entry}`));
+  } catch (error) {
+    diagnostics.push(
+      `lock purge failed: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  if (input.releaseSharedLocalRuntime) {
+    try {
+      await input.releaseSharedLocalRuntime();
+      diagnostics.push('Released the shared runtime held for this team');
+    } catch (error) {
+      diagnostics.push(
+        `Shared runtime release failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+  return { diagnostics };
 }
 
 export async function readOpenCodeRuntimeLaneIdsForTeam(

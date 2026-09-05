@@ -51,6 +51,13 @@ export interface TeamProvisioningPersistedLaunchReconcilePortsInput extends Pick
   | 'clearPersistedLaunchState'
   | 'getLiveTeamAgentRuntimeMetadata'
 > {
+  /**
+   * Required here, unlike on the reconcile ports themselves: a reconcile that
+   * runs against the provisioning service always has a tracked run to answer
+   * with, and leaving it out would silently opt every write out of the
+   * stale-run guards.
+   */
+  getTrackedRunId(teamName: string): string | null | undefined;
   readLaunchState(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
   readMembersMeta(teamName: string): Promise<readonly TeamMember[]>;
   readPersistedRuntimeMembers(teamName: string): readonly BootstrapRuntimeMemberLike[];
@@ -81,6 +88,9 @@ export interface TeamProvisioningPersistedLaunchReconcileServiceHost extends Pic
   membersMetaStore: {
     getMembers: TeamProvisioningPersistedLaunchReconcilePortsInput['readMembersMeta'];
   };
+  runTracking: {
+    getTrackedRunId: TeamProvisioningPersistedLaunchReconcilePortsInput['getTrackedRunId'];
+  };
 }
 
 function nowIso(): string {
@@ -99,6 +109,7 @@ export function createTeamProvisioningPersistedLaunchReconcilePorts(
     applyOpenCodeSecondaryBootstrapStallOverlay: input.applyOpenCodeSecondaryBootstrapStallOverlay,
     writeLaunchStateSnapshot: input.writeLaunchStateSnapshot,
     clearPersistedLaunchState: input.clearPersistedLaunchState,
+    getTrackedRunId: input.getTrackedRunId,
     applyBootstrapTranscriptEvidenceOverlay: (snapshot) =>
       applyBootstrapTranscriptEvidenceOverlay({
         snapshot,
@@ -221,9 +232,15 @@ export function createTeamProvisioningPersistedLaunchReconcilePortsFromService(
       service.applyOpenCodeSecondaryEvidenceOverlay(input),
     applyOpenCodeSecondaryBootstrapStallOverlay: (snapshot) =>
       service.applyOpenCodeSecondaryBootstrapStallOverlay(snapshot),
-    writeLaunchStateSnapshot: (teamName, snapshot) =>
-      service.writeLaunchStateSnapshot(teamName, snapshot),
-    clearPersistedLaunchState: (teamName) => service.clearPersistedLaunchState(teamName),
+    writeLaunchStateSnapshot: (teamName, snapshot, options) =>
+      options === undefined
+        ? service.writeLaunchStateSnapshot(teamName, snapshot)
+        : service.writeLaunchStateSnapshot(teamName, snapshot, options),
+    clearPersistedLaunchState: (teamName, options) =>
+      options === undefined
+        ? service.clearPersistedLaunchState(teamName)
+        : service.clearPersistedLaunchState(teamName, options),
+    getTrackedRunId: (teamName) => service.runTracking.getTrackedRunId(teamName),
     getLiveTeamAgentRuntimeMetadata: (teamName) =>
       service.getLiveTeamAgentRuntimeMetadata(teamName),
     resolveExpectedLaunchMemberName: (members, candidateName) =>

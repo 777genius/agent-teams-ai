@@ -143,7 +143,6 @@ import {
 import { GitDiffFallback } from '@main/services/team/GitDiffFallback';
 import { openCodeRelayDiagnosticsLogGate } from '@main/services/team/opencode/delivery/OpenCodeRelayDiagnosticsLogGate';
 import {
-  buildOpenCodeAppScopedMcpOwnershipMarker,
   buildOpenCodeAppScopedMcpUrl,
   copyOpenCodeLocalMcpLaunchEnv,
   hasOpenCodeLocalMcpLaunchEnv,
@@ -249,7 +248,16 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
-import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
+import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
+import {
+  buildOpenCodeProcessOwnershipMarkers,
+  cleanupOpenCodeHostProcessFallback,
+  runOpenCodeLifecycleCleanupTail,
+  type OpenCodeLifecycleCleanupTailPorts,
+} from './services/team/opencode/bridge/OpenCodeLifecycleCleanupTail';
+import { releaseLoopbackRuntimesOnAppShutdown } from './services/team/opencode/bridge/OpenCodeLoopbackRuntimeRelease';
+import { reapOrphanedOpenCodeHostsBeforeRuntimeRegistry } from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
@@ -679,6 +687,14 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }),
   ]);
 }
+let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
+
+const openCodeLifecycleCleanupTailPorts: OpenCodeLifecycleCleanupTailPorts = {
+  logSweepResult: (message) => logger.diagnostic(message),
+  logWarning: (message) => logger.warn(message),
+  logError: (message) => logger.error(message),
+};
+
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
@@ -708,46 +724,22 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
       diagnostic.startsWith('OpenCode host cleanup bridge failed:')
     );
   }
+  // After the command, not before it: the managed host the registry sweep
+  // boots in this process directory is younger than the moment the command was
+  // issued, so an issue-time fence keeps the one host the tail below exists to
+  // reap.
+  const sweepCommandSettledAtMs = Date.now();
 
-  if (reason === 'startup' && !registryCleanupAvailable) {
-    logger.warn(
-      '[OpenCode] Startup fallback cleanup skipped because host registry cleanup is unavailable'
-    );
-    return;
-  }
-
-  await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
-    mode: reason === 'shutdown' ? 'force' : 'orphaned',
-    excludePids: reason === 'startup' ? registryHostPids : undefined,
-    ...(reason === 'shutdown' ? getOpenCodeShutdownProcessOwnershipMarkers() : {}),
-    startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
+  await runOpenCodeLifecycleCleanupTail({
+    reason,
+    registryHostPids,
+    registryCleanupAvailable,
+    appStartedAtMs,
+    sweepCommandSettledAtMs,
+    managedHostInstanceId: openCodeManagedHostInstanceId,
+    releaseSharedRuntime: releaseLoopbackRuntimesOnAppShutdown,
+    ports: openCodeLifecycleCleanupTailPorts,
   });
-}
-
-function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<
-  Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
-  'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
-> {
-  return process.platform === 'win32'
-    ? {
-        requiredServeConfigMarkersAny: [
-          buildOpenCodeAppScopedMcpOwnershipMarker(openCodeManagedHostInstanceId),
-        ],
-      }
-    : { requiredDetailsMarkers: [`CLAUDE_TEAM_APP_INSTANCE_ID=${openCodeManagedHostInstanceId}`] };
-}
-
-async function cleanupOpenCodeHostProcessFallback(
-  label: string,
-  options: Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0]
-): Promise<void> {
-  const fallback = await cleanupManagedOpenCodeServeProcesses(options);
-  if (fallback.killed > 0) {
-    logger.info(`[OpenCode] ${label} cleanup killed ${fallback.killed} managed host(s)`);
-  }
-  for (const diagnostic of fallback.diagnostics) {
-    logger.warn(`[OpenCode] ${label} cleanup: ${diagnostic}`);
-  }
 }
 
 // --- Team display name cache (avoid listTeams() on every notification) ---
@@ -2049,6 +2041,20 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
     createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
   );
+  // Awaited, and before the runtime adapter registry exists: a managed host
+  // orphaned by a previous app instance still holds the fixed loopback ports a
+  // new host needs, and whoever gets there first wins. Reaping afterwards would
+  // mean the first launch of this session races a host it cannot see.
+  publishStartupStatus({
+    phase: 'runtime-host-preflight',
+    message: 'Cleaning up stale runtime hosts...',
+  });
+  await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+    appStartedAtMs,
+    logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+    logWarning: (message) => logger.warn(message),
+    logError: (message) => logger.error(message),
+  });
   publishStartupStatus({
     phase: 'runtime',
     message: 'Resolving local runtime...',
@@ -2059,11 +2065,20 @@ async function initializeServices(): Promise<void> {
     )
   );
   teamRuntimeRecoveryFeature.start();
+  // Armed before the delay, not inside the task, so a launch requested during
+  // the scheduling delay serialises behind the sweep as well.
+  const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
   scheduleStartupTask(() => {
-    void cleanupOpenCodeHostsForLifecycle('startup').catch((error: unknown) =>
-      logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
-    );
+    void cleanupOpenCodeHostsForLifecycle('startup')
+      .catch((error: unknown) =>
+        logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+      )
+      .finally(settleStartupRuntimeSweep);
   }, STARTUP_RECOVERY_DELAY_MS);
+  stopPeriodicOpenCodeHostStartupLockPurge = startPeriodicOpenCodeHostStartupLockPurge({
+    logInfo: (message) => logger.info(message),
+    logWarning: (message) => logger.warn(message),
+  });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
@@ -3005,6 +3020,11 @@ async function shutdownServices(): Promise<void> {
 
     clearStartupTimers();
     clearInboxNotifyTimers();
+    // Ahead of the first awaited step: runShutdownStep stops waiting on a step
+    // that hangs, it does not cancel it, so no awaited step may decide whether
+    // the background lock purge is still running.
+    stopPeriodicOpenCodeHostStartupLockPurge?.();
+    stopPeriodicOpenCodeHostStartupLockPurge = null;
 
     await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
       teamProvisioningService?.setRuntimeRecoveryFailureObserver(null);
@@ -3032,10 +3052,14 @@ async function shutdownServices(): Promise<void> {
     await runShutdownStep(
       'OpenCode post-subprocess fallback cleanup',
       () =>
-        cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
-          mode: 'force',
-          ...getOpenCodeShutdownProcessOwnershipMarkers(),
-        }),
+        cleanupOpenCodeHostProcessFallback(
+          'post-subprocess shutdown fallback',
+          {
+            mode: 'force',
+            ...buildOpenCodeProcessOwnershipMarkers(openCodeManagedHostInstanceId),
+          },
+          openCodeLifecycleCleanupTailPorts
+        ),
       5_000
     );
 
