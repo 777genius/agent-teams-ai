@@ -474,7 +474,8 @@ describe('HostedProducerProvenance', () => {
         provenance.emit('ownerWalTimeline', {
           recordType: 'owner-wal-published',
           operationNonce: '7'.repeat(64),
-          native: native as HostedOwnerWalNative,
+          // Deliberately exercise the runtime guard through an invalid caller value.
+          native: native as unknown as HostedOwnerWalNative,
         })
       ).toThrow(HostedProducerProvenanceFatalError);
       expect(lines(harness.bytes.get(9) ?? []).map((line) => line.recordType)).toEqual([
