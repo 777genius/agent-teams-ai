@@ -93,6 +93,13 @@ export interface OpenCodeStartupRuntimeSweepPorts {
   logSweepResult(message: string): void;
   logWarning(message: string): void;
   /**
+   * The reap failed outright, which is a caught main-process failure and not a
+   * warning about one host. `warn` reaches the durable sinks either way, but
+   * its console line is filtered out at the production log level, so the one
+   * failure that explains why nothing was reaped is the one nobody sees.
+   */
+  logError(message: string): void;
+  /**
    * Declared as a property rather than a method so the default below reads it
    * unbound without borrowing `ports` as `this`.
    */
@@ -129,7 +136,7 @@ export async function runOpenCodeStartupRuntimeSweepTail(
       ports.logWarning(`[OpenCode] startup sweep host cleanup: ${diagnostic}`);
     }
   } catch (error) {
-    ports.logWarning(`[OpenCode] Startup sweep host cleanup failed: ${String(error)}`);
+    ports.logError(`[OpenCode] Startup sweep host cleanup failed: ${String(error)}`);
   }
 }
 
@@ -151,6 +158,8 @@ export async function reapOrphanedOpenCodeHostsBeforeRuntimeRegistry(ports: {
   sweepManagedHosts?: OpenCodeManagedHostSweep;
   logSweepResult(message: string): void;
   logWarning(message: string): void;
+  /** As above: a sweep that could not run at all is a failure, not a warning. */
+  logError(message: string): void;
 }): Promise<void> {
   const sweepManagedHosts = ports.sweepManagedHosts ?? sweepManagedHostsByProcessScan;
   try {
@@ -165,6 +174,6 @@ export async function reapOrphanedOpenCodeHostsBeforeRuntimeRegistry(ports: {
       ports.logWarning(`[OpenCode] startup preflight cleanup: ${diagnostic}`);
     }
   } catch (error) {
-    ports.logWarning(`[OpenCode] Startup preflight host cleanup failed: ${String(error)}`);
+    ports.logError(`[OpenCode] Startup preflight host cleanup failed: ${String(error)}`);
   }
 }
