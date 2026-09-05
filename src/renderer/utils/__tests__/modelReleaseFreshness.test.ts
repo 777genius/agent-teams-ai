@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   compareModelReleaseFreshness,
-  getModelReleaseTimestamp,
   isRecentlyReleasedModel,
   NEW_MODEL_BADGE_WINDOW_MS,
 } from '../modelReleaseFreshness';
@@ -36,33 +35,54 @@ function buildModel(options: {
 }
 
 describe('model release freshness', () => {
-  it('uses an inclusive fourteen-day window', () => {
+  it('uses a strict fourteen-day window', () => {
     const boundary = new Date(NOW_MS - NEW_MODEL_BADGE_WINDOW_MS).toISOString();
-    const expired = new Date(NOW_MS - NEW_MODEL_BADGE_WINDOW_MS - 1).toISOString();
+    const inside = new Date(NOW_MS - NEW_MODEL_BADGE_WINDOW_MS + 1).toISOString();
 
     expect(
       isRecentlyReleasedModel(buildModel({ id: 'boundary', releaseDate: boundary }), NOW_MS)
-    ).toBe(true);
+    ).toBe(false);
+    expect(isRecentlyReleasedModel(buildModel({ id: 'inside', releaseDate: inside }), NOW_MS)).toBe(
+      true
+    );
+  });
+
+  it('treats non-empty old, future, and invalid dates as authoritative over the runtime hint', () => {
+    const old = new Date(NOW_MS - NEW_MODEL_BADGE_WINDOW_MS - 1).toISOString();
+
     expect(
-      isRecentlyReleasedModel(buildModel({ id: 'expired', releaseDate: expired }), NOW_MS)
+      isRecentlyReleasedModel(
+        buildModel({ id: 'old', releaseDate: old, recentlyReleased: true }),
+        NOW_MS
+      )
+    ).toBe(false);
+    expect(
+      isRecentlyReleasedModel(
+        buildModel({ id: 'invalid', releaseDate: 'not-a-date', recentlyReleased: true }),
+        NOW_MS
+      )
+    ).toBe(false);
+    expect(
+      isRecentlyReleasedModel(
+        buildModel({
+          id: 'future',
+          releaseDate: '2026-09-06T12:00:00.000Z',
+          recentlyReleased: true,
+        }),
+        NOW_MS
+      )
     ).toBe(false);
   });
 
-  it('rejects invalid and future release dates', () => {
-    expect(
-      getModelReleaseTimestamp(buildModel({ id: 'invalid', releaseDate: 'not-a-date' }), NOW_MS)
-    ).toBeNull();
-    expect(
-      getModelReleaseTimestamp(
-        buildModel({ id: 'future', releaseDate: '2026-09-06T12:00:00.000Z' }),
-        NOW_MS
-      )
-    ).toBeNull();
-  });
-
-  it('honors the runtime new-model hint when no release date is available', () => {
+  it('honors the runtime hint only when the release date is absent or blank', () => {
     expect(
       isRecentlyReleasedModel(buildModel({ id: 'astra', recentlyReleased: true }), NOW_MS)
+    ).toBe(true);
+    expect(
+      isRecentlyReleasedModel(
+        buildModel({ id: 'blank-date', releaseDate: '   ', recentlyReleased: true }),
+        NOW_MS
+      )
     ).toBe(true);
   });
 
