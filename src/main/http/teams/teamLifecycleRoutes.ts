@@ -9,12 +9,17 @@
  */
 import {
   clearPendingOpenCodePromptDeliveriesForTeam,
+  countLiveRecordedRuntimeHostsForTeam,
   killRetainedOpenCodeRuntimeProcessesForTeam,
   readOpenCodeRuntimeLaneIdsForTeam,
   readOwnedOpenCodeRuntimeRunIdsForTeam,
+  releaseSharedRuntimeResourcesAfterStop,
   runTeamForceStopFlow,
+  STOP_ESCALATION_TIMEOUT_MS,
+  stopTeamWithEscalation,
 } from '@main/services/team/lifecycle/teamForceStopFlow';
 import { validateTeamName } from '@main/services/team/TeamIdentifierValidation';
+import { TeamLaunchStateStore } from '@main/services/team/TeamLaunchStateStore';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { getErrorMessage } from '@shared/utils/errorHandling';
 
@@ -24,7 +29,11 @@ import type { FastifyInstance } from 'fastify';
 
 /** Error handling shared with the routes that stayed in `../teams`. */
 export interface TeamLifecycleRouteDeps {
-  logger: { error(message: string, detail: string): void; warn(message: string): void };
+  logger: {
+    error(message: string, detail: string): void;
+    warn(message: string): void;
+    info(message: string): void;
+  };
   shouldLogError: (error: unknown) => boolean;
   getStatusCode: (error: unknown) => number;
   getResponseErrorMessage: (error: unknown) => string;
@@ -57,9 +66,50 @@ export function registerTeamLifecycleRoutes(
           return reply.status(400).send({ error: validatedTeamName.error });
         }
 
+        const teamName = validatedTeamName.value!;
         const teamRuntimeApi = getTeamRuntimeApi(services);
-        await teamRuntimeApi.stopTeam(validatedTeamName.value!);
-        return reply.send(await teamRuntimeApi.getRuntimeState(validatedTeamName.value!));
+        // Same semantics as the in-app Stop control: the regular stop gets a
+        // bounded budget, and only if it does not deliver does the force-stop
+        // cleanup guarantee the team is down.
+        const result = await stopTeamWithEscalation(teamName, {
+          stopTeam: (name) => teamRuntimeApi.stopTeam(name),
+          observeOwnedRuntimeRunIds: (name) =>
+            readOwnedOpenCodeRuntimeRunIdsForTeam({ teamName: name }),
+          observeOwnedRuntimeLaneIds: (name) =>
+            readOpenCodeRuntimeLaneIdsForTeam(getTeamsBasePath(), name),
+          killRetainedRuntimeProcesses: (name, context) =>
+            killRetainedOpenCodeRuntimeProcessesForTeam({
+              teamName: name,
+              requestedAtMs: context.requestedAtMs,
+              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+            }),
+          clearPendingPromptDeliveries: (name, context) =>
+            clearPendingOpenCodePromptDeliveriesForTeam({
+              teamName: name,
+              ownedRunIds: context.ownedRunIds,
+              ownedLaneIds: context.ownedLaneIds,
+              requestedAtMs: context.requestedAtMs,
+            }),
+          logWarning: (message) => logger.warn(message),
+          stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+          countLiveRuntimeHosts: (name) => countLiveRecordedRuntimeHostsForTeam({ teamName: name }),
+          markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+          releaseSharedRuntimeResources: (name) =>
+            releaseSharedRuntimeResourcesAfterStop({
+              teamName: name,
+              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+            }),
+        });
+        if (result.stopOutcome === 'runtime_already_down') {
+          logger.info(
+            `[${teamName}] Runtime hosts were already down; finished the stop without the orchestrator acknowledgement (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
+          );
+        } else if (result.stopOutcome !== 'stopped') {
+          logger.warn(
+            `[${teamName}] Regular stop ${result.stopOutcome}; escalated to force stop (killed ${result.killedRuntimePids.length} runtime pid(s), cancelled ${result.clearedPendingDeliveries} pending deliveries)`
+          );
+        }
+        return reply.send(await teamRuntimeApi.getRuntimeState(teamName));
       } catch (error) {
         if (shouldLogError(error)) {
           logger.error(
@@ -108,6 +158,12 @@ export function registerTeamLifecycleRoutes(
               requestedAtMs: context.requestedAtMs,
             }),
           logWarning: (message) => logger.warn(message),
+          markTeamStopped: (name) => new TeamLaunchStateStore().markStopped(name),
+          releaseSharedRuntimeResources: (name) =>
+            releaseSharedRuntimeResourcesAfterStop({
+              teamName: name,
+              otherAliveTeams: teamRuntimeApi.getAliveTeams().filter((alive) => alive !== name),
+            }),
         });
         return reply.send(result);
       } catch (error) {

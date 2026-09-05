@@ -12594,7 +12594,22 @@ describe('TeamProvisioningService', () => {
       const retryText = String(sendMessageToMember.mock.calls[1]?.[0].text ?? '');
       expect(retryText).toContain('relayOfMessageId="msg-visible-required"');
       expect(retryText).toContain('agent-teams_message_send');
-      expect(retryText).toContain('What did you find?');
+      // The runtime accepted the prompt body in this session already, so the
+      // retry names the message instead of asking the question a second time.
+      expect(retryText).toContain('<opencode_delivery_redelivery>');
+      expect(retryText).not.toContain('What did you find?');
+      // The marker has to name the message the runtime already holds, taken from
+      // the ledger record that was written to disk and read back on this second
+      // pass. A marker naming some other id would point the lead at the wrong
+      // message to reconcile against, and dropping the id entirely would leave
+      // it with nothing to look up.
+      const redeliveryBlock = retryText.slice(
+        retryText.indexOf('<opencode_delivery_redelivery>'),
+        retryText.indexOf('</opencode_delivery_redelivery>')
+      );
+      expect(redeliveryBlock).toContain(
+        'The inbound app message "msg-visible-required" is ALREADY in this session'
+      );
     });
 
     it('keeps OpenCode task delivery pending after read-only non-visible tool activity', async () => {
@@ -19540,7 +19555,13 @@ describe('TeamProvisioningService', () => {
 
       expect(adapterLaunch).toHaveBeenCalledTimes(1);
       expect(adapterStop).toHaveBeenCalledTimes(1);
-      expect(progress.at(-1)).toMatchObject({ state: 'failed', error: rootCause });
+      // The lead is a veto: the failure artifact now LEADS with the lead reason
+      // and keeps the shared-runtime root cause behind it.
+      expect(progress.at(-1)).toMatchObject({
+        state: 'failed',
+        error: expect.stringContaining(rootCause),
+      });
+      expect(progress.at(-1)?.error).toContain('team-lead');
       const statuses = await svc.getMemberSpawnStatuses(teamName);
       expect(statuses.statuses.alice).toMatchObject({
         status: 'error',

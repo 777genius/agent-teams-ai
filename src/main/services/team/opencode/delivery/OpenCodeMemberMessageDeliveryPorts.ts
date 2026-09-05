@@ -4,6 +4,7 @@ import type {
   TeamLaunchRuntimeAdapter,
 } from '../../runtime';
 import type { OpenCodeCommittedBootstrapSessionRecord } from '../store/OpenCodeRuntimeManifestEvidenceReader';
+import type { PrimaryLaneBootstrapSelfHealDecision } from './OpenCodePrimaryLaneBootstrapSelfHeal';
 import type { OpenCodePromptDeliveryFollowUpPolicy } from './OpenCodePromptDeliveryFollowUpPolicy';
 import type {
   OpenCodePromptDeliveryLedgerRecord,
@@ -13,6 +14,7 @@ import type {
 import type { OpenCodeStalePendingPolicyConfig } from './OpenCodePromptDeliveryStalePendingPolicy';
 import type { OpenCodeVisibleReplyProof } from './OpenCodePromptDeliveryWatchdog';
 import type { OpenCodePromptDeliveryWatchdogScheduler } from './OpenCodePromptDeliveryWatchdogScheduler';
+import type { OpenCodeMemberContextUsageProbe } from './OpenCodeStalePendingObservationSignals';
 import type { OpenCodeVisibleReplyProofService } from './OpenCodeVisibleReplyProofService';
 import type {
   AgentActionMode,
@@ -58,6 +60,25 @@ export interface OpenCodeMemberMessageDeliveryInput {
   attachments?: AttachmentPayload[];
   source?: OpenCodeMemberMessageDeliverySource;
   inboxTimestamp?: string;
+  /**
+   * Extra reply-optional notices delivered inside the same prompt (inbox relay
+   * coalescing). Appended to the prompt body only; the ledger payload hash is
+   * computed from `text`, so retries of the same inbox row stay consistent.
+   */
+  coalescedNoticeText?: string;
+}
+
+/**
+ * The prompt body actually sent to the runtime: the inbox row's own text plus
+ * whatever notices the relay folded into this delivery. Keep this separate from
+ * `input.text`, which is the identity of the inbox row and the only thing the
+ * payload hash may see.
+ */
+export function buildOpenCodePromptBodyText(
+  input: Pick<OpenCodeMemberMessageDeliveryInput, 'text' | 'coalescedNoticeText'>
+): string {
+  const extra = input.coalescedNoticeText?.trim();
+  return extra ? `${input.text}\n\n${extra}` : input.text;
 }
 
 export interface OpenCodeMemberInboxDelivery {
@@ -75,6 +96,13 @@ export interface OpenCodeMemberInboxDelivery {
     | 'direct_child_message_send'
     | 'plain_assistant_text';
   queuedBehindMessageId?: string;
+  /**
+   * True only when THIS call dispatched a prompt carrying `coalescedNoticeText`
+   * and the runtime accepted it. `delivered` is not proof of dispatch (see the
+   * INVARIANT note at the end of `deliver`), so the inbox relay read-commits
+   * coalesced riders on this flag alone.
+   */
+  coalescedNoticesDelivered?: boolean;
   reason?: string;
   diagnostics?: string[];
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;
@@ -159,6 +187,12 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
     member: TeamMember;
     projectPath: string | null;
   }): Promise<boolean>;
+  /**
+   * Runtime turn/context token usage for a lane member: the only progress proof
+   * an ACP bridge produces. Unset, the probe short-circuits and the
+   * stale-pending clock is pure wall time.
+   */
+  readOpenCodeMemberContextUsage?: OpenCodeMemberContextUsageProbe;
   deleteSecondaryRuntimeRun(teamName: string, laneId: string): void;
   cleanupStoppedTeamOpenCodeRuntimeLanesInBackground(teamName: string): void;
   findDeliverableOpenCodeRuntimeBootstrapSessionEvidence(input: {
@@ -273,6 +307,18 @@ export interface OpenCodeMemberMessageDeliveryServiceDependencies {
    * 'active' once a prompt is accepted, 'idle' once the delivery settles.
    */
   notifyOpenCodeLeadTurnActivity?(input: OpenCodeLeadTurnActivityNotification): void;
+  /**
+   * Bounded, exactly-once lead re-bootstrap for a primary lane that holds no
+   * committed runtime session. Absent means the delivery keeps its old
+   * behaviour and the refusal is never escalated.
+   */
+  requestOpenCodePrimaryLaneRebootstrap?(input: {
+    teamName: string;
+    laneId: string;
+    memberName: string;
+    runId: string | null;
+    reason: string;
+  }): Promise<PrimaryLaneBootstrapSelfHealDecision>;
   observeOpenCodeDirectUserDeliveryInlineIfNeeded(input: {
     adapter: OpenCodeRuntimeMessageAdapter;
     ledger: OpenCodePromptDeliveryLedgerStore;

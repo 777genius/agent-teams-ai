@@ -4,6 +4,7 @@ import {
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
+import { isProcessAlive } from '@main/utils/processHealth';
 import { isLeadMember } from '@shared/utils/leadDetection';
 import { randomUUID } from 'crypto';
 
@@ -16,6 +17,7 @@ import {
   upsertOpenCodeRuntimeLaneIndexEntry,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { snapshotToMemberSpawnStatuses } from '../TeamLaunchStateEvaluator';
+import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
 import {
@@ -240,6 +242,7 @@ export function createSingleMixedSecondaryRuntimeLaneStopPorts<
     teamsBasePath: getTeamsBasePath(),
     getOpenCodeRuntimeAdapter: () => deps.service.getOpenCodeRuntimeAdapter(),
     readLaunchState: (teamName) => deps.service.readLaunchState(teamName),
+    isRuntimeProcessAlive: isProcessAlive,
     upsertOpenCodeRuntimeLaneIndexEntry,
     clearOpenCodeRuntimeLaneStorage,
     deleteSecondaryRuntimeRun: (teamName, laneId) =>
@@ -279,6 +282,7 @@ export function createStaleMixedSecondaryRecoveryPorts<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 >(deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>): StaleMixedSecondaryRecoveryPorts {
   return {
+    isTeamLaunchStopped: (teamName) => new TeamLaunchStateStore().isStopped(teamName),
     hasMixedSecondaryLaunchMetadata: (snapshot) =>
       deps.service.hasMixedSecondaryLaunchMetadata(snapshot),
     shouldRecoverStalePersistedMixedLaunchSnapshot: (snapshot) =>
@@ -302,8 +306,8 @@ export function createStaleMixedSecondaryRecoveryPorts<
     nowIso,
     getTeamsBasePath,
     buildAggregateLaunchSnapshot: (input) => deps.service.buildAggregateLaunchSnapshot(input),
-    writeLaunchStateSnapshot: (teamName, snapshot) =>
-      deps.service.writeLaunchStateSnapshot(teamName, snapshot),
+    writeLaunchStateSnapshot: (teamName, snapshot, options) =>
+      deps.service.writeLaunchStateSnapshot(teamName, snapshot, options),
   };
 }
 
@@ -358,8 +362,8 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
         ),
       buildAggregateLaunchSnapshot: (input) =>
         service.runtimeLaneCoordinator.buildAggregateLaunchSnapshot(input),
-      writeLaunchStateSnapshot: (teamName, snapshot) =>
-        service.writeLaunchStateSnapshot(teamName, snapshot),
+      writeLaunchStateSnapshot: (teamName, snapshot, writeOptions) =>
+        service.writeLaunchStateSnapshot(teamName, snapshot, writeOptions),
     },
     logger: options.logger,
   };

@@ -2,8 +2,10 @@ import {
   cleanupManagedOpenCodeServeProcesses,
   getOpenCodeServeLoopbackBaseUrl,
   isAppManagedWindowsOpenCodeServeCommand,
+  isManagedOpenCodeServeHostConfig,
   isManagedOpenCodeServeProcessDetails,
   isOpenCodeServeCommand,
+  isOrchestratorServeCommand,
 } from '@main/services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { describe, expect, it, vi } from 'vitest';
@@ -114,6 +116,32 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
         'opencode serve OPENCODE_CONFIG_CONTENT={"agent":{"teammate":{"permission":{"agent-teams_*":"allow"}}}}'
       )
     ).toBe(false);
+  });
+
+  it('recognises the orchestrator serve host, which only this app runs', () => {
+    expect(isOrchestratorServeCommand('/opt/app/bin/claude-multimodel serve --port 4096')).toBe(
+      true
+    );
+    expect(isOrchestratorServeCommand('C:\\app\\claude-multimodel.exe serve --port 4096')).toBe(
+      true
+    );
+    // Neither a different subcommand nor the standalone CLI a user runs.
+    expect(isOrchestratorServeCommand('/opt/app/bin/claude-multimodel status')).toBe(false);
+    expect(isOrchestratorServeCommand('/usr/local/bin/opencode serve --port 4096')).toBe(false);
+  });
+
+  it('recognises a managed host by its effective config when the environment is unreadable', () => {
+    expect(
+      isManagedOpenCodeServeHostConfig('{"mcp":{"url":"?agent-teams-app-instance=abc"}}')
+    ).toBe(true);
+    expect(
+      isManagedOpenCodeServeHostConfig('{"environment":{"AGENT_TEAMS_MCP_CLAUDE_DIR":"/tmp"}}')
+    ).toBe(true);
+    expect(
+      isManagedOpenCodeServeHostConfig('{"description":"claude-multimodel runtime orchestration"}')
+    ).toBe(true);
+    // A config a user's own `opencode serve` would publish.
+    expect(isManagedOpenCodeServeHostConfig('{"model":"gpt-5","mcp":{"github":{}}}')).toBe(false);
   });
 
   it('extracts only loopback OpenCode serve base URLs for disposal', () => {
@@ -387,6 +415,41 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
     expect(result.candidates[0]).toMatchObject({ pid: 401, action: 'killed' });
   });
 
+  // Fail-safe direction: an unobservable start time means "cannot prove this is
+  // mine", and the sweep reaches processes it never recorded a pid for. Reading
+  // it the other way would reap somebody else's host on every sweep.
+  it('keeps a fenced managed process whose start time cannot be read at all', async () => {
+    const killProcess = vi.fn();
+    const forceKillProcess = vi.fn();
+    const requestedAtMs = Date.parse('2026-05-13T17:00:00.000Z');
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'darwin',
+      startedBeforeMs: requestedAtMs,
+      listProcessRows: () =>
+        resolved([
+          {
+            pid: 402,
+            ppid: 123,
+            command: '/opt/homebrew/bin/opencode serve --hostname 127.0.0.1 --port 3000',
+          },
+        ]),
+      readProcessDetails: () => resolved(MANAGED_DETAILS),
+      // What `readProcessStartTimeMs` answers when the probe cannot run.
+      readProcessStartTimeMs: () => resolved(null),
+      disposeServeHost: () => resolved(undefined),
+      isProcessAlive: () => true,
+      killProcess,
+      forceKillProcess,
+    });
+
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(forceKillProcess).not.toHaveBeenCalled();
+    expect(result.killed).toBe(0);
+    expect(result.candidates[0]).toMatchObject({ pid: 402, action: 'kept_recent' });
+  });
+
   it('never kills a standalone opencode serve without the managed markers, even in force mode', async () => {
     const killProcess = vi.fn();
     const forceKillProcess = vi.fn();
@@ -420,6 +483,106 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
         reason: 'process does not carry Agent Teams managed OpenCode environment markers',
       }),
     ]);
+  });
+
+  it.each(['orphaned' as const, 'force' as const])(
+    'spares a standalone opencode serve in %s mode even when the fence would allow a kill',
+    async (mode) => {
+      const killProcess = vi.fn();
+      const forceKillProcess = vi.fn();
+      const appStartedAtMs = Date.parse('2026-05-13T17:00:00.000Z');
+
+      const result = await cleanupManagedOpenCodeServeProcesses({
+        mode,
+        platform: 'darwin',
+        startedBeforeMs: appStartedAtMs,
+        listProcessRows: () =>
+          resolved([
+            {
+              pid: 910,
+              ppid: 1,
+              command: '/usr/local/bin/opencode serve --hostname 127.0.0.1 --port 4096',
+            },
+          ]),
+        readProcessDetails: () =>
+          resolved(
+            '/usr/local/bin/opencode serve --hostname 127.0.0.1 --port 4096 HOME=/home/user'
+          ),
+        readProcessStartTimeMs: () => resolved(appStartedAtMs - 60_000),
+        disposeServeHost: () => resolved(undefined),
+        isProcessAlive: () => true,
+        killProcess,
+        forceKillProcess,
+      });
+
+      expect(killProcess).not.toHaveBeenCalled();
+      expect(forceKillProcess).not.toHaveBeenCalled();
+      expect(result.killed).toBe(0);
+      expect(result.candidates[0]).toMatchObject({ pid: 910, action: 'kept_unmanaged' });
+    }
+  );
+
+  // Windows cannot read another process's environment, and a PATH-resolved
+  // runtime carries no app-managed install path, so the config the host serves
+  // over loopback is the last remaining ownership signal.
+  it('claims a Windows host whose loopback config carries this app instance', async () => {
+    const killProcess = vi.fn();
+    const appStartedAtMs = Date.parse('2026-05-13T17:00:00.000Z');
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'win32',
+      startedBeforeMs: appStartedAtMs,
+      listProcessRows: () =>
+        resolved([
+          {
+            pid: 920,
+            ppid: 1,
+            command: 'C:\\tools\\opencode.exe serve --hostname 127.0.0.1 --port 4096',
+          },
+        ]),
+      readProcessDetails: () => resolved(null),
+      readServeHostConfig: () =>
+        resolved('{"environment":{"AGENT_TEAMS_MCP_CLAUDE_DIR":"C:/Users/dev/.claude"}}'),
+      readProcessStartTimeMs: () => resolved(appStartedAtMs - 60_000),
+      disposeServeHost: () => resolved(undefined),
+      isProcessAlive: () => false,
+      killProcess,
+    });
+
+    expect(killProcess).toHaveBeenCalledWith(920);
+    expect(result.candidates[0]).toMatchObject({ pid: 920, action: 'killed' });
+  });
+
+  it('leaves a Windows host alone when its loopback config belongs to somebody else', async () => {
+    const killProcess = vi.fn();
+    const forceKillProcess = vi.fn();
+    const appStartedAtMs = Date.parse('2026-05-13T17:00:00.000Z');
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'win32',
+      startedBeforeMs: appStartedAtMs,
+      listProcessRows: () =>
+        resolved([
+          {
+            pid: 921,
+            ppid: 1,
+            command: 'C:\\tools\\opencode.exe serve --hostname 127.0.0.1 --port 4096',
+          },
+        ]),
+      readProcessDetails: () => resolved(null),
+      readServeHostConfig: () => resolved('{"model":"gpt-5","mcp":{"github":{}}}'),
+      readProcessStartTimeMs: () => resolved(appStartedAtMs - 60_000),
+      disposeServeHost: () => resolved(undefined),
+      isProcessAlive: () => true,
+      killProcess,
+      forceKillProcess,
+    });
+
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(forceKillProcess).not.toHaveBeenCalled();
+    expect(result.candidates[0]).toMatchObject({ pid: 921, action: 'kept_unmanaged' });
   });
 
   it('escalates force cleanup when a managed OpenCode serve process survives SIGTERM', async () => {
