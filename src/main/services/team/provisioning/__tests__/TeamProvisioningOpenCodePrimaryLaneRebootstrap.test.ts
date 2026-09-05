@@ -231,6 +231,32 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
   });
 
   /**
+   * An evidence store that could not answer is not the same answer as "no
+   * session was committed". Only the second is proof, and only proof may undo
+   * a relaunch whose own result already claims the lead is alive: reaping on a
+   * rejected read destroys a lane that just came up correctly, and spends one
+   * of the few self-heal attempts the run is allowed to do it.
+   */
+  it('keeps the relaunched lane when the lead evidence store could not answer', async () => {
+    const { ports, calls } = createPorts({
+      hasCommittedLeadSessionEvidence: async () => {
+        throw new Error('runtime evidence store unreadable');
+      },
+    });
+
+    const result = await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON },
+      ports
+    );
+
+    expect(result).toEqual({ rebootstrapped: true });
+    // One stop for the relaunch, and no second one reaping what it started.
+    expect(calls.filter((call) => call === 'stopPrimary')).toHaveLength(1);
+    expect(calls).not.toContain('publishFailed');
+    expect(calls).toContain('persistLaunchState');
+  });
+
+  /**
    * The evidence read touches the runtime store on disk, so a Stop can settle
    * while it is in flight. Reaching the persist after that would write an
    * `active` launch snapshot, and a launch-start write lifts the stop marker.
