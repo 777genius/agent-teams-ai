@@ -26,7 +26,8 @@ import {
   externalWriterStateLimits,
   fingerprintsEqual,
   isClosedReconciliationResult,
-  isSafePositiveInteger,
+  listRegistrations,
+  listScopes,
   readStableExternalFile,
   scopesEqual,
   type TeamQuiescenceFence,
@@ -37,13 +38,13 @@ import {
   nextPendingOutsideSelfWriteOperation,
 } from './externalWriterSelfWriteOperations';
 
-import type {
-  ExternalWriterCleanHandoffEligibilityPlan,
-  ExternalWriterWatchHandle,
-} from './ports';
+import type { ExternalWriterCleanHandoffEligibilityPlan, ExternalWriterWatchHandle } from './ports';
 import type { TeamId } from '@shared/contracts/hosted/identifiers';
 
-export { type ExternalWriterObserverDependencies, ExternalWriterObserverError } from './externalWriterObserverSupport';
+export {
+  type ExternalWriterObserverDependencies,
+  ExternalWriterObserverError,
+} from './externalWriterObserverSupport';
 
 export class ExternalWriterObserver {
   private readonly options: ExternalWriterObserverOptions;
@@ -88,7 +89,7 @@ export class ExternalWriterObserver {
           onNotification: (notification) => this.acceptNotification(notification),
           onOverflow: (notification) => this.acceptOverflow(notification),
         });
-        const scopes = await this.listScopes();
+        const scopes = await listScopes(this.dependencies, this.options);
         for (const scope of scopes) {
           await this.scanScopeInternal(scope, 'startup_scan');
         }
@@ -228,7 +229,9 @@ export class ExternalWriterObserver {
         if (this.dependencies.clock.nowMs() >= deadlineMs) {
           break;
         }
-        const teamScopes = (await this.listScopes()).filter((scope) => scope.teamId === teamId);
+        const teamScopes = (await listScopes(this.dependencies, this.options)).filter(
+          (scope) => scope.teamId === teamId
+        );
         for (const scope of teamScopes) {
           if (this.dependencies.clock.nowMs() >= deadlineMs) {
             break;
@@ -306,7 +309,7 @@ export class ExternalWriterObserver {
         await this.watchHandle?.close();
       } catch {
         closeFailed = true;
-        for (const scope of await this.listScopes().catch(() => [])) {
+        for (const scope of await listScopes(this.dependencies, this.options).catch(() => [])) {
           this.state.markScopeDirty(scope, 'shutdown_handoff');
         }
       }
@@ -477,7 +480,7 @@ export class ExternalWriterObserver {
     const repairThrough = this.state.getLastObservationSequence();
     let registrations: readonly ExternalFileRegistration[];
     try {
-      registrations = await this.listRegistrations(scope);
+      registrations = await listRegistrations(this.dependencies, this.options, scope);
     } catch (error) {
       this.state.markScopeDirty(scope, 'catalog_changed');
       if (error instanceof ExternalWriterObserverError) {
@@ -736,49 +739,8 @@ export class ExternalWriterObserver {
   private async findRegistration(
     pending: PendingFileObservation
   ): Promise<ExternalFileRegistration | null> {
-    const registrations = await this.listRegistrations(pending.scope);
+    const registrations = await listRegistrations(this.dependencies, this.options, pending.scope);
     return registrations.find((registration) => registration.fileKey === pending.fileKey) ?? null;
-  }
-
-  private async listScopes(): Promise<readonly ExternalWriterScope[]> {
-    const scopes = await this.dependencies.catalog.listScopes();
-    if (scopes.length > this.options.maxScopes) {
-      throw new ExternalWriterObserverError('catalog_invalid');
-    }
-    const seen = new Set<string>();
-    for (const scope of scopes) {
-      const key = `${scope.teamId.length}:${scope.teamId}${scope.featureKey.length}:${scope.featureKey}`;
-      if (scope.teamId.length === 0 || scope.featureKey.length === 0 || seen.has(key)) {
-        throw new ExternalWriterObserverError('catalog_invalid');
-      }
-      seen.add(key);
-    }
-    return scopes;
-  }
-
-  private async listRegistrations(
-    scope: ExternalWriterScope
-  ): Promise<readonly ExternalFileRegistration[]> {
-    const registrations = await this.dependencies.catalog.listRegistrations(scope);
-    if (registrations.length > this.options.maxFilesPerScope) {
-      throw new ExternalWriterObserverError('catalog_invalid');
-    }
-    const seen = new Set<string>();
-    for (const registration of registrations) {
-      if (
-        !scopesEqual(registration.scope, scope) ||
-        registration.fileKey.length === 0 ||
-        !isSafePositiveInteger(registration.maxBytes) ||
-        registration.maxBytes > this.options.maxReadBytes ||
-        (registration.attributionPolicy !== 'external_file_only' &&
-          registration.attributionPolicy !== 'verified_run_evidence') ||
-        seen.has(registration.fileKey)
-      ) {
-        throw new ExternalWriterObserverError('catalog_invalid');
-      }
-      seen.add(registration.fileKey);
-    }
-    return registrations;
   }
 
   private async persist(): Promise<void> {

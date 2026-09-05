@@ -332,3 +332,49 @@ export function assertExternalWriterObserverOptions(options: ExternalWriterObser
     throw new ExternalWriterObserverError('options_invalid');
   }
 }
+
+export async function listScopes(
+  dependencies: ExternalWriterObserverDependencies,
+  options: ExternalWriterObserverOptions
+): Promise<readonly ExternalWriterScope[]> {
+  const scopes = await dependencies.catalog.listScopes();
+  if (scopes.length > options.maxScopes) {
+    throw new ExternalWriterObserverError('catalog_invalid');
+  }
+  const seen = new Set<string>();
+  for (const scope of scopes) {
+    const key = `${scope.teamId.length}:${scope.teamId}${scope.featureKey.length}:${scope.featureKey}`;
+    if (scope.teamId.length === 0 || scope.featureKey.length === 0 || seen.has(key)) {
+      throw new ExternalWriterObserverError('catalog_invalid');
+    }
+    seen.add(key);
+  }
+  return scopes;
+}
+
+export async function listRegistrations(
+  dependencies: ExternalWriterObserverDependencies,
+  options: ExternalWriterObserverOptions,
+  scope: ExternalWriterScope
+): Promise<readonly ExternalFileRegistration[]> {
+  const registrations = await dependencies.catalog.listRegistrations(scope);
+  if (registrations.length > options.maxFilesPerScope) {
+    throw new ExternalWriterObserverError('catalog_invalid');
+  }
+  const seen = new Set<string>();
+  for (const registration of registrations) {
+    if (
+      !scopesEqual(registration.scope, scope) ||
+      registration.fileKey.length === 0 ||
+      !isSafePositiveInteger(registration.maxBytes) ||
+      registration.maxBytes > options.maxReadBytes ||
+      (registration.attributionPolicy !== 'external_file_only' &&
+        registration.attributionPolicy !== 'verified_run_evidence') ||
+      seen.has(registration.fileKey)
+    ) {
+      throw new ExternalWriterObserverError('catalog_invalid');
+    }
+    seen.add(registration.fileKey);
+  }
+  return registrations;
+}
