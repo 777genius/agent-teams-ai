@@ -50,7 +50,7 @@ function exactObject(value: unknown, keys: readonly string[]): Record<string, un
 }
 
 function nonNegativeSafeInteger(value: unknown): value is number {
-  return Number.isSafeInteger(value) && (value as number) >= 0;
+  return Number.isSafeInteger(value) && (value as number) >= 0 && !Object.is(value, -0);
 }
 
 function positiveSafeInteger(value: unknown): value is number {
@@ -102,7 +102,8 @@ function parseMutation(value: unknown): HostedOwnerMutation {
   } as const;
   if (
     typeof mutation.kind === 'string' &&
-    mutation.kind in simple &&
+    typeof mutation.outcome === 'string' &&
+    Object.prototype.hasOwnProperty.call(simple, mutation.kind) &&
     simple[mutation.kind as keyof typeof simple] === mutation.outcome
   ) {
     return mutation as unknown as HostedOwnerMutation;
@@ -113,7 +114,10 @@ function parseMutation(value: unknown): HostedOwnerMutation {
     Array.isArray(mutation.claims) &&
     mutation.claims.length > 0
   ) {
-    mutation.claims.forEach(parseClaim);
+    for (let index = 0; index < mutation.claims.length; index += 1) {
+      if (!Object.prototype.hasOwnProperty.call(mutation.claims, index)) fail();
+      parseClaim(mutation.claims[index]);
+    }
     return mutation as unknown as HostedOwnerMutation;
   }
   if (

@@ -166,6 +166,53 @@ function quarantinedOwnerNative(): HostedOwnerWalNative {
   };
 }
 
+const INVALID_OWNER_NATIVE_MUTATIONS: Array<[
+  string,
+  (native: MutableOwnerNative) => void,
+]> = [
+  [
+    'inherited mutation key',
+    (native) => {
+      native.mutation = { kind: '__proto__', outcome: Object.prototype };
+    },
+  ],
+  [
+    'sparse claims',
+    (native) => {
+      native.mutation = {
+        kind: 'ingress-lease-claimed',
+        outcome: 'claimed',
+        claims: new Array(1),
+      };
+    },
+  ],
+  [
+    'inherited claim index',
+    (native) => {
+      const claims = new Array(1);
+      Object.setPrototypeOf(claims, {
+        0: {
+          claimedAtIso: '2026-09-05T00:00:00.000Z',
+          generation: 1,
+          leaseExpiresAtIso: '2026-09-05T00:01:00.000Z',
+          leaseToken: 'lease_1',
+          outboxId: 'outbox_1',
+          ownerId: 'owner_1',
+        },
+        __proto__: Array.prototype,
+      });
+      native.mutation = { kind: 'ingress-lease-claimed', outcome: 'claimed', claims };
+    },
+  ],
+  [
+    'negative-zero count',
+    (native) => {
+      const bindings = native.stateDelta.collectionSizes.bindings as Record<string, unknown>;
+      bindings.previous = -0;
+    },
+  ],
+];
+
 function operations() {
   const bytes = new Map<number, number[]>([
     [9, []],
@@ -384,6 +431,7 @@ describe('HostedProducerProvenance', () => {
     ['noncanonical fields', (native: MutableOwnerNative) => native.stateDelta.changedFields.reverse()],
     ['unknown field', (native: MutableOwnerNative) => native.stateDelta.changedFields.splice(0, 1, 'quarantine')],
     ['fake mutation', (native: MutableOwnerNative) => (native.mutation = { kind: 'migration', outcome: 'published' })],
+    ...INVALID_OWNER_NATIVE_MUTATIONS,
     ['wrong quarantine pair', (native: MutableOwnerNative) => (native.mutation.outcome = 'admitted')],
     ['wrong settlement pair', (native: MutableOwnerNative) => (native.mutation = { kind: 'delivery-settled', phase: 'completed', outcome: 'expired' })],
     ['bad fence', (native: MutableOwnerNative) => (native.fence.generation = 'owner_generation_1')],
@@ -411,6 +459,29 @@ describe('HostedProducerProvenance', () => {
       'producer-provenance-native-owner-wal'
     );
   });
+
+  it.each<[string, (native: MutableOwnerNative) => void]>(INVALID_OWNER_NATIVE_MUTATIONS)(
+    'rejects invalid Owner native before producer publication: %s',
+    (_name, mutate) => {
+      const native = JSON.parse(JSON.stringify(quarantinedOwnerNative())) as MutableOwnerNative;
+      mutate(native);
+      const harness = operations();
+      const provenance = createHostedProducerProvenanceFromEnvironment(
+        { [HOSTED_PRODUCER_PROVENANCE_ENV]: ownerContract() },
+        { role: 'owner', modulePath: '/owner/module.js', operations: harness.implementation }
+      )!;
+      expect(() =>
+        provenance.emit('ownerWalTimeline', {
+          recordType: 'owner-wal-published',
+          operationNonce: '7'.repeat(64),
+          native: native as HostedOwnerWalNative,
+        })
+      ).toThrow(HostedProducerProvenanceFatalError);
+      expect(lines(harness.bytes.get(9) ?? []).map((line) => line.recordType)).toEqual([
+        'producer-open',
+      ]);
+    }
+  );
 
   it('writes canonical bounded hash-chained lines with full-write, sync, and explicit close', () => {
     const harness = operations();
