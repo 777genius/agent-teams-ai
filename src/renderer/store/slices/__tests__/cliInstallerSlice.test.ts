@@ -535,6 +535,45 @@ describe('provider catalog invalidation races', () => {
 });
 
 describe('codex catalog watchdog races', () => {
+  it('keeps retrying a loading catalog beyond the old three-attempt window', async () => {
+    vi.useFakeTimers();
+    const provider = {
+      ...createLoadingMultimodelCliStatus().providers.find((item) => item.providerId === 'codex')!,
+      modelCatalog: null,
+      modelCatalogRefreshState: 'loading' as const,
+      runtimeCapabilities: { modelCatalog: { dynamic: true } },
+    };
+    const previousApi = window.electronAPI;
+    const getProviderStatus = vi.fn().mockResolvedValue(provider);
+    Object.defineProperty(window, 'electronAPI', {
+      configurable: true,
+      writable: true,
+      value: { cliInstaller: { getProviderStatus } },
+    });
+    const store = createCliInstallerStore();
+    store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
+    try {
+      await store.getState().fetchCliProviderStatus('codex');
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        await vi.advanceTimersByTimeAsync(5_000);
+      }
+      expect(getProviderStatus).toHaveBeenCalledTimes(5);
+    } finally {
+      getProviderStatus.mockResolvedValue({
+        ...provider,
+        modelCatalogRefreshState: 'ready' as const,
+      });
+      await vi.advanceTimersByTimeAsync(5_000);
+      store.getState().invalidateCliProviderModelCatalog();
+      Object.defineProperty(window, 'electronAPI', {
+        configurable: true,
+        writable: true,
+        value: previousApi,
+      });
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps the newer retry timer when an older request rejects', async () => {
     vi.useFakeTimers();
     let rejectFirst!: (reason?: unknown) => void;
