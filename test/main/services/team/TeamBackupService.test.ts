@@ -26,6 +26,7 @@ import type {
   PermanentDeletionTarget,
   TeamPermanentDeletionIntent,
 } from '../../../../src/main/services/team/TeamBackupService';
+import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 import { removePathWithIdentityFenceAsync } from '../../../../src/main/utils/atomicWrite';
 
 async function removePreparedDeletionTargets(
@@ -495,6 +496,90 @@ describe('TeamBackupService', () => {
       expect.stringContaining(`Could not read the stop marker for ${teamName}`)
     );
     vi.mocked(console.warn).mockClear();
+  });
+
+  it('does not restore launch state for a team stopped after the restore read the fence', async () => {
+    // The stop fence is read once, before the restore loop. A stop that lands
+    // while the loop works removes the publication files and writes its marker
+    // after them, so a commit that is not fenced again puts the pre-stop launch
+    // state back with no marker left to hold it.
+    const service = new TeamBackupService();
+    const teamName = 'stopped-mid-restore-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Stopped Mid Restore Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'reconciled', members: {} }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify({ version: 1, teamName, teamLaunchState: 'partial_failure' }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'team.meta.json'),
+      JSON.stringify({ providerId: 'codex' }),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // What the restore is about to put back is gone and nothing says the team
+    // was stopped, so the fence read before the loop lets all three through.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'team.meta.json'), { force: true });
+
+    const backupLaunchState = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'launch-state.json'
+    );
+    const realReadFile = nativeFs.promises.readFile as (...args: unknown[]) => Promise<unknown>;
+    let stoppedDuringRestore = false;
+    const readFileSpy = vi.spyOn(nativeFs.promises, 'readFile').mockImplementation((async (
+      ...args: unknown[]
+    ) => {
+      const content = await realReadFile(...args);
+      if (!stoppedDuringRestore && String(args[0]) === backupLaunchState) {
+        stoppedDuringRestore = true;
+        // The stop lands after the restore read its fence and before it
+        // commits the publication file it has just read out of the backup.
+        await new TeamLaunchStateStore().markStopped(teamName);
+      }
+      return content;
+    }) as unknown as typeof nativeFs.promises.readFile);
+
+    await service.restoreIfNeeded();
+    readFileSpy.mockRestore();
+    service.dispose();
+
+    expect(stoppedDuringRestore).toBe(true);
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    // The rest of the restore is untouched: only the publication files are
+    // fenced, so this is a restore that ran and skipped them, not one that
+    // never reached a commit.
+    await expect(fs.readFile(path.join(teamDir, 'team.meta.json'), 'utf8')).resolves.toContain(
+      'codex'
+    );
   });
 
   it('does not index a shutdown backup whose manifest could not be persisted', async () => {

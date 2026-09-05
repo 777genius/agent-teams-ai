@@ -15,7 +15,7 @@ import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 const logger = createLogger('Service:TeamLaunchStateStore');
 const TEAM_LAUNCH_STATE_FILE = 'launch-state.json';
 const MAX_LAUNCH_STATE_BYTES = 256 * 1024;
-const publicationQueueByTeam = new Map<string, Promise<void>>();
+const publicationQueueByTeam = new Map<string, Promise<unknown>>();
 
 export function getTeamLaunchStatePath(teamName: string): string {
   return path.join(getTeamsBasePath(), teamName, TEAM_LAUNCH_STATE_FILE);
@@ -90,7 +90,7 @@ function throwPublicationRevocationFailure(
   }
 }
 
-function enqueuePublication(teamName: string, operation: () => Promise<void>): Promise<void> {
+function enqueuePublication<T>(teamName: string, operation: () => Promise<T>): Promise<T> {
   const previous = publicationQueueByTeam.get(teamName);
   const queued = (previous ?? Promise.resolve()).catch(() => undefined).then(operation);
   publicationQueueByTeam.set(teamName, queued);
@@ -99,6 +99,22 @@ function enqueuePublication(teamName: string, operation: () => Promise<void>): P
       publicationQueueByTeam.delete(teamName);
     }
   });
+}
+
+/**
+ * Runs `operation` in this team's launch-state publication queue - the same one
+ * `write` and `markStopped` use. A caller that publishes or withdraws these
+ * files from outside the store needs it, because a stop is not one instant:
+ * `markStopped` removes the publication files first and writes its marker
+ * afterwards, and only the queue makes those two steps indivisible from the
+ * outside. Checking the marker without holding the queue reads a stop that has
+ * begun as a stop that never happened.
+ */
+export function withTeamLaunchStatePublicationLock<T>(
+  teamName: string,
+  operation: () => Promise<T>
+): Promise<T> {
+  return enqueuePublication(teamName, operation);
 }
 
 /**

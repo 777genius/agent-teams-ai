@@ -4,6 +4,7 @@ import {
   getTeamLaunchStoppedMarkerPath,
   getTeamLaunchSummaryPath,
   TeamLaunchStateStore,
+  withTeamLaunchStatePublicationLock,
 } from '@main/services/team/TeamLaunchStateStore';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -108,6 +109,25 @@ describe('TeamLaunchStateStore', () => {
     } finally {
       readFile.mockRestore();
     }
+  });
+
+  it('holds a caller-supplied publication until an in-flight stop has finished', async () => {
+    // markStopped removes the publication files and writes its marker after
+    // them. A caller that publishes those files from outside the store - the
+    // backup restore - must not run between the two, so it shares the queue
+    // rather than checking the marker on its own.
+    const order: string[] = [];
+    mocks.atomicWriteAsync.mockImplementation(async (target: string) => {
+      order.push(`stop-marker:${path.basename(target)}`);
+    });
+
+    const stopping = new TeamLaunchStateStore().markStopped('demo');
+    const restoring = withTeamLaunchStatePublicationLock('demo', async () => {
+      order.push('restore-commit');
+    });
+    await Promise.all([stopping, restoring]);
+
+    expect(order).toEqual(['stop-marker:launch-stopped.json', 'restore-commit']);
   });
 
   it('rejects when a live team directory cannot persist the complete launch publication', async () => {
