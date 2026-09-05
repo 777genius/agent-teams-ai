@@ -102,7 +102,11 @@ const CURSOR_AGENT_PRINT_FLAG = /--print\b/;
  * comparison stays exact - a prefix match would make a stop of `<workspace>`
  * reap the lead of `<workspace>-backup`.
  *
- * Case is folded on Windows and nowhere else. On a case-sensitive filesystem
+ * Separator direction and case are both Windows properties, and neither is
+ * folded anywhere else. Off Windows a backslash is an ordinary filename
+ * character, so `/work/a\b` is one directory and `/work/a/b` is another;
+ * rewriting the first into the second lets a stop that owns `/work/a/b` reap
+ * the lead tree standing in `/work/a\b`. Case is the same argument:
  * `/work/Team` and `/work/team` are two directories with two different teams in
  * them, and folding them together lets a stop of one reap the whole lead tree of
  * the other. Not folding costs the opposite mistake on a case-insensitive POSIX
@@ -111,7 +115,8 @@ const CURSOR_AGENT_PRINT_FLAG = /--print\b/;
  * in.
  */
 function normalizeWorkspacePath(value: string, platform: NodeJS.Platform): string {
-  const separated = value.trim().replace(/\\/g, '/');
+  const trimmed = value.trim();
+  const separated = platform === 'win32' ? trimmed.replace(/\\/g, '/') : trimmed;
   const cased = platform === 'win32' ? separated.toLowerCase() : separated;
   let end = cased.length;
   while (end > 0 && cased[end - 1] === '/') {
