@@ -54,6 +54,7 @@ interface FailedProvisioningAttemptState {
   currentProvisioningRunIdByTeam: Record<string, string | null | undefined>;
   currentRuntimeRunIdByTeam: Record<string, string | null | undefined>;
   provisioningStartedAtFloorByTeam: Record<string, string>;
+  provisioningSnapshotByTeam: TeamScopedRecord;
   ignoredProvisioningRunIds: Record<string, string>;
   ignoredRuntimeRunIds: Record<string, string>;
   memberSpawnStatusesByTeam: TeamScopedRecord;
@@ -65,6 +66,27 @@ interface FailedProvisioningAttemptState {
 }
 
 type FailedProvisioningAttemptCleanupKey = keyof FailedProvisioningAttemptState;
+
+const currentProvisioningAttemptIdByTeam = new Map<string, string>();
+
+export const teamProvisioningAttemptTracker = {
+  begin(teamName: string): string {
+    const attemptId = crypto.randomUUID();
+    currentProvisioningAttemptIdByTeam.set(teamName, attemptId);
+    return attemptId;
+  },
+  finish(teamName: string, attemptId: string): boolean {
+    if (currentProvisioningAttemptIdByTeam.get(teamName) !== attemptId) return false;
+    currentProvisioningAttemptIdByTeam.delete(teamName);
+    return true;
+  },
+  clear(teamName: string): void {
+    currentProvisioningAttemptIdByTeam.delete(teamName);
+  },
+  resetForTests(): void {
+    currentProvisioningAttemptIdByTeam.clear();
+  },
+};
 
 export function collectTeamScopedVisibleLoadingResets<
   TTeamMessagesEntry extends TeamMessagesLoadingEntry,
@@ -210,17 +232,17 @@ export function collectFailedProvisioningAttemptCleanup<
   state: TState,
   teamName: string,
   pendingRunId: string,
-  startedAtFloor: string
+  startedAtFloor: string,
+  isCurrentAttempt: boolean
 ): Partial<Pick<TState, FailedProvisioningAttemptCleanupKey>> {
-  const isCurrentAttempt = state.provisioningStartedAtFloorByTeam[teamName] === startedAtFloor;
+  if (!isCurrentAttempt) return {};
+
   const currentProvisioningRunId = state.currentProvisioningRunIdByTeam[teamName];
   const currentRuntimeRunId = state.currentRuntimeRunIdByTeam[teamName];
   const failedRunIds = new Set([pendingRunId]);
-  if (isCurrentAttempt) {
-    for (const runId of [currentProvisioningRunId, currentRuntimeRunId]) {
-      if (typeof runId === 'string') {
-        failedRunIds.add(runId);
-      }
+  for (const runId of [currentProvisioningRunId, currentRuntimeRunId]) {
+    if (typeof runId === 'string') {
+      failedRunIds.add(runId);
     }
   }
 
@@ -232,13 +254,9 @@ export function collectFailedProvisioningAttemptCleanup<
   }
 
   const clearsProvisioning =
-    isCurrentAttempt &&
-    typeof currentProvisioningRunId === 'string' &&
-    failedRunIds.has(currentProvisioningRunId);
+    typeof currentProvisioningRunId === 'string' && failedRunIds.has(currentProvisioningRunId);
   const clearsRuntime =
-    isCurrentAttempt &&
-    typeof currentRuntimeRunId === 'string' &&
-    failedRunIds.has(currentRuntimeRunId);
+    typeof currentRuntimeRunId === 'string' && failedRunIds.has(currentRuntimeRunId);
   const ignoredRuntimeRunIds = { ...state.ignoredRuntimeRunIds };
   if (clearsRuntime && currentRuntimeRunId) {
     ignoredRuntimeRunIds[currentRuntimeRunId] = teamName;
@@ -250,6 +268,7 @@ export function collectFailedProvisioningAttemptCleanup<
   const activeToolsByTeam = omitTeamKey(state.activeToolsByTeam, teamName);
   const finishedVisibleByTeam = omitTeamKey(state.finishedVisibleByTeam, teamName);
   const toolHistoryByTeam = omitTeamKey(state.toolHistoryByTeam, teamName);
+  const provisioningSnapshotByTeam = omitTeamKey(state.provisioningSnapshotByTeam, teamName);
   const clearsCurrentAttempt = clearsProvisioning || clearsRuntime;
   const closedStartedAtFloor = new Date(
     Math.max(Date.now(), Date.parse(startedAtFloor)) + 1
@@ -258,14 +277,10 @@ export function collectFailedProvisioningAttemptCleanup<
   return {
     provisioningRuns,
     ignoredProvisioningRunIds,
-    ...(isCurrentAttempt
-      ? {
-          provisioningStartedAtFloorByTeam: {
-            ...state.provisioningStartedAtFloorByTeam,
-            [teamName]: closedStartedAtFloor,
-          },
-        }
-      : {}),
+    provisioningStartedAtFloorByTeam: {
+      ...state.provisioningStartedAtFloorByTeam,
+      [teamName]: closedStartedAtFloor,
+    },
     ...(clearsProvisioning
       ? {
           currentProvisioningRunIdByTeam: omitTeamKey(
@@ -286,5 +301,6 @@ export function collectFailedProvisioningAttemptCleanup<
     ...(clearsCurrentAttempt && activeToolsByTeam ? { activeToolsByTeam } : {}),
     ...(clearsCurrentAttempt && finishedVisibleByTeam ? { finishedVisibleByTeam } : {}),
     ...(clearsCurrentAttempt && toolHistoryByTeam ? { toolHistoryByTeam } : {}),
+    ...(clearsCurrentAttempt && provisioningSnapshotByTeam ? { provisioningSnapshotByTeam } : {}),
   };
 }

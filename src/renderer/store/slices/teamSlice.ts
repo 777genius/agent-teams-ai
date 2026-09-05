@@ -144,6 +144,7 @@ import {
   collectFailedProvisioningAttemptCleanup,
   collectTeamScopedStateRemovals,
   collectTeamScopedVisibleLoadingResets,
+  teamProvisioningAttemptTracker,
 } from '../team/teamScopedStateCleanup';
 import {
   structurallySharePlainValue,
@@ -479,6 +480,7 @@ export function __resetTeamSliceModuleStateForTests(): void {
   reportedTeamLaunchStepKeys.clear();
   teamLaunchStepStartedAtByKey.clear();
   teamLaunchAnalyticsByRunId.clear();
+  teamProvisioningAttemptTracker.resetForTests();
   taskFirstOutputAnalyticsByKey.clear();
   teamAgentRuntimeFreshnessSnapshotsByTeamAndRun.clear();
   clearAllPendingReplyRefreshWaits();
@@ -499,6 +501,7 @@ function clearTeamScopedSelectorCaches(teamName: string): void {
 }
 
 function clearTeamScopedTransientState(teamName: string): void {
+  teamProvisioningAttemptTracker.clear(teamName);
   clearTeamDataRequestsForTeam(teamName);
   inFlightRefreshTeamDataCalls.delete(teamName);
   pendingFreshTeamDataRefreshes.delete(teamName);
@@ -4306,7 +4309,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearPendingReplyRefreshTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
     clearTeamScopedTransientState(request.teamName);
-
+    const attemptId = teamProvisioningAttemptTracker.begin(request.teamName);
     // Establish a per-team floor so late events from a previous run can't override UI.
     const floor = nowIso();
     set((state) => ({
@@ -4315,7 +4318,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: floor,
       },
     }));
-
     // Clear stale provisioning runs for this team so the banner starts fresh
     set((state) => {
       const cleaned = { ...state.provisioningRuns };
@@ -4365,7 +4367,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     });
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
-    const pendingRunId = `pending:${request.teamName}:${Date.now()}`;
+    const pendingRunId = `pending:${request.teamName}:${attemptId}`;
     set((state) => ({
       provisioningRuns: {
         ...state.provisioningRuns,
@@ -4473,6 +4475,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         // ignore — polling below will retry
       }
       void pollProvisioningStatus(get, response.runId);
+      teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       return response.runId;
     } catch (error) {
       const message =
@@ -4481,13 +4484,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : error instanceof Error
             ? error.message
             : 'Failed to create team';
+      const isCurrentAttempt = teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       set((state) => {
-        const isCurrentAttempt = state.provisioningStartedAtFloorByTeam[request.teamName] === floor;
         const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
           state,
           request.teamName,
           pendingRunId,
-          floor
+          floor,
+          isCurrentAttempt
         );
         const nextLaunchParamsByTeam = { ...state.launchParamsByTeam };
         if (
@@ -4529,7 +4533,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     clearPendingReplyRefreshTimer(request.teamName);
     clearPendingReplyRefreshWaits(request.teamName);
     clearTeamScopedTransientState(request.teamName);
-
+    const attemptId = teamProvisioningAttemptTracker.begin(request.teamName);
     // Establish a per-team floor so late events from a previous run can't override UI.
     const floor = nowIso();
     set((state) => ({
@@ -4538,7 +4542,6 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         [request.teamName]: floor,
       },
     }));
-
     // Clear stale provisioning runs for this team so the banner starts fresh
     set((state) => {
       const cleaned = { ...state.provisioningRuns };
@@ -4588,7 +4591,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
     });
 
     // Optimistic progress entry: ensures banner shows even if IPC progress is delayed/missed.
-    const pendingRunId = `pending:${request.teamName}:${Date.now()}`;
+    const pendingRunId = `pending:${request.teamName}:${attemptId}`;
     set((state) => ({
       provisioningRuns: {
         ...state.provisioningRuns,
@@ -4671,6 +4674,7 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
         // ignore — polling below will retry
       }
       void pollProvisioningStatus(get, response.runId);
+      teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       return response.runId;
     } catch (error) {
       const message =
@@ -4679,13 +4683,14 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           : error instanceof Error
             ? error.message
             : 'Failed to launch team';
+      const isCurrentAttempt = teamProvisioningAttemptTracker.finish(request.teamName, attemptId);
       set((state) => {
-        const isCurrentAttempt = state.provisioningStartedAtFloorByTeam[request.teamName] === floor;
         const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
           state,
           request.teamName,
           pendingRunId,
-          floor
+          floor,
+          isCurrentAttempt
         );
         const nextLaunchParamsByTeam = { ...state.launchParamsByTeam };
         if (

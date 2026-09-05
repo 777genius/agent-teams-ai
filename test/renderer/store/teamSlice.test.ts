@@ -6430,57 +6430,63 @@ describe('teamSlice actions', () => {
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
     });
 
-    it('preserves a newer provisioning attempt when an older launchTeam request rejects', async () => {
+    it('preserves a newer same-millisecond attempt when an older launch rejects', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-09-05T02:45:00.000Z'));
       const store = createSliceStore();
-      const launchRequest = createDeferredPromise<{ runId: string }>();
-      hoisted.launchTeam.mockImplementationOnce(() => launchRequest.promise);
+      const oldRequest = createDeferredPromise<{ runId: string }>();
+      const newRequest = createDeferredPromise<{ runId: string }>();
+      hoisted.launchTeam
+        .mockImplementationOnce(() => oldRequest.promise)
+        .mockImplementationOnce(() => newRequest.promise);
 
-      const launchPromise = store.getState().launchTeam({
+      const oldLaunch = store.getState().launchTeam({
         teamName: 'my-team',
         cwd: '/tmp/project',
       });
-      const rejection = expect(launchPromise).rejects.toThrow('Old launch failed');
+      const oldRejection = expect(oldLaunch).rejects.toThrow('Old launch failed');
       await Promise.resolve();
+      const oldPendingRunId = store.getState().currentProvisioningRunIdByTeam['my-team'];
+      const oldFloor = store.getState().provisioningStartedAtFloorByTeam['my-team'];
 
-      const newerStartedAt = '9999-01-01T00:00:00.000Z';
-      store.setState((state) => ({
-        provisioningStartedAtFloorByTeam: {
-          ...state.provisioningStartedAtFloorByTeam,
-          'my-team': newerStartedAt,
-        },
-        provisioningRuns: {
-          'run-new': {
-            runId: 'run-new',
-            teamName: 'my-team',
-            state: 'spawning',
-            message: 'New launch is running',
-            startedAt: newerStartedAt,
-            updatedAt: newerStartedAt,
-          },
-        },
-        currentProvisioningRunIdByTeam: {
-          ...state.currentProvisioningRunIdByTeam,
-          'my-team': 'run-new',
-        },
-        currentRuntimeRunIdByTeam: {
-          ...state.currentRuntimeRunIdByTeam,
-          'my-team': 'run-new',
-        },
-      }));
+      const newLaunch = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+      });
+      const newRejection = expect(newLaunch).rejects.toThrow('New launch cleanup');
+      await Promise.resolve();
+      const newPendingRunId = store.getState().currentProvisioningRunIdByTeam['my-team'];
+      const newFloor = store.getState().provisioningStartedAtFloorByTeam['my-team']!;
+      expect(newFloor).toBe(oldFloor);
+      expect(newPendingRunId).not.toBe(oldPendingRunId);
 
-      launchRequest.reject(new Error('Old launch failed'));
-      await rejection;
+      store.getState().onProvisioningProgress({
+        runId: 'run-new',
+        teamName: 'my-team',
+        state: 'spawning',
+        message: 'New launch is running',
+        startedAt: newFloor,
+        updatedAt: newFloor,
+      });
+
+      oldRequest.reject(new Error('Old launch failed'));
+      await oldRejection;
 
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
       expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
       expect(store.getState().provisioningRuns['run-new']).toBeDefined();
       expect(store.getState().ignoredProvisioningRunIds['run-new']).toBeUndefined();
       expect(store.getState().provisioningErrorByTeam['my-team']).toBeUndefined();
-      expect(store.getState().provisioningStartedAtFloorByTeam['my-team']).toBe(newerStartedAt);
+      expect(store.getState().provisioningStartedAtFloorByTeam['my-team']).toBe(newFloor);
+
+      newRequest.reject(new Error('New launch cleanup'));
+      await newRejection;
+      vi.useRealTimers();
     });
 
     it('rolls back optimistic pending run on early createTeam failure', async () => {
       const store = createSliceStore();
+      const createRequest = createDeferredPromise<{ runId: string }>();
       const previousParams = {
         providerId: 'codex',
         providerBackendId: 'codex-native',
@@ -6493,21 +6499,35 @@ describe('teamSlice actions', () => {
           'my-team': previousParams,
         },
       });
-      hoisted.createTeam.mockRejectedValue(new Error('create failed'));
+      hoisted.createTeam.mockImplementationOnce(() => createRequest.promise);
 
-      await expect(
-        store.getState().createTeam({
-          teamName: 'my-team',
-          cwd: '/tmp/project',
-          members: [],
-          providerId: 'anthropic',
-          model: 'sonnet',
-          effort: 'low',
-        })
-      ).rejects.toThrow('create failed');
+      const createPromise = store.getState().createTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+        members: [],
+        providerId: 'anthropic',
+        model: 'sonnet',
+        effort: 'low',
+      });
+      const rejection = expect(createPromise).rejects.toThrow('create failed');
+      await Promise.resolve();
+      const startedAt = store.getState().provisioningStartedAtFloorByTeam['my-team']!;
+      expect(store.getState().provisioningSnapshotByTeam['my-team']).toBeDefined();
+
+      store.getState().onProvisioningProgress({
+        runId: 'create-run-real',
+        teamName: 'my-team',
+        state: 'spawning',
+        message: 'Creating team',
+        startedAt,
+        updatedAt: startedAt,
+      });
+      createRequest.reject(new Error('create failed'));
+      await rejection;
 
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
       expect(Object.values(store.getState().provisioningRuns)).toHaveLength(0);
+      expect(store.getState().provisioningSnapshotByTeam['my-team']).toBeUndefined();
       expect(store.getState().provisioningErrorByTeam['my-team']).toBe('create failed');
       expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
     });
