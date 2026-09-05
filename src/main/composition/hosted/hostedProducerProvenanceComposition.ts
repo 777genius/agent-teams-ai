@@ -138,8 +138,9 @@ function parseDescriptor(value: unknown, fd: number): HostedProducerProvenanceDe
   });
 }
 function safeByteCount(value: unknown): value is number {
-  return Number.isSafeInteger(value) &&
-    (value as number) >= 0 && (value as number) <= 64 * 1024 * 1024;
+  return (
+    Number.isSafeInteger(value) && (value as number) >= 0 && (value as number) <= 64 * 1024 * 1024
+  );
 }
 function validProductInstance(native: Readonly<Record<string, unknown>>): boolean {
   return (
@@ -155,7 +156,6 @@ function validProductInstance(native: Readonly<Record<string, unknown>>): boolea
     SAFE_ID.test(native.ownerSessionId)
   );
 }
-
 const HTTP_OUTCOMES = Object.freeze({
   'team-approvals.page.v1': Object.freeze({
     success: 200,
@@ -221,7 +221,8 @@ function validateNativeRecord(
   const native = record.native as Readonly<Record<string, unknown>>;
   switch (record.recordType) {
     case 'owner-wal-published':
-      if (stream !== 'ownerWalTimeline') throw new TypeError('producer-provenance-native-owner-wal');
+      if (stream !== 'ownerWalTimeline')
+        throw new TypeError('producer-provenance-native-owner-wal');
       parseHostedOwnerWalNative(native);
       return;
     case 'approval-http-unadmitted-response-finalized': {
@@ -726,7 +727,6 @@ class NativeHostedProducerProvenance implements HostedProducerProvenance {
     throw this.fatalError ?? fatal;
   }
 }
-
 export function createHostedProducerProvenanceFromEnvironment(
   environment: Readonly<Record<string, string | undefined>>,
   options: CreateHostedProducerProvenanceOptions

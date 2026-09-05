@@ -166,10 +166,7 @@ function quarantinedOwnerNative(): HostedOwnerWalNative {
   };
 }
 
-const INVALID_OWNER_NATIVE_MUTATIONS: Array<[
-  string,
-  (native: MutableOwnerNative) => void,
-]> = [
+const INVALID_OWNER_NATIVE_MUTATIONS: Array<[string, (native: MutableOwnerNative) => void]> = [
   [
     'inherited mutation key',
     (native) => {
@@ -410,8 +407,17 @@ describe('HostedProducerProvenance', () => {
     absent.stateDelta.previousRevision = null;
     absent.stateDelta.previousStateSha256 = null;
     absent.stateDelta.changedFields = [
-      'actorMembers', 'admissionDigest', 'admissionGeneration', 'bindings', 'deliveries',
-      'ingress', 'retiredIngress', 'revision', 'routes', 'schemaVersion', 'writerFence',
+      'actorMembers',
+      'admissionDigest',
+      'admissionGeneration',
+      'bindings',
+      'deliveries',
+      'ingress',
+      'retiredIngress',
+      'revision',
+      'routes',
+      'schemaVersion',
+      'writerFence',
     ];
     for (const size of Object.values(absent.stateDelta.collectionSizes)) {
       (size as Record<string, unknown>).previous = 0;
@@ -437,39 +443,85 @@ describe('HostedProducerProvenance', () => {
   });
 
   it.each<[string, (native: MutableOwnerNative) => void]>([
-    ['missing bindings count', (native: MutableOwnerNative) => delete native.stateDelta.collectionSizes.bindings],
-    ['extra count', (native: MutableOwnerNative) => (native.stateDelta.collectionSizes.quarantine = { previous: 0, next: 1 })],
-    ['duplicate field', (native: MutableOwnerNative) => native.stateDelta.changedFields.push('revision')],
-    ['noncanonical fields', (native: MutableOwnerNative) => native.stateDelta.changedFields.reverse()],
-    ['unknown field', (native: MutableOwnerNative) => native.stateDelta.changedFields.splice(0, 1, 'quarantine')],
-    ['fake mutation', (native: MutableOwnerNative) => (native.mutation = { kind: 'migration', outcome: 'published' })],
+    [
+      'missing bindings count',
+      (native: MutableOwnerNative) => delete native.stateDelta.collectionSizes.bindings,
+    ],
+    [
+      'extra count',
+      (native: MutableOwnerNative) =>
+        (native.stateDelta.collectionSizes.quarantine = { previous: 0, next: 1 }),
+    ],
+    [
+      'duplicate field',
+      (native: MutableOwnerNative) => native.stateDelta.changedFields.push('revision'),
+    ],
+    [
+      'noncanonical fields',
+      (native: MutableOwnerNative) => native.stateDelta.changedFields.reverse(),
+    ],
+    [
+      'unknown field',
+      (native: MutableOwnerNative) => native.stateDelta.changedFields.splice(0, 1, 'quarantine'),
+    ],
+    [
+      'fake mutation',
+      (native: MutableOwnerNative) =>
+        (native.mutation = { kind: 'migration', outcome: 'published' }),
+    ],
     ...INVALID_OWNER_NATIVE_MUTATIONS,
-    ['wrong quarantine pair', (native: MutableOwnerNative) => (native.mutation.outcome = 'admitted')],
-    ['wrong settlement pair', (native: MutableOwnerNative) => (native.mutation = { kind: 'delivery-settled', phase: 'completed', outcome: 'expired' })],
+    [
+      'wrong quarantine pair',
+      (native: MutableOwnerNative) => (native.mutation.outcome = 'admitted'),
+    ],
+    [
+      'wrong settlement pair',
+      (native: MutableOwnerNative) =>
+        (native.mutation = { kind: 'delivery-settled', phase: 'completed', outcome: 'expired' }),
+    ],
     ['bad fence', (native: MutableOwnerNative) => (native.fence.generation = 'owner_generation_1')],
     ['null fence identity', (native: MutableOwnerNative) => (native.fence.dev = null)],
-    ['unpaired previous null', (native: MutableOwnerNative) => (native.stateDelta.previousRevision = null)],
-    ['absent with stored counts', (native: MutableOwnerNative) => {
-      native.revision = 1;
-      native.stateDelta.nextRevision = 1;
-      native.stateDelta.previousRevision = null;
-      native.stateDelta.previousStateSha256 = null;
-      native.stateDelta.changedFields = [
-        'actorMembers', 'admissionDigest', 'admissionGeneration', 'bindings', 'deliveries',
-        'ingress', 'retiredIngress', 'revision', 'routes', 'schemaVersion', 'writerFence',
-      ];
-    }],
+    [
+      'unpaired previous null',
+      (native: MutableOwnerNative) => (native.stateDelta.previousRevision = null),
+    ],
+    [
+      'absent with stored counts',
+      (native: MutableOwnerNative) => {
+        native.revision = 1;
+        native.stateDelta.nextRevision = 1;
+        native.stateDelta.previousRevision = null;
+        native.stateDelta.previousStateSha256 = null;
+        native.stateDelta.changedFields = [
+          'actorMembers',
+          'admissionDigest',
+          'admissionGeneration',
+          'bindings',
+          'deliveries',
+          'ingress',
+          'retiredIngress',
+          'revision',
+          'routes',
+          'schemaVersion',
+          'writerFence',
+        ];
+      },
+    ],
     ['wrong next revision', (native: MutableOwnerNative) => (native.stateDelta.nextRevision = 9)],
     ['wrong native revision', (native: MutableOwnerNative) => (native.revision = 9)],
-    ['wrong next hash', (native: MutableOwnerNative) => (native.stateDelta.nextStateSha256 = DIGEST_A)],
-    ['missing revision delta', (native: MutableOwnerNative) => native.stateDelta.changedFields.pop()],
+    [
+      'wrong next hash',
+      (native: MutableOwnerNative) => (native.stateDelta.nextStateSha256 = DIGEST_A),
+    ],
+    [
+      'missing revision delta',
+      (native: MutableOwnerNative) => native.stateDelta.changedFields.pop(),
+    ],
     ['extra native key', (native: MutableOwnerNative) => (native.debug = true)],
   ] as const)('rejects Owner native shape drift: %s', (_name, mutate) => {
     const native = JSON.parse(JSON.stringify(quarantinedOwnerNative()));
     mutate(native as MutableOwnerNative);
-    expect(() => parseHostedOwnerWalNative(native)).toThrow(
-      'producer-provenance-native-owner-wal'
-    );
+    expect(() => parseHostedOwnerWalNative(native)).toThrow('producer-provenance-native-owner-wal');
   });
 
   it.each<[string, (native: MutableOwnerNative) => void]>(INVALID_OWNER_NATIVE_MUTATIONS)(
