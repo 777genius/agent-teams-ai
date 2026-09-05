@@ -169,9 +169,14 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
     if (stoppedAfterRelaunch) {
       return stoppedAfterRelaunch;
     }
+    // `null`, not `false`: the classifier takes `false` as proof that no
+    // session was committed and takes `null` as the read having failed, which
+    // may not downgrade a lane whose launch already claims it is confirmed.
+    // Collapsing the two reaped a correctly bootstrapped lead over an I/O
+    // hiccup in the evidence store and burnt a self-heal attempt doing it.
     const committed = await ports
       .hasCommittedLeadSessionEvidence({ teamName, runId: run.runId, memberName: leadName })
-      .catch(() => false);
+      .catch(() => null);
     const leadBootstrap = classifyOpenCodePrimaryLeadBootstrap({
       leadName,
       primaryResult: result,
