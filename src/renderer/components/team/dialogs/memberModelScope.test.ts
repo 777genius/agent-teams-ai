@@ -262,6 +262,24 @@ describe('getDialogTeamModelValidationError', () => {
       createLaunchGuard(['opencode'], new Map([['opencode', passive]]), evidence).blocked(true)
     ).toBe(false);
 
+    const authoritativeRefresh = {
+      ...passive,
+      authenticated: true,
+      verificationState: 'verified' as const,
+      statusCheckOutcome: 'authoritative' as const,
+    };
+    expect(hasSettledOpenCodeScopedPreparation(authoritativeRefresh, evidence)).toBe(true);
+    expect(
+      isTeamProviderRuntimeStatusLoading('opencode', authoritativeRefresh, false, evidence)
+    ).toBe(false);
+    expect(
+      createLaunchGuard(
+        ['opencode'],
+        new Map([['opencode', authoritativeRefresh]]),
+        evidence
+      ).blocked(true)
+    ).toBe(false);
+
     for (const fallback of [
       {
         statusCheckOutcome: 'pending' as const,

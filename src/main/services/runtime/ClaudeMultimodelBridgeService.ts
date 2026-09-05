@@ -44,7 +44,7 @@ const logger = createLogger('ClaudeMultimodelBridgeService');
 const PROVIDER_STATUS_TIMEOUT_MS = 90_000;
 const PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 30_000;
 const LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 5_000;
-const OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 12_000;
+const CODEX_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 15_000;
 const SOURCE_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS = 45_000;
 const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
@@ -818,7 +818,7 @@ export class ClaudeMultimodelBridgeService {
   }
 
   private shouldUseLegacyProviderTimeoutFallback(providerId: CliProviderId): boolean {
-    return providerId === 'anthropic' || providerId === 'codex';
+    return providerId === 'anthropic' || providerId === 'codex' || providerId === 'opencode';
   }
 
   private getProviderStatusRuntimeTimeout(
@@ -835,8 +835,8 @@ export class ClaudeMultimodelBridgeService {
     }
     if (options.summary && this.shouldUseLegacyProviderTimeoutFallback(providerId)) {
       const fallbackTimeout =
-        providerId === 'opencode'
-          ? OPENCODE_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS
+        providerId === 'codex'
+          ? CODEX_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS
           : LEGACY_FALLBACK_PROVIDER_STATUS_SUMMARY_TIMEOUT_MS;
       return Math.min(options.timeoutMs ?? PROVIDER_STATUS_SUMMARY_TIMEOUT_MS, fallbackTimeout);
     }

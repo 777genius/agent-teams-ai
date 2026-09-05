@@ -26,7 +26,11 @@ export function connectedCatalogSourceIds(
         .map((entry) => entry.providerId.trim().toLowerCase())
         .filter(Boolean)
     ),
-  ].sort();
+  ].sort((left, right) => {
+    if (left === 'opencode') return -1;
+    if (right === 'opencode') return 1;
+    return left.localeCompare(right);
+  });
 }
 
 interface CatalogState {

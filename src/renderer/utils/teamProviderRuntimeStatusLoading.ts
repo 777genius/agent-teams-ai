@@ -23,6 +23,9 @@ export function canSettleOpenCodeStatusWithScopedPreparation(
 ): boolean {
   return Boolean(
     providerStatus?.statusCheckOutcome === 'model_only' ||
+    (providerStatus?.supported === true &&
+      providerStatus.statusCheckOutcome === 'authoritative' &&
+      providerStatus.modelCatalogRefreshState === 'loading') ||
     (providerStatus?.statusCheckOutcome === 'pending' &&
       providerStatus.statusCheckErrorCode === 'partial_response') ||
     (providerStatus?.statusCheckOutcome === 'transient_error' &&
