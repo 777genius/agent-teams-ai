@@ -756,6 +756,7 @@ const composeFixtureEnvironment = {
   E2E_LIFECYCLE_LAUNCHER_DIR: '/tmp/hosted-v1-networking-test/lifecycle-launcher',
   E2E_LIFECYCLE_RUN_DIR: '/tmp/hosted-v1-networking-test/lifecycle-run',
   E2E_LIFECYCLE_TRUST_DIR: '/tmp/hosted-v1-networking-test/lifecycle-trust',
+  E2E_INGRESS_NETWORK_SUBNET: '172.30.1.0/24',
   E2E_NETWORK_SUBNET: '172.30.0.0/24',
   E2E_OIDC_IP: '172.30.0.4',
   E2E_RUN_DIR: '/tmp/hosted-v1-networking-test/run',
@@ -903,12 +904,23 @@ describe('hosted-v1 explicit marker-derived Compose port', () => {
     );
   });
 
-  it('derives distinct fixed service addresses from the marker-owned subnet', () => {
+  it('derives disjoint primary and ingress subnets without changing fixed service addresses', () => {
     expect(networkAddresses('1234'.padEnd(48, '0'))).toEqual({
       app: '10.82.52.3',
       caddy: '10.82.52.2',
+      ingressSubnet: '10.82.52.16/28',
       oidc: '10.82.52.4',
       subnet: '10.82.52.0/28',
+    });
+  });
+
+  it('preserves distinct marker-derived network allocations', () => {
+    expect(networkAddresses('1235'.padEnd(48, '0'))).toEqual({
+      app: '10.82.53.3',
+      caddy: '10.82.53.2',
+      ingressSubnet: '10.82.53.16/28',
+      oidc: '10.82.53.4',
+      subnet: '10.82.53.0/28',
     });
   });
 
@@ -924,6 +936,7 @@ describe('hosted-v1 explicit marker-derived Compose port', () => {
         {
           driver?: string;
           internal?: boolean;
+          ipam?: { config?: Array<{ subnet?: string }> };
           name?: string;
         }
       >;
@@ -974,8 +987,12 @@ describe('hosted-v1 explicit marker-derived Compose port', () => {
       OIDC_BACKCHANNEL_PORT: '54321',
     });
     expect(rendered.networks['hosted-e2e']).toMatchObject({ internal: true });
+    expect(rendered.networks['hosted-e2e'].ipam?.config).toEqual([
+      { subnet: composeFixtureEnvironment.E2E_NETWORK_SUBNET },
+    ]);
     expect(rendered.networks['hosted-e2e-ingress']).toMatchObject({
       driver: 'bridge',
+      ipam: { config: [{ subnet: composeFixtureEnvironment.E2E_INGRESS_NETWORK_SUBNET }] },
       name: `${composeFixtureEnvironment.COMPOSE_PROJECT_NAME}_ingress`,
     });
     expect(rendered.networks['hosted-e2e-ingress'].internal).not.toBe(true);

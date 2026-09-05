@@ -1444,6 +1444,7 @@ async function captureFailureEvidence(input: {
 export function networkAddresses(marker: string): {
   readonly app: string;
   readonly caddy: string;
+  readonly ingressSubnet: string;
   readonly oidc: string;
   readonly subnet: string;
 } {
@@ -1452,6 +1453,7 @@ export function networkAddresses(marker: string): {
   return Object.freeze({
     app: `${prefix}.3`,
     caddy: `${prefix}.2`,
+    ingressSubnet: `${prefix}.16/28`,
     oidc: `${prefix}.4`,
     subnet: `${prefix}.0/28`,
   });
@@ -1786,6 +1788,7 @@ async function runHostedV1Main(
         E2E_LIFECYCLE_LAUNCHER_DIR: scenarioSandbox.lifecycleLauncherDir,
         E2E_LIFECYCLE_RUN_DIR: scenarioSandbox.lifecycleRunDir,
         E2E_LIFECYCLE_TRUST_DIR: scenarioSandbox.lifecycleTrustDir,
+        E2E_INGRESS_NETWORK_SUBNET: network.ingressSubnet,
         E2E_NETWORK_SUBNET: network.subnet,
         E2E_OIDC_IP: network.oidc,
         E2E_OWNER_MARKER: scenarioSandbox.markerPath,
