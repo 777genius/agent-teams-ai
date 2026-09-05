@@ -8,7 +8,7 @@ import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
 } from './memberModelScope';
-import { createLaunchGuard } from './providerLaunchAuthority';
+import { canResolveOpenCodeLaunchBlockers, createLaunchGuard } from './providerLaunchAuthority';
 
 import type { MemberDraft } from '@renderer/components/team/members/membersEditorTypes';
 import type { CliProviderStatus, TeamProviderId } from '@shared/types';
@@ -282,17 +282,31 @@ describe('getDialogTeamModelValidationError', () => {
           true
         )
       ).toBe(false);
+      expect(
+        canResolveOpenCodeLaunchBlockers([
+          {
+            providerId: 'opencode',
+            providerStatus: fallbackStatus,
+            detail: 'Passive status is still settling.',
+          },
+        ])
+      ).toBe(true);
     }
 
+    const timedOut = {
+      ...passive,
+      statusCheckOutcome: 'transient_error' as const,
+      statusCheckErrorCode: 'timeout' as const,
+    };
+    expect(hasSettledOpenCodeScopedPreparation(timedOut, evidence)).toBe(false);
     expect(
-      hasSettledOpenCodeScopedPreparation(
+      canResolveOpenCodeLaunchBlockers([
         {
-          ...passive,
-          statusCheckOutcome: 'transient_error',
-          statusCheckErrorCode: 'timeout',
+          providerId: 'opencode',
+          providerStatus: timedOut,
+          detail: 'Provider status timed out.',
         },
-        evidence
-      )
+      ])
     ).toBe(false);
 
     const failedScoped = {
