@@ -218,7 +218,7 @@ describe('getDialogTeamModelValidationError', () => {
     ).toEqual({ members: [{ ...savedMember, model: '' }], changed: true });
   });
 
-  it('settles model-only preparation only with every selected scoped catalog fresh', () => {
+  it('settles non-authoritative OpenCode preparation only with every selected scoped catalog fresh', () => {
     const passive = {
       ...createOpenCodeProviderStatus(),
       models: [],
@@ -260,6 +260,39 @@ describe('getDialogTeamModelValidationError', () => {
     expect(isTeamProviderRuntimeStatusLoading('opencode', passive, false, evidence)).toBe(false);
     expect(
       createLaunchGuard(['opencode'], new Map([['opencode', passive]]), evidence).blocked(true)
+    ).toBe(false);
+
+    for (const fallback of [
+      {
+        statusCheckOutcome: 'pending' as const,
+        statusCheckErrorCode: 'partial_response' as const,
+      },
+      {
+        statusCheckOutcome: 'transient_error' as const,
+        statusCheckErrorCode: 'runtime_missing' as const,
+      },
+    ]) {
+      const fallbackStatus = { ...passive, ...fallback };
+      expect(hasSettledOpenCodeScopedPreparation(fallbackStatus, evidence)).toBe(true);
+      expect(isTeamProviderRuntimeStatusLoading('opencode', fallbackStatus, false, evidence)).toBe(
+        false
+      );
+      expect(
+        createLaunchGuard(['opencode'], new Map([['opencode', fallbackStatus]]), evidence).blocked(
+          true
+        )
+      ).toBe(false);
+    }
+
+    expect(
+      hasSettledOpenCodeScopedPreparation(
+        {
+          ...passive,
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'timeout',
+        },
+        evidence
+      )
     ).toBe(false);
 
     const failedScoped = {

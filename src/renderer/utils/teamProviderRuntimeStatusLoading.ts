@@ -18,6 +18,18 @@ export interface OpenCodeScopedPreparationEvidence {
   localProviderLookupAuthoritative?: boolean;
 }
 
+export function canSettleOpenCodeStatusWithScopedPreparation(
+  providerStatus: CliProviderStatus | null | undefined
+): boolean {
+  return Boolean(
+    providerStatus?.statusCheckOutcome === 'model_only' ||
+    (providerStatus?.statusCheckOutcome === 'pending' &&
+      providerStatus.statusCheckErrorCode === 'partial_response') ||
+    (providerStatus?.statusCheckOutcome === 'transient_error' &&
+      providerStatus.statusCheckErrorCode === 'runtime_missing')
+  );
+}
+
 export function getOpenCodeScopedPreparationFailure(
   evidence: OpenCodeScopedPreparationEvidence | undefined
 ): CliProviderStatus | null {
@@ -37,7 +49,7 @@ export function hasSettledOpenCodeScopedPreparation(
   now = Date.now()
 ): boolean {
   if (
-    providerStatus?.statusCheckOutcome !== 'model_only' ||
+    !canSettleOpenCodeStatusWithScopedPreparation(providerStatus) ||
     !evidence ||
     evidence.selectedModels.length === 0
   ) {
@@ -47,10 +59,7 @@ export function hasSettledOpenCodeScopedPreparation(
   return evidence.selectedModels.every((model) => {
     const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId?.trim().toLowerCase();
     if (!sourceId) return false;
-    if (
-      isOpenCodeLocalProviderId(sourceId) ||
-      evidence.localSourceIds?.has(sourceId) === true
-    ) {
+    if (isOpenCodeLocalProviderId(sourceId) || evidence.localSourceIds?.has(sourceId) === true) {
       return true;
     }
     const scopedStatus = evidence.scopedStatusBySourceId.get(sourceId);
@@ -69,10 +78,7 @@ export function isTeamProviderRuntimeStatusLoading(
   }
 
   if (isTeamProviderModelVerificationPending(providerId, providerStatus)) {
-    if (
-      providerId === 'opencode' &&
-      getOpenCodeScopedPreparationFailure(openCodeEvidence)
-    ) {
+    if (providerId === 'opencode' && getOpenCodeScopedPreparationFailure(openCodeEvidence)) {
       return false;
     }
     if (

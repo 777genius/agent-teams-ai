@@ -7,6 +7,7 @@ import {
 } from '@renderer/hooks/useEffectiveCliProviderStatus';
 import { getProviderLaunchReadinessDetail } from '@renderer/utils/providerReadiness';
 import {
+  canSettleOpenCodeStatusWithScopedPreparation,
   getOpenCodeScopedPreparationFailure,
   hasSettledOpenCodeScopedPreparation,
   type OpenCodeScopedPreparationEvidence,
@@ -35,10 +36,7 @@ export function canResolveOpenCodeLaunchBlockers(
     blockers.length > 0 &&
     blockers.every(
       ({ providerId, providerStatus }) =>
-        providerId === 'opencode' &&
-        (providerStatus?.statusCheckOutcome === 'model_only' ||
-          (providerStatus?.statusCheckOutcome === 'pending' &&
-            providerStatus.statusCheckErrorCode === 'partial_response'))
+        providerId === 'opencode' && canSettleOpenCodeStatusWithScopedPreparation(providerStatus)
     )
   );
 }
@@ -67,8 +65,8 @@ export function createLaunchGuard(
       const provider = runtimeProviderStatusById.get(providerId) ?? null;
       if (
         providerId === 'opencode' &&
-        provider?.statusCheckOutcome === 'model_only' &&
-        provider.runtimeCapabilities?.modelCatalog?.source === 'app-server' &&
+        canSettleOpenCodeStatusWithScopedPreparation(provider) &&
+        provider?.runtimeCapabilities?.modelCatalog?.source === 'app-server' &&
         hasSettledOpenCodeScopedPreparation(provider, openCodeEvidence, now)
       ) {
         // Passive status cannot authorize a launch. The strict OpenCode launch
