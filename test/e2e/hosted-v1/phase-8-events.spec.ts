@@ -2,9 +2,8 @@ import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
-import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
-
 import { encodeReplayCursor } from '@features/coordination-events';
+import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
 
 import { restartHostedV1LifecycleOwner } from '../../../scripts/e2e/hosted-v1/run';
 import {
