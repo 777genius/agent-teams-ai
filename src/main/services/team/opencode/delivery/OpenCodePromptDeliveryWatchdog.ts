@@ -7,8 +7,94 @@ import type { AgentActionMode, InboxMessage, TaskRef } from '@shared/types/team'
 
 export const OPENCODE_PROMPT_DELIVERY_OBSERVE_DELAY_MS = 3_000;
 export const OPENCODE_PROMPT_DELIVERY_RETRY_DELAY_MS = 15_000;
+/**
+ * Absolute ceiling for deferring a due retry because the turn still looks
+ * active: a lane that never stops producing output must not starve the retry
+ * budget forever.
+ *
+ * It bounds only the inferred signals (a growing assistant message, growing
+ * tool calls, growing assistant text). A raw `session status busy` is the
+ * bridge stating the turn is live, and re-prompting into a live turn is exactly
+ * the double answer this guard exists to prevent, so that signal is not capped
+ * here. Whether a session that reports busy forever is ever given up on is a
+ * separate decision with a separate owner: the stale-pending policy keeps
+ * observing a non-idle session instead of settling it. This cap therefore only
+ * decides when a retry may fire, never whether the record is finished.
+ */
+export const OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS = 600_000;
 export const OPENCODE_PROMPT_WATCHDOG_GLOBAL_CONCURRENCY = 2;
 export const OPENCODE_PROMPT_WATCHDOG_PER_TEAM_CONCURRENCY = 2;
+
+export type OpenCodePromptDeliveryTurnActivityReason =
+  | 'turn_activity_absolute_cap'
+  | 'session_status_busy'
+  | 'assistant_message_progressed'
+  | 'tool_calls_progressed'
+  | 'assistant_text_progressed'
+  | 'turn_idle';
+
+export interface OpenCodePromptDeliveryTurnActivityInput {
+  previousAssistantMessageId: string;
+  previousToolCallCount: number;
+  previousAssistantPreview: string;
+  observation?: {
+    assistantMessageId?: string | null;
+    toolCallNames?: string[];
+    latestAssistantPreview?: string | null;
+  } | null;
+  observedDiagnostics: readonly string[];
+  pendingAgeMs: number | null;
+}
+
+export interface OpenCodePromptDeliveryTurnActivityDecision {
+  active: boolean;
+  reason: OpenCodePromptDeliveryTurnActivityReason;
+}
+
+/**
+ * Whether the runtime turn answering a prompt is still producing output, so a
+ * due retry would land mid-turn and make the member answer twice.
+ *
+ * A changing assistant message id is the obvious activity proof, but it does
+ * not hold for every runtime: an ACP bridge runs its whole tool loop inside a
+ * single OpenCode turn, so the assistant message id never changes mid-turn and
+ * the bridge reports the session idle after the first completed step. Growing
+ * tool calls and growing assistant text are the signals that survive that, and
+ * they are the ledger analogue of what the native lead relay already treats as
+ * liveness on tool and text events.
+ */
+export function decideOpenCodePromptDeliveryTurnActivity(
+  input: OpenCodePromptDeliveryTurnActivityInput
+): OpenCodePromptDeliveryTurnActivityDecision {
+  const sessionReportsBusy = input.observedDiagnostics.some((diagnostic) =>
+    diagnostic.trim().toLowerCase().startsWith('opencode session status busy')
+  );
+  if (sessionReportsBusy) {
+    return { active: true, reason: 'session_status_busy' };
+  }
+  if (
+    input.pendingAgeMs !== null &&
+    input.pendingAgeMs >= OPENCODE_PROMPT_DELIVERY_TURN_ACTIVITY_CAP_MS
+  ) {
+    return { active: false, reason: 'turn_activity_absolute_cap' };
+  }
+  const assistantMessageId = input.observation?.assistantMessageId?.trim() ?? '';
+  if (
+    input.previousAssistantMessageId &&
+    assistantMessageId &&
+    assistantMessageId !== input.previousAssistantMessageId
+  ) {
+    return { active: true, reason: 'assistant_message_progressed' };
+  }
+  if ((input.observation?.toolCallNames?.length ?? 0) > input.previousToolCallCount) {
+    return { active: true, reason: 'tool_calls_progressed' };
+  }
+  const assistantPreview = input.observation?.latestAssistantPreview?.trim() ?? '';
+  if (assistantPreview && assistantPreview !== input.previousAssistantPreview) {
+    return { active: true, reason: 'assistant_text_progressed' };
+  }
+  return { active: false, reason: 'turn_idle' };
+}
 
 const ACK_ONLY_PHRASES = new Set([
   'понял',

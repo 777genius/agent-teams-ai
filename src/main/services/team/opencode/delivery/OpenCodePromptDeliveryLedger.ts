@@ -478,7 +478,13 @@ export class OpenCodePromptDeliveryLedgerStore {
           input.responseObservation.assistantMessageId ?? record.observedAssistantMessageId,
         observedAssistantPreview:
           input.responseObservation.latestAssistantPreview ?? record.observedAssistantPreview,
-        observedToolCallNames: input.responseObservation.toolCallNames,
+        // A reconcile_failed/not_observed fallback observation carries an empty
+        // tool list. Overwriting the record with it would make the next
+        // successful observation look like fresh tool-call progress and defer a
+        // retry that is genuinely due.
+        observedToolCallNames: input.responseObservation.toolCallNames.length
+          ? input.responseObservation.toolCallNames
+          : record.observedToolCallNames,
         observedVisibleMessageId:
           input.responseObservation.visibleMessageToolCallId ?? record.observedVisibleMessageId,
         visibleReplyMessageId:

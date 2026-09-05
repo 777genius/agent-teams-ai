@@ -58,6 +58,25 @@ export interface OpenCodeMemberMessageDeliveryInput {
   attachments?: AttachmentPayload[];
   source?: OpenCodeMemberMessageDeliverySource;
   inboxTimestamp?: string;
+  /**
+   * Extra reply-optional notices delivered inside the same prompt (inbox relay
+   * coalescing). Appended to the prompt body only; the ledger payload hash is
+   * computed from `text`, so retries of the same inbox row stay consistent.
+   */
+  coalescedNoticeText?: string;
+}
+
+/**
+ * The prompt body actually sent to the runtime: the inbox row's own text plus
+ * whatever notices the relay folded into this delivery. Keep this separate from
+ * `input.text`, which is the identity of the inbox row and the only thing the
+ * payload hash may see.
+ */
+export function buildOpenCodePromptBodyText(
+  input: Pick<OpenCodeMemberMessageDeliveryInput, 'text' | 'coalescedNoticeText'>
+): string {
+  const extra = input.coalescedNoticeText?.trim();
+  return extra ? `${input.text}\n\n${extra}` : input.text;
 }
 
 export interface OpenCodeMemberInboxDelivery {
@@ -75,6 +94,13 @@ export interface OpenCodeMemberInboxDelivery {
     | 'direct_child_message_send'
     | 'plain_assistant_text';
   queuedBehindMessageId?: string;
+  /**
+   * True only when THIS call dispatched a prompt carrying `coalescedNoticeText`
+   * and the runtime accepted it. `delivered` is not proof of dispatch (see the
+   * INVARIANT note at the end of `deliver`), so the inbox relay read-commits
+   * coalesced riders on this flag alone.
+   */
+  coalescedNoticesDelivered?: boolean;
   reason?: string;
   diagnostics?: string[];
   userVisibleImpact?: OpenCodeRuntimeDeliveryUserVisibleImpact;

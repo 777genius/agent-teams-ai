@@ -5,6 +5,7 @@ import {
   INBOX_RELAY_IN_FLIGHT_LEASE_MS,
   INBOX_RELAY_IN_FLIGHT_TIMEOUT_MS,
 } from '../TeamProvisioningInboxRelayCandidates';
+import { OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX } from '../TeamProvisioningOpenCodeInboxCoalescePolicy';
 import {
   commitOpenCodeInboxRelayReadAfterDelivery,
   handleOpenCodeInboxAttachmentFailure,
@@ -20,6 +21,7 @@ import {
 import type { OpenCodePromptDeliveryLedgerRecord } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { OpenCodePromptDeliveryLedgerStore } from '../../opencode/delivery/OpenCodePromptDeliveryLedger';
 import type { RelayInboxMessage } from '../TeamProvisioningInboxRelayPolicy';
+import type { InboxMessage, TeamTask } from '@shared/types';
 
 function message(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage {
   return {
@@ -30,6 +32,40 @@ function message(overrides: Partial<RelayInboxMessage> = {}): RelayInboxMessage 
     read: false,
     messageId: 'message-1',
     ...overrides,
+  };
+}
+
+/** A finished board: one completed task whose last board event is the epoch. */
+function settledBoardTask(overrides: Partial<TeamTask> = {}): TeamTask {
+  return {
+    id: 'task-1',
+    subject: 'write the section',
+    status: 'completed',
+    createdAt: '2026-01-01T09:00:00.000Z',
+    // A comment after the completion bumped this; a comment is not a board event.
+    updatedAt: '2026-01-01T10:00:20.000Z',
+    historyEvents: [
+      {
+        id: 'event-1',
+        type: 'status_changed',
+        timestamp: '2026-01-01T10:00:00.000Z',
+        from: 'in_progress',
+        to: 'completed',
+      },
+    ],
+    ...overrides,
+  } as TeamTask;
+}
+
+/** The team's closing message to the user, written after the board completed. */
+function settledFinalUserMessage(): InboxMessage {
+  return {
+    from: 'team-lead',
+    to: 'user',
+    text: 'Everything on the board is done.',
+    timestamp: '2026-01-01T10:00:05.000Z',
+    read: false,
+    messageId: 'final-1',
   };
 }
 
@@ -653,7 +689,10 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
     });
     const userFollowUp = message({ messageId: 'user-2', from: 'user', text: 'wrap up please' });
     const deliverOpenCodeMemberMessage = vi.fn(
-      (_teamName: string, input: { messageId?: string; replyRecipient?: string }) =>
+      (
+        _teamName: string,
+        input: { messageId?: string; replyRecipient?: string; coalescedNoticeText?: string }
+      ) =>
         Promise.resolve(
           input.replyRecipient === 'user'
             ? { delivered: true, accepted: true, responsePending: false, laneId: 'primary' }
@@ -661,6 +700,8 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
                 delivered: true,
                 accepted: true,
                 responsePending: true,
+                // The runtime accepted the prompt, riders included.
+                ...(input.coalescedNoticeText ? { coalescedNoticesDelivered: true } : {}),
                 reason: 'opencode_delivery_response_pending',
               }
         )
@@ -678,15 +719,533 @@ describe('TeamProvisioningOpenCodeMemberInboxRelay', () => {
       })
     );
 
-    // The pending notification is attempted, the teammate report is skipped
-    // (it would only queue behind), and the user message reaches deliver().
+    // The pending notification is attempted with the teammate report coalesced
+    // into the same prompt (both reply-optional), and the user message reaches
+    // deliver() on its own.
     expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(2);
     expect(deliverOpenCodeMemberMessage.mock.calls.map(([, input]) => input.messageId)).toEqual([
       'task-comment-forward:1',
       'user-2',
     ]);
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [teammateReport]);
     expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [userFollowUp]);
-    expect(result).toMatchObject({ attempted: 2, delivered: 1, relayed: 1, failed: 0 });
+    expect(result).toMatchObject({ attempted: 2, delivered: 1, relayed: 2, failed: 0 });
+  });
+
+  it('coalesces queued reply-optional notices into one delivery and stops at the first reply-required message', async () => {
+    const comment = message({
+      messageId: 'task-comment-forward:1',
+      from: 'Scribe',
+      source: 'system_notification',
+      messageKind: 'task_comment_notification',
+      text: 'Top 3 risks posted.',
+    });
+    const dependencyResolved = message({
+      messageId: 'task-comment-forward:2',
+      from: 'system',
+      source: 'system_notification',
+      messageKind: 'task_comment_notification',
+      text: 'Dependency resolved for #a36889d4.',
+      timestamp: '2026-01-01T00:00:01.000Z',
+    });
+    const drafterStarted = message({
+      messageId: 'drafter-started',
+      from: 'Drafter',
+      source: 'system_notification',
+      text: '@Drafter started task #a36889d4',
+      timestamp: '2026-01-01T00:00:02.000Z',
+    });
+    const scribeDone = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done. Risks are on the board.',
+      timestamp: '2026-01-01T00:00:03.000Z',
+    });
+    const userFollowUp = message({
+      messageId: 'user-2',
+      from: 'user',
+      text: 'status?',
+      timestamp: '2026-01-01T00:00:04.000Z',
+    });
+    const trailingNotice = message({
+      messageId: 'drafter-done',
+      from: 'Drafter',
+      text: '#a36889d4 done.',
+      timestamp: '2026-01-01T00:00:05.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (
+        _teamName: string,
+        input: {
+          messageId?: string;
+          replyRecipient?: string;
+          text: string;
+          coalescedNoticeText?: string;
+        }
+      ) =>
+        Promise.resolve(
+          input.replyRecipient === 'user'
+            ? { delivered: true, accepted: true, responsePending: false, laneId: 'primary' }
+            : {
+                delivered: true,
+                accepted: true,
+                responsePending: true,
+                ...(input.coalescedNoticeText ? { coalescedNoticesDelivered: true } : {}),
+                reason: 'opencode_delivery_response_pending',
+              }
+        )
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi
+          .fn()
+          .mockResolvedValue([
+            comment,
+            dependencyResolved,
+            scribeDone,
+            drafterStarted,
+            userFollowUp,
+            trailingNotice,
+          ]),
+        deliverOpenCodeMemberMessage: deliverOpenCodeMemberMessage as never,
+        markInboxMessagesRead,
+      })
+    );
+
+    // Relay order: system notifications first (priority), then the rest by
+    // time. The first notice carries the next three reply-optional rows; the
+    // user message is delivered alone; the trailing notice waits for the next
+    // relay run (one committed delivery per run).
+    expect(deliverOpenCodeMemberMessage.mock.calls.map(([, input]) => input.messageId)).toEqual([
+      'task-comment-forward:1',
+      'user-2',
+    ]);
+    // The anchor's own `text` stays the inbox row; the riders travel beside it.
+    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.text).toBe('Top 3 risks posted.');
+    const coalescedText =
+      deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.coalescedNoticeText ?? '';
+    expect(coalescedText).toContain('<opencode_coalesced_notices count="3">');
+    expect(coalescedText).toContain('notice 1 (from system, messageId task-comment-forward:2');
+    expect(coalescedText).toContain('#de5126de done. Risks are on the board.');
+    expect(coalescedText).toContain('@Drafter started task #a36889d4');
+    // The user prompt ends the run, so neither it nor the notice behind it is
+    // folded into the notice prompt.
+    expect(coalescedText).not.toContain('status?');
+    expect(coalescedText).not.toContain('#a36889d4 done.');
+    expect(deliverOpenCodeMemberMessage.mock.calls[1]?.[1]?.text).toBe('status?');
+    expect(deliverOpenCodeMemberMessage.mock.calls[1]?.[1]?.coalescedNoticeText).toBeUndefined();
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [
+      dependencyResolved,
+      drafterStarted,
+      scribeDone,
+    ]);
+    expect(result).toMatchObject({ attempted: 2, delivered: 1, relayed: 4, failed: 0 });
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([expect.stringContaining('opencode_inbox_relay_coalesced_notices')])
+    );
+  });
+
+  it('leaves riders unread when the prompt that would carry them was not dispatched', async () => {
+    const anchor = message({
+      messageId: 'notice-1',
+      from: 'system',
+      source: 'system_notification',
+      text: 'Dependency resolved.',
+    });
+    const rider = message({
+      messageId: 'notice-2',
+      from: 'Scribe',
+      text: 'section 2 done',
+      timestamp: '2026-01-01T00:00:01.000Z',
+    });
+    // The delivery reports success but never says the riders were dispatched -
+    // an observation-only pass, or a prompt queued behind another record.
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { coalescedNoticeText?: string }) =>
+        Promise.resolve({
+          delivered: true,
+          accepted: true,
+          responsePending: true,
+          reason: 'opencode_delivery_response_pending',
+        })
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+    const scheduleOpenCodeMemberInboxDeliveryWake = vi.fn();
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([anchor, rider]),
+        deliverOpenCodeMemberMessage: deliverOpenCodeMemberMessage as never,
+        markInboxMessagesRead,
+        scheduleOpenCodeMemberInboxDeliveryWake,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.coalescedNoticeText).toContain(
+      '<opencode_coalesced_notices'
+    );
+    expect(markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(result.relayed).toBe(0);
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_coalesced_notices_not_dispatched'),
+      ])
+    );
+    // The rider is woken so it becomes the anchor of its own delivery.
+    expect(scheduleOpenCodeMemberInboxDeliveryWake).toHaveBeenCalledWith(
+      expect.objectContaining({ teamName: 'team', memberName: 'team-lead', messageId: 'notice-2' })
+    );
+  });
+
+  it('never folds riders into an anchor whose prompt the runtime already accepted', async () => {
+    const anchor = message({
+      messageId: 'notice-1',
+      from: 'system',
+      source: 'system_notification',
+      text: 'Dependency resolved.',
+    });
+    const rider = message({
+      messageId: 'notice-2',
+      from: 'Scribe',
+      text: 'section 2 done',
+      timestamp: '2026-01-01T00:00:01.000Z',
+    });
+    const acceptedAnchorRecord = ledgerRecord({
+      inboxMessageId: 'notice-1',
+      status: 'pending',
+      replyRecipient: 'system',
+      acceptedAt: '2026-01-01T00:00:00.500Z',
+      runtimePromptMessageId: 'prompt-1',
+    });
+    const getByInboxMessage = vi.fn(({ inboxMessageId }: { inboxMessageId: string }) =>
+      Promise.resolve(inboxMessageId === 'notice-1' ? acceptedAnchorRecord : null)
+    );
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { coalescedNoticeText?: string }) =>
+        Promise.resolve({
+          delivered: true,
+          accepted: true,
+          responsePending: true,
+          coalescedNoticesDelivered: true,
+          reason: 'opencode_delivery_response_pending',
+        })
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+    const scheduleOpenCodeMemberInboxDeliveryWake = vi.fn();
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([anchor, rider]),
+        createOpenCodePromptDeliveryLedger: vi.fn(() => ({
+          getByInboxMessage,
+        })) as unknown as RelayOpenCodeMemberInboxMessagesPorts['createOpenCodePromptDeliveryLedger'],
+        deliverOpenCodeMemberMessage: deliverOpenCodeMemberMessage as never,
+        markInboxMessagesRead,
+        scheduleOpenCodeMemberInboxDeliveryWake,
+      })
+    );
+
+    // This pass can only observe the accepted prompt, so nothing rides along -
+    // even though the delivery result claims the riders were dispatched.
+    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.coalescedNoticeText).toBeUndefined();
+    expect(markInboxMessagesRead).not.toHaveBeenCalled();
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_coalesce_deferred_dispatched_base'),
+      ])
+    );
+    expect(scheduleOpenCodeMemberInboxDeliveryWake).toHaveBeenCalledWith(
+      expect.objectContaining({ messageId: 'notice-2' })
+    );
+  });
+
+  it('does not coalesce a reply-required message and does not coalesce through nudges', async () => {
+    const notice = message({
+      messageId: 'notice-1',
+      from: 'system',
+      source: 'system_notification',
+      text: 'Dependency resolved.',
+    });
+    const userPrompt = message({
+      messageId: 'user-1',
+      from: 'user',
+      text: 'plan it',
+      timestamp: '2026-01-01T00:00:01.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, input: { replyRecipient?: string; text: string }) =>
+        Promise.resolve(
+          input.replyRecipient === 'user'
+            ? { delivered: true, accepted: true, responsePending: false, laneId: 'primary' }
+            : {
+                delivered: true,
+                accepted: true,
+                responsePending: true,
+                reason: 'opencode_delivery_response_pending',
+              }
+        )
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([notice, userPrompt]),
+        deliverOpenCodeMemberMessage: deliverOpenCodeMemberMessage as never,
+        markInboxMessagesRead,
+      })
+    );
+    // The notice is delivered alone (the user prompt is never coalesced) and
+    // the user prompt follows on its own.
+    expect(deliverOpenCodeMemberMessage.mock.calls.map(([, input]) => input.text)).toEqual([
+      'Dependency resolved.',
+      'plan it',
+    ]);
+    // The only read commit is the user prompt's own: the notice stayed pending
+    // and the user prompt was never carried by it.
+    expect(
+      markInboxMessagesRead.mock.calls.map((call) =>
+        (call[2] as RelayInboxMessage[]).map((entry) => entry.messageId)
+      )
+    ).toEqual([['user-1']]);
+
+    const nudge = message({
+      messageId: 'member-work-sync:1',
+      from: 'system',
+      source: 'system_notification',
+      messageKind: 'member_work_sync_nudge',
+      text: 'Work sync check',
+    });
+    const laterNotice = message({
+      messageId: 'notice-2',
+      from: 'Scribe',
+      text: '#1 done.',
+      timestamp: '2026-01-01T00:00:02.000Z',
+    });
+    const deliverAgain = vi.fn((_teamName: string, _input: { text: string }) =>
+      Promise.resolve({
+        delivered: true,
+        accepted: true,
+        responsePending: true,
+        reason: 'opencode_delivery_response_pending',
+      })
+    );
+    const markAgain = vi.fn().mockResolvedValue(undefined);
+    await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead-2' },
+      createRelayPorts({
+        readInboxMessages: vi.fn().mockResolvedValue([nudge, notice, laterNotice]),
+        deliverOpenCodeMemberMessage: deliverAgain as never,
+        markInboxMessagesRead: markAgain,
+      })
+    );
+    // Nudges are never coalesced (they carry their own contract) and nothing
+    // is coalesced into them.
+    expect(deliverAgain).toHaveBeenCalledTimes(1);
+    expect(deliverAgain.mock.calls[0]?.[1]?.text).toBe('Work sync check');
+    expect(markAgain).not.toHaveBeenCalled();
+  });
+
+  it('read-commits settled notices without spending a runtime turn on any of them', async () => {
+    const anchor = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done.',
+      timestamp: '2026-01-01T10:00:10.000Z',
+    });
+    const follower = message({
+      messageId: 'task-comment-forward:1',
+      from: 'system',
+      source: 'system_notification',
+      messageKind: 'task_comment_notification',
+      text: 'Comment on #de5126de.',
+      timestamp: '2026-01-01T10:00:11.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn().mockResolvedValue({ delivered: true });
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(target === 'user' ? [settledFinalUserMessage()] : [anchor, follower])
+        ) as never,
+        // The only thing that happened after the board completed is a comment,
+        // and a comment is not a board event.
+        readTaskRefInferenceTasks: vi.fn().mockResolvedValue([settledBoardTask()]),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage).not.toHaveBeenCalled();
+    // Relay order puts the system notification first; it anchors, the teammate
+    // report rides along, and both are committed in one pass.
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [follower, anchor]);
+    expect(result).toMatchObject({ attempted: 0, delivered: 0, relayed: 2, failed: 0 });
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_post_completion_read_commit'),
+      ])
+    );
+  });
+
+  it('delivers the anchor as a catch-up when the board moved during the settled read-commit', async () => {
+    const anchor = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done.',
+      timestamp: '2026-01-01T10:00:10.000Z',
+    });
+    const reopenedBoard = [
+      settledBoardTask(),
+      settledBoardTask({
+        id: 'task-2',
+        status: 'pending',
+        createdAt: '2026-01-01T10:00:12.000Z',
+        updatedAt: '2026-01-01T10:00:12.000Z',
+        historyEvents: [
+          {
+            id: 'event-new',
+            type: 'task_created',
+            timestamp: '2026-01-01T10:00:12.000Z',
+            status: 'pending',
+          },
+        ],
+      }),
+    ];
+    const boardReads = [[settledBoardTask()], reopenedBoard];
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { messageId?: string }) =>
+        Promise.resolve({ delivered: true, accepted: true, responsePending: false })
+    );
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(target === 'user' ? [settledFinalUserMessage()] : [anchor])
+        ) as never,
+        readTaskRefInferenceTasks: vi.fn(() =>
+          Promise.resolve(boardReads.shift() ?? reopenedBoard)
+        ) as never,
+        deliverOpenCodeMemberMessage,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage.mock.calls[0]?.[1]?.messageId).toBe('scribe-done');
+    expect(result).toMatchObject({ attempted: 1, delivered: 1 });
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('board moved, delivering anchor as catch-up'),
+      ])
+    );
+  });
+
+  it('delivers normally once a board event lands after the team final message', async () => {
+    const anchor = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done.',
+      timestamp: '2026-01-01T10:10:00.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { messageId?: string }) =>
+        Promise.resolve({ delivered: true, accepted: true, responsePending: false })
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(target === 'user' ? [settledFinalUserMessage()] : [anchor])
+        ) as never,
+        // The board changed after the final user message, so that message is no
+        // longer the team's word on the current board.
+        readTaskRefInferenceTasks: vi.fn().mockResolvedValue([
+          settledBoardTask({
+            updatedAt: '2026-01-01T10:09:00.000Z',
+            historyEvents: [
+              {
+                id: 'event-reopen',
+                type: 'status_changed',
+                timestamp: '2026-01-01T10:09:00.000Z',
+                from: 'in_progress',
+                to: 'completed',
+              },
+            ],
+          }),
+        ]),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    expect(deliverOpenCodeMemberMessage).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ attempted: 1, delivered: 1 });
+    expect(result.diagnostics ?? []).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_post_completion_read_commit'),
+      ])
+    );
+  });
+
+  it('delivers the board completion notice to the lead even while the team is settled', async () => {
+    const teammateReport = message({
+      messageId: 'scribe-done',
+      from: 'Scribe',
+      text: '#de5126de done.',
+      timestamp: '2026-01-01T10:00:10.000Z',
+    });
+    const boardComplete = message({
+      messageId: `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:de5126de`,
+      from: 'system',
+      source: 'system_notification',
+      text: 'Every task on the board is completed.',
+      timestamp: '2026-01-01T10:00:12.000Z',
+    });
+    const deliverOpenCodeMemberMessage = vi.fn(
+      (_teamName: string, _input: { messageId?: string }) =>
+        Promise.resolve({ delivered: true, accepted: true, responsePending: false })
+    );
+    const markInboxMessagesRead = vi.fn().mockResolvedValue(undefined);
+
+    const result = await relayOpenCodeMemberInboxMessagesWithPorts(
+      { teamName: 'team', memberName: 'team-lead', relayKey: 'team/team-lead' },
+      createRelayPorts({
+        readInboxMessages: vi.fn((_teamName: string, target: string) =>
+          Promise.resolve(
+            target === 'user' ? [settledFinalUserMessage()] : [teammateReport, boardComplete]
+          )
+        ) as never,
+        readTaskRefInferenceTasks: vi.fn().mockResolvedValue([settledBoardTask()]),
+        deliverOpenCodeMemberMessage,
+        markInboxMessagesRead,
+      })
+    );
+
+    // The board notice is the trigger for the lead's closing message, so it
+    // costs its own turn instead of being absorbed with the teammate report
+    // queued beside it - which is what a settled read-commit would have done.
+    expect(deliverOpenCodeMemberMessage.mock.calls.map(([, sent]) => sent.messageId)).toEqual([
+      `${OPENCODE_BOARD_COMPLETE_MESSAGE_ID_PREFIX}team:de5126de`,
+    ]);
+    expect(markInboxMessagesRead).toHaveBeenCalledWith('team', 'team-lead', [boardComplete]);
+    expect(markInboxMessagesRead).not.toHaveBeenCalledWith('team', 'team-lead', [
+      boardComplete,
+      teammateReport,
+    ]);
+    expect(result).toMatchObject({ attempted: 1, delivered: 1 });
+    expect(result.diagnostics ?? []).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('opencode_inbox_relay_post_completion_read_commit'),
+      ])
+    );
   });
 
   it('stops at a pending non-user delivery when no unread user message follows', async () => {
