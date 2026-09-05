@@ -79,6 +79,20 @@ describe('cursor-agent tree root detection', () => {
     expect(isSameWorkspacePath('/work/Team', '/work/team', 'linux')).toBe(false);
     expect(isSameWorkspacePath('/work/Team/', '/work/Team', 'linux')).toBe(true);
   });
+
+  /**
+   * A backslash separates nothing off Windows: it is an ordinary character in a
+   * filename, so `/work/a\b` is a directory of its own and not another spelling
+   * of `/work/a/b`. Rewriting it into a separator makes the two compare equal,
+   * which is a licence to reap the whole lead tree of a workspace nobody owns.
+   */
+  it('reads a backslash as a POSIX filename character and only as a Windows separator', () => {
+    expect(isSameWorkspacePath('/work/a\\b', '/work/a/b', 'linux')).toBe(false);
+    expect(isSameWorkspacePath('/work/a\\b', '/work/a\\b', 'linux')).toBe(true);
+    expect(isSameWorkspacePath('C:\\workspaces\\example', 'c:/workspaces/example', 'win32')).toBe(
+      true
+    );
+  });
 });
 
 describe('the ownership proof', () => {
@@ -224,6 +238,42 @@ describe('cleanupCursorAgentProcessTrees', () => {
 
     expect(result.killed).toEqual([]);
     expect(killTree).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The same shape one character further down. `/work/a\b` is a directory whose
+   * name contains a backslash, which is legal off Windows, and the owned
+   * `/work/a/b` is a different directory entirely. Reading the backslash as a
+   * separator here hands this sweep somebody else's tree.
+   */
+  it('never reaps a POSIX lead whose workspace only becomes the owned one once backslashes are separators', async () => {
+    const killTree = vi.fn();
+    const posixLead =
+      '/home/u/.local/cursor-agent/bin/cursor-agent --print --workspace /work/a\\b --model cursor-grok';
+
+    const posixRows = [{ pid: 41, ppid: 1, command: posixLead }];
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: ['/work/a/b'],
+      listProcessRows: () => Promise.resolve(posixRows),
+      killTree,
+      platform: 'linux',
+    });
+
+    expect(result.killed).toEqual([]);
+    expect(killTree).not.toHaveBeenCalled();
+
+    // The other half of the same rule: the directory that really is named
+    // `a\b` is still reaped for the caller that owns it.
+    const owned = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: ['/work/a\\b'],
+      listProcessRows: () => Promise.resolve(posixRows),
+      killTree,
+      platform: 'linux',
+    });
+
+    expect(owned.killed).toEqual([41]);
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(41);
   });
 
   /**
