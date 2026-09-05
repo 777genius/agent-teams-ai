@@ -70,9 +70,12 @@ export interface ReconcilePersistedLaunchStatePorts {
   ): PersistedTeamLaunchSnapshot | null;
   writeLaunchStateSnapshot(
     teamName: string,
-    snapshot: PersistedTeamLaunchSnapshot
+    snapshot: PersistedTeamLaunchSnapshot,
+    options?: { runId?: string }
   ): Promise<PersistedTeamLaunchSnapshot>;
-  clearPersistedLaunchState(teamName: string): Promise<void>;
+  clearPersistedLaunchState(teamName: string, options?: { expectedRunId?: string }): Promise<void>;
+  /** Run this reconcile is scoped to; without one its writes skip every stale-run guard. */
+  getTrackedRunId?(teamName: string): string | null | undefined;
   applyBootstrapTranscriptEvidenceOverlay(
     snapshot: PersistedTeamLaunchSnapshot | null
   ): Promise<PersistedTeamLaunchSnapshot | null>;
@@ -122,10 +125,32 @@ export interface ReconcilePersistedLaunchStatePorts {
   nowMs(): number;
 }
 
+/**
+ * Reconcile the persisted launch state of a team.
+ *
+ * Every write and clear is scoped to `expectedRunId` - the caller's, or the
+ * tracked run when the port supplies one. Unscoped,
+ * `writeLaunchStateSnapshotNow` skips its stale-run guards and
+ * `clearPersistedLaunchStateNow` takes the branch that also wipes bootstrap
+ * state, which lets a reconcile started for one run delete the launch state a
+ * concurrent run is still writing.
+ */
 export async function reconcilePersistedLaunchStateWithPorts(
   teamName: string,
-  ports: ReconcilePersistedLaunchStatePorts
+  ports: ReconcilePersistedLaunchStatePorts,
+  options?: { expectedRunId?: string | null }
 ): Promise<PersistedLaunchReconciliationResult> {
+  const expectedRunId = options?.expectedRunId ?? ports.getTrackedRunId?.(teamName) ?? undefined;
+  const writeSnapshot = (
+    snapshot: PersistedTeamLaunchSnapshot
+  ): Promise<PersistedTeamLaunchSnapshot> =>
+    expectedRunId
+      ? ports.writeLaunchStateSnapshot(teamName, snapshot, { runId: expectedRunId })
+      : ports.writeLaunchStateSnapshot(teamName, snapshot);
+  const clearPersistedState = (): Promise<void> =>
+    expectedRunId
+      ? ports.clearPersistedLaunchState(teamName, { expectedRunId })
+      : ports.clearPersistedLaunchState(teamName);
   const bootstrapSnapshot = await ports.readBootstrapLaunchSnapshot(teamName);
   const persisted = await ports.readLaunchState(teamName);
   const metaMembers = await ports.readMembersMeta(teamName).catch(() => []);
@@ -154,15 +179,15 @@ export async function reconcilePersistedLaunchStateWithPorts(
     snapshotBeforeBootstrapStallOverlay: overlaidRecoveredMixedSnapshot,
   });
   const stableRecoveredMixedSnapshotWithCommittedEvidence =
-    recoveredMixedSnapshotWithBootstrapStall &&
-    recoveredCommittedEvidenceWriteDecision.shouldWrite
-      ? await ports.writeLaunchStateSnapshot(teamName, recoveredMixedSnapshotWithBootstrapStall)
+    recoveredMixedSnapshotWithBootstrapStall && recoveredCommittedEvidenceWriteDecision.shouldWrite
+      ? await writeSnapshot(recoveredMixedSnapshotWithBootstrapStall)
       : recoveredMixedSnapshotWithBootstrapStall;
   const promotedRecoveredMixedSnapshot = promoteOpenCodePersistedFailureReasonsFromDiagnostics(
     stableRecoveredMixedSnapshotWithCommittedEvidence
   );
-  const cleanedRecoveredMixedSnapshot =
-    ports.cleanConfirmedBootstrapRuntimeDiagnostics(promotedRecoveredMixedSnapshot);
+  const cleanedRecoveredMixedSnapshot = ports.cleanConfirmedBootstrapRuntimeDiagnostics(
+    promotedRecoveredMixedSnapshot
+  );
   const recoveredPromotionCleanupWriteDecision = getPromotionCleanupWriteDecision({
     baseSnapshot: stableRecoveredMixedSnapshotWithCommittedEvidence,
     promotedSnapshot: promotedRecoveredMixedSnapshot,
@@ -170,7 +195,7 @@ export async function reconcilePersistedLaunchStateWithPorts(
   });
   const stableRecoveredMixedSnapshot =
     cleanedRecoveredMixedSnapshot && recoveredPromotionCleanupWriteDecision.shouldWrite
-      ? await ports.writeLaunchStateSnapshot(teamName, cleanedRecoveredMixedSnapshot)
+      ? await writeSnapshot(cleanedRecoveredMixedSnapshot)
       : cleanedRecoveredMixedSnapshot;
   const filteredBootstrapSnapshot = filterOptionalRemovedMembersFromLaunchSnapshot(
     bootstrapSnapshot,
@@ -225,7 +250,7 @@ export async function reconcilePersistedLaunchStateWithPorts(
   );
   const persistedWithCommittedEvidence =
     cleanedPersisted && persistedWriteDecision.shouldWrite
-      ? await ports.writeLaunchStateSnapshot(teamName, cleanedPersisted)
+      ? await writeSnapshot(cleanedPersisted)
       : cleanedPersisted;
   const preferredSnapshot = ports.choosePreferredLaunchSnapshot(
     overlaidBootstrapSnapshot,
@@ -238,11 +263,11 @@ export async function reconcilePersistedLaunchStateWithPorts(
   });
   if (preferredSnapshot && preferredBootstrapDecision.kind !== 'ignore') {
     if (preferredBootstrapDecision.kind === 'clear_persisted_state') {
-      await ports.clearPersistedLaunchState(teamName);
+      await clearPersistedState();
       return projectPersistedLaunchReconciliationResult(preferredSnapshot);
     }
     if (preferredBootstrapDecision.kind === 'write_snapshot') {
-      const writtenSnapshot = await ports.writeLaunchStateSnapshot(teamName, preferredSnapshot);
+      const writtenSnapshot = await writeSnapshot(preferredSnapshot);
       return projectPersistedLaunchReconciliationResult(writtenSnapshot);
     }
     return projectPersistedLaunchReconciliationResult(preferredSnapshot);
@@ -330,11 +355,11 @@ export async function reconcilePersistedLaunchStateWithPorts(
 
   const finalSnapshotDecision = decideFinalReconciledSnapshotWrite(reconciled);
   if (finalSnapshotDecision.kind === 'clear_persisted_state') {
-    await ports.clearPersistedLaunchState(teamName);
+    await clearPersistedState();
     return projectEmptyPersistedLaunchReconciliationResult();
   }
 
-  const writtenSnapshot = await ports.writeLaunchStateSnapshot(teamName, reconciled);
+  const writtenSnapshot = await writeSnapshot(reconciled);
   return projectPersistedLaunchReconciliationResult(writtenSnapshot);
 }
 

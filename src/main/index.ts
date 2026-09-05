@@ -249,6 +249,7 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import { startPeriodicOpenCodeHostStartupLockPurge } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
@@ -679,6 +680,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }),
   ]);
 }
+let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
+
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
@@ -2064,6 +2067,10 @@ async function initializeServices(): Promise<void> {
       logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
     );
   }, STARTUP_RECOVERY_DELAY_MS);
+  stopPeriodicOpenCodeHostStartupLockPurge = startPeriodicOpenCodeHostStartupLockPurge({
+    logInfo: (message) => logger.info(message),
+    logWarning: (message) => logger.warn(message),
+  });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
@@ -3005,6 +3012,11 @@ async function shutdownServices(): Promise<void> {
 
     clearStartupTimers();
     clearInboxNotifyTimers();
+    // Ahead of the first awaited step: runShutdownStep stops waiting on a step
+    // that hangs, it does not cancel it, so no awaited step may decide whether
+    // the background lock purge is still running.
+    stopPeriodicOpenCodeHostStartupLockPurge?.();
+    stopPeriodicOpenCodeHostStartupLockPurge = null;
 
     await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
       teamProvisioningService?.setRuntimeRecoveryFailureObserver(null);

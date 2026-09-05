@@ -16436,7 +16436,9 @@ describe(
       }) as typeof adapter.stop;
 
       const stopPromise = svc.stopTeam(teamName);
-      await waitForCondition(() => adapter.stopInputs.length === 1);
+      // The lanes stop concurrently, so what matters here is that a stop is in
+      // flight, not that exactly one of them is.
+      await waitForCondition(() => adapter.stopInputs.length >= 1);
       try {
         await expect(
           svc.deliverOpenCodeMemberMessage(teamName, {
