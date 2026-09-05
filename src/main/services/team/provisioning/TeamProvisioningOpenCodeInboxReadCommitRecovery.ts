@@ -156,47 +156,72 @@ export async function recoverOpenCodeOwedInboxReadCommit(input: {
   if (!recoveredRecord || !recoveredReadAllowed) {
     return { outcome: 'not_recovered' };
   }
-  const failureReason = wasTerminal
+  // The commit is two writes against two stores, and they fail into different
+  // states, so they get one reason each. Reporting both under the read's reason
+  // would name the wrong operation for a stamp failure and hide the difference
+  // that matters: only a stamp failure leaves the row read.
+  const markReadFailureReason = wasTerminal
     ? 'opencode_inbox_mark_read_failed_after_terminal_recovery'
     : 'opencode_inbox_mark_read_failed_after_responded_recovery';
-  try {
-    await input.ports.markInboxMessagesRead(input.teamName, input.memberName, [input.message]);
-    const committed = await input.ledger.markInboxReadCommitted({
-      id: recoveredRecord.id,
-      committedAt: input.ports.nowIso(),
-    });
-    input.ports.logOpenCodePromptDeliveryEvent(
-      'opencode_prompt_delivery_inbox_committed_read',
-      committed,
-      wasTerminal ? { recoveredTerminal: true } : { recoveredResponded: true }
-    );
-    return {
-      outcome: 'committed',
-      delivery: {
-        delivered: true,
-        accepted: true,
-        responsePending: false,
-        responseState: committed.responseState,
-        ledgerStatus: committed.status,
-        ledgerRecordId: committed.id,
-        laneId: input.laneId,
-        visibleReplyMessageId: committed.visibleReplyMessageId ?? undefined,
-        visibleReplyCorrelation: committed.visibleReplyCorrelation ?? undefined,
-        diagnostics: committed.diagnostics,
-      },
-    };
-  } catch (error) {
-    const diagnostic = `${failureReason}: ${input.ports.getErrorMessage(error)}`;
+  const stampFailureReason = wasTerminal
+    ? 'opencode_inbox_read_commit_stamp_failed_after_terminal_recovery'
+    : 'opencode_inbox_read_commit_stamp_failed_after_responded_recovery';
+  const commitFailed = (
+    reason: string,
+    error: unknown,
+    extraDelivery?: Partial<OpenCodeMemberInboxDelivery>
+  ): OpenCodeInboxReadCommitRecoveryOutcome => {
+    const diagnostic = `${reason}: ${input.ports.getErrorMessage(error)}`;
     return {
       outcome: 'commit_failed',
       diagnostic,
-      delivery: {
-        delivered: false,
-        reason: failureReason,
-        diagnostics: [diagnostic],
-      },
+      delivery: { delivered: false, reason, diagnostics: [diagnostic], ...extraDelivery },
     };
+  };
+  try {
+    await input.ports.markInboxMessagesRead(input.teamName, input.memberName, [input.message]);
+  } catch (error) {
+    // The row is still unread and the ledger is untouched, so the next relay
+    // pass selects this message again and re-runs the whole recovery.
+    return commitFailed(markReadFailureReason, error);
   }
+  let committed: OpenCodePromptDeliveryLedgerRecord;
+  try {
+    committed = await input.ledger.markInboxReadCommitted({
+      id: recoveredRecord.id,
+      committedAt: input.ports.nowIso(),
+    });
+  } catch (error) {
+    // The row IS read now - the double-delivery guard is engaged - and only the
+    // ledger stamp is missing. Unread selection drops read rows, so no ordinary
+    // relay pass comes back here; the record is healed by
+    // `commitOpenCodeAlreadyReadInboxRow` on the next `onlyMessageId` pass over
+    // this row. Name that record, so the owed heal is addressable.
+    return commitFailed(stampFailureReason, error, {
+      ledgerRecordId: recoveredRecord.id,
+      laneId: input.laneId,
+    });
+  }
+  input.ports.logOpenCodePromptDeliveryEvent(
+    'opencode_prompt_delivery_inbox_committed_read',
+    committed,
+    wasTerminal ? { recoveredTerminal: true } : { recoveredResponded: true }
+  );
+  return {
+    outcome: 'committed',
+    delivery: {
+      delivered: true,
+      accepted: true,
+      responsePending: false,
+      responseState: committed.responseState,
+      ledgerStatus: committed.status,
+      ledgerRecordId: committed.id,
+      laneId: input.laneId,
+      visibleReplyMessageId: committed.visibleReplyMessageId ?? undefined,
+      visibleReplyCorrelation: committed.visibleReplyCorrelation ?? undefined,
+      diagnostics: committed.diagnostics,
+    },
+  };
 }
 
 const OPENCODE_INBOX_MESSAGE_MISSING_TERMINAL_REASON = 'opencode_inbox_message_missing';

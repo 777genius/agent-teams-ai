@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { validateOpenCodePromptDeliveryLedgerRecords } from '../OpenCodePromptDeliveryLedgerRecordSchema';
 
 import type { OpenCodePromptDeliveryLedgerRecord } from '../OpenCodePromptDeliveryLedger';
+import type { InboxMessageKind } from '@shared/types/team';
 
 const NOW_ISO = '2026-01-01T00:00:00.000Z';
 
@@ -115,6 +116,35 @@ describe('validateOpenCodePromptDeliveryLedgerRecords', () => {
     });
 
     expect(validateOpenCodePromptDeliveryLedgerRecords([enriched])).toEqual([enriched]);
+  });
+
+  // A kind the guard does not know rejects the record, and one rejected record
+  // rejects the whole array - the store then quarantines a ledger that was
+  // never corrupt. The guard's allowlist is typed `Record<InboxMessageKind,
+  // true>` so an added kind is a build error; this walks the union so a kind
+  // dropped from the allowlist is a test failure too.
+  it('accepts every inbox message kind the union declares', () => {
+    const kinds: readonly InboxMessageKind[] = [
+      'default',
+      'slash_command',
+      'slash_command_result',
+      'task_comment_notification',
+      'task_stall_remediation',
+      'member_work_sync_nudge',
+      'runtime_recovery_nudge',
+      'agent_error',
+    ];
+
+    for (const messageKind of kinds) {
+      const withKind = record({ messageKind });
+      expect(validateOpenCodePromptDeliveryLedgerRecords([withKind])).toEqual([withKind]);
+    }
+  });
+
+  it('rejects an inbox message kind outside the union', () => {
+    expect(() =>
+      validateOpenCodePromptDeliveryLedgerRecords([{ ...record(), messageKind: 'not_a_kind' }])
+    ).toThrow();
   });
 
   // NEGATIVE CONTROL: the turn-progress stamps arrived after the first records
