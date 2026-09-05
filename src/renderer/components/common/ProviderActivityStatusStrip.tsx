@@ -6,7 +6,11 @@ import { shouldMaskCodexNegativeBootstrapState } from '@renderer/components/runt
 import { createLoadingMultimodelCliStatus } from '@renderer/store/slices/cliInstallerSlice';
 import { filterMainScreenCliProviders } from '@renderer/utils/geminiUiFreeze';
 import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
-import { isTeamProviderModelVerificationPending } from '@renderer/utils/teamModelAvailability';
+import {
+  hasSettledOpenCodeScopedPreparation,
+  isTeamProviderRuntimeStatusLoading,
+  type OpenCodeScopedPreparationEvidence,
+} from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 
 import { ProviderBrandLogo } from './ProviderBrandLogo';
@@ -27,16 +31,13 @@ interface ProviderActivityStatusStripProps {
   readonly cliProviderStatusLoading: Partial<Record<CliProviderId, boolean>>;
   readonly multimodelEnabled: boolean;
   readonly codexSnapshotPending?: boolean;
+  readonly openCodePreparationEvidence?: OpenCodeScopedPreparationEvidence;
   readonly providerIds?: readonly CliProviderId[];
   readonly className?: string;
   readonly label?: string | null;
   readonly layout?: 'inline' | 'stacked';
   readonly showReadyProviders?: boolean;
   readonly readyStatusText?: string;
-}
-
-function isProviderCardLoading(provider: CliProviderStatus, providerLoading: boolean): boolean {
-  return providerLoading || isTeamProviderModelVerificationPending(provider.providerId, provider);
 }
 
 function getActivityToneStyles(tone: 'loading' | 'checked' | 'error'): {
@@ -83,6 +84,7 @@ function useProviderActivityDisplay({
   cliProviderStatusLoading,
   multimodelEnabled,
   codexSnapshotPending = false,
+  openCodePreparationEvidence,
   providerIds,
   showReadyProviders,
 }: Pick<
@@ -94,6 +96,7 @@ function useProviderActivityDisplay({
   | 'cliProviderStatusLoading'
   | 'multimodelEnabled'
   | 'codexSnapshotPending'
+  | 'openCodePreparationEvidence'
   | 'providerIds'
   | 'showReadyProviders'
 >): {
@@ -130,24 +133,30 @@ function useProviderActivityDisplay({
       const provider = overridden ? providerStatusOverride : globalProvider;
       const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
       const loading =
-        isProviderCardLoading(
+        isTeamProviderRuntimeStatusLoading(
+          provider.providerId,
           provider,
-          !overridden && cliProviderStatusLoading[provider.providerId] === true
+          !overridden && cliProviderStatusLoading[provider.providerId] === true,
+          openCodePreparationEvidence
         ) ||
         (provider.providerId === 'codex' && codexSnapshotPending) ||
         shouldMaskCodexNegativeBootstrapState(sourceProvider, provider, {
           providerLoading: cliProviderStatusLoading[provider.providerId] === true,
         });
+      const scopedOpenCodeReady =
+        provider.providerId === 'opencode' &&
+        hasSettledOpenCodeScopedPreparation(provider, openCodePreparationEvidence);
 
       return {
         provider,
         loading,
-        error: !loading && !hasEffectiveProviderLaunchAuthority(provider),
+        error: !loading && !scopedOpenCodeReady && !hasEffectiveProviderLaunchAuthority(provider),
       };
     });
   }, [
     cliProviderStatusLoading,
     codexSnapshotPending,
+    openCodePreparationEvidence,
     providerIdSet,
     renderCliStatus?.providers,
     sourceProviderMap,
@@ -244,6 +253,7 @@ export const ProviderActivityStatusStrip = ({
   cliProviderStatusLoading,
   multimodelEnabled,
   codexSnapshotPending = false,
+  openCodePreparationEvidence,
   providerIds,
   className = '',
   label,
@@ -262,6 +272,7 @@ export const ProviderActivityStatusStrip = ({
     cliProviderStatusLoading,
     multimodelEnabled,
     codexSnapshotPending,
+    openCodePreparationEvidence,
     providerIds,
     showReadyProviders,
   });

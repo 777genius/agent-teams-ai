@@ -2914,6 +2914,7 @@ export const CreateTeamDialog = ({
                 cliProviderStatusLoading={cliProviderStatusLoading}
                 multimodelEnabled={multimodelEnabled}
                 codexSnapshotPending={codexSnapshotPending}
+                openCodePreparationEvidence={openCodePreparationEvidence}
                 providerIds={selectedMemberProviders}
                 className="mb-2"
                 label={t('create.prepare.selectedProvidersLabel')}

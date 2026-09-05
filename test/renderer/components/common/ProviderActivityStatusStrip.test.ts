@@ -151,6 +151,73 @@ describe('ProviderActivityStatusStrip', () => {
     }
   );
 
+  it('shows OpenCode ready when selected scoped catalogs settle passive discovery', async () => {
+    const passiveProvider = createProvider({
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      authenticated: false,
+      verificationState: 'unknown',
+      statusCheckOutcome: 'model_only',
+      statusCheckErrorCode: 'partial_response',
+      modelCatalogRefreshState: 'loading',
+    });
+    passiveProvider.capabilities.teamLaunch = false;
+    const scopedProvider = createProvider({
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      authenticated: true,
+      statusCheckOutcome: 'authoritative',
+      modelCatalogRefreshState: 'ready',
+    });
+    scopedProvider.modelCatalog = {
+      schemaVersion: 1,
+      providerId: 'opencode',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2020-01-01T00:00:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
+      defaultModelId: 'openrouter/auto',
+      defaultLaunchModel: 'openrouter/auto',
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      models: [
+        {
+          id: 'openrouter/auto',
+          launchModel: 'openrouter/auto',
+          displayName: 'Auto',
+          hidden: false,
+          supportedReasoningEfforts: [],
+          defaultReasoningEffort: null,
+          inputModalities: ['text'],
+          supportsPersonality: false,
+          isDefault: true,
+          upgrade: false,
+          source: 'app-server',
+        },
+      ],
+    };
+    const host = document.createElement('div');
+    let root!: ReturnType<typeof createRoot>;
+
+    await act(async () => {
+      root = renderStrip(host, {
+        cliStatus: createMultimodelStatus([passiveProvider]),
+        providerStatusOverride: passiveProvider,
+        openCodePreparationEvidence: {
+          selectedModels: ['openrouter/auto'],
+          scopedStatusBySourceId: new Map([['openrouter', scopedProvider]]),
+        },
+        showReadyProviders: true,
+        readyStatusText: 'Ready',
+      });
+    });
+
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('Ready');
+    expect(host.textContent).not.toContain('Checking...');
+    expect(host.textContent).not.toContain('Needs attention');
+    await act(async () => root.unmount());
+  });
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });

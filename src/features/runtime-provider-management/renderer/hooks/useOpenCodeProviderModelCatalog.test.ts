@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { MODEL_CATALOG_FRESHNESS_MS } from './loadOpenCodeScopedCatalog';
 import {
   normalizeModelResponseDiagnostics,
   useOpenCodeProviderModelCatalog,
@@ -57,6 +58,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   document.body.innerHTML = '';
 });
@@ -79,8 +81,8 @@ describe('useOpenCodeProviderModelCatalog', () => {
     const root = createRoot(host);
     const nextRefresh = new Promise<never>(() => undefined);
     const observed: Array<{ revision: number; status: string; catalogState: string | null }> = [];
-    const observe = (revision: number) =>
-      (result: ReturnType<typeof useOpenCodeProviderModelCatalog>) => {
+    const observe =
+      (revision: number) => (result: ReturnType<typeof useOpenCodeProviderModelCatalog>) => {
         observed.push({
           revision,
           status: result.status,
@@ -112,6 +114,36 @@ describe('useOpenCodeProviderModelCatalog', () => {
       catalogState: 'fresh',
     });
     expect(observed.at(-1)).toMatchObject({ revision: 1, status: 'loading' });
+    await act(async () => root.unmount());
+  });
+
+  it('refreshes a scoped catalog when its freshness window expires', async () => {
+    vi.useFakeTimers();
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const observed: Array<{ status: string; catalogState: string | null }> = [];
+    apiMock.runtimeProviderManagement.loadModels.mockResolvedValue(
+      modelCatalogResponse('automatic refresh')
+    );
+
+    await act(async () => {
+      root.render(
+        React.createElement(HookProbe, {
+          onResult: (result) =>
+            observed.push({ status: result.status, catalogState: result.catalogState }),
+        })
+      );
+    });
+    expect(apiMock.runtimeProviderManagement.loadModels).toHaveBeenCalledOnce();
+    expect(observed.at(-1)).toEqual({ status: 'ready', catalogState: 'fresh' });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(MODEL_CATALOG_FRESHNESS_MS);
+    });
+
+    expect(apiMock.runtimeProviderManagement.loadModels).toHaveBeenCalledTimes(2);
+    expect(observed.at(-1)).toEqual({ status: 'ready', catalogState: 'fresh' });
     await act(async () => root.unmount());
   });
 });

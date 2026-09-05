@@ -496,14 +496,7 @@ export function useOpenCodeProviderModelCatalog(input: {
       Math.max(0, Date.parse(state.freshUntil) - Date.now())
     );
     const timer = window.setTimeout(() => {
-      setState((current) =>
-        current.scopeKey === state.scopeKey &&
-        current.refreshRevision === state.refreshRevision &&
-        current.completedAt === state.completedAt &&
-        current.catalogState === 'fresh'
-          ? { ...current, catalogState: 'stale' }
-          : current
-      );
+      setRefreshSequence((sequence) => sequence + 1);
     }, delay);
     return () => window.clearTimeout(timer);
   }, [
