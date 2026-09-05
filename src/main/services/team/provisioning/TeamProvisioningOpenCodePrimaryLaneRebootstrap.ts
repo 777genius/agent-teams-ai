@@ -151,10 +151,23 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
     }
     ports.setAliveRunId(teamName, run.runId);
 
+    /**
+     * Every stage past the relaunch owns a host, so its fence reaps before it
+     * refuses.
+     */
+    const reapAndRefuseWhenStopped =
+      async (): Promise<OpenCodePrimaryLaneRebootstrapResult | null> => {
+        if (!stopRequested() && !lease.lease.cancelRequested) {
+          return null;
+        }
+        await reapRelaunchedPrimaryLane();
+        return refuse('stop_generation_changed');
+      };
+
     const result = await ports.launchOpenCodeAggregatePrimaryLane({ run, adapter, prompt: '' });
-    if (stopRequested() || lease.lease.cancelRequested) {
-      await reapRelaunchedPrimaryLane();
-      return refuse('stop_generation_changed');
+    const stoppedAfterRelaunch = await reapAndRefuseWhenStopped();
+    if (stoppedAfterRelaunch) {
+      return stoppedAfterRelaunch;
     }
     const committed = await ports
       .hasCommittedLeadSessionEvidence({ teamName, runId: run.runId, memberName: leadName })
@@ -174,7 +187,31 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
       return refuse('lead_evidence_still_missing');
     }
 
-    await ports.persistLaunchStateSnapshot(run, ports.getMixedSecondaryLaunchPhase(run));
+    /**
+     * The persist is fenced on both sides. An `active` snapshot is a
+     * launch-start write, and `TeamLaunchStateStore.writeNow` lifts
+     * `launch-stopped.json` for one, so a stop that settled while the evidence
+     * read was in flight must not reach the write at all. A stop that settles
+     * during the write must not go on to re-mark the run alive and publish
+     * `ready` for a team the user stopped. This is the same order the manual
+     * restart uses around its own persist.
+     */
+    const stoppedBeforePersist = await reapAndRefuseWhenStopped();
+    if (stoppedBeforePersist) {
+      return stoppedBeforePersist;
+    }
+    try {
+      await ports.persistLaunchStateSnapshot(run, ports.getMixedSecondaryLaunchPhase(run));
+    } catch (persistError) {
+      // The relaunched host outlives a failed persist otherwise: the catch
+      // below reports `relaunch_failed` without reaping anything.
+      await reapRelaunchedPrimaryLane();
+      throw persistError;
+    }
+    const stoppedAfterPersist = await reapAndRefuseWhenStopped();
+    if (stoppedAfterPersist) {
+      return stoppedAfterPersist;
+    }
     ports.setAliveRunId(teamName, run.runId);
     ports.publishReady(run, 'OpenCode lead lane was re-bootstrapped');
     return { rebootstrapped: true };

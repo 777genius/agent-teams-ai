@@ -230,6 +230,98 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     expect(calls.indexOf('publishFailed')).toBeGreaterThan(calls.lastIndexOf('stopPrimary'));
   });
 
+  /**
+   * The evidence read touches the runtime store on disk, so a Stop can settle
+   * while it is in flight. Reaching the persist after that would write an
+   * `active` launch snapshot, and a launch-start write lifts the stop marker.
+   */
+  it('does not persist launch state when a stop lands while the lead evidence is read', async () => {
+    let generation = 0;
+    const { ports, calls } = createPorts({
+      getStopTeamGeneration: () => generation,
+      hasCommittedLeadSessionEvidence: async () => {
+        calls.push('readLeadEvidence');
+        generation = 1;
+        return true;
+      },
+    });
+
+    const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON },
+      ports
+    );
+
+    expect(outcome).toEqual({ rebootstrapped: false, refusal: 'stop_generation_changed' });
+    expect(calls).not.toContain('persistLaunchState');
+    expect(calls).toEqual([
+      'publishPending',
+      'stopPrimary',
+      'setAliveRunId',
+      'launchPrimary',
+      'readLeadEvidence',
+      'stopPrimary',
+      'releaseLease',
+    ]);
+  });
+
+  it('reaps the relaunched host when a stop lands while the launch state is persisted', async () => {
+    let generation = 0;
+    const aliveRuns = new Map<string, string>();
+    const { ports, calls } = createPorts({
+      getStopTeamGeneration: () => generation,
+      setAliveRunId: (teamName, runId) => {
+        calls.push('setAliveRunId');
+        aliveRuns.set(teamName, runId);
+      },
+      stopOpenCodeRuntimeAdapterTeam: async (teamName) => {
+        calls.push('stopPrimary');
+        aliveRuns.delete(teamName);
+      },
+      persistLaunchStateSnapshot: async () => {
+        calls.push('persistLaunchState');
+        generation = 1;
+        return null;
+      },
+    });
+
+    const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON },
+      ports
+    );
+
+    expect(outcome).toEqual({ rebootstrapped: false, refusal: 'stop_generation_changed' });
+    expect(calls).toEqual([
+      'publishPending',
+      'stopPrimary',
+      'setAliveRunId',
+      'launchPrimary',
+      'persistLaunchState',
+      'stopPrimary',
+      'releaseLease',
+    ]);
+    expect(calls).not.toContain('publishReady');
+    expect(aliveRuns.size).toBe(0);
+  });
+
+  it('reaps the relaunched host when the launch state cannot be persisted', async () => {
+    const { ports, calls } = createPorts({
+      persistLaunchStateSnapshot: async () => {
+        calls.push('persistLaunchState');
+        throw new Error('launch state write failed');
+      },
+    });
+
+    const outcome = await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON },
+      ports
+    );
+
+    expect(outcome).toEqual({ rebootstrapped: false, refusal: 'relaunch_failed' });
+    expect(calls.filter((call) => call === 'stopPrimary')).toHaveLength(2);
+    expect(calls).not.toContain('publishReady');
+    expect(calls.indexOf('publishFailed')).toBeGreaterThan(calls.lastIndexOf('stopPrimary'));
+  });
+
   it('still refuses when the mid-flight cleanup stop itself fails', async () => {
     let generation = 0;
     const { ports, calls } = createPorts({
