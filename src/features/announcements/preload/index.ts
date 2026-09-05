@@ -12,6 +12,8 @@ export function createAnnouncementsBridge(): AnnouncementsApi {
     prepareAuto: () => ipcRenderer.invoke(channels.prepareAuto),
     claimAuto: (input) => ipcRenderer.invoke(channels.claimAuto, input),
     openManual: (id) => ipcRenderer.invoke(channels.openManual, id),
+    loadCover: (id, requestId) => ipcRenderer.invoke(channels.loadCover, id, requestId),
+    cancelCover: (requestId) => ipcRenderer.invoke(channels.cancelCover, requestId),
     loadAsset: (url, requestId) => ipcRenderer.invoke(channels.loadAsset, url, requestId),
     cancelAsset: (requestId) => ipcRenderer.invoke(channels.cancelAsset, requestId),
     dismiss: (id) => ipcRenderer.invoke(channels.dismiss, id),

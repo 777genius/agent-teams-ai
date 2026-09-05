@@ -12,6 +12,7 @@ import {
 import { getOverlaySnapshot } from '@renderer/hooks/useOverlayOccupancy';
 import { ArrowLeft, ArrowUpRight, Newspaper, RefreshCw } from 'lucide-react';
 
+import { AnnouncementCover } from './AnnouncementCover';
 import { AnnouncementMarkdown } from './AnnouncementMarkdown';
 import { useAnnouncementHost } from './useAnnouncementHost';
 
@@ -172,9 +173,15 @@ export const AnnouncementHost = ({
                       type="button"
                       disabled={unavailable}
                       onClick={() => void host.openArticle(item.id)}
-                      className="group flex w-full items-center justify-between gap-5 rounded-xl border border-[var(--color-border)] p-4 text-left transition-colors hover:bg-[var(--color-surface-raised)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-border-emphasis)] disabled:opacity-50"
+                      className="group grid min-h-[104px] w-full grid-cols-[minmax(124px,38%)_minmax(0,1fr)_auto] items-stretch overflow-hidden rounded-xl border border-[var(--color-border)] p-0 text-left transition-[transform,box-shadow,border-color,background-color] duration-200 hover:-translate-y-0.5 hover:border-[var(--color-border-emphasis)] hover:bg-[var(--color-surface-raised)] hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-border-emphasis)] disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none"
                     >
-                      <span className="min-w-0">
+                      <AnnouncementCover
+                        client={client}
+                        id={item.id}
+                        revision={host.snapshot?.revision ?? null}
+                        available={item.hasCoverImage}
+                      />
+                      <span className="flex min-w-0 flex-col justify-center px-4 py-3">
                         <span className="mb-2 block text-xs text-[var(--color-text-muted)]">
                           {date(item.publishedAt)}
                           {Date.now() >= Date.parse(item.validUntil)
@@ -185,7 +192,9 @@ export const AnnouncementHost = ({
                           {item.title}
                         </span>
                       </span>
-                      <ArrowUpRight className="size-4 shrink-0 text-[var(--color-text-muted)]" />
+                      <span className="flex items-center pr-4">
+                        <ArrowUpRight className="size-4 shrink-0 text-[var(--color-text-muted)] transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />
+                      </span>
                     </button>
                   ))}
                 </div>

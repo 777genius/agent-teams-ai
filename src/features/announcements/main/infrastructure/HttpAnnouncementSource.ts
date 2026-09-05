@@ -279,7 +279,7 @@ export class HttpAnnouncementSource implements AnnouncementSource {
     maxBytes: number,
     signal: AbortSignal
   ): Promise<{ dataUrl: string; decodedBytes: number }> {
-    const target = new URL(url);
+    const target = new URL(url, this.origin);
     const body = new URL(bodyUrl, this.origin);
     const assetRoot = new URL('assets/', body);
     if (

@@ -22,6 +22,8 @@ const feature = {
   prepareAuto: vi.fn(),
   claimAuto: vi.fn(),
   openManual: vi.fn(),
+  loadCover: vi.fn(),
+  cancelCover: vi.fn(),
   loadAsset: vi.fn(),
   cancelAsset: vi.fn(),
   dismiss: vi.fn(),
@@ -44,6 +46,7 @@ describe('announcements IPC boundary', () => {
     registerAnnouncementsIpc(feature as unknown as AnnouncementsFeature, () => context);
     for (const id of ['../secret', 'https://example.com', '', 'A', 'a'.repeat(81), {}, null]) {
       expect(() => invoke(channels.openManual, id)).toThrow();
+      expect(() => invoke(channels.loadCover, id, 'cover_1')).toThrow();
       expect(() => invoke(channels.dismiss, id)).toThrow();
     }
     const claim = { id: 'news', revision: 'a'.repeat(64), bodySha256: 'b'.repeat(64) };
@@ -63,12 +66,18 @@ describe('announcements IPC boundary', () => {
       expect(() =>
         invoke(channels.loadAsset, 'https://agentteams.live/a.png', requestId)
       ).toThrow();
+      expect(() => invoke(channels.loadCover, 'news', requestId)).toThrow();
+      expect(() => invoke(channels.cancelCover, requestId)).toThrow();
       expect(() => invoke(channels.cancelAsset, requestId)).toThrow();
     }
     invoke(channels.claimAuto, claim);
     expect(feature.claimAuto).toHaveBeenCalledWith(claim, context);
     invoke(channels.openManual, 'news');
     expect(feature.openManual).toHaveBeenCalledWith('news', context);
+    invoke(channels.loadCover, 'news', 'cover_1');
+    expect(feature.loadCover).toHaveBeenCalledWith('news', 'cover_1', context);
+    invoke(channels.cancelCover, 'cover_1');
+    expect(feature.cancelCover).toHaveBeenCalledWith('cover_1', context);
     invoke(
       channels.loadAsset,
       'https://agentteams.live/announcements/content/news/a/assets/x.png',
@@ -89,7 +98,7 @@ describe('announcements IPC boundary', () => {
       feature as unknown as AnnouncementsFeature,
       () => context
     );
-    expect(handlers.size).toBe(8);
+    expect(handlers.size).toBe(10);
     dispose();
     expect(handlers.size).toBe(0);
   });

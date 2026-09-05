@@ -8,6 +8,7 @@ import {
   createAnnouncementState,
   normalizeAnnouncementFeed,
 } from '../../../../src/features/announcements/core/domain';
+import { AnnouncementAssetScheduler } from '../../../../src/features/announcements/main/application/AnnouncementAssetScheduler';
 import { AnnouncementsService } from '../../../../src/features/announcements/main/application/AnnouncementsService';
 import { AnnouncementUsageTracker } from '../../../../src/features/announcements/main/application/AnnouncementUsageTracker';
 import { AnnouncementWriterOwner } from '../../../../src/features/announcements/main/infrastructure/AnnouncementWriterOwner';
@@ -24,6 +25,39 @@ async function directory() {
 afterEach(async () => {
   vi.useRealTimers();
   await Promise.all(directories.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
+
+it('releases an asset slot when a queued request is cancelled before it starts', async () => {
+  const scheduler = new AnnouncementAssetScheduler();
+  const finishes: Array<() => void> = [];
+  const running = Array.from({ length: 3 }, () =>
+    scheduler.run(
+      () => true,
+      new AbortController().signal,
+      () => new Promise<void>((resolve) => finishes.push(resolve))
+    )
+  );
+  await vi.waitFor(() => expect(finishes).toHaveLength(3));
+  const cancelledController = new AbortController();
+  const cancelled = scheduler.run(
+    () => true,
+    cancelledController.signal,
+    async () => undefined
+  );
+  cancelledController.abort();
+  let nextStarted = false;
+  const next = scheduler.run(
+    () => true,
+    new AbortController().signal,
+    async () => {
+      nextStarted = true;
+    }
+  );
+  finishes.shift()!();
+  await expect(cancelled).rejects.toThrow('asset_cancelled');
+  await vi.waitFor(() => expect(nextStarted).toBe(true));
+  for (const finish of finishes) finish();
+  await Promise.all([...running, next]);
 });
 
 describe('durable repository and writer ownership', () => {
@@ -249,6 +283,7 @@ describe('announcement consumption service', () => {
       publishedAt: '2026-09-01T00:00:00.000Z',
       validUntil: '2026-09-15T00:00:00.000Z',
       status: 'published',
+      hasCoverImage: false,
     });
     const input = { id: 'new', revision: f.feed.revision, bodySha256: 'b'.repeat(64) };
     const result = await f.service.claimAuto(input, f.context);
@@ -605,15 +640,25 @@ describe('issued document asset quotas', () => {
     await f.service.dispose();
   });
 
-  it('does not expose hero paths in list snapshots but includes hero in opened documents', async () => {
+  it('exposes only cover availability in list snapshots and loads the exact current cover', async () => {
     const f = fixture();
     const newest = f.feed.items.find((item) => item.id === 'new')!;
     newest.heroImagePath = `${newest.bodyPath.slice(0, -'body.md'.length)}assets/hero.png`;
     f.service.registerWindow(1);
     await f.service.initialize();
-    expect(
-      (await f.service.getSnapshot()).items.find((item) => item.id === 'new')
-    ).not.toHaveProperty('heroImagePath');
+    const summary = (await f.service.getSnapshot()).items.find((item) => item.id === 'new');
+    expect(summary).not.toHaveProperty('heroImagePath');
+    expect(summary?.hasCoverImage).toBe(true);
+    expect(await f.service.loadCover('old', 'cover_old', f.context)).toBeNull();
+    expect(await f.service.loadCover('new', 'cover_1', f.context)).toBe(
+      'data:image/png;base64,eA=='
+    );
+    expect(f.source.asset).toHaveBeenLastCalledWith(
+      newest.heroImagePath,
+      newest.bodyPath,
+      5 * 1024 * 1024,
+      expect.any(AbortSignal)
+    );
     expect((await f.service.openManual('new', f.context))?.announcement.heroImagePath).toBe(
       newest.heroImagePath
     );

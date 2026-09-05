@@ -1,7 +1,6 @@
 import {
   ANNOUNCEMENTS_MAX_ARTICLE_ASSET_BYTES,
   ANNOUNCEMENTS_MAX_ASSET_REQUESTS,
-  ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS,
 } from '../../contracts';
 
 import type { Announcement } from '../../contracts';
@@ -10,6 +9,7 @@ import type {
   AnnouncementSource,
   AnnouncementWindowContext,
 } from '../../core/application/ports';
+import type { AnnouncementAssetScheduler } from './AnnouncementAssetScheduler';
 
 interface IssuedDocument {
   item: Announcement;
@@ -25,43 +25,16 @@ interface AssetLoad {
   promise: Promise<AnnouncementAssetResult>;
 }
 
-const MAX_GLOBAL_QUEUED_ASSETS = 64;
-
 export class AnnouncementAssetCapabilities {
   private readonly documents = new Map<number, IssuedDocument>();
-  private activeLoads = 0;
-  private readonly waiting: Array<{
-    document: IssuedDocument;
-    resolve: (granted: boolean) => void;
-  }> = [];
-  constructor(private readonly source: AnnouncementSource) {}
+  constructor(
+    private readonly source: AnnouncementSource,
+    private readonly scheduler: AnnouncementAssetScheduler
+  ) {}
 
   private isIssued(document: IssuedDocument): boolean {
     for (const current of this.documents.values()) if (current === document) return true;
     return false;
-  }
-
-  private acquireSlot(document: IssuedDocument): Promise<boolean> {
-    if (this.activeLoads < ANNOUNCEMENTS_MAX_CONCURRENT_ASSETS) {
-      this.activeLoads++;
-      return Promise.resolve(true);
-    }
-    if (this.waiting.length >= MAX_GLOBAL_QUEUED_ASSETS) return Promise.resolve(false);
-    return new Promise((resolve) => this.waiting.push({ document, resolve }));
-  }
-
-  private releaseSlot(): void {
-    this.activeLoads--;
-    while (this.waiting.length > 0) {
-      const waiter = this.waiting.shift()!;
-      if (!this.isIssued(waiter.document)) {
-        waiter.resolve(false);
-        continue;
-      }
-      this.activeLoads++;
-      waiter.resolve(true);
-      break;
-    }
   }
 
   issue(item: Announcement, context: AnnouncementWindowContext): void {
@@ -147,21 +120,11 @@ export class AnnouncementAssetCapabilities {
         return null;
       }
       const controller = new AbortController();
-      const promise = (async () => {
-        const granted = await this.acquireSlot(document);
-        if (!granted) throw new Error('asset_cancelled');
-        try {
-          if (controller.signal.aborted) throw new Error('asset_cancelled');
-          return await this.source.asset(
-            exactUrl,
-            document.item.bodyPath,
-            remaining,
-            controller.signal
-          );
-        } finally {
-          this.releaseSlot();
-        }
-      })();
+      const promise = this.scheduler.run(
+        () => this.isIssued(document),
+        controller.signal,
+        () => this.source.asset(exactUrl, document.item.bodyPath, remaining, controller.signal)
+      );
       load = { controller, consumers: new Set(), promise };
       document.loads.set(exactUrl, load);
     }

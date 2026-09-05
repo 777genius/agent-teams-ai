@@ -27,9 +27,10 @@ const item: Announcement = {
   status: 'published',
   bodyPath: '/announcements/content/release/aa/body.md',
   bodySha256: 'a'.repeat(64),
+  heroImagePath: '/announcements/content/release/aa/assets/hero.png',
 };
 const article = {
-  announcement: item,
+  announcement: { ...item, hasCoverImage: true },
   markdown: '## Highlights\n\nA useful update.',
   bodyUrl: `https://agentteams.live${item.bodyPath}`,
 };
@@ -63,12 +64,36 @@ async function click(text: string) {
 }
 beforeEach(() => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      private readonly intersects: boolean;
+      constructor(
+        private readonly callback: IntersectionObserverCallback,
+        options?: IntersectionObserverInit
+      ) {
+        this.intersects = options?.rootMargin === '160px 0px';
+      }
+      observe(target: Element): void {
+        if (this.intersects)
+          this.callback(
+            [{ isIntersecting: true, target } as IntersectionObserverEntry],
+            this as never
+          );
+      }
+      disconnect(): void {}
+      unobserve(): void {}
+      takeRecords(): IntersectionObserverEntry[] {
+        return [];
+      }
+    }
+  );
   vi.spyOn(document, 'hasFocus').mockReturnValue(true);
   Object.defineProperty(document, 'readyState', { configurable: true, value: 'complete' });
   Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
   snapshot = {
     status: 'ready',
-    items: [item],
+    items: [{ ...item, hasCoverImage: true }],
     candidateId: item.id,
     revision: 'one',
     checkedAt: '2026-09-04T00:00:00Z',
@@ -80,6 +105,8 @@ beforeEach(() => {
     prepareAuto: vi.fn(async () => null),
     claimAuto: vi.fn(async () => article),
     openManual: vi.fn(async () => article),
+    loadCover: vi.fn(async () => 'data:image/png;base64,eA=='),
+    cancelCover: vi.fn(async () => undefined),
     loadAsset: vi.fn(async () => null),
     cancelAsset: vi.fn(async () => undefined),
     dismiss: vi.fn(async () => ({ saved: true })),
@@ -95,6 +122,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   mount.remove();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
@@ -104,8 +132,13 @@ describe('announcement host', () => {
     await act(async () => openAnnouncementHistory());
     expect(client.openManual).not.toHaveBeenCalled();
     expect(document.body.textContent).toContain(item.title);
+    await vi.waitFor(() =>
+      expect(client.loadCover).toHaveBeenCalledWith(item.id, expect.any(String))
+    );
+    expect(document.querySelector('img[src^="data:image/png"]')).not.toBeNull();
     await click(item.title);
     expect(client.openManual).toHaveBeenCalledWith(item.id);
+    expect(client.cancelCover).toHaveBeenCalled();
     expect(document.body.textContent).toContain('Highlights');
     await click('announcements.allNews');
     expect(client.dismiss).toHaveBeenCalledWith(item.id);
@@ -163,7 +196,10 @@ describe('announcement host', () => {
   });
   it.each([
     ['kill switch', { status: 'disabled' as const, autoShowEnabled: false, candidateId: null }],
-    ['archived item', { candidateId: null, items: [{ ...item, status: 'archived' as const }] }],
+    [
+      'archived item',
+      { candidateId: null, items: [{ ...item, hasCoverImage: true, status: 'archived' as const }] },
+    ],
     ['revision change', { revision: 'two', candidateId: null }],
   ])('invalidates a durable pending claim after %s', async (_label, change) => {
     let finish!: (value: typeof article) => void;

@@ -14,6 +14,8 @@ export const ANNOUNCEMENTS_CHANNELS = {
   prepareAuto: 'announcements:prepareAuto',
   claimAuto: 'announcements:claimAuto',
   openManual: 'announcements:openManual',
+  loadCover: 'announcements:loadCover',
+  cancelCover: 'announcements:cancelCover',
   loadAsset: 'announcements:loadAsset',
   cancelAsset: 'announcements:cancelAsset',
   dismiss: 'announcements:dismiss',
@@ -25,13 +27,17 @@ export interface AnnouncementOrderKey {
   id: string;
 }
 
-export interface AnnouncementSummary extends AnnouncementOrderKey {
+interface AnnouncementMetadata extends AnnouncementOrderKey {
   title: string;
   validUntil: string;
   status: 'published' | 'archived';
 }
 
-export interface Announcement extends AnnouncementSummary {
+export interface AnnouncementSummary extends AnnouncementMetadata {
+  hasCoverImage: boolean;
+}
+
+export interface Announcement extends AnnouncementMetadata {
   heroImagePath?: string;
   showToNewUsers: boolean;
   minUsageMinutes: number;
@@ -97,6 +103,8 @@ export interface AnnouncementsApi {
   prepareAuto(): Promise<PreparedAnnouncement | null>;
   claimAuto(input: ClaimAnnouncementInput): Promise<AnnouncementDocument | null>;
   openManual(id: string): Promise<AnnouncementDocument | null>;
+  loadCover(id: string, requestId: string): Promise<string | null>;
+  cancelCover(requestId: string): Promise<void>;
   loadAsset(url: string, requestId: string): Promise<string | null>;
   cancelAsset(requestId: string): Promise<void>;
   dismiss(id: string): Promise<{ saved: boolean }>;

@@ -7,6 +7,8 @@ import {
 } from '../../core/domain';
 
 import { AnnouncementAssetCapabilities } from './AnnouncementAssetCapabilities';
+import { AnnouncementAssetScheduler } from './AnnouncementAssetScheduler';
+import { AnnouncementCoverCapabilities } from './AnnouncementCoverCapabilities';
 import { AnnouncementUsageTracker } from './AnnouncementUsageTracker';
 
 import type {
@@ -32,6 +34,7 @@ const summarize = (item: Announcement): AnnouncementSummary => ({
   publishedAt: item.publishedAt,
   validUntil: item.validUntil,
   status: item.status,
+  hasCoverImage: Boolean(item.heroImagePath),
 });
 
 const documentSummary = (item: Announcement) => ({
@@ -53,6 +56,7 @@ export interface AnnouncementsServiceOptions {
 export class AnnouncementsService {
   private readonly tracker: AnnouncementUsageTracker;
   private readonly assets: AnnouncementAssetCapabilities;
+  private readonly covers: AnnouncementCoverCapabilities;
   private state: AnnouncementState | null = null;
   private owned = false;
   private releasing = false;
@@ -86,7 +90,9 @@ export class AnnouncementsService {
 
   constructor(private readonly options: AnnouncementsServiceOptions) {
     this.tracker = new AnnouncementUsageTracker(options.clock);
-    this.assets = new AnnouncementAssetCapabilities(options.source);
+    const assetScheduler = new AnnouncementAssetScheduler();
+    this.assets = new AnnouncementAssetCapabilities(options.source, assetScheduler);
+    this.covers = new AnnouncementCoverCapabilities(options.source, assetScheduler);
     this.firstOpenedAt = options.firstOpenedAt;
   }
   private lifecycle<T>(operation: () => Promise<T>): Promise<T> {
@@ -121,12 +127,14 @@ export class AnnouncementsService {
     this.prepared.delete(id);
     this.documentOpenTokens.delete(id);
     this.assets.revokeWindow(id);
+    this.covers.revokeWindow(id);
   }
   unregisterWindow(id: number): Promise<void> {
     this.tracker.unregister(id);
     this.prepared.delete(id);
     this.documentOpenTokens.delete(id);
     this.assets.revokeWindow(id);
+    this.covers.revokeWindow(id);
     return this.lifecycle(async () => {
       if (!this.tracker.hasWindows()) await this.release();
     });
@@ -177,6 +185,7 @@ export class AnnouncementsService {
     this.prepared.clear();
     this.documentOpenTokens.clear();
     this.assets.revokeAll();
+    this.covers.revokeAll();
     this.fresh = false;
     await this.mutationTail;
     await this.checkpoint();
@@ -243,6 +252,7 @@ export class AnnouncementsService {
     this.prepared.clear();
     this.documentOpenTokens.clear();
     this.assets.revokeAll();
+    this.covers.revokeAll();
     await this.mutation(() => this.checkpoint());
     this.emit();
   }
@@ -504,6 +514,7 @@ export class AnnouncementsService {
     this.documentOpenTokens.set(context.windowId, token);
     this.prepared.delete(context.windowId);
     this.assets.revokeWindow(context.windowId);
+    this.covers.revokeWindow(context.windowId);
     if (!this.owned || this.releasing || this.stopped) {
       if (this.documentOpenTokens.get(context.windowId) === token)
         this.documentOpenTokens.delete(context.windowId);
@@ -577,6 +588,44 @@ export class AnnouncementsService {
   }
   cancelAsset(requestId: string, context: AnnouncementWindowContext): void {
     this.assets.cancel(requestId, context);
+  }
+  async loadCover(
+    id: string,
+    requestId: string,
+    context: AnnouncementWindowContext
+  ): Promise<string | null> {
+    if (
+      !this.owned ||
+      this.releasing ||
+      this.stopped ||
+      !this.tracker.ownsWindow(context.windowId) ||
+      !context.isReady()
+    )
+      return null;
+    const feed = this.options.source.current();
+    const item = feed
+      ? visibleAnnouncements(feed, this.options.clock.now()).find((entry) => entry.id === id)
+      : undefined;
+    if (!feed || !item?.heroImagePath) return null;
+    const revision = feed.revision;
+    const bodySha256 = item.bodySha256;
+    const heroImagePath = item.heroImagePath;
+    const result = await this.covers.load(item, requestId, context);
+    if (!result || !context.isReady()) return null;
+    const current = this.options.source.current();
+    const stillCurrent = current?.items.some(
+      (entry) =>
+        entry.id === id &&
+        entry.bodySha256 === bodySha256 &&
+        entry.heroImagePath === heroImagePath &&
+        entry.status === 'published' &&
+        Date.parse(entry.publishedAt) <= this.options.clock.now() &&
+        this.options.clock.now() < Date.parse(entry.validUntil)
+    );
+    return current?.revision === revision && stillCurrent ? result : null;
+  }
+  cancelCover(requestId: string, context: AnnouncementWindowContext): void {
+    this.covers.cancel(requestId, context);
   }
   dismiss(id: string, context?: AnnouncementWindowContext): Promise<{ saved: boolean }> {
     const wasIssued = context ? this.assets.revokeAnnouncement(context.windowId, id) : false;

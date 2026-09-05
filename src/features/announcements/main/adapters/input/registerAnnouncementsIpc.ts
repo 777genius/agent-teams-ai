@@ -68,6 +68,15 @@ export function registerAnnouncementsIpc(
     if (!validId(id)) throw new Error('Invalid announcement request');
     return feature.openManual(id, _context);
   });
+  handle(channels.loadCover, 2, (context, id, requestId) => {
+    if (!validId(id) || !validRequestId(requestId)) throw new Error('Invalid announcement request');
+    return feature.loadCover(id, requestId, context);
+  });
+  handle(channels.cancelCover, 1, (context, requestId) => {
+    if (!validRequestId(requestId)) throw new Error('Invalid announcement request');
+    feature.cancelCover(requestId, context);
+    return undefined;
+  });
   handle(channels.loadAsset, 2, (context, url, requestId) => {
     if (!validAssetUrl(url) || !validRequestId(requestId))
       throw new Error('Invalid announcement request');

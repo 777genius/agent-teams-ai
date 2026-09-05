@@ -6,13 +6,20 @@ import { ANNOUNCEMENTS_CHANNELS as channels } from '../../../src/features/announ
 import { createAnnouncementsBridge } from '../../../src/features/announcements/preload';
 import { HttpAPIClient } from '../../../src/renderer/api/httpClient';
 
-afterEach(() => { vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.clearAllMocks();
+});
 describe('announcements transport capability', () => {
   it('passes only typed feature payload and removes exactly its listener', () => {
     const api = createAnnouncementsBridge();
     const input = { id: 'news', revision: 'a'.repeat(64), bodySha256: 'b'.repeat(64) };
     void api.claimAuto(input);
     expect(renderer.invoke).toHaveBeenCalledWith(channels.claimAuto, input);
+    void api.loadCover('news', 'cover_1');
+    expect(renderer.invoke).toHaveBeenCalledWith(channels.loadCover, 'news', 'cover_1');
+    void api.cancelCover('cover_1');
+    expect(renderer.invoke).toHaveBeenCalledWith(channels.cancelCover, 'cover_1');
     const assetUrl = 'https://agentteams.live/announcements/content/news/a/assets/x.png';
     void api.loadAsset(assetUrl, 'request_1');
     expect(renderer.invoke).toHaveBeenCalledWith(channels.loadAsset, assetUrl, 'request_1');
@@ -27,14 +34,27 @@ describe('announcements transport capability', () => {
     expect(renderer.removeListener).toHaveBeenCalledWith(channels.stateChanged, handler);
   });
   it('HTTP explicitly reports unavailable without announcement network calls or tracking', async () => {
-    vi.stubGlobal('EventSource', class { close() {} });
-    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+    vi.stubGlobal(
+      'EventSource',
+      class {
+        close() {}
+      }
+    );
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
     const api = new HttpAPIClient('http://test.invalid').announcements;
-    expect(await api.getSnapshot()).toMatchObject({ status: 'unavailable', autoShowEnabled: false });
+    expect(await api.getSnapshot()).toMatchObject({
+      status: 'unavailable',
+      autoShowEnabled: false,
+    });
     expect(await api.refresh()).toMatchObject({ status: 'unavailable' });
     expect(await api.prepareAuto()).toBeNull();
     expect(await api.openManual('news')).toBeNull();
-    expect(await api.loadAsset('https://agentteams.live/announcements/x.png', 'request_1')).toBeNull();
+    expect(await api.loadCover('news', 'cover_1')).toBeNull();
+    await expect(api.cancelCover('cover_1')).resolves.toBeUndefined();
+    expect(
+      await api.loadAsset('https://agentteams.live/announcements/x.png', 'request_1')
+    ).toBeNull();
     await expect(api.cancelAsset('request_1')).resolves.toBeUndefined();
     expect(await api.dismiss('news')).toEqual({ saved: false });
     expect(fetch).not.toHaveBeenCalled();

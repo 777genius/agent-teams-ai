@@ -163,7 +163,12 @@ describe('anonymous validated announcement source', () => {
     const bodyUrl = new URL(feed.items[0].bodyPath, 'https://agentteams.live');
     const assetUrl = new URL('assets/demo.png', bodyUrl).href;
     expect(
-      await f.source.asset(assetUrl, bodyUrl.href, ANNOUNCEMENTS_MAX_ASSET_BYTES, signal())
+      await f.source.asset(
+        new URL(assetUrl).pathname,
+        bodyUrl.href,
+        ANNOUNCEMENTS_MAX_ASSET_BYTES,
+        signal()
+      )
     ).toEqual({
       dataUrl: `data:image/png;base64,${png.toString('base64')}`,
       decodedBytes: png.byteLength,
