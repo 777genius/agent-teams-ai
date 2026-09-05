@@ -44,7 +44,7 @@ export function createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCa
       return true;
     }
 
-    const persistedSnapshot = await ports.readLaunchStateSnapshot(input.teamName).catch(() => null);
+    const persistedSnapshot = await ports.readLaunchStateSnapshot(input.teamName);
     const persistedMember =
       persistedSnapshot?.members[input.memberName] ??
       Object.values(persistedSnapshot?.members ?? {}).find(
@@ -57,9 +57,7 @@ export function createHasOpenCodeMemberRuntimeEvidenceForControlledRelaunchUseCa
       return true;
     }
 
-    const liveRuntimeByMember = await ports
-      .getLiveTeamAgentRuntimeMetadata(input.teamName)
-      .catch(() => new Map<string, LiveTeamAgentRuntimeMetadata>());
+    const liveRuntimeByMember = await ports.getLiveTeamAgentRuntimeMetadata(input.teamName);
     const liveRuntimeMember =
       liveRuntimeByMember.get(input.memberName) ??
       [...liveRuntimeByMember.entries()].find(([candidateName]) =>

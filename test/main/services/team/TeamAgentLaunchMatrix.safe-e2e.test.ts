@@ -19484,7 +19484,7 @@ describe(
       });
     });
 
-    it('fresh relaunches a failed mixed OpenCode teammate without runtime evidence', async () => {
+    it('fresh relaunches an existing failed mixed OpenCode lane without runtime evidence', async () => {
       const teamName = 'mixed-opencode-fresh-relaunch-no-runtime-evidence-safe-e2e';
       await writeMixedTeamConfig({ teamName, projectPath });
       await writeTeamMeta(teamName, projectPath);
@@ -19496,9 +19496,16 @@ describe(
       const svc = new TeamProvisioningService();
       svc.setRuntimeAdapterRegistry(new TeamRuntimeAdapterRegistry([adapter]));
       const run = createMixedLiveRun({ teamName, projectPath });
-      run.mixedSecondaryLanes = run.mixedSecondaryLanes.filter(
-        (lane: { member: { name: string } }) => lane.member.name !== 'bob'
+      const failedLane = run.mixedSecondaryLanes.find(
+        (lane: { member: { name: string } }) => lane.member.name === 'bob'
       );
+      expect(failedLane).toBeDefined();
+      Object.assign(failedLane!, {
+        state: 'finished',
+        runId: null,
+        result: null,
+        diagnostics: ['OpenCode bridge handshake failed: provider startup lock timed out'],
+      });
       run.memberSpawnStatuses.set('bob', {
         status: 'error',
         launchState: 'failed_to_start',
