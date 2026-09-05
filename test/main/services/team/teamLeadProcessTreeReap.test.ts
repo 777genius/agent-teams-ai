@@ -100,6 +100,9 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
     });
     expect(result.killedPids).toEqual([8100]);
     expect(result.diagnostics).toEqual(['Reaped 1 cursor-agent process tree(s)']);
+    // The control for the scan-failure case below: a sweep that finished
+    // reports a cleanup that finished.
+    expect(result.incomplete).toBe(false);
   });
 
   /**
@@ -203,15 +206,19 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
 
   /**
    * A sweep that could not read the process table reports and returns an empty
-   * result; the stop above it still has to report what happened.
+   * result, and the production sweep marks that result `incomplete` - a scan
+   * that never ran leaves every tree it would have reaped standing. The stop
+   * above it has to carry both out: the diagnostic, so the failure is legible,
+   * and the flag, because a stop that reports a completed cleanup here is
+   * claiming a lead tree is gone that is still holding the workspace.
    */
-  it('passes a sweep that could not scan through as a diagnostic', async () => {
+  it('passes a sweep that could not scan through as an incomplete cleanup', async () => {
     writeTeamConfig('scanfailteam', { projectPath: 'C:\\workspaces\\example' });
     sweepCursorAgentTrees.mockResolvedValueOnce({
       scanned: 0,
       killed: [],
       keptRecent: [],
-      incomplete: false,
+      incomplete: true,
       diagnostics: ['cursor-agent process scan failed: process table unavailable'],
     });
 
@@ -221,6 +228,7 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
     });
 
     expect(result.killedPids).toEqual([]);
+    expect(result.incomplete).toBe(true);
     expect(result.diagnostics).toEqual([
       'cursor-agent sweep: cursor-agent process scan failed: process table unavailable',
     ]);
