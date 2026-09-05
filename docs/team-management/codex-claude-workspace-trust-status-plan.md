@@ -1,8 +1,7 @@
 # Workspace trust: Claude Code + Codex, общий UI без ложного статуса
 
-Статус: реализовано и проверено локально на frontend base
-`81fda38cf8525f71081e39363244d4bf83f850f9`; изменения еще не закоммичены и не
-отправлены в PR.
+Статус: реализовано в PR #584. Указанные ниже research base SHA сохранены как
+исторический контекст; exact-head evidence отслеживается проверками самого PR.
 Дата проверки исходников: 2026-09-04.
 
 ## 1. Цель и границы
@@ -327,7 +326,8 @@ launch behavior и не является безобидным переключа
 - [x] Нет paid/CLI preflight, config writes, auth reads или новой кнопки подтверждения.
 - [x] IPC/HTTP/legacy fallback и все freshness edge cases покрыты тестами.
 - [x] Trust checking не меняет Launch/Skip и не скрывает реальные readiness blockers.
-- [x] Focused gates и DevMCP screenshots пройдены на exact candidate diff.
+- [ ] Exact-head CI и review PR #584 завершены; локальные focused gates и DevMCP
+      screenshots уже пройдены, но не выдаются здесь за immutable PR-head evidence.
 - [x] Live evidence отделено от fixtures; сбои внешнего provider не названы успехом.
 - [x] Codex `launch_scoped` скрыт и не создает повторяющуюся подсказку.
 

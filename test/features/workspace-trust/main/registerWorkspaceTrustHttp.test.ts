@@ -85,4 +85,18 @@ describe('workspace trust HTTP transport', () => {
     });
     expect(legacy.json()).toEqual({ status: 'unknown' });
   });
+
+  it('rejects workspace trust inspection from a non-loopback client', async () => {
+    const { app, feature } = harness();
+    const response = await app.inject({
+      method: 'POST',
+      url: WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
+      remoteAddress: '203.0.113.10',
+      payload: { projectPath: '/work/repo', providerIds: ['anthropic'] },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({ error: 'Workspace trust status unavailable' });
+    expect(feature.getLaunchStatus).not.toHaveBeenCalled();
+  });
 });

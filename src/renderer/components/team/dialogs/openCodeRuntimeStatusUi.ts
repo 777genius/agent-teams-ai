@@ -67,10 +67,12 @@ export function isOpenCodePassiveStatusReadyForCatalog(
   providerStatus: CliProviderStatus | null | undefined,
   runtimeStatus: OpenCodeRuntimeStatus | null
 ): boolean {
-  if (providerStatus?.supported && !isOpenCodeStatusCheckNonAuthoritative(providerStatus)) {
+  const nonAuthoritative = isOpenCodeStatusCheckNonAuthoritative(providerStatus);
+  if (providerStatus?.supported && !nonAuthoritative) {
     return true;
   }
   return Boolean(
+    nonAuthoritative &&
     runtimeStatus?.source !== 'missing' &&
     (providerStatus?.models.length || providerStatus?.modelCatalog?.models.length)
   );
