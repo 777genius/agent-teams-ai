@@ -33,10 +33,22 @@ export function addCodexAstraUpdatePreview(
     !runtimeStatus.latestVersion ||
     !currentVersion ||
     compareVersions(currentVersion, MINIMUM_CODEX_ASTRA_VERSION) >= 0 ||
-    compareVersions(runtimeStatus.latestVersion, MINIMUM_CODEX_ASTRA_VERSION) < 0 ||
-    options.some((option) => option.value === CODEX_ASTRA_MODEL_ID)
+    compareVersions(runtimeStatus.latestVersion, MINIMUM_CODEX_ASTRA_VERSION) < 0
   ) {
     return [...options];
+  }
+
+  const existingAstraIndex = options.findIndex((option) => option.value === CODEX_ASTRA_MODEL_ID);
+  if (existingAstraIndex >= 0) {
+    return options.map((option, index) =>
+      index === existingAstraIndex
+        ? {
+            ...option,
+            availabilityStatus: 'unavailable',
+            availabilityReason: CODEX_ASTRA_UPDATE_REQUIRED_REASON,
+          }
+        : option
+    );
   }
 
   const preview: TeamRuntimeModelOption = {

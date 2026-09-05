@@ -37,7 +37,7 @@ describe('addCodexAstraUpdatePreview', () => {
     ]);
   });
 
-  it('does not add a duplicate when the live catalog already exposes Astra', () => {
+  it('marks live-catalog Astra as update-required without adding a duplicate', () => {
     const astraOption = { value: 'gpt-6-astra', label: 'GPT-6 Astra' };
     expect(
       addCodexAstraUpdatePreview(
@@ -45,7 +45,14 @@ describe('addCodexAstraUpdatePreview', () => {
         [defaultOption, astraOption],
         CODEX_RUNTIME_WITH_ASTRA_UPDATE
       )
-    ).toEqual([defaultOption, astraOption]);
+    ).toEqual([
+      defaultOption,
+      expect.objectContaining({
+        ...astraOption,
+        availabilityStatus: 'unavailable',
+        availabilityReason: expect.stringContaining('Update Codex'),
+      }),
+    ]);
   });
 
   it('does not advertise Astra when the available update cannot provide it', () => {
