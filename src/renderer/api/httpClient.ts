@@ -5,7 +5,6 @@
  * EventSource (SSE) for real-time events. Allows the renderer
  * to run in a regular browser connected to an HTTP server.
  */
-
 import {
   createEmptyMemberLogPreviewResponse,
   createEmptyMemberLogStreamResponse,
@@ -50,6 +49,7 @@ import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
 
+import type { AnnouncementsApi, AnnouncementsSnapshot } from '@features/announcements/contracts';
 import type {
   CodexAccountSnapshotDto,
   CodexStartChatgptLoginOptions,
@@ -213,6 +213,31 @@ function createBrowserRuntimeProviderError(
 }
 
 export class HttpAPIClient implements ElectronAPI {
+  announcements: AnnouncementsApi = {
+    getSnapshot: async () => this.unavailableAnnouncements(),
+    refresh: async () => this.unavailableAnnouncements(),
+    prepareAuto: async () => null,
+    claimAuto: async () => null,
+    openManual: async () => null,
+    loadCover: async () => null,
+    cancelCover: async () => undefined,
+    loadAsset: async () => null,
+    cancelAsset: async () => undefined,
+    dismiss: async () => ({ saved: false }),
+    onStateChanged: () => () => {},
+  };
+
+  private unavailableAnnouncements(): AnnouncementsSnapshot {
+    return {
+      status: 'unavailable',
+      revision: null,
+      items: [],
+      candidateId: null,
+      checkedAt: null,
+      autoShowEnabled: false,
+    };
+  }
+
   private baseUrl: string;
   private eventSource: EventSource | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- event callbacks have varying signatures

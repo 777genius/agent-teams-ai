@@ -1,3 +1,4 @@
+import { createAnnouncementsBridge } from '@features/announcements/preload';
 import { createAppCloseCoordinationBridge } from '@features/app-close-coordination/preload';
 import { createCodexAccountBridge } from '@features/codex-account/preload';
 import { createCodexRuntimeInstallerBridge } from '@features/codex-runtime-installer/preload';
@@ -508,6 +509,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer,
   }),
   ...createRecentProjectsBridge(),
+  announcements: createAnnouncementsBridge(),
   ...createWorkspaceTrustBridge(ipcRenderer),
   teamImport: createTeamImportBridge(ipcRenderer),
   runtimeProviderManagement: createRuntimeProviderManagementBridge(ipcRenderer),

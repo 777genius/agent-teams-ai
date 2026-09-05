@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { cn } from '@renderer/lib/utils';
 import { AlertTriangle, X } from 'lucide-react';
 
@@ -26,6 +27,7 @@ export const ConflictDialog = ({
   const { t } = useAppTranslation('team');
   const [editMode, setEditMode] = useState(false);
   const [editContent, setEditContent] = useState(conflictContent);
+  useOverlayOccupancy(open);
 
   const handleManualSave = useCallback(() => {
     onResolveManual(editContent);

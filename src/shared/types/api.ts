@@ -9,6 +9,7 @@
 
 import type { CliArgsValidationResult } from '../utils/cliArgsParser';
 import type { CliInstallerAPI, OpenCodeRuntimeAPI } from './cliInstaller';
+import type { TelemetryAPI, WindowsElevationStatus } from './desktopShell';
 import type { EditorAPI, EditorFileChangeEvent, ProjectAPI } from './editor';
 import type { ApiKeysAPI, McpCatalogAPI, PluginCatalogAPI, SkillsCatalogAPI } from './extensions';
 import type {
@@ -120,6 +121,7 @@ import type {
 import type { TerminalAPI } from './terminal';
 import type { TmuxAPI } from './tmux';
 import type { WaterfallData } from './visualization';
+import type { AnnouncementsApi } from '@features/announcements/contracts';
 import type { AppCloseCoordinationElectronApi } from '@features/app-close-coordination/contracts';
 import type {
   ReviewDraftHistoryConflictCandidateSummary,
@@ -159,6 +161,13 @@ import type {
   SessionsPaginationOptions,
   SubagentDetail,
 } from '@main/types';
+
+export type {
+  SentryTelemetryContext,
+  SentryTelemetryStatus,
+  TelemetryAPI,
+  WindowsElevationStatus,
+} from './desktopShell';
 
 // =============================================================================
 // Cost Calculation Types
@@ -851,41 +860,13 @@ export interface ReviewAPI {
 }
 
 // =============================================================================
-// Telemetry API
-// =============================================================================
-
-export interface SentryTelemetryContext {
-  userId: string;
-  tags: Record<string, string>;
-}
-
-export interface SentryTelemetryStatus {
-  state: 'disabled' | 'unconfigured' | 'active' | 'failed';
-  reason: 'telemetry-disabled' | 'invalid-dsn' | 'sdk-load-failed' | 'sdk-init-failed' | null;
-  environment: 'production' | 'development';
-  release: string | null;
-}
-
-export interface TelemetryAPI {
-  getSentryContext: () => Promise<SentryTelemetryContext | null>;
-  getSentryStatus: () => Promise<SentryTelemetryStatus>;
-}
-
-export interface WindowsElevationStatus {
-  platform: string;
-  isWindows: boolean;
-  isAdministrator: boolean | null;
-  checkFailed: boolean;
-  error: string | null;
-}
-
-// =============================================================================
 // Main Electron API
 // =============================================================================
 
 /** Complete Electron API exposed to the renderer process via preload script. */
 export interface ElectronAPI
   extends RecentProjectsElectronApi, CodexAccountElectronApi, TokenUsageElectronApi {
+  announcements: AnnouncementsApi;
   startup?: AppStartupAPI;
   appCloseCoordination?: AppCloseCoordinationElectronApi;
   workspaceTrust?: WorkspaceTrustElectronApi['workspaceTrust'];

@@ -8,12 +8,15 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { useStore } from '@renderer/store';
 
 export const ContextSwitchOverlay: React.FC = () => {
   const { t } = useAppTranslation('common');
   const isContextSwitching = useStore((state) => state.isContextSwitching);
   const targetContextId = useStore((state) => state.targetContextId);
+
+  useOverlayOccupancy(isContextSwitching);
 
   if (!isContextSwitching) {
     return null;

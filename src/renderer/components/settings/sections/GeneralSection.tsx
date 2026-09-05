@@ -9,6 +9,7 @@ import { AppLanguageSelect, useAppTranslation } from '@features/localization/ren
 import { api, isElectronMode } from '@renderer/api';
 import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { Combobox } from '@renderer/components/ui/combobox';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { getFullResetState } from '@renderer/store/utils/stateResetHelpers';
@@ -67,6 +68,7 @@ export const GeneralSection = ({
   const [findingWslRoots, setFindingWslRoots] = useState(false);
   const [wslCandidates, setWslCandidates] = useState<WslClaudeRootCandidate[]>([]);
   const [showWslModal, setShowWslModal] = useState(false);
+  useOverlayOccupancy(showWslModal);
 
   // Fetch server status and Claude root info on mount
   useEffect(() => {
