@@ -8,6 +8,8 @@ const LOCAL_MCP_LAUNCH_ENV_KEYS = [
 const OPTIONAL_LOCAL_MCP_LAUNCH_ENV_KEYS = ['CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON'] as const;
 const LEGACY_LOCAL_MCP_CHILD_ENV_KEYS = ['ELECTRON_RUN_AS_NODE'] as const;
 const MANAGED_HOST_APP_INSTANCE_FRAGMENT_KEY = 'agent-teams-app-instance';
+const HTTP_MCP_URL_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL';
+const HTTP_MCP_URL_HASH_ENV = 'CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH';
 
 export type OpenCodeMcpBridgeEnv = Record<string, string | undefined>;
 
@@ -91,6 +93,25 @@ export function shouldEnsureOpenCodeLocalMcpLaunchEnv(input: {
   mcpUrl: string | undefined;
 }): boolean {
   return input.httpBridgeEnabled || !input.mcpUrl?.trim();
+}
+
+export function retainOpenCodeHttpMcpBridgeEnv(
+  sourceEnv: OpenCodeMcpBridgeEnv,
+  targetEnv: OpenCodeMcpBridgeEnv
+): boolean {
+  const url = sourceEnv[HTTP_MCP_URL_ENV]?.trim();
+  if (!url) {
+    return false;
+  }
+
+  targetEnv[HTTP_MCP_URL_ENV] = url;
+  const urlHash = sourceEnv[HTTP_MCP_URL_HASH_ENV]?.trim();
+  if (urlHash) {
+    targetEnv[HTTP_MCP_URL_HASH_ENV] = urlHash;
+  } else {
+    delete targetEnv[HTTP_MCP_URL_HASH_ENV];
+  }
+  return true;
 }
 
 export function copyOpenCodeLocalMcpLaunchEnv(
