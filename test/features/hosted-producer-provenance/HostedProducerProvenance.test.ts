@@ -377,7 +377,7 @@ describe('HostedProducerProvenance', () => {
     ]);
   });
 
-  it.each([
+  it.each<[string, (native: MutableOwnerNative) => void]>([
     ['missing bindings count', (native: MutableOwnerNative) => delete native.stateDelta.collectionSizes.bindings],
     ['extra count', (native: MutableOwnerNative) => (native.stateDelta.collectionSizes.quarantine = { previous: 0, next: 1 })],
     ['duplicate field', (native: MutableOwnerNative) => native.stateDelta.changedFields.push('revision')],
