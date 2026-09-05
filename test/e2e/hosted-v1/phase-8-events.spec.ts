@@ -4,6 +4,8 @@ import { promisify } from 'node:util';
 
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
 
+import { encodeReplayCursor } from '@features/coordination-events';
+
 import { restartHostedV1LifecycleOwner } from '../../../scripts/e2e/hosted-v1/run';
 import {
   waitForProductionCoordinationRetention,
@@ -421,8 +423,14 @@ async function beginTracedSseObservation(
 }
 
 async function readRunAcceptedJournalEvidence(runId: string): Promise<{
-  readonly highWatermarkSequence: number;
+  readonly metadata: {
+    readonly deploymentId: string;
+    readonly eventEpoch: string;
+    readonly highWatermarkSequence: number;
+  };
   readonly row: {
+    readonly deploymentId: string;
+    readonly eventEpoch: string;
     readonly eventId: string;
     readonly eventSequence: number;
     readonly runId: string;
@@ -436,26 +444,35 @@ async function readRunAcceptedJournalEvidence(runId: string): Promise<{
   try {
     const row = database
       .prepare(
-        `SELECT event_id AS eventId, event_sequence AS eventSequence,
+        `SELECT deployment_id AS deploymentId, event_epoch AS eventEpoch,
+                event_id AS eventId, event_sequence AS eventSequence,
                 json_extract(body_json, '$.runId') AS runId
            FROM coordination_event_journal
-          WHERE deployment_id = ? AND json_extract(body_json, '$.eventType') = ?
+          WHERE json_extract(body_json, '$.eventType') = ?
             AND json_extract(body_json, '$.runId') = ?
           ORDER BY event_sequence DESC LIMIT 1`
       )
-      .get('deployment_hosted-v1-e2e', 'team-lifecycle.run-accepted', runId) as
-      | { eventId: string; eventSequence: number; runId: string }
+      .get('team-lifecycle.run-accepted', runId) as
+      | {
+          deploymentId: string;
+          eventEpoch: string;
+          eventId: string;
+          eventSequence: number;
+          runId: string;
+        }
       | undefined;
-    const watermark = database
+    if (row === undefined) throw new Error('hosted_e2e_restart_journal_evidence_missing');
+    const metadata = database
       .prepare(
-        `SELECT high_watermark_sequence AS highWatermarkSequence
+        `SELECT deployment_id AS deploymentId, event_epoch AS eventEpoch,
+                high_watermark_sequence AS highWatermarkSequence
            FROM coordination_event_journal_metadata WHERE deployment_id = ?`
       )
-      .get('deployment_hosted-v1-e2e') as { highWatermarkSequence: number } | undefined;
-    if (row === undefined || watermark === undefined) {
-      throw new Error('hosted_e2e_restart_journal_evidence_missing');
-    }
-    return Object.freeze({ highWatermarkSequence: watermark.highWatermarkSequence, row });
+      .get(row.deploymentId) as
+      | { deploymentId: string; eventEpoch: string; highWatermarkSequence: number }
+      | undefined;
+    if (metadata === undefined) throw new Error('hosted_e2e_restart_journal_evidence_missing');
+    return Object.freeze({ metadata, row });
   } finally {
     database.close();
   }
@@ -710,14 +727,14 @@ test('Phase 8 SSE replay survives a production controller restart with top-level
       runId: null,
     });
     const initialEvent = await initialObservation.event();
+    const expectedScope = { kind: 'workspace', scopeId: runtime.workspaceId };
+    const expectedPayload = { kind: 'invalidate', resource: 'team_lifecycle' };
     expect(initialEvent).toMatchObject({
       eventType: 'coordination_event',
-      data: {
-        eventType: 'team-lifecycle.run-accepted',
-        scope: { kind: 'workspace', scopeId: runtime.workspaceId },
-        payload: { kind: 'invalidate', resource: 'team_lifecycle' },
-      },
+      data: { eventType: 'team-lifecycle.run-accepted' },
     });
+    expect(initialEvent.data.scope).toEqual(expectedScope);
+    expect(initialEvent.data.payload).toEqual(expectedPayload);
     expect(initialEvent.trace).toEqual(
       expect.arrayContaining([
         'status:200',
@@ -726,11 +743,21 @@ test('Phase 8 SSE replay survives a production controller restart with top-level
       ])
     );
     const journal = await readRunAcceptedJournalEvidence(receipt.runId);
-    expect(journal.highWatermarkSequence).toBeGreaterThanOrEqual(journal.row.eventSequence);
+    expect(journal.metadata.deploymentId).toBe(journal.row.deploymentId);
+    expect(journal.metadata.eventEpoch).toBe(journal.row.eventEpoch);
+    expect(journal.metadata.highWatermarkSequence).toBeGreaterThanOrEqual(
+      journal.row.eventSequence
+    );
     expect(journal.row.eventId).toBe(initialEvent.data.eventId);
     expect(journal.row.eventSequence).toBe(initialEvent.data.eventSequence);
     expect(journal.row.runId).toBe(receipt.runId);
-    expect(initialEvent.id).toBe(initialEvent.data.eventCursor);
+    const journalCursor = encodeReplayCursor({
+      deploymentId: journal.row.deploymentId,
+      eventEpoch: journal.row.eventEpoch,
+      eventSequence: journal.row.eventSequence,
+    });
+    expect(initialEvent.id).toBe(journalCursor);
+    expect(initialEvent.data.eventCursor).toBe(journalCursor);
 
     await restartController();
     await expect
@@ -744,12 +771,10 @@ test('Phase 8 SSE replay survives a production controller restart with top-level
     const replayEvent = await replayObservation.event();
     expect(replayEvent).toMatchObject({
       eventType: 'coordination_event',
-      data: {
-        eventType: 'team-lifecycle.run-accepted',
-        scope: initialEvent.data.scope,
-        payload: initialEvent.data.payload,
-      },
+      data: { eventType: 'team-lifecycle.run-accepted' },
     });
+    expect(replayEvent.data.scope).toEqual(expectedScope);
+    expect(replayEvent.data.payload).toEqual(expectedPayload);
     expect(replayEvent.id).toBe(initialEvent.id);
     expect(replayEvent.data.eventId).toBe(journal.row.eventId);
     expect(replayEvent.data.eventSequence).toBe(journal.row.eventSequence);

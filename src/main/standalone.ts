@@ -53,6 +53,7 @@ import {
 import {
   classifyHostedTeamMessageAuthorization,
   createHostedTeamMessageRouteFactory,
+  type HostedTeamMessageRouteFactory,
 } from './composition/hosted/hostedTeamMessageComposition';
 import { HostedTeamMessageOrchestratorAuthority } from './composition/hosted/hostedTeamMessageOrchestratorAuthority';
 import { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
@@ -107,7 +108,6 @@ export {
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
-import type { HostedTeamMessageRouteFactory } from './composition/hosted/hostedTeamMessageComposition';
 import type { HostedAuthStorageBackend, HttpServices } from './http';
 import type { HttpServer } from './services/infrastructure/HttpServer';
 import type { NotificationManager } from './services/infrastructure/NotificationManager';
@@ -156,9 +156,7 @@ const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
     1_000_000
   ),
 });
-if (!process.env.CORS_ORIGIN) {
-  process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
-}
+if (!process.env.CORS_ORIGIN) process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
