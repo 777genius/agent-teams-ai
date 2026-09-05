@@ -3,9 +3,7 @@ interface TeamMessagesLoadingEntry {
   loadingOlder: boolean;
 }
 
-interface TeamScopedVisibleLoadingResetState<
-  TTeamMessagesEntry extends TeamMessagesLoadingEntry,
-> {
+interface TeamScopedVisibleLoadingResetState<TTeamMessagesEntry extends TeamMessagesLoadingEntry> {
   teamMessagesByName: Record<string, TTeamMessagesEntry>;
   selectedTeamName: string | null;
   selectedTeamLoading: boolean;
@@ -50,6 +48,26 @@ interface TeamScopedProgressTombstoneState {
   ignoredRuntimeRunIds: Record<string, string>;
   provisioningStartedAtFloorByTeam: Record<string, string>;
 }
+
+interface FailedProvisioningAttemptState {
+  provisioningRuns: Record<string, TeamScopedProvisioningRun>;
+  currentProvisioningRunIdByTeam: Record<string, string | null | undefined>;
+  currentRuntimeRunIdByTeam: Record<string, string | null | undefined>;
+  provisioningStartedAtFloorByTeam: Record<string, string>;
+  ignoredProvisioningRunIds: Record<string, string>;
+  ignoredRuntimeRunIds: Record<string, string>;
+  memberSpawnStatusesByTeam: TeamScopedRecord;
+  memberSpawnSnapshotsByTeam: TeamScopedRecord;
+  teamAgentRuntimeByTeam: TeamScopedRecord;
+  activeToolsByTeam: TeamScopedRecord;
+  finishedVisibleByTeam: TeamScopedRecord;
+  toolHistoryByTeam: TeamScopedRecord;
+}
+
+type FailedProvisioningAttemptCleanupKey = Exclude<
+  keyof FailedProvisioningAttemptState,
+  'provisioningStartedAtFloorByTeam'
+>;
 
 export function collectTeamScopedVisibleLoadingResets<
   TTeamMessagesEntry extends TeamMessagesLoadingEntry,
@@ -187,4 +205,78 @@ export function buildTeamScopedProgressTombstones<TState extends TeamScopedProgr
     TState,
     'ignoredProvisioningRunIds' | 'ignoredRuntimeRunIds' | 'provisioningStartedAtFloorByTeam'
   >;
+}
+
+export function collectFailedProvisioningAttemptCleanup<
+  TState extends FailedProvisioningAttemptState,
+>(
+  state: TState,
+  teamName: string,
+  pendingRunId: string,
+  startedAtFloor: string
+): Partial<Pick<TState, FailedProvisioningAttemptCleanupKey>> {
+  const isCurrentAttempt = state.provisioningStartedAtFloorByTeam[teamName] === startedAtFloor;
+  const currentProvisioningRunId = state.currentProvisioningRunIdByTeam[teamName];
+  const currentRuntimeRunId = state.currentRuntimeRunIdByTeam[teamName];
+  const failedRunIds = new Set([pendingRunId]);
+  if (isCurrentAttempt) {
+    for (const runId of [currentProvisioningRunId, currentRuntimeRunId]) {
+      if (typeof runId === 'string') {
+        failedRunIds.add(runId);
+      }
+    }
+  }
+
+  const provisioningRuns = { ...state.provisioningRuns };
+  const ignoredProvisioningRunIds = { ...state.ignoredProvisioningRunIds };
+  for (const runId of failedRunIds) {
+    delete provisioningRuns[runId];
+    ignoredProvisioningRunIds[runId] = teamName;
+  }
+
+  const clearsProvisioning =
+    isCurrentAttempt &&
+    typeof currentProvisioningRunId === 'string' &&
+    failedRunIds.has(currentProvisioningRunId);
+  const clearsRuntime =
+    isCurrentAttempt &&
+    typeof currentRuntimeRunId === 'string' &&
+    failedRunIds.has(currentRuntimeRunId);
+  const ignoredRuntimeRunIds = { ...state.ignoredRuntimeRunIds };
+  if (clearsRuntime && currentRuntimeRunId) {
+    ignoredRuntimeRunIds[currentRuntimeRunId] = teamName;
+  }
+
+  const memberSpawnStatusesByTeam = omitTeamKey(state.memberSpawnStatusesByTeam, teamName);
+  const memberSpawnSnapshotsByTeam = omitTeamKey(state.memberSpawnSnapshotsByTeam, teamName);
+  const teamAgentRuntimeByTeam = omitTeamKey(state.teamAgentRuntimeByTeam, teamName);
+  const activeToolsByTeam = omitTeamKey(state.activeToolsByTeam, teamName);
+  const finishedVisibleByTeam = omitTeamKey(state.finishedVisibleByTeam, teamName);
+  const toolHistoryByTeam = omitTeamKey(state.toolHistoryByTeam, teamName);
+  const clearsCurrentAttempt = clearsProvisioning || clearsRuntime;
+
+  return {
+    provisioningRuns,
+    ignoredProvisioningRunIds,
+    ...(clearsProvisioning
+      ? {
+          currentProvisioningRunIdByTeam: omitTeamKey(
+            state.currentProvisioningRunIdByTeam,
+            teamName
+          )!,
+        }
+      : {}),
+    ...(clearsRuntime
+      ? {
+          currentRuntimeRunIdByTeam: omitTeamKey(state.currentRuntimeRunIdByTeam, teamName)!,
+          ignoredRuntimeRunIds,
+        }
+      : {}),
+    ...(clearsCurrentAttempt && memberSpawnStatusesByTeam ? { memberSpawnStatusesByTeam } : {}),
+    ...(clearsCurrentAttempt && memberSpawnSnapshotsByTeam ? { memberSpawnSnapshotsByTeam } : {}),
+    ...(clearsCurrentAttempt && teamAgentRuntimeByTeam ? { teamAgentRuntimeByTeam } : {}),
+    ...(clearsCurrentAttempt && activeToolsByTeam ? { activeToolsByTeam } : {}),
+    ...(clearsCurrentAttempt && finishedVisibleByTeam ? { finishedVisibleByTeam } : {}),
+    ...(clearsCurrentAttempt && toolHistoryByTeam ? { toolHistoryByTeam } : {}),
+  };
 }

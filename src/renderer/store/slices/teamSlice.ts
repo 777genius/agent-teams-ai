@@ -141,6 +141,7 @@ import {
 } from '../team/teamResolvedMembers';
 import {
   buildTeamScopedProgressTombstones,
+  collectFailedProvisioningAttemptCleanup,
   collectTeamScopedStateRemovals,
   collectTeamScopedVisibleLoadingResets,
 } from '../team/teamScopedStateCleanup';
@@ -4481,14 +4482,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             ? error.message
             : 'Failed to create team';
       set((state) => {
-        const nextRuns = { ...state.provisioningRuns };
-        delete nextRuns[pendingRunId];
-        const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
-        if (nextCurrentRunIdByTeam[request.teamName] === pendingRunId) {
-          delete nextCurrentRunIdByTeam[request.teamName];
-        }
+        const isCurrentAttempt = state.provisioningStartedAtFloorByTeam[request.teamName] === floor;
+        const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
+          state,
+          request.teamName,
+          pendingRunId,
+          floor
+        );
         const nextLaunchParamsByTeam = { ...state.launchParamsByTeam };
         if (
+          isCurrentAttempt &&
           areTeamLaunchParamsEqual(nextLaunchParamsByTeam[request.teamName], optimisticLaunchParams)
         ) {
           if (previousLaunchParams) {
@@ -4498,13 +4501,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }
         }
         return {
-          provisioningRuns: nextRuns,
-          currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+          ...failedAttemptCleanup,
           launchParamsByTeam: nextLaunchParamsByTeam,
-          provisioningErrorByTeam: {
-            ...state.provisioningErrorByTeam,
-            [request.teamName]: message,
-          },
+          provisioningErrorByTeam: isCurrentAttempt
+            ? { ...state.provisioningErrorByTeam, [request.teamName]: message }
+            : state.provisioningErrorByTeam,
         };
       });
       if (!responseRunId) {
@@ -4679,14 +4680,16 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
             ? error.message
             : 'Failed to launch team';
       set((state) => {
-        const nextRuns = { ...state.provisioningRuns };
-        delete nextRuns[pendingRunId];
-        const nextCurrentRunIdByTeam = { ...state.currentProvisioningRunIdByTeam };
-        if (nextCurrentRunIdByTeam[request.teamName] === pendingRunId) {
-          delete nextCurrentRunIdByTeam[request.teamName];
-        }
+        const isCurrentAttempt = state.provisioningStartedAtFloorByTeam[request.teamName] === floor;
+        const failedAttemptCleanup = collectFailedProvisioningAttemptCleanup(
+          state,
+          request.teamName,
+          pendingRunId,
+          floor
+        );
         const nextLaunchParamsByTeam = { ...state.launchParamsByTeam };
         if (
+          isCurrentAttempt &&
           areTeamLaunchParamsEqual(nextLaunchParamsByTeam[request.teamName], optimisticLaunchParams)
         ) {
           if (previousLaunchParams) {
@@ -4696,13 +4699,11 @@ export const createTeamSlice: StateCreator<AppState, [], [], TeamSlice> = (set, 
           }
         }
         return {
-          provisioningRuns: nextRuns,
-          currentProvisioningRunIdByTeam: nextCurrentRunIdByTeam,
+          ...failedAttemptCleanup,
           launchParamsByTeam: nextLaunchParamsByTeam,
-          provisioningErrorByTeam: {
-            ...state.provisioningErrorByTeam,
-            [request.teamName]: message,
-          },
+          provisioningErrorByTeam: isCurrentAttempt
+            ? { ...state.provisioningErrorByTeam, [request.teamName]: message }
+            : state.provisioningErrorByTeam,
         };
       });
       if (!responseRunId) {
