@@ -747,6 +747,50 @@ describe('OpenCodeBridgeCommandClient', () => {
     });
   });
 
+  it('retains an HTTP MCP transport first discovered by the lazy env provider', async () => {
+    runner.nextResult = {
+      stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
+      stderr: '',
+      exitCode: 0,
+      timedOut: false,
+    };
+    let envVersion = 0;
+    const client = createClient({
+      envProvider: () => {
+        envVersion += 1;
+        return envVersion === 1
+          ? {
+              PATH: '/usr/bin',
+              CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:5001/mcp',
+              CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'url-hash-1',
+            }
+          : {
+              PATH: '/usr/bin',
+              CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND: '/usr/bin/node',
+              CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
+              CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON: '[]',
+            };
+      },
+    });
+
+    for (const runId of ['run-1', 'run-2']) {
+      await client.execute(
+        'opencode.launchTeam',
+        { runId },
+        {
+          cwd: '/tmp/project',
+          timeoutMs: 10_000,
+        }
+      );
+    }
+
+    expect(runner.calls[1].env).toMatchObject({
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:5001/mcp',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'url-hash-1',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
+    });
+  });
+
   it('runs Windows batch launchers from their launcher directory while preserving envelope cwd', async () => {
     runner.nextResult = {
       stdout: `${JSON.stringify(bridgeSuccess({ data: { runId: 'run-1' } }))}\n`,
