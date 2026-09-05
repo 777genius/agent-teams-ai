@@ -2574,7 +2574,7 @@ export class TeamProvisioningMemberLifecycleController {
     });
     this.assertRunStillCurrentAndAlive(run, teamName);
 
-    if (existingLane) {
+    if (existingLane && hasRuntimeEvidence) {
       await this.stopSingleMixedSecondaryRuntimeLane(run, existingLane, 'relaunch');
       this.assertRunStillCurrentAndAlive(run, teamName);
     }
