@@ -20,6 +20,7 @@ import {
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
 
+import type { TeamLaunchStateReadResult } from '../TeamLaunchStateStore';
 import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
 
 const DEFAULT_STOP_TIMEOUT_MS = 15_000;
@@ -78,8 +79,11 @@ export interface TeamForceStopFlowPorts {
    * generous; this lets the flow finish as soon as the hosts are actually gone
    * instead of waiting the budget out. Omitted - or zero live hosts at the
    * first sample - and the flow waits for the stop or the timeout as before.
+   *
+   * `null` means the probe could not answer. It is not zero: only a count the
+   * probe actually established may end the stop early.
    */
-  countLiveRuntimeHosts?(teamName: string): Promise<number>;
+  countLiveRuntimeHosts?(teamName: string): Promise<number | null>;
   /**
    * Persist the stopped state: drop the launch publication and write the stop
    * marker that keeps reconciliation from re-deriving a launch snapshot for a
@@ -147,9 +151,11 @@ function watchRuntimeHostsGone(
     return { promise: new Promise<'runtime_already_down'>(() => {}), cancel };
   }
   const promise = new Promise<'runtime_already_down'>((resolve) => {
-    const onSample = (remaining: number): void => {
+    const onSample = (remaining: number | null): void => {
       sampling = false;
-      if (!cancelled && remaining <= 0) {
+      // `null` is a sample that could not answer. Ending the stop on it would
+      // report hosts as gone on evidence that never looked at one.
+      if (!cancelled && remaining !== null && remaining <= 0) {
         cancel();
         resolve('runtime_already_down');
       }
@@ -159,8 +165,8 @@ function watchRuntimeHostsGone(
       sampling = true;
       void countLiveRuntimeHostsSafely(teamName, ports).then(onSample);
     };
-    const startSampling = (liveHosts: number): void => {
-      if (cancelled || liveHosts <= 0) {
+    const startSampling = (liveHosts: number | null): void => {
+      if (cancelled || liveHosts === null || liveHosts <= 0) {
         return;
       }
       interval = setInterval(sample, RUNTIME_HOSTS_POLL_INTERVAL_MS);
@@ -172,17 +178,19 @@ function watchRuntimeHostsGone(
 }
 
 /**
- * A probe that cannot answer must not keep the stop waiting, so a failure
- * counts as "no live hosts" rather than propagating out of the poll.
+ * A probe that cannot answer must not propagate out of the poll - and must not
+ * be read as "no live hosts" either. A rejection, or a count the probe itself
+ * could not establish, becomes `null`: unknown, not zero. The stop then waits
+ * for the orchestrator or the timeout, the same as if nothing had been sampled.
  */
 async function countLiveRuntimeHostsSafely(
   teamName: string,
   ports: TeamForceStopFlowPorts
-): Promise<number> {
+): Promise<number | null> {
   try {
-    return (await ports.countLiveRuntimeHosts?.(teamName)) ?? 0;
+    return (await ports.countLiveRuntimeHosts?.(teamName)) ?? null;
   } catch {
-    return 0;
+    return null;
   }
 }
 
@@ -190,14 +198,28 @@ async function countLiveRuntimeHostsSafely(
  * How many of the team's recorded lane host processes are still running. Same
  * evidence the kill step uses: only pids the launch state recorded for this
  * team count, so an unrelated process can never keep the stop waiting.
+ *
+ * `null` when the launch state could not be read. A team that published no
+ * launch state has no recorded hosts and counts zero; a launch state this app
+ * failed to read names no host either, but that is the probe being blind, and
+ * the stop must not take it for a team that has finished exiting.
  */
 export async function countLiveRecordedRuntimeHostsForTeam(input: {
   teamName: string;
   launchStateStore?: TeamLaunchStateStore;
   isRuntimeProcessAlive?: (pid: number) => boolean;
-}): Promise<number> {
+}): Promise<number | null> {
   const launchStateStore = input.launchStateStore ?? new TeamLaunchStateStore();
-  const snapshot = await launchStateStore.read(input.teamName).catch(() => null);
+  const launchState = await launchStateStore.readResult(input.teamName).catch(
+    (error: unknown): TeamLaunchStateReadResult => ({
+      status: 'unreadable',
+      reason: error instanceof Error ? error.message : String(error),
+    })
+  );
+  if (launchState.status === 'unreadable') {
+    return null;
+  }
+  const snapshot = launchState.status === 'snapshot' ? launchState.snapshot : null;
   const isAlive = input.isRuntimeProcessAlive ?? isProcessAlive;
   const pids = collectRecordedOpenCodeRuntimePids(snapshot);
   let live = 0;

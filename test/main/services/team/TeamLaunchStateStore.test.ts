@@ -76,6 +76,40 @@ describe('TeamLaunchStateStore', () => {
     }
   });
 
+  it('separates a launch state that is absent from one it could not read', async () => {
+    const store = new TeamLaunchStateStore();
+
+    await expect(store.readResult('demo')).resolves.toEqual({ status: 'absent' });
+
+    const statePath = getTeamLaunchStatePath('demo');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, '{ not json');
+
+    // Both answer `null` through `read`, which is why a caller that has to tell
+    // "nothing recorded" from "nothing readable" cannot use it.
+    await expect(store.read('demo')).resolves.toBeNull();
+    await expect(store.readResult('demo')).resolves.toMatchObject({ status: 'unreadable' });
+  });
+
+  it('reports a launch state the filesystem refused as unreadable, not absent', async () => {
+    const readFile = vi
+      .spyOn(fs.promises, 'readFile')
+      .mockRejectedValue(Object.assign(new Error('permission denied'), { code: 'EACCES' }));
+
+    try {
+      const statePath = getTeamLaunchStatePath('demo');
+      fs.mkdirSync(path.dirname(statePath), { recursive: true });
+      fs.writeFileSync(statePath, JSON.stringify(snapshot()));
+
+      await expect(new TeamLaunchStateStore().readResult('demo')).resolves.toEqual({
+        status: 'unreadable',
+        reason: 'permission denied',
+      });
+    } finally {
+      readFile.mockRestore();
+    }
+  });
+
   it('rejects when a live team directory cannot persist the complete launch publication', async () => {
     const writeError = Object.assign(new Error('disk full'), { code: 'ENOSPC' });
     mocks.atomicWriteAsync.mockResolvedValueOnce(undefined).mockRejectedValueOnce(writeError);

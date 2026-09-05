@@ -101,29 +101,77 @@ function enqueuePublication(teamName: string, operation: () => Promise<void>): P
   });
 }
 
+/**
+ * What a launch-state read found. `absent` is an answer - this team published
+ * no launch state - while `unreadable` is the lack of one: something is on
+ * disk that the store could not turn into a snapshot, so nothing may be
+ * concluded about what the team has running.
+ */
+export type TeamLaunchStateReadResult =
+  | { status: 'snapshot'; snapshot: PersistedTeamLaunchSnapshot }
+  | { status: 'absent' }
+  | { status: 'unreadable'; reason: string };
+
+function describeReadFailure(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export class TeamLaunchStateStore {
+  /**
+   * The launch snapshot, or `null` when there is none to be had. It cannot say
+   * why: a team that never launched and a launch state this app could not read
+   * both answer `null`. Callers that draw a conclusion from the absence of
+   * recorded state - "nothing is running" - need `readResult` instead.
+   */
   async read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null> {
+    const result = await this.readResult(teamName);
+    return result.status === 'snapshot' ? result.snapshot : null;
+  }
+
+  /**
+   * The same read, keeping "this team has no launch state" apart from "the
+   * launch state could not be read". Only the first is evidence about the team;
+   * the second is the absence of evidence, and a caller that counts it as an
+   * empty snapshot reports a probe that answered nothing as a definite zero.
+   */
+  async readResult(teamName: string): Promise<TeamLaunchStateReadResult> {
     const targetPath = getTeamLaunchStatePath(teamName);
+    let raw: string;
     try {
       const stat = await fs.promises.stat(targetPath);
-      if (!stat.isFile() || stat.size > MAX_LAUNCH_STATE_BYTES) {
-        return null;
+      if (!stat.isFile()) {
+        return { status: 'unreadable', reason: 'launch state path is not a file' };
       }
-      const raw = await fs.promises.readFile(targetPath, 'utf8');
-      const parsed = JSON.parse(raw) as unknown;
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        const record = parsed as Record<string, unknown>;
-        if (
-          record.version === 2 &&
-          (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
-        ) {
-          return null;
-        }
+      if (stat.size > MAX_LAUNCH_STATE_BYTES) {
+        return { status: 'unreadable', reason: `launch state exceeds ${MAX_LAUNCH_STATE_BYTES}B` };
       }
-      return normalizePersistedLaunchSnapshot(teamName, parsed);
-    } catch {
-      return null;
+      raw = await fs.promises.readFile(targetPath, 'utf8');
+    } catch (error) {
+      // Only a missing file is an answer; every other failure leaves the
+      // question open.
+      return (error as NodeJS.ErrnoException).code === 'ENOENT'
+        ? { status: 'absent' }
+        : { status: 'unreadable', reason: describeReadFailure(error) };
     }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw) as unknown;
+    } catch (error) {
+      return { status: 'unreadable', reason: describeReadFailure(error) };
+    }
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const record = parsed as Record<string, unknown>;
+      if (
+        record.version === 2 &&
+        (typeof record.teamName !== 'string' || record.teamName.trim() !== teamName)
+      ) {
+        return { status: 'unreadable', reason: 'launch state names a different team' };
+      }
+    }
+    const snapshot = normalizePersistedLaunchSnapshot(teamName, parsed);
+    return snapshot
+      ? { status: 'snapshot', snapshot }
+      : { status: 'unreadable', reason: 'launch state did not describe a launch' };
   }
 
   async write(

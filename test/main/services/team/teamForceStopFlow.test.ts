@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PersistedTeamLaunchSnapshot } from '@shared/types';
 
 import type { TeamForceStopFlowPorts } from '@main/services/team/lifecycle/teamForceStopFlow';
+import type { TeamLaunchStateReadResult } from '@main/services/team/TeamLaunchStateStore';
 
 function createPorts(overrides: Partial<TeamForceStopFlowPorts> = {}): {
   [K in keyof TeamForceStopFlowPorts]: TeamForceStopFlowPorts[K];
@@ -36,6 +37,28 @@ function createPorts(overrides: Partial<TeamForceStopFlowPorts> = {}): {
     stopTimeoutMs: 20,
     ...overrides,
   } as never;
+}
+
+/** A launch state that recorded one OpenCode host pid per lane. */
+function recordedSnapshot(pids: Record<string, number | undefined>): TeamLaunchStateReadResult {
+  return {
+    status: 'snapshot',
+    snapshot: {
+      members: Object.fromEntries(
+        Object.entries(pids).map(([laneId, runtimePid]) => [
+          laneId,
+          { name: laneId, providerId: 'opencode', laneId, runtimePid },
+        ])
+      ),
+    } as unknown as PersistedTeamLaunchSnapshot,
+  };
+}
+
+/** A launch-state store that answers every read with the same result. */
+function launchStateStore(result: TeamLaunchStateReadResult): {
+  readResult: () => Promise<TeamLaunchStateReadResult>;
+} {
+  return { readResult: () => Promise.resolve(result) };
 }
 
 describe('runTeamForceStopFlow', () => {
@@ -495,35 +518,90 @@ describe('stopTeamWithEscalation runtime-host evidence', () => {
 
     expect(countLiveRuntimeHosts).toHaveBeenCalledTimes(samplesAtStopEnd);
   });
+
+  /**
+   * Arms the poller on a live host, then blinds the probe, and holds the
+   * orchestrator's stop open until the assertions are made. A stop that ends as
+   * `stopped` is evidence the flow kept waiting for the acknowledgement: had it
+   * read the blind samples as "the hosts are gone" it would have ended on its
+   * own, reported `runtime_already_down`, and run the force-stop cleanup.
+   */
+  async function expectBlindProbeKeepsStopOnItsNormalPath(
+    countLiveRuntimeHosts: TeamForceStopFlowPorts['countLiveRuntimeHosts']
+  ): Promise<void> {
+    let confirmStop: (() => void) | undefined;
+    const ports = createPorts({
+      stopTeam: vi.fn(
+        () =>
+          new Promise<void>((resolve) => {
+            confirmStop = resolve;
+          })
+      ),
+      stopTimeoutMs: STOP_ESCALATION_TIMEOUT_MS,
+      countLiveRuntimeHosts,
+    });
+
+    const stopping = stopTeamWithEscalation('fixteam', ports);
+    let settled = false;
+    void stopping.then(() => {
+      settled = true;
+    });
+    await advanceThroughSamples(4);
+
+    expect(settled).toBe(false);
+    expect(ports.killRetainedRuntimeProcesses).not.toHaveBeenCalled();
+    expect(ports.clearPendingPromptDeliveries).not.toHaveBeenCalled();
+
+    confirmStop?.();
+    const result = await stopping;
+
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.diagnostics.join('\n')).not.toContain('Runtime hosts were gone');
+    expect(ports.killRetainedRuntimeProcesses).not.toHaveBeenCalled();
+    expect(ports.clearPendingPromptDeliveries).not.toHaveBeenCalled();
+  }
+
+  it('does not read a probe that rejects as hosts that are gone', async () => {
+    let samples = 0;
+
+    await expectBlindProbeKeepsStopOnItsNormalPath(() => {
+      samples += 1;
+      return samples === 1 ? Promise.resolve(2) : Promise.reject(new Error('probe exploded'));
+    });
+  });
+
+  it('does not read a failed launch-state read as hosts that are gone', async () => {
+    // The recorded-host probe in production: a launch state that named a live
+    // host, then a read that failed. A failed read names no host either, and
+    // that must not pass for a team that finished exiting.
+    let reads = 0;
+    const store = {
+      readResult: (): Promise<TeamLaunchStateReadResult> => {
+        reads += 1;
+        return Promise.resolve(
+          reads === 1 ? recordedSnapshot({ 'lane-a': 11 }) : { status: 'unreadable', reason: 'EIO' }
+        );
+      },
+    };
+
+    await expectBlindProbeKeepsStopOnItsNormalPath((teamName) =>
+      countLiveRecordedRuntimeHostsForTeam({
+        teamName,
+        launchStateStore: store as never,
+        isRuntimeProcessAlive: () => true,
+      })
+    );
+  });
 });
 
 describe('countLiveRecordedRuntimeHostsForTeam', () => {
-  function launchStateStore(snapshot: PersistedTeamLaunchSnapshot | null): {
-    read: () => Promise<PersistedTeamLaunchSnapshot | null>;
-  } {
-    return { read: () => Promise.resolve(snapshot) };
-  }
-
-  function snapshotWithLanePids(
-    pids: Record<string, number | undefined>
-  ): PersistedTeamLaunchSnapshot {
-    return {
-      members: Object.fromEntries(
-        Object.entries(pids).map(([laneId, runtimePid]) => [
-          laneId,
-          { name: laneId, providerId: 'opencode', laneId, runtimePid },
-        ])
-      ),
-    } as unknown as PersistedTeamLaunchSnapshot;
-  }
-
   it('counts only the pids the launch state recorded for this team', async () => {
     const alivePids = new Set([11, 22]);
 
     const live = await countLiveRecordedRuntimeHostsForTeam({
       teamName: 'fixteam',
       launchStateStore: launchStateStore(
-        snapshotWithLanePids({ 'lane-a': 11, 'lane-b': 33, 'lane-c': undefined })
+        recordedSnapshot({ 'lane-a': 11, 'lane-b': 33, 'lane-c': undefined })
       ) as never,
       isRuntimeProcessAlive: (pid) => alivePids.has(pid),
     });
@@ -531,20 +609,40 @@ describe('countLiveRecordedRuntimeHostsForTeam', () => {
     expect(live).toBe(1);
   });
 
-  it('reports no live host when the launch state cannot be read', async () => {
+  it('counts no live host for a team that published no launch state', async () => {
     const live = await countLiveRecordedRuntimeHostsForTeam({
       teamName: 'fixteam',
-      launchStateStore: { read: () => Promise.reject(new Error('unreadable')) } as never,
+      launchStateStore: launchStateStore({ status: 'absent' }) as never,
       isRuntimeProcessAlive: () => true,
     });
 
     expect(live).toBe(0);
   });
 
+  it('reports unknown, not zero, when the launch state could not be read', async () => {
+    const live = await countLiveRecordedRuntimeHostsForTeam({
+      teamName: 'fixteam',
+      launchStateStore: launchStateStore({ status: 'unreadable', reason: 'EBUSY' }) as never,
+      isRuntimeProcessAlive: () => true,
+    });
+
+    expect(live).toBeNull();
+  });
+
+  it('reports unknown when the launch state read itself rejects', async () => {
+    const live = await countLiveRecordedRuntimeHostsForTeam({
+      teamName: 'fixteam',
+      launchStateStore: { readResult: () => Promise.reject(new Error('unreadable')) } as never,
+      isRuntimeProcessAlive: () => true,
+    });
+
+    expect(live).toBeNull();
+  });
+
   it('does not count a process whose liveness cannot be read', async () => {
     const live = await countLiveRecordedRuntimeHostsForTeam({
       teamName: 'fixteam',
-      launchStateStore: launchStateStore(snapshotWithLanePids({ 'lane-a': 11 })) as never,
+      launchStateStore: launchStateStore(recordedSnapshot({ 'lane-a': 11 })) as never,
       isRuntimeProcessAlive: () => {
         throw new Error('EPERM');
       },
