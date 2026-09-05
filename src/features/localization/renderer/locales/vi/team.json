@@ -359,10 +359,10 @@
       "cancel": "Hủy",
       "delete": "Xóa",
       "editCode": "Chỉnh sửa mã",
-      "forceStop": "Buộc dừng",
       "launch": "Khởi chạy",
       "remove": "Xóa",
       "stop": "Dừng",
+      "stopping": "Đang dừng...",
       "task": "Tác vụ",
       "visualize": "Trực quan hóa",
       "usage": "Mức dùng"
@@ -385,16 +385,13 @@
       "member_other": "thành viên",
       "title": "Đội ngũ chưa được khởi chạy"
     },
-    "forceStop": {
-      "cancelLabel": "Hủy",
-      "confirmLabel": "Buộc dừng",
-      "message": "Buộc dừng \"{{team}}\"? Thử dừng đội ngũ này và hủy các lần gửi tin nhắn đang chờ của đội. Không đảm bảo runtime sẽ thoát; các máy chủ runtime dùng chung không bị chấm dứt. Tin nhắn trong hàng đợi vẫn nằm trong hộp thư đến.",
-      "title": "Buộc dừng đội ngũ"
+    "stopFailed": {
+      "title": "Không thể dừng nhóm",
+      "message": "Nhóm vẫn đang chạy. Hãy kiểm tra trạng thái rồi nhấn Dừng lần nữa."
     },
-    "forceStopFailed": {
-      "confirmLabel": "OK",
-      "fallbackMessage": "Đã xảy ra lỗi không mong muốn",
-      "title": "Buộc dừng thất bại"
+    "stopUnknown": {
+      "title": "Không thể xác nhận đã dừng",
+      "message": "Không nhận được phản hồi từ runtime. Hãy làm mới trạng thái nhóm trước khi thử lại."
     },
     "invalidTab": "Tab đội ngũ không hợp lệ",
     "kanbanSafeData": "Không thể tải đầy đủ kanban. Đang hiển thị dữ liệu an toàn.",
@@ -429,7 +426,6 @@
       "deleteTeam": "Xóa đội ngũ",
       "editTeam": "Chỉnh sửa đội ngũ",
       "editUnavailableProvisioning": "Chỉnh sửa đội ngũ không khả dụng khi việc tạo vẫn đang diễn ra",
-      "forceStopTeam": "Buộc dừng đội ngũ - làm gián đoạn công việc đang chạy",
       "openBuiltInEditor": "Mở dự án trong trình soạn thảo tích hợp",
       "openTeamGraph": "Mở đồ thị đội ngũ",
       "stopTeam": "Dừng đội ngũ",

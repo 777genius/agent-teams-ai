@@ -83,7 +83,6 @@ import {
   GitBranch,
   History,
   Network,
-  OctagonX,
   Pencil,
   Play,
   Plus,
@@ -110,7 +109,7 @@ import { type MemberActivityFilter, type MemberDetailTab } from './members/membe
 import { deriveMetrics } from './context-metric-alias';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
-import { runTeamForceStopAction } from './teamForceStopAction';
+import { useTeamStopControl } from './useTeamStopControl';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
@@ -1287,6 +1286,7 @@ export const TeamDetailView = memo(function TeamDetailView({
 }: TeamDetailViewProps): React.JSX.Element {
   const { t } = useAppTranslation('team');
   const { isLight } = useTheme();
+  const teamStopControl = useTeamStopControl();
   const reviewLifecycleHostId = useId();
   const [requestChangesTaskId, setRequestChangesTaskId] = useState<string | null>(null);
   const [selectedMember, setSelectedMember] = useState<ResolvedTeamMember | null>(null);
@@ -1400,8 +1400,6 @@ export const TeamDetailView = memo(function TeamDetailView({
 
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [stoppingTeam, setStoppingTeam] = useState(false);
-  const [forceStoppingTeam, setForceStoppingTeam] = useState(false);
   const [trashOpen, setTrashOpen] = useState(false);
   const [sendDialogRecipient, setSendDialogRecipient] = useState<string | undefined>(undefined);
   const [sendDialogDefaultText, setSendDialogDefaultText] = useState<string | undefined>(undefined);
@@ -2297,58 +2295,22 @@ export const TeamDetailView = memo(function TeamDetailView({
   );
 
   const handleStopTeam = useCallback(async (): Promise<void> => {
-    setStoppingTeam(true);
-    try {
-      await api.teams.stop(teamName);
-      recordTeamStop({
-        source: 'detail',
-        success: true,
-        memberCount: data?.members.length ?? null,
-        providerIds: data?.members.map((member) => member.providerId ?? null),
-        runtimeActive: data?.isAlive ?? null,
-        hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
-        errorClass: 'none',
-      });
-      // Backend sends 'disconnected' progress which triggers store refresh,
-      // but refresh here too as a safety net (e.g. if progress event is missed).
-      await refreshTeamData(teamName);
-    } catch (err) {
-      recordTeamStop({
-        source: 'detail',
-        success: false,
-        memberCount: data?.members.length ?? null,
-        providerIds: data?.members.map((member) => member.providerId ?? null),
-        runtimeActive: data?.isAlive ?? null,
-        hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
-        errorClass: classifyAnalyticsError(err),
-      });
-      console.error('Failed to stop team:', err);
-    } finally {
-      setStoppingTeam(false);
-    }
-  }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData]);
-
-  const handleForceStopTeam = useCallback(async (): Promise<void> => {
-    await runTeamForceStopAction({
-      teamName,
-      labels: {
-        confirmTitle: t('detail.forceStop.title'),
-        confirmMessage: t('detail.forceStop.message', { team: data?.config.name ?? teamName }),
-        confirmLabel: t('detail.forceStop.confirmLabel'),
-        cancelLabel: t('detail.forceStop.cancelLabel'),
-        failureTitle: t('detail.forceStopFailed.title'),
-        failureFallbackMessage: t('detail.forceStopFailed.fallbackMessage'),
-        failureConfirmLabel: t('detail.forceStopFailed.confirmLabel'),
+    await teamStopControl.stopTeam(teamName, {
+      refresh: () => refreshTeamData(teamName),
+      onOutcome: (outcome, error) => {
+        const success = outcome === 'stopped' || outcome === 'stopped_after_transport_error';
+        recordTeamStop({
+          source: 'detail',
+          success,
+          memberCount: data?.members.length ?? null,
+          providerIds: data?.members.map((member) => member.providerId ?? null),
+          runtimeActive: data?.isAlive ?? null,
+          hadRunningTasks: data?.tasks.some((task) => task.status === 'in_progress') ?? null,
+          errorClass: success ? 'none' : classifyAnalyticsError(error),
+        });
       },
-      confirm,
-      forceStop: (name) => api.teams.forceStop(name),
-      refreshTeamData: (name) => refreshTeamData(name),
-      setBusy: setForceStoppingTeam,
-      logError: (cause) => console.error('Failed to force stop team:', cause),
-      logRefreshError: (cause) =>
-        console.error('Force stopped the team, but the refresh after it failed:', cause),
     });
-  }, [data?.config.name, teamName, refreshTeamData, t]);
+  }, [data?.isAlive, data?.members, data?.tasks, teamName, refreshTeamData, teamStopControl]);
 
   // Pick up pending review request from GlobalTaskDetailDialog
   useEffect(() => {
@@ -2941,11 +2903,24 @@ export const TeamDetailView = memo(function TeamDetailView({
                             variant="ghost"
                             size="sm"
                             className="h-7 gap-1 rounded-md border border-red-500/25 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                            disabled={stoppingTeam}
+                            disabled={teamStopControl.isStopping(teamName)}
+                            aria-busy={teamStopControl.isStopping(teamName)}
+                            aria-label={
+                              teamStopControl.isStopping(teamName)
+                                ? t('detail.actions.stopping')
+                                : t('detail.actions.stop')
+                            }
                             onClick={() => void handleStopTeam()}
                           >
-                            <Square size={12} className={stoppingTeam ? 'animate-pulse' : ''} />
-                            {t('detail.actions.stop')}
+                            <Square
+                              size={12}
+                              className={
+                                teamStopControl.isStopping(teamName) ? 'animate-pulse' : ''
+                              }
+                            />
+                            {teamStopControl.isStopping(teamName)
+                              ? t('detail.actions.stopping')
+                              : t('detail.actions.stop')}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
@@ -2953,26 +2928,6 @@ export const TeamDetailView = memo(function TeamDetailView({
                         </TooltipContent>
                       </Tooltip>
                     )}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 gap-1 rounded-md border border-red-500/25 px-2 text-xs text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                          disabled={forceStoppingTeam}
-                          onClick={() => void handleForceStopTeam()}
-                        >
-                          <OctagonX
-                            size={12}
-                            className={forceStoppingTeam ? 'animate-pulse' : ''}
-                          />
-                          {t('detail.actions.forceStop')}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        {t('detail.tooltips.forceStopTeam')}
-                      </TooltipContent>
-                    </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button

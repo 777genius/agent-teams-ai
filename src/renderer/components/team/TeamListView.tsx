@@ -78,6 +78,7 @@ import {
   teamMatchesProjectSelection,
 } from './teamProjectSelection';
 import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
+import { useTeamStopControl } from './useTeamStopControl';
 
 import type { ActiveTeamRef, TeamCopyData } from './dialogs/CreateTeamDialog';
 import type { TeamLaunchDialogMode } from './dialogs/LaunchTeamDialog';
@@ -320,7 +321,7 @@ interface ActiveTeamCardProps {
   branchName?: string;
   taskCounts?: TaskStatusCounts;
   launchingTeamName: string | null;
-  stoppingTeamName: string | null;
+  isStopping: boolean;
   onOpenTeam: (teamName: string, projectPath?: string) => void;
   onLaunchTeam: (
     teamName: string,
@@ -344,7 +345,7 @@ const ActiveTeamCard = ({
   branchName,
   taskCounts,
   launchingTeamName,
-  stoppingTeamName,
+  isStopping,
   onOpenTeam,
   onLaunchTeam,
   onStopTeam,
@@ -363,8 +364,8 @@ const ActiveTeamCard = ({
     launchMode === 'relaunch' ? t('list.actions.relaunchTeam') : t('list.actions.launchTeam');
   const launchTitle =
     launchingTeamName === team.teamName ? t('list.actions.launching') : launchLabel;
-  const stopTitle =
-    stoppingTeamName === team.teamName ? t('list.actions.stopping') : t('list.actions.stopTeam');
+  const stopTitle = isStopping ? t('list.actions.stopping') : t('list.actions.stopTeam');
+  const stopIconClass = isStopping ? 'animate-pulse' : '';
   const copyTitle = t('list.actions.copyTeam');
   const deleteTitle = t('list.actions.deleteTeam');
 
@@ -425,16 +426,22 @@ const ActiveTeamCard = ({
                 </button>
               ) : null}
               {status === 'active' || status === 'idle' ? (
-                <button
-                  type="button"
-                  className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-50 group-hover:opacity-100"
-                  onClick={(event) => onStopTeam(team.teamName, event)}
-                  disabled={stoppingTeamName === team.teamName}
-                  aria-label={stopTitle}
-                  title={stopTitle}
-                >
-                  <Square size={14} fill="currentColor" />
-                </button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="shrink-0 rounded p-1 text-[var(--color-text-muted)] opacity-0 transition-opacity hover:bg-amber-500/10 hover:text-amber-300 focus-visible:opacity-100 disabled:opacity-50 group-hover:opacity-100"
+                      onClick={(event) => onStopTeam(team.teamName, event)}
+                      onKeyDown={(event) => event.stopPropagation()}
+                      disabled={isStopping}
+                      aria-busy={isStopping}
+                      aria-label={stopTitle}
+                    >
+                      <Square size={14} fill="currentColor" className={stopIconClass} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{stopTitle}</TooltipContent>
+                </Tooltip>
               ) : null}
               {!team.pendingCreate ? (
                 <button
@@ -521,6 +528,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
   const { isLight } = useTheme();
   const { t } = useAppTranslation('team');
   const { t: tCommon } = useAppTranslation('common');
+  const teamStopControl = useTeamStopControl();
   const electronMode = isElectronMode();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -939,31 +947,28 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
     [teams]
   );
 
-  const [stoppingTeamName, setStoppingTeamName] = useState<string | null>(null);
-  const handleStopTeam = useCallback(async (teamName: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setStoppingTeamName(teamName);
-    try {
-      await api.teams.stop(teamName);
-      recordTeamStop({
-        source: 'list',
-        success: true,
-        runtimeActive: true,
-        errorClass: 'none',
+  const handleStopTeam = useCallback(
+    async (teamName: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      await teamStopControl.stopTeam(teamName, {
+        refresh: async () => {
+          const list = await fetchAliveTeams();
+          if (list) setAliveTeams(list);
+        },
+        onOutcome: (outcome, error) => {
+          const success = outcome === 'stopped' || outcome === 'stopped_after_transport_error';
+          recordTeamStop({
+            source: 'list',
+            success,
+            runtimeActive: true,
+            errorClass: success ? 'none' : classifyAnalyticsError(error),
+          });
+          if (success) setAliveTeams((prev) => prev.filter((name) => name !== teamName));
+        },
       });
-      setAliveTeams((prev) => prev.filter((n) => n !== teamName));
-    } catch (err) {
-      recordTeamStop({
-        source: 'list',
-        success: false,
-        runtimeActive: true,
-        errorClass: classifyAnalyticsError(err),
-      });
-      console.error('Failed to stop team:', err);
-    } finally {
-      setStoppingTeamName(null);
-    }
-  }, []);
+    },
+    [fetchAliveTeams, teamStopControl]
+  );
 
   const [launchingTeamName, setLaunchingTeamName] = useState<string | null>(null);
   const [launchDialogOpen, setLaunchDialogOpen] = useState(false);
@@ -1416,7 +1421,7 @@ export const TeamListView = memo(function TeamListView(): React.JSX.Element {
                           }
                           taskCounts={taskCountsByTeam.get(team.teamName)}
                           launchingTeamName={launchingTeamName}
-                          stoppingTeamName={stoppingTeamName}
+                          isStopping={teamStopControl.isStopping(team.teamName)}
                           onOpenTeam={openTeamTab}
                           onLaunchTeam={handleLaunchTeam}
                           onStopTeam={handleStopTeam}

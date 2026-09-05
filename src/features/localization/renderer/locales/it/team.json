@@ -359,10 +359,10 @@
       "cancel": "Annulla",
       "delete": "Elimina",
       "editCode": "Modifica codice",
-      "forceStop": "Arresto forzato",
       "launch": "Avvia",
       "remove": "Rimuovi",
       "stop": "Ferma",
+      "stopping": "Arresto in corso...",
       "task": "Task",
       "visualize": "Visualizza",
       "usage": "Utilizzo"
@@ -385,16 +385,13 @@
       "member_other": "membri",
       "title": "Team non ancora avviato"
     },
-    "forceStop": {
-      "cancelLabel": "Annulla",
-      "confirmLabel": "Arresto forzato",
-      "message": "Forzare l'arresto di \"{{team}}\"? Tenta di arrestare questo team e annulla le sue consegne di messaggi in sospeso. L'uscita del runtime non è garantita; gli host runtime condivisi non vengono terminati. I messaggi in coda restano nella posta in arrivo.",
-      "title": "Arresto forzato del team"
+    "stopFailed": {
+      "title": "Impossibile arrestare il team",
+      "message": "Il team è ancora in esecuzione. Controllane lo stato e premi di nuovo Arresta."
     },
-    "forceStopFailed": {
-      "confirmLabel": "OK",
-      "fallbackMessage": "Si è verificato un errore imprevisto",
-      "title": "Arresto forzato non riuscito"
+    "stopUnknown": {
+      "title": "Impossibile confermare l'arresto",
+      "message": "Non è stata ricevuta una risposta dal runtime. Aggiorna lo stato del team prima di riprovare."
     },
     "invalidTab": "Scheda del team non valida",
     "kanbanSafeData": "Impossibile caricare completamente la kanban. Visualizzazione dei dati sicuri.",
@@ -429,7 +426,6 @@
       "deleteTeam": "Elimina team",
       "editTeam": "Modifica team",
       "editUnavailableProvisioning": "La modifica del team non è disponibile mentre il provisioning è ancora in corso",
-      "forceStopTeam": "Arresto forzato del team - interrompe il lavoro in corso",
       "openBuiltInEditor": "Apri il progetto nell'editor integrato",
       "openTeamGraph": "Apri il grafo del team",
       "stopTeam": "Ferma team",

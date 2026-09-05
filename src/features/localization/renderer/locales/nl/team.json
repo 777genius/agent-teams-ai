@@ -359,10 +359,10 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "editCode": "Code bewerken",
-      "forceStop": "Geforceerd stoppen",
       "launch": "Starten",
       "remove": "Verwijderen",
       "stop": "Stoppen",
+      "stopping": "Bezig met stoppen...",
       "task": "Taak",
       "visualize": "Visualiseren",
       "usage": "Gebruik"
@@ -385,16 +385,13 @@
       "member_other": "leden",
       "title": "Team nog niet gestart"
     },
-    "forceStop": {
-      "cancelLabel": "Annuleren",
-      "confirmLabel": "Geforceerd stoppen",
-      "message": "\"{{team}}\" geforceerd stoppen? Probeert dit team te stoppen en annuleert de openstaande berichtbezorgingen van dit team. Het afsluiten van de runtime is niet gegarandeerd; gedeelde runtimehosts worden niet beëindigd. Berichten in de wachtrij blijven in de inbox.",
-      "title": "Team geforceerd stoppen"
+    "stopFailed": {
+      "title": "Team kan niet worden gestopt",
+      "message": "Het team is nog actief. Controleer de status en druk opnieuw op Stoppen."
     },
-    "forceStopFailed": {
-      "confirmLabel": "OK",
-      "fallbackMessage": "Er is een onverwachte fout opgetreden",
-      "title": "Geforceerd stoppen mislukt"
+    "stopUnknown": {
+      "title": "Stoppen kan niet worden bevestigd",
+      "message": "Er is geen antwoord van de runtime ontvangen. Vernieuw de teamstatus voordat u het opnieuw probeert."
     },
     "invalidTab": "Ongeldig teamtabblad",
     "kanbanSafeData": "Kon Kanban niet volledig laden. Veilige gegevens worden weergegeven.",
@@ -429,7 +426,6 @@
       "deleteTeam": "Team verwijderen",
       "editTeam": "Team bewerken",
       "editUnavailableProvisioning": "Team bewerken is niet beschikbaar zolang de provisioning nog bezig is",
-      "forceStopTeam": "Team geforceerd stoppen - onderbreekt lopend werk",
       "openBuiltInEditor": "Project openen in ingebouwde editor",
       "openTeamGraph": "Teamgrafiek openen",
       "stopTeam": "Team stoppen",
