@@ -548,23 +548,22 @@ describe('codex catalog watchdog races', () => {
     Object.defineProperty(window, 'electronAPI', {
       configurable: true,
       writable: true,
-      value: { cliInstaller: { getProviderStatus } },
+      value: {
+        cliInstaller: { getProviderStatus, invalidateStatus: vi.fn(async () => undefined) },
+      },
     });
     const store = createCliInstallerStore();
     store.setState({ cliStatus: { ...createLoadingMultimodelCliStatus(), installed: true } });
     try {
       await store.getState().fetchCliProviderStatus('codex');
-      for (let attempt = 0; attempt < 4; attempt += 1) {
+      for (let attempt = 0; attempt < 6; attempt += 1) {
         await vi.advanceTimersByTimeAsync(5_000);
       }
-      expect(getProviderStatus).toHaveBeenCalledTimes(5);
-    } finally {
-      getProviderStatus.mockResolvedValue({
-        ...provider,
-        modelCatalogRefreshState: 'ready' as const,
-      });
+      expect(getProviderStatus).toHaveBeenCalledTimes(7);
       await vi.advanceTimersByTimeAsync(5_000);
-      store.getState().invalidateCliProviderModelCatalog();
+      expect(getProviderStatus).toHaveBeenCalledTimes(7);
+    } finally {
+      await store.getState().invalidateCliStatus();
       Object.defineProperty(window, 'electronAPI', {
         configurable: true,
         writable: true,
