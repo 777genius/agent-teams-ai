@@ -4,8 +4,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { useDashboardStatusRefresh } from '@renderer/components/dashboard/useDashboardStatusRefresh';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useOpenCodeConnectedModelCatalog } from './useOpenCodeConnectedModelCatalog';
+import {
+  connectedCatalogSourceIds,
+  useOpenCodeConnectedModelCatalog,
+} from './useOpenCodeConnectedModelCatalog';
 
+import type { RuntimeProviderDirectoryEntryDto } from '../../contracts';
 import type { CliProviderStatus } from '@shared/types';
 
 const mocks = vi.hoisted(() => ({
@@ -106,6 +110,15 @@ afterEach(async () => {
 });
 
 describe('connected OpenCode dashboard catalog', () => {
+  it('loads built-in free models before slower connected sources', () => {
+    expect(
+      connectedCatalogSourceIds(
+        directory(['xai', 'opencode', 'openrouter']).directory
+          .entries as RuntimeProviderDirectoryEntryDto[]
+      )
+    ).toEqual(['opencode', 'openrouter', 'xai']);
+  });
+
   it('recovers an initial failure on the periodic tick and reloads changed connected sources', async () => {
     vi.useFakeTimers();
     try {
