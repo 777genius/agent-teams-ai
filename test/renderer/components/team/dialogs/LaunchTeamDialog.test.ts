@@ -464,7 +464,8 @@ vi.mock('@renderer/utils/teamModelAvailability', async (importOriginal) => ({
   normalizeExplicitTeamModelForUi: vi.fn((_providerId: string, model: string) => model),
 }));
 
-vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', () => ({
+vi.mock('@renderer/utils/teamProviderRuntimeStatusLoading', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@renderer/utils/teamProviderRuntimeStatusLoading')>()),
   getOpenCodeScopedPreparationFailure: vi.fn(() => null),
   hasSettledOpenCodeScopedPreparation: vi.fn(() => false),
   isTeamProviderRuntimeStatusLoading: vi.fn(() => false),
