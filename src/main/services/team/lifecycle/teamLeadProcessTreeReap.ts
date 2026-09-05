@@ -29,11 +29,12 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   otherAliveTeams: readonly string[];
   requestedAtMs?: number;
   cursorAgentTreeSweep?: CursorAgentTreeSweepPort;
-}): Promise<{ killedPids: number[]; diagnostics: string[] }> {
+}): Promise<{ killedPids: number[]; incomplete: boolean; diagnostics: string[] }> {
   const sweepPort = input.cursorAgentTreeSweep ?? DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT;
   if (!sweepPort.isEnabled()) {
     return {
       killedPids: [],
+      incomplete: false,
       diagnostics: [
         'Skipped cursor-agent sweep: the cursor-agent tree sweep is disabled for this app instance',
       ],
@@ -45,6 +46,7 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   if (!workspace) {
     return {
       killedPids: [],
+      incomplete: false,
       diagnostics: [
         'Skipped cursor-agent sweep: this team has no readable project path, and a lead tree is only reaped for a workspace this stop can name',
       ],
@@ -61,6 +63,7 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   if (sharedWith.length > 0) {
     return {
       killedPids: [],
+      incomplete: false,
       diagnostics: [
         `Skipped cursor-agent sweep: still-running team(s) work in the same project directory (${sharedWith.join(', ')})`,
       ],
@@ -74,5 +77,5 @@ export async function reapCursorAgentLeadTreesForStoppedTeam(input: {
   const diagnostics =
     sweep.killed.length > 0 ? [`Reaped ${sweep.killed.length} cursor-agent process tree(s)`] : [];
   diagnostics.push(...sweep.diagnostics.map((entry) => `cursor-agent sweep: ${entry}`));
-  return { killedPids: sweep.killed, diagnostics };
+  return { killedPids: sweep.killed, incomplete: sweep.incomplete, diagnostics };
 }

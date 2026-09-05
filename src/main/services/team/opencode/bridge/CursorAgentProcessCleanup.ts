@@ -58,6 +58,13 @@ export interface CursorAgentProcessCleanupResult {
   scanned: number;
   killed: number[];
   keptRecent: number[];
+  /**
+   * A tree this sweep decided to reap is still standing. `keptRecent` is not
+   * this: those are kept on purpose by the time fence. This is the sweep
+   * failing to finish, and a caller that reports a cleanup as complete has to
+   * know the difference - the tree still holds the workspace it was reaped for.
+   */
+  incomplete: boolean;
   diagnostics: string[];
 }
 
@@ -142,6 +149,7 @@ export async function cleanupCursorAgentProcessTrees(
     scanned: 0,
     killed: [],
     keptRecent: [],
+    incomplete: false,
     diagnostics: [],
   };
 
@@ -180,7 +188,10 @@ export async function cleanupCursorAgentProcessTrees(
     rows = await listProcessRows();
   } catch (error) {
     // A process table this app cannot read is not evidence that nothing is
-    // running, so the sweep reports and returns rather than guessing.
+    // running, so the sweep reports and returns rather than guessing - and
+    // says it did not finish, because every tree it would have reaped is
+    // still standing behind a scan that never happened.
+    result.incomplete = true;
     result.diagnostics.push(
       `cursor-agent process scan failed: ${error instanceof Error ? error.message : String(error)}`
     );
@@ -222,6 +233,8 @@ export async function cleanupCursorAgentProcessTrees(
     } catch (error) {
       // One tree that refuses to die is a diagnostic, not the end of the sweep:
       // the remaining trees are exactly the ones still holding the proxy port.
+      // It is still a cleanup that did not complete, and it says so.
+      result.incomplete = true;
       result.diagnostics.push(
         `cursor-agent tree kill failed pid=${row.pid}: ${
           error instanceof Error ? error.message : String(error)

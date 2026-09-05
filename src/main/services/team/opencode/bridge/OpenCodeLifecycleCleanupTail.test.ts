@@ -74,6 +74,7 @@ const sweepCursorAgentTrees = vi.fn(
       scanned: 0,
       killed: [] as number[],
       keptRecent: [] as number[],
+      incomplete: false,
       diagnostics: [] as string[],
     })
 );
@@ -110,7 +111,13 @@ function recordSteps(): void {
   });
   sweepCursorAgentTrees.mockImplementation(() => {
     steps.push('cursor-agent-tree-sweep');
-    return Promise.resolve({ scanned: 0, killed: [], keptRecent: [], diagnostics: [] });
+    return Promise.resolve({
+      scanned: 0,
+      killed: [],
+      keptRecent: [],
+      incomplete: false,
+      diagnostics: [],
+    });
   });
 }
 
@@ -411,6 +418,7 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
       scanned: 2,
       killed: [8100],
       keptRecent: [8200],
+      incomplete: false,
       diagnostics: ['Kept cursor-agent tree pid=8200: process start time could not be verified'],
     });
 
