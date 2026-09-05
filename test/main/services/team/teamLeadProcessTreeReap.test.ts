@@ -12,12 +12,13 @@ interface CursorAgentSweepOutcome {
   scanned: number;
   killed: number[];
   keptRecent: number[];
+  incomplete: boolean;
   diagnostics: string[];
 }
 
 const sweepCursorAgentTrees = vi.hoisted(() =>
   vi.fn<(input: CursorAgentSweepInput) => Promise<CursorAgentSweepOutcome>>(() =>
-    Promise.resolve({ scanned: 0, killed: [], keptRecent: [], diagnostics: [] })
+    Promise.resolve({ scanned: 0, killed: [], keptRecent: [], incomplete: false, diagnostics: [] })
   )
 );
 // Read through the mocked `getTeamsBasePath` closure at call time, so the team
@@ -82,6 +83,7 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
       scanned: 4,
       killed: [8100],
       keptRecent: [],
+      incomplete: false,
       diagnostics: [],
     });
     const requestedAtMs = Date.parse('2026-09-01T10:00:00.000Z');
@@ -209,6 +211,7 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
       scanned: 0,
       killed: [],
       keptRecent: [],
+      incomplete: false,
       diagnostics: ['cursor-agent process scan failed: process table unavailable'],
     });
 

@@ -118,7 +118,7 @@ export interface TeamForceStopFlowPorts {
   reapOwnedLeadProcessTrees?(
     teamName: string,
     context: { requestedAtMs: number }
-  ): Promise<{ killedPids: number[]; diagnostics: string[] }>;
+  ): Promise<{ killedPids: number[]; incomplete?: boolean; diagnostics: string[] }>;
 }
 
 /**
@@ -466,7 +466,11 @@ async function reapOwnedLeadProcessTrees(
   try {
     const reaped = await ports.reapOwnedLeadProcessTrees(teamName, { requestedAtMs });
     diagnostics.push(...reaped.diagnostics);
-    return { killedPids: reaped.killedPids, incomplete: false };
+    // A reap that resolved still leaves the cleanup incomplete when a tree it
+    // targeted refused to die: the sweep reports that per tree and carries on,
+    // and a stop that called itself completed over it would be claiming a
+    // workspace is free while the process holding it is still running.
+    return { killedPids: reaped.killedPids, incomplete: reaped.incomplete === true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     ports.logWarning(`[${teamName}] Lead process tree reap failed: ${message}`);

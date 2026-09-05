@@ -699,6 +699,32 @@ describe('post-stop external lead process tree reap', () => {
     expect(result.diagnostics).toEqual(['Reaped 1 cursor-agent process tree(s)']);
   });
 
+  /**
+   * The sweep reports a tree that refused to die per tree and carries on, so
+   * the reap resolves. It has still left the workspace occupied, and a stop
+   * that called itself completed over it would be telling the user the team is
+   * fully down while its lead is still running.
+   */
+  it('reports an incomplete cleanup when a lead tree the reap targeted refused to die', async () => {
+    const ports = createPorts({
+      reapOwnedLeadProcessTrees: vi.fn(() =>
+        Promise.resolve({
+          killedPids: [],
+          incomplete: true,
+          diagnostics: ['cursor-agent sweep: cursor-agent tree kill failed pid=8100: EPERM'],
+        })
+      ),
+    });
+
+    const result = await stopTeamWithEscalation('fixteam', ports);
+
+    expect(result.stopOutcome).toBe('stopped');
+    expect(result.cleanupOutcome).toBe('incomplete');
+    expect(result.diagnostics).toEqual([
+      'cursor-agent sweep: cursor-agent tree kill failed pid=8100: EPERM',
+    ]);
+  });
+
   // Between the kill and the release: the reap is a kill, and the release
   // unlinks locks that only a dead process lets go of.
   it('reaps after the kill step and before the shared runtime release', async () => {
@@ -751,7 +777,9 @@ describe('post-stop external lead process tree reap', () => {
    */
   it('reports a reap that threw as an incomplete cleanup and still finishes the stop', async () => {
     const ports = createPorts({
-      reapOwnedLeadProcessTrees: vi.fn(() => Promise.reject(new Error('process table unavailable'))),
+      reapOwnedLeadProcessTrees: vi.fn(() =>
+        Promise.reject(new Error('process table unavailable'))
+      ),
       markTeamStopped: vi.fn(() => Promise.resolve()),
     });
 

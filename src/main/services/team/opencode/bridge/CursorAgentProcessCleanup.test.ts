@@ -107,10 +107,12 @@ describe('the ownership proof', () => {
 
     expect(listProcessRows).not.toHaveBeenCalled();
     expect(killTree).not.toHaveBeenCalled();
+    // A deliberate skip, not a failure: there was nothing to reap.
     expect(result).toEqual({
       scanned: 0,
       killed: [],
       keptRecent: [],
+      incomplete: false,
       diagnostics: [
         'cursor-agent sweep skipped: no owned workspace was given, and a tree is only reaped for a workspace this app owns',
       ],
@@ -379,10 +381,13 @@ describe('a sweep that cannot finish still answers', () => {
       killTree,
     });
 
+    // A scan that never ran leaves every tree it would have reaped standing,
+    // so this sweep did not finish and has to say so.
     expect(result).toEqual({
       scanned: 0,
       killed: [],
       keptRecent: [],
+      incomplete: true,
       diagnostics: ['cursor-agent process scan failed: process table unavailable'],
     });
     expect(killTree).not.toHaveBeenCalled();
@@ -406,6 +411,9 @@ describe('a sweep that cannot finish still answers', () => {
     expect(result.killed).toEqual([20]);
     expect(result.diagnostics).toEqual(['cursor-agent tree kill failed pid=10: access denied']);
     expect(killTree).toHaveBeenCalledTimes(2);
+    // The sweep carried on, and the tree it could not kill is still holding the
+    // workspace: carrying on is not the same as having finished.
+    expect(result.incomplete).toBe(true);
   });
 });
 
