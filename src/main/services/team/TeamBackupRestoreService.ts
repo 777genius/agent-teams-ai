@@ -14,7 +14,10 @@ import { createLogger } from '@shared/utils/logger';
 
 import { type BackupManifest } from './teamBackupManifest';
 import { TeamConfigReader } from './TeamConfigReader';
-import { TEAM_LAUNCH_STOPPED_MARKER_FILE } from './TeamLaunchStateStore';
+import {
+  TEAM_LAUNCH_STOPPED_MARKER_FILE,
+  withTeamLaunchStatePublicationLock,
+} from './TeamLaunchStateStore';
 
 const logger = createLogger('TeamBackupService');
 const LAUNCH_STATE_PUBLICATION_FILES = new Set(['launch-state.json', 'launch-summary.json']);
@@ -198,13 +201,15 @@ export class TeamBackupRestoreService {
         }
         await fs.promises.mkdir(path.dirname(dest), { recursive: true });
         if (
-          await this.commitRestoredFile(
-            dest,
-            content,
-            observedDestination,
-            configDest,
-            committedIdentity,
-            Buffer.from(backupConfigContent)
+          await this.commitRestoredFileFencedByStop(teamName, relPath, backupFiles, () =>
+            this.commitRestoredFile(
+              dest,
+              content,
+              observedDestination,
+              configDest,
+              committedIdentity,
+              Buffer.from(backupConfigContent)
+            )
           )
         ) {
           count++;
@@ -277,13 +282,15 @@ export class TeamBackupRestoreService {
         const src = path.join(backupDir, relPath);
         const content = await fs.promises.readFile(src);
         if (
-          await this.commitRestoredFile(
-            dest,
-            content,
-            destinationObservation,
-            path.join(getTeamsBasePath(), teamName, 'config.json'),
-            sourceConfig.identity,
-            Buffer.from(sourceConfig.raw)
+          await this.commitRestoredFileFencedByStop(teamName, relPath, backupFiles, () =>
+            this.commitRestoredFile(
+              dest,
+              content,
+              destinationObservation,
+              path.join(getTeamsBasePath(), teamName, 'config.json'),
+              sourceConfig.identity,
+              Buffer.from(sourceConfig.raw)
+            )
           )
         ) {
           count++;
@@ -305,6 +312,34 @@ export class TeamBackupRestoreService {
    * restoring it brings the phantom "launch failed partway / teammate never
    * spawned" card back after the next app start.
    */
+  /**
+   * Commits one restored file. The two launch-state publication files go
+   * through the store's publication queue with the stop fence read again: the
+   * fence read before the loop is only as fresh as the moment it ran, and a
+   * stop that lands while the loop works removes those files and writes its
+   * marker afterwards. A commit that slips between the two puts the pre-stop
+   * publication back with no marker left to hold it - the stop is undone and
+   * the phantom launch card returns. Holding the queue is what keeps the stop
+   * indivisible from here; the re-read alone would only narrow the window.
+   */
+  private async commitRestoredFileFencedByStop(
+    teamName: string,
+    relPath: string,
+    backupFiles: readonly string[],
+    commit: () => Promise<boolean>
+  ): Promise<boolean> {
+    if (!LAUNCH_STATE_PUBLICATION_FILES.has(relPath)) {
+      return commit();
+    }
+    return withTeamLaunchStatePublicationLock(teamName, async () => {
+      if (await this.isLaunchStateFrozenByStop(teamName, backupFiles)) {
+        logger.info(`[Backup] Skip restore ${teamName}/${relPath}: team stopped during restore`);
+        return false;
+      }
+      return commit();
+    });
+  }
+
   private async isLaunchStateFrozenByStop(
     teamName: string,
     backupFiles: readonly string[]
