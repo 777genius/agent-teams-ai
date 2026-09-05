@@ -26,6 +26,7 @@ function sweepPorts(
     sweepCommandSettledAtMs: 1_000,
     logSweepResult: vi.fn(),
     logWarning: vi.fn(),
+    logError: vi.fn(),
     waitMs: vi.fn(() => Promise.resolve()),
     ...overrides,
   };
@@ -135,9 +136,14 @@ describe('runOpenCodeStartupRuntimeSweepTail', () => {
 
     await expect(runOpenCodeStartupRuntimeSweepTail(ports)).resolves.toBeUndefined();
 
-    expect(ports.logWarning).toHaveBeenCalledWith(
+    // A caught main-process failure goes to the error channel: `warn` reaches
+    // the durable sinks but its console line is filtered out at the production
+    // log level, so the failure that explains an empty reap would be invisible
+    // exactly where it matters.
+    expect(ports.logError).toHaveBeenCalledWith(
       '[OpenCode] Startup sweep host cleanup failed: Error: process table unreadable'
     );
+    expect(ports.logWarning).not.toHaveBeenCalled();
     expect(ports.logSweepResult).not.toHaveBeenCalled();
   });
 
@@ -152,6 +158,8 @@ describe('runOpenCodeStartupRuntimeSweepTail', () => {
     expect(ports.logWarning).toHaveBeenCalledWith(
       '[OpenCode] startup sweep host cleanup: pid=91 identity changed'
     );
+    // One host the sweep could not handle is a warning, not a failed sweep.
+    expect(ports.logError).not.toHaveBeenCalled();
   });
 });
 
@@ -168,6 +176,7 @@ describe('reapOrphanedOpenCodeHostsBeforeRuntimeRegistry', () => {
       sweepManagedHosts,
       logSweepResult,
       logWarning: vi.fn(),
+      logError: vi.fn(),
     });
 
     expect(sweepManagedHosts).toHaveBeenCalledWith({ mode: 'orphaned', startedBeforeMs: 7_000 });
@@ -181,6 +190,7 @@ describe('reapOrphanedOpenCodeHostsBeforeRuntimeRegistry', () => {
   // count either.
   it('reports a failing sweep instead of failing the startup', async () => {
     const logWarning = vi.fn();
+    const logError = vi.fn();
     const logSweepResult = vi.fn();
 
     await expect(
@@ -189,12 +199,14 @@ describe('reapOrphanedOpenCodeHostsBeforeRuntimeRegistry', () => {
         sweepManagedHosts: () => Promise.reject(new Error('process table unreadable')),
         logSweepResult,
         logWarning,
+        logError,
       })
     ).resolves.toBeUndefined();
 
-    expect(logWarning).toHaveBeenCalledWith(
+    expect(logError).toHaveBeenCalledWith(
       '[OpenCode] Startup preflight host cleanup failed: Error: process table unreadable'
     );
+    expect(logWarning).not.toHaveBeenCalled();
     expect(logSweepResult).not.toHaveBeenCalled();
   });
 });

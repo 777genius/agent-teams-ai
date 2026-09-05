@@ -745,6 +745,7 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
       ownershipMarkers: getOpenCodeProcessOwnershipMarkers(),
       logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
       logWarning: (message) => logger.warn(message),
+      logError: (message) => logger.error(message),
     });
     // A host that was killed never released its orchestrator startup lock, and
     // the next launch readiness probe waits on every leftover in turn. The
@@ -2108,6 +2109,7 @@ async function initializeServices(): Promise<void> {
     appStartedAtMs,
     logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
     logWarning: (message) => logger.warn(message),
+    logError: (message) => logger.error(message),
   });
   publishStartupStatus({
     phase: 'runtime',
