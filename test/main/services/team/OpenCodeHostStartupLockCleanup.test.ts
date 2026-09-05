@@ -5,7 +5,9 @@ import {
   purgeStaleOpenCodeHostStartupLocks,
   purgeStaleOpenCodeHostStartupLocksBeforeLaunch,
   resolveOpenCodeHostStartupLocksDir,
+  resolveStartupStaleLockMinAgeMs,
   startPeriodicOpenCodeHostStartupLockPurge,
+  STARTUP_STALE_LOCK_MIN_AGE_MS,
 } from '@main/services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
@@ -118,6 +120,40 @@ describe('purgeStaleOpenCodeHostStartupLocks', () => {
 
     expect(result).toMatchObject({ scanned: 1, removed: 0, kept: 1 });
     expect(result.diagnostics).toEqual(['broken.lock: Error: nope']);
+  });
+});
+
+describe('resolveStartupStaleLockMinAgeMs', () => {
+  // The startup purge protects an active host startup by the OS refusing to
+  // unlink the lock it holds open. Only Windows refuses; POSIX unlinks an open
+  // file and leaves the holder with a descriptor to a lock nothing can see, so
+  // the serialisation is gone and a later launch runs concurrently. There is no
+  // owner to read out of these files - the orchestrator writes them - so the
+  // age has to carry the whole guard wherever the refusal is missing.
+  it('keeps the half-minute floor where the OS refuses to unlink a held lock', () => {
+    expect(resolveStartupStaleLockMinAgeMs('win32')).toBe(STARTUP_STALE_LOCK_MIN_AGE_MS);
+  });
+
+  it.each<NodeJS.Platform>(['linux', 'darwin', 'freebsd'])(
+    'requires the genuinely-starting floor on %s, where an open lock can be unlinked',
+    (platform) => {
+      expect(resolveStartupStaleLockMinAgeMs(platform)).toBe(PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS);
+    }
+  );
+
+  it('leaves an active host startup lock in place on a startup purge that cannot be refused', async () => {
+    // Past the half-minute floor, still inside a startup POSIX cannot rule out.
+    writeLock('starting.lock', 45_000);
+    writeLock('orphan.lock', 20 * 60_000);
+
+    const result = await purgeStaleOpenCodeHostStartupLocks({
+      locksDir,
+      minAgeMs: resolveStartupStaleLockMinAgeMs('linux'),
+    });
+
+    expect(result).toMatchObject({ scanned: 2, removed: 1, kept: 1, diagnostics: [] });
+    expect(fs.existsSync(path.join(locksDir, 'starting.lock'))).toBe(true);
+    expect(fs.existsSync(path.join(locksDir, 'orphan.lock'))).toBe(false);
   });
 });
 
