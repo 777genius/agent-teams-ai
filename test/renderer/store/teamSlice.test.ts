@@ -6417,6 +6417,17 @@ describe('teamSlice actions', () => {
       expect(store.getState().provisioningErrorByTeam['my-team']).toBe(
         'MCP initialize timed out'
       );
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-late',
+        teamName: 'my-team',
+        state: 'spawning',
+        message: 'Late progress from the failed launch',
+        startedAt,
+        updatedAt: startedAt,
+      });
+      expect(store.getState().provisioningRuns['run-late']).toBeUndefined();
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
     });
 
     it('preserves a newer provisioning attempt when an older launchTeam request rejects', async () => {
@@ -6465,6 +6476,7 @@ describe('teamSlice actions', () => {
       expect(store.getState().provisioningRuns['run-new']).toBeDefined();
       expect(store.getState().ignoredProvisioningRunIds['run-new']).toBeUndefined();
       expect(store.getState().provisioningErrorByTeam['my-team']).toBeUndefined();
+      expect(store.getState().provisioningStartedAtFloorByTeam['my-team']).toBe(newerStartedAt);
     });
 
     it('rolls back optimistic pending run on early createTeam failure', async () => {

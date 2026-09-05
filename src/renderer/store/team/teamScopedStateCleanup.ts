@@ -64,10 +64,7 @@ interface FailedProvisioningAttemptState {
   toolHistoryByTeam: TeamScopedRecord;
 }
 
-type FailedProvisioningAttemptCleanupKey = Exclude<
-  keyof FailedProvisioningAttemptState,
-  'provisioningStartedAtFloorByTeam'
->;
+type FailedProvisioningAttemptCleanupKey = keyof FailedProvisioningAttemptState;
 
 export function collectTeamScopedVisibleLoadingResets<
   TTeamMessagesEntry extends TeamMessagesLoadingEntry,
@@ -254,10 +251,21 @@ export function collectFailedProvisioningAttemptCleanup<
   const finishedVisibleByTeam = omitTeamKey(state.finishedVisibleByTeam, teamName);
   const toolHistoryByTeam = omitTeamKey(state.toolHistoryByTeam, teamName);
   const clearsCurrentAttempt = clearsProvisioning || clearsRuntime;
+  const closedStartedAtFloor = new Date(
+    Math.max(Date.now(), Date.parse(startedAtFloor)) + 1
+  ).toISOString();
 
   return {
     provisioningRuns,
     ignoredProvisioningRunIds,
+    ...(isCurrentAttempt
+      ? {
+          provisioningStartedAtFloorByTeam: {
+            ...state.provisioningStartedAtFloorByTeam,
+            [teamName]: closedStartedAtFloor,
+          },
+        }
+      : {}),
     ...(clearsProvisioning
       ? {
           currentProvisioningRunIdByTeam: omitTeamKey(
