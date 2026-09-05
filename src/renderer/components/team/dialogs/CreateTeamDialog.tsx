@@ -2412,7 +2412,7 @@ export const CreateTeamDialog = ({
         }
       }}
     >
-      <DialogContent className="max-w-[52rem]">
+      <DialogContent className="max-h-[calc(100vh-2rem)] max-w-[52rem]">
         <ScopedCatalogLoaders configuration={openCodeCatalogLoaderConfiguration} />
         <DialogHeader>
           <DialogTitle className="text-sm">
