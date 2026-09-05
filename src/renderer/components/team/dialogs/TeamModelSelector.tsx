@@ -110,11 +110,13 @@ import {
 } from './openCodeRuntimeStatusUi';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
 import {
+  addCodexAstraUpdatePreview,
   deriveOpenCodeSelectionAuthorityState,
   getActiveOpenCodeStickyHeadingIndex,
   getOpenCodeModelGridColumnCount,
   getOpenCodeSelectionAuthorityScopeKey,
   getOpenCodeSourceInfo,
+  isCodexAstraUpdatePreview,
   type OpenCodeSelectionScopeAssociation,
   resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
@@ -1744,7 +1746,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     shouldDeferModelNormalization,
     value,
   ]);
-
   const modelOptions = useMemo(() => {
     if (shouldAwaitRuntimeModelList) {
       const pendingOptions: TeamRuntimeModelOption[] = [
@@ -1777,19 +1778,21 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               openCodeLocalModelOverlay.modelIds.has(option.value)
           )
         : unscopedRuntimeOptions;
-    const presentedRuntimeOptions =
+    const presentedRuntimeOptions = addCodexAstraUpdatePreview(
+      effectiveProviderId,
       effectiveProviderId === 'opencode'
         ? runtimeOptions.map((option) =>
             option.value.trim() ? option : { ...option, label: openCodeDefaultOptionLabel }
           )
-        : runtimeOptions;
+        : runtimeOptions,
+      codexRuntimeStatus
+    );
     if (
       effectiveProviderId !== 'opencode' ||
       (openCodeLocalModelOverlay.options.length === 0 && !selectedLocalModelFallbackOption)
     ) {
       return presentedRuntimeOptions;
     }
-
     const optionByValue = new Map(presentedRuntimeOptions.map((option) => [option.value, option]));
     if (
       selectedLocalModelFallbackOption &&
@@ -1802,6 +1805,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     }
     return Array.from(optionByValue.values());
   }, [
+    codexRuntimeStatus,
     effectiveProviderId,
     openCodeLocalProviderLookupAuthoritative,
     openCodeDefaultOptionLabel,
@@ -1853,7 +1857,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         }
       }
     }
-
     if (effectiveProviderId === 'opencode') {
       for (const model of openCodeLocalModelOverlay.catalogModels) {
         const runtimeModel = modelById.get(model.launchModel) ?? modelById.get(model.id);
@@ -1863,7 +1866,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         modelById.set(model.id, scopedModel);
       }
     }
-
     return modelById;
   }, [
     effectiveProviderId,
@@ -1876,7 +1878,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     if (effectiveProviderId !== 'opencode') {
       return [];
     }
-
     return modelOptions.map((option, index) => {
       const recommendation = getTeamModelRecommendation(effectiveProviderId, option.value);
       const catalogModel = runtimeCatalogModelById.get(option.value) ?? null;
@@ -1901,7 +1902,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         option.value,
         knownOpenCodeLocalSourceIds
       );
-
       return {
         option,
         index,
@@ -1974,7 +1974,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       }
       counts.set(metadata.routeTag, (counts.get(metadata.routeTag) ?? 0) + 1);
     }
-
     return OPEN_CODE_ROUTE_FILTER_TAG_ORDER.flatMap((routeTag) => {
       const count = counts.get(routeTag) ?? 0;
       return count > 0
@@ -1998,7 +1997,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
       autoFocusedOpenCodeSourceRef.current = null;
       return;
     }
-
     const selectedModel = normalizedValue.trim();
     if (!selectedModel) {
       if (autoFocusedOpenCodeSourceRef.current) {
@@ -2012,12 +2010,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     if (lastAutoFocusedOpenCodeModelRef.current === selectedModel) {
       return;
     }
-
     const selectedMetadata = openCodeModelMetadataByValue.get(selectedModel);
     if (!selectedMetadata) {
       return;
     }
-
     if (selectedMetadata.routeTag === 'local') {
       lastAutoFocusedOpenCodeModelRef.current = selectedModel;
       autoFocusedOpenCodeSourceRef.current = OPENCODE_LOCAL_MODELS_TAB_ID;
@@ -2758,6 +2754,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             runtimeProviderStatus
           ) ??
           runtimeUnavailableReason);
+    const codexModelCanUpdate = isCodexAstraUpdatePreview(opt);
     const openCodeMetadata =
       effectiveProviderId === 'opencode' ? openCodeModelMetadataByValue.get(opt.value) : null;
     let modelRecommendation: ReturnType<typeof getTeamModelRecommendation> = null;
@@ -2822,7 +2819,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         ? true
         : !modelUnavailableReason &&
           (opt.value === '' || availabilityStatus == null || availabilityStatus === 'available'));
-    const modelInteractable = modelSelectable || localModelCanAdd;
+    const modelInteractable = modelSelectable || localModelCanAdd || codexModelCanUpdate;
     const localModelStatusHint =
       localModelPresentation?.status === 'needs_verification'
         ? t('modelSelector.localModels.needsVerificationHint')
@@ -2851,7 +2848,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     const isFlatOpenCodeCell = effectiveProviderId === 'opencode';
     const flatCellBackgroundClass =
       'bg-[color-mix(in_srgb,var(--color-surface-raised)_58%,var(--color-surface)_42%)]';
-
     return (
       <button
         key={opt.value || '__default__'}
@@ -2884,22 +2880,25 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     : cn(flatCellBackgroundClass, 'text-[var(--color-text-muted)]')
             : hasBlockingModelIssue && isSelectedModel
               ? 'border-red-500/60 bg-red-500/10 text-red-100 shadow-sm'
-              : hasBlockingModelIssue
-                ? 'border-red-500/40 bg-red-500/5 text-red-200 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100'
-                : hasModelAdvisory && isSelectedModel
-                  ? 'border-amber-300/55 bg-amber-300/10 text-amber-100 shadow-sm'
-                  : hasModelAdvisory
-                    ? 'border-amber-300/35 bg-amber-300/5 text-amber-200 hover:border-amber-300/55 hover:bg-amber-300/10 hover:text-amber-100'
-                    : isSelectedModel
-                      ? 'border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
-                      : modelInteractable
-                        ? 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-border-emphasis)] hover:bg-[color-mix(in_srgb,var(--color-surface-raised)_62%,var(--color-surface)_38%)] hover:text-[var(--color-text-secondary)] hover:shadow-sm'
-                        : 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
+              : codexModelCanUpdate
+                ? 'border-sky-300/35 bg-sky-300/5 text-sky-200 hover:border-sky-300/60 hover:bg-sky-300/10 hover:text-sky-100'
+                : hasBlockingModelIssue
+                  ? 'border-red-500/40 bg-red-500/5 text-red-200 hover:border-red-400/60 hover:bg-red-500/10 hover:text-red-100'
+                  : hasModelAdvisory && isSelectedModel
+                    ? 'border-amber-300/55 bg-amber-300/10 text-amber-100 shadow-sm'
+                    : hasModelAdvisory
+                      ? 'border-amber-300/35 bg-amber-300/5 text-amber-200 hover:border-amber-300/55 hover:bg-amber-300/10 hover:text-amber-100'
+                      : isSelectedModel
+                        ? 'border-[var(--color-border-emphasis)] bg-[var(--color-surface-raised)] text-[var(--color-text)] shadow-sm'
+                        : modelInteractable
+                          ? 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:border-[var(--color-border-emphasis)] hover:bg-[color-mix(in_srgb,var(--color-surface-raised)_62%,var(--color-surface)_38%)] hover:text-[var(--color-text-secondary)] hover:shadow-sm'
+                          : 'border-[var(--color-border-subtle)] text-[var(--color-text-muted)]',
           isFlatOpenCodeCell && isSelectedModel && 'z-[1] ring-1 ring-inset ring-emerald-300',
           !modelInteractable && 'cursor-not-allowed',
           !modelDisabledReason && !activeProviderSelectable && 'pointer-events-none'
         )}
         onClick={() => {
+          if (codexModelCanUpdate) return void setCodexRuntimeDialogOpen(true);
           if (localModelCanAdd && localModelDescriptor) {
             const target: OpenCodeLocalModelSetupTarget = {
               providerId: localModelDescriptor.providerId,
@@ -3038,12 +3037,14 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             </span>
           ) : null}
           {hasBlockingModelIssue && !localModelDescriptor ? (
-            <span className="flex items-center justify-center gap-1 text-[10px] font-normal text-red-300">
+            <span className="flex items-center justify-center gap-1 text-[10px] font-normal text-current">
               <AlertTriangle className="size-3 shrink-0" />
               <span>
-                {modelUnavailableReason
-                  ? t('modelSelector.badges.unavailable')
-                  : t('modelSelector.badges.issue')}
+                {codexModelCanUpdate
+                  ? 'Update Codex'
+                  : modelUnavailableReason
+                    ? t('modelSelector.badges.unavailable')
+                    : t('modelSelector.badges.issue')}
               </span>
               {modelStatusMessage ? (
                 <ModelInfoTooltip

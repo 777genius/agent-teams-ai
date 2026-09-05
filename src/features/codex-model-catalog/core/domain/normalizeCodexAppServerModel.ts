@@ -17,6 +17,7 @@ export interface CodexAppServerModelLike {
   supportsPersonality?: boolean;
   isDefault?: boolean;
   upgrade?: unknown;
+  availabilityNux?: unknown;
 }
 
 export interface NormalizedCodexModelCatalogResult {
@@ -146,6 +147,14 @@ function asBadgeLabel(modelId: string): string {
   return modelId.replace(/^gpt-/, '');
 }
 
+function normalizeAvailabilityNuxMessage(value: unknown): string | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const message = (value as { message?: unknown }).message;
+  return typeof message === 'string' ? message.trim() || null : null;
+}
+
 export function normalizeCodexAppServerModels(
   models: readonly CodexAppServerModelLike[] | undefined,
   options: {
@@ -183,6 +192,7 @@ export function normalizeCodexAppServerModels(
     seenLaunchModels.add(launchModel);
 
     const supportedReasoningEfforts = normalizeEfforts(model);
+    const availabilityNuxMessage = normalizeAvailabilityNuxMessage(model.availabilityNux);
     normalizedModels.push({
       id,
       launchModel,
@@ -200,6 +210,8 @@ export function normalizeCodexAppServerModels(
       upgrade: Boolean(model.upgrade),
       source: 'app-server',
       badgeLabel: asBadgeLabel(id),
+      statusMessage: availabilityNuxMessage,
+      metadata: availabilityNuxMessage ? { recentlyReleased: true } : null,
     });
   }
 

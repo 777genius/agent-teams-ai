@@ -126,6 +126,30 @@ describe('connected OpenCode dashboard catalog', () => {
       vi.useRealTimers();
     }
   });
+  it('keeps the last completed catalog visible while the same scope refreshes', async () => {
+    await act(async () => root.render(<Probe />));
+    expect(observed.providerStatus?.models).toEqual(['opencode/model-0', 'openrouter/model-0']);
+
+    let completeRefresh!: (value: unknown) => void;
+    mocks.models.mockImplementation(
+      ({ providerId }) =>
+        new Promise((resolve) => {
+          if (providerId === 'opencode') completeRefresh = resolve;
+          else resolve(models(providerId));
+        })
+    );
+    await act(async () => observed.refresh());
+
+    expect(observed.providerStatus?.modelCatalogRefreshState).toBe('loading');
+    expect(observed.providerStatus?.models).toEqual(['opencode/model-0', 'openrouter/model-0']);
+
+    await act(async () => completeRefresh(models('opencode', 2)));
+    expect(observed.providerStatus?.models).toEqual([
+      'opencode/model-0',
+      'opencode/model-1',
+      'openrouter/model-0',
+    ]);
+  });
   it.each(['not-connected', 'available', 'ignored'])(
     'includes built-in OpenCode models in %s state without granting readiness',
     async (state) => {
@@ -193,6 +217,8 @@ describe('connected OpenCode dashboard catalog', () => {
       completions.get('opencode')?.(models('opencode'));
       await vi.waitFor(() => expect(mocks.models).toHaveBeenCalledTimes(2));
     });
+    expect(observed.providerStatus?.models).toEqual(['opencode/model-0']);
+    expect(observed.providerStatus?.modelCatalogRefreshState).toBe('loading');
     expect(mocks.models.mock.calls[1]?.[0].providerId).toBe('openrouter');
 
     await act(async () => {

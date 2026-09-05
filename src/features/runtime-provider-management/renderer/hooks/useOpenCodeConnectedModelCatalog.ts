@@ -45,13 +45,15 @@ export function useOpenCodeConnectedModelCatalog(input: {
 }) {
   const [revision, setRevision] = useState(0);
   const lastRefresh = useRef({ revision, external: input.refreshRevision });
-  const scope = JSON.stringify([input.projectPath, revision, input.refreshRevision]);
+  const scope = JSON.stringify([input.projectPath]);
   const [state, setState] = useState<CatalogState>({
     scope: '',
     loading: false,
     models: [],
     errors: [],
   });
+  const stateRef = useRef(state);
+  stateRef.current = state;
   const sequence = useRef(0);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
 
@@ -66,8 +68,11 @@ export function useOpenCodeConnectedModelCatalog(input: {
     const activeGroups = new Set<string>();
     let cancelled = false;
     const current = () => !cancelled && request === sequence.current;
-    setState({ scope, loading: true, models: [], errors: [] });
+    const retainedModels = stateRef.current.scope === scope ? stateRef.current.models : [];
+    setState({ scope, loading: true, models: retainedModels, errors: [] });
     void (async () => {
+      const loadedModels: RuntimeProviderModelDto[] = [];
+      const loadErrors: string[] = [];
       const entries: RuntimeProviderDirectoryEntryDto[] = [];
       const cursors = new Set<string>();
       let cursor: string | null = null;
@@ -125,23 +130,23 @@ export function useOpenCodeConnectedModelCatalog(input: {
               refreshRequested
             );
             if (!current()) return;
-            setState((previous) => ({
-              ...previous,
-              models: [...previous.models, ...catalog.models],
-              errors:
-                catalog.catalogState === 'stale'
-                  ? [...previous.errors, `${source}: cached models are stale.`]
-                  : previous.errors,
-            }));
+            loadedModels.push(...catalog.models);
+            if (catalog.catalogState === 'stale') {
+              loadErrors.push(`${source}: cached models are stale.`);
+            }
+            if (retainedModels.length === 0 && current()) {
+              setState({
+                scope,
+                loading: true,
+                models: [...loadedModels],
+                errors: [...loadErrors],
+              });
+            }
           } catch (error) {
             if (!current()) return;
-            setState((previous) => ({
-              ...previous,
-              errors: [
-                ...previous.errors,
-                `${source}: ${error instanceof Error ? error.message : 'Model catalog request failed.'}`,
-              ],
-            }));
+            loadErrors.push(
+              `${source}: ${error instanceof Error ? error.message : 'Model catalog request failed.'}`
+            );
           } finally {
             activeGroups.delete(sourceRequestGroup);
           }
@@ -150,6 +155,15 @@ export function useOpenCodeConnectedModelCatalog(input: {
       await Promise.all(
         Array.from({ length: Math.min(CONCURRENT_SOURCE_LOADS, sources.length) }, loadNext)
       );
+      if (current()) {
+        setState({
+          scope,
+          loading: true,
+          models:
+            loadedModels.length > 0 || loadErrors.length === 0 ? loadedModels : retainedModels,
+          errors: loadErrors,
+        });
+      }
     })()
       .catch((error: unknown) => {
         if (current())

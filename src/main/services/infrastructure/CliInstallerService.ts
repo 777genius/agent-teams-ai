@@ -1221,14 +1221,13 @@ export class CliInstallerService {
   ): Promise<void> {
     if (result.flavor === 'agent_teams_orchestrator') {
       result.authStatusChecking = true;
-      let acceptsHydrationUpdates = true;
       const hydratedProviderIds = new Set<CliProviderId>();
       const applyProviders = (
         providersSnapshot: CliProviderStatus[],
         final: boolean,
         updatedProviderId?: CliProviderId
       ): void => {
-        if (!acceptsHydrationUpdates || generation !== this.statusGatherGeneration) {
+        if (generation !== this.statusGatherGeneration) {
           return;
         }
         const publication = mergeProviderStatusPublication(
@@ -1255,7 +1254,7 @@ export class CliInstallerService {
           applyProviders(providers, true);
         })
         .catch((error) => {
-          if (!acceptsHydrationUpdates || generation !== this.statusGatherGeneration) {
+          if (generation !== this.statusGatherGeneration) {
             return;
           }
           const msg = getErrorMessage(error);
@@ -1268,7 +1267,6 @@ export class CliInstallerService {
       let timer: ReturnType<typeof setTimeout> | null = null;
       const timeout = new Promise<'timeout'>((resolve) => {
         timer = setTimeout(() => {
-          acceptsHydrationUpdates = false;
           result.authStatusChecking = false;
           resolve('timeout');
         }, MULTIMODEL_PROVIDER_STATUS_INITIAL_TIMEOUT_MS);

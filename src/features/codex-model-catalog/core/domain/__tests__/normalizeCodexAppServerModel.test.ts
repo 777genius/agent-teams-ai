@@ -39,6 +39,30 @@ describe('normalizeCodexAppServerModels', () => {
     ]);
   });
 
+  it('maps the authoritative availability NUX to a new-model hint and status message', () => {
+    const result = normalizeCodexAppServerModels([
+      {
+        id: 'gpt-6-astra',
+        availabilityNux: { message: ' A new generation of intelligence. ' },
+      },
+    ]);
+
+    expect(result.models[0]).toMatchObject({
+      id: 'gpt-6-astra',
+      statusMessage: 'A new generation of intelligence.',
+      metadata: { recentlyReleased: true },
+    });
+  });
+
+  it.each([null, { message: '   ' }, { message: 42 }])(
+    'ignores missing or malformed availability NUX messages: %j',
+    (availabilityNux) => {
+      const result = normalizeCodexAppServerModels([{ id: 'gpt-model', availabilityNux }]);
+
+      expect(result.models[0]).toMatchObject({ statusMessage: null, metadata: null });
+    }
+  );
+
   it('filters hidden models unless the caller explicitly asks for them', () => {
     const result = normalizeCodexAppServerModels([
       { id: 'gpt-visible', hidden: false },

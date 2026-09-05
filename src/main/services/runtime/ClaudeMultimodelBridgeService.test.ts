@@ -15,6 +15,23 @@ interface RuntimeStatusMapper {
   mergeOpenCodeVerification: (provider: CliProviderStatus, snapshot: unknown) => CliProviderStatus;
 }
 
+interface RuntimeStatusHydrationInternals {
+  beginProviderStatusHydration: (
+    binaryPath: string,
+    providerIds: readonly CliProviderId[],
+    projectPath?: string | null
+  ) => number;
+  getProviderStatusHydrationKey: (
+    binaryPath: string,
+    providerId: CliProviderId,
+    projectPath?: string | null
+  ) => string;
+  providerStatusHydrationInFlight: Map<
+    string,
+    { readonly generation: number; readonly promise: Promise<CliProviderStatus> }
+  >;
+}
+
 function mapRuntimeProviderStatus(
   providerId: CliProviderId,
   runtimeStatus: unknown
@@ -173,6 +190,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
               limits: null,
               free: false,
               releaseDate: '2026-05-20',
+              recentlyReleased: true,
               opencode: {
                 providerId: 'llama.cpp',
                 modelId: 'qwen-test:0.5b',
@@ -204,6 +222,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       reason: 'Execution proof required',
     });
     expect(provider.modelCatalog?.models[0]?.metadata?.releaseDate).toBe('2026-05-20');
+    expect(provider.modelCatalog?.models[0]?.metadata?.recentlyReleased).toBe(true);
     expect(provider.modelCatalog?.models[0]?.supportedReasoningEfforts).toEqual(['high', 'ultra']);
     expect(provider.modelCatalog?.models[0]?.defaultReasoningEffort).toBe('ultra');
   });
@@ -292,6 +311,23 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       summary: false,
       projectPath: path.resolve(projectPath),
     });
+  });
+
+  test('reuses an active single-provider catalog hydration generation', () => {
+    const internals =
+      new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusHydrationInternals;
+    const binaryPath = '/fake/cli';
+    const generation = internals.beginProviderStatusHydration(binaryPath, ['codex']);
+    const hydrationKey = internals.getProviderStatusHydrationKey(binaryPath, 'codex', null);
+    internals.providerStatusHydrationInFlight.set(hydrationKey, {
+      generation,
+      promise: Promise.resolve(mapRuntimeProviderStatus('codex', {})),
+    });
+
+    expect(internals.beginProviderStatusHydration(binaryPath, ['codex'])).toBe(generation);
+    expect(
+      internals.beginProviderStatusHydration(binaryPath, ['codex'], '/tmp/another-project')
+    ).not.toBe(generation);
   });
 });
 

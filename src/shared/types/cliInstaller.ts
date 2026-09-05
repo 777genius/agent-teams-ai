@@ -200,6 +200,8 @@ export interface CliProviderModelCatalogItem {
     limits?: unknown;
     free?: boolean;
     releaseDate?: string | null;
+    /** Authoritative runtime hint that the model is in its new-model announcement window. */
+    recentlyReleased?: boolean;
     opencode?: OpenCodeModelRouteMetadata | null;
   } | null;
 }

@@ -32,7 +32,11 @@ const NPM_REGISTRY_BASE_URL = 'https://registry.npmjs.org';
 const CURRENT_MANIFEST_SCHEMA_VERSION = 1;
 const MAX_TARBALL_BYTES = 160 * 1024 * 1024;
 const MAX_UNPACKED_BYTES = 650 * 1024 * 1024;
-const FETCH_TIMEOUT_MS = 60_000;
+const METADATA_FETCH_TIMEOUT_MS = 60_000;
+// The platform package can approach MAX_TARBALL_BYTES. A one-minute wall-clock
+// deadline aborts healthy downloads on ordinary slower connections, so package
+// downloads time out only after a full minute without network progress.
+const PACKAGE_DOWNLOAD_IDLE_TIMEOUT_MS = 60_000;
 const LATEST_VERSION_TIMEOUT_MS = 8_000;
 const VERSION_TIMEOUT_MS = 10_000;
 
@@ -234,7 +238,7 @@ export function getCodexRuntimePlatformCandidates(
   throw new Error(`Codex app install is not supported on ${platform}/${arch}`);
 }
 
-async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<string> {
+async function fetchText(url: string, timeoutMs = METADATA_FETCH_TIMEOUT_MS): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -251,7 +255,7 @@ async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<str
 async function fetchPackageMetadata(
   packageName: string,
   version = 'latest',
-  timeoutMs = FETCH_TIMEOUT_MS
+  timeoutMs = METADATA_FETCH_TIMEOUT_MS
 ): Promise<NpmPackageMetadata> {
   const url = `${NPM_REGISTRY_BASE_URL}/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`;
   const raw = await fetchText(url, timeoutMs);
@@ -291,7 +295,12 @@ async function downloadTarball(
   onProgress: (progress: CodexRuntimeInstallProgress) => void
 ): Promise<Buffer> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const resetIdleTimeout = (): void => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => controller.abort(), PACKAGE_DOWNLOAD_IDLE_TIMEOUT_MS);
+  };
+  resetIdleTimeout();
   try {
     const response = await fetch(url, { signal: controller.signal });
     if (!response.ok || !response.body) {
@@ -311,6 +320,7 @@ async function downloadTarball(
       if (done) {
         break;
       }
+      resetIdleTimeout();
       const chunk = Buffer.from(value);
       downloadedBytes += chunk.length;
       if (downloadedBytes > MAX_TARBALL_BYTES) {
@@ -331,7 +341,7 @@ async function downloadTarball(
     }
     return Buffer.concat(chunks, downloadedBytes);
   } finally {
-    clearTimeout(timer);
+    if (timer) clearTimeout(timer);
   }
 }
 
