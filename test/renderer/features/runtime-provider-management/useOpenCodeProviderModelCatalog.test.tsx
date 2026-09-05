@@ -799,7 +799,7 @@ describe('useOpenCodeProviderModelCatalog', () => {
     });
   });
 
-  it('ages synthetic fresh authority to stale while retaining display models', async () => {
+  it('automatically refreshes synthetic authority at expiry while retaining display models', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-09-01T00:00:00.000Z'));
     apiMocks.loadModels.mockResolvedValue(
@@ -838,15 +838,19 @@ describe('useOpenCodeProviderModelCatalog', () => {
       await Promise.resolve();
     });
 
-    expect(observed?.catalogState).toBe('stale');
-    expect(observed?.freshModelCount).toBeNull();
+    expect(observed?.catalogState).toBe('fresh');
+    expect(observed?.freshModelCount).toBe(1);
     expect(observed?.providerStatus?.models).toEqual(['deepinfra/retained-model']);
     expect(observed?.providerStatus?.modelCatalog).toMatchObject({
-      status: 'stale',
-      fetchedAt: refreshedFetchedAt,
-      staleAt: refreshedStaleAt,
+      status: 'ready',
     });
-    expect(apiMocks.loadModels).toHaveBeenCalledTimes(2);
+    expect(Date.parse(observed?.providerStatus?.modelCatalog?.fetchedAt ?? '')).toBeGreaterThan(
+      Date.parse(refreshedFetchedAt)
+    );
+    expect(Date.parse(observed?.providerStatus?.modelCatalog?.staleAt ?? '')).toBeGreaterThan(
+      Date.parse(refreshedStaleAt)
+    );
+    expect(apiMocks.loadModels).toHaveBeenCalledTimes(3);
   });
 
   it('reports fresh scoped zero-model authority without treating stale data as authoritative', async () => {
