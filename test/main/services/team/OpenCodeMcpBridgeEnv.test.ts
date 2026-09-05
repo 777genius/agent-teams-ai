@@ -125,6 +125,22 @@ describe('OpenCodeMcpBridgeEnv', () => {
     });
   });
 
+  it('clears a stale HTTP MCP hash when the retained endpoint has no hash', () => {
+    const target: NodeJS.ProcessEnv = {
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'stale-hash',
+    };
+
+    expect(
+      retainOpenCodeHttpMcpBridgeEnv(
+        { CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:41001/mcp' },
+        target
+      )
+    ).toBe(true);
+    expect(target).toEqual({
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:41001/mcp',
+    });
+  });
+
   it('does not invent an HTTP MCP transport before one has worked', () => {
     const target: NodeJS.ProcessEnv = {
       CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
