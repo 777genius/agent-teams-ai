@@ -34,33 +34,36 @@ Target branch: `main`.
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.76`.
+- Agent Teams runtime: `v0.0.78`.
 - Terminal Platform runtime: `v0.3.3`.
 
 Draft body source for GitHub release:
 
 <!-- RELEASE_BODY_START v2.13.0 -->
-Edit teammate and lead runtime settings without restarting the whole team. This release also strengthens provider launch checks, worktree safety, and team coordination.
+Edit live agent settings, stop teams from either team view, and review product news without leaving the app. Provider checks and mixed-team relaunches are now more reliable.
 
 ### What's New
 
 - Edit teammate provider, model, effort, workflow, worktree, and MCP settings directly from their cards.
 - Change supported lead models and reasoning effort without relaunching healthy teammates.
+- Review product news in the app and dismiss announcements permanently across restarts.
+- Stop a team from Team List or Team Details with one shared progress state.
 - See task attachment mosaics on Kanban cards, with previews that refresh after changes.
 
 ### Improvements
 
-- Browse project- and provider-scoped OpenCode catalogs with pagination, freshness indicators, and safer refreshes.
+- Browse models from every connected OpenCode provider with pagination, freshness indicators, and safer refreshes.
 - Check provider readiness when launching, with clearer blockers and connection guidance.
+- See first-launch project trust warnings only when Anthropic or Codex needs them.
 - Reuse existing worktrees without resetting branches or local changes, with branch details shown before launch.
 - Team leads now coordinate delegated tasks instead of duplicating their teammates' work.
 
 ### Bug Fixes
 
-- Codex ChatGPT logins no longer enter refresh-token revocation loops during team launch.
+- Codex teammates launch with ChatGPT or API-key authentication without refresh-token loops.
 - ChatGPT-incompatible Codex models are blocked before launch with a clear explanation.
-- Codex API-key teammates now launch correctly under non-Codex leads.
-- Launch dialog edits no longer revert while saved settings or live status refresh.
+- Failed or superseded launches no longer leave teams stuck on `Launching...` or overwrite newer attempts.
+- Mixed Anthropic, Codex, and OpenCode teams recover from stale provider and session state.
 - Windows OpenCode teammates no longer flash console windows during tool calls.
 - Replayed agent turns no longer duplicate tasks, deleted-task notices, or final messages.
 

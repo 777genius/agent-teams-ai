@@ -1,39 +1,39 @@
 {
-  "version": "0.0.77",
-  "sourceRef": "v0.0.77",
+  "version": "0.0.78",
+  "sourceRef": "v0.0.78",
   "sourceRepository": "777genius/agent_teams_orchestrator",
   "releaseRepository": "777genius/agent_teams_orchestrator_binaries",
-  "releaseTag": "runtime-v0.0.77",
+  "releaseTag": "runtime-v0.0.78",
   "assets": {
     "darwin-arm64": {
-      "file": "agent-teams-runtime-darwin-arm64-v0.0.77.tar.gz",
+      "file": "agent-teams-runtime-darwin-arm64-v0.0.78.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "9b3491234084c26f743fa75a2f12eabee851354e0969676cc71948e56b2a5a4d"
+      "sha256": "8d78198ccde5c2fa6ab99706f721d79b22fbe703c8424ea1d3481c2c5cd4d033"
     },
     "darwin-x64": {
-      "file": "agent-teams-runtime-darwin-x64-v0.0.77.tar.gz",
+      "file": "agent-teams-runtime-darwin-x64-v0.0.78.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "99bb23b0b876871689e45e7a23afa71ebed5d97156d178403d04a00993d5e4c8"
+      "sha256": "6bfeed94ac3e73a16cb5f220db43b56769e29c28e2b2fcd128c5a2f66096c05a"
     },
     "linux-x64": {
-      "file": "agent-teams-runtime-linux-x64-v0.0.77.tar.gz",
+      "file": "agent-teams-runtime-linux-x64-v0.0.78.tar.gz",
       "archiveKind": "tar.gz",
       "binaryName": "claude-multimodel",
-      "sha256": "0aa5827e8d8e7ea07230cbcf89f9452f7fd6545402f2bb7b6126ffe88f428503"
+      "sha256": "b2d3eb0a3b9def66705c319045ba947e88de15f911f632049bd4f19d8b97ac1e"
     },
     "win32-arm64": {
-      "file": "agent-teams-runtime-win32-arm64-v0.0.77.zip",
+      "file": "agent-teams-runtime-win32-arm64-v0.0.78.zip",
       "archiveKind": "zip",
       "binaryName": "claude-multimodel.exe",
-      "sha256": "7c19f4674fe80d0ab3359361acc8121ad11e61f6988f2cebd4a3eb58053f126a"
+      "sha256": "a8ac0addada8539833ea8db28bd1fd795b90eca9b85bbfdcf2cb8c4ca5bf9571"
     },
     "win32-x64": {
-      "file": "agent-teams-runtime-win32-x64-v0.0.77.zip",
+      "file": "agent-teams-runtime-win32-x64-v0.0.78.zip",
       "archiveKind": "zip",
       "binaryName": "claude-multimodel.exe",
-      "sha256": "3a6f87ecec76ff07984ca112d238e6027a5af78d2d99d0152edf02e59b807ec5"
+      "sha256": "f171d83e7e9863e3877282d387d8dcdc3a094d14085d4e2c679d87e9fc36ca8e"
     }
   }
 }
