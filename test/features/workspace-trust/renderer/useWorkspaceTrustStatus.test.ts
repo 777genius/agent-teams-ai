@@ -2,12 +2,12 @@ import { shouldShowWorkspaceTrustLaunchNotice } from '@features/workspace-trust/
 import { describe, expect, it } from 'vitest';
 
 describe('shouldShowWorkspaceTrustLaunchNotice', () => {
-  it('shows consent when trust is missing or cannot be proven', () => {
+  it('shows consent only when the project is proven untrusted', () => {
     expect(shouldShowWorkspaceTrustLaunchNotice('untrusted')).toBe(true);
-    expect(shouldShowWorkspaceTrustLaunchNotice('unknown')).toBe(true);
   });
 
-  it('hides consent while checking or when trust automation is not applicable', () => {
+  it('hides consent when trust is not proven untrusted', () => {
+    expect(shouldShowWorkspaceTrustLaunchNotice('unknown')).toBe(false);
     expect(shouldShowWorkspaceTrustLaunchNotice('checking')).toBe(false);
     expect(shouldShowWorkspaceTrustLaunchNotice('trusted')).toBe(false);
     expect(shouldShowWorkspaceTrustLaunchNotice('disabled')).toBe(false);
