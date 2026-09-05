@@ -26,12 +26,15 @@ const teamsBasePath = fs.mkdtempSync(path.join(os.tmpdir(), 'lead-tree-reap-team
 
 // The default port reads the host's process table and kills what it finds
 // there, so it is stubbed rather than left alone.
-vi.mock('@main/services/team/opencode/bridge/CursorAgentProcessCleanup', async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import('@main/services/team/opencode/bridge/CursorAgentProcessCleanup')
-  >()),
-  DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT: { isEnabled: () => true, sweepCursorAgentTrees },
-}));
+vi.mock(
+  '@main/services/team/opencode/bridge/CursorAgentProcessCleanup',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('@main/services/team/opencode/bridge/CursorAgentProcessCleanup')
+    >()),
+    DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT: { isEnabled: () => true, sweepCursorAgentTrees },
+  })
+);
 vi.mock('@main/utils/pathDecoder', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@main/utils/pathDecoder')>()),
   getTeamsBasePath: () => teamsBasePath,
@@ -45,6 +48,24 @@ function writeTeamConfig(teamName: string, config: unknown): void {
     'utf8'
   );
 }
+
+/**
+ * The same directory spelled two ways, in a spelling that really is the same
+ * directory on this platform. Case folding is a Windows property: on a
+ * case-sensitive filesystem a case variant names a different directory, so a
+ * case variant here asserts Windows behaviour where the platform does not have
+ * it - which is how this case passed on Windows and failed on the Linux runner.
+ */
+const sharedWorkspace =
+  process.platform === 'win32'
+    ? { stopped: 'C:\\workspaces\\shared', alive: 'c:/workspaces/Shared/' }
+    : { stopped: '/workspaces/shared', alive: '/workspaces/shared/' };
+
+/** Differs only in case: the same directory exactly where the platform folds case. */
+const caseVariantWorkspace =
+  process.platform === 'win32'
+    ? { stopped: 'C:\\workspaces\\cased', alive: 'C:\\workspaces\\Cased' }
+    : { stopped: '/workspaces/cased', alive: '/workspaces/Cased' };
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -106,8 +127,8 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
    * declines rather than reaping the live team's lead.
    */
   it('reaps nothing while another live team works in the same project directory', async () => {
-    writeTeamConfig('sharedstop', { projectPath: 'C:\\workspaces\\shared' });
-    writeTeamConfig('sharedalive', { projectPath: 'c:/workspaces/Shared/' });
+    writeTeamConfig('sharedstop', { projectPath: sharedWorkspace.stopped });
+    writeTeamConfig('sharedalive', { projectPath: sharedWorkspace.alive });
 
     const result = await reapCursorAgentLeadTreesForStoppedTeam({
       teamName: 'sharedstop',
@@ -118,6 +139,31 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
     expect(result.diagnostics).toEqual([
       'Skipped cursor-agent sweep: still-running team(s) work in the same project directory (sharedalive)',
     ]);
+  });
+
+  // The guard is exactly as case-sensitive as the filesystem underneath it.
+  it('follows the platform on whether a case-variant project path is the same directory', async () => {
+    writeTeamConfig('casedstop', { projectPath: caseVariantWorkspace.stopped });
+    writeTeamConfig('casedalive', { projectPath: caseVariantWorkspace.alive });
+
+    const result = await reapCursorAgentLeadTreesForStoppedTeam({
+      teamName: 'casedstop',
+      otherAliveTeams: ['casedalive'],
+      requestedAtMs: 1_700_000_000_000,
+    });
+
+    if (process.platform === 'win32') {
+      expect(sweepCursorAgentTrees).not.toHaveBeenCalled();
+      expect(result.diagnostics).toEqual([
+        'Skipped cursor-agent sweep: still-running team(s) work in the same project directory (casedalive)',
+      ]);
+      return;
+    }
+    // Two different directories here, so the live team is no obstacle at all.
+    expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
+      ownedWorkspaceCwds: [caseVariantWorkspace.stopped],
+      startedBeforeMs: 1_700_000_000_000,
+    });
   });
 
   it('still reaps while another team is alive in a different directory', async () => {
