@@ -250,6 +250,7 @@ import {
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
 import {
   purgeStaleOpenCodeHostStartupLocks,
+  resolveStartupStaleLockMinAgeMs,
   startPeriodicOpenCodeHostStartupLockPurge,
 } from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
@@ -748,9 +749,12 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
     // A host that was killed never released its orchestrator startup lock, and
     // the next launch readiness probe waits on every leftover in turn. The
     // reap above has just run, so a lock still held open belongs to a live
-    // host and its unlink fails harmlessly; the half-minute floor keeps a host
-    // that is starting right now out of scope.
-    const lockPurge = await purgeStaleOpenCodeHostStartupLocks({ minAgeMs: 30_000 });
+    // host: on Windows its unlink fails harmlessly, and where the OS unlinks
+    // an open file instead the floor alone has to keep a host that is starting
+    // right now out of scope.
+    const lockPurge = await purgeStaleOpenCodeHostStartupLocks({
+      minAgeMs: resolveStartupStaleLockMinAgeMs(),
+    });
     if (lockPurge.removed > 0) {
       logger.diagnostic(
         `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`

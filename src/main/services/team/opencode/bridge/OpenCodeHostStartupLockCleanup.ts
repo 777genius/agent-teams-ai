@@ -146,6 +146,31 @@ export async function purgeStaleOpenCodeHostStartupLocks(
 export const PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS = 120_000;
 
 /**
+ * Startup floor, applied once the reap of managed hosts has run. Half a minute
+ * is safe only where the OS refuses to unlink a lock a live host still holds
+ * open: that refusal, and not the age, is what keeps an active startup's lock.
+ */
+export const STARTUP_STALE_LOCK_MIN_AGE_MS = 30_000;
+
+/**
+ * The startup floor this platform may use. Windows refuses to unlink a file a
+ * live host holds open, so a lock that survives the purge there proves its
+ * owner is alive. POSIX unlinks an open file happily - the holder keeps its
+ * descriptor and only the directory entry goes - so an orchestrator startup
+ * that is still running loses its lock and the serialisation with it, and a
+ * later launch proceeds concurrently. These locks belong to the
+ * claude-multimodel orchestrator and carry no owner this app may read, so
+ * where the refusal is missing the age is the whole guard: it has to be the
+ * age past which a host cannot still be starting, which is the pre-launch
+ * floor the same module already trusts at a far more exposed moment.
+ */
+export function resolveStartupStaleLockMinAgeMs(
+  platform: NodeJS.Platform = process.platform
+): number {
+  return platform === 'win32' ? STARTUP_STALE_LOCK_MIN_AGE_MS : PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS;
+}
+
+/**
  * Pre-launch purge. A clean (non-escalated) stop leaves the stopped hosts'
  * startup locks behind, and the orchestrator serialises the next launch behind
  * every one of them in turn. With no other team alive there is nothing left to
