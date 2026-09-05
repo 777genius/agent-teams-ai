@@ -17,6 +17,7 @@ import {
 } from '../OpenCodePromptDeliveryLedger';
 import { isOpenCodeDeliveryResponseReadCommitAllowed } from '../OpenCodePromptDeliveryReadCommitPolicy';
 import {
+  isOpenCodePromptDeliveryStalePending,
   OPENCODE_LEAD_PLAIN_TEXT_TURN_END_REASON,
   OPENCODE_STALE_PENDING_POLICY_CONFIG,
   OPENCODE_STALE_PENDING_TERMINAL_REASON,
@@ -25,6 +26,7 @@ import {
 
 import type { OpenCodeTeamRuntimeMessageResult } from '../../../runtime';
 import type { OpenCodeDeliveryResponseObservation } from '../../bridge/OpenCodeBridgeCommandContract';
+import type { OpenCodeMemberContextUsageProbe } from '../OpenCodeStalePendingObservationSignals';
 
 /** The read-commit input the delivery service actually hands to this port. */
 type ReadCommitPortInput = Parameters<
@@ -184,6 +186,7 @@ function createHarness(input: {
     readInput: ReadCommitPortInput,
     ledger: OpenCodePromptDeliveryLedgerStore
   ) => Promise<void>;
+  readOpenCodeMemberContextUsage?: OpenCodeMemberContextUsageProbe;
 }): Harness {
   const ledger = createOpenCodePromptDeliveryLedgerStore({
     filePath: join(input.ledgerDir, 'primary.json'),
@@ -223,6 +226,8 @@ function createHarness(input: {
       metaMember: { name: LEAD, providerId: 'opencode' as const },
       memberRuntimeCwd: '/repo',
     })),
+    // Left undefined unless a test wires it, exactly like production today.
+    readOpenCodeMemberContextUsage: input.readOpenCodeMemberContextUsage,
     stoppingSecondaryRuntimeTeams: { has: () => false },
     readPersistedTeamProjectPath: vi.fn(() => '/repo'),
     resolveDeliverableTrackedRuntimeRunId: vi.fn(() => 'run-1'),
@@ -335,8 +340,15 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
       observedAssistantMessageId: 'msg_assistant',
     });
     expect(harness.followUpSchedule).not.toHaveBeenCalled();
-    expect(harness.notify).toHaveBeenCalledWith(expect.objectContaining({ state: 'idle' }));
-    expect(harness.notify).not.toHaveBeenCalledWith(expect.objectContaining({ state: 'active' }));
+    // This observation carries the raw busy line, so the lane reports the turn
+    // as live first and idle only once the record settles. Before the raw line
+    // took precedence the same observation read as idle and no `active` sample
+    // was reported at all; the settlement itself is unchanged, and `idle` is
+    // still the last thing the lane says.
+    const notifiedStates = harness.notify.mock.calls.map(
+      (call) => (call[0] as { state: string }).state
+    );
+    expect(notifiedStates).toEqual(['active', 'idle']);
   });
 
   it('keeps a fresh busy non-user delivery pending (normal observe follow-up)', async () => {
@@ -411,14 +423,16 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
     const harness = createHarness({
       ledgerDir,
       observe: async () =>
-        observedResult({ observation: pendingObservation(), diagnostics: [BUSY, TREATED_IDLE] }),
+        observedResult({ observation: pendingObservation(), diagnostics: [TREATED_IDLE] }),
     });
+    // Past the hard cap: the prompt was accepted and acted on, which now holds a
+    // silent record open, but only up to that bound.
     const staleUserPrompt: OpenCodeMemberMessageDeliveryInput = {
       ...userMessage,
       messageId: 'user-1',
-      inboxTimestamp: minutesAgoIso(20),
+      inboxTimestamp: minutesAgoIso(35),
     };
-    await seedAcceptedPendingRecord(harness.ledger, staleUserPrompt, { ageMinutes: 20 });
+    await seedAcceptedPendingRecord(harness.ledger, staleUserPrompt, { ageMinutes: 35 });
 
     const delivery = await harness.service.deliver(TEAM, staleUserPrompt);
 
@@ -473,6 +487,106 @@ describe('OpenCodeMemberMessageDeliveryService stale-pending guard', () => {
       expect(harness.send).not.toHaveBeenCalled();
       expect(harness.notify).not.toHaveBeenCalledWith(expect.objectContaining({ state: 'idle' }));
     }
+  });
+  it('keeps a busy user prompt alive on wall time alone when no usage probe is wired', async () => {
+    const harness = createHarness({
+      ledgerDir,
+      observe: async () =>
+        observedResult({ observation: pendingObservation(), diagnostics: [BUSY] }),
+    });
+    const busyUserPrompt: OpenCodeMemberMessageDeliveryInput = {
+      ...userMessage,
+      messageId: 'user-busy',
+      inboxTimestamp: minutesAgoIso(20),
+    };
+    await seedAcceptedPendingRecord(harness.ledger, busyUserPrompt, { ageMinutes: 20 });
+
+    const delivery = await harness.service.deliver(TEAM, busyUserPrompt);
+
+    expect(delivery).toMatchObject({ accepted: true, responsePending: true });
+    expect(harness.send).not.toHaveBeenCalled();
+    const [record] = await harness.ledger.list();
+    expect(record).toMatchObject({ status: 'accepted', lastTurnProgressAt: null });
+    expect(harness.logEvent).not.toHaveBeenCalledWith(
+      'opencode_prompt_delivery_terminal_failure',
+      expect.anything(),
+      expect.anything()
+    );
+  });
+
+  it('keeps a stale record alive when the turn spend grows between observations', async () => {
+    const samples = [96_000, 183_000];
+    let sample = 0;
+    const harness = createHarness({
+      ledgerDir,
+      observe: async () =>
+        observedResult({ observation: pendingObservation(), diagnostics: [BUSY] }),
+      readOpenCodeMemberContextUsage: async () => ({
+        usedTokens: samples[Math.min(sample++, samples.length - 1)],
+      }),
+    });
+    const stalePrompt: OpenCodeMemberMessageDeliveryInput = {
+      ...userMessage,
+      messageId: 'user-spending',
+      inboxTimestamp: minutesAgoIso(8),
+    };
+    await seedAcceptedPendingRecord(harness.ledger, stalePrompt, { ageMinutes: 8 });
+
+    await harness.service.deliver(TEAM, stalePrompt);
+    const [afterBaseline] = await harness.ledger.list();
+    // The first sample is a baseline, so the record is still eight minutes stale.
+    expect(afterBaseline).toMatchObject({
+      lastTurnProgressAt: null,
+      observedTurnUsedTokens: 96_000,
+    });
+    expect(
+      isOpenCodePromptDeliveryStalePending(
+        afterBaseline,
+        Date.now(),
+        OPENCODE_STALE_PENDING_POLICY_CONFIG.staleAfterMs
+      )
+    ).toBe(true);
+
+    await harness.service.deliver(TEAM, stalePrompt);
+    const [afterGrowth] = await harness.ledger.list();
+    expect(afterGrowth?.observedTurnUsedTokens).toBe(183_000);
+    expect(afterGrowth?.lastTurnProgressAt).toBeTruthy();
+    expect(
+      isOpenCodePromptDeliveryStalePending(
+        afterGrowth,
+        Date.now(),
+        OPENCODE_STALE_PENDING_POLICY_CONFIG.staleAfterMs
+      )
+    ).toBe(false);
+    expect(afterGrowth?.status).toBe('accepted');
+  });
+
+  it('leaves the same record stale when the turn spend never grows', async () => {
+    const harness = createHarness({
+      ledgerDir,
+      observe: async () =>
+        observedResult({ observation: pendingObservation(), diagnostics: [BUSY] }),
+      readOpenCodeMemberContextUsage: async () => ({ usedTokens: 96_000 }),
+    });
+    const stalePrompt: OpenCodeMemberMessageDeliveryInput = {
+      ...userMessage,
+      messageId: 'user-flat',
+      inboxTimestamp: minutesAgoIso(8),
+    };
+    await seedAcceptedPendingRecord(harness.ledger, stalePrompt, { ageMinutes: 8 });
+
+    await harness.service.deliver(TEAM, stalePrompt);
+    await harness.service.deliver(TEAM, stalePrompt);
+
+    const [record] = await harness.ledger.list();
+    expect(record).toMatchObject({ lastTurnProgressAt: null, observedTurnUsedTokens: 96_000 });
+    expect(
+      isOpenCodePromptDeliveryStalePending(
+        record,
+        Date.now(),
+        OPENCODE_STALE_PENDING_POLICY_CONFIG.staleAfterMs
+      )
+    ).toBe(true);
   });
 
   it('queues a new user behind stale busy non-user work until a fresh idle observation', async () => {
