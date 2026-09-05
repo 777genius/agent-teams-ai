@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { getVisibleTeamProviderModels } from '../teamModelCatalog';
+import {
+  getRuntimeAwareTeamModelBadgeLabel,
+  getVisibleTeamProviderModels,
+} from '../teamModelCatalog';
 
 import type { CliProviderStatus } from '@shared/types';
 
@@ -91,5 +94,37 @@ describe('dynamic Codex dashboard model catalog', () => {
       'gpt-6-astra',
       'gpt-5.6-sol',
     ]);
+  });
+});
+
+describe('dynamic OpenCode dashboard model labels', () => {
+  it('uses each model display name instead of repeating the provider source badge', () => {
+    const provider = {
+      providerId: 'opencode',
+      modelCatalog: {
+        providerId: 'opencode',
+        models: [
+          {
+            id: 'opencode/big-pickle',
+            launchModel: 'opencode/big-pickle',
+            displayName: 'Big Pickle',
+            badgeLabel: 'OpenCode Zen',
+          },
+          {
+            id: 'opencode/kimi-k2.5-free',
+            launchModel: 'opencode/kimi-k2.5-free',
+            displayName: 'Kimi K2.5 Free',
+            badgeLabel: 'OpenCode Zen',
+          },
+        ],
+      },
+    } as CliProviderStatus;
+
+    expect(getRuntimeAwareTeamModelBadgeLabel('opencode', 'opencode/big-pickle', provider)).toBe(
+      'Big Pickle'
+    );
+    expect(
+      getRuntimeAwareTeamModelBadgeLabel('opencode', 'opencode/kimi-k2.5-free', provider)
+    ).toBe('Kimi K2.5 Free');
   });
 });

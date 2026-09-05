@@ -4,7 +4,7 @@ import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
 import { isRecentlyReleasedModel } from '@renderer/utils/modelReleaseFreshness';
 import {
-  getTeamModelBadgeLabel,
+  getRuntimeAwareTeamModelBadgeLabel,
   getVisibleTeamProviderModels,
 } from '@renderer/utils/teamModelCatalog';
 import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
@@ -18,7 +18,7 @@ import type {
 } from '@shared/types';
 
 function formatModelBadgeLabel(providerId: CliProviderId, model: string): string {
-  return getTeamModelBadgeLabel(providerId, model) ?? model;
+  return getRuntimeAwareTeamModelBadgeLabel(providerId, model) ?? model;
 }
 
 function getAvailabilityStatus(
@@ -207,7 +207,9 @@ export const ProviderModelBadges = ({
     const catalogModel = providerStatus?.modelCatalog?.models.find(
       (item) => item.launchModel === model || item.id === model
     );
-    const modelLabel = catalogModel?.badgeLabel?.trim() || formatModelBadgeLabel(providerId, model);
+    const modelLabel =
+      getRuntimeAwareTeamModelBadgeLabel(providerId, model, providerStatus) ??
+      formatModelBadgeLabel(providerId, model);
     const recentlyReleased = isRecentlyReleasedModel(catalogModel);
     const catalogModelIsFree = isCatalogModelFree(model, providerStatus);
     const hasFollowingModel = index < displayedModels.length - 1;

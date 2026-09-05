@@ -560,6 +560,9 @@ export function getRuntimeAwareTeamModelBadgeLabel(
 ): string | undefined {
   const trimmed = model?.trim();
   const runtimeModel = getRuntimeCatalogModel(providerId, model, providerStatus);
+  if (providerId === 'opencode') {
+    return runtimeModel?.displayName?.trim() || getTeamModelBadgeLabel(providerId, trimmed);
+  }
   const safeAnthropicAliasLabel =
     providerId === 'anthropic'
       ? getRuntimeSafeAnthropicAliasLabel({
