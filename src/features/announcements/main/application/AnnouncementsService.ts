@@ -599,7 +599,7 @@ export class AnnouncementsService {
       this.releasing ||
       this.stopped ||
       !this.tracker.ownsWindow(context.windowId) ||
-      !context.isReady()
+      !context.isDocumentCurrent()
     )
       return null;
     const feed = this.options.source.current();
@@ -610,18 +610,17 @@ export class AnnouncementsService {
     const revision = feed.revision;
     const bodySha256 = item.bodySha256;
     const heroImagePath = item.heroImagePath;
-    const result = await this.covers.load(item, requestId, context);
-    if (!result || !context.isReady()) return null;
+    const result = await this.covers.load(item, revision, requestId, context);
+    if (!result || !context.isDocumentCurrent()) return null;
     const current = this.options.source.current();
-    const stillCurrent = current?.items.some(
-      (entry) =>
-        entry.id === id &&
-        entry.bodySha256 === bodySha256 &&
-        entry.heroImagePath === heroImagePath &&
-        entry.status === 'published' &&
-        Date.parse(entry.publishedAt) <= this.options.clock.now() &&
-        this.options.clock.now() < Date.parse(entry.validUntil)
-    );
+    const stillCurrent = current
+      ? visibleAnnouncements(current, this.options.clock.now()).some(
+          (entry) =>
+            entry.id === id &&
+            entry.bodySha256 === bodySha256 &&
+            entry.heroImagePath === heroImagePath
+        )
+      : false;
     return current?.revision === revision && stillCurrent ? result : null;
   }
   cancelCover(requestId: string, context: AnnouncementWindowContext): void {

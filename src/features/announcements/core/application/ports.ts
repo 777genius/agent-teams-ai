@@ -36,4 +36,5 @@ export interface AnnouncementWindowContext {
   uiGeneration: number;
   documentGeneration?: number;
   isReady(): boolean;
+  isDocumentCurrent(): boolean;
 }

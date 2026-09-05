@@ -15,6 +15,7 @@ interface CoverLoad {
 }
 
 interface CoverScope {
+  revision: string;
   documentGeneration: number;
   acceptedBytes: number;
   accepted: Map<string, string>;
@@ -38,15 +39,16 @@ export class AnnouncementCoverCapabilities {
     return false;
   }
 
-  private scope(context: AnnouncementWindowContext): CoverScope {
+  private scope(revision: string, context: AnnouncementWindowContext): CoverScope {
     const generation = context.documentGeneration ?? context.uiGeneration;
     let scope = this.scopes.get(context.windowId);
-    if (scope?.documentGeneration !== generation) {
+    if (scope && (scope.documentGeneration !== generation || scope.revision !== revision)) {
       this.revokeWindow(context.windowId);
       scope = undefined;
     }
     if (!scope) {
       scope = {
+        revision,
         documentGeneration: generation,
         acceptedBytes: 0,
         accepted: new Map(),
@@ -71,12 +73,13 @@ export class AnnouncementCoverCapabilities {
 
   async load(
     item: Announcement,
+    revision: string,
     requestId: string,
     context: AnnouncementWindowContext
   ): Promise<string | null> {
     const heroImagePath = item.heroImagePath;
     if (!heroImagePath) return null;
-    const scope = this.scope(context);
+    const scope = this.scope(revision, context);
     if (scope.requests.has(requestId) || scope.requests.size >= ANNOUNCEMENTS_MAX_ASSET_REQUESTS) {
       if (scope.requests.size >= ANNOUNCEMENTS_MAX_ASSET_REQUESTS)
         this.revokeWindow(context.windowId);

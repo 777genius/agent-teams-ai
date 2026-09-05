@@ -115,10 +115,19 @@ export class AnnouncementsLifecycle {
     );
     if (!record) return null;
     const generation = record.generation;
+    const documentGeneration = record.documentGeneration;
     return {
       windowId: record.window.id,
       uiGeneration: generation,
-      documentGeneration: record.documentGeneration,
+      documentGeneration,
+      isDocumentCurrent: () =>
+        !this.disposed &&
+        this.windows.get(record.window.id) === record &&
+        documentGeneration === record.documentGeneration &&
+        !!record.openedAt &&
+        !record.window.isDestroyed() &&
+        !event.sender.isDestroyed() &&
+        !event.sender.isLoadingMainFrame(),
       isReady: () =>
         !this.disposed &&
         this.windows.get(record.window.id) === record &&

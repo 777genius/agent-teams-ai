@@ -160,6 +160,7 @@ function fixture() {
   let saved = initial();
   let fails = false;
   let busy = false;
+  let ready = true;
   const feed = normalizeAnnouncementFeed({
     schemaVersion: 1,
     revision: 'a'.repeat(64),
@@ -203,7 +204,12 @@ function fixture() {
     origin: 'fresh',
     networkEnabled: true,
   });
-  const context = { windowId: 1, uiGeneration: 1, isReady: () => true };
+  const context = {
+    windowId: 1,
+    uiGeneration: 1,
+    isReady: () => ready,
+    isDocumentCurrent: () => true,
+  };
   return {
     service,
     source,
@@ -217,6 +223,9 @@ function fixture() {
     },
     busy: () => {
       busy = true;
+    },
+    setReady: (value: boolean) => {
+      ready = value;
     },
     advance: (ms: number) => {
       now += ms;
@@ -659,16 +668,80 @@ describe('issued document asset quotas', () => {
       5 * 1024 * 1024,
       expect.any(AbortSignal)
     );
+    newest.status = 'archived';
+    expect(await f.service.loadCover('new', 'cover_archived', f.context)).not.toBeNull();
+    newest.status = 'published';
+    newest.validUntil = '2026-09-03T00:00:00.000Z';
+    expect(await f.service.loadCover('new', 'cover_expired', f.context)).not.toBeNull();
     expect((await f.service.openManual('new', f.context))?.announcement.heroImagePath).toBe(
       newest.heroImagePath
     );
+    await f.service.dispose();
+  });
+
+  it('keeps a safe cover response when the window loses focus after starting the request', async () => {
+    const f = fixture();
+    const newest = f.feed.items.find((item) => item.id === 'new')!;
+    newest.heroImagePath = `${newest.bodyPath.slice(0, -'body.md'.length)}assets/hero.png`;
+    let finish!: (value: { dataUrl: string; decodedBytes: number }) => void;
+    f.source.asset.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    const pending = f.service.loadCover('new', 'cover_focus', f.context);
+    await vi.waitFor(() => expect(f.source.asset).toHaveBeenCalled());
+    f.setReady(false);
+    finish({ dataUrl: 'data:image/png;base64,eA==', decodedBytes: 1 });
+    await expect(pending).resolves.toBe('data:image/png;base64,eA==');
+    await f.service.dispose();
+  });
+
+  it('loads a cover for open history when a feed update arrives while unfocused', async () => {
+    const f = fixture();
+    const newest = f.feed.items.find((item) => item.id === 'new')!;
+    newest.heroImagePath = `${newest.bodyPath.slice(0, -'body.md'.length)}assets/hero.png`;
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    f.setReady(false);
+    await expect(f.service.loadCover('new', 'cover_background', f.context)).resolves.toBe(
+      'data:image/png;base64,eA=='
+    );
+    await f.service.dispose();
+  });
+
+  it('releases old cover bytes when the immutable feed revision changes', async () => {
+    const f = fixture();
+    const newest = f.feed.items.find((item) => item.id === 'new')!;
+    newest.heroImagePath = `${newest.bodyPath.slice(0, -'body.md'.length)}assets/hero.png`;
+    f.source.asset.mockResolvedValue({
+      dataUrl: 'data:image/png;base64,eA==',
+      decodedBytes: 4 * 1024 * 1024,
+    });
+    f.service.registerWindow(1);
+    await f.service.initialize();
+    for (let revision = 1; revision <= 6; revision++) {
+      f.feed.revision = revision.toString(16).repeat(64);
+      await expect(
+        f.service.loadCover('new', `cover_revision_${revision}`, f.context)
+      ).resolves.toBe('data:image/png;base64,eA==');
+    }
+    expect(f.source.asset).toHaveBeenCalledTimes(6);
     await f.service.dispose();
   });
 });
 
 it('shares three asset network slots globally and queues another window', async () => {
   const f = fixture();
-  const second = { windowId: 2, uiGeneration: 1, isReady: () => true };
+  const second = {
+    windowId: 2,
+    uiGeneration: 1,
+    isReady: () => true,
+    isDocumentCurrent: () => true,
+  };
   f.service.registerWindow(1);
   f.service.registerWindow(2);
   await f.service.initialize();

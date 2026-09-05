@@ -126,22 +126,27 @@ describe('main window lifecycle ownership', () => {
     await lifecycle.initialize(options);
     expect(mocks.create.mock.calls[0][0].firstOpenedAt).toMatch(/^\d{4}-/);
     expect(feature.registerWindow.mock.calls).toEqual([[1, expect.any(String)]]);
-    const contextFor = mocks.register.mock.calls[0][1] as (
-      event: IpcMainInvokeEvent
-    ) => { documentGeneration: number; isReady: () => boolean } | null;
+    const contextFor = mocks.register.mock.calls[0][1] as (event: IpcMainInvokeEvent) => {
+      documentGeneration: number;
+      isReady: () => boolean;
+      isDocumentCurrent: () => boolean;
+    } | null;
     const event = {
       sender: main.webContents,
       senderFrame: main.webContents.mainFrame,
     } as unknown as IpcMainInvokeEvent;
     const context = contextFor(event)!;
     expect(context.isReady()).toBe(true);
+    expect(context.isDocumentCurrent()).toBe(true);
     main.emit('blur');
     expect(context.isReady()).toBe(false);
+    expect(context.isDocumentCurrent()).toBe(true);
     main.emit('hide');
     expect(feature.invalidateWindow).not.toHaveBeenCalled();
     expect(contextFor(event)?.documentGeneration).toBe(0);
     main.webContents.emit('did-start-loading');
     expect(feature.invalidateWindow).toHaveBeenCalledWith(1);
+    expect(context.isDocumentCurrent()).toBe(false);
     expect(contextFor(event)?.documentGeneration).toBe(1);
     expect(
       contextFor({ sender: main.webContents, senderFrame: {} } as unknown as IpcMainInvokeEvent)

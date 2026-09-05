@@ -28,7 +28,12 @@ const feature = {
   cancelAsset: vi.fn(),
   dismiss: vi.fn(),
 };
-const context: AnnouncementWindowContext = { windowId: 1, uiGeneration: 0, isReady: () => true };
+const context: AnnouncementWindowContext = {
+  windowId: 1,
+  uiGeneration: 0,
+  isReady: () => true,
+  isDocumentCurrent: () => true,
+};
 const invoke = (name: string, ...args: unknown[]) => handlers.get(name)!({}, ...args);
 beforeEach(() => {
   handlers.clear();

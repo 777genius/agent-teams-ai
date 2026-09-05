@@ -286,6 +286,7 @@ it('drains an in-flight atomic body write before ownership can transfer and prun
     windowId: 1,
     uiGeneration: 1,
     isReady: () => true,
+    isDocumentCurrent: () => true,
   });
   await writing;
   const closing = service.unregisterWindow(1);
