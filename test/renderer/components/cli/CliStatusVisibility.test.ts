@@ -982,7 +982,7 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).toContain('OpenCode');
     expect(host.textContent).toContain('Ready to run agents');
     expect(host.textContent).toContain('Providers: 10 connected');
-    expect(host.textContent).toContain('Models available');
+    expect(host.textContent).not.toContain('Models available');
     expect(host.textContent).toContain('big-pickle');
     expect(host.textContent).not.toContain('Checking...');
     expect(host.textContent).not.toContain('Provider status unavailable');
@@ -1775,7 +1775,7 @@ describe('CLI status visibility during completed install state', () => {
       await Promise.resolve();
     });
 
-    expect(host.textContent).toContain('Models available');
+    expect(host.textContent).not.toContain('Models available');
     expect(host.textContent).toContain('Runtime: OpenCode CLI');
     expect(host.textContent).not.toContain('Loading models...');
     expect(host.textContent).not.toContain('Models unavailable for this runtime build');

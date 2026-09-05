@@ -1162,22 +1162,27 @@ const InstalledBanner = ({
                 ? getVisibleTeamProviderModels(provider.providerId, provider.models, provider)
                     .length > 0
                 : provider.models.length > 0;
-            const statusText = showSkeleton
+            const statusText: string | null = showSkeleton
               ? t('cliStatus.actions.checking')
-              : isPassiveOpenCodeModelSummary
-                ? hasProviderModels
-                  ? settingsT('providerRuntime.connectionUi.status.modelsAvailable')
-                  : provider.modelCatalogRefreshState === 'error'
-                    ? settingsT('providerRuntime.connectionUi.status.unableToVerify')
-                    : provider.modelCatalogRefreshState === 'ready'
-                      ? 'No models from connected providers'
-                      : t('cliStatus.actions.checking')
-                : openCodeRuntimeContradictsMissingMetadata
-                  ? t('cliStatus.quickConnect.connected')
-                  : formatProviderStatusText(provider, settingsT);
+              : provider.providerId === 'opencode' &&
+                  hasProviderModels &&
+                  isProviderInventoryOnlyFallback(provider)
+                ? null
+                : isPassiveOpenCodeModelSummary
+                  ? hasProviderModels
+                    ? null
+                    : provider.modelCatalogRefreshState === 'error'
+                      ? settingsT('providerRuntime.connectionUi.status.unableToVerify')
+                      : provider.modelCatalogRefreshState === 'ready'
+                        ? 'No models from connected providers'
+                        : t('cliStatus.actions.checking')
+                  : openCodeRuntimeContradictsMissingMetadata
+                    ? t('cliStatus.quickConnect.connected')
+                    : formatProviderStatusText(provider, settingsT);
             const modelCatalogLoading =
-              provider.modelCatalogRefreshState === 'loading' ||
-              (!isPassiveOpenCodeModelSummary && isOpenCodeCatalogHydrating(provider));
+              !(provider.providerId === 'opencode' && hasProviderModels) &&
+              (provider.modelCatalogRefreshState === 'loading' ||
+                (!isPassiveOpenCodeModelSummary && isOpenCodeCatalogHydrating(provider)));
             const showProviderModels = shouldShowLoadedProviderModels(provider, hasProviderModels);
             const openCodeDashboardChips = getOpenCodeDashboardChips(provider, t);
             const hasDetailContent = Boolean(
@@ -1222,14 +1227,16 @@ const InstalledBanner = ({
                           </span>
                         ))}
                       </span>
-                      <span
-                        className="whitespace-nowrap text-xs"
-                        style={{
-                          color: getProviderStatusColor(statusText, provider.authenticated),
-                        }}
-                      >
-                        {statusText}
-                      </span>
+                      {statusText ? (
+                        <span
+                          className="whitespace-nowrap text-xs"
+                          style={{
+                            color: getProviderStatusColor(statusText, provider.authenticated),
+                          }}
+                        >
+                          {statusText}
+                        </span>
+                      ) : null}
                     </div>
                     {showSkeleton ? (
                       <ProviderDetailSkeleton />

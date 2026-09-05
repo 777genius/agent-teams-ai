@@ -1725,7 +1725,7 @@ describe('CliInstallerService', () => {
       expect(status.authMethod).toBe('api_key');
     });
 
-    it('does not publish provider authority after the initial hydration wait times out', async () => {
+    it('publishes provider authority when background hydration finishes after the initial wait', async () => {
       allowConsoleLogs();
       vi.useFakeTimers();
 
@@ -1768,8 +1768,14 @@ describe('CliInstallerService', () => {
 
       const latest = service.getLatestStatusSnapshot();
       expect(latest?.authStatusChecking).toBe(false);
-      expect(latest?.authLoggedIn).toBe(false);
-      expect(latest?.authMethod).toBeNull();
+      expect(latest?.authLoggedIn).toBe(true);
+      expect(latest?.authMethod).toBe('oauth_token');
+      expect(
+        latest?.providers.find((provider) => provider.providerId === 'anthropic')
+      ).toMatchObject({
+        authenticated: true,
+        authMethod: 'oauth_token',
+      });
       expect(status.authStatusChecking).toBe(false);
       expect(status.authLoggedIn).toBe(false);
       expect(status.providers.every((provider) => provider.statusMessage === 'Checking...')).toBe(

@@ -680,7 +680,7 @@ export class ClaudeMultimodelBridgeService {
     if (providerIds.length === 1) {
       const hydrationKey = this.getProviderStatusHydrationKey(
         binaryPath,
-        providerIds[0]!,
+        providerIds[0],
         projectPath
       );
       const currentGeneration = this.providerStatusHydrationGenerations.get(hydrationKey);

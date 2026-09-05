@@ -561,13 +561,16 @@ export function getRuntimeAwareTeamModelBadgeLabel(
   const trimmed = model?.trim();
   const runtimeModel = getRuntimeCatalogModel(providerId, model, providerStatus);
   if (providerId === 'opencode') {
-    return runtimeModel?.displayName?.trim() || getTeamModelBadgeLabel(providerId, trimmed);
+    const runtimeLabel = runtimeModel?.displayName?.trim();
+    return runtimeLabel
+      ? getProviderScopedTeamModelLabel(providerId, runtimeLabel)
+      : getTeamModelBadgeLabel(providerId, trimmed);
   }
   const safeAnthropicAliasLabel =
     providerId === 'anthropic'
       ? getRuntimeSafeAnthropicAliasLabel({
           model: trimmed,
-          runtimeLabel: runtimeModel?.badgeLabel?.trim() || runtimeModel?.displayName?.trim(),
+          runtimeLabel: runtimeModel?.displayName?.trim(),
           fallbackLabel: getTeamModelBadgeLabel(providerId, trimmed),
         })
       : null;
@@ -575,7 +578,7 @@ export function getRuntimeAwareTeamModelBadgeLabel(
     return safeAnthropicAliasLabel;
   }
 
-  if (runtimeModel?.badgeLabel?.trim()) {
+  if (providerId === 'codex' && runtimeModel?.badgeLabel?.trim()) {
     return runtimeModel.badgeLabel.trim();
   }
 
