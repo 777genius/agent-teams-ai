@@ -63,6 +63,21 @@ export function isOpenCodeStatusCheckNonAuthoritative(
   );
 }
 
+export function isOpenCodePassiveStatusReadyForCatalog(
+  providerStatus: CliProviderStatus | null | undefined,
+  runtimeStatus: OpenCodeRuntimeStatus | null
+): boolean {
+  const nonAuthoritative = isOpenCodeStatusCheckNonAuthoritative(providerStatus);
+  if (providerStatus?.supported && !nonAuthoritative) {
+    return true;
+  }
+  return Boolean(
+    nonAuthoritative &&
+    runtimeStatus?.source !== 'missing' &&
+    (providerStatus?.models.length || providerStatus?.modelCatalog?.models.length)
+  );
+}
+
 export function hasFreeOpenCodeModelRoute(
   providerStatus: CliProviderStatus | null | undefined
 ): boolean {

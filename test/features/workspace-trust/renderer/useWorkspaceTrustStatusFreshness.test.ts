@@ -12,6 +12,9 @@ const transport = vi.hoisted(() => ({
     | undefined,
 }));
 vi.mock('@renderer/api', () => ({ api: transport }));
+vi.mock('@renderer/store', () => ({
+  useStore: (selector: (state: object) => unknown) => selector({}),
+}));
 
 describe('workspace trust request freshness', () => {
   let root: ReturnType<typeof createRoot>;
@@ -21,7 +24,7 @@ describe('workspace trust request freshness', () => {
   let resolveRequests: ((result: WorkspaceTrustProjectStatusResult) => void)[];
 
   function Probe() {
-    status = useWorkspaceTrustStatus({ enabled, projectPath });
+    status = useWorkspaceTrustStatus({ enabled, projectPath, providerIds: ['anthropic'] });
     return null;
   }
   const render = () =>

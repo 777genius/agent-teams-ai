@@ -458,7 +458,20 @@ export class OpenCodeBridgeCommandClient {
     if (!this.envProvider) {
       return this.env;
     }
-    return applyOpenCodeAutoUpdatePolicy(await this.envProvider());
+    const resolved = applyOpenCodeAutoUpdatePolicy(await this.envProvider());
+    const initialMcpUrl = this.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL?.trim();
+    if (!resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL?.trim() && initialMcpUrl) {
+      // A transient HTTP MCP refresh failure must not silently switch an active
+      // OpenCode launch from its sealed remote transport to the local fallback.
+      // The next command can recover the endpoint, while changing transport
+      // here would invalidate every already-running selected session.
+      resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL = initialMcpUrl;
+      const initialMcpUrlHash = this.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH?.trim();
+      if (initialMcpUrlHash) {
+        resolved.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = initialMcpUrlHash;
+      }
+    }
+    return resolved;
   }
 
   private async writeInputFile<TBody>(

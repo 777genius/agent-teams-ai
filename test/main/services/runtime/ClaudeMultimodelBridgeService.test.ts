@@ -1181,6 +1181,69 @@ describe('ClaudeMultimodelBridgeService', () => {
     );
   });
 
+  it('coalesces concurrent project-scoped status reads across bridge consumers', async () => {
+    let resolveStatus!: (value: ReturnType<typeof statusReply>) => void;
+    execCliMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStatus = resolve;
+        })
+    );
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const dashboardBridge = new ClaudeMultimodelBridgeService();
+    const provisioningBridge = new ClaudeMultimodelBridgeService();
+    const options = { projectPath: '/tmp/shared-opencode-project' };
+
+    const dashboardRead = dashboardBridge.getProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode',
+      undefined,
+      options
+    );
+    const provisioningRead = provisioningBridge.getProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode',
+      undefined,
+      options
+    );
+    await vi.waitFor(() => expect(execCliMock).toHaveBeenCalledOnce());
+
+    resolveStatus(statusReply('opencode', fullStatusFixture('opencode')));
+
+    await expect(Promise.all([dashboardRead, provisioningRead])).resolves.toEqual([
+      expect.objectContaining({ providerId: 'opencode', authenticated: true }),
+      expect.objectContaining({ providerId: 'opencode', authenticated: true }),
+    ]);
+    expect(execCliMock).toHaveBeenCalledOnce();
+  });
+
+  it('reuses a just-completed authoritative OpenCode project status across bridge consumers', async () => {
+    execCliMock.mockResolvedValue(statusReply('opencode', fullStatusFixture('opencode')));
+
+    const { ClaudeMultimodelBridgeService } =
+      await import('@main/services/runtime/ClaudeMultimodelBridgeService');
+    const dashboardBridge = new ClaudeMultimodelBridgeService();
+    const provisioningBridge = new ClaudeMultimodelBridgeService();
+    const options = { projectPath: '/tmp/shared-opencode-project' };
+
+    await dashboardBridge.getProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode',
+      undefined,
+      options
+    );
+    await provisioningBridge.getProviderStatus(
+      '/mock/agent_teams_orchestrator',
+      'opencode',
+      undefined,
+      options
+    );
+
+    expect(execCliMock).toHaveBeenCalledOnce();
+  });
+
   it('keeps OpenCode timeout copy concise and preserves saved-connection confidence', async () => {
     execCliMock.mockImplementation((_binaryPath, args) => {
       const normalizedArgs = Array.isArray(args) ? args.join(' ') : '';

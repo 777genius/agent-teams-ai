@@ -9,8 +9,11 @@ import type { WorkspaceTrustDisplayStatus } from '@features/workspace-trust/rend
 
 vi.mock('@features/localization/renderer', () => ({
   useAppTranslation: () => ({
-    t: (key: string) =>
-      key === 'launch.workspaceTrust.description' ? team.launch.workspaceTrust.description : key,
+    t: (key: string) => {
+      if (key === 'launch.workspaceTrust.title') return team.launch.workspaceTrust.title;
+      if (key === 'launch.workspaceTrust.description') return team.launch.workspaceTrust.description;
+      return key;
+    },
   }),
 }));
 
@@ -28,7 +31,7 @@ const render = (status: WorkspaceTrustDisplayStatus) =>
   );
 
 describe('workspace trust notice and launch control', () => {
-  it.each(['trusted', 'checking', 'disabled', 'not_applicable'] as const)(
+  it.each(['trusted', 'checking', 'unknown', 'launch_scoped', 'disabled', 'not_applicable'] as const)(
     'hides notice for %s',
     (status) => {
       const html = render(status);
@@ -37,22 +40,13 @@ describe('workspace trust notice and launch control', () => {
     }
   );
 
-  it.each(['untrusted', 'unknown'] as const)(
-    'renders one quiet safety sentence for %s without a card or CTA emphasis',
-    (status) => {
-      const html = render(status);
-      expect(html).toMatch(
-        /<p role="note"[^>]*>Project commands and MCP servers may run when the team starts\.<\/p>/
-      );
-      expect(html).not.toContain('launch.workspaceTrust.');
-      expect(html).not.toContain('First launch');
-      expect(html).not.toContain('Project trust');
-      expect(html).not.toContain('border-amber');
-      expect(html).not.toContain('workspace-trust-launch-cta');
-    }
-  );
-
-  it('uses identical presentation for unknown and untrusted status', () => {
-    expect(render('unknown')).toBe(render('untrusted'));
+  it('renders a first-launch warning only for proven untrusted status', () => {
+    const html = render('untrusted');
+    expect(html).toContain('role="note"');
+    expect(html).toContain('First launch will trust this project');
+    expect(html).toContain('Project hooks and MCP servers may run when the team starts.');
+    expect(html).not.toContain('launch.workspaceTrust.');
+    expect(html).toContain('border-amber');
+    expect(html).not.toContain('workspace-trust-launch-cta');
   });
 });

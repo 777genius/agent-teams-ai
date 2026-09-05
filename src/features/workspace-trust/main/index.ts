@@ -21,6 +21,7 @@ export {
   normalizeWorkspaceTrustConfigKey,
 } from '../core/domain';
 export type * from '../core/domain/WorkspaceTrustTypes';
+export { registerWorkspaceTrustHttp } from './adapters/input/registerWorkspaceTrustHttp';
 export {
   registerWorkspaceTrustIpc,
   removeWorkspaceTrustIpc,

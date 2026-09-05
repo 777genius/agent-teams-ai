@@ -8,6 +8,7 @@ export function createWorkspaceTrustFeatures(input: {
   getAutoDetectedClaudeConfigDir: () => string;
   getHomeDir: () => string;
   env?: NodeJS.ProcessEnv;
+  isLocalContext?: () => boolean;
 }) {
   const globalConfigFilePath = (): string => {
     const claudeConfigDir = input.getClaudeConfigDir();
@@ -28,6 +29,7 @@ export function createWorkspaceTrustFeatures(input: {
       ...shared,
       getHomeDir: input.getHomeDir,
       env: input.env,
+      isLocalContext: input.isLocalContext,
     }),
   };
 }

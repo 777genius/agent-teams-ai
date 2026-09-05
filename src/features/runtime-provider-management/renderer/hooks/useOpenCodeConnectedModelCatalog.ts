@@ -8,7 +8,7 @@ import { mapCatalogModel } from './useOpenCodeProviderModelCatalog';
 import type { RuntimeProviderDirectoryEntryDto, RuntimeProviderModelDto } from '../../contracts';
 import type { CliProviderStatus } from '@shared/types';
 
-const CONCURRENT_SOURCE_LOADS = 3;
+const CONCURRENT_SOURCE_LOADS = 1;
 let nextRequest = 0;
 
 export function connectedCatalogSourceIds(

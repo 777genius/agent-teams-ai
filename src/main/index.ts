@@ -985,6 +985,7 @@ let appQuitFlow: Promise<boolean> | null = null;
 
 // Service registry and global services
 let contextRegistry: ServiceContextRegistry;
+let workspaceTrustStatus: workspaceTrustFeature.WorkspaceTrustStatusFeatureFacade;
 let notificationManager: NotificationManager;
 let updaterService: UpdaterService;
 let sshConnectionManager: SshConnectionManager;
@@ -1999,7 +2000,10 @@ async function initializeServices(): Promise<void> {
     getClaudeConfigDir: getClaudeBasePath,
     getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
     getHomeDir,
+    isLocalContext: () =>
+      contextRegistry.getActive().type === 'local' && !sshConnectionManager.isRemote(),
   });
+  workspaceTrustStatus = workspaceTrust.status;
   teamProvisioningService.setWorkspaceTrustCoordinator(workspaceTrust.coordinator);
   workspaceTrustFeature.registerWorkspaceTrustIpc(ipcMain, workspaceTrust.status);
   teamRuntimeRecoveryFeature = createTeamRuntimeRecoveryFeature({
@@ -2948,6 +2952,7 @@ async function startHttpServer(
         dataCache: activeContext.dataCache,
         recentProjectsFeature,
         organizationsFeature,
+        workspaceTrust: workspaceTrustStatus,
         tokenUsageFeature: tokenUsageFeature ?? undefined,
         memberWorkSyncFeature: memberWorkSyncFeature ?? undefined,
         updaterService,

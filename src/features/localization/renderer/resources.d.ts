@@ -4293,7 +4293,8 @@ export default interface Resources {
         selectWorkingDirectory: 'Select working directory (cwd)';
       };
       workspaceTrust: {
-        description: 'Project commands and MCP servers may run when the team starts.';
+        title: 'First launch will trust this project';
+        description: 'Project hooks and MCP servers may run when the team starts.';
       };
     };
     layout: {
