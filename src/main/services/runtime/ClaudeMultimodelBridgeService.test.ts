@@ -173,6 +173,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
               limits: null,
               free: false,
               releaseDate: '2026-05-20',
+              recentlyReleased: true,
               opencode: {
                 providerId: 'llama.cpp',
                 modelId: 'qwen-test:0.5b',
@@ -204,6 +205,7 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       reason: 'Execution proof required',
     });
     expect(provider.modelCatalog?.models[0]?.metadata?.releaseDate).toBe('2026-05-20');
+    expect(provider.modelCatalog?.models[0]?.metadata?.recentlyReleased).toBe(true);
     expect(provider.modelCatalog?.models[0]?.supportedReasoningEfforts).toEqual(['high', 'ultra']);
     expect(provider.modelCatalog?.models[0]?.defaultReasoningEffort).toBe('ultra');
   });

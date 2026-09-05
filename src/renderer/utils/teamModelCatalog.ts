@@ -7,6 +7,7 @@ import {
 import { isOpenCodeModelExplicitlyFree } from '@shared/utils/opencodeModelRoute';
 import { filterVisibleProviderRuntimeModels } from '@shared/utils/providerModelVisibility';
 
+import { compareModelReleaseFreshness } from './modelReleaseFreshness';
 import { getCodexChatGptModeUiDisabledReason } from './teamModelCatalogChatGptGate';
 
 import type { CliProviderId, CliProviderStatus, TeamProviderId } from '@shared/types';
@@ -615,6 +616,7 @@ export function sortTeamProviderModels(
     return true;
   });
   const order = TEAM_PROVIDER_MODEL_ORDER[providerId];
+  const nowMs = Date.now();
 
   const sorted = [...deduped].sort((left, right) => {
     const leftLabel =
@@ -622,6 +624,14 @@ export function sortTeamProviderModels(
     const rightLabel =
       providerId === 'anthropic' ? (getTeamModelBadgeLabel(providerId, right) ?? right) : right;
     if (providerId !== 'opencode') {
+      const releaseDateOrder = compareModelReleaseFreshness(
+        getRuntimeCatalogModel(providerId, left, providerStatus),
+        getRuntimeCatalogModel(providerId, right, providerStatus),
+        nowMs
+      );
+      if (releaseDateOrder !== 0) {
+        return releaseDateOrder;
+      }
       const versionOrder = compareTeamModelVersionsDescending(leftLabel, rightLabel);
       if (versionOrder !== 0) {
         return versionOrder;
@@ -752,15 +762,16 @@ export function getVisibleTeamProviderModels(
 ): string[] {
   const expandOpenCodeSummaryCatalog = options.expandOpenCodeSummaryCatalog ?? true;
   const hasExplicitModels = models.some((model) => model.trim().length > 0);
-  const catalogModels =
-    providerId === 'opencode' ? getRuntimeCatalogLaunchModels(providerId, providerStatus) : null;
+  const catalogModels = getRuntimeCatalogLaunchModels(providerId, providerStatus);
   const sourceModels =
     providerId === 'opencode' &&
     catalogModels &&
     (!hasExplicitModels ||
       (expandOpenCodeSummaryCatalog && isOpenCodeSummaryOnlyModelList(models, providerStatus)))
       ? mergeModelLists(catalogModels, models)
-      : models;
+      : providerId === 'codex' && catalogModels
+        ? mergeModelLists(catalogModels, models)
+        : models;
 
   return sortTeamProviderModels(
     providerId,

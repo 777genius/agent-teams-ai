@@ -134,6 +134,10 @@ export interface CodexAppServerReasoningEffortOption {
   description?: string | null;
 }
 
+export interface CodexAppServerAvailabilityNux {
+  message?: string | null;
+}
+
 export interface CodexAppServerModel {
   id?: string;
   model?: string;
@@ -150,6 +154,7 @@ export interface CodexAppServerModel {
   isDefault?: boolean;
   upgrade?: boolean | string | null;
   upgradeInfo?: unknown;
+  availabilityNux?: CodexAppServerAvailabilityNux | null;
 }
 
 export interface CodexAppServerListModelsParams {

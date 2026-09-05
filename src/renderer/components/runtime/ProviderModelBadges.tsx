@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
 import { cn } from '@renderer/lib/utils';
+import { isRecentlyReleasedModel } from '@renderer/utils/modelReleaseFreshness';
 import {
   getTeamModelBadgeLabel,
   getVisibleTeamProviderModels,
@@ -203,7 +204,11 @@ export const ProviderModelBadges = ({
     const availabilityStatus = getAvailabilityStatus(model, displayModelAvailability);
     const availabilityReason = getAvailabilityReason(model, displayModelAvailability);
     const availabilityChip = getAvailabilityChip(availabilityStatus, t);
-    const modelLabel = formatModelBadgeLabel(providerId, model);
+    const catalogModel = providerStatus?.modelCatalog?.models.find(
+      (item) => item.launchModel === model || item.id === model
+    );
+    const modelLabel = catalogModel?.badgeLabel?.trim() || formatModelBadgeLabel(providerId, model);
+    const recentlyReleased = isRecentlyReleasedModel(catalogModel);
     const catalogModelIsFree = isCatalogModelFree(model, providerStatus);
     const hasFollowingModel = index < displayedModels.length - 1;
     const title = [
@@ -216,6 +221,11 @@ export const ProviderModelBadges = ({
     return (
       <span key={`${model}-${index}`} className={modelClassName} title={title || undefined}>
         <span>{modelLabel}</span>
+        {recentlyReleased ? (
+          <span className="ml-1 rounded bg-sky-400/15 px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-sky-200">
+            New
+          </span>
+        ) : null}
         {catalogModelIsFree ? (
           <span className="ml-1 rounded bg-[rgba(34,197,94,0.14)] px-1 py-0 text-[9px] font-medium uppercase tracking-[0.06em] text-[rgb(74,222,128)]">
             {t('providerModelBadges.free')}

@@ -1,11 +1,71 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  addCodexAstraUpdatePreview,
   resolveTeamModelSelectorValue,
   shouldElevateOpenCodeVirtualRow,
   shouldShowOpenCodeNeedsTestBadge,
   shouldShowOpenCodeOverviewStatus,
 } from './teamModelSelectorUi';
+
+const CODEX_RUNTIME_WITH_ASTRA_UPDATE = {
+  installed: true,
+  version: 'codex-cli 0.152.0',
+  latestVersion: '0.153.4',
+  updateAvailable: true,
+};
+
+describe('addCodexAstraUpdatePreview', () => {
+  const defaultOption = { value: '', label: 'Default' };
+  const solOption = { value: 'gpt-5.6-sol', label: '5.6 Sol' };
+
+  it('adds an unavailable Astra card after Default for an older updatable Codex runtime', () => {
+    expect(
+      addCodexAstraUpdatePreview(
+        'codex',
+        [defaultOption, solOption],
+        CODEX_RUNTIME_WITH_ASTRA_UPDATE
+      )
+    ).toEqual([
+      defaultOption,
+      expect.objectContaining({
+        value: 'gpt-6-astra',
+        availabilityStatus: 'unavailable',
+        availabilityReason: expect.stringContaining('Update Codex'),
+      }),
+      solOption,
+    ]);
+  });
+
+  it('does not add a duplicate when the live catalog already exposes Astra', () => {
+    const astraOption = { value: 'gpt-6-astra', label: 'GPT-6 Astra' };
+    expect(
+      addCodexAstraUpdatePreview(
+        'codex',
+        [defaultOption, astraOption],
+        CODEX_RUNTIME_WITH_ASTRA_UPDATE
+      )
+    ).toEqual([defaultOption, astraOption]);
+  });
+
+  it('does not advertise Astra when the available update cannot provide it', () => {
+    expect(
+      addCodexAstraUpdatePreview('codex', [defaultOption, solOption], {
+        ...CODEX_RUNTIME_WITH_ASTRA_UPDATE,
+        latestVersion: '0.153.3',
+      })
+    ).toEqual([defaultOption, solOption]);
+  });
+
+  it('does not add the update preview once the installed runtime supports Astra', () => {
+    expect(
+      addCodexAstraUpdatePreview('codex', [defaultOption, solOption], {
+        ...CODEX_RUNTIME_WITH_ASTRA_UPDATE,
+        version: 'codex-cli 0.153.4',
+      })
+    ).toEqual([defaultOption, solOption]);
+  });
+});
 
 describe('resolveTeamModelSelectorValue', () => {
   it('preserves an explicit local OpenCode route outside the current catalog and overlay', () => {

@@ -17,6 +17,7 @@ export interface CodexAppServerModelLike {
   supportsPersonality?: boolean;
   isDefault?: boolean;
   upgrade?: unknown;
+  availabilityNux?: { message?: string | null } | null;
 }
 
 export interface NormalizedCodexModelCatalogResult {
@@ -183,6 +184,7 @@ export function normalizeCodexAppServerModels(
     seenLaunchModels.add(launchModel);
 
     const supportedReasoningEfforts = normalizeEfforts(model);
+    const availabilityNuxMessage = model.availabilityNux?.message?.trim() || null;
     normalizedModels.push({
       id,
       launchModel,
@@ -200,6 +202,8 @@ export function normalizeCodexAppServerModels(
       upgrade: Boolean(model.upgrade),
       source: 'app-server',
       badgeLabel: asBadgeLabel(id),
+      statusMessage: availabilityNuxMessage,
+      metadata: availabilityNuxMessage ? { recentlyReleased: true } : null,
     });
   }
 
