@@ -472,17 +472,30 @@ describe('releaseLoopbackRuntimeModels', () => {
       'local-provider-b': { options: { baseURL: 'http://127.0.0.1:9998/v1' } },
       'local-provider-c': { options: { baseURL: 'http://127.0.0.1:9997/v1' } },
     });
-    const fetchImpl = vi.fn<typeof fetch>(async (input) => {
+    // The third provider never answers. It does not fabricate a TimeoutError:
+    // it waits on the signal the release supplies, so this case fails if the
+    // request is ever sent unbounded rather than passing on a made-up rejection.
+    const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
       const url = requestUrl(input);
       if (url.startsWith('http://127.0.0.1:9999')) throw new Error('ECONNREFUSED');
       if (url.startsWith('http://127.0.0.1:9998')) return new Response('', { status: 500 });
-      throw new DOMException('The operation was aborted due to timeout', 'TimeoutError');
+      return await new Promise<Response>((_resolve, reject) => {
+        const signal = init?.signal;
+        if (!signal) {
+          reject(new Error('release sent an unbounded request'));
+          return;
+        }
+        signal.addEventListener('abort', () => {
+          reject(signal.reason as Error);
+        });
+      });
     });
 
     const result = await releaseLoopbackRuntimeModels({
       configPaths: [configPath],
       fetchImpl,
       env: {},
+      requestTimeoutMs: 20,
       memberModels: ['local-provider/model-a', 'local-provider-b/model-a', 'local-provider-c/x'],
     });
 
@@ -491,7 +504,103 @@ describe('releaseLoopbackRuntimeModels', () => {
     expect(result.diagnostics).toEqual([
       'local-provider: release failed: ECONNREFUSED',
       'local-provider-b: release returned HTTP 500',
-      'local-provider-c: release failed: The operation was aborted due to timeout',
+      // The platform's own abort reason, not one this test invented.
+      'local-provider-c: release failed: signal timed out',
     ]);
+  });
+  /**
+   * A config that is there and unreadable is not a config that is absent. Both
+   * end with the provider skipped and its runtime holding a model for a team
+   * that is gone, so the one the app could have noticed has to say so - exactly
+   * as the unparseable case already does.
+   */
+  it('reports a config it could not read, and stays silent about one that is absent', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'at-opencode-unreadable-'));
+    tempDirs.push(dir);
+    // A directory where a config file is expected: reading it fails with
+    // something that is not ENOENT on every platform.
+    const unreadable = path.join(dir, 'opencode.json');
+    fs.mkdirSync(unreadable);
+
+    expect([...resolveLocalProviderOrigins({ configPaths: [unreadable] })]).toEqual([]);
+    expect(diagnostic).toHaveBeenCalledWith(
+      expect.stringContaining('opencode_loopback_runtime_config_unreadable')
+    );
+
+    diagnostic.mockClear();
+    expect([
+      ...resolveLocalProviderOrigins({ configPaths: [path.join(dir, 'absent.json')] }),
+    ]).toEqual([]);
+    expect(diagnostic).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The loaded-model list is the runtime's, so its length is not this app's to
+   * bound, and at shutdown there is no member filter to narrow it. Walking it
+   * one stalled request at a time is how a courtesy call becomes minutes of a
+   * shutdown the user is waiting on.
+   */
+  it('stops the fallback eviction once the whole-loop budget is spent', async () => {
+    const configPath = writeConfig({
+      'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
+    });
+    const loaded = Array.from({ length: 100 }, (_, index) => ({ model: `model-${index}` }));
+    let evictions = 0;
+    const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
+      const url = requestUrl(input);
+      if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
+      if (url.endsWith('/api/ps')) return new Response(JSON.stringify({ models: loaded }));
+      evictions += 1;
+      return await new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(init.signal?.reason as Error);
+        });
+      });
+    });
+
+    const result = await releaseLoopbackRuntimeModels({
+      configPaths: [configPath],
+      fetchImpl,
+      env: {},
+      requestTimeoutMs: 20,
+      evictionBudgetMs: 60,
+      // No member filter: the app-shutdown case, where every loaded model is a
+      // candidate and the list is entirely the runtime's to size.
+    });
+
+    expect(evictions).toBeGreaterThan(0);
+    expect(evictions).toBeLessThan(loaded.length);
+    expect(result.diagnostics.at(-1)).toMatch(
+      /eviction budget of 60ms spent: \d+ loaded model\(s\) not reached/
+    );
+  });
+
+  /**
+   * The loopback rule is enforced once, on the origin. A runtime that answers a
+   * release with a redirect would carry the request straight off the loopback
+   * interface, and the body of the eviction call names the models a team was
+   * running - so a redirect is refused rather than followed.
+   */
+  it('refuses to follow a redirect off the loopback interface', async () => {
+    const configPath = writeConfig({
+      'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
+    });
+    const redirects: (RequestRedirect | undefined)[] = [];
+    const fetchImpl = vi.fn<typeof fetch>(async (_input, init) => {
+      redirects.push(init?.redirect);
+      // What `redirect: 'error'` produces when the server answers 307/308.
+      throw new TypeError('fetch failed');
+    });
+
+    const result = await releaseLoopbackRuntimeModels({
+      configPaths: [configPath],
+      fetchImpl,
+      env: {},
+      memberModels: ['local-provider/model-a'],
+    });
+
+    expect(redirects).toEqual(['error']);
+    expect(result.released).toEqual([]);
+    expect(result.diagnostics).toEqual(['local-provider: release failed: fetch failed']);
   });
 });
