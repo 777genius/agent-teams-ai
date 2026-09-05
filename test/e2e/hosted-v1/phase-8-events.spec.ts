@@ -712,7 +712,11 @@ test('Phase 8 SSE replay survives a production controller restart with top-level
     const initialEvent = await initialObservation.event();
     expect(initialEvent).toMatchObject({
       eventType: 'coordination_event',
-      data: { eventType: 'team-lifecycle.run-accepted' },
+      data: {
+        eventType: 'team-lifecycle.run-accepted',
+        scope: { kind: 'workspace', scopeId: runtime.workspaceId },
+        payload: { kind: 'invalidate', resource: 'team_lifecycle' },
+      },
     });
     expect(initialEvent.trace).toEqual(
       expect.arrayContaining([
@@ -724,10 +728,9 @@ test('Phase 8 SSE replay survives a production controller restart with top-level
     const journal = await readRunAcceptedJournalEvidence(receipt.runId);
     expect(journal.highWatermarkSequence).toBeGreaterThanOrEqual(journal.row.eventSequence);
     expect(journal.row.eventId).toBe(initialEvent.data.eventId);
+    expect(journal.row.eventSequence).toBe(initialEvent.data.eventSequence);
     expect(journal.row.runId).toBe(receipt.runId);
-    expect((initialEvent.data.payload as { runId?: unknown } | undefined)?.runId).toBe(
-      receipt.runId
-    );
+    expect(initialEvent.id).toBe(initialEvent.data.eventCursor);
 
     await restartController();
     await expect
@@ -741,23 +744,35 @@ test('Phase 8 SSE replay survives a production controller restart with top-level
     const replayEvent = await replayObservation.event();
     expect(replayEvent).toMatchObject({
       eventType: 'coordination_event',
-      data: { eventType: 'team-lifecycle.run-accepted' },
+      data: {
+        eventType: 'team-lifecycle.run-accepted',
+        scope: initialEvent.data.scope,
+        payload: initialEvent.data.payload,
+      },
     });
     expect(replayEvent.id).toBe(initialEvent.id);
     expect(replayEvent.data.eventId).toBe(journal.row.eventId);
+    expect(replayEvent.data.eventSequence).toBe(journal.row.eventSequence);
+    expect(replayEvent.data.eventCursor).toBe(initialEvent.data.eventCursor);
     await testInfo.attach('restart-replay-sse-evidence.json', {
       body: JSON.stringify({
         initial: {
           eventId: initialEvent.data.eventId,
+          eventCursor: initialEvent.data.eventCursor,
           eventType: initialEvent.data.eventType,
           id: initialEvent.id,
+          payload: initialEvent.data.payload,
+          scope: initialEvent.data.scope,
           trace: initialEvent.trace,
         },
         journal,
         replay: {
           eventId: replayEvent.data.eventId,
+          eventCursor: replayEvent.data.eventCursor,
           eventType: replayEvent.data.eventType,
           id: replayEvent.id,
+          payload: replayEvent.data.payload,
+          scope: replayEvent.data.scope,
           trace: replayEvent.trace,
         },
         runId: receipt.runId,

@@ -9,8 +9,11 @@ import type {
   CoordinationEventHandoff,
   ReplayCoordinationEventsInput,
 } from '../../core/application';
-import type { HostedCoordinationEventStreamWriteDiagnosticObserver } from '../adapters/input/http/hostedCoordinationEventStreamWriter';
-import type { HostedCoordinationEventStreamAuthorizer } from '../application/HostedCoordinationEventStreamPorts';
+import type {
+  HostedCoordinationEventStreamAuthorizer,
+  HostedCoordinationEventStreamIdentityFactory,
+  HostedCoordinationEventStreamWriteObserver,
+} from '../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { TeamId } from '@shared/contracts/hosted';
 
@@ -44,13 +47,17 @@ export interface CreateHostedCoordinationEventStreamOptions {
   readonly storage: HostedCoordinationEventStorage;
   readonly deploymentId: string;
   readonly authorizer: HostedCoordinationEventStreamAuthorizer;
+  readonly streamIdentityFactory: HostedCoordinationEventStreamIdentityFactory;
   readonly scheduler?: HostedCoordinationEventStreamScheduler;
   readonly replayBatchSize?: number;
   readonly heartbeatIntervalMs?: number;
   readonly slowConsumerTimeoutMs?: number;
   readonly maxFrameBytes?: number;
-  /** Payload-free transport diagnostics; failures are isolated from stream correctness. */
-  readonly diagnosticObserver?: HostedCoordinationEventStreamWriteDiagnosticObserver;
+  /**
+   * Payload-free transport observations; observer failures are isolated from
+   * stream correctness.
+   */
+  readonly diagnosticObserver?: HostedCoordinationEventStreamWriteObserver;
   readonly retentionScheduler?: HostedCoordinationEventStreamScheduler;
   readonly retentionPolicy?: {
     readonly intervalMs: number;
@@ -144,6 +151,7 @@ export function createHostedCoordinationEventStream(
     authorizer: presentationAuthorizer({ authorizer: options.authorizer, sourceEvents }),
     wakeups: wakeupHub,
     scheduler: options.scheduler ?? NODE_STREAM_SCHEDULER,
+    streamIdentityFactory: options.streamIdentityFactory,
     ...(options.replayBatchSize === undefined ? {} : { replayBatchSize: options.replayBatchSize }),
     ...(options.heartbeatIntervalMs === undefined
       ? {}

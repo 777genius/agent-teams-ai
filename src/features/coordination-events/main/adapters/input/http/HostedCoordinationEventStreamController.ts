@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import {
   currentProductHostedProducerSseWriteEmitter,
   type ProductSseFrameIdentity,
@@ -24,7 +22,6 @@ import {
   type HostedCoordinationEventStreamCurrentAuthorization,
 } from './hostedCoordinationEventStreamAuthorization';
 import {
-  type HostedCoordinationEventStreamWriteDiagnosticObserver,
   HostedCoordinationEventStreamWriter,
   hostedCoordinationEventStreamWriteSucceeded,
 } from './hostedCoordinationEventStreamWriter';
@@ -34,6 +31,10 @@ import {
 } from './HostedCoordinationEventWakeSignal';
 
 import type { ReplayCoordinationEventsInput } from '../../../../core/application';
+import type {
+  HostedCoordinationEventStreamIdentityFactory,
+  HostedCoordinationEventStreamWriteObserver,
+} from '../../../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
 
 export type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
@@ -120,7 +121,8 @@ interface HostedCoordinationEventStreamControllerOptions {
   readonly heartbeatIntervalMs?: number;
   readonly slowConsumerTimeoutMs?: number;
   readonly maxFrameBytes?: number;
-  readonly diagnosticObserver?: HostedCoordinationEventStreamWriteDiagnosticObserver;
+  readonly streamIdentityFactory: HostedCoordinationEventStreamIdentityFactory;
+  readonly diagnosticObserver?: HostedCoordinationEventStreamWriteObserver;
 }
 
 interface PreparedStream {
@@ -426,7 +428,7 @@ export class HostedCoordinationEventStreamController {
     request: HostedCoordinationHttpRequest,
     reply: HostedCoordinationHttpReply
   ): Promise<void> {
-    const streamId = randomUUID();
+    const streamId = this.options.streamIdentityFactory.createStreamId();
     if (this.closed) {
       await reply.code(503).send({ error: 'event_stream_closed' });
       return;
@@ -592,8 +594,8 @@ export class HostedCoordinationEventStreamController {
     reply: HostedCoordinationHttpReply,
     reason: HostedCoordinationResyncReason,
     authorization: HostedCoordinationEventStreamAuthorization,
-    signal: AbortSignal = new AbortController().signal,
-    streamId: string = randomUUID()
+    signal: AbortSignal,
+    streamId: string
   ): Promise<void> {
     reply.hijack();
     reply.raw.writeHead(200, this.sseHeaders(streamId));

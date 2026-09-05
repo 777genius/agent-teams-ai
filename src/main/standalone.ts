@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 
 import {
@@ -597,9 +598,10 @@ async function start(): Promise<void> {
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
+    streamIdentityFactory: { createStreamId: randomUUID },
     retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
-    diagnosticObserver: (diagnostic) => {
-      logger.error('hosted_coordination_event_stream_transport', JSON.stringify(diagnostic));
+    diagnosticObserver: (observation) => {
+      logger.error('hosted_coordination_event_stream_transport', JSON.stringify(observation));
     },
   });
   if (

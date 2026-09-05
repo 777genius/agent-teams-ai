@@ -1,13 +1,15 @@
 import type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
+import type {
+  HostedCoordinationEventStreamWriteDisposition,
+  HostedCoordinationEventStreamWriteObservation,
+  HostedCoordinationEventStreamWriteObserver,
+} from '../../../application/HostedCoordinationEventStreamPorts';
 
-export type HostedCoordinationEventStreamWriteDisposition =
-  | 'immediate'
-  | 'drained'
-  | 'timed_out'
-  | 'aborted'
-  | 'closed'
-  | 'write_failed'
-  | 'oversized';
+export type {
+  HostedCoordinationEventStreamWriteDisposition,
+  HostedCoordinationEventStreamWriteObservation as HostedCoordinationEventStreamWriteDiagnostic,
+  HostedCoordinationEventStreamWriteObserver as HostedCoordinationEventStreamWriteDiagnosticObserver,
+} from '../../../application/HostedCoordinationEventStreamPorts';
 
 export interface HostedCoordinationEventStreamRawResponse {
   readonly destroyed: boolean;
@@ -18,30 +20,6 @@ export interface HostedCoordinationEventStreamRawResponse {
   write(frame: string): boolean;
 }
 
-export type HostedCoordinationEventStreamWriteDiagnostic = Readonly<
-  | {
-      kind: 'backpressure_entered';
-      streamId: string;
-      timeoutMs: number;
-    }
-  | {
-      kind: 'terminal';
-      streamId: string;
-      timeoutMs: number;
-      disposition: Exclude<HostedCoordinationEventStreamWriteDisposition, 'immediate' | 'drained'>;
-      transportTermination:
-        | 'aborted'
-        | 'already_closed'
-        | 'hard_destroyed'
-        | 'destroy_failed'
-        | 'none';
-    }
->;
-
-export type HostedCoordinationEventStreamWriteDiagnosticObserver = (
-  diagnostic: HostedCoordinationEventStreamWriteDiagnostic
-) => void;
-
 type HostedCoordinationEventStreamTransportTermination =
   | 'aborted'
   | 'already_closed'
@@ -51,7 +29,7 @@ type HostedCoordinationEventStreamTransportTermination =
 
 export interface HostedCoordinationEventStreamWriterOptions {
   readonly maxFrameBytes: number;
-  readonly observer?: HostedCoordinationEventStreamWriteDiagnosticObserver;
+  readonly observer?: HostedCoordinationEventStreamWriteObserver;
   readonly scheduler: HostedCoordinationEventStreamScheduler;
   readonly slowConsumerTimeoutMs: number;
 }
@@ -59,13 +37,13 @@ export interface HostedCoordinationEventStreamWriterOptions {
 const UTF8_ENCODER = new TextEncoder();
 
 function observe(
-  observer: HostedCoordinationEventStreamWriteDiagnosticObserver | undefined,
-  diagnostic: HostedCoordinationEventStreamWriteDiagnostic
+  observer: HostedCoordinationEventStreamWriteObserver | undefined,
+  observation: HostedCoordinationEventStreamWriteObservation
 ): void {
   try {
-    observer?.(diagnostic);
+    observer?.(observation);
   } catch {
-    // Transport correctness must never depend on diagnostics.
+    // Transport correctness must never depend on observation delivery.
   }
 }
 

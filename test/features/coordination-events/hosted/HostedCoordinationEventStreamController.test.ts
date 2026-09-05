@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 
 import {
@@ -24,6 +24,7 @@ import type {
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 const cursor = (value: string): ReplayCursor => value as ReplayCursor;
+const streamIdentityFactory = Object.freeze({ createStreamId: randomUUID });
 
 afterEach(() => resetProductHostedProducerProvenanceForTests());
 
@@ -283,6 +284,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -320,6 +322,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({
@@ -362,6 +365,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent: vi.fn() })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler,
       heartbeatIntervalMs: 10,
     });
@@ -397,6 +401,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent: vi.fn() })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -446,6 +451,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -469,6 +475,7 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: { allowedOrigin: 'https://host.test', authorize },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const handler = registerHandler(controller);
@@ -507,6 +514,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(() => pendingAuthorization.promise),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -546,6 +554,7 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: { allowedOrigin: 'https://host.test', authorize },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const handler = registerHandler(controller);
@@ -590,6 +599,7 @@ describe('HostedCoordinationEventStreamController', () => {
         }),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -620,6 +630,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -700,6 +711,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -782,6 +794,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -819,6 +832,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -870,6 +884,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -917,6 +932,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -955,6 +971,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -995,6 +1012,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler,
       slowConsumerTimeoutMs: 10,
     });
