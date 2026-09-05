@@ -405,6 +405,67 @@ describe('startedBeforeMs ownership fence', () => {
     expect(readProcessStartTimeMs).toHaveBeenCalledTimes(2);
   });
 
+  /**
+   * The half of the pid-reuse race a pid-based sweep can close. The process
+   * table named pid 10 as a lead of the owned workspace; by the time the fence
+   * asks for its start time, the pid belongs to a process that started just
+   * now. A recycled pid always reads as newer than the fence - it started after
+   * it by definition - so the sweep keeps it, and `killTree` is never reached
+   * for a pid whose identity moved between the scan and the check.
+   */
+  it('keeps a pid the process table named but that a newer process now holds', async () => {
+    const killTree = vi.fn();
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      startedBeforeMs: APP_STARTED_AT_MS,
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
+      readProcessStartTimeMs: () => Promise.resolve(PROBE_TREE_STARTED_AT_MS),
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.keptRecent).toEqual([10]);
+  });
+
+  /**
+   * The other half is a window, not a check, and this pins how narrow it is:
+   * each tree is signalled in the same turn as its own start-time check, so no
+   * other candidate's probe - the one thing in this loop that costs real time -
+   * ever sits between a check and the signal it authorizes. A sweep that
+   * collected every verdict first and killed afterwards would read
+   * `check:10, check:20, kill:10, kill:20` and would widen that window by a
+   * whole probe per tree.
+   */
+  it('signals each tree in the same turn as its own start-time check', async () => {
+    const events: string[] = [];
+    const startTimes = new Map([
+      [10, ORPHAN_TREE_STARTED_AT_MS],
+      [20, ORPHAN_TREE_STARTED_AT_MS],
+    ]);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE, OTHER_WORKSPACE],
+      startedBeforeMs: APP_STARTED_AT_MS,
+      listProcessRows: () => {
+        events.push('scan');
+        return Promise.resolve([
+          { pid: 10, ppid: 1, command: WRAPPER },
+          { pid: 20, ppid: 1, command: OTHER_WRAPPER },
+        ]);
+      },
+      readProcessStartTimeMs: (pid) => {
+        events.push(`check:${pid}`);
+        return Promise.resolve(startTimes.get(pid) ?? null);
+      },
+      killTree: (pid) => {
+        events.push(`kill:${pid}`);
+      },
+    });
+
+    expect(events).toEqual(['scan', 'check:10', 'kill:10', 'check:20', 'kill:20']);
+  });
+
   it('never reads start times when no fence is given', async () => {
     const readProcessStartTimeMs = vi.fn(() => Promise.resolve(ORPHAN_TREE_STARTED_AT_MS));
 
