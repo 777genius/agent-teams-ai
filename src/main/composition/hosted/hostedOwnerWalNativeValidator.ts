@@ -138,7 +138,7 @@ function unsignedUtf8Compare(left: string, right: string): number {
   const leftBytes = encoder.encode(left);
   const rightBytes = encoder.encode(right);
   for (let index = 0; index < Math.min(leftBytes.length, rightBytes.length); index += 1) {
-    if (leftBytes[index] !== rightBytes[index]) return leftBytes[index]! - rightBytes[index]!;
+    if (leftBytes[index] !== rightBytes[index]) return leftBytes[index] - rightBytes[index];
   }
   return leftBytes.length - rightBytes.length;
 }
@@ -183,7 +183,7 @@ export function parseHostedOwnerWalNative(value: unknown): HostedOwnerWalNative 
     !positiveSafeInteger(delta.nextRevision) ||
     !positiveSafeInteger(native.revision) ||
     delta.nextRevision !== native.revision ||
-    (absent ? delta.nextRevision !== 1 : delta.nextRevision !== (previousRevision as number) + 1) ||
+    (absent ? delta.nextRevision !== 1 : delta.nextRevision !== previousRevision! + 1) ||
     typeof delta.nextStateSha256 !== 'string' ||
     !HEX_64.test(delta.nextStateSha256) ||
     !positiveSafeInteger(wal.byteSize) ||
