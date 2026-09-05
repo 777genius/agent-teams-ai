@@ -513,6 +513,33 @@ describe('Mutation readiness', () => {
     expect(result.decisions.runtimeBinding.code).toBe('runtime_binding_evidence_unavailable');
   });
 
+  it.each(['fileWriterEpoch', 'observationWatermark'] as const)(
+    'denies external-writer evidence that changes %s between inspections',
+    async (field) => {
+      const fixture = createFixture();
+      let inspectionCount = 0;
+      const assessor = fixture.createAssessor({
+        externalWriter: {
+          inspectExternalWriterReadiness() {
+            inspectionCount += 1;
+            return verified({
+              ...fixture.evidence.externalWriter,
+              [field]: fixture.evidence.externalWriter[field] + (inspectionCount === 1 ? 0 : 1),
+            });
+          },
+        },
+      });
+
+      const result = await assessor.assess();
+
+      expect(inspectionCount).toBe(2);
+      expect(result.decisions.externalWriter).toMatchObject({
+        status: 'denied',
+        code: 'external_writer_observation_dirty',
+      });
+    }
+  );
+
   it.each([
     ['runtimeBinding', 'runtime_binding_evidence_stale'],
     ['workspaceBinding', 'workspace_binding_evidence_stale'],

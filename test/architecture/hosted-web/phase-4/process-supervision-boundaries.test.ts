@@ -70,7 +70,7 @@ describe('Phase 4 process supervision architecture boundaries', () => {
     expect(materializer).toContain('executableDescriptor: input.executableHandle.fd');
     expect(materializer).toContain('workdirDescriptor: input.workdirHandle.fd');
     expect(spawner).toContain('launch = child.stdio[3] as Writable | null;');
-    expect(spawner).toMatch(/endWithBytes\(launch, launchBytes\)/);
+    expect(spawner).toMatch(/endWithBytes\(launchStream, launchBytes\)/);
   });
 
   it('passes one bounded protocol-v1 launch frame over a dedicated EOF-delimited pipe', () => {

@@ -235,6 +235,54 @@ describe('createTeamTaskBoardFeature', () => {
     );
   });
 
+  it('keeps committed attachment metadata when finalization fails', async () => {
+    const metadata = {
+      id: '11111111-1111-4111-8111-111111111111',
+      filename: 'proof.png',
+      mimeType: 'image/png' as const,
+      size: 4,
+      addedAt: '2026-07-22T00:00:00.000Z',
+    };
+    const finalize = vi.fn(async () => {
+      throw new Error('finalize failed');
+    });
+    const rollback = vi.fn(async () => undefined);
+    const markCommitted = vi.fn();
+    const logger = { error: vi.fn(), warn: vi.fn() };
+    const transaction: TaskAttachmentStorageTransactionPort = {
+      saveAttachment: vi.fn(async () => ({ metadata, finalize, rollback })),
+      prepareAttachmentDeletion: vi.fn(),
+      markCommitted,
+    };
+    const feature = createAttachmentFeature(
+      { addTaskAttachment: vi.fn(async () => undefined), removeTaskAttachment: vi.fn() },
+      {
+        taskAttachmentStorage: {
+          runTransaction: async (_teamName, _taskId, operation) => operation(transaction),
+          getAttachment: vi.fn(),
+        },
+        taskAttachmentLogger: logger,
+      }
+    );
+
+    await expect(
+      feature.taskAttachments.save(
+        'my-team',
+        'task-1',
+        metadata.id,
+        metadata.filename,
+        metadata.mimeType,
+        'dGVzdA=='
+      )
+    ).resolves.toBe(metadata);
+    expect(markCommitted).toHaveBeenCalledOnce();
+    expect(finalize).toHaveBeenCalledOnce();
+    expect(rollback).not.toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith(
+      `[teams:saveTaskAttachment] Failed to finalize attachment ${metadata.id}: finalize failed`
+    );
+  });
+
   it('restores prepared attachment deletion when metadata removal fails', async () => {
     const events: string[] = [];
     const metadataFailure = new Error('metadata deletion failed');

@@ -258,6 +258,23 @@ describeLinux('descriptor-bound hosted task-board file source', () => {
     });
   });
 
+  it('opens task entries with nonblocking read flags before validating their type', async () => {
+    const fixture = await createFixture();
+    const originalOpen = fs.promises.open.bind(fs.promises);
+    let taskFlags: number | undefined;
+    vi.spyOn(fs.promises, 'open').mockImplementation(async (target, flags, mode) => {
+      if (typeof target === 'string' && target.endsWith('/1.json') && typeof flags === 'number') {
+        taskFlags = flags;
+      }
+      return originalOpen(target, flags, mode);
+    });
+
+    await read(fixture);
+
+    expect(taskFlags).toBeDefined();
+    expect(taskFlags! & fs.constants.O_NONBLOCK).toBe(fs.constants.O_NONBLOCK);
+  });
+
   it.each([
     ['claude root parent', 1, (fixture: TaskBoardReadFixture) => fixture.claudeRoot],
     ['teams parent', 2, (fixture: TaskBoardReadFixture) => fixture.teamsRoot],

@@ -147,7 +147,10 @@ export class NodeExternalFileObservationSource implements ExternalFileObservatio
     const before = await this.stat(file.registration);
     this.assertReadableStat(before, effectiveMaxBytes);
 
-    const handle = await open(file.filePath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
+    const handle = await open(
+      file.filePath,
+      fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0) | (fsConstants.O_NONBLOCK ?? 0)
+    );
     try {
       const openedStat = await handle.stat({ bigint: true });
       if (!openedStat.isFile()) {

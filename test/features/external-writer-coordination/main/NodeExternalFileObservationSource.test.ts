@@ -1,6 +1,9 @@
+import { execFile as execFileCallback } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 
 import { NodeExternalFileObservationSourceError } from '@features/external-writer-coordination/main';
 import {
@@ -11,6 +14,8 @@ import { parseTeamId } from '@shared/contracts/hosted/identifiers';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const teamId = parseTeamId('team_11111111111111111111111111111111');
+const execFile = promisify(execFileCallback);
+const testTmpdir = realpathSync.native(tmpdir());
 
 describe('NodeExternalFileObservationSource', () => {
   let fixtureRoot: string;
@@ -18,8 +23,8 @@ describe('NodeExternalFileObservationSource', () => {
 
   beforeEach(async () => {
     [fixtureRoot, outsideRoot] = await Promise.all([
-      mkdtemp(join(tmpdir(), 'node-external-file-source-')),
-      mkdtemp(join(tmpdir(), 'node-external-file-outside-')),
+      mkdtemp(join(testTmpdir, 'node-external-file-source-')),
+      mkdtemp(join(testTmpdir, 'node-external-file-outside-')),
     ]);
   });
 
@@ -123,6 +128,22 @@ describe('NodeExternalFileObservationSource', () => {
       kind: 'directory',
       contained: true,
     });
+    await expect(source.read(registration, 1_024)).rejects.toThrowError(
+      new NodeExternalFileObservationSourceError('unsupported_file_type')
+    );
+  });
+
+  it('does not block when a validated file is replaced by a writerless FIFO', async () => {
+    const filePath = join(fixtureRoot, 'raced.json');
+    await writeFile(filePath, '{}');
+    const { registration, source } = createSource(fixtureRoot, filePath);
+    const validated = await source.stat(registration);
+    vi.spyOn(source, 'stat').mockImplementation(async () => {
+      await rm(filePath);
+      await execFile('mkfifo', [filePath]);
+      return validated;
+    });
+
     await expect(source.read(registration, 1_024)).rejects.toThrowError(
       new NodeExternalFileObservationSourceError('unsupported_file_type')
     );

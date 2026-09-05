@@ -24,6 +24,7 @@ import {
   type WorkspaceBindingReadinessDecision,
 } from '../../contracts';
 
+import { sameExternalWriterEvidence, snapshotRuntimeRoot } from './MutationReadinessEvidence';
 import {
   parseWorkspaceBinding,
   parseWorkspaceRootReference,
@@ -37,25 +38,6 @@ import type { WorkspaceMountBindingRef } from '@features/workspace-registry/cont
 
 const DECIMAL_KERNEL_ID = /^(?:0|[1-9][0-9]*)$/;
 type MutationReadinessRuntimeInstance = MutationReadinessScope['runtimeInstance'];
-type RuntimeRootKind = 'claude' | 'app-data' | 'workspace' | 'temp' | 'logs';
-function snapshotRuntimeRoot<Kind extends RuntimeRootKind>(
-  value: unknown,
-  expectedKind: Kind
-): Readonly<{ kind: Kind; reference: string }> | null {
-  const record = readExactRecord(value, ['kind', 'reference']);
-  const reference = record?.reference;
-  return !(
-    record?.kind !== expectedKind ||
-    typeof reference !== 'string' ||
-    reference.length === 0 ||
-    reference.length > 4_096 ||
-    reference.trim() !== reference ||
-    // eslint-disable-next-line no-control-regex -- Runtime roots reject ASCII controls.
-    /[\x00-\x1f\x7f]/.test(reference)
-  )
-    ? Object.freeze({ kind: expectedKind, reference })
-    : null;
-}
 export type ReadinessEvidenceInspectionOutcome =
   | { readonly status: 'settled'; readonly value: unknown }
   | { readonly status: 'unavailable' | 'timeout' };
@@ -750,6 +732,24 @@ export function decideMutationReadiness(input: {
     if (initialDecision.status === 'denied') return initialDecision;
     return finalDecision;
   };
+  const initialExternalWriter = parseInspection(initial.externalWriter);
+  const finalExternalWriter = parseInspection(final.externalWriter);
+  const initialExternalWriterDecision = decideExternalWriter(
+    initialExternalWriter,
+    input.scope,
+    input.nowMs
+  );
+  const finalExternalWriterDecision = decideExternalWriter(
+    finalExternalWriter,
+    input.scope,
+    input.nowMs
+  );
+  const externalWriter =
+    initialExternalWriterDecision.status === 'verified' &&
+    finalExternalWriterDecision.status === 'verified' &&
+    !sameExternalWriterEvidence(initialExternalWriter, finalExternalWriter)
+      ? decision('externalWriter', 'denied', 'external_writer_observation_dirty')
+      : stableDecision(initialExternalWriterDecision, finalExternalWriterDecision);
   return Object.freeze({
     instanceLease: decideLease(initialLease, finalLease),
     runtimeBinding: stableDecision(
@@ -778,10 +778,7 @@ export function decideMutationReadiness(input: {
       decideFilesystem(parseInspection(initial.filesystem), input.scope, input.nowMs),
       decideFilesystem(parseInspection(final.filesystem), input.scope, input.nowMs)
     ),
-    externalWriter: stableDecision(
-      decideExternalWriter(parseInspection(initial.externalWriter), input.scope, input.nowMs),
-      decideExternalWriter(parseInspection(final.externalWriter), input.scope, input.nowMs)
-    ),
+    externalWriter,
     recoveryOutbox: stableDecision(
       decideRecoveryOutbox(parseInspection(initial.recoveryOutbox), input.scope, input.nowMs),
       decideRecoveryOutbox(parseInspection(final.recoveryOutbox), input.scope, input.nowMs)

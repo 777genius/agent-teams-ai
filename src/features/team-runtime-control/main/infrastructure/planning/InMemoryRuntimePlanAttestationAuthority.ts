@@ -104,8 +104,10 @@ export class InMemoryRuntimePlanAttestationAuthority implements RuntimePlanAttes
     },
     key: string
   ): Promise<RuntimePlanAttestation | null> {
-    const existing = this.recordByBinding.get(key);
     const now = this.nowEpochMs();
+    if (!Number.isFinite(now)) return null;
+    this.pruneExpired(now);
+    const existing = this.recordByBinding.get(key);
     if (existing?.consumed) return null;
     if (existing && now < Date.parse(existing.attestation.expiresAtIso)) {
       const isCurrent = this.isCurrentPlan(existing);
@@ -141,7 +143,7 @@ export class InMemoryRuntimePlanAttestationAuthority implements RuntimePlanAttes
     }
     const issueNow = this.nowEpochMs();
     if (!Number.isFinite(issueNow)) return null;
-    this.pruneExpiredUnconsumed(issueNow);
+    this.pruneExpired(issueNow);
     if (this.records.size >= this.maxRecords) return null;
     const token = this.createUniqueToken();
     const attestation = Object.freeze({
@@ -205,9 +207,9 @@ export class InMemoryRuntimePlanAttestationAuthority implements RuntimePlanAttes
     }
   }
 
-  private pruneExpiredUnconsumed(now: number): void {
+  private pruneExpired(now: number): void {
     for (const [token, record] of this.records) {
-      if (record.consumed || now < Date.parse(record.attestation.expiresAtIso)) continue;
+      if (now < Date.parse(record.attestation.expiresAtIso)) continue;
       this.records.delete(token);
       const key = bindingKey(record.attestation);
       if (this.recordByBinding.get(key) === record) this.recordByBinding.delete(key);
