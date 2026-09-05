@@ -2898,7 +2898,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
           !modelDisabledReason && !activeProviderSelectable && 'pointer-events-none'
         )}
         onClick={() => {
-          if (codexModelCanUpdate) return setCodexRuntimeDialogOpen(true);
+          if (codexModelCanUpdate) return void setCodexRuntimeDialogOpen(true);
           if (localModelCanAdd && localModelDescriptor) {
             const target: OpenCodeLocalModelSetupTarget = {
               providerId: localModelDescriptor.providerId,
