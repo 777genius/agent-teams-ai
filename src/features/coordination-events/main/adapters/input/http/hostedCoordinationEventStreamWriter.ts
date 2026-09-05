@@ -1,14 +1,14 @@
-import type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
 import type {
   HostedCoordinationEventStreamWriteDisposition,
   HostedCoordinationEventStreamWriteObservation,
   HostedCoordinationEventStreamWriteObserver,
 } from '../../../application/HostedCoordinationEventStreamPorts';
+import type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
 
 export type {
-  HostedCoordinationEventStreamWriteDisposition,
   HostedCoordinationEventStreamWriteObservation as HostedCoordinationEventStreamWriteDiagnostic,
   HostedCoordinationEventStreamWriteObserver as HostedCoordinationEventStreamWriteDiagnosticObserver,
+  HostedCoordinationEventStreamWriteDisposition,
 } from '../../../application/HostedCoordinationEventStreamPorts';
 
 export interface HostedCoordinationEventStreamRawResponse {
