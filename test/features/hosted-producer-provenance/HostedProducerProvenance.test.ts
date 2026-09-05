@@ -392,8 +392,16 @@ describe('HostedProducerProvenance', () => {
   it('accepts the strict six-count quarantine shape and emits it only on the Owner stream', () => {
     const native = quarantinedOwnerNative();
     expect(parseHostedOwnerWalNative(native)).toBe(native);
-    const positiveZeroNative = quarantinedOwnerNative();
-    positiveZeroNative.stateDelta.collectionSizes.bindings = { previous: 0, next: 1 };
+    const positiveZeroNative = {
+      ...native,
+      stateDelta: {
+        ...native.stateDelta,
+        collectionSizes: {
+          ...native.stateDelta.collectionSizes,
+          bindings: { previous: 0, next: 1 },
+        },
+      },
+    };
     expect(parseHostedOwnerWalNative(positiveZeroNative)).toBe(positiveZeroNative);
     const absent = JSON.parse(JSON.stringify(native)) as MutableOwnerNative;
     absent.mutation = { kind: 'admission-reconciled', outcome: 'published' };
