@@ -566,6 +566,13 @@ export function getRuntimeAwareTeamModelBadgeLabel(
       ? getProviderScopedTeamModelLabel(providerId, runtimeLabel)
       : getTeamModelBadgeLabel(providerId, trimmed);
   }
+  if (
+    providerId === 'anthropic' &&
+    providerStatus?.modelCatalog?.source === 'anthropic-compatible-api' &&
+    runtimeModel?.badgeLabel?.trim()
+  ) {
+    return runtimeModel.badgeLabel.trim();
+  }
   const safeAnthropicAliasLabel =
     providerId === 'anthropic'
       ? getRuntimeSafeAnthropicAliasLabel({
