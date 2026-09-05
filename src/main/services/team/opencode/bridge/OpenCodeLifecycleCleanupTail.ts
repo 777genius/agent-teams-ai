@@ -1,6 +1,5 @@
+import { listTeamProjectWorkspaces } from '@main/services/team/TeamProjectWorkspaces';
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
-
-import { listTeamProjectWorkspaces } from '../../TeamProjectWorkspaces';
 
 import {
   type CursorAgentTreeSweepPort,

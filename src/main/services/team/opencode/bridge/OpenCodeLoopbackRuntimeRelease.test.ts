@@ -49,12 +49,12 @@ function writeHomeConfig(providers: Record<string, unknown>): string {
 }
 
 /** The URL a fetch call carried, whichever of the three shapes it took. */
-function requestUrl(input: RequestInfo | URL): string {
+function getRequestUrl(input: RequestInfo | URL): string {
   if (typeof input === 'string') return input;
   return input instanceof URL ? input.href : input.url;
 }
 
-function okOnce(): Response {
+function buildOkResponse(): Response {
   return new Response('{}', { status: 200 });
 }
 
@@ -163,7 +163,7 @@ describe('releaseLoopbackRuntimeModels', () => {
     const configPath = writeConfig({
       'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
     });
-    const fetchImpl = vi.fn<typeof fetch>(async () => okOnce());
+    const fetchImpl = vi.fn<typeof fetch>(async () => buildOkResponse());
 
     const result = await releaseLoopbackRuntimeModels({
       configPaths: [configPath],
@@ -172,7 +172,7 @@ describe('releaseLoopbackRuntimeModels', () => {
       memberModels: ['local-provider/model-a'],
     });
 
-    expect(fetchImpl.mock.calls.map((call) => requestUrl(call[0]))).toEqual([
+    expect(fetchImpl.mock.calls.map((call) => getRequestUrl(call[0]))).toEqual([
       'http://127.0.0.1:9999/api/models/unload',
     ]);
     expect(fetchImpl.mock.calls[0]?.[1]?.method).toBe('POST');
@@ -209,7 +209,7 @@ describe('releaseLoopbackRuntimeModels', () => {
       'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
       'local-provider-b': { options: { baseURL: 'http://127.0.0.1:9998/v1' } },
     });
-    const fetchImpl = vi.fn<typeof fetch>(async () => okOnce());
+    const fetchImpl = vi.fn<typeof fetch>(async () => buildOkResponse());
 
     const result = await releaseLoopbackRuntimeModels({
       configPaths: [configPath],
@@ -218,7 +218,7 @@ describe('releaseLoopbackRuntimeModels', () => {
       memberModels: ['local-provider/model-a'],
     });
 
-    expect(fetchImpl.mock.calls.map((call) => requestUrl(call[0]))).toEqual([
+    expect(fetchImpl.mock.calls.map((call) => getRequestUrl(call[0]))).toEqual([
       'http://127.0.0.1:9999/api/models/unload',
     ]);
     expect(result.released).toEqual(['local-provider']);
@@ -265,7 +265,7 @@ describe('releaseLoopbackRuntimeModels', () => {
     const configPath = writeConfig({
       'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
     });
-    const fetchImpl = vi.fn<typeof fetch>(async () => okOnce());
+    const fetchImpl = vi.fn<typeof fetch>(async () => buildOkResponse());
 
     const result = await releaseLoopbackRuntimeModels({
       configPaths: [configPath],
@@ -289,13 +289,13 @@ describe('releaseLoopbackRuntimeModels', () => {
     });
     const calls: { url: string; body?: string }[] = [];
     const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
-      const url = requestUrl(input);
+      const url = getRequestUrl(input);
       calls.push({ url, body: typeof init?.body === 'string' ? init.body : undefined });
       if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
       if (url.endsWith('/api/ps')) {
         return new Response(JSON.stringify({ models: [{ name: 'model-a' }] }), { status: 200 });
       }
-      return okOnce();
+      return buildOkResponse();
     });
 
     const result = await releaseLoopbackRuntimeModels({
@@ -327,7 +327,7 @@ describe('releaseLoopbackRuntimeModels', () => {
     });
     const evicted: string[] = [];
     const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
-      const url = requestUrl(input);
+      const url = getRequestUrl(input);
       if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
       if (url.endsWith('/api/ps')) {
         return new Response(
@@ -341,7 +341,7 @@ describe('releaseLoopbackRuntimeModels', () => {
             .model
         )
       );
-      return okOnce();
+      return buildOkResponse();
     });
 
     const result = await releaseLoopbackRuntimeModels({
@@ -370,7 +370,7 @@ describe('releaseLoopbackRuntimeModels', () => {
     });
     const evicted: string[] = [];
     const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
-      const url = requestUrl(input);
+      const url = getRequestUrl(input);
       if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
       if (url.endsWith('/api/ps')) {
         return new Response(
@@ -386,7 +386,7 @@ describe('releaseLoopbackRuntimeModels', () => {
             .model
         )
       );
-      return okOnce();
+      return buildOkResponse();
     });
 
     await releaseLoopbackRuntimeModels({ configPaths: [configPath], fetchImpl, env: {} });
@@ -410,7 +410,7 @@ describe('releaseLoopbackRuntimeModels', () => {
       memberModels: ['local-provider/model-a'],
     });
 
-    expect(fetchImpl.mock.calls.map((call) => requestUrl(call[0]))).toEqual([
+    expect(fetchImpl.mock.calls.map((call) => getRequestUrl(call[0]))).toEqual([
       'http://127.0.0.1:9999/api/models/unload',
     ]);
     expect(result.released).toEqual([]);
@@ -442,7 +442,7 @@ describe('releaseLoopbackRuntimeModels', () => {
       'local-provider': { options: { baseURL: 'http://127.0.0.1:9999/v1' } },
     });
     const fetchImpl = vi.fn<typeof fetch>(async (input) => {
-      const url = requestUrl(input);
+      const url = getRequestUrl(input);
       if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
       if (url.endsWith('/api/ps')) {
         return new Response(JSON.stringify({ models: [{ model: 'model-a' }] }), { status: 200 });
@@ -476,7 +476,7 @@ describe('releaseLoopbackRuntimeModels', () => {
     // it waits on the signal the release supplies, so this case fails if the
     // request is ever sent unbounded rather than passing on a made-up rejection.
     const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
-      const url = requestUrl(input);
+      const url = getRequestUrl(input);
       if (url.startsWith('http://127.0.0.1:9999')) throw new Error('ECONNREFUSED');
       if (url.startsWith('http://127.0.0.1:9998')) return new Response('', { status: 500 });
       return await new Promise<Response>((_resolve, reject) => {
@@ -547,7 +547,7 @@ describe('releaseLoopbackRuntimeModels', () => {
     const loaded = Array.from({ length: 100 }, (_, index) => ({ model: `model-${index}` }));
     let evictions = 0;
     const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
-      const url = requestUrl(input);
+      const url = getRequestUrl(input);
       if (url.endsWith('/api/models/unload')) return new Response('', { status: 404 });
       if (url.endsWith('/api/ps')) return new Response(JSON.stringify({ models: loaded }));
       evictions += 1;
