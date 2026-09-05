@@ -2923,6 +2923,7 @@ export const CreateTeamDialog = ({
                   effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading'
                 }
                 readyStatusText={t('create.prepare.readyStatus')}
+                showDetailMessages={effectivePrepare.state === 'idle'}
               />
             ) : null}
             {canCreate && launchTeam && prepareState === 'loading' ? (

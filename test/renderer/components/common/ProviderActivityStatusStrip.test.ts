@@ -218,6 +218,44 @@ describe('ProviderActivityStatusStrip', () => {
     await act(async () => root.unmount());
   });
 
+  it('shows concise provider details only when requested', async () => {
+    const provider = createProvider({
+      providerId: 'codex',
+      displayName: 'Codex',
+      authenticated: true,
+      statusCheckOutcome: 'authoritative',
+      modelCatalogRefreshState: 'ready',
+      statusMessage: 'Codex native runtime ready',
+    });
+    provider.modelCatalog = {
+      schemaVersion: 1,
+      providerId: 'codex',
+      source: 'app-server',
+      status: 'ready',
+      fetchedAt: '2020-01-01T00:00:00.000Z',
+      staleAt: '2100-01-01T00:00:00.000Z',
+      defaultModelId: 'model',
+      defaultLaunchModel: 'model',
+      diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
+      models: [],
+    };
+    const host = document.createElement('div');
+    let root!: ReturnType<typeof createRoot>;
+
+    await act(async () => {
+      root = renderStrip(host, {
+        cliStatus: createMultimodelStatus([provider]),
+        showReadyProviders: true,
+        showDetailMessages: true,
+      });
+    });
+
+    expect(host.querySelector('[data-testid="provider-activity-detail-codex"]')?.textContent).toBe(
+      'Codex native runtime ready'
+    );
+    await act(async () => root.unmount());
+  });
+
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   });
