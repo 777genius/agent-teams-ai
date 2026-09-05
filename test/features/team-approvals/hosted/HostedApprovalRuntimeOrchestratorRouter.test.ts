@@ -1,6 +1,9 @@
+import { hostedApprovalRuntimeProductCandidateRequest } from '@features/team-approvals/main/adapters/output/runtime-ingress/hostedApprovalRuntimeOrchestratorWire';
 import {
   type HostedApprovalRuntimeOrchestratorRoute,
   HostedApprovalRuntimeOrchestratorRouter,
+  parseHostedApprovalRuntimeResponsePayload,
+  parseHostedApprovalRuntimeWireAuthority,
 } from '@features/team-approvals/main/hosted';
 import { parseRuntimePermissionApprovalIngressAuthority } from '@features/team-runtime-control/contracts';
 import { parseTeamId } from '@shared/contracts/hosted';
@@ -81,6 +84,78 @@ function ingressRecord(
 }
 
 describe('HostedApprovalRuntimeOrchestratorRouter', () => {
+  it('admits distinct private bindings for equal effects and rejects duplicate outbox ids', () => {
+    const wireAuthority = parseHostedApprovalRuntimeWireAuthority(
+      hostedApprovalRuntimeProductCandidateRequest().authority
+    );
+    const claim = {
+      ownerId: 'owner_router-test',
+      leaseToken: 'lease_router-test',
+      leaseDurationMs: 60_000,
+      limit: 2,
+    } as const;
+    const makeRecord = (binding: string): RuntimeIngressPermissionOutboxRecord => {
+      const deliveryRef = `delivery_ref_opencode-${binding}`;
+      return {
+        outboxVersion: 2,
+        outboxId: `runtime_permission:effect:${binding}`,
+        commandId: 'command_router-private',
+        effectRef: `effect:${'d'.repeat(64)}`,
+        deliveryRef,
+        authority: parseRuntimePermissionApprovalIngressAuthority({
+          deploymentId: wireAuthority.deploymentId,
+          teamId: `team_${'a'.repeat(32)}`,
+          runId: `run_${'b'.repeat(32)}`,
+          planGeneration: 1,
+          laneId: 'secondary:opencode:worker',
+          providerId: 'opencode',
+          credentialGeneration: 1,
+          credentialId: 'credential-router-private',
+          sessionId: 'session-router-private',
+          runtimeInstanceId: 'runtime-router-private',
+          deliveryOwnerId: `member_${'c'.repeat(32)}`,
+        }),
+        payloadJson: JSON.stringify({
+          schemaVersion: 1,
+          deliveryRef,
+          category: 'command',
+          summary: 'Private binding request',
+          expiresAtMs: null,
+          preview: null,
+        }),
+        observedAtIso: '2026-08-14T00:00:00.000Z',
+        acceptedAtIso: '2026-08-14T00:00:00.000Z',
+        lease: {
+          generation: 1,
+          ownerId: claim.ownerId,
+          leaseToken: claim.leaseToken,
+          claimedAtIso: '2026-08-14T00:00:00.000Z',
+          leaseExpiresAtIso: '2026-08-14T00:01:00.000Z',
+        },
+        acknowledgedAtIso: null,
+      };
+    };
+    const first = makeRecord('1'.repeat(64));
+    const second = makeRecord('2'.repeat(64));
+
+    expect(
+      parseHostedApprovalRuntimeResponsePayload(
+        'approval_ingress_claim',
+        [first, second],
+        claim,
+        wireAuthority
+      )
+    ).toEqual([first, second]);
+    expect(() =>
+      parseHostedApprovalRuntimeResponsePayload(
+        'approval_ingress_claim',
+        [first, first],
+        claim,
+        wireAuthority
+      )
+    ).toThrow();
+  });
+
   it('claims fairly and acknowledges through the exact team route that returned the record', async () => {
     const first = route('1');
     const second = route('2');

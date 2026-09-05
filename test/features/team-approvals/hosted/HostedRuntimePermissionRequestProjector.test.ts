@@ -22,7 +22,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type {
   HostedTeamApprovalAuthorityScope,
-  HostedTeamApprovalPendingReadRecord,
+  HostedTeamApprovalObservationReceipt,
   HostedTeamApprovalPendingStorageRecord,
 } from '@features/internal-storage/contracts';
 
@@ -49,19 +49,25 @@ const scope: HostedTeamApprovalAuthorityScope = Object.freeze({
 });
 
 function createRecord(
-  lease: RuntimeIngressPermissionOutboxRecord['lease'] = null
+  lease: RuntimeIngressPermissionOutboxRecord['lease'] = null,
+  outboxVersion: 1 | 2 = 1
 ): RuntimeIngressPermissionOutboxRecord {
   const digest = 'd'.repeat(64);
+  const binding = 'e'.repeat(64);
+  const deliveryRef =
+    outboxVersion === 1
+      ? 'delivery_ref_runtime-permission-1'
+      : `delivery_ref_opencode-${binding}`;
   return Object.freeze({
-    outboxVersion: 1,
-    outboxId: `runtime_permission:effect:${digest}`,
+    outboxVersion,
+    outboxId: `runtime_permission:effect:${outboxVersion === 1 ? digest : binding}`,
     commandId: 'command:runtime-permission:1',
     effectRef: `effect:${digest}`,
-    deliveryRef: 'delivery_ref_runtime-permission-1',
+    deliveryRef,
     authority,
     payloadJson: JSON.stringify({
       schemaVersion: 1,
-      deliveryRef: 'delivery_ref_runtime-permission-1',
+      deliveryRef,
       category: 'command',
       summary: 'Allow the bounded command',
       expiresAtMs: null,
@@ -75,9 +81,10 @@ function createRecord(
 }
 
 function toPendingRead(
-  record: HostedTeamApprovalPendingStorageRecord
-): HostedTeamApprovalPendingReadRecord {
-  return Object.freeze({
+  record: HostedTeamApprovalPendingStorageRecord,
+  deliveryRef = record.deliveryRef
+): HostedTeamApprovalObservationReceipt {
+  const observed = Object.freeze({
     runId: record.runId,
     requestId: record.requestId,
     approvalId: record.approvalId,
@@ -87,14 +94,17 @@ function toPendingRead(
     requestedAtMs: record.requestedAtMs,
     expiresAtMs: record.expiresAtMs,
     previewRef: record.preview?.previewRef ?? null,
+    deliveryRef,
   });
+  return observed;
 }
 
 function leasedRecord(
   request: Parameters<
     RuntimeIngressPermissionOutboxPort['claimPermissionApprovalIngressEffects']
   >[0],
-  expiresAtIso = new Date(NOW + request.leaseDurationMs).toISOString()
+  expiresAtIso = new Date(NOW + request.leaseDurationMs).toISOString(),
+  outboxVersion: 1 | 2 = 1
 ): RuntimeIngressPermissionOutboxRecord {
   return createRecord(
     Object.freeze({
@@ -103,7 +113,8 @@ function leasedRecord(
       leaseToken: request.leaseToken,
       claimedAtIso: new Date(NOW).toISOString(),
       leaseExpiresAtIso: expiresAtIso,
-    })
+    }),
+    outboxVersion
   );
 }
 
@@ -116,6 +127,65 @@ const projectionRequest = Object.freeze({
 });
 
 describe('HostedRuntimePermissionRequestProjector', () => {
+  it('retains an observed approval when its exact delivery reference differs', async () => {
+    const claimPermissionApprovalIngressEffects = vi.fn<
+      RuntimeIngressPermissionOutboxPort['claimPermissionApprovalIngressEffects']
+    >(async (request) => [leasedRecord(request, undefined, 2)]);
+    const acknowledgePermissionApprovalIngressEffect = vi.fn<
+      RuntimeIngressPermissionOutboxPort['acknowledgePermissionApprovalIngressEffect']
+    >(async () => Object.freeze({ status: 'acknowledged' as const }));
+    const observePending = vi.fn<HostedTeamApprovalPendingIngressPort['observePending']>(
+      async (pending) => toPendingRead(pending, `delivery_ref_opencode-${'f'.repeat(64)}`)
+    );
+    const projector = new HostedRuntimePermissionRequestProjector(
+      new RuntimeIngressPermissionOutbox({
+        claimPermissionApprovalIngressEffects,
+        acknowledgePermissionApprovalIngressEffect,
+      }),
+      { observePending },
+      {
+        resolvePersistedIngressAuthority: async () =>
+          Object.freeze({ status: 'resolved' as const, scope }),
+      },
+      { now: () => NOW }
+    );
+
+    await expect(projector.project(projectionRequest)).resolves.toEqual({
+      claimed: 1,
+      projected: 0,
+      acknowledged: 0,
+      retained: 1,
+    });
+    expect(acknowledgePermissionApprovalIngressEffect).not.toHaveBeenCalled();
+  });
+
+  it('projects v2 and acknowledges its private outbox id', async () => {
+    const claimed = leasedRecord(projectionRequest, undefined, 2);
+    const acknowledgePermissionApprovalIngressEffect = vi.fn<
+      RuntimeIngressPermissionOutboxPort['acknowledgePermissionApprovalIngressEffect']
+    >(async () => Object.freeze({ status: 'acknowledged' as const }));
+    const projector = new HostedRuntimePermissionRequestProjector(
+      new RuntimeIngressPermissionOutbox({
+        claimPermissionApprovalIngressEffects: async () => [claimed],
+        acknowledgePermissionApprovalIngressEffect,
+      }),
+      { observePending: async (pending) => toPendingRead(pending) },
+      {
+        resolvePersistedIngressAuthority: async () =>
+          Object.freeze({ status: 'resolved' as const, scope }),
+      },
+      { now: () => NOW }
+    );
+
+    await expect(projector.project(projectionRequest)).resolves.toMatchObject({
+      projected: 1,
+      acknowledged: 1,
+    });
+    expect(acknowledgePermissionApprovalIngressEffect).toHaveBeenCalledWith(
+      expect.objectContaining({ outboxId: `runtime_permission:effect:${'e'.repeat(64)}` })
+    );
+  });
+
   it('recovers before and after projection without losing or duplicating the stable pending approval', async () => {
     const claimPermissionApprovalIngressEffects = vi.fn<
       RuntimeIngressPermissionOutboxPort['claimPermissionApprovalIngressEffects']

@@ -21,7 +21,7 @@ import {
   parseHostedTeamApprovalDeliveryReconciliationRequest,
   parseHostedTeamApprovalDeliveryReconciliationSettleRequest,
   parseHostedTeamApprovalDeliveryRecord,
-  parseHostedTeamApprovalPendingReadRecord,
+  parseHostedTeamApprovalObservationReceipt,
   parseHostedTeamApprovalPendingReadRequest,
   parseHostedTeamApprovalPendingReadResult,
   parseHostedTeamApprovalPendingStorageRecord,
@@ -42,7 +42,7 @@ import type {
   HostedTeamApprovalDeliveryReconciliationRequest,
   HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalDeliveryRecord,
-  HostedTeamApprovalPendingReadRecord,
+  HostedTeamApprovalObservationReceipt,
   HostedTeamApprovalPendingReadRequest,
   HostedTeamApprovalPendingReadResult,
   HostedTeamApprovalPendingStorageRecord,
@@ -127,9 +127,9 @@ export class HostedTeamStorageWorkerClient {
 
   async hostedTeamApprovalObserve(
     record: HostedTeamApprovalPendingStorageRecord
-  ): Promise<HostedTeamApprovalPendingReadRecord> {
+  ): Promise<HostedTeamApprovalObservationReceipt> {
     const input = parseHostedTeamApprovalPendingStorageRecord(record);
-    return parseHostedTeamApprovalPendingReadRecord(
+    return parseHostedTeamApprovalObservationReceipt(
       await this.call('hostedTeamApprovalAuthority.observe', input, {
         timeoutAtMs: input.deadlineAtMs,
       })

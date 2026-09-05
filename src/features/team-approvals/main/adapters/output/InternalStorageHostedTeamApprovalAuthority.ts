@@ -44,7 +44,7 @@ import type {
   HostedTeamApprovalDeliveryReconciliationRequest,
   HostedTeamApprovalDeliveryReconciliationSettleRequest,
   HostedTeamApprovalDeliveryRecord,
-  HostedTeamApprovalPendingReadRecord,
+  HostedTeamApprovalObservationReceipt,
   HostedTeamApprovalPendingStorageRecord,
 } from '@features/internal-storage/contracts';
 
@@ -212,7 +212,7 @@ export class InternalStorageHostedTeamApprovalAuthority
 
   async observePending(
     record: HostedTeamApprovalPendingStorageRecord
-  ): Promise<HostedTeamApprovalPendingReadRecord> {
+  ): Promise<HostedTeamApprovalObservationReceipt> {
     return this.dependencies.storage.hostedTeamApprovalObserve(record);
   }
 

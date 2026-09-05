@@ -126,6 +126,7 @@ describe('createHostedTeamApprovalRuntimeBridge', () => {
           requestedAtMs: pending.requestedAtMs,
           expiresAtMs: pending.expiresAtMs,
           previewRef: pending.preview?.previewRef ?? null,
+          deliveryRef: pending.deliveryRef,
         });
       }
     );

@@ -12,6 +12,7 @@ import type {
   HostedTeamApprovalDeliveryAcknowledgeRequest,
   HostedTeamApprovalDeliveryClaimRequest,
   HostedTeamApprovalDeliveryRecord,
+  HostedTeamApprovalObservationReceipt,
   HostedTeamApprovalPendingReadRecord,
   HostedTeamApprovalPendingReadRequest,
   HostedTeamApprovalPendingReadResult,
@@ -385,6 +386,22 @@ export function parseHostedTeamApprovalPendingReadRecord(
     expiresAtMs,
     previewRef: input.previewRef === null ? null : previewRef(input.previewRef),
   });
+}
+
+export function parseHostedTeamApprovalObservationReceipt(
+  value: unknown
+): HostedTeamApprovalObservationReceipt {
+  if (
+    !isRecord(value) ||
+    Reflect.ownKeys(value).length !== 10 ||
+    !Object.hasOwn(value, 'deliveryRef') ||
+    typeof value.deliveryRef !== 'string' ||
+    !DELIVERY_REF.test(value.deliveryRef)
+  ) {
+    throw new TypeError('hosted-team-approval-storage-observation-receipt-invalid');
+  }
+  const { deliveryRef, ...pending } = value;
+  return Object.freeze({ ...parseHostedTeamApprovalPendingReadRecord(pending), deliveryRef });
 }
 
 export function parseHostedTeamApprovalPendingReadResult(

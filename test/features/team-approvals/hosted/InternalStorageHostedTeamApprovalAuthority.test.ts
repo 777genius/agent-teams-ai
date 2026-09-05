@@ -106,6 +106,7 @@ function storageHarness(): HostedTeamApprovalAuthorityStorageGateway {
         requestedAtMs: 10,
         expiresAtMs: 900,
         previewRef,
+        deliveryRef: 'delivery_ref_change-v1',
       })
     ),
     hostedTeamApprovalReadPending: vi.fn(() =>
