@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { isAbsolute, resolve } from 'node:path';
 
 import {
@@ -32,6 +31,7 @@ import {
   createHostedAccessNodePlatform,
 } from './composition/hosted/hostedAccessNodePlatform';
 import { createHostedCoordinationEventStreamAuthorizer } from './composition/hosted/hostedCoordinationEventStreamAuthorizer';
+import { hostedCoordinationEventStreamIdentityFactory } from './composition/hosted/hostedCoordinationEventStreamNodePlatform';
 import {
   createHostedDiagnosticsComposition,
   type HostedDiagnosticsComposition,
@@ -141,7 +141,6 @@ function hostedRetentionInteger(
   }
   return value;
 }
-
 const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
   intervalMs: hostedRetentionInteger(
     'HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS',
@@ -596,7 +595,7 @@ async function start(): Promise<void> {
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
-    streamIdentityFactory: { createStreamId: randomUUID },
+    streamIdentityFactory: hostedCoordinationEventStreamIdentityFactory,
     retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
     diagnosticObserver: (observation) => {
       logger.error('hosted_coordination_event_stream_transport', JSON.stringify(observation));
