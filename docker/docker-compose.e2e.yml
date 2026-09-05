@@ -242,6 +242,9 @@ networks:
     name: ${COMPOSE_PROJECT_NAME}_ingress
     driver: bridge
     internal: false
+    ipam:
+      config:
+        - subnet: ${E2E_INGRESS_NETWORK_SUBNET}
 
 volumes:
   agent-teams-lifecycle-trust:

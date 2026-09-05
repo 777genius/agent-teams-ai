@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+
+import ts from 'typescript';
 
 import {
   FEATURE_ARCHITECTURE_RULES,
@@ -53,6 +55,40 @@ function architectureViolation(rule, source, specifier) {
     rule,
     source,
     specifier,
+  };
+}
+
+function namedPublicExports(relativePath) {
+  const source = readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  const sourceFile = ts.createSourceFile(relativePath, source, ts.ScriptTarget.Latest, true);
+  const typeExports = [];
+  const valueExports = [];
+  const unsupported = [];
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExportDeclaration(statement)) {
+      if (
+        ts.isExportAssignment(statement) ||
+        statement.modifiers?.some(
+          ({ kind }) => kind === ts.SyntaxKind.ExportKeyword || kind === ts.SyntaxKind.DefaultKeyword
+        )
+      ) {
+        unsupported.push(statement.getText(sourceFile));
+      }
+      continue;
+    }
+    if (!statement.exportClause || !ts.isNamedExports(statement.exportClause)) {
+      unsupported.push(statement.getText(sourceFile));
+      continue;
+    }
+    for (const element of statement.exportClause.elements) {
+      const target = statement.isTypeOnly || element.isTypeOnly ? typeExports : valueExports;
+      target.push(element.name.text);
+    }
+  }
+  return {
+    typeExports: typeExports.sort(),
+    unsupported,
+    valueExports: valueExports.sort(),
   };
 }
 
@@ -1119,6 +1155,99 @@ test('detects implementation exports through transitive internal barrels', () =>
       ]);
     }
   );
+});
+
+test('rejects a public main entrypoint that transitively re-exports a node crypto concrete implementation', () => {
+  withFixture(
+    {
+      'src/features/crypto-host/main/index.ts': `
+        export { createCryptoHost } from './composition';
+      `,
+      'src/features/crypto-host/main/composition.ts': `
+        export { createCryptoHost } from './concreteHost';
+      `,
+      'src/features/crypto-host/main/concreteHost.ts': `
+        import { createHash } from 'node:crypto';
+        export function createCryptoHost(value) {
+          return createHash('sha256').update(value).digest('hex');
+        }
+      `,
+    },
+    (root) => {
+      const implementationViolations = collectFeatureArchitectureViolations(root).violations
+        .filter(({ rule }) => rule === FEATURE_ARCHITECTURE_RULES.publicApiImplementationExport)
+        .map(({ exportedName, importedName, publicEntrypoint, source, specifier }) => ({
+          exportedName,
+          importedName,
+          publicEntrypoint,
+          source,
+          specifier,
+        }));
+
+      assert.deepEqual(implementationViolations, [
+        {
+          exportedName: 'createCryptoHost',
+          importedName: 'createHash',
+          publicEntrypoint: 'src/features/crypto-host/main/index.ts',
+          source: 'src/features/crypto-host/main/concreteHost.ts',
+          specifier: 'node:crypto',
+        },
+      ]);
+    }
+  );
+});
+
+test('freezes the hosted producer provenance main public surface', () => {
+  assert.deepEqual(
+    namedPublicExports('src/features/hosted-producer-provenance/main/index.ts'),
+    {
+      typeExports: [
+        'HostedProducerProvenance',
+        'ProductHostedProducerInstance',
+        'ProductHostedProducerOperation',
+        'ProductSseFrameIdentity',
+        'ProductSseWriteEmitter',
+      ],
+      unsupported: [],
+      valueExports: [
+        'HostedProducerProvenanceFatalError',
+        'bindProductHostedProducerInstance',
+        'clearProductHostedProducerProvenance',
+        'currentProductHostedProducerProvenance',
+        'installProductHostedProducerProvenance',
+        'isHostedProducerProvenanceFatalError',
+        'productRunIdToProvenanceTeamRunId',
+        'reportProductHostedProducerProvenanceFailure',
+        'requireProductHostedProducerInstance',
+      ],
+    }
+  );
+});
+
+test('freezes the hosted producer provenance direct hosted public facet', () => {
+  assert.deepEqual(namedPublicExports('src/features/hosted-producer-provenance/main/hosted.ts'), {
+    typeExports: [
+      'HostedProducerProvenance',
+      'ProductHostedProducerInstance',
+      'ProductHostedProducerOperation',
+      'ProductSseFrameIdentity',
+      'ProductSseWriteEmitter',
+    ],
+    unsupported: [],
+    valueExports: [
+      'HostedProducerProvenanceFatalError',
+      'bindProductHostedProducerInstance',
+      'bindProductHostedProducerOperation',
+      'clearProductHostedProducerProvenance',
+      'currentProductHostedProducerProvenance',
+      'currentProductHostedProducerSseWriteEmitter',
+      'installProductHostedProducerProvenance',
+      'isHostedProducerProvenanceFatalError',
+      'productRunIdToProvenanceTeamRunId',
+      'requireProductHostedProducerInstance',
+      'requireProductHostedProducerOperation',
+    ],
+  });
 });
 
 test('recognizes JavaScript feature root entrypoints', () => {

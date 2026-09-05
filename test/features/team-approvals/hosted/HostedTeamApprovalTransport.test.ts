@@ -376,6 +376,27 @@ describe('hosted team approval renderer transport', () => {
     }
   );
 
+  it.each(['request-threw', 'response-lost'] as const)(
+    'performs exactly one decision POST when the %s outcome is ambiguous',
+    async (failure) => {
+      const fetch = vi.fn<HostedTeamApprovalFetchPort>(() => {
+        if (failure === 'request-threw') return Promise.reject(new Error('connection reset'));
+        return Promise.resolve({
+          status: 200,
+          json: () => Promise.reject(new Error('response body lost')),
+        });
+      });
+      const transport = createHostedTeamApprovalTransport({ fetch, getCsrfToken: () => csrfToken });
+
+      await expect(transport.decide(decisionCommand())).resolves.toEqual({ kind: 'unavailable' });
+      expect(fetch).toHaveBeenCalledOnce();
+      expect(fetch).toHaveBeenCalledWith(
+        HOSTED_TEAM_APPROVAL_DECISION_ROUTE,
+        expect.objectContaining({ method: 'POST' })
+      );
+    }
+  );
+
   it.each(errorCases)(
     'maps a mismatched $operation status for $reason to unavailable',
     async ({ operation, status, body }) => {

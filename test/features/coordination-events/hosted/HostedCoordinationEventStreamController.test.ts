@@ -1,10 +1,19 @@
+import { createHash, randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 
 import {
   HostedCoordinationEventStreamController,
   type HostedCoordinationEventStreamScheduler,
 } from '@features/coordination-events/main/adapters/input/http/HostedCoordinationEventStreamController';
-import { describe, expect, it, vi } from 'vitest';
+import {
+  bindProductHostedProducerInstance,
+  clearProductHostedProducerProvenance,
+  type HostedProducerProvenance,
+  installProductHostedProducerProvenance,
+} from '@features/hosted-producer-provenance/main/hosted';
+import { resetProductHostedProducerProvenanceForTests } from '@features/hosted-producer-provenance/main/HostedProducerProvenanceRegistry';
+import { createProductHostedProducerSseWriteEmitter } from '@main/composition/hosted/hostedProducerProvenanceNodeOperations';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type {
   CoordinationEventEnvelope,
@@ -15,6 +24,9 @@ import type {
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 const cursor = (value: string): ReplayCursor => value as ReplayCursor;
+const streamIdentityFactory = Object.freeze({ createStreamId: randomUUID });
+
+afterEach(() => resetProductHostedProducerProvenanceForTests());
 
 function deferred<T>(): {
   readonly promise: Promise<T>;
@@ -50,6 +62,7 @@ class FakeRawReply extends EventEmitter {
   destroyed = false;
   writableEnded = false;
   flushes = 0;
+  destroyCalls = 0;
   readonly frames: string[] = [];
   readonly headers: Array<{ status: number; headers: Record<string, string> }> = [];
   writeResult = true;
@@ -72,6 +85,12 @@ class FakeRawReply extends EventEmitter {
   end(): void {
     if (this.writableEnded) return;
     this.writableEnded = true;
+  }
+
+  destroy(): void {
+    this.destroyCalls += 1;
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.emit('close');
   }
 }
@@ -225,6 +244,62 @@ function createWakeups() {
 }
 
 describe('HostedCoordinationEventStreamController', () => {
+  it('fails closed without a raw write after the installed product emitter is cleared', async () => {
+    const provenance: HostedProducerProvenance = {
+      role: 'product-producer',
+      controllerNonce: 'c'.repeat(64),
+      runId: 'd'.repeat(64),
+      emit: vi.fn(),
+      bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => {
+        throw new Error(reason);
+      }),
+      close: vi.fn(),
+    };
+    const emitter = vi.fn(() => true);
+    installProductHostedProducerProvenance(provenance, emitter);
+    clearProductHostedProducerProvenance(provenance);
+
+    const wakeups = createWakeups();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: {
+        replay: vi.fn(async () =>
+          batch({
+            from: 'cursor-0',
+            next: 'cursor-1',
+            events: [event({ sequence: 1 })],
+            hasMore: false,
+          })
+        ),
+      },
+      authorizer: {
+        allowedOrigin: 'https://host.test',
+        authorize: vi.fn(async () => ({
+          isCurrent: vi.fn(async () => true),
+          projectEvent: vi.fn(async (committed: CoordinationEventEnvelope) => ({
+            scope: committed.scope,
+            eventType: committed.eventType,
+            publicPayload: { publicValue: committed.eventSequence },
+          })),
+        })),
+      },
+      wakeups: wakeups.source,
+      streamIdentityFactory,
+      scheduler: new ManualScheduler(),
+    });
+    const reply = createReply();
+
+    await registerHandler(controller)(
+      createRequest({ origin: 'https://host.test', after: 'cursor-0' }),
+      reply.reply
+    );
+
+    expect(reply.raw.frames).toEqual([]);
+    expect(emitter).not.toHaveBeenCalled();
+    expect(reply.raw.writableEnded).toBe(true);
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
   it('flushes an authorized empty stream before the first event or heartbeat', async () => {
     const wakeups = createWakeups();
     const controller = new HostedCoordinationEventStreamController({
@@ -247,6 +322,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({
@@ -289,6 +365,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent: vi.fn() })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler,
       heartbeatIntervalMs: 10,
     });
@@ -324,6 +401,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent: vi.fn() })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -373,6 +451,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(async () => ({ isCurrent, projectEvent })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -396,6 +475,7 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: { allowedOrigin: 'https://host.test', authorize },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const handler = registerHandler(controller);
@@ -434,6 +514,7 @@ describe('HostedCoordinationEventStreamController', () => {
         authorize: vi.fn(() => pendingAuthorization.promise),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -473,6 +554,7 @@ describe('HostedCoordinationEventStreamController', () => {
       replay: { replay },
       authorizer: { allowedOrigin: 'https://host.test', authorize },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const handler = registerHandler(controller);
@@ -517,6 +599,7 @@ describe('HostedCoordinationEventStreamController', () => {
         }),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -547,6 +630,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -560,6 +644,29 @@ describe('HostedCoordinationEventStreamController', () => {
   });
 
   it('lets Last-Event-ID win, listens before replay, catches up durably, and projects bounded envelopes', async () => {
+    const provenanceEmit = vi.fn();
+    const provenance: HostedProducerProvenance = {
+      role: 'product-producer',
+      controllerNonce: 'c'.repeat(64),
+      runId: 'd'.repeat(64),
+      emit: provenanceEmit,
+      bindInvalidation: vi.fn(),
+      poison: vi.fn((reason: string) => {
+        throw new Error(reason);
+      }),
+      close: vi.fn(),
+    };
+    bindProductHostedProducerInstance(provenance, {
+      deploymentId: 'deployment_sse',
+      bootId: 'boot_sse',
+      ownerAuthority: 'owner-authority_sse',
+      ownerGeneration: 7,
+      ownerSessionId: 'owner-session_sse',
+    });
+    installProductHostedProducerProvenance(
+      provenance,
+      createProductHostedProducerSseWriteEmitter(process.env)
+    );
     const order: string[] = [];
     const wakeups = createWakeups();
     wakeups.source.subscribe.mockImplementation((listener: () => void) => {
@@ -604,6 +711,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -619,10 +727,29 @@ describe('HostedCoordinationEventStreamController', () => {
     };
 
     await registerHandler(controller)(request, reply.reply);
+    clearProductHostedProducerProvenance(provenance);
 
     expect(order).toEqual(['subscribe', 'replay:cursor-0', 'replay:cursor-1']);
     const eventFrames = reply.raw.frames.filter((frame) => frame.startsWith('id: '));
     expect(eventFrames).toHaveLength(2);
+    expect(provenanceEmit).toHaveBeenCalledTimes(2);
+    expect(provenanceEmit.mock.calls).toEqual(
+      eventFrames.map((frame) => [
+        'productTimeline',
+        {
+          recordType: 'coordination-sse-write-succeeded',
+          operationNonce: expect.stringMatching(/^[0-9a-f]{64}$/u),
+          native: expect.objectContaining({
+            eventId: expect.stringMatching(/^cursor-/u),
+            eventType: 'coordination_event',
+            frameBytes: Buffer.byteLength(frame),
+            frameKind: 'coordination_event',
+            frameSha256: createHash('sha256').update(frame).digest('hex'),
+          }),
+        },
+      ])
+    );
+    expect(JSON.stringify(provenanceEmit.mock.calls)).not.toContain('private-owner');
     expect(eventFrames[0]).toContain('id: cursor-1\nevent: coordination_event\n');
     expect(eventFrames[1]).toContain('id: cursor-3\nevent: coordination_event\n');
     const envelopes = eventFrames.map((frame) =>
@@ -667,6 +794,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -704,6 +832,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -755,6 +884,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const request = createRequest({ origin: 'https://host.test', after: 'cursor-0' });
@@ -802,6 +932,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -840,6 +971,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler: new ManualScheduler(),
     });
     const reply = createReply();
@@ -880,6 +1012,7 @@ describe('HostedCoordinationEventStreamController', () => {
         })),
       },
       wakeups: wakeups.source,
+      streamIdentityFactory,
       scheduler,
       slowConsumerTimeoutMs: 10,
     });
@@ -896,7 +1029,9 @@ describe('HostedCoordinationEventStreamController', () => {
     await handling;
 
     expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
-    expect(reply.raw.writableEnded).toBe(true);
+    expect(reply.raw.destroyCalls).toBe(1);
+    expect(reply.raw.destroyed).toBe(true);
+    expect(reply.raw.writableEnded).toBe(false);
     controller.close();
     controller.close();
     expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);

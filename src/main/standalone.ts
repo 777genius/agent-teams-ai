@@ -31,6 +31,7 @@ import {
   createHostedAccessNodePlatform,
 } from './composition/hosted/hostedAccessNodePlatform';
 import { createHostedCoordinationEventStreamAuthorizer } from './composition/hosted/hostedCoordinationEventStreamAuthorizer';
+import { hostedCoordinationEventStreamIdentityFactory } from './composition/hosted/hostedCoordinationEventStreamNodePlatform';
 import {
   createHostedDiagnosticsComposition,
   type HostedDiagnosticsComposition,
@@ -52,6 +53,7 @@ import {
 import {
   classifyHostedTeamMessageAuthorization,
   createHostedTeamMessageRouteFactory,
+  type HostedTeamMessageRouteFactory,
 } from './composition/hosted/hostedTeamMessageComposition';
 import { HostedTeamMessageOrchestratorAuthority } from './composition/hosted/hostedTeamMessageOrchestratorAuthority';
 import { resolveHostedTeamWorkspaceId } from './composition/hosted/hostedTeamWorkspaceAttribution';
@@ -106,14 +108,12 @@ export {
   registerStandaloneShutdownSignalHandlers,
   runStandaloneShutdownLifecycle,
 } from './standaloneShutdownLifecycle';
-import type { HostedTeamMessageRouteFactory } from './composition/hosted/hostedTeamMessageComposition';
 import type { HostedAuthStorageBackend, HttpServices } from './http';
 import type { HttpServer } from './services/infrastructure/HttpServer';
 import type { NotificationManager } from './services/infrastructure/NotificationManager';
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { WorkspaceRegistryStartupSnapshot } from '@features/workspace-registry/main';
-
 const logger = createLogger('Standalone');
 const classifyHostedTeamConfigurationAuthorization = (method: string, url: string) =>
   classifyHostedTeamMessageAuthorization(method, url, (messageMethod, messageUrl) =>
@@ -123,11 +123,9 @@ const classifyHostedTeamConfigurationAuthorization = (method: string, url: strin
       classifyHostedTeamConfigurationAuthorizationFallback
     )
   );
-
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
-
 function hostedRetentionInteger(
   name: string,
   fallback: number,
@@ -143,7 +141,6 @@ function hostedRetentionInteger(
   }
   return value;
 }
-
 const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
   intervalMs: hostedRetentionInteger(
     'HOSTED_COORDINATION_EVENT_RETENTION_INTERVAL_MS',
@@ -158,9 +155,7 @@ const HOSTED_COORDINATION_EVENT_RETENTION_POLICY = Object.freeze({
     1_000_000
   ),
 });
-if (!process.env.CORS_ORIGIN) {
-  process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
-}
+if (!process.env.CORS_ORIGIN) process.env.CORS_ORIGIN = process.env.AUTH_PUBLIC_ORIGIN ?? '*';
 let localContext: ServiceContext;
 let notificationManager: NotificationManager;
 let httpServer: HttpServer;
@@ -600,7 +595,11 @@ async function start(): Promise<void> {
     storage: hostedAuthStorageBackend.coordinationEvents,
     deploymentId: hostedAccessFeature.deploymentId,
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
+    streamIdentityFactory: hostedCoordinationEventStreamIdentityFactory,
     retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
+    diagnosticObserver: (observation) => {
+      logger.error('hosted_coordination_event_stream_transport', JSON.stringify(observation));
+    },
   });
   if (
     admittedHostedClaudeRoot !== null &&

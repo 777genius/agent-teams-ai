@@ -34,6 +34,7 @@ import {
   restartHostedV1LifecycleOwner,
   restoreHostedV1NodeAbi,
   runComposeUpWithExplicitPort,
+  selectHostedV1BrowserCases,
 } from '../../../scripts/e2e/hosted-v1/run';
 import { HOSTED_V1_BROWSER_SUITES } from '../../fixtures/hosted-v1/browserSuites';
 
@@ -46,6 +47,21 @@ describe('hosted-v1 independently gated browser suite selection', () => {
     expect(parseHostedV1BrowserSuite(undefined)).toBe('core');
     expect(() => parseHostedV1BrowserSuite('phase-6,phase-8')).toThrow(
       'HOSTED_E2E_SUITE must be core, phase-6, or phase-8'
+    );
+  });
+
+  it('selects exact bounded scenarios without changing the default complete suite', () => {
+    expect(selectHostedV1BrowserCases('phase-8', undefined)).toEqual(
+      HOSTED_V1_BROWSER_SUITES['phase-8'].cases
+    );
+    expect(
+      selectHostedV1BrowserCases('phase-8', 'restart-replay,slow-consumer').map(({ id }) => id)
+    ).toEqual(['restart-replay', 'slow-consumer']);
+    expect(() => selectHostedV1BrowserCases('phase-8', 'core')).toThrow(
+      'HOSTED_E2E_SCENARIOS contains a case outside phase-8'
+    );
+    expect(() => selectHostedV1BrowserCases('phase-8', 'slow-consumer,slow-consumer')).toThrow(
+      'HOSTED_E2E_SCENARIOS must be a unique comma-separated case id list'
     );
   });
 
@@ -67,10 +83,13 @@ describe('hosted-v1 independently gated browser suite selection', () => {
     const runner = await readFile(resolve('scripts/e2e/hosted-v1/run.ts'), 'utf8');
     const main = runner.slice(runner.indexOf('async function runHostedV1Main'));
     const selection = main.indexOf('parseHostedV1BrowserSuite(process.env.HOSTED_E2E_SUITE)');
+    const scenarioSelection = main.indexOf('process.env.HOSTED_E2E_SCENARIOS');
     const docker = main.indexOf("run('docker', ['version']");
     expect(selection).toBeGreaterThan(-1);
     expect(docker).toBeGreaterThan(-1);
     expect(selection).toBeLessThan(docker);
+    expect(scenarioSelection).toBeGreaterThan(selection);
+    expect(scenarioSelection).toBeLessThan(docker);
   });
 
   it('gates every declared suite in CI', async () => {
@@ -737,6 +756,7 @@ const composeFixtureEnvironment = {
   E2E_LIFECYCLE_LAUNCHER_DIR: '/tmp/hosted-v1-networking-test/lifecycle-launcher',
   E2E_LIFECYCLE_RUN_DIR: '/tmp/hosted-v1-networking-test/lifecycle-run',
   E2E_LIFECYCLE_TRUST_DIR: '/tmp/hosted-v1-networking-test/lifecycle-trust',
+  E2E_INGRESS_NETWORK_SUBNET: '172.30.1.0/24',
   E2E_NETWORK_SUBNET: '172.30.0.0/24',
   E2E_OIDC_IP: '172.30.0.4',
   E2E_RUN_DIR: '/tmp/hosted-v1-networking-test/run',
@@ -884,12 +904,23 @@ describe('hosted-v1 explicit marker-derived Compose port', () => {
     );
   });
 
-  it('derives distinct fixed service addresses from the marker-owned subnet', () => {
+  it('derives disjoint primary and ingress subnets without changing fixed service addresses', () => {
     expect(networkAddresses('1234'.padEnd(48, '0'))).toEqual({
       app: '10.82.52.3',
       caddy: '10.82.52.2',
+      ingressSubnet: '10.82.52.16/28',
       oidc: '10.82.52.4',
       subnet: '10.82.52.0/28',
+    });
+  });
+
+  it('preserves distinct marker-derived network allocations', () => {
+    expect(networkAddresses('1235'.padEnd(48, '0'))).toEqual({
+      app: '10.82.53.3',
+      caddy: '10.82.53.2',
+      ingressSubnet: '10.82.53.16/28',
+      oidc: '10.82.53.4',
+      subnet: '10.82.53.0/28',
     });
   });
 
@@ -905,6 +936,7 @@ describe('hosted-v1 explicit marker-derived Compose port', () => {
         {
           driver?: string;
           internal?: boolean;
+          ipam?: { config?: Array<{ subnet?: string }> };
           name?: string;
         }
       >;
@@ -955,8 +987,12 @@ describe('hosted-v1 explicit marker-derived Compose port', () => {
       OIDC_BACKCHANNEL_PORT: '54321',
     });
     expect(rendered.networks['hosted-e2e']).toMatchObject({ internal: true });
+    expect(rendered.networks['hosted-e2e'].ipam?.config).toEqual([
+      { subnet: composeFixtureEnvironment.E2E_NETWORK_SUBNET },
+    ]);
     expect(rendered.networks['hosted-e2e-ingress']).toMatchObject({
       driver: 'bridge',
+      ipam: { config: [{ subnet: composeFixtureEnvironment.E2E_INGRESS_NETWORK_SUBNET }] },
       name: `${composeFixtureEnvironment.COMPOSE_PROJECT_NAME}_ingress`,
     });
     expect(rendered.networks['hosted-e2e-ingress'].internal).not.toBe(true);

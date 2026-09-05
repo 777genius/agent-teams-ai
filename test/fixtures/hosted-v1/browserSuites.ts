@@ -44,3 +44,29 @@ export function parseHostedV1BrowserSuite(value: string | undefined): HostedV1Br
   }
   return suite as HostedV1BrowserSuite;
 }
+
+export interface HostedV1BrowserCase {
+  readonly id: string;
+  readonly grep: string | null;
+}
+
+export function selectHostedV1BrowserCases(
+  suite: HostedV1BrowserSuite,
+  value: string | undefined
+): HostedV1BrowserCase[] {
+  const cases: readonly HostedV1BrowserCase[] = HOSTED_V1_BROWSER_SUITES[suite].cases;
+  if (value === undefined) return [...cases];
+  const requested = value.split(',');
+  if (
+    requested.length === 0 ||
+    requested.some((id) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(id)) ||
+    new Set(requested).size !== requested.length
+  ) {
+    throw new Error('HOSTED_E2E_SCENARIOS must be a unique comma-separated case id list');
+  }
+  const selected = requested.map((id) => cases.find((candidate) => candidate.id === id));
+  if (selected.some((candidate) => candidate === undefined)) {
+    throw new Error(`HOSTED_E2E_SCENARIOS contains a case outside ${suite}`);
+  }
+  return selected as HostedV1BrowserCase[];
+}

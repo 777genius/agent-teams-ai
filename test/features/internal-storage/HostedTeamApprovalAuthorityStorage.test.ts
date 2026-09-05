@@ -15,6 +15,7 @@ import {
   INTERNAL_STORAGE_REQUIRED_BACKUP_TABLES,
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '@features/internal-storage/main/application/internalStorageBackupContract';
+import { HostedTeamStorageWorkerClient } from '@features/internal-storage/main/infrastructure/HostedTeamStorageWorkerClient';
 import { InternalStorageWorkerClient } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerClient';
 import { HOSTED_TEAM_APPROVAL_AUTHORITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalAuthorityStorageMigration';
 import { HOSTED_TEAM_APPROVAL_CANONICAL_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/hostedTeamApprovalCanonicalIdentityStorageMigration';
@@ -30,6 +31,7 @@ import type {
   HostedTeamApprovalPendingReadResult,
   HostedTeamApprovalPendingStorageRecord,
 } from '@features/internal-storage/contracts';
+import type { InternalStorageWorkerTransport } from '@features/internal-storage/main/infrastructure/InternalStorageWorkerTransport';
 import type { HostedTeamApprovalDeliveryOutboxPort } from '@features/team-approvals/main/hosted';
 import type DatabaseConstructor from 'better-sqlite3';
 
@@ -280,6 +282,42 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
         })
       )
     ).toThrow('hosted-team-approval-storage-summary-invalid');
+  });
+
+  it('fails closed when the worker observation receipt omits or malforms its delivery reference', async () => {
+    const receipt = {
+      runId: `run_${'d'.repeat(32)}`,
+      requestId: 'permission-request-1',
+      approvalId: `approval_${'c'.repeat(32)}`,
+      approvalGeneration: 'generation_approval-v1',
+      category: 'file_change',
+      summary: 'Apply a bounded change',
+      requestedAtMs: 1,
+      expiresAtMs: 2,
+      previewRef: null,
+    } as const;
+    let workerReceipt: unknown = receipt;
+    const callWorker: InternalStorageWorkerTransport['call'] = async () => workerReceipt;
+    const client = new HostedTeamStorageWorkerClient(callWorker, async () => undefined);
+    const observation = pending(Date.now());
+
+    await expect(client.hostedTeamApprovalObserve(observation)).rejects.toThrow(
+      'hosted-team-approval-storage-observation-receipt-invalid'
+    );
+    workerReceipt = { ...receipt, deliveryRef: 'malformed' };
+    await expect(client.hostedTeamApprovalObserve(observation)).rejects.toThrow(
+      'hosted-team-approval-storage-observation-receipt-invalid'
+    );
+    for (const key of ['unexpected', Symbol('unexpected')]) {
+      workerReceipt = Object.defineProperty(
+        { ...receipt, deliveryRef: 'delivery_ref_expected' },
+        key,
+        { value: true, enumerable: false }
+      );
+      await expect(client.hostedTeamApprovalObserve(observation)).rejects.toThrow(
+        'hosted-team-approval-storage-observation-receipt-invalid'
+      );
+    }
   });
   let temporaryDirectory: string | null = null;
   const cores: InternalStorageWorkerCore[] = [];
@@ -844,9 +882,11 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     const aliceV1 = pending(storageNow);
     expect(core.handle('hostedTeamApprovalAuthority.observe', aliceV1)).toMatchObject({
       approvalGeneration: 'generation_approval-v1',
+      deliveryRef: 'delivery_ref_change-v1',
     });
     expect(core.handle('hostedTeamApprovalAuthority.observe', aliceV1)).toMatchObject({
       approvalGeneration: 'generation_approval-v1',
+      deliveryRef: 'delivery_ref_change-v1',
     });
     expect(() =>
       core.handle('hostedTeamApprovalAuthority.observe', {
@@ -854,6 +894,9 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
         deliveryRef: 'delivery_ref_retargeted-v1',
       })
     ).toThrow('hosted-team-approval-storage-observation-identity-conflict');
+    expect(core.handle('hostedTeamApprovalAuthority.observe', aliceV1)).toMatchObject({
+      deliveryRef: 'delivery_ref_change-v1',
+    });
 
     storageNow += 20;
     const aliceV2 = pending(storageNow, {
@@ -870,9 +913,11 @@ describe('HostedTeamApprovalAuthorityStorage', () => {
     expect(() => core.handle('hostedTeamApprovalAuthority.observe', aliceV2)).toThrow(
       'hosted-team-approval-storage-observation-identity-conflict'
     );
-    expect(readPending(core, scope()).records).toEqual([
+    const retainedPending = readPending(core, scope()).records;
+    expect(retainedPending).toEqual([
       expect.objectContaining({ approvalGeneration: 'generation_approval-v1' }),
     ]);
+    expect(retainedPending[0]).not.toHaveProperty('deliveryRef');
 
     const bobScope = scope({ principalId: 'actor_bob' });
     core.handle('hostedTeamApprovalAuthority.observe', { ...aliceV1, scope: bobScope });

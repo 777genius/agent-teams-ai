@@ -2,26 +2,47 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 
 import { assertFileCurrent, assertRootCurrent, descriptorMountId, procFdPath } from './anchors';
-import { RAW_ORIGINS, sha256, type RawOrigin } from './contracts';
-import { executeSupervisor, type RawFileEvidence, type SupervisorOutcome } from './processes';
+import {
+  RAW_ORIGINS,
+  RUNTIME_CAPTURE_NAMES,
+  OPENCODE_IDENTITIES,
+  sha256,
+  type RawOrigin,
+  type RuntimeCaptureName,
+} from './contracts';
+import {
+  executeSupervisor,
+  type ProducerCaptureShardEvidence,
+  type RawFileEvidence,
+  type SupervisorOutcome,
+} from './processes';
 import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
 import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
-import { verifyClosure, type WrittenFileEvidence } from './secure-files';
+import { readStable, verifyClosure, type WrittenFileEvidence } from './secure-files';
+
+export function assertLiveCaptureMode(liveMode: number, sealedMode: number): void {
+  if (sealedMode !== 0o400 || liveMode !== sealedMode) {
+    throw new Error('p3c_driver_capture_mode_disagreement');
+  }
+}
 
 export interface DriverResult {
   readonly outcome: SupervisorOutcome;
   readonly raw: Readonly<Record<RawOrigin, Buffer>>;
+  readonly captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>;
 }
 
-async function readRawFile(
+async function readSandboxEvidenceFile(
   sandbox: DisposableSandbox,
-  origin: RawOrigin,
-  expected: RawFileEvidence
+  directoryName: 'raw' | 'capture',
+  fileName: string,
+  expected: RawFileEvidence | ProducerCaptureShardEvidence
 ): Promise<Buffer> {
-  if (expected.path !== `/sandbox/raw/${origin}.ndjson`) throw new Error('p3c_driver_raw_path');
+  if (expected.path !== `/sandbox/${directoryName}/${fileName}`)
+    throw new Error('p3c_driver_evidence_path');
   await assertSandboxCurrent(sandbox);
   const rawDirectory = await open(
-    `${procFdPath(sandbox.handle)}/raw`,
+    `${procFdPath(sandbox.handle)}/${directoryName}`,
     constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW
   );
   try {
@@ -32,23 +53,28 @@ async function readRawFile(
       Number(directoryStat.mode & 0o777n) !== 0o700 ||
       expectedUid === undefined ||
       directoryStat.uid !== BigInt(expectedUid) ||
-      String(directoryStat.dev) !== sandbox.device ||
+      String(directoryStat.dev) !== sandbox.directoryIdentities[directoryName].device ||
+      String(directoryStat.ino) !== sandbox.directoryIdentities[directoryName].inode ||
       (await descriptorMountId(rawDirectory)) !== sandbox.mountId
     )
       throw new Error('p3c_driver_raw_directory');
     const file = await open(
-      `${procFdPath(rawDirectory)}/${origin}.ndjson`,
+      `${procFdPath(rawDirectory)}/${fileName}`,
       constants.O_RDONLY | constants.O_NONBLOCK | constants.O_NOFOLLOW
     );
     try {
       const before = await file.stat({ bigint: true });
+      const liveMode = Number(before.mode & 0o777n);
+      if ('seal' in expected) assertLiveCaptureMode(liveMode, expected.seal.mode);
       if (
         !before.isFile() ||
         before.nlink !== 1n ||
-        ![0o400, 0o600].includes(Number(before.mode & 0o777n)) ||
+        ('seal' in expected ? liveMode !== expected.seal.mode : ![0o400, 0o600].includes(liveMode)) ||
         expectedUid === undefined ||
         before.uid !== BigInt(expectedUid) ||
         String(before.dev) !== sandbox.device ||
+        String(before.dev) !== expected.captureDevice ||
+        String(before.ino) !== expected.captureInode ||
         (await descriptorMountId(file)) !== sandbox.mountId ||
         Number(before.size) !== expected.size
       )
@@ -92,6 +118,13 @@ async function revalidateBeforeExecution(
     ...Object.values(admission.execution).map(assertFileCurrent),
   ]);
   await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
+  const freshlyRehashedOpenCode = sha256(await readStable(admission.execution.openCode));
+  if (
+    freshlyRehashedOpenCode !== OPENCODE_IDENTITIES.linuxX64BinarySha256 ||
+    freshlyRehashedOpenCode !== admission.descriptor.openCode.linuxX64Binary.sha256
+  ) {
+    throw new Error('p3c_driver_candidate_rehash_mismatch');
+  }
   const [harness, toolchain, product, browser, owner] = await Promise.all([
     verifyClosure(admission.roots.harness, admission.descriptor.product.harnessClosure),
     verifyClosure(admission.roots.toolchain, admission.descriptor.toolchain.closure),
@@ -119,6 +152,27 @@ export async function runDriver(
   if (!outcome.zeroOwnedSurvivors) throw new Error('p3c_driver_owned_survivors');
   const raw = {} as Record<RawOrigin, Buffer>;
   for (const origin of RAW_ORIGINS)
-    raw[origin] = await readRawFile(sandbox, origin, outcome.rawFiles[origin]);
-  return Object.freeze({ outcome, raw: Object.freeze(raw) });
+    raw[origin] = await readSandboxEvidenceFile(
+      sandbox,
+      'raw',
+      `${origin}.ndjson`,
+      outcome.rawFiles[origin]
+    );
+  const captures = {} as Record<RuntimeCaptureName, readonly Buffer[]>;
+  for (const name of RUNTIME_CAPTURE_NAMES) {
+    captures[name] = Object.freeze(
+      await Promise.all(
+        outcome.captureFiles[name].shards.map(async (shard) => {
+          const prefix = '/sandbox/capture/';
+          if (!shard.path.startsWith(prefix)) throw new Error('p3c_driver_evidence_path');
+          const fileName = shard.path.slice(prefix.length);
+          if (!/^[a-zA-Z0-9._-]+\.ndjson$/u.test(fileName)) {
+            throw new Error('p3c_driver_evidence_path');
+          }
+          return readSandboxEvidenceFile(sandbox, 'capture', fileName, shard);
+        })
+      )
+    );
+  }
+  return Object.freeze({ outcome, raw: Object.freeze(raw), captures: Object.freeze(captures) });
 }

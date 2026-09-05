@@ -11,6 +11,8 @@ import type { RuntimeIngressPermissionOutboxPort } from './ports';
 
 const IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;
 const OUTBOX_ID = /^runtime_permission:effect:[a-f0-9]{64}$/;
+const EFFECT_REF = /^effect:[a-f0-9]{64}$/;
+const OPENCODE_PRIVATE_DELIVERY_REF = /^delivery_ref_opencode-([a-f0-9]{64})$/;
 
 /** The store owns short-lived claims so a caller cannot pin an effect forever. */
 export const RUNTIME_INGRESS_PERMISSION_OUTBOX_MAX_LEASE_DURATION_MS = 5 * 60 * 1_000;
@@ -37,7 +39,7 @@ export interface RuntimeIngressPermissionOutboxLease {
  * never parsed from the provider body.
  */
 export interface RuntimeIngressPermissionOutboxRecord {
-  readonly outboxVersion: 1;
+  readonly outboxVersion: 1 | 2;
   readonly outboxId: string;
   readonly commandId: string;
   readonly effectRef: string;
@@ -120,12 +122,11 @@ export function isRuntimeIngressPermissionOutboxRecord(
       'lease',
       'acknowledgedAtIso',
     ].every((key) => Object.hasOwn(record, key)) ||
-    record.outboxVersion !== 1 ||
+    (record.outboxVersion !== 1 && record.outboxVersion !== 2) ||
     typeof record.outboxId !== 'string' ||
     !OUTBOX_ID.test(record.outboxId) ||
     !isIdentifier(record.commandId) ||
     typeof record.effectRef !== 'string' ||
-    record.outboxId !== `runtime_permission:${record.effectRef}` ||
     typeof record.deliveryRef !== 'string' ||
     typeof record.payloadJson !== 'string' ||
     new TextEncoder().encode(record.payloadJson).byteLength >
@@ -148,6 +149,20 @@ export function isRuntimeIngressPermissionOutboxRecord(
     const payload = parseRuntimePermissionApprovalPayload(
       JSON.parse(record.payloadJson) as unknown
     );
+    if (record.outboxVersion === 1) {
+      if (record.outboxId !== `runtime_permission:${record.effectRef}`) return false;
+    } else {
+      const deliveryBinding = OPENCODE_PRIVATE_DELIVERY_REF.exec(record.deliveryRef);
+      if (
+        !EFFECT_REF.test(record.effectRef) ||
+        record.outboxId === `runtime_permission:${record.effectRef}` ||
+        deliveryBinding === null ||
+        record.outboxId !== `runtime_permission:effect:${deliveryBinding[1]}` ||
+        authority.providerId !== 'opencode'
+      ) {
+        return false;
+      }
+    }
     deriveRuntimePermissionApprovalIdentity({
       teamId: authority.teamId,
       runId: authority.runId,

@@ -1,4 +1,9 @@
 import {
+  currentProductHostedProducerSseWriteEmitter,
+  type ProductSseFrameIdentity,
+} from '@features/hosted-producer-provenance/main/hosted';
+
+import {
   type CoordinationEventEnvelope,
   type CoordinationReplayBatch,
   HOSTED_COORDINATION_EVENT_SSE_EVENT,
@@ -16,16 +21,29 @@ import {
   hostedCoordinationEventStreamAuthorizationIsCurrent as authorizationIsCurrent,
   type HostedCoordinationEventStreamCurrentAuthorization,
 } from './hostedCoordinationEventStreamAuthorization';
+import {
+  HostedCoordinationEventStreamWriter,
+  hostedCoordinationEventStreamWriteSucceeded,
+} from './hostedCoordinationEventStreamWriter';
+import {
+  type HostedCoordinationEventStreamScheduler,
+  WakeSignal,
+} from './HostedCoordinationEventWakeSignal';
 
 import type { ReplayCoordinationEventsInput } from '../../../../core/application';
+import type {
+  HostedCoordinationEventStreamIdentityFactory,
+  HostedCoordinationEventStreamWriteObserver,
+} from '../../../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationEventWakeupListener } from '../../../infrastructure/InProcessCoordinationEventWakeupHub';
+
+export type { HostedCoordinationEventStreamScheduler } from './HostedCoordinationEventWakeSignal';
 
 interface HostedCoordinationHttpSocket {
   readonly destroyed: boolean;
   once(event: 'close', listener: () => void): unknown;
   removeListener(event: 'close', listener: () => void): unknown;
 }
-
 interface HostedCoordinationHttpRawRequest {
   readonly aborted: boolean;
   readonly destroyed: boolean;
@@ -33,16 +51,15 @@ interface HostedCoordinationHttpRawRequest {
   once(event: 'aborted', listener: () => void): unknown;
   removeListener(event: 'aborted', listener: () => void): unknown;
 }
-
 interface HostedCoordinationHttpRequest {
   readonly headers: Readonly<Record<string, string | readonly string[] | undefined>>;
   readonly query: unknown;
   readonly raw: HostedCoordinationHttpRawRequest;
 }
-
 interface HostedCoordinationHttpRawReply {
   readonly destroyed: boolean;
   readonly writableEnded: boolean;
+  destroy(): unknown;
   end(): unknown;
   flushHeaders(): unknown;
   once(event: 'close' | 'drain' | 'error', listener: () => void): unknown;
@@ -50,14 +67,12 @@ interface HostedCoordinationHttpRawReply {
   write(frame: string): boolean;
   writeHead(statusCode: number, headers: Readonly<Record<string, string>>): unknown;
 }
-
 interface HostedCoordinationHttpReply {
   readonly raw: HostedCoordinationHttpRawReply;
   code(statusCode: number): HostedCoordinationHttpReply;
   hijack(): void;
   send(payload: unknown): unknown;
 }
-
 interface HostedCoordinationHttpApplication {
   get(
     route: string,
@@ -67,7 +82,6 @@ interface HostedCoordinationHttpApplication {
     ) => Promise<void>
   ): void;
 }
-
 const DEFAULT_REPLAY_BATCH_SIZE = 100;
 const MAX_REPLAY_BATCH_SIZE = 500;
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 15_000;
@@ -77,37 +91,27 @@ const MAX_CURSOR_LENGTH = 2_048;
 const MAX_IDENTIFIER_LENGTH = 256;
 const ABORTED_OPERATION = Symbol('aborted_operation');
 const UTF8_ENCODER = new TextEncoder();
-
 function utf8ByteLength(value: string): number {
   return UTF8_ENCODER.encode(value).byteLength;
 }
-
 interface HostedCoordinationEventReplay {
   replay(input: ReplayCoordinationEventsInput): Promise<CoordinationReplayBatch>;
 }
-
 /** Live admission whose projector remains bound to the authorized grant context. */
 interface HostedCoordinationEventStreamAuthorization extends HostedCoordinationEventStreamCurrentAuthorization {
   projectEvent(
     event: CoordinationEventEnvelope
   ): HostedCoordinationEventProjection | null | Promise<HostedCoordinationEventProjection | null>;
 }
-
 interface HostedCoordinationEventStreamAuthorizer {
   readonly allowedOrigin: string;
   authorize(
     request: HostedCoordinationHttpRequest
   ): Promise<HostedCoordinationEventStreamAuthorization | null>;
 }
-
 interface HostedCoordinationEventWakeupSource {
   subscribe(listener: CoordinationEventWakeupListener): () => void;
 }
-
-export interface HostedCoordinationEventStreamScheduler {
-  schedule(delayMs: number, callback: () => void): () => void;
-}
-
 interface HostedCoordinationEventStreamControllerOptions {
   readonly replay: HostedCoordinationEventReplay;
   readonly authorizer: HostedCoordinationEventStreamAuthorizer;
@@ -117,9 +121,9 @@ interface HostedCoordinationEventStreamControllerOptions {
   readonly heartbeatIntervalMs?: number;
   readonly slowConsumerTimeoutMs?: number;
   readonly maxFrameBytes?: number;
+  readonly streamIdentityFactory: HostedCoordinationEventStreamIdentityFactory;
+  readonly diagnosticObserver?: HostedCoordinationEventStreamWriteObserver;
 }
-
-type WakeResult = 'wakeup' | 'heartbeat' | 'closed';
 
 interface PreparedStream {
   readonly authorization: HostedCoordinationEventStreamAuthorization;
@@ -129,48 +133,7 @@ interface PreparedStream {
   readonly wakeSignal: WakeSignal;
   readonly signal: AbortSignal;
   readonly closeStream: () => void;
-}
-
-class WakeSignal {
-  private versionValue = 0;
-  private readonly listeners = new Set<() => void>();
-
-  get version(): number {
-    return this.versionValue;
-  }
-
-  notify = (): void => {
-    this.versionValue += 1;
-    for (const listener of [...this.listeners]) listener();
-  };
-
-  wait(input: {
-    readonly afterVersion: number;
-    readonly delayMs: number;
-    readonly signal: AbortSignal;
-    readonly scheduler: HostedCoordinationEventStreamScheduler;
-  }): Promise<WakeResult> {
-    if (input.signal.aborted) return Promise.resolve('closed');
-    if (this.versionValue !== input.afterVersion) return Promise.resolve('wakeup');
-    return new Promise<WakeResult>((resolve) => {
-      let settled = false;
-      let cancelSchedule = (): void => undefined;
-      const finish = (result: WakeResult): void => {
-        if (settled) return;
-        settled = true;
-        cancelSchedule();
-        this.listeners.delete(onWakeup);
-        input.signal.removeEventListener('abort', onAbort);
-        resolve(result);
-      };
-      const onWakeup = (): void => finish('wakeup');
-      const onAbort = (): void => finish('closed');
-      cancelSchedule = input.scheduler.schedule(input.delayMs, () => finish('heartbeat'));
-      this.listeners.add(onWakeup);
-      input.signal.addEventListener('abort', onAbort, { once: true });
-      if (this.versionValue !== input.afterVersion) finish('wakeup');
-    });
-  }
+  readonly streamId: string;
 }
 
 function positiveBounded(value: number, field: string, maximum: number): number {
@@ -405,6 +368,7 @@ export class HostedCoordinationEventStreamController {
   private readonly heartbeatIntervalMs: number;
   private readonly slowConsumerTimeoutMs: number;
   private readonly maxFrameBytes: number;
+  private readonly writer: HostedCoordinationEventStreamWriter;
   private readonly activeStreams = new Set<() => void>();
   private closed = false;
 
@@ -439,6 +403,12 @@ export class HostedCoordinationEventStreamController {
       'maxFrameBytes',
       1024 * 1024
     );
+    this.writer = new HostedCoordinationEventStreamWriter({
+      maxFrameBytes: this.maxFrameBytes + 512,
+      observer: controllerOptions.diagnosticObserver,
+      scheduler: controllerOptions.scheduler,
+      slowConsumerTimeoutMs: this.slowConsumerTimeoutMs,
+    });
   }
 
   register(app: unknown): void {
@@ -458,6 +428,7 @@ export class HostedCoordinationEventStreamController {
     request: HostedCoordinationHttpRequest,
     reply: HostedCoordinationHttpReply
   ): Promise<void> {
+    const streamId = this.options.streamIdentityFactory.createStreamId();
     if (this.closed) {
       await reply.code(503).send({ error: 'event_stream_closed' });
       return;
@@ -466,7 +437,6 @@ export class HostedCoordinationEventStreamController {
       await reply.code(403).send({ error: 'origin_invalid' });
       return;
     }
-
     const wakeSignal = new WakeSignal();
     const streamController = new AbortController();
     let unsubscribeWakeup = (): void => undefined;
@@ -534,7 +504,8 @@ export class HostedCoordinationEventStreamController {
           reply,
           'malformed_cursor',
           authorization,
-          streamController.signal
+          streamController.signal,
+          streamId
         );
       } finally {
         closeStream();
@@ -586,7 +557,13 @@ export class HostedCoordinationEventStreamController {
       const reason = resyncReason(error);
       try {
         if (reason !== null) {
-          await this.sendTerminalResync(reply, reason, authorization, streamController.signal);
+          await this.sendTerminalResync(
+            reply,
+            reason,
+            authorization,
+            streamController.signal,
+            streamId
+          );
         } else {
           streamController.abort();
           disposeStream();
@@ -608,6 +585,7 @@ export class HostedCoordinationEventStreamController {
       wakeSignal,
       signal: streamController.signal,
       closeStream,
+      streamId,
     };
     await this.runStream(reply, prepared);
   }
@@ -616,12 +594,20 @@ export class HostedCoordinationEventStreamController {
     reply: HostedCoordinationHttpReply,
     reason: HostedCoordinationResyncReason,
     authorization: HostedCoordinationEventStreamAuthorization,
-    signal: AbortSignal = new AbortController().signal
+    signal: AbortSignal,
+    streamId: string
   ): Promise<void> {
     reply.hijack();
-    reply.raw.writeHead(200, this.sseHeaders());
+    reply.raw.writeHead(200, this.sseHeaders(streamId));
     reply.raw.flushHeaders();
-    await this.writeAuthorized(reply, resyncFrame(reason), authorization, signal);
+    await this.writeAuthorized(
+      reply,
+      resyncFrame(reason),
+      { frameKind: 'resync_required', eventId: null, eventType: 'resync_required' },
+      authorization,
+      signal,
+      streamId
+    );
     if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.end();
   }
 
@@ -634,7 +620,7 @@ export class HostedCoordinationEventStreamController {
       return;
     }
     reply.hijack();
-    reply.raw.writeHead(200, this.sseHeaders());
+    reply.raw.writeHead(200, this.sseHeaders(prepared.streamId));
     reply.raw.flushHeaders();
     let replayCursor = prepared.requestedCursor;
     let deliveredCursor = prepared.requestedCursor;
@@ -686,16 +672,24 @@ export class HostedCoordinationEventStreamController {
               await this.writeAuthorized(
                 reply,
                 resyncFrame('projection_invalid'),
+                { frameKind: 'resync_required', eventId: null, eventType: 'resync_required' },
                 prepared.authorization,
-                prepared.signal
+                prepared.signal,
+                prepared.streamId
               );
               return;
             }
             const wrote = await this.writeAuthorized(
               reply,
               eventFrame(event.eventCursor, materialized.data),
+              {
+                frameKind: 'coordination_event',
+                eventId: event.eventCursor,
+                eventType: HOSTED_COORDINATION_EVENT_SSE_EVENT,
+              },
               prepared.authorization,
-              prepared.signal
+              prepared.signal,
+              prepared.streamId
             );
             if (!wrote) return;
             deliveredCursor = event.eventCursor;
@@ -717,8 +711,10 @@ export class HostedCoordinationEventStreamController {
           const wrote = await this.writeAuthorized(
             reply,
             ': heartbeat\n\n',
+            { frameKind: 'heartbeat', eventId: null, eventType: null },
             prepared.authorization,
-            prepared.signal
+            prepared.signal,
+            prepared.streamId
           );
           if (!wrote) break;
         }
@@ -730,8 +726,10 @@ export class HostedCoordinationEventStreamController {
         await this.writeAuthorized(
           reply,
           resyncFrame(reason),
+          { frameKind: 'resync_required', eventId: null, eventType: 'resync_required' },
           prepared.authorization,
-          prepared.signal
+          prepared.signal,
+          prepared.streamId
         );
       }
     } finally {
@@ -742,59 +740,25 @@ export class HostedCoordinationEventStreamController {
   private async writeAuthorized(
     reply: HostedCoordinationHttpReply,
     frame: string,
+    identity: ProductSseFrameIdentity,
     authorization: HostedCoordinationEventStreamAuthorization,
-    signal: AbortSignal
+    signal: AbortSignal,
+    streamId: string
   ): Promise<boolean> {
     if (!(await authorizationIsCurrent(authorization, signal))) return false;
-    return this.writeBounded(reply, frame, signal);
+    const productSseWriteEmitter = currentProductHostedProducerSseWriteEmitter();
+    const disposition = await this.writer.write({ frame, raw: reply.raw, signal, streamId });
+    const wrote = hostedCoordinationEventStreamWriteSucceeded(disposition);
+    return productSseWriteEmitter?.(frame, identity, wrote) ?? wrote;
   }
 
-  private writeBounded(
-    reply: HostedCoordinationHttpReply,
-    frame: string,
-    signal: AbortSignal
-  ): Promise<boolean> {
-    if (
-      signal.aborted ||
-      reply.raw.destroyed ||
-      reply.raw.writableEnded ||
-      utf8ByteLength(frame) > this.maxFrameBytes + 512
-    ) {
-      return Promise.resolve(false);
-    }
-    try {
-      if (reply.raw.write(frame)) return Promise.resolve(true);
-    } catch {
-      return Promise.resolve(false);
-    }
-    return new Promise<boolean>((resolve) => {
-      let settled = false;
-      let cancelDeadline = (): void => undefined;
-      const finish = (writable: boolean): void => {
-        if (settled) return;
-        settled = true;
-        cancelDeadline();
-        reply.raw.removeListener('drain', onDrain);
-        reply.raw.removeListener('close', onClose);
-        signal.removeEventListener('abort', onClose);
-        resolve(writable);
-      };
-      const onDrain = (): void => finish(true);
-      const onClose = (): void => finish(false);
-      cancelDeadline = this.options.scheduler.schedule(this.slowConsumerTimeoutMs, onClose);
-      reply.raw.once('drain', onDrain);
-      reply.raw.once('close', onClose);
-      signal.addEventListener('abort', onClose, { once: true });
-      if (signal.aborted || reply.raw.destroyed || reply.raw.writableEnded) onClose();
-    });
-  }
-
-  private sseHeaders(): Readonly<Record<string, string>> {
+  private sseHeaders(streamId: string): Readonly<Record<string, string>> {
     return Object.freeze({
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-store, private',
       Connection: 'keep-alive',
       'X-Accel-Buffering': 'no',
+      'X-Agent-Teams-Event-Stream-Id': streamId,
     });
   }
 }

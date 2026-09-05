@@ -3,6 +3,7 @@ import {
   type RuntimePermissionApprovalIngressAuthority,
 } from '@features/team-runtime-control/contracts';
 import {
+  isRuntimeIngressPermissionOutboxRecord,
   RuntimeIngressPermissionOutbox,
   type RuntimeIngressPermissionOutboxPort,
   type RuntimeIngressPermissionOutboxRecord,
@@ -53,7 +54,56 @@ function record(): RuntimeIngressPermissionOutboxRecord {
   });
 }
 
+function privateRecord(binding = 'b'.repeat(64)): RuntimeIngressPermissionOutboxRecord {
+  const effectDigest = 'd'.repeat(64);
+  const deliveryRef = `delivery_ref_opencode-${binding}`;
+  return Object.freeze({
+    ...record(),
+    outboxVersion: 2,
+    outboxId: `runtime_permission:effect:${binding}`,
+    effectRef: `effect:${effectDigest}`,
+    deliveryRef,
+    payloadJson: JSON.stringify({
+      schemaVersion: 1,
+      deliveryRef,
+      category: 'command',
+      summary: 'Allow the bounded command',
+      expiresAtMs: null,
+      preview: null,
+    }),
+  });
+}
+
 describe('RuntimeIngressPermissionOutbox', () => {
+  it('admits legacy v1 and independently bound OpenCode v2 records', () => {
+    expect(isRuntimeIngressPermissionOutboxRecord(record())).toBe(true);
+    expect(isRuntimeIngressPermissionOutboxRecord(privateRecord())).toBe(true);
+  });
+
+  it.each([
+    ['unknown version', { outboxVersion: 3 }],
+    ['legacy equality', { outboxId: `runtime_permission:effect:${'d'.repeat(64)}` }],
+    ['malformed effect', { effectRef: `effect:${'D'.repeat(64)}` }],
+    ['malformed delivery', { deliveryRef: 'delivery_ref_opencode-short' }],
+    ['mismatched binding', { outboxId: `runtime_permission:effect:${'c'.repeat(64)}` }],
+    ['unsupported provider', { authority: { ...authority, providerId: 'claude' } }],
+  ])('rejects v2 with %s', (_label, change) => {
+    expect(isRuntimeIngressPermissionOutboxRecord({ ...privateRecord(), ...change })).toBe(false);
+  });
+
+  it('rejects a payload delivery reference that differs from the private binding', () => {
+    const candidate = privateRecord();
+    expect(
+      isRuntimeIngressPermissionOutboxRecord({
+        ...candidate,
+        payloadJson: JSON.stringify({
+          ...JSON.parse(candidate.payloadJson),
+          deliveryRef: `delivery_ref_opencode-${'c'.repeat(64)}`,
+        }),
+      })
+    ).toBe(false);
+  });
+
   it('fails closed on a malformed claimed batch and delegates acknowledgement', async () => {
     const valid = record();
     const claimPermissionApprovalIngressEffects = vi.fn(async () => [

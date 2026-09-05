@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { readFileSync, writeSync } from 'node:fs';
 
 import { expect, type Page, test } from '@playwright/test';
@@ -15,11 +16,27 @@ import {
   makeSemanticPayload,
   observedSemanticIdentity,
 } from '../../../scripts/e2e/hosted-actual-owner/evidence';
+import {
+  productRunIdToProvenanceTeamRunId,
+} from '../../../src/features/hosted-producer-provenance/main/hosted';
 import { parseHostedTeamApprovalPage } from '../../../src/features/team-approvals/contracts/hosted';
+import { createBrowserHostedProducerProvenanceFromEnvironment } from '../../../src/main/composition/hosted/hostedProducerProvenanceComposition';
 
 const DESCRIPTOR_FD = 3;
 const OBSERVATION_FD = 4;
 const PROCESS_IDENTITY_FD = 5;
+
+const browserProducerProvenance = (() => {
+  const provenance = createBrowserHostedProducerProvenanceFromEnvironment(process.env, {
+    modulePath: __filename,
+  });
+  if (provenance === null) throw new Error('p3c_browser_producer_provenance_required');
+  return provenance;
+})();
+
+test.afterAll(() => {
+  browserProducerProvenance.close();
+});
 
 interface ApprovalTarget {
   readonly approvalId: string;
@@ -136,6 +153,9 @@ function readScenario(): BrowserScenario {
     !/^[0-9a-f]{64}$/u.test(descriptor.controllerNonce) ||
     typeof identity.processStartToken !== 'string' ||
     !/^[0-9a-f]{64}$/u.test(identity.processStartToken) ||
+    browserProducerProvenance.controllerNonce !== descriptor.controllerNonce ||
+    browserProducerProvenance.runId !==
+      sha256(`agent-teams.p3c.run/v1\0${descriptor.controllerNonce}`) ||
     typeof scenario.authenticatedActorTeamId !== 'string' ||
     !/^team_[0-9a-f]{32}$/u.test(scenario.authenticatedActorTeamId) ||
     scenario.authenticatedActorTeamId !== scenario.targetTeamAId ||
@@ -155,11 +175,11 @@ function readScenario(): BrowserScenario {
   return Object.freeze({
     controllerNonce: descriptor.controllerNonce,
     origin: PRODUCT_ORIGIN,
-    authenticatedActorTeamId: String(scenario.authenticatedActorTeamId),
-    targetTeamAId: String(scenario.targetTeamAId),
-    targetTeamBId: String(scenario.targetTeamBId),
-    teamARunId: String(scenario.teamARunId),
-    teamBRunId: String(scenario.teamBRunId),
+    authenticatedActorTeamId: scenario.authenticatedActorTeamId,
+    targetTeamAId: scenario.targetTeamAId,
+    targetTeamBId: scenario.targetTeamBId,
+    teamARunId: scenario.teamARunId,
+    teamBRunId: scenario.teamBRunId,
     allow,
     deny,
     teamBRequest,
@@ -169,6 +189,25 @@ function readScenario(): BrowserScenario {
 
 let sequence = 0;
 
+function nativeNegativeObservation(event: string): Readonly<{
+  observedOutcome:
+    | 'cross_team_list_rejected'
+    | 'cross_team_preview_rejected'
+    | 'cross_team_decide_rejected';
+  requestFamily: 'approval-page' | 'approval-preview' | 'approval-decision';
+}> {
+  switch (event) {
+    case 'cross_team_list_rejected':
+      return Object.freeze({ observedOutcome: event, requestFamily: 'approval-page' });
+    case 'cross_team_preview_rejected':
+      return Object.freeze({ observedOutcome: event, requestFamily: 'approval-preview' });
+    case 'cross_team_decide_rejected':
+      return Object.freeze({ observedOutcome: event, requestFamily: 'approval-decision' });
+    default:
+      throw new Error('p3c_browser_negative_native_event');
+  }
+}
+
 function observe(
   scenario: BrowserScenario,
   row: MatrixRow,
@@ -176,7 +215,9 @@ function observe(
   target: ApprovalTarget,
   decision: 'allow' | 'deny' | 'none',
   submittedMonotonicNs: bigint,
-  observedBrowserStatus?: number
+  observedBrowserStatus?: number,
+  observedResponseSha256?: string,
+  observedRequestSha256?: string
 ): void {
   sequence += 1;
   const runId = sha256(`agent-teams.p3c.run/v1\0${scenario.controllerNonce}`);
@@ -217,6 +258,32 @@ function observe(
     }),
   });
   writeSync(OBSERVATION_FD, `${canonicalJson(record)}\n`);
+  if (row === '08_cross_team_isolation') {
+    if (
+      observedBrowserStatus === undefined ||
+      observedResponseSha256 === undefined ||
+      observedRequestSha256 === undefined
+    ) {
+      throw new Error('p3c_browser_negative_native_observation_missing');
+    }
+    const negative = nativeNegativeObservation(event);
+    browserProducerProvenance.emit('negativeResults', {
+      recordType: 'browser-negative-response-observed',
+      operationNonce: randomBytes(32).toString('hex'),
+      native: Object.freeze({
+        actorTeamId: scenario.authenticatedActorTeamId,
+        harnessRunId: runId,
+        httpStatus: observedBrowserStatus,
+        processStartToken: scenario.processStartToken,
+        observedOutcome: negative.observedOutcome,
+        requestBodySha256: observedRequestSha256,
+        requestFamily: negative.requestFamily,
+        responseBodySha256: observedResponseSha256,
+        targetTeamId: scenario.targetTeamBId,
+        targetTeamRunId: productRunIdToProvenanceTeamRunId(scenario.teamBRunId),
+      }),
+    });
+  }
 }
 
 async function submit(
@@ -366,6 +433,45 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
   playwright,
 }) => {
   const scenario = readScenario();
+  const eventStreamRequests: Array<{ readonly url: string; readonly lastEventId: string | null }> =
+    [];
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname !== '/api/hosted/v1/events') return;
+    eventStreamRequests.push({
+      url: request.url(),
+      lastEventId: request.headers()['last-event-id'] ?? null,
+    });
+  });
+  await page.addInitScript(() => {
+    const host = window as unknown as {
+      __p3cObservedEventSources: Array<{
+        source: EventSource;
+        url: string;
+        eventIds: string[];
+        eventTypes: string[];
+      }>;
+    };
+    host.__p3cObservedEventSources = [];
+    const NativeEventSource = globalThis.EventSource;
+    globalThis.EventSource = class ObservedEventSource extends NativeEventSource {
+      constructor(url: string | URL, init?: EventSourceInit) {
+        super(url, init);
+        const observation = {
+          source: this as EventSource,
+          url: String(url),
+          eventIds: [] as string[],
+          eventTypes: [] as string[],
+        };
+        for (const eventType of ['coordination_event', 'resync_required']) {
+          this.addEventListener(eventType, (event) => {
+            observation.eventTypes.push(event.type);
+            observation.eventIds.push((event as MessageEvent).lastEventId);
+          });
+        }
+        host.__p3cObservedEventSources.push(observation);
+      }
+    };
+  });
   await page.route('**/*', async (route) => {
     if (new URL(route.request().url()).origin !== PRODUCT_ORIGIN) {
       await route.abort('blockedbyclient');
@@ -390,12 +496,99 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
   expect(auth.body.authenticated).toBe(true);
   expect(auth.body.csrfToken).toEqual(expect.stringMatching(/^[A-Za-z0-9_-]{32,512}$/u));
   const csrf = String(auth.body.csrfToken);
-  const pending = await readAllApprovalPages(page, scenario, csrf);
+  let pending: readonly Record<string, unknown>[] = [];
+  await expect
+    .poll(
+      async () => {
+        pending = await readAllApprovalPages(page, scenario, csrf);
+        return [scenario.allow, scenario.deny].every((target) =>
+          pending.some(({ approvalId }) => approvalId === target.approvalId)
+        );
+      },
+      { timeout: 60_000 }
+    )
+    .toBe(true);
   const observedItems = [scenario.allow, scenario.deny].map((target) => {
     const item = pending.find(({ approvalId }) => approvalId === target.approvalId);
     expect(item).toBeDefined();
     return exactApprovalItem(item!, scenario.targetTeamAId, scenario.teamARunId, target);
   });
+  await expect(page.locator(`[data-approval-id="${scenario.allow.approvalId}"]`)).toHaveCount(1, {
+    timeout: 15_000,
+  });
+  await expect(page.locator(`[data-approval-id="${scenario.deny.approvalId}"]`)).toHaveCount(1, {
+    timeout: 15_000,
+  });
+  await page.waitForFunction(
+    () =>
+      (
+        window as unknown as {
+          __p3cObservedEventSources: Array<{ eventIds: string[] }>;
+        }
+      ).__p3cObservedEventSources.some(({ eventIds }) => eventIds.some(Boolean)),
+    undefined,
+    { timeout: 30_000 }
+  );
+  const firstCursor = await page.evaluate(() => {
+    const observations = (
+      window as unknown as {
+        __p3cObservedEventSources: Array<{
+          source: EventSource;
+          eventIds: string[];
+        }>;
+      }
+    ).__p3cObservedEventSources;
+    const active = observations.find(({ eventIds }) => eventIds.some(Boolean));
+    if (!active) throw new Error('p3c_browser_eventsource_event_missing');
+    const cursor = active.eventIds.find(Boolean)!;
+    active.source.dispatchEvent(new Event('error'));
+    return cursor;
+  });
+  await page.waitForFunction(
+    () =>
+      (
+        window as unknown as {
+          __p3cObservedEventSources: unknown[];
+        }
+      ).__p3cObservedEventSources.length >= 2,
+    undefined,
+    { timeout: 30_000 }
+  );
+  await expect
+    .poll(
+      () => eventStreamRequests.findLast(({ lastEventId }) => lastEventId !== null)?.lastEventId,
+      {
+        timeout: 30_000,
+      }
+    )
+    .toBe(firstCursor);
+  expect(
+    eventStreamRequests.some(
+      ({ url, lastEventId }) =>
+        url.includes(`after=${encodeURIComponent(firstCursor)}`) && lastEventId === firstCursor
+    )
+  ).toBe(true);
+  await page.waitForFunction(
+    () => {
+      const observations = (
+        window as unknown as {
+          __p3cObservedEventSources: Array<{
+            eventIds: string[];
+            eventTypes: string[];
+          }>;
+        }
+      ).__p3cObservedEventSources;
+      const ids = observations.flatMap(({ eventIds }) => eventIds).filter(Boolean);
+      return (
+        observations.some(({ eventTypes }) => eventTypes.includes('resync_required')) &&
+        new Set(ids).size < ids.length
+      );
+    },
+    undefined,
+    { timeout: 30_000 }
+  );
+  await expect(page.locator(`[data-approval-id="${scenario.allow.approvalId}"]`)).toHaveCount(1);
+  await expect(page.locator(`[data-approval-id="${scenario.deny.approvalId}"]`)).toHaveCount(1);
   const preview = await page.evaluate(
     async ({ teamId, runId, target, csrfValue }) => {
       const response = await fetch('/api/hosted/v1/team-approvals/preview', {
@@ -524,7 +717,7 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
     }
   );
   expect(missingCsrf).toBe(403);
-  const crossTeamStatuses = await page.evaluate(
+  const crossTeamResponses = await page.evaluate(
     async ({ teamId, runId, target, csrfValue }) => {
       const common = {
         method: 'POST',
@@ -572,10 +765,11 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
         ],
       ] as const;
       return Promise.all(
-        requests.map(
-          async ([path, body]) =>
-            (await fetch(path, { ...common, body: JSON.stringify(body) })).status
-        )
+        requests.map(async ([path, body]) => {
+          const requestBody = JSON.stringify(body);
+          const response = await fetch(path, { ...common, body: requestBody });
+          return { status: response.status, body: await response.text(), requestBody };
+        })
       );
     },
     {
@@ -585,8 +779,8 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
       csrfValue: csrf,
     }
   );
-  expect(crossTeamStatuses).toHaveLength(3);
-  for (const status of crossTeamStatuses) expect([403, 404]).toContain(status);
+  expect(crossTeamResponses).toHaveLength(3);
+  for (const response of crossTeamResponses) expect([403, 404]).toContain(response.status);
   const crossTeamEvents = [
     ['cross_team_list_rejected', 'none'],
     ['cross_team_preview_rejected', 'none'],
@@ -600,7 +794,9 @@ test('authenticated loopback browser submits actual-owner allow and deny decisio
       scenario.teamBRequest,
       decision,
       process.hrtime.bigint(),
-      crossTeamStatuses[index]
+      crossTeamResponses[index]?.status,
+      sha256(crossTeamResponses[index]?.body ?? ''),
+      sha256(crossTeamResponses[index]?.requestBody ?? '')
     );
   });
 });
