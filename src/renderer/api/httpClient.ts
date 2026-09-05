@@ -41,6 +41,11 @@ import {
   type TokenUsageElectronApi,
   type TokenUsageSnapshotRequest,
 } from '@features/token-usage/contracts';
+import {
+  WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE,
+  WORKSPACE_TRUST_PROJECT_STATUS_ROUTE,
+  type WorkspaceTrustElectronApi,
+} from '@features/workspace-trust/contracts';
 import { SENTRY_ENVIRONMENT, SENTRY_RELEASE } from '@shared/utils/sentryConfig';
 
 import { createBrowserReviewApi } from './browserReviewApi';
@@ -396,6 +401,11 @@ export class HttpAPIClient implements ElectronAPI {
 
   getDashboardRecentProjects = (): Promise<DashboardRecentProjectsPayload> =>
     this.get<DashboardRecentProjectsPayload>('/api/dashboard/recent-projects');
+
+  workspaceTrust: WorkspaceTrustElectronApi['workspaceTrust'] = {
+    getLaunchStatus: (request) => this.post(WORKSPACE_TRUST_LAUNCH_STATUS_ROUTE, request),
+    getProjectStatus: (request) => this.post(WORKSPACE_TRUST_PROJECT_STATUS_ROUTE, request),
+  };
 
   organizations: OrganizationsElectronApi = {
     getOrganizationMap: (request?: OrganizationMapRequest): Promise<OrganizationMapPayload> => {

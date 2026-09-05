@@ -4,6 +4,7 @@ import { getCachedShellEnv } from '@main/utils/shellEnv';
 import {
   isSupportedOpenCodeRuntimeBinaryPath,
   resolveAppManagedOpenCodeRuntimeBinaryPath,
+  resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
 } from '../infrastructure/OpenCodeRuntimeInstallerService';
 
@@ -79,13 +80,17 @@ export function buildPassiveProviderStatusCliEnv(
   if (!options.providerId || options.providerId === 'opencode') {
     const explicitOpenCodeBinary = resolveExplicitOpenCodeBinary(options);
     const appManagedOpenCodeBinary = resolveAppManagedOpenCodeRuntimeBinaryPath();
-    if (appManagedOpenCodeBinary && !explicitOpenCodeBinary) {
+    const cachedVerifiedOpenCodeBinary = appManagedOpenCodeBinary
+      ? null
+      : resolveCachedVerifiedOpenCodeRuntimeBinaryPath();
+    const knownOpenCodeBinary = appManagedOpenCodeBinary ?? cachedVerifiedOpenCodeBinary;
+    if (knownOpenCodeBinary && !explicitOpenCodeBinary) {
       // A cached login shell can retain a stale override after the app installs or updates
-      // its managed runtime. Keep only deliberate call/process overrides authoritative.
+      // or verifies its runtime. Keep only deliberate call/process overrides authoritative.
       delete env[OPENCODE_RUNTIME_BINARY_PATH_ENV];
       delete env[OPENCODE_LEGACY_BINARY_PATH_ENV];
     }
-    applyOpenCodeRuntimeBinaryEnv(env, explicitOpenCodeBinary ?? appManagedOpenCodeBinary);
+    applyOpenCodeRuntimeBinaryEnv(env, explicitOpenCodeBinary ?? knownOpenCodeBinary);
   }
   removeGlobalElectronRunAsNodeEnv(env);
   return { env, connectionIssues: {}, providerArgs: [] };

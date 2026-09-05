@@ -1783,6 +1783,29 @@ describe('CLI status visibility during completed install state', () => {
     expect(host.textContent).toContain('big-pickle');
     expect(openCodeCatalogHookInputs).not.toHaveLength(0);
     expect(openCodeCatalogHookInputs.at(-1)?.refreshRevision).toBe(0);
+    expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(true);
+
+    storeState.cliStatusLoading = true;
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+    expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(false);
+
+    storeState.cliStatusLoading = false;
+    storeState.cliProviderStatusLoading = { opencode: true };
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+    expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(false);
+
+    storeState.cliProviderStatusLoading = {};
+    await act(async () => {
+      root.render(React.createElement(CliStatusBanner));
+      await Promise.resolve();
+    });
+    expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(true);
 
     await act(async () => {
       root.unmount();

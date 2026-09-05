@@ -538,8 +538,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   const launchAuthorityBlockers = launchGuard.blockers(isLaunchMode);
   const launchAuthorityBlocked = launchAuthorityBlockers.length > 0;
   const workspaceTrustStatus = useWorkspaceTrustStatus({
-    enabled: open && isLaunchMode && selectedMemberProviders.includes('anthropic'),
+    enabled: open && isLaunchMode,
     projectPath: effectiveCwd || null,
+    providerIds: selectedMemberProviders,
   });
   const hasSelectedAnthropicRuntime = isLaunchMode && selectedMemberProviders.includes('anthropic');
   const effectiveAnthropicRuntimeLimitContext =
@@ -2224,8 +2225,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     isLaunchMode && effectivePrepare.state === 'failed' && !experimentalLocalModelOverrideEnabled;
   const canSkipPreflight = () =>
     isLaunchMode &&
-    prepareState === 'loading' &&
-    optionalPreflight.canSkipOptionalProviderPreflight(
+    optionalPreflight.canSkipProviderPreflight(
+      prepareState,
       selectedMemberProviders,
       runtimeProviderStatusById,
       runtimeProviderLoadingById,
@@ -2300,12 +2301,17 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         return;
       }
     }
-    if (isLaunchMode && prepareState === 'idle') {
+    if (isLaunchMode && prepareState === 'idle' && !canSkipPreflight()) {
       setPrepareState('loading');
       setPrepareMessage(t('launch.prepare.checkingProviders'));
       return;
     }
-    if (launchGuard.reject(isLaunchMode, () => setLocalError(t('launch.prepare.failed')))) return;
+    if (
+      launchGuard.reject(isLaunchMode && !canSkipPreflight(), () =>
+        setLocalError(t('launch.prepare.failed'))
+      )
+    )
+      return;
     if (!submissionFence.acquire(prepareRequestSeqRef)) return;
     setLocalError(null);
     setIsSubmitting(true);
@@ -2460,7 +2466,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       (prepareState === 'loading' && !canSkipPreflight()) ||
       validationErrors.length > 0 ||
       !!modelValidationError ||
-      (isLaunchMode && prepareState !== 'idle' && launchGuard.blocked(isLaunchMode)) ||
+      (prepareState !== 'idle' && !canSkipPreflight() && launchGuard.blocked(isLaunchMode)) ||
       hasInvalidLaunchMemberNames ||
       hasDuplicateLaunchMemberNames ||
       prepareBlocksLaunch ||

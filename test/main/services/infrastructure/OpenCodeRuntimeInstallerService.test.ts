@@ -33,6 +33,7 @@ import {
   getOpenCodeRuntimePlatformCandidates,
   OpenCodeRuntimeInstallerService,
   resolveAppManagedOpenCodeRuntimeBinaryPath,
+  resolveCachedVerifiedOpenCodeRuntimeBinaryPath,
   resolveVerifiedAppManagedOpenCodeRuntimeBinaryPath,
   resolveVerifiedOpenCodeRuntimeBinaryPath,
   verifyOpenCodeRuntimePackageIntegrity,
@@ -341,6 +342,7 @@ describe('OpenCodeRuntimeInstallerService resolver', () => {
     await expect(resolveVerifiedOpenCodeRuntimeBinaryPath({ shellEnvTimeoutMs: 0 })).resolves.toBe(
       binaryPath
     );
+    expect(resolveCachedVerifiedOpenCodeRuntimeBinaryPath()).toBe(binaryPath);
     expect(resolveInteractiveShellEnvBestEffortMock).toHaveBeenCalledWith(
       expect.objectContaining({
         timeoutMs: 0,

@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from '@renderer/components/ui/tooltip';
 import { useEffectiveCliProviderStatus } from '@renderer/hooks/useEffectiveCliProviderStatus';
+import { useOpenCodePassiveStatusPrefetch } from '@renderer/hooks/useOpenCodePassiveStatusPrefetch';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
 import { shouldHydrateCodexModelCatalog } from '@renderer/utils/codexCatalogHydration';
@@ -104,6 +105,7 @@ import {
   getOpenCodeReadinessSummary,
   getOpenCodeRuntimeStatusUiState,
   hasFreeOpenCodeModelRoute,
+  isOpenCodePassiveStatusReadyForCatalog,
   shouldShowOpenCodeRuntimeLoading,
 } from './openCodeRuntimeStatusUi';
 import { compareModelFreshness, isRecentlyReleasedModel } from './teamModelFreshness';
@@ -1138,6 +1140,10 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   } | null>(null);
   const effectiveProviderId = inspectedProviderId ?? selectedProviderId;
   const isInspectingInactiveProvider = inspectedProviderId !== null;
+  useOpenCodePassiveStatusPrefetch({
+    enabled: effectiveProviderId === 'opencode',
+    projectPath: openCodeCatalogScopeKey || null,
+  });
   const {
     cliStatus: effectiveCliStatus,
     sourceCliStatus,
@@ -1204,11 +1210,16 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     value,
     scopeKey: openCodeSelectionAuthorityScopeKey,
   });
+  const openCodePassiveStatusReadyForCatalog = isOpenCodePassiveStatusReadyForCatalog(
+    passiveRuntimeProviderStatus,
+    openCodeRuntimeStatus
+  );
   const openCodeScopedCatalog = useOpenCodeProviderModelCatalog({
     enabled:
       effectiveProviderId === 'opencode' &&
       multimodelAvailable &&
-      effectiveCliStatus?.flavor === 'agent_teams_orchestrator',
+      effectiveCliStatus?.flavor === 'agent_teams_orchestrator' &&
+      openCodePassiveStatusReadyForCatalog,
     sourceProviderId: openCodeCatalogSourceProviderId,
     projectPath: openCodeCatalogScopeKey || null,
     refreshRevision: cliProviderStatusScopeRevision,
@@ -2548,7 +2559,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
   const localDetectedModelCount = openCodeLocalModelOverlay.detectedCount;
   const localConfiguredModelCount = openCodeLocalModelOverlay.configuredCount;
   const openCodeCatalogLoading =
-    effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'loading';
+    effectiveProviderId === 'opencode' &&
+    (openCodeScopedCatalog.status === 'loading' ||
+      (!openCodePassiveStatusReadyForCatalog && openCodeRuntimeStatusUiState === 'checking'));
   const openCodeCatalogRefreshFailed =
     effectiveProviderId === 'opencode' && openCodeScopedCatalog.status === 'error';
   const retryOpenCodeCatalogRefresh = (): void => {
@@ -2556,13 +2569,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     invalidateCliProviderModelCatalog?.();
   };
   const retryOpenCodeRuntimeStatus = (): void => {
-    void fetchOpenCodeRuntimeStatus();
-    void fetchCliProviderStatus('opencode', {
-      silent: true,
-      checkReason: 'launch_preflight',
-      projectPath: openCodeCatalogScopeKey || null,
-    });
-    retryOpenCodeCatalogRefresh();
+    void fetchOpenCodeRuntimeStatus().then(() =>
+      fetchCliProviderStatus('opencode', {
+        silent: true,
+        checkReason: 'launch_preflight',
+        projectPath: openCodeCatalogScopeKey || null,
+      })
+    );
   };
   const shouldShowOpenCodeCatalogLoading =
     openCodeCatalogLoading &&
@@ -3183,7 +3196,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                       disabled={
                         provider.comingSoon || (!providerSelectable && !providerInspectable)
                       }
-                      aria-disabled={!providerSelectable || undefined}
+                      aria-disabled={
+                        provider.comingSoon ||
+                        (!providerSelectable && !providerInspectable) ||
+                        undefined
+                      }
                       aria-description={providerTooltip ?? undefined}
                       data-testid={`team-model-selector-provider-nav-${provider.id}`}
                       className={cn(
@@ -3211,7 +3228,11 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                         disabled={
                           !isProviderSelectable('opencode') && !isProviderInspectable('opencode')
                         }
-                        aria-disabled={!isProviderSelectable('opencode') || undefined}
+                        aria-disabled={
+                          (!isProviderSelectable('opencode') &&
+                            !isProviderInspectable('opencode')) ||
+                          undefined
+                        }
                         aria-description={getProviderDisabledReason('opencode') ?? undefined}
                         data-testid="team-model-selector-provider-nav-local-models"
                         className="relative h-10 w-full shrink-0 justify-start gap-2 rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text)] data-[state=active]:border-cyan-300/10 data-[state=active]:bg-cyan-300/[0.07] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-cyan-300 data-[state=active]:before:content-['']"
@@ -3308,17 +3329,15 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 const openCodeDisabledReason = getProviderDisabledReason('opencode');
                 const sourceModelCount = openCodeSourceModelCountById.get(provider.sourceId) ?? 0;
                 const sourceLoadable = isOpenCodeSourceTabLoadable(provider);
+                const sourceDisabled =
+                  !sourceLoadable ||
+                  (!isProviderSelectable('opencode') && !isProviderInspectable('opencode'));
                 return (
                   <TabsTrigger
                     key={provider.id}
                     value={provider.id}
-                    disabled={
-                      !sourceLoadable ||
-                      (!isProviderSelectable('opencode') && !isProviderInspectable('opencode'))
-                    }
-                    aria-disabled={
-                      !sourceLoadable || !isProviderSelectable('opencode') || undefined
-                    }
+                    disabled={sourceDisabled}
+                    aria-disabled={sourceDisabled || undefined}
                     aria-description={
                       sourceLoadable
                         ? (openCodeDisabledReason ?? undefined)

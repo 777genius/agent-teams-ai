@@ -87,6 +87,7 @@ const storeState = {
 vi.mock('@renderer/api', () => ({
   isElectronMode: () => true,
   api: {
+    workspaceTrust: { getLaunchStatus: vi.fn(), getProjectStatus: vi.fn() },
     getCodexAccountSnapshot: vi.fn(async () => null),
     refreshCodexAccountSnapshot: vi.fn(async () => null),
     onCodexAccountSnapshotChanged: vi.fn(() => () => {}),
@@ -692,23 +693,208 @@ function createAuthoritativeProviderStatus(
 
 describe('LaunchTeamDialog', () => {
   it.each([
-    ['create', 'failed'],
-    ['launch', 'failed'],
-    ['create', 'ready'],
-    ['launch', 'ready'],
+    ['create', 'anthropic', 'codex', false, ['anthropic', 'codex']],
+    ['launch', 'anthropic', 'codex', false, ['anthropic', 'codex']],
+    ['create', 'codex', 'anthropic', false, ['anthropic', 'codex']],
+    ['launch', 'codex', 'anthropic', false, ['anthropic', 'codex']],
+    ['create', 'codex', 'anthropic', true, ['codex']],
+    ['launch', 'codex', 'anthropic', true, ['codex']],
+    ['create', 'anthropic', 'codex', true, ['anthropic']],
+    ['launch', 'anthropic', 'codex', true, ['anthropic']],
   ] as const)(
-    'optional skip %s with %s completion fences duplicates and resumes after rejection without repeating successful diagnostics',
-    async (mode, completion) => {
+    'projects trust in mounted %s with %s lead, %s member (removed=%s)',
+    async (mode, lead, memberProvider, removed, expectedProviders) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-      localStorage.setItem('team:lastSelectedProvider', 'anthropic');
-      localStorage.setItem('team:lastSelectedModel:anthropic', 'opus');
+      vi.useFakeTimers();
+      localStorage.setItem('team:lastSelectedProvider', lead);
+      localStorage.setItem(`team:lastSelectedModel:${lead}`, lead === 'codex' ? 'gpt-5.4' : 'opus');
+      for (const provider of storeState.cliStatus.providers ?? []) {
+        storeState.cliProviderStatusByScope[
+          getCliProviderStatusScopeKey(provider.providerId, '/tmp/project')
+        ] = provider;
+      }
+      if (mode === 'create') {
+        Object.assign(createTeamDraftMock.state.members[0], {
+          providerId: lead,
+          model: lead === 'codex' ? 'gpt-5.4' : 'opus',
+        });
+        Object.assign(createTeamDraftMock.state.members[1], {
+          providerId: memberProvider,
+          model: memberProvider === 'codex' ? 'gpt-5.4' : 'opus',
+          removedAt: removed ? 1 : undefined,
+        });
+      }
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      let resolveTrust!: (value: any) => void;
+      vi.mocked(api.workspaceTrust!.getLaunchStatus!).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveTrust = resolve;
+          })
+      );
+      await act(async () => {
+        root.render(
+          mode === 'create'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                clearProvisioningError: vi.fn(),
+                existingTeamNames: [],
+                provisioningTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: vi.fn(async () => {}),
+                onOpenTeam: vi.fn(),
+              })
+            : React.createElement(LaunchTeamDialog, {
+                mode: 'launch',
+                open: true,
+                teamName: 'team-alpha',
+                members: [],
+                defaultProjectPath: '/tmp/project',
+                provisioningError: null,
+                clearProvisioningError: vi.fn(),
+                activeTeams: [],
+                onClose: vi.fn(),
+                onLaunch: vi.fn(async () => {}),
+              })
+        );
+        await flush();
+      });
+      await act(async () => {
+        teamRosterEditorSectionMock.lastProps.onProviderChange(lead);
+        teamRosterEditorSectionMock.lastProps.onSyncModelsWithTeammatesChange(false);
+        teamRosterEditorSectionMock.lastProps.onMembersChange([
+          {
+            id: 'trust-test-member',
+            name: 'tester',
+            originalName: 'tester',
+            roleSelection: '',
+            customRole: 'Developer',
+            workflow: '',
+            providerId: memberProvider,
+            model: memberProvider === 'codex' ? 'gpt-5.4' : 'opus',
+            removedAt: removed ? 1 : undefined,
+          },
+        ]);
+        await flush();
+      });
+      expect(host.querySelectorAll('[role="note"]')).toHaveLength(0);
+      // Readiness intentionally publishes its clock from a zero-delay timer.
+      // Settle that independent gate without reaching the 120ms trust debounce.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10);
+      });
+      const submitLabel = mode === 'create' ? 'Create' : 'Launch team';
+      const submit = () =>
+        Array.from(host.querySelectorAll('button')).find(
+          (button) => button.textContent === submitLabel
+        );
+      expect(submit()?.disabled, host.textContent ?? '').toBe(false);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(120);
+      });
+      expect(api.workspaceTrust!.getLaunchStatus).toHaveBeenLastCalledWith({
+        projectPath: '/tmp/project',
+        providerIds: expectedProviders,
+      });
+      expect(submit()?.disabled).toBe(false);
+      await act(async () => {
+        resolveTrust({
+          providers: expectedProviders.map((providerId) => ({
+            providerId,
+            status: providerId === 'codex' ? 'launch_scoped' : 'trusted',
+          })),
+        });
+      });
+      expect(host.querySelectorAll('[role="note"]')).toHaveLength(0);
+      expect(host.textContent).not.toContain('First launch');
+      expect(host.textContent).not.toContain('Project status unknown');
+      expect(submit()?.disabled).toBe(false);
+      expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+      await act(async () => root.unmount());
+    }
+  );
+
+  it.each(['create-only', 'schedule', 'closed'] as const)(
+    'does not read trust for mounted %s',
+    async (mode) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.useFakeTimers();
+      createTeamDraftMock.state.launchTeam = false;
+      const root = createRoot(document.createElement('div'));
+      await act(async () => {
+        root.render(
+          mode === 'create-only'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                clearProvisioningError: vi.fn(),
+                existingTeamNames: [],
+                provisioningTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: vi.fn(async () => {}),
+                onOpenTeam: vi.fn(),
+              })
+            : mode === 'schedule'
+              ? React.createElement(LaunchTeamDialog, {
+                  mode: 'schedule',
+                  open: true,
+                  onClose: vi.fn(),
+                })
+              : React.createElement(LaunchTeamDialog, {
+                  mode: 'launch',
+                  open: mode !== 'closed',
+                  teamName: 'team-alpha',
+                  members: [],
+                  defaultProjectPath: '/tmp/project',
+                  provisioningError: null,
+                  clearProvisioningError: vi.fn(),
+                  activeTeams: [],
+                  onClose: vi.fn(),
+                  onLaunch: vi.fn(async () => {}),
+                })
+        );
+        await flush();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_500);
+      });
+      expect(api.workspaceTrust!.getLaunchStatus).not.toHaveBeenCalled();
+      await act(async () => root.unmount());
+    }
+  );
+
+  it.each([
+    ['create', 'failed', 'anthropic'],
+    ['launch', 'failed', 'anthropic'],
+    ['create', 'ready', 'anthropic'],
+    ['launch', 'ready', 'anthropic'],
+    ['create', 'ready', 'opencode'],
+    ['launch', 'ready', 'opencode'],
+  ] as const)(
+    'optional skip %s with %s %s completion fences duplicates and resumes after rejection without repeating successful diagnostics',
+    async (mode, completion, selectedProvider) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      localStorage.setItem('team:lastSelectedProvider', selectedProvider);
+      localStorage.setItem(
+        `team:lastSelectedModel:${selectedProvider}`,
+        selectedProvider === 'opencode' ? 'opencode/big-pickle' : 'opus'
+      );
       createTeamDraftMock.state.soloTeam = mode !== 'create';
-      if (mode === 'create') createTeamDraftMock.state.members[1].providerId = 'anthropic';
+      if (mode === 'create') createTeamDraftMock.state.members[1].providerId = selectedProvider;
       const pending: ((value: any) => void)[] = [];
       vi.mocked(runProviderPrepareDiagnostics).mockImplementation(({ providerId }) =>
-        providerId === 'opencode'
-          ? Promise.resolve({ status: 'ready', details: [], warnings: [], modelResultsById: {} })
-          : new Promise((resolve) => pending.push(resolve))
+        providerId === selectedProvider
+          ? new Promise((resolve) => pending.push(resolve))
+          : Promise.resolve({ status: 'ready', details: [], warnings: [], modelResultsById: {} })
       );
       let rejectSubmit!: (error: Error) => void;
       const submit = vi.fn(
@@ -785,7 +971,7 @@ describe('LaunchTeamDialog', () => {
       now.mockReturnValue(base);
       const attempt = vi
         .mocked(runProviderPrepareDiagnostics)
-        .mock.calls.find(([input]) => input.providerId === 'anthropic')![0];
+        .mock.calls.find(([input]) => input.providerId === selectedProvider)![0];
       await act(async () => {
         attempt.onModelProgress?.({
           status: 'failed',
@@ -839,6 +1025,9 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    vi.mocked(api.workspaceTrust!.getLaunchStatus!)
+      .mockReset()
+      .mockResolvedValue({ providers: [] });
     vi.mocked(runProviderPrepareDiagnostics).mockReset();
     vi.mocked(runProviderPrepareDiagnostics).mockResolvedValue({
       status: 'ready',
@@ -854,6 +1043,7 @@ describe('LaunchTeamDialog', () => {
         createAuthoritativeProviderStatus('opencode', ['opencode/big-pickle']),
       ],
     };
+    storeState.cliProviderStatusLoading = {};
     fetchCliProviderStatus.mockReset();
     fetchCliProviderStatus.mockImplementation(async (providerId, options) => {
       if (providerId !== 'opencode' || !options?.projectPath) {
@@ -920,14 +1110,19 @@ describe('LaunchTeamDialog', () => {
     vi.clearAllMocks();
     storeState.cliStatus = { providers: [] };
     storeState.cliProviderStatusByScope = {};
+    storeState.cliProviderStatusLoading = {};
     storeState.launchParamsByTeam = {};
     createTeamDraftMock.state.members[0].model = 'opencode/big-pickle';
+    createTeamDraftMock.state.members[0].providerId = 'opencode';
+    delete (createTeamDraftMock.state.members[0] as any).removedAt;
     createTeamDraftMock.state.members[1].providerId = 'codex';
     createTeamDraftMock.state.members[1].model = 'gpt-5.5';
+    delete (createTeamDraftMock.state.members[1] as any).removedAt;
     createTeamDraftMock.state.cwdMode = 'project';
     createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
     createTeamDraftMock.state.customCwd = '';
     createTeamDraftMock.state.soloTeam = false;
+    createTeamDraftMock.state.launchTeam = true;
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(() => true);
     teamRosterEditorSectionMock.lastProps = null;
   });
@@ -3735,20 +3930,26 @@ describe('LaunchTeamDialog', () => {
           verificationState: 'verified',
           statusCheckOutcome: 'authoritative',
           modelVerificationState: 'verified',
-          statusMessage: 'warming up',
-          detailMessage: 'catalog still loading',
+          statusMessage: 'healthy',
+          detailMessage: 'catalog snapshot ready',
           models: ['opencode/minimax-m2.5-free'],
-          modelCatalogRefreshState: 'loading',
+          modelCatalogRefreshState: 'ready',
           modelCatalog: {
             schemaVersion: 1,
             providerId: 'opencode',
             source: 'app-server',
-            status: 'checking',
+            status: 'ready',
             fetchedAt: '2026-07-20T00:00:00.000Z',
             staleAt: '2099-07-20T00:10:00.000Z',
             defaultModelId: 'opencode/minimax-m2.5-free',
             defaultLaunchModel: 'opencode/minimax-m2.5-free',
-            models: [],
+            models: [
+              {
+                id: 'opencode/minimax-m2.5-free',
+                launchModel: 'opencode/minimax-m2.5-free',
+                displayName: 'minimax-m2.5-free',
+              },
+            ],
             diagnostics: { configReadState: 'ready', appServerState: 'healthy' },
           },
           capabilities: {
@@ -3824,9 +4025,9 @@ describe('LaunchTeamDialog', () => {
     });
 
     const launchButtonWhileChecking = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Launch team'
+      (button) => button.textContent === 'Skip preflight and launch'
     );
-    expect(launchButtonWhileChecking?.hasAttribute('disabled')).toBe(true);
+    expect(launchButtonWhileChecking?.hasAttribute('disabled')).toBe(false);
 
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',

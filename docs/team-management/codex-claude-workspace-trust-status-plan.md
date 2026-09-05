@@ -1,6 +1,8 @@
 # Workspace trust: Claude Code + Codex, общий UI без ложного статуса
 
-Статус: подробный план; поддержка Codex в UI по этому плану еще не реализована.
+Статус: реализовано и проверено локально на frontend base
+`81fda38cf8525f71081e39363244d4bf83f850f9`; изменения еще не закоммичены и не
+отправлены в PR.
 Дата проверки исходников: 2026-09-04.
 
 ## 1. Цель и границы
@@ -9,10 +11,10 @@
 Create/Launch. Один контракт, один hook, одна политика отображения, один компонент.
 Различаться должны только источники фактов о доверии, а не две копии всего flow.
 
-Сохранить достигнутый UX: без желтой карточки, заголовка `First launch`, текста
-`Project status unknown`, отдельного подтверждения, постоянного спиннера и влияния
-на кнопку запуска. Подсказка сообщает о возможном выполнении проектных команд/MCP;
-она не заменяет readiness, sandbox, permissions или launch preflight.
+Показывать желтую карточку `First launch` только для доказанного Claude
+`untrusted`. Для `trusted`, `checking`, `unknown`, Codex `launch_scoped` и
+неподдерживаемых провайдеров не показывать нейтральный текст, подтверждение или
+спиннер. Карточка не заменяет readiness, sandbox, permissions или provider preflight.
 
 В scope: Claude/Anthropic, Codex, Create и Launch, IPC и тонкая HTTP-проекция той же
 операции, обратная совместимость, регрессионные и визуальные проверки.
@@ -25,9 +27,9 @@ Create/Launch. Один контракт, один hook, одна политик
 
 Для Claude можно скрыть подсказку по реально сохраненному доверию. Для Codex в
 текущем командном runtime доверие обычно задается только на отдельный запуск.
-Поэтому минимальная реализация не обещает: "Codex уже запускался, значит подсказка
-никогда больше не появится". У Codex останется одна тихая общая строка, без слов
-"первый запуск" и "неизвестный статус". Она может повторяться.
+Поэтому `launch_scoped` нельзя выдавать за первый запуск или persisted trust.
+Минимальная реализация скрывает этот статус и не показывает повторяющуюся
+информационную строку.
 
 Если обязательное условие - скрывать ее после первого Codex-запуска даже после
 перезапуска приложения, нужен отдельный согласованный продуктовый шаг: хранение
@@ -47,8 +49,8 @@ base `12d840a0f5a924d640faaa7f1843e611409cb7e9`, также с локальны�
   Оба диалога включают его только при выбранном Anthropic runtime.
 - `WorkspaceTrustStatusReader` канонизирует рабочую папку и вызывает
   `FileClaudeStateProbe`. Последний читает сохраненное `hasTrustDialogAccepted`.
-- Статусы `trusted/checking/disabled/not_applicable` скрывают строку;
-  `untrusted/unknown` показывают один общий нейтральный текст.
+- Только `untrusted` показывает first-launch warning; `trusted`, `checking`,
+  `unknown`, `launch_scoped`, `disabled` и `not_applicable` ничего не показывают.
 - `WorkspaceTrustCoordinator` уже формирует Codex trust-overrides для запуска.
   Они передаются через settings оркестратора, не через запуск UI-проверки.
 - В runtime `appServerRunner.ts` намеренно исключает `config.toml` из временного
@@ -138,8 +140,8 @@ DTO не содержит содержимого конфигов, auth identity
 
 Новый bridge метод должен быть feature-detectable. Старый main / отсутствующий
 метод / старый HTTP server не должны ломать renderer или выдавать Codex `trusted`.
-Для поддерживаемых провайдеров безопасный fallback - `unknown`, то есть тот же
-краткий общий текст. Для Anthropic-only допустим legacy API; его результат нельзя
+Для поддерживаемых провайдеров безопасный fallback - скрытый `unknown`. Для
+Anthropic-only допустим legacy API; его результат нельзя
 использовать в качестве Codex evidence.
 
 IPC и HTTP используют общий validator и facade. Добавить HTTP route/client и
@@ -158,10 +160,11 @@ SSH mode не поддерживает эту операцию, вернуть `
 | Состояние выбранных поддерживаемых провайдеров     | Отображение                                     |
 | -------------------------------------------------- | ----------------------------------------------- |
 | Только Claude, trusted                             | Нет подсказки                                   |
-| Claude untrusted или unknown                       | Одна существующая нейтральная строка            |
-| Codex launch_scoped                                | Та же строка, без first-launch обещания         |
-| Claude trusted + Codex launch_scoped               | Одна строка, не две                             |
-| Есть unknown/untrusted при других успешных ответах | Одна строка; успех соседа не скрывает ее        |
+| Claude untrusted                                   | Одна first-launch warning-карточка              |
+| Claude unknown                                     | Нет подсказки                                   |
+| Codex launch_scoped                                | Нет подсказки                                   |
+| Claude trusted + Codex launch_scoped               | Нет подсказки                                   |
+| Claude untrusted + любой сосед                     | Одна first-launch warning-карточка              |
 | Все disabled/not_applicable                        | Нет подсказки                                   |
 | Запрос checking, нет актуального результата        | Нет отдельного текста/спиннера, CTA не меняется |
 | Только неподдерживаемые провайдеры                 | Нет trust-запроса и подсказки этой feature      |
@@ -316,16 +319,22 @@ launch behavior и не является безобидным переключа
 
 Готово, когда:
 
-- [ ] Claude и Codex представлены в одном read-model/hook/UI без копий flow.
-- [ ] Claude trusted скрывает строку; Codex launch-scoped не выдается за persisted.
-- [ ] `First launch` и `Project status unknown` не возвращаются.
-- [ ] Mixed команда показывает максимум одну строку; removed provider не влияет.
-- [ ] Нет paid/CLI preflight, config writes, auth reads или новой кнопки подтверждения.
-- [ ] IPC/HTTP/legacy fallback и все freshness edge cases покрыты тестами.
-- [ ] Trust checking не меняет Launch/Skip и не скрывает реальные readiness blockers.
-- [ ] Focused gates и DevMCP screenshots пройдены на exact candidate diff.
-- [ ] Live evidence отделено от fixtures; сбои внешнего provider не названы успехом.
-- [ ] Ограничение повторной Codex-подсказки явно отражено в handoff.
+- [x] Claude и Codex представлены в одном read-model/hook/UI без копий flow.
+- [x] Claude trusted скрывает строку; Codex launch-scoped не выдается за persisted.
+- [x] `First launch` показывается только для доказанного Claude `untrusted`;
+      `Project status unknown` не показывается.
+- [x] Mixed команда показывает максимум одну строку; removed provider не влияет.
+- [x] Нет paid/CLI preflight, config writes, auth reads или новой кнопки подтверждения.
+- [x] IPC/HTTP/legacy fallback и все freshness edge cases покрыты тестами.
+- [x] Trust checking не меняет Launch/Skip и не скрывает реальные readiness blockers.
+- [x] Focused gates и DevMCP screenshots пройдены на exact candidate diff.
+- [x] Live evidence отделено от fixtures; сбои внешнего provider не названы успехом.
+- [x] Codex `launch_scoped` скрыт и не создает повторяющуюся подсказку.
+
+В DevMCP на disposable sandbox проверено: trusted Claude не показывает карточку,
+untrusted Claude показывает ровно одну warning-карточку, Codex launch-scoped и
+неизвестные состояния не создают нейтральный шум. Provider preflight проверяется
+отдельно и не использует trust-статус как launch authority.
 
 Ожидаемый бюджет: 200-350 production/wiring LOC и 300-500 test LOC. Если для
 варианта A понадобится существенно больше, сначала проверить, не попали ли в

@@ -175,6 +175,39 @@ describe('connected OpenCode dashboard catalog', () => {
     expect(observed.providerStatus?.models).toContain('openrouter/model-0');
     expect(observed.providerStatus?.modelCatalog?.status).toBe('degraded');
   });
+  it('loads connected sources sequentially to avoid competing OpenCode runtime processes', async () => {
+    mocks.directory.mockResolvedValue(directory(['opencode', 'openrouter', 'xai']));
+    const completions = new Map<string, (value: unknown) => void>();
+    mocks.models.mockImplementation(
+      ({ providerId }) =>
+        new Promise((resolve) => {
+          completions.set(providerId, resolve);
+        })
+    );
+
+    await act(async () => root.render(<Probe />));
+    expect(mocks.models).toHaveBeenCalledTimes(1);
+    expect(mocks.models.mock.calls[0]?.[0].providerId).toBe('opencode');
+
+    await act(async () => {
+      completions.get('opencode')?.(models('opencode'));
+      await vi.waitFor(() => expect(mocks.models).toHaveBeenCalledTimes(2));
+    });
+    expect(mocks.models.mock.calls[1]?.[0].providerId).toBe('openrouter');
+
+    await act(async () => {
+      completions.get('openrouter')?.(models('openrouter'));
+      await vi.waitFor(() => expect(mocks.models).toHaveBeenCalledTimes(3));
+    });
+    expect(mocks.models.mock.calls[2]?.[0].providerId).toBe('xai');
+
+    await act(async () => {
+      completions.get('xai')?.(models('xai'));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(observed.providerStatus?.modelCatalogRefreshState).toBe('ready');
+  });
   it('keeps successful sources and real timeout errors, then retries the same scope', async () => {
     mocks.models.mockImplementation(async ({ providerId }) => {
       if (providerId === 'openrouter') throw new Error('Timed out after 90000ms');

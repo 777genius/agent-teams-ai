@@ -17,10 +17,14 @@
 // error tracking can be added later with @sentry/node if needed.
 
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
+import { createWorkspaceTrustFeatures } from '@features/workspace-trust/main';
 import { createLogger } from '@shared/utils/logger';
 
 import { LocalFileSystemProvider } from './services/infrastructure/LocalFileSystemProvider';
 import {
+  getAutoDetectedClaudeBasePath,
+  getClaudeBasePath,
+  getHomeDir,
   getProjectsBasePath,
   getTodosBasePath,
   setClaudeBasePathOverride,
@@ -164,6 +168,11 @@ async function start(): Promise<void> {
     chunkBuilder: localContext.chunkBuilder,
     dataCache: localContext.dataCache,
     recentProjectsFeature,
+    workspaceTrust: createWorkspaceTrustFeatures({
+      getClaudeConfigDir: getClaudeBasePath,
+      getAutoDetectedClaudeConfigDir: getAutoDetectedClaudeBasePath,
+      getHomeDir,
+    }).status,
     updaterService: updaterServiceStub,
     sshConnectionManager: sshConnectionManagerStub,
   };

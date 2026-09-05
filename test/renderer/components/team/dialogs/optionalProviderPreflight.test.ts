@@ -1,5 +1,6 @@
 import {
   canSkipOptionalProviderPreflight,
+  canSkipPendingProviderDiscovery,
   createProviderSubmissionFence,
   resumeInterruptedProviderPreflight,
 } from '@renderer/components/team/dialogs/optionalProviderPreflight';
@@ -69,6 +70,91 @@ const check = (
 
 describe('optional provider preflight skip', () => {
   afterEach(() => vi.useRealTimers());
+  it('allows initial skip when one selected provider is still loading', () => {
+    expect(
+      canSkipPendingProviderDiscovery(
+        ['anthropic', 'opencode'],
+        new Map([
+          ['anthropic', provider('anthropic')],
+          ['opencode', provider('opencode')],
+        ]),
+        new Map([['opencode', true]]),
+        NOW
+      )
+    ).toBe(true);
+  });
+  it('does not bypass settled passive model-only discovery', () => {
+    expect(
+      canSkipPendingProviderDiscovery(
+        ['opencode'],
+        new Map([
+          [
+            'opencode',
+            {
+              ...provider('opencode'),
+              statusCheckOutcome: 'model_only' as const,
+              modelCatalog: null,
+            },
+          ],
+        ]),
+        new Map(),
+        NOW
+      )
+    ).toBe(false);
+  });
+  it('allows initial skip after a bounded provider discovery timeout', () => {
+    expect(
+      canSkipPendingProviderDiscovery(
+        ['opencode'],
+        new Map([
+          [
+            'opencode',
+            {
+              ...provider('opencode'),
+              authenticated: false,
+              statusCheckOutcome: 'transient_error' as const,
+              statusCheckErrorCode: 'timeout',
+              modelCatalog: null,
+            },
+          ],
+        ]),
+        new Map(),
+        NOW
+      )
+    ).toBe(true);
+  });
+  it('does not label an already ready selection as skippable', () => {
+    expect(
+      canSkipPendingProviderDiscovery(
+        ['anthropic', 'codex'],
+        new Map([
+          ['anthropic', provider('anthropic')],
+          ['codex', provider('codex')],
+        ]),
+        new Map(),
+        NOW
+      )
+    ).toBe(false);
+  });
+  it('does not bypass a settled provider failure', () => {
+    expect(
+      canSkipPendingProviderDiscovery(
+        ['codex'],
+        new Map([
+          [
+            'codex',
+            {
+              ...provider('codex'),
+              authenticated: false,
+              statusCheckOutcome: 'transient_error' as const,
+            },
+          ],
+        ]),
+        new Map(),
+        NOW
+      )
+    ).toBe(false);
+  });
   it.each(['pending', 'completed'] as const)(
     'rejoins %s skipped diagnostics without another paid prepare',
     async (state) => {
@@ -119,7 +205,7 @@ describe('optional provider preflight skip', () => {
       expect(prepareProvisioning.mock.calls.filter((call) => call[5] === 'deep')).toHaveLength(1);
     }
   );
-  it.each(['cacheKey', 'requestSignature', 'expired', 'opencode'] as const)(
+  it.each(['cacheKey', 'requestSignature', 'expired'] as const)(
     'does not reuse skipped results across %s',
     async (change) => {
       vi.useFakeTimers();
@@ -128,7 +214,7 @@ describe('optional provider preflight skip', () => {
       const prepareProvisioning = vi.fn(async () => ({ ready: true, message: 'ready' }));
       const input = {
         cwd: '/tmp/test-preflight',
-        providerId: change === 'opencode' ? ('opencode' as const) : ('anthropic' as const),
+        providerId: 'anthropic' as const,
         selectedModelIds: [],
         prepareProvisioning,
       };
@@ -146,7 +232,24 @@ describe('optional provider preflight skip', () => {
       expect(prepareProvisioning).toHaveBeenCalledTimes(2);
     }
   );
-  it.each(['anthropic', 'codex'] as const)(
+  it('rejoins skipped OpenCode diagnostics with the same exact proof identity', async () => {
+    const fence = createProviderSubmissionFence();
+    const prepareProvisioning = vi.fn(async () => ({ ready: true, message: 'ready' }));
+    const input = {
+      cwd: '/tmp/test-preflight',
+      providerId: 'opencode' as const,
+      selectedModelIds: [],
+      prepareProvisioning,
+    };
+    const identity = { cacheKey: 'proof', requestSignature: 'account-model-cwd' };
+    const original = fence.runPreflight(identity, input);
+    fence.acquire({ current: 0 });
+    await original;
+    fence.release();
+    expect(fence.runPreflight(identity, input)).toBe(original);
+    expect(prepareProvisioning).toHaveBeenCalledOnce();
+  });
+  it.each(['anthropic', 'codex', 'opencode'] as const)(
     'allows optional %s checking only with strict current authority',
     (id) => {
       expect(
@@ -164,7 +267,6 @@ describe('optional provider preflight skip', () => {
     { authenticated: false },
     { statusCheckOutcome: 'transient_error' as const },
     { modelCatalog: null },
-    { modelCatalogRefreshState: 'loading' as const },
     { capabilities: { ...provider('codex').capabilities, teamLaunch: false } },
   ])('rejects incomplete runtime authority %j', (override) => {
     expect(
@@ -177,7 +279,7 @@ describe('optional provider preflight skip', () => {
       )
     ).toBe(false);
   });
-  it('does not mistake background runtime refresh for optional checking', () => {
+  it('allows the user to skip while passive runtime authority is still refreshing', () => {
     expect(
       canSkipOptionalProviderPreflight(
         ['codex'],
@@ -186,7 +288,7 @@ describe('optional provider preflight skip', () => {
         [check('codex', 'checking')],
         NOW
       )
-    ).toBe(false);
+    ).toBe(true);
   });
   it('rejects failed plus pending even when aggregate state is loading', () => {
     expect(
@@ -202,7 +304,7 @@ describe('optional provider preflight skip', () => {
       )
     ).toBe(false);
   });
-  it('requires OpenCode exact proof settled before skipping another provider', () => {
+  it('allows in-flight OpenCode proof only while all providers retain launch authority', () => {
     const statuses = new Map<TeamProviderId, CliProviderStatus>([
       ['codex', provider('codex')],
       ['opencode', provider('opencode')],
@@ -215,7 +317,7 @@ describe('optional provider preflight skip', () => {
         [check('codex', 'checking'), check('opencode', 'checking')],
         NOW
       )
-    ).toBe(false);
+    ).toBe(true);
     expect(
       canSkipOptionalProviderPreflight(
         ['codex', 'opencode'],
@@ -234,7 +336,27 @@ describe('optional provider preflight skip', () => {
         [check('codex', 'checking'), check('opencode', 'ready')],
         NOW
       )
-    ).toBe(false);
+    ).toBe(true);
+  });
+  it('allows an in-flight selected-model check over passive model-only authority', () => {
+    const passive = {
+      ...provider('opencode'),
+      authenticated: false,
+      authMethod: null,
+      statusCheckOutcome: 'model_only' as const,
+      modelCatalog: null,
+      modelCatalogRefreshState: 'loading' as const,
+    };
+
+    expect(
+      canSkipOptionalProviderPreflight(
+        ['opencode'],
+        new Map([['opencode', passive]]),
+        new Map(),
+        [check('opencode', 'checking')],
+        NOW
+      )
+    ).toBe(true);
   });
   it('re-evaluates TTL at click time without requiring a rerender', () => {
     vi.useFakeTimers();

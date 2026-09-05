@@ -1630,6 +1630,11 @@ export const CliStatusBanner = ({
     enabled:
       isElectron &&
       multimodelEnabled &&
+      // The connected-provider directory fans out into several OpenCode model
+      // reads. Do not race that work against the authoritative passive status
+      // command or both can contend on the same profile until its timeout.
+      !cliStatusLoading &&
+      cliProviderStatusLoading.opencode !== true &&
       loadingCliStatus?.flavor === 'agent_teams_orchestrator' &&
       canLoadOpenCodeDashboardCatalog(passiveOpenCodeProvider, openCodeRuntimeStatus),
     refreshRevision: providerQuickConnectRefreshKey,

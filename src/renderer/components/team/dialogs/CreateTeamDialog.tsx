@@ -733,8 +733,9 @@ export const CreateTeamDialog = ({
   const launchPreflightCanResolveBlockers =
     canResolveOpenCodeLaunchBlockers(launchAuthorityBlockers);
   const workspaceTrustStatus = useWorkspaceTrustStatus({
-    enabled: open && canCreate && launchTeam && selectedMemberProviders.includes('anthropic'),
+    enabled: open && canCreate && launchTeam,
     projectPath: effectiveCwd || null,
+    providerIds: selectedMemberProviders,
   });
   const hasSelectedAnthropicRuntime = selectedMemberProviders.includes('anthropic');
   const effectiveAnthropicRuntimeLimitContext = hasSelectedAnthropicRuntime ? limitContext : false;
@@ -2123,8 +2124,8 @@ export const CreateTeamDialog = ({
     launchTeam && effectivePrepare.state === 'failed' && !experimentalLocalModelOverrideEnabled;
   const canSkipPreflight = () =>
     launchTeam &&
-    prepareState === 'loading' &&
-    optionalPreflight.canSkipOptionalProviderPreflight(
+    optionalPreflight.canSkipProviderPreflight(
+      prepareState,
       selectedMemberProviders,
       runtimeProviderStatusById,
       runtimeProviderLoadingById,
@@ -2202,12 +2203,22 @@ export const CreateTeamDialog = ({
       setLocalError(modelValidationError);
       return;
     }
-    if (launchTeam && prepareState === 'idle' && launchPreflightCanResolveBlockers) {
+    if (
+      launchTeam &&
+      prepareState === 'idle' &&
+      launchPreflightCanResolveBlockers &&
+      !canSkipPreflight()
+    ) {
       setPrepareState('loading');
       setPrepareMessage(t('create.prepare.checkingProviders'));
       return;
     }
-    if (launchGuard.reject(launchTeam, () => setLocalError(t('launch.prepare.failed')))) return;
+    if (
+      launchGuard.reject(launchTeam && !canSkipPreflight(), () =>
+        setLocalError(t('launch.prepare.failed'))
+      )
+    )
+      return;
     if (prepareBlocksCreate) {
       setLocalError(effectivePrepare.message ?? t('launch.prepare.failed'));
       return;
@@ -2386,7 +2397,7 @@ export const CreateTeamDialog = ({
   );
   const createActionLabel = isSubmitting
     ? t('create.actions.creating')
-    : launchTeam && prepareState === 'loading'
+    : launchTeam && (prepareState === 'loading' || canSkipPreflight())
       ? canSkipPreflight()
         ? t('create.actions.skipPreflightAndCreate')
         : t('create.prepare.checkingProviders')

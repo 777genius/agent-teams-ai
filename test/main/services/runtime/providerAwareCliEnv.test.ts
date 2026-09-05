@@ -14,6 +14,7 @@ const applyAllConfiguredConnectionEnvMock = vi.fn();
 const getConfiguredConnectionIssuesMock = vi.fn();
 const getConfiguredConnectionLaunchArgsMock = vi.fn();
 const resolveAppManagedOpenCodeRuntimeBinaryPathMock = vi.fn();
+const resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const isSupportedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedAppManagedCodexRuntimeBinaryPathMock = vi.fn();
@@ -76,6 +77,8 @@ vi.mock('../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerSe
     isSupportedOpenCodeRuntimeBinaryPathMock(...args),
   resolveAppManagedOpenCodeRuntimeBinaryPath: () =>
     resolveAppManagedOpenCodeRuntimeBinaryPathMock(),
+  resolveCachedVerifiedOpenCodeRuntimeBinaryPath: () =>
+    resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock(),
   resolveVerifiedOpenCodeRuntimeBinaryPath: () => resolveVerifiedOpenCodeRuntimeBinaryPathMock(),
 }));
 
@@ -115,6 +118,7 @@ describe('buildProviderAwareCliEnv', () => {
     getConfiguredConnectionLaunchArgsMock.mockResolvedValue([]);
     getConfiguredConnectionIssuesMock.mockResolvedValue({});
     resolveAppManagedOpenCodeRuntimeBinaryPathMock.mockReturnValue(null);
+    resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock.mockReturnValue(null);
     resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(null);
     isSupportedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(true);
     resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(null);
@@ -204,6 +208,24 @@ describe('buildProviderAwareCliEnv', () => {
     expect(isSupportedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
     expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
     expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+  });
+
+  it('projects a previously verified PATH runtime into passive status without probing again', async () => {
+    const cachedBinaryPath = path.join('/opt', 'homebrew', 'bin', 'opencode');
+    resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock.mockReturnValue(cachedBinaryPath);
+    const { buildPassiveProviderStatusCliEnv } =
+      await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+
+    const result = buildPassiveProviderStatusCliEnv({
+      binaryPath: '/mock/runtime',
+      providerId: 'opencode',
+    });
+
+    expect(result.env.CLAUDE_MULTIMODEL_OPENCODE_BIN_PATH).toBe(cachedBinaryPath);
+    expect(result.env.OPENCODE_BIN_PATH).toBe(cachedBinaryPath);
+    expect(result.env.PATH?.split(path.delimiter)[0]).toBe(path.dirname(cachedBinaryPath));
+    expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
+    expect(isSupportedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
   });
 
   it('preserves an explicit OpenCode binary override for passive status', async () => {
@@ -438,9 +460,7 @@ describe('buildProviderAwareCliEnv', () => {
       providerId: 'opencode',
     });
 
-    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe(
-      '/app/mcp-server/index.js'
-    );
+    expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY).toBe('/app/mcp-server/index.js');
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_COMMAND).toBeUndefined();
     expect(result.env.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBeUndefined();
     vi.mocked(console.warn).mockClear();

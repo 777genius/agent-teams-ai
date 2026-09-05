@@ -50,12 +50,19 @@ const LEGACY_PROVIDER_AUTH_TIMEOUT_MS = 15_000;
 const PROVIDER_MODELS_TIMEOUT_MS = 25_000;
 const PROVIDER_STATUS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
 const PROVIDER_MODELS_MAX_BUFFER_BYTES = 8 * 1024 * 1024;
+const OPENCODE_PROJECT_STATUS_CACHE_TTL_MS = 10_000;
 
 // Summary updates are snapshots; asynchronous hydration updates contain one provider delta.
 type ProviderStatusesObserver = (
   providers: CliProviderStatus[],
   updatedProviderId?: CliProviderId
 ) => void;
+
+const providerStatusReadInFlight = new Map<string, Promise<CliProviderStatus>>();
+const providerStatusReadCache = new Map<
+  string,
+  { readonly expiresAt: number; readonly status: CliProviderStatus }
+>();
 
 function getProviderStatusCommandCwd(projectPath: string | null | undefined): string | undefined {
   const normalized = projectPath?.trim();
@@ -651,6 +658,8 @@ export class ClaudeMultimodelBridgeService {
     this.providerStatusHydrationGeneration += 1;
     this.providerStatusHydrationGenerations.clear();
     this.providerStatusHydrationInFlight.clear();
+    providerStatusReadInFlight.clear();
+    providerStatusReadCache.clear();
   }
 
   private getProviderStatusHydrationKey(
@@ -1203,21 +1212,52 @@ export class ClaudeMultimodelBridgeService {
     providerId: CliProviderId,
     options: { summary?: boolean; timeoutMs?: number; projectPath?: string | null } = {}
   ): Promise<CliProviderStatus> {
-    const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
-      binaryPath,
+    const projectPath = getProviderStatusCommandCwd(options.projectPath) ?? '';
+    const requestKey = JSON.stringify([
+      path.resolve(binaryPath),
       providerId,
+      options.summary === true,
+      options.timeoutMs ?? null,
+      projectPath,
+    ]);
+    const canReuseCompletedRead =
+      providerId === 'opencode' && projectPath.length > 0 && options.summary !== true;
+    const cached = canReuseCompletedRead ? providerStatusReadCache.get(requestKey) : undefined;
+    if (cached && cached.expiresAt > Date.now()) return cached.status;
+    if (cached) providerStatusReadCache.delete(requestKey);
+    const existing = providerStatusReadInFlight.get(requestKey);
+    if (existing) return existing;
+
+    const request = (async () => {
+      const { env: passiveEnv, connectionIssues } = buildPassiveProviderStatusCliEnv({
+        binaryPath,
+        providerId,
+      });
+      const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
+        passiveEnv,
+        providerId
+      );
+      const status = await this.getProviderStatusFromRuntimeStatusCommand(
+        binaryPath,
+        providerId,
+        env,
+        connectionIssues,
+        options
+      );
+      if (canReuseCompletedRead && status.statusCheckOutcome === 'authoritative') {
+        providerStatusReadCache.set(requestKey, {
+          expiresAt: Date.now() + OPENCODE_PROJECT_STATUS_CACHE_TTL_MS,
+          status,
+        });
+      }
+      return status;
+    })().finally(() => {
+      if (providerStatusReadInFlight.get(requestKey) === request) {
+        providerStatusReadInFlight.delete(requestKey);
+      }
     });
-    const env = await providerConnectionService.applyPassiveProviderStatusConnectionEnv(
-      passiveEnv,
-      providerId
-    );
-    return this.getProviderStatusFromRuntimeStatusCommand(
-      binaryPath,
-      providerId,
-      env,
-      connectionIssues,
-      options
-    );
+    providerStatusReadInFlight.set(requestKey, request);
+    return request;
   }
 
   private async getProviderStatusesFromScopedRuntimeStatus(

@@ -63,6 +63,19 @@ export function isOpenCodeStatusCheckNonAuthoritative(
   );
 }
 
+export function isOpenCodePassiveStatusReadyForCatalog(
+  providerStatus: CliProviderStatus | null | undefined,
+  runtimeStatus: OpenCodeRuntimeStatus | null
+): boolean {
+  if (providerStatus?.supported && !isOpenCodeStatusCheckNonAuthoritative(providerStatus)) {
+    return true;
+  }
+  return Boolean(
+    runtimeStatus?.source !== 'missing' &&
+    (providerStatus?.models.length || providerStatus?.modelCatalog?.models.length)
+  );
+}
+
 export function hasFreeOpenCodeModelRoute(
   providerStatus: CliProviderStatus | null | undefined
 ): boolean {
