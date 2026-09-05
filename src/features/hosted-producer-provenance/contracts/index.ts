@@ -3,7 +3,7 @@ export const HOSTED_PRODUCER_PROVENANCE_CONTRACT =
   'claude-team/hosted-producer-provenance' as const;
 export const HOSTED_PRODUCER_PROVENANCE_VERSION = 2 as const;
 export const HOSTED_PRODUCER_PROVENANCE_CONTRACT_SHA256 =
-  'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498' as const;
+  'ef6aa8ac1f139d2b5e9312da8ff1e6dac21da788d46eefbd6e3d43da27da23ba' as const;
 export { default as HOSTED_PRODUCER_PROVENANCE_CONTRACT_ARTIFACT } from './hosted-producer-provenance-v2.schema.json?raw';
 
 export type HostedProducerProvenanceRole = 'browser' | 'opencode' | 'owner' | 'product-producer';
@@ -43,7 +43,77 @@ export interface HostedProducerProvenanceEnvironmentContract {
   >;
 }
 
+export type HostedOwnerStateField =
+  | 'actorMembers'
+  | 'admissionDigest'
+  | 'admissionGeneration'
+  | 'bindings'
+  | 'deliveries'
+  | 'ingress'
+  | 'retiredIngress'
+  | 'revision'
+  | 'routes'
+  | 'schemaVersion'
+  | 'writerFence';
+
+export interface HostedOwnerCollectionSize {
+  readonly previous: number;
+  readonly next: number;
+}
+
+export interface HostedOwnerLeaseClaim {
+  readonly claimedAtIso: string;
+  readonly generation: number;
+  readonly leaseExpiresAtIso: string;
+  readonly leaseToken: string;
+  readonly outboxId: string;
+  readonly ownerId: string;
+}
+
+export type HostedOwnerMutation =
+  | Readonly<{ kind: 'admission-reconciled'; outcome: 'published' }>
+  | Readonly<{ kind: 'ingress-admitted'; outcome: 'admitted' }>
+  | Readonly<{ kind: 'binding-quarantined'; outcome: 'quarantined' }>
+  | Readonly<{
+      kind: 'ingress-lease-claimed';
+      outcome: 'claimed';
+      claims: readonly HostedOwnerLeaseClaim[];
+    }>
+  | Readonly<{ kind: 'ingress-acknowledged'; outcome: 'acknowledged' }>
+  | Readonly<{ kind: 'delivery-started'; outcome: 'started' }>
+  | Readonly<{ kind: 'delivery-settled'; phase: 'completed'; outcome: 'delivered' }>
+  | Readonly<{
+      kind: 'delivery-settled';
+      phase: 'rejected';
+      outcome: 'stale_generation' | 'expired' | 'wrong_lane' | 'self_approval' | 'unavailable';
+    }>;
+
+export interface HostedOwnerWalNative {
+  readonly fence: Readonly<{ dev: string; generation: string; ino: string }>;
+  readonly mutation: HostedOwnerMutation;
+  readonly revision: number;
+  readonly stateDelta: Readonly<{
+    changedFields: readonly HostedOwnerStateField[];
+    collectionSizes: Readonly<
+      Record<
+        'actorMembers' | 'bindings' | 'deliveries' | 'ingress' | 'retiredIngress' | 'routes',
+        HostedOwnerCollectionSize
+      >
+    >;
+    nextRevision: number;
+    nextStateSha256: string;
+    previousRevision: number | null;
+    previousStateSha256: string | null;
+  }>;
+  readonly wal: Readonly<{ byteSize: number; sha256: string }>;
+}
+
 export type HostedProducerNativeRecord =
+  | Readonly<{
+      recordType: 'owner-wal-published';
+      operationNonce: string;
+      native: HostedOwnerWalNative;
+    }>
   | Readonly<{
       recordType: 'approval-http-unadmitted-response-finalized';
       operationNonce: string;

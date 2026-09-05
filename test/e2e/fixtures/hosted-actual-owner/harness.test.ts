@@ -3790,8 +3790,110 @@ describe('nonAuthoritative native capture parser goldens', () => {
 
   it('pins the exact hand-written r307 contract digest', () => {
     expect(PRODUCER_PROVENANCE_CONTRACT_SHA256).toBe(
-      'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498'
+      'ef6aa8ac1f139d2b5e9312da8ff1e6dac21da788d46eefbd6e3d43da27da23ba'
     );
+  });
+
+  function ownerCapture(nativeMutation: Record<string, unknown> = {
+    kind: 'binding-quarantined',
+    outcome: 'quarantined',
+  }): Array<Record<string, unknown>> {
+    const ownerProducer = {
+      ...producer,
+      role: 'owner',
+      implementationId: 'agent-teams.orchestrator.hosted-approval-owner.v1',
+    };
+    const ownerOpen: Record<string, unknown> = {
+      ...open,
+      producer: ownerProducer,
+      stream: 'ownerWalTimeline',
+      emissionNonce: digest('owner-shape-open'),
+      native: { descriptor: { device: '9', fd: 9, inode: '10' } },
+    };
+    const ownerSemantic: Record<string, unknown> = {
+      ...ownerOpen,
+      emissionNonce: digest('owner-shape-semantic'),
+      operationNonce: digest('owner-shape-operation'),
+      previousRecordSha256: sha256(`${canonicalJson(ownerOpen)}\n`),
+      recordType: 'owner-wal-published',
+      sequence: 1,
+      native: {
+        fence: {
+          dev: '9',
+          generation: `approval-writer-fence_${'a'.repeat(32)}`,
+          ino: '10',
+        },
+        mutation: nativeMutation,
+        revision: 8,
+        stateDelta: {
+          changedFields: ['bindings', 'revision'],
+          collectionSizes: {
+            actorMembers: { previous: 2, next: 2 },
+            bindings: { previous: 4, next: 5 },
+            deliveries: { previous: 1, next: 1 },
+            ingress: { previous: 3, next: 3 },
+            retiredIngress: { previous: 1, next: 1 },
+            routes: { previous: 2, next: 2 },
+          },
+          nextRevision: 8,
+          nextStateSha256: digest('owner-next-image'),
+          previousRevision: 7,
+          previousStateSha256: digest('owner-previous-image'),
+        },
+        wal: { byteSize: 4096, sha256: digest('owner-next-image') },
+      },
+    };
+    const ownerClose: Record<string, unknown> = {
+      ...ownerOpen,
+      emissionNonce: digest('owner-shape-close'),
+      native: {},
+      operationNonce: null,
+      previousRecordSha256: sha256(`${canonicalJson(ownerSemantic)}\n`),
+      recordType: 'producer-close',
+      sequence: 2,
+    };
+    return [ownerOpen, ownerSemantic, ownerClose];
+  }
+
+  it('accepts the strict Owner quarantine shape with all six collection counts', () => {
+    const records = ownerCapture();
+    const parsed = parseNativeRuntimeCapture(
+      'ownerWalTimelinePath',
+      Buffer.from(`${records.map(canonicalJson).join('\n')}\n`),
+      fixedControllerNonce,
+      fixedRunId
+    );
+    expect(parsed.semanticRecordCount).toBe(1);
+    expect((parsed.records[1]!.native.stateDelta as Record<string, unknown>).collectionSizes)
+      .toEqual({
+        actorMembers: { next: 2, previous: 2 },
+        bindings: { next: 5, previous: 4 },
+        deliveries: { next: 1, previous: 1 },
+        ingress: { next: 3, previous: 3 },
+        retiredIngress: { next: 1, previous: 1 },
+        routes: { next: 2, previous: 2 },
+      });
+  });
+
+  it.each([
+    '3f5ad01985ddc33b90bf3f6772288316674202a640be5bb6f4e1669319be529d',
+    'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498',
+  ])('rejects old or mixed Owner capture digest %s', (rejectedDigest) => {
+    for (const mixed of [false, true]) {
+      const records = ownerCapture();
+      const indexes = mixed ? [1] : [0, 1, 2];
+      for (const index of indexes) records[index]!.contractSha256 = rejectedDigest;
+      records[1]!.previousRecordSha256 = sha256(`${canonicalJson(records[0])}\n`);
+      records[2]!.previousRecordSha256 = sha256(`${canonicalJson(records[1])}\n`);
+      expect(() =>
+        parseNativeRuntimeCapture(
+          'ownerWalTimelinePath',
+          Buffer.from(`${records.map(canonicalJson).join('\n')}\n`),
+          fixedControllerNonce,
+          fixedRunId
+        )
+      ).toThrow(/p3c_runtime_capture_(?:contract|binding)/u);
+    }
   });
 
   it('parses a fixed hand-authored nonAuthoritative golden without granting authority', () => {

@@ -19,6 +19,7 @@ import {
   reportProductHostedProducerProvenanceFailure,
 } from '@features/hosted-producer-provenance/main';
 
+import { parseHostedOwnerWalNative } from './hostedOwnerWalNativeValidator';
 import {
   createHostedProducerProvenanceNodeOperations,
   type HostedProducerDerivedIdentity,
@@ -35,20 +36,17 @@ const TEAM_ID = /^team_[0-9a-f]{32}$/u;
 const TEAM_RUN_ID = /^team-run_[0-9a-f]{32}$/u;
 const MAX_LINE_BYTES = 64 * 1024;
 const MAX_CONTRACT_BYTES = 128 * 1024;
-
 function fatalProvenanceError(error: Error): HostedProducerProvenanceFatalError {
   return isHostedProducerProvenanceFatalError(error)
     ? error
     : new HostedProducerProvenanceFatalError('producer-provenance-fatal', { cause: error });
 }
-
 const IMPLEMENTATION_IDS = Object.freeze({
   browser: 'agent-teams.product.browser-observer.v1',
   opencode: 'agent-teams.opencode.hosted-approval.v1',
   owner: 'agent-teams.orchestrator.hosted-approval-owner.v1',
   'product-producer': 'agent-teams.product.hosted-approval.v1',
 } as const satisfies Readonly<Record<HostedProducerProvenanceRole, string>>);
-
 const ROLE_STREAMS = Object.freeze({
   browser: Object.freeze({ negativeResults: 9 }),
   opencode: Object.freeze({ openCodeTimeline: 9, protectedEffectLedger: 10 }),
@@ -92,7 +90,7 @@ function sha256(bytes: string | Uint8Array): string {
 const contractArtifact = Buffer.from(HOSTED_PRODUCER_PROVENANCE_CONTRACT_ARTIFACT, 'utf8');
 const contractSha256 = sha256(contractArtifact);
 if (
-  contractArtifact.byteLength !== 54_393 ||
+  contractArtifact.byteLength !== 56_415 ||
   contractSha256 !== HOSTED_PRODUCER_PROVENANCE_CONTRACT_SHA256
 ) {
   throw new Error('producer-provenance-schema-digest-mismatch');
@@ -140,9 +138,8 @@ function parseDescriptor(value: unknown, fd: number): HostedProducerProvenanceDe
   });
 }
 function safeByteCount(value: unknown): value is number {
-  return (
-    Number.isSafeInteger(value) && (value as number) >= 0 && (value as number) <= 64 * 1024 * 1024
-  );
+  return Number.isSafeInteger(value) &&
+    (value as number) >= 0 && (value as number) <= 64 * 1024 * 1024;
 }
 function validProductInstance(native: Readonly<Record<string, unknown>>): boolean {
   return (
@@ -214,7 +211,6 @@ function validBrowserVariant(outcome: unknown, family: unknown): boolean {
     (outcome === 'cross_team_decide_rejected' && family === 'approval-decision')
   );
 }
-
 function validateNativeRecord(
   stream: HostedProducerProvenanceStream,
   record: HostedProducerNativeRecord
@@ -224,6 +220,10 @@ function validateNativeRecord(
   }
   const native = record.native as Readonly<Record<string, unknown>>;
   switch (record.recordType) {
+    case 'owner-wal-published':
+      if (stream !== 'ownerWalTimeline') throw new TypeError('producer-provenance-native-owner-wal');
+      parseHostedOwnerWalNative(native);
+      return;
     case 'approval-http-unadmitted-response-finalized': {
       exactObject(
         native,

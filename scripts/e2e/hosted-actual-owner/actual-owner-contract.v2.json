@@ -135,7 +135,7 @@
     "captureEntryActivationAdmissionRuntimeRawIdentityRequired": true,
     "captureAuthority": "unavailable-until-real-producer-identities-are-composed",
     "producerProvenanceContract": "claude-team/hosted-producer-provenance/v2",
-    "producerProvenanceContractSha256": "acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498",
+    "producerProvenanceContractSha256": "ef6aa8ac1f139d2b5e9312da8ff1e6dac21da788d46eefbd6e3d43da27da23ba",
     "producerProvenanceEnvironment": "CLAUDE_TEAM_PRODUCER_PROVENANCE_V2",
     "producerNativeIdentitiesComposed": false,
     "captureSemanticMappings": "unavailable-until-cross-repo-v2-native-schemas-pinned",

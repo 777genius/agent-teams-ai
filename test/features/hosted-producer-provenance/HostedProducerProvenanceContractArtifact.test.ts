@@ -1,13 +1,14 @@
 import { createHash } from 'node:crypto';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readdirSync,readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 const CONTRACT = 'claude-team/hosted-producer-provenance';
-const SCHEMA_SHA256 = 'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498';
-const OLD_DIGEST = '3f5ad01985ddc33b90bf3f6772288316674202a640be5bb6f4e1669319be529d';
+const SCHEMA_SHA256 = 'ef6aa8ac1f139d2b5e9312da8ff1e6dac21da788d46eefbd6e3d43da27da23ba';
+const SUPERSEDED_V2_DIGEST = 'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498';
+const HISTORICAL_DIGEST = '3f5ad01985ddc33b90bf3f6772288316674202a640be5bb6f4e1669319be529d';
 const CONTRACTS = resolve(process.cwd(), 'src/features/hosted-producer-provenance/contracts');
 const SCHEMA_PATH = resolve(CONTRACTS, 'hosted-producer-provenance-v2.schema.json');
 const GOLDEN_PATH = resolve(CONTRACTS, 'hosted-producer-provenance-v2.golden.json');
@@ -352,7 +353,12 @@ function rejectRecord(
   if (!validateRecord(record)) {
     return mapDraft202012Error(record, validateRecord.errors, instances);
   }
-  if (record.contractSha256 === OLD_DIGEST) return 'old_digest';
+  if (
+    record.contractSha256 === HISTORICAL_DIGEST ||
+    record.contractSha256 === SUPERSEDED_V2_DIGEST
+  ) {
+    return 'old_digest';
+  }
   const instance = instanceFor(record, instances);
   if (!instance) return 'role';
   if (record.producer.implementationId !== instance.expectedProducer.implementationId) return 'implementation';
@@ -528,7 +534,8 @@ function rejectContractEvidence(fixture: InvalidFixture): string | null {
   const contractPin = evidence.contractPin as JsonObject | undefined;
   if (
     contractPin?.acceptedSha256 === SCHEMA_SHA256 &&
-    contractPin.presentedSha256 === OLD_DIGEST
+    (contractPin.presentedSha256 === HISTORICAL_DIGEST ||
+      contractPin.presentedSha256 === SUPERSEDED_V2_DIGEST)
   ) {
     return 'old_digest';
   }
@@ -727,7 +734,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
   const validateContractInstance = ajv.compile(contractInstanceSchema);
 
   it('pins canonical schema identity and all four contract instances', () => {
-    expect(schemaArtifact.bytes).toHaveLength(54_393);
+    expect(schemaArtifact.bytes).toHaveLength(56_415);
     expect(sha256(schemaArtifact.bytes)).toBe(SCHEMA_SHA256);
     expect(schemaArtifact.bytes.toString()).not.toContain(SCHEMA_SHA256);
     expect((schema['x-contract'] as JsonObject).contract).toBe(CONTRACT);
@@ -735,9 +742,76 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
     for (const instance of golden.validContractInstances) {
       expect(validateContractInstance(instance), JSON.stringify(validateContractInstance.errors)).toBe(true);
     }
-    const oldDigestInstance = clone(golden.validContractInstances[0]);
-    oldDigestInstance.contractSha256 = OLD_DIGEST;
-    expect(validateContractInstance(oldDigestInstance)).toBe(false);
+    for (const rejectedDigest of [HISTORICAL_DIGEST, SUPERSEDED_V2_DIGEST]) {
+      const oldDigestInstance = clone(golden.validContractInstances[0]);
+      oldDigestInstance.contractSha256 = rejectedDigest;
+      expect(validateContractInstance(oldDigestInstance)).toBe(false);
+      const oldDigestRecord = clone(
+        golden.validRecords.find((record) => record.recordType === 'owner-wal-published')!
+      );
+      oldDigestRecord.contractSha256 = rejectedDigest;
+      expect(validateRecord(oldDigestRecord)).toBe(false);
+    }
+  });
+
+  it('pins the exact WAL3 amendment shape and the P2 image-verification boundary', () => {
+    const definitions = schema.$defs as JsonObject;
+    const stateDelta = definitions.stateDelta as JsonObject;
+    const deltaProperties = stateDelta.properties as JsonObject;
+    const changedFields = deltaProperties.changedFields as JsonObject;
+    const collectionSizes = deltaProperties.collectionSizes as JsonObject;
+    expect((changedFields.items as JsonObject).enum).toEqual([
+      'actorMembers', 'admissionDigest', 'admissionGeneration', 'bindings', 'deliveries',
+      'ingress', 'retiredIngress', 'revision', 'routes', 'schemaVersion', 'writerFence',
+    ]);
+    expect(collectionSizes.required).toEqual([
+      'actorMembers', 'bindings', 'deliveries', 'ingress', 'retiredIngress', 'routes',
+    ]);
+    expect(Object.keys(collectionSizes.properties as JsonObject).sort()).toEqual(
+      collectionSizes.required
+    );
+    expect(((definitions.ownerMutation as JsonObject).oneOf as Json[])).toHaveLength(12);
+    const contractMetadata = schema['x-contract'] as JsonObject;
+    expect(contractMetadata.compatibility).toMatchObject({
+      acceptedVersions: [2],
+      oldDigestAccepted: false,
+      simultaneousV1V2Accepted: false,
+      supersededSha256: SUPERSEDED_V2_DIGEST,
+      translationAccepted: false,
+    });
+    expect(golden.metadata).toMatchObject({
+      oldDigestAccepted: false,
+      supersededSha256: SUPERSEDED_V2_DIGEST,
+    });
+    expect(contractMetadata.ownerMutationVerification).toContain('raw stored predecessor P');
+    expect(contractMetadata.ownerMutationVerification).toContain('working M');
+    expect(contractMetadata.ownerMutationVerification).toContain('schema-3 N');
+    expect(contractMetadata.ownerMutationVerification).toContain('mandatory P2 verification');
+
+    const quarantine = clone(
+      golden.validRecords.find(
+        (record) => (record.native.mutation as JsonObject | undefined)?.kind === 'binding-quarantined'
+      )!
+    );
+    expect(validateRecord(quarantine), JSON.stringify(validateRecord.errors)).toBe(true);
+    for (const mutateRecord of [
+      (record: RecordFixture) => {
+        delete ((record.native.stateDelta as JsonObject).collectionSizes as JsonObject).bindings;
+      },
+      (record: RecordFixture) => {
+        ((record.native.stateDelta as JsonObject).collectionSizes as JsonObject).quarantine = {
+          next: 1,
+          previous: 0,
+        };
+      },
+      (record: RecordFixture) => {
+        (record.native.mutation as JsonObject).outcome = 'admitted';
+      },
+    ]) {
+      const invalid = clone(quarantine);
+      mutateRecord(invalid);
+      expect(validateRecord(invalid)).toBe(false);
+    }
   });
 
   it('validates every positive record and exhaustive admitted variant tuple', () => {
@@ -756,7 +830,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
       'hosted-observe': 2,
       'hosted-reply': 8,
       'hosted-reply-raw': 8,
-      'owner-wal-published': 11,
+      'owner-wal-published': 12,
       'producer-close': 6,
       'producer-open': 6,
     };
@@ -768,7 +842,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
         ])
       )
     ).toEqual(expectedCounts);
-    expect(golden.validRecords).toHaveLength(82);
+    expect(golden.validRecords).toHaveLength(83);
 
     const variants = (recordType: string, project: (native: JsonObject) => Json[]) =>
       golden.validRecords
@@ -878,6 +952,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
     })).toEqual(expected([
       ['admission-reconciled', 'published', null],
       ['ingress-admitted', 'admitted', null],
+      ['binding-quarantined', 'quarantined', null],
       ['ingress-lease-claimed', 'claimed', null],
       ['ingress-acknowledged', 'acknowledged', null],
       ['delivery-started', 'started', null],
@@ -893,7 +968,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
   it('proves every admitted stream is a complete canonical hash chain ending in close', () => {
     expect(rejectChain(golden.validRecords)).toBeNull();
     expect(new Set(golden.validRecords.map((record) => record.stream)).size).toBe(6);
-    expect(golden.canonicalExamples).toHaveLength(82);
+    expect(golden.canonicalExamples).toHaveLength(83);
     for (const example of golden.canonicalExamples) {
       const record = golden.validRecords[example.recordIndex];
       expect(example.canonicalUtf8).toBe(canonicalJson(record));
@@ -942,7 +1017,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
   });
 
   it('materializes and executes every mandatory layer-specific negative with its exact code', () => {
-    expect(golden.invalidFixtures).toHaveLength(42);
+    expect(golden.invalidFixtures).toHaveLength(43);
     for (const fixture of golden.invalidFixtures) {
       const outcome = executeInvalidFixture(fixture, golden, validateRecord);
       expect(outcome.layer, fixture.id).toBe(fixture.layer);
@@ -964,7 +1039,8 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
       'product-operation-nonce-mismatch', 'record-self-hash-cycle', 'reused-operation-nonce',
       'role-alias', 'role-prefix', 'role-wildcard', 'same-path-changed-bytes', 'self-hash-cycle',
       'split-role', 'sse-whitespace-change', 'symlink-inode-substitution', 'unconsumed-semantic-record',
-      'unknown-key', 'unsafe-integer', 'utf16-order', 'wal-one-byte-change', 'wrong-fd', 'wrong-stream',
+      'superseded-v2-digest', 'unknown-key', 'unsafe-integer', 'utf16-order', 'wal-one-byte-change',
+      'wrong-fd', 'wrong-stream',
     ];
     const ids = [
       ...golden.invalidDocuments.map((fixture) => fixture.id),
@@ -973,7 +1049,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
     expect(ids.sort()).toEqual(mandatory.sort());
   });
 
-  it('proves all 52 negatives have one intended primary failure and no earlier competitor', () => {
+  it('proves all 53 negatives have one intended primary failure and no earlier competitor', () => {
     const structured = golden.invalidFixtures.map((fixture) => ({
       ...executeInvalidFixture(fixture, golden, validateRecord),
       id: fixture.id,
@@ -985,7 +1061,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
       primaryFailures: [rejectDocument(documentBytes(fixture))],
     }));
     const outcomes = [...documents, ...structured];
-    expect(outcomes).toHaveLength(52);
+    expect(outcomes).toHaveLength(53);
     for (const outcome of outcomes) {
       expect(outcome.earlierFailures, `${outcome.id}:earlier`).toEqual([]);
       expect(outcome.primaryFailures, `${outcome.id}:primary`).toHaveLength(1);
@@ -999,7 +1075,7 @@ describe('hosted producer provenance v2 frozen artifacts', () => {
       )
     ).toEqual({
       'canonical-serializer': 6,
-      'contract-instance-verifier': 13,
+      'contract-instance-verifier': 14,
       'cross-record-join-verifier': 10,
       'draft-2020-12-validator': 13,
       'duplicate-key-detector': 1,

@@ -5,6 +5,7 @@ import {
   HOSTED_PRODUCER_PROVENANCE_CONTRACT_SHA256,
   HOSTED_PRODUCER_PROVENANCE_ENV,
   HOSTED_PRODUCER_PROVENANCE_VERSION,
+  type HostedOwnerWalNative,
 } from '@features/hosted-producer-provenance/contracts';
 import {
   clearProductHostedProducerProvenance,
@@ -15,6 +16,7 @@ import {
   installProductHostedProducerProvenance,
 } from '@features/hosted-producer-provenance/main/hosted';
 import { resetProductHostedProducerProvenanceForTests } from '@features/hosted-producer-provenance/main/HostedProducerProvenanceRegistry';
+import { parseHostedOwnerWalNative } from '@main/composition/hosted/hostedOwnerWalNativeValidator';
 import {
   createBrowserHostedProducerProvenanceFromEnvironment,
   createHostedProducerProvenanceFromEnvironment,
@@ -38,6 +40,20 @@ const PRODUCT_OPERATION = Object.freeze({
   requestId: 'request_test',
   sessionId: 'session_test',
 });
+type MutableOwnerNative = {
+  [key: string]: unknown;
+  fence: Record<string, unknown>;
+  mutation: Record<string, unknown>;
+  revision: unknown;
+  stateDelta: {
+    changedFields: string[];
+    collectionSizes: Record<string, unknown>;
+    nextRevision: unknown;
+    nextStateSha256: unknown;
+    previousRevision: unknown;
+    previousStateSha256: unknown;
+  };
+};
 
 afterEach(() => resetProductHostedProducerProvenanceForTests());
 
@@ -99,6 +115,55 @@ function browserContract(): string {
     },
     version: HOSTED_PRODUCER_PROVENANCE_VERSION,
   });
+}
+
+function ownerContract(): string {
+  return canonicalJson({
+    activation: {
+      controllerNonce: CONTROLLER_NONCE,
+      runId: RUN_ID,
+      stackManifestSha256: STACK_MANIFEST_SHA256,
+    },
+    contract: HOSTED_PRODUCER_PROVENANCE_CONTRACT,
+    contractSha256: HOSTED_PRODUCER_PROVENANCE_CONTRACT_SHA256,
+    expectedProducer: {
+      artifactManifestSha256: DIGEST_A,
+      executableSha256: DIGEST_A,
+      implementationId: 'agent-teams.orchestrator.hosted-approval-owner.v1',
+      moduleSha256: DIGEST_B,
+    },
+    producerRole: 'owner',
+    streams: { ownerWalTimeline: { device: '11', fd: 9, inode: '19' } },
+    version: HOSTED_PRODUCER_PROVENANCE_VERSION,
+  });
+}
+
+function quarantinedOwnerNative(): HostedOwnerWalNative {
+  return {
+    fence: {
+      dev: '11',
+      generation: `approval-writer-fence_${'1'.repeat(32)}`,
+      ino: '19',
+    },
+    mutation: { kind: 'binding-quarantined', outcome: 'quarantined' },
+    revision: 8,
+    stateDelta: {
+      changedFields: ['bindings', 'revision'],
+      collectionSizes: {
+        actorMembers: { previous: 2, next: 2 },
+        bindings: { previous: 4, next: 5 },
+        deliveries: { previous: 1, next: 1 },
+        ingress: { previous: 3, next: 3 },
+        retiredIngress: { previous: 1, next: 1 },
+        routes: { previous: 2, next: 2 },
+      },
+      nextRevision: 8,
+      nextStateSha256: DIGEST_B,
+      previousRevision: 7,
+      previousStateSha256: DIGEST_A,
+    },
+    wal: { byteSize: 4096, sha256: DIGEST_B },
+  };
 }
 
 function operations() {
@@ -214,6 +279,16 @@ describe('HostedProducerProvenance', () => {
     expect(() => parseHostedProducerProvenanceContract(source, 'browser')).toThrow(
       'producer-provenance-contract'
     );
+    for (const rejectedDigest of [
+      '3f5ad01985ddc33b90bf3f6772288316674202a640be5bb6f4e1669319be529d',
+      'acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498',
+    ]) {
+      const old = JSON.parse(source) as Record<string, unknown>;
+      old.contractSha256 = rejectedDigest;
+      expect(() =>
+        parseHostedProducerProvenanceContract(canonicalJson(old), 'product-producer')
+      ).toThrow('producer-provenance-contract');
+    }
 
     const badIdentity = operations();
     const badIdentityOperations: HostedProducerProvenanceOperations = {
@@ -264,6 +339,77 @@ describe('HostedProducerProvenance', () => {
         }
       )
     ).toThrow('producer-provenance-descriptor-identity');
+  });
+
+  it('accepts the strict six-count quarantine shape and emits it only on the Owner stream', () => {
+    const native = quarantinedOwnerNative();
+    expect(parseHostedOwnerWalNative(native)).toBe(native);
+    const absent = JSON.parse(JSON.stringify(native)) as MutableOwnerNative;
+    absent.mutation = { kind: 'admission-reconciled', outcome: 'published' };
+    absent.revision = 1;
+    absent.stateDelta.nextRevision = 1;
+    absent.stateDelta.previousRevision = null;
+    absent.stateDelta.previousStateSha256 = null;
+    absent.stateDelta.changedFields = [
+      'actorMembers', 'admissionDigest', 'admissionGeneration', 'bindings', 'deliveries',
+      'ingress', 'retiredIngress', 'revision', 'routes', 'schemaVersion', 'writerFence',
+    ];
+    for (const size of Object.values(absent.stateDelta.collectionSizes)) {
+      (size as Record<string, unknown>).previous = 0;
+      (size as Record<string, unknown>).next = 0;
+    }
+    expect(parseHostedOwnerWalNative(absent)).toBe(absent);
+    const harness = operations();
+    const provenance = createHostedProducerProvenanceFromEnvironment(
+      { [HOSTED_PRODUCER_PROVENANCE_ENV]: ownerContract() },
+      { role: 'owner', modulePath: '/owner/module.js', operations: harness.implementation }
+    )!;
+    provenance.emit('ownerWalTimeline', {
+      recordType: 'owner-wal-published',
+      operationNonce: '7'.repeat(64),
+      native,
+    });
+    provenance.close();
+    expect(lines(harness.bytes.get(9) ?? []).map((line) => line.recordType)).toEqual([
+      'producer-open',
+      'owner-wal-published',
+      'producer-close',
+    ]);
+  });
+
+  it.each([
+    ['missing bindings count', (native: MutableOwnerNative) => delete native.stateDelta.collectionSizes.bindings],
+    ['extra count', (native: MutableOwnerNative) => (native.stateDelta.collectionSizes.quarantine = { previous: 0, next: 1 })],
+    ['duplicate field', (native: MutableOwnerNative) => native.stateDelta.changedFields.push('revision')],
+    ['noncanonical fields', (native: MutableOwnerNative) => native.stateDelta.changedFields.reverse()],
+    ['unknown field', (native: MutableOwnerNative) => native.stateDelta.changedFields.splice(0, 1, 'quarantine')],
+    ['fake mutation', (native: MutableOwnerNative) => (native.mutation = { kind: 'migration', outcome: 'published' })],
+    ['wrong quarantine pair', (native: MutableOwnerNative) => (native.mutation.outcome = 'admitted')],
+    ['wrong settlement pair', (native: MutableOwnerNative) => (native.mutation = { kind: 'delivery-settled', phase: 'completed', outcome: 'expired' })],
+    ['bad fence', (native: MutableOwnerNative) => (native.fence.generation = 'owner_generation_1')],
+    ['null fence identity', (native: MutableOwnerNative) => (native.fence.dev = null)],
+    ['unpaired previous null', (native: MutableOwnerNative) => (native.stateDelta.previousRevision = null)],
+    ['absent with stored counts', (native: MutableOwnerNative) => {
+      native.revision = 1;
+      native.stateDelta.nextRevision = 1;
+      native.stateDelta.previousRevision = null;
+      native.stateDelta.previousStateSha256 = null;
+      native.stateDelta.changedFields = [
+        'actorMembers', 'admissionDigest', 'admissionGeneration', 'bindings', 'deliveries',
+        'ingress', 'retiredIngress', 'revision', 'routes', 'schemaVersion', 'writerFence',
+      ];
+    }],
+    ['wrong next revision', (native: MutableOwnerNative) => (native.stateDelta.nextRevision = 9)],
+    ['wrong native revision', (native: MutableOwnerNative) => (native.revision = 9)],
+    ['wrong next hash', (native: MutableOwnerNative) => (native.stateDelta.nextStateSha256 = DIGEST_A)],
+    ['missing revision delta', (native: MutableOwnerNative) => native.stateDelta.changedFields.pop()],
+    ['extra native key', (native: MutableOwnerNative) => (native.debug = true)],
+  ] as const)('rejects Owner native shape drift: %s', (_name, mutate) => {
+    const native = JSON.parse(JSON.stringify(quarantinedOwnerNative()));
+    mutate(native as MutableOwnerNative);
+    expect(() => parseHostedOwnerWalNative(native)).toThrow(
+      'producer-provenance-native-owner-wal'
+    );
   });
 
   it('writes canonical bounded hash-chained lines with full-write, sync, and explicit close', () => {

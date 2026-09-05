@@ -1,5 +1,6 @@
 import { readdir, rename } from 'node:fs/promises';
 
+import { parseHostedOwnerWalNative } from '../../../src/main/composition/hosted/hostedOwnerWalNativeValidator';
 import { assertRootCurrent, procFdPath, type RootAnchor } from './anchors';
 import {
   MATRIX_ROWS,
@@ -405,43 +406,6 @@ function validSseFrameIdentity(kind: unknown, eventId: unknown, eventType: unkno
     typeof eventType === 'string' && eventType.length > 0;
 }
 
-function validOwnerMutation(value: unknown): boolean {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
-  const mutation = value as Record<string, unknown>;
-  const simple: Readonly<Record<string, string>> = Object.freeze({
-    'admission-reconciled': 'published',
-    'ingress-admitted': 'admitted',
-    'ingress-acknowledged': 'acknowledged',
-    'delivery-started': 'started',
-  });
-  if (typeof mutation.kind !== 'string' || typeof mutation.outcome !== 'string') return false;
-  if (simple[mutation.kind] === mutation.outcome) {
-    return Reflect.ownKeys(mutation).length === 2;
-  }
-  if (mutation.kind === 'delivery-settled') {
-    return Reflect.ownKeys(mutation).length === 3 &&
-      ((mutation.phase === 'completed' && mutation.outcome === 'delivered') ||
-        (mutation.phase === 'rejected' &&
-          ['stale_generation', 'expired', 'wrong_lane', 'self_approval', 'unavailable']
-            .includes(mutation.outcome)));
-  }
-  if (mutation.kind !== 'ingress-lease-claimed' || mutation.outcome !== 'claimed' ||
-    Reflect.ownKeys(mutation).length !== 3 || !Array.isArray(mutation.claims) ||
-    mutation.claims.length === 0) return false;
-  return mutation.claims.every((claim) => {
-    if (claim === null || typeof claim !== 'object' || Array.isArray(claim)) return false;
-    const item = claim as Record<string, unknown>;
-    const iso = (candidate: unknown): boolean =>
-      typeof candidate === 'string' &&
-      /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}Z$/u.test(candidate);
-    const id = (candidate: unknown): boolean =>
-      typeof candidate === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.test(candidate);
-    return Reflect.ownKeys(item).length === 6 && iso(item.claimedAtIso) &&
-      Number.isSafeInteger(item.generation) && (item.generation as number) >= 1 &&
-      iso(item.leaseExpiresAtIso) && id(item.leaseToken) && id(item.outboxId) && id(item.ownerId);
-  });
-}
-
 function assertNativeRecordSemantics(
   name: RuntimeCaptureName,
   recordType: keyof typeof NATIVE_RECORD_KEYS,
@@ -627,28 +591,9 @@ function parseNativePayload(
     `native_capture_${name}_${recordType}`
   );
   if (recordType === 'owner-wal-published') {
-    const fence = exactRecord(native.fence, ['generation', 'dev', 'ino'], 'native_owner_fence');
-    const wal = exactRecord(native.wal, ['byteSize', 'sha256'], 'native_owner_wal');
-    const delta = exactRecord(
-      native.stateDelta,
-      [
-        'previousRevision', 'previousStateSha256', 'nextRevision', 'nextStateSha256',
-        'changedFields', 'collectionSizes',
-      ],
-      'native_owner_state_delta'
-    );
-    if (
-      !Number.isSafeInteger(native.revision) || (native.revision as number) < 1 ||
-      !Number.isSafeInteger(wal.byteSize) || (wal.byteSize as number) < 1 ||
-      typeof wal.sha256 !== 'string' || !/^[0-9a-f]{64}$/u.test(wal.sha256) ||
-      typeof fence.generation !== 'string' || fence.generation.length === 0 ||
-      typeof fence.dev !== 'string' || !/^(?:0|[1-9]\d*)$/u.test(fence.dev) ||
-      typeof fence.ino !== 'string' || !/^(?:0|[1-9]\d*)$/u.test(fence.ino) ||
-      delta.nextRevision !== native.revision ||
-      typeof delta.nextStateSha256 !== 'string' || !/^[0-9a-f]{64}$/u.test(delta.nextStateSha256) ||
-      !Array.isArray(delta.changedFields) || delta.changedFields.length === 0 ||
-      !validOwnerMutation(native.mutation)
-    ) {
+    try {
+      parseHostedOwnerWalNative(native);
+    } catch {
       throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
     }
   }

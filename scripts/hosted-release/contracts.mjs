@@ -250,7 +250,7 @@ const stackLockSchema = {
   openCode: openCodeIdentity,
   contracts: {
     hostedProducerProvenanceV2Sha256: literal(
-      'sha256:acde43e62b8ab42cc5fd2bbecc22f1b96d68f456bfa188b8c63730751222f498'
+      'sha256:ef6aa8ac1f139d2b5e9312da8ff1e6dac21da788d46eefbd6e3d43da27da23ba'
     ),
     actualOwnerContractV2Sha256: sha256,
     stackContractSha256: sha256,
