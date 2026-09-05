@@ -151,6 +151,78 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     ).toEqual({ active: true, reason: 'opencode_targeted_shadow_collecting' });
   });
 
+  it('holds OpenCode targeted nudges inside the quiet window after the agenda changed', () => {
+    // A nudge 20 s after the agenda changed lands mid-turn and derails the work
+    // the change just started.
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({ providerId: 'opencode' }),
+        metrics: staleMetrics({ generatedAt: '2026-05-06T00:00:20.000Z' }),
+      })
+    ).toEqual({ active: false, reason: 'opencode_quiet_window' });
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({ providerId: 'opencode' }),
+        metrics: staleMetrics({ generatedAt: '2026-05-06T00:09:59.000Z' }),
+      })
+    ).toEqual({ active: false, reason: 'opencode_quiet_window' });
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus({ providerId: 'opencode' }),
+        metrics: staleMetrics({ generatedAt: '2026-05-06T00:10:00.000Z' }),
+      })
+    ).toEqual({ active: true, reason: 'opencode_targeted_shadow_collecting' });
+    // Native providers keep their own 6-minute stale window.
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: nativeStaleInProgressStatus(),
+        metrics: staleMetrics(),
+      })
+    ).toEqual({ active: true, reason: 'native_stale_in_progress' });
+  });
+
+  it('holds only a member that is visibly working: unstarted and unobserved still get nudged', () => {
+    const openCodeWorking = nativeStaleInProgressStatus({ providerId: 'opencode' });
+    const justChangedAgenda = staleMetrics({ generatedAt: '2026-05-06T00:00:20.000Z' });
+
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: openCodeWorking,
+        metrics: justChangedAgenda,
+      })
+    ).toEqual({ active: false, reason: 'opencode_quiet_window' });
+
+    // Same member, same 20-second-old agenda, but the task is assigned and not
+    // started: there is no turn in flight to interrupt, so the nudge goes out.
+    const openCodeNotStarted: MemberWorkSyncStatus = {
+      ...openCodeWorking,
+      agenda: {
+        ...openCodeWorking.agenda,
+        items: openCodeWorking.agenda.items.map((item) => ({
+          ...item,
+          reason: 'owned_pending_task' as const,
+          evidence: { status: 'pending' as const, owner: 'alice' },
+        })),
+      },
+    };
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: openCodeNotStarted,
+        metrics: justChangedAgenda,
+      })
+    ).toEqual({ active: true, reason: 'opencode_targeted_shadow_collecting' });
+
+    // And an unobserved member is not a working member: with no needs_sync
+    // sample recorded there is no quiet window to be inside of, so the nudge
+    // goes out rather than being held on a guess.
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: openCodeWorking,
+        metrics: staleMetrics({ generatedAt: '2026-05-06T00:00:20.000Z', recentEvents: [] }),
+      })
+    ).toEqual({ active: true, reason: 'opencode_targeted_shadow_collecting' });
+  });
+
   it('activates native inbox-watch nudges while shadow data is still collecting', () => {
     for (const providerId of ['anthropic', 'codex', 'gemini'] as const) {
       expect(
@@ -503,10 +575,18 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
       })
     ).toEqual({ active: true, reason: 'lead_targeted_shadow_collecting' });
 
+    // OpenCode stays on targeted recovery (no Codex repair); the 1-minute-old
+    // agenda is inside the OpenCode quiet window, so it is held rather than sent.
     expect(
       decideMemberWorkSyncNudgeActivation({
         status: { ...repairReady, providerId: 'opencode' },
         metrics: earlyBlockingMetrics,
+      })
+    ).toEqual({ active: false, reason: 'opencode_quiet_window' });
+    expect(
+      decideMemberWorkSyncNudgeActivation({
+        status: { ...repairReady, providerId: 'opencode' },
+        metrics: staleMetrics({ generatedAt: '2026-05-06T00:11:00.000Z' }),
       })
     ).toEqual({ active: true, reason: 'opencode_targeted_shadow_collecting' });
 
@@ -856,7 +936,7 @@ describe('MemberWorkSyncNudgeActivationPolicy', () => {
     expect(
       decideMemberWorkSyncNudgeActivation({
         status: nativeStaleInProgressStatus({ providerId: 'opencode' }),
-        metrics: staleMetrics(),
+        metrics: staleMetrics({ generatedAt: '2026-05-06T00:10:00.000Z' }),
       })
     ).toEqual({ active: true, reason: 'opencode_targeted_shadow_collecting' });
 

@@ -2,9 +2,11 @@ import { isTeamTaskBlockedByUnfinishedDependency } from '@shared/utils/teamTaskS
 
 import { getOpenCodeWeakStartStallThresholdMs } from './featureGates';
 import { classifyTaskProgressTouch, type TaskProgressSignal } from './TaskProgressSignalClassifier';
+import { evaluatePendingPickupTask } from './TeamTaskStallPendingPickup';
 
 import type { BoardTaskActivityRecord } from '../taskLogs/activity/BoardTaskActivityRecord';
 import type {
+  PostTouchStallSignal,
   ReviewTaskContext,
   TaskStallBranch,
   TaskStallEvaluation,
@@ -19,12 +21,19 @@ const WORK_TOUCH_TOOLS = new Set(['task_start', 'task_add_comment', 'task_set_st
 const REVIEW_TOUCH_TOOLS = new Set(['review_start', 'task_add_comment']);
 
 const ONE_MINUTE_MS = 60_000;
-const WORK_THRESHOLDS_MS: Record<TaskStallSignal, number> = {
+/**
+ * Exported because `getOpenCodeLaneTurnActivityMaxAgeMs` has to stay at or above
+ * every threshold in here: the lane-freshness bound demotes a stale 'active'
+ * sample to a backdated idle time, which is what turns `mid_turn_after_touch`
+ * into `turn_ended_after_touch`. The ordering is checked against these numbers
+ * in openCodeLaneTurnFreshness.test.ts instead of being restated in a comment.
+ */
+export const WORK_THRESHOLDS_MS: Record<PostTouchStallSignal, number> = {
   turn_ended_after_touch: 4 * ONE_MINUTE_MS,
   touch_then_other_turns: 5 * ONE_MINUTE_MS,
   mid_turn_after_touch: 10 * ONE_MINUTE_MS,
 };
-const REVIEW_THRESHOLDS_MS: Record<TaskStallSignal, number> = {
+const REVIEW_THRESHOLDS_MS: Record<PostTouchStallSignal, number> = {
   turn_ended_after_touch: 5 * ONE_MINUTE_MS,
   touch_then_other_turns: 6 * ONE_MINUTE_MS,
   mid_turn_after_touch: 12 * ONE_MINUTE_MS,
@@ -47,7 +56,7 @@ function isAfterOrEqual(timestamp: string, lowerBound: string): boolean {
   return Date.parse(timestamp) >= Date.parse(lowerBound);
 }
 
-function getOpenWorkInterval(task: TeamTask): TaskWorkInterval | null {
+export function getOpenWorkInterval(task: TeamTask): TaskWorkInterval | null {
   const intervals = task.workIntervals ?? [];
   for (let i = intervals.length - 1; i >= 0; i -= 1) {
     const interval = intervals[i];
@@ -230,11 +239,33 @@ function findAnchorRowIndex(
   return candidates.at(-1)!.index;
 }
 
+function normalizeMemberKey(name: string | undefined): string {
+  return name?.trim().toLowerCase() ?? '';
+}
+
+/** ISO idle-since of the owner's lane when it settled at/after the touch; else null. */
+function resolveOpenCodeLaneIdleSince(
+  snapshot: TeamTaskStallSnapshot,
+  owner: string | undefined,
+  touchAt: string
+): string | null {
+  const idleSince = snapshot.openCodeLaneIdleSinceByMemberName?.get(normalizeMemberKey(owner));
+  if (!idleSince) return null;
+  const idleMs = Date.parse(idleSince);
+  const touchMs = Date.parse(touchAt);
+  if (!Number.isFinite(idleMs) || !Number.isFinite(touchMs)) return null;
+  return idleMs >= touchMs ? idleSince : null;
+}
+
+function isOpenCodeLaneActive(snapshot: TeamTaskStallSnapshot, owner: string | undefined): boolean {
+  return snapshot.openCodeLaneActiveMemberNames?.has(normalizeMemberKey(owner)) ?? false;
+}
+
 function classifyPostTouchState(args: {
   rows: TeamTaskStallExactRow[];
   anchorMessageUuid: string;
   anchorToolUseId?: string;
-}): TaskStallSignal | 'ambiguous' {
+}): PostTouchStallSignal | 'ambiguous' {
   const normalizedRows = deduplicateAssistantRowsByRequestId(args.rows, args.anchorToolUseId);
   const anchorIndex = findAnchorRowIndex(
     normalizedRows,
@@ -398,6 +429,9 @@ export class TeamTaskStallPolicy {
       if (isOpenCodeOwner) {
         const elapsedMs = args.now.getTime() - Date.parse(openWorkInterval.startedAt);
         if (elapsedMs >= getOpenCodeWeakStartStallThresholdMs()) {
+          if (isOpenCodeLaneActive(snapshot, task.owner)) {
+            return skip(task.id, 'OpenCode lane turn is still active', 'lane_active');
+          }
           return buildOpenCodeNoProgressAlertEvaluation({
             task,
             owner: task.owner,
@@ -435,6 +469,9 @@ export class TeamTaskStallPolicy {
       if (isOpenCodeOwner) {
         const elapsedMs = args.now.getTime() - Date.parse(openWorkInterval.startedAt);
         if (elapsedMs >= getOpenCodeWeakStartStallThresholdMs()) {
+          if (isOpenCodeLaneActive(snapshot, task.owner)) {
+            return skip(task.id, 'OpenCode lane turn is still active', 'lane_active');
+          }
           return buildOpenCodeNoProgressAlertEvaluation({
             task,
             owner: task.owner,
@@ -462,11 +499,24 @@ export class TeamTaskStallPolicy {
       return skip(task.id, 'Post-touch exact rows are unavailable', 'ambiguous_state');
     }
 
-    const signal = classifyPostTouchState({
+    const classifiedSignal = classifyPostTouchState({
       rows: exactRows,
       anchorMessageUuid: workContext.lastMeaningfulTouch.source.messageUuid,
       anchorToolUseId: workContext.lastMeaningfulTouch.source.toolUseId,
     });
+    // The orchestrator transcript carries no turn-end row for OpenCode lanes,
+    // so a member that went silent after its touch classifies as "mid turn"
+    // (10-minute threshold). The delivery service knows when the lane's turn
+    // settled; a lane idle since the touch is a turn that ended.
+    const laneIdleSince =
+      ownerProviderId === 'opencode'
+        ? resolveOpenCodeLaneIdleSince(snapshot, task.owner, workContext.lastMeaningfulTouchAt)
+        : null;
+    const signal: TaskStallSignal | 'ambiguous' =
+      laneIdleSince &&
+      (classifiedSignal === 'ambiguous' || classifiedSignal === 'mid_turn_after_touch')
+        ? 'turn_ended_after_touch'
+        : classifiedSignal;
     if (signal === 'ambiguous') {
       return skip(task.id, 'Post-touch state is ambiguous', 'ambiguous_state');
     }
@@ -488,6 +538,15 @@ export class TeamTaskStallPolicy {
         'below_threshold'
       );
     }
+    if (
+      ownerProviderId === 'opencode' &&
+      !laneIdleSince &&
+      isOpenCodeLaneActive(snapshot, task.owner)
+    ) {
+      // The lane is still generating its turn; a nudge now would only queue
+      // behind (or derail) work that is already in progress.
+      return skip(task.id, 'OpenCode lane turn is still active', 'lane_active');
+    }
 
     return buildAlertEvaluation({
       task,
@@ -498,8 +557,18 @@ export class TeamTaskStallPolicy {
       touch: workContext.lastMeaningfulTouch,
       reason: isOpenCodeWeakStartOnly
         ? 'Potential work stall after weak start-only task comment.'
-        : `Potential work stall after ${signal.replaceAll('_', ' ')}.`,
+        : laneIdleSince
+          ? `Potential work stall: OpenCode lane idle since ${laneIdleSince} after the last task touch.`
+          : `Potential work stall after ${signal.replaceAll('_', ' ')}.`,
     });
+  }
+
+  evaluatePendingPickup(args: {
+    now: Date;
+    task: TeamTask;
+    snapshot: TeamTaskStallSnapshot;
+  }): TaskStallEvaluation {
+    return evaluatePendingPickupTask(args);
   }
 
   evaluateReview(args: {

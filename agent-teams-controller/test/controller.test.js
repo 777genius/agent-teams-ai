@@ -4477,6 +4477,147 @@ controller.messages.sendMessage({
     expect(boardNotices()).toHaveLength(2);
   });
 
+  function reportToken(payload) {
+    return `wrs:v1.${Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url')}.signature`;
+  }
+
+  function readReportIntents(claudeDir) {
+    const intentFile = path.join(
+      claudeDir,
+      'teams',
+      'my-team',
+      '.member-work-sync',
+      'pending-reports.json'
+    );
+    return Object.values(JSON.parse(fs.readFileSync(intentFile, 'utf8')).intents);
+  }
+
+  it('derives the report member from the report token when the caller omits memberName', async () => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+    const token = reportToken({
+      version: 1,
+      teamName: 'my-team',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      expiresAt: '2026-01-01T00:15:00.000Z',
+    });
+
+    const pending = await controller.workSync.memberWorkSyncReport({
+      state: 'still_working',
+      agendaFingerprint: 'agenda:v1:abc',
+      reportToken: token,
+    });
+
+    expect(pending.pendingValidation).toBe(true);
+    expect(readReportIntents(claudeDir)).toEqual([
+      expect.objectContaining({
+        memberName: 'bob',
+        request: expect.objectContaining({ memberName: 'bob', reportToken: token }),
+      }),
+    ]);
+  });
+
+  it('never lets a report token stand in for another member or another agenda', async () => {
+    const bobToken = reportToken({
+      version: 1,
+      teamName: 'my-team',
+      memberName: 'bob',
+      agendaFingerprint: 'agenda:v1:abc',
+      expiresAt: '2026-01-01T00:15:00.000Z',
+    });
+
+    // An explicit caller identity wins: the token is a fallback hint, never an
+    // override, so a token cannot silently retarget a report at its own member.
+    const explicitDir = makeClaudeDir();
+    await createController({
+      teamName: 'my-team',
+      claudeDir: explicitDir,
+    }).workSync.memberWorkSyncReport({
+      memberName: 'alice',
+      state: 'still_working',
+      agendaFingerprint: 'agenda:v1:abc',
+      reportToken: bobToken,
+    });
+    expect(readReportIntents(explicitDir)).toEqual([
+      expect.objectContaining({
+        memberName: 'alice',
+        request: expect.objectContaining({ memberName: 'alice', reportToken: bobToken }),
+      }),
+    ]);
+
+    // The token's own agenda is never substituted for the one the caller
+    // reported: the app still receives both and verifies the binding itself.
+    const agendaDir = makeClaudeDir();
+    await createController({
+      teamName: 'my-team',
+      claudeDir: agendaDir,
+    }).workSync.memberWorkSyncReport({
+      state: 'still_working',
+      agendaFingerprint: 'agenda:v1:other',
+      reportToken: bobToken,
+    });
+    expect(readReportIntents(agendaDir)).toEqual([
+      expect.objectContaining({
+        memberName: 'bob',
+        request: expect.objectContaining({
+          memberName: 'bob',
+          agendaFingerprint: 'agenda:v1:other',
+          reportToken: bobToken,
+        }),
+      }),
+    ]);
+  });
+
+  it.each([
+    ['a payload that is not base64url JSON', 'wrs:v1.not-a-payload.signature'],
+    [
+      'a payload with no member name',
+      `wrs:v1.${Buffer.from(JSON.stringify({ version: 1, teamName: 'my-team' }), 'utf8').toString(
+        'base64url'
+      )}.signature`,
+    ],
+    [
+      'a token of a different version prefix',
+      `wrs:v2.${Buffer.from(JSON.stringify({ memberName: 'bob' }), 'utf8').toString(
+        'base64url'
+      )}.signature`,
+    ],
+    ['a token with no payload segment at all', 'wrs:v1'],
+    ['a value that is not a token', 'bob'],
+    // The two below carry a payload that does name a configured member, so
+    // only the segment count can refuse them. The app's verifier requires
+    // exactly three non-empty segments, so a token of any other arity names
+    // nobody here either, instead of queueing a report for app validation that
+    // the app can only ever reject.
+    [
+      'an unsigned two-segment token',
+      `wrs:v1.${Buffer.from(JSON.stringify({ version: 1, teamName: 'my-team', memberName: 'bob' }), 'utf8').toString('base64url')}`,
+    ],
+    [
+      'a token with a trailing extra segment',
+      `wrs:v1.${Buffer.from(JSON.stringify({ version: 1, teamName: 'my-team', memberName: 'bob' }), 'utf8').toString('base64url')}.signature.extra`,
+    ],
+  ])('refuses a report identified only by %s', async (_label, token) => {
+    const claudeDir = makeClaudeDir();
+    const controller = createController({ teamName: 'my-team', claudeDir });
+
+    await expect(
+      controller.workSync.memberWorkSyncReport({
+        state: 'still_working',
+        agendaFingerprint: 'agenda:v1:abc',
+        reportToken: token,
+      })
+    ).rejects.toThrow('Unknown member work sync report member');
+    // Refused before anything is written: no pending intent is queued for a
+    // report that never had a usable identity.
+    expect(
+      fs.existsSync(
+        path.join(claudeDir, 'teams', 'my-team', '.member-work-sync', 'pending-reports.json')
+      )
+    ).toBe(false);
+  });
+
   it('does not record pending work sync intents for app-side validation rejections', async () => {
     const claudeDir = makeClaudeDir();
     const controller = createController({ teamName: 'my-team', claudeDir });

@@ -23,9 +23,21 @@ export type MemberWorkSyncNudgeActivationReason =
   | 'native_stale_assigned_work'
   | 'status_not_nudgeable'
   | 'blocking_metrics'
+  | 'opencode_quiet_window'
   | 'phase2_not_ready';
 
 const NATIVE_STALE_IN_PROGRESS_MIN_AGE_MS = 6 * 60_000;
+/**
+ * An OpenCode member runs one turn at a time, and a turn can legitimately take
+ * minutes. An agenda-sync nudge delivered right after the agenda changed lands
+ * mid-turn and interrupts the very work that change started: observed as a
+ * nudge 20 s after task_start, after which the member looped on
+ * member_work_sync_report instead of doing the task. Targeted OpenCode
+ * recovery for a member with an owned in_progress task therefore waits until
+ * the current needs_sync agenda has been stable this long; a member that has
+ * genuinely stopped is the stall monitor's job, not this one's.
+ */
+export const OPENCODE_TARGETED_RECOVERY_MIN_QUIET_MS = 10 * 60_000;
 const NATIVE_STALE_IN_PROGRESS_PROVIDERS = new Set(['anthropic', 'codex', 'gemini']);
 const NATIVE_TASK_PROTOCOL_REPAIR_PROVIDERS = new Set(['codex']);
 const NATIVE_TASK_PROTOCOL_REPAIR_TURN_SETTLED_DIAGNOSTIC = `${MEMBER_WORK_SYNC_RUNTIME_STALL_TRIGGER_DIAGNOSTIC_PREFIX}turn_settled`;
@@ -261,6 +273,29 @@ function getNativeStaleWorkRecoveryReason(input: {
     : 'native_stale_assigned_work';
 }
 
+function isOpenCodeTargetedRecoveryInsideQuietWindow(input: {
+  status: MemberWorkSyncStatus;
+  metrics: MemberWorkSyncTeamMetrics;
+}): boolean {
+  // Only a member that is visibly working (an owned task it moved to
+  // in_progress) gets the quiet window; assigned-but-unstarted work may still
+  // be nudged promptly.
+  if (!input.status.agenda.items.some(isOwnedInProgressWorkItem)) {
+    return false;
+  }
+  const nowMs = parseTime(input.metrics.generatedAt) ?? parseTime(input.status.evaluatedAt);
+  if (nowMs == null) {
+    return false;
+  }
+  const stableSinceMs = getCurrentFingerprintStableSinceMs(input.status, input.metrics, nowMs);
+  // Unknown age (no needs_sync sample recorded yet) does not block: the first
+  // reconcile sample arrives with the status that is being evaluated.
+  if (stableSinceMs == null) {
+    return false;
+  }
+  return nowMs - stableSinceMs < OPENCODE_TARGETED_RECOVERY_MIN_QUIET_MS;
+}
+
 function isReviewPickupRequiredCandidate(status: MemberWorkSyncStatus): boolean {
   return (
     status.state === 'needs_sync' &&
@@ -296,6 +331,12 @@ export function decideMemberWorkSyncNudgeActivation(input: {
 
   const targetedRecovery = decideMemberWorkSyncTargetedRecovery(input.status);
   if (targetedRecovery.active) {
+    if (
+      targetedRecovery.capability === 'opencode_runtime_delivery' &&
+      isOpenCodeTargetedRecoveryInsideQuietWindow(input)
+    ) {
+      return { active: false, reason: 'opencode_quiet_window' };
+    }
     if (targetedRecovery.reason !== 'native_targeted_shadow_collecting') {
       return { active: true, reason: targetedRecovery.reason };
     }

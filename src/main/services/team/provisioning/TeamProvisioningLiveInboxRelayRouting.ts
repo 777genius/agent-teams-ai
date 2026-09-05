@@ -70,7 +70,11 @@ export async function relayInboxFileToLiveRecipientWithPorts(
   const { teamName, inboxName } = input;
   const options = input.options ?? {};
 
-  if (isCrossTeamPseudoRecipientName(inboxName) || isCrossTeamToolRecipientName(inboxName)) {
+  if (
+    isTerminalInboxRecipientName(inboxName) ||
+    isCrossTeamPseudoRecipientName(inboxName) ||
+    isCrossTeamToolRecipientName(inboxName)
+  ) {
     return { kind: LiveInboxRelayKind.Ignored, relayed: 0 };
   }
 
@@ -211,6 +215,19 @@ function isExactDurableCrossTeamInboxMessage(
     typeof message.timestamp === 'string' &&
     Number.isFinite(Date.parse(message.timestamp))
   );
+}
+
+/**
+ * `user` and `system` are app-owned terminal inboxes: the UI reads user.json
+ * through TeamInboxReader and no runtime ever receives it. Both names are
+ * reserved for app-owned writes, so no agent identity can claim them.
+ *
+ * The match is exact after trimming and lowercasing - a member legitimately
+ * named `users` or `system-notices` still routes normally.
+ */
+function isTerminalInboxRecipientName(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return normalized === 'user' || normalized === 'system';
 }
 
 function isSameInboxRecipient(inboxName: string, recipientName: string | null): boolean {

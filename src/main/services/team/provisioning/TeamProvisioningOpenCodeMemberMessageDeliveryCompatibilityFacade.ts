@@ -50,6 +50,9 @@ type OpenCodeMemberMessageDeliveryHostRun = NonNullable<
   ReturnType<TeamProvisioningOpenCodeMemberMessageDeliveryHost['runs']['get']>
 >;
 
+/** A lead turn reported 'active' without a settle signal falls back to 'idle' after this long. */
+export const OPENCODE_LEAD_ACTIVE_FALLBACK_MS = 4 * 60_000;
+
 export interface TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<
   TRun extends TeamProvisioningSendMessageToRunRun,
 > {
@@ -110,6 +113,8 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
 
   private openCodeMemberInboxRelayBoundaryValue: TeamProvisioningOpenCodeMemberInboxRelayBoundary | null =
     null;
+
+  private readonly openCodeLeadActiveFallbackTimers = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private readonly deps: TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityServiceDeps<TRun>
@@ -205,11 +210,56 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
       )
         return;
       this.deps.setLeadActivity(run, input.state);
+      this.armOpenCodeLeadActiveFallback(input.teamName, input.runId, input.state);
     } catch (error) {
       this.deps.logger.warn(
         `OpenCode lead activity notification failed: ${this.deps.getErrorMessage(error)}`
       );
     }
+  }
+
+  /**
+   * The OpenCode lead has no stdin stream, so 'idle' can only arrive from a
+   * prompt-delivery settle. A runtime that keeps its session marked busy after a
+   * plain-text turn end never produces that settle, and the lead card would stay
+   * "processing" forever. A lead turn realistically finishes within minutes, so
+   * fall back to 'idle' when no newer signal arrives within the bound.
+   *
+   * Armed only past the guards above, so a notification that was dropped (wrong
+   * lane, not the lead recipient, a run that was replaced or stopped) neither
+   * arms a fallback nor disarms the one the live turn is relying on. Every
+   * accepted notification cancels the pending fallback first, so an 'idle' that
+   * does arrive disarms it (no late write over a newer real state), and repeated
+   * 'active' reports restart one timer rather than accumulating several. The
+   * fallback re-checks the same run identity when it fires, so a run that was
+   * replaced or stopped meanwhile is never written to.
+   */
+  private armOpenCodeLeadActiveFallback(
+    teamName: string,
+    runId: string,
+    state: OpenCodeLeadTurnActivityNotification['state']
+  ): void {
+    const existing = this.openCodeLeadActiveFallbackTimers.get(teamName);
+    if (existing) {
+      clearTimeout(existing);
+      this.openCodeLeadActiveFallbackTimers.delete(teamName);
+    }
+    if (state !== 'active') return;
+    const timer = setTimeout(() => {
+      this.openCodeLeadActiveFallbackTimers.delete(teamName);
+      const fallbackRun = this.deps.resolveLeadActivityRun(teamName);
+      if (
+        !fallbackRun ||
+        fallbackRun.runId !== runId ||
+        fallbackRun.processKilled ||
+        fallbackRun.cancelRequested ||
+        !this.deps.isCurrentTrackedRun(fallbackRun)
+      )
+        return;
+      this.deps.setLeadActivity(fallbackRun, 'idle');
+    }, OPENCODE_LEAD_ACTIVE_FALLBACK_MS);
+    timer.unref?.();
+    this.openCodeLeadActiveFallbackTimers.set(teamName, timer);
   }
 
   async deliverOpenCodeMemberMessage(

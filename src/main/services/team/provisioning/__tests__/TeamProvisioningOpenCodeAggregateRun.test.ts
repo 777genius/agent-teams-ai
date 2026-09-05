@@ -3,6 +3,10 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  injectPostCompactReminder,
+  type TeamProvisioningIdlePromptInjectionPorts,
+} from '../TeamProvisioningIdlePromptInjection';
+import {
   buildOpenCodeAggregateFailureProgress,
   buildOpenCodeAggregateFinalProgress,
   createOpenCodeAggregateProvisioningRun,
@@ -144,6 +148,47 @@ function lanePlan(input: {
   };
 }
 
+function freshAggregateRun(): OpenCodeAggregateProvisioningRun {
+  const alice = member('alice', { cwd: '/fake/project' });
+  return createOpenCodeAggregateProvisioningRun({
+    runId: 'run-open-code',
+    startedAt: '2026-01-01T00:00:00.000Z',
+    progress: progress(),
+    request: {
+      teamName: 'open-code-team',
+      cwd: '/fake/project',
+      providerId: 'opencode',
+      members: [alice],
+      description: 'fake launch request',
+    } as unknown as TeamCreateRequest,
+    members: [alice],
+    lanePlan: lanePlan({ primaryMembers: [alice] }),
+    onProgress: vi.fn(),
+  });
+}
+
+type AggregateIdlePromptInjectionPorts =
+  TeamProvisioningIdlePromptInjectionPorts<OpenCodeAggregateProvisioningRun>;
+
+function idlePromptInjectionPorts(
+  writeLeadStdin: AggregateIdlePromptInjectionPorts['writeLeadStdin']
+): AggregateIdlePromptInjectionPorts {
+  return {
+    logger: { info: vi.fn(), warn: vi.fn() },
+    readConfigForObservation: async () => ({ members: [{ name: 'alice', role: 'Lead' }] }),
+    readTasks: async () => [],
+    isLeadMember: (configMember) => configMember.role?.toLowerCase().includes('lead') === true,
+    buildPersistentLeadContext: () => 'persistent context',
+    buildTaskBoardSnapshot: () => 'task board snapshot',
+    buildGeminiPostLaunchHydrationPrompt: () => 'hydration prompt',
+    getPromptSizeSummary: () => ({ chars: 23, lines: 1 }),
+    writeLeadStdin,
+    setLeadActivity: () => undefined,
+    resetRuntimeToolActivity: () => undefined,
+    getRunLeadName: () => 'alice',
+  };
+}
+
 describe('TeamProvisioningOpenCodeAggregateRun', () => {
   it('builds aggregate defaults with expected members scoped to the primary lane', () => {
     const alice = member('alice', { cwd: PROJECT_CWD });
@@ -240,7 +285,7 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
       provisioningTraceLines: [],
       lastProvisioningTraceKey: null,
       detectedSessionId: null,
-      leadActivityState: 'active',
+      leadActivityState: 'idle',
       authFailureRetried: false,
       authRetryInProgress: false,
       leadContextUsage: null,
@@ -281,6 +326,31 @@ describe('TeamProvisioningOpenCodeAggregateRun', () => {
     expect(run.pendingMemberRestarts).toBeInstanceOf(Map);
     expect(run.memberSpawnLeadInboxCursorByMember).toBeInstanceOf(Map);
     expect(run.lastMemberSpawnAuditMissingWarningAt).toBeInstanceOf(Map);
+  });
+
+  it('delivers the post-compact reminder on a fresh run and defers it once a turn goes active', async () => {
+    const run = freshAggregateRun();
+    run.child = {
+      stdin: { writable: true },
+    } as unknown as OpenCodeAggregateProvisioningRun['child'];
+    run.pendingPostCompactReminder = true;
+    const writeLeadStdin = vi.fn(async () => undefined);
+    const ports = idlePromptInjectionPorts(writeLeadStdin);
+
+    await injectPostCompactReminder(run, ports);
+
+    expect(writeLeadStdin).toHaveBeenCalledTimes(1);
+    expect(run.pendingPostCompactReminder).toBe(false);
+
+    // The first prompt-delivery turn flips the seeded 'idle' to 'active'; the
+    // reminder must now be deferred and re-armed instead of injected mid-turn.
+    run.leadActivityState = 'active';
+    run.pendingPostCompactReminder = true;
+
+    await injectPostCompactReminder(run, ports);
+
+    expect(writeLeadStdin).toHaveBeenCalledTimes(1);
+    expect(run.pendingPostCompactReminder).toBe(true);
   });
 
   it('projects aggregate final progress for ready, pending, failed, and missing diagnostics', () => {

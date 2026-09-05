@@ -3,6 +3,10 @@ import {
   normalizeOptionalTeamProviderId,
 } from '@shared/utils/teamProvider';
 
+import {
+  type OpenCodeLaneTurnActivityRegistry,
+  openCodeLaneTurnActivityRegistry,
+} from '../opencode/delivery/OpenCodeLaneTurnActivityRegistry';
 import { BoardTaskActivityTranscriptReader } from '../taskLogs/activity/BoardTaskActivityTranscriptReader';
 import { isBoardTaskActivityReadEnabled } from '../taskLogs/activity/featureGates';
 import { TeamTranscriptSourceLocator } from '../taskLogs/discovery/TeamTranscriptSourceLocator';
@@ -13,6 +17,10 @@ import { getTeamTaskWorkflowColumn, isTeamTaskActivelyWorked } from '../teamTask
 import { TeamTaskReader } from '../TeamTaskReader';
 
 import { BoardTaskActivityBatchIndexer } from './BoardTaskActivityBatchIndexer';
+import {
+  classifyOpenCodeLaneTurnSample,
+  resolveOpenCodeLaneTurnActivityMaxAgeMs,
+} from './openCodeLaneTurnFreshness';
 import { OpenCodeTaskStallEvidenceSource } from './OpenCodeTaskStallEvidenceSource';
 import { buildResolvedReviewerIndex } from './reviewerResolution';
 import { TeamTaskLogFreshnessReader } from './TeamTaskLogFreshnessReader';
@@ -63,20 +71,57 @@ function buildProviderByMemberName(args: {
   return providerByMemberName;
 }
 
+/**
+ * Collaborators of the snapshot source. Every one has a production default, so
+ * a caller overrides only what it already owns; the object shape keeps that
+ * possible without spelling out the collaborators in front of it positionally.
+ */
+export interface TeamTaskStallSnapshotSourceDeps {
+  transcriptSourceLocator?: TeamTranscriptSourceLocator;
+  taskReader?: TeamTaskReader;
+  kanbanManager?: TeamKanbanManager;
+  transcriptReader?: BoardTaskActivityTranscriptReader;
+  activityBatchIndexer?: BoardTaskActivityBatchIndexer;
+  freshnessReader?: TeamTaskLogFreshnessReader;
+  exactRowReader?: TeamTaskStallExactRowReader;
+  membersMetaStore?: TeamMembersMetaStore;
+  openCodeEvidenceSource?: OpenCodeTaskStallEvidenceSource;
+  laneTurnActivity?: OpenCodeLaneTurnActivityRegistry;
+}
+
 export class TeamTaskStallSnapshotSource {
-  constructor(
-    private readonly transcriptSourceLocator: TeamTranscriptSourceLocator = new TeamTranscriptSourceLocator(),
-    private readonly taskReader: TeamTaskReader = new TeamTaskReader(),
-    private readonly kanbanManager: TeamKanbanManager = new TeamKanbanManager(),
-    private readonly transcriptReader: BoardTaskActivityTranscriptReader = new BoardTaskActivityTranscriptReader(),
-    private readonly activityBatchIndexer: BoardTaskActivityBatchIndexer = new BoardTaskActivityBatchIndexer(),
-    private readonly freshnessReader: TeamTaskLogFreshnessReader = new TeamTaskLogFreshnessReader(),
-    private readonly exactRowReader: TeamTaskStallExactRowReader = new TeamTaskStallExactRowReader(),
-    private readonly membersMetaStore: TeamMembersMetaStore = new TeamMembersMetaStore(),
-    private readonly openCodeEvidenceSource: OpenCodeTaskStallEvidenceSource = new OpenCodeTaskStallEvidenceSource()
-  ) {}
+  private readonly transcriptSourceLocator: TeamTranscriptSourceLocator;
+  private readonly taskReader: TeamTaskReader;
+  private readonly kanbanManager: TeamKanbanManager;
+  private readonly transcriptReader: BoardTaskActivityTranscriptReader;
+  private readonly activityBatchIndexer: BoardTaskActivityBatchIndexer;
+  private readonly freshnessReader: TeamTaskLogFreshnessReader;
+  private readonly exactRowReader: TeamTaskStallExactRowReader;
+  private readonly membersMetaStore: TeamMembersMetaStore;
+  private readonly openCodeEvidenceSource: OpenCodeTaskStallEvidenceSource;
+  private readonly laneTurnActivity: OpenCodeLaneTurnActivityRegistry;
+
+  constructor(deps: TeamTaskStallSnapshotSourceDeps = {}) {
+    this.transcriptSourceLocator =
+      deps.transcriptSourceLocator ?? new TeamTranscriptSourceLocator();
+    this.taskReader = deps.taskReader ?? new TeamTaskReader();
+    this.kanbanManager = deps.kanbanManager ?? new TeamKanbanManager();
+    this.transcriptReader = deps.transcriptReader ?? new BoardTaskActivityTranscriptReader();
+    this.activityBatchIndexer = deps.activityBatchIndexer ?? new BoardTaskActivityBatchIndexer();
+    this.freshnessReader = deps.freshnessReader ?? new TeamTaskLogFreshnessReader();
+    this.exactRowReader = deps.exactRowReader ?? new TeamTaskStallExactRowReader();
+    this.membersMetaStore = deps.membersMetaStore ?? new TeamMembersMetaStore();
+    this.openCodeEvidenceSource =
+      deps.openCodeEvidenceSource ?? new OpenCodeTaskStallEvidenceSource();
+    this.laneTurnActivity = deps.laneTurnActivity ?? openCodeLaneTurnActivityRegistry;
+  }
 
   async getSnapshot(teamName: string): Promise<TeamTaskStallSnapshot | null> {
+    // One clock reading for the whole scan: the lane-freshness bound below and
+    // the `scannedAt` the alerts are stamped with must not drift apart across
+    // the awaits in between, or a sample can read fresh against one and stale
+    // against the other.
+    const scannedAtMs = Date.now();
     const transcriptContext = await this.transcriptSourceLocator.getContext(teamName);
     if (!transcriptContext) {
       return null;
@@ -129,6 +174,9 @@ export class TeamTaskStallSnapshotSource {
         }) === 'review'
       );
     });
+    const pendingPickupTasks = workflowActiveTasks.filter(
+      (task) => task.status === 'pending' && Boolean(task.owner?.trim()) && !task.deletedAt
+    );
     const resolvedReviewersByTaskId = buildResolvedReviewerIndex(activeTasks, kanbanState);
     const activityReadsEnabled = isBoardTaskActivityReadEnabled();
     const exactReadsEnabled = isBoardTaskExactLogsReadEnabled();
@@ -187,7 +235,7 @@ export class TeamTaskStallSnapshotSource {
 
     return {
       teamName,
-      scannedAt: new Date().toISOString(),
+      scannedAt: new Date(scannedAtMs).toISOString(),
       projectDir: transcriptContext.projectDir,
       projectId: transcriptContext.projectId,
       leadName: resolveLeadNameFromConfig(transcriptContext.config),
@@ -199,11 +247,61 @@ export class TeamTaskStallSnapshotSource {
       allTasksById,
       inProgressTasks,
       reviewOpenTasks,
+      pendingPickupTasks,
       resolvedReviewersByTaskId,
       recordsByTaskId: mergedRecordsByTaskId,
       freshnessByTaskId,
       exactRowsByFilePath: mergedExactRowsByFilePath,
       providerByMemberName,
+      ...this.collectOpenCodeLaneTurnActivity(teamName, scannedAtMs),
+    };
+  }
+
+  /**
+   * Turn the delivery service's lane-turn samples into the snapshot's owner
+   * liveness evidence, with a staleness bound.
+   *
+   * The registry never expires an 'active' sample on its own, so an unbounded
+   * read lets a jammed delivery lane silence every OpenCode stall branch - the
+   * pickup branch and the in-progress work branch both read the same two
+   * collections. Bounding it here rather than inside either branch fixes both
+   * at once and leaves the evaluation logic untouched.
+   */
+  private collectOpenCodeLaneTurnActivity(
+    teamName: string,
+    nowMs: number
+  ): {
+    openCodeLaneIdleSinceByMemberName: Map<string, string>;
+    openCodeLaneActiveMemberNames: Set<string>;
+    openCodeLaneActiveSinceByMemberName: Map<string, string>;
+    openCodeLaneStaleActiveSinceByMemberName: Map<string, string>;
+  } {
+    const openCodeLaneIdleSinceByMemberName = new Map<string, string>();
+    const openCodeLaneActiveMemberNames = new Set<string>();
+    const openCodeLaneActiveSinceByMemberName = new Map<string, string>();
+    const openCodeLaneStaleActiveSinceByMemberName = new Map<string, string>();
+    const maxAgeMs = resolveOpenCodeLaneTurnActivityMaxAgeMs();
+
+    for (const [memberName, sample] of this.laneTurnActivity.listTeam(teamName)) {
+      const verdict = classifyOpenCodeLaneTurnSample({ sample, nowMs, maxAgeMs });
+      if (verdict.treatAsActive) {
+        openCodeLaneActiveMemberNames.add(memberName);
+      }
+      if (verdict.idleSince) {
+        openCodeLaneIdleSinceByMemberName.set(memberName, verdict.idleSince);
+      }
+      if (verdict.activeSince) {
+        openCodeLaneActiveSinceByMemberName.set(memberName, verdict.activeSince);
+      }
+      if (verdict.staleActiveSince) {
+        openCodeLaneStaleActiveSinceByMemberName.set(memberName, verdict.staleActiveSince);
+      }
+    }
+    return {
+      openCodeLaneIdleSinceByMemberName,
+      openCodeLaneActiveMemberNames,
+      openCodeLaneActiveSinceByMemberName,
+      openCodeLaneStaleActiveSinceByMemberName,
     };
   }
 
