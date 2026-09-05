@@ -232,6 +232,14 @@ export async function cleanupCursorAgentProcessTrees(
         continue;
       }
     }
+    // The signal follows that check in the same turn: nothing is awaited
+    // between them, and no other candidate is probed or signalled in between,
+    // so the identity being reaped is the one just validated. A pid recycled
+    // before the check reads as newer than the fence and is kept; what is left
+    // is the probe's own round trip, and a second probe would only reproduce
+    // that same gap rather than close it. Closing it needs a kernel handle
+    // taken while the identity holds - OpenProcess/TerminateProcess,
+    // pidfd_send_signal - and this runtime exposes neither.
     try {
       killTree(row.pid);
       result.killed.push(row.pid);
