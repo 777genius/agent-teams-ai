@@ -2070,7 +2070,7 @@ async function initializeServices(): Promise<void> {
   scheduleStartupTask(() => {
     void cleanupOpenCodeHostsForLifecycle('startup')
       .catch((error: unknown) =>
-        logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+        logger.error(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
       )
       .finally(settleStartupRuntimeSweep);
   }, STARTUP_RECOVERY_DELAY_MS);
