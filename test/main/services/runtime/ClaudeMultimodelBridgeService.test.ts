@@ -964,7 +964,7 @@ describe('ClaudeMultimodelBridgeService', () => {
       capabilities: { teamLaunch: false },
     });
     expect(calls).toEqual(['runtime status --json --provider codex --summary']);
-    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(5000);
+    expect(execCliMock.mock.calls[0][2]?.timeout).toBe(15_000);
     expect(vi.mocked(console.warn).mock.calls.map((call) => call.join(' '))).toEqual([
       expect.stringContaining('returning scoped degraded status without fallback'),
     ]);
@@ -1514,7 +1514,7 @@ describe('ClaudeMultimodelBridgeService', () => {
     expect(execCliMock).toHaveBeenCalledTimes(7);
     expect(
       execCliMock.mock.calls.map((call) => call[2]?.timeout as number).sort((a, b) => a - b)
-    ).toEqual([5000, 5000, 15000, 15000, 25000, 25000, 30000]);
+    ).toEqual([5000, 15000, 15000, 15000, 25000, 25000, 30000]);
     expect(calls).toEqual(
       expect.arrayContaining([
         'runtime status --json --provider anthropic --summary',
@@ -2014,7 +2014,7 @@ describe('ClaudeMultimodelBridgeService', () => {
       execCliMock.mock.calls.find(
         (call) => call[1].join(' ') === 'runtime status --json --provider codex --summary'
       )?.[2]?.timeout
-    ).toBe(5_000);
+    ).toBe(15_000);
     expect(
       execCliMock.mock.calls.find(
         (call) => call[1].join(' ') === 'runtime status --json --provider codex'
