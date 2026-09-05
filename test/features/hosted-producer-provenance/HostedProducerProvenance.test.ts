@@ -209,6 +209,7 @@ const INVALID_OWNER_NATIVE_MUTATIONS: Array<[
     (native) => {
       const bindings = native.stateDelta.collectionSizes.bindings as Record<string, unknown>;
       bindings.previous = -0;
+      bindings.next = 1;
     },
   ],
 ];
@@ -391,6 +392,9 @@ describe('HostedProducerProvenance', () => {
   it('accepts the strict six-count quarantine shape and emits it only on the Owner stream', () => {
     const native = quarantinedOwnerNative();
     expect(parseHostedOwnerWalNative(native)).toBe(native);
+    const positiveZeroNative = quarantinedOwnerNative();
+    positiveZeroNative.stateDelta.collectionSizes.bindings = { previous: 0, next: 1 };
+    expect(parseHostedOwnerWalNative(positiveZeroNative)).toBe(positiveZeroNative);
     const absent = JSON.parse(JSON.stringify(native)) as MutableOwnerNative;
     absent.mutation = { kind: 'admission-reconciled', outcome: 'published' };
     absent.revision = 1;
@@ -414,7 +418,7 @@ describe('HostedProducerProvenance', () => {
     provenance.emit('ownerWalTimeline', {
       recordType: 'owner-wal-published',
       operationNonce: '7'.repeat(64),
-      native,
+      native: positiveZeroNative,
     });
     provenance.close();
     expect(lines(harness.bytes.get(9) ?? []).map((line) => line.recordType)).toEqual([
