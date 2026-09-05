@@ -924,5 +924,23 @@
       "needsFix": "Wymaga poprawek"
     },
     "unassigned": "nieprzypisane"
+  },
+  "announcements": {
+    "title": "Aktualności",
+    "historyTitle": "Co nowego",
+    "description": "Aktualizacje, ulepszenia i wiadomości od Agent Teams.",
+    "imageUnavailable": "Obraz niedostępny",
+    "loading": "Ładowanie aktualności…",
+    "loadError": "Ten artykuł jest niedostępny. Odśwież aktualności lub spróbuj ponownie później.",
+    "expired": "Nieaktualne",
+    "empty": "Wszystko przeczytane",
+    "emptyDescription": "Wiadomości o projekcie pojawią się tutaj po opublikowaniu.",
+    "allNews": "Wszystkie aktualności",
+    "status": {
+      "offline": "Jesteś offline. Wcześniej wczytane artykuły są dostępne; może brakować obrazów.",
+      "writer_busy": "Aktualności są otwarte w innej instancji aplikacji. Tutaj możesz przeglądać listę; artykuły otwieraj w drugiej instancji.",
+      "unavailable": "Aktualności są dostępne w aplikacji komputerowej.",
+      "state_unavailable": "Czytanie jest dostępne, ale nie można teraz zapisać postępu. Automatyczne aktualności są wstrzymane."
+    }
   }
 }

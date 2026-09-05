@@ -1376,9 +1376,9 @@ export function GraphView({
     ]
   );
 
-  // ─── Keyboard ───────────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
       if (isEditableGraphShortcutTarget(e)) return;
 
       if (e.key === 'Escape') {

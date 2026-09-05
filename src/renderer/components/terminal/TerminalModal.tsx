@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { CheckCircle, Terminal, X, XCircle } from 'lucide-react';
 
 import { EmbeddedTerminal } from './EmbeddedTerminal';
@@ -41,6 +42,8 @@ export function TerminalModal({
   successMessage,
   failureMessage,
 }: TerminalModalProps): React.JSX.Element {
+  useOverlayOccupancy(true);
+
   const { t } = useAppTranslation('common');
   const [exited, setExited] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);

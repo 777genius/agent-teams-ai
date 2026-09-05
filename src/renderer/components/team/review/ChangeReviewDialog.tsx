@@ -10,6 +10,7 @@ import React, {
 
 import { redoDepth, undoDepth } from '@codemirror/commands';
 import { Transaction } from '@codemirror/state';
+import { AnnouncementNewsButton } from '@features/announcements/renderer';
 import { registerAppCloseParticipant } from '@features/app-close-coordination/renderer';
 import {
   ReviewDraftHistoryWriteBuffer,
@@ -435,9 +436,7 @@ export const ChangeReviewDialog = ({
     globalTasks,
   } = useStore();
 
-  // Build scope keys (pure values - safe to compute before hooks that depend on them)
   const scopeKey = mode === 'task' ? `task:${taskId ?? ''}` : `agent:${memberName ?? ''}`;
-  // Filesystem-safe: use `-` instead of `:` for decision persistence key
   const decisionScopeKey = mode === 'task' ? `task-${taskId ?? ''}` : `agent-${memberName ?? ''}`;
   const decisionScopeToken = useMemo(() => {
     if (
@@ -5027,7 +5026,6 @@ export const ChangeReviewDialog = ({
       classifyTaskChangeReviewability(taskChangeSet).reviewability === 'attention_required' ||
       taskChangeSet.scope.confidence.tier > 1);
 
-  // Active file for timeline (derived from scroll-spy)
   const activeFile = useMemo(() => {
     if (!activeChangeSet || !activeFilePath) return null;
     return activeChangeSet.files.find((f) => f.filePath === activeFilePath) ?? null;
@@ -5048,9 +5046,8 @@ export const ChangeReviewDialog = ({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
-      {/* Header */}
       <div
-        className="flex items-center justify-between border-b border-border bg-surface-sidebar px-4 py-3"
+        className="flex min-w-0 items-center justify-between border-b border-border bg-surface-sidebar px-4 py-3"
         style={
           {
             paddingLeft: isMacElectron
@@ -5060,8 +5057,8 @@ export const ChangeReviewDialog = ({
           } as React.CSSProperties
         }
       >
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-medium text-text">{title}</h2>
+        <div className="flex min-w-0 items-center gap-3">
+          <h2 className="truncate text-sm font-medium text-text">{title}</h2>
           {activeChangeSet && (
             <ViewedProgressBar
               viewed={viewedCount}
@@ -5070,19 +5067,20 @@ export const ChangeReviewDialog = ({
             />
           )}
         </div>
-        <button
-          type="button"
-          aria-label="Close Changes"
-          onClick={() => void requestClose()}
-          disabled={reviewCloseBusy || decisionHydrationPending || draftHistoryHydrationPending}
-          className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-        >
-          <X className="size-4" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <AnnouncementNewsButton />
+          <button
+            type="button"
+            aria-label="Close Changes"
+            onClick={() => void requestClose()}
+            disabled={reviewCloseBusy || decisionHydrationPending || draftHistoryHydrationPending}
+            className="rounded p-1 text-text-muted transition-colors hover:bg-surface-raised hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Keyboard shortcuts help */}
       <KeyboardShortcutsHelp
         open={diffNav.showShortcutsHelp}
         onOpenChange={diffNav.setShowShortcutsHelp}

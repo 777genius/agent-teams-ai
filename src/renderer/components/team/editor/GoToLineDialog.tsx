@@ -11,6 +11,7 @@ import { EditorView } from '@codemirror/view';
 import { useAppTranslation } from '@features/localization/renderer';
 import { Button } from '@renderer/components/ui/button';
 import { Input } from '@renderer/components/ui/input';
+import { useOverlayOccupancy } from '@renderer/hooks/useOverlayOccupancy';
 import { editorBridge } from '@renderer/utils/editorBridge';
 import { isImeComposing } from '@renderer/utils/imeComposition';
 
@@ -75,6 +76,8 @@ function parseLineInput(input: string, view: EditorView): ParsedTarget | null {
 // =============================================================================
 
 export const GoToLineDialog = ({ onClose }: GoToLineDialogProps): React.ReactElement => {
+  useOverlayOccupancy(true);
+
   const { t } = useAppTranslation('team');
   const [value, setValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
