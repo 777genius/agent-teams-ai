@@ -6383,8 +6383,110 @@ describe('teamSlice actions', () => {
       expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
     });
 
+    it('clears a real provisioning run promoted before launchTeam rejects', async () => {
+      const store = createSliceStore();
+      const launchRequest = createDeferredPromise<{ runId: string }>();
+      hoisted.launchTeam.mockImplementationOnce(() => launchRequest.promise);
+
+      const launchPromise = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+      });
+      const rejection = expect(launchPromise).rejects.toThrow('MCP initialize timed out');
+      await Promise.resolve();
+      const startedAt = store.getState().provisioningStartedAtFloorByTeam['my-team']!;
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-real',
+        teamName: 'my-team',
+        state: 'spawning',
+        message: 'Preparing workspace trust',
+        startedAt,
+        updatedAt: startedAt,
+      });
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-real');
+
+      launchRequest.reject(new Error('MCP initialize timed out'));
+      await rejection;
+
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBeUndefined();
+      expect(store.getState().provisioningRuns['run-real']).toBeUndefined();
+      expect(store.getState().ignoredProvisioningRunIds['run-real']).toBe('my-team');
+      expect(store.getState().ignoredRuntimeRunIds['run-real']).toBe('my-team');
+      expect(store.getState().provisioningErrorByTeam['my-team']).toBe(
+        'MCP initialize timed out'
+      );
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-late',
+        teamName: 'my-team',
+        state: 'spawning',
+        message: 'Late progress from the failed launch',
+        startedAt,
+        updatedAt: startedAt,
+      });
+      expect(store.getState().provisioningRuns['run-late']).toBeUndefined();
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
+    });
+
+    it('preserves a newer same-millisecond attempt when an older launch rejects', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-09-05T02:45:00.000Z'));
+      const store = createSliceStore();
+      const oldRequest = createDeferredPromise<{ runId: string }>();
+      const newRequest = createDeferredPromise<{ runId: string }>();
+      hoisted.launchTeam
+        .mockImplementationOnce(() => oldRequest.promise)
+        .mockImplementationOnce(() => newRequest.promise);
+
+      const oldLaunch = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+      });
+      const oldRejection = expect(oldLaunch).rejects.toThrow('Old launch failed');
+      await Promise.resolve();
+      const oldPendingRunId = store.getState().currentProvisioningRunIdByTeam['my-team'];
+      const oldFloor = store.getState().provisioningStartedAtFloorByTeam['my-team'];
+
+      const newLaunch = store.getState().launchTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+      });
+      const newRejection = expect(newLaunch).rejects.toThrow('New launch cleanup');
+      await Promise.resolve();
+      const newPendingRunId = store.getState().currentProvisioningRunIdByTeam['my-team'];
+      const newFloor = store.getState().provisioningStartedAtFloorByTeam['my-team']!;
+      expect(newFloor).toBe(oldFloor);
+      expect(newPendingRunId).not.toBe(oldPendingRunId);
+
+      store.getState().onProvisioningProgress({
+        runId: 'run-new',
+        teamName: 'my-team',
+        state: 'spawning',
+        message: 'New launch is running',
+        startedAt: newFloor,
+        updatedAt: newFloor,
+      });
+
+      oldRequest.reject(new Error('Old launch failed'));
+      await oldRejection;
+
+      expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().currentRuntimeRunIdByTeam['my-team']).toBe('run-new');
+      expect(store.getState().provisioningRuns['run-new']).toBeDefined();
+      expect(store.getState().ignoredProvisioningRunIds['run-new']).toBeUndefined();
+      expect(store.getState().provisioningErrorByTeam['my-team']).toBeUndefined();
+      expect(store.getState().provisioningStartedAtFloorByTeam['my-team']).toBe(newFloor);
+
+      newRequest.reject(new Error('New launch cleanup'));
+      await newRejection;
+      vi.useRealTimers();
+    });
+
     it('rolls back optimistic pending run on early createTeam failure', async () => {
       const store = createSliceStore();
+      const createRequest = createDeferredPromise<{ runId: string }>();
       const previousParams = {
         providerId: 'codex',
         providerBackendId: 'codex-native',
@@ -6397,21 +6499,35 @@ describe('teamSlice actions', () => {
           'my-team': previousParams,
         },
       });
-      hoisted.createTeam.mockRejectedValue(new Error('create failed'));
+      hoisted.createTeam.mockImplementationOnce(() => createRequest.promise);
 
-      await expect(
-        store.getState().createTeam({
-          teamName: 'my-team',
-          cwd: '/tmp/project',
-          members: [],
-          providerId: 'anthropic',
-          model: 'sonnet',
-          effort: 'low',
-        })
-      ).rejects.toThrow('create failed');
+      const createPromise = store.getState().createTeam({
+        teamName: 'my-team',
+        cwd: '/tmp/project',
+        members: [],
+        providerId: 'anthropic',
+        model: 'sonnet',
+        effort: 'low',
+      });
+      const rejection = expect(createPromise).rejects.toThrow('create failed');
+      await Promise.resolve();
+      const startedAt = store.getState().provisioningStartedAtFloorByTeam['my-team']!;
+      expect(store.getState().provisioningSnapshotByTeam['my-team']).toBeDefined();
+
+      store.getState().onProvisioningProgress({
+        runId: 'create-run-real',
+        teamName: 'my-team',
+        state: 'spawning',
+        message: 'Creating team',
+        startedAt,
+        updatedAt: startedAt,
+      });
+      createRequest.reject(new Error('create failed'));
+      await rejection;
 
       expect(store.getState().currentProvisioningRunIdByTeam['my-team']).toBeUndefined();
       expect(Object.values(store.getState().provisioningRuns)).toHaveLength(0);
+      expect(store.getState().provisioningSnapshotByTeam['my-team']).toBeUndefined();
       expect(store.getState().provisioningErrorByTeam['my-team']).toBe('create failed');
       expect(store.getState().launchParamsByTeam['my-team']).toEqual(previousParams);
     });
