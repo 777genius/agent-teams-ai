@@ -15,6 +15,23 @@ interface RuntimeStatusMapper {
   mergeOpenCodeVerification: (provider: CliProviderStatus, snapshot: unknown) => CliProviderStatus;
 }
 
+interface RuntimeStatusHydrationInternals {
+  beginProviderStatusHydration: (
+    binaryPath: string,
+    providerIds: readonly CliProviderId[],
+    projectPath?: string | null
+  ) => number;
+  getProviderStatusHydrationKey: (
+    binaryPath: string,
+    providerId: CliProviderId,
+    projectPath?: string | null
+  ) => string;
+  providerStatusHydrationInFlight: Map<
+    string,
+    { readonly generation: number; readonly promise: Promise<CliProviderStatus> }
+  >;
+}
+
 function mapRuntimeProviderStatus(
   providerId: CliProviderId,
   runtimeStatus: unknown
@@ -294,6 +311,23 @@ describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
       summary: false,
       projectPath: path.resolve(projectPath),
     });
+  });
+
+  test('reuses an active single-provider catalog hydration generation', () => {
+    const internals =
+      new ClaudeMultimodelBridgeService() as unknown as RuntimeStatusHydrationInternals;
+    const binaryPath = '/fake/cli';
+    const generation = internals.beginProviderStatusHydration(binaryPath, ['codex']);
+    const hydrationKey = internals.getProviderStatusHydrationKey(binaryPath, 'codex', null);
+    internals.providerStatusHydrationInFlight.set(hydrationKey, {
+      generation,
+      promise: Promise.resolve(mapRuntimeProviderStatus('codex', {})),
+    });
+
+    expect(internals.beginProviderStatusHydration(binaryPath, ['codex'])).toBe(generation);
+    expect(
+      internals.beginProviderStatusHydration(binaryPath, ['codex'], '/tmp/another-project')
+    ).not.toBe(generation);
   });
 });
 

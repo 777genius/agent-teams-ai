@@ -677,6 +677,21 @@ export class ClaudeMultimodelBridgeService {
     providerIds: readonly CliProviderId[],
     projectPath?: string | null
   ): number {
+    if (providerIds.length === 1) {
+      const hydrationKey = this.getProviderStatusHydrationKey(
+        binaryPath,
+        providerIds[0]!,
+        projectPath
+      );
+      const currentGeneration = this.providerStatusHydrationGenerations.get(hydrationKey);
+      if (
+        currentGeneration !== undefined &&
+        this.providerStatusHydrationInFlight.has(hydrationKey)
+      ) {
+        return currentGeneration;
+      }
+    }
+
     const generation = ++this.providerStatusHydrationGeneration;
     for (const providerId of providerIds) {
       this.providerStatusHydrationGenerations.set(
