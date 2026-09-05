@@ -3096,7 +3096,6 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
     : effectiveProviderId === 'opencode' && selectedOpenCodeSourceTab
       ? selectedOpenCodeSourceTab.id
       : effectiveProviderId;
-
   return (
     <TooltipProvider delayDuration={150} skipDelayDuration={1500}>
       <div className="mb-5">
@@ -3125,9 +3124,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
             }
             const openCodeSourceTab = openCodeProviderTabs.find((tab) => tab.id === nextValue);
             if (openCodeSourceTab) {
-              if (!isOpenCodeSourceTabLoadable(openCodeSourceTab)) {
-                return;
-              }
+              if (!isOpenCodeSourceTabLoadable(openCodeSourceTab)) return;
               setSelectedOpenCodeSourceIds(new Set([openCodeSourceTab.sourceId]));
               setSelectedOpenCodeRouteTags(new Set());
               setModelQuery('');
@@ -3145,9 +3142,7 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
               }
               return;
             }
-            if (!isTeamProviderId(nextValue)) {
-              return;
-            }
+            if (!isTeamProviderId(nextValue)) return;
             setSelectedOpenCodeSourceIds(
               nextValue === 'opencode' ? new Set(['opencode']) : new Set()
             );
@@ -3181,6 +3176,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 const providerDisabledReason = getProviderDisabledReason(provider.id);
                 const providerSelectable = isProviderSelectable(provider.id);
                 const providerInspectable = isProviderInspectable(provider.id);
+                const providerNavigationDisabled =
+                  provider.comingSoon || !(providerSelectable || providerInspectable);
                 const statusBadge = getProviderStatusBadge(provider.id);
                 const statusBadgeLabel = getProviderStatusBadgeLabel(statusBadge);
                 const providerTooltip =
@@ -3188,19 +3185,12 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                   (statusBadge === 'Multimodel off'
                     ? 'Enable Multimodel mode to use this provider.'
                     : statusBadge);
-
                 return (
                   <React.Fragment key={provider.id}>
                     <TabsTrigger
                       value={provider.id}
-                      disabled={
-                        provider.comingSoon || (!providerSelectable && !providerInspectable)
-                      }
-                      aria-disabled={
-                        provider.comingSoon ||
-                        (!providerSelectable && !providerInspectable) ||
-                        undefined
-                      }
+                      disabled={providerNavigationDisabled}
+                      aria-disabled={providerNavigationDisabled || undefined}
                       aria-description={providerTooltip ?? undefined}
                       data-testid={`team-model-selector-provider-nav-${provider.id}`}
                       className={cn(
@@ -3225,14 +3215,8 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                     {provider.id === 'opencode' ? (
                       <TabsTrigger
                         value={OPENCODE_LOCAL_MODELS_TAB_ID}
-                        disabled={
-                          !isProviderSelectable('opencode') && !isProviderInspectable('opencode')
-                        }
-                        aria-disabled={
-                          (!isProviderSelectable('opencode') &&
-                            !isProviderInspectable('opencode')) ||
-                          undefined
-                        }
+                        disabled={providerNavigationDisabled}
+                        aria-disabled={providerNavigationDisabled || undefined}
                         aria-description={getProviderDisabledReason('opencode') ?? undefined}
                         data-testid="team-model-selector-provider-nav-local-models"
                         className="relative h-10 w-full shrink-0 justify-start gap-2 rounded-md border border-transparent px-2.5 text-left text-xs text-[var(--color-text-secondary)] shadow-none transition-colors hover:bg-white/[0.035] hover:text-[var(--color-text)] data-[state=active]:border-cyan-300/10 data-[state=active]:bg-cyan-300/[0.07] data-[state=active]:text-[var(--color-text)] data-[state=active]:shadow-none data-[state=active]:before:absolute data-[state=active]:before:inset-y-2 data-[state=active]:before:left-0 data-[state=active]:before:w-0.5 data-[state=active]:before:rounded-full data-[state=active]:before:bg-cyan-300 data-[state=active]:before:content-['']"

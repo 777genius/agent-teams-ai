@@ -2232,6 +2232,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       runtimeProviderLoadingById,
       prepareChecksRef.current
     );
+  const rejectProviderLaunch = () => setLocalError(t('launch.prepare.failed'));
   const showCodexReconnectPrompt = shouldShowCodexReconnectPrompt({
     effectiveCliStatus,
     selectedProviderIds: selectedMemberProviders,
@@ -2306,12 +2307,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setPrepareMessage(t('launch.prepare.checkingProviders'));
       return;
     }
-    if (
-      launchGuard.reject(isLaunchMode && !canSkipPreflight(), () =>
-        setLocalError(t('launch.prepare.failed'))
-      )
-    )
-      return;
+    if (launchGuard.reject(isLaunchMode && !canSkipPreflight(), rejectProviderLaunch)) return;
     if (!submissionFence.acquire(prepareRequestSeqRef)) return;
     setLocalError(null);
     setIsSubmitting(true);
