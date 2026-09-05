@@ -3769,10 +3769,10 @@ export default interface Resources {
         cancel: 'Cancel';
         delete: 'Delete';
         editCode: 'Edit code';
-        forceStop: 'Force stop';
         launch: 'Launch';
         remove: 'Remove';
         stop: 'Stop';
+        stopping: 'Stopping...';
         task: 'Task';
         usage: 'Usage';
         visualize: 'Visualize';
@@ -3803,17 +3803,6 @@ export default interface Resources {
         member_other: 'members';
         title: 'Team not launched yet';
       };
-      forceStop: {
-        cancelLabel: 'Cancel';
-        confirmLabel: 'Force stop';
-        message: 'Force stop "{{team}}"? Attempts to stop this team and cancels its pending message deliveries. Runtime exit is not guaranteed; shared runtime hosts are not terminated. Queued messages stay in the inbox.';
-        title: 'Force stop team';
-      };
-      forceStopFailed: {
-        confirmLabel: 'OK';
-        fallbackMessage: 'An unexpected error occurred';
-        title: 'Force stop failed';
-      };
       invalidTab: 'Invalid team tab';
       kanbanSafeData: 'Failed to fully load kanban. Displaying safe data.';
       loadFailed: 'Failed to load team';
@@ -3839,6 +3828,14 @@ export default interface Resources {
         launching: 'Launching...';
         running: 'Running';
       };
+      stopFailed: {
+        message: 'The team is still running. Check its state and press Stop again.';
+        title: 'Unable to stop team';
+      };
+      stopUnknown: {
+        message: 'The runtime response was not received. Refresh the team state before retrying.';
+        title: 'Unable to confirm stop';
+      };
       telemetry: {
         cpu: 'CPU';
         memory: 'Memory';
@@ -3847,7 +3844,6 @@ export default interface Resources {
         deleteTeam: 'Delete team';
         editTeam: 'Edit team';
         editUnavailableProvisioning: 'Edit team is unavailable while provisioning is still in progress';
-        forceStopTeam: 'Force stop team - interrupts work in progress';
         openBuiltInEditor: 'Open project in built-in editor';
         openTeamGraph: 'Open team graph';
         openTeamUsage: 'Open usage dashboard';

@@ -359,10 +359,10 @@
       "cancel": "Ghairi",
       "delete": "Futa",
       "editCode": "Hariri msimbo",
-      "forceStop": "Simamisha kwa nguvu",
       "launch": "Zindua",
       "remove": "Ondoa",
       "stop": "Simamisha",
+      "stopping": "Inasimamisha...",
       "task": "Kazi",
       "visualize": "Onyesha kwa picha",
       "usage": "Matumizi"
@@ -385,16 +385,13 @@
       "member_other": "wanachama",
       "title": "Timu bado haijazinduliwa"
     },
-    "forceStop": {
-      "cancelLabel": "Ghairi",
-      "confirmLabel": "Simamisha kwa nguvu",
-      "message": "Simamisha \"{{team}}\" kwa nguvu? Hujaribu kusimamisha timu hii na hughairi uwasilishaji wake wa jumbe unaosubiri. Kufungwa kwa mazingira ya utekelezaji hakuhakikishwi; seva za utekelezaji zinazoshirikiwa hazizimwi. Jumbe zilizo kwenye foleni hubaki kwenye kikasha.",
-      "title": "Simamisha timu kwa nguvu"
+    "stopFailed": {
+      "title": "Imeshindikana kusimamisha timu",
+      "message": "Timu bado inaendelea. Angalia hali yake kisha ubofye Simamisha tena."
     },
-    "forceStopFailed": {
-      "confirmLabel": "Sawa",
-      "fallbackMessage": "Hitilafu isiyotarajiwa imetokea",
-      "title": "Kusimamisha kwa nguvu kumeshindwa"
+    "stopUnknown": {
+      "title": "Imeshindikana kuthibitisha kusimamishwa",
+      "message": "Hakuna jibu lililopokelewa kutoka kwa runtime. Onyesha upya hali ya timu kabla ya kujaribu tena."
     },
     "invalidTab": "Kichupo batili cha timu",
     "kanbanSafeData": "Imeshindwa kupakia kanban kikamilifu. Inaonyesha data salama.",
@@ -429,7 +426,6 @@
       "deleteTeam": "Futa timu",
       "editTeam": "Hariri timu",
       "editUnavailableProvisioning": "Hariri timu haipatikani wakati ugavi bado unaendelea",
-      "forceStopTeam": "Simamisha timu kwa nguvu - hukatiza kazi inayoendelea",
       "openBuiltInEditor": "Fungua mradi katika kihariri kilichojengwa ndani",
       "openTeamGraph": "Fungua grafu ya timu",
       "stopTeam": "Simamisha timu",

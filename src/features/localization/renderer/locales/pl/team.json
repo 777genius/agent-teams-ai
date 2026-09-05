@@ -359,10 +359,10 @@
       "cancel": "Anuluj",
       "delete": "Usuń",
       "editCode": "Edytuj kod",
-      "forceStop": "Wymuś zatrzymanie",
       "launch": "Uruchom",
       "remove": "Usuń",
       "stop": "Zatrzymaj",
+      "stopping": "Zatrzymywanie...",
       "task": "Zadanie",
       "visualize": "Wizualizuj",
       "usage": "Użycie"
@@ -385,16 +385,13 @@
       "member_other": "członkami",
       "title": "Zespół jeszcze nie uruchomiony"
     },
-    "forceStop": {
-      "cancelLabel": "Anuluj",
-      "confirmLabel": "Wymuś zatrzymanie",
-      "message": "Wymusić zatrzymanie zespołu \"{{team}}\"? Podejmuje próbę zatrzymania tego zespołu i anuluje oczekujące dostarczenia jego wiadomości. Zakończenie środowiska uruchomieniowego nie jest gwarantowane; współdzielone hosty nie są zamykane. Wiadomości w kolejce pozostają w skrzynce odbiorczej.",
-      "title": "Wymuś zatrzymanie zespołu"
+    "stopFailed": {
+      "title": "Nie można zatrzymać zespołu",
+      "message": "Zespół nadal działa. Sprawdź jego stan i ponownie naciśnij Zatrzymaj."
     },
-    "forceStopFailed": {
-      "confirmLabel": "OK",
-      "fallbackMessage": "Wystąpił nieoczekiwany błąd",
-      "title": "Wymuszone zatrzymanie nie powiodło się"
+    "stopUnknown": {
+      "title": "Nie można potwierdzić zatrzymania",
+      "message": "Nie otrzymano odpowiedzi środowiska wykonawczego. Odśwież stan zespołu przed ponowną próbą."
     },
     "invalidTab": "Nieprawidłowa karta zespołu",
     "kanbanSafeData": "Nie udało się w pełni załadować tablicy Kanban. Wyświetlanie bezpiecznych danych.",
@@ -429,7 +426,6 @@
       "deleteTeam": "Usuń zespół",
       "editTeam": "Edytuj zespół",
       "editUnavailableProvisioning": "Edycja zespołu jest niedostępna, gdy przygotowywanie jest wciąż w toku",
-      "forceStopTeam": "Wymuś zatrzymanie zespołu - przerywa trwającą pracę",
       "openBuiltInEditor": "Otwórz projekt we wbudowanym edytorze",
       "openTeamGraph": "Otwórz graf zespołu",
       "stopTeam": "Zatrzymaj zespół",

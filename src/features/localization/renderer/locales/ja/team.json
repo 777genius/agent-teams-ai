@@ -359,10 +359,10 @@
       "cancel": "キャンセル",
       "delete": "削除",
       "editCode": "編集コード",
-      "forceStop": "強制停止",
       "launch": "リリース",
       "remove": "削除",
       "stop": "ストップ",
+      "stopping": "停止しています...",
       "task": "タスク",
       "visualize": "可視化",
       "usage": "使用状況"
@@ -385,16 +385,13 @@
       "member_other": "メンバー",
       "title": "チームはまだ起動しません"
     },
-    "forceStop": {
-      "cancelLabel": "キャンセル",
-      "confirmLabel": "強制停止",
-      "message": "「{{team}}」を強制停止しますか？このチームの停止を試み、保留中のメッセージ配信をキャンセルします。ランタイムの終了は保証されません。共有ランタイムホストは終了しません。キュー内のメッセージは受信トレイに残ります。",
-      "title": "チームを強制停止"
+    "stopFailed": {
+      "title": "チームを停止できません",
+      "message": "チームはまだ実行中です。状態を確認して、もう一度「停止」を押してください。"
     },
-    "forceStopFailed": {
-      "confirmLabel": "OK",
-      "fallbackMessage": "予期しないエラーが発生しました",
-      "title": "強制停止に失敗しました"
+    "stopUnknown": {
+      "title": "停止を確認できません",
+      "message": "ランタイムから応答がありませんでした。再試行する前にチームの状態を更新してください。"
     },
     "invalidTab": "無効なチームタブ",
     "kanbanSafeData": "完全にカンバンをロードできなかった。 安全なデータの表示。",
@@ -429,7 +426,6 @@
       "deleteTeam": "チーム削除",
       "editTeam": "チーム編集",
       "editUnavailableProvisioning": "暫定中にチームを編集することは利用できません。",
-      "forceStopTeam": "チームを強制停止 - 進行中の作業を中断します",
       "openBuiltInEditor": "組み込みエディタでプロジェクトを開く",
       "openTeamGraph": "チームグラフを開く",
       "stopTeam": "チームの停止",
