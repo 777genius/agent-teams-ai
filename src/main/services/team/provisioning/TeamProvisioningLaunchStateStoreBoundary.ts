@@ -11,12 +11,27 @@ export interface LaunchStateWriteOptions {
   allowNoopSkip?: boolean;
   requireTrackedRun?: boolean;
   runId?: string;
+  /**
+   * True when the snapshot republishes launch truth that already existed
+   * instead of starting a launch. Forwarded to the store, where it keeps a stop
+   * that settled during the write final over this publication.
+   */
+  republishesExistingLaunch?: boolean;
+}
+
+/** Mirrors `TeamLaunchStatePublicationOptions` on the launch-state store. */
+export interface LaunchStatePublicationOptions {
+  republishesExistingLaunch?: boolean;
 }
 
 export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
   launchStateStore: {
     read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<void>;
     clear(teamName: string): Promise<void>;
   };
   membersMetaStore: {
@@ -47,11 +62,19 @@ export interface TeamProvisioningLaunchStateStoreBoundaryPorts {
 export interface TeamProvisioningLaunchStateStoreBoundaryServiceHost {
   launchStateStore: {
     read(teamName: string): Promise<PersistedTeamLaunchSnapshot | null>;
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<void>;
     clear?(teamName: string): Promise<void>;
   };
   defaultLaunchStateStore: {
-    write(teamName: string, snapshot: PersistedTeamLaunchSnapshot): Promise<void>;
+    write(
+      teamName: string,
+      snapshot: PersistedTeamLaunchSnapshot,
+      options?: LaunchStatePublicationOptions
+    ): Promise<void>;
     clear(teamName: string): Promise<void>;
   };
   membersMetaStore: TeamProvisioningLaunchStateStoreBoundaryPorts['membersMetaStore'];
@@ -185,7 +208,11 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       return { snapshot: previousSnapshot, wrote: false };
     }
     const writtenRunIdBeforeWrite = this.writtenRunIdByTeam.get(teamName);
-    await this.ports.launchStateStore.write(teamName, normalizedSnapshot);
+    await this.ports.launchStateStore.write(
+      teamName,
+      normalizedSnapshot,
+      options?.republishesExistingLaunch === true ? { republishesExistingLaunch: true } : undefined
+    );
     const trackedRunIdAfterWrite =
       typeof options?.runId === 'string' ? this.ports.getTrackedRunId(teamName) : undefined;
     if (typeof options?.runId === 'string' && trackedRunIdAfterWrite === options.runId) {
@@ -198,7 +225,20 @@ export class TeamProvisioningLaunchStateStoreBoundary {
           (options.requireTrackedRun === true ||
             this.observedTrackedRunIdByTeam.get(teamName) === options.runId)))
     ) {
-      await this.ports.launchStateStore.clear(teamName);
+      // Undo this write; do not erase the publication. Tracking can drop while
+      // the write is in flight - a stop settling, or a successor run taking
+      // over - and by then the launch truth on disk may belong to someone else.
+      // Clearing would delete that newer truth along with the stale write, so
+      // restore what this call overwrote and only clear when there was nothing.
+      // The restore is not a launch: a stop that settled while the write was in
+      // flight has to survive it, marker included.
+      if (previousSnapshot) {
+        await this.ports.launchStateStore.write(teamName, previousSnapshot, {
+          republishesExistingLaunch: true,
+        });
+      } else {
+        await this.ports.launchStateStore.clear(teamName);
+      }
       if (this.writtenRunIdByTeam.get(teamName) === writtenRunIdBeforeWrite) {
         this.writtenRunIdByTeam.delete(teamName);
       }
@@ -206,7 +246,7 @@ export class TeamProvisioningLaunchStateStoreBoundary {
       this.ports.logDebug(
         `[${teamName}] Removed stale launch-state write for run ${options.runId}`
       );
-      return { snapshot: normalizedSnapshot, wrote: false };
+      return { snapshot: previousSnapshot ?? normalizedSnapshot, wrote: false };
     }
     if (typeof options?.runId === 'string') {
       this.writtenRunIdByTeam.set(teamName, options.runId);
@@ -242,10 +282,10 @@ export function createTeamProvisioningLaunchStateStoreBoundaryFromService(
   return new TeamProvisioningLaunchStateStoreBoundary({
     launchStateStore: {
       read: (teamName) => service.launchStateStore.read(teamName),
-      write: async (teamName, snapshot) => {
-        await service.launchStateStore.write(teamName, snapshot);
+      write: async (teamName, snapshot, publicationOptions) => {
+        await service.launchStateStore.write(teamName, snapshot, publicationOptions);
         if (service.launchStateStore !== service.defaultLaunchStateStore) {
-          await service.defaultLaunchStateStore.write(teamName, snapshot);
+          await service.defaultLaunchStateStore.write(teamName, snapshot, publicationOptions);
         }
       },
       clear: async (teamName) => {

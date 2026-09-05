@@ -249,7 +249,17 @@ import {
   createOpenCodeBridgeClientIdentity,
   OpenCodeBridgeCommandHandshakePort,
 } from './services/team/opencode/bridge/OpenCodeBridgeHandshakeClient';
+import {
+  purgeStaleOpenCodeHostStartupLocks,
+  resolveStartupStaleLockMinAgeMs,
+  startPeriodicOpenCodeHostStartupLockPurge,
+} from './services/team/opencode/bridge/OpenCodeHostStartupLockCleanup';
 import { cleanupManagedOpenCodeServeProcesses } from './services/team/opencode/bridge/OpenCodeManagedHostProcessCleanup';
+import {
+  reapOrphanedOpenCodeHostsBeforeRuntimeRegistry,
+  runOpenCodeStartupRuntimeSweepTail,
+} from './services/team/opencode/bridge/OpenCodeStartupRuntimeSweep';
+import { beginOpenCodeStartupRuntimeSweep } from './services/team/opencode/bridge/OpenCodeStartupSweepGate';
 import { OpenCodeStateChangingBridgeCommandService } from './services/team/opencode/bridge/OpenCodeStateChangingBridgeCommandService';
 import { OpenCodeRuntimeLaunchAuthorityWriter } from './services/team/opencode/store/OpenCodeRuntimeLaunchAuthorityWriter';
 import { OpenCodeRuntimeManifestEvidenceReader } from './services/team/opencode/store/OpenCodeRuntimeManifestEvidenceReader';
@@ -679,6 +689,8 @@ async function createOpenCodeRuntimeAdapterRegistry(
     }),
   ]);
 }
+let stopPeriodicOpenCodeHostStartupLockPurge: (() => void) | null = null;
+
 async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'): Promise<void> {
   let registryHostPids = new Set<number>();
   let registryCleanupAvailable = false;
@@ -708,6 +720,11 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
       diagnostic.startsWith('OpenCode host cleanup bridge failed:')
     );
   }
+  // After the command, not before it: the managed host the registry sweep
+  // boots in this process directory is younger than the moment the command was
+  // issued, so an issue-time fence keeps the one host the tail below exists to
+  // reap.
+  const sweepCommandSettledAtMs = Date.now();
 
   if (reason === 'startup' && !registryCleanupAvailable) {
     logger.warn(
@@ -719,12 +736,39 @@ async function cleanupOpenCodeHostsForLifecycle(reason: 'startup' | 'shutdown'):
   await cleanupOpenCodeHostProcessFallback(`${reason} fallback`, {
     mode: reason === 'shutdown' ? 'force' : 'orphaned',
     excludePids: reason === 'startup' ? registryHostPids : undefined,
-    ...(reason === 'shutdown' ? getOpenCodeShutdownProcessOwnershipMarkers() : {}),
+    ...(reason === 'shutdown' ? getOpenCodeProcessOwnershipMarkers() : {}),
     startedBeforeMs: reason === 'startup' ? appStartedAtMs : null,
   });
+
+  if (reason === 'startup') {
+    await runOpenCodeStartupRuntimeSweepTail({
+      sweepCommandSettledAtMs,
+      ownershipMarkers: getOpenCodeProcessOwnershipMarkers(),
+      logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+      logWarning: (message) => logger.warn(message),
+      logError: (message) => logger.error(message),
+    });
+    // A host that was killed never released its orchestrator startup lock, and
+    // the next launch readiness probe waits on every leftover in turn. The
+    // reap above has just run, so a lock still held open belongs to a live
+    // host: on Windows its unlink fails harmlessly, and where the OS unlinks
+    // an open file instead the floor alone has to keep a host that is starting
+    // right now out of scope.
+    const lockPurge = await purgeStaleOpenCodeHostStartupLocks({
+      minAgeMs: resolveStartupStaleLockMinAgeMs(),
+    });
+    if (lockPurge.removed > 0) {
+      logger.diagnostic(
+        `opencode_startup_locks_purged phase=startup removed=${lockPurge.removed} kept=${lockPurge.kept} dir=${lockPurge.locksDir}`
+      );
+    }
+    for (const diagnostic of lockPurge.diagnostics) {
+      logger.warn(`[OpenCode] startup lock purge: ${diagnostic}`);
+    }
+  }
 }
 
-function getOpenCodeShutdownProcessOwnershipMarkers(): Pick<
+function getOpenCodeProcessOwnershipMarkers(): Pick<
   Parameters<typeof cleanupManagedOpenCodeServeProcesses>[0],
   'requiredDetailsMarkers' | 'requiredServeConfigMarkersAny'
 > {
@@ -743,7 +787,12 @@ async function cleanupOpenCodeHostProcessFallback(
 ): Promise<void> {
   const fallback = await cleanupManagedOpenCodeServeProcesses(options);
   if (fallback.killed > 0) {
-    logger.info(`[OpenCode] ${label} cleanup killed ${fallback.killed} managed host(s)`);
+    // Durable, not a warning: this is the app's most destructive lifecycle
+    // action, and the count has to still be readable when someone asks why a
+    // host they expected is gone. `info` never reaches a sink at all.
+    logger.diagnostic(
+      `[OpenCode] opencode_managed_hosts_killed sweep=${label} count=${fallback.killed}`
+    );
   }
   for (const diagnostic of fallback.diagnostics) {
     logger.warn(`[OpenCode] ${label} cleanup: ${diagnostic}`);
@@ -2049,6 +2098,20 @@ async function initializeServices(): Promise<void> {
   teamProvisioningService.setMemberRuntimeAdvisoryInvalidator(
     createMemberRuntimeAdvisoryInvalidator(teamMemberRuntimeAdvisoryService)
   );
+  // Awaited, and before the runtime adapter registry exists: a managed host
+  // orphaned by a previous app instance still holds the fixed loopback ports a
+  // new host needs, and whoever gets there first wins. Reaping afterwards would
+  // mean the first launch of this session races a host it cannot see.
+  publishStartupStatus({
+    phase: 'runtime-host-preflight',
+    message: 'Cleaning up stale runtime hosts...',
+  });
+  await reapOrphanedOpenCodeHostsBeforeRuntimeRegistry({
+    appStartedAtMs,
+    logSweepResult: (message) => logger.diagnostic(`[OpenCode] ${message}`),
+    logWarning: (message) => logger.warn(message),
+    logError: (message) => logger.error(message),
+  });
   publishStartupStatus({
     phase: 'runtime',
     message: 'Resolving local runtime...',
@@ -2059,11 +2122,20 @@ async function initializeServices(): Promise<void> {
     )
   );
   teamRuntimeRecoveryFeature.start();
+  // Armed before the delay, not inside the task, so a launch requested during
+  // the scheduling delay serialises behind the sweep as well.
+  const settleStartupRuntimeSweep = beginOpenCodeStartupRuntimeSweep();
   scheduleStartupTask(() => {
-    void cleanupOpenCodeHostsForLifecycle('startup').catch((error: unknown) =>
-      logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
-    );
+    void cleanupOpenCodeHostsForLifecycle('startup')
+      .catch((error: unknown) =>
+        logger.warn(`[OpenCode] Startup host cleanup failed: ${String(error)}`)
+      )
+      .finally(settleStartupRuntimeSweep);
   }, STARTUP_RECOVERY_DELAY_MS);
+  stopPeriodicOpenCodeHostStartupLockPurge = startPeriodicOpenCodeHostStartupLockPurge({
+    logInfo: (message) => logger.info(message),
+    logWarning: (message) => logger.warn(message),
+  });
   // Startup GC: remove stale MCP config files from previous sessions (best-effort)
   void new TeamMcpConfigBuilder().gcStaleConfigs();
   void teamDataService
@@ -3005,6 +3077,11 @@ async function shutdownServices(): Promise<void> {
 
     clearStartupTimers();
     clearInboxNotifyTimers();
+    // Ahead of the first awaited step: runShutdownStep stops waiting on a step
+    // that hangs, it does not cancel it, so no awaited step may decide whether
+    // the background lock purge is still running.
+    stopPeriodicOpenCodeHostStartupLockPurge?.();
+    stopPeriodicOpenCodeHostStartupLockPurge = null;
 
     await runShutdownStep('team runtime recovery scheduler cleanup', async () => {
       teamProvisioningService?.setRuntimeRecoveryFailureObserver(null);
@@ -3034,7 +3111,7 @@ async function shutdownServices(): Promise<void> {
       () =>
         cleanupOpenCodeHostProcessFallback('post-subprocess shutdown fallback', {
           mode: 'force',
-          ...getOpenCodeShutdownProcessOwnershipMarkers(),
+          ...getOpenCodeProcessOwnershipMarkers(),
         }),
       5_000
     );

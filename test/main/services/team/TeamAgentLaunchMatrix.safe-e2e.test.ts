@@ -2461,7 +2461,8 @@ describe(
         runtimeAlive: false,
         pendingPermissionRequestIds: ['perm-alice'],
       });
-      expect(statuses.summary?.pendingCount).toBe(1);
+      // The OpenCode lane lead survives read-back now, so it is counted too.
+      expect(statuses.summary?.pendingCount).toBe(2);
     });
 
     it('routes OpenCode runtime approval UI responses back through the adapter', async () => {
@@ -2774,7 +2775,9 @@ describe(
       expect(statuses.summary).toMatchObject({
         confirmedCount: 1,
         pendingCount: 1,
-        failedCount: 1,
+        // The lead lane failed with the rest of the primary lane and is no
+        // longer discarded on read-back.
+        failedCount: 2,
       });
     });
 
@@ -16436,7 +16439,9 @@ describe(
       }) as typeof adapter.stop;
 
       const stopPromise = svc.stopTeam(teamName);
-      await waitForCondition(() => adapter.stopInputs.length === 1);
+      // The lanes stop concurrently, so what matters here is that a stop is in
+      // flight, not that exactly one of them is.
+      await waitForCondition(() => adapter.stopInputs.length >= 1);
       try {
         await expect(
           svc.deliverOpenCodeMemberMessage(teamName, {
@@ -21857,7 +21862,9 @@ describe(
         source: 'persisted',
         teamLaunchState: 'clean_success',
       });
-      expect(statuses.expectedMembers).toEqual(['alice', 'bob']);
+      // The lead keeps its persisted runtime state after a restart, exactly as
+      // it had one while the launch was in memory.
+      expect(statuses.expectedMembers).toEqual(['alice', 'bob', 'team-lead']);
       expect(statuses.statuses.alice).toMatchObject({
         status: 'online',
         launchState: 'confirmed_alive',

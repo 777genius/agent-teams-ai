@@ -26,6 +26,7 @@ import type {
   PermanentDeletionTarget,
   TeamPermanentDeletionIntent,
 } from '../../../../src/main/services/team/TeamBackupService';
+import { TeamLaunchStateStore } from '../../../../src/main/services/team/TeamLaunchStateStore';
 import { removePathWithIdentityFenceAsync } from '../../../../src/main/utils/atomicWrite';
 
 async function removePreparedDeletionTargets(
@@ -310,6 +311,338 @@ describe('TeamBackupService', () => {
     expect(restoredLaunchSummary.teamLaunchState).toBe('partial_pending');
     expect(restoredRuntimeLaneIndex.lanes['secondary:opencode:tom'].state).toBe('active');
     expect(restoredRuntimeManifest.activeRunId).toBe('lane-run-1');
+    // A team that was never stopped gains no stop marker from a restore.
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('does not resurrect launch state for a stopped team from a pre-stop backup', async () => {
+    const service = new TeamBackupService();
+    const teamName = 'stopped-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const projectPath = path.join(tempDir, 'project');
+    await fs.mkdir(teamDir, { recursive: true });
+    const config = {
+      name: 'Stopped Team',
+      projectPath,
+      members: [{ name: 'team-lead', agentType: 'team-lead' }],
+    };
+    const launchState = { version: 2, teamName, launchPhase: 'reconciled', members: {} };
+    const launchSummary = { version: 1, teamName, teamLaunchState: 'partial_failure' };
+    await fs.writeFile(path.join(teamDir, 'config.json'), JSON.stringify(config), 'utf8');
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify(launchState),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify(launchSummary),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // Stop: the store removes both publication files and leaves the marker.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    await fs.writeFile(
+      path.join(teamDir, 'launch-stopped.json'),
+      JSON.stringify({ version: 1, teamName, stoppedAt: '2026-08-23T00:10:00.000Z' }),
+      'utf8'
+    );
+
+    // Partial restore (the config is present): the pre-stop snapshot stays gone.
+    await service.restoreIfNeeded();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+
+    // Once the stop itself is backed up, a full restore after losing the team
+    // directory keeps the team stopped too.
+    await service.backupTeam(teamName);
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(backupDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await fs.rm(teamDir, { recursive: true, force: true });
+    const restored = await service.restoreIfNeeded();
+    service.dispose();
+    expect(restored).toContain(teamName);
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('drops a stop marker the relaunched team no longer has from the shutdown backup', async () => {
+    // Stop, relaunch, shutdown, restore. The synchronous shutdown backup only
+    // adds files, so the marker copied during the stop would outlive it in the
+    // backup and freeze the restore of the launch state the relaunch produced.
+    const service = new TeamBackupService();
+    const teamName = 'relaunched-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    const backupDir = path.join(hoisted.backupsBase, 'teams', teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Relaunched Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    const markerPath = path.join(teamDir, 'launch-stopped.json');
+    await fs.writeFile(markerPath, JSON.stringify({ version: 1, teamName }), 'utf8');
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+
+    // Relaunch: the store lifts the marker and publishes the launch state.
+    await fs.rm(markerPath, { force: true });
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'active', members: {} }),
+      'utf8'
+    );
+
+    service.runShutdownBackupSync();
+
+    await expect(fs.access(path.join(backupDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(backupDir, 'launch-state.json'))).resolves.toBeUndefined();
+
+    // A full restore after losing the team directory brings the launch back
+    // instead of treating the outlived marker as a current stop.
+    await fs.rm(teamDir, { recursive: true, force: true });
+    const restoringService = new TeamBackupService();
+    await restoringService.initialize();
+    restoringService.dispose();
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
+  it('does not restore pre-stop launch state when the stop marker cannot be read', async () => {
+    // The live marker is the only evidence a team is stopped until the marker
+    // itself reaches the backup. A read that fails for anything but ENOENT does
+    // not prove the team was never stopped, so it must not license the restore
+    // to put the pre-stop launch publication back and undo the stop.
+    const service = new TeamBackupService();
+    const teamName = 'unreadable-marker-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Unreadable Marker Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'reconciled', members: {} }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify({ version: 1, teamName, teamLaunchState: 'partial_failure' }),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // Stop, before the marker itself reached the backup.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    const markerPath = path.join(teamDir, 'launch-stopped.json');
+    await fs.writeFile(markerPath, JSON.stringify({ version: 1, teamName }), 'utf8');
+
+    const realAccess = nativeFs.promises.access;
+    const accessSpy = vi
+      .spyOn(nativeFs.promises, 'access')
+      .mockImplementation(async (target, mode) => {
+        if (target === markerPath) {
+          throw Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' });
+        }
+        return realAccess(target, mode);
+      });
+
+    await service.restoreIfNeeded();
+    accessSpy.mockRestore();
+    service.dispose();
+
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`Could not read the stop marker for ${teamName}`)
+    );
+    vi.mocked(console.warn).mockClear();
+  });
+
+  it('does not restore launch state for a team stopped after the restore read the fence', async () => {
+    // The stop fence is read once, before the restore loop. A stop that lands
+    // while the loop works removes the publication files and writes its marker
+    // after them, so a commit that is not fenced again puts the pre-stop launch
+    // state back with no marker left to hold it.
+    const service = new TeamBackupService();
+    const teamName = 'stopped-mid-restore-team';
+    const teamDir = path.join(hoisted.teamsBase, teamName);
+    await fs.mkdir(teamDir, { recursive: true });
+    await fs.writeFile(
+      path.join(teamDir, 'config.json'),
+      JSON.stringify({
+        name: 'Stopped Mid Restore Team',
+        projectPath: path.join(tempDir, 'project'),
+        members: [{ name: 'team-lead', agentType: 'team-lead' }],
+      }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-state.json'),
+      JSON.stringify({ version: 2, teamName, launchPhase: 'reconciled', members: {} }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'launch-summary.json'),
+      JSON.stringify({ version: 1, teamName, teamLaunchState: 'partial_failure' }),
+      'utf8'
+    );
+    await fs.writeFile(
+      path.join(teamDir, 'team.meta.json'),
+      JSON.stringify({ providerId: 'codex' }),
+      'utf8'
+    );
+
+    await service.initialize();
+    await service.backupTeam(teamName);
+
+    // What the restore is about to put back is gone and nothing says the team
+    // was stopped, so the fence read before the loop lets all three through.
+    await fs.rm(path.join(teamDir, 'launch-state.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'launch-summary.json'), { force: true });
+    await fs.rm(path.join(teamDir, 'team.meta.json'), { force: true });
+
+    const backupLaunchState = path.join(
+      hoisted.backupsBase,
+      'teams',
+      teamName,
+      'launch-state.json'
+    );
+    const realReadFile = nativeFs.promises.readFile as (...args: unknown[]) => Promise<unknown>;
+    let stoppedDuringRestore = false;
+    const readFileSpy = vi.spyOn(nativeFs.promises, 'readFile').mockImplementation((async (
+      ...args: unknown[]
+    ) => {
+      const content = await realReadFile(...args);
+      if (!stoppedDuringRestore && String(args[0]) === backupLaunchState) {
+        stoppedDuringRestore = true;
+        // The stop lands after the restore read its fence and before it
+        // commits the publication file it has just read out of the backup.
+        await new TeamLaunchStateStore().markStopped(teamName);
+      }
+      return content;
+    }) as unknown as typeof nativeFs.promises.readFile);
+
+    await service.restoreIfNeeded();
+    readFileSpy.mockRestore();
+    service.dispose();
+
+    expect(stoppedDuringRestore).toBe(true);
+    await expect(fs.access(path.join(teamDir, 'launch-state.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-summary.json'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(fs.access(path.join(teamDir, 'launch-stopped.json'))).resolves.toBeUndefined();
+    // The rest of the restore is untouched: only the publication files are
+    // fenced, so this is a restore that ran and skipped them, not one that
+    // never reached a commit.
+    await expect(fs.readFile(path.join(teamDir, 'team.meta.json'), 'utf8')).resolves.toContain(
+      'codex'
+    );
+  });
+
+  it('does not index a shutdown backup whose manifest could not be persisted', async () => {
+    // The shutdown backup copies the files first and writes the registry entry
+    // afterwards. A manifest that never landed leaves the backup directory with
+    // new files and the previous ownership and file stats, so the registry must
+    // not advertise it as the current backup.
+    const service = new TeamBackupService();
+    const blockedTeam = 'blocked-manifest-team';
+    const healthyTeam = 'healthy-manifest-team';
+    for (const teamName of [blockedTeam, healthyTeam]) {
+      const teamDir = path.join(hoisted.teamsBase, teamName);
+      await fs.mkdir(teamDir, { recursive: true });
+      await fs.writeFile(
+        path.join(teamDir, 'config.json'),
+        JSON.stringify({
+          name: teamName,
+          projectPath: path.join(tempDir, 'project'),
+          members: [{ name: 'team-lead', agentType: 'team-lead' }],
+        }),
+        'utf8'
+      );
+    }
+
+    await service.initialize();
+    await service.backupTeam(blockedTeam);
+    await service.backupTeam(healthyTeam);
+
+    const registryPath = path.join(hoisted.backupsBase, 'registry.json');
+    const registryBefore = JSON.parse(await fs.readFile(registryPath, 'utf8')) as {
+      teams: Record<string, { lastBackupAt: string }>;
+    };
+
+    // A directory where the manifest belongs: the atomic rename cannot land.
+    const blockedManifest = path.join(hoisted.backupsBase, 'teams', blockedTeam, 'manifest.json');
+    await fs.rm(blockedManifest, { force: true });
+    await fs.mkdir(blockedManifest, { recursive: true });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-04T12:00:00.000Z'));
+    service.runShutdownBackupSync();
+    vi.useRealTimers();
+
+    const registryAfter = JSON.parse(await fs.readFile(registryPath, 'utf8')) as {
+      teams: Record<string, { lastBackupAt: string }>;
+    };
+    expect(registryAfter.teams[blockedTeam].lastBackupAt).toBe(
+      registryBefore.teams[blockedTeam].lastBackupAt
+    );
+    // The loop still reaches every later team: the failure belongs to one team.
+    expect(registryAfter.teams[healthyTeam].lastBackupAt).toBe('2026-09-04T12:00:00.000Z');
+
+    // Both layers report it: the manifest writer names the team, the shutdown
+    // loop names the backup it gave up on.
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`Failed to save manifest for ${blockedTeam}`)
+    );
+    expect(console.warn).toHaveBeenCalledWith(
+      '[TeamBackupService]',
+      expect.stringContaining(`shutdown backup failed for ${blockedTeam}`)
+    );
+    vi.mocked(console.warn).mockClear();
   });
 
   it('fences startup restore after the durable destructive deletion boundary', async () => {

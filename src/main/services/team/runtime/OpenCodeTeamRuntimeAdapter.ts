@@ -5,10 +5,16 @@ import {
   openCodeReadinessArtifactKey,
   reusableOpenCodeExecutionProof,
 } from '../opencode/readiness/OpenCodeExpectedBehaviorFingerprint';
-import { isOpenCodeTerminalProbeTechnicalDiagnostic } from '../opencode/readiness/OpenCodeFailureDiagnostics';
 import { normalizeOpenCodeProjectIdentity } from '../opencode/readiness/OpenCodeProjectIdentity';
 
-import { buildOpenCodePreLaunchGate, isRetryableReadinessState } from './OpenCodeLaunchGateResult';
+import {
+  blockedLaunchResult,
+  firstDisplayableOpenCodeFailureMessage,
+  GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON,
+  isOpenCodeLaunchTimingDiagnostic,
+  isRetryableReadinessState,
+  normalizeOpenCodeFailureMessage,
+} from './OpenCodeLaunchGateResult';
 import {
   createLocalRuntimeInspectionState,
   preflightOpenCodeLocalModels,
@@ -138,11 +144,6 @@ const REQUIRED_READY_CHECKPOINTS = new Set([
   'member_ready',
   'run_ready',
 ]);
-const GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON = 'OpenCode bridge reported member launch failure';
-const SECRET_FLAG_PATTERN =
-  /(--(?:api-key|token|password|secret|authorization|auth-token)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
-const BEARER_TOKEN_PATTERN = /\bBearer\s+\S+/gi;
-const SECRET_KEY_PATTERN = /\bsk-[A-Za-z0-9_-]{16,}\b/g;
 const OPEN_CODE_CAPABILITY_SNAPSHOT_REFRESH_RETRY_WARNING =
   'OpenCode capability snapshot changed between readiness and launch; refreshed readiness and retried launch.';
 const OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS = [
@@ -1228,64 +1229,6 @@ function selectOpenCodeMemberFailureReason(input: {
   );
 }
 
-function firstDisplayableOpenCodeFailureMessage(
-  values: readonly string[],
-  options: { includeGeneric: boolean }
-): string | undefined {
-  for (const value of values) {
-    const normalized = normalizeOpenCodeFailureMessage(value);
-    if (!normalized) {
-      continue;
-    }
-    if (!options.includeGeneric && isGenericOpenCodeFailureMessage(normalized)) {
-      continue;
-    }
-    return normalized;
-  }
-  return undefined;
-}
-
-function normalizeOpenCodeFailureMessage(value: string | undefined): string | undefined {
-  const trimmed = value?.replace(/\s+/g, ' ').trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  return trimmed
-    .replace(SECRET_FLAG_PATTERN, '$1[redacted]')
-    .replace(BEARER_TOKEN_PATTERN, 'Bearer [redacted]')
-    .replace(SECRET_KEY_PATTERN, '[redacted-api-key]');
-}
-
-function isGenericOpenCodeFailureMessage(message: string): boolean {
-  return (
-    message === GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON ||
-    message.startsWith(`${GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON}:`) ||
-    // Reassurance text prepended ahead of the real readiness diagnostic for
-    // mcp_unavailable/unknown_error (see the prepareOpenCodeLaunch caller).
-    // Without this, it wins as the first "displayable" (non-generic) message
-    // and permanently hides the specific diagnostic behind it - which is what
-    // shouldRetryTransientOpenCodeSharedRuntimeFailure pattern-matches on to
-    // decide whether a timeout is worth retrying.
-    message === 'OpenCode is temporarily unavailable. Retry the launch.' ||
-    message.startsWith('OpenCode secondary lane timing:') ||
-    message.startsWith(
-      'OpenCode bridge reported ready without all required durable checkpoints:'
-    ) ||
-    message.startsWith(
-      'OpenCode bridge reported ready before all expected members were confirmed:'
-    ) ||
-    message.startsWith(
-      'OpenCode bootstrap MCP did not complete required tools before assistant response:'
-    ) ||
-    message.startsWith('OpenCode command timed out after') ||
-    message.startsWith('CLI-authenticated providers missing from live host') ||
-    message.startsWith('OpenCode session status') ||
-    isOpenCodeTerminalProbeTechnicalDiagnostic(message) ||
-    (message.startsWith('opencode_app_mcp_tool_proof_') && message.includes('cache_hit')) ||
-    isOpenCodeLaunchTimingDiagnostic(message)
-  );
-}
-
 function extractCheckpointNames(data: OpenCodeLaunchTeamCommandData): Set<string> {
   const names = new Set<string>();
   for (const checkpoint of data.durableCheckpoints ?? []) {
@@ -1366,62 +1309,6 @@ function isOpenCodePreLaunchCapabilitySnapshotMismatchText(value: string): boole
   return OPEN_CODE_CAPABILITY_SNAPSHOT_PRELAUNCH_MISMATCH_MARKERS.some((marker) =>
     normalized.includes(marker.toLowerCase())
   );
-}
-
-function isOpenCodeLaunchTimingDiagnostic(diagnostic: string): boolean {
-  return (
-    diagnostic.startsWith('info:opencode_launch_member_timing:') ||
-    diagnostic.startsWith('info:opencode_launch_total_timing:')
-  );
-}
-
-function blockedLaunchResult(
-  input: TeamRuntimeLaunchInput,
-  reason: string,
-  diagnostics: string[],
-  warnings: string[] = [],
-  options: { preLaunchGate?: boolean } = {}
-): TeamRuntimeLaunchResult {
-  const readinessFailure =
-    reason === 'unknown_error' ||
-    reason === 'model_unavailable' ||
-    reason === 'not_authenticated' ||
-    reason === 'mcp_unavailable' ||
-    reason === 'not_installed';
-  const hardFailureReason = readinessFailure
-    ? (firstDisplayableOpenCodeFailureMessage(diagnostics, { includeGeneric: false }) ?? reason)
-    : reason;
-  const members = Object.fromEntries(
-    input.expectedMembers.map((member) => [
-      member.name,
-      {
-        memberName: member.name,
-        providerId: 'opencode' as const,
-        launchState: 'failed_to_start' as const,
-        agentToolAccepted: false,
-        runtimeAlive: false,
-        bootstrapConfirmed: false,
-        hardFailure: true,
-        hardFailureReason,
-        diagnostics,
-      },
-    ])
-  );
-
-  return {
-    runId: input.runId,
-    teamName: input.teamName,
-    launchPhase: 'finished',
-    teamLaunchState: 'partial_failure',
-    members,
-    warnings,
-    diagnostics,
-    // Attached only where the block provably precedes launchOpenCodeTeam, so an
-    // absent marker always reads as "this launch may already own a host".
-    ...(options.preLaunchGate === true
-      ? { preLaunchGate: buildOpenCodePreLaunchGate(reason) }
-      : {}),
-  };
 }
 
 function mergeDiagnostics(left: string[], right: string[]): string[] {

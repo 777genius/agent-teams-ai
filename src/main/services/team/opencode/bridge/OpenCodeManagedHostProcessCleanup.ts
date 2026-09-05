@@ -3,6 +3,7 @@ import {
   type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
 import { killProcessByPid, killProcessByPidAndWait } from '@main/utils/processKill';
+import { readProcessStartTimeMs } from '@main/utils/processStartTime';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { execFile, type ExecFileException } from 'child_process';
 
@@ -42,8 +43,21 @@ export interface OpenCodeManagedHostProcessCleanupOptions {
 
 const OPENCODE_SERVE_COMMAND_RE =
   /(^|[/\\\s"])opencode(?:\.exe)?(?:"?)(?=\s|$).*?(?:^|\s)serve(?=\s|$)/i;
+// The orchestrator binary is this app's own, bundled or explicitly configured.
+// Standalone user tooling is the plain `opencode` CLI, so an orchestrator serve
+// host is app-managed by the fact that it exists at all.
+const ORCHESTRATOR_SERVE_COMMAND_RE =
+  /(^|[/\\\s"])claude-multimodel(?:\.exe)?(?:"?)(?=\s|$).*?(?:^|\s)serve(?=\s|$)/i;
 const WINDOWS_APP_MANAGED_OPENCODE_SERVE_RE =
   /[\\/]runtimes[\\/]opencode[\\/]versions[\\/][^"'\s]+[\\/]opencode-windows-[^"'\s]+[\\/]opencode\.exe(?:"|\s|$)/i;
+// Strings only this app writes into a managed host's effective OpenCode config:
+// the app-scoped MCP instance fragment, the local MCP launch environment key,
+// the managed teammate agent description. A standalone serve config has none.
+const MANAGED_SERVE_HOST_CONFIG_PATTERNS = [
+  /agent-teams-app-instance=/i,
+  /"AGENT_TEAMS_MCP_CLAUDE_DIR"/,
+  /claude-multimodel runtime orchestration/i,
+] as const;
 const MANAGED_ENV_MARKERS = ['CLAUDE_MULTIMODEL_DATA_HOME=', 'OPENCODE_CONFIG_CONTENT='] as const;
 const MANAGED_ENV_IDENTITY_MARKERS = [
   'AGENT_TEAMS_MCP_CLAUDE_DIR=',
@@ -55,6 +69,34 @@ const MANAGED_INLINE_OPENCODE_CONFIG_PATTERNS = [
   /OPENCODE_CONFIG_CONTENT=[\s\S]*"claude-multimodel runtime orchestration"/i,
   /OPENCODE_CONFIG_CONTENT=[\s\S]*"(?:agent-teams|agent_teams|mcp__agent-teams|mcp__agent_teams)_\*"/i,
 ] as const;
+
+/**
+ * The managed-host sweep is the only cleanup step that reaches processes this
+ * app never recorded a pid for, so every path that uses it goes through a port
+ * rather than calling the sweep directly: a deployment that would rather never
+ * touch an unattributed host hands in a port that reports itself disabled, and
+ * each caller then confines itself to what it can name.
+ */
+export interface OpenCodeManagedHostSweepPort {
+  isEnabled(): boolean;
+  sweepManagedHosts(input: {
+    startedBeforeMs: number;
+    /**
+     * `force` reaps a confirmed-managed host outright; `orphaned` additionally
+     * spares one whose parent is still alive. Defaults to `force`.
+     */
+    mode?: OpenCodeManagedHostCleanupMode;
+  }): Promise<OpenCodeManagedHostCleanupResult>;
+}
+
+export const DEFAULT_OPEN_CODE_MANAGED_HOST_SWEEP_PORT: OpenCodeManagedHostSweepPort = {
+  isEnabled: () => true,
+  sweepManagedHosts: (input) =>
+    cleanupManagedOpenCodeServeProcesses({
+      mode: input.mode ?? 'force',
+      startedBeforeMs: input.startedBeforeMs,
+    }),
+};
 
 export async function cleanupManagedOpenCodeServeProcesses(
   options: OpenCodeManagedHostProcessCleanupOptions
@@ -80,8 +122,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
     options.readProcessDetails ??
     (platform === 'win32' ? async () => null : readNativeProcessCommandWithEnv);
   const readStartTimeMs =
-    options.readProcessStartTimeMs ??
-    (platform === 'win32' ? readWindowsProcessStartTimeMs : readNativeProcessStartTimeMs);
+    options.readProcessStartTimeMs ?? ((pid: number) => readProcessStartTimeMs(pid, platform));
   const disposeServeHost = options.disposeServeHost ?? disposeOpenCodeServeHost;
   const readServeHostConfig = options.readServeHostConfig ?? readOpenCodeServeHostConfig;
   const killProcess = options.killProcess;
@@ -98,7 +139,7 @@ export async function cleanupManagedOpenCodeServeProcesses(
   const sleepMs = options.sleepMs ?? sleep;
 
   for (const row of rows) {
-    if (!isOpenCodeServeCommand(row.command)) {
+    if (!isOpenCodeServeCommand(row.command) && !isOrchestratorServeCommand(row.command)) {
       continue;
     }
     result.scanned += 1;
@@ -116,17 +157,27 @@ export async function cleanupManagedOpenCodeServeProcesses(
     const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
     const details = await readDetails(row.pid);
     const isManagedByWindowsCommand =
-      platform === 'win32' && isAppManagedWindowsOpenCodeServeCommand(row.command);
-    const isManaged =
+      platform === 'win32' &&
+      (isAppManagedWindowsOpenCodeServeCommand(row.command) ||
+        isOrchestratorServeCommand(row.command));
+    let isManaged =
       isManagedByWindowsCommand ||
       Boolean(details && isManagedOpenCodeServeProcessDetails(details));
+    let serveConfig: string | null = null;
+    if (!isManaged && platform === 'win32' && baseUrl) {
+      // Windows cannot read another process's environment, and a runtime
+      // resolved through PATH does not carry the app-managed install path, so
+      // the last way to tell whose host this is asks the host itself over
+      // loopback. Silence still reads as "not ours".
+      serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
+      isManaged = Boolean(serveConfig && isManagedOpenCodeServeHostConfig(serveConfig));
+    }
     const hasRequiredDetailsMarkers =
       requiredDetailsMarkers.length === 0 ||
       Boolean(details && processDetailsIncludeMarkers(details, requiredDetailsMarkers));
-    const serveConfig =
-      requiredServeConfigMarkersAny.length > 0 && baseUrl
-        ? await readServeHostConfig(baseUrl).catch(() => null)
-        : null;
+    if (requiredServeConfigMarkersAny.length > 0 && baseUrl && serveConfig === null) {
+      serveConfig = await readServeHostConfig(baseUrl).catch(() => null);
+    }
     const hasRequiredServeConfigMarker =
       requiredServeConfigMarkersAny.length === 0 ||
       Boolean(serveConfig && stringIncludesAnyMarker(serveConfig, requiredServeConfigMarkersAny));
@@ -375,6 +426,14 @@ export function isOpenCodeServeCommand(command: string): boolean {
   return OPENCODE_SERVE_COMMAND_RE.test(command.trim());
 }
 
+export function isOrchestratorServeCommand(command: string): boolean {
+  return ORCHESTRATOR_SERVE_COMMAND_RE.test(command.trim());
+}
+
+export function isManagedOpenCodeServeHostConfig(config: string): boolean {
+  return MANAGED_SERVE_HOST_CONFIG_PATTERNS.some((pattern) => pattern.test(config));
+}
+
 export function isAppManagedWindowsOpenCodeServeCommand(command: string): boolean {
   const normalizedCommand = command.trim().replace(/\//g, '\\');
   return (
@@ -467,39 +526,6 @@ async function readOpenCodeServeHostConfig(baseUrl: string): Promise<string | nu
 
 async function readNativeProcessCommandWithEnv(pid: number): Promise<string | null> {
   return execFileText('ps', ['eww', '-p', String(pid), '-o', 'command='], 2_000, 2 * 1024 * 1024);
-}
-
-async function readNativeProcessStartTimeMs(pid: number): Promise<number | null> {
-  const output = await execFileText('ps', ['-p', String(pid), '-o', 'lstart='], 2_000, 64 * 1024);
-  if (!output) {
-    return null;
-  }
-  const parsed = Date.parse(output.trim());
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-async function readWindowsProcessStartTimeMs(pid: number): Promise<number | null> {
-  const normalizedPid = Math.trunc(pid);
-  if (!Number.isFinite(normalizedPid) || normalizedPid <= 0) {
-    return null;
-  }
-
-  const script = [
-    '$ErrorActionPreference = "Stop"',
-    `$process = Get-Process -Id ${normalizedPid} -ErrorAction Stop`,
-    '$process.StartTime.ToUniversalTime().ToString("o")',
-  ].join('; ');
-  const output = await execFileText(
-    'powershell.exe',
-    ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
-    2_000,
-    64 * 1024
-  );
-  if (!output) {
-    return null;
-  }
-  const parsed = Date.parse(output.trim());
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function isNativeProcessAlive(pid: number): boolean {

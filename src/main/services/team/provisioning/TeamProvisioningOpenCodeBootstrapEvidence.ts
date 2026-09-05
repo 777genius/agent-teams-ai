@@ -566,3 +566,41 @@ export function resolveOpenCodeRuntimeBootstrapCheckinIdempotencyFromMember(inpu
     existingRuntimeSessionId,
   };
 }
+
+/**
+ * States in which the store said something about its own contents. `healthy`
+ * is the obvious one; `missing` means the lane holds no session file at all,
+ * which is exactly the absence these gates exist to catch; and `quarantined`
+ * means the file is there and unreadable, so the delivery path that reads it
+ * the same way finds no record either.
+ *
+ * Everything else - a manifest that could not be read, a store written by a
+ * newer schema, a file whose hash does not match its manifest entry or that
+ * has no entry yet - is a store mid-write or out of reach, not an answer.
+ */
+const ANSWERED_OPEN_CODE_COMMITTED_BOOTSTRAP_STORE_STATES = new Set<
+  OpenCodeCommittedBootstrapSessionEvidence['state']
+>(['healthy', 'missing', 'quarantined']);
+
+/**
+ * The gates that may DOWNGRADE a member on a missing session record read the
+ * store through this. `readCommittedOpenCodeBootstrapSessionEvidence` answers
+ * a store it could not read the same shape it answers an empty one - no
+ * sessions - so a gate that fed it straight into a match would turn a manifest
+ * lock held by a concurrent bootstrap check-in into proof that no record
+ * exists, and tear down a healthy team on an I/O hiccup. Only an answered
+ * store may disprove anything; everything else throws, and each gate maps the
+ * throw to "cannot disprove".
+ */
+export function requireAnsweredOpenCodeCommittedBootstrapSessionEvidence(
+  evidence: OpenCodeCommittedBootstrapSessionEvidence
+): OpenCodeCommittedBootstrapSessionEvidence {
+  if (!ANSWERED_OPEN_CODE_COMMITTED_BOOTSTRAP_STORE_STATES.has(evidence.state)) {
+    throw new Error(
+      `OpenCode committed bootstrap session evidence is unavailable (${evidence.state})${
+        evidence.diagnostics.length > 0 ? `: ${evidence.diagnostics.join('; ')}` : ''
+      }`
+    );
+  }
+  return evidence;
+}
