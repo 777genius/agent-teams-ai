@@ -46,6 +46,13 @@ interface LifecycleProvisioningStatus extends LifecycleControlState {
   }[];
 }
 
+interface TracedSseEvent {
+  readonly data: Record<string, unknown>;
+  readonly eventType: string;
+  readonly id: string;
+  readonly trace: readonly string[];
+}
+
 const runtimePath = process.env.HOSTED_E2E_RUNTIME_FILE;
 if (!runtimePath) throw new Error('HOSTED_E2E_RUNTIME_FILE is required');
 const runtime = JSON.parse(await readFile(runtimePath, 'utf8')) as RuntimeInput;
@@ -178,6 +185,57 @@ async function setCaddyPaused(paused: boolean): Promise<void> {
   );
 }
 
+async function controllerLogs(): Promise<string> {
+  return (
+    await execFileAsync(
+      'docker',
+      [
+        'compose',
+        '--project-name',
+        runtime.composeProject,
+        '--file',
+        runtime.composeFile,
+        'logs',
+        '--no-color',
+        'hosted-controller',
+      ],
+      { maxBuffer: 8 * 1024 * 1024, timeout: 15_000 }
+    )
+  ).stdout;
+}
+
+async function waitForBackpressureTermination(streamId: string): Promise<void> {
+  if (!/^[0-9a-f-]{36}$/u.test(streamId)) {
+    throw new Error('hosted_e2e_phase8_stream_correlation_invalid');
+  }
+  const deadline = Date.now() + 20_000;
+  for (;;) {
+    const logs = await controllerLogs();
+    const correlated = logs
+      .split('\n')
+      .filter(
+        (line) =>
+          line.includes('hosted_coordination_event_stream_transport') &&
+          line.includes(`"streamId":"${streamId}"`)
+      );
+    const entered = correlated.some(
+      (line) => line.includes('"kind":"backpressure_entered"') && line.includes('"timeoutMs":5000')
+    );
+    const terminated = correlated.some(
+      (line) =>
+        line.includes('"kind":"terminal"') &&
+        line.includes('"timeoutMs":5000') &&
+        line.includes('"disposition":"timed_out"') &&
+        line.includes('"transportTermination":"hard_destroyed"')
+    );
+    if (entered && terminated) return;
+    if (Date.now() >= deadline) {
+      throw new Error(`backpressure_not_established:${streamId}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+}
+
 async function nextSseEvent(
   page: Page,
   cursor: string,
@@ -235,6 +293,172 @@ async function beginSseObservation(
     throw new Error('hosted_e2e_sse_observation_unavailable');
   }
   return Object.freeze({ event });
+}
+
+async function beginTracedSseObservation(
+  page: Page,
+  cursor: string,
+  expectedTopLevelEventType: string
+): Promise<{ readonly event: () => Promise<TracedSseEvent> }> {
+  const expectedPath = `/api/hosted/v1/events?after=${encodeURIComponent(cursor)}`;
+  const responseReady = page.waitForResponse(
+    (candidate) =>
+      candidate.request().method() === 'GET' &&
+      new URL(candidate.url()).pathname + new URL(candidate.url()).search === expectedPath
+  );
+  await page.evaluate(
+    ({ after, expectedType }) => {
+      const state = {
+        event: null as null | Omit<TracedSseEvent, 'trace'>,
+        open: false,
+        terminalError: null as string | null,
+        trace: [] as string[],
+      };
+      const scope = window as typeof window & { __hostedTracedSse?: typeof state };
+      scope.__hostedTracedSse = state;
+      const source = new EventSource(`/api/hosted/v1/events?after=${encodeURIComponent(after)}`);
+      let eventTimer: number | null = null;
+      source.onopen = () => {
+        state.open = true;
+        state.trace.push('open');
+        eventTimer = window.setTimeout(() => {
+          state.terminalError = 'event_timeout';
+          source.close();
+        }, 25_000);
+      };
+      const finish = (eventType: string, event: MessageEvent) => {
+        let data: Record<string, unknown>;
+        try {
+          data = JSON.parse(event.data) as Record<string, unknown>;
+        } catch {
+          state.terminalError = 'event_json_invalid';
+          source.close();
+          return;
+        }
+        state.trace.push(
+          `event:name=${eventType}:id=${event.lastEventId}:type=${String(data.eventType ?? '')}`
+        );
+        if (eventType === 'resync_required') {
+          state.trace.push(`resync:${String(data.reason ?? 'unknown')}`);
+          state.terminalError = `resync_required:${String(data.reason ?? 'unknown')}`;
+          source.close();
+          return;
+        }
+        if (data.eventType !== expectedType) return;
+        if (eventTimer !== null) window.clearTimeout(eventTimer);
+        state.event = { eventType, data, id: event.lastEventId };
+        source.close();
+      };
+      source.addEventListener('coordination_event', (event) =>
+        finish('coordination_event', event as MessageEvent)
+      );
+      source.addEventListener('resync_required', (event) =>
+        finish('resync_required', event as MessageEvent)
+      );
+      source.onerror = () => {
+        state.trace.push(`error:readyState=${source.readyState}`);
+      };
+    },
+    { after: cursor, expectedType: expectedTopLevelEventType }
+  );
+  const response = await responseReady;
+  await page.evaluate((status) => {
+    const state = (window as typeof window & { __hostedTracedSse?: { trace: string[] } })
+      .__hostedTracedSse;
+    state?.trace.push(`status:${status}`);
+  }, response.status());
+  if (response.status() !== 200) {
+    throw new Error(`hosted_e2e_sse_observation_unavailable:${response.status()}`);
+  }
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const state = (
+            window as typeof window & {
+              __hostedTracedSse?: { open: boolean; terminalError: string | null };
+            }
+          ).__hostedTracedSse;
+          return state === undefined
+            ? { open: false, terminalError: 'observer_missing' }
+            : { open: state.open, terminalError: state.terminalError };
+        }),
+      { timeout: 15_000, message: 'hosted_e2e_sse_open_readiness_timeout' }
+    )
+    .toEqual({ open: true, terminalError: null });
+
+  return Object.freeze({
+    event: async () => {
+      const deadline = Date.now() + 30_000;
+      for (;;) {
+        const state = await page.evaluate(() => {
+          const value = (
+            window as typeof window & {
+              __hostedTracedSse?: {
+                event: Omit<TracedSseEvent, 'trace'> | null;
+                terminalError: string | null;
+                trace: string[];
+              };
+            }
+          ).__hostedTracedSse;
+          return value === undefined
+            ? { event: null, terminalError: 'observer_missing', trace: [] }
+            : { event: value.event, terminalError: value.terminalError, trace: [...value.trace] };
+        });
+        if (state.terminalError !== null) {
+          throw new Error(
+            `hosted_e2e_sse_terminal:${state.terminalError}:trace=${JSON.stringify(state.trace)}`
+          );
+        }
+        if (state.event !== null) return Object.freeze({ ...state.event, trace: state.trace });
+        if (Date.now() >= deadline) {
+          throw new Error(`hosted_e2e_sse_event_timeout:trace=${JSON.stringify(state.trace)}`);
+        }
+        await page.waitForTimeout(100);
+      }
+    },
+  });
+}
+
+async function readRunAcceptedJournalEvidence(runId: string): Promise<{
+  readonly highWatermarkSequence: number;
+  readonly row: {
+    readonly eventId: string;
+    readonly eventSequence: number;
+    readonly runId: string;
+  };
+}> {
+  const { default: Database } = await import('better-sqlite3-node');
+  const database = new Database(`${runtime.appDataDir}/data/storage/app.db`, {
+    fileMustExist: true,
+    readonly: true,
+  });
+  try {
+    const row = database
+      .prepare(
+        `SELECT event_id AS eventId, event_sequence AS eventSequence,
+                json_extract(body_json, '$.runId') AS runId
+           FROM coordination_event_journal
+          WHERE deployment_id = ? AND json_extract(body_json, '$.eventType') = ?
+            AND json_extract(body_json, '$.runId') = ?
+          ORDER BY event_sequence DESC LIMIT 1`
+      )
+      .get('deployment_hosted-v1-e2e', 'team-lifecycle.run-accepted', runId) as
+      | { eventId: string; eventSequence: number; runId: string }
+      | undefined;
+    const watermark = database
+      .prepare(
+        `SELECT high_watermark_sequence AS highWatermarkSequence
+           FROM coordination_event_journal_metadata WHERE deployment_id = ?`
+      )
+      .get('deployment_hosted-v1-e2e') as { highWatermarkSequence: number } | undefined;
+    if (row === undefined || watermark === undefined) {
+      throw new Error('hosted_e2e_restart_journal_evidence_missing');
+    }
+    return Object.freeze({ highWatermarkSequence: watermark.highWatermarkSequence, row });
+  } finally {
+    database.close();
+  }
 }
 
 async function authCsrf(page: Page): Promise<string> {
@@ -398,8 +622,9 @@ test('Phase 8 provider task external writes traverse production watcher, reconci
   try {
     ui = await openAuthenticatedTeam(browser);
     observer = await openAuthenticatedEventObserver(browser);
+    const observerPage = observer.page;
     const { event } = await beginSseObservation(
-      observer.page,
+      observerPage,
       runtime.eventCursor,
       'team.task.external_file_observed'
     );
@@ -463,35 +688,88 @@ test('Phase 8 provider inbox external writes traverse production watcher, reconc
 
 test('Phase 8 SSE replay survives a production controller restart with top-level eventType', async ({
   browser,
-}) => {
+}, testInfo) => {
   test.setTimeout(2 * 60_000);
-  const { context, page } = await openAuthenticatedTeam(browser);
-  const csrfToken = await authCsrf(page);
+  let ui: Awaited<ReturnType<typeof openAuthenticatedTeam>> | null = null;
+  let observer: Awaited<ReturnType<typeof openAuthenticatedEventObserver>> | null = null;
   try {
-    const control = await ensureStopped(page, csrfToken);
-    const eventPromise = nextSseEvent(page, runtime.eventCursor, 'team-lifecycle.run-accepted');
-    await lifecycleCommand(page, {
+    ui = await openAuthenticatedTeam(browser);
+    observer = await openAuthenticatedEventObserver(browser);
+    const observerPage = observer.page;
+    const csrfToken = await authCsrf(ui.page);
+    const control = await ensureStopped(ui.page, csrfToken);
+    const initialObservation = await beginTracedSseObservation(
+      observerPage,
+      runtime.eventCursor,
+      'team-lifecycle.run-accepted'
+    );
+    const receipt = await lifecycleCommand(ui.page, {
       action: 'launch',
       csrfToken,
       expectedRevision: control.resourceRevision,
       runId: null,
     });
-    await expect(eventPromise).resolves.toMatchObject({
+    const initialEvent = await initialObservation.event();
+    expect(initialEvent).toMatchObject({
       eventType: 'coordination_event',
       data: { eventType: 'team-lifecycle.run-accepted' },
     });
+    expect(initialEvent.trace).toEqual(
+      expect.arrayContaining([
+        'status:200',
+        'open',
+        expect.stringContaining('event:name=coordination_event:'),
+      ])
+    );
+    const journal = await readRunAcceptedJournalEvidence(receipt.runId);
+    expect(journal.highWatermarkSequence).toBeGreaterThanOrEqual(journal.row.eventSequence);
+    expect(journal.row.eventId).toBe(initialEvent.data.eventId);
+    expect(journal.row.runId).toBe(receipt.runId);
+    expect((initialEvent.data.payload as { runId?: unknown } | undefined)?.runId).toBe(
+      receipt.runId
+    );
+
     await restartController();
     await expect
-      .poll(() => page.goto(runtime.origin).then((response) => response?.status()))
+      .poll(() => observerPage.goto(`${runtime.origin}/api/auth/status`).then((r) => r?.status()))
       .toBe(200);
-    await expect(
-      nextSseEvent(page, runtime.eventCursor, 'team-lifecycle.run-accepted')
-    ).resolves.toMatchObject({
+    const replayObservation = await beginTracedSseObservation(
+      observerPage,
+      runtime.eventCursor,
+      'team-lifecycle.run-accepted'
+    );
+    const replayEvent = await replayObservation.event();
+    expect(replayEvent).toMatchObject({
       eventType: 'coordination_event',
       data: { eventType: 'team-lifecycle.run-accepted' },
     });
+    expect(replayEvent.id).toBe(initialEvent.id);
+    expect(replayEvent.data.eventId).toBe(journal.row.eventId);
+    await testInfo.attach('restart-replay-sse-evidence.json', {
+      body: JSON.stringify({
+        initial: {
+          eventId: initialEvent.data.eventId,
+          eventType: initialEvent.data.eventType,
+          id: initialEvent.id,
+          trace: initialEvent.trace,
+        },
+        journal,
+        replay: {
+          eventId: replayEvent.data.eventId,
+          eventType: replayEvent.data.eventType,
+          id: replayEvent.id,
+          trace: replayEvent.trace,
+        },
+        runId: receipt.runId,
+      }),
+      contentType: 'application/json',
+    });
   } finally {
-    await context.close();
+    await Promise.allSettled(
+      [observer?.context, ui?.context]
+        .filter((context): context is BrowserContext => context !== undefined)
+        .map((context) => context.close())
+    );
   }
 });
 
@@ -628,7 +906,7 @@ test('Phase 8 production retention expiry emits resync and remains expired after
 
 test('Phase 8 production SSE bounds and closes a real slow browser consumer', async ({
   browser,
-}) => {
+}, testInfo) => {
   test.setTimeout(4 * 60_000);
   const { context, page } = await openAuthenticatedTeam(browser);
   let caddyPaused = false;
@@ -639,6 +917,7 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
         closed: false,
         error: null as string | null,
         resume: null as (() => void) | null,
+        streamId: null as string | null,
       };
       (window as typeof window & { __hostedSlowConsumer?: typeof state }).__hostedSlowConsumer =
         state;
@@ -651,6 +930,8 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
             throw new Error(`slow-consumer-status:${response.status}`);
           }
           const reader = response.body.getReader();
+          state.streamId = response.headers.get('x-agent-teams-event-stream-id');
+          if (state.streamId === null) throw new Error('slow-consumer-stream-id-missing');
           state.ready = true;
           await new Promise<void>((resolve) => {
             state.resume = resolve;
@@ -670,16 +951,35 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
         page.evaluate(() => {
           const state = (
             window as typeof window & {
-              __hostedSlowConsumer?: { ready: boolean; error: string | null };
+              __hostedSlowConsumer?: {
+                ready: boolean;
+                error: string | null;
+                streamId: string | null;
+              };
             }
           ).__hostedSlowConsumer;
-          return state === undefined ? null : { ready: state.ready, error: state.error };
+          return state === undefined
+            ? null
+            : { ready: state.ready, error: state.error, streamId: state.streamId };
         })
       )
-      .toEqual({ ready: true, error: null });
+      .toEqual({ ready: true, error: null, streamId: expect.stringMatching(/^[0-9a-f-]{36}$/u) });
+    const streamId = await page.evaluate(() => {
+      const state = (
+        window as typeof window & {
+          __hostedSlowConsumer?: { streamId: string | null };
+        }
+      ).__hostedSlowConsumer;
+      if (state?.streamId === null || state?.streamId === undefined) {
+        throw new Error('hosted_e2e_phase8_stream_correlation_missing');
+      }
+      return state.streamId;
+    });
     await setCaddyPaused(true);
     caddyPaused = true;
-    await page.waitForTimeout(8_000);
+    // Keep the proxy frozen until the controller itself proves write(false), the five-second
+    // deadline, and hard transport termination for this exact response.
+    await waitForBackpressureTermination(streamId);
     await setCaddyPaused(false);
     caddyPaused = false;
     await page.evaluate(() => {
@@ -706,13 +1006,31 @@ test('Phase 8 production SSE bounds and closes a real slow browser consumer', as
                 };
               }
             ).__hostedSlowConsumer;
-            return state === undefined
-              ? null
-              : { ready: state.ready, closed: state.closed, error: state.error };
+            return state !== undefined && state.ready && (state.closed || state.error !== null);
           }),
         { timeout: 15_000 }
       )
-      .toEqual({ ready: true, closed: true, error: null });
+      .toBe(true);
+    const terminal = await page.evaluate(() => {
+      const state = (
+        window as typeof window & {
+          __hostedSlowConsumer?: { closed: boolean; error: string | null };
+        }
+      ).__hostedSlowConsumer;
+      return state === undefined ? null : { closed: state.closed, error: state.error };
+    });
+    expect(terminal !== null && (terminal.closed || terminal.error !== null)).toBe(true);
+    await testInfo.attach('slow-consumer-transport-evidence.json', {
+      body: JSON.stringify({
+        backpressureEntered: true,
+        browserTerminal: terminal,
+        disposition: 'timed_out',
+        streamId,
+        timeoutMs: 5_000,
+        transportTermination: 'hard_destroyed',
+      }),
+      contentType: 'application/json',
+    });
   } finally {
     await Promise.allSettled([...(caddyPaused ? [setCaddyPaused(false)] : []), context.close()]);
   }

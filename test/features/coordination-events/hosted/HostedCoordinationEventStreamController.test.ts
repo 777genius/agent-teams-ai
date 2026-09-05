@@ -61,6 +61,7 @@ class FakeRawReply extends EventEmitter {
   destroyed = false;
   writableEnded = false;
   flushes = 0;
+  destroyCalls = 0;
   readonly frames: string[] = [];
   readonly headers: Array<{ status: number; headers: Record<string, string> }> = [];
   writeResult = true;
@@ -83,6 +84,12 @@ class FakeRawReply extends EventEmitter {
   end(): void {
     if (this.writableEnded) return;
     this.writableEnded = true;
+  }
+
+  destroy(): void {
+    this.destroyCalls += 1;
+    if (this.destroyed) return;
+    this.destroyed = true;
     this.emit('close');
   }
 }
@@ -633,7 +640,9 @@ describe('HostedCoordinationEventStreamController', () => {
       runId: 'd'.repeat(64),
       emit: provenanceEmit,
       bindInvalidation: vi.fn(),
-      poison: vi.fn((reason: string) => { throw new Error(reason); }),
+      poison: vi.fn((reason: string) => {
+        throw new Error(reason);
+      }),
       close: vi.fn(),
     };
     bindProductHostedProducerInstance(provenance, {
@@ -1002,7 +1011,9 @@ describe('HostedCoordinationEventStreamController', () => {
     await handling;
 
     expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
-    expect(reply.raw.writableEnded).toBe(true);
+    expect(reply.raw.destroyCalls).toBe(1);
+    expect(reply.raw.destroyed).toBe(true);
+    expect(reply.raw.writableEnded).toBe(false);
     controller.close();
     controller.close();
     expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);

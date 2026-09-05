@@ -36,6 +36,7 @@ import {
 import {
   HOSTED_V1_BROWSER_SUITES,
   parseHostedV1BrowserSuite,
+  selectHostedV1BrowserCases,
 } from '../../../test/fixtures/hosted-v1/browserSuites';
 import { createHostedV1SharedAppImageLifecycle, removeHostedV1AppImage } from './appImageCleanup';
 import { runHostedV1ForegroundSubprocess } from './foregroundSubprocess';
@@ -66,7 +67,10 @@ const HOSTED_V1_SOURCE_HEAD_LABEL = 'org.agent-teams.hosted-e2e.source-head-comm
 const HOSTED_V1_SOURCE_PATCH_LABEL = 'org.agent-teams.hosted-e2e.source-patch-sha256';
 let activeRunAbortSignal: AbortSignal | undefined;
 type ScenarioMode = 'oidc' | 'oidc-viewer' | 'personal';
-export { parseHostedV1BrowserSuite } from '../../../test/fixtures/hosted-v1/browserSuites';
+export {
+  parseHostedV1BrowserSuite,
+  selectHostedV1BrowserCases,
+} from '../../../test/fixtures/hosted-v1/browserSuites';
 export const CADDY_HTTPS_TARGET_PORT = 443;
 const CADDY_HTTPS_PUBLISHED_PORT_MIN = 49_152;
 const CADDY_HTTPS_PUBLISHED_PORT_MAX = 65_535;
@@ -1583,8 +1587,9 @@ async function runHostedV1Main(
   // Fail before Docker or sandbox I/O when a caller requests an unknown suite.
   const browserSuite = parseHostedV1BrowserSuite(process.env.HOSTED_E2E_SUITE);
   const suiteDefinition = HOSTED_V1_BROWSER_SUITES[browserSuite];
+  const browserCases = selectHostedV1BrowserCases(browserSuite, process.env.HOSTED_E2E_SCENARIOS);
   const scenarioDefinitions = suiteDefinition.authModes.flatMap((authMode) =>
-    suiteDefinition.cases.map((browserCase) => ({
+    browserCases.map((browserCase) => ({
       authMode,
       browserCase,
       scenarioKey: `${authMode}-${browserCase.id}`,

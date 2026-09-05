@@ -113,7 +113,6 @@ import type { NotificationManager } from './services/infrastructure/Notification
 import type { ServiceContext } from './services/infrastructure/ServiceContext';
 import type { RuntimeInstanceContext } from '@features/runtime-instance-context/contracts';
 import type { WorkspaceRegistryStartupSnapshot } from '@features/workspace-registry/main';
-
 const logger = createLogger('Standalone');
 const classifyHostedTeamConfigurationAuthorization = (method: string, url: string) =>
   classifyHostedTeamMessageAuthorization(method, url, (messageMethod, messageUrl) =>
@@ -123,11 +122,9 @@ const classifyHostedTeamConfigurationAuthorization = (method: string, url: strin
       classifyHostedTeamConfigurationAuthorizationFallback
     )
   );
-
 const HOST = process.env.HOST ?? '0.0.0.0';
 const PORT = parseInt(process.env.PORT ?? '3456', 10);
 const CLAUDE_ROOT = process.env.CLAUDE_ROOT;
-
 function hostedRetentionInteger(
   name: string,
   fallback: number,
@@ -601,6 +598,9 @@ async function start(): Promise<void> {
     deploymentId: hostedAccessFeature.deploymentId,
     authorizer: createHostedCoordinationEventStreamAuthorizer(hostedAccessFeature.http),
     retentionPolicy: HOSTED_COORDINATION_EVENT_RETENTION_POLICY,
+    diagnosticObserver: (diagnostic) => {
+      logger.error('hosted_coordination_event_stream_transport', JSON.stringify(diagnostic));
+    },
   });
   if (
     admittedHostedClaudeRoot !== null &&

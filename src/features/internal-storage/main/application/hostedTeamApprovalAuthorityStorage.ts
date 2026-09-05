@@ -75,9 +75,7 @@ function exactRecord(value: unknown, keys: readonly string[], label: string): Un
 }
 
 function finiteNonNegative(value: unknown, label: string): number {
-  if (!Number.isSafeInteger(value) || (value as number) < 0) {
-    throw new TypeError(`${label}-invalid`);
-  }
+  if (!Number.isSafeInteger(value) || (value as number) < 0) throw new TypeError(`${label}-invalid`);
   return value as number;
 }
 

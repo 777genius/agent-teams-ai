@@ -34,6 +34,7 @@ import {
   restartHostedV1LifecycleOwner,
   restoreHostedV1NodeAbi,
   runComposeUpWithExplicitPort,
+  selectHostedV1BrowserCases,
 } from '../../../scripts/e2e/hosted-v1/run';
 import { HOSTED_V1_BROWSER_SUITES } from '../../fixtures/hosted-v1/browserSuites';
 
@@ -46,6 +47,21 @@ describe('hosted-v1 independently gated browser suite selection', () => {
     expect(parseHostedV1BrowserSuite(undefined)).toBe('core');
     expect(() => parseHostedV1BrowserSuite('phase-6,phase-8')).toThrow(
       'HOSTED_E2E_SUITE must be core, phase-6, or phase-8'
+    );
+  });
+
+  it('selects exact bounded scenarios without changing the default complete suite', () => {
+    expect(selectHostedV1BrowserCases('phase-8', undefined)).toEqual(
+      HOSTED_V1_BROWSER_SUITES['phase-8'].cases
+    );
+    expect(
+      selectHostedV1BrowserCases('phase-8', 'restart-replay,slow-consumer').map(({ id }) => id)
+    ).toEqual(['restart-replay', 'slow-consumer']);
+    expect(() => selectHostedV1BrowserCases('phase-8', 'core')).toThrow(
+      'HOSTED_E2E_SCENARIOS contains a case outside phase-8'
+    );
+    expect(() => selectHostedV1BrowserCases('phase-8', 'slow-consumer,slow-consumer')).toThrow(
+      'HOSTED_E2E_SCENARIOS must be a unique comma-separated case id list'
     );
   });
 
@@ -67,10 +83,13 @@ describe('hosted-v1 independently gated browser suite selection', () => {
     const runner = await readFile(resolve('scripts/e2e/hosted-v1/run.ts'), 'utf8');
     const main = runner.slice(runner.indexOf('async function runHostedV1Main'));
     const selection = main.indexOf('parseHostedV1BrowserSuite(process.env.HOSTED_E2E_SUITE)');
+    const scenarioSelection = main.indexOf('process.env.HOSTED_E2E_SCENARIOS');
     const docker = main.indexOf("run('docker', ['version']");
     expect(selection).toBeGreaterThan(-1);
     expect(docker).toBeGreaterThan(-1);
     expect(selection).toBeLessThan(docker);
+    expect(scenarioSelection).toBeGreaterThan(selection);
+    expect(scenarioSelection).toBeLessThan(docker);
   });
 
   it('gates every declared suite in CI', async () => {

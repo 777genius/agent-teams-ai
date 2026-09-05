@@ -9,6 +9,7 @@ import type {
   CoordinationEventHandoff,
   ReplayCoordinationEventsInput,
 } from '../../core/application';
+import type { HostedCoordinationEventStreamWriteDiagnosticObserver } from '../adapters/input/http/hostedCoordinationEventStreamWriter';
 import type { HostedCoordinationEventStreamAuthorizer } from '../application/HostedCoordinationEventStreamPorts';
 import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import type { TeamId } from '@shared/contracts/hosted';
@@ -48,6 +49,8 @@ export interface CreateHostedCoordinationEventStreamOptions {
   readonly heartbeatIntervalMs?: number;
   readonly slowConsumerTimeoutMs?: number;
   readonly maxFrameBytes?: number;
+  /** Payload-free transport diagnostics; failures are isolated from stream correctness. */
+  readonly diagnosticObserver?: HostedCoordinationEventStreamWriteDiagnosticObserver;
   readonly retentionScheduler?: HostedCoordinationEventStreamScheduler;
   readonly retentionPolicy?: {
     readonly intervalMs: number;
@@ -149,6 +152,9 @@ export function createHostedCoordinationEventStream(
       ? {}
       : { slowConsumerTimeoutMs: options.slowConsumerTimeoutMs }),
     ...(options.maxFrameBytes === undefined ? {} : { maxFrameBytes: options.maxFrameBytes }),
+    ...(options.diagnosticObserver === undefined
+      ? {}
+      : { diagnosticObserver: options.diagnosticObserver }),
   });
   const bootstrapController = new HostedCoordinationEventBootstrapController({
     handoff,
