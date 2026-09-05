@@ -306,6 +306,7 @@ describe('recoverOpenCodeOwedInboxReadCommit', () => {
 
   it('surfaces a responded-recovery commit failure with its own reason', async () => {
     const { ports } = createPorts({ markInboxMessagesReadError: new Error('EPERM') });
+    const { ledger, markInboxReadCommitted } = createLedger();
 
     const outcome = await recoverOpenCodeOwedInboxReadCommit({
       teamName: 'team',
@@ -313,7 +314,7 @@ describe('recoverOpenCodeOwedInboxReadCommit', () => {
       canonicalMemberName: 'worker',
       laneId: 'lane-worker',
       message: message(),
-      ledger: createLedger().ledger,
+      ledger,
       ledgerRecord: ledgerRecord(),
       ports,
     });
@@ -325,6 +326,66 @@ describe('recoverOpenCodeOwedInboxReadCommit', () => {
         delivered: false,
         reason: 'opencode_inbox_mark_read_failed_after_responded_recovery',
       },
+    });
+    // The read never landed, so the stamp must not be attempted: a stamped
+    // record over an unread row would settle work the member never received.
+    expect(markInboxReadCommitted).not.toHaveBeenCalled();
+  });
+
+  it('names the ledger stamp, not the read, when only the stamp fails', async () => {
+    // The two writes fail into different states. Here the row IS read - the
+    // double-delivery guard is engaged - and only the stamp is owed, so the
+    // report must not blame `markInboxMessagesRead`, which succeeded.
+    const { ports, markInboxMessagesRead } = createPorts();
+    const { ledger } = createLedger({ markInboxReadCommittedError: new Error('locked') });
+
+    const outcome = await recoverOpenCodeOwedInboxReadCommit({
+      teamName: 'team',
+      memberName: 'worker',
+      canonicalMemberName: 'worker',
+      laneId: 'lane-worker',
+      message: message(),
+      ledger,
+      ledgerRecord: ledgerRecord(),
+      ports,
+    });
+
+    expect(markInboxMessagesRead).toHaveBeenCalledTimes(1);
+    expect(outcome).toMatchObject({
+      outcome: 'commit_failed',
+      diagnostic: 'opencode_inbox_read_commit_stamp_failed_after_responded_recovery: locked',
+      delivery: {
+        delivered: false,
+        reason: 'opencode_inbox_read_commit_stamp_failed_after_responded_recovery',
+        // Ordinary relay passes filter the now-read row out, so the record is
+        // healed only by `commitOpenCodeAlreadyReadInboxRow`. Identify it.
+        ledgerRecordId: 'record-1',
+        laneId: 'lane-worker',
+        diagnostics: ['opencode_inbox_read_commit_stamp_failed_after_responded_recovery: locked'],
+      },
+    });
+  });
+
+  it('keeps the terminal recovery distinguishable in the stamp failure reason', async () => {
+    const { ports, markInboxMessagesRead } = createPorts();
+    const { ledger } = createLedger({ markInboxReadCommittedError: new Error('locked') });
+
+    const outcome = await recoverOpenCodeOwedInboxReadCommit({
+      teamName: 'team',
+      memberName: 'worker',
+      canonicalMemberName: 'worker',
+      laneId: 'lane-worker',
+      message: message(),
+      ledger,
+      ledgerRecord: ledgerRecord({ status: 'failed_terminal' }),
+      ports,
+    });
+
+    expect(markInboxMessagesRead).toHaveBeenCalledTimes(1);
+    expect(outcome).toMatchObject({
+      outcome: 'commit_failed',
+      diagnostic: 'opencode_inbox_read_commit_stamp_failed_after_terminal_recovery: locked',
+      delivery: { reason: 'opencode_inbox_read_commit_stamp_failed_after_terminal_recovery' },
     });
   });
 });

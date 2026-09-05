@@ -65,6 +65,25 @@ const OPENCODE_DELIVERY_VISIBLE_REPLY_CORRELATIONS =
 
 const AGENT_ACTION_MODES = new Set<AgentActionMode>(['do', 'ask', 'delegate']);
 
+/**
+ * An exhaustive allowlist rather than a `Set`, because this enumeration is the
+ * one that grows. A kind missing from a `Set` literal still compiles, and the
+ * cost lands on disk: the guard rejects every persisted record carrying the new
+ * kind, `validateOpenCodePromptDeliveryLedgerRecords` then rejects the whole
+ * array, and the store quarantines a ledger that was never corrupt. As a
+ * `Record<InboxMessageKind, true>` the omission is a build error instead.
+ */
+const INBOX_MESSAGE_KINDS: Record<InboxMessageKind, true> = {
+  default: true,
+  slash_command: true,
+  slash_command_result: true,
+  task_comment_notification: true,
+  task_stall_remediation: true,
+  member_work_sync_nudge: true,
+  runtime_recovery_nudge: true,
+  agent_error: true,
+};
+
 export function validateOpenCodePromptDeliveryLedgerRecords(
   value: unknown
 ): OpenCodePromptDeliveryLedgerRecord[] {
@@ -194,14 +213,7 @@ function isOptionalNullableInboxMessageKind(
   return (
     value === undefined ||
     value === null ||
-    value === 'default' ||
-    value === 'slash_command' ||
-    value === 'slash_command_result' ||
-    value === 'task_comment_notification' ||
-    value === 'task_stall_remediation' ||
-    value === 'member_work_sync_nudge' ||
-    value === 'runtime_recovery_nudge' ||
-    value === 'agent_error'
+    (typeof value === 'string' && Object.hasOwn(INBOX_MESSAGE_KINDS, value))
   );
 }
 
