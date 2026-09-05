@@ -149,6 +149,7 @@ import {
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
+  retainOpenCodeHttpMcpBridgeEnv,
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -619,11 +620,11 @@ async function createOpenCodeRuntimeAdapterRegistry(
       nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH = mcpHttpServer.urlHash;
       await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
     } catch (error) {
-      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
-      delete bridgeEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
-      delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
-      delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
-      await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
+      if (!retainOpenCodeHttpMcpBridgeEnv(bridgeEnv, nextEnv)) {
+        delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL;
+        delete nextEnv.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH;
+        await ensureOpenCodeLocalMcpLaunchEnv(nextEnv);
+      }
       logger.warn(
         `[OpenCode] Runtime adapter bridge MCP HTTP server refresh failed: ${
           error instanceof Error ? error.message : String(error)

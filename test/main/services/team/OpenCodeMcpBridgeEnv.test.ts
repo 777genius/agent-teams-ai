@@ -6,6 +6,7 @@ import {
   hasOpenCodeLocalMcpLaunchEnv,
   isOpenCodeMcpHttpBridgeEnabled,
   mergeOpenCodeLocalMcpChildEnvironment,
+  retainOpenCodeHttpMcpBridgeEnv,
   shouldEnsureOpenCodeLocalMcpLaunchEnv,
   snapshotOpenCodeLocalMcpLaunchEnv,
 } from '@main/services/team/opencode/bridge/OpenCodeMcpBridgeEnv';
@@ -99,6 +100,40 @@ describe('OpenCodeMcpBridgeEnv', () => {
     expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ARGS_JSON).toBe('["mcp-server/dist/index.js"]');
     expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENV_JSON).toBe('{"ELECTRON_RUN_AS_NODE":"1"}');
     expect(target.CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL).toBe('http://127.0.0.1:41001/mcp');
+  });
+
+  it('retains the last working HTTP MCP transport after a refresh failure', () => {
+    const target: NodeJS.ProcessEnv = {
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:4999/mcp',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'stale-hash',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
+    };
+
+    expect(
+      retainOpenCodeHttpMcpBridgeEnv(
+        {
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: ' http://127.0.0.1:41001/mcp ',
+          CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: ' current-hash ',
+        },
+        target
+      )
+    ).toBe(true);
+    expect(target).toMatchObject({
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL: 'http://127.0.0.1:41001/mcp',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_URL_HASH: 'current-hash',
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
+    });
+  });
+
+  it('does not invent an HTTP MCP transport before one has worked', () => {
+    const target: NodeJS.ProcessEnv = {
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
+    };
+
+    expect(retainOpenCodeHttpMcpBridgeEnv({}, target)).toBe(false);
+    expect(target).toEqual({
+      CLAUDE_MULTIMODEL_AGENT_TEAMS_MCP_ENTRY: '/tmp/mcp.js',
+    });
   });
 
   it('merges app ownership into the local MCP child environment', () => {
