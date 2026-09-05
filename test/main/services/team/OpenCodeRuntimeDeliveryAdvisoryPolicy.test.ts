@@ -96,6 +96,28 @@ describe('OpenCodeRuntimeDeliveryAdvisoryPolicy', () => {
     });
   });
 
+  it('ages a surfaced advisory with the last observation, not with the frozen failure stamp', () => {
+    const failedAt = '2026-05-09T12:00:00.000Z';
+    const reObservedAt = '2026-05-09T12:20:00.000Z';
+    const record = makeRecord({
+      responseState: 'permission_blocked',
+      lastReason: 'authentication_failed',
+      diagnostics: ['authentication_failed'],
+      failedAt,
+      respondedAt: null,
+      lastObservedAt: reObservedAt,
+      lastAttemptAt: failedAt,
+      updatedAt: reObservedAt,
+    });
+
+    // `markFailedTerminal` stamps `failedAt` once, so an observe loop that keeps
+    // re-confirming the same failure would otherwise report a 20-minute-old
+    // advisory as brand new evidence forever.
+    expect(
+      decideOpenCodeRuntimeDeliveryAdvisory({ record, now: Date.parse(reObservedAt) + 1_000 })
+    ).toMatchObject({ action: 'surface', observedAt: reObservedAt });
+  });
+
   it('surfaces disk-full delivery failures immediately', () => {
     const record = makeRecord({
       responseState: 'empty_assistant_turn',

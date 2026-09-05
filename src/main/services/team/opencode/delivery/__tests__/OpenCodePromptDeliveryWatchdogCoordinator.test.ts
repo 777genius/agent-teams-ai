@@ -255,6 +255,55 @@ describe('OpenCodePromptDeliveryWatchdogCoordinator', () => {
     expect(notifyLeadTurnActivity).not.toHaveBeenCalled();
   });
 
+  it('re-arms a responded record that still owes its read-commit, at its own deadline', async () => {
+    // A responded record used to be terminal for the watchdog, so nothing ever
+    // came back for the read-commit it still owed and the inbox row stayed
+    // unread. The committed one next to it is the control: it is done, and
+    // re-arming it would be a wake that can change nothing.
+    const deferredDeadlineMs = Date.now() + 90_000;
+    const owingReadCommit = record({
+      id: 'record-owing-commit',
+      inboxMessageId: 'msg-owing-commit',
+      status: 'responded',
+      responseState: 'responded_visible_message',
+      respondedAt: ISO,
+      inboxReadCommittedAt: null,
+      nextAttemptAt: new Date(deferredDeadlineMs).toISOString(),
+    });
+    const readCommitted = record({
+      id: 'record-committed',
+      inboxMessageId: 'msg-committed',
+      status: 'responded',
+      responseState: 'responded_visible_message',
+      respondedAt: ISO,
+      inboxReadCommittedAt: ISO,
+    });
+    const ledger = {
+      pruneTerminalRecords: vi.fn(async () => undefined),
+      list: vi.fn(async () => [owingReadCommit, readCommitted]),
+      getByInboxMessage: vi.fn(async () => null),
+    } as unknown as OpenCodePromptDeliveryLedgerStore;
+    const scheduled: { messageId?: string | null; delayMs: number }[] = [];
+    const scheduler = {
+      isEnabled: vi.fn(() => true),
+      schedule: vi.fn((input: { messageId?: string | null; delayMs: number }) => {
+        scheduled.push(input);
+      }),
+      isStaleError: vi.fn(async () => false),
+    } satisfies Pick<
+      OpenCodePromptDeliveryWatchdogScheduler,
+      'isEnabled' | 'schedule' | 'isStaleError'
+    >;
+    const coordinator = makeCoordinator({ scheduler, ledger, members: [] });
+
+    await expect(coordinator.scanActiveLanes('team', ['lane-1'])).resolves.toBe(1);
+
+    expect(scheduled.map((input) => input.messageId)).toEqual(['msg-owing-commit']);
+    // The deferred deadline survives the scan: a record postponed to a future
+    // time is re-armed for that time, not woken immediately.
+    expect(scheduled[0]?.delayMs).toBeGreaterThan(60_000);
+  });
+
   it('rebuilds missing watchdog ledger records from unread inbox messages', async () => {
     const pending = record({ status: 'pending', source: 'watchdog' });
     const recovered = record({
