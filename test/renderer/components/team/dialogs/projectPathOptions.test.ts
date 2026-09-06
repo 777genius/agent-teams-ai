@@ -185,6 +185,37 @@ describe('isLaunchPreflightProjectSelectionReady', () => {
     ).toBe(true);
   });
 
+  it('accepts a saved selection with different casing, consistently with the project picker', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        selectedProjectPath: '/users/TEST/Saved-Project/',
+        effectiveCwd: '/users/TEST/Saved-Project/',
+        appliedDefaultProjectPath: defaultProjectPath,
+      })
+    ).toBe(true);
+  });
+
+  it('still waits for a navigation default when the saved path differs only in casing', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        selectedProjectPath: selectedProjectPath.toUpperCase(),
+      })
+    ).toBe(false);
+  });
+
+  it('does not accept a deleted selection through case-insensitive matching', () => {
+    expect(
+      isLaunchPreflightProjectSelectionReady({
+        ...readySelection,
+        defaultProjectPath: null,
+        selectedProjectPath: selectedProjectPath.toUpperCase(),
+        projects: [createProject({ path: selectedProjectPath, filesystemState: 'deleted' })],
+      })
+    ).toBe(false);
+  });
+
   it('waits for a new navigation default even when a previous one was applied', () => {
     expect(
       isLaunchPreflightProjectSelectionReady({

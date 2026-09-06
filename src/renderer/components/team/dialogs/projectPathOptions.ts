@@ -94,7 +94,7 @@ export function isLaunchPreflightProjectSelectionReady({
         projects.some(
           (project) =>
             isSelectableProjectPathProject(project) &&
-            normalizePath(project.path) === normalizePath(selectedProjectPath)
+            normalizePathForMatching(project.path) === normalizePathForMatching(selectedProjectPath)
         ) &&
         (!pendingDefaultSelection || normalizePath(selectedProjectPath) === normalizedDefaultPath)))
   );
