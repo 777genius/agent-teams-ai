@@ -42,14 +42,17 @@ const Probe = ({
   projectPath = '/sandbox/a',
   refreshRevision,
   periodic = false,
+  statusChecking = false,
 }: {
   enabled?: boolean;
   projectPath?: string;
   refreshRevision?: number;
   periodic?: boolean;
+  statusChecking?: boolean;
 }) => {
   observed = useOpenCodeConnectedModelCatalog({
     enabled,
+    statusChecking,
     projectPath,
     passiveProviderStatus: passive,
     refreshRevision,
@@ -110,6 +113,111 @@ afterEach(async () => {
 });
 
 describe('connected OpenCode dashboard catalog', () => {
+  it('waits for initial status to settle before reading the directory', async () => {
+    await act(async () => root.render(<Probe statusChecking />));
+    expect(mocks.directory).not.toHaveBeenCalled();
+    expect(mocks.models).not.toHaveBeenCalled();
+    await act(async () => root.render(<Probe />));
+    expect(mocks.directory).toHaveBeenCalledTimes(1);
+    expect(observed.providerStatus?.models).toEqual(['opencode/model-0', 'openrouter/model-0']);
+  });
+
+  it('finishes an in-flight source during status checking, then resumes the next source once', async () => {
+    let completeFirst!: (value: unknown) => void;
+    mocks.models.mockImplementation(({ providerId }) =>
+      providerId === 'opencode'
+        ? new Promise((resolve) => {
+            completeFirst = resolve;
+          })
+        : Promise.resolve(models(providerId))
+    );
+    await act(async () => root.render(<Probe />));
+    await act(async () => root.render(<Probe statusChecking />));
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    await act(async () => completeFirst(models('opencode', 7)));
+    expect(mocks.models).toHaveBeenCalledTimes(1);
+    expect(observed.providerStatus?.models).toHaveLength(7);
+    expect(observed.providerStatus?.modelCatalogRefreshState).toBe('loading');
+    await act(async () => root.render(<Probe />));
+    expect(mocks.directory).toHaveBeenCalledTimes(1);
+    expect(mocks.models.mock.calls.map(([input]) => input.providerId)).toEqual([
+      'opencode',
+      'openrouter',
+    ]);
+    expect(observed.providerStatus?.models).toHaveLength(8);
+    expect(observed.providerStatus?.modelCatalogRefreshState).toBe('ready');
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    await act(async () => root.render(<Probe statusChecking />));
+    await act(async () => root.render(<Probe />));
+    expect(mocks.models).toHaveBeenCalledTimes(2);
+    expect(observed.providerStatus?.modelCatalogRefreshState).toBe('ready');
+  });
+
+  it('cancels an active old scope and never paints its completion while the new scope is paused', async () => {
+    let completeOld!: (value: unknown) => void;
+    mocks.models.mockImplementation(({ providerId, projectPath }) =>
+      projectPath === '/sandbox/a'
+        ? new Promise((resolve) => {
+            completeOld = resolve;
+          })
+        : Promise.resolve(models(providerId))
+    );
+    await act(async () => root.render(<Probe />));
+    const oldGroup = mocks.models.mock.calls[0][0].requestGroupId;
+    await act(async () => root.render(<Probe projectPath="/sandbox/b" statusChecking />));
+    expect(mocks.cancel).toHaveBeenCalledWith({ requestGroupId: oldGroup });
+    await act(async () => completeOld(models('opencode', 7)));
+    expect(observed.providerStatus?.models).toEqual([]);
+    expect(mocks.directory).toHaveBeenCalledTimes(1);
+    await act(async () => root.render(<Probe projectPath="/sandbox/b" />));
+    expect(mocks.directory).toHaveBeenCalledTimes(2);
+    expect(
+      mocks.models.mock.calls.slice(1).every(([input]) => input.projectPath === '/sandbox/b')
+    ).toBe(true);
+    expect(observed.providerStatus?.models).toHaveLength(2);
+  });
+
+  it.each(['disable', 'unmount'] as const)(
+    'releases an initial status wait on hard %s',
+    async (action) => {
+      await act(async () => root.render(<Probe statusChecking />));
+      await act(async () => root.render(action === 'unmount' ? null : <Probe enabled={false} />));
+      expect(mocks.directory).not.toHaveBeenCalled();
+      expect(mocks.models).not.toHaveBeenCalled();
+      await act(async () => root.render(<Probe />));
+      expect(mocks.directory).toHaveBeenCalledTimes(1);
+      expect(mocks.models).toHaveBeenCalledTimes(2);
+      expect(observed.providerStatus?.modelCatalogRefreshState).toBe('ready');
+    }
+  );
+
+  it('supersedes a source on explicit refresh but waits for status before starting the replacement', async () => {
+    let completeOld!: (value: unknown) => void;
+    mocks.models.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          completeOld = resolve;
+        })
+    );
+    await act(async () => root.render(<Probe />));
+    const oldGroup = mocks.models.mock.calls[0][0].requestGroupId;
+    await act(async () => root.render(<Probe statusChecking />));
+    await act(async () => observed.refresh());
+    expect(mocks.cancel).toHaveBeenCalledWith({ requestGroupId: oldGroup });
+    await act(async () => completeOld(models('opencode', 7)));
+    expect(mocks.directory).toHaveBeenCalledTimes(1);
+    expect(observed.providerStatus?.models).toEqual([]);
+    await act(async () => root.render(<Probe />));
+    expect(mocks.directory).toHaveBeenCalledTimes(2);
+    expect(mocks.directory).toHaveBeenLastCalledWith(expect.objectContaining({ refresh: true }));
+    expect(mocks.models.mock.calls.slice(1).map(([input]) => input.providerId)).toEqual([
+      'opencode',
+      'openrouter',
+    ]);
+    expect(mocks.models.mock.calls[1][0].requestGroupId).not.toBe(oldGroup);
+    expect(observed.providerStatus?.models).toHaveLength(2);
+  });
+
   it('loads built-in free models before slower connected sources', () => {
     expect(
       connectedCatalogSourceIds(
