@@ -329,6 +329,13 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     };
   }
 
+  async function flushReactUpdate(update: () => void): Promise<void> {
+    await act(async () => {
+      update();
+      await Promise.resolve();
+    });
+  }
+
   afterEach(() => {
     document.body.innerHTML = '';
     storeState.cliStatus = null;
@@ -345,13 +352,13 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     setProjectCatalog('/project', baseTime + 100);
     const root = createRoot(document.createElement('div'));
 
-    await act(() => root.render(createElement(Harness, { projectPath: '/project' })));
+    await flushReactUpdate(() => root.render(createElement(Harness, { projectPath: '/project' })));
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(99));
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(1));
     expect(renderedLaunchReady).toBe(false);
-    await act(() => root.unmount());
+    await flushReactUpdate(() => root.unmount());
   });
 
   it('chunks delays above the browser timer maximum and still revokes at the exact boundary', async () => {
@@ -361,7 +368,7 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     setProjectCatalog('/project', baseTime + MAX_BROWSER_TIMEOUT_MS + 100);
     const root = createRoot(document.createElement('div'));
 
-    await act(() => root.render(createElement(Harness, { projectPath: '/project' })));
+    await flushReactUpdate(() => root.render(createElement(Harness, { projectPath: '/project' })));
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(MAX_BROWSER_TIMEOUT_MS));
     expect(renderedLaunchReady).toBe(true);
@@ -370,7 +377,7 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(1));
     expect(renderedLaunchReady).toBe(false);
-    await act(() => root.unmount());
+    await flushReactUpdate(() => root.unmount());
   });
 
   it('reschedules when the project catalog changes', async () => {
@@ -379,17 +386,17 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     vi.setSystemTime(baseTime);
     setProjectCatalog('/first', baseTime + 100);
     const root = createRoot(document.createElement('div'));
-    await act(() => root.render(createElement(Harness, { projectPath: '/first' })));
+    await flushReactUpdate(() => root.render(createElement(Harness, { projectPath: '/first' })));
     expect(renderedLaunchReady).toBe(true);
 
     setProjectCatalog('/second', baseTime + 200);
-    await act(() => root.render(createElement(Harness, { projectPath: '/second' })));
+    await flushReactUpdate(() => root.render(createElement(Harness, { projectPath: '/second' })));
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(100));
     expect(renderedLaunchReady).toBe(true);
     await act(async () => vi.advanceTimersByTimeAsync(100));
     expect(renderedLaunchReady).toBe(false);
-    await act(() => root.unmount());
+    await flushReactUpdate(() => root.unmount());
   });
 
   it.each(['fresh', 'expired', 'unauthenticated'] as const)(
@@ -400,7 +407,7 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
       vi.setSystemTime(baseTime);
       setProjectCatalog('/project', baseTime + 100);
       const root = createRoot(document.createElement('div'));
-      await act(() => root.render(createElement(Harness, { projectPath: '/project' })));
+      await flushReactUpdate(() => root.render(createElement(Harness, { projectPath: '/project' })));
       expect(renderedLaunchReady).toBe(true);
 
       // Move wall time without firing timers: retaining the old clock would accept
@@ -415,9 +422,9 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
       } else if (replacement === 'unauthenticated') {
         scoped.authenticated = false;
       }
-      await act(() => root.render(createElement(Harness, { projectPath: '/project' })));
+      await flushReactUpdate(() => root.render(createElement(Harness, { projectPath: '/project' })));
       expect(renderedLaunchReady).toBe(replacement === 'fresh');
-      await act(() => root.unmount());
+      await flushReactUpdate(() => root.unmount());
     }
   );
 
@@ -442,7 +449,7 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
     storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers };
-    await act(() => root.render(createElement(GlobalHarness)));
+    await flushReactUpdate(() => root.render(createElement(GlobalHarness)));
     expect(host.textContent).toBe('true,true,true');
     storeState.cliStatus = {
       flavor: 'agent_teams_orchestrator',
@@ -452,19 +459,19 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
           : provider
       ),
     };
-    await act(() => root.render(createElement(GlobalHarness)));
+    await flushReactUpdate(() => root.render(createElement(GlobalHarness)));
     expect(host.textContent).toBe('false,true,true');
 
     const observed: (string | null)[] = [];
     const observer = new MutationObserver(() => observed.push(host.textContent));
     observer.observe(host, { childList: true, characterData: true, subtree: true });
     storeState.cliStatus = { flavor: 'agent_teams_orchestrator', providers };
-    await act(() => root.render(createElement(GlobalHarness)));
+    await flushReactUpdate(() => root.render(createElement(GlobalHarness)));
     expect(host.textContent).toBe('true,true,true');
     expect(observed.length).toBeGreaterThan(0);
     expect(observed.every((value) => value === 'true,true,true')).toBe(true);
     observer.disconnect();
-    await act(() => root.unmount());
+    await flushReactUpdate(() => root.unmount());
   });
 
   it('cleans up the expiry timer on unmount', async () => {
@@ -473,10 +480,10 @@ describe('useEffectiveCliProviderStatus catalog expiry', () => {
     vi.setSystemTime(baseTime);
     setProjectCatalog('/project', baseTime + 100);
     const root = createRoot(document.createElement('div'));
-    await act(() => root.render(createElement(Harness, { projectPath: '/project' })));
+    await flushReactUpdate(() => root.render(createElement(Harness, { projectPath: '/project' })));
     expect(vi.getTimerCount()).toBe(1);
 
-    await act(() => root.unmount());
+    await flushReactUpdate(() => root.unmount());
     expect(vi.getTimerCount()).toBe(0);
   });
 });
