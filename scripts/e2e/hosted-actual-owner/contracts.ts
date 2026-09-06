@@ -48,46 +48,7 @@ export const OPENCODE_IDENTITIES = Object.freeze({
 export const PRODUCT_ORIGIN = 'http://127.0.0.1:45131' as const;
 export const INTEGRATION_DESCRIPTOR_FD = 3;
 export const BROWSER_OBSERVATION_FD = 4;
-export const OWNER_CHILD_FDS = Object.freeze({
-  sealedLauncherLease: 3,
-  bootstrap: 4,
-  activationV2: 5,
-} as const);
-export const OWNER_WRAPPER_ARGUMENT = '--runtime-manifest' as const;
-export const OWNER_SEALED_PROTOCOL_ARGUMENT = '--hosted-actual-owner-sealed-protocol=v1' as const;
-export const OWNER_CHILD_PROTOCOL = Object.freeze({
-  sealedLauncherLease: Object.freeze({
-    fd: 3,
-    kind: 'sealed-memfd',
-    format: 'agent-teams.hosted-control.launcher-lease/v1',
-    maximumBytes: 64 * 1024,
-    requiredSeals: Object.freeze(['seal', 'shrink', 'grow', 'write'] as const),
-    childOwnership: 'retained-until-owner-close',
-  }),
-  bootstrap: Object.freeze({
-    fd: 4,
-    kind: 'one-use-stream',
-    format: 'agent-teams.hosted-control.bootstrap/v1',
-    framing: 'u32be-header-length+canonical-json-header+32-byte-key+32-byte-hmac',
-    maximumHeaderBytes: 64 * 1024,
-    maximumFrameBytes: 4 + 64 * 1024 + 32 + 32,
-    childOwnership: 'close-after-one-frame-eof',
-  }),
-  activationV2: Object.freeze({
-    fd: 5,
-    kind: 'connected-stream-socket',
-    protocol: 'agent-teams.hosted-approval-activation-v2',
-    alreadyAuthenticated: true,
-    maximumPrepareBytes: 64 * 1024,
-    maximumResponseBytes: 64 * 1024,
-    maximumAdmissionBytes: 256 * 1024,
-    childOwnership: 'retained-by-activation-lease',
-  }),
-  parentOwnership: Object.freeze({
-    sourceDescriptors: 'arbitrary-distinct-owned',
-    closeCopiesAfterSpawn: true,
-  }),
-} as const);
+export { OWNER_CHILD_FDS, OWNER_WRAPPER_ARGUMENT, OWNER_SEALED_PROTOCOL_ARGUMENT, OWNER_CHILD_PROTOCOL } from './owner-child-protocol';
 
 export const ROOT_NAMES = Object.freeze([
   'harness',
@@ -239,7 +200,7 @@ export interface FilePin {
   readonly relativePath: string;
   readonly sha256: string;
   readonly size: number;
-  readonly mode: 256 | 292 | 365;
+  readonly mode: 256 | 292 | 320 | 365;
   readonly device: string;
   readonly inode: string;
   readonly nlink: 1;

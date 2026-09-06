@@ -7,11 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { assertFileCurrent, assertRootCurrent, procFdPath } from './anchors';
 import {
   RAW_ORIGINS,
-  OWNER_CHILD_FDS,
-  OWNER_SEALED_PROTOCOL_ARGUMENT,
-  OWNER_WRAPPER_ARGUMENT,
   OPENCODE_IDENTITIES,
-  OWNER_CHILD_PROTOCOL,
   PRODUCER_PROVENANCE_CONTRACT,
   PRODUCER_PROVENANCE_CONTRACT_SHA256,
   RUNTIME_CAPTURE_NAMES,
@@ -27,7 +23,19 @@ import {
 } from './contracts';
 import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
 import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
+import { selectOwnerPlan, assertSelectedSupervisorTranscript, type SupervisorTranscriptReceipt } from './owner-plan';
+import type { OwnerChildPlan, OwnerSourceInvocation } from './owner-child-protocol';
+import { parseOwnerChildDescriptorCleanup, parseOwnerLaunchEnvelope, assertOwnerDescriptorCaptureBindings,
+  type OwnerChildDescriptorCleanup } from './owner-descriptor-cleanup';
+import type { PrivateOwnerImagePin } from './owner-recipe';
 import type { WrittenFileEvidence } from './secure-files';
+
+import { PARENT_DESCRIPTOR_ROLES } from './owner-descriptor-legacy';
+import type { ParentDescriptorLifecycleRecord } from './owner-descriptor-legacy';
+
+export { parseOwnerChildDescriptorCleanup } from './owner-descriptor-cleanup';
+export { acceptCanonicalChildDescriptorPublication, PARENT_DESCRIPTOR_ROLES } from './owner-descriptor-legacy';
+export type { ChildDescriptorPublication, ParentDescriptorLifecycleRecord, ParentDescriptorBeforeSpawnObservation, ParentDescriptorAfterSpawnObservation } from './owner-descriptor-legacy';
 
 export const SUPERVISOR_PROTOCOL = 'agent-teams.p3c.supervisor-transcript/v1' as const;
 export const OWNER_RESTART_BOUNDARIES = Object.freeze([
@@ -91,6 +99,9 @@ const ROOT_PROCESS_SCHEDULE = Object.freeze([
 type RootProcessRole = (typeof ROOT_PROCESS_SCHEDULE)[number]['role'];
 type ChromiumRole = (typeof CHROMIUM_DESCENDANT_ROLES)[number];
 export type ProcessEvidenceRole = RootProcessRole | ChromiumRole | 'supervisor';
+// Populated only from executeSupervisor's selected executable, retained process anchor and pipe.
+// A caller-supplied JSON receipt cannot authorize v2 transcript admission.
+const selectedSupervisorTranscripts = new WeakMap<Uint8Array, SupervisorTranscriptReceipt>();
 const MAX_TRANSCRIPT_BYTES = 32 * 1024 * 1024;
 const CLEANUP_OPERATION_TIMEOUT_MS = 2_000;
 const MAX_PROC_ENVIRON_BYTES = 256 * 1024;
@@ -131,20 +142,11 @@ export interface SupervisorPlan {
       product: string;
     }>;
   }>;
-  readonly ownerChildProtocol: Readonly<{
-    wrapperArgv: readonly [typeof OWNER_WRAPPER_ARGUMENT, '/sandbox/runtime-manifest.json'];
-    sealedArgv: readonly [
-      typeof OWNER_SEALED_PROTOCOL_ARGUMENT,
-      typeof OWNER_WRAPPER_ARGUMENT,
-      '/sandbox/runtime-manifest.json',
-    ];
-    childLocalDescriptors: typeof OWNER_CHILD_FDS;
-    descriptorContract: typeof OWNER_CHILD_PROTOCOL;
-    parentSourceDescriptors: 'arbitrary-distinct-owned';
-    closeParentCopiesAfterSpawn: true;
-    compatibilityProbing: false;
-    socketPathReconnect: false;
-  }>;
+  readonly ownerChildProtocol: OwnerChildPlan;
+  readonly ownerSourceInvocation?: OwnerSourceInvocation;
+  readonly ownerLaunchHelper?: PrivateOwnerImagePin;
+  readonly ownerRecipeSha256?: string;
+  readonly ownerHarnessContractSha256?: string;
   readonly network: {
     readonly namespace: 'new';
     readonly mountNamespace: 'new';
@@ -462,65 +464,11 @@ export interface SupervisorOutcome {
   readonly network: NetworkEvidence;
   readonly filesystem: FilesystemEvidence;
   readonly processEvidenceSetId: string;
-  readonly ownerChildDescriptorCleanup: Readonly<{
-    contract: 'agent-teams.hosted-owner-child-parent-fd-cleanup/v2';
-    ownerStartTokens: readonly string[];
-    records: readonly ParentDescriptorLifecycleRecord[];
-  }>;
+  readonly ownerChildDescriptorCleanup: OwnerChildDescriptorCleanup;
   readonly rawFiles: Readonly<Record<RawOrigin, RawFileEvidence>>;
   readonly captureFiles: Readonly<Record<RuntimeCaptureName, ProducerCaptureFileEvidence>>;
   readonly transcriptSha256: string;
   readonly transcript: Buffer;
-}
-
-export const PARENT_DESCRIPTOR_ROLES = Object.freeze([
-  'sealed-launcher-lease',
-  'bootstrap',
-  'activation-v2',
-] as const);
-
-export interface ParentDescriptorBeforeSpawnObservation {
-  readonly method: 'proc-fd-identity';
-  readonly observedMonotonicNs: string;
-  readonly path: string;
-  readonly device: string;
-  readonly inode: string;
-  readonly mode: number;
-}
-
-export interface ParentDescriptorAfterSpawnObservation {
-  readonly method: 'fstat-ebadf';
-  readonly observedMonotonicNs: string;
-  readonly errno: 'EBADF';
-}
-
-export interface ParentDescriptorLifecycleRecord {
-  readonly wrapperPid: number;
-  readonly wrapperStartToken: string;
-  readonly spawnNonce: string;
-  readonly spawnBoundaryMonotonicNs: string;
-  readonly childPublication: ChildDescriptorPublication;
-  readonly descriptors: readonly Readonly<{
-    role: (typeof PARENT_DESCRIPTOR_ROLES)[number];
-    parentFd: number;
-    beforeSpawn: ParentDescriptorBeforeSpawnObservation;
-    afterSpawn: ParentDescriptorAfterSpawnObservation;
-  }>[];
-}
-
-export interface ChildDescriptorPublication {
-  readonly schemaVersion: 1;
-  readonly contract: 'agent-teams.hosted-owner-child-fd-map/v1';
-  readonly wrapperPid: number;
-  readonly wrapperStartToken: string;
-  readonly spawnNonce: string;
-  readonly descriptors: readonly Readonly<{
-    readonly role: (typeof PARENT_DESCRIPTOR_ROLES)[number];
-    readonly childFd: 3 | 4 | 5;
-    readonly device: string;
-    readonly inode: string;
-    readonly mode: number;
-  }>[];
 }
 
 type ParentDescriptorCleanupObservation = Omit<ParentDescriptorLifecycleRecord, 'childPublication'>;
@@ -560,68 +508,6 @@ export function observeCurrentWrapperDescriptorsBeforeSpawn(
 ): ReturnType<typeof observeParentDescriptorsBeforeSpawn> {
   const wrapper = readCurrentWrapperProcessStartIdentity();
   return observeParentDescriptorsBeforeSpawn(wrapper.pid, wrapper.startToken, parentFds);
-}
-
-/**
- * Accepts the child's diagnostic publication only when FD3/FD4/FD5 are the exact identities the
- * parent observed before spawn. This publication proves canonical mapping; cleanup authority still
- * comes exclusively from the supervising parent's EBADF observations.
- */
-export function acceptCanonicalChildDescriptorPublication(
-  value: unknown,
-  before: ReturnType<typeof observeParentDescriptorsBeforeSpawn>
-): ChildDescriptorPublication {
-  const publication = exactRecord(
-    value,
-    ['schemaVersion', 'contract', 'wrapperPid', 'wrapperStartToken', 'spawnNonce', 'descriptors'],
-    'child_descriptor_publication'
-  );
-  if (
-    publication.schemaVersion !== 1 ||
-    publication.contract !== 'agent-teams.hosted-owner-child-fd-map/v1' ||
-    publication.wrapperPid !== before.wrapperPid ||
-    publication.wrapperStartToken !== before.wrapperStartToken ||
-    publication.spawnNonce !== before.spawnNonce ||
-    typeof publication.spawnNonce !== 'string' ||
-    !/^[0-9a-f]{64}$/u.test(publication.spawnNonce) ||
-    !Array.isArray(publication.descriptors) ||
-    publication.descriptors.length !== PARENT_DESCRIPTOR_ROLES.length
-  ) {
-    throw new Error('p3c_child_descriptor_publication');
-  }
-  const descriptors = publication.descriptors.map((candidate, index) => {
-    const descriptor = exactRecord(
-      candidate,
-      ['role', 'childFd', 'device', 'inode', 'mode'],
-      `child_descriptor_publication_${index}`
-    );
-    const expected = before.descriptors[index];
-    if (
-      expected === undefined ||
-      descriptor.role !== expected.role ||
-      descriptor.childFd !== index + 3 ||
-      descriptor.device !== expected.beforeSpawn.device ||
-      descriptor.inode !== expected.beforeSpawn.inode ||
-      descriptor.mode !== expected.beforeSpawn.mode
-    ) {
-      throw new Error('p3c_child_descriptor_publication');
-    }
-    return Object.freeze({
-      role: expected.role,
-      childFd: (index + 3) as 3 | 4 | 5,
-      device: expected.beforeSpawn.device,
-      inode: expected.beforeSpawn.inode,
-      mode: expected.beforeSpawn.mode,
-    });
-  });
-  return Object.freeze({
-    schemaVersion: 1,
-    contract: 'agent-teams.hosted-owner-child-fd-map/v1',
-    wrapperPid: before.wrapperPid,
-    wrapperStartToken: before.wrapperStartToken,
-    spawnNonce: before.spawnNonce,
-    descriptors: Object.freeze(descriptors),
-  });
 }
 
 /** Captures kernel descriptor identities immediately before the wrapper spawn boundary. */
@@ -745,6 +631,7 @@ export function buildSupervisorPlan(
       device: sandbox.directoryIdentities[name].device,
       inode: sandbox.directoryIdentities[name].inode,
     });
+  const owner = selectOwnerPlan(admission);
   const chromium = admission.descriptor.product.chromiumExecutable;
   const capture = Object.freeze(
     Object.fromEntries(
@@ -752,7 +639,7 @@ export function buildSupervisorPlan(
     ) as Record<RuntimeCaptureName, string>
   );
   const executableSha256 = {
-    owner: admission.execution.ownerEntry.pin.sha256,
+    owner: owner.image.sha256,
     opencode: admission.execution.openCode.pin.sha256,
     supervisor: admission.execution.supervisor.pin.sha256,
     product: admission.descriptor.product.compositionEntry.sha256,
@@ -760,7 +647,7 @@ export function buildSupervisorPlan(
     ...Object.fromEntries(CHROMIUM_DESCENDANT_ROLES.map((role) => [role, chromium.sha256])),
   } as Record<ProcessEvidenceRole, string>;
   const executableDevice = {
-    owner: admission.execution.ownerEntry.pin.device,
+    owner: owner.image.device,
     opencode: admission.execution.openCode.pin.device,
     supervisor: admission.execution.supervisor.pin.device,
     product: admission.descriptor.product.compositionEntry.device,
@@ -768,7 +655,7 @@ export function buildSupervisorPlan(
     ...Object.fromEntries(CHROMIUM_DESCENDANT_ROLES.map((role) => [role, chromium.device])),
   } as Record<ProcessEvidenceRole, string>;
   const executableInode = {
-    owner: admission.execution.ownerEntry.pin.inode,
+    owner: owner.image.inode,
     opencode: admission.execution.openCode.pin.inode,
     supervisor: admission.execution.supervisor.pin.inode,
     product: admission.descriptor.product.compositionEntry.inode,
@@ -790,6 +677,7 @@ export function buildSupervisorPlan(
   return Object.freeze({
     schemaVersion: 2,
     protocol: SUPERVISOR_PROTOCOL,
+    ...owner.selection,
     controllerNonce: admission.descriptor.controllerNonce,
     runId: sandbox.runId,
     maximumRuntimeMs: 900_000,
@@ -823,23 +711,7 @@ export function buildSupervisorPlan(
         product: admission.descriptor.product.finalHarnessCommit,
       }),
     }),
-    ownerChildProtocol: Object.freeze({
-      wrapperArgv: Object.freeze([
-        OWNER_WRAPPER_ARGUMENT,
-        '/sandbox/runtime-manifest.json',
-      ] as const),
-      sealedArgv: Object.freeze([
-        OWNER_SEALED_PROTOCOL_ARGUMENT,
-        OWNER_WRAPPER_ARGUMENT,
-        '/sandbox/runtime-manifest.json',
-      ] as const),
-      childLocalDescriptors: OWNER_CHILD_FDS,
-      descriptorContract: OWNER_CHILD_PROTOCOL,
-      parentSourceDescriptors: 'arbitrary-distinct-owned',
-      closeParentCopiesAfterSpawn: true,
-      compatibilityProbing: false,
-      socketPathReconnect: false,
-    }),
+    ownerChildProtocol: owner.protocol,
     network: Object.freeze({
       namespace: 'new',
       mountNamespace: 'new',
@@ -981,7 +853,7 @@ export function buildSupervisorPlan(
     expectedArgv: Object.freeze({
       supervisor: Object.freeze([]),
       opencode: Object.freeze(['serve', '--hostname', '127.0.0.1', '--port', '4096']),
-      owner: Object.freeze([OWNER_WRAPPER_ARGUMENT, '/sandbox/runtime-manifest.json']),
+      owner: owner.argv,
       product: Object.freeze([]),
       browser: browserArgv(admission),
     }),
@@ -997,7 +869,8 @@ function parseStart(
   plan: SupervisorPlan,
   expected: (typeof ROOT_PROCESS_SCHEDULE)[number],
   sequence: number,
-  supervisorToken: string
+  supervisorToken: string,
+  parentToken = supervisorToken
 ): ProcessStartEvidence {
   const item = exactRecord(
     value,
@@ -1040,7 +913,7 @@ function parseStart(
     item.instanceId !== expected.instanceId ||
     item.generation !== expected.generation ||
     item.restartBoundary !== expected.restartBoundary ||
-    item.parentStartToken !== supervisorToken ||
+    item.parentStartToken !== parentToken ||
     item.observerStartToken !== supervisorToken ||
     item.ownershipMarkerSha256 !== sha256(plan.processOwnership.marker) ||
     !Number.isSafeInteger(item.pid) ||
@@ -1063,7 +936,7 @@ function parseStart(
     startTime: validateDecimal(item.startTime, 'supervisor_start_time'),
     observedMonotonicNs: validateDecimal(item.observedMonotonicNs, 'supervisor_observed_monotonic'),
     startToken: validateRecordId(item.startToken, 'supervisor_start_token'),
-    parentStartToken: supervisorToken,
+    parentStartToken: parentToken,
     observerStartToken: supervisorToken,
     executableDevice: validateDecimal(item.executableDevice, 'supervisor_executable_device'),
     executableInode: validateDecimal(item.executableInode, 'supervisor_executable_inode'),
@@ -1807,156 +1680,6 @@ function parseCaptureFiles(
   return Object.freeze(result);
 }
 
-export function parseOwnerChildDescriptorCleanup(
-  value: unknown,
-  starts: readonly Pick<ProcessStartEvidence, 'role' | 'pid' | 'startToken'>[]
-): SupervisorOutcome['ownerChildDescriptorCleanup'] {
-  const cleanup = exactRecord(
-    value,
-    ['schemaVersion', 'contract', 'records'],
-    'supervisor_owner_child_descriptor_cleanup'
-  );
-  const expectedOwnerTokens = starts
-    .filter(({ role }) => role === 'owner')
-    .map(({ startToken }) => startToken);
-  if (!Array.isArray(cleanup.records) || cleanup.records.length !== expectedOwnerTokens.length) {
-    throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
-  }
-  const observedTokens = cleanup.records.map((candidate, index) => {
-    const expectedOwner = starts.filter(({ role }) => role === 'owner')[index];
-    if (expectedOwner === undefined) {
-      throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
-    }
-    const record = exactRecord(
-      candidate,
-      [
-        'wrapperPid',
-        'wrapperStartToken',
-        'spawnNonce',
-        'spawnBoundaryMonotonicNs',
-        'childPublication',
-        'descriptors',
-      ],
-      `supervisor_owner_child_descriptor_cleanup_${index}`
-    );
-    if (
-      record.wrapperPid !== expectedOwner.pid ||
-      record.wrapperStartToken !== expectedOwnerTokens[index] ||
-      typeof record.spawnNonce !== 'string' ||
-      !/^[0-9a-f]{64}$/u.test(record.spawnNonce) ||
-      typeof record.spawnBoundaryMonotonicNs !== 'string' ||
-      !/^\d+$/u.test(record.spawnBoundaryMonotonicNs) ||
-      !Array.isArray(record.descriptors) ||
-      record.descriptors.length !== PARENT_DESCRIPTOR_ROLES.length
-    ) {
-      throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
-    }
-    const parentFds = new Set<number>();
-    const descriptors = record.descriptors.map((candidateDescriptor, descriptorIndex) => {
-      const descriptor = exactRecord(
-        candidateDescriptor,
-        ['role', 'parentFd', 'beforeSpawn', 'afterSpawn'],
-        `supervisor_owner_child_descriptor_${index}_${descriptorIndex}`
-      );
-      const beforeSpawn = exactRecord(
-        descriptor.beforeSpawn,
-        ['method', 'observedMonotonicNs', 'path', 'device', 'inode', 'mode'],
-        `supervisor_owner_child_descriptor_before_${index}_${descriptorIndex}`
-      );
-      const afterSpawn = exactRecord(
-        descriptor.afterSpawn,
-        ['method', 'observedMonotonicNs', 'errno'],
-        `supervisor_owner_child_descriptor_after_${index}_${descriptorIndex}`
-      );
-      const spawnBoundaryMonotonicNs = record.spawnBoundaryMonotonicNs;
-      const beforeSpawnMonotonicNs = beforeSpawn.observedMonotonicNs;
-      const afterSpawnMonotonicNs = afterSpawn.observedMonotonicNs;
-      if (
-        descriptor.role !== PARENT_DESCRIPTOR_ROLES[descriptorIndex] ||
-        !Number.isSafeInteger(descriptor.parentFd) ||
-        (descriptor.parentFd as number) < 0 ||
-        parentFds.has(descriptor.parentFd as number) ||
-        beforeSpawn.method !== 'proc-fd-identity' ||
-        typeof beforeSpawn.observedMonotonicNs !== 'string' ||
-        !/^\d+$/u.test(beforeSpawn.observedMonotonicNs) ||
-        typeof spawnBoundaryMonotonicNs !== 'string' ||
-        typeof beforeSpawnMonotonicNs !== 'string' ||
-        BigInt(beforeSpawnMonotonicNs) >= BigInt(spawnBoundaryMonotonicNs) ||
-        beforeSpawn.path !== `/proc/${expectedOwner.pid}/fd/${descriptor.parentFd}` ||
-        typeof beforeSpawn.device !== 'string' ||
-        !/^\d+$/u.test(beforeSpawn.device) ||
-        typeof beforeSpawn.inode !== 'string' ||
-        !/^[1-9]\d*$/u.test(beforeSpawn.inode) ||
-        !Number.isSafeInteger(beforeSpawn.mode) ||
-        (beforeSpawn.mode as number) < 0 ||
-        (beforeSpawn.mode as number) > 0o7777 ||
-        afterSpawn.method !== 'fstat-ebadf' ||
-        typeof afterSpawn.observedMonotonicNs !== 'string' ||
-        !/^\d+$/u.test(afterSpawn.observedMonotonicNs) ||
-        typeof afterSpawnMonotonicNs !== 'string' ||
-        BigInt(afterSpawnMonotonicNs) < BigInt(spawnBoundaryMonotonicNs) ||
-        afterSpawn.errno !== 'EBADF'
-      ) {
-        throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
-      }
-      parentFds.add(descriptor.parentFd as number);
-      return Object.freeze({
-        role: descriptor.role as (typeof PARENT_DESCRIPTOR_ROLES)[number],
-        parentFd: descriptor.parentFd as number,
-        beforeSpawn: Object.freeze({
-          method: 'proc-fd-identity' as const,
-          observedMonotonicNs: beforeSpawn.observedMonotonicNs,
-          path: beforeSpawn.path as string,
-          device: beforeSpawn.device as string,
-          inode: beforeSpawn.inode as string,
-          mode: beforeSpawn.mode as number,
-        }),
-        afterSpawn: Object.freeze({
-          method: 'fstat-ebadf' as const,
-          observedMonotonicNs: afterSpawn.observedMonotonicNs,
-          errno: 'EBADF' as const,
-        }),
-      });
-    });
-    const beforeObservation = Object.freeze({
-      wrapperPid: record.wrapperPid as number,
-      wrapperStartToken: record.wrapperStartToken as string,
-      spawnNonce: record.spawnNonce as string,
-      descriptors: Object.freeze(
-        descriptors.map(({ role, parentFd, beforeSpawn }) =>
-          Object.freeze({ role, parentFd, beforeSpawn })
-        )
-      ),
-    });
-    const childPublication = acceptCanonicalChildDescriptorPublication(
-      record.childPublication,
-      beforeObservation
-    );
-    return Object.freeze({
-      token: record.wrapperStartToken as string,
-      record: Object.freeze({
-        wrapperPid: record.wrapperPid as number,
-        wrapperStartToken: record.wrapperStartToken as string,
-        spawnNonce: record.spawnNonce as string,
-        spawnBoundaryMonotonicNs: record.spawnBoundaryMonotonicNs,
-        childPublication,
-        descriptors: Object.freeze(descriptors),
-      }),
-    });
-  });
-  if (
-    cleanup.schemaVersion !== 2 ||
-    cleanup.contract !== 'agent-teams.hosted-owner-child-parent-fd-cleanup/v2'
-  ) {
-    throw new Error('p3c_supervisor_owner_child_descriptor_cleanup');
-  }
-  return Object.freeze({
-    contract: cleanup.contract,
-    ownerStartTokens: Object.freeze(observedTokens.map(({ token }) => token)),
-    records: Object.freeze(observedTokens.map(({ record }) => record)),
-  });
-}
-
 function recordType(value: unknown): string | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   return (value as Record<string, unknown>).type as string | undefined;
@@ -1966,6 +1689,9 @@ export function parseSupervisorTranscript(
   bytes: Uint8Array,
   plan: SupervisorPlan
 ): SupervisorOutcome {
+  const v2 = 'protocolVersion' in plan.ownerChildProtocol && plan.ownerChildProtocol.protocolVersion === 2;
+  const receipt = selectedSupervisorTranscripts.get(bytes);
+  if (v2 && !receipt) throw new Error('p3c_owner_plan_selected_transcript_receipt');
   if (bytes.byteLength < 1 || bytes.byteLength > MAX_TRANSCRIPT_BYTES || bytes.at(-1) !== 0x0a)
     throw new Error('p3c_supervisor_transcript_frame');
   const lines = new TextDecoder('utf-8', { fatal: true }).decode(bytes).slice(0, -1).split('\n');
@@ -2061,6 +1787,8 @@ export function parseSupervisorTranscript(
     cwdInode: validateDecimal(hello.supervisorCwdInode, 'supervisor_self_cwd_inode'),
   });
 
+  if (v2) assertSelectedSupervisorTranscript(bytes, plan, supervisorStart, receipt);
+  const ownerLaunches: unknown[] = [];
   const starts: ProcessStartEvidence[] = [];
   const replacementExits: ProcessExitEvidence[] = [];
   let previousOwner: ProcessStartEvidence | undefined;
@@ -2082,8 +1810,14 @@ export function parseSupervisorTranscript(
         )
       );
     }
+    let parentToken = supervisorToken;
+    if (v2 && expected.role === 'owner') {
+      sequence += 1;
+      const launch = parseOwnerLaunchEnvelope(documents.shift(), plan, sequence, supervisorToken);
+      ownerLaunches.push(launch.evidence); parentToken = launch.parentToken;
+    }
     sequence += 1;
-    const start = parseStart(documents.shift(), plan, expected, sequence, supervisorToken);
+    const start = parseStart(documents.shift(), plan, expected, sequence, supervisorToken, parentToken);
     if (
       start.role === 'owner' &&
       start.generation > 1 &&
@@ -2374,8 +2108,11 @@ export function parseSupervisorTranscript(
     throw new Error('p3c_supervisor_result');
   const ownerChildDescriptorCleanup = parseOwnerChildDescriptorCleanup(
     result.ownerChildDescriptorCleanup,
-    starts
+    starts, { plan, supervisor: supervisorStart, filesystem, network, launches: ownerLaunches }
   );
+  const rawFiles = parseRawFiles(result.rawFiles, starts, supervisorStart);
+  const captureFiles = parseCaptureFiles(result.captureFiles, plan, starts, descendants, exits, supervisorStart, processEvidenceSetId);
+  assertOwnerDescriptorCaptureBindings(ownerChildDescriptorCleanup, rawFiles, captureFiles);
   return Object.freeze({
     controllerNonce: plan.controllerNonce,
     runId: plan.runId,
@@ -2388,16 +2125,8 @@ export function parseSupervisorTranscript(
     filesystem,
     processEvidenceSetId,
     ownerChildDescriptorCleanup,
-    rawFiles: parseRawFiles(result.rawFiles, starts, supervisorStart),
-    captureFiles: parseCaptureFiles(
-      result.captureFiles,
-      plan,
-      starts,
-      descendants,
-      exits,
-      supervisorStart,
-      processEvidenceSetId
-    ),
+    rawFiles,
+    captureFiles,
     transcriptSha256: createHash('sha256').update(bytes).digest('hex'),
     transcript: Buffer.from(bytes),
   });
@@ -3047,8 +2776,10 @@ export async function executeSupervisor(
   await Promise.all([
     ...Object.values(admission.roots).map(assertRootCurrent),
     ...Object.values(admission.execution).map(assertFileCurrent),
+    ...(admission.ownerLaunch ? [admission.ownerLaunch.executable, admission.ownerLaunch.helper].map(assertFileCurrent) : []),
   ]);
   const plan = buildSupervisorPlan(admission, sandbox);
+  if (admission.ownerLaunch) throw new Error('p3c_owner_v2_namespace_entry_not_selected');
   const ownershipMarker = plan.processOwnership.marker;
   await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
   const supervisor = spawn('/proc/self/fd/9', [], {
@@ -3196,5 +2927,8 @@ export async function executeSupervisor(
     await terminateAndSettle();
     throw new Error('p3c_supervisor_nonzero_or_diagnostics');
   }
-  return parseSupervisorTranscript(transcript, plan);
+  selectedSupervisorTranscripts.set(transcript, { pid: processAnchor.pid, startTime: processAnchor.startTime,
+    transcriptSha256: sha256(transcript) });
+  try { return parseSupervisorTranscript(transcript, plan); }
+  finally { selectedSupervisorTranscripts.delete(transcript); }
 }

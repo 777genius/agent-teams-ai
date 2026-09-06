@@ -8,7 +8,9 @@ import { before, after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { canonicalJson, sha256 } from '../contracts';
-import type { SupervisorPlan } from '../processes';
+import type { SupervisorPlan, ProcessStartEvidence } from '../processes';
+import { ownerChildPlanV2, OWNER_V2_ARGV } from '../owner-child-protocol';
+import { parseOwnerLaunchEvidenceV2 } from '../owner-descriptor-v2';
 import { assembleOwnerBootstrap, type AssembleBootstrapInput, type BootstrapFrames } from './bootstrap-v2';
 import { canonicalJson as supervisorCanonicalJson, sha256 as supervisorSha256 } from './canonical';
 import { launchNativeOwner, OwnerLaunchError, type InheritedImage } from './native-launch';
@@ -228,13 +230,17 @@ test('plan caller imports in the private cwd and launches from verified inherite
   const plan = { schemaVersion: 2, protocol: 'agent-teams.p3c.supervisor-transcript/v1',
     controllerNonce: bootstrap.expectedHost.activation.controllerNonce, runId: bootstrap.expectedHost.activation.runId,
     startSchedule: [{ role: 'owner', generation: 1 }], processOwnership: { marker: 'benign-plan-fixture' },
+    ownerChildProtocol: ownerChildPlanV2(), ownerRecipeSha256: '6'.repeat(64), ownerHarnessContractSha256: '7'.repeat(64),
+    ownerLaunchHelper: { root: 'p3b2', relativePath: 'owner-launch', ...input.handles.helper.pin, nlink: 1 },
+    expectedArgv: { owner: OWNER_V2_ARGV },
     expectedCwd: { owner: { device: String(cwd.dev), inode: String(cwd.ino) } },
     expectedExecutableSha256: { supervisor: sha256(readFileSync('/proc/self/exe')), owner: owner.sha256, opencode: openCode.sha256 },
     expectedExecutableDevice: { supervisor: String(self.dev), owner: owner.device, opencode: openCode.device },
     expectedExecutableInode: { supervisor: String(self.ino), owner: owner.inode, opencode: openCode.inode },
     expectedProducerArtifactSha256: { owner: '4'.repeat(64), opencode: openCode.artifactManifestSha256 },
     expectedProducerModuleSha256: { owner: owner.sha256, opencode: openCode.moduleSha256 },
-    runtimeManifest: { captureEmissionContract: { contract: 'claude-team/hosted-producer-provenance', version: 2,
+    runtimeManifest: { schemaVersion: 1, purpose: 'agent-teams.hosted-actual-owner-e2e/v1',
+      runId: bootstrap.expectedHost.activation.runId, refs: { openCodeExecutableSha256: openCode.sha256 }, captureEmissionContract: { contract: 'claude-team/hosted-producer-provenance', version: 2,
       environment: 'CLAUDE_TEAM_PRODUCER_PROVENANCE_V2', descriptorSlots: { ownerWalTimeline: 9 },
       contractSha256: 'ef6aa8ac1f139d2b5e9312da8ff1e6dac21da788d46eefbd6e3d43da27da23ba' } } } as unknown as SupervisorPlan;
   try {
@@ -264,6 +270,7 @@ test('plan caller imports in the private cwd and launches from verified inherite
       invocation: { ...sourceOptions.invocation, modulePath: '/sandbox/immutable/different.ts' } }), /source_selection/u);
     assert.equal(statSync(input.rawPath).size, 0);
     assert(fstatSync(input.handles.rawFd).isFile()); assert(fstatSync(input.handles.walFd).isFile());
+    const supervisorObservedNs = String(process.hrtime.bigint());
     const launch = await launchOwnerFromPlan({ plan, handles: input.handles, bootstrap, invocation: { kind: 'built-entry' },
       environment: {}, supervisorProcessStartToken: '5'.repeat(64), recipeSha256: '6'.repeat(64), harnessContractSha256: '7'.repeat(64) });
     const socket = launch.activation.take();
@@ -275,6 +282,25 @@ test('plan caller imports in the private cwd and launches from verified inherite
       assert.equal(header.supervisorBinding.ownerProcessStartToken, launch.ownerProcessStartToken);
       assert.equal(launch.parentCleanup.wrapperPid, launch.held.parentPid);
       assert.equal(launch.parentCleanup.ownerPid, launch.held.ownerPid);
+      // Product's parser consumes the actual accepted native output and independent caller observation.
+      // This benign consumer is not an Owner/OpenCode composition or a qualifying supervisor corpus.
+      const evidence = launch.launchEvidence();
+      const context = { plan,
+        owner: { role: 'owner', pid: launch.held.ownerPid, startTime: launch.held.ownerStartTicks,
+          startToken: launch.ownerProcessStartToken, pidfdInode: launch.held.pidfdInode,
+          parentStartToken: launch.parentCleanup.wrapperStartToken, observerStartToken: '5'.repeat(64),
+          observedMonotonicNs: String(process.hrtime.bigint()), executableDevice: owner.device,
+          executableInode: owner.inode, executableSha256: owner.sha256 } as ProcessStartEvidence,
+        supervisor: { role: 'supervisor', pid: process.pid, startTime: launch.held.callerStartTicks,
+          startToken: '5'.repeat(64), observedMonotonicNs: supervisorObservedNs } as ProcessStartEvidence,
+        pidNamespaceInode: String(statSync('/proc/self/ns/pid', { bigint: true }).ino),
+        networkNamespaceInode: String(statSync('/proc/self/ns/net', { bigint: true }).ino) };
+      assert.deepEqual(parseOwnerLaunchEvidenceV2(evidence, context).parentCleanup, launch.parentCleanup);
+      assert.throws(() => parseOwnerLaunchEvidenceV2({ ...evidence,
+        parentCleanup: { ...evidence.parentCleanup, wrapperPid: launch.held.ownerPid } }, context));
+      assert.throws(() => parseOwnerLaunchEvidenceV2({ ...evidence, nativeEvents: [] }, context));
+      assert.throws(() => parseOwnerLaunchEvidenceV2({ ...evidence,
+        wrapperObservation: { ...evidence.wrapperObservation, startTicks: '1' } }, context));
       assert.equal(launch.digests.bootstrapV2HeaderSha256, sha256(frame.subarray(4, 4 + frame.readUInt32BE(0))));
     } finally { socket.destroy(); await launch.dispose(); }
   } finally { input.closeBorrowed(); }
