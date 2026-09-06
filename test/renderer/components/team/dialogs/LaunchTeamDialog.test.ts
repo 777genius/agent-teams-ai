@@ -703,9 +703,14 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
-  it.each(['create', 'launch'] as const)(
-    'enables %s skip while Codex authority is pending with a partial response',
-    async (mode) => {
+  it.each([
+    ['create', 'pending-codex'],
+    ['launch', 'pending-codex'],
+    ['create', 'refreshing-anthropic'],
+    ['launch', 'refreshing-anthropic'],
+  ] as const)(
+    'enables %s skip during %s without repeating completed deep checks',
+    async (mode, scenario) => {
       vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
       const modelAvailability = await vi.importActual<
         typeof import('@renderer/utils/teamModelAvailability')
@@ -719,34 +724,37 @@ describe('LaunchTeamDialog', () => {
       vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
         runtimeLoading.isTeamProviderRuntimeStatusLoading
       );
-      localStorage.setItem('team:lastSelectedProvider', 'codex');
+      const refreshing = scenario === 'refreshing-anthropic';
+      localStorage.setItem('team:lastSelectedProvider', refreshing ? 'anthropic' : 'codex');
       localStorage.setItem('team:lastSelectedModel:codex', 'gpt-5.4');
+      localStorage.setItem('team:lastSelectedModel:anthropic', 'opus');
       createTeamDraftMock.state.soloTeam = true;
       const codex = storeState.cliStatus.providers.find(
         (provider) => provider.providerId === 'codex'
       )!;
-      Object.assign(codex, {
-        authenticated: false,
-        verificationState: 'unknown',
-        statusCheckOutcome: 'pending',
-        statusCheckErrorCode: 'partial_response',
-        modelCatalog: {
-          ...codex.modelCatalog,
-          source: 'static-fallback',
-          status: 'stale',
-          diagnostics: {
-            appServerState: 'degraded',
-            message: 'JSON-RPC request timed out: initialize',
+      if (!refreshing)
+        Object.assign(codex, {
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome: 'pending',
+          statusCheckErrorCode: 'partial_response',
+          modelCatalog: {
+            ...codex.modelCatalog,
+            source: 'static-fallback',
+            status: 'stale',
+            diagnostics: {
+              appServerState: 'degraded',
+              message: 'JSON-RPC request timed out: initialize',
+            },
           },
-        },
-        modelVerificationState: 'idle',
-        modelCatalogRefreshState: 'loading',
-      });
+          modelVerificationState: 'idle',
+          modelCatalogRefreshState: 'loading',
+        });
       const submit = vi.fn(async () => {});
       const host = document.createElement('div');
       document.body.appendChild(host);
       const root = createRoot(host);
-      await act(async () => {
+      const renderDialog = () => {
         root.render(
           mode === 'create'
             ? React.createElement(CreateTeamDialog, {
@@ -775,13 +783,44 @@ describe('LaunchTeamDialog', () => {
                 onLaunch: submit,
               })
         );
+      };
+      await act(async () => {
+        renderDialog();
         await flush();
       });
-      for (let i = 0; i < 5; i++)
+      const settle = async () => {
+        for (let i = 0; i < 5; i++)
+          await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            await flush();
+          });
+      };
+      await settle();
+      const completedChecks = vi.mocked(runProviderPrepareDiagnostics).mock.calls.length;
+      if (refreshing) {
+        expect(completedChecks).toBeGreaterThan(0);
+        storeState.cliStatus = {
+          ...storeState.cliStatus,
+          providers: storeState.cliStatus.providers.map((provider) =>
+            provider.providerId === 'anthropic'
+              ? {
+                  ...provider,
+                  modelCatalogRefreshState: 'loading',
+                  modelCatalog: {
+                    ...provider.modelCatalog!,
+                    staleAt: new Date(Date.now() - 1).toISOString(),
+                  },
+                }
+              : provider
+          ),
+        };
         await act(async () => {
-          await new Promise((resolve) => setTimeout(resolve, 0));
+          renderDialog();
           await flush();
         });
+        await settle();
+        expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(completedChecks);
+      }
       const button = Array.from(host.querySelectorAll('button')).find(
         (candidate) => candidate.textContent === `Skip preflight and ${mode}`
       );

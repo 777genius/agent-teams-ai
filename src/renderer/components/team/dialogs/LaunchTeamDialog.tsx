@@ -2240,7 +2240,9 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       selectedMemberProviders,
       runtimeProviderStatusById,
       runtimeProviderLoadingById,
-      prepareChecksRef.current
+      prepareChecksRef.current,
+      Date.now(),
+      loadingCliStatus?.providers
     );
   const rejectProviderLaunch = () => setLocalError(t('launch.prepare.failed'));
   const showCodexReconnectPrompt = shouldShowCodexReconnectPrompt({
@@ -2476,9 +2478,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       teammateRuntimeCompatibility.blocksSubmission
     : isSubmitting || validationErrors.length > 0 || !!modelValidationError;
   const dialogTitle = isLaunchMode
-    ? isRelaunch
-      ? t('launch.title.relaunch')
-      : t('launch.title.launch')
+    ? t(isRelaunch ? 'launch.title.relaunch' : 'launch.title.launch')
     : isEditing
       ? t('launch.title.editSchedule')
       : t('launch.title.createSchedule');

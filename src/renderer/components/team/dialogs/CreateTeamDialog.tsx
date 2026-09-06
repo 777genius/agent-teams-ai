@@ -2027,7 +2027,9 @@ export const CreateTeamDialog = ({
       selectedMemberProviders,
       runtimeProviderStatusById,
       runtimeProviderLoadingById,
-      prepareChecksRef.current
+      prepareChecksRef.current,
+      Date.now(),
+      loadingCliStatus?.providers
     );
   const hasCreateFormErrors =
     !!teamNameInlineError ||

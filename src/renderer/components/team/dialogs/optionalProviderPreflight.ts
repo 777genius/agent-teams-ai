@@ -123,8 +123,53 @@ export function canSkipProviderPreflight(
   statuses: ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>,
   loading: ReadonlyMap<TeamProviderId, boolean>,
   checks: readonly ProvisioningProviderCheck[],
-  now: number = Date.now()
+  now: number = Date.now(),
+  sourceProviders: readonly CliProviderStatus[] = []
 ): boolean {
+  const source = sourceProviders.find((provider) => provider.providerId === 'anthropic');
+  const effective = statuses.get('anthropic');
+  // The renderer gates teamLaunch on catalog freshness. Only the original
+  // runtime capability can distinguish that gate from an unsupported runtime.
+  const refreshingAnthropic =
+    state !== 'failed' &&
+    providerIds.includes('anthropic') &&
+    source?.capabilities.teamLaunch === true &&
+    [source, effective].every(
+      (provider) =>
+        provider?.supported === true &&
+        provider.authenticated === true &&
+        provider.verificationState === 'verified' &&
+        provider.statusCheckOutcome === 'authoritative' &&
+        provider.statusCheckErrorCode == null &&
+        provider.modelCatalogRefreshState === 'loading' &&
+        provider.modelCatalog?.providerId === 'anthropic' &&
+        ['ready', 'stale'].includes(provider.modelCatalog.status)
+    );
+  if (refreshingAnthropic) {
+    if (checks.some((check) => providerIds.includes(check.providerId) && check.status === 'failed'))
+      return false;
+    if (
+      providerIds.some(
+        (id) => id !== 'anthropic' && !hasEffectiveProviderLaunchAuthority(statuses.get(id), now)
+      )
+    )
+      return false;
+    const refreshStatuses = new Map(statuses).set('anthropic', source);
+    const refreshLoading = new Map(loading).set('anthropic', true);
+    if (state === 'idle')
+      return canSkipPendingProviderDiscovery(providerIds, refreshStatuses, refreshLoading, now);
+    // A passive refresh does not invalidate or repeat the completed deep check.
+    // Treat it as pending only for this optional-skip decision.
+    return canSkipOptionalProviderPreflight(
+      providerIds,
+      refreshStatuses,
+      refreshLoading,
+      checks.map((check) =>
+        check.providerId === 'anthropic' ? { ...check, status: 'checking' } : check
+      ),
+      now
+    );
+  }
   if (state === 'idle') {
     return canSkipPendingProviderDiscovery(providerIds, statuses, loading, now);
   }
