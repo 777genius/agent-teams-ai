@@ -113,6 +113,7 @@ vi.mock('@renderer/api', () => ({
       ),
     },
     teams: {
+      createConfig: vi.fn(async () => {}),
       getSavedRequest: vi.fn(async () => null),
       replaceMembers: vi.fn(async () => {}),
       prepareProvisioning: vi.fn(async () => ({})),
@@ -4418,6 +4419,83 @@ describe('LaunchTeamDialog', () => {
       root.unmount();
       await flush();
     });
+  });
+
+  it('clears completed create preflight while selection is unresolved but permits create without launch', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    const onCreate = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(CreateTeamDialog, {
+          open: true,
+          canCreate: true,
+          provisioningErrorsByTeam: {},
+          clearProvisioningError: vi.fn(),
+          existingTeamNames: [],
+          provisioningTeamNames: [],
+          activeTeams: [],
+          defaultProjectPath: '/tmp/project',
+          onClose: vi.fn(),
+          onCreate,
+          onOpenTeam: vi.fn(),
+        })
+      );
+    const settle = async () => {
+      for (let attempt = 0; attempt < 4; attempt++)
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(100);
+          await flush();
+        });
+    };
+    const submit = () => host.querySelector<HTMLButtonElement>('button.min-w-32')!;
+    await act(async () => {
+      render();
+      await flush();
+    });
+    await settle();
+    expect(submit()).not.toBeNull();
+    expect(submit().disabled).toBe(false);
+    expect(host.textContent).toContain('All selected providers are ready.');
+    createTeamDraftMock.state.selectedProjectPath = '/tmp/unresolved-project';
+    await act(async () => {
+      render();
+      await flush();
+    });
+    expect(submit().disabled).toBe(true);
+    expect(host.textContent).not.toContain('All selected providers are ready.');
+    await act(async () => {
+      submit().click();
+      await flush();
+    });
+    expect(onCreate).not.toHaveBeenCalled();
+    createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
+    await act(async () => {
+      render();
+      await flush();
+    });
+    await settle();
+    expect(submit().disabled).toBe(false);
+    expect(host.textContent).toContain('All selected providers are ready.');
+    createTeamDraftMock.state.selectedProjectPath = '';
+    createTeamDraftMock.state.launchTeam = false;
+    await act(async () => {
+      render();
+      await flush();
+    });
+    expect(submit().disabled).toBe(false);
+    await act(async () => {
+      submit().click();
+      await flush();
+    });
+    expect(api.teams.createConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: undefined })
+    );
+    expect(onCreate).not.toHaveBeenCalled();
+    await act(async () => root.unmount());
   });
 
   it.each(['project', 'custom'] as const)(

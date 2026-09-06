@@ -1170,6 +1170,13 @@ export const CreateTeamDialog = ({
       pendingPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
       prepareWarningsByProviderIdRef.current.clear();
+      if (!launchPreflightSelectionReady && prepareState !== 'idle') {
+        setPrepareState('idle');
+        setPrepareMessage(null);
+        setPrepareWarnings([]);
+        setPrepareChecks([]);
+        setAllowExperimentalLocalModels(false);
+      }
       return;
     }
 
@@ -1184,20 +1191,6 @@ export const CreateTeamDialog = ({
       setPrepareWarnings([]);
       setPrepareChecks([]);
       setPrepareMessage(t('create.prepare.unsupportedPreload'));
-      return;
-    }
-
-    if (!effectiveCwd) {
-      cancelScheduledIdleSet(prepareIdleHandlesRef.current);
-      prepareRequestSeqRef.current += 1;
-      lastPrepareProviderSignatureByIdRef.current.clear();
-      pendingPrepareProviderSignatureByIdRef.current.clear();
-      prepareProviderRequestSeqByIdRef.current.clear();
-      prepareWarningsByProviderIdRef.current.clear();
-      setPrepareState('idle');
-      setPrepareWarnings([]);
-      setPrepareChecks([]);
-      setPrepareMessage(t('create.prepare.selectWorkingDirectory'));
       return;
     }
 
@@ -2222,6 +2215,7 @@ export const CreateTeamDialog = ({
 
   const handleSubmit = (): void => {
     if (!canCreate || !draftLoaded) return;
+    if (launchTeam && !launchPreflightSelectionReady) return;
     if (submissionFence.busy || isSubmitting) return;
     if (prepareState === 'loading' && !canSkipPreflight()) return;
     if (allTakenTeamNames.includes(sanitizedTeamName)) {
@@ -3133,6 +3127,7 @@ export const CreateTeamDialog = ({
                   !canCreate ||
                   !draftLoaded ||
                   isSubmitting ||
+                  (launchTeam && !launchPreflightSelectionReady) ||
                   (prepareState === 'loading' && !canSkipPreflight()) ||
                   hasCreateFormErrors ||
                   prepareBlocksCreate
