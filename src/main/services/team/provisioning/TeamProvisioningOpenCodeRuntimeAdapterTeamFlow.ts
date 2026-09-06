@@ -2,6 +2,7 @@ import {
   isPureOpenCodeMemberLanePlan,
   type TeamRuntimeLanePlan,
 } from '@features/team-runtime-lanes';
+import { isLeadMember } from '@shared/utils/leadDetection';
 import * as path from 'path';
 
 import { buildMembersMetaWritePayload } from './TeamProvisioningConfigLaunchNormalization';
@@ -19,6 +20,64 @@ import type {
   TeamProvisioningProgress,
   TeamTask,
 } from '@shared/types';
+
+type PureOpenCodeMemberLanePlan = Extract<
+  TeamRuntimeLanePlan,
+  { mode: 'pure_opencode_member_lanes' }
+>;
+
+/**
+ * Puts the lead on the primary lane of an aggregate launch.
+ *
+ * The lane planner works on the TEAMMATE roster: `isLeadMember` is filtered out
+ * of it during normalization, so no plan it produces ever names a lead. The
+ * lead is synthesized back in exactly one place - `buildOpenCodeRuntimeAdapterLaunchMembers`,
+ * whose result is `runtimeLaunchMembers` - and that result used to reach only
+ * the non-aggregate path.
+ *
+ * So on this path no launch command was ever sent for the lead. `config.json`
+ * recorded it regardless, which is why every later message to the lead was
+ * answered with "No stored OpenCode session record": the app was addressing a
+ * member nobody had launched. When every teammate qualified for a side lane the
+ * effect was total - `primaryMembers` came out empty and
+ * `launchOpenCodeAggregatePrimaryLane` returned at its first line without
+ * sending anything at all.
+ *
+ * The plan is adjusted here rather than in the planner because the planner's
+ * contract - "these are the teammates, and this is where they run" - holds for
+ * all five of its modes, and only this one path needs the lead materialized
+ * into a roster. The lead is taken from `runtimeLaunchMembers` so both paths
+ * keep a single source of truth for what a lead is.
+ */
+function withLeadOnPrimaryLane(
+  lanePlan: PureOpenCodeMemberLanePlan,
+  runtimeLaunchMembers: TeamCreateRequest['members']
+): PureOpenCodeMemberLanePlan {
+  if (lanePlan.primaryMembers.some((member) => isLeadMember(member))) {
+    return lanePlan;
+  }
+  const lead = runtimeLaunchMembers.find((member) => isLeadMember(member));
+  if (!lead) {
+    return lanePlan;
+  }
+  return {
+    ...lanePlan,
+    primaryMembers: [lead, ...lanePlan.primaryMembers],
+    allMembers: [lead, ...lanePlan.allMembers],
+  } as PureOpenCodeMemberLanePlan;
+}
+
+/** The same lead, in the roster the flow hands along beside the plan. */
+function withLeadInRoster(
+  members: TeamCreateRequest['members'],
+  runtimeLaunchMembers: TeamCreateRequest['members']
+): TeamCreateRequest['members'] {
+  if (members.some((member) => isLeadMember(member))) {
+    return members;
+  }
+  const lead = runtimeLaunchMembers.find((member) => isLeadMember(member));
+  return lead ? [lead, ...members] : members;
+}
 
 export interface OpenCodeRuntimeAdapterTeamFlowPorts {
   getTeamsBasePathsToProbe(): { location: TeamsBaseLocation; basePath: string }[];
@@ -124,8 +183,8 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
   if (isPureOpenCodeMemberLanePlan(lanePlan)) {
     return ports.runOpenCodeWorktreeRootAggregateLaunch({
       request: launchRequest,
-      members: effectiveMembers,
-      lanePlan,
+      members: withLeadInRoster(effectiveMembers, runtimeLaunchMembers),
+      lanePlan: withLeadOnPrimaryLane(lanePlan, runtimeLaunchMembers),
       prompt,
       sourceWarning: undefined,
       onProgress,
@@ -180,8 +239,8 @@ export async function launchOpenCodeTeamThroughRuntimeAdapterFlow(
   if (isPureOpenCodeMemberLanePlan(lanePlan)) {
     return ports.runOpenCodeWorktreeRootAggregateLaunch({
       request: launchRequest,
-      members: effectiveMembers,
-      lanePlan,
+      members: withLeadInRoster(effectiveMembers, runtimeLaunchMembers),
+      lanePlan: withLeadOnPrimaryLane(lanePlan, runtimeLaunchMembers),
       prompt,
       sourceWarning: warning,
       onProgress,
