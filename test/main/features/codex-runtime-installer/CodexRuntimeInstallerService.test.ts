@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { gzipSync } from 'zlib';
 
 const execCliMock = vi.hoisted(() => vi.fn());
+const managedProbeWarningMock = vi.hoisted(() => vi.fn());
 const buildMergedCliPathMock = vi.hoisted(() => vi.fn(() => process.env.PATH ?? ''));
 const getCachedShellEnvMock = vi.hoisted(() => vi.fn<() => NodeJS.ProcessEnv | null>(() => null));
 const resolveInteractiveShellEnvBestEffortMock = vi.hoisted(() =>
@@ -14,6 +15,14 @@ const resolveInteractiveShellEnvBestEffortMock = vi.hoisted(() =>
 
 vi.mock('@main/utils/childProcess', () => ({
   execCli: execCliMock,
+}));
+vi.mock('@shared/utils/logger', () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: managedProbeWarningMock,
+    error: vi.fn(),
+  }),
 }));
 vi.mock('@main/utils/cliPathMerge', () => ({
   buildMergedCliPath: buildMergedCliPathMock,
@@ -78,6 +87,7 @@ describe('CodexRuntimeInstallerService resolver', () => {
     tempRoot = await mkdtemp(path.join(os.tmpdir(), 'codex-runtime-resolver-'));
     setAppDataBasePath(tempRoot);
     execCliMock.mockReset();
+    managedProbeWarningMock.mockReset();
     execCliMock.mockResolvedValue({ stdout: 'codex-cli 1.0.0\n', stderr: '' });
     buildMergedCliPathMock.mockReset();
     buildMergedCliPathMock.mockImplementation(() => process.env.PATH ?? '');
@@ -189,6 +199,130 @@ describe('CodexRuntimeInstallerService resolver', () => {
     execCliMock.mockRejectedValueOnce(new Error('broken binary'));
 
     await expect(resolveVerifiedAppManagedCodexRuntimeBinaryPath()).resolves.toBeNull();
+  });
+
+  describe.each(['status', 'resolver'] as const)('managed probe recovery via %s', (consumer) => {
+    let binaryPath: string;
+    let pathBinary: string;
+
+    beforeEach(async () => {
+      const runtimeRoot = path.join(tempRoot!, 'data', 'runtimes', 'codex');
+      const pathBinDir = path.join(tempRoot!, 'path-bin');
+      const executableName = process.platform === 'win32' ? 'codex.exe' : 'codex';
+      binaryPath = path.join(runtimeRoot, executableName);
+      pathBinary = path.join(pathBinDir, executableName);
+      await mkdir(runtimeRoot, { recursive: true });
+      await mkdir(pathBinDir, { recursive: true });
+      await writeFile(binaryPath, 'managed fixture', { mode: 0o755 });
+      await writeFile(pathBinary, 'PATH fixture', { mode: 0o755 });
+      await writeFile(
+        path.join(runtimeRoot, 'current.json'),
+        JSON.stringify({
+          schemaVersion: 1,
+          rootVersion: '1.0.0',
+          platformVersion: '1.0.0-darwin-arm64',
+          platformTarget: 'aarch64-apple-darwin',
+          binaryPath,
+          integrity: 'sha512-test',
+          installedAt: '2026-05-13T00:00:00.000Z',
+        })
+      );
+      process.env.PATH = pathBinDir;
+      buildMergedCliPathMock.mockReturnValue(pathBinDir);
+    });
+
+    const runProbe = () =>
+      consumer === 'status'
+        ? createCodexRuntimeInstallerFeature({
+            resolveLatestVersion: async () => '1.0.0',
+          }).getStatus()
+        : resolveVerifiedAppManagedCodexRuntimeBinaryPath();
+
+    const expectFinalFailureFallback = async () => {
+      const result = await runProbe();
+      if (consumer === 'status') {
+        expect(result).toMatchObject({ installed: true, source: 'path', binaryPath: pathBinary });
+      } else {
+        expect(result).toBeNull();
+      }
+    };
+
+    const timeoutError = () =>
+      Object.assign(new Error(`Command timed out after 10000ms: ${binaryPath} --version`), {
+        killed: true,
+        signal: 'SIGTERM',
+        stdout: 'secret stdout',
+        stderr: 'secret stderr',
+      });
+
+    it.each(['execCli', 'ETIMEDOUT'])(
+      'retries one %s timeout and retains managed Codex',
+      async (kind) => {
+        const error =
+          kind === 'execCli'
+            ? timeoutError()
+            : Object.assign(new Error('secret error output'), { code: 'ETIMEDOUT' });
+        execCliMock.mockRejectedValueOnce(error);
+
+        const result = await runProbe();
+
+        if (consumer === 'status') {
+          expect(result).toMatchObject({
+            installed: true,
+            source: 'app-managed',
+            binaryPath,
+            state: 'ready',
+          });
+        } else {
+          expect(result).toBe(binaryPath);
+        }
+        expect(execCliMock).toHaveBeenCalledTimes(2);
+        expect(execCliMock).toHaveBeenNthCalledWith(2, binaryPath, ['--version'], {
+          timeout: 10_000,
+          windowsHide: true,
+        });
+        expect(managedProbeWarningMock).toHaveBeenCalledWith(
+          'Managed Codex version probe failed',
+          expect.objectContaining({ binaryPath, attempt: 1, timedOut: true, retrying: true })
+        );
+        expect(JSON.stringify(managedProbeWarningMock.mock.calls)).not.toContain('secret');
+      }
+    );
+
+    it('stops after two timeouts and preserves the existing final-failure fallback', async () => {
+      execCliMock.mockRejectedValueOnce(timeoutError()).mockRejectedValueOnce(timeoutError());
+
+      await expectFinalFailureFallback();
+
+      expect(execCliMock.mock.calls.filter(([candidate]) => candidate === binaryPath)).toHaveLength(
+        2
+      );
+      expect(managedProbeWarningMock).toHaveBeenCalledTimes(2);
+      expect(managedProbeWarningMock).toHaveBeenLastCalledWith(
+        'Managed Codex version probe failed',
+        expect.objectContaining({ attempt: 2, timedOut: true, retrying: false })
+      );
+    });
+
+    it.each(['ENOENT', 'ENOEXEC', 1, 'ABORT_ERR'])(
+      'does not retry a hard failure with code %s',
+      async (code) => {
+        execCliMock.mockRejectedValueOnce(
+          Object.assign(new Error('secret error output'), { code, killed: true, signal: 'SIGTERM' })
+        );
+
+        await expectFinalFailureFallback();
+
+        expect(
+          execCliMock.mock.calls.filter(([candidate]) => candidate === binaryPath)
+        ).toHaveLength(1);
+        expect(managedProbeWarningMock).toHaveBeenCalledWith(
+          'Managed Codex version probe failed',
+          expect.objectContaining({ code, attempt: 1, timedOut: false, retrying: false })
+        );
+        expect(JSON.stringify(managedProbeWarningMock.mock.calls)).not.toContain('secret');
+      }
+    );
   });
 
   it('detects a PATH Codex binary from best-effort shell env when process PATH is cold', async () => {
