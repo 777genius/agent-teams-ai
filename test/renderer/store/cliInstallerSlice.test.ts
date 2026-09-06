@@ -252,7 +252,9 @@ describe('cliInstallerSlice', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    // Clear module-owned watchdog handles before replacing their timer clock.
+    await useStore.getState().invalidateCliStatus();
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -2803,8 +2805,9 @@ describe('cliInstallerSlice', () => {
           ?.modelCatalogRefreshState
       ).toBe('loading');
 
-      await vi.runOnlyPendingTimersAsync();
-
+      await vi.advanceTimersByTimeAsync(4_999);
+      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
       expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
       expect(
         useStore.getState().cliStatus?.providers.find((provider) => provider.providerId === 'codex')

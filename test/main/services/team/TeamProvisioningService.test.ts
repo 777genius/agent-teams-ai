@@ -308,6 +308,7 @@ import {
   stubProvisioningConfigProjectPath,
   verificationProbePortsHarness,
 } from './provisioningHarness';
+import { registerActiveProvisioningRun } from './provisioningHarness/servicePrivateHarness';
 
 import type { TeamProvisioningConfigFacade } from '@main/services/team/provisioning/TeamProvisioningConfigFacade';
 import type { OpenCodeTeamRuntimeMessageResult } from '@main/services/team/runtime';
@@ -8218,6 +8219,7 @@ describe('TeamProvisioningService', () => {
         },
       ];
 
+      registerActiveProvisioningRun(svc, run);
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await run.mixedSecondaryLaneLaunchQueue;
 
@@ -14381,6 +14383,7 @@ describe('TeamProvisioningService', () => {
         'utf8'
       );
 
+      registerActiveProvisioningRun(svc, run);
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await vi.waitFor(
         async () => {
@@ -14499,6 +14502,7 @@ describe('TeamProvisioningService', () => {
         },
       ];
 
+      registerActiveProvisioningRun(svc, run);
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await vi.waitFor(
         async () => {
@@ -14612,6 +14616,7 @@ describe('TeamProvisioningService', () => {
         },
       ];
 
+      registerActiveProvisioningRun(svc, run);
       await (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await vi.waitFor(
         async () => {
@@ -14755,6 +14760,7 @@ describe('TeamProvisioningService', () => {
         },
       ];
 
+      registerActiveProvisioningRun(svc, run);
       const resultPromise = (svc as any).launchMixedSecondaryLaneIfNeeded(run);
       await Promise.resolve();
       await Promise.resolve();
