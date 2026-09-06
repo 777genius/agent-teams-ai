@@ -46,6 +46,7 @@ import {
   type TeamRuntimeLaunchArgsPlan,
   type TeamRuntimeLaunchArgsPlanEnvResolutionLike,
 } from './TeamProvisioningRuntimeLaunchSelection';
+import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
 
 import type { RuntimeLaunchLogger } from './TeamProvisioningRuntimeDiagnostics';
 import type {
@@ -380,66 +381,79 @@ export function registerDeterministicLaunchChildHandlers<
   >
 ): void {
   const { run, child } = input;
-  run.timeoutHandle = ports.setTimeout(() => {
-    if (!run.processKilled && !run.provisioningComplete && run.child === child) {
-      run.finalizingByTimeout = true;
-      void (async () => {
-        const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
-        if (readyOnTimeout) {
-          return;
-        }
-        if (
-          run.provisioningComplete ||
-          run.cancelRequested ||
-          run.processKilled ||
-          run.child !== child
-        ) {
-          run.finalizingByTimeout = false;
-          return;
-        }
+  scheduleProvisioningRunTimeout(
+    run,
+    getProvisioningRunTimeoutMs(run),
+    () => {
+      if (!run.processKilled && !run.provisioningComplete && run.child === child) {
+        run.finalizingByTimeout = true;
+        void (async () => {
+          if (
+            run.provisioningComplete ||
+            run.cancelRequested ||
+            run.processKilled ||
+            run.processClosed ||
+            run.child !== child
+          ) {
+            run.finalizingByTimeout = false;
+            return;
+          }
 
-        run.processKilled = true;
-        try {
-          await ports.killTeamProcessAndWait(child);
-        } catch {
-          run.finalizingByTimeout = false;
+          run.processKilled = true;
+          try {
+            await ports.killTeamProcessAndWait(child);
+          } catch {
+            if (run.cancelRequested || run.child !== child) return;
+            run.finalizingByTimeout = false;
+            const progress = ports.updateProgress(
+              run,
+              'failed',
+              'Failed to confirm timed-out CLI termination (launch)',
+              {
+                error:
+                  'Timed out waiting for CLI during team launch, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
+                cliLogsTail: extractCliLogsFromRun(run),
+              }
+            );
+            run.onProgress(progress);
+            return;
+          }
+          if (run.cancelRequested || run.child !== child) return;
+          run.processClosed = true;
+          if (!(await cleanupAnthropicHelperIfPresent(run, ports))) {
+            run.finalizingByTimeout = false;
+            const cleanupProgress = ports.updateProgress(
+              run,
+              'failed',
+              'Timed-out launch stopped; helper cleanup will be retried',
+              {
+                error:
+                  'The owned process tree stopped, but app-managed authentication material could not be removed. The run remains tracked so cleanup can be retried.',
+                cliLogsTail: extractCliLogsFromRun(run),
+              }
+            );
+            run.onProgress(cleanupProgress);
+            return;
+          }
+          if (run.cancelRequested || run.child !== child) return;
+          if (await ports.tryCompleteAfterTimeout(run).catch(() => false)) return;
+          if (run.cancelRequested || run.child !== child) return;
           const progress = ports.updateProgress(
             run,
             'failed',
-            'Failed to confirm timed-out CLI termination (launch)',
+            'Timed out waiting for CLI (launch)',
             {
-              error:
-                'Timed out waiting for CLI during team launch, and the app could not confirm that the owned process tree stopped. The run remains tracked so termination can be retried.',
+              error: 'Timed out waiting for CLI during team launch.',
               cliLogsTail: extractCliLogsFromRun(run),
             }
           );
           run.onProgress(progress);
-          return;
-        }
-        const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI (launch)', {
-          error: 'Timed out waiting for CLI during team launch.',
-          cliLogsTail: extractCliLogsFromRun(run),
-        });
-        run.onProgress(progress);
-        if (!(await cleanupAnthropicHelperIfPresent(run, ports))) {
-          run.finalizingByTimeout = false;
-          const cleanupProgress = ports.updateProgress(
-            run,
-            'failed',
-            'Timed-out launch stopped; helper cleanup will be retried',
-            {
-              error:
-                'The owned process tree stopped, but app-managed authentication material could not be removed. The run remains tracked so cleanup can be retried.',
-              cliLogsTail: extractCliLogsFromRun(run),
-            }
-          );
-          run.onProgress(cleanupProgress);
-          return;
-        }
-        ports.cleanupRun(run);
-      })();
-    }
-  }, getProvisioningRunTimeoutMs(run));
+          ports.cleanupRun(run);
+        })();
+      }
+    },
+    ports
+  );
 
   child.once('error', (error: Error) => {
     const progress = ports.updateProgress(run, 'failed', 'Failed to start Claude CLI (launch)', {

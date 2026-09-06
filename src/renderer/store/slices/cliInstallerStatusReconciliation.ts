@@ -1,7 +1,7 @@
 import {
-  hasAnthropicCatalogRefreshLaunchSupport,
   hasAuthoritativeProviderLaunchEvidence,
   hasAuthoritativeProviderStatusEvidence,
+  hasProviderCatalogRefreshLaunchSupport,
   isProviderModelCatalogExactReady,
   selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
@@ -55,7 +55,7 @@ function mergeProviderCatalogCache(
     incomingProvider.statusCheckErrorCode === 'partial_response';
   return {
     ...incomingProvider,
-    teamLaunchAuthorityRestriction: hasAnthropicCatalogRefreshLaunchSupport(incomingProvider)
+    teamLaunchAuthorityRestriction: hasProviderCatalogRefreshLaunchSupport(incomingProvider)
       ? incomingProvider.teamLaunchAuthorityRestriction
       : undefined,
     supported: incomingProvider.supported,
@@ -102,7 +102,7 @@ export function revokeProviderLaunchAuthority(provider: CliProviderStatus): CliP
   const hasAuthoritativeStatusEvidence = hasAuthoritativeProviderStatusEvidence(provider);
   return {
     ...provider,
-    teamLaunchAuthorityRestriction: hasAnthropicCatalogRefreshLaunchSupport(provider)
+    teamLaunchAuthorityRestriction: hasProviderCatalogRefreshLaunchSupport(provider)
       ? provider.teamLaunchAuthorityRestriction
       : undefined,
     authenticated: hasAuthoritativeStatusEvidence ? provider.authenticated : false,
