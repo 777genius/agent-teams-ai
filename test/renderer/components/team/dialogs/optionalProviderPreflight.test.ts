@@ -141,26 +141,26 @@ describe('optional provider preflight skip', () => {
       )
     ).toBe(false);
   });
-  it.each([
-    { authenticated: false },
-    { statusCheckErrorCode: 'unavailable' as const },
-  ])('rejects effective Codex failure despite valid source refresh provenance: %j', (override) => {
-    const source = refreshingCodex();
-    source.capabilities.teamLaunch = false;
-    source.teamLaunchAuthorityRestriction = 'catalog-refresh';
-    const effective = { ...source, ...override };
-    expect(
-      canSkipProviderPreflight(
-        'ready',
-        ['codex'],
-        new Map([['codex', effective]]),
-        new Map(),
-        [check('codex', 'ready')],
-        NOW,
-        [source]
-      )
-    ).toBe(false);
-  });
+  it.each([{ authenticated: false }, { statusCheckErrorCode: 'unavailable' as const }])(
+    'rejects effective Codex failure despite valid source refresh provenance: %j',
+    (override) => {
+      const source = refreshingCodex();
+      source.capabilities.teamLaunch = false;
+      source.teamLaunchAuthorityRestriction = 'catalog-refresh';
+      const effective = { ...source, ...override };
+      expect(
+        canSkipProviderPreflight(
+          'ready',
+          ['codex'],
+          new Map([['codex', effective]]),
+          new Map(),
+          [check('codex', 'ready')],
+          NOW,
+          [source]
+        )
+      ).toBe(false);
+    }
+  );
   it('allows both authenticated native providers to refresh simultaneously', () => {
     const { source: anthropic, statuses, checks } = refreshingAnthropicSelection();
     const codex = refreshingCodex('missing');
@@ -445,8 +445,10 @@ describe('optional provider preflight skip', () => {
             {
               ...provider('opencode'),
               authenticated: false,
+              verificationState: 'error',
               statusCheckOutcome: 'transient_error' as const,
               statusCheckErrorCode: 'timeout',
+              capabilities: { ...provider('opencode').capabilities, teamLaunch: false },
               modelCatalog: null,
             },
           ],
@@ -456,6 +458,52 @@ describe('optional provider preflight skip', () => {
       )
     ).toBe(true);
   });
+  it.each(['timeout', 'partial_response'] as const)(
+    'allows an optional retry after %s without treating discovery as launch authority',
+    (statusCheckErrorCode) => {
+      const status: CliProviderStatus = {
+        ...provider('opencode'),
+        authenticated: false,
+        verificationState: 'error',
+        statusCheckOutcome: 'transient_error',
+        statusCheckErrorCode,
+        capabilities: { ...provider('opencode').capabilities, teamLaunch: false },
+        modelCatalogRefreshState: 'error',
+      };
+      const statuses = new Map<TeamProviderId, CliProviderStatus>([['opencode', status]]);
+      expect(
+        canSkipProviderPreflight(
+          'loading',
+          ['opencode'],
+          statuses,
+          new Map(),
+          [check('opencode', 'checking')],
+          NOW
+        )
+      ).toBe(true);
+      expect(hasEffectiveProviderLaunchAuthority(status, NOW)).toBe(false);
+      expect(
+        canSkipProviderPreflight(
+          'loading',
+          ['opencode'],
+          statuses,
+          new Map(),
+          [check('opencode', 'failed')],
+          NOW
+        )
+      ).toBe(false);
+      expect(
+        canSkipProviderPreflight(
+          'failed',
+          ['opencode'],
+          statuses,
+          new Map(),
+          [check('opencode', 'checking')],
+          NOW
+        )
+      ).toBe(false);
+    }
+  );
   it('does not label an already ready selection as skippable', () => {
     expect(
       canSkipPendingProviderDiscovery(
