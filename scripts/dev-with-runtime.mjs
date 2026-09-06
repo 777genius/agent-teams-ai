@@ -14,6 +14,7 @@ import { formatGitHubReleaseDownloadError } from './lib/github-release-download-
 import { ensureMinimumNodeOldSpaceEnv } from './lib/node-options.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
 import {
+  formatRuntimeVersionForDisplay,
   getExpectedRuntimeCliVersion,
   matchesRuntimeCliVersion,
 } from './lib/runtime-cli-version.mjs';
@@ -33,7 +34,6 @@ const runtimeCacheRoot = process.env.CLAUDE_DEV_RUNTIME_CACHE_ROOT?.trim()
 const scriptArgs = process.argv.slice(2);
 const shouldPrintRuntimePath = scriptArgs.includes('--print-runtime-path');
 const electronViteArgs = scriptArgs.filter((arg) => arg !== '--print-runtime-path' && arg !== '--');
-const runtimeDisplayName = 'teams orchestrator';
 const remoteDebuggingPortArg = '--remoteDebuggingPort';
 const terminalPlatformRootEnv = 'CLAUDE_TERMINAL_PLATFORM_ROOT';
 const legacyTerminalPlatformRootEnv = 'TERMINAL_PLATFORM_ROOT';
@@ -378,16 +378,6 @@ async function resolveElectronViteArgs(args) {
 
 function readBinaryVersion(binaryPath) {
   return runAndCapture(binaryPath, ['--version']);
-}
-
-function formatRuntimeVersionForDisplay(versionText) {
-  const trimmed = versionText.trim();
-  if (!trimmed) {
-    return runtimeDisplayName;
-  }
-
-  const versionOnly = trimmed.replace(/\s*\([^)]*\)\s*$/, '');
-  return `${versionOnly} (${runtimeDisplayName})`;
 }
 
 function isExecutable(filePath) {

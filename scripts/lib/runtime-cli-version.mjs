@@ -1,5 +1,12 @@
 const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u;
 
+export function formatRuntimeVersionForDisplay(versionText) {
+  const trimmed = versionText.trim();
+  if (!trimmed) return 'teams orchestrator';
+  const versionOnly = trimmed.replace(/\s*\([^)]*\)\s*$/, '');
+  return `${versionOnly} (teams orchestrator)`;
+}
+
 /**
  * Release identity remains lock.version plus the pinned archive checksum.
  * --version may report a separate Claude compatibility version.

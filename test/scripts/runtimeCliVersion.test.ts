@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 interface RuntimeCliVersionModule {
+  formatRuntimeVersionForDisplay(output: string): string;
   getExpectedRuntimeCliVersion(lock: { version: string; cliVersion?: unknown }): string;
   matchesRuntimeCliVersion(output: unknown, expectedVersion: string): boolean;
 }
@@ -16,6 +17,14 @@ async function loadModule(): Promise<RuntimeCliVersionModule> {
 }
 
 describe('runtime CLI version contract', () => {
+  it('displays the compatibility version with the orchestrator label', async () => {
+    const { formatRuntimeVersionForDisplay } = await loadModule();
+    expect(formatRuntimeVersionForDisplay('2.1.251 (Claude Code)\n')).toBe(
+      '2.1.251 (teams orchestrator)'
+    );
+    expect(formatRuntimeVersionForDisplay('')).toBe('teams orchestrator');
+  });
+
   it('accepts a pinned compatibility version that differs from the release identity', async () => {
     const { getExpectedRuntimeCliVersion, matchesRuntimeCliVersion } = await loadModule();
     const lock = { version: '0.0.79', cliVersion: '2.1.251' };
