@@ -80,12 +80,12 @@ function providerStatus(overrides: Partial<CliProviderStatus> = {}): CliProvider
   };
 }
 
-describe('Anthropic catalog refresh restriction provenance', () => {
+describe.each(['anthropic', 'codex'] as const)('%s refresh provenance', (providerId) => {
   const refresh = () =>
     providerStatus({
-      providerId: 'anthropic',
+      providerId,
       modelCatalogRefreshState: 'loading',
-      modelCatalog: { ...providerStatus().modelCatalog!, providerId: 'anthropic' },
+      modelCatalog: { ...providerStatus().modelCatalog!, providerId },
     });
   it('records affirmative support before catalog gating and preserves repeat sanitization', () => {
     const first = sanitizeProviderStatusAuthority(refresh());
@@ -107,6 +107,22 @@ describe('Anthropic catalog refresh restriction provenance', () => {
         .teamLaunchAuthorityRestriction
     ).toBeUndefined();
   });
+  it.each(['missing', 'stale'] as const)(
+    'preserves provenance with a %s catalog without granting launch authority',
+    (catalogState) => {
+      const source = refresh();
+      source.modelCatalog =
+        catalogState === 'missing' ? null : { ...source.modelCatalog!, status: 'stale' };
+      const sanitized = sanitizeProviderStatusAuthority(source);
+      expect(sanitized).toMatchObject({
+        authenticated: true,
+        capabilities: { teamLaunch: false },
+        teamLaunchAuthorityRestriction: 'catalog-refresh',
+        modelCatalogRefreshState: 'loading',
+      });
+      expect(isProviderModelCatalogExactReady(sanitized)).toBe(false);
+    }
+  );
   it.each([
     { authenticated: false },
     { supported: false },

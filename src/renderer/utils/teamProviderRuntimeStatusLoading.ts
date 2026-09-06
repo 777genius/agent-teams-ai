@@ -81,7 +81,7 @@ export function isTeamProviderRuntimeStatusLoading(
   }
 
   if (
-    providerId === 'anthropic' &&
+    (providerId === 'anthropic' || providerId === 'codex') &&
     providerStatus?.supported &&
     providerStatus.authenticated &&
     providerStatus.verificationState === 'verified' &&

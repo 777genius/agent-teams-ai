@@ -1,7 +1,7 @@
 import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
 import {
-  hasAnthropicCatalogRefreshLaunchSupport,
-  isAuthenticatedAnthropicCatalogRefresh,
+  hasProviderCatalogRefreshLaunchSupport,
+  isAuthenticatedProviderCatalogRefresh,
 } from '@shared/utils/providerStatusAuthority';
 
 import { runProviderPrepareDiagnostics } from './providerPrepareDiagnostics';
@@ -31,7 +31,9 @@ function hasKnownProviderFailure(status: CliProviderStatus | null | undefined): 
     status &&
     (status.statusCheckErrorCode === 'runtime_missing' ||
       status.statusCheckErrorCode === 'unavailable' ||
-      status.verificationState === 'error' ||
+      // A timed-out inventory probe reports verification=error too; it is not
+      // an authoritative auth denial. Only the optional UI check is skippable.
+      (status.verificationState === 'error' && !isProviderAuthorityRetryableDiscovery(status)) ||
       (status.statusCheckOutcome === 'authoritative' &&
         (!status.supported || !status.authenticated || !status.capabilities.teamLaunch)))
   );
@@ -130,22 +132,26 @@ export function canSkipProviderPreflight(
   now: number = Date.now(),
   sourceProviders: readonly CliProviderStatus[] = []
 ): boolean {
-  const source = sourceProviders.find((provider) => provider.providerId === 'anthropic');
-  const effective = statuses.get('anthropic');
   // Main/store may already have gated teamLaunch. The app-derived restriction
   // preserves affirmative support from this snapshot, never a previous one.
-  const refreshingAnthropic =
-    state !== 'failed' &&
-    providerIds.includes('anthropic') &&
-    Boolean(source?.modelCatalog && effective?.modelCatalog) &&
-    hasAnthropicCatalogRefreshLaunchSupport(source) &&
-    isAuthenticatedAnthropicCatalogRefresh(effective);
-  if (refreshingAnthropic) {
+  const refreshingProviders = new Map<TeamProviderId, CliProviderStatus>();
+  if (state !== 'failed') {
+    for (const id of providerIds) {
+      const source = sourceProviders.find((provider) => provider.providerId === id);
+      if (
+        hasProviderCatalogRefreshLaunchSupport(source) &&
+        isAuthenticatedProviderCatalogRefresh(statuses.get(id))
+      ) {
+        refreshingProviders.set(id, source);
+      }
+    }
+  }
+  if (refreshingProviders.size > 0) {
     if (checks.some((check) => providerIds.includes(check.providerId) && check.status === 'failed'))
       return false;
     if (
       providerIds.some((id) => {
-        if (id === 'anthropic') return false;
+        if (refreshingProviders.has(id)) return false;
         const status = statuses.get(id);
         // Completed checks cannot hide stale authority, but active discovery is
         // still optional. Keep catalog errors terminal even during a retry.
@@ -157,11 +163,15 @@ export function canSkipProviderPreflight(
       })
     )
       return false;
-    const refreshStatuses = new Map(statuses).set('anthropic', {
-      ...source,
-      capabilities: { ...source.capabilities, teamLaunch: true },
-    });
-    const refreshLoading = new Map(loading).set('anthropic', true);
+    const refreshStatuses = new Map(statuses);
+    const refreshLoading = new Map(loading);
+    for (const [id, source] of refreshingProviders) {
+      refreshStatuses.set(id, {
+        ...source,
+        capabilities: { ...source.capabilities, teamLaunch: true },
+      });
+      refreshLoading.set(id, true);
+    }
     if (state === 'idle')
       return canSkipPendingProviderDiscovery(providerIds, refreshStatuses, refreshLoading, now);
     // A passive refresh does not invalidate or repeat the completed deep check.
@@ -171,7 +181,7 @@ export function canSkipProviderPreflight(
       refreshStatuses,
       refreshLoading,
       checks.map((check) =>
-        check.providerId === 'anthropic' ? { ...check, status: 'checking' } : check
+        refreshingProviders.has(check.providerId) ? { ...check, status: 'checking' } : check
       ),
       now
     );
