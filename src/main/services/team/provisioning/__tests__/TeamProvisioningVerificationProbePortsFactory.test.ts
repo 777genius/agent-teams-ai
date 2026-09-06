@@ -3,13 +3,16 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  type TeamProvisioningProcessExitRun,
+  tryCompleteAfterTimeout,
+} from '../TeamProvisioningProcessExit';
+import {
   createTeamProvisioningVerificationProbePorts,
   createTeamProvisioningVerificationProbePortsDepsFromService,
   type TeamProvisioningVerificationProbeServiceAdapter,
   type TeamProvisioningVerificationProbeServiceHost,
 } from '../TeamProvisioningVerificationProbePortsFactory';
 
-import type { TeamProvisioningProcessExitRun } from '../TeamProvisioningProcessExit';
 import type { TeamProvisioningProgress } from '@shared/types';
 
 type TestRun = TeamProvisioningProcessExitRun;
@@ -63,6 +66,8 @@ function createRun(overrides: Partial<TestRun> = {}): TestRun {
 
 function createServiceAdapter(overrides: Partial<TestServiceAdapter> = {}): TestServiceAdapter {
   return {
+    isCurrentTrackedRun: vi.fn(() => true),
+    stopMixedSecondaryRuntimeLanes: vi.fn(async () => undefined),
     persistMembersMeta: vi.fn(async () => undefined),
     updateConfigPostLaunch: vi.fn(async () => undefined),
     refreshMemberSpawnStatusesFromLeadInbox: vi.fn(async () => undefined),
@@ -75,6 +80,106 @@ function createServiceAdapter(overrides: Partial<TestServiceAdapter> = {}): Test
 }
 
 describe('TeamProvisioningVerificationProbePortsFactory', () => {
+  function timeoutPorts(service = createServiceAdapter()) {
+    return {
+      ...service,
+      waitForValidConfig: vi.fn(async () => ({
+        ok: true as const,
+        location: 'configured' as const,
+        configPath: '/teams/atlas-hq/config.json',
+      })),
+      waitForTeamInList: vi.fn(async () => true),
+      waitForMissingInboxes: vi.fn(async () => []),
+      updateProgress: vi.fn(
+        (run: TestRun, state: TeamProvisioningProgress['state'], message: string) => {
+          run.progress = { ...run.progress, state, message };
+          return run.progress;
+        }
+      ),
+    };
+  }
+
+  it('never finalizes or releases a live or unconfirmed timed-out process', async () => {
+    const ports = timeoutPorts();
+    await expect(tryCompleteAfterTimeout(createRun(), ports)).resolves.toBe(false);
+    await expect(tryCompleteAfterTimeout(createRun({ processKilled: true }), ports)).resolves.toBe(
+      false
+    );
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.waitForValidConfig).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it('retains the stopped lead while a secondary lane termination needs retry', async () => {
+    const ports = timeoutPorts(
+      createServiceAdapter({
+        stopMixedSecondaryRuntimeLanes: vi.fn(async () => {
+          throw new Error('bridge unavailable');
+        }),
+      })
+    );
+    const run = createRun({ processKilled: true, processClosed: true, finalizingByTimeout: true });
+    await expect(tryCompleteAfterTimeout(run, ports)).resolves.toBe(true);
+    expect(run.progress.state).toBe('failed');
+    expect(run.finalizingByTimeout).toBe(false);
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    expect(ports.waitForValidConfig).not.toHaveBeenCalled();
+  });
+
+  it('does not clean up when cancellation or a replacement wins during verification', async () => {
+    const run = createRun({ processKilled: true, processClosed: true });
+    const ports = timeoutPorts();
+    ports.waitForTeamInList.mockImplementationOnce(async () => {
+      run.child = {};
+      return true;
+    });
+    await expect(tryCompleteAfterTimeout(run, ports)).resolves.toBe(true);
+    expect(ports.updateConfigPostLaunch).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it('never stops successor lanes when the timed-out run is already superseded', async () => {
+    const ports = timeoutPorts(createServiceAdapter({ isCurrentTrackedRun: vi.fn(() => false) }));
+    const run = createRun({ processKilled: true, processClosed: true });
+    await expect(tryCompleteAfterTimeout(run, ports)).resolves.toBe(true);
+    expect(ports.stopMixedSecondaryRuntimeLanes).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'persistMembersMeta',
+    'updateConfigPostLaunch',
+    'refreshMemberSpawnStatusesFromLeadInbox',
+    'maybeAuditMemberSpawnStatuses',
+    'finalizeMissingRegisteredMembersAsFailed',
+    'persistLaunchStateSnapshot',
+  ] as const)('stops finalization when ownership changes during %s', async (operation) => {
+    let current = true;
+    const service = createServiceAdapter({
+      isCurrentTrackedRun: vi.fn(() => current),
+      [operation]: vi.fn(async () => {
+        current = false;
+      }),
+    });
+    const ports = timeoutPorts(service);
+    const run = createRun({ processKilled: true, processClosed: true, isLaunch: false });
+    await expect(tryCompleteAfterTimeout(run, ports)).resolves.toBe(true);
+    expect(service[operation]).toHaveBeenCalledOnce();
+    expect(ports.updateProgress).not.toHaveBeenCalled();
+    expect(ports.cleanupRun).not.toHaveBeenCalled();
+    const calls = [
+      'persistMembersMeta',
+      'updateConfigPostLaunch',
+      'refreshMemberSpawnStatusesFromLeadInbox',
+      'maybeAuditMemberSpawnStatuses',
+      'finalizeMissingRegisteredMembersAsFailed',
+      'persistLaunchStateSnapshot',
+    ] as const;
+    for (const later of calls.slice(calls.indexOf(operation) + 1)) {
+      expect(service[later]).not.toHaveBeenCalled();
+    }
+  });
+
   it('builds verification probe deps from service-shaped dependencies', async () => {
     const serviceAdapter = createServiceAdapter();
     const listTeams = vi.fn(async () => [{ teamName: 'atlas-hq' }]);
@@ -191,7 +296,7 @@ describe('TeamProvisioningVerificationProbePortsFactory', () => {
       sleep: vi.fn(async () => undefined),
       pathExists: vi.fn(async () => true),
     });
-    const run = createRun();
+    const run = createRun({ processKilled: true, processClosed: true });
 
     await expect(ports.tryCompleteAfterTimeout(run)).resolves.toBe(true);
 

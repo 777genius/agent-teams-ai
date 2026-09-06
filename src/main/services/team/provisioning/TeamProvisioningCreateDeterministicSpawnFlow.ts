@@ -43,6 +43,7 @@ import {
   getLaunchModelArg,
   type TeamRuntimeLaunchArgsPlan,
 } from './TeamProvisioningRuntimeLaunchSelection';
+import { scheduleProvisioningRunTimeout } from './TeamProvisioningTimeoutLifecycle';
 
 import type { GeminiRuntimeAuthState } from '../../runtime/geminiRuntimeAuth';
 import type { ProvisioningEnvResolution } from './TeamProvisioningEnvBuilder';
@@ -271,17 +272,11 @@ export async function handleDeterministicCreateSpawnTimeout<
   >,
   timedOutChild = run.child
 ): Promise<void> {
-  const readyOnTimeout = await ports.tryCompleteAfterTimeout(run).catch(() => false);
-  if (readyOnTimeout) {
-    return; // cleanupRun already called inside tryCompleteAfterTimeout
-  }
-
-  // The readiness probe is asynchronous. A completion/cancellation path or a
-  // replacement child may have taken ownership while it was in flight.
   if (
     run.provisioningComplete ||
     run.cancelRequested ||
     run.processKilled ||
+    run.processClosed ||
     run.child !== timedOutChild
   ) {
     run.finalizingByTimeout = false;
@@ -292,6 +287,7 @@ export async function handleDeterministicCreateSpawnTimeout<
   try {
     await ports.killTeamProcessAndWait(timedOutChild);
   } catch {
+    if (run.cancelRequested || run.child !== timedOutChild) return;
     run.finalizingByTimeout = false;
     const progress = ports.updateProgress(
       run,
@@ -306,13 +302,8 @@ export async function handleDeterministicCreateSpawnTimeout<
     run.onProgress(progress);
     return;
   }
-
-  const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
-    error:
-      'Timed out waiting for CLI. Run `claude` once in terminal to complete onboarding and try again.',
-    cliLogsTail: extractCliLogsFromRun(run),
-  });
-  run.onProgress(progress);
+  if (run.cancelRequested || run.child !== timedOutChild) return;
+  run.processClosed = true;
   try {
     await cleanupRunOwnedAnthropicApiKeyHelper(run);
   } catch {
@@ -330,6 +321,14 @@ export async function handleDeterministicCreateSpawnTimeout<
     run.onProgress(cleanupProgress);
     return;
   }
+  if (run.cancelRequested || run.child !== timedOutChild) return;
+  if (await ports.tryCompleteAfterTimeout(run).catch(() => false)) return;
+  if (run.cancelRequested || run.child !== timedOutChild) return;
+  const progress = ports.updateProgress(run, 'failed', 'Timed out waiting for CLI', {
+    error: 'Timed out waiting for CLI to complete provisioning.',
+    cliLogsTail: extractCliLogsFromRun(run),
+  });
+  run.onProgress(progress);
   ports.cleanupRun(run);
 }
 
@@ -537,12 +536,12 @@ export async function runDeterministicCreateSpawnFlow<
   ports.startFilesystemMonitor(run, request);
 
   const spawnedChild = child;
-  run.timeoutHandle = setTimeout(() => {
+  scheduleProvisioningRunTimeout(run, getProvisioningRunTimeoutMs(run), () => {
     if (!run.processKilled && !run.provisioningComplete && run.child === spawnedChild) {
       run.finalizingByTimeout = true;
       void handleDeterministicCreateSpawnTimeout(run, ports, spawnedChild);
     }
-  }, getProvisioningRunTimeoutMs(run));
+  });
 
   child.once('error', (error) => {
     const progress = ports.updateProgress(run, 'failed', 'Failed to start Claude CLI', {

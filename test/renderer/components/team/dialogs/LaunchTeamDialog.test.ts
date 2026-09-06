@@ -710,6 +710,8 @@ describe('LaunchTeamDialog', () => {
     ['launch', 'pending-codex'],
     ['create', 'refreshing-anthropic'],
     ['launch', 'refreshing-anthropic'],
+    ['create', 'refreshing-codex'],
+    ['launch', 'refreshing-codex'],
   ] as const)(
     'enables %s skip during %s without repeating completed deep checks',
     async (mode, scenario) => {
@@ -726,8 +728,26 @@ describe('LaunchTeamDialog', () => {
       vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
         runtimeLoading.isTeamProviderRuntimeStatusLoading
       );
-      const refreshing = scenario === 'refreshing-anthropic';
-      localStorage.setItem('team:lastSelectedProvider', refreshing ? 'anthropic' : 'codex');
+      const refreshing = scenario !== 'pending-codex';
+      const refreshProviderId = scenario === 'refreshing-anthropic' ? 'anthropic' : 'codex';
+      if (scenario === 'refreshing-codex') {
+        vi.mocked(api.getCodexAccountSnapshot).mockResolvedValueOnce({
+          preferredAuthMode: 'chatgpt',
+          effectiveAuthMode: 'chatgpt',
+          launchAllowed: true,
+          launchIssueMessage: null,
+          launchReadinessState: 'ready_chatgpt',
+          appServerState: 'healthy',
+          appServerStatusMessage: null,
+          managedAccount: { type: 'chatgpt', email: null, planType: 'pro' },
+          apiKey: { available: false, source: null, sourceLabel: null },
+          requiresOpenaiAuth: false,
+          login: { status: 'idle', error: null, startedAt: null },
+          rateLimits: null,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      localStorage.setItem('team:lastSelectedProvider', refreshProviderId);
       localStorage.setItem('team:lastSelectedModel:codex', 'gpt-5.4');
       localStorage.setItem('team:lastSelectedModel:anthropic', 'opus');
       createTeamDraftMock.state.soloTeam = true;
@@ -804,7 +824,7 @@ describe('LaunchTeamDialog', () => {
         storeState.cliStatus = {
           ...storeState.cliStatus,
           providers: storeState.cliStatus.providers.map((provider) =>
-            provider.providerId === 'anthropic'
+            provider.providerId === refreshProviderId
               ? reconcileCliProviderSnapshot(
                   provider,
                   sanitizeProviderStatusAuthority({
@@ -818,7 +838,7 @@ describe('LaunchTeamDialog', () => {
           ),
         };
         expect(
-          storeState.cliStatus.providers.find((provider) => provider.providerId === 'anthropic')
+          storeState.cliStatus.providers.find((provider) => provider.providerId === refreshProviderId)
         ).toMatchObject({
           capabilities: { teamLaunch: false },
           teamLaunchAuthorityRestriction: 'catalog-refresh',

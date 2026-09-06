@@ -11,6 +11,8 @@ import {
 } from './TeamProvisioningProcessExit';
 
 type TimeoutCompletionServicePortKey =
+  | 'isCurrentTrackedRun'
+  | 'stopMixedSecondaryRuntimeLanes'
   | 'persistMembersMeta'
   | 'updateConfigPostLaunch'
   | 'refreshMemberSpawnStatusesFromLeadInbox'
@@ -79,6 +81,9 @@ export function createTeamProvisioningVerificationProbePortsDepsFromService<
 ): TeamProvisioningVerificationProbePortsFactoryDeps<TRun> {
   return {
     service: {
+      isCurrentTrackedRun: (run) => service.isCurrentTrackedRun(run),
+      stopMixedSecondaryRuntimeLanes: (teamName) =>
+        service.stopMixedSecondaryRuntimeLanes(teamName),
       persistMembersMeta: (teamName, request) => service.persistMembersMeta(teamName, request),
       updateConfigPostLaunch: (teamName, cwd, detectedSessionId, color, updateOptions) =>
         service.updateConfigPostLaunch(teamName, cwd, detectedSessionId, color, updateOptions),
@@ -139,6 +144,9 @@ export function createTeamProvisioningVerificationProbePorts<
       }),
     tryCompleteAfterTimeout: (run) =>
       tryCompleteAfterTimeoutHelper(run, {
+        isCurrentTrackedRun: (targetRun) => deps.service.isCurrentTrackedRun(targetRun),
+        stopMixedSecondaryRuntimeLanes: (teamName) =>
+          deps.service.stopMixedSecondaryRuntimeLanes(teamName),
         waitForValidConfig: (targetRun) => ports.waitForValidConfig(targetRun),
         waitForTeamInList: (teamName, targetRun) => ports.waitForTeamInList(teamName, targetRun),
         waitForMissingInboxes: (targetRun) => ports.waitForMissingInboxes(targetRun),
