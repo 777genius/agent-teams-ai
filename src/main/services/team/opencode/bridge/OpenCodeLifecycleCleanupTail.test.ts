@@ -276,6 +276,15 @@ describe('runOpenCodeLifecycleCleanupTail', () => {
     expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
       ownedWorkspaceCwds: OWNED_WORKSPACES,
       startedBeforeMs: APP_STARTED_AT_MS,
+      // A startup sweep runs where a second copy of this app may hold a live
+      // team in the same directory, and the two leads are byte-identical on the
+      // command line. Both extra fences exist for that copy: the env marker
+      // proves the tree descends from an orchestrator of this app rather than
+      // from a user's own terminal, and the orphan check spares any tree whose
+      // launcher is still alive.
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: true,
+      orphanedOnly: true,
     });
   });
 

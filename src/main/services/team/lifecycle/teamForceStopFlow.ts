@@ -11,7 +11,6 @@
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { isProcessAlive } from '@main/utils/processHealth';
 import * as fs from 'fs';
-import * as path from 'path';
 
 import {
   PRE_LAUNCH_STALE_LOCK_MIN_AGE_MS,
@@ -25,6 +24,7 @@ import {
   readOpenCodeRuntimeLaneIndex,
 } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
 import { TeamLaunchStateStore } from '../TeamLaunchStateStore';
+import { readTeamMemberModels } from '../TeamProjectWorkspaces';
 
 import type { TeamLaunchStateReadResult } from '../TeamLaunchStateStore';
 import type { PersistedTeamLaunchSnapshot, TeamForceStopResult } from '@shared/types';
@@ -541,22 +541,6 @@ export async function killRetainedOpenCodeRuntimeProcessesForTeam(_input: {
  * unreadable config has to release nothing at all instead of widening onto
  * every runtime the user configured.
  */
-async function readTeamMemberModels(teamsBasePath: string, teamName: string): Promise<string[]> {
-  try {
-    const raw = await fs.promises.readFile(
-      path.join(teamsBasePath, teamName, 'config.json'),
-      'utf8'
-    );
-    const members = (JSON.parse(raw) as { members?: unknown }).members;
-    if (!Array.isArray(members)) return [];
-    return members
-      .map((member) => (member as { model?: unknown } | null)?.model)
-      .filter((model): model is string => typeof model === 'string' && model.trim().length > 0);
-  } catch {
-    return [];
-  }
-}
-
 /**
  * The implementor of `releaseSharedLocalRuntime` this app ships, and the reason
  * that port exists: the team's members were running on loopback runtimes that

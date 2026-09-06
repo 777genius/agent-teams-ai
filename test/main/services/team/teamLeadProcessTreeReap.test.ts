@@ -97,6 +97,16 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
     expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
       ownedWorkspaceCwds: ['C:\\workspaces\\example'],
       startedBeforeMs: requestedAtMs,
+      // The stop path adds the marker but does NOT require it: the caller has
+      // already proven this exact team was stopped and that no live team shares
+      // the directory, and refusing on an unreadable environment would leave the
+      // proxy port held for the next launch.
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: false,
+      // The team's own serve host may still be shutting down beside the lead it
+      // owns, so an orphan-only fence would spare the lead for being exactly
+      // what it is.
+      orphanedOnly: false,
     });
     expect(result.killedPids).toEqual([8100]);
     expect(result.diagnostics).toEqual(['Reaped 1 cursor-agent process tree(s)']);
@@ -168,6 +178,16 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
     expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
       ownedWorkspaceCwds: [caseVariantWorkspace.stopped],
       startedBeforeMs: 1_700_000_000_000,
+      // The stop path adds the marker but does NOT require it: the caller has
+      // already proven this exact team was stopped and that no live team shares
+      // the directory, and refusing on an unreadable environment would leave the
+      // proxy port held for the next launch.
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: false,
+      // The team's own serve host may still be shutting down beside the lead it
+      // owns, so an orphan-only fence would spare the lead for being exactly
+      // what it is.
+      orphanedOnly: false,
     });
   });
 
@@ -184,6 +204,16 @@ describe('reapCursorAgentLeadTreesForStoppedTeam', () => {
     expect(sweepCursorAgentTrees).toHaveBeenCalledExactlyOnceWith({
       ownedWorkspaceCwds: ['C:\\workspaces\\example'],
       startedBeforeMs: 1_700_000_000_000,
+      // The stop path adds the marker but does NOT require it: the caller has
+      // already proven this exact team was stopped and that no live team shares
+      // the directory, and refusing on an unreadable environment would leave the
+      // proxy port held for the next launch.
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: false,
+      // The team's own serve host may still be shutting down beside the lead it
+      // owns, so an orphan-only fence would spare the lead for being exactly
+      // what it is.
+      orphanedOnly: false,
     });
   });
 

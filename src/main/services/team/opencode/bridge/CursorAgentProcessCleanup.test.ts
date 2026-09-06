@@ -23,6 +23,9 @@ vi.mock('@shared/utils/logger', () => ({
 const WORKSPACE = 'C:\\workspaces\\example';
 const OTHER_WORKSPACE = 'C:\\workspaces\\other';
 
+/** What a reap that reached the whole tree reports back to the sweep. */
+const reapedTree = (pid: number) => ({ killed: [pid], incomplete: false, diagnostics: [] });
+
 // Real Windows command lines: a PowerShell wrapper, the node runtime it starts,
 // and the tool shells below them. The user profile path is what a cursor-agent
 // install actually looks like and is the reason the tree needs a whole reap.
@@ -105,7 +108,7 @@ describe('the ownership proof', () => {
    * sweep with no owner cannot make a decision about a single row of it.
    */
   it('reaps nothing, and reads no process table, when no owned workspace is given', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
     const listProcessRows = vi.fn(() =>
       Promise.resolve([
         { pid: 10, ppid: 1, command: WRAPPER },
@@ -139,7 +142,7 @@ describe('the ownership proof', () => {
     const result = await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: ['   ', ''],
       listProcessRows,
-      killTree: vi.fn(),
+      killTree: vi.fn(reapedTree),
     });
 
     expect(listProcessRows).not.toHaveBeenCalled();
@@ -151,7 +154,7 @@ describe('the ownership proof', () => {
    * can own it. It survives every sweep.
    */
   it('never reaps a print lead whose command line names no workspace', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
     const noWorkspace = WRAPPER.replace('--workspace C:\\workspaces\\example ', '');
 
     const result = await cleanupCursorAgentProcessTrees({
@@ -167,7 +170,7 @@ describe('the ownership proof', () => {
 
 describe('cleanupCursorAgentProcessTrees', () => {
   it('kills the outermost root of each tree and never a nested one', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
 
     const result = await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: [WORKSPACE, OTHER_WORKSPACE],
@@ -189,7 +192,7 @@ describe('cleanupCursorAgentProcessTrees', () => {
   });
 
   it('reaps only the asked-for workspace and leaves another team lead alone', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
 
     const result = await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: [OTHER_WORKSPACE],
@@ -206,7 +209,7 @@ describe('cleanupCursorAgentProcessTrees', () => {
   });
 
   it('matches a workspace across separator direction, trailing separator, and case', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
 
     const result = await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: ['c:/workspaces/Example/'],
@@ -225,7 +228,7 @@ describe('cleanupCursorAgentProcessTrees', () => {
    * would take belongs to a team that is still running.
    */
   it('never reaps a POSIX lead whose workspace differs from the owned one only by case', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
     const posixLead =
       '/home/u/.local/cursor-agent/bin/cursor-agent --print --workspace /work/Team --model cursor-grok';
 
@@ -247,7 +250,7 @@ describe('cleanupCursorAgentProcessTrees', () => {
    * separator here hands this sweep somebody else's tree.
    */
   it('never reaps a POSIX lead whose workspace only becomes the owned one once backslashes are separators', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
     const posixLead =
       '/home/u/.local/cursor-agent/bin/cursor-agent --print --workspace /work/a\\b --model cursor-grok';
 
@@ -282,7 +285,7 @@ describe('cleanupCursorAgentProcessTrees', () => {
    * match here would make stopping one team kill the neighbouring one.
    */
   it('never treats a longer sibling directory as the same workspace', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
     const backupLead = WRAPPER.replace(
       '--workspace C:\\workspaces\\example',
       '--workspace C:\\workspaces\\example-backup'
@@ -304,7 +307,7 @@ describe('cleanupCursorAgentProcessTrees', () => {
     await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: [WORKSPACE],
       listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
-      killTree: vi.fn(),
+      killTree: vi.fn(reapedTree),
       platform: 'win32',
     });
 
@@ -319,7 +322,7 @@ describe('cleanupCursorAgentProcessTrees', () => {
     await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: [WORKSPACE],
       listProcessRows: () => Promise.resolve([]),
-      killTree: vi.fn(),
+      killTree: vi.fn(reapedTree),
     });
 
     expect(diagnostic).not.toHaveBeenCalled();
@@ -336,7 +339,7 @@ describe('startedBeforeMs ownership fence', () => {
   const ORPHAN_TREE_STARTED_AT_MS = Date.parse('2026-08-28T11:52:04.000Z');
 
   it('keeps a tree this app instance started and still reaps the previous orphan', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
     const startTimes = new Map([
       [10, PROBE_TREE_STARTED_AT_MS],
       [20, ORPHAN_TREE_STARTED_AT_MS],
@@ -369,7 +372,7 @@ describe('startedBeforeMs ownership fence', () => {
    * unreadable process table into a licence to kill.
    */
   it('keeps a tree whose start time cannot be verified', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
 
     const result = await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: [WORKSPACE],
@@ -399,7 +402,7 @@ describe('startedBeforeMs ownership fence', () => {
           { pid: 20, ppid: 1, command: OTHER_WRAPPER },
         ]),
       readProcessStartTimeMs,
-      killTree: vi.fn(),
+      killTree: vi.fn(reapedTree),
     });
 
     expect(readProcessStartTimeMs).toHaveBeenCalledTimes(2);
@@ -414,7 +417,7 @@ describe('startedBeforeMs ownership fence', () => {
    * for a pid whose identity moved between the scan and the check.
    */
   it('keeps a pid the process table named but that a newer process now holds', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
 
     const result = await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: [WORKSPACE],
@@ -460,6 +463,7 @@ describe('startedBeforeMs ownership fence', () => {
       },
       killTree: (pid) => {
         events.push(`kill:${pid}`);
+        return reapedTree(pid);
       },
     });
 
@@ -474,7 +478,7 @@ describe('startedBeforeMs ownership fence', () => {
       startedBeforeMs: null,
       listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
       readProcessStartTimeMs,
-      killTree: vi.fn(),
+      killTree: vi.fn(reapedTree),
     });
 
     expect(readProcessStartTimeMs).not.toHaveBeenCalled();
@@ -484,7 +488,7 @@ describe('startedBeforeMs ownership fence', () => {
 
 describe('a sweep that cannot finish still answers', () => {
   it('reports a failed process scan and reaps nothing', async () => {
-    const killTree = vi.fn();
+    const killTree = vi.fn(reapedTree);
 
     const result = await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: [WORKSPACE],
@@ -507,6 +511,7 @@ describe('a sweep that cannot finish still answers', () => {
   it('keeps reaping the remaining trees after one kill throws', async () => {
     const killTree = vi.fn((pid: number) => {
       if (pid === 10) throw new Error('access denied');
+      return reapedTree(pid);
     });
 
     const result = await cleanupCursorAgentProcessTrees({
@@ -531,5 +536,274 @@ describe('a sweep that cannot finish still answers', () => {
 describe('DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT', () => {
   it('is enabled, so a caller that hands in no port still reaps', () => {
     expect(DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT.isEnabled()).toBe(true);
+  });
+});
+
+/**
+ * A POSIX lead: `ps` joins the argument vector with spaces and re-quotes
+ * nothing, so a real project directory arrives as bare text with spaces in it.
+ */
+const POSIX_SPACED_WORKSPACE = '/Users/u/My Projects/app';
+const POSIX_SPACED_WRAPPER =
+  '/bin/sh /Users/u/.local/bin/cursor-agent --print --output-format stream-json ' +
+  '--workspace /Users/u/My Projects/app --model cursor-grok --force';
+
+describe('a workspace that contains spaces', () => {
+  /**
+   * `(\S+)` stopped at the first space and captured `/Users/u/My`, which matches
+   * no owned workspace - so the tree was never reaped and the sweep looked like
+   * it was working. Every user whose project path has a space in it got a
+   * silent no-op.
+   */
+  it('reads the whole unquoted path, not its first segment', () => {
+    expect(extractCursorAgentWorkspace(POSIX_SPACED_WRAPPER)).toBe(POSIX_SPACED_WORKSPACE);
+  });
+
+  it('reads it back in either quoting style', () => {
+    expect(
+      extractCursorAgentWorkspace(`cursor-agent --print --workspace "${POSIX_SPACED_WORKSPACE}" -m x`)
+    ).toBe(POSIX_SPACED_WORKSPACE);
+    expect(
+      extractCursorAgentWorkspace(`cursor-agent --print --workspace '${POSIX_SPACED_WORKSPACE}' -m x`)
+    ).toBe(POSIX_SPACED_WORKSPACE);
+  });
+
+  it('reaps a tree whose owned workspace contains spaces', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [POSIX_SPACED_WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () =>
+        Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_SPACED_WRAPPER }]),
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+    expect(result.killed).toEqual([10]);
+  });
+
+  it('still refuses a sibling directory that merely shares a prefix', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: ['/Users/u/My Projects/app-backup'],
+      platform: 'darwin',
+      listProcessRows: () =>
+        Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_SPACED_WRAPPER }]),
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+  });
+});
+
+describe('ownership fences beyond the command line', () => {
+  const OWNED_ENV = `CURSOR_X=1 CLAUDE_TEAM_APP_INSTANCE_ID=abc123 ${POSIX_SPACED_WRAPPER}`;
+  const FOREIGN_ENV = `PATH=/usr/bin ${POSIX_SPACED_WRAPPER}`;
+
+  const sweep = (overrides: Record<string, unknown>) =>
+    cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [POSIX_SPACED_WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () =>
+        Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_SPACED_WRAPPER }]),
+      ...overrides,
+    } as Parameters<typeof cleanupCursorAgentProcessTrees>[0]);
+
+  it('reaps a tree whose environment carries this app instance marker', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    await sweep({
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: true,
+      readProcessDetails: () => Promise.resolve(OWNED_ENV),
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+  });
+
+  /**
+   * The case the workspace fence cannot see: a user running `cursor-agent
+   * --print` in their own project produces a command line identical in every
+   * byte the sweep reads.
+   */
+  it('keeps a tree that carries no marker of this app', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    const result = await sweep({
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: true,
+      readProcessDetails: () => Promise.resolve(FOREIGN_ENV),
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.keptRecent).toEqual([10]);
+    expect(result.diagnostics.join(' ')).toContain('carries no marker of this app');
+  });
+
+  it('keeps a tree whose environment could not be read at all', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    const result = await sweep({
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: true,
+      readProcessDetails: () => Promise.resolve(null),
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.diagnostics.join(' ')).toContain('ownership is unproven');
+  });
+
+  /**
+   * The stop path. It has already proven more than the environment could add -
+   * this team was just stopped, its project path came from this app's own team
+   * config, and every live team sharing the directory vetoed the sweep - so an
+   * unreadable environment must not leave the proxy port held.
+   */
+  it('falls back to the command line when ownership proof is not required', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    const result = await sweep({
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: false,
+      readProcessDetails: () => Promise.resolve(null),
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+    expect(result.diagnostics.join(' ')).toContain('falling back to the command line');
+  });
+
+  /** Windows cannot read another process's environment, so the fence is absent. */
+  it('does not ask for an environment it cannot read on Windows', async () => {
+    const readProcessDetails = vi.fn(() => Promise.resolve(null));
+    const killTree = vi.fn(reapedTree);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'win32',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: true,
+      readProcessDetails,
+      killTree,
+    });
+
+    expect(readProcessDetails).not.toHaveBeenCalled();
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+  });
+});
+
+describe('the orphan fence a startup sweep runs under', () => {
+  /**
+   * A second copy of this app with a live team in the same directory. Its lead
+   * still has the serve host that spawned it as a parent; a lead left behind by
+   * a crashed instance has been reparented to init.
+   */
+  it('keeps a tree whose launcher is still running', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'darwin',
+      orphanedOnly: true,
+      listProcessRows: () =>
+        Promise.resolve([
+          { pid: 500, ppid: 1, command: 'opencode serve --port 1' },
+          { pid: 10, ppid: 500, command: WRAPPER },
+        ]),
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.keptRecent).toEqual([10]);
+    expect(result.diagnostics.join(' ')).toContain('is still running');
+  });
+
+  it('reaps a tree that was reparented to init', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'darwin',
+      orphanedOnly: true,
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+  });
+
+  it('reaps a tree whose launcher has already exited', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'darwin',
+      orphanedOnly: true,
+      // ppid 777 is not in the table: the launcher is gone.
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 777, command: WRAPPER }]),
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+  });
+
+  it('leaves the fence off where the stop path needs it off', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'darwin',
+      orphanedOnly: false,
+      listProcessRows: () =>
+        Promise.resolve([
+          { pid: 500, ppid: 1, command: 'opencode serve --port 1' },
+          { pid: 10, ppid: 500, command: WRAPPER },
+        ]),
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
+  });
+});
+
+describe('a tree the reap could not fully reach', () => {
+  it('does not count a refused reap as a kill', async () => {
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
+      killTree: () => ({
+        killed: [],
+        incomplete: true,
+        diagnostics: ["tree kill refused: tree of pid 10 contains this app's own process"],
+      }),
+    });
+
+    expect(result.killed).toEqual([]);
+    expect(result.incomplete).toBe(true);
+    expect(result.diagnostics.join(' ')).toContain('refused');
+  });
+
+  it('reports a partially reaped tree as an unfinished cleanup', async () => {
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'darwin',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
+      killTree: () => ({
+        killed: [10],
+        incomplete: true,
+        diagnostics: ['tree kill failed pid=11: operation not permitted'],
+      }),
+    });
+
+    expect(result.killed).toEqual([10]);
+    expect(result.incomplete).toBe(true);
+    expect(result.diagnostics.join(' ')).toContain('operation not permitted');
   });
 });

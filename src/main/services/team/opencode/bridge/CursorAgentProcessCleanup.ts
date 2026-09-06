@@ -2,10 +2,15 @@ import {
   listRuntimeProcessTableForCurrentPlatform,
   type RuntimeProcessTableRow,
 } from '@features/tmux-installer/main';
-import { killProcessByPid } from '@main/utils/processKill';
+import {
+  type ExternalProcessTreeKillResult,
+  killExternalProcessTree,
+} from '@main/utils/externalProcessTreeKill';
 import { createProcessStartTimeCache, readProcessStartTimeMs } from '@main/utils/processStartTime';
 import { listWindowsProcessTable } from '@main/utils/windowsProcessTable';
 import { createLogger } from '@shared/utils/logger';
+
+import { readNativeProcessCommandWithEnv } from './OpenCodeManagedHostProcessCleanup';
 
 const logger = createLogger('CursorAgentProcessCleanup');
 
@@ -26,8 +31,15 @@ const logger = createLogger('CursorAgentProcessCleanup');
  * have written down: the command line has to carry `--print`, which is how the
  * orchestrator spawns a lead and not how a user runs the interactive agent, and
  * a `--workspace` that matches - exactly - a workspace the caller owns. Lineage
- * carries the proof down: only the outermost root is signalled, and the rest of
- * the tree goes with it as its children.
+ * carries the proof down: what stands below a root this app can name belongs to
+ * that root, so the whole tree is reaped with it.
+ *
+ * Reaping it is a walk, not one signal. `killExternalProcessTree` reads the
+ * process table, orders the tree deepest-first and signals each pid in turn,
+ * because on macOS and Linux a signal to the root reaches the root and nothing
+ * else - and the port this sweep exists to free is held by an INHERITED socket
+ * handle, which means the children hold it too. Signalling only the root leaves
+ * the port in LISTEN and the sweep reporting success.
  */
 
 export interface CursorAgentProcessCleanupOptions {
@@ -48,9 +60,48 @@ export interface CursorAgentProcessCleanupOptions {
    * matching tree is theirs.
    */
   startedBeforeMs?: number | null;
+  /**
+   * Env markers that prove the tree descends from something this app launched.
+   *
+   * A `--workspace` match says the tree works where a team of this app works. It
+   * does NOT say the tree is this app's: a user running `cursor-agent --print`
+   * in their own project, or a second copy of this app with a live team in the
+   * same directory, produces a command line that is identical in every byte the
+   * sweep can see. The environment is what tells them apart, because a lead this
+   * app is responsible for inherits the orchestrator's env from the serve host
+   * that spawned it.
+   *
+   * POSIX only. Windows does not let one process read another's environment, so
+   * this fence is unavailable there and the sweep falls back to the command line
+   * and the time fence alone - which is why `requireOwnershipProof` exists as a
+   * separate switch for callers that would rather reap nothing than reap on
+   * weaker proof.
+   */
+  requiredEnvMarkers?: readonly string[];
+  /**
+   * Refuse to reap when ownership could not be proven, instead of falling back
+   * to the command line. A startup sweep wants this: it runs while another copy
+   * of this app may be mid-run, and a tree it cannot attribute may be that
+   * copy's live lead.
+   */
+  requireOwnershipProof?: boolean;
+  /**
+   * Only reap a tree whose parent is gone. This is what keeps a startup sweep
+   * off a LIVE tree: a lead of a running app instance still has its serve host
+   * as a parent, while a lead left behind by a crashed instance has been
+   * reparented to init. It is wrong for a stop sweep, where the team's own host
+   * may still be shutting down alongside the lead it owns.
+   */
+  orphanedOnly?: boolean;
+  readProcessDetails?: (pid: number) => Promise<string | null>;
   readProcessStartTimeMs?: (pid: number) => Promise<number | null>;
   listProcessRows?: () => Promise<RuntimeProcessTableRow[]>;
-  killTree?: (pid: number) => void;
+  /**
+   * Reaps one whole tree. It reports rather than throws, because a tree that
+   * could only be partly reaped is neither a success nor an exception: the
+   * sweep has to record it and go on to the trees behind it.
+   */
+  killTree?: (pid: number) => ExternalProcessTreeKillResult;
   platform?: NodeJS.Platform;
 }
 
@@ -80,8 +131,24 @@ export interface CursorAgentTreeSweepPort {
   sweepCursorAgentTrees(input: {
     ownedWorkspaceCwds: readonly string[];
     startedBeforeMs?: number | null;
+    requiredEnvMarkers?: readonly string[];
+    requireOwnershipProof?: boolean;
+    orphanedOnly?: boolean;
   }): Promise<CursorAgentProcessCleanupResult>;
 }
+
+/**
+ * The env var this app's orchestrator sets on every OpenCode serve host it
+ * starts. A `cursor-agent` lead is spawned BY that host and inherits it, so its
+ * presence is what separates a lead this app is responsible for from an
+ * identical-looking one a user started in the same directory.
+ *
+ * The value is deliberately not matched. A tree left behind by a previous app
+ * instance carries that instance's id, and reaping it is the entire point of the
+ * startup sweep; requiring the current id would keep exactly the trees the sweep
+ * exists to clear.
+ */
+export const CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER = 'CLAUDE_TEAM_APP_INSTANCE_ID=';
 
 export const DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT: CursorAgentTreeSweepPort = {
   isEnabled: () => true,
@@ -135,11 +202,46 @@ export function isSameWorkspacePath(
   return normalizedLeft.length > 0 && normalizedLeft === normalizeWorkspacePath(right, platform);
 }
 
+/**
+ * The `--workspace` value from a command line, in the spellings a process table
+ * actually renders it in.
+ *
+ * The unquoted form is the hard one. `ps` prints the argument vector joined by
+ * spaces and re-quotes nothing, so a real directory like
+ * `/Users/me/My Projects/app` arrives as bare text with spaces in it, and a
+ * `(\S+)` capture stops at `/Users/me/My`. That truncated value matches no owned
+ * workspace, so the tree is silently never reaped - the fence looks like it is
+ * working while the feature does nothing for every user whose project path
+ * contains a space.
+ *
+ * The value therefore runs to the next argument rather than to the next space:
+ * arguments start with `-`, so the capture ends at ` -` or at end of line. A
+ * directory whose name genuinely contains ` -` is the residual ambiguity, and it
+ * resolves toward the shorter path - which fails to match and keeps the tree,
+ * the safe direction for a sweep that kills whole trees.
+ */
 export function extractCursorAgentWorkspace(command: string): string | null {
-  const quoted = /--workspace\s+"([^"]+)"/.exec(command);
+  const quoted = /--workspace[\s=]+"([^"]+)"/.exec(command);
   if (quoted?.[1]) return quoted[1];
-  const bare = /--workspace\s+(\S+)/.exec(command);
-  return bare?.[1] ?? null;
+  const singleQuoted = /--workspace[\s=]+'([^']+)'/.exec(command);
+  if (singleQuoted?.[1]) return singleQuoted[1];
+  const bare = /--workspace[\s=]+(.+?)(?=\s+-|$)/.exec(command);
+  return bare?.[1]?.trim() || null;
+}
+
+/**
+ * Whether the launcher of a tree is still running.
+ *
+ * pid 1 is never a launcher: a process reparented to init has lost the one that
+ * started it, which is exactly the orphan this fence looks for. A ppid missing
+ * from the scan is the same answer - the parent was not in the table.
+ */
+function isParentAlive(ppid: number, livePids: ReadonlySet<number>): boolean {
+  return ppid > 1 && livePids.has(ppid);
+}
+
+function stringIncludesAnyMarker(value: string, markers: readonly string[]): boolean {
+  return markers.some((marker) => value.includes(marker));
 }
 
 export function isCursorAgentRootProcess(row: RuntimeProcessTableRow): boolean {
@@ -179,7 +281,16 @@ export async function cleanupCursorAgentProcessTrees(
     (platform === 'win32'
       ? () => listWindowsProcessTable(4_000, { bypassCache: true })
       : () => listRuntimeProcessTableForCurrentPlatform({ bypassCache: true }));
-  const killTree = options.killTree ?? killProcessByPid;
+  const killTree =
+    options.killTree ?? ((pid: number) => killExternalProcessTree(pid, { platform }));
+  // Windows cannot read another process's environment at all, so an env fence
+  // there is not a weaker check - it is no check. Dropping it here keeps the
+  // decision in one place rather than having every caller special-case the
+  // platform.
+  const requiredEnvMarkers = platform === 'win32' ? [] : (options.requiredEnvMarkers ?? []);
+  const requireOwnershipProof = options.requireOwnershipProof === true;
+  const orphanedOnly = options.orphanedOnly === true;
+  const readProcessDetails = options.readProcessDetails ?? readNativeProcessCommandWithEnv;
   const readStartTimeMs = createProcessStartTimeCache(
     options.readProcessStartTimeMs ?? ((pid: number) => readProcessStartTimeMs(pid, platform))
   );
@@ -206,6 +317,11 @@ export async function cleanupCursorAgentProcessTrees(
 
   const roots = rows.filter(isCursorAgentRootProcess);
   const rootPids = new Set(roots.map((row) => row.pid));
+  // Liveness is read off the same table snapshot the roots came from. Probing
+  // each parent separately would ask about a moment after the scan, and a
+  // parent that exits between the two reads would flip a live tree into an
+  // orphan - which is the one direction this fence must never be wrong in.
+  const livePids = new Set(rows.map((row) => row.pid));
   for (const row of roots) {
     // Only the outermost process of each tree; children are reaped with it, and
     // killing an inner one first would orphan the rest. This is also where the
@@ -214,6 +330,38 @@ export async function cleanupCursorAgentProcessTrees(
     if (rootPids.has(row.ppid)) continue;
     const workspace = extractCursorAgentWorkspace(row.command ?? '');
     if (!workspace || !ownedWorkspaces.has(normalizeWorkspacePath(workspace, platform))) continue;
+    if (orphanedOnly && isParentAlive(row.ppid, livePids)) {
+      result.keptRecent.push(row.pid);
+      result.diagnostics.push(
+        `Kept cursor-agent tree pid=${row.pid}: its parent (pid=${row.ppid}) is still running, ` +
+          'so the tree belongs to a live launcher rather than to a crashed one'
+      );
+      continue;
+    }
+    if (requiredEnvMarkers.length > 0) {
+      const details = await readProcessDetails(row.pid);
+      const proven = details !== null && stringIncludesAnyMarker(details, requiredEnvMarkers);
+      if (!proven) {
+        // Unreadable env is not proof of a foreign process, but it is also not
+        // proof of an owned one, and this sweep kills whole trees. Which way
+        // that lands is the caller's call, not this loop's.
+        if (requireOwnershipProof) {
+          result.keptRecent.push(row.pid);
+          result.diagnostics.push(
+            `Kept cursor-agent tree pid=${row.pid}: ${
+              details === null
+                ? 'process environment could not be read, so ownership is unproven'
+                : 'process environment carries no marker of this app'
+            }`
+          );
+          continue;
+        }
+        result.diagnostics.push(
+          `cursor-agent tree pid=${row.pid}: ownership marker unavailable, falling back to the ` +
+            'command line and the time fence'
+        );
+      }
+    }
     if (startedBeforeMs !== null) {
       const startedAtMs = await readStartTimeMs(row.pid);
       const verified = typeof startedAtMs === 'number' && Number.isFinite(startedAtMs);
@@ -232,21 +380,36 @@ export async function cleanupCursorAgentProcessTrees(
         continue;
       }
     }
-    // The signal follows that check in the same turn: nothing is awaited
-    // between them, and no other candidate is probed or signalled in between,
-    // so the identity being reaped is the one just validated. A pid recycled
-    // before the check reads as newer than the fence and is kept; what is left
-    // is the probe's own round trip, and a second probe would only reproduce
-    // that same gap rather than close it. Closing it needs a kernel handle
-    // taken while the identity holds - OpenProcess/TerminateProcess,
-    // pidfd_send_signal - and this runtime exposes neither.
+    // The reap follows that check in the same turn: nothing is awaited between
+    // them, and no other candidate is probed or signalled in between, so the
+    // identity being reaped is the one just validated. A pid recycled before the
+    // check reads as newer than the fence and is kept; what is left is the
+    // probe's own round trip, and a second probe would only reproduce that same
+    // gap rather than close it. Closing it needs a kernel handle taken while the
+    // identity holds - OpenProcess/TerminateProcess, pidfd_send_signal - and
+    // this runtime exposes neither. Inside the tree the walk re-checks each
+    // descendant's identity against the table it just read, so a pid recycled
+    // deeper down is skipped rather than signalled.
     try {
-      killTree(row.pid);
-      result.killed.push(row.pid);
+      const reaped = killTree(row.pid);
+      // The root counts as killed only if the walk actually reached it. A tree
+      // that refused - it contains this app, or the table could not be read -
+      // reports nothing killed, and saying otherwise would let the caller
+      // report a cleanup that never happened.
+      if (reaped.killed.length > 0) {
+        result.killed.push(row.pid);
+      }
+      if (reaped.incomplete) {
+        // One tree that refuses to die is a diagnostic, not the end of the
+        // sweep: the remaining trees are exactly the ones still holding the
+        // proxy port. It is still a cleanup that did not complete, and it says
+        // so.
+        result.incomplete = true;
+      }
+      result.diagnostics.push(
+        ...reaped.diagnostics.map((entry) => `cursor-agent ${entry} (root pid=${row.pid})`)
+      );
     } catch (error) {
-      // One tree that refuses to die is a diagnostic, not the end of the sweep:
-      // the remaining trees are exactly the ones still holding the proxy port.
-      // It is still a cleanup that did not complete, and it says so.
       result.incomplete = true;
       result.diagnostics.push(
         `cursor-agent tree kill failed pid=${row.pid}: ${

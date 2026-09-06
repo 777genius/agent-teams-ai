@@ -2,6 +2,7 @@ import { listTeamProjectWorkspaces } from '@main/services/team/TeamProjectWorksp
 import { getTeamsBasePath } from '@main/utils/pathDecoder';
 
 import {
+  CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER,
   type CursorAgentTreeSweepPort,
   DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
 } from './CursorAgentProcessCleanup';
@@ -238,6 +239,20 @@ async function reapOrphanedCursorAgentLeadTrees(
   const sweep = await sweepPort.sweepCursorAgentTrees({
     ownedWorkspaceCwds,
     startedBeforeMs: input.appStartedAtMs,
+    // A startup sweep runs where a SECOND copy of this app may have a live team
+    // in the same project directory, and the two leads are byte-identical on the
+    // command line. Both fences below exist for that copy, and both fail closed.
+    //
+    // The env marker proves the tree descends from an orchestrator of this app
+    // rather than from a user's own terminal; `requireOwnershipProof` makes an
+    // unreadable environment a reason to keep the tree, not to fall back to the
+    // command line. The orphan fence is the independent half: a lead of a
+    // running instance still has its serve host as a parent, so only a tree
+    // whose launcher is gone - which is what a crashed previous instance leaves
+    // behind, and the only thing this sweep is here for - can be reached.
+    requiredEnvMarkers: [CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER],
+    requireOwnershipProof: true,
+    orphanedOnly: true,
   });
   for (const diagnostic of sweep.diagnostics) {
     input.ports.logWarning(`[OpenCode] startup cursor-agent sweep: ${diagnostic}`);

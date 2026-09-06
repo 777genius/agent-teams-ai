@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { listAllTeamMemberModels } from '@main/services/team/TeamProjectWorkspaces';
+import { getTeamsBasePath } from '@main/utils/pathDecoder';
 import { createLogger } from '@shared/utils/logger';
 import { parse as parseJsonc, type ParseError } from 'jsonc-parser';
 
@@ -362,12 +364,30 @@ function reportReleaseOutcome(result: LoopbackRuntimeReleaseResult): void {
 }
 
 /**
- * The app-exit half. It takes no member filter because at exit there is no team
- * left to take one from: what the app knows at that point is only that nothing
- * it started is still running, so every loopback runtime in the config is asked
- * to stand down. The loopback rule is the one that still holds, and it is the
- * one that matters.
+ * The app-exit half.
+ *
+ * It is filtered, and that is the whole point of it. "The app is exiting" says
+ * nothing about who else is using the loopback runtime: an Ollama this app's
+ * teams were running on is a shared machine service, and the same instance may
+ * be holding a model for the user's own chat window, an editor extension, or
+ * another application entirely. Evicting everything it serves because THIS app
+ * is closing takes a model the user is actively using and makes them wait out a
+ * cold reload for it.
+ *
+ * So the filter is the same one the per-team release uses, widened to every team
+ * this app has on disk: what this app may ask to be released is what this app
+ * asked to be loaded. A teams directory that lists no models yields an empty
+ * filter, and an empty filter releases NOTHING - which is the correct reading of
+ * "nothing here is attributable to this app", and the opposite of the `undefined`
+ * that means "no filter at all".
  */
-export function releaseLoopbackRuntimesOnAppShutdown(): Promise<void> {
-  return releaseLoopbackRuntimeModels().then(() => undefined);
+export async function releaseLoopbackRuntimesOnAppShutdown(): Promise<void> {
+  const memberModels = await listAllTeamMemberModels(getTeamsBasePath()).catch(() => []);
+  if (memberModels.length === 0) {
+    logger.diagnostic(
+      '[OpenCode] opencode_loopback_runtime_release_skipped reason=no_app_owned_models'
+    );
+    return;
+  }
+  await releaseLoopbackRuntimeModels({ memberModels });
 }
