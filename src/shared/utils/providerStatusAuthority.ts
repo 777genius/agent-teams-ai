@@ -82,27 +82,28 @@ export function hasAuthoritativeProviderStatusEvidence(provider: CliProviderStat
 /** Accept only the current authenticated refresh snapshot, never cached support.
  * Runtime DTO mapping deliberately does not import the app-derived restriction.
  */
-export function isAuthenticatedAnthropicCatalogRefresh(
+export function isAuthenticatedProviderCatalogRefresh(
   provider: CliProviderStatus | null | undefined
 ): provider is CliProviderStatus {
   return Boolean(
-    provider?.providerId === 'anthropic' &&
+    provider &&
+    (provider.providerId === 'anthropic' || provider.providerId === 'codex') &&
     provider.supported &&
     provider.authenticated &&
     hasAuthoritativeProviderStatusEvidence(provider) &&
     provider.modelCatalogRefreshState === 'loading' &&
     (provider.modelCatalog
-      ? provider.modelCatalog.providerId === 'anthropic' &&
+      ? provider.modelCatalog.providerId === provider.providerId &&
         ['ready', 'stale'].includes(provider.modelCatalog.status)
       : provider.runtimeCapabilities?.modelCatalog?.dynamic === true)
   );
 }
 
-export function hasAnthropicCatalogRefreshLaunchSupport(
+export function hasProviderCatalogRefreshLaunchSupport(
   provider: CliProviderStatus | null | undefined
 ): provider is CliProviderStatus {
   return (
-    isAuthenticatedAnthropicCatalogRefresh(provider) &&
+    isAuthenticatedProviderCatalogRefresh(provider) &&
     (provider.capabilities.teamLaunch === true ||
       provider.teamLaunchAuthorityRestriction === 'catalog-refresh')
   );
