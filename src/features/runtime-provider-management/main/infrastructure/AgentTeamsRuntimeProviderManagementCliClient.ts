@@ -32,6 +32,7 @@ import {
   sanitizeCommandErrorMessage,
   truncateCommandErrorDetail,
 } from './runtimeProviderCommandPresentation';
+import { normalizeRuntimeProviderDirectoryResponse } from './runtimeProviderDirectoryResponse';
 import { RuntimeProviderModelRequestTracker } from './runtimeProviderModelRequestTracker';
 import {
   RUNTIME_PROVIDER_MODEL_PROBE_COMMAND_TIMEOUT_MS,
@@ -1606,6 +1607,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
     const projectPath = normalizeProjectPath(input.projectPath);
     const cacheKey = this.getDirectoryResponseCacheKey(input, projectPath);
+    const previous = this.directoryResponseCache.get(cacheKey)?.response;
     const refreshInFlightKey = `refresh:${cacheKey}`;
     const cachedInFlightKey = `cached:${cacheKey}`;
     if (input.refresh) {
@@ -1634,12 +1636,17 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
       return existingRequest;
     }
 
-    const request = this.loadProviderDirectoryUncached(
-      input,
-      projectPath,
-      cacheKey,
-      this.directoryResponseCacheGeneration
-    );
+    const generation = this.directoryResponseCacheGeneration;
+    const normalize = (response: RuntimeProviderManagementDirectoryResponse) =>
+      normalizeRuntimeProviderDirectoryResponse(response, input.summary === true, previous);
+    const request = this.loadProviderDirectoryUncached(input, projectPath, (response) =>
+      this.writeDirectoryResponseCache(
+        cacheKey,
+        normalize(response),
+        this.getDirectoryResponseCacheTtlMs(input),
+        generation
+      )
+    ).then(normalize);
     this.directoryResponseInFlight.set(inFlightKey, request);
     try {
       return await request;
@@ -1653,8 +1660,9 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
   private async loadProviderDirectoryUncached(
     input: RuntimeProviderManagementLoadDirectoryInput,
     projectPath: string | null,
-    cacheKey: string,
-    cacheGeneration: number
+    onSuccess: (
+      response: RuntimeProviderManagementDirectoryResponse
+    ) => RuntimeProviderManagementDirectoryResponse
   ): Promise<RuntimeProviderManagementDirectoryResponse> {
     const { binaryPath, env } = await resolveCliEnv();
     if (!binaryPath) {
@@ -1665,9 +1673,7 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
     }
 
     const args = ['runtime', 'providers', 'directory', '--runtime', input.runtimeId, '--json'];
-    if (input.summary === true) {
-      args.push('--summary');
-    }
+    if (input.summary === true) args.push('--summary');
     appendOptionalArg(args, '--project-path', projectPath);
     appendOptionalArg(args, '--query', input.query ?? null);
     appendOptionalArg(args, '--filter', input.filter ?? null);
@@ -1693,15 +1699,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
         args,
         runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
       );
-      return this.writeDirectoryResponseCache(
-        cacheKey,
+      return onSuccess(
         extractJsonObjectWithContext<RuntimeProviderManagementDirectoryResponse>(
           stdout,
           context,
           stderr
-        ),
-        this.getDirectoryResponseCacheTtlMs(input),
-        cacheGeneration
+        )
       );
     } catch (error) {
       const failure = normalizeCommandFailure(error, context);
@@ -1720,15 +1723,12 @@ export class AgentTeamsRuntimeProviderManagementCliClient implements RuntimeProv
                 args,
                 runtimeProviderCommandOptions({ env, timeout: COMMAND_TIMEOUT_MS }, projectPath)
               );
-              return this.writeDirectoryResponseCache(
-                cacheKey,
+              return onSuccess(
                 extractJsonObjectWithContext<RuntimeProviderManagementDirectoryResponse>(
                   retryResult.stdout,
                   context,
                   retryResult.stderr
-                ),
-                this.getDirectoryResponseCacheTtlMs(input),
-                cacheGeneration
+                )
               );
             } catch {
               // Retry also failed; fall through to return the original error.
