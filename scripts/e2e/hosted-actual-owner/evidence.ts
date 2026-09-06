@@ -1,17 +1,12 @@
 import { readdir, rename } from 'node:fs/promises';
 
-import { parseHostedOwnerWalNative } from '../../../src/main/composition/hosted/hostedOwnerWalNativeValidator';
 import { assertRootCurrent, procFdPath, type RootAnchor } from './anchors';
 import {
   MATRIX_ROWS,
-  OPENCODE_IDENTITIES,
   P3C_LANE,
   RAW_ORIGINS,
   RAW_RECORD_PURPOSE,
   RUNTIME_CAPTURE_NAMES,
-  RUNTIME_CAPTURE_STREAMS,
-  PRODUCER_PROVENANCE_CONTRACT,
-  PRODUCER_PROVENANCE_CONTRACT_SHA256,
   canonicalJson,
   exactRecord,
   sha256,
@@ -23,13 +18,37 @@ import {
   type RawRecord,
   type RuntimeCaptureName,
 } from './contracts';
+import { parseKernelBoundNativeCaptures } from './native-captures';
+import type { NativeCaptureRecord, ParsedNativeCapture } from './native-captures';
+import {
+  P1ScenarioEvidencePending,
+  verifyOpenCodeHttpEvidence,
+  type P1HttpAdmission,
+  type P1JointResult,
+} from './native-http-join';
 import type {
   ProcessStartEvidence,
   ProducerCaptureFileEvidence,
   SupervisorOutcome,
 } from './processes';
+import {
+  assertHttpOuterBinding,
+  decodeHttpBase64,
+  decodeHttpRecord,
+  parseHttpCanonical,
+} from './raw-http';
+import {
+  HTTP_LIMITS,
+  HTTP_OBSERVATION_KIND,
+  type HostedHttpRecord,
+  type LocatedHttpRawRecord,
+  type ParsedHttpRawRecord,
+} from './raw-http-types';
 import type { CleanupResult } from './sandbox';
 import { assertNoSecretLikeBytes, writeExclusive } from './secure-files';
+
+export { parseNativeRuntimeCapture } from './native-captures';
+export type { NativeCaptureRecord, ParsedNativeCapture } from './native-captures';
 
 type Requirement = readonly [RawOrigin, string, number];
 
@@ -197,7 +216,8 @@ interface CausalEvidence {
   readonly effectSetSha256s: readonly string[] | null;
 }
 
-interface ParsedRawRecord extends RawRecord {
+interface ParsedLegacyRawRecord extends RawRecord {
+  readonly kind: 'legacy';
   readonly semanticIdentity: SemanticIdentity;
   readonly nativeRecord: Readonly<Record<string, unknown>>;
   readonly ownerGeneration: number;
@@ -205,10 +225,17 @@ interface ParsedRawRecord extends RawRecord {
   readonly causal: CausalEvidence;
 }
 
-interface LocatedRawRecord extends ParsedRawRecord {
+interface LocatedLegacyRawRecord extends ParsedLegacyRawRecord {
   readonly byteStart: number;
   readonly byteEnd: number;
   readonly lineSha256: string;
+}
+
+type ParsedRawRecord = ParsedLegacyRawRecord | ParsedHttpRawRecord;
+type LocatedRawRecord = LocatedLegacyRawRecord | LocatedHttpRawRecord;
+
+function isLegacyRecord(record: LocatedRawRecord): record is LocatedLegacyRawRecord {
+  return record.kind === 'legacy';
 }
 
 export interface EvidenceDocument {
@@ -238,516 +265,6 @@ export interface EvidenceDocument {
   readonly evidenceDigest: string;
 }
 
-const CAPTURE_PRODUCER_ROLES = Object.freeze({
-  conditionalPostLedgerPath: 'product-producer',
-  negativeResultsPath: 'browser',
-  openCodeTimelinePath: 'opencode',
-  ownerWalTimelinePath: 'owner',
-  productTimelinePath: 'product-producer',
-  protectedEffectLedgerPath: 'opencode',
-} as const satisfies Readonly<Record<RuntimeCaptureName, string>>);
-
-const CAPTURE_IMPLEMENTATION_IDS = Object.freeze({
-  conditionalPostLedgerPath: 'agent-teams.product.hosted-approval.v1',
-  negativeResultsPath: 'agent-teams.product.browser-observer.v1',
-  openCodeTimelinePath: 'agent-teams.opencode.hosted-approval.v1',
-  ownerWalTimelinePath: 'agent-teams.orchestrator.hosted-approval-owner.v1',
-  productTimelinePath: 'agent-teams.product.hosted-approval.v1',
-  protectedEffectLedgerPath: 'agent-teams.opencode.hosted-approval.v1',
-} as const satisfies Readonly<Record<RuntimeCaptureName, string>>);
-
-const CAPTURE_NATIVE_RECORD_TYPES = Object.freeze({
-  conditionalPostLedgerPath: Object.freeze(['decision-compare-and-claim-verified'] as const),
-  negativeResultsPath: Object.freeze(['browser-negative-response-observed'] as const),
-  openCodeTimelinePath: Object.freeze(
-    ['hosted-capability', 'hosted-observe', 'hosted-reply', 'hosted-reply-raw'] as const
-  ),
-  ownerWalTimelinePath: Object.freeze(['owner-wal-published'] as const),
-  productTimelinePath: Object.freeze(
-    [
-      'approval-http-response-finalized',
-      'approval-http-unadmitted-response-finalized',
-      'coordination-sse-write-succeeded',
-    ] as const
-  ),
-  protectedEffectLedgerPath: Object.freeze(['conditional-reply-effect'] as const),
-} as const satisfies Readonly<Record<RuntimeCaptureName, readonly string[]>>);
-
-export interface NativeCaptureRecord {
-  readonly stream: (typeof RUNTIME_CAPTURE_STREAMS)[RuntimeCaptureName];
-  readonly recordType: string;
-  readonly sequence: number;
-  readonly previousRecordSha256: string | null;
-  readonly emissionNonce: string;
-  readonly operationNonce: string | null;
-  readonly producer: Readonly<{
-    role: string;
-    pid: number;
-    startTicks: string;
-    exeDev: string;
-    exeIno: string;
-    exeSha256: string;
-    artifactManifestSha256: string;
-    implementationId: string;
-    moduleSha256: string;
-  }>;
-  readonly activation: Readonly<{
-    controllerNonce: string;
-    runId: string;
-    stackManifestSha256: string;
-  }>;
-  readonly native: Readonly<Record<string, unknown>>;
-  readonly lineSha256: string;
-}
-
-export interface ParsedNativeCapture {
-  readonly producerRole: string;
-  readonly semanticRecordCount: number;
-  readonly records: readonly NativeCaptureRecord[];
-  readonly finalLineSha256: string;
-}
-
-const NATIVE_RECORD_KEYS = Object.freeze({
-  'decision-compare-and-claim-verified': Object.freeze([
-    'actorId', 'approvalId', 'bootId', 'decision', 'deploymentId', 'generationId',
-    'idempotencyKeySha256', 'ownerAuthority', 'ownerGeneration',
-    'ownerSessionId', 'outcome', 'requestId', 'sessionId',
-    'targetTeamId', 'targetTeamRunId',
-  ]),
-  'browser-negative-response-observed': Object.freeze([
-    'actorTeamId', 'harnessRunId', 'httpStatus', 'observedOutcome',
-    'processStartToken',
-    'requestBodySha256', 'requestFamily', 'responseBodySha256', 'targetTeamId', 'targetTeamRunId',
-  ]),
-  'approval-http-response-finalized': Object.freeze([
-    'actorId', 'bootId', 'deploymentId', 'method', 'outcome', 'ownerAuthority',
-    'ownerGeneration', 'ownerSessionId', 'requestBodyBytes', 'requestBodySha256', 'requestId',
-    'responseBodyBytes', 'responseBodySha256', 'routeId', 'sessionId', 'status',
-  ]),
-  'approval-http-unadmitted-response-finalized': Object.freeze([
-    'bootId', 'deploymentId', 'method', 'outcome', 'ownerAuthority', 'ownerGeneration',
-    'ownerSessionId', 'requestBodyBytes', 'requestBodySha256', 'responseBodyBytes',
-    'responseBodySha256', 'routeId', 'status',
-  ]),
-  'coordination-sse-write-succeeded': Object.freeze([
-    'bootId', 'deploymentId', 'eventId', 'eventType', 'frameBytes', 'frameKind', 'frameSha256',
-    'ownerAuthority', 'ownerGeneration', 'ownerSessionId',
-  ]),
-  'owner-wal-published': Object.freeze(['fence', 'mutation', 'revision', 'stateDelta', 'wal']),
-  'hosted-capability': Object.freeze([
-    'configGeneration', 'outcome', 'responseSha256', 'runtimeInstanceId', 'status',
-  ]),
-  'hosted-observe': Object.freeze([
-    'configGeneration', 'outcome', 'permissionCount', 'responseSha256', 'runtimeInstanceId',
-    'sessionId', 'status',
-  ]),
-  'hosted-reply': Object.freeze([
-    'configGeneration', 'decision', 'outcome', 'permissionDigest', 'requestId',
-    'requestIncarnation', 'responseSha256', 'runtimeInstanceId', 'sessionId',
-    'sessionIncarnation', 'status',
-  ]),
-  'hosted-reply-raw': Object.freeze([
-    'configGeneration', 'outcome', 'requestBodySha256', 'requestId', 'requestIncarnation',
-    'responseSha256', 'runtimeInstanceId', 'sessionId', 'sessionIncarnation', 'status',
-  ]),
-  'conditional-reply-effect': Object.freeze([
-    'configGeneration', 'decision', 'outcome', 'permissionDigest', 'requestId',
-    'requestIncarnation', 'runtimeInstanceId', 'sessionId', 'sessionIncarnation',
-  ]),
-} as const);
-
-function nativeKeysForRecord(
-  recordType: keyof typeof NATIVE_RECORD_KEYS,
-  value: unknown
-): readonly string[] {
-  if (recordType !== 'hosted-reply') return NATIVE_RECORD_KEYS[recordType];
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return [];
-  const outcome = (value as Record<string, unknown>).outcome;
-  return outcome === 'applied'
-    ? NATIVE_RECORD_KEYS['hosted-reply']
-    : NATIVE_RECORD_KEYS['hosted-reply'].filter((key) => key !== 'responseSha256');
-}
-
-const PRODUCT_HTTP_OUTCOMES: Readonly<Record<string, Readonly<Record<string, number>>>> =
-  Object.freeze({
-    'team-approvals.page.v1': Object.freeze({
-      success: 200, invalid_request: 400, not_found: 404, cancelled: 503, unavailable: 503,
-    }),
-    'team-approvals.preview.v1': Object.freeze({
-      success: 200, invalid_request: 400, stale_generation: 409, not_found: 404,
-      cancelled: 503, unavailable: 503,
-    }),
-    'team-approvals.decision.v1': Object.freeze({
-      committed: 200, idempotent_replay: 200, already_resolved: 409, invalid_request: 400,
-      stale_generation: 409, conflict: 409, expired: 410, not_found: 404, unavailable: 503,
-    }),
-  });
-
-function validProductHttpOutcome(
-  recordType: string,
-  route: unknown,
-  outcome: unknown,
-  status: unknown
-): boolean {
-  if (recordType === 'approval-http-unadmitted-response-finalized') {
-    return outcome === 'unadmitted' && status === 503;
-  }
-  return (
-    typeof route === 'string' &&
-    typeof outcome === 'string' &&
-    PRODUCT_HTTP_OUTCOMES[route]?.[outcome] === status
-  );
-}
-
-function validSseFrameIdentity(kind: unknown, eventId: unknown, eventType: unknown): boolean {
-  if (kind === 'heartbeat') return eventId === null && eventType === null;
-  if (kind === 'resync_required') return eventId === null && eventType === 'resync_required';
-  return kind === 'coordination_event' && typeof eventId === 'string' && eventId.length > 0 &&
-    typeof eventType === 'string' && eventType.length > 0;
-}
-
-function assertNativeRecordSemantics(
-  name: RuntimeCaptureName,
-  recordType: keyof typeof NATIVE_RECORD_KEYS,
-  native: Record<string, unknown>
-): void {
-  const fail = (): never => {
-    throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
-  };
-  const sha = (value: unknown): value is string =>
-    typeof value === 'string' && /^[0-9a-f]{64}$/u.test(value);
-  const identity = (value: unknown): value is string =>
-    typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/u.test(value);
-  const count = (value: unknown): value is number => Number.isSafeInteger(value) && (value as number) >= 0;
-  const productInstance = (): boolean =>
-    identity(native.bootId) &&
-    identity(native.deploymentId) &&
-    identity(native.ownerAuthority) &&
-    Number.isSafeInteger(native.ownerGeneration) &&
-    (native.ownerGeneration as number) >= 1 &&
-    identity(native.ownerSessionId);
-  switch (recordType) {
-    case 'decision-compare-and-claim-verified':
-      {
-      const joinedApprovalId =
-        typeof native.targetTeamId === 'string' && typeof native.targetTeamRunId === 'string' &&
-        typeof native.requestId === 'string'
-          ? `approval_${sha256(JSON.stringify({
-              schemaVersion: 1,
-              teamId: native.targetTeamId,
-              runId: native.targetTeamRunId.replace(/^team-run_/u, 'run_'),
-              requestId: native.requestId,
-            })).slice(0, 32)}`
-          : null;
-      if (
-        !productInstance() || !identity(native.actorId) ||
-        !identity(native.requestId) || !identity(native.sessionId) ||
-        typeof native.approvalId !== 'string' || !/^approval_[0-9a-f]{32}$/u.test(native.approvalId) ||
-        typeof native.generationId !== 'string' ||
-        !/^generation_runtime-permission-[0-9a-f]{64}$/u.test(native.generationId) ||
-        !identity(native.targetTeamId) ||
-        typeof native.targetTeamRunId !== 'string' ||
-        !/^team-run_[0-9a-f]{32}$/u.test(native.targetTeamRunId) ||
-        !sha(native.idempotencyKeySha256) ||
-        !['allow', 'deny'].includes(native.decision as string) ||
-        !['committed', 'idempotent_replay'].includes(native.outcome as string) ||
-        native.approvalId !== joinedApprovalId
-      ) fail();
-      return;
-      }
-    case 'browser-negative-response-observed':
-      if (
-        typeof native.actorTeamId !== 'string' || !/^team_[0-9a-f]{32}$/u.test(native.actorTeamId) ||
-        !sha(native.harnessRunId) ||
-        !sha(native.processStartToken) ||
-        !sha(native.requestBodySha256) || !sha(native.responseBodySha256) ||
-        typeof native.targetTeamId !== 'string' || !/^team_[0-9a-f]{32}$/u.test(native.targetTeamId) ||
-        typeof native.targetTeamRunId !== 'string' ||
-        !/^team-run_[0-9a-f]{32}$/u.test(native.targetTeamRunId) ||
-        ![403, 404].includes(native.httpStatus as number) ||
-        !(
-          (native.observedOutcome === 'cross_team_list_rejected' && native.requestFamily === 'approval-page') ||
-          (native.observedOutcome === 'cross_team_preview_rejected' && native.requestFamily === 'approval-preview') ||
-          (native.observedOutcome === 'cross_team_decide_rejected' && native.requestFamily === 'approval-decision')
-        )
-      ) fail();
-      return;
-    case 'approval-http-response-finalized':
-      if (
-        !productInstance() || !identity(native.actorId) ||
-        !identity(native.requestId) || !identity(native.sessionId)
-      ) fail();
-      // Fall through to the shared exact-wire fields.
-    case 'approval-http-unadmitted-response-finalized':
-      if (
-        !productInstance() ||
-        native.method !== 'POST' || !count(native.requestBodyBytes) ||
-        !sha(native.requestBodySha256) || !count(native.responseBodyBytes) ||
-        !sha(native.responseBodySha256) ||
-        !['team-approvals.page.v1', 'team-approvals.preview.v1', 'team-approvals.decision.v1']
-          .includes(native.routeId as string) ||
-        !validProductHttpOutcome(recordType, native.routeId, native.outcome, native.status)
-      ) fail();
-      return;
-    case 'coordination-sse-write-succeeded':
-      if (
-        !productInstance() ||
-        !count(native.frameBytes) || !sha(native.frameSha256) ||
-        !validSseFrameIdentity(native.frameKind, native.eventId, native.eventType)
-      ) fail();
-      return;
-    case 'hosted-capability':
-      if (!identity(native.runtimeInstanceId) || !identity(native.configGeneration) ||
-        native.outcome !== 'ok' || !sha(native.responseSha256) || native.status !== 200) fail();
-      return;
-    case 'hosted-observe':
-      if (!identity(native.runtimeInstanceId) || !identity(native.configGeneration) ||
-        !identity(native.sessionId) || !count(native.permissionCount) || !sha(native.responseSha256) ||
-        !['ok', 'overflow'].includes(native.outcome as string) || ![200, 500].includes(native.status as number)) fail();
-      return;
-    case 'hosted-reply':
-      if (!identity(native.sessionId) || !identity(native.requestId) ||
-        !['allow_once', 'reject'].includes(native.decision as string) || !sha(native.permissionDigest)) fail();
-      if (native.outcome === 'applied') {
-        if (native.status !== 200 || !sha(native.responseSha256) ||
-          !identity(native.runtimeInstanceId) || !identity(native.configGeneration) ||
-          !identity(native.sessionIncarnation) || !identity(native.requestIncarnation)) fail();
-      } else if (
-        !(
-          (native.outcome === 'bad-request' && native.status === 400) ||
-          (native.outcome === 'precondition-failed' && native.status === 412) ||
-          (native.outcome === 'conflict' && native.status === 409)
-        ) ||
-        native.runtimeInstanceId !== null || native.configGeneration !== null ||
-        native.sessionIncarnation !== null || native.requestIncarnation !== null ||
-        'responseSha256' in native
-      ) fail();
-      return;
-    case 'hosted-reply-raw': {
-      if (!identity(native.sessionId) || !identity(native.requestId) || !sha(native.responseSha256)) fail();
-      const outcomeStatus: Readonly<Record<string, number>> = Object.freeze({
-        unavailable: 404, 'body-read-failed': 400, 'invalid-json': 400, 'invalid-schema': 400,
-        'bad-request': 400, conflict: 409, 'precondition-failed': 412, applied: 200,
-      });
-      if (typeof native.outcome !== 'string' || outcomeStatus[native.outcome] !== native.status) fail();
-      if (native.outcome === 'unavailable' || native.outcome === 'body-read-failed') {
-        if (native.requestBodySha256 !== null) fail();
-      } else if (!sha(native.requestBodySha256)) fail();
-      if (native.outcome === 'applied') {
-        if (!identity(native.runtimeInstanceId) || !identity(native.configGeneration) ||
-          !identity(native.sessionIncarnation) || !identity(native.requestIncarnation)) fail();
-      } else if (native.runtimeInstanceId !== null || native.configGeneration !== null ||
-        native.sessionIncarnation !== null || native.requestIncarnation !== null) fail();
-      return;
-    }
-    case 'conditional-reply-effect':
-      if (!identity(native.sessionId) || !identity(native.requestId) ||
-        !['once', 'reject'].includes(native.decision as string)) fail();
-      if (native.outcome === 'applied') {
-        if (!sha(native.permissionDigest) || !identity(native.runtimeInstanceId) ||
-          !identity(native.configGeneration) || !identity(native.sessionIncarnation) ||
-          !identity(native.requestIncarnation)) fail();
-      } else if (native.outcome !== 'mismatch' || native.permissionDigest !== null ||
-        ![native.runtimeInstanceId, native.configGeneration, native.sessionIncarnation,
-          native.requestIncarnation].every((value) => value === null)) fail();
-      return;
-    case 'owner-wal-published':
-      return;
-  }
-}
-
-function parseNativePayload(
-  name: RuntimeCaptureName,
-  recordType: string,
-  value: unknown
-): Readonly<Record<string, unknown>> {
-  if (recordType === PRODUCER_PROVENANCE_CONTRACT.firstRecordType) {
-    const open = exactRecord(value, ['descriptor'], `native_capture_${name}_producer_open`);
-    const descriptor = exactRecord(
-      open.descriptor,
-      ['device', 'fd', 'inode'],
-      `native_capture_${name}_producer_open_descriptor`
-    );
-    if (descriptor.fd !== PRODUCER_PROVENANCE_CONTRACT.descriptorSlots[RUNTIME_CAPTURE_STREAMS[name]]) {
-      throw new Error(`p3c_runtime_capture_native_schema:${name}:producer-open`);
-    }
-    validateDecimal(descriptor.device, 'native_open_device');
-    validateDecimal(descriptor.inode, 'native_open_inode');
-    return Object.freeze({ descriptor: Object.freeze(descriptor) });
-  }
-  if (recordType === 'producer-close') {
-    return Object.freeze(exactRecord(value, [], `native_capture_${name}_producer_close`));
-  }
-  if (!CAPTURE_NATIVE_RECORD_TYPES[name].includes(recordType as never)) {
-    throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
-  }
-  const keys = NATIVE_RECORD_KEYS[recordType as keyof typeof NATIVE_RECORD_KEYS];
-  if (keys === undefined) {
-    throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
-  }
-  const native = exactRecord(
-    value,
-    nativeKeysForRecord(recordType as keyof typeof NATIVE_RECORD_KEYS, value),
-    `native_capture_${name}_${recordType}`
-  );
-  if (recordType === 'owner-wal-published') {
-    try {
-      parseHostedOwnerWalNative(native);
-    } catch {
-      throw new Error(`p3c_runtime_capture_native_schema:${name}:${recordType}`);
-    }
-  }
-  assertNativeRecordSemantics(name, recordType as keyof typeof NATIVE_RECORD_KEYS, native);
-  return Object.freeze(native);
-}
-
-/**
- * Parses producer-authored r307 bytes without accepting raw observations or an expected serializer.
- * Fixed parser goldens may call this function, but parsing alone is never acceptance evidence.
- */
-export function parseNativeRuntimeCapture(
-  name: RuntimeCaptureName,
-  bytes: Buffer,
-  controllerNonce: string,
-  runId: string,
-  runNonces: Set<string> = new Set<string>()
-): ParsedNativeCapture {
-  if (bytes.length < 2 || bytes.length > 8 * 1024 * 1024 || bytes.at(-1) !== 0x0a) {
-    throw new Error('p3c_runtime_capture_frame');
-  }
-  const source = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  if (source.includes('\r')) {
-    throw new Error('p3c_runtime_capture_frame');
-  }
-  const lines = source.slice(0, -1).split('\n');
-  if (lines.length < 2) throw new Error(`p3c_runtime_capture_empty_semantic_stream:${name}`);
-  const records: NativeCaptureRecord[] = [];
-  let previousLineSha256: string | null = null;
-  for (const [index, line] of lines.entries()) {
-    if (Buffer.byteLength(line) + 1 > PRODUCER_PROVENANCE_CONTRACT.maximumLineBytes) {
-      throw new Error('p3c_runtime_capture_line_too_large');
-    }
-    const parsed = JSON.parse(line) as unknown;
-    if (canonicalJson(parsed) !== line) throw new Error('p3c_runtime_capture_noncanonical');
-    const item = exactRecord(
-      parsed,
-      [
-        'contract',
-        'version',
-        'contractSha256',
-        'stream',
-        'recordType',
-        'sequence',
-        'previousRecordSha256',
-        'emissionNonce',
-        'producer',
-        'activation',
-        'native',
-        'operationNonce',
-      ],
-      `runtime_capture_${name}_record`
-    );
-    const producer = exactRecord(
-      item.producer,
-      [
-        'role',
-        'pid',
-        'startTicks',
-        'exeDev',
-        'exeIno',
-        'exeSha256',
-        'artifactManifestSha256',
-        'implementationId',
-        'moduleSha256',
-      ],
-      `runtime_capture_${name}_producer`
-    );
-    const activation = exactRecord(
-      item.activation,
-      ['controllerNonce', 'runId', 'stackManifestSha256'],
-      `runtime_capture_${name}_activation`
-    );
-    if (typeof item.recordType !== 'string') {
-      throw new Error(`p3c_runtime_capture_binding:${name}:${index}`);
-    }
-    const native = parseNativePayload(name, item.recordType, item.native);
-    const emissionNonce = validateRecordId(item.emissionNonce, 'native_emission_nonce');
-    if (
-      item.contract !== PRODUCER_PROVENANCE_CONTRACT.contract ||
-      item.version !== PRODUCER_PROVENANCE_CONTRACT.version ||
-      item.contractSha256 !== PRODUCER_PROVENANCE_CONTRACT_SHA256 ||
-      item.stream !== RUNTIME_CAPTURE_STREAMS[name] ||
-      item.sequence !== index ||
-      item.previousRecordSha256 !== previousLineSha256 ||
-      (index === 0 && item.recordType !== PRODUCER_PROVENANCE_CONTRACT.firstRecordType) ||
-      (index > 0 && item.recordType === PRODUCER_PROVENANCE_CONTRACT.firstRecordType) ||
-      (index === lines.length - 1 && item.recordType !== 'producer-close') ||
-      (index > 0 && index < lines.length - 1 &&
-        !CAPTURE_NATIVE_RECORD_TYPES[name].includes(item.recordType as never)) ||
-      ((index === 0 || item.recordType === 'producer-close')
-        ? item.operationNonce !== null
-        : typeof item.operationNonce !== 'string' || !/^[0-9a-f]{64}$/u.test(item.operationNonce)) ||
-      producer.role !== CAPTURE_PRODUCER_ROLES[name] ||
-      producer.implementationId !== CAPTURE_IMPLEMENTATION_IDS[name] ||
-      !Number.isSafeInteger(producer.pid) ||
-      (producer.pid as number) < 2 ||
-      activation.controllerNonce !== controllerNonce ||
-      activation.runId !== runId ||
-      typeof activation.stackManifestSha256 !== 'string' ||
-      !/^[0-9a-f]{64}$/u.test(activation.stackManifestSha256) ||
-      !/^[a-z][a-z0-9-]{0,127}$/u.test(item.recordType) ||
-      typeof producer.startTicks !== 'string' ||
-      !/^(?:0|[1-9]\d*)$/u.test(producer.startTicks) ||
-      typeof producer.exeDev !== 'string' ||
-      !/^(?:0|[1-9]\d*)$/u.test(producer.exeDev) ||
-      typeof producer.exeIno !== 'string' ||
-      !/^(?:0|[1-9]\d*)$/u.test(producer.exeIno) ||
-      [producer.exeSha256, producer.artifactManifestSha256, producer.moduleSha256].some(
-        (digest) => typeof digest !== 'string' || !/^[0-9a-f]{64}$/u.test(digest)
-      ) ||
-      runNonces.has(emissionNonce)
-    ) {
-      throw new Error(`p3c_runtime_capture_binding:${name}:${index}`);
-    }
-    runNonces.add(emissionNonce);
-    previousLineSha256 = sha256(`${line}\n`);
-    records.push(
-      Object.freeze({
-        stream: item.stream as NativeCaptureRecord['stream'],
-        recordType: item.recordType,
-        sequence: index,
-        previousRecordSha256: item.previousRecordSha256 as string | null,
-        emissionNonce,
-        operationNonce: item.operationNonce as string | null,
-        producer: Object.freeze({
-          role: producer.role as string,
-          pid: producer.pid as number,
-          startTicks: producer.startTicks as string,
-          exeDev: producer.exeDev as string,
-          exeIno: producer.exeIno as string,
-          exeSha256: producer.exeSha256 as string,
-          artifactManifestSha256: producer.artifactManifestSha256 as string,
-          implementationId: producer.implementationId as string,
-          moduleSha256: producer.moduleSha256 as string,
-        }),
-        activation: Object.freeze({
-          controllerNonce,
-          runId,
-          stackManifestSha256: activation.stackManifestSha256 as string,
-        }),
-        native: Object.freeze(native),
-        lineSha256: previousLineSha256,
-      })
-    );
-  }
-  return Object.freeze({
-    producerRole: CAPTURE_PRODUCER_ROLES[name],
-    semanticRecordCount: records.length - 2,
-    records: Object.freeze(records),
-    finalLineSha256: previousLineSha256!,
-  });
-}
-
 export function assertNativeSemanticCrossJoin(
   name: RuntimeCaptureName,
   parsedShards: readonly ParsedNativeCapture[],
@@ -768,7 +285,9 @@ export function assertNativeSemanticCrossJoin(
       : name === 'conditionalPostLedgerPath'
         ? ['product-http']
         : ['product-http', 'product-sse'];
-  const rawRecords = origins.flatMap((origin) => parseOrigin(raw[origin], origin, controllerNonce));
+  const rawRecords = origins.flatMap((origin) =>
+    parseRawOrigin(raw[origin], origin, controllerNonce).filter(isLegacyRecord)
+  );
   const consumed = new Set<string>();
   const semanticRecords = parsedShards.flatMap((shard, shardIndex) =>
     shard.records.slice(1, -1).map((record) => Object.freeze({ record, shardIndex }))
@@ -792,7 +311,7 @@ export function assertNativeSemanticCrossJoin(
     }
     return Object.freeze({ bytes: bytes.length, sha256: structure.sha256 as string });
   };
-  const matches = (nativeRecord: NativeCaptureRecord, rawRecord: LocatedRawRecord): boolean => {
+  const matches = (nativeRecord: NativeCaptureRecord, rawRecord: LocatedLegacyRawRecord): boolean => {
     const native = nativeRecord.native;
     const semantic = rawRecord.nativeRecord;
     const transport = semantic.transport as Record<string, unknown>;
@@ -891,61 +410,6 @@ export function assertNativeSemanticCrossJoin(
   if (consumed.size !== candidates.length) fail('unconsumed_raw');
 }
 
-function assertProducerCaptureFileEvidence(
-  name: RuntimeCaptureName,
-  expected: ProducerCaptureFileEvidence
-): void {
-  if (
-    expected.stream !== RUNTIME_CAPTURE_STREAMS[name] ||
-    expected.contractSha256 !== PRODUCER_PROVENANCE_CONTRACT_SHA256 ||
-    expected.shards.length === 0 ||
-    (name !== 'ownerWalTimelinePath' && expected.shards.length !== 1) ||
-    new Set(expected.shards.map(({ path }) => path)).size !== expected.shards.length ||
-    new Set(expected.shards.map(({ captureDevice, captureInode }) => `${captureDevice}:${captureInode}`))
-      .size !== expected.shards.length
-  ) {
-    throw new Error(`p3c_runtime_capture_producer_proof:${name}`);
-  }
-  if (
-    (name === 'openCodeTimelinePath' || name === 'protectedEffectLedgerPath') &&
-    expected.shards.some(
-      ({ producerModuleSha256 }) =>
-        producerModuleSha256 === OPENCODE_IDENTITIES.linuxX64BinarySha256
-    )
-  ) {
-    throw new Error(`p3c_runtime_capture_old_opencode_artifact:${name}`);
-  }
-}
-
-function assertNativeCaptureKernelBinding(
-  name: RuntimeCaptureName,
-  parsed: ParsedNativeCapture,
-  shard: ProducerCaptureFileEvidence['shards'][number],
-  outcome: SupervisorOutcome
-): void {
-  const observedProcess = outcome.starts.find(
-    ({ pid, startToken }) => pid === shard.producerPid && startToken === shard.producerStartToken
-  );
-  if (observedProcess === undefined) {
-    throw new Error(`p3c_runtime_capture_process_binding:${name}`);
-  }
-  for (const record of parsed.records) {
-    if (
-      record.producer.role !== CAPTURE_PRODUCER_ROLES[name] ||
-      observedProcess.role !== shard.producerRole ||
-      record.producer.pid !== observedProcess.pid ||
-      record.producer.startTicks !== observedProcess.startTime ||
-      record.producer.exeDev !== observedProcess.executableDevice ||
-      record.producer.exeIno !== observedProcess.executableInode ||
-      record.producer.exeSha256 !== observedProcess.executableSha256 ||
-      record.producer.artifactManifestSha256 !== shard.producerArtifactSha256 ||
-      record.producer.moduleSha256 !== shard.producerModuleSha256
-    ) {
-      throw new Error(`p3c_runtime_capture_process_binding:${name}:${record.sequence}`);
-    }
-  }
-}
-
 export interface ExactlyOnceEvidence {
   readonly normalProviderEffects: readonly {
     readonly decision: 'allow' | 'deny';
@@ -1004,16 +468,11 @@ function parseRecord(
     !Number.isSafeInteger(item.effectCount) ||
     (item.effectCount as number) < 0 ||
     (item.effectCount as number) > 16 ||
-    typeof item.payloadBase64 !== 'string' ||
-    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(item.payloadBase64)
+    typeof item.payloadBase64 !== 'string'
   )
     throw new Error('p3c_raw_record_value');
-  const payload = Buffer.from(item.payloadBase64, 'base64');
-  if (
-    payload.length < 2 ||
-    payload.length > 1024 * 1024 ||
-    payload.toString('base64') !== item.payloadBase64
-  )
+  const payload = decodeHttpBase64(item.payloadBase64, HTTP_LIMITS.payload, 'outer_base64');
+  if (payload.length < 2 || payload.toString('base64') !== item.payloadBase64)
     throw new Error('p3c_raw_payload_frame');
   assertNoSecretLikeBytes(payload);
   const semantic = validateStructuralPayload(
@@ -1030,7 +489,7 @@ function parseRecord(
   const recordId = validateRecordId(item.recordId, 'raw_record_id');
   if (sha256(`agent-teams.p3c.raw-record-id/v1\0${canonicalJson(unsigned)}`) !== recordId)
     throw new Error('p3c_raw_record_identity');
-  return Object.freeze({
+  const outer: RawRecord = Object.freeze({
     schemaVersion: 1,
     purpose: RAW_RECORD_PURPOSE,
     controllerNonce,
@@ -1045,6 +504,14 @@ function parseRecord(
     effectCount: item.effectCount as number,
     payloadBase64: item.payloadBase64,
     payloadSha256,
+  });
+  if (semantic.kind === HTTP_OBSERVATION_KIND) {
+    assertHttpOuterBinding(outer, semantic.http);
+    return Object.freeze({ ...outer, kind: HTTP_OBSERVATION_KIND, http: semantic.http });
+  }
+  return Object.freeze({
+    ...outer,
+    kind: 'legacy',
     semanticIdentity: semantic.identity,
     nativeRecord: semantic.nativeRecord,
     ownerGeneration: semantic.ownerGeneration,
@@ -2032,13 +1499,16 @@ export function validateStructuralPayload(
   event: string,
   controllerNonce: string,
   payload: Buffer
-): {
-  readonly identity: SemanticIdentity;
-  readonly nativeRecord: Readonly<Record<string, unknown>>;
-  readonly ownerGeneration: number;
-  readonly processEvidenceSetId: string | null;
-  readonly causal: CausalEvidence;
-} {
+):
+  | { readonly kind: typeof HTTP_OBSERVATION_KIND; readonly http: HostedHttpRecord }
+  | {
+      readonly kind: 'legacy';
+      readonly identity: SemanticIdentity;
+      readonly nativeRecord: Readonly<Record<string, unknown>>;
+      readonly ownerGeneration: number;
+      readonly processEvidenceSetId: string | null;
+      readonly causal: CausalEvidence;
+    } {
   let value: unknown;
   try {
     value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(payload));
@@ -2048,6 +1518,16 @@ export function validateStructuralPayload(
   if (canonicalJson(value) !== payload.toString('utf8'))
     throw new Error('p3c_raw_payload_noncanonical');
   const item = exactRecord(value, ['kind', 'recordBase64', 'recordSha256'], 'raw_payload');
+  if (item.kind === HTTP_OBSERVATION_KIND) {
+    if (origin !== 'opencode' || payload.length > HTTP_LIMITS.payload)
+      throw new Error('p3c_raw_payload_structure');
+    parseHttpCanonical(payload, 'payload');
+    const http = decodeHttpRecord(item);
+    if (http.context.row !== row || http.context.activation.controllerNonce !== controllerNonce)
+      throw new Error('p3c_http_payload_binding');
+    return Object.freeze({ kind: HTTP_OBSERVATION_KIND, http });
+  }
+  if (payload.length > 1024 * 1024) throw new Error('p3c_raw_payload_frame');
   const kinds: Readonly<Record<RawOrigin, string>> = Object.freeze({
     browser: 'browser-observation',
     'product-http': 'http-structure',
@@ -2118,6 +1598,7 @@ export function validateStructuralPayload(
   )
     throw new Error('p3c_semantic_causal_binding');
   return Object.freeze({
+    kind: 'legacy',
     identity,
     nativeRecord: Object.freeze({ ...semantic }),
     ownerGeneration: validateTransport(
@@ -2162,7 +1643,7 @@ export function validateStructuralPayload(
   });
 }
 
-function parseOrigin(
+export function parseRawOrigin(
   bytes: Buffer,
   origin: RawOrigin,
   controllerNonce: string
@@ -2174,11 +1655,14 @@ function parseOrigin(
   let previous = -1n;
   let byteStart = 0;
   const records = lines.map((line, index) => {
-    if (!line || line.includes('\r') || line.length > 2 * 1024 * 1024)
+    if (!line || line.includes('\r') || Buffer.byteLength(line) + 1 > HTTP_LIMITS.line)
       throw new Error('p3c_raw_origin_line');
     const value = JSON.parse(line) as unknown;
     if (canonicalJson(value) !== line) throw new Error('p3c_raw_origin_noncanonical');
     const record = parseRecord(value, origin, index + 1, controllerNonce);
+    if (record.kind === 'legacy' && line.length > 2 * 1024 * 1024)
+      throw new Error('p3c_raw_origin_line');
+    if (record.kind === HTTP_OBSERVATION_KIND) parseHttpCanonical(Buffer.from(line), 'outer');
     const current = BigInt(record.monotonicNs);
     if (current <= previous) throw new Error('p3c_raw_origin_clock');
     previous = current;
@@ -2197,7 +1681,8 @@ function parseOrigin(
 }
 
 function expectedStarts(
-  outcome: SupervisorOutcome
+  outcome: SupervisorOutcome,
+  http = false
 ): Readonly<Record<RawOrigin, readonly ProcessStartEvidence[]>> {
   const find = (role: string) => {
     const value = outcome.starts.filter((start) => start.role === role);
@@ -2209,7 +1694,7 @@ function expectedStarts(
     'product-http': find('product'),
     'product-sse': find('product'),
     'owner-wal': find('owner'),
-    opencode: find('opencode'),
+    opencode: find(http ? 'owner' : 'opencode'),
     supervisor: Object.freeze([outcome.supervisorStart]),
   });
 }
@@ -2217,7 +1702,8 @@ function expectedStarts(
 export function deriveEvidence(
   raw: Readonly<Record<RawOrigin, Buffer>>,
   controllerNonce: string,
-  outcome: SupervisorOutcome
+  outcome: SupervisorOutcome,
+  p1?: P1JointResult
 ): {
   readonly origins: Readonly<Record<RawOrigin, OriginEvidence>>;
   readonly rows: readonly RowEvidence[];
@@ -2226,7 +1712,25 @@ export function deriveEvidence(
   if (!outcome.zeroOwnedSurvivors) throw new Error('p3c_evidence_survivors');
   if (outcome.controllerNonce !== controllerNonce)
     throw new Error('p3c_evidence_controller_disagreement');
+  if (p1) {
+    const http = parseRawOrigin(raw.opencode, 'opencode', controllerNonce).filter(
+      (record) => record.kind === HTTP_OBSERVATION_KIND
+    );
+    if (
+      http.length === 0 ||
+      p1.controllerNonce !== controllerNonce ||
+      p1.runId !== outcome.runId ||
+      p1.ledgerSha256 !== sha256(raw.opencode) ||
+      canonicalJson(p1.recordIds) !== canonicalJson(http.map(({ recordId }) => recordId))
+    ) {
+      throw new Error('p3c_http_joint_verification_required');
+    }
+    // No transport zero-count, synthetic causal fields or legacy effect_total_* rows are claims.
+    // Shared assembly receives the verified P1 facts; P2-B must supply the remaining native proof.
+    throw new P1ScenarioEvidencePending(p1);
+  }
   const starts = expectedStarts(outcome);
+  const httpStarts = expectedStarts(outcome, true);
   const parsed = {} as Record<RawOrigin, readonly LocatedRawRecord[]>;
   const origins = {} as Record<RawOrigin, OriginEvidence>;
   for (const origin of RAW_ORIGINS) {
@@ -2236,21 +1740,25 @@ export function deriveEvidence(
       bytes.length !== outcome.rawFiles[origin].size
     )
       throw new Error('p3c_evidence_supervisor_raw_disagreement');
-    const records = parseOrigin(bytes, origin, controllerNonce);
+    const records = parseRawOrigin(bytes, origin, controllerNonce);
     if (
-      records.some(({ processStartToken, monotonicNs, ownerGeneration, semanticIdentity }) => {
-        const start = starts[origin].find(({ startToken }) => startToken === processStartToken);
+      records.some((record) => {
+        const candidates = record.kind === 'legacy' ? starts[origin] : httpStarts[origin];
+        const start = candidates.find(({ startToken }) => startToken === record.processStartToken);
+        if (!start || BigInt(record.monotonicNs) <= BigInt(start.observedMonotonicNs)) return true;
+        if (record.kind === HTTP_OBSERVATION_KIND) {
+          return (
+            record.http.context.activation.runId !== outcome.runId ||
+            start.generation !== record.http.context.recorder.ownerGeneration ||
+            !outcome.rawFiles[origin].producerStartTokens.includes(start.startToken)
+          );
+        }
         return (
-          !start ||
-          BigInt(monotonicNs) <= BigInt(start.observedMonotonicNs) ||
-          semanticIdentity.harnessRunId !== outcome.runId ||
-          (origin === 'owner-wal' && start.generation !== ownerGeneration)
+          record.semanticIdentity.harnessRunId !== outcome.runId ||
+          (origin === 'owner-wal' && start.generation !== record.ownerGeneration) ||
+          (origin === 'supervisor' && record.processEvidenceSetId !== outcome.processEvidenceSetId)
         );
-      }) ||
-      (origin === 'supervisor' &&
-        records.some(
-          ({ processEvidenceSetId }) => processEvidenceSetId !== outcome.processEvidenceSetId
-        ))
+      })
     )
       throw new Error('p3c_evidence_process_start_disagreement');
     parsed[origin] = records;
@@ -2262,7 +1770,10 @@ export function deriveEvidence(
       lastMonotonicNs: records.at(-1)!.monotonicNs,
     });
   }
-  const all = RAW_ORIGINS.flatMap((origin) => parsed[origin]);
+  const decoded = RAW_ORIGINS.flatMap((origin) => parsed[origin]);
+  if (decoded.some((record) => record.kind === HTTP_OBSERVATION_KIND))
+    throw new Error('p3c_http_joint_verification_required');
+  const all = decoded.filter(isLegacyRecord);
   if (new Set(all.map(({ recordId }) => recordId)).size !== all.length)
     throw new Error('p3c_evidence_duplicate_record');
   const globallyOrdered = [...all].sort((left, right) =>
@@ -2276,7 +1787,7 @@ export function deriveEvidence(
     )
   )
     throw new Error('p3c_evidence_global_causal_order');
-  const byChain = new Map<string, LocatedRawRecord[]>();
+  const byChain = new Map<string, LocatedLegacyRawRecord[]>();
   for (const record of globallyOrdered) {
     const records = byChain.get(record.causal.chainId) ?? [];
     if (records.length > 0 && record.causal.phase < records.at(-1)!.causal.phase)
@@ -2569,6 +2080,7 @@ export function assembleEvidence(input: {
   readonly runId: string;
   readonly outcome: SupervisorOutcome;
   readonly cleanup: CleanupResult;
+  readonly httpAdmissions?: readonly P1HttpAdmission[];
 }): EvidenceDocument {
   if (
     input.cleanup.disposition !== 'removed' ||
@@ -2577,72 +2089,36 @@ export function assembleEvidence(input: {
     input.cleanup.runId !== input.runId
   )
     throw new Error('p3c_evidence_cleanup_unproven');
-  const derived = deriveEvidence(input.raw, input.controllerNonce, input.outcome);
-  const runNonces = new Set<string>();
-  const captures = Object.fromEntries(
-    RUNTIME_CAPTURE_NAMES.map((name) => {
-      const expected = input.outcome.captureFiles[name];
-      assertProducerCaptureFileEvidence(name, expected);
-      const shardBytes = input.captures[name];
-      if (shardBytes.length !== expected.shards.length || shardBytes.length === 0) {
-        throw new Error('p3c_evidence_supervisor_capture_shard_disagreement');
-      }
-      const parsedShards = shardBytes.map((bytes, index) => {
-        const shard = expected.shards[index]!;
-        if (bytes.length !== shard.size || sha256(bytes) !== shard.sha256) {
-          throw new Error('p3c_evidence_supervisor_capture_disagreement');
-        }
-        const parsed = parseNativeRuntimeCapture(
-          name,
-          bytes,
-          input.controllerNonce,
-          input.runId,
-          runNonces
-        );
-        assertNativeCaptureKernelBinding(name, parsed, shard, input.outcome);
-        return parsed;
-      });
-      const semanticRecordCount = parsedShards.reduce(
-        (count, parsed) => count + parsed.semanticRecordCount,
-        0
-      );
-      if (semanticRecordCount === 0) {
-        throw new Error(`p3c_runtime_capture_empty_semantic_stream:${name}`);
-      }
-      assertNativeSemanticCrossJoin(
-        name,
-        parsedShards,
-        input.raw,
-        input.controllerNonce,
-        expected
-      );
-      const shardSha256s = expected.shards.map(({ sha256 }) => sha256);
-      const logicalSha256 = sha256(
-        `agent-teams.p3c.logical-native-capture/v1\0${name}\0${canonicalJson(shardSha256s)}`
-      );
-      return [
-        name,
-        Object.freeze({
-          sha256: logicalSha256,
-          size: expected.shards.reduce((size, shard) => size + shard.size, 0),
-          shardCount: expected.shards.length,
-          shardSha256s: Object.freeze(shardSha256s),
-          producerRole: parsedShards[0]!.producerRole,
-          semanticRecordCount,
-        }),
-      ];
-    })
-  ) as Record<
-    RuntimeCaptureName,
-    {
-      sha256: string;
-      size: number;
-      shardCount: number;
-      shardSha256s: readonly string[];
-      producerRole: string;
-      semanticRecordCount: number;
-    }
-  >;
+  const native = parseKernelBoundNativeCaptures(input);
+  const httpRecords = parseRawOrigin(input.raw.opencode, 'opencode', input.controllerNonce).filter(
+    (record): record is LocatedHttpRawRecord => record.kind === HTTP_OBSERVATION_KIND
+  );
+  const p1 =
+    httpRecords.length === 0
+      ? undefined
+      : verifyOpenCodeHttpEvidence({
+          records: httpRecords,
+          ledger: input.raw.opencode,
+          shards: [
+            ...native.shards.openCodeTimelinePath,
+            ...native.shards.protectedEffectLedgerPath,
+          ],
+          admissions: input.httpAdmissions ?? [],
+          outcome: input.outcome,
+        });
+  const derived = deriveEvidence(input.raw, input.controllerNonce, input.outcome, p1);
+  for (const name of RUNTIME_CAPTURE_NAMES) {
+    if (native.summaries[name].semanticRecordCount === 0)
+      throw new Error(`p3c_runtime_capture_empty_semantic_stream:${name}`);
+    assertNativeSemanticCrossJoin(
+      name,
+      native.shards[name].map(({ parsed }) => parsed),
+      input.raw,
+      input.controllerNonce,
+      input.outcome.captureFiles[name]
+    );
+  }
+  const captures = native.summaries;
   const unsigned = {
     schemaVersion: 1,
     purpose: 'agent-teams.p3c.evidence/v1',
