@@ -10,6 +10,38 @@ import type { CliProviderStatus } from '@shared/types';
 
 const NOW = Date.parse('2026-09-01T20:00:00.000Z');
 
+function createOpenCodeCatalog(model = 'opencode/big-pickle'): CliProviderStatus {
+  const base = createReadyProvider('anthropic');
+  return {
+    ...base,
+    providerId: 'opencode',
+    models: [model],
+    modelCatalog: {
+      ...base.modelCatalog!,
+      providerId: 'opencode',
+      models: [{ ...base.modelCatalog!.models[0]!, id: model, launchModel: model }],
+    },
+  };
+}
+
+function createTimedOutSource(): CliProviderStatus {
+  const source = createOpenCodeCatalog();
+  return {
+    ...source,
+    detailMessage: 'version 1.17.18 - auth /profile/auth.json',
+    modelCatalogRefreshState: 'error',
+    modelCatalog: {
+      ...source.modelCatalog!,
+      status: 'stale',
+      diagnostics: {
+        configReadState: 'ready',
+        appServerState: 'healthy',
+        message: 'OpenCode catalog overall deadline exceeded after 60000ms',
+      },
+    },
+  };
+}
+
 function createReadyProvider(providerId: 'anthropic' | 'codex'): CliProviderStatus {
   const modelId = providerId === 'codex' ? 'gpt-5.6-sol' : 'opus';
   return {
@@ -61,6 +93,98 @@ function createReadyProvider(providerId: 'anthropic' | 'codex'): CliProviderStat
 }
 
 describe('createLaunchGuard', () => {
+  it('uses fresh exact-project authority when a duplicate source catalog timed out', () => {
+    const provider = createOpenCodeCatalog();
+    const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]), {
+      selectedModels: ['opencode/big-pickle'],
+      scopedStatusBySourceId: new Map([['opencode', createTimedOutSource()]]),
+    });
+    expect(guard.blockers(true, NOW)).toEqual([]);
+    expect(guard.blocked(true, NOW)).toBe(false);
+    expect(guard.blocked(true, Date.parse(provider.modelCatalog!.staleAt))).toBe(true);
+  });
+
+  it.each([
+    'auth',
+    'auth-timeout',
+    'permanent',
+    'newer',
+    'invalid-date',
+    'future',
+    'missing-model',
+    'unavailable-model',
+    'unknown-model',
+    'unscoped',
+    'unknown-authority',
+    'expired',
+  ])('does not replace a source failure with unsafe %s evidence', (scenario) => {
+    const provider = createOpenCodeCatalog();
+    const source = createTimedOutSource();
+    if (scenario === 'auth') source.authenticated = false;
+    if (scenario === 'auth-timeout')
+      source.modelCatalog!.diagnostics.message = 'Authentication timed out';
+    if (scenario === 'permanent') source.modelCatalog!.diagnostics.code = 'authentication_required';
+    if (scenario === 'newer') source.modelCatalog!.fetchedAt = '2026-09-01T19:56:00.000Z';
+    if (scenario === 'invalid-date') source.modelCatalog!.fetchedAt = 'invalid';
+    if (scenario === 'future') source.modelCatalog!.fetchedAt = '2026-09-01T20:01:00.000Z';
+    if (scenario === 'unavailable-model' || scenario === 'unknown-model')
+      source.modelAvailability = [
+        {
+          modelId: 'opencode/big-pickle',
+          status: scenario === 'unknown-model' ? 'unknown' : 'unavailable',
+        },
+      ];
+    if (scenario === 'unknown-authority') provider.statusCheckOutcome = 'model_only';
+    if (scenario === 'expired') provider.modelCatalog!.staleAt = new Date(NOW).toISOString();
+    const guard = createLaunchGuard(
+      ['opencode'],
+      new Map([['opencode', scenario === 'unscoped' ? null : provider]]),
+      {
+        selectedModels: [
+          scenario === 'missing-model' ? 'opencode/other-model' : 'opencode/big-pickle',
+        ],
+        scopedStatusBySourceId: new Map([['opencode', source]]),
+      }
+    );
+    expect(guard.blocked(true, NOW)).toBe(true);
+  });
+
+  it.each(['auth', 'model'])(
+    'does not hide a second source %s failure behind the first timeout',
+    (failure) => {
+      const provider = createOpenCodeCatalog();
+      const otherModel = 'openrouter/auto';
+      provider.modelCatalog!.models.push({
+        ...provider.modelCatalog!.models[0]!,
+        id: otherModel,
+        launchModel: otherModel,
+      });
+      const otherSource = createTimedOutSource();
+      if (failure === 'auth') otherSource.authenticated = false;
+      else {
+        otherSource.modelCatalogRefreshState = 'ready';
+        otherSource.modelAvailability = [{ modelId: otherModel, status: 'unavailable' }];
+      }
+      const guard = createLaunchGuard(['opencode'], new Map([['opencode', provider]]), {
+        selectedModels: ['opencode/big-pickle', otherModel],
+        scopedStatusBySourceId: new Map([
+          ['opencode', createTimedOutSource()],
+          ['openrouter', otherSource],
+        ]),
+      });
+      expect(guard.blocked(true, NOW)).toBe(true);
+    }
+  );
+
+  it('shows the actual source catalog error before runtime inventory', () => {
+    const source = createTimedOutSource();
+    const guard = createLaunchGuard(['opencode'], new Map(), {
+      selectedModels: ['opencode/big-pickle'],
+      scopedStatusBySourceId: new Map([['opencode', source]]),
+    });
+    expect(guard.blockers(true, NOW)[0]?.detail).toBe(source.modelCatalog!.diagnostics.message);
+    expect(guard.blockers(true, NOW)[0]?.detail).not.toContain('auth.json');
+  });
   it.each(['codex', 'anthropic'] as const)('shares fail-closed readiness for %s', (providerId) => {
     const provider = createReadyProvider(providerId);
     expect(hasEffectiveProviderLaunchAuthority(provider, NOW)).toBe(true);

@@ -12,6 +12,7 @@ import {
   hasSettledOpenCodeScopedPreparation,
   type OpenCodeScopedPreparationEvidence,
 } from '@renderer/utils/teamProviderRuntimeStatusLoading';
+import { parseOpenCodeQualifiedModelRef } from '@shared/utils/opencodeModelRef';
 
 import type { CliInstallationStatus, CliProviderStatus, TeamProviderId } from '@shared/types';
 
@@ -46,11 +47,77 @@ function getProviderStatusDetail(provider: CliProviderStatus): string | null {
     return null;
   }
   return (
+    provider.modelCatalog?.diagnostics.message?.trim() ||
     provider.detailMessage?.trim() ||
     provider.statusMessage?.trim() ||
-    provider.modelCatalog?.diagnostics.message?.trim() ||
     null
   );
+}
+
+/** A failed duplicate source refresh cannot revoke fresher exact-project authority.
+ * Only catalogue transport timeouts qualify, never authentication or model failures.
+ */
+function hasAuthoritativeOpenCodeCatalogFallback(
+  provider: CliProviderStatus | null,
+  evidence: OpenCodeScopedPreparationEvidence | undefined,
+  now: number
+): boolean {
+  if (
+    !provider ||
+    !hasEffectiveProviderLaunchAuthority(provider, now) ||
+    !evidence?.selectedModels.length
+  )
+    return false;
+  const catalog = provider.modelCatalog!;
+  return evidence.selectedModels.every((model) => {
+    const sourceId = parseOpenCodeQualifiedModelRef(model)?.sourceId;
+    const item = catalog.models.find((entry) => entry.launchModel === model);
+    if (!sourceId || !item || item.metadata?.opencode?.proofState === 'failed') return false;
+    if (
+      provider.modelAvailability?.some(
+        (entry) =>
+          (entry.modelId === model || entry.modelId === item.id) && entry.status !== 'available'
+      )
+    )
+      return false;
+    const source = evidence.scopedStatusBySourceId.get(sourceId);
+    if (
+      source &&
+      (source.providerId !== 'opencode' ||
+        !source.supported ||
+        !source.authenticated ||
+        source.verificationState === 'error' ||
+        source.statusCheckErrorCode != null ||
+        source.modelCatalog?.models.some(
+          (entry) =>
+            entry.launchModel === model && entry.metadata?.opencode?.proofState === 'failed'
+        ) ||
+        source.modelAvailability?.some(
+          (entry) =>
+            (entry.modelId === model || entry.modelId === item.id) && entry.status !== 'available'
+        ))
+    )
+      return false;
+    if (source?.modelCatalogRefreshState !== 'error') return true;
+    const sourceCatalog = source.modelCatalog;
+    const fetchedAt = Date.parse(sourceCatalog?.fetchedAt ?? '');
+    const diagnostics = sourceCatalog?.diagnostics;
+    return (
+      source.verificationState === 'verified' &&
+      source.statusCheckOutcome === 'authoritative' &&
+      source.modelVerificationState !== 'verifying' &&
+      sourceCatalog?.status === 'stale' &&
+      sourceCatalog.providerId === 'opencode' &&
+      Number.isFinite(fetchedAt) &&
+      new Date(fetchedAt).toISOString() === sourceCatalog.fetchedAt &&
+      Date.parse(catalog.fetchedAt) >= fetchedAt &&
+      (diagnostics?.code
+        ? ['timeout', 'deadline_exceeded'].includes(diagnostics.code)
+        : /\bcatalog\b[^.\n]*(?:timed?\s*out|timeout|deadline exceeded)/i.test(
+            diagnostics?.message ?? ''
+          ))
+    );
+  });
 }
 
 export function createLaunchGuard(
@@ -76,6 +143,7 @@ export function createLaunchGuard(
       const scopedFailure =
         providerId === 'opencode' ? getOpenCodeScopedPreparationFailure(openCodeEvidence) : null;
       if (scopedFailure) {
+        if (hasAuthoritativeOpenCodeCatalogFallback(provider, openCodeEvidence, now)) return [];
         return [
           {
             providerId,
