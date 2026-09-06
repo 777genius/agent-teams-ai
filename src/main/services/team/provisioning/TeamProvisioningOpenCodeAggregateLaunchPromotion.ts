@@ -81,12 +81,25 @@ export function classifyOpenCodePrimaryLeadBootstrap(input: {
   }
   const evidence = findOpenCodePrimaryLeadEvidence(input.primaryResult, input.leadName);
   if (!evidence) {
-    // No entry for the lead at all is not this gate's failure shape:
+    // An absent lead is not proof of a healthy one.
+    //
+    // This used to answer `'confirmed'`, on the grounds that
     // `normalizeExpectedOpenCodeRuntimeLaunchMembers` turns a genuinely missing
-    // expected member into `failed_to_start`, so an absent entry means the
-    // result never went through normalization. Inventing a veto here would
-    // fail launches whose primary lane simply reported a different member.
-    return 'confirmed';
+    // expected member into `failed_to_start`, so an absent entry could only mean
+    // an unnormalized result. That function is not called anywhere in production
+    // code, so the premise never held: an absent entry was the ordinary case,
+    // and this gate waved through exactly the launches it exists to stop.
+    //
+    // It is still not a veto. A primary lane that reported a different member
+    // than the one this app calls the lead is a naming mismatch, not a dead
+    // team, and failing there would take down launches that work. `'pending'`
+    // is the honest answer: the team is not ready, and the bootstrap check-in
+    // path is given its chance to land the evidence.
+    //
+    // Disk evidence still outranks the absence, for the same reason it may only
+    // ever downgrade elsewhere: a lane that already committed a lead session is
+    // confirmed no matter what this particular result carried.
+    return input.committedSessionEvidence === true ? 'confirmed' : 'pending';
   }
   if (evidence.launchState === 'failed_to_start' || evidence.hardFailure === true) {
     return 'failed';

@@ -125,13 +125,46 @@ describe('classifyOpenCodePrimaryLeadBootstrap', () => {
     ).toBe('failed');
   });
 
-  it('does not veto when the primary lane returned no entry for the lead at all', () => {
-    // An absent entry means the result never went through expected-member
-    // normalization; a genuinely failed lead arrives as `failed_to_start`.
+  /**
+   * This case used to answer `'confirmed'`, on the premise that an absent entry
+   * could only mean an unnormalized result -
+   * `normalizeExpectedOpenCodeRuntimeLaunchMembers` would otherwise have turned
+   * a missing expected member into `failed_to_start`. That function is not
+   * called anywhere in production code, so an absent entry was the ordinary
+   * case, and the gate waved through exactly the launches it exists to stop.
+   */
+  it('does not confirm a lead the primary lane never reported', () => {
     expect(
       classifyOpenCodePrimaryLeadBootstrap({
         leadName: 'team-lead',
         primaryResult: buildRetainableOpenCodeLaunchResult('Ada'),
+      })
+    ).toBe('pending');
+  });
+
+  /**
+   * Still not a veto: a lane that reported a different member than the one this
+   * app calls the lead is a naming mismatch, not a dead team. `'pending'` keeps
+   * the run alive and leaves the bootstrap check-in path its chance to land the
+   * evidence - `'failed'` would tear down side lanes that work.
+   */
+  it('keeps an unreported lead pending rather than failing the team', () => {
+    expect(
+      classifyOpenCodePrimaryLeadBootstrap({
+        leadName: 'team-lead',
+        primaryResult: buildRetainableOpenCodeLaunchResult('Ada'),
+        committedSessionEvidence: false,
+      })
+    ).toBe('pending');
+  });
+
+  /** Disk evidence outranks the absence: a committed lead session is confirmed. */
+  it('confirms an unreported lead whose session is already committed', () => {
+    expect(
+      classifyOpenCodePrimaryLeadBootstrap({
+        leadName: 'team-lead',
+        primaryResult: buildRetainableOpenCodeLaunchResult('Ada'),
+        committedSessionEvidence: true,
       })
     ).toBe('confirmed');
   });
