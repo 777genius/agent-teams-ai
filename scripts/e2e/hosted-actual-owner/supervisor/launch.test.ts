@@ -238,6 +238,32 @@ test('plan caller imports in the private cwd and launches from verified inherite
       environment: 'CLAUDE_TEAM_PRODUCER_PROVENANCE_V2', descriptorSlots: { ownerWalTimeline: 9 },
       contractSha256: 'ef6aa8ac1f139d2b5e9312da8ff1e6dac21da788d46eefbd6e3d43da27da23ba' } } } as unknown as SupervisorPlan;
   try {
+    const module = { path: '/sandbox/immutable/owner.ts', sha256: '9'.repeat(64) };
+    const selectedImage = input.handles.helper.pin;
+    const sourcePlan = { ...plan,
+      expectedExecutableSha256: { ...plan.expectedExecutableSha256, owner: selectedImage.sha256 },
+      expectedExecutableDevice: { ...plan.expectedExecutableDevice, owner: selectedImage.device },
+      expectedExecutableInode: { ...plan.expectedExecutableInode, owner: selectedImage.inode },
+      expectedProducerModuleSha256: { ...plan.expectedProducerModuleSha256, owner: module.sha256 },
+      ownerSourceInvocation: { format: 'agent-teams.hosted-owner-source-invocation/v1' as const,
+        executable: { device: selectedImage.device, inode: selectedImage.inode, sha256: selectedImage.sha256 }, module } };
+    const sourceOptions = { plan: sourcePlan, handles: input.handles, bootstrap,
+      invocation: { kind: 'source-bun' as const, modulePath: module.path, moduleSha256: module.sha256 },
+      environment: {}, supervisorProcessStartToken: '5'.repeat(64), recipeSha256: '6'.repeat(64), harnessContractSha256: '7'.repeat(64) };
+    // Correctly pinned image B cannot replace selected image A, despite preserving selected module M.
+    await assert.rejects(launchOwnerFromPlan(sourceOptions), /selected_owner_image/u);
+    // A legacy built-entry plan is not an independently selected source invocation.
+    await assert.rejects(launchOwnerFromPlan({ ...sourceOptions, plan }), /source_selection/u);
+    const boundSourcePlan = { ...sourcePlan,
+      expectedExecutableSha256: plan.expectedExecutableSha256,
+      expectedExecutableDevice: plan.expectedExecutableDevice,
+      expectedExecutableInode: plan.expectedExecutableInode,
+      ownerSourceInvocation: { ...sourcePlan.ownerSourceInvocation,
+        executable: { device: owner.device, inode: owner.inode, sha256: owner.sha256 } } };
+    await assert.rejects(launchOwnerFromPlan({ ...sourceOptions, plan: boundSourcePlan,
+      invocation: { ...sourceOptions.invocation, modulePath: '/sandbox/immutable/different.ts' } }), /source_selection/u);
+    assert.equal(statSync(input.rawPath).size, 0);
+    assert(fstatSync(input.handles.rawFd).isFile()); assert(fstatSync(input.handles.walFd).isFile());
     const launch = await launchOwnerFromPlan({ plan, handles: input.handles, bootstrap, invocation: { kind: 'built-entry' },
       environment: {}, supervisorProcessStartToken: '5'.repeat(64), recipeSha256: '6'.repeat(64), harnessContractSha256: '7'.repeat(64) });
     const socket = launch.activation.take();
@@ -253,6 +279,24 @@ test('plan caller imports in the private cwd and launches from verified inherite
     } finally { socket.destroy(); await launch.dispose(); }
   } finally { input.closeBorrowed(); }
 });
+
+for (const stale of ['rawFd', 'walFd'] as const) {
+  test(`stale ${stale} preserves structured failure and closes every other transferred writer`, async () => {
+    const input = inputs(`stale-${stale}`);
+    const other = stale === 'rawFd' ? 'walFd' : 'rawFd';
+    closeSync(input.handles[stale]);
+    try {
+      const error = await failure(launchNativeOwner({ ...input.handles, argv: ['test-child'], environment: {},
+        assemble: () => { assert.fail('stale descriptor must fail before assembly'); } }));
+      assert.equal(error.nativeEvents.length, 0);
+      assert(error.cause instanceof AggregateError);
+      assert.equal((error.cause.errors[0] as NodeJS.ErrnoException).code, 'EBADF');
+      assert(error.cause.errors.slice(1).some((cause: NodeJS.ErrnoException) => cause.code === 'EBADF'));
+      assert.throws(() => fstatSync(input.handles[other]), { code: 'EBADF' });
+      assert.equal(statSync(input.rawPath).size, 0); assert.equal(statSync(input.walPath).size, 0);
+    } finally { input.closeBorrowed(); }
+  });
+}
 
 test('same inode through two distinct writer opens is refused before fork', async () => {
   const input = inputs('alias'); closeSync(input.handles.walFd);

@@ -149,3 +149,18 @@ refusal. Fixture headers/auth are explicitly non-authoritative and never qualifi
 5. Finish W1 custody/raw-retention injection and prefix handoff, Owner transport and P1/O1 joins in
    their owning slices, then perform the separately authorized full MVP gates. These primitives and
    benign native tests do not prove that composition complete.
+
+### Source selection and refusal cleanup
+
+A source invocation requires an admitted `plan.ownerSourceInvocation` record with
+format `agent-teams.hosted-owner-source-invocation/v1`, independently selected
+executable device/inode/SHA-256, and the exact selected module path/SHA-256.
+The executable must also match the plan's executable fields and inherited image;
+the module digest must match the separate producer-module field. A legacy
+built-entry plan cannot implicitly authorize a source runtime. Admission must
+verify the exact module path/digest pair before preserving the immutable closure.
+
+Once numeric writer handles transfer, every writer receives an independent close
+attempt even when another descriptor is stale. Closure failures join the original
+structured launch failure; they cannot suppress remaining cleanup or trigger
+retry of a potentially reused descriptor number.

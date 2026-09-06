@@ -13,7 +13,15 @@ export { assembleOwnerBootstrap } from './bootstrap-v2';
 export type { BootstrapCommon, ExpectedSupervisedOpenCode, RawRetentionBinding } from './bootstrap-v2';
 
 export interface LaunchOwnerFromPlanOptions {
-  readonly plan: SupervisorPlan;
+  readonly plan: SupervisorPlan & {
+    /** Admitted source invocation: selected runtime image and selected immutable module are distinct.
+     * The caller must verify this exact path/digest pair before maintaining the read-only closure. */
+    readonly ownerSourceInvocation?: {
+      readonly format: 'agent-teams.hosted-owner-source-invocation/v1';
+      readonly executable: { readonly device: string; readonly inode: string; readonly sha256: string };
+      readonly module: { readonly path: string; readonly sha256: string };
+    };
+  };
   readonly handles: Pick<NativeLaunchOptions, 'helper' | 'executable' | 'cwdFd' | 'rawFd' | 'walFd'>;
   /** Comes from the selected supervisor start record, not from the Owner frame. */
   readonly supervisorProcessStartToken: string;
@@ -80,12 +88,20 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
     bootstrap.expectedHost.executable.inode === plan.expectedExecutableInode.opencode &&
     bootstrap.expectedHost.executable.moduleSha256 === plan.expectedProducerModuleSha256.opencode &&
     bootstrap.expectedHost.executable.artifactManifestSha256 === plan.expectedProducerArtifactSha256.opencode, 'opencode_pins');
+  check(handles.executable.pin.sha256 === plan.expectedExecutableSha256.owner &&
+    handles.executable.pin.device === plan.expectedExecutableDevice.owner &&
+    handles.executable.pin.inode === plan.expectedExecutableInode.owner, 'selected_owner_image');
   const entrySha256 = plan.expectedProducerModuleSha256.owner;
   let prefix: readonly string[] = [];
   if (invocation.kind === 'built-entry') {
-    check(handles.executable.pin.sha256 === entrySha256 && handles.executable.pin.sha256 === plan.expectedExecutableSha256.owner &&
-      handles.executable.pin.device === plan.expectedExecutableDevice.owner && handles.executable.pin.inode === plan.expectedExecutableInode.owner, 'built_owner_image');
+    check(plan.ownerSourceInvocation === undefined && handles.executable.pin.sha256 === entrySha256, 'built_owner_image');
   } else {
+    const selected = plan.ownerSourceInvocation;
+    check(selected?.format === 'agent-teams.hosted-owner-source-invocation/v1' &&
+      selected.executable.device === plan.expectedExecutableDevice.owner &&
+      selected.executable.inode === plan.expectedExecutableInode.owner &&
+      selected.executable.sha256 === plan.expectedExecutableSha256.owner &&
+      selected.module.path === invocation.modulePath && selected.module.sha256 === entrySha256, 'source_selection');
     check(invocation.moduleSha256 === entrySha256 && invocation.modulePath.startsWith('/') &&
       Buffer.byteLength(invocation.modulePath) <= 4096 && !invocation.modulePath.includes('\0') &&
       !invocation.modulePath.split('/').some(s => s === '.' || s === '..'), 'source_module');

@@ -182,7 +182,13 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
   let closed: Promise<void> | undefined, startupTimer: NodeJS.Timeout | undefined;
   let frames: BootstrapFrames | undefined, transfer: Buffer | undefined;
   const startup = new AbortController();
-  const closeWriters = () => { for (const fd of ownedWriters) { ownedWriters.delete(fd); closeAndObserve(fd); } };
+  const writerCloseFailures: unknown[] = [];
+  const closeWriters = () => {
+    for (const fd of ownedWriters) {
+      ownedWriters.delete(fd); // Never retry a numeric descriptor after a possible close/reuse.
+      try { closeAndObserve(fd); } catch (error) { writerCloseFailures.push(error); }
+    }
+  };
   const revoke = () => {
     startup.abort(new Error('owner_launch_canceled_or_deadline'));
     channel?.stop(new Error('owner_launch_canceled_or_deadline'));
@@ -238,6 +244,7 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
     act.on('error', () => undefined); live.on('error', () => undefined);
     activation = new OwnedEndpoint(act); liveness = new OwnedEndpoint(live);
     closeWriters(); // libuv has already duplicated them. No writer retained in this TS process.
+    requireValue(writerCloseFailures.length === 0, 'writer_close_failed');
     await writeMessage(control, NATIVE_COMMAND.init, init); init.fill(0);
     const held = decodeHeld(await channel.next(NATIVE_EVENT.held));
     requireValue(held.parentPid === helper.pid && held.callerPid === process.pid &&
@@ -289,10 +296,11 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
     return Object.freeze({ held, sealed, executed: Object.freeze({ ...executed, executableSha256: options.executable.pin.sha256 }),
       delivery, activation, liveness, exit, nativeEvents: () => Object.freeze([...retainedChannel.records]), dispose });
   } catch (cause) {
-    let cleanupFailure: unknown;
-    try { await dispose(); } catch (error) { cleanupFailure = error; }
-    throw new OwnerLaunchError(cleanupFailure ? 'owner_launch_failed_cleanup_incomplete' : 'owner_launch_failed',
-      Object.freeze([...(channel?.records ?? [])]), { cause: cleanupFailure ? new AggregateError([cause, cleanupFailure]) : cause });
+    closeWriters();
+    const cleanupFailures = [...writerCloseFailures];
+    try { await dispose(); } catch (error) { cleanupFailures.push(error); }
+    throw new OwnerLaunchError(cleanupFailures.length ? 'owner_launch_failed_cleanup_incomplete' : 'owner_launch_failed',
+      Object.freeze([...(channel?.records ?? [])]), { cause: cleanupFailures.length ? new AggregateError([cause, ...cleanupFailures]) : cause });
   } finally {
     closeWriters(); transfer?.fill(0);
     frames?.leaseBytes.fill(0); frames?.bootstrapFrame.fill(0); frames?.authFrame.fill(0);
