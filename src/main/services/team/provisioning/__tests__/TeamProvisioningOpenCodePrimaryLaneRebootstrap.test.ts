@@ -392,3 +392,75 @@ describe('rebootstrapOpenCodeAggregatePrimaryLane happy path', () => {
     expect(lease.release).toHaveBeenCalledTimes(1);
   });
 });
+
+/**
+ * The trigger is automatic and fire-and-forget: the delivery path never awaits
+ * this promise. So whatever this call leaves running, nothing else is scoped to
+ * clean up - which makes the exception path the one that matters most.
+ */
+describe('a re-bootstrap that throws does not leave a host behind', () => {
+  it('reaps the lane when the relaunch itself throws', async () => {
+    const { ports, calls } = createPorts({
+      launchOpenCodeAggregatePrimaryLane: async () => {
+        calls.push('launchPrimary');
+        // A throw here can still have started a host: it may come from any step
+        // after the spawn.
+        throw new Error('runtime handshake exploded after the host came up');
+      },
+    });
+
+    const result = await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON },
+      ports
+    );
+
+    expect(result).toEqual({ rebootstrapped: false, refusal: 'relaunch_failed' });
+    // Two stops: the one that opened the re-bootstrap, and the reap of what the
+    // failed relaunch may have created.
+    expect(calls.filter((call) => call === 'stopPrimary')).toHaveLength(2);
+    expect(calls).toContain('publishFailed');
+    expect(calls).toContain('releaseLease');
+  });
+
+  it('reaps the lane when the persist throws after a confirmed lead', async () => {
+    const { ports, calls } = createPorts({
+      persistLaunchStateSnapshot: async () => {
+        calls.push('persistLaunchState');
+        throw new Error('launch state could not be written');
+      },
+    });
+
+    const result = await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON },
+      ports
+    );
+
+    expect(result).toEqual({ rebootstrapped: false, refusal: 'relaunch_failed' });
+    expect(calls.filter((call) => call === 'stopPrimary')).toHaveLength(2);
+    // A run that was never published must not be re-marked alive.
+    expect(calls).not.toContain('publishReady');
+  });
+
+  /**
+   * The other direction of the same fence. A throw BEFORE the relaunch owns no
+   * host, and reaping there would stop the lane whose failing precondition was
+   * the reason to refuse in the first place.
+   */
+  it('does not reap when the opening stop throws before any relaunch', async () => {
+    const { ports, calls } = createPorts({
+      stopOpenCodeRuntimeAdapterTeam: async () => {
+        calls.push('stopPrimary');
+        throw new Error('the lane refused to stop');
+      },
+    });
+
+    const result = await rebootstrapOpenCodeAggregatePrimaryLane(
+      { teamName: TEAM_NAME, reason: REASON },
+      ports
+    );
+
+    expect(result).toEqual({ rebootstrapped: false, refusal: 'relaunch_failed' });
+    expect(calls.filter((call) => call === 'stopPrimary')).toHaveLength(1);
+    expect(calls).not.toContain('launchPrimary');
+  });
+});

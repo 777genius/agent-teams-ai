@@ -136,6 +136,16 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
 
   const leadName = ports.resolveLeadName(run);
   const lease = ports.beginRebootstrapLease(teamName, leadName, run.runId);
+  /**
+   * Whether a host may exist that nobody is going to stop.
+   *
+   * Every refusal AFTER the relaunch reaps before it returns, but an EXCEPTION
+   * skipped all of them: the trigger is automatic and fire-and-forget, so a
+   * throw out of the launch left a freshly created host running for a team the
+   * app had just reported as failed to re-bootstrap. Nothing would have stopped
+   * it until the user stopped the team.
+   */
+  let relaunchAttempted = false;
   try {
     ports.publishPending(run, 'Re-bootstrapping the OpenCode lead lane');
     // The lease is never held across the relaunch: a leaked lease deadlocks
@@ -164,6 +174,11 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
         return refuse('stop_generation_changed');
       };
 
+    // Set BEFORE the call, not after it. A launch that throws may already have
+    // started a host - the throw can come from any step after the spawn - and a
+    // flag set on the return path would leave exactly that host running while
+    // the catch below reported a clean refusal.
+    relaunchAttempted = true;
     const result = await ports.launchOpenCodeAggregatePrimaryLane({ run, adapter, prompt: '' });
     const stoppedAfterRelaunch = await reapAndRefuseWhenStopped();
     if (stoppedAfterRelaunch) {
@@ -205,14 +220,7 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
     if (stoppedBeforePersist) {
       return stoppedBeforePersist;
     }
-    try {
-      await ports.persistLaunchStateSnapshot(run, ports.getMixedSecondaryLaunchPhase(run));
-    } catch (persistError) {
-      // The relaunched host outlives a failed persist otherwise: the catch
-      // below reports `relaunch_failed` without reaping anything.
-      await reapRelaunchedPrimaryLane();
-      throw persistError;
-    }
+    await ports.persistLaunchStateSnapshot(run, ports.getMixedSecondaryLaunchPhase(run));
     const stoppedAfterPersist = await reapAndRefuseWhenStopped();
     if (stoppedAfterPersist) {
       return stoppedAfterPersist;
@@ -221,6 +229,18 @@ export async function rebootstrapOpenCodeAggregatePrimaryLane(
     ports.publishReady(run, 'OpenCode lead lane was re-bootstrapped');
     return { rebootstrapped: true };
   } catch (error) {
+    // The same reap every post-relaunch refusal does, on the one path that used
+    // to skip it. A throw anywhere past the launch - the launch itself, the
+    // classifier, the persist - can leave a host this call created, and this is
+    // the last code that knows the host exists: the caller never awaits this
+    // promise and no later step is scoped to this attempt.
+    //
+    // It is fenced on `relaunchAttempted` because a throw BEFORE the launch owns
+    // nothing, and reaping there would stop the lane the failing precondition
+    // was protecting.
+    if (relaunchAttempted) {
+      await reapRelaunchedPrimaryLane();
+    }
     ports.publishFailed(run, 'OpenCode lead lane re-bootstrap failed', error);
     ports.logWarn(
       `[${teamName}] opencode_primary_lane_rebootstrap_failed reason=${params.reason} ` +
