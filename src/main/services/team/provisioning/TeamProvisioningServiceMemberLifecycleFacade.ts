@@ -362,7 +362,14 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     createTeamProvisioningOpenCodeLaunchWiring<ProvisioningRun>(
       createTeamProvisioningOpenCodeLaunchWiringHostFromService(
         this as unknown as TeamProvisioningOpenCodeLaunchWiringServiceHost<ProvisioningRun>
-      )
+      ),
+      (input) => {
+        void this.openCodePromptDeliveryWatchdogCoordinator
+          .wakeAfterRuntimeRegistration(input)
+          .catch((error: unknown) =>
+            logger.warn(`OpenCode registered runtime inbox wake failed: ${String(error)}`)
+          );
+      }
     );
   protected readonly requestAdmissionBoundary!: TeamProvisioningServiceComposition['requestAdmissionBoundary'];
   protected readonly openCodeRuntimeDeliveryBoundaryHost!: TeamProvisioningOpenCodeRuntimeDeliveryBoundaryHost<ProvisioningRun>;

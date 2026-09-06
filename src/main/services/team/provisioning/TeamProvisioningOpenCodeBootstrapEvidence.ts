@@ -50,11 +50,13 @@ export interface OpenCodeRuntimeBootstrapEvidencePorts {
   getCurrentAgentTeamsMcpHttpTransportEvidence(): AgentTeamsMcpHttpTransportEvidence | null;
   isFileLockTimeoutError(error: unknown): boolean;
   warn(message: string): void;
+  onBootstrapSessionCommitted?(input: CommitOpenCodeRuntimeBootstrapSessionEvidenceInput): void;
 }
 
 export function createDefaultOpenCodeRuntimeBootstrapEvidencePorts(input: {
   teamsBasePath: string;
   warn?: (message: string) => void;
+  onBootstrapSessionCommitted?: OpenCodeRuntimeBootstrapEvidencePorts['onBootstrapSessionCommitted'];
 }): OpenCodeRuntimeBootstrapEvidencePorts {
   return {
     teamsBasePath: input.teamsBasePath,
@@ -66,6 +68,7 @@ export function createDefaultOpenCodeRuntimeBootstrapEvidencePorts(input: {
     getCurrentAgentTeamsMcpHttpTransportEvidence,
     isFileLockTimeoutError,
     warn: input.warn ?? (() => undefined),
+    onBootstrapSessionCommitted: input.onBootstrapSessionCommitted,
   };
 }
 
@@ -276,10 +279,16 @@ export async function commitOpenCodeRuntimeBootstrapSessionEvidence(
   input: CommitOpenCodeRuntimeBootstrapSessionEvidenceInput,
   ports: OpenCodeRuntimeBootstrapEvidencePorts
 ): Promise<void> {
-  return withOpenCodeRuntimeLaneLifecycleLock(
-    { teamsBasePath: ports.teamsBasePath, ...input },
-    () => commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(input, ports)
+  await withOpenCodeRuntimeLaneLifecycleLock({ teamsBasePath: ports.teamsBasePath, ...input }, () =>
+    commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(input, ports)
   );
+  // Both app-managed bootstrap and runtime check-in reach this verified commit.
+  // Publish outside the lane lock; inbox delivery must not block launch/check-in.
+  try {
+    ports.onBootstrapSessionCommitted?.(input);
+  } catch (error) {
+    ports.warn(`OpenCode bootstrap inbox wake failed: ${getErrorMessage(error)}`);
+  }
 }
 
 async function commitOpenCodeRuntimeBootstrapSessionEvidenceUnlocked(

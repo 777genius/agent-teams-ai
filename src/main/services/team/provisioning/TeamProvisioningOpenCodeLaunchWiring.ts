@@ -287,7 +287,8 @@ export function createTeamProvisioningOpenCodeLaunchWiringHostFromService<Run>(
 }
 
 export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
-  host: TeamProvisioningOpenCodeLaunchWiringHost<Run>
+  host: TeamProvisioningOpenCodeLaunchWiringHost<Run>,
+  onRuntimeRegistered?: (input: { teamName: string; runId: string }) => void
 ): TeamProvisioningOpenCodeLaunchWiring {
   // One OpenCode host serves every launch of a project, so the shared-runtime
   // records outlive a single team launch: a relaunch that hits the same timeout
@@ -365,6 +366,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
             host.deliverOpenCodeLaunchPromptToLead(promptInput),
           setAliveRunId: (teamName, runId) => {
             host.runTracking.setAliveRunId(teamName, runId);
+            onRuntimeRegistered?.({ teamName, runId });
           },
           setRuntimeAdapterRun: (teamName, runtimeRun) => {
             host.runtimeAdapterRunByTeam.set(teamName, runtimeRun);
@@ -459,6 +461,7 @@ export function createTeamProvisioningOpenCodeLaunchWiring<Run>(
           },
           setAliveRunId: (teamName, runId) => {
             host.runTracking.setAliveRunId(teamName, runId);
+            onRuntimeRegistered?.({ teamName, runId });
           },
           invalidateRuntimeSnapshotCaches: (teamName) =>
             host.invalidateRuntimeSnapshotCaches(teamName),

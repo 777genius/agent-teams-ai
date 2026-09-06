@@ -58,6 +58,7 @@ describe('TeamProvisioningBootstrapEvidenceFacade', () => {
   it('builds facade deps from service-shaped dependencies', () => {
     const { facade: bootstrapTranscriptFacade } = transcriptFacade();
     const readPersistedRuntimeMembers = vi.fn(() => []);
+    const onBootstrapSessionCommitted = vi.fn();
     const service = {
       bootstrapTranscriptFacade,
       readPersistedRuntimeMembers,
@@ -67,6 +68,7 @@ describe('TeamProvisioningBootstrapEvidenceFacade', () => {
       getTeamsBasePath: () => '/teams',
       nowIso: () => NOW,
       warn: vi.fn(),
+      onBootstrapSessionCommitted,
     });
 
     expect(deps.bootstrapTranscriptFacade).toBe(bootstrapTranscriptFacade);
@@ -74,6 +76,7 @@ describe('TeamProvisioningBootstrapEvidenceFacade', () => {
     expect(readPersistedRuntimeMembers).toHaveBeenCalledWith('demo');
     expect(deps.getTeamsBasePath?.()).toBe('/teams');
     expect(deps.nowIso()).toBe(NOW);
+    expect(deps.onBootstrapSessionCommitted).toBe(onBootstrapSessionCommitted);
   });
 
   it('owns transcript, runtime proof, evidence port, and member log compatibility wrappers', async () => {
@@ -86,6 +89,7 @@ describe('TeamProvisioningBootstrapEvidenceFacade', () => {
       (input: { teamsBasePath: string; warn(message: string): void }) =>
         input as unknown as OpenCodeRuntimeBootstrapEvidencePorts
     );
+    const onBootstrapSessionCommitted = vi.fn();
     const facade = new TeamProvisioningBootstrapEvidenceFacade({
       bootstrapTranscriptFacade,
       readPersistedRuntimeMembers: vi.fn(() => []),
@@ -93,6 +97,7 @@ describe('TeamProvisioningBootstrapEvidenceFacade', () => {
       nowIso: () => NOW,
       warn: vi.fn(),
       createOpenCodeRuntimeBootstrapEvidencePorts,
+      onBootstrapSessionCommitted,
     });
 
     expect(facade.memberLogsFinder).toBe(memberLogsFinder);
@@ -112,11 +117,16 @@ describe('TeamProvisioningBootstrapEvidenceFacade', () => {
     ).resolves.toBe(null);
 
     const ports = facade.createOpenCodeRuntimeBootstrapEvidencePorts();
-    expect(ports).toEqual({ teamsBasePath: '/teams', warn: expect.any(Function) });
+    expect(ports).toEqual({
+      teamsBasePath: '/teams',
+      warn: expect.any(Function),
+      onBootstrapSessionCommitted,
+    });
     expect(setMemberLogsFinderForCompatibility).toHaveBeenCalledWith(nextMemberLogsFinder);
     expect(createOpenCodeRuntimeBootstrapEvidencePorts).toHaveBeenCalledWith({
       teamsBasePath: '/teams',
       warn: expect.any(Function),
+      onBootstrapSessionCommitted,
     });
   });
 

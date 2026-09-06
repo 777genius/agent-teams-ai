@@ -97,6 +97,12 @@ export interface OpenCodePromptDeliveryWatchdogCoordinatorPorts {
   resolveMembersForRuntimeLane(teamName: string, laneId: string): Promise<string[]>;
   getInboxMessages(teamName: string, memberName: string): Promise<InboxMessage[]>;
   resolveCurrentRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
+  hasCommittedBootstrapSession(input: {
+    teamName: string;
+    laneId: string;
+    runId: string;
+    memberName: string;
+  }): Promise<boolean>;
   hasStableInboxMessageId(message: InboxMessage): message is InboxMessage & { messageId: string };
   logPromptDeliveryEvent(
     event: string,
@@ -521,6 +527,55 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
     return await this.scanActiveLanes(teamName, activeLaneIds);
   }
 
+  async wakeAfterRuntimeRegistration(input: { teamName: string; runId: string }): Promise<void> {
+    const isCurrentPrimary = async (): Promise<boolean> =>
+      (await this.ports.resolveCurrentRuntimeRunId(input.teamName, 'primary')) === input.runId;
+    if (!(await isCurrentPrimary()) || !this.ports.canDeliverToTeamRuntime(input.teamName)) return;
+    for (const laneId of (await this.ports.readActiveRuntimeLaneIds(input.teamName)) ?? []) {
+      const runId = await this.ports.resolveCurrentRuntimeRunId(input.teamName, laneId);
+      if (!runId) continue;
+      for (const memberName of await this.ports.resolveMembersForRuntimeLane(
+        input.teamName,
+        laneId
+      )) {
+        const member = { teamName: input.teamName, laneId, runId, memberName };
+        if (!(await this.ports.hasCommittedBootstrapSession(member))) continue;
+        if (!(await isCurrentPrimary())) return;
+        await this.wakeAfterBootstrapCommit(member);
+      }
+    }
+  }
+
+  async wakeAfterBootstrapCommit(input: {
+    teamName: string;
+    laneId: string;
+    runId: string;
+    memberName: string;
+  }): Promise<number> {
+    if (!this.ports.watchdogScheduler.isEnabled()) return 0;
+    const isCurrentRun = async (): Promise<boolean> =>
+      (await this.ports.resolveCurrentRuntimeRunId(input.teamName, input.laneId)) === input.runId &&
+      this.ports.canDeliverToTeamRuntime(input.teamName);
+    if (!(await isCurrentRun())) return 0;
+    const messages = await this.ports.getInboxMessages(input.teamName, input.memberName);
+    // Stop/relaunch may race either read. Never wake a replacement generation.
+    if (!(await isCurrentRun())) return 0;
+    let scheduled = 0;
+    for (const message of messages) {
+      if (message.read || !message.text?.trim() || !this.ports.hasStableInboxMessageId(message)) {
+        continue;
+      }
+      this.schedule({
+        teamName: input.teamName,
+        memberName: input.memberName,
+        messageId: message.messageId,
+        delayMs: 500,
+      });
+      scheduled += 1;
+    }
+    return scheduled;
+  }
+
   async scanActiveLanes(teamName: string, laneIds: string[]): Promise<number> {
     if (!this.ports.watchdogScheduler.isEnabled()) {
       return 0;
@@ -660,6 +715,7 @@ export function createOpenCodePromptDeliveryWatchdogCoordinator(
     nowIso: () => new Date().toISOString(),
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     getErrorMessage: defaultGetErrorMessage,
+    hasCommittedBootstrapSession: async () => false,
     ...ports,
   });
 }
