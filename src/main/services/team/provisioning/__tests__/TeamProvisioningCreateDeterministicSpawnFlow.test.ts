@@ -524,7 +524,7 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     expect(run.mcpConfigPath).toBeNull();
   });
 
-  it('lets readiness win at the timeout deadline without killing or failure cleanup', async () => {
+  it('reports an existing team only after timeout termination is confirmed', async () => {
     vi.useFakeTimers();
     const order: string[] = [];
     const run = createPlanningRun();
@@ -534,7 +534,9 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       configureTimeoutSideEffects(ports);
     const tryCompleteAfterTimeout = vi.fn<PlanningPorts['tryCompleteAfterTimeout']>(
       async (targetRun) => {
-        expect(targetRun.processKilled).toBe(false);
+        expect(targetRun.processKilled).toBe(true);
+        expect(targetRun.processClosed).toBe(true);
+        expect(killTeamProcessAndWait).toHaveBeenCalledWith(child);
         cleanupRun(targetRun);
         return true;
       }
@@ -546,8 +548,8 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
 
     expect(tryCompleteAfterTimeout).toHaveBeenCalledOnce();
     expect(run.child).toBe(child);
-    expect(run.processKilled).toBe(false);
-    expect(killTeamProcessAndWait).not.toHaveBeenCalled();
+    expect(run.processKilled).toBe(true);
+    expect(killTeamProcessAndWait).toHaveBeenCalledWith(child);
     expect(updateProgress).not.toHaveBeenCalledWith(
       run,
       'failed',
@@ -569,7 +571,7 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
       configureTimeoutSideEffects(ports);
     const tryCompleteAfterTimeout = vi.fn<PlanningPorts['tryCompleteAfterTimeout']>(
       async (targetRun) => {
-        expect(targetRun.processKilled).toBe(false);
+        expect(targetRun.processKilled).toBe(true);
         return false;
       }
     );
@@ -709,12 +711,12 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
     expect(cleanupRun).not.toHaveBeenCalled();
   });
 
-  it('does not kill or clean up a replacement child that takes ownership during the check', async () => {
+  it('does not clean up a replacement child during post-termination reporting', async () => {
     vi.useFakeTimers();
     const order: string[] = [];
     const run = createPlanningRun();
     const ports = createPlanningPorts(order);
-    configureSpawnedChild(ports, 111);
+    const previousChild = configureSpawnedChild(ports, 111);
     const { cleanupRun, killTeamProcessAndWait, updateProgress } =
       configureTimeoutSideEffects(ports);
     let resolveReadiness!: (ready: boolean) => void;
@@ -732,13 +734,16 @@ describe('TeamProvisioningCreateDeterministicSpawnFlow', () => {
 
     const replacementChild = configureSpawnedChild(ports, 222);
     run.child = replacementChild;
+    run.processKilled = false;
+    run.processClosed = false;
+    run.finalizingByTimeout = false;
     resolveReadiness(false);
     await Promise.resolve();
     await Promise.resolve();
 
     expect(run.processKilled).toBe(false);
     expect(run.finalizingByTimeout).toBe(false);
-    expect(killTeamProcessAndWait).not.toHaveBeenCalled();
+    expect(killTeamProcessAndWait).toHaveBeenCalledExactlyOnceWith(previousChild);
     expect(updateProgress).not.toHaveBeenCalledWith(
       run,
       'failed',
