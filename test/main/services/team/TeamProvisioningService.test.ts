@@ -12605,10 +12605,12 @@ describe('TeamProvisioningService', () => {
       // pass. A marker naming some other id would point the lead at the wrong
       // message to reconcile against, and dropping the id entirely would leave
       // it with nothing to look up.
-      const redeliveryBlock = retryText.slice(
-        retryText.indexOf('<opencode_delivery_redelivery>'),
-        retryText.indexOf('</opencode_delivery_redelivery>')
-      );
+      const redeliveryOpenIndex = retryText.indexOf('<opencode_delivery_redelivery>');
+      const redeliveryCloseIndex = retryText.indexOf('</opencode_delivery_redelivery>');
+      // Without this, a missing close makes indexOf answer -1, slice() reads it
+      // as "one before the end", and the block below still holds the id.
+      expect(redeliveryCloseIndex).toBeGreaterThan(redeliveryOpenIndex);
+      const redeliveryBlock = retryText.slice(redeliveryOpenIndex, redeliveryCloseIndex);
       expect(redeliveryBlock).toContain(
         'The inbound app message "msg-visible-required" is ALREADY in this session'
       );

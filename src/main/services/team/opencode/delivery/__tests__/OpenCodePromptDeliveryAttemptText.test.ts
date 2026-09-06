@@ -24,6 +24,7 @@ describe('buildOpenCodePromptDeliveryAttemptText', () => {
     });
 
     expect(text).toContain('<opencode_delivery_redelivery>');
+    expect(text).toContain('</opencode_delivery_redelivery>');
     expect(text).toContain('"launch-1"');
     expect(text).toContain('<opencode_delivery_retry>fix</opencode_delivery_retry>');
     expect(text).not.toContain('Kick off the run.');
