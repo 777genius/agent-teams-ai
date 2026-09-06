@@ -1,4 +1,4 @@
-import React, { act } from 'react';
+import React, { act, startTransition, Suspense } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { useDashboardStatusRefresh } from '@renderer/components/dashboard/useDashboardStatusRefresh';
@@ -113,6 +113,64 @@ afterEach(async () => {
 });
 
 describe('connected OpenCode dashboard catalog', () => {
+  it('does not pause catalog I/O for an abandoned status-checking render', async () => {
+    let completeDirectory!: (value: ReturnType<typeof directory>) => void;
+    mocks.directory.mockReturnValue(
+      new Promise((resolve) => {
+        completeDirectory = resolve;
+      })
+    );
+    let finishSuspension!: () => void;
+    const suspended = new Promise<void>((resolve) => {
+      finishSuspension = resolve;
+    });
+    const suspendedRender = vi.fn();
+    const SuspendedProbe = ({ checking }: { checking: boolean }) => {
+      observed = useOpenCodeConnectedModelCatalog({
+        enabled: true,
+        statusChecking: checking,
+        projectPath: '/sandbox/abandoned-render',
+        passiveProviderStatus: passive,
+      });
+      if (checking) {
+        suspendedRender();
+        throw suspended;
+      }
+      return null;
+    };
+    const render = (checking: boolean) =>
+      root.render(
+        <Suspense fallback={null}>
+          <SuspendedProbe checking={checking} />
+        </Suspense>
+      );
+    await act(async () => {
+      render(false);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      startTransition(() => render(true));
+      await Promise.resolve();
+    });
+    expect(suspendedRender).toHaveBeenCalled();
+    await act(async () => {
+      completeDirectory(directory());
+      await Promise.resolve();
+    });
+    await act(async () => {
+      render(false);
+      finishSuspension();
+      await Promise.resolve();
+    });
+    expect(mocks.directory).toHaveBeenCalledTimes(1);
+    expect(mocks.models.mock.calls.map(([input]) => input.providerId)).toEqual([
+      'opencode',
+      'openrouter',
+    ]);
+    expect(observed.providerStatus?.modelCatalogRefreshState).toBe('ready');
+    expect(mocks.cancel).not.toHaveBeenCalled();
+  });
+
   it('waits for initial status to settle before reading the directory', async () => {
     await act(async () => root.render(<Probe statusChecking />));
     expect(mocks.directory).not.toHaveBeenCalled();

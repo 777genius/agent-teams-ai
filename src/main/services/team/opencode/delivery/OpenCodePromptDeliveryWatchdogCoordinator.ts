@@ -559,6 +559,8 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
   }): Promise<number> {
     if (!this.ports.watchdogScheduler.isEnabled()) return 0;
     const bootstrapOwner = this.ports.resolveTrackedBootstrapRunId(input);
+    // A primary can be standalone; a secondary must still belong to its tracked root.
+    if (input.laneId !== 'primary' && bootstrapOwner === null) return 0;
     const isCurrentRun = async (): Promise<boolean> => {
       if (
         (await this.ports.resolveCurrentRuntimeRunId(input.teamName, input.laneId)) !== input.runId

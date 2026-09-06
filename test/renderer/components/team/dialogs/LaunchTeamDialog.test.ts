@@ -615,11 +615,13 @@ vi.mock('@renderer/components/team/dialogs/CodexFastModeSelector', () => ({
     ),
 }));
 
+import { sanitizeProviderStatusAuthority } from '@main/services/runtime/providerStatusCheckContract';
 import { api } from '@renderer/api';
 import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDialog';
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
+import { reconcileCliProviderSnapshot } from '@renderer/store/slices/cliInstallerStatusReconciliation';
 import {
   isTeamModelAvailableForUi,
   isTeamProviderModelVerificationPending,
@@ -803,17 +805,24 @@ describe('LaunchTeamDialog', () => {
           ...storeState.cliStatus,
           providers: storeState.cliStatus.providers.map((provider) =>
             provider.providerId === 'anthropic'
-              ? {
-                  ...provider,
-                  modelCatalogRefreshState: 'loading',
-                  modelCatalog: {
-                    ...provider.modelCatalog!,
-                    staleAt: new Date(Date.now() - 1).toISOString(),
-                  },
-                }
+              ? reconcileCliProviderSnapshot(
+                  provider,
+                  sanitizeProviderStatusAuthority({
+                    ...provider,
+                    modelCatalogRefreshState: 'loading',
+                    modelCatalog: null,
+                    runtimeCapabilities: { modelCatalog: { dynamic: true } },
+                  })
+                )
               : provider
           ),
         };
+        expect(
+          storeState.cliStatus.providers.find((provider) => provider.providerId === 'anthropic')
+        ).toMatchObject({
+          capabilities: { teamLaunch: false },
+          teamLaunchAuthorityRestriction: 'catalog-refresh',
+        });
         await act(async () => {
           renderDialog();
           await flush();

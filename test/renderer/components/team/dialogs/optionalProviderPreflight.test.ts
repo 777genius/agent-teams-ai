@@ -123,6 +123,92 @@ describe('optional provider preflight skip', () => {
         ])
       ).toBe(false);
   });
+  it.each(['pending', 'transient_error'] as const)(
+    'allows mixed Anthropic refresh plus %s/partial_response discovery, including a previously ready check',
+    (statusCheckOutcome) => {
+      for (const state of ['idle', 'loading', 'ready'] as const) {
+        const { source, statuses, checks } = refreshingAnthropicSelection();
+        statuses.set('codex', {
+          ...provider('codex'),
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome,
+          statusCheckErrorCode: 'partial_response',
+          modelCatalog: null,
+          capabilities: { ...provider('codex').capabilities, teamLaunch: false },
+        });
+        for (const status of ['pending', 'ready'] as const) {
+          checks[1].status = status;
+          expect(
+            canSkipProviderPreflight(
+              state,
+              [...statuses.keys()],
+              statuses,
+              new Map(),
+              checks,
+              NOW,
+              [source]
+            )
+          ).toBe(true);
+        }
+      }
+    }
+  );
+  it.each([
+    { authenticated: false },
+    { verificationState: 'error' as const },
+    { statusCheckErrorCode: 'runtime_missing' as const },
+    { statusCheckErrorCode: 'unavailable' as const },
+    { modelCatalogRefreshState: 'error' as const },
+    {
+      statusCheckOutcome: 'pending' as const,
+      statusCheckErrorCode: 'partial_response' as const,
+      modelCatalogRefreshState: 'error' as const,
+    },
+  ])('blocks mixed secondary provider failure even with discovery loading: %j', (override) => {
+    const { source, statuses, checks } = refreshingAnthropicSelection();
+    statuses.set('codex', { ...provider('codex'), ...override });
+    expect(
+      canSkipProviderPreflight(
+        'loading',
+        [...statuses.keys()],
+        statuses,
+        new Map([['codex', true]]),
+        checks,
+        NOW,
+        [source]
+      )
+    ).toBe(false);
+  });
+  it.each(['pending', 'ready'] as const)(
+    'blocks settled stale secondary authority despite a %s check during Anthropic refresh',
+    (checkStatus) => {
+      const { source, statuses, checks } = refreshingAnthropicSelection();
+      statuses.get('codex')!.modelCatalog!.staleAt = new Date(NOW - 1).toISOString();
+      checks[1].status = checkStatus;
+      expect(
+        canSkipProviderPreflight(
+          'loading',
+          [...statuses.keys()],
+          statuses,
+          new Map(),
+          checks,
+          NOW,
+          [source]
+        )
+      ).toBe(false);
+    }
+  );
+  it('blocks a failed secondary model check even when its provider discovery is pending', () => {
+    const { source, statuses, checks } = refreshingAnthropicSelection();
+    statuses.get('codex')!.statusCheckOutcome = 'pending';
+    checks[1].status = 'failed';
+    expect(
+      canSkipProviderPreflight('loading', [...statuses.keys()], statuses, new Map(), checks, NOW, [
+        source,
+      ])
+    ).toBe(false);
+  });
   it.each(['failed-model', 'other-expired', 'missing-source', 'failed-state'] as const)(
     'does not bypass %s during Anthropic refresh',
     (failure) => {

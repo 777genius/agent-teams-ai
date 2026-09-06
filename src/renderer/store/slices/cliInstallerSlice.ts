@@ -380,6 +380,7 @@ function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatu
     a.verificationState === b.verificationState &&
     (a.statusCheckOutcome ?? null) === (b.statusCheckOutcome ?? null) &&
     (a.statusCheckErrorCode ?? null) === (b.statusCheckErrorCode ?? null) &&
+    a.teamLaunchAuthorityRestriction === b.teamLaunchAuthorityRestriction &&
     (a.modelVerificationState ?? null) === (b.modelVerificationState ?? null) &&
     (a.modelCatalogRefreshState ?? null) === (b.modelCatalogRefreshState ?? null) &&
     (a.statusMessage ?? null) === (b.statusMessage ?? null) &&

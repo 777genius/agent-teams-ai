@@ -80,6 +80,49 @@ function providerStatus(overrides: Partial<CliProviderStatus> = {}): CliProvider
   };
 }
 
+describe('Anthropic catalog refresh restriction provenance', () => {
+  const refresh = () =>
+    providerStatus({
+      providerId: 'anthropic',
+      modelCatalogRefreshState: 'loading',
+      modelCatalog: { ...providerStatus().modelCatalog!, providerId: 'anthropic' },
+    });
+  it('records affirmative support before catalog gating and preserves repeat sanitization', () => {
+    const first = sanitizeProviderStatusAuthority(refresh());
+    expect(first.capabilities.teamLaunch).toBe(false);
+    expect(first.teamLaunchAuthorityRestriction).toBe('catalog-refresh');
+    expect(sanitizeProviderStatusAuthority(first).teamLaunchAuthorityRestriction).toBe(
+      'catalog-refresh'
+    );
+  });
+  it('does not inherit an old restriction for a new unsupported runtime snapshot', () => {
+    const previous = sanitizeProviderStatusAuthority(refresh());
+    const incoming = refresh();
+    incoming.capabilities.teamLaunch = false;
+    expect(
+      mergeProviderStatusDisplayEvidence(incoming, previous).teamLaunchAuthorityRestriction
+    ).toBeUndefined();
+    expect(
+      createDegradedProviderStatus(previous, new Error('unavailable'))
+        .teamLaunchAuthorityRestriction
+    ).toBeUndefined();
+  });
+  it.each([
+    { authenticated: false },
+    { supported: false },
+    { verificationState: 'error' as const },
+    { statusCheckOutcome: 'pending' as const, statusCheckErrorCode: 'partial_response' as const },
+    { statusCheckErrorCode: 'unavailable' as const },
+    { modelCatalogRefreshState: 'error' as const },
+    { modelCatalogRefreshState: 'ready' as const },
+  ])('clears same-snapshot restriction after %j', (change) => {
+    const previous = sanitizeProviderStatusAuthority(refresh());
+    expect(
+      sanitizeProviderStatusAuthority({ ...previous, ...change }).teamLaunchAuthorityRestriction
+    ).toBeUndefined();
+  });
+});
+
 function completeRuntimeStatus(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     providerId: 'opencode',

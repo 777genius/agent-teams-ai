@@ -61,11 +61,11 @@ export function useOpenCodeConnectedModelCatalog(input: {
   stateRef.current = state;
   const sequence = useRef(0);
   const statusChecking = useRef(input.statusChecking === true);
-  statusChecking.current = input.statusChecking === true;
   const statusWaiter = useRef<(() => void) | null>(null);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
 
   useEffect(() => {
+    statusChecking.current = input.statusChecking === true;
     if (input.statusChecking !== true) {
       statusWaiter.current?.();
       statusWaiter.current = null;

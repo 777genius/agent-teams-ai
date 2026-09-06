@@ -1,4 +1,5 @@
 import {
+  hasAnthropicCatalogRefreshLaunchSupport,
   hasAuthoritativeProviderLaunchEvidence,
   hasAuthoritativeProviderStatusEvidence,
   isProviderModelCatalogExactReady,
@@ -54,6 +55,9 @@ function mergeProviderCatalogCache(
     incomingProvider.statusCheckErrorCode === 'partial_response';
   return {
     ...incomingProvider,
+    teamLaunchAuthorityRestriction: hasAnthropicCatalogRefreshLaunchSupport(incomingProvider)
+      ? incomingProvider.teamLaunchAuthorityRestriction
+      : undefined,
     supported: incomingProvider.supported,
     authenticated: hasAuthoritativeStatusEvidence ? incomingProvider.authenticated : false,
     authMethod: hasAuthoritativeStatusEvidence ? incomingProvider.authMethod : null,
@@ -98,6 +102,9 @@ export function revokeProviderLaunchAuthority(provider: CliProviderStatus): CliP
   const hasAuthoritativeStatusEvidence = hasAuthoritativeProviderStatusEvidence(provider);
   return {
     ...provider,
+    teamLaunchAuthorityRestriction: hasAnthropicCatalogRefreshLaunchSupport(provider)
+      ? provider.teamLaunchAuthorityRestriction
+      : undefined,
     authenticated: hasAuthoritativeStatusEvidence ? provider.authenticated : false,
     authMethod: hasAuthoritativeStatusEvidence ? provider.authMethod : null,
     capabilities: { ...provider.capabilities, teamLaunch: false },
@@ -116,7 +123,10 @@ export function reconcileCliProviderSnapshot(
   incomingProvider: CliProviderStatus
 ): CliProviderStatus {
   if (currentProvider && currentProvider.providerId !== incomingProvider.providerId) {
-    return revokeProviderLaunchAuthority(currentProvider);
+    return revokeProviderLaunchAuthority({
+      ...currentProvider,
+      teamLaunchAuthorityRestriction: undefined,
+    });
   }
   const mergedProvider = currentProvider
     ? mergeProviderCatalogCache(incomingProvider, currentProvider)

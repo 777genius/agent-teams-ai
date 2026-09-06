@@ -1,4 +1,8 @@
 import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
+import {
+  hasAnthropicCatalogRefreshLaunchSupport,
+  isAuthenticatedAnthropicCatalogRefresh,
+} from '@shared/utils/providerStatusAuthority';
 
 import { runProviderPrepareDiagnostics } from './providerPrepareDiagnostics';
 
@@ -128,33 +132,35 @@ export function canSkipProviderPreflight(
 ): boolean {
   const source = sourceProviders.find((provider) => provider.providerId === 'anthropic');
   const effective = statuses.get('anthropic');
-  // The renderer gates teamLaunch on catalog freshness. Only the original
-  // runtime capability can distinguish that gate from an unsupported runtime.
+  // Main/store may already have gated teamLaunch. The app-derived restriction
+  // preserves affirmative support from this snapshot, never a previous one.
   const refreshingAnthropic =
     state !== 'failed' &&
     providerIds.includes('anthropic') &&
-    source?.capabilities.teamLaunch === true &&
-    [source, effective].every(
-      (provider) =>
-        provider?.supported === true &&
-        provider.authenticated === true &&
-        provider.verificationState === 'verified' &&
-        provider.statusCheckOutcome === 'authoritative' &&
-        provider.statusCheckErrorCode == null &&
-        provider.modelCatalogRefreshState === 'loading' &&
-        provider.modelCatalog?.providerId === 'anthropic' &&
-        ['ready', 'stale'].includes(provider.modelCatalog.status)
-    );
+    Boolean(source?.modelCatalog && effective?.modelCatalog) &&
+    hasAnthropicCatalogRefreshLaunchSupport(source) &&
+    isAuthenticatedAnthropicCatalogRefresh(effective);
   if (refreshingAnthropic) {
     if (checks.some((check) => providerIds.includes(check.providerId) && check.status === 'failed'))
       return false;
     if (
-      providerIds.some(
-        (id) => id !== 'anthropic' && !hasEffectiveProviderLaunchAuthority(statuses.get(id), now)
-      )
+      providerIds.some((id) => {
+        if (id === 'anthropic') return false;
+        const status = statuses.get(id);
+        // Completed checks cannot hide stale authority, but active discovery is
+        // still optional. Keep catalog errors terminal even during a retry.
+        return (
+          status?.modelCatalogRefreshState === 'error' ||
+          (!hasEffectiveProviderLaunchAuthority(status, now) &&
+            !canSkipPendingProviderDiscovery([id], statuses, loading, now))
+        );
+      })
     )
       return false;
-    const refreshStatuses = new Map(statuses).set('anthropic', source);
+    const refreshStatuses = new Map(statuses).set('anthropic', {
+      ...source,
+      capabilities: { ...source.capabilities, teamLaunch: true },
+    });
     const refreshLoading = new Map(loading).set('anthropic', true);
     if (state === 'idle')
       return canSkipPendingProviderDiscovery(providerIds, refreshStatuses, refreshLoading, now);

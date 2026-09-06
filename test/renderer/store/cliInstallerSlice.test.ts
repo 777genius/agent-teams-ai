@@ -283,6 +283,30 @@ describe('cliInstallerSlice', () => {
   });
 
   describe('reconcileCliStatus', () => {
+    it('does not suppress updates whose only change is current refresh provenance', () => {
+      const base = createReadyOpenCodeCatalogProvider('haiku');
+      const provider = {
+        ...base,
+        providerId: 'anthropic' as const,
+        modelCatalog: {
+          ...base.modelCatalog!,
+          providerId: 'anthropic' as const,
+          status: 'stale' as const,
+        },
+        modelCatalogRefreshState: 'loading' as const,
+        capabilities: { ...base.capabilities, teamLaunch: false },
+      };
+      const current = reconcileCliStatus(null, createMultimodelStatus([provider]));
+      const incoming = createMultimodelStatus([
+        { ...current.providers[0], teamLaunchAuthorityRestriction: 'catalog-refresh' },
+      ]);
+      const next = reconcileCliStatus(current, incoming);
+      expect(next).not.toBe(current);
+      expect(next.providers[0].teamLaunchAuthorityRestriction).toBe('catalog-refresh');
+      expect(
+        reconcileCliStatus(next, current).providers[0].teamLaunchAuthorityRestriction
+      ).toBeUndefined();
+    });
     it('keeps last-known readiness for a model-only OpenCode inventory', () => {
       const current = createMultimodelStatus([
         createMultimodelProvider({

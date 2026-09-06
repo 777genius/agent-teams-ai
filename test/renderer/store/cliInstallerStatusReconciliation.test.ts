@@ -61,6 +61,36 @@ function provider(overrides: Partial<CliProviderStatus> = {}): CliProviderStatus
 }
 
 describe('cli provider status reconciliation', () => {
+  it('clears previous refresh provenance when the response provider does not match', () => {
+    const current = provider({
+      modelCatalogRefreshState: 'loading',
+      teamLaunchAuthorityRestriction: 'catalog-refresh',
+    });
+    const result = reconcileCliProviderSnapshot(current, provider({ providerId: 'codex' }));
+    expect(result.providerId).toBe('anthropic');
+    expect(result.capabilities.teamLaunch).toBe(false);
+    expect(result.teamLaunchAuthorityRestriction).toBeUndefined();
+  });
+  it('preserves only incoming refresh provenance and clears it for failures or new unsupported snapshots', () => {
+    const incoming = provider({
+      modelCatalogRefreshState: 'loading',
+      teamLaunchAuthorityRestriction: 'catalog-refresh',
+    });
+    incoming.capabilities.teamLaunch = false;
+    const first = reconcileCliProviderSnapshot(provider(), incoming);
+    expect(first.teamLaunchAuthorityRestriction).toBe('catalog-refresh');
+    expect(reconcileCliProviderSnapshot(first, first).teamLaunchAuthorityRestriction).toBe(
+      'catalog-refresh'
+    );
+    for (const next of [
+      { ...incoming, teamLaunchAuthorityRestriction: undefined },
+      { ...incoming, authenticated: false },
+      { ...incoming, modelCatalogRefreshState: 'error' as const },
+    ])
+      expect(
+        reconcileCliProviderSnapshot(first, next).teamLaunchAuthorityRestriction
+      ).toBeUndefined();
+  });
   it('keeps a retained catalog loading during an authoritative partial refresh', () => {
     const current = provider();
     const incoming = provider({
