@@ -11,6 +11,8 @@ import {
   type TeamProvisioningStreamEventPorts,
   type TeamProvisioningStreamRun,
 } from '@main/services/team/provisioning/TeamProvisioningStreamEvents';
+import { scheduleProvisioningRunTimeout } from '@main/services/team/provisioning/TeamProvisioningTimeoutLifecycle';
+import { EventEmitter } from 'events';
 import { describe, expect, it, vi } from 'vitest';
 
 import type {
@@ -18,6 +20,7 @@ import type {
   MemberSpawnStatusEntry,
   TeamProvisioningProgress,
 } from '@shared/types';
+import type { ChildProcess } from 'child_process';
 
 const NOW = '2026-05-12T10:00:00.000Z';
 
@@ -500,6 +503,76 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
   function clearExpectedWarnings(): void {
     (console.warn as unknown as { mockClear?: () => void }).mockClear?.();
   }
+
+  it('keeps the mixed run owned until a result arriving after the original 300s deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const { run } = createDeterministicBootstrapRun({
+        child: new EventEmitter() as ChildProcess,
+        requiresFirstRealTurnSuccess: true,
+        mixedSecondaryLanes: [{}],
+      });
+      const timedRun = Object.assign(run, { timeoutHandle: null as NodeJS.Timeout | null });
+      const ports = makeResultPorts();
+      const expire = vi.fn(() => ports.cleanupRun(run));
+      scheduleProvisioningRunTimeout(timedRun, 300_000, expire);
+      await vi.advanceTimersByTimeAsync(145_000);
+      handleDeterministicBootstrapEvent(
+        run,
+        {
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'completed',
+          run_id: run.runId,
+          team_name: run.teamName,
+          seq: 1,
+        },
+        ports
+      );
+      await vi.advanceTimersByTimeAsync(155_000);
+      expect(expire).not.toHaveBeenCalled();
+      expect(ports.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+      expect(ports.completeProvisioningFromSuccessfulResult).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(15_000);
+      handleTeamProvisioningStreamJsonMessage(run, { type: 'result', subtype: 'success' }, ports);
+      expect(ports.completeProvisioningFromSuccessfulResult).toHaveBeenCalledExactlyOnceWith(run);
+      expect(run).toMatchObject({ firstRealTurnSucceeded: true });
+      expect(ports.cleanupRun).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not extend a deadline from bootstrap events belonging to another run', async () => {
+    vi.useFakeTimers();
+    try {
+      const { run } = createDeterministicBootstrapRun({
+        child: new EventEmitter() as ChildProcess,
+        requiresFirstRealTurnSuccess: true,
+      });
+      const timedRun = Object.assign(run, { timeoutHandle: null as NodeJS.Timeout | null });
+      const ports = makeResultPorts();
+      const expire = vi.fn();
+      scheduleProvisioningRunTimeout(timedRun, 300_000, expire);
+      await vi.advanceTimersByTimeAsync(145_000);
+      handleDeterministicBootstrapEvent(
+        run,
+        {
+          type: 'system',
+          subtype: 'team_bootstrap',
+          event: 'completed',
+          run_id: 'old-run',
+          team_name: run.teamName,
+          seq: 1,
+        },
+        ports
+      );
+      await vi.advanceTimersByTimeAsync(155_000);
+      expect(expire).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   // Any non-success result subtype is a turn-ending failure. error_during_execution and
   // error_max_turns must be handled like plain 'error' (fail + kill + cleanup the run),

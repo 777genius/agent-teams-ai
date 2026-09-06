@@ -31,7 +31,9 @@ function hasKnownProviderFailure(status: CliProviderStatus | null | undefined): 
     status &&
     (status.statusCheckErrorCode === 'runtime_missing' ||
       status.statusCheckErrorCode === 'unavailable' ||
-      status.verificationState === 'error' ||
+      // A timed-out inventory probe reports verification=error too; it is not
+      // an authoritative auth denial. Only the optional UI check is skippable.
+      (status.verificationState === 'error' && !isProviderAuthorityRetryableDiscovery(status)) ||
       (status.statusCheckOutcome === 'authoritative' &&
         (!status.supported || !status.authenticated || !status.capabilities.teamLaunch)))
   );

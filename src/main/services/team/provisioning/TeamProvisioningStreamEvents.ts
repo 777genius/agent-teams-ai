@@ -19,6 +19,7 @@ import {
   clearPostCompactReminderState,
 } from './TeamProvisioningCleanup';
 import { buildRestartStillRunningReason } from './TeamProvisioningMemberSpawnStatusPolicy';
+import { recordProvisioningFirstTurnStart } from './TeamProvisioningTimeoutLifecycle';
 
 import type {
   InboxMessage,
@@ -414,7 +415,7 @@ function recordDeterministicBootstrapTracking(
 ): void {
   run.deterministicBootstrapStartedAt ??= new Date().toISOString();
   run.lastDeterministicBootstrapEvent = event;
-
+  if (event === 'completed') recordProvisioningFirstTurnStart(run);
   if (event === 'phase_changed') {
     const phase = typeof msg.phase === 'string' ? msg.phase.trim() : '';
     if (phase) {
