@@ -1,4 +1,4 @@
-import React, { act, startTransition, Suspense } from 'react';
+import React, { act, startTransition, Suspense, use } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 
 import { useDashboardStatusRefresh } from '@renderer/components/dashboard/useDashboardStatusRefresh';
@@ -134,7 +134,7 @@ describe('connected OpenCode dashboard catalog', () => {
       });
       if (checking) {
         suspendedRender();
-        throw suspended;
+        use(suspended);
       }
       return null;
     };
