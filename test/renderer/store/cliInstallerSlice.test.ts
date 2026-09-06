@@ -1976,47 +1976,90 @@ describe('cliInstallerSlice', () => {
       expect(useStore.getState().cliStatusError).toBeNull();
     });
 
-    it('settles an OpenCode timeout without repeating the full catalog request', async () => {
-      const connectedProvider = createReadyOpenCodeCatalogProvider('openrouter/auto');
-      const timedOutProvider = createMultimodelProvider({
-        providerId: 'opencode',
-        displayName: 'OpenCode',
-        supported: false,
-        authenticated: false,
-        authMethod: null,
-        verificationState: 'error',
-        statusCheckOutcome: 'transient_error',
-        statusCheckErrorCode: 'timeout',
-        statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
-        modelCatalogRefreshState: 'error',
-        capabilities: {
-          teamLaunch: false,
-          oneShot: false,
-          extensions: createDefaultCliExtensionCapabilities(),
-        },
-      });
-      useStore.setState({ cliStatus: createMultimodelStatus([connectedProvider]) });
-      vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValueOnce(timedOutProvider);
+    it.each(['ready', 'timeout'] as const)(
+      'retries a scoped OpenCode timeout once and settles the %s result',
+      async (result) => {
+        const connectedProvider = createReadyOpenCodeCatalogProvider('openrouter/auto');
+        const timedOutProvider = createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: false,
+          authenticated: false,
+          authMethod: null,
+          verificationState: 'error',
+          statusCheckOutcome: 'transient_error',
+          statusCheckErrorCode: 'timeout',
+          statusMessage: CLI_PROVIDER_STATUS_UNAVAILABLE_MESSAGE,
+          modelCatalogRefreshState: 'error',
+          capabilities: {
+            teamLaunch: false,
+            oneShot: false,
+            extensions: createDefaultCliExtensionCapabilities(),
+          },
+        });
+        useStore.setState({ cliStatus: createMultimodelStatus([connectedProvider]) });
+        vi.mocked(api.cliInstaller.getProviderStatus)
+          .mockResolvedValueOnce(timedOutProvider)
+          .mockResolvedValueOnce(result === 'ready' ? connectedProvider : timedOutProvider);
 
-      await expect(
-        useStore.getState().fetchCliProviderStatus('opencode', {
-          projectPath: '/tmp/opencode-timeout',
-          checkReason: 'launch_preflight',
-        })
-      ).resolves.toBe(false);
+        await expect(
+          useStore.getState().fetchCliProviderStatus('opencode', {
+            projectPath: '/tmp/opencode-timeout',
+            checkReason: 'launch_preflight',
+          })
+        ).resolves.toBe(result === 'ready');
 
-      expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
-      expect(useStore.getState().cliProviderStatusLoading.opencode).toBe(false);
-      expect(
-        useStore.getState().cliProviderStatusByScope[
-          getCliProviderStatusScopeKey('opencode', '/tmp/opencode-timeout')
-        ]
-      ).toMatchObject({
-        statusCheckOutcome: 'transient_error',
-        modelCatalogRefreshState: 'error',
-        capabilities: { teamLaunch: false },
-      });
-    });
+        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(2);
+        expect(vi.mocked(api.cliInstaller.getProviderStatus).mock.calls).toEqual([
+          ['opencode', { projectPath: '/tmp/opencode-timeout' }],
+          ['opencode', { projectPath: '/tmp/opencode-timeout' }],
+        ]);
+        expect(useStore.getState().cliProviderStatusLoading.opencode).toBe(false);
+        expect(
+          useStore.getState().cliProviderStatusByScope[
+            getCliProviderStatusScopeKey('opencode', '/tmp/opencode-timeout')
+          ]
+        ).toMatchObject(
+          result === 'ready'
+            ? {
+                statusCheckOutcome: 'authoritative',
+                modelCatalogRefreshState: 'ready',
+                authenticated: true,
+                models: ['openrouter/auto'],
+              }
+            : {
+                statusCheckOutcome: 'transient_error',
+                modelCatalogRefreshState: 'error',
+                capabilities: { teamLaunch: false },
+              }
+        );
+      }
+    );
+
+    it.each([
+      { statusCheckOutcome: 'model_only', statusCheckErrorCode: 'timeout' },
+      { statusCheckOutcome: 'model_only', statusCheckErrorCode: 'partial_response' },
+      { statusCheckOutcome: 'authoritative', statusCheckErrorCode: undefined },
+    ] as const)(
+      'does not retry scoped OpenCode model-only or permanent/auth failures: %j',
+      async (outcome) => {
+        const provider = createMultimodelProvider({
+          providerId: 'opencode',
+          displayName: 'OpenCode',
+          supported: true,
+          authenticated: false,
+          verificationState: 'error',
+          ...outcome,
+        });
+        useStore.setState({ cliStatus: createMultimodelStatus([provider]) });
+        vi.mocked(api.cliInstaller.getProviderStatus).mockResolvedValue(provider);
+        await useStore
+          .getState()
+          .fetchCliProviderStatus('opencode', { projectPath: '/tmp/opencode-nontransient' });
+        expect(api.cliInstaller.getProviderStatus).toHaveBeenCalledTimes(1);
+        expect(useStore.getState().cliProviderStatusLoading.opencode).toBe(false);
+      }
+    );
 
     it('reports a scoped OpenCode catalog loaded only after an authoritative ready response', async () => {
       const fetchedAt = new Date();

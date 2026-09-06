@@ -1290,7 +1290,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           responseProviderStatus?.statusCheckErrorCode === 'partial_response' &&
           responseProviderStatus.statusCheckOutcome !== 'model_only';
         const shouldRetryTransientTimeout =
-          providerId !== 'opencode' &&
           !verifyModels &&
           responseProviderStatus?.statusCheckOutcome === 'transient_error' &&
           responseProviderStatus.statusCheckErrorCode === 'timeout';
