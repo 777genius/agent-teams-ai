@@ -230,6 +230,14 @@ function attachAliveRun(
   (service as unknown as { runs: Map<string, unknown> }).runs.set(runId, {
     runId,
     teamName,
+    progress: {
+      runId,
+      teamName,
+      state: (opts?.provisioningComplete ?? true) ? 'ready' : 'spawning',
+      message: 'Relay fixture runtime',
+      startedAt: '2026-02-23T09:59:00.000Z',
+      updatedAt: '2026-02-23T09:59:00.000Z',
+    },
     request: {
       teamName,
       members: [{ name: 'team-lead', role: 'team-lead' }],
@@ -254,6 +262,7 @@ function attachAliveRun(
     },
     processKilled: false,
     cancelRequested: false,
+    leadActivityState: 'idle',
     provisioningComplete: opts?.provisioningComplete ?? true,
     leadRelayCapture: null,
   });
@@ -506,9 +515,7 @@ describe('TeamProvisioningService relayLeadInboxMessages', () => {
         causedByRecoveryMessageId: 'runtime-recovery-2',
       })
     );
-    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain(
-      'stream-json result: error'
-    );
+    expect(vi.mocked(console.warn).mock.calls[0]?.join(' ')).toContain('stream-json result: error');
     vi.mocked(console.warn).mockClear();
   });
 
@@ -1318,6 +1325,14 @@ Messages:
     (service as unknown as { runs: Map<string, unknown> }).runs.set('run-1', {
       runId: 'run-1',
       teamName,
+      progress: {
+        runId: 'run-1',
+        teamName,
+        state: 'ready',
+        message: 'Relay fixture runtime',
+        startedAt: '2026-02-23T09:59:00.000Z',
+        updatedAt: '2026-02-23T09:59:00.000Z',
+      },
       request: {
         teamName,
         members: [{ name: 'team-lead', role: 'team-lead' }],
@@ -1334,6 +1349,7 @@ Messages:
       child: { stdin: { writable: true, write: writeSpy } },
       processKilled: false,
       cancelRequested: false,
+      leadActivityState: 'idle',
       provisioningComplete: true,
       leadRelayCapture: null,
     });

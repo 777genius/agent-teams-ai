@@ -777,8 +777,9 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
       }
     }
 
+    const activityText = stripAgentBlocks(textParts.join('\n')).trim();
     const hasObservedActivity =
-      textParts.some((text) => text.trim().length > 0) ||
+      (activityText.length > 0 && !isTeamInternalControlMessageText(activityText)) ||
       content.some(
         (block) =>
           block.type === 'tool_use' &&
