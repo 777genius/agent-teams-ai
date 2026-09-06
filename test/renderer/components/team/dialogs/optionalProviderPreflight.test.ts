@@ -1,7 +1,9 @@
 import {
   canSkipOptionalProviderPreflight,
   canSkipPendingProviderDiscovery,
+  canSkipProviderPreflight,
   createProviderSubmissionFence,
+  getPendingProviderPreflightIds,
   resumeInterruptedProviderPreflight,
 } from '@renderer/components/team/dialogs/optionalProviderPreflight';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
@@ -70,6 +72,80 @@ const check = (
 
 describe('optional provider preflight skip', () => {
   afterEach(() => vi.useRealTimers());
+  it('keeps only the unfinished provider badge checking in a mixed preflight', () => {
+    expect(
+      getPendingProviderPreflightIds(
+        'loading',
+        ['anthropic', 'codex', 'opencode'],
+        [check('anthropic', 'ready'), check('codex', 'pending'), check('opencode', 'ready')]
+      )
+    ).toEqual(['codex']);
+  });
+  it('keeps shallow compatibility checking until its remaining deep work finishes', () => {
+    expect(
+      getPendingProviderPreflightIds(
+        'loading',
+        ['anthropic', 'codex', 'opencode'],
+        [
+          {
+            ...check('anthropic', 'checking'),
+            details: ['Selected model is available for launch.'],
+          },
+          check('opencode', 'failed'),
+        ]
+      )
+    ).toEqual(['anthropic', 'codex']);
+  });
+  it.each(['idle', 'loading'] as const)(
+    'allows skipping %s optional checks with a pending partial Codex discovery response',
+    (state) => {
+      const statuses = new Map<TeamProviderId, CliProviderStatus>([
+        ['anthropic', provider('anthropic')],
+        [
+          'codex',
+          {
+            ...provider('codex'),
+            authenticated: false,
+            verificationState: 'unknown',
+            statusCheckOutcome: 'pending',
+            statusCheckErrorCode: 'partial_response',
+            modelCatalog: null,
+          },
+        ],
+        ['opencode', provider('opencode')],
+      ]);
+      expect(
+        canSkipProviderPreflight(
+          state,
+          [...statuses.keys()],
+          statuses,
+          new Map(),
+          [check('anthropic', 'ready'), check('codex', 'pending'), check('opencode', 'ready')],
+          NOW
+        )
+      ).toBe(true);
+    }
+  );
+  it.each([
+    { authenticated: false },
+    { supported: false },
+    { verificationState: 'error' as const },
+    { statusCheckErrorCode: 'runtime_missing' as const },
+    { statusCheckErrorCode: 'unavailable' as const },
+  ])('never skips a known failure during background loading: %j', (override) => {
+    const statuses = new Map([['codex' as const, { ...provider('codex'), ...override }]]);
+    const loading = new Map([['codex' as const, true]]);
+    expect(canSkipPendingProviderDiscovery(['codex'], statuses, loading, NOW)).toBe(false);
+    expect(
+      canSkipOptionalProviderPreflight(
+        ['codex'],
+        statuses,
+        loading,
+        [check('codex', 'checking')],
+        NOW
+      )
+    ).toBe(false);
+  });
   it('allows initial skip when one selected provider is still loading', () => {
     expect(
       canSkipPendingProviderDiscovery(

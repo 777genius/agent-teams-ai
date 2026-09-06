@@ -3150,11 +3150,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 providerIds={selectedMemberProviders}
                 label="Selected providers"
                 layout="stacked"
-                forceLoadingProviderIds={
-                  presentedPrepareState === 'idle' || presentedPrepareState === 'loading'
-                    ? selectedMemberProviders
-                    : undefined
-                }
+                forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
+                  prepareState,
+                  selectedMemberProviders,
+                  prepareChecks
+                )}
                 showReadyProviders
                 readyStatusText="Ready"
                 className="mb-2"

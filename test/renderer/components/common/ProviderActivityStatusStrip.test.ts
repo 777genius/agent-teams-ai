@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
+import { getPendingProviderPreflightIds } from '@renderer/components/team/dialogs/optionalProviderPreflight';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -92,6 +93,7 @@ describe('ProviderActivityStatusStrip', () => {
     ['codex', true],
     ['codex', false],
     ['opencode', true],
+    ['anthropic', true],
   ] as const)(
     'shows Ready only with complete launch authority (%s teamLaunch=%s)',
     async (providerId, teamLaunch) => {
@@ -138,15 +140,44 @@ describe('ProviderActivityStatusStrip', () => {
             providerId === 'opencode'
               ? { ...provider, modelCatalogRefreshState: 'loading' }
               : provider,
+            ...(providerId !== 'codex'
+              ? [
+                  createProvider({
+                    providerId: 'codex',
+                    displayName: 'Codex',
+                    statusCheckOutcome: 'pending',
+                    statusCheckErrorCode: 'partial_response',
+                    verificationState: 'unknown',
+                  }),
+                ]
+              : []),
           ]),
           providerStatusOverride: providerId === 'opencode' ? provider : null,
           cliProviderStatusLoading: providerId === 'opencode' ? { opencode: true } : {},
           showReadyProviders: true,
           readyStatusText: 'Ready',
+          forceLoadingProviderIds: getPendingProviderPreflightIds(
+            'loading',
+            providerId === 'codex' ? [providerId] : [providerId, 'codex'],
+            [
+              { providerId, status: 'ready', details: [] },
+              ...(providerId !== 'codex'
+                ? [{ providerId: 'codex' as const, status: 'pending' as const, details: [] }]
+                : []),
+            ]
+          ),
         });
       });
       expect(host.textContent?.includes('Ready')).toBe(teamLaunch);
       if (!teamLaunch) expect(host.textContent).toContain('Needs attention');
+      if (providerId !== 'codex') {
+        expect(
+          host.querySelector(`[data-testid="provider-activity-status-${providerId}"]`)?.textContent
+        ).toContain('Ready');
+        expect(
+          host.querySelector('[data-testid="provider-activity-status-codex"]')?.textContent
+        ).toContain('Checking...');
+      }
       await act(async () => root.unmount());
     }
   );

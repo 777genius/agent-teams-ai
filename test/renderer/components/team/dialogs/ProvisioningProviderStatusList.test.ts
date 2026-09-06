@@ -828,6 +828,21 @@ describe('ProvisioningProviderStatusList', () => {
     });
   });
 
+  it('updates the progress message when one of the previously pending providers settles', () => {
+    expect(
+      deriveEffectiveProvisioningPrepareState({
+        state: 'loading',
+        message: 'Checking Codex, OpenCode providers...',
+        warnings: [],
+        checks: [
+          { providerId: 'anthropic', status: 'ready', details: [] },
+          { providerId: 'codex', status: 'pending', details: [] },
+          { providerId: 'opencode', status: 'ready', details: [] },
+        ],
+      })
+    ).toEqual({ state: 'loading', message: 'Checking Codex provider...' });
+  });
+
   it('exposes only terminal successful providers as ready for model selectors', () => {
     expect(
       getProvisioningProviderReadyById([

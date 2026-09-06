@@ -9,6 +9,30 @@ import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 type OptionalProviderPreflightState = 'idle' | 'loading' | 'ready' | 'failed';
 
+/** Aggregate progress must not restart badges for providers whose own work settled. */
+export function getPendingProviderPreflightIds(
+  state: OptionalProviderPreflightState,
+  providerIds: readonly TeamProviderId[],
+  checks: readonly ProvisioningProviderCheck[]
+): TeamProviderId[] {
+  if (state !== 'idle' && state !== 'loading') return [];
+  return providerIds.filter((providerId) => {
+    const check = checks.find((entry) => entry.providerId === providerId);
+    return !check || check.status === 'pending' || check.status === 'checking';
+  });
+}
+
+function hasKnownProviderFailure(status: CliProviderStatus | null | undefined): boolean {
+  return Boolean(
+    status &&
+    (status.statusCheckErrorCode === 'runtime_missing' ||
+      status.statusCheckErrorCode === 'unavailable' ||
+      status.verificationState === 'error' ||
+      (status.statusCheckOutcome === 'authoritative' &&
+        (!status.supported || !status.authenticated || !status.capabilities.teamLaunch)))
+  );
+}
+
 function isProviderAuthorityStillResolving(
   providerId: TeamProviderId,
   status: CliProviderStatus | null | undefined,
@@ -16,17 +40,20 @@ function isProviderAuthorityStillResolving(
 ): boolean {
   return (
     loading.get(providerId) === true ||
+    status?.statusCheckOutcome === 'pending' ||
     status?.statusCheckOutcome === 'model_only' ||
     status?.modelCatalogRefreshState === 'loading' ||
-    isProviderAuthorityRetryableTimeout(status)
+    isProviderAuthorityRetryableDiscovery(status)
   );
 }
 
-function isProviderAuthorityRetryableTimeout(
+function isProviderAuthorityRetryableDiscovery(
   status: CliProviderStatus | null | undefined
 ): boolean {
   return (
-    status?.statusCheckOutcome === 'transient_error' && status.statusCheckErrorCode === 'timeout'
+    status?.statusCheckOutcome === 'transient_error' &&
+    (status.statusCheckErrorCode === 'timeout' ||
+      status.statusCheckErrorCode === 'partial_response')
   );
 }
 
@@ -42,7 +69,12 @@ export function canSkipPendingProviderDiscovery(
   let discoveryPending = false;
   for (const providerId of providerIds) {
     const status = statuses.get(providerId);
-    if (loading.get(providerId) === true || isProviderAuthorityRetryableTimeout(status)) {
+    if (hasKnownProviderFailure(status)) return false;
+    if (
+      loading.get(providerId) === true ||
+      status?.statusCheckOutcome === 'pending' ||
+      isProviderAuthorityRetryableDiscovery(status)
+    ) {
       discoveryPending = true;
       continue;
     }
@@ -67,6 +99,7 @@ export function canSkipOptionalProviderPreflight(
   for (const providerId of providerIds) {
     const check = checks.find((entry) => entry.providerId === providerId);
     if (!check || check.status === 'failed') return false;
+    if (hasKnownProviderFailure(statuses.get(providerId))) return false;
     if (check.status === 'ready') continue;
     if (check.status === 'pending' || check.status === 'checking') {
       optionalPending = true;

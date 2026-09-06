@@ -620,7 +620,11 @@ import { CreateTeamDialog } from '@renderer/components/team/dialogs/CreateTeamDi
 import { LaunchTeamDialog } from '@renderer/components/team/dialogs/LaunchTeamDialog';
 import { runProviderPrepareDiagnostics } from '@renderer/components/team/dialogs/providerPrepareDiagnostics';
 import { getCliProviderStatusScopeKey } from '@renderer/store/slices/cliInstallerSlice';
-import { isTeamModelAvailableForUi } from '@renderer/utils/teamModelAvailability';
+import {
+  isTeamModelAvailableForUi,
+  isTeamProviderModelVerificationPending,
+} from '@renderer/utils/teamModelAvailability';
+import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 
 import type { CliInstallationStatus, CliProviderId, CliProviderStatus } from '@shared/types';
@@ -699,6 +703,99 @@ function createAuthoritativeProviderStatus(
 }
 
 describe('LaunchTeamDialog', () => {
+  it.each(['create', 'launch'] as const)(
+    'enables %s skip while Codex authority is pending with a partial response',
+    async (mode) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      const modelAvailability = await vi.importActual<
+        typeof import('@renderer/utils/teamModelAvailability')
+      >('@renderer/utils/teamModelAvailability');
+      const runtimeLoading = await vi.importActual<
+        typeof import('@renderer/utils/teamProviderRuntimeStatusLoading')
+      >('@renderer/utils/teamProviderRuntimeStatusLoading');
+      vi.mocked(isTeamProviderModelVerificationPending).mockImplementation(
+        modelAvailability.isTeamProviderModelVerificationPending
+      );
+      vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(
+        runtimeLoading.isTeamProviderRuntimeStatusLoading
+      );
+      localStorage.setItem('team:lastSelectedProvider', 'codex');
+      localStorage.setItem('team:lastSelectedModel:codex', 'gpt-5.4');
+      createTeamDraftMock.state.soloTeam = true;
+      const codex = storeState.cliStatus.providers.find(
+        (provider) => provider.providerId === 'codex'
+      )!;
+      Object.assign(codex, {
+        authenticated: false,
+        verificationState: 'unknown',
+        statusCheckOutcome: 'pending',
+        statusCheckErrorCode: 'partial_response',
+        modelCatalog: {
+          ...codex.modelCatalog,
+          source: 'static-fallback',
+          status: 'stale',
+          diagnostics: {
+            appServerState: 'degraded',
+            message: 'JSON-RPC request timed out: initialize',
+          },
+        },
+        modelVerificationState: 'idle',
+        modelCatalogRefreshState: 'loading',
+      });
+      const submit = vi.fn(async () => {});
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          mode === 'create'
+            ? React.createElement(CreateTeamDialog, {
+                open: true,
+                canCreate: true,
+                provisioningErrorsByTeam: {},
+                clearProvisioningError: vi.fn(),
+                existingTeamNames: [],
+                provisioningTeamNames: [],
+                activeTeams: [],
+                defaultProjectPath: '/tmp/project',
+                onClose: vi.fn(),
+                onCreate: submit,
+                onOpenTeam: vi.fn(),
+              })
+            : React.createElement(LaunchTeamDialog, {
+                mode: 'launch',
+                open: true,
+                teamName: 'team-alpha',
+                members: [],
+                defaultProjectPath: '/tmp/project',
+                provisioningError: null,
+                clearProvisioningError: vi.fn(),
+                activeTeams: [],
+                onClose: vi.fn(),
+                onLaunch: submit,
+              })
+        );
+        await flush();
+      });
+      for (let i = 0; i < 5; i++)
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+          await flush();
+        });
+      const button = Array.from(host.querySelectorAll('button')).find(
+        (candidate) => candidate.textContent === `Skip preflight and ${mode}`
+      );
+      expect(button, host.textContent ?? '').toBeDefined();
+      expect(button?.disabled).toBe(false);
+      await act(async () => {
+        button!.click();
+        await flush();
+      });
+      expect(submit).toHaveBeenCalledOnce();
+      await act(async () => root.unmount());
+    }
+  );
+
   it.each([
     ['create', 'anthropic', 'codex', false, ['anthropic', 'codex']],
     ['launch', 'anthropic', 'codex', false, ['anthropic', 'codex']],
@@ -1030,6 +1127,8 @@ describe('LaunchTeamDialog', () => {
   );
 
   beforeEach(() => {
+    vi.mocked(isTeamProviderModelVerificationPending).mockImplementation(() => false);
+    vi.mocked(isTeamProviderRuntimeStatusLoading).mockImplementation(() => false);
     vi.mocked(api.workspaceTrust!.getLaunchStatus!)
       .mockReset()
       .mockResolvedValue({ providers: [] });

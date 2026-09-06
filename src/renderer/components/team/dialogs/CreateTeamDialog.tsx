@@ -2020,13 +2020,22 @@ export const CreateTeamDialog = ({
     selectedProviderId,
     syncModelsWithLead,
   ]);
+  const canSkipPreflight = () =>
+    launchTeam &&
+    optionalPreflight.canSkipProviderPreflight(
+      prepareState,
+      selectedMemberProviders,
+      runtimeProviderStatusById,
+      runtimeProviderLoadingById,
+      prepareChecksRef.current
+    );
   const hasCreateFormErrors =
     !!teamNameInlineError ||
     isNameTakenByExistingTeam ||
     isNameProvisioning ||
     !requestValidation.valid ||
     !!modelValidationError ||
-    (launchAuthorityBlocked && !launchPreflightCanResolveBlockers) ||
+    (launchAuthorityBlocked && !launchPreflightCanResolveBlockers && !canSkipPreflight()) ||
     teammateRuntimeCompatibility.blocksSubmission ||
     worktreeGitBlocksSubmission;
 
@@ -2156,16 +2165,6 @@ export const CreateTeamDialog = ({
     activeError?.includes('Team already exists') === true && request.teamName.length > 0;
   const prepareBlocksCreate =
     launchTeam && effectivePrepare.state === 'failed' && !experimentalLocalModelOverrideEnabled;
-  const canSkipPreflight = () =>
-    launchTeam &&
-    optionalPreflight.canSkipProviderPreflight(
-      prepareState,
-      selectedMemberProviders,
-      runtimeProviderStatusById,
-      runtimeProviderLoadingById,
-      prepareChecksRef.current
-    );
-
   const organizationPlacementOrganizations = organizationStructure?.organizations ?? [];
   const activePlacementOrganization =
     organizationPlacementOrganizations.find(
@@ -2952,11 +2951,11 @@ export const CreateTeamDialog = ({
                 label={t('create.prepare.selectedProvidersLabel')}
                 layout="stacked"
                 readyStatusText={t('create.prepare.readyStatus')}
-                forceLoadingProviderIds={
-                  presentedPrepareState === 'idle' || presentedPrepareState === 'loading'
-                    ? selectedMemberProviders
-                    : undefined
-                }
+                forceLoadingProviderIds={optionalPreflight.getPendingProviderPreflightIds(
+                  prepareState,
+                  selectedMemberProviders,
+                  prepareChecks
+                )}
                 showReadyProviders
               />
             ) : null}
