@@ -13,6 +13,10 @@ import { fileURLToPath } from 'node:url';
 import { formatGitHubReleaseDownloadError } from './lib/github-release-download-error.mjs';
 import { ensureMinimumNodeOldSpaceEnv } from './lib/node-options.mjs';
 import { verifyRuntimeArchiveChecksum } from './lib/runtime-archive-checksum.mjs';
+import {
+  getExpectedRuntimeCliVersion,
+  matchesRuntimeCliVersion,
+} from './lib/runtime-cli-version.mjs';
 import { spawnSyncWithWindowsShell } from './lib/windows-shell-spawn.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -409,7 +413,7 @@ function isCachedBinaryValid(binaryPath, expectedVersion) {
   }
 
   try {
-    return readBinaryVersion(binaryPath).includes(expectedVersion);
+    return matchesRuntimeCliVersion(readBinaryVersion(binaryPath), expectedVersion);
   } catch {
     return false;
   }
@@ -618,6 +622,7 @@ async function acquireBootstrapLock(lockPath) {
 
 async function ensureBootstrappedRuntime() {
   const runtimeLock = readRuntimeLock();
+  const expectedCliVersion = getExpectedRuntimeCliVersion(runtimeLock);
   const platformKey = getPlatformAssetKey();
   const asset = runtimeLock.assets[platformKey];
   if (!asset) {
@@ -627,7 +632,7 @@ async function ensureBootstrappedRuntime() {
   const cacheDir = path.join(runtimeCacheRoot, runtimeLock.version, platformKey);
   const cachedBinaryPath = path.join(cacheDir, asset.binaryName);
 
-  if (isCachedBinaryValid(cachedBinaryPath, runtimeLock.version)) {
+  if (isCachedBinaryValid(cachedBinaryPath, expectedCliVersion)) {
     return {
       binaryPath: cachedBinaryPath,
       versionText: readBinaryVersion(cachedBinaryPath),
@@ -641,7 +646,7 @@ async function ensureBootstrappedRuntime() {
   const lockHandle = await acquireBootstrapLock(path.join(cacheDir, '.bootstrap.lock'));
 
   try {
-    if (isCachedBinaryValid(cachedBinaryPath, runtimeLock.version)) {
+    if (isCachedBinaryValid(cachedBinaryPath, expectedCliVersion)) {
       return {
         binaryPath: cachedBinaryPath,
         versionText: readBinaryVersion(cachedBinaryPath),
@@ -679,10 +684,10 @@ async function ensureBootstrappedRuntime() {
         await fs.promises.rename(nextBinaryPath, cachedBinaryPath);
 
         const versionText = readBinaryVersion(cachedBinaryPath);
-        if (!versionText.includes(runtimeLock.version)) {
+        if (!matchesRuntimeCliVersion(versionText, expectedCliVersion)) {
           await fs.promises.rm(cachedBinaryPath, { force: true });
           throw new Error(
-            `Bootstrapped runtime version mismatch. Expected ${runtimeLock.version}, got: ${versionText}`
+            `Bootstrapped runtime CLI version mismatch for release ${runtimeLock.version}. Expected ${expectedCliVersion}, got: ${versionText}`
           );
         }
 

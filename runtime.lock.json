@@ -1,5 +1,6 @@
 {
   "version": "0.0.79",
+  "cliVersion": "2.1.251",
   "sourceRef": "v0.0.79",
   "sourceRepository": "777genius/agent_teams_orchestrator",
   "releaseRepository": "777genius/agent_teams_orchestrator_binaries",

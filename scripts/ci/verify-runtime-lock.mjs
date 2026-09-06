@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { getExpectedRuntimeCliVersion } from '../lib/runtime-cli-version.mjs';
+
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..', '..');
 const runtimeLockPath = path.join(repoRoot, 'runtime.lock.json');
@@ -30,6 +32,12 @@ const publicRuntimeReleaseRepository = '777genius/agent_teams_orchestrator_binar
 
 if (!version) {
   fail('version is required');
+}
+
+try {
+  getExpectedRuntimeCliVersion(lock);
+} catch (error) {
+  fail(error.message);
 }
 
 if (!sourceRef || sourceRef !== `v${version}`) {

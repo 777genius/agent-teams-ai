@@ -970,6 +970,9 @@ gh run watch <RUN_ID> --repo 777genius/agent_teams_orchestrator
 After the runtime workflow succeeds, update this repo's `runtime.lock.json`:
 
 - `version`: the new runtime version, for example `0.0.52`
+- `cliVersion`: the exact first token of the released binary's `--version` output,
+  for example `2.1.251`. This can differ from the runtime release version for
+  Claude compatibility; when omitted, bootstrap expects `version`.
 - `sourceRef`: the matching runtime tag, for example `v0.0.52`
 - `releaseRepository`: the public repository that hosts runtime assets,
   `777genius/agent_teams_orchestrator_binaries`
