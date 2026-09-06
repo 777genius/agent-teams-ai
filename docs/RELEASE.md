@@ -34,7 +34,7 @@ Target branch: `main`.
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.81`.
+- Agent Teams runtime: `v0.0.82`.
 - Terminal Platform runtime: `v0.3.3`.
 
 Draft body source for GitHub release:
