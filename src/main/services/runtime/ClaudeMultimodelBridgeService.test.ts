@@ -62,11 +62,15 @@ function verifiedOpenCodeProvider(): CliProviderStatus {
 }
 
 describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
-  test.each([true, false])(
-    'mints refresh provenance only from raw affirmative teamLaunch=%s, ignoring injected markers',
-    (teamLaunch) => {
-      const provider = mapRuntimeProviderStatus('anthropic', {
-        providerId: 'anthropic',
+  test.each(
+    (['anthropic', 'codex'] as const).flatMap((providerId) =>
+      [true, false].map((teamLaunch) => ({ providerId, teamLaunch }))
+    )
+  )(
+    '$providerId mints refresh provenance only from raw affirmative teamLaunch=$teamLaunch, ignoring injected markers',
+    ({ providerId, teamLaunch }) => {
+      const provider = mapRuntimeProviderStatus(providerId, {
+        providerId,
         supported: true,
         authenticated: true,
         authMethod: 'claude.ai',

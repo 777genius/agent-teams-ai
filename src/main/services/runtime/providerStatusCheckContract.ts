@@ -4,9 +4,9 @@ import {
   createLegacyRuntimeFallbackCliExtensionCapabilities,
 } from '@shared/utils/providerExtensionCapabilities';
 import {
-  hasAnthropicCatalogRefreshLaunchSupport,
   hasAuthoritativeProviderLaunchEvidence,
   hasAuthoritativeProviderStatusEvidence,
+  hasProviderCatalogRefreshLaunchSupport,
   isProviderModelCatalogExactReady,
   selectProviderModelDisplayPair,
 } from '@shared/utils/providerStatusAuthority';
@@ -269,7 +269,7 @@ export function mergeProviderStatusDisplayEvidence(
 
   return {
     ...incoming,
-    teamLaunchAuthorityRestriction: hasAnthropicCatalogRefreshLaunchSupport(incoming)
+    teamLaunchAuthorityRestriction: hasProviderCatalogRefreshLaunchSupport(incoming)
       ? 'catalog-refresh'
       : undefined,
     supported: incoming.supported,
