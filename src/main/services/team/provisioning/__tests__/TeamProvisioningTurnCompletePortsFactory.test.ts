@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { handleTeamProvisioningTurnComplete } from '../TeamProvisioningTurnComplete';
 import {
   createTeamProvisioningTurnCompletePorts,
   type TeamProvisioningTurnCompleteOutputRecoveryAdapter,
@@ -8,6 +9,10 @@ import {
 } from '../TeamProvisioningTurnCompletePortsFactory';
 
 import type { MemberSpawnStatusEntry, TeamProvisioningProgress } from '@shared/types';
+
+vi.mock('../TeamProvisioningRegularFileRead', () => ({
+  tryReadRegularFileUtf8: vi.fn(async () => null),
+}));
 
 type TestRun = TeamProvisioningTurnCompletePortsFactoryRun;
 interface TestSecondaryLaunchResult {
@@ -111,7 +116,104 @@ function createOutputRecoveryAdapter(): TeamProvisioningTurnCompleteOutputRecove
   };
 }
 
+function createCompletionContext() {
+  const service = createServiceAdapter();
+  const setAliveRunId = vi.fn();
+  const config = {
+    updateConfigPostLaunch: vi.fn(async () => undefined),
+    cleanupPrelaunchBackup: vi.fn(async () => undefined),
+    persistMembersMeta: vi.fn(async () => undefined),
+  };
+  const ports = createTeamProvisioningTurnCompletePorts({
+    service,
+    outputRecovery: createOutputRecoveryAdapter(),
+    config,
+    updateProgress: vi.fn((_run, state, message) => createProgress({ state, message })),
+    provisioningRunByTeam: new Map<string, TestRun>(),
+    setAliveRunId,
+    emitTeamChange: vi.fn(),
+    killTeamProcess: vi.fn(),
+  });
+  return { service, config, ports, setAliveRunId };
+}
+
 describe('TeamProvisioningTurnCompletePortsFactory', () => {
+  it.each([false, true])(
+    'waits for roster persistence before metadata, without waiting for runtime startup (isLaunch=%s)',
+    async (isLaunch) => {
+      let finishRoster!: (ready: boolean) => void;
+      let finishRuntime!: (result: TestSecondaryLaunchResult) => void;
+      const runtimeLaunch = new Promise<TestSecondaryLaunchResult>((resolve) => {
+        finishRuntime = resolve;
+      });
+      const run = createRun({
+        isLaunch,
+        mixedSecondaryRosterPreparation: new Promise((resolve) => (finishRoster = resolve)),
+      });
+      run.request.members = [{ name: 'alice' }];
+      const { service, config, ports, setAliveRunId } = createCompletionContext();
+      vi.mocked(service.launchMixedSecondaryLaneIfNeeded).mockReturnValue(runtimeLaunch);
+
+      const completion = handleTeamProvisioningTurnComplete(run, ports);
+      const duplicateCompletion = handleTeamProvisioningTurnComplete(run, ports);
+      await Promise.resolve();
+      expect(config.updateConfigPostLaunch).not.toHaveBeenCalled();
+      expect(run.provisioningComplete).toBe(false);
+
+      finishRoster(true);
+      await vi.waitFor(() => expect(service.launchMixedSecondaryLaneIfNeeded).toHaveBeenCalled());
+      expect(config.updateConfigPostLaunch).toHaveBeenCalledTimes(1);
+      expect(config.updateConfigPostLaunch).toHaveBeenCalledWith(
+        run.teamName,
+        run.request.cwd,
+        run.detectedSessionId,
+        run.request.color,
+        expect.objectContaining({ members: run.allEffectiveMembers })
+      );
+      expect(setAliveRunId).not.toHaveBeenCalled();
+
+      finishRuntime({ launched: true });
+      await Promise.all([completion, duplicateCompletion]);
+      expect(setAliveRunId).toHaveBeenCalledExactlyOnceWith(run.teamName, run.runId);
+    }
+  );
+
+  it.each(['cancelled', 'killed', 'failed', 'superseded'])(
+    'rechecks run eligibility after roster preparation becomes %s',
+    async (outcome) => {
+      let finishRoster!: (ready: boolean) => void;
+      const run = createRun({
+        mixedSecondaryRosterPreparation: new Promise((resolve) => (finishRoster = resolve)),
+      });
+      const { service, config, ports } = createCompletionContext();
+      const completion = handleTeamProvisioningTurnComplete(run, ports);
+      if (outcome === 'cancelled') run.cancelRequested = true;
+      if (outcome === 'killed') run.processKilled = true;
+      if (outcome === 'failed') run.progress.state = 'failed';
+      if (outcome === 'superseded') {
+        vi.mocked(service.isProvisioningRunStillPromotable).mockReturnValue(false);
+      }
+
+      finishRoster(false);
+      await completion;
+      expect(config.updateConfigPostLaunch).not.toHaveBeenCalled();
+      expect(run.provisioningComplete).toBe(false);
+    }
+  );
+
+  it('allows normal completion to recover after the early roster write fails', async () => {
+    const run = createRun({
+      isLaunch: false,
+      mixedSecondaryRosterPreparation: Promise.reject(new Error('roster write failed')),
+    });
+    const { config, ports, setAliveRunId } = createCompletionContext();
+
+    await handleTeamProvisioningTurnComplete(run, ports);
+
+    expect(config.updateConfigPostLaunch).toHaveBeenCalledTimes(1);
+    expect(setAliveRunId).toHaveBeenCalledExactlyOnceWith(run.teamName, run.runId);
+  });
+
   it('wires service callbacks and shared provisioning helpers into turn-complete ports', async () => {
     const service = createServiceAdapter();
     const config = {

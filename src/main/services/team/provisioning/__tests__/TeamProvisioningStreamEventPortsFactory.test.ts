@@ -288,7 +288,12 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
   });
 
   it('waits for authoritative roster publication before starting the early side lane', async () => {
-    const callbacks = createCallbacks();
+    let finishRuntimeLaunch!: () => void;
+    const callbacks = createCallbacks({
+      launchMixedSecondaryLaneIfNeeded: vi.fn(
+        () => new Promise<void>((resolve) => (finishRuntimeLaunch = resolve))
+      ),
+    });
     let completePreparation!: (ready: boolean) => void;
     const prepareMixedSecondaryLaunch = vi.fn(
       () => new Promise<boolean>((resolve) => (completePreparation = resolve))
@@ -303,10 +308,15 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     const run = createRun();
     const pending = ports.launchMixedSecondaryLaneIfNeeded(run);
     expect(prepareMixedSecondaryLaunch).toHaveBeenCalledWith(run);
+    expect(run.mixedSecondaryRosterPreparation).toBe(
+      prepareMixedSecondaryLaunch.mock.results[0].value
+    );
     expect(callbacks.launchMixedSecondaryLaneIfNeeded).not.toHaveBeenCalled();
     completePreparation(true);
-    await pending;
+    await expect(run.mixedSecondaryRosterPreparation).resolves.toBe(true);
     expect(callbacks.launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run);
+    finishRuntimeLaunch();
+    await pending;
   });
 
   it.each(['cancelled', 'killed', 'stale', 'write-failed'])(

@@ -188,7 +188,8 @@ export function createTeamProvisioningStreamEventPortsBoundary<
     handleControlRequest: (run, msg) => deps.service.handleControlRequest(run, msg),
     launchMixedSecondaryLaneIfNeeded: async (run) => {
       if (run.cancelRequested || run.processKilled) return;
-      const prepared = await deps.prepareMixedSecondaryLaunch(run);
+      run.mixedSecondaryRosterPreparation ??= deps.prepareMixedSecondaryLaunch(run);
+      const prepared = await run.mixedSecondaryRosterPreparation;
       if (!prepared || run.cancelRequested || run.processKilled) return;
       return deps.service.launchMixedSecondaryLaneIfNeeded(run);
     },

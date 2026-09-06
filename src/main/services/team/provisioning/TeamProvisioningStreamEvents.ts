@@ -91,6 +91,7 @@ export interface TeamProvisioningStreamRun {
   lastRetryAt: number;
   apiErrorWarningEmitted: boolean;
   mixedSecondaryLanes?: readonly unknown[];
+  mixedSecondaryRosterPreparation?: Promise<boolean>;
 }
 
 export interface TeamProvisioningStreamEventPorts<TRun extends TeamProvisioningStreamRun> {
@@ -575,7 +576,7 @@ export function handleDeterministicBootstrapEvent<TRun extends TeamProvisioningS
         );
       }
     }
-    if ((run.mixedSecondaryLanes?.length ?? 0) > 0) {
+    if (!run.provisioningComplete && (run.mixedSecondaryLanes?.length ?? 0) > 0) {
       void ports.launchMixedSecondaryLaneIfNeeded(run).catch((error: unknown) => {
         logger.error(
           `[${run.teamName}] mixed secondary launch after primary bootstrap failed: ${
