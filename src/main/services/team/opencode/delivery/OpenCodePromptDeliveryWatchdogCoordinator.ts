@@ -97,6 +97,11 @@ export interface OpenCodePromptDeliveryWatchdogCoordinatorPorts {
   resolveMembersForRuntimeLane(teamName: string, laneId: string): Promise<string[]>;
   getInboxMessages(teamName: string, memberName: string): Promise<InboxMessage[]>;
   resolveCurrentRuntimeRunId(teamName: string, laneId: string): Promise<string | null>;
+  resolveTrackedBootstrapRunId(input: {
+    teamName: string;
+    laneId: string;
+    runId: string;
+  }): string | null;
   hasCommittedBootstrapSession(input: {
     teamName: string;
     laneId: string;
@@ -553,9 +558,23 @@ export class OpenCodePromptDeliveryWatchdogCoordinator {
     memberName: string;
   }): Promise<number> {
     if (!this.ports.watchdogScheduler.isEnabled()) return 0;
-    const isCurrentRun = async (): Promise<boolean> =>
-      (await this.ports.resolveCurrentRuntimeRunId(input.teamName, input.laneId)) === input.runId &&
-      this.ports.canDeliverToTeamRuntime(input.teamName);
+    const bootstrapOwner = this.ports.resolveTrackedBootstrapRunId(input);
+    const isCurrentRun = async (): Promise<boolean> => {
+      if (
+        (await this.ports.resolveCurrentRuntimeRunId(input.teamName, input.laneId)) !== input.runId
+      )
+        return false;
+      if (bootstrapOwner && this.ports.resolveTrackedBootstrapRunId(input) !== bootstrapOwner)
+        return false;
+      if (this.ports.canDeliverToTeamRuntime(input.teamName)) return true;
+      // A confirmed lane can work while its owning lead is still finalizing.
+      // This schedules only; the watchdog retains its existing recovery/Stop checks.
+      return (
+        bootstrapOwner !== null &&
+        (await this.ports.hasCommittedBootstrapSession(input)) &&
+        this.ports.resolveTrackedBootstrapRunId(input) === bootstrapOwner
+      );
+    };
     if (!(await isCurrentRun())) return 0;
     const messages = await this.ports.getInboxMessages(input.teamName, input.memberName);
     // Stop/relaunch may race either read. Never wake a replacement generation.
@@ -716,6 +735,7 @@ export function createOpenCodePromptDeliveryWatchdogCoordinator(
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     getErrorMessage: defaultGetErrorMessage,
     hasCommittedBootstrapSession: async () => false,
+    resolveTrackedBootstrapRunId: () => null,
     ...ports,
   });
 }

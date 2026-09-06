@@ -1,4 +1,24 @@
+import { findDeliverableOpenCodeRuntimeBootstrapSessionEvidence } from './TeamProvisioningOpenCodeBootstrapEvidence';
+import { getTrackedOpenCodeBootstrapWakeRunId } from './TeamProvisioningSecondaryRuntimeRuns';
+
 import type { OpenCodePromptDeliveryWatchdogCoordinatorPorts } from '../opencode/delivery/OpenCodePromptDeliveryWatchdogCoordinator';
+import type { OpenCodeRuntimeBootstrapEvidencePorts } from './TeamProvisioningOpenCodeBootstrapEvidence';
+
+export function createOpenCodeBootstrapWakePorts(
+  runtime: Parameters<typeof getTrackedOpenCodeBootstrapWakeRunId>[1],
+  createEvidencePorts: () => OpenCodeRuntimeBootstrapEvidencePorts
+): Pick<
+  OpenCodePromptDeliveryWatchdogCoordinatorPorts,
+  'resolveTrackedBootstrapRunId' | 'hasCommittedBootstrapSession'
+> {
+  return {
+    resolveTrackedBootstrapRunId: (input) => getTrackedOpenCodeBootstrapWakeRunId(input, runtime),
+    hasCommittedBootstrapSession: async (input) =>
+      Boolean(
+        await findDeliverableOpenCodeRuntimeBootstrapSessionEvidence(input, createEvidencePorts())
+      ),
+  };
+}
 
 /**
  * Service-side ports the OpenCode prompt-delivery pipeline is composed from.

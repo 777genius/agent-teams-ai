@@ -99,8 +99,10 @@ import {
   type TeamProvisioningMemberMcpLaunchConfigServiceHost,
 } from './TeamProvisioningMemberMcpLaunchConfig';
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
-import { findDeliverableOpenCodeRuntimeBootstrapSessionEvidence } from './TeamProvisioningOpenCodeBootstrapEvidence';
-import { type TeamProvisioningOpenCodeDeliveryCompositionPorts } from './TeamProvisioningOpenCodeDeliveryComposition';
+import {
+  createOpenCodeBootstrapWakePorts,
+  type TeamProvisioningOpenCodeDeliveryCompositionPorts,
+} from './TeamProvisioningOpenCodeDeliveryComposition';
 import {
   createOpenCodePromptDeliveryWatchdogSchedulerFromService,
   type TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
@@ -727,13 +729,9 @@ export function createTeamProvisioningServiceComposition(
           teamName,
           laneId
         ),
-      hasCommittedBootstrapSession: async (input) =>
-        Boolean(
-          await findDeliverableOpenCodeRuntimeBootstrapSessionEvidence(
-            input,
-            bootstrapEvidenceFacade.createOpenCodeRuntimeBootstrapEvidencePorts()
-          )
-        ),
+      ...createOpenCodeBootstrapWakePorts(openCodeRuntimeDeliveryBoundaryHost, () =>
+        bootstrapEvidenceFacade.createOpenCodeRuntimeBootstrapEvidencePorts()
+      ),
       hasStableInboxMessageId,
       logPromptDeliveryEvent: (event, record, extra) =>
         servicePorts.logOpenCodePromptDeliveryEvent(event, record, extra),
