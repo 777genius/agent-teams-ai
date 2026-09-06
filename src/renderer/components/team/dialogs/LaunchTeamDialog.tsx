@@ -904,7 +904,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   useEffect(() => {
     if (!open || !isLaunchMode) return;
     // Hydrate at most once per open dialog, and never on top of user edits.
-    if (hydrationRef.current.dirty || hydrationRef.current.key === effectiveTeamName) return;
+    if (hydrationRef.current.dirty || hydrationRef.current.key === effectiveTeamName) {
+      setLaunchHydratedTeamName(effectiveTeamName);
+      return;
+    }
 
     const applyEditableRoster = (
       savedMembers?: TeamCreateRequest['members'],
@@ -2302,13 +2305,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         return;
       }
     }
-    if (isLaunchMode && prepareState === 'idle') {
-      if (launchPreflightSelectionReady) {
-        setPrepareState('loading');
-        setPrepareMessage(t('launch.prepare.checkingProviders'));
-      }
-      return;
-    }
+    if (isLaunchMode && prepareState === 'idle') return;
     if (launchGuard.reject(isLaunchMode && !canSkipPreflight(), rejectProviderLaunch)) return;
     if (!submissionFence.acquire(prepareRequestSeqRef)) return;
     setLocalError(null);

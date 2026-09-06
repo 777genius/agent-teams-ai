@@ -34,7 +34,7 @@ describe('MembersJsonEditor', () => {
         )
       );
     render('[{"name":"worker","model":"old"}]');
-    const view = EditorView.findFromDOM(container.querySelector('.cm-editor') as HTMLElement)!;
+    const view = EditorView.findFromDOM(container.querySelector<HTMLElement>('.cm-editor')!)!;
     expect(view).toBeTruthy();
 
     render('[{"name":"worker","model":"new"}]');

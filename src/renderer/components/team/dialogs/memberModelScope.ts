@@ -1,7 +1,7 @@
 import {
   getAvailableTeamProviderModels,
-  getTeamModelUiDisabledReason,
   getTeamModelSelectionError,
+  getTeamModelUiDisabledReason,
   hasTerminalAuthoritativeModelVerification,
   isTeamModelAvailableForUi,
   isTeamProviderModelCatalogFresh,

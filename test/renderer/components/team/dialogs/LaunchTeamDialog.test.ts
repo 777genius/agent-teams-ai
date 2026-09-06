@@ -1103,6 +1103,7 @@ describe('LaunchTeamDialog', () => {
     localStorage.clear();
     vi.useRealTimers();
     vi.clearAllMocks();
+    createTeamDraftMock.state.setCwdMode.mockReset();
     storeState.cliStatus = { providers: [] };
     storeState.cliProviderStatusByScope = {};
     storeState.cliProviderStatusLoading = {};
@@ -1547,6 +1548,54 @@ describe('LaunchTeamDialog', () => {
       root.unmount();
       await flush();
     });
+  });
+
+  it('starts preflight with user choices when a roster refresh cancels pending hydration', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(new Promise(() => {}));
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = () =>
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch: vi.fn(async () => {}),
+        })
+      );
+    await act(async () => {
+      render();
+      await flush();
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+    await act(async () => {
+      teamRosterEditorSectionMock.lastProps.onSyncModelsWithTeammatesChange(true);
+      await flush();
+    });
+    await act(async () => {
+      render();
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+      await flush();
+    });
+    expect(teamRosterEditorSectionMock.lastProps.syncModelsWithTeammates).toBe(true);
+    expect(runProviderPrepareDiagnostics).toHaveBeenCalledWith(
+      expect.objectContaining({ cwd: '/tmp/project' })
+    );
+    expect(api.teams.getSavedRequest).toHaveBeenCalledTimes(1);
+    await act(async () => root.unmount());
   });
 
   it('keeps a programmatic effort reset from cancelling saved-request hydration', async () => {
@@ -4307,143 +4356,152 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('starts detailed create-team preflight only after the current project selection settles', async () => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.useFakeTimers();
-    storeState.cliStatus = {
-      flavor: 'agent_teams_orchestrator',
-      providers: [
-        {
-          ...createAuthoritativeProviderStatus('anthropic', ['haiku']),
-          modelVerificationState: 'verified',
-        },
-        {
-          ...createAuthoritativeProviderStatus('codex', ['gpt-5.5']),
-          authMethod: 'chatgpt',
-          modelVerificationState: 'verified',
-          selectedBackendId: 'codex-native',
-          resolvedBackendId: 'codex-native',
-        },
-        {
-          ...createAuthoritativeProviderStatus('opencode', ['opencode/big-pickle']),
-          authMethod: 'opencode_managed',
-          modelVerificationState: 'verified',
-          statusMessage: 'warming up',
-          detailMessage: 'first render',
-          capabilities: {
-            teamLaunch: true,
-            oneShot: false,
-            extensions: createDefaultCliExtensionCapabilities(),
+  it.each(['project', 'custom'] as const)(
+    'starts detailed create-team preflight only after the current project selection settles from %s mode',
+    async (initialCwdMode) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.useFakeTimers();
+      storeState.cliStatus = {
+        flavor: 'agent_teams_orchestrator',
+        providers: [
+          {
+            ...createAuthoritativeProviderStatus('anthropic', ['haiku']),
+            modelVerificationState: 'verified',
           },
-        },
-      ],
-    } as any;
-    await fetchCliProviderStatus('opencode', {
-      silent: true,
-      checkReason: 'launch_preflight',
-      projectPath: '/tmp/project',
-    });
-    fetchCliProviderStatus.mockClear();
-    let resolvePrepare!: (value: {
-      status: 'ready';
-      warnings: [];
-      details: [];
-      modelResultsById: {};
-    }) => void;
-    const preparePromise = new Promise<{
-      status: 'ready';
-      warnings: [];
-      details: [];
-      modelResultsById: {};
-    }>((resolve) => {
-      resolvePrepare = resolve;
-    });
-    vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(preparePromise as any);
-
-    const host = document.createElement('div');
-    document.body.appendChild(host);
-    const root = createRoot(host);
-
-    createTeamDraftMock.state.selectedProjectPath = '/tmp/stale-real-project';
-    const renderDialog = async (): Promise<void> => {
-      root.render(
-        React.createElement(CreateTeamDialog, {
-          open: true,
-          canCreate: true,
-          provisioningErrorsByTeam: {},
-          clearProvisioningError: vi.fn(),
-          existingTeamNames: [],
-          provisioningTeamNames: [],
-          activeTeams: [],
-          defaultProjectPath: '/tmp/project',
-          onClose: vi.fn(),
-          onCreate: vi.fn(async () => {}),
-          onOpenTeam: vi.fn(),
-        })
-      );
-      await flush();
-    };
-
-    await act(async () => {
-      await renderDialog();
-      await flush();
-    });
-    await act(async () => {
-      vi.runOnlyPendingTimers();
-      await flush();
-    });
-    await act(async () => {
-      vi.runOnlyPendingTimers();
-      await flush();
-    });
-
-    expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
-    expect(fetchCliProviderStatus).not.toHaveBeenCalled();
-
-    createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
-    await act(async () => {
-      await renderDialog();
-      await flush();
-    });
-
-    await act(async () => {
-      vi.runOnlyPendingTimers();
-      await flush();
-    });
-
-    expect(
-      new Set(
-        vi.mocked(runProviderPrepareDiagnostics).mock.calls.map(([input]) => input.providerId)
-      )
-    ).toEqual(new Set(['anthropic', 'codex', 'opencode']));
-    expect(
-      vi
-        .mocked(runProviderPrepareDiagnostics)
-        .mock.calls.every(([input]) => input.cwd === '/tmp/project')
-    ).toBe(true);
-    expect(
-      vi
-        .mocked(runProviderPrepareDiagnostics)
-        .mock.calls.flatMap(([input]) => input.selectedModelIds)
-    ).toEqual(expect.arrayContaining(['gpt-5.5', 'opencode/big-pickle']));
-
-    await act(async () => {
-      resolvePrepare({
-        status: 'ready',
-        warnings: [],
-        details: [],
-        modelResultsById: {},
+          {
+            ...createAuthoritativeProviderStatus('codex', ['gpt-5.5']),
+            authMethod: 'chatgpt',
+            modelVerificationState: 'verified',
+            selectedBackendId: 'codex-native',
+            resolvedBackendId: 'codex-native',
+          },
+          {
+            ...createAuthoritativeProviderStatus('opencode', ['opencode/big-pickle']),
+            authMethod: 'opencode_managed',
+            modelVerificationState: 'verified',
+            statusMessage: 'warming up',
+            detailMessage: 'first render',
+            capabilities: {
+              teamLaunch: true,
+              oneShot: false,
+              extensions: createDefaultCliExtensionCapabilities(),
+            },
+          },
+        ],
+      } as any;
+      await fetchCliProviderStatus('opencode', {
+        silent: true,
+        checkReason: 'launch_preflight',
+        projectPath: '/tmp/project',
       });
-      await flush();
-      await flush();
-    });
-    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(3);
+      fetchCliProviderStatus.mockClear();
+      let resolvePrepare!: (value: {
+        status: 'ready';
+        warnings: [];
+        details: [];
+        modelResultsById: {};
+      }) => void;
+      const preparePromise = new Promise<{
+        status: 'ready';
+        warnings: [];
+        details: [];
+        modelResultsById: {};
+      }>((resolve) => {
+        resolvePrepare = resolve;
+      });
+      vi.mocked(runProviderPrepareDiagnostics).mockReturnValue(preparePromise as any);
 
-    await act(async () => {
-      root.unmount();
-      await flush();
-    });
-  });
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+
+      createTeamDraftMock.state.selectedProjectPath = '/tmp/stale-real-project';
+      createTeamDraftMock.state.cwdMode = initialCwdMode;
+      createTeamDraftMock.state.customCwd = '/tmp/stale-custom-project';
+      createTeamDraftMock.state.setCwdMode.mockImplementation((mode) => {
+        createTeamDraftMock.state.cwdMode = mode;
+      });
+      const renderDialog = async (): Promise<void> => {
+        root.render(
+          React.createElement(CreateTeamDialog, {
+            open: true,
+            canCreate: true,
+            provisioningErrorsByTeam: {},
+            clearProvisioningError: vi.fn(),
+            existingTeamNames: [],
+            provisioningTeamNames: [],
+            activeTeams: [],
+            defaultProjectPath: '/tmp/project',
+            forceDefaultProjectSelection: true,
+            onClose: vi.fn(),
+            onCreate: vi.fn(async () => {}),
+            onOpenTeam: vi.fn(),
+          })
+        );
+        await flush();
+      };
+
+      await act(async () => {
+        await renderDialog();
+        await flush();
+      });
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+        await flush();
+      });
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+        await flush();
+      });
+
+      expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+      expect(fetchCliProviderStatus).not.toHaveBeenCalled();
+
+      createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
+      await act(async () => {
+        await renderDialog();
+        await flush();
+      });
+
+      await act(async () => {
+        vi.runOnlyPendingTimers();
+        await flush();
+      });
+
+      expect(
+        new Set(
+          vi.mocked(runProviderPrepareDiagnostics).mock.calls.map(([input]) => input.providerId)
+        )
+      ).toEqual(new Set(['anthropic', 'codex', 'opencode']));
+      expect(
+        vi
+          .mocked(runProviderPrepareDiagnostics)
+          .mock.calls.every(([input]) => input.cwd === '/tmp/project')
+      ).toBe(true);
+      expect(
+        vi
+          .mocked(runProviderPrepareDiagnostics)
+          .mock.calls.flatMap(([input]) => input.selectedModelIds)
+      ).toEqual(expect.arrayContaining(['gpt-5.5', 'opencode/big-pickle']));
+
+      await act(async () => {
+        resolvePrepare({
+          status: 'ready',
+          warnings: [],
+          details: [],
+          modelResultsById: {},
+        });
+        await flush();
+        await flush();
+      });
+      expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(3);
+
+      await act(async () => {
+        root.unmount();
+        await flush();
+      });
+    }
+  );
 
   it('does not report the submitted team name as a duplicate while creation is in flight', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);

@@ -58,6 +58,8 @@ export function isLaunchPreflightProjectSelectionReady({
   selectedProjectPath,
   defaultProjectPath,
   appliedDefaultProjectPath,
+  forceDefaultProjectSelection = false,
+  appliedDefaultProjectModePath,
 }: {
   draftLoaded: boolean;
   effectiveCwd: string;
@@ -67,6 +69,8 @@ export function isLaunchPreflightProjectSelectionReady({
   selectedProjectPath: string;
   defaultProjectPath?: string | null;
   appliedDefaultProjectPath: string | null;
+  forceDefaultProjectSelection?: boolean;
+  appliedDefaultProjectModePath?: string | null;
 }): boolean {
   const normalizedDefaultPath = defaultProjectPath ? normalizePath(defaultProjectPath) : null;
   const pendingDefaultSelection =
@@ -80,6 +84,10 @@ export function isLaunchPreflightProjectSelectionReady({
 
   return (
     draftLoaded &&
+    (!forceDefaultProjectSelection ||
+      !defaultProjectPath ||
+      isEphemeralProjectPath(defaultProjectPath) ||
+      appliedDefaultProjectModePath === normalizedDefaultPath) &&
     Boolean(effectiveCwd) &&
     (cwdMode === 'custom' ||
       (!projectsLoading &&

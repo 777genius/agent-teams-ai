@@ -1042,7 +1042,7 @@ export function buildDeterministicLaunchHydrationPrompt(
   const startupLabel = isResume ? 'resume/bootstrap' : 'launch/bootstrap';
   const headerModeLabel = isResume ? 'Deterministic resume' : 'Deterministic launch';
   const userPromptBlock = request.prompt?.trim()
-    ? `\nOriginal user instructions to apply after ${isResume ? 'resume' : 'startup'} is stable:\n${request.prompt.trim()}\n`
+    ? `\nOriginal user instructions to apply now:\n${request.prompt.trim()}\n`
     : '';
   const hasOriginalUserPrompt = Boolean(request.prompt?.trim());
   const taskBoardSnapshot = buildTaskBoardSnapshot(tasks);
@@ -1052,27 +1052,25 @@ export function buildDeterministicLaunchHydrationPrompt(
     isSolo,
     members,
   });
-  const nextSteps = isSolo
+  const nextSteps = hasOriginalUserPrompt
     ? `This ${startupLabel} step has already been completed deterministically by the runtime.
+Do NOT call TeamCreate.
+Do NOT use Agent to spawn or restore teammates.
+This is the first normal operating turn after bootstrap. Apply the original user instructions now; do not wait for another user message.
+${isSolo ? "Follow the user's requested action mode; answer read-only questions or carry out requested work and update the task board as appropriate." : "Follow the user's requested action mode, including read-only answers. Create or assign tasks only when the request calls for teammate work, using the exact roster below. If an owner is still joining, leave its assignment pending and wait for that owner; do not do its work yourself."}`
+    : isSolo
+      ? `This ${startupLabel} step has already been completed deterministically by the runtime.
 Do NOT call TeamCreate.
 Do NOT use Agent to spawn or restore teammates.
 Do NOT start implementation in this turn.
 Use this turn only to review the current board snapshot and confirm operational readiness.
-${
-  hasOriginalUserPrompt
-    ? 'Do NOT create or update any new task in this turn - wait for the next normal operating turn before translating those instructions into board work.'
-    : 'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
-}`
-    : `This ${startupLabel} step has already been completed deterministically by the runtime.
+Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.`
+      : `This ${startupLabel} step has already been completed deterministically by the runtime.
 Do NOT call TeamCreate.
 Do NOT use Agent to spawn or restore teammates.
 Do NOT repeat the launch summary.
 Use this turn only to review the current board snapshot and teammate readiness.
-${
-  hasOriginalUserPrompt
-    ? 'Do NOT create or assign any new task in this turn - wait for the next normal operating turn before translating those instructions into board work.'
-    : 'Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.'
-}
+Do NOT create, assign, or delegate any new task in this turn. If the board is empty, stay silent and wait for a fresh user instruction.
 Treat teammates whose bootstrap is still pending as not-yet-available for blocking assignments.`;
 
   return `${startLabel} [${headerModeLabel} | Team: "${request.teamName}" | Project: "${projectName}" | Lead: "${leadName}"]
@@ -1086,7 +1084,7 @@ ${nextSteps}
 ${taskBoardSnapshot}
 ${persistentContext}
 
-Reply with one concise user-facing team status line. Mention whether there is actionable board work and whether any teammate is still bootstrap-pending. Only report board readiness and teammate availability. Do not start work, create tasks, or delegate in this turn.`;
+${hasOriginalUserPrompt ? 'Carry out the requested operating turn once, then give the user a concise progress update.' : 'Reply with one concise user-facing team status line. Mention whether there is actionable board work and whether any teammate is still bootstrap-pending. Only report board readiness and teammate availability. Do not start work, create tasks, or delegate in this turn.'}`;
 }
 
 export function buildGeminiPostLaunchHydrationPrompt(

@@ -134,6 +134,75 @@ describe('buildCreateBootstrapUserPrompt', () => {
 });
 
 describe('lead launch prompts include the teammate roster rules', () => {
+  it.each([false, true])(
+    'executes an explicit launch request in the deferred operating turn (resume=%s)',
+    (isResume) => {
+      const instruction = 'Create two NEW tasks for HAIKU_RELAUNCH_OK and OPENCODE_RELAUNCH_OK.';
+      const prompt = buildDeterministicLaunchHydrationPrompt(
+        { teamName: 'sandbox-relaunch', cwd: '/sandbox', prompt: instruction },
+        teammates,
+        [],
+        isResume
+      );
+      expect(prompt.split(instruction)).toHaveLength(2);
+      expect(prompt).toContain(
+        'Apply the original user instructions now; do not wait for another user message.'
+      );
+      expect(prompt).toContain(
+        'Create or assign tasks only when the request calls for teammate work, using the exact roster below.'
+      );
+      expect(prompt).toContain('leave its assignment pending and wait for that owner');
+      expect(prompt).not.toContain('Do NOT create or assign any new task in this turn');
+      expect(prompt).not.toContain('Do not start work, create tasks, or delegate in this turn.');
+    }
+  );
+
+  it('allows an explicit solo relaunch request without inventing teammates', () => {
+    const prompt = buildDeterministicLaunchHydrationPrompt(
+      { teamName: 'sandbox-solo', cwd: '/sandbox', prompt: 'Write SOLO_RELAUNCH_OK.txt' },
+      [],
+      [],
+      false
+    );
+    expect(prompt).toContain(
+      'answer read-only questions or carry out requested work and update the task board as appropriate.'
+    );
+    expect(prompt).not.toContain('Do NOT start implementation in this turn.');
+    expect(prompt).not.toContain('Create and assign the requested work');
+  });
+
+  it('preserves read-only instructions instead of requiring tasks for every nonempty prompt', () => {
+    const prompt = buildDeterministicLaunchHydrationPrompt(
+      {
+        teamName: 'sandbox-question',
+        cwd: '/sandbox',
+        prompt: 'Only explain the current board. Do not create tasks.',
+      },
+      teammates,
+      [],
+      false
+    );
+    expect(prompt).toContain(
+      "Follow the user's requested action mode, including read-only answers."
+    );
+    expect(prompt).toContain(
+      'Create or assign tasks only when the request calls for teammate work'
+    );
+    expect(prompt).toContain('Only explain the current board. Do not create tasks.');
+  });
+
+  it('keeps blank-prompt launches limited to readiness hydration', () => {
+    const prompt = buildDeterministicLaunchHydrationPrompt(
+      { teamName: 'sandbox-hydration', cwd: '/sandbox', prompt: '   ' },
+      teammates,
+      [],
+      false
+    );
+    expect(prompt).toContain('Do NOT create, assign, or delegate any new task in this turn.');
+    expect(prompt).toContain('Do not start work, create tasks, or delegate in this turn.');
+    expect(prompt).not.toContain('first normal operating turn');
+  });
+
   it('puts exact teammate names and the integrity rules into the launch hydration prompt', () => {
     const request = {
       teamName: 'matrix-team',

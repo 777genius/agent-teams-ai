@@ -644,6 +644,8 @@ export const CreateTeamDialog = ({
     selectedProjectPath,
     defaultProjectPath,
     appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
+    forceDefaultProjectSelection,
+    appliedDefaultProjectModePath: forcedDefaultProjectModePathRef.current,
   });
   const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
     useEffectiveCliProviderStatus('opencode', {
@@ -1155,7 +1157,13 @@ export const CreateTeamDialog = ({
 
   useEffect(() => {
     if (submissionFence.busy) return;
-    if (!open || !canCreate || !launchTeam || prepareState === 'idle') {
+    if (
+      !open ||
+      !canCreate ||
+      !launchTeam ||
+      prepareState === 'idle' ||
+      !launchPreflightSelectionReady
+    ) {
       cancelScheduledIdleSet(prepareIdleHandlesRef.current);
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
@@ -1420,6 +1428,7 @@ export const CreateTeamDialog = ({
     canCreate,
     launchTeam,
     prepareState,
+    launchPreflightSelectionReady,
     isSubmitting,
     submissionFence,
     effectiveCwd,
@@ -1638,7 +1647,7 @@ export const CreateTeamDialog = ({
       const match = selectableProjects.find(
         (p) => normalizePath(p.path) === normalizedDefaultProjectPath
       );
-      if (match && !defaultAlreadyApplied) {
+      if (match && (!defaultAlreadyApplied || !selectedProjectPath)) {
         appliedDefaultProjectPathRef.current = normalizedDefaultProjectPath;
         if (normalizePath(selectedProjectPath) !== normalizedDefaultProjectPath) {
           setSelectedProjectPath(match.path);
@@ -1648,16 +1657,6 @@ export const CreateTeamDialog = ({
     }
     if (selectedProjectPath) {
       return;
-    }
-    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
-      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
-      const match = selectableProjects.find(
-        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
-      );
-      if (match) {
-        setSelectedProjectPath(match.path);
-        return;
-      }
     }
     setSelectedProjectPath(selectableProjects[0].path);
   }, [
