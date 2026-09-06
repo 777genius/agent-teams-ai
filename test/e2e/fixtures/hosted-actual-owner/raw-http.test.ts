@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   canonicalJson,
   P3C_LANE,
-  sha256,
   type RawRecord,
+  sha256,
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import {
   assembleEvidence,
@@ -15,9 +15,9 @@ import {
 } from '../../../../scripts/e2e/hosted-actual-owner/evidence';
 import { parseKernelBoundNativeCaptures } from '../../../../scripts/e2e/hosted-actual-owner/native-captures';
 import {
-  P1ScenarioEvidencePending,
-  verifyOpenCodeHttpEvidence,
+  correlateOpenCodeHttpEvidence,
 } from '../../../../scripts/e2e/hosted-actual-owner/native-http-join';
+import { P1AdmissionUnverified } from '../../../../scripts/e2e/hosted-actual-owner/p1-admission';
 import { parseRawFiles } from '../../../../scripts/e2e/hosted-actual-owner/raw-file-evidence';
 import {
   decodeHttpBase64,
@@ -30,6 +30,7 @@ import {
   HTTP_OBSERVATION_KIND,
   type LocatedHttpRawRecord,
 } from '../../../../scripts/e2e/hosted-actual-owner/raw-http-types';
+
 import {
   body,
   changeResponse,
@@ -72,9 +73,9 @@ describe('P1 actual-source operation groups', () => {
     'joins the one-fact %s branch',
     (kind) => {
       const result = joint(fixture([readOperation(kind)]));
-      expect(result.status).toBe('joined');
+      expect(result.status).toBe('correlated-unverified');
       expect(result.exchanges[0]!.facts).toHaveLength(1);
-      expect(result.exchanges[0]!.terminal).toBe('uncertain');
+      expect(result.exchanges[0]!.terminalObservation).toBe('uncertain');
     }
   );
 
@@ -89,7 +90,7 @@ describe('P1 actual-source operation groups', () => {
     'invalid-schema',
   ] as const)('joins actual reply %s', (outcome) => {
     const result = joint(fixture([reply(outcome)]));
-    expect(result.status).toBe('joined');
+    expect(result.status).toBe('correlated-unverified');
     const exchange = result.exchanges[0]!;
     expect(exchange.facts).toHaveLength(
       outcome === 'applied'
@@ -98,7 +99,7 @@ describe('P1 actual-source operation groups', () => {
           ? 2
           : 1
     );
-    expect(exchange.terminal).toBe(
+    expect(exchange.terminalObservation).toBe(
       outcome === 'applied'
         ? 'applied'
         : ['conflict', 'precondition-failed'].includes(outcome)
@@ -118,7 +119,7 @@ describe('P1 actual-source operation groups', () => {
       'per_1',
       'per_other',
     ]);
-    expect(result.status).toBe('joined');
+    expect(result.status).toBe('correlated-unverified');
   });
 
   it.each(['allow_once', 'reject'] as const)(
@@ -168,7 +169,7 @@ describe('P1 actual-source operation groups', () => {
       ),
     ];
     const result = joint(input);
-    expect(result.status).toBe('joined');
+    expect(result.status).toBe('correlated-unverified');
     expect(result.exchanges.map(({ operationNonce }) => operationNonce)).toEqual([hex(1), hex(2)]);
     expect(new Set(result.exchanges.map(({ facts }) => facts[0]!.locator.lineSha256)).size).toBe(2);
   });
@@ -177,7 +178,7 @@ describe('P1 actual-source operation groups', () => {
     const result = joint(
       fixture([readOperation('capability', 1), readOperation('observe', 2), reply('applied', 3)])
     );
-    expect(result.status).toBe('joined');
+    expect(result.status).toBe('correlated-unverified');
     const facts = result.exchanges[2]!.facts;
     expect(
       facts.find(({ record }) => record.recordType === 'hosted-reply-raw')!.locator.sequence
@@ -217,10 +218,10 @@ describe('P1 refuses missing, orphaned and reused native facts', () => {
         },
       };
     const result = joint(fixture([operation]));
-    expect(result.status).toBe('incomplete');
+    expect(result.status).toBe('incomplete-unverified');
     expect(result.unmatchedNativeFacts.length).toBeGreaterThan(0);
-    // A complete applied receipt is terminal even if its native correlation is incomplete.
-    expect(result.exchanges[0]!.terminal).toBe('applied');
+    // The retained body still describes applied; unverified correlation grants no receipt authority.
+    expect(result.exchanges[0]!.terminalObservation).toBe('applied');
   });
 
   it('consumes a group once, including an identical-body nonce replay', () => {
@@ -234,7 +235,7 @@ describe('P1 refuses missing, orphaned and reused native facts', () => {
       3
     );
     const result = joint(input);
-    expect(result.status).toBe('incomplete');
+    expect(result.status).toBe('incomplete-unverified');
     expect(result.exchanges[1]!.problem).toContain('operation_reused');
     expect(result.unmatchedNativeFacts).toHaveLength(1);
   });
@@ -259,20 +260,20 @@ describe('P1 refuses missing, orphaned and reused native facts', () => {
           ),
         });
       } else if (change === 'activation') {
-        input.admissions[0] = {
-          ...input.admissions[0]!,
+        input.correlations[0] = {
+          ...input.correlations[0]!,
           context: {
             ...context,
             activation: { ...context.activation, stackManifestSha256: hex(997) },
           },
         };
       } else {
-        input.admissions[0] = {
-          ...input.admissions[0]!,
+        input.correlations[0] = {
+          ...input.correlations[0]!,
           timeline: { captureSha256: hex(996), shardIndex: 0 },
         };
       }
-      expect(() => joint(input)).toThrow(/binding|admitted_producer|admitted_shard/u);
+      expect(() => joint(input)).toThrow(/binding|asserted_producer|selected_shard/u);
     }
   );
 
@@ -285,7 +286,7 @@ describe('P1 refuses missing, orphaned and reused native facts', () => {
     );
     input.captures.openCodeTimelinePath = [replacement.bytes];
     Object.assign(input.outcome.captureFiles.openCodeTimelinePath, { shards: [replacement.shard] });
-    expect(() => joint(input)).toThrow('admitted_shard');
+    expect(() => joint(input)).toThrow('selected_shard');
   });
 
   it('rejects an emission nonce replay shared across capture families', () => {
@@ -300,11 +301,11 @@ describe('P1 refuses missing, orphaned and reused native facts', () => {
     const input = fixture();
     const native = parseKernelBoundNativeCaptures(input);
     expect(() =>
-      verifyOpenCodeHttpEvidence({
+      correlateOpenCodeHttpEvidence({
         records: parse(input.records).slice(0, 1) as LocatedHttpRawRecord[],
         ledger: input.raw.opencode,
-        shards: [...native.shards.openCodeTimelinePath, ...native.shards.protectedEffectLedgerPath],
-        admissions: input.admissions,
+        shards: [...Object.values(native.shards).flat()],
+        correlations: input.correlations,
         outcome: input.outcome,
       })
     ).toThrow('raw_selection_incomplete');
@@ -320,18 +321,18 @@ describe('P1 refuses missing, orphaned and reused native facts', () => {
     const records = [...parse(input.records)] as LocatedHttpRawRecord[];
     records[0] = { ...records[0]!, lineSha256: hex(999) };
     expect(() =>
-      verifyOpenCodeHttpEvidence({
+      correlateOpenCodeHttpEvidence({
         records,
         ledger: input.raw.opencode,
-        shards: [...native.shards.openCodeTimelinePath, ...native.shards.protectedEffectLedgerPath],
-        admissions: input.admissions,
+        shards: [...Object.values(native.shards).flat()],
+        correlations: input.correlations,
         outcome: input.outcome,
       })
     ).toThrow('raw_fact_locator');
   });
 });
 
-describe('HTTP uncertainty and immutable admission', () => {
+describe('HTTP uncertainty and immutable correlation context', () => {
   it.each(['missing', 'duplicate', 'comma', 'padded', 'upper'] as const)(
     'retains %s nonce metadata without joining',
     (kind) => {
@@ -352,9 +353,9 @@ describe('HTTP uncertainty and immutable admission', () => {
         nonceStatus: kind === 'missing' ? 'missing' : 'invalid',
       });
       const result = joint(input);
-      expect(result.status).toBe('incomplete');
+      expect(result.status).toBe('incomplete-unverified');
       expect(result.exchanges[0]!.facts).toHaveLength(0);
-      expect(result.exchanges[0]!.terminal).toBe('applied');
+      expect(result.exchanges[0]!.terminalObservation).toBe('applied');
       expect(result.exchanges[0]).not.toHaveProperty('retryAuthority');
     }
   );
@@ -379,8 +380,8 @@ describe('HTTP uncertainty and immutable admission', () => {
                 }
         );
       const result = joint(input);
-      expect(result.status).toBe('incomplete');
-      expect(result.exchanges[0]!.terminal).toBe('uncertain');
+      expect(result.status).toBe('incomplete-unverified');
+      expect(result.exchanges[0]!.terminalObservation).toBe('uncertain');
       expect(result.exchanges[0]!.facts).toHaveLength(0);
       expect(result.unmatchedNativeFacts).toHaveLength(3);
     }
@@ -399,8 +400,8 @@ describe('HTTP uncertainty and immutable admission', () => {
         },
       };
       const result = joint(fixture([operation]));
-      expect(result.status).toBe('joined');
-      expect(result.exchanges[0]!.terminal).toBe('uncertain');
+      expect(result.status).toBe('correlated-unverified');
+      expect(result.exchanges[0]!.terminalObservation).toBe('uncertain');
     }
   );
 
@@ -417,8 +418,8 @@ describe('HTTP uncertainty and immutable admission', () => {
       { ...response, context: { ...context, row: '03_owner_effect_settlement' } },
       2
     );
-    input.admissions.push({
-      ...input.admissions[0]!,
+    input.correlations.push({
+      ...input.correlations[0]!,
       context: recordData(input.records[1]!).context,
     });
     expect(() => joint(input)).toThrow('exchange_snapshot');
@@ -435,8 +436,8 @@ describe('HTTP uncertainty and immutable admission', () => {
       { ...context.recorder, ownerGeneration: 2 },
     ]) {
       const input = fixture();
-      input.admissions[0] = {
-        ...input.admissions[0]!,
+      input.correlations[0] = {
+        ...input.correlations[0]!,
         context: {
           ...context,
           recorder,
@@ -496,7 +497,7 @@ describe('HTTP uncertainty and immutable admission', () => {
     const result = joint(input);
     expect(result.unboundFailureRecordIds).toHaveLength(1);
     expect(result.exchanges[0]!.responseRecordId).toBeNull();
-    expect(result.exchanges[0]!.terminal).toBe('uncertain');
+    expect(result.exchanges[0]!.terminalObservation).toBe('uncertain');
     expect(result.exchanges[0]!.failureRecordIds).toHaveLength(1);
   });
 });
@@ -548,7 +549,7 @@ describe('discriminated raw framing and bounds', () => {
     expect(Buffer.byteLength(canonicalJson(input.records[1]!)) + 1).toBeGreaterThan(
       2 * 1024 * 1024
     );
-    expect(joint(input).status).toBe('joined');
+    expect(joint(input).status).toBe('correlated-unverified');
     changeResponse(input.records, { body: body(Buffer.alloc(HTTP_LIMITS.body + 1)) });
     expect(() => parse(input.records)).toThrow('body_base64');
   });
@@ -631,29 +632,29 @@ describe('discriminated raw framing and bounds', () => {
     const submitted = JSON.parse(reply('applied').requestBytes.toString());
     submitted.extra = 'not-in-ten-field-contract';
     replaceRequest(invalid, Buffer.from(JSON.stringify(submitted)));
-    expect(joint(invalid).status).toBe('incomplete');
+    expect(joint(invalid).status).toBe('incomplete-unverified');
   });
 });
 
 describe('P1 assembly and legacy preservation', () => {
-  it('parses every native family before HTTP derivation and exposes typed P1 facts at the P2-B gate', () => {
+  it('parses every native family before the P1 admission gate and retains the pending P2-B gate', () => {
     const input = fixture();
     let failure: unknown;
     try {
-      assembleEvidence({ ...input, httpAdmissions: input.admissions });
+      assembleEvidence({ ...input, httpCorrelations: input.correlations });
     } catch (error) {
       failure = error;
     }
-    expect(failure).toBeInstanceOf(P1ScenarioEvidencePending);
-    expect((failure as P1ScenarioEvidencePending).p1.status).toBe('joined');
-    expect((failure as P1ScenarioEvidencePending).missing).toContain(
+    expect(failure).toBeInstanceOf(P1AdmissionUnverified);
+    expect((failure as P1AdmissionUnverified).correlation?.status).toBe('correlated-unverified');
+    expect((failure as P1AdmissionUnverified).nextGate.missing).toContain(
       'owner-wal-disk-custody-and-verified-native-corpus'
     );
     expect(() => deriveEvidence(input.raw, controllerNonce, input.outcome)).toThrow();
-    expect(() => assembleEvidence(input)).toThrow('admission_missing');
+    expect(() => assembleEvidence(input)).toThrow('p3c_p1_admission_unverified');
     // The final capture family fails even though the earlier P1 operation is otherwise complete.
     input.captures.protectedEffectLedgerPath = [Buffer.from('broken')];
-    expect(() => assembleEvidence({ ...input, httpAdmissions: input.admissions })).toThrow(
+    expect(() => assembleEvidence({ ...input, httpCorrelations: input.correlations })).toThrow(
       'capture_disagreement'
     );
   });

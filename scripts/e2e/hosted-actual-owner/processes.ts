@@ -6,7 +6,6 @@ import { readFile } from 'node:fs/promises';
 
 import { assertFileCurrent, assertRootCurrent, procFdPath } from './anchors';
 import {
-  RAW_ORIGINS,
   OWNER_CHILD_FDS,
   OWNER_SEALED_PROTOCOL_ARGUMENT,
   OWNER_WRAPPER_ARGUMENT,

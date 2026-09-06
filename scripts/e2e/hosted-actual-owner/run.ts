@@ -2,12 +2,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { parseRunArguments } from './contracts';
 import { runDriver } from './driver';
-import {
-  assembleEvidence,
-  deriveEvidence,
-  retainEvidence,
-  retainFailureEvidence,
-} from './evidence';
+import { prepareEvidence, retainFailureEvidence } from './evidence';
 import {
   admitIntegration,
   closeAdmission,
@@ -35,24 +30,15 @@ export async function run(arguments_: readonly string[]): Promise<RunResult> {
     sandbox = await createSandbox(admission.roots.sandboxParent, descriptor.controllerNonce);
     const driver = await runDriver(admission, sandbox, consumedAttempt);
     zeroOwnedSurvivors = driver.outcome.zeroOwnedSurvivors;
-    deriveEvidence(driver.raw, descriptor.controllerNonce, driver.outcome);
-    const cleanup = await cleanupSandbox(sandbox, zeroOwnedSurvivors);
-    sandboxRemoved = cleanup.disposition === 'removed';
-    const document = assembleEvidence({
-      raw: driver.raw,
-      captures: driver.captures,
+    const prepared = prepareEvidence({
+      ...driver,
       controllerNonce: descriptor.controllerNonce,
       runId: sandbox.runId,
-      outcome: driver.outcome,
-      cleanup,
     });
-    await retainEvidence(
-      admission.roots.evidenceRoot,
-      driver.raw,
-      driver.captures,
-      document,
-      driver.outcome.transcript
-    );
+    const cleanup = await cleanupSandbox(sandbox, zeroOwnedSurvivors);
+    sandboxRemoved = cleanup.disposition === 'removed';
+    const document = prepared.assemble(cleanup);
+    await prepared.retain(admission.roots.evidenceRoot, document);
     return Object.freeze({
       terminalState: 'HOLD',
       evidenceDigest: document.evidenceDigest,

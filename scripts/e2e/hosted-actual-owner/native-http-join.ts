@@ -7,6 +7,7 @@ import {
   operationKey,
   type OpenCodeFact,
 } from './opencode-operation-index';
+import { assertP1NativeBindings } from './p1-admission';
 import type { SupervisorOutcome } from './processes';
 import {
   assertHttpOuterBinding,
@@ -31,42 +32,40 @@ export interface HttpCaptureSelection {
   readonly shardIndex: number;
 }
 
-/**
- * Plain independent inputs from the admitted supervisor/activation path. Copying a decoded raw
- * context here proves no authorship. The Owner canonical sink and that composition are a separate
- * slice; absence of these inputs must never fall back to the raw record's own assertions.
- */
-export interface P1HttpAdmission {
+/** Untrusted assertions used only to characterize correlation. Publication bytes and the
+ * independently observed launch/activation chain are absent at this source checkpoint. */
+export interface P1HttpCorrelationInput {
   readonly context: HostedHttpContext;
-  readonly activationPublicationSha256: string;
+  readonly claimedActivationPublicationSha256: string;
   readonly endpoint: Readonly<{ address: '127.0.0.1'; port: number }>;
   readonly hosted: Readonly<{ runtimeInstanceId: string; configGeneration: string }>;
   readonly timeline: HttpCaptureSelection;
   readonly effects: HttpCaptureSelection;
 }
 
-export interface P1HttpExchange {
+export interface P1HttpExchangeCorrelation {
   readonly requestRecordId: string;
   readonly responseRecordId: string | null;
   readonly failureRecordIds: readonly string[];
   readonly ownerExchangeNonce: string;
   readonly context: HostedHttpContext;
-  readonly activationPublicationSha256: string;
+  readonly claimedActivationPublicationSha256: string;
   readonly operationNonce: string | null;
-  readonly status: 'joined' | 'unjoined';
+  readonly status: 'correlated-unverified' | 'uncorrelated';
   readonly problem: string | null;
   readonly facts: readonly OpenCodeFact[];
-  readonly terminal: 'applied' | 'condition-rejected' | 'uncertain';
-  readonly appliedReceipt: AppliedHttpReceipt | null;
+  readonly terminalObservation: 'applied' | 'condition-rejected' | 'uncertain';
+  readonly appliedReceiptObservation: AppliedHttpReceipt | null;
 }
 
-export interface P1JointResult {
-  readonly status: 'joined' | 'incomplete';
+export interface P1HttpCorrelationResult {
+  readonly status: 'correlated-unverified' | 'incomplete-unverified';
+  readonly admission: 'unverified';
   readonly controllerNonce: string;
   readonly runId: string;
   readonly ledgerSha256: string;
   readonly recordIds: readonly string[];
-  readonly exchanges: readonly P1HttpExchange[];
+  readonly exchanges: readonly P1HttpExchangeCorrelation[];
   readonly unboundFailureRecordIds: readonly string[];
   readonly unmatchedNativeFacts: readonly OpenCodeFact[];
   readonly nativeProblems: readonly string[];
@@ -90,28 +89,36 @@ function selectedShard(
       shard.shardIndex === selection.shardIndex &&
       shard.captureSha256 === selection.captureSha256
   );
-  httpCheck(matches.length === 1, 'admitted_shard');
+  httpCheck(matches.length === 1, 'selected_shard');
   return matches[0]!;
 }
 
-function bindAdmission(
-  admission: P1HttpAdmission,
+function bindCorrelationInput(
+  assertion: P1HttpCorrelationInput,
   shards: readonly NativeCaptureShard[],
   outcome: SupervisorOutcome
 ) {
-  const context = snapshotHttpContext(admission.context);
-  httpCheck(httpHex(admission.activationPublicationSha256), 'activation_publication');
+  const snapshot = Object.freeze({
+    context: snapshotHttpContext(assertion.context),
+    claimedActivationPublicationSha256: assertion.claimedActivationPublicationSha256,
+    endpoint: Object.freeze({ ...assertion.endpoint }),
+    hosted: Object.freeze({ ...assertion.hosted }),
+    timeline: Object.freeze({ ...assertion.timeline }),
+    effects: Object.freeze({ ...assertion.effects }),
+  });
+  const { context } = snapshot;
+  httpCheck(httpHex(snapshot.claimedActivationPublicationSha256), 'activation_publication');
   httpCheck(
-    admission.endpoint.address === '127.0.0.1' &&
-      Number.isSafeInteger(admission.endpoint.port) &&
-      admission.endpoint.port > 0 &&
-      admission.endpoint.port <= 65535,
-    'admitted_endpoint'
+    snapshot.endpoint.address === '127.0.0.1' &&
+      Number.isSafeInteger(snapshot.endpoint.port) &&
+      snapshot.endpoint.port > 0 &&
+      snapshot.endpoint.port <= 65535,
+    'asserted_endpoint'
   );
   httpCheck(
-    /^runtime_instance_[0-9a-f]{32}$/u.test(admission.hosted.runtimeInstanceId) &&
-      /^config_generation_[0-9a-f]{32}$/u.test(admission.hosted.configGeneration),
-    'admitted_hosted'
+    /^runtime_instance_[0-9a-f]{32}$/u.test(snapshot.hosted.runtimeInstanceId) &&
+      /^config_generation_[0-9a-f]{32}$/u.test(snapshot.hosted.configGeneration),
+    'asserted_hosted'
   );
   const owner = outcome.starts.find(
     (start) => start.startToken === context.recorder.processStartToken
@@ -137,10 +144,10 @@ function bindAdmission(
   httpCheck(
     context.activation.controllerNonce === outcome.controllerNonce &&
       context.activation.runId === outcome.runId,
-    'admission_run'
+    'assertion_run'
   );
-  const timeline = selectedShard(shards, 'openCodeTimelinePath', admission.timeline);
-  const effects = selectedShard(shards, 'protectedEffectLedgerPath', admission.effects);
+  const timeline = selectedShard(shards, 'openCodeTimelinePath', snapshot.timeline);
+  const effects = selectedShard(shards, 'protectedEffectLedgerPath', snapshot.effects);
   const first = timeline.parsed.records[0]!;
   httpCheck(
     timeline.producerStartToken === peer.startToken &&
@@ -152,7 +159,7 @@ function bindAdmission(
       first.activation.controllerNonce === context.activation.controllerNonce &&
       first.activation.runId === context.activation.runId &&
       first.activation.stackManifestSha256 === context.activation.stackManifestSha256,
-    'admitted_producer'
+    'asserted_producer'
   );
   const rawFile = outcome.rawFiles.opencode;
   const ownerStarts = outcome.starts.filter(({ role }) => role === 'owner');
@@ -163,7 +170,7 @@ function bindAdmission(
         canonicalJson(ownerStarts.map(({ pidfdInode }) => pidfdInode).sort()),
     'recorder_writer'
   );
-  return { admission, owner, producer: first.producer, activation: first.activation };
+  return { assertion: snapshot, owner, producer: first.producer, activation: first.activation };
 }
 
 function assertCompleteHttpSelection(
@@ -187,6 +194,7 @@ function assertCompleteHttpSelection(
       decodeHttpBase64(outer.payloadBase64, HTTP_LIMITS.payload, 'selection_payload'),
       'selection_payload'
     ) as Record<string, unknown>;
+    httpCheck(payload.kind === HTTP_OBSERVATION_KIND, 'mixed_recorder_kinds');
     httpCheck(
       selected.has(`${byteStart}:${byteEnd}`) === (payload.kind === HTTP_OBSERVATION_KIND),
       'raw_selection_incomplete'
@@ -195,27 +203,29 @@ function assertCompleteHttpSelection(
   }
 }
 
-/** Joint results are usable P1 facts, never a final scenario/production qualification. */
-export function verifyOpenCodeHttpEvidence(input: {
+/** Characterizes retained-byte agreement only. No caller object or publication digest can
+ * authenticate this result, authorize a receipt or supply admitted P1 evidence to derivation. */
+export function correlateOpenCodeHttpEvidence(input: {
   readonly records: readonly LocatedHttpRawRecord[];
   readonly ledger: Buffer;
   readonly shards: readonly NativeCaptureShard[];
-  readonly admissions: readonly P1HttpAdmission[];
+  readonly correlations: readonly P1HttpCorrelationInput[];
   readonly outcome: SupervisorOutcome;
-}): P1JointResult {
+}): P1HttpCorrelationResult {
   const { outcome, records } = input;
   assertCompleteHttpSelection(input.ledger, records);
+  assertP1NativeBindings(input.shards, outcome);
   const ledgerSha256 = sha256(input.ledger);
   httpCheck(
     outcome.rawFiles.opencode.sha256 === ledgerSha256 &&
       outcome.rawFiles.opencode.size === input.ledger.length,
     'ledger_binding'
   );
-  const admissions = new Map<string, ReturnType<typeof bindAdmission>>();
-  for (const admission of input.admissions) {
-    const key = canonicalJson(admission.context);
-    httpCheck(!admissions.has(key), 'duplicate_admission');
-    admissions.set(key, bindAdmission(admission, input.shards, outcome));
+  const correlations = new Map<string, ReturnType<typeof bindCorrelationInput>>();
+  for (const assertion of input.correlations) {
+    const key = canonicalJson(assertion.context);
+    httpCheck(!correlations.has(key), 'duplicate_assertion');
+    correlations.set(key, bindCorrelationInput(assertion, input.shards, outcome));
   }
   const requests = new Map<string, RequestRecord>();
   const responses = new Map<string, ResponseRecord>();
@@ -258,8 +268,8 @@ export function verifyOpenCodeHttpEvidence(input: {
     assertHttpOuterBinding(record, decoded);
     httpCheck(!recordIds.has(record.recordId), 'duplicate_record');
     recordIds.add(record.recordId);
-    const bound = admissions.get(canonicalJson(record.http.context));
-    httpCheck(bound, 'admission_missing');
+    const bound = correlations.get(canonicalJson(record.http.context));
+    httpCheck(bound, 'assertion_missing');
     httpCheck(
       outcome.rawFiles.opencode.producerStartTokens.includes(record.processStartToken) &&
         record.processStartToken === bound.owner.startToken &&
@@ -291,20 +301,24 @@ export function verifyOpenCodeHttpEvidence(input: {
     } else {
       httpCheck(!responses.has(requestId), 'duplicate_response');
       httpCheck(
-        observation.connectedPeer.remoteAddress === bound.admission.endpoint.address &&
-          observation.connectedPeer.remotePort === bound.admission.endpoint.port,
+        observation.connectedPeer.remoteAddress === bound.assertion.endpoint.address &&
+          observation.connectedPeer.remotePort === bound.assertion.endpoint.port,
         'connected_endpoint'
       );
       responses.set(requestId, record as ResponseRecord);
     }
   }
-  const index = buildOpenCodeOperationIndex(input.shards);
+  const index = buildOpenCodeOperationIndex(
+    input.shards.filter(
+      (shard) => shard.name === 'openCodeTimelinePath' || shard.name === 'protectedEffectLedgerPath'
+    )
+  );
   const consumed = new Set<string>();
   const claimedGroups = new Set<string>();
-  const results: P1HttpExchange[] = [];
+  const results: P1HttpExchangeCorrelation[] = [];
   for (const [requestId, record] of requests) {
     const request = record.http.observation;
-    const bound = admissions.get(canonicalJson(record.http.context))!;
+    const bound = correlations.get(canonicalJson(record.http.context))!;
     const responseRecord = responses.get(requestId);
     const response = responseRecord?.http.observation;
     const headers = response && httpHeaderStatus(response.responseHeaders);
@@ -312,13 +326,13 @@ export function verifyOpenCodeHttpEvidence(input: {
       response && headers?.identityEncoding ? appliedHttpReceipt(request, response) : null;
     if (
       receipt &&
-      (receipt.runtimeInstanceId !== bound.admission.hosted.runtimeInstanceId ||
-        receipt.configGeneration !== bound.admission.hosted.configGeneration)
+      (receipt.runtimeInstanceId !== bound.assertion.hosted.runtimeInstanceId ||
+        receipt.configGeneration !== bound.assertion.hosted.configGeneration)
     )
       receipt = null;
     let problem: string | null = null;
     let facts: readonly OpenCodeFact[] = [];
-    let terminal: P1HttpExchange['terminal'] = receipt ? 'applied' : 'uncertain';
+    let terminal: P1HttpExchangeCorrelation['terminalObservation'] = receipt ? 'applied' : 'uncertain';
     try {
       httpCheck(response, 'missing_response');
       httpCheck(response.complete, 'incomplete_response');
@@ -332,8 +346,8 @@ export function verifyOpenCodeHttpEvidence(input: {
       for (const fact of group.facts) {
         const selection =
           fact.locator.stream === 'openCodeTimeline'
-            ? bound.admission.timeline
-            : bound.admission.effects;
+            ? bound.assertion.timeline
+            : bound.assertion.effects;
         httpCheck(
           fact.locator.captureSha256 === selection.captureSha256 &&
             fact.locator.shardIndex === selection.shardIndex &&
@@ -341,7 +355,7 @@ export function verifyOpenCodeHttpEvidence(input: {
           'native_fact_binding'
         );
       }
-      joinHttpOperationBody(group, request, response, bound.admission.hosted);
+      joinHttpOperationBody(group, request, response, bound.assertion.hosted);
       facts = group.facts;
       facts.forEach((fact) => consumed.add(canonicalJson(fact.locator)));
       if (group.outcome === 'conflict' || group.outcome === 'precondition-failed')
@@ -356,13 +370,13 @@ export function verifyOpenCodeHttpEvidence(input: {
         failureRecordIds: Object.freeze(failures.get(requestId) ?? []),
         ownerExchangeNonce: request.ownerExchangeNonce,
         context: record.http.context,
-        activationPublicationSha256: bound.admission.activationPublicationSha256,
+        claimedActivationPublicationSha256: bound.assertion.claimedActivationPublicationSha256,
         operationNonce: response?.peerOperationNonce ?? null,
-        status: problem === null ? 'joined' : 'unjoined',
+        status: problem === null ? 'correlated-unverified' : 'uncorrelated',
         problem,
         facts,
-        terminal,
-        appliedReceipt: receipt,
+        terminalObservation: terminal,
+        appliedReceiptObservation: receipt,
       })
     );
   }
@@ -374,11 +388,12 @@ export function verifyOpenCodeHttpEvidence(input: {
   return Object.freeze({
     status:
       results.length > 0 &&
-      results.every((result) => result.status === 'joined') &&
+      results.every((result) => result.status === 'correlated-unverified') &&
       unboundFailures.length === 0 &&
       unmatchedNativeFacts.length === 0
-        ? 'joined'
-        : 'incomplete',
+        ? 'correlated-unverified'
+        : 'incomplete-unverified',
+    admission: 'unverified',
     controllerNonce: outcome.controllerNonce,
     runId: outcome.runId,
     ledgerSha256,
@@ -388,17 +403,4 @@ export function verifyOpenCodeHttpEvidence(input: {
     unmatchedNativeFacts: Object.freeze(unmatchedNativeFacts),
     nativeProblems: Object.freeze(nativeProblems),
   });
-}
-
-/** Preserves the existing missing Owner semantic gate while handing P1 facts to shared assembly. */
-export class P1ScenarioEvidencePending extends Error {
-  readonly missing = Object.freeze([
-    'owner-wal-disk-custody-and-verified-native-corpus',
-    'native-scenario-derivation-without-legacy-effect-total-rows',
-  ]);
-
-  constructor(readonly p1: P1JointResult) {
-    super('p3c_runtime_capture_semantic_mapping_unavailable:ownerWalTimelinePath');
-    this.name = 'P1ScenarioEvidencePending';
-  }
 }

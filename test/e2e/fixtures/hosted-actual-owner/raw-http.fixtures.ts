@@ -3,40 +3,41 @@ import {
   PRODUCER_PROVENANCE_CONTRACT,
   PRODUCER_PROVENANCE_CONTRACT_SHA256,
   RAW_ORIGINS,
-  RUNTIME_CAPTURE_NAMES,
-  RUNTIME_CAPTURE_STREAMS,
-  sha256,
   type RawOrigin,
   type RawRecord,
+  RUNTIME_CAPTURE_NAMES,
+  RUNTIME_CAPTURE_STREAMS,
   type RuntimeCaptureName,
+  sha256,
 } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import {
   makeRawRecord,
   parseRawOrigin,
 } from '../../../../scripts/e2e/hosted-actual-owner/evidence';
 import {
-  parseKernelBoundNativeCaptures,
   type NativeCaptureRecord,
+  parseKernelBoundNativeCaptures,
 } from '../../../../scripts/e2e/hosted-actual-owner/native-captures';
 import {
-  verifyOpenCodeHttpEvidence,
-  type P1HttpAdmission,
+  correlateOpenCodeHttpEvidence,
+  type P1HttpCorrelationInput,
 } from '../../../../scripts/e2e/hosted-actual-owner/native-http-join';
+import { snapshotHttpContext } from '../../../../scripts/e2e/hosted-actual-owner/raw-http';
+import {
+  type HostedHttpContext,
+  type HostedHttpOperation,
+  type HostedHttpRecord,
+  HTTP_OBSERVATION_KIND,
+  HTTP_OBSERVATION_PURPOSE,
+  type HttpResponseObservation,
+  type LocatedHttpRawRecord,
+} from '../../../../scripts/e2e/hosted-actual-owner/raw-http-types';
+
 import type {
   ProcessStartEvidence,
   ProducerCaptureShardEvidence,
   SupervisorOutcome,
 } from '../../../../scripts/e2e/hosted-actual-owner/processes';
-import { snapshotHttpContext } from '../../../../scripts/e2e/hosted-actual-owner/raw-http';
-import {
-  HTTP_OBSERVATION_KIND,
-  HTTP_OBSERVATION_PURPOSE,
-  type HostedHttpContext,
-  type HostedHttpOperation,
-  type HostedHttpRecord,
-  type HttpResponseObservation,
-  type LocatedHttpRawRecord,
-} from '../../../../scripts/e2e/hosted-actual-owner/raw-http-types';
 
 // Source-derived fixtures, not runtime evidence or qualification:
 // OpenCode 8147af1b9e8564af8218e88fa92733a1b93b35b1:
@@ -571,10 +572,10 @@ export function fixture(operations: OperationFixture[] = [reply('applied')]) {
       ])
     ),
   } as unknown as SupervisorOutcome;
-  const admissions: P1HttpAdmission[] = [
+  const correlations: P1HttpCorrelationInput[] = [
     {
       context,
-      activationPublicationSha256: hex(130),
+      claimedActivationPublicationSha256: hex(130),
       endpoint: { address: '127.0.0.1', port: 4096 },
       hosted,
       timeline: { captureSha256: sha256(captures.openCodeTimelinePath[0]!), shardIndex: 0 },
@@ -586,7 +587,7 @@ export function fixture(operations: OperationFixture[] = [reply('applied')]) {
     raw,
     captures,
     outcome,
-    admissions,
+    correlations,
     controllerNonce,
     runId,
     cleanup: {
@@ -610,13 +611,13 @@ export function retainChanges(input: HttpFixture): void {
 export function joint(input: HttpFixture) {
   retainChanges(input);
   const parsed = parseKernelBoundNativeCaptures(input);
-  return verifyOpenCodeHttpEvidence({
+  return correlateOpenCodeHttpEvidence({
     records: parseRawOrigin(input.raw.opencode, 'opencode', controllerNonce).filter(
       (record): record is LocatedHttpRawRecord => record.kind === HTTP_OBSERVATION_KIND
     ),
     ledger: input.raw.opencode,
-    shards: [...parsed.shards.openCodeTimelinePath, ...parsed.shards.protectedEffectLedgerPath],
-    admissions: input.admissions,
+    shards: [...Object.values(parsed.shards).flat()],
+    correlations: input.correlations,
     outcome: input.outcome,
   });
 }

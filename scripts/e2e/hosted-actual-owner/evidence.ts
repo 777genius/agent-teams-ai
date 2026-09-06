@@ -18,16 +18,16 @@ import {
   type RawRecord,
   type RuntimeCaptureName,
 } from './contracts';
-import { parseKernelBoundNativeCaptures } from './native-captures';
-import type { NativeCaptureRecord, ParsedNativeCapture } from './native-captures';
 import {
-  P1ScenarioEvidencePending,
-  verifyOpenCodeHttpEvidence,
-  type P1HttpAdmission,
-  type P1JointResult,
-} from './native-http-join';
+  assertEvidenceCleanup,
+  type EvidencePreparationInput,
+  prepareNativeEvidence,
+} from './evidence-preparation';
+import type { NativeCaptureRecord, ParsedNativeCapture } from './native-captures';
+import { correlateOpenCodeHttpEvidence } from './native-http-join';
+import { P1AdmissionUnverified } from './p1-admission';
+import { assertRawRecordWriters } from './raw-writer-binding';
 import type {
-  ProcessStartEvidence,
   ProducerCaptureFileEvidence,
   SupervisorOutcome,
 } from './processes';
@@ -232,7 +232,7 @@ interface LocatedLegacyRawRecord extends ParsedLegacyRawRecord {
 }
 
 type ParsedRawRecord = ParsedLegacyRawRecord | ParsedHttpRawRecord;
-type LocatedRawRecord = LocatedLegacyRawRecord | LocatedHttpRawRecord;
+export type LocatedRawRecord = LocatedLegacyRawRecord | LocatedHttpRawRecord;
 
 function isLegacyRecord(record: LocatedRawRecord): record is LocatedLegacyRawRecord {
   return record.kind === 'legacy';
@@ -1680,30 +1680,10 @@ export function parseRawOrigin(
   return Object.freeze(records);
 }
 
-function expectedStarts(
-  outcome: SupervisorOutcome,
-  http = false
-): Readonly<Record<RawOrigin, readonly ProcessStartEvidence[]>> {
-  const find = (role: string) => {
-    const value = outcome.starts.filter((start) => start.role === role);
-    if (value.length < 1) throw new Error('p3c_evidence_process_start_missing');
-    return Object.freeze(value);
-  };
-  return Object.freeze({
-    browser: find('browser'),
-    'product-http': find('product'),
-    'product-sse': find('product'),
-    'owner-wal': find('owner'),
-    opencode: find(http ? 'owner' : 'opencode'),
-    supervisor: Object.freeze([outcome.supervisorStart]),
-  });
-}
-
 export function deriveEvidence(
   raw: Readonly<Record<RawOrigin, Buffer>>,
   controllerNonce: string,
-  outcome: SupervisorOutcome,
-  p1?: P1JointResult
+  outcome: SupervisorOutcome
 ): {
   readonly origins: Readonly<Record<RawOrigin, OriginEvidence>>;
   readonly rows: readonly RowEvidence[];
@@ -1712,25 +1692,6 @@ export function deriveEvidence(
   if (!outcome.zeroOwnedSurvivors) throw new Error('p3c_evidence_survivors');
   if (outcome.controllerNonce !== controllerNonce)
     throw new Error('p3c_evidence_controller_disagreement');
-  if (p1) {
-    const http = parseRawOrigin(raw.opencode, 'opencode', controllerNonce).filter(
-      (record) => record.kind === HTTP_OBSERVATION_KIND
-    );
-    if (
-      http.length === 0 ||
-      p1.controllerNonce !== controllerNonce ||
-      p1.runId !== outcome.runId ||
-      p1.ledgerSha256 !== sha256(raw.opencode) ||
-      canonicalJson(p1.recordIds) !== canonicalJson(http.map(({ recordId }) => recordId))
-    ) {
-      throw new Error('p3c_http_joint_verification_required');
-    }
-    // No transport zero-count, synthetic causal fields or legacy effect_total_* rows are claims.
-    // Shared assembly receives the verified P1 facts; P2-B must supply the remaining native proof.
-    throw new P1ScenarioEvidencePending(p1);
-  }
-  const starts = expectedStarts(outcome);
-  const httpStarts = expectedStarts(outcome, true);
   const parsed = {} as Record<RawOrigin, readonly LocatedRawRecord[]>;
   const origins = {} as Record<RawOrigin, OriginEvidence>;
   for (const origin of RAW_ORIGINS) {
@@ -1741,26 +1702,7 @@ export function deriveEvidence(
     )
       throw new Error('p3c_evidence_supervisor_raw_disagreement');
     const records = parseRawOrigin(bytes, origin, controllerNonce);
-    if (
-      records.some((record) => {
-        const candidates = record.kind === 'legacy' ? starts[origin] : httpStarts[origin];
-        const start = candidates.find(({ startToken }) => startToken === record.processStartToken);
-        if (!start || BigInt(record.monotonicNs) <= BigInt(start.observedMonotonicNs)) return true;
-        if (record.kind === HTTP_OBSERVATION_KIND) {
-          return (
-            record.http.context.activation.runId !== outcome.runId ||
-            start.generation !== record.http.context.recorder.ownerGeneration ||
-            !outcome.rawFiles[origin].producerStartTokens.includes(start.startToken)
-          );
-        }
-        return (
-          record.semanticIdentity.harnessRunId !== outcome.runId ||
-          (origin === 'owner-wal' && start.generation !== record.ownerGeneration) ||
-          (origin === 'supervisor' && record.processEvidenceSetId !== outcome.processEvidenceSetId)
-        );
-      })
-    )
-      throw new Error('p3c_evidence_process_start_disagreement');
+    assertRawRecordWriters(origin, records, outcome);
     parsed[origin] = records;
     origins[origin] = Object.freeze({
       sha256: sha256(bytes),
@@ -1772,7 +1714,7 @@ export function deriveEvidence(
   }
   const decoded = RAW_ORIGINS.flatMap((origin) => parsed[origin]);
   if (decoded.some((record) => record.kind === HTTP_OBSERVATION_KIND))
-    throw new Error('p3c_http_joint_verification_required');
+    throw new P1AdmissionUnverified();
   const all = decoded.filter(isLegacyRecord);
   if (new Set(all.map(({ recordId }) => recordId)).size !== all.length)
     throw new Error('p3c_evidence_duplicate_record');
@@ -2073,69 +2015,84 @@ export function deriveEvidence(
   });
 }
 
-export function assembleEvidence(input: {
-  readonly raw: Readonly<Record<RawOrigin, Buffer>>;
-  readonly captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>;
-  readonly controllerNonce: string;
-  readonly runId: string;
-  readonly outcome: SupervisorOutcome;
-  readonly cleanup: CleanupResult;
-  readonly httpAdmissions?: readonly P1HttpAdmission[];
-}): EvidenceDocument {
+/** Complete all native/P1 and semantic validation while the sandbox still exists.
+ * Only closures over this validated snapshot reach cleanup/retention; no caller can supply
+ * a prepared object or a fixture callback to bypass this boundary. */
+export function prepareEvidence(input: EvidencePreparationInput) {
+  const { raw, captures, outcome, native, shards, correlations, controllerNonce, runId } =
+    prepareNativeEvidence(input);
+  const opencode = parseRawOrigin(raw.opencode, 'opencode', controllerNonce);
   if (
-    input.cleanup.disposition !== 'removed' ||
-    !input.cleanup.markerVerified ||
-    !input.cleanup.zeroOwnedSurvivors ||
-    input.cleanup.runId !== input.runId
+    raw.opencode.length !== outcome.rawFiles.opencode.size ||
+    sha256(raw.opencode) !== outcome.rawFiles.opencode.sha256
   )
-    throw new Error('p3c_evidence_cleanup_unproven');
-  const native = parseKernelBoundNativeCaptures(input);
-  const httpRecords = parseRawOrigin(input.raw.opencode, 'opencode', input.controllerNonce).filter(
+    throw new Error('p3c_evidence_supervisor_raw_disagreement');
+  assertRawRecordWriters('opencode', opencode, outcome);
+  const httpRecords = opencode.filter(
     (record): record is LocatedHttpRawRecord => record.kind === HTTP_OBSERVATION_KIND
   );
-  const p1 =
-    httpRecords.length === 0
-      ? undefined
-      : verifyOpenCodeHttpEvidence({
+  if (httpRecords.length > 0) {
+    const correlation = correlations?.length
+      ? correlateOpenCodeHttpEvidence({
           records: httpRecords,
-          ledger: input.raw.opencode,
-          shards: [
-            ...native.shards.openCodeTimelinePath,
-            ...native.shards.protectedEffectLedgerPath,
-          ],
-          admissions: input.httpAdmissions ?? [],
-          outcome: input.outcome,
-        });
-  const derived = deriveEvidence(input.raw, input.controllerNonce, input.outcome, p1);
+          ledger: raw.opencode,
+          shards,
+          correlations,
+          outcome,
+        })
+      : null;
+    // No publication bytes, signature verifier or retained launch/readiness/route source is
+    // composed into this driver yet. Never promote a matching caller object into P1 evidence.
+    throw new P1AdmissionUnverified(correlation);
+  }
+
+  const derived = deriveEvidence(raw, controllerNonce, outcome);
   for (const name of RUNTIME_CAPTURE_NAMES) {
     if (native.summaries[name].semanticRecordCount === 0)
       throw new Error(`p3c_runtime_capture_empty_semantic_stream:${name}`);
     assertNativeSemanticCrossJoin(
       name,
       native.shards[name].map(({ parsed }) => parsed),
-      input.raw,
-      input.controllerNonce,
-      input.outcome.captureFiles[name]
+      raw,
+      controllerNonce,
+      outcome.captureFiles[name]
     );
   }
-  const captures = native.summaries;
-  const unsigned = {
-    schemaVersion: 1,
-    purpose: 'agent-teams.p3c.evidence/v1',
-    controllerNonce: input.controllerNonce,
-    runId: input.runId,
-    result: 'verified',
-    raw: derived.origins,
-    captures: Object.freeze(captures),
-    rows: derived.rows,
-    exactlyOnce: derived.exactlyOnce,
-    supervisorTranscriptSha256: input.outcome.transcriptSha256,
-    cleanup: input.cleanup,
-  } as const;
+  let assembled: EvidenceDocument | undefined;
   return Object.freeze({
-    ...unsigned,
-    evidenceDigest: sha256(`agent-teams.p3c.evidence-document/v1\0${canonicalJson(unsigned)}`),
+    assemble(cleanup: CleanupResult): EvidenceDocument {
+      assertEvidenceCleanup(cleanup, runId);
+      const unsigned = {
+        schemaVersion: 1,
+        purpose: 'agent-teams.p3c.evidence/v1',
+        controllerNonce,
+        runId,
+        result: 'verified',
+        raw: derived.origins,
+        captures: native.summaries,
+        rows: derived.rows,
+        exactlyOnce: derived.exactlyOnce,
+        supervisorTranscriptSha256: outcome.transcriptSha256,
+        cleanup: Object.freeze({ ...cleanup }),
+      } as const;
+      assembled = Object.freeze({
+        ...unsigned,
+        evidenceDigest: sha256(`agent-teams.p3c.evidence-document/v1\0${canonicalJson(unsigned)}`),
+      });
+      return assembled;
+    },
+    async retain(evidenceRoot: RootAnchor, document: EvidenceDocument) {
+      if (document !== assembled) throw new Error('p3c_evidence_preparation_document_disagreement');
+      return retainEvidence(evidenceRoot, raw, captures, document, outcome.transcript);
+    },
   });
+}
+
+export function assembleEvidence(
+  input: EvidencePreparationInput & { readonly cleanup: CleanupResult }
+): EvidenceDocument {
+  assertEvidenceCleanup(input.cleanup, input.runId);
+  return prepareEvidence(input).assemble(input.cleanup);
 }
 
 export async function retainEvidence(
