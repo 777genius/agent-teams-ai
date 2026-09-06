@@ -949,7 +949,12 @@ describe('all twelve honest mutation alternatives and nonpublication boundaries'
         request: directRequest,
         delivery: terminal,
       };
-      const direct = pair(jsonImage(p), nextState(p, { deliveries: [terminal] }), mutation, witness);
+      const direct = pair(
+        jsonImage(p),
+        nextState(p, { deliveries: [terminal] }),
+        mutation,
+        witness
+      );
       if (outcome === 'stale_generation' || outcome === 'wrong_lane') {
         // Stale binding returns without publication; exact binding rules out wrong_lane.
         expect(() => verifyOwnerWalImages(direct)).toThrow('direct-rejection-precondition');
