@@ -777,6 +777,23 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
       }
     }
 
+    const hasObservedActivity =
+      textParts.some((text) => text.trim().length > 0) ||
+      content.some(
+        (block) =>
+          block.type === 'tool_use' &&
+          typeof block.name === 'string' &&
+          typeof block.id === 'string'
+      );
+    if (
+      hasObservedActivity &&
+      !run.processKilled &&
+      !run.cancelRequested &&
+      run.progress.state !== 'failed'
+    ) {
+      ports.setLeadActivity(run, 'active');
+    }
+
     for (const block of content) {
       if (
         block?.type === 'tool_use' &&

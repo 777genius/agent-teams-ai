@@ -212,6 +212,7 @@ export interface ProvisioningRun {
   detectedSessionId: string | null;
   /** Lead process activity: 'active' during turn processing, 'idle' waiting for input, 'offline' after exit. */
   leadActivityState: LeadActivityState;
+  leadActivityPublished?: boolean;
   /** Whether an auth failure retry was already attempted for this run. */
   authFailureRetried: boolean;
   /** Set to true while auth-failure respawn is in progress to prevent duplicate handling. */

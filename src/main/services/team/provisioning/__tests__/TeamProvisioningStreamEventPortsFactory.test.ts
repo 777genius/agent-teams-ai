@@ -164,6 +164,61 @@ function createOutputRecoveryAdapter(
 }
 
 describe('TeamProvisioningStreamEventPortsFactory', () => {
+  it.each([
+    { content: [{ type: 'text', text: 'I am delegating the task.' }] },
+    {
+      content: [
+        { type: 'tool_use', id: 'tool-1', name: 'TaskCreate', input: { subject: 'Test task' } },
+      ],
+    },
+  ])(
+    'publishes substantive assistant activity without completing the first turn: %j',
+    ({ content }) => {
+      const callbacks = createCallbacks();
+      const ports = createTeamProvisioningStreamEventPorts(callbacks);
+      const run = createRun({ requiresFirstRealTurnSuccess: true });
+
+      handleTeamProvisioningStreamJsonMessage(run, { type: 'assistant', content }, ports);
+
+      expect(callbacks.setLeadActivity).toHaveBeenCalledWith(run, 'active');
+      expect(callbacks.completeProvisioningFromSuccessfulResult).not.toHaveBeenCalled();
+      expect(callbacks.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+      expect(run.provisioningComplete).toBe(false);
+    }
+  );
+
+  it.each(['cancelled', 'killed', 'failed', 'empty', 'api-error', 'system-init'])(
+    'does not publish observed assistant activity for %s',
+    (reason) => {
+      const callbacks = createCallbacks();
+      const ports = createTeamProvisioningStreamEventPorts(callbacks);
+      const run = createRun({
+        cancelRequested: reason === 'cancelled',
+        processKilled: reason === 'killed',
+        progress: createProgress({ state: reason === 'failed' ? 'failed' : 'finalizing' }),
+      });
+      const text =
+        reason === 'empty'
+          ? '  '
+          : reason === 'api-error'
+            ? 'API Error: 429 Rate limit reached'
+            : 'Working';
+
+      handleTeamProvisioningStreamJsonMessage(
+        run,
+        {
+          type: reason === 'system-init' ? 'system' : 'assistant',
+          subtype: reason === 'system-init' ? 'init' : undefined,
+          content: [{ type: 'text', text }],
+        },
+        ports
+      );
+
+      expect(callbacks.setLeadActivity).not.toHaveBeenCalledWith(run, 'active');
+      expect(callbacks.completeProvisioningFromSuccessfulResult).not.toHaveBeenCalled();
+    }
+  );
+
   it('wires service callbacks and shared provisioning helpers into stream event ports', () => {
     const callbacks = createCallbacks();
     const ports = createTeamProvisioningStreamEventPorts(callbacks);

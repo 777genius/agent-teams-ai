@@ -7,6 +7,7 @@ import {
   selectTeamMemberSnapshotsForName,
 } from '@renderer/store/slices/teamSlice';
 import { buildTeamMemberLaunchDiagnosticsPayloads } from '@renderer/utils/memberLaunchDiagnostics';
+import { applyLeadActivityToProvisioningPresentation } from '@renderer/utils/teamProvisioningLeadActivityPresentation';
 import { buildTeamProvisioningPresentation } from '@renderer/utils/teamProvisioningPresentation';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -32,6 +33,8 @@ export function useTeamProvisioningPresentation(teamName: string): {
     memberSpawnStatuses,
     memberSpawnSnapshot,
     runtimeSnapshot,
+    leadActivity,
+    currentRuntimeRunId,
   } = useStore(
     useShallow((s) => ({
       progress: getCurrentProvisioningProgressForTeam(s, teamName),
@@ -41,20 +44,43 @@ export function useTeamProvisioningPresentation(teamName: string): {
       memberSpawnStatuses: s.memberSpawnStatusesByTeam[teamName],
       memberSpawnSnapshot: s.memberSpawnSnapshotsByTeam[teamName],
       runtimeSnapshot: s.teamAgentRuntimeByTeam?.[teamName],
+      leadActivity: s.leadActivityByTeam?.[teamName],
+      currentRuntimeRunId: s.currentRuntimeRunIdByTeam?.[teamName],
     }))
   );
 
   const presentation = useMemo(
     () =>
-      buildTeamProvisioningPresentation({
-        progress,
-        members: teamMembers,
-        memberSpawnStatuses,
-        memberSpawnSnapshot,
-        memberRuntimeEntries: runtimeSnapshot?.members,
-        t,
-      }),
-    [memberSpawnSnapshot, memberSpawnStatuses, progress, runtimeSnapshot?.members, teamMembers, t]
+      applyLeadActivityToProvisioningPresentation(
+        buildTeamProvisioningPresentation({
+          progress,
+          members: teamMembers,
+          memberSpawnStatuses,
+          memberSpawnSnapshot,
+          memberRuntimeEntries: runtimeSnapshot?.members,
+          t,
+        }),
+        {
+          leadActivity,
+          currentRuntimeRunId,
+          title: t('provisioning.presentation.panel.completingStartupChecks', {
+            defaultValue: 'Completing startup checks',
+          }),
+          detail: t('provisioning.presentation.active.leadWorking', {
+            defaultValue: 'Lead is working while startup checks finish.',
+          }),
+        }
+      ),
+    [
+      memberSpawnSnapshot,
+      memberSpawnStatuses,
+      progress,
+      runtimeSnapshot?.members,
+      teamMembers,
+      leadActivity,
+      currentRuntimeRunId,
+      t,
+    ]
   );
   const memberDiagnostics = useMemo(
     () =>
