@@ -47,6 +47,8 @@ export function useOpenCodePassiveStatusPrefetch({
     const staleAt = Date.parse(catalog?.staleAt ?? '');
     const expiryKey =
       catalog &&
+      catalog.status === 'ready' &&
+      scopedProviderStatus.modelCatalogRefreshState === 'ready' &&
       !isTeamProviderModelCatalogFresh('opencode', scopedProviderStatus) &&
       Number.isFinite(staleAt) &&
       staleAt <= Date.now()

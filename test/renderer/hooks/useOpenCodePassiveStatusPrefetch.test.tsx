@@ -109,6 +109,44 @@ describe('useOpenCodePassiveStatusPrefetch', () => {
     await act(async () => root.unmount());
   });
 
+  it.each(['error', 'loading'] as const)(
+    'does not refresh retained expired evidence during %s until invalidation or recovery',
+    async (refreshState) => {
+      vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+      vi.useFakeTimers();
+      vi.setSystemTime(NOW);
+      const scopeKey = getCliProviderStatusScopeKey('opencode', PROJECT);
+      const expired = cachedCatalog(NOW - 1);
+      const retained = { ...expired, modelCatalogRefreshState: refreshState };
+      storeState.cliProviderStatusByScope = { [scopeKey]: retained };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => root.render(<Harness />));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+        root.render(<Harness />);
+      });
+      expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
+
+      // Store reconciliation also marks retained catalogs stale after a failed check.
+      storeState.cliProviderStatusByScope = {
+        [scopeKey]: { ...retained, modelCatalog: { ...expired.modelCatalog, status: 'stale' } },
+      };
+      await act(async () => root.render(<Harness />));
+      expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
+      storeState.cliProviderStatusScopeRevision += 1;
+      await act(async () => root.render(<Harness />));
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledOnce();
+
+      storeState.cliProviderStatusByScope = { [scopeKey]: cachedCatalog(Date.now() + 1000) };
+      await act(async () => root.render(<Harness />));
+      await act(async () => vi.advanceTimersByTimeAsync(1000));
+      expect(storeState.fetchCliProviderStatus).toHaveBeenCalledTimes(2);
+      await act(async () => root.unmount());
+    }
+  );
+
   it('cancels expiry while disabled and refreshes the expired scope when enabled again', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
