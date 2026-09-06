@@ -114,6 +114,7 @@ function createStreamEventPorts(): {
   killTeamProcess: ReturnType<typeof vi.fn>;
   markUnconfirmedBootstrapMembersFailed: ReturnType<typeof vi.fn>;
   persistLaunchStateSnapshot: ReturnType<typeof vi.fn>;
+  launchMixedSecondaryLaneIfNeeded: ReturnType<typeof vi.fn>;
   cleanupRun: ReturnType<typeof vi.fn>;
   reevaluateMemberLaunchStatus: ReturnType<typeof vi.fn>;
 } {
@@ -121,6 +122,7 @@ function createStreamEventPorts(): {
   const killTeamProcess = vi.fn();
   const markUnconfirmedBootstrapMembersFailed = vi.fn();
   const persistLaunchStateSnapshot = vi.fn(async () => null);
+  const launchMixedSecondaryLaneIfNeeded = vi.fn(async () => null);
   const cleanupRun = vi.fn();
   const reevaluateMemberLaunchStatus = vi.fn(async () => undefined);
 
@@ -175,6 +177,7 @@ function createStreamEventPorts(): {
     stopPersistentTeamMembers: vi.fn(),
     killTeamProcess,
     persistLaunchStateSnapshot,
+    launchMixedSecondaryLaneIfNeeded,
     cleanupRun,
     handleProvisioningTurnComplete: vi.fn(async () => undefined),
   } as Partial<
@@ -187,6 +190,7 @@ function createStreamEventPorts(): {
     killTeamProcess,
     markUnconfirmedBootstrapMembersFailed,
     persistLaunchStateSnapshot,
+    launchMixedSecondaryLaneIfNeeded,
     cleanupRun,
     reevaluateMemberLaunchStatus,
   };
@@ -350,6 +354,30 @@ describe('TeamProvisioningStreamEvents', () => {
       hardFailure: true,
       hardFailureReason: 'spawn failed hard',
     });
+  });
+
+  it('starts mixed secondary lanes when primary bootstrap completes before the first real turn', () => {
+    const { run } = createDeterministicBootstrapRun({
+      requiresFirstRealTurnSuccess: true,
+      mixedSecondaryLanes: [{}],
+    });
+    const { ports, launchMixedSecondaryLaneIfNeeded } = createStreamEventPorts();
+
+    const event = {
+      type: 'system',
+      subtype: 'team_bootstrap',
+      event: 'completed',
+      failed_members: [],
+      run_id: run.runId,
+      team_name: run.teamName,
+      seq: 1,
+    };
+    expect(handleDeterministicBootstrapEvent(run, event, ports)).toBe(true);
+    expect(launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run);
+    expect(ports.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+
+    expect(handleDeterministicBootstrapEvent(run, event, ports)).toBe(true);
+    expect(launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledTimes(1);
   });
 
   it('reports workspace trust deterministic bootstrap failures through stream events', () => {

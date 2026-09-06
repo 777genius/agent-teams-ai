@@ -3035,7 +3035,12 @@ describe('TeamModelSelector disabled Codex models', () => {
         expect(activeOpenCodeButton?.getAttribute('data-state')).toBe('active');
       });
     });
-    expect(host.textContent).toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).not.toContain('OpenCode is not ready for team launch');
+    expect(
+      host
+        .querySelector('[data-testid="team-model-selector-provider-status"]')
+        ?.getAttribute('data-tone')
+    ).toBe('info');
     expect(host.textContent).toContain('OpenCode status: checking runtime');
     expect(host.textContent).toContain(
       'The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.'
@@ -3847,7 +3852,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(openCodeButton?.getAttribute('aria-disabled')).toBeNull();
-    expect(host.textContent).toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).not.toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).toContain('OpenCode runtime status is still loading.');
     expect(onValueChange).not.toHaveBeenCalled();
 
     await act(async () => {

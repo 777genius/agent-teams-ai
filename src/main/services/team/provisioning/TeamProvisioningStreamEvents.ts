@@ -90,6 +90,7 @@ export interface TeamProvisioningStreamRun {
   provisioningOutputParts: string[];
   lastRetryAt: number;
   apiErrorWarningEmitted: boolean;
+  mixedSecondaryLanes?: readonly unknown[];
 }
 
 export interface TeamProvisioningStreamEventPorts<TRun extends TeamProvisioningStreamRun> {
@@ -162,6 +163,7 @@ export interface TeamProvisioningStreamEventPorts<TRun extends TeamProvisioningS
   injectGeminiPostLaunchHydration(run: TRun): Promise<void>;
   completeProvisioningFromSuccessfulResult(run: TRun): void;
   handleControlRequest(run: TRun, msg: Record<string, unknown>): void;
+  launchMixedSecondaryLaneIfNeeded(run: TRun): Promise<unknown>;
   handleProvisioningTurnComplete(run: TRun): Promise<void>;
   cleanupRun(run: TRun): void;
   killTeamProcess(child: ChildProcess | null | undefined): void;
@@ -572,6 +574,15 @@ export function handleDeterministicBootstrapEvent<TRun extends TeamProvisioningS
           reason || 'Deterministic bootstrap failed to spawn teammate.'
         );
       }
+    }
+    if ((run.mixedSecondaryLanes?.length ?? 0) > 0) {
+      void ports.launchMixedSecondaryLaneIfNeeded(run).catch((error: unknown) => {
+        logger.error(
+          `[${run.teamName}] mixed secondary launch after primary bootstrap failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      });
     }
     if (!run.requiresFirstRealTurnSuccess && !run.provisioningComplete && !run.cancelRequested) {
       void ports.handleProvisioningTurnComplete(run).catch((error: unknown) => {

@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import {
   clearInheritedMemberModelsUnavailableForProvider,
   getDialogTeamModelValidationError,
+  resolveProviderScopedMemberModel,
 } from './memberModelScope';
 import { canResolveOpenCodeLaunchBlockers, createLaunchGuard } from './providerLaunchAuthority';
 
@@ -82,6 +83,30 @@ const providerStatusById = new Map<TeamProviderId, CliProviderStatus>([
 const providerLoadingById = new Map<TeamProviderId, boolean>();
 
 describe('getDialogTeamModelValidationError', () => {
+  it.each(['cursor-acp/auto', 'kiro/auto'])(
+    'blocks unsupported extension-bound model %s without scheduling it for preflight',
+    (modelId) => {
+      expect(
+        getDialogTeamModelValidationError({
+          selectedProviderId: 'opencode',
+          selectedModel: modelId,
+          members: [],
+          validateMembers: true,
+          runtimeProviderStatusById: new Map(),
+          runtimeProviderLoadingById: providerLoadingById,
+        })
+      ).toContain('not supported by the current Agent Teams launch runtime');
+      expect(
+        resolveProviderScopedMemberModel({
+          selectedProviderId: 'codex',
+          memberProviderId: 'opencode',
+          memberModel: modelId,
+          runtimeProviderStatusById: new Map(),
+        })
+      ).toEqual({ providerId: 'opencode', model: '' });
+    }
+  );
+
   it('allows a built-in Ollama lead route outside the general OpenCode catalog', () => {
     expect(
       getDialogTeamModelValidationError({

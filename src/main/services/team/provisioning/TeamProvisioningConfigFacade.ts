@@ -20,6 +20,7 @@ import {
   type TeamProvisioningLaunchExpectedMembersPorts,
 } from './TeamProvisioningLaunchExpectedMembers';
 import { createTeamProvisioningLaunchExpectedMembersPorts } from './TeamProvisioningLaunchExpectedMembersPortsFactory';
+import { type TeamProvisioningLaunchRosterInput } from './TeamProvisioningLaunchRosterMaterialization';
 import {
   listPersistedTeamNames as listPersistedTeamNamesHelper,
   type PersistedTeamConfigCacheEntry,
@@ -92,7 +93,8 @@ export class TeamProvisioningConfigFacade {
         getTeamsBasePath,
         getProjectsBasePath,
         readRegularFileUtf8: options.readRegularFileUtf8,
-        writeFileUtf8: (filePath, contents) => atomicWriteAsync(filePath, contents),
+        writeFileUtf8: (filePath, contents, options) =>
+          atomicWriteAsync(filePath, contents, options),
         unlink: (filePath) => fs.promises.unlink(filePath),
         readDir: (dirPath) => fs.promises.readdir(dirPath),
         stat: (filePath) => fs.promises.stat(filePath),
@@ -142,6 +144,10 @@ export class TeamProvisioningConfigFacade {
 
   updateConfigProjectPath(teamName: string, cwd: string): Promise<void> {
     return this.configMaintenance.updateConfigProjectPath(teamName, cwd);
+  }
+
+  materializeLaunchRoster(input: TeamProvisioningLaunchRosterInput): Promise<boolean> {
+    return this.configMaintenance.materializeLaunchRoster(input);
   }
 
   updateConfigPostLaunch(

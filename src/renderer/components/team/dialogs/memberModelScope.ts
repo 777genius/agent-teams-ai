@@ -1,5 +1,6 @@
 import {
   getAvailableTeamProviderModels,
+  getTeamModelUiDisabledReason,
   getTeamModelSelectionError,
   hasTerminalAuthoritativeModelVerification,
   isTeamModelAvailableForUi,
@@ -186,6 +187,12 @@ export function resolveProviderScopedMemberModel(
 
   const normalizedModel = normalizeExplicitTeamModelForUi(providerId, rawModel);
   if (!normalizedModel) {
+    return { providerId, model: '' };
+  }
+  // Keep unsupported extension-backed routes visible in the selector, but do
+  // not send a stale saved selection into provider preflight. The form-level
+  // validation still explains why the user must choose another model.
+  if (getTeamModelUiDisabledReason(providerId, normalizedModel)) {
     return { providerId, model: '' };
   }
   // App-managed local providers are discovered through the local-provider overlay,

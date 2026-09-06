@@ -6,6 +6,7 @@ import {
   GPT_5_1_CODEX_MINI_UI_DISABLED_REASON,
   GPT_5_2_CODEX_UI_DISABLED_REASON,
   GPT_5_3_CODEX_SPARK_UI_DISABLED_REASON,
+  isTeamModelAvailableForUi,
   isTeamProviderModelCatalogFresh,
   isTeamProviderModelCatalogSettled,
   isTeamProviderModelVerificationPending,
@@ -89,6 +90,21 @@ function createAnthropicCompatibleProviderStatus(
 }
 
 describe('teamModelAvailability', () => {
+  it.each(['cursor-acp/auto', 'kiro/auto'])(
+    'keeps extension-bound model %s visible but unavailable for team launch',
+    (modelId) => {
+      const providerStatus = createOpenCodeProviderStatus([modelId]);
+
+      expect(getAvailableTeamProviderModelOptions('opencode', providerStatus)).toEqual(
+        expect.arrayContaining([expect.objectContaining({ value: modelId })])
+      );
+      expect(isTeamModelAvailableForUi('opencode', modelId, providerStatus)).toBe(false);
+      expect(getTeamModelSelectionError('opencode', modelId, providerStatus)).toContain(
+        'not supported by the current Agent Teams launch runtime'
+      );
+    }
+  );
+
   it('keeps Codex pending while its runtime checks a settled cached catalog', () => {
     const providerStatus = createCodexProviderStatus(['gpt-5.4'], {
       modelCatalogRefreshState: 'ready',

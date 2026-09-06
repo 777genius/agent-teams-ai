@@ -631,10 +631,6 @@ async function confirmLaunchPreflight(
   if (!button) {
     throw new Error(`Expected "${label}" button.`);
   }
-  await act(async () => {
-    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flush();
-  });
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -816,7 +812,11 @@ describe('LaunchTeamDialog', () => {
       expect(host.textContent).not.toContain('First launch');
       expect(host.textContent).not.toContain('Project status unknown');
       expect(submit()?.disabled).toBe(false);
-      expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+      expect(
+        new Set(
+          vi.mocked(runProviderPrepareDiagnostics).mock.calls.map(([input]) => input.providerId)
+        )
+      ).toEqual(new Set(expectedProviders));
       await act(async () => root.unmount());
     }
   );
@@ -950,12 +950,6 @@ describe('LaunchTeamDialog', () => {
         Array.from(host.querySelectorAll('button')).find(
           (button) => button.textContent?.trim() === label
         )!;
-      const first = findButton(mode === 'create' ? 'Create' : 'Launch team');
-      await act(async () => {
-        first.click();
-        await flush();
-      });
-      await settle();
       const skipLabel =
         mode === 'create' ? 'Skip preflight and create' : 'Skip preflight and launch';
       const skip = findButton(skipLabel);
@@ -1440,7 +1434,12 @@ describe('LaunchTeamDialog', () => {
 
   it('hydrates existing teammate models before a slow saved-request lookup completes', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(new Promise(() => {}));
+    let resolveSavedRequest!: (value: any) => void;
+    vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSavedRequest = resolve;
+      })
+    );
     const localModel = 'ollama/qwen2.5-coder:0.5b';
     vi.mocked(isTeamModelAvailableForUi).mockImplementation(
       (_providerId, model, providerStatus) => providerStatus?.models?.includes(model ?? '') ?? false
@@ -1525,6 +1524,12 @@ describe('LaunchTeamDialog', () => {
         model: localModel,
       }),
     ]);
+    expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
+    await act(async () => {
+      resolveSavedRequest(null);
+      await flush();
+    });
+    await confirmLaunchPreflight(host);
     expect(
       vi
         .mocked(runProviderPrepareDiagnostics)
@@ -1546,6 +1551,7 @@ describe('LaunchTeamDialog', () => {
 
   it('keeps a programmatic effort reset from cancelling saved-request hydration', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
     localStorage.setItem('team:lastSelectedEffort', 'xhigh');
     let resolveSavedRequest: (value: unknown) => void = () => {};
     vi.mocked(api.teams.getSavedRequest).mockReturnValueOnce(
@@ -1582,6 +1588,11 @@ describe('LaunchTeamDialog', () => {
       teamRosterEditorSectionMock.lastProps?.onEffortAutoReset();
       await flush();
     });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+      await flush();
+    });
+    expect(runProviderPrepareDiagnostics).not.toHaveBeenCalled();
 
     await act(async () => {
       resolveSavedRequest({
@@ -1600,6 +1611,17 @@ describe('LaunchTeamDialog', () => {
     ]);
     // The auto reset kept the form pristine, so the saved request fields still hydrate.
     expect(teamRosterEditorSectionMock.lastProps?.providerId).toBe('codex');
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+      await flush();
+    });
+    expect(runProviderPrepareDiagnostics).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cwd: '/tmp/project',
+        providerId: 'codex',
+        selectedModelIds: expect.arrayContaining(['gpt-5.5']),
+      })
+    );
 
     await act(async () => {
       root.unmount();
@@ -2290,14 +2312,6 @@ describe('LaunchTeamDialog', () => {
       );
       await flush();
     });
-    const createButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Create'
-    );
-    expect(createButton?.disabled).toBe(false);
-    await act(async () => {
-      createButton?.click();
-      await flush();
-    });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
       await flush();
@@ -2415,14 +2429,6 @@ describe('LaunchTeamDialog', () => {
           onOpenTeam: vi.fn(),
         })
       );
-      await flush();
-    });
-    const createButton = Array.from(host.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Create'
-    );
-    expect(createButton?.disabled).toBe(false);
-    await act(async () => {
-      createButton?.click();
       await flush();
     });
     await act(async () => {
@@ -3864,13 +3870,12 @@ describe('LaunchTeamDialog', () => {
       await renderDialog();
     });
 
-    expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(1);
     expect(fetchCliProviderStatus).not.toHaveBeenCalled();
     const initialLaunchButton = Array.from(host.querySelectorAll('button')).find(
       (button) => button.textContent === 'Launch team'
     );
     await act(async () => {
-      initialLaunchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await new Promise((resolve) => setTimeout(resolve, 0));
       await flush();
     });
@@ -4232,7 +4237,7 @@ describe('LaunchTeamDialog', () => {
       attempt += 1
     ) {
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await new Promise((resolve) => setTimeout(resolve, 25));
         await flush();
       });
     }
@@ -4302,7 +4307,7 @@ describe('LaunchTeamDialog', () => {
     });
   });
 
-  it('does not start create-team preflight across same-signature rerenders before confirmation', async () => {
+  it('starts detailed create-team preflight only after the current project selection settles', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers();
     storeState.cliStatus = {
@@ -4359,6 +4364,7 @@ describe('LaunchTeamDialog', () => {
     document.body.appendChild(host);
     const root = createRoot(host);
 
+    createTeamDraftMock.state.selectedProjectPath = '/tmp/stale-real-project';
     const renderDialog = async (): Promise<void> => {
       root.render(
         React.createElement(CreateTeamDialog, {
@@ -4394,12 +4400,32 @@ describe('LaunchTeamDialog', () => {
     expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
     expect(fetchCliProviderStatus).not.toHaveBeenCalled();
 
+    createTeamDraftMock.state.selectedProjectPath = '/tmp/project';
     await act(async () => {
       await renderDialog();
       await flush();
     });
 
-    expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+      await flush();
+    });
+
+    expect(
+      new Set(
+        vi.mocked(runProviderPrepareDiagnostics).mock.calls.map(([input]) => input.providerId)
+      )
+    ).toEqual(new Set(['anthropic', 'codex', 'opencode']));
+    expect(
+      vi
+        .mocked(runProviderPrepareDiagnostics)
+        .mock.calls.every(([input]) => input.cwd === '/tmp/project')
+    ).toBe(true);
+    expect(
+      vi
+        .mocked(runProviderPrepareDiagnostics)
+        .mock.calls.flatMap(([input]) => input.selectedModelIds)
+    ).toEqual(expect.arrayContaining(['gpt-5.5', 'opencode/big-pickle']));
 
     await act(async () => {
       resolvePrepare({
@@ -4411,7 +4437,7 @@ describe('LaunchTeamDialog', () => {
       await flush();
       await flush();
     });
-    expect(vi.mocked(runProviderPrepareDiagnostics)).not.toHaveBeenCalled();
+    expect(vi.mocked(runProviderPrepareDiagnostics)).toHaveBeenCalledTimes(3);
 
     await act(async () => {
       root.unmount();

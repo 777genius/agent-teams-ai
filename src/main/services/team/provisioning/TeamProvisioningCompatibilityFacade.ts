@@ -34,6 +34,7 @@ export interface TeamProvisioningCompatibilityDelegation<
     | 'persistMembersMeta'
     | 'resolveLaunchExpectedMembers'
     | 'updateConfigPostLaunch'
+    | 'materializeLaunchRoster'
   >;
   configTaskActivityBoundary: Pick<
     TeamProvisioningConfigTaskActivityBoundary<TRun>,

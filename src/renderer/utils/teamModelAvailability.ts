@@ -16,6 +16,8 @@ import {
   type TeamProviderModelOption,
 } from './teamModelCatalog';
 import { extractProviderScopedBaseModel } from './teamModelContext';
+import { getUnsupportedTeamModelRouteReason } from './teamModelLaunchSupport';
+export { OPENCODE_EXTENSION_BOUND_TEAM_LAUNCH_UNAVAILABLE_REASON } from './teamModelLaunchSupport';
 
 import type {
   CliProviderId,
@@ -131,7 +133,10 @@ export function getTeamModelUiDisabledReason(
   model: string | undefined,
   providerStatus?: TeamModelRuntimeProviderStatus | null
 ): string | null {
-  return getRuntimeAwareTeamModelUiDisabledReason(providerId, model, providerStatus);
+  return (
+    getUnsupportedTeamModelRouteReason(providerId, model) ??
+    getRuntimeAwareTeamModelUiDisabledReason(providerId, model, providerStatus)
+  );
 }
 
 export function isTeamModelUiDisabled(
@@ -197,11 +202,11 @@ export function hasTerminalAuthoritativeModelVerification(
 ): boolean {
   return Boolean(
     providerStatus?.statusCheckOutcome === 'authoritative' &&
-      providerStatus.statusCheckErrorCode == null &&
-      providerStatus.verificationState === 'verified' &&
-      providerStatus.modelCatalogRefreshState === 'ready' &&
-      providerStatus.modelCatalog?.status === 'ready' &&
-      providerStatus.modelVerificationState !== 'verifying'
+    providerStatus.statusCheckErrorCode == null &&
+    providerStatus.verificationState === 'verified' &&
+    providerStatus.modelCatalogRefreshState === 'ready' &&
+    providerStatus.modelCatalog?.status === 'ready' &&
+    providerStatus.modelVerificationState !== 'verifying'
   );
 }
 

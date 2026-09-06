@@ -205,7 +205,7 @@ function getProviderStatus(
 function isCodexCatalogLoadingSnapshot(provider: CliProviderStatus | undefined): boolean {
   return (
     provider?.providerId === 'codex' &&
-    provider.modelCatalog == null &&
+    provider.modelCatalog?.status !== 'ready' &&
     provider.modelCatalogRefreshState === 'loading' &&
     provider.runtimeCapabilities?.modelCatalog?.dynamic === true
   );

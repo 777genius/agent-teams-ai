@@ -218,6 +218,31 @@ describe('ProviderActivityStatusStrip', () => {
     await act(async () => root.unmount());
   });
 
+  it('keeps a selected provider neutral while a detailed preflight is still running', async () => {
+    const provider = createProvider({
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      verificationState: 'error',
+      statusMessage: 'Provider launch status could not be verified.',
+    });
+    const host = document.createElement('div');
+    let root!: ReturnType<typeof createRoot>;
+
+    await act(async () => {
+      root = renderStrip(host, {
+        cliStatus: createMultimodelStatus([provider]),
+        providerStatusOverride: provider,
+        forceLoadingProviderIds: ['opencode'],
+        showReadyProviders: true,
+      });
+    });
+
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('Checking...');
+    expect(host.textContent).not.toContain('Needs attention');
+    await act(async () => root.unmount());
+  });
+
   it('shows concise provider details only when requested', async () => {
     const provider = createProvider({
       providerId: 'codex',

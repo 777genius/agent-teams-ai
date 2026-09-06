@@ -10,7 +10,7 @@ import {
   syntaxHighlighting,
 } from '@codemirror/language';
 import { lintGutter } from '@codemirror/lint';
-import { EditorState } from '@codemirror/state';
+import { Annotation, EditorState, Transaction } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
 import {
   EditorView,
@@ -40,6 +40,8 @@ const membersEditorTheme = EditorView.theme({
     overflow: 'auto',
   },
 });
+
+const externalValueSync = Annotation.define<boolean>();
 
 export const MembersJsonEditor = ({
   value,
@@ -75,7 +77,10 @@ export const MembersJsonEditor = ({
         baseEditorTheme,
         membersEditorTheme,
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
+          if (
+            update.docChanged &&
+            !update.transactions.some((tr) => tr.annotation(externalValueSync))
+          ) {
             onChangeRef.current(update.state.doc.toString());
           }
         }),
@@ -104,6 +109,7 @@ export const MembersJsonEditor = ({
     if (currentDoc !== value) {
       view.dispatch({
         changes: { from: 0, to: currentDoc.length, insert: value },
+        annotations: [externalValueSync.of(true), Transaction.addToHistory.of(false)],
       });
     }
   }, [value]);

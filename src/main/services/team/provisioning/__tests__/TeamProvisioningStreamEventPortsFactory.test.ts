@@ -102,6 +102,7 @@ function createCallbacks(
     injectGeminiPostLaunchHydration: vi.fn(async () => undefined),
     completeProvisioningFromSuccessfulResult: vi.fn(),
     handleControlRequest: vi.fn(),
+    launchMixedSecondaryLaneIfNeeded: vi.fn(async () => undefined),
     handleProvisioningTurnComplete: vi.fn(async () => undefined),
     cleanupRun: vi.fn(),
     emitApiErrorWarning: vi.fn(),
@@ -139,6 +140,7 @@ function createServiceAdapter(
     injectGeminiPostLaunchHydration: callbacks.injectGeminiPostLaunchHydration,
     completeProvisioningFromSuccessfulResult: callbacks.completeProvisioningFromSuccessfulResult,
     handleControlRequest: callbacks.handleControlRequest,
+    launchMixedSecondaryLaneIfNeeded: callbacks.launchMixedSecondaryLaneIfNeeded,
     handleProvisioningTurnComplete: callbacks.handleProvisioningTurnComplete,
     cleanupRun: callbacks.cleanupRun,
     setMemberSpawnStatus: callbacks.setMemberSpawnStatus,
@@ -202,6 +204,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
         stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers,
       },
       outputRecovery: createOutputRecoveryAdapter(callbacks),
+      prepareMixedSecondaryLaunch: vi.fn(async () => true),
       updateProgress: callbacks.updateProgress,
       emitTeamChange,
     });
@@ -252,6 +255,7 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
         stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers,
       },
       outputRecovery: createOutputRecoveryAdapter(callbacks),
+      prepareMixedSecondaryLaunch: vi.fn(async () => true),
       updateProgress: callbacks.updateProgress,
     });
     const run = createRun();
@@ -282,4 +286,52 @@ describe('TeamProvisioningStreamEventPortsFactory', () => {
     expect(callbacks.captureTeamSpawnEvents).toHaveBeenCalledWith(run, msg.content);
     expect(callbacks.captureSendMessages).toHaveBeenCalledWith(run, msg.content);
   });
+
+  it('waits for authoritative roster publication before starting the early side lane', async () => {
+    const callbacks = createCallbacks();
+    let completePreparation!: (ready: boolean) => void;
+    const prepareMixedSecondaryLaunch = vi.fn(
+      () => new Promise<boolean>((resolve) => (completePreparation = resolve))
+    );
+    const ports = createTeamProvisioningStreamEventPortsBoundary({
+      service: createServiceAdapter(callbacks),
+      persistentRuntimeCleanup: { stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers },
+      outputRecovery: createOutputRecoveryAdapter(callbacks),
+      updateProgress: callbacks.updateProgress,
+      prepareMixedSecondaryLaunch,
+    });
+    const run = createRun();
+    const pending = ports.launchMixedSecondaryLaneIfNeeded(run);
+    expect(prepareMixedSecondaryLaunch).toHaveBeenCalledWith(run);
+    expect(callbacks.launchMixedSecondaryLaneIfNeeded).not.toHaveBeenCalled();
+    completePreparation(true);
+    await pending;
+    expect(callbacks.launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run);
+  });
+
+  it.each(['cancelled', 'killed', 'stale', 'write-failed'])(
+    'does not start an early side lane when roster preparation is %s',
+    async (outcome) => {
+      const callbacks = createCallbacks();
+      const run = createRun();
+      const ports = createTeamProvisioningStreamEventPortsBoundary({
+        service: createServiceAdapter(callbacks),
+        persistentRuntimeCleanup: {
+          stopPersistentTeamMembers: callbacks.stopPersistentTeamMembers,
+        },
+        outputRecovery: createOutputRecoveryAdapter(callbacks),
+        updateProgress: callbacks.updateProgress,
+        prepareMixedSecondaryLaunch: async () => {
+          if (outcome === 'cancelled') run.cancelRequested = true;
+          if (outcome === 'killed') run.processKilled = true;
+          if (outcome === 'write-failed') throw new Error('config write failed');
+          return outcome !== 'stale';
+        },
+      });
+      const pending = ports.launchMixedSecondaryLaneIfNeeded(run);
+      if (outcome === 'write-failed') await expect(pending).rejects.toThrow('config write failed');
+      else await pending;
+      expect(callbacks.launchMixedSecondaryLaneIfNeeded).not.toHaveBeenCalled();
+    }
+  );
 });

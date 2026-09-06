@@ -116,6 +116,7 @@ import * as optionalPreflight from './optionalProviderPreflight';
 import { OptionalSettingsSection } from './OptionalSettingsSection';
 import {
   isDeletedProjectPathSelection,
+  isLaunchPreflightProjectSelectionReady,
   isSelectableProjectPathProject,
 } from './projectPathOptions';
 import { loadProjectPathProjects, syntheticProjectFromPath } from './projectPathProjects';
@@ -167,6 +168,7 @@ import {
 import { useMemberWorkspaceInfo } from './useMemberWorkspaceInfo';
 import { useOpenCodeLocalModelScope } from './useOpenCodeLocalModelScope';
 import { useOpenCodeProviderScopedDialogModelState } from './useOpenCodeProviderScopedModelAuthority';
+import { useProvisioningPreparePresentationState } from './useProvisioningPreparePresentationState';
 import {
   getWorktreeGitBlockingMessage,
   getWorktreeGitControlDisabledReason,
@@ -338,6 +340,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
 
   // Effective team name: from props if provided, otherwise from local selection
   const effectiveTeamName = propsTeamName || selectedTeamName;
+  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
+  const [launchHydratedTeamName, setLaunchHydratedTeamName] = useState<string | null>(null);
   const needsTeamSelector = isSchedule && !propsTeamName;
 
   // ---------------------------------------------------------------------------
@@ -419,6 +423,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     if (!open) {
       setProviderSettingsProviderId(null);
       hydrationRef.current = { key: null, dirty: false, rosterDirty: false };
+      setLaunchHydratedTeamName(null);
     }
   }, [open]);
   // Advanced CLI section state (with localStorage persistence)
@@ -459,6 +464,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       ? ''
       : selectedProjectPath.trim();
   const effectiveCwd = cwdMode === 'project' ? selectedProjectCwd : customCwd.trim();
+  const launchPreflightSelectionReady = isLaunchPreflightProjectSelectionReady({
+    draftLoaded: launchHydratedTeamName === effectiveTeamName,
+    effectiveCwd,
+    cwdMode,
+    projectsLoading,
+    projects,
+    selectedProjectPath,
+    defaultProjectPath,
+    appliedDefaultProjectPath: appliedDefaultProjectPathRef.current,
+  });
   const { cliStatus: projectScopedCliStatus, providerStatus: projectScopedOpenCodeStatus } =
     useEffectiveCliProviderStatus('opencode', {
       projectPath: effectiveCwd || null,
@@ -937,6 +952,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       // Edits made while the request was in flight win over it, but an unrelated control is
       // not a roster edit — and with no live members the saved request is its only source.
       if (cancelled) return;
+      setLaunchHydratedTeamName(effectiveTeamName);
       if (!hydrationRef.current.rosterDirty) {
         applyEditableRoster(savedRequest?.members, savedRequest?.syncModelsWithLead);
       }
@@ -1610,11 +1626,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   // Warm up CLI for the currently selected working directory (launch mode only).
   useEffect(() => {
     if (submissionFence.busy) return;
-    if (!open || !isLaunchMode || prepareState === 'idle') {
+    if (!open || !isLaunchMode || !launchPreflightSelectionReady) {
       prepareRequestSeqRef.current += 1;
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
       prepareWarningsByProviderIdRef.current.clear();
+      return;
+    }
+    if (prepareState === 'idle') {
+      setPrepareState('loading');
+      setPrepareMessage(t('launch.prepare.checkingProviders'));
       return;
     }
 
@@ -1627,18 +1648,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       setPrepareWarnings([]);
       setPrepareChecks([]);
       setPrepareMessage(t('launch.prepare.unsupportedPreload'));
-      return;
-    }
-
-    if (!effectiveCwd) {
-      prepareRequestSeqRef.current += 1;
-      lastPrepareProviderSignatureByIdRef.current.clear();
-      prepareProviderRequestSeqByIdRef.current.clear();
-      prepareWarningsByProviderIdRef.current.clear();
-      setPrepareState('idle');
-      setPrepareWarnings([]);
-      setPrepareChecks([]);
-      setPrepareMessage(t('launch.prepare.selectWorkingDirectory'));
       return;
     }
 
@@ -1842,6 +1851,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     open,
     isLaunchMode,
     prepareState,
+    launchPreflightSelectionReady,
     isSubmitting,
     submissionFence,
     effectiveCwd,
@@ -1855,12 +1865,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
     t,
   ]);
 
-  // ---------------------------------------------------------------------------
   // Shared effects: projects
-  // ---------------------------------------------------------------------------
-
   const repositoryGroups = useStore(useShallow((s) => s.repositoryGroups));
-  const defaultProjectPath = isLaunchMode ? props.defaultProjectPath : undefined;
   const shouldDeferProjectListLoad =
     isLaunchMode &&
     !projectsLoadRequested &&
@@ -1930,7 +1936,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       const match = selectableProjects.find(
         (p) => normalizePath(p.path) === normalizedDefaultProjectPath
       );
-      if (match && !defaultAlreadyApplied) {
+      if (match && (!defaultAlreadyApplied || !selectedProjectPath)) {
         appliedDefaultProjectPathRef.current = normalizedDefaultProjectPath;
         if (normalizePath(selectedProjectPath) !== normalizedDefaultProjectPath) {
           setSelectedProjectPath(match.path);
@@ -1939,16 +1945,6 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }
     }
     if (selectedProjectPath) return;
-    if (defaultProjectPath && !isEphemeralProjectPath(defaultProjectPath)) {
-      const normalizedDefaultProjectPath = normalizePath(defaultProjectPath);
-      const match = selectableProjects.find(
-        (p) => normalizePath(p.path) === normalizedDefaultProjectPath
-      );
-      if (match) {
-        setSelectedProjectPath(match.path);
-        return;
-      }
-    }
     setSelectedProjectPath(selectableProjects[0].path);
   }, [open, cwdMode, projects, selectedProjectPath, defaultProjectPath, setSelectedProjectPath]);
 
@@ -2213,6 +2209,10 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       }),
     [prepareChecks, prepareMessage, prepareState, prepareWarnings, t]
   );
+  const presentedPrepareState = useProvisioningPreparePresentationState(
+    effectivePrepare.state,
+    open
+  );
   const {
     available: experimentalLocalModelOverrideAvailable,
     enabled: experimentalLocalModelOverrideEnabled,
@@ -2302,9 +2302,11 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         return;
       }
     }
-    if (isLaunchMode && prepareState === 'idle' && !canSkipPreflight()) {
-      setPrepareState('loading');
-      setPrepareMessage(t('launch.prepare.checkingProviders'));
+    if (isLaunchMode && prepareState === 'idle') {
+      if (launchPreflightSelectionReady) {
+        setPrepareState('loading');
+        setPrepareMessage(t('launch.prepare.checkingProviders'));
+      }
       return;
     }
     if (launchGuard.reject(isLaunchMode && !canSkipPreflight(), rejectProviderLaunch)) return;
@@ -3143,13 +3145,16 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 providerIds={selectedMemberProviders}
                 label="Selected providers"
                 layout="stacked"
-                showReadyProviders={
-                  effectivePrepare.state === 'idle' || effectivePrepare.state === 'loading'
+                forceLoadingProviderIds={
+                  presentedPrepareState === 'idle' || presentedPrepareState === 'loading'
+                    ? selectedMemberProviders
+                    : undefined
                 }
+                showReadyProviders
                 readyStatusText="Ready"
                 className="mb-2"
               />
-              {prepareState === 'loading' ? (
+              {presentedPrepareState === 'loading' ? (
                 <>
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -3174,14 +3179,12 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   <ProvisioningProviderStatusList
                     checks={prepareChecks}
                     className="mt-2"
-                    onOpenProviderSettings={(providerId) =>
-                      setProviderSettingsProviderId(providerId)
-                    }
+                    onOpenProviderSettings={setProviderSettingsProviderId}
                   />
                 </>
               ) : null}
 
-              {effectivePrepare.state === 'ready' && !launchAuthorityBlocked ? (
+              {presentedPrepareState === 'ready' && !launchAuthorityBlocked ? (
                 <ProviderPrepareReadyNotice
                   checks={prepareChecks}
                   message={effectivePrepare.message}
@@ -3190,7 +3193,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 />
               ) : null}
 
-              {effectivePrepare.state === 'ready' && launchAuthorityBlocked ? (
+              {presentedPrepareState === 'ready' && launchAuthorityBlocked ? (
                 <ProviderLaunchAuthorityNotice
                   id={LAUNCH_AUTHORITY_BLOCKER_ID}
                   action={
@@ -3203,7 +3206,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                 />
               ) : null}
 
-              {effectivePrepare.state === 'failed' ? (
+              {presentedPrepareState === 'failed' ? (
                 <div className="text-xs">
                   <div className="flex items-start gap-2 text-red-300">
                     <AlertTriangle className="mt-0.5 size-4 shrink-0" />
@@ -3235,9 +3238,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                       checks={prepareChecks}
                       className="mt-2"
                       suppressDetailsMatching={effectivePrepare.message}
-                      onOpenProviderSettings={(providerId) =>
-                        setProviderSettingsProviderId(providerId)
-                      }
+                      onOpenProviderSettings={setProviderSettingsProviderId}
                     />
                   ) : null}
                   {prepareWarnings.length > 0 && prepareChecks.length === 0 ? (

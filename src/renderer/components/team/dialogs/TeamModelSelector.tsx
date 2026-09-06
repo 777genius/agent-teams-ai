@@ -100,6 +100,7 @@ import {
 import { OpenCodeLocalModelStatus } from './OpenCodeLocalModelStatus';
 import {
   canUseCachedOpenCodeModelsDuringTransientCheck,
+  getOpenCodeDisabledPanelPresentation,
   getOpenCodeReadinessBadgeLabel,
   getOpenCodeReadinessMessage,
   getOpenCodeReadinessSummary,
@@ -2653,19 +2654,13 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
         }
       : activeProviderDisabledReason && effectiveProviderId === 'opencode'
         ? {
-            tone: 'warning' as const,
-            title: t('modelSelector.openCodeStatus.notReadyTitle'),
-            summary: getOpenCodeReadinessSummary(
-              openCodeProviderStatus,
+            ...getOpenCodeDisabledPanelPresentation(
+              openCodeRuntimeStatusUiState,
+              activeProviderDisabledReason,
+              getProviderOverrideDisabledReason('opencode'),
               t,
-              openCodeRuntimeStatusUiState
+              openCodeProviderStatus
             ),
-            message: getOpenCodeReadinessMessage(
-              openCodeProviderStatus,
-              t,
-              openCodeRuntimeStatusUiState
-            ),
-            reason: activeProviderDisabledReason,
             actionLabel: null,
           }
         : showOpenCodeOverviewStatus &&
@@ -2703,7 +2698,9 @@ export const TeamModelSelector: React.FC<TeamModelSelectorProps> = ({
                 reason: null,
                 actionLabel: null,
               }
-            : showOpenCodeOverviewStatus && canActivateInspectedOpenCode
+            : showOpenCodeOverviewStatus &&
+                canActivateInspectedOpenCode &&
+                openCodeRuntimeStatusUiState === 'ready'
               ? {
                   tone: 'ready' as const,
                   title: t('modelSelector.openCodeStatus.readyTitle'),

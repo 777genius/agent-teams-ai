@@ -76,6 +76,7 @@ export interface TeamProvisioningStreamEventPortCallbacks<
   injectGeminiPostLaunchHydration: TeamProvisioningStreamEventPorts<TRun>['injectGeminiPostLaunchHydration'];
   completeProvisioningFromSuccessfulResult: TeamProvisioningStreamEventPorts<TRun>['completeProvisioningFromSuccessfulResult'];
   handleControlRequest: TeamProvisioningStreamEventPorts<TRun>['handleControlRequest'];
+  launchMixedSecondaryLaneIfNeeded: TeamProvisioningStreamEventPorts<TRun>['launchMixedSecondaryLaneIfNeeded'];
   handleProvisioningTurnComplete: TeamProvisioningStreamEventPorts<TRun>['handleProvisioningTurnComplete'];
   cleanupRun: TeamProvisioningStreamEventPorts<TRun>['cleanupRun'];
   emitApiErrorWarning: TeamProvisioningStreamEventPorts<TRun>['emitApiErrorWarning'];
@@ -115,6 +116,7 @@ type StreamEventServicePortKey =
   | 'injectGeminiPostLaunchHydration'
   | 'completeProvisioningFromSuccessfulResult'
   | 'handleControlRequest'
+  | 'launchMixedSecondaryLaneIfNeeded'
   | 'handleProvisioningTurnComplete'
   | 'cleanupRun'
   | 'setMemberSpawnStatus'
@@ -139,6 +141,7 @@ export interface TeamProvisioningStreamEventPortsBoundaryDeps<
   service: TeamProvisioningStreamEventServiceAdapter<TRun>;
   persistentRuntimeCleanup: TeamProvisioningStreamEventPersistentRuntimeCleanupAdapter<TRun>;
   outputRecovery: TeamProvisioningStreamEventOutputRecoveryAdapter<TRun>;
+  prepareMixedSecondaryLaunch(run: TRun): Promise<boolean>;
   updateProgress: TeamProvisioningStreamEventPorts<TRun>['updateProgress'];
   emitTeamChange?: TeamProvisioningStreamEventPorts<TRun>['emitTeamChange'];
 }
@@ -183,6 +186,12 @@ export function createTeamProvisioningStreamEventPortsBoundary<
     completeProvisioningFromSuccessfulResult: (run) =>
       deps.service.completeProvisioningFromSuccessfulResult(run),
     handleControlRequest: (run, msg) => deps.service.handleControlRequest(run, msg),
+    launchMixedSecondaryLaneIfNeeded: async (run) => {
+      if (run.cancelRequested || run.processKilled) return;
+      const prepared = await deps.prepareMixedSecondaryLaunch(run);
+      if (!prepared || run.cancelRequested || run.processKilled) return;
+      return deps.service.launchMixedSecondaryLaneIfNeeded(run);
+    },
     handleProvisioningTurnComplete: (run) => deps.service.handleProvisioningTurnComplete(run),
     cleanupRun: (run) => deps.service.cleanupRun(run),
     emitApiErrorWarning: (run, text) => deps.outputRecovery.emitApiErrorWarning(run, text),
@@ -239,6 +248,7 @@ export function createTeamProvisioningStreamEventPorts<
     injectGeminiPostLaunchHydration: callbacks.injectGeminiPostLaunchHydration,
     completeProvisioningFromSuccessfulResult: callbacks.completeProvisioningFromSuccessfulResult,
     handleControlRequest: callbacks.handleControlRequest,
+    launchMixedSecondaryLaneIfNeeded: callbacks.launchMixedSecondaryLaneIfNeeded,
     handleProvisioningTurnComplete: callbacks.handleProvisioningTurnComplete,
     cleanupRun: callbacks.cleanupRun,
     killTeamProcess,

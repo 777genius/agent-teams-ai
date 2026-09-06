@@ -3,6 +3,14 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+  computeLiveTeamWatchScope,
+  computeTeamWatchScope,
+  markTeamEngaged,
+  resetTeamWatchScopeForTests,
+  setAliveTeamsProvider,
+} from '../../../../src/main/services/infrastructure/teamWatchScope';
+
 type MockChokidarWatcher = {
   targets: string[];
   options: unknown;
@@ -112,6 +120,7 @@ describe('TeamTaskWatchRegistry scoping', () => {
   });
 
   afterEach(() => {
+    resetTeamWatchScopeForTests();
     setPlatform(originalPlatform);
     statGate.hold = null;
     statGate.parked = false;
@@ -247,6 +256,36 @@ describe('TeamTaskWatchRegistry scoping', () => {
       // The registry always emits forward-slash relative paths (see toRelativePath).
       relativePath: 'beta/inboxes/team-lead.json',
     });
+  });
+
+  it('recovers provisioning inboxes before ready without replaying historical teams', async () => {
+    let nowMs = 0;
+    setAliveTeamsProvider(() => []);
+    const events: string[] = [];
+    const registry = new TeamTaskWatchRegistry({
+      kind: 'teams',
+      rootPath: root,
+      onChange: (_eventType, relativePath) => events.push(relativePath),
+      onError: () => {},
+      getScopedTeamNames: () => computeTeamWatchScope(nowMs),
+      getScopedInboxTeamNames: () => computeLiveTeamWatchScope(nowMs),
+    });
+    try {
+      await registry.start();
+      markTeamEngaged('beta', nowMs);
+      await registry.requestReconcile();
+      expect(events).toContain('beta/inboxes/team-lead.json');
+      expect(events.some((event) => /^(alpha|gamma)\//.test(event))).toBe(false);
+      const deliveredCount = events.length;
+      await registry.requestReconcile();
+      expect(events).toHaveLength(deliveredCount);
+
+      nowMs = 5 * 60_000 + 1;
+      await registry.requestReconcile();
+      expect(latestTargets()).not.toContain(path.join(root, 'beta', 'inboxes'));
+    } finally {
+      await registry.close();
+    }
   });
 
   it('backfills only explicitly scoped live inboxes on initial startup', async () => {
