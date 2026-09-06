@@ -114,6 +114,7 @@ function createStreamEventPorts(): {
   killTeamProcess: ReturnType<typeof vi.fn>;
   markUnconfirmedBootstrapMembersFailed: ReturnType<typeof vi.fn>;
   persistLaunchStateSnapshot: ReturnType<typeof vi.fn>;
+  launchMixedSecondaryLaneIfNeeded: ReturnType<typeof vi.fn>;
   cleanupRun: ReturnType<typeof vi.fn>;
   reevaluateMemberLaunchStatus: ReturnType<typeof vi.fn>;
 } {
@@ -121,6 +122,7 @@ function createStreamEventPorts(): {
   const killTeamProcess = vi.fn();
   const markUnconfirmedBootstrapMembersFailed = vi.fn();
   const persistLaunchStateSnapshot = vi.fn(async () => null);
+  const launchMixedSecondaryLaneIfNeeded = vi.fn(async () => null);
   const cleanupRun = vi.fn();
   const reevaluateMemberLaunchStatus = vi.fn(async () => undefined);
 
@@ -175,6 +177,7 @@ function createStreamEventPorts(): {
     stopPersistentTeamMembers: vi.fn(),
     killTeamProcess,
     persistLaunchStateSnapshot,
+    launchMixedSecondaryLaneIfNeeded,
     cleanupRun,
     handleProvisioningTurnComplete: vi.fn(async () => undefined),
   } as Partial<
@@ -187,6 +190,7 @@ function createStreamEventPorts(): {
     killTeamProcess,
     markUnconfirmedBootstrapMembersFailed,
     persistLaunchStateSnapshot,
+    launchMixedSecondaryLaneIfNeeded,
     cleanupRun,
     reevaluateMemberLaunchStatus,
   };
@@ -352,6 +356,81 @@ describe('TeamProvisioningStreamEvents', () => {
     });
   });
 
+  it('starts mixed secondary lanes when primary bootstrap completes before the first real turn', () => {
+    const { run } = createDeterministicBootstrapRun({
+      requiresFirstRealTurnSuccess: true,
+      mixedSecondaryLanes: [{}],
+    });
+    const { ports, launchMixedSecondaryLaneIfNeeded } = createStreamEventPorts();
+
+    const event = {
+      type: 'system',
+      subtype: 'team_bootstrap',
+      event: 'completed',
+      failed_members: [],
+      run_id: run.runId,
+      team_name: run.teamName,
+      seq: 1,
+    };
+    expect(handleDeterministicBootstrapEvent(run, event, ports)).toBe(true);
+    expect(launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledWith(run);
+    expect(ports.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+
+    expect(handleDeterministicBootstrapEvent(run, event, ports)).toBe(true);
+    expect(launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])(
+    'starts secondary preparation before immediate completion (isLaunch=%s)',
+    (isLaunch) => {
+      const { run } = createDeterministicBootstrapRun({
+        isLaunch,
+        requiresFirstRealTurnSuccess: false,
+        mixedSecondaryLanes: [{}],
+      });
+      const { ports, launchMixedSecondaryLaneIfNeeded } = createStreamEventPorts();
+
+      expect(
+        handleDeterministicBootstrapEvent(
+          run,
+          {
+            type: 'system',
+            subtype: 'team_bootstrap',
+            event: 'completed',
+            failed_members: [],
+            run_id: run.runId,
+            team_name: run.teamName,
+            seq: 1,
+          },
+          ports
+        )
+      ).toBe(true);
+
+      expect(ports.handleProvisioningTurnComplete).toHaveBeenCalledExactlyOnceWith(run);
+      expect(launchMixedSecondaryLaneIfNeeded).toHaveBeenCalledExactlyOnceWith(run);
+      expect(launchMixedSecondaryLaneIfNeeded.mock.invocationCallOrder[0]).toBeLessThan(
+        vi.mocked(ports.handleProvisioningTurnComplete).mock.invocationCallOrder[0]
+      );
+    }
+  );
+
+  it('does not start eager roster preparation after completion has claimed the run', () => {
+    const { run } = createDeterministicBootstrapRun({
+      provisioningComplete: true,
+      mixedSecondaryLanes: [{}],
+    });
+    const { ports, launchMixedSecondaryLaneIfNeeded } = createStreamEventPorts();
+
+    handleDeterministicBootstrapEvent(
+      run,
+      { type: 'system', subtype: 'team_bootstrap', event: 'completed' },
+      ports
+    );
+
+    expect(launchMixedSecondaryLaneIfNeeded).not.toHaveBeenCalled();
+    expect(ports.handleProvisioningTurnComplete).not.toHaveBeenCalled();
+  });
+
   it('reports workspace trust deterministic bootstrap failures through stream events', () => {
     const reason =
       'Teammate "Gayani" cannot start in headless process runtime because workspace trust is not accepted for "C:\\Users\\vilok\\OneDrive\\Desktop\\Safar 0.1". Open that workspace once interactively and accept trust, then launch the team again.';
@@ -431,7 +510,11 @@ describe('handleTeamProvisioningStreamJsonMessage result handling', () => {
       const { run } = createDeterministicBootstrapRun({ provisioningComplete: false });
       const ports = makeResultPorts();
 
-      handleTeamProvisioningStreamJsonMessage(run, { type: 'result', subtype, error: 'boom' }, ports);
+      handleTeamProvisioningStreamJsonMessage(
+        run,
+        { type: 'result', subtype, error: 'boom' },
+        ports
+      );
 
       expect(run.progress.state).toBe('failed');
       expect(ports.killTeamProcess).toHaveBeenCalledWith(run.child);

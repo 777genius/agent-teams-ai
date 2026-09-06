@@ -99,7 +99,10 @@ import {
   type TeamProvisioningMemberMcpLaunchConfigServiceHost,
 } from './TeamProvisioningMemberMcpLaunchConfig';
 import { createInitialMemberSpawnStatusEntry } from './TeamProvisioningMemberSpawnStatusPolicy';
-import { type TeamProvisioningOpenCodeDeliveryCompositionPorts } from './TeamProvisioningOpenCodeDeliveryComposition';
+import {
+  createOpenCodeBootstrapWakePorts,
+  type TeamProvisioningOpenCodeDeliveryCompositionPorts,
+} from './TeamProvisioningOpenCodeDeliveryComposition';
 import {
   createOpenCodePromptDeliveryWatchdogSchedulerFromService,
   type TeamProvisioningOpenCodePromptDeliveryWatchdogSchedulerServiceHost,
@@ -726,6 +729,9 @@ export function createTeamProvisioningServiceComposition(
           teamName,
           laneId
         ),
+      ...createOpenCodeBootstrapWakePorts(openCodeRuntimeDeliveryBoundaryHost, () =>
+        bootstrapEvidenceFacade.createOpenCodeRuntimeBootstrapEvidencePorts()
+      ),
       hasStableInboxMessageId,
       logPromptDeliveryEvent: (event, record, extra) =>
         servicePorts.logOpenCodePromptDeliveryEvent(event, record, extra),
@@ -753,6 +759,13 @@ export function createTeamProvisioningServiceComposition(
       getTeamsBasePath,
       nowIso,
       warn: (message) => logger.warn(message),
+      onBootstrapSessionCommitted: (input) => {
+        void openCodePromptDeliveryWatchdogCoordinator
+          .wakeAfterBootstrapCommit(input)
+          .catch((error) =>
+            logger.warn(`OpenCode bootstrap inbox wake failed: ${getErrorMessage(error)}`)
+          );
+      },
     }
   );
   assignCompositionPart(host.installTarget, 'bootstrapEvidenceFacade', bootstrapEvidenceFacade);

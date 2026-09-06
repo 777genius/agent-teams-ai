@@ -123,6 +123,7 @@ function createPorts(
     nowMs: vi.fn<() => number>().mockReturnValueOnce(1000).mockReturnValue(1250),
     randomUuid: vi.fn<() => string>(() => 'lane-run-id'),
     teamsBasePath: vi.fn<() => string>(() => '/teams'),
+    isCurrentTrackedRun: vi.fn(() => true),
     isStoppingSecondaryRuntimeTeam: vi.fn<(teamName: string) => boolean>(() => false),
     clearOpenCodeRuntimeLaneStorage: vi.fn<
       MixedSecondaryLaneLaunchFlowPorts<TestRun>['clearOpenCodeRuntimeLaneStorage']
@@ -166,6 +167,59 @@ function createPorts(
 }
 
 describe('TeamProvisioningMixedSecondaryLaneLaunchFlow', () => {
+  it.each(['setup', 'generation', 'prompt'] as const)(
+    'does not launch when the tracked run changes as %s preparation resolves',
+    async (stage) => {
+      const run = createRun();
+      const lane = createLane({ runId: 'superseded-lane-run' });
+      let currentRun = run;
+      let markPrepared!: () => void;
+      let releasePreparation!: () => void;
+      const prepared = new Promise<void>((resolve) => (markPrepared = resolve));
+      const preparation = new Promise<void>((resolve) => (releasePreparation = resolve));
+      const waitForPreparation = async <T>(result: T): Promise<T> => {
+        markPrepared();
+        await preparation;
+        return result;
+      };
+      const adapter = createAdapter();
+      const ports = createPorts({
+        isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
+        getOpenCodeRuntimeAdapter: () => adapter,
+        ...(stage === 'setup'
+          ? { readLaunchState: () => waitForPreparation(createSnapshot()) }
+          : stage === 'generation'
+            ? {
+                prepareOpenCodeRuntimeLaneForLaunchGeneration: () =>
+                  waitForPreparation({ diagnostics: [] }),
+              }
+            : { buildOpenCodeSecondaryAppManagedLaunchPrompt: () => waitForPreparation('prompt') }),
+      });
+
+      const launching = launchSingleMixedSecondaryLaneWithPorts(run, lane, ports);
+      await prepared;
+      releasePreparation();
+      currentRun = createRun();
+      await launching;
+
+      expect(run).toMatchObject({ cancelRequested: false, processKilled: false });
+      expect(adapter.launch).not.toHaveBeenCalled();
+      expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
+        teamsBasePath: '/teams',
+        teamName: run.teamName,
+        laneId: lane.laneId,
+        expectedRunId: 'superseded-lane-run',
+      });
+      expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
+        run.teamName,
+        lane.laneId,
+        'superseded-lane-run'
+      );
+      expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+      expect(lane).toMatchObject({ state: 'finished', result: null });
+    }
+  );
+
   it('resets stale launch generation state and retries a stale manifest launch failure', async () => {
     const staleMessage = 'Bridge server runtime manifest high watermark is stale';
     const launch = vi

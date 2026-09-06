@@ -17,6 +17,10 @@ import {
   updateTeamConfigPostLaunch,
 } from './TeamProvisioningConfigMaterialization';
 import { mergeAndRemoveDuplicateInboxes } from './TeamProvisioningInboxDuplicateMerge';
+import {
+  materializeTeamProvisioningLaunchRoster,
+  type TeamProvisioningLaunchRosterInput,
+} from './TeamProvisioningLaunchRosterMaterialization';
 
 import type { TeamCreateRequest, TeamMember } from '@shared/types';
 
@@ -41,7 +45,11 @@ export interface TeamProvisioningConfigMaintenancePorts {
     filePath: string,
     options: TeamProvisioningConfigMaintenanceReadOptions
   ): Promise<string | null | undefined>;
-  writeFileUtf8(filePath: string, contents: string): Promise<void>;
+  writeFileUtf8(
+    filePath: string,
+    contents: string,
+    options?: { beforeCommit: () => Promise<void> }
+  ): Promise<void>;
   unlink(filePath: string): Promise<void>;
   readDir(dirPath: string): Promise<string[]>;
   stat(filePath: string): Promise<{ isFile(): boolean; mtimeMs: number }>;
@@ -79,6 +87,18 @@ export interface TeamProvisioningConfigMaintenanceOptions {
 
 export class TeamProvisioningConfigMaintenance {
   constructor(private readonly options: TeamProvisioningConfigMaintenanceOptions) {}
+
+  materializeLaunchRoster(input: TeamProvisioningLaunchRosterInput): Promise<boolean> {
+    const configPath = this.getConfigPath(input.teamName);
+    return materializeTeamProvisioningLaunchRoster(input, {
+      readConfig: () => this.readTeamConfig(configPath),
+      readMetaMembers: () => this.options.ports.membersMetaStore.getMembers(input.teamName),
+      writeConfig: (raw, beforeCommit) =>
+        this.options.ports.writeFileUtf8(configPath, raw, { beforeCommit }),
+      invalidateTeam: (teamName) => this.options.ports.invalidateTeam(teamName),
+      now: () => this.options.ports.now(),
+    });
+  }
 
   /**
    * Immediately update projectPath in config.json at launch start, before CLI spawn.

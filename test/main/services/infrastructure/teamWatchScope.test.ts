@@ -22,13 +22,14 @@ describe('teamWatchScope', () => {
     expect([...(computeTeamWatchScope(1000) ?? [])]).toContain('t-alive');
   });
 
-  it('keeps inbox live scope limited to alive teams', () => {
+  it('includes recently engaged launch teams in inbox scope before ready', () => {
     setAliveTeamsProvider(() => ['t-alive']);
     markTeamEngaged('t-engaged', 0);
 
     expect(computeTeamWatchScope(1000)?.has('t-engaged')).toBe(true);
-    expect(computeLiveTeamWatchScope()?.has('t-alive')).toBe(true);
-    expect(computeLiveTeamWatchScope()?.has('t-engaged')).toBe(false);
+    expect(computeLiveTeamWatchScope(1000)?.has('t-alive')).toBe(true);
+    expect(computeLiveTeamWatchScope(1000)?.has('t-engaged')).toBe(true);
+    expect(computeLiveTeamWatchScope(FIVE_MIN + 1)?.has('t-engaged')).toBe(false);
   });
 
   it('includes engaged teams within TTL and prunes after expiry', () => {

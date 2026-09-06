@@ -505,6 +505,7 @@ export async function runDeterministicLaunchSpawnFlow<TRun extends Deterministic
         request,
         run,
         effectiveMemberSpecs,
+        allEffectiveMemberSpecs,
         controlApiBaseUrl: provisioningEnv.env.CLAUDE_TEAM_CONTROL_URL,
         isValidationCancelled: () =>
           isDeterministicLaunchSpawnCancelled({

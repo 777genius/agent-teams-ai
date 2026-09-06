@@ -325,7 +325,11 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       }),
     } as unknown as TeamLaunchRuntimeAdapter;
     const host = createHost(calls, adapter);
-    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host);
+    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host, ({ teamName, runId }) => {
+      expect(host.aliveRuns.get(teamName)).toBe(runId);
+      expect(host.runtimeAdapterRunByTeam.get(teamName)?.runId).toBe(runId);
+      calls.push('registeredInboxWake');
+    });
     const onProgress = vi.fn();
 
     const result = await wiring.runOpenCodeTeamRuntimeAdapterLaunch({
@@ -355,6 +359,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'syncApprovals',
       'progress:ready',
       'setAliveRun',
+      'registeredInboxWake',
       'invalidateCaches',
       'emit:process:ready',
     ]);
@@ -364,7 +369,10 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
     const calls: string[] = [];
     const adapter = {} as TeamLaunchRuntimeAdapter;
     const host = createHost(calls, adapter);
-    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host);
+    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host, ({ teamName, runId }) => {
+      expect(host.aliveRuns.get(teamName)).toBe(runId);
+      calls.push('registeredInboxWake');
+    });
     const alice = member('alice');
     const bob = member('bob');
 
@@ -398,6 +406,7 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       'deliverLaunchPrompt:team-lead:launch',
       'progress:ready',
       'setAliveRun',
+      'registeredInboxWake',
       'invalidateCaches',
       'emit:process:ready',
     ]);
@@ -419,7 +428,8 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
       providerId: 'opencode',
     });
     host.aliveRuns.set('team-a', 'newer-run');
-    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host);
+    const onRuntimeRegistered = vi.fn();
+    const wiring = createTeamProvisioningOpenCodeLaunchWiring(host, onRuntimeRegistered);
     const artifactModule = await import('../../TeamLaunchFailureArtifactPack');
     const storageModule =
       await import('../../opencode/store/OpenCodeRuntimeManifestEvidenceReader');
@@ -443,5 +453,6 @@ describe('TeamProvisioningOpenCodeLaunchWiring', () => {
     );
     expect(host.runtimeAdapterRunByTeam.get('team-a')?.runId).toBe('newer-run');
     expect(host.aliveRuns.get('team-a')).toBe('newer-run');
+    expect(onRuntimeRegistered).not.toHaveBeenCalled();
   });
 });

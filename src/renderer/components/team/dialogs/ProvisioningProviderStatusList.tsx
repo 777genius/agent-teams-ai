@@ -801,24 +801,17 @@ export function deriveEffectiveProvisioningPrepareState(params: {
   checks: ProvisioningProviderCheck[];
   t?: TeamTranslator;
 }): { state: ProvisioningPrepareState; message: string | null } {
-  if (params.state !== 'loading') {
+  if (params.state !== 'loading' || params.checks.length === 0) {
     return {
       state: params.state,
       message: params.message,
     };
   }
 
-  if (params.checks.length === 0) {
-    return {
-      state: params.state,
-      message: params.message,
-    };
-  }
-
-  const hasPendingChecks = params.checks.some(
+  const pendingChecks = params.checks.filter(
     (check) => check.status === 'pending' || check.status === 'checking'
   );
-  if (hasPendingChecks) {
+  if (pendingChecks.length > 0) {
     if (hasCompatibilityPendingDetails(params.checks)) {
       return {
         state: params.state,
@@ -829,7 +822,11 @@ export function deriveEffectiveProvisioningPrepareState(params: {
     }
     return {
       state: params.state,
-      message: params.message,
+      message: getProvisioningProviderProgressMessage(
+        pendingChecks.map((check) => check.providerId),
+        params.checks.length,
+        params.t
+      ),
     };
   }
 

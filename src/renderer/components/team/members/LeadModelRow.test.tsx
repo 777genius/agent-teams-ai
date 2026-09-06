@@ -67,7 +67,27 @@ vi.mock('@renderer/components/team/dialogs/TeamModelSelector', () => ({
   getProviderScopedTeamModelLabel: (_providerId: string, model: string) => model || 'Default',
   getTeamEffortLabel: (effort: string) => effort || 'Default',
   getTeamProviderLabel: (providerId: string) => providerId,
-  TeamModelSelector: () => React.createElement('div', null, 'team-model-selector'),
+  TeamModelSelector: ({
+    onProviderChange,
+    onValueChange,
+  }: {
+    onProviderChange: (providerId: string) => void;
+    onValueChange: (model: string) => void;
+  }) =>
+    React.createElement(
+      'div',
+      { 'data-testid': 'team-model-selector' },
+      React.createElement(
+        'button',
+        { type: 'button', onClick: () => onProviderChange('codex') },
+        'choose-codex'
+      ),
+      React.createElement(
+        'button',
+        { type: 'button', onClick: () => onValueChange('gpt-5.6-sol') },
+        'choose-model'
+      )
+    ),
 }));
 
 vi.mock('@renderer/components/ui/checkbox', () => ({
@@ -168,6 +188,53 @@ describe('LeadModelRow', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+  });
+
+  it('keeps the model selector open while provider and model choices update', () => {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const Harness = (): React.JSX.Element => {
+      const [providerId, setProviderId] = React.useState<'anthropic' | 'codex'>('anthropic');
+      const [model, setModel] = React.useState('opus');
+      return (
+        <LeadModelRow
+          providerId={providerId}
+          model={model}
+          effort="medium"
+          limitContext={false}
+          onProviderChange={(provider) => setProviderId(provider as 'anthropic' | 'codex')}
+          onModelChange={setModel}
+          onEffortChange={() => undefined}
+          onLimitContextChange={() => undefined}
+          syncModelsWithTeammates
+          onSyncModelsWithTeammatesChange={() => undefined}
+        />
+      );
+    };
+
+    act(() => root.render(<Harness />));
+    const opener = host.querySelector<HTMLButtonElement>('[aria-label="anthropic provider, opus"]');
+    expect(opener).not.toBeNull();
+    act(() => opener!.click());
+    expect(host.querySelector('[data-testid="team-model-selector"]')).not.toBeNull();
+
+    const providerControl = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'choose-codex'
+    );
+    expect(providerControl).toBeDefined();
+    act(() => providerControl!.click());
+    expect(host.querySelector('[aria-label="codex provider, opus"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="team-model-selector"]')).not.toBeNull();
+    const modelControl = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'choose-model'
+    );
+    expect(modelControl).toBeDefined();
+    act(() => modelControl!.click());
+    expect(host.querySelector('[aria-label="codex provider, gpt-5.6-sol"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="team-model-selector"]')).not.toBeNull();
+
+    act(() => root.unmount());
   });
 
   it('uses the canonical team-lead color for the preview stripe', () => {

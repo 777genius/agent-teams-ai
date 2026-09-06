@@ -72,6 +72,7 @@ export interface MaterializeDeterministicLaunchBootstrapFilesInput<
   request: TeamLaunchRequest;
   run: TRun;
   effectiveMemberSpecs: TeamCreateRequest['members'];
+  allEffectiveMemberSpecs: TeamCreateRequest['members'];
   controlApiBaseUrl?: string;
   isValidationCancelled(): boolean;
 }
@@ -406,7 +407,7 @@ export async function materializeDeterministicLaunchBootstrapFiles<
 
   const prompt = ports.buildDeterministicLaunchHydrationPrompt(
     request,
-    effectiveMemberSpecs,
+    input.allEffectiveMemberSpecs,
     existingTasks,
     false
   );

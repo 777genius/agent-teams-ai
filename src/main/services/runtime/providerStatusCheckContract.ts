@@ -4,6 +4,7 @@ import {
   createLegacyRuntimeFallbackCliExtensionCapabilities,
 } from '@shared/utils/providerExtensionCapabilities';
 import {
+  hasAnthropicCatalogRefreshLaunchSupport,
   hasAuthoritativeProviderLaunchEvidence,
   hasAuthoritativeProviderStatusEvidence,
   isProviderModelCatalogExactReady,
@@ -218,6 +219,7 @@ export function createDegradedProviderStatus(
   const degraded = createRuntimeStatusErrorProviderStatus(previous.providerId, error);
   return {
     ...previous,
+    teamLaunchAuthorityRestriction: undefined,
     verificationState: degraded.verificationState,
     statusCheckOutcome: degraded.statusCheckOutcome,
     statusCheckErrorCode: degraded.statusCheckErrorCode,
@@ -267,6 +269,9 @@ export function mergeProviderStatusDisplayEvidence(
 
   return {
     ...incoming,
+    teamLaunchAuthorityRestriction: hasAnthropicCatalogRefreshLaunchSupport(incoming)
+      ? 'catalog-refresh'
+      : undefined,
     supported: incoming.supported,
     authenticated: hasAuthoritativeStatusEvidence ? incoming.authenticated : false,
     authMethod: hasAuthoritativeStatusEvidence ? incoming.authMethod : null,

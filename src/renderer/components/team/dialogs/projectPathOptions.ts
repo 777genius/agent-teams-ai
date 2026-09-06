@@ -1,4 +1,4 @@
-import { normalizePathForMatching } from '@renderer/utils/pathNormalize';
+import { normalizePath, normalizePathForMatching } from '@renderer/utils/pathNormalize';
 import { isEphemeralProjectPath } from '@shared/utils/ephemeralProjectPath';
 
 import type {
@@ -47,6 +47,57 @@ export function isSelectableProjectPathProject(
   project: Pick<ProjectPathProject, 'path' | 'filesystemState'>
 ): boolean {
   return !isEphemeralProjectPath(project.path) && project.filesystemState !== 'deleted';
+}
+
+export function isLaunchPreflightProjectSelectionReady({
+  draftLoaded,
+  effectiveCwd,
+  cwdMode,
+  projectsLoading,
+  projects,
+  selectedProjectPath,
+  defaultProjectPath,
+  appliedDefaultProjectPath,
+  forceDefaultProjectSelection = false,
+  appliedDefaultProjectModePath,
+}: {
+  draftLoaded: boolean;
+  effectiveCwd: string;
+  cwdMode: 'project' | 'custom';
+  projectsLoading: boolean;
+  projects: readonly ProjectPathProject[];
+  selectedProjectPath: string;
+  defaultProjectPath?: string | null;
+  appliedDefaultProjectPath: string | null;
+  forceDefaultProjectSelection?: boolean;
+  appliedDefaultProjectModePath?: string | null;
+}): boolean {
+  const normalizedDefaultPath = defaultProjectPath ? normalizePath(defaultProjectPath) : null;
+  const pendingDefaultSelection =
+    normalizedDefaultPath !== null &&
+    appliedDefaultProjectPath !== normalizedDefaultPath &&
+    projects.some(
+      (project) =>
+        isSelectableProjectPathProject(project) &&
+        normalizePath(project.path) === normalizedDefaultPath
+    );
+
+  return (
+    draftLoaded &&
+    (!forceDefaultProjectSelection ||
+      !defaultProjectPath ||
+      isEphemeralProjectPath(defaultProjectPath) ||
+      appliedDefaultProjectModePath === normalizedDefaultPath) &&
+    Boolean(effectiveCwd) &&
+    (cwdMode === 'custom' ||
+      (!projectsLoading &&
+        projects.some(
+          (project) =>
+            isSelectableProjectPathProject(project) &&
+            normalizePathForMatching(project.path) === normalizePathForMatching(selectedProjectPath)
+        ) &&
+        (!pendingDefaultSelection || normalizePath(selectedProjectPath) === normalizedDefaultPath)))
+  );
 }
 
 export function findProjectPathProjectByPath(

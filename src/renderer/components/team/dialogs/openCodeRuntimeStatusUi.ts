@@ -8,6 +8,33 @@ import type { TFunction } from 'i18next';
 export type OpenCodeRuntimeStatusUiState = 'checking' | 'missing' | 'retry' | 'ready';
 type TeamTranslator = TFunction<TranslationNamespace, undefined>;
 
+export function getOpenCodeDisabledPanelPresentation(
+  runtimeStatusUiState: OpenCodeRuntimeStatusUiState,
+  reason: string,
+  overrideReason: string | null,
+  t: TeamTranslator,
+  providerStatus?: CliProviderStatus | null
+): {
+  tone: 'info' | 'warning';
+  title: string;
+  reason: string | null;
+  summary: string;
+  message: string;
+} {
+  const pending = runtimeStatusUiState === 'checking' && !overrideReason;
+  return {
+    tone: pending ? 'info' : 'warning',
+    title: t(
+      pending
+        ? 'modelSelector.openCodeStatus.loadingRuntime'
+        : 'modelSelector.openCodeStatus.notReadyTitle'
+    ),
+    reason: pending ? null : reason,
+    summary: getOpenCodeReadinessSummary(providerStatus, t, runtimeStatusUiState),
+    message: getOpenCodeReadinessMessage(providerStatus, t, runtimeStatusUiState),
+  };
+}
+
 export function getOpenCodeRuntimeStatusUiState({
   providerStatus,
   runtimeStatus,
@@ -45,6 +72,17 @@ export function getOpenCodeRuntimeStatusUiState({
     (runtimeStatus === null && !providerStatus) ||
     providerStatus?.statusCheckOutcome === 'pending' ||
     providerStatus?.statusCheckOutcome === 'model_only' ||
+    // The renderer gates launch while catalog authority settles. That is not
+    // a runtime failure, even when connection evidence is authoritative.
+    (providerStatus?.supported === true &&
+      providerStatus.authenticated === true &&
+      providerStatus.verificationState === 'verified' &&
+      providerStatus.statusCheckOutcome === 'authoritative' &&
+      providerStatus.modelVerificationState === 'idle' &&
+      providerStatus.modelCatalogRefreshState !== 'error' &&
+      providerStatus.modelCatalog?.status !== 'degraded' &&
+      providerStatus.modelCatalog?.status !== 'unavailable' &&
+      !providerStatus.capabilities.teamLaunch) ||
     isTeamProviderModelVerificationPending('opencode', providerStatus)
   ) {
     return 'checking';

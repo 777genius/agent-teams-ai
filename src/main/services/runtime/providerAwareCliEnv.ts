@@ -1,4 +1,7 @@
-import { resolveVerifiedAppManagedCodexRuntimeBinaryPath } from '@features/codex-runtime-installer/main';
+import {
+  resolveAppManagedCodexRuntimeBinaryPath,
+  resolveVerifiedAppManagedCodexRuntimeBinaryPath,
+} from '@features/codex-runtime-installer/main';
 import { getCachedShellEnv } from '@main/utils/shellEnv';
 
 import {
@@ -91,6 +94,12 @@ export function buildPassiveProviderStatusCliEnv(
       delete env[OPENCODE_LEGACY_BINARY_PATH_ENV];
     }
     applyOpenCodeRuntimeBinaryEnv(env, explicitOpenCodeBinary ?? knownOpenCodeBinary);
+  }
+  if (!options.providerId || options.providerId === 'codex') {
+    const appManagedCodexBinary = resolveAppManagedCodexRuntimeBinaryPath();
+    if (appManagedCodexBinary && !env.CODEX_CLI_PATH) {
+      env.CODEX_CLI_PATH = appManagedCodexBinary;
+    }
   }
   removeGlobalElectronRunAsNodeEnv(env);
   return { env, connectionIssues: {}, providerArgs: [] };

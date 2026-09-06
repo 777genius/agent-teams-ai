@@ -43,10 +43,12 @@ export interface TeamProvisioningBootstrapEvidenceFacadeDeps {
   getTeamsBasePath?: () => string;
   nowIso(): string;
   warn(message: string): void;
+  onBootstrapSessionCommitted?: OpenCodeRuntimeBootstrapEvidencePorts['onBootstrapSessionCommitted'];
   openCodeSecondaryEvidenceOverlayPorts?: OpenCodeSecondaryEvidenceOverlayPorts;
   createOpenCodeRuntimeBootstrapEvidencePorts?: (input: {
     teamsBasePath: string;
     warn(message: string): void;
+    onBootstrapSessionCommitted?: OpenCodeRuntimeBootstrapEvidencePorts['onBootstrapSessionCommitted'];
   }) => OpenCodeRuntimeBootstrapEvidencePorts;
 }
 
@@ -59,6 +61,7 @@ export interface TeamProvisioningBootstrapEvidenceFacadeServiceHostOptions {
   getTeamsBasePath?: () => string;
   nowIso(): string;
   warn(message: string): void;
+  onBootstrapSessionCommitted?: OpenCodeRuntimeBootstrapEvidencePorts['onBootstrapSessionCommitted'];
 }
 
 export function createTeamProvisioningBootstrapEvidenceFacadeDepsFromService(
@@ -71,6 +74,7 @@ export function createTeamProvisioningBootstrapEvidenceFacadeDepsFromService(
     getTeamsBasePath: options.getTeamsBasePath,
     nowIso: options.nowIso,
     warn: options.warn,
+    onBootstrapSessionCommitted: options.onBootstrapSessionCommitted,
   };
 }
 
@@ -119,6 +123,7 @@ export class TeamProvisioningBootstrapEvidenceFacade {
     return this.createOpenCodeRuntimeBootstrapEvidencePortsForInput({
       teamsBasePath: this.getTeamsBasePath(),
       warn: (message) => this.deps.warn(message),
+      onBootstrapSessionCommitted: this.deps.onBootstrapSessionCommitted,
     });
   }
 

@@ -74,6 +74,7 @@ function createPorts(): TeamProvisioningStreamEventPorts<TeamProvisioningStreamR
     appendProvisioningAssistantText: vi.fn(),
     boundProgressAssistantParts: vi.fn((parts: string[]) => parts),
     pushLiveLeadTextMessage: vi.fn(),
+    setLeadActivity: vi.fn(),
     captureTeamSpawnEvents: vi.fn(),
     captureSendMessages: vi.fn(),
     updateLeadContextUsageFromUsage: vi.fn(),
@@ -126,10 +127,12 @@ describe('lead relay capture activity proof', () => {
   it('touches the capture when the lead stream reports an assistant message', () => {
     const touch = vi.fn();
     const run = createRun({ leadRelayCapture: createCapture(touch) });
+    const ports = createPorts();
 
-    handleTeamProvisioningStreamJsonMessage(run, assistantMessage(), createPorts());
+    handleTeamProvisioningStreamJsonMessage(run, assistantMessage(), ports);
 
     expect(touch).toHaveBeenCalledTimes(1);
+    expect(ports.setLeadActivity).toHaveBeenCalledWith(run, 'active');
   });
 
   it.each(['processKilled', 'cancelRequested'] as const)(
@@ -146,6 +149,7 @@ describe('lead relay capture activity proof', () => {
       expect(ports.pushLiveLeadTextMessage).not.toHaveBeenCalled();
       expect(ports.captureSendMessages).not.toHaveBeenCalled();
       expect(ports.startRuntimeToolActivity).not.toHaveBeenCalled();
+      expect(ports.setLeadActivity).not.toHaveBeenCalled();
     }
   );
 

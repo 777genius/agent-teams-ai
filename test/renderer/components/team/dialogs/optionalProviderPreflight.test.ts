@@ -1,7 +1,9 @@
 import {
   canSkipOptionalProviderPreflight,
   canSkipPendingProviderDiscovery,
+  canSkipProviderPreflight,
   createProviderSubmissionFence,
+  getPendingProviderPreflightIds,
   resumeInterruptedProviderPreflight,
 } from '@renderer/components/team/dialogs/optionalProviderPreflight';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
@@ -70,6 +72,237 @@ const check = (
 
 describe('optional provider preflight skip', () => {
   afterEach(() => vi.useRealTimers());
+  function refreshingAnthropicSelection(override: Partial<CliProviderStatus> = {}) {
+    const source = {
+      ...provider('anthropic'),
+      modelCatalogRefreshState: 'loading' as const,
+      modelCatalog: {
+        ...provider('anthropic').modelCatalog!,
+        staleAt: new Date(NOW - 1).toISOString(),
+      },
+      ...override,
+    };
+    return {
+      source,
+      statuses: new Map<TeamProviderId, CliProviderStatus>([
+        ['anthropic', { ...source, capabilities: { ...source.capabilities, teamLaunch: false } }],
+        ['codex', provider('codex')],
+        ['opencode', provider('opencode')],
+      ]),
+      checks: [check('anthropic', 'ready'), check('codex', 'ready'), check('opencode', 'ready')],
+    };
+  }
+  it.each(['idle', 'loading', 'ready'] as const)(
+    'allows %s skip during a verified Anthropic catalog refresh without replacing completed checks',
+    (state) => {
+      const { source, statuses, checks } = refreshingAnthropicSelection();
+      expect(
+        canSkipProviderPreflight(state, [...statuses.keys()], statuses, new Map(), checks, NOW, [
+          source,
+        ])
+      ).toBe(true);
+      expect(checks.every((entry) => entry.status === 'ready')).toBe(true);
+    }
+  );
+  it.each([
+    { authenticated: false },
+    { supported: false },
+    { verificationState: 'error' as const },
+    { capabilities: { ...provider('anthropic').capabilities, teamLaunch: false } },
+    { statusCheckErrorCode: 'unavailable' as const },
+    { statusCheckErrorCode: 'runtime_missing' as const },
+    { modelCatalogRefreshState: 'error' as const },
+    { modelCatalogRefreshState: 'ready' as const },
+    { modelCatalog: { ...provider('anthropic').modelCatalog!, status: 'unavailable' as const } },
+  ])('does not bypass Anthropic failure or expiry without refresh: %j', (override) => {
+    const { source, statuses, checks } = refreshingAnthropicSelection(override);
+    for (const state of ['loading', 'ready'] as const)
+      expect(
+        canSkipProviderPreflight(state, [...statuses.keys()], statuses, new Map(), checks, NOW, [
+          source,
+        ])
+      ).toBe(false);
+  });
+  it.each(['pending', 'transient_error'] as const)(
+    'allows mixed Anthropic refresh plus %s/partial_response discovery, including a previously ready check',
+    (statusCheckOutcome) => {
+      for (const state of ['idle', 'loading', 'ready'] as const) {
+        const { source, statuses, checks } = refreshingAnthropicSelection();
+        statuses.set('codex', {
+          ...provider('codex'),
+          authenticated: false,
+          verificationState: 'unknown',
+          statusCheckOutcome,
+          statusCheckErrorCode: 'partial_response',
+          modelCatalog: null,
+          capabilities: { ...provider('codex').capabilities, teamLaunch: false },
+        });
+        for (const status of ['pending', 'ready'] as const) {
+          checks[1].status = status;
+          expect(
+            canSkipProviderPreflight(
+              state,
+              [...statuses.keys()],
+              statuses,
+              new Map(),
+              checks,
+              NOW,
+              [source]
+            )
+          ).toBe(true);
+        }
+      }
+    }
+  );
+  it.each([
+    { authenticated: false },
+    { verificationState: 'error' as const },
+    { statusCheckErrorCode: 'runtime_missing' as const },
+    { statusCheckErrorCode: 'unavailable' as const },
+    { modelCatalogRefreshState: 'error' as const },
+    {
+      statusCheckOutcome: 'pending' as const,
+      statusCheckErrorCode: 'partial_response' as const,
+      modelCatalogRefreshState: 'error' as const,
+    },
+  ])('blocks mixed secondary provider failure even with discovery loading: %j', (override) => {
+    const { source, statuses, checks } = refreshingAnthropicSelection();
+    statuses.set('codex', { ...provider('codex'), ...override });
+    expect(
+      canSkipProviderPreflight(
+        'loading',
+        [...statuses.keys()],
+        statuses,
+        new Map([['codex', true]]),
+        checks,
+        NOW,
+        [source]
+      )
+    ).toBe(false);
+  });
+  it.each(['pending', 'ready'] as const)(
+    'blocks settled stale secondary authority despite a %s check during Anthropic refresh',
+    (checkStatus) => {
+      const { source, statuses, checks } = refreshingAnthropicSelection();
+      statuses.get('codex')!.modelCatalog!.staleAt = new Date(NOW - 1).toISOString();
+      checks[1].status = checkStatus;
+      expect(
+        canSkipProviderPreflight(
+          'loading',
+          [...statuses.keys()],
+          statuses,
+          new Map(),
+          checks,
+          NOW,
+          [source]
+        )
+      ).toBe(false);
+    }
+  );
+  it('blocks a failed secondary model check even when its provider discovery is pending', () => {
+    const { source, statuses, checks } = refreshingAnthropicSelection();
+    statuses.get('codex')!.statusCheckOutcome = 'pending';
+    checks[1].status = 'failed';
+    expect(
+      canSkipProviderPreflight('loading', [...statuses.keys()], statuses, new Map(), checks, NOW, [
+        source,
+      ])
+    ).toBe(false);
+  });
+  it.each(['failed-model', 'other-expired', 'missing-source', 'failed-state'] as const)(
+    'does not bypass %s during Anthropic refresh',
+    (failure) => {
+      const { source, statuses, checks } = refreshingAnthropicSelection();
+      if (failure === 'failed-model') checks[0].status = 'failed';
+      if (failure === 'other-expired')
+        statuses.get('codex')!.modelCatalog!.staleAt = new Date(NOW - 1).toISOString();
+      expect(
+        canSkipProviderPreflight(
+          failure === 'failed-state' ? 'failed' : 'ready',
+          [...statuses.keys()],
+          statuses,
+          new Map(),
+          checks,
+          NOW,
+          failure === 'missing-source' ? [] : [source]
+        )
+      ).toBe(false);
+    }
+  );
+  it('keeps only the unfinished provider badge checking in a mixed preflight', () => {
+    expect(
+      getPendingProviderPreflightIds(
+        'loading',
+        ['anthropic', 'codex', 'opencode'],
+        [check('anthropic', 'ready'), check('codex', 'pending'), check('opencode', 'ready')]
+      )
+    ).toEqual(['codex']);
+  });
+  it('keeps shallow compatibility checking until its remaining deep work finishes', () => {
+    expect(
+      getPendingProviderPreflightIds(
+        'loading',
+        ['anthropic', 'codex', 'opencode'],
+        [
+          {
+            ...check('anthropic', 'checking'),
+            details: ['Selected model is available for launch.'],
+          },
+          check('opencode', 'failed'),
+        ]
+      )
+    ).toEqual(['anthropic', 'codex']);
+  });
+  it.each(['idle', 'loading'] as const)(
+    'allows skipping %s optional checks with a pending partial Codex discovery response',
+    (state) => {
+      const statuses = new Map<TeamProviderId, CliProviderStatus>([
+        ['anthropic', provider('anthropic')],
+        [
+          'codex',
+          {
+            ...provider('codex'),
+            authenticated: false,
+            verificationState: 'unknown',
+            statusCheckOutcome: 'pending',
+            statusCheckErrorCode: 'partial_response',
+            modelCatalog: null,
+          },
+        ],
+        ['opencode', provider('opencode')],
+      ]);
+      expect(
+        canSkipProviderPreflight(
+          state,
+          [...statuses.keys()],
+          statuses,
+          new Map(),
+          [check('anthropic', 'ready'), check('codex', 'pending'), check('opencode', 'ready')],
+          NOW
+        )
+      ).toBe(true);
+    }
+  );
+  it.each([
+    { authenticated: false },
+    { supported: false },
+    { verificationState: 'error' as const },
+    { statusCheckErrorCode: 'runtime_missing' as const },
+    { statusCheckErrorCode: 'unavailable' as const },
+  ])('never skips a known failure during background loading: %j', (override) => {
+    const statuses = new Map([['codex' as const, { ...provider('codex'), ...override }]]);
+    const loading = new Map([['codex' as const, true]]);
+    expect(canSkipPendingProviderDiscovery(['codex'], statuses, loading, NOW)).toBe(false);
+    expect(
+      canSkipOptionalProviderPreflight(
+        ['codex'],
+        statuses,
+        loading,
+        [check('codex', 'checking')],
+        NOW
+      )
+    ).toBe(false);
+  });
   it('allows initial skip when one selected provider is still loading', () => {
     expect(
       canSkipPendingProviderDiscovery(

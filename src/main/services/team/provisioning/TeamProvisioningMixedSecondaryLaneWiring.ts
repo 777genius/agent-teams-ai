@@ -114,6 +114,7 @@ export interface TeamProvisioningMixedSecondaryLaneWiringDeps<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 > {
   service: TeamProvisioningMixedSecondaryLaneWiringService<TRun>;
+  isCurrentTrackedRun(run: TRun): boolean;
   logger: MixedSecondaryLaunchQueuePorts<TRun>['logger'] &
     SingleMixedSecondaryRuntimeLaneStopPorts['logger'];
 }
@@ -165,6 +166,7 @@ export interface TeamProvisioningMixedSecondaryLaneWiringServiceHost<
 export interface TeamProvisioningMixedSecondaryLaneWiringServiceHostOptions<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 > {
+  isCurrentTrackedRun(run: TRun): boolean;
   logger: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>['logger'];
 }
 
@@ -203,6 +205,7 @@ export function createMixedSecondaryLaneLaunchFlowPorts<
   deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>
 ): MixedSecondaryLaneLaunchFlowPorts<TRun> {
   return {
+    isCurrentTrackedRun: deps.isCurrentTrackedRun,
     nowMs: () => Date.now(),
     randomUuid: () => randomUUID(),
     teamsBasePath: () => getTeamsBasePath(),
@@ -252,6 +255,7 @@ export function createMixedSecondaryLaunchQueuePorts<
   TRun extends TeamProvisioningMixedSecondaryLaneWiringRun,
 >(deps: TeamProvisioningMixedSecondaryLaneWiringDeps<TRun>): MixedSecondaryLaunchQueuePorts<TRun> {
   return {
+    isCurrentTrackedRun: deps.isCurrentTrackedRun,
     nowMs: () => Date.now(),
     randomUuid: () => randomUUID(),
     teamsBasePath: () => getTeamsBasePath(),
@@ -314,6 +318,7 @@ export function createTeamProvisioningMixedSecondaryLaneWiringDepsFromService<
   options: TeamProvisioningMixedSecondaryLaneWiringServiceHostOptions<TRun>
 ): TeamProvisioningMixedSecondaryLaneWiringDeps<TRun> {
   return {
+    isCurrentTrackedRun: options.isCurrentTrackedRun,
     service: {
       isStoppingSecondaryRuntimeTeam: (teamName) =>
         service.stoppingSecondaryRuntimeTeams.has(teamName),

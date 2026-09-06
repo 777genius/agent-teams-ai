@@ -62,6 +62,35 @@ function verifiedOpenCodeProvider(): CliProviderStatus {
 }
 
 describe('ClaudeMultimodelBridgeService runtime status mapping', () => {
+  test.each([true, false])(
+    'mints refresh provenance only from raw affirmative teamLaunch=%s, ignoring injected markers',
+    (teamLaunch) => {
+      const provider = mapRuntimeProviderStatus('anthropic', {
+        providerId: 'anthropic',
+        supported: true,
+        authenticated: true,
+        authMethod: 'claude.ai',
+        verificationState: 'verified',
+        statusCheckOutcome: 'authoritative',
+        capabilities: { teamLaunch, oneShot: true, extensions: {} },
+        canLoginFromUi: true,
+        selectedBackendId: null,
+        resolvedBackendId: null,
+        availableBackends: [],
+        externalRuntimeDiagnostics: [],
+        backend: null,
+        statusMessage: null,
+        detailMessage: null,
+        models: ['haiku'],
+        runtimeCapabilities: { modelCatalog: { dynamic: true } },
+        teamLaunchAuthorityRestriction: 'catalog-refresh',
+      });
+      expect(provider.capabilities.teamLaunch).toBe(false);
+      expect(provider.teamLaunchAuthorityRestriction).toBe(
+        teamLaunch ? 'catalog-refresh' : undefined
+      );
+    }
+  );
   test('maps Anthropic subscription rate limits from orchestrator runtime status', () => {
     const provider = mapRuntimeProviderStatus('anthropic', {
       supported: true,

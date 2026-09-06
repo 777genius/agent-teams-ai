@@ -21,14 +21,15 @@ export const ProviderPrepareReadyNotice = ({
 }): React.JSX.Element => {
   const { t } = useAppTranslation('team');
   const hasNotes = checks.some((check) => check.status === 'notes') || warnings.length > 0;
+  const heading = hasNotes ? t('launch.prepare.readyWithNotes') : t('launch.prepare.ready');
 
   return (
     <div>
       <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
         <CheckCircle2 className="size-3.5 shrink-0" />
-        <span>{hasNotes ? t('launch.prepare.readyWithNotes') : t('launch.prepare.ready')}</span>
+        <span>{heading}</span>
       </div>
-      {message ? (
+      {message?.trim() && message.trim() !== heading.trim() ? (
         <p className="mt-0.5 pl-5 text-[11px] text-[var(--color-text-muted)]">{message}</p>
       ) : null}
       <ProvisioningProviderStatusList

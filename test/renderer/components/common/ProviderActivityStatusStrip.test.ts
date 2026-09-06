@@ -2,6 +2,9 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
+import { getPendingProviderPreflightIds } from '@renderer/components/team/dialogs/optionalProviderPreflight';
+import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
+import { ProviderLaunchAuthorityNotice } from '@renderer/components/team/dialogs/ProviderLaunchAuthorityNotice';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -89,9 +92,91 @@ function renderStrip(
 
 describe('ProviderActivityStatusStrip', () => {
   it.each([
+    'refresh',
+    'auth',
+    'unsupported',
+    'error',
+    'catalog-error',
+    'unavailable',
+    'mixed',
+  ] as const)(
+    'presents authenticated Anthropic catalog refresh neutrally without hiding %s failures',
+    async (scenario) => {
+      const provider = createProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        authenticated: scenario !== 'auth',
+        supported: scenario !== 'unsupported',
+        verificationState: scenario === 'error' ? 'error' : 'verified',
+        statusCheckOutcome: 'authoritative',
+        statusCheckErrorCode: scenario === 'unavailable' ? 'unavailable' : undefined,
+        modelCatalogRefreshState: scenario === 'catalog-error' ? 'error' : 'loading',
+        models: ['claude-haiku-4-5'],
+      });
+      provider.capabilities.teamLaunch = false;
+      const providers =
+        scenario === 'mixed'
+          ? [
+              provider,
+              createProvider({
+                providerId: 'opencode',
+                displayName: 'OpenCode',
+                verificationState: 'error',
+              }),
+            ]
+          : [provider];
+      const guard = createLaunchGuard(
+        scenario === 'mixed' ? ['anthropic', 'opencode'] : ['anthropic'],
+        new Map(providers.map((entry) => [entry.providerId, entry]))
+      );
+      expect(guard.blocked(true)).toBe(true);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(ProviderActivityStatusStrip, {
+              cliStatus: createMultimodelStatus(providers),
+              cliStatusLoading: false,
+              cliProviderStatusLoading: {},
+              multimodelEnabled: true,
+              showReadyProviders: true,
+            }),
+            React.createElement(ProviderLaunchAuthorityNotice, {
+              action: 'launch',
+              blockers: guard.blockers(true),
+              id: 'provider-refresh-notice',
+              onOpenProviderSettings: vi.fn(),
+            })
+          )
+        );
+      });
+      if (scenario === 'refresh') {
+        expect(host.textContent).toContain('Checking...');
+        expect(host.querySelector('#provider-refresh-notice')?.getAttribute('role')).toBe('status');
+        expect(host.textContent).not.toContain('Needs attention');
+        expect(host.querySelector('[role="alert"]')).toBeNull();
+      } else {
+        expect(host.textContent).toContain('Needs attention');
+        expect(host.querySelector('#provider-refresh-notice')?.getAttribute('role')).toBe('alert');
+        if (scenario === 'mixed') {
+          expect(host.querySelector('#provider-refresh-notice')?.textContent).toMatch(
+            /Anthropic.*checking/i
+          );
+        }
+      }
+      await act(async () => root.unmount());
+    }
+  );
+
+  it.each([
     ['codex', true],
     ['codex', false],
     ['opencode', true],
+    ['anthropic', true],
   ] as const)(
     'shows Ready only with complete launch authority (%s teamLaunch=%s)',
     async (providerId, teamLaunch) => {
@@ -138,15 +223,44 @@ describe('ProviderActivityStatusStrip', () => {
             providerId === 'opencode'
               ? { ...provider, modelCatalogRefreshState: 'loading' }
               : provider,
+            ...(providerId !== 'codex'
+              ? [
+                  createProvider({
+                    providerId: 'codex',
+                    displayName: 'Codex',
+                    statusCheckOutcome: 'pending',
+                    statusCheckErrorCode: 'partial_response',
+                    verificationState: 'unknown',
+                  }),
+                ]
+              : []),
           ]),
           providerStatusOverride: providerId === 'opencode' ? provider : null,
           cliProviderStatusLoading: providerId === 'opencode' ? { opencode: true } : {},
           showReadyProviders: true,
           readyStatusText: 'Ready',
+          forceLoadingProviderIds: getPendingProviderPreflightIds(
+            'loading',
+            providerId === 'codex' ? [providerId] : [providerId, 'codex'],
+            [
+              { providerId, status: 'ready', details: [] },
+              ...(providerId !== 'codex'
+                ? [{ providerId: 'codex' as const, status: 'pending' as const, details: [] }]
+                : []),
+            ]
+          ),
         });
       });
       expect(host.textContent?.includes('Ready')).toBe(teamLaunch);
       if (!teamLaunch) expect(host.textContent).toContain('Needs attention');
+      if (providerId !== 'codex') {
+        expect(
+          host.querySelector(`[data-testid="provider-activity-status-${providerId}"]`)?.textContent
+        ).toContain('Ready');
+        expect(
+          host.querySelector('[data-testid="provider-activity-status-codex"]')?.textContent
+        ).toContain('Checking...');
+      }
       await act(async () => root.unmount());
     }
   );
@@ -214,6 +328,31 @@ describe('ProviderActivityStatusStrip', () => {
     expect(host.textContent).toContain('OpenCode');
     expect(host.textContent).toContain('Ready');
     expect(host.textContent).not.toContain('Checking...');
+    expect(host.textContent).not.toContain('Needs attention');
+    await act(async () => root.unmount());
+  });
+
+  it('keeps a selected provider neutral while a detailed preflight is still running', async () => {
+    const provider = createProvider({
+      providerId: 'opencode',
+      displayName: 'OpenCode',
+      verificationState: 'error',
+      statusMessage: 'Provider launch status could not be verified.',
+    });
+    const host = document.createElement('div');
+    let root!: ReturnType<typeof createRoot>;
+
+    await act(async () => {
+      root = renderStrip(host, {
+        cliStatus: createMultimodelStatus([provider]),
+        providerStatusOverride: provider,
+        forceLoadingProviderIds: ['opencode'],
+        showReadyProviders: true,
+      });
+    });
+
+    expect(host.textContent).toContain('OpenCode');
+    expect(host.textContent).toContain('Checking...');
     expect(host.textContent).not.toContain('Needs attention');
     await act(async () => root.unmount());
   });

@@ -109,6 +109,7 @@ import { type MemberActivityFilter, type MemberDetailTab } from './members/membe
 import { deriveMetrics } from './context-metric-alias';
 import { showTeamDeleteError } from './teamDeleteErrorDialog';
 import { resolvePinnedTeamActionTop } from './teamDetailLayout';
+import { TeamStatusBadge } from './TeamStatusBadge';
 import { useTeamStopControl } from './useTeamStopControl';
 
 import type { AddMemberEntry } from './dialogs/AddMemberDialog';
@@ -2881,16 +2882,12 @@ export const TeamDetailView = memo(function TeamDetailView({
                     <h2 className="min-w-0 truncate text-base font-semibold text-[var(--color-text)]">
                       {data.config.name}
                     </h2>
-                    {data.isAlive && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
-                        <span className="size-1.5 rounded-full bg-emerald-400" />
-                        {t('detail.status.running')}
-                      </span>
-                    )}
-                    {!data.isAlive && isTeamProvisioning && (
-                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-medium text-yellow-400">
-                        <span className="size-1.5 animate-pulse rounded-full bg-yellow-400" />
-                        {t('detail.status.launching')}
+                    {(data.isAlive || isTeamProvisioning) && (
+                      <span className="shrink-0">
+                        <TeamStatusBadge
+                          teamName={teamName}
+                          status={isTeamProvisioning ? 'provisioning' : 'idle'}
+                        />
                       </span>
                     )}
                   </div>

@@ -205,7 +205,7 @@ function getProviderStatus(
 function isCodexCatalogLoadingSnapshot(provider: CliProviderStatus | undefined): boolean {
   return (
     provider?.providerId === 'codex' &&
-    provider.modelCatalog == null &&
+    provider.modelCatalog?.status !== 'ready' &&
     provider.modelCatalogRefreshState === 'loading' &&
     provider.runtimeCapabilities?.modelCatalog?.dynamic === true
   );
@@ -380,6 +380,7 @@ function areProviderStatusContentEqual(a: CliProviderStatus, b: CliProviderStatu
     a.verificationState === b.verificationState &&
     (a.statusCheckOutcome ?? null) === (b.statusCheckOutcome ?? null) &&
     (a.statusCheckErrorCode ?? null) === (b.statusCheckErrorCode ?? null) &&
+    a.teamLaunchAuthorityRestriction === b.teamLaunchAuthorityRestriction &&
     (a.modelVerificationState ?? null) === (b.modelVerificationState ?? null) &&
     (a.modelCatalogRefreshState ?? null) === (b.modelCatalogRefreshState ?? null) &&
     (a.statusMessage ?? null) === (b.statusMessage ?? null) &&
@@ -1290,7 +1291,6 @@ export const createCliInstallerSlice: StateCreator<AppState, [], [], CliInstalle
           responseProviderStatus?.statusCheckErrorCode === 'partial_response' &&
           responseProviderStatus.statusCheckOutcome !== 'model_only';
         const shouldRetryTransientTimeout =
-          providerId !== 'opencode' &&
           !verifyModels &&
           responseProviderStatus?.statusCheckOutcome === 'transient_error' &&
           responseProviderStatus.statusCheckErrorCode === 'timeout';

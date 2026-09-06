@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer } from 'react';
 
 import {
   isCodexAccountSnapshotPending,
@@ -32,7 +32,7 @@ interface ConservativeClockSnapshot {
   now: number;
 }
 
-/** Starts fail-closed, then publishes clock reads only from timer callbacks. */
+/** Revalidates each source before paint without reading the clock during render. */
 function useConservativeNow(source: unknown): readonly [number, (now: number) => void] {
   const [snapshot, publishSnapshot] = useReducer(
     (_current: ConservativeClockSnapshot, next: ConservativeClockSnapshot) => next,
@@ -40,9 +40,8 @@ function useConservativeNow(source: unknown): readonly [number, (now: number) =>
   );
   const publishNow = useCallback((now: number) => publishSnapshot({ source, now }), [source]);
 
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => publishNow(Date.now()), 0);
-    return () => window.clearTimeout(timeoutId);
+  useLayoutEffect(() => {
+    publishNow(Date.now());
   }, [publishNow]);
 
   return [Object.is(snapshot.source, source) ? snapshot.now : Number.POSITIVE_INFINITY, publishNow];

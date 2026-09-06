@@ -1,4 +1,8 @@
 import { hasEffectiveProviderLaunchAuthority } from '@renderer/utils/providerReadiness';
+import {
+  hasAnthropicCatalogRefreshLaunchSupport,
+  isAuthenticatedAnthropicCatalogRefresh,
+} from '@shared/utils/providerStatusAuthority';
 
 import { runProviderPrepareDiagnostics } from './providerPrepareDiagnostics';
 
@@ -9,6 +13,30 @@ import type { CliProviderStatus, TeamProviderId } from '@shared/types';
 
 type OptionalProviderPreflightState = 'idle' | 'loading' | 'ready' | 'failed';
 
+/** Aggregate progress must not restart badges for providers whose own work settled. */
+export function getPendingProviderPreflightIds(
+  state: OptionalProviderPreflightState,
+  providerIds: readonly TeamProviderId[],
+  checks: readonly ProvisioningProviderCheck[]
+): TeamProviderId[] {
+  if (state !== 'idle' && state !== 'loading') return [];
+  return providerIds.filter((providerId) => {
+    const check = checks.find((entry) => entry.providerId === providerId);
+    return !check || check.status === 'pending' || check.status === 'checking';
+  });
+}
+
+function hasKnownProviderFailure(status: CliProviderStatus | null | undefined): boolean {
+  return Boolean(
+    status &&
+    (status.statusCheckErrorCode === 'runtime_missing' ||
+      status.statusCheckErrorCode === 'unavailable' ||
+      status.verificationState === 'error' ||
+      (status.statusCheckOutcome === 'authoritative' &&
+        (!status.supported || !status.authenticated || !status.capabilities.teamLaunch)))
+  );
+}
+
 function isProviderAuthorityStillResolving(
   providerId: TeamProviderId,
   status: CliProviderStatus | null | undefined,
@@ -16,17 +44,20 @@ function isProviderAuthorityStillResolving(
 ): boolean {
   return (
     loading.get(providerId) === true ||
+    status?.statusCheckOutcome === 'pending' ||
     status?.statusCheckOutcome === 'model_only' ||
     status?.modelCatalogRefreshState === 'loading' ||
-    isProviderAuthorityRetryableTimeout(status)
+    isProviderAuthorityRetryableDiscovery(status)
   );
 }
 
-function isProviderAuthorityRetryableTimeout(
+function isProviderAuthorityRetryableDiscovery(
   status: CliProviderStatus | null | undefined
 ): boolean {
   return (
-    status?.statusCheckOutcome === 'transient_error' && status.statusCheckErrorCode === 'timeout'
+    status?.statusCheckOutcome === 'transient_error' &&
+    (status.statusCheckErrorCode === 'timeout' ||
+      status.statusCheckErrorCode === 'partial_response')
   );
 }
 
@@ -42,7 +73,12 @@ export function canSkipPendingProviderDiscovery(
   let discoveryPending = false;
   for (const providerId of providerIds) {
     const status = statuses.get(providerId);
-    if (loading.get(providerId) === true || isProviderAuthorityRetryableTimeout(status)) {
+    if (hasKnownProviderFailure(status)) return false;
+    if (
+      loading.get(providerId) === true ||
+      status?.statusCheckOutcome === 'pending' ||
+      isProviderAuthorityRetryableDiscovery(status)
+    ) {
       discoveryPending = true;
       continue;
     }
@@ -67,6 +103,7 @@ export function canSkipOptionalProviderPreflight(
   for (const providerId of providerIds) {
     const check = checks.find((entry) => entry.providerId === providerId);
     if (!check || check.status === 'failed') return false;
+    if (hasKnownProviderFailure(statuses.get(providerId))) return false;
     if (check.status === 'ready') continue;
     if (check.status === 'pending' || check.status === 'checking') {
       optionalPending = true;
@@ -90,8 +127,55 @@ export function canSkipProviderPreflight(
   statuses: ReadonlyMap<TeamProviderId, CliProviderStatus | null | undefined>,
   loading: ReadonlyMap<TeamProviderId, boolean>,
   checks: readonly ProvisioningProviderCheck[],
-  now: number = Date.now()
+  now: number = Date.now(),
+  sourceProviders: readonly CliProviderStatus[] = []
 ): boolean {
+  const source = sourceProviders.find((provider) => provider.providerId === 'anthropic');
+  const effective = statuses.get('anthropic');
+  // Main/store may already have gated teamLaunch. The app-derived restriction
+  // preserves affirmative support from this snapshot, never a previous one.
+  const refreshingAnthropic =
+    state !== 'failed' &&
+    providerIds.includes('anthropic') &&
+    Boolean(source?.modelCatalog && effective?.modelCatalog) &&
+    hasAnthropicCatalogRefreshLaunchSupport(source) &&
+    isAuthenticatedAnthropicCatalogRefresh(effective);
+  if (refreshingAnthropic) {
+    if (checks.some((check) => providerIds.includes(check.providerId) && check.status === 'failed'))
+      return false;
+    if (
+      providerIds.some((id) => {
+        if (id === 'anthropic') return false;
+        const status = statuses.get(id);
+        // Completed checks cannot hide stale authority, but active discovery is
+        // still optional. Keep catalog errors terminal even during a retry.
+        return (
+          status?.modelCatalogRefreshState === 'error' ||
+          (!hasEffectiveProviderLaunchAuthority(status, now) &&
+            !canSkipPendingProviderDiscovery([id], statuses, loading, now))
+        );
+      })
+    )
+      return false;
+    const refreshStatuses = new Map(statuses).set('anthropic', {
+      ...source,
+      capabilities: { ...source.capabilities, teamLaunch: true },
+    });
+    const refreshLoading = new Map(loading).set('anthropic', true);
+    if (state === 'idle')
+      return canSkipPendingProviderDiscovery(providerIds, refreshStatuses, refreshLoading, now);
+    // A passive refresh does not invalidate or repeat the completed deep check.
+    // Treat it as pending only for this optional-skip decision.
+    return canSkipOptionalProviderPreflight(
+      providerIds,
+      refreshStatuses,
+      refreshLoading,
+      checks.map((check) =>
+        check.providerId === 'anthropic' ? { ...check, status: 'checking' } : check
+      ),
+      now
+    );
+  }
   if (state === 'idle') {
     return canSkipPendingProviderDiscovery(providerIds, statuses, loading, now);
   }

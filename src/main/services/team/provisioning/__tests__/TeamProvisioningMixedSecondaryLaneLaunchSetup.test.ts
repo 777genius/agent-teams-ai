@@ -83,6 +83,7 @@ function createPorts(
     nowMs: vi.fn<() => number>(() => 1000),
     randomUuid: vi.fn<() => string>(() => 'generated-run-id'),
     teamsBasePath: vi.fn<() => string>(() => '/teams'),
+    isCurrentTrackedRun: vi.fn(() => true),
     isStoppingSecondaryRuntimeTeam: vi.fn<(teamName: string) => boolean>(() => false),
     clearOpenCodeRuntimeLaneStorage: vi.fn<
       MixedSecondaryLaneLaunchSetupPorts<TestRun>['clearOpenCodeRuntimeLaneStorage']

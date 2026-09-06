@@ -1751,11 +1751,10 @@ function wireFileWatcherEvents(context: ServiceContext): void {
   };
   context.fileWatcher.on('team-change', teamChangeHandler);
 
-  // Scope team-root/task file watching to alive + UI-engaged teams, and scope
-  // inbox watching to live teams only. Idle historical teams cannot produce
-  // immediate runtime inbox activity, so their inbox files do not need live fd
-  // watchers; when a team launches, target reconciliation backfills existing
-  // inbox files before live delivery resumes.
+  // Scope artifacts and inboxes to alive + recently engaged teams. Provisioning
+  // can assign work before final readiness, so its engaged window must include
+  // inbox delivery too. The bounded TTL excludes historical idle teams;
+  // reconciliation backfills assignments written before watcher readiness.
   setAliveTeamsProvider(() => teamProvisioningService.getAliveTeamNames());
   setTeamWatchScopeChangeListener(() => {
     void context.fileWatcher.refreshTeamWatchScope();
@@ -1866,15 +1865,17 @@ function reconfigureLocalContextForClaudeRoot(): void {
 const announcementsLifecycle = new AnnouncementsLifecycle();
 
 async function initializeServices(): Promise<void> {
-  void announcementsLifecycle.initialize({
-    userDataPath: app.getPath('userData'),
-    profile: earlyAnnouncementsProfile,
-    production: app.isPackaged,
-    isolatedProfile:
-      !!earlyElectronDevPathOverrideResult.userDataDir &&
-      !!earlyElectronDevPathOverrideResult.claudeRoot,
-    sourceOverride: process.env.AGENT_TEAMS_ANNOUNCEMENTS_FEED_URL,
-  }).catch((error: unknown) => logger.warn('Announcements initialization unavailable', error));
+  void announcementsLifecycle
+    .initialize({
+      userDataPath: app.getPath('userData'),
+      profile: earlyAnnouncementsProfile,
+      production: app.isPackaged,
+      isolatedProfile:
+        !!earlyElectronDevPathOverrideResult.userDataDir &&
+        !!earlyElectronDevPathOverrideResult.claudeRoot,
+      sourceOverride: process.env.AGENT_TEAMS_ANNOUNCEMENTS_FEED_URL,
+    })
+    .catch((error: unknown) => logger.warn('Announcements initialization unavailable', error));
   logger.info('Initializing services...');
   publishStartupStatus({
     phase: 'services',

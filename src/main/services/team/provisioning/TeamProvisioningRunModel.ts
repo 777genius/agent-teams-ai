@@ -96,6 +96,8 @@ export interface ProvisioningRun {
   effectiveMembers: TeamCreateRequest['members'];
   launchIdentity: ProviderModelLaunchIdentity | null;
   mixedSecondaryLanes: MixedSecondaryRuntimeLaneState[];
+  /** Roster-only write barrier; does not wait for secondary runtime startup. */
+  mixedSecondaryRosterPreparation?: Promise<boolean>;
   /**
    * OpenCode secondary lanes share bridge state files. Launch them sequentially
    * per team run to avoid file-lock contention while keeping launch non-blocking.
@@ -210,6 +212,7 @@ export interface ProvisioningRun {
   detectedSessionId: string | null;
   /** Lead process activity: 'active' during turn processing, 'idle' waiting for input, 'offline' after exit. */
   leadActivityState: LeadActivityState;
+  leadActivityPublished?: boolean;
   /** Whether an auth failure retry was already attempted for this run. */
   authFailureRetried: boolean;
   /** Set to true while auth-failure respawn is in progress to prevent duplicate handling. */

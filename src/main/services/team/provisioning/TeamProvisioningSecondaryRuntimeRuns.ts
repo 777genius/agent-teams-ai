@@ -304,6 +304,29 @@ export function createSecondaryRuntimeRunStore(input: {
   };
 }
 
+export function getTrackedOpenCodeBootstrapWakeRunId(
+  input: { teamName: string; laneId: string; runId: string },
+  ports: {
+    runTracking: { resolveDeliverableTrackedRuntimeRunId(teamName: string): string | null };
+    runs: {
+      get(
+        runId: string
+      ): { mixedSecondaryLanes?: readonly { laneId: string; runId: string | null }[] } | undefined;
+    };
+  }
+): string | null {
+  const trackedRunId = ports.runTracking.resolveDeliverableTrackedRuntimeRunId(input.teamName);
+  if (!trackedRunId) return null;
+  if (input.laneId === 'primary') return trackedRunId === input.runId ? trackedRunId : null;
+  return ports.runs
+    .get(trackedRunId)
+    ?.mixedSecondaryLanes?.some(
+      (lane) => lane.laneId === input.laneId && lane.runId === input.runId
+    )
+    ? trackedRunId
+    : null;
+}
+
 export function getCurrentOpenCodeRuntimeRunId(input: {
   teamName: string;
   laneId: string;

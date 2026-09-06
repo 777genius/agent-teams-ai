@@ -88,6 +88,7 @@ const refreshOpenCodeCatalog = vi.fn();
 let openCodeCatalogHookInputs: {
   refreshRevision?: number;
   enabled?: boolean;
+  statusChecking?: boolean;
 }[] = [];
 const codexAccountHookState = {
   snapshot: null as CodexAccountSnapshotDto | null,
@@ -1790,7 +1791,10 @@ describe('CLI status visibility during completed install state', () => {
       root.render(React.createElement(CliStatusBanner));
       await Promise.resolve();
     });
-    expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(false);
+    expect(openCodeCatalogHookInputs.at(-1)).toMatchObject({
+      enabled: true,
+      statusChecking: true,
+    });
 
     storeState.cliStatusLoading = false;
     storeState.cliProviderStatusLoading = { opencode: true };
@@ -1798,14 +1802,20 @@ describe('CLI status visibility during completed install state', () => {
       root.render(React.createElement(CliStatusBanner));
       await Promise.resolve();
     });
-    expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(false);
+    expect(openCodeCatalogHookInputs.at(-1)).toMatchObject({
+      enabled: true,
+      statusChecking: true,
+    });
 
     storeState.cliProviderStatusLoading = {};
     await act(async () => {
       root.render(React.createElement(CliStatusBanner));
       await Promise.resolve();
     });
-    expect(openCodeCatalogHookInputs.at(-1)?.enabled).toBe(true);
+    expect(openCodeCatalogHookInputs.at(-1)).toMatchObject({
+      enabled: true,
+      statusChecking: false,
+    });
 
     await act(async () => {
       root.unmount();

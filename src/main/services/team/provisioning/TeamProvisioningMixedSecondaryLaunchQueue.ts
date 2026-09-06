@@ -33,6 +33,7 @@ export interface MixedSecondaryLaunchQueuePorts<TRun extends MixedSecondaryLaunc
   nowMs(): number;
   randomUuid(): string;
   teamsBasePath(): string;
+  isCurrentTrackedRun(run: TRun): boolean;
   clearOpenCodeRuntimeLaneStorage(input: {
     teamsBasePath: string;
     teamName: string;
@@ -102,10 +103,12 @@ export function launchQueuedMixedSecondaryLaneInBackground<
   lane.queuedAtMs = lane.queuedAtMs ?? ports.nowMs();
   lane.launchScheduled = true;
   const laneRunId = (lane.runId ??= ports.randomUuid());
+  const shouldAbortLaunch = (): boolean =>
+    run.cancelRequested || run.processKilled || !ports.isCurrentTrackedRun(run);
 
   const launch = async () => {
     try {
-      if (run.cancelRequested || run.processKilled) {
+      if (shouldAbortLaunch()) {
         // This queued lane has not acquired runtime storage or registry ownership.
         if (lane.runId === laneRunId) lane.state = 'finished';
         return;
@@ -129,11 +132,7 @@ export function launchQueuedMixedSecondaryLaneInBackground<
       }
       lane.state = 'launching';
       await ports.launchSingleMixedSecondaryLane(run, lane);
-      if (
-        shouldRetryTransientOpenCodeSharedRuntimeFailure(lane.result) &&
-        !run.cancelRequested &&
-        !run.processKilled
-      ) {
+      if (shouldRetryTransientOpenCodeSharedRuntimeFailure(lane.result) && !shouldAbortLaunch()) {
         // The pre-launch gate on the failed result proves the state-changing
         // bridge command never ran, so one in-place relaunch cannot duplicate a
         // host or a session.
@@ -148,7 +147,7 @@ export function launchQueuedMixedSecondaryLaneInBackground<
         // The backoff is a window in which the lane can change hands (a manual
         // lane retry or a relaunch assigns a new lane run id). Only the run that
         // observed the timeout may relaunch, mirroring the cancelled-lane fence.
-        if (!run.cancelRequested && !run.processKilled && lane.runId === laneRunId) {
+        if (!shouldAbortLaunch() && lane.runId === laneRunId) {
           lane.state = 'launching';
           lane.result = null;
           await ports.launchSingleMixedSecondaryLane(run, lane);
@@ -158,7 +157,7 @@ export function launchQueuedMixedSecondaryLaneInBackground<
         trackOpenCodeSharedRuntimeFailureFromResult(run, laneCwd, lane.result, ports.nowMs());
       }
     } catch (error) {
-      if (run.cancelRequested || run.processKilled) {
+      if (shouldAbortLaunch()) {
         await clearQueuedMixedSecondaryLaneStorage(run, lane, laneRunId, ports);
         if (lane.runId === laneRunId) lane.state = 'finished';
         return;
@@ -209,7 +208,9 @@ export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSeconda
   ports: MixedSecondaryLaunchQueuePorts<TRun>,
   options: { waitForCompletion?: boolean } = {}
 ): Promise<PersistedTeamLaunchSnapshot | null> {
-  if (run.cancelRequested || run.processKilled) {
+  const shouldAbortLaunch = (): boolean =>
+    run.cancelRequested || run.processKilled || !ports.isCurrentTrackedRun(run);
+  if (shouldAbortLaunch()) {
     return ports.readLaunchState(run.teamName).catch(() => null);
   }
 
@@ -246,6 +247,7 @@ export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSeconda
       };
       lane.diagnostics = lane.result.diagnostics;
       await ports.publishMixedSecondaryLaneStatusChange(run, lane);
+      if (shouldAbortLaunch()) return ports.readLaunchState(run.teamName).catch(() => null);
     }
     return ports.persistLaunchStateSnapshot(run, 'finished');
   }
@@ -256,7 +258,7 @@ export async function launchMixedSecondaryLaneIfNeeded<TRun extends MixedSeconda
 
   if (options.waitForCompletion) {
     await run.mixedSecondaryLaneLaunchQueue;
-    if (run.cancelRequested || run.processKilled) {
+    if (shouldAbortLaunch()) {
       return ports.readLaunchState(run.teamName).catch(() => null);
     }
   }

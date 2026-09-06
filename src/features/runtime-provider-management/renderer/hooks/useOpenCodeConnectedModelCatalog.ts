@@ -43,6 +43,7 @@ interface CatalogState {
 /** Dashboard display only: connected sources, never a full model inventory or launch proof. */
 export function useOpenCodeConnectedModelCatalog(input: {
   enabled: boolean;
+  statusChecking?: boolean;
   projectPath: string | null;
   passiveProviderStatus: CliProviderStatus | null;
   refreshRevision?: number;
@@ -59,7 +60,17 @@ export function useOpenCodeConnectedModelCatalog(input: {
   const stateRef = useRef(state);
   stateRef.current = state;
   const sequence = useRef(0);
+  const statusChecking = useRef(input.statusChecking === true);
+  const statusWaiter = useRef<(() => void) | null>(null);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
+
+  useEffect(() => {
+    statusChecking.current = input.statusChecking === true;
+    if (input.statusChecking !== true) {
+      statusWaiter.current?.();
+      statusWaiter.current = null;
+    }
+  }, [input.statusChecking]);
 
   useEffect(() => {
     if (!input.enabled) return;
@@ -72,6 +83,16 @@ export function useOpenCodeConnectedModelCatalog(input: {
     const activeGroups = new Set<string>();
     let cancelled = false;
     const current = () => !cancelled && request === sequence.current;
+    // One sequential catalog lane: status checks pause its next read without
+    // aborting the current source or discarding already collected models.
+    const waitForStatus = async () => {
+      while (current() && statusChecking.current) {
+        await new Promise<void>((resolve) => {
+          statusWaiter.current = resolve;
+        });
+      }
+      return current();
+    };
     const retainedModels = stateRef.current.scope === scope ? stateRef.current.models : [];
     setState({ scope, loading: true, models: retainedModels, errors: [] });
     void (async () => {
@@ -82,6 +103,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
       let cursor: string | null = null;
       let total: number | null = null;
       for (let page = 0; page < 20; page += 1) {
+        if (!(await waitForStatus())) return;
         const response = await api.runtimeProviderManagement.loadProviderDirectory({
           runtimeId: 'opencode',
           projectPath: input.projectPath,
@@ -122,6 +144,7 @@ export function useOpenCodeConnectedModelCatalog(input: {
       let sourceIndex = 0;
       const loadNext = async () => {
         while (current() && sourceIndex < sources.length) {
+          if (!(await waitForStatus())) return;
           const source = sources[sourceIndex++];
           const sourceRequestGroup = `${requestGroupId}:${source}`;
           activeGroups.add(sourceRequestGroup);
@@ -184,6 +207,8 @@ export function useOpenCodeConnectedModelCatalog(input: {
       });
     return () => {
       cancelled = true;
+      statusWaiter.current?.();
+      statusWaiter.current = null;
       if (isElectronMode()) {
         for (const group of activeGroups)
           void api.runtimeProviderManagement
@@ -197,9 +222,8 @@ export function useOpenCodeConnectedModelCatalog(input: {
     const passive = input.passiveProviderStatus;
     const hasScopedState = state.scope === scope;
     if (!passive || (!input.enabled && !hasScopedState)) return passive;
-    // A provider re-check temporarily pauses catalog I/O to avoid contending on
-    // the OpenCode profile. Keep rendering the last-good catalog for this scope
-    // while that pause is active instead of flashing an empty/loading summary.
+    // Keep the last-good catalog for this scope while reads or status checks
+    // are in flight. Catalog discovery never grants launch authority.
     const active = hasScopedState ? state : { loading: true, models: [], errors: [] };
     const models = [
       ...new Map(

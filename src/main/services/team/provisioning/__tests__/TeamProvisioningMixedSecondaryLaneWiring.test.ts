@@ -123,6 +123,7 @@ function createDeps(
 ): TeamProvisioningMixedSecondaryLaneWiringDeps<TestRun> {
   return {
     service: createService(overrides),
+    isCurrentTrackedRun: vi.fn(() => true),
     logger: {
       warn: vi.fn(),
     },
@@ -137,6 +138,8 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
     const lane = createLane();
     const launchResult = createLaunchResult();
 
+    expect(ports.isCurrentTrackedRun(run)).toBe(true);
+    expect(deps.isCurrentTrackedRun).toHaveBeenCalledWith(run);
     expect(ports.isStoppingSecondaryRuntimeTeam('atlas-hq')).toBe(false);
     ports.deleteSecondaryRuntimeRun('atlas-hq', lane.laneId);
     await ports.publishMixedSecondaryLaneStatusChange(run, lane);
@@ -309,14 +312,18 @@ describe('TeamProvisioningMixedSecondaryLaneWiring', () => {
       readPersistedTeamProjectPath: service.readPersistedTeamProjectPath,
       writeLaunchStateSnapshot: service.writeLaunchStateSnapshot,
     } satisfies TeamProvisioningMixedSecondaryLaneWiringServiceHost<TestRun>;
+    const isCurrentTrackedRun = vi.fn(() => false);
     const deps = createTeamProvisioningMixedSecondaryLaneWiringDepsFromService(host, {
       logger,
+      isCurrentTrackedRun,
     });
     const run = createRun();
     const lane = createLane();
     const snapshot = createSnapshot();
 
     expect(deps.logger).toBe(logger);
+    expect(deps.isCurrentTrackedRun(run)).toBe(false);
+    expect(isCurrentTrackedRun).toHaveBeenCalledWith(run);
     expect(deps.service.isStoppingSecondaryRuntimeTeam('atlas-hq')).toBe(true);
     deps.service.deleteSecondaryRuntimeRun('atlas-hq', lane.laneId);
     await deps.service.publishMixedSecondaryLaneStatusChange(run, lane);

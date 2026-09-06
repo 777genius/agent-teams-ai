@@ -90,6 +90,8 @@ export interface TeamProvisioningStreamRun {
   provisioningOutputParts: string[];
   lastRetryAt: number;
   apiErrorWarningEmitted: boolean;
+  mixedSecondaryLanes?: readonly unknown[];
+  mixedSecondaryRosterPreparation?: Promise<boolean>;
 }
 
 export interface TeamProvisioningStreamEventPorts<TRun extends TeamProvisioningStreamRun> {
@@ -162,6 +164,7 @@ export interface TeamProvisioningStreamEventPorts<TRun extends TeamProvisioningS
   injectGeminiPostLaunchHydration(run: TRun): Promise<void>;
   completeProvisioningFromSuccessfulResult(run: TRun): void;
   handleControlRequest(run: TRun, msg: Record<string, unknown>): void;
+  launchMixedSecondaryLaneIfNeeded(run: TRun): Promise<unknown>;
   handleProvisioningTurnComplete(run: TRun): Promise<void>;
   cleanupRun(run: TRun): void;
   killTeamProcess(child: ChildProcess | null | undefined): void;
@@ -573,6 +576,15 @@ export function handleDeterministicBootstrapEvent<TRun extends TeamProvisioningS
         );
       }
     }
+    if (!run.provisioningComplete && (run.mixedSecondaryLanes?.length ?? 0) > 0) {
+      void ports.launchMixedSecondaryLaneIfNeeded(run).catch((error: unknown) => {
+        logger.error(
+          `[${run.teamName}] mixed secondary launch after primary bootstrap failed: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        );
+      });
+    }
     if (!run.requiresFirstRealTurnSuccess && !run.provisioningComplete && !run.cancelRequested) {
       void ports.handleProvisioningTurnComplete(run).catch((error: unknown) => {
         logger.error(
@@ -763,6 +775,24 @@ export function handleTeamProvisioningStreamJsonMessage<TRun extends TeamProvisi
           );
         }
       }
+    }
+
+    const activityText = stripAgentBlocks(textParts.join('\n')).trim();
+    const hasObservedActivity =
+      (activityText.length > 0 && !isTeamInternalControlMessageText(activityText)) ||
+      content.some(
+        (block) =>
+          block.type === 'tool_use' &&
+          typeof block.name === 'string' &&
+          typeof block.id === 'string'
+      );
+    if (
+      hasObservedActivity &&
+      !run.processKilled &&
+      !run.cancelRequested &&
+      run.progress.state !== 'failed'
+    ) {
+      ports.setLeadActivity(run, 'active');
     }
 
     for (const block of content) {

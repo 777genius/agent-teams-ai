@@ -32,6 +32,7 @@ interface ProviderActivityStatusStripProps {
   readonly multimodelEnabled: boolean;
   readonly codexSnapshotPending?: boolean;
   readonly openCodePreparationEvidence?: OpenCodeScopedPreparationEvidence;
+  readonly forceLoadingProviderIds?: readonly CliProviderId[];
   readonly providerIds?: readonly CliProviderId[];
   readonly className?: string;
   readonly label?: string | null;
@@ -86,6 +87,7 @@ function useProviderActivityDisplay({
   multimodelEnabled,
   codexSnapshotPending = false,
   openCodePreparationEvidence,
+  forceLoadingProviderIds,
   providerIds,
   showReadyProviders,
 }: Pick<
@@ -98,6 +100,7 @@ function useProviderActivityDisplay({
   | 'multimodelEnabled'
   | 'codexSnapshotPending'
   | 'openCodePreparationEvidence'
+  | 'forceLoadingProviderIds'
   | 'providerIds'
   | 'showReadyProviders'
 >): {
@@ -118,6 +121,10 @@ function useProviderActivityDisplay({
     () => (providerIds ? new Set<CliProviderId>(providerIds) : null),
     [providerIds]
   );
+  const forcedLoadingProviderIdSet = useMemo(
+    () => new Set<CliProviderId>(forceLoadingProviderIds ?? []),
+    [forceLoadingProviderIds]
+  );
   const sourceProviderMap = useMemo(
     () =>
       new Map((sourceStatus?.providers ?? []).map((provider) => [provider.providerId, provider])),
@@ -134,6 +141,7 @@ function useProviderActivityDisplay({
       const provider = overridden ? providerStatusOverride : globalProvider;
       const sourceProvider = sourceProviderMap.get(provider.providerId) ?? null;
       const loading =
+        forcedLoadingProviderIdSet.has(provider.providerId) ||
         isTeamProviderRuntimeStatusLoading(
           provider.providerId,
           provider,
@@ -157,6 +165,7 @@ function useProviderActivityDisplay({
   }, [
     cliProviderStatusLoading,
     codexSnapshotPending,
+    forcedLoadingProviderIdSet,
     openCodePreparationEvidence,
     providerIdSet,
     renderCliStatus?.providers,
@@ -255,6 +264,7 @@ export const ProviderActivityStatusStrip = ({
   multimodelEnabled,
   codexSnapshotPending = false,
   openCodePreparationEvidence,
+  forceLoadingProviderIds,
   providerIds,
   className = '',
   label,
@@ -275,6 +285,7 @@ export const ProviderActivityStatusStrip = ({
     multimodelEnabled,
     codexSnapshotPending,
     openCodePreparationEvidence,
+    forceLoadingProviderIds,
     providerIds,
     showReadyProviders,
   });

@@ -17,6 +17,11 @@ import { promises as fsp, readFileSync } from 'fs';
 import path from 'path';
 import { gunzipSync } from 'zlib';
 
+import {
+  CODEX_RUNTIME_VERSION_TIMEOUT_MS as VERSION_TIMEOUT_MS,
+  probeManagedCodexVersion,
+} from './probeManagedCodexVersion';
+
 import type { CodexRuntimeInstallerPort } from '../../core/application/ports/CodexRuntimeInstallerPort';
 import type {
   CodexRuntimeInstallProgress,
@@ -38,7 +43,6 @@ const METADATA_FETCH_TIMEOUT_MS = 60_000;
 // downloads time out only after a full minute without network progress.
 const PACKAGE_DOWNLOAD_IDLE_TIMEOUT_MS = 60_000;
 const LATEST_VERSION_TIMEOUT_MS = 8_000;
-const VERSION_TIMEOUT_MS = 10_000;
 
 interface NpmPackageMetadata {
   name?: string;
@@ -120,10 +124,7 @@ export async function resolveVerifiedAppManagedCodexRuntimeBinaryPath(): Promise
     return null;
   }
   try {
-    await execCli(binaryPath, ['--version'], {
-      timeout: VERSION_TIMEOUT_MS,
-      windowsHide: true,
-    });
+    await probeManagedCodexVersion(binaryPath);
     return binaryPath;
   } catch {
     return null;
@@ -599,10 +600,7 @@ export class CodexRuntimeInstallerService implements CodexRuntimeInstallerPort {
       };
     }
     try {
-      const { stdout } = await execCli(manifest.binaryPath, ['--version'], {
-        timeout: VERSION_TIMEOUT_MS,
-        windowsHide: true,
-      });
+      const stdout = await probeManagedCodexVersion(manifest.binaryPath);
       return {
         installed: true,
         binaryPath: manifest.binaryPath,

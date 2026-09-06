@@ -277,6 +277,8 @@ export interface CliProviderStatus {
   /** Optional for compatibility with runtimes that predate typed status-check outcomes. */
   statusCheckOutcome?: CliProviderStatusCheckOutcome;
   statusCheckErrorCode?: CliProviderStatusCheckErrorCode;
+  /** App-derived from affirmative runtime support; never launch authorization. */
+  teamLaunchAuthorityRestriction?: 'catalog-refresh';
   modelVerificationState?: 'idle' | 'verifying' | 'verified';
   statusMessage?: string | null;
   detailMessage?: string | null;

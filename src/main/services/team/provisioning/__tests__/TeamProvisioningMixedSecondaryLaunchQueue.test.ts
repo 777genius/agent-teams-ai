@@ -127,6 +127,7 @@ function createPorts(
     nowMs: vi.fn<() => number>(() => 1234),
     randomUuid: vi.fn<() => string>(() => 'generated-run-id'),
     teamsBasePath: vi.fn<() => string>(() => '/teams'),
+    isCurrentTrackedRun: vi.fn(() => true),
     clearOpenCodeRuntimeLaneStorage: vi.fn<
       MixedSecondaryLaunchQueuePorts<TestRun>['clearOpenCodeRuntimeLaneStorage']
     >(async () => undefined),
@@ -184,6 +185,54 @@ function createDeferred(): {
 }
 
 describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
+  it('rejects a run superseded after successful roster preparation before queue entry', async () => {
+    const lane = createLane();
+    const run = createRun({ mixedSecondaryLanes: [lane] });
+    let currentRun = run;
+    const ports = createPorts({
+      isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
+    });
+    const prepared = createDeferred();
+    const launching = (async () => {
+      await prepared.promise;
+      return launchMixedSecondaryLaneIfNeeded(run, ports);
+    })();
+
+    prepared.resolve();
+    currentRun = createRun();
+    await expect(launching).resolves.toEqual(createSnapshot('active'));
+
+    expect(ports.getOpenCodeRuntimeAdapter).not.toHaveBeenCalled();
+    expect(ports.launchSingleMixedSecondaryLane).not.toHaveBeenCalled();
+    expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
+    expect(run.mixedSecondaryLaneLaunchQueue).toBeUndefined();
+    expect(lane).toMatchObject({ state: 'queued', runId: null });
+  });
+
+  it('does not launch or persist an old run after it is superseded while queued', async () => {
+    const lane = createLane();
+    const previous = createDeferred();
+    const run = createRun({
+      mixedSecondaryLanes: [lane],
+      mixedSecondaryLaneLaunchQueue: previous.promise,
+    });
+    let currentRun = run;
+    const ports = createPorts({
+      isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
+    });
+
+    const launching = launchMixedSecondaryLaneIfNeeded(run, ports, { waitForCompletion: true });
+    currentRun = createRun();
+    previous.resolve();
+    await launching;
+
+    expect(lane.state).toBe('finished');
+    expect(ports.launchSingleMixedSecondaryLane).not.toHaveBeenCalled();
+    expect(ports.persistLaunchStateSnapshot).not.toHaveBeenCalled();
+    expect(ports.clearOpenCodeRuntimeLaneStorage).not.toHaveBeenCalled();
+    expect(ports.deleteSecondaryRuntimeRunIfOwned).not.toHaveBeenCalled();
+  });
+
   it('no-ops queued launch guard for non-queued or already scheduled lanes', () => {
     const finishedLane = createLane({ state: 'finished' });
     const scheduledLane = createLane({ launchScheduled: true });
@@ -450,46 +499,52 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     expect(ports.persistLaunchStateSnapshot).toHaveBeenCalledWith(run, 'active');
     expect(ports.launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(2);
   });
-  it('fences late rejected launch cleanup to the generation captured when queued', async () => {
-    const lane = createLane({ runId: 'cancelled-run' });
-    const run = createRun({ mixedSecondaryLanes: [lane] });
-    let releaseLaunch!: () => void;
-    let markLaunchEntered!: () => void;
-    const launchEntered = new Promise<void>((resolve) => {
-      markLaunchEntered = resolve;
-    });
-    const launchReleased = new Promise<void>((resolve) => {
-      releaseLaunch = resolve;
-    });
-    const ports = createPorts({
-      launchSingleMixedSecondaryLane: vi.fn(async () => {
-        markLaunchEntered();
-        await launchReleased;
-        throw new Error('cancelled launch returned late');
-      }),
-    });
-    launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
-    await launchEntered;
-    run.cancelRequested = true;
-    lane.runId = 'fresh-run';
-    lane.state = 'launching';
-    releaseLaunch();
-    await run.mixedSecondaryLaneLaunchQueue;
+  it.each(['cancelled', 'superseded'])(
+    'fences late rejected %s launch cleanup to the generation captured when queued',
+    async (outcome) => {
+      const lane = createLane({ runId: 'cancelled-run' });
+      const run = createRun({ mixedSecondaryLanes: [lane] });
+      let currentRun = run;
+      let releaseLaunch!: () => void;
+      let markLaunchEntered!: () => void;
+      const launchEntered = new Promise<void>((resolve) => {
+        markLaunchEntered = resolve;
+      });
+      const launchReleased = new Promise<void>((resolve) => {
+        releaseLaunch = resolve;
+      });
+      const ports = createPorts({
+        isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
+        launchSingleMixedSecondaryLane: vi.fn(async () => {
+          markLaunchEntered();
+          await launchReleased;
+          throw new Error('cancelled launch returned late');
+        }),
+      });
+      launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+      await launchEntered;
+      if (outcome === 'cancelled') run.cancelRequested = true;
+      else currentRun = createRun();
+      lane.runId = 'fresh-run';
+      lane.state = 'launching';
+      releaseLaunch();
+      await run.mixedSecondaryLaneLaunchQueue;
 
-    expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
-      teamsBasePath: '/teams',
-      teamName: 'team-a',
-      laneId: lane.laneId,
-      expectedRunId: 'cancelled-run',
-    });
-    expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
-      'team-a',
-      lane.laneId,
-      'cancelled-run'
-    );
-    expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
-    expect(lane).toMatchObject({ runId: 'fresh-run', state: 'launching' });
-  });
+      expect(ports.clearOpenCodeRuntimeLaneStorage).toHaveBeenCalledWith({
+        teamsBasePath: '/teams',
+        teamName: 'team-a',
+        laneId: lane.laneId,
+        expectedRunId: 'cancelled-run',
+      });
+      expect(ports.deleteSecondaryRuntimeRunIfOwned).toHaveBeenCalledWith(
+        'team-a',
+        lane.laneId,
+        'cancelled-run'
+      );
+      expect(ports.deleteSecondaryRuntimeRun).not.toHaveBeenCalled();
+      expect(lane).toMatchObject({ runId: 'fresh-run', state: 'launching' });
+    }
+  );
 
   const MODELS_QUERY_TIMEOUT =
     'Failed to query OpenCode models: OpenCode command timed out after 10000ms';
@@ -742,35 +797,43 @@ describe('TeamProvisioningMixedSecondaryLaunchQueue', () => {
     }
   });
 
-  it('does not relaunch after the backoff when the lane changed hands meanwhile', async () => {
-    vi.useFakeTimers();
-    try {
-      const lane = createLane();
-      const run = createRun({ mixedSecondaryLanes: [lane] });
-      const launchSingleMixedSecondaryLane = vi
-        .fn<MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']>()
-        .mockImplementationOnce(async (_run, launchedLane) => {
-          launchedLane.state = 'finished';
-          launchedLane.result = gatedFailureResult({
-            runId: launchedLane.runId!,
-            teamName: run.teamName,
-            memberName: launchedLane.member.name,
-            message: MODELS_QUERY_TIMEOUT,
+  it.each(['lane', 'tracked-run'])(
+    'does not relaunch after the backoff when the %s changed hands meanwhile',
+    async (owner) => {
+      vi.useFakeTimers();
+      try {
+        const lane = createLane();
+        const run = createRun({ mixedSecondaryLanes: [lane] });
+        let currentRun = run;
+        const launchSingleMixedSecondaryLane = vi
+          .fn<MixedSecondaryLaunchQueuePorts<TestRun>['launchSingleMixedSecondaryLane']>()
+          .mockImplementationOnce(async (_run, launchedLane) => {
+            launchedLane.state = 'finished';
+            launchedLane.result = gatedFailureResult({
+              runId: launchedLane.runId!,
+              teamName: run.teamName,
+              memberName: launchedLane.member.name,
+              message: MODELS_QUERY_TIMEOUT,
+            });
           });
+        const ports = createPorts({
+          launchSingleMixedSecondaryLane,
+          isCurrentTrackedRun: vi.fn((candidate) => candidate === currentRun),
         });
-      const ports = createPorts({ launchSingleMixedSecondaryLane });
 
-      launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
-      await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS - 1);
-      // A manual lane retry re-owned the lane while the backoff was still pending.
-      lane.runId = 'successor-run-id';
-      await drainTransientBackoff(run);
+        launchQueuedMixedSecondaryLaneInBackground(run, lane, ports);
+        await vi.advanceTimersByTimeAsync(OPENCODE_TRANSIENT_SHARED_RUNTIME_RETRY_BACKOFF_MS - 1);
+        // A manual lane retry re-owned the lane while the backoff was still pending.
+        if (owner === 'lane') lane.runId = 'successor-run-id';
+        else currentRun = createRun();
+        await drainTransientBackoff(run);
 
-      expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(1);
-      expect(lane.runId).toBe('successor-run-id');
-      expect(lane.result).toMatchObject({ teamLaunchState: 'partial_failure' });
-    } finally {
-      vi.useRealTimers();
+        expect(launchSingleMixedSecondaryLane).toHaveBeenCalledTimes(1);
+        expect(lane.runId).toBe(owner === 'lane' ? 'successor-run-id' : 'generated-run-id');
+        expect(lane.result).toMatchObject({ teamLaunchState: 'partial_failure' });
+      } finally {
+        vi.useRealTimers();
+      }
     }
-  });
+  );
 });

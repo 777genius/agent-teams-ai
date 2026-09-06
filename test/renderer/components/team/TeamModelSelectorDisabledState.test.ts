@@ -1415,7 +1415,7 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
   });
 
-  it('keeps stale local OpenCode models visible without remote catalog loading', async () => {
+  it('refreshes stale passive OpenCode status while keeping local models visible without remote catalog loading', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     const loadModels = vi.fn(async () => providerModelsResponse('ollama'));
     installLoadModelsApi(loadModels);
@@ -1479,7 +1479,11 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(loadModels).not.toHaveBeenCalled();
-    expect(storeState.fetchCliProviderStatus).not.toHaveBeenCalled();
+    expect(storeState.fetchCliProviderStatus).toHaveBeenCalledExactlyOnceWith('opencode', {
+      silent: true,
+      checkReason: 'launch_preflight',
+      projectPath: '/tmp/stale-project',
+    });
     expect(
       host.querySelector('[data-testid="team-model-selector-opencode-loading-skeleton"]')
     ).toBeNull();
@@ -3035,7 +3039,12 @@ describe('TeamModelSelector disabled Codex models', () => {
         expect(activeOpenCodeButton?.getAttribute('data-state')).toBe('active');
       });
     });
-    expect(host.textContent).toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).not.toContain('OpenCode is not ready for team launch');
+    expect(
+      host
+        .querySelector('[data-testid="team-model-selector-provider-status"]')
+        ?.getAttribute('data-tone')
+    ).toBe('info');
     expect(host.textContent).toContain('OpenCode status: checking runtime');
     expect(host.textContent).toContain(
       'The app is still checking the OpenCode runtime. Wait for provider status to finish, then try again.'
@@ -3847,7 +3856,8 @@ describe('TeamModelSelector disabled Codex models', () => {
     });
 
     expect(openCodeButton?.getAttribute('aria-disabled')).toBeNull();
-    expect(host.textContent).toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).not.toContain('OpenCode is not ready for team launch');
+    expect(host.textContent).toContain('OpenCode runtime status is still loading.');
     expect(onValueChange).not.toHaveBeenCalled();
 
     await act(async () => {
