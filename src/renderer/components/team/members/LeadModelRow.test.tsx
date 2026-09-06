@@ -214,22 +214,24 @@ describe('LeadModelRow', () => {
     };
 
     act(() => root.render(<Harness />));
-    act(() =>
-      host.querySelector<HTMLButtonElement>('[aria-label="anthropic provider, opus"]')?.click()
-    );
+    const opener = host.querySelector<HTMLButtonElement>('[aria-label="anthropic provider, opus"]');
+    expect(opener).not.toBeNull();
+    act(() => opener!.click());
     expect(host.querySelector('[data-testid="team-model-selector"]')).not.toBeNull();
 
-    act(() =>
-      Array.from(host.querySelectorAll('button'))
-        .find((button) => button.textContent === 'choose-codex')
-        ?.click()
+    const providerControl = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'choose-codex'
     );
+    expect(providerControl).toBeDefined();
+    act(() => providerControl!.click());
+    expect(host.querySelector('[aria-label="codex provider, opus"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="team-model-selector"]')).not.toBeNull();
-    act(() =>
-      Array.from(host.querySelectorAll('button'))
-        .find((button) => button.textContent === 'choose-model')
-        ?.click()
+    const modelControl = Array.from(host.querySelectorAll('button')).find(
+      (button) => button.textContent === 'choose-model'
     );
+    expect(modelControl).toBeDefined();
+    act(() => modelControl!.click());
+    expect(host.querySelector('[aria-label="codex provider, gpt-5.6-sol"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="team-model-selector"]')).not.toBeNull();
 
     act(() => root.unmount());

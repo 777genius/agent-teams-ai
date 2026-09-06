@@ -77,6 +77,16 @@ describe('OpenCode pending launch presentation', () => {
       reason,
     });
   });
+  it('does not call a ready catalog launch-blocked while renderer authority is still gated', () => {
+    const providerStatus = { ...connected, modelCatalog: { status: 'ready' } } as CliProviderStatus;
+    expect(
+      getOpenCodeRuntimeStatusUiState({
+        providerStatus,
+        runtimeStatus,
+        runtimeStatusLoading: false,
+      })
+    ).toBe('checking');
+  });
   it.each([
     { verificationState: 'error' },
     { modelCatalogRefreshState: 'error' },

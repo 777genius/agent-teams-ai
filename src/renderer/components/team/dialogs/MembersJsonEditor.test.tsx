@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 
+import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -43,5 +44,15 @@ describe('MembersJsonEditor', () => {
 
     act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: '[]' } }));
     expect(onChange).toHaveBeenCalledExactlyOnceWith('[]');
+    act(() => {
+      expect(undo(view)).toBe(true);
+    });
+    expect(view.state.doc.toString()).toBe('[{"name":"worker","model":"new"}]');
+    expect(onChange).toHaveBeenLastCalledWith('[{"name":"worker","model":"new"}]');
+    act(() => {
+      expect(undo(view)).toBe(false);
+    });
+    expect(view.state.doc.toString()).toBe('[{"name":"worker","model":"new"}]');
+    expect(onChange).toHaveBeenCalledTimes(2);
   });
 });

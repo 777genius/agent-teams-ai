@@ -16,6 +16,7 @@ const fetchCliProviderStatus = vi.fn<
 const createSchedule = vi.fn();
 const updateSchedule = vi.fn();
 const teamRosterEditorSectionMock = vi.hoisted(() => ({ lastProps: null as any }));
+const projectPathSelectorMock = vi.hoisted(() => ({ onSelect: (_path: string) => {} }));
 type TestCliStatus = Pick<CliInstallationStatus, 'providers'> &
   Partial<Pick<CliInstallationStatus, 'flavor'>>;
 const createTeamDraftMock = vi.hoisted(() => ({
@@ -302,8 +303,16 @@ vi.mock('@renderer/components/team/dialogs/OptionalSettingsSection', () => ({
 }));
 
 vi.mock('@renderer/components/team/dialogs/ProjectPathSelector', () => ({
-  ProjectPathSelector: ({ selectedProjectPath }: { selectedProjectPath: string }) =>
-    React.createElement('div', { 'data-testid': 'project-path' }, selectedProjectPath),
+  ProjectPathSelector: ({
+    selectedProjectPath,
+    onSelectedProjectPathChange,
+  }: {
+    selectedProjectPath: string;
+    onSelectedProjectPathChange: (path: string) => void;
+  }) => {
+    projectPathSelectorMock.onSelect = onSelectedProjectPathChange;
+    return React.createElement('div', { 'data-testid': 'project-path' }, selectedProjectPath);
+  },
 }));
 
 vi.mock('@renderer/components/ui/button', () => ({
@@ -1548,6 +1557,61 @@ describe('LaunchTeamDialog', () => {
       root.unmount();
       await flush();
     });
+  });
+
+  it('invalidates ready checks and blocks launch while project selection is unresolved', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers();
+    const onLaunch = vi.fn(async () => {});
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(
+        React.createElement(LaunchTeamDialog, {
+          mode: 'launch',
+          open: true,
+          teamName: 'team-alpha',
+          members: [],
+          defaultProjectPath: '/tmp/project',
+          provisioningError: null,
+          clearProvisioningError: vi.fn(),
+          activeTeams: [],
+          onClose: vi.fn(),
+          onLaunch,
+        })
+      );
+      await flush();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
+      await flush();
+    });
+    const submit = () =>
+      Array.from(host.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Launch team'
+      )!;
+    expect(submit().disabled).toBe(false);
+    expect(host.textContent).toContain('All selected providers are ready.');
+    await act(async () => {
+      projectPathSelectorMock.onSelect('/tmp/unresolved-project');
+      await flush();
+    });
+    expect(submit().disabled).toBe(true);
+    expect(host.textContent).not.toContain('All selected providers are ready.');
+    await act(async () => {
+      submit().click();
+      await flush();
+    });
+    expect(onLaunch).not.toHaveBeenCalled();
+    expect(api.teams.replaceMembers).not.toHaveBeenCalled();
+    await act(async () => {
+      projectPathSelectorMock.onSelect('/tmp/project');
+      await flush();
+      await vi.advanceTimersByTimeAsync(250);
+    });
+    expect(submit().disabled).toBe(false);
+    await act(async () => root.unmount());
   });
 
   it('starts preflight with user choices when a roster refresh cancels pending hydration', async () => {

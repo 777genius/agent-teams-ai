@@ -1634,6 +1634,13 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
       lastPrepareProviderSignatureByIdRef.current.clear();
       prepareProviderRequestSeqByIdRef.current.clear();
       prepareWarningsByProviderIdRef.current.clear();
+      if (prepareState !== 'idle') {
+        setPrepareState('idle');
+        setPrepareMessage(null);
+        setPrepareWarnings([]);
+        setPrepareChecks([]);
+        setAllowExperimentalLocalModels(false);
+      }
       return;
     }
     if (prepareState === 'idle') {
@@ -2305,7 +2312,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
         return;
       }
     }
-    if (isLaunchMode && prepareState === 'idle') return;
+    if (isLaunchMode && (prepareState === 'idle' || !launchPreflightSelectionReady)) return;
     if (launchGuard.reject(isLaunchMode && !canSkipPreflight(), rejectProviderLaunch)) return;
     if (!submissionFence.acquire(prepareRequestSeqRef)) return;
     setLocalError(null);
@@ -2456,7 +2463,8 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
   };
 
   const isDisabled = isLaunchMode
-    ? isSubmitting ||
+    ? !launchPreflightSelectionReady ||
+      isSubmitting ||
       launchInFlight ||
       (prepareState === 'loading' && !canSkipPreflight()) ||
       validationErrors.length > 0 ||
@@ -3156,12 +3164,7 @@ export const LaunchTeamDialog = (props: LaunchTeamDialogProps): React.JSX.Elemen
                   <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     <div>
-                      <span>
-                        {effectivePrepare.message ??
-                          (effectivePrepare.state === 'idle'
-                            ? t('launch.prepare.checkingProviders')
-                            : t('launch.prepare.preparingEnvironment'))}
-                      </span>
+                      {effectivePrepare.message ?? t('launch.prepare.preparingEnvironment')}
                       <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] opacity-70">
                         <span>
                           {t('launch.prepare.preflight', {

@@ -20,6 +20,7 @@ export interface MixedSecondaryLaneLaunchSetupPorts<TRun extends MixedSecondaryL
   nowMs(): number;
   randomUuid(): string;
   teamsBasePath(): string;
+  isCurrentTrackedRun(run: TRun): boolean;
   isStoppingSecondaryRuntimeTeam(teamName: string): boolean;
   clearOpenCodeRuntimeLaneStorage(input: {
     teamsBasePath: string;
@@ -86,7 +87,10 @@ export async function setupMixedSecondaryLaneLaunch<TRun extends MixedSecondaryL
   const requestedDiagnostics = [...lane.diagnostics];
   const laneRunId = (lane.runId ??= ports.randomUuid());
   const shouldAbortLaunch = (): boolean =>
-    run.cancelRequested || run.processKilled || ports.isStoppingSecondaryRuntimeTeam(run.teamName);
+    run.cancelRequested ||
+    run.processKilled ||
+    !ports.isCurrentTrackedRun(run) ||
+    ports.isStoppingSecondaryRuntimeTeam(run.teamName);
   const finishCancelledLane = async (): Promise<void> => {
     await ports
       .clearOpenCodeRuntimeLaneStorage({

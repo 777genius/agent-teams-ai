@@ -34,7 +34,7 @@ Target branch: `main`.
 
 Runtime gate:
 
-- Agent Teams runtime: `v0.0.78`.
+- Agent Teams runtime: `v0.0.79`.
 - Terminal Platform runtime: `v0.3.3`.
 
 Draft body source for GitHub release:
@@ -53,7 +53,7 @@ Edit live agent settings, stop teams from either team view, and review product n
 ### Improvements
 
 - Browse models from every connected OpenCode provider with pagination, freshness indicators, and safer refreshes.
-- Check provider readiness when launching, with clearer blockers and connection guidance.
+- See automatic preflight progress for each selected model before creating or relaunching a team.
 - See first-launch project trust warnings only when Anthropic or Codex needs them.
 - Reuse existing worktrees without resetting branches or local changes, with branch details shown before launch.
 - Team leads now coordinate delegated tasks instead of duplicating their teammates' work.
@@ -63,7 +63,7 @@ Edit live agent settings, stop teams from either team view, and review product n
 - Codex teammates launch with ChatGPT or API-key authentication without refresh-token loops.
 - ChatGPT-incompatible Codex models are blocked before launch with a clear explanation.
 - Failed or superseded launches no longer leave teams stuck on `Launching...` or overwrite newer attempts.
-- Mixed Anthropic, Codex, and OpenCode teams recover from stale provider and session state.
+- Mixed-team assignments arrive during startup, and relaunch instructions run without needing another message.
 - Windows OpenCode teammates no longer flash console windows during tool calls.
 - Replayed agent turns no longer duplicate tasks, deleted-task notices, or final messages.
 

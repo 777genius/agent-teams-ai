@@ -355,7 +355,7 @@ export abstract class TeamProvisioningServiceMemberLifecycleFacade extends TeamP
     createTeamProvisioningMixedSecondaryLaneWiring<ProvisioningRun>(
       createTeamProvisioningMixedSecondaryLaneWiringDepsFromService(
         this as unknown as TeamProvisioningMixedSecondaryLaneWiringServiceHost<ProvisioningRun>,
-        { logger }
+        { logger, isCurrentTrackedRun: (run) => this.isCurrentTrackedRun(run) }
       )
     );
   protected readonly openCodeLaunchWiring =
