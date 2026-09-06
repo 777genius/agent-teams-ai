@@ -104,6 +104,120 @@ describe('TeamProvisioningLaunchRosterMaterialization', () => {
     expect(ports.writeConfig).not.toHaveBeenCalled();
   });
 
+  it('rebases a concurrent native startup update without waiting for the first lead turn', async () => {
+    const { state, input, ports } = createHarness();
+    state.beforeWrite = () => {
+      state.beforeWrite = () => {};
+      const latest = JSON.parse(state.raw);
+      latest.members[1].lastHeartbeatAt = 456;
+      latest.members.push({ name: 'native-worker', providerId: 'codex', model: 'gpt-5.6-luna' });
+      latest.updatedAt = 456;
+      state.raw = JSON.stringify(latest);
+    };
+    await expect(materializeTeamProvisioningLaunchRoster(input, ports)).resolves.toBe(true);
+    expect(JSON.parse(state.raw)).toMatchObject({
+      updatedAt: 456,
+      members: [
+        { name: 'team-lead' },
+        { name: 'haiku', lastHeartbeatAt: 456 },
+        { name: 'native-worker', providerId: 'codex' },
+        { name: 'opencode-worker', providerId: 'opencode' },
+      ],
+    });
+    expect(ports.writeConfig).toHaveBeenCalledTimes(2);
+    expect(ports.invalidateTeam).toHaveBeenCalledTimes(1);
+  });
+
+  it('bounds repeated conflicts without publishing a stale snapshot', async () => {
+    const { state, input, ports } = createHarness();
+    let updates = 0;
+    state.beforeWrite = () => {
+      state.raw = JSON.stringify({ ...JSON.parse(state.raw), updatedAt: ++updates });
+    };
+    await expect(materializeTeamProvisioningLaunchRoster(input, ports)).rejects.toThrow(
+      'roster changed before config commit'
+    );
+    expect(ports.writeConfig).toHaveBeenCalledTimes(3);
+    expect(JSON.parse(state.raw).members).toHaveLength(2);
+    expect(ports.invalidateTeam).not.toHaveBeenCalled();
+  });
+
+  it.each(['lead-session', 'provider', 'model', 'removed-config', 'cancelled', 'removed-meta'])(
+    'does not retry publication across %s changes',
+    async (change) => {
+      const { state, input, ports } = createHarness();
+      state.beforeWrite = () => {
+        const latest = JSON.parse(state.raw);
+        if (change === 'lead-session') latest.leadSessionId = 'replacement-session';
+        if (change === 'provider') latest.members[1].providerId = 'codex';
+        if (change === 'model') latest.members[1].model = 'replacement-model';
+        if (change === 'removed-config')
+          latest.members.push({ name: 'opencode-worker', removedAt: 456 });
+        if (change === 'cancelled') state.current = false;
+        if (change === 'removed-meta') state.meta[0].removedAt = 456;
+        state.raw = JSON.stringify({ ...latest, updatedAt: 456 });
+      };
+      await expect(materializeTeamProvisioningLaunchRoster(input, ports)).rejects.toThrow(
+        'roster changed before config commit'
+      );
+      expect(ports.writeConfig).toHaveBeenCalledTimes(1);
+      expect(ports.invalidateTeam).not.toHaveBeenCalled();
+    }
+  );
+
+  it('does not retry an unrelated storage error', async () => {
+    const { input, ports } = createHarness();
+    vi.mocked(ports.writeConfig).mockRejectedValue(new Error('disk full'));
+    await expect(materializeTeamProvisioningLaunchRoster(input, ports)).rejects.toThrow(
+      'disk full'
+    );
+    expect(ports.writeConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a replacement lead appearing between a conflict and the next read', async () => {
+    const { state, input, ports } = createHarness();
+    state.beforeWrite = () => {
+      state.raw = JSON.stringify({ ...JSON.parse(state.raw), updatedAt: 456 });
+    };
+    const read = ports.readConfig;
+    let reads = 0;
+    ports.readConfig = async () => {
+      if (++reads === 3) {
+        state.raw = JSON.stringify({ ...JSON.parse(state.raw), leadSessionId: 'replacement' });
+      }
+      return read();
+    };
+    await expect(materializeTeamProvisioningLaunchRoster(input, ports)).rejects.toThrow(
+      'roster changed before config commit'
+    );
+    expect(ports.writeConfig).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(state.raw).leadSessionId).toBe('replacement');
+  });
+
+  it.each(['opencode', 'codex'])(
+    'handles a concurrent %s member with the same target name',
+    async (providerId) => {
+      const { state, input, ports } = createHarness();
+      state.beforeWrite = () => {
+        state.beforeWrite = () => {};
+        const latest = JSON.parse(state.raw);
+        latest.members.push({
+          name: 'opencode-worker',
+          agentId: 'opencode-worker@sandbox-mixed',
+          providerId,
+          model: 'openai/gpt-5',
+        });
+        state.raw = JSON.stringify(latest);
+      };
+      const result = materializeTeamProvisioningLaunchRoster(input, ports);
+      if (providerId === 'opencode') await expect(result).resolves.toBe(true);
+      else await expect(result).rejects.toThrow('roster changed before config commit');
+      expect(ports.writeConfig).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(state.raw).members).toHaveLength(3);
+      expect(JSON.parse(state.raw).members[2].providerId).toBe(providerId);
+    }
+  );
+
   it.each(['cancelled', 'config-changed', 'removed'])(
     'aborts atomic publication when the launch becomes %s during the write',
     async (change) => {
