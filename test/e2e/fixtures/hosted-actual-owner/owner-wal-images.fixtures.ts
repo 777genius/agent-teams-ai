@@ -90,6 +90,13 @@ export function ingress(n = 1, r = route()): OwnerWalIngress {
     acknowledgedAtIso: null,
   };
 }
+/** Keep the number token inside the exact payload string, including -0. */
+export function payloadExpiry(record: OwnerWalIngress, token: string): OwnerWalIngress {
+  return {
+    ...record,
+    payloadJson: record.payloadJson.replace('"expiresAtMs":null', `"expiresAtMs":${token}`),
+  };
+}
 export function binding(r: OwnerWalIngress, quarantined = false): OwnerWalBinding {
   return {
     teamId: r.authority.teamId,
@@ -230,7 +237,9 @@ export function pair(
   const previous: Record<string, unknown> | null = p
     ? JSON.parse(Buffer.from(p.bytes).toString('utf8'))
     : null;
-  const stored: Record<string, unknown> = JSON.parse(Buffer.from(next.bytes).toString('utf8'));
+  // Actual Owner metadata compares P with the compacted object supplied to
+  // JSON.stringify, which can still contain -0 in a route's restoreGeneration.
+  const stored: Record<string, unknown> = { ...n };
   const counts = (key: string, value: Record<string, unknown> | null): number => {
     if (!value || !Object.hasOwn(value, key)) return 0;
     const item = value[key];

@@ -335,6 +335,37 @@ function deliveryForRequest(
   };
 }
 
+/** Service guards after binding and before the first delivery publication.
+ * Expiry precedes actor checks. No clock is retained in this witness: a finite
+ * expiry permits that rejection, but its timing still needs P2-B evidence. */
+function validateInitialDeliveryOutcome(
+  state: OwnerWalState,
+  request: OwnerWalDeliveryRequest,
+  delivery: OwnerWalDelivery
+): void {
+  const record = state.ingress.find((r) => r.outboxId === delivery.outboxId)!;
+  const member =
+    request.principal.kind === 'operator' ? state.actorMembers[request.principal.actorId] : null;
+  const actorFailure =
+    request.principal.kind !== 'operator'
+      ? null
+      : !member
+        ? 'unavailable'
+        : member === record.authority.deliveryOwnerId
+          ? 'self_approval'
+          : null;
+  if (delivery.phase === 'started') {
+    requireWal(actorFailure === null, 'delivery-start-actor');
+  } else {
+    const payload = object(parseOwnerWalJson(record.payloadJson));
+    requireWal(
+      (actorFailure !== null && delivery.result === actorFailure) ||
+        (delivery.result === 'expired' && payload.expiresAtMs !== null),
+      'direct-rejection-precondition'
+    );
+  }
+}
+
 /** Apply only the witnessed logical action to M. The caller subsequently decodes and
  * compacts this proposal; it is NEVER reported as an intermediate persisted image. */
 function applyAction(
@@ -445,7 +476,9 @@ function applyAction(
     }
     case 'delivery-started': {
       object(witness, ['kind', 'request']);
-      const delivery = deliveryForRequest(state, deliveryRequest(witness.request), true);
+      const request = deliveryRequest(witness.request);
+      const delivery = deliveryForRequest(state, request, true);
+      validateInitialDeliveryOutcome(state, request, delivery);
       return { ...state, deliveries: [...state.deliveries, delivery] }; // full decoder rejects all conflicting identities
     }
     case 'delivery-settled': {
@@ -468,9 +501,16 @@ function applyAction(
       );
       if (index < 0) {
         requireWal(delivery.phase === 'rejected', 'completed-without-start');
+        validateInitialDeliveryOutcome(state, request, delivery);
         return { ...state, deliveries: [...state.deliveries, delivery] };
       }
       requireWal(equal(state.deliveries[index], started), 'settlement-predecessor-or-replay');
+      requireWal(
+        delivery.result === 'delivered' ||
+          delivery.result === 'stale_generation' ||
+          delivery.result === 'unavailable',
+        'started-settlement-outcome'
+      );
       return { ...state, deliveries: state.deliveries.map((d, i) => (i === index ? delivery : d)) };
     }
   }
@@ -569,12 +609,25 @@ export function verifyOwnerWalImages(
       native.wal.byteSize === next.summary.byteSize,
     'native-image-binding'
   );
-  requireWal(equal(native.fence, next.working.writerFence), 'fence');
+  // locked() rejects a retained P whose fence differs from the acquired identity;
+  // publication injects that same identity into N and the native record.
+  requireWal(
+    equal(native.fence, next.working.writerFence) &&
+      (!previous || equal(previous.working.writerFence, native.fence)),
+    'fence'
+  );
+  const proposal = applyAction(previous?.working ?? null, native, input.witness);
+  const compacted = compactOwnerWalState(decodeOwnerWalState(proposal));
+  // Owner compares P against the compacted state for metadata, then stores its
+  // JSON bytes. This matters for a stored restoreGeneration of -0 becoming 0;
+  // payloadJson contents are strings and must never undergo that normalization.
+  const serialized = decodeOwnerWalState(JSON.parse(JSON.stringify(compacted)));
+  requireWal(equal(serialized, next.working), 'action-compaction');
   const changed = OWNER_WAL_FIELDS.filter(
     (key) =>
       !previous ||
       !Object.hasOwn(previous.stored, key) ||
-      !equal(previous.stored[key], next.stored[key])
+      !equal(previous.stored[key], compacted[key])
   ).sort((a, b) => Buffer.from(a).compare(Buffer.from(b)));
   requireWal(equal(changed, delta.changedFields), 'changed-fields');
   for (const key of OWNER_WAL_COLLECTIONS)
@@ -585,9 +638,6 @@ export function verifyOwnerWalImages(
       }),
       `collection-${key}`
     );
-  const proposal = applyAction(previous?.working ?? null, native, input.witness);
-  const compacted = compactOwnerWalState(decodeOwnerWalState(proposal));
-  requireWal(equal(compacted, next.working), 'action-compaction');
   return freeze<ValidatedOwnerWalImages>({
     kind: 'validated-owner-wal-images',
     custodyVerified: false,

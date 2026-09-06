@@ -26,6 +26,7 @@ import {
   legacy,
   nextState,
   pair,
+  payloadExpiry,
   request,
   route,
   state,
@@ -376,6 +377,90 @@ describe('r744 P2-A exact stored P, migrated M, compacted N', () => {
         })
       )
     ).toThrow();
+  });
+
+  it.each([1, 2] as const)(
+    'preserves Owner-accepted expiresAtMs number tokens through WAL%s migration and reconciliation',
+    (version) => {
+      for (const token of ['-0', '-0e0', '0', '0e0', '1.0', '9007199254740991']) {
+        const { stored, reconciled } = legacy(version);
+        stored.ingress[0] = payloadExpiry(stored.ingress[0], token);
+        stored.retiredIngress[0] = payloadExpiry(stored.retiredIngress[0], token);
+        reconciled.retiredIngress = [stored.ingress[0], stored.retiredIngress[0]];
+        stored.deliveries = stored.deliveries.map((d) => {
+          const record = reconciled.retiredIngress.find((r) => r.outboxId === d.outboxId)!;
+          return { ...d, payloadFingerprint: delivery(record).payloadFingerprint };
+        });
+        reconciled.deliveries = stored.deliveries;
+        const raw = image(Buffer.from(` \n${JSON.stringify(stored, null, 2)}\r\n`));
+        const input = pair(raw, reconciled, admissionMutation, admission(reconciled));
+        const m = decodeOwnerWalState(JSON.parse(Buffer.from(raw.bytes).toString('utf8')));
+        expect(m.retiredIngress.map((r) => r.payloadJson)).toEqual(
+          reconciled.retiredIngress.map((r) => r.payloadJson)
+        );
+        expect(m.retiredIngress[0].payloadJson).toContain(`"expiresAtMs":${token}`);
+        accepts(input);
+        expect(input.native.stateDelta.previousStateSha256).toBe(digest(raw.bytes));
+        expect(input.native.stateDelta.collectionSizes.retiredIngress).toEqual({
+          previous: 1,
+          next: 2,
+        });
+        const normalized = structuredClone(reconciled);
+        normalized.retiredIngress[0].payloadJson = JSON.stringify(
+          JSON.parse(normalized.retiredIngress[0].payloadJson)
+        );
+        if (normalized.retiredIngress[0].payloadJson !== stored.ingress[0].payloadJson) {
+          expect(() =>
+            verifyOwnerWalImages(pair(raw, normalized, admissionMutation, admission(reconciled)))
+          ).toThrow('action-compaction');
+        }
+      }
+    }
+  );
+
+  it('accepts the same stored numeric domain in modern active and retired ingress', () => {
+    for (const token of ['-0', '-0e0', '0', '1', '9007199254740991']) {
+      const p = state(2);
+      p.ingress = p.ingress.map((r) => payloadExpiry(r, token));
+      p.retiredIngress = [p.ingress.pop()!];
+      p.deliveries = [
+        { ...delivery(p.retiredIngress[0]), phase: 'completed', result: 'delivered' },
+      ];
+      const n = nextState(p, { admissionDigest: hex(99) });
+      accepts(pair(jsonImage(p), n, admissionMutation, admission(n)));
+      expect(decodeOwnerWalState(p).ingress[0].payloadJson).toBe(p.ingress[0].payloadJson);
+      expect(decodeOwnerWalState(p).retiredIngress[0].payloadJson).toBe(
+        p.retiredIngress[0].payloadJson
+      );
+    }
+    for (const version of [1, 2, 3] as const) {
+      for (const token of ['-1', '0.5', '9007199254740992', '1e309', '"0"', 'false']) {
+        const p = version === 3 ? state() : legacy(version).stored;
+        p.ingress[0] = payloadExpiry(p.ingress[0], token);
+        expect(() => decodeOwnerWalState(p)).toThrow('integer');
+      }
+    }
+  });
+
+  it('matches stored restoreGeneration -0 and Owner metadata before outer JSON normalizes it', () => {
+    const p = state();
+    p.routes[0].scope.restoreGeneration = -0;
+    const raw = image(
+      Buffer.from(JSON.stringify(p).replace('"restoreGeneration":0', '"restoreGeneration":-0'))
+    );
+    const m = decodeOwnerWalState(JSON.parse(Buffer.from(raw.bytes).toString('utf8')));
+    expect(Object.is(m.routes[0].scope.restoreGeneration, -0)).toBe(true);
+    const req = request(m.ingress[0]);
+    const n = nextState(m, { deliveries: [delivery(m.ingress[0], req)] });
+    const input = pair(raw, n, startMutation, { kind: 'delivery-started', request: req });
+    expect(input.native.stateDelta.changedFields).toEqual(['deliveries', 'revision']);
+    expect(Buffer.from(input.next.bytes).toString('utf8')).toContain('"restoreGeneration":0');
+    accepts(input);
+    for (const restoreGeneration of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, Infinity]) {
+      const invalid = state();
+      invalid.routes[0].scope.restoreGeneration = restoreGeneration;
+      expect(() => decodeOwnerWalState(invalid)).toThrow('integer');
+    }
   });
 });
 
@@ -837,25 +922,177 @@ describe('all twelve honest mutation alternatives and nonpublication boundaries'
   );
 
   it.each(rejectedResults)(
-    'validates exact rejected/%s insertion and started transition',
+    'checks actual Service reachability for rejected/%s insertion and started transition',
     (outcome) => {
       const { p, n, req, d } = startCase();
-      const terminal: OwnerWalDelivery = { ...d, phase: 'rejected', result: outcome };
+      const directRequest = {
+        ...req,
+        principal:
+          outcome === 'self_approval' || outcome === 'unavailable'
+            ? {
+                kind: 'operator' as const,
+                actorId: outcome === 'self_approval' ? 'actor_owner' : 'actor_missing',
+              }
+            : req.principal,
+      };
+      if (outcome === 'expired') {
+        p.ingress[0] = payloadExpiry(p.ingress[0], '0');
+      }
+      const terminal: OwnerWalDelivery = {
+        ...delivery(p.ingress[0], directRequest),
+        phase: 'rejected',
+        result: outcome,
+      };
       const mutation = { kind: 'delivery-settled', phase: 'rejected', outcome } as const;
       const witness: OwnerWalMutationWitness = {
         kind: 'delivery-settled',
-        request: req,
+        request: directRequest,
         delivery: terminal,
       };
-      accepts(pair(jsonImage(p), nextState(p, { deliveries: [terminal] }), mutation, witness));
-      accepts(pair(jsonImage(n), nextState(n, { deliveries: [terminal] }), mutation, witness));
+      const direct = pair(jsonImage(p), nextState(p, { deliveries: [terminal] }), mutation, witness);
+      if (outcome === 'stale_generation' || outcome === 'wrong_lane') {
+        // Stale binding returns without publication; exact binding rules out wrong_lane.
+        expect(() => verifyOwnerWalImages(direct)).toThrow('direct-rejection-precondition');
+      } else accepts(direct);
+      const settled: OwnerWalDelivery = { ...d, phase: 'rejected', result: outcome };
+      const settledWitness: OwnerWalMutationWitness = {
+        kind: 'delivery-settled',
+        request: req,
+        delivery: settled,
+      };
+      const transition = pair(
+        jsonImage(n),
+        nextState(n, { deliveries: [settled] }),
+        mutation,
+        settledWitness
+      );
+      if (outcome === 'stale_generation' || outcome === 'unavailable') accepts(transition);
+      else expect(() => verifyOwnerWalImages(transition)).toThrow('started-settlement-outcome');
       expect(() =>
         verifyOwnerWalImages(
-          pair(jsonImage(n), nextState(n, { deliveries: [terminal] }), completedMutation, witness)
+          pair(
+            jsonImage(n),
+            nextState(n, { deliveries: [settled] }),
+            completedMutation,
+            settledWitness
+          )
         )
       ).toThrow('settlement-witness');
     }
   );
+
+  it.each(['allow', 'deny'] as const)(
+    'rejects coherent self/unmapped %s starts and requires the matching direct rejection',
+    (decision) => {
+      for (const actorId of ['actor_owner', 'actor_alias', 'actor_missing']) {
+        const p = state();
+        p.actorMembers.actor_alias = p.routes[0].authority.deliveryOwnerId;
+        const req = {
+          ...request(p.ingress[0], decision),
+          principal: { kind: 'operator' as const, actorId },
+        };
+        const d = delivery(p.ingress[0], req);
+        const input = pair(jsonImage(p), nextState(p, { deliveries: [d] }), startMutation, {
+          kind: 'delivery-started',
+          request: req,
+        });
+        expect(d.payloadFingerprint).toBe(digest(JSON.stringify(req)));
+        expect(input.native.wal.sha256).toBe(digest(input.next.bytes));
+        expect(input.native.stateDelta.changedFields).toEqual(['deliveries', 'revision']);
+        expect(() => verifyOwnerWalImages(input)).toThrow('delivery-start-actor');
+        const expected = actorId === 'actor_missing' ? 'unavailable' : 'self_approval';
+        for (const outcome of rejectedResults) {
+          const terminal: OwnerWalDelivery = { ...d, phase: 'rejected', result: outcome };
+          const direct = pair(
+            jsonImage(p),
+            nextState(p, { deliveries: [terminal] }),
+            { kind: 'delivery-settled', phase: 'rejected', outcome },
+            { kind: 'delivery-settled', request: req, delivery: terminal }
+          );
+          if (outcome === expected) accepts(direct);
+          else expect(() => verifyOwnerWalImages(direct)).toThrow('direct-rejection-precondition');
+        }
+      }
+    }
+  );
+
+  it('uses member equality and preserves timeout system principals and expiry precedence', () => {
+    const p = state();
+    delete p.actorMembers.actor_operator;
+    p.actorMembers.actor_reviewer = `member_${'9'.repeat(32)}`;
+    for (const decision of ['allow', 'deny', 'timeout'] as const) {
+      const original = request(p.ingress[0], decision);
+      const req = {
+        ...original,
+        principal:
+          decision === 'timeout'
+            ? original.principal
+            : { kind: 'operator' as const, actorId: 'actor_reviewer' },
+      };
+      const d = delivery(p.ingress[0], req);
+      accepts(
+        pair(jsonImage(p), nextState(p, { deliveries: [d] }), startMutation, {
+          kind: 'delivery-started',
+          request: req,
+        })
+      );
+      const invalidPrincipal = {
+        ...req,
+        principal:
+          decision === 'timeout'
+            ? { kind: 'operator' as const, actorId: 'actor_reviewer' }
+            : { kind: 'system_timeout' as const },
+      };
+      expect(() =>
+        verifyOwnerWalImages(
+          pair(
+            jsonImage(p),
+            nextState(p, { deliveries: [delivery(p.ingress[0], invalidPrincipal)] }),
+            startMutation,
+            { kind: 'delivery-started', request: invalidPrincipal }
+          )
+        )
+      ).toThrow('principal');
+      for (const outcome of ['self_approval', 'unavailable', 'expired'] as const) {
+        const terminal: OwnerWalDelivery = { ...d, phase: 'rejected', result: outcome };
+        expect(() =>
+          verifyOwnerWalImages(
+            pair(
+              jsonImage(p),
+              nextState(p, { deliveries: [terminal] }),
+              { kind: 'delivery-settled', phase: 'rejected', outcome },
+              { kind: 'delivery-settled', request: req, delivery: terminal }
+            )
+          )
+        ).toThrow('direct-rejection-precondition');
+      }
+    }
+    // Expiry runs before actor mapping, and also applies to system_timeout.
+    p.ingress[0] = payloadExpiry(p.ingress[0], '-0');
+    for (const principal of [
+      { kind: 'operator', actorId: 'actor_owner' },
+      { kind: 'operator', actorId: 'actor_missing' },
+      { kind: 'system_timeout' },
+    ] as const) {
+      const req = {
+        ...request(p.ingress[0], principal.kind === 'operator' ? 'deny' : 'timeout'),
+        principal,
+      };
+      const terminal: OwnerWalDelivery = {
+        ...delivery(p.ingress[0], req),
+        phase: 'rejected',
+        result: 'expired',
+      };
+      accepts(
+        pair(
+          jsonImage(p),
+          nextState(p, { deliveries: [terminal] }),
+          { kind: 'delivery-settled', phase: 'rejected', outcome: 'expired' },
+          { kind: 'delivery-settled', request: req, delivery: terminal }
+        )
+      );
+    }
+  });
 
   it('joins the original delivery request, D generation and B delivery; checks all durable delivery identity fields', () => {
     const { input, p, n, req } = startCase();
@@ -1052,11 +1289,15 @@ describe('native/image metadata and pure continuity fail closed', () => {
     const invalid: unknown[] = [
       { ...native, extra: true },
       { ...native, revision: native.revision + 1 },
+      { ...native, revision: -0 },
       { ...native, fence: { ...native.fence, dev: '01' } },
       { ...native, fence: { ...native.fence, ino: '9' } },
       { ...native, stateDelta: { ...native.stateDelta, previousRevision: 0 } },
+      { ...native, stateDelta: { ...native.stateDelta, previousRevision: -0 } },
+      { ...native, stateDelta: { ...native.stateDelta, nextRevision: -0 } },
       { ...native, stateDelta: { ...native.stateDelta, previousStateSha256: null } },
       { ...native, wal: { ...native.wal, byteSize: native.wal.byteSize + 1 } },
+      { ...native, wal: { ...native.wal, byteSize: -0 } },
     ];
     for (const mutation of [
       { kind: 'migration', outcome: 'published' },
@@ -1079,6 +1320,18 @@ describe('native/image metadata and pure continuity fail closed', () => {
       const sizes = { ...native.stateDelta.collectionSizes };
       Reflect.deleteProperty(sizes, key);
       invalid.push({ ...native, stateDelta: { ...native.stateDelta, collectionSizes: sizes } });
+      for (const side of ['previous', 'next'] as const) {
+        invalid.push({
+          ...native,
+          stateDelta: {
+            ...native.stateDelta,
+            collectionSizes: {
+              ...native.stateDelta.collectionSizes,
+              [key]: { ...native.stateDelta.collectionSizes[key], [side]: -0 },
+            },
+          },
+        });
+      }
       invalid.push({
         ...native,
         stateDelta: {
@@ -1124,14 +1377,15 @@ describe('native/image metadata and pure continuity fail closed', () => {
     expect(() => verifyOwnerWalImageContinuity(complete, unrelated)).toThrow('lineage-gap');
   });
 
-  it('validates fence bytes on replacement without inferring process ownership or an owner-generation fence', () => {
+  it('rejects substituted P fences even with coherent N/native metadata', () => {
     const { p, n, input } = startCase();
     const changed = {
       ...n,
       writerFence: { generation: `approval-writer-fence_${'b'.repeat(32)}`, dev: '22', ino: '33' },
     };
     const replacement = pair(jsonImage(p), changed, startMutation, input.witness);
-    accepts(replacement);
+    accepts(input);
+    expect(() => verifyOwnerWalImages(replacement)).toThrow('fence');
     expect(replacement.native.stateDelta.changedFields).toEqual([
       'deliveries',
       'revision',
@@ -1143,6 +1397,33 @@ describe('native/image metadata and pure continuity fail closed', () => {
         native: { ...replacement.native, fence: p.writerFence },
       })
     ).toThrow('fence');
+    // Matching fences remain valid without claiming the acquiring process's custody.
+    const sameFence = pair(
+      jsonImage({ ...p, writerFence: changed.writerFence }),
+      changed,
+      startMutation,
+      input.witness
+    );
+    accepts(sameFence);
+    expect(sameFence.native.stateDelta.changedFields).toEqual(['deliveries', 'revision']);
+    for (const field of ['generation', 'dev', 'ino'] as const) {
+      const mismatched = {
+        ...p,
+        writerFence: { ...p.writerFence, [field]: changed.writerFence[field] },
+      };
+      expect(() =>
+        verifyOwnerWalImages(pair(jsonImage(mismatched), n, startMutation, input.witness))
+      ).toThrow('fence');
+    }
+    for (const version of [1, 2] as const) {
+      const { stored, reconciled } = legacy(version);
+      const changedLegacy = { ...reconciled, writerFence: changed.writerFence };
+      expect(() =>
+        verifyOwnerWalImages(
+          pair(jsonImage(stored), changedLegacy, admissionMutation, admission(changedLegacy))
+        )
+      ).toThrow('fence');
+    }
   });
 
   it('rejects missing/oversized operation objects, cycles and accessors before semantic decoding', () => {

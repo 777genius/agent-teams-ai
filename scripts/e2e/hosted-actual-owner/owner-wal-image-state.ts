@@ -185,6 +185,11 @@ export function integer(value: unknown, minimum = 0, maximum = Number.MAX_SAFE_I
   );
   return value;
 }
+// Owner's stored nonnegative integers admit -0. Keep its sign in M; only outer
+// JSON serialization normalizes it, while embedded payloadJson stays byte-exact.
+function storedNonnegativeInteger(value: unknown): number {
+  return Object.is(value, -0) ? -0 : integer(value);
+}
 export function iso(value: unknown): string {
   requireWal(
     typeof value === 'string' &&
@@ -365,7 +370,7 @@ export function decodeOwnerWalRoute(
         s.authorityGeneration,
         /^generation_[A-Za-z0-9][A-Za-z0-9._-]{0,245}$/u
       ),
-      restoreGeneration: integer(s.restoreGeneration),
+      restoreGeneration: storedNonnegativeInteger(s.restoreGeneration),
     },
     openCodeBinding: {
       toolApprovalMode: 'manual',
@@ -509,7 +514,7 @@ export function decodeOwnerWalIngress(
     'payload'
   );
   validateSummary(p.summary);
-  if (p.expiresAtMs !== null) integer(p.expiresAtMs);
+  if (p.expiresAtMs !== null) storedNonnegativeInteger(p.expiresAtMs);
   const observedAtIso = iso(r.observedAtIso),
     acceptedAtIso = iso(r.acceptedAtIso);
   requireWal(Date.parse(acceptedAtIso) >= Date.parse(observedAtIso), 'accepted-time');
