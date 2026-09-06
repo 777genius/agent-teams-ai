@@ -194,9 +194,16 @@ describe('TeamProvisioningLaunchRosterMaterialization', () => {
     expect(JSON.parse(state.raw).leadSessionId).toBe('replacement');
   });
 
-  it.each(['opencode', 'codex'])(
+  it.each([
+    ['opencode', { providerId: 'opencode' }, true],
+    ['codex', { providerId: 'codex' }, false],
+    ['matching legacy provider', { providerId: 'opencode', provider: 'opencode' }, true],
+    ['conflicting legacy provider', { providerId: 'opencode', provider: 'codex' }, false],
+    ['matching backend', { providerId: 'opencode', providerBackendId: 'opencode-cli' }, true],
+    ['conflicting backend', { providerId: 'opencode', providerBackendId: 'codex-native' }, false],
+  ])(
     'handles a concurrent %s member with the same target name',
-    async (providerId) => {
+    async (_label, identity, compatible) => {
       const { state, input, ports } = createHarness();
       state.beforeWrite = () => {
         state.beforeWrite = () => {};
@@ -204,17 +211,17 @@ describe('TeamProvisioningLaunchRosterMaterialization', () => {
         latest.members.push({
           name: 'opencode-worker',
           agentId: 'opencode-worker@sandbox-mixed',
-          providerId,
+          ...identity,
           model: 'openai/gpt-5',
         });
         state.raw = JSON.stringify(latest);
       };
       const result = materializeTeamProvisioningLaunchRoster(input, ports);
-      if (providerId === 'opencode') await expect(result).resolves.toBe(true);
+      if (compatible) await expect(result).resolves.toBe(true);
       else await expect(result).rejects.toThrow('roster changed before config commit');
       expect(ports.writeConfig).toHaveBeenCalledTimes(1);
       expect(JSON.parse(state.raw).members).toHaveLength(3);
-      expect(JSON.parse(state.raw).members[2].providerId).toBe(providerId);
+      expect(JSON.parse(state.raw).members[2]).toMatchObject(identity);
     }
   );
 

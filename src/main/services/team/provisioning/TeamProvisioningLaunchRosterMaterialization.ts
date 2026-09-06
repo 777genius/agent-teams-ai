@@ -128,9 +128,13 @@ async function publishLaunchRoster(
           (candidate) => candidate?.name?.trim().toLowerCase() === name
         );
         const existing = matches[0];
+        const legacyProvider = (existing as { provider?: unknown } | undefined)?.provider;
         if (
           matches.length !== 1 ||
           normalizeOptionalTeamProviderId(existing.providerId) !== 'opencode' ||
+          (legacyProvider != null &&
+            normalizeOptionalTeamProviderId(legacyProvider) !== 'opencode') ||
+          (existing.providerBackendId != null && existing.providerBackendId !== 'opencode-cli') ||
           existing.model?.trim() !== member.model?.trim() ||
           existing.agentId !== `${member.name.trim()}@${input.teamName}`
         ) {
