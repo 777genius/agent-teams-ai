@@ -1,19 +1,23 @@
 import { chmod, mkdtemp, open, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
+
+import { descriptorMountId, openRootAnchor } from '../../../../scripts/e2e/hosted-actual-owner/anchors';
+import { legacyOwnerChildPlan, OWNER_V2_ARGV,ownerChildPlanV2 } from '../../../../scripts/e2e/hosted-actual-owner/owner-child-protocol';
+import { assertOwnerDescriptorCaptureBindings,parseOwnerChildDescriptorCleanup, parseOwnerLaunchEnvelope } from '../../../../scripts/e2e/hosted-actual-owner/owner-descriptor-cleanup';
 import { parseOwnerDescriptorMapV2, parseOwnerLaunchEvidenceV2 } from '../../../../scripts/e2e/hosted-actual-owner/owner-descriptor-v2';
-import { parseOwnerChildDescriptorCleanup, parseOwnerLaunchEnvelope, assertOwnerDescriptorCaptureBindings } from '../../../../scripts/e2e/hosted-actual-owner/owner-descriptor-cleanup';
 import { assertOwnerPlanV2, assertSelectedSupervisorTranscript, selectOwnerPlan } from '../../../../scripts/e2e/hosted-actual-owner/owner-plan';
-import { legacyOwnerChildPlan, ownerChildPlanV2, OWNER_V2_ARGV } from '../../../../scripts/e2e/hosted-actual-owner/owner-child-protocol';
 import { verifyP3B2Recipe } from '../../../../scripts/e2e/hosted-actual-owner/owner-recipe';
+import { parseSupervisorTranscript, type SupervisorOutcome } from '../../../../scripts/e2e/hosted-actual-owner/processes';
+import { closureDigestForTest, type ClosureEntry,verifyClosure } from '../../../../scripts/e2e/hosted-actual-owner/secure-files';
 import { canonicalJson, sha256 } from '../../../../scripts/e2e/hosted-actual-owner/supervisor/canonical';
+
+import { fixture, hex } from './owner-descriptor-v2.fixtures';
+
 import type { FilePin, IntegrationDescriptor } from '../../../../scripts/e2e/hosted-actual-owner/contracts';
 import type { PreflightAdmission } from '../../../../scripts/e2e/hosted-actual-owner/preflight';
-import { parseSupervisorTranscript, type SupervisorOutcome } from '../../../../scripts/e2e/hosted-actual-owner/processes';
-import { descriptorMountId, openRootAnchor } from '../../../../scripts/e2e/hosted-actual-owner/anchors';
-import { closureDigestForTest, verifyClosure, type ClosureEntry } from '../../../../scripts/e2e/hosted-actual-owner/secure-files';
-import { fixture, hex } from './owner-descriptor-v2.fixtures';
 
 const joined = (f = fixture()) => parseOwnerChildDescriptorCleanup({ schemaVersion: 3,
   contract: 'agent-teams.hosted-owner-child-parent-fd-cleanup/v3', records: [f.evidence.parentCleanup] }, [f.context.owner], {
@@ -111,8 +115,7 @@ describe('Product v2 native descriptor evidence (structural, non-qualifying)', (
   });
   it('cross-checks FD8 and FD9 against independently parsed capture identities', () => {
     const f = fixture(), cleanup = joined(f);
-    const raw = { opencode: { captureDevice: '1', captureInode: '1005', producerStartTokens: [f.context.owner.startToken] } }
-      as unknown as SupervisorOutcome['rawFiles'];
+    const raw = { opencode: { captureDevice: '1', captureInode: '1005', producerStartTokens: [f.context.owner.startToken] } } as unknown as SupervisorOutcome['rawFiles'];
     const captures = { ownerWalTimelinePath: { shards: [{ producerStartToken: f.context.owner.startToken,
       producerRole: 'owner', producerFd: 9, captureDevice: '1', captureInode: '1006' }] } } as unknown as SupervisorOutcome['captureFiles'];
     expect(() => assertOwnerDescriptorCaptureBindings(cleanup, raw, captures)).not.toThrow();
