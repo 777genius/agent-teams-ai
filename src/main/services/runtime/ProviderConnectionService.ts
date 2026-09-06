@@ -347,9 +347,10 @@ function createCodexCustomProviderCatalog(
 
 function applyCodexRuntimeContextEnv(
   env: NodeJS.ProcessEnv,
-  snapshot: CodexAccountSnapshotDto
+  snapshot: CodexAccountSnapshotDto,
+  binaryPathOverride?: string
 ): void {
-  const binaryPath = snapshot.runtimeContext?.binaryPath?.trim();
+  const binaryPath = binaryPathOverride?.trim() || snapshot.runtimeContext?.binaryPath?.trim();
   if (binaryPath) {
     env[CODEX_CLI_PATH_ENV_VAR] = binaryPath;
   }
@@ -826,7 +827,7 @@ export class ProviderConnectionService {
     if (!snapshot) {
       return env;
     }
-    applyCodexRuntimeContextEnv(env, snapshot);
+    applyCodexRuntimeContextEnv(env, snapshot, env[CODEX_CLI_PATH_ENV_VAR]);
     const readiness = evaluateCodexLaunchReadiness({
       preferredAuthMode: snapshot.preferredAuthMode,
       managedAccount: snapshot.managedAccount,

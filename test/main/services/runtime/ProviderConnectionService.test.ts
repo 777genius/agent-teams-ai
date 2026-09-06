@@ -1486,6 +1486,37 @@ describe('ProviderConnectionService', () => {
     expect(execCliMock).not.toHaveBeenCalled();
   });
 
+  it.each(['/managed/codex/bin/codex', '/explicit/codex'])(
+    'preserves passive binary %s over stale cached context while keeping account auth and home',
+    async (binaryPath) => {
+      const { ProviderConnectionService } =
+        await import('@main/services/runtime/ProviderConnectionService');
+      const getSnapshot = vi.fn().mockRejectedValue(new Error('passive status must not refresh'));
+      const getCachedSnapshot = vi.fn().mockReturnValue(createCodexSnapshot());
+      const lookupPreferred = vi.fn();
+      const service = new ProviderConnectionService(
+        { lookupPreferred } as never,
+        { getConfig: () => createConfig('auto') } as never
+      );
+      service.setCodexAccountFeature({ getSnapshot, getCachedSnapshot });
+
+      const env = await service.applyPassiveProviderStatusConnectionEnv(
+        { CODEX_CLI_PATH: binaryPath, OPENAI_API_KEY: 'must-not-leak-to-chatgpt-status' },
+        'codex'
+      );
+
+      expect(env).toMatchObject({
+        CODEX_CLI_PATH: binaryPath,
+        CODEX_HOME: '/Users/tester/.codex-custom',
+        CLAUDE_CODE_CODEX_FORCED_LOGIN_METHOD: 'chatgpt',
+      });
+      expect(env.OPENAI_API_KEY).toBeUndefined();
+      expect(getSnapshot).not.toHaveBeenCalled();
+      expect(lookupPreferred).not.toHaveBeenCalled();
+      expect(execCliMock).not.toHaveBeenCalled();
+    }
+  );
+
   it('keeps passive non-Codex status probes free of account resolution', async () => {
     const { ProviderConnectionService } =
       await import('@main/services/runtime/ProviderConnectionService');

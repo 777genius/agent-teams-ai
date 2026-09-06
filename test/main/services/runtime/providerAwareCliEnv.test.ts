@@ -17,6 +17,7 @@ const resolveAppManagedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedOpenCodeRuntimeBinaryPathMock = vi.fn();
 const isSupportedOpenCodeRuntimeBinaryPathMock = vi.fn();
+const resolveAppManagedCodexRuntimeBinaryPathMock = vi.fn();
 const resolveVerifiedAppManagedCodexRuntimeBinaryPathMock = vi.fn();
 const resolveAgentTeamsMcpLaunchSpecMock = vi.fn();
 const resolvePackagedAgentTeamsMcpEntryMock = vi.fn();
@@ -83,6 +84,7 @@ vi.mock('../../../../src/main/services/infrastructure/OpenCodeRuntimeInstallerSe
 }));
 
 vi.mock('@features/codex-runtime-installer/main', () => ({
+  resolveAppManagedCodexRuntimeBinaryPath: () => resolveAppManagedCodexRuntimeBinaryPathMock(),
   resolveVerifiedAppManagedCodexRuntimeBinaryPath: () =>
     resolveVerifiedAppManagedCodexRuntimeBinaryPathMock(),
 }));
@@ -121,6 +123,7 @@ describe('buildProviderAwareCliEnv', () => {
     resolveCachedVerifiedOpenCodeRuntimeBinaryPathMock.mockReturnValue(null);
     resolveVerifiedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(null);
     isSupportedOpenCodeRuntimeBinaryPathMock.mockResolvedValue(true);
+    resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue(null);
     resolveVerifiedAppManagedCodexRuntimeBinaryPathMock.mockResolvedValue(null);
     resolveAgentTeamsMcpLaunchSpecMock.mockResolvedValue({
       command: 'node',
@@ -166,6 +169,7 @@ describe('buildProviderAwareCliEnv', () => {
       expect(result.providerArgs).toEqual([]);
       expect(result.env.ELECTRON_RUN_AS_NODE).toBeUndefined();
       expect(result.env.CLAUDE_CODE_ENTRY_PROVIDER).toBe('codex');
+      expect(result.env.CODEX_CLI_PATH).toBeUndefined();
       expect(resolveAppManagedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
       expect(resolveVerifiedAppManagedCodexRuntimeBinaryPathMock).not.toHaveBeenCalled();
       expect(resolveVerifiedOpenCodeRuntimeBinaryPathMock).not.toHaveBeenCalled();
@@ -209,6 +213,56 @@ describe('buildProviderAwareCliEnv', () => {
     expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
     expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
   });
+
+  it.each([undefined, 'codex'] as const)(
+    'projects managed Codex metadata into passive status for provider %s without probes',
+    async (providerId) => {
+      const managedBinary = '/managed/codex/bin/codex';
+      resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue(managedBinary);
+      const { buildPassiveProviderStatusCliEnv } =
+        await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+
+      const { env } = buildPassiveProviderStatusCliEnv({ providerId });
+
+      expect(env.CODEX_CLI_PATH).toBe(managedBinary);
+      expect(resolveVerifiedAppManagedCodexRuntimeBinaryPathMock).not.toHaveBeenCalled();
+      expect(applyConfiguredConnectionEnvMock).not.toHaveBeenCalled();
+      expect(resolveAgentTeamsMcpLaunchSpecMock).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each(['call', 'shell', 'inherited'])(
+    'preserves a %s Codex binary override over passive managed metadata',
+    async (source) => {
+      const override = { CODEX_CLI_PATH: '/custom/codex' };
+      resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue('/managed/codex');
+      if (source === 'shell') getCachedShellEnvMock.mockReturnValue(override);
+      if (source === 'inherited') buildEnrichedEnvMock.mockReturnValue(override);
+      const { buildPassiveProviderStatusCliEnv } =
+        await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+
+      const { env } = buildPassiveProviderStatusCliEnv({
+        providerId: 'codex',
+        env: source === 'call' ? override : undefined,
+      });
+
+      expect(env.CODEX_CLI_PATH).toBe('/custom/codex');
+    }
+  );
+
+  it.each(['anthropic', 'gemini', 'opencode'] as const)(
+    'does not project managed Codex into passive %s status',
+    async (providerId) => {
+      resolveAppManagedCodexRuntimeBinaryPathMock.mockReturnValue('/managed/codex');
+      const { buildPassiveProviderStatusCliEnv } =
+        await import('../../../../src/main/services/runtime/providerAwareCliEnv');
+
+      const { env } = buildPassiveProviderStatusCliEnv({ providerId });
+
+      expect(env.CODEX_CLI_PATH).toBeUndefined();
+      expect(resolveAppManagedCodexRuntimeBinaryPathMock).not.toHaveBeenCalled();
+    }
+  );
 
   it('projects a previously verified PATH runtime into passive status without probing again', async () => {
     const cachedBinaryPath = path.join('/opt', 'homebrew', 'bin', 'opencode');
