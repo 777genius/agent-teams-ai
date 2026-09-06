@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 
 import { ProviderActivityStatusStrip } from '@renderer/components/common/ProviderActivityStatusStrip';
 import { getPendingProviderPreflightIds } from '@renderer/components/team/dialogs/optionalProviderPreflight';
+import { createLaunchGuard } from '@renderer/components/team/dialogs/providerLaunchAuthority';
+import { ProviderLaunchAuthorityNotice } from '@renderer/components/team/dialogs/ProviderLaunchAuthorityNotice';
 import { createDefaultCliExtensionCapabilities } from '@shared/utils/providerExtensionCapabilities';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -89,6 +91,87 @@ function renderStrip(
 }
 
 describe('ProviderActivityStatusStrip', () => {
+  it.each([
+    'refresh',
+    'auth',
+    'unsupported',
+    'error',
+    'catalog-error',
+    'unavailable',
+    'mixed',
+  ] as const)(
+    'presents authenticated Anthropic catalog refresh neutrally without hiding %s failures',
+    async (scenario) => {
+      const provider = createProvider({
+        providerId: 'anthropic',
+        displayName: 'Anthropic',
+        authenticated: scenario !== 'auth',
+        supported: scenario !== 'unsupported',
+        verificationState: scenario === 'error' ? 'error' : 'verified',
+        statusCheckOutcome: 'authoritative',
+        statusCheckErrorCode: scenario === 'unavailable' ? 'unavailable' : undefined,
+        modelCatalogRefreshState: scenario === 'catalog-error' ? 'error' : 'loading',
+        models: ['claude-haiku-4-5'],
+      });
+      provider.capabilities.teamLaunch = false;
+      const providers =
+        scenario === 'mixed'
+          ? [
+              provider,
+              createProvider({
+                providerId: 'opencode',
+                displayName: 'OpenCode',
+                verificationState: 'error',
+              }),
+            ]
+          : [provider];
+      const guard = createLaunchGuard(
+        scenario === 'mixed' ? ['anthropic', 'opencode'] : ['anthropic'],
+        new Map(providers.map((entry) => [entry.providerId, entry]))
+      );
+      expect(guard.blocked(true)).toBe(true);
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const root = createRoot(host);
+      await act(async () => {
+        root.render(
+          React.createElement(
+            React.Fragment,
+            null,
+            React.createElement(ProviderActivityStatusStrip, {
+              cliStatus: createMultimodelStatus(providers),
+              cliStatusLoading: false,
+              cliProviderStatusLoading: {},
+              multimodelEnabled: true,
+              showReadyProviders: true,
+            }),
+            React.createElement(ProviderLaunchAuthorityNotice, {
+              action: 'launch',
+              blockers: guard.blockers(true),
+              id: 'provider-refresh-notice',
+              onOpenProviderSettings: vi.fn(),
+            })
+          )
+        );
+      });
+      if (scenario === 'refresh') {
+        expect(host.textContent).toContain('Checking...');
+        expect(host.querySelector('#provider-refresh-notice')?.getAttribute('role')).toBe('status');
+        expect(host.textContent).not.toContain('Needs attention');
+        expect(host.querySelector('[role="alert"]')).toBeNull();
+      } else {
+        expect(host.textContent).toContain('Needs attention');
+        expect(host.querySelector('#provider-refresh-notice')?.getAttribute('role')).toBe('alert');
+        if (scenario === 'mixed') {
+          expect(host.querySelector('#provider-refresh-notice')?.textContent).toMatch(
+            /Anthropic.*checking/i
+          );
+        }
+      }
+      await act(async () => root.unmount());
+    }
+  );
+
   it.each([
     ['codex', true],
     ['codex', false],

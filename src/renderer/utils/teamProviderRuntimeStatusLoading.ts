@@ -80,6 +80,17 @@ export function isTeamProviderRuntimeStatusLoading(
     return false;
   }
 
+  if (
+    providerId === 'anthropic' &&
+    providerStatus?.supported &&
+    providerStatus.authenticated &&
+    providerStatus.verificationState === 'verified' &&
+    providerStatus.statusCheckOutcome === 'authoritative' &&
+    providerStatus.statusCheckErrorCode == null &&
+    providerStatus.modelCatalogRefreshState === 'loading'
+  )
+    return true;
+
   if (isTeamProviderModelVerificationPending(providerId, providerStatus)) {
     if (providerId === 'opencode' && getOpenCodeScopedPreparationFailure(openCodeEvidence)) {
       return false;

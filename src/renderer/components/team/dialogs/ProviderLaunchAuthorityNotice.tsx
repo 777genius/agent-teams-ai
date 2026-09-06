@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useAppTranslation } from '@features/localization/renderer';
+import { isTeamProviderRuntimeStatusLoading } from '@renderer/utils/teamProviderRuntimeStatusLoading';
 import { AlertTriangle } from 'lucide-react';
 
 import {
@@ -24,13 +25,22 @@ export const ProviderLaunchAuthorityNotice = ({
 }): React.JSX.Element | null => {
   const { t } = useAppTranslation('team');
   if (blockers.length === 0) return null;
-
   const checks = blockers.map((blocker) => ({
     providerId: blocker.providerId,
-    status: 'failed' as const,
+    status:
+      blocker.providerId === 'anthropic' &&
+      isTeamProviderRuntimeStatusLoading(blocker.providerId, blocker.providerStatus)
+        ? ('checking' as const)
+        : ('failed' as const),
     backendSummary: getProvisioningProviderBackendSummary(blocker.providerStatus),
     details: [blocker.detail],
   }));
+  if (checks.every((check) => check.status === 'checking'))
+    return (
+      <p id={id} role="status" className="text-xs text-[var(--color-text-muted)]">
+        {t('launch.prepare.checkingProviders')}
+      </p>
+    );
 
   return (
     <div id={id} role="alert" aria-live="polite" className="text-xs">
