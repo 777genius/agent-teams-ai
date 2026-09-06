@@ -21,16 +21,58 @@ export const PRIMARY_LANE_REBOOTSTRAP_FIRST_FAILURE_GRACE_MS = 20_000;
 export const PRIMARY_LANE_REBOOTSTRAP_RETRY_DELAY_MS = 15_000;
 
 /**
- * The ladder ships enabled.
+ * The env switch for the ladder, and the reason it ships OFF.
  *
- * Relaunching the lead without a user asking for it is a product decision, not
- * a bug fix, so it is switchable from exactly one place: flip this default, or
- * inject `isOpenCodePrimaryLaneSelfHealEnabled`. With it off the lane still
- * refuses the unwinnable send and the delivery row still settles - it just
- * settles terminal immediately instead of after a bounded ladder, and no
- * relaunch is ever started.
+ * This module was written against a symptom whose cause turned out to be
+ * elsewhere: on the aggregate launch path the lead was never included in the
+ * roster handed to the orchestrator, so no launch command was ever sent for it.
+ * See `docs/team-management/opencode-lead-session-root-cause.md` for the full
+ * account, including the bridge-ledger evidence.
+ *
+ * Two reasons it is off by default:
+ *
+ * 1. Against that cause it cannot work. The re-bootstrap relaunches the primary
+ *    lane through the same code path that omitted the lead, so a second attempt
+ *    omits it again - two relaunches, tens of seconds and the lead's whole
+ *    context spent to arrive at the same terminal state.
+ * 2. Relaunching a lead nobody asked to relaunch has a blast radius. The
+ *    lane-storage probe keys off a fixed set of evidence filenames; if that
+ *    layout ever changes, healthy lanes start reading as unbootstrapped and
+ *    every user's lead restarts twice per run, with no way to stop it short of
+ *    a release.
+ *
+ * It is kept rather than deleted because the NON-aggregate path does launch the
+ * lead, and a genuine bootstrap failure there is exactly what this was built
+ * for. Turn it on deliberately, for a reproduction you understand.
+ *
+ * With it off the lane still refuses the unwinnable send and the delivery row
+ * still settles - it just settles terminal immediately instead of after a
+ * bounded ladder, and no relaunch is ever started.
  */
-export const OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED = true;
+export const OPENCODE_PRIMARY_LANE_SELF_HEAL_ENV =
+  'CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED';
+
+export const OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED = false;
+
+/**
+ * Reads the switch the same way the stall monitor's gates read theirs, so an
+ * operator does not have to remember which spelling of "on" a given flag wants.
+ */
+export function isOpenCodePrimaryLaneSelfHealEnabledFromEnv(
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
+  const raw = env[OPENCODE_PRIMARY_LANE_SELF_HEAL_ENV]?.trim().toLowerCase();
+  if (raw == null || raw.length === 0) {
+    return OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED;
+  }
+  if (raw === '1' || raw === 'true' || raw === 'on' || raw === 'yes') {
+    return true;
+  }
+  if (raw === '0' || raw === 'false' || raw === 'off' || raw === 'no') {
+    return false;
+  }
+  return OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED;
+}
 
 export const OPENCODE_PRIMARY_LANE_BOOTSTRAP_MISSING_REASON =
   'opencode_primary_lane_bootstrap_missing';
@@ -209,7 +251,7 @@ export class OpenCodePrimaryLaneBootstrapSelfHealTracker {
     this.nowMs = ports.nowMs ?? (() => Date.now());
     this.isEnabled =
       ports.isOpenCodePrimaryLaneSelfHealEnabled ??
-      ((): boolean => OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED);
+      ((): boolean => isOpenCodePrimaryLaneSelfHealEnabledFromEnv());
   }
 
   private keyOf(teamName: string, runId: string | null): string {

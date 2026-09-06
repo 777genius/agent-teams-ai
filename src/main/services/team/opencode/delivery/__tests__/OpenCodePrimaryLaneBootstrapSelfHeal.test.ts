@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  isOpenCodePrimaryLaneSelfHealEnabledFromEnv,
+  OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED,
+  OPENCODE_PRIMARY_LANE_SELF_HEAL_ENV,
   decidePrimaryLaneBootstrapSelfHeal,
   describePrimaryLaneBootstrapSelfHeal,
   OpenCodePrimaryLaneBootstrapSelfHealTracker,
@@ -162,6 +165,10 @@ describe('OpenCodePrimaryLaneBootstrapSelfHealTracker', () => {
       nowMs,
       inspectLaneStorage: async () => UNBOOTSTRAPPED_LANE_STORAGE,
       rebootstrapPrimaryLane,
+      // The ladder ships off - see the module docblock and
+      // docs/team-management/opencode-lead-session-root-cause.md. These tests
+      // are about how it behaves once an operator turns it on.
+      isOpenCodePrimaryLaneSelfHealEnabled: () => true,
     });
     return { tracker, rebootstrapPrimaryLane };
   }
@@ -207,6 +214,7 @@ describe('OpenCodePrimaryLaneBootstrapSelfHealTracker', () => {
       nowMs: () => now,
       inspectLaneStorage: async () => UNBOOTSTRAPPED_LANE_STORAGE,
       rebootstrapPrimaryLane,
+      isOpenCodePrimaryLaneSelfHealEnabled: () => true,
     });
 
     await tracker.request(request);
@@ -278,6 +286,7 @@ describe('OpenCodePrimaryLaneBootstrapSelfHealTracker', () => {
       nowMs: () => T0 + 10 * 60_000,
       inspectLaneStorage: async () => COMMITTED_LANE_STORAGE,
       rebootstrapPrimaryLane,
+      isOpenCodePrimaryLaneSelfHealEnabled: () => true,
     });
 
     expect((await tracker.request(request)).action).toBe('not_applicable');
@@ -292,6 +301,7 @@ describe('OpenCodePrimaryLaneBootstrapSelfHealTracker', () => {
         throw new Error('EBUSY');
       },
       rebootstrapPrimaryLane,
+      isOpenCodePrimaryLaneSelfHealEnabled: () => true,
     });
 
     expect((await tracker.request(request)).action).toBe('not_applicable');
@@ -310,6 +320,7 @@ describe('OpenCodePrimaryLaneBootstrapSelfHealTracker', () => {
         hasRuntimeEvidenceOnDisk: false,
       }),
       rebootstrapPrimaryLane,
+      isOpenCodePrimaryLaneSelfHealEnabled: () => true,
     });
 
     expect((await tracker.request(request)).action).toBe('not_applicable');
@@ -351,5 +362,71 @@ describe('OpenCodePrimaryLaneBootstrapSelfHealTracker', () => {
     // previous window's elapsed time.
     expect((await tracker.request(request)).action).toBe('wait');
     expect(rebootstrapPrimaryLane).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * The ladder ships off. It was written against a symptom whose cause was
+ * elsewhere - on the aggregate launch path the lead was never in the roster sent
+ * to the orchestrator - and against that cause a re-bootstrap relaunches through
+ * the same code that omitted the lead. See
+ * docs/team-management/opencode-lead-session-root-cause.md.
+ */
+describe('the self-heal switch', () => {
+  it('is off when nothing is set', () => {
+    expect(isOpenCodePrimaryLaneSelfHealEnabledFromEnv({})).toBe(false);
+    expect(OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED).toBe(false);
+  });
+
+  it('accepts the same spellings of on and off the stall gates accept', () => {
+    for (const on of ['1', 'true', 'on', 'yes', 'TRUE', ' On ']) {
+      expect(
+        isOpenCodePrimaryLaneSelfHealEnabledFromEnv({
+          [OPENCODE_PRIMARY_LANE_SELF_HEAL_ENV]: on,
+        })
+      ).toBe(true);
+    }
+    for (const off of ['0', 'false', 'off', 'no']) {
+      expect(
+        isOpenCodePrimaryLaneSelfHealEnabledFromEnv({
+          [OPENCODE_PRIMARY_LANE_SELF_HEAL_ENV]: off,
+        })
+      ).toBe(false);
+    }
+  });
+
+  /** An unreadable value is not a licence to relaunch anyone's lead. */
+  it('falls back to the default on anything it does not understand', () => {
+    expect(
+      isOpenCodePrimaryLaneSelfHealEnabledFromEnv({
+        [OPENCODE_PRIMARY_LANE_SELF_HEAL_ENV]: 'maybe',
+      })
+    ).toBe(false);
+    expect(
+      isOpenCodePrimaryLaneSelfHealEnabledFromEnv({
+        [OPENCODE_PRIMARY_LANE_SELF_HEAL_ENV]: '   ',
+      })
+    ).toBe(false);
+  });
+
+  it('gives up instead of relaunching while the switch is off', async () => {
+    const rebootstrapPrimaryLane = vi.fn(async () => true);
+    const tracker = new OpenCodePrimaryLaneBootstrapSelfHealTracker({
+      nowMs: () => 1_000_000,
+      inspectLaneStorage: async () => UNBOOTSTRAPPED_LANE_STORAGE,
+      rebootstrapPrimaryLane,
+      isOpenCodePrimaryLaneSelfHealEnabled: () => false,
+    });
+
+    const decision = await tracker.request({
+      teamName: 'lane-team',
+      laneId: 'primary',
+      memberName: 'team-lead',
+      runId: 'run-a1',
+      reason: 'opencode_primary_lane_bootstrap_missing',
+    });
+
+    expect(decision.action).toBe('give_up');
+    expect(rebootstrapPrimaryLane).not.toHaveBeenCalled();
   });
 });
