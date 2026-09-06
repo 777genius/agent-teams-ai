@@ -11,6 +11,7 @@ import {
 import { MemberBadge } from '@renderer/components/team/MemberBadge';
 import { ActionModeSelector } from '@renderer/components/team/messages/ActionModeSelector';
 import { OpenCodeDeliveryWarning } from '@renderer/components/team/messages/OpenCodeDeliveryWarning';
+import { useTeamStartupCopy } from '@renderer/components/team/useTeamStartupCopy';
 import { Popover, PopoverContent, PopoverTrigger } from '@renderer/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@renderer/components/ui/tooltip';
 import { getTeamColorSet } from '@renderer/constants/teamColors';
@@ -19,7 +20,6 @@ import { useTaskSuggestions } from '@renderer/hooks/useTaskSuggestions';
 import { useTeamSuggestions } from '@renderer/hooks/useTeamSuggestions';
 import { cn } from '@renderer/lib/utils';
 import { useStore } from '@renderer/store';
-import { isTeamProvisioningActive } from '@renderer/store/slices/teamSlice';
 import { serializeChipsWithText } from '@renderer/types/inlineChip';
 import {
   canMemberShowAttachmentControl,
@@ -282,7 +282,7 @@ export const MessageComposer = ({
     const displayName = s.selectedTeamData?.config.name ?? teamName;
     return nameColorSet(displayName).border;
   });
-  const isProvisioning = useStore((s) => isTeamProvisioningActive(s, teamName));
+  const startupCopy = useTeamStartupCopy(teamName);
   const draft = useComposerDraft(teamName);
   const appliedRevisionRequestIdRef = useRef<string | null>(null);
   const textHasTeamMentionTrigger = draft.text.includes('@');
@@ -333,7 +333,7 @@ export const MessageComposer = ({
     useShallow((s) => (slashCommandDataEnabled ? s.skillsUserCatalog : EMPTY_SKILL_CATALOG))
   );
   const fetchSkillsCatalog = useStore((s) => s.fetchSkillsCatalog);
-  const isLaunchBlocking = isProvisioning && !isTeamAlive;
+  const isLaunchBlocking = startupCopy.isProvisioning && !isTeamAlive;
 
   // Fetch the catalog only when slash suggestions are actually needed.
   useEffect(() => {
@@ -1250,7 +1250,7 @@ export const MessageComposer = ({
           id={`compose-${teamName}`}
           placeholder={
             isLaunchBlocking
-              ? t('messageComposer.input.teamLaunchingPlaceholder')
+              ? startupCopy.placeholder
               : isCrossTeam
                 ? t('messageComposer.input.crossTeamPlaceholder', {
                     team: targetDisplayName ?? t('messageComposer.input.teamFallback'),
@@ -1327,9 +1327,7 @@ export const MessageComposer = ({
                     {slashCommandRestrictionReason ? (
                       <TooltipContent side="top">{slashCommandRestrictionReason}</TooltipContent>
                     ) : isLaunchBlocking && !sending ? (
-                      <TooltipContent side="top">
-                        {t('messageComposer.actions.sendingUnavailableLaunching')}
-                      </TooltipContent>
+                      <TooltipContent side="top">{startupCopy.sendingUnavailable}</TooltipContent>
                     ) : null}
                   </Tooltip>
                 ) : null}

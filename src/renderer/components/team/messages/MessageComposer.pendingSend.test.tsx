@@ -4,7 +4,11 @@ import { createRoot } from 'react-dom/client';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { ResolvedTeamMember } from '@shared/types';
+import type {
+  LeadActivityState,
+  ResolvedTeamMember,
+  TeamProvisioningProgress,
+} from '@shared/types';
 
 const draftHarness = vi.hoisted(() => {
   const initialState = {
@@ -62,10 +66,16 @@ const draftHarness = vi.hoisted(() => {
 const provisioningHarness = vi.hoisted(() => {
   const state = {
     active: false,
+    progress: null as TeamProvisioningProgress | null,
+    leadActivity: undefined as LeadActivityState | undefined,
+    currentRunId: undefined as string | undefined,
   };
   return {
     reset: () => {
       state.active = false;
+      state.progress = null;
+      state.leadActivity = undefined;
+      state.currentRunId = undefined;
     },
     state,
   };
@@ -152,6 +162,7 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
     HTMLTextAreaElement,
     {
       value: string;
+      placeholder?: string;
       disabled?: boolean;
       className?: string;
       surfaceClassName?: string;
@@ -166,6 +177,7 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
     (
       {
         value,
+        placeholder,
         disabled,
         className,
         surfaceClassName,
@@ -193,6 +205,7 @@ vi.mock('@renderer/components/ui/MentionableTextarea', () => {
             readOnly: true,
             ref,
             value,
+            placeholder,
           }),
           React.createElement('div', null, cornerActionLeft),
           React.createElement('div', null, cornerAction)
@@ -275,11 +288,14 @@ vi.mock('@renderer/store', () => ({
       selectedTeamName: null,
       skillsProjectCatalogByProjectPath: {},
       skillsUserCatalog: [],
+      leadActivityByTeam: { 'team-alpha': provisioningHarness.state.leadActivity },
+      currentRuntimeRunIdByTeam: { 'team-alpha': provisioningHarness.state.currentRunId },
     }),
 }));
 
 vi.mock('@renderer/store/slices/teamSlice', () => ({
   isTeamProvisioningActive: () => provisioningHarness.state.active,
+  getCurrentProvisioningProgressForTeam: () => provisioningHarness.state.progress,
 }));
 
 import { MessageComposer } from './MessageComposer';
@@ -722,6 +738,37 @@ describe('MessageComposer pending send lifecycle', () => {
       root.unmount();
     });
   });
+
+  it.each([false, true])(
+    'shows working startup copy without changing the alive=%s send gate',
+    (isTeamAlive) => {
+      provisioningHarness.state.active = true;
+      provisioningHarness.state.progress = {
+        runId: 'run-current',
+        teamName: 'team-alpha',
+        state: 'finalizing',
+        startedAt: '2026-09-06T12:00:00Z',
+        updatedAt: '2026-09-06T12:00:05Z',
+        message: 'Auditing bootstrap truth',
+      };
+      provisioningHarness.state.leadActivity = 'active';
+      provisioningHarness.state.currentRunId = 'run-current';
+      const { host, onSend, root } = renderComposer({ isTeamAlive });
+      expect(getSendButton(host).disabled).toBe(!isTeamAlive);
+      if (!isTeamAlive) {
+        expect(getTextarea(host).placeholder).toContain(
+          'Lead is working. Startup checks are finishing'
+        );
+        expect(getTextarea(host).placeholder).toContain('sending is not yet available');
+        expect(getTextarea(host).placeholder).not.toContain('will be queued');
+        act(() => getSendButton(host).click());
+        expect(onSend).not.toHaveBeenCalled();
+      } else {
+        expect(getTextarea(host).placeholder).not.toContain('Startup checks');
+      }
+      act(() => root.unmount());
+    }
+  );
 
   it('returns focus to the textarea after sending', () => {
     const { host, root } = renderComposer();

@@ -1,5 +1,20 @@
+import { isProvisioningProgressActive } from './teamProvisioningPresentation';
+
 import type { TeamProvisioningPresentation } from './teamProvisioningPresentation';
-import type { LeadActivityState } from '@shared/types';
+import type { LeadActivityState, TeamProvisioningProgress } from '@shared/types';
+
+export function hasObservedLeadWorkDuringProvisioning(input: {
+  progress: TeamProvisioningProgress | null | undefined;
+  leadActivity?: LeadActivityState;
+  currentRuntimeRunId?: string | null;
+}): boolean {
+  return (
+    isProvisioningProgressActive(input.progress) &&
+    input.leadActivity === 'active' &&
+    input.currentRuntimeRunId != null &&
+    input.currentRuntimeRunId === input.progress?.runId
+  );
+}
 
 /** Keep observed work separate from the launch-success and teammate-readiness gates. */
 export function applyLeadActivityToProvisioningPresentation(
@@ -15,8 +30,7 @@ export function applyLeadActivityToProvisioningPresentation(
     !presentation?.isActive ||
     presentation.isReady ||
     presentation.isFailed ||
-    input.leadActivity !== 'active' ||
-    input.currentRuntimeRunId !== presentation.progress.runId
+    !hasObservedLeadWorkDuringProvisioning({ ...input, progress: presentation.progress })
   )
     return presentation;
 

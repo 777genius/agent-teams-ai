@@ -77,6 +77,7 @@ import {
   resolveTeamsProjectNavigationPath,
   teamMatchesProjectSelection,
 } from './teamProjectSelection';
+import { TeamStatusBadge } from './TeamStatusBadge';
 import { TeamTaskStatusSummary } from './TeamTaskStatusSummary';
 import { useTeamStopControl } from './useTeamStopControl';
 
@@ -257,60 +258,6 @@ function renderTeamRecentPaths(
 
 type TeamT = ReturnType<typeof useAppTranslation>['t'];
 
-const StatusBadge = ({ status, t }: { status: TeamStatus; t: TeamT }): React.JSX.Element => {
-  switch (status) {
-    case 'active':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
-          <span className="size-1.5 animate-pulse rounded-full bg-emerald-400" />
-          {t('list.status.active')}
-        </span>
-      );
-    case 'idle':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-400">
-          <span className="size-1.5 rounded-full bg-emerald-400" />
-          {t('list.status.running')}
-        </span>
-      );
-    case 'provisioning':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-          <span className="size-1.5 animate-pulse rounded-full bg-amber-400" />
-          {t('list.status.launching')}
-        </span>
-      );
-    case 'offline':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/15 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
-          <span className="size-1.5 rounded-full bg-zinc-500" />
-          {t('list.status.offline')}
-        </span>
-      );
-    case 'partial_failure':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-          <span className="size-1.5 rounded-full bg-amber-400" />
-          {t('list.status.partialFailure')}
-        </span>
-      );
-    case 'partial_skipped':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-medium text-sky-300">
-          <span className="size-1.5 rounded-full bg-sky-300" />
-          {t('list.status.partialSkipped')}
-        </span>
-      );
-    case 'partial_pending':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-300">
-          <span className="size-1.5 rounded-full bg-amber-300" />
-          {t('list.status.partialPending')}
-        </span>
-      );
-  }
-};
-
 interface ActiveTeamCardProps {
   team: TeamSummary;
   status: TeamStatus;
@@ -395,7 +342,7 @@ const ActiveTeamCard = ({
               {team.displayName}
             </h3>
             <div className="pointer-events-none shrink-0">
-              <StatusBadge status={status} t={t} />
+              <TeamStatusBadge status={status} teamName={team.teamName} />
             </div>
           </div>
           <div className="flex min-h-6 items-center justify-between gap-2">
