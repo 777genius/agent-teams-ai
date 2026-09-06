@@ -672,7 +672,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(timeoutCallback).not.toBeNull();
   });
 
-  it('does not kill or fail a timed-out launch when timeout recovery succeeds', async () => {
+  it('terminates a timed-out launch before reporting the already-provisioned team', async () => {
     let timeoutCallback: (() => void) | null = null;
     const child = new EventEmitter() as ChildProcess;
     const run = createRun({ child });
@@ -706,10 +706,11 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
       expect(tryCompleteAfterTimeout).toHaveBeenCalledWith(run);
     });
 
-    expect(killTeamProcessAndWait).not.toHaveBeenCalled();
+    expect(killTeamProcessAndWait).toHaveBeenCalledExactlyOnceWith(child);
     expect(updateProgress).not.toHaveBeenCalled();
     expect(cleanupRun).not.toHaveBeenCalled();
-    expect(run.processKilled).toBe(false);
+    expect(run.processKilled).toBe(true);
+    expect(run.processClosed).toBe(true);
     expect(run.finalizingByTimeout).toBe(true);
   });
 
@@ -910,7 +911,7 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     expect(run.anthropicApiKeyHelper).toBeNull();
   });
 
-  it('does not terminate or clean a replacement launch child after timeout probing', async () => {
+  it('does not clean a replacement launch child during post-termination reporting', async () => {
     let timeoutCallback: (() => void) | null = null;
     const child = new EventEmitter() as ChildProcess;
     const replacementChild = new EventEmitter() as ChildProcess;
@@ -952,15 +953,18 @@ describe('TeamProvisioningLaunchDeterministicSpawnFlow', () => {
     });
 
     run.child = replacementChild;
+    run.processKilled = false;
+    run.processClosed = false;
+    run.finalizingByTimeout = false;
     finishProbe(false);
     await vi.waitFor(() => {
       expect(run.finalizingByTimeout).toBe(false);
     });
 
     expect(run.processKilled).toBe(false);
-    expect(killTeamProcessAndWait).not.toHaveBeenCalled();
-    expect(cleanupAnthropicApiKeyHelperMaterial).not.toHaveBeenCalled();
-    expect(run.anthropicApiKeyHelper).toBe(anthropicApiKeyHelper);
+    expect(killTeamProcessAndWait).toHaveBeenCalledExactlyOnceWith(child);
+    expect(cleanupAnthropicApiKeyHelperMaterial).toHaveBeenCalledOnce();
+    expect(run.anthropicApiKeyHelper).toBeNull();
     expect(cleanupRun).not.toHaveBeenCalled();
   });
 });

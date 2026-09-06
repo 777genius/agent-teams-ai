@@ -40,6 +40,7 @@ export interface WaitForValidConfigPorts {
 }
 
 export interface TeamProvisioningProcessExitRun extends CliExitPresentationRun {
+  child?: object | null;
   runId: string;
   teamName: string;
   progress: TeamProvisioningProgress;
@@ -87,6 +88,8 @@ export interface WaitForMissingInboxesPorts {
 export interface TeamProvisioningTimeoutCompletionPorts<
   TRun extends TeamProvisioningProcessExitRun,
 > {
+  isCurrentTrackedRun(run: TRun): boolean;
+  stopMixedSecondaryRuntimeLanes(teamName: string): Promise<void>;
   waitForValidConfig(run: TRun): Promise<ValidConfigProbeResultLike>;
   waitForTeamInList(teamName: string, run?: TRun): Promise<boolean>;
   waitForMissingInboxes(run: TRun): Promise<string[]>;
@@ -432,21 +435,47 @@ export async function tryCompleteAfterTimeout<TRun extends TeamProvisioningProce
   run: TRun,
   ports: TeamProvisioningTimeoutCompletionPorts<TRun>
 ): Promise<boolean> {
-  if (run.cancelRequested) {
-    return false;
+  const child = run.child;
+  const isCurrent = (): boolean =>
+    ports.isCurrentTrackedRun(run) &&
+    run.child === child &&
+    run.processClosed &&
+    run.processKilled &&
+    !run.cancelRequested &&
+    !run.provisioningComplete &&
+    !run.authRetryInProgress;
+  // This is post-termination reporting, never a readiness signal for a live process.
+  if (!run.processClosed || !run.processKilled) return false;
+  if (!isCurrent()) return true;
+  try {
+    await ports.stopMixedSecondaryRuntimeLanes(run.teamName);
+  } catch {
+    if (!isCurrent()) return true;
+    run.finalizingByTimeout = false;
+    run.onProgress(
+      ports.updateProgress(run, 'failed', 'Timed-out runtime cleanup needs retry', {
+        error:
+          'The lead stopped, but secondary runtimes could not be confirmed stopped. The run remains tracked for cleanup.',
+      })
+    );
+    return true;
   }
+  if (!isCurrent()) return true;
 
   const configProbe = await ports.waitForValidConfig(run);
+  if (!isCurrent()) return true;
   if (!configProbe.ok || configProbe.location !== 'configured') {
     return false;
   }
 
   const visibleInList = await ports.waitForTeamInList(run.teamName);
+  if (!isCurrent()) return true;
   if (!visibleInList) {
     return false;
   }
 
   const missingInboxes = await ports.waitForMissingInboxes(run);
+  if (!isCurrent()) return true;
   const decision = decideTimeoutCompletion({
     cancelRequested: run.cancelRequested,
     configProbe,
@@ -459,6 +488,7 @@ export async function tryCompleteAfterTimeout<TRun extends TeamProvisioningProce
 
   if (!run.isLaunch) {
     await ports.persistMembersMeta(run.teamName, run.request);
+    if (!isCurrent()) return true;
   }
   await ports.updateConfigPostLaunch(
     run.teamName,
@@ -472,10 +502,15 @@ export async function tryCompleteAfterTimeout<TRun extends TeamProvisioningProce
       members: run.allEffectiveMembers,
     }
   );
+  if (!isCurrent()) return true;
   await ports.refreshMemberSpawnStatusesFromLeadInbox(run);
+  if (!isCurrent()) return true;
   await ports.maybeAuditMemberSpawnStatuses(run, { force: true });
+  if (!isCurrent()) return true;
   await ports.finalizeMissingRegisteredMembersAsFailed(run);
+  if (!isCurrent()) return true;
   await ports.persistLaunchStateSnapshot(run, 'finished');
+  if (!isCurrent()) return true;
   const progress = ports.updateProgress(
     run,
     'disconnected',
