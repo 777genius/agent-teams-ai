@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 
-import { encodeReplayCursor } from '@features/coordination-events';
+import { encodeReplayCursor, HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE } from '@features/coordination-events';
 import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
 
 import { restartHostedV1LifecycleOwner } from '../../../scripts/e2e/hosted-v1/run';
@@ -11,6 +11,8 @@ import {
   writeProviderInbox,
   writeProviderTask,
 } from '../../fixtures/hosted-v1/adversarialState';
+
+import { installSseObservation } from '../../fixtures/hosted-v1/sseObservation';
 
 interface RuntimeInput {
   readonly appDataDir: string;
@@ -33,6 +35,7 @@ interface LifecycleControlState {
 }
 
 interface LifecycleCommandReceipt {
+  readonly commandId: string;
   readonly kind: 'accepted';
   readonly resourceRevision: string;
   readonly runId: string;
@@ -237,188 +240,123 @@ async function waitForBackpressureTermination(streamId: string): Promise<void> {
   }
 }
 
-async function nextSseEvent(
-  page: Page,
-  cursor: string,
-  expectedTopLevelEventType?: string
-): Promise<{ eventType: string; data: Record<string, unknown>; id: string }> {
-  return page.evaluate(
-    ({ after, expectedTopLevelEventType }) =>
-      new Promise((resolve, reject) => {
-        const source = new EventSource(`/api/hosted/v1/events?after=${encodeURIComponent(after)}`);
-        const timeout = window.setTimeout(() => {
-          source.close();
-          reject(new Error('hosted_e2e_sse_observation_timeout'));
-        }, 25_000);
-        const finish = (eventType: string, event: MessageEvent) => {
-          const data = JSON.parse(event.data) as Record<string, unknown>;
-          if (
-            expectedTopLevelEventType !== undefined &&
-            data.eventType !== expectedTopLevelEventType
-          ) {
-            return;
-          }
-          window.clearTimeout(timeout);
-          source.close();
-          resolve({ eventType, data, id: event.lastEventId });
-        };
-        source.addEventListener('coordination_event', (event) =>
-          finish('coordination_event', event as MessageEvent)
-        );
-        source.addEventListener('resync_required', (event) =>
-          finish('resync_required', event as MessageEvent)
-        );
-        // EventSource owns bounded reconnects between controller readiness and the replay stream.
-        // Closing on its first transient transport error defeats that protocol after a restart;
-        // the outer timeout still fails permanent auth or availability errors deterministically.
-        source.onerror = () => undefined;
-      }),
-    { after: cursor, expectedTopLevelEventType }
-  );
-}
-
-async function beginSseObservation(
-  page: Page,
-  cursor: string,
-  expectedTopLevelEventType?: string
-): Promise<Readonly<{ event: ReturnType<typeof nextSseEvent> }>> {
-  const expectedPath = `/api/hosted/v1/events?after=${encodeURIComponent(cursor)}`;
-  const response = page.waitForResponse(
-    (candidate) =>
-      candidate.request().method() === 'GET' &&
-      new URL(candidate.url()).pathname + new URL(candidate.url()).search === expectedPath
-  );
-  const event = nextSseEvent(page, cursor, expectedTopLevelEventType);
-  void event.catch(() => undefined);
-  if ((await response).status() !== 200) {
-    throw new Error('hosted_e2e_sse_observation_unavailable');
-  }
-  return Object.freeze({ event });
-}
-
-async function beginTracedSseObservation(
-  page: Page,
-  cursor: string,
-  expectedTopLevelEventType: string
-): Promise<{ readonly event: () => Promise<TracedSseEvent> }> {
-  const expectedPath = `/api/hosted/v1/events?after=${encodeURIComponent(cursor)}`;
-  const responseReady = page.waitForResponse(
-    (candidate) =>
-      candidate.request().method() === 'GET' &&
-      new URL(candidate.url()).pathname + new URL(candidate.url()).search === expectedPath
-  );
-  await page.evaluate(
-    ({ after, expectedType }) => {
-      const state = {
-        event: null as null | Omit<TracedSseEvent, 'trace'>,
-        open: false,
-        terminalError: null as string | null,
-        trace: [] as string[],
-      };
-      const scope = window as typeof window & { __hostedTracedSse?: typeof state };
-      scope.__hostedTracedSse = state;
-      const source = new EventSource(`/api/hosted/v1/events?after=${encodeURIComponent(after)}`);
-      let eventTimer: number | null = null;
-      source.onopen = () => {
-        state.open = true;
-        state.trace.push('open');
-        eventTimer = window.setTimeout(() => {
-          state.terminalError = 'event_timeout';
-          source.close();
-        }, 25_000);
-      };
-      const finish = (eventType: string, event: MessageEvent) => {
-        let data: Record<string, unknown>;
-        try {
-          data = JSON.parse(event.data) as Record<string, unknown>;
-        } catch {
-          state.terminalError = 'event_json_invalid';
-          source.close();
-          return;
-        }
-        state.trace.push(
-          `event:name=${eventType}:id=${event.lastEventId}:type=${String(data.eventType ?? '')}`
-        );
-        if (eventType === 'resync_required') {
-          state.trace.push(`resync:${String(data.reason ?? 'unknown')}`);
-          state.terminalError = `resync_required:${String(data.reason ?? 'unknown')}`;
-          source.close();
-          return;
-        }
-        if (data.eventType !== expectedType) return;
-        if (eventTimer !== null) window.clearTimeout(eventTimer);
-        state.event = { eventType, data, id: event.lastEventId };
-        source.close();
-      };
-      source.addEventListener('coordination_event', (event) =>
-        finish('coordination_event', event as MessageEvent)
-      );
-      source.addEventListener('resync_required', (event) =>
-        finish('resync_required', event as MessageEvent)
-      );
-      source.onerror = () => {
-        state.trace.push(`error:readyState=${source.readyState}`);
-      };
-    },
-    { after: cursor, expectedType: expectedTopLevelEventType }
-  );
-  const response = await responseReady;
-  await page.evaluate((status) => {
-    const state = (window as typeof window & { __hostedTracedSse?: { trace: string[] } })
-      .__hostedTracedSse;
-    state?.trace.push(`status:${status}`);
-  }, response.status());
-  if (response.status() !== 200) {
-    throw new Error(`hosted_e2e_sse_observation_unavailable:${response.status()}`);
-  }
-  await expect
-    .poll(
-      () =>
-        page.evaluate(() => {
-          const state = (
-            window as typeof window & {
-              __hostedTracedSse?: { open: boolean; terminalError: string | null };
-            }
-          ).__hostedTracedSse;
-          return state === undefined
-            ? { open: false, terminalError: 'observer_missing' }
-            : { open: state.open, terminalError: state.terminalError };
-        }),
-      { timeout: 15_000, message: 'hosted_e2e_sse_open_readiness_timeout' }
-    )
-    .toEqual({ open: true, terminalError: null });
-
-  return Object.freeze({
-    event: async () => {
-      const deadline = Date.now() + 30_000;
-      for (;;) {
-        const state = await page.evaluate(() => {
-          const value = (
-            window as typeof window & {
-              __hostedTracedSse?: {
-                event: Omit<TracedSseEvent, 'trace'> | null;
-                terminalError: string | null;
-                trace: string[];
-              };
-            }
-          ).__hostedTracedSse;
-          return value === undefined
-            ? { event: null, terminalError: 'observer_missing', trace: [] }
-            : { event: value.event, terminalError: value.terminalError, trace: [...value.trace] };
-        });
-        if (state.terminalError !== null) {
-          throw new Error(
-            `hosted_e2e_sse_terminal:${state.terminalError}:trace=${JSON.stringify(state.trace)}`
-          );
-        }
-        if (state.event !== null) return Object.freeze({ ...state.event, trace: state.trace });
-        if (Date.now() >= deadline) {
-          throw new Error(`hosted_e2e_sse_event_timeout:trace=${JSON.stringify(state.trace)}`);
-        }
-        await page.waitForTimeout(100);
-      }
-    },
+async function observationState(page: Page) {
+  return page.evaluate(() => {
+    const state = (window as typeof window & {
+      __hostedTracedSse?: import('../../fixtures/hosted-v1/sseObservation').SseObservationState;
+    }).__hostedTracedSse;
+    return state === undefined
+      ? { requestedCursor: null, httpStatus: null, event: null, open: false, terminalError: 'observer_missing', trace: [] }
+      : { requestedCursor: state.requestedCursor, httpStatus: state.httpStatus, event: state.event, open: state.open, terminalError: state.terminalError, trace: [...state.trace] };
   });
+}
+
+async function disposeObservation(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    (window as typeof window & { __hostedTracedSse?: { dispose: () => void } })
+      .__hostedTracedSse?.dispose();
+  });
+}
+
+function assertObservationHealthy(state: Awaited<ReturnType<typeof observationState>>): void {
+  if (state.terminalError !== null) {
+    throw Object.assign(new Error(`hosted_e2e_sse_terminal:${state.terminalError}:trace=${JSON.stringify(state.trace)}`), {
+      code: state.terminalError,
+    });
+  }
+}
+
+async function awaitObservedEvent(page: Page): Promise<TracedSseEvent> {
+  try {
+    for (;;) {
+      const state = await observationState(page);
+      assertObservationHealthy(state);
+      if (state.event !== null) return { ...state.event, trace: state.trace };
+      await page.waitForTimeout(100);
+    }
+  } finally {
+    await disposeObservation(page);
+  }
+}
+
+async function nextSseEvent(page: Page, cursor: string, expectedTopLevelEventType?: string): Promise<TracedSseEvent> {
+  const observation = await beginTracedSseObservation(page, cursor, expectedTopLevelEventType);
+  return observation.event();
+}
+
+async function beginSseObservation(page: Page, cursor: string, expectedTopLevelEventType?: string) {
+  const observation = await beginTracedSseObservation(page, cursor, expectedTopLevelEventType);
+  const event = observation.event();
+  void event.catch(() => undefined);
+  return { event };
+}
+
+async function beginTracedSseObservation(page: Page, cursor: string, expectedTopLevelEventType?: string) {
+  const expectedPath = `/api/hosted/v1/events?after=${encodeURIComponent(cursor)}`;
+  const responseReady = page.waitForResponse((candidate) =>
+    candidate.request().method() === 'GET' &&
+    new URL(candidate.url()).pathname + new URL(candidate.url()).search === expectedPath,
+    { timeout: 15_000 }
+  );
+  void responseReady.catch(() => undefined);
+  await page.evaluate(installSseObservation, { after: cursor, expectedType: expectedTopLevelEventType });
+  try {
+    const response = await responseReady;
+    await page.evaluate((status) => {
+      const state = (window as typeof window & {
+        __hostedTracedSse?: { httpStatus: number | null; trace: string[] };
+      }).__hostedTracedSse;
+      if (state !== undefined) {
+        state.httpStatus = status;
+        state.trace.push(`status:${status}`);
+        if (state.trace.length > 64) state.trace.splice(1, 1);
+      }
+    }, response.status());
+    if (response.status() !== 200) throw new Error(`hosted_e2e_sse_observation_unavailable:${response.status()}`);
+    const deadline = Date.now() + 15_000;
+    for (;;) {
+      const state = await observationState(page);
+      assertObservationHealthy(state);
+      if (state.open) break;
+      if (Date.now() >= deadline) throw new Error(`hosted_e2e_sse_open_readiness_timeout:trace=${JSON.stringify(state.trace)}`);
+      await page.waitForTimeout(100);
+    }
+    return { event: () => awaitObservedEvent(page) };
+  } catch (error) {
+    await disposeObservation(page);
+    throw error;
+  }
+}
+
+async function currentProductionCursor(page: Page, csrfToken: string): Promise<string> {
+  return page.evaluate(async ({ route, teamId, csrfToken }) => {
+    const response = await fetch(route, {
+      method: 'POST', credentials: 'include', cache: 'no-store',
+      headers: { 'content-type': 'application/json', 'x-agent-teams-csrf': csrfToken },
+      body: JSON.stringify({ schemaVersion: 1, teamId }),
+    });
+    const body = await response.json();
+    if (response.status !== 200 || typeof body?.metadata?.replayCursor !== 'string') {
+      throw new Error(`hosted_e2e_bootstrap_unavailable:${response.status}`);
+    }
+    return body.metadata.replayCursor;
+  }, { route: HOSTED_COORDINATION_EVENT_BOOTSTRAP_ROUTE, teamId: runtime.teamId, csrfToken });
+}
+
+async function readRetentionJournalSnapshot(): Promise<unknown> {
+  const { default: Database } = await import('better-sqlite3-node');
+  const database = new Database(`${runtime.appDataDir}/data/storage/app.db`, {
+    fileMustExist: true, readonly: true,
+  });
+  try {
+    // Bounded protocol identity only; no body_json, paths, credentials or command payloads.
+    return database.transaction(() => ({
+      metadata: database.prepare(`SELECT deployment_id, event_epoch, retention_floor_sequence,
+        high_watermark_sequence FROM coordination_event_journal_metadata LIMIT 8`).all(),
+      rows: database.prepare(`SELECT deployment_id, event_epoch, event_id, event_sequence
+        FROM coordination_event_journal ORDER BY event_sequence DESC LIMIT 16`).all(),
+    }))();
+  } finally { database.close(); }
 }
 
 async function readRunAcceptedJournalEvidence(runId: string): Promise<{
@@ -569,7 +507,7 @@ async function lifecycleCommand(
       ) {
         throw new Error(`hosted_e2e_phase8_lifecycle_${action}_receipt_invalid`);
       }
-      return body;
+      return { ...body, commandId: `lifecycle-command_phase8-${action}-${nonce}` };
     },
     { ...input, teamId: runtime.teamId, workspaceId: runtime.workspaceId }
   );
@@ -887,59 +825,83 @@ test('Phase 8 lifecycle recovery survives a lost response, renderer reload, reau
 
 test('Phase 8 production retention expiry emits resync and remains expired after restart', async ({
   browser,
-}) => {
+}, testInfo) => {
   test.setTimeout(3 * 60_000);
   const { context, page } = await openAuthenticatedTeam(browser);
-  const csrfToken = await authCsrf(page);
+  let observer: Awaited<ReturnType<typeof openAuthenticatedEventObserver>> | null = null;
+  const evidence: unknown[] = [];
   try {
-    let control = await ensureStopped(page, csrfToken);
-    const firstEventPromise = nextSseEvent(
-      page,
-      runtime.eventCursor,
-      'team-lifecycle.run-accepted'
-    );
-    await lifecycleCommand(page, {
-      action: 'launch',
-      csrfToken,
-      expectedRevision: control.resourceRevision,
-      runId: null,
-    });
-    const firstEvent = await firstEventPromise;
-    control = await ensureStopped(page, csrfToken);
-    const secondEventPromise = nextSseEvent(page, firstEvent.id, 'team-lifecycle.run-accepted');
-    await lifecycleCommand(page, {
-      action: 'launch',
-      csrfToken,
-      expectedRevision: control.resourceRevision,
-      runId: null,
-    });
-    const secondEvent = await secondEventPromise;
-    control = await ensureStopped(page, csrfToken);
-    const thirdEventPromise = nextSseEvent(page, secondEvent.id, 'team-lifecycle.run-accepted');
-    await lifecycleCommand(page, {
-      action: 'launch',
-      csrfToken,
-      expectedRevision: control.resourceRevision,
-      runId: null,
-    });
-    await thirdEventPromise;
-
+    observer = await openAuthenticatedEventObserver(browser);
+    const csrfToken = await authCsrf(page);
+    const accepted: TracedSseEvent[] = [];
+    for (let launch = 0; launch < 3; launch += 1) {
+      const control = await ensureStopped(page, csrfToken);
+      const cursor = await currentProductionCursor(page, csrfToken);
+      const observation = await beginTracedSseObservation(observer.page, cursor, 'team-lifecycle.run-accepted');
+      const receipt = await lifecycleCommand(page, {
+        action: 'launch', csrfToken, expectedRevision: control.resourceRevision, runId: null,
+      });
+      evidence.push({ launch, receipt: { commandId: receipt.commandId, runId: receipt.runId } });
+      const event = await observation.event();
+      accepted.push(event);
+      // Capture each row immediately, before deliberately aggressive retention advances.
+      evidence.push({ launch, event: { id: event.id, eventId: event.data.eventId,
+        eventSequence: event.data.eventSequence, eventType: event.data.eventType, trace: event.trace } });
+      const journal = await readRunAcceptedJournalEvidence(receipt.runId);
+      evidence.push({ launch, journal });
+      expect(event).toMatchObject({ eventType: 'coordination_event', data: {
+        eventType: 'team-lifecycle.run-accepted',
+        scope: { kind: 'workspace', scopeId: runtime.workspaceId },
+        payload: { kind: 'invalidate', resource: 'team_lifecycle' },
+      } });
+      expect((await lifecycleProgress(page, csrfToken)).recentCommands).toContainEqual(
+        expect.objectContaining({ commandId: receipt.commandId, action: 'launch' })
+      );
+      expect(journal.row.runId).toBe(receipt.runId);
+      expect(journal.row.eventId).toBe(event.data.eventId);
+      expect(journal.row.eventSequence).toBe(event.data.eventSequence);
+      expect(journal.metadata.deploymentId).toBe(journal.row.deploymentId);
+      expect(journal.metadata.eventEpoch).toBe(journal.row.eventEpoch);
+      expect(journal.metadata.highWatermarkSequence).toBeGreaterThanOrEqual(journal.row.eventSequence);
+      const journalCursor = encodeReplayCursor(journal.row);
+      expect(event.id).toBe(journalCursor);
+      expect(event.data.eventCursor).toBe(journalCursor);
+    }
+    expect(accepted).toHaveLength(3);
+    const firstEvent = accepted[0]!;
+    expect(accepted[1]!.data.eventSequence).toBeGreaterThan(firstEvent.data.eventSequence as number);
+    expect(accepted[2]!.data.eventSequence).toBeGreaterThan(accepted[1]!.data.eventSequence as number);
     const watermark = await waitForProductionCoordinationRetention(runtime.appDataDir);
+    evidence.push({ watermark });
     expect(watermark.retentionFloorSequence).toBe(watermark.highWatermarkSequence - 1);
-    await expect(nextSseEvent(page, firstEvent.id)).resolves.toMatchObject({
-      eventType: 'resync_required',
-      data: { kind: 'resync_required', reason: 'cursor_expired' },
+    expect(firstEvent.data.eventSequence).toBeLessThan(watermark.retentionFloorSequence);
+    const beforeRestart = await nextSseEvent(observer.page, firstEvent.id);
+    evidence.push({ beforeRestart: { eventType: beforeRestart.eventType, trace: beforeRestart.trace } });
+    expect(beforeRestart).toMatchObject({
+      eventType: 'resync_required', data: { kind: 'resync_required', reason: 'cursor_expired' },
     });
     await restartController();
-    await expect
-      .poll(() => page.goto(runtime.origin).then((response) => response?.status()))
-      .toBe(200);
-    await expect(nextSseEvent(page, firstEvent.id)).resolves.toMatchObject({
-      eventType: 'resync_required',
-      data: { kind: 'resync_required', reason: 'cursor_expired' },
+    await expect.poll(() => observer!.page.goto(`${runtime.origin}/api/auth/status`).then((r) => r?.status())).toBe(200);
+    const afterRestart = await nextSseEvent(observer.page, firstEvent.id);
+    evidence.push({ afterRestart: { eventType: afterRestart.eventType, trace: afterRestart.trace } });
+    expect(afterRestart).toMatchObject({
+      eventType: 'resync_required', data: { kind: 'resync_required', reason: 'cursor_expired' },
     });
   } finally {
-    await context.close();
+    if (observer !== null) {
+      const state = await observationState(observer.page).catch(() => null);
+      evidence.push({ observer: state === null ? null : {
+        requestedCursor: state.requestedCursor, httpStatus: state.httpStatus, open: state.open, terminalError: state.terminalError, trace: state.trace,
+      } });
+    }
+    evidence.push({ journalAtExit: await readRetentionJournalSnapshot().catch(() => ({ unavailable: true })) });
+    try {
+      await testInfo.attach('retention-sse-evidence.json', {
+        body: JSON.stringify(evidence), contentType: 'application/json',
+      });
+    } finally {
+      await Promise.allSettled([context.close(), ...(observer === null ? [] : [observer.context.close()])]);
+    }
   }
 });
 

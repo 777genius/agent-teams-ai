@@ -9,6 +9,7 @@ import {
   encodeReplayCursor,
   materializeCoordinationEventEnvelope,
   materializeEventJournalWatermark,
+  ReplayCursorError,
 } from '../../../core/domain';
 
 import type {
@@ -58,10 +59,22 @@ export class SqliteCoordinationEventJournal implements CoordinationEventJournal 
     readonly limit: number;
   }): Promise<CoordinationJournalReplayRead<TPayload>> {
     await this.requireInitialization();
-    const result = await this.options.storage.coordinationEventRead({
-      deploymentId: this.options.deploymentId,
-      ...input,
-    });
+    const result = await this.options.storage
+      .coordinationEventRead({
+        deploymentId: this.options.deploymentId,
+        ...input,
+      })
+      .catch((error: unknown) => {
+        // The worker transport reconstructs this known storage outcome as an Error.
+        // Preserve every other storage failure, including its original identity.
+        if (
+          error instanceof Error &&
+          error.message === 'coordination-event-journal-cursor-stale'
+        ) {
+          throw new ReplayCursorError('replay_cursor_stale', 'Coordination replay cursor expired');
+        }
+        throw error;
+      });
     const watermark = mapWatermark(result.watermark);
     return Object.freeze({
       events: Object.freeze(

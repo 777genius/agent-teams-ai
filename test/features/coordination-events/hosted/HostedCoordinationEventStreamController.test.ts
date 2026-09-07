@@ -1,3 +1,7 @@
+import { CoordinationEventHandoff } from '@features/coordination-events/core/application/CoordinationEventHandoff';
+import { encodeReplayCursor } from '@features/coordination-events/core/domain';
+import { SqliteCoordinationEventJournal } from '@features/coordination-events/main/adapters/output/SqliteCoordinationEventJournal';
+import type { CoordinationDurabilityStorageGateway } from '@features/internal-storage/main';
 import { createHash, randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 
@@ -1035,5 +1039,87 @@ describe('HostedCoordinationEventStreamController', () => {
     controller.close();
     controller.close();
     expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Exercise the real adapter -> handoff -> SSE mapping, with the worker's exact
+// transported stale outcome injected only after the valid watermark was read.
+describe('SQLite retention race at the SSE boundary', () => {
+  function fixture(initialHigh = 2) {
+    let high = initialHigh;
+    let floor = 0;
+    let pruneOnRead = true;
+    const metadata = () => ({ deploymentId: 'deployment-1', eventEpoch: 'epoch-1',
+      highWatermarkSequence: high, retentionFloorSequence: floor });
+    const position = (eventSequence: number) => encodeReplayCursor({ ...metadata(), eventSequence });
+    const read = vi.fn(async (input: { afterSequence: number }) => {
+      if (pruneOnRead) floor = 1;
+      if (input.afterSequence < floor) throw new Error('coordination-event-journal-cursor-stale');
+      const draft = {
+        actor: { actorRef: 'test-operator', kind: 'operator' }, emittedAt: '2026-08-02T00:00:00.000Z',
+        eventId: 'event-2', eventType: 'team-lifecycle.run-accepted', payload: {},
+        schemaVersion: 1, scope: { kind: 'team', scopeId: 'team-1' }, teamId: 'team-1',
+      };
+      return { watermark: metadata(), rows: [{ deploymentId: 'deployment-1', eventEpoch: 'epoch-1',
+        eventSequence: 2, eventId: 'event-2', bodyJson: JSON.stringify(draft) }] };
+    });
+    const storage = {
+      coordinationEventInitialize: async () => metadata(),
+      coordinationEventGetWatermark: vi.fn(async () => metadata()),
+      coordinationEventRead: read,
+    } as unknown as CoordinationDurabilityStorageGateway;
+    const journal = new SqliteCoordinationEventJournal({ storage, deploymentId: 'deployment-1' });
+    const handoff = new CoordinationEventHandoff({ journal,
+      deadlineScheduler: { scheduleDeadline: () => () => undefined } });
+    return { read, storage, journal, handoff, position,
+      advance: () => { high = 2; },
+      retain: () => { floor = 1; pruneOnRead = false; },
+    };
+  }
+
+  it.each(['initial', 'established'] as const)('emits cursor_expired for %s replay when pruning overtakes row read', async (phase) => {
+    const f = fixture(phase === 'initial' ? 2 : 0);
+    const wakeups = createWakeups();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: f.handoff, wakeups: wakeups.source, streamIdentityFactory,
+      scheduler: new ManualScheduler(),
+      authorizer: { allowedOrigin: 'https://host.test', authorize: async () => ({
+        isCurrent: async () => true, projectEvent: async () => null,
+      }) },
+    });
+    const reply = createReply();
+    const handling = registerHandler(controller)(createRequest({ origin: 'https://host.test', after: f.position(0) }), reply.reply);
+    if (phase === 'established') {
+      await vi.waitFor(() => expect(reply.raw.flushes).toBe(1));
+      expect(f.read).not.toHaveBeenCalled();
+      f.advance();
+      wakeups.notify();
+    }
+    await handling;
+    expect(f.read).toHaveBeenCalledWith(expect.objectContaining({ afterSequence: 0, throughSequence: 2 }));
+    expect(reply.statusCode).toBe(200);
+    expect(reply.raw.frames.join('')).toContain('event: resync_required');
+    expect(reply.raw.frames.join('')).toContain('"reason":"cursor_expired"');
+    expect(reply.raw.frames.join('')).not.toContain('coordination-event-journal-cursor-stale');
+    expect(reply.raw.writableEnded).toBe(true);
+    expect(wakeups.unsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects delayed cursor zero after task 1 is pruned, but replays retained launch 2 from floor 1', async () => {
+    const f = fixture();
+    f.retain();
+    await expect(f.handoff.replay({ cursor: f.position(0) })).rejects.toMatchObject({ code: 'replay_cursor_stale' });
+    expect(f.read).not.toHaveBeenCalled();
+    const replay = await f.handoff.replay({ cursor: f.position(1) });
+    expect(replay.events).toHaveLength(1);
+    expect(replay.events[0]).toMatchObject({ eventSequence: 2, eventType: 'team-lifecycle.run-accepted', eventCursor: f.position(2) });
+    expect(replay.nextCursor).toBe(f.position(2));
+  });
+
+  it.each([new Error('database unavailable'), new Error('coordination-event-journal-cursor-stale:other'),
+    { message: 'coordination-event-journal-cursor-stale' }])('preserves unrelated storage rejection identity %#', async (failure) => {
+    const f = fixture();
+    f.read.mockRejectedValueOnce(failure);
+    await expect(f.journal.readCommittedEvents({ afterSequence: 0, throughSequence: 2, limit: 10 })).rejects.toBe(failure);
   });
 });
