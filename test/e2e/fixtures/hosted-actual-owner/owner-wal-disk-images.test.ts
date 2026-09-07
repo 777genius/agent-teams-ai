@@ -1,12 +1,14 @@
 import { chmod, link, mkdtemp, open, rename, rm, stat, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { descriptorMountId, openRootAnchor } from '../../../../scripts/e2e/hosted-actual-owner/anchors';
 import { parseNativeRuntimeCapture } from '../../../../scripts/e2e/hosted-actual-owner/native-captures';
 import { openOwnerWalDiskFile } from '../../../../scripts/e2e/hosted-actual-owner/owner-wal-disk-files';
 import { readDiskOwnerWalGeneration, readDiskOwnerWalImages } from '../../../../scripts/e2e/hosted-actual-owner/owner-wal-disk-images';
+
 import { admission, digest, emptyState, image, jsonImage, pair } from './owner-wal-images.fixtures';
 import { controllerNonce, hex, nativeCapture, runId } from './raw-http.fixtures';
 
