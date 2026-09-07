@@ -28,7 +28,7 @@ Before publishing:
 - Confirm version numbers, runtime gates, asset names, and download links.
 - Keep the body in this document identical to the GitHub release body.
 
-## Draft: v2.13.2 (2026-09-07)
+## Released: v2.13.2 (2026-09-07)
 
 GitHub release: [v2.13.2](https://github.com/777genius/agent-teams-ai/releases/tag/v2.13.2).
 
@@ -47,7 +47,7 @@ This update fixes OpenCode startup checks and makes provider sign-in failures ea
 ### Fixes
 
 - Stop valid OpenCode settings managed by the app from incorrectly blocking model checks.
-- Show the provider's sign-in error when it rejects access with a 401 response.
+- Show the provider's sign-in error when it rejects access with a 401 or 403 response.
 - Reuse newly started OpenCode servers without incorrectly reporting that their settings have changed.
 
 ### Downloads
