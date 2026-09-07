@@ -9,7 +9,7 @@ import {
   type OpenCodeMemberMessageDeliveryInput,
 } from '../opencode/delivery/OpenCodeMemberMessageDeliveryPorts';
 import {
-  OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED,
+  isOpenCodePrimaryLaneSelfHealEnabledFromEnv,
   OpenCodePrimaryLaneBootstrapSelfHealTracker,
 } from '../opencode/delivery/OpenCodePrimaryLaneBootstrapSelfHeal';
 import { inspectOpenCodeRuntimeLaneStorage } from '../opencode/store/OpenCodeRuntimeManifestEvidenceReader';
@@ -180,9 +180,13 @@ export class TeamProvisioningOpenCodeMemberMessageDeliveryCompatibilityService<
       }),
     rebootstrapPrimaryLane: async ({ teamName, reason }) =>
       (await this.deps.rebootstrapOpenCodeAggregatePrimaryLane?.(teamName, reason)) ?? false,
+    // Falls back to the ENV READER, not to the constant. This port is always
+    // supplied, so the tracker never reaches its own default - and with the
+    // constant here, setting CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED
+    // changed nothing in the running app: the switch existed only in tests.
     isOpenCodePrimaryLaneSelfHealEnabled: () =>
       this.deps.isOpenCodePrimaryLaneSelfHealEnabled?.() ??
-      OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED,
+      isOpenCodePrimaryLaneSelfHealEnabledFromEnv(),
     // Durable: an automatic lead relaunch has to still be explainable once the
     // lane-scoped ledger is gone, and it must not depend on a log level.
     logWarning: (message) => logger.diagnostic(message),
