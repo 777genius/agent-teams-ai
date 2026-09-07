@@ -1,3 +1,5 @@
+import { OWNER_RESTART_BOUNDARIES, CHROMIUM_DESCENDANT_ROLES, ROOT_PROCESS_SCHEDULE } from './supervisor/launch-schedule';
+import { NATIVE_ACTIVATION_ENTRY_ARGUMENT } from '../../../src/main/composition/hosted/hostedNativeActivationHandleContract';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { once } from 'node:events';
@@ -17,6 +19,7 @@ import {
   validateDecimal,
   validateRecordId,
   type ClosurePin,
+  type IntegrationDescriptor,
   type RawOrigin,
   type RuntimeCaptureName,
 } from './contracts';
@@ -28,6 +31,10 @@ import type { OwnerChildPlan, OwnerSourceInvocation } from './owner-child-protoc
 import { parseOwnerChildDescriptorCleanup, parseOwnerLaunchEnvelope, assertOwnerDescriptorCaptureBindings,
   type OwnerChildDescriptorCleanup } from './owner-descriptor-cleanup';
 import type { PrivateOwnerImagePin } from './owner-recipe';
+import type { SelectedSupervisorInvocation } from './supervisor/selected-invocation';
+import { SELECTED_PLAN_MAXIMUM_BYTES } from './supervisor/selected-plan-input';
+import { SELECTED_PUBLIC_ARTIFACTS, SELECTED_PUBLIC_ARTIFACT_NAMES,
+  type SelectedPublicArtifactName } from './supervisor/public-artifacts';
 import type { WrittenFileEvidence } from './secure-files';
 
 import { PARENT_DESCRIPTOR_ROLES } from './owner-descriptor-legacy';
@@ -38,63 +45,7 @@ export { acceptCanonicalChildDescriptorPublication, PARENT_DESCRIPTOR_ROLES } fr
 export type { ChildDescriptorPublication, ParentDescriptorLifecycleRecord, ParentDescriptorBeforeSpawnObservation, ParentDescriptorAfterSpawnObservation } from './owner-descriptor-legacy';
 
 export const SUPERVISOR_PROTOCOL = 'agent-teams.p3c.supervisor-transcript/v1' as const;
-export const OWNER_RESTART_BOUNDARIES = Object.freeze([
-  'initial',
-  'after-pending-before-decision',
-  'after-decision-before-provider',
-  'after-effect-before-owner-recording',
-] as const);
-export const CHROMIUM_DESCENDANT_ROLES = Object.freeze([
-  'chromium-browser',
-  'chromium-network',
-  'chromium-gpu',
-  'chromium-renderer',
-] as const);
-
-const ROOT_PROCESS_SCHEDULE = Object.freeze([
-  {
-    role: 'opencode',
-    instanceId: 'opencode-1',
-    generation: 1,
-    restartBoundary: 'initial',
-  },
-  {
-    role: 'owner',
-    instanceId: 'owner-1',
-    generation: 1,
-    restartBoundary: 'initial',
-  },
-  {
-    role: 'product',
-    instanceId: 'product-1',
-    generation: 1,
-    restartBoundary: 'initial',
-  },
-  {
-    role: 'browser',
-    instanceId: 'browser-1',
-    generation: 1,
-    restartBoundary: 'initial',
-  },
-  {
-    role: 'owner',
-    instanceId: 'owner-2',
-    generation: 2,
-    restartBoundary: OWNER_RESTART_BOUNDARIES[1],
-  },
-  {
-    role: 'owner',
-    instanceId: 'owner-3',
-    generation: 3,
-    restartBoundary: OWNER_RESTART_BOUNDARIES[2],
-  },
-  {
-    role: 'owner',
-    instanceId: 'owner-4',
-    generation: 4,
-    restartBoundary: OWNER_RESTART_BOUNDARIES[3],
-  },
-] as const);
+export { OWNER_RESTART_BOUNDARIES, CHROMIUM_DESCENDANT_ROLES } from './supervisor/launch-schedule';
 
 type RootProcessRole = (typeof ROOT_PROCESS_SCHEDULE)[number]['role'];
 type ChromiumRole = (typeof CHROMIUM_DESCENDANT_ROLES)[number];
@@ -107,6 +58,16 @@ const CLEANUP_OPERATION_TIMEOUT_MS = 2_000;
 const MAX_PROC_ENVIRON_BYTES = 256 * 1024;
 
 export interface SupervisorPlan {
+  /** Recipe-v3 extension; namespace launcher and running Node remain distinct. */
+  readonly supervisorSourceInvocation?: SelectedSupervisorInvocation;
+  /** Public descriptor data for independent namespace-local verification. */
+  readonly supervisorAdmissionDescriptor?: IntegrationDescriptor;
+  readonly supervisorPublicArtifacts?: Readonly<{
+    contract: 'agent-teams.hosted-selected-public-artifacts/v1';
+    files: Readonly<Record<SelectedPublicArtifactName, Readonly<{
+      descriptor: number; path: string; device: string; inode: string; size: number; sha256: string;
+    }>>>;
+  }>;
   readonly schemaVersion: 2;
   readonly protocol: typeof SUPERVISOR_PROTOCOL;
   readonly controllerNonce: string;
@@ -141,6 +102,13 @@ export interface SupervisorPlan {
       orchestrator: string;
       product: string;
     }>;
+  }>;
+  /** Versioned native Product exec extension; legacy plans do not imply handle IPC. */
+  readonly productSourceInvocation?: Readonly<{
+    format: 'agent-teams.hosted-product-node-handle-ipc/v1';
+    executable: Readonly<{ device: string; inode: string; sha256: string }>;
+    module: Readonly<{ path: string; sha256: string }>;
+    activationArgument: typeof NATIVE_ACTIVATION_ENTRY_ARGUMENT;
   }>;
   readonly ownerChildProtocol: OwnerChildPlan;
   readonly ownerSourceInvocation?: OwnerSourceInvocation;
@@ -182,7 +150,8 @@ export interface SupervisorPlan {
       'product',
       'sandbox',
       'toolchain',
-    ];
+    ] | readonly ['admission', 'browser', 'composition', 'dev', 'lib', 'lib64', 'opencode',
+      'owner', 'p3b2', 'proc', 'product', 'sandbox', 'toolchain'];
     readonly expectedMounts: readonly {
       readonly target: string;
       readonly access: 'read-only' | 'read-write' | 'private';
@@ -632,6 +601,14 @@ export function buildSupervisorPlan(
       inode: sandbox.directoryIdentities[name].inode,
     });
   const owner = selectOwnerPlan(admission);
+  const supervisorInvocation = admission.ownerLaunch?.selection.supervisor;
+  const selectedPublicArtifacts = admission.selectedSupervisorArtifacts;
+  if (!!supervisorInvocation !== !!selectedPublicArtifacts) {
+    throw new Error('p3c_selected_supervisor_public_artifacts_required');
+  }
+  const supervisorImage = supervisorInvocation?.executable ?? admission.execution.supervisor.pin;
+  const productImage = admission.ownerLaunch ? admission.descriptor.toolchain.node : admission.descriptor.product.compositionEntry;
+  const productModulePath = `/product/${admission.descriptor.product.compositionEntry.relativePath}`;
   const chromium = admission.descriptor.product.chromiumExecutable;
   const capture = Object.freeze(
     Object.fromEntries(
@@ -641,24 +618,24 @@ export function buildSupervisorPlan(
   const executableSha256 = {
     owner: owner.image.sha256,
     opencode: admission.execution.openCode.pin.sha256,
-    supervisor: admission.execution.supervisor.pin.sha256,
-    product: admission.descriptor.product.compositionEntry.sha256,
+    supervisor: supervisorImage.sha256,
+    product: productImage.sha256,
     browser: admission.descriptor.toolchain.node.sha256,
     ...Object.fromEntries(CHROMIUM_DESCENDANT_ROLES.map((role) => [role, chromium.sha256])),
   } as Record<ProcessEvidenceRole, string>;
   const executableDevice = {
     owner: owner.image.device,
     opencode: admission.execution.openCode.pin.device,
-    supervisor: admission.execution.supervisor.pin.device,
-    product: admission.descriptor.product.compositionEntry.device,
+    supervisor: supervisorImage.device,
+    product: productImage.device,
     browser: admission.descriptor.toolchain.node.device,
     ...Object.fromEntries(CHROMIUM_DESCENDANT_ROLES.map((role) => [role, chromium.device])),
   } as Record<ProcessEvidenceRole, string>;
   const executableInode = {
     owner: owner.image.inode,
     opencode: admission.execution.openCode.pin.inode,
-    supervisor: admission.execution.supervisor.pin.inode,
-    product: admission.descriptor.product.compositionEntry.inode,
+    supervisor: supervisorImage.inode,
+    product: productImage.inode,
     browser: admission.descriptor.toolchain.node.inode,
     ...Object.fromEntries(CHROMIUM_DESCENDANT_ROLES.map((role) => [role, chromium.inode])),
   } as Record<ProcessEvidenceRole, string>;
@@ -678,6 +655,22 @@ export function buildSupervisorPlan(
     schemaVersion: 2,
     protocol: SUPERVISOR_PROTOCOL,
     ...owner.selection,
+    ...(supervisorInvocation ? { supervisorSourceInvocation: supervisorInvocation,
+      supervisorAdmissionDescriptor: structuredClone(admission.descriptor) } : {}),
+    ...(selectedPublicArtifacts ? { supervisorPublicArtifacts: Object.freeze({
+      contract: 'agent-teams.hosted-selected-public-artifacts/v1' as const,
+      files: Object.freeze(Object.fromEntries(SELECTED_PUBLIC_ARTIFACT_NAMES.map(name => {
+        const pin = selectedPublicArtifacts[name].pin, mount = SELECTED_PUBLIC_ARTIFACTS[name];
+        return [name, Object.freeze({ descriptor: mount.fd, path: `/admission/${mount.name}`,
+          device: pin.device, inode: pin.inode, size: pin.size, sha256: pin.sha256 })];
+      })) as NonNullable<SupervisorPlan['supervisorPublicArtifacts']>['files']),
+    }) } : {}),
+    ...(admission.ownerLaunch ? { productSourceInvocation: Object.freeze({
+      format: 'agent-teams.hosted-product-node-handle-ipc/v1' as const,
+      executable: Object.freeze({ device: productImage.device, inode: productImage.inode, sha256: productImage.sha256 }),
+      module: Object.freeze({ path: productModulePath, sha256: admission.descriptor.product.compositionEntry.sha256 }),
+      activationArgument: NATIVE_ACTIVATION_ENTRY_ARGUMENT,
+    }) } : {}),
     controllerNonce: admission.descriptor.controllerNonce,
     runId: sandbox.runId,
     maximumRuntimeMs: 900_000,
@@ -728,7 +721,10 @@ export function buildSupervisorPlan(
       pivotRoot: true,
       rootFilesystem: 'private-tmpfs',
       ambientHostFilesystem: 'deny',
-      expectedTopLevelEntries: Object.freeze([
+      expectedTopLevelEntries: Object.freeze(supervisorInvocation ? [
+        'admission', 'browser', 'composition', 'dev', 'lib', 'lib64', 'opencode',
+        'owner', 'p3b2', 'proc', 'product', 'sandbox', 'toolchain',
+      ] as const : [
         'browser',
         'composition',
         'dev',
@@ -796,6 +792,11 @@ export function buildSupervisorPlan(
           access: 'read-only' as const,
           sourceDescriptor: 13,
         }),
+        ...(supervisorInvocation ? SELECTED_PUBLIC_ARTIFACT_NAMES.map(name => Object.freeze({
+          target: `/admission/${SELECTED_PUBLIC_ARTIFACTS[name].name}`,
+          access: 'read-only' as const,
+          sourceDescriptor: SELECTED_PUBLIC_ARTIFACTS[name].fd,
+        })) : []),
       ]),
       ambientPathProbes: Object.freeze(['/host', '/home', '/root', '/tmp', '/var/data'] as const),
     }),
@@ -851,10 +852,12 @@ export function buildSupervisorPlan(
     expectedProducerArtifactSha256,
     expectedProducerModuleSha256,
     expectedArgv: Object.freeze({
-      supervisor: Object.freeze([]),
+      supervisor: Object.freeze(supervisorInvocation ? ['--import',
+        `/toolchain/${supervisorInvocation.loader.relativePath}`,
+        `/p3b2/${supervisorInvocation.module.relativePath}`, '--selected-supervisor-v1'] : []),
       opencode: Object.freeze(['serve', '--hostname', '127.0.0.1', '--port', '4096']),
       owner: owner.argv,
-      product: Object.freeze([]),
+      product: Object.freeze(admission.ownerLaunch ? [productModulePath, NATIVE_ACTIVATION_ENTRY_ARGUMENT] : []),
       browser: browserArgv(admission),
     }),
     startSchedule: ROOT_PROCESS_SCHEDULE,
@@ -2710,13 +2713,19 @@ export async function executeSupervisor(
   await Promise.all([
     ...Object.values(admission.roots).map(assertRootCurrent),
     ...Object.values(admission.execution).map(assertFileCurrent),
-    ...(admission.ownerLaunch ? [admission.ownerLaunch.executable, admission.ownerLaunch.helper].map(assertFileCurrent) : []),
+    ...Object.values(admission.selectedSupervisorArtifacts ?? {}).map(assertFileCurrent),
+    ...(admission.ownerLaunch ? [admission.ownerLaunch.executable, admission.ownerLaunch.helper,
+      ...(admission.ownerLaunch.supervisorModule ? [admission.ownerLaunch.supervisorModule] : [])].map(assertFileCurrent) : []),
   ]);
   const plan = buildSupervisorPlan(admission, sandbox);
+  const planBytes = Buffer.from(canonicalJson(plan));
+  if (plan.supervisorSourceInvocation && planBytes.length > SELECTED_PLAN_MAXIMUM_BYTES) {
+    throw new Error('p3c_selected_supervisor_plan_bound');
+  }
   if (admission.ownerLaunch) throw new Error('p3c_owner_v2_namespace_entry_not_selected');
   const ownershipMarker = plan.processOwnership.marker;
   await assertOneRunAuthorizationConsumed(admission, consumedAttempt);
-  const supervisor = spawn('/proc/self/fd/9', [], {
+  const supervisor = spawn('/proc/self/fd/9', plan.supervisorSourceInvocation?.argv ?? [], {
     cwd: `${procFdPath(sandbox.handle)}/run`,
     detached: true,
     shell: false,
@@ -2736,6 +2745,8 @@ export async function executeSupervisor(
       admission.roots.toolchain.handle.fd,
       admission.roots.p3b2.handle.fd,
       admission.execution.productCompositionDescriptor.handle.fd,
+      ...(admission.selectedSupervisorArtifacts ? SELECTED_PUBLIC_ARTIFACT_NAMES.map(
+        name => admission.selectedSupervisorArtifacts![name].handle.fd) : []),
     ],
   });
   const supervisorSpawnFailure = new Promise<never>((_resolve, reject) => {
@@ -2815,7 +2826,7 @@ export async function executeSupervisor(
     await terminateAndSettle();
     throw new Error('p3c_supervisor_plan_pipe');
   }
-  (planPipe as NodeJS.WritableStream).end(Buffer.from(canonicalJson(plan)));
+  (planPipe as NodeJS.WritableStream).end(planBytes);
   let timeout: NodeJS.Timeout | undefined;
   const boundedExit = new Promise<never>((_, reject) => {
     timeout = setTimeout(

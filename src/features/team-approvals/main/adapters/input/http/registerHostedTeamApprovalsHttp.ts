@@ -399,12 +399,22 @@ async function handle<T>(
   }
 }
 
+/** Acquired once per handler; the release includes terminal response evidence. */
+export interface HostedTeamApprovalsHttpGeneration {
+  readonly contribution: HostedRouteContribution<HostedTeamApprovalsHttpFacade>;
+  readonly routeAdmission: HostedRouteAdmission;
+  readonly provenance: HostedProducerProvenance;
+  readonly createContext: HostedTeamApprovalsContextFactory;
+  release(): void;
+}
+
 export function registerHostedTeamApprovalsHttp(
   app: FastifyInstance,
   contribution: HostedRouteContribution<HostedTeamApprovalsHttpFacade>,
   routeAdmission: HostedRouteAdmission,
   provenance: HostedProducerProvenance,
-  createContext: HostedTeamApprovalsContextFactory
+  createContext: HostedTeamApprovalsContextFactory,
+  acquireGeneration?: () => HostedTeamApprovalsHttpGeneration | null
 ): void {
   if (contribution.id !== 'team-approvals.hosted.v1') {
     throw new TypeError('hosted-team-approvals-route-contribution-invalid');
@@ -418,45 +428,29 @@ export function registerHostedTeamApprovalsHttp(
     throw new TypeError('hosted-team-approvals-route-contribution-invalid');
   }
   const descriptors = HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS;
-  const facade = contribution.facade;
   const routeOptions = Object.freeze({
     bodyLimit: HOSTED_TEAM_APPROVAL_REQUEST_BODY_LIMIT_BYTES,
     preParsing: captureExactRequestBody,
   });
-  app.post<{ Body: unknown }>(descriptors[0].path, routeOptions, (request, reply) =>
-    handle(
-      request,
-      reply,
-      descriptors[0],
-      routeAdmission,
-      provenance,
-      createContext,
-      (context) => facade.getPage(request.body, context),
-      preparePageResult
-    )
-  );
-  app.post<{ Body: unknown }>(descriptors[1].path, routeOptions, (request, reply) =>
-    handle(
-      request,
-      reply,
-      descriptors[1],
-      routeAdmission,
-      provenance,
-      createContext,
-      (context) => facade.getPreview(request.body, context),
-      preparePreviewResult
-    )
-  );
-  app.post<{ Body: unknown }>(descriptors[2].path, routeOptions, (request, reply) =>
-    handle(
-      request,
-      reply,
-      descriptors[2],
-      routeAdmission,
-      provenance,
-      createContext,
-      (context) => facade.decide(request.body, context),
-      prepareDecisionResult
-    )
-  );
+  const dispatch = async (index: 0 | 1 | 2, request: FastifyRequest, reply: FastifyReply) => {
+    const generation = acquireGeneration ? acquireGeneration() : {
+      contribution, routeAdmission, provenance, createContext, release: () => {},
+    };
+    if (!generation) return reply.code(503).header('Cache-Control', 'no-store').send(
+      errorEnvelope('unavailable', 'team_approval_unavailable', true));
+    try {
+      const facade = generation.contribution.facade;
+      const common = [request, reply, descriptors[index], generation.routeAdmission,
+        generation.provenance, generation.createContext] as const;
+      if (index === 0) return await handle(...common,
+        context => facade.getPage(request.body, context), preparePageResult);
+      if (index === 1) return await handle(...common,
+        context => facade.getPreview(request.body, context), preparePreviewResult);
+      return await handle(...common,
+        context => facade.decide(request.body, context), prepareDecisionResult);
+    } finally { generation.release(); }
+  };
+  app.post(descriptors[0].path, routeOptions, (request, reply) => dispatch(0, request, reply));
+  app.post(descriptors[1].path, routeOptions, (request, reply) => dispatch(1, request, reply));
+  app.post(descriptors[2].path, routeOptions, (request, reply) => dispatch(2, request, reply));
 }

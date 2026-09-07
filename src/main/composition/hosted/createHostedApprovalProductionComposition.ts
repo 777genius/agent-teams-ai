@@ -327,10 +327,18 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
   let operator: HostedOperatorProductionComposition | null = null;
   let router: HostedApprovalRuntimeOrchestratorRouter | null = null;
   let closed = false;
+  let revoked = false;
+  const revoke = (): void => {
+    if (revoked) return;
+    revoked = true;
+    operator?.close();
+    router?.close();
+  };
   const closeActivatedSurface = (): void => {
     if (closed) return;
     // Revoke logical route leases before any downstream cleanup can run.
     closed = true;
+    revoke();
     for (const lease of activationLeases) lease.invalidate();
     router?.close();
     operator?.close();
@@ -389,8 +397,8 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
         ? {}
         : { timeoutMs: approvalActivationTimeoutMs }),
       onOwnerLoss: () => {
-        closeActivatedSurface();
-        onApprovalOwnerLoss?.(new Error('hosted-approval-production-activation-owner-lost'));
+        try { closeActivatedSurface(); }
+        finally { onApprovalOwnerLoss?.(new Error('hosted-approval-production-activation-owner-lost')); }
       },
     });
     assertHostedApprovalRuntimeActivationPreflight(
@@ -460,7 +468,8 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
         lease: createApprovalRouteMutationLease(
           route.socketPath,
           request.ownerBinding,
-          activationLease
+          activationLease,
+          () => !revoked
         ),
         ownerProofKey,
         authority: wireAuthority,
@@ -499,11 +508,14 @@ async function createHostedApprovalProductionCompositionAfterPrechecks(
     );
     operator = createdOperator;
     return Object.freeze({
+      surfaceDependencies: createdOperator.surfaceDependencies,
+      revoke,
+      drain: () => createdOperator.drain!(),
       isReady: () =>
-        !closed && activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady(),
+        !revoked && !closed && activationLeases.every((lease) => lease.isReady()) && createdOperator.isReady(),
       reconcileApprovalDecision: createdOperator.reconcileApprovalDecision.bind(createdOperator),
       register(app: Parameters<HostedOperatorProductionComposition['register']>[0]): void {
-        if (closed || activationLeases.some((lease) => !lease.isReady())) {
+        if (revoked || closed || activationLeases.some((lease) => !lease.isReady())) {
           throw new Error('hosted-approval-production-activation-unavailable');
         }
         createdOperator.register(app);
@@ -645,13 +657,14 @@ function hostedApprovalRouteAuthorityVersion(
 function createApprovalRouteMutationLease(
   socketPath: string,
   binding: HostedApprovalRuntimeActivationBinding['ownerBinding'],
-  activationLease: HostedApprovalRuntimeActivationLease
+  activationLease: HostedApprovalRuntimeActivationLease,
+  isCurrent: () => boolean
 ): TeamLifecycleCommandMutationLease {
   let invalidated = false;
   return Object.freeze({
     socketPath,
     currentBinding: () =>
-      invalidated || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding,
+      invalidated || !isCurrent() || !sameHostedApprovalActivationOwner(activationLease, binding) ? null : binding,
     invalidate: () => {
       invalidated = true;
       activationLease.invalidate();

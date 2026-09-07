@@ -5,7 +5,7 @@ import {
   sameOrchestratorLifecycleOwnerBinding,
 } from '@main/composition/hosted/hostedLifecycleOrchestratorReadiness';
 
-import type { HostedApprovalRuntimeActivationSigningIdentity } from './HostedApprovalRuntimeProductionComposition';
+import type { HostedApprovalRuntimeActivationSigningIdentity } from './HostedApprovalRuntimeActivationPublication';
 import type { Socket } from 'node:net';
 
 export interface HostedApprovalRuntimeActivationBinding {

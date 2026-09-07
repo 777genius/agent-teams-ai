@@ -248,6 +248,36 @@ function createWakeups() {
 }
 
 describe('HostedCoordinationEventStreamController', () => {
+  it('rejects gap admission and never resumes a predecessor replay after drain reopens', async () => {
+    const pending = deferred<CoordinationReplayBatch>();
+    const entered = deferred<void>();
+    const controller = new HostedCoordinationEventStreamController({
+      replay: { replay: () => { entered.resolve(); return pending.promise; } },
+      authorizer: { allowedOrigin: 'https://host.test', authorize: async () => ({
+        isCurrent: () => true,
+        projectEvent: (committed: CoordinationEventEnvelope) => ({
+          scope: committed.scope, eventType: committed.eventType, publicPayload: {},
+        }),
+      }) },
+      wakeups: createWakeups().source, streamIdentityFactory, scheduler: new ManualScheduler(),
+    });
+    const handler = registerHandler(controller), old = createReply();
+    const serving = handler(createRequest({ origin: 'https://host.test', after: 'cursor-0' }), old.reply);
+    await entered.promise;
+    const gap = deferred<void>(), release = deferred<void>();
+    const draining = controller.runWithStreamsDrained(async () => { gap.resolve(); await release.promise; });
+    await gap.promise;
+    const rejected = createReply();
+    await handler(createRequest({ origin: 'https://host.test', after: 'cursor-0' }), rejected.reply);
+    expect(rejected.statusCode).toBe(503);
+    release.resolve();
+    await draining;
+    pending.resolve(batch({ from: 'cursor-0', next: 'cursor-1', events: [event({ sequence: 1 })], hasMore: false }));
+    await serving;
+    expect(old.raw.frames).toEqual([]);
+    controller.close();
+  });
+
   it('fails closed without a raw write after the installed product emitter is cleared', async () => {
     const provenance: HostedProducerProvenance = {
       role: 'product-producer',

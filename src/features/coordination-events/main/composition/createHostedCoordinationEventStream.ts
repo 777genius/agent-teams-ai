@@ -70,6 +70,7 @@ export interface HostedCoordinationEventStream {
   /** Lossy latency hint after an atomic commit through the shared storage worker. */
   notifyDurableCommit(): Promise<void>;
   register(app: unknown): void;
+  runWithStreamsDrained<T>(operation: () => Promise<T>): Promise<T>;
   close(): void;
 }
 
@@ -171,6 +172,7 @@ export function createHostedCoordinationEventStream(
   let closed = false;
   return Object.freeze({
     handoff,
+    runWithStreamsDrained: <T>(operation: () => Promise<T>) => controller.runWithStreamsDrained(operation),
     notifyDurableCommit: () => wakeupHub.notifyCommittedEvent({} as CoordinationEventEnvelope),
     register: (app: unknown) => {
       controller.register(app);

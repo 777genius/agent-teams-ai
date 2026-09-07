@@ -44,8 +44,9 @@ export type ProductSseFrameIdentity =
 export type ProductSseWriteEmitter = (
   frame: string,
   identity: ProductSseFrameIdentity,
-  wrote: boolean
-) => boolean;
+  wrote: boolean,
+  provenance?: HostedProducerProvenance | null
+) => boolean | Promise<boolean>;
 
 export function productRunIdToProvenanceTeamRunId(runId: string): string {
   const match = PRODUCT_RUN_ID.exec(runId);

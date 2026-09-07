@@ -12,6 +12,8 @@ import {
   createOptionalHostedApprovalProductionComposition,
   type CreateOptionalHostedApprovalProductionCompositionDependencies,
 } from './createHostedApprovalProductionComposition';
+import { HostedApprovalGenerationRuntime, type HostedApprovalGenerationRuntimeOptions } from './hostedApprovalGenerationRuntime';
+import { installHostedNativeActivationReplacementReceiver, takeHostedNativeActivationHandle } from './hostedNativeActivationHandle';
 import { createHostedProducerProvenanceFromEnvironment } from './hostedProducerProvenanceComposition';
 import { createProductHostedProducerSseWriteEmitter } from './hostedProducerProvenanceNodeOperations';
 
@@ -23,13 +25,50 @@ export async function createHostedApprovalProductionCompositionFromEnvironment(
   dependencies: Omit<
     CreateOptionalHostedApprovalProductionCompositionDependencies,
     'activationPublication'
-  >
+  >,
+  generationRuntime?: Pick<HostedApprovalGenerationRuntimeOptions, 'drainStreams' | 'revokeLifecycle' | 'createRouteAdmission'>
 ): Promise<HostedOperatorProductionComposition | null> {
-  const inheritedCandidate = dependencies.inheritedCandidateActivation;
-  const producerProvenance = createHostedProducerProvenanceFromEnvironment(environment, {
-    role: 'product-producer',
-    modulePath: __filename,
-  });
+  const nativeHandle = await takeHostedNativeActivationHandle(dependencies.ownerAdmission);
+  if (nativeHandle && dependencies.inheritedCandidateActivation) {
+    closeHostedApprovalRuntimeConnectedTransport(nativeHandle.transport);
+    throw new Error('hosted-native-activation-duplicate-composition-input');
+  }
+  const inheritedCandidate = nativeHandle ?? dependencies.inheritedCandidateActivation;
+  let producerProvenance: ReturnType<typeof createHostedProducerProvenanceFromEnvironment>;
+  try {
+    producerProvenance = createHostedProducerProvenanceFromEnvironment(environment, {
+      role: 'product-producer', modulePath: __filename,
+    });
+  } catch (error) {
+    if (inheritedCandidate) closeHostedApprovalRuntimeConnectedTransport(inheritedCandidate.transport);
+    throw error;
+  }
+  if (nativeHandle) {
+    let runtime: HostedApprovalGenerationRuntime | undefined;
+    try {
+      if (!generationRuntime || !producerProvenance) throw new Error('native_generation_runtime_required');
+      const activationPublication = readHostedApprovalRuntimeActivationPublicationContract(environment);
+      runtime = new HostedApprovalGenerationRuntime({
+        ...generationRuntime,
+        dependencies: { ...dependencies, activationPublication },
+        initial: { selection: nativeHandle.selection, socket: nativeHandle.transport.socket },
+        serializedBootstrap: environment.AGENT_TEAMS_HOSTED_TEAM_LIFECYCLE_READ_BOOTSTRAP ?? '',
+        provenance: producerProvenance,
+        sseEmitter: createProductHostedProducerSseWriteEmitter(environment),
+        send: message => new Promise<void>((resolve, reject) => {
+          if (!process.send || !process.connected) { reject(new Error('native_generation_ipc_lost')); return; }
+          process.send(message, error => error ? reject(error) : resolve());
+        }),
+      });
+      installHostedNativeActivationReplacementReceiver(runtime);
+      await runtime.start();
+      return runtime;
+    } catch (error) {
+      closeHostedApprovalRuntimeConnectedTransport(nativeHandle.transport);
+      if (runtime) runtime.close(); else producerProvenance?.close();
+      throw error;
+    }
+  }
   try {
     installProductHostedProducerProvenance(
       producerProvenance,
@@ -37,6 +76,7 @@ export async function createHostedApprovalProductionCompositionFromEnvironment(
     );
   } catch (error) {
     producerProvenance?.close();
+    if (inheritedCandidate) closeHostedApprovalRuntimeConnectedTransport(inheritedCandidate.transport);
     throw error;
   }
   const candidateActivation =

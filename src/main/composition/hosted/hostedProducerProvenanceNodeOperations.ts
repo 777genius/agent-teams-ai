@@ -138,9 +138,10 @@ export function createHostedProducerProvenanceNodeOperations(): HostedProducerPr
 export function createProductHostedProducerSseWriteEmitter(
   environment: Readonly<Record<string, string | undefined>>
 ): ProductSseWriteEmitter {
-  return (frame, identity, wrote) => {
+  return (frame, identity, wrote, pinnedProvenance) => {
     if (!wrote) return false;
-    const provenance = currentProductHostedProducerProvenance();
+    const provenance = pinnedProvenance === undefined
+      ? currentProductHostedProducerProvenance() : pinnedProvenance;
     if (provenance === null) {
       if (environment[HOSTED_PRODUCER_PROVENANCE_ENV] === undefined) return true;
       throw new TypeError('producer-provenance-product-required');

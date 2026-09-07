@@ -21,6 +21,9 @@ export interface NativeLaunchOptions {
   /** Ownership TRANSFERS on entry after distinct-number validation, including on failure. */
   readonly rawFd: number;
   readonly walFd: number;
+  /** Resource-owner notification after numeric writer ownership transfers.
+   * Throwing still leaves both writers owned and closed by this launch. */
+  readonly onWriterOwnershipTaken?: () => void;
   /** Includes argv[0]. Source execution uses the Bun image and its admitted module argv separately. */
   readonly argv: readonly string[];
   readonly environment: Readonly<Record<string, string>>;
@@ -216,6 +219,7 @@ export async function launchNativeOwner(options: NativeLaunchOptions): Promise<N
     } else if (helper?.pid) throw new Error('owner_launch_cleanup_observation_missing');
   })();
   try {
+    options.onWriterOwnershipTaken?.();
     options.signal?.throwIfAborted();
     const [helperStat, imageStat] = await Promise.all([hashImage(options.helper, options.signal), hashImage(options.executable, options.signal)]);
     const rawStat = fstatSync(options.rawFd, { bigint: true }), walStat = fstatSync(options.walFd, { bigint: true });

@@ -1,5 +1,8 @@
 import { isAbsolute, resolve } from 'node:path';
 
+import { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
+export { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
+
 import {
   createHostedCoordinationEventStream,
   type HostedCoordinationEventStream,
@@ -14,14 +17,13 @@ import {
   type HostedTeamIdentityReadBackend,
 } from '@features/internal-storage/main/hosted';
 import { createRecentProjectsFeature } from '@features/recent-projects/main';
+// eslint-disable-next-line no-restricted-imports -- Standalone binds the bounded hosted approval catalog.
+import { HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS } from '@features/team-approvals/main/hosted';
 import { createQueryContext } from '@shared/contracts/hosted';
 import { createLogger } from '@shared/utils/logger';
 
 import {
   createHostedRouteAdmissionBinding,
-  HOSTED_READINESS_DIMENSIONS,
-  HOSTED_TERMINAL_READINESS,
-  type HostedReadinessDimensionStates,
   type HostedRouteAdmissionBinding,
 } from './composition/hosted/application';
 import { createHostedApprovalProductionCompositionFromEnvironment } from './composition/hosted/createHostedApprovalProductionCompositionFromEnvironment';
@@ -179,58 +181,6 @@ let hostedAuthLocalControlHandle: { close(): Promise<void> } | null = null;
 let fatalFailStop = false;
 let standaloneRequestedExitCode = 0;
 let requestStandaloneFatalFailStop: ((label: string, error: unknown) => void) | null = null;
-
-export function createStandaloneHostedRouteReadiness(input: {
-  readonly fatalFailStop: boolean;
-  readonly runtimeIdentityAvailable: boolean;
-  readonly diagnosticsAvailable: boolean;
-  readonly lifecycleOwnerAvailable: boolean;
-}): {
-  readonly revision: number;
-  readonly dimensions: HostedReadinessDimensionStates;
-} {
-  const { fatalFailStop, runtimeIdentityAvailable, diagnosticsAvailable, lifecycleOwnerAvailable } =
-    input;
-  const readiness = Object.fromEntries(
-    HOSTED_READINESS_DIMENSIONS.map((dimension) => {
-      const ready =
-        !fatalFailStop &&
-        (dimension === 'live' ||
-          dimension === 'serve' ||
-          dimension === 'auth' ||
-          (dimension === 'read' && runtimeIdentityAvailable && diagnosticsAvailable) ||
-          (dimension === 'mutation' && lifecycleOwnerAvailable) ||
-          (dimension === 'runtime-control' && lifecycleOwnerAvailable));
-      const reason = fatalFailStop
-        ? 'fatal_fail_stop'
-        : !runtimeIdentityAvailable
-          ? 'runtime_identity_unavailable'
-          : !diagnosticsAvailable
-            ? 'diagnostics_unavailable'
-            : runtimeIdentityAvailable
-              ? 'external_orchestrator_unavailable'
-              : 'runtime_identity_unavailable';
-      return [
-        dimension,
-        Object.freeze({
-          dimension,
-          status: ready ? ('ready' as const) : ('not_ready' as const),
-          reasons: Object.freeze(ready ? [] : [reason]),
-        }),
-      ];
-    })
-  );
-  return Object.freeze({
-    revision:
-      (runtimeIdentityAvailable ? 1 : 0) +
-      (diagnosticsAvailable ? 1 : 0) +
-      (lifecycleOwnerAvailable ? 1 : 0),
-    dimensions: Object.freeze({
-      ...readiness,
-      terminal: HOSTED_TERMINAL_READINESS,
-    }) as HostedReadinessDimensionStates,
-  });
-}
 
 function hostedRouteReadiness(): ReturnType<typeof createStandaloneHostedRouteReadiness> {
   const runtimeIdentityAvailable = hostedDiagnosticsRuntimeInstance !== null;
@@ -509,6 +459,30 @@ async function start(): Promise<void> {
       ownerProofKey: lifecycleTrustAnchor,
       onApprovalOwnerLoss: (error) =>
         requestStandaloneFatalFailStop?.('Approval owner lost', error),
+    },
+    {
+      drainStreams: operation => {
+        if (!hostedCoordinationEventStream) throw new Error('hosted_coordination_stream_not_initialized');
+        return hostedCoordinationEventStream.runWithStreamsDrained(() =>
+          runWithEventStreamsDrained(operation));
+      },
+      createRouteAdmission: isReady => createHostedRouteAdmissionBinding({
+        routes: HOSTED_TEAM_APPROVAL_ROUTE_DESCRIPTORS,
+        routeScope: 'production',
+        readiness: { readiness: async () => createStandaloneHostedRouteReadiness({
+          fatalFailStop,
+          runtimeIdentityAvailable: hostedDiagnosticsRuntimeInstance !== null,
+          diagnosticsAvailable: hostedDiagnostics?.isReady() === true,
+          // This catalog owns only approvals. A new approval generation must not
+          // revive the retired lifecycle/task/message lease or its readiness.
+          lifecycleOwnerAvailable: isReady(),
+        }) },
+      }),
+      revokeLifecycle: () => {
+        hostedTeamMessageWriter?.close();
+        hostedLifecycleCommands?.close();
+        hostedLifecycleReadinessCleanup?.();
+      },
     }
   );
   hostedTeamMessageWriter =

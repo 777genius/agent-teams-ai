@@ -524,7 +524,7 @@ function assertSocketStillCurrent(path: string, expected: OrchestratorSocketIden
   assertSameSocketIdentity(expected, readSocketIdentity(path, expected.uid, expected.gid));
 }
 
-function parseAdmissionPayload(
+export function parseAdmissionPayload(
   serialized: string,
   expectedSocketPath: string,
   expectedVersion: 2 | 3 | 4
@@ -730,7 +730,7 @@ function parseBootstrapBinding(value: unknown): OrchestratorLifecycleBootstrapBi
   });
 }
 
-function assertBootstrapBinding(
+export function assertBootstrapBinding(
   binding: OrchestratorLifecycleBootstrapBinding,
   serializedBootstrap: string,
   artifactDigest: string,

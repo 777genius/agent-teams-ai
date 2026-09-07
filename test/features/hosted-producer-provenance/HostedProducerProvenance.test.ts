@@ -285,16 +285,18 @@ describe('HostedProducerProvenance', () => {
     const secondEmitter = vi.fn(() => true);
 
     installProductHostedProducerProvenance(first, firstEmitter);
-    expect(currentProductHostedProducerSseWriteEmitter()).toBe(firstEmitter);
+    const pinnedFirst = currentProductHostedProducerSseWriteEmitter()!;
+    pinnedFirst(': heartbeat\n\n', { frameKind: 'heartbeat', eventId: null, eventType: null }, true);
+    expect(firstEmitter).toHaveBeenLastCalledWith(': heartbeat\n\n', { frameKind: 'heartbeat', eventId: null, eventType: null }, true, first);
     clearProductHostedProducerProvenance(first);
     expect(() => currentProductHostedProducerSseWriteEmitter()).toThrow(
       'producer-provenance-product-sse-emitter-cleared'
     );
 
     installProductHostedProducerProvenance(second, secondEmitter);
-    expect(currentProductHostedProducerSseWriteEmitter()).toBe(secondEmitter);
+    expect(currentProductHostedProducerSseWriteEmitter()).not.toBe(pinnedFirst);
     clearProductHostedProducerProvenance(first);
-    expect(currentProductHostedProducerSseWriteEmitter()).toBe(secondEmitter);
+    expect(currentProductHostedProducerSseWriteEmitter()).not.toBe(pinnedFirst);
     clearProductHostedProducerProvenance(second);
     expect(() => currentProductHostedProducerSseWriteEmitter()).toThrow(
       HostedProducerProvenanceFatalError

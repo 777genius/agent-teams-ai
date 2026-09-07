@@ -52,7 +52,9 @@ export function installProductHostedProducerProvenance(
   }
   if (productProvenancePoison !== null) throw productProvenancePoison;
   productProvenance = provenance;
-  productSseWriteEmitter = sseWriteEmitter ?? null;
+  productSseWriteEmitter = sseWriteEmitter
+    ? (frame, identity, wrote) => sseWriteEmitter(frame, identity, wrote, provenance)
+    : null;
 }
 
 export function currentProductHostedProducerProvenance(): HostedProducerProvenance | null {

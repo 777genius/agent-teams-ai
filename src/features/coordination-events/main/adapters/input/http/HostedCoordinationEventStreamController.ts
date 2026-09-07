@@ -371,6 +371,8 @@ export class HostedCoordinationEventStreamController {
   private readonly writer: HostedCoordinationEventStreamWriter;
   private readonly activeStreams = new Set<() => void>();
   private closed = false;
+  private draining = false;
+  private readonly pendingWrites = new Set<Promise<boolean>>();
 
   constructor(options: unknown) {
     const controllerOptions = options as HostedCoordinationEventStreamControllerOptions;
@@ -424,12 +426,25 @@ export class HostedCoordinationEventStreamController {
     for (const closeStream of [...this.activeStreams]) closeStream();
   }
 
+  /** Stop admission synchronously; keep admitted writes and evidence alive before retirement. */
+  async runWithStreamsDrained<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.closed || this.draining) throw new Error('event_stream_drain_unavailable');
+    this.draining = true;
+    try {
+      await Promise.all([...this.pendingWrites]);
+      for (const closeStream of [...this.activeStreams]) closeStream();
+      return await operation();
+    } finally {
+      this.draining = false;
+    }
+  }
+
   private async handle(
     request: HostedCoordinationHttpRequest,
     reply: HostedCoordinationHttpReply
   ): Promise<void> {
     const streamId = this.options.streamIdentityFactory.createStreamId();
-    if (this.closed) {
+    if (this.closed || this.draining) {
       await reply.code(503).send({ error: 'event_stream_closed' });
       return;
     }
@@ -746,10 +761,16 @@ export class HostedCoordinationEventStreamController {
     streamId: string
   ): Promise<boolean> {
     if (!(await authorizationIsCurrent(authorization, signal))) return false;
+    if (this.closed || this.draining) return false;
     const productSseWriteEmitter = currentProductHostedProducerSseWriteEmitter();
-    const disposition = await this.writer.write({ frame, raw: reply.raw, signal, streamId });
-    const wrote = hostedCoordinationEventStreamWriteSucceeded(disposition);
-    return productSseWriteEmitter?.(frame, identity, wrote) ?? wrote;
+    const pending = (async () => {
+      const disposition = await this.writer.write({ frame, raw: reply.raw, signal, streamId });
+      const wrote = hostedCoordinationEventStreamWriteSucceeded(disposition);
+      return await (productSseWriteEmitter?.(frame, identity, wrote) ?? wrote);
+    })();
+    this.pendingWrites.add(pending);
+    try { return await pending; }
+    finally { this.pendingWrites.delete(pending); }
   }
 
   private sseHeaders(streamId: string): Readonly<Record<string, string>> {

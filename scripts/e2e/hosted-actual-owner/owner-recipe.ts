@@ -1,5 +1,7 @@
 import { canonicalJson, exactRecord, sha256 } from './supervisor/canonical';
-import { OPENCODE_IDENTITIES, type FilePin, type IntegrationDescriptor } from './contracts';
+import type { FilePin, IntegrationDescriptor } from './contracts';
+import { OPENCODE_IDENTITIES } from './open-code-identities';
+import { parseSelectedSupervisorInvocation, type SelectedSupervisorInvocation } from './supervisor/selected-invocation';
 import { OWNER_V2_ARGV, type OwnerSourceInvocation } from './owner-child-protocol';
 
 export type PrivateOwnerImagePin = FilePin & { readonly root: 'p3b2'; readonly mode: 320 };
@@ -9,6 +11,7 @@ export interface OwnerLaunchSelectionV2 {
   readonly executable: PrivateOwnerImagePin;
   readonly helper: PrivateOwnerImagePin;
   readonly source: OwnerSourceInvocation;
+  readonly supervisor?: SelectedSupervisorInvocation;
 }
 function check(value: unknown, reason: string): asserts value {
   if (!value) throw new Error(`p3c_owner_recipe_v2_${reason}`);
@@ -41,11 +44,14 @@ function privateImage(value: unknown): PrivateOwnerImagePin {
 export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor): OwnerLaunchSelectionV2 | undefined {
   const value = parseCanonicalObject(bytes, 'p3b2_recipe');
   if (value.schemaVersion === 1) { verifyLegacyP3B2Recipe(bytes, descriptor); return undefined; }
+  const selectedSupervisor = value.schemaVersion === 3;
   const r = exactRecord(value, ['schemaVersion', 'purpose', 'sourceBaseCommit', 'resultCommit', 'entry',
     'supervisor', 'candidateOpenCodeSha256', 'argv', 'sourceTreeRequired', 'accepted',
-    'sourceInvocation', 'launchHelper'], 'owner_recipe_v2');
+    'sourceInvocation', 'launchHelper', ...(selectedSupervisor ? ['supervisorInvocation'] : [])], 'owner_recipe_v2');
   const selected = descriptor.p3b2;
-  check(r.schemaVersion === 2 && r.purpose === 'agent-teams.p3b2.source-actual-owner-entry/v2' &&
+  check((selectedSupervisor
+    ? r.purpose === 'agent-teams.p3b2.selected-native-supervisor/v3'
+    : r.schemaVersion === 2 && r.purpose === 'agent-teams.p3b2.source-actual-owner-entry/v2') &&
     sha256(bytes) === selected.recipeSha256 && sha256(bytes) === selected.recipe.sha256, 'version_digest');
   check(r.sourceBaseCommit === selected.sourceBaseCommit && r.resultCommit === selected.resultCommit &&
     canonicalJson(r.entry) === canonicalJson({ relativePath: selected.entry.relativePath, sha256: selected.entry.sha256 }) &&
@@ -56,14 +62,18 @@ export function verifyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescripto
   const source = exactRecord(r.sourceInvocation, ['format', 'executable', 'module'], 'owner_source');
   const module = exactRecord(source.module, ['path', 'sha256'], 'owner_source_module');
   const executable = privateImage(source.executable), helper = privateImage(r.launchHelper);
+  const supervisor = selectedSupervisor
+    ? parseSelectedSupervisorInvocation(r.supervisorInvocation, descriptor) : undefined;
   check(source.format === 'agent-teams.hosted-owner-source-invocation/v1' &&
     module.path === `/p3b2/${selected.entry.relativePath}` && module.sha256 === selected.entry.sha256 &&
     /\.(?:ts|tsx|mts)$/u.test(selected.entry.relativePath), 'module');
-  const pins = [executable, helper, selected.entry, selected.supervisor, selected.recipe];
+  const pins = [executable, helper, selected.entry, selected.supervisor, selected.recipe,
+    ...(supervisor ? [supervisor.module] : [])];
   check(new Set(pins.map(p => p.relativePath)).size === pins.length &&
     new Set(pins.map(p => `${p.device}:${p.inode}`)).size === pins.length, 'image_alias');
   check(canonicalJson(r.argv) === canonicalJson(['run', module.path, ...OWNER_V2_ARGV]), 'argv');
   return Object.freeze({ protocolVersion: 2, recipeSha256: selected.recipeSha256, executable, helper,
+    ...(supervisor ? { supervisor } : {}),
     source: Object.freeze({ format: 'agent-teams.hosted-owner-source-invocation/v1',
       executable: Object.freeze({ device: executable.device, inode: executable.inode, sha256: executable.sha256 }),
       module: Object.freeze({ path: module.path as string, sha256: selected.entry.sha256 }) }) });
@@ -112,5 +122,6 @@ function verifyLegacyP3B2Recipe(bytes: Buffer, descriptor: IntegrationDescriptor
 }
 
 export function selectedOwnerImages(selection?: OwnerLaunchSelectionV2): readonly FilePin[] {
-  return selection === undefined ? [] : [selection.executable, selection.helper];
+  return selection === undefined ? [] : [selection.executable, selection.helper,
+    ...(selection.supervisor ? [selection.supervisor.module] : [])];
 }

@@ -21,7 +21,7 @@ import {
   type WorkspaceId,
 } from '@shared/contracts/hosted';
 
-import { createHostedOperatorSurfacesComposition } from './hostedOperatorSurfacesComposition';
+import { createHostedOperatorSurfacesComposition,type CreateHostedOperatorSurfacesCompositionDependencies } from './hostedOperatorSurfacesComposition';
 
 import type { HostedRouteAdmissionBinding } from './application';
 import type { HostedAuthenticatedPrincipal } from '@features/hosted-access';
@@ -46,6 +46,9 @@ const DEFAULT_PUMP_INTERVAL_MS = 1_000;
 const DEFAULT_PUMP_RETRY_MS = 250;
 
 export interface HostedOperatorProductionComposition {
+  readonly surfaceDependencies?: CreateHostedOperatorSurfacesCompositionDependencies;
+  revoke?(): void;
+  drain?(): Promise<void>;
   isReady(): boolean;
   reconcileApprovalDecision(
     request: HostedApprovalDecisionReconciliationRequest
@@ -345,6 +348,16 @@ export function createHostedOperatorProductionCompositionFromPlan(
   let pumpRequested = false;
   let deliveryCursor = 0;
   const timers = new Set<ReturnType<typeof setTimeout>>();
+  const pending = new Set<Promise<unknown>>();
+  let drainFailure: unknown;
+  const track = <T>(operation: Promise<T>): Promise<T> => {
+    pending.add(operation);
+    void operation.then(() => pending.delete(operation), error => {
+      drainFailure ??= error;
+      pending.delete(operation);
+    });
+    return operation;
+  };
 
   const schedule = (callback: () => void, delayMs: number): void => {
     const timer = setTimer(() => {
@@ -402,7 +415,7 @@ export function createHostedOperatorProductionCompositionFromPlan(
   const schedulePump = (delayMs: number, generation: number): void => {
     schedule(() => {
       if (closed || generation !== recoveryGeneration || !recovered) return;
-      void runPump(generation);
+      void track(runPump(generation));
     }, delayMs);
   };
 
@@ -445,7 +458,7 @@ export function createHostedOperatorProductionCompositionFromPlan(
     schedule(() => {
       if (closed || generation !== recoveryGeneration) return;
       const deadlineAtMs = nowMs() + recoveryTimeoutMs;
-      void approvalStorage
+      void track(approvalStorage
         .hostedTeamApprovalAuditTimeouts({ nextAuditTimeMs, deadlineAtMs })
         .then(async (result) => {
           if (closed || generation !== recoveryGeneration) return;
@@ -465,7 +478,7 @@ export function createHostedOperatorProductionCompositionFromPlan(
           recovered = false;
           recoveryGeneration += 1;
           schedule(triggerRecovery, pumpRetryMs);
-        });
+        }));
     }, delay);
   };
 
@@ -486,7 +499,7 @@ export function createHostedOperatorProductionCompositionFromPlan(
       recoveryGeneration += 1;
       schedule(beginRecovery, pumpRetryMs);
     }, recoveryTimeoutMs);
-    void (async () => {
+    void track((async () => {
       const audit = await approvalStorage.hostedTeamApprovalAuditTimeouts({
         nextAuditTimeMs: recoveryStartedAt,
         deadlineAtMs: recoveryDeadline,
@@ -503,7 +516,7 @@ export function createHostedOperatorProductionCompositionFromPlan(
       recovered = false;
       recoveryGeneration += 1;
       schedule(beginRecovery, pumpRetryMs);
-    });
+    }));
   };
   triggerRecovery = beginRecovery;
   beginRecovery();
@@ -576,7 +589,7 @@ export function createHostedOperatorProductionCompositionFromPlan(
     if (closed || !recovered) throw new Error('hosted-operator-production-recovery-incomplete');
     return authenticatedContext(request as FastifyRequest, signal);
   };
-  const surfaces = createHostedOperatorSurfacesComposition({
+  const surfaceDependencies: CreateHostedOperatorSurfacesCompositionDependencies = {
     routeAdmission,
     readiness: {
       contribution: createHostedReadinessRouteContribution(readiness),
@@ -587,15 +600,21 @@ export function createHostedOperatorProductionCompositionFromPlan(
       createContext: approvalContext,
       producerProvenance: dependencies.producerProvenance,
     },
-  });
+  };
+  const surfaces = createHostedOperatorSurfacesComposition(surfaceDependencies);
 
   return Object.freeze({
+    surfaceDependencies,
+    async drain(): Promise<void> {
+      while (pending.size) await Promise.allSettled([...pending]);
+      if (drainFailure !== undefined) throw drainFailure;
+    },
     isReady: () => !closed && recovered,
     reconcileApprovalDecision(
       request: HostedApprovalDecisionReconciliationRequest
     ): Promise<HostedApprovalDecisionReconciliationResult> {
       if (closed || !recovered) return Promise.resolve(Object.freeze({ status: 'unavailable' }));
-      return runtimeBridge.reconcileApprovalDecision(request);
+      return track(runtimeBridge.reconcileApprovalDecision(request));
     },
     register(app: FastifyInstance): void {
       if (closed || registered) throw new Error('hosted-operator-production-unavailable');

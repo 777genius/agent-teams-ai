@@ -29,6 +29,18 @@ export function selectOwnerPlan(admission: PreflightAdmission) {
 /** Checks redundant plan/manifest values at both the selected caller and transcript boundary. */
 export function assertOwnerPlanV2(plan: SupervisorPlan): void {
   check(canonicalJson(plan.ownerChildProtocol) === canonicalJson(ownerChildPlanV2()), 'protocol_v2');
+  const supervisor = plan.supervisorSourceInvocation;
+  if (supervisor) {
+    check(supervisor.format === 'agent-teams.hosted-selected-supervisor-invocation/v1' &&
+      supervisor.executable.root === 'toolchain' && supervisor.loader.root === 'toolchain' &&
+      supervisor.module.root === 'p3b2' && supervisor.launcher.root === 'p3b2' &&
+      supervisor.executable.device === plan.expectedExecutableDevice.supervisor &&
+      supervisor.executable.inode === plan.expectedExecutableInode.supervisor &&
+      supervisor.executable.sha256 === plan.expectedExecutableSha256.supervisor &&
+      canonicalJson(plan.expectedArgv.supervisor) === canonicalJson(['--import',
+        `/toolchain/${supervisor.loader.relativePath}`, `/p3b2/${supervisor.module.relativePath}`,
+        '--selected-supervisor-v1']), 'selected_supervisor');
+  }
   const s = plan.ownerSourceInvocation, helper = plan.ownerLaunchHelper;
   check(helper && helper.root === 'p3b2' && helper.mode === 0o500 && helper.nlink === 1 &&
     /^[0-9a-f]{64}$/u.test(helper.sha256) && /^[0-9a-f]{64}$/u.test(plan.ownerRecipeSha256 ?? '') &&

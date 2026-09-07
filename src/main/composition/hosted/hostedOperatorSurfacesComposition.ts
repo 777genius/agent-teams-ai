@@ -21,6 +21,7 @@ import {
 import {
   type HostedTeamApprovalsContextFactory,
   type HostedTeamApprovalsHttpFacade,
+  type HostedTeamApprovalsHttpGeneration,
   registerHostedTeamApprovalsHttp,
 } from '@features/team-approvals/main/hosted';
 
@@ -35,6 +36,7 @@ interface OperatorRoute<TFacade, TContextFactory> {
 
 export interface CreateHostedOperatorSurfacesCompositionDependencies {
   readonly routeAdmission: HostedRouteAdmission;
+  readonly acquireApprovalGeneration?: () => HostedTeamApprovalsHttpGeneration | null;
   /** Readiness reports admission state, so it must remain callable without self-admission. */
   readonly readiness?: OperatorRoute<HostedReadinessHttpFacade, HostedReadinessContextFactory>;
   readonly memberLog?: OperatorRoute<HostedMemberLogHttpFacade, HostedMemberLogContextFactory>;
@@ -90,7 +92,8 @@ export function createHostedOperatorSurfacesComposition(
           dependencies.approvals.contribution,
           dependencies.routeAdmission,
           dependencies.approvals.producerProvenance,
-          dependencies.approvals.createContext
+          dependencies.approvals.createContext,
+          dependencies.acquireApprovalGeneration
         );
       }
       if (dependencies.diagnostics !== undefined) {

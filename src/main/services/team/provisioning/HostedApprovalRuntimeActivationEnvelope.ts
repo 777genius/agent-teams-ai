@@ -15,16 +15,16 @@ import {
   requireHostedApprovalActivationProof as requireProof,
 } from './HostedApprovalRuntimeActivationProof';
 import {
-  validateActivationAdmission,
-  validateActivationBinding,
-  validateTimeout,
-} from './HostedApprovalRuntimeActivationValidation';
-import {
   type HostedApprovalRuntimeActivationPublicVerifier,
   type HostedApprovalRuntimeActivationSigningIdentity,
   serializeHostedApprovalRuntimeActivationAuthorshipPublication,
   verifyHostedApprovalRuntimeActivationAuthorshipPublication,
-} from './HostedApprovalRuntimeProductionComposition';
+} from './HostedApprovalRuntimeActivationPublication';
+import {
+  validateActivationAdmission,
+  validateActivationBinding,
+  validateTimeout,
+} from './HostedApprovalRuntimeActivationValidation';
 
 import type {
   HostedActualOwnerCandidateOpenCodeSha256,
@@ -34,14 +34,6 @@ import type {
   HostedApprovalRuntimeConnectedTransport,
 } from './HostedApprovalRuntimeActivationTypes';
 
-export type {
-  HostedActualOwnerCandidateOpenCodeSha256,
-  HostedApprovalRuntimeActivationBinding,
-  HostedApprovalRuntimeActivationLease,
-  HostedApprovalRuntimeActivationOptions,
-  HostedApprovalRuntimeConnectedTransport,
-} from './HostedApprovalRuntimeActivationTypes';
-export { sameHostedApprovalActivationOwner } from './HostedApprovalRuntimeActivationTypes';
 export {
   HOSTED_APPROVAL_ACTIVATION_ADMISSION_FILE_ENV,
   HOSTED_APPROVAL_ACTIVATION_AUTHORSHIP_ALGORITHM,
@@ -54,7 +46,15 @@ export {
   type HostedApprovalRuntimeActivationSigningIdentity,
   readHostedApprovalRuntimeActivationPublicationContract,
   readHostedApprovalRuntimeActivationSigningIdentity,
-} from './HostedApprovalRuntimeProductionComposition';
+} from './HostedApprovalRuntimeActivationPublication';
+export type {
+  HostedActualOwnerCandidateOpenCodeSha256,
+  HostedApprovalRuntimeActivationBinding,
+  HostedApprovalRuntimeActivationLease,
+  HostedApprovalRuntimeActivationOptions,
+  HostedApprovalRuntimeConnectedTransport,
+} from './HostedApprovalRuntimeActivationTypes';
+export { sameHostedApprovalActivationOwner } from './HostedApprovalRuntimeActivationTypes';
 
 export const HOSTED_APPROVAL_ACTIVATION_PURPOSE =
   'agent-teams.hosted-approval-activation/v2' as const;
@@ -433,6 +433,7 @@ async function activateHostedApprovalRuntimeOnConnectedTransport(
     socket.on('close', () => {
       if (!intentionallyClosed) fail(new Error('hosted-approval-activation-owner-lost'));
     });
+    if (connection.start === 'connected') socket.resume();
   });
   if (!lease.isReady()) {
     lease.invalidate();
