@@ -17,6 +17,11 @@ on:
         required: true
         default: false
         type: boolean
+      recover_linux_only:
+        description: Recover missing v2.13.2 Linux assets from the immutable release source
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -32,7 +37,7 @@ env:
 
 jobs:
   build:
-    if: ${{ !inputs.reuse_existing_draft_assets }}
+    if: ${{ !inputs.reuse_existing_draft_assets && !inputs.recover_linux_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -157,7 +162,7 @@ jobs:
           retention-days: 1
 
   prepare-runtime:
-    if: ${{ !inputs.reuse_existing_draft_assets }}
+    if: ${{ !inputs.reuse_existing_draft_assets && !inputs.recover_linux_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -332,7 +337,7 @@ jobs:
           exit 1
 
   prepare-terminal-platform-runtime:
-    if: ${{ !inputs.reuse_existing_draft_assets }}
+    if: ${{ !inputs.reuse_existing_draft_assets && !inputs.recover_linux_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -474,6 +479,7 @@ jobs:
           exit 1
 
   verify-public-runtime:
+    if: ${{ !inputs.recover_linux_only }}
     name: verify public runtime (${{ matrix.platform }})
     needs: prepare-runtime
     runs-on: ${{ matrix.runner }}
@@ -509,6 +515,7 @@ jobs:
         run: node ./scripts/ci/verify-public-runtime-bootstrap.mjs
 
   release-mac:
+    if: ${{ !inputs.recover_linux_only }}
     needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
     timeout-minutes: 90
     strategy:
@@ -661,6 +668,7 @@ jobs:
           done
 
   release-win:
+    if: ${{ !inputs.recover_linux_only }}
     needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
     strategy:
       fail-fast: false
@@ -822,14 +830,54 @@ jobs:
 
   release-linux:
     needs: [build, prepare-runtime, prepare-terminal-platform-runtime, verify-public-runtime]
+    if: >-
+      ${{ !cancelled() && !inputs.reuse_existing_draft_assets &&
+          (inputs.recover_linux_only ||
+           (needs.build.result == 'success' && needs.prepare-runtime.result == 'success' &&
+            needs.prepare-terminal-platform-runtime.result == 'success' && needs.verify-public-runtime.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.recover_linux_only && '906395bc7cf846b2c3debc8271e4853fb7173e5f' || github.sha }}
+
+      - name: Guard Linux recovery identity and existing assets
+        if: ${{ inputs.recover_linux_only }}
+        id: recovery-guard
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test "$RELEASE_TAG" = v2.13.2
+          test "$PUBLISH_RELEASE" = false
+          test "$(git rev-parse HEAD)" = 906395bc7cf846b2c3debc8271e4853fb7173e5f
+          test -z "$(git status --porcelain)"
+          cat > "$RUNNER_TEMP/recovery-guard.sh" <<'GUARD'
+          snapshot_release() {
+            test "$(gh api "repos/$GITHUB_REPOSITORY/commits/v2.13.2" --jq '.sha')" = 906395bc7cf846b2c3debc8271e4853fb7173e5f
+            gh release view v2.13.2 --repo "$GITHUB_REPOSITORY" \
+              --json id,isDraft,targetCommitish,tagName,assets | jq -e '
+              select(.isDraft == true and .tagName == "v2.13.2" and
+                .targetCommitish == "906395bc7cf846b2c3debc8271e4853fb7173e5f") |
+              {id,isDraft,targetCommitish,tagName,assets: [.assets[] |
+                {id,name,size,digest,state}] | sort_by(.name)}' > "$1"
+          }
+          assert_existing_assets_unchanged() {
+            jq -e --slurpfile before "$RUNNER_TEMP/recovery-before.json" '
+              (.assets |= map(select(.name as $name | $before[0].assets | any(.name == $name))))
+              == $before[0]' "$1" > /dev/null
+          }
+          GUARD
+          source "$RUNNER_TEMP/recovery-guard.sh"
+          snapshot_release "$RUNNER_TEMP/recovery-before.json"
+          jq -e '.assets | length > 0 and all(.state == "uploaded" and
+            (.digest | test("^sha256:[a-f0-9]{64}$")))' "$RUNNER_TEMP/recovery-before.json"
 
       - name: Download dist artifact
+        if: ${{ !inputs.recover_linux_only }}
         uses: actions/download-artifact@v8
         with:
           name: dist
@@ -902,6 +950,7 @@ jobs:
 
       - name: Build app (Linux)
         env:
+          GIT_SHA: ${{ inputs.recover_linux_only && '906395bc7cf846b2c3debc8271e4853fb7173e5f' || github.sha }}
           NODE_OPTIONS: '--max-old-space-size=8192'
           SENTRY_DSN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_DSN || '' }}
           SENTRY_AUTH_TOKEN: ${{ github.event_name == 'workflow_dispatch' && secrets.SENTRY_AUTH_TOKEN || '' }}
@@ -910,6 +959,14 @@ jobs:
           POSTHOG_KEY: ${{ github.event_name == 'workflow_dispatch' && secrets.POSTHOG_KEY || '' }}
           POSTHOG_HOST: https://eu.i.posthog.com
         run: pnpm build
+
+      - name: Verify recovery build source metadata
+        if: ${{ inputs.recover_linux_only }}
+        run: |
+          set -euo pipefail
+          expected_sha=906395bc7cf846b2c3debc8271e4853fb7173e5f
+          grep -Fq "$expected_sha" dist-electron/main/index.cjs
+          grep -Flr --include='*.js' "$expected_sha" out/renderer/assets > /dev/null
 
       - name: Verify Sentry source map upload (Linux)
         if: ${{ env.IS_RELEASE_BUILD == 'true' }}
@@ -950,10 +1007,60 @@ jobs:
         run: node ./scripts/electron-builder/verifyBundle.cjs "release/linux-unpacked" linux x64
 
       - name: Smoke packaged app (Linux)
+        if: ${{ !inputs.recover_linux_only }}
+        timeout-minutes: 2
         run: xvfb-run -a node ./scripts/electron-builder/smokePackagedApp.cjs "release/linux-unpacked" linux
 
+      - name: Smoke packaged app with pinned recovery harness
+        if: ${{ inputs.recover_linux_only }}
+        timeout-minutes: 2
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GITHUB_REPOSITORY/contents/scripts/electron-builder/smokePackagedApp.cjs?ref=9d89b59ae00e7f185c93205d367799c4dd9e0f0d" \
+            -H 'Accept: application/vnd.github.raw+json' > "$RUNNER_TEMP/recovery-smoke.cjs"
+          echo "ad114ccefd4e85093e99f628bc1a3943fb9d78fa05919b295af4d91ed7bea449  $RUNNER_TEMP/recovery-smoke.cjs" | sha256sum --check
+          unset GH_TOKEN
+          xvfb-run -a node "$RUNNER_TEMP/recovery-smoke.cjs" "$GITHUB_WORKSPACE/release/linux-unpacked" linux
+
+      - name: Upload missing Linux recovery assets
+        if: ${{ inputs.recover_linux_only }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/recovery-guard.sh"
+          shopt -s nullglob
+          files=(release/*.AppImage release/*.deb release/*.rpm release/*.pacman release/*.AppImage.blockmap)
+          test "${#files[@]}" -gt 0
+          for file in "${files[@]}"; do
+            snapshot_release "$RUNNER_TEMP/recovery-current.json"
+            assert_existing_assets_unchanged "$RUNNER_TEMP/recovery-current.json"
+            name="$(basename "$file")"
+            digest="sha256:$(sha256sum "$file" | cut -d ' ' -f 1)"
+            size="$(stat -c %s "$file")"
+            if ! jq -e --arg name "$name" '.assets | any(.name == $name)' "$RUNNER_TEMP/recovery-current.json" > /dev/null; then
+              gh release upload v2.13.2 "$file" --repo "$GITHUB_REPOSITORY"
+            fi
+            snapshot_release "$RUNNER_TEMP/recovery-current.json"
+            jq -e --arg name "$name" --arg digest "$digest" --argjson size "$size" '
+              .assets | any(.name == $name and .digest == $digest and .size == $size and .state == "uploaded")
+              ' "$RUNNER_TEMP/recovery-current.json"
+          done
+
+      - name: Verify recovery preserved existing assets
+        if: ${{ always() && inputs.recover_linux_only && steps.recovery-guard.outcome == 'success' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          source "$RUNNER_TEMP/recovery-guard.sh"
+          snapshot_release "$RUNNER_TEMP/recovery-after.json"
+          assert_existing_assets_unchanged "$RUNNER_TEMP/recovery-after.json"
+
       - name: Upload assets to release
-        if: ${{ env.IS_RELEASE_BUILD == 'true' }}
+        if: ${{ env.IS_RELEASE_BUILD == 'true' && !inputs.recover_linux_only }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -971,7 +1078,7 @@ jobs:
     needs: [release-mac, release-win, release-linux]
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release && !inputs.reuse_existing_draft_assets }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release && !inputs.reuse_existing_draft_assets && !inputs.recover_linux_only }}
 
     steps:
       - name: Checkout release promotion
@@ -991,7 +1098,7 @@ jobs:
   promote-existing-draft:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.reuse_existing_draft_assets }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.reuse_existing_draft_assets && !inputs.recover_linux_only }}
 
     steps:
       - name: Checkout release promotion
