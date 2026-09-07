@@ -25,11 +25,11 @@ export type HostedTeamConfigurationStorageReadResult =
 export type HostedTeamConfigurationStorageUpdateResult =
   | Readonly<{ kind: 'updated'; draft: HostedSavedTeamRequest }>
   | Readonly<{ kind: 'not_found' }>
-  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' }>;
+  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' | 'promotion_frozen' }>;
 
 export type HostedTeamConfigurationStorageDeleteResult =
   | Readonly<{ kind: 'deleted'; outcome: 'deleted' | 'already_absent' }>
-  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' }>;
+  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' | 'promotion_frozen' }>;
 
 /** Application-owned persistence boundary; adapters may not own application policy. */
 export interface HostedTeamConfigurationAuthorityStoragePort {

@@ -8,14 +8,14 @@ interface SchemaObject {
   readonly sql?: unknown;
 }
 
-/** Validate the one explicit v29 change before applying the frozen v1 projection digest.
+/** Validate the one explicit v29 identity change (retained in v30) before the frozen v1 digest.
  * This only normalizes an in-memory schema projection; it never executes SQL or repairs storage.
  * The caller must still check the complete object count/digest and identity graph.
  */
 export function normalizeCurrentTeamIdentitySchema(
   objects: readonly SchemaObject[], version: unknown
 ): readonly SchemaObject[] {
-  if (version !== 29) return objects;
+  if (version !== 29 && version !== 30) return objects;
   const name = 'trg_team_identity_transition';
   const current = objects.filter((object) => object.name === name);
   if (current.length !== 1 || current[0]?.type !== 'trigger' ||

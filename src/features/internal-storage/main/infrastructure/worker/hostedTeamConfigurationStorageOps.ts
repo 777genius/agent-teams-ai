@@ -254,6 +254,7 @@ export class HostedTeamConfigurationStorageOps {
         if (row.revision_token !== input.expectedRevision) {
           return { kind: 'conflict', reason: 'revision_mismatch' };
         }
+        if (this.isFrozen(input.workspaceId, input.teamId)) return { kind: 'conflict', reason: 'promotion_frozen' };
         const nextRevision = revision();
         const current = draft(row);
         const { configuration, ...metadataUpdates } = input.updates;
@@ -313,6 +314,7 @@ export class HostedTeamConfigurationStorageOps {
         if (row.revision_token !== input.expectedRevision) {
           return { kind: 'conflict', reason: 'revision_mismatch' };
         }
+        if (this.isFrozen(input.workspaceId, input.teamId)) return { kind: 'conflict', reason: 'promotion_frozen' };
         const changed = db
           .prepare(
             `UPDATE hosted_team_configuration_drafts
@@ -345,6 +347,11 @@ export class HostedTeamConfigurationStorageOps {
         row.runtime_workspace_id !== binding.runtimeWorkspaceId || row.binding_generation !== binding.bindingGeneration)) {
       throw new Error('draft-publication-actor-binding-mismatch');
     }
+  }
+
+  private isFrozen(workspaceId: string, teamId: string): boolean {
+    return !!this.getDatabase().prepare(`SELECT 1 FROM hosted_team_configuration_promotions
+      WHERE workspace_id = ? AND team_id = ?`).get(workspaceId, teamId);
   }
 
   private requireMutationAdmission(deadlineAtMs: number): number {

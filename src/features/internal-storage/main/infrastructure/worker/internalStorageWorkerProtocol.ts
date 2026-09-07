@@ -277,6 +277,8 @@ type TypedHostedTeamApprovalAuthorityWorkerRequest = {
 }[keyof HostedTeamApprovalAuthorityWorkerPayloadByOp];
 
 export interface HostedTeamConfigurationWorkerPayloadByOp {
+  'hostedPromotion.begin': import('../../../contracts/hostedPromotionStorageContracts').HostedPromotionBegin;
+  'hostedPromotion.lookup': import('../../../contracts/hostedPromotionStorageContracts').HostedPromotionLookup;
   'hostedTeamConfiguration.create': HostedTeamConfigurationStorageCreateRequest;
   'hostedTeamConfiguration.read': {
     readonly workspaceId: WorkspaceId;

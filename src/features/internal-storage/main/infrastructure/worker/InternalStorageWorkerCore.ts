@@ -17,6 +17,7 @@ import {
 import { ExternalWriterObservationStorageOps } from './externalWriterObservationStorageOps';
 import { ExternalWriterReconciliationStorageOps } from './externalWriterReconciliationStorageOps';
 import { HostedAuthStorageOps } from './hostedAuthStorageOps';
+import { HostedPromotionStorageOps } from './hostedPromotionStorageOps';
 import { HostedTeamApprovalAuthorityStorageOps } from './hostedTeamApprovalAuthorityStorageOps';
 import { HostedTeamConfigurationStorageOps } from './hostedTeamConfigurationStorageOps';
 import {
@@ -48,6 +49,7 @@ import type {
   InternalStorageBackendInfo,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
+import type { HostedPromotionCommitAuthority } from './hostedPromotionStorageOps';
 import type {
   InternalStorageWorkerOp,
   InternalStorageWorkerRequest,
@@ -97,6 +99,8 @@ export interface InternalStorageWorkerCoreOptions {
     options?: { readonly?: boolean; fileMustExist?: boolean }
   ): SqliteDatabase;
   now?(): Date;
+  /** Host-only retained commit capability. No default adapter or payload override. */
+  promotionCommitAuthority?: HostedPromotionCommitAuthority;
 }
 
 interface OpenState {
@@ -128,6 +132,11 @@ export class InternalStorageWorkerCore {
   private readonly hostedTeamApprovalAuthorityOps = new HostedTeamApprovalAuthorityStorageOps(
     () => this.open().db,
     () => (this.options.now?.() ?? new Date()).getTime()
+  );
+  private readonly promotionOps = new HostedPromotionStorageOps(
+    () => this.open().db,
+    () => (this.options.now?.() ?? new Date()).getTime(),
+    () => this.options.promotionCommitAuthority
   );
   private readonly hostedTeamConfigurationOps = new HostedTeamConfigurationStorageOps(
     () => this.open().db,
@@ -173,20 +182,24 @@ export class InternalStorageWorkerCore {
     }
     this.assertMutationAdmission(op, payload);
     if (isInternalStorageMutation(op) && (op.startsWith('teamIdentity.') ||
-        op === 'draftPublication.settle' || op === 'hostedTeamConfiguration.delete' ||
+        op === 'hostedPromotion.begin' || op === 'draftPublication.settle' || op === 'hostedTeamConfiguration.delete' ||
         (op === 'hostedTeamConfiguration.create' && typeof payload === 'object' && payload !== null &&
           Object.hasOwn(payload, 'publicationBinding')))) {
       // Publication intent and canonical commits must survive a WAL power-loss boundary.
       this.open().db.pragma('synchronous = FULL');
     }
     switch (op) {
+      case 'hostedPromotion.begin':
+        return this.promotionOps.begin(payload);
+      case 'hostedPromotion.lookup':
+        return this.promotionOps.lookup(payload);
       case 'ping':
         return this.ping(payload);
       case 'teamIdentity.snapshot': {
         if (!this.state) throw new Error('canonical-snapshot-connection-not-retained');
         const { db, connectionFileIdentity } = this.state;
         if (!connectionFileIdentity || connectionFileIdentity !== this.observeDatabaseFileIdentity() ||
-            db.pragma('user_version', { simple: true }) !== 29 ||
+            db.pragma('user_version', { simple: true }) !== INTERNAL_STORAGE_SCHEMA_VERSION ||
             Number(db.pragma('page_count', { simple: true })) * Number(db.pragma('page_size', { simple: true })) > 512 * 1024 * 1024) {
           throw new Error('canonical-snapshot-source-invalid');
         }
@@ -677,6 +690,7 @@ function isInternalStorageMutation(op: InternalStorageWorkerOp): boolean {
     case 'teamIdentity.list':
     case 'teamIdentity.listActive':
     case 'teamIdentity.captureExternalWriterInventory':
+    case 'hostedPromotion.lookup':
     case 'draftPublication.lookup':
     case 'draftPublication.read':
     case 'teamIdentity.get':

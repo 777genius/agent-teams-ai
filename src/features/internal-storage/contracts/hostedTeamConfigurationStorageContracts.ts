@@ -70,7 +70,7 @@ export interface HostedTeamConfigurationStorageUpdateRequest {
 export type HostedTeamConfigurationStorageUpdateResult =
   | Readonly<{ kind: 'updated'; draft: HostedTeamConfigurationStorageDraft }>
   | Readonly<{ kind: 'not_found' }>
-  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' }>;
+  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' | 'promotion_frozen' }>;
 
 export interface HostedTeamConfigurationStorageDeleteRequest {
   readonly publicationBinding?: TeamDraftPublicationBinding;
@@ -86,7 +86,7 @@ export interface HostedTeamConfigurationStorageMutationOptions {
 
 export type HostedTeamConfigurationStorageDeleteResult =
   | Readonly<{ kind: 'deleted'; outcome: 'deleted' | 'already_absent' }>
-  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' }>;
+  | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' | 'promotion_frozen' }>;
 
 export interface HostedTeamConfigurationStorageGateway {
   createHostedTeamConfiguration(

@@ -1,6 +1,9 @@
 import { parseTeamId, type TeamId, type WorkspaceId } from '@shared/contracts/hosted';
 
-import { parseTeamDraftPublication, type TeamDraftPublicationStorageGateway } from '../../contracts/teamDraftPublicationContracts';
+import {
+  parseTeamDraftPublication,
+  type TeamDraftPublicationStorageGateway,
+} from '../../contracts/teamDraftPublicationContracts';
 import {
   type ExternalWriterIdentityInventoryCapture,
   MAX_TEAM_IDENTITY_READ_RECORDS,
@@ -25,6 +28,7 @@ import {
   type InternalStorageWorkerRequest,
   type ProcessOwnershipWorkerPayloadByOp,
 } from './worker/internalStorageWorkerProtocol';
+import { createHostedPromotionWorkerClient } from './HostedPromotionWorkerClient';
 import { HostedTeamApprovalWorkerClient } from './HostedTeamApprovalWorkerClient';
 import { resolveInternalStorageWorkerPath } from './internalStorageWorkerPath';
 import {
@@ -148,6 +152,7 @@ export class InternalStorageWorkerClient
       (op, payload, callOptions) => this.callHostedTeamConfiguration(op, payload, callOptions)
     );
   }
+  readonly promotions = createHostedPromotionWorkerClient((op, input, options) => this.call(op, input, options));
   readonly identityPublication: TeamIdentityPublicationGateway = {
     listTeamIdentities: () => this.listTeamIdentities(),
     getTeamIdentity: (teamId) => this.getTeamIdentity(teamId),

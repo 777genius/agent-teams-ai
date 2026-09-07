@@ -1,8 +1,10 @@
+import { HOSTED_PROMOTION_STORAGE_MIGRATION } from '@features/internal-storage/main/infrastructure/worker/hostedPromotionStorageMigration';
 import {
   readSchemaVersion,
   runInternalStorageMigrations,
 } from '@features/internal-storage/main/infrastructure/worker/internalStorageMigrations';
 import { TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS } from '@features/internal-storage/main/infrastructure/worker/teamIdentityStorageSchema';
+import DatabaseFixture from 'better-sqlite3-node';
 import { expect } from 'vitest';
 
 import type DatabaseConstructor from 'better-sqlite3';
@@ -13,7 +15,7 @@ type Database = InstanceType<typeof DatabaseConstructor>;
 // No copied DDL, rewritten versions, swallowed migration errors or production hooks.
 export function createReleasedInternalStorageSchema(
   db: Database,
-  version: 6 | 18 | 24 | 25 | 27 | 28
+  version: 6 | 18 | 24 | 25 | 27 | 28 | 29
 ): void {
   expect(readSchemaVersion(db)).toBe(0);
   expect(db.prepare("SELECT name FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%'").all()).toEqual([]);
@@ -36,12 +38,41 @@ export function createReleasedInternalStorageSchema(
     if (error !== prefixComplete) throw error;
   }
   expect(readSchemaVersion(db)).toBe(version);
-  expectReleasedIdentitySchema(db);
+  if (version < 29) expectReleasedIdentitySchema(db);
+}
+
+// Test-only current-to-released projection. Check every v30 object before
+// removing it, then compare the COMPLETE remaining schema with a real v29
+// migration prefix. Never relabel current DDL as a historical fixture.
+export function restoreReleasedV29Schema(db: Database): void {
+  expect(readSchemaVersion(db)).toBe(30);
+  expect(db.prepare('SELECT * FROM hosted_team_configuration_promotions').all()).toEqual([]);
+  const objects = HOSTED_PROMOTION_STORAGE_MIGRATION.statements.map((statement) => {
+    const match = /^CREATE (TABLE|TRIGGER) ([a-z_]+)/u.exec(statement);
+    if (!match) throw new Error('unexpected-promotion-schema-object');
+    const [, type, name] = match;
+    expect(db.prepare('SELECT sql FROM sqlite_schema WHERE name = ?').get(name)).toEqual({ sql: statement });
+    return { type, name };
+  });
+  const reference = new DatabaseFixture(':memory:');
+  try {
+    createReleasedInternalStorageSchema(reference, 29);
+    db.transaction(() => {
+      for (const { type, name } of [...objects].reverse()) db.exec(`DROP ${type} ${name}`);
+      db.pragma('user_version = 29');
+      const schema = 'SELECT type, name, tbl_name, sql FROM sqlite_schema ORDER BY type, name, tbl_name';
+      expect(db.prepare(schema).all()).toEqual(reference.prepare(schema).all());
+    })();
+  } finally {
+    reference.close();
+  }
+  expect(readSchemaVersion(db)).toBe(29);
 }
 
 // Only v29 changes v27/v28 DDL: remove its table (and attached triggers/indexes),
 // then restore the exact released identity trigger. v28 itself is admission-only.
 export function restorePrePublicationSchema(db: Database, version: 27 | 28): void {
+  if (readSchemaVersion(db) === 30) restoreReleasedV29Schema(db);
   expect(readSchemaVersion(db)).toBe(29);
   const oldTrigger = TEAM_IDENTITY_STORAGE_MIGRATION_STATEMENTS.find((statement) =>
     statement.startsWith('CREATE TRIGGER IF NOT EXISTS trg_team_identity_transition\n')
