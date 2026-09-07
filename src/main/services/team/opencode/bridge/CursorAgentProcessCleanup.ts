@@ -256,23 +256,33 @@ export function commandNamesOwnedWorkspace(
   const bare = /--workspace[\s=]+(.+)$/.exec(command)?.[1];
   if (bare === undefined) return false;
   const value = bare.trim();
-  for (const candidate of enumerateWorkspacePrefixes(value)) {
-    if (normalizeWorkspacePath(candidate.path, platform) !== normalizedOwned) continue;
-    // Nothing left, or the next token is unmistakably a flag.
-    if (candidate.rest.length === 0 || candidate.rest.startsWith(' --')) return true;
-  }
-  return false;
-}
 
-/**
- * Every way an unquoted value could be split into "the path" and "what follows".
- * Only splits at spaces, because that is the only separator `ps` inserted.
- */
-function* enumerateWorkspacePrefixes(value: string): Generator<{ path: string; rest: string }> {
-  yield { path: value, rest: '' };
-  for (let index = value.indexOf(' '); index !== -1; index = value.indexOf(' ', index + 1)) {
-    yield { path: value.slice(0, index), rest: value.slice(index) };
+  // An owned path with no spaces in it ends at the first space. The token has to
+  // match, AND what follows has to look like the next argument rather than the
+  // rest of a longer directory name - otherwise an owned `/Users/u/My` would
+  // claim a process actually running in `/Users/u/My Projects/app`.
+  if (!normalizedOwned.includes(' ')) {
+    const firstSpace = value.indexOf(' ');
+    const firstToken = firstSpace === -1 ? value : value.slice(0, firstSpace);
+    if (normalizeWorkspacePath(firstToken, platform) !== normalizedOwned) return false;
+    return firstSpace === -1 || value.slice(firstSpace).trimStart().startsWith('-');
   }
+
+  // An owned path that DOES contain spaces is only recognisable when the value
+  // is the whole remainder of the command line - i.e. `--workspace` was the last
+  // argument.
+  //
+  // No heuristic is used to find where such a path ends, and this is deliberate.
+  // An earlier attempt treated ` --` as the start of the next flag, which reads
+  // `/work/My Team -- backup` as `/work/My Team` and matches a directory the
+  // caller does not own; `/work/My Team --model backup` collides the same way. A
+  // joined argv is genuinely ambiguous, and every rule that resolves it also
+  // resolves some real directory name wrongly.
+  //
+  // The cost is that a spaced workspace followed by more arguments is never
+  // matched, so its tree is kept. For a sweep that kills whole trees, a missed
+  // reap is the acceptable failure and a wrong reap is not.
+  return normalizeWorkspacePath(value, platform) === normalizedOwned;
 }
 
 /**

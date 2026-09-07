@@ -550,17 +550,24 @@ const POSIX_SPACED_WRAPPER =
 
 describe('a workspace that contains spaces', () => {
   /**
-   * `(\S+)` stopped at the first space and captured `/Users/u/My`, which matches
-   * no owned workspace - so the tree was never reaped and the sweep looked like
-   * it was working. Every user whose project path has a space in it got a
-   * silent no-op.
+   * A joined argv cannot be split back unambiguously, so an unquoted spaced path
+   * followed by more arguments is refused rather than guessed at.
    */
-  it('reads the whole unquoted path, not its first segment', () => {
+  it('refuses an ambiguous unquoted spaced path', () => {
+    // POSIX_SPACED_WRAPPER has arguments after the spaced path, so it is
+    // ambiguous and deliberately does not match.
     expect(
       commandNamesOwnedWorkspace(POSIX_SPACED_WRAPPER, POSIX_SPACED_WORKSPACE, 'darwin')
-    ).toBe(true);
-    // The first segment alone must not match.
+    ).toBe(false);
     expect(commandNamesOwnedWorkspace(POSIX_SPACED_WRAPPER, '/Users/u/My', 'darwin')).toBe(false);
+    // Quoted, the same path is unambiguous and does match.
+    expect(
+      commandNamesOwnedWorkspace(
+        `cursor-agent --print --workspace "${POSIX_SPACED_WORKSPACE}" --model m`,
+        POSIX_SPACED_WORKSPACE,
+        'darwin'
+      )
+    ).toBe(true);
   });
 
   it('reads it back in either quoting style', () => {
@@ -570,14 +577,14 @@ describe('a workspace that contains spaces', () => {
     }
   });
 
-  it('reaps a tree whose owned workspace contains spaces', async () => {
+  it('reaps a tree whose owned workspace contains spaces when it is unambiguous', async () => {
     const killTree = vi.fn(reapedTree);
+    const unambiguous = `/bin/sh cursor-agent --print --workspace ${POSIX_SPACED_WORKSPACE}`;
 
     const result = await cleanupCursorAgentProcessTrees({
       ownedWorkspaceCwds: [POSIX_SPACED_WORKSPACE],
       platform: 'darwin',
-      listProcessRows: () =>
-        Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_SPACED_WRAPPER }]),
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: unambiguous }]),
       killTree,
     });
 
@@ -601,15 +608,19 @@ describe('a workspace that contains spaces', () => {
 });
 
 describe('ownership fences beyond the command line', () => {
-  const OWNED_ENV = `CURSOR_X=1 CLAUDE_TEAM_APP_INSTANCE_ID=abc123 ${POSIX_SPACED_WRAPPER}`;
-  const FOREIGN_ENV = `PATH=/usr/bin ${POSIX_SPACED_WRAPPER}`;
+  // Space-free on purpose: this block is about the environment fence, and a
+  // spaced path would drag the (deliberately strict) parsing rules into it.
+  const PLAIN_WORKSPACE = '/work/app';
+  const PLAIN_WRAPPER =
+    '/bin/sh /Users/u/.local/bin/cursor-agent --print --workspace /work/app --model m';
+  const OWNED_ENV = `CURSOR_X=1 CLAUDE_TEAM_APP_INSTANCE_ID=abc123 ${PLAIN_WRAPPER}`;
+  const FOREIGN_ENV = `PATH=/usr/bin ${PLAIN_WRAPPER}`;
 
   const sweep = (overrides: Record<string, unknown>) =>
     cleanupCursorAgentProcessTrees({
-      ownedWorkspaceCwds: [POSIX_SPACED_WORKSPACE],
+      ownedWorkspaceCwds: [PLAIN_WORKSPACE],
       platform: 'darwin',
-      listProcessRows: () =>
-        Promise.resolve([{ pid: 10, ppid: 1, command: POSIX_SPACED_WRAPPER }]),
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: PLAIN_WRAPPER }]),
       ...overrides,
     } as Parameters<typeof cleanupCursorAgentProcessTrees>[0]);
 
@@ -827,13 +838,70 @@ describe('a workspace value that cannot be parsed unambiguously', () => {
   it('does not let a sibling directory match an owned one', () => {
     const command = `cursor-agent --print --workspace ${SIBLING} --model x`;
     expect(commandNamesOwnedWorkspace(command, SPACED, 'darwin')).toBe(false);
-    expect(commandNamesOwnedWorkspace(command, SIBLING, 'darwin')).toBe(true);
+    // Not the sibling either: a spaced path with arguments after it is ambiguous
+    // in a joined argv, so it is refused rather than guessed at.
+    expect(commandNamesOwnedWorkspace(command, SIBLING, 'darwin')).toBe(false);
+    // Unambiguous spellings of the sibling do match.
+    expect(
+      commandNamesOwnedWorkspace(`cursor-agent --print --workspace ${SIBLING}`, SIBLING, 'darwin')
+    ).toBe(true);
+    expect(
+      commandNamesOwnedWorkspace(
+        `cursor-agent --print --workspace "${SIBLING}" --model x`,
+        SIBLING,
+        'darwin'
+      )
+    ).toBe(true);
   });
 
-  it('still matches an owned path with spaces followed by a long flag', () => {
+  /**
+   * The other direction of the same ambiguity: an owned path that happens to be
+   * the first segment of a longer one must not claim it.
+   */
+  it('does not let a space-free owned path claim a longer spaced one', () => {
     const command = 'cursor-agent --print --workspace /Users/u/My Projects/app --model m';
-    expect(commandNamesOwnedWorkspace(command, '/Users/u/My Projects/app', 'darwin')).toBe(true);
     expect(commandNamesOwnedWorkspace(command, '/Users/u/My', 'darwin')).toBe(false);
+  });
+
+  /**
+   * The counter-examples that killed the previous heuristic. Treating ` --` as
+   * the next flag reads a directory literally named `... -- backup` as its own
+   * parent, and cannot tell it from a real flag following a spaced path.
+   */
+  it('refuses every spelling that a flag heuristic would have accepted', () => {
+    for (const value of ['/work/My Team -- backup', '/work/My Team --model backup']) {
+      const command = `cursor-agent --print --workspace ${value}`;
+      expect(commandNamesOwnedWorkspace(command, '/work/My Team', 'darwin')).toBe(false);
+    }
+  });
+
+  /**
+   * A spaced owned path is only recognised unquoted when `--workspace` was the
+   * last argument. Otherwise the tree is kept - a missed reap, which is the
+   * acceptable direction here.
+   */
+  it('matches a spaced path only when nothing follows it', () => {
+    expect(
+      commandNamesOwnedWorkspace(
+        'cursor-agent --print --workspace /Users/u/My Projects/app',
+        '/Users/u/My Projects/app',
+        'darwin'
+      )
+    ).toBe(true);
+    expect(
+      commandNamesOwnedWorkspace(
+        'cursor-agent --print --workspace /Users/u/My Projects/app --model m',
+        '/Users/u/My Projects/app',
+        'darwin'
+      )
+    ).toBe(false);
+  });
+
+  /** A path without spaces ends at the first space, so following args are fine. */
+  it('matches a space-free path regardless of what follows', () => {
+    const command = 'cursor-agent --print --workspace /work/app --model m --force';
+    expect(commandNamesOwnedWorkspace(command, '/work/app', 'darwin')).toBe(true);
+    expect(commandNamesOwnedWorkspace(command, '/work', 'darwin')).toBe(false);
   });
 
   it('matches a quoted value exactly and nothing else', () => {
