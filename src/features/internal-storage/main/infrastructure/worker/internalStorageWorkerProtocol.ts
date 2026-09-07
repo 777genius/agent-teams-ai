@@ -28,6 +28,8 @@ import type {
   CommentJournalEntryRecord,
   StallJournalEntryRecord,
 } from '../../../contracts/internalStorageContracts';
+import type { TeamDraftPublicationStorageGateway } from '../../../contracts/teamDraftPublicationContracts';
+import type { TeamIdentityPublicationGateway } from '../../../contracts/teamIdentityStorageContracts';
 import type { TeamRosterSnapshotRecord } from '../../../contracts/teamRosterStorageContracts';
 import type { CoordinationDrainStorageEvidence } from '../../application/coordinationDurabilityStorage';
 import type {
@@ -69,7 +71,7 @@ export type {
 
 export interface InternalStorageWorkerData {
   databasePath: string;
-  mode?: 'team-identity-read-only';
+  mode?: 'team-identity-read-only' | 'team-identity-publication';
 }
 
 export type ApplicationCommandLedgerWorkerOp =
@@ -307,8 +309,24 @@ type TypedExternalWriterObservationWorkerRequest = {
   };
 }[keyof ExternalWriterObservationWorkerPayloadByOp];
 
+export interface DraftPublicationWorkerPayloadByOp {
+  'teamIdentity.reserve': Parameters<TeamIdentityPublicationGateway['reserveTeamIdentity']>[0];
+  'teamIdentity.prepareReserved': Parameters<TeamIdentityPublicationGateway['prepareReservedTeamAdoption']>[0];
+  'teamIdentity.recordPublished': Parameters<TeamIdentityPublicationGateway['recordTeamIdentityFilePublished']>[0];
+  'teamIdentity.commitAdoption': Parameters<TeamIdentityPublicationGateway['commitTeamAdoption']>[0];
+  'teamIdentity.tombstone': Parameters<TeamIdentityPublicationGateway['tombstoneTeamIdentity']>[0];
+  'draftPublication.lookup': Parameters<TeamDraftPublicationStorageGateway['lookupTeamDraftPublication']>[0];
+  'draftPublication.read': Parameters<TeamDraftPublicationStorageGateway['readTeamDraftPublication']>[0];
+  'draftPublication.settle': Parameters<TeamDraftPublicationStorageGateway['settleTeamDraftPublication']>[0];
+}
+type DraftPublicationWorkerRequest = {
+  [Op in keyof DraftPublicationWorkerPayloadByOp]: { id: string; op: Op; payload: DraftPublicationWorkerPayloadByOp[Op] }
+}[keyof DraftPublicationWorkerPayloadByOp];
+
 export type InternalStorageWorkerRequest =
-  | { id: string; op: 'ping'; payload: Record<string, never> }
+  | DraftPublicationWorkerRequest
+  | { id: string; op: 'ping'; payload: { readonly requireExistingCanonical?: true } }
+  | { id: string; op: 'teamIdentity.snapshot'; payload: Record<string, never> }
   | { id: string; op: 'stallJournal.load'; payload: { teamName: string } }
   | {
       id: string;

@@ -19,6 +19,8 @@ export function createHostedTeamConfigurationFeature(
   const adapter = new HostedTeamConfigurationAdapter(application, authorization);
   return Object.freeze({
     routes: HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS,
+    getPublication: adapter.getPublication.bind(adapter),
+    recoverPublication: adapter.recoverPublication.bind(adapter),
     getSavedRequest: adapter.getSavedRequest.bind(adapter),
     createDraft: adapter.createDraft.bind(adapter),
     updateDraft: adapter.updateDraft.bind(adapter),

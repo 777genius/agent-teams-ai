@@ -24,6 +24,7 @@ import {
   parseHostedTeamConfigurationStorageUpdateRequest,
 } from '../../../contracts/hostedTeamConfigurationStorageContracts';
 
+import type { TeamDraftPublicationBinding } from '../../../contracts/teamDraftPublicationContracts';
 import type DatabaseConstructor from 'better-sqlite3';
 
 type SqliteDatabase = InstanceType<typeof DatabaseConstructor>;
@@ -155,6 +156,7 @@ export class HostedTeamConfigurationStorageOps {
           | { payload_hash: string; team_id: string; initial_revision: string }
           | undefined;
         if (replay) {
+          this.assertPublicationActor(input.workspaceId, replay.team_id, input.publicationBinding);
           return replay.payload_hash === input.payloadHash
             ? {
                 kind: 'created',
@@ -200,6 +202,17 @@ export class HostedTeamConfigurationStorageOps {
           initialRevision,
           admittedAtMs
         );
+        if (input.publicationBinding) {
+          const operationId = `adoption_${randomBytes(16).toString('hex')}`;
+          const binding = input.publicationBinding;
+          db.prepare(`INSERT INTO hosted_team_configuration_publications
+            (operation_id, workspace_id, team_id, actor_id, deployment_id, runtime_workspace_id,
+             binding_generation, legacy_key, created_at, initial_revision, directory_fingerprint, state)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'pending')`).run(
+            operationId, input.workspaceId, reservedTeamId, binding.actorId, binding.deploymentId,
+            binding.runtimeWorkspaceId, binding.bindingGeneration, `draft-${operationId.slice(9)}`,
+            new Date(admittedAtMs).toISOString(), initialRevision);
+        }
         return {
           kind: 'created',
           teamId: reservedTeamId as never,
@@ -294,6 +307,7 @@ export class HostedTeamConfigurationStorageOps {
           .get(input.workspaceId, input.teamId) as
           | { state: 'active' | 'deleted'; revision_token: string; revision_ordinal: number }
           | undefined;
+        this.assertPublicationActor(input.workspaceId, input.teamId, input.publicationBinding);
         // Absence and tombstones deliberately have the same response, including wrong-workspace IDs.
         if (!row || row.state === 'deleted') return { kind: 'deleted', outcome: 'already_absent' };
         if (row.revision_token !== input.expectedRevision) {
@@ -307,11 +321,30 @@ export class HostedTeamConfigurationStorageOps {
             WHERE workspace_id = ? AND team_id = ? AND state = 'active' AND revision_token = ?`
           )
           .run(revision(), admittedAtMs, input.workspaceId, input.teamId, input.expectedRevision);
+        if (changed.changes === 1) {
+          db.prepare(`UPDATE hosted_team_configuration_publications SET state = 'tombstoned'
+            WHERE workspace_id = ? AND team_id = ?`).run(input.workspaceId, input.teamId);
+        }
         return changed.changes === 1
           ? { kind: 'deleted', outcome: 'deleted' }
           : { kind: 'conflict', reason: 'revision_mismatch' };
       })
       .immediate();
+  }
+
+  /** Publication absence is legacy; another actor's immutable operation is never absence.
+   * Runs inside the create replay/delete transaction, before mutation or replay success.
+   */
+  private assertPublicationActor(workspaceId: string, teamId: string,
+    binding: TeamDraftPublicationBinding | undefined): void {
+    const row = this.getDatabase().prepare(`SELECT actor_id, deployment_id, runtime_workspace_id, binding_generation
+      FROM hosted_team_configuration_publications WHERE workspace_id = ? AND team_id = ?`)
+      .get(workspaceId, teamId) as { actor_id: string; deployment_id: string;
+        runtime_workspace_id: string; binding_generation: number } | undefined;
+    if (row && (!binding || row.actor_id !== binding.actorId || row.deployment_id !== binding.deploymentId ||
+        row.runtime_workspace_id !== binding.runtimeWorkspaceId || row.binding_generation !== binding.bindingGeneration)) {
+      throw new Error('draft-publication-actor-binding-mismatch');
+    }
   }
 
   private requireMutationAdmission(deadlineAtMs: number): number {

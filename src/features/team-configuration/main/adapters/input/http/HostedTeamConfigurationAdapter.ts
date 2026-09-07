@@ -21,6 +21,7 @@ import {
   parseHostedGetSavedTeamRequest,
   parseHostedUpdateDraftTeamRequest,
 } from '../../../../contracts/hosted';
+import { type HostedDraftPublicationLookupResult, parseHostedDraftPublicationLookup, parseHostedDraftPublicationStatus, publicationLookupResult } from '../../../../contracts/hostedDraftPublication';
 import {
   assertHostedRosterMatches,
   parseHostedRosterConfiguration,
@@ -159,6 +160,8 @@ function projectDraft(
 }
 
 export interface HostedTeamConfigurationFacade {
+  getPublication?(body: unknown, principal: QueryContext): Promise<HostedDraftPublicationLookupResult>;
+  recoverPublication?(body: unknown, principal: QueryContext): Promise<HostedDraftPublicationLookupResult>;
   getSavedRequest(body: unknown, principal: QueryContext): Promise<HostedGetSavedTeamResult>;
   createDraft(body: unknown, principal: QueryContext): Promise<HostedCreateDraftTeamResult>;
   updateDraft(body: unknown, principal: QueryContext): Promise<HostedUpdateDraftTeamResult>;
@@ -171,6 +174,23 @@ export class HostedTeamConfigurationAdapter implements HostedTeamConfigurationFa
     private readonly application: HostedTeamConfigurationApplicationPort,
     private readonly authorization: HostedTeamConfigurationAuthorizationPort
   ) {}
+
+  getPublication(body: unknown, principal: QueryContext) { return this.publication(body, principal, false); }
+  recoverPublication(body: unknown, principal: QueryContext) { return this.publication(body, principal, true); }
+  private async publication(body: unknown, principal: QueryContext, recover: boolean): Promise<HostedDraftPublicationLookupResult> {
+    let request;
+    try { request = parseHostedDraftPublicationLookup(body); }
+    catch { return errorResult('invalid_request', 'team_configuration_request_invalid', false); }
+    if (!(await this.authorize(recover ? 'recover_publication' : 'get_publication',
+      { kind: 'workspace', workspaceId: request.workspaceId }, principal))) {
+      return errorResult('forbidden', 'team_configuration_forbidden', false);
+    }
+    try {
+      if (!this.application.publicationStatus) return unavailable();
+      const result = await this.application.publicationStatus(request, principal, recover);
+      return result.kind === 'error' ? applicationError(result.error) : publicationLookupResult(result.teamId, result.publication);
+    } catch { return unavailable(); }
+  }
 
   async getSavedRequest(body: unknown, principal: QueryContext): Promise<HostedGetSavedTeamResult> {
     const parsed = parseHostedGetSavedTeamRequest(body);
@@ -220,6 +240,10 @@ export class HostedTeamConfigurationAdapter implements HostedTeamConfigurationFa
         context: principal,
       });
       if (result.kind === 'error') return applicationError(result.error);
+      if (result.publication) {
+        const publication = parseHostedDraftPublicationStatus(result.publication);
+        if (publication.state === 'pending' || publication.state === 'recovery_required') return unavailable();
+      }
       const identity = Object.freeze({
         workspaceId: parsed.value.workspaceId,
         teamId: parseTeamId(result.teamId),

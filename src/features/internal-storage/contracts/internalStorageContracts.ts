@@ -1,5 +1,5 @@
 /** Persisted SQLite format, advanced only by the append-only worker migration ledger. */
-export const INTERNAL_STORAGE_SCHEMA_VERSION = 28;
+export const INTERNAL_STORAGE_SCHEMA_VERSION = 29;
 
 export const INTERNAL_STORAGE_DIRNAME = 'storage';
 export const INTERNAL_STORAGE_DATABASE_FILENAME = 'app.db';
@@ -135,4 +135,6 @@ export interface InternalStorageBackendInfo {
   schemaVersion: number;
   /** 'recovered' means a corrupt database file was backed up and recreated. */
   integrity: 'ok' | 'recovered';
+  /** Worker-observed device/inode at connection open; null means sharing cannot be admitted. */
+  connectionFileIdentity?: string | null;
 }

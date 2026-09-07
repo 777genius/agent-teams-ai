@@ -19,13 +19,14 @@ export type HostedTeamConfigurationContextFactory = (
 ) => QueryContext | Promise<QueryContext>;
 
 type Result = Awaited<
-  ReturnType<HostedTeamConfigurationFacade[keyof HostedTeamConfigurationFacade]>
+  ReturnType<NonNullable<HostedTeamConfigurationFacade[keyof HostedTeamConfigurationFacade]>>
 >;
 
 function sendResult(reply: FastifyReply, result: Result): FastifyReply {
   switch (result.kind) {
     case 'created':
       return reply.status(201).send(result);
+    case 'publication':
     case 'found':
     case 'updated':
     case 'deleted':
@@ -128,6 +129,8 @@ export function registerHostedTeamConfigurationHttp(
     throw new TypeError('hosted-team-configuration-route-contribution-invalid');
   }
   const facade = contribution.facade;
+  registerOperation(app, descriptors[4], (body, context) => facade.getPublication?.(body, context) ?? Promise.resolve(unavailableResult()), routeAdmission, createContext);
+  registerOperation(app, descriptors[5], (body, context) => facade.recoverPublication?.(body, context) ?? Promise.resolve(unavailableResult()), routeAdmission, createContext);
   registerOperation(
     app,
     descriptors[0],

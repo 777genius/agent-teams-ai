@@ -36,6 +36,8 @@ function facade(): HostedTeamConfigurationFacade {
     retryable: false,
   });
   return {
+    getPublication: vi.fn(async () => invalid()),
+    recoverPublication: vi.fn(async () => invalid()),
     getSavedRequest: vi.fn(async () => invalid()),
     createDraft: vi.fn(async () => invalid()),
     updateDraft: vi.fn(async () => invalid()),
@@ -177,8 +179,10 @@ describe('hosted team configuration HTTP', () => {
   });
 
   it('declares read readiness without CSRF and CSRF only for mutations', () => {
-    const [read, ...mutations] = HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS;
-    expect(read).toMatchObject({
+    const reads = HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS.filter((route) => route.authPolicyId === 'hosted.browser.session');
+    const mutations = HOSTED_TEAM_CONFIGURATION_ROUTE_DESCRIPTORS.filter((route) => route.authPolicyId === 'hosted.browser.session.csrf');
+    expect(reads).toHaveLength(2);
+    for (const read of reads) expect(read).toMatchObject({
       authPolicyId: 'hosted.browser.session',
       readiness: ['serve', 'auth', 'read'],
     });
@@ -197,7 +201,7 @@ describe('hosted team configuration HTTP', () => {
     expect(assembly.facades).toEqual([
       expect.objectContaining({ id: 'team-configuration.hosted.v1' }),
     ]);
-    expect(assembly.catalog.routes).toHaveLength(4);
+    expect(assembly.catalog.routes).toHaveLength(6);
     for (const route of assembly.catalog.routes) {
       for (const reference of [
         route.id,

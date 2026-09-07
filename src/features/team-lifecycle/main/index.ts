@@ -225,3 +225,9 @@ export class LegacyTeamLifecycleReadSource
     return Promise.resolve(this.source.listAliveTeamProjections(request, context));
   }
 }
+
+export type {
+  HostedDraftPublicationFeature,
+  HostedDraftPublicationRequest,
+  HostedDraftPublicationResult,
+} from '../core/application/ports/HostedDraftPublicationFeature';

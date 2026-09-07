@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
+import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/contracts';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -72,7 +73,7 @@ describe('stopped-stack recovery', () => {
     await expect(readdir(fixtureRoot)).resolves.toEqual([]);
   });
 
-  it('preserves configured SQLite v28 and legacy JSON through stopped-stack archive and restore', async () => {
+  it('preserves current SQLite schema with v28 roster encoding and legacy JSON through stopped-stack archive and restore', async () => {
     const root = await mkdtemp(join(tmpdir(), 'hosted-configured-restore-'));
     roots.push(root);
     const sourceRoot = join(root, 'source');
@@ -106,7 +107,7 @@ describe('stopped-stack recovery', () => {
     for (const file of [join(archiveRoot, 'payload', 'data', 'storage', 'app.db'), join(targetRoot, 'data', 'storage', 'app.db')]) {
       const database = new Database(file, { readonly: true });
       try {
-        expect(database.pragma('user_version', { simple: true })).toBe(28);
+        expect(database.pragma('user_version', { simple: true })).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
         expect(database.prepare('SELECT * FROM hosted_team_configuration_drafts ORDER BY team_id').all()).toEqual(rows);
         expect(database.prepare('SELECT * FROM hosted_team_configuration_create_keys ORDER BY team_id').all()).toEqual(ledger);
       } finally { database.close(); }

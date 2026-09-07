@@ -4,5 +4,6 @@ export type * from './hostedTeamApprovalAuthorityStorageContracts';
 export type * from './hostedTeamConfigurationStorageContracts';
 export * from './internalStorageContracts';
 export * from './memberWorkSyncTeamIdentity';
+export * from './teamDraftPublicationContracts';
 export * from './teamIdentityStorageContracts';
 export * from './teamRosterStorageContracts';

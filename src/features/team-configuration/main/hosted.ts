@@ -1,3 +1,4 @@
+export type { HostedDraftWorkspaceFence } from '../core/application/hosted-authority/HostedDraftPublicationPort';
 export {
   HostedTeamConfigurationAdapter,
   type HostedTeamConfigurationFacade,
@@ -13,6 +14,10 @@ export {
   createHostedTeamConfigurationRouteContribution,
   type HostedTeamConfigurationFeature,
 } from './composition/createHostedTeamConfigurationFeature';
+export {
+  createReservedDraftConfigurationAttribution,
+  type ReservedDraftConfigurationAttribution,
+} from './composition/createReservedDraftConfigurationAttribution';
 export {
   HOSTED_TEAM_CONFIGURATION_OPERATIONS,
   type HostedTeamConfigurationApplicationError,

@@ -8,8 +8,14 @@ import {
   INTERNAL_STORAGE_SCHEMA_VERSION,
 } from '@features/internal-storage/main/application/internalStorageBackupContract';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
+import { RESERVED_TEAM_IDENTITY_TRANSITION } from '@features/internal-storage/main/infrastructure/worker/teamDraftPublicationMigration';
 import { parseRevision, parseWorkspaceId } from '@shared/contracts/hosted';
 import { afterEach, describe, expect, it } from 'vitest';
+
+import {
+  createReleasedInternalStorageSchema,
+  restorePrePublicationSchema,
+} from './fixtures/releasedInternalStorageSchema';
 
 import type {
   HostedTeamConfigurationStorageCreateResult,
@@ -179,14 +185,10 @@ describe('hosted team configuration SQLite authority', () => {
 
   it('additively migrates a released v18 database without rewriting existing tables', async () => {
     const file = await databasePath();
-    const initial = core(file);
-    initial.handle('ping', {});
-    initial.close();
     const database = openDatabase(file);
     try {
-      database.exec('DROP TABLE hosted_team_configuration_create_keys');
-      database.exec('DROP TABLE hosted_team_configuration_drafts');
-      database.pragma('user_version = 18');
+      createReleasedInternalStorageSchema(database, 18);
+      database.prepare(`INSERT INTO store_imports VALUES ('legacy-store', 'legacy-team', 'legacy-time', 7)`).run();
     } finally {
       database.close();
     }
@@ -204,6 +206,12 @@ describe('hosted team configuration SQLite authority', () => {
         'hosted_team_configuration_drafts',
       ])
     );
+    const reopened = openDatabase(file);
+    try {
+      expect(reopened.prepare('SELECT * FROM store_imports').all()).toEqual([
+        { store_id: 'legacy-store', team_name: 'legacy-team', imported_at: 'legacy-time', entry_count: 7 },
+      ]);
+    } finally { reopened.close(); }
   });
 
   it('serializes competing update/delete and never leaks cross-workspace existence', async () => {
@@ -395,46 +403,65 @@ describe('hosted team configuration SQLite authority', () => {
     } finally { database.close(); }
   });
 
-  it('does not advance v27 format admission while an existing backup fence is active', async () => {
+  it.each([[27, 28], [28, 29]] as const)('does not advance v%s admission to v%s while an existing backup fence is active', async (version, nextVersion) => {
     const file = await databasePath();
-    const initial = core(file);
-    initial.handle('ping', {});
-    initial.close();
     const database = openDatabase(file);
     try {
-      database.pragma('user_version = 27');
+      createReleasedInternalStorageSchema(database, version);
       database.prepare(`INSERT INTO coordination_backup_runs (
         backup_run_id, deployment_id, state, revision, fence_completion_status, record_json, requested_at, updated_at
       ) VALUES ('backup-format', 'deployment-test', 'sqlite_snapshot', 1, NULL, '{}', 'now', 'now')`).run();
       database.prepare(`INSERT INTO coordination_backup_writer_fences (
         deployment_id, generation, admitted_run_id, lease_id, status, disposition, acquired_at, completed_at
       ) VALUES ('deployment-test', 1, 'backup-format', 'lease-format', 'active', NULL, 'now', NULL)`).run();
-      expect(() => core(file).handle('ping', {})).toThrow('internal-storage-v28-migration-backup-fenced');
-      expect(database.pragma('user_version', { simple: true })).toBe(27);
+      const schemaBefore = database.prepare('SELECT type, name, sql FROM sqlite_schema ORDER BY name').all();
+      expect(() => core(file).handle('ping', {})).toThrow(`internal-storage-v${nextVersion}-migration-backup-fenced`);
+      expect(database.pragma('user_version', { simple: true })).toBe(version);
+      expect(database.prepare('SELECT type, name, sql FROM sqlite_schema ORDER BY name').all()).toEqual(schemaBefore);
       expect(database.prepare('SELECT count(*) AS count FROM hosted_team_configuration_drafts').get()).toEqual({ count: 0 });
     } finally { database.close(); }
   });
 
-  it('advances v27 admission without rewriting legacy records and still allows metadata edits', async () => {
+  it.each([27, 28] as const)('migrates released v%s to v29 without rewriting legacy records and still allows metadata edits', async (version) => {
     const file = await databasePath();
     const initial = core(file);
     const created = initial.handle('hostedTeamConfiguration.create', create) as HostedTeamConfigurationStorageCreateResult;
     if (created.kind !== 'created') throw new Error('expected create');
+    initial.handle('teamIdentity.reserve', {
+      teamId: created.teamId, legacyKey: 'legacy-draft',
+      directoryFingerprint: 'c'.repeat(64), workspaceBinding: null,
+      createdAt: '2026-07-20T10:00:00.000Z',
+    });
     initial.close();
     const database = openDatabase(file);
     const legacyMembers = [{ name: 'user' }, { name: 'con' }, { name: 'alice-2' }, { name: 'lead' }, { name: 'LEAD' }];
     const bytes = JSON.stringify(legacyMembers, null, 2);
     try {
-      // v28 has no DDL/data changes: this is the exact released v27 table shape.
+      restorePrePublicationSchema(database, version);
       database.prepare('UPDATE hosted_team_configuration_drafts SET members_json = ?').run(bytes);
-      database.pragma('user_version = 27');
       const before = database.prepare('SELECT * FROM hosted_team_configuration_drafts').all();
       const ledger = database.prepare('SELECT * FROM hosted_team_configuration_create_keys').all();
+      const identities = database.prepare('SELECT * FROM team_identity_records').all();
+      const reservations = database.prepare('SELECT * FROM legacy_team_key_reservations').all();
+      const legacySchema = database.prepare("SELECT type, name, sql FROM sqlite_schema WHERE name != 'trg_team_identity_transition' AND tbl_name != 'hosted_team_configuration_publications' ORDER BY name");
+      const schemaBefore = legacySchema.all();
       const migrated = core(file);
-      expect(migrated.handle('ping', {})).toMatchObject({ schemaVersion: 28 });
-      expect(database.pragma('user_version', { simple: true })).toBe(28);
+      expect(migrated.handle('ping', {})).toMatchObject({ schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION });
+      expect(database.pragma('user_version', { simple: true })).toBe(INTERNAL_STORAGE_SCHEMA_VERSION);
       expect(database.prepare('SELECT * FROM hosted_team_configuration_drafts').all()).toEqual(before);
       expect(database.prepare('SELECT * FROM hosted_team_configuration_create_keys').all()).toEqual(ledger);
+      expect(database.prepare('SELECT * FROM team_identity_records').all()).toEqual(identities);
+      expect(database.prepare('SELECT * FROM legacy_team_key_reservations').all()).toEqual(reservations);
+      expect(legacySchema.all()).toEqual(schemaBefore);
+      expect(database.prepare('SELECT * FROM hosted_team_configuration_publications').all()).toEqual([]);
+      expect(database.prepare("SELECT sql FROM sqlite_schema WHERE name = 'trg_team_identity_transition'").get()).toEqual({
+        sql: RESERVED_TEAM_IDENTITY_TRANSITION,
+      });
+      expect(database.prepare("SELECT name FROM sqlite_schema WHERE type = 'trigger' AND tbl_name = 'hosted_team_configuration_publications' ORDER BY name").all()).toEqual([
+        { name: 'hosted_team_configuration_publications_immutable' },
+        { name: 'hosted_team_configuration_publications_no_delete' },
+      ]);
+      expect(database.pragma('foreign_key_check')).toEqual([]);
       const identity = { workspaceId, teamId: created.teamId };
       expect(migrated.handle('hostedTeamConfiguration.read', identity)).toMatchObject({
         kind: 'found', draft: { members: legacyMembers },

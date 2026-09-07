@@ -6,6 +6,7 @@ import type {
   HostedTeamConfigurationMember,
   HostedUpdateDraftTeamRequest,
 } from '../../../contracts/hosted';
+import type { HostedDraftPublicationBinding, HostedDraftPublicationPort } from './HostedDraftPublicationPort';
 import type { QueryContext, Revision, TeamId, WorkspaceId } from '@shared/contracts/hosted';
 
 export type HostedTeamConfigurationStorageCreateResult =
@@ -40,6 +41,7 @@ export interface HostedTeamConfigurationAuthorityStoragePort {
       readonly metadata: Readonly<{ name: string }>;
       readonly members: readonly HostedTeamConfigurationMember[];
       readonly configuration?: HostedCreateDraftTeamRequest['configuration'];
+      readonly publicationBinding?: HostedDraftPublicationBinding;
       readonly deadlineAtMs: number;
     },
     signal: AbortSignal
@@ -57,6 +59,7 @@ export interface HostedTeamConfigurationAuthorityStoragePort {
   ): Promise<HostedTeamConfigurationStorageUpdateResult>;
   delete(
     request: HostedTeamConfigurationIdentity & {
+      readonly publicationBinding?: HostedDraftPublicationBinding;
       readonly expectedRevision: Revision;
       readonly deadlineAtMs: number;
     },
@@ -65,6 +68,7 @@ export interface HostedTeamConfigurationAuthorityStoragePort {
 }
 
 export interface HostedTeamConfigurationAuthorityDependencies {
+  readonly publication?: HostedDraftPublicationPort;
   readonly storage: HostedTeamConfigurationAuthorityStoragePort;
   readonly sha256Hex: (canonicalPayload: string) => Promise<string> | string;
   readonly now: () => number;

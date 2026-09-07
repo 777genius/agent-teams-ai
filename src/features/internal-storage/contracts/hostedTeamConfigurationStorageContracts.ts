@@ -13,6 +13,8 @@ import {
   type WorkspaceId,
 } from '@shared/contracts/hosted';
 
+import { parseTeamDraftPublicationBinding, type TeamDraftPublicationBinding } from './teamDraftPublicationContracts';
+
 export interface HostedTeamConfigurationStorageDraft {
   readonly workspaceId: WorkspaceId;
   readonly teamId: TeamId;
@@ -28,6 +30,7 @@ export interface HostedTeamConfigurationStorageDraft {
 }
 
 export interface HostedTeamConfigurationStorageCreateRequest {
+  readonly publicationBinding?: TeamDraftPublicationBinding;
   readonly workspaceId: WorkspaceId;
   readonly idempotencyKey: string;
   readonly payloadHash: string;
@@ -70,6 +73,7 @@ export type HostedTeamConfigurationStorageUpdateResult =
   | Readonly<{ kind: 'conflict'; reason: 'revision_mismatch' }>;
 
 export interface HostedTeamConfigurationStorageDeleteRequest {
+  readonly publicationBinding?: TeamDraftPublicationBinding;
   readonly workspaceId: WorkspaceId;
   readonly teamId: TeamId;
   readonly expectedRevision: Revision;
@@ -216,6 +220,7 @@ export function parseHostedTeamConfigurationStorageCreateRequest(
     'members',
     'deadlineAtMs',
     ...(Object.hasOwn(record(value), 'configuration') ? ['configuration'] : []),
+    ...(Object.hasOwn(record(value), 'publicationBinding') ? ['publicationBinding'] : []),
   ]);
   if (
     typeof input.idempotencyKey !== 'string' ||
@@ -229,6 +234,7 @@ export function parseHostedTeamConfigurationStorageCreateRequest(
     workspaceId: parseWorkspaceId(input.workspaceId),
     idempotencyKey: input.idempotencyKey,
     payloadHash: input.payloadHash,
+    ...(Object.hasOwn(input, 'publicationBinding') ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) } : {}),
     metadata: metadata(input.metadata, true) as Readonly<{ name: string }>,
     members: newMembers(input.members),
     ...configurationFields(input),
@@ -271,8 +277,10 @@ export function parseHostedTeamConfigurationStorageUpdateRequest(
 export function parseHostedTeamConfigurationStorageDeleteRequest(
   value: unknown
 ): HostedTeamConfigurationStorageDeleteRequest {
-  const input = exact(value, ['workspaceId', 'teamId', 'expectedRevision', 'deadlineAtMs']);
+  const input = exact(value, ['workspaceId', 'teamId', 'expectedRevision', 'deadlineAtMs',
+    ...(Object.hasOwn(record(value), 'publicationBinding') ? ['publicationBinding'] : [])]);
   return Object.freeze({
+    ...(Object.hasOwn(input, 'publicationBinding') ? { publicationBinding: parseTeamDraftPublicationBinding(input.publicationBinding) } : {}),
     ...parseHostedTeamConfigurationStorageIdentity({
       workspaceId: input.workspaceId,
       teamId: input.teamId,

@@ -20,6 +20,8 @@ export const HOSTED_TEAM_CONFIGURATION_SCHEMA_VERSION = HOSTED_SCHEMA_VERSION;
 
 export const HOSTED_TEAM_CONFIGURATION_ROUTES = Object.freeze({
   getSavedRequest: '/api/hosted/v1/team-configuration/saved-request',
+  getPublication: '/api/hosted/v1/team-configuration/draft/publication',
+  recoverPublication: '/api/hosted/v1/team-configuration/draft/publication/recover',
   createDraft: '/api/hosted/v1/team-configuration/draft/create',
   updateDraft: '/api/hosted/v1/team-configuration/draft/update',
   deleteDraft: '/api/hosted/v1/team-configuration/draft/delete',

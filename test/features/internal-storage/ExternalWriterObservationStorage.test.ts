@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
+import { INTERNAL_STORAGE_SCHEMA_VERSION } from '@features/internal-storage/contracts';
 // eslint-disable-next-line no-restricted-imports -- Integration coverage exercises the concrete hosted adapter.
 import { InternalStorageExternalWriterObservationStateStore } from '@features/internal-storage/main/hosted';
 import { InternalStorageWorkerCore } from '@features/internal-storage/main/infrastructure/worker/InternalStorageWorkerCore';
@@ -9,6 +10,8 @@ import { parseInternalStorageWorkerResponseForPending } from '@features/internal
 import { parseDeploymentId, parseTeamId } from '@shared/contracts/hosted';
 import Database from 'better-sqlite3-node';
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { createReleasedInternalStorageSchema } from './fixtures/releasedInternalStorageSchema';
 
 import type { FileObservationStateCheckpoint } from '@features/external-writer-coordination/contracts';
 
@@ -451,25 +454,18 @@ describe('external writer observation checkpoint storage', () => {
 
   it('migrates v24 to v25 with checkpoint and retired-team floor tables', async () => {
     const worker = await open();
-    worker.handle('ping', {});
     worker.close();
     core = null;
     const dbFile = path.join(tmpDir!, 'storage.db');
     const legacy = new Database(dbFile);
-    legacy.exec(`
-      DROP TABLE external_writer_reconciliation_receipts;
-      DROP TABLE external_writer_observation_handoff_eligibility;
-      DROP TABLE external_writer_observation_retired_team_floors;
-      DROP TABLE external_writer_observation_checkpoints;
-      PRAGMA user_version = 24;
-    `);
+    createReleasedInternalStorageSchema(legacy, 24);
     legacy.close();
 
     core = new InternalStorageWorkerCore({
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 28 });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION });
     const migrated = new Database(dbFile, { readonly: true });
     expect(
       migrated
@@ -491,23 +487,18 @@ describe('external writer observation checkpoint storage', () => {
 
   it('migrates v25 to v26 with the bounded consume receipt table', async () => {
     const worker = await open();
-    worker.handle('ping', {});
     worker.close();
     core = null;
     const dbFile = path.join(tmpDir!, 'storage.db');
     const legacy = new Database(dbFile);
-    legacy.exec(`
-      DROP TABLE external_writer_reconciliation_receipts;
-      DROP TABLE external_writer_observation_consume_receipts;
-      PRAGMA user_version = 25;
-    `);
+    createReleasedInternalStorageSchema(legacy, 25);
     legacy.close();
 
     core = new InternalStorageWorkerCore({
       databasePath: dbFile,
       createDatabase: (file) => new Database(file),
     });
-    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: 28 });
+    expect(core.handle('ping', {})).toMatchObject({ schemaVersion: INTERNAL_STORAGE_SCHEMA_VERSION });
     const migrated = new Database(dbFile, { readonly: true });
     expect(
       migrated
@@ -571,17 +562,11 @@ describe('external writer observation checkpoint storage', () => {
 
   it('blocks the v24 to v25 migration while a backup writer fence is active', async () => {
     const worker = await open();
-    worker.handle('ping', {});
     worker.close();
     core = null;
     const dbFile = path.join(tmpDir!, 'storage.db');
     const db = new Database(dbFile);
-    db.exec(`
-      DROP TABLE external_writer_observation_handoff_eligibility;
-      DROP TABLE external_writer_observation_retired_team_floors;
-      DROP TABLE external_writer_observation_checkpoints;
-      PRAGMA user_version = 24;
-    `);
+    createReleasedInternalStorageSchema(db, 24);
     db.prepare(
       `INSERT INTO coordination_backup_runs (
          backup_run_id, deployment_id, state, revision, fence_completion_status,

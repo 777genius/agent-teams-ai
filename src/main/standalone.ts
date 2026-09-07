@@ -1,5 +1,6 @@
 import { isAbsolute, resolve } from 'node:path';
 
+import { createHostedDraftPublicationComposition, type HostedDraftPublicationComposition } from './composition/hosted/hostedDraftPublicationComposition';
 import { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
 export { createStandaloneHostedRouteReadiness } from './composition/hosted/standaloneHostedRouteReadiness';
 
@@ -10,7 +11,7 @@ import {
 import { createHostedAccessFeature, type HostedAccessFeature } from '@features/hosted-access/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted operations exposes route descriptors for production composition.
 import { HOSTED_DIAGNOSTICS_ROUTE_DESCRIPTORS } from '@features/hosted-operations/main/hosted';
-import { type TeamIdentityReadGateway } from '@features/internal-storage/main';
+import { createInternalStorageFeature, type TeamIdentityReadGateway } from '@features/internal-storage/main';
 // eslint-disable-next-line no-restricted-imports -- Hosted storage composition is main-process-only.
 import {
   createHostedTeamIdentityReadBackend,
@@ -164,6 +165,7 @@ let httpServer: HttpServer;
 let configManager: { flush(): Promise<void> } | null = null;
 let shutdownPromise: Promise<void> | null = null;
 let hostedAuthStorageBackend: HostedAuthStorageBackend | null = null;
+let hostedDraftPublication: HostedDraftPublicationComposition | null = null;
 let hostedTeamIdentityReadBackend: HostedTeamIdentityReadBackend | null = null;
 let hostedAccessFeature: HostedAccessFeature | null = null;
 let hostedCoordinationEventStream: HostedCoordinationEventStream | null = null;
@@ -239,6 +241,8 @@ async function start(): Promise<void> {
     hostedBootstrapEnvironment
   );
   const hostedMode = serializedHostedBootstrap !== undefined || process.env.AUTH_MODE !== undefined;
+  const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
+  hostedAuthStorageBackend = createInternalStorageFeature({ userDataPath: authDataDirectory, scope: 'hosted-auth' });
   const productionOwnerAdmission =
     serializedHostedBootstrap === undefined
       ? null
@@ -282,14 +286,23 @@ async function start(): Promise<void> {
       admittedHostedClaudeRoot = claudeRoot;
       setClaudeBasePathOverride(admittedHostedClaudeRoot);
 
-      const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({ appDataRoot });
+      try {
+        hostedDraftPublication = await createHostedDraftPublicationComposition({ bootstrap, drafts: hostedAuthStorageBackend });
+      } catch {
+        logger.warn('Canonical draft publication unavailable; configuration mutations remain disabled.');
+      }
+      const teamIdentityGateway = await createTeamLifecycleReadOnlyIdentitySource({
+        appDataRoot, currentWriter: hostedDraftPublication?.identityReadSource,
+      });
       if (teamIdentityGateway === null) {
         logger.warn(
           'Hosted team lifecycle identity admission unavailable; canonical reads remain disabled.'
         );
       } else {
-        hostedTeamIdentityReadBackend = createHostedTeamIdentityReadBackend(appDataRoot);
-        const liveTeamIdentityGateway = hostedTeamIdentityReadBackend.gateway;
+        // Retained-writer reads preserve connection custody on every snapshot, including live WAL.
+        // The legacy frozen-file admission keeps its separate query-only live worker path.
+        hostedTeamIdentityReadBackend = hostedDraftPublication ? null : createHostedTeamIdentityReadBackend(appDataRoot);
+        const liveTeamIdentityGateway = hostedTeamIdentityReadBackend?.gateway ?? teamIdentityGateway;
         const readPorts = createMountBindingScopedTeamLifecycleReadPorts({
           authority: bootstrap.authority,
           mountBinding: bootstrap.mountBinding,
@@ -330,13 +343,11 @@ async function start(): Promise<void> {
     setClaudeBasePathOverride(admittedHostedClaudeRoot);
   }
   const [
-    { createHostedAuthStorageBackend },
     { HttpServer },
     { LocalFileSystemProvider },
     { NotificationManager },
     { ServiceContext },
   ] = await Promise.all([
-    import('./http'),
     import('./services/infrastructure/HttpServer'),
     import('./services/infrastructure/LocalFileSystemProvider'),
     import('./services/infrastructure/NotificationManager'),
@@ -361,8 +372,6 @@ async function start(): Promise<void> {
   localContext.fileWatcher.setNotificationManager(notificationManager);
 
   httpServer = new HttpServer();
-  const authDataDirectory = resolveStandaloneAuthDataDirectory(process.env, hostedMode);
-  hostedAuthStorageBackend = createHostedAuthStorageBackend(authDataDirectory);
   const hostedAuthHostPlatform = createHostedAccessNodePlatform();
   hostedAccessFeature = await createHostedAccessFeature({
     environment: process.env,
@@ -548,6 +557,8 @@ async function start(): Promise<void> {
       ? null
       : createHostedTeamConfigurationComposition({
           authentication: hostedAccessFeature.http,
+          publication: teamIdentityGrantFenceSource === null ? null : hostedDraftPublication,
+          restoreGeneration: hostedAccessFeature.restoreGeneration,
           storage: hostedAuthStorageBackend.teamConfigurations,
           runtimeInstance: hostedDiagnosticsRuntimeInstance,
           expectedDeploymentId: hostedAccessFeature.deploymentId,
@@ -717,6 +728,8 @@ async function shutdown(requestedExitCode = 0): Promise<void> {
       },
       flushConfig: async () => {
         await configManager?.flush();
+        await hostedDraftPublication?.dispose();
+        hostedDraftPublication = null;
         await hostedAuthStorageBackend?.dispose();
         hostedAuthStorageBackend = null;
         await hostedTeamIdentityReadBackend?.dispose();

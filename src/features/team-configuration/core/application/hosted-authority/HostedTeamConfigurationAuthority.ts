@@ -11,6 +11,7 @@ import type {
   HostedTeamConfigurationIdentity,
   HostedUpdateDraftTeamRequest,
 } from '../../../contracts/hosted';
+import type { HostedDraftPublicationLookup } from '../../../contracts/hostedDraftPublication';
 import type {
   HostedTeamConfigurationAuthorityCreateRequest,
   HostedTeamConfigurationAuthorityDependencies,
@@ -30,8 +31,11 @@ export class HostedTeamConfigurationAuthority {
     const rejected = this.admit(request.context);
     if (rejected) return rejected;
     try {
+      const captured = await this.dependencies.publication?.capture(request.workspaceId, request.context);
+      const publicationBinding = captured?.binding;
       const result = await this.dependencies.storage.create(
         {
+          ...(publicationBinding ? { publicationBinding } : {}),
           workspaceId: request.workspaceId,
           idempotencyKey: request.idempotencyKey,
           payloadHash: await this.dependencies.sha256Hex(
@@ -44,9 +48,11 @@ export class HostedTeamConfigurationAuthority {
         },
         request.context.signal
       );
-      return result.kind === 'conflict'
-        ? error('conflict', 'team_configuration_idempotency_conflict')
-        : result;
+      if (result.kind === 'conflict') return error('conflict', 'team_configuration_idempotency_conflict');
+      // The durable draft commits first. Never race an unfinished publication with the response.
+      const publication = await this.dependencies.publication?.settle(
+        { workspaceId: request.workspaceId, teamId: result.teamId }, request.context, captured);
+      return { ...result, ...(publication ? { publication } : {}) };
     } catch {
       return this.unavailable();
     }
@@ -101,16 +107,29 @@ export class HostedTeamConfigurationAuthority {
     const rejected = this.admit(context);
     if (rejected) return rejected;
     try {
+      const captured = await this.dependencies.publication?.capture(identity.workspaceId, context);
       const result = await this.dependencies.storage.delete(
-        { ...identity, expectedRevision, deadlineAtMs: context.deadlineAtMs },
+        { ...identity, expectedRevision, deadlineAtMs: context.deadlineAtMs,
+          ...(captured ? { publicationBinding: captured.binding } : {}) },
         context.signal
       );
-      return result.kind === 'conflict'
-        ? error('conflict', 'team_configuration_revision_conflict')
-        : result;
+      if (result.kind === 'conflict') return error('conflict', 'team_configuration_revision_conflict');
+      const publication = await this.dependencies.publication?.settle(identity, context, captured);
+      if (publication && publication.state !== 'tombstoned') return this.unavailable();
+      return result;
     } catch {
       return this.unavailable();
     }
+  }
+
+  async publicationStatus(request: HostedDraftPublicationLookup, context: QueryContext, recover: boolean) {
+    const rejected = this.admit(context);
+    if (rejected) return rejected;
+    try {
+      if (!this.dependencies.publication) return this.unavailable();
+      const result = await this.dependencies.publication.lookup(request, context, recover);
+      return result ? { kind: 'publication' as const, ...result } : error('not_found', 'team_configuration_not_found');
+    } catch { return this.unavailable(); }
   }
 
   private admit(context: QueryContext): ReturnType<typeof error> | null {
