@@ -150,8 +150,38 @@ export interface CursorAgentTreeSweepPort {
  */
 export const CURSOR_AGENT_APP_OWNERSHIP_ENV_MARKER = 'CLAUDE_TEAM_APP_INSTANCE_ID=';
 
+/**
+ * Opt-in switch for the whole sweep, and the reason it ships OFF.
+ *
+ * Everything this module can observe about a `cursor-agent` tree comes from a
+ * JOINED command line, and joining destroys the argument boundaries. A directory
+ * named `/work/app --model auto` renders exactly like `/work/app` followed by a
+ * model argument; `/work/app - backup` renders like `/work/app` followed by
+ * anything. Three progressively stricter parsers were each beaten by a plausible
+ * real directory name.
+ *
+ * The stop path compensates by declining when a still-running team sits in a
+ * confusable directory - but that is proof of a CONFLICT, not proof of
+ * OWNERSHIP. It cannot see a team whose config is unreadable at that moment, a
+ * team belonging to another copy of this app, or a `cursor-agent --print` the
+ * user started themselves. The env marker separates this app's processes from a
+ * stranger's, and nothing available separates one team of this app from another.
+ *
+ * Reaping on "no known conflict" is therefore the wrong shape for an operation
+ * that kills whole process trees. Until a process carries positive attribution
+ * to the team that started it - which needs a change in the orchestrator that
+ * spawns it, not another parsing rule here - the sweep is off unless an operator
+ * turns it on for a situation they understand.
+ */
+export const CURSOR_AGENT_TREE_SWEEP_ENV = 'CLAUDE_TEAM_CURSOR_AGENT_TREE_SWEEP_ENABLED';
+
+export function isCursorAgentTreeSweepEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const raw = env[CURSOR_AGENT_TREE_SWEEP_ENV]?.trim().toLowerCase();
+  return raw === '1' || raw === 'true' || raw === 'on' || raw === 'yes';
+}
+
 export const DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT: CursorAgentTreeSweepPort = {
-  isEnabled: () => true,
+  isEnabled: () => isCursorAgentTreeSweepEnabled(),
   sweepCursorAgentTrees: (input) => cleanupCursorAgentProcessTrees(input),
 };
 
