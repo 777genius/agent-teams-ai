@@ -19,6 +19,7 @@ describe('hosted approval production admission', () => {
       publicHosted,
       productionGate,
       actualOwnerEvidence,
+      actualOwnerNativeCaptures,
       actualOwnerProcesses,
     ] = await Promise.all([
       readFile('src/main/standalone.ts', 'utf8'),
@@ -27,6 +28,7 @@ describe('hosted approval production admission', () => {
       readFile('src/features/team-approvals/main/hosted.ts', 'utf8'),
       readFile(PRODUCTION_GATE, 'utf8'),
       readFile('scripts/e2e/hosted-actual-owner/evidence.ts', 'utf8'),
+      readFile('scripts/e2e/hosted-actual-owner/native-captures.ts', 'utf8'),
       readFile('scripts/e2e/hosted-actual-owner/processes.ts', 'utf8'),
     ]);
     expect(environmentComposition).toContain(
@@ -75,7 +77,9 @@ describe('hosted approval production admission', () => {
     expect(productionGate).toContain('HOSTED_APPROVAL_RUNTIME_ORCHESTRATOR_CAPABILITY = false');
     expect(actualOwnerEvidence).not.toContain('export function runtimeCaptureDocument');
     expect(actualOwnerEvidence).toContain('parseNativeRuntimeCapture');
-    expect(actualOwnerEvidence).toContain('p3c_runtime_capture_producer_proof');
+    expect(actualOwnerEvidence).toContain("export { parseNativeRuntimeCapture } from './native-captures'");
+    expect(actualOwnerNativeCaptures).toContain('export function parseNativeRuntimeCapture');
+    expect(actualOwnerNativeCaptures).toContain('p3c_runtime_capture_producer_proof');
     expect(actualOwnerEvidence).toContain('p3c_runtime_capture_semantic_mapping_unavailable');
     expect(actualOwnerEvidence).not.toContain('recordType.startsWith');
     expect(actualOwnerProcesses).toContain('writerDescriptorsClosed');
