@@ -156,10 +156,19 @@ export async function cleanupManagedOpenCodeServeProcesses(
 
     const baseUrl = getOpenCodeServeLoopbackBaseUrl(row.command);
     const details = await readDetails(row.pid);
+    // The install path is evidence; the binary name is not.
+    //
+    // `isAppManagedWindowsOpenCodeServeCommand` matches a runtime under this
+    // app's own versioned install directory, which a host of another program
+    // cannot be running from. `isOrchestratorServeCommand` only says the process
+    // is AN orchestrator - it says nothing about WHOSE. Reading it as proof made
+    // every `claude-multimodel serve` on the machine app-managed by definition,
+    // including one belonging to a second installation or a copy of this app the
+    // user is running side by side. It stays in scope, so the loopback probe
+    // below still gets to ask the host who it belongs to, but it no longer
+    // answers that question by itself.
     const isManagedByWindowsCommand =
-      platform === 'win32' &&
-      (isAppManagedWindowsOpenCodeServeCommand(row.command) ||
-        isOrchestratorServeCommand(row.command));
+      platform === 'win32' && isAppManagedWindowsOpenCodeServeCommand(row.command);
     let isManaged =
       isManagedByWindowsCommand ||
       Boolean(details && isManagedOpenCodeServeProcessDetails(details));

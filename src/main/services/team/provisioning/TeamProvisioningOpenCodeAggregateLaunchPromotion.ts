@@ -22,10 +22,27 @@ import type { MixedSecondaryRuntimeLaneState } from './TeamProvisioningSecondary
  */
 export type OpenCodePrimaryLeadBootstrapState = 'confirmed' | 'pending' | 'failed';
 
+/**
+ * The lead this gate is entitled to judge: the one that runs ON this lane.
+ *
+ * A team can have a lead on another runtime - a Cursor lead beside OpenCode side
+ * lanes is an ordinary, working shape - and such a lead is absent from an
+ * OpenCode launch result for a completely legitimate reason. Vetoing on it would
+ * hold back a launch that is fine, so a lead with an explicit non-OpenCode
+ * provider is not this gate's business. A member with no provider recorded takes
+ * the lane's own runtime, which is the historical default and stays included.
+ */
 export function resolveOpenCodeAggregatePrimaryLeadName(
-  members: readonly { name: string }[]
+  members: readonly { name: string; providerId?: string }[]
 ): string | null {
-  return members.find((member) => isLeadMember(member))?.name?.trim() || null;
+  return (
+    members
+      .find(
+        (member) =>
+          isLeadMember(member) && (member.providerId ?? 'opencode') === 'opencode'
+      )
+      ?.name?.trim() || null
+  );
 }
 
 export function findOpenCodePrimaryLeadEvidence(
@@ -81,12 +98,29 @@ export function classifyOpenCodePrimaryLeadBootstrap(input: {
   }
   const evidence = findOpenCodePrimaryLeadEvidence(input.primaryResult, input.leadName);
   if (!evidence) {
-    // No entry for the lead at all is not this gate's failure shape:
+    // An absent lead is not proof of a healthy one.
+    //
+    // This used to answer `'confirmed'`, on the grounds that
     // `normalizeExpectedOpenCodeRuntimeLaunchMembers` turns a genuinely missing
-    // expected member into `failed_to_start`, so an absent entry means the
-    // result never went through normalization. Inventing a veto here would
-    // fail launches whose primary lane simply reported a different member.
-    return 'confirmed';
+    // expected member into `failed_to_start`, so an absent entry could only mean
+    // an unnormalized result. That function is not called anywhere in production
+    // code, so the premise never held: an absent entry was the ordinary case,
+    // and this gate waved through exactly the launches it exists to stop.
+    //
+    // It is still not a veto. A primary lane that reported a different member
+    // than the one this app calls the lead is a naming mismatch, not a dead
+    // team, and failing there would take down launches that work. `'pending'`
+    // is the honest answer: the team is not ready, and the bootstrap check-in
+    // path is given its chance to land the evidence.
+    //
+    // Only a NEGATIVE disk read downgrades, exactly as everywhere else in this
+    // function: `false` is proof that no lead session was committed, while
+    // `null` means the read failed or no reader is wired, and an absence of
+    // evidence may not hold back a launch on its own. Downgrading on `null` also
+    // fails the legitimate shape where the lead does not belong to this lane at
+    // all - a Cursor lead beside OpenCode side lanes - which is a launch that
+    // works today.
+    return input.committedSessionEvidence === false ? 'pending' : 'confirmed';
   }
   if (evidence.launchState === 'failed_to_start' || evidence.hardFailure === true) {
     return 'failed';
