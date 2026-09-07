@@ -928,24 +928,6 @@ function mapOpenCodeLaunchDataToRuntimeResult(
         ]
       : [];
 
-  /**
-   * Members the bridge reported that nobody expected.
-   *
-   * The mapping below is driven by `expectedMembers`, so anything the runtime
-   * returned outside that list was dropped without a trace - including a lead
-   * the caller failed to put in the roster, which is exactly the shape that let
-   * a team launch with a lead nobody had started. Keeping the entry means the
-   * evidence survives to the promotion gate and to the session-evidence commit,
-   * which is where a lead that IS alive should be recognised.
-   *
-   * They are added after the expected ones and never overwrite them: an
-   * expected member's evidence is the one the caller asked about.
-   */
-  const expectedMemberNames = new Set(input.expectedMembers.map((member) => member.name));
-  const unexpectedBridgeMemberNames = Object.keys(data.members).filter(
-    (name) => !expectedMemberNames.has(name)
-  );
-
   const members = Object.fromEntries(
     input.expectedMembers.map((member) => {
       const bridgeMember = data.members[member.name];
@@ -999,39 +981,6 @@ function mapOpenCodeLaunchDataToRuntimeResult(
       ];
     })
   );
-
-  for (const memberName of unexpectedBridgeMemberNames) {
-    const bridgeMember = data.members[memberName];
-    members[memberName] = mapBridgeMemberToRuntimeEvidence(
-      memberName,
-      bridgeMember.launchState,
-      bridgeMember.sessionId,
-      bridgeMember.model,
-      bridgeMember.runtimePid,
-      bridgeMember.pendingPermissionRequestIds,
-      bridgeMember.pendingPermissions,
-      true,
-      [
-        `OpenCode bridge reported ${memberName}, which the caller did not expect; keeping its evidence rather than dropping it.`,
-        ...(bridgeMember.diagnostics ?? []),
-        ...(bridgeMember.evidence ?? []).map(
-          (evidence) => `${evidence.kind} at ${evidence.observedAt}`
-        ),
-      ],
-      input.runId,
-      input.laneId?.trim() || 'primary',
-      input.teamName,
-      bridgeMember.bootstrapEvidenceSource,
-      bridgeMember.bootstrapMode,
-      bridgeMember.appManagedBootstrapCandidate,
-      selectOpenCodeMemberFailureReason({
-        memberDiagnostics: bridgeMember.diagnostics ?? [],
-        bridgeDiagnostics: data.diagnostics,
-        checkpointDiagnostics: [],
-        fallback: GENERIC_OPEN_CODE_MEMBER_FAILURE_REASON,
-      })
-    );
-  }
 
   return {
     runId: input.runId,

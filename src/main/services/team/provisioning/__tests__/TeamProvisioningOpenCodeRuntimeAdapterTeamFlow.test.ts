@@ -492,6 +492,36 @@ describe('the lead reaches the aggregate primary lane', () => {
     expect(seen.primaryMembers.filter((name) => name === 'team-lead')).toHaveLength(1);
   });
 
+  /**
+   * The two filters that decide what a lead is disagree: `isLeadMember` matches a
+   * name case-insensitively, while the inbox compatibility filter drops only the
+   * exact string `team-lead`. So a roster recovered from inboxes can carry a
+   * `Team-Lead` that the planner treats as an ordinary teammate and sends to a
+   * side lane. Adding a synthesized lead on top of that would launch two sessions
+   * for one identity, and only one of them would be tracked.
+   */
+  it('does not add a lead when one is already running on a side lane', async () => {
+    const seen = { members: [] as string[], primaryMembers: [] as string[] };
+    const primaryMembers = [
+      { name: 'alice', role: 'Engineer', providerId: 'opencode' },
+    ] as TeamCreateRequest['members'];
+    const sideMembers = [
+      { name: 'Team-Lead', role: 'Team Lead', providerId: 'opencode', model: 'other-model' },
+    ] as TeamCreateRequest['members'];
+
+    await createOpenCodeTeamThroughRuntimeAdapterFlow(
+      createRequest(),
+      vi.fn(),
+      createPorts(
+        [],
+        aggregatePorts(seen, memberLanePlan({ primaryMembers, sideMembers }), primaryMembers)
+      )
+    );
+
+    expect(seen.primaryMembers).toEqual(['alice']);
+    expect(seen.members).not.toContain('team-lead');
+  });
+
   it('does the same on the launch path, not only on create', async () => {
     const seen = { members: [] as string[], primaryMembers: [] as string[] };
     const primaryMembers = [

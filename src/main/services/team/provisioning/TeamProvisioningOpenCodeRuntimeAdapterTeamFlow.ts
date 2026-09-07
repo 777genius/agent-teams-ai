@@ -53,7 +53,7 @@ function withLeadOnPrimaryLane(
   lanePlan: PureOpenCodeMemberLanePlan,
   runtimeLaunchMembers: TeamCreateRequest['members']
 ): PureOpenCodeMemberLanePlan {
-  if (lanePlan.primaryMembers.some((member) => isLeadMember(member))) {
+  if (planAlreadyRunsALead(lanePlan)) {
     return lanePlan;
   }
   const lead = runtimeLaunchMembers.find((member) => isLeadMember(member));
@@ -67,12 +67,38 @@ function withLeadOnPrimaryLane(
   } as PureOpenCodeMemberLanePlan;
 }
 
-/** The same lead, in the roster the flow hands along beside the plan. */
+/**
+ * Whether the plan already launches a lead ANYWHERE, side lanes included.
+ *
+ * Checking only `primaryMembers` is not enough, because the two filters that
+ * decide what a lead is disagree. `isLeadMember` matches a name
+ * case-insensitively (and any of the lead agent types), while the inbox
+ * compatibility filter drops only the exact string `team-lead`. So a roster
+ * recovered from inboxes can carry a `Team-Lead` that the planner treats as an
+ * ordinary teammate and sends to a side lane - and adding a synthesized lead on
+ * top of it would launch two sessions for one identity, with only one of them
+ * tracked.
+ */
+function planAlreadyRunsALead(lanePlan: PureOpenCodeMemberLanePlan): boolean {
+  return (
+    lanePlan.primaryMembers.some((member) => isLeadMember(member)) ||
+    lanePlan.sideLanes.some((lane) => isLeadMember(lane.member))
+  );
+}
+
+/**
+ * The same lead, in the roster the flow hands along beside the plan.
+ *
+ * Gated on the plan, not on the roster: the two have to agree. A plan that
+ * already runs a lead on a side lane must not gain a second one here either,
+ * or the roster would claim a member the plan never launches.
+ */
 function withLeadInRoster(
   members: TeamCreateRequest['members'],
-  runtimeLaunchMembers: TeamCreateRequest['members']
+  runtimeLaunchMembers: TeamCreateRequest['members'],
+  lanePlan: PureOpenCodeMemberLanePlan
 ): TeamCreateRequest['members'] {
-  if (members.some((member) => isLeadMember(member))) {
+  if (planAlreadyRunsALead(lanePlan) || members.some((member) => isLeadMember(member))) {
     return members;
   }
   const lead = runtimeLaunchMembers.find((member) => isLeadMember(member));
@@ -183,7 +209,7 @@ export async function createOpenCodeTeamThroughRuntimeAdapterFlow(
   if (isPureOpenCodeMemberLanePlan(lanePlan)) {
     return ports.runOpenCodeWorktreeRootAggregateLaunch({
       request: launchRequest,
-      members: withLeadInRoster(effectiveMembers, runtimeLaunchMembers),
+      members: withLeadInRoster(effectiveMembers, runtimeLaunchMembers, lanePlan),
       lanePlan: withLeadOnPrimaryLane(lanePlan, runtimeLaunchMembers),
       prompt,
       sourceWarning: undefined,
@@ -239,7 +265,7 @@ export async function launchOpenCodeTeamThroughRuntimeAdapterFlow(
   if (isPureOpenCodeMemberLanePlan(lanePlan)) {
     return ports.runOpenCodeWorktreeRootAggregateLaunch({
       request: launchRequest,
-      members: withLeadInRoster(effectiveMembers, runtimeLaunchMembers),
+      members: withLeadInRoster(effectiveMembers, runtimeLaunchMembers, lanePlan),
       lanePlan: withLeadOnPrimaryLane(lanePlan, runtimeLaunchMembers),
       prompt,
       sourceWarning: warning,

@@ -122,8 +122,9 @@ mind when touching this area:
 committed session: stop the lane, relaunch it, require committed lead evidence.
 It was written as a fix for this symptom and originally shipped enabled.
 
-It is now behind `CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED`, default
-off, for two reasons:
+It is gated behind `CLAUDE_TEAM_OPENCODE_PRIMARY_LANE_SELF_HEAL_ENABLED`, default
+off, on the branch of PR #582 - the branch that introduces the ladder in the
+first place. Two reasons:
 
 1. **Against this root cause it cannot work.** The re-bootstrap relaunches the
    primary lane through the same code path that omitted the lead in the first
@@ -139,19 +140,38 @@ It is kept rather than deleted because the non-aggregate path does launch the
 lead, and a genuine bootstrap failure there is exactly what it was built for.
 Turn it on deliberately, for a reproduction you understand.
 
-## What was fixed
+## What is fixed, and what is not
+
+Fixed here, in this repository, on `main`:
 
 | Fix | Where |
 |---|---|
 | Lead is placed on the aggregate primary lane | `TeamProvisioningOpenCodeRuntimeAdapterTeamFlow` |
-| Absent lead is no longer read as `'confirmed'` | `TeamProvisioningOpenCodeAggregateLaunchPromotion` |
-| Members outside `expectedMembers` are no longer dropped | `OpenCodeTeamRuntimeAdapter` |
-| A confirmed member without a session id fails the launch | `TeamProvisioningOpenCodeAggregateLaunchPersistence` |
-| Self-heal gated off by default | `OpenCodePrimaryLaneBootstrapSelfHeal` |
 
 The lead is added at the aggregate boundary, not in the planner: the planner's
 contract holds for all five of its modes, and only this one path needs the lead
 materialized into a roster.
+
+Fixed in the orchestrator, released separately with its binary
+(`777genius/agent_teams_orchestrator#65`):
+
+| Fix | Where |
+|---|---|
+| A failed bootstrap leaves the session record stale instead of deleting it | `cleanupFailedLaunchSession` |
+
+**Still open**, and deliberately so - each rides with the branch that owns the
+code, not with this fix:
+
+| Gap | Where it will land |
+|---|---|
+| Absent lead read as `'confirmed'` by the lead veto | branch of PR #580 |
+| Self-heal ladder enabled by default | branch of PR #582 |
+| Confirmed member without a session id skipped with a bare `continue` | `TeamProvisioningOpenCodeAggregateLaunchPersistence`, unclaimed |
+| Members outside `expectedMembers` dropped from the launch result | `OpenCodeTeamRuntimeAdapter`, unclaimed |
+
+The last two matter for anyone debugging this again: the evidence commit can
+still be skipped in silence when a member is confirmed without a session id, so
+the original symptom is reachable by a second route even with the launch fixed.
 
 ## How to tell it is happening again
 
