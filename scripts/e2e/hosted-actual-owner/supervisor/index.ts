@@ -2,6 +2,9 @@ import { randomBytes, createHash } from 'node:crypto';
 import { closeSync, createReadStream, fstatSync, openSync, constants } from 'node:fs';
 
 import type { SupervisorPlan } from '../processes';
+import { assertOwnerPlanV2 } from '../owner-plan';
+import { observeOwnerWrapper, observeSelectedOwnerModule, type OwnerWrapperObservation } from '../owner-wrapper-observation';
+import { OWNER_LAUNCH_EVIDENCE_V2, type OwnerLaunchEvidenceV2 } from '../owner-descriptor-v2';
 import { canonicalJson, sha256 } from './canonical';
 import { assembleOwnerBootstrap, type AssembleBootstrapInput, type AssembledBootstrap } from './bootstrap-v2';
 import { launchNativeOwner, type NativeLaunchOptions } from './native-launch';
@@ -13,15 +16,7 @@ export { assembleOwnerBootstrap } from './bootstrap-v2';
 export type { BootstrapCommon, ExpectedSupervisedOpenCode, RawRetentionBinding } from './bootstrap-v2';
 
 export interface LaunchOwnerFromPlanOptions {
-  readonly plan: SupervisorPlan & {
-    /** Admitted source invocation: selected runtime image and selected immutable module are distinct.
-     * The caller must verify this exact path/digest pair before maintaining the read-only closure. */
-    readonly ownerSourceInvocation?: {
-      readonly format: 'agent-teams.hosted-owner-source-invocation/v1';
-      readonly executable: { readonly device: string; readonly inode: string; readonly sha256: string };
-      readonly module: { readonly path: string; readonly sha256: string };
-    };
-  };
+  readonly plan: SupervisorPlan;
   readonly handles: Pick<NativeLaunchOptions, 'helper' | 'executable' | 'cwdFd' | 'rawFd' | 'walFd'>;
   /** Comes from the selected supervisor start record, not from the Owner frame. */
   readonly supervisorProcessStartToken: string;
@@ -92,7 +87,6 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
     handles.executable.pin.device === plan.expectedExecutableDevice.owner &&
     handles.executable.pin.inode === plan.expectedExecutableInode.owner, 'selected_owner_image');
   const entrySha256 = plan.expectedProducerModuleSha256.owner;
-  let prefix: readonly string[] = [];
   if (invocation.kind === 'built-entry') {
     check(plan.ownerSourceInvocation === undefined && handles.executable.pin.sha256 === entrySha256, 'built_owner_image');
   } else {
@@ -105,8 +99,14 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
     check(invocation.moduleSha256 === entrySha256 && invocation.modulePath.startsWith('/') &&
       Buffer.byteLength(invocation.modulePath) <= 4096 && !invocation.modulePath.includes('\0') &&
       !invocation.modulePath.split('/').some(s => s === '.' || s === '..'), 'source_module');
-    prefix = ['run', invocation.modulePath];
   }
+  assertOwnerPlanV2(plan);
+  check(options.recipeSha256 === plan.ownerRecipeSha256 && options.harnessContractSha256 === plan.ownerHarnessContractSha256, 'selected_contract_recipe');
+  const helper = plan.ownerLaunchHelper!;
+  check(handles.helper.pin.device === helper.device && handles.helper.pin.inode === helper.inode &&
+    handles.helper.pin.sha256 === helper.sha256 && handles.helper.pin.size === helper.size &&
+    handles.helper.pin.mode === helper.mode, 'selected_helper');
+  if (invocation.kind === 'source-bun') await observeSelectedOwnerModule(invocation.modulePath, invocation.moduleSha256);
   await observeExecutingSupervisor(plan, options.signal);
   const wal = fstatSync(handles.walFd, { bigint: true });
   const provenance = plan.runtimeManifest.captureEmissionContract;
@@ -122,11 +122,13 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
     producerRole: 'owner', streams: { ownerWalTimeline: { fd: 9, device: String(wal.dev), inode: String(wal.ino) } }, version: 2 });
   const ownerProcessStartToken = randomBytes(32).toString('hex');
   let digests: AssembledBootstrap['digests'] | undefined;
+  let wrapperObservation: OwnerWrapperObservation | undefined;
   const launch = await launchNativeOwner({ ...handles, signal: options.signal,
-    argv: ['/proc/self/fd/11', ...prefix, '--hosted-actual-owner-sealed-protocol=v2', '--runtime-manifest', '/sandbox/runtime-manifest.json'],
+    argv: ['/proc/self/fd/11', ...plan.expectedArgv.owner],
     environment: { ...options.environment, P3C_PROCESS_OWNERSHIP_MARKER: plan.processOwnership.marker,
       [provenance.environment]: capsule },
-    assemble(held) {
+    async assemble(held) {
+      wrapperObservation = await observeOwnerWrapper(held, handles.helper.pin);
       const assembled = assembleOwnerBootstrap({ ...bootstrap, held, supervisorBinding: {
         supervisorPid: held.callerPid, supervisorStartTicks: held.callerStartTicks,
         supervisorStartToken: options.supervisorProcessStartToken, supervisorExecutableSha256: plan.expectedExecutableSha256.supervisor,
@@ -135,6 +137,12 @@ export async function launchOwnerFromPlan(options: LaunchOwnerFromPlanOptions) {
         ownerProducerCapsuleSha256: sha256(capsule) } });
       digests = assembled.digests; return assembled;
     } });
-  return Object.freeze({ ...launch, ownerProcessStartToken, digests: digests!, descriptorMap: descriptorMap(launch.held),
-    parentCleanup: parentCleanup(launch.held, ownerProcessStartToken) });
+  const map = descriptorMap(launch.held), cleanup = parentCleanup(launch.held, ownerProcessStartToken);
+  const launchEvidence = (): OwnerLaunchEvidenceV2 => Object.freeze({ schemaVersion: 2,
+    contract: OWNER_LAUNCH_EVIDENCE_V2, ownerProcessStartToken, descriptorMap: map,
+    descriptorMapSha256: digests!.descriptorMapSha256, bootstrapDigests: digests!, parentCleanup: cleanup,
+    wrapperObservation: wrapperObservation!, executedImageSha256: launch.executed.executableSha256,
+    nativeEvents: launch.nativeEvents() });
+  return Object.freeze({ ...launch, ownerProcessStartToken, digests: digests!, descriptorMap: map,
+    parentCleanup: cleanup, launchEvidence });
 }
