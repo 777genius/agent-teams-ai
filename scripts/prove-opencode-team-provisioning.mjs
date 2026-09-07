@@ -123,7 +123,7 @@ export async function runProvisioningSmoke({
   }
   const ownedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'opencode-team-smoke-'));
   let ownedProject;
-  let preserveFailedRun = false;
+  let completedSuccessfully = false;
   try {
     // An explicit marked target is a test-only parent, never the mutable run project itself.
     ownedProject = projectPath
@@ -227,11 +227,12 @@ export async function runProvisioningSmoke({
       { cwd: repoRoot, env, stdio: 'inherit' }
     );
     if (result.error) throw result.error;
-    preserveFailedRun = result.status !== 0;
+    completedSuccessfully = result.status === 0;
     return result.status ?? 1;
   } finally {
     // The caller's marked project is never owned by this wrapper.
-    if (preserveFailedRun) {
+    // Preflight can already start managed hosts; retain their state until success is proven.
+    if (!completedSuccessfully) {
       log(
         `Smoke failed; preserving owned state for targeted cleanup: ${ownedRoot}, project ${ownedProject}`
       );
