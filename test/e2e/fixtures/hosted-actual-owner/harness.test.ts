@@ -3426,6 +3426,7 @@ function replaceRawOrigin(
       rawFiles: {
         ...fixture.outcome.rawFiles,
         [origin]: {
+          ...fixture.outcome.rawFiles[origin],
           path: `/sandbox/raw/${origin}.ndjson`,
           sha256: sha256(bytes),
           size: bytes.length,
@@ -4852,6 +4853,47 @@ describe('raw evidence validation', () => {
     );
     expect(() => deriveEvidence(changed.raw, changed.controllerNonce, changed.outcome)).toThrow(
       'p3c_semantic_http_page_body'
+    );
+  });
+
+  it('rejects Owner writer attribution for retained legacy OpenCode records', () => {
+    const fixture = rawEvidence();
+    expect(() => deriveEvidence(fixture.raw, fixture.controllerNonce, fixture.outcome)).not.toThrow();
+    const outcome = structuredClone(fixture.outcome);
+    const writers = outcome.starts.filter(({ role }) => role === 'owner');
+    Object.assign(outcome.rawFiles.opencode, {
+      producerStartTokens: writers.map(({ startToken }) => startToken).sort(),
+      producerPidfdInodes: writers.map(({ pidfdInode }) => pidfdInode).sort(),
+    });
+    expect(() => deriveEvidence(fixture.raw, fixture.controllerNonce, outcome)).toThrow(
+      'p3c_evidence_process_start_disagreement'
+    );
+  });
+
+  it('rejects Owner pidfd attribution even when the legacy OpenCode writer token is retained', () => {
+    const fixture = rawEvidence();
+    const outcome = structuredClone(fixture.outcome);
+    Object.assign(outcome.rawFiles.opencode, {
+      producerPidfdInodes: outcome.starts.filter(({ role }) => role === 'owner')
+        .map(({ pidfdInode }) => pidfdInode).sort(),
+    });
+    expect(() => deriveEvidence(fixture.raw, fixture.controllerNonce, outcome)).toThrow(
+      'p3c_evidence_process_start_disagreement'
+    );
+  });
+
+  it('rejects legacy OpenCode records relabeled as an Owner-written ledger', () => {
+    const fixture = rawEvidence();
+    const owners = fixture.outcome.starts.filter(({ role }) => role === 'owner');
+    const changed = mutateOuterEvent(fixture, 'opencode', 'allow_conditional_request', (record) => {
+      record.processStartToken = owners[0].startToken;
+    });
+    Object.assign(changed.outcome.rawFiles.opencode, {
+      producerStartTokens: owners.map(({ startToken }) => startToken).sort(),
+      producerPidfdInodes: owners.map(({ pidfdInode }) => pidfdInode).sort(),
+    });
+    expect(() => deriveEvidence(changed.raw, changed.controllerNonce, changed.outcome)).toThrow(
+      'p3c_evidence_process_start_disagreement'
     );
   });
 

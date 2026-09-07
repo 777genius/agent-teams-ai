@@ -11,11 +11,13 @@ import {
   type RuntimeCaptureName,
 } from './contracts';
 import {
+  buildSupervisorPlan,
   executeSupervisor,
   type ProducerCaptureShardEvidence,
   type RawFileEvidence,
   type SupervisorOutcome,
 } from './processes';
+import { type P1LaunchSelection, snapshotP1LaunchSelection } from './p1-admission';
 import { assertOneRunAuthorizationConsumed, type PreflightAdmission } from './preflight';
 import { assertSandboxCurrent, type DisposableSandbox } from './sandbox';
 import { readStable, verifyClosure, type WrittenFileEvidence } from './secure-files';
@@ -27,6 +29,7 @@ export function assertLiveCaptureMode(liveMode: number, sealedMode: number): voi
 }
 
 export interface DriverResult {
+  readonly selectedLaunch: P1LaunchSelection;
   readonly outcome: SupervisorOutcome;
   readonly raw: Readonly<Record<RawOrigin, Buffer>>;
   readonly captures: Readonly<Record<RuntimeCaptureName, readonly Buffer[]>>;
@@ -148,6 +151,7 @@ export async function runDriver(
   consumedAttempt: WrittenFileEvidence
 ): Promise<DriverResult> {
   await revalidateBeforeExecution(admission, sandbox, consumedAttempt);
+  const selectedLaunch = snapshotP1LaunchSelection(buildSupervisorPlan(admission, sandbox));
   const outcome = await executeSupervisor(admission, sandbox, consumedAttempt);
   if (!outcome.zeroOwnedSurvivors) throw new Error('p3c_driver_owned_survivors');
   const raw = {} as Record<RawOrigin, Buffer>;
@@ -174,5 +178,10 @@ export async function runDriver(
       )
     );
   }
-  return Object.freeze({ outcome, raw: Object.freeze(raw), captures: Object.freeze(captures) });
+  return Object.freeze({
+    selectedLaunch,
+    outcome,
+    raw: Object.freeze(raw),
+    captures: Object.freeze(captures),
+  });
 }
