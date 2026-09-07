@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   cleanupCursorAgentProcessTrees,
+  commandNamesOwnedWorkspace,
   DEFAULT_CURSOR_AGENT_TREE_SWEEP_PORT,
-  extractCursorAgentWorkspace,
   isCursorAgentRootProcess,
   isSameWorkspacePath,
 } from './CursorAgentProcessCleanup';
@@ -40,10 +40,10 @@ describe('cursor-agent tree root detection', () => {
   it('detects a print lead in both spellings and reads back its workspace', () => {
     expect(isCursorAgentRootProcess({ pid: 1, ppid: 0, command: WRAPPER })).toBe(true);
     expect(isCursorAgentRootProcess({ pid: 2, ppid: 1, command: NODE_CHILD })).toBe(true);
-    expect(extractCursorAgentWorkspace(WRAPPER)).toBe(WORKSPACE);
-    expect(extractCursorAgentWorkspace('x --workspace "C:\\ws\\a b\\c" --model m')).toBe(
-      'C:\\ws\\a b\\c'
-    );
+    expect(commandNamesOwnedWorkspace(WRAPPER, WORKSPACE, 'win32')).toBe(true);
+    expect(
+      commandNamesOwnedWorkspace('x --workspace "C:\\ws\\a b\\c" --model m', 'C:\\ws\\a b\\c', 'win32')
+    ).toBe(true);
   });
 
   /**
@@ -556,16 +556,18 @@ describe('a workspace that contains spaces', () => {
    * silent no-op.
    */
   it('reads the whole unquoted path, not its first segment', () => {
-    expect(extractCursorAgentWorkspace(POSIX_SPACED_WRAPPER)).toBe(POSIX_SPACED_WORKSPACE);
+    expect(
+      commandNamesOwnedWorkspace(POSIX_SPACED_WRAPPER, POSIX_SPACED_WORKSPACE, 'darwin')
+    ).toBe(true);
+    // The first segment alone must not match.
+    expect(commandNamesOwnedWorkspace(POSIX_SPACED_WRAPPER, '/Users/u/My', 'darwin')).toBe(false);
   });
 
   it('reads it back in either quoting style', () => {
-    expect(
-      extractCursorAgentWorkspace(`cursor-agent --print --workspace "${POSIX_SPACED_WORKSPACE}" -m x`)
-    ).toBe(POSIX_SPACED_WORKSPACE);
-    expect(
-      extractCursorAgentWorkspace(`cursor-agent --print --workspace '${POSIX_SPACED_WORKSPACE}' -m x`)
-    ).toBe(POSIX_SPACED_WORKSPACE);
+    for (const quote of ['"', "'"]) {
+      const command = `cursor-agent --print --workspace ${quote}${POSIX_SPACED_WORKSPACE}${quote} -m x`;
+      expect(commandNamesOwnedWorkspace(command, POSIX_SPACED_WORKSPACE, 'darwin')).toBe(true);
+    }
   });
 
   it('reaps a tree whose owned workspace contains spaces', async () => {
@@ -678,7 +680,11 @@ describe('ownership fences beyond the command line', () => {
     expect(result.diagnostics.join(' ')).toContain('falling back to the command line');
   });
 
-  /** Windows cannot read another process's environment, so the fence is absent. */
+  /**
+   * Windows cannot read another process's environment, so a caller demanding
+   * ownership proof cannot get it. The sweep refuses rather than quietly falling
+   * back to the command line - see the dedicated describe block below.
+   */
   it('does not ask for an environment it cannot read on Windows', async () => {
     const readProcessDetails = vi.fn(() => Promise.resolve(null));
     const killTree = vi.fn(reapedTree);
@@ -688,7 +694,7 @@ describe('ownership fences beyond the command line', () => {
       platform: 'win32',
       listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
       requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
-      requireOwnershipProof: true,
+      requireOwnershipProof: false,
       readProcessDetails,
       killTree,
     });
@@ -805,5 +811,96 @@ describe('a tree the reap could not fully reach', () => {
     expect(result.killed).toEqual([10]);
     expect(result.incomplete).toBe(true);
     expect(result.diagnostics.join(' ')).toContain('operation not permitted');
+  });
+});
+
+/**
+ * `ps` joins the argument vector with spaces and re-quotes nothing, so an
+ * unquoted path with spaces cannot be split back unambiguously. An earlier
+ * attempt stopped the capture at the first ` -`, which made two DIFFERENT
+ * directories read as the same one.
+ */
+describe('a workspace value that cannot be parsed unambiguously', () => {
+  const SPACED = '/work/My Team';
+  const SIBLING = '/work/My Team - backup';
+
+  it('does not let a sibling directory match an owned one', () => {
+    const command = `cursor-agent --print --workspace ${SIBLING} --model x`;
+    expect(commandNamesOwnedWorkspace(command, SPACED, 'darwin')).toBe(false);
+    expect(commandNamesOwnedWorkspace(command, SIBLING, 'darwin')).toBe(true);
+  });
+
+  it('still matches an owned path with spaces followed by a long flag', () => {
+    const command = 'cursor-agent --print --workspace /Users/u/My Projects/app --model m';
+    expect(commandNamesOwnedWorkspace(command, '/Users/u/My Projects/app', 'darwin')).toBe(true);
+    expect(commandNamesOwnedWorkspace(command, '/Users/u/My', 'darwin')).toBe(false);
+  });
+
+  it('matches a quoted value exactly and nothing else', () => {
+    const command = `cursor-agent --print --workspace "${SIBLING}" --model x`;
+    expect(commandNamesOwnedWorkspace(command, SIBLING, 'darwin')).toBe(true);
+    expect(commandNamesOwnedWorkspace(command, SPACED, 'darwin')).toBe(false);
+  });
+
+  it('keeps the sibling tree during a real sweep', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [SPACED],
+      platform: 'darwin',
+      listProcessRows: () =>
+        Promise.resolve([
+          {
+            pid: 10,
+            ppid: 1,
+            command: `/bin/sh cursor-agent --print --workspace ${SIBLING} --model x`,
+          },
+        ]),
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Windows cannot read another process's environment, so a caller that demands
+ * ownership proof cannot get it there. Continuing anyway would silently downgrade
+ * the sweep to "reap on the command line alone" - the fence the caller was
+ * explicitly refusing to rely on.
+ */
+describe('ownership proof that the platform cannot supply', () => {
+  it('reaps nothing on Windows when proof is required', async () => {
+    const killTree = vi.fn(reapedTree);
+    const listProcessRows = vi.fn(() =>
+      Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }])
+    );
+
+    const result = await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'win32',
+      listProcessRows,
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: true,
+      killTree,
+    });
+
+    expect(killTree).not.toHaveBeenCalled();
+    expect(result.diagnostics.join(' ')).toContain('cannot be read on Windows');
+  });
+
+  it('still reaps on Windows when proof was never required', async () => {
+    const killTree = vi.fn(reapedTree);
+
+    await cleanupCursorAgentProcessTrees({
+      ownedWorkspaceCwds: [WORKSPACE],
+      platform: 'win32',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: WRAPPER }]),
+      requiredEnvMarkers: ['CLAUDE_TEAM_APP_INSTANCE_ID='],
+      requireOwnershipProof: false,
+      killTree,
+    });
+
+    expect(killTree).toHaveBeenCalledExactlyOnceWith(10);
   });
 });

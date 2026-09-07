@@ -71,11 +71,11 @@ export interface CursorAgentProcessCleanupOptions {
    * app is responsible for inherits the orchestrator's env from the serve host
    * that spawned it.
    *
-   * POSIX only. Windows does not let one process read another's environment, so
-   * this fence is unavailable there and the sweep falls back to the command line
-   * and the time fence alone - which is why `requireOwnershipProof` exists as a
-   * separate switch for callers that would rather reap nothing than reap on
-   * weaker proof.
+   * POSIX only. Windows does not let one process read another's environment. A
+   * caller that also sets `requireOwnershipProof` therefore cannot be satisfied
+   * there, and the sweep refuses outright rather than quietly falling back to
+   * the command line - falling back would grant exactly the weaker fence the
+   * caller was refusing to rely on.
    */
   requiredEnvMarkers?: readonly string[];
   /**
@@ -220,13 +220,59 @@ export function isSameWorkspacePath(
  * resolves toward the shorter path - which fails to match and keeps the tree,
  * the safe direction for a sweep that kills whole trees.
  */
-export function extractCursorAgentWorkspace(command: string): string | null {
-  const quoted = /--workspace[\s=]+"([^"]+)"/.exec(command);
-  if (quoted?.[1]) return quoted[1];
-  const singleQuoted = /--workspace[\s=]+'([^']+)'/.exec(command);
-  if (singleQuoted?.[1]) return singleQuoted[1];
-  const bare = /--workspace[\s=]+(.+?)(?=\s+-|$)/.exec(command);
-  return bare?.[1]?.trim() || null;
+/**
+ * Whether this command line names `ownedWorkspace` as its `--workspace`.
+ *
+ * Asked this way round on purpose. `ps` joins the argument vector with spaces
+ * and re-quotes nothing, so an unquoted path with spaces in it cannot be parsed
+ * back unambiguously - there is no way to tell where the value ends and the next
+ * argument begins. Extracting a value and comparing it is therefore a guess, and
+ * guessing here reaps process trees: an earlier attempt stopped the capture at
+ * the first ` -`, which turned `/work/My Team - backup` into `/work/My Team` and
+ * made a stop of one directory match the lead of a different one.
+ *
+ * Starting from a workspace the caller can prove it owns removes the guess. The
+ * remainder after the match has to be either nothing, or the start of a long
+ * flag (` --`). A path that continues into ` - backup` leaves a remainder that
+ * is neither, so it does not match, and the tree is kept. That is the direction
+ * to be wrong in for a sweep that kills whole trees.
+ */
+export function commandNamesOwnedWorkspace(
+  command: string,
+  ownedWorkspace: string,
+  platform: NodeJS.Platform = process.platform
+): boolean {
+  const normalizedOwned = normalizeWorkspacePath(ownedWorkspace, platform);
+  if (normalizedOwned.length === 0) return false;
+
+  // A quoted value is unambiguous; compare it exactly.
+  const quoted =
+    /--workspace[\s=]+"([^"]+)"/.exec(command)?.[1] ??
+    /--workspace[\s=]+'([^']+)'/.exec(command)?.[1];
+  if (quoted !== undefined) {
+    return normalizeWorkspacePath(quoted, platform) === normalizedOwned;
+  }
+
+  const bare = /--workspace[\s=]+(.+)$/.exec(command)?.[1];
+  if (bare === undefined) return false;
+  const value = bare.trim();
+  for (const candidate of enumerateWorkspacePrefixes(value)) {
+    if (normalizeWorkspacePath(candidate.path, platform) !== normalizedOwned) continue;
+    // Nothing left, or the next token is unmistakably a flag.
+    if (candidate.rest.length === 0 || candidate.rest.startsWith(' --')) return true;
+  }
+  return false;
+}
+
+/**
+ * Every way an unquoted value could be split into "the path" and "what follows".
+ * Only splits at spaces, because that is the only separator `ps` inserted.
+ */
+function* enumerateWorkspacePrefixes(value: string): Generator<{ path: string; rest: string }> {
+  yield { path: value, rest: '' };
+  for (let index = value.indexOf(' '); index !== -1; index = value.indexOf(' ', index + 1)) {
+    yield { path: value.slice(0, index), rest: value.slice(index) };
+  }
 }
 
 /**
@@ -284,11 +330,22 @@ export async function cleanupCursorAgentProcessTrees(
   const killTree =
     options.killTree ?? ((pid: number) => killExternalProcessTree(pid, { platform }));
   // Windows cannot read another process's environment at all, so an env fence
-  // there is not a weaker check - it is no check. Dropping it here keeps the
-  // decision in one place rather than having every caller special-case the
-  // platform.
-  const requiredEnvMarkers = platform === 'win32' ? [] : (options.requiredEnvMarkers ?? []);
+  // there is not a weaker check - it is no check.
+  const requestedEnvMarkers = options.requiredEnvMarkers ?? [];
+  const requiredEnvMarkers = platform === 'win32' ? [] : requestedEnvMarkers;
   const requireOwnershipProof = options.requireOwnershipProof === true;
+  if (platform === 'win32' && requireOwnershipProof && requestedEnvMarkers.length > 0) {
+    // The caller asked to reap only what it can prove it owns, and on this
+    // platform the proof it named is unobtainable. Dropping the marker list and
+    // continuing would silently downgrade that to "reap on the command line
+    // alone" - the exact fence the caller was trying not to rely on. A sweep
+    // that cannot meet its own precondition does nothing and says so.
+    result.diagnostics.push(
+      'cursor-agent sweep skipped: ownership proof was required, and a process environment ' +
+        'cannot be read on Windows'
+    );
+    return result;
+  }
   const orphanedOnly = options.orphanedOnly === true;
   const readProcessDetails = options.readProcessDetails ?? readNativeProcessCommandWithEnv;
   const readStartTimeMs = createProcessStartTimeCache(
@@ -328,8 +385,13 @@ export async function cleanupCursorAgentProcessTrees(
     // ownership proof reaches the rest of the tree: what is below a root this
     // app can name belongs to that root.
     if (rootPids.has(row.ppid)) continue;
-    const workspace = extractCursorAgentWorkspace(row.command ?? '');
-    if (!workspace || !ownedWorkspaces.has(normalizeWorkspacePath(workspace, platform))) continue;
+    // Asked per owned workspace rather than by parsing the command's value:
+    // an unquoted path with spaces cannot be split back unambiguously, and
+    // guessing where it ends is how a stop of one directory reached the lead of
+    // another.
+    const command = row.command ?? '';
+    if (![...ownedWorkspaces].some((owned) => commandNamesOwnedWorkspace(command, owned, platform)))
+      continue;
     if (orphanedOnly && isParentAlive(row.ppid, livePids)) {
       result.keptRecent.push(row.pid);
       result.diagnostics.push(

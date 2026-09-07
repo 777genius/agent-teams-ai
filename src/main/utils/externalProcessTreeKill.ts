@@ -161,7 +161,19 @@ export function killExternalProcessTree(
     // This is the same per-pid re-read `killProcessTreeAndWait` does for the
     // trees this app spawned, and it costs one `ps` per pid on a sweep that
     // runs at most twice in a session.
-    const current = (readProcessTable() ?? processes).get(identity.pid);
+    const currentTable = readProcessTable();
+    if (!currentTable) {
+      // A table that cannot be re-read is not a confirmation. Falling back to
+      // the scan snapshot would compare the identity against itself, which is
+      // not a check at all: a pid recycled since the scan would pass it and take
+      // the signal meant for its predecessor.
+      result.incomplete = true;
+      result.diagnostics.push(
+        `tree kill skipped pid=${identity.pid}: process identity could not be re-checked`
+      );
+      continue;
+    }
+    const current = currentTable.get(identity.pid);
     if (!current) {
       // Gone between the scan and the signal, which is the outcome this call
       // wanted. Not a failure, and nothing left to signal.
