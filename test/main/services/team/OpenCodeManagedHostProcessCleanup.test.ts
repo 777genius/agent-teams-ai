@@ -1036,3 +1036,72 @@ describe('OpenCodeManagedHostProcessCleanup', () => {
     expect(result.candidates[0]).toMatchObject({ pid: 500, action: 'kept_unmanaged' });
   });
 });
+
+/**
+ * An orchestrator serve host is in scope for the sweep, but being an
+ * orchestrator is not the same as being THIS app's orchestrator. Treating the
+ * binary name as proof made every `claude-multimodel serve` on the machine
+ * app-managed by definition, including one belonging to a second installation
+ * or to a copy of the app running side by side.
+ */
+describe('whose orchestrator serve host is it', () => {
+  const ORCHESTRATOR = 'C:\\Program Files\\Other App\\claude-multimodel.exe serve --port 4096';
+
+  it('does not kill a Windows orchestrator host that will not identify itself', async () => {
+    const killProcess = vi.fn();
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'win32',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: ORCHESTRATOR }]),
+      readProcessDetails: async () => null,
+      // The host is reachable but its config carries none of this app's marks.
+      readServeHostConfig: async () => '{"description":"somebody else runtime"}',
+      killProcess,
+      isProcessAlive: () => true,
+    });
+
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(result.killed).toBe(0);
+    expect(result.candidates[0]?.action).toBe('kept_unmanaged');
+  });
+
+  it('does not kill a Windows orchestrator host that does not answer at all', async () => {
+    const killProcess = vi.fn();
+
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'win32',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: ORCHESTRATOR }]),
+      readProcessDetails: async () => null,
+      readServeHostConfig: async () => {
+        throw new Error('connection refused');
+      },
+      killProcess,
+      isProcessAlive: () => true,
+    });
+
+    expect(killProcess).not.toHaveBeenCalled();
+    expect(result.killed).toBe(0);
+  });
+
+  /** It stays in scope: a host that DOES identify itself is still reaped. */
+  it('reaps a Windows orchestrator host whose config identifies this app', async () => {
+    const result = await cleanupManagedOpenCodeServeProcesses({
+      mode: 'force',
+      platform: 'win32',
+      listProcessRows: () => Promise.resolve([{ pid: 10, ppid: 1, command: ORCHESTRATOR }]),
+      readProcessDetails: async () => null,
+      readServeHostConfig: async () =>
+        '{"description":"claude-multimodel runtime orchestration"}',
+      disposeServeHost: async () => undefined,
+      killProcess: vi.fn(),
+      // The host is gone by the time the signal would have been sent, so the
+      // sweep counts it as reaped without needing to signal it.
+      isProcessAlive: () => false,
+    });
+
+    expect(result.killed).toBe(1);
+    expect(result.candidates[0]?.action).toBe('killed');
+  });
+});
