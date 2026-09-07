@@ -271,21 +271,18 @@ describe('the self-heal switch on the production wiring', () => {
     delete process.env[ENV_NAME];
   });
 
-  function selfHealPortOf(service: ReturnType<typeof createService>) {
-    let port:
-      | ((input: typeof request) => Promise<{ action: string }>)
-      | undefined;
-    const withCapture = service as unknown as {
-      createOpenCodeMemberMessageDeliveryService(): unknown;
-      deps: { createDeliveryHost(): Record<string, unknown> };
+  type SelfHealPort = (input: typeof request) => Promise<{ action: string }>;
+
+  /** The port the service hands to the delivery factory - the production seam. */
+  function selfHealPortOf(
+    service: ReturnType<typeof createService>
+  ): SelfHealPort | undefined {
+    const created = (
+      service as unknown as { createOpenCodeMemberMessageDeliveryService(): unknown }
+    ).createOpenCodeMemberMessageDeliveryService() as {
+      deps?: { requestOpenCodePrimaryLaneRebootstrap?: SelfHealPort };
     };
-    const originalCreateHost = withCapture.deps.createDeliveryHost.bind(withCapture.deps);
-    withCapture.deps.createDeliveryHost = () => originalCreateHost();
-    const created = withCapture.createOpenCodeMemberMessageDeliveryService() as unknown as {
-      deps?: { requestOpenCodePrimaryLaneRebootstrap?: typeof port };
-    };
-    port = created.deps?.requestOpenCodePrimaryLaneRebootstrap;
-    return port;
+    return created.deps?.requestOpenCodePrimaryLaneRebootstrap;
   }
 
   it('stays off when the environment says nothing', async () => {

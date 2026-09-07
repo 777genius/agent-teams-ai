@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  decidePrimaryLaneBootstrapSelfHeal,
+  describePrimaryLaneBootstrapSelfHeal,
   isOpenCodePrimaryLaneSelfHealEnabledFromEnv,
   OPENCODE_PRIMARY_LANE_SELF_HEAL_DEFAULT_ENABLED,
   OPENCODE_PRIMARY_LANE_SELF_HEAL_ENV,
-  decidePrimaryLaneBootstrapSelfHeal,
-  describePrimaryLaneBootstrapSelfHeal,
   OpenCodePrimaryLaneBootstrapSelfHealTracker,
   PRIMARY_LANE_REBOOTSTRAP_BUDGET_EXHAUSTED_DIAGNOSTIC,
   PRIMARY_LANE_REBOOTSTRAP_DISABLED_DIAGNOSTIC,
