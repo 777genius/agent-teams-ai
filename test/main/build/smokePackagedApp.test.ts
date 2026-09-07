@@ -159,7 +159,7 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
     }
   );
 
-  it.each(['success', 'early-exit', 'timeout', 'failure-pattern'])(
+  it.each(['success', 'early-exit', 'timeout', 'failure-pattern', 'failure-and-cleanup-error'])(
     'cleans inherited pipes on the full harness %s path',
     (mode) => {
       const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-harness-TEST-'));
@@ -176,12 +176,29 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
           child.once('message', () => {
             if (${JSON.stringify(mode)} === 'early-exit') process.exit(2);
             if (${JSON.stringify(mode)} === 'success') console.log('renderer did-finish-load');
-            if (${JSON.stringify(mode)} === 'failure-pattern') console.log('MODULE_NOT_FOUND');
+            if (${JSON.stringify(mode)}.startsWith('failure-')) console.log('MODULE_NOT_FOUND');
           });
           setTimeout(() => process.exit(1), 6000);
         `;
         fs.writeFileSync(path.join(sandbox, 'agent-teams-ai'), fixtureSource, { mode: 0o755 });
-        const result = spawnSync(process.execPath, [scriptPath, sandbox, 'linux'], {
+        const nodeArgs = [scriptPath, sandbox, 'linux'];
+        if (mode === 'failure-and-cleanup-error') {
+          const hookPath = path.join(sandbox, 'cleanup-error-TEST.cjs');
+          fs.writeFileSync(
+            hookPath,
+            `
+            const kill = process.kill;
+            process.kill = function(pid, signal) {
+              const result = kill.call(this, pid, signal);
+              // Deliver the real owned-group cleanup before injecting a diagnostic failure.
+              if (signal === 'SIGKILL') throw new Error('TEST cleanup failure');
+              return result;
+            };
+          `
+          );
+          nodeArgs.unshift('--require', hookPath);
+        }
+        const result = spawnSync(process.execPath, nodeArgs, {
           cwd: sandbox,
           encoding: 'utf8',
           timeout: 5_000,
@@ -199,9 +216,14 @@ describe.skipIf(process.platform === 'win32')('smokePackagedApp POSIX process cl
           'early-exit': 'Packaged app exited before startup completed: code=2',
           timeout: 'Timed out after 2000ms waiting for packaged startup',
           'failure-pattern': 'Detected startup failure pattern',
+          'failure-and-cleanup-error': 'Detected startup failure pattern',
         };
         if (mode !== 'success') expect(result.stderr).toContain(failureReasons[mode]);
-        expect(result.stdout).toContain('stdio closed');
+        if (mode === 'failure-and-cleanup-error') {
+          expect(result.stderr).toContain('TEST cleanup failure');
+        } else {
+          expect(result.stdout).toContain('stdio closed');
+        }
         expect(result.stdout.includes('[smokePackagedApp] OK')).toBe(mode === 'success');
         if (mode === 'success') {
           expect(result.stdout.indexOf('stdio closed')).toBeLessThan(

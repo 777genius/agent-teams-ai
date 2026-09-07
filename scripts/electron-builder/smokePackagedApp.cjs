@@ -280,6 +280,7 @@ async function main() {
   });
   child.once('spawn', () => console.log(`[smokePackagedApp] spawned: pid=${child.pid}`));
 
+  let startupError;
   try {
     const deadline = Date.now() + STARTUP_TIMEOUT_MS;
     let startupSeenAt = null;
@@ -321,10 +322,20 @@ async function main() {
           `Timed out after ${STARTUP_TIMEOUT_MS}ms waiting for packaged startup`
       );
     }
+  } catch (error) {
+    startupError = error;
+    throw error;
   } finally {
     // Every startup outcome must clean up descendants, including early exit or spawn failure.
     try {
       await terminateChild(child, closePromise, platform);
+    } catch (cleanupError) {
+      if (startupError) {
+        console.error(
+          `[smokePackagedApp] Startup failed before cleanup: ${startupError.stack || String(startupError)}`
+        );
+      }
+      throw cleanupError;
     } finally {
       if (log.trim()) console.log(`--- packaged app log ---\n${log.trim()}`);
     }
